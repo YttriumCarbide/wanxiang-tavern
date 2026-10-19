@@ -1,0 +1,61 @@
+.boss-death-cinema {
+  position: absolute;
+  inset: 0;
+  z-index: 35;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, transparent 22%, #050b1466 75%, #050b14b3);
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding-bottom: 17%;
+  color: #f4deb7;
+  text-shadow: 0 2px 15px #000;
+}
+.boss-death-cinema::before,
+.boss-death-cinema::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 8%;
+  background: linear-gradient(#060e18ed, #060e18a3);
+  border-bottom: 1px solid #b8c8d84d;
+}
+.boss-death-cinema::before {
+  top: 0;
+}
+.boss-death-cinema::after {
+  bottom: 0;
+  transform: rotate(180deg);
+}
+.boss-death-cinema strong {
+  font-size: clamp(20px, 3vw, 42px);
+  letter-spacing: 10px;
+  font-weight: 400;
+}
+.boss-death-cinema small {
+  font-size: 10px;
+  letter-spacing: 8px;
+  margin-top: 10px;
+  color: #a9cfd5;
+}
+#battle.boss-finisher .right-rail,
+#battle.boss-finisher .turn-column,
+#battle.boss-finisher .round-indicator,
+#battle.boss-finisher #story-toggle,
+#battle.boss-finisher #ap-orb,
+#battle.boss-finisher .unit-layer {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 180ms ease;
+}
+@media (max-height: 500px) {
+  .boss-death-cinema {
+    padding-bottom: 10%;
+  }
+  .boss-death-cinema strong {
+    font-size: 22px;
+    letter-spacing: 6px;
+  }
+}

@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="zh-CN">
+  <meta charset="utf-8" /><meta
+    name="viewport"
+    content="width=device-width,initial-scale=1"
+  /><title>万象酒馆 · 二层走廊</title>
+  <link rel="stylesheet" href="./styles/tavern.css" />
+  <link rel="stylesheet" href="./styles/guest-room.css" />
+  <link rel="stylesheet" href="./styles/corridor.css" />
+  <body class="guest-room corridor">
+    <canvas aria-label="可以环视、点击房门进入客房或主卧的三维体素走廊"></canvas>
+    <header id="room-plaque" aria-label="当前地点：万象酒馆二层走廊">
+      <span>WANXIANG INN</span>
+      <strong>走 廊</strong>
+      <small>二层 · 三间房门</small>
+    </header>
+    <button class="spot visible" id="leave-corridor">‹ 回到大厅</button>
+    <button class="talk-open" id="corridor-talk">交流</button>
+    <div id="aim"></div>
+    <div id="spots" aria-label="走廊中的三扇房门"></div>
+    <div id="where" aria-live="polite">走廊 · 三扇房门</div>
+    <p id="room-hint">拖动画面环视 · 点击房门进入</p>
+    <div id="status">正在推开走廊门…</div>
+    <div id="scene-fade" aria-hidden="true"></div>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "./vendor/build/three.module.js",
+          "three/addons/": "./vendor/addons/"
+        }
+      }
+    </script>
+    <script type="module" src="./src/tavern/corridor.js"></script>
+  </body>
+</html>

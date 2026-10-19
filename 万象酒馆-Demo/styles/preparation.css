@@ -1,0 +1,238 @@
+#party-panel {
+  width: min(1080px, calc(100vw - 70px));
+  max-width: calc(100vw - 30px);
+  height: min(790px, 85dvh);
+  max-height: 85dvh;
+  padding: 22px;
+  color: #e3dec9;
+  background: #132724f5;
+  border: 1px solid #85927980;
+  border-radius: 12px;
+  overflow: hidden;
+}
+#party-panel[open] {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+#party-panel::backdrop {
+  background: #0715109c;
+  backdrop-filter: blur(7px);
+}
+.prepare-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.prepare-heading small {
+  color: #92b4a6;
+  font-size: 9px;
+  letter-spacing: 3px;
+}
+.prepare-heading h2 {
+  margin: 5px 0 0;
+  font-size: 25px;
+  font-weight: 500;
+  letter-spacing: 7px;
+}
+.prepare-heading button {
+  background: #213c36;
+}
+.prepare-hint {
+  margin: 0;
+  font-size: 12px;
+  color: #a5beb2;
+}
+#prepare-slots {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.prepare-slot {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  align-items: center;
+  padding: 5px;
+  color: #c6d5c8;
+  border: 1px solid #66877865;
+  background: #16332d;
+  min-width: 0;
+}
+.prepare-slot.selected {
+  border-color: #e2cc94;
+  background: #334739;
+}
+.prepare-slot small {
+  font-size: 10px;
+  color: #a6c3b0;
+}
+.prepare-slot img {
+  width: 31px;
+  height: 40px;
+  object-fit: contain;
+  border: 1px solid #7e8e6680;
+}
+.prepare-slot strong {
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  white-space: nowrap;
+}
+.prepare-body {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.65fr) minmax(0, 1.7fr);
+  gap: 20px;
+  flex: 1;
+  min-height: 0;
+}
+.prepare-body > section {
+  min-height: 0;
+  overflow: auto;
+}
+.prepare-body h3 {
+  margin: 14px 0 9px;
+  color: #c6d3c4;
+  font-size: 13px;
+  font-weight: 500;
+}
+.prepare-body h3 small {
+  color: #8ea998;
+  font-size: 10px;
+}
+#prepare-pool {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  gap: 10px;
+  align-content: start;
+}
+.prepare-member {
+  display: flex;
+  flex-direction: column;
+  padding: 5px;
+  gap: 6px;
+  min-width: 0;
+  background: #20342d82;
+  border: 1px solid #6b897845;
+}
+.prepare-member.selected {
+  border-color: #d9c18b;
+  background: #43544599;
+}
+.prepare-member > img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: contain;
+}
+.prepare-member strong {
+  font-size: 13px;
+}
+.prepare-member small {
+  font-size: 11px;
+  color: #a7bbab;
+}
+.prepare-member span {
+  font-size: 10px;
+  color: #8fb591;
+}
+.prepare-member .prepare-member-actions {
+  flex: 0 0 auto;
+}
+.prepare-member-actions button {
+  padding: 5px 9px;
+  background: #304538;
+  font-size: 11px;
+}
+#prepare-detail {
+  min-height: 0;
+  overflow: auto;
+  border-left: 1px solid #6d8e7542;
+  padding-left: 16px;
+}
+#prepare-detail .character-sheet {
+  display: block;
+  height: auto;
+}
+#prepare-detail .character-identity {
+  margin-bottom: 12px;
+  display: grid;
+  grid-template-columns: 115px minmax(0, 1fr);
+  overflow: visible;
+}
+#prepare-detail .identity-art {
+  height: 154px;
+  margin: 10px 0 10px 10px;
+}
+#prepare-detail .identity-art > span {
+  display: none;
+}
+#prepare-detail .identity-body {
+  padding: 12px;
+}
+#prepare-detail .identity-body h2 {
+  font-size: 21px;
+}
+#prepare-detail .identity-stats {
+  margin-top: 12px;
+  gap: 8px;
+}
+#prepare-detail .identity-stats dd {
+  font-size: 15px;
+}
+#prepare-detail .character-dossier {
+  height: auto;
+  overflow: visible;
+}
+#prepare-detail .character-abilities {
+  margin-top: 12px;
+}
+#party-panel > footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+#prepare-status {
+  color: #9db39f;
+  font-size: 11px;
+}
+@media (max-height: 600px) {
+  #party-panel {
+    padding: 12px;
+    height: 88dvh;
+    max-height: 88dvh;
+    gap: 8px;
+  }
+  .prepare-heading h2 {
+    font-size: 18px;
+    margin: 0;
+  }
+  .prepare-heading small {
+    display: none;
+  }
+  .prepare-slot {
+    padding: 5px;
+    gap: 3px;
+  }
+  .prepare-slot img {
+    width: 27px;
+    height: 38px;
+  }
+  .prepare-slot strong {
+    font-size: 10px;
+  }
+  .prepare-hint {
+    font-size: 10px;
+  }
+  .prepare-body {
+    grid-template-columns: minmax(180px, 0.65fr) minmax(0, 1.7fr);
+    gap: 12px;
+  }
+  #prepare-slots {
+    gap: 4px;
+  }
+  #prepare-status {
+    font-size: 9px;
+  }
+}

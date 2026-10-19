@@ -1,0 +1,31 @@
+{
+  "name": "万象酒馆 · 二层走廊",
+  "asset": "万象酒馆-走廊.glb",
+  "runtime": "assets/corridor.glb",
+  "voxel_edge_m": 0.02,
+  "resolution": "2 cm watertight voxel surface",
+  "occupied_voxels": 4380626,
+  "box_definitions": 757,
+  "triangles": 9010,
+  "bytes": 574436,
+  "dimensions_cells": [
+    190,
+    170,
+    510
+  ],
+  "room_m": [
+    3.4,
+    2.95,
+    9.6
+  ],
+  "eye_height_m": 1.46,
+  "doors": [
+    "guest-room-a",
+    "guest-room-b",
+    "master-bedroom"
+  ],
+  "return_door": "tavern hall on the right wall",
+  "style": "warm plaster, dark walnut, brass sconces and a wine runner",
+  "mesh_cleanup": "single owner volume, hidden-face culling and greedy coplanar merge",
+  "build_seconds": 1.8
+}

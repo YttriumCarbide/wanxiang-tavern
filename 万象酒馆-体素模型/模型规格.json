@@ -1,0 +1,194 @@
+{
+  "voxel_edge_m": 0.04,
+  "occupied_voxels": 1861399,
+  "previous_occupied_voxels": 142020,
+  "voxel_count_multiplier": 13.11,
+  "surface_resolution_multiplier": 9.77,
+  "triangles": 72420,
+  "mesh_groups": 32,
+  "vox_scene_models": 46,
+  "near_view_voxel_edge_m": 0.02,
+  "near_view_voxels": 8170,
+  "geometry_cleanup": "Unique native voxel ownership and shared hidden-face removal",
+  "interior_m": [
+    12,
+    3.52,
+    10
+  ],
+  "table_top_m": 0.76,
+  "chair_seat_m": 0.48,
+  "bar_top_m": 1.08,
+  "seated_eye_height_m": 1.18,
+  "bottle_height_m": 0.28,
+  "stations": [
+    "20_Summoning_Arrival_Gate",
+    "21_Dungeon_Runegate",
+    "22_Roguelike_Three_Choice_Desk"
+  ],
+  "animations": [
+    "Summoning_Crystals_Idle"
+  ],
+  "summoning": "People emerge through the arrival gate; cards are only their combat representation",
+  "lights": [
+    {
+      "name": "Lantern",
+      "position": [
+        -1.12,
+        2.2800000000000002,
+        -4.5
+      ],
+      "color": [
+        1,
+        0.73,
+        0.42
+      ],
+      "intensity": 5.5,
+      "range": 7,
+      "type": "point"
+    },
+    {
+      "name": "Lantern",
+      "position": [
+        2.88,
+        2.2800000000000002,
+        -4.5
+      ],
+      "color": [
+        1,
+        0.73,
+        0.42
+      ],
+      "intensity": 5.5,
+      "range": 7,
+      "type": "point"
+    },
+    {
+      "name": "Lantern",
+      "position": [
+        -3.12,
+        2.24,
+        4.699999999999999
+      ],
+      "color": [
+        1,
+        0.73,
+        0.42
+      ],
+      "intensity": 5.5,
+      "range": 7,
+      "type": "point"
+    },
+    {
+      "name": "Lantern",
+      "position": [
+        3.44,
+        2.24,
+        4.699999999999999
+      ],
+      "color": [
+        1,
+        0.73,
+        0.42
+      ],
+      "intensity": 5.5,
+      "range": 7,
+      "type": "point"
+    },
+    {
+      "name": "Chandelier",
+      "position": [
+        -2.2,
+        2.36,
+        -0.72
+      ],
+      "color": [
+        1,
+        0.78,
+        0.52
+      ],
+      "intensity": 17.6,
+      "range": 13,
+      "type": "spot"
+    },
+    {
+      "name": "Chandelier",
+      "position": [
+        2.2,
+        2.36,
+        2.12
+      ],
+      "color": [
+        1,
+        0.78,
+        0.52
+      ],
+      "intensity": 17.6,
+      "range": 13,
+      "type": "spot"
+    },
+    {
+      "name": "Hearth",
+      "position": [
+        4.48,
+        0.64,
+        -4.08
+      ],
+      "color": [
+        1,
+        0.48,
+        0.2
+      ],
+      "intensity": 5.5,
+      "range": 6,
+      "type": "point"
+    },
+    {
+      "name": "Runegate",
+      "position": [
+        1.14,
+        1.4,
+        -4.32
+      ],
+      "color": [
+        0.56,
+        0.4,
+        1
+      ],
+      "intensity": 2.75,
+      "range": 5,
+      "type": "point"
+    },
+    {
+      "name": "Summoning",
+      "position": [
+        -5.16,
+        1.24,
+        1.24
+      ],
+      "color": [
+        0.3,
+        0.85,
+        0.78
+      ],
+      "intensity": 2.2,
+      "range": 4,
+      "type": "point"
+    },
+    {
+      "name": "Counter_Candle",
+      "position": [
+        -3.94,
+        1.36,
+        -3.7
+      ],
+      "color": [
+        1,
+        0.76,
+        0.45
+      ],
+      "intensity": 0.8800000000000001,
+      "range": 3,
+      "type": "point"
+    }
+  ]
+}

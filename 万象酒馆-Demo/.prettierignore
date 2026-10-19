@@ -1,0 +1,12 @@
+vendor/
+node_modules/
+assets/
+.runtime/
+验证/
+tests/fixtures/
+package-lock.json
+*.cmd
+*.ps1
+*.py
+
+dist/

@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="zh-CN">
+  <meta charset="utf-8" /><meta
+    name="viewport"
+    content="width=device-width,initial-scale=1"
+  /><title>万象酒馆 · 客房</title>
+  <link rel="stylesheet" href="./styles/tavern.css" />
+  <link rel="stylesheet" href="./styles/guest-room.css" />
+  <body class="guest-room">
+    <canvas aria-label="可以环视、点击场景中的位置按钮平滑移动的三维体素酒馆客房"></canvas>
+    <header id="room-plaque" aria-label="当前地点：万象酒馆客房">
+      <span>WANXIANG INN</span>
+      <strong>客 房</strong>
+      <small>二层 · 静室</small>
+    </header>
+    <button class="spot" id="leave-room" hidden>◇ 离开房间</button>
+    <button id="room-talk" class="talk-open">交流</button>
+    <div id="aim"></div>
+    <div id="spots" aria-label="客房中的可抵达位置"></div>
+    <div id="where" aria-live="polite">客房 · 推门而入</div>
+    <p id="room-hint">拖动画面环视 · 点击光点前往</p>
+    <div id="status">正在推开客房门…</div>
+    <div id="scene-fade" aria-hidden="true"></div>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "./vendor/build/three.module.js",
+          "three/addons/": "./vendor/addons/"
+        }
+      }
+    </script>
+    <script type="module" src="./src/tavern/room.js"></script>
+  </body>
+</html>

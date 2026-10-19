@@ -1,0 +1,294 @@
+{
+  "format": "16-bit mono PCM",
+  "sampleRate": 44100,
+  "sounds": [
+    {
+      "name": "bow",
+      "file": "assets/audio/sfx/bow.wav",
+      "seconds": 0.62,
+      "bytes": 54728
+    },
+    {
+      "name": "bow-hit",
+      "file": "assets/audio/sfx/bow-hit.wav",
+      "seconds": 0.34,
+      "bytes": 30032
+    },
+    {
+      "name": "sword",
+      "file": "assets/audio/sfx/sword.wav",
+      "seconds": 0.48,
+      "bytes": 42380
+    },
+    {
+      "name": "sword-hit",
+      "file": "assets/audio/sfx/sword-hit.wav",
+      "seconds": 0.52,
+      "bytes": 45908
+    },
+    {
+      "name": "staff",
+      "file": "assets/audio/sfx/staff.wav",
+      "seconds": 0.74,
+      "bytes": 65312
+    },
+    {
+      "name": "staff-hit",
+      "file": "assets/audio/sfx/staff-hit.wav",
+      "seconds": 0.58,
+      "bytes": 51200
+    },
+    {
+      "name": "slime-bounce",
+      "file": "assets/audio/sfx/slime-bounce.wav",
+      "seconds": 0.34,
+      "bytes": 30032
+    },
+    {
+      "name": "slime-bounce-hit",
+      "file": "assets/audio/sfx/slime-bounce-hit.wav",
+      "seconds": 0.3,
+      "bytes": 26504
+    },
+    {
+      "name": "mushroom-bonk",
+      "file": "assets/audio/sfx/mushroom-bonk.wav",
+      "seconds": 0.3,
+      "bytes": 26504
+    },
+    {
+      "name": "mushroom-bonk-hit",
+      "file": "assets/audio/sfx/mushroom-bonk-hit.wav",
+      "seconds": 0.3,
+      "bytes": 26504
+    },
+    {
+      "name": "pebble-shards",
+      "file": "assets/audio/sfx/pebble-shards.wav",
+      "seconds": 0.4,
+      "bytes": 35324
+    },
+    {
+      "name": "pebble-shards-hit",
+      "file": "assets/audio/sfx/pebble-shards-hit.wav",
+      "seconds": 0.36,
+      "bytes": 31796
+    },
+    {
+      "name": "claw-pounce",
+      "file": "assets/audio/sfx/claw-pounce.wav",
+      "seconds": 0.42,
+      "bytes": 37088
+    },
+    {
+      "name": "claw-pounce-hit",
+      "file": "assets/audio/sfx/claw-pounce-hit.wav",
+      "seconds": 0.3,
+      "bytes": 26504
+    },
+    {
+      "name": "stone-slam",
+      "file": "assets/audio/sfx/stone-slam.wav",
+      "seconds": 0.52,
+      "bytes": 45908
+    },
+    {
+      "name": "stone-slam-hit",
+      "file": "assets/audio/sfx/stone-slam-hit.wav",
+      "seconds": 0.48,
+      "bytes": 42380
+    },
+    {
+      "name": "ember-bolt",
+      "file": "assets/audio/sfx/ember-bolt.wav",
+      "seconds": 0.42,
+      "bytes": 37088
+    },
+    {
+      "name": "ember-bolt-hit",
+      "file": "assets/audio/sfx/ember-bolt-hit.wav",
+      "seconds": 0.34,
+      "bytes": 30032
+    },
+    {
+      "name": "gate-crush",
+      "file": "assets/audio/sfx/gate-crush.wav",
+      "seconds": 0.72,
+      "bytes": 63548
+    },
+    {
+      "name": "gate-crush-hit",
+      "file": "assets/audio/sfx/gate-crush-hit.wav",
+      "seconds": 0.58,
+      "bytes": 51200
+    },
+    {
+      "name": "spore-volley",
+      "file": "assets/audio/sfx/spore-volley.wav",
+      "seconds": 0.4,
+      "bytes": 35324
+    },
+    {
+      "name": "spore-volley-hit",
+      "file": "assets/audio/sfx/spore-volley-hit.wav",
+      "seconds": 0.35,
+      "bytes": 30914
+    },
+    {
+      "name": "crystal-ram",
+      "file": "assets/audio/sfx/crystal-ram.wav",
+      "seconds": 0.48,
+      "bytes": 42380
+    },
+    {
+      "name": "crystal-ram-hit",
+      "file": "assets/audio/sfx/crystal-ram-hit.wav",
+      "seconds": 0.4,
+      "bytes": 35324
+    },
+    {
+      "name": "cinder-spark",
+      "file": "assets/audio/sfx/cinder-spark.wav",
+      "seconds": 0.34,
+      "bytes": 30032
+    },
+    {
+      "name": "cinder-spark-hit",
+      "file": "assets/audio/sfx/cinder-spark-hit.wav",
+      "seconds": 0.3,
+      "bytes": 26504
+    },
+    {
+      "name": "tide-ribbon",
+      "file": "assets/audio/sfx/tide-ribbon.wav",
+      "seconds": 0.48,
+      "bytes": 42380
+    },
+    {
+      "name": "tide-ribbon-hit",
+      "file": "assets/audio/sfx/tide-ribbon-hit.wav",
+      "seconds": 0.38,
+      "bytes": 33560
+    },
+    {
+      "name": "astral-cascade",
+      "file": "assets/audio/sfx/astral-cascade.wav",
+      "seconds": 0.8,
+      "bytes": 70604
+    },
+    {
+      "name": "astral-cascade-hit",
+      "file": "assets/audio/sfx/astral-cascade-hit.wav",
+      "seconds": 0.55,
+      "bytes": 48554
+    },
+    {
+      "name": "click",
+      "file": "assets/audio/sfx/click.wav",
+      "seconds": 0.09,
+      "bytes": 7982
+    },
+    {
+      "name": "select",
+      "file": "assets/audio/sfx/select.wav",
+      "seconds": 0.24,
+      "bytes": 21212
+    },
+    {
+      "name": "skill",
+      "file": "assets/audio/sfx/skill.wav",
+      "seconds": 0.3,
+      "bytes": 26504
+    },
+    {
+      "name": "drag",
+      "file": "assets/audio/sfx/drag.wav",
+      "seconds": 0.16,
+      "bytes": 14156
+    },
+    {
+      "name": "queue",
+      "file": "assets/audio/sfx/queue.wav",
+      "seconds": 0.18,
+      "bytes": 15920
+    },
+    {
+      "name": "cancel",
+      "file": "assets/audio/sfx/cancel.wav",
+      "seconds": 0.13,
+      "bytes": 11510
+    },
+    {
+      "name": "error",
+      "file": "assets/audio/sfx/error.wav",
+      "seconds": 0.28,
+      "bytes": 24740
+    },
+    {
+      "name": "gate",
+      "file": "assets/audio/sfx/gate.wav",
+      "seconds": 0.9,
+      "bytes": 79424
+    },
+    {
+      "name": "round",
+      "file": "assets/audio/sfx/round.wav",
+      "seconds": 0.38,
+      "bytes": 33560
+    },
+    {
+      "name": "exchange",
+      "file": "assets/audio/sfx/exchange.wav",
+      "seconds": 0.3,
+      "bytes": 26504
+    },
+    {
+      "name": "cast",
+      "file": "assets/audio/sfx/cast.wav",
+      "seconds": 0.55,
+      "bytes": 48554
+    },
+    {
+      "name": "heal",
+      "file": "assets/audio/sfx/heal.wav",
+      "seconds": 0.62,
+      "bytes": 54728
+    },
+    {
+      "name": "shield",
+      "file": "assets/audio/sfx/shield.wav",
+      "seconds": 0.42,
+      "bytes": 37088
+    },
+    {
+      "name": "victory",
+      "file": "assets/audio/sfx/victory.wav",
+      "seconds": 1.25,
+      "bytes": 110294
+    },
+    {
+      "name": "defeat",
+      "file": "assets/audio/sfx/defeat.wav",
+      "seconds": 0.95,
+      "bytes": 83834
+    },
+    {
+      "name": "boss-death-charge",
+      "file": "assets/audio/sfx/boss-death-charge.wav",
+      "seconds": 0.85,
+      "bytes": 75014
+    },
+    {
+      "name": "boss-death-break",
+      "file": "assets/audio/sfx/boss-death-break.wav",
+      "seconds": 1.1,
+      "bytes": 97064
+    },
+    {
+      "name": "boss-death-tail",
+      "file": "assets/audio/sfx/boss-death-tail.wav",
+      "seconds": 1.55,
+      "bytes": 136754
+    }
+  ]
+}

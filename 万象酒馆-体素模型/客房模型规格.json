@@ -1,0 +1,36 @@
+{
+  "name": "万象酒馆 · 客房·东厢",
+  "variant": "a",
+  "asset": "万象酒馆-客房A.glb",
+  "runtime": "assets/guest-room-a.glb",
+  "voxel_edge_m": 0.02,
+  "resolution": "2 cm watertight voxel surface",
+  "occupied_voxels": 6194244,
+  "box_definitions": 4001,
+  "triangles": 21152,
+  "bytes": 1318332,
+  "dimensions_cells": [
+    418,
+    178,
+    338
+  ],
+  "room_m": [
+    8,
+    3.12,
+    6.4
+  ],
+  "eye_height_m": 1.36,
+  "style": "warm plaster, dark walnut, brass fittings and wine fabric",
+  "landmarks": [
+    "low walnut guest bed",
+    "moonlit window seat",
+    "writing desk with tavern chair",
+    "double-door wardrobe",
+    "basin stand with mirror",
+    "iron stove with kettle",
+    "corridor door"
+  ],
+  "teleport_door": "three matching doors at the end of the upstairs corridor",
+  "mesh_cleanup": "single owner volume, hidden-face culling and greedy coplanar merge",
+  "build_seconds": 3.0
+}

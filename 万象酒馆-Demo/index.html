@@ -1,0 +1,954 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <link rel="icon" href="data:," />
+    <title>万象酒馆 · 时间轴战斗 Demo</title>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "./vendor/build/three.module.js",
+          "three/addons/": "./vendor/addons/",
+          "js-tiktoken/lite": "./vendor/runtime/tiktoken.js",
+          "js-tiktoken/ranks/o200k_base": "./vendor/runtime/o200k_base.js",
+          "@noble/hashes/sha2.js": "./vendor/runtime/sha2.js"
+        }
+      }
+    </script>
+    <link rel="stylesheet" href="./styles/app.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="header-left">
+        <button id="saves-open" class="saves-trigger" title="打开存档管理">
+          <svg viewBox="0 0 24 24" fill="none" width="15" height="15" aria-hidden="true">
+            <path
+              d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linejoin="round"
+            />
+            <polyline points="17 21 17 13 7 13 7 21" stroke="currentColor" stroke-width="1.8" />
+            <polyline points="7 3 7 8 15 8" stroke="currentColor" stroke-width="1.8" />
+          </svg>
+          <span>存档</span>
+        </button>
+        <span class="brand"></span><span id="mode-label"></span>
+      </div>
+      <nav>
+        <button id="memory-open">总结</button>
+        <button id="archives-open">归档</button>
+        <button id="records-open">记录</button>
+        <button id="ai-open">设置</button>
+        <button id="party-toggle">准备</button
+        ><button id="generation-review" data-generation-review="context" hidden>查看原始回复</button
+        ><button class="hud-toggle" id="turn-toggle">回合</button
+        ><button class="hud-toggle" id="details-toggle">角色</button
+        ><button id="speed" hidden>演出 ×1</button><button id="back-inn" hidden>返回酒馆</button>
+        <button
+          id="audio-toggle"
+          aria-label="声音设置"
+          aria-expanded="false"
+          aria-controls="audio-panel"
+          title="声音设置"
+        >
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path
+              d="M4 9h4l5-4v14l-5-4H4zM16 8c3 2 3 6 0 8M19 5c5 4 5 10 0 14"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linejoin="round"
+            />
+          </svg>
+        </button>
+      </nav>
+    </header>
+    <section id="audio-panel" role="region" aria-label="声音设置" hidden>
+      <strong>声音</strong>
+      <div class="audio-row">
+        <label for="audio-music">音乐</label
+        ><output id="audio-music-value" for="audio-music">32%</output
+        ><button id="audio-music-mute" aria-label="音乐开关" aria-pressed="false">已开启</button>
+      </div>
+      <input id="audio-music" type="range" min="0" max="100" value="32" aria-label="音乐音量" />
+      <div class="audio-row">
+        <label for="audio-effects">音效</label
+        ><output id="audio-effects-value" for="audio-effects">60%</output
+        ><button id="audio-effects-mute" aria-label="音效开关" aria-pressed="false">已开启</button>
+      </div>
+      <input id="audio-effects" type="range" min="0" max="100" value="60" aria-label="音效音量" />
+      <small id="audio-state" role="status">点击页面后启用声音</small>
+    </section>
+    <aside id="inn-resources" aria-label="酒馆资源" aria-live="polite">
+      <span class="inn-resource"
+        ><img src="assets/icons/ether.svg" width="64" height="64" alt="" /><span
+          >以太<strong id="ether-count">0</strong></span
+        ></span
+      >
+      <div>
+        <img src="./assets/icons/summon-contract.svg" width="64" height="64" alt="" /><span
+          >召唤契约<strong id="contract-count">0</strong></span
+        >
+      </div>
+      <div>
+        <img src="./assets/icons/gold.svg" width="64" height="64" alt="" /><span
+          >金币<strong id="gold-count">0</strong></span
+        >
+      </div>
+    </aside>
+    <dialog id="summon-choice" aria-labelledby="summon-choice-title">
+      <header class="ai-heading">
+        <div>
+          <small>SUMMON / 契约之门</small>
+          <h2 id="summon-choice-title">选择召唤术</h2>
+        </div>
+        <button id="summon-choice-close" aria-label="关闭召唤">×</button>
+      </header>
+      <p>每次召唤消耗 1 份契约。来客加入角色池后，可在准备中安排出战。</p>
+      <div class="summon-methods">
+        <button data-summon-mode="official" aria-pressed="true">
+          <b>万象召唤术</b><span>从世界书的官设角色中随机召唤一位尚未加入的来客。</span>
+        </button>
+        <button data-summon-mode="chaos" aria-pressed="false">
+          <b>混沌召唤术</b><span>官设、已知 NPC、AI 创作各三分之一。</span>
+        </button>
+        <button data-summon-mode="infinite" aria-pressed="false">
+          <b>无限召唤术</b><span>由 AI 根据你的愿望创作一位全新角色。</span>
+        </button>
+        <button data-summon-mode="npc" aria-pressed="false">
+          <b>印记召唤术</b><span>将旅途归档中已知的 NPC 细化为同伴。</span>
+        </button>
+      </div>
+      <label id="summon-npc-label" hidden>选择已知 NPC<select id="summon-npc"></select></label>
+      <label id="summon-wish-label" hidden
+        >召唤愿望（可选）<textarea
+          id="summon-wish"
+          maxlength="4000"
+          rows="4"
+          placeholder="例如：蒸汽奇幻世界，使用机械弓的沉静游侠，寻找失踪的姐姐。"
+        ></textarea>
+      </label>
+      <p id="summon-choice-status" role="status"></p>
+      <footer>
+        <span id="summon-contracts"></span
+        ><button id="summon-confirm" class="primary">召唤 · 1 份契约</button>
+      </footer>
+    </dialog>
+    <section id="generation-progress" hidden aria-live="polite">
+      <div class="generation-orbit" aria-hidden="true">◇</div>
+      <h2 id="generation-title">正在编织本章故事</h2>
+      <p id="generation-description">界门另一端的旅程正在展开…</p>
+      <small>等待接口返回，请稍候</small><button id="generation-progress-cancel">取消</button>
+    </section>
+    <dialog id="ai-dialog" aria-labelledby="ai-title">
+      <div class="ai-heading">
+        <h2 id="ai-title">设置</h2>
+        <button id="ai-close" aria-label="关闭设置">×</button>
+      </div>
+      <nav class="ai-tabs" role="tablist" aria-label="生成工坊">
+        <button data-ai-tab="settings" role="tab">接口设置</button
+        ><button data-ai-tab="game" role="tab">开发者模式</button
+        ><button data-ai-tab="prompts" role="tab">提示词预设</button
+        ><button id="ai-worldbooks" role="tab">世界书</button
+        ><button id="ai-regex" role="tab">正则</button>
+      </nav>
+      <div class="ai-workspace">
+        <section class="ai-editor">
+          <div data-ai-page="settings">
+            <p class="ai-hint">
+              兼容 Chat
+              Completions，各用途独立配置。可选择本机转发或浏览器直连，总结与造物使用内置提示词。
+            </p>
+            <label
+              >用途<select id="ai-kind">
+                <option value="character">角色生成 API</option>
+                <option value="script">剧本 API</option>
+                <option value="chat">酒馆交流 API</option>
+                <option value="quick-chat">快速闲聊 API</option>
+                <option value="summary">记忆总结 API（内置提示词）</option>
+                <option value="creation">以太造物 API（内置提示词）</option>
+              </select></label
+            >
+            <div class="connection-preset-picker">
+              <label
+                >选择 API 预设<select id="api-preset-select">
+                  <option value="">未选择</option>
+                </select></label
+              ><button
+                id="api-preset-delete"
+                title="删除所选 API 预设"
+                aria-label="删除所选 API 预设"
+              >
+                ⌫
+              </button>
+            </div>
+            <label
+              >连接方式<select id="ai-requestMode">
+                <option value="local">本机服务转发</option>
+                <option value="browser">浏览器直连</option>
+              </select></label
+            >
+            <p id="ai-transport-hint" class="ai-hint"></p>
+            <label
+              >Base URL<input
+                id="ai-baseUrl"
+                type="url"
+                value="https://api.openai.com/v1"
+                placeholder="https://服务地址/v1"
+            /></label>
+            <label>模型<input id="ai-model" placeholder="填写服务商的模型ID" /></label>
+            <section id="ai-model-picker" hidden>
+              <label for="ai-model-list">模型列表 · <span id="ai-model-count"></span></label
+              ><select id="ai-model-list" size="6" aria-label="可用模型列表"></select>
+            </section>
+            <label
+              >API Key<input
+                id="ai-key"
+                type="password"
+                autocomplete="off"
+                placeholder="留空保持现有密钥"
+            /></label>
+            <label class="ai-check"
+              ><input
+                id="ai-rememberKey"
+                type="checkbox"
+              />在此设备记住密钥（普通备份不包含密钥）</label
+            >
+            <label class="ai-check"
+              ><input id="ai-clear-key" type="checkbox" />清除当前用途的密钥</label
+            >
+            <details>
+              <summary>兼容选项</summary>
+              <label class="ai-check"
+                ><input
+                  id="ai-jsonMode"
+                  type="checkbox"
+                />保存JSON模式偏好（标签生成时不发送）</label
+              >
+              <label class="ai-check"
+                ><input id="ai-strictJson" type="checkbox" />保存严格JSON
+                Schema偏好（标签生成时不发送）</label
+              >
+              <p class="ai-hint">
+                角色与剧本采用 wanxiang_json
+                标签读取，兼容预设的其他返回文字。上游JSON模式与外层标签冲突，因此生成时不发送
+                response_format；本地始终严格校验字段、数值与规则。
+              </p>
+              <label
+                >输出长度字段<select id="ai-tokenField">
+                  <option value="max_tokens">max_tokens</option>
+                  <option value="max_completion_tokens">max_completion_tokens</option>
+                  <option value="none">不发送长度字段</option>
+                </select></label
+              >
+              <label
+                >输出上限<input
+                  id="ai-maxTokens"
+                  type="number"
+                  min="256"
+                  max="131072"
+                  value="32768"
+              /></label>
+              <label id="ai-summary-context" hidden
+                >总结上下文长度<input
+                  id="ai-contextSize"
+                  type="number"
+                  min="1024"
+                  max="2000000"
+                  value="131072"
+              /></label>
+              <label
+                >提示词后处理<select id="ai-promptProcessing">
+                  <option value="strict">严格无工具</option>
+                  <option value="merge_tools" selected>合并含工具</option>
+                </select></label
+              >
+            </details>
+            <div class="connection-preset-save">
+              <label
+                >预设名称<input id="api-preset-name" maxlength="60" placeholder="例如：DS" /></label
+              ><button id="api-preset-save">保存为 API 预设</button>
+            </div>
+            <div class="ai-actions">
+              <button id="ai-profile-save" class="primary">保存当前连接</button
+              ><button id="ai-models">读取模型列表</button>
+            </div>
+            <p class="ai-hint">
+              使用你自己的服务地址与模型。召唤门召唤角色，副本门生成剧本并进入。不会自动重试付费请求。
+            </p>
+          </div>
+          <div data-ai-page="game" hidden>
+            <div class="generation-options">
+              <small>DEVELOPER / OPTIONS</small>
+              <h3>开发者模式</h3>
+              <p>开关自动保存，在之后的新冒险与新副本生效。</p>
+              <label
+                ><span
+                  ><strong>开发者模式</strong
+                  ><small>普通模式必须调用AI；开启后才允许停用生成、返回和编辑归档。</small></span
+                ><input type="checkbox" data-generation-option="developerMode" role="switch"
+              /></label>
+              <div id="developer-options" hidden>
+                <label
+                  ><span
+                    ><strong>主角 AI 生成</strong
+                    ><small
+                      >开启后填写设定并调用角色 API 创建主角；关闭时使用青缘开局。</small
+                    ></span
+                  ><input type="checkbox" data-generation-option="protagonistApi" role="switch"
+                /></label>
+                <label
+                  ><span
+                    ><strong>副本 AI 剧本</strong
+                    ><small>开启后进入新副本时调用剧本 API；关闭时使用本地占位剧情。</small></span
+                  ><input type="checkbox" data-generation-option="scriptApi" role="switch"
+                /></label>
+                <label
+                  ><span
+                    ><strong>中途返回</strong><small>允许在副本尚未结算时返回酒馆。</small></span
+                  ><input type="checkbox" data-generation-option="allowRetreat" role="switch"
+                /></label>
+                <label
+                  ><span
+                    ><strong>调整设定</strong><small>允许手动编辑归档 NPC 和物品设定。</small></span
+                  ><input type="checkbox" data-generation-option="editArchives" role="switch"
+                /></label>
+              </div>
+            </div>
+            <section class="memory-settings">
+              <h3>经历与聊天记忆</h3>
+              <p>
+                手动总结尚未处理的记录，检查并确认后用于后续上下文。完整原文保留，总结API使用内置提示词。
+              </p>
+              <p>顶部“总结”按钮可打开记忆整理。</p>
+            </section>
+          </div>
+          <div data-ai-page="prompts" hidden>
+            <p class="prompt-editor-banner">
+              提示词管理器 · 拖拽排序，点击名称或铅笔编辑。预设决定文风，生成要求在世界书中编辑。
+            </p>
+            <label
+              >当前用途<select id="prompt-kind">
+                <option value="character">角色生成 API</option>
+                <option value="script">剧本 API</option>
+                <option value="chat">酒馆交流 API</option>
+                <option value="quick-chat">快速闲聊 API</option>
+              </select></label
+            >
+            <label>提示词预设<select id="prompt-select"></select></label>
+            <label>预设名称<input id="prompt-name" maxlength="80" /></label>
+            <div class="ai-actions">
+              <button id="prompt-use">当前接口使用此预设</button
+              ><button id="prompt-save" class="primary">保存修改</button
+              ><button id="prompt-copy">另存为</button><button id="prompt-delete">删除</button>
+            </div>
+            <div class="ai-actions">
+              <button id="prompt-import">导入酒馆预设 JSON</button
+              ><button id="prompt-export">导出预设</button
+              ><button id="helper-open">预设扩展窗口</button
+              ><button id="ai-preview-request">预览当前使用预设 / TK</button
+              ><input id="prompt-import-file" type="file" accept=".json,application/json" hidden />
+            </div>
+            <p id="prompt-source" class="ai-hint"></p>
+            <p id="prompt-warnings" role="status"></p>
+            <div id="prompt-sampling" class="sampling-fields"></div>
+            <div id="prompt-messages"></div>
+            <div class="ai-actions">
+              <button id="prompt-add">＋ 添加消息层</button
+              ><button id="prompt-preview" class="primary">预览最终请求（不调用模型）</button>
+            </div>
+            <details class="preset-box">
+              <summary>变量与酒馆占位层适配</summary>
+              <p class="ai-hint">
+                支持
+                {{input}}、{{brief}}、{{task}}、{{char}}、{{user}}、{{description}}、{{personality}}、{{worldbook}}、{{characters}}、{{scenario}}、{{history}}、{{persona}}、{{wiBefore}}、{{wiAfter}}、{{scriptStyle}}。游戏要求由世界书按位置注入，不再追加默认文风。支持全局
+                prompt_order、开关、排序、按请求尾部深度注入。游戏读取完整人物正文，charPersonality不重复注入。插件、脚本与未适配宏会提示，不执行。
+              </p>
+            </details>
+            <details class="preset-box" id="prompt-fixed">
+              <summary>代码读取约束参考（输出格式在世界书 @D 条目）</summary>
+              <p class="ai-hint">
+                实际生成要求和JSON Schema由世界书的“JSON输出格式
+                @D”条目发送。这里仅供对照代码校验要求，不额外注入消息。字段修改仍需与解析器一致。
+              </p>
+              <pre id="prompt-contract"></pre>
+            </details>
+          </div>
+          <div data-ai-page="characters" hidden>
+            <h3>六人队伍 · 绿灯设定</h3>
+            <div id="ai-party"></div>
+            <label
+              >新角色 / OC要求<textarea
+                id="ai-character-brief"
+                rows="4"
+                maxlength="10000"
+                placeholder="职业、性格、经历、武器、擅长的技能……"
+              ></textarea>
+            </label>
+            <p class="ai-hint">
+              在青色召唤门靠近后点击“召唤角色”。来客会自动写入角色世界书，可在此调整队伍。
+            </p>
+            <div id="ai-pool"></div>
+          </div>
+          <div data-ai-page="scripts" hidden>
+            <p class="ai-hint">读取在队角色设定和已发生的剧情，敌人、数值与战斗结果由游戏决定。</p>
+            <label
+              >本章要求 / 剧情引导<textarea id="ai-script-brief" rows="5" maxlength="10000">
+让故事随旅程逐渐推进，并留下伏笔。文风、视角、节奏与描写方式沿用当前预设。</textarea>
+            </label>
+            <p class="ai-hint">
+              在紫色副本门点击“进入剧本”，加载时生成本章，战斗中在左侧逐段阅读。
+            </p>
+            <div id="ai-books"></div>
+          </div>
+        </section>
+        <section class="ai-result">
+          <h3 id="ai-result-title">世界书正文</h3>
+          <p id="ai-token-summary" class="ai-hint"></p>
+          <pre id="ai-preview">选择角色或剧本，阅读已保存的正文。</pre>
+          <div id="ai-lore-editor" hidden>
+            <label
+              >人物世界书正文<textarea id="ai-lore-text" rows="14" maxlength="24000"></textarea>
+            </label>
+            <label
+              >角色标签（JSON数组，用于世界书过滤）<input
+                id="ai-lore-tags"
+                placeholder='["护卫", "遗迹"]'
+            /></label>
+            <button id="ai-lore-save">保存人物设定</button>
+            <p class="ai-hint">影响之后的剧本和上下文；不修改已有战斗数值。</p>
+          </div>
+        </section>
+      </div>
+      <footer class="ai-footer">
+        <button id="generation-reset-undo" hidden>恢复清空前存档</button>
+        <span id="ai-status" role="status"></span><button id="ai-cancel" hidden>取消生成</button>
+      </footer>
+    </dialog>
+    <dialog id="destination-dialog" data-stage="region" aria-labelledby="destination-title">
+      <header class="ai-heading">
+        <div>
+          <small id="destination-step">01 / 选择异境</small>
+          <h2 id="destination-title">选择去往的地方</h2>
+        </div>
+        <div class="destination-header-actions">
+          <button id="destination-origin" hidden>① 起点</button>
+          <button id="destination-back" hidden>‹ 重选异境</button
+          ><button id="destination-close" aria-label="关闭地图选择">×</button>
+        </div>
+      </header>
+      <section id="destination-world-screen" class="destination-world" aria-label="选择地图环境">
+        <button
+          id="destination-region-prev"
+          class="destination-world-arrow"
+          aria-label="上一个场景"
+        >
+          ‹
+        </button>
+        <div class="destination-showcase">
+          <div id="destination-region-copy" aria-live="polite">
+            <small id="destination-region-count"></small>
+            <h3 id="destination-region-name"></h3>
+          </div>
+          <div id="destination-preview">
+            <span class="destination-preview-status">正在搭建微缩世界…</span
+            ><span class="destination-preview-error">预览暂未加载，请切换场景重试</span>
+          </div>
+          <div class="destination-world-copy">
+            <section class="destination-intro">
+              <p id="destination-summary"></p>
+              <strong id="destination-effect"></strong>
+            </section>
+            <nav id="destination-regions" aria-label="地图环境"></nav>
+          </div>
+        </div>
+        <button
+          id="destination-region-next"
+          class="destination-world-arrow"
+          aria-label="下一个场景"
+        >
+          ›
+        </button>
+      </section>
+      <section
+        id="destination-route-screen"
+        class="destination-route"
+        aria-label="羊皮纸探索地图"
+        hidden
+      >
+        <div id="destination-map" tabindex="0" role="region" aria-label="可拖动的探索地图"></div>
+        <div class="destination-map-heading">
+          <small>沿墨迹深入 · 圈叉为已通关 · 拖动查看</small
+          ><button id="destination-center" aria-label="定位所选地点">定位</button>
+        </div>
+        <section id="destination-sites" aria-label="当前副本地点" aria-live="polite"></section>
+      </section>
+      <footer>
+        <span id="destination-status"></span
+        ><button id="destination-region-confirm" class="primary">选择此异境 · 展开地图</button
+        ><button id="destination-start" class="primary" hidden>启程</button>
+      </footer>
+    </dialog>
+    <dialog id="summoned-dialog" aria-labelledby="summoned-name">
+      <header class="ai-heading">
+        <h2 id="summoned-name"></h2>
+        <button id="summoned-close" aria-label="关闭来客档案">×</button>
+      </header>
+      <div id="summoned-lore"></div>
+      <footer>
+        <p>先加入酒馆角色池，出战成员由你之后安排。</p>
+        <button id="summoned-join" class="primary">加入队伍</button>
+        <button data-generation-review="character" hidden>原始返回</button>
+      </footer>
+    </dialog>
+    <dialog id="generation-diagnostics" aria-labelledby="diagnostic-title">
+      <header class="ai-heading">
+        <h2 id="diagnostic-title">生成诊断</h2>
+        <button id="diagnostic-close" aria-label="关闭诊断">×</button>
+      </header>
+      <p id="diagnostic-summary" role="status"></p>
+      <details id="diagnostic-request" hidden>
+        <summary id="diagnostic-token-summary"></summary>
+        <pre id="diagnostic-messages"></pre>
+      </details>
+      <div class="diagnostic-findings">
+        <section>
+          <h3>哪里不对</h3>
+          <pre id="diagnostic-issues"></pre>
+        </section>
+        <section>
+          <h3>自动修复记录</h3>
+          <pre id="diagnostic-repairs"></pre>
+        </section>
+      </div>
+      <div class="diagnostic-texts">
+        <label
+          >模型原始返回（只读；配置密钥如被回显会隐藏）<textarea
+            id="diagnostic-raw"
+            readonly
+            spellcheck="false"
+          ></textarea>
+        </label>
+        <label
+          >校验文本（失败时可手动修改）<textarea id="diagnostic-edit" spellcheck="false"></textarea>
+        </label>
+      </div>
+      <footer>
+        <div class="ai-actions">
+          <button id="diagnostic-copy">复制原文</button
+          ><button id="diagnostic-download">下载原文</button
+          ><button id="diagnostic-validate" class="primary">本地重新校验并接收</button>
+        </div>
+        <p id="diagnostic-note" role="status"></p>
+      </footer>
+    </dialog>
+    <dialog id="regex-dialog" class="tavern-editor-dialog" aria-labelledby="regex-title">
+      <header>
+        <h2 id="regex-title">正则表达式 · Regex</h2>
+        <button id="regex-close" aria-label="关闭正则">×</button>
+      </header>
+      <div class="ai-actions">
+        <button id="regex-add">＋ 新建</button><button id="regex-import">导入</button
+        ><button id="regex-export">导出</button><button id="regex-up">↑</button
+        ><button id="regex-down">↓</button><button id="regex-delete">删除</button
+        ><button id="regex-save">保存</button
+        ><input type="file" id="regex-import-file" accept=".json,application/json" hidden />
+      </div>
+      <label
+        >正则来源<select id="regex-scope">
+          <option value="">全局正则</option>
+        </select></label
+      >
+      <div class="regex-workspace">
+        <nav id="regex-list"></nav>
+        <section id="regex-fields"></section>
+      </div>
+      <details class="preset-box">
+        <summary>测试正则</summary>
+        <div class="regex-options">
+          <select id="regex-test-kind" aria-label="测试API">
+            <option value="script">剧本API</option>
+            <option value="character">角色API</option></select
+          ><select id="regex-test-placement" aria-label="测试位置">
+            <option value="2">AI输出</option>
+            <option value="1">用户输入</option>
+            <option value="5">世界书</option></select
+          ><label><input id="regex-test-prompt" type="checkbox" />提示词</label
+          ><label><input id="regex-test-markdown" type="checkbox" />仅显示</label>
+        </div>
+        <textarea id="regex-test-input" rows="3" aria-label="测试文本"></textarea
+        ><button id="regex-test">运行测试</button>
+        <pre id="regex-test-output"></pre>
+      </details>
+      <p id="regex-status" role="status"></p>
+    </dialog>
+    <dialog
+      id="prompt-entry-dialog"
+      class="tavern-editor-dialog"
+      aria-labelledby="prompt-entry-title"
+    >
+      <header><h2 id="prompt-entry-title">编辑提示词</h2></header>
+      <div id="prompt-entry-fields"></div>
+      <footer><button id="prompt-entry-save">完成编辑</button></footer>
+    </dialog>
+    <dialog id="world-dialog" aria-labelledby="world-title">
+      <header class="world-book-heading">
+        <h2 id="world-title">🌐 世界书</h2>
+        <input id="world-name" aria-label="世界书名称" maxlength="100" /><button
+          id="world-import"
+          title="导入条目"
+        >
+          ⇥</button
+        ><button id="world-save" title="保存世界书">保存</button
+        ><button id="world-close" aria-label="关闭世界书">×</button
+        ><input id="world-import-file" type="file" accept=".json,application/json" hidden />
+      </header>
+      <div class="world-tools">
+        <button id="world-add" title="新建条目">＋</button
+        ><button id="world-collapse" title="收起条目">⌃</button
+        ><input id="world-search" aria-label="搜索条目" placeholder="搜索…" /><select
+          id="world-sort"
+          aria-label="条目排序"
+        >
+          <option value="display">自定义顺序</option>
+          <option value="order">优先级</option>
+          <option value="name">标题</option></select
+        ><span id="world-count"></span>
+      </div>
+      <div class="world-format-links">
+        <span>输出格式</span><button data-world-format="character">角色格式 · @D</button
+        ><button data-world-format="script">剧本格式 · @D</button>
+      </div>
+      <div class="world-workspace">
+        <div class="world-table-labels world-row-grid">
+          <span></span><span></span><span>标题（备注）</span><span>触发策略</span
+          ><span>插入位置</span><span>深度</span><span>顺序</span><span>触发概率 %</span
+          ><span></span><span></span>
+        </div>
+        <div id="world-entry-list"></div>
+      </div>
+      <div id="world-editor-parking" hidden>
+        <section class="world-editor"><div id="world-entry-fields"></div></section>
+      </div>
+      <footer>
+        <div class="world-preview-tools">
+          <select id="world-kind" aria-label="预览用途">
+            <option value="character">角色 API</option>
+            <option value="script">剧本 API</option>
+            <option value="chat">酒馆交流 API</option>
+            <option value="quick-chat">快速闲聊 API</option></select
+          ><button id="world-preview-button">最终发送预览 / TK</button
+          ><button id="world-edit-view" hidden>返回编辑</button>
+        </div>
+        <p id="world-status" role="status"></p>
+      </footer>
+      <section id="world-preview-area" hidden>
+        <p id="world-token-summary"></p>
+        <pre id="world-preview"></pre>
+      </section>
+    </dialog>
+    <dialog id="portrait-dialog" aria-labelledby="portrait-url-title">
+      <header>
+        <h2 id="portrait-url-title">从图床导入立绘</h2>
+        <button id="portrait-url-close" aria-label="关闭立绘导入">×</button>
+      </header>
+      <div class="portrait-url-body">
+        <img id="portrait-url-preview" alt="当前角色立绘" />
+        <div>
+          <label
+            >图片直链<input
+              id="portrait-url"
+              type="url"
+              placeholder="https://图床地址/图片.webp"
+              autocomplete="off"
+          /></label>
+          <p id="portrait-url-status" role="status"></p>
+          <button id="portrait-url-apply" class="primary">导入并保存</button>
+        </div>
+      </div>
+    </dialog>
+    <main id="inn">
+      <div id="inn-frame"></div>
+      <dialog id="party-panel" aria-labelledby="prepare-title">
+        <header class="prepare-heading">
+          <div>
+            <small>PARTY / PREPARATION</small>
+            <h2 id="prepare-title">准备</h2>
+          </div>
+          <button id="prepare-close" aria-label="关闭准备">×</button>
+        </header>
+        <div class="prepare-body">
+          <section>
+            <div id="prepare-slots"></div>
+            <h3>角色 <small id="prepare-count"></small></h3>
+            <div id="prepare-pool"></div>
+          </section>
+          <aside id="prepare-detail"></aside>
+        </div>
+        <footer>
+          <span id="prepare-status">阵容自动保存</span
+          ><button id="prepare-cancel-generation" hidden>取消剧本生成</button
+          ><button id="prepare-done" class="primary">准备完成</button>
+        </footer>
+      </dialog>
+    </main>
+    <main id="battle" hidden>
+      <dialog id="story-feed" aria-labelledby="story-title">
+        <header>
+          <div>
+            <small>路途手记</small>
+            <h2 id="story-title"></h2>
+          </div>
+          <button id="story-close" aria-label="收起路途手记">×</button>
+        </header>
+        <nav id="story-pages" aria-label="按战斗查看手记"></nav>
+        <div id="story-lines" aria-live="polite" tabindex="0"></div>
+        <div class="quick-chat-heading">
+          <span>途中闲聊</span><button id="quick-memory-open" type="button">总结记忆</button
+          ><button
+            id="quick-chat-toggle"
+            type="button"
+            aria-expanded="true"
+            aria-controls="quick-chat-body"
+          >
+            收起闲聊 ⌃
+          </button>
+        </div>
+        <div id="quick-chat-body">
+          <section id="quick-chat-log" aria-live="polite" aria-label="本趟闲聊"></section>
+          <form id="quick-chat-form">
+            <input
+              id="quick-chat-input"
+              maxlength="10000"
+              placeholder="和同行者说句话…"
+              aria-label="战斗闲聊"
+            /><button id="quick-chat-send" type="submit">闲聊</button
+            ><button id="script-rewrite" type="button">重置剧本</button>
+          </form>
+          <small id="quick-chat-status" role="status"></small>
+        </div>
+        <footer>
+          <button id="story-prev" aria-label="上一场手记">‹ 上一场</button
+          ><span id="story-page-count"></span
+          ><button id="story-next" aria-label="下一场手记">下一场 ›</button>
+        </footer>
+      </dialog>
+      <section id="stage">
+        <canvas aria-label="全屏体素战盘"></canvas>
+        <div class="unit-layer"></div>
+        <div class="battle-effects" aria-hidden="true"></div>
+        <div id="intent-layer" aria-label="敌人预计行动"></div>
+        <div id="scene-loading">正在进入遗迹…</div>
+      </section>
+      <aside class="turn-column glass">
+        <div class="stage-caption">
+          <span class="eyebrow">MOONSCAR / EXPEDITION</span><span id="encounter-label"></span>
+          <div id="journey-progress"></div>
+          <span id="stage-note"></span>
+        </div>
+        <section class="timeline-panel">
+          <span id="timeline-title" hidden></span>
+          <div id="selection-hint" aria-live="polite"></div>
+          <div id="timeline"></div>
+          <section id="opening-preview" hidden></section>
+          <div id="forecast-note" aria-live="polite"></div>
+        </section>
+        <div id="combat-log" role="log" aria-label="战斗记录"></div>
+      </aside>
+      <span id="round-label" class="round-indicator" role="status"></span>
+      <button id="story-toggle" aria-controls="story-feed" aria-expanded="false" hidden>
+        路途手记 <span aria-hidden="true">↓</span>
+      </button>
+      <div id="ap-orb" role="status" tabindex="0"><span id="ap-label"></span><small>AP</small></div>
+      <aside class="right-rail">
+        <aside id="details" class="panel glass"></aside>
+        <div class="command-controls">
+          <button id="clear">清空编排</button><button id="commit" class="primary">确认结算</button>
+        </div>
+        <section class="rear-panel">
+          <div class="rear-caption">
+            <span class="eyebrow">RESERVE / 3</span><strong>后场手牌</strong
+            ><small>拖到前场交换 · 1 AP</small>
+          </div>
+          <div id="rear-cards"></div>
+        </section>
+      </aside>
+      <div id="drag-menu" hidden></div>
+      <div id="round-banner" aria-live="polite"></div>
+      <div id="round-start" hidden aria-live="polite"><small></small><strong>回合开始</strong></div>
+    </main>
+    <div id="landscape-hint">↻ 请将手机横向使用</div>
+    <div id="toast" role="status"></div>
+    <dialog id="rules">
+      <button class="dialog-close" data-close>×</button><span class="eyebrow">HOW TO PLAY</span>
+      <h2>在时间轴上排兵布阵</h2>
+      <div class="rules-grid">
+        <p>
+          <b>1. 先手准备</b><br />进入战斗先获得1
+          AP。可以攻击、迟缓敌人、换位或换人，再开始正常回合。
+        </p>
+        <p>
+          <b>2. 正常回合</b><br />每回合3
+          AP。保留3个我方格，每名存活敌人增加1格；敌人按速度占位。速度1在末格。
+        </p>
+        <p>
+          <b>3. 安排技能</b><br />选角色、技能、目标，再点空时间格。2
+          AP技能需要连续两格。已编排行动可拖动或删除。
+        </p>
+        <p>
+          <b>4. 阵型交换</b><br />前场角色互换、后场换入前场均消耗1
+          AP，并占时间格；敌人始终攻击左、中、右位置。
+        </p>
+        <p>
+          <b>5. 实时预演</b
+          ><br />修改编排立刻更新敌人位置、生命和蓝量。发生重叠的行动保留原位并标红，修正后才能结算。
+        </p>
+        <p>
+          <b>6. 资源与行动次数</b
+          ><br />普通攻击不耗蓝；技能消耗AP和蓝量。每人有单独的技能出手上限，2
+          AP技能仍算一次出手。阵型交换属于队伍指令。
+        </p>
+        <p>
+          <b>7. 异常与濒死</b
+          ><br />流血在每次行动后触发；回合末先再生、再中毒。每次生命变化立即判定濒死，0生命无法回血，后续行动划掉。
+        </p>
+        <p>
+          <b>8. 觉醒与胜负</b
+          ><br />完成角色任务获得奥义点，点数达标即可编排奥义。当前敌人全部濒死结束本场，全队六人濒死失败。五场普通战后进入最终Boss战。
+        </p>
+      </div>
+      <p class="muted">
+        力量、守势、虚弱、易伤、再生、中毒、迟缓、流血、铁皮均已实现。蓝量在本次副本内不回复，回到酒馆重新出发才填满。数值为测试值。
+      </p>
+      <button class="primary" data-close>开始排兵布阵</button>
+    </dialog>
+    <dialog id="route">
+      <button class="dialog-close" id="route-close">×</button
+      ><span class="eyebrow">MOONSCAR / SIX ENCOUNTERS</span>
+      <h2>月痕遗迹 · 选择最终敌人</h2>
+      <p class="muted">
+        遗迹外厅 → 碎柱回廊 → 月痕林缘 → 孢光浅滩 → 古林封印 → 最终Boss<br />蓝量贯穿整个副本，战间营火只恢复生命。
+      </p>
+      <div id="boss-options"></div>
+      <button id="route-confirm" class="primary">确认路线</button>
+      <a class="artbook-link" href="./artbook.html" target="_blank" rel="noopener"
+        >异境图册 · 查看场景与造物</a
+      >
+    </dialog>
+    <dialog id="result"></dialog>
+    <dialog id="saves-dialog" class="saves-dialog" aria-labelledby="saves-dialog-title">
+      <button class="dialog-close" id="saves-close" aria-label="关闭存档面板">×</button>
+      <div class="saves-header">
+        <span class="eyebrow">CHRONICLES ARCHIVE</span>
+        <h2 id="saves-dialog-title">酒馆秘典 · 历程存档</h2>
+        <p class="muted">包含 1 个自动保存位与 3 个手动存档位，可自由覆盖、载入或导出备份。</p>
+      </div>
+      <div class="saves-toolbar">
+        <button
+          id="saves-create-btn"
+          class="saves-tool-btn saves-primary-btn"
+          title="将当前游戏进度新建至可用存档槽位"
+        >
+          ＋ 新建当前存档
+        </button>
+        <button
+          id="saves-new-game-btn"
+          class="saves-tool-btn"
+          title="重置为初始队伍和第一章全新旅途"
+        >
+          开启新冒险
+        </button>
+        <button id="saves-export-current" class="saves-tool-btn">导出当前实时进度</button>
+        <label class="saves-tool-btn saves-import-label">
+          <span>从文件导入存档</span>
+          <input type="file" id="saves-import-input" accept=".json,application/json" hidden />
+        </label>
+      </div>
+      <div id="saves-slots-list" class="saves-slots-grid"></div>
+    </dialog>
+    <dialog id="chat-dialog" data-stage="choose" aria-label="酒馆交流">
+      <header class="chat-header">
+        <span class="chat-emblem" aria-hidden="true">✦</span>
+        <div class="chat-heading">
+          <p>万象酒馆 · 灯火长谈</p>
+          <h2>相聚 · <span id="chat-place"></span></h2>
+        </div>
+        <button id="chat-close" aria-label="收起交流">×</button>
+      </header>
+      <section id="chat-choose">
+        <div class="chat-intro">
+          <small>此刻，无需急着启程</small>
+          <h3>今夜，和谁聊聊？</h3>
+          <p id="chat-environment"></p>
+        </div>
+        <div id="chat-characters"></div>
+        <div class="chat-choose-footer">
+          <span id="chat-selection-count"></span
+          ><button id="chat-begin" class="primary">
+            入座交谈 <span aria-hidden="true">→</span>
+          </button>
+        </div>
+      </section>
+      <section id="chat-conversation" hidden>
+        <aside class="chat-company">
+          <small>此刻相伴</small>
+          <label class="chat-location-label"
+            >所在位置<select id="chat-place-select" aria-label="所在位置"></select
+          ></label>
+          <div id="chat-participants"></div>
+          <p id="chat-scene"></p>
+          <button id="chat-memory-open">总结记忆</button>
+        </aside>
+        <div class="chat-room">
+          <div id="chat-messages" aria-live="polite"></div>
+          <div class="chat-composer">
+            <div id="chat-player"></div>
+            <form id="chat-form">
+              <textarea
+                id="chat-input"
+                rows="2"
+                maxlength="10000"
+                placeholder="输入你想说的话，或想做的事…"
+                aria-label="酒馆发言"
+              ></textarea
+              ><button id="chat-send" class="primary" type="submit">发送</button
+              ><button id="chat-cancel" type="button" hidden>取消</button>
+            </form>
+            <small class="chat-input-hint">回车发送 · Shift + 回车换行</small>
+          </div>
+        </div>
+      </section>
+      <small id="chat-status" role="status"></small>
+    </dialog>
+    <dialog id="memory-dialog" aria-labelledby="memory-title">
+      <header>
+        <div>
+          <small>万象酒馆 · 记忆档案</small>
+          <h2 id="memory-title">把经历留在记忆里</h2>
+        </div>
+        <button id="memory-close" aria-label="关闭记忆总结">×</button>
+      </header>
+      <p id="memory-count"></p>
+      <div id="memory-items"></div>
+      <nav class="memory-pages" aria-label="摘要预览分页">
+        <button id="memory-prev">上一页</button><span id="memory-page"></span
+        ><button id="memory-next">下一页</button>
+      </nav>
+      <p id="memory-status" role="status"></p>
+      <footer>
+        <button id="memory-generate">生成未总结记录的摘要</button>
+        <button id="memory-cancel" hidden>取消请求</button>
+        <button id="memory-accept" class="primary" disabled>确认使用摘要</button>
+      </footer>
+    </dialog>
+    <dialog id="helper-dialog" aria-label="预设扩展窗口">
+      <header>
+        <span>预设扩展</span><button id="helper-close" aria-label="关闭扩展窗口">×</button>
+      </header>
+      <div id="helper-content"></div>
+      <small id="helper-status" role="status"></small>
+    </dialog>
+    <script type="module" src="./src/app.js"></script>
+  </body>
+</html>

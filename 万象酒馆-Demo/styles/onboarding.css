@@ -1,0 +1,441 @@
+#new-game {
+  width: min(1180px, 94vw);
+  max-width: min(1180px, 94vw);
+  height: min(850px, 92dvh);
+  max-height: 92dvh;
+  padding: 28px;
+  color: #dfdbc9;
+  background: linear-gradient(135deg, #1c3433f5, #101a21f7);
+  border: 1px solid #b29c655e;
+  box-shadow: 0 30px 100px #0009;
+}
+#new-game[open] {
+  display: flex;
+  flex-direction: column;
+}
+#new-game::backdrop {
+  background: #071012c9;
+  backdrop-filter: blur(8px);
+}
+.creation-heading {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+}
+.creation-heading small {
+  color: #c8b179;
+  font-size: 10px;
+  letter-spacing: 4px;
+}
+.creation-heading h1 {
+  margin: 10px 0;
+  font-size: clamp(22px, 3vw, 34px);
+  font-weight: 400;
+}
+.creation-heading p,
+.creation-hint {
+  color: #acbcb6;
+  line-height: 1.7;
+  font-size: 12px;
+}
+.creation-toolbar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 0 18px;
+  border-bottom: 1px solid #d8c28922;
+}
+.creation-toolbar span {
+  margin-left: auto;
+  color: #c1b78f;
+  font-size: 11px;
+}
+.creation-workspace {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  padding-top: 20px;
+}
+#creation-form,
+.creation-preview {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.creation-fields {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  overflow: auto;
+  padding-right: 8px;
+}
+.creation-field {
+  display: grid;
+  gap: 7px;
+  grid-column: 1 / -1;
+  font-size: 12px;
+  color: #c3d3ca;
+}
+.creation-field.short {
+  grid-column: auto;
+}
+.creation-field input,
+.creation-field textarea {
+  width: 100%;
+  min-width: 0;
+  padding: 10px;
+  color: #eeeadb;
+  background: #060f1559;
+  border: 1px solid #a4c4b52c;
+  border-radius: 4px;
+  font: inherit;
+  resize: vertical;
+}
+.creation-field input:focus,
+.creation-field textarea:focus {
+  outline: 1px solid #c7b77a;
+}
+#creation-review {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+#creation-review .character-sheet {
+  height: auto;
+  grid-template-columns: 1fr;
+  gap: 20px;
+  padding: 1px 8px 12px 1px;
+}
+#creation-review .character-identity {
+  display: grid;
+  grid-template-columns: 115px minmax(0, 1fr);
+  max-height: none;
+  overflow: visible;
+}
+#creation-review .identity-art {
+  height: 150px;
+  margin: 8px;
+}
+#creation-review .identity-body {
+  padding: 14px 12px 14px 4px;
+}
+#creation-review .identity-body h2 {
+  font-size: 24px;
+}
+#creation-review .identity-stats {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 12px;
+  gap: 8px;
+}
+#creation-review .character-dossier {
+  height: auto;
+  overflow: visible;
+}
+.creation-empty {
+  min-height: 280px;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  text-align: center;
+  padding: 28px;
+  color: #98b4ad;
+}
+.creation-empty > span {
+  font-size: 65px;
+  color: #b7c9ac;
+  text-shadow: 0 0 35px #84ddc66e;
+}
+.creation-empty h2 {
+  font-size: 19px;
+  font-weight: 400;
+}
+.creation-empty p {
+  font-size: 13px;
+  max-width: 270px;
+  line-height: 1.9;
+}
+#creation-status {
+  font-size: 12px;
+  line-height: 1.7;
+  color: #d4c294;
+  min-height: 38px;
+}
+#creation-start,
+#creation-generate {
+  width: 100%;
+  flex-shrink: 0;
+}
+#tutorial-guide {
+  position: fixed;
+  z-index: 39;
+  top: 80px;
+  left: 22px;
+  width: 190px;
+  padding: 12px;
+  background: linear-gradient(130deg, #102a2bed, #172023e8);
+  border: 1px solid #c8ac6669;
+  box-shadow: 0 9px 28px #0004;
+  border-radius: 6px;
+  backdrop-filter: blur(12px);
+}
+#tutorial-guide small {
+  color: #cbb576;
+  font-size: 10px;
+  letter-spacing: 2px;
+}
+#tutorial-guide h3 {
+  margin: 10px 0;
+  font-weight: 400;
+  font-size: 17px;
+  color: #eee5c7;
+}
+#tutorial-guide p {
+  font-size: 12px;
+  line-height: 1.9;
+  color: #c5d1c9;
+}
+#tutorial-action {
+  width: 100%;
+  margin-top: 5px;
+}
+.tutorial-focus {
+  outline: 2px solid #e1c77b;
+  outline-offset: 4px;
+  animation: tutorial-focus 1.8s ease-in-out infinite;
+}
+@keyframes tutorial-focus {
+  0%,
+  100% {
+    box-shadow: 0 0 10px #dec27b33;
+  }
+  50% {
+    box-shadow: 0 0 28px #dec27b80;
+  }
+}
+@media (max-height: 600px) and (orientation: landscape) {
+  #new-game {
+    padding: 16px 22px;
+    max-height: 96dvh;
+    height: 96dvh;
+  }
+  .creation-heading h1 {
+    margin: 5px 0;
+    font-size: 22px;
+  }
+  .creation-heading p {
+    margin: 5px 0;
+  }
+  .creation-toolbar {
+    padding: 7px 0;
+  }
+  .creation-workspace {
+    padding-top: 10px;
+    gap: 16px;
+  }
+  .creation-fields {
+    gap: 8px;
+  }
+  #creation-review {
+    max-height: none;
+  }
+  #creation-review .character-identity {
+    grid-template-columns: 75px minmax(0, 1fr);
+  }
+  #creation-review .identity-art {
+    height: 102px;
+    margin: 5px;
+  }
+  #creation-review .identity-body {
+    padding: 8px 5px;
+  }
+  #creation-review .identity-body h2 {
+    font-size: 18px;
+  }
+  #creation-review .identity-tags span {
+    padding: 2px 4px;
+    font-size: 10px;
+  }
+  #creation-review .identity-stats {
+    gap: 4px;
+    margin-top: 7px;
+  }
+  #creation-review .identity-stats dd {
+    font-size: 14px;
+  }
+  .creation-empty {
+    min-height: 150px;
+    padding: 8px;
+  }
+  .creation-empty > span {
+    font-size: 38px;
+  }
+  .creation-empty h2 {
+    margin: 5px 0;
+  }
+  .creation-empty p {
+    margin: 5px 0;
+  }
+  #tutorial-guide {
+    top: 52px;
+    left: 10px;
+    width: 200px;
+    padding: 10px 12px;
+  }
+  #tutorial-guide h3 {
+    font-size: 14px;
+    margin: 6px 0;
+  }
+  #tutorial-guide p {
+    font-size: 10px;
+    line-height: 1.7;
+    margin: 5px 0;
+  }
+  #tutorial-action {
+    font-size: 11px;
+    min-height: 30px;
+    padding: 5px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tutorial-focus {
+    animation: none;
+  }
+}
+
+.guide-dialogue {
+  width: min(850px, 85vw);
+  max-width: 90vw;
+  margin: auto auto 9dvh;
+  padding: 0;
+  border: 1px solid #b8a1dcaa;
+  border-radius: 14px;
+  color: #eee7f8;
+  background: linear-gradient(120deg, #201d36f5, #172c2bf5);
+  box-shadow: 0 16px 90px #0008;
+  overflow: hidden;
+}
+.guide-dialogue[open] {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  align-items: center;
+}
+.guide-dialogue::backdrop {
+  background: #080a151f;
+}
+.guide-portrait {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+  min-height: 0;
+  object-fit: contain;
+  object-position: top center;
+  background: #1f2032;
+}
+.dialogue-body {
+  padding: 18px 28px 12px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;
+}
+[id$='dialogue-speaker'] {
+  color: #d2b7f3;
+  font-size: 18px;
+  letter-spacing: 3px;
+}
+.guide-dialogue[data-speaker='长景月汐'] [id$='dialogue-speaker'] {
+  color: #c9c3f2;
+}
+[id$='dialogue-text'] {
+  min-height: 64px;
+  flex: 1;
+  margin: 12px 0 6px;
+  white-space: pre-wrap;
+  font-size: 16px;
+  line-height: 2;
+}
+[id$='dialogue-next'] {
+  align-self: flex-end;
+  flex-shrink: 0;
+  border: 0;
+  background: transparent;
+  color: #dbc5f4;
+}
+.guide-dialogue.opening-prose {
+  margin: auto;
+  width: min(900px, 82vw);
+  background: #151923cc;
+}
+.guide-dialogue.opening-prose::backdrop {
+  background: #060710aa;
+  backdrop-filter: blur(2px);
+}
+.guide-dialogue.opening-prose[open] {
+  display: block;
+}
+.opening-prose .guide-portrait {
+  display: none;
+}
+.opening-prose .dialogue-body {
+  padding: 38px 50px 24px;
+}
+.opening-prose [id$='dialogue-text'] {
+  min-height: 140px;
+}
+.skill-targetable {
+  outline: 1px dashed #d5c397;
+  outline-offset: 2px;
+  animation: tutorial-focus 1.8s ease-in-out infinite;
+}
+@media (max-height: 600px) and (orientation: landscape) {
+  .guide-dialogue {
+    margin-bottom: 5dvh;
+  }
+  .guide-dialogue[open] {
+    grid-template-columns: 150px minmax(0, 1fr);
+  }
+  .guide-portrait {
+    min-height: 0;
+  }
+  .dialogue-body {
+    padding: 14px 20px 10px;
+  }
+  [id$='dialogue-text'] {
+    font-size: 13px;
+    line-height: 1.8;
+    min-height: 55px;
+    margin: 8px 0;
+  }
+  .opening-prose .dialogue-body {
+    padding: 20px 30px 14px;
+  }
+  .opening-prose [id$='dialogue-text'] {
+    min-height: 90px;
+  }
+  #tutorial-guide {
+    width: 150px;
+  }
+}
+.creation-workspace.local-protagonist {
+  display: block;
+  overflow: auto;
+}
+
+.local-protagonist > .creation-preview {
+  height: 100%;
+}
+
+.guide-dialogue.without-portrait[open] {
+  grid-template-columns: minmax(0, 1fr);
+}
+.guide-portrait[hidden] {
+  display: none;
+}

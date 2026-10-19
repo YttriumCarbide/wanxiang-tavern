@@ -1,0 +1,63 @@
+body.corridor {
+  background: #161418;
+}
+
+#leave-corridor {
+  position: fixed;
+  left: auto;
+  right: 20px;
+  top: 72px;
+  z-index: 5;
+  border-color: #c7a57588;
+  background: #2b211de8;
+  box-shadow: 0 4px 24px #0006;
+  color: #f2e3c5;
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: none;
+}
+
+#leave-corridor:hover,
+#leave-corridor:focus-visible {
+  background: #72553cf2;
+  border-color: #efce99;
+}
+
+.corridor #room-plaque small {
+  color: #d8c5a5;
+}
+
+.corridor .spot[data-door='roomA'] {
+  border-color: #b77f8d88;
+}
+
+.corridor .spot[data-door='roomA'] .diamond {
+  color: #e0a8b4;
+}
+
+.corridor .spot[data-door='roomB'] {
+  border-color: #89aeb788;
+}
+
+.corridor .spot[data-door='roomB'] .diamond {
+  color: #b8dce0;
+}
+
+.corridor .spot[data-door='master'] {
+  border-color: #c8a96b99;
+  background: #3a2b1fe8;
+}
+
+.corridor .spot[data-door='master'] .diamond {
+  color: #f2d596;
+}
+
+@media (max-width: 720px) {
+  #leave-corridor {
+    right: 12px;
+    top: 62px;
+    padding: 9px 13px;
+    font-size: 11px;
+  }
+}

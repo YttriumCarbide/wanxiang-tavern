@@ -1,0 +1,38 @@
+html {
+  color-scheme: dark;
+}
+body {
+  margin: 0;
+  color: #e5dfce;
+  background: transparent;
+  font:
+    14px/1.6 system-ui,
+    sans-serif;
+}
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  border: 1px solid #9baf9560;
+  border-radius: 5px;
+  background: #1b302b;
+  color: inherit;
+  padding: 7px 12px;
+}
+button {
+  cursor: pointer;
+}
+#script-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.helper-toast {
+  position: fixed;
+  bottom: 10px;
+  left: 10px;
+  padding: 10px;
+  background: #293d31;
+  border-radius: 8px;
+}

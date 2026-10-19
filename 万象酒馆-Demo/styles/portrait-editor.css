@@ -1,0 +1,86 @@
+.portrait-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 14px;
+}
+.portrait-tools button {
+  font-size: 11px;
+  padding: 7px 10px;
+}
+#portrait-dialog {
+  width: min(660px, calc(100vw - 32px));
+  max-height: calc(100dvh - 24px);
+  padding: 22px;
+  border: 1px solid #a6b18e80;
+  border-radius: 10px;
+  background: #152927f5;
+  color: #dfddc9;
+}
+#portrait-dialog::backdrop {
+  background: #03121077;
+}
+#portrait-dialog header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+#portrait-dialog h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 400;
+}
+.portrait-url-body {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 20px;
+  align-items: center;
+}
+#portrait-url-preview {
+  width: 120px;
+  height: 180px;
+  object-fit: cover;
+  border-radius: 5px;
+}
+.portrait-url-body label {
+  display: grid;
+  gap: 9px;
+  font-size: 11px;
+  color: #b8c8b3;
+}
+#portrait-url {
+  width: 100%;
+  min-height: 38px;
+  padding: 8px;
+  border: 1px solid #819b7560;
+  background: #091917a8;
+  color: #e2dfce;
+}
+#portrait-url-status {
+  font-size: 11px;
+  line-height: 1.8;
+  color: #afc1ac;
+  min-height: 3.6em;
+  overflow-wrap: anywhere;
+}
+#portrait-url-apply {
+  min-height: 36px;
+}
+@media (max-height: 500px) {
+  #portrait-dialog {
+    padding: 16px;
+  }
+  #portrait-dialog header {
+    margin-bottom: 10px;
+  }
+  #portrait-url-preview {
+    width: 96px;
+    height: 144px;
+  }
+  .portrait-url-body {
+    grid-template-columns: 96px minmax(0, 1fr);
+    gap: 16px;
+  }
+}

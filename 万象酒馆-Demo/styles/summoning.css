@@ -1,0 +1,162 @@
+#inn-resources {
+  position: fixed;
+  z-index: 16;
+  right: 18px;
+  bottom: 18px;
+  display: flex;
+  gap: 12px;
+  padding: 5px 10px 5px 6px;
+  border: 1px solid #bbab7752;
+  border-radius: 7px;
+  background: #122325de;
+  color: #e3ddc9;
+  pointer-events: none;
+}
+#inn-resources > div,
+#inn-resources > .inn-resource {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+#inn-resources img {
+  width: 30px;
+  height: 30px;
+}
+#inn-resources span {
+  font-size: 9px;
+  color: #b7c1af;
+}
+#inn-resources strong {
+  display: block;
+  font:
+    15px Georgia,
+    serif;
+  color: #e8cf92;
+  margin-top: 2px;
+}
+.in-battle #inn-resources {
+  display: none;
+}
+#summon-choice {
+  width: min(850px, calc(100vw - 32px));
+  max-height: calc(100dvh - 24px);
+  padding: 26px;
+  color: #e3ddc9;
+  background: radial-gradient(ellipse at top, #2a4442, #111f22);
+  border: 1px solid #ad9d6b66;
+  border-radius: 14px;
+}
+#summon-choice::backdrop {
+  background: #04110ed4;
+  backdrop-filter: blur(8px);
+}
+#summon-choice .ai-heading,
+#summon-choice footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+#summon-choice h2 {
+  font-weight: 400;
+  letter-spacing: 4px;
+  margin: 8px 0;
+}
+#summon-choice p,
+#summon-choice small,
+#summon-contracts {
+  font-size: 12px;
+  line-height: 1.8;
+  color: #aebead;
+}
+.summon-methods {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 24px 0;
+}
+.summon-methods button {
+  padding: 22px 16px;
+  text-align: left;
+  background: #102125;
+  border: 1px solid #93aaa34d;
+  border-radius: 9px;
+}
+.summon-methods b {
+  display: block;
+  color: #e3d1a4;
+  font-size: 18px;
+  margin-bottom: 15px;
+  font-weight: 400;
+}
+.summon-methods span {
+  color: #9eb7b0;
+  font-size: 12px;
+  line-height: 1.8;
+}
+.summon-methods [aria-pressed='true'] {
+  border-color: #d2bd7e;
+  background: #263d3b;
+  box-shadow: inset 0 0 25px #d2bd7e0d;
+}
+#summon-wish-label {
+  display: block;
+  color: #d4c8a8;
+  font-size: 12px;
+}
+#summon-wish-label[hidden] {
+  display: none;
+}
+#summon-wish {
+  display: block;
+  width: 100%;
+  resize: vertical;
+  margin-top: 9px;
+  padding: 12px;
+  background: #0a191c;
+  color: #e3ddc9;
+  border: 1px solid #8caa965c;
+  border-radius: 6px;
+  font: inherit;
+}
+#summon-choice footer {
+  border-top: 1px solid #c2b58335;
+  padding-top: 16px;
+}
+#summon-confirm {
+  min-height: 42px;
+}
+@media (max-height: 600px) {
+  #inn-resources {
+    bottom: 12px;
+    right: 12px;
+    padding: 4px 12px 4px 4px;
+    gap: 10px;
+  }
+  #summon-choice {
+    padding: 16px;
+  }
+  .summon-methods {
+    margin: 12px 0;
+  }
+  .summon-methods button {
+    padding: 14px;
+  }
+}
+@media (max-width: 600px) and (orientation: portrait) {
+  .summon-methods {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .summon-methods button {
+    padding: 12px;
+  }
+  .summon-methods b {
+    margin-bottom: 6px;
+  }
+  #inn-resources {
+    right: 10px;
+    bottom: 10px;
+    gap: 10px;
+  }
+}

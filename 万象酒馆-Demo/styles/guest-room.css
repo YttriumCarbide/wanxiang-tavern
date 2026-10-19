@@ -1,0 +1,213 @@
+body.guest-room {
+  background: #1d1718;
+}
+#room-plaque {
+  position: fixed;
+  left: 50%;
+  top: 22px;
+  z-index: 4;
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  min-width: 190px;
+  padding: 9px 26px 10px;
+  border: 1px solid #d7b78366;
+  border-radius: 3px;
+  color: #f4e8d2;
+  background:
+    linear-gradient(90deg, transparent, #2b211dc7 14%, #352920d9 50%, #2b211dc7 86%, transparent),
+    #2b211d99;
+  box-shadow: 0 8px 32px #0006;
+  pointer-events: none;
+  transform: translateX(-50%);
+}
+#room-plaque::before,
+#room-plaque::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 32px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #d7b783aa);
+}
+#room-plaque::before {
+  right: calc(100% + 8px);
+}
+#room-plaque::after {
+  left: calc(100% + 8px);
+  transform: scaleX(-1);
+}
+#room-plaque span {
+  color: #c9a878;
+  font:
+    8px/1.2 Georgia,
+    serif;
+  letter-spacing: 0.28em;
+}
+#room-plaque strong {
+  font:
+    500 17px/1.3 Georgia,
+    'Songti SC',
+    serif;
+  letter-spacing: 0.42em;
+  text-indent: 0.42em;
+}
+#room-plaque small {
+  color: #c9b394;
+  font: 10px/1.3 system-ui;
+  letter-spacing: 0.2em;
+}
+#where {
+  position: fixed;
+  left: 24px;
+  bottom: 21px;
+  z-index: 3;
+  padding-left: 12px;
+  border-left: 1px solid #cba87299;
+  color: #e9d5b7;
+  font:
+    12px/1.5 Georgia,
+    'Songti SC',
+    serif;
+  letter-spacing: 0.1em;
+  text-shadow: 0 1px 8px #000;
+  pointer-events: none;
+}
+#room-hint {
+  position: fixed;
+  left: 50%;
+  bottom: 82px;
+  z-index: 3;
+  margin: 0;
+  padding: 7px 16px;
+  border: 1px solid #b5976a44;
+  border-radius: 999px;
+  color: #cdb99a;
+  background: #1e1717ad;
+  font: 10px/1.4 system-ui;
+  letter-spacing: 0.14em;
+  opacity: 1;
+  pointer-events: none;
+  transform: translateX(-50%);
+  transition: opacity 1.2s ease;
+  backdrop-filter: blur(5px);
+}
+#room-hint.quiet {
+  opacity: 0;
+}
+#leave-room {
+  border-color: #e0bc7dcc;
+  background: #4a3527ed;
+  box-shadow:
+    0 6px 30px #0007,
+    0 0 24px #e0a45b33;
+  color: #ffebc9;
+  font-size: 14px;
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+#leave-room[hidden] {
+  display: none;
+}
+#scene-fade {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: #120e0f;
+  opacity: 1;
+  pointer-events: none;
+  transition: opacity 0.8s ease;
+}
+#scene-fade.clear {
+  opacity: 0;
+}
+body.leaving #scene-fade {
+  opacity: 1;
+  transition-duration: 0.34s;
+}
+body.guest-room #status {
+  z-index: 100;
+  background: radial-gradient(circle at 50% 44%, #3d2b22 0, transparent 32%), #1d1718;
+  font:
+    13px/1.7 Georgia,
+    'Songti SC',
+    serif;
+  letter-spacing: 0.12em;
+}
+.spot[data-place='window'] {
+  border-color: #83afcc88;
+}
+.spot[data-place='window'] .diamond {
+  color: #a8d2e9;
+}
+.spot[data-place='stove'] {
+  border-color: #d79b6888;
+}
+.spot[data-place='stove'] .diamond {
+  color: #ffc47e;
+}
+.spot[data-place='desk'] {
+  border-color: #c8a96b88;
+}
+.spot[data-place='desk'] .diamond {
+  color: #e7ca8c;
+}
+.spot[data-place='bed'] {
+  border-color: #b77f8d88;
+}
+.spot[data-place='bed'] .diamond {
+  color: #e0a8b4;
+}
+.spot[data-place='washstand'] {
+  border-color: #89aeb788;
+}
+.spot[data-place='washstand'] .diamond {
+  color: #b8dce0;
+}
+.spot[data-place='wardrobe'] {
+  border-color: #b89d7088;
+}
+.spot[data-place='wardrobe'] .diamond {
+  color: #e3c58e;
+}
+.master-room #room-plaque {
+  border-color: #e3c58e88;
+  background:
+    linear-gradient(90deg, transparent, #34251dd9 14%, #453326e6 50%, #34251dd9 86%, transparent),
+    #2b211d99;
+}
+.master-room #room-plaque strong {
+  color: #ffe7b6;
+}
+@media (max-width: 720px) {
+  #room-plaque {
+    top: 12px;
+    min-width: 160px;
+    padding: 7px 20px 8px;
+  }
+  #room-plaque strong {
+    font-size: 14px;
+  }
+  #where {
+    left: 14px;
+    bottom: 14px;
+    font-size: 10px;
+  }
+  #room-hint {
+    bottom: 76px;
+    font-size: 9px;
+  }
+  #leave-room {
+    font-size: 12px;
+  }
+}
+@media (max-height: 500px) {
+  #room-plaque {
+    top: 9px;
+    padding-block: 5px;
+  }
+  #room-hint {
+    display: none;
+  }
+}

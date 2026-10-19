@@ -1,0 +1,110 @@
+#backpack-open {
+  position: fixed;
+  z-index: 22;
+  width: var(--bag-size, 100px);
+  height: var(--bag-size, 100px);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  padding: 12px;
+  border: 5px solid #c7ae72;
+  background: radial-gradient(circle at 35% 25%, #3a5550, #172d2a);
+  color: #e6d6a7;
+  box-shadow: 0 4px 20px #0006;
+}
+#backpack-open[hidden] {
+  display: none;
+}
+#backpack-open svg {
+  width: 60%;
+  height: 60%;
+}
+#backpack-open small {
+  font-size: 11px;
+  line-height: 1;
+}
+.backpack-panel {
+  position: fixed;
+  z-index: 24;
+  width: min(450px, calc(100vw - 28px));
+  max-height: min(520px, 65dvh);
+  overflow: auto;
+  padding: 18px;
+  color: #e2ddcb;
+  background: linear-gradient(145deg, #203b36f5, #101e20fa);
+  border: 1px solid #b49d67;
+  border-radius: 4px 20px 4px 4px;
+  box-shadow: 0 12px 38px #0008;
+  transform: translateY(18px) scale(0.92);
+  transform-origin: left bottom;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    transform 0.24s ease,
+    opacity 0.2s,
+    visibility 0.24s;
+  pointer-events: none;
+}
+.backpack-panel.expanded {
+  transform: translateY(0) scale(1);
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+.backpack-panel header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #b49d6755;
+  padding-bottom: 9px;
+}
+.backpack-panel h2 {
+  margin: 5px 0;
+  font-size: 20px;
+  font-weight: 400;
+  letter-spacing: 3px;
+}
+.backpack-panel small,
+.backpack-panel p {
+  color: #aebfb3;
+  font-size: 11px;
+  line-height: 1.6;
+}
+#backpack-items {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0;
+}
+.bag-item {
+  display: flex;
+  text-align: left;
+  align-items: center;
+  gap: 10px;
+  padding: 6px;
+  background: #c9b8870a;
+  border: 1px solid #b49d6738;
+}
+.bag-item img {
+  width: 64px;
+  height: 64px;
+  flex: none;
+}
+.bag-item > span {
+  flex: 1;
+}
+.bag-item strong,
+.bag-item small {
+  display: block;
+}
+.bag-item b {
+  font-size: 11px;
+  white-space: nowrap;
+  color: #dbc58f;
+}
+@media (prefers-reduced-motion: reduce) {
+  .backpack-panel {
+    transition: none;
+  }
+}

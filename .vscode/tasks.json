@@ -1,0 +1,9 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    { "label": "Demo: start", "type": "shell", "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"${workspaceFolder}/万象酒馆-Demo/launch.ps1\" -NoBrowser", "problemMatcher": [] },
+    { "label": "Demo: stop", "type": "shell", "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"${workspaceFolder}/万象酒馆-Demo/launch.ps1\" -Stop", "problemMatcher": [] },
+    { "label": "Demo: check", "type": "shell", "command": "npm.cmd run check", "options": { "cwd": "${workspaceFolder}/万象酒馆-Demo" }, "problemMatcher": [] },
+    { "label": "Demo: format", "type": "shell", "command": "npm.cmd run format", "options": { "cwd": "${workspaceFolder}/万象酒馆-Demo" }, "problemMatcher": [] }
+  ]
+}

@@ -1,0 +1,67 @@
+.app-header nav #audio-toggle {
+  display: grid;
+  place-items: center;
+  padding: 5px;
+  width: 30px;
+  min-width: 30px;
+}
+#audio-toggle svg {
+  width: 18px;
+  height: 18px;
+}
+#audio-toggle.audio-muted {
+  opacity: 0.55;
+}
+#audio-panel {
+  position: fixed;
+  top: 60px;
+  right: 20px;
+  width: min(260px, calc(100vw - 24px));
+  padding: 16px;
+  z-index: 80;
+  color: #e9dfbf;
+  background: #142b2af2;
+  border: 1px solid #9a956966;
+  border-radius: 6px;
+  box-shadow: 0 10px 35px #0007;
+  backdrop-filter: blur(12px);
+}
+#audio-panel > strong {
+  display: block;
+  font-size: 14px;
+  margin-bottom: 12px;
+}
+.audio-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+}
+.audio-row output {
+  margin-left: auto;
+  color: #abbfae;
+  font-variant-numeric: tabular-nums;
+}
+.audio-row button {
+  padding: 3px 6px;
+  font-size: 10px;
+  min-width: 48px;
+}
+#audio-panel input {
+  display: block;
+  width: 100%;
+  margin: 10px 0 16px;
+  accent-color: #d2b67e;
+}
+#audio-state {
+  display: block;
+  color: #a8bfad;
+  font-size: 10px;
+}
+@media (orientation: landscape) and (max-height: 600px) {
+  #audio-panel {
+    top: 43px;
+    right: 10px;
+    padding: 12px;
+  }
+}

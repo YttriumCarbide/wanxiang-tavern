@@ -1,0 +1,35 @@
+{
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "eslint.workingDirectories": [
+    {
+      "directory": "./万象酒馆-Demo",
+      "changeProcessCWD": true
+    }
+  ],
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  },
+  "files.exclude": {
+    "**/node_modules": true,
+    "**/.runtime": true,
+    "**/.venv": true
+  },
+  "search.exclude": {
+    "**/vendor": true,
+    "**/node_modules": true,
+    "**/.runtime": true,
+    "**/assets": true,
+    "**/.venv": true
+  },
+  "[powershell]": {
+    "editor.defaultFormatter": "ms-vscode.PowerShell",
+    "files.encoding": "utf8bom",
+    "files.eol": "\r\n"
+  },
+  "[bat]": {
+    "editor.formatOnSave": false,
+    "files.encoding": "windows1252",
+    "files.eol": "\r\n"
+  }
+}

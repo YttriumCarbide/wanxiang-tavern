@@ -1,0 +1,303 @@
+import {
+  equip,
+  buyEquipment,
+  normalizeEquipment,
+  equippedDefinitions,
+  EQUIPMENT_STATS,
+} from '../equipment.js';
+import { ITEMS } from '../content/items.js';
+import { BUFFS } from '../data.js';
+import { TRIGGER_EVENTS, TRIGGER_TARGETS } from '../triggers.js';
+import { html } from '../shared/html.js';
+import { escapeText } from '../ui.js';
+
+export function equipmentDescription(item) {
+  const effectText = (effect) =>
+    effect.type === 'buff'
+      ? `${BUFFS[effect.buff].name}+${effect.value}`
+      : effect.type === 'cleanse'
+        ? '净化' + effect.buffs.map((key) => BUFFS[key].name).join('、')
+        : `${{ damage: '伤害', heal: '治疗', mana: '回蓝', shield: '护盾' }[effect.type]}${effect.value}`;
+  const conditionText = (condition) => {
+    const simple = {
+      front: '在前场',
+      rear: '在后场',
+      hasPositive: '有正面状态',
+      hasNegative: '有负面状态',
+      hasBuff: '有状态',
+      noBuff: '无状态',
+      hasShield: '有护盾',
+    };
+    if (simple[condition.type]) return simple[condition.type];
+    if (condition.type === 'buff') return `${BUFFS[condition.buff].name}≥${condition.value}层`;
+    if (condition.type === 'roundAtLeast') return `第${condition.value}回合起`;
+    return `${condition.type.startsWith('hp') ? '生命' : '法力'}${condition.type.endsWith('Below') ? '≤' : '≥'}${condition.value}%`;
+  };
+  return [
+    ...Object.entries(item.stats).map(([key, value]) => EQUIPMENT_STATS[key] + '+' + value),
+    ...item.rules.map(
+      (rule) =>
+        `${rule.mode === 'continuous' ? '持续生效' : TRIGGER_EVENTS[rule.event] + '，每趟' + rule.limit + '次'}${rule.conditions.length ? '（' + rule.conditions.map(conditionText).join('，') + '）' : ''} → ${TRIGGER_TARGETS[rule.target]}：${rule.effects.map(effectText).join('、')}`,
+    ),
+  ].join('；');
+}
+export function preparationEquipment(library, member) {
+  const equipment = equippedDefinitions(library, member);
+  return html`<section class="equipment-slots">
+    <h3>随身装备 · ${equipment.length} / 3</h3>
+    ${Array.from({ length: 3 }, (_, slot) => {
+      const current = member.equipment?.[slot];
+      return html`<label
+        >装备 ${slot + 1}<select
+          data-equipment-character="${member.id}"
+          data-equipment-slot="${slot}"
+        >
+          <option value="">未装备</option>
+          ${library.equipment.owned
+            .filter(
+              (instance) =>
+                instance.id === current ||
+                !library.characters.some((entry) => entry.equipment?.includes(instance.id)),
+            )
+            .map((instance) => {
+              const template = library.equipment.catalog.find(
+                (entry) => entry.id === instance.templateId,
+              );
+              return html`<option
+                value="${instance.id}"
+                ${instance.id === current ? 'selected' : ''}
+              >
+                ${escapeText(template.name)}
+              </option>`;
+            })
+            .join('')}
+        </select></label
+      >`;
+    }).join(
+      '',
+    )}${equipment.map((item) => html`<p><b>${escapeText(item.name)}</b> · ${escapeText(item.description)}<small>${escapeText(equipmentDescription(item))}</small></p>`).join('')}
+  </section>`;
+}
+export function createEquipment(context) {
+  const { session, events } = context;
+  const library = () => session.ai.library;
+  const panel = document.createElement('dialog');
+  panel.id = 'ether-forge';
+  panel.innerHTML =
+    '<header><div><small>ETHER / CONSTRUCTION</small><h2>以太凝聚器</h2></div><button data-forge-close>×</button></header><p>凝聚归档中的物品，构造与其来历相符的装备。每件装备最多占用一个槽，每位角色三个槽。</p><div class="forge-toolbar"><button id="forge-config">造物 API 设置</button><button id="forge-refine" class="primary">凝聚未细化物品</button><button id="forge-cancel" hidden>取消生成</button><strong id="forge-ether"></strong></div><p id="forge-status" role="status"></p><div id="forge-catalog"></div>';
+  document.body.append(panel);
+  const bag = document.createElement('details');
+  bag.id = 'prepare-bag';
+  bag.innerHTML = '<summary>查看背包</summary><div></div>';
+  document.querySelector('#party-panel').append(bag);
+  let request = null;
+  function pendingItems() {
+    const keyOf = (map, name, description, value) =>
+      JSON.stringify([map, name, description, value]);
+    const known = new Set(
+      library().equipment.catalog.map((item) =>
+        keyOf(item.map, item.sourceName, item.sourceDescription, item.price),
+      ),
+    );
+    const items = [];
+    for (const item of library().archives.items) {
+      const key = keyOf(item.map, item.name, item.description, item.value);
+      if (item.refinedTemplateId || item.conflictWith || item.superseded || known.has(key))
+        continue;
+      known.add(key);
+      const book = library().scripts.find((entry) => entry.id === item.source?.scriptId);
+      const record = library().history.find((entry) => entry.runId === item.source?.runId);
+      items.push({
+        ...item,
+        script: (
+          book?.story ||
+          record?.lines?.filter((line) => line.stage !== 'combat').map((line) => line.text) ||
+          []
+        ).join('\n\n'),
+      });
+    }
+    return items;
+  }
+  function refresh() {
+    panel.querySelector('#forge-ether').textContent = '以太 ' + library().inventory.ether;
+    panel.querySelector('#forge-refine').disabled = !!request || !pendingItems().length;
+    panel.querySelector('#forge-cancel').hidden = !request;
+    panel.querySelector('#forge-catalog').innerHTML =
+      library()
+        .equipment.catalog.map(
+          (item) =>
+            html`<article class="forge-item">
+              <span class="equipment-emblem">✧</span>
+              <div>
+                <h3>${escapeText(item.name)}</h3>
+                <p>${escapeText(item.description)}</p>
+                <small>${escapeText(equipmentDescription(item))}</small>
+              </div>
+              <button
+                data-buy-equipment="${escapeText(item.id)}"
+                ${request || library().inventory.ether < item.price ? 'disabled' : ''}
+              >
+                ${item.price} 以太 · 构造
+              </button>
+            </article>`,
+        )
+        .join('') || '<p>尚无装备。副本中收集并归档物品后，点击凝聚。</p>';
+    bag.querySelector('div').innerHTML =
+      Object.values(ITEMS)
+        .filter((item) => library().inventory.items[item.id] > 0)
+        .map(
+          (item) =>
+            html`<p>
+              <img width="64" height="64" src="${item.icon}" alt="" /><span
+                >${item.name} × ${library().inventory.items[item.id]}<small
+                  >${escapeText(item.text)}</small
+                ></span
+              >
+            </p>`,
+        )
+        .join('') +
+      library()
+        .equipment.owned.map((instance) => {
+          const item = library().equipment.catalog.find((item) => item.id === instance.templateId);
+          const wearer = library().characters.find((member) =>
+            member.equipment?.includes(instance.id),
+          );
+          return html`<p>
+            ✧ ${escapeText(item.name)} ·
+            ${wearer ? escapeText(wearer.setting.name) + '装备中' : '未装备'}
+          </p>`;
+        })
+        .join('');
+  }
+  const api = (path, data, signal) => context.apiClient.request(path, data, { signal });
+  events.on(panel.querySelector('#forge-refine'), 'click', async () => {
+    if (request || session.ai.busy || session.runtime.mode !== 'inn') return;
+    const items = pendingItems();
+    if (!items.length) return;
+    const original = library();
+    request = new AbortController();
+    session.ai.busy = true;
+    refresh();
+    const status = panel.querySelector('#forge-status');
+    try {
+      const scripts = Object.fromEntries(
+        items.map((item) => [item.source?.scriptId || item.id, item.script]),
+      );
+      const plan = await api(
+        'creation/plan',
+        {
+          items: items.map(({ script: _script, ...item }) => ({
+            ...item,
+            scriptId: item.source?.scriptId || item.id,
+          })),
+          scripts,
+        },
+        request.signal,
+      );
+      const result = [];
+      for (const [index, ids] of plan.batches.entries()) {
+        status.textContent = `正在凝聚 ${index + 1}/${plan.batches.length} 批 · 共 ${items.length} 件`;
+        const batch = items.filter((item) => ids.includes(item.id));
+        const generated = await api('generate/creation', { items: batch }, request.signal);
+        for (const item of generated.items) {
+          const source = batch.find((entry) => entry.id === item.id);
+          if (!source) throw Error('造物来源已变化');
+          result.push(normalizeEquipment(item, source));
+        }
+        status.textContent += ` · 输入约 ${generated.request?.tokens?.inputEstimate || 0} TK`;
+      }
+      if (session.runtime.disposed || original !== library()) return;
+      if (
+        result.length !== items.length ||
+        new Set(result.map((item) => item.id)).size !== items.length
+      )
+        throw Error('造物条目不完整');
+      library().equipment.catalog.push(...result);
+      for (const template of result)
+        for (const item of library().archives.items)
+          if (
+            item.name === template.sourceName &&
+            item.map === template.map &&
+            item.description === template.sourceDescription &&
+            item.value === template.price &&
+            !item.conflictWith &&
+            !item.superseded
+          )
+            item.refinedTemplateId = template.id;
+      context.generation.save();
+      status.textContent = `已凝聚 ${result.length} 件装备；按原物品价值支付以太即可构造。`;
+    } catch (failure) {
+      status.textContent =
+        failure.name === 'AbortError' ? '已取消，没有保存装备或扣除以太。' : failure.message;
+    } finally {
+      request = null;
+      session.ai.busy = false;
+      if (!session.runtime.disposed) refresh();
+    }
+  });
+  events.on(panel.querySelector('#forge-cancel'), 'click', () => request?.abort());
+  events.on(panel.querySelector('[data-forge-close]'), 'click', () => {
+    request?.abort();
+    panel.close();
+  });
+  events.on(panel, 'cancel', () => request?.abort());
+  events.on(panel.querySelector('#forge-config'), 'click', () => {
+    panel.close();
+    void context.generation.open('', 'creation');
+  });
+  events.on(panel, 'click', (event) => {
+    const button = event.target.closest('[data-buy-equipment]');
+    if (!button || request || session.runtime.mode !== 'inn') return;
+    try {
+      buyEquipment(library(), button.dataset.buyEquipment, crypto.randomUUID());
+      context.generation.save();
+      refresh();
+    } catch (failure) {
+      panel.querySelector('#forge-status').textContent = failure.message;
+    }
+  });
+  events.on(document.querySelector('#party-panel'), 'change', (event) => {
+    const select = event.target.closest('[data-equipment-character]');
+    if (!select) return;
+    try {
+      if (session.runtime.mode === 'battle') throw Error('副本中不能更换装备');
+      equip(
+        library(),
+        select.dataset.equipmentCharacter,
+        Number(select.dataset.equipmentSlot),
+        select.value,
+      );
+      context.generation.save();
+      context.shell.renderParty();
+    } catch (failure) {
+      context.shell.toast(failure.message);
+      context.shell.renderParty();
+    }
+  });
+  events.on(document.querySelector('#party-panel'), 'click', (event) => {
+    if (event.target.closest('[data-equipment-focus]'))
+      document
+        .querySelector('#prepare-detail .equipment-slots')
+        ?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  });
+  events.on(window, 'message', (event) => {
+    if (
+      event.origin !== location.origin ||
+      event.source !== document.querySelector('#inn-frame iframe')?.contentWindow ||
+      event.data?.type !== 'tavern-condenser' ||
+      session.runtime.mode !== 'inn' ||
+      session.ai.busy
+    )
+      return;
+    refresh();
+    panel.showModal();
+  });
+  return {
+    refresh,
+    dispose() {
+      request?.abort();
+      panel.remove();
+      bag.remove();
+    },
+  };
+}

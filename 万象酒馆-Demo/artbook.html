@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>异境图册 · 万象酒馆</title>
+    <link rel="icon" href="data:," />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "./vendor/build/three.module.js",
+          "three/addons/": "./vendor/addons/"
+        }
+      }
+    </script>
+    <link rel="stylesheet" href="./styles/app.css" />
+    <link rel="stylesheet" href="./styles/artbook.css" />
+  </head>
+  <body class="artbook-page">
+    <main id="art-stage">
+      <canvas></canvas>
+      <div class="unit-layer"></div>
+      <div class="battle-effects"></div>
+      <div id="intent-layer"></div>
+    </main>
+    <aside class="artbook-panel">
+      <span class="artbook-eyebrow">THE ATLAS / 万象酒馆</span>
+      <h1>异境图册</h1>
+      <p>沿着界隙，看看更远处。</p>
+      <h2>境域</h2>
+      <div id="atlas-scenes"></div>
+      <label for="atlas-weather">天气预览</label>
+      <select id="atlas-weather" aria-label="预览天气"></select>
+      <h2>造物</h2>
+      <div id="atlas-creatures"></div>
+      <div class="artbook-actions">
+        <button id="atlas-attack">攻击演出</button><button id="atlas-status">状态演出</button>
+      </div>
+      <a href="./">返回酒馆</a>
+    </aside>
+    <footer class="artbook-caption">
+      <span id="atlas-kind">境域 / 01</span>
+      <h2 id="atlas-title">霜晶矿窟</h2>
+      <p id="atlas-description">矿灯照亮冰壁，载晶矿车沿着旧轨往返。</p>
+    </footer>
+    <div id="atlas-loading">正在翻开图册…</div>
+    <script type="module" src="./src/artbook.js"></script>
+  </body>
+</html>

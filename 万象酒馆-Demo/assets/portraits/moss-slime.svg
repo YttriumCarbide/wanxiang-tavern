@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="900" viewBox="0 0 120 180" shape-rendering="crispEdges">
+  <defs><radialGradient id="glow"><stop stop-color="#91bb78" stop-opacity=".32"/><stop offset="1" stop-color="#253f36"/></radialGradient></defs>
+  <rect width="120" height="180" fill="#253f36"/>
+  <rect x="5" y="5" width="110" height="170" fill="url(#glow)"/>
+  <path d="M14 163V69Q14 18 60 14Q106 18 106 69V163" fill="none" stroke="#91bb78" stroke-opacity=".4" stroke-width=".6"/>
+  <circle cx="60" cy="68" r="34" fill="none" stroke="#91bb78" stroke-opacity=".2" stroke-width=".5"/>
+  <path d="M18 123v-25h9V81h13V69h40v12h13v17h9v25z" fill="#548455"/><path d="M27 112V94h13V81h33v9h13v22z" fill="#7fae6c"/><path d="M38 79v-9h10v-9h8v17zm22-7v-12h8v-8h9v13h-8v9z" fill="#a8c88b"/><path d="M38 97h6v8h-6zm34 0h6v8h-6z" fill="#1e3831"/><path d="M52 110h12v4H52z" fill="#d8dea5"/><path d="M20 126h82v5H20z" fill="#152d28"/><path d="M32 91h9v5h-9zm9-6h8v5h-8z" fill="#b4cf89"/>
+  <path d="M16 163h88m-84 4h80M60 12l2 4-2 4-2-4z" fill="none" stroke="#91bb78" stroke-opacity=".6" stroke-width=".5"/>
+</svg>

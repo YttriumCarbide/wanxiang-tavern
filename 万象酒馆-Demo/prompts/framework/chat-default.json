@@ -1,0 +1,31 @@
+{
+  "name": "酒馆交流",
+  "prompts": [
+    {
+      "identifier": "main",
+      "name": "角色扮演",
+      "role": "system",
+      "content": "根据世界观、环境和人物设定自然回应玩家。尊重玩家意愿，沿用所选预设的文风。"
+    },
+    {
+      "identifier": "chatHistory",
+      "name": "聊天记录",
+      "marker": true
+    }
+  ],
+  "prompt_order": [
+    {
+      "character_id": 100001,
+      "order": [
+        {
+          "identifier": "main",
+          "enabled": true
+        },
+        {
+          "identifier": "chatHistory",
+          "enabled": true
+        }
+      ]
+    }
+  ]
+}

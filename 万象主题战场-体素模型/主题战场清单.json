@@ -1,0 +1,349 @@
+{
+  "source": "建模工具/build_theme_arenas.py",
+  "models": [
+    {
+      "id": "dynasty",
+      "name": "朱阙宫庭",
+      "boxes": 944,
+      "components": 31,
+      "file": "dynasty.glb",
+      "preview": "preview-dynasty.glb",
+      "layout": {
+        "mode": "authored-large",
+        "uniqueSpan": [
+          7.9,
+          19.1
+        ],
+        "uniqueBounds": {
+          "x": [
+            -14.5,
+            -6.6
+          ],
+          "z": [
+            -9.55,
+            9.55
+          ]
+        },
+        "zones": [
+          "western gallery",
+          "lotus pond and bridge",
+          "old pine court",
+          "moon gate",
+          "flower rockery"
+        ],
+        "mirroredRight": true,
+        "repeatSpan": [
+          8.2,
+          19.2
+        ],
+        "bounds": {
+          "x": 24,
+          "z": 29
+        },
+        "patches": 1,
+        "boxes": 944
+      }
+    },
+    {
+      "id": "xianxia",
+      "name": "云海仙门",
+      "boxes": 729,
+      "components": 28,
+      "file": "xianxia.glb",
+      "preview": "preview-xianxia.glb",
+      "layout": {
+        "mode": "authored-large",
+        "uniqueSpan": [
+          7.9,
+          19.1
+        ],
+        "uniqueBounds": {
+          "x": [
+            -14.5,
+            -6.6
+          ],
+          "z": [
+            -9.55,
+            9.55
+          ]
+        },
+        "zones": [
+          "tiered mountain",
+          "curved sky path",
+          "waterfall and moon pool",
+          "suspended pavilion",
+          "bamboo grove"
+        ],
+        "mirroredRight": true,
+        "repeatSpan": [
+          8.2,
+          19.2
+        ],
+        "bounds": {
+          "x": 24,
+          "z": 29
+        },
+        "patches": 1,
+        "boxes": 729
+      }
+    },
+    {
+      "id": "castle",
+      "name": "石堡校场",
+      "boxes": 1325,
+      "components": 29,
+      "file": "castle.glb",
+      "preview": "preview-castle.glb",
+      "layout": {
+        "mode": "authored-large",
+        "uniqueSpan": [
+          7.9,
+          19.1
+        ],
+        "uniqueBounds": {
+          "x": [
+            -14.5,
+            -6.6
+          ],
+          "z": [
+            -9.55,
+            9.55
+          ]
+        },
+        "zones": [
+          "breached curtain wall",
+          "siege yard",
+          "command tent",
+          "stable and hay cart",
+          "archery lane"
+        ],
+        "mirroredRight": true,
+        "repeatSpan": [
+          8.2,
+          19.2
+        ],
+        "bounds": {
+          "x": 24,
+          "z": 29
+        },
+        "patches": 1,
+        "boxes": 1325
+      }
+    },
+    {
+      "id": "arcane",
+      "name": "星辉秘庭",
+      "boxes": 754,
+      "components": 19,
+      "file": "arcane.glb",
+      "preview": "preview-arcane.glb",
+      "layout": {
+        "mode": "authored-large",
+        "uniqueSpan": [
+          7.9,
+          19.1
+        ],
+        "uniqueBounds": {
+          "x": [
+            -14.5,
+            -6.6
+          ],
+          "z": [
+            -9.55,
+            9.55
+          ]
+        },
+        "zones": [
+          "celestial observatory",
+          "curved library",
+          "crystal spring",
+          "floating folios",
+          "alchemical desk"
+        ],
+        "mirroredRight": true,
+        "repeatSpan": [
+          8.2,
+          19.2
+        ],
+        "bounds": {
+          "x": 24,
+          "z": 29
+        },
+        "patches": 1,
+        "boxes": 754
+      }
+    },
+    {
+      "id": "metropolis",
+      "name": "霓虹街口",
+      "boxes": 291,
+      "components": 30,
+      "file": "metropolis.glb",
+      "preview": "preview-metropolis.glb",
+      "layout": {
+        "mode": "authored-large",
+        "uniqueSpan": [
+          7.9,
+          19.1
+        ],
+        "uniqueBounds": {
+          "x": [
+            -14.5,
+            -6.6
+          ],
+          "z": [
+            -9.55,
+            9.55
+          ]
+        },
+        "zones": [
+          "corner shop block",
+          "bus stop",
+          "parking court",
+          "neon sign",
+          "street garden"
+        ],
+        "mirroredRight": true,
+        "repeatSpan": [
+          8.2,
+          19.2
+        ],
+        "bounds": {
+          "x": 24,
+          "z": 29
+        },
+        "patches": 1,
+        "boxes": 291
+      }
+    },
+    {
+      "id": "nexus",
+      "name": "量子舱室",
+      "boxes": 500,
+      "components": 23,
+      "file": "nexus.glb",
+      "preview": "preview-nexus.glb",
+      "layout": {
+        "mode": "authored-large",
+        "uniqueSpan": [
+          7.9,
+          19.1
+        ],
+        "uniqueBounds": {
+          "x": [
+            -14.5,
+            -6.6
+          ],
+          "z": [
+            -9.55,
+            9.55
+          ]
+        },
+        "zones": [
+          "reactor well",
+          "service gantry",
+          "control gallery",
+          "cargo dock",
+          "conduit trench"
+        ],
+        "mirroredRight": true,
+        "repeatSpan": [
+          8.2,
+          19.2
+        ],
+        "bounds": {
+          "x": 24,
+          "z": 29
+        },
+        "patches": 1,
+        "boxes": 500
+      }
+    },
+    {
+      "id": "wasteland",
+      "name": "荒原残站",
+      "boxes": 307,
+      "components": 20,
+      "file": "wasteland.glb",
+      "preview": "preview-wasteland.glb",
+      "layout": {
+        "mode": "authored-large",
+        "uniqueSpan": [
+          7.9,
+          19.1
+        ],
+        "uniqueBounds": {
+          "x": [
+            -14.5,
+            -6.6
+          ],
+          "z": [
+            -9.55,
+            9.55
+          ]
+        },
+        "zones": [
+          "broken highway",
+          "crashed bus",
+          "ruined filling station",
+          "scrap yard",
+          "windblown dunes"
+        ],
+        "mirroredRight": true,
+        "repeatSpan": [
+          8.2,
+          19.2
+        ],
+        "bounds": {
+          "x": 24,
+          "z": 29
+        },
+        "patches": 1,
+        "boxes": 307
+      }
+    },
+    {
+      "id": "relic",
+      "name": "黄沙神殿",
+      "boxes": 232,
+      "components": 19,
+      "file": "relic.glb",
+      "preview": "preview-relic.glb",
+      "layout": {
+        "mode": "authored-large",
+        "uniqueSpan": [
+          7.9,
+          19.1
+        ],
+        "uniqueBounds": {
+          "x": [
+            -14.5,
+            -6.6
+          ],
+          "z": [
+            -9.55,
+            9.55
+          ]
+        },
+        "zones": [
+          "collapsed pyramid",
+          "excavation trench",
+          "buried guardian",
+          "broken colonnade",
+          "processional stair"
+        ],
+        "mirroredRight": true,
+        "repeatSpan": [
+          8.2,
+          19.2
+        ],
+        "bounds": {
+          "x": 24,
+          "z": 29
+        },
+        "patches": 1,
+        "boxes": 232
+      }
+    }
+  ]
+}

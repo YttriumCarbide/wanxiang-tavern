@@ -1,0 +1,44 @@
+{
+  "name": "万象酒馆 · 主卧·主人房",
+  "asset": "万象酒馆-主卧.glb",
+  "runtime": "assets/master-bedroom.glb",
+  "voxel_edge_m": 0.02,
+  "resolution": "2 cm watertight voxel surface",
+  "occupied_voxels": 12518424,
+  "box_definitions": 25452,
+  "triangles": 13946,
+  "bytes": 873504,
+  "dimensions_cells": [
+    578,
+    193,
+    478
+  ],
+  "room_m": [
+    11.2,
+    3.4,
+    9.2
+  ],
+  "floor_area_m2": 103.04,
+  "guest_floor_area_m2": 51.2,
+  "area_multiple": 2.012,
+  "bed_size_m": [
+    2.6,
+    2.9
+  ],
+  "eye_height_m": 1.5,
+  "style": "warm plaster, dark walnut, gilt brass, wine silk and king bed",
+  "landmarks": [
+    "king-size canopied double bed",
+    "two nightstands with lamps",
+    "window seat with moonlit curtains",
+    "stone fireplace and mantel mirror",
+    "writing desk with shared tavern chair",
+    "vanity and basin",
+    "two wingback chairs and tea table",
+    "wardrobe with hatboxes",
+    "large medallion rug and brass chandelier",
+    "corridor door"
+  ],
+  "mesh_cleanup": "single owner volume, hidden-face culling and greedy coplanar merge",
+  "build_seconds": 4.8
+}

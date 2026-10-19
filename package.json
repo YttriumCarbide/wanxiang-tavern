@@ -1,0 +1,13 @@
+{
+  "name": "wanxiang-tavern",
+  "version": "1.3.0",
+  "private": true,
+  "scripts": {
+    "build": "npm --prefix 万象酒馆-Demo ci && npm --prefix 万象酒馆-Demo run build",
+    "test": "npm --prefix 万象酒馆-Demo test",
+    "dev": "npm --prefix 万象酒馆-Demo run dev"
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  }
+}

@@ -1,0 +1,170 @@
+.artbook-page {
+  overflow: hidden;
+  background: #172730;
+}
+#art-stage {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+}
+#art-stage > canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.artbook-panel {
+  position: fixed;
+  top: 26px;
+  left: 26px;
+  width: 238px;
+  padding: 24px;
+  border: 1px solid #b7c7b52e;
+  background: linear-gradient(145deg, #122b30e8, #12232bd1);
+  backdrop-filter: blur(14px);
+  border-radius: 3px;
+  box-shadow: 0 16px 60px #07151c42;
+}
+.artbook-eyebrow {
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: #b8d4c5;
+}
+.artbook-panel h1 {
+  font-size: 27px;
+  font-weight: 500;
+  letter-spacing: 5px;
+  margin: 16px 0 8px;
+  color: #e8dcb7;
+}
+.artbook-panel p {
+  color: #b0c3b9;
+  font-size: 11px;
+  margin-bottom: 26px;
+}
+.artbook-panel h2 {
+  color: #9db9af;
+  font-size: 10px;
+  letter-spacing: 3px;
+  margin: 19px 0 9px;
+  font-weight: 400;
+}
+#atlas-scenes,
+#atlas-creatures {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.artbook-panel button {
+  min-width: 0;
+  padding: 10px 5px;
+  font-size: 11px;
+  border: 1px solid #99b6a929;
+  background: #203d414d;
+  color: #becfc4;
+}
+.artbook-panel button[aria-pressed='true'] {
+  border-color: #dfc8978c;
+  color: #f4e0b4;
+  background: #8c88632e;
+}
+.artbook-panel button:hover {
+  background: #abc6ac24;
+}
+.artbook-actions {
+  display: flex;
+  gap: 6px;
+  margin: 20px 0;
+}
+.artbook-actions button {
+  flex: 1;
+}
+.artbook-panel a {
+  display: block;
+  font-size: 11px;
+  color: #c0d2c4;
+  text-underline-offset: 5px;
+}
+.artbook-caption {
+  position: fixed;
+  bottom: 32px;
+  right: 36px;
+  text-align: right;
+  max-width: 430px;
+  pointer-events: none;
+  text-shadow: 0 2px 14px #041b20;
+}
+.artbook-caption > span {
+  font-size: 10px;
+  letter-spacing: 3px;
+  color: #b8d7cc;
+}
+.artbook-caption h2 {
+  margin: 10px 0;
+  font-size: 32px;
+  font-weight: 400;
+  letter-spacing: 8px;
+  color: #eee4c8;
+}
+.artbook-caption p {
+  font-size: 12px;
+  color: #c3d4c6;
+  line-height: 1.8;
+}
+#atlas-loading {
+  position: fixed;
+  left: 50%;
+  top: 45%;
+  translate: -50% -50%;
+  padding: 15px 24px;
+  color: #d8ddc7;
+  background: #163139df;
+  border: 1px solid #bbd6c050;
+}
+.artbook-panel label[for='atlas-weather'] {
+  display: block;
+  margin-top: 10px;
+  font-size: 11px;
+  color: #c3d4c6;
+}
+#atlas-weather {
+  width: 100%;
+  margin-top: 5px;
+  padding: 7px 9px;
+  color: #e1dec4;
+  background: #132b30;
+  border: 1px solid #bbd6c050;
+  border-radius: 5px;
+}
+@media (max-height: 650px) {
+  .artbook-panel {
+    top: 12px;
+    left: 12px;
+    width: 205px;
+    padding: 13px;
+  }
+  .artbook-panel h1 {
+    font-size: 20px;
+    margin: 9px 0;
+  }
+  .artbook-panel p {
+    margin-bottom: 8px;
+  }
+  .artbook-panel h2 {
+    margin: 11px 0 6px;
+  }
+  .artbook-panel button {
+    padding: 7px 3px;
+    font-size: 10px;
+  }
+  .artbook-actions {
+    margin: 10px 0;
+  }
+  .artbook-caption {
+    bottom: 15px;
+    right: 18px;
+    max-width: 250px;
+  }
+  .artbook-caption h2 {
+    font-size: 22px;
+  }
+}

@@ -1,0 +1,74 @@
+{
+  "app": "wanxiang-static-release",
+  "version": 1,
+  "staticFilesOnly": true,
+  "releaseBytes": 136264610,
+  "releaseCredentialHits": [],
+  "retainedRoles": [
+    {
+      "name": "长景月汐",
+      "publicAndOriginalMatch": true
+    },
+    {
+      "name": "青缘",
+      "publicAndOriginalMatch": true
+    },
+    {
+      "name": "潘多拉",
+      "publicAndOriginalMatch": true
+    },
+    {
+      "name": "伊蒂丝",
+      "publicAndOriginalMatch": true
+    }
+  ],
+  "checks": [
+    {
+      "scope": "core",
+      "passed": true
+    },
+    {
+      "scope": "server",
+      "passed": true
+    },
+    {
+      "scope": "settings",
+      "passed": true
+    },
+    {
+      "scope": "chat",
+      "passed": true
+    },
+    {
+      "scope": "onboarding",
+      "passed": true
+    },
+    {
+      "scope": "expedition",
+      "passed": true
+    },
+    {
+      "scope": "quality",
+      "passed": true
+    },
+    {
+      "scope": "static",
+      "passed": true
+    }
+  ],
+  "staticVerification": {
+    "staticFilesOnly": true,
+    "projectSubdirectory": true,
+    "allSixApis": true,
+    "exactTokenizer": true,
+    "regexWorker": true,
+    "stream": true,
+    "helperWindow": true,
+    "portraitsPersisted": true,
+    "backupExcludesKeys": true,
+    "chatAndSettingsReloaded": true,
+    "battleCheckpoint": true,
+    "apiRequests": 0,
+    "files": 400
+  }
+}

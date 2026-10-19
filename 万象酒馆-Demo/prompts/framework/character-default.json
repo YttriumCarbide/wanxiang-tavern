@@ -1,0 +1,63 @@
+{
+  "id": "character-default",
+  "name": "通用消息框架（角色接口）",
+  "prompts": [
+    {
+      "identifier": "main",
+      "name": "主提示词",
+      "role": "system",
+      "content": "根据本次任务、已激活世界书与提供的资料生成内容。"
+    },
+    {
+      "identifier": "worldInfoBefore",
+      "name": "世界书（角色前）",
+      "role": "system",
+      "marker": true
+    },
+    {
+      "identifier": "charDescription",
+      "name": "角色描述",
+      "role": "system",
+      "marker": true
+    },
+    {
+      "identifier": "worldInfoAfter",
+      "name": "世界书（角色后）",
+      "role": "system",
+      "marker": true
+    },
+    {
+      "identifier": "chatHistory",
+      "name": "聊天记录 / 当前任务",
+      "role": "user",
+      "marker": true
+    }
+  ],
+  "prompt_order": [
+    {
+      "character_id": 100001,
+      "order": [
+        {
+          "identifier": "main",
+          "enabled": true
+        },
+        {
+          "identifier": "worldInfoBefore",
+          "enabled": true
+        },
+        {
+          "identifier": "charDescription",
+          "enabled": true
+        },
+        {
+          "identifier": "worldInfoAfter",
+          "enabled": true
+        },
+        {
+          "identifier": "chatHistory",
+          "enabled": true
+        }
+      ]
+    }
+  ]
+}

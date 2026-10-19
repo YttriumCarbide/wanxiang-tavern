@@ -1,0 +1,143 @@
+#memory-dialog {
+  width: min(880px, calc(100vw - 40px));
+  height: min(720px, calc(100dvh - 48px));
+  margin: auto;
+  padding: 26px;
+  color: #ece2cd;
+  border: 1px solid #bea56b66;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #22372e, #10231f 75%);
+  box-shadow: 0 24px 100px #0009;
+}
+#memory-dialog[open] {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+#memory-dialog::backdrop {
+  background: #050e0bc9;
+  backdrop-filter: blur(5px);
+}
+#memory-dialog header,
+#memory-dialog footer {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 12px;
+}
+.memory-pages {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  flex-shrink: 0;
+  font-size: 13px;
+  color: #c4b58c;
+}
+.memory-pages button {
+  padding: 6px 12px;
+  font-size: 12px;
+}
+#memory-dialog header > div {
+  flex: 1;
+}
+#memory-dialog h2 {
+  margin: 8px 0 0;
+  color: #dcc48a;
+  font-size: 25px;
+  font-weight: 400;
+}
+#memory-dialog small {
+  color: #b9ad88;
+  letter-spacing: 3px;
+}
+#memory-count,
+#memory-status {
+  margin: 0;
+  color: #bfc7b6;
+  font-size: 13px;
+  line-height: 1.6;
+  flex-shrink: 0;
+}
+#memory-items {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding-right: 8px;
+}
+#memory-items article {
+  padding: 18px;
+  margin-bottom: 14px;
+  border: 1px solid #baa36b38;
+  border-radius: 10px;
+  background: #0b1b1880;
+}
+#memory-items h3 {
+  margin: 0 0 12px;
+  color: #d9c899;
+  font-size: 15px;
+  font-weight: 400;
+}
+#memory-items details {
+  color: #b7c2b5;
+  font-size: 13px;
+  margin-bottom: 14px;
+}
+#memory-items details p {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 240px;
+  overflow: auto;
+}
+#memory-items label {
+  display: grid;
+  gap: 8px;
+  color: #c4b58c;
+  font-size: 13px;
+}
+#memory-items textarea {
+  width: 100%;
+  min-height: 84px;
+  resize: vertical;
+  border: 1px solid #baa36b45;
+  border-radius: 7px;
+  padding: 10px 12px;
+  background: #091b17;
+  color: #e9e1ce;
+  line-height: 1.6;
+}
+#memory-dialog footer {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  border-top: 1px solid #baa36b38;
+  padding-top: 14px;
+}
+.memory-settings {
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid #baa36b38;
+}
+.memory-settings p {
+  color: #acb9aa;
+  font-size: 13px;
+  line-height: 1.7;
+}
+@media (max-height: 480px), (max-width: 600px) {
+  #memory-dialog {
+    width: calc(100vw - 24px);
+    height: calc(100dvh - 24px);
+    padding: 16px;
+    gap: 8px;
+  }
+  #memory-dialog h2 {
+    font-size: 20px;
+  }
+  #memory-dialog footer {
+    padding-top: 8px;
+    gap: 8px;
+  }
+  #memory-dialog footer button {
+    font-size: 13px;
+    padding: 9px 12px;
+  }
+}

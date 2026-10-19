@@ -1,0 +1,132 @@
+{
+  "source": "建模工具/build_destination_previews.py",
+  "models": [
+    {
+      "theme": "ruins",
+      "asset": "preview-ruins.glb",
+      "boxes": 946,
+      "components": {
+        "Floating_Bedrock": 329,
+        "Terrain": 329,
+        "Surface_Chips": 66,
+        "Causeway": 65,
+        "Causeway_Edge": 2,
+        "Light_Inlay": 2,
+        "Front_Stairs": 3,
+        "Pillar_Plinths": 10,
+        "Carved_Pillars": 37,
+        "Pillar_Capitals": 5,
+        "Pillar_Runes": 5,
+        "Stepped_Arch": 11,
+        "Arch_Crown": 11,
+        "Arch_Keystone": 1,
+        "Brazier": 4,
+        "Flame": 8,
+        "Ritual_Seal": 36,
+        "Moss": 22
+      },
+      "bytes": 974448
+    },
+    {
+      "theme": "forest",
+      "asset": "preview-forest.glb",
+      "boxes": 1084,
+      "components": {
+        "Floating_Bedrock": 329,
+        "Terrain": 329,
+        "Surface_Chips": 65,
+        "Causeway": 65,
+        "Causeway_Edge": 2,
+        "Light_Inlay": 2,
+        "Front_Stairs": 3,
+        "Tree_Trunks": 36,
+        "Layered_Canopy": 146,
+        "Tree_Roots": 9,
+        "Pillar_Plinths": 4,
+        "Carved_Pillars": 22,
+        "Pillar_Capitals": 2,
+        "Pillar_Runes": 2,
+        "Stepped_Arch": 11,
+        "Arch_Crown": 11,
+        "Arch_Keystone": 1,
+        "Mushrooms": 22,
+        "Mushroom_Caps": 22,
+        "Rest_Bench": 1
+      },
+      "bytes": 1115776
+    },
+    {
+      "theme": "frost",
+      "asset": "preview-frost.glb",
+      "boxes": 955,
+      "components": {
+        "Floating_Bedrock": 329,
+        "Terrain": 329,
+        "Surface_Chips": 68,
+        "Causeway": 65,
+        "Causeway_Edge": 2,
+        "Light_Inlay": 2,
+        "Front_Stairs": 3,
+        "Crystal_Facets": 80,
+        "Crystal_Heart": 5,
+        "Track_Sleepers": 16,
+        "Steel_Rails": 2,
+        "Minecart": 27,
+        "Pillar_Plinths": 4,
+        "Carved_Pillars": 18,
+        "Pillar_Capitals": 2,
+        "Pillar_Runes": 2,
+        "Mine_Beam": 1
+      },
+      "bytes": 982276
+    },
+    {
+      "theme": "forge",
+      "asset": "preview-forge.glb",
+      "boxes": 855,
+      "components": {
+        "Floating_Bedrock": 329,
+        "Terrain": 329,
+        "Surface_Chips": 75,
+        "Causeway": 65,
+        "Causeway_Edge": 2,
+        "Light_Inlay": 2,
+        "Front_Stairs": 3,
+        "Molten_Channel": 12,
+        "Brick_Furnace": 13,
+        "Furnace_Mouth": 1,
+        "Furnace_Grate": 5,
+        "Anvil_Base": 1,
+        "Anvil": 2,
+        "Workbench": 3,
+        "Metal_Ingots": 7,
+        "Brazier": 2,
+        "Flame": 4
+      },
+      "bytes": 881324
+    },
+    {
+      "theme": "tide",
+      "asset": "preview-tide.glb",
+      "boxes": 1003,
+      "components": {
+        "Floating_Bedrock": 329,
+        "Terrain": 329,
+        "Surface_Chips": 67,
+        "Causeway": 65,
+        "Causeway_Edge": 2,
+        "Light_Inlay": 2,
+        "Front_Stairs": 3,
+        "Pillar_Plinths": 8,
+        "Carved_Pillars": 36,
+        "Pillar_Capitals": 4,
+        "Pillar_Runes": 4,
+        "Celestial_Ring": 64,
+        "Star_Studs": 8,
+        "Tidal_Seal": 44,
+        "Branching_Coral": 38
+      },
+      "bytes": 1028544
+    }
+  ]
+}

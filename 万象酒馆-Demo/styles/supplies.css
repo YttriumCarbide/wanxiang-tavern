@@ -1,0 +1,95 @@
+#void-shop,
+#loot-conflicts {
+  width: min(820px, 90vw);
+  max-height: 86dvh;
+  overflow: auto;
+  background: linear-gradient(145deg, #223b37, #101f21);
+  border: 1px solid #bfa46a;
+  color: #e9dfc4;
+  padding: 26px;
+  border-radius: 18px;
+}
+#void-shop header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+#void-shop h2,
+#loot-conflicts h2 {
+  font-weight: 400;
+  letter-spacing: 3px;
+}
+#void-shop small,
+#loot-conflicts p {
+  font-size: 12px;
+  color: #b5c4b5;
+  line-height: 1.7;
+}
+#shop-items {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 20px 0;
+}
+#shop-items button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  text-align: left;
+  background: #c6af7a0a;
+  border: 1px solid #bfa46a44;
+}
+#shop-items img {
+  width: 64px;
+  height: 64px;
+  flex: none;
+}
+#shop-items span {
+  flex: 1;
+}
+#shop-items strong,
+#shop-items small {
+  display: block;
+}
+#shop-items b {
+  font-size: 12px;
+  white-space: nowrap;
+  color: #e0c58b;
+}
+#void-shop::backdrop,
+#loot-conflicts::backdrop {
+  background: #06110ecc;
+  backdrop-filter: blur(4px);
+}
+.loot-comparison {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.loot-comparison article {
+  padding: 18px;
+  border: 1px solid #bfa46a55;
+  background: #d8c4950a;
+}
+.loot-choices {
+  display: flex;
+  gap: 10px;
+  margin: 16px 0;
+}
+#loot-conflicts label {
+  display: grid;
+  gap: 8px;
+}
+@media (max-width: 620px) {
+  #shop-items {
+    grid-template-columns: 1fr;
+  }
+  #void-shop,
+  #loot-conflicts {
+    padding: 16px;
+  }
+  .loot-choices {
+    flex-wrap: wrap;
+  }
+}

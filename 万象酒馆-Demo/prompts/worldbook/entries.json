@@ -1,0 +1,62 @@
+[
+  {
+    "id": "character-definition",
+    "name": "角色生成 · 人物设定规范",
+    "kind": "character",
+    "position": 0,
+    "order": 1100
+  },
+  {
+    "id": "character-mechanics",
+    "name": "角色生成 · 能力与数据规则",
+    "kind": "character",
+    "position": 1,
+    "order": 1100
+  },
+  {
+    "id": "character-output",
+    "name": "角色生成 · JSON输出格式 @D",
+    "kind": "character",
+    "position": 4,
+    "depth": 0,
+    "role": 0,
+    "order": 9999
+  },
+  {
+    "id": "script-definition",
+    "name": "副本剧本 · 人物与素材定义",
+    "kind": "script",
+    "position": 0,
+    "order": 1100
+  },
+  {
+    "id": "script-player",
+    "name": "副本剧本 · 玩家主角与大纲代称",
+    "kind": "script",
+    "position": 0,
+    "order": 1150
+  },
+  {
+    "id": "script-plot",
+    "name": "副本剧本 · 自由叙事与伏笔",
+    "kind": "script",
+    "position": 1,
+    "order": 1100
+  },
+  {
+    "id": "script-facts",
+    "name": "副本剧本 · 战斗事实与历史边界",
+    "kind": "script",
+    "position": 1,
+    "order": 1200
+  },
+  {
+    "id": "script-output",
+    "name": "副本剧本 · JSON输出格式 @D",
+    "kind": "script",
+    "position": 4,
+    "depth": 0,
+    "role": 0,
+    "order": 9999
+  }
+]

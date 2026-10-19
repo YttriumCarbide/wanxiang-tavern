@@ -1,0 +1,398 @@
+/* SillyTavern-style inline World Info entries. */
+#world-dialog {
+  width: min(1100px, calc(100vw - 28px));
+  max-width: calc(100vw - 28px);
+  height: calc(100dvh - 36px);
+  max-height: calc(100dvh - 36px);
+  padding: 18px;
+  color: #dedede;
+  background: #191919f8;
+  border: 1px solid #444;
+  border-radius: 12px;
+  overflow: hidden;
+  font:
+    14px/1.5 'Microsoft YaHei',
+    sans-serif;
+}
+#world-dialog[open] {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+#world-dialog::backdrop {
+  background: #0009;
+  backdrop-filter: blur(4px);
+}
+#world-dialog input:not([type='checkbox']),
+#world-dialog select,
+#world-dialog textarea {
+  min-width: 0;
+  width: 100%;
+  color: #ddd;
+  background: #0e0e0e;
+  border: 1px solid #303030;
+  border-radius: 6px;
+  padding: 6px 8px;
+  font: inherit;
+}
+#world-dialog input[type='number'] {
+  appearance: textfield;
+}
+#world-dialog input::-webkit-inner-spin-button {
+  display: none;
+}
+#world-dialog button {
+  color: #ccc;
+  background: #222;
+  border: 1px solid #333;
+  padding: 5px 9px;
+  border-radius: 5px;
+}
+#world-dialog button:hover {
+  background: #333;
+  border-color: #777;
+}
+.world-book-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.world-book-heading h2 {
+  margin: 0;
+  font-size: 17px;
+  white-space: nowrap;
+  font-weight: 400;
+}
+#world-name {
+  flex: 1;
+}
+.world-tools {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+#world-search {
+  max-width: 210px;
+}
+#world-sort {
+  max-width: 145px;
+}
+#world-count {
+  margin-left: auto;
+  color: #aaa;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.world-format-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  color: #aaa;
+  font-size: 12px;
+}
+#world-dialog .world-format-links button {
+  background: #292822;
+  color: #dfcd9d;
+  border-color: #645c42;
+}
+.world-workspace {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  scrollbar-gutter: stable;
+}
+.world-row-grid {
+  display: grid;
+  grid-template-columns:
+    28px 24px minmax(135px, 1fr) 58px minmax(190px, 1.4fr)
+    52px 68px 68px 30px 30px;
+  gap: 6px;
+  align-items: center;
+}
+.world-table-labels {
+  padding: 0 10px 6px;
+  font-size: 12px;
+  color: #999;
+  text-align: center;
+}
+#world-entry-list {
+  display: grid;
+  gap: 8px;
+}
+.world-entry-row {
+  background: #151515;
+  border: 1px solid #303030;
+  border-radius: 12px;
+}
+.world-entry-bar {
+  padding: 8px 10px;
+}
+#world-dialog .world-entry-bar input,
+#world-dialog .world-entry-bar select {
+  height: 34px;
+  padding: 4px 6px;
+}
+#world-dialog .world-entry-bar button {
+  height: 28px;
+  padding: 0;
+  border: 0;
+  background: #252525;
+}
+#world-dialog .world-entry-bar .world-expand {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #b5b5a9;
+  color: #252525;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+#world-dialog .world-entry-bar .world-expand .world-expand-icon {
+  width: 12px;
+  height: 12px;
+  transition: transform 0.16s ease;
+  pointer-events: none;
+}
+#world-dialog .world-entry-bar .world-expand[aria-expanded='true'] .world-expand-icon {
+  transform: rotate(180deg);
+}
+.world-entry-row.is-disabled .world-entry-bar {
+  opacity: 0.48;
+}
+.world-entry-bar .world-switch {
+  position: relative;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+.world-switch input {
+  position: absolute;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  margin: 0;
+}
+.world-switch span {
+  width: 23px;
+  height: 14px;
+  background: #555;
+  border-radius: 10px;
+  pointer-events: none;
+}
+.world-switch span::after {
+  content: '';
+  display: block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #222;
+  margin: 3px;
+  transition: translate 0.15s;
+}
+.world-switch input:checked + span {
+  background: #db8a22;
+}
+.world-switch input:checked + span::after {
+  translate: 9px 0;
+}
+.world-switch input:focus-visible + span {
+  outline: 2px solid #d5c293;
+  outline-offset: 3px;
+}
+.world-editor {
+  padding: 6px 16px 18px;
+}
+.world-editor label {
+  display: grid;
+  gap: 4px;
+  color: #aaa;
+  text-align: center;
+  font-size: 13px;
+}
+.world-key-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 105px minmax(0, 1fr);
+  gap: 9px;
+  align-items: end;
+}
+#world-dialog .world-key-fields textarea {
+  resize: vertical;
+  height: 54px;
+  min-height: 40px;
+  padding: 5px;
+}
+.world-scan-fields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 12px 0;
+}
+.world-targets {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  padding: 8px 0 13px;
+  color: #bbb;
+}
+.world-targets small {
+  color: #777;
+  font-size: 11px;
+}
+#world-dialog .world-check {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 5px;
+  margin: 0;
+  line-height: 1.7;
+  text-align: left;
+  font-size: 12px;
+  color: #b1b1a8;
+}
+.world-check input {
+  margin: 0;
+  accent-color: #d6d5c8;
+  width: 15px;
+  height: 15px;
+}
+.world-content-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 8px 0;
+}
+.world-content-heading > div:first-child {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  color: #aaa;
+  align-items: center;
+}
+#world-entry-tokens {
+  font-size: 12px;
+}
+.world-recursion-fields {
+  display: grid;
+  grid-template-columns: 1.45fr 1fr;
+  gap: 3px 15px;
+}
+#world-dialog .world-content {
+  height: 290px;
+  min-height: 180px;
+  resize: vertical;
+  padding: 13px;
+  font:
+    16px/1.65 'Microsoft YaHei',
+    sans-serif;
+  border-color: #383838;
+  background: #101010;
+}
+#world-dialog footer {
+  flex-shrink: 0;
+}
+.world-preview-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+#world-dialog #world-kind {
+  width: 126px;
+}
+#world-status {
+  color: #999;
+  font-size: 11px;
+  line-height: 1.4;
+  margin: 6px 0 0;
+  max-height: 30px;
+  overflow: auto;
+}
+#world-preview-area {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+#world-dialog.show-preview .world-workspace,
+#world-dialog.show-preview .world-table-labels {
+  display: none;
+}
+#world-preview,
+#diagnostic-messages {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font: 12px/1.8 monospace;
+}
+#diagnostic-messages {
+  max-height: 250px;
+  overflow: auto;
+}
+#world-token-summary,
+#diagnostic-token-summary,
+#ai-token-summary {
+  color: #b1dfc4;
+  line-height: 1.8;
+  font-size: 12px;
+}
+.world-empty {
+  color: #999;
+  padding: 30px;
+  text-align: center;
+}
+@media (max-width: 950px) {
+  #world-dialog {
+    padding: 10px;
+  }
+  .world-row-grid {
+    grid-template-columns:
+      24px 22px minmax(115px, 1fr) 44px minmax(164px, 1.2fr)
+      43px 53px 56px 24px 24px;
+    gap: 4px;
+  }
+  .world-entry-bar {
+    padding: 6px;
+  }
+  #world-dialog .world-entry-bar input,
+  #world-dialog .world-entry-bar select {
+    font-size: 12px;
+    padding: 3px;
+  }
+  .world-editor {
+    padding: 6px 10px 12px;
+  }
+  .world-content-heading {
+    align-items: start;
+  }
+  .world-recursion-fields {
+    gap: 3px 8px;
+  }
+}
+@media (max-height: 600px) {
+  #world-dialog {
+    height: calc(100dvh - 16px);
+    max-height: calc(100dvh - 16px);
+    gap: 6px;
+  }
+  .world-book-heading h2 {
+    font-size: 14px;
+  }
+  .world-format-links {
+    gap: 6px;
+  }
+  #world-dialog .world-content {
+    height: 230px;
+  }
+  .world-table-labels {
+    padding-bottom: 2px;
+  }
+  .world-targets {
+    gap: 9px;
+  }
+}

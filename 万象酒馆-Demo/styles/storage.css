@@ -1,0 +1,31 @@
+.storage-notice {
+  position: fixed;
+  z-index: 10000;
+  inset: 20px 20px auto;
+  margin: 0 auto;
+  max-width: 640px;
+  padding: 18px 24px;
+  color: #e5d7b5;
+  background: #142723;
+  border: 1px solid #bca56e;
+  border-radius: 12px;
+  box-shadow: 0 12px 40px #0008;
+}
+
+.local-data-panel {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid #bca56e55;
+}
+
+.local-data-panel p {
+  color: #a5b8aa;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.local-data-panel > div {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}

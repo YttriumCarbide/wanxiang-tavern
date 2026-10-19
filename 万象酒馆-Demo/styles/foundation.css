@@ -1,0 +1,125 @@
+/* foundation: component-owned styles and responsive rules. */
+
+:root {
+  color-scheme: dark;
+  --bg: #141a1d;
+  --ink: #e8e1cf;
+  --teal: #82bdb3;
+  --red: #d8787c;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font:
+    13px 'Segoe UI',
+    'Microsoft YaHei',
+    sans-serif;
+}
+button {
+  font: inherit;
+}
+select {
+  font: inherit;
+}
+button {
+  color: inherit;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 8px 12px;
+}
+button:hover {
+  border-color: var(--teal);
+}
+button:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+select:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+button.primary {
+  background: #c4aa73;
+  border-color: #e1c994;
+  color: #172221;
+  font-weight: 600;
+}
+button.primary:hover {
+  background: #e0c38a;
+}
+[hidden] {
+  display: none !important;
+}
+.eyebrow {
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: var(--muted);
+}
+.muted {
+  color: var(--muted);
+  line-height: 1.8;
+}
+.bar {
+  height: 5px;
+  overflow: hidden;
+  background: #101a20;
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  bottom: 20px;
+  border-radius: 2px;
+}
+.bar.mp {
+  bottom: 1px;
+  height: 4px;
+}
+:root {
+  --panel: #152126b8;
+  --border: #82948a55;
+  --muted: #bdcabf;
+  --gold: #d8b984;
+}
+body {
+  overflow: hidden;
+}
+button {
+  background: #20332c7a;
+  transition:
+    background 0.18s,
+    border-color 0.18s,
+    box-shadow 0.18s;
+}
+button:hover {
+  background: #3b594a99;
+}
+@media (max-width: 760px) {
+  body {
+    overflow: hidden;
+  }
+}
+.bar {
+  position: relative !important;
+  inset: auto !important;
+  display: block;
+  margin: 0 !important;
+  border: 1px solid #0b161b99;
+  pointer-events: auto;
+  outline-offset: 3px;
+  cursor: help;
+}
+.bar {
+  overflow: visible !important;
+  height: 13px !important;
+}
+.bar.mp {
+  height: 12px !important;
+}
