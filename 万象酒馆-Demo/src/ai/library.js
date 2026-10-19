@@ -12,7 +12,7 @@ import { formatCharacterSetting } from './character-setting.js';
 import { loadCustomPortraits, savedPortrait } from '../portraits.js';
 import { newExploration, restoreExploration } from '../exploration.js';
 import { restoreInventory } from '../rewards.js';
-import { restoredSummary } from '../memory.js';
+import { restoredSummary, conversationText } from '../memory.js';
 import { restoreArchives, hydrateArchiveMaps } from '../archives.js';
 
 export function newLibrary() {
@@ -134,14 +134,22 @@ export function restoreLibrary(value) {
         typeof message.content === 'string' &&
         message.content.length <= 200000,
     )
-    .map(({ role, content, display, speakerIds, speakerName, summary, id, divider }) => {
+    .map((message, index, messages) => {
+      const { role, content, display, speakerIds, speakerName, summary, turnSummary, id, divider } =
+        message;
       const validSummary = restoredSummary(summary, content);
+      const player = messages[index - 1];
+      const validTurn =
+        role === 'assistant' && player?.role === 'user' && !player.divider && !divider
+          ? restoredSummary(turnSummary, conversationText(player, message))
+          : null;
       return {
         role,
         content,
         ...(typeof id === 'string' ? { id } : {}),
         ...(divider ? { divider: true } : {}),
         ...(validSummary ? { summary: validSummary } : {}),
+        ...(validTurn ? { turnSummary: validTurn } : {}),
         ...(typeof display === 'string' && display.length <= 200000 ? { display } : {}),
         ...(Array.isArray(speakerIds)
           ? {

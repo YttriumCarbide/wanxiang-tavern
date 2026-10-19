@@ -8,7 +8,7 @@ export async function settingsPreparationChecks({ page, output }) {
     (await page.locator('.app-header nav button:visible').allTextContents()).map((text) =>
       text.trim(),
     ),
-    ['归档', '记录', '设置', '准备', ''],
+    ['总结', '归档', '记录', '设置', '准备', ''],
   );
   assert.equal(
     await page
@@ -78,17 +78,16 @@ export async function settingsPreparationChecks({ page, output }) {
   await page.waitForFunction(() => !!window.demo);
   await page.locator('#party-toggle').click();
   assert.equal(await page.locator('.prepare-slot').count(), 6);
-  assert.equal(await page.locator('.prepare-member').count(), 7);
+  assert.equal(await page.locator('.prepare-member').count(), 1);
   const modal = await page.locator('#party-panel').boundingBox();
   assert(modal.x > 0 && modal.y > 0 && modal.height < 836 * 0.9);
-  await page.locator('[data-prepare-slot="4"]').click();
-  await page.locator('[data-prepare-view="character-preparation"]').click();
-  await page.locator('[data-prepare-use="character-preparation"]').click();
+  await page
+    .locator('[data-prepare-view="character-preparation"]')
+    .dragTo(page.locator('[data-prepare-slot="4"]'));
   let saved = await page.evaluate(() => JSON.parse(localStorage.getItem('wanxiang.worldbooks.v1')));
   assert.equal(saved.party[4], 'character-preparation');
   assert.equal(new Set(saved.party).size, 6);
-  await page.locator('[data-prepare-slot="0"]').click();
-  await page.locator('[data-prepare-use="character-preparation"]').click();
+  await page.locator('[data-prepare-slot="4"]').dragTo(page.locator('[data-prepare-slot="0"]'));
   saved = await page.evaluate(() => JSON.parse(localStorage.getItem('wanxiang.worldbooks.v1')));
   assert.equal(saved.party[0], 'character-preparation');
   assert.equal(new Set(saved.party).size, 6);
@@ -97,17 +96,17 @@ export async function settingsPreparationChecks({ page, output }) {
   await page.evaluate(() => localStorage.removeItem('wanxiang.generated-reset.v1'));
   await page.reload();
   await page.locator('#party-toggle').click();
-  assert.equal(await page.locator('.prepare-member').count(), 6);
-  assert((await page.locator('#prepare-status').textContent()).includes('剧本 0 篇 · 历史 0 条'));
+  assert.equal(await page.locator('.prepare-member').count(), 0);
+  assert((await page.locator('#prepare-status').textContent()).includes('6 / 6 位出发'));
   await page.locator('#prepare-done').click();
   await page.locator('#ai-open').click();
   await Promise.all([
     page.waitForNavigation({ waitUntil: 'domcontentloaded' }),
     page.locator('#generation-reset-undo').click(),
   ]);
-  await page.waitForFunction(() => document.querySelectorAll('.prepare-member').length === 7);
+  await page.waitForFunction(() => document.querySelectorAll('.prepare-member').length === 1);
   await page.locator('#party-toggle').click();
-  assert.equal(await page.locator('.prepare-member').count(), 7);
+  assert.equal(await page.locator('.prepare-member').count(), 1);
   await page.locator('#prepare-done').click();
   await page.evaluate(() => localStorage.removeItem('wanxiang.worldbooks.v1'));
   await page.reload();

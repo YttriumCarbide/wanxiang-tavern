@@ -120,7 +120,7 @@ export async function apiSettingsChecks({ browser, baseURL, output }) {
     await page.locator('#prompt-import-file').setInputFiles(fixture);
     await page
       .locator('#ai-status')
-      .filter({ hasText: '预设已导入共享库' })
+      .filter({ hasText: '已导入并应用' })
       .waitFor({ timeout: 60000 });
     const id = await page.locator('#prompt-select').inputValue();
     imported.push(id);
@@ -152,7 +152,10 @@ export async function apiSettingsChecks({ browser, baseURL, output }) {
       .filter({ hasText: '未调用模型' })
       .waitFor({ timeout: 60000 });
     const preview = await (await previewResponse).json();
-    assert(preview.messages.length > 2);
+    assert(preview.messages.length >= 2);
+    assert.equal(profile.chat.promptProcessing, 'strict');
+    assert(preview.messages.some((message) => message.role === 'system'));
+    assert(preview.messages.some((message) => message.role === 'user'));
     assert(preview.tokens.inputEstimate > 0);
     assert(!preview.messages.some((message) => /{{(?:getvar|setvar|roll)\b/.test(message.content)));
     await page.screenshot({ path: path.join(output, 'izumi-preset-preview.png') });

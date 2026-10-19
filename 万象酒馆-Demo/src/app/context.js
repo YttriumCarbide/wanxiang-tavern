@@ -22,6 +22,7 @@
  * @property {ReturnType<typeof import('./drag.js').createDrag>} drag
  * @property {ReturnType<typeof import('./saves.js').createSaveManager>} [saves]
  * @property {ReturnType<typeof import('./onboarding.js').createOnboarding>} onboarding
+ * @property {ReturnType<typeof import('./first-run.js').createFirstRun>} firstRun
  * @property {ReturnType<typeof import('./shop.js').createShop>} shop
  * @property {ReturnType<typeof import('./loot-conflicts.js').createLootConflicts>} lootConflicts
  * @property {ReturnType<typeof import('./backpack.js').createBackpack>} backpack

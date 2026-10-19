@@ -34,7 +34,7 @@ export const EDITH_LESSONS = {
   'opening-confirm': lesson('确认先手编排', '#commit', [
     '安排好了。闪烁的变化是预演，还没落在我们身上。满意的话就点“结算先手”，我会照着你的安排出手。',
   ]),
-  timeline: lesson('查看敌方时间格', '#timeline', [
+  timeline: lesson('查看敌方时间格', '#timeline .enemy-cell', [
     '正式回合有3 AP，底下的时间格从左向右依次结算。敌人也在这条时间线上行动。',
     '点一个敌方时间格，就能一起看所有敌人的箭头；只想看一位，就点它的卡牌。先观察，再决定怎么走，这比一头撞过去有趣多了。',
   ]),
@@ -74,9 +74,12 @@ export const EDITH_LESSONS = {
   'slow-done': lesson('道具也要安排时机', null, [
     '它慢下来了，药瓶也确实用掉了。背包中的道具要到结算才消耗，取消编排不会浪费；接下来利用多出来的空隙吧。',
   ]),
-  crossfire: lesson('第四战 · 一起看意图', '#timeline', [
+  crossfire: lesson('第四战 · 一起看意图', '#opening-preview .enemy-cell, #timeline .enemy-cell', [
     '猎犬和小蕈一起挡住路了。点任意一个敌方时间格，看清它们分别想攻击哪里，再安排我们的行动。',
     '空基座也有用途，别急着填满它。换位、攻击和道具都在同一条时间轴上，先后顺序由你来决定。',
+  ]),
+  'crossfire-done': lesson('看清了，再行动', null, [
+    '现在，两名敌人的攻击位置都看清了。剑旁的数字是伤害，右边的图标是附加状态。按你的判断安排这回合吧。',
   ]),
   boss: lesson('最终战 · 魔力药水', '#backpack-open', [
     '守门巨像就在前面。这瓶魔力药水也给你，现在打开背包就能看见它。选中后，再点一名存活队友，便能回复8法力。',

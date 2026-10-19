@@ -4,8 +4,9 @@ import { escapeText } from '../ui.js';
 import { html } from '../shared/html.js';
 import { query as $ } from './dom.js';
 import { tokenSummary, formatRequestPreview } from './request-preview.js';
+import { API_LABELS, PROMPT_KINDS } from './first-run-rules.js';
 
-/** Settings editor owns only its draft; persisted presets and secrets belong to the local service. */
+/** The editor owns its draft; the platform store keeps presets and credentials on this device. */
 export function createAiPresetEditor({
   events,
   api,
@@ -287,6 +288,28 @@ ${escapeText(entry.content)}</textarea>
           : '连接预设已保存，包含URL、模型和API Key；可在角色与剧本接口中选用。',
     );
   }
+  $('#api-apply-targets').innerHTML = Object.entries(API_LABELS)
+    .map(
+      ([id, name]) =>
+        html`<label><input type="checkbox" value="${id}" data-apply-kind />${name}</label>`,
+    )
+    .join('');
+  events.on(
+    $('#api-preset-apply-many'),
+    'click',
+    guard(async () => {
+      const id = $('#api-preset-select').value;
+      if (!id) throw Error('请先保存或选择一个 API 预设');
+      const targets = [...document.querySelectorAll('[data-apply-kind]:checked')];
+      if (!targets.length) throw Error('请勾选要应用的 API');
+      for (const target of targets) {
+        const result = await api('presets', { action: 'apply', kind: target.value, id });
+        setProfiles(result.profiles);
+      }
+      fillProfile();
+      status(`已将所选连接预设应用到 ${targets.length} 个 API。`);
+    }),
+  );
   events.on(
     $('#api-preset-save'),
     'click',
@@ -471,9 +494,15 @@ ${escapeText(entry.content)}</textarea>
       warnings = result.warnings;
       await refresh();
       renderDraft();
-      await select(draft.id);
+      for (const target of PROMPT_KINDS) {
+        setProfiles(await api('prompts/select', { kind: target, id: draft.id }));
+        window.dispatchEvent(new CustomEvent('preset-selected', { detail: { kind: target } }));
+      }
+      syncProfile();
       $('#prompt-import-file').value = '';
-      status('预设已导入共享库，所有 API 均可选择；各接口独立选择使用哪一份。');
+      status(
+        '已导入并应用到角色、剧本、酒馆交流和快速闲聊 API；之后可分别更换。总结和造物使用内置提示词。',
+      );
     }),
   );
   events.on(
@@ -491,5 +520,5 @@ ${escapeText(entry.content)}</textarea>
       URL.revokeObjectURL(url);
     }),
   );
-  return { refresh, syncProfile };
+  return { refresh, syncProfile, open };
 }

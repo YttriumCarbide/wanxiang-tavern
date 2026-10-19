@@ -49,7 +49,7 @@ function abilitySheet(skill, design, label) {
 }
 
 /** Presentation joins compiled values with readable lore; neither layer is modified. */
-export function characterSheet(entry, equipment = []) {
+export function characterSheet(entry, equipment = [], options = {}) {
   const model = characterPresentation(
       typeof entry.display?.worldbook === 'string'
         ? { ...entry, setting: { ...entry.setting, worldbook: entry.display.worldbook } }
@@ -57,6 +57,7 @@ export function characterSheet(entry, equipment = []) {
     ),
     combat = applyEquipment(grownCombat(entry), equipment);
   const growth = restoreGrowth(entry.growth, entry.id);
+  const isPrep = options.mode === 'preparation';
   const attack = {
     name: combat.attackName,
     ap: 1,
@@ -64,6 +65,46 @@ export function characterSheet(entry, equipment = []) {
     target: 'enemy',
     effects: [{ type: 'damage', value: combat.attack }],
   };
+
+  const nextExp = xpToNext(growth.level);
+  const expPercent = Math.min(100, Math.max(0, Math.round((growth.xp / nextExp) * 100)));
+
+  const abilities = html`<section class="character-abilities">
+    <h3>战斗方式 <small>${isPrep ? '战技数值、目标与消耗' : '展开查看数值与动作'}</small></h3>
+    ${abilitySheet(attack, model.attack, '普攻')}${combat.skills.map((skill, index) => abilitySheet(skill, model.skills[index], skill.passive ? '被动' : '技能')).join('')}
+  </section>`;
+
+  const biography = html`<div class="character-biography">
+    ${model.sections
+      .map(
+        (section) =>
+          html`<section>
+            <h3>${section.title}</h3>
+            <p>${escapeText(section.text)}</p>
+          </section>`,
+      )
+      .join('')}${
+      model.fallback
+        ? html`<section>
+            <h3>来客设定</h3>
+            <p>${escapeText(model.fallback)}</p>
+          </section>`
+        : ''
+    }
+  </div>`;
+
+  const dossierContent = isPrep
+    ? html`${options.equipmentMarkup || ''}${abilities}
+        <details class="character-lore-fold">
+          <summary class="lore-fold-summary">
+            <span class="lore-summary-badge">📜 设定档案</span>
+            <strong class="lore-summary-title">角色生平、外貌与世界书设定</strong>
+            <span class="lore-summary-hint">点击展开详细设定 ▾</span>
+          </summary>
+          ${biography}
+        </details>`
+    : html`${biography}${abilities}`;
+
   return html`<div class="character-sheet">
     <aside class="character-identity">
       <div class="identity-art">
@@ -73,11 +114,24 @@ export function characterSheet(entry, equipment = []) {
       </div>
       <div class="identity-body">
         <h2>${escapeText(model.name)}</h2>
-        <p class="identity-profession">
-          ${RARITIES[growth.rarity].name} · Lv.${growth.level} ·
-          ${growth.xp}/${xpToNext(growth.level)} EXP
-        </p>
-        <p class="identity-profession">${escapeText(model.profession)}</p>
+        <div class="identity-rank-line">
+          <span class="identity-level-badge"
+            ><small>LV.</small><strong>${growth.level}</strong></span
+          >
+          <span class="identity-rarity-tag rarity-${growth.rarity}"
+            >${RARITIES[growth.rarity].name}</span
+          >
+          <span class="identity-profession-tag">${escapeText(model.profession)}</span>
+        </div>
+        <div class="identity-exp-widget" title="经验值：${growth.xp} / ${nextExp} EXP">
+          <div class="exp-widget-labels">
+            <span class="exp-title">EXP 经验进阶</span>
+            <span class="exp-numbers">${growth.xp} / ${nextExp} (${expPercent}%)</span>
+          </div>
+          <div class="exp-track">
+            <div class="exp-fill" style="width: ${expPercent}%"></div>
+          </div>
+        </div>
         <div class="identity-tags">
           <span>${escapeText(model.gender)}</span><span>${escapeText(model.age)}</span>
           ${model.traits.map((trait) => html`<span title="${escapeText(trait.label)}">${escapeText(trait.value)}</span>`).join('')}
@@ -102,29 +156,6 @@ export function characterSheet(entry, equipment = []) {
         </dl>
       </div>
     </aside>
-    <div class="character-dossier">
-      <div class="character-biography">
-        ${model.sections
-          .map(
-            (section) =>
-              html`<section>
-                <h3>${section.title}</h3>
-                <p>${escapeText(section.text)}</p>
-              </section>`,
-          )
-          .join('')}${
-          model.fallback
-            ? html`<section>
-                <h3>来客设定</h3>
-                <p>${escapeText(model.fallback)}</p>
-              </section>`
-            : ''
-        }
-      </div>
-      <section class="character-abilities">
-        <h3>战斗方式 <small>展开查看数值与动作</small></h3>
-        ${abilitySheet(attack, model.attack, '普攻')}${combat.skills.map((skill, index) => abilitySheet(skill, model.skills[index], skill.passive ? '被动' : '技能')).join('')}
-      </section>
-    </div>
+    <div class="character-dossier">${dossierContent}</div>
   </div>`;
 }

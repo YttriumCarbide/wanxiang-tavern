@@ -45,12 +45,14 @@ export function createSummoning(context) {
     if (!button || busy) return;
     mode = button.dataset.summonMode;
     $('#summon-choice-status').textContent = '';
+    $('#inn-frame iframe')?.contentWindow?.postMessage({ type: 'summon-surge' }, location.origin);
     refresh();
   });
   events.on($('#summon-confirm'), 'click', async () => {
     if (busy || session.ai.busy || !dialog.open || session.runtime.mode !== 'inn') return;
     if (!(library().inventory?.summonContracts > 0)) return;
     busy = true;
+    $('#inn-frame iframe')?.contentWindow?.postMessage({ type: 'summon-surge' }, location.origin);
     refresh();
     try {
       const source = summonSource(mode, Math.random());

@@ -522,7 +522,7 @@
 .card-buffs {
   position: absolute;
   right: 4px;
-  top: 4px;
+  top: -29px;
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
@@ -627,7 +627,7 @@
   }
   .card-buffs {
     right: 1px;
-    top: 1px;
+    top: -22px;
     gap: 2px;
   }
   .unit-hit .buff-icon {

@@ -1,10 +1,4 @@
-import {
-  equip,
-  buyEquipment,
-  normalizeEquipment,
-  equippedDefinitions,
-  EQUIPMENT_STATS,
-} from '../equipment.js';
+import { equip, buyEquipment, normalizeEquipment, EQUIPMENT_STATS } from '../equipment.js';
 import { ITEMS } from '../content/items.js';
 import { BUFFS } from '../data.js';
 import { TRIGGER_EVENTS, TRIGGER_TARGETS } from '../triggers.js';
@@ -42,42 +36,48 @@ export function equipmentDescription(item) {
   ].join('；');
 }
 export function preparationEquipment(library, member) {
-  const equipment = equippedDefinitions(library, member);
   return html`<section class="equipment-slots">
-    <h3>随身装备 · ${equipment.length} / 3</h3>
-    ${Array.from({ length: 3 }, (_, slot) => {
-      const current = member.equipment?.[slot];
-      return html`<label
-        >装备 ${slot + 1}<select
-          data-equipment-character="${member.id}"
-          data-equipment-slot="${slot}"
+    <h3>角色装备</h3>
+    <div class="prepare-gear-list">
+      ${Array.from({ length: 3 }, (_, slot) => {
+        const current = member.equipment?.[slot];
+        const instance = library.equipment.owned.find((item) => item.id === current);
+        const template = library.equipment.catalog.find((item) => item.id === instance?.templateId);
+        return html`<label
+          class="prepare-gear-row"
+          data-tooltip="${escapeText(template ? equipmentDescription(template) : '点击选择装备')}"
         >
-          <option value="">未装备</option>
-          ${library.equipment.owned
-            .filter(
-              (instance) =>
-                instance.id === current ||
-                !library.characters.some((entry) => entry.equipment?.includes(instance.id)),
-            )
-            .map((instance) => {
-              const template = library.equipment.catalog.find(
-                (entry) => entry.id === instance.templateId,
-              );
-              return html`<option
-                value="${instance.id}"
-                ${instance.id === current ? 'selected' : ''}
-              >
-                ${escapeText(template.name)}
-              </option>`;
-            })
-            .join('')}
-        </select></label
-      >`;
-    }).join(
-      '',
-    )}${equipment.map((item) => html`<p><b>${escapeText(item.name)}</b> · ${escapeText(item.description)}<small>${escapeText(equipmentDescription(item))}</small></p>`).join('')}
+          <span class="prepare-gear-icon">${template ? '✧' : '＋'}</span>
+          <span
+            ><strong>装备 ${slot + 1}</strong
+            ><small>${escapeText(template?.name || '未装备')}</small></span
+          ><b>›</b>
+          <select
+            data-equipment-character="${member.id}"
+            data-equipment-slot="${slot}"
+            aria-label="装备 ${slot + 1}"
+          >
+            <option value="">未装备</option>
+            ${library.equipment.owned
+              .filter(
+                (item) =>
+                  item.id === current ||
+                  !library.characters.some((entry) => entry.equipment?.includes(item.id)),
+              )
+              .map(
+                (item) =>
+                  html`<option value="${item.id}" ${item.id === current ? 'selected' : ''}>
+                    ${escapeText(library.equipment.catalog.find((entry) => entry.id === item.templateId)?.name || '装备')}
+                  </option>`,
+              )
+              .join('')}
+          </select></label
+        >`;
+      }).join('')}
+    </div>
   </section>`;
 }
+
 export function createEquipment(context) {
   const { session, events } = context;
   const library = () => session.ai.library;
@@ -89,7 +89,7 @@ export function createEquipment(context) {
   const bag = document.createElement('details');
   bag.id = 'prepare-bag';
   bag.innerHTML = '<summary>查看背包</summary><div></div>';
-  document.querySelector('#party-panel').append(bag);
+  document.querySelector('#party-panel > footer').prepend(bag);
   let request = null;
   function pendingItems() {
     const keyOf = (map, name, description, value) =>
@@ -147,11 +147,9 @@ export function createEquipment(context) {
         .filter((item) => library().inventory.items[item.id] > 0)
         .map(
           (item) =>
-            html`<p>
+            html`<p tabindex="0" data-tooltip="${escapeText(item.text)}">
               <img width="64" height="64" src="${item.icon}" alt="" /><span
-                >${item.name} × ${library().inventory.items[item.id]}<small
-                  >${escapeText(item.text)}</small
-                ></span
+                >${item.name} × ${library().inventory.items[item.id]}</span
               >
             </p>`,
         )

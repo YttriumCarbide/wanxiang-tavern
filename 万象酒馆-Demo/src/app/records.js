@@ -8,7 +8,7 @@ export function createRecords(context) {
   const dialog = document.createElement('dialog');
   dialog.id = 'journey-records';
   dialog.innerHTML =
-    '<header><h2>旅途记录</h2><button id="records-edit">编辑</button><button id="records-delete">删除</button><button id="records-close" aria-label="关闭记录">×</button></header><div class="records-body"><nav id="records-list"></nav><article id="records-text"></article></div>';
+    '<header><div class="records-title"><small>JOURNEY / JOURNAL</small><h2>旅途记录</h2></div><nav class="records-actions"><button id="records-edit">编辑</button><button id="records-delete">删除</button><button id="records-close" aria-label="关闭记录">×</button></nav></header><div class="records-body"><nav id="records-list"></nav><article id="records-text"></article></div>';
   document.body.append(dialog);
   const library = () => context.session.ai.library;
   function field(label, value, multiline = false) {
@@ -20,7 +20,20 @@ export function createRecords(context) {
     wrapper.append(input);
     return { wrapper, input };
   }
+  function emptyState(area, title, hint) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'records-empty';
+    const icon = document.createElement('span');
+    icon.textContent = '✧';
+    const heading = document.createElement('h3');
+    heading.textContent = title;
+    const caption = document.createElement('p');
+    caption.textContent = hint;
+    wrapper.append(icon, heading, caption);
+    area.append(wrapper);
+  }
   function list() {
+    dialog.classList.toggle('is-empty', !library().history.length);
     $('#records-list').replaceChildren(
       ...library()
         .history.map((record, index) => {
@@ -42,7 +55,7 @@ export function createRecords(context) {
     const area = $('#records-text');
     area.replaceChildren();
     if (!record) {
-      area.textContent = '尚无旅途记录。已展示的副本文字会自动保存在这里。';
+      emptyState(area, '旅程尚未落笔', '已走过的副本故事会保存在这里。');
       return;
     }
     const title = document.createElement('h3');
@@ -176,12 +189,16 @@ export function createRecords(context) {
   const archive = document.createElement('dialog');
   archive.id = 'archive-dialog';
   archive.innerHTML =
-    '<header><h2>旅途归档</h2><button data-archive-tab="npcs">NPC</button><button data-archive-tab="items">道具</button><button id="archive-close">×</button></header><div class="records-body"><nav id="archive-list"></nav><article id="archive-text"></article></div>';
+    '<header><div class="records-title"><small>JOURNEY / COLLECTION</small><h2>旅途归档</h2></div><nav class="records-actions"><div class="archive-tabs"><button data-archive-tab="npcs">NPC</button><button data-archive-tab="items">道具</button></div><button id="archive-close" aria-label="关闭归档">×</button></nav></header><div class="records-body"><nav id="archive-list"></nav><article id="archive-text"></article></div>';
   document.body.append(archive);
   let tab = 'npcs';
   let archiveEditing = false;
   function renderArchive(index = 0) {
     const entries = library().archives[tab];
+    archive.classList.toggle('is-empty', !entries.length);
+    archive.querySelectorAll('[data-archive-tab]').forEach((button) => {
+      button.setAttribute('aria-pressed', String(button.dataset.archiveTab === tab));
+    });
     $('#archive-list').replaceChildren(
       ...entries.map((entry, entryIndex) => {
         const button = document.createElement('button');
@@ -195,7 +212,11 @@ export function createRecords(context) {
     const area = $('#archive-text');
     area.replaceChildren();
     if (!entry) {
-      area.textContent = tab === 'npcs' ? '尚未遇见可归档的 NPC。' : '尚未收集道具。';
+      emptyState(
+        area,
+        tab === 'npcs' ? '尚未结识新的旅人' : '行囊里尚无收藏',
+        tab === 'npcs' ? '探索中遇见的人物将收录于此。' : '探索中收集的物品将收录于此。',
+      );
       return;
     }
     const name = field('姓名 / 名称', entry.name);
@@ -270,7 +291,10 @@ export function createRecords(context) {
     );
     area.append(name.wrapper, content.wrapper);
     if (tab === 'npcs') area.append(keywords.wrapper);
-    area.append(sources, edit, save);
+    const actions = document.createElement('div');
+    actions.className = 'archive-edit-actions';
+    actions.append(edit, save);
+    area.append(sources, actions);
   }
   context.events.on($('#archives-open'), 'click', () => {
     archiveEditing = false;

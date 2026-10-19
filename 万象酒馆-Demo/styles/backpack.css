@@ -28,10 +28,10 @@
 .backpack-panel {
   position: fixed;
   z-index: 24;
-  width: min(450px, calc(100vw - 28px));
+  width: min(340px, calc(100vw - 28px));
   max-height: min(520px, 65dvh);
   overflow: auto;
-  padding: 18px;
+  padding: 12px;
   color: #e2ddcb;
   background: linear-gradient(145deg, #203b36f5, #101e20fa);
   border: 1px solid #b49d67;
@@ -62,7 +62,7 @@
 }
 .backpack-panel h2 {
   margin: 5px 0;
-  font-size: 20px;
+  font-size: 17px;
   font-weight: 400;
   letter-spacing: 3px;
 }
@@ -74,34 +74,61 @@
 }
 #backpack-items {
   display: grid;
-  gap: 8px;
-  margin: 12px 0;
-}
-.bag-item {
-  display: flex;
-  text-align: left;
-  align-items: center;
-  gap: 10px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  margin: 8px 0 0;
   padding: 6px;
-  background: #c9b8870a;
+  background: #09151266;
   border: 1px solid #b49d6738;
 }
+.bag-item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+  min-height: 76px;
+  padding: 6px 3px;
+  background: radial-gradient(ellipse at top, #b49d6718, #0c1e1b);
+  border: 1px solid #b49d6750;
+  border-radius: 4px;
+  box-shadow: inset 0 0 12px #0005;
+}
+.bag-item:hover,
+.bag-item:focus-visible {
+  border-color: #dbc58f;
+  background: #b49d6725;
+}
 .bag-item img {
-  width: 64px;
-  height: 64px;
-  flex: none;
+  width: 36px;
+  height: 36px;
 }
 .bag-item > span {
-  flex: 1;
-}
-.bag-item strong,
-.bag-item small {
-  display: block;
-}
-.bag-item b {
   font-size: 11px;
-  white-space: nowrap;
-  color: #dbc58f;
+  line-height: 1.4;
+}
+.bag-count {
+  position: absolute;
+  top: 3px;
+  right: 5px;
+  color: #ecd7a5;
+  font-size: 12px;
+}
+.item-projectile {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 64px;
+  height: 64px;
+  pointer-events: none;
+  z-index: 45;
+  filter: drop-shadow(0 0 9px var(--item-color));
+  will-change: transform, opacity;
+}
+.bag-empty {
+  grid-column: 1 / -1;
+  text-align: center;
 }
 @media (prefers-reduced-motion: reduce) {
   .backpack-panel {

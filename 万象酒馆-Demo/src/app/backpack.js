@@ -19,15 +19,10 @@ export function createBackpack(context) {
   panel.id = 'backpack-dialog';
   panel.setAttribute('aria-labelledby', 'backpack-title');
   panel.innerHTML = html`<header>
-      <div>
-        <small>TRAVELLER / SUPPLIES</small>
-        <h2 id="backpack-title">随身背包</h2>
-      </div>
+      <h2 id="backpack-title">随身背包</h2>
       <button id="backpack-close" aria-label="关闭背包">×</button>
     </header>
-    <p>使用道具占用 1 AP，选好道具后点选场上目标。</p>
-    <div id="backpack-items"></div>
-    <small>预演不消耗道具；确认结算后才扣除。</small>`;
+    <div id="backpack-items"></div>`;
   panel.className = 'backpack-panel';
   panel.inert = true;
   document.querySelector('#battle').append(panel);
@@ -56,13 +51,12 @@ export function createBackpack(context) {
             html`<button
             class="bag-item"
             data-item="${item.id}"
+            data-tooltip="${escapeText(item.name + '\n' + item.text + '\n1 AP · ' + (item.target === 'enemy' ? '敌方单体' : '我方单体'))}"
+            aria-label="${item.name}，持有${counts[item.id]}"
             ${!counts[item.id] ? 'disabled' : ''}
           >
             <img width="64" height="64" src="${item.icon}" alt="" /
-            ><span
-              ><strong>${item.name} × ${counts[item.id] || 0}</strong
-              ><small>${escapeText(item.text)}</small></span
-            ><b>1 AP</b>
+            ><span>${item.name}</span><b class="bag-count">${counts[item.id]}</b>
           </button>`,
         )
         .join('') || '<p class="bag-empty">背包里暂时没有道具</p>';
@@ -81,6 +75,57 @@ export function createBackpack(context) {
     close();
     context.renderer.render();
     context.shell.toast(`选择${item.target === 'enemy' ? '一名敌人' : '一名队友'}使用${item.name}`);
+  }
+  const flights = new Set();
+  async function playItem(event) {
+    const item = ITEMS[event.skill];
+    if (event.type !== 'item' || !item || session.runtime.disposed) return;
+    const from = button.getBoundingClientRect();
+    const images = event.targets.map((id) => {
+      const target = document.querySelector(`[data-unit="${id}"], [data-rear="${id}"]`);
+      if (!target) return null;
+      const to = target.getBoundingClientRect();
+      const image = document.createElement('img');
+      image.className = 'item-projectile';
+      image.src = item.icon;
+      image.alt = '';
+      image.setAttribute('aria-hidden', 'true');
+      image.style.setProperty('--item-color', item.color);
+      document.querySelector('#battle').append(image);
+      const x0 = from.left + from.width / 2 - 32;
+      const y0 = from.top + from.height / 2 - 32;
+      const dx = to.left + to.width / 2 - 32 - x0;
+      const dy = to.top + to.height / 2 - 32 - y0;
+      const arc = Math.min(240, Math.max(85, Math.abs(dx) * 0.24 + Math.abs(dy) * 0.18));
+      const frames = Array.from({ length: 25 }, (_, index) => {
+        const t = index / 24;
+        return {
+          transform: `translate(${x0 + dx * t}px, ${y0 + dy * t - 4 * arc * t * (1 - t)}px) rotate(${-30 + 570 * t}deg) scale(${0.65 + 0.45 * Math.sin(t * Math.PI)})`,
+          opacity: t > 0.92 ? (1 - t) / 0.08 : 1,
+        };
+      });
+      if (matchMedia('(prefers-reduced-motion: reduce)').matches)
+        frames.splice(
+          0,
+          frames.length,
+          { transform: `translate(${x0 + dx}px, ${y0 + dy}px)`, opacity: 1 },
+          { transform: `translate(${x0 + dx}px, ${y0 + dy}px)`, opacity: 0 },
+        );
+      const animation = image.animate(frames, {
+        duration: 700 / session.battle.speed,
+        easing: 'cubic-bezier(.25,.05,.65,1)',
+        fill: 'forwards',
+      });
+      const flight = { image, animation };
+      flights.add(flight);
+      return animation.finished
+        .catch(() => {})
+        .finally(() => {
+          flights.delete(flight);
+          image.remove();
+        });
+    });
+    await Promise.all(images);
   }
   events.on(button, 'click', () => {
     if (!context.viewport.canPlan() || !session.ai.library.inventory.bagUnlocked) return;
@@ -101,7 +146,13 @@ export function createBackpack(context) {
   return {
     render,
     close,
+    playItem,
     dispose() {
+      for (const { image, animation } of flights) {
+        animation.cancel();
+        image.remove();
+      }
+      flights.clear();
       close();
       panel.remove();
       button.remove();

@@ -27,20 +27,41 @@ export function memoryText(original, summary) {
   return valid ? `【已确认摘要】${valid.text}` : original;
 }
 
+export function conversationText(player, reply) {
+  return `玩家：${player.content}\n\n${reply.speakerName || 'AI回应'}：${reply.content}`;
+}
+
+function isConversation(player, reply) {
+  return (
+    player?.role === 'user' &&
+    reply?.role === 'assistant' &&
+    !player.divider &&
+    !reply.divider &&
+    typeof player.content === 'string' &&
+    typeof reply.content === 'string' &&
+    !!player.content.trim() &&
+    !!reply.content.trim()
+  );
+}
+
 function memorySources(library, quick = []) {
   const sources = [];
   for (const [kind, messages] of [
     ['chat', library.tavernChat || []],
     ['quick', quick],
   ]) {
+    let round = 0;
     messages.forEach((message, index) => {
-      if (message.divider || message.role === 'system') return;
+      const player = messages[index - 1];
+      if (!isConversation(player, message)) return;
+      round++;
       sources.push({
-        id: `${kind}:${index}`,
+        id: `${kind}:turn:${message.id || index}`,
         kind,
-        label: `${kind === 'chat' ? '酒馆交流' : '本趟闲聊'} · 第${index + 1}层 · ${message.role === 'user' ? '玩家' : message.speakerName || '回应'}`,
-        text: message.content,
+        label: `${kind === 'chat' ? '酒馆交流' : '本趟闲聊'} · 第${round}轮对话`,
+        text: conversationText(player, message),
         target: message,
+        summaryKey: 'turnSummary',
       });
     });
   }
@@ -52,6 +73,7 @@ function memorySources(library, quick = []) {
         label: `${record.title || '副本经历'} · 第${(line.encounter || 0) + 1}战 · ${line.speaker || '旁白'} · 第${index + 1}条`,
         text: line.text,
         target: line,
+        summaryKey: 'summary',
       });
     }
   }
@@ -60,8 +82,8 @@ function memorySources(library, quick = []) {
 
 export function pendingMemories(library, quick = []) {
   return memorySources(library, quick)
-    .filter((item) => !restoredSummary(item.target.summary, item.text))
-    .map(({ target: _target, ...item }) => item);
+    .filter((item) => !restoredSummary(item.target[item.summaryKey], item.text))
+    .map(({ target: _target, summaryKey: _key, ...item }) => item);
 }
 
 /** Validate every snapshot before applying anything, including edits or a changed save. */
@@ -86,25 +108,36 @@ export function applyMemorySummaries(library, quick, snapshot, results) {
       throw Error('摘要需要1～12000字，尚未保存');
     return {
       target: source.target,
+      key: source.summaryKey,
       text: result.summary.trim(),
       sourceHash: memoryHash(source.text),
     };
   });
-  const previous = changes.map(({ target }) => ({ target, summary: target.summary }));
-  for (const { target, text, sourceHash } of changes) target.summary = { text, sourceHash };
+  const previous = changes.map(({ target, key }) => ({ target, key, summary: target[key] }));
+  for (const { target, key, text, sourceHash } of changes) target[key] = { text, sourceHash };
   return () => {
-    for (const { target, summary } of previous) {
-      if (summary === undefined) delete target.summary;
-      else target.summary = summary;
+    for (const { target, key, summary } of previous) {
+      if (summary === undefined) delete target[key];
+      else target[key] = summary;
     }
   };
 }
 
 export function memoryChat(messages) {
-  return messages.map(({ role, content, summary }) => ({
-    role,
-    content: memoryText(content, summary),
-  }));
+  const history = [];
+  for (let index = 0; index < messages.length; index++) {
+    const message = messages[index];
+    const reply = messages[index + 1];
+    const summary = isConversation(message, reply)
+      ? restoredSummary(reply.turnSummary, conversationText(message, reply))
+      : null;
+    if (summary) {
+      history.push({ role: 'assistant', content: `【已确认对话摘要】${summary.text}` });
+      index++;
+    } else
+      history.push({ role: message.role, content: memoryText(message.content, message.summary) });
+  }
+  return history;
 }
 
 /** Route history contains copies of confirmed lines; match both speaker and original text. */

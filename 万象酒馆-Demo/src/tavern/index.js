@@ -383,6 +383,12 @@ export async function createTavernView() {
   corridorDoor.onclick = () => {
     if (!corridorDoor.hidden && !corridorDoor.disabled) enterCorridor();
   };
+  let summonSurge = 0;
+  events.on(window, 'message', (e) => {
+    if (e.origin === location.origin && e.data?.type === 'summon-surge') {
+      summonSurge = 2.5;
+    }
+  });
   const projected = new THREE.Vector3(),
     direction = new THREE.Vector3(),
     toward = new THREE.Vector3(),
@@ -489,9 +495,13 @@ export async function createTavernView() {
       }
     }
     if (mixer) mixer.update(dt);
-    fieldMaterials.forEach((m) => (m.uniforms.uTime.value = elapsed));
+    if (summonSurge > 0) summonSurge = Math.max(0, summonSurge - dt);
+    const surgeBoost = summonSurge > 0 ? 1 + (summonSurge / 2.5) * 3 : 1;
+    fieldMaterials.forEach((m) => (m.uniforms.uTime.value = elapsed * (summonSurge > 0 ? 2 : 1)));
     pulseMaterials.forEach(({ m, base, phase }) =>
-      m.emissive.copy(base).multiplyScalar(0.9 + 0.2 * Math.sin(elapsed * 1.4 + phase)),
+      m.emissive
+        .copy(base)
+        .multiplyScalar((0.9 + 0.2 * Math.sin(elapsed * 1.4 + phase)) * surgeBoost),
     );
     animatedLights.forEach(
       ({ l, base, phase }) =>
@@ -503,7 +513,8 @@ export async function createTavernView() {
     );
     for (const s of sparks) {
       s.seeds.forEach((seed, i) => {
-        const v = (seed.v + elapsed * (s.kind ? 0.08 : 0.04)) % 1;
+        const speed = (s.kind ? 0.08 : 0.04) * (summonSurge > 0 ? 3 : 1);
+        const v = (seed.v + elapsed * speed) % 1;
         if (s.kind) {
           dummy.position.set(
             s.x + 0.03 * Math.sin(seed.phase + elapsed),

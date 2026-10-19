@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises';
 import { adviceNativeChecks } from './advice-preset.mjs';
 import { legacySession } from './legacy-session.mjs';
 import { lootConflictChecks } from './loot-conflicts.mjs';
+import { memoryChat } from '../../src/memory.js';
 
 export async function chatChecks({ browser, baseURL, output }) {
   const page = await browser.newPage({ viewport: { width: 1440, height: 836 } });
@@ -188,12 +189,14 @@ export async function chatChecks({ browser, baseURL, output }) {
     await page.setViewportSize({ width: 1440, height: 836 });
     await page.locator('#chat-memory-open').click();
     await page.locator('#memory-dialog').waitFor({ state: 'visible' });
-    assert.equal(await page.locator('#memory-items article').count(), 2);
+    assert.equal(await page.locator('#memory-items article').count(), 1);
     await page.locator('#memory-generate').click();
     await page.locator('#memory-accept').waitFor({ state: 'visible' });
     await page.waitForFunction(() => !document.querySelector('#memory-accept').disabled);
     assert(
-      (await page.evaluate(() => demo.getLibrary().tavernChat)).every((item) => !item.summary),
+      (await page.evaluate(() => demo.getLibrary().tavernChat)).every(
+        (item) => !item.summary && !item.turnSummary,
+      ),
       'generation cannot save before acceptance',
     );
     assert(
@@ -201,6 +204,9 @@ export async function chatChecks({ browser, baseURL, output }) {
         (item) => Object.keys(item).sort().join(',') === 'id,kind,label,text',
       ),
     );
+    assert.equal(summaryRequests[0].items.length, 1);
+    assert(summaryRequests[0].items[0].text.includes('我给来客倒一杯水。'));
+    assert(summaryRequests[0].items[0].text.includes('我们就在酒馆聊聊。'));
     await page.locator('#memory-items textarea').first().fill('玩家给来客倒了一杯水。');
     await page.screenshot({ path: path.join(output, 'memory-summary-preview.png') });
     await page.setViewportSize({ width: 844, height: 390 });
@@ -215,7 +221,7 @@ export async function chatChecks({ browser, baseURL, output }) {
       demo.getLibrary().tavernChat.filter((item) => item.role !== 'system'),
     );
     assert.equal(summarized[0].content, '我给来客倒一杯水。');
-    assert.equal(summarized[0].summary.text, '玩家给来客倒了一杯水。');
+    assert.equal(summarized[1].turnSummary.text, '玩家给来客倒了一杯水。');
     assert.equal(await page.locator('.chat-room-heading').count(), 0);
     for (const checkbox of await page.locator('#chat-participants input').all())
       await checkbox.uncheck();
@@ -231,7 +237,7 @@ export async function chatChecks({ browser, baseURL, output }) {
     await page.waitForFunction(
       () => demo.getLibrary().tavernChat.filter((item) => item.role !== 'system').length === 4,
     );
-    assert.equal(sent[1].history.filter((item) => item.role !== 'system').length, 2);
+    assert.equal(sent[1].history.filter((item) => item.role !== 'system').length, 1);
     assert(
       sent[1].history.some(
         (message) => message.role === 'system' && message.content.includes('离开了'),
@@ -240,7 +246,7 @@ export async function chatChecks({ browser, baseURL, output }) {
     assert(
       sent[1].history
         .filter((item) => item.role !== 'system')
-        .every((item) => item.content.startsWith('【已确认摘要】')),
+        .every((item) => item.content.startsWith('【已确认对话摘要】')),
     );
     assert.equal(sent[1].selected.length, 1);
     await page.locator('#chat-place-select').selectOption('bar');
@@ -259,7 +265,7 @@ export async function chatChecks({ browser, baseURL, output }) {
         await page.evaluate(() =>
           demo.getLibrary().tavernChat.filter((item) => item.role !== 'system'),
         )
-      )[0].summary.text,
+      )[1].turnSummary.text,
       '玩家给来客倒了一杯水。',
     );
     await page.evaluate(() => demo.startBattle());
@@ -283,13 +289,7 @@ export async function chatChecks({ browser, baseURL, output }) {
     assert.equal(await page.locator('#quick-chat-input').inputValue(), '下一句闲聊');
     assert.equal(sent[2].selected.length, 6);
     assert.equal(sent[2].previousScript, '');
-    await page.locator('#quick-memory-open').click();
-    await page.locator('#memory-dialog').waitFor({ state: 'visible' });
-    const memoryTitles = await page.locator('#memory-items h3').allTextContents();
-    assert(memoryTitles.some((title) => title.includes('本趟闲聊')));
-    assert(memoryTitles.some((title) => title.includes('第1战')));
-    assert(!memoryTitles.some((title) => title.includes('酒馆交流 · 第1层')));
-    await page.locator('#memory-close').click();
+    assert.equal(await page.locator('#quick-memory-open').count(), 0);
     const readingHeight = (await page.locator('#story-lines').boundingBox()).height;
     await page.locator('#quick-chat-toggle').click();
     assert.equal(await page.locator('#quick-chat-body').isVisible(), false);
@@ -300,6 +300,9 @@ export async function chatChecks({ browser, baseURL, output }) {
     await page.locator('#quick-chat-toggle').click();
     assert.equal(await page.locator('#quick-chat-body').isVisible(), true);
     await page.locator('#script-rewrite').click();
+    await page.locator('#rewrite-help').waitFor({ state: 'visible' });
+    await page.locator('#rewrite-help-remember').check();
+    await page.locator('#rewrite-help-confirm').click();
     await page.locator('#quick-chat-status').filter({ hasText: '后续剧本已更新' }).waitFor();
     const after = await page.evaluate(() => ({
       state: demo.getState(),
@@ -321,6 +324,17 @@ export async function chatChecks({ browser, baseURL, output }) {
       ),
     );
     assert.equal(sent[3].brief, battle.script.generationInput.brief);
+    assert.equal(
+      await page.evaluate(() => localStorage.getItem('wanxiang.rewrite-help.dismissed.v1')),
+      'true',
+    );
+    const secondRewrite = page.waitForResponse((response) =>
+      response.url().endsWith('/api/ai/generate/script'),
+    );
+    await page.locator('#script-rewrite').click();
+    await secondRewrite;
+    assert.equal(await page.locator('#rewrite-help').isVisible(), false);
+    await page.waitForFunction(() => !document.querySelector('#script-rewrite').disabled);
     const quickRetryRequests = [];
     await page.route('**/api/ai/generate/quick-chat', (route) => {
       quickRetryRequests.push(route.request().postDataJSON());
@@ -431,7 +445,12 @@ export async function chatChecks({ browser, baseURL, output }) {
     );
     assert.equal(
       retryRequests[0].history.length,
-      beforeRetry.findIndex((message) => message.id === chosen.id),
+      memoryChat(
+        beforeRetry.slice(
+          0,
+          beforeRetry.findIndex((message) => message.id === chosen.id),
+        ),
+      ).length,
     );
     const retried = await page.evaluate(() => demo.getLibrary());
     const position = retried.tavernChat.findIndex((message) => message.id === chosen.id);

@@ -66,18 +66,38 @@
   line-height: 1.7;
 }
 #prepare-bag {
+  position: relative;
   flex-shrink: 0;
-  padding: 12px 20px;
-  border-top: 1px solid #c3b47d44;
+  font-size: 12px;
 }
-#prepare-bag[open] {
-  max-height: 28dvh;
+#prepare-bag summary {
+  cursor: pointer;
+  color: #d3c399;
+  padding: 8px;
+}
+#prepare-bag > div {
+  position: absolute;
+  bottom: calc(100% + 14px);
+  left: 0;
+  width: 280px;
+  max-height: 230px;
   overflow: auto;
+  padding: 12px;
+  background: #10221e;
+  border: 1px solid #bca16b77;
+  border-radius: 10px;
+  box-shadow: 0 12px 35px #0009;
+  z-index: 2;
 }
 #prepare-bag p {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
+  font-size: 12px;
+}
+#prepare-bag img {
+  width: 32px;
+  height: 32px;
 }
 #formation-lesson {
   position: fixed;

@@ -29,8 +29,8 @@ export function createMemory(context) {
   }
   function render() {
     $('#memory-count').textContent = snapshot.length
-      ? `${snapshot.length}条未总结记录 · 按原楼层逐条生成`
-      : '没有尚未总结的记录';
+      ? `${snapshot.length}项待总结 · 每轮对话合并玩家发言与 AI 回应`
+      : '暂无待总结的完整对话或副本记录';
     $('#memory-page').textContent = snapshot.length
       ? `${page + 1} / ${Math.ceil(snapshot.length / 30)}`
       : '0 / 0';
@@ -167,8 +167,7 @@ export function createMemory(context) {
       status(failure.message);
     }
   }
-  for (const id of ['memory-open', 'chat-memory-open', 'quick-memory-open'])
-    events.on($('#' + id), 'click', open);
+  for (const id of ['memory-open', 'chat-memory-open']) events.on($('#' + id), 'click', open);
   events.on($('#memory-close'), 'click', () => dialog.close());
   events.on(dialog, 'close', () => request?.abort());
   events.on($('#memory-cancel'), 'click', () => request?.abort());

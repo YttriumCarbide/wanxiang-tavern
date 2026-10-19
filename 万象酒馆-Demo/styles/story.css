@@ -255,32 +255,87 @@
 }
 #journey-records,
 #archive-dialog {
-  width: min(960px, 88vw);
-  height: 80dvh;
-  padding: 22px;
+  width: min(960px, calc(100vw - 60px));
+  height: min(640px, calc(100dvh - 60px));
+  padding: 0;
   color: #e3dec9;
-  background: #122724f5;
-  border: 1px solid #9cae8b77;
-  border-radius: 12px;
+  background: radial-gradient(ellipse at top left, #25483c66, transparent 65%), #10221efc;
+  border: 1px solid #bca16b77;
+  border-radius: 14px;
   overflow: hidden;
+  box-shadow: 0 24px 80px #0009;
 }
 #journey-records[open],
 #archive-dialog[open] {
   display: flex;
   flex-direction: column;
+  animation: records-enter 200ms ease-out;
 }
-#journey-records header,
-#archive-dialog header {
+#journey-records::backdrop,
+#archive-dialog::backdrop {
+  background: #020b09b3;
+  backdrop-filter: blur(6px);
+}
+#journey-records > header,
+#archive-dialog > header {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  padding: 20px 24px;
+  gap: 16px;
+  border-bottom: 1px solid #bca16b33;
+}
+.records-title small {
+  color: #89a995;
+  font-size: 9px;
+  letter-spacing: 2px;
+}
+.records-title h2 {
+  font-size: 24px;
+  font-weight: 400;
+  letter-spacing: 2px;
+  margin: 5px 0 0;
+  color: #eddbac;
+}
+.records-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.records-actions button {
+  min-height: 34px;
+  padding: 7px 12px;
+  font-size: 12px;
+}
+.archive-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid #7d9d8740;
+  border-radius: 8px;
+  background: #07151166;
+}
+.archive-tabs button {
+  border: none;
+  background: transparent;
+  min-width: 62px;
+  border-radius: 5px;
+}
+.archive-tabs button[aria-pressed='true'] {
+  background: #bca16b33;
+  color: #eddbac;
 }
 .records-body {
   display: grid;
-  grid-template-columns: minmax(120px, 1fr) 3fr;
-  gap: 22px;
+  grid-template-columns: 200px minmax(0, 1fr);
   min-height: 0;
   flex: 1;
+}
+#records-list,
+#archive-list {
+  padding: 16px 12px;
+  border-right: 1px solid #bca16b22;
+  background: #08171344;
 }
 #records-list,
 #records-text,
@@ -293,49 +348,220 @@
 #archive-list button {
   display: block;
   width: 100%;
-  margin-bottom: 8px;
+  margin-bottom: 7px;
+  padding: 12px;
+  text-align: left;
+  line-height: 1.6;
+  font-size: 12px;
+  border-color: transparent;
+  background: transparent;
 }
 #records-list button[aria-pressed='true'],
 #archive-list button[aria-pressed='true'] {
-  border-color: #dfc58b;
+  border-color: #bca16b66;
+  background: #bca16b16;
+  color: #eddbac;
 }
-#records-text {
-  padding: 0 10px;
+#records-text,
+#archive-text {
+  padding: 22px 28px;
   user-select: text;
+}
+#records-text h3 {
+  margin-top: 0;
+  color: #eddbac;
+  font-weight: 400;
+  font-size: 24px;
+}
+#records-text h4 {
+  color: #baa879;
+  border-bottom: 1px solid #bca16b22;
+  padding-bottom: 10px;
 }
 #records-text p {
   white-space: pre-wrap;
   line-height: 2;
+  font-size: 14px;
 }
 .archive-field {
   display: block;
-  margin: 12px 0;
-  color: #b9c8b4;
+  margin: 0 0 18px;
+  color: #8eaa9b;
+  font-size: 12px;
 }
 .archive-field input,
 .archive-field textarea {
   display: block;
   width: 100%;
-  margin-top: 6px;
+  box-sizing: border-box;
+  margin-top: 7px;
   padding: 10px;
   color: #eee4cd;
-  background: #0b1d1b;
+  background: #08171388;
   border: 1px solid #6b80725c;
   border-radius: 6px;
+}
+.archive-field input[readonly],
+.archive-field textarea[readonly] {
+  padding: 0;
+  background: transparent;
+  border-color: transparent;
+  outline: none;
+}
+.archive-field input[readonly] {
+  font-size: 18px;
+  color: #eddbac;
 }
 .archive-field textarea {
   min-height: 160px;
   resize: vertical;
-  line-height: 1.8;
+  line-height: 1.9;
+  font-size: 14px;
 }
 .archive-sources {
   white-space: pre-wrap;
-  color: #acb9a6;
+  color: #8eaa9b;
   line-height: 1.8;
+  font-size: 11px;
+  padding-top: 16px;
+  border-top: 1px solid #bca16b22;
+}
+.archive-edit-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+.is-empty .records-body {
+  grid-template-columns: 1fr;
+}
+.is-empty #records-list,
+.is-empty #archive-list {
+  display: none;
+}
+.is-empty #records-text,
+.is-empty #archive-text {
+  display: grid;
+  place-items: center;
+}
+.records-empty {
+  text-align: center;
+  max-width: 340px;
+}
+.records-empty > span {
+  display: block;
+  color: #bca16b;
+  font-size: 42px;
+  margin-bottom: 18px;
+}
+.records-empty h3 {
+  color: #cfccaf;
+  font-size: 18px;
+  font-weight: 400;
+}
+.records-empty p {
+  font-size: 12px;
+  color: #8eaa9b;
+  line-height: 1.8;
+}
+@keyframes records-enter {
+  from {
+    opacity: 0;
+    translate: 0 8px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+@media (max-width: 600px) {
+  #journey-records,
+  #archive-dialog {
+    width: calc(100vw - 24px);
+    height: calc(100dvh - 32px);
+  }
+  #journey-records > header,
+  #archive-dialog > header {
+    padding: 14px;
+    gap: 8px;
+  }
+  .records-title h2 {
+    font-size: 19px;
+  }
+  .records-title small {
+    display: none;
+  }
+  .records-actions {
+    gap: 4px;
+  }
+  .records-actions button {
+    padding: 7px;
+    min-width: 30px;
+  }
+  .records-body {
+    grid-template-columns: 115px minmax(0, 1fr);
+  }
+  #records-text,
+  #archive-text {
+    padding: 16px;
+  }
+}
+@media (max-height: 500px) {
+  #journey-records,
+  #archive-dialog {
+    height: calc(100dvh - 24px);
+  }
+  #journey-records > header,
+  #archive-dialog > header {
+    padding: 10px 20px;
+  }
+  .records-title small {
+    display: none;
+  }
+  .records-title h2 {
+    margin: 0;
+    font-size: 20px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  #journey-records[open],
+  #archive-dialog[open] {
+    animation: none;
+  }
 }
 .ether-reward {
   padding: 10px;
   background: #367a9b20;
   border: 1px solid #8bb9cb66;
   border-radius: 8px;
+}
+#rewrite-help {
+  width: min(520px, calc(100vw - 32px));
+  padding: 28px;
+  border: 1px solid #bfa66a;
+  border-radius: 12px;
+  background: linear-gradient(145deg, #203c35, #10211f);
+  color: #e2ddcb;
+  box-shadow: 0 20px 70px #0009;
+}
+#rewrite-help h2 {
+  margin: 0 0 20px;
+  font-weight: 400;
+  color: #dec991;
+}
+#rewrite-help p {
+  font-size: 14px;
+  line-height: 1.9;
+}
+#rewrite-help label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 22px 0;
+  color: #bdc7b9;
+  font-size: 13px;
+}
+#rewrite-help footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
 }

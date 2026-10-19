@@ -6,6 +6,7 @@ export const allScopes = [
   'artbook',
   'chat',
   'settings',
+  'preparation',
   'core',
   'ui',
   'layout',

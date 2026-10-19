@@ -122,7 +122,8 @@ export async function staticChecks({ browser, output }) {
   try {
     await page.goto(baseURL);
     await page.waitForFunction(() => !!window.demo, { timeout: 60000 });
-    await page.locator('#new-game').waitFor();
+    await page.locator('#start-screen').waitFor();
+    await page.screenshot({ path: path.join(output, 'start-screen.png') });
     await bootApi();
     const profiles = await request('config');
     assert(
@@ -132,6 +133,64 @@ export async function staticChecks({ browser, output }) {
     );
     assert.deepEqual((await request('presets')).presets, []);
     assert.deepEqual((await request('prompts')).presets, []);
+    await page.locator('#start-journey').click();
+    await page.locator('#ai-model').waitFor({ state: 'visible' });
+    await page.waitForFunction(() => !document.querySelector('#ai-model').disabled);
+    assert.equal(await page.locator('#new-game').isVisible(), false);
+    assert.equal(await page.locator('#ai-promptProcessing').inputValue(), 'strict');
+    await page.locator('#ai-baseUrl').fill('https://upstream.invalid/v1');
+    await page.locator('#ai-model').fill('fixture-model');
+    await page.locator('#ai-key').fill('STATIC_FIXTURE_KEY');
+    await page.locator('#ai-rememberKey').check();
+    await page.locator('#api-preset-name').fill('首次配置连接');
+    await page.locator('#api-preset-save').click();
+    await page.locator('#ai-status').filter({ hasText: '连接预设已保存' }).waitFor();
+    await page.locator('#setup-next').click();
+    await page.locator('#setup-status').filter({ hasText: '还需配置' }).waitFor();
+    for (const kind of ['script', 'chat', 'quick-chat', 'summary', 'creation'])
+      await page.locator(`[data-apply-kind][value="${kind}"]`).check();
+    await page.locator('#api-preset-apply-many').click();
+    await page.locator('#ai-status').filter({ hasText: '应用到 5 个 API' }).waitFor();
+    await page.screenshot({ path: path.join(output, 'first-run-connections.png') });
+    await page.locator('#setup-next').click();
+    await page.locator('#prompt-import').waitFor({ state: 'visible' });
+    await page.locator('#setup-next').click();
+    await page.locator('#setup-status').filter({ hasText: '请先导入' }).waitFor();
+    await page.locator('#prompt-import-file').setInputFiles({
+      name: 'first-run.json',
+      mimeType: 'application/json',
+      buffer: Buffer.from(
+        JSON.stringify({
+          name: '首次文风',
+          prompts: [
+            { identifier: 'main', role: 'system', content: '自然续写' },
+            { identifier: 'chatHistory', marker: true },
+          ],
+        }),
+      ),
+    });
+    await page.locator('#ai-status').filter({ hasText: '已导入并应用' }).waitFor();
+    await page.screenshot({ path: path.join(output, 'first-run-prompts.png') });
+    await page.locator('#setup-next').click();
+    await page.locator('#new-game').waitFor({ state: 'visible' });
+    assert.equal(await page.locator('#ai-dialog').isVisible(), false);
+    const saved = await page.evaluate(async () => {
+      const { openDatabase } = await import(
+        new URL('./src/storage/database.js', location.href).href
+      );
+      const db = await openDatabase();
+      const saved = db.get('api.config');
+      db.close();
+      return saved;
+    });
+    assert(saved.profiles.script.model === 'fixture-model');
+    assert(
+      new Set(
+        ['character', 'script', 'chat', 'quick-chat'].map(
+          (kind) => saved.profiles[kind].promptPresetId,
+        ),
+      ).size === 1,
+    );
     const book = (await request('worldbooks/tavern-world')).book;
     assert.deepEqual(
       Object.values(book.entries)

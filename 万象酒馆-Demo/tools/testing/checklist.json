@@ -1,0 +1,6 @@
+{
+  "description": "整备双面板、拖拽与横向布局；归档记录；一问一答摘要。一次批量检查，不跑完整副本。",
+  "scopes": ["quality", "core", "preparation", "chat"],
+  "coreFiles": ["tests/memory.test.js"],
+  "browserConcurrency": 2
+}

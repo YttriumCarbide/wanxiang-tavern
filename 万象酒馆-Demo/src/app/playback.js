@@ -56,6 +56,8 @@ export function createPlayback(context) {
       if (session.runtime.disposed) return;
       session.battle.activeCell = beat.at;
       for (const event of beat.events) {
+        if (event.type === 'item') await context.backpack.playItem(event);
+        if (session.runtime.disposed) return;
         const before = session.battle.display || session.battle.state;
         session.battle.display = event.after;
         session.battle.history.push(

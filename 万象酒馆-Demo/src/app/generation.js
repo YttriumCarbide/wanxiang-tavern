@@ -319,11 +319,7 @@ export function createGeneration(context) {
       if (kind) $('#ai-kind').value = kind;
       await presetEditor.refresh();
       fillProfile();
-      status(
-        typeof notice === 'string' && notice
-          ? notice
-          : '配置角色与剧本接口。生成入口在酒馆的两座门上。',
-      );
+      status(typeof notice === 'string' ? notice : '');
     } catch (failure) {
       status(failure.message);
     } finally {
@@ -573,7 +569,7 @@ export function createGeneration(context) {
         $('#generation-progress').hidden = true;
         if (kind === 'script') {
           $('#party-panel').close();
-          $('#prepare-title').textContent = '出发准备';
+          $('#prepare-title').textContent = '战阵整备';
           $('#prepare-done').disabled = false;
           $('#prepare-close').disabled = false;
           $('#prepare-cancel-generation').hidden = true;
@@ -797,6 +793,20 @@ export function createGeneration(context) {
   });
   return {
     open,
+    openPrompts: () => presetEditor.open(),
+    saveConnection: saveProfile,
+    async setupStatus() {
+      profiles = await api('config');
+      return Object.fromEntries(
+        Object.entries(profiles).map(([kind, profile]) => [
+          kind,
+          {
+            connection: ready(profile, kind),
+            prompt: !!profile.promptPresetId && !profile.promptPresetId.endsWith('-default'),
+          },
+        ]),
+      );
+    },
     save,
     syncCharacters: syncWorldbookCharacters,
     refreshStory: story.render,

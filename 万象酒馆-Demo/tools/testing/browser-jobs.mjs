@@ -1,0 +1,94 @@
+import path from 'node:path';
+
+/** Jobs share one browser, but the scheduler gives each job a separate service and output folder. */
+export function browserJobs(scopes, results, root) {
+  const jobs = [];
+  const add = (name, operation, after = []) => {
+    if (scopes.has(name)) jobs.push({ name, operation, after });
+  };
+  const simple = (name, file, method, after = []) =>
+    add(
+      name,
+      async (options) => {
+        const module = await import(`../../tests/browser/${file}.mjs`);
+        return module[method](options);
+      },
+      after,
+    );
+  simple('onboarding', 'onboarding', 'onboardingChecks');
+  add('settings', async (options) => {
+    const { apiSettingsChecks } = await import('../../tests/browser/api-settings.mjs');
+    const { equipmentChecks } = await import('../../tests/browser/equipment.mjs');
+    const { generationOptionsChecks } = await import('../../tests/browser/generation-options.mjs');
+    return {
+      ...(await apiSettingsChecks(options)),
+      generationOptions: await generationOptionsChecks(options),
+      equipment: await equipmentChecks(options),
+    };
+  });
+  simple('chat', 'chat', 'chatChecks');
+  simple('preparation', 'preparation', 'preparationChecks');
+  const environment = ['environment', 'artbook', 'rooms'].find((name) => scopes.has(name));
+  if (environment)
+    add(environment, async (options) => {
+      const { artbookChecks } = await import('../../tests/browser/artbook.mjs');
+      const { guestRoomChecks } = await import('../../tests/browser/guest-room.mjs');
+      const { roomChatChecks } = await import('../../tests/browser/room-chat.mjs');
+      const checked = await Promise.allSettled([
+        scopes.has('environment') || scopes.has('artbook') ? artbookChecks(options) : null,
+        scopes.has('environment') || scopes.has('rooms') ? guestRoomChecks(options) : null,
+        scopes.has('environment') || scopes.has('rooms') ? roomChatChecks(options) : null,
+      ]);
+      const errors = checked.filter((item) => item.status === 'rejected');
+      if (errors.length)
+        throw new AggregateError(
+          errors.map((item) => item.reason),
+          errors.map((item) => item.reason.stack).join('\n'),
+        );
+      return { artbook: checked[0].value, rooms: checked[1].value, chat: checked[2].value };
+    });
+  simple('ai', 'generation', 'generationChecks');
+  simple('audio', 'audio', 'battleMusicChecks');
+  add('layout', async (options) => {
+    const { layout } = await import('../../tests/browser/layout.mjs');
+    return layout({ ...options, fixture: path.join(root, 'tests/fixtures/layout.json') });
+  });
+  add(
+    'ui',
+    async (options) => {
+      const failed = results.find(
+        (result) => ['settings', environment].includes(result.name) && !result.passed,
+      );
+      if (failed)
+        throw Error(`Prerequisite ${failed.name} failed; fix that result before rerunning UI`);
+      const { smoke } = await import('../../tests/browser/smoke.mjs');
+      return smoke({
+        ...options,
+        settingsChecked: results.find((result) => result.name === 'settings' && result.passed)
+          ?.detail,
+        environmentChecked: results.find(
+          (result) => ['environment', 'rooms', 'artbook'].includes(result.name) && result.passed,
+        )?.detail,
+      });
+    },
+    ['settings', environment].filter((name) => name && scopes.has(name)),
+  );
+  for (const [name, file, method, field] of [
+    ['death-effects', 'card-death', 'cardDeathChecks', 'cardDeaths'],
+    ['intents', 'enemy-intents', 'enemyIntentChecks', 'enemyIntents'],
+    ['destinations', 'destination-pager', 'destinationPagerChecks', 'destinationPager'],
+  ])
+    add(
+      name,
+      async (options) => {
+        const checked = results.find((result) => result.name === 'ui' && result.passed)?.detail?.[
+          field
+        ];
+        if (checked) return checked;
+        const module = await import(`../../tests/browser/${file}.mjs`);
+        return module[method](options);
+      },
+      scopes.has('ui') ? ['ui'] : [],
+    );
+  return jobs;
+}

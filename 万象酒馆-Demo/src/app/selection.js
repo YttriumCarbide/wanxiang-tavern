@@ -30,9 +30,9 @@ export function createSelection(context) {
       session.selection.inspectedEnemy = enemy;
       session.selection.intentScope = 'all';
       session.selection.target = enemy;
-      context.onboarding?.intentViewed();
       $('#drag-menu').hidden = true;
       context.renderer.render();
+      context.onboarding?.intentViewed();
       return;
     }
     if (!context.planning.fitsAt(start, 1))
@@ -49,13 +49,13 @@ export function createSelection(context) {
     if (!context.viewport.canPlan()) return;
     session.selection.inspectedEnemy = id;
     session.selection.intentScope = all ? 'all' : 'single';
-    if (all) context.onboarding?.intentViewed();
     session.selection.target = id;
     session.selection.pending = null;
     session.selection.interactionStep = 'enemy-preview';
     const at = session.battle.forecast.slots.indexOf(id);
     if (at >= 0) session.selection.selectedCell = at;
     context.renderer.render();
+    if (all) context.onboarding?.intentViewed();
   }
   function enemyIntentPreview() {
     if (

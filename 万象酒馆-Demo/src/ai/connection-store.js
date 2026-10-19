@@ -24,7 +24,7 @@ function profileFrom(input, old) {
   const temperature = input.temperature == null ? null : Number(input.temperature);
   if (temperature !== null && (!Number.isFinite(temperature) || temperature < 0 || temperature > 2))
     throw Error('Temperature范围是0～2');
-  const promptProcessing = input.promptProcessing ?? old.promptProcessing ?? 'merge_tools';
+  const promptProcessing = input.promptProcessing ?? old.promptProcessing ?? 'strict';
   if (!['strict', 'merge_tools'].includes(promptProcessing)) throw Error('提示词后处理类型无效');
   const contextSize = Number(input.contextSize ?? old.contextSize ?? 131072);
   if (!Number.isInteger(contextSize) || contextSize < 1024 || contextSize > 2000000)
@@ -59,7 +59,7 @@ export function createConnectionStore({ snapshot = {}, initial = {}, save = asyn
     temperature: null,
     maxTokens: DEFAULT_OUTPUT_TOKENS,
     tokenField: 'max_tokens',
-    promptProcessing: 'merge_tools',
+    promptProcessing: 'strict',
     contextSize: 131072,
     stream: false,
     requestMode: 'local',

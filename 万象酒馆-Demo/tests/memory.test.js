@@ -35,8 +35,16 @@ test('manual summaries preserve each original layer and replace only confirmed c
   const quick = [{ role: 'user', content: '当心前方。' }];
   const original = structuredClone(library);
   const items = pendingMemories(library, quick);
-  assert.equal(items.length, 4);
+  assert.equal(items.length, 2);
   assert(!JSON.stringify(items).includes('未展示的未来剧情'));
+  assert.equal(
+    items[0].text,
+    '玩家：我给潘多拉倒水，并答应明天再来。\n\nAI回应：<p>潘多拉接过水杯。</p>',
+  );
+  assert(
+    !items.some((item) => item.kind === 'quick'),
+    'Unanswered player messages are not summarized',
+  );
   assert(items.every((item) => Object.keys(item).sort().join(',') === 'id,kind,label,text'));
   const response = items.map((item) => ({ id: item.id, summary: `摘要：${item.label}` }));
   assert.equal(memoryChat(library.tavernChat)[0].content, original.tavernChat[0].content);
@@ -46,7 +54,7 @@ test('manual summaries preserve each original layer and replace only confirmed c
   assert.equal(library.history[0].lines[0].text, original.history[0].lines[0].text);
   assert.deepEqual(library.characters, original.characters);
   assert.deepEqual(library.inventory, original.inventory);
-  assert(memoryChat(library.tavernChat)[0].content.startsWith('【已确认摘要】'));
+  assert(memoryChat(library.tavernChat)[0].content.startsWith('【已确认对话摘要】'));
   const copiedHistory = [
     {
       title: '遗迹初探',
@@ -69,7 +77,7 @@ test('manual summaries preserve each original layer and replace only confirmed c
   assert(projected.includes('未经历的未来必须保留'));
   assert.equal(book.story[0], original.history[0].lines[0].text);
   rollback();
-  assert.equal(pendingMemories(library, quick).length, 4);
+  assert.equal(pendingMemories(library, quick).length, 2);
   assert.deepEqual(library, original);
 });
 
@@ -104,6 +112,29 @@ test('changed sources or incomplete IDs reject atomically; restored summaries su
   restored.tavernChat[0].content = '之后修改的新原文';
   assert.equal(memoryChat(restored.tavernChat)[0].content, '之后修改的新原文');
   assert.equal(pendingMemories(restored).length, 1);
+});
+
+test('conversation summaries require an adjacent completed pair and are invalidated by edits to either side', () => {
+  const library = newLibrary();
+  library.tavernChat = [
+    { role: 'assistant', content: '独立开场' },
+    { role: 'user', content: '未获得回应' },
+    { role: 'system', content: '换了位置', divider: true },
+    { role: 'assistant', content: '另一处的开场' },
+    { id: 'p', role: 'user', content: '你好' },
+    { id: 'a', role: 'assistant', content: '欢迎回来' },
+    { role: 'user', content: '尚未回复的草稿' },
+  ];
+  const source = pendingMemories(library);
+  assert.equal(source.length, 1);
+  applyMemorySummaries(library, [], source, [{ id: source[0].id, summary: '双方互相问候' }]);
+  assert.equal(memoryChat(library.tavernChat).length, 6);
+  assert.equal(library.tavernChat.length, 7);
+  const restored = restoreLibrary(JSON.parse(JSON.stringify(library)));
+  assert.equal(pendingMemories(restored).length, 0);
+  restored.tavernChat[5].content = '新的回答';
+  assert.equal(pendingMemories(restored).length, 1);
+  assert.equal(memoryChat(restored.tavernChat).length, 7);
 });
 
 test('summary planning splits every item within context and output budgets without importing extra material', async () => {

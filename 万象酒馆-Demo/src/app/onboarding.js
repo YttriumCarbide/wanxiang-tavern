@@ -57,9 +57,7 @@ export function createOnboarding(context) {
             <p>生成后在这里检查主角的设定与技能，确认后才会开启新存档。</p>
           </div>
         </div>
-        <p id="creation-status" role="status">
-          开始前需要配置角色 API 并选择提示词预设；剧本暂使用本地战斗测试文本。
-        </p>
+        <p id="creation-status" role="status">接口与提示词预设已就绪，可以填写主角设定。</p>
         <button id="creation-start" class="primary" disabled>以此身份开始</button>
       </section>
     </div>`;
@@ -173,6 +171,7 @@ export function createOnboarding(context) {
   }
   function open() {
     if (session.battle.playing || session.ai.busy) return;
+    if (session.runtime.needsStart && !context.firstRun?.completed) return context.firstRun.open();
     if (session.runtime.mode === 'battle') context.journey.returnInn();
     $('#creation-close').hidden = !!session.runtime.needsStart;
     generationModeChanged();
@@ -324,6 +323,7 @@ export function createOnboarding(context) {
       else refresh();
     },
     resumed() {
+      context.firstRun?.resumed();
       session.runtime.needsStart = false;
       storage.removeItem('wanxiang.creation-pending.v1');
       dialog.close();
@@ -433,7 +433,10 @@ export function createOnboarding(context) {
     intentViewed() {
       if (!learning(session.ai.library) || session.runtime.mode !== 'battle') return;
       tutorialTasks(state()).intent = true;
-      if (session.battle.state.encounter === 3) tutorialTasks(state()).crossfire = true;
+      if (session.battle.state.encounter === 3) {
+        tutorialTasks(state()).crossfire = true;
+        if (state().tutorial === 'crossfire') advance('crossfire-done');
+      } else if (state().tutorial === 'timeline') advance('intent');
       context.generation.save();
     },
     roundFinished(opening, result) {

@@ -26,6 +26,7 @@ import { createDestinations } from './destinations.js';
 import { createSaveManager } from './saves.js';
 import { createRecords } from './records.js';
 import { createOnboarding } from './onboarding.js';
+import { createFirstRun } from './first-run.js';
 import { createChat } from './chat.js';
 import { createPresetExtensions } from './preset-extensions.js';
 import { createSummoning } from './summoning.js';
@@ -62,6 +63,7 @@ export function createApplication({
   context.drag = createDrag(context);
   context.backpack = createBackpack(context);
   context.onboarding = createOnboarding(context);
+  context.firstRun = createFirstRun(context);
   context.summoning = createSummoning(context);
   context.extensions = createPresetExtensions(context);
   context.chat = createChat(context);
@@ -98,6 +100,7 @@ export function createApplication({
     context.destinations.dispose();
     context.saves?.dispose?.();
     context.onboarding.dispose();
+    context.firstRun.dispose();
     context.backpack.dispose();
     context.shop.dispose();
     context.lootConflicts.dispose();

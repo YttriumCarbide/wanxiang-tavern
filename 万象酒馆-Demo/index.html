@@ -270,13 +270,15 @@
                 >预设名称<input id="api-preset-name" maxlength="60" placeholder="例如：DS" /></label
               ><button id="api-preset-save">保存为 API 预设</button>
             </div>
+            <fieldset class="connection-apply">
+              <legend>为其他 API 配置相同预设</legend>
+              <div id="api-apply-targets"></div>
+              <button id="api-preset-apply-many" type="button">应用所选 API 预设</button>
+            </fieldset>
             <div class="ai-actions">
               <button id="ai-profile-save" class="primary">保存当前连接</button
               ><button id="ai-models">读取模型列表</button>
             </div>
-            <p class="ai-hint">
-              使用你自己的服务地址与模型。召唤门召唤角色，副本门生成剧本并进入。不会自动重试付费请求。
-            </p>
           </div>
           <div data-ai-page="game" hidden>
             <div class="generation-options">
@@ -672,25 +674,44 @@
       <div id="inn-frame"></div>
       <dialog id="party-panel" aria-labelledby="prepare-title">
         <header class="prepare-heading">
-          <div>
-            <small>PARTY / PREPARATION</small>
-            <h2 id="prepare-title">准备</h2>
-          </div>
-          <button id="prepare-close" aria-label="关闭准备">×</button>
+          <h2 id="prepare-title">战阵整备</h2>
+          <button id="prepare-close" aria-label="关闭准备">返回酒馆 <span>×</span></button>
         </header>
         <div class="prepare-body">
-          <section>
+          <section class="prepare-formation-col">
+            <h3>当前阵容</h3>
             <div id="prepare-slots"></div>
-            <h3>角色 <small id="prepare-count"></small></h3>
-            <div id="prepare-pool"></div>
+            <small class="prepare-hint">点击角色编辑 · 拖动调整站位</small>
           </section>
-          <aside id="prepare-detail"></aside>
+          <section class="prepare-reserve-col">
+            <h3>未上场角色 <small id="prepare-count"></small></h3>
+            <input
+              id="prepare-search"
+              type="search"
+              placeholder="搜索角色…"
+              aria-label="搜索未上场角色"
+            />
+            <div id="prepare-pool" aria-label="未上场角色"></div>
+          </section>
         </div>
         <footer>
-          <span id="prepare-status">阵容自动保存</span
-          ><button id="prepare-cancel-generation" hidden>取消剧本生成</button
-          ><button id="prepare-done" class="primary">准备完成</button>
+          <small id="prepare-status">阵容自动保存</small>
+          <div>
+            <button id="prepare-cancel-generation" hidden>取消剧本生成</button>
+            <button id="prepare-done" class="primary">准备完成</button>
+          </div>
         </footer>
+        <dialog id="prepare-character-dialog" aria-labelledby="prepare-character-title">
+          <header>
+            <h2 id="prepare-character-title">角色编辑</h2>
+            <button id="prepare-character-close" aria-label="关闭角色编辑">×</button>
+          </header>
+          <div id="prepare-detail"></div>
+          <footer>
+            <small>装备与立绘自动保存</small
+            ><button id="prepare-character-done" class="primary">完成编辑</button>
+          </footer>
+        </dialog>
       </dialog>
     </main>
     <main id="battle" hidden>
@@ -705,7 +726,7 @@
         <nav id="story-pages" aria-label="按战斗查看手记"></nav>
         <div id="story-lines" aria-live="polite" tabindex="0"></div>
         <div class="quick-chat-heading">
-          <span>途中闲聊</span><button id="quick-memory-open" type="button">总结记忆</button
+          <span>途中闲聊</span
           ><button
             id="quick-chat-toggle"
             type="button"
@@ -724,7 +745,7 @@
               placeholder="和同行者说句话…"
               aria-label="战斗闲聊"
             /><button id="quick-chat-send" type="submit">闲聊</button
-            ><button id="script-rewrite" type="button">重置剧本</button>
+            ><button id="script-rewrite" type="button">修改剧本</button>
           </form>
           <small id="quick-chat-status" role="status"></small>
         </div>

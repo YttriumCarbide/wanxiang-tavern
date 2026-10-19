@@ -64,6 +64,7 @@ async function capture(page) {
           ];
           return {
             key: `${selector}[${index}]`,
+            raisedStatus: element.matches('.unit-hit .card-buffs, .unit-hit .buff-icon'),
             rect: Object.fromEntries(
               ['x', 'y', 'width', 'height'].map((key) => [key, Math.round(rect[key] * 100) / 100]),
             ),
@@ -158,12 +159,16 @@ export async function layout({ browser, baseURL, fixture, update = false }) {
           Math.abs(
             value.rect[key] -
               previous.rect[key] +
-              (value.key === '#details[0]' && key === 'height'
-                ? detailHeightChange
-                : ['.command-controls[0]', '#commit[0]', '#clear[0]'].includes(value.key) &&
-                    key === 'y'
-                  ? detailHeightChange / 2
-                  : 0),
+              // The requested status row sits 33px above its former position.
+              // Compare every other coordinate and style against the original baseline.
+              (key === 'y' && value.raisedStatus
+                ? 33
+                : value.key === '#details[0]' && key === 'height'
+                  ? detailHeightChange
+                  : ['.command-controls[0]', '#commit[0]', '#clear[0]'].includes(value.key) &&
+                      key === 'y'
+                    ? detailHeightChange / 2
+                    : 0),
           ) > 1
         )
           differences.push(

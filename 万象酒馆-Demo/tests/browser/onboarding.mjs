@@ -71,6 +71,7 @@ export async function onboardingChecks({ browser, baseURL, output }) {
       });
     });
     await page.goto(baseURL);
+    await page.locator('#start-journey').click();
     await page.locator('#new-game').waitFor({ state: 'visible' });
     assert.equal(await page.locator('#creation-form').isVisible(), false);
     assert.equal(await page.locator('#creation-start').isEnabled(), true);
@@ -211,6 +212,9 @@ export async function onboardingChecks({ browser, baseURL, output }) {
       if (room === 3) {
         await page.locator('#opening-preview .enemy-cell,#timeline .enemy-cell').first().click();
         await finishDialogue();
+        const inspected = await page.evaluate(() => demo.getLibrary().campaign);
+        assert.equal(inspected.tutorial, 'crossfire-done');
+        assert.equal(inspected.tasks.crossfire, true);
       }
       if ([1, 2].includes(room)) {
         assert.equal(
@@ -240,6 +244,17 @@ export async function onboardingChecks({ browser, baseURL, output }) {
           );
           assert.equal(await page.locator('#backpack-items [data-item]').count(), 1);
           await page.waitForTimeout(260);
+          const itemIcon = await page.locator('#backpack-items .bag-item img').boundingBox();
+          const itemSlot = await page.locator('#backpack-items .bag-item').boundingBox();
+          assert.equal(itemIcon.width, 36);
+          assert.equal(itemIcon.height, 36);
+          assert(itemSlot.width <= 80 && itemSlot.height <= 90);
+          assert.equal(await page.locator('#backpack-items .bag-item small').count(), 0);
+          assert(
+            (await page.locator('#backpack-items .bag-item').getAttribute('data-tooltip')).includes(
+              '施加1层迟缓',
+            ),
+          );
           await page.screenshot({ path: path.join(output, 'backpack-inline.png') });
           await page.setViewportSize({ width: 844, height: 390 });
           await page.waitForTimeout(300);
@@ -266,6 +281,7 @@ export async function onboardingChecks({ browser, baseURL, output }) {
             0,
           );
           await page.screenshot({ path: path.join(output, 'tutorial-slow-item.png') });
+          assert.equal(await page.locator('.item-projectile').count(), 0);
         }
         await finishDialogue();
         const demonstration = await page.evaluate(() => demo.getForecast());
@@ -277,6 +293,24 @@ export async function onboardingChecks({ browser, baseURL, output }) {
             ),
           );
         await page.locator('#commit').click();
+        if (room === 2) {
+          await page.locator('.item-projectile').waitFor({ state: 'attached' });
+          const projectile = await page.locator('.item-projectile').evaluate((element) => ({
+            src: element.getAttribute('src'),
+            frames: element.getAnimations()[0].effect.getKeyframes(),
+          }));
+          assert(projectile.src.endsWith('slow-potion.svg'));
+          assert(projectile.frames.length > 2);
+          await page.locator('.item-projectile').evaluate((element) => {
+            const animation = element.getAnimations()[0];
+            animation.pause();
+            animation.currentTime = animation.effect.getTiming().duration * 0.55;
+          });
+          await page.screenshot({ path: path.join(output, 'item-throw.png') });
+          await page
+            .locator('.item-projectile')
+            .evaluate((element) => element.getAnimations()[0].play());
+        }
         await page.waitForFunction(() => !demo.getStatus().playing);
         await finishDialogue();
         assert.equal(

@@ -6,6 +6,7 @@ import { query as $ } from './dom.js';
 import { relevantArchives } from '../archives.js';
 import { applyRelationshipActions } from '../relationships.js';
 import { streamingChatText } from '../ai/output-tags.js';
+import { html } from '../shared/html.js';
 import {
   memoryChat,
   memoryHistory,
@@ -18,6 +19,22 @@ export function createChat(context) {
   const api = context.apiClient.request;
   const { session, events } = context;
   const dialog = $('#chat-dialog');
+  const rewriteHelp = document.createElement('dialog');
+  rewriteHelp.id = 'rewrite-help';
+  rewriteHelp.setAttribute('aria-labelledby', 'rewrite-help-title');
+  rewriteHelp.innerHTML = html`<h2 id="rewrite-help-title">修改后续剧本</h2>
+    <p>
+      如果你对当前的剧本发展不满意，可以先在闲聊中表达想法、引导故事的方向，再点击“修改剧本”。AI
+      会结合当前剧本、已经发生的事件和本趟闲聊，调整接下来的发展。
+    </p>
+    <p>只会修改尚未经历的战斗与剧情；已经发生的内容和当前战斗保持不变。此操作会调用剧本 API。</p>
+    <label><input id="rewrite-help-remember" type="checkbox" />不再提示</label>
+    <footer>
+      <button id="rewrite-help-cancel">暂不修改</button
+      ><button id="rewrite-help-confirm" class="primary">确认修改</button>
+    </footer>`;
+  document.body.append(rewriteHelp);
+  const preferences = context.storage || localStorage;
   $('#chat-place-select').replaceChildren(
     ...Object.entries(CHAT_PLACES).map(([id, location]) => {
       const option = document.createElement('option');
@@ -470,7 +487,17 @@ export function createChat(context) {
       event.currentTarget.form.requestSubmit();
     });
   }
-  events.on($('#script-rewrite'), 'click', () => void resetScript());
+  events.on($('#script-rewrite'), 'click', () => {
+    if (preferences.getItem('wanxiang.rewrite-help.dismissed.v1') === 'true') void resetScript();
+    else if (!rewriteHelp.open) rewriteHelp.showModal();
+  });
+  events.on($('#rewrite-help-cancel'), 'click', () => rewriteHelp.close());
+  events.on($('#rewrite-help-confirm'), 'click', () => {
+    if ($('#rewrite-help-remember').checked)
+      preferences.setItem('wanxiang.rewrite-help.dismissed.v1', 'true');
+    rewriteHelp.close();
+    void resetScript();
+  });
   events.on($('#quick-chat-toggle'), 'click', () => {
     const body = $('#quick-chat-body');
     body.hidden = !body.hidden;
@@ -503,5 +530,15 @@ export function createChat(context) {
     state().selectionInitialized = false;
     state().lastLocation = null;
   }
-  return { open, input, leave, enteredDungeon, resetSelection, dispose: leave };
+  return {
+    open,
+    input,
+    leave,
+    enteredDungeon,
+    resetSelection,
+    dispose() {
+      leave();
+      rewriteHelp.remove();
+    },
+  };
 }

@@ -3,8 +3,10 @@ import { query as $ } from './dom.js';
 import { readFileAsOptimizedImage } from '../portraits.js';
 import { mountBattleTextSelection } from './text-selection.js';
 import { createPortraitEditor } from './portrait-editor.js';
+import { mountPreparationTouch } from './preparation-touch.js';
 
 export function mountInput(context) {
+  mountPreparationTouch(context);
   mountBattleTextSelection(context);
   const portraitEditor = createPortraitEditor(context);
   const { session } = context;
@@ -158,26 +160,22 @@ export function mountInput(context) {
   });
 
   context.events.on($('#party-panel'), 'click', (e) => {
-    const remove = e.target.closest('[data-prepare-remove]');
-    if (remove) {
-      context.generation.setPartySlot(Number(remove.dataset.prepareRemove), null);
-      return;
-    }
     const slot = e.target.closest('[data-prepare-slot]');
     if (slot) {
       session.ai.preparationSlot = Number(slot.dataset.prepareSlot);
+      if (slot.dataset.prepareHero) session.ai.preparationCharacter = slot.dataset.prepareHero;
       context.shell.renderParty();
-      return;
-    }
-    const use = e.target.closest('[data-prepare-use]');
-    if (use) {
-      context.generation.setPartySlot(session.ai.preparationSlot, use.dataset.prepareUse);
+      if (slot.dataset.prepareHero && !$('#prepare-character-dialog').open)
+        $('#prepare-character-dialog').showModal();
       return;
     }
     const inspect = e.target.closest('[data-prepare-view]');
     if (inspect) {
       session.ai.preparationCharacter = inspect.dataset.prepareView;
+      const empty = session.ai.library.party.findIndex((id) => !id);
+      if (empty >= 0) session.ai.preparationSlot = empty;
       context.shell.renderParty();
+      if (!$('#prepare-character-dialog').open) $('#prepare-character-dialog').showModal();
       return;
     }
 
@@ -203,6 +201,13 @@ export function mountInput(context) {
 
   for (const id of ['prepare-close', 'prepare-done'])
     context.events.on($('#' + id), 'click', () => $('#party-panel').close());
+  for (const id of ['prepare-character-close', 'prepare-character-done'])
+    context.events.on($('#' + id), 'click', () => $('#prepare-character-dialog').close());
+  context.events.on($('#party-panel'), 'close', () => $('#prepare-character-dialog').close());
+  context.events.on($('#prepare-search'), 'input', (event) => {
+    session.ai.preparationSearch = event.target.value;
+    context.shell.renderParty();
+  });
   context.events.on($('#party-panel'), 'keydown', (e) => {
     if (e.key === 'Enter' || e.key === ' ') {
       const editWrap = e.target.closest('[data-edit-portrait]');
@@ -213,8 +218,63 @@ export function mountInput(context) {
     }
   });
 
+  context.events.on($('#party-panel'), 'dragstart', (e) => {
+    const member = e.target.closest('.prepare-member');
+    const slot = e.target.closest('.prepare-slot');
+    if (member && member.dataset.prepareHero) {
+      e.dataTransfer.setData(
+        'text/plain',
+        JSON.stringify({ type: 'hero', id: member.dataset.prepareHero }),
+      );
+      e.dataTransfer.effectAllowed = 'copyMove';
+      member.classList.add('dragging');
+    } else if (slot && slot.dataset.prepareHero) {
+      e.dataTransfer.setData(
+        'text/plain',
+        JSON.stringify({
+          type: 'slot',
+          slot: Number(slot.dataset.prepareSlot),
+          id: slot.dataset.prepareHero,
+        }),
+      );
+      e.dataTransfer.effectAllowed = 'move';
+      slot.classList.add('dragging');
+    }
+  });
+
+  context.events.on($('#party-panel'), 'dragend', () => {
+    for (const el of $('#party-panel').querySelectorAll('.dragging')) {
+      el.classList.remove('dragging');
+    }
+    for (const el of $('#party-panel').querySelectorAll('.drag-over')) {
+      el.classList.remove('drag-over');
+    }
+  });
+
   context.events.on($('#party-panel'), 'dragover', (e) => {
-    if (e.target.closest('[data-edit-portrait]')) e.preventDefault();
+    if (e.target.closest('[data-edit-portrait]')) {
+      e.preventDefault();
+      return;
+    }
+    const slot = e.target.closest('.prepare-slot');
+    const pool = e.target.closest('#prepare-pool');
+    if (slot || pool) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      if (slot) {
+        for (const s of $('#party-panel').querySelectorAll('.prepare-slot.drag-over')) {
+          if (s !== slot) s.classList.remove('drag-over');
+        }
+        slot.classList.add('drag-over');
+      }
+    }
+  });
+
+  context.events.on($('#party-panel'), 'dragleave', (e) => {
+    const slot = e.target.closest('.prepare-slot');
+    if (slot && !slot.contains(e.relatedTarget)) {
+      slot.classList.remove('drag-over');
+    }
   });
 
   context.events.on($('#party-panel'), 'drop', async (e) => {
@@ -231,6 +291,40 @@ export function mountInput(context) {
       } catch (err) {
         context.shell.toast(err.message || '图片读取失败');
       }
+      return;
+    }
+
+    const slot = e.target.closest('.prepare-slot');
+    const pool = e.target.closest('#prepare-pool');
+    for (const s of $('#party-panel').querySelectorAll('.drag-over')) {
+      s.classList.remove('drag-over');
+    }
+    for (const el of $('#party-panel').querySelectorAll('.dragging')) {
+      el.classList.remove('dragging');
+    }
+    let data;
+    try {
+      data = JSON.parse(e.dataTransfer.getData('text/plain'));
+    } catch {
+      return;
+    }
+    if (!data) return;
+    e.preventDefault();
+
+    if (slot) {
+      const targetIndex = Number(slot.dataset.prepareSlot);
+      if (data.type === 'hero') {
+        session.ai.preparationSlot = targetIndex;
+        session.ai.preparationCharacter = data.id;
+        context.generation.setPartySlot(targetIndex, data.id);
+      } else if (data.type === 'slot') {
+        if (data.slot !== targetIndex) {
+          session.ai.preparationSlot = targetIndex;
+          context.generation.setPartySlot(targetIndex, data.id);
+        }
+      }
+    } else if (pool && data.type === 'slot') {
+      context.generation.setPartySlot(data.slot, null);
     }
   });
 
