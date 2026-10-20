@@ -66,7 +66,7 @@ function novelV3Schema() {
 }
 
 export function scriptOutputSchema() {
-  return object({
+  const schema = object({
     schemaVersion: { type: 'integer', const: 4 },
     story: array(string(24000), ENCOUNTER_COUNT, ENCOUNTER_COUNT),
     data: object({
@@ -101,9 +101,23 @@ export function scriptOutputSchema() {
         0,
         24,
       ),
-      nextHook: object({ setting: string(200, 0) }),
+      nextHook: {
+        type: 'object',
+        properties: {
+          setting: string(2000, 0),
+          phase: { type: 'string', enum: ['起', '承1', '承2', '转1', '转2', '合'] },
+        },
+        required: ['setting'],
+        additionalProperties: false,
+      },
     }),
   });
+  schema.properties.data.properties.encounters = array(
+    object({ enemyIds: array(string(80), 1, 3) }),
+    ENCOUNTER_COUNT,
+    ENCOUNTER_COUNT,
+  );
+  return schema;
 }
 
 /** Existing v2 responses and saved chapters remain readable during preset migration. */

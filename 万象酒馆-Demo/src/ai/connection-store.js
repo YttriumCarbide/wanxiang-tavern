@@ -3,7 +3,15 @@ const randomUUID = () => crypto.randomUUID();
 
 export const DEFAULT_OUTPUT_TOKENS = 32768;
 export const MAX_OUTPUT_TOKENS = 131072;
-export const API_KINDS = ['character', 'script', 'chat', 'quick-chat', 'summary', 'creation'];
+export const API_KINDS = [
+  'character',
+  'script',
+  'chat',
+  'quick-chat',
+  'summary',
+  'creation',
+  'map',
+];
 const kinds = API_KINDS;
 const publicProfile = ({ apiKey, ...profile }) => ({ ...profile, hasApiKey: !!apiKey });
 
@@ -38,7 +46,7 @@ function profileFrom(input, old) {
     baseUrl: input.baseUrl.trim(),
     model: input.model.trim(),
     apiKey,
-    rememberKey: input.rememberKey === true,
+    rememberKey: input.rememberKey !== false,
     jsonMode: input.jsonMode === true,
     strictJson: input.strictJson === true,
     temperature,
@@ -53,7 +61,7 @@ export function createConnectionStore({ snapshot = {}, initial = {}, save = asyn
     baseUrl: 'https://api.openai.com/v1',
     model: '',
     apiKey: '',
-    rememberKey: false,
+    rememberKey: true,
     jsonMode: false,
     strictJson: false,
     temperature: null,
@@ -70,8 +78,8 @@ export function createConnectionStore({ snapshot = {}, initial = {}, save = asyn
       kind,
       {
         ...defaults,
-        ...(['summary', 'creation'].includes(kind) ? { maxTokens: 8192, temperature: 0.2 } : {}),
-        promptPresetId: ['summary', 'creation'].includes(kind) ? null : `${kind}-default`,
+        ...(kind === 'summary' ? { maxTokens: 8192, temperature: 0.2 } : {}),
+        promptPresetId: kind === 'summary' ? null : `${kind}-default`,
         apiPresetId: null,
       },
     ]),
@@ -81,12 +89,20 @@ export function createConnectionStore({ snapshot = {}, initial = {}, save = asyn
   for (const kind of kinds) {
     const value = snapshot.profiles?.[kind] || snapshot[kind];
     if (value)
-      profiles[kind] = { ...profiles[kind], ...value, apiKey: value.apiKey || defaults.apiKey };
+      profiles[kind] = {
+        ...profiles[kind],
+        ...value,
+        apiKey: value.apiKey || defaults.apiKey,
+        ...((snapshot.version || 0) < 4 ? { rememberKey: true } : {}),
+      };
   }
+  for (const kind of ['map', 'creation'])
+    if (!profiles[kind].promptPresetId)
+      profiles[kind].promptPresetId = profiles.chat.promptPresetId || `${kind}-default`;
   function persist() {
     const stored = (profile) => ({ ...profile, apiKey: profile.rememberKey ? profile.apiKey : '' });
     const value = {
-      version: 3,
+      version: 4,
       profiles: Object.fromEntries(kinds.map((kind) => [kind, stored(profiles[kind])])),
       apiPresets: presets.map(stored),
     };
@@ -118,7 +134,7 @@ export function createConnectionStore({ snapshot = {}, initial = {}, save = asyn
     },
     async selectPrompt(kind, id) {
       checkKind(kind);
-      if (['summary', 'creation'].includes(kind)) throw Error('此API使用内置提示词，无需选择预设');
+      if (kind === 'summary') throw Error('此API使用内置提示词，无需选择预设');
       profiles[kind].promptPresetId = id;
       await persist();
       return visible();
@@ -142,7 +158,7 @@ export function createConnectionStore({ snapshot = {}, initial = {}, save = asyn
         // The ordinary profile checkbox still controls profiles saved without a preset.
         const entry = {
           ...profile,
-          rememberKey: profile.requestMode !== 'browser' || input.profile?.rememberKey === true,
+          rememberKey: profile.requestMode !== 'browser' || input.profile?.rememberKey !== false,
           id: input.id || `api-${randomUUID()}`,
           name,
         };

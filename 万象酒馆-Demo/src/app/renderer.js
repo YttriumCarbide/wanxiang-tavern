@@ -1,3 +1,4 @@
+import { emblemRing } from '../emblems.js';
 import { ENCOUNTER_COUNT, FINAL_ENCOUNTER } from '../content/journey-rules.js';
 import { html } from '../shared/html.js';
 import { ENCOUNTERS } from '../data.js';
@@ -11,20 +12,32 @@ import { portraitUrl } from '../catalog.js';
 export function createRenderer(context) {
   const { session } = context;
   function renderRear(s) {
-    const ids = (session.battle.playing ? s.formation : session.battle.forecast.final.formation)
-      .slice(3)
-      .filter(Boolean);
+    const ids = (
+      session.battle.playing ? s.formation : session.battle.forecast.final.formation
+    ).slice(3);
     $('#rear-cards').innerHTML = ids
-      .map((id) => {
+      .map((id, index) => {
+        if (!id)
+          return html`<button
+            class="rear-card rear-empty"
+            data-empty-slot="${index + 3}"
+            aria-label="后场空位${index + 1}"
+          >
+            <span>＋</span><small>后场</small>
+          </button>`;
         const d = context.roster.get(id),
-          u = s.units[id],
-          f = session.battle.forecast.final.units[id];
+          u = s.units?.[id],
+          f = session.battle.forecast?.final?.units?.[id] || u;
+        if (!d || !u) return '';
+        const ready = Boolean(
+          u.entryReady && (d.entrySkill || d.combat?.entrySkill || d.setting?.entrySkill),
+        );
         return html`<button
-          class="rear-card ${session.selection.selected === id ? 'selected' : ''} ${u.hp === 0 ? 'fallen' : ''}"
-          style="--unit:${d.color}"
+          class="rear-card ${session.selection.selected === id ? 'selected' : ''} ${u.hp === 0 ? 'fallen' : ''} ${ready ? 'entry-ready' : ''}"
+          style="--unit:${d.color || '#9e9e9e'}"
           data-dragunit="${id}"
           data-rear="${id}"
-          aria-label="${escapeText(d.name)}，后场角色"
+          aria-label="${escapeText(d.name)}，后场角色${ready ? '，入场技就绪' : ''}"
           ${session.battle.playing ? 'disabled' : ''}
         >
           <img src="${portraitUrl(d)}" alt="" /><svg
@@ -44,7 +57,9 @@ export function createRenderer(context) {
           ><span class="card-buffs"
             >${statusIcons(s, id, session.battle.forecast.final, session.battle.playing ? [] : session.battle.forecast.events)}</span
           ><strong class="rear-name">${escapeText(d.name)}</strong>
+          ${ready ? html`<span class="entry-tag" title="${escapeText(d.entrySkill?.name ? `入场技【${d.entrySkill.name}】就绪：${d.entrySkill.text || ''}` : '入场技就绪')}">入场</span>` : ''}
           <div class="rear-resources">${resourceBars(u, f)}</div>
+          ${emblemRing(d, u, false, session.battle.playing ? u : f)}
         </button>`;
       })
       .join('');
@@ -59,6 +74,16 @@ export function createRenderer(context) {
   }
   function render(options = {}) {
     if (session.runtime.disposed || session.runtime.mode === 'inn') return;
+    const emblemState = session.battle.playing
+      ? session.battle.display || session.battle.state
+      : session.battle.forecast?.final || session.battle.state;
+    const selectedUnit =
+      session.selection.selected && emblemState?.units
+        ? emblemState.units[session.selection.selected]
+        : null;
+    const emblemActive = !!selectedUnit && (selectedUnit.combined || 0) > 0;
+    $('#battle').classList.toggle('emblem-active', emblemActive);
+    $('#emblem-screen')?.classList.toggle('active', emblemActive);
     const layout = captureLayout(),
       s = session.battle.display || session.battle.state;
     $('#encounter-label').textContent =

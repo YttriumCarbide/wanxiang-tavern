@@ -1,3 +1,5 @@
+import { createEmblemAura } from './emblem-aura.js';
+import { emblemRing } from './emblems.js';
 import { BIOMES } from './content/biomes.js';
 import { createSceneAmbience } from './scene-ambience.js';
 import { createWeatherSystem } from './scene-weather.js';
@@ -21,7 +23,7 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
   const theme = BIOMES[options.map] || BIOMES.ruins;
   stage.dataset.biome = options.map || 'ruins';
   stage.style.setProperty('--scene-accent', theme.accent);
-  const definitions = { ...DEFINITIONS, ...options.heroDefinitions };
+  const definitions = { ...DEFINITIONS, ...options.enemyDefinitions, ...options.heroDefinitions };
   const canvas = stage.querySelector('canvas'),
     layer = stage.querySelector('.unit-layer'),
     effects = stage.querySelector('.battle-effects');
@@ -212,6 +214,7 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
   const releasedPositions = new Map(),
     dragMaterials = [];
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const emblemAura = createEmblemAura(scene, resources, reduced);
   const deaths = createCardDeaths({
     scene,
     camera,
@@ -255,7 +258,8 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
     if (!playing && s.phase === 'plan') deaths.releaseCinematic();
     if (playing) clearHints();
     const formation = playing ? s.formation : forecast.final.formation,
-      available = friendRecords.filter((r) => !formation.slice(0, 3).includes(r.id)),
+      frontIds = new Set(formation.slice(0, 3).filter(Boolean)),
+      available = friendRecords.filter((r) => !r.id || !frontIds.has(r.id)),
       next = new Map();
     emptySlots.forEach((el, slot) => {
       el.hidden = playing || !!formation[slot];
@@ -263,12 +267,14 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
     for (let slot = 0; slot < 3; slot++) {
       const id = formation[slot];
       if (!id) continue;
-      const r = assignments.get(id) || available.shift(),
-        goal = new THREE.Vector3([-3.014, 0, 3.014][slot], 0.12, 2.345),
+      const r =
+        assignments.get(id) || available.shift() || friendRecords.find((rec) => !next.has(rec.id));
+      if (!r) continue;
+      const goal = new THREE.Vector3([-3.014, 0, 3.014][slot], 0.12, 2.345),
         incoming = r.id !== id;
       let from = releasedPositions.get(id) || null;
       releasedPositions.delete(id);
-      if (incoming && !from && origins.has(id)) {
+      if (incoming && (!from || origins.has(id)) && origins.has(id)) {
         from = screenToWorld(origins.get(id));
         if (from) {
           from.y = 0.15;
@@ -311,6 +317,20 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
         u = s.units[id],
         f = forecast.final.units[id],
         d = definitions[id];
+      const combined =
+        side === 'Friendly' && u.hp > 0 && !!(u.combined || (!playing && f.combined));
+      const canAwaken =
+        side === 'Friendly' &&
+        u.hp > 0 &&
+        selected === id &&
+        !!d.emblemId &&
+        (playing ? u : f).emblemCharge === 6 &&
+        !combined;
+      r.emblemActive = combined;
+      r.emblemSelected = combined && selected === id;
+      el.classList.toggle('combined-unit', combined);
+      el.classList.toggle('combined-selected', r.emblemSelected);
+      el.classList.toggle('can-awaken', canAwaken);
       r.restScale = d.boss ? 1.08 : 1;
       if (side === 'Friendly') {
         root.visible = true;
@@ -377,9 +397,39 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
                 <path d="M-6 5h12v3H2v9h-4V8h-4z" />
               </g>
             </g></svg></span
-        ><span class="unit-info"
+        >${
+          canAwaken
+            ? html`<span class="awaken-drop-mark" aria-hidden="true"
+                ><svg viewBox="0 0 48 48">
+                  <g fill="#d8f8ff" stroke="#123d54" stroke-width="1.2">
+                    <circle
+                      cx="24"
+                      cy="24"
+                      r="20"
+                      fill="#14394ce6"
+                      stroke="#68ddff"
+                      stroke-width="2.5"
+                    />
+                    <circle
+                      cx="24"
+                      cy="24"
+                      r="15"
+                      fill="none"
+                      stroke="#a4f0ff"
+                      stroke-width="1.2"
+                      stroke-dasharray="3 3"
+                    />
+                    <g transform="translate(24 24)">
+                      <path d="M0-11L3-3L11 0L3 3L0 11L-3 3L-11 0L-3-3Z" fill="#bdf7ff" />
+                      <circle cx="0" cy="0" r="2.5" fill="#ffffff" />
+                    </g>
+                  </g></svg
+              ></span>`
+            : ''
+        }<span class="unit-info"
           ><span class="unit-name">${d.name}${u.hp === 0 ? ' ×' : ''}</span></span
-        ><span class="unit-resources">${resourceBars(u, f)}</span>`;
+        ><span class="unit-resources">${resourceBars(u, f)}</span
+        >${emblemRing(d, u, selected === id, playing ? u : f)}`;
       if (el.innerHTML !== markupString) el.innerHTML = markupString;
       el.onclick = () => onUnitClick(id, side, slot);
     }
@@ -496,6 +546,7 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
     raf = 0;
     if (disposed) return;
     let moving = ambience.update(now);
+    moving = emblemAura.update(records, now) || moving;
     moving = weather.update(now) || moving;
     for (const r of records) {
       if (activeDrag?.record === r) continue;
@@ -621,15 +672,19 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
         if (o.isMesh) {
           const own = (m) => {
             const c = m.clone();
-            c.userData.baseColor = m.userData.baseColor.clone();
-            c.userData.baseEmission = m.userData.baseEmission.clone();
+            c.userData.baseColor =
+              m.userData?.baseColor?.clone() || m.color?.clone() || new THREE.Color(0xffffff);
+            c.userData.baseEmission =
+              m.userData?.baseEmission?.clone() || m.emissive?.clone() || new THREE.Color(0);
             return c;
           };
           o.material = Array.isArray(o.material) ? o.material.map(own) : own(o.material);
           const ms = Array.isArray(o.material) ? o.material : [o.material];
           dragMaterials.push(...ms);
-          ms.forEach((m) => m.color.copy(m.userData.baseColor));
-          if (o.name.endsWith('_Artwork')) {
+          ms.forEach((m) => {
+            if (m.userData?.baseColor) m.color.copy(m.userData.baseColor);
+          });
+          if (o.name.endsWith('_Artwork') && textures[id]) {
             o.material.map = textures[id];
             o.material.needsUpdate = true;
           }
@@ -682,6 +737,7 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
     resize,
     playEvent,
     artStatus: () => ({ ...ambience.stats(), outerEnvironment }),
+    emblemStatus: emblemAura.status,
     weatherStatus: weather.stats,
     deathStatus: deaths.stats,
     floorStatus: () => ({ ...floorStatus }),

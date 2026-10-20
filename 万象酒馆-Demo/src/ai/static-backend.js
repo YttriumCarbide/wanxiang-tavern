@@ -39,9 +39,8 @@ export async function createStaticBackend(
   const controllers = new Set();
   let disposed = false;
   async function generate(path, input, options) {
-    const match = /^(generate|models)\/(character|script|chat|quick-chat|summary|creation)$/.exec(
-      path,
-    );
+    const match =
+      /^(generate|models)\/(character|script|chat|quick-chat|summary|creation|map)$/.exec(path);
     const kind = match[2],
       models = match[1] === 'models';
     if (controllers.size >= 2) throw Error('已有生成任务在进行，请稍候');
@@ -56,9 +55,7 @@ export async function createStaticBackend(
       controller.signal.throwIfAborted();
       const profile = settings.get(kind);
       const source =
-        models || ['summary', 'creation'].includes(kind)
-          ? null
-          : (await prompts.get(profile.promptPresetId)).preset;
+        models || kind === 'summary' ? null : (await prompts.get(profile.promptPresetId)).preset;
       const prepared = models ? null : await pipeline.buildRequest(kind, input, source);
       controller.signal.throwIfAborted();
       const requestId = crypto.randomUUID(),
@@ -117,7 +114,7 @@ export async function createStaticBackend(
   async function request(path, data, options = {}) {
     if (disposed) throw Error('接口已关闭');
     options.signal?.throwIfAborted();
-    if (/^(generate|models)\/(character|script|chat|quick-chat|summary|creation)$/.test(path))
+    if (/^(generate|models)\/(character|script|chat|quick-chat|summary|creation|map)$/.test(path))
       return generate(path, data || {}, options);
     if (path === 'config')
       return data ? settings.saveProfile({ ...data, requestMode: 'browser' }) : settings.visible();
@@ -169,6 +166,8 @@ export async function createStaticBackend(
         formats: {
           character: await readText('character.system.md'),
           script: await readText('script.system.md'),
+          map: await readText('map.system.md'),
+          creation: await readText('creation.system.md'),
         },
       };
     if (path.startsWith('prompts/')) {

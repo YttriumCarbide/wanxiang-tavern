@@ -31,7 +31,10 @@ export function animateLayout(old, definitions) {
       if (el.dataset.rear && previous.el.dataset.unit) {
         const ghost = document.createElement('div');
         ghost.className = 'card-flight';
-        ghost.innerHTML = html`<img src="${portraitUrl(definitions[key])}" alt="" />`;
+        const def = Array.isArray(definitions)
+          ? definitions.find((item) => item?.id === key)
+          : definitions?.[key];
+        ghost.innerHTML = html`<img src="${portraitUrl(def)}" alt="" />`;
         document.body.append(ghost);
         const a = previous.rect,
           b = rect;

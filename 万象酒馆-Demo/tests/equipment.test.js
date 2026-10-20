@@ -27,7 +27,7 @@ import {
   performedFrontRearSwap,
 } from '../src/companion-events.js';
 import { officialSummonPool } from '../src/summoning.js';
-import { creationRequest, creationPlan, creationResponse } from '../server/creation-request.mjs';
+import { creationInput, creationPlan, creationResponse } from '../server/creation-request.mjs';
 import { developerOption, restoreGenerationOptions } from '../src/generation-options.js';
 
 function withRules(rules) {
@@ -189,9 +189,9 @@ test('creation validates batch identity and code budget, without importing prese
     contextSize: 131072,
     promptProcessing: 'merge_tools',
   };
-  const request = creationRequest({ items }, profile, (text) => Math.ceil(text.length / 2));
-  assert.equal(request.messages.length, 2);
-  assert.ok(request.messages[1].content.includes('矿洞中拾取晶矿'));
+  const request = creationInput({ items });
+  assert.equal(request.items.length, 1);
+  assert.equal(request.scripts[0], '矿洞中拾取晶矿。');
   assert.deepEqual(creationPlan({ items }, profile, (text) => Math.ceil(text.length / 2)).batches, [
     ['ore'],
   ]);

@@ -1,6 +1,8 @@
+import { BASE_WORLDS, routeKey, isEndless, validateEncounters } from './worlds.js';
 import { ENCOUNTER_COUNT, FINAL_ENCOUNTER } from './content/journey-rules.js';
 import { REGIONS } from './content/regions.js';
 import { MAP_IDS } from './content/biomes.js';
+import { DEFINITIONS } from './data.js';
 import { tutorialSpec } from './content/tutorial.js';
 
 function random(seed) {
@@ -11,10 +13,11 @@ function random(seed) {
   };
 }
 
-function node(map, sequence, seed, continuation = null, parentId = null, depth = 0) {
+function node(map, sequence, seed, continuation = null, parentId = null, depth = 0, world = null) {
   return {
-    id: `${map}-${sequence}-${seed >>> 0}`,
+    id: `${world?.id || map}-${sequence}-${seed >>> 0}`,
     map,
+    ...(world ? { world: structuredClone(world) } : {}),
     sequence,
     seed: seed >>> 0,
     site: sequence % 6,
@@ -41,19 +44,39 @@ export function newExploration(seed = 17371) {
 
 export function availableExplorations(route) {
   const frontier = route.frontier.filter(
-    (entry) => entry.sequence < REGIONS[entry.map].sites.length,
+    (entry) => isEndless(entry) || entry.sequence < REGIONS[entry.map].sites.length,
   );
   const sequence = Math.min(...frontier.map((entry) => entry.sequence));
   return frontier.filter((entry) => entry.sequence === sequence);
 }
 
 export function explorationPreview(route, map) {
+  if (route.frontier[0]?.world)
+    return route.frontier.map((entry) => ({ ...entry, parentId: null }));
+  const available = availableExplorations(route);
+  const latest = Math.max(0, ...available.map((entry) => entry.sequence));
   const known = [...(route.cleared || []), ...route.frontier]
-    .filter((entry) => entry.sequence < REGIONS[map].sites.length)
+    .filter(
+      (entry) =>
+        entry.sequence < 6 ||
+        (route.cleared || []).some(
+          (item) => item.id === entry.id && entry.sequence >= latest - 5,
+        ) ||
+        available.some((item) => item.id === entry.id),
+    )
     .sort((a, b) => a.sequence - b.sequence)
     .map((entry) => ({ ...entry }));
+  if (latest >= 6)
+    return known.map((entry, index) => ({
+      ...entry,
+      parentId: index ? known[index - 1].id : null,
+    }));
   const entries = [];
-  for (let sequence = 0; sequence < REGIONS[map].sites.length; sequence++) {
+  for (
+    let sequence = 0;
+    sequence < Math.max(REGIONS[map].sites.length, ...known.map((entry) => entry.sequence + 1));
+    sequence++
+  ) {
     const existing = known.find((entry) => entry.sequence === sequence);
     if (existing) {
       entries.push(existing);
@@ -79,10 +102,15 @@ export function explorationPreview(route, map) {
 }
 
 /** Persist only code-generated node descriptors, never arbitrary encounter definitions from AI. */
-export function restoreExploration(value, seed = 17371) {
+export function restoreExploration(value, seed = 17371, worlds = []) {
   const result = newExploration(seed);
-  for (const map of MAP_IDS) {
-    const route = value?.[map];
+  for (const key of [
+    ...MAP_IDS,
+    ...worlds.filter((world) => !MAP_IDS.includes(world.id)).map((world) => world.id),
+  ]) {
+    const world = worlds.find((entry) => entry.id === key);
+    const map = world?.map || key;
+    const route = value?.[key];
     if (!route || !Array.isArray(route.frontier)) continue;
     try {
       const restoreNode = (entry) => {
@@ -100,9 +128,11 @@ export function restoreExploration(value, seed = 17371) {
           typeof entry.continuation === 'string' ? entry.continuation.slice(0, 2000) : null,
           typeof entry.parentId === 'string' ? entry.parentId : null,
           Number.isSafeInteger(entry.depth) && entry.depth >= 0 ? entry.depth : 0,
+          world,
         );
       };
-      const valid = (entry) => entry.sequence < REGIONS[map].sites.length;
+      const valid = (entry) =>
+        world || BASE_WORLDS.includes(map) || entry.sequence < REGIONS[map].sites.length;
       const frontier = route.frontier.map(restoreNode).filter(valid);
       const cleared = Array.isArray(route.cleared)
         ? route.cleared.map(restoreNode).filter(valid)
@@ -116,7 +146,22 @@ export function restoreExploration(value, seed = 17371) {
         if (entry.parentId && !seen.has(entry.parentId)) throw Error('Invalid route parent');
         seen.add(entry.id);
       }
-      result[map] = {
+      if (!frontier.length && (world || BASE_WORLDS.includes(map))) {
+        const last = cleared.at(-1);
+        if (last)
+          frontier.push(
+            node(
+              map,
+              last.sequence + 1,
+              (last.seed + 7919) >>> 0,
+              null,
+              last.id,
+              last.depth + 1,
+              world,
+            ),
+          );
+      }
+      result[key] = {
         completed: cleared.length,
         nextSequence: all.reduce((max, entry) => Math.max(max, entry.sequence + 1), 1),
         frontier,
@@ -136,7 +181,7 @@ export function explorationSpec(entry, index = 0) {
     !region ||
     !Number.isSafeInteger(entry.sequence) ||
     entry.sequence < 0 ||
-    entry.sequence >= region?.sites.length ||
+    (!isEndless(entry) && entry.sequence >= region?.sites.length) ||
     !Number.isInteger(entry.seed)
   )
     throw Error('探索地点无效');
@@ -144,23 +189,34 @@ export function explorationSpec(entry, index = 0) {
     throw Error('战斗序号无效');
   if (entry.tutorial === true && entry.map === 'ruins') return tutorialSpec(index);
   const site = (entry.sequence + index) % 6;
+  const dynamic = entry.world;
+  if (entry.encounters) validateEncounters(entry.encounters, entry);
+  const definitions = dynamic?.enemyDefinitions || {};
+  const poolIds = dynamic?.enemyIds || [...region.enemies, region.boss];
+  const bossIds = poolIds.filter((id) => (definitions[id] || DEFINITIONS[id])?.boss);
+  const ordinary = poolIds.filter((id) => !(definitions[id] || DEFINITIONS[id])?.boss);
   const rng = random((entry.seed + index * 7919) >>> 0);
-  const pool = [...region.enemies];
+  const pool = [...(dynamic ? (ordinary.length ? ordinary : poolIds) : region.enemies)];
   for (let i = pool.length - 1; i > 0; i--) {
     const j = Math.floor(rng() * (i + 1));
     [pool[i], pool[j]] = [pool[j], pool[i]];
   }
   const boss = index === FINAL_ENCOUNTER;
   return {
-    name: region.sites[site],
+    name: isEndless(entry)
+      ? `${dynamic?.name || region.name} · 第 ${entry.sequence + 1} 处`
+      : region.sites[site],
     map: entry.map,
-    enemyIds: boss
-      ? [region.boss]
-      : pool.slice(0, index === 0 ? 1 + Math.floor(rng() * 3) : 2 + Math.floor(rng() * 2)),
+    enemyDefinitions: definitions,
+    enemyIds:
+      entry.encounters?.[index]?.enemyIds ||
+      (boss
+        ? [dynamic ? bossIds[0] : region.boss]
+        : pool.slice(0, index === 0 ? 1 + Math.floor(rng() * 3) : 2 + Math.floor(rng() * 2))),
     hpScale: 1,
     boss,
-    environment: { ...region.rules },
-    description: region.atmosphere,
+    environment: {},
+    description: dynamic?.background || region.atmosphere,
   };
 }
 
@@ -170,7 +226,7 @@ export function completeExploration(
   entry,
   { title, nextHook, lines = [], runId, tags = [] } = {},
 ) {
-  const route = routes[entry.map];
+  const route = routes[routeKey(entry)];
   const at = route?.frontier.findIndex((item) => item.id === entry.id);
   if (at === undefined || at < 0) return null;
   if (!availableExplorations(route).some((item) => item.id === entry.id)) return null;
@@ -178,7 +234,14 @@ export function completeExploration(
     typeof nextHook?.setting === 'string' ? nextHook.setting.slice(0, 2000) : null;
   const current = route.frontier[at];
   const successors = Array.from(
-    { length: route.nextSequence < REGIONS[entry.map].sites.length ? 1 : 0 },
+    {
+      length:
+        entry.world ||
+        BASE_WORLDS.includes(entry.map) ||
+        route.nextSequence < REGIONS[entry.map].sites.length
+          ? 1
+          : 0,
+    },
     () => {
       const sequence = route.nextSequence++;
       return node(
@@ -188,6 +251,7 @@ export function completeExploration(
         continuation,
         current.id,
         current.depth + 1,
+        current.world,
       );
     },
   );
@@ -204,4 +268,18 @@ export function completeExploration(
   });
   route.history = route.history.slice(-3);
   return successors[0] || null;
+}
+
+export function addWorldRoute(routes, world, seed = Math.floor(Math.random() * 4294967296)) {
+  if (routes[world.id]) {
+    for (const entry of routes[world.id].frontier) entry.world = structuredClone(world);
+    return;
+  }
+  routes[world.id] = {
+    completed: 0,
+    nextSequence: 1,
+    frontier: [node(world.map, 0, seed, null, null, 0, world)],
+    cleared: [],
+    history: [],
+  };
 }

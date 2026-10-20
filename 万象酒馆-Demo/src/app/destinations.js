@@ -1,3 +1,6 @@
+import { createRawResponse } from './raw-response.js';
+import { BASE_WORLDS, worldRegion, routeKey } from '../worlds.js';
+import { addWorldRoute } from '../exploration.js';
 import { REGIONS } from '../content/regions.js';
 import { explorationSpec, availableExplorations, explorationPreview } from '../exploration.js';
 import { DEFINITIONS } from '../data.js';
@@ -15,18 +18,177 @@ export function createDestinations(context) {
   const maps = () =>
     learning(session.ai.library) || session.ai.library.campaign?.tutorial === 'depart-again'
       ? ['ruins']
-      : Object.keys(REGIONS);
+      : [
+          ...BASE_WORLDS,
+          ...(session.ai.library.worlds || [])
+            .filter((world) => !BASE_WORLDS.includes(world.id))
+            .map((world) => world.id),
+          'singularity',
+        ];
   const nodesFor = (map) =>
     learning(session.ai.library)
       ? session.ai.library.exploration.ruins.frontier.slice(0, 1)
-      : availableExplorations(session.ai.library.exploration[map]);
+      : availableExplorations(session.ai.library.exploration[map] || { frontier: [] });
+  const regionFor = (id) =>
+    id === 'singularity'
+      ? {
+          name: '多元奇点',
+          description: '前往尚未记录的世界。写下目的地与愿望，让奇点构筑一条新的道路。',
+          sites: [],
+        }
+      : worldRegion(session.ai.library, id);
   const dialog = $('#destination-dialog');
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
   let preview = null;
   let touch = null;
   let drag = null;
   let suppressClick = false;
+  const rawResponse = createRawResponse(events, 'map-raw-response', '地图 API 原始回复');
   let stage = 'region';
+  let stripPage = 0;
+  let request = null;
+  const strip = document.createElement('div');
+  strip.className = 'destination-strip';
+  $('#destination-regions').before(strip);
+  const previous = document.createElement('button');
+  const next = document.createElement('button');
+  previous.textContent = '‹';
+  next.textContent = '›';
+  previous.setAttribute('aria-label', '上一页地图');
+  next.setAttribute('aria-label', '下一页地图');
+  strip.append(previous, $('#destination-regions'), next);
+  const expand = document.createElement('button');
+  expand.id = 'destination-expand';
+  expand.textContent = '扩充世界观';
+  $('#destination-back').before(expand);
+  const form = document.createElement('dialog');
+  form.id = 'world-construction';
+  form.innerHTML =
+    '<header><div><small>MULTIVERSE / SINGULARITY</small><h2>构筑前往的世界</h2></div><button data-world-close aria-label="关闭">×</button></header><div class="world-blackhole" aria-hidden="true"><i></i></div><textarea id="world-brief" maxlength="10000" rows="6" placeholder="希望前往怎样的世界？可以补充时代、建筑、势力、人物与希望经历的故事…" aria-label="世界构筑要求"></textarea><p id="world-status" role="status"></p><footer><button data-world-config>配置地图 API</button><button data-world-submit class="primary">构筑世界</button></footer>';
+  document.body.append(form);
+  const lore = document.createElement('dialog');
+  lore.id = 'destination-lore';
+  lore.innerHTML =
+    '<header><h2></h2><button aria-label="关闭世界背景">×</button></header><article></article>';
+  document.body.append(lore);
+  const more = document.createElement('button');
+  more.id = 'destination-description';
+  more.textContent = '展开世界背景';
+  $('#destination-summary').after(more);
+  events.on(lore.querySelector('button'), 'click', () => lore.close());
+  events.on(more, 'click', () => {
+    const region = regionFor(session.journey.regionMap);
+    lore.querySelector('h2').textContent = region.name;
+    lore.querySelector('article').textContent = region.description;
+    lore.showModal();
+  });
+  const hole = document.createElement('div');
+  hole.className = 'singularity-art';
+  hole.setAttribute('aria-hidden', 'true');
+  hole.innerHTML =
+    '<i class="singularity-stars"></i><i class="singularity-halo"></i><i class="singularity-disc"></i><i class="singularity-core"></i><span>MULTIVERSE</span>';
+  $('#destination-preview').append(hole);
+  let expanding = null;
+  function openWorld(extension = false) {
+    const id = session.journey.regionMap;
+    const region = regionFor(id);
+    expanding = extension
+      ? session.ai.library.worlds?.find((world) => world.id === id) || {
+          id,
+          map: id,
+          name: region.name,
+          background: region.description + '\n' + region.atmosphere,
+          landmarks: [...region.sites],
+          enemyIds: [...region.enemies, region.boss],
+          enemyDefinitions: {},
+        }
+      : null;
+    form.querySelector('h2').textContent = extension ? '扩充世界观' : '构筑前往的世界';
+    form.querySelector('#world-brief').value = extension
+      ? '沿着已有故事增加新的重要地点、事件、伏笔和敌人，保留原有世界。'
+      : '';
+    form.querySelector('#world-status').textContent = '';
+    form.showModal();
+    form.querySelector('#world-brief').focus();
+  }
+  events.on(previous, 'click', () => {
+    stripPage = Math.max(0, stripPage - 1);
+    render();
+  });
+  events.on(next, 'click', () => {
+    stripPage = Math.min(Math.ceil(maps().length / 5) - 1, stripPage + 1);
+    render();
+  });
+  events.on(expand, 'click', () => openWorld(true));
+  events.on(form.querySelector('[data-world-close]'), 'click', () => {
+    request?.abort();
+    form.close();
+  });
+  events.on(form, 'cancel', () => request?.abort());
+  events.on(form.querySelector('[data-world-config]'), 'click', () => {
+    form.close();
+    dialog.close();
+    void context.generation.open('', 'map');
+  });
+  events.on(form.querySelector('[data-world-submit]'), 'click', async () => {
+    if (request || session.ai.busy) return;
+    request = new AbortController();
+    const original = session.ai.library;
+    const button = form.querySelector('[data-world-submit]');
+    const status = form.querySelector('#world-status');
+    session.ai.busy = true;
+    button.disabled = true;
+    form.dataset.busy = 'true';
+    status.textContent = '正在构筑世界…';
+    try {
+      const result = await context.apiClient.request(
+        'generate/map',
+        {
+          brief: form.querySelector('#world-brief').value,
+          existing: expanding,
+          knownEnemies: Object.assign(
+            {},
+            ...(original.worlds || []).map((world) => world.enemyDefinitions),
+          ),
+        },
+        { signal: request.signal },
+      );
+      if (session.runtime.disposed || original !== session.ai.library) return;
+      const world = result.world;
+      const others = (original.worlds || []).filter((entry) => entry.id !== expanding?.id);
+      if (
+        others.some(
+          (entry) =>
+            entry.id === world.id ||
+            Object.keys(world.enemyDefinitions).some(
+              (id) =>
+                entry.enemyDefinitions[id] &&
+                JSON.stringify(entry.enemyDefinitions[id]) !==
+                  JSON.stringify(world.enemyDefinitions[id]),
+            ),
+        )
+      )
+        throw Error('世界或敌人ID与已有世界冲突，未覆盖资料');
+      original.worlds = [...others, world];
+      addWorldRoute(original.exploration, world);
+      context.generation.save();
+      context.audio.play('generation-ready');
+      session.journey.regionMap = world.id;
+      session.journey.selectedNode = structuredClone(recommended(world.id));
+      stripPage = Math.floor(maps().indexOf(world.id) / 5);
+      form.close();
+      setStage('region');
+      context.shell.toast(`世界已保存 · 输入约 ${result.request?.tokens?.inputEstimate || 0} TK`);
+    } catch (failure) {
+      status.textContent = failure.name === 'AbortError' ? '已取消，未保存世界。' : failure.message;
+      rawResponse.show(failure);
+    } finally {
+      request = null;
+      session.ai.busy = false;
+      button.disabled = false;
+      form.dataset.busy = 'false';
+    }
+  });
   function recommended(map) {
     const nodes = nodesFor(map);
     return (
@@ -71,12 +233,14 @@ export function createDestinations(context) {
         ${node.continuation ? escapeText(node.continuation) : '穿过界门，沿这条路开启一段新的旅程。'}
       </p>
       <div class="destination-enemies">
-        ${spec.enemyIds.map((id) => html`<img src="${portraitUrl(DEFINITIONS[id])}" alt="${escapeText(DEFINITIONS[id].name)}" title="${escapeText(DEFINITIONS[id].name)}" />`).join('')}<small
+        ${spec.enemyIds.map((id) => html`<img src="${portraitUrl(spec.enemyDefinitions?.[id] || DEFINITIONS[id])}" alt="${escapeText((spec.enemyDefinitions?.[id] || DEFINITIONS[id]).name)}" title="${escapeText((spec.enemyDefinitions?.[id] || DEFINITIONS[id]).name)}" />`).join('')}<small
           >可能遭遇</small
         >
       </div>
     </article>`;
-    $('#destination-start').disabled = !nodesFor(node.map).some((item) => item.id === node.id);
+    $('#destination-start').disabled = !nodesFor(routeKey(node)).some(
+      (item) => item.id === node.id,
+    );
     $('#destination-start').textContent = `启程 · 第 ${node.sequence + 1} 处 →`;
     $('#destination-map')
       .querySelectorAll('[data-map-node]')
@@ -137,7 +301,9 @@ export function createDestinations(context) {
             <span class="destination-selection-label" aria-hidden="true">当前选择</span>
             <span class="destination-node-mark"
               >${destinationMark(entry.seed, done)}<em>${entry.sequence + 1}</em></span
-            ><strong>${escapeText(REGIONS[entry.map].sites[entry.sequence])}</strong>
+            ><strong
+              >${escapeText(entry.sequence < 6 && !entry.world ? REGIONS[entry.map].sites[entry.sequence] : explorationSpec(entry).name)}</strong
+            >
           </button>`;
         })
         .join('')}
@@ -146,7 +312,7 @@ export function createDestinations(context) {
   }
   function render(direction = 0) {
     const map = session.journey.regionMap;
-    const region = REGIONS[map];
+    const region = regionFor(map);
     const availableMaps = maps();
     const index = availableMaps.indexOf(map);
     const route = session.ai.library.exploration[map];
@@ -157,26 +323,43 @@ export function createDestinations(context) {
       `${String(index + 1).padStart(2, '0')} / ${String(availableMaps.length).padStart(2, '0')}`;
     for (const id of ['destination-region-prev', 'destination-region-next'])
       $('#' + id).disabled = availableMaps.length === 1;
-    $('#destination-summary').textContent = region.description;
-    $('#destination-effect').textContent = region.effect;
+    $('#destination-summary').textContent =
+      region.description.length > 78 ? region.description.slice(0, 78) + '…' : region.description;
+    more.hidden = region.description.length <= 78;
+    $('#destination-effect').hidden = true;
     $('#destination-status').textContent =
-      `已完成 ${route.completed} / ${region.sites.length} 处 · ${nodesFor(map).length ? '怪物属性固定' : '本图已完成'}`;
+      map === 'singularity'
+        ? '由你选择下一个世界'
+        : `已探索 ${route.completed} 处${route.completed >= 6 || region.id ? ' · 无限旅途' : ' / 6'}`;
+    stripPage = Math.min(stripPage, Math.ceil(availableMaps.length / 5) - 1);
+    previous.disabled = stripPage === 0;
+    next.disabled = (stripPage + 1) * 5 >= availableMaps.length;
+    expand.hidden = map === 'singularity' || !(route?.completed >= 6 || region.id);
     $('#destination-regions').innerHTML = availableMaps
+      .slice(stripPage * 5, stripPage * 5 + 5)
       .map(
         (id) =>
           html`<button
             data-region="${id}"
-            aria-label="${REGIONS[id].name}"
+            aria-label="${regionFor(id).name}"
             aria-pressed="${id === map}"
           >
-            <span>${escapeText(REGIONS[id].name)}</span>
+            <span>${escapeText(regionFor(id).name)}</span>
           </button>`,
       )
       .join('');
     if (direction) animate($('#destination-region-copy'), direction);
     try {
       preview ||= createDestinationPreview($('#destination-preview'));
-      void preview.show(map, direction);
+      $('#destination-preview').classList.toggle('singularity', map === 'singularity');
+      $('#destination-preview').tabIndex = map === 'singularity' ? 0 : -1;
+      $('#destination-preview').setAttribute('role', map === 'singularity' ? 'button' : 'group');
+      $('#destination-preview').setAttribute(
+        'aria-label',
+        map === 'singularity' ? '多元奇点，点击构筑新世界' : '场景预览',
+      );
+      if (map === 'singularity') preview.pause();
+      else void preview.show(region.map || map, direction);
     } catch {
       $('#destination-preview').dataset.error = 'true';
     }
@@ -193,7 +376,7 @@ export function createDestinations(context) {
     $('#destination-back').hidden = !route;
     $('#destination-step').textContent = route ? '02 / 沿地图探索' : '01 / 选择异境';
     $('#destination-title').textContent = route
-      ? `${REGIONS[session.journey.regionMap].name} · 探索地图`
+      ? `${regionFor(session.journey.regionMap).name} · 探索地图`
       : '选择去往的地方';
     if (route) {
       preview?.pause();
@@ -225,7 +408,9 @@ export function createDestinations(context) {
     if (session.runtime.mode !== 'inn' || session.ai.busy || dialog.open) return;
     if (session.runtime.needsStart) return context.onboarding.open();
     if (context.onboarding && !context.onboarding.allowPortal('script')) return;
-    if (learning(session.ai.library)) session.journey.regionMap = 'ruins';
+    if (learning(session.ai.library) || !maps().includes(session.journey.regionMap))
+      session.journey.regionMap = 'ruins';
+    stripPage = Math.floor(maps().indexOf(session.journey.regionMap) / 5);
     session.journey.selectedNode = structuredClone(recommended(session.journey.regionMap) || null);
     if (learning(session.ai.library)) session.journey.selectedNode.tutorial = true;
     dialog.showModal();
@@ -239,7 +424,9 @@ export function createDestinations(context) {
   });
   events.on($('#destination-region-prev'), 'click', () => pageRegion(-1));
   events.on($('#destination-region-next'), 'click', () => pageRegion(1));
-  events.on($('#destination-region-confirm'), 'click', () => setStage('route'));
+  events.on($('#destination-region-confirm'), 'click', () =>
+    session.journey.regionMap === 'singularity' ? openWorld() : setStage('route'),
+  );
   events.on($('#destination-back'), 'click', () => setStage('region'));
   events.on($('#destination-origin'), 'click', () => {
     const viewport = $('#destination-map');
@@ -309,6 +496,15 @@ export function createDestinations(context) {
     const step = event.key === 'ArrowRight' ? 1 : -1;
     pageRegion(step);
   });
+  events.on($('#destination-preview'), 'click', () => {
+    if (session.journey.regionMap === 'singularity') openWorld();
+  });
+  events.on($('#destination-preview'), 'keydown', (event) => {
+    if (session.journey.regionMap === 'singularity' && ['Enter', ' '].includes(event.key)) {
+      event.preventDefault();
+      openWorld();
+    }
+  });
   events.on($('#destination-preview'), 'pointerdown', (event) => {
     if (event.pointerType === 'mouse') return;
     touch = { x: event.clientX, y: event.clientY, id: event.pointerId };
@@ -343,6 +539,10 @@ export function createDestinations(context) {
   return {
     open,
     dispose() {
+      request?.abort();
+      form.remove();
+      lore.remove();
+      rawResponse.dispose();
       preview?.dispose();
     },
   };

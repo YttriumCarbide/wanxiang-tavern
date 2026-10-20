@@ -49,11 +49,13 @@ export function parseCharacterOutput(content) {
   if (raw.schemaVersion !== 3) fail('角色schemaVersion必须为3，根节点为schemaVersion/setting/data');
   if (
     Object.keys(raw).some(
-      (key) => !['schemaVersion', 'setting', 'data', 'arrivalDialogue'].includes(key),
+      (key) =>
+        !['schemaVersion', 'setting', 'data', 'arrivalDialogue', 'levelUpLines'].includes(key),
     )
   )
     fail('角色根节点存在未规定字段');
-  normalizeCharacterSetting(raw.setting);
+  const setting = normalizeCharacterSetting(raw.setting);
+  raw.setting.personality = setting.personality;
   object(raw.data, 'data数据层');
   return raw;
 }
@@ -73,7 +75,7 @@ function effects(list, path = 'effects') {
     object(effect, '技能效果');
     const type = choice(
       effect.type,
-      ['damage', 'heal', 'shield', 'buff', 'cleanse', 'selfHeal', 'selfMana'],
+      ['damage', 'heal', 'shield', 'buff', 'cleanse', 'selfHeal', 'selfMana', 'selfShield'],
       '效果类型',
     );
     if (type === 'cleanse') {
@@ -88,6 +90,7 @@ function effects(list, path = 'effects') {
       type,
       value: integer(effect.value, 1, type === 'buff' ? 6 : 32, '效果数值'),
       ...(type === 'buff' ? { buff: choice(effect.buff, Object.keys(BUFFS), '状态ID') } : {}),
+      ...(effect.target ? { target: effect.target } : {}),
     };
   });
 }
@@ -157,6 +160,7 @@ export function normalizeCharacter(raw, id) {
             name: text(setting.name, '姓名', 30),
             title: text(setting.title, '称号', 30),
             worldbook: stripRetiredLore(text(setting.worldbook, '人物世界书正文', 24000)),
+            ...(setting.entrySkill ? { entrySkill: setting.entrySkill } : {}),
             ...(setting.formatVersion === 3 ? { formatVersion: 3 } : {}),
           }
         : Object.fromEntries(
@@ -192,8 +196,39 @@ export function normalizeCharacter(raw, id) {
       skill(item, `generated-${index + 1}`, true, raw.schemaVersion === 3),
     ),
   };
-  if (combat.skills.every((item) => item.passive)) fail('至少需要一个主动技能');
-  return { id, source: 'generated', setting: lore, combat, archetype: base.id };
+  if (data.entrySkill || setting.entrySkill) {
+    const entryData = data.entrySkill || {};
+    const entrySetting = setting.entrySkill || {};
+    combat.entrySkill = {
+      id: `${id}-entry`,
+      name: display(text(entrySetting.name || entryData.name || '入场技', '入场技名', 30)),
+      text: text(entrySetting.description || entryData.text || '', '入场技说明', 300),
+      target: choice(
+        entryData.target || 'opposite',
+        ['opposite', 'enemy', 'allEnemies', 'allAllies', 'lowestAlly', 'lowestEnemy', 'self'],
+        '入场技目标',
+      ),
+      effects: Array.isArray(entryData.effects)
+        ? effects(entryData.effects, `${id}.entrySkill.effects`)
+        : [{ type: 'damage', value: 2 }],
+    };
+  }
+  if (raw.schemaVersion !== 3 && combat.entrySkill && !lore.entrySkill) {
+    lore.entrySkill = {
+      name: combat.entrySkill.name,
+      description: combat.entrySkill.text,
+    };
+  }
+  return {
+    id,
+    source: 'generated',
+    setting: lore,
+    combat,
+    archetype: base.id,
+    ...(raw.levelUpLines
+      ? { levelUpLines: raw.levelUpLines.map((line) => text(line, '升级台词', 300)) }
+      : {}),
+  };
 }
 /** v3 stores free prose once and compiles the unchanged metadata out of its wrapper. */
 function normalizeNovelScript(raw, id, encounterCount) {
@@ -221,6 +256,7 @@ function normalizeNovelScript(raw, id, encounterCount) {
     id,
     schemaVersion: raw.schemaVersion,
     story,
+    ...(data.encounters ? { encounters: structuredClone(data.encounters) } : {}),
     title: text(data.title, '剧本名', 60),
     synopsis: modern ? '' : text(data.synopsis, '概要', 2000),
     setting: modern ? '' : text(data.setting, '世界设定', 4000),
@@ -249,6 +285,9 @@ function normalizeNovelScript(raw, id, encounterCount) {
       : {}),
     nextHook: {
       setting: modern && !hook.setting ? '' : text(hook.setting, '下章伏笔', 2000),
+      ...(hook.phase
+        ? { phase: choice(hook.phase, ['起', '承1', '承2', '转1', '转2', '合'], '伏笔阶段') }
+        : {}),
       ...(modern
         ? {}
         : {

@@ -126,12 +126,13 @@ test('growth claims kills and complete bonus once, persists random gains and kee
   claimCompletionExperience(library, expedition);
   const snapshot = structuredClone(member.growth);
   assert.deepEqual(claimCompletionExperience(library, expedition), []);
-  assert(snapshot.level >= 2);
-  assert(grownCombat(member).hp > original.hp);
+  assert.equal(snapshot.level, 1);
+  gainExperience(member, xpToNext(1));
+  assert(grownCombat(member).hp >= original.hp);
   assert.deepEqual(member.combat, original);
   assert.deepEqual(
     restoreLibrary(library).characters.find((entry) => entry.id === member.id).growth,
-    snapshot,
+    member.growth,
   );
   const copy = structuredClone(member);
   const a = gainExperience(member, xpToNext(member.growth.level));

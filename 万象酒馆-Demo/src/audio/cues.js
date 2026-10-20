@@ -17,16 +17,17 @@ export function combatCues(event, before, speed = 1) {
   ]);
   if (event.type === 'item') return [{ name: 'cast', delay: 0 }];
   if (event.type === 'swap') return [{ name: 'exchange', delay: 0 }];
-  if (!['hero', 'enemy'].includes(event.type)) return deathCues;
-  const friendly = event.targets.every(
-    (id) => before.units[id]?.side === before.units[event.actor]?.side,
-  );
-  const delay = ((ATTACK_TIMING[attackStyle(event)] || 640) * 0.7) / (1000 * speed);
+  if (!['hero', 'enemy', 'entrySkill'].includes(event.type)) return deathCues;
+  const friendly =
+    event.targets.length > 0 &&
+    event.targets.every((id) => before.units[id]?.side === before.units[event.actor]?.side);
+  const def = definition(event.after, event.actor);
+  const style = attackStyle(event) || def?.weapon || 'sword';
+  const delay = ((ATTACK_TIMING[style] || 640) * 0.7) / (1000 * speed);
   if (friendly) {
     const healing = event.targets.some((id) => event.after.units[id]?.hp > before.units[id]?.hp);
     return [{ name: 'cast', delay: 0 }, { name: healing ? 'heal' : 'shield', delay }, ...deathCues];
   }
-  const style = attackStyle(event);
   return [{ name: style, delay: 0 }, { name: `${style}-hit`, delay }, ...deathCues];
 }
 
@@ -103,6 +104,11 @@ export const SOUND_CUES = {
     ['triangle', 260, 520, 0.19, 0.07],
   ],
   cast: [['sine', 440, 880, 0.24, 0.065]],
+  combine: [
+    ['sine', 180, 660, 0.76, 0.1],
+    ['triangle', 523, 1047, 0.82, 0.055, 0.05],
+    ['noise', 0, 0, 0.7, 0.04, 0, 2400],
+  ],
   heal: [
     ['sine', 659, 659, 0.22, 0.07],
     ['sine', 988, 988, 0.3, 0.05, 0.07],

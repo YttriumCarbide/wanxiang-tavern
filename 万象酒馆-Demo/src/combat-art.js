@@ -14,6 +14,25 @@ export const ENEMY_ATTACKS = [
   'cinder-spark',
   'tide-ribbon',
   'astral-cascade',
+  'patrol-pounce',
+  'corridor-cleave',
+  'ballista-bolt',
+  'viper-fang',
+  'storm-dive',
+  'shadow-strike',
+  'beetle-burrow',
+  'seeker-pulse',
+  'mud-slam',
+  'tomb-flare',
+  'warden-fist',
+  'specter-wail',
+  'ooze-splash',
+  'parasite-leech',
+  'gate-barrage',
+  'beast-roar',
+  'colossus-beam',
+  'cinder-pyre',
+  'void-collapse',
 ];
 export const ATTACK_TIMING = {
   sword: 640,
@@ -31,10 +50,36 @@ export const ATTACK_TIMING = {
   'cinder-spark': 740,
   'tide-ribbon': 820,
   'astral-cascade': 940,
+  'patrol-pounce': 660,
+  'corridor-cleave': 780,
+  'ballista-bolt': 820,
+  'viper-fang': 640,
+  'storm-dive': 700,
+  'shadow-strike': 660,
+  'beetle-burrow': 740,
+  'seeker-pulse': 720,
+  'mud-slam': 800,
+  'tomb-flare': 760,
+  'warden-fist': 820,
+  'specter-wail': 760,
+  'ooze-splash': 700,
+  'parasite-leech': 640,
+  'gate-barrage': 900,
+  'beast-roar': 880,
+  'colossus-beam': 920,
+  'cinder-pyre': 860,
+  'void-collapse': 940,
 };
 export function attackStyle(event) {
-  const def = event.after?.heroDefinitions?.[event.actor] || DEFINITIONS[event.actor];
-  return event.type === 'hero' ? def?.weapon : event.type === 'enemy' ? def?.attackStyle : null;
+  const def =
+    event.after?.heroDefinitions?.[event.actor] ||
+    event.after?.enemyDefinitions?.[event.actor] ||
+    DEFINITIONS[event.actor];
+  return event.type === 'hero' || event.type === 'entrySkill'
+    ? def?.weapon || 'sword'
+    : event.type === 'enemy'
+      ? def?.attackStyle
+      : null;
 }
 
 export const combatSprites = {

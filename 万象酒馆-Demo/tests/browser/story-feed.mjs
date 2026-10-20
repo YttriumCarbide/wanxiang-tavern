@@ -46,6 +46,7 @@ export async function storyFeedChecks({ browser, baseURL, output }) {
       const session = {
         runtime: { disposed: false, mode: 'battle' },
         ai: {
+          generationOptions: { developerMode: true, editArchives: true },
           activeScript: {
             id: 'novel',
             runId: 'novel-run',
@@ -114,7 +115,9 @@ export async function storyFeedChecks({ browser, baseURL, output }) {
     await page.locator('#story-toggle').click();
     assert.equal(await page.locator('#story-feed').isVisible(), true);
     assert.equal(await page.locator('#story-pages button').count(), 5);
-    assert(!(await page.locator('#story-lines').textContent()).includes('小说第5段'));
+    assert((await page.locator('#story-lines').textContent()).includes('小说第5段'));
+    assert.equal(await page.locator('#story-lines').evaluate((element) => element.scrollTop), 0);
+    assert.equal(await page.evaluate(() => !!window.storyFixture.record.complete), false);
     await page.locator('[data-story-page="0"]').click();
     assert((await page.locator('#story-lines').textContent()).includes('小说第1段'));
     assert(!(await page.locator('#story-lines').textContent()).includes('小说第2段'));
@@ -198,10 +201,11 @@ export async function storyFeedChecks({ browser, baseURL, output }) {
     await page.locator('#archives-open').click();
     assert.equal(await page.locator('#archive-list button').count(), 1);
     assert((await page.locator('.archive-sources').textContent()).includes('潮声 · 林中的旧桥'));
+    await page.locator('#archive-text button').filter({ hasText: '调整设定' }).click();
     await page
       .locator('#archive-text textarea')
       .fill('外貌：灰袍老人。经历：曾经修缮过旧桥，现在守护回廊入口。');
-    await page.locator('#archive-text button').click();
+    await page.locator('#archive-text button').filter({ hasText: '保存修改' }).click();
     await page.screenshot({ path: path.join(output, 'npc-archive-editor.png') });
     assert(
       (
@@ -244,7 +248,7 @@ export async function storyFeedChecks({ browser, baseURL, output }) {
       fiveIndependentPages: true,
       defaultCollapsed: true,
       noFutureSpoilers: true,
-      endingOnlyAfterBoss: true,
+      finalProseAtBossStart: true,
       duplicateMilestonesPrevented: true,
       combatFactsKeptOutsideProse: true,
       dismissAndKeyboard: true,

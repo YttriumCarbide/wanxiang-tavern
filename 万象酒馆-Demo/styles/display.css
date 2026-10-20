@@ -1,0 +1,33 @@
+html,
+body {
+  overscroll-behavior: none;
+}
+#fullscreen-toggle {
+  width: 42px;
+  padding: 8px;
+}
+#fullscreen-toggle svg {
+  width: 20px;
+  height: 20px;
+  vertical-align: middle;
+}
+body.landscape-host > :not(#landscape-frame) {
+  display: none !important;
+}
+#landscape-frame {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100dvh;
+  border: 0;
+  z-index: 1000;
+}
+@media (orientation: portrait) {
+  #landscape-frame {
+    inset: 50% auto auto 50%;
+    width: 100dvh;
+    height: 100vw;
+    transform: translate(-50%, -50%) rotate(90deg);
+    transform-origin: center;
+  }
+}

@@ -15,6 +15,7 @@ export function browserJobs(scopes, results, root) {
       },
       after,
     );
+  simple('worlds-emblems', 'worlds-emblems', 'worldsEmblemsChecks');
   simple('onboarding', 'onboarding', 'onboardingChecks');
   add('settings', async (options) => {
     const { apiSettingsChecks } = await import('../../tests/browser/api-settings.mjs');
@@ -27,7 +28,18 @@ export function browserJobs(scopes, results, root) {
     };
   });
   simple('chat', 'chat', 'chatChecks');
-  simple('preparation', 'preparation', 'preparationChecks');
+  add('preparation', async (options) => {
+    const { preparationChecks } = await import('../../tests/browser/preparation.mjs');
+    const { settlementChecks } = await import('../../tests/browser/settlement.mjs');
+    const { storyFeedChecks } = await import('../../tests/browser/story-feed.mjs');
+    const { journeyRefreshChecks } = await import('../../tests/browser/journey-refresh.mjs');
+    return {
+      preparation: await preparationChecks(options),
+      story: await storyFeedChecks(options),
+      settlement: await settlementChecks(options),
+      refresh: await journeyRefreshChecks(options),
+    };
+  });
   const environment = ['environment', 'artbook', 'rooms'].find((name) => scopes.has(name));
   if (environment)
     add(environment, async (options) => {
@@ -74,6 +86,7 @@ export function browserJobs(scopes, results, root) {
     ['settings', environment].filter((name) => name && scopes.has(name)),
   );
   for (const [name, file, method, field] of [
+    ['summoning', 'summoning', 'summoningChecks', 'summoning'],
     ['death-effects', 'card-death', 'cardDeathChecks', 'cardDeaths'],
     ['intents', 'enemy-intents', 'enemyIntentChecks', 'enemyIntents'],
     ['destinations', 'destination-pager', 'destinationPagerChecks', 'destinationPager'],

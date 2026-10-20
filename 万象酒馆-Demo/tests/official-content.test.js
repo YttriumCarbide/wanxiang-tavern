@@ -6,6 +6,7 @@ import { EDITH } from '../src/content/edith.js';
 import {
   TUTORIAL_DUNGEON,
   CORRIDOR_DUNGEON,
+  HALL_DUNGEON,
   officialDungeonFor,
 } from '../src/content/official-dungeons.js';
 import { migrateTutorialWorldbook } from '../server/worldbook-tutorial.mjs';
@@ -60,7 +61,7 @@ test('tutorial migration preserves edited Pandora and injection controls while r
   );
   assert.equal(source.entries[1].content, '过期同伴资料');
   assert.equal(officialDungeonFor({ map: 'ruins', sequence: 1 }), CORRIDOR_DUNGEON);
-  assert.equal(officialDungeonFor({ map: 'ruins', sequence: 2 }), null);
+  assert.equal(officialDungeonFor({ map: 'ruins', sequence: 2 }), HALL_DUNGEON);
   assert.equal(officialDungeonFor({ map: 'forest', sequence: 1 }), null);
   assert.equal(officialDungeonFor({ map: 'ruins', sequence: 0, tutorial: true }), TUTORIAL_DUNGEON);
 });

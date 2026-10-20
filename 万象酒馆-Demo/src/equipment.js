@@ -1,3 +1,4 @@
+import { finalSkillText } from './skill-text.js';
 import { normalizeRules } from './triggers.js';
 
 export const EQUIPMENT_STATS = Object.freeze({
@@ -156,6 +157,7 @@ export function applyEquipment(combat, equipment) {
         if (effect.type === 'damage') effect.value += item.stats.skillDamage || 0;
     }
   }
+  for (const skill of result.skills) if (!skill.passive) skill.text = finalSkillText(skill);
   result.limit = Math.min(6, result.limit);
   return result;
 }

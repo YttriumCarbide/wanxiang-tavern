@@ -16,6 +16,7 @@ export function createDebugAPI(context) {
     getPlan: () => structuredClone(session.battle.plan),
     getArtStatus: () => session.runtime.view?.artStatus() || null,
     getWeatherStatus: () => session.runtime.view?.weatherStatus() || null,
+    getEmblemStatus: () => session.runtime.view?.emblemStatus() || null,
     getAudioStatus: context.audio.status,
     getForecast: () => structuredClone(session.battle.forecast),
     getStatus: () => ({

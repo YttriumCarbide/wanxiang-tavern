@@ -163,8 +163,10 @@ test('both actual generation routes use tagged JSON, local validation and matchi
           (message) => message.role === 'assistant' && message.content.startsWith(OUTPUT_OPEN),
         ),
       );
-      if (kind === 'character') assert(!JSON.stringify(preview.body.messages).includes('格雷'));
-      else assert(!JSON.stringify(preview.body.messages).includes('断流的水渠'));
+      if (kind === 'character') {
+        assert(!JSON.stringify(preview.body.messages).includes('格雷'));
+        assert(JSON.stringify(preview.body.messages).includes('性格必须直接写成字符串'));
+      } else assert(!JSON.stringify(preview.body.messages).includes('断流的水渠'));
       const script = scriptFixture(party.map((entry) => entry.id));
       script.opening = '进入遗迹。';
       for (const scene of script.scenes) {
@@ -290,7 +292,7 @@ test('version 4 migrates only protocol paragraphs and examples, preserving edits
   );
   assert.equal(
     JSON.parse(await readFile(path.join(directory, 'builtin-content.json'), 'utf8')).version,
-    24,
+    27,
   );
 });
 

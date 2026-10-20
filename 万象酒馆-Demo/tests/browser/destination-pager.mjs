@@ -1,3 +1,4 @@
+import { BASE_WORLDS } from '../../src/worlds.js';
 import { legacySession } from './legacy-session.mjs';
 import assert from 'node:assert/strict';
 import path from 'node:path';
@@ -82,7 +83,7 @@ export async function destinationPagerChecks({ browser, baseURL, output }) {
     assert.equal(await page.locator('[data-map-node] em').first().textContent(), '1');
     assert(!(await page.locator('[data-map-node]').first().innerText()).includes('新手教程'));
     await page.locator('#destination-back').click();
-    for (const [index, map] of Object.keys(REGIONS).entries()) {
+    for (const [index, map] of BASE_WORLDS.entries()) {
       await ready(map);
       assert.equal(await page.locator('#destination-region-name').textContent(), REGIONS[map].name);
       assert(
@@ -100,7 +101,7 @@ export async function destinationPagerChecks({ browser, baseURL, output }) {
         await page.locator('#destination-region-count').textContent(),
         String(index + 1).padStart(2, '0') +
           ' / ' +
-          String(Object.keys(REGIONS).length).padStart(2, '0'),
+          String(BASE_WORLDS.length + 1).padStart(2, '0'),
       );
       assert(!(await page.locator('#destination-map').isVisible()));
       assert(!(await page.locator('#destination-start').isVisible()));
@@ -111,6 +112,7 @@ export async function destinationPagerChecks({ browser, baseURL, output }) {
       );
       await page.locator('#destination-region-next').click();
     }
+    await page.locator('#destination-region-next').click();
     await ready('ruins');
     await page.locator('#destination-region-next').click({ clickCount: 3, delay: 30 });
     await ready('forge');
@@ -251,6 +253,12 @@ export async function destinationPagerChecks({ browser, baseURL, output }) {
     await page.mouse.move(540, 180);
     await page.mouse.down();
     await page.mouse.move(190, 240, { steps: 10 });
+    assert.equal(
+      await page
+        .locator('#destination-map')
+        .evaluate((element) => getComputedStyle(element).opacity),
+      '1',
+    );
     await page.mouse.up();
     assert(await page.locator('#destination-map').evaluate((element) => element.scrollLeft > 100));
     assert.equal(
@@ -297,17 +305,19 @@ export async function destinationPagerChecks({ browser, baseURL, output }) {
       const { completeExploration } = await import('/src/exploration.js');
       const library = demo.getLibrary();
       const route = library.exploration.tide;
-      while (route.frontier.length) completeExploration(library.exploration, route.frontier[0]);
+      while (route.completed < 6) completeExploration(library.exploration, route.frontier[0]);
       localStorage.setItem('wanxiang.worldbooks.v1', JSON.stringify(library));
     });
+    await page.setViewportSize({ width: 1440, height: 836 });
     await page.reload();
     await page.waitForFunction(() => !!window.demo);
     await openGate();
     await page.locator('[data-region="tide"]').click();
     await ready('tide');
-    await expandMap();
-    assert.equal(await page.locator('#destination-start').isDisabled(), true);
-    assert.equal(await page.locator('#destination-start').textContent(), '本图已完成');
+    await page.locator('#destination-region-confirm').click();
+    assert.equal(await page.locator('#destination-start').isDisabled(), false);
+    assert((await page.locator('#destination-start').textContent()).includes('第 7 处'));
+    assert.equal(await page.locator('.destination-node').count(), 7);
     assert.equal(await page.locator('.destination-node.cleared').count(), 6);
     await page.screenshot({ path: path.join(output, 'destination-six-sites-complete.png') });
     assert.deepEqual(errors, []);
@@ -323,6 +333,7 @@ export async function destinationPagerChecks({ browser, baseURL, output }) {
     };
   } catch (error) {
     await page.screenshot({ path: path.join(output, 'destination-pager-error.png') });
+    error.message += '\nPage errors: ' + errors.join(' | ');
     throw error;
   } finally {
     await page.close();

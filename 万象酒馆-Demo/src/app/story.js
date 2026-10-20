@@ -110,17 +110,15 @@ export function createStoryFeed(session, save) {
     if (!record || record.played.includes(key)) return;
     view().latest = Math.max(view().latest, index);
     if (book.schemaVersion >= 3) {
-      const part =
-        stage === 'before' && index < FINAL_ENCOUNTER
-          ? index
-          : stage === 'after' && index === FINAL_ENCOUNTER
-            ? FINAL_ENCOUNTER
-            : -1;
+      const part = stage === 'before' ? index : -1;
       if (part < 0) {
-        if (stage === 'before' && !dialog.open) {
-          view().page = index === FINAL_ENCOUNTER ? FINAL_ENCOUNTER - 1 : index;
-          render();
+        record.played.push(key);
+        if (stage === 'after' && index === FINAL_ENCOUNTER) {
+          record.complete = true;
+          record.nextHook = book.nextHook;
+          session.ai.library.chapter = Math.max(session.ai.library.chapter, book.chapter + 1);
         }
+        save();
         return;
       }
       append('', book.display?.story?.[part] ?? book.story[part], stage, index);
@@ -195,6 +193,7 @@ export function createStoryFeed(session, save) {
     render();
     dialog.dataset.automatic = String(automatic === true);
     dialog.showModal();
+    $('#story-lines').scrollTop = 0;
     dialog.animate(
       [
         { opacity: 0, transform: 'translateY(10px) scale(.98)' },

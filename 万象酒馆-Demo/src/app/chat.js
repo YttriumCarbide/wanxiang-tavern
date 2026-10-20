@@ -1,3 +1,4 @@
+import { routeKey } from '../worlds.js';
 import { FINAL_ENCOUNTER } from '../content/journey-rules.js';
 import { CHAT_PLACES, tavernActivities, mergeFutureScript } from '../chat.js';
 import { settingOnly } from '../ai/contracts.js';
@@ -307,7 +308,7 @@ export function createChat(context) {
         state()
           .quick.map((message) => message.content)
           .join('\n'),
-        session.battle.state.map,
+        book.exploration ? routeKey(book.exploration) : session.battle.state.map,
       ),
       rewrite: {
         lockedThrough: session.battle.state.encounter,
@@ -334,6 +335,8 @@ export function createChat(context) {
         session.battle.state.encounter,
       );
       session.ai.activeScript = merged;
+      if (merged.encounters && session.journey.expedition?.exploration)
+        session.journey.expedition.exploration.encounters = structuredClone(merged.encounters);
       const index = library().scripts.findIndex((entry) => entry.id === book.id);
       if (index >= 0) {
         const { runId: _runId, ...saved } = merged;

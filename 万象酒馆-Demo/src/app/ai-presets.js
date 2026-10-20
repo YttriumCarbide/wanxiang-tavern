@@ -87,7 +87,7 @@ export function createAiPresetEditor({
     }
     $('#prompt-name').value = draft.name;
     $('#prompt-source').textContent =
-      `导入的预设：${draft.name} · 游戏输出格式在世界书顶部的“角色格式 / 剧本格式”中编辑。`;
+      `导入的预设：${draft.name} · 游戏输出格式在世界书顶部的“角色 / 剧本 / 地图 / 以太格式”中编辑。`;
     $('#prompt-warnings').textContent = warnings.join('\n');
     $('#prompt-contract').textContent = formats[kind()] || '';
     const order = draft.prompt_order[0].order;
@@ -298,8 +298,12 @@ ${escapeText(entry.content)}</textarea>
     $('#api-preset-apply-many'),
     'click',
     guard(async () => {
-      const id = $('#api-preset-select').value;
-      if (!id) throw Error('请先保存或选择一个 API 预设');
+      let id = $('#api-preset-select').value;
+      if (!id) {
+        if (!$('#api-preset-name').value.trim()) $('#api-preset-name').value = '通用连接';
+        await connection('save', true);
+        id = $('#api-preset-select').value;
+      }
       const targets = [...document.querySelectorAll('[data-apply-kind]:checked')];
       if (!targets.length) throw Error('请勾选要应用的 API');
       for (const target of targets) {
@@ -308,6 +312,14 @@ ${escapeText(entry.content)}</textarea>
       }
       fillProfile();
       status(`已将所选连接预设应用到 ${targets.length} 个 API。`);
+      $('#api-preset-apply-many').textContent = `已应用到 ${targets.length} 个 API ✓`;
+      $('#api-preset-apply-many').animate(
+        [
+          { backgroundColor: '#d5c18b', color: '#11231f' },
+          { backgroundColor: '#203a31', color: '#e5dfce' },
+        ],
+        { duration: 800 },
+      );
     }),
   );
   events.on(
@@ -501,7 +513,7 @@ ${escapeText(entry.content)}</textarea>
       syncProfile();
       $('#prompt-import-file').value = '';
       status(
-        '已导入并应用到角色、剧本、酒馆交流和快速闲聊 API；之后可分别更换。总结和造物使用内置提示词。',
+        '已导入并应用到角色、剧本、交流、闲聊、地图和以太 API；之后可分别更换。总结使用独立提示词。',
       );
     }),
   );

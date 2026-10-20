@@ -60,18 +60,15 @@ export async function createAiApi({
   async function prepareDirect(path, input) {
     expireDirectRequests();
     if (active + directRequests.size >= 2) throw Error('已有生成任务在进行，请稍候');
-    const match = /^(generate|models)\/(character|script|chat|quick-chat|summary|creation)$/.exec(
-      path,
-    );
+    const match =
+      /^(generate|models)\/(character|script|chat|quick-chat|summary|creation|map)$/.exec(path);
     if (!match) throw Error('接口不存在');
     const kind = match[2],
       models = match[1] === 'models';
     const profile = settings.get(kind);
     if (profile.requestMode !== 'browser') throw Error('当前接口未选择浏览器直连');
     const source =
-      models || ['summary', 'creation'].includes(kind)
-        ? null
-        : (await prompts.get(profile.promptPresetId)).preset;
+      models || kind === 'summary' ? null : (await prompts.get(profile.promptPresetId)).preset;
     const prepared = models ? null : await buildRequest(kind, input, source);
     if (active + directRequests.size >= 2) throw Error('已有生成任务在进行，请稍候');
     const requestId = randomUUID();
@@ -305,7 +302,7 @@ export async function createAiApi({
       if (url === '/api/ai/prompts' && req.method === 'GET') {
         const formats = Object.fromEntries(
           await Promise.all(
-            ['character', 'script'].map(async (kind) => [
+            ['character', 'script', 'map', 'creation'].map(async (kind) => [
               kind,
               await readFile(new URL(`../prompts/${kind}.system.md`, import.meta.url), 'utf8'),
             ]),
@@ -361,7 +358,7 @@ export async function createAiApi({
         return true;
       }
       const match = url.match(
-        /^\/api\/ai\/(generate|models)\/(character|script|chat|quick-chat|summary|creation)$/,
+        /^\/api\/ai\/(generate|models)\/(character|script|chat|quick-chat|summary|creation|map)$/,
       );
       if (!match || req.method !== 'POST') {
         send(res, 404, { error: '接口不存在' });
@@ -378,11 +375,8 @@ export async function createAiApi({
       const profile = settings.get(kind);
       const chatting = ['chat', 'quick-chat'].includes(kind);
       const summarizing = kind === 'summary';
-      const creating = kind === 'creation';
       const source =
-        models || summarizing || creating
-          ? null
-          : (await prompts.get(profile.promptPresetId)).preset;
+        models || summarizing ? null : (await prompts.get(profile.promptPresetId)).preset;
       const prepared = models ? null : await buildRequest(kind, input, source);
       const messages = prepared?.messages || [];
       const requestId = randomUUID();

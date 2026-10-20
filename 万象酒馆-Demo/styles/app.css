@@ -25,3 +25,6 @@
 @import './supplies.css';
 
 @import url('./equipment.css');
+
+@import url('./display.css');
+@import url('./settlement.css');

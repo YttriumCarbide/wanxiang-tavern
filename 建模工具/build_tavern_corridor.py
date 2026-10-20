@@ -316,37 +316,89 @@ def entry_and_window():
     # The far wall is split equally between supplies and the future ether device.
     clear_box(-1.68, 0.05, -4.96, 3.36, 2.72, 0.22)
     box(-1.7, 0, -4.96, 3.4, 2.95, 0.12, "walnutDark")
-    void_machines()
+
+
+def vending_bottle(center_x, base_y, liquid):
+    """One aligned potion: foot, body, shoulder, neck, seal, label and glass highlight."""
+    box(center_x - 0.055, base_y, -4.075, 0.11, 0.018, 0.082, "iron")
+    box(center_x - 0.05, base_y + 0.018, -4.07, 0.10, 0.12, 0.072, liquid)
+    box(center_x - 0.045, base_y + 0.028, -3.994, 0.018, 0.098, 0.006, "cream")
+    box(center_x - 0.035, base_y + 0.138, -4.058, 0.07, 0.03, 0.06, "mirror")
+    box(center_x - 0.021, base_y + 0.168, -4.052, 0.042, 0.038, 0.046, "mirror")
+    box(center_x - 0.024, base_y + 0.162, -4.056, 0.048, 0.01, 0.05, "brassLight")
+    box(center_x - 0.014, base_y + 0.206, -4.044, 0.028, 0.024, 0.034, "brassDark")
+    box(center_x - 0.036, base_y + 0.035, -3.996, 0.072, 0.062, 0.012, "paper")
+    box(center_x - 0.03, base_y + 0.042, -3.982, 0.06, 0.008, 0.004, "brassDark")
+    box(center_x - 0.024, base_y + 0.054, -3.982, 0.048, 0.026, 0.004, "wine")
+    box(center_x - 0.009, base_y + 0.028, -3.982, 0.018, 0.078, 0.004, "paperShadow")
+
+
+def vending_machine():
+    # A single, evenly stocked cabinet: four columns, three shelves, centred labels.
+    x = -1.56
+    box(x, 0.04, -4.72, 1.4, 0.16, 0.68, "iron")
+    box(x + 0.03, 0.2, -4.7, 1.34, 2.16, 0.64, "walnutDark")
+    box(x + 0.02, 2.36, -4.74, 1.38, 0.08, 0.68, "brassDark")
+    box(x + 0.08, 2.44, -4.7, 1.24, 0.04, 0.6, "brass")
+    for xx in [x + 0.04, x + 1.28]:
+        box(xx, 0.18, -4.69, 0.08, 2.22, 0.62, "brass")
+        box(xx - 0.012, 0.28, -4.08, 0.024, 1.9, 0.08, "brassLight")
+    box(x + 0.04, 2.22, -4.16, 1.32, 0.16, 0.18, "brassDark")
+    box(x + 0.16, 2.24, -4.08, 1.08, 0.12, 0.05, "night2")
+    for index in range(5):
+        box(x + 0.27 + index * 0.18, 2.265, -4.025, 0.12, 0.055, 0.02, "starGlow")
+    box(x + 0.16, 0.94, -4.14, 0.86, 1.12, 0.04, "night")
+    box(x + 0.12, 0.9, -4.13, 0.94, 0.04, 0.06, "brass")
+    box(x + 0.12, 2.06, -4.13, 0.94, 0.04, 0.06, "brass")
+    box(x + 0.12, 0.9, -4.13, 0.04, 1.2, 0.06, "brass")
+    box(x + 1.02, 0.9, -4.13, 0.04, 1.2, 0.06, "brass")
+    for row, shelf_y in enumerate([0.98, 1.34, 1.7]):
+        box(x + 0.16, shelf_y, -4.105, 0.8, 0.026, 0.14, "brass")
+        box(x + 0.145, shelf_y - 0.012, -3.995, 0.83, 0.032, 0.026, "brassDark")
+        box(x + 0.18, shelf_y + 0.03, -4.095, 0.76, 0.012, 0.012, "moonGlow")
+        for col, liquid in enumerate(["moonGlow", "wine", "leafLight", "wax"]):
+            center_x = x + 0.296 + col * 0.196
+            vending_bottle(center_x, shelf_y + 0.026, liquid)
+            box(center_x - 0.038, shelf_y - 0.022, -3.958, 0.076, 0.022, 0.008, "paperShadow")
+    box(x + 0.96, 1.28, -3.99, 0.022, 0.48, 0.024, "brassLight")
+    box(x + 0.945, 1.7, -3.985, 0.05, 0.026, 0.02, "brass")
+
+    # Control strip: cash reader, three-by-three keypad and a framed delivery hatch.
+    box(x + 1.0, 0.98, -4.1, 0.3, 1.06, 0.04, "iron")
+    box(x + 1.035, 1.56, -4.08, 0.23, 0.2, 0.08, "brass")
+    box(x + 1.07, 1.62, -4.01, 0.15, 0.06, 0.02, "iron")
+    box(x + 1.075, 1.7, -4.01, 0.14, 0.055, 0.018, "moonGlow")
+    for row in range(3):
+        for col in range(3):
+            box(
+                x + 1.055 + col * 0.066, 1.2 + row * 0.085, -4.005, 0.044, 0.05, 0.022, "brassLight"
+            )
+    box(x + 1.06, 1.04, -4.005, 0.18, 0.07, 0.02, "night2")
+    box(x + 1.085, 1.055, -3.995, 0.13, 0.04, 0.008, "starGlow")
+    box(x + 0.18, 0.36, -4.12, 1.02, 0.46, 0.07, "brassDark")
+    box(x + 0.24, 0.41, -3.99, 0.88, 0.34, 0.026, "iron")
+    box(x + 0.28, 0.46, -3.972, 0.76, 0.24, 0.012, "night")
+    box(x + 0.44, 0.67, -3.958, 0.44, 0.018, 0.018, "brassLight")
+    box(x + 0.64, 0.37, -3.955, 0.12, 0.08, 0.018, "brass")
+    box(x + 0.67, 0.39, -3.94, 0.06, 0.04, 0.008, "starGlow")
+    box(x + 0.1, 0.28, -4.08, 1.16, 0.035, 0.12, "brass")
+    box(x + 0.14, 0.24, -4.06, 1.08, 0.028, 0.08, "brassDark")
+
+    # Feet, vents, screws and a bank of cold-cathode tubes under the display.
+    for xx in [x + 0.1, x + 1.16]:
+        box(xx, 0.01, -4.56, 0.14, 0.07, 0.16, "brassDark")
+    for col in range(15):
+        box(x + 0.18 + col * 0.07, 0.255, -4.055, 0.035, 0.095, 0.02, "ironLight")
+    for row in range(3):
+        for col in range(4):
+            box(x + 0.22 + col * 0.24, 0.3 + row * 0.03, -4.0, 0.18, 0.012, 0.012, "moonGlow")
+    for yy in np.arange(0.28, 2.22, 0.12):
+        for xx in [x + 0.055, x + 1.345]:
+            box(xx, yy, -4.0, 0.025, 0.025, 0.02, "brassLight")
 
 
 def void_machines():
-    # Left half: framed glass, two shelves of potions, coin reader and delivery hatch.
-    x = -1.56
-    box(x, 0.04, -4.72, 1.4, 0.16, 0.68, "iron")
-    box(x + 0.06, 0.2, -4.68, 1.28, 2.04, 0.58, "walnutDark")
-    for xx in [x + 0.04, x + 1.28]:
-        box(xx, 0.18, -4.1, 0.08, 2.12, 0.08, "brass")
-    box(x + 0.04, 2.22, -4.16, 1.32, 0.16, 0.18, "brassDark")
-    box(x + 0.18, 2.24, -4.06, 1.04, 0.1, 0.04, "night2")
-    for xx in [x + 0.32, x + 0.66, x + 1.0]:
-        box(xx, 2.26, -4.02, 0.12, 0.06, 0.02, "starGlow")
-    box(x + 0.16, 0.94, -4.12, 0.86, 1.12, 0.04, "night")
-    for row in range(2):
-        yy = 1.04 + row * 0.5
-        box(x + 0.14, yy - 0.08, -4.08, 0.9, 0.06, 0.04, "brass")
-        for col, liquid in enumerate(["moonGlow", "wine", "leafLight"]):
-            xx = x + 0.24 + col * 0.26
-            box(xx, yy, -4.06, 0.14, 0.24, 0.08, liquid)
-            box(xx + 0.04, yy + 0.24, -4.06, 0.06, 0.08, 0.08, "brassLight")
-            box(xx + 0.02, yy + 0.06, -3.98, 0.03, 0.12, 0.02, "cream")
-    box(x + 1.08, 1.66, -4.06, 0.16, 0.08, 0.04, "iron")
-    box(x + 1.1, 1.68, -4.02, 0.1, 0.02, 0.02, "starGlow")
-    for row in range(3):
-        for col in range(2):
-            box(x + 1.08 + col * 0.08, 1.44 - row * 0.1, -4.02, 0.06, 0.06, 0.04, "brassLight")
-    box(x + 0.18, 0.4, -4.06, 1.02, 0.4, 0.04, "iron")
-    box(x + 0.26, 0.46, -4.02, 0.86, 0.22, 0.02, "night")
-    box(x + 0.14, 0.32, -4.12, 1.1, 0.06, 0.24, "brass")
+    vending_machine()
     # Right half: dormant containment rings, a faceted ether core and pipework.
     x = 0.16
     box(x, 0.04, -4.72, 1.4, 0.16, 0.68, "iron")
@@ -369,6 +421,55 @@ def void_machines():
     box(x + 0.4, 2.16, -4.16, 0.6, 0.08, 0.04, "moonGlow")
     for col in range(3):
         box(x + 0.42 + col * 0.18, 0.3, -4.08, 0.08, 0.1, 0.04, "ironLight")
+
+    # Five-millimetre details: rivets, vents and the suspended astrolabe.
+    for yy in np.arange(0.25, 2.16, 0.12):
+        for xx in [0.285, 1.385]:
+            box(xx, yy, -4.005, 0.02, 0.02, 0.015, "brassLight")
+    for row in range(4):
+        for col in range(9):
+            box(-1.35 + col * 0.11, 2.275 + row * 0.02, -3.995, 0.05, 0.008, 0.008, "moonGlow")
+    # An astrolabe with nested engraved rings, fine teeth and suspended crystalline light.
+    for radius, count in [(0.49, 96), (0.38, 72), (0.24, 48)]:
+        for step in range(count):
+            angle = step * math.tau / count
+            box(
+                0.84 + math.sin(angle) * radius,
+                1.3 + math.cos(angle) * radius,
+                -4.075,
+                0.018,
+                0.018,
+                0.02,
+                "brassLight" if step % 6 else "moonGlow",
+            )
+    for row in range(22):
+        width = 0.04 + (1 - abs(row - 10.5) / 11) * 0.24
+        box(
+            0.84 - width / 2,
+            1.015 + row * 0.025,
+            -4.06,
+            width,
+            0.025,
+            0.04,
+            "night3" if row % 3 else "moonGlow",
+        )
+    for side in [-1, 1]:
+        for row in range(9):
+            box(0.84 + side * 0.59, 0.68 + row * 0.14, -4.16, 0.03, 0.025, 0.14, "brassDark")
+
+
+def detailed_machine_meshes():
+    global VOL, S, ORIGIN, SHAPE
+    original = (VOL, S, ORIGIN, SHAPE)
+    try:
+        S = 0.005
+        ORIGIN = np.array([-1.7, 0, -4.8])
+        SHAPE = (680, 500, 220)
+        VOL = np.zeros(SHAPE, dtype=np.uint8)
+        void_machines()
+        return meshes()[2]
+    finally:
+        VOL, S, ORIGIN, SHAPE = original
 
 
 def runner():
@@ -598,6 +699,13 @@ def build():
     runner()
     extras()
     dimensions, occupied, faces = meshes()
+    details = detailed_machine_meshes()
+    for color_index, data in details.items():
+        target = faces[color_index]
+        offset = len(target["p"])
+        target["p"].extend(data["p"])
+        target["n"].extend(data["n"])
+        target["i"].extend(index + offset for index in data["i"])
     triangles, bytes_written = write_glb(TAVERN_OUT / "万象酒馆-走廊.glb", faces)
     runtime = ASSETS / "corridor.glb"
     runtime.write_bytes((TAVERN_OUT / "万象酒馆-走廊.glb").read_bytes())
@@ -606,6 +714,8 @@ def build():
         "asset": "万象酒馆-走廊.glb",
         "runtime": "assets/corridor.glb",
         "voxel_edge_m": S,
+        "machine_voxel_edge_m": 0.005,
+        "machine_detail_multiplier": 4,
         "resolution": "2 cm watertight voxel surface",
         "occupied_voxels": occupied,
         "box_definitions": box_calls,
@@ -625,7 +735,7 @@ def build():
         "build_seconds": round(time.time() - started, 1),
     }
     (TAVERN_OUT / "走廊模型规格.json").write_text(
-        json.dumps(spec, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+        json.dumps(spec, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n"
     )
     print(json.dumps(spec, ensure_ascii=False))
 

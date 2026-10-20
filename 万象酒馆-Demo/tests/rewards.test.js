@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { newCampaign, firstCompanion } from '../src/campaign.js';
 import { defaultProtagonist } from '../src/content/qingyuan.js';
 import { restoreLibrary, compileRoster } from '../src/ai/library.js';
-import { newExpedition, beginEncounter, completeEncounter } from '../src/expedition.js';
+import { newExpedition, beginEncounter, completeEncounter, chooseRest } from '../src/expedition.js';
 import { claimBattleRewards } from '../src/rewards.js';
 
 test('only confirmed expedition completion grants one contract and claims are idempotent', () => {
@@ -15,6 +15,7 @@ test('only confirmed expedition completion grants one contract and claims are id
     assert.throws(() => completeEncounter(trip, state));
     state.phase = 'victory';
     const result = completeEncounter(trip, state);
+    if (trip.restPending) chooseRest(trip, 'sleep');
     assert.equal(result.rewards.summonContracts, room === 4 ? 1 : 0);
     assert(claimBattleRewards(library, result.rewardId, result.rewards));
     assert.equal(claimBattleRewards(library, result.rewardId, result.rewards), false);

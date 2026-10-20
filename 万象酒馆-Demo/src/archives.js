@@ -1,3 +1,4 @@
+import { routeKey } from './worlds.js';
 import { memoryText } from './memory.js';
 
 const normalizedName = (name) =>
@@ -33,7 +34,7 @@ export function archiveMilestone(library, book, record, encounter) {
   library.archives ||= restoreArchives();
   record.archiveClaims ||= [];
   const partyNames = new Set((book.party || []).map((member) => normalizedName(member.name)));
-  const map = book.exploration?.map || record.map || 'ruins';
+  const map = (book.exploration ? routeKey(book.exploration) : record.map) || 'ruins';
   const source = { runId: record.runId, scriptId: book.id, title: book.title, map, encounter };
   for (const [index, npc] of (book.npcs || []).entries()) {
     if (
@@ -72,7 +73,6 @@ export function archiveMilestone(library, book, record, encounter) {
       (archived) =>
         !archived.superseded &&
         !archived.conflictWith &&
-        itemMap(library, archived) === map &&
         normalizedName(archived.name) === normalizedName(item.name),
     );
     const resolved = item.reference ? resolveItemReferences([item], old ? [old] : [])[0] : item;
@@ -135,20 +135,18 @@ export function relevantArchives(library, text, map = null) {
         .join('\n\n'),
     }));
   const known = new Map();
-  for (const entry of library.archives?.items || []) {
-    const mapId = itemMap(library, entry);
-    if (
-      entry.conflictWith ||
-      entry.superseded ||
-      !(map ? map === mapId : query.includes(normalizedName(entry.name)))
-    )
-      continue;
-    known.set(mapId + ':' + normalizedName(entry.name), {
-      name: entry.name,
-      description: entry.description,
-      value: entry.value,
-      map: mapId,
-    });
+  for (const entry of mergedArchiveItems(library.archives?.items || [])) {
+    const maps = new Set(entry.sources.map((source) => source.map || itemMap(library, { source })));
+    if (entry.conflictWith || entry.superseded) continue;
+    for (const mapId of maps) {
+      if (!(map ? map === mapId : query.includes(normalizedName(entry.name)))) continue;
+      known.set(mapId + ':' + normalizedName(entry.name), {
+        name: entry.name,
+        description: entry.description,
+        value: entry.value,
+        map: mapId,
+      });
+    }
   }
   return { npcs, stories, items: [...known.values()] };
 }
@@ -198,12 +196,28 @@ export function resolveItemConflict(library, id, choice, rename = '') {
     current.value = old.value;
   } else
     for (const item of items)
-      if (
-        item !== current &&
-        (item.map || item.source?.map) === map &&
-        normalizedName(item.name) === normalizedName(current.name)
-      )
+      if (item !== current && normalizedName(item.name) === normalizedName(current.name))
         item.superseded = true;
   delete current.conflictWith;
   return current;
+}
+
+/** One catalog row per name, while physical acquisitions remain separate for exact run settlement. */
+export function mergedArchiveItems(items) {
+  const groups = new Map();
+  for (const item of items) {
+    const key = normalizedName(item.name);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(item);
+  }
+  return [...groups.values()].map((group) => {
+    const current = group.findLast((item) => !item.superseded && !item.conflictWith) || group[0];
+    const sources = new Map();
+    for (const item of group)
+      for (const source of item.sources || [item.source]) {
+        if (source)
+          sources.set(JSON.stringify([source.runId, source.map, source.encounter]), source);
+      }
+    return { ...current, archiveIds: group.map((item) => item.id), sources: [...sources.values()] };
+  });
 }

@@ -7,7 +7,7 @@ export function createModelPicker({ events, api, saveProfile, status }) {
     list.replaceChildren();
     $('#ai-model-picker').hidden = true;
   }
-  events.on($('#ai-models'), 'click', async () => {
+  async function loadModels() {
     const button = $('#ai-models');
     button.disabled = true;
     try {
@@ -28,6 +28,10 @@ export function createModelPicker({ events, api, saveProfile, status }) {
     } finally {
       button.disabled = false;
     }
+  }
+  events.on($('#ai-models'), 'click', loadModels);
+  events.on(document.querySelector('#ai-dialog'), 'click', (event) => {
+    if (event.target.closest('#setup-models')) void loadModels();
   });
   events.on(list, 'change', () => {
     $('#ai-model').value = list.value;

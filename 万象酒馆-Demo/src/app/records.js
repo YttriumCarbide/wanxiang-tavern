@@ -1,3 +1,7 @@
+import { DEFINITIONS } from '../data.js';
+import { portraitUrl } from '../portraits.js';
+import { mergedArchiveItems } from '../archives.js';
+import { REGIONS } from '../content/regions.js';
 import { query as $ } from './dom.js';
 import { developerOption } from '../generation-options.js';
 
@@ -189,12 +193,23 @@ export function createRecords(context) {
   const archive = document.createElement('dialog');
   archive.id = 'archive-dialog';
   archive.innerHTML =
-    '<header><div class="records-title"><small>JOURNEY / COLLECTION</small><h2>旅途归档</h2></div><nav class="records-actions"><div class="archive-tabs"><button data-archive-tab="npcs">NPC</button><button data-archive-tab="items">道具</button></div><button id="archive-close" aria-label="关闭归档">×</button></nav></header><div class="records-body"><nav id="archive-list"></nav><article id="archive-text"></article></div>';
+    '<header><div class="records-title"><small>JOURNEY / COLLECTION</small><h2>旅途归档</h2></div><nav class="records-actions"><div class="archive-tabs"><button data-archive-tab="npcs">NPC</button><button data-archive-tab="items">道具</button><button data-archive-tab="enemies">敌人</button></div><button id="archive-close" aria-label="关闭归档">×</button></nav></header><div class="records-body"><nav id="archive-list"></nav><article id="archive-text"></article></div>';
   document.body.append(archive);
   let tab = 'npcs';
   let archiveEditing = false;
   function renderArchive(index = 0) {
-    const entries = library().archives[tab];
+    const entries =
+      tab === 'enemies'
+        ? Object.values({
+            ...DEFINITIONS,
+            ...Object.assign(
+              {},
+              ...(library().worlds || []).map((world) => world.enemyDefinitions),
+            ),
+          }).filter((entry) => entry.speed)
+        : tab === 'items'
+          ? mergedArchiveItems(library().archives.items)
+          : library().archives[tab];
     archive.classList.toggle('is-empty', !entries.length);
     archive.querySelectorAll('[data-archive-tab]').forEach((button) => {
       button.setAttribute('aria-pressed', String(button.dataset.archiveTab === tab));
@@ -219,6 +234,29 @@ export function createRecords(context) {
       );
       return;
     }
+    if (tab === 'enemies') {
+      const picture = document.createElement('img');
+      picture.src = portraitUrl(entry);
+      picture.width = 96;
+      picture.alt = entry.name;
+      const heading = document.createElement('h3');
+      heading.textContent = entry.name + (entry.boss ? ' · Boss' : '');
+      const stats = document.createElement('p');
+      stats.textContent = `生命 ${entry.hp} · 速度 ${entry.speed}`;
+      const source = document.createElement('p');
+      source.textContent =
+        (library().worlds || [])
+          .filter((world) => world.enemyIds.includes(entry.id))
+          .map((world) => world.name)
+          .join('、') || '官方敌人';
+      area.append(picture, heading, stats, source);
+      for (const move of [...entry.intents, ...(entry.enragedIntents || [])]) {
+        const line = document.createElement('p');
+        line.textContent = `${move.name}：${move.text}`;
+        area.append(line);
+      }
+      return;
+    }
     const name = field('姓名 / 名称', entry.name);
     const content = field(
       tab === 'npcs' ? '外貌与经历' : '描述（20字以内）',
@@ -233,7 +271,7 @@ export function createRecords(context) {
       .filter(Boolean)
       .map(
         (source) =>
-          `来自《${source.title}》· 地图 ${source.map || entry.map || 'ruins'} · 第 ${source.encounter + 1} 战`,
+          `来自《${source.title}》· 地图 ${REGIONS[source.map || entry.map || 'ruins']?.name || source.map || entry.map || '遗迹'} · 第 ${source.encounter + 1} 战`,
       )
       .join('\n');
     if (tab === 'items')
@@ -283,7 +321,14 @@ export function createRecords(context) {
                 duplicate.sources.push(source);
             entries.splice(index, 1);
           }
-        } else entry.description = content.input.value.slice(0, 20);
+        } else {
+          entry.description = content.input.value.slice(0, 20);
+          for (const item of library().archives.items)
+            if (entry.archiveIds.includes(item.id)) {
+              item.name = entry.name;
+              item.description = entry.description;
+            }
+        }
         context.generation.save();
         renderArchive(Math.min(index, entries.length - 1));
       },

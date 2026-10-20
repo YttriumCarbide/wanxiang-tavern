@@ -1,9 +1,6 @@
 import { restoreLibrary } from '../ai/library.js';
-import { claimCompletionExperience, applyEncounterGrowth, GROWTH_LABELS } from '../growth.js';
+import { claimCompletionExperience, applyEncounterGrowth } from '../growth.js';
 import { ENCOUNTER_COUNT, FINAL_ENCOUNTER } from '../content/journey-rules.js';
-import { html } from '../shared/html.js';
-import { HEROES, BOSSES } from '../data.js';
-import { escapeText } from '../ui.js';
 import { preview, getEnemies } from '../engine.js';
 import {
   newExpedition,
@@ -15,7 +12,6 @@ import { REGIONS } from '../content/regions.js';
 import { createBattleView } from '../scene.js';
 import { roundBanner } from '../motion.js';
 import { query as $ } from './dom.js';
-import { portraitUrl } from '../catalog.js';
 import { encounterMusic } from '../audio/config.js';
 import { claimBattleRewards } from '../rewards.js';
 import { dungeonLoot, settleEther } from '../archives.js';
@@ -48,7 +44,14 @@ export function createJourney(context) {
         session.journey.expedition = newExpedition(
           session.journey.bossChoice,
           roster,
-          session.journey.selectedNode,
+          session.journey.selectedNode
+            ? {
+                ...session.journey.selectedNode,
+                ...(session.ai.activeScript?.encounters
+                  ? { encounters: session.ai.activeScript.encounters }
+                  : {}),
+              }
+            : null,
         );
       } catch (failure) {
         session.runtime.mode = 'inn';
@@ -101,6 +104,7 @@ export function createJourney(context) {
         enemyIds: session.battle.state.enemyIds,
         formation: session.battle.state.formation,
         heroDefinitions: session.battle.state.heroDefinitions,
+        enemyDefinitions: session.battle.state.enemyDefinitions,
       });
       if (load !== session.runtime.token) {
         loaded.dispose();
@@ -129,6 +133,7 @@ export function createJourney(context) {
       if (load !== session.runtime.token || session.runtime.disposed) return;
       context.onboarding?.battleStarted();
       context.companionEvents?.battleStarted();
+      context.emblems?.check();
       roundBanner(spec.boss ? `最终战 · ${spec.name}` : '先手准备 · 1 AP');
     } catch (e) {
       $('#scene-loading').textContent = '场景载入失败：' + e.message;
@@ -155,6 +160,7 @@ export function createJourney(context) {
     document.body.classList.add('in-battle');
     await mountEncounter(true);
     context.generation.save();
+    if (session.journey.expedition.pendingResult) await showResult();
   }
   function returnInn() {
     if (session.battle.playing) return;
@@ -185,8 +191,28 @@ export function createJourney(context) {
       });
       context.generation.save();
     }
+    if (!settled && session.runtime.mode === 'battle' && session.ai.activeScript) {
+      const book = session.ai.activeScript;
+      session.ai.library.history = session.ai.library.history.filter(
+        (record) => record.runId !== book.runId,
+      );
+      session.ai.library.scripts = session.ai.library.scripts.filter(
+        (entry) => entry.id !== book.id,
+      );
+      session.ai.library.archives.items = session.ai.library.archives.items.filter(
+        (item) => item.source?.runId !== book.runId,
+      );
+      for (const npc of session.ai.library.archives.npcs)
+        npc.sources = (npc.sources || []).filter((source) => source.runId !== book.runId);
+      session.ai.library.archives.npcs = session.ai.library.archives.npcs.filter(
+        (npc) => npc.sources.length,
+      );
+      session.ai.library.prepared = null;
+      context.generation.save();
+    }
     context.backpack?.close();
     context.companionEvents?.leave();
+    context.emblems?.leave();
     context.chat?.leave();
     context.generation.cancelScene();
     session.runtime.token++;
@@ -208,20 +234,15 @@ export function createJourney(context) {
     $('#ai-open').hidden = false;
     $('#back-inn').hidden = true;
     $('#mode-label').textContent = '';
-    context.shell.mountInn();
+    context.shell.mountInn(session.journey.expedition ? 'gate' : null);
     context.onboarding?.refresh();
     context.companionEvents?.returned();
   }
   async function showResult() {
+    if (session.journey.expedition.pendingResult)
+      return presentResult(session.journey.expedition.pendingResult);
     if (session.battle.state.phase === 'victory')
       await context.generation.showScene(session.battle.state.encounter, 'after');
-    if (
-      session.battle.state.phase === 'victory' &&
-      session.battle.state.encounter === FINAL_ENCOUNTER
-    ) {
-      context.generation.openStory(true);
-      await context.generation.storyClosed();
-    }
     if (session.runtime.disposed || session.runtime.mode !== 'battle') return;
     const won = session.battle.state.phase === 'victory',
       spec = currentEncounterSpec(session.journey.expedition, session.battle.state.encounter),
@@ -260,110 +281,45 @@ export function createJourney(context) {
     const levelUps = complete
       ? claimCompletionExperience(session.ai.library, session.journey.expedition)
       : [];
-    const gainedLevels = [...(session.journey.expedition.levelUps || []), ...levelUps].filter(
-      (gain) => gain.levels.length,
-    );
+    const awards = [...(session.journey.expedition.experienceAwards || []), ...levelUps];
+    session.journey.expedition.experienceAwards = [];
+    session.journey.expedition.levelUps = [];
     const loot = runId ? dungeonLoot(session.ai.library, runId) : [];
     const ether = complete && runId ? settleEther(session.ai.library, runId) : 0;
     if (complete) {
       recordSettlement(session.ai.library, runId || session.journey.expedition.id);
       context.generation.save();
     }
-    const successor =
-      won && complete && explored ? context.generation.explorationWon(explored) : null;
+    if (won && complete && explored) context.generation.explorationWon(explored);
     context.audio.play(won ? 'victory' : 'defeat');
-    $('#result').innerHTML = html`<span class="eyebrow"
-        >${complete ? 'EXPEDITION / COMPLETE' : won ? 'ENCOUNTER / CAMPFIRE' : 'EXPEDITION / DEFEAT'}</span
-      >
-      <div class="result-icon">${won ? '◇' : '×'}</div>
-      <h2>
-        ${explored && complete ? '五场完成 · 探索归来' : complete ? '封印已解 · 副本通关' : won ? `${spec.name}已清理` : '全队濒死'}
-      </h2>
-      <p>
-        ${explored && complete ? (session.ai.library.exploration[spec.map].frontier.length ? `已开放${escapeText(REGIONS[spec.map].name)}的后续副本。返回酒馆后可继续选择。` : `${escapeText(REGIONS[spec.map].name)}的六处副本已全部完成。返回酒馆后可选择其他地图。`) : complete ? `五场战斗与${spec.name}最终战全部完成。` : won ? '营火恢复生命与濒死伙伴，蓝量保留剩余值。' : '本地点仍保留，失败不会推进路线。'}<br />${complete ? `总共 ${session.journey.expedition.records.reduce((n, r) => n + r.rounds, 0)} 回合` : `本场 ${Math.max(1, session.battle.state.round)} 回合`}${next && !complete ? ` · 下一战：${next.next.name}` : ''}
-      </p>
-      <section class="battle-rewards" aria-label="本场获得">
-        ${
-          complete
-            ? html`<div class="ether-reward">
-                <strong>物资折算 · 以太 +${ether}</strong>
-                <p>
-                  ${loot.map((item) => `${escapeText(item.name)}：${item.value}以太`).join(' · ') || '本趟没有收集物资'}
-                </p>
-                <small
-                  >所有副本收获折算为以太，可在酒馆兑换。持有 ${session.ai.library.inventory.ether}
-                  以太</small
-                >
-              </div>`
-            : ''
-        }
-        <small>本场获得</small>
-        ${
-          next?.rewards.summonContracts
-            ? html`<div class="contract-reward">
-                <span aria-hidden="true">✦</span
-                ><strong>召唤契约 × ${next.rewards.summonContracts}</strong>
-                <p>在酒馆的召唤之门使用</p>
-              </div>`
-            : '<p class="reward-empty">本场无掉落 · 副本通关可获得召唤契约</p>'
-        }
-        <p>
-          金币 + ${next?.rewards.gold || 0} · 持有金币：${session.ai.library.inventory?.gold || 0}
-        </p>
-        <p>持有召唤契约：${session.ai.library.inventory?.summonContracts || 0}</p>
-      </section>
-      <div class="level-rewards">
-        ${gainedLevels.map((gain) => html`<p>${escapeText(gain.name)} · Lv.${gain.level} ${gain.levels.flatMap((level) => Object.entries(level.gains).map(([key, n]) => GROWTH_LABELS[key] + '+' + n)).join('、') || '本次没有属性增长'}</p>`).join('')}
-      </div>
-      <div class="result-party">
-        ${HEROES.filter((slot) => session.battle.state.units[slot.id])
-          .map((slot) => {
-            const h = context.roster.get(slot.id);
-            const change = next?.changes.find((c) => c.id === h.id);
-            return html`<div>
-              <img src="${portraitUrl(h)}" alt="${h.name}" /><small
-                >${h.name}<br />${session.battle.state.units[h.id].hp}${change ? ` → ${change.after}` : ''}/${h.hp}<br />蓝
-                ${session.battle.state.units[h.id].mp}</small
-              >
-            </div>`;
-          })
-          .join('')}
-      </div>
-      ${successor?.continuation ? html`<div class="journey-summary">后续线索：${escapeText(successor.continuation)}</div>` : complete && !explored ? html`<div class="journey-summary">${session.journey.expedition.records.map((r) => html`<span>${r.index + 1}. ${r.name} · ${r.rounds}回合</span>`).join('')}</div>` : ''}
-      <div class="result-buttons">
-        ${session.ai.activeScript ? '<button id="result-journal">路途手记</button>' : ''}
-        ${won && !complete ? '<button id="continue" class="primary">继续深入 · 下一战</button>' : explored ? '' : '<button id="retry" class="primary">' + (complete ? '挑战另一位 Boss' : '重新出发') + '</button>'}<button
-          id="result-back"
-          ${won && !complete && !developerOption(session.ai.generationOptions, 'allowRetreat') ? 'hidden' : ''}
-        >
-          返回酒馆
-        </button>
-      </div>`;
-    $('#result-back').onclick = returnInn;
-    const journal = $('#result-journal');
-    if (journal) journal.onclick = context.generation.openStory;
-    const onward = $('#continue');
-    if (onward)
-      onward.onclick = () => {
+    const result = {
+      won,
+      complete,
+      encounter: session.battle.state.encounter,
+      rewards: next?.rewards,
+      ether,
+      loot: loot.filter((item) => item.source.encounter === session.battle.state.encounter),
+      awards,
+    };
+    session.journey.expedition.pendingResult = result;
+    context.generation.save();
+    context.checkpoint.saveNow();
+    return presentResult(result);
+  }
+  async function presentResult(result) {
+    await context.settlement.show({
+      ...result,
+      onward() {
+        delete session.journey.expedition.pendingResult;
         $('#result').close();
         context.generation.showScene(session.battle.state.encounter, 'interlude');
-        startBattle(true);
-      };
-    const retry = $('#retry');
-    if (retry)
-      retry.onclick = () => {
-        $('#result').close();
-        if (complete)
-          session.journey.bossChoice =
-            BOSSES[
-              (BOSSES.findIndex((boss) => boss.id === session.journey.expedition.boss) + 1) %
-                BOSSES.length
-            ].id;
-        returnInn();
-        void context.generation.portal('script');
-      };
-    $('#result').showModal();
-    context.onboarding?.battleWon(won && complete);
+        void startBattle(true);
+      },
+      back: returnInn,
+      journal: session.ai.activeScript ? context.generation.openStory : null,
+      retreat: developerOption(session.ai.generationOptions, 'allowRetreat'),
+    });
+    context.onboarding?.battleWon(result.won && result.complete);
   }
   return { startBattle, returnInn, showResult, resume };
 }

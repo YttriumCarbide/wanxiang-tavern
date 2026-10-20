@@ -62,6 +62,22 @@
             />
           </svg>
         </button>
+        <button
+          id="fullscreen-toggle"
+          type="button"
+          aria-label="进入全屏"
+          aria-pressed="false"
+          title="全屏"
+        >
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path
+              d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+            />
+          </svg>
+        </button>
       </nav>
     </header>
     <section id="audio-panel" role="region" aria-label="声音设置" hidden>
@@ -71,13 +87,29 @@
         ><output id="audio-music-value" for="audio-music">32%</output
         ><button id="audio-music-mute" aria-label="音乐开关" aria-pressed="false">已开启</button>
       </div>
-      <input id="audio-music" type="range" min="0" max="100" value="32" aria-label="音乐音量" />
+      <input
+        autocomplete="off"
+        id="audio-music"
+        type="range"
+        min="0"
+        max="100"
+        value="32"
+        aria-label="音乐音量"
+      />
       <div class="audio-row">
         <label for="audio-effects">音效</label
         ><output id="audio-effects-value" for="audio-effects">60%</output
         ><button id="audio-effects-mute" aria-label="音效开关" aria-pressed="false">已开启</button>
       </div>
-      <input id="audio-effects" type="range" min="0" max="100" value="60" aria-label="音效音量" />
+      <input
+        autocomplete="off"
+        id="audio-effects"
+        type="range"
+        min="0"
+        max="100"
+        value="60"
+        aria-label="音效音量"
+      />
       <small id="audio-state" role="status">点击页面后启用声音</small>
     </section>
     <aside id="inn-resources" aria-label="酒馆资源" aria-live="polite">
@@ -97,44 +129,38 @@
         >
       </div>
     </aside>
-    <dialog id="summon-choice" aria-labelledby="summon-choice-title">
-      <header class="ai-heading">
-        <div>
-          <small>SUMMON / 契约之门</small>
-          <h2 id="summon-choice-title">选择召唤术</h2>
-        </div>
-        <button id="summon-choice-close" aria-label="关闭召唤">×</button>
-      </header>
-      <p>每次召唤消耗 1 份契约。来客加入角色池后，可在准备中安排出战。</p>
+    <section id="summon-choice" hidden aria-label="召唤之门" data-stage="choose">
+      <button id="summon-choice-close" aria-label="关闭召唤">×</button>
       <div class="summon-methods">
-        <button data-summon-mode="official" aria-pressed="true">
-          <b>万象召唤术</b><span>从世界书的官设角色中随机召唤一位尚未加入的来客。</span>
+        <button data-summon-mode="official" aria-pressed="false">
+          <span>✧</span><b>万象召唤术</b>
         </button>
         <button data-summon-mode="chaos" aria-pressed="false">
-          <b>混沌召唤术</b><span>官设、已知 NPC、AI 创作各三分之一。</span>
+          <span>☯</span><b>混沌召唤术</b>
         </button>
         <button data-summon-mode="infinite" aria-pressed="false">
-          <b>无限召唤术</b><span>由 AI 根据你的愿望创作一位全新角色。</span>
+          <span>∞</span><b>无限召唤术</b>
         </button>
-        <button data-summon-mode="npc" aria-pressed="false">
-          <b>印记召唤术</b><span>将旅途归档中已知的 NPC 细化为同伴。</span>
-        </button>
+        <button data-summon-mode="npc" aria-pressed="false"><span>◇</span><b>印记召唤术</b></button>
       </div>
-      <label id="summon-npc-label" hidden>选择已知 NPC<select id="summon-npc"></select></label>
-      <label id="summon-wish-label" hidden
-        >召唤愿望（可选）<textarea
+      <label id="summon-npc-label" hidden
+        ><select id="summon-npc" aria-label="选择已知NPC"></select
+      ></label>
+      <label id="summon-wish-label" hidden>
+        <textarea
+          autocomplete="off"
           id="summon-wish"
           maxlength="4000"
           rows="4"
-          placeholder="例如：蒸汽奇幻世界，使用机械弓的沉静游侠，寻找失踪的姐姐。"
+          aria-label="召唤愿望"
         ></textarea>
       </label>
       <p id="summon-choice-status" role="status"></p>
       <footer>
-        <span id="summon-contracts"></span
-        ><button id="summon-confirm" class="primary">召唤 · 1 份契约</button>
+        <span id="summon-contracts" hidden></span><button id="summon-cancel" hidden>取消</button
+        ><button id="summon-confirm" class="primary" hidden>开始召唤</button>
       </footer>
-    </dialog>
+    </section>
     <section id="generation-progress" hidden aria-live="polite">
       <div class="generation-orbit" aria-hidden="true">◇</div>
       <h2 id="generation-title">正在编织本章故事</h2>
@@ -167,7 +193,8 @@
                 <option value="chat">酒馆交流 API</option>
                 <option value="quick-chat">快速闲聊 API</option>
                 <option value="summary">记忆总结 API（内置提示词）</option>
-                <option value="creation">以太造物 API（内置提示词）</option>
+                <option value="map">地图 API</option>
+                <option value="creation">以太造物 API</option>
               </select></label
             >
             <div class="connection-preset-picker">
@@ -192,42 +219,51 @@
             <p id="ai-transport-hint" class="ai-hint"></p>
             <label
               >Base URL<input
+                autocomplete="off"
                 id="ai-baseUrl"
                 type="url"
                 value="https://api.openai.com/v1"
                 placeholder="https://服务地址/v1"
             /></label>
-            <label>模型<input id="ai-model" placeholder="填写服务商的模型ID" /></label>
+            <label
+              >模型<input autocomplete="off" id="ai-model" placeholder="填写服务商的模型ID"
+            /></label>
             <section id="ai-model-picker" hidden>
               <label for="ai-model-list">模型列表 · <span id="ai-model-count"></span></label
               ><select id="ai-model-list" size="6" aria-label="可用模型列表"></select>
             </section>
             <label
               >API Key<input
+                autocomplete="off"
                 id="ai-key"
                 type="password"
-                autocomplete="off"
                 placeholder="留空保持现有密钥"
             /></label>
             <label class="ai-check"
               ><input
+                autocomplete="off"
                 id="ai-rememberKey"
                 type="checkbox"
               />在此设备记住密钥（普通备份不包含密钥）</label
             >
             <label class="ai-check"
-              ><input id="ai-clear-key" type="checkbox" />清除当前用途的密钥</label
+              ><input
+                autocomplete="off"
+                id="ai-clear-key"
+                type="checkbox"
+              />清除当前用途的密钥</label
             >
             <details>
               <summary>兼容选项</summary>
               <label class="ai-check"
                 ><input
+                  autocomplete="off"
                   id="ai-jsonMode"
                   type="checkbox"
                 />保存JSON模式偏好（标签生成时不发送）</label
               >
               <label class="ai-check"
-                ><input id="ai-strictJson" type="checkbox" />保存严格JSON
+                ><input autocomplete="off" id="ai-strictJson" type="checkbox" />保存严格JSON
                 Schema偏好（标签生成时不发送）</label
               >
               <p class="ai-hint">
@@ -244,6 +280,7 @@
               >
               <label
                 >输出上限<input
+                  autocomplete="off"
                   id="ai-maxTokens"
                   type="number"
                   min="256"
@@ -252,6 +289,7 @@
               /></label>
               <label id="ai-summary-context" hidden
                 >总结上下文长度<input
+                  autocomplete="off"
                   id="ai-contextSize"
                   type="number"
                   min="1024"
@@ -267,13 +305,17 @@
             </details>
             <div class="connection-preset-save">
               <label
-                >预设名称<input id="api-preset-name" maxlength="60" placeholder="例如：DS" /></label
+                >预设名称<input
+                  autocomplete="off"
+                  id="api-preset-name"
+                  maxlength="60"
+                  placeholder="例如：DS" /></label
               ><button id="api-preset-save">保存为 API 预设</button>
             </div>
             <fieldset class="connection-apply">
               <legend>为其他 API 配置相同预设</legend>
               <div id="api-apply-targets"></div>
-              <button id="api-preset-apply-many" type="button">应用所选 API 预设</button>
+              <button id="api-preset-apply-many" type="button">确定应用到勾选的 API</button>
             </fieldset>
             <div class="ai-actions">
               <button id="ai-profile-save" class="primary">保存当前连接</button
@@ -289,7 +331,11 @@
                 ><span
                   ><strong>开发者模式</strong
                   ><small>普通模式必须调用AI；开启后才允许停用生成、返回和编辑归档。</small></span
-                ><input type="checkbox" data-generation-option="developerMode" role="switch"
+                ><input
+                  autocomplete="off"
+                  type="checkbox"
+                  data-generation-option="developerMode"
+                  role="switch"
               /></label>
               <div id="developer-options" hidden>
                 <label
@@ -298,23 +344,39 @@
                     ><small
                       >开启后填写设定并调用角色 API 创建主角；关闭时使用青缘开局。</small
                     ></span
-                  ><input type="checkbox" data-generation-option="protagonistApi" role="switch"
+                  ><input
+                    autocomplete="off"
+                    type="checkbox"
+                    data-generation-option="protagonistApi"
+                    role="switch"
                 /></label>
                 <label
                   ><span
                     ><strong>副本 AI 剧本</strong
                     ><small>开启后进入新副本时调用剧本 API；关闭时使用本地占位剧情。</small></span
-                  ><input type="checkbox" data-generation-option="scriptApi" role="switch"
+                  ><input
+                    autocomplete="off"
+                    type="checkbox"
+                    data-generation-option="scriptApi"
+                    role="switch"
                 /></label>
                 <label
                   ><span
                     ><strong>中途返回</strong><small>允许在副本尚未结算时返回酒馆。</small></span
-                  ><input type="checkbox" data-generation-option="allowRetreat" role="switch"
+                  ><input
+                    autocomplete="off"
+                    type="checkbox"
+                    data-generation-option="allowRetreat"
+                    role="switch"
                 /></label>
                 <label
                   ><span
                     ><strong>调整设定</strong><small>允许手动编辑归档 NPC 和物品设定。</small></span
-                  ><input type="checkbox" data-generation-option="editArchives" role="switch"
+                  ><input
+                    autocomplete="off"
+                    type="checkbox"
+                    data-generation-option="editArchives"
+                    role="switch"
                 /></label>
               </div>
             </div>
@@ -336,10 +398,12 @@
                 <option value="script">剧本 API</option>
                 <option value="chat">酒馆交流 API</option>
                 <option value="quick-chat">快速闲聊 API</option>
+                <option value="map">地图 API</option>
+                <option value="creation">以太造物 API</option>
               </select></label
             >
             <label>提示词预设<select id="prompt-select"></select></label>
-            <label>预设名称<input id="prompt-name" maxlength="80" /></label>
+            <label>预设名称<input autocomplete="off" id="prompt-name" maxlength="80" /></label>
             <div class="ai-actions">
               <button id="prompt-use">当前接口使用此预设</button
               ><button id="prompt-save" class="primary">保存修改</button
@@ -350,7 +414,13 @@
               ><button id="prompt-export">导出预设</button
               ><button id="helper-open">预设扩展窗口</button
               ><button id="ai-preview-request">预览当前使用预设 / TK</button
-              ><input id="prompt-import-file" type="file" accept=".json,application/json" hidden />
+              ><input
+                autocomplete="off"
+                id="prompt-import-file"
+                type="file"
+                accept=".json,application/json"
+                hidden
+              />
             </div>
             <p id="prompt-source" class="ai-hint"></p>
             <p id="prompt-warnings" role="status"></p>
@@ -382,6 +452,7 @@
             <div id="ai-party"></div>
             <label
               >新角色 / OC要求<textarea
+                autocomplete="off"
                 id="ai-character-brief"
                 rows="4"
                 maxlength="10000"
@@ -396,7 +467,12 @@
           <div data-ai-page="scripts" hidden>
             <p class="ai-hint">读取在队角色设定和已发生的剧情，敌人、数值与战斗结果由游戏决定。</p>
             <label
-              >本章要求 / 剧情引导<textarea id="ai-script-brief" rows="5" maxlength="10000">
+              >本章要求 / 剧情引导<textarea
+                autocomplete="off"
+                id="ai-script-brief"
+                rows="5"
+                maxlength="10000"
+              >
 让故事随旅程逐渐推进，并留下伏笔。文风、视角、节奏与描写方式沿用当前预设。</textarea>
             </label>
             <p class="ai-hint">
@@ -411,10 +487,16 @@
           <pre id="ai-preview">选择角色或剧本，阅读已保存的正文。</pre>
           <div id="ai-lore-editor" hidden>
             <label
-              >人物世界书正文<textarea id="ai-lore-text" rows="14" maxlength="24000"></textarea>
+              >人物世界书正文<textarea
+                autocomplete="off"
+                id="ai-lore-text"
+                rows="14"
+                maxlength="24000"
+              ></textarea>
             </label>
             <label
               >角色标签（JSON数组，用于世界书过滤）<input
+                autocomplete="off"
                 id="ai-lore-tags"
                 placeholder='["护卫", "遗迹"]'
             /></label>
@@ -527,13 +609,18 @@
       <div class="diagnostic-texts">
         <label
           >模型原始返回（只读；配置密钥如被回显会隐藏）<textarea
+            autocomplete="off"
             id="diagnostic-raw"
             readonly
             spellcheck="false"
           ></textarea>
         </label>
         <label
-          >校验文本（失败时可手动修改）<textarea id="diagnostic-edit" spellcheck="false"></textarea>
+          >校验文本（失败时可手动修改）<textarea
+            autocomplete="off"
+            id="diagnostic-edit"
+            spellcheck="false"
+          ></textarea>
         </label>
       </div>
       <footer>
@@ -555,7 +642,13 @@
         ><button id="regex-export">导出</button><button id="regex-up">↑</button
         ><button id="regex-down">↓</button><button id="regex-delete">删除</button
         ><button id="regex-save">保存</button
-        ><input type="file" id="regex-import-file" accept=".json,application/json" hidden />
+        ><input
+          autocomplete="off"
+          type="file"
+          id="regex-import-file"
+          accept=".json,application/json"
+          hidden
+        />
       </div>
       <label
         >正则来源<select id="regex-scope">
@@ -576,10 +669,12 @@
             <option value="2">AI输出</option>
             <option value="1">用户输入</option>
             <option value="5">世界书</option></select
-          ><label><input id="regex-test-prompt" type="checkbox" />提示词</label
-          ><label><input id="regex-test-markdown" type="checkbox" />仅显示</label>
+          ><label><input autocomplete="off" id="regex-test-prompt" type="checkbox" />提示词</label
+          ><label
+            ><input autocomplete="off" id="regex-test-markdown" type="checkbox" />仅显示</label
+          >
         </div>
-        <textarea id="regex-test-input" rows="3" aria-label="测试文本"></textarea
+        <textarea autocomplete="off" id="regex-test-input" rows="3" aria-label="测试文本"></textarea
         ><button id="regex-test">运行测试</button>
         <pre id="regex-test-output"></pre>
       </details>
@@ -597,22 +692,30 @@
     <dialog id="world-dialog" aria-labelledby="world-title">
       <header class="world-book-heading">
         <h2 id="world-title">🌐 世界书</h2>
-        <input id="world-name" aria-label="世界书名称" maxlength="100" /><button
+        <input autocomplete="off" id="world-name" aria-label="世界书名称" maxlength="100" /><button
           id="world-import"
           title="导入条目"
         >
           ⇥</button
         ><button id="world-save" title="保存世界书">保存</button
         ><button id="world-close" aria-label="关闭世界书">×</button
-        ><input id="world-import-file" type="file" accept=".json,application/json" hidden />
+        ><input
+          autocomplete="off"
+          id="world-import-file"
+          type="file"
+          accept=".json,application/json"
+          hidden
+        />
       </header>
       <div class="world-tools">
         <button id="world-add" title="新建条目">＋</button
         ><button id="world-collapse" title="收起条目">⌃</button
-        ><input id="world-search" aria-label="搜索条目" placeholder="搜索…" /><select
-          id="world-sort"
-          aria-label="条目排序"
-        >
+        ><input
+          autocomplete="off"
+          id="world-search"
+          aria-label="搜索条目"
+          placeholder="搜索…"
+        /><select id="world-sort" aria-label="条目排序">
           <option value="display">自定义顺序</option>
           <option value="order">优先级</option>
           <option value="name">标题</option></select
@@ -639,7 +742,9 @@
             <option value="character">角色 API</option>
             <option value="script">剧本 API</option>
             <option value="chat">酒馆交流 API</option>
-            <option value="quick-chat">快速闲聊 API</option></select
+            <option value="quick-chat">快速闲聊 API</option>
+            <option value="map">地图 API</option>
+            <option value="creation">以太造物 API</option></select
           ><button id="world-preview-button">最终发送预览 / TK</button
           ><button id="world-edit-view" hidden>返回编辑</button>
         </div>
@@ -660,6 +765,7 @@
         <div>
           <label
             >图片直链<input
+              autocomplete="off"
               id="portrait-url"
               type="url"
               placeholder="https://图床地址/图片.webp"
@@ -681,11 +787,11 @@
           <section class="prepare-formation-col">
             <h3>当前阵容</h3>
             <div id="prepare-slots"></div>
-            <small class="prepare-hint">点击角色编辑 · 拖动调整站位</small>
           </section>
           <section class="prepare-reserve-col">
             <h3>未上场角色 <small id="prepare-count"></small></h3>
             <input
+              autocomplete="off"
               id="prepare-search"
               type="search"
               placeholder="搜索角色…"
@@ -738,8 +844,9 @@
         </div>
         <div id="quick-chat-body">
           <section id="quick-chat-log" aria-live="polite" aria-label="本趟闲聊"></section>
-          <form id="quick-chat-form">
+          <form autocomplete="off" id="quick-chat-form">
             <input
+              autocomplete="off"
               id="quick-chat-input"
               maxlength="10000"
               placeholder="和同行者说句话…"
@@ -799,6 +906,7 @@
       <div id="round-banner" aria-live="polite"></div>
       <div id="round-start" hidden aria-live="polite"><small></small><strong>回合开始</strong></div>
     </main>
+    <div id="emblem-screen" aria-hidden="true"></div>
     <div id="landscape-hint">↻ 请将手机横向使用</div>
     <div id="toast" role="status"></div>
     <dialog id="rules">
@@ -883,7 +991,13 @@
         <button id="saves-export-current" class="saves-tool-btn">导出当前实时进度</button>
         <label class="saves-tool-btn saves-import-label">
           <span>从文件导入存档</span>
-          <input type="file" id="saves-import-input" accept=".json,application/json" hidden />
+          <input
+            autocomplete="off"
+            type="file"
+            id="saves-import-input"
+            accept=".json,application/json"
+            hidden
+          />
         </label>
       </div>
       <div id="saves-slots-list" class="saves-slots-grid"></div>
@@ -925,8 +1039,9 @@
           <div id="chat-messages" aria-live="polite"></div>
           <div class="chat-composer">
             <div id="chat-player"></div>
-            <form id="chat-form">
+            <form autocomplete="off" id="chat-form">
               <textarea
+                autocomplete="off"
                 id="chat-input"
                 rows="2"
                 maxlength="10000"

@@ -98,6 +98,7 @@ export async function rawReplyChecks({ browser, baseURL }) {
       await inn.locator('#summon-open').click();
       await page.locator('[data-summon-mode="infinite"]').click();
       await page.locator('#summon-confirm').click();
+      await page.locator('#summon-confirm').click();
       await page.locator('#summoned-dialog').waitFor({ state: 'visible' });
       await page.locator('#summoned-close').click();
       await inspect(`character回复${turn}`);

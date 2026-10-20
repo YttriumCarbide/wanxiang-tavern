@@ -1,7 +1,13 @@
 /** Event types are emitted by engine.js; animation timing does not define ownership. */
 export function actionSide(event) {
   if (event?.type === 'enemy') return 'enemy';
-  if (event?.type === 'hero' || event?.type === 'swap' || event?.type === 'item') return 'player';
+  if (
+    event?.type === 'hero' ||
+    event?.type === 'swap' ||
+    event?.type === 'item' ||
+    event?.type === 'engage'
+  )
+    return 'player';
   return null;
 }
 

@@ -20,9 +20,8 @@ export function createApiClient({ fetchImpl = fetch, timeoutMs = 180000 } = {}) 
   }
   async function request(path, data, options = {}) {
     if (disposed) throw Error('接口已关闭');
-    const route = /^(generate|models)\/(character|script|chat|quick-chat|summary|creation)$/.exec(
-      path,
-    );
+    const route =
+      /^(generate|models)\/(character|script|chat|quick-chat|summary|creation|map)$/.exec(path);
     if (!route) return local(path, data, options);
     const controller = new AbortController();
     controllers.add(controller);

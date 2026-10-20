@@ -3,6 +3,16 @@ import { html } from './shared/html.js';
 // Draw on a 64-pixel grid while retaining the existing 16px presentation size.
 // Silhouettes convey the effect; highlights, seams and chips provide close-up detail.
 const artwork = {
+  balance: html`<path fill="#173143" d="M9 5h46v54H9z" /><path
+      fill="#32586d"
+      d="M13 9h38v46H13z"
+    /><path fill="#b5e9ef" d="M30 13h4v36h-4zM16 21h32v4H16z" /><path
+      fill="#e5cb87"
+      d="M18 25 9 43h18zm28 0L37 43h18zM21 51h22v4H21z"
+    /><path fill="#f5f4cf" d="M15 38h8v3h-8zM43 38h8v3h-8zM28 16h8v4h-8z" /><path
+      fill="#71b6ca"
+      d="M18 45h10v3H18zM37 45h10v3H37z"
+    />`,
   haste: html`<path fill="#28354d" d="M27 5h18v25l10 10v15H12V43l15-12z" /><path
       fill="#8faad3"
       d="M31 9h10v23l10 10v9H17v-6l14-11z"
@@ -99,6 +109,12 @@ const artwork = {
     <path fill="#fff4d3" d="M30 24h3v7h-7v2h7v6h-3v-6h-5v-3h5z" />
     <path fill="#36546b" d="M37 46l6-8v5l-8 9z" />
     <path fill="#f2f8e6" d="M15 10h3v3h-3zM46 10h3v3h-3z" />`,
+  overload: html`<path fill="#152b48" d="M10 8h44v48H10z" />
+    <path fill="#2c699a" d="M14 12h36v40H14z" />
+    <path fill="#04d9ff" d="M28 6l-8 24h12l-6 28 22-30H36l8-22z" />
+    <path fill="#a6f4ff" d="M30 14l-5 14h10l-4 18 14-20H35l6-12z" />
+    <path fill="#ffeb3b" d="M32 20h4v6h-4zm-2 10h6v4h-6zm4 8h3v4h-3z" />
+    <path fill="#ffffff" d="M31 16h2v8h-2zm2 14h2v6h-2z" />`,
 };
 
 export function icon(key) {

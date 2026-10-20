@@ -8,7 +8,7 @@ export function encounterEnemies(index, boss) {
 export function enemiesForSpec(spec) {
   return enemySlots(spec.enemyIds).flatMap((id, slot) => {
     if (!id) return [];
-    const enemy = DEFINITIONS[id];
+    const enemy = spec.enemyDefinitions?.[id] || DEFINITIONS[id];
     return [
       {
         id,

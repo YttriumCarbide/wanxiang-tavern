@@ -1,3 +1,6 @@
+import { upgradeAssetWorldbook } from '../src/ai/asset-worldbook.js';
+import { setTimeout as waitForFile } from 'node:timers/promises';
+import { upgradeGameRules } from '../src/ai/game-rules-upgrade.js';
 import { migrateTutorialWorldbook } from './worldbook-tutorial.mjs';
 import { cleanCharacterEntries } from '../src/ai/character-cleanup.js';
 import { migrateJourneyWorldbook } from './worldbook-journey.mjs';
@@ -35,7 +38,20 @@ export async function createWorldbookStore(directory) {
       .catch(() => {})
       .then(async () => {
         await writeFile(file + '.tmp', JSON.stringify(value, null, 2) + '\n');
-        await rename(file + '.tmp', file);
+        for (let attempt = 0; ; attempt++) {
+          try {
+            await rename(file + '.tmp', file);
+            break;
+          } catch (failure) {
+            if (
+              process.platform !== 'win32' ||
+              !['EPERM', 'EBUSY'].includes(failure.code) ||
+              attempt >= 5
+            )
+              throw failure;
+            await waitForFile(25 * 2 ** attempt);
+          }
+        }
       });
     return writes;
   };
@@ -504,7 +520,7 @@ export async function createWorldbookStore(directory) {
     }
     for (const entry of canon) {
       entry.content = tavernCanonText();
-      entry.apiTargets = ['character', 'script', 'chat', 'quick-chat'];
+      entry.apiTargets = ['character', 'script', 'chat', 'quick-chat', 'map', 'creation'];
       entry.extensions = {
         ...entry.extensions,
         wanxiang: { ...entry.extensions?.wanxiang, canon: 'tavern' },
@@ -518,7 +534,7 @@ export async function createWorldbookStore(directory) {
       book.entries[uid] = {
         ...characterWorldEntry(officialCharacter('edith'), uid),
         key: ['伊蒂丝', 'Edith', '上一任酒馆主人', '坍缩过载'],
-        apiTargets: ['character', 'script', 'chat', 'quick-chat'],
+        apiTargets: ['character', 'script', 'chat', 'quick-chat', 'map', 'creation'],
       };
       uid++;
     }
@@ -808,6 +824,23 @@ export async function createWorldbookStore(directory) {
     await write(fileFor('tavern-world'), book);
     await write(contentVersionFile, { version: 24 });
   }
+  if (contentVersion < 26) {
+    const { book } = await get('tavern-world');
+    await write(path.join(directory, 'world-before-game-rules-v26.json'), book);
+    await write(fileFor('tavern-world'), upgradeGameRules(book));
+    await write(contentVersionFile, { version: 26 });
+  }
+  if (contentVersion < 27) {
+    const { book } = await get('tavern-world');
+    const content = {};
+    for (const kind of ['map', 'creation'])
+      content[kind] = await readFile(
+        new URL(`../prompts/worldbook/${kind}-output.md`, import.meta.url),
+        'utf8',
+      );
+    await write(fileFor('tavern-world'), upgradeAssetWorldbook(book, content));
+    await write(contentVersionFile, { version: 27 });
+  }
   return {
     get,
     list,
@@ -850,7 +883,15 @@ export async function createWorldbookStore(directory) {
     },
     async delete(id) {
       await unlink(fileFor(id));
-      for (const field of ['globalSelect', 'character', 'script', 'chat', 'quick-chat'])
+      for (const field of [
+        'globalSelect',
+        'character',
+        'script',
+        'chat',
+        'quick-chat',
+        'map',
+        'creation',
+      ])
         settings[field] = settings[field].filter((value) => value !== id);
       for (const key of Object.keys(settings.bindings))
         settings.bindings[key] = settings.bindings[key].filter((value) => value !== id);

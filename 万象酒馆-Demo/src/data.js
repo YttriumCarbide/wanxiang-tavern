@@ -1,6 +1,16 @@
 import { CHANGJING_YUEXI } from './content/changjing-yuexi.js';
-import { EXTRA_ENEMIES, EXTRA_BOSSES } from './content/new-adversaries.js';
+import {
+  EXTRA_ENEMIES,
+  EXTRA_BOSSES,
+  RUINS_ADVERSARIES,
+  RUINS_BOSSES,
+} from './content/new-adversaries.js';
 export const BUFFS = {
+  balance: {
+    name: '平衡',
+    icon: '衡',
+    text: '攻击伤害均分至三个前场位置，原有状态目标不变。空位不承受伤害。',
+  },
   haste: {
     name: '敏捷',
     icon: '捷',
@@ -24,6 +34,11 @@ export const BUFFS = {
     text: '每次行动前失去层数对应的生命，因本次流血濒死则取消行动',
   },
   iron: { name: '铁皮', icon: '铁', text: '每次受到攻击减少层数对应的伤害' },
+  overload: {
+    name: '超限',
+    icon: '载',
+    text: '下次释放技能消耗翻倍，技能效果额外生效一次，触发后移除。',
+  },
 };
 export const HEROES = [
   CHANGJING_YUEXI,
@@ -62,6 +77,16 @@ export const HEROES = [
         value: 1,
       },
     ],
+    entrySkill: {
+      id: 'entry-lyria',
+      name: '拔刀·瞬斩',
+      text: '换入时对正对位敌人造成8点伤害并施加2层流血。',
+      target: 'opposite',
+      effects: [
+        { type: 'damage', value: 8 },
+        { type: 'buff', buff: 'bleed', value: 2 },
+      ],
+    },
   },
   {
     id: 'morrow',
@@ -101,6 +126,13 @@ export const HEROES = [
         ],
       },
     ],
+    entrySkill: {
+      id: 'entry-morrow',
+      name: '时隙停滞',
+      text: '换入时对所有敌人施加1层迟缓，实时后移其行动顺序。',
+      target: 'allEnemies',
+      effects: [{ type: 'buff', buff: 'slow', value: 1 }],
+    },
   },
   {
     id: 'serin',
@@ -136,6 +168,16 @@ export const HEROES = [
         endHeal: 2,
       },
     ],
+    entrySkill: {
+      id: 'entry-serin',
+      name: '战地圣愈',
+      text: '换入时为生命比例最低的存活队友回复8点生命并施加2层再生。',
+      target: 'lowestAlly',
+      effects: [
+        { type: 'heal', value: 8 },
+        { type: 'buff', buff: 'regen', value: 2 },
+      ],
+    },
   },
   {
     id: 'vesper',
@@ -172,6 +214,17 @@ export const HEROES = [
         value: 1,
       },
     ],
+    entrySkill: {
+      id: 'entry-vesper',
+      name: '影羽寄生',
+      text: '换入时甩出暗紫鸦羽没入正对位敌人影子，造成4点伤害并附加2层中毒与1层易伤。',
+      target: 'opposite',
+      effects: [
+        { type: 'damage', value: 4 },
+        { type: 'buff', buff: 'poison', value: 2 },
+        { type: 'buff', buff: 'vulnerable', value: 1 },
+      ],
+    },
   },
   {
     id: 'rook',
@@ -207,6 +260,13 @@ export const HEROES = [
         bonusMp: 4,
       },
     ],
+    entrySkill: {
+      id: 'entry-rook',
+      name: '鹰眼狙击',
+      text: '换入时挽弓疾射精准狙击生命最低的敌人，造成11点穿透伤害。',
+      target: 'lowestEnemy',
+      effects: [{ type: 'damage', value: 11 }],
+    },
   },
 ];
 export const ENEMIES = [
@@ -464,7 +524,7 @@ export const BOSSES = [
   ...EXTRA_BOSSES,
 ];
 export const DEFINITIONS = Object.fromEntries(
-  [...HEROES, ...ENEMIES, ...BOSSES].map((d) => [d.id, d]),
+  [...HEROES, ...ENEMIES, ...BOSSES, ...RUINS_ADVERSARIES, ...RUINS_BOSSES].map((d) => [d.id, d]),
 );
 export const ENCOUNTERS = [
   {
@@ -507,14 +567,24 @@ export function encounterSpec(index, boss = 'bossGate') {
   if (!Number.isInteger(index) || !ENCOUNTERS[index]) throw Error('战斗序号无效');
   const spec = { ...ENCOUNTERS[index] };
   if (spec.boss) {
-    spec.name = DEFINITIONS[boss].name;
+    spec.name = DEFINITIONS[boss]?.name || '首领战';
     spec.map = boss === 'bossBloom' ? 'forest' : boss === 'bossTide' ? 'tide' : 'ruins';
     spec.enemyIds =
       boss === 'bossBloom'
         ? ['warden', boss, 'hound']
         : boss === 'bossTide'
           ? ['tideJelly', boss, 'crystalBeetle']
-          : ['hound', boss, 'hexer'];
+          : boss === 'ruinsGate'
+            ? ['corridorGuard', boss, 'stoneBallista']
+            : boss === 'chasmBeast'
+              ? ['viperShadow', boss, 'raptorStorm']
+              : boss === 'brassColossus'
+                ? ['stoneBeetle', boss, 'brassSeeker']
+                : boss === 'cinderPriest'
+                  ? ['tombBeetle', boss, 'cultistSpecter']
+                  : boss === 'apepLamb'
+                    ? ['blackOoze', boss, 'voidParasite']
+                    : ['hound', boss, 'hexer'];
   } else spec.enemyIds = [...spec.enemyIds];
   return spec;
 }

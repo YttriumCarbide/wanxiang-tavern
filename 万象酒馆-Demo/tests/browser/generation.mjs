@@ -113,6 +113,7 @@ export async function generationChecks({ browser, baseURL, output }) {
     await inn.locator('#summon-open').click();
     await page.locator('[data-summon-mode="infinite"]').click();
     await page.locator('#summon-confirm').click();
+    await page.locator('#summon-confirm').click();
     await page.locator('#ai-dialog').waitFor({ state: 'visible' });
     assert.equal(await page.locator('#ai-kind').inputValue(), 'character');
     assert.equal(calls.length, 0, 'Missing configuration opens settings without a generation call');

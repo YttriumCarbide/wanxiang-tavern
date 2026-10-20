@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="900" viewBox="0 0 600 900">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="45%" r="65%">
+      <stop offset="0%" stop-color="#8de0b0" stop-opacity="0.32" />
+      <stop offset="60%" stop-color="#1e3328" />
+      <stop offset="100%" stop-color="#0d1a14" />
+    </radialGradient>
+    <linearGradient id="metal" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#64a37e" />
+      <stop offset="50%" stop-color="#8de0b0" />
+      <stop offset="100%" stop-color="#0d1a14" />
+    </linearGradient>
+  </defs>
+  <rect width="600" height="900" fill="#0d1a14" />
+  <rect x="20" y="20" width="560" height="860" fill="url(#bg)" rx="16" />
+  <circle cx="300" cy="380" r="230" fill="none" stroke="#64a37e" stroke-width="3" stroke-opacity="0.35" />
+  <circle cx="300" cy="380" r="200" fill="none" stroke="#8de0b0" stroke-width="1.5" stroke-dasharray="8 6" stroke-opacity="0.4" />
+  <path d="M70 820V340Q70 100 300 80Q530 100 530 340V820" fill="none" stroke="#64a37e" stroke-opacity="0.3" stroke-width="2.5" />
+  <path d="M60 830H540M100 850H500" stroke="#64a37e" stroke-opacity="0.5" stroke-width="3" />
+  
+      <!-- Skeletal wings -->
+      <path d="M300 350L100 210L60 320L180 380L80 430L200 450L300 480L400 450L520 430L420 380L540 320L500 210Z" fill="#2c4d3c" stroke="#64a37e" stroke-width="4" opacity="0.85" />
+      <!-- Twin beast heads silhouette -->
+      <path d="M220 440L160 330L210 260L250 340Z" fill="#46735a" stroke="#8de0b0" stroke-width="3" />
+      <path d="M380 440L440 330L390 260L350 340Z" fill="#46735a" stroke="#8de0b0" stroke-width="3" />
+      <!-- Glowing serpent eyes -->
+      <circle cx="195" cy="305" r="7" fill="#ffef78" />
+      <circle cx="405" cy="305" r="7" fill="#ffef78" />
+      <!-- Claws & torso -->
+      <polygon points="250,420 350,420 370,620 300,690 230,620" fill="#1b2e24" stroke="#64a37e" stroke-width="5" />
+      <line x1="210" y1="580" x2="160" y2="670" stroke="#8de0b0" stroke-width="6" stroke-linecap="round" />
+      <line x1="390" y1="580" x2="440" y2="670" stroke="#8de0b0" stroke-width="6" stroke-linecap="round" />
+      <polygon points="275,500 325,500 300,560" fill="#8de0b0" />
+    
+</svg>

@@ -1,3 +1,4 @@
+import { BUFFS } from './data.js';
 import { createStatusEffects, triggeredStatusVisuals } from './status-effects.js';
 import { createCombatDetails } from './combat-details.js';
 import { createAttackEffects } from './attack-effects.js';
@@ -101,14 +102,16 @@ export function createEffects(layer, center, getSpeed) {
     const d = definition(e.after, e.actor),
       source = center(e.actor),
       attack = records.find((r) => r.id === e.actor),
-      style = attackStyle(e),
-      isAction = ['hero', 'enemy'].includes(e.type),
+      style = attackStyle(e) || d?.weapon || 'sword',
+      isAction = ['hero', 'enemy', 'entrySkill'].includes(e.type),
       duration = isAction ? ATTACK_TIMING[style] || 640 : 0,
       impactDelay = isAction ? duration * 0.7 : 0;
-    if (isAction) details.thread(layer, source, d.color, duration);
+    if (isAction && source) details.thread(layer, source, d?.color, duration);
     const signals = triggeredStatusVisuals(e, before);
-    for (const signal of signals)
-      statuses.trigger(signal, center(signal.id), signal.type === 'bleed' ? duration * 0.8 : 0);
+    for (const signal of signals) {
+      const sp = center(signal.id);
+      if (sp) statuses.trigger(signal, sp, signal.type === 'bleed' ? duration * 0.8 : 0);
+    }
     if (attack && isAction) {
       attack.attack = {
         start: performance.now(),
@@ -135,7 +138,7 @@ export function createEffects(layer, center, getSpeed) {
             start: performance.now() + impactDelay / getSpeed(),
             duration: 240 / getSpeed(),
           };
-        attacks.strike(style, source, p, d.color);
+        attacks.strike(style, source || p, p, d?.color || '#ffd97a');
         details.trace(p, style, impactDelay);
         if (old.block > u.block) statuses.shield(p, u.block === 0, impactDelay);
         if (e.type === 'hero' && ['delay', 'hourglass', 'stillness'].includes(e.skill))
@@ -156,8 +159,26 @@ export function createEffects(layer, center, getSpeed) {
           hp > 0 ? 'heal' : e.type === 'poison' ? 'poison-number' : '',
           impactDelay,
         );
-      else if (shield > 0) floating(p, `+${shield} 盾`, 'shield-number', impactDelay);
+      else if (shield > 0) {
+        floating(p, `+${shield} 盾`, 'shield-number', impactDelay);
+        statuses.shield(p, false, impactDelay);
+      }
       if (mp) floating({ x: p.x + 28, y: p.y + 35 }, `${mp > 0 ? '+' : ''}${mp} 蓝`, 'mana-number');
+      if (e.type === 'item') {
+        const added = Object.keys(u.buffs).filter(
+          (key) => (u.buffs[key] || 0) > (old.buffs[key] || 0),
+        );
+        if (added.length) {
+          ring(p, u.side === 'hero' ? '#e9d692' : '#bc89dd', 'potion-status-ring', impactDelay);
+          sparks(p, u.side === 'hero' ? '#f1dc8b' : '#c982df', 10, impactDelay);
+          floating(
+            { x: p.x, y: p.y - 28 },
+            added.map((key) => BUFFS[key]?.name || key).join(' · '),
+            'potion-status-number',
+            impactDelay,
+          );
+        }
+      }
       if (mp > 0 && e.type === 'item') ring(p, '#79c5e0', 'healing-ring');
       if (hp > 0 && e.type === 'regen') ring(p, '#b9e7a8', 'healing-ring');
       if (hp < 0 && e.type === 'poison') sparks(p, '#b08bd7', 4);
@@ -166,9 +187,9 @@ export function createEffects(layer, center, getSpeed) {
         sparks(p, '#aca399', 9, impactDelay);
       }
       const def = definition(e.after, id);
-      if (def.boss && u.hp > 0 && !old.enraged && u.enraged) {
+      if (def?.boss && u.hp > 0 && !old.enraged && u.enraged) {
         roundBanner(`${def.name} · 第二阶段`);
-        ring(p, def.color, 'boss-phase-ring');
+        ring(p, def.color || '#ffd97a', 'boss-phase-ring');
       }
     }
     return Math.max(duration, signals.length ? 700 : 0);

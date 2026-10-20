@@ -12,7 +12,14 @@ export async function createPromptStore(directory) {
   async function get(id) {
     const builtin =
       !id ||
-      ['character-default', 'script-default', 'chat-default', 'quick-chat-default'].includes(id);
+      [
+        'character-default',
+        'script-default',
+        'chat-default',
+        'quick-chat-default',
+        'map-default',
+        'creation-default',
+      ].includes(id);
     const raw = JSON.parse(
       await readFile(
         builtin
@@ -32,7 +39,14 @@ export async function createPromptStore(directory) {
         if (!name.endsWith('.json')) continue;
         const id = name.slice(0, -5);
         if (
-          ['character-default', 'script-default', 'chat-default', 'quick-chat-default'].includes(id)
+          [
+            'character-default',
+            'script-default',
+            'chat-default',
+            'quick-chat-default',
+            'map-default',
+            'creation-default',
+          ].includes(id)
         )
           continue;
         try {
@@ -59,7 +73,14 @@ export async function createPromptStore(directory) {
     },
     async delete(id) {
       if (
-        ['character-default', 'script-default', 'chat-default', 'quick-chat-default'].includes(id)
+        [
+          'character-default',
+          'script-default',
+          'chat-default',
+          'quick-chat-default',
+          'map-default',
+          'creation-default',
+        ].includes(id)
       )
         throw Error('默认预设可以编辑，但不能删除');
       await unlink(fileFor(id));

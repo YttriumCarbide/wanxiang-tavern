@@ -109,6 +109,7 @@ export function createDestinationPreview(host) {
   async function show(map, step = 1) {
     const request = ++ticket;
     active = true;
+    renderer.domElement.hidden = false;
     host.dataset.loading = 'true';
     delete host.dataset.ready;
     resize();
@@ -145,6 +146,7 @@ export function createDestinationPreview(host) {
   }
   function pause() {
     active = false;
+    renderer.domElement.hidden = true;
     ticket++;
     cancelAnimationFrame(raf);
     raf = 0;

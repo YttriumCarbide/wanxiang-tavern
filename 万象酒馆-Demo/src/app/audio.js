@@ -1,3 +1,4 @@
+import { guardMouseGestures } from './display.js';
 import { createAudioMixer } from '../audio/mixer.js';
 import { audioPreferences } from '../audio/config.js';
 import { createEventScope } from '../shared/events.js';
@@ -120,6 +121,7 @@ export function createAudio(context) {
         childEvents = createEventScope();
         const child = frame.contentDocument;
         if (!child) return;
+        guardMouseGestures(childEvents, child);
         childEvents.on(child, 'pointerdown', unlock, { capture: true });
         childEvents.on(child, 'keydown', unlock, { capture: true });
         childEvents.on(

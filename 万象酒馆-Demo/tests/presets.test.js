@@ -184,6 +184,7 @@ test('named API presets persist credentials across restart and keep every public
   const settings = await createAiSettings(file);
   assert.equal(settings.visible().character.maxTokens, 32768);
   await settings.saveProfile({
+    rememberKey: false,
     kind: 'character',
     baseUrl: 'https://example.com/v1',
     model: 'test-model',
@@ -323,7 +324,10 @@ test('optional strict script mode sends the five-block novel schema and unchange
   assert.equal(payload.response_format.json_schema.strict, true);
   assert.equal(schema.properties.story.minItems, 5);
   assert.equal(schema.properties.story.items.type, 'string');
-  assert.deepEqual(Object.keys(schema.properties.data.properties.nextHook.properties), ['setting']);
+  assert.deepEqual(Object.keys(schema.properties.data.properties.nextHook.properties), [
+    'setting',
+    'phase',
+  ]);
   assert.equal(
     schema.properties.data.properties.items.items.anyOf[2].properties.description.maxLength,
     20,

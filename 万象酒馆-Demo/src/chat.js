@@ -68,6 +68,10 @@ export function mergeFutureScript(current, replacement, encountered) {
       ...current.npcs,
       ...replacement.npcs.filter((npc) => !current.npcs.some((old) => old.id === npc.id)),
     ];
+  if (current.encounters && replacement.encounters)
+    result.encounters = current.encounters.map((room, index) =>
+      structuredClone(index <= encountered ? room : replacement.encounters[index]),
+    );
   result.nextHook = structuredClone(replacement.nextHook);
   return result;
 }

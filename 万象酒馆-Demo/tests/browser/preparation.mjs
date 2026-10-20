@@ -79,6 +79,14 @@ export async function preparationChecks({ browser, baseURL, output }) {
     const reserve = await page.locator('.prepare-reserve-col').boundingBox();
     assert(formation.x > reserve.x && formation.width > reserve.width * 2.8);
     assert.equal(await page.locator('.prepare-slot').count(), 6);
+    assert(
+      await page
+        .locator('#prepare-slots')
+        .evaluate((element) => element.scrollHeight <= element.clientHeight + 1),
+    );
+    assert(!(await panel.textContent()).includes('点击角色编辑'));
+    for (const slot of await page.locator('.prepare-slot').all())
+      inside(await slot.boundingBox(), { width: 1440, height: 836 });
     assert.equal(await page.locator('.prepare-member').count(), 3);
     assert.equal(await page.locator('#prepare-character-dialog').isVisible(), false);
     assert.equal(

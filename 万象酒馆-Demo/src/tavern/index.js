@@ -172,6 +172,12 @@ export async function createTavernView() {
     syncAngles();
     current = '';
     updateWhere('召唤之门前 · 初到酒馆');
+  } else if (query.get('return') === 'gate') {
+    camera.position.set(1.14, 1.6, -3.7);
+    camera.lookAt(4.12, 1.25, -0.28);
+    syncAngles();
+    current = '';
+    updateWhere('副本之门前 · 回到酒馆');
   } else if (query.get('return') === 'corridor') {
     camera.position.set(0, 1.46, 3.34);
     camera.lookAt(0.2, 1.2, -1.2);
@@ -187,18 +193,22 @@ export async function createTavernView() {
     const material = new THREE.ShaderMaterial({
       uniforms: {
         uTime: { value: 0 },
+        uTint: { value: new THREE.Color('#69cfad') },
+        uMix: { value: 0 },
+        uRipples: { value: 1 },
         uOrigin: { value: new THREE.Vector2(...origin) },
         uSpan: { value: new THREE.Vector2(...span) },
         uKind: { value: kind },
       },
       vertexShader: `varying vec3 vWorld;void main(){vec4 w=modelMatrix*vec4(position,1.0);vWorld=w.xyz;gl_Position=projectionMatrix*viewMatrix*w;}`,
-      fragmentShader: `uniform float uTime;uniform float uKind;uniform vec2 uOrigin;uniform vec2 uSpan;varying vec3 vWorld;
+      fragmentShader: `uniform vec3 uTint;uniform float uMix;uniform float uRipples;uniform float uTime;uniform float uKind;uniform vec2 uOrigin;uniform vec2 uSpan;varying vec3 vWorld;
  float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
- void main(){vec2 face=uKind<.5?vWorld.xy:vec2(-vWorld.z,vWorld.y);vec2 uv=(face-uOrigin)/uSpan;vec2 cells=floor(uv*uSpan/.04);vec2 q=(cells+.5)*.04/uSpan;float t=uTime;vec3 color;
+ void main(){vec2 face=uKind<.5?vWorld.xy:vec2(-vWorld.z,vWorld.y);vec2 uv=(face-uOrigin)/uSpan;vec2 cells=floor(uv*uSpan/.04);vec2 q=(cells+.5)*.04/uSpan;float t=uTime*uRipples;vec3 color;
  if(uKind<.5){vec2 d=(q-.5)*vec2(1.0,1.15);float r=length(d);float a=atan(d.y,d.x);float wave=sin(r*40.0-t*1.1+sin(a*3.0+t*.4)*.45);float shine=smoothstep(.25,.9,wave);
  color=mix(vec3(.075,.043,.12),vec3(.48,.27,.72),shine);color+=vec3(.14,.08,.2)*exp(-r*5.0);float mote=step(.989,hash(cells))*pow(max(0.0,sin(t*1.8+hash(cells)*12.0)),8.0);color+=mote*vec3(.7,.5,1.0);
  }else{float band=sin(q.y*24.0-t*1.5+sin(q.x*10.0+t*.3)*.8);color=mix(vec3(.035,.105,.12),vec3(.19,.53,.5),smoothstep(-.7,.85,band));
  float mote=step(.986,hash(cells))*pow(max(0.0,sin(t+hash(cells)*20.0)),6.0);color+=mote*vec3(.4,.8,.7);}
+ if(uKind>.5){color=mix(color,uTint*(length(color)*1.4+.06),uMix);}
  gl_FragColor=vec4(color,1.0);\n#include <tonemapping_fragment>\n#include <colorspace_fragment>}`,
     });
     fieldMaterials.push(material);
@@ -364,6 +374,14 @@ export async function createTavernView() {
     if (e.key === 'ArrowDown') pitch = Math.max(-1.25, pitch - 0.07);
     apply();
   });
+  const emblem = document.createElement('button');
+  emblem.id = 'emblem-open';
+  emblem.textContent = '召唤纹章士';
+  emblem.hidden = true;
+  document.getElementById('talk-open').before(emblem);
+  emblem.onclick = () => {
+    if (!emblem.hidden && !travel) parent.postMessage({ type: 'tavern-emblem' }, location.origin);
+  };
   const talk = document.getElementById('talk-open');
   talk.onclick = () => {
     if (!talk.hidden && !travel)
@@ -384,7 +402,20 @@ export async function createTavernView() {
     if (!corridorDoor.hidden && !corridorDoor.disabled) enterCorridor();
   };
   let summonSurge = 0;
+  let summonMode = null;
+  let choosingSummon = false;
+  const summonTint = new THREE.Color('#69cfad');
   events.on(window, 'message', (e) => {
+    if (e.origin === location.origin && e.source === parent && e.data?.type === 'summon-mode') {
+      summonMode = e.data.mode;
+      choosingSummon = e.data.choosing === true;
+      summonTint.set(
+        { official: '#73e3b5', chaos: '#ba82ef', infinite: '#7ea9ff', npc: '#f3cc70' }[
+          summonMode
+        ] || '#69cfad',
+      );
+      summonSurge = 2.5;
+    }
     if (e.origin === location.origin && e.data?.type === 'summon-surge') {
       summonSurge = 2.5;
     }
@@ -397,6 +428,7 @@ export async function createTavernView() {
   let spotTimer = 0,
     summonVisible = null;
   function updateSpots(checkOcclusion = true) {
+    emblem.hidden = !loaded || !!travel || current !== 'fate';
     talk.hidden = !loaded || !!travel || !['bar', 'bar2', 'table', 'table2'].includes(current);
     camera.updateMatrixWorld();
     camera.getWorldDirection(direction);
@@ -422,6 +454,12 @@ export async function createTavernView() {
     }
     updatePortal(enter, 'gate');
     updatePortal(summon, 'summon');
+    if (choosingSummon) {
+      summon.hidden = true;
+      summon.disabled = true;
+      summon.tabIndex = -1;
+      summon.setAttribute('aria-hidden', 'true');
+    }
     updatePortal(corridorDoor, 'corridorDoor');
     if (summonVisible !== !summon.hidden) {
       summonVisible = !summon.hidden;
@@ -453,7 +491,9 @@ export async function createTavernView() {
         ray.far = Math.max(0.1, distance - 0.22);
         state.occluded = ray.intersectObject(model, true).length !== 0;
       }
-      const visible = candidate && !state.occluded;
+      // Arrival navigation stays clickable above the table even if a chair intersects its anchor ray.
+      const arrivalFate = query.get('return') === 'gate' && current === '' && id === 'fate';
+      const visible = candidate && (!state.occluded || arrivalFate);
       state.visible = visible;
       state.candidate = candidate;
       b.classList.toggle('visible', visible);
@@ -481,6 +521,22 @@ export async function createTavernView() {
   renderer.setAnimationLoop(() => {
     const dt = Math.min(clock.getDelta(), 0.05);
     elapsed += dt;
+    for (const material of fieldMaterials)
+      if (material.uniforms.uKind.value > 0.5) {
+        material.uniforms.uTint.value.lerp(summonTint, Math.min(1, dt * 5));
+        material.uniforms.uMix.value = THREE.MathUtils.damp(
+          material.uniforms.uMix.value,
+          summonMode ? 1 : 0,
+          5,
+          dt,
+        );
+        material.uniforms.uRipples.value = THREE.MathUtils.damp(
+          material.uniforms.uRipples.value,
+          summonMode === 'chaos' ? 2.5 : summonMode === 'infinite' ? 1.8 : 1,
+          5,
+          dt,
+        );
+      }
     if (travel) {
       travel.elapsed += dt;
       const a = Math.min(1, travel.elapsed / travel.duration),

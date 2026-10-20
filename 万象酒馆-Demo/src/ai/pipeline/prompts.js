@@ -1,7 +1,9 @@
+import { isEndless } from '../../worlds.js';
+import { arcFor } from '../../story-arc.js';
 import { generationNumbers } from '../../growth.js';
 import { ENCOUNTER_COUNT, FINAL_ENCOUNTER } from '../../content/journey-rules.js';
 import { OUTPUT_TAG } from './output-envelope.js';
-import { encounterSpec, BOSSES } from '../../data.js';
+import { encounterSpec, BOSSES, DEFINITIONS } from '../../data.js';
 import { normalizePromptPreset, composePromptPreset, presetSampling } from '../presets.js';
 import { scriptOutputSchema } from '../script-schema.js';
 import { characterOutputSchema } from '../character-schema.js';
@@ -61,17 +63,22 @@ export function generationInput(kind, input) {
         ...(input.purpose === 'protagonist'
           ? {
               role: '玩家主角',
+              levelUpLines:
+                '根节点额外输出levelUpLines数组，恰好5句符合该主角性格的简短升级台词，不存进setting。',
               guidance:
                 '忠实保留玩家填写的姓名、身份、性格与动作设想，润色为完整角色设定集并补齐技能。主角将固定出战，可在现有游戏数值范围内设计得更强一些，例如更充足的生命和蓝量；行动次数固定为2次；不得突破Schema或发明未支持的效果。',
             }
           : {}),
+        entrySkillGuidance:
+          '每个角色都必须有且仅有一个专属入场技（必填，主角与召唤角色皆须具备）：在setting.entrySkill中填写{name,description}，在data.entrySkill中填写{text,target:"opposite"|"lowestEnemy"|"lowestAlly"|"allEnemies"|"allAllies"|"self",effects:[{type,value...}]}。入场技需体现角色战术定位与机制多样性，支持对位破隙（opposite）、残血收割（lowestEnemy）、伤员急救（lowestAlly）、全体妨害（allEnemies）或自身强化（self），严禁千篇一律全体AOE。在后排待满一个整回合后换入前排时自动触发，不消耗额外AP或行动点。',
         existingCharacters: (input.existing || []).slice(0, 12).map((item) => ({
           name: String(item.name || '').slice(0, 30),
           title: String(item.title || '').slice(0, 30),
         })),
       },
     };
-  if (!BOSSES.some((boss) => boss.id === input.boss)) throw Error('副本路线无效');
+  if (!isEndless(input.exploration) && !BOSSES.some((boss) => boss.id === input.boss))
+    throw Error('副本路线无效');
   if (
     !Array.isArray(input.party) ||
     input.party.length < 1 ||
@@ -96,6 +103,26 @@ export function generationInput(kind, input) {
     world: TAVERN_WORLD,
     request: {
       brief: input.brief,
+      storyArc: arcFor(input),
+      ...(isEndless(input.exploration)
+        ? {
+            dynamicWorld: {
+              background:
+                input.exploration.world?.background || REGIONS[input.exploration.map].atmosphere,
+              landmarks: input.exploration.world?.landmarks || [],
+              enemies:
+                input.enemyPool ||
+                (
+                  input.exploration.world?.enemyIds || [
+                    ...REGIONS[input.exploration.map].enemies,
+                    REGIONS[input.exploration.map].boss,
+                  ]
+                ).map((id) => input.exploration.world?.enemyDefinitions[id] || DEFINITIONS[id]),
+              instruction:
+                '优先按剧情发展选择每场遭遇；data.encounters必须输出恰好五项，每项{enemyIds:[当前世界敌人ID]}，每场1～3个不同ID，最终场至少一位Boss，只能从本地图敌人池选择。不能输出地图环境buff。已经经历的战斗配置不可修改。',
+            },
+          }
+        : {}),
       ...(officialDungeon
         ? {
             officialDungeon: {
@@ -145,7 +172,7 @@ export function generationInput(kind, input) {
         '旅程第二段（第二场展示）',
         '旅程第三段（第三场展示）',
         '旅程第四段（第四场展示）',
-        '最终Boss获胜后',
+        '最终Boss战开始时，推进剧情，不预写胜负',
       ],
       ...(selected
         ? {
@@ -153,8 +180,6 @@ export function generationInput(kind, input) {
               id: selected.map,
               name: REGIONS[selected.map].name,
               atmosphere: REGIONS[selected.map].atmosphere,
-              environmentRules: selected.environment,
-              effect: REGIONS[selected.map].effect,
             },
             continuation:
               typeof input.exploration.continuation === 'string'
@@ -180,31 +205,38 @@ export function generationInput(kind, input) {
       confirmed: Array.isArray(input.history) ? input.history.slice(-3) : [],
       instruction: '只承接已经发生的事，伏笔不是既成事实。',
     },
-    encounters: selected
-      ? Array.from({ length: ENCOUNTER_COUNT }, (_, index) => {
-          const spec = explorationSpec(input.exploration, index);
-          return {
-            index,
-            name: spec.name,
-            map: spec.map,
-            environment: REGIONS[spec.map].atmosphere,
-            enemies: enemiesForSpec(spec),
-            enemyCount: spec.enemyIds.length,
-            boss: !!spec.boss,
-          };
-        })
-      : Array.from({ length: ENCOUNTER_COUNT }, (_, index) => {
-          const spec = encounterSpec(index, input.boss);
-          return {
-            index,
-            name: spec.name,
-            map: spec.map,
-            environment: EXPEDITION_PLACES[index],
-            enemies: encounterEnemies(index, input.boss),
-            enemyCount: spec.enemyIds.length,
-            boss: !!spec.boss,
-          };
-        }),
+    encounters: isEndless(input.exploration)
+      ? Array.from({ length: ENCOUNTER_COUNT }, (_, index) => ({
+          index,
+          bossRequired: index === FINAL_ENCOUNTER,
+          instruction:
+            '以剧情为先，从request.dynamicWorld.enemies中选择，输出在data.encounters；此处不预先指定敌人。',
+        }))
+      : selected
+        ? Array.from({ length: ENCOUNTER_COUNT }, (_, index) => {
+            const spec = explorationSpec(input.exploration, index);
+            return {
+              index,
+              name: spec.name,
+              map: spec.map,
+              environment: REGIONS[spec.map].atmosphere,
+              enemies: enemiesForSpec(spec),
+              enemyCount: spec.enemyIds.length,
+              boss: !!spec.boss,
+            };
+          })
+        : Array.from({ length: ENCOUNTER_COUNT }, (_, index) => {
+            const spec = encounterSpec(index, input.boss);
+            return {
+              index,
+              name: spec.name,
+              map: spec.map,
+              environment: EXPEDITION_PLACES[index],
+              enemies: encounterEnemies(index, input.boss),
+              enemyCount: spec.enemyIds.length,
+              boss: !!spec.boss,
+            };
+          }),
   };
 }
 
@@ -219,14 +251,15 @@ export async function generationRequest(kind, input, source, options = {}) {
     { text: input.brief || '', placement: 1, options: { kind, variables: variablesForRegex } },
   ]);
   input = { ...input, brief: inputPass[0].text };
-  const context = generationInput(kind, input);
+  const context = options.assetContext || generationInput(kind, input);
   if (options.worldInfo)
     context.world = {
       source: '本次已激活的世界书条目',
       instruction: '公共设定来自世界书注入消息；人物私有经历来自characters，游戏协议不作为世界观。',
     };
-  const schema =
-    kind === 'character'
+  const schema = options.assetContext
+    ? { type: 'object', description: '完整结构见当前API世界书格式条目，数据参考见本次输入' }
+    : kind === 'character'
       ? characterOutputSchema()
       : scriptOutputSchema(context.characters.greenLight.map((entry) => entry.id));
   const raw = source || JSON.parse(await readText(`framework/${kind}-default.json`));
@@ -313,7 +346,9 @@ export async function generationRequest(kind, input, source, options = {}) {
   const variables = {
     input: inputText,
     brief: context.request.brief,
-    task: kind === 'character' ? '角色生成' : '剧本生成',
+    task: { character: '角色生成', script: '剧本生成', map: '地图构筑', creation: '以太造物' }[
+      kind
+    ],
     char:
       kind === 'character'
         ? '待生成角色'
@@ -328,6 +363,7 @@ export async function generationRequest(kind, input, source, options = {}) {
         .map((entry) => entry.content)
         .join('\n\n') || '',
     outputschema: JSON.stringify(schema),
+    enemyattacks: options.assetContext?.mechanics?.enemyAttacks?.join(',') || '',
     scenario,
     persona: options.worldInfo?.settings.persona || '玩家的行为与意愿由玩家决定。',
     history,

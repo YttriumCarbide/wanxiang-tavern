@@ -1,3 +1,5 @@
+import { targetsPlayer } from '../enemy-targets.js';
+import { canCombine } from '../emblems.js';
 import { ITEMS } from '../content/items.js';
 import { preview, getEnemies, intent } from '../engine.js';
 import { query as $ } from './dom.js';
@@ -96,7 +98,14 @@ export function createSelection(context) {
       at: event.at,
       move: move.name,
       selfBuffs: [
-        ...Object.keys(move.selfBuff || {}).map((key) => ({ key })),
+        ...[
+          ...new Set([
+            ...Object.keys(move.selfBuff || {}),
+            ...move.effects
+              .filter((effect) => effect.type === 'buff' && !targetsPlayer(effect))
+              .map((effect) => effect.buff),
+          ]),
+        ].map((key) => ({ key })),
         ...(move.selfShield ? [{ key: 'shield' }] : []),
       ]
         .map(({ key }) => ({
@@ -111,7 +120,12 @@ export function createSelection(context) {
         }))
         .filter(({ value }) => value > 0),
       cancelled: false,
-      targets: (move.slots || [move.slot]).map((slot) => {
+      targets: (move.effects.some(targetsPlayer)
+        ? before.units[id].buffs.balance
+          ? [0, 1, 2]
+          : move.slots || [move.slot]
+        : []
+      ).map((slot) => {
         if (!before.formation[slot]) return { slot, id: null, name: '空位', damage: 0, buffs: [] };
         const id = before.formation[slot],
           prefix = `${d.name} → ${context.roster.get(id).name}：`,
@@ -245,6 +259,14 @@ export function createSelection(context) {
       inspectEnemy(id);
       return;
     }
+    if (
+      session.selection.selected === id &&
+      session.selection.interactionStep === 'skill' &&
+      canCombine(session.battle.forecast.final, id)
+    ) {
+      context.planning.queueEngage(id);
+      return;
+    }
     session.selection.selected = id;
     session.selection.pending = null;
     session.selection.inspectedEnemy = null;
@@ -302,7 +324,7 @@ export function createSelection(context) {
       return;
     const a = context.roster.ability(session.selection.selected, skill),
       start = context.planning.preferredStart(a.ap);
-    if (!context.planning.fitsAt(start, a.ap))
+    if (!context.planning.fitsSkillAt(start, a.ap))
       return context.shell.toast(
         a.ap === 2 ? '这个技能需要两个连续空格。' : '没有空余的我方时间格。',
       );

@@ -92,8 +92,13 @@
   align-content: start;
 }
 #prepare-slots {
+  grid-template-columns: repeat(3, minmax(80px, 116px));
+  justify-content: center;
   min-height: 0;
-  overflow: auto;
+  flex: 1;
+  grid-template-rows: min-content minmax(0, 1fr) min-content minmax(0, 1fr);
+  align-content: stretch;
+  overflow: hidden;
   padding: 2px;
 }
 .formation-row-label {
@@ -109,7 +114,7 @@
   align-items: stretch;
   justify-content: center;
   min-width: 0;
-  height: 132px;
+  height: 152px;
   padding: 5px;
   gap: 5px;
   background: #08171388;
@@ -120,6 +125,10 @@
     background 160ms,
     border-color 160ms,
     box-shadow 160ms;
+}
+.prepare-slot {
+  height: 100%;
+  max-height: 152px;
 }
 .prepare-slot img,
 .prepare-member img {
@@ -163,7 +172,7 @@
   border-color: #efda98;
   box-shadow: inset 0 0 0 2px #efda9877;
 }
-.dragging {
+#party-panel .dragging {
   opacity: 0.35;
 }
 .member-crown {
@@ -399,6 +408,64 @@
     opacity: 1;
     translate: 0 0;
   }
+}
+.prepare-abilities-preview {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.prepare-abilities-preview h3 {
+  margin: 0;
+  font-size: 14px;
+  color: #dfcca0;
+  border-bottom: 1px solid #7d9d8733;
+  padding-bottom: 6px;
+}
+.prepare-ability-category {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.prepare-ability-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #8fb8a7;
+  letter-spacing: 0.5px;
+}
+.prepare-ability-item {
+  background: #07151199;
+  border: 1px solid #7d9d8726;
+  border-radius: 7px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.prepare-ability-item > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.prepare-ability-item strong {
+  font-size: 12px;
+  color: #f0e6cf;
+}
+.prepare-ability-item small {
+  font-size: 11px;
+  color: #7d9d87;
+}
+.prepare-ability-item p {
+  margin: 0;
+  font-size: 11px;
+  color: #adc4b8;
+  line-height: 1.45;
+}
+.prepare-empty-ability {
+  margin: 0;
+  font-size: 11px;
+  color: #6a8279;
+  font-style: italic;
 }
 @media (pointer: coarse) {
   .prepare-drag-handle {

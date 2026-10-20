@@ -113,7 +113,7 @@ export function mountInput(context) {
       !context.viewport.canPlan() ||
       session.runtime.drag?.moved ||
       e.target.closest(
-        'dialog[open],#tutorial-guide,[data-unit],[data-rear],.time-cell,.time-action,[data-skill],.extra-details summary,#details [data-tooltip],.command-controls button,#drag-menu button,.hud-toggle,#round-label,#ap-orb,#audio-toggle,#audio-panel,#story-toggle',
+        'dialog[open],#tutorial-guide,[data-unit],[data-rear],[data-empty-slot],.time-cell,.time-action,[data-skill],.extra-details summary,#details [data-tooltip],.command-controls button,#drag-menu button,.hud-toggle,#round-label,#ap-orb,#audio-toggle,#audio-panel,#story-toggle',
       )
     )
       return;
@@ -128,6 +128,11 @@ export function mountInput(context) {
       context.selection.clearSelection(true);
       context.renderer.render();
     }
+  });
+  context.events.on(document, 'click', (event) => {
+    const empty = event.target.closest('[data-empty-slot]');
+    if (!empty || !context.viewport.canPlan() || !session.selection.selected) return;
+    context.planning.queueSwap(session.selection.selected, Number(empty.dataset.emptySlot));
   });
   context.events.on($('#commit'), 'click', context.playback.commit);
   context.events.on($('#clear'), 'click', () => {

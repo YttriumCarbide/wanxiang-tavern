@@ -47,3 +47,11 @@ export function prepareSwapLesson(library) {
   else if (library.characters.some((member) => member.id === 'official-pandora'))
     library.party[3] = 'official-pandora';
 }
+
+export function performedRetreat(state, result) {
+  return result.events.some((event, index) => {
+    if (event.type !== 'swap') return false;
+    const before = index ? result.events[index - 1].after : state;
+    return before.formation.slice(0, 3).some((id) => id && event.after.formation.indexOf(id) >= 3);
+  });
+}

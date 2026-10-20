@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="900" viewBox="0 0 600 900">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="45%" r="65%">
+      <stop offset="0%" stop-color="#b894e6" stop-opacity="0.32" />
+      <stop offset="60%" stop-color="#261f30" />
+      <stop offset="100%" stop-color="#110d17" />
+    </radialGradient>
+    <linearGradient id="metal" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#7b629c" />
+      <stop offset="50%" stop-color="#b894e6" />
+      <stop offset="100%" stop-color="#110d17" />
+    </linearGradient>
+  </defs>
+  <rect width="600" height="900" fill="#110d17" />
+  <rect x="20" y="20" width="560" height="860" fill="url(#bg)" rx="16" />
+  <circle cx="300" cy="380" r="230" fill="none" stroke="#7b629c" stroke-width="3" stroke-opacity="0.35" />
+  <circle cx="300" cy="380" r="200" fill="none" stroke="#b894e6" stroke-width="1.5" stroke-dasharray="8 6" stroke-opacity="0.4" />
+  <path d="M70 820V340Q70 100 300 80Q530 100 530 340V820" fill="none" stroke="#7b629c" stroke-opacity="0.3" stroke-width="2.5" />
+  <path d="M60 830H540M100 850H500" stroke="#7b629c" stroke-opacity="0.5" stroke-width="3" />
+  
+      <!-- Cloaked Leaping Stalker -->
+      <path d="M300 240Q200 280 180 400L220 620L300 700L380 620L420 400Q400 280 300 240Z" fill="#38294a" stroke="#7b629c" stroke-width="4" />
+      <!-- Shadow hood & Dagger blades -->
+      <polygon points="300,280 340,360 260,360" fill="#110d17" stroke="#b894e6" stroke-width="2" />
+      <circle cx="285" cy="340" r="4" fill="#c47aff" />
+      <circle cx="315" cy="340" r="4" fill="#c47aff" />
+      <!-- Crossed daggers -->
+      <line x1="160" y1="460" x2="280" y2="580" stroke="#d5c2ed" stroke-width="5" stroke-linecap="round" />
+      <line x1="440" y1="460" x2="320" y2="580" stroke="#d5c2ed" stroke-width="5" stroke-linecap="round" />
+    
+</svg>

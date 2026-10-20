@@ -1,0 +1,31 @@
+{
+  "id": "creation-default",
+  "name": "以太造物默认",
+  "prompts": [
+    {
+      "identifier": "main",
+      "role": "system",
+      "content": "按照本次任务与已激活世界书生成。"
+    },
+    {
+      "identifier": "chatHistory",
+      "marker": true,
+      "system_prompt": true
+    }
+  ],
+  "prompt_order": [
+    {
+      "character_id": 100001,
+      "order": [
+        {
+          "identifier": "main",
+          "enabled": true
+        },
+        {
+          "identifier": "chatHistory",
+          "enabled": true
+        }
+      ]
+    }
+  ]
+}

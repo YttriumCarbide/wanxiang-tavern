@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="900" viewBox="0 0 600 900">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="45%" r="65%">
+      <stop offset="0%" stop-color="#baa893" stop-opacity="0.32" />
+      <stop offset="60%" stop-color="#2b251e" />
+      <stop offset="100%" stop-color="#14110d" />
+    </radialGradient>
+    <linearGradient id="metal" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8a7660" />
+      <stop offset="50%" stop-color="#baa893" />
+      <stop offset="100%" stop-color="#14110d" />
+    </linearGradient>
+  </defs>
+  <rect width="600" height="900" fill="#14110d" />
+  <rect x="20" y="20" width="560" height="860" fill="url(#bg)" rx="16" />
+  <circle cx="300" cy="380" r="230" fill="none" stroke="#8a7660" stroke-width="3" stroke-opacity="0.35" />
+  <circle cx="300" cy="380" r="200" fill="none" stroke="#baa893" stroke-width="1.5" stroke-dasharray="8 6" stroke-opacity="0.4" />
+  <path d="M70 820V340Q70 100 300 80Q530 100 530 340V820" fill="none" stroke="#8a7660" stroke-opacity="0.3" stroke-width="2.5" />
+  <path d="M60 830H540M100 850H500" stroke="#8a7660" stroke-opacity="0.5" stroke-width="3" />
+  
+      <!-- Chunky Mud / Clay Golem -->
+      <path d="M220 320Q300 280 380 320Q440 440 400 680Q300 720 200 680Q160 440 220 320Z" fill="#473a2d" stroke="#8a7660" stroke-width="5" />
+      <!-- Stone Core embedded in mud -->
+      <circle cx="300" cy="460" r="32" fill="#baa893" stroke="#8a7660" stroke-width="4" />
+      <polygon points="300,435 320,475 280,475" fill="#302418" />
+      <!-- Glowing stone eyes -->
+      <circle cx="260" cy="360" r="8" fill="#ffd97d" />
+      <circle cx="340" cy="360" r="8" fill="#ffd97d" />
+      <!-- Mud drips -->
+      <path d="M200 660Q200 740 210 750M380 660Q380 740 370 750" stroke="#baa893" stroke-width="8" stroke-linecap="round" fill="none" />
+    
+</svg>

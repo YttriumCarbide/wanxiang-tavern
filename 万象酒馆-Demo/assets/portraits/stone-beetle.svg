@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="900" viewBox="0 0 600 900">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="45%" r="65%">
+      <stop offset="0%" stop-color="#a1cfa6" stop-opacity="0.32" />
+      <stop offset="60%" stop-color="#293325" />
+      <stop offset="100%" stop-color="#121710" />
+    </radialGradient>
+    <linearGradient id="metal" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#739466" />
+      <stop offset="50%" stop-color="#a1cfa6" />
+      <stop offset="100%" stop-color="#121710" />
+    </linearGradient>
+  </defs>
+  <rect width="600" height="900" fill="#121710" />
+  <rect x="20" y="20" width="560" height="860" fill="url(#bg)" rx="16" />
+  <circle cx="300" cy="380" r="230" fill="none" stroke="#739466" stroke-width="3" stroke-opacity="0.35" />
+  <circle cx="300" cy="380" r="200" fill="none" stroke="#a1cfa6" stroke-width="1.5" stroke-dasharray="8 6" stroke-opacity="0.4" />
+  <path d="M70 820V340Q70 100 300 80Q530 100 530 340V820" fill="none" stroke="#739466" stroke-opacity="0.3" stroke-width="2.5" />
+  <path d="M60 830H540M100 850H500" stroke="#739466" stroke-opacity="0.5" stroke-width="3" />
+  
+      <!-- Heavy Stone Beetle Shell -->
+      <ellipse cx="300" cy="460" rx="140" ry="180" fill="#3d4f37" stroke="#739466" stroke-width="5" />
+      <line x1="300" y1="280" x2="300" y2="640" stroke="#121710" stroke-width="6" />
+      <polygon points="300,240 335,290 265,290" fill="#293325" stroke="#a1cfa6" stroke-width="4" />
+      <!-- Mandibles & Spikes -->
+      <path d="M265 260Q220 220 240 180" stroke="#a1cfa6" stroke-width="6" fill="none" stroke-linecap="round" />
+      <path d="M335 260Q380 220 360 180" stroke="#a1cfa6" stroke-width="6" fill="none" stroke-linecap="round" />
+      <!-- 6 Digging legs -->
+      <line x1="170" y1="360" x2="90" y2="340" stroke="#739466" stroke-width="7" stroke-linecap="round" />
+      <line x1="160" y1="460" x2="80" y2="470" stroke="#739466" stroke-width="7" stroke-linecap="round" />
+      <line x1="180" y1="560" x2="100" y2="600" stroke="#739466" stroke-width="7" stroke-linecap="round" />
+      <line x1="430" y1="360" x2="510" y2="340" stroke="#739466" stroke-width="7" stroke-linecap="round" />
+      <line x1="440" y1="460" x2="520" y2="470" stroke="#739466" stroke-width="7" stroke-linecap="round" />
+      <line x1="420" y1="560" x2="500" y2="600" stroke="#739466" stroke-width="7" stroke-linecap="round" />
+    
+</svg>

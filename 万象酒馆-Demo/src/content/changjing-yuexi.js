@@ -34,6 +34,16 @@ export const CHANGJING_YUEXI = {
       effects: [{ type: 'buff', buff: 'haste', value: 1 }],
     },
   ],
+  entrySkill: {
+    id: 'falling-starlight',
+    name: '霜月·星陨穿刺',
+    text: '换入时对正对位敌人造成10点伤害并施加1层易伤。',
+    target: 'opposite',
+    effects: [
+      { type: 'damage', value: 10 },
+      { type: 'buff', buff: 'vulnerable', value: 1 },
+    ],
+  },
 };
 
 export const CHANGJING_YUEXI_SETTING = {
@@ -68,4 +78,9 @@ export const CHANGJING_YUEXI_SETTING = {
         '将星辰之力加持自身，让步伐与出剑衔接得更轻快敏捷。细光顺着裙摆与脚下星图移动，为接下来的连续行动留出余地。',
     },
   ],
+  entrySkill: {
+    name: '霜月·星陨穿刺',
+    description:
+      '踏入前场的一瞬展开夜空星图，伴生剑霜月于虚空划出星陨剑芒直穿正对位敌方单位，造成10点伤害并附加1层易伤。',
+  },
 };

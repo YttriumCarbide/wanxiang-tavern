@@ -17,7 +17,7 @@ export async function onboardingChecks({ browser, baseURL, output }) {
       JSON.stringify({ developerMode: true, protagonistApi: false, scriptApi: false }),
     );
   });
-  page.on('pageerror', (error) => errors.push(error.message));
+  page.on('pageerror', (error) => errors.push(error.stack || error.message));
   async function innReady() {
     await page
       .frameLocator('#inn-frame iframe')
@@ -370,10 +370,16 @@ export async function onboardingChecks({ browser, baseURL, output }) {
         }
       }
       assert.equal((await page.evaluate(() => demo.getState())).phase, 'victory');
+      while (await page.locator('#level-dialogue').isVisible())
+        await page.locator('#level-dialogue button').click();
       await page.locator('#result').waitFor({ state: 'visible' });
       completed.push(room);
       if (room < 4) {
         await page.locator('#continue').click();
+        if (room === 2) {
+          await page.locator('[data-rest="sleep"]').click();
+          await page.locator('#rest-continue').click();
+        }
         await page.waitForFunction(
           (room) =>
             demo.getStatus().mode === 'battle' &&
@@ -387,7 +393,7 @@ export async function onboardingChecks({ browser, baseURL, output }) {
     assert(armourReminder, 'Edith comments on the actual Boss shield event');
     assert.equal((await page.evaluate(() => demo.getLibrary())).campaign.completed, true);
     assert.equal((await page.evaluate(() => demo.getLibrary())).inventory.summonContracts, 1);
-    assert((await page.locator('.battle-rewards').textContent()).includes('召唤契约 × 1'));
+    assert.equal(await page.locator('.battle-rewards [aria-label="召唤契约 1"]').count(), 1);
     assert((await page.evaluate(() => demo.getLibrary())).inventory.ether > 0);
     await finishDialogue();
     await page.locator('#result-back').click();
@@ -442,6 +448,8 @@ export async function onboardingChecks({ browser, baseURL, output }) {
     const corridor = page.frameLocator('#inn-frame iframe');
     await corridor.locator('[data-door=shop]').click();
     const gold = (await page.evaluate(() => demo.getLibrary())).inventory.gold;
+    await page.locator('[data-shop-category=mana]').click();
+    await page.locator('[data-shop-item=mana-potion]').click();
     await page.locator('[data-buy=mana-potion]').click();
     assert.equal((await page.evaluate(() => demo.getLibrary())).inventory.gold, gold - 20);
     assert.equal((await page.evaluate(() => demo.getLibrary())).campaign.tutorial, 'depart-again');
@@ -476,8 +484,8 @@ export async function onboardingChecks({ browser, baseURL, output }) {
     await page.waitForFunction(() => !document.querySelector('#story-feed').open);
     const automatic = await page.evaluate(() => window.automaticJournals);
     assert(
-      automatic.length >= 6,
-      'Four later fights, final ending, and next dungeon open automatically',
+      automatic.length >= 5,
+      'Four later fights including Boss start, and the next dungeon open automatically',
     );
     assert(
       automatic.every((entry) => !entry.resultVisible),

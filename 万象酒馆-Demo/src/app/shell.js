@@ -41,12 +41,14 @@ export function createShell(context) {
     clearTimeout(session.runtime.toastTimer);
     session.runtime.toastTimer = setTimeout(() => $('#toast').classList.remove('visible'), 3300);
   }
-  function mountInn() {
+  function mountInn(returnTo = null) {
     const frame = document.createElement('iframe');
     frame.src =
       session.ai.library.campaign?.tutorial === 'arrival'
         ? './tavern.html?arrival=1'
-        : './tavern.html';
+        : returnTo === 'gate'
+          ? './tavern.html?return=gate'
+          : './tavern.html';
     frame.title = '第一人称万象酒馆';
     context.audio.attachFrame(frame);
     $('#inn-frame').replaceChildren(frame);

@@ -1,3 +1,5 @@
+import { createRawResponse } from './raw-response.js';
+import { EMBLEMS, equipEmblem } from '../emblems.js';
 import { equip, buyEquipment, normalizeEquipment, EQUIPMENT_STATS } from '../equipment.js';
 import { ITEMS } from '../content/items.js';
 import { BUFFS } from '../data.js';
@@ -36,8 +38,24 @@ export function equipmentDescription(item) {
   ].join('；');
 }
 export function preparationEquipment(library, member) {
+  const currentEmblem = EMBLEMS[member.emblemId]?.emblem;
   return html`<section class="equipment-slots">
     <h3>角色装备</h3>
+    <label class="prepare-emblem-row"
+      ><span>纹章士</span
+      ><select data-emblem-character="${member.id}" aria-label="装备纹章士">
+        <option value="">未装备</option>
+        ${(library.emblems || [])
+          .map((id) => {
+            const item = EMBLEMS[id]?.emblem;
+            if (!item) return '';
+            return `<option value="${item.id}" ${member.emblemId === item.id ? 'selected' : ''}>${item.title} · ${item.name}</option>`;
+          })
+          .join('')}</select
+      ><small
+        >${escapeText(currentEmblem ? currentEmblem.text : '在命运桌结识纹章士')}</small
+      ></label
+    >
     <div class="prepare-gear-list">
       ${Array.from({ length: 3 }, (_, slot) => {
         const current = member.equipment?.[slot];
@@ -75,22 +93,116 @@ export function preparationEquipment(library, member) {
         >`;
       }).join('')}
     </div>
+    <section class="prepare-abilities-preview">
+      <h3>技能与实际效果</h3>
+      <div class="prepare-ability-category">
+        <div class="prepare-ability-label">普通攻击</div>
+        <div class="prepare-ability-item">
+          <div><strong>普通攻击</strong><small>1 AP · 0 蓝</small></div>
+          <p>造成 ${member.combat?.attack || member.attack || 6} 点基础伤害。</p>
+        </div>
+      </div>
+      <div class="prepare-ability-category">
+        <div class="prepare-ability-label">角色技能</div>
+        ${(member.combat?.skills || member.skills || [])
+          .filter((s) => !s.passive)
+          .map(
+            (s) =>
+              html`<div class="prepare-ability-item">
+                <div>
+                  <strong>${escapeText(s.name)}</strong
+                  ><small
+                    >${s.ap} AP${s.mp ? ` · ${s.mp} 蓝` : ''}${s.hp ? ` · ${s.hp} 生命` : ''}</small
+                  >
+                </div>
+                <p>${escapeText(s.text || '')}</p>
+              </div>`,
+          )
+          .join('')}
+      </div>
+      ${
+        currentEmblem
+          ? html`<div class="prepare-ability-category">
+              <div class="prepare-ability-label">结合技 · ${escapeText(currentEmblem.name)}</div>
+              ${
+                EMBLEMS[member.emblemId]?.skill
+                  ? html`<div class="prepare-ability-item">
+                      <div>
+                        <strong>${escapeText(EMBLEMS[member.emblemId].skill.name)}</strong
+                        ><small
+                          >${EMBLEMS[member.emblemId].skill.ap} AP ·
+                          ${EMBLEMS[member.emblemId].skill.mp} 蓝</small
+                        >
+                      </div>
+                      <p>${escapeText(EMBLEMS[member.emblemId].skill.text || '')}</p>
+                    </div>`
+                  : ''
+              }
+            </div>`
+          : ''
+      }
+      <div class="prepare-ability-category">
+        <div class="prepare-ability-label">入场技</div>
+        ${(() => {
+          const entry =
+            member.setting?.entrySkill || member.entrySkill || member.combat?.entrySkill;
+          if (!entry) return html`<p class="prepare-empty-ability">无入场技</p>`;
+          return html`<div class="prepare-ability-item">
+            <div>
+              <strong>${escapeText(entry.name || '入场技')}</strong
+              ><small>后排满回合换入自动触发</small>
+            </div>
+            <p>${escapeText(entry.description || entry.text || '')}</p>
+          </div>`;
+        })()}
+      </div>
+
+      <div class="prepare-ability-category">
+        <div class="prepare-ability-label">被动特质</div>
+        ${(member.combat?.skills || member.skills || [])
+          .filter((s) => s.passive)
+          .map(
+            (s) =>
+              html`<div class="prepare-ability-item">
+                <div>
+                  <strong>${escapeText(s.name)}</strong
+                  ><small>被动 · ${escapeText(s.location)}</small>
+                </div>
+                <p>${escapeText(s.text || '')}</p>
+              </div>`,
+          )
+          .join('')}
+        ${
+          currentEmblem
+            ? html`<div class="prepare-ability-item">
+                <div>
+                  <strong>${escapeText(currentEmblem.title)}</strong><small>纹章被动</small>
+                </div>
+                <p>${escapeText(currentEmblem.text || '')}</p>
+              </div>`
+            : ''
+        }
+      </div>
+    </section>
   </section>`;
 }
 
 export function createEquipment(context) {
   const { session, events } = context;
   const library = () => session.ai.library;
+  const rawResponse = createRawResponse(events, 'creation-raw-response', '以太 API 原始回复');
   const panel = document.createElement('dialog');
   panel.id = 'ether-forge';
   panel.innerHTML =
-    '<header><div><small>ETHER / CONSTRUCTION</small><h2>以太凝聚器</h2></div><button data-forge-close>×</button></header><p>凝聚归档中的物品，构造与其来历相符的装备。每件装备最多占用一个槽，每位角色三个槽。</p><div class="forge-toolbar"><button id="forge-config">造物 API 设置</button><button id="forge-refine" class="primary">凝聚未细化物品</button><button id="forge-cancel" hidden>取消生成</button><strong id="forge-ether"></strong></div><p id="forge-status" role="status"></p><div id="forge-catalog"></div>';
+    '<header><div><small>ETHER / ATELIER</small><h2>以太凝聚器</h2></div><nav><button data-forge-page="construct" aria-pressed="true">凝聚</button><button data-forge-page="exchange">兑换</button></nav><button data-forge-close aria-label="关闭凝聚器">×</button></header><div class="forge-toolbar"><button id="forge-config">造物 API</button><button id="forge-refine" class="primary">构筑未构筑道具</button><button id="forge-cancel" hidden>取消</button><strong id="forge-ether"></strong></div><div class="forge-layout"><nav id="forge-list"></nav><section id="forge-workspace"><div id="forge-animation" class="condenser-stage"><i class="condenser-ring"></i><i class="condenser-ring ring-two"></i><i class="condenser-ring ring-three"></i><span class="condenser-core">✧</span><div class="condenser-beam"></div><small id="forge-animation-label">以太凝聚 · 等待构筑</small></div><div id="forge-catalog" hidden></div></section></div><p id="forge-status" role="status"></p>';
   document.body.append(panel);
   const bag = document.createElement('details');
   bag.id = 'prepare-bag';
   bag.innerHTML = '<summary>查看背包</summary><div></div>';
   document.querySelector('#party-panel > footer').prepend(bag);
   let request = null;
+  let page = 'construct';
+  let selected = null;
   function pendingItems() {
     const keyOf = (map, name, description, value) =>
       JSON.stringify([map, name, description, value]);
@@ -122,26 +234,45 @@ export function createEquipment(context) {
     panel.querySelector('#forge-ether').textContent = '以太 ' + library().inventory.ether;
     panel.querySelector('#forge-refine').disabled = !!request || !pendingItems().length;
     panel.querySelector('#forge-cancel').hidden = !request;
-    panel.querySelector('#forge-catalog').innerHTML =
-      library()
-        .equipment.catalog.map(
+    panel.dataset.busy = String(!!request);
+    panel.querySelector('#forge-animation').hidden = page !== 'construct';
+    panel.querySelector('#forge-catalog').hidden = page !== 'exchange';
+    panel.querySelector('#forge-refine').hidden = page !== 'construct';
+    panel.querySelector('#forge-animation-label').textContent = request
+      ? '正在构筑…'
+      : '以太凝聚 · 等待构筑';
+    panel
+      .querySelectorAll('[data-forge-page]')
+      .forEach((button) =>
+        button.setAttribute('aria-pressed', String(button.dataset.forgePage === page)),
+      );
+    const entries = page === 'construct' ? pendingItems() : library().equipment.catalog;
+    if (!entries.some((item) => item.id === selected)) selected = entries[0]?.id || null;
+    panel.querySelector('#forge-list').innerHTML =
+      entries
+        .map(
           (item) =>
-            html`<article class="forge-item">
-              <span class="equipment-emblem">✧</span>
-              <div>
-                <h3>${escapeText(item.name)}</h3>
-                <p>${escapeText(item.description)}</p>
-                <small>${escapeText(equipmentDescription(item))}</small>
-              </div>
-              <button
-                data-buy-equipment="${escapeText(item.id)}"
-                ${request || library().inventory.ether < item.price ? 'disabled' : ''}
-              >
-                ${item.price} 以太 · 构造
-              </button>
-            </article>`,
+            html`<button data-forge-select="${item.id}" aria-pressed="${item.id === selected}">
+              <span>✧</span><strong>${escapeText(item.name)}</strong>
+            </button>`,
         )
-        .join('') || '<p>尚无装备。副本中收集并归档物品后，点击凝聚。</p>';
+        .join('') || '<p class="forge-empty">暂无道具</p>';
+    const item = library().equipment.catalog.find((item) => item.id === selected);
+    panel.querySelector('#forge-catalog').innerHTML = item
+      ? html`<article class="forge-item">
+          <span class="equipment-emblem">✧</span>
+          <h3>${escapeText(item.name)}</h3>
+          <p>${escapeText(item.description)}</p>
+          <div class="forge-effects">${escapeText(equipmentDescription(item))}</div>
+          <button
+            class="primary"
+            data-buy-equipment="${escapeText(item.id)}"
+            ${request || library().inventory.ether < item.price ? 'disabled' : ''}
+          >
+            兑换 ${item.price}<img src="./assets/icons/ether.svg" alt="以太" />
+          </button>
+        </article>`
+      : '<p class="forge-empty">构筑道具后，可在这里兑换装备。</p>';
     bag.querySelector('div').innerHTML =
       Object.values(ITEMS)
         .filter((item) => library().inventory.items[item.id] > 0)
@@ -227,6 +358,7 @@ export function createEquipment(context) {
     } catch (failure) {
       status.textContent =
         failure.name === 'AbortError' ? '已取消，没有保存装备或扣除以太。' : failure.message;
+      rawResponse.show(failure);
     } finally {
       request = null;
       session.ai.busy = false;
@@ -244,17 +376,52 @@ export function createEquipment(context) {
     void context.generation.open('', 'creation');
   });
   events.on(panel, 'click', (event) => {
+    const tab = event.target.closest('[data-forge-page]');
+    if (tab) {
+      page = tab.dataset.forgePage;
+      selected = null;
+      refresh();
+      return;
+    }
+    const pick = event.target.closest('[data-forge-select]');
+    if (pick) {
+      selected = pick.dataset.forgeSelect;
+      refresh();
+      context.audio.play('select');
+      return;
+    }
     const button = event.target.closest('[data-buy-equipment]');
     if (!button || request || session.runtime.mode !== 'inn') return;
     try {
       buyEquipment(library(), button.dataset.buyEquipment, crypto.randomUUID());
       context.generation.save();
       refresh();
+      context.audio.play('exchange');
+      panel.querySelector('#forge-status').textContent = '装备已加入背包。';
+      panel
+        .querySelector('.equipment-emblem')
+        ?.animate([{ scale: '.7', opacity: 0.4 }, { scale: '1.15', opacity: 1 }, { scale: '1' }], {
+          duration: 600,
+        });
     } catch (failure) {
       panel.querySelector('#forge-status').textContent = failure.message;
     }
   });
   events.on(document.querySelector('#party-panel'), 'change', (event) => {
+    const emblem = event.target.closest('[data-emblem-character]');
+    if (emblem) {
+      try {
+        if (session.runtime.mode === 'battle') throw Error('战斗中不能更换纹章士');
+        equipEmblem(library(), emblem.dataset.emblemCharacter, emblem.value);
+        context.generation.save();
+        context.shell.renderParty();
+        context.emblems?.equipped();
+      } catch (failure) {
+        context.shell.toast(failure.message);
+        context.shell.renderParty();
+      }
+      return;
+    }
     const select = event.target.closest('[data-equipment-character]');
     if (!select) return;
     try {
@@ -295,6 +462,7 @@ export function createEquipment(context) {
     dispose() {
       request?.abort();
       panel.remove();
+      rawResponse.dispose();
       bag.remove();
     },
   };

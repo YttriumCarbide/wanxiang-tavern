@@ -496,6 +496,22 @@
 .status-regen {
   background: radial-gradient(ellipse, #a9df9b1f, transparent 65%);
 }
+.status-vulnerable {
+  background: radial-gradient(ellipse, #c084fc33, transparent 65%);
+  filter: drop-shadow(0 0 6px #a855f7);
+}
+.status-weak {
+  background: radial-gradient(ellipse, #93c5fd33, transparent 65%);
+  filter: drop-shadow(0 0 6px #3b82f6);
+}
+.status-slow {
+  background: radial-gradient(ellipse, #fde04733, transparent 65%);
+  filter: drop-shadow(0 0 6px #eab308);
+}
+.status-immobilize {
+  background: radial-gradient(ellipse, #a855f744, transparent 65%);
+  filter: drop-shadow(0 0 8px #7c3aed);
+}
 .status-mote {
   position: absolute;
   width: 6px;
@@ -518,6 +534,13 @@
   height: 8px;
   rotate: 35deg;
   box-shadow: 0 0 6px #c9eeb2;
+}
+.status-mote-vulnerable,
+.status-mote-weak,
+.status-mote-slow,
+.status-mote-immobilize {
+  border-radius: 50%;
+  box-shadow: 0 0 7px var(--fx);
 }
 .shield-membrane {
   filter: drop-shadow(0 0 7px #b4dbe0);

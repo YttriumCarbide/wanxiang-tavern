@@ -17,7 +17,7 @@ export function characterOutputSchema({ acceptLegacyNames = false } = {}) {
   const buff = choice(Object.keys(BUFFS));
   const effect = {
     anyOf: [
-      ...['damage', 'heal', 'shield', 'selfHeal', 'selfMana'].map((type) =>
+      ...['damage', 'heal', 'shield', 'selfHeal', 'selfMana', 'selfShield'].map((type) =>
         object({ type: { const: type, type: 'string' }, value: integer(1, 32) }),
       ),
       object({ type: { const: 'buff', type: 'string' }, buff, value: integer(1, 6) }),
@@ -53,7 +53,7 @@ export function characterOutputSchema({ acceptLegacyNames = false } = {}) {
     ability({
       passive: { type: 'boolean', const: true },
       location: { type: 'string', const: '后场' },
-      endHeal: integer(1, 3),
+      endHeal: integer(1, 6),
     }),
     ability({
       passive: { type: 'boolean', const: true },
@@ -61,6 +61,20 @@ export function characterOutputSchema({ acceptLegacyNames = false } = {}) {
       bonusMp: integer(1, 6),
     }),
   ];
+  const entrySkillShape = object({
+    text: string(300),
+    target: choice([
+      'opposite',
+      'enemy',
+      'allEnemies',
+      'allAllies',
+      'lowestAlly',
+      'lowestEnemy',
+      'self',
+    ]),
+    effects: array(effect, 1, 3),
+  });
+  if (acceptLegacyNames) entrySkillShape.properties.name = string(30);
   const schema = object({
     schemaVersion: { type: 'integer', const: 3 },
     setting: object({
@@ -71,10 +85,15 @@ export function characterOutputSchema({ acceptLegacyNames = false } = {}) {
       },
       appearance: string(2000),
       profession: namedDescription,
-      personality: string(2400),
+      personality: {
+        ...string(2400),
+        description:
+          '性格必须直接写成字符串，如"严谨务实，习惯核实事实。"；不要写成{name,description}对象。',
+      },
       history: string(2000),
       attack: namedDescription,
       skills: array(namedDescription, 2, 2),
+      entrySkill: namedDescription,
     }),
     data: object({
       archetype: choice(['aegis', 'lyria', 'morrow', 'serin', 'vesper', 'rook']),
@@ -84,11 +103,16 @@ export function characterOutputSchema({ acceptLegacyNames = false } = {}) {
       weapon: choice(['sword', 'staff', 'bow']),
       limit: integer(1, 2),
       skills: array({ anyOf: [active, ...passive] }, 2, 2),
+      entrySkill: entrySkillShape,
     }),
   });
   schema.properties.setting.required = schema.properties.setting.required.filter(
-    (key) => key !== 'age',
+    (key) => !['age', 'entrySkill'].includes(key),
   );
+  schema.properties.data.required = schema.properties.data.required.filter(
+    (key) => key !== 'entrySkill',
+  );
+  schema.properties.levelUpLines = array(string(300), 5, 5);
   schema.properties.arrivalDialogue = array(
     object({ speaker: choice(['character', 'player']), text: string(500) }),
     2,
@@ -151,5 +175,9 @@ export function triggerRuleSchema() {
 
 /** Older v3 responses may repeat labels, but those fields are optional and never authoritative. */
 export function characterInputSchema() {
-  return characterOutputSchema({ acceptLegacyNames: true });
+  const schema = characterOutputSchema({ acceptLegacyNames: true });
+  schema.properties.setting.properties.personality = {
+    anyOf: [string(2400), object({ name: string(30), description: string(2400) })],
+  };
+  return schema;
 }

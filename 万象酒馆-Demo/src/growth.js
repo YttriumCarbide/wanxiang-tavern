@@ -1,25 +1,26 @@
 import { applyEquipment } from './equipment.js';
+import { finalSkillText } from './skill-text.js';
 /** Persistent growth is separate from authored combat definitions and battle snapshots. */
 export const RARITIES = Object.freeze({
   common: {
     name: '普通',
     weight: 55,
-    rates: { hp: 65, mp: 50, attack: 30, skillDamage: 30, limit: 2, manaCost: 15 },
+    rates: { hp: 46, mp: 30, attack: 16, skillDamage: 4, limit: 1, manaCost: 3 },
   },
   rare: {
     name: '稀有',
     weight: 30,
-    rates: { hp: 80, mp: 65, attack: 40, skillDamage: 40, limit: 3, manaCost: 20 },
+    rates: { hp: 44, mp: 30, attack: 17, skillDamage: 5, limit: 1, manaCost: 3 },
   },
   epic: {
     name: '史诗',
     weight: 12,
-    rates: { hp: 95, mp: 80, attack: 50, skillDamage: 50, limit: 4, manaCost: 25 },
+    rates: { hp: 43, mp: 29, attack: 18, skillDamage: 5, limit: 2, manaCost: 3 },
   },
   legendary: {
     name: '传说',
     weight: 3,
-    rates: { hp: 100, mp: 95, attack: 60, skillDamage: 60, limit: 5, manaCost: 30 },
+    rates: { hp: 42, mp: 28, attack: 19, skillDamage: 6, limit: 2, manaCost: 3 },
   },
 });
 export const GROWTH_LABELS = Object.freeze({
@@ -59,7 +60,7 @@ export function restoreGrowth(value, id) {
   };
 }
 export function xpToNext(level) {
-  return 40 + (level - 1) * 20;
+  return 240 + (level - 1) * 140 + (level - 1) ** 2 * 20;
 }
 export function grownCombat(member) {
   const growth = restoreGrowth(member.growth, member.id);
@@ -72,15 +73,15 @@ export function grownCombat(member) {
   for (const skill of combat.skills) {
     if (skill.passive) continue;
     skill.mp = Math.max(0, skill.mp - b.manaCost);
-    if (b.skillDamage || b.manaCost)
-      skill.text += '（成长：技能伤害+' + b.skillDamage + '，耗蓝降低' + b.manaCost + '）';
     for (const effect of skill.effects) if (effect.type === 'damage') effect.value += b.skillDamage;
+    skill.text = finalSkillText(skill);
   }
   return combat;
 }
 export function gainExperience(member, amount) {
   const growth = restoreGrowth(member.growth, member.id);
   const levels = [];
+  const before = { level: growth.level, xp: growth.xp };
   growth.xp += amount;
   function random() {
     growth.seed = (Math.imul(growth.seed, 1664525) + 1013904223) >>> 0;
@@ -90,23 +91,34 @@ export function gainExperience(member, amount) {
     growth.xp -= xpToNext(growth.level);
     growth.level++;
     const gains = {};
-    for (const [key, rate] of Object.entries(RARITIES[growth.rarity].rates)) {
-      if (random() * 100 >= rate) continue;
-      const n = key === 'hp' ? 2 : 1;
-      if (key === 'limit' && member.combat.limit + growth.bonus.limit >= 5) continue;
-      if (
-        key === 'manaCost' &&
-        !member.combat.skills.some((s) => !s.passive && s.mp > growth.bonus.manaCost)
-      )
-        continue;
-      growth.bonus[key] += n;
-      gains[key] = n;
+    const points = 1 + Math.floor(random() * 3);
+    for (let point = 0; point < points; point++) {
+      const choices = Object.entries(RARITIES[growth.rarity].rates).filter(([key]) => {
+        if (key === 'limit') return member.combat.limit + growth.bonus.limit < 5;
+        if (key === 'manaCost')
+          return member.combat.skills.some(
+            (skill) => !skill.passive && skill.mp > growth.bonus.manaCost,
+          );
+        return true;
+      });
+      let roll = random() * choices.reduce((sum, [, weight]) => sum + weight, 0);
+      const key = choices.find(([, weight]) => (roll -= weight) < 0)?.[0] || 'hp';
+      growth.bonus[key]++;
+      gains[key] = (gains[key] || 0) + 1;
     }
     levels.push({ level: growth.level, gains });
   }
   if (growth.level === 99) growth.xp = 0;
   member.growth = growth;
-  return { id: member.id, name: member.setting.name, amount, level: growth.level, levels };
+  return {
+    id: member.id,
+    name: member.setting.name,
+    amount,
+    before,
+    after: { level: growth.level, xp: growth.xp },
+    level: growth.level,
+    levels,
+  };
 }
 /** Enemy death claims are awarded on accepted playback, including a subsequently lost battle. */
 export function claimKillExperience(library, expedition, state, result) {
@@ -152,7 +164,7 @@ export function generationNumbers(input) {
     skillMana: [2, Math.min(10, 4 + index * 2)],
     growthRates: RARITIES[rarity].rates,
     guidance:
-      '仅分配数据层基础数值，不按原设境界直接无限放大。主动技能伤害与耗蓝匹配；群体技能使用区间低值。普通攻击与技能伤害独立。主角行动次数必须为2。等级初始1，升级时六项属性独立按成长率判定；技能耗蓝成长是减消耗，最多降至0。',
+      '仅分配数据层基础数值，不按原设境界直接无限放大。主动技能伤害与耗蓝匹配；群体技能使用区间低值。普通攻击与技能伤害独立。主角行动次数必须为2。等级初始1，升级总共随机分配1到3点，按growthRates权重抽取，主要提升生命和法力；技能耗蓝成长是减消耗，最多降至0。',
   };
 }
 
@@ -174,6 +186,7 @@ export function applyEncounterGrowth(expedition, members) {
     carried.heroDefinitions[slot] = {
       ...combat,
       id: slot,
+      ...(old.emblemId ? { emblemId: old.emblemId } : {}),
       ...(old.customPortrait ? { customPortrait: old.customPortrait } : {}),
     };
   }

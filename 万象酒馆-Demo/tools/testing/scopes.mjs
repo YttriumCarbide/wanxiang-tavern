@@ -1,5 +1,6 @@
 export const allScopes = [
   'quality',
+  'worlds-emblems',
   'static',
   'environment',
   'rooms',
@@ -7,6 +8,7 @@ export const allScopes = [
   'chat',
   'settings',
   'preparation',
+  'summoning',
   'core',
   'ui',
   'layout',

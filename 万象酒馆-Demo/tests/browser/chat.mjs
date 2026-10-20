@@ -362,6 +362,14 @@ export async function chatChecks({ browser, baseURL, output }) {
     assert.deepEqual(await page.evaluate(() => demo.getChat().quick), []);
     await page
       .frameLocator('#inn-frame iframe')
+      .locator('#status')
+      .waitFor({ state: 'detached', timeout: 60000 });
+    await page
+      .frameLocator('#inn-frame iframe')
+      .locator('canvas')
+      .evaluate(() => window.assetPreview.placeNow('table'));
+    await page
+      .frameLocator('#inn-frame iframe')
       .locator('#talk-open')
       .waitFor({ state: 'visible' });
     await page.frameLocator('#inn-frame iframe').locator('#talk-open').click();

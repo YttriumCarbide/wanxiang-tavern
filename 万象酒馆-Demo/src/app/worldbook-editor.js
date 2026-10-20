@@ -178,7 +178,7 @@ ${escapeText(entry.keysecondary.join(', '))}</textarea>
       </div>
       <div class="world-targets">
         <span>发送给</span
-        >${['character', 'script', 'chat', 'quick-chat'].map((kind) => html`<label class="world-check"><input type="checkbox" data-world-target="${kind}" ${entry.apiTargets.includes(kind) ? 'checked' : ''} />${{ character: '角色 API', script: '剧本 API', chat: '酒馆交流 API', 'quick-chat': '快速闲聊 API' }[kind]}</label>`).join('')}<small
+        >${['character', 'script', 'chat', 'quick-chat', 'map', 'creation'].map((kind) => html`<label class="world-check"><input type="checkbox" data-world-target="${kind}" ${entry.apiTargets.includes(kind) ? 'checked' : ''} />${{ character: '角色 API', script: '剧本 API', chat: '酒馆交流 API', 'quick-chat': '快速闲聊 API', map: '地图 API', creation: '以太 API' }[kind]}</label>`).join('')}<small
           >仍需满足本条的触发条件；都不勾选则不发送。</small
         >
       </div>

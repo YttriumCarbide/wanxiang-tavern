@@ -154,7 +154,8 @@ test('map preview retains entrance and unlocks exactly the next number, includin
     completeExploration(routes, availableExplorations(route)[0]);
   }
   route.frontier.push({ ...first, sequence: 19, id: 'old-branch' });
-  assert.equal(availableExplorations(route).length, 0);
-  assert.equal(explorationPreview(route, 'ruins').length, 6);
-  assert.equal(completeExploration(routes, route.frontier[0]), null);
+  assert.equal(availableExplorations(route).length, 1);
+  assert.equal(availableExplorations(route)[0].sequence, 6);
+  assert.equal(explorationPreview(route, 'ruins').length, 7);
+  assert.equal(completeExploration(routes, route.frontier[1]), null);
 });

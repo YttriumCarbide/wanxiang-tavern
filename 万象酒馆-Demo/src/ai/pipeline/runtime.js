@@ -1,8 +1,12 @@
+import { EQUIPMENT_STATS } from '../../equipment.js';
+import { TRIGGER_EVENTS, TRIGGER_TARGETS, POSITIVE_BUFFS } from '../../triggers.js';
+import { ENEMY_ATTACKS } from '../../combat-art.js';
+import { mapInput, mapResponse } from './map-request.js';
 import { generationRequest } from './prompts.js';
 import { chatInput, chatRequest } from './chat-request.js';
 import { chatResponse } from './chat-response.js';
 import { summaryRequest, summaryResponse, summaryItems } from './summary-request.js';
-import { creationRequest, creationResponse, creationItems } from './creation-request.js';
+import { creationInput, creationResponse, creationItems } from './creation-request.js';
 import { presetProcessing, processGeneratedProse } from './preset-processing.js';
 import { adviceSettings } from '../advice.js';
 import { presetRegexScripts } from '../regex.js';
@@ -34,10 +38,30 @@ export function createAiPipeline({
   async function buildRequest(kind, input, source, override) {
     const profile = settings.get(kind);
     if (kind === 'summary') return summaryRequest(input, profile, countTokens, readText);
-    if (kind === 'creation') return creationRequest(input, profile, countTokens);
+
     const chatting = ['chat', 'quick-chat'].includes(kind);
     const normalized = chatting ? chatInput(kind, input) : input;
+    const asset = ['map', 'creation'].includes(kind);
+    const assetData = asset ? (kind === 'map' ? mapInput(input) : creationInput(input)) : null;
     const options = {
+      ...(asset
+        ? {
+            assetContext: {
+              task: kind,
+              request: { brief: input.brief || '构筑归档装备' },
+              data: assetData,
+              mechanics:
+                kind === 'map'
+                  ? { enemyAttacks: ENEMY_ATTACKS }
+                  : {
+                      stats: EQUIPMENT_STATS,
+                      events: TRIGGER_EVENTS,
+                      targets: TRIGGER_TARGETS,
+                      positiveBuffs: POSITIVE_BUFFS,
+                    },
+            },
+          }
+        : {}),
       profile,
       readText,
       runRegexTasks,
@@ -74,12 +98,35 @@ export function createAiPipeline({
     const creating = kind === 'creation';
     if (requestReport) requestReport.usage = result.usage;
     if (models) return result;
-    else if (creating) {
-      return {
-        items: creationResponse(result.content, creationItems(input)),
-        request: { tokens: prepared.tokens },
-        usage: result.usage,
-      };
+    else if (kind === 'map' || creating) {
+      try {
+        const candidate = /<wanxiang_json\b/i.test(result.content)
+          ? extractGenerationEnvelope(kind, result.content).candidateText
+          : result.content;
+        const scripts = [...regexStore.get(), ...presetRegexScripts(source)];
+        const processed = (
+          await runRegexTasks(scripts, [{ text: candidate, placement: 2, options: { kind } }])
+        )[0].text;
+        const value =
+          kind === 'map'
+            ? { world: mapResponse(processed, input) }
+            : { items: creationResponse(processed, creationItems(input)) };
+        await commitWorldState(requestId, kind);
+        return {
+          ...value,
+          request: { ...requestReport, tokens: prepared.tokens },
+          usage: result.usage,
+        };
+      } catch (failure) {
+        failure.diagnostic = generationDiagnostic(
+          kind,
+          result.content,
+          failure.message,
+          'asset-response',
+        );
+        failure.diagnostic.request = requestReport;
+        throw failure;
+      }
     } else if (summarizing) {
       const summaries = summaryResponse(result.content, summaryItems(input));
       return {
@@ -197,7 +244,7 @@ export function createAiPipeline({
         : null,
       stop: prepared?.transport?.stop,
       responseSchema:
-        models || ['chat', 'quick-chat', 'summary', 'creation'].includes(kind)
+        models || ['chat', 'quick-chat', 'summary', 'creation', 'map'].includes(kind)
           ? null
           : kind === 'character'
             ? characterOutputSchema()

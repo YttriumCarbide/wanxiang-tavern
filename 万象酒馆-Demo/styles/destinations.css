@@ -674,3 +674,214 @@
   opacity: 0.38;
   cursor: not-allowed;
 }
+
+.destination-strip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.destination-strip > button {
+  flex: 0 0 34px;
+  padding: 8px;
+}
+.destination-strip #destination-regions {
+  flex: 1;
+  min-width: 0;
+  justify-content: center;
+}
+#destination-preview.singularity {
+  overflow: hidden;
+  isolation: isolate;
+  background: radial-gradient(ellipse, #243244 0%, #0b1520 50%, transparent 76%);
+  container-type: size;
+}
+#destination-preview.singularity canvas,
+#destination-preview.singularity > span {
+  display: none;
+}
+.singularity-art {
+  display: none;
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+.singularity .singularity-art {
+  display: block;
+}
+.singularity-core {
+  position: absolute;
+  width: min(45cqh, 32cqw);
+  aspect-ratio: 1;
+  left: 50%;
+  top: 48%;
+  translate: -50% -50%;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 45% 40%,
+    #030611 60%,
+    #0c0f23 68%,
+    #d8b27d 70%,
+    #a3c2d4 72%,
+    transparent 75%
+  );
+  box-shadow: 0 0 30px #b69be028;
+}
+.singularity-halo {
+  position: absolute;
+  width: min(62cqh, 45cqw);
+  aspect-ratio: 1;
+  left: 50%;
+  top: 48%;
+  translate: -50% -50%;
+  border-radius: 50%;
+  border: 1px solid #7798b655;
+  box-shadow:
+    0 0 45px #8e7ae44d,
+    inset 0 0 35px #717fa949;
+  animation: singularity-breathe 5s ease-in-out infinite alternate;
+}
+.singularity-disc {
+  position: absolute;
+  width: min(125cqh, 86cqw);
+  height: min(23cqh, 17cqw);
+  left: 50%;
+  top: 48%;
+  translate: -50% -50%;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 35deg,
+    transparent,
+    #a8d7e73b,
+    #eacb9d,
+    transparent 36%,
+    #8f8ce6,
+    #eddfbd 77%,
+    transparent
+  );
+  transform: rotate(-15deg);
+  filter: blur(1px);
+  box-shadow: 0 0 12px #a9cde730;
+  animation: singularity-drift 9s ease-in-out infinite alternate;
+}
+.singularity-stars {
+  position: absolute;
+  inset: 8% 5%;
+  background-image:
+    radial-gradient(circle at 20% 32%, #ecdeaf 1px, transparent 2px),
+    radial-gradient(circle at 73% 68%, #a4d6ef 1px, transparent 2px),
+    radial-gradient(circle at 57% 13%, #bfd4ea 1px, transparent 2px);
+  background-size:
+    131px 97px,
+    179px 139px,
+    211px 167px;
+  opacity: 0.65;
+}
+.singularity-art > span {
+  position: absolute;
+  left: 50%;
+  bottom: 4%;
+  translate: -50% 0;
+  color: #98b0c8;
+  font-size: 10px;
+  letter-spacing: 9px;
+}
+@keyframes singularity-breathe {
+  to {
+    opacity: 0.6;
+    scale: 1.04;
+  }
+}
+@keyframes singularity-drift {
+  to {
+    transform: rotate(-5deg) scaleX(0.96);
+    filter: hue-rotate(22deg);
+  }
+}
+@keyframes singularity-spin {
+  to {
+    rotate: 360deg;
+  }
+}
+#world-construction {
+  width: min(700px, 84vw);
+  padding: 24px;
+}
+#world-construction header,
+#world-construction footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+#world-construction textarea {
+  width: 100%;
+  resize: vertical;
+  position: relative;
+}
+.world-blackhole {
+  position: relative;
+  height: 150px;
+  overflow: hidden;
+  background: radial-gradient(ellipse, #594d7b, transparent 65%);
+}
+.world-blackhole i {
+  position: absolute;
+  border-radius: 50%;
+  aspect-ratio: 1;
+  background: #030610;
+  border: 2px solid #bccee0;
+  box-shadow: 0 0 25px #a79acb;
+  animation: singularity-spin 8s linear infinite;
+  width: 100px;
+  left: calc(50% - 50px);
+  top: 24px;
+}
+#world-construction[data-busy='true'] .world-blackhole i {
+  animation-duration: 1.5s;
+  box-shadow: 0 0 70px #b6a6fc;
+}
+@media (prefers-reduced-motion: reduce) {
+  .singularity-art .singularity-halo,
+  .singularity-art .singularity-disc,
+  .world-blackhole i {
+    animation: none;
+  }
+}
+
+#destination-description {
+  padding: 5px 14px;
+  font-size: 12px;
+  color: #d6c18f;
+  border-color: #a99b6955;
+}
+#destination-lore,
+.raw-response {
+  width: min(760px, calc(100vw - 60px));
+  max-height: 80dvh;
+  padding: 24px;
+  background: #102421;
+  color: #e3ddc9;
+  border: 1px solid #bda57077;
+  border-radius: 12px;
+}
+#destination-lore header,
+.raw-response header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+#destination-lore article {
+  white-space: pre-wrap;
+  overflow: auto;
+  max-height: 58dvh;
+  line-height: 1.9;
+  font-size: 14px;
+  padding-right: 12px;
+}
+.raw-response textarea {
+  width: 100%;
+  height: 48dvh;
+  resize: none;
+  font-size: 12px;
+}

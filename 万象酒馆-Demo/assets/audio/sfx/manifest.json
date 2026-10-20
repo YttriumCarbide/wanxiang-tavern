@@ -249,6 +249,12 @@
       "bytes": 48554
     },
     {
+      "name": "combine",
+      "file": "assets/audio/sfx/combine.wav",
+      "seconds": 1.08,
+      "bytes": 95300
+    },
+    {
       "name": "heal",
       "file": "assets/audio/sfx/heal.wav",
       "seconds": 0.62,

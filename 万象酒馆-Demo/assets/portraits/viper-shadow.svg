@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="900" viewBox="0 0 600 900">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="45%" r="65%">
+      <stop offset="0%" stop-color="#8de3ad" stop-opacity="0.32" />
+      <stop offset="60%" stop-color="#1b3327" />
+      <stop offset="100%" stop-color="#0b1711" />
+    </radialGradient>
+    <linearGradient id="metal" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#599c73" />
+      <stop offset="50%" stop-color="#8de3ad" />
+      <stop offset="100%" stop-color="#0b1711" />
+    </linearGradient>
+  </defs>
+  <rect width="600" height="900" fill="#0b1711" />
+  <rect x="20" y="20" width="560" height="860" fill="url(#bg)" rx="16" />
+  <circle cx="300" cy="380" r="230" fill="none" stroke="#599c73" stroke-width="3" stroke-opacity="0.35" />
+  <circle cx="300" cy="380" r="200" fill="none" stroke="#8de3ad" stroke-width="1.5" stroke-dasharray="8 6" stroke-opacity="0.4" />
+  <path d="M70 820V340Q70 100 300 80Q530 100 530 340V820" fill="none" stroke="#599c73" stroke-opacity="0.3" stroke-width="2.5" />
+  <path d="M60 830H540M100 850H500" stroke="#599c73" stroke-opacity="0.5" stroke-width="3" />
+  
+      <!-- Coiled Serpent -->
+      <path d="M300 200Q380 180 400 260Q410 340 300 380Q180 420 200 520Q220 620 340 620Q420 610 420 680Q410 740 300 750Q180 740 160 650" fill="none" stroke="#3b694f" stroke-width="32" stroke-linecap="round" />
+      <path d="M300 200Q380 180 400 260Q410 340 300 380Q180 420 200 520Q220 620 340 620Q420 610 420 680Q410 740 300 750Q180 740 160 650" fill="none" stroke="#8de3ad" stroke-width="4" stroke-dasharray="16 12" />
+      <!-- Snake Head & Fangs -->
+      <polygon points="300,160 340,210 260,210" fill="#599c73" stroke="#8de3ad" stroke-width="3" />
+      <circle cx="280" cy="190" r="5" fill="#fffd75" />
+      <circle cx="320" cy="190" r="5" fill="#fffd75" />
+      <line x1="285" y1="210" x2="280" y2="235" stroke="#ffffff" stroke-width="3" />
+      <line x1="315" y1="210" x2="320" y2="235" stroke="#ffffff" stroke-width="3" />
+    
+</svg>

@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="900" viewBox="0 0 600 900">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="45%" r="65%">
+      <stop offset="0%" stop-color="#be88ff" stop-opacity="0.32" />
+      <stop offset="60%" stop-color="#1a1024" />
+      <stop offset="100%" stop-color="#07040a" />
+    </radialGradient>
+    <linearGradient id="metal" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8352b5" />
+      <stop offset="50%" stop-color="#be88ff" />
+      <stop offset="100%" stop-color="#07040a" />
+    </linearGradient>
+  </defs>
+  <rect width="600" height="900" fill="#07040a" />
+  <rect x="20" y="20" width="560" height="860" fill="url(#bg)" rx="16" />
+  <circle cx="300" cy="380" r="230" fill="none" stroke="#8352b5" stroke-width="3" stroke-opacity="0.35" />
+  <circle cx="300" cy="380" r="200" fill="none" stroke="#be88ff" stroke-width="1.5" stroke-dasharray="8 6" stroke-opacity="0.4" />
+  <path d="M70 820V340Q70 100 300 80Q530 100 530 340V820" fill="none" stroke="#8352b5" stroke-opacity="0.3" stroke-width="2.5" />
+  <path d="M60 830H540M100 850H500" stroke="#8352b5" stroke-opacity="0.5" stroke-width="3" />
+  
+      <!-- Swirling Black Void Mass -->
+      <circle cx="300" cy="400" r="160" fill="#12091c" stroke="#8352b5" stroke-width="5" />
+      <!-- Twisted horns / snake coils -->
+      <path d="M300 270Q200 180 140 240Q100 290 170 330Q210 310 240 330" fill="none" stroke="#be88ff" stroke-width="12" stroke-linecap="round" />
+      <path d="M300 270Q400 180 460 240Q500 290 430 330Q390 310 360 330" fill="none" stroke="#be88ff" stroke-width="12" stroke-linecap="round" />
+      <!-- Grotesque Lamb/Beast mask in black oil -->
+      <polygon points="300,320 350,420 325,500 275,500 250,420" fill="#07040a" stroke="#8352b5" stroke-width="5" />
+      <!-- Many eldritch eyes -->
+      <circle cx="280" cy="390" r="7" fill="#ff385c" />
+      <circle cx="320" cy="390" r="7" fill="#ff385c" />
+      <circle cx="300" cy="425" r="9" fill="#ffde59" />
+      <circle cx="270" cy="445" r="5" fill="#a445ff" />
+      <circle cx="330" cy="445" r="5" fill="#a445ff" />
+      <!-- Dripping Black Tendrils & Drops -->
+      <path d="M220 520Q200 650 210 740M260 550Q250 680 255 770M300 560Q300 700 300 790M340 550Q350 680 345 770M380 520Q400 650 390 740" stroke="#8352b5" stroke-width="6" fill="none" stroke-linecap="round" />
+      <circle cx="210" cy="760" r="8" fill="#be88ff" />
+      <circle cx="300" cy="810" r="10" fill="#be88ff" />
+      <circle cx="390" cy="760" r="8" fill="#be88ff" />
+    
+</svg>

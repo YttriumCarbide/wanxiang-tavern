@@ -1,3 +1,4 @@
+import { BASE_WORLDS } from '../src/worlds.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
@@ -9,13 +10,13 @@ import {
 } from '../src/exploration.js';
 import { REGIONS } from '../src/content/regions.js';
 import { DEFINITIONS } from '../src/data.js';
-import { newExpedition, beginEncounter, completeEncounter } from '../src/expedition.js';
+import { newExpedition, beginEncounter, completeEncounter, chooseRest } from '../src/expedition.js';
 import { generationInput, generationRequest } from '../server/prompts.mjs';
 import { scriptOutputSchema } from '../src/ai/script-schema.js';
 import { readGenerationResult } from '../server/generation-result.mjs';
 import { newLibrary } from '../src/ai/library.js';
 
-test('thirteen independent regions end at the sixth distinct site, with fixed monster stats and recoverable saves', () => {
+test('regions preserve independent progress and base worlds continue after six sites', () => {
   const routes = newExploration(817);
   assert.equal(Object.keys(routes).length, Object.keys(REGIONS).length);
   assert.equal(Object.keys(routes).length, 13);
@@ -36,6 +37,7 @@ test('thirteen independent regions end at the sixth distinct site, with fixed mo
       assert.throws(() => completeEncounter(trip, state));
       state.phase = 'victory';
       assert.equal(completeEncounter(trip, state).complete, room === 4);
+      if (trip.restPending) chooseRest(trip, 'sleep');
     }
     assert.equal(trip.records.length, 5);
     const next = completeExploration(routes, selected, {
@@ -47,9 +49,9 @@ test('thirteen independent regions end at the sixth distinct site, with fixed mo
       assert.equal(next.map, 'forest');
       assert(next.continuation.includes('古堡'));
       assert.equal(next.parentId, selected.id);
-    } else assert.equal(next, null);
+    } else assert.equal(next.sequence, 6);
     assert.equal(completeExploration(routes, selected), null);
-    assert.equal(routes.forest.frontier.length, i < 5 ? 1 : 0);
+    assert.equal(routes.forest.frontier.length, 1);
     assert.equal(routes.forest.cleared.length, i + 1);
   }
   for (let seed = 0; seed < 120; seed++)
@@ -77,7 +79,7 @@ test('all generated non-tutorial ordinary fights after the entrance contain at l
   }
 });
 
-test('environment values run in the shared battle engine and match the region sent to the script API', async () => {
+test('all maps remove environmental bonuses and prompts agree with combat', async () => {
   const routes = newExploration(72),
     lib = newLibrary();
   for (const [map, region] of Object.entries(REGIONS)) {
@@ -85,22 +87,9 @@ test('environment values run in the shared battle engine and match the region se
     const spec = explorationSpec(node);
     const state = beginEncounter(newExpedition('bossGate', {}, node));
     const hero = state.units.aegis;
-    if (region.rules.shield) assert.equal(hero.block, region.rules.shield);
-    if (region.rules.regen) assert.equal(hero.buffs.regen, region.rules.regen);
-    if (region.rules.strength) assert.equal(hero.buffs.strength, region.rules.strength);
-    if (region.rules.bonusMp) assert.equal(hero.maxMp, DEFINITIONS.aegis.mp + region.rules.bonusMp);
-    if (region.rules.bonusMp) {
-      const trip = newExpedition('bossTide', {}, node);
-      for (let room = 0; room < 5; room++) {
-        const nextState = beginEncounter(trip);
-        assert.equal(nextState.units.aegis.maxMp, DEFINITIONS.aegis.mp + region.rules.bonusMp);
-        assert(nextState.units.aegis.mp <= nextState.units.aegis.maxMp);
-        nextState.phase = 'victory';
-        completeEncounter(trip, nextState);
-      }
-    }
-    if (region.rules.enemySlow)
-      assert.equal(state.units[spec.enemyIds[0]].buffs.slow, region.rules.enemySlow);
+    assert.equal(hero.block, 0);
+    assert.deepEqual(hero.buffs, {});
+    assert.equal(region.rules, undefined);
     const input = {
       brief: '延续旅程',
       boss: 'bossGate',
@@ -119,7 +108,8 @@ test('environment values run in the shared battle engine and match the region se
       context.encounters[0].enemies.map((entry) => entry.id),
       spec.enemyIds,
     );
-    assert.deepEqual(context.request.region.environmentRules, spec.environment);
+    assert.equal(context.request.region.environmentRules, undefined);
+    assert.deepEqual(spec.environment, {});
     assert.equal(context.request.narrativeParts.length, 5);
     assert(context.request.continuation.includes('古堡'));
     const request = await generationRequest('script', input);
@@ -187,7 +177,7 @@ test('routes unlock sequentially and legacy branches survive reload', () => {
   assert.equal(restored.ruins.cleared.length, 0);
 });
 
-test('all maps have only sites 1 to 6 and old repeated successors are removed without losing finished routes or history', () => {
+test('base worlds retain seventh routes and hidden art routes retain history', () => {
   const routes = newExploration(42);
   for (const [map, route] of Object.entries(routes)) {
     const preview = explorationPreview(route, map);
@@ -202,7 +192,7 @@ test('all maps have only sites 1 to 6 and old repeated successors are removed wi
         runId: map + '-' + i,
         lines: [{ text: '实际发生的故事保留。' }],
       });
-    assert.equal(route.frontier.length, 0);
+    assert.equal(route.frontier.length, BASE_WORLDS.includes(map) ? 1 : 0);
     const seventh = {
       ...route.cleared[0],
       sequence: 6,
@@ -216,14 +206,18 @@ test('all maps have only sites 1 to 6 and old repeated successors are removed wi
       { ...seventh, sequence: 7, seed: 1000, id: map + '-7-1000', parentId: seventh.id },
     ];
     route.completed = 7;
-    assert.throws(() => explorationSpec(seventh), /无效/);
+    assert.equal(
+      explorationSpec(seventh).environment &&
+        Object.keys(explorationSpec(seventh).environment).length,
+      0,
+    );
   }
   const restored = restoreExploration(routes);
   for (const [map, route] of Object.entries(restored)) {
-    assert.equal(route.completed, 6);
-    assert.equal(route.frontier.length, 0);
-    assert.equal(route.cleared.length, 6);
-    assert.equal(explorationPreview(route, map).length, 6);
+    assert.equal(route.completed, BASE_WORLDS.includes(map) ? 7 : 6);
+    assert.equal(route.frontier.length, BASE_WORLDS.includes(map) ? 1 : 0);
+    assert.equal(route.cleared.length, BASE_WORLDS.includes(map) ? 7 : 6);
+    assert.equal(explorationPreview(route, map).length, BASE_WORLDS.includes(map) ? 8 : 6);
     assert.deepEqual(route.history, routes[map].history);
   }
   assert.deepEqual(restoreExploration(restored), restored);

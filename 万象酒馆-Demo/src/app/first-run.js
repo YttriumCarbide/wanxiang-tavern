@@ -31,7 +31,7 @@ export function createFirstRun(context) {
   footer.id = 'setup-footer';
   footer.hidden = true;
   footer.innerHTML =
-    '<p id="setup-status" role="status"></p><button id="setup-next" class="primary">下一步</button>';
+    '<p id="setup-status" role="status"></p><button id="setup-models" type="button">获取模型名称</button><button id="setup-next" class="primary">下一步</button>';
   settings.append(footer);
   let stage = null;
   let completed = false;
@@ -47,8 +47,9 @@ export function createFirstRun(context) {
       ? '先配置你的 AI 接口'
       : '导入一个酒馆提示词预设';
     element('setup-description').textContent = connections
-      ? '副本剧本 API 负责统筹剧情、理解设定和安排后续发展，建议使用理解、推理与长篇创作能力较强的模型。角色生成、酒馆交流、快速闲聊、记忆总结和以太造物可使用更轻量、费用较低的模型。六项用途都需保存连接；可在下方勾选其他用途，一键应用同一份 API 预设。'
-      : '导入一份你喜欢的酒馆预设，即默认应用到角色生成、副本剧本、酒馆交流和快速闲聊。以后可分别更换；记忆总结和以太造物使用游戏内置提示词，无需导入。';
+      ? '副本剧本 API 负责统筹剧情、理解设定和安排后续发展，建议使用理解、推理与长篇创作能力较强的模型。角色生成、酒馆交流、快速闲聊、记忆总结、地图构筑和以太造物可使用费用较低、能稳定输出格式的模型。七项用途都需保存连接；可在下方勾选其他用途，一键应用同一份 API 预设。'
+      : '导入一份你喜欢的酒馆预设，默认应用到角色、剧本、交流、闲聊、地图和以太 API，之后可分别更换。记忆总结使用独立提示词。';
+    element('setup-models').hidden = !connections;
     element('setup-next').textContent = connections
       ? '下一步 · 导入提示词预设 →'
       : '下一步 · 创建角色 →';

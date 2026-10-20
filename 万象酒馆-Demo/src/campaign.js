@@ -44,7 +44,6 @@ export function assignParty(library, index, id) {
   const party = [...library.party];
   if (previous >= 0) [party[index], party[previous]] = [party[previous], party[index]];
   else party[index] = id;
-  if (!party.slice(0, 3).some(Boolean)) throw Error('前场至少需要一名角色');
   library.party = party;
   library.prepared = null;
 }

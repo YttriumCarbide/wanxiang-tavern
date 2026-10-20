@@ -22,6 +22,7 @@ const NAMES = [
   'round',
   'exchange',
   'cast',
+  'combine',
   'heal',
   'shield',
   'victory',
@@ -59,6 +60,7 @@ function gainFor(name) {
   if (name === 'boss-death-charge') return 0.55;
   if (name === 'boss-death-break') return 0.78;
   if (name === 'boss-death-tail') return 0.58;
+  if (name === 'combine') return 0.64;
   if (name.endsWith('-hit')) return 0.78;
   if (name === 'victory' || name === 'defeat') return 0.55;
   if (name === 'gate' || name === 'round') return 0.56;
@@ -67,6 +69,7 @@ function gainFor(name) {
 
 function jitterFor(name) {
   if (UI.has(name)) return 0.015;
+  if (name === 'combine') return 0.01;
   if (name.startsWith('boss-death')) return 0.01;
   if (name.endsWith('-hit')) return 0.04;
   return 0.035;

@@ -47,6 +47,8 @@ export const WORLD_SETTINGS_DEFAULTS = Object.freeze({
   script: [],
   chat: [],
   'quick-chat': [],
+  map: [],
+  creation: [],
   bindings: {},
   depth: 2,
   minActivations: 0,
@@ -170,7 +172,9 @@ export function normalizeWorldbook(raw, fallbackName = '未命名世界书') {
     if (
       !Array.isArray(entry.apiTargets) ||
       new Set(entry.apiTargets).size !== entry.apiTargets.length ||
-      entry.apiTargets.some((kind) => !['character', 'script', 'chat', 'quick-chat'].includes(kind))
+      entry.apiTargets.some(
+        (kind) => !['character', 'script', 'chat', 'quick-chat', 'map', 'creation'].includes(kind),
+      )
     )
       throw Error(
         `条目${uid}.apiTargets只能包含character/script/chat/quick-chat，空数组表示都不发`,
@@ -257,7 +261,15 @@ export function normalizeWorldbook(raw, fallbackName = '未命名世界书') {
 
 export function normalizeWorldSettings(raw = {}) {
   const settings = { ...structuredClone(WORLD_SETTINGS_DEFAULTS), ...structuredClone(raw) };
-  for (const field of ['globalSelect', 'character', 'script', 'chat', 'quick-chat'])
+  for (const field of [
+    'globalSelect',
+    'character',
+    'script',
+    'chat',
+    'quick-chat',
+    'map',
+    'creation',
+  ])
     strings(settings[field], field);
   if (
     !settings.bindings ||

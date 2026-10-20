@@ -43,7 +43,25 @@ test('new output generates each name once while legacy duplicates remain optiona
     {},
     createCharacterReader(),
   ).entry;
-  assert.deepEqual({ ...legacy, id: entry.id, combat: { ...legacy.combat, id: entry.id } }, entry);
+  assert.deepEqual(
+    {
+      ...legacy,
+      id: entry.id,
+      combat: {
+        ...legacy.combat,
+        id: entry.id,
+        ...(legacy.combat.entrySkill
+          ? {
+              entrySkill: {
+                ...legacy.combat.entrySkill,
+                id: entry.combat.entrySkill?.id,
+              },
+            }
+          : {}),
+      },
+    },
+    entry,
+  );
 });
 
 test('Qili passes unchanged and both old and compact responses retain executable combat data through saves', async () => {

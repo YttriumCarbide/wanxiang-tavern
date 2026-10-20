@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="900" viewBox="0 0 600 900">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="45%" r="65%">
+      <stop offset="0%" stop-color="#ffd073" stop-opacity="0.32" />
+      <stop offset="60%" stop-color="#422e16" />
+      <stop offset="100%" stop-color="#1f1508" />
+    </radialGradient>
+    <linearGradient id="metal" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#d99c36" />
+      <stop offset="50%" stop-color="#ffd073" />
+      <stop offset="100%" stop-color="#1f1508" />
+    </linearGradient>
+  </defs>
+  <rect width="600" height="900" fill="#1f1508" />
+  <rect x="20" y="20" width="560" height="860" fill="url(#bg)" rx="16" />
+  <circle cx="300" cy="380" r="230" fill="none" stroke="#d99c36" stroke-width="3" stroke-opacity="0.35" />
+  <circle cx="300" cy="380" r="200" fill="none" stroke="#ffd073" stroke-width="1.5" stroke-dasharray="8 6" stroke-opacity="0.4" />
+  <path d="M70 820V340Q70 100 300 80Q530 100 530 340V820" fill="none" stroke="#d99c36" stroke-opacity="0.3" stroke-width="2.5" />
+  <path d="M60 830H540M100 850H500" stroke="#d99c36" stroke-opacity="0.5" stroke-width="3" />
+  
+      <!-- Broad brass shoulders & torso -->
+      <polygon points="120,380 480,380 430,730 170,730" fill="#5c401e" stroke="#d99c36" stroke-width="6" />
+      <!-- Triangular Head -->
+      <polygon points="300,160 390,320 210,320" fill="#755227" stroke="#ffd073" stroke-width="6" />
+      <!-- Giant Cyclops Eye & Laser core -->
+      <circle cx="300" cy="265" r="34" fill="#1f1508" stroke="#d99c36" stroke-width="5" />
+      <circle cx="300" cy="265" r="18" fill="#ff382e" />
+      <line x1="300" y1="265" x2="300" y2="380" stroke="#ff5c52" stroke-width="4" stroke-dasharray="4 4" />
+      <!-- Brass chest plates -->
+      <polygon points="240,430 360,430 380,550 300,610 220,550" fill="#3b2913" stroke="#ffd073" stroke-width="4" />
+      <!-- Key silhouette in the center -->
+      <path d="M300 480A12 12 0 1 0 300 504A12 12 0 1 0 300 480ZM300 504V550M292 530H300M292 544H300" stroke="#ffd073" stroke-width="4" fill="none" stroke-linecap="round" />
+      <!-- Giant arms -->
+      <rect x="70" y="380" width="60" height="280" fill="#4d3519" stroke="#d99c36" stroke-width="4" rx="8" />
+      <rect x="470" y="380" width="60" height="280" fill="#4d3519" stroke="#d99c36" stroke-width="4" rx="8" />
+    
+</svg>

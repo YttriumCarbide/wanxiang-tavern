@@ -62,6 +62,64 @@
 .swap-options button {
   flex: 1;
 }
+.details-actions-scroll {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+  max-height: calc(100vh - 210px);
+  padding-right: 4px;
+}
+.action-category {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.action-category-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: #8fb8a7;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid #7d9d8722;
+  padding-bottom: 2px;
+  margin-top: 2px;
+}
+.ability-card {
+  width: 100%;
+  text-align: left;
+  border: 1px solid #7d9d8726;
+  background: #07151188;
+  border-radius: 4px;
+  padding: 6px 8px;
+  color: #d0e4dd;
+}
+.ability-card strong {
+  font-size: 12px;
+  font-weight: 500;
+  color: #f0e6cf;
+}
+.ability-card small {
+  float: right;
+  font-size: 11px;
+  color: #7d9d87;
+}
+.ability-card p {
+  margin: 4px 0 0;
+  font-size: 11px;
+  color: #adc4b8;
+  line-height: 1.4;
+}
+.action-empty-note {
+  margin: 0;
+  font-size: 11px;
+  color: #6a8279;
+  font-style: italic;
+  padding: 2px 0;
+}
+.ability.combine-disabled {
+  opacity: 0.55;
+  filter: grayscale(0.4);
+}
 @media (max-width: 1100px) {
   #details {
     padding: 12px;

@@ -20,7 +20,7 @@ export function createOnboarding(context) {
     ['personality', '性格与习惯', 'textarea', 1200],
     ['history', '经历与来历', 'textarea', 1500],
     ['attack', '普通攻击：名字与动作', 'textarea', 800],
-    ['skills', '技能：名字、动作与效果设想', 'textarea', 1500],
+    ['skills', '共两个技能槽：可选择主动技能或被动技能，填写名字、动作与效果', 'textarea', 1500],
     ['notes', '其他设定与补充', 'textarea', 1000],
   ];
   const dialog = document.createElement('dialog');
@@ -41,7 +41,7 @@ export function createOnboarding(context) {
     <div class="creation-workspace">
       <form id="creation-form">
         <div class="creation-fields">
-          ${fields.map(([key, label, tag, max]) => html`<label class="creation-field ${tag === 'input' ? 'short' : ''}">${label}${tag === 'input' ? html`<input name="${key}" ${key === 'age' ? '' : html`maxlength="${max}"`} ${key === 'name' ? 'required autocomplete="off"' : ''} />` : html`<textarea name="${key}" maxlength="${max}" rows="3"></textarea>`}</label>`).join('')}
+          ${fields.map(([key, label, tag, max]) => html`${key === 'skills' ? `<div class="creation-skill-types"><label>技能一<select name="skillType1"><option value="主动">主动技能</option><option value="被动">被动技能</option></select></label><label>技能二<select name="skillType2"><option value="主动">主动技能</option><option value="被动">被动技能</option></select></label></div>` : ''}<label class="creation-field ${tag === 'input' ? 'short' : ''}">${label}${tag === 'input' ? html`<input name="${key}" ${key === 'age' ? '' : html`maxlength="${max}"`} ${key === 'name' ? 'required autocomplete="off"' : ''} />` : html`<textarea name="${key}" maxlength="${max}" rows="3"></textarea>`}</label>`).join('')}
         </div>
         <p class="creation-hint">
           姓名必填，其余可以留给 AI 补全。可以写动作和效果设想，无需填写 JSON。
@@ -120,7 +120,11 @@ export function createOnboarding(context) {
     if (step === 'arrival') {
       if (shown === step) return;
       shown = step;
-      dialogue.show(ARRIVAL_PROSE, () => advance('portal'), true);
+      dialogue.show(
+        ARRIVAL_PROSE.map((text, index) => (index === 0 ? { speaker: '旁白', text } : text)),
+        () => advance('portal'),
+        true,
+      );
       return;
     }
     if (step === 'recruit-dialogue') {
@@ -224,9 +228,11 @@ export function createOnboarding(context) {
     try {
       if (!(await ready()) || session.runtime.disposed) return;
       const values = new FormData($('#creation-form'));
-      const brief = fields
-        .map(([key, label]) => `${label}：${String(values.get(key) || '').trim() || '由AI补全'}`)
-        .join('\n');
+      const brief =
+        `技能槽一：${values.get('skillType1')}；技能槽二：${values.get('skillType2')}。共两个技能，普通攻击独立。\n` +
+        fields
+          .map(([key, label]) => `${label}：${String(values.get(key) || '').trim() || '由AI补全'}`)
+          .join('\n');
       $('#creation-status').textContent =
         '正在生成你的完整设定与技能，请稍候；失败时可查看原始回复并本地修正。';
       $('#creation-cancel').hidden = false;

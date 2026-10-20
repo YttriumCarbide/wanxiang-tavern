@@ -1,3 +1,4 @@
+import { mountLandscapeHost, mountOuterGestures } from './app/display.js';
 import { createApplication } from './app/application.js';
 import { openDatabase, createGameStorage } from './storage/database.js';
 import { createStaticBackend } from './ai/static-backend.js';
@@ -27,6 +28,10 @@ async function enablePortraitWorker() {
 }
 
 export async function startGame() {
+  if (mountLandscapeHost()) {
+    mountOuterGestures();
+    return;
+  }
   // Service-backed browser fixtures opt in explicitly; published HTML never carries this marker.
   if (document.querySelector('meta[name="wanxiang-test-backend"]')?.content === 'local') {
     const application = createApplication();

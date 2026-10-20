@@ -76,7 +76,7 @@ test('compiled novel metadata survives a save without wrappers and display regex
   const restored = restoreLibrary(JSON.parse(JSON.stringify(library)));
   assert.equal(restored.scripts.length, 1);
   assert.deepEqual(restored.scripts[0].story, raw.story);
-  assert.deepEqual(restored.scripts[0].nextHook, raw.data.nextHook);
+  assert.deepEqual(restored.scripts[0].nextHook, { ...raw.data.nextHook, phase: '起' });
   assert(!restored.scripts[0].data);
 });
 

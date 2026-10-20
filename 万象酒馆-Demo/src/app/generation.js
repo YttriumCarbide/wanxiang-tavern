@@ -1,3 +1,7 @@
+import { explorationSpec } from '../exploration.js';
+import { DEFINITIONS } from '../data.js';
+import { routeKey } from '../worlds.js';
+import { nextArcPhase } from '../story-arc.js';
 import { combatTestScript } from '../content/generation-mode.js';
 import { cleanLibraryCharacters } from '../ai/character-cleanup.js';
 import { relevantArchives } from '../archives.js';
@@ -298,7 +302,7 @@ export function createGeneration(context) {
     $('#ai-clear-key').checked = false;
     $('#ai-strictJson').checked = profile.strictJson === true;
     $('#ai-strictJson').disabled = false;
-    $('#ai-summary-context').hidden = !['summary', 'creation'].includes($('#ai-kind').value);
+    $('#ai-summary-context').hidden = !$('#ai-kind').value === 'summary';
     $('#ai-contextSize').value = String(profile.contextSize || 131072);
     presetEditor.syncProfile();
   }
@@ -337,8 +341,7 @@ export function createGeneration(context) {
       data[key] = $(`#ai-${key}`).value;
     data.maxTokens = Number($('#ai-maxTokens').value);
     data.temperature = profiles?.[data.kind]?.temperature ?? null;
-    if (['summary', 'creation'].includes(data.kind))
-      data.contextSize = Number($('#ai-contextSize').value);
+    if (data.kind === 'summary') data.contextSize = Number($('#ai-contextSize').value);
     for (const key of ['jsonMode', 'rememberKey', 'strictJson'])
       data[key] = $(`#ai-${key}`).checked;
     if (data.requestMode === 'browser' && !context.apiClient.staticMode) {
@@ -368,9 +371,16 @@ export function createGeneration(context) {
   }
   function scriptInput() {
     const node = session.journey.selectedNode;
-    const route = node ? library().exploration[node.map] : null;
+    const route = node ? library().exploration[routeKey(node)] : null;
     return {
       visitId: crypto.randomUUID(),
+      storyArc: {
+        phase: nextArcPhase(
+          library()
+            .history.filter((record) => record.complete && (!node || record.map === routeKey(node)))
+            .at(-1)?.nextHook,
+        ),
+      },
       archiveContext: relevantArchives(
         library(),
         [
@@ -382,16 +392,29 @@ export function createGeneration(context) {
         ]
           .filter(Boolean)
           .join('\n'),
-        node?.map || 'ruins',
+        node ? routeKey(node) : 'ruins',
       ),
       previousStories: library()
-        .scripts.filter((book) => !node || book.exploration?.map === node.map)
+        .scripts.filter(
+          (book) => !node || (book.exploration && routeKey(book.exploration) === routeKey(node)),
+        )
         .slice(-3)
         .map((book) => ({ title: book.title, tags: book.tags })),
       brief:
         $('#ai-script-brief').value.trim() ||
         '让故事随旅程逐渐推进，并留下伏笔。文风、视角、节奏与描写方式沿用当前预设。',
-      boss: node ? REGIONS[node.map].boss : session.journey.bossChoice,
+      boss: node
+        ? explorationSpec(node, 4).enemyIds.find(
+            (id) => (node.world?.enemyDefinitions[id] || DEFINITIONS[id])?.boss,
+          ) || REGIONS[node.map].boss
+        : session.journey.bossChoice,
+      ...(node
+        ? {
+            enemyPool: (
+              node.world?.enemyIds || [...REGIONS[node.map].enemies, REGIONS[node.map].boss]
+            ).map((id) => node.world?.enemyDefinitions[id] || DEFINITIONS[id]),
+          }
+        : {}),
       chapter: route ? route.completed + 1 : library().chapter,
       party: party().map(settingOnly),
       protagonistId: library().campaign?.protagonistId || null,
@@ -646,6 +669,7 @@ export function createGeneration(context) {
       session.runtime.mode = 'inn';
       diagnostics.refreshButtons();
       await accept(kind, entry, input, arrivalDialogue);
+      if (kind === 'script') context.audio.play('shield');
       if (
         diagnostics.latest(kind)?.warnings?.some((warning) => warning.path === 'output.repetition')
       )
@@ -930,7 +954,9 @@ export function createGeneration(context) {
           played: [],
           complete: false,
           nextHook: null,
-          ...(book.exploration ? { map: book.exploration.map, nodeId: book.exploration.id } : {}),
+          ...(book.exploration
+            ? { map: routeKey(book.exploration), nodeId: book.exploration.id }
+            : {}),
         });
         save();
       }

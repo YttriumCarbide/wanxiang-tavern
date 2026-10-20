@@ -3,11 +3,13 @@
   "asset": "万象酒馆-走廊.glb",
   "runtime": "assets/corridor.glb",
   "voxel_edge_m": 0.02,
+  "machine_voxel_edge_m": 0.005,
+  "machine_detail_multiplier": 4,
   "resolution": "2 cm watertight voxel surface",
-  "occupied_voxels": 4380626,
-  "box_definitions": 757,
-  "triangles": 9010,
-  "bytes": 574436,
+  "occupied_voxels": 4069311,
+  "box_definitions": 1265,
+  "triangles": 15082,
+  "bytes": 938844,
   "dimensions_cells": [
     190,
     170,
@@ -27,5 +29,5 @@
   "return_door": "tavern hall on the right wall",
   "style": "warm plaster, dark walnut, brass sconces and a wine runner",
   "mesh_cleanup": "single owner volume, hidden-face culling and greedy coplanar merge",
-  "build_seconds": 1.8
+  "build_seconds": 4.8
 }

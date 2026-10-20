@@ -1,66 +1,180 @@
 #void-shop,
 #loot-conflicts {
-  width: min(820px, 90vw);
-  max-height: 86dvh;
+  width: min(860px, calc(100vw - 48px));
+  max-height: calc(100dvh - 48px);
   overflow: auto;
-  background: linear-gradient(145deg, #223b37, #101f21);
-  border: 1px solid #bfa46a;
+  background: radial-gradient(ellipse at top right, #37554444, transparent 70%), #10231f;
+  border: 1px solid #bfa46a88;
   color: #e9dfc4;
-  padding: 26px;
-  border-radius: 18px;
+  padding: 24px;
+  border-radius: 14px;
 }
 #void-shop header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 16px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid #bfa46a33;
+}
+#void-shop header small {
+  letter-spacing: 2px;
+  font-size: 9px;
+  color: #9fbaa9;
 }
 #void-shop h2,
 #loot-conflicts h2 {
   font-weight: 400;
-  letter-spacing: 3px;
+  letter-spacing: 2px;
+  margin: 6px 0 0;
+  font-size: 24px;
 }
-#void-shop small,
-#loot-conflicts p {
-  font-size: 12px;
-  color: #b5c4b5;
-  line-height: 1.7;
+#shop-gold {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-left: auto;
+  color: #dfc78a;
+  font-size: 17px;
+}
+#shop-gold img {
+  width: 26px;
+  height: 26px;
+}
+.shop-layout {
+  display: grid;
+  grid-template-columns: 5fr 4fr;
+  gap: 24px;
+  min-height: 0;
+  padding-top: 20px;
 }
 #shop-items {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-  margin: 20px 0;
+  gap: 9px;
+  max-height: 390px;
+  overflow: auto;
+  align-content: start;
+  padding: 2px;
 }
 #shop-items button {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 10px;
-  padding: 10px;
-  text-align: left;
-  background: #c6af7a0a;
-  border: 1px solid #bfa46a44;
+  justify-content: center;
+  padding: 11px 5px;
+  gap: 7px;
+  border: 1px solid #9aaa7733;
+  border-radius: 8px;
+  background: #07181288;
+  transition:
+    border-color 180ms,
+    background 180ms;
 }
-#shop-items img {
-  width: 64px;
-  height: 64px;
-  flex: none;
+#shop-items button[aria-pressed='true'] {
+  border-color: #dfc78a;
+  background: #dfc78a12;
+  box-shadow: inset 0 0 16px #dfc78a0d;
 }
-#shop-items span {
-  flex: 1;
+#shop-items button > img {
+  width: 40px;
+  height: 40px;
 }
-#shop-items strong,
+#shop-items strong {
+  font-size: 11px;
+  font-weight: 400;
+  text-align: center;
+}
 #shop-items small {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: #dac489;
 }
-#shop-items b {
+#shop-items small img {
+  width: 15px;
+  height: 15px;
+}
+#shop-detail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px 15px;
+  text-align: center;
+  min-width: 0;
+}
+.shop-art {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 160px;
+  height: 160px;
+}
+.shop-art > img {
+  position: relative;
+  width: 94px;
+  height: 94px;
+  filter: drop-shadow(0 0 20px #cfbc7844);
+}
+.shop-orbit {
+  position: absolute;
+  inset: 8px;
+  border: 1px solid #bfa46a44;
+  border-radius: 50%;
+  box-shadow: 0 0 0 10px #bfa46a07;
+  transform: rotateX(35deg);
+}
+#shop-detail h3 {
+  font-size: 22px;
+  font-weight: 400;
+  color: #e3ce97;
+  margin: 15px 0 10px;
+}
+#shop-detail p {
+  color: #b8c4b4;
+  line-height: 1.8;
+  font-size: 13px;
+  margin: 0 0 20px;
+}
+.shop-stock {
+  color: #9fbaa9;
   font-size: 12px;
-  white-space: nowrap;
-  color: #e0c58b;
+  margin-bottom: 18px;
+}
+#shop-detail [data-buy] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-width: 180px;
+  margin-top: auto;
+}
+#shop-detail [data-buy] img {
+  width: 21px;
+  height: 21px;
+}
+#shop-status {
+  display: flex;
+  min-height: 24px;
+  justify-content: center;
+  align-items: center;
+  gap: 7px;
+  color: #e1cf9a;
+  font-size: 12px;
+  margin: 18px 0 0;
+}
+#shop-status img {
+  width: 24px;
+  height: 24px;
+}
+#shop-status b {
+  color: #a0cc9d;
 }
 #void-shop::backdrop,
 #loot-conflicts::backdrop {
   background: #06110ecc;
-  backdrop-filter: blur(4px);
+  backdrop-filter: blur(5px);
 }
 .loot-comparison {
   display: grid;
@@ -82,9 +196,6 @@
   gap: 8px;
 }
 @media (max-width: 620px) {
-  #shop-items {
-    grid-template-columns: 1fr;
-  }
   #void-shop,
   #loot-conflicts {
     padding: 16px;
@@ -92,4 +203,68 @@
   .loot-choices {
     flex-wrap: wrap;
   }
+}
+
+@media (max-height: 500px) {
+  #void-shop {
+    padding: 16px 22px;
+  }
+  #void-shop header {
+    padding-bottom: 10px;
+  }
+  #void-shop h2 {
+    font-size: 20px;
+  }
+  .shop-layout {
+    padding-top: 12px;
+    gap: 18px;
+  }
+  #shop-items {
+    max-height: 220px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  #shop-items button {
+    padding: 8px 4px;
+    gap: 5px;
+  }
+  #shop-items button > img {
+    width: 28px;
+    height: 28px;
+  }
+  .shop-art {
+    width: 90px;
+    height: 90px;
+  }
+  .shop-art > img {
+    width: 60px;
+    height: 60px;
+  }
+  #shop-detail h3 {
+    font-size: 18px;
+    margin-top: 8px;
+  }
+  #shop-detail p {
+    margin-bottom: 8px;
+    font-size: 12px;
+  }
+  .shop-stock {
+    margin-bottom: 8px;
+  }
+}
+
+#shop-categories {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 18px;
+  flex-wrap: wrap;
+}
+#shop-categories button {
+  padding: 7px 15px;
+  font-size: 12px;
+}
+#shop-categories button[aria-pressed='true'] {
+  color: #ecdfb1;
+  background: #56613b;
+  border-color: #cdb579;
 }

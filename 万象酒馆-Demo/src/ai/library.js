@@ -1,3 +1,5 @@
+import { restoreWorlds } from '../worlds.js';
+import { EMBLEMS, EMBLEM_ID, OVERLOAD_EMBLEM_ID } from '../emblems.js';
 import { grownCombat, restoreGrowth } from '../growth.js';
 import { restoreEquipment, applyEquipment, equippedDefinitions } from '../equipment.js';
 import { ENCOUNTER_COUNT } from '../content/journey-rules.js';
@@ -14,6 +16,7 @@ import { newExploration, restoreExploration } from '../exploration.js';
 import { restoreInventory } from '../rewards.js';
 import { restoredSummary, conversationText } from '../memory.js';
 import { restoreArchives, hydrateArchiveMaps } from '../archives.js';
+import { defaultProtagonist } from '../content/qingyuan.js';
 
 export function newLibrary() {
   return createLibrary(loadCustomPortraits());
@@ -33,8 +36,15 @@ function createLibrary(customPortraits) {
     rewardClaims: [],
     experienceClaims: [],
     equipment: restoreEquipment(),
+    worlds: [],
+    emblems: [],
     refinedNpcs: [],
-    progression: { settlements: [], pandoraJoined: false, swapLesson: 'none' },
+    progression: {
+      settlements: [],
+      pandoraJoined: false,
+      swapLesson: 'none',
+      emblemLesson: 'none',
+    },
     exploration: newExploration(Math.floor(Math.random() * 4294967296)),
     characters: HEROES.map((hero) => {
       const combat = structuredClone(hero);
@@ -111,7 +121,38 @@ export function compileRoster(library) {
       const combat = applyEquipment(grownCombat(entry), equippedDefinitions(library, entry));
       const portrait = savedPortrait(customPortraits, entry);
       if (portrait) combat.customPortrait = portrait;
-      return [slot.id, { ...combat, id: slot.id }];
+      const emblemId = EMBLEMS[entry.emblemId] ? entry.emblemId : null;
+      if (emblemId === OVERLOAD_EMBLEM_ID) {
+        combat.mp = Math.round(combat.mp * 1.5);
+        combat.hp = Math.round(combat.hp + combat.mp * 0.25);
+        combat._overloadApplied = true;
+      }
+      if (!combat.entrySkill) {
+        if (entry.setting?.entrySkill) {
+          combat.entrySkill = {
+            id: `entry-${entry.id}`,
+            name: entry.setting.entrySkill.name,
+            text: entry.setting.entrySkill.description,
+            target: 'opposite',
+            effects: [{ type: 'damage', value: 8 }],
+          };
+        } else if (entry.setting?.name === '青缘' || entry.id === 'character-qingyuan') {
+          combat.entrySkill = structuredClone(defaultProtagonist().combat.entrySkill);
+        } else {
+          const fallbackHero = HEROES.find((h) => h.id === entry.archetype) || HEROES[0];
+          if (fallbackHero?.entrySkill) {
+            combat.entrySkill = structuredClone(fallbackHero.entrySkill);
+          }
+        }
+      }
+      return [
+        slot.id,
+        {
+          ...combat,
+          id: slot.id,
+          ...(emblemId ? { emblemId } : {}),
+        },
+      ];
     }),
   );
 }
@@ -124,7 +165,10 @@ export function restoreLibrary(value) {
     library.characters = [];
     library.party = Array(6).fill(null);
   }
-  if (value.exploration) library.exploration = restoreExploration(value.exploration);
+  library.worlds = restoreWorlds(value.worlds);
+  library.emblems = Array.isArray(value.emblems) ? value.emblems.filter((id) => EMBLEMS[id]) : [];
+  if (value.exploration)
+    library.exploration = restoreExploration(value.exploration, 17371, library.worlds);
   library.archives = restoreArchives(value.archives);
   library.relationships = structuredClone(value.relationships || {});
   library.tavernChat = (Array.isArray(value.tavernChat) ? value.tavernChat : [])
@@ -185,7 +229,12 @@ export function restoreLibrary(value) {
       value.progression?.pandoraJoined === true ||
       ((!campaign || value.campaign.version >= 3) &&
         value.characters?.some((member) => member.id === 'official-pandora') === true),
-    swapLesson: ['pending', 'active', 'done'].includes(value.progression?.swapLesson)
+    emblemLesson: ['summon', 'equip', 'charge', 'combine', 'skill', 'done'].includes(
+      value.progression?.emblemLesson,
+    )
+      ? value.progression.emblemLesson
+      : 'none',
+    swapLesson: ['pending', 'active', 'retreat', 'done'].includes(value.progression?.swapLesson)
       ? value.progression.swapLesson
       : 'none',
   };
@@ -240,6 +289,7 @@ export function restoreLibrary(value) {
         {
           schemaVersion: entry.setting?.worldbook ? 2 : 1,
           setting: entry.setting,
+          ...(entry.levelUpLines ? { levelUpLines: entry.levelUpLines } : {}),
           data: { ...entry.combat, archetype: entry.archetype },
         },
         entry.id,
@@ -256,6 +306,13 @@ export function restoreLibrary(value) {
           .filter((tag) => typeof tag === 'string' && tag.length <= 60)
           .slice(0, 30);
       if (entry.display) restored.display = structuredClone(entry.display);
+      if (
+        (restored.setting?.name === '青缘' || restored.id === 'character-qingyuan') &&
+        (!restored.combat.entrySkill || !restored.setting.entrySkill)
+      ) {
+        restored.combat.entrySkill ||= structuredClone(defaultProtagonist().combat.entrySkill);
+        restored.setting.entrySkill ||= structuredClone(defaultProtagonist().setting.entrySkill);
+      }
       library.characters.push(restored);
     } catch {
       /* Ignore damaged local entries. */
@@ -344,6 +401,11 @@ export function restoreLibrary(value) {
         .slice(0, 3)
         .map((id) => (library.equipment.owned.some((item) => item.id === id) ? id : null));
   }
+  const emblemWearer = value.characters?.find((entry) => entry.emblemId === EMBLEM_ID);
+  if (library.emblems.includes(EMBLEM_ID)) {
+    const wearer = library.characters.find((entry) => entry.id === emblemWearer?.id);
+    if (wearer) wearer.emblemId = EMBLEM_ID;
+  }
   const equipped = new Set();
   for (const member of library.characters)
     if (member.equipment)
@@ -358,6 +420,8 @@ export function restoreLibrary(value) {
         book.id === value.prepared &&
         (book.story || book.scenes).length === ENCOUNTER_COUNT &&
         (!book.exploration ||
+          book.exploration.world ||
+          book.exploration.sequence >= 6 ||
           book.exploration.sequence < REGIONS[book.exploration.map]?.sites.length),
     ) && !(campaign && value.campaign.version < 3)
       ? value.prepared

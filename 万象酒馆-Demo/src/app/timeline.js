@@ -77,9 +77,9 @@ export function createTimeline(context) {
       el.innerHTML = html`<span class="action-number">${opening ? '◇' : a.start + 1}</span>
         <div>
           <b
-            >${skip ? '× ' : bad ? '! ' : ''}${a.kind === 'item' ? ITEMS[a.item].name : a.kind === 'skill' ? context.roster.ability(a.actor, a.skill).name : a.kind === 'swap' ? '换入' : '交换'}</b
+            >${skip ? '× ' : bad ? '! ' : ''}${a.kind === 'item' ? ITEMS[a.item].name : a.kind === 'skill' ? context.roster.ability(a.actor, a.skill).name : a.kind === 'engage' ? `结合${a.followUp ? ' · ' + context.roster.ability(a.actor, a.followUp.skill).name : ''}` : a.kind === 'swap' ? (session.battle.state.units[a.incoming]?.entryReady && context.roster.get(a.incoming)?.entrySkill?.name ? `换入 · ${context.roster.get(a.incoming).entrySkill.name}` : '换入') : '交换'}</b
           ><small
-            >${a.kind === 'item' ? context.roster.get(a.target).name : a.kind === 'skill' ? context.roster.get(a.actor).name : a.kind === 'swap' ? context.roster.get(a.incoming).name : '阵型'}
+            >${a.kind === 'item' ? context.roster.get(a.target).name : ['skill', 'engage'].includes(a.kind) ? context.roster.get(a.actor).name : a.kind === 'swap' ? context.roster.get(a.incoming).name : '阵型'}
             · ${a.ap} AP</small
           >
         </div>
@@ -94,6 +94,11 @@ export function createTimeline(context) {
       el.onclick = (e) => {
         if (e.target.closest('[data-remove]')) return;
         context.selection.clearSelection();
+        if (a.kind === 'engage') {
+          session.selection.selected = a.actor;
+          session.selection.selectedCell = a.start;
+          session.selection.interactionStep = 'skill';
+        }
         context.renderer.render();
       };
       el.ondragstart = (e) =>

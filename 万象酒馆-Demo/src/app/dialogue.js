@@ -4,7 +4,7 @@ export function createDialogue(events, id = 'guide-dialogue') {
   panel.id = id;
   panel.className = 'guide-dialogue';
   panel.innerHTML =
-    '<img class="guide-portrait" hidden alt="" /><div class="dialogue-body"><small id="dialogue-speaker">伊蒂丝</small><p id="dialogue-text"></p><button id="dialogue-next">点击展开全文</button></div>';
+    '<div class="dialogue-bonuses"></div><img class="guide-portrait" hidden alt="" /><div class="dialogue-body"><small id="dialogue-speaker">伊蒂丝</small><p id="dialogue-text"></p><button id="dialogue-next">点击展开全文</button></div>';
   if (id !== 'guide-dialogue') {
     for (const element of panel.querySelectorAll('[id]')) element.id = id + '-' + element.id;
   }
@@ -26,6 +26,22 @@ export function createDialogue(events, id = 'guide-dialogue') {
     stop();
     count = 0;
     const line = lines[index];
+    const bonuses = panel.querySelector('.dialogue-bonuses');
+    bonuses.replaceChildren(
+      ...(line.bonuses || []).map((bonus, index) => {
+        const badge = document.createElement('span');
+        badge.textContent = bonus;
+        badge.animate(
+          [
+            { opacity: 0, translate: '0 15px' },
+            { opacity: 1, translate: '0 0' },
+          ],
+          { duration: 380, delay: index * 100, fill: 'backwards' },
+        );
+        return badge;
+      }),
+    );
+    bonuses.hidden = !line.bonuses?.length;
     const opening = panel.classList.contains('opening-prose');
     panel.dataset.speaker = line.speaker;
     part('dialogue-speaker').textContent = opening ? line.speaker || '白光之后' : line.speaker;

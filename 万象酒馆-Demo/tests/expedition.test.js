@@ -1,8 +1,10 @@
+import { newLibrary } from '../src/ai/library.js';
+import { buyItem } from '../src/content/items.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { BOSSES, HEROES, encounterSpec } from '../src/data.js';
 import { preview, advance, intent, newEncounter, campRest } from '../src/engine.js';
-import { newExpedition, beginEncounter, completeEncounter } from '../src/expedition.js';
+import { newExpedition, beginEncounter, completeEncounter, chooseRest } from '../src/expedition.js';
 import { buildPlan } from './planner.js';
 test('four normal encounters then a final boss; every original art theme remains reachable across routes', () => {
   for (const boss of BOSSES) {
@@ -13,13 +15,14 @@ test('four normal encounters then a final boss; every original art theme remains
       assert(specs.some((spec) => spec.map === map));
   }
 });
-test('camp restores life and revives dying companions without restoring mana', () => {
+test('ordinary battle carry preserves dying companions and mana; explicit sleep restores life', () => {
   const s = newEncounter(encounterSpec(0));
   s.units.aegis.hp = 0;
   s.units.aegis.mp = 3;
   s.units.morrow.mp = 2;
   const r = campRest(s);
-  assert.equal(r.state.units.aegis.hp, 17);
+  assert.equal(r.state.units.aegis.hp, 0);
+  assert.equal(campRest(s, 'sleep').state.units.aegis.hp, Math.floor(s.units.aegis.maxHp * 0.4));
   assert.equal(r.state.units.aegis.mp, 3);
   assert.equal(r.state.units.morrow.mp, 2);
   assert.equal(s.units.aegis.hp, 0);
@@ -63,8 +66,13 @@ for (const boss of BOSSES)
   test(`full five-encounter expedition can defeat ${boss.name}`, () => {
     const trip = newExpedition(boss.id),
       records = [];
+    const supplies = newLibrary();
+    supplies.inventory.gold = 200;
+    for (let count = 0; count < 4; count++) assert(buyItem(supplies, 'fine-health-potion').ok);
+    assert(buyItem(supplies, 'calamity-scroll').ok);
     for (let room = 0; room < 5; room++) {
       let s = beginEncounter(trip);
+      if (room === 0) s.items = structuredClone(supplies.inventory.items);
       for (let turn = 0; turn < 35 && !['victory', 'defeat'].includes(s.phase); turn++) {
         const plan = buildPlan(s),
           r = preview(s, plan);
@@ -75,6 +83,7 @@ for (const boss of BOSSES)
       const mana = HEROES.map((h) => s.units[h.id].mp);
       records.push(s.round);
       const result = completeEncounter(trip, s);
+      if (trip.restPending) chooseRest(trip, 'sleep');
       if (!result.complete) {
         const next = beginEncounter(trip);
         assert.deepEqual(

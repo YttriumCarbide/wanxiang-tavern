@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="900" viewBox="0 0 600 900">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="45%" r="65%">
+      <stop offset="0%" stop-color="#c58af5" stop-opacity="0.32" />
+      <stop offset="60%" stop-color="#21132b" />
+      <stop offset="100%" stop-color="#0b060f" />
+    </radialGradient>
+    <linearGradient id="metal" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#7f4da6" />
+      <stop offset="50%" stop-color="#c58af5" />
+      <stop offset="100%" stop-color="#0b060f" />
+    </linearGradient>
+  </defs>
+  <rect width="600" height="900" fill="#0b060f" />
+  <rect x="20" y="20" width="560" height="860" fill="url(#bg)" rx="16" />
+  <circle cx="300" cy="380" r="230" fill="none" stroke="#7f4da6" stroke-width="3" stroke-opacity="0.35" />
+  <circle cx="300" cy="380" r="200" fill="none" stroke="#c58af5" stroke-width="1.5" stroke-dasharray="8 6" stroke-opacity="0.4" />
+  <path d="M70 820V340Q70 100 300 80Q530 100 530 340V820" fill="none" stroke="#7f4da6" stroke-opacity="0.3" stroke-width="2.5" />
+  <path d="M60 830H540M100 850H500" stroke="#7f4da6" stroke-opacity="0.5" stroke-width="3" />
+  
+      <!-- Multi-legged eldritch tick / parasite -->
+      <circle cx="300" cy="440" r="90" fill="#2d173d" stroke="#7f4da6" stroke-width="5" />
+      <!-- Needle proboscis -->
+      <polygon points="300,260 315,360 285,360" fill="#c58af5" />
+      <!-- Many needle legs -->
+      <path d="M220 400L130 360L90 420" stroke="#7f4da6" stroke-width="6" fill="none" stroke-linecap="round" />
+      <path d="M210 460L120 470L80 540" stroke="#7f4da6" stroke-width="6" fill="none" stroke-linecap="round" />
+      <path d="M230 520L140 580L110 660" stroke="#7f4da6" stroke-width="6" fill="none" stroke-linecap="round" />
+      <path d="M380 400L470 360L510 420" stroke="#7f4da6" stroke-width="6" fill="none" stroke-linecap="round" />
+      <path d="M390 460L480 470L520 540" stroke="#7f4da6" stroke-width="6" fill="none" stroke-linecap="round" />
+      <path d="M370 520L460 580L490 660" stroke="#7f4da6" stroke-width="6" fill="none" stroke-linecap="round" />
+      <!-- Glowing back sacs -->
+      <circle cx="270" cy="440" r="14" fill="#ff3877" />
+      <circle cx="330" cy="440" r="14" fill="#ff3877" />
+      <circle cx="300" cy="490" r="18" fill="#9947ff" />
+    
+</svg>

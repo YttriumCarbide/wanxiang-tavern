@@ -1,6 +1,7 @@
 /**
  * Explicit controller ports; no module globals or circular ES module imports.
  * @typedef {Object} AppContext
+ * @property {ReturnType<typeof import('./emblems.js').createEmblems>} emblems
  * @property {Storage|ReturnType<typeof import('../storage/database.js').createGameStorage>} storage
  * @property {ReturnType<typeof import('../storage/checkpoint.js').createCheckpoint>} checkpoint
  * @property {ReturnType<typeof import('../ai/api-client.js').createApiClient>} apiClient
@@ -13,6 +14,7 @@
  * @property {ReturnType<typeof import('./destinations.js').createDestinations>} destinations
  * @property {ReturnType<typeof import('./shell.js').createShell>} shell
  * @property {ReturnType<typeof import('./journey.js').createJourney>} journey
+ * @property {ReturnType<typeof import('./settlement.js').createSettlement>} settlement
  * @property {ReturnType<typeof import('./selection.js').createSelection>} selection
  * @property {ReturnType<typeof import('./planning.js').createPlanning>} planning
  * @property {ReturnType<typeof import('./details.js').createDetails>} details

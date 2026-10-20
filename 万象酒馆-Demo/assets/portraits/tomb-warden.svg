@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="900" viewBox="0 0 600 900">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="45%" r="65%">
+      <stop offset="0%" stop-color="#b9a5d6" stop-opacity="0.32" />
+      <stop offset="60%" stop-color="#262130" />
+      <stop offset="100%" stop-color="#100c17" />
+    </radialGradient>
+    <linearGradient id="metal" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#836f9e" />
+      <stop offset="50%" stop-color="#b9a5d6" />
+      <stop offset="100%" stop-color="#100c17" />
+    </linearGradient>
+  </defs>
+  <rect width="600" height="900" fill="#100c17" />
+  <rect x="20" y="20" width="560" height="860" fill="url(#bg)" rx="16" />
+  <circle cx="300" cy="380" r="230" fill="none" stroke="#836f9e" stroke-width="3" stroke-opacity="0.35" />
+  <circle cx="300" cy="380" r="200" fill="none" stroke="#b9a5d6" stroke-width="1.5" stroke-dasharray="8 6" stroke-opacity="0.4" />
+  <path d="M70 820V340Q70 100 300 80Q530 100 530 340V820" fill="none" stroke="#836f9e" stroke-opacity="0.3" stroke-width="2.5" />
+  <path d="M60 830H540M100 850H500" stroke="#836f9e" stroke-opacity="0.5" stroke-width="3" />
+  
+      <!-- Tall Runed Tomb Warden Statue -->
+      <polygon points="200,280 400,280 430,720 170,720" fill="#3a304a" stroke="#836f9e" stroke-width="6" />
+      <!-- Head with Nemes-like Headdress -->
+      <polygon points="240,280 360,280 380,180 220,180" fill="#4d3f63" stroke="#b9a5d6" stroke-width="4" />
+      <line x1="260" y1="230" x2="340" y2="230" stroke="#b9a5d6" stroke-width="6" />
+      <!-- Glowing hieroglyphs on chest -->
+      <circle cx="300" cy="420" r="26" fill="#100c17" stroke="#b9a5d6" stroke-width="3" />
+      <line x1="300" y1="360" x2="300" y2="600" stroke="#b9a5d6" stroke-width="4" stroke-dasharray="10 8" />
+      <rect x="230" y="490" width="140" height="15" fill="#836f9e" />
+      <rect x="250" y="540" width="100" height="15" fill="#836f9e" />
+    
+</svg>

@@ -1,3 +1,5 @@
+import { isEndless, validateEncounters } from '../../worlds.js';
+import { arcFor } from '../../story-arc.js';
 import { generationDiagnostic } from '../diagnostic.js';
 export { generationDiagnostic, redactDiagnostic } from '../diagnostic.js';
 import { generationNumbers, restoreGrowth } from '../../growth.js';
@@ -8,6 +10,7 @@ import { characterOutputSchema, characterInputSchema } from '../character-schema
 import { scriptInputSchema } from '../script-schema.js';
 import { scriptProseReport } from '../script-prose.js';
 import { outputSchemaIssues } from '../schema-check.js';
+import { normalizeCharacterPersonality } from '../character-setting.js';
 
 function location(text, offset) {
   const lines = text.slice(0, offset).split('\n');
@@ -117,6 +120,16 @@ export function readGenerationResult(kind, rawText, input, readCharacter = parse
     if (diagnostic.issues.length)
       throw Error(`生成格式不符：${diagnostic.issues[0].path} ${diagnostic.issues[0].message}`);
     diagnostic.stage = 'rules';
+    if (kind === 'character' && typeof raw.setting.personality !== 'string') {
+      const before = JSON.stringify(raw.setting.personality);
+      raw.setting.personality = normalizeCharacterPersonality(raw.setting.personality);
+      diagnostic.repairs.push({
+        path: 'character.setting.personality',
+        before,
+        message: '将性格的name/description对象合并为文字，保留名称与完整描述',
+      });
+      diagnostic.candidateText = JSON.stringify(raw, null, 2);
+    }
     const id = `${kind}-${crypto.randomUUID()}`;
     const entry =
       kind === 'character'
@@ -126,6 +139,12 @@ export function readGenerationResult(kind, rawText, input, readCharacter = parse
       const seed = restoreGrowth(null, input.rollId || input.brief || entry.setting.name).seed;
       entry.growth = restoreGrowth({ rarity: generationNumbers(input).rarity, seed }, entry.id);
       if (input.purpose === 'protagonist') entry.combat.limit = 2;
+    }
+    if (kind === 'script') {
+      if (isEndless(input.exploration))
+        entry.encounters = validateEncounters(entry.encounters, input.exploration);
+      const phase = arcFor(input).phase;
+      entry.nextHook.phase = phase;
     }
     if (kind === 'script')
       entry.items = resolveItemReferences(entry.items || [], input.archiveContext?.items || []);

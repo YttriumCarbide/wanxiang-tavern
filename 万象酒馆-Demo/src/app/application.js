@@ -1,3 +1,5 @@
+import { createEmblems } from './emblems.js';
+import { mountDisplay } from './display.js';
 import { createCheckpoint } from '../storage/checkpoint.js';
 import { createApiClient } from '../ai/api-client.js';
 import { createShop } from './shop.js';
@@ -32,6 +34,7 @@ import { createPresetExtensions } from './preset-extensions.js';
 import { createSummoning } from './summoning.js';
 import { createMemory } from './memory.js';
 import { createEquipment } from './equipment.js';
+import { createSettlement } from './settlement.js';
 import { createCompanionEvents } from './companion-events.js';
 
 /** Composition root: wiring only, with one explicit application lifetime. */
@@ -71,10 +74,15 @@ export function createApplication({
   context.shop = createShop(context);
   context.lootConflicts = createLootConflicts(context);
   context.equipment = createEquipment(context);
+  context.emblems = createEmblems(context);
   context.companionEvents = createCompanionEvents(context);
+  context.settlement = createSettlement(context);
 
   const records = createRecords(context);
+  for (const field of document.querySelectorAll('input, textarea, form'))
+    field.setAttribute('autocomplete', 'off');
   mountInput(context);
+  mountDisplay(context);
   const disposeTooltips = mountTooltips();
   context.checkpoint = createCheckpoint(context);
   const checkpoint = context.checkpoint.pending();
@@ -106,6 +114,8 @@ export function createApplication({
     context.lootConflicts.dispose();
     context.equipment.dispose();
     context.companionEvents.dispose();
+    context.emblems.dispose();
+    context.settlement.dispose();
     context.summoning.dispose();
     context.chat.dispose();
     context.memory.dispose();

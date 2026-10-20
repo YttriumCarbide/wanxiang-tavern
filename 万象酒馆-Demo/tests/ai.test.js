@@ -173,6 +173,7 @@ test('local API proxies generation, keeps keys private and rejects foreign origi
       baseUrl: 'https://example.com/v1',
       model: 'mock',
       apiKey: 'private-test-key',
+      rememberKey: false,
       jsonMode: true,
       tokenField: 'max_tokens',
       temperature: null,

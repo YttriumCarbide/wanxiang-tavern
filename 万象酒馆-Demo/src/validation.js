@@ -184,10 +184,20 @@ export function assertGameData() {
 
 /** Structural checks run once; temporal checks (mana, formation, dying) remain in simulation. */
 export function validateAction(state, action, seen = new Set()) {
-  if (!action || !['skill', 'swap', 'reposition', 'item'].includes(action.kind))
+  if (!action || !['skill', 'swap', 'reposition', 'item', 'engage'].includes(action.kind))
     return '行动类型无效';
   if (typeof action.id !== 'string' || !action.id || seen.has(action.id)) return '行动ID缺失或重复';
   if (!integer(action.start)) return '时间位置无效';
+  if (action.kind === 'engage') {
+    if (state.units[action.actor]?.side !== 'hero' || !definition(state, action.actor)?.emblemId)
+      return '结合角色没有装备纹章士';
+    if (!action.followUp) return action.ap === 1 ? null : '结合标记占据一个时间格';
+    return validateAction(
+      state,
+      { ...action, ...action.followUp, kind: 'skill', actor: action.actor },
+      seen,
+    );
+  }
   if (action.kind === 'item') {
     const item = ITEMS[action.item];
     if (!item || action.ap !== 1) return '道具与AP无效';
@@ -198,7 +208,11 @@ export function validateAction(state, action, seen = new Set()) {
     if (!slot(action.slot)) return '换入位置无效';
     if (state.units[action.incoming]?.side !== 'hero') return '换入角色无效';
   }
-  if (action.kind === 'reposition' && (!slot(action.a) || !slot(action.b) || action.a === action.b))
+  if (
+    action.kind === 'reposition' &&
+    (![action.a, action.b].every((value) => Number.isInteger(value) && value >= 0 && value < 6) ||
+      action.a === action.b)
+  )
     return '交换位置无效';
   if (action.kind !== 'skill') return action.ap === 1 ? null : '交换必须消耗1 AP';
   if (!definition(state, action.actor) || state.units[action.actor]?.side !== 'hero')

@@ -92,7 +92,7 @@ export async function explorationJourneyChecks({ browser, baseURL, output }) {
     await page.reload();
     for (const [turn, map] of ['forest', 'frost', 'forge', 'tide', 'ruins', 'forest'].entries()) {
       await openGate();
-      assert.equal(await page.locator('#destination-regions [data-region]').count(), 13);
+      assert.equal(await page.locator('#destination-regions [data-region]').count(), 5);
       assert.equal(calls.length, 0, 'Combat testing must not request the script API');
       await page.locator(`#destination-regions button[data-region="${map}"]`).click();
       await page.locator('#destination-region-confirm').click();
@@ -172,12 +172,18 @@ export async function explorationJourneyChecks({ browser, baseURL, output }) {
           }
 
           assert.equal((await page.evaluate(() => window.demo.getState())).phase, 'victory');
+          while (await page.locator('#level-dialogue').isVisible())
+            await page.locator('#level-dialogue button').click();
           await page.locator('#result').waitFor({ state: 'visible' });
           const afterRoom = await page.evaluate(() => window.demo.getExploration());
           assert.equal(afterRoom.forest.completed, room === 4 ? 1 : 0);
           if (room < 4) {
             assert(afterRoom.forest.frontier.some((node) => node.id === selected.id));
             await page.locator('#continue').click();
+            if (room === 2) {
+              await page.locator('[data-rest="sleep"]').click();
+              await page.locator('#rest-continue').click();
+            }
             await page.waitForFunction(
               (room) =>
                 window.demo.getState().encounter === room + 1 &&

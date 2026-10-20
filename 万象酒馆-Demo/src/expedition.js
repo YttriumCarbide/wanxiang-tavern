@@ -20,6 +20,7 @@ export function currentEncounterSpec(expedition, index = expedition.index) {
 }
 export function beginEncounter(expedition) {
   if (expedition.status !== 'active') throw Error('Expedition already finished');
+  if (expedition.restPending) throw Error('请先选择睡眠或用餐');
   return newEncounter(
     currentEncounterSpec(expedition),
     expedition.carried,
@@ -58,6 +59,7 @@ export function completeEncounter(expedition, state) {
   const rest = campRest(state);
   expedition.carried = rest.state;
   expedition.index++;
+  if (state.encounter === 2) expedition.restPending = true;
   return {
     complete: false,
     rewards,
@@ -65,4 +67,15 @@ export function completeEncounter(expedition, state) {
     changes: rest.changes,
     next: currentEncounterSpec(expedition),
   };
+}
+
+/** A single choice after battle three; the returned engine changes drive every recovery animation. */
+export function chooseRest(expedition, choice) {
+  if (!expedition.restPending || !expedition.carried || expedition.index !== 3)
+    throw Error('当前不能休整');
+  const result = campRest(expedition.carried, choice);
+  expedition.carried = result.state;
+  expedition.restPending = false;
+  expedition.restChoice = choice;
+  return result.changes;
 }

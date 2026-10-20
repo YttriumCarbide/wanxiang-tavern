@@ -1,5 +1,6 @@
+import { ITEMS } from '../src/content/items.js';
 import { abilityFor, definitionsFor, heroesFor } from '../src/catalog.js';
-import { preview, getEnemies, makeAction, makeSwap } from '../src/engine.js';
+import { preview, getEnemies, makeAction, makeSwap, makeItem } from '../src/engine.js';
 function score(result) {
   let n = 0;
   for (const u of Object.values(result.final.units)) {
@@ -58,6 +59,14 @@ export function buildPlan(s) {
           const a = makeSwap(incoming, slot, start),
             p = preview(s, [...plan, a]);
           if (p.valid) candidates.push({ a, p, score: score(p) });
+        }
+      }
+      for (const item of Object.values(ITEMS).filter((item) => r.final.items[item.id] > 0)) {
+        const ids = item.target === 'enemy' ? s.enemyIds : beforeAction.formation;
+        for (const target of ids.filter((id) => beforeAction.units[id]?.hp > 0)) {
+          const a = makeItem(item.id, target, start);
+          const p = preview(s, [...plan, a]);
+          if (p.valid) candidates.push({ a, p, score: score(p) - 1 });
         }
       }
       for (const actor of r.final.formation.slice(0, 3).filter(Boolean)) {

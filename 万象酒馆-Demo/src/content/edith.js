@@ -32,13 +32,23 @@ export const EDITH = {
       mp: 0,
       hp: 6,
       target: 'enemy',
-      text: '消耗6生命，回复自身8法力，再以银色单刃剑对一名敌人造成12伤害。生命消耗不受护盾、铁皮减免，生命必须大于6才能释放。',
+      text: '消耗6生命，回复自身8法力，对一名敌人造成12伤害。',
       effects: [
         { type: 'selfMana', value: 8 },
         { type: 'damage', value: 12 },
       ],
     },
   ],
+  entrySkill: {
+    id: 'gravity-singularity',
+    name: '引力奇点',
+    text: '上场时对所有敌方单位造成2点伤害并附加1层虚弱。',
+    target: 'allEnemies',
+    effects: [
+      { type: 'damage', value: 2 },
+      { type: 'buff', buff: 'weak', value: 1 },
+    ],
+  },
 };
 
 export const EDITH_SETTING = {
@@ -73,4 +83,9 @@ export const EDITH_SETTING = {
         '消耗自身生命，将辰砂般的暗红微光收束为法力；银色单刃剑随之划出犀利斩击，明暗交错的星月光痕掠向敌人。',
     },
   ],
+  entrySkill: {
+    name: '引力奇点',
+    description:
+      '踏入前场时引动周身微缩重力场，引力波骤然扩散形成奇点，对所有敌方单位造成冲击并使其发力迟滞。',
+  },
 };

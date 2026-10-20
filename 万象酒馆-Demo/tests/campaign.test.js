@@ -7,7 +7,7 @@ import { characterDocument } from './fixtures/ai.js';
 import { newEncounter, preview, advance, makeAction, makeReposition } from '../src/engine.js';
 import { heroesFor } from '../src/catalog.js';
 import { tutorialSpec } from '../src/content/tutorial.js';
-import { newExpedition, beginEncounter, completeEncounter } from '../src/expedition.js';
+import { newExpedition, beginEncounter, completeEncounter, chooseRest } from '../src/expedition.js';
 import { explorationSpec } from '../src/exploration.js';
 import { generationInput } from '../server/prompts.mjs';
 import { debrisRandom, debrisShape } from '../src/voxel-debris.js';
@@ -99,6 +99,7 @@ test('tutorial descriptors, AI reference and five encounter progression share th
     const beforeMp = state.units.aegis.mp;
     state.phase = 'victory';
     const result = completeEncounter(expedition, state);
+    if (expedition.restPending) chooseRest(expedition, 'sleep');
     assert.equal(result.complete, index === 4);
     if (index < 4) assert.equal(expedition.carried.units.aegis.mp, beforeMp);
   }

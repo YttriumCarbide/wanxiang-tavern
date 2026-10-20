@@ -42,6 +42,19 @@ export function characterGameReference() {
       weapon: hero.weapon,
       note: '仅选当前立绘与色板，不强迫原世界职业相同',
     })),
+    entrySkill: {
+      rule: '每个角色都必须有且仅有一个专属入场技（必填，包括主角与召唤角色）',
+      meaning: '在后排待满一个整回合后换入前排自动触发，不消耗额外AP或行动点',
+      targets: {
+        opposite: '正对位的敌方单位（推荐剑士/刺客精准破阵打击）',
+        lowestEnemy: '生命最低的敌方单位（推荐游侠/刺客残血斩杀）',
+        lowestAlly: '生命比例最低的友方单位（推荐医护战地急救）',
+        allEnemies: '所有敌方单位（大范围压制、虚弱或迟缓）',
+        allAllies: '所有友方单位（全员护盾或全员回血）',
+        self: '自己（换入时自身强化或获得护盾）',
+      },
+      effects: '1~3项效果（damage/heal/shield/buff/selfShield等）',
+    },
     activeEffects: {
       count: [1, 4],
       damage: '对目标造成基础伤害，value整数1～32',

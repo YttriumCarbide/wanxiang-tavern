@@ -1,3 +1,4 @@
+import { worldFixture } from '../fixtures/multiverse.js';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
@@ -139,7 +140,13 @@ export async function staticChecks({ browser, output }) {
     assert.equal(await page.locator('#new-game').isVisible(), false);
     assert.equal(await page.locator('#ai-promptProcessing').inputValue(), 'strict');
     await page.locator('#ai-baseUrl').fill('https://upstream.invalid/v1');
-    await page.locator('#ai-model').fill('fixture-model');
+    await page.locator('#ai-key').fill('STATIC_FIXTURE_KEY');
+    await page.locator('#setup-models').click();
+    await page.locator('#ai-model-list').waitFor({ state: 'visible' });
+    assert.deepEqual(await page.locator('#ai-model-list option').allTextContents(), [
+      'fixture-model',
+    ]);
+    await page.locator('#ai-model-list').selectOption('fixture-model');
     await page.locator('#ai-key').fill('STATIC_FIXTURE_KEY');
     await page.locator('#ai-rememberKey').check();
     await page.locator('#api-preset-name').fill('首次配置连接');
@@ -147,10 +154,10 @@ export async function staticChecks({ browser, output }) {
     await page.locator('#ai-status').filter({ hasText: '连接预设已保存' }).waitFor();
     await page.locator('#setup-next').click();
     await page.locator('#setup-status').filter({ hasText: '还需配置' }).waitFor();
-    for (const kind of ['script', 'chat', 'quick-chat', 'summary', 'creation'])
+    for (const kind of ['script', 'chat', 'quick-chat', 'summary', 'creation', 'map'])
       await page.locator(`[data-apply-kind][value="${kind}"]`).check();
     await page.locator('#api-preset-apply-many').click();
-    await page.locator('#ai-status').filter({ hasText: '应用到 5 个 API' }).waitFor();
+    await page.locator('#ai-status').filter({ hasText: '应用到 6 个 API' }).waitFor();
     await page.screenshot({ path: path.join(output, 'first-run-connections.png') });
     await page.locator('#setup-next').click();
     await page.locator('#prompt-import').waitFor({ state: 'visible' });
@@ -207,7 +214,7 @@ export async function staticChecks({ browser, output }) {
       })),
       { history: [], archives: { npcs: [], items: [] }, chat: [] },
     );
-    for (const kind of ['character', 'script', 'chat', 'quick-chat', 'summary', 'creation'])
+    for (const kind of ['character', 'script', 'chat', 'quick-chat', 'summary', 'creation', 'map'])
       await request('config', {
         kind,
         baseUrl: 'https://upstream.invalid/v1',
@@ -253,7 +260,11 @@ export async function staticChecks({ browser, output }) {
     ).preset;
     await request('prompts/select', { kind: 'chat', id: preset.id });
     const preview = await request('prompts/preview', { kind: 'chat', input: chatInput });
-    assert.equal(calls.length, 1, 'previews never contact the provider');
+    assert.equal(
+      calls.length,
+      2,
+      'only model discovery and the earlier explicit request contact the provider',
+    );
     reply =
       '<wanxiang_chat>你好，来客。</wanxiang_chat><wanxiang_actions>{"affection":[{"id":"official-edith","delta":1}],"agreeToAdventure":[]}</wanxiang_actions>';
     const chat = await request('generate/chat', chatInput);
@@ -330,6 +341,10 @@ export async function staticChecks({ browser, output }) {
       ).items[0].price,
       10,
     );
+    reply = JSON.stringify(worldFixture());
+    const generatedWorld = await request('generate/map', { brief: '前往潮灯港' });
+    assert.equal(generatedWorld.world.id, 'world-lantern');
+    assert.equal(generatedWorld.world.enemyIds.length, 3);
     const image =
       'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLbtAAAAABJRU5ErkJggg==';
     const portrait = await request('portrait/save', { dataUrl: image });
@@ -430,7 +445,7 @@ export async function staticChecks({ browser, output }) {
     return {
       staticFilesOnly: true,
       projectSubdirectory: true,
-      allSixApis: true,
+      allSevenApis: true,
       exactTokenizer: true,
       regexWorker: true,
       stream: true,

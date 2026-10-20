@@ -5,8 +5,16 @@ export const API_LABELS = Object.freeze({
   'quick-chat': '快速闲聊',
   summary: '记忆总结',
   creation: '以太造物',
+  map: '地图构筑',
 });
-export const PROMPT_KINDS = Object.freeze(['character', 'script', 'chat', 'quick-chat']);
+export const PROMPT_KINDS = Object.freeze([
+  'character',
+  'script',
+  'chat',
+  'quick-chat',
+  'map',
+  'creation',
+]);
 
 export function missingSetup(status, stage) {
   const kinds = stage === 'connections' ? Object.keys(API_LABELS) : PROMPT_KINDS;

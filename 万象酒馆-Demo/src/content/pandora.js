@@ -34,6 +34,16 @@ export const PANDORA = {
       effects: [{ type: 'buff', buff: 'bind', value: 1 }],
     },
   ],
+  entrySkill: {
+    id: 'entry-pandora',
+    name: '魔偶时停扑击',
+    text: '换入时对正对位敌人造成5点伤害并施加1层禁锢（取消其本回合未执行的行动）。',
+    target: 'opposite',
+    effects: [
+      { type: 'damage', value: 5 },
+      { type: 'buff', buff: 'bind', value: 1 },
+    ],
+  },
 };
 
 export const PANDORA_SETTING = {
@@ -68,4 +78,9 @@ export const PANDORA_SETTING = {
         '表盘眼中的刻度跳动一次。她凝视的敌人如同被钉在一瞬间，动作骤然停住，未能完成这一次出手。刻度的微光随这个回合的结束散去。',
     },
   ],
+  entrySkill: {
+    name: '魔偶时停扑击',
+    description:
+      '换入前场时怀中玩偶扑击正对位敌人，眼眸表盘跳动短暂封印时间刻度，造成5点伤害并施加1层禁锢。',
+  },
 };

@@ -176,3 +176,28 @@ body.leaving #scene-fade {
   opacity: 1;
   transition-duration: 0.34s;
 }
+
+#emblem-open {
+  position: fixed;
+  z-index: 10;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 11px 28px;
+  border: 1px solid #c7a57588;
+  border-radius: 7px;
+  background: #30261fe8;
+  color: #f2e3c5;
+  box-shadow:
+    0 4px 24px #0005,
+    0 0 20px #c5965120;
+  font: 14px system-ui;
+  cursor: pointer;
+  backdrop-filter: blur(5px);
+}
+#emblem-open:hover,
+#emblem-open:focus-visible {
+  background: #72553cf2;
+  border-color: #efce99;
+  outline: 0;
+}

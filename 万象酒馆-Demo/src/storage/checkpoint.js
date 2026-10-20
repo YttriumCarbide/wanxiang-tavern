@@ -18,7 +18,11 @@ export function createCheckpoint(context) {
     if (
       session.runtime.mode !== 'battle' ||
       session.battle.playing ||
-      !['opening', 'plan'].includes(session.battle.state.phase)
+      !(
+        ['opening', 'plan'].includes(session.battle.state.phase) ||
+        (['victory', 'defeat'].includes(session.battle.state.phase) &&
+          session.journey.expedition?.pendingResult)
+      )
     )
       return;
     storage.setItem(
@@ -43,7 +47,11 @@ export function createCheckpoint(context) {
       if (
         value?.version !== 1 ||
         !value.journey?.expedition ||
-        !['opening', 'plan'].includes(value.state?.phase)
+        !(
+          ['opening', 'plan'].includes(value.state?.phase) ||
+          (['victory', 'defeat'].includes(value.state?.phase) &&
+            value.journey.expedition.pendingResult)
+        )
       )
         return null;
       if (!value.state.units || !Array.isArray(value.state.formation)) return null;

@@ -110,6 +110,8 @@ export async function equipmentChecks({ browser, baseURL, output }) {
     }
     await innMessage('tavern-condenser');
     await page.locator('#forge-refine').click();
+    await page.locator('#forge-status').filter({ hasText: '已' }).waitFor();
+    await page.locator('[data-forge-page="exchange"]').click();
     await page.locator('[data-buy-equipment]').waitFor();
     await page.locator('[data-buy-equipment]').click();
     assert.equal((await page.evaluate(() => demo.getLibrary())).inventory.ether, 30);
@@ -226,8 +228,11 @@ export async function equipmentChecks({ browser, baseURL, output }) {
     await page.waitForFunction(() => !!window.demo);
     await page.locator('#companion-dialogue.opening-prose').waitFor({ state: 'visible' });
     await page.screenshot({ path: path.join(output, 'pandora-third-return.png') });
-    for (let i = 0; i < 10; i++) await page.locator('#companion-dialogue button').click();
+    while (await page.locator('#companion-dialogue').isVisible())
+      await page.locator('#companion-dialogue button').click();
     await page.waitForFunction(() => demo.getLibrary().progression.pandoraJoined);
+    while (await page.locator('#emblem-dialogue').isVisible())
+      await page.locator('#emblem-dialogue button').click();
     await innMessage('enter-dungeon');
     await page.locator('#destination-region-confirm').click();
     await page.locator('#destination-start').click();
@@ -247,6 +252,16 @@ export async function equipmentChecks({ browser, baseURL, output }) {
     const front = state.formation.slice(0, 3).find(Boolean);
     await page.locator(`[data-rear="${rear}"]`).click();
     await page.locator(`[data-unit="${front}"]`).click();
+    await page.locator('#commit').click();
+    await page.waitForFunction(() => demo.getLibrary().progression.swapLesson === 'retreat');
+    while (await page.locator('#companion-dialogue').isVisible())
+      await page.locator('#companion-dialogue button').click();
+    await page.waitForFunction(() => !demo.getStatus().playing);
+    const retreatState = await page.evaluate(() => demo.getState());
+    const actor = retreatState.formation.slice(0, 3).find(Boolean);
+    const empty = retreatState.formation.findIndex((id, index) => index >= 3 && !id);
+    await page.locator(`[data-unit="${actor}"]`).click();
+    await page.locator(`[data-empty-slot="${empty}"]`).click();
     await page.locator('#commit').click();
     await page.waitForFunction(() => demo.getLibrary().progression.swapLesson === 'done');
     assert.equal(await page.locator('#formation-lesson').isVisible(), false);

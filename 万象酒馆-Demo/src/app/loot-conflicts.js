@@ -22,7 +22,7 @@ export function createLootConflicts(context) {
     const old = library.archives.items.find((item) => item.id === current.conflictWith);
     panel.innerHTML = html`<small>ARCHIVE / DISCOVERY</small>
       <h2>同名物品，新的发现</h2>
-      <p>「${escapeText(current.name)}」在同一地图已有不同记录，请决定这次收获的归档方式。</p>
+      <p>「${escapeText(current.name)}」已有不同记录，请决定这次收获的归档方式。</p>
       <div class="loot-comparison">
         <article>
           <h3>旧记录</h3>

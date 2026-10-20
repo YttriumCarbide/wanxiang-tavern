@@ -8,7 +8,7 @@ import { readGenerationResult } from '../server/generation-result.mjs';
 import { parseCharacterOutput } from '../src/ai/contracts.js';
 import { compactCharacterDocument } from './fixtures/ai.js';
 
-test('creation API uses an independent connection, exact source IDs and value budget, without presets or automatic retries', async () => {
+test('creation API uses an independent connection, exact source IDs and value budget, with shared presets, worldbook formats and no automatic retries', async () => {
   const directory = await mkdtemp(path.join(process.cwd(), '.runtime/tests/creation-api-'));
   const calls = [];
   let invalid = false;
@@ -20,7 +20,8 @@ test('creation API uses an independent connection, exact source IDs and value bu
     fetchImpl: async (_url, options) => {
       const payload = JSON.parse(options.body);
       calls.push(payload);
-      const { items } = JSON.parse(payload.messages.at(-1).content);
+      const items = [{ id: 'source-ore', name: '石片' }];
+      assert(payload.messages.some((message) => message.content.includes('玩家在回廊拾起石片。')));
       return Response.json({
         choices: [
           {
@@ -83,11 +84,12 @@ test('creation API uses an independent connection, exact source IDs and value bu
     assert.equal(calls[0].model, 'creation-model');
     assert(!JSON.stringify(calls[0]).includes('禁止额外角色注入'));
     assert(!JSON.stringify(calls[0]).includes('禁止额外世界注入'));
-    assert.equal(calls[0].messages.length, 2);
+    assert(calls[0].messages.some((message) => message.content.includes('装备构造器')));
     assert.equal(
       (await post('prompts/select', { kind: 'creation', id: 'character-default' })).status,
-      400,
+      200,
     );
+    await post('prompts/select', { kind: 'creation', id: 'creation-default' });
     invalid = true;
     assert.equal((await post('generate/creation', input)).status, 400);
     assert.equal(calls.length, 2);

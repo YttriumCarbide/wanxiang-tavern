@@ -135,6 +135,7 @@ export function createWeatherSystem(scene, model, resources, reduced = false, op
       surface = surfaces.sample(x, z);
     const supported =
       surface.collects &&
+      !(isSnow && Math.abs(x) < 6.7 && Math.abs(z) < 5.7) &&
       [
         [-size, 0],
         [size, 0],

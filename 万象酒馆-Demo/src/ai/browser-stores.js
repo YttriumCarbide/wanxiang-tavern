@@ -1,3 +1,5 @@
+import { upgradeAssetWorldbook } from './asset-worldbook.js';
+import { upgradeGameRules } from './game-rules-upgrade.js';
 import { normalizePromptPreset } from './presets.js';
 import { normalizeRegexScripts } from './regex.js';
 import { normalizeWorldbook, normalizeWorldSettings, characterWorldEntry } from './worldbook.js';
@@ -15,7 +17,14 @@ export async function createBrowserStores(database, readText, builtinBook) {
     initial: { requestMode: 'browser' },
     save: (value) => database.write([['api.config', value]]),
   });
-  const defaults = ['character-default', 'script-default', 'chat-default', 'quick-chat-default'];
+  const defaults = [
+    'character-default',
+    'script-default',
+    'chat-default',
+    'quick-chat-default',
+    'map-default',
+    'creation-default',
+  ];
   const prompts = {
     async get(id = 'character-default') {
       checkedId(id);
@@ -49,6 +58,26 @@ export async function createBrowserStores(database, readText, builtinBook) {
   };
   if (!database.get('world.book.tavern-world'))
     await database.write([['world.book.tavern-world', normalizeWorldbook(builtinBook).book]]);
+  if (!database.get('world.game-rules.v26')) {
+    const previous = database.get('world.book.tavern-world');
+    if (previous)
+      await database.write([
+        ['world.backup.before-game-rules-v26', previous],
+        ['world.book.tavern-world', upgradeGameRules(previous)],
+        ['world.game-rules.v26', true],
+      ]);
+  }
+  if (!database.get('world.asset-rules.v27')) {
+    const previous = database.get('world.book.tavern-world');
+    const updated = upgradeAssetWorldbook(previous, {
+      map: await readText('worldbook/map-output.md'),
+      creation: await readText('worldbook/creation-output.md'),
+    });
+    await database.write([
+      ['world.book.tavern-world', updated],
+      ['world.asset-rules.v27', true],
+    ]);
+  }
   let worldSettings = normalizeWorldSettings(
     database.get('world.settings') || { globalSelect: ['tavern-world'] },
   );
@@ -100,7 +129,15 @@ export async function createBrowserStores(database, readText, builtinBook) {
     async delete(id) {
       checkedId(id);
       const next = structuredClone(worldSettings);
-      for (const field of ['globalSelect', 'character', 'script', 'chat', 'quick-chat'])
+      for (const field of [
+        'globalSelect',
+        'character',
+        'script',
+        'chat',
+        'quick-chat',
+        'map',
+        'creation',
+      ])
         next[field] = next[field].filter((item) => item !== id);
       for (const key of Object.keys(next.bindings))
         next.bindings[key] = next.bindings[key].filter((item) => item !== id);

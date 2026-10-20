@@ -1,3 +1,4 @@
+import { EMBLEMS } from '../emblems.js';
 import { html } from '../shared/html.js';
 import { escapeText } from '../ui.js';
 import { query as $ } from './dom.js';
@@ -21,10 +22,14 @@ export function createDrag(context) {
       y = rect ? rect.top + rect.height / 2 : innerHeight / 2;
     }
     const d = context.roster.get(actor),
-      u = session.battle.forecast.final.units[actor],
+      u = session.battle.forecast?.final?.units?.[actor];
+    if (!d || !u) return;
+    const emblemSkill = EMBLEMS[d.emblemId]?.skill,
+      activeEmblemSkill = u.combined && !u.combineSkillUsed && emblemSkill ? [emblemSkill] : [],
       skills = [
         context.roster.ability(actor, 'attack'),
-        ...d.skills.filter((a) => !a.passive),
+        ...(d.skills || []).filter((a) => !a.passive),
+        ...activeEmblemSkill,
       ].filter((a) =>
         side === 'Enemy'
           ? ['enemy', 'allEnemies'].includes(a.target)
