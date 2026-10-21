@@ -37,7 +37,13 @@ const server = http.createServer(async (req, res) => {
   if (url === '/__demo/status') {
     res.setHeader('Content-Type', 'application/json');
     res.setHeader('Cache-Control', 'no-store');
-    return res.end(JSON.stringify({ name: 'wanxiang-tavern-demo', pid: process.pid, port }));
+    return res.end(
+      JSON.stringify({ name: 'wanxiang-tavern-demo', pid: process.pid, port, opencodeRelay: true }),
+    );
+  }
+  if (url === '/__demo/opencode') {
+    const { relayOpencode } = await import('./server/opencode-relay.mjs');
+    return relayOpencode(req, res, { port });
   }
   if (url === '/__demo/stop') {
     if (req.method !== 'POST') return res.writeHead(405).end();

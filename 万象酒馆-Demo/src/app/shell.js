@@ -1,3 +1,4 @@
+import { rearUnlocked } from '../formation-access.js';
 import { html } from '../shared/html.js';
 import { HEROES, BOSSES } from '../data.js';
 import { escapeText } from '../ui.js';
@@ -109,7 +110,9 @@ export function createShell(context) {
       for (const element of panel.querySelectorAll('[data-prepare-hero]'))
         previous.set(element.dataset.prepareHero, element.getBoundingClientRect());
     const slot = session.ai.preparationSlot;
+    panel.classList.toggle('rear-locked', !rearUnlocked(library));
     $('#prepare-slots').innerHTML = library.party
+      .slice(0, rearUnlocked(library) ? 6 : 3)
       .map((id, index) => {
         const entry = library.characters.find((member) => member.id === id);
         const row =
@@ -183,7 +186,7 @@ export function createShell(context) {
       </section>`;
     $('#prepare-status').textContent = session.ai.departureParty
       ? '生成剧本中 · 名单锁定，可调整位置与装备'
-      : `${library.party.filter(Boolean).length} / 6 位出发 · 自动保存`;
+      : `${library.party.filter(Boolean).length} / ${rearUnlocked(library) ? 6 : 3} 位出发 · 自动保存`;
     if (
       panel.open &&
       !matchMedia('(prefers-reduced-motion: reduce), (orientation: portrait)').matches

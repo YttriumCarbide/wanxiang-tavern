@@ -1,6 +1,12 @@
 {
-  "description": "伊蒂丝新立绘替换，遗迹副本2~6大纲入世界书，新增14种小怪与5种Boss（卡牌图像、战术意图池、Monster Lore、地图API敌人池注入），修复后场拖入前场首个角色消失及交换角色飞行轨迹异常Bug，质量与核心全项通过",
+  "description": "Vertex 原生API Key/OAuth、流式及工具输出、终止与错误诊断；六套剑/杖/弓男女默认立绘自动选择及敌人共用；验证设置保存、实际卡面、静态发布，不重复副本通关。",
   "scopes": ["quality", "core"],
-  "coreFiles": [],
+  "coreFiles": [
+    "tests/vertex-portraits.test.js",
+    "tests/art-assets.test.js",
+    "tests/character-presentation.test.js",
+    "tests/optimization.test.js",
+    "tests/pandora.test.js"
+  ],
   "browserConcurrency": 2
 }

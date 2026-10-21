@@ -118,6 +118,7 @@ export function validateGameData(
     check(ENEMY_ATTACKS.includes(enemy.attackStyle), `${enemy.id}: invalid attack presentation`);
     check(integer(enemy.speed, 1), `${enemy.id}: invalid speed`);
     const moves = [
+      ...(enemy.openingIntent ? [enemy.openingIntent] : []),
       ...(Array.isArray(enemy.intents) ? enemy.intents : []),
       ...(Array.isArray(enemy.enragedIntents) ? enemy.enragedIntents : []),
     ];

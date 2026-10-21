@@ -1,3 +1,5 @@
+import { CORRIDOR_RING_GUIDANCE } from './corridor-ring.js';
+
 const OUTLINE_PREAMBLE = `大纲以第三人称改写，<user>仅在本大纲中代指玩家创建的主角；生成正文时按该主角的实际姓名、设定与自然称呼叙述，不照抄代称。这是完整连续的大纲参考，保留人物、线索与事件的先后关系；文风与细节由当前预设决定。由AI根据实际战斗进度自行安排事件的叙述位置，在本次回复中讲完本次旅程，不预先按场次切分大纲。战斗名单、场次、胜负和已发生事实以本次请求的数据为准。`;
 
 export const TUTORIAL_DUNGEON = {
@@ -17,12 +19,12 @@ export const CORRIDOR_DUNGEON = {
   outline: `【官设副本大纲：回廊内部 · 石像守卫与巡游猎犬】
 ${OUTLINE_PREAMBLE}
 
-<user>召唤了第一个同伴后，准备再次进入遗迹。遗迹的探索才刚开始，远远达不到改变时间线的地步。于是再次进入，来到回廊内部。<user>与伊蒂丝查看回廊内部的壁画时，发现这些壁画让人不安，从蛇偷吃苹果到蛇吞下太阳，这时<user>小队遭到了盘踞在这里的狗群偷袭，最后处理了巡游猎犬偷袭后，继续探索回廊。回廊的蜿蜒曲折，像是一条盘踞的蛇。很快<user>与伊蒂丝穿过回廊清理了小怪，来到遗迹大厅门口，有着紧闭的石门，<user>与伊蒂丝在石门前试图破解机关失败引来反击，于是大战发射各种机关的石门，准备将其物理摧毁进入大厅。
+<user>召唤了第一个同伴后，准备再次进入遗迹。遗迹的探索才刚开始，远远达不到改变时间线的地步。于是再次进入，来到回廊内部。<user>与伊蒂丝查看回廊内部的壁画时，发现这些壁画让人不安，从蛇偷吃苹果到蛇吞下太阳，这时<user>小队遭到了盘踞在这里的狗群偷袭，最后处理了巡游猎犬偷袭后，继续探索回廊。回廊的蜿蜒曲折，像是一条盘踞的蛇。很快<user>与伊蒂丝穿过回廊清理了小怪，来到遗迹大厅门口，有着紧闭的石门，<user>与伊蒂丝在石门前试图破解机关失败引来反击，于是大战发射各种机关的石门，准备将其物理摧毁进入大厅。${CORRIDOR_RING_GUIDANCE}
 
 重要事件：
 1.继续深入回廊内部，看壁画时被猎犬偷袭
 4.来到遗迹门口破解谜题，谜题失败
-5.别无他法，物理摧毁石门，摧毁门的防御机关和门本身`,
+5.石门雷锁骤亮，蓄势释放足以重伤同伴的开幕雷击；<user>意外从门前裂缝中取得均衡纹章士檀虹羽的戒指，戒指自行戴在主角手上且六格充能全满。伊蒂丝立刻指导主角结合并对机关石门使用结合技“平衡”，分散雷击，随后物理摧毁门的防御机关和门本身。此戒指是一次性的剧情获得，不再作为可折算以太的普通掉落重复生成。`,
 };
 
 export const HALL_DUNGEON = {
@@ -91,8 +93,8 @@ export const ALL_OFFICIAL_DUNGEONS = [...OFFICIAL_DUNGEONS, ...EXPANDED_DUNGEONS
 
 export function officialDungeonFor(exploration) {
   if (exploration?.world) return null;
-  if (exploration?.tutorial === true) return TUTORIAL_DUNGEON;
   if (exploration?.map !== 'ruins') return null;
+  if (exploration.tutorial === true || exploration.sequence === 0) return TUTORIAL_DUNGEON;
   switch (exploration.sequence) {
     case 1:
       return CORRIDOR_DUNGEON;

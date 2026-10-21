@@ -274,7 +274,7 @@ test('Edith restores as an official guest and pays health for real capped mana a
   assert.equal(compiled.combat.skills[1].effects[0].type, 'selfMana');
 });
 
-test('editable canon and official tutorial outline migrate once and only match the tutorial request', async () => {
+test('editable canon and all six official outlines migrate once and only match their own chapter', async () => {
   const directory = await mkdtemp(path.join(process.cwd(), '.runtime/tests/official-content-'));
   const store = await createWorldbookStore(directory);
   const { book } = await store.get('tavern-world');
@@ -296,7 +296,7 @@ test('editable canon and official tutorial outline migrate once and only match t
   assert.equal(
     Object.values(fresh.entries).filter((entry) => entry.extensions?.wanxiang?.officialDungeonId)
       .length,
-    2,
+    6,
   );
   const library = newCampaign(defaultProtagonist());
   assert(officialSummonPool(library, fresh).some((entry) => entry.id === 'official-aegis'));
@@ -315,7 +315,7 @@ test('editable canon and official tutorial outline migrate once and only match t
   assert(tutorial.messages.some((message) => message.content.includes('大纲编辑回写验证')));
   const normal = await generationRequest(
     'script',
-    { ...input, exploration: { ...input.exploration, tutorial: false } },
+    { ...input, exploration: { ...input.exploration, tutorial: false, sequence: 1 } },
     null,
     options,
   );

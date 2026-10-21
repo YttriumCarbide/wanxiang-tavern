@@ -14,7 +14,7 @@ export function createCompanionEvents(context) {
   reminder.id = 'formation-lesson';
   reminder.hidden = true;
   reminder.textContent =
-    '前后场教学：点击或拖动后场伙伴，换入一个前场位置。消耗 1 AP，后场伙伴不能直接使用主动技能。完成一次真实交换后继续。';
+    '前后场与入场技：后场待满一个正式回合后，换入前场会自动触发入场技。先完成交换，再练习后撤。';
   document.body.append(reminder);
   let showing = false;
   function returned() {
@@ -25,7 +25,7 @@ export function createCompanionEvents(context) {
       [
         {
           speaker: '旁白',
-          text: '第三次远行归来，副本之门在身后收拢。酒馆暖灯还亮着，门口却多了一个人。紫发少女侧卧在门边，黑白紫相间的裙角压在身下，双手紧紧环着一只戴小王冠的玩偶。她睡得很沉，额发遮住了半张脸，呼吸轻得让人忍不住停下脚步。',
+          text: '第二次远行归来，副本之门在身后收拢。酒馆暖灯还亮着，门口却多了一个人。紫发少女侧卧在门边，黑白紫相间的裙角压在身下，双手紧紧环着一只戴小王冠的玩偶。她睡得很沉，额发遮住了半张脸，呼吸轻得让人忍不住停下脚步。',
         },
         {
           speaker: '长景月汐',
@@ -106,6 +106,13 @@ export function createCompanionEvents(context) {
   }
   function battleStarted() {
     const progress = session.ai.library.progression;
+    if (
+      progress?.entryLesson === 'ready' &&
+      !Object.values(session.battle.state.units).some(
+        (unit) => unit.side === 'hero' && unit.entryReady,
+      )
+    )
+      progress.entryLesson = 'pending';
     if (!progress || !['pending', 'active', 'retreat'].includes(progress.swapLesson)) return;
     if (progress.swapLesson === 'retreat') {
       reminder.textContent = '将一名前场角色拖到后场空位，确认结算，练习避开攻击。';
@@ -118,7 +125,7 @@ export function createCompanionEvents(context) {
       [
         {
           speaker: '伊蒂丝',
-          text: '人多起来了，旅途也能换个走法。前场的伙伴负责出手，后场的伙伴暂时休息。花费一点行动力，就能让后场的一位接替前场。',
+          text: '现在后场开放了。前场负责出手，后场暂时休息。伙伴在后场待满一个完整的正式回合，入场技就会就绪；之后花1 AP换入前场，会自动触发，不额外消耗行动次数。',
         },
         {
           speaker: '潘多拉',
@@ -127,7 +134,7 @@ export function createCompanionEvents(context) {
         },
         {
           speaker: '伊蒂丝',
-          text: '现在试一次吧。先手的这一点行动力正好够用，确认结算以后，这次交换才真正完成。',
+          text: '先试一次交换，确认结算后才真正完成。之后记得让伙伴在后场待满一个正式回合，再看卡牌上的“入场”提示；潘多拉换入时，玩偶会扑击正对面的敌人，并让它停住尚未执行的行动。',
         },
       ],
       () => {
@@ -136,6 +143,15 @@ export function createCompanionEvents(context) {
     );
   }
   function beforeCommit() {
+    if (
+      session.ai.library.progression?.entryLesson === 'ready' &&
+      session.ai.library.progression.swapLesson === 'done'
+    ) {
+      if (!session.battle.forecast.events.some((event) => event.type === 'entrySkill')) {
+        context.shell.toast('将入场技就绪的后场伙伴换入前场，再确认结算。');
+        return false;
+      }
+    }
     if (!['active', 'retreat'].includes(session.ai.library.progression?.swapLesson)) return true;
     if (session.ai.library.progression.swapLesson === 'retreat') {
       if (performedRetreat(session.battle.state, session.battle.forecast)) return true;
@@ -148,7 +164,46 @@ export function createCompanionEvents(context) {
     }
     return true;
   }
+  function checkEntryLesson(result) {
+    const progress = session.ai.library.progression;
+    if (
+      !progress ||
+      progress.swapLesson !== 'done' ||
+      !['pending', 'ready'].includes(progress.entryLesson)
+    )
+      return;
+    if (result.events.some((event) => event.type === 'entrySkill')) {
+      progress.entryLesson = 'done';
+      reminder.hidden = true;
+      context.generation.save();
+      dialogue.show([
+        {
+          speaker: '伊蒂丝',
+          text: '这就是入场技：后场蓄势，换入时自动发动。它不额外消耗 AP 或行动次数；用过以后，再到后场待满一个正式回合就能重新准备。',
+        },
+      ]);
+      return;
+    }
+    if (result.outcome || dialogue.open) return;
+    const ready = result.final.formation
+      .slice(3)
+      .some((id) => id && result.final.units[id].entryReady);
+    if (ready && progress.entryLesson === 'pending') {
+      progress.entryLesson = 'ready';
+      reminder.textContent = '入场技就绪：将带“入场”提示的后场角色换入前场，再确认结算。';
+      reminder.hidden = false;
+      context.generation.save();
+      dialogue.show([
+        {
+          speaker: '潘多拉',
+          portrait: './assets/portraits/pandora.png',
+          text: '主人……后场伙伴的入场技准备好了。把带“入场”提示的伙伴换入前场，看看它怎样自动发动吧。',
+        },
+      ]);
+    }
+  }
   function accepted(state, result) {
+    checkEntryLesson(result);
     const progress = session.ai.library.progression;
     if (progress?.swapLesson === 'active' && performedFrontRearSwap(state, result)) {
       progress.swapLesson = 'retreat';

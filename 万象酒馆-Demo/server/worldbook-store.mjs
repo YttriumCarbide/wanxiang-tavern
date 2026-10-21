@@ -1,3 +1,7 @@
+import { upgradeTutorialRevision } from '../src/ai/tutorial-revision.js';
+import { upgradeProtagonistRules } from '../src/ai/protagonist-rules.js';
+import { upgradeBattleDisplayRules } from '../src/ai/battle-display-rules.js';
+import { upgradeRuinsWorldbook } from '../src/ai/ruins-worldbook.js';
 import { upgradeAssetWorldbook } from '../src/ai/asset-worldbook.js';
 import { setTimeout as waitForFile } from 'node:timers/promises';
 import { upgradeGameRules } from '../src/ai/game-rules-upgrade.js';
@@ -840,6 +844,35 @@ export async function createWorldbookStore(directory) {
       );
     await write(fileFor('tavern-world'), upgradeAssetWorldbook(book, content));
     await write(contentVersionFile, { version: 27 });
+  }
+  if (contentVersion < 28) {
+    const guidance = await readFile(
+      new URL('../prompts/worldbook/protagonist-strength.md', import.meta.url),
+      'utf8',
+    );
+    const record = await get('tavern-world');
+    await write(fileFor('tavern-world'), upgradeProtagonistRules(record.book, guidance));
+    await write(contentVersionFile, { version: 28 });
+  }
+
+  if (contentVersion < 29) {
+    const guidance = await readFile(
+      new URL('../prompts/worldbook/battle-display.md', import.meta.url),
+      'utf8',
+    );
+    const record = await get('tavern-world');
+    await write(fileFor('tavern-world'), upgradeBattleDisplayRules(record.book, guidance));
+    await write(contentVersionFile, { version: 29 });
+  }
+  if (contentVersion < 30) {
+    const record = await get('tavern-world');
+    await write(fileFor('tavern-world'), upgradeRuinsWorldbook(record.book));
+    await write(contentVersionFile, { version: 30 });
+  }
+  if (contentVersion < 31) {
+    const record = await get('tavern-world');
+    await write(fileFor('tavern-world'), upgradeTutorialRevision(record.book));
+    await write(contentVersionFile, { version: 31 });
   }
   return {
     get,

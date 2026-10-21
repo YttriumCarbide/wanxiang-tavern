@@ -69,6 +69,11 @@ test('all generated non-tutorial ordinary fights after the entrance contain at l
       for (const node of route.frontier) {
         for (let room = 1; room < 4; room++) {
           const spec = explorationSpec(node, room);
+          // The authored introductory chapter keeps one stone guard for the slow lesson.
+          if (node.map === 'ruins' && node.sequence === 0 && room === 2) {
+            assert.deepEqual(spec.enemyIds, ['warden']);
+            continue;
+          }
           assert(spec.enemyIds.length >= 2 && spec.enemyIds.length <= 3);
           assert.equal(new Set(spec.enemyIds).size, spec.enemyIds.length);
           assert(spec.enemyIds.every((id) => !DEFINITIONS[id].boss));

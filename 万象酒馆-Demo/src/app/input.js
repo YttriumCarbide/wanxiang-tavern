@@ -41,7 +41,7 @@ export function mountInput(context) {
       )
         return;
       if (session.runtime.drag.moved && !(e.buttons & 1)) {
-        context.drag.clearDropHighlights();
+        context.drag.finishDrag(e, true);
         return;
       }
       if (

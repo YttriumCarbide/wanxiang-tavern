@@ -19,6 +19,7 @@ export function createDebugAPI(context) {
     getEmblemStatus: () => session.runtime.view?.emblemStatus() || null,
     getAudioStatus: context.audio.status,
     getForecast: () => structuredClone(session.battle.forecast),
+    getSceneMotion: () => session.runtime.view?.motionStatus() || [],
     getStatus: () => ({
       mode: session.runtime.mode,
       playing: session.battle.playing,
@@ -31,6 +32,7 @@ export function createDebugAPI(context) {
       animating: !!session.runtime.view?.isAnimating(),
       deaths: session.runtime.view?.deathStatus() || null,
       dragging: session.runtime.view?.dragState() || null,
+      releasedDrag: session.runtime.view?.releaseStatus() || null,
       transitioning: !$('#round-start').hidden,
     }),
     startBattle: context.journey.startBattle,

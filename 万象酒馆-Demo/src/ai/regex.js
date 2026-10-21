@@ -39,7 +39,9 @@ export function normalizeRegexScripts(raw) {
       throw Error('trimStrings必须是文字数组');
     if (
       !Array.isArray(item.apiTargets) ||
-      item.apiTargets.some((kind) => !['character', 'script', 'chat', 'quick-chat'].includes(kind))
+      item.apiTargets.some(
+        (kind) => !['character', 'script', 'chat', 'quick-chat', 'map', 'creation'].includes(kind),
+      )
     )
       throw Error('正则发送对象无效');
     for (const key of ['disabled', 'markdownOnly', 'promptOnly', 'runOnEdit'])
@@ -62,7 +64,17 @@ export function compileRegex(source) {
 }
 
 export function presetRegexScripts(preset) {
-  return normalizeRegexScripts(preset?.extensions?.regex_scripts || preset?.regex_scripts || []);
+  const scripts =
+    preset?.extensions?.regex_scripts ??
+    preset?.regex_scripts ??
+    preset?.extensions?.SPreset?.RegexBinding?.regexes ??
+    [];
+  return normalizeRegexScripts(
+    scripts.map((script) => ({
+      apiTargets: ['character', 'script', 'chat', 'quick-chat', 'map', 'creation'],
+      ...script,
+    })),
+  );
 }
 
 export function applyRegexScripts(text, scripts, placement, options = {}) {

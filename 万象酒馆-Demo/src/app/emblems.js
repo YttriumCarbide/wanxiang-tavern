@@ -1,5 +1,6 @@
 import { EMBLEM_ID, OVERLOAD_EMBLEM_ID, canCombine, COMBINE_SKILL } from '../emblems.js';
 import { createDialogue } from './dialogue.js';
+import { overloadLessonEligible } from '../emblem-progression.js';
 
 export function createEmblems(context) {
   const { session, events } = context;
@@ -13,13 +14,39 @@ export function createEmblems(context) {
   function speak(text, done) {
     if (showing) return;
     showing = true;
-    dialogue.show([{ speaker: '潘多拉', portrait: './assets/portraits/pandora.png', text }], () => {
-      showing = false;
-      done?.();
-    });
+    const edith =
+      session.runtime.mode === 'battle' &&
+      session.journey.expedition?.exploration?.map === 'ruins' &&
+      session.journey.expedition.exploration.sequence === 1;
+    dialogue.show(
+      [
+        {
+          speaker: edith ? '伊蒂丝' : '潘多拉',
+          portrait: `./assets/portraits/${edith ? 'edith' : 'pandora'}.png`,
+          text,
+        },
+      ],
+      () => {
+        showing = false;
+        done?.();
+      },
+    );
   }
   function returned() {
     const state = progress();
+    if (
+      overloadLessonEligible(session.ai.library) &&
+      session.ai.library.emblems?.includes(EMBLEM_ID)
+    ) {
+      if (showing || !['none', undefined].includes(state.overloadLesson)) return;
+      state.overloadLesson = 'summon';
+      context.generation.save();
+      speak(
+        '主人……命运桌上又有一颗星亮起来了。这次回应您的是过载纹章士，水无月兰。我们去命运桌迎接她吧，第一次相遇不需要支付以太。她的力量与檀虹羽不同，取得以后，可以在整备里选择让谁与她同行。',
+        () => context.shell.toast('前往命运桌，获取过载纹章士水无月兰。'),
+      );
+      return;
+    }
     if (
       !state?.pandoraJoined ||
       state.settlements.length < 3 ||
@@ -36,6 +63,14 @@ export function createEmblems(context) {
     );
   }
   function equipped() {
+    if (
+      progress()?.overloadLesson === 'equip' &&
+      session.ai.library.characters.some((member) => member.emblemId === OVERLOAD_EMBLEM_ID)
+    ) {
+      progress().overloadLesson = 'done';
+      context.generation.save();
+      context.shell.toast('过载纹章已装备，充满六格后即可结合并使用「超限负荷」。');
+    }
     if (
       progress()?.emblemLesson !== 'equip' ||
       !session.ai.library.characters.some((member) => member.emblemId === EMBLEM_ID)
@@ -55,7 +90,25 @@ export function createEmblems(context) {
       ['victory', 'defeat'].includes(session.battle.state.phase)
     )
       return;
-    if (state.emblemLesson === 'charge' && state.settlements.length >= 3) {
+    if (state.emblemLesson === 'corridor-intro') {
+      const actor = session.journey.expedition?.corridorRing?.actor;
+      if (!actor || !canCombine(session.battle.state, actor)) {
+        state.emblemLesson = 'charge';
+        context.generation.save();
+        return;
+      }
+      state.emblemLesson = 'combine';
+      context.generation.save();
+      speak(
+        '门缝里怎么会有一枚戒指……它自己戴到主人手上了。星光已经连成六格，这是均衡纹章士檀虹羽的力量。先别往前走，门上的雷锁正在蓄势，第一击会造成60点伤害！\n\n现在连续点主角两次，进入结合，再点左侧的「结合技 · 平衡」，把目标选为机关石门。结合标记占住的同一格，可以接着安排主角的结合技，不用空过先手。\n\n平衡会把那道雷击分到三个前场位置，空位的那份落空。先完成结合与平衡，再确认结算，我们一起把这扇门打开。',
+        () => {
+          hint.textContent = '双击主角结合 → 同一时间格使用「平衡」→ 选机关石门 → 确认结算。';
+          hint.hidden = false;
+        },
+      );
+      return;
+    }
+    if (state.emblemLesson === 'charge') {
       const actor = session.battle.state.formation
         .slice(0, 3)
         .find((id) => canCombine(session.battle.state, id));
@@ -80,6 +133,19 @@ export function createEmblems(context) {
   function beforeCommit() {
     if (!['combine', 'skill'].includes(progress()?.emblemLesson)) return true;
     const result = session.battle.forecast;
+    if (
+      progress().emblemLesson === 'combine' &&
+      session.journey.expedition?.corridorRing &&
+      !result.events.some(
+        (event) =>
+          event.type === 'hero' &&
+          event.skill === COMBINE_SKILL.id &&
+          event.targets.includes('ruinsGate'),
+      )
+    ) {
+      context.shell.toast('先双击主角结合，再在同一格使用「平衡」标记机关石门，最后确认结算。');
+      return false;
+    }
     if (
       progress().emblemLesson === 'combine' &&
       !result.events.some((event) => event.type === 'engage')
@@ -159,13 +225,15 @@ export function createEmblems(context) {
     }
     if (!session.ai.library.emblems.includes(OVERLOAD_EMBLEM_ID)) {
       const ether = session.ai.library.inventory?.ether || 0;
-      if (ether < 100) {
+      const teaching = overloadLessonEligible(session.ai.library);
+      if (!teaching && ether < 100) {
         context.shell.toast('以太不足，需要 100 以太结识过载纹章士水无月兰。');
         (context.shell.renderParty(), document.querySelector('#party-panel').showModal());
         return;
       }
-      session.ai.library.inventory.ether -= 100;
+      if (!teaching) session.ai.library.inventory.ether -= 100;
       session.ai.library.emblems.push(OVERLOAD_EMBLEM_ID);
+      if (teaching) progress().overloadLesson = 'equip';
       context.generation.save();
       context.audio.play('summon');
       speak(

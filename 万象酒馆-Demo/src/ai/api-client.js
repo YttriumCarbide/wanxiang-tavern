@@ -1,9 +1,10 @@
+import { REQUEST_TIMEOUT_MS } from './request-policy.js';
 import { compatibleRequest, completionURL, validateApiKey } from './compatible.js';
 import { localRequest } from './local-client.js';
 import { redactDiagnostic } from './diagnostic.js';
 
 /** One application-owned gateway. Credentials stay in this page's memory, never in saves. */
-export function createApiClient({ fetchImpl = fetch, timeoutMs = 180000 } = {}) {
+export function createApiClient({ fetchImpl = fetch, timeoutMs = REQUEST_TIMEOUT_MS } = {}) {
   const credentials = new Map();
   const controllers = new Set();
   let disposed = false;
@@ -55,7 +56,7 @@ export function createApiClient({ fetchImpl = fetch, timeoutMs = 180000 } = {}) 
       return await local('transport/complete', { ticket, result }, bounded);
     } catch (failure) {
       if (failure.name === 'AbortError' || controller.signal.aborted)
-        throw Error('请求已取消或超过180秒，请检查服务后重试', { cause: failure });
+        throw Error('请求已取消或超过15分钟，请检查服务后重试', { cause: failure });
       if (failure instanceof TypeError && key)
         failure.message =
           '浏览器直连失败，请检查网络、HTTPS及接口是否允许跨域（CORS）。未自动重试。';

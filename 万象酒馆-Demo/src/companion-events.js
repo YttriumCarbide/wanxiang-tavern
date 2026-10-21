@@ -8,7 +8,7 @@ export function recordSettlement(library, id) {
 export function pandoraEligible(library) {
   return (
     !library.progression?.pandoraJoined &&
-    library.progression?.settlements.length >= 3 &&
+    library.progression?.settlements.length >= 2 &&
     !library.characters.some((member) => member.id === 'official-pandora')
   );
 }
@@ -20,6 +20,7 @@ export function joinPandora(library) {
   if (empty >= 0) library.party[empty] = 'official-pandora';
   library.progression.pandoraJoined = true;
   library.progression.swapLesson = 'pending';
+  library.progression.entryLesson = 'pending';
   library.prepared = null;
   return true;
 }

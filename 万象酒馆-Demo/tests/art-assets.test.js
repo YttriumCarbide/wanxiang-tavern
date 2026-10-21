@@ -152,7 +152,13 @@ test('new enemies have original voxel studies, portraits, lore-ready IDs and a u
       'utf8',
     );
     assert.match(portrait, /width="600" height="900"/);
-    assert((portrait.match(/<polygon/g) || []).length >= 60);
+    if (id === 'crystalBeetle') assert((portrait.match(/<polygon/g) || []).length >= 60);
+    else {
+      assert.match(portrait, /data-art-style="isometric-voxel-v3"/);
+      assert(portrait.includes(`data-enemy-model="${id}"`));
+      assert.match(portrait, /transform="translate\([^"]+\) scale\([0-9.]+\)"/);
+      assert.match(portrait, /<polygon points="/);
+    }
     const model = await readFile(new URL(`../assets/${enemy.portrait}.glb`, import.meta.url));
     assert.equal(model.readUInt32LE(0), 0x46546c67);
   }

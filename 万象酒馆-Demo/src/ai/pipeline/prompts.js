@@ -3,7 +3,7 @@ import { arcFor } from '../../story-arc.js';
 import { generationNumbers } from '../../growth.js';
 import { ENCOUNTER_COUNT, FINAL_ENCOUNTER } from '../../content/journey-rules.js';
 import { OUTPUT_TAG } from './output-envelope.js';
-import { encounterSpec, BOSSES, DEFINITIONS } from '../../data.js';
+import { encounterSpec, DEFINITIONS } from '../../data.js';
 import { normalizePromptPreset, composePromptPreset, presetSampling } from '../presets.js';
 import { scriptOutputSchema } from '../script-schema.js';
 import { characterOutputSchema } from '../character-schema.js';
@@ -46,7 +46,7 @@ export function generationInput(kind, input) {
       mechanics: { ...characterGameReference(), generationNumbers: generationNumbers(input) },
       request: {
         brief: input.brief,
-        unavailableCharacters: ['潘多拉（仅第三次副本结算事件加入，不可抽取）'],
+        unavailableCharacters: ['潘多拉（仅第二次副本结算事件加入，不可抽取）'],
         ...(input.purpose === 'npc'
           ? {
               knownNpc: input.npc,
@@ -66,7 +66,7 @@ export function generationInput(kind, input) {
               levelUpLines:
                 '根节点额外输出levelUpLines数组，恰好5句符合该主角性格的简短升级台词，不存进setting。',
               guidance:
-                '忠实保留玩家填写的姓名、身份、性格与动作设想，润色为完整角色设定集并补齐技能。主角将固定出战，可在现有游戏数值范围内设计得更强一些，例如更充足的生命和蓝量；行动次数固定为2次；不得突破Schema或发明未支持的效果。',
+                '忠实保留玩家填写的姓名、身份、性格与动作设想，润色为完整角色设定集并补齐技能。主角固定出战，必须设计为强势开局：生命、蓝量、普攻伤害和技能伤害均优先取合法范围的较高值，明显强于普通同伴，耗蓝不能抵消强度；行动次数固定为2次；不得突破Schema或发明未支持的效果。',
             }
           : {}),
         entrySkillGuidance:
@@ -77,8 +77,7 @@ export function generationInput(kind, input) {
         })),
       },
     };
-  if (!isEndless(input.exploration) && !BOSSES.some((boss) => boss.id === input.boss))
-    throw Error('副本路线无效');
+  if (!isEndless(input.exploration) && !DEFINITIONS[input.boss]?.boss) throw Error('副本路线无效');
   if (
     !Array.isArray(input.party) ||
     input.party.length < 1 ||
@@ -130,6 +129,8 @@ export function generationInput(kind, input) {
               worldbookKey: officialDungeon.key,
               instruction:
                 '沿本次激活的完整官设大纲扩写，由AI根据实际战斗进度自行安排事件的叙述位置，在本次回复中讲完本次旅程。大纲不按场次预先分段，不照搬为已发生的历史。大纲中的<user>是玩家创建的主角代称，正文按characters.player所指角色的实际姓名和设定自然称呼。',
+              enemyPolicy:
+                'encounters已给出这份剧本的五场固定敌人，必须按真实名单描写，不换成通用怪或其他剧本Boss。沿完整大纲安排事件，不把阵容说明机械拆成五段剧情。',
             },
           }
         : {}),
@@ -157,7 +158,9 @@ export function generationInput(kind, input) {
           }
         : {}),
       ...(typeof input.visitId === 'string' ? { visitId: input.visitId.slice(0, 80) } : {}),
-      journey: '这是新一趟副本。承接已发生的历史，创作新的事件与开篇，不重新输出上一趟剧本。',
+      journey:
+        '这是新一趟副本。整趟使用同一个副本地点，不生成每场独立地点名、地点标题或location字段；正文自然叙述环境即可。承接已发生的历史，创作新的事件与开篇，不重新输出上一趟剧本。',
+      location: selected?.name || REGIONS[input.map || 'ruins']?.name || '副本',
       previousStories: (Array.isArray(input.previousStories) ? input.previousStories : [])
         .slice(-3)
         .map((book) => ({
@@ -217,10 +220,10 @@ export function generationInput(kind, input) {
             const spec = explorationSpec(input.exploration, index);
             return {
               index,
-              name: spec.name,
               map: spec.map,
               environment: REGIONS[spec.map].atmosphere,
               enemies: enemiesForSpec(spec),
+              encounterReason: spec.description,
               enemyCount: spec.enemyIds.length,
               boss: !!spec.boss,
             };
@@ -229,7 +232,6 @@ export function generationInput(kind, input) {
             const spec = encounterSpec(index, input.boss);
             return {
               index,
-              name: spec.name,
               map: spec.map,
               environment: EXPEDITION_PLACES[index],
               enemies: encounterEnemies(index, input.boss),

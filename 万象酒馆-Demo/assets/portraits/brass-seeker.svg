@@ -1,33 +1,29 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="600" height="900" viewBox="0 0 600 900">
-  <defs>
-    <radialGradient id="bg" cx="50%" cy="45%" r="65%">
-      <stop offset="0%" stop-color="#ffd67a" stop-opacity="0.32" />
-      <stop offset="60%" stop-color="#3d301c" />
-      <stop offset="100%" stop-color="#1a140b" />
-    </radialGradient>
-    <linearGradient id="metal" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#c79848" />
-      <stop offset="50%" stop-color="#ffd67a" />
-      <stop offset="100%" stop-color="#1a140b" />
-    </linearGradient>
-  </defs>
-  <rect width="600" height="900" fill="#1a140b" />
-  <rect x="20" y="20" width="560" height="860" fill="url(#bg)" rx="16" />
-  <circle cx="300" cy="380" r="230" fill="none" stroke="#c79848" stroke-width="3" stroke-opacity="0.35" />
-  <circle cx="300" cy="380" r="200" fill="none" stroke="#ffd67a" stroke-width="1.5" stroke-dasharray="8 6" stroke-opacity="0.4" />
-  <path d="M70 820V340Q70 100 300 80Q530 100 530 340V820" fill="none" stroke="#c79848" stroke-opacity="0.3" stroke-width="2.5" />
-  <path d="M60 830H540M100 850H500" stroke="#c79848" stroke-opacity="0.5" stroke-width="3" />
-  
-      <!-- Floating Brass Drone Body -->
-      <polygon points="300,240 390,360 360,500 240,500 210,360" fill="#5c4524" stroke="#c79848" stroke-width="5" />
-      <circle cx="300" cy="380" r="38" fill="#1a140b" stroke="#ffd67a" stroke-width="4" />
-      <circle cx="300" cy="380" r="18" fill="#52dcff" />
-      <!-- Rotors / Antennas -->
-      <line x1="300" y1="240" x2="300" y2="170" stroke="#ffd67a" stroke-width="4" />
-      <ellipse cx="300" cy="170" rx="30" ry="8" fill="none" stroke="#ffd67a" stroke-width="3" />
-      <line x1="210" y1="360" x2="140" y2="320" stroke="#c79848" stroke-width="5" />
-      <line x1="390" y1="360" x2="460" y2="320" stroke="#c79848" stroke-width="5" />
-      <!-- Laser Lens Pointer -->
-      <polygon points="280,500 320,500 300,560" fill="#ffd67a" />
-    
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="900" viewBox="0 0 256 384" data-art-style="isometric-voxel-v3"><title>黄铜巡察机</title>
+<defs><radialGradient id="chamber" cx="50%" cy="54%" r="68%"><stop stop-color="#81632f"/><stop offset="1" stop-color="#142428"/></radialGradient></defs>
+<path fill="url(#chamber)" d="M0 0h256v384H0z"/>
+<ellipse cx="128" cy="326.0" rx="56.7" ry="10" fill="#09171b" opacity=".5"/>
+<g data-enemy-model="brassSeeker" transform="translate(-172.251 -351.248) scale(2.34571)"><polygon points="120.3,269.1 107.8,274.4 107.8,249.2 120.3,243.8" fill="#4d5653"/>
+<polygon points="107.8,274.4 99.7,271.0 99.7,245.8 107.8,249.2" fill="#6a7772"/>
+<polygon points="112.3,240.4 120.3,243.8 107.8,249.2 99.7,245.8" fill="#8a9b94"/>
+<polygon points="156.3,271.0 148.3,274.4 148.3,249.2 156.3,245.8" fill="#4d5653"/>
+<polygon points="148.3,274.4 135.7,269.1 135.7,243.8 148.3,249.2" fill="#6a7772"/>
+<polygon points="143.8,240.4 156.3,245.8 148.3,249.2 135.7,243.8" fill="#8a9b94"/>
+<polygon points="156.8,268.0 128.0,280.2 128.0,265.8 156.8,253.6" fill="#1a2127"/>
+<polygon points="128.0,280.2 99.2,268.0 99.2,253.6 128.0,265.8" fill="#242e36"/>
+<polygon points="128.0,241.4 156.8,253.6 128.0,265.8 99.2,253.6" fill="#2f3c46"/>
+<polygon points="146.9,253.6 128.0,261.6 128.0,231.6 146.9,223.6" fill="#74684d"/>
+<polygon points="128.0,261.6 109.1,253.6 109.1,223.6 128.0,231.6" fill="#a08f6a"/>
+<polygon points="128.0,215.6 146.9,223.6 128.0,231.6 109.1,223.6" fill="#d1bb8a"/>
+<polygon points="152.3,222.4 128.0,232.7 128.0,202.7 152.3,192.4" fill="#7f612e"/>
+<polygon points="128.0,232.7 103.7,222.4 103.7,192.4 128.0,202.7" fill="#af863f"/>
+<polygon points="128.0,182.1 152.3,192.4 128.0,202.7 103.7,192.4" fill="#e5af53"/>
+<polygon points="148.5,215.7 135.0,221.4 135.0,213.0 148.5,207.3" fill="#6b978d"/>
+<polygon points="135.0,221.4 132.7,220.5 132.7,212.1 135.0,213.0" fill="#93d0c2"/>
+<polygon points="146.2,206.4 148.5,207.3 135.0,213.0 132.7,212.1" fill="#c0fffe"/>
+<polygon points="156.3,284.3 143.8,289.6 143.8,264.4 156.3,259.0" fill="#4d5653"/>
+<polygon points="143.8,289.6 135.7,286.2 135.7,260.9 143.8,264.4" fill="#6a7772"/>
+<polygon points="148.3,255.6 156.3,259.0 143.8,264.4 135.7,260.9" fill="#8a9b94"/>
+<polygon points="120.3,286.2 112.3,289.6 112.3,264.4 120.3,260.9" fill="#4d5653"/>
+<polygon points="112.3,289.6 99.7,284.3 99.7,259.0 112.3,264.4" fill="#6a7772"/>
+<polygon points="107.8,255.6 120.3,260.9 112.3,264.4 99.7,259.0" fill="#8a9b94"/></g>
 </svg>

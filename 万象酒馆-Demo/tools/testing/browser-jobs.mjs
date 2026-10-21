@@ -15,7 +15,12 @@ export function browserJobs(scopes, results, root) {
       },
       after,
     );
+  simple('battle-controls', 'battle-controls', 'battleControlChecks');
+  simple('vertex-portraits', 'vertex-portraits', 'vertexPortraitChecks');
+  simple('tutorial-revision', 'tutorial-revision', 'tutorialRevisionChecks');
+  simple('enemy-portraits', 'enemy-portraits', 'enemyPortraitChecks');
   simple('worlds-emblems', 'worlds-emblems', 'worldsEmblemsChecks');
+  simple('opencode', 'opencode', 'opencodeBrowserChecks');
   simple('onboarding', 'onboarding', 'onboardingChecks');
   add('settings', async (options) => {
     const { apiSettingsChecks } = await import('../../tests/browser/api-settings.mjs');

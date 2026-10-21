@@ -4,6 +4,7 @@ import { REGIONS } from './content/regions.js';
 import { MAP_IDS } from './content/biomes.js';
 import { DEFINITIONS } from './data.js';
 import { tutorialSpec } from './content/tutorial.js';
+import { ruinsEncounterSpec } from './content/ruins-encounters.js';
 
 function random(seed) {
   let state = seed >>> 0;
@@ -188,7 +189,9 @@ export function explorationSpec(entry, index = 0) {
   if (!Number.isInteger(index) || index < 0 || index >= ENCOUNTER_COUNT)
     throw Error('战斗序号无效');
   if (entry.tutorial === true && entry.map === 'ruins') return tutorialSpec(index);
-  const site = (entry.sequence + index) % 6;
+  if (!entry.world && entry.map === 'ruins' && entry.sequence < 6)
+    return ruinsEncounterSpec(entry.sequence, index);
+  const site = entry.sequence % 6;
   const dynamic = entry.world;
   if (entry.encounters) validateEncounters(entry.encounters, entry);
   const definitions = dynamic?.enemyDefinitions || {};

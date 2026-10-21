@@ -36,10 +36,10 @@ test('moving into an empty base before an enemy attack dodges it and still costs
 
 test('the vulnerability lesson starts with a visible weakness in enemy armour; the next lesson uses slow items', () => {
   const opening = newEncounter(tutorialSpec(1), null, 1, compileRoster(campaign()));
-  assert.equal(opening.units.cinderImp.buffs.vulnerable, 1);
-  const hit = preview(opening, [makeAction(opening, 'lyria', 'attack', 'cinderImp', 0)]);
+  assert.equal(opening.units.pebble.buffs.vulnerable, 1);
+  const hit = preview(opening, [makeAction(opening, 'lyria', 'attack', 'pebble', 0)]);
   assert(hit.valid);
-  assert(hit.final.units.cinderImp.hp < opening.units.cinderImp.hp - 7);
+  assert(hit.final.units.pebble.hp < opening.units.pebble.hp - 7);
   const stone = newEncounter(tutorialSpec(2), null, 2, compileRoster(campaign()));
   assert.deepEqual(stone.enemyIds, ['warden']);
   assert(stone.units.warden.maxHp > 50);

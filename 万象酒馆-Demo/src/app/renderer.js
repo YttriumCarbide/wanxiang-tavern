@@ -1,3 +1,5 @@
+import { resourceText } from '../resource-text.js';
+import { rearUnlocked } from '../formation-access.js';
 import { emblemRing } from '../emblems.js';
 import { ENCOUNTER_COUNT, FINAL_ENCOUNTER } from '../content/journey-rules.js';
 import { html } from '../shared/html.js';
@@ -12,6 +14,12 @@ import { portraitUrl } from '../catalog.js';
 export function createRenderer(context) {
   const { session } = context;
   function renderRear(s) {
+    const unlocked = rearUnlocked(session.ai.library);
+    $('.rear-panel').hidden = !unlocked;
+    if (!unlocked) {
+      $('#rear-cards').replaceChildren();
+      return;
+    }
     const ids = (
       session.battle.playing ? s.formation : session.battle.forecast.final.formation
     ).slice(3);
@@ -57,7 +65,7 @@ export function createRenderer(context) {
           ><span class="card-buffs"
             >${statusIcons(s, id, session.battle.forecast.final, session.battle.playing ? [] : session.battle.forecast.events)}</span
           ><strong class="rear-name">${escapeText(d.name)}</strong>
-          ${ready ? html`<span class="entry-tag" title="${escapeText(d.entrySkill?.name ? `入场技【${d.entrySkill.name}】就绪：${d.entrySkill.text || ''}` : '入场技就绪')}">入场</span>` : ''}
+          ${ready ? html`<span class="entry-tag" title="${escapeText(resourceText(d.entrySkill?.name ? `入场技【${d.entrySkill.name}】就绪：${d.entrySkill.text || ''}` : '入场技就绪'))}">入场</span>` : ''}
           <div class="rear-resources">${resourceBars(u, f)}</div>
           ${emblemRing(d, u, false, session.battle.playing ? u : f)}
         </button>`;

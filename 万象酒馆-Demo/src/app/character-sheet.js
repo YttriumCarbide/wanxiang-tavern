@@ -1,3 +1,4 @@
+import { resourceText } from '../resource-text.js';
 import { grownCombat, restoreGrowth, RARITIES, xpToNext } from '../growth.js';
 import { BUFFS } from '../data.js';
 import { characterPresentation } from '../ai/character-presentation.js';
@@ -29,9 +30,11 @@ function passiveText(skill) {
 function abilitySheet(skill, design, label) {
   const cost = skill.passive
     ? `被动 · ${skill.location}`
-    : `${skill.ap} AP · ${skill.mp} 蓝${skill.hp ? ` · ${skill.hp} 生命` : ''}`;
+    : `${skill.ap} AP · ${skill.mp} sp${skill.hp ? ` · ${skill.hp} hp` : ''}`;
   const effects = skill.passive ? [passiveText(skill)] : skill.effects.map(effectText);
-  const motion = escapeText(design?.description || '这位来客的旧设定尚未记载具体动作。');
+  const motion = escapeText(
+    resourceText(design?.description || '这位来客的旧设定尚未记载具体动作。'),
+  );
   return html`<details class="character-ability" data-character-ability="${escapeText(label)}">
     <summary>
       <span class="ability-kind">${label}</span><strong>${escapeText(skill.name)}</strong
@@ -41,7 +44,7 @@ function abilitySheet(skill, design, label) {
       <div class="ability-mechanics">
         <span
           >${skill.passive ? escapeText(skill.location) : escapeText(targets[skill.target])}</span
-        >${effects.map((text) => html`<b>${escapeText(text)}</b>`).join('')}
+        >${effects.map((text) => html`<b>${escapeText(resourceText(text))}</b>`).join('')}
       </div>
       <p class="ability-motion">${motion}</p>
     </div>

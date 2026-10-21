@@ -527,6 +527,12 @@ export const RUINS_BOSSES = [
     boss: true,
     color: '#d4a259',
     portrait: 'ruins-gate',
+    openingIntent: {
+      name: '开幕雷击 · 雷锁贯穿',
+      slot: 0,
+      text: '首次出手向左位落下60伤害的雷击；此开幕攻击每场仅一次。',
+      effects: [{ type: 'damage', value: 60 }],
+    },
     hp: 95,
     mp: 0,
     speed: 2,

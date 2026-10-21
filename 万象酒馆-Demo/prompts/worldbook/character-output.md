@@ -20,11 +20,12 @@ effects中damage/heal/shield/selfHeal/selfMana只含type/value；selfMana为回�
 
 不生成ultimate、quest、awakening字段；当前版本没有奥义或觉醒系统，只设计普攻、两个技能与专属入场技。
 
-
 【装备与被动统一事件规则】
 新被动可用{passive:true,text:"中文实际效果",rules:[...]}，每条规则按本次mechanics.passives.unifiedRules和Schema设计。持续光环不写event/limit，事件规则必须有单趟limit，装备和被动效果不递归触发。条件按当前实际状态全部同时判断。
-召唤角色（非创建主角）根节点必须附arrivalDialogue，2～5项{speaker:"character"或"player",text:"中文对白"}，角色与主角自然交谈，不强制引导。此项仅本次展示，不写入setting或角色记忆。已知NPC任务忠实保留request.knownNpc原姓名与经历。潘多拉不可抽取，仅由第三次完整副本结算后的事件加入。
+召唤角色（非创建主角）根节点必须附arrivalDialogue，2～5项{speaker:"character"或"player",text:"中文对白"}，角色与主角自然交谈，不强制引导。此项仅本次展示，不写入setting或角色记忆。已知NPC任务忠实保留request.knownNpc原姓名与经历。潘多拉不可抽取，仅由第二次完整副本结算后的事件加入。
 
 【1.3 行程与成长规则更新】
 【主角升级台词】
 为主角生成时，根节点额外输出levelUpLines数组，恰好5句符合其性格的简短升级台词。两个技能槽各自可以设计为主动或被动，普通攻击独立存在。
+
+当本次用途为玩家主角（purpose=protagonist）时，必须按强势开局设计：生命、法力、普通攻击和主动技能伤害在合法范围内优先选择较高值，明显强于同稀有度普通同伴；行动次数固定2，技能耗蓝保持合理，不能以极高消耗抵消强度。玩家明确填写的设想优先。只有一般同伴才按普通概率分布分配，不要把主角按弱小新手模板生成。

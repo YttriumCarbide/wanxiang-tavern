@@ -13,6 +13,10 @@ export function createSettlement(context) {
   const dialogue = createDialogue(events, 'level-dialogue');
   let release = null;
   let disposed = false;
+  let presenting = false;
+  events.on(panel, 'cancel', (event) => {
+    if (presenting) event.preventDefault();
+  });
   const members = () =>
     (session.journey.expedition.partyIds || session.ai.library.party)
       .filter(Boolean)
@@ -84,8 +88,29 @@ export function createSettlement(context) {
             { duration: 520, easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'forwards' },
           );
           await animation.finished.catch(() => {});
-          if (level < end.level) context.audio.play('shield');
+          bar.style.width = `${(to / maximum) * 100}%`;
+          animation.cancel();
+          if (disposed || !panel.open) return;
+          if (level < end.level) {
+            context.audio.play('shield');
+            row.dataset.experienceState = 'level-up';
+            label.textContent = `Lv.${level + 1}`;
+            const badge = row.querySelector('[data-level-up]');
+            badge.hidden = false;
+            const flash = row.animate(
+              [
+                { backgroundColor: '#d4b65e00', boxShadow: '0 0 0 #ead37d00' },
+                { backgroundColor: '#d4b65e35', boxShadow: '0 0 22px #ead37d80', offset: 0.4 },
+                { backgroundColor: '#d4b65e00', boxShadow: '0 0 0 #ead37d00' },
+              ],
+              { duration: 380, easing: 'ease-out' },
+            );
+            await flash.finished.catch(() => {});
+            badge.hidden = true;
+          }
+          row.dataset.experienceState = 'filling';
         }
+        row.dataset.experienceState = 'complete';
       }),
     );
   }
@@ -94,7 +119,11 @@ export function createSettlement(context) {
       .map((member) => {
         const award = awards.get(member.id);
         const growth = award?.before || restoreGrowth(member.growth, member.id);
-        return html`<article class="experience-row" data-experience="${member.id}">
+        return html`<article
+          class="experience-row"
+          data-experience="${member.id}"
+          data-experience-state="${award ? 'filling' : 'complete'}"
+        >
           <img src="${portraitUrl(member.combat)}" alt="${escapeText(member.setting.name)}" />
           <div>
             <header>
@@ -105,6 +134,7 @@ export function createSettlement(context) {
               <i style="width:${(growth.xp / xpToNext(growth.level)) * 100}%"></i>
             </div>
             <small data-xp>${growth.xp} / ${xpToNext(growth.level)} EXP</small>
+            <span class="experience-level-up" data-level-up hidden>↑ LEVEL UP</span>
           </div>
         </article>`;
       })
@@ -191,7 +221,6 @@ export function createSettlement(context) {
     retreat,
   }) {
     const grouped = totals(awards);
-    await levelDialogues(grouped);
     if (disposed || session.runtime.mode !== 'battle') return;
     const reward = (icon, count, label, cls = '') =>
       count
@@ -244,12 +273,28 @@ export function createSettlement(context) {
     const story = panel.querySelector('#result-journal');
     if (story) story.onclick = journal;
     panel.showModal();
-    void experience(grouped);
+    presenting = true;
+    const buttons = [...panel.querySelectorAll('.result-buttons button')];
+    buttons.forEach((button) => {
+      button.disabled = true;
+    });
+    try {
+      await experience(grouped);
+      if (disposed || !panel.open || session.runtime.mode !== 'battle') return;
+      await levelDialogues(grouped);
+    } finally {
+      presenting = false;
+      if (!disposed)
+        buttons.forEach((button) => {
+          button.disabled = false;
+        });
+    }
   }
   return {
     show,
     dispose() {
       disposed = true;
+      panel.getAnimations({ subtree: true }).forEach((animation) => animation.cancel());
       release?.();
       dialogue.dispose();
     },

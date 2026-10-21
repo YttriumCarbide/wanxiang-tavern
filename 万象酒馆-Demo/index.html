@@ -218,6 +218,20 @@
             >
             <p id="ai-transport-hint" class="ai-hint"></p>
             <label
+              >接口协议<select id="ai-provider">
+                <option value="auto">自动识别（OpenAI / Google Vertex）</option>
+                <option value="openai">OpenAI 兼容</option>
+                <option value="vertex">Google Vertex · Gemini 原生</option>
+              </select></label
+            >
+            <label id="ai-vertex-auth" hidden
+              >Vertex 认证<select id="ai-vertexAuth">
+                <option value="api-key">API Key（快捷模式）</option>
+                <option value="oauth">OAuth 访问令牌（标准模式）</option>
+              </select></label
+            >
+            <p id="ai-provider-hint" class="ai-hint" hidden></p>
+            <label
               >Base URL<input
                 autocomplete="off"
                 id="ai-baseUrl"

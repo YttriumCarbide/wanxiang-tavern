@@ -117,7 +117,6 @@ export function createDrag(context) {
         from = formation.indexOf(current.id),
         to = formation.indexOf(targetId);
       session.runtime.view?.endDrag();
-      session.runtime.view?.cancelReleasedDrag(current.id);
       current.source.classList.remove('is-drag-source');
       document.body.classList.remove('is-dragging');
       clearDropHighlights();
@@ -133,6 +132,7 @@ export function createDrag(context) {
           showDropMenu(current.id, targetId, 'Enemy', e.clientX, e.clientY);
         else context.shell.toast('备用角色先换入前场。');
       }
+      session.runtime.view?.cancelReleasedDrag(current.id);
       setTimeout(() => {
         if (session.runtime.drag === current) session.runtime.drag = null;
       }, 0);

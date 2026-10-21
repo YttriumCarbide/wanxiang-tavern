@@ -1,3 +1,17 @@
+## 2026-10-21 请求控制与兼容
+
+所有生成及模型列表入口提供“终止”，主动取消或十五分钟超时都会中止请求，失败不自动重试。主角创建有两个独立技能描述框及各自的主动／被动选择；世界书内容版本28追加主角强势开局指导，保持两次行动及合法数值边界。
+
+OpenCode Go 可填写 `https://opencode.ai/zen/go/v1`。独立实现稳定的 `x-opencode-session`、逐请求更新的 `x-opencode-request` 和兼容客户端标头 `x-opencode-client: cli`，不复制第三方插件、不加载插件界面，Node转发保留 `wanxiang-tavern/1.0` 身份。三项元数据随模型列表、流式及普通请求发送，仅针对 OpenCode 域名生效。
+
+实测 `glm-5.1` 流式生成成功；`deepseek-v4.1-flash` 仍被工作区 Privacy=Global 要求拒绝，没有更改账户设置。旧版及新版官方接口 OPTIONS 均返回404、没有跨域允许头。它们目前不能从生产静态网页直接请求，线上需允许跨域的兼容转发地址。
+
+本机启动器的服务增加仅限回环地址的 OpenCode 转发。浏览器启动时先确认本机服务能力，再在模型请求前选择传输；不在付费请求失败后换路线重试。目标限制为 OpenCode 的两种官方模型／生成路径，核验请求来源，不落盘密钥、对话、生成正文，支持流式、终止和十五分钟超时。生产静态网页维持浏览器直连，不依赖本机服务，不包含转发服务源码。
+
+Cline 使用通用 OpenAI 兼容连接，地址为 `https://api.cline.bot/api/v1`；免费模型仍需自己的 Cline API 密钥，本次没有密钥，未做真实生成验证。
+
+社区预设兼容将 `model`／`ass` 消息角色映射为 `assistant`；预设绑定正则默认覆盖六种创作用途，尊重显式范围，总结保持独立。根级正则优先，没有根级列表才读取 SPreset 的旧绑定缓存，不重复导入。不改用户原文件，不执行其中未支持的脚本。
+
 # 当前发布模式
 
 纯静态版直接在浏览器运行全部API逻辑，配置与密钥由各玩家自行提供。存储、部署与兼容方式以[静态化适配](静态化适配.md)为准。下文保留的本机HTTP路由用于开发隔离测试，不是部署依赖。
@@ -189,3 +203,14 @@ API 连接配置只提供“严格无工具”和“合并含工具”两种提�
 地图的id与美术map不同；新世界地图页面只显示当前前进节点。动态剧本data.encounters是五项{enemyIds:[]}; 每项1～3个不同的当前世界敌人ID，末场至少一个Boss。未登记的敌人、未知外貌/效果/位置和越界数值会拒收，原世界不覆盖。新世界使用自己的归档关键词与物品库，保存、总结与个人API资料继续只留在玩家设备。
 
 敌人效果的target相对敌人阵营：opponents指玩家前场；self指自身；allAllies指存活敌人全体；lowestAlly指生命比例最低的存活敌人。治疗、法力、护盾及正面状态只指向敌人阵营，禁止给玩家角色施加slow。旧世界加载时移除无效slow，保留其余世界资料。Boss可使用全部已登记外貌，不限定首领皮套。地图与造物校验失败提供本次原始回复查看，不保存到长期记录，不自动重试。
+
+# Google Vertex / Gemini 原生渠道
+
+接口协议选“Google Vertex · Gemini 原生”。七类API共用该实现，连接可保存成预设并应用到其他API，聊天提示词预设仍按原开关处理。
+
+- 快捷模式：Base URL 填 `https://aiplatform.googleapis.com/v1`，认证选 API Key，密钥栏填写 Vertex 快捷模式密钥，模型栏填写控制台中的 Gemini 模型ID。
+- 标准模式：Base URL 填 `https://区域-aiplatform.googleapis.com/v1/projects/项目ID/locations/区域`；使用 global 时域名为 `aiplatform.googleapis.com`。认证选 OAuth，密钥栏填有效访问令牌。当前不接收服务账号私钥，不自动刷新令牌，过期后在本机更新。
+- 原生快捷模式文档未提供模型列表接口，模型ID手动填写；不会用一条生成请求来探测模型。已有 Vertex OpenAI 兼容端点仍可选择 OpenAI 协议。
+- 原生请求支持文字历史、系统指令、采样参数、JSON偏好、预设正文工具及SSE流式输出；工具只提取正文，不执行任意函数。system/developer按原顺序合并进Google的systemInstruction，相邻同角色消息合并成parts，模型thought不混入正文。沿用十五分钟超时、终止、配额错误和原文诊断，不自动重试。
+
+依据：[Google 快捷模式REST](https://docs.cloud.google.com/gemini-enterprise-agent-platform/reference/express-mode/api-reference)、[生成协议](https://docs.cloud.google.com/gemini-enterprise-agent-platform/reference/models/inference)、[FunctionDeclaration](https://docs.cloud.google.com/gemini-enterprise-agent-platform/reference/rest/Shared.Types/FunctionDeclaration)。当前完成模拟协议与隔离浏览器检查，未使用用户Vertex密钥实测付费生成。

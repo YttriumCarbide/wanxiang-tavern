@@ -64,6 +64,19 @@
   align-items: center;
   gap: 12px;
 }
+.experience-row {
+  position: relative;
+  border-radius: 6px;
+}
+.experience-level-up {
+  position: absolute;
+  right: 4px;
+  bottom: 3px;
+  color: #ffe7a1;
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-shadow: 0 0 10px #e8c85b;
+}
 .experience-row > img,
 .recovery-row > img {
   width: 40px;

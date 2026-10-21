@@ -1,3 +1,4 @@
+import { finishSettlement } from './legacy-session.mjs';
 import { legacySession } from './legacy-session.mjs';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
@@ -172,9 +173,7 @@ export async function explorationJourneyChecks({ browser, baseURL, output }) {
           }
 
           assert.equal((await page.evaluate(() => window.demo.getState())).phase, 'victory');
-          while (await page.locator('#level-dialogue').isVisible())
-            await page.locator('#level-dialogue button').click();
-          await page.locator('#result').waitFor({ state: 'visible' });
+          await finishSettlement(page);
           const afterRoom = await page.evaluate(() => window.demo.getExploration());
           assert.equal(afterRoom.forest.completed, room === 4 ? 1 : 0);
           if (room < 4) {

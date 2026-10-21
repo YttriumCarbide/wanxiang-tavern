@@ -1,5 +1,11 @@
 export const allScopes = [
+  'vertex-portraits',
   'quality',
+  'tutorial-revision',
+  'enemy-portraits',
+  'provider-live',
+  'opencode',
+  'battle-controls',
   'worlds-emblems',
   'static',
   'environment',

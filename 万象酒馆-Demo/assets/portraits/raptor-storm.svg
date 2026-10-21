@@ -1,31 +1,65 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="600" height="900" viewBox="0 0 600 900">
-  <defs>
-    <radialGradient id="bg" cx="50%" cy="45%" r="65%">
-      <stop offset="0%" stop-color="#a3d6f5" stop-opacity="0.32" />
-      <stop offset="60%" stop-color="#1e303b" />
-      <stop offset="100%" stop-color="#0d161c" />
-    </radialGradient>
-    <linearGradient id="metal" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#6c9bb5" />
-      <stop offset="50%" stop-color="#a3d6f5" />
-      <stop offset="100%" stop-color="#0d161c" />
-    </linearGradient>
-  </defs>
-  <rect width="600" height="900" fill="#0d161c" />
-  <rect x="20" y="20" width="560" height="860" fill="url(#bg)" rx="16" />
-  <circle cx="300" cy="380" r="230" fill="none" stroke="#6c9bb5" stroke-width="3" stroke-opacity="0.35" />
-  <circle cx="300" cy="380" r="200" fill="none" stroke="#a3d6f5" stroke-width="1.5" stroke-dasharray="8 6" stroke-opacity="0.4" />
-  <path d="M70 820V340Q70 100 300 80Q530 100 530 340V820" fill="none" stroke="#6c9bb5" stroke-opacity="0.3" stroke-width="2.5" />
-  <path d="M60 830H540M100 850H500" stroke="#6c9bb5" stroke-opacity="0.5" stroke-width="3" />
-  
-      <!-- Swooping Bird / Raptor Wings -->
-      <path d="M300 380L140 220L80 320L220 380L160 460L280 450L300 560L320 450L440 460L380 380L520 320L460 220Z" fill="#324c5c" stroke="#6c9bb5" stroke-width="4" />
-      <!-- Sharp Beak & Talons -->
-      <polygon points="300,320 325,380 275,380" fill="#e0b35e" />
-      <polygon points="300,380 330,420 270,420" fill="#a3d6f5" />
-      <circle cx="285" cy="360" r="4" fill="#ffffff" />
-      <circle cx="315" cy="360" r="4" fill="#ffffff" />
-      <line x1="260" y1="560" x2="240" y2="640" stroke="#e0b35e" stroke-width="5" stroke-linecap="round" />
-      <line x1="340" y1="560" x2="360" y2="640" stroke="#e0b35e" stroke-width="5" stroke-linecap="round" />
-    
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="900" viewBox="0 0 256 384" data-art-style="isometric-voxel-v3"><title>鸟印裂风怪鸟</title>
+<defs><radialGradient id="chamber" cx="50%" cy="54%" r="68%"><stop stop-color="#466576"/><stop offset="1" stop-color="#142428"/></radialGradient></defs>
+<path fill="url(#chamber)" d="M0 0h256v384H0z"/>
+<ellipse cx="128" cy="321.8" rx="94.1" ry="10" fill="#09171b" opacity=".5"/>
+<g data-enemy-model="raptorStorm" transform="translate(-110.191 -292.132) scale(2.18324)"><polygon points="160.4,186.3 153.2,189.3 153.2,182.7 160.4,179.7" fill="#456374"/>
+<polygon points="153.2,189.3 131.6,180.2 131.6,173.6 153.2,182.7" fill="#5f889f"/>
+<polygon points="138.8,170.6 160.4,179.7 153.2,182.7 131.6,173.6" fill="#7cb2d0"/>
+<polygon points="160.2,195.9 153.0,199.0 153.0,192.4 160.2,189.3" fill="#4d5653"/>
+<polygon points="153.0,199.0 128.2,188.5 128.2,181.9 153.0,192.4" fill="#6a7772"/>
+<polygon points="135.4,178.9 160.2,189.3 153.0,192.4 128.2,181.9" fill="#8a9b94"/>
+<polygon points="159.9,205.6 152.8,208.6 152.8,202.0 159.9,199.0" fill="#456374"/>
+<polygon points="152.8,208.6 124.8,196.8 124.8,190.2 152.8,202.0" fill="#5f889f"/>
+<polygon points="132.1,187.2 159.9,199.0 152.8,202.0 124.8,190.2" fill="#7cb2d0"/>
+<polygon points="105.5,227.5 94.7,232.1 94.7,226.1 105.5,221.5" fill="#456374"/>
+<polygon points="94.7,232.1 85.7,228.3 85.7,222.3 94.7,226.1" fill="#5f889f"/>
+<polygon points="96.5,217.7 105.5,221.5 94.7,226.1 85.7,222.3" fill="#7cb2d0"/>
+<polygon points="110.5,227.2 99.7,231.8 99.7,225.8 110.5,221.2" fill="#456374"/>
+<polygon points="99.7,231.8 90.7,228.0 90.7,222.0 99.7,225.8" fill="#5f889f"/>
+<polygon points="101.5,217.4 110.5,221.2 99.7,225.8 90.7,222.0" fill="#7cb2d0"/>
+<polygon points="159.7,215.2 152.5,218.3 152.5,211.7 159.7,208.6" fill="#4d5653"/>
+<polygon points="152.5,218.3 121.5,205.1 121.5,198.5 152.5,211.7" fill="#6a7772"/>
+<polygon points="128.7,195.5 159.7,208.6 152.5,211.7 121.5,198.5" fill="#8a9b94"/>
+<polygon points="115.4,226.9 104.6,231.5 104.6,225.5 115.4,220.9" fill="#456374"/>
+<polygon points="104.6,231.5 95.6,227.7 95.6,221.7 104.6,225.5" fill="#5f889f"/>
+<polygon points="106.4,217.1 115.4,220.9 104.6,225.5 95.6,221.7" fill="#7cb2d0"/>
+<polygon points="159.5,224.9 152.3,227.9 152.3,221.3 159.5,218.3" fill="#456374"/>
+<polygon points="152.3,227.9 118.1,213.5 118.1,206.9 152.3,221.3" fill="#5f889f"/>
+<polygon points="125.3,203.8 159.5,218.3 152.3,221.3 118.1,206.9" fill="#7cb2d0"/>
+<polygon points="141.5,274.9 137.0,276.8 137.0,242.0 141.5,240.1" fill="#74684d"/>
+<polygon points="137.0,276.8 132.5,274.9 132.5,240.1 137.0,242.0" fill="#a08f6a"/>
+<polygon points="137.0,238.2 141.5,240.1 137.0,242.0 132.5,240.1" fill="#d1bb8a"/>
+<polygon points="150.1,243.7 132.9,250.9 132.9,218.5 150.1,211.3" fill="#1a2127"/>
+<polygon points="132.9,250.9 106.0,239.5 106.0,207.1 132.9,218.5" fill="#242e36"/>
+<polygon points="123.0,199.9 150.1,211.3 132.9,218.5 106.0,207.1" fill="#2f3c46"/>
+<polygon points="128.9,280.2 124.4,282.1 124.4,247.3 128.9,245.4" fill="#74684d"/>
+<polygon points="124.4,282.1 119.9,280.2 119.9,245.4 124.4,247.3" fill="#a08f6a"/>
+<polygon points="124.4,243.5 128.9,245.4 124.4,247.3 119.9,245.4" fill="#d1bb8a"/>
+<polygon points="132.5,236.3 125.3,239.3 125.3,232.7 132.5,229.7" fill="#456374"/>
+<polygon points="125.3,239.3 91.1,224.9 91.1,218.3 125.3,232.7" fill="#5f889f"/>
+<polygon points="98.3,215.2 132.5,229.7 125.3,232.7 91.1,218.3" fill="#7cb2d0"/>
+<polygon points="153.7,217.6 139.3,223.6 139.3,203.2 153.7,197.2" fill="#456374"/>
+<polygon points="139.3,223.6 124.0,217.2 124.0,196.8 139.3,203.2" fill="#5f889f"/>
+<polygon points="138.3,190.7 153.7,197.2 139.3,203.2 124.0,196.8" fill="#7cb2d0"/>
+<polygon points="121.0,231.6 113.8,234.6 113.8,228.0 121.0,225.0" fill="#4d5653"/>
+<polygon points="113.8,234.6 82.8,221.5 82.8,214.9 113.8,228.0" fill="#6a7772"/>
+<polygon points="90.0,211.8 121.0,225.0 113.8,228.0 82.8,214.9" fill="#8a9b94"/>
+<polygon points="155.3,209.1 152.2,210.4 152.2,206.2 155.3,204.9" fill="#9c8f5d"/>
+<polygon points="152.2,210.4 150.2,209.6 150.2,205.4 152.2,206.2" fill="#d7c480"/>
+<polygon points="153.3,204.0 155.3,204.9 152.2,206.2 150.2,205.4" fill="#ffffa7"/>
+<polygon points="109.5,226.8 102.3,229.9 102.3,223.3 109.5,220.3" fill="#456374"/>
+<polygon points="102.3,229.9 74.4,218.1 74.4,211.5 102.3,223.3" fill="#5f889f"/>
+<polygon points="81.7,208.5 109.5,220.3 102.3,223.3 74.4,211.5" fill="#7cb2d0"/>
+<polygon points="98.1,222.1 90.9,225.2 90.9,218.6 98.1,215.5" fill="#4d5653"/>
+<polygon points="90.9,225.2 66.1,214.7 66.1,208.1 90.9,218.6" fill="#6a7772"/>
+<polygon points="73.3,205.1 98.1,215.5 90.9,218.6 66.1,208.1" fill="#8a9b94"/>
+<polygon points="86.6,217.4 79.4,220.5 79.4,213.9 86.6,210.8" fill="#456374"/>
+<polygon points="79.4,220.5 57.8,211.4 57.8,204.8 79.4,213.9" fill="#5f889f"/>
+<polygon points="65.0,201.7 86.6,210.8 79.4,213.9 57.8,204.8" fill="#7cb2d0"/>
+<polygon points="159.1,221.7 151.8,224.7 151.8,217.5 159.1,214.5" fill="#74684d"/>
+<polygon points="151.8,224.7 141.9,220.5 141.9,213.3 151.8,217.5" fill="#a08f6a"/>
+<polygon points="149.2,210.3 159.1,214.5 151.8,217.5 141.9,213.3" fill="#d1bb8a"/>
+<polygon points="143.6,214.0 140.5,215.3 140.5,211.1 143.6,209.8" fill="#9c8f5d"/>
+<polygon points="140.5,215.3 138.5,214.5 138.5,210.3 140.5,211.1" fill="#d7c480"/>
+<polygon points="141.6,209.0 143.6,209.8 140.5,211.1 138.5,210.3" fill="#ffffa7"/></g>
 </svg>

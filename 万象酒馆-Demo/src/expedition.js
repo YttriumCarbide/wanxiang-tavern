@@ -22,7 +22,12 @@ export function beginEncounter(expedition) {
   if (expedition.status !== 'active') throw Error('Expedition already finished');
   if (expedition.restPending) throw Error('请先选择睡眠或用餐');
   return newEncounter(
-    currentEncounterSpec(expedition),
+    {
+      ...currentEncounterSpec(expedition),
+      ...(expedition.corridorRing?.encounter === expedition.index
+        ? { initialEmblemCharge: { [expedition.corridorRing.actor]: 6 } }
+        : {}),
+    },
     expedition.carried,
     expedition.index,
     expedition.heroDefinitions,

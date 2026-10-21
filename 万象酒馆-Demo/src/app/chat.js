@@ -465,7 +465,19 @@ export function createChat(context) {
   });
   events.on($('#quick-chat-log'), 'click', (event) => {
     const retry = event.target.closest('[data-chat-retry]');
-    if (retry) void send('quick-chat', retry.dataset.chatRetry);
+    if (retry) {
+      void send('quick-chat', retry.dataset.chatRetry);
+      return;
+    }
+    const button = event.target.closest('[data-chat-delete]');
+    if (!button || request || rewrite) return;
+    const index = state().quick.findIndex((item) => item.id === button.dataset.chatDelete);
+    if (index < 0) return;
+    state().quick.splice(index, 1);
+    if (state().responseErrors) delete state().responseErrors[button.dataset.chatDelete];
+    context.generation.save();
+    context.checkpoint?.saveNow();
+    renderHistory();
   });
   events.on($('#chat-characters'), 'change', presentation.selectionCount);
   events.on($('#chat-close'), 'click', () => dialog.close());

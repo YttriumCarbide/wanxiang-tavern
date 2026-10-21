@@ -31,6 +31,7 @@ export async function preparationChecks({ browser, baseURL, output }) {
   library.inventory.summonContracts = 1;
   firstCompanion(library);
   library.campaign.tutorial = 'complete';
+  library.progression.pandoraJoined = true;
   for (let index = 0; index < 3; index++) {
     const document = characterDocument();
     document.setting.name = `旅人${index + 1}`;

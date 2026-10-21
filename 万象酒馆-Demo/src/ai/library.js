@@ -1,3 +1,4 @@
+import { lockUnopenedRear } from '../formation-access.js';
 import { restoreWorlds } from '../worlds.js';
 import { EMBLEMS, EMBLEM_ID, OVERLOAD_EMBLEM_ID } from '../emblems.js';
 import { grownCombat, restoreGrowth } from '../growth.js';
@@ -43,6 +44,9 @@ function createLibrary(customPortraits) {
       settlements: [],
       pandoraJoined: false,
       swapLesson: 'none',
+      entryLesson: 'done',
+      corridorRingAcquired: false,
+      overloadLesson: 'none',
       emblemLesson: 'none',
     },
     exploration: newExploration(Math.floor(Math.random() * 4294967296)),
@@ -229,9 +233,22 @@ export function restoreLibrary(value) {
       value.progression?.pandoraJoined === true ||
       ((!campaign || value.campaign.version >= 3) &&
         value.characters?.some((member) => member.id === 'official-pandora') === true),
-    emblemLesson: ['summon', 'equip', 'charge', 'combine', 'skill', 'done'].includes(
-      value.progression?.emblemLesson,
-    )
+    entryLesson: ['pending', 'ready', 'done'].includes(value.progression?.entryLesson)
+      ? value.progression.entryLesson
+      : 'done',
+    corridorRingAcquired: value.progression?.corridorRingAcquired === true,
+    overloadLesson: ['summon', 'equip', 'done'].includes(value.progression?.overloadLesson)
+      ? value.progression.overloadLesson
+      : 'none',
+    emblemLesson: [
+      'summon',
+      'equip',
+      'charge',
+      'combine',
+      'skill',
+      'done',
+      'corridor-intro',
+    ].includes(value.progression?.emblemLesson)
       ? value.progression.emblemLesson
       : 'none',
     swapLesson: ['pending', 'active', 'retreat', 'done'].includes(value.progression?.swapLesson)
@@ -431,5 +448,6 @@ export function restoreLibrary(value) {
   // Only code-produced, confirmed history is stored; the request builder bounds context size.
   library.history = Array.isArray(value.history) ? structuredClone(value.history) : [];
   hydrateArchiveMaps(library);
+  lockUnopenedRear(library);
   return library;
 }

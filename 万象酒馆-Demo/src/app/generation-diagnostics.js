@@ -38,6 +38,12 @@ export function createGenerationDiagnostics({ session, events, api, accept, toas
       : record.repairs.length
         ? '已通过完整校验，下方列出自动修复的格式问题。'
         : '格式与规则校验通过。';
+    if (record.stage === 'upstream-quota')
+      $('#diagnostic-summary').textContent =
+        '上游额度或请求限额不足，本次生成失败。下方保留上游错误及已收到的内容，未自动重试。';
+    else if (record.stage === 'transport')
+      $('#diagnostic-summary').textContent =
+        '接口返回失败，尚未得到可接收的完整结果。下方保留实际收到的内容；反代完成日志不代表正文已经交回游戏。';
     if (record.prose)
       $('#diagnostic-summary').textContent +=
         ` 整章正文${record.prose.characters}字（${record.prose.unit}）。`;
@@ -53,6 +59,9 @@ export function createGenerationDiagnostics({ session, events, api, accept, toas
       (record.resolvedIssues?.length
         ? '已修正的问题：\n' + describeIssues(record.resolvedIssues)
         : '没有发现格式或规则问题。');
+    if (record.delivery)
+      $('#diagnostic-issues').textContent +=
+        `\n\n游戏收包：${record.delivery.receivedBytes}字节，${record.delivery.eventCount}条数据帧，已提取正文${record.delivery.textCharacters}字；${record.delivery.doneMarker ? '收到' : '未收到'}流式结束标记。`;
     if (record.warnings?.length)
       $('#diagnostic-issues').textContent +=
         '\n\n参考信息（不影响接收）：\n' + describeIssues(record.warnings);

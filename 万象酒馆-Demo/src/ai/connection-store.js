@@ -1,4 +1,5 @@
 import { completionURL, validateApiKey } from './compatible.js';
+import { isVertex, vertexURL } from './vertex.js';
 const randomUUID = () => crypto.randomUUID();
 
 export const DEFAULT_OUTPUT_TOKENS = 32768;
@@ -17,6 +18,11 @@ const publicProfile = ({ apiKey, ...profile }) => ({ ...profile, hasApiKey: !!ap
 
 function profileFrom(input, old) {
   completionURL(input.baseUrl);
+  const provider = input.provider ?? old.provider ?? 'auto';
+  const vertexAuth = input.vertexAuth ?? old.vertexAuth ?? 'api-key';
+  if (!['auto', 'openai', 'vertex'].includes(provider)) throw Error('接口协议无效');
+  if (!['api-key', 'oauth'].includes(vertexAuth)) throw Error('Vertex 认证类型无效');
+  if (isVertex({ ...input, provider })) vertexURL(input);
   if (typeof input.model !== 'string' || input.model.length > 200) throw Error('模型名称无效');
   const apiKey = input.clearKey
     ? ''
@@ -40,7 +46,10 @@ function profileFrom(input, old) {
   const requestMode = input.requestMode ?? old.requestMode ?? 'local';
   if (!['local', 'browser'].includes(requestMode)) throw Error('连接方式无效');
   return {
+    provider,
+    vertexAuth,
     requestMode,
+    sessionId: old.sessionId || randomUUID(),
     contextSize,
     promptProcessing,
     baseUrl: input.baseUrl.trim(),
@@ -58,6 +67,8 @@ function profileFrom(input, old) {
 /** Platform-owned storage holds settings; this store has no network or filesystem dependency. */
 export function createConnectionStore({ snapshot = {}, initial = {}, save = async () => {} } = {}) {
   const defaults = {
+    provider: 'auto',
+    vertexAuth: 'api-key',
     baseUrl: 'https://api.openai.com/v1',
     model: '',
     apiKey: '',
@@ -78,6 +89,7 @@ export function createConnectionStore({ snapshot = {}, initial = {}, save = asyn
       kind,
       {
         ...defaults,
+        sessionId: randomUUID(),
         ...(kind === 'summary' ? { maxTokens: 8192, temperature: 0.2 } : {}),
         promptPresetId: kind === 'summary' ? null : `${kind}-default`,
         apiPresetId: null,

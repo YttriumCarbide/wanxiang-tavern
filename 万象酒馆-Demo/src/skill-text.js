@@ -1,4 +1,5 @@
 import { BUFFS } from './data.js';
+import { resourceText } from './resource-text.js';
 
 /** Display the actual compiled effects, including growth, without explanatory growth suffixes. */
 export function finalSkillText(skill) {
@@ -21,5 +22,5 @@ export function finalSkillText(skill) {
     else if (effect.type === 'cleanse')
       parts.push('净化' + effect.buffs.map((key) => BUFFS[key]?.name || key).join('、'));
   }
-  return parts.join('，') + '。';
+  return resourceText(parts.join('，') + '。');
 }

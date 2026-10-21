@@ -25,7 +25,7 @@ export function normalizePromptPreset(raw, id = 'custom') {
     const identifier = String(entry.identifier || `message-${index + 1}`);
     if (!/^[a-zA-Z0-9_-]{1,100}$/.test(identifier))
       throw Error('消息identifier只允许字母、数字、横线与下划线');
-    const role = entry.role === 'ass' ? 'assistant' : entry.role || 'system';
+    const role = ['ass', 'model'].includes(entry.role) ? 'assistant' : entry.role || 'system';
     if (!roles.includes(role)) throw Error(`${identifier}的角色只能是system、user、assistant`);
     const content = typeof entry.content === 'string' ? entry.content : '';
     if (content.length > 128000) throw Error(`${identifier}内容过长（最多128000字）`);

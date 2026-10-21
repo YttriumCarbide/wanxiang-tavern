@@ -3,6 +3,9 @@ import { readCompletionStream } from './completion-stream.js';
 import { readToolContent } from './tool-content.js';
 import { outputToolRequest } from './preset-output.js';
 import { createPresetOutputProcessor } from './output-processor.js';
+import { opencodeHeaders } from './opencode-headers.js';
+import { upstreamError } from './upstream-error.js';
+import { isVertex, vertexRequest, vertexResponse } from './vertex.js';
 
 export function validateApiKey(apiKey) {
   if (typeof apiKey !== 'string' || apiKey.length > 2000 || /[^\x21-\x7e]/.test(apiKey))
@@ -39,9 +42,14 @@ export async function compatibleRequest(
   } = {},
 ) {
   validateApiKey(profile.apiKey || '');
-  const url = completionURL(profile.baseUrl);
+  const nativeVertex = isVertex(profile);
+  if (models && nativeVertex)
+    throw Error(
+      'Vertex 原生接口未提供快捷模式模型列表，请在模型栏填写 Google 控制台显示的 Gemini 模型ID；未发送付费请求。',
+    );
+  let url = completionURL(profile.baseUrl);
   if (models) url.pathname = url.pathname.replace(/\/chat\/completions$/, '/models');
-  const headers = { 'Content-Type': 'application/json' };
+  let headers = { 'Content-Type': 'application/json', ...opencodeHeaders(profile) };
   if (profile.apiKey) headers.Authorization = `Bearer ${profile.apiKey}`;
   const payload = {
     model: profile.model,
@@ -66,31 +74,42 @@ export async function compatibleRequest(
     const maxTokens = sampling.maxTokens ?? profile.maxTokens;
     if (maxTokens && profile.tokenField !== 'none') payload[profile.tokenField] = maxTokens;
   }
-  const response = await fetchImpl(url, {
+  let body = payload;
+  if (nativeVertex) {
+    const vertex = vertexRequest(profile, payload);
+    url = vertex.url;
+    headers = vertex.headers;
+    body = vertex.body;
+  }
+  let response = await fetchImpl(url, {
     method: models ? 'GET' : 'POST',
     headers,
-    ...(models ? {} : { body: JSON.stringify(payload) }),
+    ...(models ? {} : { body: JSON.stringify(body) }),
     signal,
     redirect: 'error',
   });
+  if (nativeVertex) response = await vertexResponse(response);
   if (!models && response.ok && response.headers.get('content-type')?.includes('text/event-stream'))
     try {
       return await readCompletionStream(response, onDelta, outputTool, outputProcessing);
     } catch (failure) {
       failure.diagnostic = redactDiagnostic(
-        generationDiagnostic(
-          'character',
-          failure.rawText || '',
-          failure.message,
-          failure.stage || 'transport',
-        ),
+        {
+          ...generationDiagnostic(
+            'character',
+            failure.rawText || '',
+            failure.message,
+            failure.stage || 'transport',
+          ),
+          delivery: failure.delivery,
+        },
         profile.apiKey,
       );
       throw failure;
     }
   const content = await response.text();
   if (content.length > 2000000) throw Error('接口返回内容过大');
-  const rejected = (message, rawText = content, stage = 'transport') => {
+  const rejected = (message, rawText = response.vertexRawText || content, stage = 'transport') => {
     const failure = Error(message);
     failure.diagnostic = redactDiagnostic(
       generationDiagnostic(
@@ -111,14 +130,31 @@ export async function compatibleRequest(
   try {
     data = JSON.parse(content);
   } catch {
+    if (response.status === 429) {
+      const info = upstreamError(content, response.status);
+      throw rejected(info.message, content, info.stage);
+    }
     throw rejected(`接口未返回JSON（HTTP ${response.status}），请检查Base URL`);
   }
-  if (!response.ok) {
-    const detail = String(data.error?.message || `HTTP ${response.status}`)
+  if (!response.ok || data?.error) {
+    const detail = String(
+      data?.error?.message ||
+        (typeof data?.error === 'string' ? data.error : '') ||
+        `HTTP ${response.status}`,
+    )
       .replaceAll(profile.apiKey || '\0', '[密钥已隐藏]')
       .slice(0, 350);
+    if (url.hostname === 'opencode.ai' && /requires Global regions/i.test(detail))
+      throw rejected(
+        'OpenCode 当前模型要求工作区 Privacy 使用 Global 地区。请在 OpenCode 控制台检查隐私地区设置，或选择符合当前设置的模型。未自动重试。',
+      );
+    const info = upstreamError(detail, response.status);
     throw rejected(
-      `上游接口失败：${detail}${outputTool ? `；本次预设使用${outputTool.name}输出，请确认API支持工具调用` : ''}`,
+      info.stage === 'upstream-quota'
+        ? info.message
+        : `上游接口失败：${detail}${outputTool ? `；本次预设使用${outputTool.name}输出，请确认API支持工具调用` : ''}`,
+      content,
+      info.stage,
     );
   }
   if (models) return { models: (data.data || []).map((model) => String(model.id)).slice(0, 300) };

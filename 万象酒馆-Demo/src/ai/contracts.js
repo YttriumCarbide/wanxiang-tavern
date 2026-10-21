@@ -1,3 +1,5 @@
+import { resourceText } from '../resource-text.js';
+import { defaultCharacterPortrait } from '../content/portrait-templates.js';
 import { ENCOUNTER_COUNT } from '../content/journey-rules.js';
 import { stripRetiredFields, stripRetiredLore } from './retired-abilities.js';
 import { MAP_IDS } from '../content/biomes.js';
@@ -99,7 +101,7 @@ function skill(value, id, allowPassive = true, strict = false) {
   const common = {
     id,
     name: display(text(value.name, '技能名', 30)),
-    text: display(text(value.text, '技能说明', 300)),
+    text: resourceText(display(text(value.text, '技能说明', 300))),
   };
   if (value.passive === true && allowPassive) {
     if (value.rules)
@@ -184,7 +186,10 @@ export function normalizeCharacter(raw, id) {
     name: display(lore.name),
     title: display(lore.title),
     color: base.color,
-    portrait: base.id === 'aegis' ? 'guardian' : base.portrait,
+    portrait: defaultCharacterPortrait(
+      data.weapon,
+      setting.gender || lore.worldbook?.match(/^性别[：:]\s*([^\n]+)/m)?.[1],
+    ),
     hp: integer(data.hp, 20, 80, '生命'),
     mp: integer(data.mp, 8, 40, '蓝量'),
     attack: integer(data.attack, 3, 14, '普攻'),
@@ -202,7 +207,7 @@ export function normalizeCharacter(raw, id) {
     combat.entrySkill = {
       id: `${id}-entry`,
       name: display(text(entrySetting.name || entryData.name || '入场技', '入场技名', 30)),
-      text: text(entrySetting.description || entryData.text || '', '入场技说明', 300),
+      text: resourceText(text(entrySetting.description || entryData.text || '', '入场技说明', 300)),
       target: choice(
         entryData.target || 'opposite',
         ['opposite', 'enemy', 'allEnemies', 'allAllies', 'lowestAlly', 'lowestEnemy', 'self'],

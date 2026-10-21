@@ -213,7 +213,7 @@ test('creation validates batch identity and code budget, without importing prese
   );
 });
 
-test('Pandora is excluded from all official draws and only joins once after three distinct settlements', () => {
+test('Pandora is excluded from all official draws and only joins once after two distinct settlements', () => {
   const library = newLibrary();
   const book = {
     entries: {
@@ -223,9 +223,8 @@ test('Pandora is excluded from all official draws and only joins once after thre
   assert.deepEqual(officialSummonPool(library, book), []);
   recordSettlement(library, 'run1');
   recordSettlement(library, 'run1');
-  recordSettlement(library, 'run2');
   assert.equal(pandoraEligible(library), false);
-  recordSettlement(library, 'run3');
+  recordSettlement(library, 'run2');
   assert.equal(joinPandora(library), true);
   assert.equal(joinPandora(library), false);
   assert.equal(library.characters.filter((member) => member.id === 'official-pandora').length, 1);

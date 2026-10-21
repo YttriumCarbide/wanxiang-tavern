@@ -563,3 +563,8 @@
     transition: none;
   }
 }
+
+#party-panel.rear-locked #prepare-slots {
+  grid-template-rows: min-content minmax(0, 1fr);
+  align-content: center;
+}

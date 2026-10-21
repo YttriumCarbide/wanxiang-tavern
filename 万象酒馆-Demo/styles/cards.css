@@ -44,7 +44,8 @@
   background: transparent;
   touch-action: none;
 }
-.is-dragging .empty-slot {
+.is-dragging .empty-slot,
+.choosing-formation .empty-slot {
   pointer-events: auto;
   border-color: #a8d6c880;
   background: #a8d6c810;

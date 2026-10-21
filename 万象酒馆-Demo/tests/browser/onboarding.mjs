@@ -1,3 +1,4 @@
+import { finishSettlement } from './legacy-session.mjs';
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import { buildPlan } from '../planner.js';
@@ -227,7 +228,7 @@ export async function onboardingChecks({ browser, baseURL, output }) {
         if (room === 1) {
           await page.locator('[data-unit="lyria"]').click();
           await page.locator('[data-skill="attack"]').click();
-          await page.locator('[data-unit="cinderImp"]').click();
+          await page.locator('[data-unit="pebble"]').click();
         } else {
           assert.equal(
             (await page.evaluate(() => demo.getLibrary())).inventory.items['slow-potion'],
@@ -370,9 +371,7 @@ export async function onboardingChecks({ browser, baseURL, output }) {
         }
       }
       assert.equal((await page.evaluate(() => demo.getState())).phase, 'victory');
-      while (await page.locator('#level-dialogue').isVisible())
-        await page.locator('#level-dialogue button').click();
-      await page.locator('#result').waitFor({ state: 'visible' });
+      await finishSettlement(page);
       completed.push(room);
       if (room < 4) {
         await page.locator('#continue').click();
@@ -452,9 +451,17 @@ export async function onboardingChecks({ browser, baseURL, output }) {
     await page.locator('[data-shop-item=mana-potion]').click();
     await page.locator('[data-buy=mana-potion]').click();
     assert.equal((await page.evaluate(() => demo.getLibrary())).inventory.gold, gold - 20);
-    assert.equal((await page.evaluate(() => demo.getLibrary())).campaign.tutorial, 'depart-again');
+    assert.equal((await page.evaluate(() => demo.getLibrary())).campaign.tutorial, 'condenser');
     await page.screenshot({ path: path.join(output, 'void-shop.png') });
     await page.locator('#shop-close').click();
+    await finishDialogue();
+    await corridor.locator('[data-door=condenser]').click();
+    await page.locator('#ether-forge').waitFor({ state: 'visible' });
+    await finishDialogue();
+    assert.equal((await page.evaluate(() => demo.getLibrary())).campaign.tutorial, 'depart-again');
+    await page.locator('[data-forge-page=exchange]').click();
+    await page.screenshot({ path: path.join(output, 'tutorial-condenser.png') });
+    await page.locator('[data-forge-close]').click();
     await finishDialogue();
     await corridor.locator('#leave-corridor').click();
     await page.waitForFunction(() => {

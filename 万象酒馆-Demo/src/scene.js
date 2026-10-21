@@ -211,6 +211,7 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
   let renderedIntent = '';
   const intentLayer = stage.querySelector('#intent-layer');
   let activeDrag = null;
+  let lastDragRelease = null;
   const releasedPositions = new Map(),
     dragMaterials = [];
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -274,7 +275,7 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
         incoming = r.id !== id;
       let from = releasedPositions.get(id) || null;
       releasedPositions.delete(id);
-      if (incoming && (!from || origins.has(id)) && origins.has(id)) {
+      if (incoming && !from && origins.has(id)) {
         from = screenToWorld(origins.get(id));
         if (from) {
           from.y = 0.15;
@@ -668,6 +669,7 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
     const record = assignments.get(id),
       root = record ? record.root : friendRecords[0].root.clone(true);
     if (!record) {
+      root.visible = true;
       root.traverse((o) => {
         if (o.isMesh) {
           const own = (m) => {
@@ -717,6 +719,7 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
     const d = activeDrag;
     activeDrag = null;
     releasedPositions.set(d.id, d.root.position.clone());
+    lastDragRelease = { id: d.id, position: d.root.position.toArray() };
     if (d.record) {
       d.record.el.classList.remove('is-drag-source');
       d.root.rotation.x = 0;
@@ -760,11 +763,24 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
     moveDrag,
     endDrag,
     cancelReleasedDrag,
+    releaseStatus: () => (lastDragRelease ? structuredClone(lastDragRelease) : null),
+    motionStatus() {
+      return friendRecords
+        .filter((record) => record.id)
+        .map((record) => ({
+          id: record.id,
+          visible: record.root.visible,
+          position: record.root.position.toArray(),
+          from: record.motion?.from.toArray() || null,
+          to: record.goal.toArray(),
+        }));
+    },
     dragState() {
       return activeDrag
         ? {
             id: activeDrag.id,
             source: activeDrag.record ? 'front' : 'hand',
+            visible: activeDrag.root.visible,
             position: activeDrag.root.position.toArray(),
             goal: activeDrag.record?.goal.toArray(),
             meshes: (() => {

@@ -1,3 +1,4 @@
+import { TUTORIAL_TARGETS } from '../content/ruins-encounters.js';
 import { generationEnabled } from '../generation-options.js';
 import { createDialogue } from './dialogue.js';
 import { ARRIVAL_PROSE, EDITH_LESSONS, FIRST_RECRUIT_DIALOGUE } from '../content/edith-guide.js';
@@ -20,7 +21,8 @@ export function createOnboarding(context) {
     ['personality', '性格与习惯', 'textarea', 1200],
     ['history', '经历与来历', 'textarea', 1500],
     ['attack', '普通攻击：名字与动作', 'textarea', 800],
-    ['skills', '共两个技能槽：可选择主动技能或被动技能，填写名字、动作与效果', 'textarea', 1500],
+    ['skill1', '一技能：名字、动作与效果', 'textarea', 1000],
+    ['skill2', '二技能：名字、动作与效果', 'textarea', 1000],
     ['notes', '其他设定与补充', 'textarea', 1000],
   ];
   const dialog = document.createElement('dialog');
@@ -41,7 +43,24 @@ export function createOnboarding(context) {
     <div class="creation-workspace">
       <form id="creation-form">
         <div class="creation-fields">
-          ${fields.map(([key, label, tag, max]) => html`${key === 'skills' ? `<div class="creation-skill-types"><label>技能一<select name="skillType1"><option value="主动">主动技能</option><option value="被动">被动技能</option></select></label><label>技能二<select name="skillType2"><option value="主动">主动技能</option><option value="被动">被动技能</option></select></label></div>` : ''}<label class="creation-field ${tag === 'input' ? 'short' : ''}">${label}${tag === 'input' ? html`<input name="${key}" ${key === 'age' ? '' : html`maxlength="${max}"`} ${key === 'name' ? 'required autocomplete="off"' : ''} />` : html`<textarea name="${key}" maxlength="${max}" rows="3"></textarea>`}</label>`).join('')}
+          ${fields
+            .map(
+              ([key, label, tag, max]) =>
+                html`<label class="creation-field ${tag === 'input' ? 'short' : ''}"
+                  ><span>${label}</span>${
+                    key === 'skill1' || key === 'skill2'
+                      ? html`<select
+                          name="skillType${key.at(-1)}"
+                          aria-label="${key === 'skill1' ? '一技能' : '二技能'}类型"
+                        >
+                          <option value="主动">主动技能</option>
+                          <option value="被动">被动技能</option>
+                        </select>`
+                      : ''
+                  }${tag === 'input' ? html`<input name="${key}" ${key === 'age' ? '' : html`maxlength="${max}"`} ${key === 'name' ? 'required autocomplete="off"' : ''} />` : html`<textarea name="${key}" maxlength="${max}" rows="3"></textarea>`}</label
+                >`,
+            )
+            .join('')}
         </div>
         <p class="creation-hint">
           姓名必填，其余可以留给 AI 补全。可以写动作和效果设想，无需填写 JSON。
@@ -113,6 +132,7 @@ export function createOnboarding(context) {
         'table',
         'invite',
         'shop',
+        'condenser',
         'depart-again',
       ].includes(campaign.tutorial)
         ? 'portal'
@@ -287,6 +307,10 @@ export function createOnboarding(context) {
       if (frame) frame.src = './corridor.html?shop=1';
       return;
     }
+    if (guide.dataset.step === 'condenser') {
+      context.shell.toast('点击售货机旁的以太凝聚器，认识凝聚与兑换页面。');
+      return;
+    }
     if (['table', 'invite'].includes(guide.dataset.step)) {
       $('#inn-frame iframe')?.contentWindow?.assetPreview?.moveTo('table');
       return;
@@ -345,9 +369,11 @@ export function createOnboarding(context) {
         context.shell.toast(
           ['table', 'invite'].includes(state().tutorial)
             ? '先到圆桌与长景月汐交流，完成至少一次交流，再一起出发。'
-            : state().tutorial === 'shop'
-              ? '先前往走廊的虚空售货机，购买一件补给。'
-              : '先完成以太结算和首次召唤教学。',
+            : state().tutorial === 'condenser'
+              ? '先点开售货机旁的以太凝聚器，了解以太和装备的用途。'
+              : state().tutorial === 'shop'
+                ? '先前往走廊的虚空售货机，购买一件补给。'
+                : '先完成以太结算和首次召唤教学。',
         );
         return false;
       }
@@ -401,7 +427,7 @@ export function createOnboarding(context) {
         session.battle.plan.some((action) =>
           state().tutorial === 'vulnerable'
             ? action.kind === 'skill' &&
-              (action.target === 'cinderImp' ||
+              (action.target === TUTORIAL_TARGETS.vulnerable ||
                 context.roster.ability(action.actor, action.skill)?.target === 'allEnemies')
             : action.kind === 'item' &&
               action.item === (state().tutorial === 'slow' ? 'slow-potion' : 'mana-potion'),
@@ -495,9 +521,32 @@ export function createOnboarding(context) {
     },
     purchased() {
       if (state()?.tutorial === 'shop') {
-        state().tutorial = 'depart-again';
+        state().tutorial = 'condenser';
         context.generation.save();
       }
+    },
+    condenserOpened() {
+      if (state()?.tutorial !== 'condenser') return;
+      state().tutorial = 'depart-again';
+      context.generation.save();
+      dialogue.show(
+        [
+          '这里就是凝聚器。左侧是旅途中留下的物品，凝聚后会出现可兑换的装备；先不用生成，也不用购买。',
+          '下一次编织剧本时，我们会在整备里学习怎样把装备交给合适的人。一个角色最多佩戴三件，出发前随时可以调整。',
+        ],
+        refresh,
+      );
+    },
+    preparationOpened() {
+      if (!state()?.completed || !state().firstRecruit || tutorialTasks(state()).equipmentIntro)
+        return;
+      tutorialTasks(state()).equipmentIntro = true;
+      context.generation.save();
+      dialogue.show([
+        '趁门外的故事还在编织，我们先看整备。点一张已经出战的角色卡，就能打开他的装备页。',
+        '装备栏里一共有三个位置，选择背包中持有的装备即可戴上，留空就能卸下。同一件装备只能交给一个人；加成和特殊触发效果会一起带进战斗。',
+        '这里也能调整前场站位、查看背包。生成期间出发名单已经锁定，可以换位置和装备，进副本后就不能更换装备了。现在没有装备也没关系，先记住入口。',
+      ]);
     },
     tripStarted() {
       if (state()?.tutorial === 'depart-again') {

@@ -132,7 +132,7 @@ test('tutorial requires actual intended vulnerability event and shield lives bes
   assert.equal(tutorialCommitIssue(library, state, opening), '');
   const normal = advance(opening);
   assert(tutorialCommitIssue(library, normal, preview(normal, [])).includes('易伤'));
-  const result = preview(normal, [makeAction(normal, 'lyria', 'attack', 'cinderImp', 0)]);
+  const result = preview(normal, [makeAction(normal, 'lyria', 'attack', 'pebble', 0)]);
   assert(result.valid);
   assert.equal(tutorialCommitIssue(library, normal, result), '');
   recordTutorialResult(library.campaign, false, result);

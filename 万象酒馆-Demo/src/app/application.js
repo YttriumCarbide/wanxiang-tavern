@@ -1,3 +1,4 @@
+import { createRequestControls } from './request-controls.js';
 import { createEmblems } from './emblems.js';
 import { mountDisplay } from './display.js';
 import { createCheckpoint } from '../storage/checkpoint.js';
@@ -49,6 +50,7 @@ export function createApplication({
     events: createEventScope(),
     apiClient,
   });
+  context.apiClient = createRequestControls(apiClient);
   context.roster = createRoster(context);
   context.viewport = createViewport(context);
   context.audio = createAudio(context);

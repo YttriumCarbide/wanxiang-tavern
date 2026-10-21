@@ -1,37 +1,65 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="600" height="900" viewBox="0 0 600 900">
-  <defs>
-    <radialGradient id="bg" cx="50%" cy="45%" r="65%">
-      <stop offset="0%" stop-color="#ffd073" stop-opacity="0.32" />
-      <stop offset="60%" stop-color="#422e16" />
-      <stop offset="100%" stop-color="#1f1508" />
-    </radialGradient>
-    <linearGradient id="metal" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#d99c36" />
-      <stop offset="50%" stop-color="#ffd073" />
-      <stop offset="100%" stop-color="#1f1508" />
-    </linearGradient>
-  </defs>
-  <rect width="600" height="900" fill="#1f1508" />
-  <rect x="20" y="20" width="560" height="860" fill="url(#bg)" rx="16" />
-  <circle cx="300" cy="380" r="230" fill="none" stroke="#d99c36" stroke-width="3" stroke-opacity="0.35" />
-  <circle cx="300" cy="380" r="200" fill="none" stroke="#ffd073" stroke-width="1.5" stroke-dasharray="8 6" stroke-opacity="0.4" />
-  <path d="M70 820V340Q70 100 300 80Q530 100 530 340V820" fill="none" stroke="#d99c36" stroke-opacity="0.3" stroke-width="2.5" />
-  <path d="M60 830H540M100 850H500" stroke="#d99c36" stroke-opacity="0.5" stroke-width="3" />
-  
-      <!-- Broad brass shoulders & torso -->
-      <polygon points="120,380 480,380 430,730 170,730" fill="#5c401e" stroke="#d99c36" stroke-width="6" />
-      <!-- Triangular Head -->
-      <polygon points="300,160 390,320 210,320" fill="#755227" stroke="#ffd073" stroke-width="6" />
-      <!-- Giant Cyclops Eye & Laser core -->
-      <circle cx="300" cy="265" r="34" fill="#1f1508" stroke="#d99c36" stroke-width="5" />
-      <circle cx="300" cy="265" r="18" fill="#ff382e" />
-      <line x1="300" y1="265" x2="300" y2="380" stroke="#ff5c52" stroke-width="4" stroke-dasharray="4 4" />
-      <!-- Brass chest plates -->
-      <polygon points="240,430 360,430 380,550 300,610 220,550" fill="#3b2913" stroke="#ffd073" stroke-width="4" />
-      <!-- Key silhouette in the center -->
-      <path d="M300 480A12 12 0 1 0 300 504A12 12 0 1 0 300 480ZM300 504V550M292 530H300M292 544H300" stroke="#ffd073" stroke-width="4" fill="none" stroke-linecap="round" />
-      <!-- Giant arms -->
-      <rect x="70" y="380" width="60" height="280" fill="#4d3519" stroke="#d99c36" stroke-width="4" rx="8" />
-      <rect x="470" y="380" width="60" height="280" fill="#4d3519" stroke="#d99c36" stroke-width="4" rx="8" />
-    
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="900" viewBox="0 0 256 384" data-art-style="isometric-voxel-v3"><title>黄铜独眼巨像</title>
+<defs><radialGradient id="chamber" cx="50%" cy="54%" r="68%"><stop stop-color="#8d6523"/><stop offset="1" stop-color="#142428"/></radialGradient></defs>
+<path fill="url(#chamber)" d="M0 0h256v384H0z"/>
+<ellipse cx="128" cy="326.0" rx="46.6" ry="10" fill="#09171b" opacity=".5"/>
+<g data-enemy-model="brassColossus" transform="translate(-94.287 -173.326) scale(1.73661)"><polygon points="159.9,200.4 147.3,205.8 147.3,193.8 159.9,188.4" fill="#74684d"/>
+<polygon points="147.3,205.8 133.8,200.1 133.8,188.1 147.3,193.8" fill="#a08f6a"/>
+<polygon points="146.4,182.8 159.9,188.4 147.3,193.8 133.8,188.1" fill="#d1bb8a"/>
+<polygon points="159.1,260.4 155.0,262.1 155.0,214.1 159.1,212.4" fill="#74684d"/>
+<polygon points="155.0,262.1 150.9,260.4 150.9,212.4 155.0,214.1" fill="#a08f6a"/>
+<polygon points="155.0,210.7 159.1,212.4 155.0,214.1 150.9,212.4" fill="#d1bb8a"/>
+<polygon points="157.9,218.3 154.8,219.6 154.8,182.4 157.9,181.1" fill="#7d878a"/>
+<polygon points="154.8,219.6 152.1,218.5 152.1,181.3 154.8,182.4" fill="#acbabd"/>
+<polygon points="155.2,180.0 157.9,181.1 154.8,182.4 152.1,181.3" fill="#e1f3f7"/>
+<polygon points="155.9,224.3 148.3,227.5 148.3,203.5 155.9,200.3" fill="#1a2127"/>
+<polygon points="148.3,227.5 141.5,224.7 141.5,200.7 148.3,203.5" fill="#242e36"/>
+<polygon points="149.2,197.4 155.9,200.3 148.3,203.5 141.5,200.7" fill="#2f3c46"/>
+<polygon points="145.1,267.4 136.1,271.2 136.1,236.7 145.1,232.9" fill="#74684d"/>
+<polygon points="136.1,271.2 126.2,267.0 126.2,232.5 136.1,236.7" fill="#a08f6a"/>
+<polygon points="135.2,228.7 145.1,232.9 136.1,236.7 126.2,232.5" fill="#d1bb8a"/>
+<polygon points="151.4,278.0 141.5,282.2 141.5,274.4 151.4,270.2" fill="#1a2127"/>
+<polygon points="141.5,282.2 125.3,275.4 125.3,267.6 141.5,274.4" fill="#242e36"/>
+<polygon points="135.2,263.4 151.4,270.2 141.5,274.4 125.3,267.6" fill="#2f3c46"/>
+<polygon points="149.2,241.4 127.5,250.5 127.5,209.1 149.2,200.0" fill="#8b6423"/>
+<polygon points="127.5,250.5 106.8,241.8 106.8,200.4 127.5,209.1" fill="#bf8930"/>
+<polygon points="128.4,191.3 149.2,200.0 127.5,209.1 106.8,200.4" fill="#fab33e"/>
+<polygon points="159.9,234.6 128.4,247.9 128.4,205.9 159.9,192.6" fill="#74684d"/>
+<polygon points="128.4,247.9 96.0,234.2 96.0,192.2 128.4,205.9" fill="#a08f6a"/>
+<polygon points="127.5,178.9 159.9,192.6 128.4,205.9 96.0,192.2" fill="#d1bb8a"/>
+<polygon points="145.1,193.1 128.0,200.3 128.0,177.5 145.1,170.3" fill="#4d5653"/>
+<polygon points="128.0,200.3 110.9,193.1 110.9,170.3 128.0,177.5" fill="#6a7772"/>
+<polygon points="128.0,163.0 145.1,170.3 128.0,177.5 110.9,170.3" fill="#8a9b94"/>
+<polygon points="150.9,186.4 119.5,199.7 119.5,188.9 150.9,175.6" fill="#8b6423"/>
+<polygon points="119.5,199.7 105.0,193.6 105.0,182.8 119.5,188.9" fill="#bf8930"/>
+<polygon points="136.6,169.5 150.9,175.6 119.5,188.9 105.0,182.8" fill="#fab33e"/>
+<polygon points="146.4,177.1 123.0,187.0 123.0,176.2 146.4,166.3" fill="#74684d"/>
+<polygon points="123.0,187.0 109.5,181.3 109.5,170.5 123.0,176.2" fill="#a08f6a"/>
+<polygon points="132.9,160.6 146.4,166.3 123.0,176.2 109.5,170.5" fill="#d1bb8a"/>
+<polygon points="141.1,167.8 126.7,173.9 126.7,163.1 141.1,157.0" fill="#8b6423"/>
+<polygon points="126.7,173.9 115.0,169.0 115.0,158.2 126.7,163.1" fill="#bf8930"/>
+<polygon points="129.3,152.1 141.1,157.0 126.7,163.1 115.0,158.2" fill="#fab33e"/>
+<polygon points="135.7,158.6 130.3,160.8 130.3,150.0 135.7,147.8" fill="#74684d"/>
+<polygon points="130.3,160.8 120.3,156.7 120.3,145.9 130.3,150.0" fill="#a08f6a"/>
+<polygon points="125.8,143.6 135.7,147.8 130.3,150.0 120.3,145.9" fill="#d1bb8a"/>
+<polygon points="145.4,181.0 142.3,182.4 142.3,178.2 145.4,176.8" fill="#8c9c92"/>
+<polygon points="142.3,182.4 140.3,181.5 140.3,177.3 142.3,178.2" fill="#c1d6c9"/>
+<polygon points="143.4,176.0 145.4,176.8 142.3,178.2 140.3,177.3" fill="#fcffff"/>
+<polygon points="129.8,273.8 120.8,277.6 120.8,243.1 129.8,239.3" fill="#74684d"/>
+<polygon points="120.8,277.6 110.9,273.4 110.9,238.9 120.8,243.1" fill="#a08f6a"/>
+<polygon points="119.9,235.1 129.8,239.3 120.8,243.1 110.9,238.9" fill="#d1bb8a"/>
+<polygon points="136.1,284.5 126.2,288.7 126.2,280.9 136.1,276.7" fill="#1a2127"/>
+<polygon points="126.2,288.7 110.0,281.8 110.0,274.0 126.2,280.9" fill="#242e36"/>
+<polygon points="119.9,269.9 136.1,276.7 126.2,280.9 110.0,274.0" fill="#2f3c46"/>
+<polygon points="133.7,186.0 130.6,187.3 130.6,183.1 133.7,181.8" fill="#8c9c92"/>
+<polygon points="130.6,187.3 128.6,186.5 128.6,182.3 130.6,183.1" fill="#c1d6c9"/>
+<polygon points="131.7,180.9 133.7,181.8 130.6,183.1 128.6,182.3" fill="#fcffff"/>
+<polygon points="152.3,222.5 139.7,227.9 139.7,214.7 152.3,209.3" fill="#6b9d93"/>
+<polygon points="139.7,227.9 137.9,227.1 137.9,213.9 139.7,214.7" fill="#93d8ca"/>
+<polygon points="150.5,208.6 152.3,209.3 139.7,214.7 137.9,213.9" fill="#c0ffff"/>
+<polygon points="122.2,216.4 109.5,221.7 109.5,209.7 122.2,204.4" fill="#74684d"/>
+<polygon points="109.5,221.7 96.0,216.0 96.0,204.0 109.5,209.7" fill="#a08f6a"/>
+<polygon points="108.7,198.7 122.2,204.4 109.5,209.7 96.0,204.0" fill="#d1bb8a"/>
+<polygon points="118.1,240.3 110.5,243.5 110.5,219.5 118.1,216.3" fill="#1a2127"/>
+<polygon points="110.5,243.5 103.7,240.6 103.7,216.6 110.5,219.5" fill="#242e36"/>
+<polygon points="111.3,213.4 118.1,216.3 110.5,219.5 103.7,216.6" fill="#2f3c46"/></g>
 </svg>

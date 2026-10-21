@@ -183,6 +183,11 @@ export function createSelection(context) {
   }
   function refreshInteraction() {
     $('#battle').classList.toggle(
+      'choosing-formation',
+      context.viewport.canPlan() &&
+        ['swap', 'exchange'].includes(session.selection.interactionStep),
+    );
+    $('#battle').classList.toggle(
       'choosing-target',
       context.viewport.compactHUD() &&
         ['actor', 'target', 'swap', 'exchange'].includes(session.selection.interactionStep),

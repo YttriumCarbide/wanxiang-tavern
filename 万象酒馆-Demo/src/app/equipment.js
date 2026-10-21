@@ -1,3 +1,4 @@
+import { resourceText } from '../resource-text.js';
 import { createRawResponse } from './raw-response.js';
 import { EMBLEMS, equipEmblem } from '../emblems.js';
 import { equip, buyEquipment, normalizeEquipment, EQUIPMENT_STATS } from '../equipment.js';
@@ -29,13 +30,15 @@ export function equipmentDescription(item) {
     if (condition.type === 'roundAtLeast') return `第${condition.value}回合起`;
     return `${condition.type.startsWith('hp') ? '生命' : '法力'}${condition.type.endsWith('Below') ? '≤' : '≥'}${condition.value}%`;
   };
-  return [
-    ...Object.entries(item.stats).map(([key, value]) => EQUIPMENT_STATS[key] + '+' + value),
-    ...item.rules.map(
-      (rule) =>
-        `${rule.mode === 'continuous' ? '持续生效' : TRIGGER_EVENTS[rule.event] + '，每趟' + rule.limit + '次'}${rule.conditions.length ? '（' + rule.conditions.map(conditionText).join('，') + '）' : ''} → ${TRIGGER_TARGETS[rule.target]}：${rule.effects.map(effectText).join('、')}`,
-    ),
-  ].join('；');
+  return resourceText(
+    [
+      ...Object.entries(item.stats).map(([key, value]) => EQUIPMENT_STATS[key] + '+' + value),
+      ...item.rules.map(
+        (rule) =>
+          `${rule.mode === 'continuous' ? '持续生效' : TRIGGER_EVENTS[rule.event] + '，每趟' + rule.limit + '次'}${rule.conditions.length ? '（' + rule.conditions.map(conditionText).join('，') + '）' : ''} → ${TRIGGER_TARGETS[rule.target]}：${rule.effects.map(effectText).join('、')}`,
+      ),
+    ].join('；'),
+  );
 }
 export function preparationEquipment(library, member) {
   const currentEmblem = EMBLEMS[member.emblemId]?.emblem;
@@ -53,7 +56,7 @@ export function preparationEquipment(library, member) {
           })
           .join('')}</select
       ><small
-        >${escapeText(currentEmblem ? currentEmblem.text : '在命运桌结识纹章士')}</small
+        >${escapeText(resourceText(currentEmblem ? currentEmblem.text : '在命运桌结识纹章士'))}</small
       ></label
     >
     <div class="prepare-gear-list">
@@ -98,7 +101,7 @@ export function preparationEquipment(library, member) {
       <div class="prepare-ability-category">
         <div class="prepare-ability-label">普通攻击</div>
         <div class="prepare-ability-item">
-          <div><strong>普通攻击</strong><small>1 AP · 0 蓝</small></div>
+          <div><strong>普通攻击</strong><small>1 AP · 0 sp</small></div>
           <p>造成 ${member.combat?.attack || member.attack || 6} 点基础伤害。</p>
         </div>
       </div>
@@ -112,10 +115,10 @@ export function preparationEquipment(library, member) {
                 <div>
                   <strong>${escapeText(s.name)}</strong
                   ><small
-                    >${s.ap} AP${s.mp ? ` · ${s.mp} 蓝` : ''}${s.hp ? ` · ${s.hp} 生命` : ''}</small
+                    >${s.ap} AP${s.mp ? ` · ${s.mp} sp` : ''}${s.hp ? ` · ${s.hp} hp` : ''}</small
                   >
                 </div>
-                <p>${escapeText(s.text || '')}</p>
+                <p>${escapeText(resourceText(s.text || ''))}</p>
               </div>`,
           )
           .join('')}
@@ -131,10 +134,10 @@ export function preparationEquipment(library, member) {
                         <strong>${escapeText(EMBLEMS[member.emblemId].skill.name)}</strong
                         ><small
                           >${EMBLEMS[member.emblemId].skill.ap} AP ·
-                          ${EMBLEMS[member.emblemId].skill.mp} 蓝</small
+                          ${EMBLEMS[member.emblemId].skill.mp} sp</small
                         >
                       </div>
-                      <p>${escapeText(EMBLEMS[member.emblemId].skill.text || '')}</p>
+                      <p>${escapeText(resourceText(EMBLEMS[member.emblemId].skill.text || ''))}</p>
                     </div>`
                   : ''
               }
@@ -152,7 +155,7 @@ export function preparationEquipment(library, member) {
               <strong>${escapeText(entry.name || '入场技')}</strong
               ><small>后排满回合换入自动触发</small>
             </div>
-            <p>${escapeText(entry.description || entry.text || '')}</p>
+            <p>${escapeText(resourceText(entry.description || entry.text || ''))}</p>
           </div>`;
         })()}
       </div>
@@ -168,7 +171,7 @@ export function preparationEquipment(library, member) {
                   <strong>${escapeText(s.name)}</strong
                   ><small>被动 · ${escapeText(s.location)}</small>
                 </div>
-                <p>${escapeText(s.text || '')}</p>
+                <p>${escapeText(resourceText(s.text || ''))}</p>
               </div>`,
           )
           .join('')}
@@ -178,7 +181,7 @@ export function preparationEquipment(library, member) {
                 <div>
                   <strong>${escapeText(currentEmblem.title)}</strong><small>纹章被动</small>
                 </div>
-                <p>${escapeText(currentEmblem.text || '')}</p>
+                <p>${escapeText(resourceText(currentEmblem.text || ''))}</p>
               </div>`
             : ''
         }
@@ -456,6 +459,7 @@ export function createEquipment(context) {
       return;
     refresh();
     panel.showModal();
+    context.onboarding?.condenserOpened();
   });
   return {
     refresh,

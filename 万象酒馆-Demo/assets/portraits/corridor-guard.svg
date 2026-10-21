@@ -1,30 +1,53 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="600" height="900" viewBox="0 0 600 900">
-  <defs>
-    <radialGradient id="bg" cx="50%" cy="45%" r="65%">
-      <stop offset="0%" stop-color="#a8cde3" stop-opacity="0.32" />
-      <stop offset="60%" stop-color="#26343d" />
-      <stop offset="100%" stop-color="#131b21" />
-    </radialGradient>
-    <linearGradient id="metal" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#7b9cb0" />
-      <stop offset="50%" stop-color="#a8cde3" />
-      <stop offset="100%" stop-color="#131b21" />
-    </linearGradient>
-  </defs>
-  <rect width="600" height="900" fill="#131b21" />
-  <rect x="20" y="20" width="560" height="860" fill="url(#bg)" rx="16" />
-  <circle cx="300" cy="380" r="230" fill="none" stroke="#7b9cb0" stroke-width="3" stroke-opacity="0.35" />
-  <circle cx="300" cy="380" r="200" fill="none" stroke="#a8cde3" stroke-width="1.5" stroke-dasharray="8 6" stroke-opacity="0.4" />
-  <path d="M70 820V340Q70 100 300 80Q530 100 530 340V820" fill="none" stroke="#7b9cb0" stroke-opacity="0.3" stroke-width="2.5" />
-  <path d="M60 830H540M100 850H500" stroke="#7b9cb0" stroke-opacity="0.5" stroke-width="3" />
-  
-      <!-- Tower Stone Shield -->
-      <polygon points="200,260 400,260 380,680 300,740 220,680" fill="#3b4f5c" stroke="#7b9cb0" stroke-width="6" />
-      <rect x="240" y="320" width="120" height="20" fill="#131b21" />
-      <line x1="300" y1="260" x2="300" y2="730" stroke="#a8cde3" stroke-width="4" />
-      <line x1="210" y1="450" x2="390" y2="450" stroke="#a8cde3" stroke-width="4" />
-      <!-- Stone helm behind shield -->
-      <polygon points="260,240 340,240 350,180 250,180" fill="#4a6373" stroke="#7b9cb0" stroke-width="4" />
-      <line x1="270" y1="210" x2="330" y2="210" stroke="#72e4ff" stroke-width="6" />
-    
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="900" viewBox="0 0 256 384" data-art-style="isometric-voxel-v3"><title>回廊石卫</title>
+<defs><radialGradient id="chamber" cx="50%" cy="54%" r="68%"><stop stop-color="#506572"/><stop offset="1" stop-color="#142428"/></radialGradient></defs>
+<path fill="url(#chamber)" d="M0 0h256v384H0z"/>
+<ellipse cx="128" cy="326.0" rx="59.2" ry="10" fill="#09171b" opacity=".5"/>
+<g data-enemy-model="corridorGuard" transform="translate(-154.205 -308.460) scale(2.20472)"><polygon points="159.9,209.8 147.3,215.1 147.3,203.1 159.9,197.8" fill="#74684d"/>
+<polygon points="147.3,215.1 133.8,209.4 133.8,197.4 147.3,203.1" fill="#a08f6a"/>
+<polygon points="146.4,192.1 159.9,197.8 147.3,203.1 133.8,197.4" fill="#d1bb8a"/>
+<polygon points="159.1,260.4 155.0,262.1 155.0,214.1 159.1,212.4" fill="#74684d"/>
+<polygon points="155.0,262.1 150.9,260.4 150.9,212.4 155.0,214.1" fill="#a08f6a"/>
+<polygon points="155.0,210.7 159.1,212.4 155.0,214.1 150.9,212.4" fill="#d1bb8a"/>
+<polygon points="157.9,218.3 154.8,219.6 154.8,182.4 157.9,181.1" fill="#7d878a"/>
+<polygon points="154.8,219.6 152.1,218.5 152.1,181.3 154.8,182.4" fill="#acbabd"/>
+<polygon points="155.2,180.0 157.9,181.1 154.8,182.4 152.1,181.3" fill="#e1f3f7"/>
+<polygon points="155.9,230.6 148.3,233.8 148.3,209.8 155.9,206.6" fill="#1a2127"/>
+<polygon points="148.3,233.8 141.5,231.0 141.5,207.0 148.3,209.8" fill="#242e36"/>
+<polygon points="149.2,203.7 155.9,206.6 148.3,209.8 141.5,207.0" fill="#2f3c46"/>
+<polygon points="145.1,267.4 136.1,271.2 136.1,241.2 145.1,237.4" fill="#74684d"/>
+<polygon points="136.1,271.2 126.2,267.0 126.2,237.0 136.1,241.2" fill="#a08f6a"/>
+<polygon points="135.2,233.2 145.1,237.4 136.1,241.2 126.2,237.0" fill="#d1bb8a"/>
+<polygon points="151.4,278.0 141.5,282.2 141.5,274.4 151.4,270.2" fill="#1a2127"/>
+<polygon points="141.5,282.2 125.3,275.4 125.3,267.6 141.5,274.4" fill="#242e36"/>
+<polygon points="135.2,263.4 151.4,270.2 141.5,274.4 125.3,267.6" fill="#2f3c46"/>
+<polygon points="149.2,241.4 127.5,250.5 127.5,214.5 149.2,205.4" fill="#4f6471"/>
+<polygon points="127.5,250.5 106.8,241.8 106.8,205.8 127.5,214.5" fill="#6c899b"/>
+<polygon points="128.4,196.7 149.2,205.4 127.5,214.5 106.8,205.8" fill="#8db3ca"/>
+<polygon points="145.1,204.4 128.0,211.6 128.0,188.8 145.1,181.6" fill="#4d5653"/>
+<polygon points="128.0,211.6 110.9,204.4 110.9,181.6 128.0,188.8" fill="#6a7772"/>
+<polygon points="128.0,174.4 145.1,181.6 128.0,188.8 110.9,181.6" fill="#8a9b94"/>
+<polygon points="145.4,194.1 142.3,195.4 142.3,191.2 145.4,189.9" fill="#8c9c92"/>
+<polygon points="142.3,195.4 140.3,194.6 140.3,190.4 142.3,191.2" fill="#c1d6c9"/>
+<polygon points="143.4,189.0 145.4,189.9 142.3,191.2 140.3,190.4" fill="#fcffff"/>
+<polygon points="129.8,273.8 120.8,277.6 120.8,247.6 129.8,243.8" fill="#74684d"/>
+<polygon points="120.8,277.6 110.9,273.4 110.9,243.4 120.8,247.6" fill="#a08f6a"/>
+<polygon points="119.9,239.6 129.8,243.8 120.8,247.6 110.9,243.4" fill="#d1bb8a"/>
+<polygon points="136.1,284.5 126.2,288.7 126.2,280.9 136.1,276.7" fill="#1a2127"/>
+<polygon points="126.2,288.7 110.0,281.8 110.0,274.0 126.2,280.9" fill="#242e36"/>
+<polygon points="119.9,269.9 136.1,276.7 126.2,280.9 110.0,274.0" fill="#2f3c46"/>
+<polygon points="133.7,199.0 130.6,200.4 130.6,196.2 133.7,194.8" fill="#8c9c92"/>
+<polygon points="130.6,200.4 128.6,199.5 128.6,195.3 130.6,196.2" fill="#c1d6c9"/>
+<polygon points="131.7,194.0 133.7,194.8 130.6,196.2 128.6,195.3" fill="#fcffff"/>
+<polygon points="122.2,225.8 109.5,231.1 109.5,219.1 122.2,213.8" fill="#74684d"/>
+<polygon points="109.5,231.1 96.0,225.4 96.0,213.4 109.5,219.1" fill="#a08f6a"/>
+<polygon points="108.7,208.1 122.2,213.8 109.5,219.1 96.0,213.4" fill="#d1bb8a"/>
+<polygon points="118.1,246.6 110.5,249.8 110.5,225.8 118.1,222.6" fill="#1a2127"/>
+<polygon points="110.5,249.8 103.7,246.9 103.7,222.9 110.5,225.8" fill="#242e36"/>
+<polygon points="111.3,219.7 118.1,222.6 110.5,225.8 103.7,222.9" fill="#2f3c46"/>
+<polygon points="124.4,265.9 102.8,275.0 102.8,228.2 124.4,219.1" fill="#4d5653"/>
+<polygon points="102.8,275.0 98.3,273.1 98.3,226.3 102.8,228.2" fill="#6a7772"/>
+<polygon points="119.9,217.2 124.4,219.1 102.8,228.2 98.3,226.3" fill="#8a9b94"/>
+<polygon points="121.3,254.0 108.7,259.3 108.7,244.9 121.3,239.6" fill="#4f6471"/>
+<polygon points="108.7,259.3 106.8,258.5 106.8,244.1 108.7,244.9" fill="#6c899b"/>
+<polygon points="119.5,238.8 121.3,239.6 108.7,244.9 106.8,244.1" fill="#8db3ca"/></g>
 </svg>

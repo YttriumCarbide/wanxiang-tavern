@@ -6,6 +6,7 @@ import { DEFINITIONS, HEROES, BUFFS } from './data.js';
 import { EDITH } from './content/edith.js';
 import { PANDORA } from './content/pandora.js';
 import { ENEMY_ATTACKS } from './combat-art.js';
+import { PORTRAIT_TEMPLATES } from './content/portrait-templates.js';
 
 export const BASE_WORLDS = Object.freeze(['ruins', 'forest', 'frost', 'forge', 'tide']);
 export const routeKey = (entry) => entry.world?.id || entry.map;
@@ -42,6 +43,7 @@ export function worldReference() {
       EDITH,
       PANDORA,
       defaultProtagonist().combat,
+      ...PORTRAIT_TEMPLATES,
     ].map(({ portrait, name }) => ({ portrait, name })),
   };
 }

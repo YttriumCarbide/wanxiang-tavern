@@ -621,3 +621,28 @@
   outline: 2px solid #d3bd83;
   outline-offset: 4px;
 }
+
+.api-request-control {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex: 0 0 auto;
+  gap: 12px;
+  padding: 8px 12px;
+  color: #c6d2c4;
+  font-size: 12px;
+  background: #102821ee;
+  border: 1px solid #b9a57555;
+  border-radius: 7px;
+}
+.api-request-control button {
+  padding: 7px 16px;
+  color: #efd5ac;
+  border-color: #c6a66b88;
+}
+.api-request-control.floating {
+  position: fixed;
+  right: 24px;
+  bottom: 78px;
+  z-index: 90;
+}

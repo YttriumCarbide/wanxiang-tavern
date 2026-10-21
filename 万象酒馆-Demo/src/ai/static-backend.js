@@ -1,8 +1,10 @@
+import { REQUEST_TIMEOUT_MS } from './request-policy.js';
 import { createBrowserStores } from './browser-stores.js';
 import { createBrowserPortraits } from './browser-portraits.js';
 import { createWorldbookCounter } from './tokenizer.js';
 import { createAiPipeline } from './pipeline/runtime.js';
 import { compatibleRequest } from './compatible.js';
+import { createOpencodeBrowserFetch } from './opencode-browser.js';
 import { summaryPlan } from './pipeline/summary-request.js';
 import { creationPlan } from './pipeline/creation-request.js';
 import { readGenerationResult, redactDiagnostic } from './pipeline/generation-result.js';
@@ -16,6 +18,7 @@ export async function createStaticBackend(
   database,
   { fetchImpl = fetch, virtualImages = true, regexRunner = runRegexTasks } = {},
 ) {
+  const modelFetch = await createOpencodeBrowserFetch(fetchImpl);
   const readText = async (name) => {
     if (!/^(?!.*\.\.)[a-z0-9/.-]+\.(md|json)$/.test(name)) throw Error('内置提示词路径无效');
     const response = await fetchImpl(new URL('../../prompts/' + name, import.meta.url));
@@ -48,7 +51,7 @@ export async function createStaticBackend(
     const cancel = () => controller.abort(options.signal?.reason);
     options.signal?.addEventListener('abort', cancel, { once: true });
     if (options.signal?.aborted) cancel();
-    const timer = setTimeout(() => controller.abort(), 180000);
+    const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
     controllers.add(controller);
     let job;
     try {
@@ -85,14 +88,14 @@ export async function createStaticBackend(
       const result = await compatibleRequest(profile, messages, {
         ...pipeline.completionOptions(job),
         signal: controller.signal,
-        fetchImpl,
+        fetchImpl: modelFetch,
         onDelta: options.onDelta,
       });
       controller.signal.throwIfAborted();
       return await pipeline.acceptResult(job, result);
     } catch (failure) {
       if (controller.signal.aborted || failure.name === 'AbortError')
-        throw Error('请求已取消或超过180秒，请检查服务后重试', { cause: failure });
+        throw Error('请求已取消或超过15分钟，请检查服务后重试', { cause: failure });
       if (failure instanceof TypeError && !failure.diagnostic)
         failure.message = '浏览器无法连接此接口，请检查网络、HTTPS及跨域支持（CORS）。未自动重试。';
       if (failure.diagnostic) {

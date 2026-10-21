@@ -1,32 +1,56 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="600" height="900" viewBox="0 0 600 900">
-  <defs>
-    <radialGradient id="bg" cx="50%" cy="45%" r="65%">
-      <stop offset="0%" stop-color="#baa893" stop-opacity="0.32" />
-      <stop offset="60%" stop-color="#2b251e" />
-      <stop offset="100%" stop-color="#14110d" />
-    </radialGradient>
-    <linearGradient id="metal" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#8a7660" />
-      <stop offset="50%" stop-color="#baa893" />
-      <stop offset="100%" stop-color="#14110d" />
-    </linearGradient>
-  </defs>
-  <rect width="600" height="900" fill="#14110d" />
-  <rect x="20" y="20" width="560" height="860" fill="url(#bg)" rx="16" />
-  <circle cx="300" cy="380" r="230" fill="none" stroke="#8a7660" stroke-width="3" stroke-opacity="0.35" />
-  <circle cx="300" cy="380" r="200" fill="none" stroke="#baa893" stroke-width="1.5" stroke-dasharray="8 6" stroke-opacity="0.4" />
-  <path d="M70 820V340Q70 100 300 80Q530 100 530 340V820" fill="none" stroke="#8a7660" stroke-opacity="0.3" stroke-width="2.5" />
-  <path d="M60 830H540M100 850H500" stroke="#8a7660" stroke-opacity="0.5" stroke-width="3" />
-  
-      <!-- Chunky Mud / Clay Golem -->
-      <path d="M220 320Q300 280 380 320Q440 440 400 680Q300 720 200 680Q160 440 220 320Z" fill="#473a2d" stroke="#8a7660" stroke-width="5" />
-      <!-- Stone Core embedded in mud -->
-      <circle cx="300" cy="460" r="32" fill="#baa893" stroke="#8a7660" stroke-width="4" />
-      <polygon points="300,435 320,475 280,475" fill="#302418" />
-      <!-- Glowing stone eyes -->
-      <circle cx="260" cy="360" r="8" fill="#ffd97d" />
-      <circle cx="340" cy="360" r="8" fill="#ffd97d" />
-      <!-- Mud drips -->
-      <path d="M200 660Q200 740 210 750M380 660Q380 740 370 750" stroke="#baa893" stroke-width="8" stroke-linecap="round" fill="none" />
-    
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="900" viewBox="0 0 256 384" data-art-style="isometric-voxel-v3"><title>灰石泥傀儡</title>
+<defs><radialGradient id="chamber" cx="50%" cy="54%" r="68%"><stop stop-color="#5a4d3e"/><stop offset="1" stop-color="#142428"/></radialGradient></defs>
+<path fill="url(#chamber)" d="M0 0h256v384H0z"/>
+<ellipse cx="128" cy="326.0" rx="61.4" ry="10" fill="#09171b" opacity=".5"/>
+<g data-enemy-model="ruinsMudGolem" transform="translate(-132.344 -251.014) scale(2.00573)"><polygon points="159.9,200.4 147.3,205.8 147.3,193.8 159.9,188.4" fill="#74684d"/>
+<polygon points="147.3,205.8 133.8,200.1 133.8,188.1 147.3,193.8" fill="#a08f6a"/>
+<polygon points="146.4,182.8 159.9,188.4 147.3,193.8 133.8,188.1" fill="#d1bb8a"/>
+<polygon points="159.1,260.4 155.0,262.1 155.0,214.1 159.1,212.4" fill="#74684d"/>
+<polygon points="155.0,262.1 150.9,260.4 150.9,212.4 155.0,214.1" fill="#a08f6a"/>
+<polygon points="155.0,210.7 159.1,212.4 155.0,214.1 150.9,212.4" fill="#d1bb8a"/>
+<polygon points="157.9,218.3 154.8,219.6 154.8,182.4 157.9,181.1" fill="#7d878a"/>
+<polygon points="154.8,219.6 152.1,218.5 152.1,181.3 154.8,182.4" fill="#acbabd"/>
+<polygon points="155.2,180.0 157.9,181.1 154.8,182.4 152.1,181.3" fill="#e1f3f7"/>
+<polygon points="166.3,246.6 149.2,253.8 149.2,213.0 166.3,205.8" fill="#4d5653"/>
+<polygon points="149.2,253.8 131.2,246.2 131.2,205.4 149.2,213.0" fill="#6a7772"/>
+<polygon points="148.3,198.2 166.3,205.8 149.2,213.0 131.2,205.4" fill="#8a9b94"/>
+<polygon points="155.9,224.3 148.3,227.5 148.3,203.5 155.9,200.3" fill="#1a2127"/>
+<polygon points="148.3,227.5 141.5,224.7 141.5,200.7 148.3,203.5" fill="#242e36"/>
+<polygon points="149.2,197.4 155.9,200.3 148.3,203.5 141.5,200.7" fill="#2f3c46"/>
+<polygon points="145.1,267.4 136.1,271.2 136.1,236.7 145.1,232.9" fill="#74684d"/>
+<polygon points="136.1,271.2 126.2,267.0 126.2,232.5 136.1,236.7" fill="#a08f6a"/>
+<polygon points="135.2,228.7 145.1,232.9 136.1,236.7 126.2,232.5" fill="#d1bb8a"/>
+<polygon points="151.4,278.0 141.5,282.2 141.5,274.4 151.4,270.2" fill="#1a2127"/>
+<polygon points="141.5,282.2 125.3,275.4 125.3,267.6 141.5,274.4" fill="#242e36"/>
+<polygon points="135.2,263.4 151.4,270.2 141.5,274.4 125.3,267.6" fill="#2f3c46"/>
+<polygon points="149.2,241.4 127.5,250.5 127.5,209.1 149.2,200.0" fill="#584c3d"/>
+<polygon points="127.5,250.5 106.8,241.8 106.8,200.4 127.5,209.1" fill="#796854"/>
+<polygon points="128.4,191.3 149.2,200.0 127.5,209.1 106.8,200.4" fill="#9f886e"/>
+<polygon points="156.8,227.6 126.2,240.6 126.2,213.0 156.8,200.0" fill="#4d5653"/>
+<polygon points="126.2,240.6 99.2,229.2 99.2,201.6 126.2,213.0" fill="#6a7772"/>
+<polygon points="129.8,188.6 156.8,200.0 126.2,213.0 99.2,201.6" fill="#8a9b94"/>
+<polygon points="145.1,193.1 128.0,200.3 128.0,177.5 145.1,170.3" fill="#4d5653"/>
+<polygon points="128.0,200.3 110.9,193.1 110.9,170.3 128.0,177.5" fill="#6a7772"/>
+<polygon points="128.0,163.0 145.1,170.3 128.0,177.5 110.9,170.3" fill="#8a9b94"/>
+<polygon points="145.4,181.0 142.3,182.4 142.3,178.2 145.4,176.8" fill="#8c9c92"/>
+<polygon points="142.3,182.4 140.3,181.5 140.3,177.3 142.3,178.2" fill="#c1d6c9"/>
+<polygon points="143.4,176.0 145.4,176.8 142.3,178.2 140.3,177.3" fill="#fcffff"/>
+<polygon points="129.8,273.8 120.8,277.6 120.8,243.1 129.8,239.3" fill="#74684d"/>
+<polygon points="120.8,277.6 110.9,273.4 110.9,238.9 120.8,243.1" fill="#a08f6a"/>
+<polygon points="119.9,235.1 129.8,239.3 120.8,243.1 110.9,238.9" fill="#d1bb8a"/>
+<polygon points="136.1,284.5 126.2,288.7 126.2,280.9 136.1,276.7" fill="#1a2127"/>
+<polygon points="126.2,288.7 110.0,281.8 110.0,274.0 126.2,280.9" fill="#242e36"/>
+<polygon points="119.9,269.9 136.1,276.7 126.2,280.9 110.0,274.0" fill="#2f3c46"/>
+<polygon points="133.7,186.0 130.6,187.3 130.6,183.1 133.7,181.8" fill="#8c9c92"/>
+<polygon points="130.6,187.3 128.6,186.5 128.6,182.3 130.6,183.1" fill="#c1d6c9"/>
+<polygon points="131.7,180.9 133.7,181.8 130.6,183.1 128.6,182.3" fill="#fcffff"/>
+<polygon points="122.2,216.4 109.5,221.7 109.5,209.7 122.2,204.4" fill="#74684d"/>
+<polygon points="109.5,221.7 96.0,216.0 96.0,204.0 109.5,209.7" fill="#a08f6a"/>
+<polygon points="108.7,198.7 122.2,204.4 109.5,209.7 96.0,204.0" fill="#d1bb8a"/>
+<polygon points="128.4,262.5 111.3,269.8 111.3,228.9 128.4,221.7" fill="#4d5653"/>
+<polygon points="111.3,269.8 93.3,262.2 93.3,221.4 111.3,228.9" fill="#6a7772"/>
+<polygon points="110.5,214.1 128.4,221.7 111.3,228.9 93.3,221.4" fill="#8a9b94"/>
+<polygon points="118.1,240.3 110.5,243.5 110.5,219.5 118.1,216.3" fill="#1a2127"/>
+<polygon points="110.5,243.5 103.7,240.6 103.7,216.6 110.5,219.5" fill="#242e36"/>
+<polygon points="111.3,213.4 118.1,216.3 110.5,219.5 103.7,216.6" fill="#2f3c46"/></g>
 </svg>

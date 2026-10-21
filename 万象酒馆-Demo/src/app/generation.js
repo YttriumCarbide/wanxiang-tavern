@@ -43,6 +43,7 @@ import { assignParty, firstCompanion } from '../campaign.js';
 import { memoryHistory } from '../memory.js';
 import { developerOption } from '../generation-options.js';
 import { prepareSwapLesson } from '../companion-events.js';
+import { rearUnlocked } from '../formation-access.js';
 
 const libraryKey = 'wanxiang.worldbooks.v1';
 export function createGeneration(context) {
@@ -165,25 +166,27 @@ export function createGeneration(context) {
   }
   void syncWorldbookCharacters();
   function render() {
-    $('#ai-party').innerHTML = HEROES.map(
-      (slot, index) =>
-        html`<label
-          >${index + 1} · ${index < 3 ? '前场' : '后场'}<select data-party-slot="${index}">
-            ${library().campaign ? '<option value="">空位</option>' : ''}
-            ${library()
-              .characters.map(
-                (entry) =>
-                  html`<option
-                    value="${entry.id}"
-                    ${library().party[index] === entry.id ? 'selected' : ''}
-                  >
-                    ${escapeText(entry.setting.name)}
-                  </option>`,
-              )
-              .join('')}
-          </select></label
-        >`,
-    ).join('');
+    $('#ai-party').innerHTML = HEROES.slice(0, rearUnlocked(library()) ? 6 : 3)
+      .map(
+        (slot, index) =>
+          html`<label
+            >${index + 1} · ${index < 3 ? '前场' : '后场'}<select data-party-slot="${index}">
+              ${library().campaign ? '<option value="">空位</option>' : ''}
+              ${library()
+                .characters.map(
+                  (entry) =>
+                    html`<option
+                      value="${entry.id}"
+                      ${library().party[index] === entry.id ? 'selected' : ''}
+                    >
+                      ${escapeText(entry.setting.name)}
+                    </option>`,
+                )
+                .join('')}
+            </select></label
+          >`,
+      )
+      .join('');
     $('#ai-pool').innerHTML = library()
       .characters.map(
         (entry) =>
@@ -272,11 +275,37 @@ export function createGeneration(context) {
       : '由本机服务请求AI，可使用保存在本机的连接密钥。';
   }
   events.on($('#ai-requestMode'), 'change', renderTransport);
+  function renderProvider() {
+    const base = $('#ai-baseUrl').value;
+    const native =
+      $('#ai-provider').value === 'vertex' ||
+      ($('#ai-provider').value === 'auto' &&
+        /aiplatform\.googleapis\.com/.test(base) &&
+        !base.includes('/endpoints/'));
+    $('#ai-vertex-auth').hidden = !native;
+    $('#ai-provider-hint').hidden = !native;
+    $('#ai-provider-hint').textContent =
+      $('#ai-vertexAuth').value === 'oauth'
+        ? '标准模式：Base URL 填 https://区域-aiplatform.googleapis.com/v1/projects/项目ID/locations/区域，全球区域用 aiplatform.googleapis.com；密钥栏填有效OAuth访问令牌。令牌过期后需更新，本页不保存服务账号私钥。模型ID手动填写。'
+        : '快捷模式：Base URL 填 https://aiplatform.googleapis.com/v1，密钥栏填Vertex API Key，模型栏填Google控制台中的Gemini模型ID。原生接口无需 /chat/completions，模型ID手动填写。';
+  }
+  events.on($('#ai-provider'), 'change', () => {
+    if (
+      $('#ai-provider').value === 'vertex' &&
+      $('#ai-baseUrl').value === 'https://api.openai.com/v1'
+    )
+      $('#ai-baseUrl').value = 'https://aiplatform.googleapis.com/v1';
+    renderProvider();
+  });
+  events.on($('#ai-baseUrl'), 'input', renderProvider);
+  events.on($('#ai-vertexAuth'), 'change', renderProvider);
   function fillProfile() {
     const profile = profiles?.[$('#ai-kind').value];
     if (!profile) return;
     for (const key of [
       'baseUrl',
+      'provider',
+      'vertexAuth',
       'model',
       'maxTokens',
       'tokenField',
@@ -285,6 +314,7 @@ export function createGeneration(context) {
     ])
       $(`#ai-${key}`).value = String(profile[key] ?? (key === 'requestMode' ? 'local' : ''));
     renderTransport();
+    renderProvider();
     modelPicker.clear();
     for (const key of ['jsonMode', 'rememberKey']) $(`#ai-${key}`).checked = profile[key];
     $('#ai-jsonMode').disabled = false;
@@ -337,7 +367,15 @@ export function createGeneration(context) {
       apiKey: $('#ai-key').value,
       clearKey: $('#ai-clear-key').checked,
     };
-    for (const key of ['baseUrl', 'model', 'tokenField', 'promptProcessing', 'requestMode'])
+    for (const key of [
+      'baseUrl',
+      'model',
+      'tokenField',
+      'promptProcessing',
+      'requestMode',
+      'provider',
+      'vertexAuth',
+    ])
       data[key] = $(`#ai-${key}`).value;
     data.maxTokens = Number($('#ai-maxTokens').value);
     data.temperature = profiles?.[data.kind]?.temperature ?? null;
@@ -565,6 +603,7 @@ export function createGeneration(context) {
       $('#prepare-close').disabled = true;
       $('#prepare-cancel-generation').hidden = false;
       if (!$('#party-panel').open) $('#party-panel').showModal();
+      context.onboarding?.preparationOpened();
     }
     render();
     const input = override || inputFor(kind);
@@ -745,7 +784,9 @@ export function createGeneration(context) {
       library().characters.push(summoned);
     if (library().campaign) {
       if (!library().party.includes(summoned.id)) {
-        const index = library().party.indexOf(null);
+        const index = library()
+          .party.slice(0, rearUnlocked(library()) ? 6 : 3)
+          .indexOf(null);
         if (index >= 0) library().party[index] = summoned.id;
       }
       installRoster();

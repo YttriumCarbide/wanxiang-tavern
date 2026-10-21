@@ -1,3 +1,4 @@
+import { TUTORIAL_TARGETS } from './content/ruins-encounters.js';
 import { FINAL_ENCOUNTER } from './content/journey-rules.js';
 
 export function tutorialTasks(campaign) {
@@ -19,8 +20,8 @@ export function demonstrated(result, name) {
     return events.some(
       (event) =>
         event.type === 'hero' &&
-        event.targets.includes('cinderImp') &&
-        event.after.units.cinderImp?.buffs.vulnerable &&
+        event.targets.includes(TUTORIAL_TARGETS.vulnerable) &&
+        event.after.units[TUTORIAL_TARGETS.vulnerable]?.buffs.vulnerable &&
         event.logs.some((line) => line.includes('→') && line.includes('伤害')),
     );
   if (name === 'slow')
@@ -28,12 +29,14 @@ export function demonstrated(result, name) {
       (event, index) =>
         event.type === 'item' &&
         event.skill === 'slow-potion' &&
-        event.targets.includes('warden') &&
-        event.after.units.warden?.buffs.slow >= 1 &&
+        event.targets.includes(TUTORIAL_TARGETS.slow) &&
+        event.after.units[TUTORIAL_TARGETS.slow]?.buffs.slow >= 1 &&
         !events
           .slice(0, index)
-          .some((earlier) => earlier.type === 'enemy' && earlier.actor === 'warden') &&
-        events.slice(index + 1).some((later) => later.type === 'enemy' && later.actor === 'warden'),
+          .some((earlier) => earlier.type === 'enemy' && earlier.actor === TUTORIAL_TARGETS.slow) &&
+        events
+          .slice(index + 1)
+          .some((later) => later.type === 'enemy' && later.actor === TUTORIAL_TARGETS.slow),
     );
   if (name === 'mana')
     return events.some(
@@ -46,7 +49,7 @@ export function demonstrated(result, name) {
     return events.some(
       (event, index) =>
         event.type === 'enemy' &&
-        event.actor === 'bossGate' &&
+        event.actor === TUTORIAL_TARGETS.armour &&
         event.after.units[event.actor]?.block >
           (index ? events[index - 1].after.units[event.actor]?.block || 0 : 0),
     );
@@ -79,7 +82,7 @@ export function tutorialCommitIssue(library, state, forecast) {
     (state.phase !== 'opening' || victory) &&
     !demonstrated(forecast, 'vulnerable')
   )
-    return '先用一次伤害攻击命中带有易伤的灰炉小偶，观察增伤。';
+    return '先用一次伤害攻击命中带有易伤的碎石幼灵，观察增伤。';
   if (index === 2 && !tasks.slow) {
     if (state.phase === 'opening' && forecast.events.some((event) => event.skill === 'slow-potion'))
       return '先结算先手，迟缓药水请在正式回合、石卫行动之前使用。';

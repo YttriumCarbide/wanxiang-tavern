@@ -55,3 +55,18 @@ export async function dismissAutomaticJournals(page) {
     });
   });
 }
+
+/** Settlement narration follows the completed experience animation. */
+export async function finishSettlement(page) {
+  await page.locator('#result').waitFor({ state: 'visible' });
+  await page.waitForFunction(() =>
+    [...document.querySelectorAll('[data-experience]')].every(
+      (row) => row.dataset.experienceState === 'complete',
+    ),
+  );
+  while (await page.locator('#level-dialogue').isVisible())
+    await page.locator('#level-dialogue button').click();
+  await page.waitForFunction(
+    () => !document.querySelector('#result .result-buttons button:not([hidden]):disabled'),
+  );
+}

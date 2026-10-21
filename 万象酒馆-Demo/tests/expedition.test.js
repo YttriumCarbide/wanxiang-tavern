@@ -6,6 +6,25 @@ import { BOSSES, HEROES, encounterSpec } from '../src/data.js';
 import { preview, advance, intent, newEncounter, campRest } from '../src/engine.js';
 import { newExpedition, beginEncounter, completeEncounter, chooseRest } from '../src/expedition.js';
 import { buildPlan } from './planner.js';
+
+test('only rear entry skills become ready between battles; first arrival still requires charging', () => {
+  const first = newEncounter(encounterSpec(0));
+  assert(first.formation.filter(Boolean).every((id) => !first.units[id].entryReady));
+  for (const id of first.formation.filter(Boolean)) first.units[id].entryReady = false;
+  const rear = first.formation.slice(3).filter(Boolean);
+  first.units[rear[0]].hp = 10;
+  first.units[rear[0]].mp = 2;
+  const next = newEncounter(encounterSpec(1), first, 1);
+  assert(rear.every((id) => next.units[id].entryReady));
+  assert(
+    next.formation
+      .slice(0, 3)
+      .filter(Boolean)
+      .every((id) => !next.units[id].entryReady),
+  );
+  assert.equal(next.units[rear[0]].hp, 10);
+  assert.equal(next.units[rear[0]].mp, 2);
+});
 test('four normal encounters then a final boss; every original art theme remains reachable across routes', () => {
   for (const boss of BOSSES) {
     const specs = Array.from({ length: 5 }, (_, i) => encounterSpec(i, boss.id));

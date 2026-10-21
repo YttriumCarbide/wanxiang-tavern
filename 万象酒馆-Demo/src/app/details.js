@@ -1,3 +1,4 @@
+import { resourceText } from '../resource-text.js';
 import { EMBLEMS } from '../emblems.js';
 import { effectiveBuff } from '../engine.js';
 import { html } from '../shared/html.js';
@@ -43,25 +44,25 @@ export function createDetails(context) {
     const combineTooltip = !emblemSkill
       ? ''
       : !isCombined
-        ? `${emblemSkill.name}（结合技 · 需结合后解锁）\n${emblemSkill.text}\n消耗 ${emblemSkill.ap} AP · ${emblemSkill.mp} 蓝量`
+        ? `${emblemSkill.name}（结合技 · 需结合后解锁）\n${emblemSkill.text}\n消耗 ${emblemSkill.ap} AP · ${emblemSkill.mp} sp`
         : combineUsed
-          ? `${emblemSkill.name}（结合技 · 本轮结合已使用）\n${emblemSkill.text}\n消耗 ${emblemSkill.ap} AP · ${emblemSkill.mp} 蓝量`
-          : `${emblemSkill.text}\n消耗 ${emblemSkill.ap} AP · ${emblemSkill.mp} 蓝量`;
+          ? `${emblemSkill.name}（结合技 · 本轮结合已使用）\n${emblemSkill.text}\n消耗 ${emblemSkill.ap} AP · ${emblemSkill.mp} sp`
+          : `${emblemSkill.text}\n消耗 ${emblemSkill.ap} AP · ${emblemSkill.mp} sp`;
     const skillButton = (a, isCombine = false) => {
       const isCombineDisabled = isCombine && !canUseCombine;
       const isDisabled = disabled || isCombineDisabled;
       const tooltip = isCombine
         ? combineTooltip
-        : `${a.text || `造成${d.attack}基础伤害`}\n消耗 ${a.ap} AP · ${a.mp} 蓝量${a.hp ? ` · ${a.hp} 生命` : ''}`;
+        : `${a.text || `造成${d.attack}基础伤害`}\n消耗 ${a.ap} AP · ${a.mp} sp${a.hp ? ` · ${a.hp} hp` : ''}`;
       return html`<button
         class="ability ${session.selection.pending?.skill === a.id && session.selection.pending?.actor === session.selection.selected ? 'active' : ''} ${session.selection.interactionStep === 'skill' && !isDisabled ? 'skill-targetable' : ''} ${isCombineDisabled ? 'combine-disabled' : ''}"
         data-skill="${a.id}"
-        data-tooltip="${escapeText(tooltip)}"
+        data-tooltip="${escapeText(resourceText(tooltip))}"
         draggable="${!isDisabled}"
         ${isDisabled ? 'disabled' : ''}
       >
         <strong>${a.name}</strong
-        ><small>${a.ap} AP${a.mp ? ` · ${a.mp} 蓝` : ''}${a.hp ? ` · ${a.hp} 生命` : ''}</small>
+        ><small>${a.ap} AP${a.mp ? ` · ${a.mp} sp` : ''}${a.hp ? ` · ${a.hp} hp` : ''}</small>
       </button>`;
     };
     $('#details').innerHTML = html`<div class="hero-heading">
@@ -111,10 +112,10 @@ export function createDetails(context) {
                 : '蓄势中 · 待满整回合';
             return html`<div
               class="ability-card entry-card ${isReady && isRear ? 'entry-ready' : ''}"
-              data-tooltip="${escapeText(`入场技 · ${entrySkill.name}\n${entrySkill.description || entrySkill.text || '在后排待满一个完整回合后换入前排自动触发（不耗AP/行动点）。'}`)}"
+              data-tooltip="${escapeText(resourceText(`入场技 · ${entrySkill.name}\n${entrySkill.description || entrySkill.text || '在后排待满一个完整回合后换入前排自动触发（不耗AP/行动点）。'}`))}"
             >
               <strong>${escapeText(entrySkill.name)}</strong><small>${statusBadge}</small>
-              <p>${escapeText(entrySkill.description || entrySkill.text || '')}</p>
+              <p>${escapeText(resourceText(entrySkill.description || entrySkill.text || ''))}</p>
             </div>`;
           })()}
         </div>
@@ -127,21 +128,23 @@ export function createDetails(context) {
                 html`<button
                   class="ability passive-ability"
                   data-passive="${a.id}"
-                  data-tooltip="${escapeText(`${a.location}被动：${a.text}`)}"
+                  data-tooltip="${escapeText(resourceText(`${a.location}被动：${a.text}`))}"
                 >
                   <strong>${escapeText(a.name)}</strong
                   ><small>被动 · ${escapeText(a.location)}</small>
-                  <p>${escapeText(a.text)}</p>
+                  <p>${escapeText(resourceText(a.text))}</p>
                 </button>`,
             )
             .join('')}${
             emblemDef?.emblem
               ? html`<div
-                  class="ability-card passive-card"
-                  data-tooltip="${escapeText(`${emblemDef.emblem.title}：${emblemDef.emblem.text}`)}"
+                  class="ability-card passive-card emblem-passive ${isCombined ? 'emblem-passive-active' : 'emblem-passive-inactive'}"
+                  data-emblem-passive
+                  aria-label="${isCombined ? '结合被动生效' : '未结合'}"
+                  data-tooltip="${escapeText(resourceText(`${emblemDef.emblem.title}：${emblemDef.emblem.text}`))}"
                 >
                   <strong>${escapeText(emblemDef.emblem.name)}</strong><small>纹章被动</small>
-                  <p>${escapeText(emblemDef.emblem.text)}</p>
+                  <p>${escapeText(resourceText(emblemDef.emblem.text))}</p>
                 </div>`
               : ''
           }
@@ -152,7 +155,9 @@ export function createDetails(context) {
       .forEach((button) => {
         button.onclick = () => {
           const ability = d.skills.find((item) => item.id === button.dataset.passive);
-          context.shell.toast(`${ability.name} · ${ability.location}：${ability.text}`);
+          context.shell.toast(
+            resourceText(`${ability.name} · ${ability.location}：${ability.text}`),
+          );
         };
       });
     $('#details')

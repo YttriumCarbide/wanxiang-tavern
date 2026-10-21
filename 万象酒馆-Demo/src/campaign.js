@@ -1,3 +1,4 @@
+import { rearUnlocked } from './formation-access.js';
 import { restoreGrowth } from './growth.js';
 import { newLibrary, officialCharacter } from './ai/library.js';
 
@@ -5,7 +6,12 @@ export function newCampaign(protagonist) {
   const library = newLibrary();
   library.characters = [structuredClone(protagonist), officialCharacter('edith')];
   library.characters[0].combat.limit = 2;
-  library.characters[0].growth = restoreGrowth(protagonist.growth, protagonist.id);
+  library.characters[0].growth = restoreGrowth(
+    { rarity: protagonist.growth?.rarity, seed: protagonist.growth?.seed },
+    protagonist.id,
+  );
+  delete library.characters[0].emblemId;
+  delete library.characters[0].equipment;
   library.party = [protagonist.id, 'official-edith', null, null, null, null];
   library.enabled = true;
   library.campaign = {
@@ -30,12 +36,14 @@ export const guiding = (library) =>
     'table',
     'invite',
     'shop',
+    'condenser',
     'depart-again',
   ].includes(library.campaign?.tutorial);
 
 /** Membership is authoritative; a protagonist can change places but cannot leave the party. */
 export function assignParty(library, index, id) {
   if (!Number.isInteger(index) || index < 0 || index > 5) throw Error('阵容位置无效');
+  if (index >= 3 && !rearUnlocked(library)) throw Error('潘多拉加入后才会开放后场');
   if (id !== null && !library.characters.some((entry) => entry.id === id))
     throw Error('角色不在酒馆中');
   const previous = id === null ? -1 : library.party.indexOf(id);
@@ -58,7 +66,7 @@ export function firstCompanion(library, worldbook) {
   if (typeof worldbook === 'string' && worldbook.trim()) entry.setting.worldbook = worldbook.trim();
   library.inventory.summonContracts--;
   if (!library.characters.some((member) => member.id === entry.id)) library.characters.push(entry);
-  const empty = library.party.indexOf(null);
+  const empty = library.party.slice(0, rearUnlocked(library) ? 6 : 3).indexOf(null);
   if (empty >= 0 && !library.party.includes(entry.id)) library.party[empty] = entry.id;
   library.prepared = null;
   library.campaign.firstRecruit = true;

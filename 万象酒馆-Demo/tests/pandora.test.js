@@ -60,7 +60,7 @@ test('generated art belongs to a character, survives formation swaps and cannot 
   const raw = characterDocument();
   raw.data.archetype = 'aegis';
   const hero = normalizeCharacter(raw, 'character-art-owner');
-  assert.equal(hero.combat.portrait, 'guardian');
+  assert.equal(hero.combat.portrait, 'template-staff-male.webp');
   assert(!savedPortrait({ aegis: 'other-character-image' }, hero));
   hero.combat.customPortrait = 'data:image/webp;base64,AAAA';
   const library = newCampaign(hero);

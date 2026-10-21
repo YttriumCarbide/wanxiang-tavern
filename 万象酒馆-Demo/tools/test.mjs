@@ -125,6 +125,11 @@ async function main() {
         return command(process.execPath, ['--test', ...files]);
       },
     });
+  if (scopes.has('provider-live'))
+    local.push({
+      name: 'provider-live',
+      operation: async () => (await import('../tests/provider-live.mjs')).providerLiveChecks(),
+    });
   await Promise.all([
     runBatch(local, 2, (job) => run(job.name, job.operation)),
     browserChecks(scopes),

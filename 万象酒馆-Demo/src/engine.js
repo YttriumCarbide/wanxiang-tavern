@@ -73,7 +73,10 @@ export function intent(s, id) {
     enraged =
       def.boss && (s.units[id].enraged || s.units[id].hp <= s.units[id].maxHp * def.phaseThreshold);
   const list = enraged ? def.enragedIntents : def.intents;
-  const move = list[(Math.max(1, s.round) - 1) % list.length];
+  const move =
+    def.openingIntent && !s.units[id].openingAttackUsed
+      ? def.openingIntent
+      : list[(Math.max(1, s.round) - 1) % list.length];
   return {
     ...move,
     ...(s.enemyIntentSlots?.[id] !== undefined ? { slot: s.enemyIntentSlots[id] } : {}),
@@ -440,6 +443,7 @@ function simulate(s, plan, slots) {
       }
       const move = intent(work, enemy),
         targets = (move.slots || [move.slot]).map((slot) => work.formation[slot]).filter(Boolean);
+      if (definitions[enemy].openingIntent) u.openingAttackUsed = true;
       if (move.selfShield) effects(enemy, [enemy], [{ type: 'shield', value: move.selfShield }]);
       if (move.selfHeal) heal(enemy, move.selfHeal);
       if (move.selfBuff)
@@ -777,7 +781,7 @@ export function newEncounter(spec, prior = null, index = 0, heroDefinitions = {}
           used: 0,
           combined: 0,
           combineSkillUsed: false,
-          entryReady: false,
+          entryReady: s.formation.slice(3).includes(h.id),
         }
       : s.units[h.id];
     if (spec.environment?.bonusMp) units[h.id].maxMp = s.units[h.id].maxMp;
@@ -799,6 +803,10 @@ export function newEncounter(spec, prior = null, index = 0, heroDefinitions = {}
     };
   }
   s.units = units;
+  for (const [id, charge] of Object.entries(spec.initialEmblemCharge || {})) {
+    if (units[id]?.side === 'hero' && EMBLEMS[s.heroDefinitions[id]?.emblemId])
+      units[id].emblemCharge = Math.max(0, Math.min(6, charge));
+  }
   for (const [id, buffs] of Object.entries(spec.initialEnemyBuffs || {})) {
     if (units[id]?.side === 'enemy') Object.assign(units[id].buffs, buffs);
   }

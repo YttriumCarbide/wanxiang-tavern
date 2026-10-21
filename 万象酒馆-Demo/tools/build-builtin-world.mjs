@@ -3,6 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createWorldbookStore } from '../server/worldbook-store.mjs';
 import { characterWorldEntry } from '../src/ai/worldbook.js';
+import { upgradeRuinsWorldbook } from '../src/ai/ruins-worldbook.js';
 
 /** Reproducible public canon, built without reading any user configuration or saved worldbook. */
 export async function buildBuiltinWorld() {
@@ -29,6 +30,28 @@ export async function buildBuiltinWorld() {
       );
       uid++;
     }
+    // Public authored entries are source assets, never read from a player's saved worldbook.
+    const extras = JSON.parse(
+      await readFile(path.join(root, 'prompts/worldbook/official-extra-entries.json'), 'utf8'),
+    );
+    for (const [key, entry] of Object.entries(extras)) {
+      const marker = entry.extensions?.wanxiang;
+      const existing = Object.values(book.entries).find((item) =>
+        marker?.dungeonId
+          ? [
+              item.extensions?.wanxiang?.dungeonId,
+              item.extensions?.wanxiang?.officialDungeonId,
+            ].includes(marker.dungeonId)
+          : marker?.generationRule &&
+            item.extensions?.wanxiang?.generationRule === marker.generationRule,
+      );
+      const targetUid =
+        existing?.uid ??
+        (book.entries[key] ? Math.max(...Object.keys(book.entries).map(Number)) + 1 : Number(key));
+      book.entries[targetUid] = { ...entry, uid: targetUid, displayIndex: targetUid };
+    }
+    const updated = upgradeRuinsWorldbook(book);
+    book.entries = updated.entries;
     book.extensions = {
       wanxiang: {
         publicSeed: 1,

@@ -166,6 +166,7 @@ export async function worldsEmblemsChecks({ browser, baseURL, output }) {
     await fate.locator('#status').waitFor({ state: 'detached', timeout: 60000 });
     await fate.locator('canvas').evaluate(() => window.assetPreview.placeNow('fate'));
     await fate.locator('#emblem-open').click();
+    await page.locator('#emblem-dialogue').waitFor({ state: 'visible' });
     while (await page.locator('#emblem-dialogue').isVisible())
       await page.locator('#emblem-dialogue button').click();
     assert((await page.evaluate(() => demo.getLibrary())).emblems.includes('tan-hongyu'));
@@ -188,6 +189,8 @@ export async function worldsEmblemsChecks({ browser, baseURL, output }) {
       'enemy-lantern-guard',
     ]);
     assert.equal(await page.locator('.emblem-ring').count(), 1);
+    await page.locator('[data-unit="aegis"]').click();
+    assert.equal(await page.locator('[data-emblem-passive].emblem-passive-inactive').count(), 1);
     if ((await page.locator('#speed').textContent()).includes('×1'))
       await page.locator('#speed').click();
     for (let turn = 0; turn < 7; turn++) {
@@ -214,6 +217,7 @@ export async function worldsEmblemsChecks({ browser, baseURL, output }) {
     await page.locator('[data-unit="aegis"]').click();
     await page.locator('[data-unit="aegis"]').click();
     assert.equal((await page.evaluate(() => demo.getPlan()))[0].kind, 'engage');
+    assert.equal(await page.locator('[data-emblem-passive].emblem-passive-active').count(), 1);
     await page.locator('[data-skill="attack"]').click();
     await page.locator('[data-unit="enemy-lantern-scout"]').click();
     assert((await page.evaluate(() => demo.getPlan()))[0].followUp);
@@ -272,6 +276,8 @@ export async function worldsEmblemsChecks({ browser, baseURL, output }) {
     assert((await page.evaluate(() => demo.getState())).units['enemy-lantern-scout'].buffs.balance);
     assert.equal((await page.evaluate(() => demo.getLibrary())).progression.emblemLesson, 'done');
     await page.evaluate(() => demo.returnInn());
+    while (await page.locator('#emblem-dialogue').isVisible())
+      await page.locator('#emblem-dialogue button').click();
     const returned = page.frameLocator('#inn-frame iframe');
     await returned.locator('.spot[data-place="fate"].visible').waitFor({ timeout: 60000 });
     await page.screenshot({ path: path.join(output, 'return-facing-fate-table.png') });

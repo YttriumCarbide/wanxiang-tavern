@@ -84,7 +84,20 @@ export async function settlementChecks({ browser, baseURL, output }) {
         retreat: false,
       });
     });
+    await page.locator('#result').waitFor({ state: 'visible' });
+    assert.equal(await page.locator('#level-dialogue').isVisible(), false);
+    assert.equal(await page.locator('#continue').isDisabled(), true);
+    await page.waitForFunction(
+      () => !!document.querySelector('[data-experience-state="level-up"]'),
+    );
+    assert.equal(await page.locator('#level-dialogue').isVisible(), false);
+    await page.screenshot({ path: path.join(output, 'experience-level-up-animation.png') });
     await page.locator('#level-dialogue').waitFor({ state: 'visible' });
+    assert(
+      await page
+        .locator('[data-experience]')
+        .evaluateAll((rows) => rows.every((row) => row.dataset.experienceState === 'complete')),
+    );
     assert((await page.locator('#level-dialogue .dialogue-bonuses').textContent()).includes('+'));
     await page.screenshot({ path: path.join(output, 'level-up-dialogue.png') });
     while (await page.locator('#level-dialogue').isVisible())

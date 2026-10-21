@@ -1,9 +1,11 @@
 import { HEROES, BUFFS } from '../../data.js';
+import { PORTRAIT_TEMPLATES } from '../../content/portrait-templates.js';
 import { TRIGGER_EVENTS, TRIGGER_TARGETS, POSITIVE_BUFFS } from '../../triggers.js';
 
 /** A classified design reference, derived from the shipped game rather than scattered prose. */
 export function characterGameReference() {
   return {
+    displayNotation: '所有技能说明用小写hp表示生命、sp表示法力；JSON字段保留hp/mp，不改变Schema。',
     resources: {
       hp: { range: [20, 80], meaning: '生命上限，不能因职业强度把所有属性填满' },
       mp: { range: [8, 40], meaning: '蓝量上限，战斗和战间不自动补满' },
@@ -40,8 +42,9 @@ export function characterGameReference() {
       id: hero.id,
       title: hero.title,
       weapon: hero.weapon,
-      note: '仅选当前立绘与色板，不强迫原世界职业相同',
+      note: '只提供战斗职业与色板参考；默认立绘按weapon与setting.gender选择，不绑定官设身份',
     })),
+    defaultPortraits: PORTRAIT_TEMPLATES,
     entrySkill: {
       rule: '每个角色都必须有且仅有一个专属入场技（必填，包括主角与召唤角色）',
       meaning: '在后排待满一个整回合后换入前排自动触发，不消耗额外AP或行动点',
@@ -135,7 +138,7 @@ export function characterGameReference() {
     },
     designRules: [
       '先按职业、性格、经历确定攻防与技能主题，再选已实现的效果和合理数值。',
-      '两个技能槽至少一个主动，顺序对应setting.skills；所有名称只在setting生成，data只填写数值与可执行规则。',
+      '两个技能槽均可选择主动或被动，普通攻击独立，顺序对应setting.skills；所有名称只在setting生成，data只填写数值与可执行规则。',
       '不生成抽牌、额外AP、眩晕、复活、任意召唤、概率或自定义脚本。',
       '数值只存在数据层，设定层动作描写不写AP、蓝量、伤害与状态层数。',
     ],

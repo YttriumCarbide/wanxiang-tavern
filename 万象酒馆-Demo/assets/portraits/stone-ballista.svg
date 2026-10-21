@@ -1,31 +1,26 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="600" height="900" viewBox="0 0 600 900">
-  <defs>
-    <radialGradient id="bg" cx="50%" cy="45%" r="65%">
-      <stop offset="0%" stop-color="#e0ae77" stop-opacity="0.32" />
-      <stop offset="60%" stop-color="#362b20" />
-      <stop offset="100%" stop-color="#17120c" />
-    </radialGradient>
-    <linearGradient id="metal" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#ad8151" />
-      <stop offset="50%" stop-color="#e0ae77" />
-      <stop offset="100%" stop-color="#17120c" />
-    </linearGradient>
-  </defs>
-  <rect width="600" height="900" fill="#17120c" />
-  <rect x="20" y="20" width="560" height="860" fill="url(#bg)" rx="16" />
-  <circle cx="300" cy="380" r="230" fill="none" stroke="#ad8151" stroke-width="3" stroke-opacity="0.35" />
-  <circle cx="300" cy="380" r="200" fill="none" stroke="#e0ae77" stroke-width="1.5" stroke-dasharray="8 6" stroke-opacity="0.4" />
-  <path d="M70 820V340Q70 100 300 80Q530 100 530 340V820" fill="none" stroke="#ad8151" stroke-opacity="0.3" stroke-width="2.5" />
-  <path d="M60 830H540M100 850H500" stroke="#ad8151" stroke-opacity="0.5" stroke-width="3" />
-  
-      <!-- Crossbow / Ballista arms -->
-      <path d="M100 360Q300 240 500 360" fill="none" stroke="#ad8151" stroke-width="14" stroke-linecap="round" />
-      <line x1="110" y1="365" x2="300" y2="520" stroke="#e0ae77" stroke-width="4" />
-      <line x1="490" y1="365" x2="300" y2="520" stroke="#e0ae77" stroke-width="4" />
-      <!-- Stock & Heavy Bolt -->
-      <rect x="285" y="220" width="30" height="420" fill="#523d29" stroke="#ad8151" stroke-width="4" rx="4" />
-      <polygon points="300,160 325,230 275,230" fill="#e0ae77" stroke="#ad8151" stroke-width="3" />
-      <!-- Tripod pedestal -->
-      <polygon points="240,640 360,640 420,740 180,740" fill="#36291a" stroke="#ad8151" stroke-width="4" />
-    
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="900" viewBox="0 0 256 384" data-art-style="isometric-voxel-v3"><title>石门机关弩</title>
+<defs><radialGradient id="chamber" cx="50%" cy="54%" r="68%"><stop stop-color="#705435"/><stop offset="1" stop-color="#142428"/></radialGradient></defs>
+<path fill="url(#chamber)" d="M0 0h256v384H0z"/>
+<ellipse cx="128" cy="294.7" rx="94.1" ry="10" fill="#09171b" opacity=".5"/>
+<g data-enemy-model="stoneBallista" transform="translate(-233.019 -451.216) scale(2.59259)"><polygon points="149.2,270.6 143.8,272.9 143.8,253.7 149.2,251.4" fill="#74684d"/>
+<polygon points="143.8,272.9 128.4,266.4 128.4,247.2 143.8,253.7" fill="#a08f6a"/>
+<polygon points="133.8,244.9 149.2,251.4 143.8,253.7 128.4,247.2" fill="#d1bb8a"/>
+<polygon points="130.7,260.5 121.7,264.3 121.7,234.3 130.7,230.5" fill="#4d5653"/>
+<polygon points="121.7,264.3 112.7,260.5 112.7,230.5 121.7,234.3" fill="#6a7772"/>
+<polygon points="121.7,226.7 130.7,230.5 121.7,234.3 112.7,230.5" fill="#8a9b94"/>
+<polygon points="159.5,277.1 132.5,288.5 132.5,276.5 159.5,265.1" fill="#1a2127"/>
+<polygon points="132.5,288.5 96.5,273.3 96.5,261.3 132.5,276.5" fill="#242e36"/>
+<polygon points="123.5,249.9 159.5,265.1 132.5,276.5 96.5,261.3" fill="#2f3c46"/>
+<polygon points="157.9,241.3 155.7,242.2 155.7,239.8 157.9,238.9" fill="#938b74"/>
+<polygon points="155.7,242.2 108.9,222.5 108.9,220.1 155.7,239.8" fill="#cabfa0"/>
+<polygon points="111.1,219.1 157.9,238.9 155.7,239.8 108.9,220.1" fill="#fffad1"/>
+<polygon points="167.2,251.2 156.3,255.7 156.3,246.1 167.2,241.6" fill="#74684d"/>
+<polygon points="156.3,255.7 106.8,234.8 106.8,225.2 156.3,246.1" fill="#a08f6a"/>
+<polygon points="117.7,220.7 167.2,241.6 156.3,246.1 106.8,225.2" fill="#d1bb8a"/>
+<polygon points="116.8,284.3 111.3,286.5 111.3,267.3 116.8,265.0" fill="#74684d"/>
+<polygon points="111.3,286.5 96.0,280.1 96.0,260.9 111.3,267.3" fill="#a08f6a"/>
+<polygon points="101.5,258.6 116.8,265.0 111.3,267.3 96.0,260.9" fill="#d1bb8a"/>
+<polygon points="182.4,234.3 124.8,258.6 124.8,251.4 182.4,227.1" fill="#6f5334"/>
+<polygon points="124.8,258.6 118.5,255.9 118.5,248.7 124.8,251.4" fill="#987247"/>
+<polygon points="176.2,224.4 182.4,227.1 124.8,251.4 118.5,248.7" fill="#c7945d"/></g>
 </svg>

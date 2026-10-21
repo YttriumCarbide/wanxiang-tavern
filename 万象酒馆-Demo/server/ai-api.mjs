@@ -1,3 +1,4 @@
+import { REQUEST_TIMEOUT_MS } from '../src/ai/request-policy.js';
 import { createAiPipeline } from '../src/ai/pipeline/runtime.js';
 import { importRemotePortrait } from './portrait-images.mjs';
 import { createPortraitStore } from './portrait-store.mjs';
@@ -106,7 +107,7 @@ export async function createAiApi({
       messages,
       requestId,
       requestReport,
-      expiresAt: Date.now() + 180000,
+      expiresAt: Date.now() + REQUEST_TIMEOUT_MS,
     };
     directRequests.set(requestId, job);
     return {
@@ -407,7 +408,7 @@ export async function createAiApi({
         return true;
       }
       const controller = new AbortController(),
-        timer = setTimeout(() => controller.abort(), 180000);
+        timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
       const cancel = () => {
         if (!res.writableEnded) controller.abort();
       };
@@ -452,7 +453,7 @@ export async function createAiApi({
             type: 'error',
             error:
               failure.name === 'AbortError'
-                ? '请求已取消或超过180秒，请检查服务后重试'
+                ? '请求已取消或超过15分钟，请检查服务后重试'
                 : redactDiagnostic(failure.message, profile.apiKey),
             diagnostic: failure.diagnostic,
           });
@@ -470,7 +471,7 @@ export async function createAiApi({
         let report = {
           error:
             failure.name === 'AbortError'
-              ? '请求已取消或超过180秒，请检查服务后重试'
+              ? '请求已取消或超过15分钟，请检查服务后重试'
               : failure.message,
           diagnostic: failure.diagnostic,
         };

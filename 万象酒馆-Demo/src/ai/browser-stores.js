@@ -1,3 +1,7 @@
+import { upgradeTutorialRevision } from './tutorial-revision.js';
+import { upgradeProtagonistRules } from './protagonist-rules.js';
+import { upgradeBattleDisplayRules } from './battle-display-rules.js';
+import { upgradeRuinsWorldbook } from './ruins-worldbook.js';
 import { upgradeAssetWorldbook } from './asset-worldbook.js';
 import { upgradeGameRules } from './game-rules-upgrade.js';
 import { normalizePromptPreset } from './presets.js';
@@ -76,6 +80,38 @@ export async function createBrowserStores(database, readText, builtinBook) {
     await database.write([
       ['world.book.tavern-world', updated],
       ['world.asset-rules.v27', true],
+    ]);
+  }
+  if (!database.get('world.protagonist-rules.v28')) {
+    const updated = upgradeProtagonistRules(
+      database.get('world.book.tavern-world'),
+      await readText('worldbook/protagonist-strength.md'),
+    );
+    await database.write([
+      ['world.book.tavern-world', updated],
+      ['world.protagonist-rules.v28', true],
+    ]);
+  }
+  if (!database.get('world.battle-display.v29')) {
+    const updated = upgradeBattleDisplayRules(
+      database.get('world.book.tavern-world'),
+      await readText('worldbook/battle-display.md'),
+    );
+    await database.write([
+      ['world.book.tavern-world', updated],
+      ['world.battle-display.v29', true],
+    ]);
+  }
+  if (!database.get('world.ruins-roster.v30')) {
+    await database.write([
+      ['world.book.tavern-world', upgradeRuinsWorldbook(database.get('world.book.tavern-world'))],
+      ['world.ruins-roster.v30', true],
+    ]);
+  }
+  if (!database.get('world.tutorial-equipment.v31')) {
+    await database.write([
+      ['world.book.tavern-world', upgradeTutorialRevision(database.get('world.book.tavern-world'))],
+      ['world.tutorial-equipment.v31', true],
     ]);
   }
   let worldSettings = normalizeWorldSettings(

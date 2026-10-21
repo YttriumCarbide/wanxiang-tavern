@@ -198,9 +198,27 @@ export async function equipmentChecks({ browser, baseURL, output }) {
     await page.locator('#destination-region-confirm').click();
     await page.locator('#destination-start').click();
     await page.locator('#prepare-title').filter({ hasText: '正在生成剧本' }).waitFor();
+    await page.locator('#guide-dialogue').waitFor({ state: 'visible' });
+    while (await page.locator('#guide-dialogue').isVisible())
+      await page.locator('#dialogue-next').click();
+    assert.equal(
+      (await page.evaluate(() => demo.getLibrary())).campaign.tasks.equipmentIntro,
+      true,
+    );
     assert.equal(await page.locator('#generation-progress').isVisible(), false);
     const before = (await page.evaluate(() => demo.getLibrary())).party.filter(Boolean).sort();
     const source = page.locator(`[data-prepare-hero="${entry.id}"]`);
+    assert.equal(
+      await source.count(),
+      1,
+      JSON.stringify(
+        await page.evaluate(() => ({
+          party: demo.getLibrary().party,
+          characters: demo.getLibrary().characters.map((c) => ({ id: c.id, name: c.setting.name })),
+          pool: document.querySelector('#prepare-pool').textContent,
+        })),
+      ),
+    );
     const deployed = (await page.evaluate(() => demo.getLibrary())).party.includes(entry.id);
     await source.dragTo(page.locator('[data-prepare-slot="0"]'));
     const after = (await page.evaluate(() => demo.getLibrary())).party;
@@ -214,7 +232,7 @@ export async function equipmentChecks({ browser, baseURL, output }) {
     await page.evaluate(() => {
       const library = demo.getLibrary();
       library.progression = {
-        settlements: ['one', 'two', 'three'],
+        settlements: ['one', 'two'],
         pandoraJoined: false,
         swapLesson: 'none',
       };
@@ -227,7 +245,7 @@ export async function equipmentChecks({ browser, baseURL, output }) {
     await page.reload();
     await page.waitForFunction(() => !!window.demo);
     await page.locator('#companion-dialogue.opening-prose').waitFor({ state: 'visible' });
-    await page.screenshot({ path: path.join(output, 'pandora-third-return.png') });
+    await page.screenshot({ path: path.join(output, 'pandora-second-return.png') });
     while (await page.locator('#companion-dialogue').isVisible())
       await page.locator('#companion-dialogue button').click();
     await page.waitForFunction(() => demo.getLibrary().progression.pandoraJoined);
@@ -265,6 +283,25 @@ export async function equipmentChecks({ browser, baseURL, output }) {
     await page.locator('#commit').click();
     await page.waitForFunction(() => demo.getLibrary().progression.swapLesson === 'done');
     assert.equal(await page.locator('#formation-lesson').isVisible(), false);
+    await page.waitForFunction(() => !demo.getStatus().playing);
+    await page.locator('#commit').click();
+    await page.waitForFunction(() => demo.getLibrary().progression.entryLesson === 'ready');
+    while (await page.locator('#companion-dialogue').isVisible())
+      await page.locator('#companion-dialogue button').click();
+    await page.waitForFunction(() => !demo.getStatus().playing);
+    const charged = await page.evaluate(() => {
+      const state = demo.getState();
+      return state.formation.slice(3).find((id) => id && state.units[id].entryReady);
+    });
+    await page.locator(`[data-rear="${charged}"]`).click();
+    const target = await page.evaluate(() => {
+      const state = demo.getState();
+      const id = state.formation[0];
+      return id ? `[data-unit="${id}"]` : '[data-empty-slot="0"]';
+    });
+    await page.locator(target).click();
+    await page.locator('#commit').click();
+    await page.waitForFunction(() => demo.getLibrary().progression.entryLesson === 'done');
     assert.deepEqual(errors, []);
     assert.deepEqual(calls, ['creation', 'npc', 'script']);
     return {
@@ -278,6 +315,7 @@ export async function equipmentChecks({ browser, baseURL, output }) {
       pandoraEvent: true,
       realSwapLesson: true,
       retreatGuard: true,
+      actualEntrySkillLesson: true,
     };
   } finally {
     await page.close();

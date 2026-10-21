@@ -1,3 +1,4 @@
+import { rearUnlocked } from '../formation-access.js';
 import { canCombine } from '../emblems.js';
 import { ITEMS } from '../content/items.js';
 import { preview, makeAction, makeSwap, makeReposition, makeItem, makeEngage } from '../engine.js';
@@ -124,6 +125,8 @@ export function createPlanning(context) {
     if (!fitsAt(start, 1)) return blocked('所选时间格无法交换，请选择空格或取消选择。');
     const formation = session.battle.forecast.final.formation,
       index = formation.indexOf(id);
+    if ((index >= 3 || slot >= 3) && !rearUnlocked(session.ai.library))
+      return blocked('潘多拉加入后才会开放后场');
     if (index === slot) return blocked('角色已经在这个位置。');
     if (session.battle.state.units[id].hp <= 0) return blocked('濒死角色不能换入。');
     session.battle.plan.push(

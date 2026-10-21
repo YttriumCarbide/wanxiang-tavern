@@ -111,7 +111,6 @@ export function createPlayback(context) {
       context.planning.recompute();
       context.renderer.render();
       context.onboarding?.roundFinished(wasOpening, result);
-      context.emblems?.check();
       if (session.battle.state.phase === 'victory' || session.battle.state.phase === 'defeat')
         context.journey.showResult();
     } finally {
@@ -119,6 +118,7 @@ export function createPlayback(context) {
       session.battle.playing = false;
       session.battle.activeCell = -1;
       context.renderer.render();
+      context.emblems?.check();
     }
   }
   return { showTurnNotice, commit };

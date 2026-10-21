@@ -1,12 +1,13 @@
+import { RUINS_ROUTES, RUINS_ENEMY_IDS } from './ruins-encounters.js';
 /** Existing art themes, fixed environment rules and six reusable exploration site families. */
 export const REGIONS = Object.freeze({
   ruins: {
     name: '界隙遗迹',
     description: '断墙、石阶与尘封的回廊。故事中的具体遗址由本条路线逐次展开。',
     atmosphere: '干燥石尘，风化石壁，暖色火光。',
-    sites: ['旧阶入口', '断柱回廊', '沉降庭院', '石拱侧厅', '地下通路', '守望石台'],
-    enemies: ['mossSlime', 'sprout', 'pebble', 'hound', 'warden'],
-    boss: 'bossGate',
+    sites: RUINS_ROUTES.map((route) => route.name),
+    enemies: [...RUINS_ENEMY_IDS],
+    boss: 'apepLamb',
   },
   forest: {
     name: '月痕古林',

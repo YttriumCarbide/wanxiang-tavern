@@ -18,6 +18,20 @@ export async function staticChecks({ browser, output }) {
   );
   const allowedFiles = new Set([...manifest.files.map((file) => file.path), 'release.json']);
   const root = path.join(projectRoot, 'dist');
+  const canon = JSON.parse(
+    await readFile(path.join(root, 'assets/builtin-worldbook.json'), 'utf8'),
+  );
+  const canonEntries = Object.values(canon.entries);
+  for (const id of ['ruins-hall', 'ruins-sinkhole', 'ruins-tomb', 'ruins-curse'])
+    assert(
+      canonEntries.some((entry) => entry.extensions?.wanxiang?.dungeonId === id),
+      id,
+    );
+  assert(
+    canonEntries.some(
+      (entry) => entry.extensions?.wanxiang?.generationRule === 'map-enemy-tactics',
+    ),
+  );
   const prefix = '/wanxiang-demo/';
   const types = {
     '.html': 'text/html',

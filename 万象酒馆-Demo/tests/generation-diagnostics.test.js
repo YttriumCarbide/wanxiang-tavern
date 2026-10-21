@@ -189,6 +189,63 @@ test('truncation and non-JSON upstream failures retain raw text with configured 
   );
 });
 
+test('upstream quota failures preserve raw responses and never retry HTTP or SSE requests', async () => {
+  const profile = { baseUrl: 'https://example.com/v1', model: 'mock', apiKey: 'private-test-key' };
+  const message = '上游 HTTP 429: [,[8,"Quota exceeded",[]]]';
+  const raw = JSON.stringify({ error: { message, code: 429 } });
+  const prefix =
+    'data: ' + JSON.stringify({ choices: [{ delta: { content: '尚未完成的正文' } }] }) + '\n\n';
+  for (const [response, expectedRaw] of [
+    [new Response(raw, { status: 429 }), raw],
+    [new Response(message, { status: 429 }), message],
+    [new Response(raw), raw],
+    [
+      new Response('data: ' + raw + '\n\n', { headers: { 'Content-Type': 'text/event-stream' } }),
+      raw,
+    ],
+    [
+      new Response(prefix + 'data: ' + raw + '\n\n', {
+        headers: { 'Content-Type': 'text/event-stream' },
+      }),
+      '尚未完成的正文',
+    ],
+  ]) {
+    let calls = 0;
+    await assert.rejects(
+      compatibleRequest(profile, [], {
+        fetchImpl: async () => {
+          calls++;
+          return response;
+        },
+      }),
+      (failure) => {
+        assert.equal(failure.diagnostic.stage, 'upstream-quota');
+        assert.equal(failure.diagnostic.rawText, expectedRaw);
+        assert(failure.message.includes('延长超时无法解决'));
+        assert(failure.message.includes(message));
+        return true;
+      },
+    );
+    assert.equal(calls, 1);
+  }
+  const disconnect = JSON.stringify({
+    error: { message: 'executor 断线后未在暂存窗口内补发结果' },
+  });
+  await assert.rejects(
+    compatibleRequest(profile, [], {
+      fetchImpl: async () =>
+        new Response('data: ' + disconnect + '\n\n', {
+          headers: { 'Content-Type': 'text/event-stream' },
+        }),
+    }),
+    (failure) => {
+      assert.equal(failure.diagnostic.stage, 'transport');
+      assert.equal(failure.diagnostic.rawText, disconnect);
+      return true;
+    },
+  );
+});
+
 test('failed generation can be corrected and accepted locally without another provider request', async () => {
   const directory = await mkdtemp(path.join(process.cwd(), '.runtime/tests/diagnostic-'));
   let calls = 0;
