@@ -242,7 +242,7 @@ test('Vertex errors retain diagnostic text, redact credentials, never retry, pro
   });
 });
 
-test('all six portraits compile by weapon and gender, survive restores and are available to generated enemies', async () => {
+test('all six companion portraits compile by weapon and gender, survive restores and are excluded from enemy appearances', async () => {
   const fixture = JSON.parse(
     await readFile(new URL('./fixtures/silvia-character.json', import.meta.url), 'utf8'),
   );
@@ -257,7 +257,7 @@ test('all six portraits compile by weapon and gender, survive restores and are a
       library.characters.find((member) => member.id === entry.id).combat.portrait,
       template.portrait,
     );
-    assert(worldReference().appearances.some((item) => item.portrait === template.portrait));
+    assert(!worldReference().appearances.some((item) => item.portrait === template.portrait));
     const bytes = await readFile(
       new URL(`../assets/portraits/${template.portrait}`, import.meta.url),
     );

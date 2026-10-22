@@ -1,4 +1,5 @@
 import { upgradeTutorialRevision } from './tutorial-revision.js';
+import { upgradeEnemyAppearanceRules } from './enemy-appearance-rules.js';
 import { upgradeProtagonistRules } from './protagonist-rules.js';
 import { upgradeBattleDisplayRules } from './battle-display-rules.js';
 import { upgradeRuinsWorldbook } from './ruins-worldbook.js';
@@ -112,6 +113,15 @@ export async function createBrowserStores(database, readText, builtinBook) {
     await database.write([
       ['world.book.tavern-world', upgradeTutorialRevision(database.get('world.book.tavern-world'))],
       ['world.tutorial-equipment.v31', true],
+    ]);
+  }
+  if (!database.get('world.enemy-appearances.v32')) {
+    await database.write([
+      [
+        'world.book.tavern-world',
+        upgradeEnemyAppearanceRules(database.get('world.book.tavern-world')),
+      ],
+      ['world.enemy-appearances.v32', true],
     ]);
   }
   let worldSettings = normalizeWorldSettings(

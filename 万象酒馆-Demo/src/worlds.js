@@ -1,12 +1,9 @@
-import { defaultProtagonist } from './content/qingyuan.js';
 import { isPositiveEnemyEffect } from './enemy-targets.js';
 import { REGIONS } from './content/regions.js';
 import { MAP_IDS } from './content/biomes.js';
-import { DEFINITIONS, HEROES, BUFFS } from './data.js';
-import { EDITH } from './content/edith.js';
-import { PANDORA } from './content/pandora.js';
+import { DEFINITIONS, BUFFS } from './data.js';
 import { ENEMY_ATTACKS } from './combat-art.js';
-import { PORTRAIT_TEMPLATES } from './content/portrait-templates.js';
+import { HUMANOID_ENEMY_TEMPLATES, restoredEnemyPortrait } from './content/enemy-templates.js';
 
 export const BASE_WORLDS = Object.freeze(['ruins', 'forest', 'frost', 'forge', 'tide']);
 export const routeKey = (entry) => entry.world?.id || entry.map;
@@ -38,12 +35,8 @@ export function worldReference() {
       .filter((entry) => entry.speed)
       .map((entry) => structuredClone(entry)),
     appearances: [
-      ...Object.values(DEFINITIONS),
-      ...HEROES,
-      EDITH,
-      PANDORA,
-      defaultProtagonist().combat,
-      ...PORTRAIT_TEMPLATES,
+      ...Object.values(DEFINITIONS).filter((entry) => entry.speed),
+      ...HUMANOID_ENEMY_TEMPLATES,
     ].map(({ portrait, name }) => ({ portrait, name })),
   };
 }
@@ -110,14 +103,15 @@ export function normalizeEnemy(enemy, { restoring = false } = {}) {
   if (!enemy || !/^enemy-[a-z0-9-]{1,70}$/.test(enemy.id) || DEFINITIONS[enemy.id])
     throw Error('新敌人ID无效');
   const appearances = new Set(worldReference().appearances.map((entry) => entry.portrait));
-  if (!appearances.has(enemy.portrait) || !ENEMY_ATTACKS.includes(enemy.attackStyle))
+  const portrait = restoring ? restoredEnemyPortrait(enemy.portrait) : enemy.portrait;
+  if (!appearances.has(portrait) || !ENEMY_ATTACKS.includes(enemy.attackStyle))
     throw Error('敌人外貌或攻击表现无效');
   if (enemy.boss !== undefined && typeof enemy.boss !== 'boolean')
     throw Error('Boss标记必须是布尔值');
   return {
     id: enemy.id,
     name: text(enemy.name, 1, 40, '敌人名称'),
-    portrait: enemy.portrait,
+    portrait,
     color: /^#[0-9a-f]{6}$/i.test(enemy.color) ? enemy.color : '#b3a996',
     hp: number(enemy.hp, 10, enemy.boss ? 900 : 300, '生命'),
     mp: 0,
@@ -144,7 +138,6 @@ export function normalizeWorld(
   if (!/^(?:world-[a-z0-9-]+|ruins|forest|frost|forge|tide)$/.test(id)) throw Error('地图ID无效');
   if (!MAP_IDS.includes(raw.map)) throw Error('地图背景无效');
   if (existing && raw.map !== existing.map) throw Error('扩充不能更换已有地图背景');
-  const appearances = new Set(worldReference().appearances.map((entry) => entry.portrait));
   const definitions = { ...existing?.enemyDefinitions };
   if (!Array.isArray(raw.enemies) || raw.enemies.length > (restoring ? 500 : 30))
     throw Error('新敌人列表无效');
@@ -157,8 +150,6 @@ export function normalizeWorld(
       definitions[enemy.id]
     )
       throw Error('新敌人ID重复或无效');
-    if (!appearances.has(enemy.portrait) || !ENEMY_ATTACKS.includes(enemy.attackStyle))
-      throw Error('敌人外貌或攻击表现无效');
     const definition = normalizeEnemy(enemy, { restoring });
     definitions[enemy.id] = definition;
     added.push(enemy.id);

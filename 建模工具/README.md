@@ -6,6 +6,7 @@
 - `build_battlefield.py`：遗迹战场源模型，复用酒馆导出函数。
 - `build_forest.py`：古林源模型，复用酒馆导出函数和遗迹卡牌。
 - `build_realms.py`：霜晶矿窟、余烬铸坊、潮汐星殿、三只小怪与星潮Boss。
+- `build_humanoid_enemies.py`：复用异境模型导出器，将人形敌人的共享体素数据导出为六套真实GLB。统一重建入口为在Demo目录执行 `node tools/build-humanoid-enemies.mjs`，此命令同时生成卡面、保留JSON源并调用该Python导出器，无需重建地图。
 - `build_theme_arenas.py`：在原有五张战场后追加八张主题战场及对应微缩预览，复用`build_realms.py`导出器。
 - `build_demo_floor.py`：从保留的两套源GLB生成Demo地板、装饰和固定基座。源GLB与此前的两个GLB备份经SHA-256比对一致，因此不再保留重复备份。
 - `validate_*.py`：对应源资产的几何验证。

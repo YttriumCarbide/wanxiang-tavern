@@ -1,12 +1,6 @@
 {
-  "description": "Vertex 原生API Key/OAuth、流式及工具输出、终止与错误诊断；六套剑/杖/弓男女默认立绘自动选择及敌人共用；验证设置保存、实际卡面、静态发布，不重复副本通关。",
-  "scopes": ["quality", "core"],
-  "coreFiles": [
-    "tests/vertex-portraits.test.js",
-    "tests/art-assets.test.js",
-    "tests/character-presentation.test.js",
-    "tests/optimization.test.js",
-    "tests/pandora.test.js"
-  ],
+  "description": "首批quality/core/models/server/static/humanoid-enemies通过；此清单只复查最后的女性发型可见性、六套GLB和卡面、敌我白名单与文档，不重复已通过的服务和完整副本。",
+  "scopes": ["quality", "core", "humanoid-enemies"],
+  "coreFiles": ["tests/humanoid-enemies.test.js"],
   "browserConcurrency": 2
 }

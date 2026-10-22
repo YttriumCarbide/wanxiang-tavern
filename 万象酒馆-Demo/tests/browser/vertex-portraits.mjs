@@ -49,7 +49,7 @@ export async function vertexPortraitChecks({ browser, baseURL, output }) {
         .querySelectorAll('aside, footer, #atlas-loading')
         .forEach((element) => (element.hidden = true));
       const { HEROES, DEFINITIONS } = await import('/src/data.js');
-      const { PORTRAIT_TEMPLATES } = await import('/src/content/portrait-templates.js');
+      const { HUMANOID_ENEMY_TEMPLATES } = await import('/src/content/enemy-templates.js');
       const { createBattleView } = await import('/src/scene.js');
       const { newBattle, preview } = await import('/src/engine.js');
       const weapons = ['sword', 'staff', 'bow'];
@@ -67,10 +67,10 @@ export async function vertexPortraitChecks({ browser, baseURL, output }) {
           {
             ...DEFINITIONS.pebble,
             id: `template-enemy-${index}`,
-            name: PORTRAIT_TEMPLATES.find(
+            name: HUMANOID_ENEMY_TEMPLATES.find(
               (entry) => entry.weapon === weapon && entry.gender === 'male',
             ).name,
-            portrait: `template-${weapon}-male.webp`,
+            portrait: `enemy-humanoid-${weapon}-male`,
           },
         ]),
       );

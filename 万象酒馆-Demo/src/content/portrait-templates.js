@@ -1,4 +1,4 @@
-/** Shared default art for generated heroes and human-shaped world enemies. */
+/** Default illustrations for generated protagonists and companions only. */
 export const PORTRAIT_TEMPLATES = Object.freeze(
   ['sword', 'staff', 'bow'].flatMap((weapon) =>
     ['female', 'male'].map((gender) => ({

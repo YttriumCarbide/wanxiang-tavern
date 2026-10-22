@@ -292,7 +292,7 @@ test('version 4 migrates only protocol paragraphs and examples, preserving edits
   );
   assert.equal(
     JSON.parse(await readFile(path.join(directory, 'builtin-content.json'), 'utf8')).version,
-    31,
+    32,
   );
 });
 

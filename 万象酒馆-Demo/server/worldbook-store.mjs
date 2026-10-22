@@ -3,6 +3,7 @@ import { upgradeProtagonistRules } from '../src/ai/protagonist-rules.js';
 import { upgradeBattleDisplayRules } from '../src/ai/battle-display-rules.js';
 import { upgradeRuinsWorldbook } from '../src/ai/ruins-worldbook.js';
 import { upgradeAssetWorldbook } from '../src/ai/asset-worldbook.js';
+import { upgradeEnemyAppearanceRules } from '../src/ai/enemy-appearance-rules.js';
 import { setTimeout as waitForFile } from 'node:timers/promises';
 import { upgradeGameRules } from '../src/ai/game-rules-upgrade.js';
 import { migrateTutorialWorldbook } from './worldbook-tutorial.mjs';
@@ -873,6 +874,11 @@ export async function createWorldbookStore(directory) {
     const record = await get('tavern-world');
     await write(fileFor('tavern-world'), upgradeTutorialRevision(record.book));
     await write(contentVersionFile, { version: 31 });
+  }
+  if (contentVersion < 32) {
+    const record = await get('tavern-world');
+    await write(fileFor('tavern-world'), upgradeEnemyAppearanceRules(record.book));
+    await write(contentVersionFile, { version: 32 });
   }
   return {
     get,

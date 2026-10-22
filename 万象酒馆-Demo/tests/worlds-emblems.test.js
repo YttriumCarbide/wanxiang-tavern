@@ -44,11 +44,11 @@ function battle() {
     w.enemyDefinitions,
   );
 }
-test('world construction validates mechanics, supports teammate appearances and only appends expansions', () => {
+test('world construction validates mechanics, excludes teammate appearances and only appends expansions', () => {
   const original = world();
   assert.equal(worldReference().styles.length, 13);
   assert(
-    worldReference().appearances.some((entry) => entry.portrait === DEFINITIONS.aegis.portrait),
+    !worldReference().appearances.some((entry) => entry.portrait === DEFINITIONS.aegis.portrait),
   );
   const expansion = {
     ...worldFixture(),

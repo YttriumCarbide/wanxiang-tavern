@@ -1,4 +1,5 @@
 export const allScopes = [
+  'humanoid-enemies',
   'vertex-portraits',
   'quality',
   'tutorial-revision',

@@ -19,6 +19,7 @@ export function browserJobs(scopes, results, root) {
   simple('vertex-portraits', 'vertex-portraits', 'vertexPortraitChecks');
   simple('tutorial-revision', 'tutorial-revision', 'tutorialRevisionChecks');
   simple('enemy-portraits', 'enemy-portraits', 'enemyPortraitChecks');
+  simple('humanoid-enemies', 'humanoid-enemies', 'humanoidEnemyChecks');
   simple('worlds-emblems', 'worlds-emblems', 'worldsEmblemsChecks');
   simple('opencode', 'opencode', 'opencodeBrowserChecks');
   simple('onboarding', 'onboarding', 'onboardingChecks');
