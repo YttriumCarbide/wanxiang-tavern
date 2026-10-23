@@ -114,7 +114,7 @@ export function readGenerationResult(kind, rawText, input, readCharacter = parse
     const ids = (input.party || []).map((item) => item.id);
     diagnostic.issues = outputSchemaIssues(
       kind === 'character' ? stripRetiredFields(raw) : raw,
-      kind === 'character' ? characterInputSchema() : scriptInputSchema(ids),
+      kind === 'character' ? characterInputSchema(raw.schemaVersion) : scriptInputSchema(ids),
       kind,
     );
     if (diagnostic.issues.length)
@@ -133,7 +133,7 @@ export function readGenerationResult(kind, rawText, input, readCharacter = parse
     const id = `${kind}-${crypto.randomUUID()}`;
     const entry =
       kind === 'character'
-        ? normalizeCharacter(readCharacter(diagnostic.candidateText), id)
+        ? normalizeCharacter(readCharacter(diagnostic.candidateText), id, input)
         : normalizeScript(raw, id, ids);
     if (kind === 'character') {
       const seed = restoreGrowth(null, input.rollId || input.brief || entry.setting.name).seed;

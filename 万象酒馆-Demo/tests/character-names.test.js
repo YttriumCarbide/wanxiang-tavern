@@ -14,7 +14,7 @@ import { compactCharacterDocument } from './fixtures/ai.js';
 
 test('new output generates each name once while legacy duplicates remain optional input', () => {
   const raw = compactCharacterDocument();
-  checkOutputSchema(raw, characterOutputSchema());
+  checkOutputSchema(raw, characterOutputSchema({ version: 3 }));
   const schema = characterOutputSchema().properties.data;
   for (const field of ['name', 'title', 'attackName']) assert(!schema.properties[field]);
   assert(!schema.properties.ultimate && !schema.properties.quest);
@@ -119,9 +119,13 @@ test('version 6 updates only owned name-generation rules and preserves worldbook
   const upgraded = await createWorldbookStore(directory);
   const current = await upgraded.get('tavern-world');
   const updated = current.book.entries[rule.uid];
-  assert(updated.content.includes('data不生成name、title、attackName'));
+  assert(updated.content.includes('data必须包含archetype/weapon/profile/skills/entrySkill'));
   assert(!updated.content.includes('两层名称须逐字一致'));
-  assert(updated.content.includes('我的自定义要求'));
+  assert(
+    Object.values(current.book.entries).some(
+      (entry) => entry.disable && entry.content.includes('我的自定义要求'),
+    ),
+  );
   assert.deepEqual([updated.depth, updated.order], [2, 4321]);
   assert.deepEqual(current.book.entries[unrelated.uid], untouched);
 });

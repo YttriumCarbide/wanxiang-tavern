@@ -5,7 +5,7 @@ import { TRIGGER_EVENTS, TRIGGER_TARGETS, POSITIVE_BUFFS } from '../../triggers.
 /** A classified design reference, derived from the shipped game rather than scattered prose. */
 export function characterGameReference() {
   return {
-    displayNotation: '所有技能说明用小写hp表示生命、sp表示法力；JSON字段保留hp/mp，不改变Schema。',
+    displayNotation: '所有技能说明用小写hp/sp；v4仅设计机制，基础值与效果数字由程序编译。',
     resources: {
       hp: { range: [20, 80], meaning: '生命上限，不能因职业强度把所有属性填满' },
       mp: { range: [8, 40], meaning: '蓝量上限，战斗和战间不自动补满' },
@@ -56,91 +56,49 @@ export function characterGameReference() {
         allAllies: '所有友方单位（全员护盾或全员回血）',
         self: '自己（换入时自身强化或获得护盾）',
       },
-      effects: '1~3项效果（damage/heal/shield/buff/selfShield等）',
+      effects: '1~2项效果，写type/power，不填value；opposite对位为空时攻击落空，不寻找其他敌人。',
     },
     activeEffects: {
-      count: [1, 4],
-      damage: '对目标造成基础伤害，value整数1～32',
-      heal: '回复目标生命，value整数1～32',
-      shield: '目标获得护盾，value整数1～32',
-      selfHeal: '施术者自己回复生命，value整数1～32',
-      selfMana: '施术者自己回复法力，value整数1～32，不超过法力上限',
-      buff: '给目标添加指定buff层数，value整数1～6',
+      count: [1, 2],
+      damage: '对目标造成伤害，power选择low/standard/high；2AP程序给予显著更高伤害',
+      heal: '回复目标hp，选择power档位',
+      shield: '目标获得护盾，选择power档位',
+      selfHeal: '施术者回复hp，选择power档位',
+      selfMana: '施术者回复sp，选择power档位',
+      buff: '选择buff与power，层数由程序决定；禁锢、敏捷、超限每次1层',
       cleanse: 'buffs数组列出需移除的状态ID',
     },
     statuses: Object.entries(BUFFS).map(([id, value]) => ({
       id,
       name: value.name,
       meaning: value.text,
-      category: ['strength', 'guard', 'regen', 'iron'].includes(id) ? '增益' : '减益',
+      category: POSITIVE_BUFFS.includes(id) ? '增益' : '减益',
       note:
         id === 'slow'
           ? '只用于敌方，影响时间轴顺序'
           : '层数和结算由代码负责，不自行发明持续回合或触发条件',
     })),
     passives: {
+      locations: ['前场', '后场', '全战斗', '战斗外'],
       unifiedRules: {
-        format: {
-          passive: true,
-          text: '实际效果',
-          rules: [
-            {
-              mode: 'event',
-              event: 'damageTaken',
-              conditions: [{ type: 'front' }],
-              target: 'self',
-              effects: [{ type: 'heal', value: 2 }],
-              limit: 3,
-            },
-          ],
-        },
         events: TRIGGER_EVENTS,
         targets: TRIGGER_TARGETS,
         continuous:
-          'mode=continuous，条件满足时提供正面状态光环，不写event和limit；支持' +
-          POSITIVE_BUFFS.join(','),
+          'mode=continuous只支持haste,strength,guard,iron持续光环；再生必须使用有次数限制的事件施加，按层衰减。',
+        event:
+          'mode=event，写event、scope与limit档位；scope为round/battle/expedition，limit为once/few/regular。',
         conditions:
-          '全部AND；front/rear/hasPositive/hasNegative/hasBuff/noBuff/hasShield；hpBelow/hpAbove/mpBelow/mpAbove带value百分比；roundAtLeast带value；buff带buff/value。判断当前实际状态，不将光环再次当成条件。',
+          '每条规则最多一个条件；subject为self或target，默认self；front/rear/hasPositive/hasNegative/hasBuff/noBuff/hasShield，hpBelow/hpAbove/mpBelow/mpAbove的value为百分比，buff条件带buff/value，mark条件value为1~3。',
         recursion:
-          '装备和被动产生的伤害、治疗、法力及buff都不会再次触发事件；单趟limit跨战斗共享，最多50次。',
+          '装备和被动产生的效果不会继续触发事件。每角色最多一种专属标记、上限3，每场清空。',
       },
-      locations: ['前场', '后场', '全战斗', '战斗外'],
-      chooseOneEffectOnly: [
-        {
-          fields: ['buff', 'value'],
-          allowedBuffs: ['strength', 'guard', 'iron'],
-          value: [1, 3],
-          locations: ['前场', '后场', '全战斗'],
-          meaning: '位置满足时本人持续获得对应增益',
-        },
-        {
-          fields: ['teamFrontBuff', 'value'],
-          allowedBuffs: ['strength', 'guard', 'iron'],
-          value: [1, 2],
-          locations: ['前场', '后场', '全战斗'],
-          meaning: '施术者位置满足时，给我方前场提供光环',
-        },
-        {
-          fields: ['endHeal'],
-          value: [1, 3],
-          location: '后场',
-          meaning: '正常回合末帮助生命比例最低且仍存活的受伤队友',
-        },
-        {
-          fields: ['bonusMp'],
-          value: [1, 6],
-          location: '战斗外',
-          meaning: '整备时增加本人的蓝量上限，战斗中不回蓝',
-        },
-      ],
-      noActiveFields: ['ap', 'mp', 'target', 'effects'],
-      note: '新设计优先使用unifiedRules；旧四种被动仍兼容。持续光环支持正面状态，负面状态只能通过事件施加。',
+      note: 'v4只用kind:passive/rules；不写旧passive/location/value格式。被动名称留在人设，实际说明由程序按编译规则生成。',
     },
     designRules: [
       '先按职业、性格、经历确定攻防与技能主题，再选已实现的效果和合理数值。',
-      '两个技能槽均可选择主动或被动，普通攻击独立，顺序对应setting.skills；所有名称只在setting生成，data只填写数值与可执行规则。',
+      '两个技能槽均可选择主动或被动，普通攻击独立，顺序对应setting.skills；所有名称只在setting生成，data只选择机制、AP与强弱档位。',
       '不生成抽牌、额外AP、眩晕、复活、任意召唤、概率或自定义脚本。',
-      '数值只存在数据层，设定层动作描写不写AP、蓝量、伤害与状态层数。',
+      'AI不填写实际基础数值；设定层主动写动作，被动写实际条件与效果；程序根据设计生成准确技能说明。',
     ],
   };
 }

@@ -196,12 +196,15 @@ test('creation validates batch identity and code budget, without importing prese
     ['ore'],
   ]);
   const content = {
-    items: [{ id: 'ore', name: '晶片', description: '生命+2', stats: { hp: 2 }, rules: [] }],
+    schemaVersion: 2,
+    items: [
+      { id: 'ore', name: '晶片', description: '星辉', design: { statFocus: ['hp'], rules: [] } },
+    ],
   };
   const result = creationResponse(JSON.stringify(content), items);
   assert.equal(result[0].price, 10);
-  content.items[0].stats = { limit: 1, attack: 40 };
-  assert.throws(() => creationResponse(JSON.stringify(content), items), /预算/);
+  content.items[0].design.statFocus = ['limit'];
+  assert.throws(() => creationResponse(JSON.stringify(content), items), /档位/);
   content.items[0].id = 'unknown';
   assert.throws(() => creationResponse(JSON.stringify(content), items), /ID/);
   assert.throws(

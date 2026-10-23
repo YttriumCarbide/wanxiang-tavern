@@ -52,7 +52,7 @@ export function availableExplorations(route) {
 }
 
 export function explorationPreview(route, map) {
-  if (route.frontier[0]?.world)
+  if (route.frontier[0]?.world && !BASE_WORLDS.includes(map))
     return route.frontier.map((entry) => ({ ...entry, parentId: null }));
   const available = availableExplorations(route);
   const latest = Math.max(0, ...available.map((entry) => entry.sequence));
@@ -129,7 +129,7 @@ export function restoreExploration(value, seed = 17371, worlds = []) {
           typeof entry.continuation === 'string' ? entry.continuation.slice(0, 2000) : null,
           typeof entry.parentId === 'string' ? entry.parentId : null,
           Number.isSafeInteger(entry.depth) && entry.depth >= 0 ? entry.depth : 0,
-          world,
+          world && (!BASE_WORLDS.includes(key) || entry.sequence >= 6) ? world : null,
         );
       };
       const valid = (entry) =>
@@ -206,9 +206,7 @@ export function explorationSpec(entry, index = 0) {
   }
   const boss = index === FINAL_ENCOUNTER;
   return {
-    name: isEndless(entry)
-      ? `${dynamic?.name || region.name} · 第 ${entry.sequence + 1} 处`
-      : region.sites[site],
+    name: isEndless(entry) ? '继续探索' : region.sites[site],
     map: entry.map,
     enemyDefinitions: definitions,
     enemyIds:

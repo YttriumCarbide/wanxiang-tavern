@@ -4,6 +4,16 @@
 }
 .hero-heading {
   align-items: center;
+  position: relative;
+  padding-right: 44px;
+}
+.battle-character-level {
+  position: absolute;
+  top: 0;
+  right: 0;
+  color: #e7cd8d;
+  font-size: 12px;
+  font-weight: 600;
 }
 .hero-heading img {
   object-fit: cover;

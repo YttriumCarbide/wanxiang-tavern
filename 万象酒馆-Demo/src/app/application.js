@@ -1,4 +1,6 @@
 import { createRequestControls } from './request-controls.js';
+import { createGenerationAccess } from './generation-access.js';
+import { createBookshelf } from './bookshelf.js';
 import { createEmblems } from './emblems.js';
 import { mountDisplay } from './display.js';
 import { createCheckpoint } from '../storage/checkpoint.js';
@@ -50,7 +52,8 @@ export function createApplication({
     events: createEventScope(),
     apiClient,
   });
-  context.apiClient = createRequestControls(apiClient);
+  context.apiClient = createRequestControls(apiClient, () => context.session.ai.generationOptions);
+  context.generationAccess = createGenerationAccess(context);
   context.roster = createRoster(context);
   context.viewport = createViewport(context);
   context.audio = createAudio(context);
@@ -73,6 +76,7 @@ export function createApplication({
   context.extensions = createPresetExtensions(context);
   context.chat = createChat(context);
   context.memory = createMemory(context);
+  context.bookshelf = createBookshelf(context);
   context.shop = createShop(context);
   context.lootConflicts = createLootConflicts(context);
   context.equipment = createEquipment(context);
@@ -94,6 +98,7 @@ export function createApplication({
     context.onboarding.init();
   }
   context.shell.renderParty();
+  context.generationAccess.refresh();
 
   function dispose() {
     const runtime = context.session.runtime;
@@ -103,6 +108,7 @@ export function createApplication({
     clearTimeout(runtime.toastTimer);
     clearTimeout(runtime.resizeTimer);
     context.events.dispose();
+    context.generationAccess.dispose();
     context.checkpoint.dispose();
     context.apiClient.dispose();
     context.audio.dispose();
@@ -121,6 +127,7 @@ export function createApplication({
     context.summoning.dispose();
     context.chat.dispose();
     context.memory.dispose();
+    context.bookshelf.dispose();
     context.extensions.dispose();
     records.dispose();
     document.querySelectorAll('#round-start,#round-banner').forEach((el) => {

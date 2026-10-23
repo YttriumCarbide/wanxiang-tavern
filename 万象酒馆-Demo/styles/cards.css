@@ -1527,7 +1527,7 @@
   align-items: center;
   justify-content: center;
 }
-.unit-hit.can-awaken .emblem-ring {
+.unit-hit.can-awaken .emblem-ring:not(:has(.future-charge)) {
   display: none !important;
 }
 .awaken-drop-mark {
@@ -1910,5 +1910,26 @@
   #emblem-screen.awakening::before {
     animation: none;
     opacity: 0;
+  }
+}
+.emblem-ring circle.future-charge {
+  stroke: #a5f5ff;
+  animation: emblem-charge-preview 0.9s ease-in-out infinite alternate;
+}
+@keyframes emblem-charge-preview {
+  from {
+    opacity: 0.15;
+    filter: none;
+  }
+  to {
+    opacity: 1;
+    filter: drop-shadow(0 0 2px #70dfff);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .emblem-ring circle.future-charge {
+    animation: none;
+    stroke: #87c6d5;
+    stroke-dasharray: 3 2 3 52;
   }
 }

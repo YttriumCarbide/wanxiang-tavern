@@ -336,7 +336,10 @@ export async function staticChecks({ browser, output }) {
       '约好明日出发。',
     );
     reply = JSON.stringify({
-      items: [{ id: 'ore', name: '晶片', description: '生命+2', stats: { hp: 2 }, rules: [] }],
+      schemaVersion: 2,
+      items: [
+        { id: 'ore', name: '晶片', description: '星辉', design: { statFocus: ['hp'], rules: [] } },
+      ],
     });
     assert.equal(
       (
@@ -445,14 +448,16 @@ export async function staticChecks({ browser, output }) {
       { timeout: 60000 },
     );
     await page.evaluate(() => demo.flushStorage());
-    const state = await page.evaluate(() => demo.getState());
+    const unfinished = await page.evaluate(() => demo.getActiveScript());
     await page.reload();
-    await page.waitForFunction(
-      () => !!window.demo && demo.getStatus().mode === 'battle' && !demo.getStatus().animating,
-      { timeout: 60000 },
-    );
-    assert.deepEqual(await page.evaluate(() => demo.getState()), state);
-    await page.screenshot({ path: path.join(output, 'static-battle-restored.png') });
+    await page.waitForFunction(() => !!window.demo && demo.getStatus().mode === 'inn', {
+      timeout: 60000,
+    });
+    assert.equal(await page.evaluate(() => demo.getActiveScript()), null);
+    const returned = await page.evaluate(() => demo.getLibrary());
+    assert(!returned.scripts.some((entry) => entry.id === unfinished.id));
+    assert(!returned.history.some((entry) => entry.runId === unfinished.runId));
+    await page.screenshot({ path: path.join(output, 'static-returned-to-hall.png') });
     assert.deepEqual(apiTraffic, []);
     assert.deepEqual(errors, []);
     assert(calls.every((call) => call.headers.authorization === 'Bearer STATIC_FIXTURE_KEY'));
@@ -467,7 +472,7 @@ export async function staticChecks({ browser, output }) {
       portraitsPersisted: true,
       backupExcludesKeys: true,
       chatAndSettingsReloaded: true,
-      battleCheckpoint: true,
+      reloadDiscardsUnfinishedTrip: true,
       apiRequests: 0,
       files: manifest.files.length,
     };

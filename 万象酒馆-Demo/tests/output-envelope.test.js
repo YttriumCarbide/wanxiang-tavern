@@ -243,7 +243,7 @@ test('both actual generation routes use tagged JSON, local validation and matchi
   }
 });
 
-test('version 4 migrates only protocol paragraphs and examples, preserving edits and injection settings', async () => {
+test('generation v4 removes the old complete example, preserving custom protocol text and injection settings', async () => {
   const directory = await mkdtemp(path.join(process.cwd(), '.runtime/tests/envelope-migration-'));
   const store = await createWorldbookStore(directory);
   const saved = await store.get('tavern-world');
@@ -259,8 +259,14 @@ test('version 4 migrates only protocol paragraphs and examples, preserving edits
     disable: true,
     apiTargets: ['character', 'script'],
   });
-  const example = rules.find((entry) => entry.comment === '角色生成 · JSON格式示例 @D');
-  example.content = characterResponse();
+  const exampleUid = Math.max(...Object.keys(saved.book.entries).map(Number)) + 1;
+  const example = {
+    uid: exampleUid,
+    comment: '角色生成 · JSON格式示例 @D',
+    content: characterResponse(),
+    extensions: { wanxiang: { generationExample: 'character' } },
+  };
+  saved.book.entries[exampleUid] = example;
   const unrelated = rules.find((entry) => entry.uid !== output.uid && entry.uid !== example.uid);
   const original = structuredClone(unrelated);
   await store.save(saved);
@@ -269,19 +275,23 @@ test('version 4 migrates only protocol paragraphs and examples, preserving edits
   const result = await migrated.get('tavern-world');
   const entry = result.book.entries[output.uid];
   assert(entry.content.includes(OUTPUT_OPEN));
-  assert(entry.content.includes('我自己的字段补充'));
+  assert(
+    Object.values(result.book.entries).some(
+      (item) => item.disable && item.content.includes('我自己的字段补充'),
+    ),
+  );
+  assert(entry.content.includes('CHARACTER v4'));
   assert(!entry.content.includes('禁止XML'));
   assert.deepEqual(
     [entry.depth, entry.order, entry.disable, entry.apiTargets],
     [2, 4321, true, ['character', 'script']],
   );
   assert.deepEqual(result.book.entries[unrelated.uid], original);
-  assert.equal(
-    extractGenerationEnvelope(
-      'character',
-      result.book.entries[example.uid].content,
-    ).candidateText.trim(),
-    characterResponse(),
+  assert.equal(result.book.entries[example.uid], undefined);
+  assert(
+    Object.values(result.book.entries).some(
+      (item) => item.extensions?.wanxiang?.generationRule === 'character-numeric-reference',
+    ),
   );
   entry.content += '\n迁移后编辑';
   await migrated.save(result);
@@ -292,7 +302,7 @@ test('version 4 migrates only protocol paragraphs and examples, preserving edits
   );
   assert.equal(
     JSON.parse(await readFile(path.join(directory, 'builtin-content.json'), 'utf8')).version,
-    32,
+    37,
   );
 });
 
@@ -319,18 +329,16 @@ test('example-copy diagnostics are informational and never reject valid prose', 
   assert.deepEqual(generationSourceWarnings('character', '{broken', messages), []);
 });
 
-test('version 5 retires stock examples once without disabling user examples or deleting reference content', async () => {
+test('v4 removes the stock character example while keeping official number references and custom script examples', async () => {
   const directory = await mkdtemp(path.join(process.cwd(), '.runtime/tests/example-retirement-'));
   const store = await createWorldbookStore(directory);
   const saved = await store.get('tavern-world');
   const examples = Object.values(saved.book.entries).filter((entry) =>
     /JSON格式示例 @D$/.test(entry.comment),
   );
-  assert.equal(examples.length, 2);
+  assert.equal(examples.length, 1);
   assert(examples.every((entry) => entry.disable));
-  const character = examples.find((entry) => entry.apiTargets.includes('character'));
-  const original = character.content;
-  character.disable = false;
+  assert(!examples.some((entry) => entry.apiTargets.includes('character')));
   const script = examples.find((entry) => entry.apiTargets.includes('script'));
   script.content = wrap(JSON.stringify({ user: '我手写的示例，不可覆盖' }));
   script.disable = false;
@@ -338,12 +346,19 @@ test('version 5 retires stock examples once without disabling user examples or d
   await writeFile(path.join(directory, 'builtin-content.json'), '{"version":4}');
   const upgraded = await createWorldbookStore(directory);
   const result = await upgraded.get('tavern-world');
-  assert(result.book.entries[character.uid].disable);
-  assert.equal(result.book.entries[character.uid].content, original);
+  assert(
+    !Object.values(result.book.entries).some(
+      (entry) => entry.extensions?.wanxiang?.generationExample === 'character',
+    ),
+  );
+  assert(
+    Object.values(result.book.entries).some(
+      (entry) => entry.extensions?.wanxiang?.generationRule === 'character-numeric-reference',
+    ),
+  );
   assert.equal(result.book.entries[script.uid].disable, false);
   assert.equal(result.book.entries[script.uid].content, script.content);
-  result.book.entries[character.uid].disable = false;
   await upgraded.save(result);
   const restarted = await createWorldbookStore(directory);
-  assert.equal((await restarted.get('tavern-world')).book.entries[character.uid].disable, false);
+  assert.equal((await restarted.get('tavern-world')).book.entries[script.uid].disable, false);
 });

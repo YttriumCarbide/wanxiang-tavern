@@ -81,7 +81,9 @@ async function browserChecks(scopes) {
       run(job.name, async () => {
         const directory = path.join(output, job.name);
         await mkdir(directory, { recursive: true });
-        return withTestServer((baseURL) => job.operation({ browser, baseURL, output: directory }));
+        return withTestServer((baseURL) => job.operation({ browser, baseURL, output: directory }), {
+          browserOnly: job.browserOnly,
+        });
       }),
     );
   } catch (error) {

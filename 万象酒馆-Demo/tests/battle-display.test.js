@@ -14,7 +14,7 @@ test('skill resource notation is uniform, including saved Chinese descriptions a
   );
   const skill = { hp: 6, target: 'self', effects: [{ type: 'selfMana', value: 8 }] };
   const original = structuredClone(skill);
-  assert.equal(finalSkillText(skill), '消耗6hp，自身回复8sp。');
+  assert.equal(finalSkillText(skill), '自身回复8sp。');
   assert.deepEqual(skill, original);
 });
 

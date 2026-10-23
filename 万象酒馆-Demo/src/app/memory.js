@@ -12,6 +12,7 @@ export function createMemory(context) {
     owner = null,
     quickOwner = null,
     request = null;
+  let counts = new Map();
   const status = (text) => {
     $('#memory-status').textContent = text;
   };
@@ -29,7 +30,7 @@ export function createMemory(context) {
   }
   function render() {
     $('#memory-count').textContent = snapshot.length
-      ? `${snapshot.length}项待总结 · 每轮对话合并玩家发言与 AI 回应`
+      ? `${snapshot.length}条等待总结 · 每个副本一条，每轮聊天一条`
       : '暂无待总结的完整对话或副本记录';
     $('#memory-page').textContent = snapshot.length
       ? `${page + 1} / ${Math.ceil(snapshot.length / 30)}`
@@ -39,12 +40,8 @@ export function createMemory(context) {
         const article = document.createElement('article');
         const title = document.createElement('h3');
         title.textContent = item.label;
-        const details = document.createElement('details');
-        const heading = document.createElement('summary');
-        heading.textContent = '查看原文';
-        const original = document.createElement('p');
-        original.textContent = item.text;
-        details.append(heading, original);
+        const tokens = document.createElement('small');
+        tokens.textContent = counts.has(item.id) ? `${counts.get(item.id)} TK` : '统计 TK…';
         const label = document.createElement('label');
         label.textContent = '摘要';
         const area = document.createElement('textarea');
@@ -55,7 +52,8 @@ export function createMemory(context) {
         area.placeholder = '生成后可检查并修改，确认使用才会保存';
         area.value = results.get(item.id) || '';
         label.append(area);
-        article.append(title, details, label);
+        article.append(title, tokens);
+        if (results.has(item.id)) article.append(label);
         return article;
       }),
     );
@@ -79,16 +77,29 @@ export function createMemory(context) {
     )
       throw Error('存档或本趟闲聊已切换，请重新打开总结界面');
   }
-  function open() {
+  async function open() {
     if (request) return;
     owner = session.ai.library;
     quickOwner = session.ai.chat.quick;
     snapshot = pendingMemories(owner, quickOwner);
     page = 0;
     results = new Map();
-    status('只发送总结提示词与待总结原文；不加载预设、世界书或额外角色设定。');
+    counts = new Map();
+    status('点击全部总结，处理所有待总结记录。TK为原文参考分词数量。');
     render();
     if (!dialog.open) dialog.showModal();
+    const items = snapshot;
+    try {
+      for (let offset = 0; offset < items.length; offset += 1000) {
+        const batch = items.slice(offset, offset + 1000);
+        const result = await chatApi('tokens', { texts: batch.map((item) => item.text) });
+        if (snapshot !== items) return;
+        batch.forEach((item, index) => counts.set(item.id, result.counts[index]));
+      }
+      if (snapshot === items) render();
+    } catch (failure) {
+      if (snapshot === items) status(failure.message);
+    }
   }
   async function generate() {
     if (request || !snapshot.length) return;

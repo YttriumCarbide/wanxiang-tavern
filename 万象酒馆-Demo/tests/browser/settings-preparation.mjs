@@ -8,7 +8,7 @@ export async function settingsPreparationChecks({ page, output }) {
     (await page.locator('.app-header nav button:visible').allTextContents()).map((text) =>
       text.trim(),
     ),
-    ['总结', '归档', '记录', '设置', '准备', ''],
+    ['总结', '归档', '记录', '设置', '准备', '', ''],
   );
   assert.equal(
     await page

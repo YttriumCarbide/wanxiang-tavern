@@ -4,6 +4,12 @@ import { fileURLToPath } from 'node:url';
 import { createWorldbookStore } from '../server/worldbook-store.mjs';
 import { characterWorldEntry } from '../src/ai/worldbook.js';
 import { upgradeRuinsWorldbook } from '../src/ai/ruins-worldbook.js';
+import { upgradeCharacterGeneration } from '../src/ai/character-generation-upgrade.js';
+import { characterGenerationSources } from '../server/worldbook-generation.mjs';
+import { upgradeContinuityRules } from '../src/ai/continuity-upgrade.js';
+import { upgradeGenerationExperience } from '../src/ai/generation-experience-upgrade.js';
+import { upgradeStatusEmblems } from '../src/ai/status-emblem-upgrade.js';
+import { upgradeUniversalEnemies } from '../src/ai/universal-enemy-upgrade.js';
 
 /** Reproducible public canon, built without reading any user configuration or saved worldbook. */
 export async function buildBuiltinWorld() {
@@ -50,8 +56,15 @@ export async function buildBuiltinWorld() {
         (book.entries[key] ? Math.max(...Object.keys(book.entries).map(Number)) + 1 : Number(key));
       book.entries[targetUid] = { ...entry, uid: targetUid, displayIndex: targetUid };
     }
-    const updated = upgradeRuinsWorldbook(book);
-    book.entries = updated.entries;
+    const updated = upgradeCharacterGeneration(
+      upgradeRuinsWorldbook(book),
+      await characterGenerationSources(),
+    );
+    book.entries = upgradeGenerationExperience(
+      upgradeContinuityRules(updated),
+      await readFile(path.join(root, 'prompts/worldbook/creation-output.md'), 'utf8'),
+    ).entries;
+    book.entries = upgradeUniversalEnemies(upgradeStatusEmblems(book)).entries;
     book.extensions = {
       wanxiang: {
         publicSeed: 1,

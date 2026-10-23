@@ -76,35 +76,12 @@ export async function createCorridorView() {
     pitch = camera.rotation.x,
     model = null,
     disposed = false,
-    leaving = false,
-    travel = null;
+    leaving = false;
   const projected = new THREE.Vector3(),
     direction = new THREE.Vector3(),
     toward = new THREE.Vector3(),
     ray = new THREE.Raycaster();
-  const machines = {
-    shop: { label: '虚空售货机', anchor: [-0.8, 1.5, -3.95] },
-    condenser: { label: '以太凝聚器', anchor: [0.85, 1.5, -3.95] },
-  };
-  const landmarks = {
-    ...DOORS,
-    machines: { label: '走廊尽头 · 补给与造物', anchor: [0, 1.35, -3.8] },
-    ...machines,
-  };
-  function approachMachines() {
-    if (leaving || travel) return;
-    const target = camera.clone();
-    target.position.set(0, 1.46, -2.65);
-    target.lookAt(0, 1.35, -4.1);
-    travel = {
-      elapsed: 0,
-      start: camera.position.clone(),
-      end: target.position.clone(),
-      q0: camera.quaternion.clone(),
-      q1: target.quaternion.clone(),
-    };
-    updateWhere('走向走廊尽头…');
-  }
+  const landmarks = DOORS;
   const spotElements = {},
     spotStates = {};
   const resources = createResourceScope();
@@ -146,13 +123,7 @@ export async function createCorridorView() {
       button.disabled = true;
       button.tabIndex = -1;
       button.onclick = () => {
-        if (id === 'machines') approachMachines();
-        else if (id === 'shop' || id === 'condenser') {
-          parent.postMessage(
-            { type: id === 'shop' ? 'tavern-shop' : 'tavern-condenser' },
-            location.origin,
-          );
-        } else enterDoor(id);
+        enterDoor(id);
       };
       document.getElementById('spots').append(button);
       spotElements[id] = button;
@@ -179,11 +150,7 @@ export async function createCorridorView() {
       const distance = toward.length();
       toward.normalize();
       projected.project(camera);
-      const closeToMachines =
-        !travel && camera.position.distanceTo(new THREE.Vector3(0, 1.46, -2.65)) < 0.3;
-      const allowed = id === 'machines' ? !closeToMachines : machines[id] ? closeToMachines : true;
       const candidate =
-        allowed &&
         distance > 0.4 &&
         direction.dot(toward) > 0.2 &&
         projected.z > -1 &&
@@ -266,9 +233,6 @@ export async function createCorridorView() {
     document.body.classList.add('ready');
     const hint = document.getElementById('room-hint');
     if (hint) setTimeout(() => hint.classList.add('quiet'), 4600);
-    if (new URLSearchParams(location.search).get('shop') === '1') {
-      approachMachines();
-    }
     window.corridorReady = true;
     window.corridorPreview = {
       scene,
@@ -277,7 +241,6 @@ export async function createCorridorView() {
       model,
       doors: DOORS,
       enterDoor,
-      approachMachines,
       leaveToTavern,
       getState: () => ({
         leaving,
@@ -300,7 +263,7 @@ export async function createCorridorView() {
 
   let drag = null;
   events.on(canvas, 'pointerdown', (event) => {
-    if (event.button !== 0 || travel) return;
+    if (event.button !== 0) return;
     drag = { x: event.clientX, y: event.clientY, id: event.pointerId };
     canvas.setPointerCapture(event.pointerId);
   });
@@ -344,19 +307,6 @@ export async function createCorridorView() {
   renderer.setAnimationLoop(() => {
     const dt = Math.min(clock.getDelta(), 0.05);
     elapsed += dt;
-    if (travel) {
-      travel.elapsed += dt;
-      const fraction = Math.min(1, travel.elapsed / 1.15);
-      const eased = fraction * fraction * (3 - 2 * fraction);
-      camera.position.lerpVectors(travel.start, travel.end, eased);
-      camera.quaternion.slerpQuaternions(travel.q0, travel.q1, eased);
-      if (fraction === 1) {
-        travel = null;
-        yaw = camera.rotation.y;
-        pitch = camera.rotation.x;
-        updateWhere('虚空售货机 · 以太凝聚器');
-      }
-    }
     lanterns.forEach((light, index) => {
       light.intensity = (index === 1 ? 18 : 14) * (0.96 + Math.sin(elapsed * 8 + index) * 0.035);
     });

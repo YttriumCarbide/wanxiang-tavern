@@ -380,15 +380,23 @@
 .tutorial-focus {
   outline: 2px solid #e1c77b;
   outline-offset: 4px;
-  animation: tutorial-focus 1.8s ease-in-out infinite;
+  animation: tutorial-focus 1.65s ease-in-out infinite;
 }
 @keyframes tutorial-focus {
   0%,
   100% {
-    box-shadow: 0 0 10px #dec27b33;
+    outline-color: #f7df9c;
+    outline-offset: 3px;
+    box-shadow:
+      0 0 0 1px #dec27b55,
+      0 0 12px #dec27b55;
   }
   50% {
-    box-shadow: 0 0 28px #dec27b80;
+    outline-color: #c19e4f;
+    outline-offset: 8px;
+    box-shadow:
+      0 0 0 5px #dec27b08,
+      0 0 30px #dec27b99;
   }
 }
 @media (max-height: 600px) and (orientation: landscape) {
@@ -476,7 +484,8 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .tutorial-focus {
+  .tutorial-focus,
+  .skill-targetable {
     animation: none;
   }
 }
@@ -641,4 +650,15 @@
   color: #e5f1e9;
   z-index: 25;
   pointer-events: none;
+}
+.ai-generation-control {
+  display: contents;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  min-width: 0;
+}
+.ai-generation-control:disabled button {
+  opacity: 0.45;
+  cursor: not-allowed;
 }

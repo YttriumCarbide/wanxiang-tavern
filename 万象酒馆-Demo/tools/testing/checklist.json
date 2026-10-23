@@ -1,6 +1,6 @@
 {
-  "description": "首批quality/core/models/server/static/humanoid-enemies通过；此清单只复查最后的女性发型可见性、六套GLB和卡面、敌我白名单与文档，不重复已通过的服务和完整副本。",
-  "scopes": ["quality", "core", "humanoid-enemies"],
-  "coreFiles": ["tests/humanoid-enemies.test.js"],
+  "description": "发布前最终复查：多元地图可直接引用官方通用Boss而不重复定义，补齐裁定者/归环之核的战术用例与文档；仅核心/静态/质量，其余全部已通过。",
+  "scopes": ["quality", "core", "static"],
+  "coreFiles": ["tests/universal-enemies.test.js", "tests/worlds-emblems.test.js"],
   "browserConcurrency": 2
 }

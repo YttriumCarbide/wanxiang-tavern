@@ -1,4 +1,5 @@
 import { routeKey } from '../worlds.js';
+import { skippingAi } from '../generation-options.js';
 import { FINAL_ENCOUNTER } from '../content/journey-rules.js';
 import { CHAT_PLACES, tavernActivities, mergeFutureScript } from '../chat.js';
 import { settingOnly } from '../ai/contracts.js';
@@ -144,6 +145,7 @@ export function createChat(context) {
     $('#chat-cancel').hidden = !value;
   }
   async function send(kind, retryId = null) {
+    if (skippingAi(session.ai.generationOptions)) return;
     if (request || rewrite) return;
     if (kind === 'chat' ? session.runtime.mode !== 'inn' : session.runtime.mode !== 'battle')
       return;
@@ -286,6 +288,7 @@ export function createChat(context) {
     }
   }
   async function resetScript() {
+    if (skippingAi(session.ai.generationOptions)) return;
     const book = session.ai.activeScript;
     if (request || rewrite || !book || session.runtime.mode !== 'battle') return;
     if (session.battle.state.encounter >= FINAL_ENCOUNTER) {

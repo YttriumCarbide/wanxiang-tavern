@@ -4,6 +4,11 @@ import { upgradeBattleDisplayRules } from '../src/ai/battle-display-rules.js';
 import { upgradeRuinsWorldbook } from '../src/ai/ruins-worldbook.js';
 import { upgradeAssetWorldbook } from '../src/ai/asset-worldbook.js';
 import { upgradeEnemyAppearanceRules } from '../src/ai/enemy-appearance-rules.js';
+import { upgradeCharacterGeneration } from '../src/ai/character-generation-upgrade.js';
+import { upgradeContinuityRules } from '../src/ai/continuity-upgrade.js';
+import { upgradeGenerationExperience } from '../src/ai/generation-experience-upgrade.js';
+import { upgradeStatusEmblems } from '../src/ai/status-emblem-upgrade.js';
+import { upgradeUniversalEnemies } from '../src/ai/universal-enemy-upgrade.js';
 import { setTimeout as waitForFile } from 'node:timers/promises';
 import { upgradeGameRules } from '../src/ai/game-rules-upgrade.js';
 import { migrateTutorialWorldbook } from './worldbook-tutorial.mjs';
@@ -16,6 +21,7 @@ import {
   deduplicateGenerationWorldbook,
   relaxScriptWorldbook,
   adaptExplorationWorldbook,
+  characterGenerationSources,
 } from './worldbook-generation.mjs';
 import { mkdir, readFile, writeFile, rename, readdir, unlink } from 'node:fs/promises';
 import path from 'node:path';
@@ -879,6 +885,38 @@ export async function createWorldbookStore(directory) {
     const record = await get('tavern-world');
     await write(fileFor('tavern-world'), upgradeEnemyAppearanceRules(record.book));
     await write(contentVersionFile, { version: 32 });
+  }
+  if (contentVersion < 33) {
+    const record = await get('tavern-world');
+    await write(
+      fileFor('tavern-world'),
+      upgradeCharacterGeneration(record.book, await characterGenerationSources()),
+    );
+    await write(contentVersionFile, { version: 33 });
+  }
+  if (contentVersion < 34) {
+    const record = await get('tavern-world');
+    await write(fileFor('tavern-world'), upgradeContinuityRules(record.book));
+    await write(contentVersionFile, { version: 34 });
+  }
+  if (contentVersion < 35) {
+    const record = await get('tavern-world');
+    const creation = await readFile(
+      new URL('../prompts/worldbook/creation-output.md', import.meta.url),
+      'utf8',
+    );
+    await write(fileFor('tavern-world'), upgradeGenerationExperience(record.book, creation));
+    await write(contentVersionFile, { version: 35 });
+  }
+  if (contentVersion < 36) {
+    const record = await get('tavern-world');
+    await write(fileFor('tavern-world'), upgradeStatusEmblems(record.book));
+    await write(contentVersionFile, { version: 36 });
+  }
+  if (contentVersion < 37) {
+    const record = await get('tavern-world');
+    await write(fileFor('tavern-world'), upgradeUniversalEnemies(record.book));
+    await write(contentVersionFile, { version: 37 });
   }
   return {
     get,

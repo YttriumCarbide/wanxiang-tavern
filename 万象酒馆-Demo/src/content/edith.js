@@ -6,7 +6,7 @@ export const EDITH = {
   weapon: 'sword',
   portrait: 'edith.png',
   color: '#a8d9f0',
-  hp: 77,
+  hp: 48,
   mp: 22,
   attack: 7,
   limit: 1,
@@ -32,7 +32,7 @@ export const EDITH = {
       mp: 0,
       hp: 6,
       target: 'enemy',
-      text: '消耗6生命，回复自身8法力，对一名敌人造成12伤害。',
+      text: '回复自身8法力，对一名敌人造成12伤害。',
       effects: [
         { type: 'selfMana', value: 8 },
         { type: 'damage', value: 12 },
@@ -80,7 +80,7 @@ export const EDITH_SETTING = {
     {
       name: '辰砂晦明',
       description:
-        '消耗自身生命，将辰砂般的暗红微光收束为法力；银色单刃剑随之划出犀利斩击，明暗交错的星月光痕掠向敌人。',
+        '将辰砂般的暗红微光收束为法力；银色单刃剑随之划出犀利斩击，明暗交错的星月光痕掠向敌人。',
     },
   ],
   entrySkill: {

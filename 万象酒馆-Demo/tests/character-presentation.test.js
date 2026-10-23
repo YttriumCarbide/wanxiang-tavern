@@ -51,6 +51,28 @@ test('editable worldbook text is escaped in the merged sheet and legacy prose re
   assert(characterSheet(entry).includes(entry.setting.worldbook));
 });
 
+test('passive sheets show executable timing and effects instead of the action prose', () => {
+  const entry = normalizeCharacter(characterDocument(), 'character-passive-sheet');
+  entry.combat.skills[0] = {
+    id: 'passive-fixture',
+    name: '守护',
+    passive: true,
+    location: '前场',
+    buff: 'iron',
+    value: 2,
+    text: '错误的动作说明',
+  };
+  entry.setting.worldbook = entry.setting.worldbook.replace(
+    /技能动作描写｜[^：]+：[^\n]*/,
+    '技能动作描写｜守护：抬起手臂，光芒围绕身体旋转。',
+  );
+  const markup = characterSheet(entry);
+  const section = markup.slice(markup.indexOf('data-character-ability="被动"'));
+  assert(section.includes('自身持续获得2层铁皮'));
+  assert(!section.includes('抬起手臂，光芒围绕身体旋转'));
+  assert(!section.includes('错误的动作说明'));
+});
+
 test('both full routes send the exact game enemy cast, while an editable bestiary supplies only relevant lore', async () => {
   assert.deepEqual(
     Object.keys(MONSTER_LORE).sort(),

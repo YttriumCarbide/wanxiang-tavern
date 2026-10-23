@@ -1,4 +1,5 @@
 import { CHANGJING_YUEXI } from './content/changjing-yuexi.js';
+import { UNIVERSAL_ENEMIES, UNIVERSAL_BOSSES } from './content/universal-adversaries.js';
 import {
   EXTRA_ENEMIES,
   EXTRA_BOSSES,
@@ -23,21 +24,31 @@ export const BUFFS = {
   },
   strength: { name: '力量', icon: '力', text: '每次攻击增加层数对应的伤害' },
   guard: { name: '守势', icon: '守', text: '获得护盾时增加层数对应的护盾' },
-  weak: { name: '虚弱', icon: '弱', text: '攻击伤害减少25%' },
-  vulnerable: { name: '易伤', icon: '伤', text: '受到攻击伤害增加50%' },
-  regen: { name: '再生', icon: '生', text: '回合末先回复生命，濒死单位无法回复' },
-  poison: { name: '中毒', icon: '毒', text: '回合末再生后失去层数对应的生命' },
-  slow: { name: '迟缓', icon: '缓', text: '减少敌人速度，实时后移敌方行动' },
+  weak: { name: '虚弱', icon: '弱', text: '攻击伤害减少25%，正常回合结束减少1层' },
+  vulnerable: { name: '易伤', icon: '伤', text: '受到攻击伤害增加50%，正常回合结束减少1层' },
+  regen: { name: '再生', icon: '生', text: '回合末先回复层数对应hp，再减少1层；濒死单位无法回复' },
+  poison: { name: '中毒', icon: '毒', text: '回合末再生后失去层数对应hp，然后减少1层' },
+  slow: {
+    name: '迟缓',
+    icon: '缓',
+    text: '减少敌人速度，实时后移敌方行动；2层及以上正常回合末减1层，最低保留1层',
+  },
   bleed: {
     name: '流血',
     icon: '血',
-    text: '每次行动前失去层数对应的生命，因本次流血濒死则取消行动',
+    text: '每次行动前失去层数对应hp，流血致死则取消行动；正常回合结束减少1层',
   },
   iron: { name: '铁皮', icon: '铁', text: '每次受到攻击减少层数对应的伤害' },
   overload: {
     name: '超限',
     icon: '载',
-    text: '下次释放技能消耗翻倍，技能效果额外生效一次，触发后移除。',
+    text: '上限1层，下次角色技能消耗翻倍并额外生效一次，用后移除；跨回合、结合结束不消失，跨战斗清除。',
+  },
+  meteor: { name: '流星剑姿', icon: '星', text: '本场普通攻击额外攻击一次，不叠加攻击次数' },
+  sacrifice: {
+    name: '欺之牺',
+    icon: '牺',
+    text: '下次敌人死亡时献祭此单位，由施术者吸收部分属性和一个技能；本场有效',
   },
 };
 export const HEROES = [
@@ -61,10 +72,10 @@ export const HEROES = [
         ap: 2,
         mp: 3,
         target: 'enemy',
-        text: '造成18伤害，施加2流血。',
+        text: '造成18伤害，施加4流血。',
         effects: [
           { type: 'damage', value: 18 },
-          { type: 'buff', buff: 'bleed', value: 2 },
+          { type: 'buff', buff: 'bleed', value: 4 },
         ],
       },
       {
@@ -80,11 +91,11 @@ export const HEROES = [
     entrySkill: {
       id: 'entry-lyria',
       name: '拔刀·瞬斩',
-      text: '换入时对正对位敌人造成8点伤害并施加2层流血。',
+      text: '换入时对正对位敌人造成8点伤害并施加4层流血。',
       target: 'opposite',
       effects: [
         { type: 'damage', value: 8 },
-        { type: 'buff', buff: 'bleed', value: 2 },
+        { type: 'buff', buff: 'bleed', value: 4 },
       ],
     },
   },
@@ -153,10 +164,10 @@ export const HEROES = [
         ap: 1,
         mp: 3,
         target: 'ally',
-        text: '回复10生命，施加2再生。',
+        text: '回复10生命，施加4再生。',
         effects: [
           { type: 'heal', value: 10 },
-          { type: 'buff', buff: 'regen', value: 2 },
+          { type: 'buff', buff: 'regen', value: 4 },
         ],
       },
       {
@@ -171,11 +182,11 @@ export const HEROES = [
     entrySkill: {
       id: 'entry-serin',
       name: '战地圣愈',
-      text: '换入时为生命比例最低的存活队友回复8点生命并施加2层再生。',
+      text: '换入时为生命比例最低的存活队友回复8点生命并施加4层再生。',
       target: 'lowestAlly',
       effects: [
         { type: 'heal', value: 8 },
-        { type: 'buff', buff: 'regen', value: 2 },
+        { type: 'buff', buff: 'regen', value: 4 },
       ],
     },
   },
@@ -198,9 +209,9 @@ export const HEROES = [
         ap: 1,
         mp: 3,
         target: 'enemy',
-        text: '施加3中毒与2易伤。',
+        text: '施加6中毒与2易伤。',
         effects: [
-          { type: 'buff', buff: 'poison', value: 3 },
+          { type: 'buff', buff: 'poison', value: 6 },
           { type: 'buff', buff: 'vulnerable', value: 2 },
         ],
       },
@@ -217,11 +228,11 @@ export const HEROES = [
     entrySkill: {
       id: 'entry-vesper',
       name: '影羽寄生',
-      text: '换入时甩出暗紫鸦羽没入正对位敌人影子，造成4点伤害并附加2层中毒与1层易伤。',
+      text: '换入时甩出暗紫鸦羽没入正对位敌人影子，造成4点伤害并附加4层中毒与1层易伤。',
       target: 'opposite',
       effects: [
         { type: 'damage', value: 4 },
-        { type: 'buff', buff: 'poison', value: 2 },
+        { type: 'buff', buff: 'poison', value: 4 },
         { type: 'buff', buff: 'vulnerable', value: 1 },
       ],
     },
@@ -350,10 +361,10 @@ export const ENEMIES = [
       {
         name: '撕咬左位',
         slot: 0,
-        text: '攻击左位12伤害，施加1流血',
+        text: '攻击左位12伤害，施加3流血',
         effects: [
           { type: 'damage', value: 12 },
-          { type: 'buff', buff: 'bleed', value: 1 },
+          { type: 'buff', buff: 'bleed', value: 3 },
         ],
       },
       {
@@ -411,10 +422,10 @@ export const ENEMIES = [
       {
         name: '毒焰右位',
         slot: 2,
-        text: '攻击右位8伤害，施加2中毒',
+        text: '攻击右位8伤害，施加4中毒',
         effects: [
           { type: 'damage', value: 8 },
-          { type: 'buff', buff: 'poison', value: 2 },
+          { type: 'buff', buff: 'poison', value: 4 },
         ],
       },
       {
@@ -429,6 +440,7 @@ export const ENEMIES = [
     ],
   },
   ...EXTRA_ENEMIES,
+  ...UNIVERSAL_ENEMIES,
 ];
 export const BOSSES = [
   {
@@ -463,7 +475,7 @@ export const BOSSES = [
         selfBuff: { strength: 1 },
         effects: [
           { type: 'damage', value: 16 },
-          { type: 'buff', buff: 'bleed', value: 2 },
+          { type: 'buff', buff: 'bleed', value: 4 },
         ],
       },
       { name: '崩解全场', slots: [0, 1, 2], effects: [{ type: 'damage', value: 9 }] },
@@ -489,7 +501,7 @@ export const BOSSES = [
         slot: 2,
         effects: [
           { type: 'damage', value: 10 },
-          { type: 'buff', buff: 'poison', value: 3 },
+          { type: 'buff', buff: 'poison', value: 6 },
         ],
       },
       {
@@ -497,7 +509,7 @@ export const BOSSES = [
         slots: [0, 1],
         effects: [
           { type: 'damage', value: 8 },
-          { type: 'buff', buff: 'bleed', value: 1 },
+          { type: 'buff', buff: 'bleed', value: 3 },
         ],
       },
     ],
@@ -507,7 +519,7 @@ export const BOSSES = [
         slots: [0, 1, 2],
         effects: [
           { type: 'damage', value: 6 },
-          { type: 'buff', buff: 'poison', value: 2 },
+          { type: 'buff', buff: 'poison', value: 4 },
         ],
       },
       {
@@ -522,6 +534,7 @@ export const BOSSES = [
     ],
   },
   ...EXTRA_BOSSES,
+  ...UNIVERSAL_BOSSES,
 ];
 export const DEFINITIONS = Object.fromEntries(
   [...HEROES, ...ENEMIES, ...BOSSES, ...RUINS_ADVERSARIES, ...RUINS_BOSSES].map((d) => [d.id, d]),

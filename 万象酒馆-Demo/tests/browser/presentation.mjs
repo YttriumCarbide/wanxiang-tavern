@@ -104,7 +104,10 @@ export async function presentationChecks({ page, output }) {
     };
   });
   try {
-    assert.equal(result.seen.length, 15);
+    assert(
+      result.seen.length >= 15,
+      'Keep the original effect gallery and include newly registered enemies',
+    );
     for (const effect of result.seen) {
       assert(effect.sprites > 0, effect.style);
       assert(effect.duration >= 600, effect.style);

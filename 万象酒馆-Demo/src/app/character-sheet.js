@@ -6,6 +6,7 @@ import { escapeText } from '../ui.js';
 import { html } from '../shared/html.js';
 import { portraitUrl } from '../catalog.js';
 import { applyEquipment } from '../equipment.js';
+import { finalPassiveText, finalSkillText } from '../skill-text.js';
 
 const targets = {
   enemy: '一名敌人',
@@ -18,20 +19,20 @@ function effectText(effect) {
   if (effect.type === 'buff') return `${BUFFS[effect.buff].name} +${effect.value}层`;
   if (effect.type === 'cleanse')
     return `净化：${effect.buffs.map((key) => BUFFS[key].name).join('、')}`;
+  if (effect.type === 'mark') return `标记 +${effect.value}层`;
   return `${{ damage: '基础伤害', heal: '治疗', shield: '护盾', selfHeal: '自身治疗', selfMana: '自身回复法力' }[effect.type]} ${effect.value}`;
 }
-function passiveText(skill) {
-  if (skill.buff) return `${BUFFS[skill.buff].name} +${skill.value}`;
-  if (skill.teamFrontBuff) return `前场队伍：${BUFFS[skill.teamFrontBuff].name} +${skill.value}`;
-  if (skill.endHeal) return `回合结束治疗 ${skill.endHeal}`;
-  if (skill.bonusMp) return `整备时蓝量上限 +${skill.bonusMp}`;
-  return skill.text;
-}
-function abilitySheet(skill, design, label) {
+function abilitySheet(skill, design, label, markName) {
   const cost = skill.passive
     ? `被动 · ${skill.location}`
     : `${skill.ap} AP · ${skill.mp} sp${skill.hp ? ` · ${skill.hp} hp` : ''}`;
-  const effects = skill.passive ? [passiveText(skill)] : skill.effects.map(effectText);
+  const effects = skill.passive
+    ? [finalPassiveText(skill, markName)]
+    : skill.effects.some(
+          (effect) => effect.when || effect.perMark || effect.consumeMark || effect.type === 'mark',
+        )
+      ? [finalSkillText(skill, markName)]
+      : skill.effects.map(effectText);
   const motion = escapeText(
     resourceText(design?.description || '这位来客的旧设定尚未记载具体动作。'),
   );
@@ -46,7 +47,7 @@ function abilitySheet(skill, design, label) {
           >${skill.passive ? escapeText(skill.location) : escapeText(targets[skill.target])}</span
         >${effects.map((text) => html`<b>${escapeText(resourceText(text))}</b>`).join('')}
       </div>
-      <p class="ability-motion">${motion}</p>
+      ${skill.passive ? '' : html`<p class="ability-motion">${motion}</p>`}
     </div>
   </details>`;
 }
@@ -74,7 +75,7 @@ export function characterSheet(entry, equipment = [], options = {}) {
 
   const abilities = html`<section class="character-abilities">
     <h3>战斗方式 <small>${isPrep ? '战技数值、目标与消耗' : '展开查看数值与动作'}</small></h3>
-    ${abilitySheet(attack, model.attack, '普攻')}${combat.skills.map((skill, index) => abilitySheet(skill, model.skills[index], skill.passive ? '被动' : '技能')).join('')}
+    ${abilitySheet(attack, model.attack, '普攻')}${combat.skills.map((skill, index) => abilitySheet(skill, model.skills[index], skill.passive ? '被动' : '技能', combat.mechanicMark?.name)).join('')}
   </section>`;
 
   const biography = html`<div class="character-biography">

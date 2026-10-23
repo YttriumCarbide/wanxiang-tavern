@@ -32,7 +32,7 @@ export function auditPromptPreset(kind, preset) {
           : [];
       const issues = outputSchemaIssues(
         example,
-        kind === 'character' ? characterInputSchema() : scriptInputSchema(ids),
+        kind === 'character' ? characterInputSchema(example.schemaVersion) : scriptInputSchema(ids),
         kind,
       );
       if (issues.length)

@@ -6,7 +6,6 @@ function withoutKeys(value) {
   const copy = structuredClone(value);
   for (const profile of [...Object.values(copy.profiles || {}), ...(copy.apiPresets || [])]) {
     profile.apiKey = '';
-    profile.rememberKey = false;
   }
   return copy;
 }

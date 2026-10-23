@@ -281,11 +281,13 @@ ${escapeText(entry.content)}</textarea>
     fillProfile();
     syncProfile();
     status(
-      action === 'apply'
-        ? '连接预设已应用，角色和剧本都可以从同一列表选用。'
-        : action === 'delete'
-          ? '连接预设已删除，当前接口配置保留。'
-          : '连接预设已保存，包含URL、模型和API Key；可在角色与剧本接口中选用。',
+      getProfiles()?.[$('#ai-kind').value]?.rememberKey === false
+        ? '连接仅本次有效：密钥未记在设备，关闭或更新后需重填。可点击“长期保存此连接”。'
+        : action === 'apply'
+          ? '连接预设已应用，角色和剧本都可以从同一列表选用。'
+          : action === 'delete'
+            ? '连接预设已删除，当前接口配置保留。'
+            : '连接预设已保存，包含URL、模型和API Key；可在角色与剧本接口中选用。',
     );
   }
   $('#api-apply-targets').innerHTML = Object.entries(API_LABELS)

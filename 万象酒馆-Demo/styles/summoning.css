@@ -156,6 +156,24 @@
   line-height: 1.8;
   text-align: center;
 }
+#summon-method-notice {
+  position: absolute;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(560px, calc(100vw - 48px));
+  margin: 0;
+  padding: 12px 18px;
+  border: 1px solid #c2b38366;
+  border-radius: 8px;
+  background: #10231ff2;
+  color: #e6dfc9;
+  box-shadow: 0 8px 32px #0006;
+  font-size: 13px;
+  line-height: 1.7;
+  text-align: center;
+  pointer-events: none;
+}
 #summon-choice[data-stage='wish'] {
   background: #020a08d9;
   backdrop-filter: blur(3px);

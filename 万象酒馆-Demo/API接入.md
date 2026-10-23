@@ -24,9 +24,17 @@ Cline 使用通用 OpenAI 兼容连接，地址为 `https://api.cline.bot/api/v1
 
 首次召唤长景月汐后，靠近青色召唤门点击“召唤角色”打开详情页。万象召唤术从世界书官设角色中抽取未拥有的来客，无限召唤术调用角色API，混沌召唤术各以50%概率选择官设或AI。无限和混沌可填写世界观与角色愿望，AI分支将愿望作为当次brief发送；未配置时打开设置，保存后继续。每次成功召唤扣1份契约，失败或取消不扣。靠近紫色副本门点击“进入剧本”，加载时生成本章。失败或取消保留原内容，不自动重试付费请求。
 
-保存命名的API连接预设会将URL、模型、Key和兼容参数一起保存在本机，重启后仍可选用。仅保存当前接口时，Key是否跨重启保留仍由“记住当前接口密钥”开关决定。已保存Key不回显到输入框，显示“已配置”；提示词预设、世界书和诊断导出均不携带Key。旧预设若此前已丢失Key，需要重新填入并保存一次。
+API连接与命名连接预设遵守“在此设备记住密钥”开关，默认勾选。取消后明确显示“仅本次使用（关闭后需重填）”，可点击“长期保存此连接”恢复跨重启保存。已保存Key不回显到输入框，显示“已在此设备记住”；代码更新和正常关机不会清除。旧预设若此前已丢失Key，需要重新填入并长期保存一次，同地址、模型和认证的当前预设会同步补齐密钥，再应用给其他API即可。空密钥预设不会覆盖其当前连接已经保存的Key，其他服务连接不能继承该Key。提示词预设、世界书、普通完整备份和诊断导出均不携带Key；完整备份保留记住密钥的偏好，不把它自动改成临时模式。
 
-## 角色协议 v3
+## 角色协议 v4：代码抽取与AI设计
+
+新生成默认schemaVersion4，setting保留人物设定，data只选择profile、主动/被动、AP、费用及效果强度档位，不填写最终hp/mp/attack/limit/value。character-generation.js使用本次rollId固定种子抽取稀有度、基础普攻/行动次数和独立的六档机制复杂度，并结合AI设计编译最终数值；主角固定2次行动并采用强势预算。四位基础参考只有青缘、48hp伊蒂丝、长景月汐和潘多拉，不读取个人存档或其他AI角色。
+
+复杂度依次为直接、复合、单条件、事件限次、单标记积累消耗和轻量联动，以2～4档为主；每技能最多两项主要效果，每规则一个条件，一个角色最多一种0～3层标记。无额外技能、变身或独立资源条。2 AP技能获得明显更高预算，群体范围、费用、附加效果和被动共同约束最终数值。技能说明从编译效果生成；旧v1/v2/v3返回和已存角色继续读取，旧数值不重新抽取。
+
+项目自带完整示例人物已移除，世界书v33改用四官设基础数值参考；旧自定义协议文字保留为停用副本，原开关与注入设置保留。NPC印记召唤及混沌中的NPC分支共用来源校验：前五图主线须通关该图第六关，自制世界和第七关起的无限探索NPC不受限制；来源多重时任一来源已解锁即可。未解锁不会调用模型或扣契约。
+
+## 角色协议 v3（旧返回兼容）
 
 角色API在`<wanxiang_json>...</wanxiang_json>`内一次输出一个JSON对象：`{schemaVersion:3, setting:{...}, data:{...}}`，先设定层，再数据层。旧的“纯文字＋game_data”传输协议已停用，旧世界书仍可恢复。
 
@@ -214,3 +222,13 @@ API 连接配置只提供“严格无工具”和“合并含工具”两种提�
 - 原生请求支持文字历史、系统指令、采样参数、JSON偏好、预设正文工具及SSE流式输出；工具只提取正文，不执行任意函数。system/developer按原顺序合并进Google的systemInstruction，相邻同角色消息合并成parts，模型thought不混入正文。沿用十五分钟超时、终止、配额错误和原文诊断，不自动重试。
 
 依据：[Google 快捷模式REST](https://docs.cloud.google.com/gemini-enterprise-agent-platform/reference/express-mode/api-reference)、[生成协议](https://docs.cloud.google.com/gemini-enterprise-agent-platform/reference/models/inference)、[FunctionDeclaration](https://docs.cloud.google.com/gemini-enterprise-agent-platform/reference/rest/Shared.Types/FunctionDeclaration)。当前完成模拟协议与隔离浏览器检查，未使用用户Vertex密钥实测付费生成。
+
+## 重复地图敌人与NPC互动
+
+地图API中同ID敌人以游戏官方或已登记定义为准，生成的替代定义直接丢弃；同次响应重复ID取首次定义。优先使用enemyIds引用旧敌人。剧本API的request.npcInteraction.required在每次新剧本有20%概率为true，此时应安排至少一名非队伍NPC与主角团实际互动并同步填写data.npcs；该要求写入世界书，预览与实际发送共享决定，不额外调用模型。
+
+## 2026-10-23 服务账号、造物与继续探索
+
+Vertex完整版本接收Google服务账号JSON（文件导入或粘贴），以Web Crypto对JWT作RS256签名，向固定GoogleOAuth端点换取短期访问令牌。私钥不发送给模型、不会进入普通备份；地区默认global，模型手填，每次请求前重新取得有效令牌，不重试付费生成。依据Google服务账号协议：https://developers.google.com/identity/protocols/oauth2/service-account；全局端点：https://cloud.google.com/vertex-ai/generative-ai/docs/learn/locations。
+
+以太造物v2由designPlan规定价值档位、可用属性和规则复杂度，AI选择statFocus和事件/效果档位，代码编译数值并以实际装备预算再次校验。旧装备仍可读取。主线六关后的首次继续探索必须先通过地图API构筑后续世界，提交前六关真实正文，至少新增三个不同目标与一个新Boss；保存完成后才能请求新剧本。无限探索仍返回五场敌人配置，正文可独立推进人物与世界，不必逐只描述底层敌人，禁止将Boss当正文称呼。

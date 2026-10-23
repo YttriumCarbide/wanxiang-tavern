@@ -114,7 +114,7 @@ test('live requests use visible @D schema once with current IDs and no hidden fo
       (entry) => entry.active && entry.title.includes('JSON输出格式 @D'),
     );
     assert(output);
-    const expected = kind === 'character' ? 'CHARACTER v3' : 'SCRIPT v4';
+    const expected = kind === 'character' ? 'CHARACTER v4' : 'SCRIPT v4';
     assert(request.messages.at(-1).content.includes(expected));
     assert.equal(
       request.messages.filter((message) => message.content.includes('本次动态JSON Schema')).length,

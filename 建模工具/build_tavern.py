@@ -399,25 +399,7 @@ box(-3.44, 2.96, -4.28, 0.24, 0.2, 0.04, "brassLight")
 box(-3.2, 3, -4.28, 0.08, 0.12, 0.04, "brass")
 for x in [-4.4, -4.08, -2.88, -2.56]:
     box(x, 3.04, -4.28, 0.16, 0.04, 0.04, "walnutDark")
-group("12_Corner_Barrels_and_Crates")
-barrel(-5.36, 0, 3.84)
-barrel(-5.36, 0, 4.52)
-barrel(-5.36, 0.76, 4.16, 0.24, 0.6)
-for x, y, z, w, h, d in [(-4.84, 0, 4.32, 0.52, 0.44, 0.44), (-4.8, 0.44, 4.36, 0.44, 0.36, 0.36)]:
-    box(x, y, z, w, h, d, "oak")
-    for yy in [y + 0.04, y + h / 2, y + h - 0.08]:
-        box(x, yy, z + d, w, 0.04, 0.04, "oakDark")
-    line(
-        (x + 0.04, y + 0.04, z + d + 0.04),
-        (x + w - 0.08, y + h - 0.08, z + d + 0.04),
-        0.04,
-        "oakEdge",
-    )
-    for yy in [y + 0.04, y + h / 2, y + h - 0.08]:
-        box(x, yy, z - 0.04, w, 0.04, 0.04, "oakDark")
-        box(x + w, yy, z, 0.04, 0.04, d, "oakDark")
-    line((x + 0.04, y + 0.04, z - 0.08), (x + w - 0.08, y + h - 0.08, z - 0.08), 0.04, "oakEdge")
-    line((x + w, y + 0.04, z + 0.04), (x + w, y + h - 0.08, z + d - 0.08), 0.04, "oakEdge")
+# The west rear corner is reserved for the separately exported supply machines.
 
 group("13_Seating_and_Tables")
 
@@ -445,8 +427,8 @@ def table(cx, cz, r=0.64):
 
 table(0.2, 1.64, 0.64)
 table(3.84, 3.0, 0.56)
-# Two wall benches: slats, small leather cushions and backs.
-for x in [-4.16, 1.5]:
+# Keep the east bench; the west rear bench gives the supply corner a clear footprint.
+for x in [1.5]:
     for dx in [0, 1.32]:
         box(x + dx, 0, 4.24, 0.12, 0.44, 0.36, "walnut")
     topgrain(x, 0.44, 4.12, 1.48, 0.48, "oak", "oakDark")
@@ -528,6 +510,17 @@ box(4.68, 2.08, -3.36, 1.16, 0.08, 0.44, "walnut")
 box(5, 2.2, -3.16, 0.28, 0.2, 0.2, "terracotta")
 for xx, yy in [(5, 2.4), (5.12, 2.48), (4.96, 2.56)]:
     box(xx, yy, -3.12, 0.12, 0.12, 0.12, "leaf")
+
+# Turn the complete case against the east wall, including its books and plant.
+bookcase_indices = np.argwhere(A)
+bookcase_points = ORIGIN + (bookcase_indices + 0.5) * S
+bookcase_positions = bookcase_points.copy()
+bookcase_positions[:, 0] = 5.88 - (bookcase_points[:, 2] + 3.32)
+bookcase_positions[:, 2] = -3.6 + (bookcase_points[:, 0] - 4.72)
+bookcase_target = np.floor((bookcase_positions - ORIGIN) / S + 1e-6).astype(int)
+bookcase_volume = np.zeros(SHAPE, dtype=np.uint8)
+bookcase_volume[tuple(bookcase_target.T)] = A[tuple(bookcase_indices.T)]
+groups["16_Arcane_Bookcase"] = bookcase_volume
 
 group("20_Summoning_Arrival_Gate")
 box(-5.44, 0, 0.04, 2.08, 0.08, 1.84, "stoneDark")
@@ -758,14 +751,6 @@ for xx in [-4.68, -4.24]:
     box(xx, 1.12, -3.8, 0.04, 0.04, 0.28, "iron")
 box(-4.52, 1.12, -3.72, 0.16, 0.04, 0.16, "cream")
 box(-4.48, 1.16, -3.72, 0.12, 0.04, 0.12, "paperShadow")
-# Compact leather satchel on the left bench and fabric draped over its side.
-box(-3.8, 0.56, 4.16, 0.32, 0.32, 0.2, "leatherDark")
-box(-3.8, 0.84, 4.12, 0.32, 0.08, 0.24, "leather")
-box(-3.68, 0.72, 4.08, 0.08, 0.12, 0.04, "brass")
-box(-4.04, 0.52, 4.08, 0.24, 0.04, 0.36, "rug")
-box(-4.04, 0.2, 4.04, 0.24, 0.36, 0.04, "rug")
-for xx in [-4, -3.92]:
-    box(xx, 0.2, 4, 0.04, 0.36, 0.04, "thread")
 # Stack of books beside the hearth, simple iron poker and a shallow copper bowl.
 for yy, c in [(0.04, "wine"), (0.12, "green"), (0.2, "blue")]:
     box(3.24, yy, -4.32, 0.32, 0.08, 0.24, c)

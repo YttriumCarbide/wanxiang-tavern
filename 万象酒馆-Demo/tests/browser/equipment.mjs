@@ -3,6 +3,7 @@ import path from 'node:path';
 import { legacySession } from './legacy-session.mjs';
 import { newCampaign, firstCompanion } from '../../src/campaign.js';
 import { defaultProtagonist } from '../../src/content/qingyuan.js';
+import { completeExploration } from '../../src/exploration.js';
 import { normalizeCharacter } from '../../src/ai/contracts.js';
 import { characterDocument, tavernPresetFixture } from '../fixtures/ai.js';
 
@@ -20,6 +21,9 @@ export async function equipmentChecks({ browser, baseURL, output }) {
     library.inventory.summonContracts = 5;
     firstCompanion(library);
     library.campaign.tutorial = 'complete';
+    // This suite exercises successful refinement, after the main world's sixth site.
+    for (let site = 0; site < 6; site++)
+      completeExploration(library.exploration, library.exploration.ruins.frontier[0]);
     library.inventory.ether = 40;
     library.inventory.items['health-potion'] = 2;
     library.archives.items.push({

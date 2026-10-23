@@ -2,6 +2,7 @@ import { REQUEST_TIMEOUT_MS } from './request-policy.js';
 import { compatibleRequest, completionURL, validateApiKey } from './compatible.js';
 import { localRequest } from './local-client.js';
 import { redactDiagnostic } from './diagnostic.js';
+import { readServiceAccount } from './vertex-service-account.js';
 
 /** One application-owned gateway. Credentials stay in this page's memory, never in saves. */
 export function createApiClient({ fetchImpl = fetch, timeoutMs = REQUEST_TIMEOUT_MS } = {}) {
@@ -11,7 +12,8 @@ export function createApiClient({ fetchImpl = fetch, timeoutMs = REQUEST_TIMEOUT
   const credentialId = (kind, profile) => `${kind}:${completionURL(profile.baseUrl).href}`;
   const local = (path, data, options = {}) => localRequest(path, data, { ...options, fetchImpl });
   function setCredential(kind, profile, key) {
-    validateApiKey(key);
+    if (key && profile.vertexAuth === 'service-account') readServiceAccount(key);
+    else validateApiKey(key);
     const id = credentialId(kind, profile);
     if (key) credentials.set(id, key);
     else credentials.delete(id);

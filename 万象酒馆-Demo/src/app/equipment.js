@@ -56,7 +56,7 @@ export function preparationEquipment(library, member) {
           })
           .join('')}</select
       ><small
-        >${escapeText(resourceText(currentEmblem ? currentEmblem.text : '在命运桌结识纹章士'))}</small
+        >${escapeText(resourceText(currentEmblem ? currentEmblem.text : '在各地Boss战中获得纹章士'))}</small
       ></label
     >
     <div class="prepare-gear-list">
@@ -199,6 +199,13 @@ export function createEquipment(context) {
   panel.innerHTML =
     '<header><div><small>ETHER / ATELIER</small><h2>以太凝聚器</h2></div><nav><button data-forge-page="construct" aria-pressed="true">凝聚</button><button data-forge-page="exchange">兑换</button></nav><button data-forge-close aria-label="关闭凝聚器">×</button></header><div class="forge-toolbar"><button id="forge-config">造物 API</button><button id="forge-refine" class="primary">构筑未构筑道具</button><button id="forge-cancel" hidden>取消</button><strong id="forge-ether"></strong></div><div class="forge-layout"><nav id="forge-list"></nav><section id="forge-workspace"><div id="forge-animation" class="condenser-stage"><i class="condenser-ring"></i><i class="condenser-ring ring-two"></i><i class="condenser-ring ring-three"></i><span class="condenser-core">✧</span><div class="condenser-beam"></div><small id="forge-animation-label">以太凝聚 · 等待构筑</small></div><div id="forge-catalog" hidden></div></section></div><p id="forge-status" role="status"></p>';
   document.body.append(panel);
+  const lesson = document.createElement('section');
+  lesson.id = 'forge-lesson';
+  lesson.hidden = true;
+  lesson.setAttribute('aria-live', 'polite');
+  lesson.innerHTML =
+    '<div><small>伊蒂丝 · 以太构筑</small><strong id="forge-lesson-title"></strong><p id="forge-lesson-text"></p></div><button id="forge-lesson-next" class="primary"></button>';
+  panel.querySelector('.forge-toolbar').after(lesson);
   const bag = document.createElement('details');
   bag.id = 'prepare-bag';
   bag.innerHTML = '<summary>查看背包</summary><div></div>';
@@ -206,6 +213,26 @@ export function createEquipment(context) {
   let request = null;
   let page = 'construct';
   let selected = null;
+  let teaching = false;
+  function explainForge() {
+    lesson.hidden = !teaching;
+    for (const target of panel.querySelectorAll('.tutorial-focus'))
+      target.classList.remove('tutorial-focus');
+    if (!teaching) return;
+    const constructing = page === 'construct';
+    panel.querySelector('#forge-lesson-title').textContent = constructing
+      ? '先构筑，再兑换'
+      : '支付以太，把装备带走';
+    panel.querySelector('#forge-lesson-text').textContent = constructing
+      ? '左侧列出尚未构筑的归档物品。点击“构筑未构筑道具”会调用造物 API，将它们转成有属性和被动效果的装备。现在先看页面，不需要调用 API。'
+      : '这里展示已构筑的装备，选择左侧物品就能查看效果和价格。支付对应以太后装备进入背包，出发前在整备中分配给角色，每人最多三件。现在不用购买。';
+    panel.querySelector('#forge-lesson-next').textContent = constructing
+      ? '查看兑换页面 →'
+      : '明白了';
+    panel
+      .querySelector(constructing ? '#forge-refine' : '[data-forge-page="exchange"]')
+      .classList.add('tutorial-focus');
+  }
   function pendingItems() {
     const keyOf = (map, name, description, value) =>
       JSON.stringify([map, name, description, value]);
@@ -249,6 +276,7 @@ export function createEquipment(context) {
       .forEach((button) =>
         button.setAttribute('aria-pressed', String(button.dataset.forgePage === page)),
       );
+    explainForge();
     const entries = page === 'construct' ? pendingItems() : library().equipment.catalog;
     if (!entries.some((item) => item.id === selected)) selected = entries[0]?.id || null;
     panel.querySelector('#forge-list').innerHTML =
@@ -369,6 +397,17 @@ export function createEquipment(context) {
     }
   });
   events.on(panel.querySelector('#forge-cancel'), 'click', () => request?.abort());
+  events.on(panel.querySelector('#forge-lesson-next'), 'click', () => {
+    if (page === 'construct') {
+      page = 'exchange';
+      selected = null;
+      refresh();
+      return;
+    }
+    teaching = false;
+    explainForge();
+    context.onboarding?.condenserLearned();
+  });
   events.on(panel.querySelector('[data-forge-close]'), 'click', () => {
     request?.abort();
     panel.close();
@@ -410,13 +449,14 @@ export function createEquipment(context) {
       panel.querySelector('#forge-status').textContent = failure.message;
     }
   });
-  events.on(document.querySelector('#party-panel'), 'change', (event) => {
+  events.on(document.querySelector('#party-panel'), 'change', async (event) => {
     const emblem = event.target.closest('[data-emblem-character]');
     if (emblem) {
       try {
         if (session.runtime.mode === 'battle') throw Error('战斗中不能更换纹章士');
         equipEmblem(library(), emblem.dataset.emblemCharacter, emblem.value);
-        context.generation.save();
+        if (context.generation.save() === false) throw Error('纹章未能保存，请先整理存储空间');
+        await context.storage.flush?.();
         context.shell.renderParty();
         context.emblems?.equipped();
       } catch (failure) {
@@ -435,7 +475,8 @@ export function createEquipment(context) {
         Number(select.dataset.equipmentSlot),
         select.value,
       );
-      context.generation.save();
+      if (context.generation.save() === false) throw Error('装备未能保存，请先整理存储空间');
+      await context.storage.flush?.();
       context.shell.renderParty();
     } catch (failure) {
       context.shell.toast(failure.message);
@@ -457,9 +498,10 @@ export function createEquipment(context) {
       session.ai.busy
     )
       return;
+    teaching = context.onboarding?.condenserOpened() === true;
+    if (teaching) page = 'construct';
     refresh();
     panel.showModal();
-    context.onboarding?.condenserOpened();
   });
   return {
     refresh,

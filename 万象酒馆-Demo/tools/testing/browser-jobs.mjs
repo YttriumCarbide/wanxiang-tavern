@@ -3,10 +3,10 @@ import path from 'node:path';
 /** Jobs share one browser, but the scheduler gives each job a separate service and output folder. */
 export function browserJobs(scopes, results, root) {
   const jobs = [];
-  const add = (name, operation, after = []) => {
-    if (scopes.has(name)) jobs.push({ name, operation, after });
+  const add = (name, operation, after = [], browserOnly = false) => {
+    if (scopes.has(name)) jobs.push({ name, operation, after, browserOnly });
   };
-  const simple = (name, file, method, after = []) =>
+  const simple = (name, file, method, after = [], browserOnly = false) =>
     add(
       name,
       async (options) => {
@@ -14,8 +14,22 @@ export function browserJobs(scopes, results, root) {
         return module[method](options);
       },
       after,
+      browserOnly,
     );
   simple('battle-controls', 'battle-controls', 'battleControlChecks');
+  simple('universal-enemies', 'universal-enemies', 'universalEnemyChecks');
+  simple('developer-mode', 'developer-mode', 'developerModeChecks');
+  simple('status-emblems', 'status-emblems', 'statusEmblemChecks', [], true);
+  simple('arcade', 'arcade', 'arcadeChecks');
+  simple('generation-experience', 'generation-experience', 'generationExperienceChecks');
+  simple('battle-markers', 'battle-markers', 'battleMarkerChecks');
+  simple(
+    'credential-persistence',
+    'credential-persistence',
+    'credentialPersistenceChecks',
+    [],
+    true,
+  );
   simple('vertex-portraits', 'vertex-portraits', 'vertexPortraitChecks');
   simple('tutorial-revision', 'tutorial-revision', 'tutorialRevisionChecks');
   simple('enemy-portraits', 'enemy-portraits', 'enemyPortraitChecks');

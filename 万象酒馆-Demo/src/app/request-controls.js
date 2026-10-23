@@ -1,6 +1,7 @@
 import { API_LABELS } from './first-run-rules.js';
+import { skippingAi } from '../generation-options.js';
 /** Every paid/model request has a real AbortSignal and a visible control in its current panel. */
-export function createRequestControls(client) {
+export function createRequestControls(client, generationOptions = () => null) {
   const active = new Set();
   function hostFor(kind, models) {
     const visible = (id) => {
@@ -25,6 +26,8 @@ export function createRequestControls(client) {
       const match =
         /^(generate|models)\/(character|script|chat|quick-chat|summary|creation|map)$/.exec(path);
       if (!match) return client.request(path, data, options);
+      if (match[1] === 'generate' && skippingAi(generationOptions()))
+        throw Error('开发者模式已跳过AI生成，请关闭“跳过AI生成”后再使用。');
       const controller = new AbortController();
       const cancel = () => controller.abort(options.signal?.reason);
       options.signal?.addEventListener('abort', cancel, { once: true });

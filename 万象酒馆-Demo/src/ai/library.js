@@ -1,6 +1,8 @@
 import { lockUnopenedRear } from '../formation-access.js';
+import { restoreTetris } from '../tetris.js';
+import { upgradeLegacyStatuses } from '../status-rules.js';
 import { restoreWorlds } from '../worlds.js';
-import { EMBLEMS, EMBLEM_ID, OVERLOAD_EMBLEM_ID } from '../emblems.js';
+import { EMBLEMS, OVERLOAD_EMBLEM_ID } from '../emblems.js';
 import { grownCombat, restoreGrowth } from '../growth.js';
 import { restoreEquipment, applyEquipment, equippedDefinitions } from '../equipment.js';
 import { ENCOUNTER_COUNT } from '../content/journey-rules.js';
@@ -26,6 +28,7 @@ export function newLibrary() {
 function createLibrary(customPortraits) {
   return {
     version: 1,
+    statusRevision: 36,
     enabled: false,
     chapter: 1,
     history: [],
@@ -170,6 +173,9 @@ export function restoreLibrary(value) {
     library.party = Array(6).fill(null);
   }
   library.worlds = restoreWorlds(value.worlds);
+  if (value.statusRevision !== 36)
+    for (const world of library.worlds)
+      for (const enemy of Object.values(world.enemyDefinitions)) upgradeLegacyStatuses(enemy);
   library.emblems = Array.isArray(value.emblems) ? value.emblems.filter((id) => EMBLEMS[id]) : [];
   if (value.exploration)
     library.exploration = restoreExploration(value.exploration, 17371, library.worlds);
@@ -311,6 +317,7 @@ export function restoreLibrary(value) {
         },
         entry.id,
       );
+      if (value.statusRevision !== 36) upgradeLegacyStatuses(restored.combat);
       if (
         typeof entry.combat?.customPortrait === 'string' &&
         /^(?:data:image\/(?:png|jpeg|webp|gif|avif);base64,|\.\/__portraits\/[a-f0-9]{64}\.(?:png|jpg|webp|gif|avif)$|\/api\/ai\/portraits\/[a-f0-9]{64}\.(?:png|jpg|webp|gif|avif)$)/.test(
@@ -418,10 +425,10 @@ export function restoreLibrary(value) {
         .slice(0, 3)
         .map((id) => (library.equipment.owned.some((item) => item.id === id) ? id : null));
   }
-  const emblemWearer = value.characters?.find((entry) => entry.emblemId === EMBLEM_ID);
-  if (library.emblems.includes(EMBLEM_ID)) {
-    const wearer = library.characters.find((entry) => entry.id === emblemWearer?.id);
-    if (wearer) wearer.emblemId = EMBLEM_ID;
+  for (const id of library.emblems) {
+    const saved = value.characters?.find((entry) => entry.emblemId === id);
+    const wearer = library.characters.find((entry) => entry.id === saved?.id);
+    if (wearer) wearer.emblemId = id;
   }
   const equipped = new Set();
   for (const member of library.characters)
@@ -447,6 +454,7 @@ export function restoreLibrary(value) {
   library.chapter = Number.isInteger(value.chapter) && value.chapter > 0 ? value.chapter : 1;
   // Only code-produced, confirmed history is stored; the request builder bounds context size.
   library.history = Array.isArray(value.history) ? structuredClone(value.history) : [];
+  if (value.arcade) library.arcade = restoreTetris(value.arcade);
   hydrateArchiveMaps(library);
   lockUnopenedRear(library);
   return library;

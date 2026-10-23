@@ -51,14 +51,16 @@ export async function stopServer(port) {
   }
 }
 
-export async function withTestServer(operation) {
+export async function withTestServer(operation, { browserOnly = false } = {}) {
   const port = await freePort();
   const child = spawn(process.execPath, ['server.cjs'], {
     cwd: projectRoot,
     env: {
       ...process.env,
       PORT: String(port),
-      AI_CONFIG_FILE: path.join(projectRoot, `.runtime/tests/ai-config-${port}.json`),
+      AI_CONFIG_FILE: browserOnly
+        ? ''
+        : path.join(projectRoot, `.runtime/tests/ai-config-${port}.json`),
       AI_PROMPTS_DIR: path.join(projectRoot, `.runtime/tests/prompts-${port}`),
       AI_WORLDINFO_DIR: path.join(projectRoot, `.runtime/tests/world-info-${port}`),
       OPENAI_API_KEY: '',

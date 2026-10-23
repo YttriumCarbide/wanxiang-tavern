@@ -67,18 +67,82 @@ export async function journeyRefreshChecks({ browser, baseURL, output }) {
     assert((await page.locator('#shop-status').innerText()).includes('+1'));
     await page.screenshot({ path: path.join(output, 'shop-refreshed.png') });
     await page.locator('#shop-close').click();
-    await page.goto(new URL('corridor.html', baseURL).href);
-    await page.waitForFunction(() => window.corridorReady, null, { timeout: 60000 });
-    const start = await page.evaluate(() => window.corridorPreview.camera.position.toArray());
-    await page.evaluate(() => window.corridorPreview.approachMachines());
-    await page.waitForFunction(
-      () => Math.abs(window.corridorPreview.camera.position.z + 2.65) < 0.01,
-    );
-    const end = await page.evaluate(() => window.corridorPreview.camera.position.toArray());
+    await page.goto(new URL('tavern.html', baseURL).href);
+    await page.waitForFunction(() => window.modelReady, null, { timeout: 60000 });
+    await page.setViewportSize({ width: 1904, height: 900 });
+    const start = await page.evaluate(() => window.assetPreview.camera.position.toArray());
+    await page.evaluate(() => window.assetPreview.moveTo('supplies'));
+    await page.locator('#shop-open').waitFor({ state: 'visible' });
+    const end = await page.evaluate(() => window.assetPreview.camera.position.toArray());
     assert.notDeepEqual(end, start);
-    await page.locator('[data-door="shop"].visible').waitFor();
-    await page.locator('[data-door="condenser"].visible').waitFor();
-    await page.screenshot({ path: path.join(output, 'corridor-machines-refreshed.png') });
+    await page.locator('#condenser-open').waitFor({ state: 'visible' });
+    assert(
+      await page.evaluate(
+        () => !!window.assetPreview.model.getObjectByName('Tavern_Supply_Corner'),
+      ),
+    );
+    assert.equal(
+      await page.evaluate(
+        () => !!window.assetPreview.model.getObjectByName('12_Corner_Barrels_and_Crates'),
+      ),
+      false,
+    );
+    const geometry = await page.evaluate(async () => {
+      const { Box3, Vector3 } = await import('/vendor/build/three.module.js');
+      const { model, camera } = window.assetPreview;
+      model.updateMatrixWorld(true);
+      camera.updateMatrixWorld(true);
+      const machines = new Box3().setFromObject(model.getObjectByName('Tavern_Supply_Corner'));
+      const gate = new Box3();
+      model.traverse((object) => {
+        if (object.isMesh && object.name.startsWith('20_Summoning'))
+          gate.union(new Box3().setFromObject(object));
+      });
+      const projected = [];
+      for (const x of [machines.min.x, machines.max.x])
+        for (const y of [machines.min.y, machines.max.y])
+          for (const z of [machines.min.z, machines.max.z])
+            projected.push(new Vector3(x, y, z).project(camera).toArray());
+      return {
+        intersectsGate: machines.intersectsBox(gate),
+        gap: machines.min.z - gate.max.z,
+        projected,
+      };
+    });
+    assert.equal(
+      geometry.intersectsGate,
+      false,
+      'the supply corner must not intersect the summon gate',
+    );
+    assert(geometry.gap > 1, 'the summon gate retains a clear passage beside the machines');
+    assert(
+      geometry.projected.every(([x, y, z]) => Math.abs(x) < 0.95 && Math.abs(y) < 0.95 && z < 1),
+    );
+    const shopButton = await page.locator('#shop-open').boundingBox();
+    const forgeButton = await page.locator('#condenser-open').boundingBox();
+    assert(shopButton.x + shopButton.width + 8 <= forgeButton.x);
+    assert(shopButton.y + shopButton.height <= 900 && forgeButton.y + forgeButton.height <= 900);
+    await page.screenshot({ path: path.join(output, 'tavern-machines-refreshed.png') });
+    await page.evaluate(() => {
+      const { camera } = window.assetPreview;
+      camera.position.set(0.2, 1.5, 1.4);
+      camera.lookAt(-4.8, 1.35, 2.8);
+    });
+    await page.waitForTimeout(350);
+    const navigation = await page.locator('#spots .spot.visible').all();
+    const boxes = await Promise.all(navigation.map((button) => button.boundingBox()));
+    for (let index = 0; index < boxes.length; index++)
+      for (const other of boxes.slice(index + 1)) {
+        const box = boxes[index];
+        assert(
+          box.x + box.width <= other.x ||
+            other.x + other.width <= box.x ||
+            box.y + box.height <= other.y ||
+            other.y + other.height <= box.y,
+          'projected navigation labels must not overlap',
+        );
+      }
+    await page.screenshot({ path: path.join(output, 'tavern-supplies-gate-spacing.png') });
     assert.deepEqual(errors, []);
   } finally {
     await page.close();
@@ -114,6 +178,6 @@ export async function journeyRefreshChecks({ browser, baseURL, output }) {
     mobileLandscape: true,
     mouseGestures: true,
     shopFeedback: true,
-    corridorTravel: true,
+    tavernSupplyTravel: true,
   };
 }

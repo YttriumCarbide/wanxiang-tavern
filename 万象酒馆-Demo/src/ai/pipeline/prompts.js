@@ -17,6 +17,7 @@ import { encounterEnemies, enemiesForSpec } from './encounter-reference.js';
 import { explorationSpec } from '../../exploration.js';
 import { REGIONS } from '../../content/regions.js';
 import { presetOutputTransport, outputToolRequest } from '../preset-output.js';
+import { requireNpcInteraction } from '../../npc-interaction.js';
 
 export function generationInput(kind, input) {
   if (!['character', 'script'].includes(kind)) throw Error('接口类型无效');
@@ -30,7 +31,8 @@ export function generationInput(kind, input) {
         documentType: '角色设定集，不是小说、剧情片段或宣传文案',
         settingTextTokens: [1000, 1500],
         historyCharacters: '150～260字，目标约200字',
-        order: '先完成setting人物设计，再推导data游戏数值；一次响应完成',
+        order:
+          '先完成setting人物设计，再用data选择程序允许的机制和强度档位；具体数值由代码编译，一次响应完成',
         categories: [
           '姓名',
           '性别',
@@ -40,7 +42,7 @@ export function generationInput(kind, input) {
           '性格',
           '经历',
           '攻击方式',
-          '技能动作描写',
+          '主动技能动作描写与被动实际效果',
         ],
       },
       mechanics: { ...characterGameReference(), generationNumbers: generationNumbers(input) },
@@ -66,11 +68,11 @@ export function generationInput(kind, input) {
               levelUpLines:
                 '根节点额外输出levelUpLines数组，恰好5句符合该主角性格的简短升级台词，不存进setting。',
               guidance:
-                '忠实保留玩家填写的姓名、身份、性格与动作设想，润色为完整角色设定集并补齐技能。主角固定出战，必须设计为强势开局：生命、蓝量、普攻伤害和技能伤害均优先取合法范围的较高值，明显强于普通同伴，耗蓝不能抵消强度；行动次数固定为2次；不得突破Schema或发明未支持的效果。',
+                '忠实保留玩家填写的姓名、身份、性格与动作设想。主角固定出战，程序给予较高基础生命、法力、普攻与固定2次行动；AI只选定位、主动/被动、AP费用与效果档位，不再填写实际基础值。2AP技能必须体现高回报，不得突破本次复杂度或发明未支持的效果。',
             }
           : {}),
         entrySkillGuidance:
-          '每个角色都必须有且仅有一个专属入场技（必填，主角与召唤角色皆须具备）：在setting.entrySkill中填写{name,description}，在data.entrySkill中填写{text,target:"opposite"|"lowestEnemy"|"lowestAlly"|"allEnemies"|"allAllies"|"self",effects:[{type,value...}]}。入场技需体现角色战术定位与机制多样性，支持对位破隙（opposite）、残血收割（lowestEnemy）、伤员急救（lowestAlly）、全体妨害（allEnemies）或自身强化（self），严禁千篇一律全体AOE。在后排待满一个整回合后换入前排时自动触发，不消耗额外AP或行动点。',
+          '每个角色必须有一个专属入场技。setting.entrySkill填写{name,description}，data.entrySkill只填写target/effects，各效果写type/power及必要机制参数，不填具体value、AP或费用。支持opposite/lowestEnemy/lowestAlly/allEnemies/allAllies/self，后排就绪换入前场时自动触发。opposite对位为空时该次攻击落空，不追击其他敌人。被动description说明实际效果，不写挥剑、抬手等动作代替规则。',
         existingCharacters: (input.existing || []).slice(0, 12).map((item) => ({
           name: String(item.name || '').slice(0, 30),
           title: String(item.title || '').slice(0, 30),
@@ -103,12 +105,22 @@ export function generationInput(kind, input) {
     request: {
       brief: input.brief,
       storyArc: arcFor(input),
+      ...(requireNpcInteraction(input)
+        ? {
+            npcInteraction: {
+              required: true,
+              instruction:
+                '本次剧本必须安排至少一名非主角团NPC出场，并与主角团发生实质互动：对话、合作、交易、冲突或提供可执行帮助，不能只提到姓名。请在对应story正文实际描写互动，并在data.npcs中按现有格式归档该NPC，encounter填写实际出场场次。不得把队伍成员重复写成NPC；遵守本章大纲和已发生事实。',
+            },
+          }
+        : {}),
       ...(isEndless(input.exploration)
         ? {
             dynamicWorld: {
               background:
                 input.exploration.world?.background || REGIONS[input.exploration.map].atmosphere,
               landmarks: input.exploration.world?.landmarks || [],
+              goals: input.exploration.world?.goals || [],
               enemies:
                 input.enemyPool ||
                 (
@@ -118,7 +130,7 @@ export function generationInput(kind, input) {
                   ]
                 ).map((id) => input.exploration.world?.enemyDefinitions[id] || DEFINITIONS[id]),
               instruction:
-                '优先按剧情发展选择每场遭遇；data.encounters必须输出恰好五项，每项{enemyIds:[当前世界敌人ID]}，每场1～3个不同ID，最终场至少一位Boss，只能从本地图敌人池选择。不能输出地图环境buff。已经经历的战斗配置不可修改。',
+                '重要：无限探索的正文以人物、目标、事件、抉择和世界变化为主，不能受游戏战斗外观束缚。禁止在正文使用Boss或首领战等游戏称呼，大多数底层敌人不必出现在正文；叙事走到哪里与游戏打什么可以分离，不能为了循环敌人原地打转。只有敌人确实贴合当前情节才自然描写，不勉强塞入。数据仍由你为每场选择敌人：data.encounters恰好五项，每项{enemyIds:[当前世界敌人ID]}，每场1～3个不同ID，最终场至少一位boss=true，只从敌人池选择；这些是程序配置，不是必须写进小说的情节。不输出地图buff，不改写已经历的战斗配置。',
             },
           }
         : {}),
@@ -175,7 +187,9 @@ export function generationInput(kind, input) {
         '旅程第二段（第二场展示）',
         '旅程第三段（第三场展示）',
         '旅程第四段（第四场展示）',
-        '最终Boss战开始时，推进剧情，不预写胜负',
+        isEndless(input.exploration)
+          ? '旅程第五段，继续推进人物与目标，不强行绑定底层战斗或预写胜负'
+          : '最终Boss战开始时，推进剧情，不预写胜负',
       ],
       ...(selected
         ? {

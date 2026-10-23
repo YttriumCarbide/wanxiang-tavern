@@ -157,7 +157,8 @@ export function applyEquipment(combat, equipment) {
         if (effect.type === 'damage') effect.value += item.stats.skillDamage || 0;
     }
   }
-  for (const skill of result.skills) if (!skill.passive) skill.text = finalSkillText(skill);
+  for (const skill of result.skills)
+    if (!skill.passive) skill.text = finalSkillText(skill, result.mechanicMark?.name);
   result.limit = Math.min(6, result.limit);
   return result;
 }

@@ -1,4 +1,11 @@
 export const allScopes = [
+  'universal-enemies',
+  'developer-mode',
+  'status-emblems',
+  'arcade',
+  'generation-experience',
+  'battle-markers',
+  'credential-persistence',
   'humanoid-enemies',
   'vertex-portraits',
   'quality',

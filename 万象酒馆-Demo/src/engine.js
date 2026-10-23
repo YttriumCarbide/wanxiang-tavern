@@ -1,16 +1,19 @@
 import { enemyEffectSide } from './enemy-targets.js';
-import {
-  canCombine,
-  COMBINE_SKILL,
-  OVERLOAD_SKILL,
-  EMBLEMS,
-  OVERLOAD_EMBLEM_ID,
-} from './emblems.js';
+import { tacticalDecision, lockEnemyDecisions } from './enemy-tactics.js';
+import { canCombine, EMBLEMS, OVERLOAD_EMBLEM_ID } from './emblems.js';
 import { ITEMS, restoreBag } from './content/items.js';
 import { definition, definitionsFor, heroesFor, abilityFor } from './catalog.js';
 import { validateAction } from './validation.js';
 import { HEROES, DEFINITIONS, encounterSpec, enemySlots } from './data.js';
 import { auraValue, rulesFor, conditionsMet, triggerTargets, POSITIVE_BUFFS } from './triggers.js';
+import { decayStatuses, statusStacks, NEGATIVE_STATUSES } from './status-rules.js';
+import {
+  createEmblemMechanics,
+  positionBuff,
+  emblemTargetError,
+  clearBattleMechanics,
+  negativeImmune,
+} from './emblem-mechanics.js';
 export const clone = (x) => structuredClone(x);
 export function newBattle(
   enemyIds = encounterSpec(0).enemyIds,
@@ -47,9 +50,12 @@ export function newBattle(
             mp,
             maxMp: mp,
             block: 0,
-            buffs: { ...d.buffs },
+            buffs: Object.fromEntries(
+              Object.entries(d.buffs || {}).map(([key, value]) => [key, statusStacks(key, value)]),
+            ),
             entryReady: false,
             used: 0,
+            ...(d.mechanicMark ? { mark: 0 } : {}),
           },
         ];
       }),
@@ -63,22 +69,51 @@ export const rear = (s) => s.formation.slice(3);
 export const getEnemies = (s) => s.enemyIds.map((id) => definition(s, id));
 export const livingEnemies = (s) => getEnemies(s).filter((e) => s.units[e.id].hp > 0);
 export function effectiveBuff(s, id, key) {
+  if (NEGATIVE_STATUSES.includes(key) && negativeImmune(s, id)) return 0;
   const value =
     (s.units[id]?.buffs[key] || 0) +
+    positionBuff(s, id, key) +
     (s.units[id]?.hp > 0 ? auraValue(s, heroesFor(s), id, key) : 0);
   return key === 'haste' ? Math.min(2, value) : value;
 }
 export function intent(s, id) {
+  const tactical =
+    s.enemyDecisions?.[id]?.round === s.round
+      ? s.enemyDecisions[id]
+      : tacticalDecision(s, id, definition(s, id));
+  if (tactical) {
+    const def = definition(s, id);
+    const list = tactical.enraged ? def.enragedIntents : def.intents;
+    return { ...list[tactical.index], ...tactical };
+  }
   const def = definition(s, id),
     enraged =
       def.boss && (s.units[id].enraged || s.units[id].hp <= s.units[id].maxHp * def.phaseThreshold);
   const list = enraged ? def.enragedIntents : def.intents;
   const move =
-    def.openingIntent && !s.units[id].openingAttackUsed
+    def.openingIntent &&
+    !s.units[id].openingAttackUsed &&
+    (!def.openingIntent.lowestHpPosition || s.round <= 1)
       ? def.openingIntent
       : list[(Math.max(1, s.round) - 1) % list.length];
   return {
     ...move,
+    ...(move.lowestHpPosition
+      ? s.openingTargetSlots?.[id] !== undefined
+        ? { slot: s.openingTargetSlots[id] }
+        : {
+            slot: s.formation
+              .slice(0, 3)
+              .reduce(
+                (lowest, id, slot) =>
+                  s.units[id]?.hp > 0 &&
+                  (lowest < 0 || s.units[id].hp < s.units[s.formation[lowest]].hp)
+                    ? slot
+                    : lowest,
+                -1,
+              ),
+          }
+      : {}),
     ...(s.enemyIntentSlots?.[id] !== undefined ? { slot: s.enemyIntentSlots[id] } : {}),
     enraged: !!enraged,
   };
@@ -197,17 +232,25 @@ function simulate(s, plan, slots) {
   }
   let at = -1,
     currentLogs = [],
-    currentStatusTriggers = [];
+    currentStatusTriggers = [],
+    attackHits = null;
   work.procUses ||= {};
   function trigger(event, owner = null, detail = {}) {
     for (const hero of heroes) {
       if (owner && hero.id !== owner) continue;
       for (const rule of rulesFor(hero)) {
-        const key = hero.id + ':' + rule.key;
+        const scope = rule.scope || 'expedition';
+        const boundary =
+          scope === 'round'
+            ? `:round:${work.encounter || 0}:${work.phase}:${work.round}`
+            : scope === 'battle'
+              ? `:battle:${work.encounter || 0}`
+              : '';
+        const key = hero.id + ':' + rule.key + boundary;
         if (
           rule.mode !== 'event' ||
-          rule.event !== event ||
-          !conditionsMet(work, hero.id, rule.conditions) ||
+          (rule.event !== event && rule.event !== 'conditionStart') ||
+          !conditionsMet(work, hero.id, rule.conditions, { target: detail.targets?.[0] }) ||
           (work.procUses[key] || 0) >= rule.limit
         )
           continue;
@@ -223,6 +266,7 @@ function simulate(s, plan, slots) {
     if (u.hp === 0 && !deaths.some((d) => d.id === u.id)) {
       deaths.push({ id: u.id, at, reason });
       currentLogs.push(`${definitions[u.id]?.name || u.id}濒死，后续行动失效`);
+      mechanics.onDeath(u.id);
     }
   }
   function lose(u, n, reason) {
@@ -242,6 +286,29 @@ function simulate(s, plan, slots) {
       if (!generated) trigger('healed', id, { targets: [id] });
     }
   }
+  function applyBuff(actor, id, key, value, generated = false) {
+    const unit = work.units[id];
+    if (!unit || unit.hp <= 0 || mechanics.reflect(actor, id, key, value)) return;
+    const before = unit.buffs[key] || 0;
+    unit.buffs[key] = statusStacks(key, before + value);
+    const gained = unit.buffs[key] - before;
+    if (key === 'slow' && unit.side === 'enemy' && slots.indexOf(id) > at)
+      slows[id] = (slows[id] || 0) + gained;
+    if (gained && !generated) {
+      trigger('gainBuff', id, { targets: [id] });
+      trigger(POSITIVE_BUFFS.includes(key) ? 'gainPositive' : 'gainNegative', id, {
+        targets: [id],
+      });
+    }
+  }
+  const mechanics = createEmblemMechanics(work, definitions, {
+    lose,
+    heal,
+    buff: applyBuff,
+    log: (text) => currentLogs.push(text),
+    damage: (actor, target, value) =>
+      effects(actor, [target], [{ type: 'damage', value, flat: true }], true),
+  });
   function effects(
     actor,
     targets,
@@ -250,50 +317,79 @@ function simulate(s, plan, slots) {
     echo = false,
     split = false,
     bonus = 0,
+    markSnapshot = work.units[actor]?.mark || 0,
   ) {
+    let consumedMark = false;
+    const allowed = (effect, id) =>
+      !effect.when || conditionsMet(work, actor, [effect.when], { target: id, mark: markSnapshot });
     for (const eff of list || []) {
+      const value = (eff.value || 0) + (eff.perMark || 0) * markSnapshot;
+      let applied = false;
       if (eff.type === 'selfHeal') {
-        heal(actor, eff.value + bonus, generated);
+        if (!allowed(eff, actor)) continue;
+        heal(actor, value + bonus, generated);
+        consumedMark ||= eff.consumeMark === true;
         continue;
       }
       if (eff.type === 'selfMana') {
         const unit = work.units[actor];
-        if (unit.hp <= 0) continue;
-        const gained = Math.min(eff.value, unit.maxMp - unit.mp);
+        if (unit.hp <= 0 || !allowed(eff, actor)) continue;
+        const gained = Math.min(value, unit.maxMp - unit.mp);
         unit.mp += gained;
         if (gained) currentLogs.push(`${definitions[actor].name}回复${gained}法力`);
         if (gained && !generated) trigger('manaRestored', actor, { targets: [actor] });
+        consumedMark ||= eff.consumeMark === true;
         continue;
       }
       if ((eff.type === 'shield' && eff.target === 'self') || eff.type === 'selfShield') {
         const unit = work.units[actor];
-        if (unit && unit.hp > 0) {
-          const n = eff.value + effectiveBuff(work, actor, 'guard');
+        if (unit && unit.hp > 0 && allowed(eff, actor)) {
+          const n = value + effectiveBuff(work, actor, 'guard');
           unit.block += n;
           currentLogs.push(`${definitions[actor].name}获得${n}护盾`);
+          consumedMark ||= eff.consumeMark === true;
         }
         continue;
       }
+      if (eff.type === 'mark') {
+        const unit = work.units[actor];
+        if (unit?.hp > 0 && allowed(eff, actor)) {
+          unit.mark = Math.min(
+            definitions[actor]?.mechanicMark?.max || 3,
+            (unit.mark || 0) + value,
+          );
+          currentLogs.push(
+            `${definitions[actor].name}积累${definitions[actor].mechanicMark?.name || '标记'}，当前${unit.mark}层`,
+          );
+        }
+        continue;
+      }
+      const selected =
+        actor && ['self', 'target', 'lowestAlly', 'allAllies', 'allEnemies'].includes(eff.target)
+          ? triggerTargets(work, actor, eff.target, { targets })
+          : targets;
       const affected =
         eff.type === 'damage' && echo
-          ? [...new Set([...targets, ...work.enemyIds])]
+          ? [...new Set([...selected, ...work.enemyIds])]
           : eff.type === 'damage' && split
             ? front(work).filter(Boolean)
-            : targets;
+            : selected;
       for (const id of affected) {
         const u = work.units[id];
-        if (!u || u.hp <= 0) continue;
+        if (!u || u.hp <= 0 || !allowed(eff, id)) continue;
+        applied = true;
         if (eff.type === 'damage') {
-          let n = eff.value + bonus + (actor ? effectiveBuff(work, actor, 'strength') : 0);
+          if (!generated && attackHits && u.side === 'enemy') attackHits.add(id);
+          let n = value + bonus + (actor && !eff.flat ? effectiveBuff(work, actor, 'strength') : 0);
           if (work.units[actor]?.side === 'enemy')
             n = Math.max(1, Math.round(n * (work.enemyDamageScale || 1)));
-          if (actor && effectiveBuff(work, actor, 'weak')) n = Math.floor(n * 0.75);
+          if (!eff.flat && actor && effectiveBuff(work, actor, 'weak')) n = Math.floor(n * 0.75);
           if (split) {
             const total = n * split;
             const position = front(work).indexOf(id);
             n = Math.floor(total / 3) + (position < total % 3 ? 1 : 0);
           }
-          if (effectiveBuff(work, id, 'vulnerable')) n = Math.floor(n * 1.5);
+          if (!eff.flat && effectiveBuff(work, id, 'vulnerable')) n = Math.floor(n * 1.5);
           n = Math.max(0, n - effectiveBuff(work, id, 'iron'));
           const absorbed = Math.min(u.block, n);
           u.block -= absorbed;
@@ -308,42 +404,34 @@ function simulate(s, plan, slots) {
             if (actor) trigger('damageDealt', actor, { targets: [id] });
           }
           if (killed && actor && !generated) trigger('kill', actor, { targets: [id] });
+          if (!generated) mechanics.damage(actor, id, damage);
         }
         if (eff.type === 'shield') {
-          const n = eff.value + effectiveBuff(work, id, 'guard');
+          const n = value + effectiveBuff(work, id, 'guard');
           u.block += n;
           currentLogs.push(`${definitions[id].name}获得${n}护盾`);
         }
-        if (eff.type === 'heal') heal(id, eff.value + bonus, generated);
+        if (eff.type === 'heal') heal(id, value + bonus, generated);
         if (eff.type === 'mana') {
-          const gained = Math.min(eff.value, u.maxMp - u.mp);
+          const gained = Math.min(value, u.maxMp - u.mp);
           u.mp += gained;
           currentLogs.push(`${definitions[id].name}回复${gained}法力`);
           if (gained && !generated) trigger('manaRestored', id, { targets: [id] });
         }
         if (eff.type === 'cleanse') for (const buff of eff.buffs) delete u.buffs[buff];
-        if (eff.type === 'buff') {
-          u.buffs[eff.buff] = (u.buffs[eff.buff] || 0) + eff.value;
-          if (eff.buff === 'haste') u.buffs.haste = Math.min(2, u.buffs.haste);
-          // A later status persists, but cannot move an attack that has already happened.
-          if (eff.buff === 'slow' && u.side === 'enemy' && slots.indexOf(id) > at)
-            slows[id] = (slows[id] || 0) + eff.value;
-          if (!generated) {
-            trigger('gainBuff', id, { targets: [id] });
-            trigger(POSITIVE_BUFFS.includes(eff.buff) ? 'gainPositive' : 'gainNegative', id, {
-              targets: [id],
-            });
-          }
-        }
+        if (eff.type === 'buff') applyBuff(actor, id, eff.buff, value, generated);
       }
+      if (applied && eff.consumeMark) consumedMark = true;
     }
+    if (consumedMark && work.units[actor]) work.units[actor].mark = 0;
   }
   function bleed(id) {
     const u = work.units[id];
-    if (u?.hp > 0 && u.buffs.bleed) {
-      lose(u, u.buffs.bleed, '行动前流血');
-      currentLogs.push(`${definitions[id].name}行动前流血${u.buffs.bleed}`);
-      currentStatusTriggers.push({ id, type: 'bleed', value: u.buffs.bleed });
+    const value = effectiveBuff(work, id, 'bleed');
+    if (u?.hp > 0 && value) {
+      lose(u, value, '行动前流血');
+      currentLogs.push(`${definitions[id].name}行动前流血${value}`);
+      currentStatusTriggers.push({ id, type: 'bleed', value });
       record('status', id, '行动前 · 流血');
       return u.hp === 0;
     }
@@ -374,7 +462,10 @@ function simulate(s, plan, slots) {
         (a, b) => work.units[a].hp / work.units[a].maxHp - work.units[b].hp / work.units[b].maxHp,
       );
       esTargets = living.length ? [living[0]] : [];
-    } else if (es.target === 'opposite' || es.target === 'enemy') {
+    } else if (es.target === 'opposite') {
+      const opposite = enemySlots(work.enemyIds)[slot];
+      esTargets = opposite && work.units[opposite]?.hp > 0 ? [opposite] : [];
+    } else if (es.target === 'enemy') {
       const eSlots = enemySlots(work.enemyIds);
       let oppId = slot !== undefined && slot !== null ? eSlots[slot] : null;
       if (!oppId || work.units[oppId]?.hp <= 0) {
@@ -397,11 +488,14 @@ function simulate(s, plan, slots) {
       esTargets = [id];
     }
     const effectsList = Array.isArray(es.effects) ? es.effects : [{ type: 'damage', value: 5 }];
-    effects(id, esTargets, effectsList, false);
-    currentLogs.push(`${inDef.name}入场触发【${es.name}】`);
+    if (es.selfDamage) lose(unit, es.selfDamage, '入场技 · 自身伤害');
+    if (unit.hp > 0) effects(id, esTargets, effectsList, false);
+    currentLogs.push(
+      `${inDef.name}入场触发【${es.name}】${es.target === 'opposite' && !esTargets.length ? '，对位无存活敌人' : ''}`,
+    );
     record('entrySkill', id, es.name, esTargets, actionId, es.id);
   }
-  function record(type, actor, label, targetIds = [], actionId = null, skill = null) {
+  function record(type, actor, label, targetIds = [], actionId = null, skill = null, detail = {}) {
     events.push({
       type,
       at,
@@ -410,6 +504,7 @@ function simulate(s, plan, slots) {
       targets: targetIds,
       actionId,
       skill,
+      ...detail,
       logs: [...currentLogs],
       statusTriggers: [...currentStatusTriggers],
       after: clone(work),
@@ -433,7 +528,7 @@ function simulate(s, plan, slots) {
       if (u.buffs.bind) {
         currentLogs.push(`${definitions[enemy].name}受到禁锢，本回合行动取消`);
         currentStatusTriggers.push({ id: enemy, type: 'bind', value: 1 });
-        record('skip', enemy, '禁锢 · 行动取消');
+        record('skip', enemy, '禁锢 · 行动取消', [], null, null, { blockedBy: 'bind' });
         continue;
       }
       bleed(enemy);
@@ -454,7 +549,12 @@ function simulate(s, plan, slots) {
         );
       for (const effect of move.effects) {
         const effectTarget = enemyEffectSide(effect);
-        if (effect.type === 'buff' && effect.buff === 'slow' && effectTarget === 'opponents')
+        if (
+          effect.type === 'buff' &&
+          effect.buff === 'slow' &&
+          effectTarget === 'opponents' &&
+          !targets.some((id) => negativeImmune(work, id))
+        )
           continue;
         const allied = work.enemyIds.filter((id) => work.units[id].hp > 0);
         const ownTargets =
@@ -595,17 +695,11 @@ function simulate(s, plan, slots) {
         continue;
       }
       const isOverloaded =
-        !!u.buffs.overload &&
-        a.skill !== 'attack' &&
-        a.skill !== COMBINE_SKILL.id &&
-        a.skill !== OVERLOAD_SKILL.id;
+        !!u.buffs.overload && a.skill !== 'attack' && EMBLEMS[def.emblemId]?.skill?.id !== a.skill;
       const mpCost = skill.mp * (isOverloaded ? 2 : 1);
       const hpCost = (skill.hp || 0) * (isOverloaded ? 2 : 1);
       let error = '';
-      if (
-        [COMBINE_SKILL.id, OVERLOAD_SKILL.id].includes(a.skill) &&
-        (!u.combined || u.combineSkillUsed)
-      )
+      if (EMBLEMS[def.emblemId]?.skill?.id === a.skill && (!u.combined || u.combineSkillUsed))
         error = '结合技需要结合状态，且每次结合限用一次';
       else if (!front(work).includes(a.actor)) error = '角色此时仍在后场，需要先换入';
       else if (u.used >= def.limit + effectiveBuff(work, a.actor, 'haste'))
@@ -627,6 +721,7 @@ function simulate(s, plan, slots) {
         )
       )
         error = '技能目标无效';
+      error ||= emblemTargetError(work, definitions[a.target], a.actor, skill, a.target);
       if (error) {
         invalid.push({ id: a.id, message: error });
         record('invalid', a.actor, error, [], a.id);
@@ -659,6 +754,7 @@ function simulate(s, plan, slots) {
         attack && targets.some((id) => work.units[id]?.side === 'enemy' && work.units[id].hp > 0);
       if (attack) trigger('beforeAttack', a.actor, { targets });
       if (u.hp > 0) {
+        attackHits = new Set();
         const echo =
           !!u.combined &&
           attack &&
@@ -668,23 +764,36 @@ function simulate(s, plan, slots) {
           def.emblemId === OVERLOAD_EMBLEM_ID && a.skill !== 'attack'
             ? Math.round(mpCost * 0.25)
             : 0;
-        effects(a.actor, targets, skill.effects, false, echo, false, bonus);
+        if (skill.mechanic) mechanics.cast(a.actor, skill, a.target);
+        else effects(a.actor, targets, skill.effects, false, echo, false, bonus);
+        if (a.skill === 'attack' && u.buffs.meteor && u.hp > 0) {
+          currentLogs.push(`${definitions[a.actor].name} · 流星剑姿：普通攻击额外攻击一次`);
+          effects(a.actor, targets, skill.effects, false, echo, false, bonus);
+        }
         if (isOverloaded && u.hp > 0) {
           currentLogs.push(`${definitions[a.actor].name}超限负荷：技能额外生效一次`);
           effects(a.actor, targets, skill.effects, false, echo, false, bonus);
         }
-        if ([COMBINE_SKILL.id, OVERLOAD_SKILL.id].includes(a.skill)) u.combineSkillUsed = true;
+        mechanics.attack(a.actor, attackHits);
+        attackHits = null;
+        if (EMBLEMS[def.emblemId]?.skill?.id === a.skill) u.combineSkillUsed = true;
         if (attackedEnemy && def.emblemId && !u.combined)
           u.emblemCharge = Math.min(6, (u.emblemCharge || 0) + 1);
       }
       if (a.skill !== 'attack') trigger('skillCast', a.actor, { targets });
+      if (a.skill === 'attack' && attackedEnemy && def.basicAttackMark && u.hp > 0)
+        u.mark = Math.min(def.mechanicMark?.max || 3, (u.mark || 0) + def.basicAttackMark);
       if (attack) trigger('afterAttack', a.actor, { targets });
-      record('hero', a.actor, skill.name, targets, a.id, a.skill);
+      record('hero', a.actor, skill.name, targets, a.id, a.skill, {
+        repeatCount: isOverloaded || (a.skill === 'attack' && u.buffs.meteor) ? 2 : 1,
+        costs: { mp: mpCost, hp: hpCost },
+      });
     } else if (!usedSlots.has(at)) record('wait', null, '保留行动');
   }
   if (s.phase !== 'opening') {
     at = slots.length;
     trigger('roundEnd');
+    mechanics.roundEnd();
     for (const hero of heroes) {
       const unit = work.units[hero.id];
       if (!unit || unit.hp <= 0) continue;
@@ -692,10 +801,7 @@ function simulate(s, plan, slots) {
         unit.entryReady = true;
       }
       if (!hero.emblemId) continue;
-      if (unit.combined) {
-        unit.combined--;
-        if (!unit.combined) unit.combineSkillUsed = false;
-      } else if (rear(work).includes(hero.id))
+      if (!unit.combined && rear(work).includes(hero.id))
         unit.emblemCharge = Math.min(6, (unit.emblemCharge || 0) + 2);
     }
     record('emblem', null, '纹章 · 充能与结合时限');
@@ -704,12 +810,26 @@ function simulate(s, plan, slots) {
         heal(u.id, effectiveBuff(work, u.id, 'regen'));
     record('regen', null, '回合末 · 再生先结算');
     for (const u of Object.values(work.units))
-      if (u.hp > 0 && u.buffs.poison) {
-        lose(u, u.buffs.poison, '回合末中毒');
-        currentLogs.push(`${definitions[u.id].name}中毒${u.buffs.poison}`);
-        currentStatusTriggers.push({ id: u.id, type: 'poison', value: u.buffs.poison });
+      if (u.hp > 0 && effectiveBuff(work, u.id, 'poison')) {
+        const value = effectiveBuff(work, u.id, 'poison');
+        lose(u, value, '回合末中毒');
+        currentLogs.push(`${definitions[u.id].name}中毒${value}`);
+        currentStatusTriggers.push({ id: u.id, type: 'poison', value });
       }
     record('poison', null, '回合末 · 中毒结算');
+    const decay = decayStatuses(work.units);
+    for (const change of decay)
+      currentLogs.push(
+        `${definitions[change.id].name}的${change.buff}从${change.before}层衰减至${change.after}层`,
+      );
+    if (decay.length) record('decay', null, '回合末 · 状态衰减', [], null, null, { decay });
+    for (const unit of Object.values(work.units)) {
+      if (unit.combined) {
+        unit.combined--;
+        if (!unit.combined) unit.combineSkillUsed = false;
+      }
+    }
+    record('emblem', null, '回合末 · 结合时限');
   }
   for (const u of Object.values(work.units)) delete u.buffs.bind;
   return { final: work, events, invalid, skipped, deaths, slows, slots };
@@ -751,13 +871,24 @@ export function advance(result) {
   const opening = s.phase === 'opening';
   s.phase = 'plan';
   s.round = opening ? 1 : s.round + 1;
+  if (opening)
+    s.openingTargetSlots = Object.fromEntries(
+      s.enemyIds
+        .filter((id) => definition(s, id).openingIntent?.lowestHpPosition)
+        .map((id) => [id, intent(s, id).slot]),
+    );
   for (const u of Object.values(s.units)) {
     u.used = 0;
     if (!opening) u.block = 0;
   }
+  lockEnemyDecisions(s, definitionsFor(s));
   return s;
 }
 export function newEncounter(spec, prior = null, index = 0, heroDefinitions = {}) {
+  if (prior) {
+    prior = clone(prior);
+    clearBattleMechanics(prior);
+  }
   const s = newBattle(
     spec.enemyIds,
     prior?.heroDefinitions || heroDefinitions,
@@ -776,12 +907,13 @@ export function newEncounter(spec, prior = null, index = 0, heroDefinitions = {}
     units[h.id] = prior
       ? {
           ...clone(prior.units[h.id]),
-          buffs: {},
+          buffs: clone(s.units[h.id].buffs),
           block: 0,
           used: 0,
           combined: 0,
           combineSkillUsed: false,
           entryReady: s.formation.slice(3).includes(h.id),
+          ...(h.mechanicMark ? { mark: 0 } : {}),
         }
       : s.units[h.id];
     if (spec.environment?.bonusMp) units[h.id].maxMp = s.units[h.id].maxMp;
@@ -797,7 +929,9 @@ export function newEncounter(spec, prior = null, index = 0, heroDefinitions = {}
       mp: 0,
       maxMp: 0,
       block: 0,
-      buffs: { ...d.buffs },
+      buffs: Object.fromEntries(
+        Object.entries(d.buffs || {}).map(([key, value]) => [key, statusStacks(key, value)]),
+      ),
 
       used: 0,
     };
@@ -808,7 +942,9 @@ export function newEncounter(spec, prior = null, index = 0, heroDefinitions = {}
       units[id].emblemCharge = Math.max(0, Math.min(6, charge));
   }
   for (const [id, buffs] of Object.entries(spec.initialEnemyBuffs || {})) {
-    if (units[id]?.side === 'enemy') Object.assign(units[id].buffs, buffs);
+    if (units[id]?.side === 'enemy')
+      for (const [key, value] of Object.entries(buffs))
+        units[id].buffs[key] = statusStacks(key, value);
   }
   // Aim the vulnerability lesson at an occupied base once. Later repositioning can still dodge it.
   if (spec.occupiedOpeningTarget) {
@@ -828,6 +964,7 @@ export function newEncounter(spec, prior = null, index = 0, heroDefinitions = {}
 export function campRest(s, recovery = null) {
   if (recovery !== null && !['sleep', 'meal'].includes(recovery)) throw Error('休整方式无效');
   const rested = clone(s);
+  clearBattleMechanics(rested);
   const changes = [];
   for (const hero of heroesFor(s)) {
     const unit = rested.units[hero.id];

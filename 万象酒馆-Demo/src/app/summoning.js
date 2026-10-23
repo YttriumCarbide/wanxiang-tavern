@@ -1,4 +1,9 @@
-import { officialSummonPool, summonSource } from '../summoning.js';
+import {
+  officialSummonPool,
+  summonSource,
+  knownNpcSummonPool,
+  npcSummonStatus,
+} from '../summoning.js';
 import { query as $ } from './dom.js';
 
 export function createSummoning(context) {
@@ -6,7 +11,36 @@ export function createSummoning(context) {
   const dialog = $('#summon-choice');
   let mode = null;
   let stage = 'choose';
+  let noticeTimer = null;
+  const descriptions = {
+    official: '万象召唤术：从尚未加入的官设来客中召唤一位同伴。',
+    chaos: '混沌召唤术：官设来客、已解锁NPC、全新角色各占三分之一。',
+    npc: '印记召唤术：召唤已遇见的NPC。前五个世界的主线NPC须通关对应第六关；自制世界与无限探索不受限制。',
+    infinite: '无限召唤术：填写愿望，由AI构筑一位全新同伴。',
+  };
+  function clearNotice() {
+    clearTimeout(noticeTimer);
+    noticeTimer = null;
+    $('#summon-method-notice').hidden = true;
+  }
+  function showNotice() {
+    clearNotice();
+    const notice = $('#summon-method-notice');
+    notice.textContent = descriptions[mode];
+    notice.hidden = false;
+    notice.getAnimations().forEach((animation) => animation.cancel());
+    if (!matchMedia('(prefers-reduced-motion: reduce)').matches)
+      notice.animate(
+        [
+          { opacity: 0, transform: 'translate(-50%, 12px)' },
+          { opacity: 1, transform: 'translate(-50%, 0)' },
+        ],
+        { duration: 220, easing: 'ease-out' },
+      );
+    noticeTimer = setTimeout(clearNotice, 5200);
+  }
   function close() {
+    clearNotice();
     dialog.hidden = true;
     document.body.classList.remove('summoning');
     $('#inn-frame iframe')?.contentWindow?.postMessage(
@@ -24,6 +58,7 @@ export function createSummoning(context) {
     $('#ether-count').textContent = String(library().inventory?.ether || 0);
     $('#summon-contracts').textContent = `持有契约 ${contracts} 份`;
     $('#summon-confirm').disabled = busy || contracts < 1 || library().characters.length >= 100;
+    $('#summon-confirm').dataset.requiresAi = String(mode !== 'official');
     dialog.dataset.stage = stage;
     dialog.dataset.mode = mode || '';
     $('#summon-wish-label').hidden = stage !== 'wish';
@@ -39,9 +74,19 @@ export function createSummoning(context) {
             npc.name !== '潘多拉' &&
             !library().characters.some((member) => member.setting.name === npc.name),
         )
-        .map((npc) => new Option(npc.name, npc.id)),
+        .map((npc) => {
+          const status = npcSummonStatus(library(), npc);
+          const option = new Option(
+            status.allowed ? npc.name : `${npc.name} · ${status.reason}`,
+            npc.id,
+          );
+          option.disabled = !status.allowed;
+          return option;
+        }),
     );
-    if (selected) $('#summon-npc').value = selected;
+    if (selected && knownNpcSummonPool(library()).some((npc) => npc.id === selected))
+      $('#summon-npc').value = selected;
+    else $('#summon-npc').value = knownNpcSummonPool(library())[0]?.id || '';
     dialog.querySelectorAll('[data-summon-mode]').forEach((button) => {
       button.setAttribute('aria-pressed', String(button.dataset.summonMode === mode));
       button.disabled = busy || (!!mode && button.dataset.summonMode !== mode);
@@ -92,6 +137,7 @@ export function createSummoning(context) {
       location.origin,
     );
     refresh();
+    showNotice();
     const after = button.getBoundingClientRect();
     button.getAnimations().forEach((animation) => animation.cancel());
     button.animate(
@@ -107,11 +153,13 @@ export function createSummoning(context) {
     if (!(library().inventory?.summonContracts > 0)) return;
     if (!mode) return;
     if (stage !== 'wish' && ['infinite', 'chaos'].includes(mode)) {
+      clearNotice();
       stage = 'wish';
       refresh();
       $('#summon-wish').focus();
       return;
     }
+    clearNotice();
     busy = true;
     $('#inn-frame iframe')?.contentWindow?.postMessage({ type: 'summon-surge' }, location.origin);
     refresh();
@@ -131,18 +179,15 @@ export function createSummoning(context) {
         close();
       } else {
         const brief = $('#summon-wish').value.trim();
-        const pool = library().archives.npcs.filter(
-          (npc) =>
-            npc.name !== '潘多拉' &&
-            !library().characters.some((member) => member.setting.name === npc.name),
-        );
+        const pool = knownNpcSummonPool(library());
         const npc =
           source === 'npc'
             ? mode === 'npc'
               ? pool.find((npc) => npc.id === $('#summon-npc').value)
               : pool[Math.floor(Math.random() * pool.length)]
             : null;
-        if (source === 'npc' && !npc) throw Error('没有可召唤的已知NPC，此次未消耗契约。');
+        if (source === 'npc' && !npc)
+          throw Error('没有已解锁的NPC。主线NPC需通关对应世界第六关，此次未消耗契约。');
         const npcInput = npc
           ? {
               ...structuredClone(npc),

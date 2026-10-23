@@ -31,6 +31,12 @@ export function conversationText(player, reply) {
   return `玩家：${player.content}\n\n${reply.speakerName || 'AI回应'}：${reply.content}`;
 }
 
+export function dungeonMemoryText(record) {
+  return (record.lines || [])
+    .map((line) => `${line.speaker || '旁白'}：${line.text || ''}`)
+    .join('\n\n');
+}
+
 function isConversation(player, reply) {
   return (
     player?.role === 'user' &&
@@ -66,16 +72,14 @@ function memorySources(library, quick = []) {
     });
   }
   for (const [recordIndex, record] of (library.history || []).entries()) {
-    for (const [index, line] of (record.lines || []).entries()) {
-      sources.push({
-        id: `dungeon:${record.runId || recordIndex}:${index}`,
-        kind: 'dungeon',
-        label: `${record.title || '副本经历'} · 第${(line.encounter || 0) + 1}战 · ${line.speaker || '旁白'} · 第${index + 1}条`,
-        text: line.text,
-        target: line,
-        summaryKey: 'summary',
-      });
-    }
+    sources.push({
+      id: `dungeon:${record.runId || recordIndex}`,
+      kind: 'dungeon',
+      label: record.title || '副本经历',
+      text: dungeonMemoryText(record),
+      target: record,
+      summaryKey: 'summary',
+    });
   }
   return sources.filter((item) => typeof item.text === 'string' && item.text.trim());
 }
@@ -155,25 +159,39 @@ export function memoryHistory(library, records) {
         summaries.set(JSON.stringify([line.speaker, line.text]), line.summary);
     }
   }
-  return records.map((record) => ({
-    title: record.title,
-    ...(record.setting ? { setting: record.setting } : {}),
-    confirmedEvents: (record.confirmedEvents || record.lines || []).map((line) => ({
-      speaker: line.speaker,
-      text: memoryText(
-        line.text,
-        line.summary || summaries.get(JSON.stringify([line.speaker, line.text])),
-      ),
-      ...(Number.isInteger(line.encounter) ? { encounter: line.encounter } : {}),
-      ...(line.stage ? { stage: line.stage } : {}),
-    })),
-    unresolvedHook: record.unresolvedHook || (record.complete ? record.nextHook : null),
-  }));
+  return records.map((record) => {
+    const original = (library.history || []).find((entry) =>
+      record.runId
+        ? entry.runId === record.runId
+        : entry.title === record.title &&
+          dungeonMemoryText(entry) ===
+            dungeonMemoryText({ lines: record.confirmedEvents || record.lines }),
+    );
+    const summary = original && restoredSummary(original.summary, dungeonMemoryText(original));
+    return {
+      title: record.title,
+      ...(record.setting ? { setting: record.setting } : {}),
+      confirmedEvents: summary
+        ? [{ speaker: '副本记忆', text: `【已确认副本摘要】${summary.text}` }]
+        : (record.confirmedEvents || record.lines || []).map((line) => ({
+            speaker: line.speaker,
+            text: memoryText(
+              line.text,
+              line.summary || summaries.get(JSON.stringify([line.speaker, line.text])),
+            ),
+            ...(Number.isInteger(line.encounter) ? { encounter: line.encounter } : {}),
+            ...(line.stage ? { stage: line.stage } : {}),
+          })),
+      unresolvedHook: record.unresolvedHook || (record.complete ? record.nextHook : null),
+    };
+  });
 }
 
 export function previousDungeonMemory(library) {
   const record = library.history?.at(-1);
   if (!record) return '';
+  const summary = restoredSummary(record.summary, dungeonMemoryText(record));
+  if (summary) return `${record.title}\n\n【已确认副本摘要】${summary.text}`;
   return [
     record.title,
     ...(record.lines || [])
@@ -186,6 +204,17 @@ export function previousDungeonMemory(library) {
 
 export function scriptMemory(library, book) {
   const record = library.history?.find((item) => item.runId === book.runId);
+  const summary = record && restoredSummary(record.summary, dungeonMemoryText(record));
+  if (summary) {
+    const confirmed = new Set((record.lines || []).map((line) => line.text));
+    let included = false;
+    return scriptProse(book, (text) => {
+      if (!confirmed.has(text)) return text;
+      if (included) return '';
+      included = true;
+      return `【已确认副本摘要】${summary.text}`;
+    });
+  }
   const summaries = new Map((record?.lines || []).map((line) => [line.text, line.summary]));
   return scriptProse(book, (text) => memoryText(text, summaries.get(text)));
 }

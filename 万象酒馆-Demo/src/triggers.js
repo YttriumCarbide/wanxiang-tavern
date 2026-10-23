@@ -31,7 +31,15 @@ export const TRIGGER_TARGETS = Object.freeze({
   allEnemies: '全体存活敌人',
   lowestEnemy: '生命最低敌人',
 });
-export const POSITIVE_BUFFS = Object.freeze(['haste', 'strength', 'guard', 'regen', 'iron']);
+export const POSITIVE_BUFFS = Object.freeze([
+  'haste',
+  'strength',
+  'guard',
+  'regen',
+  'iron',
+  'meteor',
+  'overload',
+]);
 export const NEGATIVE_BUFFS = Object.freeze([
   'bind',
   'weak',
@@ -45,6 +53,36 @@ function integer(value, min, max, label) {
   if (!Number.isInteger(value) || value < min || value > max) throw Error(label + '无效');
   return value;
 }
+export function normalizeCondition(condition) {
+  const { type, value } = condition;
+  const subject = condition.subject === undefined ? {} : { subject: condition.subject };
+  if (condition.subject !== undefined && !['self', 'target'].includes(condition.subject))
+    throw Error('条件对象无效');
+  if (
+    ['front', 'rear', 'hasPositive', 'hasNegative', 'hasBuff', 'hasShield', 'noBuff'].includes(type)
+  )
+    return { type, ...subject };
+  if (['hpBelow', 'hpAbove', 'mpBelow', 'mpAbove'].includes(type))
+    return { type, value: integer(value, 0, 100, '资源百分比'), ...subject };
+  if (type === 'roundAtLeast')
+    return { type, value: integer(value, 0, 99, '回合条件'), ...subject };
+  if (type === 'mark') return { type, value: integer(value, 1, 3, '标记层数'), ...subject };
+  if (type === 'buff' && Object.hasOwn(BUFFS, condition.buff))
+    return { type, buff: condition.buff, value: integer(value, 1, 9, '状态层数'), ...subject };
+  throw Error('触发条件无效');
+}
+export function effectMetadata(effect) {
+  const result = {};
+  if (effect.target !== undefined) {
+    if (!['self', 'target', 'lowestAlly', 'allAllies', 'allEnemies'].includes(effect.target))
+      throw Error('效果目标无效');
+    result.target = effect.target;
+  }
+  if (effect.when) result.when = normalizeCondition(effect.when);
+  if (effect.perMark !== undefined) result.perMark = integer(effect.perMark, 1, 8, '标记强化');
+  if (effect.consumeMark === true) result.consumeMark = true;
+  return result;
+}
 export function normalizeRules(value) {
   if (!Array.isArray(value) || value.length > 4) throw Error('触发规则最多四条');
   return value.map((rule, index) => {
@@ -55,21 +93,7 @@ export function normalizeRules(value) {
     const conditions = rule.conditions || [];
     if (!Array.isArray(conditions) || conditions.length > 6)
       throw Error('条件最多六项，全部同时满足');
-    const checked = conditions.map((condition) => {
-      const { type, value } = condition;
-      if (
-        ['front', 'rear', 'hasPositive', 'hasNegative', 'hasBuff', 'hasShield', 'noBuff'].includes(
-          type,
-        )
-      )
-        return { type };
-      if (['hpBelow', 'hpAbove', 'mpBelow', 'mpAbove'].includes(type))
-        return { type, value: integer(value, 0, 100, '资源百分比') };
-      if (type === 'roundAtLeast') return { type, value: integer(value, 0, 99, '回合条件') };
-      if (type === 'buff' && Object.hasOwn(BUFFS, condition.buff))
-        return { type, buff: condition.buff, value: integer(value, 1, 9, '状态层数') };
-      throw Error('触发条件无效');
-    });
+    const checked = conditions.map(normalizeCondition);
     if (!Array.isArray(rule.effects) || !rule.effects.length || rule.effects.length > 3)
       throw Error('每条规则需要一至三项效果');
     const effects = rule.effects.map((effect) => {
@@ -78,7 +102,7 @@ export function normalizeRules(value) {
         (effect.type !== 'buff' || !POSITIVE_BUFFS.includes(effect.buff))
       )
         throw Error('持续效果只支持正面状态光环');
-      if (!['damage', 'heal', 'mana', 'shield', 'buff', 'cleanse'].includes(effect.type))
+      if (!['damage', 'heal', 'mana', 'shield', 'buff', 'cleanse', 'mark'].includes(effect.type))
         throw Error('触发效果无效');
       if (effect.type === 'cleanse') {
         if (
@@ -87,20 +111,32 @@ export function normalizeRules(value) {
           effect.buffs.some((key) => !Object.hasOwn(BUFFS, key))
         )
           throw Error('净化状态无效');
-        return { type: 'cleanse', buffs: [...new Set(effect.buffs)] };
+        return { type: 'cleanse', buffs: [...new Set(effect.buffs)], ...effectMetadata(effect) };
       }
       if (effect.type === 'buff' && !Object.hasOwn(BUFFS, effect.buff)) throw Error('触发状态无效');
       return {
         type: effect.type,
-        value: integer(effect.value, 1, effect.type === 'buff' ? 3 : 20, '触发数值'),
+        value: integer(
+          effect.value,
+          1,
+          ['buff', 'mark'].includes(effect.type) ? 3 : 20,
+          '触发数值',
+        ),
         ...(effect.type === 'buff' ? { buff: effect.buff } : {}),
+        ...effectMetadata(effect),
       };
     });
+    if (rule.scope && !['round', 'battle', 'expedition'].includes(rule.scope))
+      throw Error('触发次数范围无效');
     return {
       id: 'rule-' + index,
       mode: rule.mode,
       ...(rule.mode === 'event'
-        ? { event: rule.event, limit: integer(rule.limit, 1, 50, '单趟触发次数') }
+        ? {
+            event: rule.event,
+            limit: integer(rule.limit, 1, 50, '触发次数'),
+            ...(rule.scope ? { scope: rule.scope } : {}),
+          }
         : {}),
       conditions: checked,
       target: rule.target,
@@ -151,14 +187,30 @@ export function rulesFor(definition) {
         key: 'equipment:' + equipment.id + ':' + index,
         name: equipment.name,
       });
-  return result;
+  return result.flatMap((rule) => {
+    if (rule.mode !== 'continuous' || !rule.effects.some((effect) => effect.buff === 'regen'))
+      return [rule];
+    const permanent = rule.effects.filter((effect) => effect.buff !== 'regen');
+    const finite = {
+      ...rule,
+      key: rule.key + ':regen',
+      mode: 'event',
+      event: 'conditionStart',
+      scope: 'battle',
+      limit: 1,
+      effects: rule.effects.filter((effect) => effect.buff === 'regen'),
+    };
+    return permanent.length ? [{ ...rule, effects: permanent }, finite] : [finite];
+  });
 }
-export function conditionsMet(state, owner, conditions = []) {
-  const unit = state.units[owner];
-  if (!unit || unit.hp <= 0) return false;
-  const has = (keys) => keys.some((key) => unit.buffs[key] > 0);
-  return conditions.every(({ type, value, buff }) => {
-    const position = state.formation.indexOf(owner);
+export function conditionsMet(state, owner, conditions = [], context = {}) {
+  if (!state.units[owner] || state.units[owner].hp <= 0) return false;
+  return conditions.every(({ type, value, buff, subject }) => {
+    const id = subject === 'target' ? context.target : owner;
+    const unit = state.units[id];
+    if (!unit || unit.hp <= 0) return false;
+    const has = (keys) => keys.some((key) => unit.buffs[key] > 0);
+    const position = state.formation.indexOf(id);
     if (type === 'front') return position >= 0 && position < 3;
     if (type === 'rear') return position >= 3;
     if (type === 'hasPositive') return has(POSITIVE_BUFFS);
@@ -168,6 +220,8 @@ export function conditionsMet(state, owner, conditions = []) {
     if (type === 'hasShield') return unit.block > 0;
     if (type === 'buff') return (unit.buffs[buff] || 0) >= value;
     if (type === 'roundAtLeast') return state.round >= value;
+    if (type === 'mark')
+      return (id === owner && context.mark !== undefined ? context.mark : unit.mark || 0) >= value;
     const ratio = type.startsWith('hp')
       ? unit.hp / unit.maxHp
       : unit.maxMp
@@ -213,7 +267,7 @@ export function auraValue(state, definitions, id, buff) {
     for (const rule of rulesFor(definition)) {
       if (
         rule.mode !== 'continuous' ||
-        !conditionsMet(state, definition.id, rule.conditions) ||
+        !conditionsMet(state, definition.id, rule.conditions, { target: id }) ||
         !triggerTargets(state, definition.id, rule.target).includes(id)
       )
         continue;

@@ -267,11 +267,19 @@ export async function smoke({ browser, baseURL, output, settingsChecked, environ
     );
     assert.equal(await page.locator('#hover-tooltip').count(), 1);
 
-    const phone = await browser.newPage({ viewport: { width: 844, height: 390 }, hasTouch: true });
-    pages.push(phone);
-    phone.on('pageerror', (error) => errors.push(error.message));
-    await legacySession(phone);
-    await phone.goto(baseURL);
+    const phonePage = await browser.newPage({
+      viewport: { width: 844, height: 390 },
+      hasTouch: true,
+    });
+    pages.push(phonePage);
+    phonePage.on('pageerror', (error) => errors.push(error.message));
+    await legacySession(phonePage);
+    await phonePage.goto(baseURL);
+    await phonePage.locator('#landscape-frame').waitFor({ state: 'visible' });
+    const phone = await (
+      await phonePage.locator('#landscape-frame').elementHandle()
+    ).contentFrame();
+    await phone.waitForFunction(() => !!window.demo);
     await phone.evaluate(() => demo.startBattle());
     await phone.waitForFunction(
       () => demo.getStatus().mode === 'battle' && !demo.getStatus().animating,
@@ -290,7 +298,7 @@ export async function smoke({ browser, baseURL, output, settingsChecked, environ
       const rect = await card.boundingBox();
       assert(rect.y + rect.height <= timeline.y, 'Resource bars must not overlap the timeline');
     }
-    await phone.screenshot({ path: path.join(output, 'landscape.png') });
+    await phonePage.screenshot({ path: path.join(output, 'landscape.png') });
     await phone.locator('#clear').tap();
     await phone.locator('[data-unit="aegis"]').tap();
     await phone.locator('[data-unit="mossSlime"]').tap();

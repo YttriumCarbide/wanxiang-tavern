@@ -71,9 +71,10 @@ export async function guestRoomChecks({ browser, baseURL, output }) {
       camera.position.set(0, 1.46, -2.65);
       camera.lookAt(0, 1.35, -4.3);
     });
-    await page.locator('[data-door=shop].visible').waitFor();
+    assert.equal(await page.locator('[data-door=shop]').count(), 0);
+    assert.equal(await page.locator('[data-door=condenser]').count(), 0);
     await page.waitForTimeout(350);
-    await page.screenshot({ path: path.join(output, 'corridor-supplies.png') });
+    await page.screenshot({ path: path.join(output, 'corridor-far-wall.png') });
     await page.evaluate(() => {
       const { camera } = window.corridorPreview;
       camera.position.set(0.85, 1.46, 1);

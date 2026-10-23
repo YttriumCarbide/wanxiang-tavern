@@ -5,6 +5,7 @@ import { restoreLibrary, compileRoster } from '../ai/library.js';
 import { loadCustomPortraits } from '../portraits.js';
 import { packagePortraitAssets, restorePortraitAssets } from '../portrait-archive.js';
 import { newBattle, preview } from '../engine.js';
+import { discardUnfinishedTrip } from '../abandoned-trip.js';
 
 export const SAVES_STORAGE_KEY = 'wanxiang.saves.v1';
 
@@ -161,6 +162,10 @@ export function applySaveSnapshot(context, snapshot) {
   const storage = context.storage || getStorage();
 
   session.ai.library = restoreLibrary(snapshot.data.library);
+  discardUnfinishedTrip(session.ai.library);
+  storage?.removeItem('wanxiang.battle-checkpoint.v1');
+  session.runtime.mode = 'inn';
+  session.battle.playing = false;
   session.ai.activeScript = null;
   session.journey.expedition = null;
   session.battle.history = [];

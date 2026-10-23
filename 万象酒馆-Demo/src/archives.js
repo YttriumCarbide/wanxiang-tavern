@@ -1,4 +1,4 @@
-import { routeKey } from './worlds.js';
+import { routeKey, isEndless } from './worlds.js';
 import { memoryText } from './memory.js';
 
 const normalizedName = (name) =>
@@ -35,7 +35,20 @@ export function archiveMilestone(library, book, record, encounter) {
   record.archiveClaims ||= [];
   const partyNames = new Set((book.party || []).map((member) => normalizedName(member.name)));
   const map = (book.exploration ? routeKey(book.exploration) : record.map) || 'ruins';
-  const source = { runId: record.runId, scriptId: book.id, title: book.title, map, encounter };
+  const source = {
+    runId: record.runId,
+    scriptId: book.id,
+    title: book.title,
+    map,
+    encounter,
+    ...(book.exploration
+      ? {
+          sequence: book.exploration.sequence,
+          endless: isEndless(book.exploration),
+          ...(book.exploration.world ? { worldId: book.exploration.world.id } : {}),
+        }
+      : {}),
+  };
   for (const [index, npc] of (book.npcs || []).entries()) {
     if (
       (npc.encounter ?? 0) !== encounter ||

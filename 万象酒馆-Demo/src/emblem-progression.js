@@ -1,5 +1,11 @@
 import { HEROES } from './data.js';
-import { EMBLEM_ID, OVERLOAD_EMBLEM_ID } from './emblems.js';
+import {
+  EMBLEM_ID,
+  OVERLOAD_EMBLEM_ID,
+  DRAGON_EMBLEM_ID,
+  MASK_EMBLEM_ID,
+  SUPREME_EMBLEM_ID,
+} from './emblems.js';
 
 /** Grant the authored ring once at the corridor Boss boundary, never in a preview. */
 export function prepareCorridorRing(library, expedition) {
@@ -36,10 +42,29 @@ export function prepareCorridorRing(library, expedition) {
   return true;
 }
 
-export function overloadLessonEligible(library) {
-  return (
-    library.progression?.pandoraJoined &&
-    library.progression.settlements.length >= 3 &&
-    !library.emblems?.includes(OVERLOAD_EMBLEM_ID)
-  );
+/** Authored Boss rewards are granted once on entering the matching final battle. */
+export function prepareBossEmblem(library, expedition) {
+  const route = expedition.exploration;
+  if (!route || route.world || expedition.index !== 4) return false;
+  const id =
+    route.map === 'ruins'
+      ? route.sequence === 2
+        ? OVERLOAD_EMBLEM_ID
+        : route.sequence === 5
+          ? DRAGON_EMBLEM_ID
+          : null
+      : route.map === 'forest'
+        ? route.sequence === 1
+          ? SUPREME_EMBLEM_ID
+          : route.sequence === 3
+            ? MASK_EMBLEM_ID
+            : null
+        : null;
+  if (!id || library.emblems?.includes(id)) return false;
+  library.emblems ||= [];
+  library.emblems.push(id);
+  expedition.emblemArrival = { id, shown: false };
+  if (id === OVERLOAD_EMBLEM_ID && library.progression)
+    library.progression.overloadLesson = 'equip';
+  return true;
 }

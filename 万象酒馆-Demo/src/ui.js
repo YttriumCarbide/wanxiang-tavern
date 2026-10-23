@@ -4,6 +4,7 @@ import { html } from './shared/html.js';
 import { createEventScope } from './shared/events.js';
 import { BUFFS } from './data.js';
 import { effectiveBuff } from './engine.js';
+import { definition } from './catalog.js';
 
 export const escapeText = (s) =>
   String(s).replace(
@@ -12,14 +13,14 @@ export const escapeText = (s) =>
   );
 export function statusIcons(s, id, end = s, events = []) {
   let markupString = '';
-  const chip = (key, value, future, text) =>
+  const chip = (key, value, future, text, label = key === 'shield' ? '护盾' : BUFFS[key]?.name) =>
     html`<span
       class="buff-icon ${future ? 'future-buff' : 'current-buff'}"
       data-buff="${key}"
       data-count="${value}"
       tabindex="0"
       data-tooltip="${escapeText(text)}"
-      aria-label="${future ? '预计新增' : ''}${key === 'shield' ? '护盾' : BUFFS[key].name}${value}"
+      aria-label="${future ? '预计新增' : ''}${escapeText(label || key)}${value}"
       >${icon(key)}<b>${future ? '+' : ''}${value}</b></span
     >`;
   for (const k of Object.keys(BUFFS)) {
@@ -43,6 +44,29 @@ export function statusIcons(s, id, end = s, events = []) {
     // A round-local status can expire before final state, while its queued effect still matters.
     if (k === 'bind' && !now && !after && events.some((event) => event.after.units[id]?.buffs.bind))
       markupString += chip(k, 1, true, `预计禁锢：本回合生效，结束解除\n${b.text}`);
+  }
+  const mark = definition(s, id)?.mechanicMark;
+  if (mark) {
+    const now = s.units[id]?.mark || 0;
+    const after = end.units[id]?.mark || 0;
+    const label = mark.name || '标记';
+    const maximum = mark.max || 3;
+    if (now > 0)
+      markupString += chip(
+        'mark',
+        now,
+        false,
+        `${label} ${now}/${maximum}${now !== after ? `\n预计结算后 ${after}/${maximum}` : ''}\n本场战斗内积累与消耗，下场清空。`,
+        label,
+      );
+    if (after > now)
+      markupString += chip(
+        'mark',
+        after - now,
+        true,
+        `预计新增 ${label} ${after - now}\n结算后共 ${after}/${maximum}`,
+        label,
+      );
   }
   return markupString;
 }

@@ -146,7 +146,7 @@ test('character request classifies canon, design, complete mechanics and current
   );
   assert.deepEqual(context.mechanics.passives.locations, ['前场', '后场', '全战斗', '战斗外']);
   assert.equal(context.request.brief, '光明水晶法师');
-  assert(messages.at(-1).content.includes('CHARACTER v3'));
+  assert(messages.at(-1).content.includes('CHARACTER v4'));
 });
 
 test('script v2 allows sparse casts, narration, silent actions and empty optional stages', () => {

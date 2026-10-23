@@ -18,7 +18,7 @@ import { dungeonLoot, settleEther } from '../archives.js';
 import { resetRelationshipGains } from '../relationships.js';
 import { recordSettlement } from '../companion-events.js';
 import { developerOption } from '../generation-options.js';
-import { prepareCorridorRing } from '../emblem-progression.js';
+import { prepareCorridorRing, prepareBossEmblem } from '../emblem-progression.js';
 
 /** @param {import('./context.js').AppContext} context */
 export function createJourney(context) {
@@ -65,6 +65,8 @@ export function createJourney(context) {
     document.body.classList.add('in-battle');
     if (continuing) applyEncounterGrowth(session.journey.expedition, session.ai.library.characters);
     if (prepareCorridorRing(session.ai.library, session.journey.expedition))
+      context.generation.save();
+    if (prepareBossEmblem(session.ai.library, session.journey.expedition))
       context.generation.save();
     session.battle.state = beginEncounter(session.journey.expedition);
     session.battle.state.items = structuredClone(session.ai.library.inventory.items);

@@ -16,6 +16,7 @@ const effectTypes = new Set([
   'selfHeal',
   'selfMana',
   'mana',
+  'mark',
 ]);
 const integer = (value, minimum = 0) => Number.isInteger(value) && value >= minimum;
 const slot = (value) => integer(value) && value < 3;

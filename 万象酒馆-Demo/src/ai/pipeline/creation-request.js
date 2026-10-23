@@ -1,4 +1,5 @@
-import { normalizeEquipment, equipmentBudget } from '../../equipment.js';
+import { equipmentBudget } from '../../equipment.js';
+import { equipmentGenerationPlan, compileEquipmentDesign } from '../../equipment-generation.js';
 import { finalizeRequest } from './prompt-processing.js';
 
 export function creationItems(input) {
@@ -29,6 +30,7 @@ export function creationItems(input) {
       map: item.map,
       script,
       budget: equipmentBudget(item.value),
+      designPlan: equipmentGenerationPlan(item),
     };
   });
 }
@@ -68,12 +70,14 @@ export function creationResponse(content, expected) {
   }
   if (!Array.isArray(raw.items) || raw.items.length !== expected.length)
     throw Error('造物结果遗漏或增加物品');
+  if (raw.schemaVersion !== 2 || raw.items.some((item) => !item.design || item.stats || item.rules))
+    throw Error('造物API需使用v2设计格式：提供design，不填写实际stats、rules数值');
   const seen = new Set();
   return raw.items.map((item) => {
     const source = expected.find((entry) => entry.id === item.id);
     if (!source || seen.has(item.id)) throw Error('造物来源ID重复或不存在');
     seen.add(item.id);
-    return normalizeEquipment(item, source);
+    return compileEquipmentDesign(item, source);
   });
 }
 export function creationPlan(input, profile, countTokens) {

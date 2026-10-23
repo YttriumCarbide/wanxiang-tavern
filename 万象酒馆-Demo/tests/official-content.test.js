@@ -241,7 +241,7 @@ test('Edith restores as an official guest and pays health for real capped mana a
   library.party[0] = 'official-edith';
   library.party[2] = library.campaign.protagonistId;
   const restored = restoreLibrary(library);
-  assert.equal(restored.characters.find((entry) => entry.id === 'official-edith').combat.hp, 77);
+  assert.equal(restored.characters.find((entry) => entry.id === 'official-edith').combat.hp, 48);
   const legacy = newLibrary();
   legacy.characters.push(officialCharacter('edith'));
   assert(restoreLibrary(legacy).characters.some((entry) => entry.id === 'official-aegis'));

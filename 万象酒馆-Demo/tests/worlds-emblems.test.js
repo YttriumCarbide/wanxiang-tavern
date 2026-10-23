@@ -64,7 +64,10 @@ test('world construction validates mechanics, excludes teammate appearances and 
   const bad = worldFixture();
   bad.enemies[0].portrait = 'https://bad.example/evil.svg';
   assert.throws(() => normalizeWorld(bad), /外貌/);
-  assert.throws(() => normalizeWorld(worldFixture(), original), /重复/);
+  assert.deepEqual(
+    normalizeWorld(worldFixture(), original).enemyDefinitions,
+    original.enemyDefinitions,
+  );
   assert.deepEqual(restoreWorlds([original]), [original]);
   const other = worldFixture();
   other.id = 'world-second';
@@ -217,8 +220,11 @@ test('balance sums multi-position damage, shares among three positions and keeps
   assert(result.valid);
   for (const target of state.formation.slice(0, 3))
     assert.equal(state.units[target].hp - result.final.units[target].hp, 6);
-  assert.equal(result.final.units[state.formation[0]].buffs.weak, 1);
-  assert.equal(result.final.units[state.formation[1]].buffs.weak, 1);
+  const attacked = result.events.find((event) => event.type === 'enemy');
+  assert.equal(attacked.after.units[state.formation[0]].buffs.weak, 1);
+  assert.equal(attacked.after.units[state.formation[1]].buffs.weak, 1);
+  assert.equal(result.final.units[state.formation[0]].buffs.weak, undefined);
+  assert.equal(result.final.units[state.formation[1]].buffs.weak, undefined);
   assert(!result.final.units[state.formation[2]].buffs.weak);
   state.formation[1] = null;
   const empty = preview(state, []);

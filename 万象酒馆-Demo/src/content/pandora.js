@@ -18,10 +18,10 @@ export const PANDORA = {
       ap: 1,
       mp: 3,
       target: 'enemy',
-      text: '玩偶变大扑向敌人，造成14伤害，施加1虚弱。',
+      text: '玩偶变大扑向敌人，造成14伤害，施加2层虚弱。',
       effects: [
         { type: 'damage', value: 14 },
-        { type: 'buff', buff: 'weak', value: 1 },
+        { type: 'buff', buff: 'weak', value: 2 },
       ],
     },
     {
@@ -37,12 +37,10 @@ export const PANDORA = {
   entrySkill: {
     id: 'entry-pandora',
     name: '魔偶时停扑击',
-    text: '换入时对正对位敌人造成5点伤害并施加1层禁锢（取消其本回合未执行的行动）。',
+    text: '换入时自身受到5伤害，禁锢正对位敌人，取消其本回合尚未执行的行动。',
     target: 'opposite',
-    effects: [
-      { type: 'damage', value: 5 },
-      { type: 'buff', buff: 'bind', value: 1 },
-    ],
+    selfDamage: 5,
+    effects: [{ type: 'buff', buff: 'bind', value: 1 }],
   },
 };
 
@@ -81,6 +79,6 @@ export const PANDORA_SETTING = {
   entrySkill: {
     name: '魔偶时停扑击',
     description:
-      '换入前场时怀中玩偶扑击正对位敌人，眼眸表盘跳动短暂封印时间刻度，造成5点伤害并施加1层禁锢。',
+      '换入前场时自身受到5伤害，眼眸表盘跳动，禁锢正对位敌人，取消其本回合尚未执行的行动。',
   },
 };

@@ -6,7 +6,9 @@ import { MAP_IDS } from '../content/biomes.js';
 import { HEROES, BUFFS } from '../data.js';
 import { characterInputSchema } from './character-schema.js';
 import { checkOutputSchema } from './schema-check.js';
-import { normalizeRules } from '../triggers.js';
+import { normalizeRules, effectMetadata } from '../triggers.js';
+import { compileCharacterDesign } from '../character-generation.js';
+import { finalSkillText, finalPassiveText } from '../skill-text.js';
 import {
   normalizeCharacterSetting,
   formatCharacterSetting,
@@ -47,8 +49,9 @@ const display = (value) => value.replaceAll('<', '‹').replaceAll('>', '›');
 /** Fresh character calls use strict two-layer JSON; old stored prose remains readable. */
 export function parseCharacterOutput(content) {
   const raw = stripRetiredFields(parseGeneratedJSON(content));
-  checkOutputSchema(raw, characterInputSchema(), 'character');
-  if (raw.schemaVersion !== 3) fail('角色schemaVersion必须为3，根节点为schemaVersion/setting/data');
+  checkOutputSchema(raw, characterInputSchema(raw.schemaVersion), 'character');
+  if (![3, 4].includes(raw.schemaVersion))
+    fail('角色schemaVersion必须为3或4，根节点为schemaVersion/setting/data');
   if (
     Object.keys(raw).some(
       (key) =>
@@ -77,7 +80,7 @@ function effects(list, path = 'effects') {
     object(effect, '技能效果');
     const type = choice(
       effect.type,
-      ['damage', 'heal', 'shield', 'buff', 'cleanse', 'selfHeal', 'selfMana', 'selfShield'],
+      ['damage', 'heal', 'shield', 'buff', 'cleanse', 'selfHeal', 'selfMana', 'selfShield', 'mark'],
       '效果类型',
     );
     if (type === 'cleanse') {
@@ -86,13 +89,14 @@ function effects(list, path = 'effects') {
       return {
         type,
         buffs: effect.buffs.map((key) => choice(key, Object.keys(BUFFS), '净化状态')),
+        ...effectMetadata(effect),
       };
     }
     return {
       type,
-      value: integer(effect.value, 1, type === 'buff' ? 6 : 32, '效果数值'),
+      value: integer(effect.value, 1, type === 'buff' ? 6 : type === 'mark' ? 3 : 32, '效果数值'),
       ...(type === 'buff' ? { buff: choice(effect.buff, Object.keys(BUFFS), '状态ID') } : {}),
-      ...(effect.target ? { target: effect.target } : {}),
+      ...effectMetadata(effect),
     };
   });
 }
@@ -104,8 +108,16 @@ function skill(value, id, allowPassive = true, strict = false) {
     text: resourceText(display(text(value.text, '技能说明', 300))),
   };
   if (value.passive === true && allowPassive) {
-    if (value.rules)
-      return { ...common, passive: true, location: '全战斗', rules: normalizeRules(value.rules) };
+    if (value.rules) {
+      const result = {
+        ...common,
+        passive: true,
+        location: '全战斗',
+        rules: normalizeRules(value.rules),
+      };
+      result.text = finalPassiveText(result);
+      return result;
+    }
     const location = choice(value.location, ['前场', '后场', '全战斗', '战斗外'], '被动位置');
     const result = { ...common, passive: true, location };
     if (strict && (value.buff || value.teamFrontBuff)) {
@@ -138,8 +150,9 @@ function skill(value, id, allowPassive = true, strict = false) {
     effects: effects(value.effects, `${id}.effects`),
   };
 }
-export function normalizeCharacter(raw, id) {
+export function normalizeCharacter(raw, id, input = {}) {
   raw = stripRetiredFields(raw);
+  if (raw.schemaVersion === 4) raw = compileCharacterDesign(raw, input);
   object(raw, '角色');
   if (![1, 2, 3].includes(raw.schemaVersion)) fail('角色schemaVersion无效');
   const sourceSetting = object(raw.setting, '设定层');
@@ -201,6 +214,14 @@ export function normalizeCharacter(raw, id) {
       skill(item, `generated-${index + 1}`, true, raw.schemaVersion === 3),
     ),
   };
+  if (data.mechanicMark) {
+    combat.mechanicMark = {
+      name: text(data.mechanicMark.name, '标记名称', 15),
+      max: integer(data.mechanicMark.max, 1, 3, '标记上限'),
+    };
+    if (data.basicAttackMark)
+      combat.basicAttackMark = integer(data.basicAttackMark, 1, 1, '普攻积累标记');
+  }
   if (data.entrySkill || setting.entrySkill) {
     const entryData = data.entrySkill || {};
     const entrySetting = setting.entrySkill || {};
@@ -223,6 +244,11 @@ export function normalizeCharacter(raw, id) {
       name: combat.entrySkill.name,
       description: combat.entrySkill.text,
     };
+  }
+  for (const ability of [...combat.skills, combat.entrySkill].filter(Boolean)) {
+    ability.text = ability.passive
+      ? finalPassiveText(ability, combat.mechanicMark?.name)
+      : finalSkillText(ability, combat.mechanicMark?.name);
   }
   return {
     id,

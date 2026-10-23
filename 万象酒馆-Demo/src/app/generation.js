@@ -1,4 +1,10 @@
 import { explorationSpec } from '../exploration.js';
+import { needsContinuationWorld } from '../continuation-world.js';
+import {
+  validateServiceAccount,
+  readServiceAccount,
+  serviceAccountBase,
+} from '../ai/vertex-service-account.js';
 import { DEFINITIONS } from '../data.js';
 import { routeKey } from '../worlds.js';
 import { nextArcPhase } from '../story-arc.js';
@@ -44,6 +50,7 @@ import { memoryHistory } from '../memory.js';
 import { developerOption } from '../generation-options.js';
 import { prepareSwapLesson } from '../companion-events.js';
 import { rearUnlocked } from '../formation-access.js';
+import { npcSummonStatus } from '../summoning.js';
 
 const libraryKey = 'wanxiang.worldbooks.v1';
 export function createGeneration(context) {
@@ -70,6 +77,7 @@ export function createGeneration(context) {
       checkbox.checked = session.ai.generationOptions[checkbox.dataset.generationOption];
     if (session.runtime.mode === 'battle')
       $('#back-inn').hidden = !developerOption(session.ai.generationOptions, 'allowRetreat');
+    context.generationAccess?.refresh();
   }
   renderDeveloperOptions();
   for (const checkbox of document.querySelectorAll('[data-generation-option]')) {
@@ -90,6 +98,7 @@ export function createGeneration(context) {
       session.ai.generationOptions = next;
       renderDeveloperOptions();
       context.onboarding?.generationModeChanged();
+      context.onboarding?.refresh();
       status('游戏选项已保存。');
     });
   }
@@ -221,9 +230,7 @@ export function createGeneration(context) {
         .join('') || '<p>尚未启程。在副本门点击“进入剧本”开始本章。</p>';
     $('#ai-cancel').hidden = !session.ai.busy;
     $('#generation-reset-undo').hidden = !hasGeneratedRecovery(storage);
-    $('#ai-profile-save').textContent = pendingPortal
-      ? `保存并${pendingPortal === 'character' ? '召唤' : '进入剧本'}`
-      : '保存当前连接';
+    renderCredentialRetention();
   }
   function showBook(value) {
     if (!value) return;
@@ -274,6 +281,23 @@ export function createGeneration(context) {
       ? '由本页请求AI，接口需允许跨域。密钥仅在当前页面保留；本阶段预设准备与结果校验仍使用本机服务。'
       : '由本机服务请求AI，可使用保存在本机的连接密钥。';
   }
+  function renderCredentialRetention() {
+    const browser = $('#ai-requestMode').value === 'browser';
+    const temporary = browser && (!context.apiClient.staticMode || !$('#ai-rememberKey').checked);
+    $('#ai-key-retention').textContent = browser
+      ? temporary
+        ? '当前仅本次使用：密钥不会写入设备，更新页面或关机后需要重新输入。'
+        : '密钥会保存在此设备，刷新、代码更新及正常关机重启后保留；不会进入普通备份。'
+      : '';
+    $('#ai-remember-and-save').hidden = !context.apiClient.staticMode || !temporary;
+    $('#ai-profile-save').textContent = temporary
+      ? '仅本次使用（关闭后需重填）'
+      : pendingPortal
+        ? `保存并${pendingPortal === 'character' ? '召唤' : '进入剧本'}`
+        : '保存当前连接';
+  }
+  events.on($('#ai-rememberKey'), 'change', renderCredentialRetention);
+  events.on($('#ai-requestMode'), 'change', renderCredentialRetention);
   events.on($('#ai-requestMode'), 'change', renderTransport);
   function renderProvider() {
     const base = $('#ai-baseUrl').value;
@@ -284,8 +308,12 @@ export function createGeneration(context) {
         !base.includes('/endpoints/'));
     $('#ai-vertex-auth').hidden = !native;
     $('#ai-provider-hint').hidden = !native;
-    $('#ai-provider-hint').textContent =
-      $('#ai-vertexAuth').value === 'oauth'
+    const serviceAccount = native && $('#ai-vertexAuth').value === 'service-account';
+    $('#ai-service-account-fields').hidden = !serviceAccount;
+    $('#ai-key').closest('label').hidden = serviceAccount;
+    $('#ai-provider-hint').textContent = serviceAccount
+      ? '导入或粘贴服务账号 JSON，验证后保存。项目自动识别，地区默认为 global；模型名自行填写。私钥只用于本地签名，访问令牌自动获取，不会进入普通备份。'
+      : $('#ai-vertexAuth').value === 'oauth'
         ? '标准模式：Base URL 填 https://区域-aiplatform.googleapis.com/v1/projects/项目ID/locations/区域，全球区域用 aiplatform.googleapis.com；密钥栏填有效OAuth访问令牌。令牌过期后需更新，本页不保存服务账号私钥。模型ID手动填写。'
         : '快捷模式：Base URL 填 https://aiplatform.googleapis.com/v1，密钥栏填Vertex API Key，模型栏填Google控制台中的Gemini模型ID。原生接口无需 /chat/completions，模型ID手动填写。';
   }
@@ -295,10 +323,35 @@ export function createGeneration(context) {
       $('#ai-baseUrl').value === 'https://api.openai.com/v1'
     )
       $('#ai-baseUrl').value = 'https://aiplatform.googleapis.com/v1';
+    if ($('#ai-provider').value === 'vertex') $('#ai-vertexAuth').value = 'service-account';
     renderProvider();
   });
   events.on($('#ai-baseUrl'), 'input', renderProvider);
   events.on($('#ai-vertexAuth'), 'change', renderProvider);
+  events.on($('#ai-service-import'), 'click', () => $('#ai-service-file').click());
+  events.on($('#ai-service-file'), 'change', async () => {
+    const file = $('#ai-service-file').files[0];
+    if (!file) return;
+    if (file.size > 20000) {
+      $('#ai-service-status').textContent = 'JSON 文件过大';
+      return;
+    }
+    $('#ai-service-account').value = await file.text();
+    $('#ai-service-file').value = '';
+    $('#ai-service-validate').click();
+  });
+  events.on($('#ai-service-validate'), 'click', async () => {
+    try {
+      const account = await validateServiceAccount($('#ai-service-account').value);
+      $('#ai-baseUrl').value = serviceAccountBase(
+        account.project,
+        $('#ai-vertexLocation').value.trim() || 'global',
+      );
+      $('#ai-service-status').textContent = `JSON 有效 · 项目 ${account.project} · 保存连接后生效`;
+    } catch (failure) {
+      $('#ai-service-status').textContent = failure.message;
+    }
+  });
   function fillProfile() {
     const profile = profiles?.[$('#ai-kind').value];
     if (!profile) return;
@@ -317,8 +370,17 @@ export function createGeneration(context) {
     renderProvider();
     modelPicker.clear();
     for (const key of ['jsonMode', 'rememberKey']) $(`#ai-${key}`).checked = profile[key];
+    renderCredentialRetention();
     $('#ai-jsonMode').disabled = false;
     $('#ai-key').value = '';
+    $('#ai-service-account').value = '';
+    $('#ai-service-account').placeholder = profile.hasApiKey
+      ? '已配置服务账号；留空保持，不回显私钥'
+      : '粘贴完整服务账号 JSON';
+    $('#ai-vertexLocation').value = profile.vertexLocation || 'global';
+    $('#ai-service-status').textContent = profile.vertexProject
+      ? `项目 ${profile.vertexProject}`
+      : '';
     $('#ai-key').placeholder =
       profile.requestMode === 'browser'
         ? context.apiClient.hasCredential($('#ai-kind').value, profile)
@@ -382,6 +444,15 @@ export function createGeneration(context) {
     if (data.kind === 'summary') data.contextSize = Number($('#ai-contextSize').value);
     for (const key of ['jsonMode', 'rememberKey', 'strictJson'])
       data[key] = $(`#ai-${key}`).checked;
+    if (data.vertexAuth === 'service-account' && !$('#ai-service-account-fields').hidden) {
+      data.apiKey = $('#ai-service-account').value.trim();
+      data.vertexLocation = $('#ai-vertexLocation').value.trim() || 'global';
+      data.vertexProject = data.apiKey
+        ? readServiceAccount(data.apiKey).project_id
+        : profiles?.[data.kind]?.vertexProject || '';
+      if (data.vertexProject)
+        data.baseUrl = serviceAccountBase(data.vertexProject, data.vertexLocation);
+    }
     if (data.requestMode === 'browser' && !context.apiClient.staticMode) {
       if (data.clearKey || data.apiKey.trim())
         context.apiClient.setCredential(data.kind, data, data.clearKey ? '' : data.apiKey.trim());
@@ -395,7 +466,12 @@ export function createGeneration(context) {
     profiles = await api('config', captureProfile());
     fillProfile();
     $('#api-preset-name').value = pendingName;
-    status('当前连接已保存；填写预设名称并点击“保存为 API 预设”可加入列表。');
+    status(
+      profiles[$('#ai-kind').value].requestMode === 'browser' &&
+        !profiles[$('#ai-kind').value].rememberKey
+        ? '当前连接仅本次有效，密钥没有写入设备。点击“长期保存此连接”可在重启后继续使用。'
+        : '当前连接已保存到此设备，更新或正常重启后可继续使用；普通备份不包含密钥。',
+    );
   }
   function ready(profile, kind) {
     if (!profile?.model?.trim()) return false;
@@ -516,6 +592,7 @@ export function createGeneration(context) {
             {
               schemaVersion: 2,
               setting: generated.setting,
+              ...(generated.levelUpLines ? { levelUpLines: generated.levelUpLines } : {}),
               data: { ...generated.combat, archetype: generated.archetype },
             },
             generated.id,
@@ -658,9 +735,23 @@ export function createGeneration(context) {
     if (session.runtime.mode !== 'inn' || session.ai.busy || session.runtime.disposed) return;
     if (session.runtime.needsStart) return context.onboarding.open();
     if (context.onboarding && !context.onboarding.allowPortal(kind)) return;
+    if (
+      kind === 'script' &&
+      generationEnabled(session.ai.generationOptions) &&
+      needsContinuationWorld(library(), session.journey.selectedNode)
+    )
+      return context.destinations.prepareContinuation();
     try {
+      if (kind === 'character' && summonInput?.npc) {
+        const npc = library().archives.npcs.find((entry) => entry.id === summonInput.npc.id);
+        if (!npc) throw Error('此NPC已不在归档中，请重新选择。');
+        const status = npcSummonStatus(library(), npc);
+        if (!status.allowed) throw Error(status.reason + '，此次未消耗契约。');
+      }
       if (kind === 'character' && context.onboarding?.summonCompanion()) return;
       if (kind === 'character' && !summonInput) return context.summoning.open();
+      if (kind === 'character' && !generationEnabled(session.ai.generationOptions))
+        throw Error('已跳过AI生成；官设召唤仍可使用，AI角色召唤暂不可用。');
       if (kind === 'character' && !library().inventory.summonContracts)
         throw Error('召唤需要一份契约，完成副本后可获得。');
       if (kind === 'character') pendingSummon = summonInput;
@@ -765,6 +856,17 @@ export function createGeneration(context) {
     $('#ai-profile-save'),
     'click',
     guard(async () => {
+      await saveProfile();
+      if (pendingPortal && pendingPortal === $('#ai-kind').value)
+        await portal(pendingPortal, pendingSummon);
+    }),
+  );
+  events.on(
+    $('#ai-remember-and-save'),
+    'click',
+    guard(async () => {
+      $('#ai-rememberKey').checked = true;
+      renderCredentialRetention();
       await saveProfile();
       if (pendingPortal && pendingPortal === $('#ai-kind').value)
         await portal(pendingPortal, pendingSummon);

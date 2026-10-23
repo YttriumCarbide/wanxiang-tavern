@@ -116,6 +116,15 @@ export function createOnboarding(context) {
       return;
     }
     const campaign = state();
+    if (
+      !generationEnabled(session.ai.generationOptions) &&
+      ['table', 'invite'].includes(campaign.tutorial)
+    ) {
+      campaign.tutorial = 'shop';
+      campaign.tableTalkCompleted = true;
+      context.generation.save();
+      shown = null;
+    }
     if (session.runtime.mode === 'inn' && campaign.tutorial === 'reward') {
       campaign.tutorial = 'summon-return';
       context.generation.save();
@@ -154,7 +163,11 @@ export function createOnboarding(context) {
         state().tutorial = 'table';
         context.generation.save();
         refresh();
-        context.shell.toast('长景月汐已加入队伍，到圆桌坐下，邀请她一起出发。');
+        context.shell.toast(
+          generationEnabled(session.ai.generationOptions)
+            ? '长景月汐已加入队伍，到圆桌坐下，邀请她一起出发。'
+            : '长景月汐已加入队伍，已跳过AI交流教学，去补给角买一件补给吧。',
+        );
       });
       return;
     }
@@ -211,7 +224,7 @@ export function createOnboarding(context) {
     $('#new-game-title').textContent = enabled ? '你的故事，从这里开始' : '青缘的旅程';
     $('.creation-heading p').textContent = enabled
       ? '写下你是谁。角色 API 会保留你的设想，补全设定与战斗技能。'
-      : '使用青缘开局。可在设置的开发者模式中开启主角 AI 生成。';
+      : '使用青缘开局。关闭开发者模式中的“跳过AI生成”即可创建自己的主角。';
     if (!enabled) review(context.generation.defaultProtagonist());
     else {
       reviewed = null;
@@ -303,11 +316,11 @@ export function createOnboarding(context) {
   events.on($('#tutorial-action'), 'click', () => {
     if (guide.dataset.step === 'ether') return advance('reward');
     if (guide.dataset.step === 'shop') {
-      const frame = $('#inn-frame iframe');
-      if (frame) frame.src = './corridor.html?shop=1';
+      $('#inn-frame iframe')?.contentWindow?.assetPreview?.moveTo('supplies');
       return;
     }
     if (guide.dataset.step === 'condenser') {
+      $('#inn-frame iframe')?.contentWindow?.assetPreview?.moveTo('supplies');
       context.shell.toast('点击售货机旁的以太凝聚器，认识凝聚与兑换页面。');
       return;
     }
@@ -372,7 +385,7 @@ export function createOnboarding(context) {
             : state().tutorial === 'condenser'
               ? '先点开售货机旁的以太凝聚器，了解以太和装备的用途。'
               : state().tutorial === 'shop'
-                ? '先前往走廊的虚空售货机，购买一件补给。'
+                ? '先前往酒馆补给角的虚空售货机，购买一件补给。'
                 : '先完成以太结算和首次召唤教学。',
         );
         return false;
@@ -526,16 +539,13 @@ export function createOnboarding(context) {
       }
     },
     condenserOpened() {
+      return state()?.tutorial === 'condenser';
+    },
+    condenserLearned() {
       if (state()?.tutorial !== 'condenser') return;
       state().tutorial = 'depart-again';
       context.generation.save();
-      dialogue.show(
-        [
-          '这里就是凝聚器。左侧是旅途中留下的物品，凝聚后会出现可兑换的装备；先不用生成，也不用购买。',
-          '下一次编织剧本时，我们会在整备里学习怎样把装备交给合适的人。一个角色最多佩戴三件，出发前随时可以调整。',
-        ],
-        refresh,
-      );
+      refresh();
     },
     preparationOpened() {
       if (!state()?.completed || !state().firstRecruit || tutorialTasks(state()).equipmentIntro)

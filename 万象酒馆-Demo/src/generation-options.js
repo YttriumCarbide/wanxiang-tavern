@@ -1,9 +1,11 @@
 export const GENERATION_OPTIONS_KEY = 'wanxiang.generation-options.v1';
 
 export function restoreGenerationOptions(value) {
+  const skipAiGeneration = skippingAi(value);
   return {
-    protagonistApi: value?.developerMode !== true || value?.protagonistApi !== false,
-    scriptApi: value?.developerMode !== true || value?.scriptApi !== false,
+    skipAiGeneration,
+    protagonistApi: !skipAiGeneration,
+    scriptApi: !skipAiGeneration,
     developerMode: value?.developerMode === true,
     allowRetreat: value?.allowRetreat === true,
     editArchives: value?.editArchives === true,
@@ -11,8 +13,14 @@ export function restoreGenerationOptions(value) {
 }
 
 /** Only an explicit developer override may bypass a real generation request. */
-export function generationEnabled(options, key) {
-  return options.developerMode !== true || options[key] !== false;
+export function skippingAi(options) {
+  if (options?.developerMode !== true) return false;
+  if (typeof options.skipAiGeneration === 'boolean') return options.skipAiGeneration;
+  return options.protagonistApi === false || options.scriptApi === false;
+}
+
+export function generationEnabled(options) {
+  return !skippingAi(options);
 }
 
 export const developerOption = (options, key) =>

@@ -54,6 +54,7 @@ test('original portrait bytes and color profile survive storage and service rest
 
 test('AI defaults preserve an existing Qingyuan for explicit developer fallback', () => {
   assert.deepEqual(restoreGenerationOptions(null), {
+    skipAiGeneration: false,
     protagonistApi: true,
     scriptApi: true,
     developerMode: false,

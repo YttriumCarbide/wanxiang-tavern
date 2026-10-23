@@ -63,17 +63,19 @@ test('manual summaries preserve each original layer and replace only confirmed c
     },
   ];
   assert(
-    memoryHistory(library, copiedHistory)[0].confirmedEvents[0].text.startsWith('【已确认摘要】'),
+    memoryHistory(library, copiedHistory)[0].confirmedEvents[0].text.startsWith(
+      '【已确认副本摘要】',
+    ),
   );
   assert(!previousDungeonMemory(library).includes('未展示的未来剧情'));
-  assert(previousDungeonMemory(library).includes('【已确认摘要】'));
+  assert(previousDungeonMemory(library).includes('【已确认副本摘要】'));
   const book = {
     schemaVersion: 3,
     runId: 'run-one',
     story: [library.history[0].lines[0].text, '未经历的未来必须保留'],
   };
   const projected = scriptMemory(library, book);
-  assert(projected.includes('【已确认摘要】'));
+  assert(projected.includes('【已确认副本摘要】'));
   assert(projected.includes('未经历的未来必须保留'));
   assert.equal(book.story[0], original.history[0].lines[0].text);
   rollback();

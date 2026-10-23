@@ -201,3 +201,30 @@ body.leaving #scene-fade {
   border-color: #efce99;
   outline: 0;
 }
+
+.supply-open {
+  position: fixed;
+  z-index: 10;
+  bottom: 28px;
+  left: calc(50% - 96px);
+  transform: translateX(-50%);
+  min-width: 180px;
+  padding: 12px 20px;
+  border: 1px solid #c7a575aa;
+  border-radius: 7px;
+  background: #30261ff0;
+  color: #f2e3c5;
+  box-shadow: 0 4px 24px #0005;
+  cursor: pointer;
+  font: 14px system-ui;
+}
+#condenser-open {
+  left: calc(50% + 96px);
+  border-color: #82c7ceaa;
+  background: #16363bf0;
+}
+.supply-open:hover,
+.supply-open:focus-visible {
+  border-color: #f5dfa1;
+  box-shadow: 0 0 22px #dbc27a55;
+}

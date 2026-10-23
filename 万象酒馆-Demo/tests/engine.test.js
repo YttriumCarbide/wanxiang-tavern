@@ -92,7 +92,11 @@ test('slow applied after an enemy action leaves this timeline fixed and affects 
   assert(result.valid, JSON.stringify(result.invalid));
   assert.deepEqual(result.slots, slots);
   assert.equal(result.events.find((event) => event.actor === 'warden').at, enemyAt);
-  assert.equal(result.final.units.warden.buffs.slow, 2);
+  assert.equal(
+    result.events.find((event) => event.type === 'hero').after.units.warden.buffs.slow,
+    2,
+  );
+  assert.equal(result.final.units.warden.buffs.slow, 1);
   assert.equal(result.slows.warden, undefined);
   assert(enemyTimeline(advance(result)).indexOf('warden') > enemyAt);
 });

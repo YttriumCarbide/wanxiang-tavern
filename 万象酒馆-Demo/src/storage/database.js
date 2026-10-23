@@ -37,7 +37,11 @@ export async function openDatabase({
     get: (key) => structuredClone(cache.get(key)),
     entries: () => [...cache].map(([key, value]) => [key, structuredClone(value)]),
     async write(entries, deleted = []) {
-      const transaction = connection.transaction(STORE, 'readwrite');
+      const transaction = connection.transaction(
+        STORE,
+        'readwrite',
+        entries.some(([key]) => key === 'api.config') ? { durability: 'strict' } : undefined,
+      );
       const done = completed(transaction);
       const store = transaction.objectStore(STORE);
       for (const key of deleted) store.delete(key);

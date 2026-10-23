@@ -1,4 +1,6 @@
 import { createRawResponse } from './raw-response.js';
+import { generationEnabled } from '../generation-options.js';
+import { needsContinuationWorld, continuationInput } from '../continuation-world.js';
 import { BASE_WORLDS, worldRegion, routeKey } from '../worlds.js';
 import { addWorldRoute } from '../exploration.js';
 import { REGIONS } from '../content/regions.js';
@@ -89,7 +91,9 @@ export function createDestinations(context) {
     '<i class="singularity-stars"></i><i class="singularity-halo"></i><i class="singularity-disc"></i><i class="singularity-core"></i><span>MULTIVERSE</span>';
   $('#destination-preview').append(hole);
   let expanding = null;
-  function openWorld(extension = false) {
+  let continuation = false;
+  function openWorld(extension = false, prepareContinuation = false) {
+    continuation = prepareContinuation;
     const id = session.journey.regionMap;
     const region = regionFor(id);
     expanding = extension
@@ -103,9 +107,15 @@ export function createDestinations(context) {
           enemyDefinitions: {},
         }
       : null;
-    form.querySelector('h2').textContent = extension ? '扩充世界观' : '构筑前往的世界';
+    form.querySelector('h2').textContent = prepareContinuation
+      ? '构筑继续探索'
+      : extension
+        ? '扩充世界观'
+        : '构筑前往的世界';
     form.querySelector('#world-brief').value = extension
-      ? '沿着已有故事增加新的重要地点、事件、伏笔和敌人，保留原有世界。'
+      ? prepareContinuation
+        ? '承接前六关的故事，为接下来的旅途引入至少三个不同的新目标、新敌人和新Boss。'
+        : '沿着已有故事增加新的重要地点、事件、伏笔和敌人，保留原有世界。'
       : '';
     form.querySelector('#world-status').textContent = '';
     form.showModal();
@@ -150,6 +160,7 @@ export function createDestinations(context) {
             {},
             ...(original.worlds || []).map((world) => world.enemyDefinitions),
           ),
+          ...(continuation ? { continuation: continuationInput(original, expanding.id) } : {}),
         },
         { signal: request.signal },
       );
@@ -177,7 +188,7 @@ export function createDestinations(context) {
       session.journey.selectedNode = structuredClone(recommended(world.id));
       stripPage = Math.floor(maps().indexOf(world.id) / 5);
       form.close();
-      setStage('region');
+      setStage(continuation ? 'route' : 'region');
       context.shell.toast(`世界已保存 · 输入约 ${result.request?.tokens?.inputEstimate || 0} TK`);
     } catch (failure) {
       status.textContent = failure.name === 'AbortError' ? '已取消，未保存世界。' : failure.message;
@@ -241,7 +252,13 @@ export function createDestinations(context) {
     $('#destination-start').disabled = !nodesFor(routeKey(node)).some(
       (item) => item.id === node.id,
     );
-    $('#destination-start').textContent = `启程 · 第 ${node.sequence + 1} 处 →`;
+    $('#destination-start').textContent =
+      generationEnabled(session.ai.generationOptions) &&
+      needsContinuationWorld(session.ai.library, node)
+        ? '构筑继续探索 →'
+        : node.world || node.sequence >= 6
+          ? '继续探索 →'
+          : `启程 · 第 ${node.sequence + 1} 处 →`;
     $('#destination-map')
       .querySelectorAll('[data-map-node]')
       .forEach((button) => {
@@ -319,6 +336,8 @@ export function createDestinations(context) {
     dialog.dataset.region = map;
     $('#destination-region-name').textContent = region.name;
     $('#destination-region-confirm').textContent = `确认「${region.name}」 →`;
+    $('#destination-region-confirm').dataset.requiresAi = String(map === 'singularity');
+    expand.dataset.requiresAi = 'true';
     $('#destination-region-count').textContent =
       `${String(index + 1).padStart(2, '0')} / ${String(availableMaps.length).padStart(2, '0')}`;
     for (const id of ['destination-region-prev', 'destination-region-next'])
@@ -533,11 +552,23 @@ export function createDestinations(context) {
   events.on($('#destination-close'), 'click', () => dialog.close());
   events.on($('#destination-start'), 'click', () => {
     if (stage !== 'route' || !session.journey.selectedNode || session.ai.busy) return;
+    if (
+      generationEnabled(session.ai.generationOptions) &&
+      needsContinuationWorld(session.ai.library, session.journey.selectedNode)
+    ) {
+      openWorld(true, true);
+      return;
+    }
     dialog.close();
     void context.generation.portal('script');
   });
   return {
     open,
+    prepareContinuation() {
+      if (!dialog.open) dialog.showModal();
+      setStage('route');
+      openWorld(true, true);
+    },
     dispose() {
       request?.abort();
       form.remove();

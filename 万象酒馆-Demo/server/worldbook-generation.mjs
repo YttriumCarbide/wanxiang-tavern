@@ -2,6 +2,29 @@ import { readFile } from 'node:fs/promises';
 import { newWorldEntry } from '../src/ai/worldbook.js';
 import { OUTPUT_OPEN, OUTPUT_CLOSE } from './output-envelope.mjs';
 
+export async function characterGenerationSources() {
+  const names = [
+    'character-definition',
+    'character-mechanics',
+    'character-output',
+    'growth-numbers',
+  ];
+  return {
+    rules: Object.fromEntries(
+      await Promise.all(
+        names.map(async (name) => [
+          name,
+          await readFile(new URL(`../prompts/worldbook/${name}.md`, import.meta.url), 'utf8'),
+        ]),
+      ),
+    ),
+    reference: await readFile(
+      new URL('../prompts/worldbook/character-example.json', import.meta.url),
+      'utf8',
+    ),
+  };
+}
+
 function compactExample(value) {
   if (value?.schemaVersion === 3 && Array.isArray(value.story)) return value;
   if (value?.schemaVersion === 2 && Array.isArray(value.scenes)) {

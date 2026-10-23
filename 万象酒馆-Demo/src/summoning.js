@@ -1,5 +1,39 @@
 import { HEROES } from './data.js';
 import { officialCharacter } from './ai/library.js';
+import { BASE_WORLDS } from './worlds.js';
+import { REGIONS } from './content/regions.js';
+
+/** Canon NPCs join only after their six-site story; custom and endless encounters stay free. */
+export function npcSummonStatus(library, npc) {
+  const sources = npc.sources?.length ? npc.sources : [npc.source || {}];
+  const locked = new Set();
+  for (const source of sources) {
+    const script = library.scripts?.find((entry) => entry.id === source.scriptId);
+    const node = script?.exploration;
+    const record = library.history?.find((entry) => entry.runId === source.runId);
+    const map = source.worldId || node?.world?.id || source.map || node?.map || record?.map;
+    const sequence = source.sequence ?? node?.sequence;
+    if (source.endless || node?.world || sequence >= 6 || !BASE_WORLDS.includes(map))
+      return { allowed: true, reason: '' };
+    const route = library.exploration?.[map];
+    if (route?.cleared?.some((entry) => entry.sequence === 5) || route?.completed >= 6)
+      return { allowed: true, reason: '' };
+    locked.add(REGIONS[map].name);
+  }
+  return {
+    allowed: false,
+    reason: `通关${[...locked].join('或')}第六关后可召唤`,
+  };
+}
+
+export function knownNpcSummonPool(library) {
+  return (library.archives?.npcs || []).filter(
+    (npc) =>
+      npc.name !== '潘多拉' &&
+      !library.characters.some((member) => member.setting.name === npc.name) &&
+      npcSummonStatus(library, npc).allowed,
+  );
+}
 
 /** Worldbook prose is editable; official identities and combat definitions stay code-owned. */
 export function officialSummonPool(library, book) {

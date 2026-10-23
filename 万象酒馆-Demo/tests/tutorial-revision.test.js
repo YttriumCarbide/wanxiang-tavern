@@ -3,11 +3,22 @@ import assert from 'node:assert/strict';
 import { newCampaign, firstCompanion } from '../src/campaign.js';
 import { defaultProtagonist } from '../src/content/qingyuan.js';
 import { compileRoster, restoreLibrary } from '../src/ai/library.js';
-import { prepareCorridorRing, overloadLessonEligible } from '../src/emblem-progression.js';
+import { prepareCorridorRing, prepareBossEmblem } from '../src/emblem-progression.js';
 import { newExpedition, beginEncounter, completeEncounter, chooseRest } from '../src/expedition.js';
 import { preview, advance, makeEngage, intent } from '../src/engine.js';
 import { COMBINE_SKILL, EMBLEM_ID, OVERLOAD_EMBLEM_ID } from '../src/emblems.js';
 import { upgradeTutorialRevision } from '../src/ai/tutorial-revision.js';
+
+test('new Edith begins with 48 hp while saved level growth is retained', () => {
+  const library = newCampaign(defaultProtagonist());
+  const edith = library.characters.find((member) => member.id === 'official-edith');
+  assert.equal(edith.combat.hp, 48);
+  edith.growth = { level: 3, xp: 20, rarity: 'rare', seed: 12, bonus: { hp: 4 } };
+  const restored = restoreLibrary(library).characters.find((member) => member.id === edith.id);
+  assert.equal(restored.combat.hp, 48);
+  assert.equal(restored.growth.level, 3);
+  assert.equal(restored.growth.bonus.hp, 4);
+});
 
 export function corridorFixture() {
   const library = newCampaign(defaultProtagonist());
@@ -59,7 +70,7 @@ test('corridor Boss grants and equips a full ring exactly once; balance precedes
   assert(result.valid, JSON.stringify(result.invalid));
   const state = advance(result);
   assert.equal(state.units.ruinsGate.buffs.balance, 1);
-  assert.equal(intent(state, 'ruinsGate').effects[0].value, 60);
+  assert.equal(intent(state, 'ruinsGate').effects[0].value, 24);
   const hit = preview(state, []);
   assert(hit.valid);
   const index = hit.events.findIndex(
@@ -69,19 +80,16 @@ test('corridor Boss grants and equips a full ring exactly once; balance precedes
   const before = index ? hit.events[index - 1].after : state;
   const after = hit.events[index].after;
   for (const id of state.formation.slice(0, 3))
-    assert.equal(before.units[id].hp - after.units[id].hp, 20);
+    assert.equal(before.units[id].hp - after.units[id].hp, 8 - (before.units[id].buffs.iron || 0));
   assert(after.units.ruinsGate.openingAttackUsed);
   const next = advance(hit);
   assert(!intent(next, 'ruinsGate').name.includes('开幕'));
   assert.equal(opening.units[actor].emblemCharge, 6, 'preview does not mutate charge');
   assert.deepEqual(restoreLibrary(library).emblems, [EMBLEM_ID]);
-  library.progression.pandoraJoined = true;
-  library.progression.settlements = ['1', '2'];
-  assert(!overloadLessonEligible(library));
-  library.progression.settlements.push('3');
-  assert(overloadLessonEligible(library));
-  library.emblems.push(OVERLOAD_EMBLEM_ID);
-  assert(!overloadLessonEligible(library));
+  const thirdBoss = { index: 4, exploration: { map: 'ruins', sequence: 2 } };
+  assert(prepareBossEmblem(library, thirdBoss));
+  assert(library.emblems.includes(OVERLOAD_EMBLEM_ID));
+  assert(!prepareBossEmblem(library, thirdBoss));
 });
 
 test('ring worldbook migration appends narrative without altering player text or injection switches', () => {

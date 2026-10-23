@@ -424,8 +424,11 @@ export async function onboardingChecks({ browser, baseURL, output }) {
     library = await page.evaluate(() => demo.getLibrary());
     assert.equal(library.characters.filter((entry) => entry.setting.name === '长景月汐').length, 1);
     assert(library.party.includes('official-aegis'));
-    assert.equal(library.campaign.tutorial, 'table');
+    assert.equal(library.campaign.tutorial, 'shop');
     assert.equal(requests.length, 0, 'The first contracted companion does not call a model API');
+    const bookshelfFrame = await innReady();
+    await bookshelfFrame.evaluate(() => window.assetPreview.placeNow('bookshelf'));
+    await bookshelfFrame.locator('#bookshelf-open').click();
     await page.locator('#records-open').click();
     assert.equal(await page.locator('#records-text h4').count(), 5);
     assert((await page.locator('#records-text').textContent()).includes('战斗测试占位剧本'));
@@ -435,17 +438,17 @@ export async function onboardingChecks({ browser, baseURL, output }) {
     await frame.evaluate(() => window.assetPreview.placeNow('table'));
     await frame.locator('#talk-open').click();
     await finishDialogue();
-    await page.locator('#chat-input').fill('长景月汐，要和我一起去下一个副本吗？');
+    assert.equal(await page.locator('#chat-send').isDisabled(), true);
+    await page.locator('#chat-input').fill('开发者模式不必取得AI回复');
     await page.locator('#chat-input').press('Enter');
     await page.waitForFunction(() => demo.getLibrary().campaign.tutorial === 'shop');
+    assert.equal(requests.length, 0, 'The developer shortcut never sends a chat request');
     await finishDialogue();
     await page.locator('#chat-close').click();
     await page.locator('#tutorial-action').click();
-    await page.waitForFunction(
-      () => document.querySelector('#inn-frame iframe')?.contentWindow.corridorReady,
-    );
-    const corridor = page.frameLocator('#inn-frame iframe');
-    await corridor.locator('[data-door=shop]').click();
+    const supplies = page.frameLocator('#inn-frame iframe');
+    await supplies.locator('#shop-open').waitFor({ state: 'visible' });
+    await supplies.locator('#shop-open').click();
     const gold = (await page.evaluate(() => demo.getLibrary())).inventory.gold;
     await page.locator('[data-shop-category=mana]').click();
     await page.locator('[data-shop-item=mana-potion]').click();
@@ -455,19 +458,23 @@ export async function onboardingChecks({ browser, baseURL, output }) {
     await page.screenshot({ path: path.join(output, 'void-shop.png') });
     await page.locator('#shop-close').click();
     await finishDialogue();
-    await corridor.locator('[data-door=condenser]').click();
+    await supplies.locator('#condenser-open').click();
     await page.locator('#ether-forge').waitFor({ state: 'visible' });
     await finishDialogue();
+    assert.equal((await page.evaluate(() => demo.getLibrary())).campaign.tutorial, 'condenser');
+    await page.locator('#forge-lesson').waitFor({ state: 'visible' });
+    assert((await page.locator('#forge-lesson-text').textContent()).includes('造物 API'));
+    await page.locator('#forge-lesson-next').click();
+    assert.equal(
+      await page.locator('[data-forge-page=exchange]').getAttribute('aria-pressed'),
+      'true',
+    );
+    await page.locator('#forge-lesson-next').click();
     assert.equal((await page.evaluate(() => demo.getLibrary())).campaign.tutorial, 'depart-again');
-    await page.locator('[data-forge-page=exchange]').click();
+    await finishDialogue();
     await page.screenshot({ path: path.join(output, 'tutorial-condenser.png') });
     await page.locator('[data-forge-close]').click();
     await finishDialogue();
-    await corridor.locator('#leave-corridor').click();
-    await page.waitForFunction(() => {
-      const inn = document.querySelector('#inn-frame iframe')?.contentWindow;
-      return inn?.location.pathname.endsWith('/tavern.html') && inn.modelReady === true;
-    });
     const returnedFrame = await innReady();
     await finishDialogue();
     if (await page.locator('#chat-dialog').evaluate((el) => el.open))
@@ -485,7 +492,7 @@ export async function onboardingChecks({ browser, baseURL, output }) {
         demo.getLibrary().campaign.tutorial === 'complete' && demo.getStatus().mode === 'battle',
     );
     assert.equal(
-      (await page.evaluate(() => demo.getLibrary())).relationships['official-aegis'].gains,
+      (await page.evaluate(() => demo.getLibrary())).relationships['official-aegis']?.gains || 0,
       0,
     );
     await page.waitForFunction(() => !document.querySelector('#story-feed').open);

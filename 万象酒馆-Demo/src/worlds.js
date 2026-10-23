@@ -142,23 +142,28 @@ export function normalizeWorld(
   if (!Array.isArray(raw.enemies) || raw.enemies.length > (restoring ? 500 : 30))
     throw Error('新敌人列表无效');
   const added = [];
+  const reused = [];
   for (const enemy of raw.enemies) {
-    if (
-      !/^enemy-[a-z0-9-]{1,70}$/.test(enemy.id) ||
-      DEFINITIONS[enemy.id] ||
-      knownEnemies[enemy.id] ||
-      definitions[enemy.id]
-    )
-      throw Error('新敌人ID重复或无效');
+    if (!enemy || typeof enemy.id !== 'string') throw Error('新敌人ID无效');
+    const old = DEFINITIONS[enemy.id] || definitions[enemy.id] || knownEnemies[enemy.id];
+    if (old) {
+      if (!DEFINITIONS[enemy.id] && !definitions[enemy.id])
+        definitions[enemy.id] = normalizeEnemy(old, { restoring: true });
+      reused.push(enemy.id);
+      continue;
+    }
+    if (!/^enemy-[a-z0-9-]{1,70}$/.test(enemy.id)) throw Error('新敌人ID无效');
     const definition = normalizeEnemy(enemy, { restoring });
     definitions[enemy.id] = definition;
     added.push(enemy.id);
   }
-  if (!existing && !restoring && !added.some((id) => definitions[id].boss))
-    throw Error('新世界至少需要一位全新的Boss');
   for (const id of raw.enemyIds || [])
     if (knownEnemies[id] && !definitions[id]) definitions[id] = normalizeEnemy(knownEnemies[id]);
-  const ids = [...new Set([...(existing?.enemyIds || []), ...(raw.enemyIds || []), ...added])];
+  const ids = [
+    ...new Set([...(existing?.enemyIds || []), ...(raw.enemyIds || []), ...added, ...reused]),
+  ];
+  if (!existing && !restoring && !ids.some((id) => (definitions[id] || DEFINITIONS[id])?.boss))
+    throw Error('新世界至少需要一位Boss');
   if (
     !ids.length ||
     ids.length > 500 ||
@@ -184,6 +189,12 @@ export function normalizeWorld(
     landmarks: [...(existing?.landmarks || []), ...landmarks],
     enemyIds: ids,
     enemyDefinitions: definitions,
+    goals: [
+      ...(existing?.goals || []),
+      ...(Array.isArray(raw.goals) ? raw.goals.map((goal) => text(goal, 1, 2000, '后续目标')) : []),
+    ],
+    continuationPrepared:
+      existing?.continuationPrepared === true || (restoring && raw.continuationPrepared === true),
   };
 }
 export function restoreWorlds(value) {

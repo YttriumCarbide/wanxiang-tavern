@@ -1,5 +1,6 @@
 import { completionURL, validateApiKey } from './compatible.js';
 import { isVertex, vertexURL } from './vertex.js';
+import { readServiceAccount, serviceAccountBase } from './vertex-service-account.js';
 const randomUUID = () => crypto.randomUUID();
 
 export const DEFAULT_OUTPUT_TOKENS = 32768;
@@ -16,20 +17,36 @@ export const API_KINDS = [
 const kinds = API_KINDS;
 const publicProfile = ({ apiKey, ...profile }) => ({ ...profile, hasApiKey: !!apiKey });
 
+function sameConnection(left, right) {
+  return (
+    completionURL(left.baseUrl).href === completionURL(right.baseUrl).href &&
+    left.model === right.model &&
+    (left.provider || 'auto') === (right.provider || 'auto') &&
+    (left.vertexAuth || 'api-key') === (right.vertexAuth || 'api-key')
+  );
+}
+
 function profileFrom(input, old) {
   completionURL(input.baseUrl);
   const provider = input.provider ?? old.provider ?? 'auto';
   const vertexAuth = input.vertexAuth ?? old.vertexAuth ?? 'api-key';
   if (!['auto', 'openai', 'vertex'].includes(provider)) throw Error('接口协议无效');
-  if (!['api-key', 'oauth'].includes(vertexAuth)) throw Error('Vertex 认证类型无效');
+  if (!['api-key', 'oauth', 'service-account'].includes(vertexAuth))
+    throw Error('Vertex 认证类型无效');
   if (isVertex({ ...input, provider })) vertexURL(input);
   if (typeof input.model !== 'string' || input.model.length > 200) throw Error('模型名称无效');
   const apiKey = input.clearKey
     ? ''
     : typeof input.apiKey === 'string' && input.apiKey.trim()
       ? input.apiKey.trim()
-      : old.apiKey;
-  validateApiKey(apiKey);
+      : (old.vertexAuth || 'api-key') === vertexAuth
+        ? old.apiKey
+        : '';
+  const serviceAccount = vertexAuth === 'service-account' && isVertex({ ...input, provider });
+  const account = serviceAccount && apiKey ? readServiceAccount(apiKey) : null;
+  if (!serviceAccount) validateApiKey(apiKey);
+  const vertexProject = account?.project_id || input.vertexProject || old.vertexProject || '';
+  const vertexLocation = input.vertexLocation || old.vertexLocation || 'global';
   if (!['max_tokens', 'max_completion_tokens', 'none'].includes(input.tokenField))
     throw Error('输出长度字段无效');
   const maxTokens = Number(input.maxTokens ?? DEFAULT_OUTPUT_TOKENS);
@@ -48,11 +65,16 @@ function profileFrom(input, old) {
   return {
     provider,
     vertexAuth,
+    vertexProject,
+    vertexLocation,
     requestMode,
     sessionId: old.sessionId || randomUUID(),
     contextSize,
     promptProcessing,
-    baseUrl: input.baseUrl.trim(),
+    baseUrl:
+      serviceAccount && vertexProject
+        ? serviceAccountBase(vertexProject, vertexLocation)
+        : input.baseUrl.trim(),
     model: input.model.trim(),
     apiKey,
     rememberKey: input.rememberKey !== false,
@@ -136,12 +158,32 @@ export function createConnectionStore({ snapshot = {}, initial = {}, save = asyn
     async saveProfile(input) {
       checkKind(input.kind);
       const old = profiles[input.kind];
-      profiles[input.kind] = {
+      const next = {
         ...profileFrom(input, old),
         promptPresetId: old.promptPresetId,
         apiPresetId: old.apiPresetId,
       };
-      await persist();
+      profiles[input.kind] = next;
+      const presetIndex = presets.findIndex((entry) => entry.id === next.apiPresetId);
+      const oldPreset = presets[presetIndex];
+      const repairedPreset =
+        oldPreset &&
+        (!oldPreset.apiKey || oldPreset.rememberKey === false) &&
+        next.apiKey &&
+        next.rememberKey &&
+        sameConnection(oldPreset, next)
+          ? { ...oldPreset, apiKey: next.apiKey, rememberKey: true }
+          : oldPreset;
+      if (repairedPreset !== oldPreset) presets[presetIndex] = repairedPreset;
+      try {
+        await persist();
+      } catch (failure) {
+        if (profiles[input.kind] === next) profiles[input.kind] = old;
+        if (presets[presetIndex] === repairedPreset && oldPreset) presets[presetIndex] = oldPreset;
+        throw Error('连接未能写入此设备，尚未保存。请检查浏览器存储权限或剩余空间。', {
+          cause: failure,
+        });
+      }
       return visible();
     },
     async selectPrompt(kind, id) {
@@ -184,8 +226,16 @@ export function createConnectionStore({ snapshot = {}, initial = {}, save = asyn
         if (!entry) throw Error('API预设不存在');
         if (input.action === 'apply') {
           const { id, name: _name, ...profile } = entry;
+          const current = profiles[input.kind];
+          // A redacted copy of the selected preset must not erase its already saved credential.
+          const keepKey =
+            !profile.apiKey &&
+            current.apiKey &&
+            current.apiPresetId === id &&
+            sameConnection(current, profile);
           profiles[input.kind] = {
             ...profile,
+            ...(keepKey ? { apiKey: current.apiKey, rememberKey: current.rememberKey } : {}),
             promptPresetId: profiles[input.kind].promptPresetId,
             apiPresetId: id,
           };

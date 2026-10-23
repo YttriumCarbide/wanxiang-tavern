@@ -102,10 +102,10 @@ export const ITEMS = Object.freeze(
         '#c2a7e0',
         40,
         [
-          { type: 'buff', buff: 'weak', value: 1 },
-          { type: 'buff', buff: 'vulnerable', value: 1 },
+          { type: 'buff', buff: 'weak', value: 2 },
+          { type: 'buff', buff: 'vulnerable', value: 2 },
         ],
-        '施加1层虚弱和1层易伤。',
+        '施加2层虚弱和2层易伤。',
         'enemy',
       ),
       potion(
@@ -114,10 +114,10 @@ export const ITEMS = Object.freeze(
         '#d497e8',
         80,
         [
-          { type: 'buff', buff: 'weak', value: 2 },
-          { type: 'buff', buff: 'vulnerable', value: 2 },
+          { type: 'buff', buff: 'weak', value: 4 },
+          { type: 'buff', buff: 'vulnerable', value: 4 },
         ],
-        '施加2层虚弱和2层易伤。',
+        '施加4层虚弱和4层易伤。',
         'enemy',
       ),
     ].map((item) => [item.id, item]),

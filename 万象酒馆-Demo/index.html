@@ -37,9 +37,6 @@
         <span class="brand"></span><span id="mode-label"></span>
       </div>
       <nav>
-        <button id="memory-open">总结</button>
-        <button id="archives-open">归档</button>
-        <button id="records-open">记录</button>
         <button id="ai-open">设置</button>
         <button id="party-toggle">准备</button
         ><button id="generation-review" data-generation-review="context" hidden>查看原始回复</button
@@ -80,6 +77,23 @@
         </button>
       </nav>
     </header>
+    <dialog id="bookshelf-dialog" aria-labelledby="bookshelf-title">
+      <header>
+        <div>
+          <small>LIBRARY / 旅人藏书</small>
+          <h2 id="bookshelf-title">酒馆书架</h2>
+        </div>
+        <button id="bookshelf-close" aria-label="关闭书架">×</button>
+      </header>
+      <nav class="bookshelf-actions">
+        <button id="archives-open">归档</button><button id="records-open">记录</button
+        ><button id="memory-open">总结</button>
+      </nav>
+      <div class="bookshelf-layout">
+        <nav id="bookshelf-books"></nav>
+        <article id="bookshelf-text"></article>
+      </div>
+    </dialog>
     <section id="audio-panel" role="region" aria-label="声音设置" hidden>
       <strong>声音</strong>
       <div class="audio-row">
@@ -156,6 +170,7 @@
         ></textarea>
       </label>
       <p id="summon-choice-status" role="status"></p>
+      <p id="summon-method-notice" role="status" hidden></p>
       <footer>
         <span id="summon-contracts" hidden></span><button id="summon-cancel" hidden>取消</button
         ><button id="summon-confirm" class="primary" hidden>开始召唤</button>
@@ -226,11 +241,34 @@
             >
             <label id="ai-vertex-auth" hidden
               >Vertex 认证<select id="ai-vertexAuth">
+                <option value="service-account">完整版本（Service Account JSON）</option>
                 <option value="api-key">API Key（快捷模式）</option>
                 <option value="oauth">OAuth 访问令牌（标准模式）</option>
               </select></label
             >
             <p id="ai-provider-hint" class="ai-hint" hidden></p>
+            <section id="ai-service-account-fields" hidden>
+              <label
+                >服务账号 JSON 内容<textarea
+                  id="ai-service-account"
+                  rows="5"
+                  spellcheck="false"
+                  autocomplete="off"
+                  placeholder="粘贴完整 JSON；已保存时留空保持"
+                ></textarea>
+              </label>
+              <div class="ai-actions">
+                <button id="ai-service-import" type="button">导入 JSON 文件</button
+                ><input
+                  id="ai-service-file"
+                  type="file"
+                  accept=".json,application/json"
+                  hidden
+                /><button id="ai-service-validate" type="button">验证 JSON</button>
+              </div>
+              <label>地区<input id="ai-vertexLocation" value="global" autocomplete="off" /></label>
+              <p id="ai-service-status" role="status"></p>
+            </section>
             <label
               >Base URL<input
                 autocomplete="off"
@@ -260,6 +298,8 @@
                 type="checkbox"
               />在此设备记住密钥（普通备份不包含密钥）</label
             >
+            <p id="ai-key-retention" class="ai-hint" role="status"></p>
+            <button id="ai-remember-and-save" type="button" hidden>长期保存此连接</button>
             <label class="ai-check"
               ><input
                 autocomplete="off"
@@ -344,7 +384,9 @@
               <label
                 ><span
                   ><strong>开发者模式</strong
-                  ><small>普通模式必须调用AI；开启后才允许停用生成、返回和编辑归档。</small></span
+                  ><small
+                    >普通模式必须调用AI；开启后可跳过AI生成、允许中途返回和编辑归档。</small
+                  ></span
                 ><input
                   autocomplete="off"
                   type="checkbox"
@@ -354,24 +396,14 @@
               <div id="developer-options" hidden>
                 <label
                   ><span
-                    ><strong>主角 AI 生成</strong
+                    ><strong>跳过AI生成</strong
                     ><small
-                      >开启后填写设定并调用角色 API 创建主角；关闭时使用青缘开局。</small
+                      >使用青缘和本地测试剧本，跳过教程中必须取得AI回复的步骤，并禁用AI生成按钮。</small
                     ></span
                   ><input
                     autocomplete="off"
                     type="checkbox"
-                    data-generation-option="protagonistApi"
-                    role="switch"
-                /></label>
-                <label
-                  ><span
-                    ><strong>副本 AI 剧本</strong
-                    ><small>开启后进入新副本时调用剧本 API；关闭时使用本地占位剧情。</small></span
-                  ><input
-                    autocomplete="off"
-                    type="checkbox"
-                    data-generation-option="scriptApi"
+                    data-generation-option="skipAiGeneration"
                     role="switch"
                 /></label>
                 <label
@@ -1087,7 +1119,7 @@
       </nav>
       <p id="memory-status" role="status"></p>
       <footer>
-        <button id="memory-generate">生成未总结记录的摘要</button>
+        <button id="memory-generate">全部总结</button>
         <button id="memory-cancel" hidden>取消请求</button>
         <button id="memory-accept" class="primary" disabled>确认使用摘要</button>
       </footer>

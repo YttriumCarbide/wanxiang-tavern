@@ -8,7 +8,7 @@ import { createAiSettings, DEFAULT_OUTPUT_TOKENS } from '../server/ai-settings.m
 import { createPromptStore } from '../server/prompt-store.mjs';
 import { compatibleRequest } from '../server/compatible.mjs';
 import { scriptOutputSchema } from '../src/ai/script-schema.js';
-import { parseCharacterOutput, normalizeCharacter, normalizeScript } from '../src/ai/contracts.js';
+import { normalizeScript } from '../src/ai/contracts.js';
 import { tavernPresetFixture, requestContext } from './fixtures/ai.js';
 import { createMacroExpander } from '../src/ai/prompt-macros.js';
 import { createHelperStorage } from '../server/helper-storage.mjs';
@@ -124,7 +124,7 @@ test('Tavern layered prompts preserve role/order/disabled layers and always end 
   assert(!messages.some((entry) => entry.content.includes('THIS_LAYER_MUST_NOT_BE_SENT')));
   assert.equal(requestContext(messages).request.brief, '独特的盾卫');
   assert.equal(messages.at(-1).role, 'system');
-  assert(messages.at(-1).content.includes('CHARACTER v3'));
+  assert(messages.at(-1).content.includes('CHARACTER v4'));
   raw.prompts[0].content = '{{unsupported::macro}}';
   await assert.rejects(generationMessages('character', { brief: '盾卫' }, raw), /未适配宏/);
   raw.prompts[0].content = '{{__proto__}}';
@@ -152,18 +152,23 @@ test('request-depth injection remains ordered and cannot replace or truncate the
   assert.equal(normalized.prompts.at(-1).injection_order, 0);
 });
 
-test('built-in assistant examples use real parseable character and five-scene script formats', async () => {
+test('character reference contains only approved official base numbers while the script example stays parseable', async () => {
   for (const kind of ['character', 'script']) {
     const example = await readFile(
       new URL(`../prompts/worldbook/${kind}-example.json`, import.meta.url),
       'utf8',
     );
-    if (kind === 'character')
-      assert.equal(
-        normalizeCharacter(parseCharacterOutput(example), 'character-example').combat.attackName,
-        '剑击',
+    if (kind === 'character') {
+      const reference = JSON.parse(example);
+      assert.equal(reference.purpose, 'official-base-stat-reference');
+      assert.deepEqual(
+        reference.characters.map((entry) => entry.name),
+        ['青缘', '伊蒂丝', '长景月汐', '潘多拉'],
       );
-    else
+      assert.equal(reference.characters.find((entry) => entry.name === '伊蒂丝').base.hp, 48);
+      assert.equal(reference.setting, undefined);
+      assert(!example.includes('格雷'));
+    } else
       assert.equal(
         normalizeScript(JSON.parse(example), 'script-example', [
           'official-aegis',

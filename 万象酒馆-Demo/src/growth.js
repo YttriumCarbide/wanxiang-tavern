@@ -1,5 +1,6 @@
 import { applyEquipment } from './equipment.js';
 import { finalSkillText } from './skill-text.js';
+import { characterGenerationPlan } from './character-generation.js';
 /** Persistent growth is separate from authored combat definitions and battle snapshots. */
 export const RARITIES = Object.freeze({
   common: {
@@ -65,6 +66,7 @@ export function xpToNext(level) {
 export function grownCombat(member) {
   const growth = restoreGrowth(member.growth, member.id);
   const combat = structuredClone(member.combat);
+  combat.level = growth.level;
   const b = growth.bonus;
   combat.hp += b.hp;
   combat.mp += b.mp;
@@ -74,7 +76,7 @@ export function grownCombat(member) {
     if (skill.passive) continue;
     skill.mp = Math.max(0, skill.mp - b.manaCost);
     for (const effect of skill.effects) if (effect.type === 'damage') effect.value += b.skillDamage;
-    skill.text = finalSkillText(skill);
+    skill.text = finalSkillText(skill, combat.mechanicMark?.name);
   }
   return combat;
 }
@@ -150,21 +152,21 @@ export function claimCompletionExperience(library, expedition) {
     .map((member) => gainExperience(member, 40));
 }
 export function generationNumbers(input) {
-  const rarity = RARITIES[input.rarity] ? input.rarity : rarityFor(input.rollId || input.brief);
-  const index = Object.keys(RARITIES).indexOf(rarity);
+  const plan = characterGenerationPlan(input);
+  const rarity = plan.rarity;
   return {
+    ...plan,
     rarity,
     name: RARITIES[rarity].name,
     probabilities: Object.fromEntries(Object.entries(RARITIES).map(([id, t]) => [id, t.weight])),
-    hp: [30 + index * 8, 44 + index * 10],
-    mp: [10 + index * 3, 16 + index * 6],
-    attack: [4 + index, 6 + index * 2],
-    skillDamage: [5 + index * 2, 10 + index * 4],
-    limit: input.purpose === 'protagonist' ? 2 : index >= 2 ? '1或2，按强度分配' : '1',
-    skillMana: [2, Math.min(10, 4 + index * 2)],
+    hp: plan.profiles.balanced.hp,
+    mp: plan.profiles.balanced.sp,
+    attack: plan.fixed.attack,
+    limit: plan.fixed.limit,
     growthRates: RARITIES[rarity].rates,
     guidance:
-      '仅分配数据层基础数值，不按原设境界直接无限放大。主动技能伤害与耗蓝匹配；群体技能使用区间低值。普通攻击与技能伤害独立。主角行动次数必须为2。等级初始1，升级总共随机分配1到3点，按growthRates权重抽取，主要提升生命和法力；技能耗蓝成长是减消耗，最多降至0。',
+      plan.guidance +
+      '所有参考均为1级无装备基础值，不含升级、装备、敏捷或结合。初始等级1，成长由代码处理。',
   };
 }
 

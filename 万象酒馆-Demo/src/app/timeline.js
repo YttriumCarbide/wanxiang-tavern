@@ -36,13 +36,45 @@ export function createTimeline(context) {
     const cell = (id, i, readOnly = false, s = session.battle.state) => {
       const cancelled =
           !readOnly && id && session.battle.forecast.deaths.some((d) => d.id === id && d.at < i),
+        bound =
+          !readOnly &&
+          id &&
+          session.battle.forecast.events.some(
+            (event) => event.actor === id && event.at === i && event.blockedBy === 'bind',
+          ),
         move = id ? intent(s, id) : null;
       return html`<button
-        class="time-cell ${id ? 'enemy-cell' : ''} ${cancelled ? 'cancelled' : ''} ${!readOnly && (session.battle.activeCell === i || (!session.battle.playing && session.selection.selectedCell === i)) ? 'playing' : ''} ${readOnly ? 'preview-cell' : ''} ${readOnly && id && id === session.selection.inspectedEnemy ? 'playing' : ''}"
+        class="time-cell ${id ? 'enemy-cell' : ''} ${cancelled ? 'cancelled' : ''} ${bound ? 'bound' : ''} ${!readOnly && (session.battle.activeCell === i || (!session.battle.playing && session.selection.selectedCell === i)) ? 'playing' : ''} ${readOnly ? 'preview-cell' : ''} ${readOnly && id && id === session.selection.inspectedEnemy ? 'playing' : ''}"
         ${readOnly ? `data-preview="${i}"` : `data-start="${i}" data-motion="${id ? `enemy-${id}` : `empty-${i}`}"`}
         ${session.battle.playing || (readOnly && !id) ? 'disabled' : ''}
-        ${id ? `data-tooltip="${escapeText(`${context.roster.get(id).name} · 速度 ${Math.max(1, context.roster.get(id).speed - (s.units[id].buffs.slow || 0))}\n${move.name}：${move.text}`)}"` : ''}
+        ${id ? `data-tooltip="${escapeText(`${context.roster.get(id).name} · ${bound ? '禁锢，本回合行动取消' : `速度 ${Math.max(1, context.roster.get(id).speed - (s.units[id].buffs.slow || 0))}\n${move.name}：${move.text}`}`)}"` : ''}
       >
+        ${
+          bound
+            ? html`<span class="timeline-chain" role="img" aria-label="禁锢，行动取消"
+                ><svg viewBox="0 0 40 32" aria-hidden="true">
+                  <g fill="none" stroke="currentColor" stroke-width="3.5">
+                    <rect
+                      x="3"
+                      y="7"
+                      width="21"
+                      height="11"
+                      rx="5.5"
+                      transform="rotate(-34 13 13)"
+                    />
+                    <rect
+                      x="16"
+                      y="14"
+                      width="21"
+                      height="11"
+                      rx="5.5"
+                      transform="rotate(-34 26 20)"
+                    />
+                    <path d="m15 20 10-7" />
+                  </g></svg
+              ></span>`
+            : ''
+        }
         <span class="num">${opening && !readOnly ? '◇' : i + 1}</span
         ><span class="cell-label"
           >${id ? `${cancelled ? '× ' : ''}${context.roster.get(id).name}` : opening && !readOnly ? '先手' : readOnly ? '我方行动' : '＋'}${id ? html`<small>速度 ${Math.max(1, context.roster.get(id).speed - (s.units[id].buffs.slow || 0))}</small>` : ''}</span
@@ -53,11 +85,15 @@ export function createTimeline(context) {
     for (const a of session.battle.plan) {
       const bad = session.battle.forecast.invalid.find((x) => x.id === a.id),
         skip = session.battle.forecast.skipped.find((x) => x.id === a.id),
+        repeated = session.battle.forecast.events.some(
+          (event) => event.actionId === a.id && event.type === 'hero' && event.repeatCount === 2,
+        ),
         el = document.createElement('div');
       el.className =
         'time-action' +
         (bad ? ' invalid' : '') +
         (skip ? ' skipped' : '') +
+        (repeated ? ' repeated' : '') +
         (session.battle.activeCell === a.start ? ' playing' : '');
       el.style.top = '0px';
       el.style.height = `${row}px`;
@@ -78,7 +114,7 @@ export function createTimeline(context) {
         <div>
           <b
             >${skip ? '× ' : bad ? '! ' : ''}${a.kind === 'item' ? ITEMS[a.item].name : a.kind === 'skill' ? context.roster.ability(a.actor, a.skill).name : a.kind === 'engage' ? `结合${a.followUp ? ' · ' + context.roster.ability(a.actor, a.followUp.skill).name : ''}` : a.kind === 'swap' ? (session.battle.state.units[a.incoming]?.entryReady && context.roster.get(a.incoming)?.entrySkill?.name ? `换入 · ${context.roster.get(a.incoming).entrySkill.name}` : '换入') : '交换'}</b
-          ><small
+          >${repeated ? html`<span class="skill-repeat" aria-label="该行动生效两次">×2</span>` : ''}<small
             >${a.kind === 'item' ? context.roster.get(a.target).name : ['skill', 'engage'].includes(a.kind) ? context.roster.get(a.actor).name : a.kind === 'swap' ? context.roster.get(a.incoming).name : '阵型'}
             · ${a.ap} AP</small
           >

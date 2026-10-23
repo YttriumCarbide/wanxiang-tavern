@@ -17,12 +17,8 @@ export function createBackpack(context) {
   document.querySelector('#battle').append(button);
   const panel = document.createElement('section');
   panel.id = 'backpack-dialog';
-  panel.setAttribute('aria-labelledby', 'backpack-title');
-  panel.innerHTML = html`<header>
-      <h2 id="backpack-title">随身背包</h2>
-      <button id="backpack-close" aria-label="关闭背包">×</button>
-    </header>
-    <div id="backpack-items"></div>`;
+  panel.setAttribute('aria-label', '背包道具');
+  panel.innerHTML = '<div id="backpack-items"></div>';
   panel.className = 'backpack-panel';
   panel.inert = true;
   document.querySelector('#battle').append(panel);
@@ -39,7 +35,7 @@ export function createBackpack(context) {
     button.style.left = `${orb.right + (orb.width < 70 ? 8 : 12)}px`;
     button.style.bottom = `${innerHeight - orb.bottom}px`;
     button.style.setProperty('--bag-size', `${orb.width}px`);
-    panel.style.left = `${orb.left}px`;
+    panel.style.left = `${Math.max(12, Math.min(orb.left, innerWidth - panel.offsetWidth - 12))}px`;
     panel.style.bottom = `${innerHeight - orb.top + 12}px`;
     if (!panel.classList.contains('expanded')) return;
     const counts = session.battle.forecast.final.items || {};
@@ -135,7 +131,9 @@ export function createBackpack(context) {
     button.setAttribute('aria-expanded', 'true');
     render();
   });
-  events.on(panel.querySelector('#backpack-close'), 'click', close);
+  events.on(document, 'pointerdown', (event) => {
+    if (!panel.contains(event.target) && !button.contains(event.target)) close();
+  });
   events.on(window, 'keydown', (event) => {
     if (event.key === 'Escape') close();
   });

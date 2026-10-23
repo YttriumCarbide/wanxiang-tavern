@@ -1,6 +1,14 @@
-import { EMBLEM_ID, OVERLOAD_EMBLEM_ID, canCombine, COMBINE_SKILL } from '../emblems.js';
+import {
+  EMBLEM_ID,
+  OVERLOAD_EMBLEM_ID,
+  DRAGON_EMBLEM_ID,
+  MASK_EMBLEM_ID,
+  SUPREME_EMBLEM_ID,
+  EMBLEMS,
+  canCombine,
+  COMBINE_SKILL,
+} from '../emblems.js';
 import { createDialogue } from './dialogue.js';
-import { overloadLessonEligible } from '../emblem-progression.js';
 
 export function createEmblems(context) {
   const { session, events } = context;
@@ -11,7 +19,7 @@ export function createEmblems(context) {
   document.body.append(hint);
   let showing = false;
   const progress = () => session.ai.library.progression;
-  function speak(text, done) {
+  function speak(text, done, narrator = false) {
     if (showing) return;
     showing = true;
     const edith =
@@ -21,8 +29,8 @@ export function createEmblems(context) {
     dialogue.show(
       [
         {
-          speaker: edith ? '伊蒂丝' : '潘多拉',
-          portrait: `./assets/portraits/${edith ? 'edith' : 'pandora'}.png`,
+          speaker: narrator ? '旁白' : edith ? '伊蒂丝' : '潘多拉',
+          portrait: narrator ? null : `./assets/portraits/${edith ? 'edith' : 'pandora'}.png`,
           text,
         },
       ],
@@ -34,33 +42,8 @@ export function createEmblems(context) {
   }
   function returned() {
     const state = progress();
-    if (
-      overloadLessonEligible(session.ai.library) &&
-      session.ai.library.emblems?.includes(EMBLEM_ID)
-    ) {
-      if (showing || !['none', undefined].includes(state.overloadLesson)) return;
-      state.overloadLesson = 'summon';
-      context.generation.save();
-      speak(
-        '主人……命运桌上又有一颗星亮起来了。这次回应您的是过载纹章士，水无月兰。我们去命运桌迎接她吧，第一次相遇不需要支付以太。她的力量与檀虹羽不同，取得以后，可以在整备里选择让谁与她同行。',
-        () => context.shell.toast('前往命运桌，获取过载纹章士水无月兰。'),
-      );
-      return;
-    }
-    if (
-      !state?.pandoraJoined ||
-      state.settlements.length < 3 ||
-      session.ai.library.emblems?.includes(EMBLEM_ID) ||
-      showing
-    )
-      return;
-    if (!['none', undefined].includes(state.emblemLesson)) return;
-    state.emblemLesson = 'summon';
-    context.generation.save();
-    speak(
-      '主人……命运桌上，有一枚正在发亮的纹章。它记着另一位旅人的力量。我们去命运桌看看吧，试着召唤与您同行的纹章士。',
-      () => context.shell.toast('前往命运桌，召唤纹章士。'),
-    );
+    if (state?.overloadLesson === 'summon') state.overloadLesson = 'none';
+    if (state?.emblemLesson === 'summon') state.emblemLesson = 'none';
   }
   function equipped() {
     if (
@@ -90,6 +73,28 @@ export function createEmblems(context) {
       ['victory', 'defeat'].includes(session.battle.state.phase)
     )
       return;
+    const arrival = session.journey.expedition?.emblemArrival;
+    if (arrival && !arrival.shown) {
+      arrival.shown = true;
+      context.generation.save();
+      context.audio.play('summon');
+      const lines = {
+        [OVERLOAD_EMBLEM_ID]:
+          '断崖兽的咆哮震落了一枚亮着蓝光的戒指。主人……它在回应您。过载纹章士水无月兰将力量交给了我们；超限能让下一次战技以双倍消耗额外释放一次，跨回合也不会白白消失。',
+        [DRAGON_EMBLEM_ID]:
+          '黑色诅咒撕开的缝隙里，一枚龙纹戒指落到众人面前。伊蒂丝抬起手，星光照出神威的名字：龙咒能削弱孤立的敌人，龙脉则将庇护留在脚下的位置。换上伙伴，庇护仍在那里。',
+        [SUPREME_EMBLEM_ID]:
+          '林间的恶意骤然倒流，一枚银白纹章浮在枝叶之间。主人……这是玖柒。她能将敌人施下的恶意原路送回；当三种诅咒汇在同一名普通敌人身上，月之瞳便能将其抹去。',
+        [MASK_EMBLEM_ID]:
+          '树影间落下一副带笑的假面，随后收拢成一枚戒指。伊蒂丝的声音低了下来：风在舞愿意同行。她的攻击以伙伴的生命为代价，死亡也会带来回响。至于欺之牺……使用前，要想清楚献上的会是谁。',
+      };
+      speak(
+        lines[arrival.id] + `\n\n已获得${EMBLEMS[arrival.id].emblem.name}，可在下次整备中装备。`,
+        null,
+        [DRAGON_EMBLEM_ID, MASK_EMBLEM_ID].includes(arrival.id),
+      );
+      return;
+    }
     if (state.emblemLesson === 'corridor-intro') {
       const actor = session.journey.expedition?.corridorRing?.actor;
       if (!actor || !canCombine(session.battle.state, actor)) {
@@ -207,41 +212,6 @@ export function createEmblems(context) {
       session.ai.busy
     )
       return;
-    if (!session.ai.library.emblems?.includes(EMBLEM_ID)) {
-      if (!progress()?.pandoraJoined || progress().settlements.length < 3) {
-        context.shell.toast('命运桌上的纹章还在沉睡。');
-        return;
-      }
-      session.ai.library.emblems ||= [];
-      session.ai.library.emblems.push(EMBLEM_ID);
-      progress().emblemLesson = 'equip';
-      context.generation.save();
-      context.audio.play('summon');
-      speak(
-        '均衡纹章士，檀虹羽……她回应您了。打开整备，点选一位伙伴，在角色装备上方选择这枚纹章。一个人只能装备一位纹章士。',
-        () => (context.shell.renderParty(), document.querySelector('#party-panel').showModal()),
-      );
-      return;
-    }
-    if (!session.ai.library.emblems.includes(OVERLOAD_EMBLEM_ID)) {
-      const ether = session.ai.library.inventory?.ether || 0;
-      const teaching = overloadLessonEligible(session.ai.library);
-      if (!teaching && ether < 100) {
-        context.shell.toast('以太不足，需要 100 以太结识过载纹章士水无月兰。');
-        (context.shell.renderParty(), document.querySelector('#party-panel').showModal());
-        return;
-      }
-      if (!teaching) session.ai.library.inventory.ether -= 100;
-      session.ai.library.emblems.push(OVERLOAD_EMBLEM_ID);
-      if (teaching) progress().overloadLesson = 'equip';
-      context.generation.save();
-      context.audio.play('summon');
-      speak(
-        '过载纹章士，水无月兰……她回应了您的呼唤。灵能血装将大幅扩展法力与体能，超限负荷能令下一次战技产生双倍轰鸣。',
-        () => (context.shell.renderParty(), document.querySelector('#party-panel').showModal()),
-      );
-      return;
-    }
     (context.shell.renderParty(), document.querySelector('#party-panel').showModal());
   });
   return {

@@ -589,7 +589,7 @@ def linear(hex_value):
     ]
 
 
-def write_glb(path, faces):
+def write_glb(path, faces, title="万象酒馆 · 二层走廊", voxel_edge=S):
     blob = bytearray()
     doc = {
         "asset": {"version": "2.0", "generator": "Wanxiang corridor atelier"},
@@ -668,8 +668,8 @@ def write_glb(path, faces):
     doc["meshes"].append({"name": "Corridor", "primitives": primitives})
     doc["buffers"] = [{"byteLength": len(blob)}]
     doc["extras"] = {
-        "title": "万象酒馆 · 二层走廊",
-        "voxelEdgeMeters": S,
+        "title": title,
+        "voxelEdgeMeters": voxel_edge,
         "boxDefinitions": box_calls,
         "triangles": triangles,
         "materials": len(used),
@@ -699,13 +699,6 @@ def build():
     runner()
     extras()
     dimensions, occupied, faces = meshes()
-    details = detailed_machine_meshes()
-    for color_index, data in details.items():
-        target = faces[color_index]
-        offset = len(target["p"])
-        target["p"].extend(data["p"])
-        target["n"].extend(data["n"])
-        target["i"].extend(index + offset for index in data["i"])
     triangles, bytes_written = write_glb(TAVERN_OUT / "万象酒馆-走廊.glb", faces)
     runtime = ASSETS / "corridor.glb"
     runtime.write_bytes((TAVERN_OUT / "万象酒馆-走廊.glb").read_bytes())
@@ -714,8 +707,7 @@ def build():
         "asset": "万象酒馆-走廊.glb",
         "runtime": "assets/corridor.glb",
         "voxel_edge_m": S,
-        "machine_voxel_edge_m": 0.005,
-        "machine_detail_multiplier": 4,
+        "machines": "relocated to the tavern supply corner",
         "resolution": "2 cm watertight voxel surface",
         "occupied_voxels": occupied,
         "box_definitions": box_calls,
@@ -737,6 +729,13 @@ def build():
     (TAVERN_OUT / "走廊模型规格.json").write_text(
         json.dumps(spec, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n"
     )
+    # Preserve the original five-millimetre machine geometry as a reusable source asset.
+    details = detailed_machine_meshes()
+    for data in details.values():
+        data["p"] = [(x, y, z + 4.4) for x, y, z in data["p"]]
+    machines = TAVERN_OUT / "万象酒馆-补给装置.glb"
+    write_glb(machines, details, "万象酒馆 · 补给与以太构筑", 0.005)
+    (ASSETS / "tavern-machines.glb").write_bytes(machines.read_bytes())
     print(json.dumps(spec, ensure_ascii=False))
 
 

@@ -101,6 +101,14 @@ export async function rawReplyChecks({ browser, baseURL }) {
       await page.locator('#summon-confirm').click();
       await page.locator('#summoned-dialog').waitFor({ state: 'visible' });
       await page.locator('#summoned-close').click();
+      await page.locator('#companion-dialogue').waitFor({ state: 'visible' });
+      for (
+        let line = 0;
+        line < 12 && (await page.locator('#companion-dialogue').isVisible());
+        line++
+      )
+        await page.locator('#companion-dialogue button').click();
+      assert.equal(await page.locator('#companion-dialogue').isVisible(), false);
       await inspect(`character回复${turn}`);
       await inn.evaluate(() => {
         const view = window.assetPreview;

@@ -51,7 +51,7 @@ export const EXTRA_ENEMIES = [
         slot: 2,
         effects: [
           { type: 'damage', value: 8 },
-          { type: 'buff', buff: 'poison', value: 1 },
+          { type: 'buff', buff: 'poison', value: 3 },
         ],
       },
       { name: '灯潮轻拂', slot: 0, effects: [{ type: 'damage', value: 10 }] },
@@ -76,10 +76,10 @@ export const RUINS_ADVERSARIES = [
       {
         name: '暗处扑袭左位',
         slot: 0,
-        text: '扑击左位9伤害，施加1流血',
+        text: '扑击左位9伤害，施加3流血',
         effects: [
           { type: 'damage', value: 9 },
-          { type: 'buff', buff: 'bleed', value: 1 },
+          { type: 'buff', buff: 'bleed', value: 3 },
         ],
       },
       {
@@ -164,10 +164,10 @@ export const RUINS_ADVERSARIES = [
       {
         name: '毒牙噬咬左位',
         slot: 0,
-        text: '攻击左位7伤害，施加2中毒',
+        text: '攻击左位7伤害，施加4中毒',
         effects: [
           { type: 'damage', value: 7 },
-          { type: 'buff', buff: 'poison', value: 2 },
+          { type: 'buff', buff: 'poison', value: 4 },
         ],
       },
       {
@@ -233,10 +233,10 @@ export const RUINS_ADVERSARIES = [
       {
         name: '漆黑短刃割裂',
         slot: 0,
-        text: '划击左位8伤害，施加1流血',
+        text: '划击左位8伤害，施加3流血',
         effects: [
           { type: 'damage', value: 8 },
-          { type: 'buff', buff: 'bleed', value: 1 },
+          { type: 'buff', buff: 'bleed', value: 3 },
         ],
       },
     ],
@@ -404,10 +404,10 @@ export const RUINS_ADVERSARIES = [
       {
         name: '死咒呢喃侵蚀',
         slot: 1,
-        text: '咒文侵蚀中位8伤害，施加2中毒',
+        text: '咒文侵蚀中位8伤害，施加4中毒',
         effects: [
           { type: 'damage', value: 8 },
-          { type: 'buff', buff: 'poison', value: 2 },
+          { type: 'buff', buff: 'poison', value: 4 },
         ],
       },
       {
@@ -434,10 +434,10 @@ export const RUINS_ADVERSARIES = [
       {
         name: '诅咒黑液溅射',
         slot: 0,
-        text: '黑色黏液泼溅左位7伤害，施加2中毒',
+        text: '黑色黏液泼溅左位7伤害，施加4中毒',
         effects: [
           { type: 'damage', value: 7 },
-          { type: 'buff', buff: 'poison', value: 2 },
+          { type: 'buff', buff: 'poison', value: 4 },
         ],
       },
       {
@@ -467,10 +467,10 @@ export const RUINS_ADVERSARIES = [
       {
         name: '虚空寄生撕咬',
         slot: 1,
-        text: '咬噬中位10伤害，施加1流血',
+        text: '咬噬中位10伤害，施加3流血',
         effects: [
           { type: 'damage', value: 10 },
-          { type: 'buff', buff: 'bleed', value: 1 },
+          { type: 'buff', buff: 'bleed', value: 3 },
         ],
       },
       {
@@ -530,8 +530,12 @@ export const RUINS_BOSSES = [
     openingIntent: {
       name: '开幕雷击 · 雷锁贯穿',
       slot: 0,
-      text: '首次出手向左位落下60伤害的雷击；此开幕攻击每场仅一次。',
-      effects: [{ type: 'damage', value: 60 }],
+      lowestHpPosition: true,
+      text: '第一回合锁定当前hp最低的前场角色所在位置，造成24伤害并施加1层虚弱，每场仅一次。',
+      effects: [
+        { type: 'damage', value: 24 },
+        { type: 'buff', buff: 'weak', value: 1 },
+      ],
     },
     hp: 95,
     mp: 0,
@@ -603,10 +607,10 @@ export const RUINS_BOSSES = [
       {
         name: '双首连环撕咬',
         slot: 1,
-        text: '巨颚撕咬中位13伤害，施加2流血',
+        text: '巨颚撕咬中位13伤害，施加4流血',
         effects: [
           { type: 'damage', value: 13 },
-          { type: 'buff', buff: 'bleed', value: 2 },
+          { type: 'buff', buff: 'bleed', value: 4 },
         ],
       },
     ],
@@ -623,10 +627,10 @@ export const RUINS_BOSSES = [
       {
         name: '断崖绝杀撕裂',
         slot: 0,
-        text: '凶兽绝杀暴扑左位17伤害，施加2流血',
+        text: '凶兽绝杀暴扑左位17伤害，施加4流血',
         effects: [
           { type: 'damage', value: 17 },
-          { type: 'buff', buff: 'bleed', value: 2 },
+          { type: 'buff', buff: 'bleed', value: 4 },
         ],
       },
     ],
@@ -670,10 +674,10 @@ export const RUINS_BOSSES = [
       {
         name: '崩山裂地重锤',
         slot: 1,
-        text: '重拳崩山猛击中位18伤害，施加1流血',
+        text: '重拳崩山猛击中位18伤害，施加3流血',
         effects: [
           { type: 'damage', value: 18 },
-          { type: 'buff', buff: 'bleed', value: 1 },
+          { type: 'buff', buff: 'bleed', value: 3 },
         ],
       },
     ],
@@ -696,10 +700,10 @@ export const RUINS_BOSSES = [
       {
         name: '晦涩呢喃咒杀',
         slot: 1,
-        text: '低语死咒轰击中位10伤害，施加2中毒',
+        text: '低语死咒轰击中位10伤害，施加4中毒',
         effects: [
           { type: 'damage', value: 10 },
-          { type: 'buff', buff: 'poison', value: 2 },
+          { type: 'buff', buff: 'poison', value: 4 },
         ],
       },
       {
@@ -717,10 +721,10 @@ export const RUINS_BOSSES = [
       {
         name: '神秘字符狂乱',
         slots: [0, 1, 2],
-        text: '疯狂咒文席卷全场各9伤害，施加1中毒',
+        text: '疯狂咒文席卷全场各9伤害，施加3中毒',
         effects: [
           { type: 'damage', value: 9 },
-          { type: 'buff', buff: 'poison', value: 1 },
+          { type: 'buff', buff: 'poison', value: 3 },
         ],
       },
       {
@@ -752,19 +756,19 @@ export const RUINS_BOSSES = [
       {
         name: '诅咒黑液泼溅',
         slots: [0, 1],
-        text: '黑泥腐蚀左中位各9伤害，施加1中毒',
+        text: '黑泥腐蚀左中位各9伤害，施加3中毒',
         effects: [
           { type: 'damage', value: 9 },
-          { type: 'buff', buff: 'poison', value: 1 },
+          { type: 'buff', buff: 'poison', value: 3 },
         ],
       },
       {
         name: '邪神触须狂笞',
         slot: 2,
-        text: '触须痛击右位14伤害，施加2流血',
+        text: '触须痛击右位14伤害，施加4流血',
         effects: [
           { type: 'damage', value: 14 },
-          { type: 'buff', buff: 'bleed', value: 2 },
+          { type: 'buff', buff: 'bleed', value: 4 },
         ],
       },
     ],
@@ -781,10 +785,10 @@ export const RUINS_BOSSES = [
       {
         name: '阿佩普的窒息',
         slot: 1,
-        text: '深渊巨口吞噬中位18伤害，施加2流血',
+        text: '深渊巨口吞噬中位18伤害，施加4流血',
         effects: [
           { type: 'damage', value: 18 },
-          { type: 'buff', buff: 'bleed', value: 2 },
+          { type: 'buff', buff: 'bleed', value: 4 },
         ],
       },
     ],

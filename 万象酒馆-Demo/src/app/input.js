@@ -348,6 +348,14 @@ export function mountInput(context) {
     if (
       e.origin === location.origin &&
       e.source === $('#inn-frame iframe')?.contentWindow &&
+      e.data?.type === 'tavern-bookshelf'
+    ) {
+      context.bookshelf.open();
+      return;
+    }
+    if (
+      e.origin === location.origin &&
+      e.source === $('#inn-frame iframe')?.contentWindow &&
       e.data?.type === 'tavern-portal-visibility'
     ) {
       context.generation.setSummonVisible(e.data.summon === true);

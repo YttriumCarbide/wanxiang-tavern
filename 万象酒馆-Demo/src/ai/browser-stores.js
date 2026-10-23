@@ -9,6 +9,11 @@ import { normalizePromptPreset } from './presets.js';
 import { normalizeRegexScripts } from './regex.js';
 import { normalizeWorldbook, normalizeWorldSettings, characterWorldEntry } from './worldbook.js';
 import { createConnectionStore } from './connection-store.js';
+import { upgradeCharacterGeneration } from './character-generation-upgrade.js';
+import { upgradeContinuityRules } from './continuity-upgrade.js';
+import { upgradeGenerationExperience } from './generation-experience-upgrade.js';
+import { upgradeStatusEmblems } from './status-emblem-upgrade.js';
+import { upgradeUniversalEnemies } from './universal-enemy-upgrade.js';
 
 function checkedId(id) {
   if (typeof id !== 'string' || !/^[a-z0-9-]{1,100}$/.test(id)) throw Error('资料ID无效');
@@ -124,6 +129,53 @@ export async function createBrowserStores(database, readText, builtinBook) {
       ['world.enemy-appearances.v32', true],
     ]);
   }
+  if (!database.get('world.character-generation.v33')) {
+    const names = [
+      'character-definition',
+      'character-mechanics',
+      'character-output',
+      'growth-numbers',
+    ];
+    const rules = Object.fromEntries(
+      await Promise.all(names.map(async (name) => [name, await readText(`worldbook/${name}.md`)])),
+    );
+    await database.write([
+      [
+        'world.book.tavern-world',
+        upgradeCharacterGeneration(database.get('world.book.tavern-world'), {
+          rules,
+          reference: await readText('worldbook/character-example.json'),
+        }),
+      ],
+      ['world.character-generation.v33', true],
+    ]);
+  }
+  if (!database.get('world.continuity.v34'))
+    await database.write([
+      ['world.book.tavern-world', upgradeContinuityRules(database.get('world.book.tavern-world'))],
+      ['world.continuity.v34', true],
+    ]);
+  if (!database.get('world.generation-experience.v35'))
+    await database.write([
+      [
+        'world.book.tavern-world',
+        upgradeGenerationExperience(
+          database.get('world.book.tavern-world'),
+          await readText('worldbook/creation-output.md'),
+        ),
+      ],
+      ['world.generation-experience.v35', true],
+    ]);
+  if (!database.get('world.status-emblems.v36'))
+    await database.write([
+      ['world.book.tavern-world', upgradeStatusEmblems(database.get('world.book.tavern-world'))],
+      ['world.status-emblems.v36', true],
+    ]);
+  if (!database.get('world.universal-enemies.v37'))
+    await database.write([
+      ['world.book.tavern-world', upgradeUniversalEnemies(database.get('world.book.tavern-world'))],
+      ['world.universal-enemies.v37', true],
+    ]);
   let worldSettings = normalizeWorldSettings(
     database.get('world.settings') || { globalSelect: ['tavern-world'] },
   );

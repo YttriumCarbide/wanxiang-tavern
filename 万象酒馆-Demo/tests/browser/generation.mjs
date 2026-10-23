@@ -24,7 +24,7 @@ export async function generationChecks({ browser, baseURL, output }) {
     let text = '';
     for await (const chunk of req) text += chunk;
     const request = JSON.parse(text),
-      character = request.messages.at(-1).content.includes('CHARACTER v3');
+      character = /CHARACTER v[34]/.test(request.messages.at(-1).content);
     calls.push(request);
     const context = requestContext(request.messages);
     const badCharacter = characterDocument();

@@ -1,5 +1,4 @@
-import { restoreLibrary } from '../ai/library.js';
-import { preview } from '../engine.js';
+import { discardUnfinishedTrip } from '../abandoned-trip.js';
 
 const KEY = 'wanxiang.battle-checkpoint.v1';
 
@@ -41,27 +40,17 @@ export function createCheckpoint(context) {
     );
   }
   function pending() {
-    if (!context.apiClient.staticMode) return null;
+    let activeScript = null;
     try {
       const value = JSON.parse(storage.getItem(KEY));
-      if (
-        value?.version !== 1 ||
-        !value.journey?.expedition ||
-        !(
-          ['opening', 'plan'].includes(value.state?.phase) ||
-          (['victory', 'defeat'].includes(value.state?.phase) &&
-            value.journey.expedition.pendingResult)
-        )
-      )
-        return null;
-      if (!value.state.units || !Array.isArray(value.state.formation)) return null;
-      restoreLibrary(value.library);
-      preview(value.state, []);
-      return value;
+      activeScript = value?.activeScript;
     } catch {
-      storage.removeItem(KEY);
-      return null;
+      // A damaged checkpoint must not prevent returning to the hall.
     }
+    if (discardUnfinishedTrip(session.ai.library, activeScript))
+      storage.setItem('wanxiang.worldbooks.v1', JSON.stringify(session.ai.library));
+    storage.removeItem(KEY);
+    return null;
   }
   return {
     pending,

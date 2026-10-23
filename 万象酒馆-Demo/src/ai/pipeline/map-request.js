@@ -6,7 +6,13 @@ export function mapInput(input) {
   reference.enemies.push(...known);
   if (typeof input.brief !== 'string' || !input.brief.trim() || input.brief.length > 10000)
     throw Error('请填写希望前往的世界');
-  return { request: input.brief, existing: input.existing || null, canon: TAVERN_WORLD, reference };
+  return {
+    request: input.brief,
+    existing: input.existing || null,
+    canon: TAVERN_WORLD,
+    reference,
+    ...(input.continuation ? { continuation: input.continuation } : {}),
+  };
 }
 
 export function mapResponse(content, input) {
@@ -22,5 +28,22 @@ export function mapResponse(content, input) {
       return [enemy.id, enemy];
     }),
   );
-  return normalizeWorld(raw, input.existing || null, { knownEnemies });
+  const world = normalizeWorld(raw, input.existing || null, { knownEnemies });
+  if (input.continuation) {
+    if (
+      !Array.isArray(raw.goals) ||
+      raw.goals.length < 3 ||
+      new Set(raw.goals.map((goal) => String(goal).trim())).size < 3 ||
+      !raw.enemies?.some(
+        (enemy) =>
+          enemy.boss &&
+          world.enemyDefinitions[enemy.id]?.boss &&
+          !input.existing?.enemyIds?.includes(enemy.id) &&
+          !knownEnemies[enemy.id],
+      )
+    )
+      throw Error('继续探索构筑需要至少三个不同的新目标及一位全新Boss，尚未保存');
+    world.continuationPrepared = true;
+  }
+  return world;
 }

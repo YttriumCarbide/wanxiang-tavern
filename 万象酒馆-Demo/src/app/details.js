@@ -5,6 +5,7 @@ import { html } from '../shared/html.js';
 import { resourceBars, statusIcons, escapeText } from '../ui.js';
 import { query as $ } from './dom.js';
 import { portraitUrl } from '../catalog.js';
+import { finalPassiveText } from '../skill-text.js';
 
 /** @param {import('./context.js').AppContext} context */
 export function createDetails(context) {
@@ -71,6 +72,7 @@ export function createDetails(context) {
           <h2 style="color:${d.color}">${d.name}</h2>
           <p>${d.title}${u.hp === 0 ? ' · 濒死' : ''}</p>
         </div>
+        <span class="battle-character-level">Lv.${d.level || 1}</span>
       </div>
       <div class="hero-resources">${resourceBars(u, f)}</div>
       <div class="detail-buffs">${buffIcons}</div>
@@ -128,11 +130,11 @@ export function createDetails(context) {
                 html`<button
                   class="ability passive-ability"
                   data-passive="${a.id}"
-                  data-tooltip="${escapeText(resourceText(`${a.location}被动：${a.text}`))}"
+                  data-tooltip="${escapeText(finalPassiveText(a, d.mechanicMark?.name))}"
                 >
                   <strong>${escapeText(a.name)}</strong
                   ><small>被动 · ${escapeText(a.location)}</small>
-                  <p>${escapeText(resourceText(a.text))}</p>
+                  <p>${escapeText(finalPassiveText(a, d.mechanicMark?.name))}</p>
                 </button>`,
             )
             .join('')}${
@@ -156,7 +158,7 @@ export function createDetails(context) {
         button.onclick = () => {
           const ability = d.skills.find((item) => item.id === button.dataset.passive);
           context.shell.toast(
-            resourceText(`${ability.name} · ${ability.location}：${ability.text}`),
+            `${ability.name}：${finalPassiveText(ability, d.mechanicMark?.name)}`,
           );
         };
       });

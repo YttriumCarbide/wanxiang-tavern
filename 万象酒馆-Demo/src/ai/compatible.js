@@ -6,6 +6,7 @@ import { createPresetOutputProcessor } from './output-processor.js';
 import { opencodeHeaders } from './opencode-headers.js';
 import { upstreamError } from './upstream-error.js';
 import { isVertex, vertexRequest, vertexResponse } from './vertex.js';
+import { serviceAccountToken } from './vertex-service-account.js';
 
 export function validateApiKey(apiKey) {
   if (typeof apiKey !== 'string' || apiKey.length > 2000 || /[^\x21-\x7e]/.test(apiKey))
@@ -41,8 +42,9 @@ export async function compatibleRequest(
     onDelta,
   } = {},
 ) {
-  validateApiKey(profile.apiKey || '');
   const nativeVertex = isVertex(profile);
+  const serviceAccount = nativeVertex && profile.vertexAuth === 'service-account';
+  if (!serviceAccount) validateApiKey(profile.apiKey || '');
   if (models && nativeVertex)
     throw Error(
       'Vertex 原生接口未提供快捷模式模型列表，请在模型栏填写 Google 控制台显示的 Gemini 模型ID；未发送付费请求。',
@@ -75,8 +77,14 @@ export async function compatibleRequest(
     if (maxTokens && profile.tokenField !== 'none') payload[profile.tokenField] = maxTokens;
   }
   let body = payload;
+  let vertexToken = '';
   if (nativeVertex) {
-    const vertex = vertexRequest(profile, payload);
+    if (serviceAccount)
+      vertexToken = await serviceAccountToken(profile.apiKey, { fetchImpl, signal });
+    const vertex = vertexRequest(
+      serviceAccount ? { ...profile, apiKey: vertexToken, vertexAuth: 'oauth' } : profile,
+      payload,
+    );
     url = vertex.url;
     headers = vertex.headers;
     body = vertex.body;
@@ -88,37 +96,35 @@ export async function compatibleRequest(
     signal,
     redirect: 'error',
   });
+  const redact = (value) =>
+    redactDiagnostic(redactDiagnostic(value, vertexToken), profile.apiKey) ?? value;
   if (nativeVertex) response = await vertexResponse(response);
   if (!models && response.ok && response.headers.get('content-type')?.includes('text/event-stream'))
     try {
       return await readCompletionStream(response, onDelta, outputTool, outputProcessing);
     } catch (failure) {
-      failure.diagnostic = redactDiagnostic(
-        {
-          ...generationDiagnostic(
-            'character',
-            failure.rawText || '',
-            failure.message,
-            failure.stage || 'transport',
-          ),
-          delivery: failure.delivery,
-        },
-        profile.apiKey,
-      );
+      failure.diagnostic = redact({
+        ...generationDiagnostic(
+          'character',
+          failure.rawText || '',
+          failure.message,
+          failure.stage || 'transport',
+        ),
+        delivery: failure.delivery,
+      });
       throw failure;
     }
-  const content = await response.text();
+  const content = redact(await response.text());
   if (content.length > 2000000) throw Error('接口返回内容过大');
   const rejected = (message, rawText = response.vertexRawText || content, stage = 'transport') => {
     const failure = Error(message);
-    failure.diagnostic = redactDiagnostic(
+    failure.diagnostic = redact(
       generationDiagnostic(
         responseSchema?.properties?.schemaVersion?.const === 2 ? 'script' : 'character',
         rawText,
         message,
         stage,
       ),
-      profile.apiKey,
     );
     return failure;
   };
@@ -153,7 +159,7 @@ export async function compatibleRequest(
       info.stage === 'upstream-quota'
         ? info.message
         : `上游接口失败：${detail}${outputTool ? `；本次预设使用${outputTool.name}输出，请确认API支持工具调用` : ''}`,
-      content,
+      vertexToken ? content.replaceAll(vertexToken, '[令牌已隐藏]') : content,
       info.stage,
     );
   }

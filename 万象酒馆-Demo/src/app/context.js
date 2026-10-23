@@ -1,6 +1,7 @@
 /**
  * Explicit controller ports; no module globals or circular ES module imports.
  * @typedef {Object} AppContext
+ * @property {ReturnType<typeof import('./generation-access.js').createGenerationAccess>} generationAccess
  * @property {ReturnType<typeof import('./emblems.js').createEmblems>} emblems
  * @property {Storage|ReturnType<typeof import('../storage/database.js').createGameStorage>} storage
  * @property {ReturnType<typeof import('../storage/checkpoint.js').createCheckpoint>} checkpoint
@@ -30,6 +31,7 @@
  * @property {ReturnType<typeof import('./backpack.js').createBackpack>} backpack
  * @property {ReturnType<typeof import('./chat.js').createChat>} chat
  * @property {ReturnType<typeof import('./memory.js').createMemory>} memory
+ * @property {ReturnType<typeof import('./bookshelf.js').createBookshelf>} bookshelf
  * @property {ReturnType<typeof import('./equipment.js').createEquipment>} equipment
  * @property {ReturnType<typeof import('./companion-events.js').createCompanionEvents>} companionEvents
  * @property {ReturnType<typeof import('./preset-extensions.js').createPresetExtensions>} extensions

@@ -19,14 +19,15 @@ export async function portraitImportChecks({ browser, baseURL, output }) {
     await legacySession(page);
     await page.goto(baseURL);
     await page.locator('#party-toggle').click();
-    assert((await page.locator('#prepare-detail h2').textContent()).includes('长景月汐'));
+    await page.locator('[data-prepare-hero="official-aegis"]').click();
+    assert((await page.locator('#prepare-character-title').textContent()).includes('长景月汐'));
     assert(
-      (await page.locator('#prepare-detail .identity-art img').getAttribute('src')).endsWith(
+      (await page.locator('#prepare-detail .prepare-portrait > img').getAttribute('src')).endsWith(
         'changjing-yuexi.png',
       ),
     );
-    assert((await page.locator('#prepare-detail').textContent()).includes('星月剑士'));
     await page.screenshot({ path: path.join(output, 'changjing-yuexi-character.png') });
+    await page.locator('.prepare-portrait-tools summary').click();
     await page.locator('[data-portrait-url="official-aegis"]').click();
     await page.locator('#portrait-url').fill('javascript:alert(1)');
     await page.locator('#portrait-url-apply').click();
@@ -39,27 +40,32 @@ export async function portraitImportChecks({ browser, baseURL, output }) {
     await page.locator('#portrait-dialog').waitFor({ state: 'hidden' });
     assert.equal(calls.length, 1);
     assert(
-      (await page.locator('#prepare-detail .identity-art img').getAttribute('src')).startsWith(
-        '/api/ai/portraits/',
-      ),
+      (
+        await page.locator('#prepare-detail .prepare-portrait > img').getAttribute('src')
+      ).startsWith('/api/ai/portraits/'),
     );
-    const originalUrl = await page.locator('#prepare-detail .identity-art img').getAttribute('src');
+    const originalUrl = await page
+      .locator('#prepare-detail .prepare-portrait > img')
+      .getAttribute('src');
     const original = await page.request.get(new URL(originalUrl, baseURL).href);
     assert.deepEqual(await original.body(), bytes, 'Imported image bytes must remain identical');
     await page.reload();
     await page.locator('#party-toggle').click();
+    await page.locator('[data-prepare-hero="official-aegis"]').click();
     assert(
-      (await page.locator('#prepare-detail .identity-art img').getAttribute('src')).startsWith(
-        '/api/ai/portraits/',
-      ),
+      (
+        await page.locator('#prepare-detail .prepare-portrait > img').getAttribute('src')
+      ).startsWith('/api/ai/portraits/'),
     );
+    await page.locator('.prepare-portrait-tools summary').click();
     await page.locator('[data-reset-portrait="official-aegis"]').click();
     assert(
-      (await page.locator('#prepare-detail .identity-art img').getAttribute('src')).endsWith(
+      (await page.locator('#prepare-detail .prepare-portrait > img').getAttribute('src')).endsWith(
         'changjing-yuexi.png',
       ),
     );
     await page.setViewportSize({ width: 844, height: 390 });
+    await page.locator('.prepare-portrait-tools summary').click();
     await page.locator('[data-portrait-url="official-aegis"]').click();
     const box = await page.locator('#portrait-dialog').boundingBox();
     assert(box.x >= 0 && box.y >= 0 && box.x + box.width <= 844 && box.y + box.height <= 390);

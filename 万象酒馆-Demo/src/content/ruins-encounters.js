@@ -133,7 +133,7 @@ export const RUINS_ROUTES = Object.freeze([
   },
   {
     id: 'ruins-curse',
-    name: '灰的真相 · 诅咒显现',
+    name: '诅咒显现',
     boss: 'apepLamb',
     battles: [
       {

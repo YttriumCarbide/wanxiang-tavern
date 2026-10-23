@@ -27,12 +27,12 @@ test('creation API uses an independent connection, exact source IDs and value bu
           {
             message: {
               content: JSON.stringify({
+                schemaVersion: 2,
                 items: items.map((item) => ({
                   id: item.id,
                   name: item.name,
                   description: '增加生命',
-                  stats: { hp: invalid ? 40 : 2 },
-                  rules: [],
+                  design: { statFocus: invalid ? ['limit'] : ['hp'], rules: [] },
                 })),
               }),
             },
@@ -84,7 +84,7 @@ test('creation API uses an independent connection, exact source IDs and value bu
     assert.equal(calls[0].model, 'creation-model');
     assert(!JSON.stringify(calls[0]).includes('禁止额外角色注入'));
     assert(!JSON.stringify(calls[0]).includes('禁止额外世界注入'));
-    assert(calls[0].messages.some((message) => message.content.includes('装备构造器')));
+    assert(calls[0].messages.some((message) => message.content.includes('以太装备设计者')));
     assert.equal(
       (await post('prompts/select', { kind: 'creation', id: 'character-default' })).status,
       200,

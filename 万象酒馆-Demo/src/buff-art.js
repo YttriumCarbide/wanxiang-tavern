@@ -3,6 +3,17 @@ import { html } from './shared/html.js';
 // Draw on a 64-pixel grid while retaining the existing 16px presentation size.
 // Silhouettes convey the effect; highlights, seams and chips provide close-up detail.
 const artwork = {
+  meteor: html`<path fill="#213943" d="M8 7h48v50H8z" /><path
+      fill="#a9e4e5"
+      d="m36 10 4 14 14 4-14 4-4 14-4-14-14-4 14-4z"
+    /><path fill="#eed49b" d="m18 35 3 7 7 3-7 3-3 8-3-8-8-3 8-3z" />`,
+  sacrifice: html`<path fill="#30223d" d="M9 7h46v50H9z" /><path
+      fill="#e4c7a2"
+      d="M18 15h28v23l-7 9H25l-7-9z"
+    /><path fill="#6b315d" d="M22 23h7v8h-7zM35 23h7v8h-7zM28 37h8v5h-8z" /><path
+      fill="#c990d6"
+      d="M12 51h40v4H12zM30 8h4v9h-4z"
+    />`,
   balance: html`<path fill="#173143" d="M9 5h46v54H9z" /><path
       fill="#32586d"
       d="M13 9h38v46H13z"
@@ -115,6 +126,12 @@ const artwork = {
     <path fill="#a6f4ff" d="M30 14l-5 14h10l-4 18 14-20H35l6-12z" />
     <path fill="#ffeb3b" d="M32 20h4v6h-4zm-2 10h6v4h-6zm4 8h3v4h-3z" />
     <path fill="#ffffff" d="M31 16h2v8h-2zm2 14h2v6h-2z" />`,
+  mark: html`<path fill="#292c45" d="M18 5h28l13 27-13 27H18L5 32z" />
+    <path fill="#657ca1" d="M21 9h22l12 23-12 23H21L9 32z" />
+    <path fill="#cfdbef" d="m32 12 13 20-13 20-13-20z" />
+    <path fill="#dfbd78" d="m32 20 8 12-8 12-8-12z" />
+    <path fill="#fff5cd" d="M30 25h4v14h-4zM25 30h14v4H25z" />
+    <path fill="#9db4d9" d="M13 29h4v6h-4zM47 29h4v6h-4z" />`,
 };
 
 export function icon(key) {

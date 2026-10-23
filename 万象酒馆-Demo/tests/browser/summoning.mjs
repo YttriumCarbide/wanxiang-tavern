@@ -86,9 +86,12 @@ export async function summoningChecks({ browser, baseURL, output }) {
     await openSummon();
     assert.equal(await page.locator('[data-summon-mode]').count(), 4);
     await page.locator('[data-summon-mode="official"]').click();
+    await page.locator('#summon-method-notice').waitFor({ state: 'visible' });
+    assert.match(await page.locator('#summon-method-notice').textContent(), /万象召唤术/);
     assert(!(await page.locator('#summon-wish').isVisible()));
     await page.locator('#summon-confirm').click();
     await page.locator('#summoned-dialog').waitFor({ state: 'visible' });
+    assert.equal(await page.locator('#summon-method-notice').isVisible(), false);
     assert.equal((await page.evaluate(() => demo.getLibrary())).characters.length, 4);
     assert.equal(await page.locator('#contract-count').textContent(), '2');
     await page.locator('#summoned-join').click();

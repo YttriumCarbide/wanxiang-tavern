@@ -79,6 +79,21 @@ export async function createTavernView() {
       focus: [3.84, 1.05, 1.8],
       anchor: [3.84, 0.95, 3.88],
     },
+    supplies: {
+      name: '补给角 · 售货机与以太凝聚器',
+      button: '走向补给角',
+      p: [-3.65, 1.5, 1.25],
+      focus: [-3.75, 1.3, 4.45],
+      anchor: [-3.75, 2.65, 3.85],
+    },
+    bookshelf: {
+      name: '书架 · 藏书与旅途',
+      button: '走向书架',
+      p: [3.15, 1.45, -2.6],
+      focus: [5.65, 1.25, -3.05],
+      // Keep the approach marker above the fate desk and in front of the shelves.
+      anchor: [5.2, 2.65, -2.7],
+    },
   };
   let current = 'table',
     yaw = -0.13,
@@ -249,10 +264,25 @@ export async function createTavernView() {
   }
   events.on(window, 'pagehide', dispose, { once: true });
   try {
-    const gltf = await new GLTFLoader().loadAsync('./assets/inn.glb');
+    const loader = new GLTFLoader();
+    const [gltf, machines] = await Promise.all([
+      loader.loadAsync('./assets/inn.glb'),
+      loader.loadAsync('./assets/tavern-machines.glb'),
+    ]);
     model = gltf.scene;
     resources.object(model);
+    resources.object(machines.scene);
     if (disposed) return { dispose };
+    // Older exported rooms still contain the removable barrel/crate group in this corner.
+    const oldCorner = [];
+    model.traverse((object) => {
+      if (object.name.startsWith('12_Corner_Barrels_and_Crates')) oldCorner.push(object);
+    });
+    for (const object of oldCorner) object.removeFromParent();
+    machines.scene.name = 'Tavern_Supply_Corner';
+    machines.scene.position.set(-3.75, 0, 4.45);
+    machines.scene.rotation.y = Math.PI;
+    model.add(machines.scene);
     const dungeonShader = gateMaterial(0, [0.48, 0.24], [1.32, 2.12]),
       summonShader = gateMaterial(1, [-1.84, 0.2], [1.2, 2.2]);
     model.traverse((o) => {
@@ -376,13 +406,40 @@ export async function createTavernView() {
   });
   const emblem = document.createElement('button');
   emblem.id = 'emblem-open';
-  emblem.textContent = '召唤纹章士';
+  emblem.textContent = '查看纹章士';
   emblem.hidden = true;
   document.getElementById('talk-open').before(emblem);
   emblem.onclick = () => {
     if (!emblem.hidden && !travel) parent.postMessage({ type: 'tavern-emblem' }, location.origin);
   };
+  const supplyButtons = {};
+  for (const [id, label] of Object.entries({ shop: '虚空售货机', condenser: '以太凝聚器' })) {
+    const button = document.createElement('button');
+    button.id = `${id}-open`;
+    button.className = 'supply-open';
+    button.textContent = label;
+    button.hidden = true;
+    button.onclick = () => {
+      if (!button.hidden && !travel)
+        parent.postMessage(
+          { type: id === 'shop' ? 'tavern-shop' : 'tavern-condenser' },
+          location.origin,
+        );
+    };
+    document.getElementById('talk-open').before(button);
+    supplyButtons[id] = button;
+  }
   const talk = document.getElementById('talk-open');
+  const bookshelf = document.createElement('button');
+  bookshelf.id = 'bookshelf-open';
+  bookshelf.className = 'talk-open';
+  bookshelf.textContent = '查阅书架';
+  bookshelf.hidden = true;
+  bookshelf.onclick = () => {
+    if (!bookshelf.hidden && !travel)
+      parent.postMessage({ type: 'tavern-bookshelf' }, location.origin);
+  };
+  talk.before(bookshelf);
   talk.onclick = () => {
     if (!talk.hidden && !travel)
       parent.postMessage({ type: 'tavern-talk', place: current }, location.origin);
@@ -428,7 +485,10 @@ export async function createTavernView() {
   let spotTimer = 0,
     summonVisible = null;
   function updateSpots(checkOcclusion = true) {
+    bookshelf.hidden = !loaded || !!travel || current !== 'bookshelf';
     emblem.hidden = !loaded || !!travel || current !== 'fate';
+    for (const button of Object.values(supplyButtons))
+      button.hidden = !loaded || !!travel || current !== 'supplies';
     talk.hidden = !loaded || !!travel || !['bar', 'bar2', 'table', 'table2'].includes(current);
     camera.updateMatrixWorld();
     camera.getWorldDirection(direction);
@@ -500,12 +560,33 @@ export async function createTavernView() {
       b.disabled = !visible;
       b.tabIndex = visible ? 0 : -1;
       b.setAttribute('aria-hidden', visible ? 'false' : 'true');
+      b.style.translate = '';
       b.style.transform =
         'translate3d(' +
         (projected.x * 0.5 + 0.5) * innerWidth +
         'px,' +
         (-projected.y * 0.5 + 0.5) * innerHeight +
         'px,0) translate(-50%,-50%)';
+    }
+    const placed = [];
+    const buttons = [enter, summon, corridorDoor, ...Object.values(spotElements)];
+    for (const button of buttons) {
+      button.style.translate = '';
+      if (button.hidden || button.disabled) continue;
+      const box = button.getBoundingClientRect();
+      let top = box.top;
+      for (const previous of placed) {
+        if (
+          box.left < previous.right + 12 &&
+          box.right > previous.left - 12 &&
+          top < previous.bottom + 12 &&
+          top + box.height > previous.top - 12
+        )
+          top = previous.bottom + 12;
+      }
+      if (top + box.height > innerHeight - 100) top = Math.max(70, box.top - box.height - 18);
+      button.style.translate = `0 ${top - box.top}px`;
+      placed.push({ left: box.left, right: box.right, top, bottom: top + box.height });
     }
   }
   function resize() {

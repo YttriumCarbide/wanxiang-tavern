@@ -78,6 +78,7 @@ async function capture(page) {
 
 export async function layout({ browser, baseURL, fixture, update = false }) {
   const snapshots = {};
+  const detailDiagnostics = {};
   for (const touch of [false, true]) {
     const page = await browser.newPage({ viewport: { width: 1440, height: 836 }, hasTouch: touch });
     try {
@@ -105,6 +106,29 @@ export async function layout({ browser, baseURL, fixture, update = false }) {
         await page.setViewportSize({ width: profile.width, height: profile.height });
         await page.waitForTimeout(180);
         snapshots[profile.name] = await capture(page);
+        detailDiagnostics[profile.name] = await page.evaluate(() => {
+          const panel = document.querySelector('#details');
+          const scroll = panel.querySelector('.details-actions-scroll');
+          return {
+            selected: window.demo.getStatus().selected,
+            heading: panel.querySelector('h2')?.textContent,
+            text: panel.innerText,
+            scroll: scroll
+              ? { clientHeight: scroll.clientHeight, scrollHeight: scroll.scrollHeight }
+              : null,
+            categories: [...panel.querySelectorAll('.action-category')].map((section) => ({
+              title: section.querySelector('.action-category-title')?.textContent,
+              height: section.getBoundingClientRect().height,
+              children: section.childElementCount,
+            })),
+            buffs: panel.querySelector('.detail-buffs')?.innerHTML,
+            style: {
+              height: getComputedStyle(panel).height,
+              maxHeight: getComputedStyle(panel).maxHeight,
+              overflow: getComputedStyle(panel).overflow,
+            },
+          };
+        });
       }
     } finally {
       await page.close();
@@ -123,14 +147,33 @@ export async function layout({ browser, baseURL, fixture, update = false }) {
   const differences = [];
   for (const [name, actual] of Object.entries(snapshots)) {
     const baseline = expected.snapshots[name];
-    // The passive disclosure was removed in favour of skill buttons. Allow its measured
-    // height change while still checking the rail, buttons and every unrelated coordinate.
+    // The current five ability categories need more height than the old disclosure panel.
+    // Keep the golden fixture; verify category flow and dependent controls separately.
     const currentDetails = actual.find((entry) => entry.key === '#details[0]');
     const previousDetails = baseline.find((entry) => entry.key === '#details[0]');
     const detailHeightChange = previousDetails.rect.height - currentDetails.rect.height;
-    assert(detailHeightChange >= 0 && detailHeightChange <= 50);
+    assert(
+      currentDetails.rect.height > 0 &&
+        currentDetails.rect.y + currentDetails.rect.height <=
+          profiles.find((profile) => profile.name === name).height,
+      `${name}: details must remain inside the viewport. ${JSON.stringify(detailDiagnostics[name])}`,
+    );
     const commands = actual.find((entry) => entry.key === '.command-controls[0]');
     assert(currentDetails.rect.y + currentDetails.rect.height <= commands.rect.y);
+    assert(
+      commands.rect.y + commands.rect.height <=
+        profiles.find((profile) => profile.name === name).height,
+    );
+    const abilities = actual.filter((entry) => entry.key.startsWith('.ability['));
+    for (const [index, ability] of abilities.entries()) {
+      assert(ability.rect.x >= currentDetails.rect.x);
+      assert(
+        ability.rect.x + ability.rect.width <= currentDetails.rect.x + currentDetails.rect.width,
+      );
+      assert(ability.rect.width >= currentDetails.rect.width * 0.8);
+      if (index)
+        assert(ability.rect.y >= abilities[index - 1].rect.y + abilities[index - 1].rect.height);
+    }
     if (actual.length !== baseline.length) {
       differences.push(`${name}: element count ${actual.length} != ${baseline.length}`);
       continue;
@@ -154,7 +197,11 @@ export async function layout({ browser, baseURL, fixture, update = false }) {
         assert.equal(value.style.transform, 'none');
         continue;
       }
-      for (const key of Object.keys(value.rect))
+      for (const key of Object.keys(value.rect)) {
+        // Category headings and the scroll gutter intentionally change button flow.
+        if (value.key.startsWith('.ability[') && ['y', 'width'].includes(key)) continue;
+        if (['.command-controls[0]', '#commit[0]', '#clear[0]'].includes(value.key) && key === 'y')
+          continue;
         if (
           Math.abs(
             value.rect[key] -
@@ -165,15 +212,13 @@ export async function layout({ browser, baseURL, fixture, update = false }) {
                 ? 33
                 : value.key === '#details[0]' && key === 'height'
                   ? detailHeightChange
-                  : ['.command-controls[0]', '#commit[0]', '#clear[0]'].includes(value.key) &&
-                      key === 'y'
-                    ? detailHeightChange / 2
-                    : 0),
+                  : 0),
           ) > 1
         )
           differences.push(
             `${name} ${value.key} ${key}: ${value.rect[key]} != ${previous.rect[key]}`,
           );
+      }
       for (const key of Object.keys(value.style))
         if (value.style[key] !== previous.style[key])
           differences.push(

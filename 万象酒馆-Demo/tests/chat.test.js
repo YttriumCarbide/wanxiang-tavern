@@ -15,8 +15,9 @@ import { samplingFromPreset } from '../src/ai/sampling.js';
 import { presetHelperScripts } from '../src/ai/helper-scripts.js';
 import { restoreGenerationOptions } from '../src/generation-options.js';
 
-test('normal play always generates; only explicit developer mode can disable either API', () => {
+test('normal play always generates; the combined developer switch migrates both old options', () => {
   const defaults = {
+    skipAiGeneration: false,
     developerMode: false,
     allowRetreat: false,
     editArchives: false,
@@ -27,12 +28,27 @@ test('normal play always generates; only explicit developer mode can disable eit
   assert.deepEqual(restoreGenerationOptions({ protagonistApi: false, scriptApi: false }), defaults);
   assert.deepEqual(
     restoreGenerationOptions({ developerMode: true, protagonistApi: false, scriptApi: false }),
-    { ...defaults, developerMode: true, protagonistApi: false, scriptApi: false },
+    {
+      ...defaults,
+      skipAiGeneration: true,
+      developerMode: true,
+      protagonistApi: false,
+      scriptApi: false,
+    },
   );
   assert.deepEqual(restoreGenerationOptions({ developerMode: true }), {
     ...defaults,
     developerMode: true,
   });
+  assert.equal(
+    restoreGenerationOptions({
+      developerMode: true,
+      protagonistApi: false,
+      skipAiGeneration: false,
+    }).protagonistApi,
+    true,
+  );
+  assert.equal(restoreGenerationOptions({ skipAiGeneration: true }).skipAiGeneration, false);
 });
 
 test('a rewritten script can only replace future prose; visited scenes and combat metadata stay frozen', () => {
