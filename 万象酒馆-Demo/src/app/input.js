@@ -102,18 +102,11 @@ export function mountInput(context) {
     }
   });
   context.events.on(document, 'pointerdown', (e) => {
-    const panel = e.target.closest('#details');
-    if (
-      panel &&
-      panel.scrollHeight > panel.clientHeight &&
-      e.clientX > panel.getBoundingClientRect().right - 14
-    )
-      return;
     if (
       !context.viewport.canPlan() ||
       session.runtime.drag?.moved ||
       e.target.closest(
-        'dialog[open],#tutorial-guide,[data-unit],[data-rear],[data-empty-slot],.time-cell,.time-action,[data-skill],.extra-details summary,#details [data-tooltip],.command-controls button,#drag-menu button,.hud-toggle,#round-label,#ap-orb,#audio-toggle,#audio-panel,#story-toggle',
+        'dialog[open],#tutorial-guide,#details,[data-unit],[data-rear],[data-empty-slot],.time-cell,.time-action,[data-skill],.command-controls button,#drag-menu button,.hud-toggle,#round-label,#ap-orb,#audio-toggle,#audio-panel,#story-toggle',
       )
     )
       return;

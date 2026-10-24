@@ -59,7 +59,7 @@ export function createDetails(context) {
         class="ability ${session.selection.pending?.skill === a.id && session.selection.pending?.actor === session.selection.selected ? 'active' : ''} ${session.selection.interactionStep === 'skill' && !isDisabled ? 'skill-targetable' : ''} ${isCombineDisabled ? 'combine-disabled' : ''}"
         data-skill="${a.id}"
         data-tooltip="${escapeText(resourceText(tooltip))}"
-        draggable="${!isDisabled}"
+        draggable="${!isDisabled && !matchMedia('(pointer: coarse) and (max-width: 1100px)').matches}"
         ${isDisabled ? 'disabled' : ''}
       >
         <strong>${a.name}</strong

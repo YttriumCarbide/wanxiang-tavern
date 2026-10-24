@@ -31,3 +31,13 @@ body.landscape-host > :not(#landscape-frame) {
     transform-origin: center;
   }
 }
+@media (pointer: coarse) and (orientation: landscape) and (max-width: 1100px) and (max-height: 600px) {
+  #fullscreen-toggle {
+    width: 30px;
+    padding: 4px;
+  }
+  #fullscreen-toggle svg {
+    width: 17px;
+    height: 17px;
+  }
+}

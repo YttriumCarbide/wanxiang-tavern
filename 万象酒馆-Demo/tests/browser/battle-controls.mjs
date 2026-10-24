@@ -48,6 +48,16 @@ export async function battleControlChecks({ browser, baseURL, output }) {
     await page.mouse.up();
     assert.equal((await page.evaluate(() => demo.getPlan())).length, 0);
     assert.equal(await page.locator('.is-drag-source').count(), 0);
+    await page.locator(`[data-unit="${front}"]`).click();
+    await page.locator('#details .hero-heading').click();
+    assert.equal(await page.evaluate(() => demo.getStatus().selected), front);
+    await page.locator('#stage').click({ position: { x: 8, y: 170 } });
+    assert.equal(await page.evaluate(() => demo.getStatus().selected), null);
+    // This request test enables AI after the local combat fixture; its upstream stays mocked.
+    await page.locator('[data-generation-option="skipAiGeneration"]').evaluate((input) => {
+      input.checked = false;
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    });
     await page.locator('#story-toggle').click();
     let held;
     await page.route('**/api/ai/generate/quick-chat', (route) => {

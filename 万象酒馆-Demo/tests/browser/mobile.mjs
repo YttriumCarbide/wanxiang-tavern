@@ -4,6 +4,42 @@ import { legacySession } from './legacy-session.mjs';
 import { newLibrary } from '../../src/ai/library.js';
 import { normalizeEquipment } from '../../src/equipment.js';
 
+/** Send real touch input so browser panning, pointer cancellation and click suppression all run. */
+async function swipeScroll(page, panel, { rotated = false } = {}) {
+  const metrics = await panel.evaluate((node) => {
+    node.scrollTop = 0;
+    return { overflow: node.scrollHeight - node.clientHeight };
+  });
+  assert(metrics.overflow > 20, 'The real panel contains enough content to scroll');
+  const box = await panel.boundingBox();
+  const from = rotated
+    ? { x: box.x + 18, y: box.y + box.height / 2 }
+    : { x: box.x + box.width / 2, y: box.y + box.height - 18 };
+  const to = rotated ? { x: box.x + box.width - 18, y: from.y } : { x: from.x, y: box.y + 18 };
+  const input = await page.context().newCDPSession(page);
+  try {
+    await input.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [from] });
+    for (let step = 1; step <= 12; step++) {
+      await input.send('Input.dispatchTouchEvent', {
+        type: 'touchMove',
+        touchPoints: [
+          { x: from.x + ((to.x - from.x) * step) / 12, y: from.y + ((to.y - from.y) * step) / 12 },
+        ],
+      });
+      await page.waitForTimeout(18);
+    }
+    await input.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await panel.evaluate(
+      () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+    );
+    const scrolled = await panel.evaluate((node) => node.scrollTop);
+    assert(scrolled > 12, 'A finger swipe moves panel content: ' + scrolled);
+    return scrolled;
+  } finally {
+    await input.detach();
+  }
+}
+
 /** One batch covers actual small landscape panels and renderer suspension, with isolated saves. */
 export async function mobileChecks({ browser, baseURL, output }) {
   const errors = [],
@@ -23,6 +59,18 @@ export async function mobileChecks({ browser, baseURL, output }) {
       { id: 'mobile-equipment', name: '断环', value: 65 },
     ),
   );
+  for (let index = 1; index < 12; index++) {
+    library.equipment.catalog.push({
+      ...structuredClone(library.equipment.catalog[0]),
+      id: 'mobile-equipment-' + index,
+      name: '旅途装备' + index,
+    });
+  }
+  library.tavernChat = Array.from({ length: 24 }, (_, index) => ({
+    id: 'mobile-message-' + index,
+    role: index % 2 ? 'assistant' : 'user',
+    content: '这是一条用于验证手机手指滑动的酒馆聊天记录。'.repeat(3),
+  }));
   for (const viewport of [
     { width: 667, height: 375 },
     { width: 844, height: 390 },
@@ -43,6 +91,7 @@ export async function mobileChecks({ browser, baseURL, output }) {
       const frame = page.frameLocator('#inn-frame iframe');
       await frame.locator('#status').waitFor({ state: 'detached', timeout: 60000 });
       const measure = async (selector, label) => {
+        await page.locator(selector).waitFor({ state: 'visible' });
         await page.locator(selector).evaluate((node) =>
           Promise.all(
             node
@@ -79,6 +128,8 @@ export async function mobileChecks({ browser, baseURL, output }) {
       for (const tab of ['settings', 'prompts', 'game']) {
         await page.locator('[data-ai-tab="' + tab + '"]').click();
         await measure('#ai-dialog', 'api-' + tab);
+        if (tab === 'settings')
+          await swipeScroll(page, page.locator('#ai-dialog .ai-editor').first());
       }
       const paused = await frame
         .locator('canvas')
@@ -112,6 +163,7 @@ export async function mobileChecks({ browser, baseURL, output }) {
       await frame.locator('#condenser-open').click();
       await page.locator('[data-forge-page="exchange"]').click();
       await measure('#ether-forge', 'forge');
+      await swipeScroll(page, page.locator('#forge-list'));
       const buy = await page.locator('[data-buy-equipment]').boundingBox();
       const work = await page.locator('#forge-workspace').boundingBox();
       if (!buy || buy.y < work.y || buy.y + buy.height > work.y + work.height + 1)
@@ -126,6 +178,7 @@ export async function mobileChecks({ browser, baseURL, output }) {
       await frame.locator('canvas').evaluate(() => window.assetPreview.placeNow('table'));
       await frame.locator('#talk-open').click();
       await measure('#chat-dialog', 'chat');
+      await swipeScroll(page, page.locator('#chat-messages'));
       await page.locator('#chat-close').click();
       await frame.locator('canvas').evaluate(() => window.assetPreview.placeNow('bookshelf'));
       for (const [button, dialog, close] of [
@@ -135,6 +188,10 @@ export async function mobileChecks({ browser, baseURL, output }) {
       ]) {
         await frame.locator('#bookshelf-' + button).click();
         await measure('#' + dialog, button);
+        if (button === 'archives') {
+          await page.locator('[data-archive-tab="enemies"]').click();
+          await swipeScroll(page, page.locator('#archive-list'));
+        }
         await page.locator('#' + close).click();
       }
       // Exercise the production request wrapper and the real shared arcade without an upstream request.
@@ -197,10 +254,52 @@ export async function mobileChecks({ browser, baseURL, output }) {
         );
       });
       assert.equal(intersects, false, 'Save and round indicator do not overlap');
-      await page.locator('#details-toggle').click();
+      const front = await page.evaluate(() => demo.getState().formation[0]);
+      await page.locator(`[data-unit="${front}"]`).tap();
       await measure('#details', 'battle-details');
       assert((await page.locator('#details').boundingBox()).height >= 180);
-      await page.locator('#details-toggle').click();
+      const selected = await page.evaluate(() => demo.getStatus().selected);
+      await page.locator('#details .hero-heading').tap();
+      assert.equal(
+        await page.evaluate(() => demo.getStatus().selected),
+        selected,
+        'Touching the heading keeps the selected actor',
+      );
+      await page.locator('#details').evaluate((node) => {
+        window.mobileDetailsOriginal = node.firstElementChild;
+      });
+      await swipeScroll(page, page.locator('#details'));
+      assert.equal(
+        await page.evaluate(() => demo.getStatus().selected),
+        selected,
+        'Scrolling skills keeps the selected actor',
+      );
+      assert(
+        await page
+          .locator('#details')
+          .evaluate((node) => node.firstElementChild === window.mobileDetailsOriginal),
+        'Scrolling does not replace the panel DOM',
+      );
+      assert.equal(
+        (await page.evaluate(() => demo.getPlan())).length,
+        0,
+        'A swipe over skills never activates a skill',
+      );
+      await page.screenshot({
+        path: path.join(output, 'battle-scrolled-' + viewport.width + '.png'),
+      });
+      await page.locator('#details [data-skill="attack"]').tap();
+      assert(
+        await page.evaluate(
+          () =>
+            demo.getStatus().pending?.skill === 'attack' ||
+            demo.getPlan().some((action) => action.skill === 'attack'),
+        ),
+        'A deliberate tap still selects or queues the attack after scrolling',
+      );
+      await page.locator('#stage').tap({ position: { x: 8, y: 170 } });
+      assert.equal(await page.evaluate(() => demo.getStatus().selected), null);
+      if ((await page.evaluate(() => demo.getPlan())).length) await page.locator('#clear').click();
       const canvas = await page.locator('#battle canvas').evaluate((node) => ({
         width: node.width,
         height: node.height,
@@ -228,6 +327,8 @@ export async function mobileChecks({ browser, baseURL, output }) {
       .locator('body')
       .evaluate(() => ({ width: innerWidth, height: innerHeight }));
     assert.deepEqual(size, { width: 844, height: 390 });
+    await game.locator('#ai-open').click();
+    await swipeScroll(portrait, game.locator('#ai-dialog .ai-editor').first(), { rotated: true });
   } finally {
     await portrait.close();
   }
@@ -238,5 +339,14 @@ export async function mobileChecks({ browser, baseURL, output }) {
     screens,
     rendering: { fps: 30, pixelRatioCap: 1.25, shadows: false, pausedUnderModals: true },
     apiWaitGames: 7,
+    realTouchScrolling: [
+      'settings',
+      'equipment',
+      'chat',
+      'archives',
+      'battle-details',
+      'rotated-host',
+    ],
+    preservesActorAndPanel: true,
   };
 }

@@ -1,6 +1,6 @@
 {
-  "description": "手机两种横屏和竖屏宿主、方块、核心、静态、服务与规范已通过；仅复查设置和整备组件夹具中剩余的旧入口及已通关选关流程。",
-  "scopes": ["quality"],
+  "description": "手机触摸滚动和按钮缩小：真实手势检查设置、战斗技能面板及旋转宿主，保留选中且不误放技能；复核桌面战斗选择、拖动和静态构建。",
+  "scopes": ["quality", "static"],
   "coreFiles": ["tests/mobile-polish.test.js"],
   "browserConcurrency": 2
 }
