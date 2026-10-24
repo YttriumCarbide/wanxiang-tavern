@@ -13,11 +13,14 @@ export function createTimeline(context) {
       timeline = $('#timeline'),
       opening = session.battle.state.phase === 'opening',
       mobile = context.viewport.compactHUD();
-    const gap = 8,
+    const geometry = getComputedStyle(timeline);
+    const gap = Number.parseFloat(geometry.columnGap) || 8,
       nextState = { ...session.battle.forecast.final, phase: 'plan', round: 1 },
       nextSlots = opening ? enemyTimeline(nextState) : [],
-      row = context.viewport.compactLandscape() ? 62 : mobile ? 74 : 92,
-      previewRow = context.viewport.compactLandscape() ? 62 : mobile ? 74 : 92;
+      row =
+        Number.parseFloat(geometry.getPropertyValue('--timeline-row-size')) ||
+        (context.viewport.compactLandscape() ? 62 : mobile ? 74 : 92),
+      previewRow = row;
     const used = session.battle.plan.reduce((n, a) => n + a.ap, 0),
       ap = opening ? 1 : 3;
     timeline.classList.toggle('opening-timeline', opening);

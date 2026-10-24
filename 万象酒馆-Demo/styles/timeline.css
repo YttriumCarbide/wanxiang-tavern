@@ -396,10 +396,10 @@
   height: auto !important;
 }
 #timeline {
-  gap: 8px;
+  gap: var(--timeline-gap, 8px);
 }
 .preview-grid {
-  gap: 8px;
+  gap: var(--timeline-gap, 8px);
 }
 .time-cell {
   display: flex;
@@ -638,7 +638,7 @@
 }
 #opening-preview {
   position: absolute;
-  left: calc(var(--opening-width) + 8px);
+  left: calc(var(--opening-width) + var(--timeline-gap, 8px));
   right: 0;
   bottom: 0;
   width: auto;
@@ -872,5 +872,52 @@
   }
   .turn-column {
     bottom: 2px !important;
+  }
+}
+@media (pointer: coarse) and (orientation: landscape) and (max-width: 1100px) and (max-height: 600px) {
+  .turn-column {
+    --timeline-gap: 5px;
+    --timeline-side: calc(clamp(158px, 23vw, 192px) + 20px);
+    left: 50% !important;
+    right: auto !important;
+    transform: translateX(-50%) !important;
+    width: min(500px, calc(100vw - var(--timeline-side) - var(--timeline-side))) !important;
+    bottom: 8px !important;
+    max-height: 46px !important;
+  }
+  #timeline {
+    --timeline-row-size: 46px;
+  }
+  .opening-timeline {
+    height: var(--timeline-row-size) !important;
+  }
+  .time-cell,
+  .preview-grid .time-cell,
+  .time-action {
+    padding: 3px 4px;
+    gap: 2px;
+  }
+  .time-cell .num,
+  .preview-grid .time-cell .num,
+  .time-action .action-number {
+    font-size: 17px;
+    line-height: 18px;
+    margin-bottom: 0;
+  }
+  .time-cell .cell-label,
+  .opening-timeline .time-cell:not(.enemy-cell) .cell-label {
+    font-size: 8px !important;
+    line-height: 11px !important;
+  }
+  .time-action b {
+    max-width: 100%;
+    font-size: 8px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin: 0;
+  }
+  .time-action small {
+    font-size: 7px;
+    line-height: 10px;
   }
 }

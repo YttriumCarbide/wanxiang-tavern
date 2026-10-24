@@ -1,6 +1,6 @@
 {
-  "description": "手机触摸滚动和按钮缩小：真实手势检查设置、战斗技能面板及旋转宿主，保留选中且不误放技能；复核桌面战斗选择、拖动和静态构建。",
-  "scopes": ["quality", "static"],
-  "coreFiles": ["tests/mobile-polish.test.js"],
+  "description": "手机底部回合格缩小并整体居中，检查先手与正常回合的行动块、坐标和桌面拖放；Vertex topK零值省略、正值限制及服务账号共用发送路径，全部使用模拟上游。",
+  "scopes": ["quality"],
+  "coreFiles": ["tests/vertex-portraits.test.js", "tests/vertex-service-account.test.js"],
   "browserConcurrency": 2
 }

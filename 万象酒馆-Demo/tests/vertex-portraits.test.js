@@ -69,6 +69,43 @@ test('Vertex Express uses native route and API-key header, preserves roles and r
   assert.deepEqual(result.usage, { input: 7, output: 9 });
 });
 
+test('Vertex top-k omits preset zero and restricts positive values without changing other channels', async () => {
+  for (const [value, expected] of [
+    [0, undefined],
+    [1, 1],
+    [40, 40],
+    [64, 64],
+    [65, 64],
+    [1000, 64],
+  ]) {
+    let sent;
+    let calls = 0;
+    await compatibleRequest(profile, messages, {
+      sampling: { top_k: value, top_p: 0.85 },
+      fetchImpl: async (url, options) => {
+        calls++;
+        sent = JSON.parse(options.body).generationConfig;
+        return Response.json(answer('OK'));
+      },
+    });
+    assert.equal(sent.topK, expected);
+    assert.equal(Object.hasOwn(sent, 'topK'), expected !== undefined);
+    assert.equal(sent.topP, 0.85);
+    assert.equal(calls, 1, 'Parameter adaptation happens before the only upstream request');
+  }
+  await compatibleRequest(
+    { ...profile, provider: 'openai', baseUrl: 'https://example.test/v1' },
+    messages,
+    {
+      sampling: { top_k: 0 },
+      fetchImpl: async (url, options) => {
+        assert.equal(JSON.parse(options.body).top_k, 0);
+        return Response.json({ choices: [{ message: { content: 'OK' } }] });
+      },
+    },
+  );
+});
+
 test('Vertex OAuth project endpoint, saved connection and reuse retain provider without exporting secrets', async () => {
   let snapshot;
   const store = createConnectionStore({

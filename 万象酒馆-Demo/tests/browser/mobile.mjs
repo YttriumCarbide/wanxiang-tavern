@@ -40,6 +40,49 @@ async function swipeScroll(page, panel, { rotated = false } = {}) {
   }
 }
 
+async function checkTimeline(page, viewport) {
+  await page.locator('.turn-column').evaluate((node) =>
+    Promise.all(
+      node
+        .getAnimations({ subtree: true })
+        .filter((animation) => animation.effect?.getTiming().iterations !== Infinity)
+        .map((animation) => animation.finished.catch(() => {})),
+    ),
+  );
+  const geometry = await page.locator('.turn-column').evaluate((node) => {
+    const bounds = node.getBoundingClientRect();
+    const cells = [...node.querySelectorAll('.time-cell')]
+      .filter((cell) => cell.getClientRects().length)
+      .map((cell) => {
+        const box = cell.getBoundingClientRect();
+        return { x: box.x, right: box.right, height: box.height };
+      });
+    const rail = document.querySelector('.right-rail').getBoundingClientRect();
+    return {
+      x: bounds.x,
+      right: bounds.right,
+      center: (bounds.left + bounds.right) / 2,
+      cells,
+      railLeft: rail.left,
+    };
+  });
+  assert(
+    Math.abs(geometry.center - viewport.width / 2) < 1,
+    'The complete battle timeline is centered on the screen',
+  );
+  assert(geometry.right <= geometry.railLeft - 6, 'The timeline leaves space for reserve cards');
+  for (const cell of geometry.cells) {
+    assert(
+      Math.abs(cell.height - 46) < 1,
+      'Both current and preview turn cells use the smaller mobile height',
+    );
+    assert(
+      cell.x >= geometry.x - 1 && cell.right <= geometry.right + 1,
+      JSON.stringify({ cell, geometry }),
+    );
+  }
+}
+
 /** One batch covers actual small landscape panels and renderer suspension, with isolated saves. */
 export async function mobileChecks({ browser, baseURL, output }) {
   const errors = [],
@@ -243,6 +286,7 @@ export async function mobileChecks({ browser, baseURL, output }) {
       await page.locator('#round-start').waitFor({ state: 'hidden' });
       await measure('#battle', 'battle');
       await measure('.command-controls', 'battle-controls');
+      await checkTimeline(page, viewport);
       const intersects = await page.evaluate(() => {
         const save = document.querySelector('#saves-open').getBoundingClientRect();
         const round = document.querySelector('.round-indicator').getBoundingClientRect();
@@ -300,6 +344,33 @@ export async function mobileChecks({ browser, baseURL, output }) {
       await page.locator('#stage').tap({ position: { x: 8, y: 170 } });
       assert.equal(await page.evaluate(() => demo.getStatus().selected), null);
       if ((await page.evaluate(() => demo.getPlan())).length) await page.locator('#clear').click();
+      await page.locator('#commit').click();
+      await page.waitForFunction(
+        () =>
+          demo.getState().phase === 'plan' &&
+          !demo.getStatus().playing &&
+          !demo.getStatus().animating,
+      );
+      await page.locator('#round-start').waitFor({ state: 'hidden' });
+      await checkTimeline(page, viewport);
+      await page.locator(`[data-unit="${front}"]`).tap();
+      await page.locator('#details [data-skill="attack"]').tap();
+      const target = await page.evaluate(() => demo.getStatus().eligibleTargets[0]);
+      if (target) await page.locator(`[data-unit="${target}"]`).tap();
+      const planned = await page.evaluate(() => demo.getPlan());
+      assert.equal(planned.length, 1);
+      await checkTimeline(page, viewport);
+      const action = await page.locator('.time-action').boundingBox();
+      const slot = await page.locator(`[data-start="${planned[0].start}"]`).boundingBox();
+      assert(
+        Math.abs(action.x - slot.x) < 1 &&
+          Math.abs(action.width - slot.width) < 1 &&
+          Math.abs(action.height - 46) < 1,
+        'Queued actions align with smaller cells',
+      );
+      await page.screenshot({
+        path: path.join(output, 'timeline-centered-' + viewport.width + '.png'),
+      });
       const canvas = await page.locator('#battle canvas').evaluate((node) => ({
         width: node.width,
         height: node.height,
@@ -348,5 +419,6 @@ export async function mobileChecks({ browser, baseURL, output }) {
       'rotated-host',
     ],
     preservesActorAndPanel: true,
+    centeredTimeline: { height: 46, phases: ['opening', 'plan'], alignedActions: true },
   };
 }

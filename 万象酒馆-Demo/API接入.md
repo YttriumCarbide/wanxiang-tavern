@@ -214,6 +214,8 @@ API 连接配置只提供“严格无工具”和“合并含工具”两种提�
 
 # Google Vertex / Gemini 原生渠道
 
+预设的top_k=0在Vertex发送层按“不指定”处理，不发送非法topK=0；正整数最多发送64。原预设不改写，其他协议保持原有参数。API Key、OAuth与服务账号JSON共用这一转换；参数在首次发送前处理，不自动重试请求。topK为可选配置，参见[Google GenerationConfig](https://cloud.google.com/vertex-ai/generative-ai/docs/reference/rest/v1beta1/GenerationConfig)。
+
 接口协议选“Google Vertex · Gemini 原生”。七类API共用该实现，连接可保存成预设并应用到其他API，聊天提示词预设仍按原开关处理。
 
 - 快捷模式：Base URL 填 `https://aiplatform.googleapis.com/v1`，认证选 API Key，密钥栏填写 Vertex 快捷模式密钥，模型栏填写控制台中的 Gemini 模型ID。

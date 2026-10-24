@@ -79,11 +79,13 @@ test('Vertex generation exchanges authentication once, sends Bearer and never pr
     maxTokens: 1024,
   };
   const result = await compatibleRequest(profile, [{ role: 'user', content: '生成文字' }], {
+    sampling: { top_k: 0 },
     fetchImpl: async (url, options) => {
       calls.push(String(url));
       if (String(url).includes('oauth2.googleapis.com'))
         return Response.json({ access_token: 'fixture-access-token' });
       assert.equal(options.headers.Authorization, 'Bearer fixture-access-token');
+      assert.equal(Object.hasOwn(JSON.parse(options.body).generationConfig, 'topK'), false);
       assert(!options.body.includes('PRIVATE KEY'));
       assert(
         String(url).includes(

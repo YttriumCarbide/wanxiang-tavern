@@ -81,11 +81,13 @@ export function vertexRequest(profile, payload) {
   for (const [source, target] of Object.entries({
     temperature: 'temperature',
     top_p: 'topP',
-    top_k: 'topK',
     frequency_penalty: 'frequencyPenalty',
     presence_penalty: 'presencePenalty',
   }))
     if (Number.isFinite(payload[source])) generationConfig[target] = payload[source];
+  // Presets use zero to disable top-k. Vertex requires a positive value, so defer to its default.
+  if (Number.isInteger(payload.top_k) && payload.top_k > 0)
+    generationConfig.topK = Math.min(64, payload.top_k);
   const limit = payload.max_completion_tokens ?? payload.max_tokens;
   if (limit) generationConfig.maxOutputTokens = limit;
   if (payload.stop?.length) generationConfig.stopSequences = payload.stop;
