@@ -65,6 +65,14 @@ export function validateGameData(
         for (const key of Array.isArray(effect.buffs) ? effect.buffs : []) buff(key, location);
       } else {
         check(integer(effect.value), `${location}: effect value must be a nonnegative integer`);
+        if (effect.maxHpPercent !== undefined)
+          check(
+            effect.type === 'heal' &&
+              Number.isFinite(effect.maxHpPercent) &&
+              effect.maxHpPercent > 0 &&
+              effect.maxHpPercent <= 1,
+            `${location}: invalid percentage recovery`,
+          );
         if (effect.type === 'buff') buff(effect.buff, location);
       }
     }
@@ -124,7 +132,7 @@ export function validateGameData(
       ...(Array.isArray(enemy.enragedIntents) ? enemy.enragedIntents : []),
     ];
     check(moves.length > 0, `${enemy.id}: no intents`);
-    if (enemy.boss)
+    if (enemy.boss && enemy.phaseMode !== 'cycle')
       check(
         enemy.phaseThreshold > 0 && enemy.phaseThreshold < 1 && enemy.enragedIntents?.length,
         `${enemy.id}: invalid second phase`,
@@ -138,7 +146,8 @@ export function validateGameData(
         (Array.isArray(move.slots) ? move.slots : [move.slot]).every(slot),
         `${enemy.id}/${move.name}: invalid position`,
       );
-      effects(move.effects, `${enemy.id}/${move.name}`);
+      if (!(move.charging === true && Array.isArray(move.effects) && move.effects.length === 0))
+        effects(move.effects, `${enemy.id}/${move.name}`);
       for (const key of Object.keys(move.selfBuff || {})) buff(key, enemy.id);
     }
   }

@@ -43,6 +43,7 @@ export function completeEncounter(expedition, state) {
   const rewards = {
     summonContracts: state.encounter === ENCOUNTERS.length - 1 ? 1 : 0,
     gold: spec.boss ? 100 : 20,
+    ...(spec.itemRewards ? { items: structuredClone(spec.itemRewards) } : {}),
   };
   expedition.records.push({
     index: state.encounter,

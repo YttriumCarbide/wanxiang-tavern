@@ -1,6 +1,7 @@
 import { isEndless } from '../../worlds.js';
 import { arcFor } from '../../story-arc.js';
 import { generationNumbers } from '../../growth.js';
+import { characterConstraintText } from '../../character-generation.js';
 import { ENCOUNTER_COUNT, FINAL_ENCOUNTER } from '../../content/journey-rules.js';
 import { OUTPUT_TAG } from './output-envelope.js';
 import { encounterSpec, DEFINITIONS } from '../../data.js';
@@ -23,7 +24,8 @@ export function generationInput(kind, input) {
   if (!['character', 'script'].includes(kind)) throw Error('接口类型无效');
   if (typeof input.brief !== 'string' || input.brief.length < 1 || input.brief.length > 10000)
     throw Error('请填写1～10000字的生成要求');
-  if (kind === 'character')
+  if (kind === 'character') {
+    const plan = generationNumbers(input);
     return {
       task: 'character',
       world: TAVERN_WORLD,
@@ -45,7 +47,7 @@ export function generationInput(kind, input) {
           '主动技能动作描写与被动实际效果',
         ],
       },
-      mechanics: { ...characterGameReference(), generationNumbers: generationNumbers(input) },
+      mechanics: { ...characterGameReference(plan), generationNumbers: plan },
       request: {
         brief: input.brief,
         unavailableCharacters: ['潘多拉（仅第二次副本结算事件加入，不可抽取）'],
@@ -79,6 +81,7 @@ export function generationInput(kind, input) {
         })),
       },
     };
+  }
   if (!isEndless(input.exploration) && !DEFINITIONS[input.boss]?.boss) throw Error('副本路线无效');
   if (
     !Array.isArray(input.party) ||
@@ -139,6 +142,13 @@ export function generationInput(kind, input) {
             officialDungeon: {
               id: officialDungeon.id,
               worldbookKey: officialDungeon.key,
+              ...(officialDungeon.npcs
+                ? {
+                    npcs: officialDungeon.npcs,
+                    npcArchiveGuidance:
+                      '官设NPC按实际参与剧情的场次记录到data.npcs，保留姓名、外貌与性格辨识点，不强行加入出战队伍。',
+                  }
+                : {}),
               instruction:
                 '沿本次激活的完整官设大纲扩写，由AI根据实际战斗进度自行安排事件的叙述位置，在本次回复中讲完本次旅程。大纲不按场次预先分段，不照搬为已发生的历史。大纲中的<user>是玩家创建的主角代称，正文按characters.player所指角色的实际姓名和设定自然称呼。',
               enemyPolicy:
@@ -276,7 +286,7 @@ export async function generationRequest(kind, input, source, options = {}) {
   const schema = options.assetContext
     ? { type: 'object', description: '完整结构见当前API世界书格式条目，数据参考见本次输入' }
     : kind === 'character'
-      ? characterOutputSchema()
+      ? characterOutputSchema({ plan: context.mechanics.generationNumbers })
       : scriptOutputSchema(context.characters.greenLight.map((entry) => entry.id));
   const raw = source || JSON.parse(await readText(`framework/${kind}-default.json`));
   const { preset } = normalizePromptPreset(raw, raw.id);
@@ -299,6 +309,10 @@ export async function generationRequest(kind, input, source, options = {}) {
         context: {
           kind,
           outputSchema: JSON.stringify(schema),
+          characterLimits:
+            kind === 'character'
+              ? characterConstraintText(context.mechanics.generationNumbers)
+              : '',
           trigger: 'normal',
           messages: [
             ...(input.history || []).flatMap((record) =>
@@ -393,6 +407,7 @@ export async function generationRequest(kind, input, source, options = {}) {
     personadescription: options.worldInfo?.settings.persona || '',
     lastmessage: context.request.brief,
     lastusermessage: context.request.brief,
+    lastchatmessage: context.request.brief,
     lastcharmessage: (input.history || []).at(-1)?.confirmedEvents?.at(-1)?.text || '',
     firstmessage: (input.history || [])[0]?.confirmedEvents?.[0]?.text || '',
     instruct: '',

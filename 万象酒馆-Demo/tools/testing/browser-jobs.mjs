@@ -17,6 +17,9 @@ export function browserJobs(scopes, results, root) {
       browserOnly,
     );
   simple('battle-controls', 'battle-controls', 'battleControlChecks');
+  simple('mobile', 'mobile', 'mobileChecks');
+  simple('forest', 'forest', 'forestChecks');
+  simple('workshop', 'workshop', 'workshopChecks', [], true);
   simple('universal-enemies', 'universal-enemies', 'universalEnemyChecks');
   simple('developer-mode', 'developer-mode', 'developerModeChecks');
   simple('status-emblems', 'status-emblems', 'statusEmblemChecks', [], true);

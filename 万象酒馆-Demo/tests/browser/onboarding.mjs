@@ -428,8 +428,7 @@ export async function onboardingChecks({ browser, baseURL, output }) {
     assert.equal(requests.length, 0, 'The first contracted companion does not call a model API');
     const bookshelfFrame = await innReady();
     await bookshelfFrame.evaluate(() => window.assetPreview.placeNow('bookshelf'));
-    await bookshelfFrame.locator('#bookshelf-open').click();
-    await page.locator('#records-open').click();
+    await bookshelfFrame.locator('#bookshelf-records').click();
     assert.equal(await page.locator('#records-text h4').count(), 5);
     assert((await page.locator('#records-text').textContent()).includes('战斗测试占位剧本'));
     assert(!(await page.locator('#records-text').textContent()).includes('伤害'));

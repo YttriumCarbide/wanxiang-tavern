@@ -292,7 +292,12 @@ export function createOnboarding(context) {
       storage.removeItem('wanxiang.creation-pending.v1');
       session.ai.preparationSlot = 0;
       session.ai.preparationCharacter = reviewed.id;
-      context.generation.replaceLibrary(newCampaign(reviewed));
+      const campaign = newCampaign(reviewed);
+      // Preserve both waiting-game saves across the newly created campaign.
+      // Carry that progress into the newly created campaign instead of resetting it.
+      campaign.workshop = session.ai.library.workshop;
+      campaign.arcade = session.ai.library.arcade;
+      context.generation.replaceLibrary(campaign);
       dialog.close();
       context.journey.returnInn();
       context.saves.createNewSave();

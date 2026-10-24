@@ -640,9 +640,83 @@
   color: #efd5ac;
   border-color: #c6a66b88;
 }
-.api-request-control.floating {
+.api-request-dock {
   position: fixed;
   right: 24px;
   bottom: 78px;
   z-index: 90;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: calc(100dvh - 160px);
+  max-width: calc(100vw - 48px);
+  overflow: auto;
+}
+
+@media (max-height: 600px) and (orientation: landscape) {
+  #ai-dialog[open] {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  #ai-dialog .ai-heading {
+    flex: 0 0 auto;
+  }
+  #ai-dialog .ai-heading h2 {
+    font-size: 17px;
+  }
+  #ai-dialog .ai-tabs {
+    flex: 0 0 auto;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    margin: 2px 0;
+    padding-bottom: 3px;
+  }
+  #ai-dialog .ai-tabs button {
+    flex-shrink: 0;
+    min-height: 32px;
+  }
+  #ai-dialog .ai-workspace {
+    flex: 1;
+    height: auto;
+    min-height: 0;
+    gap: 10px;
+  }
+  #ai-dialog[data-tab='prompts'] .ai-workspace {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 0.8fr);
+  }
+  #ai-dialog .ai-footer {
+    flex: 0 0 auto;
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+  #ai-dialog fieldset {
+    min-width: 0;
+  }
+  .connection-preset-picker,
+  .connection-preset-save {
+    flex-wrap: wrap;
+  }
+  .api-request-control {
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 5px 8px;
+    font-size: 11px;
+  }
+  .api-request-control button {
+    min-height: 32px;
+    padding: 5px 10px;
+  }
+  .api-request-dock {
+    right: calc(8px + var(--safe-right));
+    bottom: 8px;
+    max-height: 40dvh;
+  }
+  #generation-progress {
+    gap: 10px;
+    padding: 12px;
+  }
+  .generation-orbit {
+    font-size: 42px;
+  }
 }

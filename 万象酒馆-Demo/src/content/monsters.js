@@ -1,3 +1,4 @@
+import { FOREST_MONSTER_LORE } from './forest-lore.js';
 /** Narrative setting only. Encounter identities and combat capabilities come from data.js. */
 export const MONSTER_LORE = Object.freeze({
   crystalBeetle: {
@@ -180,6 +181,7 @@ export const RUINS_MONSTER_LORE = Object.freeze({
 export const ALL_MONSTER_LORE = Object.freeze({
   ...MONSTER_LORE,
   ...RUINS_MONSTER_LORE,
+  ...FOREST_MONSTER_LORE,
 });
 
 export function monsterWorldbook(id, name) {

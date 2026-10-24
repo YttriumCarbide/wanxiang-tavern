@@ -1,4 +1,5 @@
 import { CORRIDOR_RING_GUIDANCE } from './corridor-ring.js';
+import { FOREST_DUNGEONS } from './forest-dungeons.js';
 
 const OUTLINE_PREAMBLE = `大纲以第三人称改写，<user>仅在本大纲中代指玩家创建的主角；生成正文时按该主角的实际姓名、设定与自然称呼叙述，不照抄代称。这是完整连续的大纲参考，保留人物、线索与事件的先后关系；文风与细节由当前预设决定。由AI根据实际战斗进度自行安排事件的叙述位置，在本次回复中讲完本次旅程，不预先按场次切分大纲。战斗名单、场次、胜负和已发生事实以本次请求的数据为准。`;
 
@@ -90,10 +91,12 @@ ${OUTLINE_PREAMBLE}
 
 export const OFFICIAL_DUNGEONS = [TUTORIAL_DUNGEON, CORRIDOR_DUNGEON];
 export const EXPANDED_DUNGEONS = [HALL_DUNGEON, SINKHOLE_DUNGEON, TOMB_DUNGEON, CURSE_DUNGEON];
-export const ALL_OFFICIAL_DUNGEONS = [...OFFICIAL_DUNGEONS, ...EXPANDED_DUNGEONS];
+export const RUINS_DUNGEONS = [...OFFICIAL_DUNGEONS, ...EXPANDED_DUNGEONS];
+export const ALL_OFFICIAL_DUNGEONS = [...RUINS_DUNGEONS, ...FOREST_DUNGEONS];
 
 export function officialDungeonFor(exploration) {
   if (exploration?.world) return null;
+  if (exploration?.map === 'forest') return FOREST_DUNGEONS[exploration.sequence] || null;
   if (exploration?.map !== 'ruins') return null;
   if (exploration.tutorial === true || exploration.sequence === 0) return TUTORIAL_DUNGEON;
   switch (exploration.sequence) {

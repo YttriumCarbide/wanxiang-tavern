@@ -5,6 +5,8 @@ import { upgradeRuinsWorldbook } from '../src/ai/ruins-worldbook.js';
 import { upgradeAssetWorldbook } from '../src/ai/asset-worldbook.js';
 import { upgradeEnemyAppearanceRules } from '../src/ai/enemy-appearance-rules.js';
 import { upgradeCharacterGeneration } from '../src/ai/character-generation-upgrade.js';
+import { upgradeCharacterConstraints } from '../src/ai/character-constraints-upgrade.js';
+import { upgradeForestWorldbook } from '../src/ai/forest-worldbook.js';
 import { upgradeContinuityRules } from '../src/ai/continuity-upgrade.js';
 import { upgradeGenerationExperience } from '../src/ai/generation-experience-upgrade.js';
 import { upgradeStatusEmblems } from '../src/ai/status-emblem-upgrade.js';
@@ -917,6 +919,20 @@ export async function createWorldbookStore(directory) {
     const record = await get('tavern-world');
     await write(fileFor('tavern-world'), upgradeUniversalEnemies(record.book));
     await write(contentVersionFile, { version: 37 });
+  }
+  if (contentVersion < 38) {
+    const record = await get('tavern-world');
+    const content = await readFile(
+      new URL('../prompts/worldbook/character-complexity.md', import.meta.url),
+      'utf8',
+    );
+    await write(fileFor('tavern-world'), upgradeCharacterConstraints(record.book, content));
+    await write(contentVersionFile, { version: 38 });
+  }
+  if (contentVersion < 39) {
+    const record = await get('tavern-world');
+    await write(fileFor('tavern-world'), upgradeForestWorldbook(record.book));
+    await write(contentVersionFile, { version: 39 });
   }
   return {
     get,

@@ -29,6 +29,37 @@ function weighted(seed, key, entries) {
   return entries.find(([, weight]) => (value -= weight) < 0)[0];
 }
 
+/** One set of permissions for the request facts, narrowed output schema and compiler. */
+export function characterDesignLimits(complexity) {
+  return {
+    effectsPerSkill: complexity === 1 ? 1 : 2,
+    conditionsPerRule: complexity >= 3 ? 1 : 0,
+    rulesPerPassive: 1,
+    passiveModes: complexity >= 4 ? ['continuous', 'event'] : ['continuous'],
+    conditionalEffects: complexity >= 3,
+    markTypes: complexity >= 5 ? 1 : 0,
+    maxMark: 3,
+  };
+}
+
+export function characterConstraintText(plan) {
+  const limits = characterDesignLimits(plan.complexity);
+  return [
+    `当前机制复杂度：第${plan.complexity}档「${plan.complexityName}」。这是已确定的上限，不能自行提升，也不要求用满。`,
+    `每技能/入场技最多${limits.effectsPerSkill}项效果；每个被动最多1条规则；每条规则最多${limits.conditionsPerRule}个条件。`,
+    limits.passiveModes.includes('event')
+      ? '允许continuous持续光环和event事件被动；event必须同时填写event、scope、limit。'
+      : '本次禁止event事件被动，rules[].mode只能是continuous，不得填写event、scope、limit。攻击后、受伤时、回合开始/结束时触发全部禁止，包括「回合结束且在前场获得护盾」。',
+    limits.conditionalEffects
+      ? '允许一个条件判断；「处于前场」是条件，「回合结束时」是事件，前场条件不能让低于4档的角色获得事件触发权限。'
+      : '本次conditions必须为空数组，不得使用when条件强化。',
+    'continuous仅允许力量strength、铁皮iron、守势guard、敏捷haste正面状态光环；不能持续造成伤害、回血、回sp、获得护盾或授予再生。护盾shield不是铁皮iron。',
+    limits.markTypes
+      ? '专属标记最多一种、最多3层，积累与消耗必须符合本档结构。'
+      : '本次禁止mark、basicAttackMark、perMark、consumeMark及mark条件。',
+  ].join('\n');
+}
+
 /** Authored base definitions only; no save, level, equipment or generated guest participates. */
 export function officialStatReferences() {
   return [defaultProtagonist().combat, EDITH, CHANGJING_YUEXI, PANDORA].map((hero) => ({
@@ -88,13 +119,7 @@ export function characterGenerationPlan(input = {}) {
       striker: { hp: [42 + tier * 2, 50 + tier * 2], sp: [18 + tier * 2, 24 + tier * 2] },
       support: { hp: [42 + tier * 2, 50 + tier * 2], sp: [26 + tier * 2, 32 + tier * 2] },
     },
-    limits: {
-      effectsPerSkill: complexity === 1 ? 1 : 2,
-      conditionsPerRule: 1,
-      rulesPerPassive: 1,
-      markTypes: complexity >= 5 ? 1 : 0,
-      maxMark: 3,
-    },
+    limits: characterDesignLimits(complexity),
     officialReferences: officialStatReferences(),
     guidance:
       'AI只选定位、主动/被动、1或2AP、费用档位和效果强弱档位，不填写具体hp/mp/attack/limit或效果value。程序使用固定种子编译，预览、刷新与本地重校验不重抽。2AP获得显著更高效果预算；群体、附加状态、强控制与被动占用预算。',
@@ -126,7 +151,10 @@ function validateComplexity(data, plan) {
         assertDesign(!rule.conditions.length || plan.complexity >= 3, '本档不允许条件');
         if (rule.conditions.some((condition) => condition.type === 'mark'))
           assertDesign(data.mark && plan.complexity >= 5, '标记条件需要本角色专属标记');
-        assertDesign(rule.mode !== 'event' || plan.complexity >= 4, '本档不允许事件被动');
+        assertDesign(
+          plan.limits.passiveModes.includes(rule.mode),
+          `本档不允许事件被动：当前第${plan.complexity}档「${plan.complexityName}」，事件被动需要第4档起；请改用本档允许的主动效果或持续正面状态光环，并同步修改技能描述`,
+        );
         if (rule.mode === 'event')
           assertDesign(rule.event && rule.limit && rule.scope, '事件被动必须指定事件、次数和范围');
         assertDesign(

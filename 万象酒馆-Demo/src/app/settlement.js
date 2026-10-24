@@ -5,6 +5,7 @@ import { GROWTH_LABELS, restoreGrowth, xpToNext } from '../growth.js';
 import { levelLines } from '../content/level-dialogue.js';
 import { chooseRest } from '../expedition.js';
 import { createDialogue } from './dialogue.js';
+import { ITEMS } from '../content/items.js';
 
 /** Presentation consumes already-awarded experience and the engine's recovery changes. */
 export function createSettlement(context) {
@@ -236,6 +237,16 @@ export function createSettlement(context) {
       </h2>
       <div class="battle-rewards">
         ${reward('gold', rewards?.gold || 0, '金币')}${reward('summon-contract', rewards?.summonContracts || 0, '召唤契约')}${reward('ether', ether, '以太', 'ether-reward')}
+        ${Object.entries(rewards?.items || {})
+          .map(
+            ([id, count]) =>
+              html`<span title="${escapeText(ITEMS[id].name)}"
+                ><img src="${ITEMS[id].icon}" alt="${escapeText(ITEMS[id].name)}" /><b
+                  >${count}</b
+                ></span
+              >`,
+          )
+          .join('')}
       </div>
       <div class="experience-list">${experienceRows(grouped)}</div>
       ${

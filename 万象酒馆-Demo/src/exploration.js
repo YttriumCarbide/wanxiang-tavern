@@ -1,6 +1,7 @@
 import { BASE_WORLDS, routeKey, isEndless, validateEncounters } from './worlds.js';
 import { ENCOUNTER_COUNT, FINAL_ENCOUNTER } from './content/journey-rules.js';
 import { REGIONS } from './content/regions.js';
+import { forestEncounterSpec } from './content/forest-encounters.js';
 import { MAP_IDS } from './content/biomes.js';
 import { DEFINITIONS } from './data.js';
 import { tutorialSpec } from './content/tutorial.js';
@@ -191,6 +192,8 @@ export function explorationSpec(entry, index = 0) {
   if (entry.tutorial === true && entry.map === 'ruins') return tutorialSpec(index);
   if (!entry.world && entry.map === 'ruins' && entry.sequence < 6)
     return ruinsEncounterSpec(entry.sequence, index);
+  if (!entry.world && entry.map === 'forest' && entry.sequence < 6)
+    return forestEncounterSpec(entry.sequence, index);
   const site = entry.sequence % 6;
   const dynamic = entry.world;
   if (entry.encounters) validateEncounters(entry.encounters, entry);

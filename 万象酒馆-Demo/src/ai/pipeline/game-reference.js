@@ -3,7 +3,7 @@ import { PORTRAIT_TEMPLATES } from '../../content/portrait-templates.js';
 import { TRIGGER_EVENTS, TRIGGER_TARGETS, POSITIVE_BUFFS } from '../../triggers.js';
 
 /** A classified design reference, derived from the shipped game rather than scattered prose. */
-export function characterGameReference() {
+export function characterGameReference(plan = null) {
   return {
     displayNotation: '所有技能说明用小写hp/sp；v4仅设计机制，基础值与效果数字由程序编译。',
     resources: {
@@ -56,10 +56,10 @@ export function characterGameReference() {
         allAllies: '所有友方单位（全员护盾或全员回血）',
         self: '自己（换入时自身强化或获得护盾）',
       },
-      effects: '1~2项效果，写type/power，不填value；opposite对位为空时攻击落空，不寻找其他敌人。',
+      effects: `1~${plan?.limits.effectsPerSkill || 2}项效果，写type/power，不填value；opposite对位为空时攻击落空，不寻找其他敌人。`,
     },
     activeEffects: {
-      count: [1, 2],
+      count: [1, plan?.limits.effectsPerSkill || 2],
       damage: '对目标造成伤害，power选择low/standard/high；2AP程序给予显著更高伤害',
       heal: '回复目标hp，选择power档位',
       shield: '目标获得护盾，选择power档位',
@@ -81,12 +81,14 @@ export function characterGameReference() {
     passives: {
       locations: ['前场', '后场', '全战斗', '战斗外'],
       unifiedRules: {
-        events: TRIGGER_EVENTS,
+        events: !plan || plan.limits.passiveModes.includes('event') ? TRIGGER_EVENTS : {},
         targets: TRIGGER_TARGETS,
         continuous:
           'mode=continuous只支持haste,strength,guard,iron持续光环；再生必须使用有次数限制的事件施加，按层衰减。',
         event:
-          'mode=event，写event、scope与limit档位；scope为round/battle/expedition，limit为once/few/regular。',
+          !plan || plan.limits.passiveModes.includes('event')
+            ? 'mode=event，写event、scope与limit档位；scope为round/battle/expedition，limit为once/few/regular。'
+            : '本次低于第4档，禁止事件被动。不要输出event、scope或limit。',
         conditions:
           '每条规则最多一个条件；subject为self或target，默认self；front/rear/hasPositive/hasNegative/hasBuff/noBuff/hasShield，hpBelow/hpAbove/mpBelow/mpAbove的value为百分比，buff条件带buff/value，mark条件value为1~3。',
         recursion:

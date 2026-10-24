@@ -82,6 +82,7 @@
     inset 0 0 18px #8cd7b90a;
   transition:
     opacity 260ms,
+    translate 480ms cubic-bezier(0.2, 0.8, 0.2, 1),
     box-shadow 260ms;
 }
 .summon-methods button b {
@@ -210,6 +211,11 @@ body.summoning:has(#summon-choice[data-stage='wish']) #toast,
 }
 #summon-choice[data-stage='wish'] footer {
   top: calc(50% + 90px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .summon-methods button {
+    transition: none;
+  }
 }
 @media (max-height: 500px) {
   .summon-methods button {

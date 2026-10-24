@@ -29,6 +29,8 @@ export function createMacroExpander(variables) {
         if (name === 'newline') return '\n';
         if (name === 'lastusermessage')
           return variables.lastusermessage ?? variables.brief ?? variables.input ?? '';
+        if (name === 'lastchatmessage')
+          return variables.lastchatmessage ?? variables.lastcharmessage ?? '';
         if (name === 'date' || name === 'time') {
           const date = new Date(variables.clock || Date.now());
           return name === 'date'

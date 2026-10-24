@@ -1,0 +1,234 @@
+.we-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--ws-line);
+}
+.we-toolbar select,
+.we-toolbar button {
+  background: #12271f;
+  border: 1px solid var(--ws-line);
+  border-radius: 5px;
+  color: #d3d6ba;
+  padding: 8px 10px;
+  font-size: 11px;
+}
+.we-toolbar span {
+  margin-left: auto;
+  font-size: 10px;
+  color: var(--ws-muted);
+}
+.we-body {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr) 320px;
+  flex: 1;
+  min-height: 0;
+}
+.we-list {
+  overflow: auto;
+  border-right: 1px solid var(--ws-line);
+  padding: 12px;
+  scrollbar-width: thin;
+}
+.we-list button {
+  display: block;
+  width: 100%;
+  padding: 12px 10px;
+  margin-bottom: 5px;
+  text-align: left;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: transparent;
+  font-size: 12px;
+}
+.we-list button[aria-pressed='true'] {
+  border-color: #c6ac6b77;
+  background: #c6ac6b14;
+}
+.we-list small {
+  display: block;
+  margin-top: 5px;
+  color: #91a18c;
+  font-size: 9px;
+  overflow-wrap: anywhere;
+}
+.we-list p {
+  color: #9fab95;
+  line-height: 1.8;
+  font-size: 11px;
+}
+.we-map {
+  position: relative;
+  overflow: auto;
+  background-image: radial-gradient(#a6ba9e26 1px, transparent 1px);
+  background-size: 22px 22px;
+  scrollbar-width: thin;
+}
+.we-graph {
+  min-height: 100%;
+}
+.we-sheet {
+  position: relative;
+}
+.we-node {
+  position: absolute;
+  width: 210px;
+  height: 126px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
+  padding: 18px;
+  text-align: left;
+  border: 1px solid #8b9a7266;
+  border-radius: 8px;
+  background: linear-gradient(130deg, #2d4237, #1b2c22);
+  cursor: move;
+  touch-action: none;
+  user-select: none;
+}
+.we-node.selected {
+  border-color: #dec185;
+  box-shadow: 0 0 0 3px #cfaf7222;
+}
+.we-node small {
+  font-size: 9px;
+  color: #b6b98e;
+}
+.we-node strong {
+  font-size: 17px;
+  font-weight: 500;
+}
+.we-node span {
+  font-size: 11px;
+  color: #a5b69b;
+}
+.we-fields {
+  min-width: 0;
+  overflow: auto;
+  padding: 20px;
+  border-left: 1px solid var(--ws-line);
+  background: #20352a;
+  scrollbar-width: thin;
+}
+.we-fields h2 {
+  font:
+    24px 'Songti SC',
+    'SimSun',
+    serif;
+  margin: 0 0 20px;
+}
+.we-fields label {
+  display: block;
+  margin: 15px 0;
+  color: #b7c3a8;
+  font-size: 11px;
+  line-height: 1.8;
+}
+.we-fields input,
+.we-fields select,
+.we-fields textarea {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  border: 1px solid #a3b28444;
+  border-radius: 4px;
+  background: #11271f;
+  color: #e1e2c8;
+  padding: 8px;
+  font:
+    11px / 1.7 'Segoe UI',
+    'Microsoft YaHei',
+    sans-serif;
+}
+.we-fields textarea {
+  min-height: 95px;
+  resize: vertical;
+  font-family: Consolas, monospace;
+  tab-size: 2;
+}
+.we-fields button {
+  border: 1px solid #b6aa6f55;
+  background: #11281f;
+  border-radius: 4px;
+  font-size: 11px;
+  padding: 7px 10px;
+}
+.we-fields > button {
+  width: 100%;
+  margin-top: 10px;
+}
+.we-fields fieldset {
+  border: 1px solid #8b9f723d;
+  border-radius: 5px;
+  padding: 10px;
+  margin: 18px 0;
+  min-width: 0;
+}
+.we-fields legend {
+  font-size: 11px;
+  padding: 0 5px;
+  color: #c9c69e;
+}
+.we-recipe-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 65px;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.we-recipe-row button {
+  grid-column: 1 / -1;
+  color: #c5a48e;
+  padding: 4px;
+}
+.we-core-card {
+  margin: 25px;
+  padding: 25px;
+  border: 1px solid #c1ae6e55;
+  border-radius: 8px;
+  background: #c1ae6e0a;
+}
+.we-core-card small {
+  color: #cfaf72;
+  letter-spacing: 3px;
+}
+.we-debug-note {
+  margin: 100px 40px;
+  color: #b0bca2;
+  line-height: 2;
+}
+.we-debug-note h2 {
+  font:
+    30px 'Songti SC',
+    'SimSun',
+    serif;
+  color: #ddd1af;
+}
+@media (max-width: 1000px), (max-height: 600px) {
+  #workshop-editor .ws-header {
+    min-height: 62px;
+    padding: 10px 16px;
+  }
+  #workshop-editor .ws-header-actions {
+    gap: 5px;
+  }
+  #workshop-editor .ws-header-actions button {
+    font-size: 10px;
+    padding: 6px;
+  }
+  .we-body {
+    grid-template-columns: 130px minmax(0, 1fr) 265px;
+  }
+  .we-fields {
+    padding: 15px;
+  }
+  .we-toolbar {
+    padding: 8px 12px;
+  }
+  .we-toolbar span {
+    display: none;
+  }
+}

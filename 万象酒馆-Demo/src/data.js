@@ -1,4 +1,5 @@
 import { CHANGJING_YUEXI } from './content/changjing-yuexi.js';
+import { FOREST_ENEMIES, FOREST_BOSSES } from './content/forest-adversaries.js';
 import { UNIVERSAL_ENEMIES, UNIVERSAL_BOSSES } from './content/universal-adversaries.js';
 import {
   EXTRA_ENEMIES,
@@ -441,6 +442,7 @@ export const ENEMIES = [
   },
   ...EXTRA_ENEMIES,
   ...UNIVERSAL_ENEMIES,
+  ...FOREST_ENEMIES,
 ];
 export const BOSSES = [
   {
@@ -535,6 +537,7 @@ export const BOSSES = [
   },
   ...EXTRA_BOSSES,
   ...UNIVERSAL_BOSSES,
+  ...FOREST_BOSSES,
 ];
 export const DEFINITIONS = Object.fromEntries(
   [...HEROES, ...ENEMIES, ...BOSSES, ...RUINS_ADVERSARIES, ...RUINS_BOSSES].map((d) => [d.id, d]),

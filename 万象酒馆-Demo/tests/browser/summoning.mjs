@@ -25,6 +25,10 @@ export async function summoningChecks({ browser, baseURL, output }) {
       firstCompanion(library);
       library.campaign.tutorial = 'complete';
       library.inventory.gold = 200;
+      localStorage.setItem(
+        'wanxiang.generation-options.v1',
+        JSON.stringify({ developerMode: true, skipAiGeneration: false, allowRetreat: true }),
+      );
       localStorage.setItem('wanxiang.worldbooks.v1', JSON.stringify(library));
     });
     await page.reload();
@@ -72,7 +76,7 @@ export async function summoningChecks({ browser, baseURL, output }) {
     assert.equal(icon.width, 30);
     assert.equal(icon.height, 30);
     const resource = await page.locator('#inn-resources > div').first().boundingBox();
-    const toolbar = await page.locator('#records-open').boundingBox();
+    const toolbar = await page.locator('#ai-open').boundingBox();
     assert(resource.width * resource.height < toolbar.width * toolbar.height * 3);
     await page.screenshot({ path: path.join(output, 'inn-resources-compact.png') });
     await page.route('**/api/ai/worldbooks/tavern-world', async (route) => {
@@ -95,7 +99,8 @@ export async function summoningChecks({ browser, baseURL, output }) {
     assert.equal((await page.evaluate(() => demo.getLibrary())).characters.length, 4);
     assert.equal(await page.locator('#contract-count').textContent(), '2');
     await page.locator('#summoned-join').click();
-    for (let i = 0; i < 6; i++) await page.locator('#companion-dialogue button').click();
+    while (await page.locator('#companion-dialogue').isVisible())
+      await page.locator('#companion-dialogue button').click();
     await page.route('**/api/ai/prompts/fixture', (route) =>
       route.fulfill({ json: { preset: { ...tavernPresetFixture(), id: 'fixture' } } }),
     );

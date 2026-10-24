@@ -6,6 +6,8 @@
   --ink: #e8e1cf;
   --teal: #82bdb3;
   --red: #d8787c;
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
 }
 * {
   box-sizing: border-box;
@@ -122,4 +124,35 @@ button:hover {
 }
 .bar.mp {
   height: 12px !important;
+}
+
+@media (pointer: coarse) {
+  button,
+  select,
+  input {
+    touch-action: manipulation;
+  }
+  dialog {
+    overscroll-behavior: contain;
+  }
+  input,
+  textarea,
+  select {
+    min-width: 0;
+  }
+  dialog::backdrop {
+    backdrop-filter: none;
+  }
+}
+@media (max-height: 600px) and (orientation: landscape) {
+  dialog {
+    max-height: calc(100dvh - 12px);
+    max-width: calc(100vw - 16px - var(--safe-left) - var(--safe-right));
+  }
+  dialog input,
+  dialog textarea,
+  dialog pre,
+  dialog p {
+    overflow-wrap: anywhere;
+  }
 }

@@ -7,6 +7,7 @@ import {
   TUTORIAL_DUNGEON,
   CORRIDOR_DUNGEON,
   HALL_DUNGEON,
+  ALL_OFFICIAL_DUNGEONS,
   officialDungeonFor,
 } from '../src/content/official-dungeons.js';
 import { migrateTutorialWorldbook } from '../server/worldbook-tutorial.mjs';
@@ -62,7 +63,7 @@ test('tutorial migration preserves edited Pandora and injection controls while r
   assert.equal(source.entries[1].content, '过期同伴资料');
   assert.equal(officialDungeonFor({ map: 'ruins', sequence: 1 }), CORRIDOR_DUNGEON);
   assert.equal(officialDungeonFor({ map: 'ruins', sequence: 2 }), HALL_DUNGEON);
-  assert.equal(officialDungeonFor({ map: 'forest', sequence: 1 }), null);
+  assert.equal(officialDungeonFor({ map: 'forest', sequence: 1 }).id, 'forest-bog');
   assert.equal(officialDungeonFor({ map: 'ruins', sequence: 0, tutorial: true }), TUTORIAL_DUNGEON);
 });
 
@@ -296,7 +297,7 @@ test('editable canon and all six official outlines migrate once and only match t
   assert.equal(
     Object.values(fresh.entries).filter((entry) => entry.extensions?.wanxiang?.officialDungeonId)
       .length,
-    6,
+    ALL_OFFICIAL_DUNGEONS.length,
   );
   const library = newCampaign(defaultProtagonist());
   assert(officialSummonPool(library, fresh).some((entry) => entry.id === 'official-aegis'));

@@ -1,6 +1,7 @@
 import { createRequestControls } from './request-controls.js';
 import { createGenerationAccess } from './generation-access.js';
 import { createBookshelf } from './bookshelf.js';
+import { createArcade } from './arcade.js';
 import { createEmblems } from './emblems.js';
 import { mountDisplay } from './display.js';
 import { createCheckpoint } from '../storage/checkpoint.js';
@@ -52,7 +53,11 @@ export function createApplication({
     events: createEventScope(),
     apiClient,
   });
-  context.apiClient = createRequestControls(apiClient, () => context.session.ai.generationOptions);
+  context.apiClient = createRequestControls(
+    apiClient,
+    () => context.session.ai.generationOptions,
+    () => context.arcade,
+  );
   context.generationAccess = createGenerationAccess(context);
   context.roster = createRoster(context);
   context.viewport = createViewport(context);
@@ -83,6 +88,7 @@ export function createApplication({
   context.emblems = createEmblems(context);
   context.companionEvents = createCompanionEvents(context);
   context.settlement = createSettlement(context);
+  context.arcade = createArcade(context);
 
   const records = createRecords(context);
   for (const field of document.querySelectorAll('input, textarea, form'))
@@ -107,6 +113,7 @@ export function createApplication({
     runtime.token++;
     clearTimeout(runtime.toastTimer);
     clearTimeout(runtime.resizeTimer);
+    context.arcade.dispose();
     context.events.dispose();
     context.generationAccess.dispose();
     context.checkpoint.dispose();

@@ -4,7 +4,11 @@ import { presetHelperScripts } from './helper-scripts.js';
 export function adviceBinding(preset) {
   const declaration = preset.extensions?.wanxiang?.advice;
   const izumi = presetHelperScripts(preset).some(
-    (script) => script.enabled && script.id === '7c19636a-77b4-4c18-b26b-673872cb8dcf',
+    (script) =>
+      script.enabled &&
+      ['7c19636a-77b4-4c18-b26b-673872cb8dcf', '3e6591ac-a852-4a94-8d9f-062da0539167'].includes(
+        script.id,
+      ),
   );
   if (!izumi && (!declaration || typeof declaration !== 'object')) return null;
   return {

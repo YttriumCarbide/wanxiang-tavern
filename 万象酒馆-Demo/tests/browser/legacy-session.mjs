@@ -1,6 +1,19 @@
 import { newLibrary } from '../../src/ai/library.js';
 import { applyGeneratedReset } from '../../src/app/generated-reset.js';
 
+export async function openShelfPanel(page, action) {
+  const frame = page.frameLocator('#inn-frame iframe');
+  await frame.locator('#status').waitFor({ state: 'detached', timeout: 60000 });
+  await frame.locator('canvas').evaluate(() => window.assetPreview.placeNow('bookshelf'));
+  await frame.locator('#bookshelf-' + action).click();
+  const panels = {
+    archives: 'archive-dialog',
+    records: 'journey-records',
+    memory: 'memory-dialog',
+  };
+  await page.locator('#' + panels[action]).waitFor({ state: 'visible' });
+}
+
 /** These suites exercise existing six-member saves; fresh creation has its own real API suite. */
 export async function legacySession(page) {
   await dismissAutomaticJournals(page);

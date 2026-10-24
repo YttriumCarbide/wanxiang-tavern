@@ -293,7 +293,7 @@ export function createEquipment(context) {
       ? html`<article class="forge-item">
           <span class="equipment-emblem">✧</span>
           <h3>${escapeText(item.name)}</h3>
-          <p>${escapeText(item.description)}</p>
+          <p>${escapeText(resourceText(item.description))}</p>
           <div class="forge-effects">${escapeText(equipmentDescription(item))}</div>
           <button
             class="primary"

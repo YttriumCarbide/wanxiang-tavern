@@ -149,6 +149,13 @@ export async function explorationJourneyChecks({ browser, baseURL, output }) {
               if (action.kind === 'swap') {
                 await page.locator(`[data-rear="${action.incoming}"]`).click();
                 await page.locator(`[data-side="Friendly"][data-slot="${action.slot}"]`).click();
+              } else if (action.kind === 'item') {
+                await page.locator('#backpack-open').click();
+                await page.locator(`[data-item="${action.item}"]`).click();
+                await page
+                  .locator(`[data-unit="${action.target}"],[data-rear="${action.target}"]`)
+                  .first()
+                  .click();
               } else {
                 await page.locator(`[data-unit="${action.actor}"]`).click();
                 await page.locator(`[data-skill="${action.skill}"]`).click();

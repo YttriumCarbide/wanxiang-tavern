@@ -1,4 +1,5 @@
 import { RUINS_ROUTES, RUINS_ENEMY_IDS } from './ruins-encounters.js';
+import { FOREST_ROUTES } from './forest-encounters.js';
 /** Existing art themes, fixed environment rules and six reusable exploration site families. */
 export const REGIONS = Object.freeze({
   ruins: {
@@ -13,9 +14,26 @@ export const REGIONS = Object.freeze({
     name: '月痕古林',
     description: '树根、苔藓与萤火。可复用为林中道路、废堡周边或其他森林主题地点。',
     atmosphere: '潮湿空气，遮蔽天光的树冠，苔石与萤火。',
-    sites: ['林缘小径', '苔石岔路', '树根空地', '隐蔽营地', '古木阴影', '孢子深处'],
-    enemies: ['mossSlime', 'sprout', 'pebble', 'hound'],
-    boss: 'bossBloom',
+    sites: FOREST_ROUTES.map((route) => route.name),
+    enemies: [
+      'livingVine',
+      'moonMoth',
+      'bogLeech',
+      'fogSpore',
+      'bogDrifter',
+      'moonWorker',
+      'hiveGuard',
+      'honeyLarva',
+      'scaleShield',
+      'scaleWarrior',
+      'scaleArcher',
+      'twistedSapling',
+      'rootHauler',
+      'barkAcolyte',
+      'rootSentry',
+      'moonTendril',
+    ],
+    boss: 'moonEye',
   },
   frost: {
     name: '霜晶矿窟',

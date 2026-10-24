@@ -22,6 +22,7 @@ import { formatRegexPresentation } from './regex-presentation.js';
 import { characterOutputSchema } from '../character-schema.js';
 import { scriptOutputSchema } from '../script-schema.js';
 import { parseCharacterOutput } from '../contracts.js';
+import { characterGenerationPlan } from '../../character-generation.js';
 
 /** Shared prompt, parser and world-state pipeline. Network and storage are supplied by the host. */
 export function createAiPipeline({
@@ -247,7 +248,7 @@ export function createAiPipeline({
         models || ['chat', 'quick-chat', 'summary', 'creation', 'map'].includes(kind)
           ? null
           : kind === 'character'
-            ? characterOutputSchema()
+            ? characterOutputSchema({ plan: characterGenerationPlan(input) })
             : scriptOutputSchema(input.party.map((item) => item.id)),
     };
   }

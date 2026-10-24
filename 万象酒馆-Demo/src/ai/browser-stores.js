@@ -14,6 +14,8 @@ import { upgradeContinuityRules } from './continuity-upgrade.js';
 import { upgradeGenerationExperience } from './generation-experience-upgrade.js';
 import { upgradeStatusEmblems } from './status-emblem-upgrade.js';
 import { upgradeUniversalEnemies } from './universal-enemy-upgrade.js';
+import { upgradeCharacterConstraints } from './character-constraints-upgrade.js';
+import { upgradeForestWorldbook } from './forest-worldbook.js';
 
 function checkedId(id) {
   if (typeof id !== 'string' || !/^[a-z0-9-]{1,100}$/.test(id)) throw Error('资料ID无效');
@@ -175,6 +177,22 @@ export async function createBrowserStores(database, readText, builtinBook) {
     await database.write([
       ['world.book.tavern-world', upgradeUniversalEnemies(database.get('world.book.tavern-world'))],
       ['world.universal-enemies.v37', true],
+    ]);
+  if (!database.get('world.character-constraints.v38'))
+    await database.write([
+      [
+        'world.book.tavern-world',
+        upgradeCharacterConstraints(
+          database.get('world.book.tavern-world'),
+          await readText('worldbook/character-complexity.md'),
+        ),
+      ],
+      ['world.character-constraints.v38', true],
+    ]);
+  if (!database.get('world.forest-chapters.v39'))
+    await database.write([
+      ['world.book.tavern-world', upgradeForestWorldbook(database.get('world.book.tavern-world'))],
+      ['world.forest-chapters.v39', true],
     ]);
   let worldSettings = normalizeWorldSettings(
     database.get('world.settings') || { globalSelect: ['tavern-world'] },

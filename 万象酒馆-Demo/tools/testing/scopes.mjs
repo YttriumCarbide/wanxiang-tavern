@@ -1,4 +1,7 @@
 export const allScopes = [
+  'mobile',
+  'forest',
+  'workshop',
   'universal-enemies',
   'developer-mode',
   'status-emblems',

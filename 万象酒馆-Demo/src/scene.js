@@ -18,6 +18,7 @@ import { portraitUrl } from './catalog.js';
 import { createCardDeaths } from './card-death.js';
 import { stabilizeFloorGeometry } from './floor-geometry.js';
 import { enemyIntentBadge } from './enemy-intent.js';
+import { deviceRenderQuality, createFrameBudget } from './shared/render-budget.js';
 
 export async function createBattleView(stage, onUnitClick, options = {}) {
   const theme = BIOMES[options.map] || BIOMES.ruins;
@@ -29,11 +30,13 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
     effects = stage.querySelector('.battle-effects');
   const renderer = new THREE.WebGLRenderer({
     canvas,
-    antialias: true,
-    preserveDrawingBuffer: true,
+    antialias: deviceRenderQuality().antialias,
+    preserveDrawingBuffer: !deviceRenderQuality().mobile,
   });
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-  renderer.shadowMap.enabled = true;
+  const quality = deviceRenderQuality();
+  const frameBudget = createFrameBudget(quality.fps);
+  renderer.setPixelRatio(quality.pixelRatio);
+  renderer.shadowMap.enabled = quality.shadows;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.12;
@@ -546,6 +549,11 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
   function tick(now) {
     raf = 0;
     if (disposed) return;
+    if (document.hidden || document.querySelector('dialog[open]')) return;
+    if (!frameBudget.accepts(now)) {
+      schedule();
+      return;
+    }
     let moving = ambience.update(now);
     moving = emblemAura.update(records, now) || moving;
     moving = weather.update(now) || moving;
@@ -618,6 +626,7 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
     camera.updateProjectionMatrix();
     camera.updateMatrixWorld();
     renderer.setSize(width, height, false);
+    renderer.setPixelRatio(deviceRenderQuality().pixelRatio);
     positions();
     renderer.render(scene, camera);
     schedule();
@@ -652,6 +661,12 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
   ro.observe(stage);
   resize();
   events.on(document, 'visibilitychange', schedule);
+  const modalObserver = new MutationObserver(schedule);
+  modalObserver.observe(document.body, {
+    subtree: true,
+    attributes: true,
+    attributeFilter: ['open'],
+  });
   events.on(canvas, 'wheel', (e) => e.preventDefault(), { passive: false });
   const dragRay = new THREE.Raycaster(),
     dragPointer = new THREE.Vector2(),
@@ -804,6 +819,7 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
       disposed = true;
       cancelAnimationFrame(raf);
       ro.disconnect();
+      modalObserver.disconnect();
       events.dispose();
       deaths.dispose();
       dragMaterials.forEach((m) => resources.material(m));

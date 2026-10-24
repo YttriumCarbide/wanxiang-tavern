@@ -127,7 +127,6 @@ export function createSummoning(context) {
   events.on(dialog, 'click', (event) => {
     const button = event.target.closest('[data-summon-mode]');
     if (!button || busy) return;
-    const before = button.getBoundingClientRect();
     mode = button.dataset.summonMode;
     stage = 'selected';
     $('#summon-choice-status').textContent = '';
@@ -138,15 +137,6 @@ export function createSummoning(context) {
     );
     refresh();
     showNotice();
-    const after = button.getBoundingClientRect();
-    button.getAnimations().forEach((animation) => animation.cancel());
-    button.animate(
-      [
-        { transform: `translate(${before.left - after.left}px, ${before.top - after.top}px)` },
-        { transform: 'translate(0, 0)' },
-      ],
-      { duration: 480, easing: 'cubic-bezier(.2,.8,.2,1)' },
-    );
   });
   events.on($('#summon-confirm'), 'click', async () => {
     if (busy || session.ai.busy || dialog.hidden || session.runtime.mode !== 'inn') return;

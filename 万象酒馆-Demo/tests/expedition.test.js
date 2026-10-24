@@ -59,7 +59,7 @@ test('resources and formation persist; round status and action counters reset', 
   assert.deepEqual(next.formation, s.formation);
   assert.equal(next.phase, 'opening');
 });
-test('both bosses change to different second-phase intents at half health', () => {
+test('threshold bosses change second-phase intents; cycle bosses keep their published pattern', () => {
   for (const boss of BOSSES) {
     const s = newEncounter(encounterSpec(4, boss.id));
     s.phase = 'plan';
@@ -67,6 +67,11 @@ test('both bosses change to different second-phase intents at half health', () =
     const before = intent(s, boss.id);
     s.units[boss.id].hp = Math.floor(boss.hp / 2);
     const after = intent(s, boss.id);
+    if (boss.phaseMode === 'cycle') {
+      assert.equal(after.enraged, false);
+      assert.equal(before.name, after.name);
+      continue;
+    }
     assert(after.enraged);
     assert.notEqual(before.name, after.name);
   }

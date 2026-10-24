@@ -83,8 +83,8 @@ export async function generationExperienceChecks({ browser, baseURL, output }) {
   async function shelf() {
     const frame = await innReady();
     await frame.locator('canvas').evaluate(() => window.assetPreview.placeNow('bookshelf'));
-    await frame.locator('#bookshelf-open').click();
-    await page.locator('#bookshelf-dialog').waitFor({ state: 'visible' });
+    await frame.locator('#bookshelf-memory').click();
+    await page.locator('#memory-dialog').waitFor({ state: 'visible' });
   }
   try {
     await page.route('**/api/ai/generate/summary', async (route) => {
@@ -230,7 +230,7 @@ export async function generationExperienceChecks({ browser, baseURL, output }) {
       if (from === 'fate')
         await page.screenshot({ path: path.join(output, 'bookshelf-approach-marker.png') });
       await button.click();
-      await frame.locator('#bookshelf-open').waitFor({ state: 'visible' });
+      await frame.locator('#bookshelf-memory').waitFor({ state: 'visible' });
       assert.equal(
         await frame.locator('canvas').evaluate(() => window.assetPreview.getState().current),
         'bookshelf',
@@ -246,8 +246,6 @@ export async function generationExperienceChecks({ browser, baseURL, output }) {
     assert(bounds.min[0] > 5.3 && bounds.max[0] < 6.1, 'Bookcase stands against the east wall');
     await page.screenshot({ path: path.join(output, 'bookshelf-against-wall.png') });
     await shelf();
-    assert.equal(await page.locator('#bookshelf-books button').count(), 4);
-    await page.locator('#memory-open').click();
     await page.waitForFunction(
       () =>
         document.querySelectorAll('#memory-items article').length === 6 &&
@@ -278,7 +276,7 @@ export async function generationExperienceChecks({ browser, baseURL, output }) {
     await page.locator('#chat-send').click();
     await page.locator('[data-request-stop="chat"]').waitFor();
     await chatStarted;
-    assert.equal(await page.locator('[data-request-arcade],#arcade-dialog').count(), 0);
+    assert.equal(await page.locator('[data-request-arcade="chat"]').count(), 1);
     assert(releaseChat);
     releaseChat();
     await page.locator('[data-request-stop="chat"]').waitFor({ state: 'detached' });
@@ -302,7 +300,7 @@ export async function generationExperienceChecks({ browser, baseURL, output }) {
       client.dispose();
       return { stops, games, remaining: document.querySelectorAll('.api-request-control').length };
     });
-    assert.deepEqual(sharedControls, { stops: 7, games: 0, remaining: 0 });
+    assert.deepEqual(sharedControls, { stops: 7, games: 7, remaining: 0 });
 
     await post('config', {
       kind: 'script',

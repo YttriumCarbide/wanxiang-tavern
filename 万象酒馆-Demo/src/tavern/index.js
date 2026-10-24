@@ -3,16 +3,20 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { createEventScope } from '../shared/events.js';
 import { createResourceScope } from '../shared/resources.js';
 import { synchronizeSummonCrystals } from './animation.js';
+import { deviceRenderQuality, createFrameBudget } from '../shared/render-budget.js';
 
 export async function createTavernView() {
+  const quality = deviceRenderQuality();
+  const frameBudget = createFrameBudget(quality.fps);
+  let renderedFrames = 0;
   const canvas = document.querySelector('canvas');
   const renderer = new THREE.WebGLRenderer({
     canvas,
-    antialias: true,
-    preserveDrawingBuffer: true,
+    antialias: quality.antialias,
+    preserveDrawingBuffer: !quality.mobile,
   });
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-  renderer.shadowMap.enabled = true;
+  renderer.setPixelRatio(quality.pixelRatio);
+  renderer.shadowMap.enabled = quality.shadows;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 0.96;
@@ -249,11 +253,13 @@ export async function createTavernView() {
   let disposed = false;
   const resources = createResourceScope();
   const events = createEventScope();
+  const shelfButtons = [];
   function dispose() {
     if (disposed) return;
     disposed = true;
     renderer.setAnimationLoop(null);
     events.dispose();
+    shelfButtons.forEach((shelf) => shelf.button.remove());
     mixer?.stopAllAction();
     if (model) mixer?.uncacheRoot(model);
     resources.object(scene);
@@ -351,6 +357,12 @@ export async function createTavernView() {
       enterCorridor,
       fieldMaterials,
       getState: () => ({
+        rendering: {
+          frames: renderedFrames,
+          fps: quality.fps,
+          pixelRatio: renderer.getPixelRatio(),
+          shadows: renderer.shadowMap.enabled,
+        },
         current,
         moving: !!travel,
         buttons: Object.entries(spotElements)
@@ -430,16 +442,26 @@ export async function createTavernView() {
     supplyButtons[id] = button;
   }
   const talk = document.getElementById('talk-open');
-  const bookshelf = document.createElement('button');
-  bookshelf.id = 'bookshelf-open';
-  bookshelf.className = 'talk-open';
-  bookshelf.textContent = '查阅书架';
-  bookshelf.hidden = true;
-  bookshelf.onclick = () => {
-    if (!bookshelf.hidden && !travel)
-      parent.postMessage({ type: 'tavern-bookshelf' }, location.origin);
-  };
-  talk.before(bookshelf);
+  shelfButtons.push(
+    ...[
+      { action: 'archives', label: '归档', height: 1.78 },
+      { action: 'records', label: '记录', height: 1.24 },
+      { action: 'memory', label: '总结', height: 0.7 },
+    ].map((shelf) => {
+      const button = document.createElement('button');
+      button.id = 'bookshelf-' + shelf.action;
+      button.className = 'talk-open bookshelf-shelf';
+      button.textContent = shelf.label;
+      button.dataset.shelfAction = shelf.action;
+      button.hidden = true;
+      events.on(button, 'click', () => {
+        if (!button.hidden && !travel)
+          parent.postMessage({ type: 'tavern-bookshelf', action: shelf.action }, location.origin);
+      });
+      talk.before(button);
+      return { ...shelf, button };
+    }),
+  );
   talk.onclick = () => {
     if (!talk.hidden && !travel)
       parent.postMessage({ type: 'tavern-talk', place: current }, location.origin);
@@ -485,12 +507,24 @@ export async function createTavernView() {
   let spotTimer = 0,
     summonVisible = null;
   function updateSpots(checkOcclusion = true) {
-    bookshelf.hidden = !loaded || !!travel || current !== 'bookshelf';
+    camera.updateMatrixWorld();
+    for (const shelf of shelfButtons) {
+      shelf.button.hidden = !loaded || !!travel || current !== 'bookshelf';
+      if (!shelf.button.hidden) {
+        projected.set(5.48, shelf.height, -3.08).project(camera);
+        shelf.button.hidden =
+          projected.z < -1 ||
+          projected.z > 1 ||
+          Math.abs(projected.x) > 1 ||
+          Math.abs(projected.y) > 1;
+        shelf.button.style.left = (projected.x * 0.5 + 0.5) * innerWidth + 'px';
+        shelf.button.style.top = (-projected.y * 0.5 + 0.5) * innerHeight + 'px';
+      }
+    }
     emblem.hidden = !loaded || !!travel || current !== 'fate';
     for (const button of Object.values(supplyButtons))
       button.hidden = !loaded || !!travel || current !== 'supplies';
     talk.hidden = !loaded || !!travel || !['bar', 'bar2', 'table', 'table2'].includes(current);
-    camera.updateMatrixWorld();
     camera.getWorldDirection(direction);
     function updatePortal(button, id) {
       projected.fromArray(places[id].anchor);
@@ -599,7 +633,18 @@ export async function createTavernView() {
   resize();
   const clock = new THREE.Clock();
   let elapsed = 0;
-  renderer.setAnimationLoop(() => {
+  renderer.setAnimationLoop((now) => {
+    let covered = false;
+    try {
+      covered = !!parent.document.querySelector('dialog[open], #generation-progress:not([hidden])');
+    } catch {
+      /* Standalone cross-origin previews render independently. */
+    }
+    if (document.hidden || covered) {
+      clock.getDelta();
+      return;
+    }
+    if (!frameBudget.accepts(now)) return;
     const dt = Math.min(clock.getDelta(), 0.05);
     elapsed += dt;
     for (const material of fieldMaterials)
@@ -676,6 +721,7 @@ export async function createTavernView() {
     updateSpots(checkOcclusion);
     if (checkOcclusion) spotTimer = 0;
     renderer.render(scene, camera);
+    renderedFrames++;
   });
 
   return { dispose };

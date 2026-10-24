@@ -1,8 +1,10 @@
 import { API_LABELS } from './first-run-rules.js';
 import { skippingAi } from '../generation-options.js';
 /** Every paid/model request has a real AbortSignal and a visible control in its current panel. */
-export function createRequestControls(client, generationOptions = () => null) {
+export function createRequestControls(client, generationOptions = () => null, arcade = () => null) {
   const active = new Set();
+  const dock = document.createElement('div');
+  dock.className = 'api-request-dock';
   function hostFor(kind, models) {
     const visible = (id) => {
       const panel = document.getElementById(id);
@@ -40,12 +42,21 @@ export function createRequestControls(client, generationOptions = () => null) {
       button.type = 'button';
       button.textContent = '终止';
       button.dataset.requestStop = match[2];
-      control.append(label, button);
+      const play = document.createElement('button');
+      play.type = 'button';
+      play.textContent = '俄罗斯方块';
+      play.dataset.requestArcade = match[2];
+      const openArcade = () => arcade()?.open();
+      play.addEventListener('click', openArcade);
+      control.append(label, play, button);
       const host = hostFor(match[2], match[1] === 'models');
-      if (host === document.body) control.classList.add('floating');
-      host.append(control);
+      if (host === document.body) {
+        if (!dock.isConnected) document.body.append(dock);
+        dock.append(control);
+      } else host.append(control);
       const record = { controller, control };
       active.add(record);
+      let outcome = 'error';
       const stop = () => {
         controller.abort();
         button.disabled = true;
@@ -56,11 +67,19 @@ export function createRequestControls(client, generationOptions = () => null) {
         controller.signal.throwIfAborted();
         const result = await client.request(path, data, { ...options, signal: controller.signal });
         controller.signal.throwIfAborted();
+        outcome = 'success';
         return result;
       } finally {
+        if (controller.signal.aborted) outcome = 'cancel';
+        arcade()?.completed(
+          match[1] === 'models' ? '模型列表' : API_LABELS[match[2]],
+          outcome === 'success',
+        );
         options.signal?.removeEventListener('abort', cancel);
         button.removeEventListener('click', stop);
+        play.removeEventListener('click', openArcade);
         control.remove();
+        if (!dock.childElementCount) dock.remove();
         active.delete(record);
       }
     },
@@ -70,6 +89,7 @@ export function createRequestControls(client, generationOptions = () => null) {
         control.remove();
       }
       active.clear();
+      dock.remove();
       client.dispose();
     },
   };

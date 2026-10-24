@@ -150,6 +150,9 @@ export async function chatRequest(
     const projection = adviceTranscript(transcript, effectiveAdvice);
     const variables = {
       input: projection.messages.at(-1).content,
+      lastchatmessage: projection.messages.at(-1).content,
+      lastcharmessage:
+        projection.messages.findLast((message) => message.role === 'assistant')?.content || '',
       brief: projection.messages.at(-1).content,
       task: kind === 'chat' ? '酒馆交流' : '战斗闲聊',
       char: input.characters.map((character) => character.name).join('、'),

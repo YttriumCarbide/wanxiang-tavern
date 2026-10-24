@@ -88,6 +88,7 @@ export function scanWorldbooks({ books, settings: rawSettings, context, state = 
   const expanded = (text) =>
     text
       .replace(/{{\s*outputSchema\s*}}/gi, () => context.outputSchema || '')
+      .replace(/{{\s*characterLimits\s*}}/gi, () => context.characterLimits || '')
       .replace(/{{\s*(char|user)\s*}}/gi, (_, key) =>
         key.toLowerCase() === 'char' ? (context.names || []).join('、') : '玩家',
       );

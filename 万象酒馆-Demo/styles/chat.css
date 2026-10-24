@@ -856,3 +856,33 @@ iframe.mes_text {
   color: #e1d4af;
   border: 1px solid #b5a37266;
 }
+
+@media (max-height: 600px) and (orientation: landscape) {
+  #chat-dialog {
+    width: calc(100vw - 20px - var(--safe-left) - var(--safe-right));
+    height: calc(100dvh - 16px);
+    padding: 10px 14px;
+  }
+  #chat-conversation {
+    min-height: 0;
+    grid-template-columns: 110px minmax(0, 1fr);
+    gap: 10px;
+  }
+  .chat-company {
+    overflow: auto;
+    padding-right: 8px;
+  }
+  .chat-person {
+    padding: 6px;
+  }
+  .chat-person img {
+    width: 40px;
+    height: 48px;
+  }
+  .chat-person strong {
+    font-size: 12px;
+  }
+  .chat-person small {
+    font-size: 9px;
+  }
+}

@@ -38,6 +38,7 @@ export function createArcade(context) {
     '<h2>生成完成</h2><p></p><button data-arcade-return>返回查看</button><button data-arcade-continue>继续游戏</button>';
   document.body.append(dialog, notice);
   let timer = null,
+    saveTimer = null,
     announcement = null,
     disposed = false;
   let owner = null,
@@ -46,10 +47,12 @@ export function createArcade(context) {
     drag = null;
   const board = dialog.querySelector('#arcade-board');
   const accelerate = dialog.querySelector('[data-tetris="down"]');
-  function save() {
+  function save(flush = false) {
     if (!state || context.session.ai.library !== owner) return;
     owner.arcade = structuredClone(state);
-    context.generation?.save();
+    clearTimeout(saveTimer);
+    if (flush) context.generation?.save();
+    else saveTimer = setTimeout(() => context.generation?.save(), 400);
   }
   function render() {
     if (!board.childElementCount)
@@ -87,7 +90,7 @@ export function createArcade(context) {
     const reward = result.events.reduce((sum, event) => sum + (event.ether || 0), 0);
     if (reward) owner.inventory.ether += reward;
     // Store board and earned currency in the same library snapshot, avoiding duplicate rewards on reload.
-    save();
+    save(reward > 0 || ['pause', 'new'].includes(action));
     render();
     if (reward) {
       dialog.querySelector('#arcade-status').textContent =
@@ -156,7 +159,7 @@ export function createArcade(context) {
     fastFall = false;
     drag = null;
     state = tetrisStep(state, 'pause').state;
-    save();
+    save(true);
   });
   context.events.on(document, 'visibilitychange', () => {
     if (document.hidden && dialog.open) {
@@ -188,6 +191,7 @@ export function createArcade(context) {
     completed(label, success = true) {
       if (!dialog.open || disposed) return;
       clearTimeout(announcement);
+      save(true);
       announcement = setTimeout(() => {
         if (disposed || !dialog.open) return;
         clearTimeout(timer);
@@ -204,9 +208,10 @@ export function createArcade(context) {
       disposed = true;
       clearTimeout(timer);
       clearTimeout(announcement);
+      clearTimeout(saveTimer);
       if (state) {
         state = tetrisStep(state, 'pause').state;
-        save();
+        save(true);
       }
       notice.remove();
       dialog.remove();

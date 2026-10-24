@@ -1,4 +1,4 @@
-import { restoreBag } from './content/items.js';
+import { ITEMS, restoreBag } from './content/items.js';
 export function restoreInventory(value) {
   const count = value?.summonContracts;
   return {
@@ -22,8 +22,24 @@ export function claimBattleRewards(library, claimId, rewards) {
   const gold = rewards.gold ?? 0;
   if (!Number.isSafeInteger(count) || count < 0 || !Number.isSafeInteger(gold) || gold < 0)
     throw Error('奖励数量无效');
+  const items = rewards.items ?? {};
+  if (
+    !items ||
+    typeof items !== 'object' ||
+    Array.isArray(items) ||
+    Object.entries(items).some(
+      ([id, value]) => !ITEMS[id] || !Number.isSafeInteger(value) || value < 0,
+    )
+  )
+    throw Error('道具奖励无效');
   library.inventory.summonContracts = Math.min(999999, library.inventory.summonContracts + count);
   library.inventory.gold = Math.min(999999999, (library.inventory.gold || 0) + gold);
+  if (Object.keys(items).length) {
+    library.inventory.items = restoreBag(library.inventory.items);
+    for (const [id, value] of Object.entries(items))
+      library.inventory.items[id] = Math.min(9999, library.inventory.items[id] + value);
+    library.inventory.bagUnlocked = true;
+  }
   library.rewardClaims.push(claimId);
   library.rewardClaims = library.rewardClaims.slice(-2000);
   return true;

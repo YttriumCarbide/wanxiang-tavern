@@ -48,8 +48,15 @@ export function createBookshelf(context) {
   });
   select(0);
   return {
-    open() {
-      if (context.session.runtime.mode === 'inn' && !dialog.open) dialog.showModal();
+    open(action) {
+      if (context.session.runtime.mode !== 'inn') return;
+      const entry = {
+        archives: '#archives-open',
+        records: '#records-open',
+        memory: '#memory-open',
+      }[action];
+      if (entry) $(entry).click();
+      else if (!dialog.open) dialog.showModal();
     },
     dispose() {
       dialog.close();

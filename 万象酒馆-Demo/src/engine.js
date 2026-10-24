@@ -88,7 +88,9 @@ export function intent(s, id) {
   }
   const def = definition(s, id),
     enraged =
-      def.boss && (s.units[id].enraged || s.units[id].hp <= s.units[id].maxHp * def.phaseThreshold);
+      def.boss &&
+      def.phaseMode !== 'cycle' &&
+      (s.units[id].enraged || s.units[id].hp <= s.units[id].maxHp * def.phaseThreshold);
   const list = enraged ? def.enragedIntents : def.intents;
   const move =
     def.openingIntent &&
@@ -127,7 +129,11 @@ export function enemyTimeline(s, extraSlow = {}) {
     .map((e, i) => ({
       id: e.id,
       speed: Math.max(1, e.speed - (s.units[e.id].buffs.slow || 0) - (extraSlow[e.id] || 0)),
-      tie: (i * 17 + s.seed + s.round * 11) % 31,
+      // Equal-speed collisions fill backwards from the last time slot.
+      tie:
+        e.tactic?.mode === 'moon-tree'
+          ? { crown: 2, eye: 1, root: 0 }[e.tactic.part]
+          : (i * 17 + s.seed + s.round * 11) % 31,
     }))
     .sort((a, b) => b.speed - a.speed || a.tie - b.tie);
   for (const e of ranked) {
@@ -200,7 +206,11 @@ function simulate(s, plan, slots) {
     slows = {},
     usedSlots = new Map();
   for (const u of Object.values(work.units))
-    if (definitions[u.id]?.boss && u.hp <= u.maxHp * (definitions[u.id].phaseThreshold || 0.5))
+    if (
+      definitions[u.id]?.boss &&
+      definitions[u.id].phaseMode !== 'cycle' &&
+      u.hp <= u.maxHp * (definitions[u.id].phaseThreshold || 0.5)
+    )
       u.enraged = true;
   const seenIDs = new Set();
   const sorted = plan
@@ -272,7 +282,11 @@ function simulate(s, plan, slots) {
   function lose(u, n, reason) {
     if (u.hp <= 0) return;
     u.hp = Math.max(0, u.hp - n);
-    if (definitions[u.id]?.boss && u.hp <= u.maxHp * (definitions[u.id].phaseThreshold || 0.5))
+    if (
+      definitions[u.id]?.boss &&
+      definitions[u.id].phaseMode !== 'cycle' &&
+      u.hp <= u.maxHp * (definitions[u.id].phaseThreshold || 0.5)
+    )
       u.enraged = true;
     death(u, reason);
   }
@@ -411,7 +425,10 @@ function simulate(s, plan, slots) {
           u.block += n;
           currentLogs.push(`${definitions[id].name}获得${n}护盾`);
         }
-        if (eff.type === 'heal') heal(id, value + bonus, generated);
+        if (eff.type === 'heal') {
+          const recovery = eff.maxHpPercent ? Math.round(u.maxHp * eff.maxHpPercent) : value;
+          heal(id, recovery + bonus, generated);
+        }
         if (eff.type === 'mana') {
           const gained = Math.min(value, u.maxMp - u.mp);
           u.mp += gained;

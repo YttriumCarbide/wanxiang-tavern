@@ -4,6 +4,7 @@ export function tacticalDecision(state, id, definition) {
   if (!tactic) return null;
   const unit = state.units[id];
   const enraged = !!(
+    definition.phaseMode !== 'cycle' &&
     definition.boss &&
     (unit.enraged || unit.hp <= unit.maxHp * definition.phaseThreshold)
   );
@@ -13,6 +14,37 @@ export function tacticalDecision(state, id, definition) {
     .map((actor, slot) => ({ ...state.units[actor], slot }))
     .filter((entry) => entry.hp > 0);
   const allies = state.enemyIds.map((actor) => state.units[actor]).filter((entry) => entry.hp > 0);
+  if (tactic.mode === 'moon-tree') {
+    const round = Math.max(1, state.round),
+      index = (round - 1) % 3;
+    const seed =
+      [...id].reduce(
+        (n, c) => Math.imul(n ^ c.charCodeAt(0), 16777619),
+        (state.seed + Math.imul(round, 1103515245)) >>> 0,
+      ) >>> 0;
+    let effects = structuredClone(list[index].effects);
+    let slots = list[index].slots || [list[index].slot];
+    if (tactic.part === 'crown' && index === 0) {
+      const key = ['vulnerable', 'weak', 'bind', 'bleed', 'poison'][seed % 5];
+      effects = [
+        {
+          type: 'buff',
+          buff: key,
+          value: key === 'bind' ? 1 : ['bleed', 'poison'].includes(key) ? 4 : 2,
+        },
+      ];
+      slots = [front[seed % Math.max(1, front.length)]?.slot ?? 1];
+    }
+    if (tactic.part === 'crown' && index === 1) {
+      const key = ['iron', 'regen', 'haste', 'strength'][seed % 4];
+      effects = [{ type: 'buff', buff: key, value: key === 'regen' ? 4 : 1, target: 'allAllies' }];
+    }
+    if (tactic.part === 'eye' && index === 0)
+      effects = [
+        { type: 'damage', value: Math.round(21 * Math.pow(1.5, Math.floor((round - 1) / 3))) },
+      ];
+    return { round: state.round, index, enraged: false, slot: slots[0] ?? 1, slots, effects };
+  }
   const score = (entry) => {
     if (tactic.target === 'wounded') return -entry.hp;
     if (tactic.target === 'shielded') return entry.block + (entry.buffs.iron || 0) * 4;
@@ -71,6 +103,7 @@ export function tacticalDecision(state, id, definition) {
       break;
   }
   const move = list[index];
+  if (tactic.target === 'fixed') slot = move.slot ?? 1;
   const slots = move.adjacent ? [slot, slot === 2 ? 1 : slot + 1] : move.slots || [slot];
   return { round: state.round, index, enraged, slot, slots };
 }

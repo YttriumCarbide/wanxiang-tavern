@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import path from 'node:path';
-import { legacySession } from './legacy-session.mjs';
+import { legacySession, openShelfPanel } from './legacy-session.mjs';
 import { newCampaign, firstCompanion } from '../../src/campaign.js';
 import { defaultProtagonist } from '../../src/content/qingyuan.js';
 import { completeExploration } from '../../src/exploration.js';
@@ -72,12 +72,12 @@ export async function equipmentChecks({ browser, baseURL, output }) {
       localStorage.setItem('wanxiang.worldbooks.v1', JSON.stringify(library));
       localStorage.setItem(
         'wanxiang.generation-options.v1',
-        JSON.stringify({ developerMode: true, protagonistApi: false, scriptApi: true }),
+        JSON.stringify({ developerMode: true, skipAiGeneration: false }),
       );
     }, library);
     await page.reload();
     await page.waitForFunction(() => !!window.demo);
-    await page.locator('#archives-open').click();
+    await openShelfPanel(page, 'archives');
     assert.equal(await page.locator('#archive-text input').first().getAttribute('readonly'), '');
     assert.equal(
       await page.locator('#archive-text button').filter({ hasText: '调整设定' }).isVisible(),
@@ -85,7 +85,11 @@ export async function equipmentChecks({ browser, baseURL, output }) {
     );
     await page.locator('#archive-close').click();
     const header = await page.locator('.app-header nav > button').allTextContents();
-    assert.equal(header.indexOf('总结') + 1, header.indexOf('归档'));
+    assert(!header.includes('总结') && !header.includes('归档'));
+    assert.equal(
+      await page.frameLocator('#inn-frame iframe').locator('[data-shelf-action]').count(),
+      3,
+    );
     await page.route('**/api/ai/generate/creation', async (route) => {
       const body = route.request().postDataJSON();
       assert(body.items[0].script.includes('在回廊中遇见灯河'));
@@ -199,6 +203,7 @@ export async function equipmentChecks({ browser, baseURL, output }) {
     const frame = page.frameLocator('#inn-frame iframe');
     await frame.locator('canvas').evaluate(() => window.assetPreview.placeNow('gate'));
     await frame.locator('#enter').click();
+    await page.locator('#destination-regions button[data-region="forest"]').click();
     await page.locator('#destination-region-confirm').click();
     await page.locator('#destination-start').click();
     await page.locator('#prepare-title').filter({ hasText: '正在生成剧本' }).waitFor();
@@ -256,14 +261,25 @@ export async function equipmentChecks({ browser, baseURL, output }) {
     while (await page.locator('#emblem-dialogue').isVisible())
       await page.locator('#emblem-dialogue button').click();
     await innMessage('enter-dungeon');
+    await page.locator('#destination-regions button[data-region="forest"]').click();
     await page.locator('#destination-region-confirm').click();
     await page.locator('#destination-start').click();
-    await page.waitForFunction(
-      () => demo.getStatus().mode === 'battle' && !demo.getStatus().animating,
-      { timeout: 60000 },
-    );
+    await page
+      .waitForFunction(() => demo.getStatus().mode === 'battle', null, { timeout: 60000 })
+      .catch(async (error) => {
+        await page.screenshot({ path: path.join(output, 'equipment-departure-failure.png') });
+        const state = await page.evaluate(() => ({
+          status: demo.getStatus(),
+          options: localStorage.getItem('wanxiang.generation-options.v1'),
+          scene: document.querySelector('#scene-loading').textContent,
+          toast: document.querySelector('#toast').textContent,
+          dialogs: [...document.querySelectorAll('dialog[open]')].map((node) => node.id),
+        }));
+        throw Error(error.message + '\n' + JSON.stringify(state));
+      });
     await page.locator('#companion-dialogue').waitFor({ state: 'visible' });
     for (let i = 0; i < 6; i++) await page.locator('#companion-dialogue button').click();
+    await page.waitForFunction(() => !demo.getStatus().animating);
     assert.equal(await page.locator('#back-inn').isVisible(), false);
     await page.evaluate(() => demo.returnInn());
     assert.equal(await page.evaluate(() => demo.getStatus().mode), 'battle');

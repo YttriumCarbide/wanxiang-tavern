@@ -198,7 +198,8 @@ export async function storyFeedChecks({ browser, baseURL, output }) {
     await page.locator('#story-close').click();
     await page.locator('#story-feed').waitFor({ state: 'hidden' });
     await page.setViewportSize({ width: 1440, height: 836 });
-    await page.locator('#archives-open').click();
+    // This component fixture invokes the same hidden bridge as the physical shelf.
+    await page.locator('#archives-open').evaluate((button) => button.click());
     assert.equal(await page.locator('#archive-list button').count(), 1);
     assert((await page.locator('.archive-sources').textContent()).includes('潮声 · 林中的旧桥'));
     await page.locator('#archive-text button').filter({ hasText: '调整设定' }).click();
@@ -215,7 +216,7 @@ export async function storyFeedChecks({ browser, baseURL, output }) {
     await page.locator('[data-archive-tab="items"]').click();
     assert((await page.locator('.archive-sources').textContent()).includes('价值 5 以太'));
     await page.locator('#archive-close').click();
-    await page.locator('#records-open').click();
+    await page.locator('#records-open').evaluate((button) => button.click());
     await page.locator('#records-edit').click();
     await page.locator('#records-text input').nth(1).fill('旧桥，回廊');
     await page.locator('#records-text textarea').first().fill('编辑后的第一场已确认正文。');

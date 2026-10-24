@@ -959,7 +959,7 @@
       "key": [],
       "keysecondary": [],
       "comment": "角色生成 · 能力与数据规则",
-      "content": "【角色生成 · 混合设计规范 v4】\n代码已按本次固定种子抽取稀有度、普通攻击、基础行动次数和机制复杂度。AI负责人物、定位、两技能的主动/被动组合、AP费用、效果侧重与配合，代码负责最终hp、sp、伤害、恢复和状态数值。按mechanics.generationNumbers与动态Schema选择已提供的档位，不自行填写实际数值或重新掷骰。\ndata.profile从balanced/durable/caster/striker/support选择。普通攻击独立，消耗1 AP和0 sp；主角基础行动次数固定2，一般同伴读取本次计划。我方每个正常回合共用3 AP，2 AP技能占用连续两格，不额外给予行动。2 AP必须获得明显高于同类1 AP技能的效果预算，不能只是提高费用。\n两个技能槽各自可选择主动或被动，必须有且仅有一个专属入场技。入场技在后场蓄势就绪后换入前场触发，不消耗额外AP；对位目标为空时空放，不能自动改打其他敌人。effects中的每项效果可按Schema独立指定目标，治疗/护盾/增益指向自身或友方，伤害/减益指向敌方；迟缓只影响敌人。\n机制复杂度按整个角色评定：1直接效果；2两项复合效果；3一个条件强化；4一个事件及限次触发；5一种标记积累消耗；6围绕同一种标记的轻量跨技能联动。读取本次复杂度上限，不强制用满。每技能最多两项主要效果，每规则最多一个条件，全角色最多一种专属标记、最多3层，仅一套跨技能联动。when、perMark、consumeMark、rule.scope与计次结构只按本次Schema输出；禁止另起资源条、多形态、变身、额外技能、任意脚本和递归触发。\n被动写清触发时机、条件、作用对象、实际效果及次数限制，不能只描写姿势、光效或动作。名称仅在setting生成一次，data按同序技能槽读取。动作设定与最终效果分开，界面由代码生成准确数值说明。\n\n【状态衰减补充】虚弱/易伤每正常回合末减1层，纯减益技能通常2层，有其他主要效果时可1层。中毒/流血/再生每正常回合末减1层，通常给予3～6层；力量/铁皮/守势/敏捷本场不衰减。迟缓2层起减至1层后保留。禁锢/超限上限1层。再生不能使用continuous永久光环，应使用带次数上限的event施加。\n",
+      "content": "【角色生成 · 混合设计规范 v4】\n代码已按本次固定种子抽取稀有度、普通攻击、基础行动次数和机制复杂度。AI负责人物、定位、两技能的主动/被动组合、AP费用、效果侧重与配合，代码负责最终hp、sp、伤害、恢复和状态数值。按mechanics.generationNumbers与动态Schema选择已提供的档位，不自行填写实际数值或重新掷骰。\ndata.profile从balanced/durable/caster/striker/support选择。普通攻击独立，消耗1 AP和0 sp；主角基础行动次数固定2，一般同伴读取本次计划。我方每个正常回合共用3 AP，2 AP技能占用连续两格，不额外给予行动。2 AP必须获得明显高于同类1 AP技能的效果预算，不能只是提高费用。\n两个技能槽各自可选择主动或被动，必须有且仅有一个专属入场技。入场技在后场蓄势就绪后换入前场触发，不消耗额外AP；对位目标为空时空放，不能自动改打其他敌人。effects中的每项效果可按Schema独立指定目标，治疗/护盾/增益指向自身或友方，伤害/减益指向敌方；迟缓只影响敌人。\n机制复杂度按整个角色评定：1直接效果；2两项复合效果；3一个条件强化；4一个事件及限次触发；5一种标记积累消耗；6围绕同一种标记的轻量跨技能联动。读取本次复杂度上限，不强制用满。每技能最多两项主要效果，每规则最多一个条件，全角色最多一种专属标记、最多3层，仅一套跨技能联动。when、perMark、consumeMark、rule.scope与计次结构只按本次Schema输出；禁止另起资源条、多形态、变身、额外技能、任意脚本和递归触发。\n先读取本次角色机制权限：第1～3档禁止事件被动，只有第4档起才能使用event；第1～2档禁止条件。持续被动只说明允许的光环效果与可用条件，不填写事件或次数；允许事件被动时才说明触发时机、条件、作用对象、实际效果及次数限制。不能只描写姿势、光效或动作。名称仅在setting生成一次，data按同序技能槽读取。动作设定与最终效果分开，界面由代码生成准确数值说明。\n\n【状态衰减补充】虚弱/易伤每正常回合末减1层，纯减益技能通常2层，有其他主要效果时可1层。中毒/流血/再生每正常回合末减1层，通常给予3～6层；力量/铁皮/守势/敏捷本场不衰减。迟缓2层起减至1层后保留。禁锢/超限上限1层。再生不能使用continuous永久光环；低于4档时放在主动或入场技中，允许事件被动时才可用限次event施加。\n",
       "constant": true,
       "vectorized": false,
       "selective": true,
@@ -1013,7 +1013,7 @@
       "key": [],
       "keysecondary": [],
       "comment": "角色生成 · JSON输出格式 @D",
-      "content": "【角色生成输出格式 / CHARACTER v4】\n最终结果必须使用唯一一组 <wanxiang_json> 与 </wanxiang_json> 包裹，标签单独成行，内部为一个完整JSON对象。标签不写进JSON字符串，不嵌套、不重复。无需输出思考过程或自查，不输出Markdown围栏、game_data、额外XML、省略号或未规定字段。\n根节点依次为schemaVersion、setting、data，schemaVersion固定4。召唤时附arrivalDialogue，2～5项{speaker:\"character\"或\"player\",text:\"中文对白\"}；主角附levelUpLines，恰好5句符合性格的升级台词。两者只按本次用途输出，不写入setting。\nsetting只允许name/gender/age/appearance/profession/personality/history/attack/skills/entrySkill。age可省略或自由文字/数字；profession、attack、entrySkill和两项skills为{name,description}，其余直接是字符串。personality是字符串，不能写成对象。skills恰好两项，entrySkill必填。被动description解释实际效果、触发条件及次数，不能写成主动释放动作。\ndata必须包含archetype/weapon/profile/skills/entrySkill，可按Schema增加唯一mark声明；不写hp、mp、attack、limit、等级或其他具体数值。archetype只决定现有战斗模板，weapon是sword/staff/bow演出类别，profile选择战斗定位。姓名与技能名称只在setting生成，data不重复，技能按同序槽位对应。\ndata.skills中的主动形状为{kind:\"active\",ap:1或2,cost:\"low\"或\"standard\"或\"high\",target,effects}；被动为{kind:\"passive\",rules}。每个效果用type与power档位，buff/cleanse/mark及条件/标记消耗的细节严格按动态Schema，禁止输出实际value数值。每技能最多两项主要效果。被动持续光环与事件规则互斥，事件带明确scope和limit档位；一次触发不递归引发新触发。\nentrySkill为{target,effects}，无AP或资源费用。opposite只命中正对位存活敌人，无目标时空放；其他目标只选Schema允许项。附加效果可按Schema单独选对象，确保治疗和增益不会施加给敌人。\n不生成ultimate、quest、awakening、变身、多形态或第三技能。设定纯文字目标1000～1500参考tokens，经历150～260字；按request.brief及本次固定计划创作。\n\n【输出标签唯一性】\n整条可见回复中，输出标签只能作为最终JSON的外层边界各出现一次，严禁嵌套或重复。不要在思考、规划、吐槽、自查、解释、示例或Markdown代码中复述完整的开始或结束标签；无需输出思考过程或格式自查。\n\n【本次任务与示例边界】\n没有供复制的完整示例人物。官方数值参考只用于理解游戏尺度，不是本次已生成的角色，禁止照抄姓名、人设或整个技能组合。existingCharacters只用于避免重复。已知NPC任务保留request.knownNpc原姓名、外貌、身份与经历。潘多拉不可抽取，仅事件加入。\n\n本次动态JSON Schema：\n{{outputSchema}}\n",
+      "content": "【角色生成输出格式 / CHARACTER v4】\n最终结果必须使用唯一一组 <wanxiang_json> 与 </wanxiang_json> 包裹，标签单独成行，内部为一个完整JSON对象。标签不写进JSON字符串，不嵌套、不重复。无需输出思考过程或自查，不输出Markdown围栏、game_data、额外XML、省略号或未规定字段。\n根节点依次为schemaVersion、setting、data，schemaVersion固定4。召唤时附arrivalDialogue，2～5项{speaker:\"character\"或\"player\",text:\"中文对白\"}；主角附levelUpLines，恰好5句符合性格的升级台词。两者只按本次用途输出，不写入setting。\nsetting只允许name/gender/age/appearance/profession/personality/history/attack/skills/entrySkill。age可省略或自由文字/数字；profession、attack、entrySkill和两项skills为{name,description}，其余直接是字符串。personality是字符串，不能写成对象。skills恰好两项，entrySkill必填。被动description解释实际效果、触发条件及次数，不能写成主动释放动作。\ndata必须包含archetype/weapon/profile/skills/entrySkill，可按Schema增加唯一mark声明；不写hp、mp、attack、limit、等级或其他具体数值。archetype只决定现有战斗模板，weapon是sword/staff/bow演出类别，profile选择战斗定位。姓名与技能名称只在setting生成，data不重复，技能按同序槽位对应。\ndata.skills中的主动形状为{kind:\"active\",ap:1或2,cost:\"low\"或\"standard\"或\"high\",target,effects}；被动为{kind:\"passive\",rules}。每个效果用type与power档位，buff/cleanse/mark及条件/标记消耗的细节严格按本次动态Schema，禁止输出实际value数值。效果项数服从本次上限，第1档只有一项。被动持续光环与事件规则互斥：第1～3档rules只能用continuous，禁止event/scope/limit；第4档起事件被动才可使用，并必须给齐event/scope/limit。持续光环只允许strength/iron/guard/haste，不支持shield或再生；一次触发不递归引发新触发。\nentrySkill为{target,effects}，无AP或资源费用。opposite只命中正对位存活敌人，无目标时空放；其他目标只选Schema允许项。附加效果可按Schema单独选对象，确保治疗和增益不会施加给敌人。\n不生成ultimate、quest、awakening、变身、多形态或第三技能。设定纯文字目标1000～1500参考tokens，经历150～260字；按request.brief及本次固定计划创作。\n\n【输出标签唯一性】\n整条可见回复中，输出标签只能作为最终JSON的外层边界各出现一次，严禁嵌套或重复。不要在思考、规划、吐槽、自查、解释、示例或Markdown代码中复述完整的开始或结束标签；无需输出思考过程或格式自查。\n\n【本次任务与示例边界】\n没有供复制的完整示例人物。官方数值参考只用于理解游戏尺度，不是本次已生成的角色，禁止照抄姓名、人设或整个技能组合。existingCharacters只用于避免重复。已知NPC任务保留request.knownNpc原姓名、外貌、身份与经历。潘多拉不可抽取，仅事件加入。\n\n本次动态JSON Schema：\n{{outputSchema}}\n",
       "constant": true,
       "vectorized": false,
       "selective": true,
@@ -3030,7 +3030,7 @@
       "key": [],
       "keysecondary": [],
       "comment": "角色生成 · 能力与数据规则 · v4迁移前留存（停用）",
-      "content": "【角色生成 · 混合设计规范 v4】\n代码已按本次固定种子抽取稀有度、普通攻击、基础行动次数和机制复杂度。AI负责人物、定位、两技能的主动/被动组合、AP费用、效果侧重与配合，代码负责最终hp、sp、伤害、恢复和状态数值。按mechanics.generationNumbers与动态Schema选择已提供的档位，不自行填写实际数值或重新掷骰。\ndata.profile从balanced/durable/caster/striker/support选择。普通攻击独立，消耗1 AP和0 sp；主角基础行动次数固定2，一般同伴读取本次计划。我方每个正常回合共用3 AP，2 AP技能占用连续两格，不额外给予行动。2 AP必须获得明显高于同类1 AP技能的效果预算，不能只是提高费用。\n两个技能槽各自可选择主动或被动，必须有且仅有一个专属入场技。入场技在后场蓄势就绪后换入前场触发，不消耗额外AP；对位目标为空时空放，不能自动改打其他敌人。effects中的每项效果可按Schema独立指定目标，治疗/护盾/增益指向自身或友方，伤害/减益指向敌方；迟缓只影响敌人。\n机制复杂度按整个角色评定：1直接效果；2两项复合效果；3一个条件强化；4一个事件及限次触发；5一种标记积累消耗；6围绕同一种标记的轻量跨技能联动。读取本次复杂度上限，不强制用满。每技能最多两项主要效果，每规则最多一个条件，全角色最多一种专属标记、最多3层，仅一套跨技能联动。when、perMark、consumeMark、rule.scope与计次结构只按本次Schema输出；禁止另起资源条、多形态、变身、额外技能、任意脚本和递归触发。\n被动写清触发时机、条件、作用对象、实际效果及次数限制，不能只描写姿势、光效或动作。名称仅在setting生成一次，data按同序技能槽读取。动作设定与最终效果分开，界面由代码生成准确数值说明。\n\n【状态衰减补充】虚弱/易伤每正常回合末减1层，纯减益技能通常2层，有其他主要效果时可1层。中毒/流血/再生每正常回合末减1层，通常给予3～6层；力量/铁皮/守势/敏捷本场不衰减。迟缓2层起减至1层后保留。禁锢/超限上限1层。再生不能使用continuous永久光环，应使用带次数上限的event施加。\n\n\n名称只在setting生成一次，data不重复生成；技能按同序槽位对应，编译时由代码继承名称。\n不生成ultimate、quest、awakening字段；当前版本没有奥义或觉醒系统，只设计普攻和两个技能。",
+      "content": "【角色生成 · 混合设计规范 v4】\n代码已按本次固定种子抽取稀有度、普通攻击、基础行动次数和机制复杂度。AI负责人物、定位、两技能的主动/被动组合、AP费用、效果侧重与配合，代码负责最终hp、sp、伤害、恢复和状态数值。按mechanics.generationNumbers与动态Schema选择已提供的档位，不自行填写实际数值或重新掷骰。\ndata.profile从balanced/durable/caster/striker/support选择。普通攻击独立，消耗1 AP和0 sp；主角基础行动次数固定2，一般同伴读取本次计划。我方每个正常回合共用3 AP，2 AP技能占用连续两格，不额外给予行动。2 AP必须获得明显高于同类1 AP技能的效果预算，不能只是提高费用。\n两个技能槽各自可选择主动或被动，必须有且仅有一个专属入场技。入场技在后场蓄势就绪后换入前场触发，不消耗额外AP；对位目标为空时空放，不能自动改打其他敌人。effects中的每项效果可按Schema独立指定目标，治疗/护盾/增益指向自身或友方，伤害/减益指向敌方；迟缓只影响敌人。\n机制复杂度按整个角色评定：1直接效果；2两项复合效果；3一个条件强化；4一个事件及限次触发；5一种标记积累消耗；6围绕同一种标记的轻量跨技能联动。读取本次复杂度上限，不强制用满。每技能最多两项主要效果，每规则最多一个条件，全角色最多一种专属标记、最多3层，仅一套跨技能联动。when、perMark、consumeMark、rule.scope与计次结构只按本次Schema输出；禁止另起资源条、多形态、变身、额外技能、任意脚本和递归触发。\n先读取本次角色机制权限：第1～3档禁止事件被动，只有第4档起才能使用event；第1～2档禁止条件。持续被动只说明允许的光环效果与可用条件，不填写事件或次数；允许事件被动时才说明触发时机、条件、作用对象、实际效果及次数限制。不能只描写姿势、光效或动作。名称仅在setting生成一次，data按同序技能槽读取。动作设定与最终效果分开，界面由代码生成准确数值说明。\n\n【状态衰减补充】虚弱/易伤每正常回合末减1层，纯减益技能通常2层，有其他主要效果时可1层。中毒/流血/再生每正常回合末减1层，通常给予3～6层；力量/铁皮/守势/敏捷本场不衰减。迟缓2层起减至1层后保留。禁锢/超限上限1层。再生不能使用continuous永久光环；低于4档时放在主动或入场技中，允许事件被动时才可用限次event施加。\n\n\n名称只在setting生成一次，data不重复生成；技能按同序槽位对应，编译时由代码继承名称。\n不生成ultimate、quest、awakening字段；当前版本没有奥义或觉醒系统，只设计普攻和两个技能。",
       "constant": true,
       "vectorized": false,
       "selective": true,
@@ -3084,7 +3084,7 @@
       "key": [],
       "keysecondary": [],
       "comment": "角色生成 · JSON输出格式 @D · v4迁移前留存（停用）",
-      "content": "【角色生成输出格式 / CHARACTER v4】\n最终结果必须使用唯一一组 <wanxiang_json> 与 </wanxiang_json> 包裹，标签单独成行，内部为一个完整JSON对象。标签不写进JSON字符串，不嵌套、不重复。无需输出思考过程或自查，不输出Markdown围栏、game_data、额外XML、省略号或未规定字段。\n根节点依次为schemaVersion、setting、data，schemaVersion固定4。召唤时附arrivalDialogue，2～5项{speaker:\"character\"或\"player\",text:\"中文对白\"}；主角附levelUpLines，恰好5句符合性格的升级台词。两者只按本次用途输出，不写入setting。\nsetting只允许name/gender/age/appearance/profession/personality/history/attack/skills/entrySkill。age可省略或自由文字/数字；profession、attack、entrySkill和两项skills为{name,description}，其余直接是字符串。personality是字符串，不能写成对象。skills恰好两项，entrySkill必填。被动description解释实际效果、触发条件及次数，不能写成主动释放动作。\ndata必须包含archetype/weapon/profile/skills/entrySkill，可按Schema增加唯一mark声明；不写hp、mp、attack、limit、等级或其他具体数值。archetype只决定现有战斗模板，weapon是sword/staff/bow演出类别，profile选择战斗定位。姓名与技能名称只在setting生成，data不重复，技能按同序槽位对应。\ndata.skills中的主动形状为{kind:\"active\",ap:1或2,cost:\"low\"或\"standard\"或\"high\",target,effects}；被动为{kind:\"passive\",rules}。每个效果用type与power档位，buff/cleanse/mark及条件/标记消耗的细节严格按动态Schema，禁止输出实际value数值。每技能最多两项主要效果。被动持续光环与事件规则互斥，事件带明确scope和limit档位；一次触发不递归引发新触发。\nentrySkill为{target,effects}，无AP或资源费用。opposite只命中正对位存活敌人，无目标时空放；其他目标只选Schema允许项。附加效果可按Schema单独选对象，确保治疗和增益不会施加给敌人。\n不生成ultimate、quest、awakening、变身、多形态或第三技能。设定纯文字目标1000～1500参考tokens，经历150～260字；按request.brief及本次固定计划创作。\n\n【输出标签唯一性】\n整条可见回复中，输出标签只能作为最终JSON的外层边界各出现一次，严禁嵌套或重复。不要在思考、规划、吐槽、自查、解释、示例或Markdown代码中复述完整的开始或结束标签；无需输出思考过程或格式自查。\n\n【本次任务与示例边界】\n没有供复制的完整示例人物。官方数值参考只用于理解游戏尺度，不是本次已生成的角色，禁止照抄姓名、人设或整个技能组合。existingCharacters只用于避免重复。已知NPC任务保留request.knownNpc原姓名、外貌、身份与经历。潘多拉不可抽取，仅事件加入。\n\n本次动态JSON Schema：\n{{outputSchema}}\n\n年龄age仅用于人物设定，可自由填写文字或数字，也可留空或省略；不要求纯数字，不限制年龄内容，不参与战斗计算。\n不生成ultimate、quest、awakening字段；当前版本没有奥义或觉醒系统，只设计普攻和两个技能。\n\n【装备与被动统一事件规则】undefined\n\n【1.3 行程与成长规则更新】\n人物只有两个技能槽，每槽可选择主动或被动，普通攻击始终独立存在。为玩家生成主角时，根节点额外输出levelUpLines：恰好5句符合该主角性格的简短升级台词字符串，不能放进setting或data，不让主角说出其他角色的口吻。\n\n【主角强势开局】\n当purpose=protagonist时，代码使用主角强势开局预算且基础行动次数固定2。AI围绕玩家设想选择有实用效果的定位、主动/被动组合与AP费用；数值通过本次计划档位由代码生成，禁止在data自行填写hp/mp/attack/limit等最终值。2 AP技能必须具有明显高于同类1 AP技能的效果预算，不能通过过高sp消耗抵消主角强度。一般同伴按本次代码抽取的稀有度与独立复杂度设计。\n\n\n【战斗说明用语与地点】\n技能、入场技、被动及纹章效果的说明统一用小写 hp 表示生命、sp 表示法力。不写血量、蓝量或 MP；例如“消耗5sp，回复7hp”。JSON数值字段仍严格使用Schema中的hp、mp，不将mp字段改成sp，也不改角色或技能名称。\n剧本任务中，一趟副本只使用本次request.location所指的副本地点。不要为五场战斗逐场编造独立地点名、地点标题或location/sceneName字段；自然叙述周围环境与人物行动即可。只在规定字段输出正文、敌人与物品，不新增地点元数据。\n",
+      "content": "【角色生成输出格式 / CHARACTER v4】\n最终结果必须使用唯一一组 <wanxiang_json> 与 </wanxiang_json> 包裹，标签单独成行，内部为一个完整JSON对象。标签不写进JSON字符串，不嵌套、不重复。无需输出思考过程或自查，不输出Markdown围栏、game_data、额外XML、省略号或未规定字段。\n根节点依次为schemaVersion、setting、data，schemaVersion固定4。召唤时附arrivalDialogue，2～5项{speaker:\"character\"或\"player\",text:\"中文对白\"}；主角附levelUpLines，恰好5句符合性格的升级台词。两者只按本次用途输出，不写入setting。\nsetting只允许name/gender/age/appearance/profession/personality/history/attack/skills/entrySkill。age可省略或自由文字/数字；profession、attack、entrySkill和两项skills为{name,description}，其余直接是字符串。personality是字符串，不能写成对象。skills恰好两项，entrySkill必填。被动description解释实际效果、触发条件及次数，不能写成主动释放动作。\ndata必须包含archetype/weapon/profile/skills/entrySkill，可按Schema增加唯一mark声明；不写hp、mp、attack、limit、等级或其他具体数值。archetype只决定现有战斗模板，weapon是sword/staff/bow演出类别，profile选择战斗定位。姓名与技能名称只在setting生成，data不重复，技能按同序槽位对应。\ndata.skills中的主动形状为{kind:\"active\",ap:1或2,cost:\"low\"或\"standard\"或\"high\",target,effects}；被动为{kind:\"passive\",rules}。每个效果用type与power档位，buff/cleanse/mark及条件/标记消耗的细节严格按本次动态Schema，禁止输出实际value数值。效果项数服从本次上限，第1档只有一项。被动持续光环与事件规则互斥：第1～3档rules只能用continuous，禁止event/scope/limit；第4档起事件被动才可使用，并必须给齐event/scope/limit。持续光环只允许strength/iron/guard/haste，不支持shield或再生；一次触发不递归引发新触发。\nentrySkill为{target,effects}，无AP或资源费用。opposite只命中正对位存活敌人，无目标时空放；其他目标只选Schema允许项。附加效果可按Schema单独选对象，确保治疗和增益不会施加给敌人。\n不生成ultimate、quest、awakening、变身、多形态或第三技能。设定纯文字目标1000～1500参考tokens，经历150～260字；按request.brief及本次固定计划创作。\n\n【输出标签唯一性】\n整条可见回复中，输出标签只能作为最终JSON的外层边界各出现一次，严禁嵌套或重复。不要在思考、规划、吐槽、自查、解释、示例或Markdown代码中复述完整的开始或结束标签；无需输出思考过程或格式自查。\n\n【本次任务与示例边界】\n没有供复制的完整示例人物。官方数值参考只用于理解游戏尺度，不是本次已生成的角色，禁止照抄姓名、人设或整个技能组合。existingCharacters只用于避免重复。已知NPC任务保留request.knownNpc原姓名、外貌、身份与经历。潘多拉不可抽取，仅事件加入。\n\n本次动态JSON Schema：\n{{outputSchema}}\n\n年龄age仅用于人物设定，可自由填写文字或数字，也可留空或省略；不要求纯数字，不限制年龄内容，不参与战斗计算。\n不生成ultimate、quest、awakening字段；当前版本没有奥义或觉醒系统，只设计普攻和两个技能。\n\n【装备与被动统一事件规则】undefined\n\n【1.3 行程与成长规则更新】\n人物只有两个技能槽，每槽可选择主动或被动，普通攻击始终独立存在。为玩家生成主角时，根节点额外输出levelUpLines：恰好5句符合该主角性格的简短升级台词字符串，不能放进setting或data，不让主角说出其他角色的口吻。\n\n【主角强势开局】\n当purpose=protagonist时，代码使用主角强势开局预算且基础行动次数固定2。AI围绕玩家设想选择有实用效果的定位、主动/被动组合与AP费用；数值通过本次计划档位由代码生成，禁止在data自行填写hp/mp/attack/limit等最终值。2 AP技能必须具有明显高于同类1 AP技能的效果预算，不能通过过高sp消耗抵消主角强度。一般同伴按本次代码抽取的稀有度与独立复杂度设计。\n\n\n【战斗说明用语与地点】\n技能、入场技、被动及纹章效果的说明统一用小写 hp 表示生命、sp 表示法力。不写血量、蓝量或 MP；例如“消耗5sp，回复7hp”。JSON数值字段仍严格使用Schema中的hp、mp，不将mp字段改成sp，也不改角色或技能名称。\n剧本任务中，一趟副本只使用本次request.location所指的副本地点。不要为五场战斗逐场编造独立地点名、地点标题或location/sceneName字段；自然叙述周围环境与人物行动即可。只在规定字段输出正文、敌人与物品，不新增地点元数据。\n",
       "constant": true,
       "vectorized": false,
       "selective": true,
@@ -3363,6 +3363,1938 @@
     "68": {
       "uid": 68,
       "apiTargets": [
+        "character"
+      ],
+      "key": [],
+      "keysecondary": [],
+      "comment": "角色生成 · 本次机制权限与自检",
+      "content": "【本次角色机制权限 · 先定可执行效果，再写技能描述】\n下面是程序为这一次生成确定的权限。通用事件表、官设参考、职业气氛与其他档位的介绍都只是资料，不表示本次可以使用。只按当前权限与动态Schema创作；不能因为稀有度高、主角强势或人设强大就自行提高复杂度。\n\n{{characterLimits}}\n\n【条件不等于事件】\n“处于前场时力量提高”属于持续条件光环；“回合结束且在前场时获得护盾”属于回合结束事件加前场条件，必须达到第4档。即使护盾很少、每回合只触发一次、把技能称为防御仪轨，也仍然是事件被动，低档不可使用。\n低于4档时，如人物需要防护，可以设计主动护盾技能，或权限允许的持续铁皮/守势光环；人设描述也同步匹配。禁止只把mode从event改成continuous，却保留shield护盾、每回合回复或受击触发；这些不会变成合法持续光环。\n\n【两种被动分别写】\n持续被动：mode=continuous，只写conditions、target、effects；effects只能是上面列出的四种正面状态光环，不写event/scope/limit。第1、2档的conditions只能是[]，第3档起最多一个条件。\n事件被动：仅本次权限允许event时使用，必须同时给出event、scope、limit；不能漏填或靠文字暗示触发时机。每条规则最多一个条件，各项效果不能再嵌套第二个条件。\n主动、事件被动与入场技可以使用本次Schema列出的相应效果；持续光环不因通用效果表里有伤害、治疗、护盾、再生就获得这些权限。\n\n输出前在内部核对两个技能和入场技：效果数量、条件数量、被动模式、事件权限、标记权限与文字说明逐项一致。发现越档就自行重设计这项技能，不能提交越档方案让游戏兜底。只输出最终规定格式，不输出自查过程、解释或额外示例人物。\n",
+      "constant": true,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 9998,
+      "position": 4,
+      "disable": false,
+      "ignoreBudget": true,
+      "excludeRecursion": false,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": false,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 0,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 68,
+      "extensions": {
+        "wanxiang": {
+          "generationRule": "character-complexity",
+          "apiTargets": [
+            "character"
+          ]
+        }
+      }
+    },
+    "69": {
+      "uid": 69,
+      "apiTargets": [
+        "script"
+      ],
+      "key": [
+        "official-dungeon:forest-fringe"
+      ],
+      "keysecondary": [],
+      "comment": "官设副本：月痕古林 第1关 古林外围",
+      "content": "【官设副本大纲：月痕古林 第1关 古林外围】\n<user>代指玩家主角，正文按实际姓名自然叙述。以下为整趟连贯大纲，每关对应五场程序战斗，不机械拆成五份大纲；使用本次真实阵容，不擅自改换Boss，不提前宣告胜负、奖励或未来事实。\n\n主角团落在古林外围。这里原本是魔法森林，却有逆着风摆动的草叶、拖向林内的痕迹、遗落药篓和蓝色荧光碎屑。沿痕迹发现被活藤缠住的精灵采药少女月苓，清除藤蔓后救下她。通过她的装束、药瓶与对话了解当地的公会、冒险者和魔物，逐步判断世界背景，不能落地便全知。月苓说明这里偏僻，通常没有强大魔物和高阶冒险者，深林却有“会呼吸的根”传说，蜂群近来还把发光碎片运往树冠蜂巢。她这次出门匆忙，主要药剂寄存在附近公会，承诺取来后再帮忙，并送给队伍两瓶药剂。她离开准备后，苔背巨蛙·咕隆惊逃而至。击败它后才看清背上的蜂针和伤口：本来会捕食昆虫的巨蛙竟被蜂群赶得逃命，森林的异常已经超出月苓熟知的常识。下一处为通往蜂巢必经的毒沼根窟。\n重要事件：1.观察拖痕、药篓与荧屑。2.救下月苓，交涉取得蜂巢与呼吸根的情报、两瓶药剂。3.击败咕隆后发现蜂毒伤口，进入毒沼线索。\n\n【古林固定战斗阵容】\n以下为程序真实配置，沿大纲自然推进，不能改换敌人或提前宣告胜负。\n第1场：livingVine。追踪拖拽痕迹，在活藤包围中救下月苓；胜利后交涉并获两瓶药剂。\n第2场：moonMoth、livingVine。从药篓附近的荧屑和蓝光飞蛾确认月痕污染，与普通萤火区分。\n第3场：greyStinger、livingVine。蜂群有序搬运发光碎片，月苓说明会呼吸的根与树冠蜂巢传说。\n第4场：moonMoth、greyStinger。月苓回附近公会取药剂，队伍沿蜂针和蛙足印追踪林中异动。\n第5场：mossGulon。苔背巨蛙惊逃而来；击败后发现蜂毒伤口，开放通往蜂巢必经的毒沼。",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 850,
+      "position": 1,
+      "disable": false,
+      "ignoreBudget": true,
+      "excludeRecursion": true,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 69,
+      "extensions": {
+        "wanxiang": {
+          "officialDungeonId": "forest-fringe",
+          "apiTargets": [
+            "script"
+          ]
+        }
+      }
+    },
+    "70": {
+      "uid": 70,
+      "apiTargets": [
+        "script"
+      ],
+      "key": [
+        "official-dungeon:forest-bog"
+      ],
+      "keysecondary": [],
+      "comment": "官设副本：月痕古林 第2关 毒沼根窟",
+      "content": "【官设副本大纲：月痕古林 第2关 毒沼根窟】\n<user>代指玩家主角，正文按实际姓名自然叙述。以下为整趟连贯大纲，每关对应五场程序战斗，不机械拆成五份大纲；使用本次真实阵容，不擅自改换Boss，不提前宣告胜负、奖励或未来事实。\n\n队伍继续深入，蓝色毒瘴令沿途魔物失去清醒意识，蜂群却依然有序地绕过几处低洼。要到达树冠蜂巢必须先穿过沼泽与洞窟，队伍通过蜂群避开的雾道、瘴囊破裂方向和泥水汇流找出三处污染节点。清除囊菇、排开堵住的石渠，让通风与排水逐步恢复，不要求队员具备净化或任何元素魔法，也不能仅凭一句咒语消除整片瘴气。沼泽深处的毒沼泥核不断改变泥路，月苓此时带着公会寄存的药材赶回，使用显影与解毒药剂提供支援。队伍配合她识别裸露泥核，通过实际战斗击败元素怪，打通前往蜂鸣穹巢的安全路线。Boss开战时得到至高纹章士玖柒的戒指，由伊蒂丝、潘多拉或旁白结合现场说明，不重复作为以太掉落。\n重要事件：1.从失智魔物与有序蜂群的反差找到线索。2.逐一疏通三处毒沼节点。3.月苓携药赶回，协力击败泥核。\n\n【古林固定战斗阵容】\n以下为程序真实配置，沿大纲自然推进，不能改换敌人或提前宣告胜负。\n第1场：fogSpore、bogLeech。蓝瘴使魔物神志混乱，观察有序蜂群避开的低洼雾道，定位第一节点。\n第2场：bogDrifter、greyStinger。沿蜂群绕行处找到第二毒沼节点，疏开堵住的排水石渠。\n第3场：fogSpore、bogDrifter。清除第三节点的瘴囊和淤泥，通风后蓝瘴减弱，发现深处元素泥核。\n第4场：bogLeech、bogDrifter。月苓带着公会寄存的药剂赶回，显露泥核通路并支援队伍。\n第5场：bogElemental。与月苓配合击败泥核，取得通向蜂鸣穹巢的安全路线；Boss开战获得至高纹章士玖柒。",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 850,
+      "position": 1,
+      "disable": false,
+      "ignoreBudget": true,
+      "excludeRecursion": true,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 70,
+      "extensions": {
+        "wanxiang": {
+          "officialDungeonId": "forest-bog",
+          "apiTargets": [
+            "script"
+          ]
+        }
+      }
+    },
+    "71": {
+      "uid": 71,
+      "apiTargets": [
+        "script"
+      ],
+      "key": [
+        "official-dungeon:forest-hive"
+      ],
+      "keysecondary": [],
+      "comment": "官设副本：月痕古林 第3关 蜂鸣穹巢",
+      "content": "【官设副本大纲：月痕古林 第3关 蜂鸣穹巢】\n<user>代指玩家主角，正文按实际姓名自然叙述。以下为整趟连贯大纲，每关对应五场程序战斗，不机械拆成五份大纲；使用本次真实阵容，不擅自改换Boss，不提前宣告胜负、奖励或未来事实。\n\n蓝瘴消退，队伍越过沼泽，远远望见散发诡异微光的巨大蜂巢。巢外一位装备精良的骑士倒在草中，队伍先驱散围绕他的怪物，再由月苓检查生命迹象并施药唤醒。骑士自称A级搜救冒险者杜克，惊魂未定地说明自己用烟熏草绕开工蜂，曾找到打开内门的蜂蜡钥齿，却在接近蜂后时被会移动的树群改变回程路线，迷失、中毒，至今昏迷了三天。杜克应请求担任向导，用重新校准的测绳、旧划痕与烟熏草帮助队伍辨路，而非独自解决所有危险。队伍清理工蜂、蜡甲巢卫和蜜囊幼虫，追踪月痕碎片如何被搬运进巢室，并确认蜂后受月痕感染。与月纹蜂后艰难交战，实际胜利后取得完整蜂蜡钥齿，开启通往月树古城的内门。\n重要事件：1.清怪救下杜克，得知他中毒失踪三天。2.追查月痕碎片搬运与感染。3.战胜蜂后后取得钥齿、开启古城。\n\n【古林固定战斗阵容】\n以下为程序真实配置，沿大纲自然推进，不能改换敌人或提前宣告胜负。\n第1场：moonWorker、moonMoth。驱散倒地骑士周围的搬运蜂与荧蛾，月苓施药唤醒A级搜救骑士杜克。\n第2场：moonWorker、hiveGuard。杜克用返程标记与烟熏草带路，确认蜂群搬运月痕碎片的入口。\n第3场：honeyLarva、moonWorker。沿蜜囊管道查清碎片加工与蜂后感染，并找到杜克遗落的蜂蜡钥齿。\n第4场：hiveGuard、honeyLarva、moonWorker。打开蜂蜡内门，进入蜂后所在核心巢室，杜克承认活树林令其迷路中毒。\n第5场：hiveGuard、moonQueen、honeyLarva。击败受月痕感染的蜂后，实际胜利后取得完整蜂蜡钥齿并开启月树古城入口。",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 850,
+      "position": 1,
+      "disable": false,
+      "ignoreBudget": true,
+      "excludeRecursion": true,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 71,
+      "extensions": {
+        "wanxiang": {
+          "officialDungeonId": "forest-hive",
+          "apiTargets": [
+            "script"
+          ]
+        }
+      }
+    },
+    "72": {
+      "uid": 72,
+      "apiTargets": [
+        "script"
+      ],
+      "key": [
+        "official-dungeon:forest-root-city"
+      ],
+      "keysecondary": [],
+      "comment": "官设副本：月痕古林 第4关 月树古城",
+      "content": "【官设副本大纲：月痕古林 第4关 月树古城】\n<user>代指玩家主角，正文按实际姓名自然叙述。以下为整趟连贯大纲，每关对应五场程序战斗，不机械拆成五份大纲；使用本次真实阵容，不擅自改换Boss，不提前宣告胜负、奖励或未来事实。\n\n队伍沿巢室后的通道进入月树古城。建筑把活根、石砖、导光金属与陌生几何结构结合，月苓的知识也找不到对应文明。主角团讨论它可能源自未知或地外文明，这仍是线索推断，不能立即宣布真相。闯入惊动数量有限却训练成熟的蜥蜴人守卫；盾卫、刃兵与弓手以军号分工，表明这里存在有组织的守城体系。队伍从制式甲扣、统一路标、仍在维护的能源设施和月牙形瞳孔观察其文明痕迹，不把它们写成无意识野兽。突破内城协防，最终战胜近卫队长后才取得通向地上圣林的路径。Boss开战获得假面纹章士风在舞，由潘多拉、伊蒂丝或旁白说明，戒指不再重复折算以太。\n重要事件：1.陌生建筑启发文明来源的猜测。2.与分工明确的守卫交战，发现月牙瞳孔。3.击败近卫队长，深入古城出口。\n\n【古林固定战斗阵容】\n以下为程序真实配置，沿大纲自然推进，不能改换敌人或提前宣告胜负。\n第1场：scaleShield、scaleArcher。月苓观察陌生建筑，主角团讨论地外文明仅是猜测；闯入惊动有组织的守卫。\n第2场：scaleWarrior、scaleArcher。从交叉火力与军号观察蜥蜴人的明确分工，发现月牙形瞳孔。\n第3场：scaleShield、scaleWarrior。突破盾刃协防，从制式装备与居民遗迹确认古城拥有成熟文明。\n第4场：scaleShield、scaleArcher、scaleWarrior。穿过仍有能源运转的内城廊道，推断守卫在执行守城命令而非偶然变异。\n第5场：scaleShield、scaleCaptain、scaleArcher。击败近卫队长，取得通向地上圣林的路径；Boss开战获得假面纹章士风在舞。",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 850,
+      "position": 1,
+      "disable": false,
+      "ignoreBudget": true,
+      "excludeRecursion": true,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 72,
+      "extensions": {
+        "wanxiang": {
+          "officialDungeonId": "forest-root-city",
+          "apiTargets": [
+            "script"
+          ]
+        }
+      }
+    },
+    "73": {
+      "uid": 73,
+      "apiTargets": [
+        "script"
+      ],
+      "key": [
+        "official-dungeon:forest-sanctum"
+      ],
+      "keysecondary": [],
+      "comment": "官设副本：月痕古林 第5关 圣林",
+      "content": "【官设副本大纲：月痕古林 第5关 圣林】\n<user>代指玩家主角，正文按实际姓名自然叙述。以下为整趟连贯大纲，每关对应五场程序战斗，不机械拆成五份大纲；使用本次真实阵容，不擅自改换Boss，不提前宣告胜负、奖励或未来事实。\n\n古城尽头的阶梯回到地上圣林，扭曲的树怪正是杜克所说会移动的树林。队伍观察到根须必须借湿土前进，遇到古城石砖便打滑或挤在砖缝边，驮土根行者会为它们搬运泥土。众人根据这一规律清开排水沟、重新铺好散落石板、割断跨砖缝的细根，建立不依赖职业或元素的退守路线。戴木面具的护林主祭指挥树群包围，队伍退回石路，分段切断驮土者与侍徒的铜铃传令，让移动受阻的树怪暴露弱点。主祭大势已去后发起搏命围攻，队伍依靠已经亲手整理出的路线反包围，击败其最后防线。铜铃停下，林地暂时安静，众人以为灾祸结束，深处却仍有规律的根脉震动。\n重要事件：1.观察湿土移动与石砖阻根的规律。2.疏通排水、铺接石路，切断驮土与传令线路。3.在退守路线反击主祭的搏命围攻。不得把特定元素或角色能力作为通关条件。\n\n【古林固定战斗阵容】\n以下为程序真实配置，沿大纲自然推进，不能改换敌人或提前宣告胜负。\n第1场：twistedSapling、rootHauler。回到地上认出杜克所说的活树，观察树根沿湿土留下的移动轨迹。\n第2场：rootHauler、barkAcolyte。发现古城石砖能阻断根须，疏开排水沟、移开旧铺路板，准备可通行的石路。\n第3场：twistedSapling、barkAcolyte。主祭用铜铃驱树包围；队伍退守石砖并拔断越过砖缝的根束，适用于任何队伍。\n第4场：twistedSapling、rootHauler、barkAcolyte。破坏驮土路线，让树群无法把湿土铺到石路，趁其受阻反包围侍徒。\n第5场：twistedSapling、maskedForester、rootHauler。主祭发起搏命围攻，利用已清出的退路逐步击败其指挥体系，表面恢复宁静。",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 850,
+      "position": 1,
+      "disable": false,
+      "ignoreBudget": true,
+      "excludeRecursion": true,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 73,
+      "extensions": {
+        "wanxiang": {
+          "officialDungeonId": "forest-sanctum",
+          "apiTargets": [
+            "script"
+          ]
+        }
+      }
+    },
+    "74": {
+      "uid": 74,
+      "apiTargets": [
+        "script"
+      ],
+      "key": [
+        "official-dungeon:forest-mother"
+      ],
+      "keysecondary": [],
+      "comment": "官设副本：月痕古林 第6关 月痕母树",
+      "content": "【官设副本大纲：月痕古林 第6关 月痕母树】\n<user>代指玩家主角，正文按实际姓名自然叙述。以下为整趟连贯大纲，每关对应五场程序战斗，不机械拆成五份大纲；使用本次真实阵容，不擅自改换Boss，不提前宣告胜负、奖励或未来事实。\n\n起初只是清理溃散月树，队伍却发现残根的蓝光在一扇月华门后仍有规律地起伏。穿门后见到参天母树，活组织缠着金属导管与虹膜机械；它才是感染与传令的核心。主角团根据殖生结构、信号网络和古城遗迹提出“可能来自外界、用于传播信仰或殖民，后来受损才局限于此”的猜测，只能作为推断，不能借旁白直接坐实未查明的文明史。清除钻出土地的树须守卫和月华导藤，拆开外层供能支路，确认树冠负责疫病与生机、树根负责修复、中央魔眼负责远程打击。普通树群依赖湿土的弱点不能直接套在母树核心上；队伍必须依据三个部位的公开行动轮换与空间位置逐步击破，不要求任何特定元素能力。最终战左侧月蚀树冠、中间月之魔眼、右侧月痕树根同时存在，只有全部倒下才算胜利。实际胜利后根脉停止、蓝瘴褪去，月苓辨认出新发的正常嫩芽，杜克重新留下安全路标；众人离开时看见森林恢复生长的征兆，而非凭空预言所有未来。\n重要事件：1.残根引向月华门。2.发现母树和三部位分工，清理外层护卫。3.根据预告的攻击与治疗循环逐一击破部位。4.全部击败后确认林地复苏并离开。\n\n【古林固定战斗阵容】\n以下为程序真实配置，沿大纲自然推进，不能改换敌人或提前宣告胜负。\n第1场：twistedSapling、moonTendril。清剿溃散月树，发现根须在一扇月华门后仍有规律地抽动。\n第2场：rootSentry、moonTendril。穿门发现科技与活体组织结合的母树，清除从土中钻出的护卫。\n第3场：rootSentry、barkAcolyte。找到冠层培养囊、中央虹膜和根部修复管，确定三个部位的不同职责。\n第4场：rootSentry、moonTendril、rootHauler。拆除外层供能支路取得直接攻击三个核心部位的位置，不要求任何元素能力。\n第5场：moonCrown、moonEye、moonRoot。左冠、中眼、右根同时交战，行动顺序为冠、眼、根；击败全部部位后才结束灾源，留下森林复苏的实际征兆。",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 850,
+      "position": 1,
+      "disable": false,
+      "ignoreBudget": true,
+      "excludeRecursion": true,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 74,
+      "extensions": {
+        "wanxiang": {
+          "officialDungeonId": "forest-mother",
+          "apiTargets": [
+            "script"
+          ]
+        }
+      }
+    },
+    "75": {
+      "uid": 75,
+      "apiTargets": [
+        "script",
+        "character"
+      ],
+      "key": [
+        "月苓",
+        "official-dungeon:forest-fringe",
+        "official-dungeon:forest-bog",
+        "official-dungeon:forest-hive",
+        "official-dungeon:forest-root-city",
+        "official-dungeon:forest-sanctum",
+        "official-dungeon:forest-mother"
+      ],
+      "keysecondary": [],
+      "comment": "官设NPC：月苓",
+      "content": "姓名：月苓\n身份：把药效记成旋律的精灵采药师\n外貌：浅苔绿短斗篷、卷起的银白发辫，腰间一串标着月相的琉璃药瓶，指尖染着洗不掉的蓝色药斑。\n人物设计：她给每一种药剂编了一段短旋律，紧张时会一边哼歌一边准确找出解毒瓶，失去药篓的狼狈丝毫掩不住这份本领。她坚持在每张药方背面记下服药者后来过得怎样，因为她曾配出治好了伤、却没能留住人的药。\n叙事边界：第一关获救并送两瓶药剂后回附近公会取寄存物资，第二关赶回支援；不可在尚未获救时写成随队，也不能凭空拥有无限药剂。",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 840,
+      "position": 0,
+      "disable": false,
+      "ignoreBudget": true,
+      "excludeRecursion": false,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 75,
+      "extensions": {
+        "wanxiang": {
+          "officialNpcId": "yueling",
+          "apiTargets": [
+            "script",
+            "character"
+          ]
+        }
+      }
+    },
+    "76": {
+      "uid": 76,
+      "apiTargets": [
+        "script",
+        "character"
+      ],
+      "key": [
+        "杜克",
+        "official-dungeon:forest-hive",
+        "official-dungeon:forest-root-city",
+        "official-dungeon:forest-sanctum",
+        "official-dungeon:forest-mother"
+      ],
+      "keysecondary": [],
+      "comment": "官设NPC：杜克",
+      "content": "姓名：杜克\n身份：总把最后一条退路留给别人的A级搜救骑士\n外貌：风化的青铜半甲、褪色深蓝披肩，左手佩剑，右腕缠着刻有返程刻度的旧测绳，护颈挂满无主的搜救名牌。\n人物设计：他能凭绳结和墙上不起眼的划痕把陌生人的返程路线连起来，却会认真向每一位同行者确认“这次也一起回去”。迷失蜂巢的三天让这位从不留下伤员的骑士第一次成为被救的人，他醒来仍先问自己标过路的那支队伍是否安全。\n叙事边界：第三关清除周边怪物后由月苓施药唤醒；说明中毒昏迷三天、烟熏草、蜂蜡钥齿与活树林干扰方向，随后担任向导。不预写他早已随队或获救。",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 840,
+      "position": 0,
+      "disable": false,
+      "ignoreBudget": true,
+      "excludeRecursion": false,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 76,
+      "extensions": {
+        "wanxiang": {
+          "officialNpcId": "duke",
+          "apiTargets": [
+            "script",
+            "character"
+          ]
+        }
+      }
+    },
+    "77": {
+      "uid": 77,
+      "apiTargets": [
+        "script",
+        "map"
+      ],
+      "key": [
+        "livingVine",
+        "缚猎活藤"
+      ],
+      "keysecondary": [],
+      "comment": "古林怪物图鉴：缚猎活藤",
+      "content": "名称：缚猎活藤\n外形：盘绕立起的粗藤，以钩状侧枝和分叉根足攀附，藤节间透出蓝白微光。\n习性与能力：藤节扣着遗落药篓，根须会循脚步震动收紧；切断绑在同一根主藤上的结点即可解救采药人。\n行动方式：缠踝收紧：锁定护盾最少的位置：7伤害、1禁锢。；藤鞭扫击：横扫相邻位置，各8伤害。\n叙事边界：这些是可观察特征与可能的行动。实际伤害、技能使用、受伤和胜负以游戏已经确认的事件为准。\n基础hp：36；速度：3；每回合一次行动。",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 210,
+      "position": 0,
+      "disable": false,
+      "ignoreBudget": true,
+      "excludeRecursion": false,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 77,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "livingVine",
+          "apiTargets": [
+            "script",
+            "map"
+          ]
+        }
+      }
+    },
+    "78": {
+      "uid": 78,
+      "apiTargets": [
+        "script",
+        "map"
+      ],
+      "key": [
+        "moonMoth",
+        "荧屑夜蛾"
+      ],
+      "keysecondary": [],
+      "comment": "古林怪物图鉴：荧屑夜蛾",
+      "content": "名称：荧屑夜蛾\n外形：灰蓝鳞粉覆盖分层宽翅，腹下垂着细足，触须和翅纹映出冰蓝月光。\n习性与能力：翅面沾着蓝色月痕粉，受扰时沿拖拽痕迹扑飞，荧光并非森林原有的萤火。\n行动方式：荧粉扑落：优先干扰强化最多的位置：5伤害、2虚弱。\n叙事边界：这些是可观察特征与可能的行动。实际伤害、技能使用、受伤和胜负以游戏已经确认的事件为准。\n基础hp：28；速度：4；每回合一次行动。",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 210,
+      "position": 0,
+      "disable": false,
+      "ignoreBudget": true,
+      "excludeRecursion": false,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 78,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "moonMoth",
+          "apiTargets": [
+            "script",
+            "map"
+          ]
+        }
+      }
+    },
+    "79": {
+      "uid": 79,
+      "apiTargets": [
+        "script",
+        "map"
+      ],
+      "key": [
+        "bogLeech",
+        "瘴泽吸蛭"
+      ],
+      "keysecondary": [],
+      "comment": "古林怪物图鉴：瘴泽吸蛭",
+      "content": "名称：瘴泽吸蛭\n外形：粗短分节的软体躯壳贴地蠕动，两侧短足依次起落，前端口器不断收缩。\n习性与能力：藏在湿泥边缘的粗大吸蛭，身体鼓起时会回流黏液修补伤口。\n行动方式：吸附噬咬：追击当前hp最低的位置：9伤害，并为自己回复4hp。\n叙事边界：这些是可观察特征与可能的行动。实际伤害、技能使用、受伤和胜负以游戏已经确认的事件为准。\n基础hp：40；速度：3；每回合一次行动。",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 210,
+      "position": 0,
+      "disable": false,
+      "ignoreBudget": true,
+      "excludeRecursion": false,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 79,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "bogLeech",
+          "apiTargets": [
+            "script",
+            "map"
+          ]
+        }
+      }
+    },
+    "80": {
+      "uid": 80,
+      "apiTargets": [
+        "script",
+        "map"
+      ],
+      "key": [
+        "fogSpore",
+        "蓝瘴囊菇"
+      ],
+      "keysecondary": [],
+      "comment": "古林怪物图鉴：蓝瘴囊菇",
+      "content": "名称：蓝瘴囊菇\n外形：苍白菌柄撑着层叠蓝伞，伞沿垂挂荧亮孢囊，根丝扎进潮湿地面。\n习性与能力：孢囊被蓝瘴撑得半透明，蜂群刻意避开它喷出的低空雾流，可据此追查毒沼节点。\n行动方式：瘴囊鼓胀：优先给未中毒的位置施加5中毒。；菌柄推撞：喷雾后抬起菌柄：8伤害。\n叙事边界：这些是可观察特征与可能的行动。实际伤害、技能使用、受伤和胜负以游戏已经确认的事件为准。\n基础hp：34；速度：2；每回合一次行动。",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 210,
+      "position": 0,
+      "disable": false,
+      "ignoreBudget": true,
+      "excludeRecursion": false,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 80,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "fogSpore",
+          "apiTargets": [
+            "script",
+            "map"
+          ]
+        }
+      }
+    },
+    "81": {
+      "uid": 81,
+      "apiTargets": [
+        "script",
+        "map"
+      ],
+      "key": [
+        "bogDrifter",
+        "迷瘴泥兽"
+      ],
+      "keysecondary": [],
+      "comment": "古林怪物图鉴：迷瘴泥兽",
+      "content": "名称：迷瘴泥兽\n外形：苔绿泥壳层层隆起，垂落的双臂聚成重拳，胸口露出银蓝色流动核心。\n习性与能力：失去方向感的泥壳魔物，体表苔痕总向同一个节点流动，受伤后会本能收紧泥甲。\n行动方式：泥甲横撞：撞击护盾最少的位置：10伤害。；泥壳蜷护：hp不足45%且无护盾时先获得9护盾。\n叙事边界：这些是可观察特征与可能的行动。实际伤害、技能使用、受伤和胜负以游戏已经确认的事件为准。\n基础hp：46；速度：2；每回合一次行动。",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 210,
+      "position": 0,
+      "disable": false,
+      "ignoreBudget": true,
+      "excludeRecursion": false,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 81,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "bogDrifter",
+          "apiTargets": [
+            "script",
+            "map"
+          ]
+        }
+      }
+    },
+    "82": {
+      "uid": 82,
+      "apiTargets": [
+        "script",
+        "map"
+      ],
+      "key": [
+        "moonWorker",
+        "搬月工蜂"
+      ],
+      "keysecondary": [],
+      "comment": "古林怪物图鉴：搬月工蜂",
+      "content": "名称：搬月工蜂\n外形：褐金相间的节腹、双侧叠翅与细长尾针，暗色复眼映着蓝色碎片。\n习性与能力：前足抱着蓝色碎片，腹部刻纹与蜂后同步闪亮；会寻找尚未中毒的人而非反复浪费毒液。\n行动方式：护运毒针：优先锁定未中毒位置：7伤害、4中毒。\n叙事边界：这些是可观察特征与可能的行动。实际伤害、技能使用、受伤和胜负以游戏已经确认的事件为准。\n基础hp：36；速度：4；每回合一次行动。",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 210,
+      "position": 0,
+      "disable": false,
+      "ignoreBudget": true,
+      "excludeRecursion": false,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 82,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "moonWorker",
+          "apiTargets": [
+            "script",
+            "map"
+          ]
+        }
+      }
+    },
+    "83": {
+      "uid": 83,
+      "apiTargets": [
+        "script",
+        "map"
+      ],
+      "key": [
+        "hiveGuard",
+        "蜡甲巢卫"
+      ],
+      "keysecondary": [],
+      "comment": "古林怪物图鉴：蜡甲巢卫",
+      "content": "名称：蜡甲巢卫\n外形：褐金相间的节腹、双侧叠翅与细长尾针，暗色复眼映着蓝色碎片。\n习性与能力：蜂蜡在胸腹形成六棱甲板，巢室受袭时优先为伤重的同类筑蜡墙。\n行动方式：巢口冲撞：撞击暴露位置：11伤害。；筑蜡护巢：同类受伤且缺少护盾时给予hp比例最低同类10护盾。\n叙事边界：这些是可观察特征与可能的行动。实际伤害、技能使用、受伤和胜负以游戏已经确认的事件为准。\n基础hp：54；速度：2；每回合一次行动。",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 210,
+      "position": 0,
+      "disable": false,
+      "ignoreBudget": true,
+      "excludeRecursion": false,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 83,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "hiveGuard",
+          "apiTargets": [
+            "script",
+            "map"
+          ]
+        }
+      }
+    },
+    "84": {
+      "uid": 84,
+      "apiTargets": [
+        "script",
+        "map"
+      ],
+      "key": [
+        "honeyLarva",
+        "蜜囊幼虫"
+      ],
+      "keysecondary": [],
+      "comment": "古林怪物图鉴：蜜囊幼虫",
+      "content": "名称：蜜囊幼虫\n外形：粗短分节的软体躯壳贴地蠕动，两侧短足依次起落，前端口器不断收缩。\n习性与能力：背着半透明蜜囊的粗短幼虫，消化月痕后分泌异常蜜汁，会先治疗同巢伤员。\n行动方式：酸蜜喷吐：无人重伤时攻击暴露位置：8伤害、2易伤。；封伤蜜浆：奇数回合若同类hp不高于60%，为最低hp比例同类回复13hp。\n叙事边界：这些是可观察特征与可能的行动。实际伤害、技能使用、受伤和胜负以游戏已经确认的事件为准。\n基础hp：44；速度：2；每回合一次行动。",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 210,
+      "position": 0,
+      "disable": false,
+      "ignoreBudget": true,
+      "excludeRecursion": false,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 84,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "honeyLarva",
+          "apiTargets": [
+            "script",
+            "map"
+          ]
+        }
+      }
+    },
+    "85": {
+      "uid": 85,
+      "apiTargets": [
+        "script",
+        "map"
+      ],
+      "key": [
+        "scaleShield",
+        "月瞳蜥蜴盾卫"
+      ],
+      "keysecondary": [],
+      "comment": "古林怪物图鉴：月瞳蜥蜴盾卫",
+      "content": "名称：月瞳蜥蜴盾卫\n外形：直立鳞身、长吻月瞳与脊背鳞冠，拖尾保持平衡，穿戴古城制式甲与兵器。\n习性与能力：环形盾面刻着陌生城徽，月牙瞳孔会在受击时收窄；总先守住受伤的同袍。\n行动方式：盾沿重击：攻击暴露位置：10伤害。；交盾掩护：优先为伤重且无护盾的同袍增加12护盾。\n叙事边界：这些是可观察特征与可能的行动。实际伤害、技能使用、受伤和胜负以游戏已经确认的事件为准。\n基础hp：56；速度：2；每回合一次行动。",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 210,
+      "position": 0,
+      "disable": false,
+      "ignoreBudget": true,
+      "excludeRecursion": false,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 85,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "scaleShield",
+          "apiTargets": [
+            "script",
+            "map"
+          ]
+        }
+      }
+    },
+    "86": {
+      "uid": 86,
+      "apiTargets": [
+        "script",
+        "map"
+      ],
+      "key": [
+        "scaleWarrior",
+        "月瞳蜥蜴刃兵"
+      ],
+      "keysecondary": [],
+      "comment": "古林怪物图鉴：月瞳蜥蜴刃兵",
+      "content": "名称：月瞳蜥蜴刃兵\n外形：直立鳞身、长吻月瞳与脊背鳞冠，拖尾保持平衡，穿戴古城制式甲与兵器。\n习性与能力：颈鳞嵌着统一制式的铜扣，依照短促军号夹击，会对厚盾改用破甲动作。\n行动方式：交错突刺：攻击护盾较厚的位置：12伤害。；鳞刃破隙：护盾较厚时先施加2易伤再造成9伤害。\n叙事边界：这些是可观察特征与可能的行动。实际伤害、技能使用、受伤和胜负以游戏已经确认的事件为准。\n基础hp：49；速度：3；每回合一次行动。",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 210,
+      "position": 0,
+      "disable": false,
+      "ignoreBudget": true,
+      "excludeRecursion": false,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 86,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "scaleWarrior",
+          "apiTargets": [
+            "script",
+            "map"
+          ]
+        }
+      }
+    },
+    "87": {
+      "uid": 87,
+      "apiTargets": [
+        "script",
+        "map"
+      ],
+      "key": [
+        "scaleArcher",
+        "月瞳蜥蜴弓手"
+      ],
+      "keysecondary": [],
+      "comment": "古林怪物图鉴：月瞳蜥蜴弓手",
+      "content": "名称：月瞳蜥蜴弓手\n外形：直立鳞身、长吻月瞳与脊背鳞冠，拖尾保持平衡，穿戴古城制式甲与兵器。\n习性与能力：尾端系着方向标，弓弦沿古城廊柱布阵；偏向瞄准sp较高的施术者所在位置。\n行动方式：循能穿箭：锁定回合开始时sp最高的位置：11伤害、2虚弱。\n叙事边界：这些是可观察特征与可能的行动。实际伤害、技能使用、受伤和胜负以游戏已经确认的事件为准。\n基础hp：39；速度：4；每回合一次行动。",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 210,
+      "position": 0,
+      "disable": false,
+      "ignoreBudget": true,
+      "excludeRecursion": false,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 87,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "scaleArcher",
+          "apiTargets": [
+            "script",
+            "map"
+          ]
+        }
+      }
+    },
+    "88": {
+      "uid": 88,
+      "apiTargets": [
+        "script",
+        "map"
+      ],
+      "key": [
+        "twistedSapling",
+        "扭枝月树"
+      ],
+      "keysecondary": [],
+      "comment": "古林怪物图鉴：扭枝月树",
+      "content": "名称：扭枝月树\n外形：扭斜树干生出指爪般的枝臂，根足拖行，树皮缝中亮着细长眼孔。\n习性与能力：根须托着扭曲树干移动，离开湿土便难以借力；石砖边缘会留下反复拖行的根痕。\n行动方式：根须挥击：对相邻位置各造成9伤害。；树皮缩护：收起外层枝条，为自己获得8护盾。\n叙事边界：这些是可观察特征与可能的行动。实际伤害、技能使用、受伤和胜负以游戏已经确认的事件为准。\n基础hp：54；速度：2；每回合一次行动。",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 210,
+      "position": 0,
+      "disable": false,
+      "ignoreBudget": true,
+      "excludeRecursion": false,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 88,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "twistedSapling",
+          "apiTargets": [
+            "script",
+            "map"
+          ]
+        }
+      }
+    },
+    "89": {
+      "uid": 89,
+      "apiTargets": [
+        "script",
+        "map"
+      ],
+      "key": [
+        "rootHauler",
+        "驮土根行者"
+      ],
+      "keysecondary": [],
+      "comment": "古林怪物图鉴：驮土根行者",
+      "content": "名称：驮土根行者\n外形：多股粗根拧成活动躯体，分叉支足撑住身体，银灰接环与蓝光导管穿过根心。\n习性与能力：根束拖着一团湿土为同类铺路，坚硬砖面会让它运来的土团散开。\n行动方式：土团抛砸：对中间位置造成13伤害。；湿土覆根：为所有同类施加3再生。\n叙事边界：这些是可观察特征与可能的行动。实际伤害、技能使用、受伤和胜负以游戏已经确认的事件为准。\n基础hp：62；速度：1；每回合一次行动。",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 210,
+      "position": 0,
+      "disable": false,
+      "ignoreBudget": true,
+      "excludeRecursion": false,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 89,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "rootHauler",
+          "apiTargets": [
+            "script",
+            "map"
+          ]
+        }
+      }
+    },
+    "90": {
+      "uid": 90,
+      "apiTargets": [
+        "script",
+        "map"
+      ],
+      "key": [
+        "barkAcolyte",
+        "木面护林侍徒"
+      ],
+      "keysecondary": [],
+      "comment": "古林怪物图鉴：木面护林侍徒",
+      "content": "名称：木面护林侍徒\n外形：树根披肩裹着长袍，枝角木面具遮脸，缝口根线下垂，手边挂着传令铜铃。\n习性与能力：木面具的嘴被根丝缝住，靠摇动铜铃传令；先削弱强化明显的闯入者。\n行动方式：缝口咒铃：锁定强化最多的位置：2虚弱、2易伤。；根线抽打：对同一战术目标造成10伤害。\n叙事边界：这些是可观察特征与可能的行动。实际伤害、技能使用、受伤和胜负以游戏已经确认的事件为准。\n基础hp：43；速度：3；每回合一次行动。",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 210,
+      "position": 0,
+      "disable": false,
+      "ignoreBudget": true,
+      "excludeRecursion": false,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 90,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "barkAcolyte",
+          "apiTargets": [
+            "script",
+            "map"
+          ]
+        }
+      }
+    },
+    "91": {
+      "uid": 91,
+      "apiTargets": [
+        "script",
+        "map"
+      ],
+      "key": [
+        "rootSentry",
+        "树须守卫"
+      ],
+      "keysecondary": [],
+      "comment": "古林怪物图鉴：树须守卫",
+      "content": "名称：树须守卫\n外形：多股粗根拧成活动躯体，分叉支足撑住身体，银灰接环与蓝光导管穿过根心。\n习性与能力：从埋地导管中钻出的根须护卫，根心包着银蓝支架，表明母树同时使用活体组织与精密构装。\n行动方式：锚须穿刺：锁定护盾最少的位置：12伤害、3流血。；根盘合拢：为自身获得10护盾。\n叙事边界：这些是可观察特征与可能的行动。实际伤害、技能使用、受伤和胜负以游戏已经确认的事件为准。\n基础hp：64；速度：2；每回合一次行动。",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 210,
+      "position": 0,
+      "disable": false,
+      "ignoreBudget": true,
+      "excludeRecursion": false,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 91,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "rootSentry",
+          "apiTargets": [
+            "script",
+            "map"
+          ]
+        }
+      }
+    },
+    "92": {
+      "uid": 92,
+      "apiTargets": [
+        "script",
+        "map"
+      ],
+      "key": [
+        "moonTendril",
+        "月华导藤"
+      ],
+      "keysecondary": [],
+      "comment": "古林怪物图鉴：月华导藤",
+      "content": "名称：月华导藤\n外形：盘绕立起的粗藤，以钩状侧枝和分叉根足攀附，藤节间透出蓝白微光。\n习性与能力：导藤内流动着有节律的蓝光，缠住古城遗物时会读取并回传亮纹，无法仅靠元素相克处理。\n行动方式：光络鞭打：锁定sp最高的位置：10伤害、2虚弱。；导藤收束：对锁定的高sp位置施加1禁锢。\n叙事边界：这些是可观察特征与可能的行动。实际伤害、技能使用、受伤和胜负以游戏已经确认的事件为准。\n基础hp：46；速度：3；每回合一次行动。",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 210,
+      "position": 0,
+      "disable": false,
+      "ignoreBudget": true,
+      "excludeRecursion": false,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 92,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "moonTendril",
+          "apiTargets": [
+            "script",
+            "map"
+          ]
+        }
+      }
+    },
+    "93": {
+      "uid": 93,
+      "apiTargets": [
+        "script",
+        "map"
+      ],
+      "key": [
+        "mossGulon",
+        "苔背巨蛙·咕隆"
+      ],
+      "keysecondary": [],
+      "comment": "古林怪物图鉴：苔背巨蛙·咕隆",
+      "content": "名称：苔背巨蛙·咕隆\n外形：宽腹巨蛙伏在四只厚足上，高凸双眼扫视前方，苔背扎着数根发蓝的蜂针。\n习性与能力：背苔里扎着数根蓝光蜂针，愤怒的鼓鸣掩盖着仓促逃命的惊惧；击败后才看清蜂毒造成的伤口。\n行动方式：惊跃踏泥：对两侧位置各造成10伤害。；鼓囊重撞：对中间位置造成16伤害，并为自己获得6护盾。\n叙事边界：这些是可观察特征与可能的行动。实际伤害、技能使用、受伤和胜负以游戏已经确认的事件为准。\n基础hp：116；速度：2；每回合一次行动。",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 210,
+      "position": 0,
+      "disable": false,
+      "ignoreBudget": true,
+      "excludeRecursion": false,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 93,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "mossGulon",
+          "apiTargets": [
+            "script",
+            "map"
+          ]
+        }
+      }
+    },
+    "94": {
+      "uid": 94,
+      "apiTargets": [
+        "script",
+        "map"
+      ],
+      "key": [
+        "bogElemental",
+        "毒沼泥核"
+      ],
+      "keysecondary": [],
+      "comment": "古林怪物图鉴：毒沼泥核",
+      "content": "名称：毒沼泥核\n外形：苔绿泥壳层层隆起，垂落的双臂聚成重拳，胸口露出银蓝色流动核心。\n习性与能力：三处毒沼支流汇成的元素生命，月苓的药剂能显露其流动核心，普通攻击同样能破坏裸露泥核。\n行动方式：蓝瘴奔涌：对所有前场造成7伤害和3中毒。；泥核压陷：对中位造成18伤害并施加1禁锢。；沉泥回流：为自己回复20hp。\n叙事边界：这些是可观察特征与可能的行动。实际伤害、技能使用、受伤和胜负以游戏已经确认的事件为准。\n基础hp：142；速度：1；每回合一次行动。",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 210,
+      "position": 0,
+      "disable": false,
+      "ignoreBudget": true,
+      "excludeRecursion": false,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 94,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "bogElemental",
+          "apiTargets": [
+            "script",
+            "map"
+          ]
+        }
+      }
+    },
+    "95": {
+      "uid": 95,
+      "apiTargets": [
+        "script",
+        "map"
+      ],
+      "key": [
+        "moonQueen",
+        "月纹蜂后"
+      ],
+      "keysecondary": [],
+      "comment": "古林怪物图鉴：月纹蜂后",
+      "content": "名称：月纹蜂后\n外形：褐金相间的节腹、双侧叠翅与细长尾针，暗色复眼映着蓝色碎片。\n习性与能力：胸前月纹把蜂巢当成碎片传送网络；不靠蛮力追击，而以蜂蜡封路与毒针轮换压迫。\n行动方式：御巢毒雨：对所有前场造成8伤害、3中毒。；月纹长针：对中位造成20伤害、2易伤。；蜡巢封护：为全部同巢单位增加10护盾。\n叙事边界：这些是可观察特征与可能的行动。实际伤害、技能使用、受伤和胜负以游戏已经确认的事件为准。\n基础hp：156；速度：2；每回合一次行动。",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 210,
+      "position": 0,
+      "disable": false,
+      "ignoreBudget": true,
+      "excludeRecursion": false,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 95,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "moonQueen",
+          "apiTargets": [
+            "script",
+            "map"
+          ]
+        }
+      }
+    },
+    "96": {
+      "uid": 96,
+      "apiTargets": [
+        "script",
+        "map"
+      ],
+      "key": [
+        "scaleCaptain",
+        "月瞳近卫队长"
+      ],
+      "keysecondary": [],
+      "comment": "古林怪物图鉴：月瞳近卫队长",
+      "content": "名称：月瞳近卫队长\n外形：直立鳞身、长吻月瞳与脊背鳞冠，拖尾保持平衡，穿戴古城制式甲与兵器。\n习性与能力：甲裙刻着逐级军衔，月牙瞳孔随口令明灭；队长守护的是一座仍有秩序运转的古城。\n行动方式：近卫合击：对两侧各造成13伤害。；破门斩击：瞄准中位，先给予2易伤再造成17伤害。；列阵守城：为所有同袍增加1力量、1铁皮。\n叙事边界：这些是可观察特征与可能的行动。实际伤害、技能使用、受伤和胜负以游戏已经确认的事件为准。\n基础hp：170；速度：2；每回合一次行动。",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 210,
+      "position": 0,
+      "disable": false,
+      "ignoreBudget": true,
+      "excludeRecursion": false,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 96,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "scaleCaptain",
+          "apiTargets": [
+            "script",
+            "map"
+          ]
+        }
+      }
+    },
+    "97": {
+      "uid": 97,
+      "apiTargets": [
+        "script",
+        "map"
+      ],
+      "key": [
+        "maskedForester",
+        "木面护林主祭"
+      ],
+      "keysecondary": [],
+      "comment": "古林怪物图鉴：木面护林主祭",
+      "content": "名称：木面护林主祭\n外形：树根披肩裹着长袍，枝角木面具遮脸，缝口根线下垂，手边挂着传令铜铃。\n习性与能力：面具背后根须与皮肤相连，把保护林地曲解为不许任何生命离开；失去土路后仍以铜铃驱赶树怪拼命。\n行动方式：围林咒缚：对两侧各造成9伤害、2虚弱。；根誓倾轧：对中间位置造成22伤害。；困兽号令：为同类增加2力量，自身获得8护盾。\n叙事边界：这些是可观察特征与可能的行动。实际伤害、技能使用、受伤和胜负以游戏已经确认的事件为准。\n基础hp：166；速度：2；每回合一次行动。",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 210,
+      "position": 0,
+      "disable": false,
+      "ignoreBudget": true,
+      "excludeRecursion": false,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 97,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "maskedForester",
+          "apiTargets": [
+            "script",
+            "map"
+          ]
+        }
+      }
+    },
+    "98": {
+      "uid": 98,
+      "apiTargets": [
+        "script",
+        "map"
+      ],
+      "key": [
+        "moonCrown",
+        "月蚀树冠"
+      ],
+      "keysecondary": [],
+      "comment": "古林怪物图鉴：月蚀树冠",
+      "content": "名称：月蚀树冠\n外形：宽大冠层下悬着数枚半透明培养囊，叶片呈扇状层叠，蓝光沿根脉周期闪动。\n习性与能力：左侧冠层同时散布生机与瘟疫，叶片下的培养囊按三回合循环开合。\n行动方式：瘟疫播种：第1回合随机给一名前场施加易伤/虚弱/禁锢/流血/中毒之一。；生机授予：第2回合给所有敌方同伴随机施加铁皮/再生/敏捷/力量之一。；月疫共鸣：第3回合所有同伴获得1力量、1铁皮，所有玩家前场获得2易伤、2虚弱。\n叙事边界：这些是可观察特征与可能的行动。实际伤害、技能使用、受伤和胜负以游戏已经确认的事件为准。\n基础hp：110；速度：1；每回合一次行动。\n三部位速度均为1，行动顺序树冠、魔眼、树根。按三回合循环，第四回合重新开始；魔眼首轮激光21伤害，每个循环乘1.5；树根治疗各存活部位最大hp的20%。必须全部击败才算胜利。",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 210,
+      "position": 0,
+      "disable": false,
+      "ignoreBudget": true,
+      "excludeRecursion": false,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 98,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "moonCrown",
+          "apiTargets": [
+            "script",
+            "map"
+          ]
+        }
+      }
+    },
+    "99": {
+      "uid": 99,
+      "apiTargets": [
+        "script",
+        "map"
+      ],
+      "key": [
+        "moonEye",
+        "月之魔眼"
+      ],
+      "keysecondary": [],
+      "comment": "古林怪物图鉴：月之魔眼",
+      "content": "名称：月之魔眼\n外形：活体树干包住银灰环形虹膜，中央竖瞳泛蓝，两侧飞弹舱与根管相连。\n习性与能力：中央金属虹膜嵌入活体树干；第1回合激光每次循环按前次的150%增强，第3回合蓄力不攻击。\n行动方式：贯中月光：第1回合瞄准中位：初次21伤害，以后每个循环增加50%。；巡林飞弹：第2回合对所有前场造成8伤害。；魔眼蓄能：第3回合蓄力，本回合不产生效果。\n叙事边界：这些是可观察特征与可能的行动。实际伤害、技能使用、受伤和胜负以游戏已经确认的事件为准。\n基础hp：130；速度：1；每回合一次行动。\n三部位速度均为1，行动顺序树冠、魔眼、树根。按三回合循环，第四回合重新开始；魔眼首轮激光21伤害，每个循环乘1.5；树根治疗各存活部位最大hp的20%。必须全部击败才算胜利。",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 210,
+      "position": 0,
+      "disable": false,
+      "ignoreBudget": true,
+      "excludeRecursion": false,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 99,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "moonEye",
+          "apiTargets": [
+            "script",
+            "map"
+          ]
+        }
+      }
+    },
+    "100": {
+      "uid": 100,
+      "apiTargets": [
+        "script",
+        "map"
+      ],
+      "key": [
+        "moonRoot",
+        "月痕树根"
+      ],
+      "keysecondary": [],
+      "comment": "古林怪物图鉴：月痕树根",
+      "content": "名称：月痕树根\n外形：多股粗根拧成活动躯体，分叉支足撑住身体，银灰接环与蓝光导管穿过根心。\n习性与能力：右侧粗根缠着分流机械，既能扫击两翼也能修复整株母树；其治疗按各部位最大hp分别计算。\n行动方式：两翼根扫：第1回合对两侧各造成7伤害。；蓄根推挤：第2回合蓄力同时对两侧各造成4伤害。；根脉再构：第3回合为所有存活敌方同伴回复各自最大hp的20%。\n叙事边界：这些是可观察特征与可能的行动。实际伤害、技能使用、受伤和胜负以游戏已经确认的事件为准。\n基础hp：150；速度：1；每回合一次行动。\n三部位速度均为1，行动顺序树冠、魔眼、树根。按三回合循环，第四回合重新开始；魔眼首轮激光21伤害，每个循环乘1.5；树根治疗各存活部位最大hp的20%。必须全部击败才算胜利。",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 210,
+      "position": 0,
+      "disable": false,
+      "ignoreBudget": true,
+      "excludeRecursion": false,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 100,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "moonRoot",
+          "apiTargets": [
+            "script",
+            "map"
+          ]
+        }
+      }
+    },
+    "101": {
+      "uid": 101,
+      "apiTargets": [
         "character",
         "script"
       ],
@@ -3407,15 +5339,15 @@
       "cooldown": null,
       "delay": null,
       "triggers": [],
-      "displayIndex": 68,
+      "displayIndex": 101,
       "extensions": {
         "wanxiang": {
           "characterId": "official-aegis"
         }
       }
     },
-    "69": {
-      "uid": 69,
+    "102": {
+      "uid": 102,
       "apiTargets": [
         "character",
         "script"
@@ -3461,15 +5393,15 @@
       "cooldown": null,
       "delay": null,
       "triggers": [],
-      "displayIndex": 69,
+      "displayIndex": 102,
       "extensions": {
         "wanxiang": {
           "characterId": "character-qingyuan"
         }
       }
     },
-    "70": {
-      "uid": 70,
+    "103": {
+      "uid": 103,
       "apiTargets": [
         "character",
         "script"
@@ -3515,15 +5447,15 @@
       "cooldown": null,
       "delay": null,
       "triggers": [],
-      "displayIndex": 70,
+      "displayIndex": 103,
       "extensions": {
         "wanxiang": {
           "characterId": "official-pandora"
         }
       }
     },
-    "71": {
-      "uid": 71,
+    "104": {
+      "uid": 104,
       "apiTargets": [
         "character",
         "script"
@@ -3569,15 +5501,15 @@
       "cooldown": null,
       "delay": null,
       "triggers": [],
-      "displayIndex": 71,
+      "displayIndex": 104,
       "extensions": {
         "wanxiang": {
           "characterId": "official-edith"
         }
       }
     },
-    "72": {
-      "uid": 72,
+    "105": {
+      "uid": 105,
       "apiTargets": [
         "map"
       ],
@@ -3620,7 +5552,7 @@
       "cooldown": null,
       "delay": null,
       "triggers": [],
-      "displayIndex": 72,
+      "displayIndex": 105,
       "extensions": {
         "wanxiang": {
           "generationRule": "map-enemy-tactics",

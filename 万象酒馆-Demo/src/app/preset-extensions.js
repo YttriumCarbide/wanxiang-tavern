@@ -55,6 +55,11 @@ export function createPresetExtensions(context) {
       capability: crypto.randomUUID(),
       advice: Boolean(adviceBinding(preset)),
     };
+    if (!presetHelperScripts(preset).some((script) => script.enabled)) {
+      active.ready = true;
+      $('#helper-status').textContent = '此预设没有已启用的扩展脚本。';
+      return;
+    }
     frame = document.createElement('iframe');
     frame.id = 'helper-frame';
     frame.title = '预设扩展';

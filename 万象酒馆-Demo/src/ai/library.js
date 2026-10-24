@@ -28,6 +28,7 @@ export function newLibrary() {
 function createLibrary(customPortraits) {
   return {
     version: 1,
+    workshop: null,
     statusRevision: 36,
     enabled: false,
     chapter: 1,
@@ -167,6 +168,9 @@ export function restoreLibrary(value) {
   const customPortraits = loadCustomPortraits();
   const library = createLibrary(customPortraits);
   if (!value || value.version !== 1) return library;
+  // The workshop controller restores this envelope against the active custom
+  // catalog, so authored material IDs survive slots, backup imports and reloads.
+  library.workshop = value.workshop?.version === 1 ? structuredClone(value.workshop) : null;
   const campaign = [1, 2, 3].includes(value.campaign?.version);
   if (campaign) {
     library.characters = [];

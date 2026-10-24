@@ -641,8 +641,19 @@
   .right-rail #details:not(.mobile-open) {
     max-height: 62px !important;
   }
+  .right-rail #details:not(.mobile-open) > :not(.hero-heading):not(.empty-character) {
+    display: none;
+  }
   .right-rail #details.mobile-open {
+    position: fixed !important;
+    top: 49px !important;
+    right: 12px !important;
+    left: auto !important;
+    width: min(250px, 38vw) !important;
+    height: calc(100dvh - 136px);
     max-height: none !important;
+    z-index: 35;
+    overflow-y: auto;
   }
   .hero-heading {
     gap: 8px;
@@ -708,6 +719,12 @@
   }
   #battle.choosing-target #details {
     max-height: 62px !important;
+  }
+  #battle.choosing-target #details.mobile-open {
+    height: auto;
+  }
+  #battle.choosing-target #details > :not(.hero-heading):not(.empty-character) {
+    display: none;
   }
   .empty-character {
     min-height: 40px;

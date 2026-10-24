@@ -568,3 +568,38 @@
   grid-template-rows: min-content minmax(0, 1fr);
   align-content: center;
 }
+
+@media (max-height: 600px) and (orientation: landscape) {
+  #party-panel {
+    width: min(960px, calc(100vw - 20px - var(--safe-left) - var(--safe-right)));
+    height: calc(100dvh - 16px);
+  }
+  .prepare-body {
+    grid-template-columns: minmax(120px, 1fr) minmax(0, 3fr);
+    gap: 12px;
+    padding: 8px 14px;
+  }
+  #prepare-slots {
+    grid-template-columns: repeat(3, minmax(0, 100px));
+  }
+  #prepare-pool {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .prepare-heading,
+  #prepare-character-dialog > header {
+    padding: 8px 14px;
+  }
+  #party-panel > footer,
+  #prepare-character-dialog > footer {
+    padding: 6px 14px;
+  }
+  #prepare-character-dialog {
+    width: min(760px, calc(100vw - 20px));
+    height: calc(100dvh - 16px);
+  }
+  #prepare-detail {
+    min-height: 0;
+    overflow: auto;
+    padding: 10px 14px;
+  }
+}

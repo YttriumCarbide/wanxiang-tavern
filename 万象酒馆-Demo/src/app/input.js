@@ -350,7 +350,7 @@ export function mountInput(context) {
       e.source === $('#inn-frame iframe')?.contentWindow &&
       e.data?.type === 'tavern-bookshelf'
     ) {
-      context.bookshelf.open();
+      context.bookshelf.open(e.data.action);
       return;
     }
     if (

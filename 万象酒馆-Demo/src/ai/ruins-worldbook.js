@@ -1,5 +1,5 @@
 import { RUINS_ROUTES } from '../content/ruins-encounters.js';
-import { ALL_OFFICIAL_DUNGEONS } from '../content/official-dungeons.js';
+import { RUINS_DUNGEONS } from '../content/official-dungeons.js';
 import { RUINS_MONSTER_LORE, monsterWorldbook } from '../content/monsters.js';
 import { DEFINITIONS } from '../data.js';
 import { newWorldEntry } from './worldbook.js';
@@ -8,7 +8,7 @@ import { newWorldEntry } from './worldbook.js';
 export function upgradeRuinsWorldbook(source) {
   const book = structuredClone(source);
   let uid = Math.max(-1, ...Object.keys(book.entries).map(Number)) + 1;
-  for (const [sequence, dungeon] of ALL_OFFICIAL_DUNGEONS.entries()) {
+  for (const [sequence, dungeon] of RUINS_DUNGEONS.entries()) {
     let entry = Object.values(book.entries).find(
       (item) =>
         item.extensions?.wanxiang?.officialDungeonId === dungeon.id ||

@@ -11,9 +11,9 @@ export async function arcadeChecks({ browser, baseURL, output }) {
   const layouts = [];
   for (const viewport of [
     { width: 1440, height: 836 },
-    { width: 960, height: 480 },
+    { width: 667, height: 375 },
   ]) {
-    const page = await browser.newPage({ viewport, hasTouch: viewport.height === 480 });
+    const page = await browser.newPage({ viewport, hasTouch: viewport.height < 600 });
     page.on('pageerror', (error) => errors.push(error.message));
     try {
       await page.route('**/__arcade', (route) =>

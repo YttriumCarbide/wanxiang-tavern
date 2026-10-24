@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import path from 'node:path';
-import { legacySession } from './legacy-session.mjs';
+import { legacySession, openShelfPanel } from './legacy-session.mjs';
 import { newCampaign, firstCompanion } from '../../src/campaign.js';
 import { defaultProtagonist } from '../../src/content/qingyuan.js';
 import { normalizeCharacter } from '../../src/ai/contracts.js';
@@ -176,7 +176,7 @@ export async function preparationChecks({ browser, baseURL, output }) {
     await page.screenshot({ path: path.join(output, 'preparation-landscape.png') });
     await page.locator('#prepare-done').click();
     await page.setViewportSize({ width: 1440, height: 836 });
-    await page.locator('#archives-open').click();
+    await openShelfPanel(page, 'archives');
     assert.equal(await page.locator('#archive-dialog .records-empty').count(), 1);
     const tabs = await page.locator('.archive-tabs').boundingBox();
     const archive = await page.locator('#archive-dialog').boundingBox();
@@ -196,7 +196,7 @@ export async function preparationChecks({ browser, baseURL, output }) {
     assert.equal(await page.locator('#archive-list button').count(), 1);
     await page.screenshot({ path: path.join(output, 'archive-items.png') });
     await page.locator('#archive-close').click();
-    await page.locator('#records-open').click();
+    await openShelfPanel(page, 'records');
     assert((await page.locator('#records-text').innerText()).includes('沿着壁画走向石门'));
     await page
       .locator('#journey-records')
