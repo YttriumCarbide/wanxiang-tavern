@@ -1,6 +1,17 @@
 import { attackStyle, ATTACK_TIMING } from '../combat-art.js';
 import { definition } from '../catalog.js';
 
+/** New motion names reuse the matching shipped sound family instead of playing silence. */
+export function combatSoundStyle(style) {
+  if (SOUND_CUES[style]) return style;
+  if (/pounce|fang|strike|dive|leech/.test(style)) return 'claw-pounce';
+  if (/bolt|flare|pyre|beam|pulse|wail|collapse/.test(style)) return 'staff';
+  if (/slam|fist|crush|cleave|roar/.test(style)) return 'stone-slam';
+  if (/shards|barrage|burrow/.test(style)) return 'pebble-shards';
+  if (/splash|ooze/.test(style)) return 'slime-bounce';
+  return 'sword';
+}
+
 /** Only executed combat events create cues; forecasts remain silent. */
 export function combatCues(event, before, speed = 1) {
   const deaths = Object.keys(before.units).filter(
@@ -28,7 +39,8 @@ export function combatCues(event, before, speed = 1) {
     const healing = event.targets.some((id) => event.after.units[id]?.hp > before.units[id]?.hp);
     return [{ name: 'cast', delay: 0 }, { name: healing ? 'heal' : 'shield', delay }, ...deathCues];
   }
-  return [{ name: style, delay: 0 }, { name: `${style}-hit`, delay }, ...deathCues];
+  const sound = combatSoundStyle(style);
+  return [{ name: sound, delay: 0 }, { name: `${sound}-hit`, delay }, ...deathCues];
 }
 
 // [wave, start Hz, end Hz, seconds, level, delay seconds, noise filter Hz]

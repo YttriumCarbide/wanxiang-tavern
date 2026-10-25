@@ -90,7 +90,11 @@ test('tutorial descriptors, AI reference and five encounter progression share th
   const expedition = newExpedition('bossGate', compileRoster(library), node);
   for (let index = 0; index < 5; index++) {
     const spec = explorationSpec(node, index);
-    assert.deepEqual(spec, tutorialSpec(index));
+    const { level, growthSeed, growthEntry, ...authored } = spec;
+    assert.deepEqual(authored, tutorialSpec(index));
+    assert.equal(level, 1);
+    assert.equal(growthSeed, node.seed);
+    assert.equal(growthEntry.tutorial, true);
     assert(spec.enemyIds.length <= 2);
     let state = beginEncounter(expedition);
     assert.equal(heroesFor(state).length, 2);

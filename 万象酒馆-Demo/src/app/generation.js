@@ -30,6 +30,9 @@ import { escapeText } from '../ui.js';
 import { html } from '../shared/html.js';
 import { query as $ } from './dom.js';
 import { createStoryFeed } from './story.js';
+import { recollectionScript } from '../recollections.js';
+import { currentEncounterSpec } from '../expedition.js';
+import { ENCOUNTER_COUNT } from '../content/journey-rules.js';
 import { createModelPicker } from './model-picker.js';
 import { createAiPresetEditor } from './ai-presets.js';
 import { createGenerationDiagnostics } from './generation-diagnostics.js';
@@ -1037,11 +1040,16 @@ export function createGeneration(context) {
     portal,
     recruitOfficial: recruit,
     setPartySlot: updateParty,
-    explorationWon(node) {
+    explorationWon(node, { ether = 0 } = {}) {
       const book = session.ai.activeScript;
       const record = book ? library().history.find((item) => item.runId === book.runId) : null;
       const next = completeExploration(library().exploration, node, {
         runId: book?.runId,
+        scriptId: book?.id,
+        ether,
+        encounters: Array.from({ length: ENCOUNTER_COUNT }, (_, index) =>
+          currentEncounterSpec(session.journey.expedition, index),
+        ),
         tags: book?.tags,
         title: book?.title,
         nextHook: book?.nextHook,
@@ -1058,6 +1066,11 @@ export function createGeneration(context) {
     },
     ...story,
     async prepare() {
+      if (session.journey.selectedNode?.replay) {
+        session.ai.activeScript = recollectionScript(library(), session.journey.selectedNode);
+        story.reset();
+        return compileRoster(library());
+      }
       prepareSwapLesson(library());
       if (!generationEnabled(session.ai.generationOptions, 'scriptApi') && !library().prepared) {
         const input = scriptInput();

@@ -146,6 +146,7 @@ export function createChat(context) {
   }
   async function send(kind, retryId = null) {
     if (skippingAi(session.ai.generationOptions)) return;
+    if (kind === 'quick-chat' && session.ai.activeScript?.recollection) return;
     if (request || rewrite) return;
     if (kind === 'chat' ? session.runtime.mode !== 'inn' : session.runtime.mode !== 'battle')
       return;
@@ -290,6 +291,7 @@ export function createChat(context) {
   async function resetScript() {
     if (skippingAi(session.ai.generationOptions)) return;
     const book = session.ai.activeScript;
+    if (book?.recollection) return;
     if (request || rewrite || !book || session.runtime.mode !== 'battle') return;
     if (session.battle.state.encounter >= FINAL_ENCOUNTER) {
       status('quick-chat', '已进入最终战，没有未经历的战斗可改写。');

@@ -311,6 +311,7 @@ export function createCardDeaths({ scene, camera, stage, getSpeed, reduced }) {
   return {
     play,
     update,
+    cinematicActive: () => !!cinema,
     releaseCinematic() {
       if (!cinema) return;
       cinema.overlay?.remove();

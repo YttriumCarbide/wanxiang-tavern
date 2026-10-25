@@ -7,6 +7,7 @@ import { validateAction } from './validation.js';
 import { HEROES, DEFINITIONS, encounterSpec, enemySlots } from './data.js';
 import { auraValue, rulesFor, conditionsMet, triggerTargets, POSITIVE_BUFFS } from './triggers.js';
 import { decayStatuses, statusStacks, NEGATIVE_STATUSES } from './status-rules.js';
+import { enemyGrowth, leveledIntent } from './enemy-growth.js';
 import {
   createEmblemMechanics,
   positionBuff,
@@ -84,7 +85,7 @@ export function intent(s, id) {
   if (tactical) {
     const def = definition(s, id);
     const list = tactical.enraged ? def.enragedIntents : def.intents;
-    return { ...list[tactical.index], ...tactical };
+    return leveledIntent({ ...list[tactical.index], ...tactical }, s.units[id]?.attackBonus);
   }
   const def = definition(s, id),
     enraged =
@@ -98,27 +99,30 @@ export function intent(s, id) {
     (!def.openingIntent.lowestHpPosition || s.round <= 1)
       ? def.openingIntent
       : list[(Math.max(1, s.round) - 1) % list.length];
-  return {
-    ...move,
-    ...(move.lowestHpPosition
-      ? s.openingTargetSlots?.[id] !== undefined
-        ? { slot: s.openingTargetSlots[id] }
-        : {
-            slot: s.formation
-              .slice(0, 3)
-              .reduce(
-                (lowest, id, slot) =>
-                  s.units[id]?.hp > 0 &&
-                  (lowest < 0 || s.units[id].hp < s.units[s.formation[lowest]].hp)
-                    ? slot
-                    : lowest,
-                -1,
-              ),
-          }
-      : {}),
-    ...(s.enemyIntentSlots?.[id] !== undefined ? { slot: s.enemyIntentSlots[id] } : {}),
-    enraged: !!enraged,
-  };
+  return leveledIntent(
+    {
+      ...move,
+      ...(move.lowestHpPosition
+        ? s.openingTargetSlots?.[id] !== undefined
+          ? { slot: s.openingTargetSlots[id] }
+          : {
+              slot: s.formation
+                .slice(0, 3)
+                .reduce(
+                  (lowest, id, slot) =>
+                    s.units[id]?.hp > 0 &&
+                    (lowest < 0 || s.units[id].hp < s.units[s.formation[lowest]].hp)
+                      ? slot
+                      : lowest,
+                  -1,
+                ),
+            }
+        : {}),
+      ...(s.enemyIntentSlots?.[id] !== undefined ? { slot: s.enemyIntentSlots[id] } : {}),
+      enraged: !!enraged,
+    },
+    s.units[id]?.attackBonus,
+  );
 }
 export function enemyTimeline(s, extraSlow = {}) {
   if (s.phase === 'opening') return [null];
@@ -769,8 +773,14 @@ function simulate(s, plan, slots) {
       const attack = skill.effects.some((effect) => effect.type === 'damage');
       const attackedEnemy =
         attack && targets.some((id) => work.units[id]?.side === 'enemy' && work.units[id].hp > 0);
-      if (attack) trigger('beforeAttack', a.actor, { targets });
-      if (u.hp > 0) {
+      const repeats = isOverloaded || (a.skill === 'attack' && u.buffs.meteor) ? 2 : 1;
+      for (let cast = 0; cast < repeats && u.hp > 0; cast++) {
+        if (cast)
+          currentLogs.push(
+            `${def.name} · ${isOverloaded ? '超限负荷：技能额外生效一次' : '流星剑姿：普通攻击额外攻击一次'}`,
+          );
+        if (attack) trigger('beforeAttack', a.actor, { targets });
+        if (u.hp <= 0) break;
         attackHits = new Set();
         const echo =
           !!u.combined &&
@@ -783,28 +793,23 @@ function simulate(s, plan, slots) {
             : 0;
         if (skill.mechanic) mechanics.cast(a.actor, skill, a.target);
         else effects(a.actor, targets, skill.effects, false, echo, false, bonus);
-        if (a.skill === 'attack' && u.buffs.meteor && u.hp > 0) {
-          currentLogs.push(`${definitions[a.actor].name} · 流星剑姿：普通攻击额外攻击一次`);
-          effects(a.actor, targets, skill.effects, false, echo, false, bonus);
-        }
-        if (isOverloaded && u.hp > 0) {
-          currentLogs.push(`${definitions[a.actor].name}超限负荷：技能额外生效一次`);
-          effects(a.actor, targets, skill.effects, false, echo, false, bonus);
-        }
         mechanics.attack(a.actor, attackHits);
         attackHits = null;
+        if (a.skill !== 'attack') trigger('skillCast', a.actor, { targets });
+        if (cast === 0 && a.skill === 'attack' && attackedEnemy && def.basicAttackMark && u.hp > 0)
+          u.mark = Math.min(def.mechanicMark?.max || 3, (u.mark || 0) + def.basicAttackMark);
+        if (attack) trigger('afterAttack', a.actor, { targets });
         if (EMBLEMS[def.emblemId]?.skill?.id === a.skill) u.combineSkillUsed = true;
-        if (attackedEnemy && def.emblemId && !u.combined)
-          u.emblemCharge = Math.min(6, (u.emblemCharge || 0) + 1);
+        if (cast === repeats - 1) {
+          if (attackedEnemy && def.emblemId && !u.combined)
+            u.emblemCharge = Math.min(6, (u.emblemCharge || 0) + 1);
+        }
+        record('hero', a.actor, skill.name, targets, a.id, a.skill, {
+          repeatCount: repeats,
+          repeatIndex: cast + 1,
+          costs: { mp: cast ? 0 : mpCost, hp: cast ? 0 : hpCost },
+        });
       }
-      if (a.skill !== 'attack') trigger('skillCast', a.actor, { targets });
-      if (a.skill === 'attack' && attackedEnemy && def.basicAttackMark && u.hp > 0)
-        u.mark = Math.min(def.mechanicMark?.max || 3, (u.mark || 0) + def.basicAttackMark);
-      if (attack) trigger('afterAttack', a.actor, { targets });
-      record('hero', a.actor, skill.name, targets, a.id, a.skill, {
-        repeatCount: isOverloaded || (a.skill === 'attack' && u.buffs.meteor) ? 2 : 1,
-        costs: { mp: mpCost, hp: hpCost },
-      });
     } else if (!usedSlots.has(at)) record('wait', null, '保留行动');
   }
   if (s.phase !== 'opening') {
@@ -918,6 +923,7 @@ export function newEncounter(spec, prior = null, index = 0, heroDefinitions = {}
   s.encounter = index;
   s.map = spec.map;
   s.enemyDamageScale = spec.enemyDamageScale || 1;
+  s.level = spec.level || 1;
   s.seed += index * 17;
   const units = {};
   for (const h of heroesFor(s)) {
@@ -937,10 +943,19 @@ export function newEncounter(spec, prior = null, index = 0, heroDefinitions = {}
   }
   for (const id of spec.enemyIds) {
     const d = definition(s, id),
-      hp = Math.max(1, Math.round(d.hp * (d.boss ? spec.bossHpScale || 1 : spec.hpScale)));
+      growth = spec.growthEntry
+        ? enemyGrowth(spec.growthEntry, index, id, d.boss)
+        : { level: 1, bonus: { hp: 0, attack: 0 } },
+      hp = Math.max(
+        1,
+        Math.round(d.hp * (d.boss ? spec.bossHpScale || 1 : spec.hpScale || 1)) + growth.bonus.hp,
+      );
     units[id] = {
       id,
       side: 'enemy',
+      level: growth.level,
+      growth: growth.bonus,
+      attackBonus: growth.bonus.attack,
       hp,
       maxHp: hp,
       mp: 0,

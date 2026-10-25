@@ -16,6 +16,7 @@ import { upgradeStatusEmblems } from './status-emblem-upgrade.js';
 import { upgradeUniversalEnemies } from './universal-enemy-upgrade.js';
 import { upgradeCharacterConstraints } from './character-constraints-upgrade.js';
 import { upgradeForestWorldbook } from './forest-worldbook.js';
+import { upgradeCharacterIdentity } from './character-identity-upgrade.js';
 
 function checkedId(id) {
   if (typeof id !== 'string' || !/^[a-z0-9-]{1,100}$/.test(id)) throw Error('资料ID无效');
@@ -193,6 +194,17 @@ export async function createBrowserStores(database, readText, builtinBook) {
     await database.write([
       ['world.book.tavern-world', upgradeForestWorldbook(database.get('world.book.tavern-world'))],
       ['world.forest-chapters.v39', true],
+    ]);
+  if (!database.get('world.character-identity.v40'))
+    await database.write([
+      [
+        'world.book.tavern-world',
+        upgradeCharacterIdentity(
+          database.get('world.book.tavern-world'),
+          await readText('worldbook/character-identity.md'),
+        ),
+      ],
+      ['world.character-identity.v40', true],
     ]);
   let worldSettings = normalizeWorldSettings(
     database.get('world.settings') || { globalSelect: ['tavern-world'] },

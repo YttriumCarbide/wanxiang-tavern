@@ -111,6 +111,23 @@ export function characterGenerationPlan(input = {}) {
       COMPLEXITIES.map(({ level, weight }) => [level, weight]),
     ),
     fixed: { attack, limit },
+    skillKindWeights: { active: 80, passive: 20 },
+    preferredSkillKinds: [0, 1].map((slot) =>
+      roll(seed, 'skill-kind-' + slot, 1, 100) <= 80 ? 'active' : 'passive',
+    ),
+    activeDesignFocus: [
+      '进攻和自身续航的取舍，用独立效果目标区分伤害对象与回复对象',
+      '保护或援助队友，并选择自己承担费用或获得后续收益',
+      '单体重击与群体压制形成不同用途，而不是单纯改伤害数值',
+      '以自身hp/sp消耗、低费高费构成实际资源决策',
+      ...(complexity >= 3
+        ? [
+            '根据自身或目标的状态、护盾、资源比例选择触发强化',
+            '前后场条件或回合条件使同一技能有不同使用时机',
+          ]
+        : []),
+      ...(complexity >= 5 ? ['围绕唯一标记安排积累与消耗，不能另造资源系统'] : []),
+    ][roll(seed, 'design-focus', 0, complexity >= 5 ? 6 : complexity >= 3 ? 5 : 3)],
     probabilities: RARITY_WEIGHTS,
     profiles: {
       balanced: { hp: [46 + tier * 3, 54 + tier * 3], sp: [20 + tier * 2, 26 + tier * 2] },

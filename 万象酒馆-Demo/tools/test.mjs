@@ -124,7 +124,7 @@ async function main() {
           : (await readdir(path.join(root, 'tests')))
               .filter((name) => name.endsWith('.test.js'))
               .map((name) => 'tests/' + name);
-        return command(process.execPath, ['--test', ...files]);
+        return command(process.execPath, ['--test', ...files], { timeout: 120000 });
       },
     });
   if (scopes.has('provider-live'))

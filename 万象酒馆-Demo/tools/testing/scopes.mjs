@@ -1,4 +1,5 @@
 export const allScopes = [
+  'enemy-progression',
   'mobile',
   'forest',
   'workshop',

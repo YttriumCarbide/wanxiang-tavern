@@ -13,6 +13,7 @@ import { createDestinationPreview } from '../destination-preview.js';
 import { query as $ } from './dom.js';
 import { learning } from '../campaign.js';
 import { destinationMap, destinationTrail, destinationMark } from '../destination-map.js';
+import { canRecall } from '../recollections.js';
 
 /** Environment browsing and a persistent, pannable tree of complete journeys. */
 export function createDestinations(context) {
@@ -237,7 +238,10 @@ export function createDestinations(context) {
     >
       <div class="destination-site-top">
         <small>✓ 已选择 · 第 ${node.sequence + 1} 处 · 完整五场</small
-        ><span>${node.continuation ? '承接伏笔' : '未探索'}</span>
+        ><span
+          >${node.replay ? '回忆' : node.continuation ? '承接伏笔' : '未探索'} ·
+          Lv.${spec.level}</span
+        >
       </div>
       <h3>${escapeText(spec.name)}</h3>
       <p>
@@ -249,12 +253,13 @@ export function createDestinations(context) {
         >
       </div>
     </article>`;
-    $('#destination-start').disabled = !nodesFor(routeKey(node)).some(
-      (item) => item.id === node.id,
-    );
-    $('#destination-start').textContent =
-      generationEnabled(session.ai.generationOptions) &&
-      needsContinuationWorld(session.ai.library, node)
+    $('#destination-start').disabled =
+      !canRecall(session.ai.library, node) &&
+      !nodesFor(routeKey(node)).some((item) => item.id === node.id);
+    $('#destination-start').textContent = node.replay
+      ? '回忆 →'
+      : generationEnabled(session.ai.generationOptions) &&
+          needsContinuationWorld(session.ai.library, node)
         ? '构筑继续探索 →'
         : node.world || node.sequence >= 6
           ? '继续探索 →'
@@ -312,8 +317,8 @@ export function createDestinations(context) {
             style="left:${point.x - 70}px;top:${point.y - 30}px;--ink-angle:${(entry.seed % 17) - 8}deg;--label-angle:${(entry.seed % 9) - 4}deg"
             aria-pressed="${entry.id === session.journey.selectedNode?.id}"
             aria-label="${escapeText(explorationSpec(entry).name)} · ${done ? '已通关' : available.has(entry.id) ? '可探索' : '未解锁'}"
-            title="${done ? '已经通关，选择后续地点继续深入' : available.has(entry.id) ? '点击选择此副本，再点击启程' : '按数字顺序通关前面的地点后解锁'}"
-            ${done || !available.has(entry.id) ? 'disabled' : ''}
+            title="${done && canRecall(session.ai.library, entry) ? '回忆：重玩此关，不请求API' : done ? '已通关' : available.has(entry.id) ? '点击选择此副本，再点击启程' : '按数字顺序通关前面的地点后解锁'}"
+            ${!canRecall(session.ai.library, entry) && (done || !available.has(entry.id)) ? 'disabled' : ''}
           >
             <span class="destination-selection-label" aria-hidden="true">当前选择</span>
             <span class="destination-node-mark"
@@ -466,11 +471,13 @@ export function createDestinations(context) {
   events.on($('#destination-map'), 'click', (event) => {
     if (suppressClick) return;
     const button = event.target.closest('[data-map-node]');
-    const node = nodesFor(session.journey.regionMap).find(
+    const route = session.ai.library.exploration[session.journey.regionMap];
+    const node = [...nodesFor(session.journey.regionMap), ...(route?.cleared || [])].find(
       (entry) => entry.id === button?.dataset.mapNode,
     );
     if (!node) return;
     session.journey.selectedNode = structuredClone(node);
+    if (canRecall(session.ai.library, node)) session.journey.selectedNode.replay = true;
     if (learning(session.ai.library)) session.journey.selectedNode.tutorial = true;
     renderSite();
     center();
@@ -552,6 +559,11 @@ export function createDestinations(context) {
   events.on($('#destination-close'), 'click', () => dialog.close());
   events.on($('#destination-start'), 'click', () => {
     if (stage !== 'route' || !session.journey.selectedNode || session.ai.busy) return;
+    if (session.journey.selectedNode.replay) {
+      dialog.close();
+      void context.journey.startBattle();
+      return;
+    }
     if (
       generationEnabled(session.ai.generationOptions) &&
       needsContinuationWorld(session.ai.library, session.journey.selectedNode)

@@ -37,7 +37,7 @@ test('长景月汐 replaces the first companion while old party IDs, other setti
   const action = makeAction(state, 'aegis', 'bastion', 'warden', 0);
   const result = preview(state, [action]);
   assert(result.valid);
-  assert.equal(result.final.units.warden.buffs.vulnerable, 1);
+  assert.equal(result.final.units.warden.buffs.vulnerable, 2);
   assert.equal(result.final.units.aegis.mp, 15);
 });
 

@@ -95,7 +95,8 @@ test('custom worlds carry five narrative enemy selections into real battles and 
     const spec = explorationSpec(entry, index);
     const state = newEncounter(spec);
     assert.deepEqual(state.enemyIds, entry.encounters[index].enemyIds);
-    assert.equal(state.units[state.enemyIds[0]].maxHp, w.enemyDefinitions[state.enemyIds[0]].hp);
+    const unit = state.units[state.enemyIds[0]];
+    assert.equal(unit.maxHp, w.enemyDefinitions[unit.id].hp + unit.growth.hp);
     assert(preview(state, []).valid);
     assert.deepEqual(spec.environment, {});
   }

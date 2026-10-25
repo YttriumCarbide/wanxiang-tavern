@@ -6,6 +6,7 @@ import { MAP_IDS } from './content/biomes.js';
 import { DEFINITIONS } from './data.js';
 import { tutorialSpec } from './content/tutorial.js';
 import { ruinsEncounterSpec } from './content/ruins-encounters.js';
+import { encounterLevel } from './enemy-growth.js';
 
 function random(seed) {
   let state = seed >>> 0;
@@ -123,7 +124,7 @@ export function restoreExploration(value, seed = 17371, worlds = []) {
           !Number.isInteger(entry.seed)
         )
           throw Error('Invalid exploration node');
-        return node(
+        const restored = node(
           map,
           entry.sequence,
           entry.seed,
@@ -132,6 +133,34 @@ export function restoreExploration(value, seed = 17371, worlds = []) {
           Number.isSafeInteger(entry.depth) && entry.depth >= 0 ? entry.depth : 0,
           world && (!BASE_WORLDS.includes(key) || entry.sequence >= 6) ? world : null,
         );
+        if (
+          entry.recollection &&
+          Number.isSafeInteger(entry.recollection.ether) &&
+          entry.recollection.ether >= 0
+        ) {
+          const saved = entry.recollection;
+          if (
+            Array.isArray(saved.encounters) &&
+            saved.encounters.length === ENCOUNTER_COUNT &&
+            saved.encounters.every(
+              (battle) =>
+                Array.isArray(battle.enemyIds) &&
+                battle.enemyIds.length >= 1 &&
+                battle.enemyIds.length <= 3 &&
+                new Set(battle.enemyIds).size === battle.enemyIds.length &&
+                battle.enemyIds.every((id) => DEFINITIONS[id] || world?.enemyDefinitions?.[id]),
+            )
+          ) {
+            restored.recollection = {
+              ether: Math.min(999999999, saved.ether),
+              tutorial: saved.tutorial === true,
+              encounters: saved.encounters.map((battle) => ({ enemyIds: [...battle.enemyIds] })),
+              ...(typeof saved.runId === 'string' ? { runId: saved.runId } : {}),
+              ...(typeof saved.scriptId === 'string' ? { scriptId: saved.scriptId } : {}),
+            };
+          }
+        }
+        return restored;
       };
       const valid = (entry) =>
         world || BASE_WORLDS.includes(map) || entry.sequence < REGIONS[map].sites.length;
@@ -177,7 +206,7 @@ export function restoreExploration(value, seed = 17371, worlds = []) {
   return result;
 }
 
-export function explorationSpec(entry, index = 0) {
+function baseExplorationSpec(entry, index = 0) {
   const region = REGIONS[entry?.map];
   if (
     !region ||
@@ -224,11 +253,31 @@ export function explorationSpec(entry, index = 0) {
   };
 }
 
+export function explorationSpec(entry, index = 0) {
+  if (entry.replay && entry.recollection?.tutorial) entry = { ...entry, tutorial: true };
+  const spec = baseExplorationSpec(entry, index);
+  return {
+    ...spec,
+    ...(entry.replay && entry.recollection?.encounters?.[index]
+      ? { enemyIds: [...entry.recollection.encounters[index].enemyIds] }
+      : {}),
+    level: encounterLevel(entry),
+    growthSeed: entry.seed,
+    growthEntry: {
+      map: entry.map,
+      sequence: entry.sequence,
+      seed: entry.seed,
+      tutorial: entry.tutorial,
+      ...(entry.world ? { world: { id: entry.world.id } } : {}),
+    },
+  };
+}
+
 /** Only victory opens a successor; defeat, leaving and duplicate callbacks do not advance. */
 export function completeExploration(
   routes,
   entry,
-  { title, nextHook, lines = [], runId, tags = [] } = {},
+  { title, nextHook, lines = [], runId, scriptId, tags = [], encounters, ether = 0 } = {},
 ) {
   const route = routes[routeKey(entry)];
   const at = route?.frontier.findIndex((item) => item.id === entry.id);
@@ -261,7 +310,20 @@ export function completeExploration(
   );
   route.frontier.splice(at, 1, ...successors);
   route.cleared ||= [];
-  route.cleared.push(structuredClone(current));
+  route.cleared.push({
+    ...structuredClone(current),
+    ...(encounters
+      ? {
+          recollection: {
+            runId,
+            scriptId,
+            ether,
+            tutorial: entry.tutorial === true,
+            encounters: encounters.map((battle) => ({ enemyIds: [...battle.enemyIds] })),
+          },
+        }
+      : {}),
+  });
   route.completed++;
   route.history.push({
     ...(runId ? { runId } : {}),

@@ -430,7 +430,8 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
                   </g></svg
               ></span>`
             : ''
-        }<span class="unit-info"
+        }${side === 'Enemy' ? html`<small class="enemy-level">Lv.${u.level || 1}</small>` : ''}<span
+          class="unit-info"
           ><span class="unit-name">${d.name}${u.hp === 0 ? ' ×' : ''}</span></span
         ><span class="unit-resources">${resourceBars(u, f)}</span
         >${emblemRing(d, u, selected === id, playing ? u : f)}`;
@@ -549,7 +550,8 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
   function tick(now) {
     raf = 0;
     if (disposed) return;
-    if (document.hidden || document.querySelector('dialog[open]')) return;
+    if (document.hidden) return;
+    if (document.querySelector('dialog[open]') && !deaths.cinematicActive()) return;
     if (!frameBudget.accepts(now)) {
       schedule();
       return;

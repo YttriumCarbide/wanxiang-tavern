@@ -1,6 +1,15 @@
 {
-  "description": "手机底部回合格缩小并整体居中，检查先手与正常回合的行动块、坐标和桌面拖放；Vertex topK零值省略、正值限制及服务账号共用发送路径，全部使用模拟上游。",
-  "scopes": ["quality"],
-  "coreFiles": ["tests/vertex-portraits.test.js", "tests/vertex-service-account.test.js"],
+  "description": "敌人等级、回忆奖励/正文、角色v40及超限动画回归清单。完整五场expedition、server、static已验收通过，按需显式追加，不默认重复通关；最后失败复查已通过，结果见.runtime/tests/report.json。",
+  "scopes": ["quality", "core", "enemy-progression", "battle-markers", "death-effects"],
+  "coreFiles": [
+    "tests/enemy-progression.test.js",
+    "tests/battle-mechanic-execution.test.js",
+    "tests/playback.test.js",
+    "tests/exploration.test.js",
+    "tests/forest.test.js",
+    "tests/ruins-encounters.test.js",
+    "tests/worlds-emblems.test.js",
+    "tests/campaign.test.js"
+  ],
   "browserConcurrency": 2
 }

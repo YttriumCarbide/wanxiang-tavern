@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { MUSIC, encounterMusic, audioPreferences, DEFAULT_AUDIO } from '../src/audio/config.js';
 import { REGIONS } from '../src/content/regions.js';
-import { SOUND_CUES, combatCues } from '../src/audio/cues.js';
+import { SOUND_CUES, combatCues, combatSoundStyle } from '../src/audio/cues.js';
 import { SFX, SFX_NAMES } from '../src/audio/sfx.js';
 import { HEROES, ENEMIES, BOSSES } from '../src/data.js';
 import { newBattle, advance, preview, makeAction } from '../src/engine.js';
@@ -66,7 +66,7 @@ test('map encounters use their assigned tracks and keep Boss music', () => {
 
 test('every weapon and enemy has startup and impact cues, synchronized with attack speed', () => {
   for (const def of [...HEROES, ...ENEMIES, ...BOSSES]) {
-    const style = def.weapon || def.attackStyle;
+    const style = combatSoundStyle(def.weapon || def.attackStyle);
     assert(SOUND_CUES[style]?.length > 0, style);
     assert(SOUND_CUES[`${style}-hit`]?.length > 0, style);
   }

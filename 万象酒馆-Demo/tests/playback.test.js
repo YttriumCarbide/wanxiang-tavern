@@ -17,6 +17,23 @@ test('2 AP occupied slots retain their beat and end-of-round effects share one b
   );
 });
 
+test('repeated casts occupy separate visual beats in the same timeline slot', () => {
+  const events = [
+    { at: 0, type: 'hero', actionId: 'one', repeatCount: 2, repeatIndex: 1 },
+    { at: 0, type: 'hero', actionId: 'one', repeatCount: 2, repeatIndex: 2 },
+    { at: 1, type: 'enemy' },
+  ];
+  const beats = playbackBeats({ slots: [null, 'enemy'], events });
+  assert.deepEqual(
+    beats.map((beat) => beat.at),
+    [0, 0, 1],
+  );
+  assert.deepEqual(
+    beats.map((beat) => beat.events),
+    events.map((event) => [event]),
+  );
+});
+
 test('actual playback uses identical beat durations when an attack kills, ignoring corpse lifetime', async (t) => {
   const previousDocument = globalThis.document;
   const element = {

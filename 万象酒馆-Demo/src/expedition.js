@@ -43,6 +43,9 @@ export function completeEncounter(expedition, state) {
   const rewards = {
     summonContracts: state.encounter === ENCOUNTERS.length - 1 ? 1 : 0,
     gold: spec.boss ? 100 : 20,
+    ...(expedition.exploration?.replay && state.encounter === ENCOUNTERS.length - 1
+      ? { ether: expedition.recollectionEther || 0 }
+      : {}),
     ...(spec.itemRewards ? { items: structuredClone(spec.itemRewards) } : {}),
   };
   expedition.records.push({

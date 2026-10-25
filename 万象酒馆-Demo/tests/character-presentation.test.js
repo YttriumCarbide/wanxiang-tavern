@@ -7,8 +7,8 @@ import { characterDocument } from './fixtures/ai.js';
 import { normalizeCharacter, normalizeScript, settingOnly } from '../src/ai/contracts.js';
 import { characterPresentation } from '../src/ai/character-presentation.js';
 import { characterSheet } from '../src/app/character-sheet.js';
-import { MONSTER_LORE } from '../src/content/monsters.js';
-import { ENEMIES, BOSSES, encounterSpec } from '../src/data.js';
+import { ALL_MONSTER_LORE, MONSTER_LORE } from '../src/content/monsters.js';
+import { ENEMIES, BOSSES, DEFINITIONS, encounterSpec } from '../src/data.js';
 import { newLibrary } from '../src/ai/library.js';
 import { encounterEnemies } from '../server/encounter-reference.mjs';
 import { createWorldbookStore } from '../server/worldbook-store.mjs';
@@ -73,11 +73,8 @@ test('passive sheets show executable timing and effects instead of the action pr
   assert(!section.includes('错误的动作说明'));
 });
 
-test('both full routes send the exact game enemy cast, while an editable bestiary supplies only relevant lore', async () => {
-  assert.deepEqual(
-    Object.keys(MONSTER_LORE).sort(),
-    [...ENEMIES, ...BOSSES].map((enemy) => enemy.id).sort(),
-  );
+test('legacy routes send the exact cast and their editable bestiary supplies only relevant lore', async () => {
+  assert(Object.keys(ALL_MONSTER_LORE).every((id) => DEFINITIONS[id]?.speed > 0));
   const directory = await mkdtemp(path.join(process.cwd(), '.runtime/tests/monster-lore-'));
   const store = await createWorldbookStore(directory);
   const initial = await store.get('tavern-world');
@@ -85,8 +82,15 @@ test('both full routes send the exact game enemy cast, while an editable bestiar
   await store.save({ id: 'tavern-world', book: initial.book });
   const restored = await createWorldbookStore(directory);
   assert((await restored.get('tavern-world')).book.entries[0].content.includes('玩家补充'));
+  const { settings } = await restored.resolve('script', { party: [] });
+  await restored.configure({
+    ...settings,
+    contextSize: 131072,
+    budgetCap: 32768,
+    recursive: false,
+  });
   const countTokens = createWorldbookCounter();
-  for (const { id: boss } of BOSSES) {
+  for (const { id: boss } of BOSSES.filter((enemy) => MONSTER_LORE[enemy.id])) {
     const input = {
       brief: '沿旧路探索',
       boss,

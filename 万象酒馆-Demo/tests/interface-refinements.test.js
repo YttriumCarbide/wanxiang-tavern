@@ -78,7 +78,7 @@ test('generated enemy healing and boons target enemies while damage/debuffs targ
   assert.equal(restoreWorlds(restored).length, 1);
   bad.enemies[0].intents[0].effects = [{ type: 'heal', value: 3, target: 'opponents' }];
   assert.throws(() => normalizeWorld(bad), /治疗/);
-  raw.enemies[2].portrait = defaultProtagonist().combat.portrait;
+  raw.enemies[2].portrait = 'enemy-humanoid-sword-female';
   assert(normalizeWorld(raw).enemyDefinitions[raw.enemies[2].id].boss);
 });
 
@@ -156,8 +156,14 @@ test('map and creation use imported preset, editable worldbook format, wrapped r
         ],
       },
       {
+        schemaVersion: 2,
         items: [
-          { id: 'stone', name: '港口石片', description: '生命+2', stats: { hp: 2 }, rules: [] },
+          {
+            id: 'stone',
+            name: '港口石片',
+            description: '生命强化',
+            design: { statFocus: ['hp'], rules: [] },
+          },
         ],
       },
     ],

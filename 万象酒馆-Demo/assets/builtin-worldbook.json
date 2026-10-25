@@ -5295,6 +5295,60 @@
     "101": {
       "uid": 101,
       "apiTargets": [
+        "character"
+      ],
+      "key": [],
+      "keysecondary": [],
+      "comment": "角色生成 · 特色、说话方式与主动技能差异",
+      "content": "【角色特色与技能差异】\n两个技能槽默认按主动80%、被动20%的方向设计，普通攻击和入场技不计入该比例。读取mechanics.generationNumbers.preferredSkillKinds作为本次推荐组合；玩家明确指定某槽类型时以玩家要求为准。不必为了凑齐主动与被动而机械地每人各写一个。两招可以都是主动；主动应占多数。\n\n先回答“玩家在什么不同局面下会选择这两招”，再写技能。结合本次activeDesignFocus，至少让两个技能在目标、费用与支付资源、攻防用途、允许的条件、标记积累消耗中有实际差异。禁止默认每个人都是“单体伤害＋易伤”和“更高伤害＋虚弱”，也不要只把元素、名字与数值换一遍。主动不等于只有攻击：保护、治疗、sp周转、净化、群体压制、自身强化，都可以构成不同战术用途。效果可分别指定目标，但必须遵守本次复杂度与效果数量上限；低档也可用费用、单体/群体、自身/队友的差异，不得为了有趣越档。高档优先运用已支持的条件或唯一标记，不发明位移、额外行动或解析器不支持的机制。2AP的高回报来自同类效果明显更高的预算，不能写成低回报的昂贵版本。\n\n性格personality中明确包含说话方式：用词偏好、句式长短、称呼习惯、表达不同意见的方式，以及在熟人/陌生人或紧张/放松时的变化。用一两句短对白体现，避免只列冷静、温柔、可靠等抽象标签。召唤对话和升级台词沿用同一种声音。\n\n人物需要能被记住的具体辨识点：一个正在追求或逃避的目标，一个与外在身份有张力但自洽的矛盾，以及可在交谈中观察到的习惯或判断偏好。把职业经历、外貌细节、说话方式和技能意象连在一起；不要给所有人套创伤、冷脸或宏大身世，也不必把每个人写成怪人。已有NPC细化保留其身份，特色来自补全其动机和声音，不擅自改成另一个人。所有这些都是创作指导，不新增输出字段。\n",
+      "constant": true,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 9997,
+      "position": 4,
+      "disable": false,
+      "ignoreBudget": true,
+      "excludeRecursion": false,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": false,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 0,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 101,
+      "extensions": {
+        "wanxiang": {
+          "generationRule": "character-identity",
+          "apiTargets": [
+            "character"
+          ]
+        }
+      }
+    },
+    "102": {
+      "uid": 102,
+      "apiTargets": [
         "character",
         "script"
       ],
@@ -5339,15 +5393,15 @@
       "cooldown": null,
       "delay": null,
       "triggers": [],
-      "displayIndex": 101,
+      "displayIndex": 102,
       "extensions": {
         "wanxiang": {
           "characterId": "official-aegis"
         }
       }
     },
-    "102": {
-      "uid": 102,
+    "103": {
+      "uid": 103,
       "apiTargets": [
         "character",
         "script"
@@ -5393,15 +5447,15 @@
       "cooldown": null,
       "delay": null,
       "triggers": [],
-      "displayIndex": 102,
+      "displayIndex": 103,
       "extensions": {
         "wanxiang": {
           "characterId": "character-qingyuan"
         }
       }
     },
-    "103": {
-      "uid": 103,
+    "104": {
+      "uid": 104,
       "apiTargets": [
         "character",
         "script"
@@ -5447,15 +5501,15 @@
       "cooldown": null,
       "delay": null,
       "triggers": [],
-      "displayIndex": 103,
+      "displayIndex": 104,
       "extensions": {
         "wanxiang": {
           "characterId": "official-pandora"
         }
       }
     },
-    "104": {
-      "uid": 104,
+    "105": {
+      "uid": 105,
       "apiTargets": [
         "character",
         "script"
@@ -5501,15 +5555,15 @@
       "cooldown": null,
       "delay": null,
       "triggers": [],
-      "displayIndex": 104,
+      "displayIndex": 105,
       "extensions": {
         "wanxiang": {
           "characterId": "official-edith"
         }
       }
     },
-    "105": {
-      "uid": 105,
+    "106": {
+      "uid": 106,
       "apiTargets": [
         "map"
       ],
@@ -5552,7 +5606,7 @@
       "cooldown": null,
       "delay": null,
       "triggers": [],
-      "displayIndex": 105,
+      "displayIndex": 106,
       "extensions": {
         "wanxiang": {
           "generationRule": "map-enemy-tactics",

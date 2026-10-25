@@ -102,6 +102,19 @@ test('overload granted earlier in the same plan doubles the next skill exactly o
   assert(!result.final.units[actor].buffs.overload);
   const event = result.events.find((item) => item.actionId === burst.id && item.type === 'hero');
   assert.equal(event.repeatCount, 2);
+  const casts = result.events.filter((item) => item.actionId === burst.id && item.type === 'hero');
+  assert.deepEqual(
+    casts.map((item) => item.repeatIndex),
+    [1, 2],
+  );
+  assert.deepEqual(
+    casts.map((item) => item.after.units[enemy].hp),
+    [188, 176],
+  );
+  assert.equal(
+    casts.reduce((sum, item) => sum + item.costs.mp, 0),
+    8,
+  );
   assert.deepEqual(event.costs, { mp: 8, hp: 0 });
   assert.equal(result.events.find((item) => item.actionId === combineSkill.id).repeatCount, 1);
   const next = advance(result);

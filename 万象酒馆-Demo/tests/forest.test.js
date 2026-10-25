@@ -47,7 +47,10 @@ test('six authored forest chapters each have five matching encounters and a dist
       assert.equal(spec.boss, index === 4);
       for (const id of spec.enemyIds) assert(DEFINITIONS[id]);
       const state = newEncounter(spec);
-      for (const id of spec.enemyIds) assert.equal(state.units[id].maxHp, DEFINITIONS[id].hp);
+      for (const id of spec.enemyIds) {
+        assert.equal(state.units[id].maxHp, DEFINITIONS[id].hp + state.units[id].growth.hp);
+        assert(state.units[id].level >= spec.level - 1);
+      }
       assert(preview(state, []).valid);
     }
     assert(route.battles[4].enemyIds.includes(route.boss));

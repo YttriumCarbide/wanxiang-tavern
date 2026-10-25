@@ -139,7 +139,7 @@ test('six story phases advance concretely and worldbook migration preserves pers
   assert(library.characters.length > 0);
 });
 
-test('accepted settlement and rest choice survive a static refresh as one coherent snapshot', () => {
+test('checkpoint captures accepted rest coherently but loading discards battle and preserves earned inventory', () => {
   const expedition = newExpedition();
   let state;
   for (let index = 0; index < 3; index++) {
@@ -173,14 +173,19 @@ test('accepted settlement and rest choice survive a static refresh as one cohere
   };
   const checkpoint = createCheckpoint(context);
   checkpoint.saveNow();
-  assert.equal(checkpoint.pending().journey.expedition.restPending, true);
+  const key = 'wanxiang.battle-checkpoint.v1';
+  assert.equal(JSON.parse(values.get(key)).journey.expedition.restPending, true);
   chooseRest(expedition, 'meal');
   checkpoint.saveNow();
-  const restored = checkpoint.pending().journey.expedition;
+  const restored = JSON.parse(values.get(key)).journey.expedition;
   assert.equal(restored.restPending, false);
   assert.equal(restored.pendingResult.encounter, 2);
   assert.equal(restored.carried.units.aegis.mp, restored.carried.units.aegis.maxMp);
   assert.throws(() => chooseRest(restored, 'sleep'));
+  const inventory = structuredClone(context.session.ai.library.inventory);
+  assert.equal(checkpoint.pending(), null);
+  assert(!values.has(key));
+  assert.deepEqual(context.session.ai.library.inventory, inventory);
   checkpoint.dispose();
 });
 

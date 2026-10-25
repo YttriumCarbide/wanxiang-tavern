@@ -7,6 +7,7 @@ import { upgradeEnemyAppearanceRules } from '../src/ai/enemy-appearance-rules.js
 import { upgradeCharacterGeneration } from '../src/ai/character-generation-upgrade.js';
 import { upgradeCharacterConstraints } from '../src/ai/character-constraints-upgrade.js';
 import { upgradeForestWorldbook } from '../src/ai/forest-worldbook.js';
+import { upgradeCharacterIdentity } from '../src/ai/character-identity-upgrade.js';
 import { upgradeContinuityRules } from '../src/ai/continuity-upgrade.js';
 import { upgradeGenerationExperience } from '../src/ai/generation-experience-upgrade.js';
 import { upgradeStatusEmblems } from '../src/ai/status-emblem-upgrade.js';
@@ -933,6 +934,15 @@ export async function createWorldbookStore(directory) {
     const record = await get('tavern-world');
     await write(fileFor('tavern-world'), upgradeForestWorldbook(record.book));
     await write(contentVersionFile, { version: 39 });
+  }
+  if (contentVersion < 40) {
+    const record = await get('tavern-world');
+    const content = await readFile(
+      new URL('../prompts/worldbook/character-identity.md', import.meta.url),
+      'utf8',
+    );
+    await write(fileFor('tavern-world'), upgradeCharacterIdentity(record.book, content));
+    await write(contentVersionFile, { version: 40 });
   }
   return {
     get,

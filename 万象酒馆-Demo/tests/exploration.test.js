@@ -33,7 +33,10 @@ test('regions preserve independent progress and base worlds continue after six s
     for (let room = 0; room < 5; room++) {
       const state = beginEncounter(trip);
       const expected = explorationSpec(selected, room);
-      for (const id of expected.enemyIds) assert.equal(state.units[id].maxHp, DEFINITIONS[id].hp);
+      for (const id of expected.enemyIds) {
+        assert.equal(state.units[id].maxHp, DEFINITIONS[id].hp + state.units[id].growth.hp);
+        assert(state.units[id].level >= spec.level - 1);
+      }
       assert.throws(() => completeEncounter(trip, state));
       state.phase = 'victory';
       assert.equal(completeEncounter(trip, state).complete, room === 4);

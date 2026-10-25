@@ -149,7 +149,13 @@ export async function cardDeathChecks({ browser, baseURL, output }) {
     assert.equal(boss.texturedMeshes, 0);
     assert.equal(await page.locator('.boss-death-cinema').count(), 1);
     await page.screenshot({ path: path.join(output, 'boss-death-closeup.png') });
+    await page.locator('#result').evaluate((panel) => panel.showModal());
     await page.waitForFunction(() => window.deathFixture.view.deathStatus().active === 0);
+    assert(
+      await page.locator('#result').isVisible(),
+      'A result modal cannot freeze the Boss cinematic that hides it',
+    );
+    await page.locator('#result').evaluate((panel) => panel.close());
     assert.equal(await page.locator('.boss-death-cinema').count(), 0);
     assert.equal(
       await page

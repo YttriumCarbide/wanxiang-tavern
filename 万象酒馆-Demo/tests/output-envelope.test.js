@@ -302,7 +302,7 @@ test('generation v4 removes the old complete example, preserving custom protocol
   );
   assert.equal(
     JSON.parse(await readFile(path.join(directory, 'builtin-content.json'), 'utf8')).version,
-    37,
+    40,
   );
 });
 

@@ -17,6 +17,10 @@ export function createStoryFeed(session, save) {
   let closing = null;
   const waiters = new Set();
   function render() {
+    const recollection = !!session.ai.activeScript?.recollection;
+    $('.quick-chat-heading').hidden = recollection;
+    $('#quick-chat-body').hidden =
+      recollection || $('#quick-chat-toggle').getAttribute('aria-expanded') === 'false';
     if (session.ai.activeScript) {
       toggle.hidden = false;
       document.body.classList.add('has-story');
@@ -105,6 +109,15 @@ export function createStoryFeed(session, save) {
   function showScene(index, stage) {
     const book = session.ai.activeScript;
     if (!book || session.runtime.disposed) return;
+    if (book.recollection) {
+      if (stage === 'before' && !view().pages[index].length) {
+        view().latest = Math.max(view().latest, index);
+        view().page = index;
+        append('', book.story[index] || '无', stage, index);
+        render();
+      }
+      return;
+    }
     const key = `${book.id}-${index}-${stage}`;
     const record = session.ai.library.history.find((item) => item.runId === book.runId);
     if (!record || record.played.includes(key)) return;
@@ -169,7 +182,7 @@ export function createStoryFeed(session, save) {
     save();
   }
   function recordRound(result, state) {
-    if (!session.ai.activeScript) return;
+    if (!session.ai.activeScript || session.ai.activeScript.recollection) return;
     const logs = result.events.flatMap((event) => event.logs || []).filter(Boolean);
     if (!logs.length) return;
     const title = state.phase === 'opening' ? '先手准备结束' : `第${state.round}回合`;

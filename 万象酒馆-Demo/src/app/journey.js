@@ -19,6 +19,7 @@ import { resetRelationshipGains } from '../relationships.js';
 import { recordSettlement } from '../companion-events.js';
 import { developerOption } from '../generation-options.js';
 import { prepareCorridorRing, prepareBossEmblem } from '../emblem-progression.js';
+import { recollectionEther } from '../recollections.js';
 
 /** @param {import('./context.js').AppContext} context */
 export function createJourney(context) {
@@ -28,7 +29,12 @@ export function createJourney(context) {
       return;
     if (session.runtime.needsStart) return context.onboarding.open();
     if (!continuing && context.onboarding && !context.onboarding.allowPortal('script')) return;
-    if (session.ai.library.campaign && !continuing && !session.ai.library.prepared) {
+    if (
+      session.ai.library.campaign &&
+      !continuing &&
+      !session.ai.library.prepared &&
+      !session.journey.selectedNode?.replay
+    ) {
       context.destinations.open();
       return;
     }
@@ -40,7 +46,7 @@ export function createJourney(context) {
         const roster = await context.generation.prepare();
         resetRelationshipGains(session.ai.library);
         context.chat?.enteredDungeon();
-        context.onboarding?.tripStarted();
+        if (!session.journey.selectedNode?.replay) context.onboarding?.tripStarted();
         if (session.runtime.disposed) return;
         session.journey.expedition = newExpedition(
           session.journey.bossChoice,
@@ -54,6 +60,11 @@ export function createJourney(context) {
               }
             : null,
         );
+        if (session.journey.selectedNode?.replay)
+          session.journey.expedition.recollectionEther = recollectionEther(
+            session.ai.library,
+            session.journey.selectedNode,
+          );
       } catch (failure) {
         session.runtime.mode = 'inn';
         context.shell.toast('剧本准备失败：' + failure.message);
@@ -188,7 +199,11 @@ export function createJourney(context) {
       !context.onboarding.allowReturn()
     )
       return;
-    if (session.runtime.mode === 'battle' && session.ai.activeScript) {
+    if (
+      session.runtime.mode === 'battle' &&
+      session.ai.activeScript &&
+      !session.ai.activeScript.recollection
+    ) {
       session.ai.library.tavernChat.push({
         id: crypto.randomUUID(),
         role: 'system',
@@ -197,7 +212,12 @@ export function createJourney(context) {
       });
       context.generation.save();
     }
-    if (!settled && session.runtime.mode === 'battle' && session.ai.activeScript) {
+    if (
+      !settled &&
+      session.runtime.mode === 'battle' &&
+      session.ai.activeScript &&
+      !session.ai.activeScript.recollection
+    ) {
       const book = session.ai.activeScript;
       session.ai.library.history = session.ai.library.history.filter(
         (record) => record.runId !== book.runId,
@@ -259,9 +279,11 @@ export function createJourney(context) {
       context.generation.save();
     }
     const explored = session.journey.expedition.exploration;
+    const replay = explored?.replay;
     const runId = session.ai.activeScript?.runId;
     if (
       complete &&
+      !replay &&
       runId &&
       session.ai.library.campaign &&
       !session.ai.library.campaign.completed &&
@@ -291,12 +313,19 @@ export function createJourney(context) {
     session.journey.expedition.experienceAwards = [];
     session.journey.expedition.levelUps = [];
     const loot = runId ? dungeonLoot(session.ai.library, runId) : [];
-    const ether = complete && runId ? settleEther(session.ai.library, runId) : 0;
-    if (complete) {
+    const ether = replay
+      ? complete
+        ? session.journey.expedition.recollectionEther
+        : 0
+      : complete && runId
+        ? settleEther(session.ai.library, runId)
+        : 0;
+    if (complete && !replay) {
       recordSettlement(session.ai.library, runId || session.journey.expedition.id);
       context.generation.save();
     }
-    if (won && complete && explored) context.generation.explorationWon(explored);
+    if (won && complete && explored && !replay)
+      context.generation.explorationWon(explored, { ether });
     context.audio.play(won ? 'victory' : 'defeat');
     const result = {
       won,

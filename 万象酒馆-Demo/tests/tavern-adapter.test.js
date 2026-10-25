@@ -304,5 +304,5 @@ test('user input regex cannot rewrite system definitions or assistant examples',
   assert(request.messages.some((message) => message.content === 'SYSTEM_WORD'));
   assert(request.messages.some((message) => message.content === 'ASSISTANT_WORD'));
   assert(request.messages.some((message) => message.content === 'USER_CHANGED'));
-  assert(request.messages.at(-1).content.includes('CHARACTER v3'));
+  assert(request.messages.at(-1).content.includes('CHARACTER v4'));
 });

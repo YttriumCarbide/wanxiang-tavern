@@ -20,7 +20,15 @@ export function claimBattleRewards(library, claimId, rewards) {
   if (library.rewardClaims.includes(claimId)) return false;
   const count = rewards.summonContracts;
   const gold = rewards.gold ?? 0;
-  if (!Number.isSafeInteger(count) || count < 0 || !Number.isSafeInteger(gold) || gold < 0)
+  const ether = rewards.ether ?? 0;
+  if (
+    !Number.isSafeInteger(count) ||
+    count < 0 ||
+    !Number.isSafeInteger(gold) ||
+    gold < 0 ||
+    !Number.isSafeInteger(ether) ||
+    ether < 0
+  )
     throw Error('奖励数量无效');
   const items = rewards.items ?? {};
   if (
@@ -34,6 +42,7 @@ export function claimBattleRewards(library, claimId, rewards) {
     throw Error('道具奖励无效');
   library.inventory.summonContracts = Math.min(999999, library.inventory.summonContracts + count);
   library.inventory.gold = Math.min(999999999, (library.inventory.gold || 0) + gold);
+  library.inventory.ether = Math.min(999999999, (library.inventory.ether || 0) + ether);
   if (Object.keys(items).length) {
     library.inventory.items = restoreBag(library.inventory.items);
     for (const [id, value] of Object.entries(items))

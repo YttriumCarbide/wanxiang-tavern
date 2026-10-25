@@ -39,7 +39,9 @@ test('six authored ruins trips use their own fixed cast in both engine and gener
     const trip = newExpedition(route.boss, {}, node);
     for (let index = 0; index < 5; index++) {
       const spec = explorationSpec(node, index);
-      assert.deepEqual(spec, explorationSpec({ ...node, seed: 771 }, index));
+      const alternate = explorationSpec({ ...node, seed: 771 }, index);
+      assert.deepEqual(spec.enemyIds, alternate.enemyIds);
+      assert.equal(spec.level, alternate.level);
       assert.deepEqual(spec.enemyIds, route.battles[index].enemyIds);
       assert.equal(new Set(spec.enemyIds).size, spec.enemyIds.length);
       assert(spec.enemyIds.length >= 1 && spec.enemyIds.length <= 3);
@@ -52,7 +54,7 @@ test('six authored ruins trips use their own fixed cast in both engine and gener
       const state = beginEncounter(trip);
       assert.deepEqual(state.enemyIds, spec.enemyIds);
       for (const id of state.enemyIds) {
-        assert.equal(state.units[id].maxHp, DEFINITIONS[id].hp);
+        assert.equal(state.units[id].maxHp, DEFINITIONS[id].hp + state.units[id].growth.hp);
         used.add(id);
       }
       assert.deepEqual(
