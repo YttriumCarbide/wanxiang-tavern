@@ -5,6 +5,7 @@ import { html } from '../shared/html.js';
 import { query as $ } from './dom.js';
 import { appendChatMessage } from './chat-message.js';
 import { relationship } from '../relationships.js';
+import { readableGalText } from '../gal.js';
 
 /** Portraits and speaker labels are presentation data, never added to model history. */
 export function createChatPresentation(session) {
@@ -30,6 +31,20 @@ export function createChatPresentation(session) {
     };
   }
   function append(container, message) {
+    const actors = library().characters.map((member) => ({
+      id: member.id,
+      name: member.setting.name,
+    }));
+    if (typeof message.content === 'string' && message.content.includes('【'))
+      message = {
+        ...message,
+        content: readableGalText(message.content, actors, library().campaign?.protagonistId),
+        display: readableGalText(
+          message.display ?? message.content,
+          actors,
+          library().campaign?.protagonistId,
+        ),
+      };
     const identities = message.speakerIds?.length
       ? message.speakerIds
       : message.role === 'user'

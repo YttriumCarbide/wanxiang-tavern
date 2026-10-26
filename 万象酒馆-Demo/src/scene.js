@@ -551,7 +551,11 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
     raf = 0;
     if (disposed) return;
     if (document.hidden) return;
-    if (document.querySelector('dialog[open]') && !deaths.cinematicActive()) return;
+    if (
+      document.querySelector('dialog[open],.gal-stage:not([hidden])') &&
+      !deaths.cinematicActive()
+    )
+      return;
     if (!frameBudget.accepts(now)) {
       schedule();
       return;

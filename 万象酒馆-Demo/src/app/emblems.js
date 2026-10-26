@@ -12,7 +12,7 @@ import { createDialogue } from './dialogue.js';
 
 export function createEmblems(context) {
   const { session, events } = context;
-  const dialogue = createDialogue(events, 'emblem-dialogue');
+  const dialogue = createDialogue(events, 'emblem-dialogue', context.gal);
   const hint = document.createElement('aside');
   hint.id = 'emblem-lesson';
   hint.hidden = true;

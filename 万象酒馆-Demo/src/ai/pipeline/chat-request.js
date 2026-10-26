@@ -4,6 +4,7 @@ import { scanWorldbooks, injectWorldbookMessages } from '../worldbook-scan.js';
 import { finalizeRequest } from './prompt-processing.js';
 import { presetOutputTransport, presetOutputWarnings } from '../preset-output.js';
 import { adviceTranscript } from '../advice.js';
+import { galInstruction } from '../gal-prompt.js';
 
 export function chatInput(kind, input) {
   if (!['chat', 'quick-chat'].includes(kind)) throw Error('聊天接口类型无效');
@@ -194,7 +195,7 @@ export async function chatRequest(
       worldInfo.settings.authorNote,
       { characterText: characters },
     );
-    messages.push({ role: 'system', content: rules });
+    messages.push({ role: 'system', content: rules + '\n' + galInstruction(input, kind) });
     const processed = await runRegexTasks(
       regexScripts,
       messages.map((message, index) => ({

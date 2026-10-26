@@ -40,6 +40,7 @@ import { createMemory } from './memory.js';
 import { createEquipment } from './equipment.js';
 import { createSettlement } from './settlement.js';
 import { createCompanionEvents } from './companion-events.js';
+import { createGalPlayer } from './gal.js';
 
 /** Composition root: wiring only, with one explicit application lifetime. */
 export function createApplication({
@@ -62,6 +63,7 @@ export function createApplication({
   context.roster = createRoster(context);
   context.viewport = createViewport(context);
   context.audio = createAudio(context);
+  context.gal = createGalPlayer(context);
   context.generation = createGeneration(context);
   context.destinations = createDestinations(context);
   context.shell = createShell(context);
@@ -133,6 +135,7 @@ export function createApplication({
     context.settlement.dispose();
     context.summoning.dispose();
     context.chat.dispose();
+    context.gal.dispose();
     context.memory.dispose();
     context.bookshelf.dispose();
     context.extensions.dispose();

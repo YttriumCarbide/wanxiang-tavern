@@ -104,7 +104,7 @@ export function createOnboarding(context) {
     context.generation.save();
     refresh();
   }
-  const dialogue = createDialogue(events);
+  const dialogue = createDialogue(events, 'guide-dialogue', context.gal);
   let shown = null;
   function refresh() {
     const active = guiding(session.ai.library) && !session.runtime.needsStart && !dialog.open;
@@ -150,7 +150,11 @@ export function createOnboarding(context) {
       if (shown === step) return;
       shown = step;
       dialogue.show(
-        ARRIVAL_PROSE.map((text, index) => (index === 0 ? { speaker: '旁白', text } : text)),
+        ARRIVAL_PROSE.map((text, index) => {
+          if (context.gal?.enabled && index === 1)
+            return { speaker: '旁白', text: '【登场:伊蒂丝】' + text };
+          return index === 0 ? { speaker: '旁白', text } : text;
+        }),
         () => advance('portal'),
         true,
       );
@@ -350,7 +354,11 @@ export function createOnboarding(context) {
     )
       return;
     const step = state().tutorial;
-    if (step === 'intent' && event.target.closest('#story-toggle') && $('#story-feed').open) {
+    if (
+      step === 'intent' &&
+      event.target.closest('#story-toggle') &&
+      ($('#story-feed').open || context.gal?.owner === 'script')
+    ) {
       state().tutorial = 'swap';
       tutorialTasks(state()).journal = true;
       context.generation.save();
@@ -360,6 +368,15 @@ export function createOnboarding(context) {
   });
   events.on($('#story-feed'), 'close', () => {
     if (learning(session.ai.library) && state().tutorial === 'swap') refresh();
+  });
+  events.on(document, 'gal-finished', (event) => {
+    if (
+      event.detail.owner === 'script' &&
+      event.detail.completed &&
+      learning(session.ai.library) &&
+      state().tutorial === 'swap'
+    )
+      refresh();
   });
   return {
     generationModeChanged,

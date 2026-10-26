@@ -2,9 +2,10 @@ import { ENCOUNTER_COUNT, FINAL_ENCOUNTER } from '../content/journey-rules.js';
 import { query as $ } from './dom.js';
 import { createEventScope } from '../shared/events.js';
 import { archiveMilestone } from '../archives.js';
+import { readableGalText } from '../gal.js';
 
 /** Only confirmed milestones enter history; browsing pages never unlocks future prose. */
-export function createStoryFeed(session, save) {
+export function createStoryFeed(session, save, gal = null) {
   const events = createEventScope();
   const dialog = $('#story-feed');
   const toggle = $('#story-toggle');
@@ -16,6 +17,7 @@ export function createStoryFeed(session, save) {
   const view = () => session.ai.storyView;
   let closing = null;
   const waiters = new Set();
+  let galCompletion = null;
   function render() {
     const recollection = !!session.ai.activeScript?.recollection;
     $('.quick-chat-heading').hidden = recollection;
@@ -37,7 +39,11 @@ export function createStoryFeed(session, save) {
         paragraph.append(name);
       }
       const prose = document.createElement('p');
-      prose.textContent = line.text;
+      prose.textContent = readableGalText(
+        line.text,
+        gal?.actors() || [],
+        session.ai.library.campaign?.protagonistId,
+      );
       paragraph.append(prose);
       area.append(paragraph);
     }
@@ -66,6 +72,7 @@ export function createStoryFeed(session, save) {
     $('#story-next').disabled = view().page === FINAL_ENCOUNTER;
   }
   function close(immediate = false) {
+    gal?.cancel('script');
     if (dialog.open && !closing && !immediate) {
       closing = dialog.animate(
         [
@@ -202,6 +209,21 @@ export function createStoryFeed(session, save) {
     render();
   }
   function openStory(automatic = false) {
+    if (gal?.enabled) {
+      if (!session.ai.activeScript || gal.owner === 'script') return;
+      const completion = gal.play(
+        view().pages[view().page].map((line) => ({
+          speaker: line.speaker,
+          text: line.text,
+        })),
+        { owner: 'script', title: session.ai.activeScript.title || '路途手记' },
+      );
+      galCompletion = completion;
+      void completion.then(() => {
+        if (galCompletion === completion) galCompletion = null;
+      });
+      return;
+    }
     if (!session.ai.activeScript || dialog.open) return;
     render();
     dialog.dataset.automatic = String(automatic === true);
@@ -259,6 +281,7 @@ export function createStoryFeed(session, save) {
     recordRound,
     openStory,
     storyClosed() {
+      if (galCompletion) return galCompletion;
       return dialog.open ? new Promise((resolve) => waiters.add(resolve)) : Promise.resolve();
     },
     cancelScene() {

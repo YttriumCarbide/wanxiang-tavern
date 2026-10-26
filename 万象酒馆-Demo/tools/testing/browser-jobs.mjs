@@ -17,6 +17,7 @@ export function browserJobs(scopes, results, root) {
       browserOnly,
     );
   simple('battle-controls', 'battle-controls', 'battleControlChecks');
+  simple('gal', 'gal', 'galChecks');
   simple('enemy-progression', 'enemy-progression', 'enemyProgressionChecks');
   simple('mobile', 'mobile', 'mobileChecks');
   simple('forest', 'forest', 'forestChecks');

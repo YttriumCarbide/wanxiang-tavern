@@ -19,6 +19,7 @@ import { explorationSpec } from '../../exploration.js';
 import { REGIONS } from '../../content/regions.js';
 import { presetOutputTransport, outputToolRequest } from '../preset-output.js';
 import { requireNpcInteraction } from '../../npc-interaction.js';
+import { galInstruction } from '../gal-prompt.js';
 
 export function generationInput(kind, input) {
   if (!['character', 'script'].includes(kind)) throw Error('接口类型无效');
@@ -491,6 +492,8 @@ export async function generationRequest(kind, input, source, options = {}) {
     });
   }
   const warnings = auditPromptPreset(kind, preset);
+  if (kind === 'script' && galInstruction(input, kind))
+    messages.push({ role: 'system', content: galInstruction(input, kind) });
   if (
     scan &&
     !scan.entries.some((entry) => entry.extensions?.wanxiang?.generationRule === `${kind}-output`)

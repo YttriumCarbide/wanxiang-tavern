@@ -258,6 +258,20 @@ export function createChat(context) {
           .find((element) => element.dataset.messageId === reply.id)
           ?.scrollIntoView({ block: 'nearest' });
       } else presentation.append(log, reply);
+      if (context.gal?.enabled) {
+        const content = /【(?:旁白|对白[:：])/u.test(reply.content)
+          ? reply.content
+          : [
+              {
+                speaker: reply.speakerIds?.length === 1 ? reply.speakerIds[0] : '旁白',
+                text: reply.content,
+              },
+            ];
+        void context.gal.play(content, {
+          owner: kind,
+          title: kind === 'chat' ? '酒馆 · 片刻交谈' : '旅途 · 片刻闲谈',
+        });
+      }
       state().lastRequest = result.request;
       status(
         kind,
@@ -361,6 +375,8 @@ export function createChat(context) {
     }
   }
   function leave() {
+    context.gal?.cancel('chat');
+    context.gal?.cancel('quick-chat');
     revision++;
     request?.abort();
     rewrite?.abort();

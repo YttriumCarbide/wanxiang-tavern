@@ -7,6 +7,9 @@ body {
   color: #eee4d4;
   font: 13px system-ui;
 }
+body.gal-covered :is(button, #spots, #aim, #status) {
+  visibility: hidden;
+}
 canvas {
   display: block;
   position: fixed;

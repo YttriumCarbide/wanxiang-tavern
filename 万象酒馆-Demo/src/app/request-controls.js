@@ -1,5 +1,6 @@
 import { API_LABELS } from './first-run-rules.js';
 import { skippingAi } from '../generation-options.js';
+import { galRequestInput } from '../gal.js';
 /** Every paid/model request has a real AbortSignal and a visible control in its current panel. */
 export function createRequestControls(client, generationOptions = () => null, arcade = () => null) {
   const active = new Set();
@@ -27,7 +28,13 @@ export function createRequestControls(client, generationOptions = () => null, ar
     async request(path, data, options = {}) {
       const match =
         /^(generate|models)\/(character|script|chat|quick-chat|summary|creation|map)$/.exec(path);
-      if (!match) return client.request(path, data, options);
+      if (!match) {
+        const preview =
+          path === 'prompts/preview' && data?.kind
+            ? { ...data, input: galRequestInput(data.kind, data.input, generationOptions()) }
+            : data;
+        return client.request(path, preview, options);
+      }
       if (match[1] === 'generate' && skippingAi(generationOptions()))
         throw Error('开发者模式已跳过AI生成，请关闭“跳过AI生成”后再使用。');
       const controller = new AbortController();
@@ -65,7 +72,9 @@ export function createRequestControls(client, generationOptions = () => null, ar
       button.addEventListener('click', stop);
       try {
         controller.signal.throwIfAborted();
-        const result = await client.request(path, data, { ...options, signal: controller.signal });
+        const input =
+          match[1] === 'generate' ? galRequestInput(match[2], data, generationOptions()) : data;
+        const result = await client.request(path, input, { ...options, signal: controller.signal });
         controller.signal.throwIfAborted();
         outcome = 'success';
         return result;

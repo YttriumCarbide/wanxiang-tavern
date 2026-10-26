@@ -9,7 +9,7 @@ import { portraitUrl } from '../portraits.js';
 
 export function createCompanionEvents(context) {
   const { session, events } = context;
-  const dialogue = createDialogue(events, 'companion-dialogue');
+  const dialogue = createDialogue(events, 'companion-dialogue', context.gal);
   const reminder = document.createElement('aside');
   reminder.id = 'formation-lesson';
   reminder.hidden = true;

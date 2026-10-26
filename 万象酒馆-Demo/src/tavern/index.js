@@ -485,6 +485,8 @@ export async function createTavernView() {
   let choosingSummon = false;
   const summonTint = new THREE.Color('#69cfad');
   events.on(window, 'message', (e) => {
+    if (e.origin === location.origin && e.source === parent && e.data?.type === 'gal-visibility')
+      document.body.classList.toggle('gal-covered', e.data.visible === true);
     if (e.origin === location.origin && e.source === parent && e.data?.type === 'summon-mode') {
       summonMode = e.data.mode;
       choosingSummon = e.data.choosing === true;
@@ -499,6 +501,14 @@ export async function createTavernView() {
       summonSurge = 2.5;
     }
   });
+  try {
+    document.body.classList.toggle(
+      'gal-covered',
+      parent.document.body.classList.contains('gal-playing'),
+    );
+  } catch {
+    /* Standalone cross-origin previews do not use the parent application's Gal stage. */
+  }
   const projected = new THREE.Vector3(),
     direction = new THREE.Vector3(),
     toward = new THREE.Vector3(),
@@ -633,14 +643,21 @@ export async function createTavernView() {
   resize();
   const clock = new THREE.Clock();
   let elapsed = 0;
+  let coveredFrame = false;
+  events.on(window, 'resize', () => {
+    coveredFrame = false;
+  });
   renderer.setAnimationLoop((now) => {
     let covered = false;
     try {
-      covered = !!parent.document.querySelector('dialog[open], #generation-progress:not([hidden])');
+      covered = !!parent.document.querySelector(
+        'dialog[open], #generation-progress:not([hidden]),.gal-stage:not([hidden])',
+      );
     } catch {
       /* Standalone cross-origin previews render independently. */
     }
-    if (document.hidden || covered) {
+    if (!covered) coveredFrame = false;
+    if (document.hidden || (covered && coveredFrame)) {
       clock.getDelta();
       return;
     }
@@ -721,6 +738,7 @@ export async function createTavernView() {
     updateSpots(checkOcclusion);
     if (checkOcclusion) spotTimer = 0;
     renderer.render(scene, camera);
+    if (covered && loaded) coveredFrame = true;
     renderedFrames++;
   });
 

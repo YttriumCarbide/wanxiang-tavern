@@ -99,6 +99,7 @@ export function createGeneration(context) {
         return;
       }
       session.ai.generationOptions = next;
+      if (!next.developerMode || !next.galMode) context.gal?.cancel();
       renderDeveloperOptions();
       context.onboarding?.generationModeChanged();
       context.onboarding?.refresh();
@@ -123,7 +124,7 @@ export function createGeneration(context) {
       return false;
     }
   }
-  const story = createStoryFeed(session, save);
+  const story = createStoryFeed(session, save, context.gal);
   function installRoster() {
     session.battle.state = newBattle(undefined, compileRoster(library()));
     session.battle.forecast = preview(session.battle.state, []);

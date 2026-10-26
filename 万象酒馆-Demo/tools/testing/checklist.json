@@ -1,15 +1,6 @@
 {
-  "description": "敌人等级、回忆奖励/正文、角色v40及超限动画回归清单。完整五场expedition、server、static已验收通过，按需显式追加，不默认重复通关；最后失败复查已通过，结果见.runtime/tests/report.json。",
-  "scopes": ["quality", "core", "enemy-progression", "battle-markers", "death-effects"],
-  "coreFiles": [
-    "tests/enemy-progression.test.js",
-    "tests/battle-mechanic-execution.test.js",
-    "tests/playback.test.js",
-    "tests/exploration.test.js",
-    "tests/forest.test.js",
-    "tests/ruins-encounters.test.js",
-    "tests/worlds-emblems.test.js",
-    "tests/campaign.test.js"
-  ],
+  "description": "复核Gal人物缩小后的单人、双人和手机横屏布局，以及剧本/聊天/闲聊三种文风指引的真实请求拼装。研发仅develop，正式网页不变。不重复完整副本，不调用付费模型。",
+  "scopes": ["quality", "core", "gal", "chat", "static"],
+  "coreFiles": ["tests/gal.test.js"],
   "browserConcurrency": 2
 }

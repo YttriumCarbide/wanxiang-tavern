@@ -1,5 +1,7 @@
+import { authoredGalContent } from '../gal.js';
+
 /** One owned typewriter, shared by the opening prose and Edith's action-gated lessons. */
-export function createDialogue(events, id = 'guide-dialogue') {
+export function createDialogue(events, id = 'guide-dialogue', gal = null) {
   const panel = document.createElement('dialog');
   panel.id = id;
   panel.className = 'guide-dialogue';
@@ -88,9 +90,22 @@ export function createDialogue(events, id = 'guide-dialogue') {
   });
   return {
     get open() {
-      return panel.open;
+      return panel.open || gal?.owner === id;
     },
     show(content, callback, opening = false) {
+      if (gal?.enabled) {
+        stop();
+        if (panel.open) panel.close();
+        gal.cancel(id);
+        void gal.play(authoredGalContent(content), {
+          owner: id,
+          onComplete: callback,
+          mandatory: true,
+          defaultSpeaker: '伊蒂丝',
+          title: opening ? '白光之后 · 初至万象' : '万象酒馆',
+        });
+        return;
+      }
       lines = content.map((line) =>
         typeof line === 'string'
           ? { text: line, speaker: '伊蒂丝', portrait: './assets/portraits/edith.png' }
@@ -110,11 +125,13 @@ export function createDialogue(events, id = 'guide-dialogue') {
       render();
     },
     close() {
+      gal?.cancel(id);
       stop();
       done = null;
       panel.close();
     },
     dispose() {
+      gal?.cancel(id);
       stop();
       panel.remove();
     },

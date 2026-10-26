@@ -14,6 +14,19 @@ export async function chatChecks({ browser, baseURL, output }) {
   page.on('pageerror', (error) => errors.push(error.message));
   await legacySession(page);
   await page.addInitScript(() => {
+    if (origin === 'null') return;
+    const options = JSON.parse(localStorage.getItem('wanxiang.generation-options.v1') || '{}');
+    localStorage.setItem(
+      'wanxiang.generation-options.v1',
+      JSON.stringify({
+        ...options,
+        skipAiGeneration: false,
+        protagonistApi: true,
+        scriptApi: true,
+      }),
+    );
+  });
+  await page.addInitScript(() => {
     if (window.origin === 'null') return;
     const key = 'wanxiang.worldbooks.v1';
     const library = JSON.parse(localStorage.getItem(key));
@@ -268,10 +281,21 @@ export async function chatChecks({ browser, baseURL, output }) {
       )[1].turnSummary.text,
       '玩家给来客倒了一杯水。',
     );
+    // Enter with a local test script, then enable only the mocked chat/rewrite requests.
+    await page.evaluate(() => {
+      const field = document.querySelector('[data-generation-option="skipAiGeneration"]');
+      field.checked = true;
+      field.dispatchEvent(new Event('change', { bubbles: true }));
+    });
     await page.evaluate(() => demo.startBattle());
     await page.waitForFunction(
       () => demo.getStatus().mode === 'battle' && !demo.getStatus().animating,
     );
+    await page.evaluate(() => {
+      const field = document.querySelector('[data-generation-option="skipAiGeneration"]');
+      field.checked = false;
+      field.dispatchEvent(new Event('change', { bubbles: true }));
+    });
     const battle = await page.evaluate(() => ({
       state: demo.getState(),
       expedition: demo.getExpedition(),
@@ -364,6 +388,9 @@ export async function chatChecks({ browser, baseURL, output }) {
       .frameLocator('#inn-frame iframe')
       .locator('#status')
       .waitFor({ state: 'detached', timeout: 60000 });
+    await page.waitForFunction(
+      () => document.querySelector('#inn-frame iframe')?.contentWindow?.assetPreview,
+    );
     await page
       .frameLocator('#inn-frame iframe')
       .locator('canvas')

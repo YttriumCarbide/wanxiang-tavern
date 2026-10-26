@@ -11,7 +11,7 @@ import { ITEMS } from '../content/items.js';
 export function createSettlement(context) {
   const { session, events } = context;
   const panel = document.querySelector('#result');
-  const dialogue = createDialogue(events, 'level-dialogue');
+  const dialogue = createDialogue(events, 'level-dialogue', context.gal);
   let release = null;
   let disposed = false;
   let presenting = false;

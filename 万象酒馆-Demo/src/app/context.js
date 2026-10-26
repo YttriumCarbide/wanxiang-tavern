@@ -1,6 +1,7 @@
 /**
  * Explicit controller ports; no module globals or circular ES module imports.
  * @typedef {Object} AppContext
+ * @property {ReturnType<typeof import('./gal.js').createGalPlayer>} gal
  * @property {ReturnType<typeof import('./arcade.js').createArcade>} arcade
  * @property {ReturnType<typeof import('./generation-access.js').createGenerationAccess>} generationAccess
  * @property {ReturnType<typeof import('./emblems.js').createEmblems>} emblems
