@@ -1,4 +1,5 @@
 import { createEventScope } from '../shared/events.js';
+import { mountRotatedScrolling } from './touch-scroll.js';
 
 /** Stop page-owned mouse navigation while preserving left-button card dragging and scrolling. */
 export function guardMouseGestures(events, target = document) {
@@ -60,6 +61,7 @@ export function mountLandscapeHost() {
 }
 export function mountDisplay(context) {
   guardMouseGestures(context.events);
+  mountRotatedScrolling(context.events);
   const button = document.querySelector('#fullscreen-toggle');
   const host = window.top.document;
   const paint = () => {

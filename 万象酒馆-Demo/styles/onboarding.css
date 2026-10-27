@@ -692,3 +692,27 @@
     font-size: 10px;
   }
 }
+@media (max-width: 900px), (max-height: 500px) {
+  #setup-intro {
+    margin: 6px 0 10px;
+    padding: 10px 12px;
+  }
+  #setup-heading {
+    font-size: 18px;
+    margin: 6px 0;
+  }
+  #setup-description {
+    font-size: 12px;
+    line-height: 1.65;
+  }
+  #setup-footer {
+    position: static;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding-block: 10px;
+  }
+  #setup-status {
+    flex-basis: 100%;
+    margin: 0;
+  }
+}

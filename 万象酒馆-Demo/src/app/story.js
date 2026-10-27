@@ -9,6 +9,12 @@ export function createStoryFeed(session, save, gal = null) {
   const events = createEventScope();
   const dialog = $('#story-feed');
   const toggle = $('#story-toggle');
+  const dock = document.createElement('nav');
+  dock.id = 'gal-dungeon-menu';
+  dock.setAttribute('aria-label', '旅途阅读与交流');
+  dock.innerHTML =
+    '<button data-dungeon-gal="story"><small>STORY</small>剧情</button><button data-dungeon-gal="quick"><small>TALK</small>同行闲聊</button>';
+  document.body.append(dock);
   session.ai.storyView ||= {
     page: 0,
     latest: 0,
@@ -211,6 +217,7 @@ export function createStoryFeed(session, save, gal = null) {
   function openStory(automatic = false) {
     if (gal?.enabled) {
       if (!session.ai.activeScript || gal.owner === 'script') return;
+      gal.cancel();
       const completion = gal.play(
         view().pages[view().page].map((line) => ({
           speaker: line.speaker,
@@ -238,6 +245,12 @@ export function createStoryFeed(session, save, gal = null) {
     );
     toggle.setAttribute('aria-expanded', 'true');
   }
+  events.on(dock, 'click', (event) => {
+    const action = event.target.closest('[data-dungeon-gal]')?.dataset.dungeonGal;
+    if (action === 'story') openStory();
+    if (action === 'quick') document.dispatchEvent(new CustomEvent('gal-open-quick'));
+  });
+  events.on(document, 'gal-open-script', () => openStory());
   events.on(toggle, 'click', () => {
     if (dialog.open) close();
     else openStory();
@@ -292,6 +305,7 @@ export function createStoryFeed(session, save, gal = null) {
     dispose() {
       close(true);
       events.dispose();
+      dock.remove();
       document.body.classList.remove('has-story');
     },
   };

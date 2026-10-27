@@ -15,6 +15,7 @@ export function mountPreparationTouch(context) {
   }
   context.events.on(panel, 'pointerdown', (event) => {
     suppressClick = false;
+    if (context.session.ai.formationLocked) return;
     if (event.pointerType === 'mouse' || !event.target.closest('.prepare-drag-handle')) return;
     const source = event.target.closest('[data-prepare-hero]');
     if (!source) return;

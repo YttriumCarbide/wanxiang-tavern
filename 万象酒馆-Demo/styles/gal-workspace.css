@@ -1,0 +1,422 @@
+.gal-actionbar {
+  position: absolute;
+  inset: auto max(5vw, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom))
+    max(5vw, env(safe-area-inset-left));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  z-index: 7;
+}
+.gal-quick-menu,
+.gal-workspace-menu {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.gal-workspace-menu {
+  margin-right: 0;
+}
+.gal-actionbar button {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 28px;
+  padding: 5px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #eff4ee;
+  opacity: 0.62;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.gal-actionbar button:hover {
+  opacity: 1;
+  color: #fff;
+  background: #ffffff15;
+}
+.gal-actionbar button[aria-pressed='true'] {
+  color: #efd29a;
+  background: #ffffff1c;
+  opacity: 1;
+}
+.gal-actionbar button svg {
+  width: 18px;
+  height: 18px;
+}
+.gal-control-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.gal-ui-hidden :is(.gal-reading, .gal-controls, .gal-actionbar, .gal-workspace) {
+  visibility: hidden;
+}
+.gal-stage {
+  --gal-side-width: 232px;
+}
+.gal-stage[data-drawer='composer'] .gal-reading,
+.gal-stage[data-drawer='side'] .gal-reading,
+.gal-stage[data-drawer='archive'] .gal-reading {
+  visibility: hidden;
+}
+.gal-stage[data-drawer='side'] .gal-cast img[data-position='left'] {
+  left: calc(var(--gal-side-width) + (100vw - var(--gal-side-width)) * 0.33);
+}
+.gal-stage[data-drawer='side'] .gal-cast img[data-position='center'] {
+  left: calc((100vw + var(--gal-side-width)) / 2);
+}
+.gal-stage[data-workspace] .gal-quick-menu :is([data-gal='journal'], [data-gal='compose']) {
+  display: none;
+}
+.gal-side,
+.gal-composer,
+.gal-archive {
+  position: absolute;
+  z-index: 6;
+  border: 0;
+  border-radius: 8px;
+  background: #133847a6;
+  box-shadow: none;
+  backdrop-filter: blur(7px);
+  overscroll-behavior: contain;
+  touch-action: pan-x pan-y;
+}
+.gal-side > header,
+.gal-composer > header,
+.gal-archive > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.gal-workspace header strong {
+  color: #e2cc98;
+  font-weight: 400;
+  font-size: 14px;
+  letter-spacing: 0.1em;
+}
+.gal-workspace header button {
+  border: 0;
+  background: transparent;
+  color: #9eb5b5;
+  font-size: 11px;
+  padding: 3px 6px;
+}
+.gal-side {
+  inset: 65px auto 48px max(18px, env(safe-area-inset-left));
+  width: var(--gal-side-width);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  animation: gal-slide-left 220ms ease both;
+}
+.gal-side-content {
+  flex: 1;
+  min-height: 0;
+}
+.gal-side .chat-company {
+  height: 100%;
+  border: 0;
+  padding: 0;
+  gap: 8px;
+}
+.gal-side .chat-company > small,
+.gal-side #chat-scene {
+  display: none;
+}
+.gal-side .chat-location-label {
+  margin: 0;
+  gap: 4px;
+  font-size: 10px;
+}
+.gal-side select {
+  width: 100%;
+  padding: 5px 7px;
+  font-size: 12px;
+}
+#gal-stage #chat-participants {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 3px 0 0;
+}
+#gal-stage .chat-person {
+  display: grid;
+  grid-template-columns: 14px 36px minmax(0, 1fr);
+  align-items: center;
+  justify-content: start;
+  min-height: 58px;
+  padding: 6px;
+  margin: 0;
+  gap: 8px;
+  border-radius: 3px;
+  text-align: left;
+  box-shadow: none;
+  flex-shrink: 0;
+}
+#gal-stage .chat-person input {
+  position: static;
+  inset: auto;
+  width: 14px;
+  height: 14px;
+  opacity: 1;
+  accent-color: #d2ba7e;
+}
+#gal-stage .chat-person img {
+  width: 36px;
+  height: 44px;
+  border-radius: 2px;
+  object-fit: cover;
+}
+#gal-stage .chat-person > span {
+  align-items: start;
+  min-width: 0;
+  gap: 3px;
+}
+#gal-stage .chat-person strong {
+  margin: 0;
+  font-size: 12px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+#gal-stage .chat-person small {
+  font-size: 9px;
+}
+#gal-stage .chat-person:has(input:checked) {
+  background: #2b4246;
+  border-color: #cbb68088;
+  box-shadow: none;
+}
+.gal-side #chat-memory-open {
+  flex-shrink: 0;
+  padding: 6px;
+  font-size: 11px;
+}
+.gal-composer {
+  inset: auto 0 0;
+  padding: 22px max(14vw, env(safe-area-inset-left)) max(44px, env(safe-area-inset-bottom));
+  border-radius: 0;
+  background: linear-gradient(180deg, transparent, #0b3a4b66 22%, #082b3c88);
+  backdrop-filter: none;
+  animation: gal-slide-up 220ms ease both;
+}
+#gal-stage .chat-composer {
+  padding: 0;
+  background: transparent;
+  border: 0;
+}
+#gal-stage #chat-player {
+  display: none;
+}
+.gal-composer form {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+}
+#gal-stage :is(#chat-input, #quick-chat-input) {
+  flex: 1;
+  min-width: 0;
+  height: 78px;
+  min-height: 78px;
+  max-height: 24dvh;
+  resize: none;
+  padding: 12px 14px;
+  color: #eee7d5;
+  font-size: 15px;
+  line-height: 1.6;
+  border: 0;
+  border-bottom: 1px solid #d2e5e555;
+  border-radius: 0;
+  background: #001b2726;
+}
+#gal-stage :is(#chat-send, #quick-chat-send, #chat-cancel) {
+  height: auto;
+  min-width: 70px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #eaf2ed;
+  padding: 8px 16px;
+  font-size: 13px;
+}
+#gal-stage .chat-input-hint {
+  margin-top: 5px;
+  font-size: 9px;
+  color: #8da4a4;
+}
+.gal-composer :is(#chat-status, #quick-chat-status) {
+  display: block;
+  max-height: 30px;
+  overflow: auto;
+  font-size: 10px;
+  color: #aabdb7;
+}
+.gal-composer :is(#chat-status, #quick-chat-status):empty {
+  display: none;
+}
+.gal-archive {
+  inset: 65px 6vw 50px;
+  padding: 18px;
+  overflow: auto;
+  animation: gal-slide-right 220ms ease both;
+}
+.gal-archive #chat-messages,
+.gal-archive #quick-chat-log {
+  max-height: none;
+  overflow: visible;
+}
+#gal-dungeon-menu {
+  display: none;
+}
+body.gal-mode.has-story.in-battle:not(.gal-playing) #gal-dungeon-menu {
+  position: fixed;
+  z-index: 40;
+  left: max(16px, env(safe-area-inset-left));
+  bottom: 27%;
+  display: grid;
+  gap: 6px;
+}
+body.gal-mode #story-toggle {
+  display: none;
+}
+#gal-dungeon-menu button {
+  display: grid;
+  gap: 3px;
+  padding: 9px 14px;
+  background: #10252be8;
+  border-color: #b6aa7b77;
+}
+#gal-dungeon-menu small {
+  font-size: 8px;
+  letter-spacing: 0.2em;
+  color: #a6b4b2;
+}
+@keyframes gal-slide-left {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes gal-slide-right {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes gal-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(22px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (max-height: 500px), (max-width: 900px) {
+  .gal-stage {
+    --gal-side-width: 184px;
+  }
+  .gal-actionbar {
+    inset: auto 4vw max(6px, env(safe-area-inset-bottom));
+    gap: 8px;
+    justify-content: center;
+  }
+  .gal-actionbar button {
+    width: 28px;
+    height: 26px;
+    padding: 4px;
+    font-size: 10px;
+  }
+  .gal-quick-menu,
+  .gal-workspace-menu {
+    gap: 2px;
+  }
+  .gal-quick-menu [data-gal='next'] {
+    display: none;
+  }
+  .gal-side {
+    top: 42px;
+    left: max(12px, env(safe-area-inset-left));
+    bottom: 38px;
+    padding: 9px;
+  }
+  .gal-workspace header strong {
+    font-size: 12px;
+  }
+  .gal-side > header {
+    margin-bottom: 6px;
+  }
+  #gal-stage .chat-person {
+    min-height: 46px;
+    padding: 4px;
+    grid-template-columns: 12px 28px minmax(0, 1fr);
+    gap: 6px;
+  }
+  #gal-stage .chat-person img {
+    width: 28px;
+    height: 34px;
+  }
+  #gal-stage .chat-person input {
+    width: 12px;
+    height: 12px;
+  }
+  #gal-stage .chat-person strong {
+    font-size: 11px;
+  }
+  #gal-stage .chat-person small {
+    font-size: 8px;
+  }
+  .gal-composer {
+    inset: auto 0 0;
+    padding: 14px max(10vw, env(safe-area-inset-left)) max(40px, env(safe-area-inset-bottom));
+    max-height: calc(100dvh - 78px);
+  }
+  .gal-composer > header {
+    margin-bottom: 7px;
+  }
+  #gal-stage :is(#chat-input, #quick-chat-input) {
+    height: 56px;
+    min-height: 56px;
+    max-height: 24dvh;
+    padding: 8px 10px;
+    font-size: 13px;
+  }
+  #gal-stage :is(#chat-send, #quick-chat-send, #chat-cancel) {
+    min-width: 54px;
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+  .gal-archive {
+    inset: 42px 4vw 38px;
+    padding: 12px;
+  }
+  #gal-dungeon-menu button {
+    padding: 6px 8px;
+    font-size: 11px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gal-workspace * {
+    animation: none;
+  }
+}

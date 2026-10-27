@@ -1,6 +1,6 @@
 {
-  "description": "复核Gal人物缩小后的单人、双人和手机横屏布局，以及剧本/聊天/闲聊三种文风指引的真实请求拼装。研发仅develop，正式网页不变。不重复完整副本，不调用付费模型。",
-  "scopes": ["quality", "core", "gal", "chat", "static"],
+  "description": "此前已通过编队出发、新手和完整副本验证；当前只复核重排后的Gal手机选人/输入/阅读互斥布局、手机滚动和实际落位完成后再播放对白。所有AI均本地模拟，不读取实际密钥。仅develop。",
+  "scopes": ["quality", "gal", "mobile", "static", "battle-controls"],
   "coreFiles": ["tests/gal.test.js"],
   "browserConcurrency": 2
 }

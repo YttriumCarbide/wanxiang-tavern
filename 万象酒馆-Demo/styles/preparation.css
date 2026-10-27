@@ -603,3 +603,111 @@
     padding: 10px 14px;
   }
 }
+#party-panel.formation-locked .prepare-reserve-col,
+#party-panel.formation-locked .prepare-drag-handle {
+  display: none;
+}
+#party-panel.formation-locked .prepare-body {
+  grid-template-columns: minmax(0, 1fr);
+}
+#departure-party {
+  width: min(920px, calc(100vw - 24px));
+  padding: 22px;
+  background: #132a2a;
+  color: #eee3c9;
+  border: 1px solid #bdab77;
+}
+#departure-party > header,
+#departure-party > footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+#departure-party h2 {
+  margin: 5px 0;
+}
+#departure-party p {
+  color: #aebfb9;
+  line-height: 1.7;
+}
+.departure-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 22px;
+}
+.departure-slots {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.departure-slots button {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+}
+.departure-slots img {
+  height: 86px;
+  width: 65px;
+  object-fit: cover;
+}
+.departure-roster {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  max-height: 400px;
+  overflow: auto;
+}
+.departure-roster button {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.departure-roster img {
+  width: 48px;
+  height: 64px;
+  object-fit: cover;
+}
+#departure-party button[aria-pressed='true'] {
+  border-color: #e4cd8b;
+  background: #465747;
+}
+#departure-party > footer {
+  margin-top: 18px;
+}
+@media (max-width: 900px), (max-height: 500px) {
+  #departure-party {
+    padding: 12px;
+  }
+  .departure-layout {
+    gap: 12px;
+  }
+  #departure-party h2 {
+    font-size: 19px;
+  }
+  #departure-party h3 {
+    font-size: 13px;
+    margin: 8px 0;
+  }
+  .departure-slots img {
+    height: 55px;
+    width: 42px;
+  }
+  .departure-roster {
+    max-height: 220px;
+  }
+  .departure-roster img {
+    height: 45px;
+    width: 34px;
+  }
+  #departure-party > footer {
+    margin-top: 10px;
+  }
+}
+@media (max-width: 500px) and (orientation: portrait) {
+  .departure-layout {
+    grid-template-columns: 1fr;
+  }
+}

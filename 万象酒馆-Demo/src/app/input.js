@@ -217,6 +217,10 @@ export function mountInput(context) {
   });
 
   context.events.on($('#party-panel'), 'dragstart', (e) => {
+    if (session.ai.formationLocked) {
+      e.preventDefault();
+      return;
+    }
     const member = e.target.closest('.prepare-member');
     const slot = e.target.closest('.prepare-slot');
     if (member && member.dataset.prepareHero) {

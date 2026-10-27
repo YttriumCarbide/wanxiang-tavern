@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import path from 'node:path';
 import { readFile } from 'node:fs/promises';
 import { dismissAutomaticJournals } from './legacy-session.mjs';
+import { galWorkspaceChecks } from './gal-workspace.mjs';
 
 export async function galChecks({ browser, baseURL, output }) {
   const errors = [];
@@ -20,17 +21,50 @@ export async function galChecks({ browser, baseURL, output }) {
     const viewport = page.viewportSize();
     const reading = await page.locator('.gal-reading').boundingBox();
     const controls = await page.locator('.gal-controls').boundingBox();
-    assert(reading.y > viewport.height * 0.6, 'reading stays in the lower part of the scene');
+    assert(reading.y > viewport.height * 0.5, 'reading stays in the lower part of the scene');
     assert(controls.y + controls.height < reading.y, 'controls do not overlap the text');
-    assert(reading.x > viewport.width * 0.03, 'text retains side margins');
+    const prose = await page.locator('.gal-page').boundingBox();
+    assert(
+      prose.x > viewport.width * 0.08,
+      'text retains side margins within the full-width gradient',
+    );
+    const icons = await page.locator('.gal-actionbar button:visible').all();
+    const iconBoxes = [];
+    for (const icon of icons) {
+      assert.equal(await icon.locator('svg').count(), 1);
+      const box = await icon.boundingBox();
+      assert(
+        box.y >= reading.y && box.y + box.height <= reading.y + reading.height,
+        'icons stay inside dialogue area',
+      );
+      iconBoxes.push(box);
+    }
+    const firstIcon = iconBoxes[0];
+    const lastIcon = iconBoxes.at(-1);
+    assert(
+      Math.abs((firstIcon.x + lastIcon.x + lastIcon.width) / 2 - viewport.width / 2) < 2,
+      'icons are centered',
+    );
     const sprites = await page.locator('.gal-cast img').all();
     const boxes = [];
     for (const sprite of sprites) {
       const box = await sprite.boundingBox();
-      assert(box.height <= viewport.height * 0.66, 'portrait must not fill screen height');
-      assert(box.width <= viewport.width * 0.3, 'portrait retains background space');
-      assert(box.y >= viewport.height * 0.2, 'clear space remains above portraits');
-      assert(box.y + box.height * 0.55 < reading.y, 'face stays above reading area');
+      assert(
+        box.height >= viewport.height * 0.8 && box.height <= viewport.height * 0.88,
+        'portrait matches the reference standing scale',
+      );
+      assert(box.width <= viewport.width * 0.49, 'portrait retains background space');
+      assert(box.y >= controls.y + controls.height - 1, 'portrait clears the top controls');
+      if (sprites.length === 1)
+        assert(
+          Math.abs(box.x + box.width / 2 - viewport.width / 2) < 2,
+          'single portrait is centered like the reference',
+        );
+      assert(box.y + box.height * 0.36 < reading.y, 'face stays above reading area');
+      assert(
+        Math.abs(box.y + box.height - viewport.height) < 2,
+        'portrait reaches screen bottom behind the translucent dialogue',
+      );
       boxes.push(box);
     }
     if (boxes.length === 2) {
@@ -257,6 +291,7 @@ export async function galChecks({ browser, baseURL, output }) {
     });
     assert.equal(await page.locator('#gal-stage').count(), 0);
     assert.deepEqual(errors, []);
+    const workspace = await galWorkspaceChecks({ browser, baseURL, output });
     return {
       originalTutorial: true,
       developerToggle: true,
@@ -264,6 +299,7 @@ export async function galChecks({ browser, baseURL, output }) {
       narrationAndUser: true,
       missingSprites: true,
       rgba: alpha,
+      workspace,
     };
   } finally {
     await page.close();

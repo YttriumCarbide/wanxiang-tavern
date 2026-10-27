@@ -22,6 +22,13 @@ body.gal-playing #formation-lesson,
 body.gal-playing #story-toggle {
   visibility: hidden;
 }
+body.gal-playing #toast {
+  visibility: hidden;
+}
+body.gal-playing #battle > :not(#stage),
+body.gal-playing #battle :is(.unit-layer, #intent-layer) {
+  visibility: hidden;
+}
 dialog:has(> #gal-stage:not([hidden])) {
   background: transparent;
   border-color: transparent;
@@ -40,7 +47,7 @@ dialog:has(> #gal-stage:not([hidden])) > :not(.gal-stage) {
 .gal-vignette {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, #07151d33, transparent 22%, transparent 65%, #07151d99);
+  background: linear-gradient(180deg, #07151d22, transparent 22%, transparent 80%, #07151d22);
   pointer-events: none;
 }
 .gal-cast {
@@ -50,9 +57,10 @@ dialog:has(> #gal-stage:not([hidden])) > :not(.gal-stage) {
 }
 .gal-cast img {
   position: absolute;
-  bottom: 14%;
-  width: min(28vw, 380px);
-  height: 64%;
+  bottom: 0;
+  width: auto;
+  max-width: 48vw;
+  height: 84dvh;
   object-fit: contain;
   object-position: center bottom;
   filter: brightness(0.6) saturate(0.72);
@@ -65,11 +73,11 @@ dialog:has(> #gal-stage:not([hidden])) > :not(.gal-stage) {
   animation: gal-arrive 420ms ease both;
 }
 .gal-cast img[data-position='left'] {
-  left: 31%;
+  left: 28%;
   translate: -50% 0;
 }
 .gal-cast img[data-position='right'] {
-  left: 69%;
+  left: 72%;
   translate: -50% 0;
 }
 .gal-cast img[data-position='center'] {
@@ -110,16 +118,15 @@ dialog:has(> #gal-stage:not([hidden])) > :not(.gal-stage) {
 }
 .gal-reading {
   position: absolute;
-  inset: auto max(6vw, env(safe-area-inset-right)) max(18px, env(safe-area-inset-bottom))
-    max(6vw, env(safe-area-inset-left));
-  max-width: 1120px;
+  inset: auto 0 0;
+  max-width: none;
   margin-inline: auto;
-  padding: 15px 30px 12px;
-  border: 1px solid #d9c48e45;
-  border-top-color: #d9c48e99;
-  border-radius: 3px;
-  background: linear-gradient(110deg, #0a2029eb, #101b27ed);
-  box-shadow: 0 8px 30px #00000033;
+  padding: 20px max(14vw, env(safe-area-inset-left)) max(44px, env(safe-area-inset-bottom));
+  border: 0;
+  border-radius: 0;
+  background: linear-gradient(180deg, transparent, #0b3a4b66 22%, #082b3c88);
+  box-shadow: none;
+  text-shadow: 0 1px 4px #000d;
 }
 .gal-speaker {
   display: flex;
@@ -133,11 +140,12 @@ dialog:has(> #gal-stage:not([hidden])) > :not(.gal-stage) {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: #e8d3a5;
-  font-size: 18px;
+  color: #f8f5ea;
+  font-size: 20px;
   letter-spacing: 0.12em;
 }
 .gal-speaker small {
+  display: none;
   color: #c6cec899;
   font-size: 10px;
   letter-spacing: 0.2em;
@@ -159,7 +167,7 @@ dialog:has(> #gal-stage:not([hidden])) > :not(.gal-stage) {
   min-height: 110px;
   padding: 10px 0 8px;
   border: 0;
-  border-top: 1px solid #d9c48e55;
+  border-top: 0;
   border-radius: 0;
   background: transparent;
   color: #f8f1df;
@@ -192,6 +200,12 @@ dialog:has(> #gal-stage:not([hidden])) > :not(.gal-stage) {
   font-size: 11px;
   letter-spacing: 0.12em;
 }
+.gal-hint {
+  visibility: hidden;
+}
+.gal-count {
+  opacity: 0.35;
+}
 .gal-stage[data-kind='narration'] .gal-speaker > span {
   color: #c7d6dc;
   font-size: 16px;
@@ -220,7 +234,7 @@ dialog:has(> #gal-stage:not([hidden])) > :not(.gal-stage) {
   border: 1px solid #d9c48e55;
   overflow-y: auto;
   overscroll-behavior: contain;
-  touch-action: pan-y;
+  touch-action: pan-x pan-y;
 }
 .gal-history[hidden] {
   display: none;
@@ -271,9 +285,8 @@ dialog:has(> #gal-stage:not([hidden])) > :not(.gal-stage) {
     font-size: 10px;
   }
   .gal-reading {
-    inset: auto max(4vw, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom))
-      max(4vw, env(safe-area-inset-left));
-    padding: 9px 18px 7px;
+    inset: auto 0 0;
+    padding: 12px max(10vw, env(safe-area-inset-left)) max(40px, env(safe-area-inset-bottom));
   }
   .gal-speaker {
     gap: 8px;
@@ -293,15 +306,14 @@ dialog:has(> #gal-stage:not([hidden])) > :not(.gal-stage) {
     line-height: 1.6;
   }
   .gal-cast img {
-    width: 29vw;
-    height: 64%;
-    bottom: 14%;
+    height: 84dvh;
+    bottom: 0;
   }
   .gal-cast img[data-position='left'] {
-    left: 30%;
+    left: 28%;
   }
   .gal-cast img[data-position='right'] {
-    left: 70%;
+    left: 72%;
   }
   .gal-footer {
     font-size: 9px;

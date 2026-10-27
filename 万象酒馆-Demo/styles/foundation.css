@@ -168,3 +168,29 @@ button:hover {
     overflow-wrap: anywhere;
   }
 }
+@media (max-width: 900px), (max-height: 500px) {
+  body dialog {
+    max-width: calc(100vw - 16px - var(--safe-left) - var(--safe-right)) !important;
+    max-height: calc(
+      100dvh - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom)
+    ) !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+    touch-action: pan-x pan-y;
+  }
+  dialog > header,
+  dialog > footer {
+    flex-shrink: 0;
+  }
+  dialog :is(input, textarea, select) {
+    max-width: 100%;
+    min-width: 0;
+  }
+  dialog :is(pre, p, label, small) {
+    overflow-wrap: anywhere;
+  }
+  dialog button {
+    padding: 6px 9px;
+    font-size: 12px;
+  }
+}

@@ -443,6 +443,11 @@ export async function staticChecks({ browser, output }) {
     await page.evaluate(() => demo.startBattle());
     await page.locator('#destination-region-confirm').click();
     await page.locator('#destination-start').click();
+    await page.locator('[data-departure="confirm"]').click();
+    await page.locator('#party-panel').waitFor({ state: 'visible' });
+    while (await page.locator('#guide-dialogue').isVisible())
+      await page.locator('#dialogue-next').click();
+    await page.locator('#prepare-done').click();
     await page.waitForFunction(
       () => demo.getStatus().mode === 'battle' && !demo.getStatus().animating,
       { timeout: 60000 },

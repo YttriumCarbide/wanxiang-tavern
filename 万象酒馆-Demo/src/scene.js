@@ -547,6 +547,10 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
     }
     renderIntent();
   }
+  const settledWaiters = new Set();
+  function unitMotionActive() {
+    return !!activeDrag || records.some((record) => record.motion || record.attack);
+  }
   function tick(now) {
     raf = 0;
     if (disposed) return;
@@ -617,6 +621,10 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
     moving = deaths.update(now) || moving;
     positions();
     renderer.render(scene, camera);
+    if (!unitMotionActive()) {
+      for (const resolve of settledWaiters) resolve();
+      settledWaiters.clear();
+    }
     if (moving) schedule();
   }
   function schedule() {
@@ -818,11 +826,20 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
       animationSpeed = n;
     },
     isAnimating() {
-      return !!activeDrag || records.some((r) => r.motion || r.attack);
+      return unitMotionActive();
+    },
+    whenSettled() {
+      if (disposed || !unitMotionActive()) return Promise.resolve();
+      return new Promise((resolve) => {
+        settledWaiters.add(resolve);
+        schedule();
+      });
     },
     dispose() {
       endDrag();
       disposed = true;
+      for (const resolve of settledWaiters) resolve();
+      settledWaiters.clear();
       cancelAnimationFrame(raf);
       ro.disconnect();
       modalObserver.disconnect();

@@ -110,6 +110,7 @@ export function createShell(context) {
       for (const element of panel.querySelectorAll('[data-prepare-hero]'))
         previous.set(element.dataset.prepareHero, element.getBoundingClientRect());
     const slot = session.ai.preparationSlot;
+    panel.classList.toggle('formation-locked', session.ai.formationLocked === true);
     panel.classList.toggle('rear-locked', !rearUnlocked(library));
     $('#prepare-slots').innerHTML = library.party
       .slice(0, rearUnlocked(library) ? 6 : 3)
@@ -125,7 +126,7 @@ export function createShell(context) {
             class="prepare-slot ${slot === index ? 'selected' : ''}"
             data-prepare-slot="${index}"
             ${entry ? `data-prepare-hero="${entry.id}"` : ''}
-            draggable="${!!entry}"
+            draggable="${!!entry && !session.ai.formationLocked}"
             aria-pressed="${slot === index}"
             aria-label="${index < 3 ? '前场' : '后场'}${(index % 3) + 1}：${escapeText(entry?.setting.name || '空位')}"
           >
@@ -184,9 +185,11 @@ export function createShell(context) {
       <section class="prepare-character-controls">
         ${preparationEquipment(library, inspected)}
       </section>`;
-    $('#prepare-status').textContent = session.ai.departureParty
-      ? '生成剧本中 · 名单锁定，可调整位置与装备'
-      : `${library.party.filter(Boolean).length} / ${rearUnlocked(library) ? 6 : 3} 位出发 · 自动保存`;
+    $('#prepare-status').textContent = session.ai.formationLocked
+      ? '本场编队已锁定 · 点击角色调整装备'
+      : session.ai.departureParty
+        ? '生成剧本中 · 名单锁定，可调整位置与装备'
+        : `${library.party.filter(Boolean).length} / ${rearUnlocked(library) ? 6 : 3} 位出发 · 自动保存`;
     if (
       panel.open &&
       !matchMedia('(prefers-reduced-motion: reduce), (orientation: portrait)').matches

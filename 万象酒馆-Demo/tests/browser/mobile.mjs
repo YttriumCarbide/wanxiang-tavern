@@ -13,9 +13,9 @@ async function swipeScroll(page, panel, { rotated = false } = {}) {
   assert(metrics.overflow > 20, 'The real panel contains enough content to scroll');
   const box = await panel.boundingBox();
   const from = rotated
-    ? { x: box.x + 18, y: box.y + box.height / 2 }
+    ? { x: box.x + 60, y: box.y + box.height / 2 }
     : { x: box.x + box.width / 2, y: box.y + box.height - 18 };
-  const to = rotated ? { x: box.x + box.width - 18, y: from.y } : { x: from.x, y: box.y + 18 };
+  const to = rotated ? { x: box.x + box.width - 60, y: from.y } : { x: from.x, y: box.y + 18 };
   const input = await page.context().newCDPSession(page);
   try {
     await input.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [from] });
@@ -32,9 +32,22 @@ async function swipeScroll(page, panel, { rotated = false } = {}) {
     await panel.evaluate(
       () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
     );
-    const scrolled = await panel.evaluate((node) => node.scrollTop);
+    const scrolled = await panel.evaluate((node) => node.scrollTop, undefined, { timeout: 5000 });
     assert(scrolled > 12, 'A finger swipe moves panel content: ' + scrolled);
     return scrolled;
+  } catch (failure) {
+    const state = await page.evaluate(() => ({
+      url: location.href,
+      frames: [...document.querySelectorAll('iframe')].map((frame) => ({
+        id: frame.id,
+        src: frame.src,
+      })),
+      body: document.body.className,
+    }));
+    throw Error(
+      `${failure.message}\nTouch context: ${JSON.stringify({ state, from, to, box, rotated })}`,
+      { cause: failure },
+    );
   } finally {
     await input.detach();
   }
@@ -171,8 +184,7 @@ export async function mobileChecks({ browser, baseURL, output }) {
       for (const tab of ['settings', 'prompts', 'game']) {
         await page.locator('[data-ai-tab="' + tab + '"]').click();
         await measure('#ai-dialog', 'api-' + tab);
-        if (tab === 'settings')
-          await swipeScroll(page, page.locator('#ai-dialog .ai-editor').first());
+        if (tab === 'settings') await swipeScroll(page, page.locator('#ai-dialog'));
       }
       const paused = await frame
         .locator('canvas')
@@ -399,7 +411,7 @@ export async function mobileChecks({ browser, baseURL, output }) {
       .evaluate(() => ({ width: innerWidth, height: innerHeight }));
     assert.deepEqual(size, { width: 844, height: 390 });
     await game.locator('#ai-open').click();
-    await swipeScroll(portrait, game.locator('#ai-dialog .ai-editor').first(), { rotated: true });
+    await swipeScroll(portrait, game.locator('#ai-dialog'), { rotated: true });
   } finally {
     await portrait.close();
   }

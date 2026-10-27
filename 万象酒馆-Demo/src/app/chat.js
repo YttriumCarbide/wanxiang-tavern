@@ -55,8 +55,51 @@ export function createChat(context) {
   const library = () => session.ai.library;
   const characters = () =>
     library().characters.filter((member) => member.id !== library().campaign?.protagonistId);
-  function renderHistory() {
-    presentation.history();
+  function renderHistory(kind = 'chat') {
+    presentation.history(kind);
+  }
+  function playReply(kind, reply) {
+    if (!reply) return context.shell.toast('还没有可重播的对话');
+    const content = /【(?:旁白|对白[:：])/u.test(reply.content)
+      ? reply.content
+      : [
+          {
+            speaker: reply.speakerIds?.length === 1 ? reply.speakerIds[0] : '旁白',
+            text: reply.content,
+          },
+        ];
+    void context.gal.play(content, {
+      owner: kind,
+      title: kind === 'chat' ? '酒馆 · 片刻交谈' : '旅途 · 片刻闲谈',
+    });
+  }
+  function openGal(kind) {
+    const quick = kind === 'quick-chat';
+    if (quick && session.runtime.mode !== 'battle') return;
+    if (quick && session.ai.activeScript?.recollection) return;
+    if (dialog.open) dialog.close();
+    if ($('#story-feed').open) $('#story-feed').close();
+    presentation.history(kind);
+    context.gal.workspace({
+      owner: kind,
+      title: quick ? '旅途 · 同行闲谈' : `酒馆 · ${CHAT_PLACES[place].name}`,
+      actors: quick ? library().party.filter(Boolean) : state().selected,
+      selection: quick ? [] : [$('.chat-company')],
+      composer: quick
+        ? [$('#quick-chat-form'), $('#quick-chat-status'), $('#script-rewrite')]
+        : [$('.chat-composer'), $('#chat-status')],
+      history: [$(quick ? '#quick-chat-log' : '#chat-messages')],
+      replay: () =>
+        playReply(
+          kind,
+          (quick ? state().quick : library().tavernChat).findLast(
+            (message) => message.role === 'assistant',
+          ),
+        ),
+      onClose() {
+        request?.abort();
+      },
+    });
   }
   function open(location) {
     if (session.runtime.mode !== 'inn' || !CHAT_PLACES[location]) return;
@@ -87,7 +130,8 @@ export function createChat(context) {
     presentation.conversation(place, activities);
     renderHistory();
     $('#chat-status').textContent = '';
-    if (!dialog.open) dialog.showModal();
+    if (context.gal?.enabled) openGal('chat');
+    else if (!dialog.open) dialog.showModal();
     context.onboarding?.chatOpened(place);
   }
   function input(kind, text) {
@@ -195,6 +239,9 @@ export function createChat(context) {
       field.value = '';
     }
     request = new AbortController();
+    const started = performance.now();
+    const signal = request.signal;
+    if (context.gal?.enabled) context.gal.waiting('正在倾听……');
     busy(true);
     const log = $(kind === 'chat' ? '#chat-messages' : '#quick-chat-log');
     if (!retryId) presentation.append(log, userMessage);
@@ -259,23 +306,24 @@ export function createChat(context) {
           ?.scrollIntoView({ block: 'nearest' });
       } else presentation.append(log, reply);
       if (context.gal?.enabled) {
-        const content = /【(?:旁白|对白[:：])/u.test(reply.content)
-          ? reply.content
-          : [
-              {
-                speaker: reply.speakerIds?.length === 1 ? reply.speakerIds[0] : '旁白',
-                text: reply.content,
-              },
-            ];
-        void context.gal.play(content, {
-          owner: kind,
-          title: kind === 'chat' ? '酒馆 · 片刻交谈' : '旅途 · 片刻闲谈',
+        await new Promise((resolve) => {
+          const timeout = setTimeout(resolve, Math.max(0, 2000 - (performance.now() - started)));
+          signal.addEventListener(
+            'abort',
+            () => {
+              clearTimeout(timeout);
+              resolve();
+            },
+            { once: true },
+          );
         });
+        if (!signal.aborted && epoch === revision && !session.runtime.disposed)
+          playReply(kind, reply);
       }
       state().lastRequest = result.request;
       status(
         kind,
-        `输入约 ${result.request.tokens.inputEstimate} TK（${result.request.tokens.tokenizer}） · 实际 ${result.usage.input} / ${result.usage.output} TK${result.request.warnings.length ? ' · ' + result.request.warnings.join('；') : ''}`,
+        `输入约 ${result.request.tokens.inputEstimate} TK（${result.request.tokens.tokenizer || '估算'}） · 实际 ${result.usage.input} / ${result.usage.output} TK${result.request.warnings.length ? ' · ' + result.request.warnings.join('；') : ''}`,
       );
     } catch (failure) {
       if (epoch === revision && !session.runtime.disposed) {
@@ -300,6 +348,7 @@ export function createChat(context) {
       pending.remove();
       request = null;
       busy(false);
+      context.gal?.settled(kind);
     }
   }
   async function resetScript() {
@@ -498,10 +547,17 @@ export function createChat(context) {
     if (state().responseErrors) delete state().responseErrors[button.dataset.chatDelete];
     context.generation.save();
     context.checkpoint?.saveNow();
-    renderHistory();
+    renderHistory('quick-chat');
   });
   events.on($('#chat-characters'), 'change', presentation.selectionCount);
   events.on($('#chat-close'), 'click', () => dialog.close());
+  events.on(document, 'gal-compose', () => {
+    if (context.gal?.enabled) {
+      if (session.runtime.mode === 'battle') openGal('quick-chat');
+      else openGal('chat');
+    }
+  });
+  events.on(document, 'gal-open-quick', () => openGal('quick-chat'));
   events.on(dialog, 'close', () => request?.abort());
   events.on($('#chat-cancel'), 'click', () => {
     request?.abort();

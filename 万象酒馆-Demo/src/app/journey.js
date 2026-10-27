@@ -127,13 +127,21 @@ export function createJourney(context) {
         return;
       }
       session.runtime.view = loaded;
-      session.runtime.mode = 'battle';
-      context.generation.refreshReview();
       context.audio.setScene(encounterMusic(spec));
       $('#scene-loading').hidden = true;
       $('#battle').classList.add('entering');
-      setTimeout(() => $('#battle').classList.remove('entering'), 700);
       context.renderer.render();
+      const entrance = $('#battle')
+        .getAnimations({ subtree: true })
+        .filter((animation) => animation.effect?.getTiming().iterations !== Infinity);
+      await Promise.all([
+        loaded.whenSettled(),
+        ...entrance.map((animation) => animation.finished.catch(() => {})),
+      ]);
+      if (load !== session.runtime.token || session.runtime.disposed) return;
+      $('#battle').classList.remove('entering');
+      session.runtime.mode = 'battle';
+      context.generation.refreshReview();
       if (resuming) {
         context.generation.refreshStory();
         context.onboarding?.resumed();

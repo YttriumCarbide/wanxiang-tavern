@@ -126,13 +126,20 @@ export async function onboardingChecks({ browser, baseURL, output }) {
     await page.locator('#destination-region-confirm').click();
     assert.equal(await page.locator('[data-map-node]:not([disabled])').count(), 1);
     await page.locator('#destination-start').click();
+    await page.locator('[data-departure="confirm"]').click();
+    await page.locator('#prepare-done').click();
     await page.waitForFunction(
-      () => demo.getStatus().mode === 'battle' && !demo.getStatus().animating,
+      () =>
+        demo.getStatus().mode === 'battle' &&
+        document.querySelector('#scene-loading').hidden &&
+        !document.querySelector('#battle').classList.contains('entering') &&
+        (!demo.getStatus().animating || document.querySelector('#guide-dialogue').open),
       null,
       { timeout: 60000 },
     );
     assert.equal(requests.length, 0, 'Entering a dungeon must not call the script API');
     await finishDialogue();
+    await page.waitForFunction(() => !demo.getStatus().animating);
     await page.locator('#commit').click();
     assert.equal(
       (await page.evaluate(() => demo.getState())).phase,
@@ -383,7 +390,9 @@ export async function onboardingChecks({ browser, baseURL, output }) {
           (room) =>
             demo.getStatus().mode === 'battle' &&
             demo.getState().encounter === room + 1 &&
-            !demo.getStatus().animating,
+            document.querySelector('#scene-loading').hidden &&
+            !document.querySelector('#battle').classList.contains('entering') &&
+            (!demo.getStatus().animating || document.querySelector('#guide-dialogue').open),
           room,
           { timeout: 60000 },
         );
@@ -429,6 +438,7 @@ export async function onboardingChecks({ browser, baseURL, output }) {
     const bookshelfFrame = await innReady();
     await bookshelfFrame.evaluate(() => window.assetPreview.placeNow('bookshelf'));
     await bookshelfFrame.locator('#bookshelf-records').click();
+    await page.waitForFunction(() => document.querySelectorAll('#records-text h4').length === 5);
     assert.equal(await page.locator('#records-text h4').count(), 5);
     assert((await page.locator('#records-text').textContent()).includes('战斗测试占位剧本'));
     assert(!(await page.locator('#records-text').textContent()).includes('伤害'));
@@ -483,9 +493,13 @@ export async function onboardingChecks({ browser, baseURL, output }) {
     await page.locator('#destination-dialog').waitFor({ state: 'visible' });
     assert.equal(await page.locator('#destination-regions [data-region]').count(), 1);
     await page.locator('#destination-region-confirm').click();
-    assert.equal(await page.locator('[data-map-node]:not([disabled])').count(), 1);
+    assert.equal(await page.locator('[data-map-node]:not([disabled])').count(), 2);
     assert.equal(await page.locator('.destination-node.cleared').count(), 1);
+    await page.locator('[data-map-node]:not(.cleared):not([disabled])').click();
     await page.locator('#destination-start').click();
+    await page.locator('[data-departure="confirm"]').click();
+    await finishDialogue();
+    await page.locator('#prepare-done').click();
     await page.waitForFunction(
       () =>
         demo.getLibrary().campaign.tutorial === 'complete' && demo.getStatus().mode === 'battle',

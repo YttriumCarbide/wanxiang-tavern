@@ -720,3 +720,50 @@
     font-size: 42px;
   }
 }
+@media (max-width: 900px), (max-height: 500px) {
+  #ai-dialog,
+  #ai-dialog[data-tab='settings'] {
+    width: calc(100vw - 16px - var(--safe-left) - var(--safe-right));
+    height: calc(100dvh - 16px);
+    padding: 12px;
+  }
+  #ai-dialog .ai-workspace,
+  #ai-dialog[data-tab='prompts'] .ai-workspace,
+  #ai-dialog[data-tab='settings'][data-preview='true'] .ai-workspace {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    height: auto;
+    min-height: 0;
+  }
+  #ai-dialog .ai-editor,
+  #ai-dialog .ai-result {
+    overflow: visible;
+    max-height: none;
+    padding-right: 0;
+  }
+  .ai-tabs {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    flex-shrink: 0;
+  }
+  .ai-tabs button {
+    white-space: nowrap;
+  }
+  .ai-heading {
+    position: sticky;
+    top: -12px;
+    z-index: 4;
+    background: #142724;
+    padding-block: 6px;
+  }
+  .connection-preset-picker,
+  .connection-preset-save,
+  .ai-actions,
+  .ai-footer {
+    flex-wrap: wrap;
+  }
+  .connection-preset-picker label,
+  .connection-preset-save label {
+    min-width: 0;
+  }
+}

@@ -54,11 +54,13 @@ import { developerOption } from '../generation-options.js';
 import { prepareSwapLesson } from '../companion-events.js';
 import { rearUnlocked } from '../formation-access.js';
 import { npcSummonStatus } from '../summoning.js';
+import { createDeparture } from './departure.js';
 
 const libraryKey = 'wanxiang.worldbooks.v1';
 export function createGeneration(context) {
   const storage = context.storage || localStorage;
   const { session, events } = context;
+  const departure = createDeparture(context);
   let request = null,
     profiles = null,
     pendingPortal = null,
@@ -75,6 +77,7 @@ export function createGeneration(context) {
   }
   const library = () => session.ai.library;
   function renderDeveloperOptions() {
+    document.body.classList.toggle('gal-mode', context.gal?.enabled === true);
     $('#developer-options').hidden = !session.ai.generationOptions.developerMode;
     for (const checkbox of document.querySelectorAll('[data-generation-option]'))
       checkbox.checked = session.ai.generationOptions[checkbox.dataset.generationOption];
@@ -633,6 +636,8 @@ export function createGeneration(context) {
       library().scripts.push(entry);
       library().prepared = entry.id;
       save();
+      if (!(await departure.equip())) return;
+      if (session.runtime.disposed) return;
       await context.journey.startBattle();
     }
   }
@@ -675,16 +680,10 @@ export function createGeneration(context) {
       kind === 'character'
         ? '青色门扉泛起涟漪，一段新的来历正在浮现…'
         : '同行者跨越界门前，旅程的第一章正在展开…';
-    $('#generation-progress').hidden = kind === 'script';
+    $('#generation-progress').hidden = false;
     if (kind === 'script') {
       session.ai.departureParty = library().party.filter(Boolean);
       context.shell.renderParty();
-      $('#prepare-title').textContent = '整备 · 正在生成剧本';
-      $('#prepare-done').disabled = true;
-      $('#prepare-close').disabled = true;
-      $('#prepare-cancel-generation').hidden = false;
-      if (!$('#party-panel').open) $('#party-panel').showModal();
-      context.onboarding?.preparationOpened();
     }
     render();
     const input = override || inputFor(kind);
@@ -723,6 +722,7 @@ export function createGeneration(context) {
   }
   function updateParty(index, id) {
     try {
+      if (session.ai.formationLocked) throw Error('本场编队已确认，整备只能调整装备');
       if (session.ai.departureParty && (!id || !session.ai.departureParty.includes(id)))
         throw Error('剧本生成期间只能交换出发角色的站位');
       assignParty(library(), index, id || null);
@@ -760,6 +760,7 @@ export function createGeneration(context) {
         throw Error('召唤需要一份契约，完成副本后可获得。');
       if (kind === 'character') pendingSummon = summonInput;
       if (kind === 'script') prepareSwapLesson(library());
+      if (kind === 'script' && !(await departure.choose())) return;
       if (kind === 'script' && !generationEnabled(session.ai.generationOptions, 'scriptApi')) {
         pendingPortal = null;
         $('#ai-dialog').close();
@@ -808,8 +809,6 @@ export function createGeneration(context) {
         diagnostics.latest(kind)?.warnings?.some((warning) => warning.path === 'output.repetition')
       )
         context.shell.toast('本次剧本正文与旧篇相同，可点“查看原始回复”核对模型返回。未自动重试。');
-      else if (diagnostics.latest(kind)?.repairs.length)
-        context.shell.toast('已自动修复格式，可在“生成诊断”查看原文与修复记录。');
     } catch (failure) {
       if (session.runtime.disposed) return;
       session.runtime.mode = 'inn';
@@ -1121,6 +1120,7 @@ export function createGeneration(context) {
       return compileRoster(library());
     },
     dispose() {
+      departure.dispose();
       worldEditor.dispose();
       request?.abort();
       story.dispose();
