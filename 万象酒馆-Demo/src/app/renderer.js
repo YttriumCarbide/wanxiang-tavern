@@ -132,6 +132,7 @@ export function createRenderer(context) {
     if (options.animate !== false) animateLayout(layout, context.roster.all());
     context.selection.refreshInteraction();
     context.backpack?.render();
+    context.battleReading?.render();
     context.checkpoint?.schedule();
   }
   return { renderRear, render };

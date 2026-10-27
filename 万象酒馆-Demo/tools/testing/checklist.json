@@ -1,6 +1,6 @@
 {
-  "description": "仅复核Gal发言框为主体、发送小图标、TK及修改剧本折叠到辅助工具，以及原聊天的控件还原。使用本地模拟，不读真实密钥，不重复副本。仅develop。",
-  "scopes": ["quality", "gal", "chat"],
+  "description": "复核按选中顺序固定前两张立绘、无素材留空、回到输入与收起退出；确认编队后边生成边装备，背包旁圆形按钮切换时间轴/剧情闲聊。只测试受影响的生成与UI流程，不重复副本战斗，API全部本地模拟。",
+  "scopes": ["quality", "core", "gal", "chat", "static", "battle-controls"],
   "coreFiles": ["tests/gal.test.js"],
   "browserConcurrency": 2
 }

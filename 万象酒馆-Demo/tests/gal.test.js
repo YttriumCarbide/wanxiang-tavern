@@ -9,6 +9,7 @@ import {
   paginateGalBeat,
   resolveGalActor,
   nextGalStage,
+  selectedGalStage,
   authoredGalContent,
   readableGalText,
 } from '../src/gal.js';
@@ -18,6 +19,20 @@ import { createAiPipeline } from '../src/ai/pipeline/runtime.js';
 import { createWorldbookStore } from '../server/worldbook-store.mjs';
 import { normalizePromptPreset } from '../src/ai/presets.js';
 import { runRegexTasks } from '../server/regex-runtime.mjs';
+
+test('selection fixes the first two identities without substituting missing portraits', () => {
+  const actors = [
+    { id: 'a', sprite: 'a.png' },
+    { id: 'b', sprite: 'b.png' },
+    { id: 'c', sprite: 'c.png' },
+    { id: 'missing' },
+  ];
+  assert.deepEqual(selectedGalStage(['a'], actors), ['a']);
+  assert.deepEqual(selectedGalStage(['a', 'b', 'c'], actors), ['a', 'b']);
+  assert.deepEqual(selectedGalStage(['b', 'c'], actors), ['b', 'c']);
+  assert.deepEqual(selectedGalStage(['missing', 'b', 'c'], actors), ['b']);
+  assert.deepEqual(selectedGalStage(['missing'], actors), []);
+});
 
 test('Gal mode is an explicit persistent developer choice and affects only narrative APIs', () => {
   assert.equal(galEnabled(restoreGenerationOptions(null)), false);

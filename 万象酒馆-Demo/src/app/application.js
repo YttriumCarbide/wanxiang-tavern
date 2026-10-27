@@ -9,6 +9,7 @@ import { createApiClient } from '../ai/api-client.js';
 import { createShop } from './shop.js';
 import { createLootConflicts } from './loot-conflicts.js';
 import { createBackpack } from './backpack.js';
+import { createBattleReading } from './battle-reading.js';
 import { createSession } from './session.js';
 import { createViewport } from './viewport.js';
 import { createShell } from './shell.js';
@@ -77,6 +78,7 @@ export function createApplication({
   context.playback = createPlayback(context);
   context.drag = createDrag(context);
   context.backpack = createBackpack(context);
+  context.battleReading = createBattleReading(context);
   context.onboarding = createOnboarding(context);
   context.firstRun = createFirstRun(context);
   context.summoning = createSummoning(context);
@@ -127,6 +129,7 @@ export function createApplication({
     context.onboarding.dispose();
     context.firstRun.dispose();
     context.backpack.dispose();
+    context.battleReading.dispose();
     context.shop.dispose();
     context.lootConflicts.dispose();
     context.equipment.dispose();

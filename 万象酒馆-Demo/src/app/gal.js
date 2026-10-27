@@ -4,6 +4,7 @@ import {
   paginateGalBeat,
   resolveGalActor,
   nextGalStage,
+  selectedGalStage,
 } from '../gal.js';
 import { portraitUrl } from '../portraits.js';
 import { createEventScope } from '../shared/events.js';
@@ -40,6 +41,7 @@ export function createGalPlayer(context) {
   let skip = false;
   const workspace = createGalWorkspace(panel, events, {
     show: showPanel,
+    exit: () => part('[data-gal="close"]').click(),
     pause() {
       auto = skip = false;
       clearTimeout(autoTimer);
@@ -202,6 +204,12 @@ export function createGalPlayer(context) {
       );
       stage = nextGalStage(stage, previous, person);
     }
+    if (workspace.active?.owner === current.owner)
+      stage = selectedGalStage(
+        workspace.active.actors || [],
+        cast,
+        context.session.ai.library.campaign?.protagonistId,
+      );
     if (!beat.text.trim()) {
       pageIndex++;
       render();
@@ -386,14 +394,21 @@ export function createGalPlayer(context) {
       part('[data-gal="close"]').hidden = false;
       part('[data-gal="journal"]').hidden = true;
       part('[data-gal="compose"]').hidden = true;
-      part('.gal-text').textContent = '说点什么，让故事继续。';
+      part('.gal-text').textContent = '';
       part('.gal-cast').replaceChildren();
       cast = actors();
-      stage = [];
-      for (const id of options.actors || []) {
-        const actor = resolveGalActor(id, cast, context.session.ai.library.campaign?.protagonistId);
-        stage = nextGalStage(stage, { type: 'enter' }, actor);
-      }
+      stage = selectedGalStage(
+        options.actors || [],
+        cast,
+        context.session.ai.library.campaign?.protagonistId,
+      );
+      renderCast(null);
+    },
+    selection(ids) {
+      if (!workspace.active) return;
+      workspace.active.actors = [...ids];
+      cast = actors();
+      stage = selectedGalStage(ids, cast, context.session.ai.library.campaign?.protagonistId);
       renderCast(null);
     },
     waiting(text) {

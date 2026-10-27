@@ -62,6 +62,7 @@ export function createGeneration(context) {
   const { session, events } = context;
   const departure = createDeparture(context);
   let request = null,
+    equipmentPreparation = null,
     profiles = null,
     pendingPortal = null,
     pendingSummon = null,
@@ -636,7 +637,10 @@ export function createGeneration(context) {
       library().scripts.push(entry);
       library().prepared = entry.id;
       save();
-      if (!(await departure.equip())) return;
+      const equipment = equipmentPreparation || departure.equip();
+      equipmentPreparation = null;
+      equipment.ready();
+      if (!(await equipment.completion)) return;
       if (session.runtime.disposed) return;
       await context.journey.startBattle();
     }
@@ -680,10 +684,11 @@ export function createGeneration(context) {
       kind === 'character'
         ? '青色门扉泛起涟漪，一段新的来历正在浮现…'
         : '同行者跨越界门前，旅程的第一章正在展开…';
-    $('#generation-progress').hidden = false;
+    $('#generation-progress').hidden = kind === 'script';
     if (kind === 'script') {
       session.ai.departureParty = library().party.filter(Boolean);
       context.shell.renderParty();
+      equipmentPreparation = departure.equip({ pending: true, onCancel: () => request?.abort() });
     }
     render();
     const input = override || inputFor(kind);
@@ -700,6 +705,10 @@ export function createGeneration(context) {
       if (result.diagnostic) diagnostics.record(result.diagnostic, input, true);
       return { entry: result.entry, input, arrivalDialogue: result.arrivalDialogue };
     } catch (failure) {
+      if (kind === 'script') {
+        equipmentPreparation?.cancel();
+        equipmentPreparation = null;
+      }
       if (!session.runtime.disposed && failure.diagnostic)
         diagnostics.record(failure.diagnostic, input);
       throw failure;
@@ -709,13 +718,6 @@ export function createGeneration(context) {
       request = null;
       if (!session.runtime.disposed) {
         $('#generation-progress').hidden = true;
-        if (kind === 'script') {
-          $('#party-panel').close();
-          $('#prepare-title').textContent = '战阵整备';
-          $('#prepare-done').disabled = false;
-          $('#prepare-close').disabled = false;
-          $('#prepare-cancel-generation').hidden = true;
-        }
         render();
       }
     }

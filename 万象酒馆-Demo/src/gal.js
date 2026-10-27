@@ -135,3 +135,12 @@ export function nextGalStage(stage, beat, actor) {
   if (stage.includes(actor.id)) return [...stage];
   return [...stage.slice(-1), actor.id];
 }
+
+/** Selection order owns two portrait slots; a missing sprite leaves its slot empty. */
+export function selectedGalStage(ids, actors, protagonistId) {
+  return ids
+    .slice(0, 2)
+    .map((id) => resolveGalActor(id, actors, protagonistId))
+    .filter((actor) => actor?.sprite && !actor.user)
+    .map((actor) => actor.id);
+}

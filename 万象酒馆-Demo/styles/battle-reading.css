@@ -1,0 +1,92 @@
+#battle-reading-toggle {
+  position: fixed;
+  z-index: 22;
+  width: var(--reading-size, 78px);
+  height: var(--reading-size, 78px);
+  border-radius: 50%;
+  border: calc(var(--reading-size, 78px) * 0.05) solid #c7ae72;
+  background: radial-gradient(circle at 35% 25%, #3a5550, #172d2a);
+  color: #e6d6a7;
+  box-shadow: 0 4px 20px #0006;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+}
+#battle-reading-toggle svg {
+  width: 58%;
+  height: 58%;
+}
+#battle-reading-toggle small {
+  font-size: 10px;
+  line-height: 1;
+}
+#battle-reading-toggle[aria-expanded='true'] {
+  border-color: #f1dc9b;
+  background: radial-gradient(circle at 35% 25%, #52736b, #213f39);
+}
+#gal-dungeon-menu {
+  position: fixed;
+  z-index: 21;
+  display: flex;
+  gap: 12px;
+  width: min(360px, 45vw);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translate(-50%, 15px);
+  transition:
+    opacity 160ms ease,
+    transform 220ms ease,
+    visibility 220ms;
+}
+#gal-dungeon-menu button {
+  flex: 1;
+  padding: 14px;
+  border: 1px solid #c7ae7277;
+  border-radius: 7px;
+  background: #17372ee8;
+  color: #ead9ac;
+  font-size: 16px;
+}
+#battle.show-reading-controls #gal-dungeon-menu {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translate(-50%, 0);
+  transition-delay: 120ms;
+}
+body.gal-mode .turn-column {
+  transition:
+    opacity 160ms ease,
+    translate 220ms ease,
+    visibility 220ms;
+}
+#battle.show-reading-controls .turn-column {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  translate: 0 16px;
+}
+@media (max-height: 500px), (max-width: 900px) {
+  #battle-reading-toggle {
+    padding: 5px;
+  }
+  #battle-reading-toggle small {
+    font-size: 8px;
+  }
+  #gal-dungeon-menu {
+    gap: 8px;
+  }
+  #gal-dungeon-menu button {
+    padding: 10px;
+    font-size: 13px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  #gal-dungeon-menu,
+  body.gal-mode .turn-column {
+    transition: none;
+  }
+}

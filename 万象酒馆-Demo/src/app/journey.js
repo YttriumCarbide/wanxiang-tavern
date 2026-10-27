@@ -141,6 +141,8 @@ export function createJourney(context) {
       if (load !== session.runtime.token || session.runtime.disposed) return;
       $('#battle').classList.remove('entering');
       session.runtime.mode = 'battle';
+      context.backpack?.render();
+      context.battleReading?.render();
       context.generation.refreshReview();
       if (resuming) {
         context.generation.refreshStory();

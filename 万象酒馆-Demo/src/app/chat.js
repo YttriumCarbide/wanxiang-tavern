@@ -83,7 +83,9 @@ export function createChat(context) {
     context.gal.workspace({
       owner: kind,
       title: quick ? '旅途 · 同行闲谈' : `酒馆 · ${CHAT_PLACES[place].name}`,
-      actors: quick ? library().party.filter(Boolean) : state().selected,
+      actors: quick
+        ? library().party.filter((id) => id && id !== library().campaign?.protagonistId)
+        : state().selected,
       selection: quick ? [] : [$('.chat-company')],
       composer: quick ? [$('#quick-chat-form')] : [$('.chat-composer')],
       auxiliary: quick ? [$('#quick-chat-status'), $('#script-rewrite')] : [$('#chat-status')],
@@ -466,9 +468,14 @@ export function createChat(context) {
   });
   events.on($('#chat-participants'), 'change', () => {
     const previous = new Set(state().selected);
-    state().selected = [...$('#chat-participants').querySelectorAll('input:checked')].map(
+    const checked = [...$('#chat-participants').querySelectorAll('input:checked')].map(
       (input) => input.value,
     );
+    state().selected = [
+      ...state().selected.filter((id) => checked.includes(id)),
+      ...checked.filter((id) => !previous.has(id)),
+    ];
+    if (context.gal?.enabled) context.gal.selection(state().selected);
     const removed = [...previous]
       .filter((id) => !state().selected.includes(id))
       .map((id) => library().characters.find((member) => member.id === id)?.setting.name)

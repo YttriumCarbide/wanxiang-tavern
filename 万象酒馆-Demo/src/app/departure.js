@@ -37,6 +37,7 @@ export function createDeparture(context) {
   let selected = 0;
   let resolveChoice = null;
   let draft = [];
+  let activeEquipment = null;
   const library = () => session.ai.library;
   function render() {
     const memberButton = (id, index) => {
@@ -118,19 +119,24 @@ export function createDeparture(context) {
         resolveChoice = resolve;
       });
     },
-    equip() {
+    equip({ pending = false, onCancel } = {}) {
+      if (activeEquipment) return activeEquipment;
       session.ai.formationLocked = true;
       context.shell.renderParty();
       const preparation = document.querySelector('#party-panel');
       const done = document.querySelector('#prepare-done');
       const close = document.querySelector('#prepare-close');
-      document.querySelector('#prepare-title').textContent = '出发 / 02 · 调整装备';
+      const title = document.querySelector('#prepare-title');
+      const cancel = document.querySelector('#prepare-cancel-generation');
+      title.textContent = pending ? '正在生成剧本 · 可调整装备' : '出发 / 02 · 调整装备';
+      done.disabled = pending;
+      cancel.hidden = !pending;
       done.textContent = '整备完成 · 出发';
       const closeLabel = close.innerHTML;
       close.textContent = '取消出发';
       preparation.showModal();
       context.onboarding?.preparationOpened();
-      return new Promise((resolve) => {
+      const completion = new Promise((resolve) => {
         let confirmed = false;
         const confirm = () => {
           confirmed = true;
@@ -140,17 +146,35 @@ export function createDeparture(context) {
           'close',
           () => {
             session.ai.formationLocked = false;
-            document.querySelector('#prepare-title').textContent = '战阵整备';
+            title.textContent = '战阵整备';
             document.querySelector('#prepare-done').textContent = '准备完成';
+            done.disabled = false;
+            cancel.hidden = true;
             close.innerHTML = closeLabel;
             done.removeEventListener('click', confirm, { capture: true });
             resolve(confirmed);
+            activeEquipment = null;
+            if (pending) onCancel?.();
           },
           { once: true },
         );
       });
+      activeEquipment = {
+        completion,
+        ready() {
+          pending = false;
+          title.textContent = '剧本已就绪 · 调整装备';
+          done.disabled = false;
+          cancel.hidden = true;
+        },
+        cancel() {
+          if (preparation.open) preparation.close();
+        },
+      };
+      return activeEquipment;
     },
     dispose() {
+      activeEquipment?.cancel();
       finish(false);
       panel.remove();
     },

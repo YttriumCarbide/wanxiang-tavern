@@ -3,13 +3,32 @@ import path from 'node:path';
 import { legacySession } from './legacy-session.mjs';
 import { combatTestScript } from '../../src/content/generation-mode.js';
 import { tavernPresetFixture } from '../fixtures/ai.js';
+import { newLibrary, officialCharacter } from '../../src/ai/library.js';
+import { normalizeEquipment, buyEquipment } from '../../src/equipment.js';
 
 /** Real controllers, mocked upstream: composition, replay, party transaction and touch dialogs. */
 export async function galWorkspaceChecks({ browser, baseURL, output }) {
   const page = await browser.newPage({ viewport: { width: 1440, height: 836 }, hasTouch: true });
   await legacySession(page);
-  await page.addInitScript(() => {
+  const initial = newLibrary();
+  initial.inventory.bagUnlocked = true;
+  for (const id of ['edith', 'pandora'])
+    if (!initial.characters.some((member) => member.id === `official-${id}`))
+      initial.characters.push(officialCharacter(id));
+  initial.equipment.catalog.push(
+    normalizeEquipment(
+      { name: '整备测试晶环', description: 'hp增加2', stats: { hp: 2 }, rules: [] },
+      { id: 'gal-ring', name: '晶环', value: 25 },
+    ),
+  );
+  initial.inventory.ether = 25;
+  buyEquipment(initial, 'gal-ring', 'gal-owned');
+  await page.addInitScript((library) => {
     if (origin === 'null') return;
+    if (!sessionStorage.getItem('gal-workspace-seeded')) {
+      localStorage.setItem('wanxiang.worldbooks.v1', JSON.stringify(library));
+      sessionStorage.setItem('gal-workspace-seeded', 'true');
+    }
     localStorage.setItem(
       'wanxiang.generation-options.v1',
       JSON.stringify({
@@ -20,7 +39,7 @@ export async function galWorkspaceChecks({ browser, baseURL, output }) {
         allowRetreat: true,
       }),
     );
-  });
+  }, initial);
   const errors = [],
     calls = [];
   page.on('pageerror', (failure) => errors.push(failure.message));
@@ -51,9 +70,18 @@ export async function galWorkspaceChecks({ browser, baseURL, output }) {
         },
       });
     });
-  await page.route('**/api/ai/generate/script', (route) => {
+  let releaseScript, announceScript;
+  const scriptPending = new Promise((resolve) => {
+    releaseScript = resolve;
+  });
+  const scriptStarted = new Promise((resolve) => {
+    announceScript = resolve;
+  });
+  await page.route('**/api/ai/generate/script', async (route) => {
     const input = route.request().postDataJSON();
     calls.push({ kind: 'script', input });
+    announceScript();
+    await scriptPending;
     return route.fulfill({
       json: {
         entry: {
@@ -111,8 +139,46 @@ export async function galWorkspaceChecks({ browser, baseURL, output }) {
     assert.equal(await page.locator('.gal-composer').isVisible(), false);
     const person = await page.locator('.gal-side .chat-person').first().boundingBox();
     assert(person.height <= 64, 'participants use compact rows instead of large cards');
+    const originallyChecked = await page
+      .locator('#chat-participants input:checked')
+      .evaluateAll((inputs) => inputs.map((input) => input.value));
+    for (const id of originallyChecked)
+      await page.locator(`#chat-participants input[value="${id}"]`).uncheck();
+    const moon = initial.characters.find((member) => member.combat.id === 'aegis').id;
+    const missing = initial.characters.find(
+      (member) => !['aegis', 'edith', 'pandora'].includes(member.combat.id),
+    ).id;
+    const choose = (id, checked) =>
+      page.locator(`#chat-participants input[value="${id}"]`).setChecked(checked);
+    const assertCast = async (ids) =>
+      assert.deepEqual(
+        await page
+          .locator('.gal-cast img:not([data-leaving])')
+          .evaluateAll((images) => images.map((image) => image.dataset.actor)),
+        ids,
+      );
+    await choose(missing, true);
+    await assertCast([]);
+    await choose(missing, false);
+    await choose(moon, true);
+    await assertCast([moon]);
+    await choose('official-edith', true);
+    await choose('official-pandora', true);
+    await assertCast([moon, 'official-edith']);
+    await choose(moon, false);
+    await assertCast(['official-edith', 'official-pandora']);
+    await choose('official-edith', false);
+    await assertCast(['official-pandora']);
+    await choose('official-pandora', false);
+    await choose(missing, true);
+    await assertCast([]);
+    await choose(missing, false);
+    await choose('official-edith', true);
+    await choose('official-pandora', true);
     await page.screenshot({ path: path.join(output, 'desktop-gal-participants.png') });
     await page.locator('[data-workspace="compose"]').first().click();
+    assert.equal(await page.locator('.gal-composer').isVisible(), true);
+    assert.equal(await page.locator('.gal-reading').isVisible(), false);
     await page
       .locator('.gal-composer')
       .evaluate((node) => Promise.all(node.getAnimations().map((animation) => animation.finished)));
@@ -157,10 +223,19 @@ export async function galWorkspaceChecks({ browser, baseURL, output }) {
     await page.locator('[data-gal="close"]').click();
     await frame.locator('#talk-open').click();
     await page.locator('[data-workspace="replay"]').click();
-    await page.locator('.gal-page').click();
+    await page.waitForFunction(() =>
+      document.querySelector('.gal-text').textContent.includes('先坐'),
+    );
+    await page.locator('#gal-stage').evaluate((element) => {
+      if (element.dataset.typing === 'true') element.querySelector('.gal-page').click();
+    });
     assert((await page.locator('.gal-text').textContent()).includes('先坐下'));
     assert.equal(calls.filter((call) => call.kind === 'chat').length, 1);
-    assert.deepEqual(await page.evaluate(() => demo.getLibrary().tavernChat), saved);
+    assert.deepEqual(
+      (await page.evaluate(() => demo.getLibrary().tavernChat)).filter((line) => !line.divider),
+      saved.filter((line) => !line.divider),
+      'replay does not duplicate messages; reopening may record updated participants',
+    );
     await finishPages();
     await page.locator('[data-gal="close"]').click();
     await frame.locator('canvas').evaluate(() => window.assetPreview.placeNow('gate'));
@@ -177,6 +252,20 @@ export async function galWorkspaceChecks({ browser, baseURL, output }) {
     await page.locator(`[data-departure-hero="${reserveId}"]`).click();
     await page.locator('[data-departure="confirm"]').click();
     await page.locator('#party-panel.formation-locked').waitFor({ state: 'visible' });
+    await scriptStarted;
+    assert.equal(await page.locator('#prepare-done').isDisabled(), true);
+    assert.equal(await page.locator('#generation-progress').isVisible(), false);
+    await page.locator('[data-prepare-slot="0"]').click();
+    await page.locator('[data-equipment-slot="0"]').selectOption('gal-owned');
+    await page.locator('#prepare-character-done').click();
+    assert(
+      (await page.evaluate(() => demo.getLibrary())).characters
+        .find((member) => member.id === reserveId)
+        .equipment.includes('gal-owned'),
+    );
+    await page.screenshot({ path: path.join(output, 'equipment-while-generating.png') });
+    releaseScript();
+    await page.waitForFunction(() => !document.querySelector('#prepare-done').disabled);
     assert.equal(calls.filter((call) => call.kind === 'script').length, 1);
     assert.equal(calls.find((call) => call.kind === 'script').input.party[0].id, reserveId);
     assert.equal(await page.locator('.prepare-reserve-col').isVisible(), false);
@@ -198,6 +287,12 @@ export async function galWorkspaceChecks({ browser, baseURL, output }) {
     );
     await page.waitForFunction(() => demo.getStatus().mode === 'battle');
     await finishPages();
+    await page.locator('#battle-reading-toggle').click();
+    await page.locator('#gal-dungeon-menu').waitFor({ state: 'visible' });
+    assert.equal(await page.locator('.turn-column').evaluate((node) => node.inert), true);
+    await page.locator('#battle-reading-toggle').click();
+    assert.equal(await page.locator('.turn-column').evaluate((node) => node.inert), false);
+    await page.locator('#battle-reading-toggle').click();
     await page.locator('[data-dungeon-gal="quick"]').click();
     await page.locator('#quick-chat-input').fill('留意前面。');
     await page.locator('#quick-chat-input').press('Enter');
@@ -243,6 +338,23 @@ export async function galWorkspaceChecks({ browser, baseURL, output }) {
       );
     await page.screenshot({ path: path.join(output, 'mobile-gal-composer.png') });
     await page.locator('[data-gal="close"]').click();
+    const orb = await page.locator('#ap-orb').boundingBox();
+    const switchBox = await page.locator('#battle-reading-toggle').boundingBox();
+    const bagBox = await page.locator('#backpack-open').boundingBox();
+    assert(
+      Math.abs(switchBox.width - orb.width) < 1 && Math.abs(switchBox.y - orb.y) < 1,
+      'switch matches the AP/backpack size and baseline',
+    );
+    assert(switchBox.x > bagBox.x + bagBox.width, 'switch stays immediately right of the backpack');
+    const timelineBox = await page.locator('.turn-column').boundingBox();
+    assert(timelineBox.x >= switchBox.x + switchBox.width, 'switch stays left of the first turn');
+    const stateBeforeSwitch = await page.evaluate(() => demo.getState());
+    await page.locator('#battle-reading-toggle').click();
+    assert.equal(await page.locator('.turn-column').evaluate((node) => node.inert), false);
+    await page.locator('#battle-reading-toggle').click();
+    await page.locator('#gal-dungeon-menu').waitFor({ state: 'visible' });
+    assert.deepEqual(await page.evaluate(() => demo.getState()), stateBeforeSwitch);
+    await page.screenshot({ path: path.join(output, 'mobile-reading-switch.png') });
     await page.evaluate(() => demo.returnInn());
     await frame.locator('#status').waitFor({ state: 'detached', timeout: 60000 });
     await page.waitForFunction(
@@ -267,7 +379,11 @@ export async function galWorkspaceChecks({ browser, baseURL, output }) {
     assert(actor.x >= side.x + side.width, 'participant drawer does not cover the portrait');
     assert.equal(await page.locator('.gal-composer').isVisible(), false);
     await page.screenshot({ path: path.join(output, 'mobile-gal-participants.png') });
-    await page.locator('[data-gal="close"]').click();
+    await page.locator('.gal-side [data-workspace="compose"]').click();
+    assert.equal(await page.locator('.gal-composer').isVisible(), true);
+    assert.equal(await page.locator('.gal-reading').isVisible(), false);
+    await page.locator('.gal-composer [data-workspace="exit"]').click();
+    assert.equal(await page.locator('#gal-stage').isVisible(), false);
     for (const viewport of [
       { width: 844, height: 390 },
       { width: 390, height: 844 },
@@ -297,6 +413,7 @@ export async function galWorkspaceChecks({ browser, baseURL, output }) {
       responsiveSetup: true,
     };
   } finally {
+    releaseScript?.();
     await page.close();
   }
 }

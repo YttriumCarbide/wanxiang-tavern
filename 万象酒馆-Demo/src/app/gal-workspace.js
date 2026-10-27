@@ -6,9 +6,9 @@ export function createGalWorkspace(panel, events, actions) {
   root.className = 'gal-workspace';
   root.hidden = true;
   root.innerHTML = `<nav class="gal-workspace-menu" aria-label="交流工具"><button data-workspace="people">同行者</button><button data-workspace="compose">输入</button><button data-workspace="replay">重播上次</button><button data-workspace="tools" aria-expanded="false">生成信息与剧本工具</button></nav>
-    <aside class="gal-side" hidden><header><strong>此刻相伴</strong><button data-workspace="people">收起 ‹</button></header><div class="gal-side-content"></div></aside>
-    <section class="gal-composer" hidden><header><strong>你的话</strong><button data-workspace="compose">收起 ↓</button></header><div class="gal-composer-content"></div><small class="gal-feedback" role="status" hidden></small></section>
-    <section class="gal-tools" hidden aria-label="生成信息与剧本工具"><header><strong>生成信息与剧本</strong><button data-workspace="tools">收起</button></header><div class="gal-tools-content"></div></section>
+    <aside class="gal-side" hidden><header><strong>此刻相伴</strong><button data-workspace="compose">返回输入</button></header><div class="gal-side-content"></div></aside>
+    <section class="gal-composer" hidden><header><strong>你的话</strong><button data-workspace="exit">收起</button></header><div class="gal-composer-content"></div><small class="gal-feedback" role="status" hidden></small></section>
+    <section class="gal-tools" hidden aria-label="生成信息与剧本工具"><header><strong>生成信息与剧本</strong><button data-workspace="tools">关闭</button></header><div class="gal-tools-content"></div></section>
     <section class="gal-archive" hidden><header><strong>交流记录</strong><button data-workspace="archive">返回演出</button></header><div class="gal-archive-content"></div></section>`;
   panel.append(root);
   const menu = root.querySelector('.gal-workspace-menu');
@@ -55,8 +55,9 @@ export function createGalWorkspace(panel, events, actions) {
     const visible = target.hidden;
     for (const selector of ['.gal-side', '.gal-composer', '.gal-archive', '.gal-tools'])
       part(selector).hidden = true;
-    target.hidden = !visible;
-    panel.dataset.drawer = visible ? name : '';
+    const next = visible ? name : 'composer';
+    part(`.gal-${next}`).hidden = false;
+    panel.dataset.drawer = next;
     if (visible) {
       actions.pause();
       target.querySelector('textarea')?.focus({ preventScroll: true });
@@ -68,6 +69,7 @@ export function createGalWorkspace(panel, events, actions) {
     if (action === 'compose') toggle('composer');
     if (action === 'archive') toggle('archive');
     if (action === 'replay') config?.replay?.();
+    if (action === 'exit') actions.exit();
     if (action === 'tools') {
       const tools = part('.gal-tools');
       tools.hidden = !tools.hidden;

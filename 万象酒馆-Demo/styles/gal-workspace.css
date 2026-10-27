@@ -316,31 +316,8 @@
   max-height: none;
   overflow: visible;
 }
-#gal-dungeon-menu {
-  display: none;
-}
-body.gal-mode.has-story.in-battle:not(.gal-playing) #gal-dungeon-menu {
-  position: fixed;
-  z-index: 40;
-  left: max(16px, env(safe-area-inset-left));
-  bottom: 27%;
-  display: grid;
-  gap: 6px;
-}
 body.gal-mode #story-toggle {
   display: none;
-}
-#gal-dungeon-menu button {
-  display: grid;
-  gap: 3px;
-  padding: 9px 14px;
-  background: #10252be8;
-  border-color: #b6aa7b77;
-}
-#gal-dungeon-menu small {
-  font-size: 8px;
-  letter-spacing: 0.2em;
-  color: #a6b4b2;
 }
 @keyframes gal-slide-left {
   from {
@@ -449,10 +426,6 @@ body.gal-mode #story-toggle {
   .gal-archive {
     inset: 42px 4vw 38px;
     padding: 12px;
-  }
-  #gal-dungeon-menu button {
-    padding: 6px 8px;
-    font-size: 11px;
   }
 }
 @media (prefers-reduced-motion: reduce) {
