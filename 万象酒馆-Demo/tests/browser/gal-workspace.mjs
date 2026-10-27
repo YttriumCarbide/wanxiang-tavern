@@ -209,6 +209,33 @@ export async function galWorkspaceChecks({ browser, baseURL, output }) {
     await page.setViewportSize({ width: 844, height: 390 });
     await inside('.gal-composer');
     assert.equal(await page.locator('.gal-reading').isVisible(), false);
+    assert.equal(
+      await page.locator('#quick-chat-status').isVisible(),
+      false,
+      'token counts stay out of the composer',
+    );
+    assert.equal(
+      await page.locator('#script-rewrite').isVisible(),
+      false,
+      'rewrite stays in auxiliary tools',
+    );
+    const inputBox = await page.locator('#quick-chat-input').boundingBox();
+    const formBox = await page.locator('#quick-chat-form').boundingBox();
+    const composerBox = await page.locator('.gal-composer').boundingBox();
+    assert(
+      inputBox.height >= 95 && inputBox.width >= formBox.width * 0.9,
+      'the speech field dominates the input row',
+    );
+    assert(
+      inputBox.height >= composerBox.height * 0.55,
+      'the speech field is the main part of the panel',
+    );
+    assert.equal(await page.locator('#quick-chat-send svg').count(), 1);
+    await page.locator('.gal-actionbar [data-workspace="tools"]').click();
+    assert.equal(await page.locator('#script-rewrite').isVisible(), true);
+    assert.equal(await page.locator('#quick-chat-status').isVisible(), true);
+    assert.equal(await page.locator('#quick-chat-input').isVisible(), true);
+    await page.locator('.gal-actionbar [data-workspace="tools"]').click();
     await page
       .locator('.gal-composer')
       .evaluate((element) =>

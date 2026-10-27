@@ -1,5 +1,5 @@
 /** Fixed UI artwork; model text never enters SVG markup. */
-export function decorateGalButtons(panel) {
+export function galIconMarkup(action, label) {
   const paths = {
     back: '<path d="m14 5-7 7 7 7M6 5v14"/>',
     next: '<path d="m9 5 7 7-7 7"/>',
@@ -13,12 +13,18 @@ export function decorateGalButtons(panel) {
     people:
       '<circle cx="9" cy="8" r="3"/><path d="M3 20v-3a6 6 0 0 1 12 0v3M16 5a3 3 0 0 1 0 6M18 14a5 5 0 0 1 3 6"/>',
     replay: '<path d="M4 10a8 8 0 1 1 2 8M4 4v6h6"/>',
+    tools: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7h.01"/>',
+    send: '<path d="m3 4 18 8-18 8 4-8zM7 12h14"/>',
   };
+  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[action] || paths.compose}</svg><span class="gal-control-label">${label}</span>`;
+}
+
+export function decorateGalButtons(panel) {
   for (const button of panel.querySelectorAll('.gal-actionbar button')) {
     const action = button.dataset.gal || button.dataset.workspace;
     const label = button.textContent.replace(/[‹›]/gu, '').trim();
     button.setAttribute('aria-label', label);
     button.title = label;
-    button.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[action] || paths.compose}</svg><span class="gal-control-label">${label}</span>`;
+    button.innerHTML = galIconMarkup(action, label);
   }
 }

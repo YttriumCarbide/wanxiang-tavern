@@ -85,9 +85,8 @@ export function createChat(context) {
       title: quick ? '旅途 · 同行闲谈' : `酒馆 · ${CHAT_PLACES[place].name}`,
       actors: quick ? library().party.filter(Boolean) : state().selected,
       selection: quick ? [] : [$('.chat-company')],
-      composer: quick
-        ? [$('#quick-chat-form'), $('#quick-chat-status'), $('#script-rewrite')]
-        : [$('.chat-composer'), $('#chat-status')],
+      composer: quick ? [$('#quick-chat-form')] : [$('.chat-composer')],
+      auxiliary: quick ? [$('#quick-chat-status'), $('#script-rewrite')] : [$('#chat-status')],
       history: [$(quick ? '#quick-chat-log' : '#chat-messages')],
       replay: () =>
         playReply(
@@ -176,8 +175,9 @@ export function createChat(context) {
       history: memoryChat(quick ? state().quick : library().tavernChat || []),
     };
   }
-  function status(kind, text) {
+  function status(kind, text, { technical = false } = {}) {
     $(kind === 'chat' ? '#chat-status' : '#quick-chat-status').textContent = text;
+    context.gal?.feedback(kind, technical ? '' : text);
   }
   function busy(value) {
     state().sending = value;
@@ -324,6 +324,7 @@ export function createChat(context) {
       status(
         kind,
         `输入约 ${result.request.tokens.inputEstimate} TK（${result.request.tokens.tokenizer || '估算'}） · 实际 ${result.usage.input} / ${result.usage.output} TK${result.request.warnings.length ? ' · ' + result.request.warnings.join('；') : ''}`,
+        { technical: true },
       );
     } catch (failure) {
       if (epoch === revision && !session.runtime.disposed) {
@@ -414,6 +415,7 @@ export function createChat(context) {
       status(
         'quick-chat',
         `后续剧本已更新；前 ${session.battle.state.encounter + 1} 场保持原样。输入约 ${result.diagnostic.request.tokens.inputEstimate} TK。`,
+        { technical: true },
       );
     } catch (failure) {
       if (epoch === revision)

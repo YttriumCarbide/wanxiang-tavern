@@ -397,11 +397,15 @@ export function createGalPlayer(context) {
       renderCast(null);
     },
     waiting(text) {
+      workspace.feedback(workspace.active?.owner, '');
       workspace.playing(true);
       part('.gal-text').textContent = text;
     },
     settled(owner) {
       if (workspace.active?.owner === owner && !current) workspace.playing(false);
+    },
+    feedback(owner, text) {
+      workspace.feedback(owner, text);
     },
     play(content, options = {}) {
       return new Promise((resolve) => {

@@ -1,6 +1,6 @@
 {
-  "description": "此前已通过编队出发、新手和完整副本验证；当前只复核重排后的Gal手机选人/输入/阅读互斥布局、手机滚动和实际落位完成后再播放对白。所有AI均本地模拟，不读取实际密钥。仅develop。",
-  "scopes": ["quality", "gal", "mobile", "static", "battle-controls"],
+  "description": "仅复核Gal发言框为主体、发送小图标、TK及修改剧本折叠到辅助工具，以及原聊天的控件还原。使用本地模拟，不读真实密钥，不重复副本。仅develop。",
+  "scopes": ["quality", "gal", "chat"],
   "coreFiles": ["tests/gal.test.js"],
   "browserConcurrency": 2
 }
