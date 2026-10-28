@@ -25,7 +25,8 @@ function conditionText(condition, markName = '标记') {
 function effectText(effect, target = '目标', markName = '标记') {
   let description = '';
   if (effect.type === 'damage') description = `对${target}造成${effect.value}伤害`;
-  else if (effect.type === 'heal') description = `为${target}回复${effect.value}hp`;
+  else if (effect.type === 'heal')
+    description = `为${target}回复${effect.maxHpPercent ? `最大hp的${Math.round(effect.maxHpPercent * 100)}%` : `${effect.value}hp`}`;
   else if (effect.type === 'selfHeal') description = `自身回复${effect.value}hp`;
   else if (effect.type === 'selfMana' || effect.type === 'mana')
     description = `${effect.type === 'selfMana' ? '自身' : target}回复${effect.value}sp`;
@@ -96,6 +97,10 @@ export function finalPassiveText(skill, markName = '标记') {
 
 /** Display the actual compiled effects, including growth, without explanatory growth suffixes. */
 export function finalSkillText(skill, markName = '标记') {
+  if (skill.mechanic === 'junlue')
+    return `造成${skill.effects.find((effect) => effect.type === 'damage')?.value || 0}伤害，目标下次攻击只能指向自己；目标下次获得正面状态或护盾时，自己也获得同等增益。`;
+  if (['soul-revive', 'soul-banquet'].includes(skill.mechanic))
+    return resourceText(skill.text || '');
   const parts = [];
   for (const effect of skill.effects || []) {
     const target =

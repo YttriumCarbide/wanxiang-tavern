@@ -963,3 +963,106 @@
     min-height: 0;
   }
 }
+
+.prepare-emblem-row select,
+.prepare-gear-row select {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}
+.prepare-emblem-row,
+.prepare-gear-row {
+  cursor: pointer;
+}
+.emblem-choice-label {
+  display: block;
+  padding: 10px 14px;
+  border: 1px solid #cbb77877;
+  border-radius: 8px;
+  background: linear-gradient(120deg, #2c4845, #152c31);
+  color: #e7d4a2;
+}
+#equipment-picker {
+  width: 100%;
+  grid-column: 1 / -1;
+  max-height: none;
+  overflow: hidden;
+  padding: 14px;
+  border: 1px solid #bba97188;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #1c3939f5, #101f2bf5);
+}
+#equipment-picker header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+#equipment-picker h2 {
+  font-size: 23px;
+  margin: 8px 0 18px;
+}
+#equipment-picker header small {
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: #aebcab;
+}
+.equipment-picker-list {
+  display: grid;
+  gap: 10px;
+}
+.equipment-picker-list button {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 20px;
+  gap: 12px;
+  text-align: left;
+  align-items: center;
+  padding: 14px;
+  border: 1px solid #7b9a8c55;
+  border-radius: 10px;
+  background: #233d3b99;
+}
+.equipment-picker-list button[aria-pressed='true'] {
+  border-color: #e7cc7e;
+  background: #76653c44;
+}
+.equipment-picker-list strong,
+.equipment-picker-list small {
+  display: block;
+}
+.equipment-picker-list small {
+  color: #c9b985;
+  margin-top: 5px;
+  font-size: 11px;
+}
+.equipment-picker-list p {
+  margin: 8px 0 0;
+  color: #a8bbb1;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.picker-seal {
+  width: 42px;
+  height: 42px;
+  border: 1px solid #d3c17f77;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #e5cf92;
+  font-size: 25px;
+  background: #102823;
+}
+@media (max-height: 500px) {
+  #equipment-picker {
+    padding: 10px;
+  }
+  .equipment-picker-list button {
+    padding: 10px;
+  }
+  #equipment-picker h2 {
+    font-size: 18px;
+    margin: 4px 0 10px;
+  }
+}

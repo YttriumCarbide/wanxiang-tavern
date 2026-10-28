@@ -126,7 +126,7 @@ export async function onboardingChecks({ browser, baseURL, output }) {
     await page.locator('#destination-region-confirm').click();
     assert.equal(await page.locator('[data-map-node]:not([disabled])').count(), 1);
     await page.locator('#destination-start').click();
-    await page.locator('[data-departure="confirm"]').click();
+    await page.locator('#prepare-done').click();
     await page.locator('#prepare-done').click();
     await page.waitForFunction(
       () =>
@@ -390,6 +390,8 @@ export async function onboardingChecks({ browser, baseURL, output }) {
           (room) =>
             demo.getStatus().mode === 'battle' &&
             demo.getState().encounter === room + 1 &&
+            demo.getLibrary().campaign.tutorial ===
+              ['vulnerable', 'slow-opening', 'crossfire', 'boss'][room] &&
             document.querySelector('#scene-loading').hidden &&
             !document.querySelector('#battle').classList.contains('entering') &&
             (!demo.getStatus().animating || document.querySelector('#guide-dialogue').open),
@@ -497,7 +499,7 @@ export async function onboardingChecks({ browser, baseURL, output }) {
     assert.equal(await page.locator('.destination-node.cleared').count(), 1);
     await page.locator('[data-map-node]:not(.cleared):not([disabled])').click();
     await page.locator('#destination-start').click();
-    await page.locator('[data-departure="confirm"]').click();
+    await page.locator('#prepare-done').click();
     await finishDialogue();
     await page.locator('#prepare-done').click();
     await page.waitForFunction(

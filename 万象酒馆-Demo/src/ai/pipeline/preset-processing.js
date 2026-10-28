@@ -3,6 +3,8 @@ export { createPresetOutputProcessor } from '../output-processor.js';
 import { sha256 } from '@noble/hashes/sha2.js';
 import { rebornReassemble } from '../reborn-processing.js';
 import { presetHelperScripts } from '../helper-scripts.js';
+import { createMacroExpander } from '../prompt-macros.js';
+import { MIAOSAIYA_FINGERPRINTS, miaosaiyaReassemble } from '../miaosaiya-processing.js';
 
 function fingerprint(text) {
   const bytes = sha256(
@@ -20,12 +22,22 @@ export function presetProcessing(preset, storage = {}) {
   const sp = preset.extensions?.SPreset || {};
   const result = {};
   if (sp.OutputPreprocessing?.enabled) {
-    if (
-      fingerprint(sp.OutputPreprocessing.script) !==
-      '20ec4f8c0faea5829618f6c2867047e97642a50e4422e6f05c3c7129b98df0a1'
+    const outputFingerprint = fingerprint(sp.OutputPreprocessing.script);
+    if (outputFingerprint === MIAOSAIYA_FINGERPRINTS.output) {
+      const formatter = sp.OutputPreprocessing.toolCallFormatter;
+      if (formatter?.enabled && fingerprint(formatter.script) !== MIAOSAIYA_FINGERPRINTS.formatter)
+        throw Error('当前工具输出格式化脚本版本未适配，未执行未知脚本；原预设保留');
+      result.output = 'miaosaiya-1.6';
+    } else if (
+      outputFingerprint === '20ec4f8c0faea5829618f6c2867047e97642a50e4422e6f05c3c7129b98df0a1'
     )
-      throw Error('当前输出预处理脚本版本未适配，未执行未知脚本；原预设保留');
-    result.output = 'reborn-2.4';
+      result.output = 'reborn-2.4';
+    else throw Error('当前输出预处理脚本版本未适配，未执行未知脚本；原预设保留');
+  }
+  if (sp.FinalRequestProcessing?.enabled) {
+    if (fingerprint(sp.FinalRequestProcessing.script) !== MIAOSAIYA_FINGERPRINTS.finalRequest)
+      throw Error('当前最终请求处理脚本版本未适配，未执行未知脚本；原预设保留');
+    result.finalRequest = 'miaosaiya-1.6';
   }
   const squash = sp.ChatSquash;
   if (squash?.squashed_post_script_enable) {
@@ -34,7 +46,9 @@ export function presetProcessing(preset, storage = {}) {
         fingerprint(squash.squashed_post_script) ===
         '58b283a79322a45bc7703c52a0fdff1704428855da95b42e1f3f06e93994a500'
           ? 'reborn-2.4'
-          : 'unknown',
+          : fingerprint(squash.squashed_post_script) === MIAOSAIYA_FINGERPRINTS.reassembly
+            ? 'miaosaiya-1.6'
+            : 'unknown',
       enabled: squash.enabled === true,
       conditional: squash.conditional_enabled === true,
       tag: squash.conditional_tag || '',
@@ -61,7 +75,7 @@ export function presetProcessing(preset, storage = {}) {
   return result;
 }
 
-export function processPresetMessages(source, processing = {}) {
+export function processPresetMessages(source, processing = {}, variables = {}) {
   let messages = structuredClone(source);
   const status = {};
   const assembly = processing.reassembly;
@@ -72,7 +86,7 @@ export function processPresetMessages(source, processing = {}) {
       Boolean(assembly.tag && messages.some((message) => message.content?.includes(assembly.tag)));
     status.reassembly = active ? 'enabled' : 'inactive';
     if (active) {
-      if (assembly.version !== 'reborn-2.4')
+      if (!['reborn-2.4', 'miaosaiya-1.6'].includes(assembly.version))
         throw Error('当前消息重组脚本版本未适配，未执行未知脚本');
       if (assembly.enabled) {
         messages = messages.map((message) => ({
@@ -81,7 +95,20 @@ export function processPresetMessages(source, processing = {}) {
             ? message.content.replaceAll(assembly.tag, '')
             : message.content,
         }));
-        messages = squashReborn(messages, assembly.settings);
+        const replace = createMacroExpander(variables);
+        const settings = Object.fromEntries(
+          Object.entries(assembly.settings).map(([key, value]) => [
+            key,
+            typeof value === 'string' ? replace(value) : value,
+          ]),
+        );
+        messages = squashReborn(messages, settings, assembly.version);
+      } else if (assembly.version === 'miaosaiya-1.6') {
+        // This preset's callback accepts one string, unlike Reborn's message-array callback.
+        messages = messages.map((message) => ({
+          ...message,
+          content: miaosaiyaReassemble(message.content),
+        }));
       } else messages = rebornReassemble(messages);
     }
   }
@@ -144,7 +171,7 @@ export function prepareKeminiTransport(source, processing = {}, hasOutputTool = 
   return { messages, outputTool, status };
 }
 
-function squashReborn(messages, settings) {
+function squashReborn(messages, settings, version) {
   if (settings.squashed_separator_regex || settings.re_split || settings.separate_chat_history)
     throw Error('当前Reborn消息合并配置未适配，未擅自改变发送方式');
   const affixes = {
@@ -161,7 +188,7 @@ function squashReborn(messages, settings) {
       result.push({
         role:
           settings.role === 'follow' ? messages[0]?.role || 'user' : settings.role || 'assistant',
-        content: text,
+        content: version === 'miaosaiya-1.6' ? miaosaiyaReassemble(text) : text,
       });
     text = '';
     lastRole = '';

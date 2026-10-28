@@ -48,6 +48,7 @@ export function clearBattleMechanics(state) {
   }
   delete state.absorptionBases;
   delete state.dragonVein;
+  delete state.sinkingPlague;
   delete state.sacrifices;
 }
 

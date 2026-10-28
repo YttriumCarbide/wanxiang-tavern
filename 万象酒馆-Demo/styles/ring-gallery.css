@@ -1,0 +1,198 @@
+body.ring-viewing :is(#spots, .spot, #emblem-open, .talk-open, .supply-open, #aim) {
+  visibility: hidden;
+}
+.ring-gallery[hidden] {
+  display: none;
+}
+.ring-gallery {
+  --ring-accent: #78e4d7;
+  position: fixed;
+  inset: 0;
+  z-index: 25;
+  color: #f5ebd9;
+  background: linear-gradient(180deg, #07121955, transparent 28%, transparent 68%, #07121977);
+  pointer-events: none;
+}
+.ring-gallery button {
+  pointer-events: auto;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  border: 1px solid #c5d4dc36;
+  background: #11212a55;
+  border-radius: 50px;
+  padding: 9px 16px;
+  transition:
+    background 180ms ease,
+    border-color 180ms ease,
+    color 180ms ease;
+}
+.ring-gallery button:hover,
+.ring-gallery button:focus-visible {
+  border-color: var(--ring-accent);
+  background: #263b4588;
+  outline: none;
+}
+.ring-gallery header {
+  position: absolute;
+  inset: max(24px, env(safe-area-inset-top)) 4vw auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #d0cebf;
+  letter-spacing: 0.22em;
+  font-size: 11px;
+}
+.ring-gallery header button {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  font-size: 24px;
+  backdrop-filter: blur(10px);
+}
+.ring-gallery-caption {
+  position: absolute;
+  top: 9vh;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+  white-space: nowrap;
+  text-shadow: 0 2px 18px #000c;
+}
+.ring-gallery h1 {
+  font:
+    500 clamp(24px, 2.6vw, 36px) Georgia,
+    'Noto Serif SC',
+    serif;
+  margin: 0 0 10px;
+  letter-spacing: 0.2em;
+}
+.ring-gallery-owner {
+  display: block;
+  color: #c8c4b4;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+}
+.ring-gallery-viewport {
+  position: absolute;
+  inset: 150px 4vw 150px;
+  pointer-events: auto;
+  touch-action: none;
+  cursor: grab;
+}
+.ring-gallery-viewport:active {
+  cursor: grabbing;
+}
+.ring-gallery-tools {
+  position: absolute;
+  bottom: 94px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  white-space: nowrap;
+  padding: 4px;
+  background: #0b1a2466;
+  border: 1px solid #c5d4dc26;
+  border-radius: 50px;
+  backdrop-filter: blur(12px);
+}
+.ring-gallery-tools button {
+  padding: 6px 13px;
+  border-color: transparent;
+  background: transparent;
+  font-size: 11px;
+}
+.ring-gallery nav {
+  position: absolute;
+  bottom: max(26px, env(safe-area-inset-bottom));
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 3px;
+  width: max-content;
+  max-width: 94vw;
+  padding: 5px;
+  background: #0b1a2477;
+  border: 1px solid #c5d4dc33;
+  border-radius: 50px;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 8px 30px #0003;
+}
+.ring-gallery nav button {
+  color: #c5cecf;
+  padding: 10px 22px;
+  font-size: 12px;
+  white-space: nowrap;
+  background: transparent;
+  border-color: transparent;
+}
+.ring-gallery nav button[aria-pressed='true'] {
+  color: var(--ring-accent);
+  border-color: #c5d4dc66;
+  background: #e9f5ff12;
+}
+@media (max-height: 540px), (max-width: 800px) {
+  .ring-gallery header {
+    inset: max(10px, env(safe-area-inset-top)) 3vw auto;
+    font-size: 10px;
+  }
+  .ring-gallery header button {
+    width: 31px;
+    height: 31px;
+    font-size: 20px;
+  }
+  .ring-gallery-caption {
+    top: 42px;
+  }
+  .ring-gallery h1 {
+    font-size: 23px;
+    margin-bottom: 5px;
+  }
+  .ring-gallery-owner {
+    font-size: 9px;
+  }
+  .ring-gallery-viewport {
+    inset: 92px 3vw 100px;
+  }
+  .ring-gallery-tools {
+    bottom: 60px;
+    padding: 2px;
+  }
+  .ring-gallery-tools button {
+    padding: 5px 11px;
+    font-size: 10px;
+  }
+  .ring-gallery nav {
+    bottom: max(9px, env(safe-area-inset-bottom));
+    gap: 2px;
+    padding: 3px;
+  }
+  .ring-gallery nav button {
+    padding: 8px 12px;
+    font-size: 10px;
+  }
+}
+@media (orientation: portrait) {
+  .ring-gallery-caption {
+    top: 70px;
+  }
+  .ring-gallery-viewport {
+    inset: 135px 0 155px;
+  }
+  .ring-gallery-tools {
+    bottom: 109px;
+  }
+  .ring-gallery nav {
+    flex-wrap: wrap;
+    justify-content: center;
+    width: min(94vw, 360px);
+    border-radius: 20px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ring-gallery button {
+    transition: none;
+  }
+}

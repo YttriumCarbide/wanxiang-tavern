@@ -30,6 +30,7 @@ export async function arcadeChecks({ browser, baseURL, output }) {
         for (let row = 16; row < 20; row++)
           library.arcade.board[row] = Array.from({ length: 10 }, (_, x) => (x === 9 ? 0 : 1));
         library.arcade.piece = { type: 0, cells: [[1], [1], [1], [1]], x: 9, y: 0 };
+        delete library.arcade.pieceStart;
         const events = createEventScope();
         const context = {
           events,
@@ -137,6 +138,15 @@ export async function arcadeChecks({ browser, baseURL, output }) {
       );
       await page.locator('[data-arcade-close]').click();
       assert.equal(await page.locator('#arcade-dialog').isVisible(), false);
+      const closed = await page.evaluate(() =>
+        structuredClone(window.arcadeFixture.context.session.ai.library),
+      );
+      await page.waitForTimeout(750);
+      assert.deepEqual(
+        await page.evaluate(() => window.arcadeFixture.context.session.ai.library),
+        closed,
+        'Closed game stops all simulation and deferred saves',
+      );
       await page.evaluate(() => {
         const fixture = window.arcadeFixture;
         fixture.context.session.ai.library = JSON.parse(localStorage.getItem('arcade-fixture'));
@@ -144,11 +154,11 @@ export async function arcadeChecks({ browser, baseURL, output }) {
       });
       assert.equal(
         await page.evaluate(() => window.arcadeFixture.context.session.ai.library.arcade.lines),
-        4,
+        0,
       );
       assert.equal(
         await page.evaluate(() => window.arcadeFixture.context.session.ai.library.inventory.ether),
-        110,
+        100,
       );
       await page.evaluate(() => window.arcadeFixture.arcade.completed('剧本生成'));
       await page.locator('#arcade-completion').waitFor({ state: 'visible' });

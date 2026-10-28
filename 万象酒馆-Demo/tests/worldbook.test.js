@@ -253,18 +253,18 @@ test('worldbook CRUD, bindings and timer state survive restart without changing 
 
 test('design notes do not reject valid characters, while missing design and unknown executable data remain invalid', () => {
   const raw = characterDocument();
-  raw.setting.profession.description_note = '这是辅助备注，不是角色正文';
+  raw.setting.attack.description_note = '这是辅助备注，不是角色正文';
   const text = JSON.stringify(raw);
   const result = readGenerationResult('character', text, {}, createCharacterReader());
   assert.equal(result.diagnostic.rawText, text);
   assert(
     result.diagnostic.repairs.some(
-      (repair) => repair.path === 'character.setting.profession.description_note',
+      (repair) => repair.path === 'character.setting.attack.description_note',
     ),
   );
   assert(!result.entry.setting.worldbook.includes('辅助备注'));
   const missing = structuredClone(raw);
-  delete missing.setting.profession.description;
+  delete missing.setting.attack.description;
   assert.throws(
     () => readGenerationResult('character', JSON.stringify(missing), {}, createCharacterReader()),
     /description/,

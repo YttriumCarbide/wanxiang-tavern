@@ -4,6 +4,7 @@ import { mergedArchiveItems } from '../archives.js';
 import { REGIONS } from '../content/regions.js';
 import { query as $ } from './dom.js';
 import { developerOption } from '../generation-options.js';
+import { enemyIntentText } from '../enemy-intent-text.js';
 
 /** Only reached prose is editable here; future battles remain in the script. */
 export function createRecords(context) {
@@ -242,7 +243,7 @@ export function createRecords(context) {
       const heading = document.createElement('h3');
       heading.textContent = entry.name + (entry.boss ? ' · Boss' : '');
       const stats = document.createElement('p');
-      stats.textContent = `生命 ${entry.hp} · 速度 ${entry.speed}`;
+      stats.textContent = `基础hp ${entry.hp} · 速度 ${entry.speed}`;
       const source = document.createElement('p');
       source.textContent =
         (library().worlds || [])
@@ -252,7 +253,7 @@ export function createRecords(context) {
       area.append(picture, heading, stats, source);
       for (const move of [...entry.intents, ...(entry.enragedIntents || [])]) {
         const line = document.createElement('p');
-        line.textContent = `${move.name}：${move.text}`;
+        line.textContent = `${move.name}：${enemyIntentText(move)}`;
         area.append(line);
       }
       return;

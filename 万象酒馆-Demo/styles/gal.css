@@ -29,10 +29,28 @@ body.gal-playing #battle > :not(#stage),
 body.gal-playing #battle :is(.unit-layer, #intent-layer) {
   visibility: hidden;
 }
+body.gal-playing dialog:not(:has(> #gal-stage:not([hidden]))) {
+  visibility: hidden;
+}
+body.gal-playing dialog::backdrop {
+  background: transparent;
+  backdrop-filter: none;
+}
 dialog:has(> #gal-stage:not([hidden])) {
+  inset: 0;
+  width: 100vw !important;
+  height: 100dvh !important;
+  max-width: none !important;
+  max-height: none !important;
+  margin: 0;
+  padding: 0;
+  overflow: visible;
   background: transparent;
   border-color: transparent;
   box-shadow: none;
+  backdrop-filter: none;
+  filter: none;
+  transform: none;
 }
 dialog:has(> #gal-stage:not([hidden]))::backdrop {
   background: transparent;

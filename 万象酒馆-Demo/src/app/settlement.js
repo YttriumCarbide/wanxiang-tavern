@@ -146,7 +146,7 @@ export function createSettlement(context) {
     const area = document.createElement('section');
     area.className = 'rest-choices';
     area.innerHTML =
-      '<h3>旅途休整</h3><div><button data-rest="sleep"><span>☾</span><strong>睡眠</strong><small>回复40%最大生命</small></button><button data-rest="meal"><span>♨</span><strong>用餐</strong><small>法力回满</small></button></div>';
+      '<h3>旅途休整</h3><div><button data-rest="sleep"><span>☾</span><strong>睡眠</strong><small>恢复已损失hp的60%</small></button><button data-rest="meal"><span>♨</span><strong>用餐</strong><small>恢复已损失sp的60%</small></button></div>';
     panel.append(area);
     for (const button of area.querySelectorAll('[data-rest]'))
       button.onclick = async () => {

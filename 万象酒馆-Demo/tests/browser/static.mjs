@@ -218,7 +218,14 @@ export async function staticChecks({ browser, output }) {
         .filter((entry) => entry.extensions?.wanxiang?.characterId)
         .map((entry) => entry.comment)
         .sort(),
-      ['人物详情：伊蒂丝', '人物详情：潘多拉', '人物详情：长景月汐', '人物详情：青缘'].sort(),
+      [
+        '人物详情：伊蒂丝',
+        '人物详情：潘多拉',
+        '人物详情：长景月汐',
+        '人物详情：青缘',
+        '人物详情：骆公绪',
+        '人物详情：西莉卡·梵·拉普斯',
+      ].sort(),
     );
     assert.deepEqual(
       await page.evaluate(() => ({
@@ -443,7 +450,7 @@ export async function staticChecks({ browser, output }) {
     await page.evaluate(() => demo.startBattle());
     await page.locator('#destination-region-confirm').click();
     await page.locator('#destination-start').click();
-    await page.locator('[data-departure="confirm"]').click();
+    await page.locator('#prepare-done').click();
     await page.locator('#party-panel').waitFor({ state: 'visible' });
     while (await page.locator('#guide-dialogue').isVisible())
       await page.locator('#dialogue-next').click();

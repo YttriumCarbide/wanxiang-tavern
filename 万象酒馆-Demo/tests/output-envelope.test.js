@@ -276,9 +276,10 @@ test('generation v4 removes the old complete example, preserving custom protocol
   const entry = result.book.entries[output.uid];
   assert(entry.content.includes(OUTPUT_OPEN));
   assert(
-    Object.values(result.book.entries).some(
-      (item) => item.disable && item.content.includes('我自己的字段补充'),
-    ),
+    [
+      ...Object.values(result.book.entries),
+      ...(result.book.extensions?.wanxiang?.retiredPromptArchive || []).map((item) => item.entry),
+    ].some((item) => item.disable && item.content.includes('我自己的字段补充')),
   );
   assert(entry.content.includes('CHARACTER v4'));
   assert(!entry.content.includes('禁止XML'));
@@ -302,7 +303,7 @@ test('generation v4 removes the old complete example, preserving custom protocol
   );
   assert.equal(
     JSON.parse(await readFile(path.join(directory, 'builtin-content.json'), 'utf8')).version,
-    40,
+    46,
   );
 });
 
@@ -336,10 +337,16 @@ test('v4 removes the stock character example while keeping official number refer
   const examples = Object.values(saved.book.entries).filter((entry) =>
     /JSON格式示例 @D$/.test(entry.comment),
   );
-  assert.equal(examples.length, 1);
+  assert.equal(examples.length, 0);
   assert(examples.every((entry) => entry.disable));
   assert(!examples.some((entry) => entry.apiTargets.includes('character')));
-  const script = examples.find((entry) => entry.apiTargets.includes('script'));
+  const script = structuredClone(
+    saved.book.extensions.wanxiang.retiredPromptArchive
+      .map((item) => item.entry)
+      .find((entry) => entry.extensions?.wanxiang?.generationExample === 'script'),
+  );
+  assert(script);
+  saved.book.entries[script.uid] = script;
   script.content = wrap(JSON.stringify({ user: '我手写的示例，不可覆盖' }));
   script.disable = false;
   await store.save(saved);

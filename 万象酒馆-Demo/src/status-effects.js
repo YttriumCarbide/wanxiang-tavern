@@ -25,6 +25,7 @@ export function createStatusEffects({ animate, ring, sparks }) {
     const { type } = signal;
     const color = {
       poison: '#b6da81',
+      sinkingPlague: '#9c78bd',
       bleed: '#e59b9a',
       regen: '#b9e5af',
       vulnerable: '#d8b4fe',

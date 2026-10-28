@@ -1,4 +1,4 @@
-import { newTetris, restoreTetris, tetrisStep, tetrisDisplay } from '../tetris.js';
+import { newTetris, restoreTetris, tetrisStep, tetrisDisplay, rewindTetris } from '../tetris.js';
 import { html } from '../shared/html.js';
 
 export function createArcade(context) {
@@ -44,7 +44,8 @@ export function createArcade(context) {
   let owner = null,
     state = null,
     fastFall = false,
-    drag = null;
+    drag = null,
+    closed = true;
   const board = dialog.querySelector('#arcade-board');
   const accelerate = dialog.querySelector('[data-tetris="down"]');
   function save(flush = false) {
@@ -81,6 +82,7 @@ export function createArcade(context) {
       timer = setTimeout(() => act('tick'), fastFall ? 45 : Math.max(140, 650 - state.lines * 8));
   }
   function act(action) {
+    if (disposed || !dialog.open || notice.open || closed || !state) return;
     if (context.session.ai.library !== owner) {
       dialog.close();
       return;
@@ -100,6 +102,27 @@ export function createArcade(context) {
     }
     if (['tick', 'pause', 'play', 'new'].includes(action) || state.status !== 'playing') schedule();
   }
+  function haltAndRewind() {
+    clearTimeout(timer);
+    clearTimeout(announcement);
+    clearTimeout(saveTimer);
+    fastFall = false;
+    drag = null;
+    if (closed || !state) return;
+    closed = true;
+    const result = rewindTetris(state);
+    state = result.state;
+    if (context.session.ai.library === owner) {
+      owner.inventory.ether = Math.max(0, owner.inventory.ether - result.returnedEther);
+      save(true);
+      context.shell?.renderParty();
+    }
+    if (notice.open) notice.close();
+  }
+  function close() {
+    haltAndRewind();
+    if (dialog.open) dialog.close();
+  }
   context.events.on(dialog, 'click', (event) => {
     const action = event.target.closest('[data-tetris]')?.dataset.tetris;
     if (action && (action !== 'down' || event.detail === 0)) act(action);
@@ -108,7 +131,7 @@ export function createArcade(context) {
       drag = null;
       act(state.status === 'over' ? 'new' : state.status === 'paused' ? 'play' : 'pause');
     }
-    if (event.target.closest('[data-arcade-close]')) dialog.close();
+    if (event.target.closest('[data-arcade-close]')) close();
   });
   context.events.on(board, 'pointerdown', (event) => {
     if (!event.isPrimary || event.button !== 0 || state.status !== 'playing') return;
@@ -154,13 +177,11 @@ export function createArcade(context) {
     event.preventDefault();
     act(action);
   });
-  context.events.on(dialog, 'close', () => {
-    clearTimeout(timer);
-    fastFall = false;
-    drag = null;
-    state = tetrisStep(state, 'pause').state;
-    save(true);
+  context.events.on(dialog, 'cancel', (event) => {
+    event.preventDefault();
+    close();
   });
+  context.events.on(dialog, 'close', haltAndRewind);
   context.events.on(document, 'visibilitychange', () => {
     if (document.hidden && dialog.open) {
       fastFall = false;
@@ -171,7 +192,7 @@ export function createArcade(context) {
   context.events.on(notice, 'click', (event) => {
     if (event.target.closest('[data-arcade-return]')) {
       notice.close();
-      dialog.close();
+      close();
     }
     if (event.target.closest('[data-arcade-continue]')) {
       notice.close();
@@ -185,6 +206,7 @@ export function createArcade(context) {
       state = restoreTetris(owner.arcade || newTetris(Math.floor(Math.random() * 4294967296)));
       fastFall = false;
       drag = null;
+      closed = false;
       dialog.showModal();
       act('play');
     },
@@ -205,14 +227,11 @@ export function createArcade(context) {
       }, 80);
     },
     dispose() {
+      close();
       disposed = true;
       clearTimeout(timer);
       clearTimeout(announcement);
       clearTimeout(saveTimer);
-      if (state) {
-        state = tetrisStep(state, 'pause').state;
-        save(true);
-      }
       notice.remove();
       dialog.remove();
     },

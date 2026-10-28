@@ -59,7 +59,7 @@ export function createApiClient({ fetchImpl = fetch, timeoutMs = REQUEST_TIMEOUT
     } catch (failure) {
       if (failure.name === 'AbortError' || controller.signal.aborted)
         throw Error('请求已取消或超过15分钟，请检查服务后重试', { cause: failure });
-      if (failure instanceof TypeError && key)
+      if (failure instanceof TypeError && key && !failure.diagnostic)
         failure.message =
           '浏览器直连失败，请检查网络、HTTPS及接口是否允许跨域（CORS）。未自动重试。';
       if (failure.diagnostic) {

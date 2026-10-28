@@ -110,7 +110,10 @@ test('v8 migrates only owned script rules, keeps injection controls and archives
     [4, 1, 2, 345, owned.apiTargets],
   );
   assert(!rule.content.includes('具体目标'));
-  const archived = Object.values(book.entries).find((entry) => entry.content === owned.content);
+  const archived = [
+    ...Object.values(book.entries),
+    ...(book.extensions?.wanxiang?.retiredPromptArchive || []).map((item) => item.entry),
+  ].find((entry) => entry.content === owned.content);
   assert(archived.disable && archived.apiTargets.length === 0);
   assert.equal(book.entries[uid].content, saved.book.entries[uid].content);
   const library = newLibrary();
@@ -147,7 +150,8 @@ test('v8 migrates only owned script rules, keeps injection controls and archives
   assert(!sent.includes('先交代本趟') && !sent.includes('老舍《断魂枪》'));
   const context = generationInput('script', input);
   assert(!context.outputBudget && context.encounters.every((room) => !room.milestone));
-  assert(request.messages.at(-1).content.includes('SCRIPT v4'));
+  assert(request.messages.some((message) => message.content.includes('SCRIPT v4')));
+  assert(request.messages.at(-1).content.includes('【数据生成输出边界】'));
   const again = await createWorldbookStore(directory);
   assert.deepEqual((await again.get('tavern-world')).book, book);
 });

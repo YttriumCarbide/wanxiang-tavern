@@ -1,3 +1,4 @@
+import { upgradePlaytestWorldbook } from '../src/ai/playtest-upgrade.js';
 import { upgradeTutorialRevision } from '../src/ai/tutorial-revision.js';
 import { upgradeProtagonistRules } from '../src/ai/protagonist-rules.js';
 import { upgradeBattleDisplayRules } from '../src/ai/battle-display-rules.js';
@@ -8,6 +9,11 @@ import { upgradeCharacterGeneration } from '../src/ai/character-generation-upgra
 import { upgradeCharacterConstraints } from '../src/ai/character-constraints-upgrade.js';
 import { upgradeForestWorldbook } from '../src/ai/forest-worldbook.js';
 import { upgradeCharacterIdentity } from '../src/ai/character-identity-upgrade.js';
+import { upgradeCombatControl } from '../src/ai/combat-control-upgrade.js';
+import { upgradeGenerationBoundary } from '../src/ai/generation-boundary-upgrade.js';
+import { upgradeBattleBalance } from '../src/ai/battle-balance-upgrade.js';
+import { upgradeFrostWorldbook } from '../src/ai/frost-worldbook.js';
+import { upgradeEnemyBaseWorldbook } from '../src/ai/enemy-base-upgrade.js';
 import { upgradeContinuityRules } from '../src/ai/continuity-upgrade.js';
 import { upgradeGenerationExperience } from '../src/ai/generation-experience-upgrade.js';
 import { upgradeStatusEmblems } from '../src/ai/status-emblem-upgrade.js';
@@ -943,6 +949,41 @@ export async function createWorldbookStore(directory) {
     );
     await write(fileFor('tavern-world'), upgradeCharacterIdentity(record.book, content));
     await write(contentVersionFile, { version: 40 });
+  }
+  if (contentVersion < 41) {
+    const record = await get('tavern-world');
+    await write(fileFor('tavern-world'), upgradeCombatControl(record.book));
+    await write(contentVersionFile, { version: 41 });
+  }
+  if (contentVersion < 42) {
+    const record = await get('tavern-world');
+    const content = await readFile(
+      new URL('../prompts/worldbook/generation-boundary.md', import.meta.url),
+      'utf8',
+    );
+    await write(fileFor('tavern-world'), upgradeGenerationBoundary(record.book, content));
+    await write(contentVersionFile, { version: 42 });
+  }
+  if (contentVersion < 43) {
+    const record = await get('tavern-world');
+    await write(fileFor('tavern-world'), upgradeBattleBalance(record.book));
+    await write(contentVersionFile, { version: 43 });
+  }
+  if (contentVersion < 44) {
+    const record = await get('tavern-world');
+    await write(fileFor('tavern-world'), upgradeFrostWorldbook(record.book));
+    await write(contentVersionFile, { version: 44 });
+  }
+  if (contentVersion < 45) {
+    const record = await get('tavern-world');
+    await write(fileFor('tavern-world'), upgradeEnemyBaseWorldbook(record.book));
+    await write(contentVersionFile, { version: 45 });
+  }
+  if (contentVersion < 46) {
+    const record = await get('tavern-world');
+    const sources = await characterGenerationSources();
+    await write(fileFor('tavern-world'), upgradePlaytestWorldbook(record.book, sources.rules));
+    await write(contentVersionFile, { version: 46 });
   }
   return {
     get,

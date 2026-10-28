@@ -236,6 +236,7 @@ export async function chatRequest(
           tag: 'wanxiang_chat',
           ...presetOutputTransport(preset),
           presetProcessing,
+          presetVariables: { user: variables.user, char: variables.char },
           ...(adviceStatus
             ? {
                 advice: {

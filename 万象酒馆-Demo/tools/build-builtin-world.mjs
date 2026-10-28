@@ -1,3 +1,4 @@
+import { upgradePlaytestWorldbook } from '../src/ai/playtest-upgrade.js';
 import { mkdtemp, readFile, writeFile, rm, mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -10,6 +11,8 @@ import { upgradeContinuityRules } from '../src/ai/continuity-upgrade.js';
 import { upgradeGenerationExperience } from '../src/ai/generation-experience-upgrade.js';
 import { upgradeStatusEmblems } from '../src/ai/status-emblem-upgrade.js';
 import { upgradeUniversalEnemies } from '../src/ai/universal-enemy-upgrade.js';
+import { upgradeFrostWorldbook } from '../src/ai/frost-worldbook.js';
+import { upgradeEnemyBaseWorldbook } from '../src/ai/enemy-base-upgrade.js';
 
 /** Reproducible public canon, built without reading any user configuration or saved worldbook. */
 export async function buildBuiltinWorld() {
@@ -64,7 +67,13 @@ export async function buildBuiltinWorld() {
       upgradeContinuityRules(updated),
       await readFile(path.join(root, 'prompts/worldbook/creation-output.md'), 'utf8'),
     ).entries;
-    book.entries = upgradeUniversalEnemies(upgradeStatusEmblems(book)).entries;
+    book.entries = upgradeFrostWorldbook(
+      upgradeUniversalEnemies(upgradeStatusEmblems(book)),
+    ).entries;
+    book.entries = upgradePlaytestWorldbook(
+      upgradeEnemyBaseWorldbook(book),
+      (await characterGenerationSources()).rules,
+    ).entries;
     book.extensions = {
       wanxiang: {
         publicSeed: 1,

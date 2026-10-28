@@ -80,7 +80,7 @@ export function createEmblems(context) {
       context.audio.play('summon');
       const lines = {
         [OVERLOAD_EMBLEM_ID]:
-          '断崖兽的咆哮震落了一枚亮着蓝光的戒指。主人……它在回应您。过载纹章士水无月兰将力量交给了我们；超限能让下一次战技以双倍消耗额外释放一次，跨回合也不会白白消失。',
+          '断崖兽的咆哮震落了一枚亮着蓝光的戒指。它正回应着同伴。过载纹章士水无月兰将力量交给了我们；超限能让下一次战技以双倍消耗额外释放一次，跨回合也不会白白消失。',
         [DRAGON_EMBLEM_ID]:
           '黑色诅咒撕开的缝隙里，一枚龙纹戒指落到众人面前。伊蒂丝抬起手，星光照出神威的名字：龙咒能削弱孤立的敌人，龙脉则将庇护留在脚下的位置。换上伙伴，庇护仍在那里。',
         [SUPREME_EMBLEM_ID]:
@@ -89,7 +89,8 @@ export function createEmblems(context) {
           '树影间落下一副带笑的假面，随后收拢成一枚戒指。伊蒂丝的声音低了下来：风在舞愿意同行。她的攻击以伙伴的生命为代价，死亡也会带来回响。至于欺之牺……使用前，要想清楚献上的会是谁。',
       };
       speak(
-        lines[arrival.id] + `\n\n已获得${EMBLEMS[arrival.id].emblem.name}，可在下次整备中装备。`,
+        lines[arrival.id] +
+          `\n\n已获得${EMBLEMS[arrival.id].emblem.name}。${arrival.recipient ? `戒指选择了${arrival.recipient.name}，已自动装备。` : '大家都已装备戒指，先收入纹章收藏，可在整备中更换。'}`,
         null,
         [DRAGON_EMBLEM_ID, MASK_EMBLEM_ID].includes(arrival.id),
       );
@@ -104,10 +105,11 @@ export function createEmblems(context) {
       }
       state.emblemLesson = 'combine';
       context.generation.save();
+      const name = session.battle.state.heroDefinitions[actor].name;
       speak(
-        '门缝里怎么会有一枚戒指……它自己戴到主人手上了。星光已经连成六格，这是均衡纹章士檀虹羽的力量。先别往前走，门上的雷锁正在蓄势，第一击会造成60点伤害！\n\n现在连续点主角两次，进入结合，再点左侧的「结合技 · 平衡」，把目标选为机关石门。结合标记占住的同一格，可以接着安排主角的结合技，不用空过先手。\n\n平衡会把那道雷击分到三个前场位置，空位的那份落空。先完成结合与平衡，再确认结算，我们一起把这扇门打开。',
+        `门缝里怎么会有一枚戒指……它自己戴到${name}手上了。星光已经连成六格，这是均衡纹章士檀虹羽的力量。门上的雷锁正在蓄势，第一击会锁定hp最低的位置，造成24伤害并施加一层虚弱！\n\n现在连续点${name}两次，进入结合，再点左侧的「结合技 · 平衡」，把目标选为机关石门。结合标记占住的同一格，可以接着安排${name}的结合技，不用空过先手。\n\n平衡会把雷击分到三个前场位置，空位的那份落空；虚弱仍留在原目标上。先完成结合与平衡，再确认结算。`,
         () => {
-          hint.textContent = '双击主角结合 → 同一时间格使用「平衡」→ 选机关石门 → 确认结算。';
+          hint.textContent = `双击${name}结合 → 同一时间格使用「平衡」→ 选机关石门 → 确认结算。`;
           hint.hidden = false;
         },
       );
@@ -148,7 +150,10 @@ export function createEmblems(context) {
           event.targets.includes('ruinsGate'),
       )
     ) {
-      context.shell.toast('先双击主角结合，再在同一格使用「平衡」标记机关石门，最后确认结算。');
+      const actor = session.journey.expedition.corridorRing.actor;
+      context.shell.toast(
+        `先双击${session.battle.state.heroDefinitions[actor]?.name || '获赠戒指的角色'}结合，再在同一格使用「平衡」标记机关石门，最后确认结算。`,
+      );
       return false;
     }
     if (
@@ -206,13 +211,39 @@ export function createEmblems(context) {
   events.on(window, 'message', (event) => {
     if (
       event.origin !== location.origin ||
-      event.source !== document.querySelector('#inn-frame iframe')?.contentWindow ||
-      event.data?.type !== 'tavern-emblem' ||
+      event.source !== document.querySelector('#inn-frame iframe')?.contentWindow
+    )
+      return;
+    if (event.data?.type === 'tavern-emblem-visibility') {
+      document.body.classList.toggle(
+        'ring-cabinet-open',
+        event.data.open === true && session.runtime.mode === 'inn',
+      );
+      return;
+    }
+    if (
+      !['tavern-emblem', 'tavern-emblem-equip'].includes(event.data?.type) ||
       session.runtime.mode !== 'inn' ||
       session.ai.busy
     )
       return;
-    (context.shell.renderParty(), document.querySelector('#party-panel').showModal());
+    if (event.data.type === 'tavern-emblem') {
+      const library = session.ai.library;
+      const collection = Object.fromEntries(
+        Object.keys(EMBLEMS).map((id) => [
+          id,
+          {
+            owned: library.emblems?.includes(id) || false,
+            wearer:
+              library.characters.find((member) => member.emblemId === id)?.setting?.name || null,
+          },
+        ]),
+      );
+      event.source.postMessage({ type: 'tavern-emblem-collection', collection }, location.origin);
+      return;
+    }
+    context.shell.renderParty();
+    document.querySelector('#party-panel').showModal();
   });
   return {
     returned,
@@ -221,11 +252,13 @@ export function createEmblems(context) {
     accepted,
     beforeCommit,
     leave() {
+      document.body.classList.remove('ring-cabinet-open');
       hint.hidden = true;
       dialogue.close();
       showing = false;
     },
     dispose() {
+      document.body.classList.remove('ring-cabinet-open');
       dialogue.dispose();
       hint.remove();
     },

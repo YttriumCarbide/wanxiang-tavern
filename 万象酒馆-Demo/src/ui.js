@@ -45,7 +45,37 @@ export function statusIcons(s, id, end = s, events = []) {
     if (k === 'bind' && !now && !after && events.some((event) => event.after.units[id]?.buffs.bind))
       markupString += chip(k, 1, true, `预计禁锢：本回合生效，结束解除\n${b.text}`);
   }
+  const floor = s.formation.indexOf(id);
+  const futureFloor = end.formation.indexOf(id);
+  const plague = floor >= 0 && floor < 3 ? s.sinkingPlague?.ages[floor] : undefined;
+  const futurePlague =
+    futureFloor >= 0 && futureFloor < 3 ? end.sinkingPlague?.ages[futureFloor] : undefined;
+  if (plague !== undefined || futurePlague !== undefined)
+    markupString += chip(
+      'sinkingPlague',
+      (plague ?? futurePlague) + 1,
+      plague === undefined,
+      `沉疫 · 地板效果\n下次回合结束受到${((plague ?? futurePlague) + 1) * 2}伤害。换人不清除，后场不受伤害；空位与后撤期间仍累计回合。`,
+      '沉疫',
+    );
   const mark = definition(s, id)?.mechanicMark;
+  const modifier = s.expeditionModifiers?.[id] || end.expeditionModifiers?.[id];
+  if (modifier?.scale < 1)
+    markupString += chip(
+      'mark',
+      Math.round((1 - modifier.scale) * 100),
+      !s.expeditionModifiers?.[id],
+      `灵核代价：hp/sp上限、普攻与技能伤害减少${Math.round((1 - modifier.scale) * 100)}%，仅本次探索有效。`,
+      '灵核代价',
+    );
+  if (s.units[id]?.nextBasicDouble || end.units[id]?.nextBasicDouble)
+    markupString += chip(
+      'strength',
+      2,
+      !s.units[id]?.nextBasicDouble,
+      '持节立阵：下次普通攻击伤害翻倍；毅明反击也会消耗。',
+      '下次普攻翻倍',
+    );
   if (mark) {
     const now = s.units[id]?.mark || 0;
     const after = end.units[id]?.mark || 0;

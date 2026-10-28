@@ -214,10 +214,7 @@ export function createGeneration(context) {
             ></span>
             <div>
               <b>${escapeText(entry.setting.name)}</b
-              ><small
-                >${escapeText(entry.setting.title)} ·
-                ${entry.source === 'official' ? '官方' : '来客'}</small
-              >
+              ><small> ${entry.source === 'official' ? '官方' : '来客'}</small>
             </div>
             <button data-lore="${entry.id}">阅读设定</button>
           </article>`,
@@ -550,7 +547,7 @@ export function createGeneration(context) {
       ? {
           brief:
             $('#ai-character-brief').value.trim() ||
-            '召唤一位有清晰职业与性格的异界冒险者，按设定集文体输出，普攻、技能动作和机械效果互相对应，不生成奥义。',
+            '召唤一位有鲜明身份与性格的异界冒险者，按设定集文体输出，普攻、技能动作和机械效果互相对应，不生成奥义。',
           rollId: (session.ai.characterRollId ||= crypto.randomUUID()),
           existing: library().characters.map((entry) => ({
             name: entry.setting.name,

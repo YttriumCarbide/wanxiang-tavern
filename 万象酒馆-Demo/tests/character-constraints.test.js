@@ -190,7 +190,8 @@ test('server and browser stores inject the same current-tier instruction and nar
         request.messages.filter((m) => m.content.includes('【本次角色机制权限')).length,
         1,
       );
-      assert(request.messages.at(-1).content.includes('CHARACTER v4'));
+      assert(request.messages.some((message) => message.content.includes('CHARACTER v4')));
+      assert(request.messages.at(-1).content.includes('【数据生成输出边界】'));
       const marker = combined.indexOf('本次动态JSON Schema：');
       assert(marker >= 0);
       const expected = JSON.stringify(

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import path from 'node:path';
-import { legacySession } from './legacy-session.mjs';
+import { legacySession, openShelfPanel } from './legacy-session.mjs';
 import { worldFixture } from '../fixtures/multiverse.js';
 import { tavernPresetFixture } from '../fixtures/ai.js';
 
@@ -96,11 +96,18 @@ export async function worldsEmblemsChecks({ browser, baseURL, output }) {
         baseUrl: `http://127.0.0.1:${provider.address().port}/v1`,
         model: 'multiverse-fixture',
         tokenField: 'max_tokens',
+        apiKey: 'MULTIVERSE_FIXTURE_KEY',
       });
     const preset = await post('prompts/save', { preset: tavernPresetFixture() });
     for (const kind of ['script', 'map'])
       await post('prompts/select', { kind, id: preset.preset.id });
     await legacySession(page);
+    await page.addInitScript(() =>
+      localStorage.setItem(
+        'wanxiang.generation-options.v1',
+        JSON.stringify({ developerMode: true, allowRetreat: true, skipAiGeneration: false }),
+      ),
+    );
     await page.goto(baseURL);
     await page.waitForFunction(() => !!window.demo);
     await openGate();
@@ -146,12 +153,13 @@ export async function worldsEmblemsChecks({ browser, baseURL, output }) {
     await page.locator('#destination-close').click();
     await page.evaluate(() => {
       const lib = demo.getLibrary();
-      lib.emblems = [];
+      lib.emblems = ['tan-hongyu'];
       lib.progression = {
         settlements: ['one', 'two', 'three'],
         pandoraJoined: true,
         swapLesson: 'done',
-        emblemLesson: 'none',
+        emblemLesson: 'charge',
+        corridorRingAcquired: true,
       };
       localStorage.setItem('wanxiang.worldbooks.v1', JSON.stringify(lib));
       const options = JSON.parse(localStorage.getItem('wanxiang.generation-options.v1'));
@@ -162,13 +170,8 @@ export async function worldsEmblemsChecks({ browser, baseURL, output }) {
     await page.waitForFunction(() => !!window.demo);
     while (await page.locator('#emblem-dialogue').isVisible())
       await page.locator('#emblem-dialogue button').click();
-    const fate = page.frameLocator('#inn-frame iframe');
-    await fate.locator('#status').waitFor({ state: 'detached', timeout: 60000 });
-    await fate.locator('canvas').evaluate(() => window.assetPreview.placeNow('fate'));
-    await fate.locator('#emblem-open').click();
-    await page.locator('#emblem-dialogue').waitFor({ state: 'visible' });
-    while (await page.locator('#emblem-dialogue').isVisible())
-      await page.locator('#emblem-dialogue button').click();
+    // Rings now come from authored Boss events; this fixture starts with a legitimately owned ring.
+    await page.locator('#party-toggle').click();
     assert((await page.evaluate(() => demo.getLibrary())).emblems.includes('tan-hongyu'));
     await page.locator('[data-prepare-slot="0"]').click();
     await page.locator('[data-emblem-character]').selectOption('tan-hongyu');
@@ -281,7 +284,7 @@ export async function worldsEmblemsChecks({ browser, baseURL, output }) {
     const returned = page.frameLocator('#inn-frame iframe');
     await returned.locator('.spot[data-place="fate"].visible').waitFor({ timeout: 60000 });
     await page.screenshot({ path: path.join(output, 'return-facing-fate-table.png') });
-    await page.locator('#archives-open').click();
+    await openShelfPanel(page, 'archives');
     await page.locator('[data-archive-tab="enemies"]').click();
     assert((await page.locator('#archive-list').textContent()).includes('夜港执政官'));
     assert.deepEqual(errors, []);

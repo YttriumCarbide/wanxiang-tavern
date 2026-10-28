@@ -1,3 +1,4 @@
+import { upgradePlaytestWorldbook } from './playtest-upgrade.js';
 import { upgradeTutorialRevision } from './tutorial-revision.js';
 import { upgradeEnemyAppearanceRules } from './enemy-appearance-rules.js';
 import { upgradeProtagonistRules } from './protagonist-rules.js';
@@ -17,6 +18,11 @@ import { upgradeUniversalEnemies } from './universal-enemy-upgrade.js';
 import { upgradeCharacterConstraints } from './character-constraints-upgrade.js';
 import { upgradeForestWorldbook } from './forest-worldbook.js';
 import { upgradeCharacterIdentity } from './character-identity-upgrade.js';
+import { upgradeCombatControl } from './combat-control-upgrade.js';
+import { upgradeGenerationBoundary } from './generation-boundary-upgrade.js';
+import { upgradeBattleBalance } from './battle-balance-upgrade.js';
+import { upgradeFrostWorldbook } from './frost-worldbook.js';
+import { upgradeEnemyBaseWorldbook } from './enemy-base-upgrade.js';
 
 function checkedId(id) {
   if (typeof id !== 'string' || !/^[a-z0-9-]{1,100}$/.test(id)) throw Error('资料ID无效');
@@ -206,6 +212,60 @@ export async function createBrowserStores(database, readText, builtinBook) {
       ],
       ['world.character-identity.v40', true],
     ]);
+  if (!database.get('world.combat-control.v41'))
+    await database.write([
+      ['world.book.tavern-world', upgradeCombatControl(database.get('world.book.tavern-world'))],
+      ['world.combat-control.v41', true],
+    ]);
+  if (!database.get('world.generation-boundary.v42'))
+    await database.write([
+      [
+        'world.book.tavern-world',
+        upgradeGenerationBoundary(
+          database.get('world.book.tavern-world'),
+          await readText('worldbook/generation-boundary.md'),
+        ),
+      ],
+      ['world.generation-boundary.v42', true],
+    ]);
+  if (!database.get('world.battle-balance.v43'))
+    await database.write([
+      ['world.book.tavern-world', upgradeBattleBalance(database.get('world.book.tavern-world'))],
+      ['world.battle-balance.v43', true],
+    ]);
+  if (!database.get('world.frost-chapters.v44'))
+    await database.write([
+      ['world.book.tavern-world', upgradeFrostWorldbook(database.get('world.book.tavern-world'))],
+      ['world.frost-chapters.v44', true],
+    ]);
+  if (!database.get('world.enemy-base.v45'))
+    await database.write([
+      [
+        'world.book.tavern-world',
+        upgradeEnemyBaseWorldbook(database.get('world.book.tavern-world')),
+      ],
+      ['world.enemy-base.v45', true],
+    ]);
+  if (!database.get('world.playtest.v46')) {
+    const names = [
+      'character-definition',
+      'character-mechanics',
+      'character-output',
+      'growth-numbers',
+    ];
+    const rules = Object.fromEntries(
+      await Promise.all(
+        names.map(async (name) => [name, await readText('worldbook/' + name + '.md')]),
+      ),
+    );
+    await database.write([
+      [
+        'world.book.tavern-world',
+        upgradePlaytestWorldbook(database.get('world.book.tavern-world'), rules),
+      ],
+      ['world.playtest.v46', true],
+    ]);
+  }
   let worldSettings = normalizeWorldSettings(
     database.get('world.settings') || { globalSelect: ['tavern-world'] },
   );

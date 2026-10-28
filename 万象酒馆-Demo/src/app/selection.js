@@ -1,4 +1,5 @@
 import { targetsPlayer } from '../enemy-targets.js';
+import { canSoulRevive } from '../companion-mechanics.js';
 import { canCombine } from '../emblems.js';
 import { ITEMS } from '../content/items.js';
 import { preview, getEnemies, intent } from '../engine.js';
@@ -176,8 +177,22 @@ export function createSelection(context) {
               session.selection.pending.skill,
             );
       return (
-        a.target === 'enemy' ? getEnemies(session.battle.state).map((e) => e.id) : formation
-      ).filter((id) => session.battle.state.units[id]?.hp > 0);
+        a.target === 'enemy'
+          ? getEnemies(session.battle.state).map((e) => e.id)
+          : a.mechanic === 'soul-banquet'
+            ? formation
+                .slice(0, 3)
+                .filter(
+                  (id) =>
+                    id !== session.selection.pending.actor &&
+                    !Object.values(session.battle.forecast.final.soulLoans || {}).includes(id),
+                )
+            : formation
+      ).filter((id) =>
+        a.mechanic === 'soul-revive'
+          ? canSoulRevive(session.battle.forecast.final, id)
+          : session.battle.state.units[id]?.hp > 0,
+      );
     }
     return [];
   }

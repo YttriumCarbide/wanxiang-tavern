@@ -75,7 +75,7 @@ export function attackStyle(event) {
     event.after?.heroDefinitions?.[event.actor] ||
     event.after?.enemyDefinitions?.[event.actor] ||
     DEFINITIONS[event.actor];
-  return event.type === 'hero' || event.type === 'entrySkill'
+  return ['hero', 'entrySkill', 'counter'].includes(event.type)
     ? def?.weapon || 'sword'
     : event.type === 'enemy'
       ? def?.attackStyle

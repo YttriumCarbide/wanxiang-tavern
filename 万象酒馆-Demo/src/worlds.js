@@ -4,6 +4,11 @@ import { MAP_IDS } from './content/biomes.js';
 import { DEFINITIONS, BUFFS } from './data.js';
 import { ENEMY_ATTACKS } from './combat-art.js';
 import { HUMANOID_ENEMY_TEMPLATES, restoredEnemyPortrait } from './content/enemy-templates.js';
+import {
+  ENEMY_BASE_REVISION,
+  ENEMY_DESIGN_LIMITS,
+  restoreEnemyBaseValues,
+} from './enemy-base-values.js';
 
 export const BASE_WORLDS = Object.freeze(['ruins', 'forest', 'frost', 'forge', 'tide']);
 export const routeKey = (entry) => entry.world?.id || entry.map;
@@ -38,6 +43,7 @@ export function worldReference() {
       ...Object.values(DEFINITIONS).filter((entry) => entry.speed),
       ...HUMANOID_ENEMY_TEMPLATES,
     ].map(({ portrait, name }) => ({ portrait, name })),
+    enemyNumbers: structuredClone(ENEMY_DESIGN_LIMITS),
   };
 }
 const number = (value, min, max, label) => {
@@ -49,7 +55,7 @@ const text = (value, min, max, label) => {
     throw Error(label + '长度无效');
   return value.trim();
 };
-function effects(list, restoring = false) {
+function effects(list, restoring = false, boss = false) {
   if (!Array.isArray(list) || (!list.length && !restoring) || list.length > 5)
     throw Error('敌人效果数量无效');
   return list.flatMap((effect) => {
@@ -65,7 +71,16 @@ function effects(list, restoring = false) {
       if (restoring) return [];
       throw Error('禁止给玩家队友施加迟缓；迟缓只影响敌人的行动速度');
     }
-    const value = number(effect.value, 1, effect.type === 'buff' ? 3 : 40, '效果');
+    const value = number(
+      effect.value,
+      1,
+      effect.type === 'buff'
+        ? 3
+        : effect.type === 'damage'
+          ? ENEMY_DESIGN_LIMITS[boss ? 'boss' : 'ordinary'].damage[1]
+          : ENEMY_DESIGN_LIMITS.support[1],
+      '效果',
+    );
     if (effect.type === 'buff' && (!BUFFS[effect.buff] || effect.buff === 'balance'))
       throw Error('敌人状态无效');
     return [
@@ -78,7 +93,7 @@ function effects(list, restoring = false) {
     ];
   });
 }
-function moves(list, restoring = false) {
+function moves(list, restoring = false, boss = false) {
   if (!Array.isArray(list) || !list.length || list.length > 6) throw Error('敌人行动意图无效');
   return list.map((move) => {
     const slots = move.slots || [move.slot];
@@ -94,7 +109,7 @@ function moves(list, restoring = false) {
       name: text(move.name, 1, 40, '意图名称'),
       text: text(move.text, 1, 300, '意图说明'),
       slots,
-      effects: effects(move.effects, restoring),
+      effects: effects(move.effects, restoring, boss),
       ...(move.selfShield ? { selfShield: number(move.selfShield, 1, 30, '护盾') } : {}),
     };
   });
@@ -102,6 +117,7 @@ function moves(list, restoring = false) {
 export function normalizeEnemy(enemy, { restoring = false } = {}) {
   if (!enemy || !/^enemy-[a-z0-9-]{1,70}$/.test(enemy.id) || DEFINITIONS[enemy.id])
     throw Error('新敌人ID无效');
+  if (restoring) enemy = restoreEnemyBaseValues(enemy);
   const appearances = new Set(worldReference().appearances.map((entry) => entry.portrait));
   const portrait = restoring ? restoredEnemyPortrait(enemy.portrait) : enemy.portrait;
   if (!appearances.has(portrait) || !ENEMY_ATTACKS.includes(enemy.attackStyle))
@@ -113,17 +129,18 @@ export function normalizeEnemy(enemy, { restoring = false } = {}) {
     name: text(enemy.name, 1, 40, '敌人名称'),
     portrait,
     color: /^#[0-9a-f]{6}$/i.test(enemy.color) ? enemy.color : '#b3a996',
-    hp: number(enemy.hp, 10, enemy.boss ? 900 : 300, '生命'),
+    baseRevision: ENEMY_BASE_REVISION,
+    hp: number(enemy.hp, ...ENEMY_DESIGN_LIMITS[enemy.boss ? 'boss' : 'ordinary'].hp, '生命'),
     mp: 0,
     speed: number(enemy.speed, 1, 6, '速度'),
     attackStyle: enemy.attackStyle,
     buffs: {},
-    intents: moves(enemy.intents, restoring),
+    intents: moves(enemy.intents, restoring, !!enemy.boss),
     ...(enemy.boss
       ? {
           boss: true,
           phaseThreshold: 0.5,
-          enragedIntents: moves(enemy.enragedIntents || enemy.intents, restoring),
+          enragedIntents: moves(enemy.enragedIntents || enemy.intents, restoring, true),
         }
       : {}),
   };

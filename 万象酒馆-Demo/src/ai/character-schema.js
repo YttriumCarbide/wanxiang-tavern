@@ -31,7 +31,7 @@ function legacyCharacterSchema({ acceptLegacyNames = false } = {}) {
   };
   const active = ability({
     ap: integer(1, 2),
-    mp: integer(0, 10),
+    mp: integer(0, 15),
     target: choice(['enemy', 'ally', 'self', 'allAllies', 'allEnemies']),
     effects: array(effect, 1, 4),
   });
@@ -84,7 +84,6 @@ function legacyCharacterSchema({ acceptLegacyNames = false } = {}) {
         description: '自由人物设定，可写文字或数字，也可留空或省略；不参与游戏数值及内容校验。',
       },
       appearance: string(2000),
-      profession: namedDescription,
       personality: {
         ...string(2400),
         description:
@@ -121,7 +120,7 @@ function legacyCharacterSchema({ acceptLegacyNames = false } = {}) {
   if (acceptLegacyNames)
     Object.assign(schema.properties.data.properties, {
       name: string(30),
-      title: string(30),
+      title: { type: 'string', maxLength: 30 },
       attackName: string(30),
     });
   return schema;
@@ -180,6 +179,10 @@ export function characterInputSchema(version = 3) {
   schema.properties.setting.properties.personality = {
     anyOf: [string(2400), object({ name: string(30), description: string(2400) })],
   };
+  schema.properties.setting.properties.profession = object({
+    name: string(30),
+    description: string(1200),
+  });
   return schema;
 }
 

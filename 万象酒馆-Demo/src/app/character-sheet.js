@@ -125,7 +125,6 @@ export function characterSheet(entry, equipment = [], options = {}) {
           <span class="identity-rarity-tag rarity-${growth.rarity}"
             >${RARITIES[growth.rarity].name}</span
           >
-          <span class="identity-profession-tag">${escapeText(model.profession)}</span>
         </div>
         <div class="identity-exp-widget" title="经验值：${growth.xp} / ${nextExp} EXP">
           <div class="exp-widget-labels">

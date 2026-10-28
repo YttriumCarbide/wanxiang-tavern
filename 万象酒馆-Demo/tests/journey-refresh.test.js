@@ -63,11 +63,8 @@ test('ordinary victory preserves resources and the third battle grants exactly o
     const changes = chooseRest(expedition, choice);
     assert(changes.length > 0);
     for (const change of changes) {
-      assert.equal(
-        change.after,
-        choice === 'sleep' ? Math.min(change.maxHp, 4 + Math.floor(change.maxHp * 0.4)) : 4,
-      );
-      assert.equal(change.mp, choice === 'meal' ? change.maxMp : 1);
+      assert.equal(change.after, choice === 'sleep' ? 4 + Math.ceil((change.maxHp - 4) * 0.6) : 4);
+      assert.equal(change.mp, choice === 'meal' ? 1 + Math.ceil((change.maxMp - 1) * 0.6) : 1);
     }
     assert.throws(() => chooseRest(expedition, choice));
     assert.equal(beginEncounter(expedition).encounter, 3);
@@ -180,7 +177,10 @@ test('checkpoint captures accepted rest coherently but loading discards battle a
   const restored = JSON.parse(values.get(key)).journey.expedition;
   assert.equal(restored.restPending, false);
   assert.equal(restored.pendingResult.encounter, 2);
-  assert.equal(restored.carried.units.aegis.mp, restored.carried.units.aegis.maxMp);
+  assert.equal(
+    restored.carried.units.aegis.mp,
+    2 + Math.ceil((restored.carried.units.aegis.maxMp - 2) * 0.6),
+  );
   assert.throws(() => chooseRest(restored, 'sleep'));
   const inventory = structuredClone(context.session.ai.library.inventory);
   assert.equal(checkpoint.pending(), null);

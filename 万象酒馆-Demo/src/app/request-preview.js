@@ -16,6 +16,8 @@ export function formatRequestPreview(result) {
     );
   if (result.transport?.processingStatus && Object.keys(result.transport.processingStatus).length)
     lines.push('预设特殊处理：' + JSON.stringify(result.transport.processingStatus));
+  if (result.transport?.contextTool)
+    lines.push('上下文工具（随请求发送）：' + JSON.stringify(result.transport.contextTool));
   if (result.transport?.presetProcessing?.output)
     lines.push('输出预处理：' + result.transport.presetProcessing.output);
   if (result.transport?.advice)

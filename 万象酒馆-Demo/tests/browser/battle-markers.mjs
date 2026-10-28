@@ -101,11 +101,20 @@ export async function battleMarkerChecks({ browser, baseURL, output }) {
         planning: { actionLabel: (action) => action.skill || action.kind },
       };
       context.roster = createRoster(context);
+      session.selection.selected = actor;
+      const { createDetails } = await import('/src/app/details.js');
+      createDetails(context).renderDetails(state);
       const timeline = createTimeline(context);
       timeline.renderTimeline();
       window.markerFixture = { session, timeline, engine, actor, binder };
     });
     assert.equal(await page.locator('.skill-repeat').count(), 1);
+    assert.equal(
+      await page
+        .locator('.details-actions-scroll')
+        .evaluate((element) => getComputedStyle(element).overflowY),
+      'visible',
+    );
     assert.equal(await page.locator('.skill-repeat').textContent(), '×2');
     assert.equal(await page.locator('.time-cell.bound .timeline-chain').count(), 1);
     assert.match(await page.locator('.time-cell.bound').getAttribute('data-tooltip'), /禁锢/);
@@ -179,11 +188,47 @@ export async function battleMarkerChecks({ browser, baseURL, output }) {
       };
       context.renderer.render();
       await createPlayback(context).commit();
+      const phaseState = session.battle.state;
+      const boss = phaseState.enemyIds[0];
+      Object.assign(phaseState.enemyDefinitions[boss], {
+        boss: true,
+        phaseThreshold: 0.5,
+        speed: 1,
+        intents: [{ name: '等待', slot: 0, effects: [] }],
+        enragedIntents: [{ name: '第二阶段', slot: 0, effects: [] }],
+      });
+      Object.assign(phaseState.units[boss], { hp: 65, maxHp: 115, enraged: false, buffs: {} });
+      phaseState.units[phaseState.enemyIds[1]].hp = 0;
+      phaseState.units[actor].buffs = {};
+      phaseState.units[actor].used = 0;
+      phaseState.units[binder].used = 0;
+      session.battle.plan = [
+        engine.makeAction(phaseState, actor, 'burst', boss, 0),
+        engine.makeAction(phaseState, binder, 'attack', boss, 1),
+      ];
+      session.battle.forecast = engine.preview(phaseState, session.battle.plan);
+      if (!session.battle.forecast.valid)
+        throw Error(JSON.stringify(session.battle.forecast.invalid));
+      timeline.renderTimeline();
+      const playerSkip = document.querySelector('.time-action.bound')?.textContent;
+      const phaseEvents = [];
+      let visibleFlash = false;
+      session.runtime.view.playEvent = (event, before) => {
+        phaseEvents.push(event.type);
+        const duration = view.playEvent(event, before);
+        if (event.type === 'bossPhase')
+          visibleFlash ||= !!document.querySelector('.boss-phase-flash');
+        return duration;
+      };
+      await createPlayback(context).commit();
       view.dispose();
       return {
         played,
         expected: expected.map((event) => event.after.units[state.enemyIds[0]].hp),
         binder,
+        playerSkip,
+        visibleFlash,
+        phaseEvents,
       };
     });
     assert.deepEqual(
@@ -199,6 +244,10 @@ export async function battleMarkerChecks({ browser, baseURL, output }) {
       'Both real attack animations start on separate beats',
     );
     assert.deepEqual(errors, []);
+    assert.match(animation.playerSkip, /禁锢.*跳过/);
+    assert.equal(animation.visibleFlash, true);
+    assert.equal(animation.phaseEvents.filter((type) => type === 'bossPhase').length, 1);
+    assert.equal(animation.phaseEvents.filter((type) => type === 'hero').length, 1);
     return {
       overloadUsesActualEvent: true,
       bindMatchesCancelledSlot: true,

@@ -22,10 +22,10 @@ test('identity and motion prose join compiled numbers without persisting another
   const sheet = characterPresentation(entry);
   assert.equal(sheet.gender, '男');
   assert.equal(sheet.age, '二十九岁');
-  assert.equal(sheet.profession, '巡灯术士');
+  assert.equal(sheet.profession, undefined);
   assert.deepEqual(
     sheet.sections.map((section) => section.title),
-    ['外貌', '职业', '性格', '经历'],
+    ['外貌', '性格', '经历'],
   );
   assert.equal(sheet.attack.name, entry.combat.attackName);
   assert.deepEqual(
@@ -34,7 +34,7 @@ test('identity and motion prose join compiled numbers without persisting another
   );
   const markup = characterSheet(entry);
   assert(markup.includes('基础伤害 10') && markup.includes('迟缓 +1层'));
-  assert(markup.includes('1 AP · 2 sp'));
+  assert(markup.includes('1 AP · 3 sp'));
   assert(markup.includes(sheet.skills[0].description));
   assert.equal((markup.match(/<details /g) || []).length, 3);
   assert.equal(JSON.stringify(entry), before);

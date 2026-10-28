@@ -240,6 +240,7 @@ export function createAiPipeline({
       models,
       outputEnvelope: !models,
       outputTool: prepared?.transport?.outputTool,
+      contextTool: prepared?.transport?.contextTool,
       outputProcessing: ['chat', 'quick-chat'].includes(kind)
         ? prepared?.transport?.presetProcessing
         : null,

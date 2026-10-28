@@ -121,6 +121,12 @@ export async function equipmentChecks({ browser, baseURL, output }) {
     await page.locator('#forge-status').filter({ hasText: '已' }).waitFor();
     await page.locator('[data-forge-page="exchange"]').click();
     await page.locator('[data-buy-equipment]').waitFor();
+    assert.equal(
+      await page.locator('.forge-item > p').count(),
+      0,
+      'Only the compiled equipment effect is shown',
+    );
+    assert.equal(await page.locator('.forge-effects').count(), 1);
     await page.locator('[data-buy-equipment]').click();
     assert.equal((await page.evaluate(() => demo.getLibrary())).inventory.ether, 30);
     await page.screenshot({ path: path.join(output, 'ether-construction.png') });
@@ -206,6 +212,7 @@ export async function equipmentChecks({ browser, baseURL, output }) {
     await page.locator('#destination-regions button[data-region="forest"]').click();
     await page.locator('#destination-region-confirm').click();
     await page.locator('#destination-start').click();
+    await page.locator('#prepare-done').click();
     await page.locator('#prepare-title').filter({ hasText: '正在生成剧本' }).waitFor();
     await page.locator('#guide-dialogue').waitFor({ state: 'visible' });
     while (await page.locator('#guide-dialogue').isVisible())
@@ -228,11 +235,13 @@ export async function equipmentChecks({ browser, baseURL, output }) {
         })),
       ),
     );
-    const deployed = (await page.evaluate(() => demo.getLibrary())).party.includes(entry.id);
-    await source.dragTo(page.locator('[data-prepare-slot="0"]'));
+    assert(
+      await page
+        .locator('#party-panel')
+        .evaluate((panel) => panel.classList.contains('formation-locked')),
+    );
+    assert.equal(await page.locator('#prepare-pool').isVisible(), false);
     const after = (await page.evaluate(() => demo.getLibrary())).party;
-    if (deployed) assert.equal(after[0], entry.id);
-    else assert(!after.includes(entry.id));
     assert.deepEqual(after.filter(Boolean).sort(), before);
     await page.screenshot({ path: path.join(output, 'script-generating-preparation.png') });
     release();
@@ -264,6 +273,8 @@ export async function equipmentChecks({ browser, baseURL, output }) {
     await page.locator('#destination-regions button[data-region="forest"]').click();
     await page.locator('#destination-region-confirm').click();
     await page.locator('#destination-start').click();
+    await page.locator('#prepare-done').click();
+    await page.locator('#prepare-done').click();
     await page
       .waitForFunction(() => demo.getStatus().mode === 'battle', null, { timeout: 60000 })
       .catch(async (error) => {

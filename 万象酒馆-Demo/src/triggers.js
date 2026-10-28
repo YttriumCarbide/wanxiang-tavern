@@ -230,6 +230,29 @@ export function conditionsMet(state, owner, conditions = [], context = {}) {
     return type.endsWith('Below') ? ratio * 100 <= value : ratio * 100 >= value;
   });
 }
+export function ruleUsageKey(state, owner, rule) {
+  const scope = rule.scope || 'expedition';
+  const boundary =
+    scope === 'round'
+      ? `:round:${state.encounter || 0}:${state.phase}:${state.round}`
+      : scope === 'battle'
+        ? `:battle:${state.encounter || 0}`
+        : '';
+  return owner + ':' + rule.key + boundary;
+}
+
+/** Availability is derived from the engine's own conditions and use counters. */
+export function ruleAvailable(state, owner, rule) {
+  return (
+    conditionsMet(
+      state,
+      owner,
+      (rule.conditions || []).filter((condition) => condition.subject !== 'target'),
+    ) &&
+    (rule.mode === 'continuous' ||
+      (state.procUses?.[ruleUsageKey(state, owner, rule)] || 0) < rule.limit)
+  );
+}
 export function triggerTargets(state, owner, target, event = {}) {
   const allies = Object.values(state.units).filter(
     (u) => u.side === state.units[owner].side && u.hp > 0,

@@ -1,4 +1,5 @@
 import { claimKillExperience } from '../growth.js';
+import { claimCooperationAffection } from '../cooperation.js';
 import { advance } from '../engine.js';
 import { playbackBeats, PLAYBACK_BEAT_MS } from '../playback-timing.js';
 import { query as $, sleep } from './dom.js';
@@ -78,6 +79,12 @@ export function createPlayback(context) {
           context.renderer.render();
           session.runtime.view?.playEvent(event, before);
           context.audio.combat(event, before, session.battle.speed);
+          if (event.type === 'bossPhase')
+            await showTurnNotice(
+              '第二阶段',
+              `${event.after.heroDefinitions?.[event.actor]?.name || event.after.enemyDefinitions?.[event.actor]?.name || event.actor} · 冲击禁锢，本回合剩余行动跳过`,
+              2200 * session.battle.speed,
+            );
         }
         context.renderer.render();
         await sleep(PLAYBACK_BEAT_MS / session.battle.speed);
@@ -103,6 +110,13 @@ export function createPlayback(context) {
       );
       session.ai.library.inventory.items = structuredClone(result.final.items);
       context.companionEvents?.accepted(session.battle.state, result);
+      const cooperation = claimCooperationAffection(
+        session.ai.library,
+        session.journey.expedition,
+        result,
+      );
+      if (cooperation?.delta)
+        context.shell.toast(`合作击破 · ${cooperation.name}好感 +${cooperation.delta}`);
       context.emblems?.accepted(result);
       session.battle.state = advance(result);
       context.generation.save();

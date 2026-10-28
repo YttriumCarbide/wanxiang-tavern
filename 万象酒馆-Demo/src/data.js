@@ -1,5 +1,6 @@
 import { CHANGJING_YUEXI } from './content/changjing-yuexi.js';
 import { FOREST_ENEMIES, FOREST_BOSSES } from './content/forest-adversaries.js';
+import { FROST_ENEMIES, FROST_BOSSES } from './content/frost-adversaries.js';
 import { UNIVERSAL_ENEMIES, UNIVERSAL_BOSSES } from './content/universal-adversaries.js';
 import {
   EXTRA_ENEMIES,
@@ -21,7 +22,7 @@ export const BUFFS = {
   bind: {
     name: '禁锢',
     icon: '禁',
-    text: '取消敌人本回合尚未执行的行动，回合结束解除；层数不延长持续时间。',
+    text: '跳过目标本回合尚未执行的主动行动，回合结束解除；层数不延长持续时间。',
   },
   strength: { name: '力量', icon: '力', text: '每次攻击增加层数对应的伤害' },
   guard: { name: '守势', icon: '守', text: '获得护盾时增加层数对应的护盾' },
@@ -289,7 +290,7 @@ export const ENEMIES = [
     title: '弱怪 / 简单攻击',
     color: '#91bb78',
     portrait: 'moss-slime',
-    hp: 22,
+    hp: 26,
     mp: 0,
     speed: 3,
     limit: 1,
@@ -298,8 +299,8 @@ export const ENEMIES = [
       {
         name: '轻撞左位',
         slot: 0,
-        text: '攻击左位6伤害',
-        effects: [{ type: 'damage', value: 6 }],
+        text: '攻击左位7伤害',
+        effects: [{ type: 'damage', value: 7 }],
       },
     ],
   },
@@ -310,7 +311,7 @@ export const ENEMIES = [
     title: '弱怪 / 缓慢攻击',
     color: '#d1a776',
     portrait: 'sprout',
-    hp: 20,
+    hp: 24,
     mp: 0,
     speed: 1,
     limit: 1,
@@ -319,8 +320,8 @@ export const ENEMIES = [
       {
         name: '敲打右位',
         slot: 2,
-        text: '攻击右位5伤害',
-        effects: [{ type: 'damage', value: 5 }],
+        text: '攻击右位6伤害',
+        effects: [{ type: 'damage', value: 6 }],
       },
     ],
   },
@@ -331,7 +332,7 @@ export const ENEMIES = [
     title: '弱怪 / 薄盾',
     color: '#a9b3b6',
     portrait: 'pebble',
-    hp: 28,
+    hp: 34,
     mp: 0,
     speed: 2,
     limit: 1,
@@ -340,9 +341,9 @@ export const ENEMIES = [
       {
         name: '缩壳碰撞',
         slot: 1,
-        text: '获得3护盾，攻击中位6伤害',
+        text: '获得3护盾，攻击中位7伤害',
         selfShield: 3,
-        effects: [{ type: 'damage', value: 6 }],
+        effects: [{ type: 'damage', value: 7 }],
       },
     ],
   },
@@ -353,7 +354,7 @@ export const ENEMIES = [
     title: '快速 / 流血',
     color: '#b46e57',
     portrait: 'hound',
-    hp: 36,
+    hp: 43,
     mp: 0,
     speed: 5,
     limit: 1,
@@ -362,17 +363,17 @@ export const ENEMIES = [
       {
         name: '撕咬左位',
         slot: 0,
-        text: '攻击左位12伤害，施加3流血',
+        text: '攻击左位13伤害，施加3流血',
         effects: [
-          { type: 'damage', value: 12 },
+          { type: 'damage', value: 13 },
           { type: 'buff', buff: 'bleed', value: 3 },
         ],
       },
       {
         name: '扑袭右位',
         slot: 2,
-        text: '攻击右位13伤害',
-        effects: [{ type: 'damage', value: 13 }],
+        text: '攻击右位14伤害',
+        effects: [{ type: 'damage', value: 14 }],
       },
     ],
   },
@@ -383,7 +384,7 @@ export const ENEMIES = [
     title: '耐久 / 护盾',
     color: '#8d9fa6',
     portrait: 'golem',
-    hp: 55,
+    hp: 66,
     mp: 0,
     speed: 3,
     limit: 1,
@@ -392,16 +393,16 @@ export const ENEMIES = [
       {
         name: '筑壳震击',
         slot: 1,
-        text: '获得7护盾，再攻击中位9伤害',
+        text: '获得7护盾，再攻击中位10伤害',
         selfShield: 7,
-        effects: [{ type: 'damage', value: 9 }],
+        effects: [{ type: 'damage', value: 10 }],
       },
       {
         name: '重锤左位',
         slot: 0,
-        text: '攻击左位16伤害，施加1易伤',
+        text: '攻击左位17伤害，施加1易伤',
         effects: [
-          { type: 'damage', value: 16 },
+          { type: 'damage', value: 17 },
           { type: 'buff', buff: 'vulnerable', value: 1 },
         ],
       },
@@ -414,7 +415,7 @@ export const ENEMIES = [
     title: '法术 / 中毒',
     color: '#b097c6',
     portrait: 'cultist',
-    hp: 36,
+    hp: 43,
     mp: 0,
     speed: 1,
     limit: 1,
@@ -423,18 +424,18 @@ export const ENEMIES = [
       {
         name: '毒焰右位',
         slot: 2,
-        text: '攻击右位8伤害，施加4中毒',
+        text: '攻击右位9伤害，施加4中毒',
         effects: [
-          { type: 'damage', value: 8 },
+          { type: 'damage', value: 9 },
           { type: 'buff', buff: 'poison', value: 4 },
         ],
       },
       {
         name: '衰败中位',
         slot: 1,
-        text: '攻击中位9伤害，施加1虚弱',
+        text: '攻击中位10伤害，施加1虚弱',
         effects: [
-          { type: 'damage', value: 9 },
+          { type: 'damage', value: 10 },
           { type: 'buff', buff: 'weak', value: 1 },
         ],
       },
@@ -443,6 +444,7 @@ export const ENEMIES = [
   ...EXTRA_ENEMIES,
   ...UNIVERSAL_ENEMIES,
   ...FOREST_ENEMIES,
+  ...FROST_ENEMIES,
 ];
 export const BOSSES = [
   {
@@ -453,7 +455,7 @@ export const BOSSES = [
     boss: true,
     color: '#dfb46d',
     portrait: 'boss-gate',
-    hp: 110,
+    hp: 126,
     mp: 0,
     speed: 3,
     limit: 1,
@@ -491,7 +493,7 @@ export const BOSSES = [
     boss: true,
     color: '#bdaaed',
     portrait: 'boss-bloom',
-    hp: 100,
+    hp: 115,
     mp: 0,
     speed: 4,
     limit: 1,
@@ -538,6 +540,7 @@ export const BOSSES = [
   ...EXTRA_BOSSES,
   ...UNIVERSAL_BOSSES,
   ...FOREST_BOSSES,
+  ...FROST_BOSSES,
 ];
 export const DEFINITIONS = Object.fromEntries(
   [...HEROES, ...ENEMIES, ...BOSSES, ...RUINS_ADVERSARIES, ...RUINS_BOSSES].map((d) => [d.id, d]),
@@ -600,7 +603,9 @@ export function encounterSpec(index, boss = 'bossGate') {
                   ? ['tombBeetle', boss, 'cultistSpecter']
                   : boss === 'apepLamb'
                     ? ['blackOoze', boss, 'voidParasite']
-                    : ['hound', boss, 'hexer'];
+                    : boss === 'ares'
+                      ? ['aresCannonLeft', boss, 'aresCannonRight']
+                      : ['hound', boss, 'hexer'];
   } else spec.enemyIds = [...spec.enemyIds];
   return spec;
 }

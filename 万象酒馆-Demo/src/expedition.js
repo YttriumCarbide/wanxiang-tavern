@@ -1,6 +1,7 @@
 import { ENCOUNTERS, encounterSpec } from './data.js';
 import { newEncounter, campRest } from './engine.js';
 import { explorationSpec } from './exploration.js';
+import { STORY_RING_CHARGE } from './content/journey-rules.js';
 export function newExpedition(boss = 'bossGate', heroDefinitions = {}, exploration = null) {
   return {
     id: crypto.randomUUID(),
@@ -24,8 +25,11 @@ export function beginEncounter(expedition) {
   return newEncounter(
     {
       ...currentEncounterSpec(expedition),
-      ...(expedition.corridorRing?.encounter === expedition.index
-        ? { initialEmblemCharge: { [expedition.corridorRing.actor]: 6 } }
+      ...(expedition.corridorRing?.actor && expedition.corridorRing.encounter === expedition.index
+        ? { initialEmblemCharge: { [expedition.corridorRing.actor]: STORY_RING_CHARGE } }
+        : {}),
+      ...(expedition.emblemArrival?.recipient?.actor && expedition.index === 4
+        ? { initialEmblemCharge: { [expedition.emblemArrival.recipient.actor]: STORY_RING_CHARGE } }
         : {}),
     },
     expedition.carried,

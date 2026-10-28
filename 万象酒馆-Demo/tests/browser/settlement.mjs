@@ -133,7 +133,11 @@ export async function settlementChecks({ browser, baseURL, output }) {
       };
     });
     assert(recovery.continued && !recovery.pending);
-    assert(recovery.units.every((unit) => unit.mp === unit.maxMp && unit.hp === 10));
+    assert(
+      recovery.units.every(
+        (unit) => unit.mp === 1 + Math.ceil((unit.maxMp - 1) * 0.6) && unit.hp === 10,
+      ),
+    );
     await page.evaluate(() => {
       window.settlementFixture.settlement.dispose();
       window.settlementFixture.events.dispose();

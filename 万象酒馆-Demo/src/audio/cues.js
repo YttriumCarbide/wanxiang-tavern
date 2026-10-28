@@ -14,11 +14,12 @@ export function combatSoundStyle(style) {
 
 /** Only executed combat events create cues; forecasts remain silent. */
 export function combatCues(event, before, speed = 1) {
+  if (event.type === 'bossPhase') return [{ name: 'combine', delay: 0 }];
   const deaths = Object.keys(before.units).filter(
     (id) =>
       before.units[id].hp > 0 && event.after?.units[id]?.hp === 0 && definition(before, id)?.boss,
   );
-  const timing = ['hero', 'enemy'].includes(event.type)
+  const timing = ['hero', 'enemy', 'counter'].includes(event.type)
     ? ((ATTACK_TIMING[attackStyle(event)] || 640) * 0.7) / (1000 * speed)
     : 0;
   const deathCues = deaths.flatMap(() => [
@@ -28,7 +29,7 @@ export function combatCues(event, before, speed = 1) {
   ]);
   if (event.type === 'item') return [{ name: 'cast', delay: 0 }];
   if (event.type === 'swap') return [{ name: 'exchange', delay: 0 }];
-  if (!['hero', 'enemy', 'entrySkill'].includes(event.type)) return deathCues;
+  if (!['hero', 'enemy', 'counter', 'entrySkill'].includes(event.type)) return deathCues;
   const friendly =
     event.targets.length > 0 &&
     event.targets.every((id) => before.units[id]?.side === before.units[event.actor]?.side);

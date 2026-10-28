@@ -39,6 +39,9 @@ export function createGalPlayer(context) {
   let cast = [];
   let read = [];
   let skip = false;
+  let finishing = false;
+  let transitionEpoch = 0;
+  let exitAnimations = [];
   const workspace = createGalWorkspace(panel, events, {
     show: showPanel,
     exit: () => part('[data-gal="close"]').click(),
@@ -49,10 +52,16 @@ export function createGalPlayer(context) {
   });
   decorateGalButtons(panel);
   function showPanel(title) {
+    transitionEpoch++;
+    for (const animation of exitAnimations) animation.cancel();
+    exitAnimations = [];
+    delete panel.dataset.leaving;
     // A body-owned popover has no inherited dialog filter/backdrop rectangle.
-    const modal = [...document.querySelectorAll('dialog[open]')]
-      .filter((dialog) => dialog.matches(':modal'))
-      .at(-1);
+    const modal =
+      document.activeElement?.closest('dialog:modal') ||
+      [...document.querySelectorAll('dialog[open]')]
+        .filter((dialog) => dialog.matches(':modal'))
+        .at(-1);
     (modal || document.body).append(panel);
     panel.hidden = false;
     document.body.classList.add('gal-playing');
@@ -72,7 +81,15 @@ export function createGalPlayer(context) {
     const members = library.characters.map((member) => {
       const official = member.source === 'official';
       const key = member.combat?.id;
-      const sprite = official ? { edith: 'edith', pandora: 'pandora', aegis: 'yuexi' }[key] : null;
+      const sprite = official
+        ? {
+            edith: 'edith',
+            pandora: 'pandora',
+            aegis: 'yuexi',
+            'luo-gongxu': 'luo-gongxu',
+            'silica-laps': 'silica-laps',
+          }[key]
+        : null;
       return {
         id: member.id,
         name: member.setting.name,
@@ -106,6 +123,10 @@ export function createGalPlayer(context) {
     typing = false;
   }
   function hide() {
+    transitionEpoch++;
+    for (const animation of exitAnimations) animation.cancel();
+    exitAnimations = [];
+    delete panel.dataset.leaving;
     stop();
     panel.dataset.playing = 'false';
     panel.classList.remove('gal-ui-hidden');
@@ -117,14 +138,69 @@ export function createGalPlayer(context) {
     part('.gal-history').hidden = true;
     stage = [];
   }
-  function finish(completed = true) {
+  async function animateExit() {
+    stop();
+    if (panel.hidden) return true;
+    const epoch = ++transitionEpoch;
+    panel.dataset.leaving = 'true';
+    const duration = matchMedia('(prefers-reduced-motion: reduce)').matches ? 1 : 360;
+    exitAnimations = [];
+    for (const [index, image] of [...part('.gal-cast').children].entries()) {
+      const direction =
+        image.dataset.position === 'left'
+          ? -1
+          : image.dataset.position === 'right'
+            ? 1
+            : index % 2
+              ? 1
+              : -1;
+      exitAnimations.push(
+        image.animate(
+          [
+            { opacity: 1, translate: '0 0' },
+            { opacity: 0, translate: direction * 110 + 'vw 0' },
+          ],
+          { duration, easing: 'cubic-bezier(.4,0,.6,1)', fill: 'forwards' },
+        ),
+      );
+    }
+    for (const node of panel.querySelectorAll(
+      '.gal-reading,.gal-composer,.gal-actionbar,.gal-side,.gal-archive',
+    )) {
+      if (node.hidden) continue;
+      exitAnimations.push(
+        node.animate(
+          [
+            { opacity: 1, translate: '0 0' },
+            { opacity: 0, translate: '0 110%' },
+          ],
+          { duration, easing: 'ease-in', fill: 'forwards' },
+        ),
+      );
+    }
+    await Promise.all(exitAnimations.map((animation) => animation.finished.catch(() => {})));
+    if (epoch !== transitionEpoch) return false;
+    for (const animation of exitAnimations) animation.cancel();
+    exitAnimations = [];
+    delete panel.dataset.leaving;
+    part('.gal-cast').replaceChildren();
+    stage = [];
+    return true;
+  }
+  async function finish(completed = true, closeWorkspace = false) {
     if (!current) return;
     const job = current;
     current = null;
-    if (workspace.active) {
-      stop();
-      workspace.playing(false);
-    } else hide();
+    finishing = true;
+    const exited = completed ? await animateExit() : true;
+    if (exited) {
+      if (closeWorkspace) workspace.close();
+      if (workspace.active) {
+        stop();
+        workspace.playing(false);
+      } else hide();
+    }
+    finishing = false;
     job.resolve();
     document.dispatchEvent(
       new CustomEvent('gal-finished', { detail: { owner: job.owner, completed } }),
@@ -222,7 +298,8 @@ export function createGalPlayer(context) {
     part('[data-gal="journal"]').hidden =
       current.mandatory === true || !context.session.ai.activeScript || Boolean(workspace.active);
     renderCast(narration ? null : actor?.id);
-    const name = narration ? '旁白' : actor?.name || beat.speaker || '来客';
+    const level = beat.speaker?.match(/\s*·\s*Lv\.\d+$/u)?.[0] || '';
+    const name = narration ? '旁白' : actor ? actor.name + level : beat.speaker || '来客';
     part('.gal-speaker span').textContent = name;
     part('.gal-speaker small').textContent = actor?.user
       ? '你的视角'
@@ -265,7 +342,7 @@ export function createGalPlayer(context) {
     }
   }
   function startNext() {
-    if (current || !pending.length) return;
+    if (current || finishing || !pending.length) return;
     current = pending.shift();
     skip = false;
     part('[data-gal="skip"]').setAttribute('aria-pressed', 'false');
@@ -285,9 +362,14 @@ export function createGalPlayer(context) {
     event.stopPropagation();
     const action = event.target.closest('[data-gal]')?.dataset.gal;
     if (action === 'close') {
-      workspace.close();
-      if (current) finish();
-      else hide();
+      if (current) void finish(true, true);
+      else if (panel.dataset.leaving !== 'true')
+        void animateExit().then((exited) => {
+          if (exited) {
+            workspace.close();
+            hide();
+          }
+        });
     }
     if (action === 'back' && current) {
       auto = skip = false;

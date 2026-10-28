@@ -173,7 +173,7 @@ test('legacy regeneration becomes a finite once-per-battle grant, and Pandora pa
   const result = resolve(entry, [makeSwap('serin', 1, 0)]);
   const event = result.events.find((item) => item.type === 'entrySkill');
   assert.equal(event.after.units.serin.hp, 95);
-  assert.equal(event.after.units['target-1'].hp, 1000);
+  assert.equal(event.after.units['target-1'].hp, entry.units['target-1'].hp);
   assert.equal(event.after.units['target-1'].buffs.bind, 1);
   assert(
     result.events.some(
@@ -231,7 +231,7 @@ test('mask passive adds exact max-hp damage, charges only other allies, and reso
   for (const unit of Object.values(state.units))
     if (unit.side === 'hero' && unit.id !== 'aegis') unit.hp = 80;
   const hit = cast(state, 'attack');
-  assert.equal(hit.final.units['target-0'].hp, 970);
+  assert.equal(hit.final.units['target-0'].hp, state.units['target-0'].hp - 30);
   assert.equal(hit.final.units.aegis.hp, 80);
   assert.equal(hit.final.units.lyria.hp, 70);
   state.units.lyria.hp = 5;
@@ -263,7 +263,7 @@ test('sacrifice fires once on an enemy death, heals surviving enemies and grants
   const result = cast(next, 'attack');
   assert.equal(result.final.units.lyria.hp, 0);
   assert.equal(result.final.units['target-0'].hp, 0);
-  assert.equal(result.final.units['target-1'].hp, 1000);
+  assert.equal(result.final.units['target-1'].hp, state.units['target-1'].maxHp);
   assert.equal(result.final.units.aegis.maxHp, 120);
   assert.equal(result.final.units.aegis.maxMp, 120);
   assert.equal(result.final.heroDefinitions.aegis.attack, 12);
@@ -302,7 +302,7 @@ test('supreme reflection blocks new and existing negative effects; moon eye reje
   eye.units['target-0'].buffs = { weak: 2, vulnerable: 2, slow: 1 };
   const result = cast(eye, EMBLEMS[SUPREME_EMBLEM_ID].skill.id);
   assert.equal(result.final.units['target-0'].hp, 0);
-  assert.equal(result.final.units['target-1'].hp, 970);
+  assert.equal(result.final.units['target-1'].hp, eye.units['target-1'].hp - 30);
   eye.enemyDefinitions['target-0'].boss = true;
   assert(
     !preview(eye, [makeAction(eye, 'aegis', EMBLEMS[SUPREME_EMBLEM_ID].skill.id, 'target-0', 0)])
@@ -324,7 +324,11 @@ test('authored skills, cap rules, all five equipped emblems and three equipment 
   const buffed = advance(cast(state, 'meteor-stance', 'aegis'));
   const attack = cast(buffed, 'attack');
   assert.equal(attack.events.find((event) => event.type === 'hero').repeatCount, 2);
-  assert.equal(attack.final.units['target-0'].hp, 984, 'Two attacks of 6 + 2 strength');
+  assert.equal(
+    attack.final.units['target-0'].hp,
+    buffed.units['target-0'].hp - 16,
+    'Two attacks of 6 + 2 strength',
+  );
   const library = newLibrary();
   library.emblems = Object.keys(EMBLEMS);
   for (const [index, id] of library.emblems.entries()) library.characters[index].emblemId = id;

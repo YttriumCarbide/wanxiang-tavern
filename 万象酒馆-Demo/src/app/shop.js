@@ -30,6 +30,7 @@ export function createShop(context) {
   const group = (id) => id.replace(/^fine-/, '').replace(/-potion$|-scroll$/g, '');
   let category = 'slow';
   let selected = Object.keys(ITEMS)[0];
+  let fromPreparation = false;
   function render() {
     const inventory = context.session.ai.library.inventory;
     panel.querySelector('#shop-gold').innerHTML = html`<img
@@ -67,14 +68,23 @@ export function createShop(context) {
         购买 <b>${item.price}</b><img src="./assets/icons/gold.svg" alt="金币" />
       </button>`;
   }
-  function open() {
-    if (context.session.runtime.mode !== 'inn') return;
+  function open({ preparation = false } = {}) {
+    if (
+      context.session.runtime.mode !== 'inn' &&
+      !(preparation && document.querySelector('#party-panel').open)
+    )
+      return;
+    fromPreparation = preparation;
     render();
     panel.querySelector('#shop-status').textContent = '';
     if (!panel.open) panel.showModal();
   }
   context.events.on(panel.querySelector('#shop-close'), 'click', () => panel.close());
-  context.events.on(panel, 'close', () => context.onboarding.refresh());
+  context.events.on(panel, 'close', () => {
+    context.onboarding.refresh();
+    context.equipment.refresh();
+    context.shell.renderParty();
+  });
   context.events.on(panel, 'click', (event) => {
     const tab = event.target.closest('[data-shop-category]');
     if (tab) {
@@ -92,7 +102,12 @@ export function createShop(context) {
       return;
     }
     const button = event.target.closest('[data-buy]');
-    if (!button || context.session.runtime.mode !== 'inn') return;
+    if (
+      !button ||
+      (context.session.runtime.mode !== 'inn' &&
+        !(fromPreparation && document.querySelector('#party-panel').open))
+    )
+      return;
     const result = buyItem(context.session.ai.library, button.dataset.buy);
     if (!result.ok) {
       panel.querySelector('#shop-status').textContent = result.message;

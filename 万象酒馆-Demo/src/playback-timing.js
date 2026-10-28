@@ -7,7 +7,13 @@ export function playbackBeats(result) {
   for (let at = 0; at < result.slots.length + Number(end); at++) {
     let beat = { at, events: [] };
     for (const event of result.events.filter((item) => item.at === at)) {
-      if (event.type === 'hero' && event.repeatIndex > 1 && beat.events.length) {
+      if (
+        beat.events.length &&
+        (event.type === 'bossPhase' ||
+          event.type === 'counter' ||
+          beat.events.some((item) => item.type === 'bossPhase') ||
+          event.repeatIndex > 1)
+      ) {
         beats.push(beat);
         beat = { at, events: [] };
       }

@@ -4,6 +4,7 @@ import { legacySession } from './legacy-session.mjs';
 import { combatTestScript } from '../../src/content/generation-mode.js';
 import { tavernPresetFixture } from '../fixtures/ai.js';
 import { newLibrary, officialCharacter } from '../../src/ai/library.js';
+import { EMBLEMS } from '../../src/emblems.js';
 import { normalizeEquipment, buyEquipment } from '../../src/equipment.js';
 
 /** Real controllers, mocked upstream: composition, replay, party transaction and touch dialogs. */
@@ -23,6 +24,10 @@ export async function galWorkspaceChecks({ browser, baseURL, output }) {
   );
   initial.inventory.ether = 25;
   buyEquipment(initial, 'gal-ring', 'gal-owned');
+  initial.inventory.gold = 1000;
+  initial.inventory.ether = 500;
+  initial.emblems = [Object.keys(EMBLEMS)[0]];
+  initial.characters[0].emblemId = initial.emblems[0];
   await page.addInitScript((library) => {
     if (origin === 'null') return;
     if (!sessionStorage.getItem('gal-workspace-seeded')) {
@@ -100,8 +105,13 @@ export async function galWorkspaceChecks({ browser, baseURL, output }) {
       let index = 0;
       index < 35 && (await page.locator('#gal-stage').getAttribute('data-playing')) === 'true';
       index++
-    )
-      await page.locator('.gal-page').click();
+    ) {
+      if ((await page.locator('#gal-stage').getAttribute('data-leaving')) === 'true')
+        await page.waitForFunction(
+          () => document.querySelector('#gal-stage').dataset.leaving !== 'true',
+        );
+      else await page.locator('.gal-page').click();
+    }
   }
   async function inside(selector) {
     await page.locator(selector).evaluate((node) =>
@@ -242,21 +252,28 @@ export async function galWorkspaceChecks({ browser, baseURL, output }) {
     await frame.locator('#enter').click();
     await page.locator('#destination-region-confirm').click();
     await page.locator('#destination-start').click();
-    await page.locator('#departure-party').waitFor({ state: 'visible' });
+    await page.locator('#party-panel').waitFor({ state: 'visible' });
+    assert.equal(await page.locator('#departure-party').count(), 0);
     assert.equal(calls.filter((call) => call.kind === 'script').length, 0);
-    await page.locator('[data-departure-slot="0"]').click();
     const reserveId = await page
-      .locator('[data-departure-hero]')
+      .locator('#prepare-pool [data-prepare-hero]')
       .last()
-      .getAttribute('data-departure-hero');
-    await page.locator(`[data-departure-hero="${reserveId}"]`).click();
-    await page.locator('[data-departure="confirm"]').click();
+      .getAttribute('data-prepare-hero');
+    await page
+      .locator('#prepare-pool [data-prepare-hero="' + reserveId + '"]')
+      .dragTo(page.locator('[data-prepare-slot="0"]'));
+    assert.equal(
+      await page.locator('[data-prepare-slot="0"]').getAttribute('data-prepare-hero'),
+      reserveId,
+    );
+    await page.locator('#prepare-done').click();
     await page.locator('#party-panel.formation-locked').waitFor({ state: 'visible' });
     await scriptStarted;
     assert.equal(await page.locator('#prepare-done').isDisabled(), true);
     assert.equal(await page.locator('#generation-progress').isVisible(), false);
     await page.locator('[data-prepare-slot="0"]').click();
-    await page.locator('[data-equipment-slot="0"]').selectOption('gal-owned');
+    await page.locator('.prepare-gear-row').first().click();
+    await page.locator('[data-picker-value="gal-owned"]').click();
     await page.locator('#prepare-character-done').click();
     assert(
       (await page.evaluate(() => demo.getLibrary())).characters
@@ -264,6 +281,43 @@ export async function galWorkspaceChecks({ browser, baseURL, output }) {
         .equipment.includes('gal-owned'),
     );
     await page.screenshot({ path: path.join(output, 'equipment-while-generating.png') });
+    await page.locator('[data-prepare-buy]').click();
+    await page.locator('#void-shop').waitFor({ state: 'visible' });
+    const buy = page.locator('#void-shop [data-buy]');
+    const itemId = await buy.getAttribute('data-buy');
+    const count = await page.evaluate((id) => demo.getLibrary().inventory.items[id] || 0, itemId);
+    await buy.click();
+    assert.equal(
+      await page.evaluate((id) => demo.getLibrary().inventory.items[id], itemId),
+      count + 1,
+    );
+    await page.locator('#shop-close').click();
+    await page.locator('[data-prepare-exchange]').click();
+    assert(await page.locator('#forge-refine').isDisabled());
+    assert(await page.locator('#forge-config').isDisabled());
+    await page.locator('[data-buy-equipment]').click();
+    assert.equal(await page.evaluate(() => demo.getLibrary().equipment.owned.length), 2);
+    await page.locator('[data-forge-close]').click();
+    await page.locator('[data-prepare-slot="0"]').click();
+    await page.locator('.prepare-emblem-row').click();
+    const ringChoice = page.locator('[data-picker-value="' + initial.emblems[0] + '"]');
+    assert((await ringChoice.textContent()).includes('点击转移'));
+    await ringChoice.click();
+    assert.equal(
+      await page.evaluate(
+        (id) => demo.getLibrary().characters.find((member) => member.id === id).emblemId,
+        reserveId,
+      ),
+      initial.emblems[0],
+    );
+    assert.equal(
+      await page.evaluate(
+        (id) => demo.getLibrary().characters.find((member) => member.id === id).emblemId,
+        initial.characters[0].id,
+      ),
+      null,
+    );
+    await page.locator('#prepare-character-done').click();
     releaseScript();
     await page.waitForFunction(() => !document.querySelector('#prepare-done').disabled);
     assert.equal(calls.filter((call) => call.kind === 'script').length, 1);
@@ -271,6 +325,7 @@ export async function galWorkspaceChecks({ browser, baseURL, output }) {
     assert.equal(await page.locator('.prepare-reserve-col').isVisible(), false);
     assert.equal(await page.locator('.prepare-slot[draggable="true"]').count(), 0);
     await page.locator('#prepare-done').click();
+    await page.waitForFunction(() => demo.getStatus().mode === 'battle');
     await page.waitForFunction(
       () =>
         !document.querySelector('#gal-stage').hidden &&
@@ -383,7 +438,7 @@ export async function galWorkspaceChecks({ browser, baseURL, output }) {
     assert.equal(await page.locator('.gal-composer').isVisible(), true);
     assert.equal(await page.locator('.gal-reading').isVisible(), false);
     await page.locator('.gal-composer [data-workspace="exit"]').click();
-    assert.equal(await page.locator('#gal-stage').isVisible(), false);
+    await page.locator('#gal-stage').waitFor({ state: 'hidden' });
     for (const viewport of [
       { width: 844, height: 390 },
       { width: 390, height: 844 },

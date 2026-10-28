@@ -37,6 +37,7 @@ export async function compatibleRequest(
     sampling = {},
     outputEnvelope = false,
     outputTool = null,
+    contextTool = null,
     outputProcessing = null,
     stop = null,
     onDelta,
@@ -60,7 +61,7 @@ export async function compatibleRequest(
   };
   if (!models) {
     if (!profile.model) throw Error('请先填写模型名称');
-    const toolRequest = outputToolRequest(outputTool);
+    const toolRequest = outputToolRequest(outputTool, contextTool);
     if (toolRequest) Object.assign(payload, toolRequest);
     else if (!outputEnvelope && profile.strictJson && responseSchema)
       payload.response_format = {

@@ -97,7 +97,7 @@ test('overload granted earlier in the same plan doubles the next skill exactly o
   const result = preview(state, [combineSkill, burst]);
   assert(result.valid);
   assert.equal(result.final.units[actor].mp, 22);
-  assert.equal(result.final.units[enemy].hp, 176);
+  assert.equal(result.final.units[enemy].hp, state.units[enemy].hp - 24);
   assert.equal(result.final.units[actor].combineSkillUsed, true);
   assert(!result.final.units[actor].buffs.overload);
   const event = result.events.find((item) => item.actionId === burst.id && item.type === 'hero');
@@ -109,7 +109,7 @@ test('overload granted earlier in the same plan doubles the next skill exactly o
   );
   assert.deepEqual(
     casts.map((item) => item.after.units[enemy].hp),
-    [188, 176],
+    [state.units[enemy].hp - 12, state.units[enemy].hp - 24],
   );
   assert.equal(
     casts.reduce((sum, item) => sum + item.costs.mp, 0),
@@ -198,7 +198,7 @@ test('a generated mark is bounded, consumed once across group targets and kept a
   state.units[actor].mark = 3;
   const result = preview(state, [makeAction(state, actor, 'marked', state.enemyIds[0], 0)]);
   assert(result.valid);
-  for (const id of state.enemyIds) assert.equal(result.final.units[id].hp, 189);
+  for (const id of state.enemyIds) assert.equal(result.final.units[id].hp, state.units[id].hp - 11);
   assert.equal(result.final.units[actor].mark, 0);
   assert.equal(result.final.units[actor].block, 4);
   assert.equal(state.units[actor].mark, 3, 'preview never consumes persistent combat state');
@@ -238,11 +238,11 @@ test('conditional target checks and independent effect targets use actual battle
   ];
   const result = preview(state, [makeAction(state, actor, 'conditional', enemy, 0)]);
   assert(result.valid);
-  assert.equal(result.final.units[enemy].hp, 188);
+  assert.equal(result.final.units[enemy].hp, state.units[enemy].hp - 12);
   assert.equal(result.final.units[wounded].hp, 9);
   delete state.units[enemy].buffs.bleed;
   const ordinary = preview(state, [makeAction(state, actor, 'conditional', enemy, 0)]);
-  assert.equal(ordinary.final.units[enemy].hp, 200);
+  assert.equal(ordinary.final.units[enemy].hp, state.units[enemy].hp);
 });
 
 test('an overloaded marked skill consumes its mark once and its second cast cannot reuse consumed stacks', () => {
@@ -267,7 +267,7 @@ test('an overloaded marked skill consumes its mark once and its second cast cann
   assert(result.valid);
   assert.equal(
     result.final.units[state.enemyIds[0]].hp,
-    184,
+    state.units[state.enemyIds[0]].hp - 16,
     'first cast deals 11, second deals 5',
   );
   assert.equal(result.final.units[actor].mark, 0);

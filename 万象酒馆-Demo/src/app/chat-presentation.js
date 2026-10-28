@@ -96,10 +96,7 @@ export function createChatPresentation(session) {
               >
             </div>
             <div class="chat-guest-copy">
-              <strong>${escapeText(member.setting.name)}</strong
-              ><small
-                >${escapeText(member.setting.profession?.name || member.combat.title || '异界来客')}</small
-              >
+              <strong>${escapeText(member.setting.name)}</strong><small>异界来客</small>
               <p>
                 ${escapeText(activities.find((activity) => activity.id === member.id)?.text || '')}
               </p>

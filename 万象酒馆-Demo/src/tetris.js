@@ -27,6 +27,14 @@ const SHAPES = Object.freeze([
 ]);
 export const TETRIS_REWARDS = Object.freeze([0, 1, 3, 6, 10]);
 
+function snapshot(state) {
+  return Object.fromEntries(
+    ['version', 'seed', 'board', 'bag', 'piece', 'status', 'lines', 'score', 'earned'].map(
+      (key) => [key, structuredClone(state[key])],
+    ),
+  );
+}
+
 function random(state) {
   state.seed = (Math.imul(state.seed, 1664525) + 1013904223) >>> 0;
   return state.seed / 4294967296;
@@ -43,6 +51,7 @@ function next(state) {
   const cells = structuredClone(SHAPES[type]);
   state.piece = { type, cells, x: Math.floor((10 - cells[0].length) / 2), y: 0 };
   if (!fits(state, state.piece)) state.status = 'over';
+  state.pieceStart = snapshot(state);
 }
 export function newTetris(seed = 17371) {
   const state = {
@@ -121,12 +130,21 @@ export function restoreTetris(raw) {
       (raw.status !== 'over' && !fits(raw, raw.piece))
     )
       throw Error();
-    return { ...structuredClone(raw), status: raw.status === 'over' ? 'over' : 'paused' };
+    const state = { ...snapshot(raw), status: raw.status === 'over' ? 'over' : 'paused' };
+    for (const key of ['pieceStart', 'previousPiece']) {
+      if (!raw[key]) continue;
+      const checkpoint = restoreTetris(snapshot(raw[key]));
+      if (checkpoint.earned <= state.earned && checkpoint.lines <= state.lines)
+        state[key] = snapshot(checkpoint);
+    }
+    state.pieceStart ||= snapshot(state);
+    return state;
   } catch {
     return newTetris();
   }
 }
 function lock(state, events) {
+  state.previousPiece = state.pieceStart || snapshot(state);
   const piece = state.piece;
   for (const [y, row] of piece.cells.entries())
     for (const [x, cell] of row.entries())
@@ -145,6 +163,14 @@ function lock(state, events) {
   }
   next(state);
   events.push({ type: 'lock' });
+}
+/** Closing undoes the last locked piece and its rewards, then pauses at that piece's start. */
+export function rewindTetris(input) {
+  const checkpoint = input.previousPiece || input.pieceStart || snapshot(input);
+  const state = restoreTetris(snapshot(checkpoint));
+  state.status = 'paused';
+  state.pieceStart = snapshot(state);
+  return { state, returnedEther: Math.max(0, input.earned - state.earned) };
 }
 /** Pure simulation: the same settled clear event drives currency and the visual feedback. */
 export function tetrisStep(input, action) {

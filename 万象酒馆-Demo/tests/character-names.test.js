@@ -26,7 +26,7 @@ test('new output generates each name once while legacy duplicates remain optiona
     createCharacterReader(),
   ).entry;
   assert.equal(entry.combat.name, raw.setting.name);
-  assert.equal(entry.combat.title, raw.setting.profession.name);
+  assert.equal(entry.combat.title, '');
   assert.equal(entry.combat.attackName, raw.setting.attack.name);
   assert.equal(entry.combat.skills[1].name, raw.setting.skills[1].name);
   assert(!entry.combat.ultimate);
@@ -78,7 +78,7 @@ test('Qili passes unchanged and both old and compact responses retain executable
     assert.equal(JSON.stringify(document), before);
     assert.equal(result.diagnostic.candidateText, before);
     assert.equal(entry.combat.name, '祁砾');
-    assert.equal(entry.combat.title, '桥梁匠人');
+    assert.equal(entry.combat.title, '');
     assert.equal(entry.combat.attackName, '楔进');
     assert(entry.setting.worldbook.includes(original.setting.history));
     const library = newLibrary();
@@ -122,9 +122,10 @@ test('version 6 updates only owned name-generation rules and preserves worldbook
   assert(updated.content.includes('data必须包含archetype/weapon/profile/skills/entrySkill'));
   assert(!updated.content.includes('两层名称须逐字一致'));
   assert(
-    Object.values(current.book.entries).some(
-      (entry) => entry.disable && entry.content.includes('我的自定义要求'),
-    ),
+    [
+      ...Object.values(current.book.entries),
+      ...(current.book.extensions?.wanxiang?.retiredPromptArchive || []).map((item) => item.entry),
+    ].some((entry) => entry.disable && entry.content.includes('我的自定义要求')),
   );
   assert.deepEqual([updated.depth, updated.order], [2, 4321]);
   assert.deepEqual(current.book.entries[unrelated.uid], untouched);

@@ -4,6 +4,7 @@ import { createEventScope } from '../shared/events.js';
 import { createResourceScope } from '../shared/resources.js';
 import { synchronizeSummonCrystals } from './animation.js';
 import { deviceRenderQuality, createFrameBudget } from '../shared/render-budget.js';
+import { createRingDisplay } from './ring-display.js';
 
 export async function createTavernView() {
   const quality = deviceRenderQuality();
@@ -70,10 +71,10 @@ export async function createTavernView() {
       anchor: [0, 1.3, 4.5],
     },
     fate: {
-      name: '命运桌 · 肉鸽成长',
+      name: '命运桌 · 纹章戒指',
       button: '坐到命运桌',
-      p: [4.12, 1.18, 0.52],
-      focus: [4.12, 1.15, -0.6],
+      p: [4.12, 1.34, 0.7],
+      focus: [4.12, 0.98, -0.45],
       anchor: [4.12, 1.1, -0.28],
     },
     table2: {
@@ -254,10 +255,12 @@ export async function createTavernView() {
   const resources = createResourceScope();
   const events = createEventScope();
   const shelfButtons = [];
+  let ringDisplay = null;
   function dispose() {
     if (disposed) return;
     disposed = true;
     renderer.setAnimationLoop(null);
+    ringDisplay?.dispose();
     events.dispose();
     shelfButtons.forEach((shelf) => shelf.button.remove());
     mixer?.stopAllAction();
@@ -338,6 +341,7 @@ export async function createTavernView() {
       }
     });
     scene.add(model);
+    ringDisplay = createRingDisplay(renderer, scene, camera);
     mixer = new THREE.AnimationMixer(model);
     gltf.animations.forEach((a) => mixer.clipAction(synchronizeSummonCrystals(a)).play());
     addSparks(1.14, 0.24, -4.5, 1.32, 2.12, '#bb91ea', 0);
@@ -356,6 +360,7 @@ export async function createTavernView() {
       look,
       enterCorridor,
       fieldMaterials,
+      rings: () => ringDisplay.status(),
       getState: () => ({
         rendering: {
           frames: renderedFrames,
@@ -378,6 +383,7 @@ export async function createTavernView() {
   }
   let drag = null;
   events.on(canvas, 'pointerdown', (e) => {
+    if (ringDisplay?.status().active) return;
     cancelTravel();
     drag = { x: e.clientX, y: e.clientY, id: e.pointerId };
     canvas.setPointerCapture(e.pointerId);
@@ -403,6 +409,7 @@ export async function createTavernView() {
     { passive: false },
   );
   events.on(window, 'keydown', (e) => {
+    if (ringDisplay?.status().active) return;
     if (e.key === 'Escape') {
       moveTo('table');
       return;
@@ -418,12 +425,20 @@ export async function createTavernView() {
   });
   const emblem = document.createElement('button');
   emblem.id = 'emblem-open';
-  emblem.textContent = '查看纹章士';
+  emblem.textContent = '赏鉴纹章戒指';
   emblem.hidden = true;
   document.getElementById('talk-open').before(emblem);
   emblem.onclick = () => {
-    if (!emblem.hidden && !travel) parent.postMessage({ type: 'tavern-emblem' }, location.origin);
+    if (!emblem.hidden && !travel) ringDisplay?.open();
   };
+  events.on(window, 'message', (event) => {
+    if (
+      event.origin === location.origin &&
+      event.source === parent &&
+      event.data?.type === 'tavern-emblem-collection'
+    )
+      ringDisplay?.setCollection(event.data.collection);
+  });
   const supplyButtons = {};
   for (const [id, label] of Object.entries({ shop: '虚空售货机', condenser: '以太凝聚器' })) {
     const button = document.createElement('button');
@@ -663,6 +678,10 @@ export async function createTavernView() {
     }
     if (!frameBudget.accepts(now)) return;
     const dt = Math.min(clock.getDelta(), 0.05);
+    if (ringDisplay?.render(dt)) {
+      renderedFrames++;
+      return;
+    }
     elapsed += dt;
     for (const material of fieldMaterials)
       if (material.uniforms.uKind.value > 0.5) {

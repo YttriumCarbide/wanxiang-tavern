@@ -1,9 +1,10 @@
-import { newLibrary } from '../src/ai/library.js';
+import { newLibrary, compileRoster } from '../src/ai/library.js';
+import { gainExperience, xpToNext } from '../src/growth.js';
 import { buyItem } from '../src/content/items.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { BOSSES, HEROES, encounterSpec } from '../src/data.js';
-import { preview, advance, intent, newEncounter, campRest } from '../src/engine.js';
+import { preview, advance, intent, newEncounter, campRest, makeAction } from '../src/engine.js';
 import { newExpedition, beginEncounter, completeEncounter, chooseRest } from '../src/expedition.js';
 import { buildPlan } from './planner.js';
 
@@ -41,7 +42,7 @@ test('ordinary battle carry preserves dying companions and mana; explicit sleep 
   s.units.morrow.mp = 2;
   const r = campRest(s);
   assert.equal(r.state.units.aegis.hp, 0);
-  assert.equal(campRest(s, 'sleep').state.units.aegis.hp, Math.floor(s.units.aegis.maxHp * 0.4));
+  assert.equal(campRest(s, 'sleep').state.units.aegis.hp, Math.ceil(s.units.aegis.maxHp * 0.6));
   assert.equal(r.state.units.aegis.mp, 3);
   assert.equal(r.state.units.morrow.mp, 2);
   assert.equal(s.units.aegis.hp, 0);
@@ -88,7 +89,18 @@ test('boss second phase remains after regeneration heals above the threshold', (
 });
 for (const boss of BOSSES)
   test(`full five-encounter expedition can defeat ${boss.name}`, () => {
-    const trip = newExpedition(boss.id),
+    const veterans = newLibrary();
+    // Ares is a sixth-chapter military boss, unlike the original level-one demo encounters.
+    if (boss.id === 'ares')
+      for (const member of veterans.characters)
+        gainExperience(
+          member,
+          Array.from({ length: 19 }, (_, level) => xpToNext(level + 1)).reduce(
+            (sum, value) => sum + value,
+            0,
+          ),
+        );
+    const trip = newExpedition(boss.id, boss.id === 'ares' ? compileRoster(veterans) : {}),
       records = [];
     const supplies = newLibrary();
     supplies.inventory.gold = 200;
@@ -98,7 +110,10 @@ for (const boss of BOSSES)
       let s = beginEncounter(trip);
       if (room === 0) s.items = structuredClone(supplies.inventory.items);
       for (let turn = 0; turn < 35 && !['victory', 'defeat'].includes(s.phase); turn++) {
-        const plan = buildPlan(s),
+        const plan =
+            boss.id === 'ares' && room === 4 && s.phase === 'opening'
+              ? [makeAction(s, 'aegis', 'meteor-stance', 'aegis', 0)]
+              : buildPlan(s),
           r = preview(s, plan);
         assert(r.valid, JSON.stringify(r.invalid));
         s = advance(r);

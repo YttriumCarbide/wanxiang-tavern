@@ -1,4 +1,43 @@
 /* effects: component-owned styles and responsive rules. */
+.boss-phase-ring {
+  position: absolute;
+  width: 160px;
+  height: 160px;
+  margin: -80px 0 0 -80px;
+  border: 5px double var(--fx);
+  border-radius: 50%;
+  box-shadow:
+    0 0 35px var(--fx),
+    inset 0 0 20px var(--fx);
+  pointer-events: none;
+}
+.boss-phase-flash {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, #a967db05 35%, #8e53c844 70%, #e8aaff99);
+  box-shadow: inset 0 0 80px #bd81ed88;
+  pointer-events: none;
+}
+.boss-phase-shockwave {
+  position: absolute;
+  width: 220vmax;
+  height: 220vmax;
+  border: 14px solid #fff;
+  border-radius: 50%;
+  box-shadow:
+    0 0 55px 30px #eafaffaa,
+    inset 0 0 60px 20px #fff9;
+  pointer-events: none;
+}
+.floating-number.equipment-proc-number {
+  color: #f4dd9f;
+  background: linear-gradient(90deg, transparent, #142c32ee 15%, #29423eee 85%, transparent);
+  border-block: 1px solid #e4c87c99;
+  padding: 4px 12px;
+  font-size: clamp(9px, 0.85vw, 12px);
+  white-space: nowrap;
+  text-shadow: 0 0 8px #d8b75c88;
+}
 .combat-sprite {
   position: absolute;
   transform: translate(-50%, -50%);

@@ -16,6 +16,10 @@ export async function galChecks({ browser, baseURL, output }) {
   async function nextPage() {
     await revealPage();
     await page.locator('.gal-page').click();
+    if ((await page.locator('#gal-stage').getAttribute('data-leaving')) === 'true')
+      await page.waitForFunction(
+        () => document.querySelector('#gal-stage').dataset.leaving !== 'true',
+      );
   }
   async function checkComposition() {
     const viewport = page.viewportSize();
@@ -100,15 +104,13 @@ export async function galChecks({ browser, baseURL, output }) {
     await page.locator('.gal-page').click();
     assert((await page.locator('.gal-text').textContent()).includes('白光'));
     await page.screenshot({ path: path.join(output, 'opening-narration.png') });
-    await page.locator('.gal-page').click();
-    await page.locator('.gal-cast img').waitFor();
-    await page.locator('.gal-page').click();
-    assert.equal(await page.locator('#gal-stage').getAttribute('data-kind'), 'narration');
-    await page.locator('.gal-page').click();
-    await page.waitForFunction(
-      () => document.querySelector('#gal-stage').dataset.kind === 'dialogue',
-    );
-    await page.locator('.gal-page').click();
+    for (
+      let index = 0;
+      index < 20 && (await page.locator('#gal-stage').getAttribute('data-kind')) !== 'dialogue';
+      index++
+    )
+      await nextPage();
+    await revealPage();
     assert((await page.locator('.gal-speaker').textContent()).includes('伊蒂丝'));
     await page.locator('.gal-cast img').evaluate(async (image) => {
       await image.decode();
@@ -129,8 +131,8 @@ export async function galChecks({ browser, baseURL, output }) {
     await checkComposition();
     await page.screenshot({ path: path.join(output, 'mobile-gal.png') });
     for (let index = 0; index < 100 && (await page.locator('#gal-stage').isVisible()); index++)
-      await page.locator('.gal-page').click();
-    assert.equal(await page.locator('#gal-stage').isVisible(), false);
+      await nextPage();
+    await page.locator('#gal-stage').waitFor({ state: 'hidden' });
     assert.equal(calls.length, 0);
     assert.notEqual((await page.evaluate(() => demo.getLibrary())).campaign.tutorial, 'arrival');
     await page.setViewportSize({ width: 1440, height: 836 });
@@ -225,7 +227,7 @@ export async function galChecks({ browser, baseURL, output }) {
     await checkComposition();
     await page.screenshot({ path: path.join(output, 'two-character-stage.png') });
     await page.locator('[data-gal="close"]').click();
-    assert.equal(await page.locator('#gal-stage').isVisible(), false);
+    await page.locator('#gal-stage').waitFor({ state: 'hidden' });
     const requestModes = await page.evaluate(async () => {
       const { createRequestControls } = await import('/src/app/request-controls.js');
       const received = [];
@@ -259,6 +261,92 @@ export async function galChecks({ browser, baseURL, output }) {
     await page.screenshot({ path: path.join(output, 'pandora-gal.png') });
     await nextPage();
     assert.equal(await page.evaluate(() => window.galFixture.completed), 1);
+    await page.setViewportSize({ width: 844, height: 390 });
+    const speech =
+      '先别急着开门，门后的脚步一直停在同一个地方。我们先把灯放低，看看地上的影子会不会跟着动。要是影子还在原地，就沿着左边的石阶走，记得留意身后的动静。';
+    const narration =
+      '她把书压在桌角，侧耳听了一会儿，随后轻轻推开身旁的木椅。走廊里的灯晃了两下，细小的灰尘从门框上落下来。门后的人没有回应，只有衣料擦过石墙的声音。';
+    await page.evaluate(
+      ({ speech, narration }) => {
+        void window.galFixture.gal.play(`【对白:伊蒂丝】${speech}【旁白】${narration}`, {
+          owner: 'short-pages',
+          onComplete: () => window.galFixture.completed++,
+        });
+      },
+      { speech, narration },
+    );
+    await revealPage();
+    const firstPage = await page.locator('.gal-text').textContent();
+    await nextPage();
+    await revealPage();
+    assert((await page.locator('.gal-speaker span').textContent()).includes('伊蒂丝'));
+    assert.notEqual(await page.locator('.gal-text').textContent(), firstPage);
+    await page.locator('[data-gal="back"]').click();
+    await revealPage();
+    assert.equal(await page.locator('.gal-text').textContent(), firstPage);
+    await page.screenshot({ path: path.join(output, 'short-page-dialogue.png') });
+    const chunks = { dialogue: [], narration: [] };
+    for (let index = 0; index < 30 && (await page.locator('#gal-stage').isVisible()); index++) {
+      await revealPage();
+      const type = await page.locator('#gal-stage').getAttribute('data-kind');
+      const text = await page.locator('.gal-text').textContent();
+      assert(Array.from(text).length <= (type === 'dialogue' ? 48 : 60));
+      chunks[type].push(text);
+      await nextPage();
+    }
+    assert(chunks.dialogue.length > 1 && chunks.narration.length > 1);
+    assert.equal(chunks.dialogue.join(''), speech);
+    assert.equal(chunks.narration.join(''), narration);
+    assert.equal(await page.evaluate(() => window.galFixture.completed), 2);
+    await page.evaluate(() => {
+      const result = document.querySelector('#result');
+      result.showModal();
+      window.galFixture.dialogue.show([
+        {
+          speaker: '伊蒂丝 · Lv.2',
+          text: '记住了。下一次，我会更稳一些。',
+          bonuses: ['hp +2', '技能伤害 +1'],
+        },
+      ]);
+    });
+    await revealPage();
+    assert.equal(await page.locator('#fixture-dialogue').isVisible(), false);
+    assert.equal(
+      await page.locator('#gal-stage').evaluate((node) => node.parentElement.id),
+      'result',
+    );
+    assert.equal(await page.locator('.gal-cast img.speaking').count(), 1);
+    assert((await page.locator('.gal-speaker span').textContent()).includes('Lv.2'));
+    assert((await page.locator('.gal-bonuses').textContent()).includes('hp +2'));
+    const host = await page.locator('#result').evaluate((node) => ({
+      background: getComputedStyle(node).backgroundColor,
+      filter: getComputedStyle(node).backdropFilter,
+      backdrop: getComputedStyle(node, '::backdrop').backdropFilter,
+      bounds: {
+        width: node.getBoundingClientRect().width,
+        height: node.getBoundingClientRect().height,
+      },
+    }));
+    assert.equal(host.background, 'rgba(0, 0, 0, 0)');
+    assert.equal(host.filter, 'none');
+    assert.equal(host.backdrop, 'none');
+    assert(host.bounds.width >= 843 && host.bounds.height >= 389);
+    assert.equal(
+      await page.locator('#chat-dialog').isVisible(),
+      false,
+      'older modal content stays out of the Gal scene',
+    );
+    await page.locator('#result').evaluate((node) =>
+      Promise.all(
+        node
+          .getAnimations({ subtree: true })
+          .filter((animation) => animation.effect.getTiming().iterations !== Infinity)
+          .map((animation) => animation.finished.catch(() => {})),
+      ),
+    );
+    await page.screenshot({ path: path.join(output, 'gal-level-up-mobile.png') });
+    await nextPage();
+    await page.evaluate(() => document.querySelector('#result').close());
     const alpha = await page.evaluate(async () => {
       const results = [];
       for (const key of ['edith', 'pandora', 'yuexi']) {

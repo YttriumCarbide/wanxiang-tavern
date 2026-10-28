@@ -2,6 +2,7 @@ import { HEROES } from './data.js';
 import { officialCharacter } from './ai/library.js';
 import { BASE_WORLDS } from './worlds.js';
 import { REGIONS } from './content/regions.js';
+import { OFFICIAL_VISITORS } from './content/official-visitors.js';
 
 /** Canon NPCs join only after their six-site story; custom and endless encounters stay free. */
 export function npcSummonStatus(library, npc) {
@@ -38,17 +39,19 @@ export function knownNpcSummonPool(library) {
 /** Worldbook prose is editable; official identities and combat definitions stay code-owned. */
 export function officialSummonPool(library, book) {
   const owned = new Set(library.characters.map((entry) => entry.id));
-  return [...HEROES.map((hero) => hero.id), 'edith'].flatMap((id) => {
-    const entry = officialCharacter(id);
-    if (owned.has(entry.id)) return [];
-    const lore = Object.values(book?.entries || {}).find(
-      (item) => item.extensions?.wanxiang?.characterId === entry.id,
-    );
-    if (!lore || typeof lore.content !== 'string' || !lore.content.trim()) return [];
-    entry.setting.worldbook = lore.content.trim();
-    entry.setting.edited = true;
-    return [entry];
-  });
+  return [...HEROES.map((hero) => hero.id), 'edith', ...Object.keys(OFFICIAL_VISITORS)].flatMap(
+    (id) => {
+      const entry = officialCharacter(id);
+      if (owned.has(entry.id)) return [];
+      const lore = Object.values(book?.entries || {}).find(
+        (item) => item.extensions?.wanxiang?.characterId === entry.id,
+      );
+      if (!lore || typeof lore.content !== 'string' || !lore.content.trim()) return [];
+      entry.setting.worldbook = lore.content.trim();
+      entry.setting.edited = true;
+      return [entry];
+    },
+  );
 }
 
 export function summonSource(mode, roll) {

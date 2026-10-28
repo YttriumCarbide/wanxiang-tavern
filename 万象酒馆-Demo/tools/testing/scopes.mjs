@@ -1,5 +1,8 @@
 export const allScopes = [
+  'ring-gallery',
   'gal',
+  'frost',
+  'equipment',
   'enemy-progression',
   'mobile',
   'forest',

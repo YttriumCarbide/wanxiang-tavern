@@ -204,6 +204,7 @@ export function createCardDeaths({ scene, camera, stage, getSpeed, reduced }) {
   function play(record, definition, delay = 0) {
     if (disposed || !record || played.has(record.id)) return 0;
     played.add(record.id);
+    if (definition.nonlethal) return 0;
     const boss = !!definition.boss;
     const resources = createResourceScope();
     const bloom = createBloom(resources, boss, reduced);

@@ -15,7 +15,6 @@ export function characterPresentation(entry) {
       .trim(),
   }));
   const find = (label) => fields.find((field) => field.label === label)?.text || '';
-  const profession = find('职业').split('\n');
   const named = (prefix) =>
     fields
       .filter((field) => field.label.startsWith(prefix))
@@ -27,10 +26,8 @@ export function characterPresentation(entry) {
     traits: [...prose.matchAll(/(?:^|[。\n])(种族|身份|境界|灵根)[：:]([^。\n]+)/g)].map(
       (match) => ({ label: match[1], value: match[2].trim() }),
     ),
-    profession: profession.shift() || entry.setting.title,
     sections: [
       { title: '外貌', text: find('外貌') || entry.setting.appearance || '' },
-      { title: '职业', text: profession.join('\n') || entry.setting.title },
       { title: '性格', text: find('性格') || entry.setting.personality || '' },
       { title: '经历', text: find('经历') || entry.setting.background || '' },
     ].filter((section) => section.text),

@@ -71,7 +71,9 @@ test('every weapon and enemy has startup and impact cues, synchronized with atta
     assert(SOUND_CUES[`${style}-hit`]?.length > 0, style);
   }
   const state = newBattle();
-  const event = preview(state, [makeAction(state, 'morrow', 'attack', 'mossSlime', 0)]).events[0];
+  const event = preview(state, [makeAction(state, 'morrow', 'attack', 'mossSlime', 0)]).events.find(
+    (event) => event.type === 'hero',
+  );
   const normal = combatCues(event, state, 1),
     fast = combatCues(event, state, 2);
   assert.equal(normal[0].name, 'staff');
@@ -90,8 +92,11 @@ test('every weapon and enemy has startup and impact cues, synchronized with atta
 test('a confirmed Boss death schedules charge, fracture and lingering tones with playback speed', () => {
   const state = newBattle(['bossGate']);
   state.units.bossGate.hp = 1;
+  state.units.bossGate.enraged = true;
   state.units.bossGate.buffs = {};
-  const event = preview(state, [makeAction(state, 'aegis', 'attack', 'bossGate', 0)]).events[0];
+  const event = preview(state, [makeAction(state, 'aegis', 'attack', 'bossGate', 0)]).events.find(
+    (event) => event.type === 'hero',
+  );
   const cues = combatCues(event, state).filter((cue) => cue.name.startsWith('boss-death'));
   assert.deepEqual(
     cues.map((cue) => cue.name),

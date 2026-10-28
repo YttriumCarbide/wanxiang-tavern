@@ -259,9 +259,14 @@
   background: #45334a80;
   border-color: #b491c866;
 }
-.time-cell.bound {
+.time-cell.bound,
+.time-action.bound {
   border-color: #bda7dc;
   background: #352c43e6;
+}
+.time-action.bound small {
+  color: #e0c9f6;
+  text-decoration: none;
 }
 .timeline-chain {
   position: absolute;

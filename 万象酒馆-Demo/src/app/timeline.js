@@ -88,14 +88,19 @@ export function createTimeline(context) {
     for (const a of session.battle.plan) {
       const bad = session.battle.forecast.invalid.find((x) => x.id === a.id),
         skip = session.battle.forecast.skipped.find((x) => x.id === a.id),
-        repeated = session.battle.forecast.events.some(
-          (event) => event.actionId === a.id && event.type === 'hero' && event.repeatCount === 2,
+        casts = session.battle.forecast.events.filter(
+          (event) => event.actionId === a.id && event.type === 'hero',
+        ),
+        repeated = casts.length > 1,
+        bound = session.battle.forecast.events.find(
+          (event) => event.actionId === a.id && event.blockedBy === 'bind',
         ),
         el = document.createElement('div');
       el.className =
         'time-action' +
         (bad ? ' invalid' : '') +
         (skip ? ' skipped' : '') +
+        (bound ? ' bound' : '') +
         (repeated ? ' repeated' : '') +
         (session.battle.activeCell === a.start ? ' playing' : '');
       el.style.top = '0px';
@@ -111,6 +116,7 @@ export function createTimeline(context) {
         'data-tooltip',
         bad?.message ||
           skip?.message ||
+          bound?.label ||
           `${context.planning.actionLabel(a)} · ${a.ap} AP\n拖动调整顺序`,
       );
       el.innerHTML = html`<span class="action-number">${opening ? '◇' : a.start + 1}</span>
@@ -119,7 +125,7 @@ export function createTimeline(context) {
             >${skip ? '× ' : bad ? '! ' : ''}${a.kind === 'item' ? ITEMS[a.item].name : a.kind === 'skill' ? context.roster.ability(a.actor, a.skill).name : a.kind === 'engage' ? `结合${a.followUp ? ' · ' + context.roster.ability(a.actor, a.followUp.skill).name : ''}` : a.kind === 'swap' ? (session.battle.state.units[a.incoming]?.entryReady && context.roster.get(a.incoming)?.entrySkill?.name ? `换入 · ${context.roster.get(a.incoming).entrySkill.name}` : '换入') : '交换'}</b
           >${repeated ? html`<span class="skill-repeat" aria-label="该行动生效两次">×2</span>` : ''}<small
             >${a.kind === 'item' ? context.roster.get(a.target).name : ['skill', 'engage'].includes(a.kind) ? context.roster.get(a.actor).name : a.kind === 'swap' ? context.roster.get(a.incoming).name : '阵型'}
-            · ${a.ap} AP</small
+            · ${bound ? (casts.length ? '后次禁锢跳过' : '禁锢 · 跳过') : `${a.ap} AP`}</small
           >
         </div>
         <button

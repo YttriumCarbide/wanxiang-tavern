@@ -1,4 +1,13 @@
 /** Fixed emblem rules; battle state is the sole owner of charge and duration. */
+export function applyEmblemStats(combat, emblemId) {
+  const result = structuredClone(combat);
+  if (emblemId === OVERLOAD_EMBLEM_ID && !result._overloadApplied) {
+    result.mp = Math.round(result.mp * 1.5);
+    result.hp = Math.round(result.hp + result.mp * 0.25);
+    result._overloadApplied = true;
+  }
+  return result;
+}
 export const EMBLEM_ID = 'tan-hongyu';
 export const EMBLEM = Object.freeze({
   id: EMBLEM_ID,
@@ -126,11 +135,9 @@ export function equipEmblem(library, memberId, emblemId) {
   const member = library.characters.find((entry) => entry.id === memberId);
   if (!member || (emblemId && (!EMBLEMS[emblemId] || !library.emblems?.includes(emblemId))))
     throw Error('纹章士尚未获得');
-  if (
-    emblemId &&
-    library.characters.some((entry) => entry.id !== memberId && entry.emblemId === emblemId)
-  )
-    throw Error('纹章士已与其他角色同行，请先卸下');
+  if (emblemId)
+    for (const entry of library.characters)
+      if (entry.id !== memberId && entry.emblemId === emblemId) entry.emblemId = null;
   member.emblemId = emblemId || null;
 }
 

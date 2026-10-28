@@ -31,7 +31,7 @@ export function normalizeCharacterPersonality(value) {
   return text(`${name}：${description}`, 'setting.personality', 2400);
 }
 
-export function normalizeCharacterSetting(value) {
+export function normalizeCharacterSetting(value, { skillCount = 2 } = {}) {
   fields(
     value,
     [
@@ -47,11 +47,11 @@ export function normalizeCharacterSetting(value) {
       'entrySkill',
     ],
     'setting',
-    ['age', 'entrySkill'],
+    ['age', 'entrySkill', 'profession'],
   );
-  const profession = action(value.profession, 'setting.profession');
   const history = text(value.history, 'setting.history', 2000);
-  if (!Array.isArray(value.skills) || value.skills.length !== 2) fail('setting.skills必须恰好两项');
+  if (!Array.isArray(value.skills) || value.skills.length !== skillCount)
+    fail(skillCount === 2 ? 'setting.skills必须恰好两项' : `setting.skills必须恰好${skillCount}项`);
   const normalized = {
     name: text(value.name, 'setting.name', 30),
     gender: text(value.gender, 'setting.gender', 30),
@@ -62,7 +62,6 @@ export function normalizeCharacterSetting(value) {
           ? value.age
           : JSON.stringify(value.age),
     appearance: text(value.appearance, 'setting.appearance', 2000),
-    profession,
     personality: normalizeCharacterPersonality(value.personality),
     history,
     attack: action(value.attack, 'setting.attack'),
@@ -75,14 +74,13 @@ export function normalizeCharacterSetting(value) {
 }
 
 /** Strip the JSON wrapper once; all subsequent role context is readable setting prose. */
-export function formatCharacterSetting(value) {
-  const setting = normalizeCharacterSetting(value);
+export function formatCharacterSetting(value, options) {
+  const setting = normalizeCharacterSetting(value, options);
   return [
     `姓名：${setting.name}`,
     `性别：${setting.gender}`,
     setting.age ? `年龄：${setting.age}` : null,
     `外貌：${setting.appearance}`,
-    `职业：${setting.profession.name}\n${setting.profession.description}`,
     `性格：${setting.personality}`,
     `经历：${setting.history}`,
     `攻击方式｜${setting.attack.name}：${setting.attack.description}`,
@@ -100,7 +98,7 @@ export function characterDataFromSetting(setting, data) {
   return {
     ...data,
     name: setting.name,
-    title: setting.profession.name,
+    title: '',
     attackName: setting.attack.name,
     skills: Array.isArray(data.skills)
       ? data.skills.map((skill, index) => ({ ...skill, name: setting.skills[index]?.name }))

@@ -137,6 +137,7 @@ export function characterGenerationPlan(input = {}) {
       support: { hp: [42 + tier * 2, 50 + tier * 2], sp: [26 + tier * 2, 32 + tier * 2] },
     },
     limits: characterDesignLimits(complexity),
+    costBands: { low: [5, 7], standard: [8, 11], high: [12, 15] },
     officialReferences: officialStatReferences(),
     guidance:
       'AI只选定位、主动/被动、1或2AP、费用档位和效果强弱档位，不填写具体hp/mp/attack/limit或效果value。程序使用固定种子编译，预览、刷新与本地重校验不重抽。2AP获得显著更高效果预算；群体、附加状态、强控制与被动占用预算。',
@@ -379,15 +380,19 @@ export function compileCharacterDesign(raw, input = {}) {
       (effect) => effect.type === 'buff' && ['bind', 'overload'].includes(effect.buff),
     );
     const costTier = ['low', 'standard', 'high'].indexOf(ability.cost || 'standard');
-    const mp = Math.min(
-      10,
-      Math.max(
-        strongControl ? 8 : 0,
-        2 +
-          costTier +
-          (ability.ap === 2 ? 1 : 0) +
-          (['allEnemies', 'allAllies'].includes(ability.target) ? 1 : 0),
-      ),
+    const costly =
+      ability.ap === 2 ||
+      ['allEnemies', 'allAllies'].includes(ability.target) ||
+      ability.effects.some((effect) => effect.power === 'high' || effect.perMark);
+    const band = Math.max(costTier, strongControl ? 2 : costly ? 1 : 0);
+    const mp = roll(
+      plan.seed,
+      `skill:${index}:cost`,
+      ...[
+        [5, 7],
+        [8, 11],
+        [12, 15],
+      ][band],
     );
     const hpCost =
       ability.payment === 'hp'
@@ -395,7 +400,7 @@ export function compileCharacterDesign(raw, input = {}) {
         : 0;
     const result = {
       ap: ability.ap,
-      mp: hpCost ? 0 : mp,
+      mp,
       ...(hpCost ? { hp: hpCost } : {}),
       target: ability.target,
       effects: abilityEffects,

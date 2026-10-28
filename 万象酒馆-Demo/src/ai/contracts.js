@@ -67,7 +67,7 @@ export function parseCharacterOutput(content) {
 
 export function characterWorldbook(entry) {
   return (
-    entry.setting.worldbook ||
+    stripRetiredLore(entry.setting.worldbook) ||
     ['name', 'title', 'appearance', 'personality', 'background', 'speechStyle', 'motivation']
       .map((key) => entry.setting[key])
       .filter(Boolean)
@@ -144,7 +144,7 @@ function skill(value, id, allowPassive = true, strict = false) {
   return {
     ...common,
     ap: integer(value.ap, 1, 2, `${id}.ap需要数字1或2`),
-    mp: integer(value.mp, 0, 10, `${id}.mp需要0～10整数`),
+    mp: integer(value.mp, 0, 15, `${id}.mp需要0～15整数`),
     ...(value.hp === undefined ? {} : { hp: integer(value.hp, 1, 20, `${id}.hp需要1～20整数`) }),
     target: choice(value.target, ['enemy', 'ally', 'self', 'allAllies', 'allEnemies'], '技能目标'),
     effects: effects(value.effects, `${id}.effects`),
@@ -166,14 +166,14 @@ export function normalizeCharacter(raw, id, input = {}) {
     raw.schemaVersion === 3
       ? {
           name: setting.name,
-          title: setting.profession.name,
+          title: '',
           worldbook: formatCharacterSetting(setting),
           formatVersion: 3,
         }
       : raw.schemaVersion === 2
         ? {
             name: text(setting.name, '姓名', 30),
-            title: text(setting.title, '称号', 30),
+            title: typeof setting.title === 'string' ? setting.title.slice(0, 30) : '',
             worldbook: stripRetiredLore(text(setting.worldbook, '人物世界书正文', 24000)),
             ...(setting.entrySkill ? { entrySkill: setting.entrySkill } : {}),
             ...(setting.formatVersion === 3 ? { formatVersion: 3 } : {}),

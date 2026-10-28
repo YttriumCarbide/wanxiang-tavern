@@ -38,18 +38,36 @@ export function presetOutputTransport(preset) {
   const forced = preset.extensions?.SPreset?.ForcedPostProcessing;
   return {
     outputTool,
-    ...(forced?.enabled && ['strict', 'merge_tools'].includes(forced.mode)
-      ? { promptProcessing: forced.mode }
+    ...(forced?.enabled && ['', 'strict', 'merge_tools'].includes(forced.mode)
+      ? { promptProcessing: forced.mode || 'none' }
       : {}),
   };
 }
 
-export function outputToolRequest(outputTool) {
-  if (!outputTool) return null;
+export function outputToolRequest(outputTool, contextTool = null) {
+  if (!outputTool && !contextTool) return null;
+  if (
+    contextTool &&
+    (contextTool.name !== 'context' || typeof contextTool.description !== 'string')
+  )
+    throw Error('未适配的上下文工具');
+  const contextTools = contextTool
+    ? [
+        {
+          type: 'function',
+          function: {
+            name: 'context',
+            description: contextTool.description,
+            parameters: { type: 'object', properties: {} },
+          },
+        },
+      ]
+    : [];
+  if (!outputTool) return { tools: contextTools };
   const kemini = /^emit_complete_response_[a-f0-9]{24}$/u.test(outputTool.name);
   if (outputTool.name !== 'game_content' && !kemini) throw Error('未适配的正文工具');
   return {
-    tools: [{ type: 'function', function: structuredClone(outputTool) }],
+    tools: [{ type: 'function', function: structuredClone(outputTool) }, ...contextTools],
     tool_choice: kemini ? 'auto' : { type: 'function', function: { name: outputTool.name } },
   };
 }

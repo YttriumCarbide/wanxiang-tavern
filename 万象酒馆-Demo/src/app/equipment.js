@@ -1,7 +1,15 @@
 import { resourceText } from '../resource-text.js';
+import { grownCombat } from '../growth.js';
+import { createEquipmentPicker } from './equipment-picker.js';
 import { createRawResponse } from './raw-response.js';
 import { EMBLEMS, equipEmblem } from '../emblems.js';
-import { equip, buyEquipment, normalizeEquipment, EQUIPMENT_STATS } from '../equipment.js';
+import {
+  equip,
+  buyEquipment,
+  normalizeEquipment,
+  equippedDefinitions,
+  EQUIPMENT_STATS,
+} from '../equipment.js';
 import { ITEMS } from '../content/items.js';
 import { BUFFS } from '../data.js';
 import { TRIGGER_EVENTS, TRIGGER_TARGETS } from '../triggers.js';
@@ -41,11 +49,14 @@ export function equipmentDescription(item) {
   );
 }
 export function preparationEquipment(library, member) {
+  const definition = grownCombat(member);
   const currentEmblem = EMBLEMS[member.emblemId]?.emblem;
   return html`<section class="equipment-slots">
     <h3>角色装备</h3>
-    <label class="prepare-emblem-row"
+    <label class="prepare-emblem-row" role="button" tabindex="0"
       ><span>纹章士</span
+      ><strong class="emblem-choice-label"
+        >${escapeText(currentEmblem ? currentEmblem.title + ' · ' + currentEmblem.name : '选择戒指')}</strong
       ><select data-emblem-character="${member.id}" aria-label="装备纹章士">
         <option value="">未装备</option>
         ${(library.emblems || [])
@@ -66,6 +77,8 @@ export function preparationEquipment(library, member) {
         const template = library.equipment.catalog.find((item) => item.id === instance?.templateId);
         return html`<label
           class="prepare-gear-row"
+          role="button"
+          tabindex="0"
           data-tooltip="${escapeText(template ? equipmentDescription(template) : '点击选择装备')}"
         >
           <span class="prepare-gear-icon">${template ? '✧' : '＋'}</span>
@@ -83,7 +96,14 @@ export function preparationEquipment(library, member) {
               .filter(
                 (item) =>
                   item.id === current ||
-                  !library.characters.some((entry) => entry.equipment?.includes(item.id)),
+                  (!library.characters.some((entry) => entry.equipment?.includes(item.id)) &&
+                    !equippedDefinitions(library, member).some(
+                      (equipped) =>
+                        equipped.id !== current &&
+                        equipped.name ===
+                          library.equipment.catalog.find((entry) => entry.id === item.templateId)
+                            ?.name,
+                    )),
               )
               .map(
                 (item) =>
@@ -107,7 +127,7 @@ export function preparationEquipment(library, member) {
       </div>
       <div class="prepare-ability-category">
         <div class="prepare-ability-label">角色技能</div>
-        ${(member.combat?.skills || member.skills || [])
+        ${(definition.skills || [])
           .filter((s) => !s.passive)
           .map(
             (s) =>
@@ -162,7 +182,7 @@ export function preparationEquipment(library, member) {
 
       <div class="prepare-ability-category">
         <div class="prepare-ability-label">被动特质</div>
-        ${(member.combat?.skills || member.skills || [])
+        ${(definition.skills || [])
           .filter((s) => s.passive)
           .map(
             (s) =>
@@ -192,6 +212,7 @@ export function preparationEquipment(library, member) {
 
 export function createEquipment(context) {
   const { session, events } = context;
+  const picker = createEquipmentPicker(context, equipmentDescription);
   const library = () => session.ai.library;
   const rawResponse = createRawResponse(events, 'creation-raw-response', '以太 API 原始回复');
   const panel = document.createElement('dialog');
@@ -214,6 +235,7 @@ export function createEquipment(context) {
   let page = 'construct';
   let selected = null;
   let teaching = false;
+  let exchangeOnly = false;
   function explainForge() {
     lesson.hidden = !teaching;
     for (const target of panel.querySelectorAll('.tutorial-focus'))
@@ -261,8 +283,11 @@ export function createEquipment(context) {
     return items;
   }
   function refresh() {
+    panel.querySelector('#forge-config').disabled = exchangeOnly || session.ai.busy;
+    panel.querySelector('[data-forge-page="construct"]').disabled = exchangeOnly;
     panel.querySelector('#forge-ether').textContent = '以太 ' + library().inventory.ether;
-    panel.querySelector('#forge-refine').disabled = !!request || !pendingItems().length;
+    panel.querySelector('#forge-refine').disabled =
+      exchangeOnly || session.ai.busy || !!request || !pendingItems().length;
     panel.querySelector('#forge-cancel').hidden = !request;
     panel.dataset.busy = String(!!request);
     panel.querySelector('#forge-animation').hidden = page !== 'construct';
@@ -293,7 +318,6 @@ export function createEquipment(context) {
       ? html`<article class="forge-item">
           <span class="equipment-emblem">✧</span>
           <h3>${escapeText(item.name)}</h3>
-          <p>${escapeText(resourceText(item.description))}</p>
           <div class="forge-effects">${escapeText(equipmentDescription(item))}</div>
           <button
             class="primary"
@@ -433,7 +457,13 @@ export function createEquipment(context) {
       return;
     }
     const button = event.target.closest('[data-buy-equipment]');
-    if (!button || request || session.runtime.mode !== 'inn') return;
+    if (
+      !button ||
+      request ||
+      (session.runtime.mode !== 'inn' &&
+        !(exchangeOnly && document.querySelector('#party-panel').open))
+    )
+      return;
     try {
       buyEquipment(library(), button.dataset.buyEquipment, crypto.randomUUID());
       context.generation.save();
@@ -499,17 +529,28 @@ export function createEquipment(context) {
     )
       return;
     teaching = context.onboarding?.condenserOpened() === true;
+    exchangeOnly = false;
     if (teaching) page = 'construct';
     refresh();
     panel.showModal();
   });
   return {
+    openExchange() {
+      if (!document.querySelector('#party-panel').open) return;
+      exchangeOnly = true;
+      page = 'exchange';
+      selected = null;
+      teaching = false;
+      refresh();
+      if (!panel.open) panel.showModal();
+    },
     refresh,
     dispose() {
       request?.abort();
       panel.remove();
       rawResponse.dispose();
       bag.remove();
+      picker.dispose();
     },
   };
 }

@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="900" viewBox="0 0 256 384" data-art-style="isometric-voxel-v3"><title>裂镜侦察机</title>
+<defs><radialGradient id="chamber" cx="50%" cy="54%" r="68%"><stop stop-color="#60838e"/><stop offset="1" stop-color="#142428"/></radialGradient></defs>
+<path fill="url(#chamber)" d="M0 0h256v384H0z"/>
+<ellipse cx="128" cy="276.8" rx="94.1" ry="10" fill="#09171b" opacity=".5"/>
+<g data-enemy-model="sentryDrone" transform="translate(-240.593 -494.463) scale(2.96296)"><polygon points="162.2,234.4 152.3,238.6 152.3,233.8 162.2,229.6" fill="#586364"/>
+<polygon points="152.3,238.6 128.0,228.3 128.0,223.5 152.3,233.8" fill="#79888a"/>
+<polygon points="137.9,219.3 162.2,229.6 152.3,233.8 128.0,223.5" fill="#9eb2b5"/>
+<polygon points="122.6,240.5 118.1,242.4 118.1,232.8 122.6,230.9" fill="#65959a"/>
+<polygon points="118.1,242.4 115.4,241.3 115.4,231.7 118.1,232.8" fill="#8bcdd4"/>
+<polygon points="119.9,229.8 122.6,230.9 118.1,232.8 115.4,231.7" fill="#b6ffff"/>
+<polygon points="127.1,238.0 108.2,246.0 108.2,234.0 127.1,226.0" fill="#1a272e"/>
+<polygon points="108.2,246.0 101.9,243.4 101.9,231.4 108.2,234.0" fill="#24363f"/>
+<polygon points="120.8,223.4 127.1,226.0 108.2,234.0 101.9,231.4" fill="#2f4653"/>
+<polygon points="110.0,245.8 105.5,247.7 105.5,238.1 110.0,236.2" fill="#65959a"/>
+<polygon points="105.5,247.7 102.8,246.6 102.8,237.0 105.5,238.1" fill="#8bcdd4"/>
+<polygon points="107.3,235.1 110.0,236.2 105.5,238.1 102.8,237.0" fill="#b6ffff"/>
+<polygon points="156.8,250.3 131.6,261.0 131.6,240.6 156.8,229.9" fill="#415159"/>
+<polygon points="131.6,261.0 99.2,247.3 99.2,226.9 131.6,240.6" fill="#59707a"/>
+<polygon points="124.4,216.2 156.8,229.9 131.6,240.6 99.2,226.9" fill="#7492a0"/>
+<polygon points="157.0,248.9 136.8,257.5 136.8,247.9 157.0,239.3" fill="#1a272e"/>
+<polygon points="136.8,257.5 133.2,255.9 133.2,246.3 136.8,247.9" fill="#24363f"/>
+<polygon points="153.4,237.8 157.0,239.3 136.8,247.9 133.2,246.3" fill="#2f4653"/>
+<polygon points="120.8,251.9 110.9,256.0 110.9,251.2 120.8,247.1" fill="#586364"/>
+<polygon points="110.9,256.0 86.6,245.8 86.6,241.0 110.9,251.2" fill="#79888a"/>
+<polygon points="96.5,236.8 120.8,247.1 110.9,251.2 86.6,241.0" fill="#9eb2b5"/>
+<polygon points="156.0,247.8 139.8,254.6 139.8,250.8 156.0,244.0" fill="#947e4d"/>
+<polygon points="139.8,254.6 138.5,254.1 138.5,250.2 139.8,250.8" fill="#ccad6a"/>
+<polygon points="154.7,243.4 156.0,244.0 139.8,250.8 138.5,250.2" fill="#ffe38b"/></g>
+</svg>

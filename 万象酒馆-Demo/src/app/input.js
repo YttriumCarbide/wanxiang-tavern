@@ -106,7 +106,7 @@ export function mountInput(context) {
       !context.viewport.canPlan() ||
       session.runtime.drag?.moved ||
       e.target.closest(
-        'dialog[open],#tutorial-guide,#details,[data-unit],[data-rear],[data-empty-slot],.time-cell,.time-action,[data-skill],.command-controls button,#drag-menu button,.hud-toggle,#round-label,#ap-orb,#audio-toggle,#audio-panel,#story-toggle',
+        'dialog[open],#tutorial-guide,#details,[data-unit],[data-rear],[data-empty-slot],.time-cell,.time-action,[data-skill],.command-controls button,#drag-menu button,.hud-toggle,#round-label,#ap-orb,#battle-reading-toggle,#gal-dungeon-menu,#audio-toggle,#audio-panel,#story-toggle',
       )
     )
       return;

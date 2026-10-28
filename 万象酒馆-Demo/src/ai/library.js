@@ -2,13 +2,14 @@ import { lockUnopenedRear } from '../formation-access.js';
 import { restoreTetris } from '../tetris.js';
 import { upgradeLegacyStatuses } from '../status-rules.js';
 import { restoreWorlds } from '../worlds.js';
-import { EMBLEMS, OVERLOAD_EMBLEM_ID } from '../emblems.js';
+import { EMBLEMS, applyEmblemStats } from '../emblems.js';
 import { grownCombat, restoreGrowth } from '../growth.js';
 import { restoreEquipment, applyEquipment, equippedDefinitions } from '../equipment.js';
 import { ENCOUNTER_COUNT } from '../content/journey-rules.js';
 import { REGIONS } from '../content/regions.js';
 import { PANDORA, PANDORA_SETTING } from '../content/pandora.js';
 import { EDITH, EDITH_SETTING } from '../content/edith.js';
+import { OFFICIAL_VISITORS } from '../content/official-visitors.js';
 import { stripRetiredLore } from './retired-abilities.js';
 import { HEROES } from '../data.js';
 import { normalizeCharacter, normalizeScript } from './contracts.js';
@@ -77,6 +78,24 @@ function createLibrary(customPortraits) {
   };
 }
 export function officialCharacter(id) {
+  if (OFFICIAL_VISITORS[id]) {
+    const visitor = OFFICIAL_VISITORS[id];
+    return {
+      id: 'official-' + id,
+      source: 'official',
+      archetype: id === 'luo-gongxu' ? 'aegis' : 'morrow',
+      growth: restoreGrowth(null, 'official-' + id),
+      combat: structuredClone(visitor.combat),
+      setting: {
+        name: visitor.setting.name,
+        title: visitor.combat.title,
+        worldbook: formatCharacterSetting(visitor.setting, {
+          skillCount: visitor.combat.skills.length,
+        }),
+        formatVersion: 3,
+      },
+    };
+  }
   if (id === 'edith')
     return {
       id: 'official-edith',
@@ -101,7 +120,9 @@ export function officialCharacter(id) {
       setting: {
         name: PANDORA.name,
         title: PANDORA.title,
-        worldbook: formatCharacterSetting(PANDORA_SETTING),
+        worldbook:
+          formatCharacterSetting(PANDORA_SETTING) +
+          '\n\n叙事提示：服装颜色只在首次出场或确有必要时简短交代，不反复强调裙子是黑白紫相间的。',
         formatVersion: 3,
       },
     };
@@ -126,15 +147,13 @@ export function compileRoster(library) {
       if (!entry && library.campaign && !library.party[index])
         return [slot.id, { ...structuredClone(slot), inactive: true }];
       if (!entry) throw Error('队伍角色不在角色池中');
-      const combat = applyEquipment(grownCombat(entry), equippedDefinitions(library, entry));
+      const combat = applyEmblemStats(
+        applyEquipment(grownCombat(entry), equippedDefinitions(library, entry)),
+        entry.emblemId,
+      );
       const portrait = savedPortrait(customPortraits, entry);
       if (portrait) combat.customPortrait = portrait;
       const emblemId = EMBLEMS[entry.emblemId] ? entry.emblemId : null;
-      if (emblemId === OVERLOAD_EMBLEM_ID) {
-        combat.mp = Math.round(combat.mp * 1.5);
-        combat.hp = Math.round(combat.hp + combat.mp * 0.25);
-        combat._overloadApplied = true;
-      }
       if (!combat.entrySkill) {
         if (entry.setting?.entrySkill) {
           combat.entrySkill = {
@@ -272,7 +291,11 @@ export function restoreLibrary(value) {
     : [];
   for (const entry of Array.isArray(value.characters) ? value.characters.slice(0, 100) : []) {
     if (entry.source === 'official') {
-      const official = ['official-pandora', 'official-edith'].includes(entry.id)
+      const official = [
+        'official-pandora',
+        'official-edith',
+        ...Object.keys(OFFICIAL_VISITORS).map((id) => 'official-' + id),
+      ].includes(entry.id)
         ? officialCharacter(entry.id.slice('official-'.length))
         : createLibrary(customPortraits).characters.find((member) => member.id === entry.id);
       if (official && !library.characters.some((member) => member.id === official.id))
@@ -347,6 +370,9 @@ export function restoreLibrary(value) {
     }
   }
   for (const member of library.characters) {
+    delete member.setting.profession;
+    if (member.setting.worldbook)
+      member.setting.worldbook = stripRetiredLore(member.setting.worldbook);
     const portrait = savedPortrait(customPortraits, member);
     if (portrait) member.combat.customPortrait = portrait;
   }
@@ -436,12 +462,20 @@ export function restoreLibrary(value) {
   }
   const equipped = new Set();
   for (const member of library.characters)
-    if (member.equipment)
+    if (member.equipment) {
+      const names = new Set();
       member.equipment = member.equipment.map((id) => {
         if (!id || equipped.has(id)) return null;
+        const instance = library.equipment.owned.find((item) => item.id === id);
+        const name = library.equipment.catalog.find(
+          (item) => item.id === instance?.templateId,
+        )?.name;
+        if (!name || names.has(name)) return null;
+        names.add(name);
         equipped.add(id);
         return id;
       });
+    }
   library.prepared =
     library.scripts.some(
       (book) =>

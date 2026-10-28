@@ -79,6 +79,39 @@ test('long novel prose survives local pagination, Unicode and marker parsing wit
   );
 });
 
+test('short pages keep consecutive speakers and narration intact at natural pauses', () => {
+  for (const type of ['dialogue', 'narration']) {
+    const text = '门还没有开。先听一听。这次别急。我们还有时间。';
+    const beat = { type, speaker: type === 'dialogue' ? 'edith' : '', text };
+    const pages = paginateGalBeat(beat, 155);
+    assert.deepEqual(
+      pages.map((page) => page.text),
+      ['门还没有开。先听一听。', '这次别急。我们还有时间。'],
+    );
+    assert(pages.every((page) => page.type === type && page.speaker === beat.speaker));
+    assert.equal(pages.map((page) => page.text).join(''), text);
+  }
+  const quoted = { type: 'narration', text: '她低声说：“先等等？！”随后合上书。\n门外传来脚步。' };
+  const quotedPages = paginateGalBeat(quoted, 155);
+  assert.equal(quotedPages[0].text, '她低声说：“先等等？！”随后合上书。');
+  assert.equal(quotedPages.map((page) => page.text).join(''), quoted.text);
+  const long = { type: 'dialogue', speaker: 'edith', text: '沿着石阶慢慢走'.repeat(22) + '。”' };
+  const desktop = paginateGalBeat(long, 155);
+  const mobile = paginateGalBeat(long, 76);
+  assert(desktop.every((page) => Array.from(page.text).length <= 64));
+  assert(mobile.every((page) => Array.from(page.text).length <= 48));
+  assert(mobile.length > desktop.length);
+  for (const pages of [desktop, mobile]) {
+    assert.equal(pages.map((page) => page.text).join(''), long.text);
+    assert(pages.every((page) => !/^[。”]/u.test(page.text)));
+  }
+  const repeated = parseGalText('【对白:edith】先等等。【对白:edith】再听听。【旁白】灯熄了。');
+  assert.deepEqual(
+    repeated.map((beat) => beat.speaker),
+    ['edith', 'edith', ''],
+  );
+});
+
 test('authored tutorial action prose is narration while known quoted speech keeps its speaker', () => {
   const result = authoredGalContent([
     { speaker: '潘多拉', text: '她抱紧小熊。“主人。”她抬头。“欢迎回来。”' },

@@ -54,7 +54,7 @@ test('a new adventure resets borrowed protagonist growth while loading a save pr
 
 test('corridor Boss grants and equips a full ring exactly once; balance precedes a single opening lightning strike', () => {
   const { library, expedition } = corridorFixture();
-  assert(prepareCorridorRing(library, expedition));
+  assert(prepareCorridorRing(library, expedition, () => 0));
   assert.equal(prepareCorridorRing(library, expedition), false);
   assert.deepEqual(library.emblems, [EMBLEM_ID]);
   assert.equal(library.characters[0].emblemId, EMBLEM_ID);

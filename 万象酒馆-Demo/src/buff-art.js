@@ -3,6 +3,13 @@ import { html } from './shared/html.js';
 // Draw on a 64-pixel grid while retaining the existing 16px presentation size.
 // Silhouettes convey the effect; highlights, seams and chips provide close-up detail.
 const artwork = {
+  sinkingPlague: html`<path fill="#241b34" d="M5 5h54v54H5z" /><path
+      fill="#8f63ac"
+      d="M8 42h48v8H8zM14 32h8v10h-8zM42 30h8v12h-8z"
+    /><path fill="#b8cf79" d="M27 12h10v7h7v13H20V19h7z" /><path
+      fill="#342445"
+      d="M25 23h5v5h-5zM35 23h5v5h-5z"
+    /><path fill="#d1b4e4" d="m29 37 5 4-5 4h7l-5 5 3 5h-6l-2-6 4-6-4-4z" />`,
   meteor: html`<path fill="#213943" d="M8 7h48v50H8z" /><path
       fill="#a9e4e5"
       d="m36 10 4 14 14 4-14 4-4 14-4-14-14-4 14-4z"

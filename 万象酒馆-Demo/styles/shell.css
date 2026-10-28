@@ -1141,3 +1141,6 @@ dialog::backdrop {
     line-height: 24px;
   }
 }
+body.ring-cabinet-open :is(.app-header, #inn-resources) {
+  visibility: hidden;
+}

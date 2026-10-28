@@ -22,7 +22,7 @@ test('长景月汐 replaces the first companion while old party IDs, other setti
   old.history = [{ runId: 'past', lines: ['旧的故事'] }];
   const restored = restoreLibrary(old);
   assert.equal(restored.characters[0].setting.name, '长景月汐');
-  assert(restored.characters[0].setting.worldbook.includes('王国公主'));
+  assert(restored.characters[0].setting.worldbook.includes('长景月汐'));
   assert(!restored.characters[0].setting.worldbook.includes('私人编辑'));
   assert.equal(restored.characters[1].setting.worldbook, old.characters[1].setting.worldbook);
   assert.deepEqual(restored.party, old.party);

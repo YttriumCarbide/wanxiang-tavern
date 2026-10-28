@@ -16,7 +16,7 @@ export function createOnboarding(context) {
     ['name', '姓名', 'input', 30],
     ['gender', '性别', 'input', 30],
     ['age', '年龄', 'input'],
-    ['identity', '种族、身份与职业', 'input', 200],
+    ['identity', '种族与身份', 'input', 200],
     ['appearance', '外貌与衣着', 'textarea', 1200],
     ['personality', '性格与习惯', 'textarea', 1200],
     ['history', '经历与来历', 'textarea', 1500],
@@ -201,14 +201,24 @@ export function createOnboarding(context) {
         context.backpack.render();
       }
       guide.hidden = false;
-      highlight(content.focus);
+      highlight(
+        context.gal?.enabled && step === 'intent' ? '#battle-reading-toggle' : content.focus,
+      );
     }
     if (shown === step) {
       if (!dialogue.open) readyForAction();
       return;
     }
     shown = step;
-    dialogue.show(content.lines, readyForAction);
+    const lines =
+      context.gal?.enabled && step === 'intent'
+        ? [
+            '背包右边的圆形切换按钮可以收起时间轴，显示剧情、闲聊和修改剧本。第一场正文等你点击“剧情”才播放，不会抢在教学前面。',
+            '“闲聊”可以和同行者说话，输入后发送即可；交流不消耗AP或推进回合，退出后继续安排战斗。',
+            '想引导后续发展，可以先在闲聊表达想法，再用“修改剧本”。它只改尚未经历的内容，会先说明作用并调用剧本API。现在先点切换，再打开剧情看看。',
+          ]
+        : content.lines;
+    dialogue.show(lines, readyForAction);
   }
   function open() {
     if (session.battle.playing || session.ai.busy) return;
@@ -356,7 +366,7 @@ export function createOnboarding(context) {
     const step = state().tutorial;
     if (
       step === 'intent' &&
-      event.target.closest('#story-toggle') &&
+      event.target.closest('#story-toggle,[data-dungeon-gal="story"]') &&
       ($('#story-feed').open || context.gal?.owner === 'script')
     ) {
       state().tutorial = 'swap';

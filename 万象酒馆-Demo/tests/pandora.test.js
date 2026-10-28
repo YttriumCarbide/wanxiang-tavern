@@ -1,4 +1,5 @@
 import { portraitFrameLayout } from '../src/portrait-frame.js';
+import { DEFINITIONS } from '../src/data.js';
 import { statusIcons } from '../src/ui.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -28,7 +29,14 @@ test('square and wide illustrations retain their original proportions at the top
 
 test('bind cancels exactly the remaining enemy action, expires this round and preview is immutable', () => {
   const state = advance(
-    preview(newBattle(['warden'], { morrow: { ...PANDORA, id: 'morrow' } }), []),
+    preview(
+      newBattle(
+        ['warden'],
+        { morrow: { ...PANDORA, id: 'morrow' } },
+        { warden: { ...DEFINITIONS.warden, speed: 1 } },
+      ),
+      [],
+    ),
   );
   const before = structuredClone(state);
   const result = preview(state, [makeAction(state, 'morrow', 'clock-bind', 'warden', 0)]);
@@ -40,14 +48,16 @@ test('bind cancels exactly the remaining enemy action, expires this round and pr
     ),
   );
   assert(!result.events.some((event) => event.actor === 'warden' && event.type === 'enemy'));
-  assert.equal(result.final.units.morrow.mp, state.units.morrow.mp - 10);
+  assert.equal(result.final.units.morrow.mp, state.units.morrow.mp - 18);
   assert(!result.final.units.warden.buffs.bind);
   assert.deepEqual(state, before);
   const next = advance(result);
   assert(
     preview(next, []).events.some((event) => event.actor === 'warden' && event.type === 'enemy'),
   );
-  const late = preview(state, [makeAction(state, 'morrow', 'clock-bind', 'warden', 2)]);
+  const lateState = structuredClone(state);
+  lateState.enemyDefinitions.warden = { ...DEFINITIONS.warden, speed: 3 };
+  const late = preview(lateState, [makeAction(lateState, 'morrow', 'clock-bind', 'warden', 2)]);
   assert(late.valid);
   assert(late.events.some((event) => event.actor === 'warden' && event.type === 'enemy'));
   assert(

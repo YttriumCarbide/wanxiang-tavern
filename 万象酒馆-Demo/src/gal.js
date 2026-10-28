@@ -63,16 +63,50 @@ export function authoredGalContent(content, defaultSpeaker = '伊蒂丝') {
   });
 }
 
+/** Prefer one or two complete sentences; retain punctuation and the original text exactly. */
+function pacedPageEnd(characters, limit) {
+  let sentenceEnd = 0;
+  let sentences = 0;
+  for (let index = 0; index < limit; index++) {
+    const character = characters[index];
+    if (character === '\n') return index + 1;
+    const period =
+      character === '.' &&
+      (!characters[index + 1] || /[\s”’"」』）)]/u.test(characters[index + 1]));
+    if (!period && !/[。！？!?；;…]/u.test(character)) continue;
+    let end = index + 1;
+    while (end < characters.length && /[。！？!?；;….”’"」』）》】)]/u.test(characters[end])) end++;
+    if (end > limit) break;
+    sentenceEnd = end;
+    sentences++;
+    if (sentences === 2) return end;
+    index = end - 1;
+  }
+  if (sentenceEnd) return sentenceEnd;
+  if (limit === characters.length) return limit;
+  for (let index = limit - 1; index >= Math.floor(limit * 0.45); index--)
+    if (/[，,、：:\s]/u.test(characters[index])) return index + 1;
+  let end = limit;
+  while (end > 1 && /[，,。！？!?；;、：:….”’"」』）》】)]/u.test(characters[end])) end--;
+  while (end > 1 && /[“‘"「『（(《【]/u.test(characters[end - 1])) end--;
+  return end;
+}
+
 export function paginateGalBeat(beat, capacity = 140) {
   if (!beat.text) return [beat];
   const result = [];
   let remaining = Array.from(beat.text);
+  const compact = capacity <= 80;
+  const pageLimit = Math.min(
+    capacity,
+    beat.type === 'dialogue' ? (compact ? 48 : 64) : compact ? 60 : 80,
+  );
   while (remaining.length) {
     let end = 0;
     let lines = 1;
     let column = 0;
     const columns = Math.ceil(capacity / 3);
-    while (end < remaining.length && end < capacity) {
+    while (end < remaining.length && end < pageLimit) {
       if (remaining[end] === '\n') {
         lines++;
         column = 0;
@@ -84,14 +118,7 @@ export function paginateGalBeat(beat, capacity = 140) {
       end++;
     }
     end = Math.max(1, end);
-    if (end < remaining.length) {
-      for (let index = end - 1; index >= Math.floor(end * 0.5); index--) {
-        if (/[。！？；\n.!?]/u.test(remaining[index])) {
-          end = index + 1;
-          break;
-        }
-      }
-    }
+    end = pacedPageEnd(remaining, end);
     result.push({ ...beat, text: remaining.slice(0, end).join('') });
     remaining = remaining.slice(end);
   }

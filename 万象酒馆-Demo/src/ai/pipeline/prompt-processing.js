@@ -1,6 +1,7 @@
 import { mergeMessages } from '../../../vendor/sillytavern/merge-messages.mjs';
 import { requestTokenReport } from './request-tokens.js';
 import { outputToolRequest } from '../preset-output.js';
+import { miaosaiyaFinalRequest, miaosaiyaPromptMessages } from '../miaosaiya-processing.js';
 import {
   processPresetMessages,
   prepareKeminiTransport,
@@ -9,6 +10,7 @@ import {
 
 /** Use the upstream SillyTavern implementation for both supported processing modes. */
 export function processPrompt(messages, mode = 'merge_tools', names = []) {
+  if (mode === 'none') return structuredClone(messages);
   if (!['strict', 'merge_tools'].includes(mode)) throw Error('提示词后处理类型无效');
   return mergeMessages(
     structuredClone(messages),
@@ -26,20 +28,25 @@ export function finalizeRequest(prepared, profile, countTokens, names = []) {
   const sampling = prepared.sampling || {};
   const maxOutput = profile.tokenField === 'none' ? 0 : (sampling.maxTokens ?? profile.maxTokens);
   const mode = prepared.transport?.promptProcessing || profile.promptProcessing || 'merge_tools';
-  const processed = processPresetMessages(prepared.messages, prepared.transport?.presetProcessing);
+  const processed = processPresetMessages(
+    miaosaiyaPromptMessages(prepared.messages, prepared.transport?.presetProcessing),
+    prepared.transport?.presetProcessing,
+    prepared.transport?.presetVariables,
+  );
   const kemini = prepareKeminiTransport(
     processPrompt(processed.messages, mode, names),
     prepared.transport?.presetProcessing,
     Boolean(prepared.transport?.outputTool),
   );
-  const messages = kemini.messages;
+  const final = miaosaiyaFinalRequest(kemini.messages, prepared.transport?.presetProcessing);
+  const messages = final.messages;
   const outputTool = kemini.outputTool || prepared.transport?.outputTool;
   const tokens = requestTokenReport(
     messages,
     countTokens,
     null,
     maxOutput,
-    outputToolRequest(outputTool),
+    outputToolRequest(outputTool, final.contextTool),
   );
   const contextSize = sampling.contextSize ?? profile.contextSize ?? 131072;
   if (tokens.totalBudgetEstimate > contextSize)
@@ -56,7 +63,8 @@ export function finalizeRequest(prepared, profile, countTokens, names = []) {
       stream: sampling.stream ?? profile.stream ?? false,
       contextSize,
       ...(outputTool ? { outputTool } : {}),
-      processingStatus: { ...processed.status, ...kemini.status },
+      ...(final.contextTool ? { contextTool: final.contextTool } : {}),
+      processingStatus: { ...processed.status, ...kemini.status, ...final.status },
       stop: presetStopStrings(prepared.transport?.presetProcessing),
     },
   };

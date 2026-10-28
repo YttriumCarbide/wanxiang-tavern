@@ -9,6 +9,7 @@ export async function readCompletionStream(
   outputTool = null,
   outputProcessing = null,
 ) {
+  const started = performance.now();
   const decoder = new TextDecoder();
   let processor = createPresetOutputProcessor(outputProcessing, onDelta);
   let emittedRaw = '';
@@ -75,10 +76,12 @@ export async function readCompletionStream(
         if (ended) break;
       }
       // A completed SSE reply must not wait for the proxy to close its keep-alive connection.
-      if (ended) break;
+      // Some compatible proxies finish with finish_reason but omit [DONE]. Both are
+      // terminal protocol signals; do not read a new chunk from a kept-open socket.
+      if (ended || finish) break;
     }
     buffer += decoder.decode();
-    if (!ended && buffer.trim()) event(buffer.replaceAll('\r', ''));
+    if (!ended && !finish && buffer.trim()) event(buffer.replaceAll('\r', ''));
     if (finish === 'length') throw Error('生成被长度上限截断，请提高回复上限后重试');
     if (tool) content = tool.finish();
     if (!content.trim()) throw Error('模型没有返回正文');
@@ -104,6 +107,8 @@ export async function readCompletionStream(
       eventCount,
       textCharacters: content.length,
       doneMarker: ended,
+      finishReason: finish,
+      elapsedMs: Math.round(performance.now() - started),
     };
     failure.stage ||= finish === 'length' ? 'truncated' : tool ? 'tool-response' : 'transport';
     throw failure;

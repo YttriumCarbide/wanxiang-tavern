@@ -61,7 +61,8 @@ export function createGenerationDiagnostics({ session, events, api, accept, toas
         : '没有发现格式或规则问题。');
     if (record.delivery)
       $('#diagnostic-issues').textContent +=
-        `\n\n游戏收包：${record.delivery.receivedBytes}字节，${record.delivery.eventCount}条数据帧，已提取正文${record.delivery.textCharacters}字；${record.delivery.doneMarker ? '收到' : '未收到'}流式结束标记。`;
+        `\n\n游戏收包：${record.delivery.receivedBytes}字节，${record.delivery.eventCount}条数据帧，已提取正文${record.delivery.textCharacters}字；${record.delivery.doneMarker ? '收到' : '未收到'}流式结束标记。` +
+        `\n模型结束原因：${record.delivery.finishReason || '未收到'}；收包用时：${((record.delivery.elapsedMs || 0) / 1000).toFixed(1)}秒。`;
     if (record.warnings?.length)
       $('#diagnostic-issues').textContent +=
         '\n\n参考信息（不影响接收）：\n' + describeIssues(record.warnings);

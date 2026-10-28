@@ -132,10 +132,21 @@ export function equip(library, characterId, slot, instanceId) {
     throw Error('未持有该装备');
   if (instanceId && library.characters.some((item) => item.equipment?.includes(instanceId)))
     throw Error('该装备已被使用，请先卸下');
+  if (instanceId) {
+    const instance = library.equipment.owned.find((item) => item.id === instanceId);
+    const name = library.equipment.catalog.find((item) => item.id === instance.templateId)?.name;
+    if (
+      equippedDefinitions(library, member).some(
+        (item) => item.name === name && member.equipment?.[slot] !== item.id,
+      )
+    )
+      throw Error('同名装备每名角色只能装备一件');
+  }
   member.equipment ||= [null, null, null];
   member.equipment[slot] = instanceId || null;
 }
 export function equippedDefinitions(library, member) {
+  const names = new Set();
   return (member.equipment || [])
     .slice(0, 3)
     .map((id) => {
@@ -143,7 +154,11 @@ export function equippedDefinitions(library, member) {
       const template = library.equipment?.catalog.find((item) => item.id === instance?.templateId);
       return template ? { ...structuredClone(template), id } : null;
     })
-    .filter(Boolean);
+    .filter((item) => {
+      if (!item || names.has(item.name)) return false;
+      names.add(item.name);
+      return true;
+    });
 }
 export function applyEquipment(combat, equipment) {
   const result = structuredClone(combat);

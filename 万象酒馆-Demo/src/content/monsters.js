@@ -1,4 +1,5 @@
 import { FOREST_MONSTER_LORE } from './forest-lore.js';
+import { FROST_ENEMIES, FROST_BOSSES } from './frost-adversaries.js';
 /** Narrative setting only. Encounter identities and combat capabilities come from data.js. */
 export const MONSTER_LORE = Object.freeze({
   crystalBeetle: {
@@ -182,6 +183,18 @@ export const ALL_MONSTER_LORE = Object.freeze({
   ...MONSTER_LORE,
   ...RUINS_MONSTER_LORE,
   ...FOREST_MONSTER_LORE,
+  ...Object.fromEntries(
+    [...FROST_ENEMIES, ...FROST_BOSSES].map((enemy) => [
+      enemy.id,
+      {
+        appearance: enemy.description,
+        habits: enemy.nonlethal
+          ? '维持聚落安全，受到压制后会放下武器交涉，不得写成死亡。'
+          : enemy.description,
+        motion: enemy.intents.map((move) => `${move.name}：${move.text}`).join('；'),
+      },
+    ]),
+  ),
 });
 
 export function monsterWorldbook(id, name) {

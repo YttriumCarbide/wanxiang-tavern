@@ -22,7 +22,7 @@ export function upgradeTutorialRevision(source) {
       entry.content +=
         '\n\n' +
         CORRIDOR_RING_GUIDANCE +
-        '\n重要节点5修订：开幕雷击蓄势时意外获得戒指，主角满充能结合，使用平衡后突破机关石门。';
+        '\n重要节点5修订：开幕雷击蓄势时意外获得戒指，实际获赠者满充能结合，使用平衡后突破机关石门。';
     }
     if (marker?.monsterId === 'ruinsGate' && !entry.content.includes('雷锁贯穿'))
       entry.content +=

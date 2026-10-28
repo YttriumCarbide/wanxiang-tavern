@@ -711,3 +711,16 @@
     grid-template-columns: 1fr;
   }
 }
+
+.preparation-supplies {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.preparation-supplies button {
+  padding: 8px 12px;
+  border: 1px solid #c6b77966;
+  border-radius: 6px;
+  background: #213c39;
+  color: #e7d5a8;
+}

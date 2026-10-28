@@ -17,7 +17,7 @@ export function createBattleReading(context) {
   menu.setAttribute('aria-label', '剧情与同行闲聊');
   menu.inert = true;
   menu.innerHTML =
-    '<button data-dungeon-gal="story">剧情</button><button data-dungeon-gal="quick">闲聊</button>';
+    '<button data-dungeon-gal="story">剧情</button><button data-dungeon-gal="quick">闲聊</button><button data-dungeon-gal="rewrite">修改剧本</button>';
   battle.append(button, menu);
   let expanded = false;
   function setExpanded(value) {
@@ -50,6 +50,7 @@ export function createBattleReading(context) {
     const kind = event.target.closest('[data-dungeon-gal]')?.dataset.dungeonGal;
     if (kind === 'story') document.dispatchEvent(new CustomEvent('gal-open-script'));
     if (kind === 'quick') document.dispatchEvent(new CustomEvent('gal-open-quick'));
+    if (kind === 'rewrite') document.dispatchEvent(new CustomEvent('gal-rewrite-script'));
   });
   events.on(window, 'resize', render);
   return {

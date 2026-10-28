@@ -84,14 +84,20 @@ export function createEffects(layer, center, getSpeed) {
     el.textContent = text;
     el.style.left = `${p.x}px`;
     el.style.top = `${p.y - 38}px`;
+    const equipment = kind === 'equipment-proc-number';
     animate(
       el,
       [
         { opacity: 0, translate: '0 5px' },
         { opacity: 1, translate: '0 -12px', offset: 0.2 },
-        { opacity: 0, translate: '0 -75px' },
+        ...(equipment
+          ? [
+              { opacity: 1, translate: '0 -18px', offset: 0.75 },
+              { opacity: 0, translate: '0 -36px' },
+            ]
+          : [{ opacity: 0, translate: '0 -75px' }]),
       ],
-      850,
+      equipment ? 2800 * getSpeed() : 850,
       delay,
     );
   }
@@ -103,9 +109,42 @@ export function createEffects(layer, center, getSpeed) {
       source = center(e.actor),
       attack = records.find((r) => r.id === e.actor),
       style = attackStyle(e) || d?.weapon || 'sword',
-      isAction = ['hero', 'enemy', 'entrySkill'].includes(e.type),
+      isAction = ['hero', 'enemy', 'entrySkill', 'counter'].includes(e.type),
       duration = isAction ? ATTACK_TIMING[style] || 640 : 0,
       impactDelay = isAction ? duration * 0.7 : 0;
+    if (e.type === 'bossPhase' && source) {
+      roundBanner(`${d.name} · 第二阶段`);
+      ring(source, d.color || '#d78ffe', 'boss-phase-ring');
+      sparks(source, '#d9a1ff', reduced ? 4 : 16);
+      const flash = document.createElement('div');
+      flash.className = 'boss-phase-flash';
+      flash.setAttribute('aria-label', 'Boss进入第二阶段');
+      animate(flash, [{ opacity: 0 }, { opacity: 0.85, offset: 0.18 }, { opacity: 0 }], 1400);
+      const shock = document.createElement('div');
+      shock.className = 'boss-phase-shockwave';
+      shock.style.left = `${source.x}px`;
+      shock.style.top = `${source.y}px`;
+      animate(
+        shock,
+        [
+          { opacity: 0.95, transform: 'translate(-50%,-50%) scale(0.01)' },
+          { opacity: 0.65, offset: 0.4 },
+          { opacity: 0, transform: 'translate(-50%,-50%) scale(1)' },
+        ],
+        1800,
+      );
+    }
+    for (const proc of e.procs || []) {
+      if (!proc.equipment) continue;
+      const point = center(proc.owner);
+      if (point)
+        floating(
+          { x: point.x, y: point.y - 48 },
+          `✧ ${proc.name} · 已触发`,
+          'equipment-proc-number',
+          impactDelay,
+        );
+    }
     if (isAction && source) details.thread(layer, source, d?.color, duration);
     const signals = triggeredStatusVisuals(e, before);
     for (const signal of signals) {
@@ -186,13 +225,8 @@ export function createEffects(layer, center, getSpeed) {
         ring(p, '#ba8194', 'death-ring', impactDelay);
         sparks(p, '#aca399', 9, impactDelay);
       }
-      const def = definition(e.after, id);
-      if (def?.boss && u.hp > 0 && !old.enraged && u.enraged) {
-        roundBanner(`${def.name} · 第二阶段`);
-        ring(p, def.color || '#ffd97a', 'boss-phase-ring');
-      }
     }
-    return Math.max(duration, signals.length ? 700 : 0);
+    return Math.max(duration, signals.length || e.type === 'bossPhase' ? 700 : 0);
   }
   return {
     play,

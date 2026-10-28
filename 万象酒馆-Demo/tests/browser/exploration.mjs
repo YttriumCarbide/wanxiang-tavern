@@ -115,7 +115,7 @@ export async function explorationJourneyChecks({ browser, baseURL, output }) {
         await page.setViewportSize({ width: 1440, height: 836 });
       }
       await page.locator('#destination-start').click();
-      await page.locator('[data-departure="confirm"]').click();
+      await page.locator('#prepare-done').click();
       await page.locator('#prepare-done').click();
       await page.waitForFunction(() => window.demo.getStatus().mode === 'battle', {
         timeout: 60000,

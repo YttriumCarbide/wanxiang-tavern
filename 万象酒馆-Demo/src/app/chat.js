@@ -567,6 +567,7 @@ export function createChat(context) {
     }
   });
   events.on(document, 'gal-open-quick', () => openGal('quick-chat'));
+  events.on(document, 'gal-rewrite-script', () => $('#script-rewrite').click());
   events.on(dialog, 'close', () => request?.abort());
   events.on($('#chat-cancel'), 'click', () => {
     request?.abort();

@@ -56,7 +56,9 @@ test('all companions use three weapon presentations and every enemy resolves a s
   assert.equal(attackStyle({ type: 'poison', actor: null }), null);
   const state = newBattle();
   assert.equal(
-    preview(state, [makeAction(state, 'morrow', 'delay', 'mossSlime', 0)]).events[0].skill,
+    preview(state, [makeAction(state, 'morrow', 'delay', 'mossSlime', 0)]).events.find(
+      (event) => event.type === 'hero',
+    ).skill,
     'delay',
   );
 });

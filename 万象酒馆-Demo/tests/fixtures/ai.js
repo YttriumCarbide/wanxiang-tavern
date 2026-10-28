@@ -9,10 +9,9 @@ export function characterDocument() {
   const raw = characterFixture();
   const setting = JSON.parse(JSON.stringify(OFFICIAL_SETTINGS.morrow).replaceAll('时砂', '灯河'));
   setting.age = '二十九岁';
-  setting.profession.name = '巡灯术士';
   setting.attack.name = raw.data.attackName;
   setting.skills.forEach((skill, index) => { skill.name = raw.data.skills[index].name; });
-  return { schemaVersion: 3, setting, data: { name: setting.name, title: setting.profession.name, ...raw.data } };
+  return { schemaVersion: 3, setting, data: { name: setting.name, title: '', ...raw.data } };
 }
 export function characterResponse() { return JSON.stringify(characterDocument()); }
 export function scriptFixture(ids) {

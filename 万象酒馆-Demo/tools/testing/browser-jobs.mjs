@@ -17,10 +17,13 @@ export function browserJobs(scopes, results, root) {
       browserOnly,
     );
   simple('battle-controls', 'battle-controls', 'battleControlChecks');
+  simple('ring-gallery', 'ring-gallery', 'ringGalleryChecks');
   simple('gal', 'gal', 'galChecks');
+  simple('equipment', 'equipment', 'equipmentChecks');
   simple('enemy-progression', 'enemy-progression', 'enemyProgressionChecks');
   simple('mobile', 'mobile', 'mobileChecks');
   simple('forest', 'forest', 'forestChecks');
+  simple('frost', 'frost', 'frostChecks');
   simple('workshop', 'workshop', 'workshopChecks', [], true);
   simple('universal-enemies', 'universal-enemies', 'universalEnemyChecks');
   simple('developer-mode', 'developer-mode', 'developerModeChecks');

@@ -155,8 +155,8 @@ test('third-round root heals twenty percent of each living part and eye only cha
   for (const id of state.formation.filter(Boolean))
     assert.equal(eye.after.units[id].hp, state.units[id].hp);
   assert.equal(root.after.units.moonCrown.hp, 0);
-  assert.equal(root.after.units.moonEye.hp, 36);
-  assert.equal(root.after.units.moonRoot.hp, 40);
+  assert.equal(root.after.units.moonEye.hp, 10 + Math.round(state.units.moonEye.maxHp * 0.2));
+  assert.equal(root.after.units.moonRoot.hp, 10 + Math.round(state.units.moonRoot.maxHp * 0.2));
   assert.notEqual(
     result.final.phase,
     'victory',

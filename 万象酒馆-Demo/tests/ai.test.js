@@ -38,13 +38,16 @@ test('generated data compiles once into an independent combat snapshot with real
   assert.equal(abilityFor(state, 'aegis', 'generated-1').name, '凝灯');
   const result = preview(state, [makeAction(state, 'aegis', 'generated-1', 'mossSlime', 0)]);
   assert(result.valid);
-  assert.equal(result.final.units.aegis.mp, 26);
+  assert.equal(
+    result.final.units.aegis.mp,
+    state.units.aegis.mp - abilityFor(state, 'aegis', 'generated-1').mp,
+  );
   entry.combat.attack = 3;
   assert.equal(abilityFor(state, 'aegis', 'attack').effects[0].value, 12);
   assert.equal(HEROES[0].attack, 6);
   const next = newEncounter(encounterSpec(1), advance(result), 1);
   assert.equal(abilityFor(next, 'aegis', 'attack').effects[0].value, 12);
-  assert.equal(next.units.aegis.mp, 26);
+  assert.equal(next.units.aegis.mp, result.final.units.aegis.mp);
   assert(!('combat' in settingOnly(entry)));
   assert.equal(restoreLibrary(JSON.parse(JSON.stringify(library))).party[0], entry.id);
 });
@@ -216,7 +219,7 @@ test('character protocol accepts prose lengths while preserving structure and di
   const short = characterDocument();
   short.setting.appearance = '短发。';
   short.setting.personality = '谨慎。';
-  short.setting.profession.description = '巡灯术士。';
+  short.setting.attack.description = '凝成灯火。';
   assert.doesNotThrow(() => read(JSON.stringify(short)));
   const long = characterDocument();
   long.setting.appearance = long.setting.appearance.repeat(4);

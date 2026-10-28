@@ -1,6 +1,8 @@
 import { applyEquipment } from './equipment.js';
 import { finalSkillText } from './skill-text.js';
 import { characterGenerationPlan } from './character-generation.js';
+import { applyEmblemStats } from './emblems.js';
+import { applyCompanionModifiers } from './companion-mechanics.js';
 /** Persistent growth is separate from authored combat definitions and battle snapshots. */
 export const RARITIES = Object.freeze({
   common: {
@@ -71,10 +73,10 @@ export function grownCombat(member) {
   combat.hp += b.hp;
   combat.mp += b.mp;
   combat.attack += b.attack;
-  combat.limit = Math.min(5, combat.limit + b.limit);
+  combat.limit = Math.min(2, combat.limit + b.limit);
   for (const skill of combat.skills) {
     if (skill.passive) continue;
-    skill.mp = Math.max(0, skill.mp - b.manaCost);
+    skill.mp = Math.max(3, skill.mp - b.manaCost);
     for (const effect of skill.effects) if (effect.type === 'damage') effect.value += b.skillDamage;
     skill.text = finalSkillText(skill, combat.mechanicMark?.name);
   }
@@ -96,10 +98,10 @@ export function gainExperience(member, amount) {
     const points = 1 + Math.floor(random() * 3);
     for (let point = 0; point < points; point++) {
       const choices = Object.entries(RARITIES[growth.rarity].rates).filter(([key]) => {
-        if (key === 'limit') return member.combat.limit + growth.bonus.limit < 5;
+        if (key === 'limit') return member.combat.limit + growth.bonus.limit < 2;
         if (key === 'manaCost')
           return member.combat.skills.some(
-            (skill) => !skill.passive && skill.mp > growth.bonus.manaCost,
+            (skill) => !skill.passive && skill.mp - growth.bonus.manaCost > 3,
           );
         return true;
       });
@@ -178,7 +180,13 @@ export function applyEncounterGrowth(expedition, members) {
     const unit = carried.units[slot];
     const old = carried.heroDefinitions[slot];
     if (!member || !unit || !old) continue;
-    const combat = applyEquipment(grownCombat(member), old.equipment || []);
+    const combat = applyCompanionModifiers(
+      applyEmblemStats(
+        applyEquipment(grownCombat(member), old.equipment || []),
+        member.emblemId || old.emblemId,
+      ),
+      carried.expeditionModifiers?.[slot],
+    );
     const hp = combat.hp - old.hp;
     const mp = combat.mp - old.mp;
     unit.maxHp += hp;

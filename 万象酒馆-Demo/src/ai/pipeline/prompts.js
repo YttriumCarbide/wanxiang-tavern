@@ -41,7 +41,6 @@ export function generationInput(kind, input) {
           '性别',
           '年龄',
           '外貌',
-          '职业',
           '性格（包括说话方式、具体动机和可观察的个人习惯）',
           '经历',
           '攻击方式',
@@ -518,6 +517,7 @@ export async function generationRequest(kind, input, source, options = {}) {
       responseFormat: null,
       ...outputTransport,
       presetProcessing: options.presetProcessing,
+      presetVariables: { user: variables.user, char: variables.char },
     },
     regex: {
       scripts: regexScripts.length,

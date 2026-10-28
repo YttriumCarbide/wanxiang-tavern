@@ -76,8 +76,8 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  overflow-y: auto;
-  max-height: calc(100vh - 210px);
+  overflow: visible;
+  max-height: none;
   padding-right: 4px;
 }
 .action-category {
@@ -759,4 +759,45 @@
     padding: 5px 6px;
     margin: 3px 0;
   }
+}
+
+#details .ability-section-label {
+  margin: 12px 0 6px;
+  font-size: 11px;
+  color: #adc5b3;
+  letter-spacing: 1px;
+}
+#details .effect-inactive {
+  opacity: 0.42;
+  filter: saturate(0.3);
+}
+#details .passive-card {
+  display: block;
+  padding: 10px;
+  border: 1px solid #74988a44;
+  border-radius: 5px;
+  margin: 5px 0;
+}
+#details .passive-card strong,
+#details .passive-card small,
+#details .borrowed-skill-source {
+  display: block;
+}
+#details .passive-card small {
+  font-size: 10px;
+  margin-top: 4px;
+  color: #a6beac;
+}
+#details .passive-card p {
+  margin: 7px 0 0;
+  font-size: 12px;
+  line-height: 1.6;
+}
+#details .borrowed-skill-source {
+  flex-basis: 100%;
+  font-size: 10px;
+  color: #cbb1e1;
+}
+#details .action-category-title {
+  font-size: 13px;
 }

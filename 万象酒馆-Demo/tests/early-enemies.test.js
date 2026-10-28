@@ -24,13 +24,13 @@ import { validateGameData } from '../src/validation.js';
 test('starter enemies have stronger base stats while keeping predictable single actions', () => {
   for (const id of ['mossSlime', 'sprout', 'pebble']) {
     const enemy = DEFINITIONS[id];
-    assert(enemy.hp >= 20 && enemy.hp <= 28);
+    assert(enemy.hp >= 24 && enemy.hp <= 34);
     assert.equal(enemy.mp, 0);
     assert.equal(enemy.intents.length, 1);
     assert.deepEqual(enemy.buffs, {});
     assert(
       enemy.intents[0].effects.every(
-        (effect) => effect.type === 'damage' && effect.value >= 5 && effect.value <= 6,
+        (effect) => effect.type === 'damage' && effect.value >= 6 && effect.value <= 7,
       ),
     );
     assert((enemy.intents[0].selfShield || 0) <= 3);
