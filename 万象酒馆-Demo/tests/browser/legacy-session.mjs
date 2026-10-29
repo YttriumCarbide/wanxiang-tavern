@@ -51,7 +51,29 @@ export async function dismissAutomaticJournals(page) {
       window.automaticJournals = JSON.parse(
         sessionStorage.getItem('test-automatic-journals') || '[]',
       );
+      let scheduled = false;
       const observer = new MutationObserver(() => {
+        const stage = document.querySelector('#gal-stage');
+        if (
+          stage &&
+          !stage.hidden &&
+          stage.dataset.owner === 'script' &&
+          stage.dataset.automatic === 'true' &&
+          stage.dataset.leaving !== 'true' &&
+          !scheduled
+        ) {
+          scheduled = true;
+          setTimeout(() => {
+            scheduled = false;
+            if (
+              !stage.hidden &&
+              stage.dataset.owner === 'script' &&
+              stage.dataset.automatic === 'true' &&
+              stage.dataset.leaving !== 'true'
+            )
+              stage.querySelector('.gal-page').click();
+          }, 0);
+        }
         if (journal.open && journal.dataset.automatic === 'true') {
           window.automaticJournals.push({
             page: document.querySelector('#story-page-count').textContent,
@@ -64,9 +86,38 @@ export async function dismissAutomaticJournals(page) {
           document.querySelector('#story-close').click();
         }
       });
-      observer.observe(journal, { attributes: true, attributeFilter: ['open'] });
+      observer.observe(document.body, {
+        attributes: true,
+        subtree: true,
+        attributeFilter: [
+          'open',
+          'hidden',
+          'data-owner',
+          'data-automatic',
+          'data-typing',
+          'data-leaving',
+        ],
+      });
     });
   });
+}
+
+/** Read an authored Gal sequence; this never advances an action-gated lesson by itself. */
+export async function finishGalDialogue(page, owner) {
+  for (let index = 0; index < 500; index++) {
+    const state = await page.locator('#gal-stage').evaluate((stage) => ({
+      hidden: stage.hidden,
+      owner: stage.dataset.owner,
+      leaving: stage.dataset.leaving === 'true',
+    }));
+    if (state.hidden || (owner && state.owner !== owner)) return;
+    if (state.leaving)
+      await page.waitForFunction(
+        () => document.querySelector('#gal-stage').dataset.leaving !== 'true',
+      );
+    else await page.locator('.gal-page').click();
+  }
+  throw Error('Gal dialogue did not reach its next interaction');
 }
 
 /** Settlement narration follows the completed experience animation. */

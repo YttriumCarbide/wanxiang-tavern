@@ -142,7 +142,8 @@ export function createStoryFeed(session, save, gal = null) {
         return;
       }
       append('', book.display?.story?.[part] ?? book.story[part], stage, index);
-      record.lines.push({ speaker: '旁白', text: book.story[part], encounter: index, stage });
+      if (!book.adventure)
+        record.lines.push({ speaker: '旁白', text: book.story[part], encounter: index, stage });
     }
     if (book.schemaVersion === 2 && stage === 'before') {
       if (index === 0 && !record.played.includes('prologue')) {
@@ -179,7 +180,8 @@ export function createStoryFeed(session, save, gal = null) {
     }
     if (!dialog.open) view().page = index;
     record.played.push(key);
-    archiveMilestone(session.ai.library, book, record, index);
+    if (!book.adventure || ![1, 3].includes(index))
+      archiveMilestone(session.ai.library, book, record, index);
     if (stage === 'after' && index === FINAL_ENCOUNTER) {
       record.complete = true;
       record.nextHook = book.nextHook;
@@ -217,7 +219,33 @@ export function createStoryFeed(session, save, gal = null) {
           speaker: line.speaker,
           text: line.text,
         })),
-        { owner: 'script', title: session.ai.activeScript.title || '路途手记' },
+        {
+          owner: 'script',
+          title: session.ai.activeScript.title || '路途手记',
+          automatic,
+          onRead(line) {
+            const book = session.ai.activeScript;
+            if (!book?.adventure || book.recollection) return;
+            const record = session.ai.library.history.find((item) => item.runId === book.runId);
+            if (
+              record &&
+              !record.lines.some(
+                (item) =>
+                  item.encounter === view().page &&
+                  item.stage === 'before' &&
+                  item.text === line.text,
+              )
+            ) {
+              record.lines.push({
+                speaker: line.speaker || '旁白',
+                text: line.text,
+                encounter: view().page,
+                stage: 'before',
+              });
+              save();
+            }
+          },
+        },
       );
       galCompletion = completion;
       void completion.then(() => {

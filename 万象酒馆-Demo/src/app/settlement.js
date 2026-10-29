@@ -6,6 +6,7 @@ import { levelLines } from '../content/level-dialogue.js';
 import { chooseRest } from '../expedition.js';
 import { createDialogue } from './dialogue.js';
 import { ITEMS } from '../content/items.js';
+import { ADVENTURE_NODE_LABELS } from '../adventure/definition.js';
 
 /** Presentation consumes already-awarded experience and the engine's recovery changes. */
 export function createSettlement(context) {
@@ -233,7 +234,7 @@ export function createSettlement(context) {
           >`
         : '';
     panel.innerHTML = html`<h2>
-        ${won ? `第 ${encounter + 1} 场通过${complete ? ' · 副本完成' : ''}` : '本次旅途结束'}
+        ${won ? `${session.journey.expedition.adventure ? ADVENTURE_NODE_LABELS[encounter] : `第 ${encounter + 1} 场`}通过${complete ? ' · 副本完成' : ''}` : '本次旅途结束'}
       </h2>
       <div class="battle-rewards">
         ${reward('gold', rewards?.gold || 0, '金币')}${reward('summon-contract', rewards?.summonContracts || 0, '召唤契约')}${reward('ether', ether, '以太', 'ether-reward')}

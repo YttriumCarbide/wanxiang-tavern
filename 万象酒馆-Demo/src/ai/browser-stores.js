@@ -1,4 +1,5 @@
 import { upgradePlaytestWorldbook } from './playtest-upgrade.js';
+import { upgradeAdventureWorldbook } from './adventure-upgrade.js';
 import { upgradeTutorialRevision } from './tutorial-revision.js';
 import { upgradeEnemyAppearanceRules } from './enemy-appearance-rules.js';
 import { upgradeProtagonistRules } from './protagonist-rules.js';
@@ -266,6 +267,17 @@ export async function createBrowserStores(database, readText, builtinBook) {
       ['world.playtest.v46', true],
     ]);
   }
+  if (!database.get('world.adventure.v50'))
+    await database.write([
+      [
+        'world.book.tavern-world',
+        upgradeAdventureWorldbook(
+          database.get('world.book.tavern-world'),
+          await readText('worldbook/script-output.md'),
+        ),
+      ],
+      ['world.adventure.v50', true],
+    ]);
   let worldSettings = normalizeWorldSettings(
     database.get('world.settings') || { globalSelect: ['tavern-world'] },
   );

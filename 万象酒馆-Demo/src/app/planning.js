@@ -148,6 +148,20 @@ export function createPlanning(context) {
     session.selection.pending = { kind: 'skill', actor, skill, target: targetId };
     return put(start);
   }
+  function canQueueSkill(actor, skill, target) {
+    const ability = context.roster.ability(actor, skill);
+    const start = preferredStart(ability.ap, actor);
+    if (!fitsSkillAt(start, ability.ap, actor)) return false;
+    const plan = structuredClone(session.battle.plan);
+    const marker = plan.find(
+      (entry) => entry.kind === 'engage' && entry.actor === actor && entry.start === start,
+    );
+    if (marker) {
+      marker.followUp = { skill, target };
+      marker.ap = ability.ap;
+    } else plan.push(makeAction(session.battle.state, actor, skill, target, start));
+    return preview(session.battle.state, plan).valid;
+  }
   function removeAction(id) {
     if (!context.viewport.canPlan()) return;
     session.battle.plan = session.battle.plan.filter((a) => a.id !== id);
@@ -190,6 +204,7 @@ export function createPlanning(context) {
     put,
     queueSwap,
     queueDirectSkill,
+    canQueueSkill,
     removeAction,
     moveAction,
     actionLabel,

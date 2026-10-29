@@ -62,7 +62,7 @@ test('both visitors join official summon pool, survive save restoration and comp
     roster = compileRoster(restored);
   assert.equal(roster.aegis.name, '骆公绪');
   assert.equal(roster.lyria.name, '西莉卡·梵·拉普斯');
-  assert.deepEqual([roster.aegis.hp, roster.aegis.mp, roster.aegis.attack], [60, 23, 7]);
+  assert.deepEqual([roster.aegis.hp, roster.aegis.mp, roster.aegis.attack], [60, 23, 9]);
   assert.match(roster.aegis.skills[0].text, /只能指向自己/);
   assert.deepEqual(
     roster.lyria.skills.map((skill) => skill.id),
@@ -139,7 +139,7 @@ test('Junlue also copies an explicitly self-targeted enemy shield before any lat
 test('entry shield uses current attack, double applies to a counter, actual hp damage restores sp and stops at full', () => {
   const state = planning(battle(party('luo-gongxu', 'serin')));
   state.heroDefinitions.serin.attack = 9;
-  Object.assign(state.units.serin, { entryReady: true, mp: 15 });
+  Object.assign(state.units.serin, { entryReady: true, mp: 15, hp: 20 });
   const result = preview(state, [makeReposition(0, 3, 0)]);
   assert(result.valid);
   const entry = result.events.find((event) => event.type === 'entrySkill');
@@ -150,6 +150,7 @@ test('entry shield uses current attack, double applies to a counter, actual hp d
   const before = result.events[result.events.indexOf(counter) - 1].after;
   assert.equal(before.units.hound.hp - counter.after.units.hound.hp, 18);
   assert.equal(result.final.units.serin.mp, 23);
+  assert.equal(result.final.units.serin.hp, 38);
   assert.equal(result.final.units.serin.counterDisabled, true);
   assert.equal(result.final.units.serin.nextBasicDouble, false);
   const next = advance(result);

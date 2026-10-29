@@ -77,13 +77,13 @@ export function tutorialCommitIssue(library, state, forecast) {
   )
     return '先完成查看意图、打开手记和换位躲避的教学。';
   if (
-    index === 1 &&
+    index === (campaign.adventureTutorial ? 2 : 1) &&
     !tasks.vulnerable &&
     (state.phase !== 'opening' || victory) &&
     !demonstrated(forecast, 'vulnerable')
   )
     return '先用一次伤害攻击命中带有易伤的碎石幼灵，观察增伤。';
-  if (index === 2 && !tasks.slow) {
+  if (index === 2 && !tasks.slow && (!campaign.adventureTutorial || tasks.vulnerable)) {
     if (state.phase === 'opening' && forecast.events.some((event) => event.skill === 'slow-potion'))
       return '先结算先手，迟缓药水请在正式回合、石卫行动之前使用。';
     if ((state.phase !== 'opening' || victory) && !demonstrated(forecast, 'slow'))
@@ -91,6 +91,21 @@ export function tutorialCommitIssue(library, state, forecast) {
   }
   if (index === 3 && !tasks.crossfire && state.phase !== 'opening')
     return '先点敌方时间格，一起查看两名敌人的意图。';
+  if (
+    campaign.adventureTutorial &&
+    index === 2 &&
+    tasks.slow &&
+    !tasks.crossfire &&
+    state.phase !== 'opening'
+  )
+    return '先点敌方时间格，一起查看两名敌人的意图。';
+  if (
+    campaign.adventureTutorial &&
+    index === 2 &&
+    victory &&
+    !(tasks.vulnerable && tasks.slow && tasks.crossfire)
+  )
+    return '先完成易伤、迟缓药水和查看两名敌人意图的教学，再完成精英战。';
   if (
     index === FINAL_ENCOUNTER &&
     !tasks.mana &&

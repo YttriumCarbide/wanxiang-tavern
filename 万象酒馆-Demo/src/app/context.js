@@ -34,6 +34,7 @@
  * @property {ReturnType<typeof import('./backpack.js').createBackpack>} backpack
  * @property {ReturnType<typeof import('./chat.js').createChat>} chat
  * @property {ReturnType<typeof import('./memory.js').createMemory>} memory
+ * @property {ReturnType<typeof import('./adventure.js').createAdventure>} adventure
  * @property {ReturnType<typeof import('./bookshelf.js').createBookshelf>} bookshelf
  * @property {ReturnType<typeof import('./equipment.js').createEquipment>} equipment
  * @property {ReturnType<typeof import('./companion-events.js').createCompanionEvents>} companionEvents

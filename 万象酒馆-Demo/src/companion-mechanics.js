@@ -188,12 +188,13 @@ export function createCompanionMechanics(state, definitions, ports) {
         )
           continue;
         const damage = ports.basicAttack(id, enemy);
+        unit.hp = Math.min(unit.maxHp, unit.hp + damage);
         unit.mp = Math.min(unit.maxMp, unit.mp + damage);
         if (unit.mp >= unit.maxMp) unit.counterDisabled = true;
         ports.log(
-          `${definitions[id].name} · 毅明：回复${damage}sp${unit.counterDisabled ? '，sp已满，本场反击结束' : ''}`,
+          `${definitions[id].name} · 毅明：回复${damage}hp和sp${unit.counterDisabled ? '，sp已满，本场反击结束' : ''}`,
         );
-        ports.record('counterRecovery', id, '毅明 · 回复sp', [id]);
+        ports.record('counterRecovery', id, '毅明 · 回复hp和sp', [id]);
       }
     },
   };

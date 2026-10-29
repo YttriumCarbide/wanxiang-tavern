@@ -285,6 +285,7 @@ export function createSelection(context) {
       canCombine(session.battle.forecast.final, id)
     ) {
       context.planning.queueEngage(id);
+      context.drag.showDropMenu(id, id, 'Friendly');
       return;
     }
     session.selection.selected = id;
@@ -298,6 +299,11 @@ export function createSelection(context) {
     session.selection.interactionStep = context.viewport.canPlan() ? 'skill' : null;
     context.viewport.openCharacterHUD();
     context.renderer.render();
+    if (
+      context.viewport.canPlan() &&
+      session.battle.forecast.final.formation.slice(0, 3).includes(id)
+    )
+      context.drag.showDropMenu(id, id, 'Friendly');
   }
   function selectHero(id) {
     if (session.battle.playing || session.runtime.drag?.moved) return;

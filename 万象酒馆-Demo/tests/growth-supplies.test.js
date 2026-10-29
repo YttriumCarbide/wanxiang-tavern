@@ -13,6 +13,7 @@ import {
   restoreGrowth,
   xpToNext,
   applyEncounterGrowth,
+  grownSkillCosts,
 } from '../src/growth.js';
 import {
   relevantArchives,
@@ -27,6 +28,24 @@ import { chatInput } from '../server/chat-request.mjs';
 import { restoreLibrary } from '../src/ai/library.js';
 import { compactCharacterDocument } from './fixtures/ai.js';
 import { createCharacterReader } from '../server/character-reader.mjs';
+import { officialCharacter } from '../src/ai/library.js';
+
+test('growth reduces the resource actually paid, keeps zero costs and deterministically splits dual costs', () => {
+  const edith = officialCharacter('edith');
+  assert.equal(grownCombat(edith).skills[1].mp, 0);
+  edith.growth = restoreGrowth({ bonus: { manaCost: 99 } }, edith.id);
+  assert.deepEqual([grownCombat(edith).skills[1].hp, grownCombat(edith).skills[1].mp], [3, 0]);
+  const dual = { id: 'dual', hp: 7, mp: 8 };
+  let previous = { hp: 7, mp: 8 };
+  for (let points = 1; points <= 12; points++) {
+    const next = grownSkillCosts(dual, points, 'example');
+    assert(next.hp >= 3 && next.mp >= 3);
+    assert.equal(previous.hp + previous.mp - next.hp - next.mp, points <= 9 ? 1 : 0);
+    assert.deepEqual(next, grownSkillCosts(dual, points, 'example'));
+    previous = next;
+  }
+  assert.deepEqual(grownSkillCosts({ id: 'free', hp: 0, mp: 0 }, 99, 'x'), { hp: 0, mp: 0 });
+});
 
 test('twelve supplies have real 64px icons and purchases persist atomically without spending ether', async () => {
   const library = newCampaign(defaultProtagonist());

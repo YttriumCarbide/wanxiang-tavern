@@ -64,7 +64,14 @@ export function createDetails(context) {
         '" data-skill="' +
         escapeText(skill.id) +
         '" data-tooltip="' +
-        e(text + '\n消耗 ' + skill.ap + ' AP · ' + skill.mp + ' sp') +
+        e(
+          text +
+            '\n消耗 ' +
+            skill.ap +
+            ' AP' +
+            (skill.mp ? ' · ' + skill.mp + ' sp' : '') +
+            (skill.hp ? ' · ' + skill.hp + ' hp' : ''),
+        ) +
         '" draggable="' +
         (!inactive && !matchMedia('(pointer: coarse) and (max-width: 1100px)').matches) +
         '"' +

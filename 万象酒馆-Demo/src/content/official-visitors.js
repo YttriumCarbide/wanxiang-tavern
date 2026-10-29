@@ -6,7 +6,7 @@ export const OFFICIAL_VISITORS = {
       title: '持节将军',
       hp: 60,
       mp: 23,
-      attack: 7,
+      attack: 9,
       attackName: '节钺刺击',
       limit: 1,
       weapon: 'sword',
@@ -30,7 +30,7 @@ export const OFFICIAL_VISITORS = {
           passive: true,
           location: '全战斗',
           mechanic: 'luo-counter',
-          text: '成为敌人攻击目标并结算后，对其进行一次普通攻击，回复等同实际hp伤害的sp。若以此回满sp，本场不再触发。',
+          text: '成为敌人攻击目标并结算后，对其进行一次普通攻击，回复等同实际hp伤害的hp和sp。若以此回满sp，本场不再触发。',
         },
       ],
       entrySkill: {
@@ -39,7 +39,7 @@ export const OFFICIAL_VISITORS = {
         target: 'self',
         mechanic: 'luo-entry',
         text: '获得等于普攻基础伤害的护盾，下次普通攻击伤害翻倍；毅明反击也会消耗此效果。',
-        effects: [{ type: 'shield', value: 7 }],
+        effects: [{ type: 'shield', value: 9 }],
       },
     },
     setting: {
@@ -62,7 +62,7 @@ export const OFFICIAL_VISITORS = {
         {
           name: '毅明',
           description:
-            '承受敌人指向自己的攻击后，以普通攻击反击并按实际伤害回复sp；因此回满sp后，本场停止反击。',
+            '承受敌人指向自己的攻击后，以普通攻击反击并按实际伤害回复hp和sp；因此回满sp后，本场停止反击。',
         },
       ],
       entrySkill: {

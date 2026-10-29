@@ -4,13 +4,25 @@ import { formatRequestPreview, tokenSummary } from './request-preview.js';
 /** Raw responses live only in this page session, outside saved worldbooks and AI context. */
 export function createGenerationDiagnostics({ session, events, api, accept, toast }) {
   const current = () => session.ai.diagnostics[session.ai.diagnosticKind];
+  const labels = { character: '角色', script: '剧本', 'quick-chat': '事件RP' };
+  const selector = document.createElement('select');
+  selector.id = 'diagnostic-kind';
+  selector.setAttribute('aria-label', '选择原始返回');
+  $('#diagnostic-title').after(selector);
+  function preferredKind() {
+    const rp = session.ai.diagnostics['quick-chat']?.input?.adventure;
+    return session.runtime.mode === 'event' &&
+      rp?.episodeId === session.journey.expedition?.id &&
+      rp?.node === session.journey.expedition?.index
+      ? 'quick-chat'
+      : 'script';
+  }
   function refreshButtons() {
-    const kind =
-      session.runtime.mode === 'battle'
-        ? 'script'
-        : session.runtime.mode === 'inn' && session.runtime.summonVisible
-          ? 'character'
-          : null;
+    const kind = ['battle', 'event'].includes(session.runtime.mode)
+      ? 'script'
+      : session.runtime.mode === 'inn' && session.runtime.summonVisible
+        ? 'character'
+        : null;
     const button = $('#generation-review');
     button.hidden = !kind;
     button.disabled = !session.ai.diagnostics[kind];
@@ -25,7 +37,14 @@ export function createGenerationDiagnostics({ session, events, api, accept, toas
     const record = current();
     refreshButtons();
     if (!record) return;
-    $('#diagnostic-title').textContent = `${record.kind === 'character' ? '角色' : '剧本'}生成诊断`;
+    $('#diagnostic-title').textContent = `${labels[record.kind] || '生成'}原始返回`;
+    selector.replaceChildren(
+      ...Object.entries(labels)
+        .filter(([kind]) => session.ai.diagnostics[kind])
+        .map(([kind, label]) => new Option(label, kind)),
+    );
+    selector.value = record.kind;
+    selector.hidden = selector.options.length < 2;
     $('#diagnostic-request').hidden = !record.request;
     $('#diagnostic-token-summary').textContent = record.request
       ? tokenSummary(record.request.tokens)
@@ -75,17 +94,24 @@ export function createGenerationDiagnostics({ session, events, api, accept, toas
         .join('\n') || '未自动修改内容。';
     $('#diagnostic-raw').value = record.rawText;
     $('#diagnostic-edit').value = record.candidateText;
-    $('#diagnostic-edit').readOnly = record.accepted;
-    $('#diagnostic-validate').hidden = record.accepted;
-    $('#diagnostic-note').textContent = record.accepted
-      ? '此结果已通过校验；本窗口仅供查看。原文只保留到刷新页面，不进入世界书或后续提示词。'
-      : '可修改右侧文本并本地重新校验；不会调用模型。只修复格式，不补写设定、猜数值或绕过规则校验。';
+    $('#diagnostic-edit').readOnly = record.accepted || record.readOnly;
+    $('#diagnostic-validate').hidden = record.accepted || record.readOnly;
+    $('#diagnostic-note').textContent = record.readOnly
+      ? '仅查看本次RP原始返回；不会重新请求或更改进度。原文只保留到刷新页面，不进入存档或后续提示词。'
+      : record.accepted
+        ? '此结果已通过校验；本窗口仅供查看。原文只保留到刷新页面，不进入世界书或后续提示词。'
+        : '可修改右侧文本并本地重新校验；不会调用模型。只修复格式，不补写设定、猜数值或绕过规则校验。';
   }
-  function show(kind = session.ai.diagnosticKind) {
+  function show(kind = preferredKind()) {
     session.ai.diagnosticKind = kind;
     render();
+    if (!current()) {
+      toast('本页尚未收到这次API的原始返回；原文不会跨刷新保存。');
+      return;
+    }
     if (current() && !$('#generation-diagnostics').open) $('#generation-diagnostics').showModal();
   }
+  events.on(selector, 'change', () => show(selector.value));
   function record(diagnostic, input, accepted = false) {
     const kind = diagnostic.kind;
     session.ai.diagnosticKind = kind;

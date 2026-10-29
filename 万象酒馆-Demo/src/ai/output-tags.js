@@ -1,13 +1,14 @@
 /** Scan protocol boundaries, skipping references in reasoning wrappers and inline code. */
 export function readOutputTags(rawText, definitions, { partial = false } = {}) {
-  const tokens = /(`+)[^\r\n]*?\1|<(\/?)([\w:.-]+~?)(?:\s[^<>]*?)?>/gu;
+  const tokens =
+    /(`{3,}|~{3,})[^\r\n]*\r?\n[\s\S]*?\1|(`+)[^\r\n]*?\2|<(\/?)([\w:.-]+~?)(?:\s[^<>]*?)?>/gu;
   const reasoning = [];
   const sections = [];
   for (let match = tokens.exec(rawText); match; match = tokens.exec(rawText)) {
-    if (match[1]) continue;
-    const name = match[3].toLowerCase().replace(/~$/u, '');
+    if (match[1] || match[2]) continue;
+    const name = match[4].toLowerCase().replace(/~$/u, '');
     if (/(?:think|thought|analysis|reasoning|planning|tucao|report_nya)/u.test(name)) {
-      if (!match[2]) reasoning.push(name);
+      if (!match[3]) reasoning.push(name);
       else {
         const opening = reasoning.lastIndexOf(name);
         // The outer closing tag also ends any unpaired tag names quoted in its notes.
@@ -17,15 +18,18 @@ export function readOutputTags(rawText, definitions, { partial = false } = {}) {
     }
     if (reasoning.length) continue;
     const definition = definitions.find((item) => item.tag === name);
-    if (!definition || match[0] !== `<${match[2]}${definition.tag}>`) continue;
-    if (match[2]) throw Error(`发现多余的 </${name}> 结束标签`);
-    if (sections.some((section) => section.tag === name))
-      throw Error(`发现多组 ${name} 输出标签；最终结果必须只有一组`);
+    if (!definition || match[0] !== `<${match[3]}${definition.tag}>`) continue;
+    if (match[3]) throw Error(`发现多余的 </${name}> 结束标签`);
     const from = tokens.lastIndex;
     const end = payloadEnd(rawText, from, definition, definitions, partial);
+    const content = rawText.slice(from, end.contentEnd);
+    tokens.lastIndex = end.end;
+    if (definition.accept && !definition.accept(content)) continue;
+    if (sections.some((section) => section.tag === name))
+      throw Error(`发现多组 ${name} 输出标签；最终结果必须只有一组`);
     sections.push({
       tag: name,
-      content: rawText.slice(from, end.contentEnd),
+      content,
       start: match.index,
       end: end.end,
       complete: end.complete,

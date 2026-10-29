@@ -17,8 +17,11 @@ export function browserJobs(scopes, results, root) {
       browserOnly,
     );
   simple('battle-controls', 'battle-controls', 'battleControlChecks');
+  simple('skill-menus', 'skill-menus', 'skillMenuChecks');
+  simple('rp-layout', 'rp-layout', 'rpLayoutChecks');
   simple('ring-gallery', 'ring-gallery', 'ringGalleryChecks');
   simple('gal', 'gal', 'galChecks');
+  simple('adventure', 'adventure', 'adventureChecks');
   simple('equipment', 'equipment', 'equipmentChecks');
   simple('enemy-progression', 'enemy-progression', 'enemyProgressionChecks');
   simple('mobile', 'mobile', 'mobileChecks');
@@ -46,16 +49,27 @@ export function browserJobs(scopes, results, root) {
   simple('opencode', 'opencode', 'opencodeBrowserChecks');
   simple('onboarding', 'onboarding', 'onboardingChecks');
   add('settings', async (options) => {
-    const { apiSettingsChecks } = await import('../../tests/browser/api-settings.mjs');
+    const { apiSettingsChecks, firstRunApplyChecks } =
+      await import('../../tests/browser/api-settings.mjs');
     const { equipmentChecks } = await import('../../tests/browser/equipment.mjs');
     const { generationOptionsChecks } = await import('../../tests/browser/generation-options.mjs');
     return {
       ...(await apiSettingsChecks(options)),
       generationOptions: await generationOptionsChecks(options),
       equipment: await equipmentChecks(options),
+      firstRun: await firstRunApplyChecks(options),
     };
   });
-  simple('chat', 'chat', 'chatChecks');
+  add(
+    'chat',
+    async (options) => {
+      const completed = results.find((result) => result.name === 'gal' && result.passed);
+      if (completed?.detail?.workspace) return completed.detail.workspace;
+      const { chatChecks } = await import('../../tests/browser/chat.mjs');
+      return chatChecks(options);
+    },
+    scopes.has('gal') ? ['gal'] : [],
+  );
   add('preparation', async (options) => {
     const { preparationChecks } = await import('../../tests/browser/preparation.mjs');
     const { settlementChecks } = await import('../../tests/browser/settlement.mjs');

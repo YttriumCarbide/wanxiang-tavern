@@ -112,6 +112,32 @@
   background: #122521;
   z-index: 3;
 }
+#ai-dialog[data-setup='connections'],
+#ai-dialog[data-setup='prompts'] {
+  display: flex;
+  flex-direction: column;
+}
+#ai-dialog:is([data-setup='connections'], [data-setup='prompts']) .ai-workspace {
+  flex: 1;
+  min-height: 0;
+  height: auto;
+  overflow: auto;
+}
+#ai-dialog:is([data-setup='connections'], [data-setup='prompts']) #setup-intro {
+  flex-shrink: 0;
+  max-height: 27dvh;
+  overflow-y: auto;
+}
+#ai-dialog:is([data-setup='connections'], [data-setup='prompts']) #setup-footer {
+  position: static;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+#setup-apply {
+  color: #f0d59c;
+  border-color: #bda575;
+}
 #setup-footer[hidden],
 #setup-intro[hidden] {
   display: none;
@@ -135,19 +161,22 @@
   font-size: 13px;
   color: #d2bd88;
 }
-#api-apply-targets {
+#api-apply-targets,
+#prompt-apply-targets {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
   margin-bottom: 12px;
 }
-#api-apply-targets label {
+#api-apply-targets label,
+#prompt-apply-targets label {
   display: flex;
   align-items: center;
   gap: 8px;
   font-size: 12px;
 }
-#api-apply-targets input {
+#api-apply-targets input,
+#prompt-apply-targets input {
   width: auto;
   margin: 0;
 }

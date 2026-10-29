@@ -2,6 +2,12 @@ import { ENCOUNTERS, encounterSpec } from './data.js';
 import { newEncounter, campRest } from './engine.js';
 import { explorationSpec } from './exploration.js';
 import { STORY_RING_CHARGE } from './content/journey-rules.js';
+import { ADVENTURE_NODE_TYPES } from './adventure/definition.js';
+import { adventureReady } from './adventure/state.js';
+
+export function expeditionNodeType(expedition) {
+  return expedition.adventure ? ADVENTURE_NODE_TYPES[expedition.index] : 'battle';
+}
 export function newExpedition(boss = 'bossGate', heroDefinitions = {}, exploration = null) {
   return {
     id: crypto.randomUUID(),
@@ -15,13 +21,22 @@ export function newExpedition(boss = 'bossGate', heroDefinitions = {}, explorati
   };
 }
 export function currentEncounterSpec(expedition, index = expedition.index) {
-  return expedition.exploration
+  const spec = expedition.exploration
     ? explorationSpec(expedition.exploration, index)
     : encounterSpec(index, expedition.boss);
+  if (expedition.adventure && expedition.exploration?.tutorial && index === 2)
+    return {
+      ...spec,
+      enemyIds: ['pebble', 'warden'],
+      initialEnemyBuffs: { pebble: { vulnerable: 1 } },
+    };
+  return spec;
 }
 export function beginEncounter(expedition) {
   if (expedition.status !== 'active') throw Error('Expedition already finished');
   if (expedition.restPending) throw Error('请先选择睡眠或用餐');
+  if (['event', 'quest'].includes(expeditionNodeType(expedition)))
+    throw Error('当前是RP节点，不创建战斗');
   return newEncounter(
     {
       ...currentEncounterSpec(expedition),
@@ -36,6 +51,26 @@ export function beginEncounter(expedition) {
     expedition.index,
     expedition.heroDefinitions,
   );
+}
+
+export function completeAdventureNode(expedition, book) {
+  const index = expedition.index;
+  if (!expedition.adventure || ![1, 3].includes(index)) throw Error('当前不是RP节点');
+  if (index === 1 && !expedition.adventure.event.resolved) throw Error('请先完成事件选择');
+  if (index === 3 && !adventureReady(book.adventure, expedition.adventure))
+    throw Error('主要目标尚未完成');
+  if (expedition.records.some((record) => record.index === index)) throw Error('此节点已完成');
+  expedition.records.push({
+    index,
+    name: index === 1 ? book.adventure.event.title : book.adventure.quest.title,
+    map: expedition.exploration?.map || 'ruins',
+    type: index === 1 ? 'event' : 'quest',
+    rounds: 0,
+    rewards: {},
+    rewardId: `${expedition.id}:node-${index}`,
+    party: {},
+  });
+  expedition.index++;
 }
 export function completeEncounter(expedition, state) {
   if (state.phase !== 'victory') throw Error('Encounter has not been won');

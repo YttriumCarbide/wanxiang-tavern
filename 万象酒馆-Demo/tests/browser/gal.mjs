@@ -82,7 +82,7 @@ export async function galChecks({ browser, baseURL, output }) {
     if (origin === 'null') return;
     localStorage.setItem(
       'wanxiang.generation-options.v1',
-      JSON.stringify({ developerMode: true, skipAiGeneration: true, galMode: true }),
+      JSON.stringify({ developerMode: true, skipAiGeneration: true, galMode: false }),
     );
   });
   const calls = [];
@@ -138,11 +138,15 @@ export async function galChecks({ browser, baseURL, output }) {
     await page.setViewportSize({ width: 1440, height: 836 });
     await page.locator('#ai-open').click();
     await page.locator('[data-ai-tab="game"]').click();
-    assert(await page.locator('[data-generation-option="galMode"]').isChecked());
-    await page.locator('[data-generation-option="galMode"]').uncheck();
+    assert.equal(await page.locator('[data-generation-option="galMode"]').count(), 0);
+    await page.locator('[data-generation-option="developerMode"]').uncheck();
+    assert(await page.locator('body').evaluate((body) => body.classList.contains('gal-mode')));
     assert.equal(
-      await page.evaluate(
-        () => JSON.parse(localStorage.getItem('wanxiang.generation-options.v1')).galMode,
+      await page.evaluate(() =>
+        Object.hasOwn(
+          JSON.parse(localStorage.getItem('wanxiang.generation-options.v1')),
+          'galMode',
+        ),
       ),
       false,
     );
@@ -188,7 +192,7 @@ export async function galChecks({ browser, baseURL, output }) {
       const dialogue = createDialogue(events, 'fixture-dialogue', gal);
       const feed = createStoryFeed(session, () => {}, gal);
       window.galFixture = { gal, dialogue, feed, session, completed: 0 };
-      document.querySelector('#chat-dialog').showModal();
+      document.querySelector('#ai-dialog').showModal();
       void gal.play(
         '【对白:伊蒂丝】你好。【旁白】灯火微微摇动。【对白:长景月汐】剑已经带好了。【对白:user】出发。【对白:npc:守门人】走左边。【退场:伊蒂丝】【旁白】她走出了酒馆。【对白:潘多拉】主人……',
         { owner: 'fixture', title: '万象 · 星灯之间' },
@@ -332,9 +336,9 @@ export async function galChecks({ browser, baseURL, output }) {
     assert.equal(host.backdrop, 'none');
     assert(host.bounds.width >= 843 && host.bounds.height >= 389);
     assert.equal(
-      await page.locator('#chat-dialog').isVisible(),
-      false,
-      'older modal content stays out of the Gal scene',
+      await page.locator('#chat-dialog').count(),
+      0,
+      'the old chat modal has been removed',
     );
     await page.locator('#result').evaluate((node) =>
       Promise.all(
@@ -382,7 +386,8 @@ export async function galChecks({ browser, baseURL, output }) {
     const workspace = await galWorkspaceChecks({ browser, baseURL, output });
     return {
       originalTutorial: true,
-      developerToggle: true,
+      ordinaryPlayDefaultsToGal: true,
+      retiredToggleRemoved: true,
       mobileLandscape: true,
       narrationAndUser: true,
       missingSprites: true,

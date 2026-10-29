@@ -400,6 +400,7 @@ export function restoreLibrary(value) {
       tasks: structuredClone(value.campaign.tasks || {}),
       tableTalkCompleted: value.campaign.tableTalkCompleted === true,
       shopPurchased: value.campaign.shopPurchased === true,
+      adventureTutorial: value.campaign.adventureTutorial === true,
     };
     if (!library.campaign.firstRecruit) {
       library.characters = library.characters.filter((entry) => entry.id !== 'official-aegis');
@@ -439,6 +440,7 @@ export function restoreLibrary(value) {
         ...(book.display ? { display: structuredClone(book.display) } : {}),
         ...(book.generationInput ? { generationInput: structuredClone(book.generationInput) } : {}),
         party: book.party,
+        ...(book.runId ? { runId: book.runId } : {}),
         boss: book.boss,
         chapter: book.chapter,
         ...(book.exploration ? { exploration: structuredClone(book.exploration) } : {}),

@@ -36,7 +36,13 @@ export function recollectionScript(library, entry) {
     );
   });
   return {
-    schemaVersion: 4,
+    schemaVersion: book?.adventure ? 5 : 4,
+    ...(book?.adventure
+      ? {
+          adventure: structuredClone(book.adventure),
+          adventureFinal: structuredClone(record?.adventureFinal || null),
+        }
+      : {}),
     id: 'recollection-' + crypto.randomUUID(),
     runId: crypto.randomUUID(),
     recollection: true,

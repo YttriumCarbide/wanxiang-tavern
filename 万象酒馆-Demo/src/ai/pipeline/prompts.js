@@ -10,6 +10,7 @@ import { scriptOutputSchema } from '../script-schema.js';
 import { characterOutputSchema } from '../character-schema.js';
 import { TAVERN_WORLD, EXPEDITION_PLACES } from '../../content/world.js';
 import { officialDungeonFor } from '../../content/official-dungeons.js';
+import { rpChapterDirection } from '../../content/rp-outlines.js';
 import { characterGameReference } from './game-reference.js';
 import { scanWorldbooks, injectWorldbookMessages } from '../worldbook-scan.js';
 import { requestTokenReport } from './request-tokens.js';
@@ -20,6 +21,9 @@ import { REGIONS } from '../../content/regions.js';
 import { presetOutputTransport, outputToolRequest } from '../preset-output.js';
 import { requireNpcInteraction } from '../../npc-interaction.js';
 import { galInstruction } from '../gal-prompt.js';
+import { adventureScriptRules } from '../adventure-prompt.js';
+import { currentEncounterSpec } from '../../expedition.js';
+import { ADVENTURE_NODE_TYPES } from '../../adventure/definition.js';
 
 export function generationInput(kind, input) {
   if (!['character', 'script'].includes(kind)) throw Error('接口类型无效');
@@ -107,6 +111,9 @@ export function generationInput(kind, input) {
     world: TAVERN_WORLD,
     request: {
       brief: input.brief,
+      ...(input.adventureVersion === 1
+        ? { rpChapterDirection: rpChapterDirection(input.exploration) }
+        : {}),
       storyArc: arcFor(input),
       ...(requireNpcInteraction(input)
         ? {
@@ -152,7 +159,7 @@ export function generationInput(kind, input) {
               instruction:
                 '沿本次激活的完整官设大纲扩写，由AI根据实际战斗进度自行安排事件的叙述位置，在本次回复中讲完本次旅程。大纲不按场次预先分段，不照搬为已发生的历史。大纲中的<user>是玩家创建的主角代称，正文按characters.player所指角色的实际姓名和设定自然称呼。',
               enemyPolicy:
-                'encounters已给出这份剧本的五场固定敌人，必须按真实名单描写，不换成通用怪或其他剧本Boss。沿完整大纲安排事件，不把阵容说明机械拆成五段剧情。',
+                '只有节点1、3、5发生战斗，使用encounters索引0、2、4的真实名单；索引1、3是旧战斗兼容资料，不要把第二、第四节点写成必打战斗。将完整大纲中的互动与调查融入第二事件和第四自由任务，不规定唯一解。',
             },
           }
         : {}),
@@ -193,10 +200,10 @@ export function generationInput(kind, input) {
         })),
       previousStoriesUsage: '这些仅是近期剧本的避重复索引，不是范文，也不是已发生的历史。',
       narrativeParts: [
-        '旅程第一段（第一场展示）',
-        '旅程第二段（第二场展示）',
-        '旅程第三段（第三场展示）',
-        '旅程第四段（第四场展示）',
+        '节点1：普通战斗前Gal正文',
+        '节点2：受限RP事件开场Gal正文，选择和奖励另填data.adventure.event',
+        '节点3：精英战斗前Gal正文',
+        '节点4：自由RP任务开场Gal正文，目标另填data.adventure.quest',
         isEndless(input.exploration)
           ? '旅程第五段，继续推进人物与目标，不强行绑定底层战斗或预写胜负'
           : '最终Boss战开始时，推进剧情，不预写胜负',
@@ -241,14 +248,22 @@ export function generationInput(kind, input) {
         }))
       : selected
         ? Array.from({ length: ENCOUNTER_COUNT }, (_, index) => {
-            const spec = explorationSpec(input.exploration, index);
+            const spec = currentEncounterSpec(
+              {
+                exploration: input.exploration,
+                adventure: input.adventureVersion === 1 ? {} : null,
+              },
+              index,
+            );
+            const rp = input.adventureVersion === 1 && [1, 3].includes(index);
             return {
               index,
               map: spec.map,
               environment: REGIONS[spec.map].atmosphere,
-              enemies: enemiesForSpec(spec),
+              enemies: rp ? [] : enemiesForSpec(spec),
               encounterReason: spec.description,
-              enemyCount: spec.enemyIds.length,
+              enemyCount: rp ? 0 : spec.enemyIds.length,
+              ...(input.adventureVersion === 1 ? { nodeType: ADVENTURE_NODE_TYPES[index] } : {}),
               boss: !!spec.boss,
             };
           })
@@ -491,8 +506,15 @@ export async function generationRequest(kind, input, source, options = {}) {
     });
   }
   const warnings = auditPromptPreset(kind, preset);
-  if (kind === 'script' && galInstruction(input, kind))
-    messages.push({ role: 'system', content: galInstruction(input, kind) });
+  if (kind === 'script') {
+    const boundary = messages.findLastIndex((message) =>
+      message.content.startsWith('【数据生成输出边界】'),
+    );
+    messages.splice(boundary < 0 ? messages.length : boundary, 0, {
+      role: 'system',
+      content: galInstruction(input, kind) + '\n' + adventureScriptRules(),
+    });
+  }
   if (
     scan &&
     !scan.entries.some((entry) => entry.extensions?.wanxiang?.generationRule === `${kind}-output`)

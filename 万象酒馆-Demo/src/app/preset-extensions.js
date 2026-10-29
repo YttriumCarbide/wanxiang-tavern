@@ -36,15 +36,18 @@ export function createPresetExtensions(context) {
     const ticket = ++generation;
     const profiles = await api('config');
     const id = profiles[kind]?.promptPresetId;
-    if (!id || session.runtime.disposed || ticket !== generation) return;
-    if (active?.id === id) {
+    if (session.runtime.disposed || ticket !== generation) return;
+    if (!id) {
+      unload();
+      return;
+    }
+    const { preset } = await api(`prompts/${id}`);
+    if (ticket !== generation || session.runtime.disposed) return;
+    if (active?.id === id && JSON.stringify(active.preset) === JSON.stringify(preset)) {
       active.kind = kind;
       return;
     }
-    const [{ preset }, { storage }] = await Promise.all([
-      api(`prompts/${id}`),
-      api(`helper-storage/${id}`),
-    ]);
+    const { storage } = await api(`helper-storage/${id}`);
     if (ticket !== generation || session.runtime.disposed) return;
     unload();
     active = {

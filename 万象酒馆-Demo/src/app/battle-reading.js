@@ -28,6 +28,8 @@ export function createBattleReading(context) {
     menu.inert = !value;
   }
   function render() {
+    menu.querySelector('[data-dungeon-gal="rewrite"]').disabled =
+      session.journey.expedition?.adventure?.boss.locked === true;
     button.hidden =
       !context.gal?.enabled || session.runtime.mode !== 'battle' || !session.ai.activeScript;
     button.disabled = session.battle.playing;

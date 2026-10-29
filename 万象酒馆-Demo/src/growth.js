@@ -32,7 +32,7 @@ export const GROWTH_LABELS = Object.freeze({
   attack: '普攻伤害',
   skillDamage: '技能伤害',
   limit: '行动次数',
-  manaCost: '技能耗蓝降低',
+  manaCost: '技能消耗降低',
 });
 function seedOf(text) {
   let seed = 2166136261;
@@ -65,6 +65,17 @@ export function restoreGrowth(value, id) {
 export function xpToNext(level) {
   return 240 + (level - 1) * 140 + (level - 1) ** 2 * 20;
 }
+/** Replay stable per-skill resource choices so saving and previewing never reroll costs. */
+export function grownSkillCosts(skill, reductions, memberId) {
+  const costs = { mp: skill.mp || 0, hp: skill.hp || 0 };
+  for (let step = 0; step < reductions; step++) {
+    const available = ['hp', 'mp'].filter((key) => costs[key] > 3);
+    if (!available.length) break;
+    const key = available[seedOf(`${memberId}:${skill.id}:cost:${step}`) % available.length];
+    costs[key]--;
+  }
+  return costs;
+}
 export function grownCombat(member) {
   const growth = restoreGrowth(member.growth, member.id);
   const combat = structuredClone(member.combat);
@@ -76,7 +87,9 @@ export function grownCombat(member) {
   combat.limit = Math.min(2, combat.limit + b.limit);
   for (const skill of combat.skills) {
     if (skill.passive) continue;
-    skill.mp = Math.max(3, skill.mp - b.manaCost);
+    const costs = grownSkillCosts(skill, b.manaCost, member.id);
+    skill.mp = costs.mp;
+    if (skill.hp) skill.hp = costs.hp;
     for (const effect of skill.effects) if (effect.type === 'damage') effect.value += b.skillDamage;
     skill.text = finalSkillText(skill, combat.mechanicMark?.name);
   }
@@ -100,9 +113,11 @@ export function gainExperience(member, amount) {
       const choices = Object.entries(RARITIES[growth.rarity].rates).filter(([key]) => {
         if (key === 'limit') return member.combat.limit + growth.bonus.limit < 2;
         if (key === 'manaCost')
-          return member.combat.skills.some(
-            (skill) => !skill.passive && skill.mp - growth.bonus.manaCost > 3,
-          );
+          return member.combat.skills.some((skill) => {
+            if (skill.passive) return false;
+            const costs = grownSkillCosts(skill, growth.bonus.manaCost, member.id);
+            return costs.hp > 3 || costs.mp > 3;
+          });
         return true;
       });
       let roll = random() * choices.reduce((sum, [, weight]) => sum + weight, 0);

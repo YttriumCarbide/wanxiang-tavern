@@ -1,4 +1,5 @@
 import { upgradePlaytestWorldbook } from '../src/ai/playtest-upgrade.js';
+import { upgradeAdventureWorldbook } from '../src/ai/adventure-upgrade.js';
 import { mkdtemp, readFile, writeFile, rm, mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -74,9 +75,20 @@ export async function buildBuiltinWorld() {
       upgradeEnemyBaseWorldbook(book),
       (await characterGenerationSources()).rules,
     ).entries;
+    book.entries = upgradeAdventureWorldbook(
+      {
+        ...book,
+        extensions: {
+          ...book.extensions,
+          wanxiang: { ...book.extensions?.wanxiang, adventureRevision: 47 },
+        },
+      },
+      await readFile(path.join(root, 'prompts/worldbook/script-output.md'), 'utf8'),
+    ).entries;
     book.extensions = {
       wanxiang: {
         publicSeed: 1,
+        adventureRevision: 50,
         characterCleanup: {
           revision: 'public-canon',
           removedIds: [

@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import { legacySession } from './legacy-session.mjs';
+import { EMBLEMS } from '../../src/emblems.js';
+import { resourceText } from '../../src/resource-text.js';
 
 /** Check actual jewellery, transparent inn composition, and interruptible transitions in one session. */
 export async function ringGalleryChecks({ browser, baseURL, output }) {
@@ -53,9 +55,7 @@ export async function ringGalleryChecks({ browser, baseURL, output }) {
     assert.equal(await page.locator('#party-panel').isVisible(), false);
     assert.equal(
       await frame
-        .locator(
-          '.ring-gallery-craft, .ring-gallery-power, .ring-gallery h2, .ring-gallery details',
-        )
+        .locator('.ring-gallery-craft, .ring-gallery-power, .ring-gallery details')
         .count(),
       0,
     );
@@ -79,6 +79,18 @@ export async function ringGalleryChecks({ browser, baseURL, output }) {
         }
       }
       await waitForSwitch();
+      assert.equal(
+        await frame.locator('[data-ring-passive]').textContent(),
+        resourceText(EMBLEMS[id].emblem.text),
+      );
+      assert.equal(
+        await frame.locator('[data-ring-skill-name]').textContent(),
+        EMBLEMS[id].skill.name,
+      );
+      assert.equal(
+        await frame.locator('[data-ring-skill-effect]').textContent(),
+        resourceText(EMBLEMS[id].skill.text),
+      );
       assert.equal(
         await frame.locator('canvas').evaluate(() => window.assetPreview.rings().selected),
         id,
@@ -126,7 +138,9 @@ export async function ringGalleryChecks({ browser, baseURL, output }) {
     await waitForSwitch();
     const mobile = await frame.locator('.ring-gallery').evaluate((panel) => {
       return [
-        ...panel.querySelectorAll('header, nav, .ring-gallery-tools, .ring-gallery-caption'),
+        ...panel.querySelectorAll(
+          'header, nav, .ring-gallery-tools, .ring-gallery-caption, .ring-gallery-effects',
+        ),
       ].map((el) => {
         const box = el.getBoundingClientRect();
         return {

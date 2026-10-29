@@ -57,7 +57,11 @@ export function mergeFutureScript(current, replacement, encountered) {
     }
   }
   if (replacement.schemaVersion >= 4) {
-    result.schemaVersion = 4;
+    result.schemaVersion = replacement.schemaVersion;
+    if (current.adventure && replacement.adventure) {
+      if (encountered < 1) result.adventure.event = structuredClone(replacement.adventure.event);
+      if (encountered < 3) result.adventure.quest = structuredClone(replacement.adventure.quest);
+    }
     for (const field of ['npcs', 'items'])
       result[field] = [
         ...(current[field] || []).filter((entry) => (entry.encounter ?? 0) <= encountered),

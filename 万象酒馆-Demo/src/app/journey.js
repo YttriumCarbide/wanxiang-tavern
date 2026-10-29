@@ -7,7 +7,11 @@ import {
   beginEncounter,
   completeEncounter,
   currentEncounterSpec,
+  expeditionNodeType,
+  completeAdventureNode,
 } from '../expedition.js';
+import { createAdventureState, lockBoss } from '../adventure/state.js';
+import { ADVENTURE_NODE_LABELS } from '../adventure/definition.js';
 import { REGIONS } from '../content/regions.js';
 import { createBattleView } from '../scene.js';
 import { roundBanner } from '../motion.js';
@@ -60,6 +64,29 @@ export function createJourney(context) {
               }
             : null,
         );
+        if (session.ai.activeScript?.adventure)
+          session.journey.expedition.adventure = createAdventureState(session.ai.activeScript);
+        if (session.ai.activeScript?.adventure && session.journey.selectedNode?.replay) {
+          const state = session.journey.expedition.adventure;
+          const final = session.ai.activeScript.adventureFinal;
+          state.event = {
+            ...state.event,
+            ...(final?.event || {}),
+            choiceId:
+              final?.event?.choiceId || session.ai.activeScript.adventure.event.choices[0].id,
+            resolved: true,
+            rewardClaimed: false,
+          };
+          for (const goal of Object.values(state.goals)) goal.status = 'completed';
+          state.history = final?.history || [];
+          state.readyPrompted = true;
+        }
+        if (
+          session.ai.activeScript?.adventure &&
+          session.journey.selectedNode?.tutorial &&
+          session.ai.library.campaign
+        )
+          session.ai.library.campaign.adventureTutorial = true;
         if (session.journey.selectedNode?.replay)
           session.journey.expedition.recollectionEther = recollectionEther(
             session.ai.library,
@@ -72,7 +99,18 @@ export function createJourney(context) {
         return;
       }
     }
+    if (session.ai.activeScript?.adventure) {
+      const record = session.ai.library.history.find(
+        (item) => item.runId === session.ai.activeScript.runId,
+      );
+      if (record) record.adventureVersion = 1;
+    }
     session.journey.expedition.partyIds ||= [...session.ai.library.party];
+    if (['event', 'quest'].includes(expeditionNodeType(session.journey.expedition))) {
+      await context.adventure.enter();
+      return;
+    }
+    context.adventure.leave();
     document.body.classList.add('in-battle');
     if (continuing) applyEncounterGrowth(session.journey.expedition, session.ai.library.characters);
     if (prepareCorridorRing(session.ai.library, session.journey.expedition))
@@ -105,9 +143,11 @@ export function createJourney(context) {
     $('#ai-open').hidden = true;
     $('#back-inn').hidden = !developerOption(session.ai.generationOptions, 'allowRetreat');
     const spec = currentEncounterSpec(session.journey.expedition, session.battle.state.encounter);
-    $('#mode-label').textContent = session.journey.expedition.exploration
-      ? `${REGIONS[spec.map].name} · 第 ${session.battle.state.encounter + 1}/${ENCOUNTER_COUNT} 战 · ${spec.name}`
-      : `第 ${session.battle.state.encounter + 1}/${ENCOUNTER_COUNT} 战 · ${spec.name}`;
+    $('#mode-label').textContent = session.journey.expedition.adventure
+      ? `${spec.name} · 第 ${session.battle.state.encounter + 1}/${ENCOUNTER_COUNT} 节点 · ${ADVENTURE_NODE_LABELS[session.battle.state.encounter]}`
+      : session.journey.expedition.exploration
+        ? `${REGIONS[spec.map].name} · 第 ${session.battle.state.encounter + 1}/${ENCOUNTER_COUNT} 战 · ${spec.name}`
+        : `第 ${session.battle.state.encounter + 1}/${ENCOUNTER_COUNT} 战 · ${spec.name}`;
     $('#scene-loading').hidden = false;
     $('#scene-loading').textContent = `正在进入${spec.name}…`;
     $('#inn-frame').replaceChildren();
@@ -180,8 +220,25 @@ export function createJourney(context) {
     }
     session.journey = snapshot.journey;
     session.ai.activeScript = snapshot.activeScript;
+    if (snapshot.activeScript?.id) {
+      const index = session.ai.library.scripts.findIndex(
+        (book) => book.id === snapshot.activeScript.id,
+      );
+      if (index >= 0) session.ai.library.scripts[index] = session.ai.activeScript;
+    }
     session.ai.storyView = snapshot.storyView;
     session.ai.chat.quick = snapshot.quick || [];
+    if (['event', 'quest'].includes(expeditionNodeType(session.journey.expedition))) {
+      if (session.journey.expedition.pendingResult) {
+        session.runtime.mode = 'loading';
+        document.body.classList.add('in-battle');
+        await mountEncounter(true);
+        await showResult();
+        return;
+      }
+      await context.adventure.enter(true);
+      return;
+    }
     session.selection.selected = snapshot.state.formation.find(Boolean);
     session.selection.target = getEnemies(snapshot.state)[0]?.id;
     session.runtime.mode = 'loading';
@@ -197,7 +254,7 @@ export function createJourney(context) {
       (session.journey.expedition?.status === 'complete' ||
         session.battle.state.phase === 'defeat');
     if (
-      session.runtime.mode === 'battle' &&
+      ['battle', 'event'].includes(session.runtime.mode) &&
       !settled &&
       !developerOption(session.ai.generationOptions, 'allowRetreat')
     ) {
@@ -205,13 +262,13 @@ export function createJourney(context) {
       return;
     }
     if (
-      session.runtime.mode === 'battle' &&
+      ['battle', 'event'].includes(session.runtime.mode) &&
       context.onboarding &&
       !context.onboarding.allowReturn()
     )
       return;
     if (
-      session.runtime.mode === 'battle' &&
+      ['battle', 'event'].includes(session.runtime.mode) &&
       session.ai.activeScript &&
       !session.ai.activeScript.recollection
     ) {
@@ -225,7 +282,7 @@ export function createJourney(context) {
     }
     if (
       !settled &&
-      session.runtime.mode === 'battle' &&
+      ['battle', 'event'].includes(session.runtime.mode) &&
       session.ai.activeScript &&
       !session.ai.activeScript.recollection
     ) {
@@ -248,6 +305,7 @@ export function createJourney(context) {
       context.generation.save();
     }
     context.backpack?.close();
+    context.adventure.leave();
     context.companionEvents?.leave();
     context.emblems?.leave();
     context.chat?.leave();
@@ -274,6 +332,7 @@ export function createJourney(context) {
     context.shell.mountInn(session.journey.expedition ? 'gate' : null);
     context.onboarding?.refresh();
     context.companionEvents?.returned();
+    void context.memory?.autoSummarize();
   }
   async function showResult() {
     if (session.journey.expedition.pendingResult)
@@ -332,6 +391,10 @@ export function createJourney(context) {
         ? settleEther(session.ai.library, runId)
         : 0;
     if (complete && !replay) {
+      if (session.journey.expedition.adventure) {
+        const record = session.ai.library.history.find((item) => item.runId === runId);
+        if (record) record.adventureFinal = structuredClone(session.journey.expedition.adventure);
+      }
       recordSettlement(session.ai.library, runId || session.journey.expedition.id);
       context.generation.save();
     }
@@ -367,5 +430,38 @@ export function createJourney(context) {
     });
     context.onboarding?.battleWon(result.won && result.complete);
   }
-  return { startBattle, returnInn, showResult, resume };
+  async function continueAdventure() {
+    const expedition = session.journey.expedition;
+    if (session.runtime.mode !== 'event' || !expedition?.adventure) return;
+    try {
+      if (
+        expedition.index === 1 &&
+        session.ai.activeScript.recollection &&
+        !expedition.adventure.event.rewardClaimed
+      ) {
+        const choice = session.ai.activeScript.adventure.event.choices.find(
+          (item) => item.id === expedition.adventure.event.choiceId,
+        );
+        claimBattleRewards(session.ai.library, `${expedition.id}:event-2`, choice.reward);
+        expedition.adventure.event.rewardClaimed = true;
+      }
+      if (expedition.index === 3) {
+        lockBoss(expedition, session.ai.activeScript);
+        if (!expedition.adventure.questRewardClaimed) {
+          claimBattleRewards(session.ai.library, `${expedition.id}:quest-4`, {
+            summonContracts: 0,
+            gold: 20,
+          });
+          expedition.adventure.questRewardClaimed = true;
+        }
+      }
+      completeAdventureNode(expedition, session.ai.activeScript);
+      context.adventure.leave();
+      context.generation.save();
+      await startBattle(true);
+    } catch (failure) {
+      context.shell.toast(failure.message);
+    }
+  }
+  return { startBattle, returnInn, showResult, resume, continueAdventure };
 }

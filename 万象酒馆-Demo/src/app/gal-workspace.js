@@ -17,8 +17,23 @@ export function createGalWorkspace(panel, events, actions) {
   let config = null;
   let mounted = [];
   let decorated = [];
+  const observer = new ResizeObserver(() => notifyLayout());
   const part = (selector) => panel.querySelector(selector);
+  function notifyLayout() {
+    if (!config || part('.gal-composer').hidden) return;
+    config?.onLayout?.({
+      height: part('.gal-composer').offsetHeight,
+      collapsed: panel.dataset.composerCollapsed === 'true',
+    });
+  }
+  function collapse(value) {
+    if (!config?.persistent) return;
+    panel.dataset.composerCollapsed = String(value);
+    part('.gal-composer').inert = value;
+    notifyLayout();
+  }
   function clear() {
+    observer.disconnect();
     for (const { button, markup, label, title } of decorated) {
       button.innerHTML = markup;
       for (const [name, value] of [
@@ -37,6 +52,9 @@ export function createGalWorkspace(panel, events, actions) {
     config = null;
     root.hidden = true;
     menu.hidden = true;
+    part('.gal-composer').inert = false;
+    delete panel.dataset.composerCollapsed;
+    delete panel.dataset.persistent;
     delete panel.dataset.workspace;
     delete panel.dataset.drawer;
   }
@@ -50,6 +68,10 @@ export function createGalWorkspace(panel, events, actions) {
     }
   }
   function toggle(name) {
+    if (name === 'composer' && config?.persistent) {
+      collapse(false);
+      return;
+    }
     const target = part(`.gal-${name}`);
     if (!target) return;
     const visible = target.hidden;
@@ -69,7 +91,10 @@ export function createGalWorkspace(panel, events, actions) {
     if (action === 'compose') toggle('composer');
     if (action === 'archive') toggle('archive');
     if (action === 'replay') config?.replay?.();
-    if (action === 'exit') actions.exit();
+    if (action === 'exit') {
+      if (config?.persistent) collapse(true);
+      else actions.exit();
+    }
     if (action === 'tools') {
       const tools = part('.gal-tools');
       tools.hidden = !tools.hidden;
@@ -92,8 +117,9 @@ export function createGalWorkspace(panel, events, actions) {
       mount(options.composer, '.gal-composer-content');
       mount(options.auxiliary, '.gal-tools-content');
       mount(options.history, '.gal-archive-content');
+      panel.dataset.persistent = String(options.persistent === true);
       for (const button of part('.gal-composer').querySelectorAll(
-        '#chat-send,#quick-chat-send,#chat-cancel',
+        '#chat-send,#quick-chat-send,#chat-cancel,[data-rp="send"]',
       )) {
         decorated.push({
           button,
@@ -117,6 +143,8 @@ export function createGalWorkspace(panel, events, actions) {
       menu.querySelector('[data-workspace="tools"]').setAttribute('aria-expanded', 'false');
       panel.dataset.drawer = 'composer';
       actions.show(options.title);
+      observer.observe(part('.gal-composer'));
+      collapse(false);
     },
     playing(value) {
       panel.dataset.playing = String(value);
@@ -132,6 +160,7 @@ export function createGalWorkspace(panel, events, actions) {
     history() {
       toggle('archive');
     },
+    collapse,
     feedback(owner, text) {
       if (config?.owner !== owner) return;
       part('.gal-feedback').textContent = text;

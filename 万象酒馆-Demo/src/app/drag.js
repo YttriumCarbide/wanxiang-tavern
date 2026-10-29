@@ -7,18 +7,19 @@ import { query as $ } from './dom.js';
 export function createDrag(context) {
   const { session } = context;
   function showDropMenu(actor, targetId, side, x, y) {
+    const self = actor === targetId;
     session.selection.selected = actor;
     session.selection.pending = null;
-    session.selection.interactionStep = null;
+    session.selection.interactionStep = self ? 'skill' : null;
     session.selection.inspectedEnemy = null;
     session.selection.target = targetId;
-    if (context.viewport.compactHUD()) $('#details').classList.remove('mobile-open');
+    if (context.viewport.compactHUD() && !self) $('#details').classList.remove('mobile-open');
     if (x == null || y == null) {
       const card = [...document.querySelectorAll('[data-unit]')].find(
         (element) => element.dataset.unit === targetId,
       );
       const rect = card?.getBoundingClientRect();
-      x = rect ? rect.left + rect.width / 2 : innerWidth / 2;
+      x = rect ? (self ? rect.right : rect.left + rect.width / 2) : innerWidth / 2;
       y = rect ? rect.top + rect.height / 2 : innerHeight / 2;
     }
     const d = context.roster.get(actor),
@@ -31,26 +32,28 @@ export function createDrag(context) {
         ...(d.skills || []).filter((a) => !a.passive),
         ...activeEmblemSkill,
       ].filter((a) =>
-        side === 'Enemy'
-          ? ['enemy', 'allEnemies'].includes(a.target)
-          : ['ally', 'self', 'allAllies'].includes(a.target),
+        self
+          ? a.target === 'self'
+          : side === 'Enemy'
+            ? ['enemy', 'allEnemies'].includes(a.target)
+            : ['ally', 'allAllies'].includes(a.target),
       );
     const menu = $('#drag-menu');
+    if (self && !skills.length) {
+      menu.hidden = true;
+      return;
+    }
     menu.innerHTML = html`<span>${d.name} → ${context.roster.get(targetId).name}</span
-      >${side === 'Friendly' ? '<button data-drop-swap>交换 · 1 AP</button>' : ''}${skills
+      >${side === 'Friendly' && !self ? '<button data-drop-swap>交换 · 1 AP</button>' : ''}${skills
         .map((a) => {
-          const unavailable =
-            u.mp < a.mp ||
-            (a.hp && u.hp <= a.hp) ||
-            u.used >= d.limit ||
-            !context.planning.fitsAt(context.planning.preferredStart(a.ap), a.ap);
+          const unavailable = !context.planning.canQueueSkill(actor, a.id, targetId);
           return html`<button
             data-drop-skill="${a.id}"
             ${unavailable ? 'disabled' : ''}
-            data-tooltip="${escapeText(`${a.text || `造成${d.attack}伤害`}\n${a.ap} AP · ${a.mp} 蓝量${a.hp ? ` · ${a.hp} 生命` : ''}`)}"
+            data-tooltip="${escapeText(`${a.text || `造成${d.attack}伤害`}\n消耗 ${a.ap} AP${a.mp ? ` · ${a.mp} sp` : ''}${a.hp ? ` · ${a.hp} hp` : ''}`)}"
           >
             ${a.name}<small
-              >${a.ap} AP${a.mp ? ` · ${a.mp} 蓝` : ''}${a.hp ? ` · ${a.hp} 生命` : ''}</small
+              >${a.ap} AP${a.mp ? ` · ${a.mp} sp` : ''}${a.hp ? ` · ${a.hp} hp` : ''}</small
             >
           </button>`;
         })

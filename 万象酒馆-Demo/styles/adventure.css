@@ -1,0 +1,494 @@
+#rp-scene {
+  position: fixed;
+  inset: 0;
+  z-index: 12;
+  color: #f5e9d8;
+  background-color: #17151c;
+  background-position: center;
+  background-size: cover;
+  overflow: hidden;
+  isolation: isolate;
+  animation: rp-arrive 600ms ease both;
+}
+.rp-vignette {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    linear-gradient(90deg, #10101400 20%, #14101866 47%, #141018ed 100%),
+    linear-gradient(0deg, #100e18b0, transparent 60%);
+}
+.rp-header {
+  position: absolute;
+  inset: max(24px, env(safe-area-inset-top)) 5vw auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #ddcba9;
+  font-size: 13px;
+  letter-spacing: 0.1em;
+  gap: 20px;
+  z-index: 2;
+}
+#rp-scene button {
+  color: inherit;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+.rp-tools {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.rp-header > span {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+#rp-scene .rp-tools button {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 12px;
+  border: 1px solid #d0b47830;
+  border-radius: 18px;
+  background: #161a2399;
+  color: #e5d6b5;
+  font-size: 12px;
+  transition:
+    background 180ms ease,
+    border-color 180ms ease;
+}
+#rp-scene .rp-tools button:hover,
+#rp-scene .rp-tools button[aria-expanded='true'] {
+  background: #b39b5e25;
+  border-color: #d6bd7c88;
+}
+.rp-tools svg {
+  width: 17px;
+  height: 17px;
+  flex-shrink: 0;
+}
+.rp-content {
+  position: absolute;
+  top: 16%;
+  right: 7%;
+  bottom: var(--rp-panel-bottom, 5%);
+  width: min(560px, 46vw);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  padding: 8px 20px 20px;
+  scrollbar-width: thin;
+  scrollbar-color: #bc9c6955 transparent;
+  scrollbar-gutter: stable;
+  overflow-anchor: none;
+  transition: bottom 360ms cubic-bezier(0.22, 0.65, 0.3, 1);
+}
+#rp-scene[data-intro='true'] :is(.rp-header, .rp-content) {
+  visibility: hidden;
+  pointer-events: none;
+}
+#rp-scene[data-intro='false'] .rp-content {
+  animation: rp-reveal 480ms ease both;
+}
+.gal-composer .rp-form {
+  display: block;
+  margin-top: 0;
+}
+.gal-composer .rp-locked-choice {
+  margin: 8px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #efd3a0;
+  border-left: 2px solid #cab17a;
+  padding-left: 10px;
+  user-select: text;
+}
+.gal-composer #rp-input {
+  resize: none;
+  max-height: 65px;
+  padding: 10px 12px;
+}
+.gal-stage[data-workspace='adventure'] {
+  pointer-events: none;
+}
+.gal-stage[data-workspace='adventure']
+  :is(.gal-composer, .gal-actionbar, .gal-controls, .gal-reading, .gal-history) {
+  pointer-events: auto;
+}
+.gal-stage[data-workspace='adventure'][data-playing='false'] :is(.gal-actionbar, .gal-controls) {
+  display: none;
+}
+body.in-adventure:has(#gal-stage[data-workspace='adventure'][data-playing='true']) .rp-content {
+  visibility: hidden;
+  pointer-events: none;
+}
+.gal-stage[data-workspace='adventure'] .gal-cast {
+  display: none;
+}
+.gal-stage[data-workspace='adventure'] .gal-controls {
+  display: none;
+}
+body.in-adventure.gal-playing :is(#ai-dialog, #generation-diagnostics)[open] {
+  visibility: visible;
+}
+@keyframes rp-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.rp-kicker {
+  color: #bc9c72;
+  letter-spacing: 0.22em;
+  font-size: 11px;
+}
+.rp-content h1 {
+  font-family: 'Noto Serif SC', serif;
+  font-size: clamp(27px, 3vw, 44px);
+  font-weight: 400;
+  margin: 14px 0 20px;
+  letter-spacing: 0.08em;
+  text-shadow: 0 2px 15px #0009;
+}
+.rp-description {
+  color: #ddd0bf;
+  line-height: 1.9;
+  font-size: 15px;
+  margin: 0 0 25px;
+}
+#rp-scene [data-rp-choice] {
+  width: 100%;
+  padding: 16px 4px;
+  display: flex;
+  gap: 18px;
+  text-align: left;
+  border-top: 1px solid #d0b88b33;
+  transition:
+    background 180ms ease,
+    translate 180ms ease;
+}
+#rp-scene [data-rp-choice]:not(:disabled):hover,
+#rp-scene [data-rp-choice][aria-pressed='true'] {
+  background: linear-gradient(90deg, #cba86c20, transparent);
+  translate: 4px 0;
+}
+.rp-choice-number {
+  color: #bda07b;
+  font:
+    19px Georgia,
+    serif;
+  padding-top: 2px;
+}
+.rp-options strong {
+  display: block;
+  font-weight: 400;
+  font-size: 17px;
+  color: #f1dfb9;
+}
+.rp-options small {
+  display: block;
+  margin-top: 7px;
+  line-height: 1.6;
+  color: #c4b7a8;
+}
+.rp-options em {
+  display: block;
+  color: #d3ad76;
+  font: 11px sans-serif;
+  margin-top: 9px;
+}
+.rp-form {
+  margin-top: 20px;
+}
+#rp-scene [data-rp-choice][aria-pressed='true']:disabled {
+  opacity: 1;
+}
+#rp-scene > .api-request-control {
+  position: absolute;
+  bottom: 16px;
+  left: 3vw;
+  max-width: 42vw;
+  background: #211b26cc;
+  color: #e6d1ad;
+  border-color: #c0a67e55;
+}
+.rp-form label {
+  font-size: 12px;
+  color: #b9a994;
+}
+.rp-form > div {
+  display: flex;
+  align-items: end;
+  gap: 12px;
+  margin-top: 7px;
+}
+#rp-input {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  padding: 12px 0;
+  color: #f4e9d8;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid #c5aa7b77;
+  border-radius: 0;
+  font-size: 15px;
+  resize: vertical;
+  max-height: 150px;
+}
+#rp-scene [data-rp='send'] {
+  padding: 10px 0;
+  white-space: nowrap;
+  color: #edc887;
+}
+.rp-footer {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 15px;
+}
+.rp-footer button {
+  font-size: 12px;
+  padding: 8px 0;
+  color: #bdb09f !important;
+}
+#rp-scene [data-rp='next'],
+#rp-scene [data-rp='boss'] {
+  color: #f1d096 !important;
+  border-bottom: 1px solid #bc9a64;
+  padding: 10px 0;
+  margin-left: auto;
+  font-size: 15px;
+}
+.rp-status {
+  min-height: 18px;
+  color: #e1b28d;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.rp-goals article {
+  display: flex;
+  gap: 14px;
+  padding: 13px 0;
+  border-top: 1px solid #c1a37830;
+}
+.rp-goals article > span {
+  color: #bfa479;
+  font-size: 19px;
+}
+.rp-goals h2 {
+  font-size: 16px;
+  font-weight: 400;
+  margin: 0 0 6px;
+}
+.rp-environment {
+  margin-top: 25px;
+  padding-top: 16px;
+  border-top: 1px solid #c1a37830;
+}
+.rp-environment > h2 {
+  margin: 0 0 12px;
+  color: #cdb992;
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0.16em;
+}
+.rp-environment dl {
+  margin: 0;
+}
+.rp-environment dl > div {
+  display: grid;
+  grid-template-columns: minmax(50px, 0.28fr) 1fr;
+  gap: 14px;
+  padding: 9px 0;
+  font-size: 13px;
+  line-height: 1.65;
+}
+.rp-environment dt {
+  color: #d3bf97;
+}
+.rp-environment dd {
+  margin: 0;
+  color: #c6c0b4;
+}
+.rp-goals h2 small {
+  color: #b7a891;
+  font: 10px sans-serif;
+  margin-left: 8px;
+}
+.rp-goals p {
+  font-size: 13px;
+  color: #bfb4a8;
+  margin: 0;
+  line-height: 1.6;
+}
+.rp-goals [data-status='completed'] {
+  opacity: 0.6;
+}
+.rp-goals [data-status='completed'] h2 {
+  text-decoration: line-through;
+}
+.rp-boss-ready {
+  padding: 20px 0;
+  margin-top: 18px;
+  border-top: 1px solid #dfc39599;
+  animation: rp-arrive 300ms ease both;
+}
+.rp-boss-ready strong {
+  font:
+    23px Georgia,
+    serif;
+  color: #f0d7a4;
+}
+.rp-boss-ready p {
+  color: #d0c0ab;
+  font-size: 13px;
+}
+.rp-boss-ready button {
+  margin-right: 20px;
+  padding: 8px 0;
+}
+body.in-adventure .app-header {
+  z-index: 14;
+}
+body.in-adventure #mode-label {
+  display: none;
+}
+#automatic-memory {
+  position: fixed;
+  z-index: 60;
+  bottom: 20px;
+  left: 50%;
+  translate: -50% 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 18px;
+  width: min(620px, 88vw);
+  color: #dfd1bb;
+  background: #211d29e8;
+  border-bottom: 1px solid #c1a07588;
+  font-size: 13px;
+  box-shadow: 0 8px 24px #0004;
+}
+#automatic-memory button {
+  background: transparent;
+  border: 0;
+  color: #ecd4a5;
+  white-space: nowrap;
+  padding: 5px;
+}
+@keyframes rp-arrive {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@media (max-height: 500px), (pointer: coarse) and (max-width: 1100px) {
+  .gal-composer .rp-locked-choice {
+    font-size: 11px;
+    margin-top: 3px;
+  }
+  .gal-composer #rp-input {
+    padding: 6px 10px;
+    max-height: 40px;
+  }
+  .rp-header {
+    inset: 12px 4vw auto;
+    font-size: 10px;
+  }
+  .rp-tools {
+    gap: 5px;
+  }
+  #rp-scene .rp-tools button {
+    padding: 6px 9px;
+    font-size: 10px;
+    gap: 5px;
+  }
+  .rp-tools svg {
+    width: 15px;
+    height: 15px;
+  }
+  .rp-header > span {
+    max-width: 25vw;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .rp-content {
+    top: 14%;
+    right: 3%;
+    width: 52vw;
+    padding: 7px 12px 16px;
+  }
+  .rp-vignette {
+    background: linear-gradient(90deg, transparent 10%, #141018bb 48%, #141018ed);
+  }
+  .rp-content h1 {
+    font-size: 26px;
+    margin: 9px 0 12px;
+  }
+  .rp-description {
+    font-size: 12px;
+    line-height: 1.7;
+    margin-bottom: 15px;
+  }
+  #rp-scene [data-rp-choice] {
+    padding: 11px 2px;
+    gap: 10px;
+  }
+  .rp-options strong {
+    font-size: 14px;
+  }
+  .rp-options small,
+  .rp-goals p {
+    font-size: 11px;
+  }
+  .rp-form {
+    margin-top: 12px;
+  }
+  #rp-input {
+    font-size: 13px;
+    max-height: 100px;
+    padding: 8px 0;
+  }
+  .rp-footer {
+    gap: 11px;
+    margin-top: 6px;
+  }
+  .rp-goals h2 {
+    font-size: 13px;
+  }
+  .rp-environment dl > div {
+    font-size: 11px;
+    padding: 6px 0;
+    gap: 9px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  #rp-scene,
+  .rp-boss-ready,
+  #rp-scene[data-intro='false'] .rp-content {
+    animation: none;
+  }
+  .rp-content {
+    transition: none;
+  }
+}
+@media (max-width: 700px) {
+  .rp-tools button > span:not(.gal-control-label) {
+    display: none;
+  }
+}

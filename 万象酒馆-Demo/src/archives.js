@@ -1,5 +1,5 @@
 import { routeKey, isEndless } from './worlds.js';
-import { memoryText } from './memory.js';
+import { memoryText, dungeonMemoryText, restoredSummary } from './memory.js';
 
 const normalizedName = (name) =>
   String(name || '')
@@ -142,10 +142,12 @@ export function relevantArchives(library, text, map = null) {
     )
     .map((record) => ({
       title: record.title,
-      content: (record.lines || [])
-        .filter((line) => line.stage !== 'combat')
-        .map((line) => memoryText(line.text, line.summary))
-        .join('\n\n'),
+      content:
+        restoredSummary(record.summary, dungeonMemoryText(record))?.text ||
+        (record.lines || [])
+          .filter((line) => line.stage !== 'combat')
+          .map((line) => memoryText(line.text, line.summary))
+          .join('\n\n'),
     }));
   const known = new Map();
   for (const entry of mergedArchiveItems(library.archives?.items || [])) {

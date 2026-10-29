@@ -86,7 +86,20 @@ function memorySources(library, quick = []) {
 
 export function pendingMemories(library, quick = []) {
   return memorySources(library, quick)
+    .filter((item) => item.kind !== 'dungeon' || item.target.adventureVersion !== 1)
     .filter((item) => !restoredSummary(item.target[item.summaryKey], item.text))
+    .map(({ target: _target, summaryKey: _key, ...item }) => item);
+}
+
+export function pendingDungeonMemories(library) {
+  return memorySources(library)
+    .filter(
+      (item) =>
+        item.kind === 'dungeon' &&
+        item.target.adventureVersion === 1 &&
+        item.target.complete === true &&
+        !restoredSummary(item.target.summary, item.text),
+    )
     .map(({ target: _target, summaryKey: _key, ...item }) => item);
 }
 

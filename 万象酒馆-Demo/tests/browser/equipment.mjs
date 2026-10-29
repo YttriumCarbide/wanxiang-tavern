@@ -13,6 +13,17 @@ export async function equipmentChecks({ browser, baseURL, output }) {
   const calls = [];
   page.on('pageerror', (error) => errors.push(error.message));
   await legacySession(page);
+  async function readGal(wait = false) {
+    const stage = page.locator('#gal-stage');
+    if (wait) await stage.waitFor({ state: 'visible' });
+    for (let index = 0; index < 160 && (await stage.isVisible()); index++) {
+      if ((await stage.getAttribute('data-leaving')) === 'true')
+        await page.waitForFunction(
+          () => document.querySelector('#gal-stage').dataset.leaving !== 'true',
+        );
+      else await page.locator('.gal-page').click();
+    }
+  }
   try {
     await page.goto(baseURL);
     await page.waitForFunction(() => !!window.demo);
@@ -188,8 +199,7 @@ export async function equipmentChecks({ browser, baseURL, output }) {
     assert.equal(recruited.inventory.summonContracts, 3);
     assert(recruited.refinedNpcs.includes('灯河'));
     await page.locator('#summoned-join').click();
-    await page.locator('#companion-dialogue').waitFor({ state: 'visible' });
-    for (let i = 0; i < 4; i++) await page.locator('#companion-dialogue button').click();
+    await readGal(true);
     assert(
       !(await page.evaluate(() => demo.getLibrary())).tavernChat.some((message) =>
         message.content.includes('还记得回廊'),
@@ -213,10 +223,12 @@ export async function equipmentChecks({ browser, baseURL, output }) {
     await page.locator('#destination-region-confirm').click();
     await page.locator('#destination-start').click();
     await page.locator('#prepare-done').click();
-    await page.locator('#prepare-title').filter({ hasText: '正在生成剧本' }).waitFor();
-    await page.locator('#guide-dialogue').waitFor({ state: 'visible' });
-    while (await page.locator('#guide-dialogue').isVisible())
-      await page.locator('#dialogue-next').click();
+    await page
+      .locator('#prepare-title')
+      .filter({ hasText: '正在生成剧本' })
+      .waitFor({ state: 'attached' });
+    await readGal(true);
+    await page.locator('#prepare-title').waitFor({ state: 'visible' });
     assert.equal(
       (await page.evaluate(() => demo.getLibrary())).campaign.tasks.equipmentIntro,
       true,
@@ -262,13 +274,11 @@ export async function equipmentChecks({ browser, baseURL, output }) {
     });
     await page.reload();
     await page.waitForFunction(() => !!window.demo);
-    await page.locator('#companion-dialogue.opening-prose').waitFor({ state: 'visible' });
+    await page.locator('#gal-stage').waitFor({ state: 'visible' });
     await page.screenshot({ path: path.join(output, 'pandora-second-return.png') });
-    while (await page.locator('#companion-dialogue').isVisible())
-      await page.locator('#companion-dialogue button').click();
+    await readGal();
     await page.waitForFunction(() => demo.getLibrary().progression.pandoraJoined);
-    while (await page.locator('#emblem-dialogue').isVisible())
-      await page.locator('#emblem-dialogue button').click();
+    await readGal();
     await innMessage('enter-dungeon');
     await page.locator('#destination-regions button[data-region="forest"]').click();
     await page.locator('#destination-region-confirm').click();
@@ -288,8 +298,7 @@ export async function equipmentChecks({ browser, baseURL, output }) {
         }));
         throw Error(error.message + '\n' + JSON.stringify(state));
       });
-    await page.locator('#companion-dialogue').waitFor({ state: 'visible' });
-    for (let i = 0; i < 6; i++) await page.locator('#companion-dialogue button').click();
+    await readGal(true);
     await page.waitForFunction(() => !demo.getStatus().animating);
     assert.equal(await page.locator('#back-inn').isVisible(), false);
     await page.evaluate(() => demo.returnInn());
@@ -303,8 +312,7 @@ export async function equipmentChecks({ browser, baseURL, output }) {
     await page.locator(`[data-unit="${front}"]`).click();
     await page.locator('#commit').click();
     await page.waitForFunction(() => demo.getLibrary().progression.swapLesson === 'retreat');
-    while (await page.locator('#companion-dialogue').isVisible())
-      await page.locator('#companion-dialogue button').click();
+    await readGal(true);
     await page.waitForFunction(() => !demo.getStatus().playing);
     const retreatState = await page.evaluate(() => demo.getState());
     const actor = retreatState.formation.slice(0, 3).find(Boolean);
@@ -317,8 +325,7 @@ export async function equipmentChecks({ browser, baseURL, output }) {
     await page.waitForFunction(() => !demo.getStatus().playing);
     await page.locator('#commit').click();
     await page.waitForFunction(() => demo.getLibrary().progression.entryLesson === 'ready');
-    while (await page.locator('#companion-dialogue').isVisible())
-      await page.locator('#companion-dialogue button').click();
+    await readGal(true);
     await page.waitForFunction(() => !demo.getStatus().playing);
     const charged = await page.evaluate(() => {
       const state = demo.getState();

@@ -6,6 +6,7 @@ import { loadCustomPortraits } from '../portraits.js';
 import { packagePortraitAssets, restorePortraitAssets } from '../portrait-archive.js';
 import { newBattle, preview } from '../engine.js';
 import { discardUnfinishedTrip } from '../abandoned-trip.js';
+import { adventureSnapshot, validAdventureSnapshot } from '../adventure/snapshot.js';
 
 export const SAVES_STORAGE_KEY = 'wanxiang.saves.v1';
 
@@ -78,6 +79,7 @@ export function createSaveSnapshot(session, slotId = 'slot1', note = '') {
       library: structuredClone(library),
       customPortraits: structuredClone(customPortraits),
       journey,
+      adventure: adventureSnapshot(session),
     },
   };
 }
@@ -162,6 +164,15 @@ export function applySaveSnapshot(context, snapshot) {
   const storage = context.storage || getStorage();
 
   session.ai.library = restoreLibrary(snapshot.data.library);
+  if (validAdventureSnapshot(snapshot.data.adventure)) {
+    if (snapshot.data.customPortraits && typeof localStorage !== 'undefined')
+      localStorage.setItem('wanxiang.portraits.v1', JSON.stringify(snapshot.data.customPortraits));
+    context.gal?.cancel();
+    context.adventure?.leave();
+    context.chat?.leave();
+    void context.journey.resume({ ...snapshot.data.adventure, library: session.ai.library });
+    return;
+  }
   discardUnfinishedTrip(session.ai.library);
   storage?.removeItem('wanxiang.battle-checkpoint.v1');
   session.runtime.mode = 'inn';

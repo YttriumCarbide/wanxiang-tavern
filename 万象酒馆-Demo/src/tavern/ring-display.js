@@ -3,6 +3,7 @@ import { EMBLEMS } from '../emblems.js';
 import { createEmblemRing, RING_DESIGNS } from '../emblem-rings.js';
 import { createResourceScope } from '../shared/resources.js';
 import { createEventScope } from '../shared/events.js';
+import { resourceText } from '../resource-text.js';
 
 /** One renderer, a cached view of the real room, and at most two jewellery models in transition. */
 export function createRingDisplay(renderer, room, roomCamera) {
@@ -81,6 +82,7 @@ export function createRingDisplay(renderer, room, roomCamera) {
     '<header><span>纹章藏品</span><button type="button" data-ring-close aria-label="关闭戒指陈列">×</button></header>' +
     '<div class="ring-gallery-caption"><h1></h1><span class="ring-gallery-owner"></span></div>' +
     '<div class="ring-gallery-viewport" data-ring-viewport aria-label="拖动旋转戒指，滚轮缩放"></div>' +
+    '<aside class="ring-gallery-effects" aria-label="纹章效果" aria-live="polite"><section><h2>结合被动</h2><p data-ring-passive></p></section><section><h2 data-ring-skill-name></h2><small data-ring-skill-cost></small><p data-ring-skill-effect></p></section></aside>' +
     '<div class="ring-gallery-tools"><button type="button" data-ring-zoom="-1" aria-label="缩小戒指">−</button><button type="button" data-ring-turn aria-pressed="true">暂停旋转</button><button type="button" data-ring-zoom="1" aria-label="放大戒指">＋</button><button type="button" data-ring-equip>整备</button></div>' +
     '<nav aria-label="选择纹章戒指"></nav>';
   document.body.append(panel);
@@ -137,6 +139,12 @@ export function createRingDisplay(renderer, room, roomCamera) {
   function caption() {
     panel.style.setProperty('--ring-accent', RING_DESIGNS[selected].color);
     panel.querySelector('h1').textContent = EMBLEMS[selected].emblem.name;
+    const { emblem, skill } = EMBLEMS[selected];
+    panel.querySelector('[data-ring-passive]').textContent = resourceText(emblem.text);
+    panel.querySelector('[data-ring-skill-name]').textContent = skill.name;
+    panel.querySelector('[data-ring-skill-cost]').textContent =
+      `${skill.ap} AP${skill.mp ? ` · ${skill.mp} sp` : ''}${skill.hp ? ` · ${skill.hp} hp` : ''}`;
+    panel.querySelector('[data-ring-skill-effect]').textContent = resourceText(skill.text);
     panel.querySelector('.ring-gallery-owner').textContent = collection[selected]?.owned
       ? '已契约 · ' + (collection[selected].wearer || '尚未佩戴')
       : '未契约';
@@ -212,6 +220,10 @@ export function createRingDisplay(renderer, room, roomCamera) {
     }
   });
   const viewport = panel.querySelector('[data-ring-viewport]');
+  let viewportBounds = null;
+  events.on(window, 'resize', () => {
+    viewportBounds = null;
+  });
   events.on(viewport, 'pointerdown', (event) => {
     drag = { id: event.pointerId, x: event.clientX, y: event.clientY };
     viewport.setPointerCapture(event.pointerId);
@@ -258,6 +270,7 @@ export function createRingDisplay(renderer, room, roomCamera) {
       active = true;
       backdropDirty = true;
       panel.hidden = false;
+      viewportBounds = null;
       document.body.classList.add('ring-viewing');
       parent.postMessage({ type: 'tavern-emblem-visibility', open: true }, location.origin);
       select(selected, true);
@@ -307,6 +320,15 @@ export function createRingDisplay(renderer, room, roomCamera) {
       display.rotation.set(pitch, yaw, 0);
       display.scale.setScalar(zoom);
       camera.aspect = innerWidth / innerHeight;
+      viewportBounds ||= viewport.getBoundingClientRect();
+      camera.setViewOffset(
+        innerWidth,
+        innerHeight,
+        innerWidth / 2 - viewportBounds.left - viewportBounds.width / 2,
+        innerHeight / 2 - viewportBounds.top - viewportBounds.height / 2,
+        innerWidth,
+        innerHeight,
+      );
       camera.position.set(0, 0.52, innerHeight <= 540 || camera.aspect < 1 ? 6.6 : 5.7);
       camera.lookAt(0, 0.16, 0);
       camera.updateProjectionMatrix();

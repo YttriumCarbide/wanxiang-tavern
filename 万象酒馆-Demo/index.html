@@ -20,6 +20,7 @@
       }
     </script>
     <link rel="stylesheet" href="./styles/app.css" />
+    <link rel="stylesheet" href="./styles/adventure.css" />
   </head>
   <body>
     <header class="app-header">
@@ -399,18 +400,6 @@
               <div id="developer-options" hidden>
                 <label
                   ><span
-                    ><strong>Gal式剧情演出</strong
-                    ><small
-                      >开启后，教程、交流、闲聊和剧本使用立绘舞台逐句播放；关闭后使用原来的阅读方式。</small
-                    ></span
-                  ><input
-                    autocomplete="off"
-                    type="checkbox"
-                    data-generation-option="galMode"
-                    role="switch"
-                /></label>
-                <label
-                  ><span
                     ><strong>跳过AI生成</strong
                     ><small
                       >使用青缘和本地测试剧本，跳过教程中必须取得AI回复的步骤，并禁用AI生成按钮。</small
@@ -485,6 +474,11 @@
             </div>
             <p id="prompt-source" class="ai-hint"></p>
             <p id="prompt-warnings" role="status"></p>
+            <fieldset class="connection-apply prompt-apply">
+              <legend>把当前预设与调节应用到其他 API</legend>
+              <div id="prompt-apply-targets"></div>
+              <button id="prompt-apply-many" type="button">保存并应用到勾选的 API</button>
+            </fieldset>
             <div id="prompt-sampling" class="sampling-fields"></div>
             <div id="prompt-messages"></div>
             <div class="ai-actions">
@@ -1063,30 +1057,8 @@
       </div>
       <div id="saves-slots-list" class="saves-slots-grid"></div>
     </dialog>
-    <dialog id="chat-dialog" data-stage="choose" aria-label="酒馆交流">
-      <header class="chat-header">
-        <span class="chat-emblem" aria-hidden="true">✦</span>
-        <div class="chat-heading">
-          <p>万象酒馆 · 灯火长谈</p>
-          <h2>相聚 · <span id="chat-place"></span></h2>
-        </div>
-        <button id="chat-close" aria-label="收起交流">×</button>
-      </header>
-      <section id="chat-choose">
-        <div class="chat-intro">
-          <small>此刻，无需急着启程</small>
-          <h3>今夜，和谁聊聊？</h3>
-          <p id="chat-environment"></p>
-        </div>
-        <div id="chat-characters"></div>
-        <div class="chat-choose-footer">
-          <span id="chat-selection-count"></span
-          ><button id="chat-begin" class="primary">
-            入座交谈 <span aria-hidden="true">→</span>
-          </button>
-        </div>
-      </section>
-      <section id="chat-conversation" hidden>
+    <div id="chat-controls" hidden aria-hidden="true">
+      <section id="chat-conversation">
         <aside class="chat-company">
           <small>此刻相伴</small>
           <label class="chat-location-label"
@@ -1117,7 +1089,7 @@
         </div>
       </section>
       <small id="chat-status" role="status"></small>
-    </dialog>
+    </div>
     <dialog id="memory-dialog" aria-labelledby="memory-title">
       <header>
         <div>

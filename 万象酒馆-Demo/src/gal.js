@@ -1,11 +1,7 @@
 /** Lightweight prose markers; the stored story remains complete, readable text. */
-export function galEnabled(options) {
-  return options?.developerMode === true && options.galMode === true;
-}
-
-export function galRequestInput(kind, input, options) {
+export function galRequestInput(kind, input) {
   if (!['script', 'chat', 'quick-chat'].includes(kind)) return input;
-  return { ...input, presentationMode: galEnabled(options) ? 'gal' : 'prose' };
+  return { ...input, presentationMode: 'gal' };
 }
 
 export function parseGalText(source, defaultSpeaker = '') {

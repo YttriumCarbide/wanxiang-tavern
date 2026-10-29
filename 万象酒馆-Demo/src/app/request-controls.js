@@ -2,22 +2,27 @@ import { API_LABELS } from './first-run-rules.js';
 import { skippingAi } from '../generation-options.js';
 import { galRequestInput } from '../gal.js';
 /** Every paid/model request has a real AbortSignal and a visible control in its current panel. */
-export function createRequestControls(client, generationOptions = () => null, arcade = () => null) {
+export function createRequestControls(
+  client,
+  generationOptions = () => null,
+  arcade = () => null,
+  prepare = async () => {},
+) {
   const active = new Set();
   const dock = document.createElement('div');
   dock.className = 'api-request-dock';
   function hostFor(kind, models) {
     const visible = (id) => {
       const panel = document.getElementById(id);
-      return panel?.open ? panel : null;
+      return panel && (panel.tagName === 'DIALOG' ? panel.open : !panel.hidden) ? panel : null;
     };
     if (models) return visible('ai-dialog') || document.body;
     const candidates = {
       map: ['world-construction'],
       creation: ['ether-forge'],
       summary: ['memory-dialog'],
-      chat: ['chat-dialog'],
-      'quick-chat': ['story-feed'],
+      chat: ['gal-stage'],
+      'quick-chat': ['gal-stage', 'rp-scene'],
       character: ['ai-dialog', 'new-game'],
       script: ['story-feed', 'party-panel', 'ai-dialog'],
     };
@@ -31,7 +36,7 @@ export function createRequestControls(client, generationOptions = () => null, ar
       if (!match) {
         const preview =
           path === 'prompts/preview' && data?.kind
-            ? { ...data, input: galRequestInput(data.kind, data.input, generationOptions()) }
+            ? { ...data, input: galRequestInput(data.kind, data.input) }
             : data;
         return client.request(path, preview, options);
       }
@@ -57,10 +62,22 @@ export function createRequestControls(client, generationOptions = () => null, ar
       play.addEventListener('click', openArcade);
       control.append(label, play, button);
       const host = hostFor(match[2], match[1] === 'models');
+      const galQuick = match[2] === 'quick-chat' && host.id === 'gal-stage';
+      if (galQuick) {
+        control.classList.add('gal-request-control');
+        label.hidden = true;
+        button.title = button.textContent;
+        button.setAttribute('aria-label', button.textContent);
+        button.textContent = '■';
+        play.title = play.textContent;
+        play.setAttribute('aria-label', play.textContent);
+        play.textContent = '▦';
+      }
       if (host === document.body) {
         if (!dock.isConnected) document.body.append(dock);
         dock.append(control);
-      } else host.append(control);
+      } else if (galQuick) host.querySelector('.gal-actionbar').append(control);
+      else host.append(control);
       const record = { controller, control };
       active.add(record);
       let outcome = 'error';
@@ -72,8 +89,9 @@ export function createRequestControls(client, generationOptions = () => null, ar
       button.addEventListener('click', stop);
       try {
         controller.signal.throwIfAborted();
-        const input =
-          match[1] === 'generate' ? galRequestInput(match[2], data, generationOptions()) : data;
+        if (match[1] === 'generate') await prepare(match[2]);
+        controller.signal.throwIfAborted();
+        const input = match[1] === 'generate' ? galRequestInput(match[2], data) : data;
         const result = await client.request(path, input, { ...options, signal: controller.signal });
         controller.signal.throwIfAborted();
         outcome = 'success';

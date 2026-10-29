@@ -6,6 +6,7 @@ body.ring-viewing :is(#spots, .spot, #emblem-open, .talk-open, .supply-open, #ai
 }
 .ring-gallery {
   --ring-accent: #78e4d7;
+  --ring-detail-width: clamp(230px, 28vw, 380px);
   position: fixed;
   inset: 0;
   z-index: 25;
@@ -53,7 +54,7 @@ body.ring-viewing :is(#spots, .spot, #emblem-open, .talk-open, .supply-open, #ai
 .ring-gallery-caption {
   position: absolute;
   top: 9vh;
-  left: 50%;
+  left: calc(49vw - var(--ring-detail-width) / 2);
   transform: translateX(-50%);
   text-align: center;
   white-space: nowrap;
@@ -75,10 +76,48 @@ body.ring-viewing :is(#spots, .spot, #emblem-open, .talk-open, .supply-open, #ai
 }
 .ring-gallery-viewport {
   position: absolute;
-  inset: 150px 4vw 150px;
+  inset: 150px calc(6vw + var(--ring-detail-width)) 150px 4vw;
   pointer-events: auto;
   touch-action: none;
   cursor: grab;
+}
+.ring-gallery-effects {
+  position: absolute;
+  top: 22vh;
+  right: 4vw;
+  bottom: 160px;
+  width: var(--ring-detail-width);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  pointer-events: auto;
+  scrollbar-width: thin;
+  padding: 5px 14px 14px 18px;
+  background: linear-gradient(90deg, #101b2866, #0d192455);
+  border-left: 1px solid #dcc68c55;
+  border-radius: 2px 14px 14px 2px;
+  box-sizing: border-box;
+}
+.ring-gallery-effects section + section {
+  margin-top: 24px;
+}
+.ring-gallery-effects h2 {
+  font-size: 16px;
+  font-weight: 400;
+  color: #ead7a9;
+  margin: 10px 0;
+}
+.ring-gallery-effects p {
+  font-size: 13px;
+  line-height: 1.85;
+  margin: 0;
+  color: #e0dccf;
+}
+.ring-gallery-effects small {
+  display: block;
+  font-size: 11px;
+  color: #c8c1ab;
+  margin-bottom: 10px;
 }
 .ring-gallery-viewport:active {
   cursor: grabbing;
@@ -154,7 +193,24 @@ body.ring-viewing :is(#spots, .spot, #emblem-open, .talk-open, .supply-open, #ai
     font-size: 9px;
   }
   .ring-gallery-viewport {
-    inset: 92px 3vw 100px;
+    inset: 92px calc(5vw + var(--ring-detail-width)) 100px 3vw;
+  }
+  .ring-gallery-effects {
+    top: 70px;
+    right: 3vw;
+    bottom: 108px;
+    padding: 4px 10px;
+  }
+  .ring-gallery-effects h2 {
+    font-size: 13px;
+    margin: 6px 0;
+  }
+  .ring-gallery-effects p {
+    font-size: 11px;
+    line-height: 1.65;
+  }
+  .ring-gallery-effects section + section {
+    margin-top: 15px;
   }
   .ring-gallery-tools {
     bottom: 60px;
@@ -177,9 +233,18 @@ body.ring-viewing :is(#spots, .spot, #emblem-open, .talk-open, .supply-open, #ai
 @media (orientation: portrait) {
   .ring-gallery-caption {
     top: 70px;
+    left: 50%;
   }
   .ring-gallery-viewport {
-    inset: 135px 0 155px;
+    inset: 135px 0 calc(25vh + 180px);
+  }
+  .ring-gallery-effects {
+    top: auto;
+    bottom: 170px;
+    left: 5vw;
+    right: 5vw;
+    width: auto;
+    max-height: 25vh;
   }
   .ring-gallery-tools {
     bottom: 109px;

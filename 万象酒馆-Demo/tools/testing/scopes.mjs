@@ -1,4 +1,7 @@
 export const allScopes = [
+  'rp-layout',
+  'skill-menus',
+  'adventure',
   'ring-gallery',
   'gal',
   'frost',

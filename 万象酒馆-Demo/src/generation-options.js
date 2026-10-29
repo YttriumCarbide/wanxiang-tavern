@@ -9,7 +9,6 @@ export function restoreGenerationOptions(value) {
     developerMode: value?.developerMode === true,
     allowRetreat: value?.allowRetreat === true,
     editArchives: value?.editArchives === true,
-    galMode: value?.galMode === true,
   };
 }
 

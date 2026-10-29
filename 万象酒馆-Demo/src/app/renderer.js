@@ -1,4 +1,5 @@
 import { resourceText } from '../resource-text.js';
+import { ADVENTURE_NODE_LABELS } from '../adventure/definition.js';
 import { rearUnlocked } from '../formation-access.js';
 import { emblemRing } from '../emblems.js';
 import { ENCOUNTER_COUNT, FINAL_ENCOUNTER } from '../content/journey-rules.js';
@@ -81,7 +82,7 @@ export function createRenderer(context) {
       );
   }
   function render(options = {}) {
-    if (session.runtime.disposed || session.runtime.mode === 'inn') return;
+    if (session.runtime.disposed || ['inn', 'event'].includes(session.runtime.mode)) return;
     const emblemState = session.battle.playing
       ? session.battle.display || session.battle.state
       : session.battle.forecast?.final || session.battle.state;
@@ -100,8 +101,8 @@ export function createRenderer(context) {
       (r, i) =>
         html`<i
           class="${i < session.battle.state.encounter ? 'done' : i === session.battle.state.encounter ? 'current' : ''}"
-          title="${currentEncounterSpec(session.journey.expedition, i).name}"
-          >${i === FINAL_ENCOUNTER ? '◆' : i + 1}</i
+          title="${session.journey.expedition.adventure ? ADVENTURE_NODE_LABELS[i] : currentEncounterSpec(session.journey.expedition, i).name}"
+          >${i === FINAL_ENCOUNTER ? '◆' : session.journey.expedition.adventure && [1, 3].includes(i) ? '◇' : i + 1}</i
         >`,
     ).join('');
     $('#round-label').textContent =

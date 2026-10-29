@@ -3,6 +3,40 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { legacySession } from './legacy-session.mjs';
 
+export async function firstRunApplyChecks({ browser, baseURL, output }) {
+  const page = await browser.newPage({ viewport: { width: 667, height: 375 }, hasTouch: true });
+  try {
+    await page.goto(baseURL + '/?display=landscape');
+    await page.waitForFunction(() => !!window.demo);
+    await page.locator('#start-journey').click();
+    await page.locator('#ai-dialog[data-setup="connections"]').waitFor();
+    await page.waitForFunction(() => !document.querySelector('#ai-model').disabled);
+    await page.locator('#ai-baseUrl').fill('http://127.0.0.1:9999/v1');
+    await page.locator('#ai-model').fill('first-run-fixture');
+    await page.locator('#ai-key').fill('test-only-key');
+    for (const id of ['script', 'quick-chat', 'creation'])
+      await page.locator(`[data-apply-kind][value="${id}"]`).check();
+    const confirm = page.locator('#setup-apply');
+    await confirm.scrollIntoViewIfNeeded();
+    const box = await confirm.boundingBox();
+    assert(
+      box.y >= 0 && box.y + box.height <= 375,
+      'first setup confirmation stays inside the mobile viewport',
+    );
+    await confirm.click();
+    await page.waitForFunction(() =>
+      document.querySelector('#ai-status').textContent.includes('已将所选连接预设应用到 3'),
+    );
+    const profiles = await page.evaluate(async () => (await fetch('/api/ai/config')).json());
+    for (const id of ['script', 'quick-chat', 'creation'])
+      assert.equal(profiles[id].model, 'first-run-fixture');
+    await page.screenshot({ path: path.join(output, 'first-run-confirm-mobile.png') });
+    return { mobileConfirmation: true, appliesSelectedProfiles: true };
+  } finally {
+    await page.close();
+  }
+}
+
 export async function apiSettingsChecks({ browser, baseURL, output }) {
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
   const failures = [],
@@ -141,6 +175,25 @@ export async function apiSettingsChecks({ browser, baseURL, output }) {
       assert.equal(saved.extensions.regex_scripts.length, 32);
       assert(saved.extensions.tavern_helper.scripts[0].content.length > 1000000);
     }
+    const separate = await post('prompts/save', { preset: { ...saved, name: '独立用途预设' } });
+    imported.push(separate.preset.id);
+    await post('prompts/select', { kind: 'creation', id: separate.preset.id });
+    await page.locator('[data-prompt-entry="main"] .prompt-edit-name').click();
+    const main = page.locator('#prompt-entry-dialog [data-prompt-field="content"]');
+    await main.fill((await main.inputValue()) + '\nPRESET_NEXT_REQUEST_FRESH');
+    await page.locator('#prompt-entry-save').click();
+    await page.locator('[data-apply-prompt-kind][value="script"]').check();
+    await page.locator('[data-apply-prompt-kind][value="quick-chat"]').check();
+    await page.locator('#prompt-apply-many').click();
+    await page.locator('#ai-status').filter({ hasText: '已将当前预设及调节应用到 2' }).waitFor();
+    const nextProfiles = await page.evaluate(async () => (await fetch('/api/ai/config')).json());
+    assert.equal(nextProfiles.script.promptPresetId, id);
+    assert.equal(nextProfiles['quick-chat'].promptPresetId, id);
+    assert.equal(
+      nextProfiles.creation.promptPresetId,
+      separate.preset.id,
+      'unselected purposes retain their own preset',
+    );
     const previewResponse = page.waitForResponse(
       (response) =>
         response.url().endsWith('/api/ai/prompts/preview') &&
@@ -153,6 +206,10 @@ export async function apiSettingsChecks({ browser, baseURL, output }) {
       .waitFor({ timeout: 60000 });
     const preview = await (await previewResponse).json();
     assert(preview.messages.length >= 2);
+    assert(
+      preview.messages.some((message) => message.content.includes('PRESET_NEXT_REQUEST_FRESH')),
+      'saved adjustments enter the very next request without entering a dungeon',
+    );
     assert.equal(profile.chat.promptProcessing, 'strict');
     assert(preview.messages.some((message) => message.role === 'system'));
     assert(preview.messages.some((message) => message.role === 'user'));

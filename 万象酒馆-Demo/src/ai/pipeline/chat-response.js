@@ -1,18 +1,49 @@
 import { chatRegexScripts } from './chat-request.js';
 import { readOutputTags } from '../output-tags.js';
+import { validateTaskReply } from '../../adventure/state.js';
 
 export async function chatResponse(kind, content, scripts, input = {}, runRegexTasks) {
   scripts = chatRegexScripts(kind, scripts);
   let text = content;
   let actions = { affection: [], agreeToAdventure: [] };
+  let adventure;
+  const invalidAdventure = [];
   if (kind === 'quick-chat' || kind === 'chat') {
     const sections = readOutputTags(content, [
       { tag: 'wanxiang_chat' },
       { tag: 'wanxiang_actions', json: true },
+      {
+        tag: 'wanxiang_adventure',
+        json: true,
+        accept(value) {
+          if (kind !== 'quick-chat' || input.adventure?.mode !== 'quest') return false;
+          try {
+            validateTaskReply(JSON.parse(value), input.adventure);
+            return true;
+          } catch (failure) {
+            invalidAdventure.push(failure.message);
+            return false;
+          }
+        },
+      },
     ]);
     const body = sections.find((section) => section.tag === 'wanxiang_chat');
     if (!body?.content.trim()) throw Error('回复正文需要唯一一组wanxiang_chat标签');
     text = body.content.trim();
+    if (kind === 'quick-chat' && input.adventure?.mode === 'quest') {
+      const section = sections.find((item) => item.tag === 'wanxiang_adventure');
+      if (!section)
+        throw Error(
+          invalidAdventure.length
+            ? `任务数据无效：${invalidAdventure[0]}。可在原始返回中核对；已确认进度保留。`
+            : '缺少任务状态，已确认进度保留，请重试本次回应',
+        );
+      try {
+        adventure = validateTaskReply(JSON.parse(section.content), input.adventure);
+      } catch (failure) {
+        throw Error('任务数据无效：' + failure.message, { cause: failure });
+      }
+    }
     if (kind === 'chat') {
       const actionTag = sections.find((section) => section.tag === 'wanxiang_actions');
       if (actionTag) {
@@ -55,5 +86,6 @@ export async function chatResponse(kind, content, scripts, input = {}, runRegexT
     content: processed.text,
     display: display.text,
     ...(kind === 'chat' ? { actions } : {}),
+    ...(adventure ? { adventure } : {}),
   };
 }

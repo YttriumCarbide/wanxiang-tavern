@@ -1,6 +1,6 @@
-/** Presentation is opt-in and does not change metadata, mechanics or prose length targets. */
+/** All narrative APIs use the Gal stage; metadata, mechanics and prose lengths stay unchanged. */
 export function galInstruction(input, kind = 'script') {
-  if (input.presentationMode !== 'gal') return '';
+  if (!['script', 'chat', 'quick-chat'].includes(kind)) return '';
   const members = input.party || input.characters || [];
   const dialogueTarget = kind === 'script' ? '65%～80%' : kind === 'chat' ? '80%～90%' : '85%左右';
   const style = {

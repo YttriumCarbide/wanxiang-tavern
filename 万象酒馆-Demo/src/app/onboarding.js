@@ -107,6 +107,11 @@ export function createOnboarding(context) {
   const dialogue = createDialogue(events, 'guide-dialogue', context.gal);
   let shown = null;
   function refresh() {
+    if (session.runtime.mode === 'event') {
+      guide.hidden = true;
+      highlight(null);
+      return;
+    }
     const active = guiding(session.ai.library) && !session.runtime.needsStart && !dialog.open;
     guide.hidden = true;
     highlight(null);
@@ -179,11 +184,19 @@ export function createOnboarding(context) {
     if (!content) return;
     guide.dataset.step = step;
     $('#tutorial-count').textContent = '伊蒂丝的小提醒';
-    $('#tutorial-title').textContent = content.title;
+    $('#tutorial-title').textContent = campaign.adventureTutorial
+      ? {
+          vulnerable: '精英战 · 易伤',
+          slow: '精英战 · 背包与迟缓',
+          crossfire: '精英战 · 一起查看意图',
+        }[step] || content.title
+      : content.title;
     $('#tutorial-text').textContent = '';
     $('#tutorial-action').textContent = content.action || '再听一遍';
     $('#tutorial-action').hidden = false;
     function readyForAction() {
+      if (campaign.adventureTutorial && step === 'vulnerable-done') return advance('slow');
+      if (campaign.adventureTutorial && step === 'slow-done') return advance('crossfire');
       if (step === 'ether') return advance('reward');
       const item = step === 'slow' ? 'slow-potion' : step === 'boss' ? 'mana-potion' : null;
       if (item) {
@@ -510,7 +523,12 @@ export function createOnboarding(context) {
     intentViewed() {
       if (!learning(session.ai.library) || session.runtime.mode !== 'battle') return;
       tutorialTasks(state()).intent = true;
-      if (session.battle.state.encounter === 3) {
+      if (
+        session.battle.state.encounter === 3 ||
+        (state().adventureTutorial &&
+          session.battle.state.encounter === 2 &&
+          tutorialTasks(state()).slow)
+      ) {
         tutorialTasks(state()).crossfire = true;
         if (state().tutorial === 'crossfire') advance('crossfire-done');
       } else if (state().tutorial === 'timeline') advance('intent');
@@ -546,9 +564,11 @@ export function createOnboarding(context) {
     },
     battleStarted() {
       if (!learning(session.ai.library)) return refresh();
-      const lesson = ['extra', 'vulnerable', 'slow-opening', 'crossfire', 'boss'][
-        session.battle.state.encounter
-      ];
+      const lesson = (
+        state().adventureTutorial
+          ? ['extra', null, 'vulnerable', null, 'boss']
+          : ['extra', 'vulnerable', 'slow-opening', 'crossfire', 'boss']
+      )[session.battle.state.encounter];
       advance(lesson);
     },
     battleWon(complete) {

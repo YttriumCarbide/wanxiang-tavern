@@ -1,5 +1,4 @@
 import {
-  galEnabled,
   parseGalText,
   paginateGalBeat,
   resolveGalActor,
@@ -223,6 +222,7 @@ export function createGalPlayer(context) {
       .trim()
       .replace(/\n[ \t]*\n+/gu, '\n');
     panel.dataset.typing = 'false';
+    current.onRead?.(current.pages[pageIndex]);
     part('.gal-hint').textContent =
       pageIndex === current.pages.length - 1 ? '点击结束本段' : '点击继续';
     schedule();
@@ -294,6 +294,7 @@ export function createGalPlayer(context) {
     const narration = beat.type === 'narration';
     panel.dataset.kind = narration ? 'narration' : actor?.user ? 'user' : 'dialogue';
     panel.dataset.owner = current.owner;
+    panel.dataset.automatic = String(current.automatic === true);
     part('[data-gal="compose"]').hidden = current.mandatory === true || Boolean(workspace.active);
     part('[data-gal="journal"]').hidden =
       current.mandatory === true || !context.session.ai.activeScript || Boolean(workspace.active);
@@ -362,7 +363,10 @@ export function createGalPlayer(context) {
     event.stopPropagation();
     const action = event.target.closest('[data-gal]')?.dataset.gal;
     if (action === 'close') {
-      if (current) void finish(true, true);
+      if (workspace.active?.persistent) {
+        if (current) void finish(true).then(() => workspace.collapse(true));
+        else workspace.collapse(true);
+      } else if (current) void finish(true, true);
       else if (panel.dataset.leaving !== 'true')
         void animateExit().then((exited) => {
           if (exited) {
@@ -464,7 +468,7 @@ export function createGalPlayer(context) {
   });
   return {
     get enabled() {
-      return galEnabled(context.session.ai.generationOptions);
+      return true;
     },
     get owner() {
       return current?.owner;
@@ -493,10 +497,27 @@ export function createGalPlayer(context) {
       stage = selectedGalStage(ids, cast, context.session.ai.library.campaign?.protagonistId);
       renderCast(null);
     },
-    waiting(text) {
+    collapseComposer(value) {
+      workspace.collapse(value);
+    },
+    waiting() {
+      if (current) void finish(false);
+      stop();
       workspace.feedback(workspace.active?.owner, '');
       workspace.playing(true);
-      part('.gal-text').textContent = text;
+      panel.dataset.kind = 'narration';
+      panel.dataset.typing = 'false';
+      part('.gal-speaker span').textContent = '提示';
+      part('.gal-speaker small').textContent = 'WAIT';
+      part('.gal-speaker img').hidden = true;
+      part('.gal-speaker img').removeAttribute('src');
+      part('.gal-bonuses').replaceChildren();
+      part('.gal-cast')
+        .querySelectorAll('.speaking')
+        .forEach((actor) => actor.classList.remove('speaking'));
+      part('.gal-text').textContent = '正在生成回复……';
+      part('.gal-count').textContent = '';
+      part('.gal-hint').textContent = '请稍候';
     },
     settled(owner) {
       if (workspace.active?.owner === owner && !current) workspace.playing(false);

@@ -37,11 +37,10 @@ export async function galWorkspaceChecks({ browser, baseURL, output }) {
     localStorage.setItem(
       'wanxiang.generation-options.v1',
       JSON.stringify({
-        developerMode: true,
-        galMode: true,
+        developerMode: false,
+        galMode: false,
         protagonistApi: true,
         scriptApi: true,
-        allowRetreat: true,
       }),
     );
   }, initial);
@@ -112,6 +111,19 @@ export async function galWorkspaceChecks({ browser, baseURL, output }) {
         );
       else await page.locator('.gal-page').click();
     }
+  }
+  async function checkComposer(kind) {
+    await page.locator(`#${kind}-input`).focus();
+    const style = await page.locator(`#${kind}-input`).evaluate((node) => {
+      const css = getComputedStyle(node);
+      return { outline: css.outlineStyle, shadow: css.boxShadow };
+    });
+    assert.equal(style.outline, 'none', 'Gal inputs replace the browser focus outline');
+    assert.notEqual(style.shadow, 'none', 'focus retains the translucent gold decoration');
+    const icon = page.locator(`#${kind}-send svg`);
+    const rect = await icon.boundingBox();
+    assert(rect.width >= 18 && rect.height >= 18, 'send icon has explicit visible dimensions');
+    assert(await icon.locator('path').count());
   }
   async function inside(selector) {
     await page.locator(selector).evaluate((node) =>
@@ -194,6 +206,7 @@ export async function galWorkspaceChecks({ browser, baseURL, output }) {
       .evaluate((node) => Promise.all(node.getAnimations().map((animation) => animation.finished)));
     await page.screenshot({ path: path.join(output, 'desktop-gal-compose.png') });
     await page.locator('#chat-input').fill('今天怎么样？');
+    await checkComposer('chat');
     const submitted = Date.now();
     await page.locator('#chat-input').press('Enter');
     await page.waitForFunction(
@@ -350,6 +363,7 @@ export async function galWorkspaceChecks({ browser, baseURL, output }) {
     await page.locator('#battle-reading-toggle').click();
     await page.locator('[data-dungeon-gal="quick"]').click();
     await page.locator('#quick-chat-input').fill('留意前面。');
+    await checkComposer('quick-chat');
     await page.locator('#quick-chat-input').press('Enter');
     await page.waitForFunction(() =>
       document.querySelector('.gal-text').textContent.includes('先坐'),
@@ -410,7 +424,8 @@ export async function galWorkspaceChecks({ browser, baseURL, output }) {
     await page.locator('#gal-dungeon-menu').waitFor({ state: 'visible' });
     assert.deepEqual(await page.evaluate(() => demo.getState()), stateBeforeSwitch);
     await page.screenshot({ path: path.join(output, 'mobile-reading-switch.png') });
-    await page.evaluate(() => demo.returnInn());
+    await page.goto(baseURL + '/?display=landscape');
+    await page.waitForFunction(() => !!window.demo);
     await frame.locator('#status').waitFor({ state: 'detached', timeout: 60000 });
     await page.waitForFunction(
       () => document.querySelector('#inn-frame iframe')?.contentWindow?.assetPreview,
@@ -418,6 +433,11 @@ export async function galWorkspaceChecks({ browser, baseURL, output }) {
     await frame.locator('canvas').evaluate(() => window.assetPreview.placeNow('table'));
     await frame.locator('#talk-open').click();
     await page.locator('[data-workspace="people"]').first().click();
+    const refreshedSelection = await page
+      .locator('#chat-participants input:checked')
+      .evaluateAll((inputs) => inputs.map((input) => input.value));
+    for (const id of refreshedSelection) await choose(id, false);
+    await choose('official-edith', true);
     await page
       .locator('.gal-cast')
       .evaluate((node) =>
@@ -451,11 +471,22 @@ export async function galWorkspaceChecks({ browser, baseURL, output }) {
         document.querySelector('#setup-intro').hidden = false;
         document.querySelector('#setup-footer').hidden = false;
       });
-      const scroll = await page.locator('#ai-dialog').evaluate((dialog) => {
-        dialog.scrollTop = dialog.scrollHeight;
-        return { top: dialog.scrollTop, overflow: dialog.scrollHeight - dialog.clientHeight };
+      const scroll = await page.locator('#ai-dialog .ai-workspace').evaluate((workspace) => {
+        workspace.scrollTop = workspace.scrollHeight;
+        return {
+          top: workspace.scrollTop,
+          overflow: workspace.scrollHeight - workspace.clientHeight,
+        };
       });
-      assert(scroll.overflow > 0 && scroll.top > 0, 'API setup can scroll to its footer');
+      assert(
+        scroll.overflow > 0 && scroll.top > 0,
+        'API setup content remains scrollable above its fixed confirmation',
+      );
+      const footer = await page.locator('#setup-footer').boundingBox();
+      assert(
+        footer.y >= 0 && footer.y + footer.height <= viewport.height,
+        'setup confirmation is always visible',
+      );
       await page.screenshot({ path: path.join(output, `api-setup-${viewport.width}.png`) });
       await page.locator('#ai-close').click();
     }

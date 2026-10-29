@@ -20,7 +20,6 @@ import {
 export function createChat(context) {
   const api = context.apiClient.request;
   const { session, events } = context;
-  const dialog = $('#chat-dialog');
   const rewriteHelp = document.createElement('dialog');
   rewriteHelp.id = 'rewrite-help';
   rewriteHelp.setAttribute('aria-labelledby', 'rewrite-help-title');
@@ -77,7 +76,6 @@ export function createChat(context) {
     const quick = kind === 'quick-chat';
     if (quick && session.runtime.mode !== 'battle') return;
     if (quick && session.ai.activeScript?.recollection) return;
-    if (dialog.open) dialog.close();
     if ($('#story-feed').open) $('#story-feed').close();
     presentation.history(kind);
     context.gal.workspace({
@@ -131,8 +129,7 @@ export function createChat(context) {
     presentation.conversation(place, activities);
     renderHistory();
     $('#chat-status').textContent = '';
-    if (context.gal?.enabled) openGal('chat');
-    else if (!dialog.open) dialog.showModal();
+    openGal('chat');
     context.onboarding?.chatOpened(place);
   }
   function input(kind, text) {
@@ -186,7 +183,7 @@ export function createChat(context) {
     document.querySelectorAll('[data-chat-retry]').forEach((button) => {
       button.disabled = value;
     });
-    for (const id of ['chat-send', 'quick-chat-send', 'script-rewrite', 'chat-begin'])
+    for (const id of ['chat-send', 'quick-chat-send', 'script-rewrite'])
       $('#' + id).disabled = value;
     $('#chat-cancel').hidden = !value;
   }
@@ -243,14 +240,14 @@ export function createChat(context) {
     request = new AbortController();
     const started = performance.now();
     const signal = request.signal;
-    if (context.gal?.enabled) context.gal.waiting('正在倾听……');
+    context.gal.waiting();
     busy(true);
     const log = $(kind === 'chat' ? '#chat-messages' : '#quick-chat-log');
     if (!retryId) presentation.append(log, userMessage);
     const pending = presentation.append(log, {
       role: 'assistant',
-      content: retryId ? '正在重试这条消息…' : '正在倾听你的话…',
-      ...replySpeaker,
+      content: retryId ? '正在重试这条消息……' : '正在生成回复……',
+      speakerName: '提示',
       pending: true,
     });
     if (retryId) {
@@ -262,8 +259,6 @@ export function createChat(context) {
     }
     let stream = '';
     try {
-      await context.extensions.activate(kind);
-      if (kind === 'chat') await context.extensions.flush?.();
       const result = await api(`generate/${kind}`, payload, {
         signal: request.signal,
         onDelta(delta) {
@@ -307,7 +302,7 @@ export function createChat(context) {
           .find((element) => element.dataset.messageId === reply.id)
           ?.scrollIntoView({ block: 'nearest' });
       } else presentation.append(log, reply);
-      if (context.gal?.enabled) {
+      {
         await new Promise((resolve) => {
           const timeout = setTimeout(resolve, Math.max(0, 2000 - (performance.now() - started)));
           signal.addEventListener(
@@ -357,6 +352,7 @@ export function createChat(context) {
   async function resetScript() {
     if (skippingAi(session.ai.generationOptions)) return;
     const book = session.ai.activeScript;
+    if (book?.adventure && session.journey.expedition?.adventure?.boss.locked) return;
     if (book?.recollection) return;
     if (request || rewrite || !book || session.runtime.mode !== 'battle') return;
     if (session.battle.state.encounter >= FINAL_ENCOUNTER) {
@@ -391,7 +387,6 @@ export function createChat(context) {
     busy(true);
     status('quick-chat', '正在结合闲聊改写后续剧本…');
     try {
-      await context.extensions.activate('script');
       const result = await api('generate/script', payload, { signal: rewrite.signal });
       if (
         epoch !== revision ||
@@ -440,32 +435,7 @@ export function createChat(context) {
     $('#quick-chat-log').replaceChildren();
     $('#quick-chat-input').value = '';
     $('#quick-chat-status').textContent = '';
-    if (dialog.open) dialog.close();
   }
-  events.on($('#chat-begin'), 'click', () => {
-    state().selected = [...$('#chat-characters').querySelectorAll('input:checked')].map(
-      (checkbox) => checkbox.value,
-    );
-    presentation.conversation(place, activities);
-    const names =
-      state()
-        .selected.map((id) => library().characters.find((member) => member.id === id)?.setting.name)
-        .filter(Boolean)
-        .join('、') || '独自一人';
-    const marker = `${names}来了，在${CHAT_PLACES[place].name}处交流。`;
-    if (state().lastLocation !== marker) {
-      library().tavernChat.push({
-        id: crypto.randomUUID(),
-        role: 'system',
-        divider: true,
-        content: marker,
-      });
-      state().lastLocation = marker;
-      context.generation.save();
-    }
-    renderHistory();
-    $('#chat-input').focus();
-  });
   events.on($('#chat-participants'), 'change', () => {
     const previous = new Set(state().selected);
     const checked = [...$('#chat-participants').querySelectorAll('input:checked')].map(
@@ -475,7 +445,7 @@ export function createChat(context) {
       ...state().selected.filter((id) => checked.includes(id)),
       ...checked.filter((id) => !previous.has(id)),
     ];
-    if (context.gal?.enabled) context.gal.selection(state().selected);
+    context.gal.selection(state().selected);
     const removed = [...previous]
       .filter((id) => !state().selected.includes(id))
       .map((id) => library().characters.find((member) => member.id === id)?.setting.name)
@@ -558,17 +528,12 @@ export function createChat(context) {
     context.checkpoint?.saveNow();
     renderHistory('quick-chat');
   });
-  events.on($('#chat-characters'), 'change', presentation.selectionCount);
-  events.on($('#chat-close'), 'click', () => dialog.close());
   events.on(document, 'gal-compose', () => {
-    if (context.gal?.enabled) {
-      if (session.runtime.mode === 'battle') openGal('quick-chat');
-      else openGal('chat');
-    }
+    if (session.runtime.mode === 'battle') openGal('quick-chat');
+    else openGal('chat');
   });
   events.on(document, 'gal-open-quick', () => openGal('quick-chat'));
   events.on(document, 'gal-rewrite-script', () => $('#script-rewrite').click());
-  events.on(dialog, 'close', () => request?.abort());
   events.on($('#chat-cancel'), 'click', () => {
     request?.abort();
     rewrite?.abort();

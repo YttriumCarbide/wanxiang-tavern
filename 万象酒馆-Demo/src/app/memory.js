@@ -1,4 +1,4 @@
-import { pendingMemories, applyMemorySummaries } from '../memory.js';
+import { pendingMemories, pendingDungeonMemories, applyMemorySummaries } from '../memory.js';
 import { query as $ } from './dom.js';
 
 /** Manual generation stages editable summaries; only explicit acceptance changes saved context. */
@@ -13,6 +13,71 @@ export function createMemory(context) {
     quickOwner = null,
     request = null;
   let counts = new Map();
+  let autoRequest = null;
+  const automatic = document.createElement('aside');
+  automatic.id = 'automatic-memory';
+  automatic.hidden = true;
+  automatic.innerHTML =
+    '<span role="status"></span><button data-summary-retry hidden>重试</button><button data-summary-hide aria-label="收起总结提示">×</button>';
+  document.body.append(automatic);
+  async function autoSummarize() {
+    if (autoRequest || session.runtime.mode !== 'inn') return;
+    const library = session.ai.library;
+    if (pendingDungeonMemories(library).length < 3) return;
+    const controller = new AbortController();
+    autoRequest = controller;
+    automatic.hidden = false;
+    automatic.querySelector('[data-summary-retry]').hidden = true;
+    const message = (text) => {
+      automatic.querySelector('span').textContent = text;
+    };
+    try {
+      while (library === session.ai.library && !session.runtime.disposed) {
+        const snapshot = pendingDungeonMemories(library).slice(0, 3);
+        if (snapshot.length < 3) break;
+        message('正在整理三次冒险 · 各自独立总结，仍可自由使用酒馆');
+        const plan = await chatApi(
+          'summary/plan',
+          { items: snapshot },
+          { signal: controller.signal },
+        );
+        const byId = new Map(snapshot.map((item) => [item.id, item]));
+        const items = [];
+        for (const batch of plan.batches) {
+          const response = await chatApi(
+            'generate/summary',
+            {
+              items: batch.ids.map((id) => byId.get(id)),
+            },
+            { signal: controller.signal },
+          );
+          controller.signal.throwIfAborted();
+          items.push(...response.items);
+        }
+        if (library !== session.ai.library || session.runtime.disposed) return;
+        const rollback = applyMemorySummaries(library, [], snapshot, items);
+        try {
+          if (!context.generation.save()) throw Error('本地保存失败，原记录保留');
+          await context.storage.flush?.();
+        } catch (failure) {
+          rollback();
+          throw failure;
+        }
+        message('三份冒险记忆已分别保存 · 原始经历完整保留');
+      }
+    } catch (failure) {
+      if (library === session.ai.library && !session.runtime.disposed) {
+        message('冒险总结未完成：' + failure.message + '。原记录保留，可稍后重试。');
+        automatic.querySelector('[data-summary-retry]').hidden = false;
+      }
+    } finally {
+      if (autoRequest === controller) autoRequest = null;
+    }
+  }
+  events.on(automatic.querySelector('[data-summary-retry]'), 'click', () => void autoSummarize());
+  events.on(automatic.querySelector('[data-summary-hide]'), 'click', () => {
+    automatic.hidden = true;
+  });
   const status = (text) => {
     $('#memory-status').textContent = text;
   };
@@ -60,6 +125,8 @@ export function createMemory(context) {
     busy(false);
   }
   function reset() {
+    autoRequest?.abort();
+    autoRequest = null;
     request?.abort();
     request = null;
     snapshot = [];
@@ -201,5 +268,13 @@ export function createMemory(context) {
     else results.delete(id);
     busy(false);
   });
-  return { open, reset, dispose: reset };
+  return {
+    open,
+    reset,
+    autoSummarize,
+    dispose() {
+      reset();
+      automatic.remove();
+    },
+  };
 }

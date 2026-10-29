@@ -1,4 +1,5 @@
 import { upgradePlaytestWorldbook } from '../src/ai/playtest-upgrade.js';
+import { upgradeAdventureWorldbook } from '../src/ai/adventure-upgrade.js';
 import { upgradeTutorialRevision } from '../src/ai/tutorial-revision.js';
 import { upgradeProtagonistRules } from '../src/ai/protagonist-rules.js';
 import { upgradeBattleDisplayRules } from '../src/ai/battle-display-rules.js';
@@ -984,6 +985,15 @@ export async function createWorldbookStore(directory) {
     const sources = await characterGenerationSources();
     await write(fileFor('tavern-world'), upgradePlaytestWorldbook(record.book, sources.rules));
     await write(contentVersionFile, { version: 46 });
+  }
+  if (contentVersion < 50) {
+    const record = await get('tavern-world');
+    const output = await readFile(
+      new URL('../prompts/worldbook/script-output.md', import.meta.url),
+      'utf8',
+    );
+    await write(fileFor('tavern-world'), upgradeAdventureWorldbook(record.book, output));
+    await write(contentVersionFile, { version: 50 });
   }
   return {
     get,

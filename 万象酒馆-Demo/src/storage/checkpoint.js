@@ -1,4 +1,5 @@
 import { discardUnfinishedTrip } from '../abandoned-trip.js';
+import { adventureSnapshot, validAdventureSnapshot } from '../adventure/snapshot.js';
 
 const KEY = 'wanxiang.battle-checkpoint.v1';
 
@@ -12,6 +13,11 @@ export function createCheckpoint(context) {
       return;
     if (session.runtime.mode === 'inn') {
       storage.removeItem(KEY);
+      return;
+    }
+    const adventure = adventureSnapshot(session);
+    if (adventure) {
+      storage.setItem(KEY, JSON.stringify({ ...adventure, library: session.ai.library }));
       return;
     }
     if (
@@ -43,6 +49,7 @@ export function createCheckpoint(context) {
     let activeScript = null;
     try {
       const value = JSON.parse(storage.getItem(KEY));
+      if (validAdventureSnapshot(value) && value.library) return value;
       activeScript = value?.activeScript;
     } catch {
       // A damaged checkpoint must not prevent returning to the hall.

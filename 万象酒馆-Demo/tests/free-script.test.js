@@ -150,7 +150,7 @@ test('v8 migrates only owned script rules, keeps injection controls and archives
   assert(!sent.includes('先交代本趟') && !sent.includes('老舍《断魂枪》'));
   const context = generationInput('script', input);
   assert(!context.outputBudget && context.encounters.every((room) => !room.milestone));
-  assert(request.messages.some((message) => message.content.includes('SCRIPT v4')));
+  assert(request.messages.some((message) => message.content.includes('SCRIPT v5')));
   assert(request.messages.at(-1).content.includes('【数据生成输出边界】'));
   const again = await createWorldbookStore(directory);
   assert.deepEqual((await again.get('tavern-world')).book, book);

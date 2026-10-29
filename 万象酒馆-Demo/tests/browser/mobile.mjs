@@ -5,7 +5,7 @@ import { newLibrary } from '../../src/ai/library.js';
 import { normalizeEquipment } from '../../src/equipment.js';
 
 /** Send real touch input so browser panning, pointer cancellation and click suppression all run. */
-async function swipeScroll(page, panel, { rotated = false } = {}) {
+export async function swipeScroll(page, panel, { rotated = false } = {}) {
   const metrics = await panel.evaluate((node) => {
     node.scrollTop = 0;
     return { overflow: node.scrollHeight - node.clientHeight };
@@ -232,9 +232,11 @@ export async function mobileChecks({ browser, baseURL, output }) {
       await page.locator('#shop-close').click();
       await frame.locator('canvas').evaluate(() => window.assetPreview.placeNow('table'));
       await frame.locator('#talk-open').click();
-      await measure('#chat-dialog', 'chat');
-      await swipeScroll(page, page.locator('#chat-messages'));
-      await page.locator('#chat-close').click();
+      await measure('#gal-stage', 'chat');
+      await page.locator('[data-gal="history"]').click();
+      await swipeScroll(page, page.locator('.gal-archive'));
+      await page.locator('[data-gal="close"]').click();
+      await page.locator('#gal-stage').waitFor({ state: 'hidden' });
       await frame.locator('canvas').evaluate(() => window.assetPreview.placeNow('bookshelf'));
       for (const [button, dialog, close] of [
         ['archives', 'archive-dialog', 'archive-close'],

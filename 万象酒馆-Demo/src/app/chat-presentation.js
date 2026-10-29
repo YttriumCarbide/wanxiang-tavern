@@ -66,52 +66,7 @@ export function createChatPresentation(session) {
     if (retry) retry.disabled = session.ai.chat.sending === true;
     return article;
   }
-  function selectionCount() {
-    const count = $('#chat-characters').querySelectorAll('input:checked').length;
-    $('#chat-selection-count').textContent = count
-      ? `已邀 ${count} 位来客 · 可多选`
-      : '选择想交谈的来客，也可以先独坐片刻';
-  }
-  function show(stage) {
-    $('#chat-dialog').dataset.stage = stage;
-    $('#chat-choose').hidden = stage !== 'choose';
-    $('#chat-conversation').hidden = stage !== 'conversation';
-  }
-  function choose(place, activities, characters) {
-    $('#chat-place').textContent = CHAT_PLACES[place].name;
-    $('#chat-environment').textContent = CHAT_PLACES[place].environment;
-    $('#chat-characters').innerHTML = characters
-      .map(
-        (member, index) =>
-          html` <label class="chat-guest">
-            <input
-              type="checkbox"
-              value="${escapeText(member.id)}"
-              ${session.ai.chat.selected.includes(member.id) ? 'checked' : ''}
-              aria-label="邀请${escapeText(member.setting.name)}"
-            />
-            <div class="chat-guest-art">
-              ${portrait(member)}<span class="chat-guest-number"
-                >来客 / ${String(index + 1).padStart(2, '0')}</span
-              >
-            </div>
-            <div class="chat-guest-copy">
-              <strong>${escapeText(member.setting.name)}</strong><small>异界来客</small>
-              <p>
-                ${escapeText(activities.find((activity) => activity.id === member.id)?.text || '')}
-              </p>
-            </div>
-          </label>`,
-      )
-      .join('');
-    if (!characters.length)
-      $('#chat-characters').innerHTML =
-        '<p class="chat-no-guests">这里暂时很安静。先坐一会儿吧。</p>';
-    selectionCount();
-    show('choose');
-  }
   function conversation(place) {
-    $('#chat-place').textContent = CHAT_PLACES[place].name;
     $('#chat-place-select').value = place;
     $('#chat-participants').innerHTML = library()
       .characters.filter((member) => member.id !== library().campaign?.protagonistId)
@@ -137,7 +92,6 @@ export function createChatPresentation(session) {
     $('#chat-player').innerHTML = player
       ? `${portrait(player)}<span><strong>${escapeText(player.setting.name)}</strong><small>写下此刻的言语与行动</small></span>`
       : '<span>写下此刻的言语与行动</span>';
-    show('conversation');
   }
   function history(kind = 'chat') {
     const log = $(kind === 'chat' ? '#chat-messages' : '#quick-chat-log');
@@ -153,5 +107,5 @@ export function createChatPresentation(session) {
       log.innerHTML =
         '<div class="chat-empty"><span>✦</span><h3>故事，从一句话开始</h3><p>倒一杯饮料，问候一声，或只是坐近一点。</p></div>';
   }
-  return { append, speaker, choose, show, conversation, history, selectionCount };
+  return { append, speaker, conversation, history };
 }

@@ -75,6 +75,7 @@ export function createAiPresetEditor({
       'prompt-export',
       'prompt-add',
       'prompt-preview',
+      'prompt-apply-many',
     ])
       $('#' + id).disabled = !draft;
     renderSampling($('#prompt-sampling'), draft);
@@ -234,7 +235,7 @@ ${escapeText(entry.content)}</textarea>
     setProfiles(await api('prompts/select', { kind: kind(), id }));
     syncProfile();
     window.dispatchEvent(new CustomEvent('preset-selected', { detail: { kind: kind() } }));
-    status('提示词预设已应用到当前接口；另一接口可独立选择同一份预设。');
+    status('提示词预设已应用，下一次请求此 API 即生效，无需重新进门。');
   }
   async function preview(useDraft = true) {
     const result = await api('prompts/preview', {
@@ -261,7 +262,7 @@ ${escapeText(entry.content)}</textarea>
     await refresh();
     await select(draft.id);
     renderDraft();
-    status('分层提示词已保存，下一次门口生成立即使用。');
+    status('分层提示词已保存，下一次请求此 API 即使用最新修改。');
   }
   async function connection(action, isNew = false) {
     const selected = $('#api-preset-select').value;
@@ -296,6 +297,29 @@ ${escapeText(entry.content)}</textarea>
         html`<label><input type="checkbox" value="${id}" data-apply-kind />${name}</label>`,
     )
     .join('');
+  $('#prompt-apply-targets').innerHTML = PROMPT_KINDS.map(
+    (id) =>
+      html`<label
+        ><input type="checkbox" value="${id}" data-apply-prompt-kind />${API_LABELS[id]}</label
+      >`,
+  ).join('');
+  events.on(
+    $('#prompt-apply-many'),
+    'click',
+    guard(async () => {
+      const targets = [...document.querySelectorAll('[data-apply-prompt-kind]:checked')].map(
+        (input) => input.value,
+      );
+      if (!targets.length) throw Error('请勾选要应用的 API');
+      await save();
+      for (const target of targets) {
+        setProfiles(await api('prompts/select', { kind: target, id: draft.id }));
+        window.dispatchEvent(new CustomEvent('preset-selected', { detail: { kind: target } }));
+      }
+      syncProfile();
+      status(`已将当前预设及调节应用到 ${targets.length} 个 API；各自下一次请求即生效。`);
+    }),
+  );
   events.on(
     $('#api-preset-apply-many'),
     'click',

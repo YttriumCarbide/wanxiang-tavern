@@ -5,6 +5,7 @@ import { finalizeRequest } from './prompt-processing.js';
 import { presetOutputTransport, presetOutputWarnings } from '../preset-output.js';
 import { adviceTranscript } from '../advice.js';
 import { galInstruction } from '../gal-prompt.js';
+import { adventureChatRules, adventureOutputBoundary } from '../adventure-prompt.js';
 
 export function chatInput(kind, input) {
   if (!['chat', 'quick-chat'].includes(kind)) throw Error('聊天接口类型无效');
@@ -124,6 +125,14 @@ export async function chatRequest(
         ]
       : []),
   ];
+  if (kind === 'quick-chat' && input.adventure) {
+    const stateContext = { ...input.adventure };
+    delete stateContext.history;
+    base.push({
+      role: 'system',
+      content: '当前五节点冒险上下文（未来预定不是已发生历史）：\n' + JSON.stringify(stateContext),
+    });
+  }
   if (input.archiveContext)
     base.push({
       role: 'system',
@@ -195,7 +204,13 @@ export async function chatRequest(
       worldInfo.settings.authorNote,
       { characterText: characters },
     );
-    messages.push({ role: 'system', content: rules + '\n' + galInstruction(input, kind) });
+    messages.push({
+      role: 'system',
+      content:
+        (kind === 'quick-chat' && input.adventure ? adventureChatRules(input.adventure) : rules) +
+        '\n' +
+        galInstruction(input, kind),
+    });
     const processed = await runRegexTasks(
       regexScripts,
       messages.map((message, index) => ({
@@ -218,6 +233,8 @@ export async function chatRequest(
     retained.forEach((index, position) => {
       messages[index] = transfer.messages[position];
     });
+    const boundary = adventureOutputBoundary(input.adventure);
+    if (kind === 'quick-chat' && boundary) messages.push({ role: 'system', content: boundary });
     const adviceStatus = !advice
       ? null
       : !advice.enabled

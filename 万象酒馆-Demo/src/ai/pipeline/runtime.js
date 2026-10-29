@@ -162,6 +162,14 @@ export function createAiPipeline({
       await worlds.commit(kind, prepared.nextWorldState, prepared.nextWorldState.step - 1);
       pendingWorldStates.delete(requestId);
       const reply = { ...response, request: requestReport, usage: result.usage };
+      if (input.adventure)
+        reply.diagnostic = redactDiagnostic(
+          {
+            ...generationDiagnostic(kind, result.rawContent || result.content, '', 'complete'),
+            request: requestReport,
+          },
+          profile?.apiKey,
+        );
       return reply;
     } else {
       const scripts = [...regexStore.get(), ...presetRegexScripts(source)];

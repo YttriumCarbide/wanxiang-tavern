@@ -38,6 +38,7 @@ import { createChat } from './chat.js';
 import { createPresetExtensions } from './preset-extensions.js';
 import { createSummoning } from './summoning.js';
 import { createMemory } from './memory.js';
+import { createAdventure } from './adventure.js';
 import { createEquipment } from './equipment.js';
 import { createSettlement } from './settlement.js';
 import { createCompanionEvents } from './companion-events.js';
@@ -59,6 +60,11 @@ export function createApplication({
     apiClient,
     () => context.session.ai.generationOptions,
     () => context.arcade,
+    async (kind) => {
+      if (kind === 'summary') return;
+      await context.extensions?.activate(kind);
+      await context.extensions?.flush();
+    },
   );
   context.generationAccess = createGenerationAccess(context);
   context.roster = createRoster(context);
@@ -85,6 +91,7 @@ export function createApplication({
   context.extensions = createPresetExtensions(context);
   context.chat = createChat(context);
   context.memory = createMemory(context);
+  context.adventure = createAdventure(context);
   context.bookshelf = createBookshelf(context);
   context.shop = createShop(context);
   context.lootConflicts = createLootConflicts(context);
@@ -140,6 +147,7 @@ export function createApplication({
     context.chat.dispose();
     context.gal.dispose();
     context.memory.dispose();
+    context.adventure.dispose();
     context.bookshelf.dispose();
     context.extensions.dispose();
     records.dispose();

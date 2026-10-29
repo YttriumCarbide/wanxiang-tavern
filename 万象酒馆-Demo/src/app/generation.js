@@ -8,7 +8,7 @@ import {
 import { DEFINITIONS } from '../data.js';
 import { routeKey } from '../worlds.js';
 import { nextArcPhase } from '../story-arc.js';
-import { combatTestScript } from '../content/generation-mode.js';
+import { adventureTestScript } from '../content/generation-mode.js';
 import { cleanLibraryCharacters } from '../ai/character-cleanup.js';
 import { relevantArchives } from '../archives.js';
 import {
@@ -78,7 +78,7 @@ export function createGeneration(context) {
   }
   const library = () => session.ai.library;
   function renderDeveloperOptions() {
-    document.body.classList.toggle('gal-mode', context.gal?.enabled === true);
+    document.body.classList.add('gal-mode');
     $('#developer-options').hidden = !session.ai.generationOptions.developerMode;
     for (const checkbox of document.querySelectorAll('[data-generation-option]'))
       checkbox.checked = session.ai.generationOptions[checkbox.dataset.generationOption];
@@ -103,7 +103,6 @@ export function createGeneration(context) {
         return;
       }
       session.ai.generationOptions = next;
-      if (!next.developerMode || !next.galMode) context.gal?.cancel();
       renderDeveloperOptions();
       context.onboarding?.generationModeChanged();
       context.onboarding?.refresh();
@@ -404,7 +403,7 @@ export function createGeneration(context) {
     presetEditor.syncProfile();
   }
   async function open(notice = '', kind) {
-    if (session.runtime.mode !== 'inn') return;
+    if (!['inn', 'event'].includes(session.runtime.mode)) return;
     render();
     setTab('settings');
     if (!$('#ai-dialog').open) $('#ai-dialog').showModal();
@@ -535,6 +534,7 @@ export function createGeneration(context) {
           }
         : {}),
       chapter: route ? route.completed + 1 : library().chapter,
+      adventureVersion: 1,
       party: party().map(settingOnly),
       protagonistId: library().campaign?.protagonistId || null,
       ...(node ? { exploration: structuredClone(node) } : {}),
@@ -690,7 +690,6 @@ export function createGeneration(context) {
     render();
     const input = override || inputFor(kind);
     try {
-      await context.extensions?.activate(kind);
       const result = await api(`generate/${kind}`, input, request.signal);
       if (session.runtime.disposed) throw Error('页面已关闭');
       if (kind === 'script' && result.diagnostic) {
@@ -766,7 +765,7 @@ export function createGeneration(context) {
         const input = scriptInput();
         await accept(
           'script',
-          { ...combatTestScript(input.exploration?.map), id: 'script-' + crypto.randomUUID() },
+          { ...adventureTestScript(input.exploration?.map), id: 'script-' + crypto.randomUUID() },
           input,
         );
         return;
@@ -1058,6 +1057,8 @@ export function createGeneration(context) {
       return next;
     },
     refreshReview: diagnostics.refreshButtons,
+    openReview: diagnostics.show,
+    recordReview: diagnostics.record,
     setSummonVisible(visible) {
       session.runtime.summonVisible = visible;
       diagnostics.refreshButtons();
@@ -1075,7 +1076,7 @@ export function createGeneration(context) {
         const input = scriptInput();
         const book = {
           ...normalizeScript(
-            combatTestScript(input.exploration?.map),
+            adventureTestScript(input.exploration?.map),
             'script-' + crypto.randomUUID(),
           ),
           generationInput: structuredClone(input),

@@ -3,7 +3,6 @@ import assert from 'node:assert/strict';
 import { mkdtemp, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import {
-  galEnabled,
   galRequestInput,
   parseGalText,
   paginateGalBeat,
@@ -34,15 +33,13 @@ test('selection fixes the first two identities without substituting missing port
   assert.deepEqual(selectedGalStage(['missing'], actors), []);
 });
 
-test('Gal mode is an explicit persistent developer choice and affects only narrative APIs', () => {
-  assert.equal(galEnabled(restoreGenerationOptions(null)), false);
-  assert.equal(galEnabled(restoreGenerationOptions({ galMode: true })), false);
-  const options = restoreGenerationOptions({ developerMode: true, galMode: true });
-  assert(galEnabled(restoreGenerationOptions(JSON.parse(JSON.stringify(options)))));
+test('Gal is the only narrative presentation and ignores retired mode preferences', () => {
+  const options = restoreGenerationOptions({ developerMode: false, galMode: false });
+  assert(!('galMode' in options));
   const source = { brief: '出发' };
   for (const kind of ['script', 'chat', 'quick-chat']) {
     assert.equal(galRequestInput(kind, source, options).presentationMode, 'gal');
-    assert.equal(galRequestInput(kind, source, {}).presentationMode, 'prose');
+    assert.equal(galRequestInput(kind, source, {}).presentationMode, 'gal');
   }
   for (const kind of ['character', 'map', 'creation', 'summary'])
     assert.equal(galRequestInput(kind, source, options), source);
@@ -177,7 +174,7 @@ test('actual shared pipeline opts script and chat into Gal without changing the 
         : { text: '喝茶', place: 'bar', characters: party, selected: ['hero'], history: [] };
     const off = await pipeline.buildRequest(kind, input, source);
     const on = await pipeline.buildRequest(kind, { ...input, presentationMode: 'gal' }, source);
-    assert(!off.messages.some((message) => message.content.includes('【Gal叙事格式')));
+    assert(off.messages.some((message) => message.content.includes('【Gal叙事格式')));
     assert(on.messages.some((message) => message.content.includes('【Gal叙事格式')));
     assert.equal(on.transport.format, off.transport.format);
     assert.equal(on.transport.tag, off.transport.tag);

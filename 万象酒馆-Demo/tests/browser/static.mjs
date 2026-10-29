@@ -6,7 +6,7 @@ import path from 'node:path';
 import { buildStatic } from '../../tools/build-static.mjs';
 import { projectRoot } from '../../tools/testing/runtime.mjs';
 import { characterDocument } from '../fixtures/ai.js';
-import { dismissAutomaticJournals } from './legacy-session.mjs';
+import { dismissAutomaticJournals, finishGalDialogue } from './legacy-session.mjs';
 
 /** Only files are served here. There is no API, request preparer, proxy or Node game backend. */
 export async function staticChecks({ browser, output }) {
@@ -452,8 +452,7 @@ export async function staticChecks({ browser, output }) {
     await page.locator('#destination-start').click();
     await page.locator('#prepare-done').click();
     await page.locator('#party-panel').waitFor({ state: 'visible' });
-    while (await page.locator('#guide-dialogue').isVisible())
-      await page.locator('#dialogue-next').click();
+    await finishGalDialogue(page, 'guide-dialogue');
     await page.locator('#prepare-done').click();
     await page.waitForFunction(
       () => demo.getStatus().mode === 'battle' && !demo.getStatus().animating,
@@ -462,13 +461,13 @@ export async function staticChecks({ browser, output }) {
     await page.evaluate(() => demo.flushStorage());
     const unfinished = await page.evaluate(() => demo.getActiveScript());
     await page.reload();
-    await page.waitForFunction(() => !!window.demo && demo.getStatus().mode === 'inn', {
+    await page.waitForFunction(() => !!window.demo && demo.getStatus().mode === 'battle', {
       timeout: 60000,
     });
-    assert.equal(await page.evaluate(() => demo.getActiveScript()), null);
+    assert.equal((await page.evaluate(() => demo.getActiveScript())).id, unfinished.id);
     const returned = await page.evaluate(() => demo.getLibrary());
-    assert(!returned.scripts.some((entry) => entry.id === unfinished.id));
-    assert(!returned.history.some((entry) => entry.runId === unfinished.runId));
+    assert(returned.scripts.some((entry) => entry.id === unfinished.id));
+    assert(returned.history.some((entry) => entry.runId === unfinished.runId));
     await page.screenshot({ path: path.join(output, 'static-returned-to-hall.png') });
     assert.deepEqual(apiTraffic, []);
     assert.deepEqual(errors, []);
@@ -484,7 +483,7 @@ export async function staticChecks({ browser, output }) {
       portraitsPersisted: true,
       backupExcludesKeys: true,
       chatAndSettingsReloaded: true,
-      reloadDiscardsUnfinishedTrip: true,
+      reloadResumesAdventure: true,
       apiRequests: 0,
       files: manifest.files.length,
     };

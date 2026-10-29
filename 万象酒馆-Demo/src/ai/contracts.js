@@ -9,6 +9,7 @@ import { checkOutputSchema } from './schema-check.js';
 import { normalizeRules, effectMetadata } from '../triggers.js';
 import { compileCharacterDesign } from '../character-generation.js';
 import { finalSkillText, finalPassiveText } from '../skill-text.js';
+import { normalizeAdventureDefinition, savedAdventureInput } from '../adventure/definition.js';
 import {
   normalizeCharacterSetting,
   formatCharacterSetting,
@@ -267,7 +268,7 @@ function normalizeNovelScript(raw, id, encounterCount) {
   if (!Array.isArray(raw.story) || raw.story.length !== encounterCount)
     fail(`剧本正文需要${encounterCount}段文字`);
   const story = raw.story.map((part, index) => text(part, `story[${index}]`, 24000));
-  const modern = raw.schemaVersion === 4;
+  const modern = raw.schemaVersion >= 4;
   const npcs =
     Array.isArray(data.npcs) && data.npcs.length <= (modern ? 12 : 3)
       ? data.npcs.map((npc, index) => ({
@@ -287,6 +288,16 @@ function normalizeNovelScript(raw, id, encounterCount) {
     id,
     schemaVersion: raw.schemaVersion,
     story,
+    ...(raw.schemaVersion === 5
+      ? {
+          adventure: normalizeAdventureDefinition(
+            data.adventure?.event?.choices?.some((choice) => !Array.isArray(choice.reward?.items))
+              ? savedAdventureInput(data.adventure)
+              : data.adventure,
+          ),
+          original: structuredClone(raw.original || { story, data }),
+        }
+      : {}),
     ...(data.encounters ? { encounters: structuredClone(data.encounters) } : {}),
     title: text(data.title, '剧本名', 60),
     synopsis: modern ? '' : text(data.synopsis, '概要', 2000),
@@ -334,7 +345,7 @@ function normalizeNovelScript(raw, id, encounterCount) {
 
 export function normalizeScript(raw, id, partyIds = [], { encounterCount = ENCOUNTER_COUNT } = {}) {
   object(raw, '剧本');
-  if ([3, 4].includes(raw.schemaVersion)) return normalizeNovelScript(raw, id, encounterCount);
+  if ([3, 4, 5].includes(raw.schemaVersion)) return normalizeNovelScript(raw, id, encounterCount);
   if (![1, 2].includes(raw.schemaVersion)) fail('剧本schemaVersion必须为3（旧存档兼容1/2）');
   const structured = raw.schemaVersion === 2;
   const npcs =

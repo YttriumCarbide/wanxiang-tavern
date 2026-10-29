@@ -1,5 +1,6 @@
 import { ENCOUNTER_COUNT, FINAL_ENCOUNTER } from '../content/journey-rules.js';
 import { MAP_IDS } from '../content/biomes.js';
+import { adventureDefinitionSchema } from '../adventure/definition.js';
 const string = (maxLength, minLength = 1) => ({ type: 'string', minLength, maxLength });
 const array = (items, minItems, maxItems) => ({ type: 'array', items, minItems, maxItems });
 const object = (properties) => ({
@@ -65,7 +66,7 @@ function novelV3Schema() {
   });
 }
 
-export function scriptOutputSchema() {
+function novelV4Schema() {
   const schema = object({
     schemaVersion: { type: 'integer', const: 4 },
     story: array(string(24000), ENCOUNTER_COUNT, ENCOUNTER_COUNT),
@@ -120,11 +121,20 @@ export function scriptOutputSchema() {
   return schema;
 }
 
+export function scriptOutputSchema() {
+  const schema = novelV4Schema();
+  schema.properties.schemaVersion.const = 5;
+  schema.properties.data.properties.adventure = adventureDefinitionSchema();
+  schema.properties.data.required.push('adventure');
+  return schema;
+}
+
 /** Existing v2 responses and saved chapters remain readable during preset migration. */
 export function scriptInputSchema(partyIds = []) {
   return {
     anyOf: [
       scriptOutputSchema(),
+      novelV4Schema(),
       novelV3Schema(),
       legacyScriptSchema(partyIds, { acceptLegacyIndex: true }),
     ],

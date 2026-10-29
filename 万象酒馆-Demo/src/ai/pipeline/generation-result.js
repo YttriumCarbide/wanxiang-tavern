@@ -120,6 +120,8 @@ export function readGenerationResult(kind, rawText, input, readCharacter = parse
     if (diagnostic.issues.length)
       throw Error(`生成格式不符：${diagnostic.issues[0].path} ${diagnostic.issues[0].message}`);
     diagnostic.stage = 'rules';
+    if (kind === 'script' && input.adventureVersion === 1 && raw.schemaVersion !== 5)
+      throw Error('本次需要schemaVersion 5的五节点剧本，请按当前输出格式重试');
     if (kind === 'character' && typeof raw.setting.personality !== 'string') {
       const before = JSON.stringify(raw.setting.personality);
       raw.setting.personality = normalizeCharacterPersonality(raw.setting.personality);
@@ -151,7 +153,7 @@ export function readGenerationResult(kind, rawText, input, readCharacter = parse
     if (kind === 'script') diagnostic.prose = scriptProseReport(entry);
     if (
       kind === 'script' &&
-      raw.schemaVersion === 4 &&
+      raw.schemaVersion >= 4 &&
       entry.npcs.some((npc) =>
         (input.party || []).some(
           (member) =>

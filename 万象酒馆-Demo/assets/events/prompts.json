@@ -1,0 +1,86 @@
+{
+  "generator": "Built-in imagegen",
+  "purpose": "五张官设地图第2节点事件、第4节点自由RP背景",
+  "assets": [
+    {
+      "file": "ruins-event.png",
+      "node": 2,
+      "prompt": "Ancient fractured stone ruin resting alcove; expedition table, satchel and cups; warm amber lanterns and cool slate; premium painterly fantasy 16:9 environment, no people, no text, no UI.",
+      "style": "Premium hand-painted fantasy card RPG environment, landscape16:9, full bleed, no UI, characters, text or logos.",
+      "sourceSha256": "ee4627eb2ea3b9b0a2ea370c10c5846d9f7cee6a16d45dae0d1429eaec743c01",
+      "sourceImage": "exec-d790ab0c-23db-473a-b745-13d99ba859bd.png"
+    },
+    {
+      "file": "ruins-quest.png",
+      "node": 4,
+      "prompt": "A vaulted stone observatory at the heart of weathered ruins, a broken bronze armillary sphere and several walkable archways, a stone writing desk with scattered blank parchment, amber braziers, cold shafts of light. A place for investigation, negotiation, and finding multiple routes onward.",
+      "style": "Premium hand-painted fantasy card RPG environment, landscape16:9, full bleed, no UI, characters, text or logos.",
+      "sourceSha256": "f65c746c95d5ba5d9197302beac6c61e2c11f5653dd23b551cd2e7b871823b25",
+      "sourceImage": "exec-b1d2f9e7-01ac-46d1-ad96-2cb419fa92cd.png"
+    },
+    {
+      "file": "forest-event.png",
+      "node": 2,
+      "prompt": "An inviting sheltered clearing under immense ancient trees, a little abandoned herbalist's rest stop with wicker baskets and unlabelled medicine bottles on a mossy log, tiny blue moon-motes in humid air, pale violet flowers, restrained warm lanterns. Atmospheric mysterious forest, not ominous horror.",
+      "style": "Premium hand-painted fantasy card RPG environment, landscape16:9, full bleed, no UI, characters, text or logos.",
+      "sourceSha256": "c1404720969356ae51396b5096e0836438235480e60ed6bdb896b32ef0815c1f",
+      "sourceImage": "exec-afcdfb68-660d-4135-9b90-143cc0e17490.png"
+    },
+    {
+      "file": "forest-quest.png",
+      "node": 4,
+      "prompt": "A vast moonlit forest hollow with enormous breathing-looking roots around a weathered stone causeway, distant suspended honeycomb-like natural structures and luminous blue flecks, branching routes, scattered old stone reliefs. A place to discover clues and find different ways through the forest.",
+      "style": "Premium hand-painted fantasy card RPG environment, landscape16:9, full bleed, no UI, characters, text or logos.",
+      "sourceSha256": "b1a249a740c2f375f9bfbabea8be5bed7059ca7d5cb5dd46e8601e83502d0019",
+      "sourceImage": "exec-783926a6-9737-4b2e-ae71-9bf067f176c4.png"
+    },
+    {
+      "file": "frost-event.png",
+      "node": 2,
+      "prompt": "A quiet abandoned railway shelter inside a huge icy crystal mine, old mine cart, bundled work gloves and a thermos on a wooden workbench, warm amber hanging lamp, pale blue crystal clusters and dense frost, dignified weathered industrial details.",
+      "style": "Premium hand-painted fantasy card RPG environment, landscape16:9, full bleed, no UI, characters, text or logos.",
+      "sourceSha256": "579f41e4a41119bb1fbd03a643e1d8e643e9af733fe051a1a81fe72d3d29d21f",
+      "sourceImage": "exec-18d5535a-9b02-4401-b260-499ccf2b364d.png"
+    },
+    {
+      "file": "frost-quest.png",
+      "node": 4,
+      "prompt": "An underground frosted mine junction, diverging rails, an old mechanical switching console with blank gauges, a closed industrial door and a side ladder, crystalline ice walls illuminated in blue-white with restrained orange emergency lamps. Layered exploratory space with several plausible routes.",
+      "style": "Premium hand-painted fantasy card RPG environment, landscape16:9, full bleed, no UI, characters, text or logos.",
+      "sourceSha256": "3717da0548e44b02b93944798c6d04531637a1959ec03cca7fa4ee0b403b4837",
+      "sourceImage": "exec-bcc8e348-a445-4809-a0e7-caf3124a7716.png"
+    },
+    {
+      "file": "forge-event.png",
+      "node": 2,
+      "prompt": "A cooling workshop alcove beside a colossal abandoned foundry, a metal worktable, plain cups, tongs and repaired tools, leather apron hanging from a hook, banked furnace warmth reflected on dark iron and copper. Human-scale rest stop amid monumental industrial surroundings.",
+      "style": "Premium hand-painted fantasy card RPG environment, landscape16:9, full bleed, no UI, characters, text or logos.",
+      "sourceSha256": "103c4d5911825e9dec19c8977623d0f1f46accd0dbbe3c1a3565fef51afe4523",
+      "sourceImage": "exec-5583406c-0b99-4440-a648-f5ca2d72d712.png"
+    },
+    {
+      "file": "forge-quest.png",
+      "node": 4,
+      "prompt": "A great ruined forge hall of soot-black iron, overhead chains, winding catwalks, stopped mechanical hammers and multiple walkways around a low glowing molten channel. Visible valve wheels and an old gate offer environmental clues, orange embers and cool charcoal shadows.",
+      "style": "Premium hand-painted fantasy card RPG environment, landscape16:9, full bleed, no UI, characters, text or logos.",
+      "sourceSha256": "77651685a2c8b9285b1d424275154ad10068eee5790f45addfed5e0c1cd245b7",
+      "sourceImage": "exec-b92657a3-c882-45bb-b157-fbdd65c66b2d.png"
+    },
+    {
+      "file": "tide-event.png",
+      "node": 2,
+      "prompt": "A peaceful sheltered terrace in an ancient tidal star temple, pearly limestone, shallow water and subtle coral, a small stone table with an unmarked shell bowl, warm coral lamps, distant misty ocean and a broken astronomical dome. Soft sea-blue, old gold and rose pearl.",
+      "style": "Premium hand-painted fantasy card RPG environment, landscape16:9, full bleed, no UI, characters, text or logos.",
+      "sourceSha256": "0018307b45fb0959d7d47fbfd4a322d6aa5bba1ba92f9a5d46d6311393b9ba73",
+      "sourceImage": "exec-c5a5461c-1f84-4ca8-8ae3-fbcbc2d2408b.png"
+    },
+    {
+      "file": "tide-quest.png",
+      "node": 4,
+      "prompt": "A majestic partly flooded astronomical temple chamber, stone bridges crossing reflective shallow water, a tilted bronze star disc, coral-framed doorways and three accessible passages. Shafts of moonlight and hanging tide lamps, quiet mystery, deep indigo with silver and pale coral accents.",
+      "style": "Premium hand-painted fantasy card RPG environment, landscape16:9, full bleed, no UI, characters, text or logos.",
+      "sourceSha256": "d7e140b6554ef68c8947756b3cea2d0c161debce58340a26f566da53126aa610",
+      "sourceImage": "exec-e13c2e16-3001-4a5a-b49c-a3635381e3b8.png"
+    }
+  ]
+}

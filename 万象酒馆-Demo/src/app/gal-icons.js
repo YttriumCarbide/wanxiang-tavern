@@ -15,8 +15,10 @@ export function galIconMarkup(action, label) {
     replay: '<path d="M4 10a8 8 0 1 1 2 8M4 4v6h6"/>',
     tools: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7h.01"/>',
     send: '<path d="m3 4 18 8-18 8 4-8zM7 12h14"/>',
+    settings:
+      '<circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3M5 5l2 2m10 10 2 2M5 19l2-2M17 7l2-2"/>',
   };
-  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[action] || paths.compose}</svg><span class="gal-control-label">${label}</span>`;
+  return `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[action] || paths.compose}</svg><span class="gal-control-label">${label}</span>`;
 }
 
 export function decorateGalButtons(panel) {

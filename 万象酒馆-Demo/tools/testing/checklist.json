@@ -1,6 +1,6 @@
 {
-  "description": "研发版同步正式版：戒指、Gal、战斗、角色生成及霜晶矿窟等累积改动。统一执行质量、全部核心、服务、静态和受影响关键流程；入场/技能操作修复及Boss中断变更安排一次真实五战。仅本地模拟，不读取个人密钥。通过且未再改动的检查不重复执行。 最终仅复核格式与静态构建，其余组保留通过记录。",
-  "scopes": ["quality", "static"],
+  "description": "正式发布develop累计改动到main。沿用已通过的核心、服务、静态、预设、Gal和赏鉴检查，补充统一请求入口修改后的新手五节点推进、手机与快捷技能菜单验收，不重复旧版六关通关。",
+  "scopes": ["quality", "adventure", "mobile", "skill-menus"],
   "coreFiles": [],
   "browserConcurrency": 2
 }
