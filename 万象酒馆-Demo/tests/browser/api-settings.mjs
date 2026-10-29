@@ -11,6 +11,18 @@ export async function firstRunApplyChecks({ browser, baseURL, output }) {
     await page.locator('#start-journey').click();
     await page.locator('#ai-dialog[data-setup="connections"]').waitFor();
     await page.waitForFunction(() => !document.querySelector('#ai-model').disabled);
+    const intro = await page.locator('#setup-intro').boundingBox();
+    const workspace = await page.locator('#ai-dialog .ai-workspace').boundingBox();
+    assert(intro.height < 55, 'compact setup guidance leaves space for the actual form');
+    assert(workspace.height > 160, 'the setup form owns most of the mobile dialog');
+    await page.screenshot({ path: path.join(output, 'first-run-form-mobile.png') });
+    for (const id of ['ai-baseUrl', 'ai-model', 'ai-key']) {
+      const field = await page.locator('#' + id).boundingBox();
+      assert(
+        field.y >= workspace.y && field.y + field.height <= workspace.y + workspace.height,
+        `address, model and key are visible before scrolling: ${id} ${JSON.stringify({ field, workspace })}`,
+      );
+    }
     await page.locator('#ai-baseUrl').fill('http://127.0.0.1:9999/v1');
     await page.locator('#ai-model').fill('first-run-fixture');
     await page.locator('#ai-key').fill('test-only-key');

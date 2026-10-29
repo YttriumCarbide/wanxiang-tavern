@@ -79,25 +79,27 @@
   color: #e1c995;
 }
 #setup-intro {
-  padding: 16px 20px;
-  margin: 8px 0 12px;
-  border: 1px solid #c3ab7244;
-  border-left: 3px solid #c3ab72;
-  background: #c3ab7209;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  padding: 7px 0;
+  margin: 3px 0 8px;
+  border-bottom: 1px solid #c3ab7233;
 }
 #setup-intro small {
   color: #d4bc82;
   letter-spacing: 2px;
 }
 #setup-heading {
-  margin: 10px 0;
-  font-size: 23px;
+  margin: 0;
+  font-size: 16px;
   font-weight: 400;
 }
 #setup-description {
   margin: 0;
   font-size: 13px;
-  line-height: 1.8;
+  line-height: 1.5;
   color: #b9c9bf;
 }
 #setup-footer {
@@ -134,6 +136,47 @@
   flex-wrap: wrap;
   gap: 8px;
 }
+#ai-dialog[data-setup='connections'] [data-ai-page='settings'] {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 12px;
+}
+#ai-dialog[data-setup='connections'] [data-ai-page='settings'] > * {
+  grid-column: 1 / -1;
+  order: 4;
+}
+#ai-dialog[data-setup='connections'] [data-ai-page='settings'] > p:first-child {
+  display: none;
+}
+#ai-dialog[data-setup='connections'] :is(.connection-purpose, .connection-protocol) {
+  grid-column: auto;
+  order: 0;
+}
+#ai-dialog[data-setup='connections'] .connection-url {
+  order: 1;
+}
+#ai-dialog[data-setup='connections'] :is(.connection-key, .connection-model) {
+  grid-column: auto;
+  order: 2;
+}
+#ai-dialog[data-setup='connections'] #ai-service-account-fields {
+  order: 2;
+}
+#ai-dialog[data-setup='connections'] .ai-editor label {
+  margin: 3px 0;
+  gap: 3px;
+  font-size: 11px;
+  line-height: 1.25;
+}
+#ai-dialog[data-setup='connections'] .connection-primary input,
+#ai-dialog[data-setup='connections'] :is(.connection-purpose, .connection-protocol) select {
+  min-height: 30px;
+  height: 30px;
+  padding: 5px 8px;
+}
+#ai-dialog:is([data-setup='connections'], [data-setup='prompts']) .ai-footer {
+  margin-top: 4px;
+}
 #setup-apply {
   color: #f0d59c;
   border-color: #bda575;
@@ -147,6 +190,9 @@
   line-height: 1.7;
   color: #e0c589;
   flex: 1;
+}
+#setup-status:empty {
+  display: none;
 }
 #ai-dialog[data-setup='connections'] .ai-tabs,
 #ai-dialog[data-setup='prompts'] .ai-tabs {
@@ -181,6 +227,32 @@
   margin: 0;
 }
 @media (max-height: 500px) {
+  #ai-dialog[data-setup='connections'] #setup-heading,
+  #ai-dialog[data-setup='prompts'] #setup-heading,
+  #setup-models {
+    display: none;
+  }
+  #ai-dialog:is([data-setup='connections'], [data-setup='prompts']) #setup-intro {
+    margin: 2px 0 5px;
+    padding: 4px 0;
+    gap: 4px 10px;
+    max-height: none;
+  }
+  #setup-intro small {
+    font-size: 10px;
+    letter-spacing: 1px;
+  }
+  #setup-description {
+    font-size: 11px;
+  }
+  #ai-dialog:is([data-setup='connections'], [data-setup='prompts']) #setup-footer {
+    padding-top: 7px;
+  }
+  #setup-footer button {
+    min-height: 32px;
+    padding: 7px 11px;
+    font-size: 11px;
+  }
   #start-title {
     font-size: 40px;
     margin: 10px 0;

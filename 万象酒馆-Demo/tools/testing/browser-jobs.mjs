@@ -17,6 +17,9 @@ export function browserJobs(scopes, results, root) {
       browserOnly,
     );
   simple('battle-controls', 'battle-controls', 'battleControlChecks');
+  simple('compatibility', 'compatibility', 'compatibilityChecks');
+  simple('first-run', 'api-settings', 'firstRunApplyChecks');
+  simple('tavern-visitors', 'tavern-visitors', 'tavernVisitorsChecks');
   simple('skill-menus', 'skill-menus', 'skillMenuChecks');
   simple('rp-layout', 'rp-layout', 'rpLayoutChecks');
   simple('ring-gallery', 'ring-gallery', 'ringGalleryChecks');

@@ -21,6 +21,7 @@ test('normal play always generates; the combined developer switch migrates both 
     developerMode: false,
     allowRetreat: false,
     editArchives: false,
+    tavernVisitors: false,
     protagonistApi: true,
     scriptApi: true,
   };

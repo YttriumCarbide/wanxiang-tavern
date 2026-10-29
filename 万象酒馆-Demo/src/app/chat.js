@@ -576,8 +576,15 @@ export function createChat(context) {
       event.origin === location.origin &&
       event.source === $('#inn-frame iframe')?.contentWindow &&
       event.data?.type === 'tavern-talk'
-    )
+    ) {
+      if (event.data.characterId) {
+        const member = characters().find((entry) => entry.id === event.data.characterId);
+        if (!member) return;
+        state().selected = [member.id];
+        state().selectionInitialized = true;
+      }
       open(event.data.place);
+    }
     if (event.data?.type === 'chat-frame-size') {
       const frame = [...document.querySelectorAll('iframe.mes_text')].find(
         (frame) => frame.contentWindow === event.source,

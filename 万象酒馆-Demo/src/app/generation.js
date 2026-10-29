@@ -106,6 +106,7 @@ export function createGeneration(context) {
       renderDeveloperOptions();
       context.onboarding?.generationModeChanged();
       context.onboarding?.refresh();
+      context.shell.syncInnVisitors();
       status('游戏选项已保存。');
     });
   }
@@ -118,6 +119,7 @@ export function createGeneration(context) {
   }
   function save() {
     context.summoning?.refresh();
+    context.shell.syncInnVisitors();
     try {
       storage.setItem(libraryKey, JSON.stringify(library()));
       context.saves?.autoSave?.('游戏进度保存');

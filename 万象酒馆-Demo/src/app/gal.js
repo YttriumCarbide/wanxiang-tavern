@@ -9,6 +9,7 @@ import { portraitUrl } from '../portraits.js';
 import { createEventScope } from '../shared/events.js';
 import { createGalWorkspace } from './gal-workspace.js';
 import { decorateGalButtons } from './gal-icons.js';
+import { activeModal, createPopoverSurface } from '../shared/top-layer.js';
 
 /** One application-owned visual-novel stage, shared by dialogue, story and both chat readers. */
 export function createGalPlayer(context) {
@@ -16,7 +17,7 @@ export function createGalPlayer(context) {
   const panel = document.createElement('section');
   panel.id = 'gal-stage';
   panel.className = 'gal-stage';
-  panel.setAttribute('popover', 'manual');
+  const surface = createPopoverSurface(panel);
   panel.setAttribute('aria-label', 'Gal剧情演出');
   panel.tabIndex = -1;
   panel.hidden = true;
@@ -56,17 +57,14 @@ export function createGalPlayer(context) {
     exitAnimations = [];
     delete panel.dataset.leaving;
     // A body-owned popover has no inherited dialog filter/backdrop rectangle.
-    const modal =
-      document.activeElement?.closest('dialog:modal') ||
-      [...document.querySelectorAll('dialog[open]')]
-        .filter((dialog) => dialog.matches(':modal'))
-        .at(-1);
+    surface.hide();
+    const modal = activeModal(document);
     (modal || document.body).append(panel);
     panel.hidden = false;
     document.body.classList.add('gal-playing');
     sceneVisibility(true);
     part('.gal-chapter').textContent = title || '万象 · 片刻';
-    if (panel.showPopover && !panel.matches(':popover-open')) panel.showPopover();
+    surface.show();
   }
   function sceneVisibility(visible) {
     for (const frame of document.querySelectorAll('#inn-frame iframe')) {
@@ -129,7 +127,7 @@ export function createGalPlayer(context) {
     stop();
     panel.dataset.playing = 'false';
     panel.classList.remove('gal-ui-hidden');
-    if (panel.matches(':popover-open')) panel.hidePopover();
+    surface.hide();
     panel.hidden = true;
     document.body.classList.remove('gal-playing');
     sceneVisibility(false);
@@ -280,7 +278,11 @@ export function createGalPlayer(context) {
       );
       stage = nextGalStage(stage, previous, person);
     }
-    if (workspace.active?.owner === current.owner)
+    if (
+      workspace.active?.owner === current.owner &&
+      current.owner !== 'quick-chat' &&
+      Array.isArray(workspace.active.actors)
+    )
       stage = selectedGalStage(
         workspace.active.actors || [],
         cast,

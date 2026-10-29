@@ -1,6 +1,15 @@
 {
-  "description": "正式发布develop累计改动到main。沿用已通过的核心、服务、静态、预设、Gal和赏鉴检查，补充统一请求入口修改后的新手五节点推进、手机与快捷技能菜单验收，不重复旧版六关通关。",
-  "scopes": ["quality", "adventure", "mobile", "skill-menus"],
-  "coreFiles": [],
+  "description": "三位官方角色全身透明立绘及酒馆六个刷新位置实验；旧浏览器无popover状态选择器的启动与点击；新手连接配置优先填写区。保留上一轮RP/Gal修改，复核相关核心、静态及手机，不进行完整副本通关。",
+  "scopes": [
+    "quality",
+    "core",
+    "compatibility",
+    "tavern-visitors",
+    "settings",
+    "gal",
+    "mobile",
+    "static"
+  ],
+  "coreFiles": ["tests/chat.test.js", "tests/portrait-store.test.js", "tests/gal.test.js"],
   "browserConcurrency": 2
 }

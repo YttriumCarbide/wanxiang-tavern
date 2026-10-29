@@ -43,12 +43,10 @@ export function createFirstRun(context) {
     if (!stage) return;
     const connections = stage === 'connections';
     element('setup-count').textContent = connections ? '01 / 03 · 连接旅途' : '02 / 03 · 选择文风';
-    element('setup-heading').textContent = connections
-      ? '先配置你的 AI 接口'
-      : '导入一个酒馆提示词预设';
+    element('setup-heading').textContent = connections ? '连接 AI' : '选择文风';
     element('setup-description').textContent = connections
-      ? '副本剧本 API 负责统筹剧情、理解设定和安排后续发展，建议使用理解、推理与长篇创作能力较强的模型。角色生成、酒馆交流、快速闲聊、记忆总结、地图构筑和以太造物可使用费用较低、能稳定输出格式的模型。七项用途都需保存连接；可在下方勾选其他用途，一键应用同一份 API 预设。'
-      : '导入一份你喜欢的酒馆预设，默认应用到角色、剧本、交流、闲聊、地图和以太 API，之后可分别更换。记忆总结使用独立提示词。';
+      ? '填写地址、密钥和模型。相同配置可勾选其他用途，一次应用。'
+      : '导入酒馆提示词预设，之后可为不同用途单独调整。';
     element('setup-models').hidden = !connections;
     element('setup-apply').hidden = !connections;
     element('setup-next').textContent = connections

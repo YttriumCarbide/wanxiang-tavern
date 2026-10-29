@@ -5,6 +5,8 @@ import { escapeText } from '../ui.js';
 import { query as $ } from './dom.js';
 import { portraitUrl, saveCustomPortrait } from '../portraits.js';
 import { preparationEquipment } from './equipment.js';
+import { developerOption } from '../generation-options.js';
+import { TAVERN_VISITORS } from '../content/tavern-visitors.js';
 
 /** @param {import('./context.js').AppContext} context */
 export function createShell(context) {
@@ -52,8 +54,27 @@ export function createShell(context) {
           : './tavern.html';
     frame.title = '第一人称万象酒馆';
     context.audio.attachFrame(frame);
+    context.events.on(frame, 'load', syncInnVisitors);
     $('#inn-frame').replaceChildren(frame);
     $('#party-panel').close();
+  }
+  function syncInnVisitors() {
+    const frame = $('#inn-frame iframe');
+    if (!frame) return;
+    const characters = TAVERN_VISITORS.flatMap((definition) => {
+      const member = session.ai.library.characters.find(
+        (entry) => entry.source === 'official' && entry.combat.id === definition.combatId,
+      );
+      return member ? [{ key: definition.id, id: member.id }] : [];
+    });
+    frame.contentWindow?.postMessage(
+      {
+        type: 'tavern-visitors',
+        enabled: developerOption(session.ai.generationOptions, 'tavernVisitors'),
+        characters,
+      },
+      location.origin,
+    );
   }
   function setCustomPortrait(heroId, dataUrl) {
     const member = session.ai.library.characters.find((entry) => entry.id === heroId);
@@ -214,5 +235,5 @@ export function createShell(context) {
     }
     context.equipment?.refresh();
   }
-  return { showRoute, toast, mountInn, renderParty, setCustomPortrait };
+  return { showRoute, toast, mountInn, renderParty, setCustomPortrait, syncInnVisitors };
 }

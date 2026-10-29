@@ -1,4 +1,7 @@
 export const allScopes = [
+  'compatibility',
+  'first-run',
+  'tavern-visitors',
   'rp-layout',
   'skill-menus',
   'adventure',

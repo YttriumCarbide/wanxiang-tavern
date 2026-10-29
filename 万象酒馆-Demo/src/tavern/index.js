@@ -5,6 +5,8 @@ import { createResourceScope } from '../shared/resources.js';
 import { synchronizeSummonCrystals } from './animation.js';
 import { deviceRenderQuality, createFrameBudget } from '../shared/render-budget.js';
 import { createRingDisplay } from './ring-display.js';
+import { createTavernVisitors } from './visitors.js';
+import { TAVERN_VISITORS } from '../content/tavern-visitors.js';
 
 export async function createTavernView() {
   const quality = deviceRenderQuality();
@@ -256,11 +258,24 @@ export async function createTavernView() {
   const events = createEventScope();
   const shelfButtons = [];
   let ringDisplay = null;
+  let visitors = null;
+  let visitorConfig = null;
+  events.on(window, 'message', (event) => {
+    if (
+      event.origin !== location.origin ||
+      event.source !== parent ||
+      event.data?.type !== 'tavern-visitors'
+    )
+      return;
+    visitorConfig = event.data;
+    visitors?.configure(visitorConfig);
+  });
   function dispose() {
     if (disposed) return;
     disposed = true;
     renderer.setAnimationLoop(null);
     ringDisplay?.dispose();
+    visitors?.dispose();
     events.dispose();
     shelfButtons.forEach((shelf) => shelf.button.remove());
     mixer?.stopAllAction();
@@ -341,6 +356,13 @@ export async function createTavernView() {
       }
     });
     scene.add(model);
+    visitors = createTavernVisitors(scene, camera, model);
+    if (query.get('visitors') === '1')
+      visitorConfig = {
+        enabled: true,
+        characters: TAVERN_VISITORS.map(({ id }) => ({ key: id, id })),
+      };
+    if (visitorConfig) visitors.configure(visitorConfig);
     ringDisplay = createRingDisplay(renderer, scene, camera);
     mixer = new THREE.AnimationMixer(model);
     gltf.animations.forEach((a) => mixer.clipAction(synchronizeSummonCrystals(a)).play());
@@ -361,6 +383,7 @@ export async function createTavernView() {
       enterCorridor,
       fieldMaterials,
       rings: () => ringDisplay.status(),
+      visitors: () => visitors.status(),
       getState: () => ({
         rendering: {
           frames: renderedFrames,
@@ -385,18 +408,36 @@ export async function createTavernView() {
   events.on(canvas, 'pointerdown', (e) => {
     if (ringDisplay?.status().active) return;
     cancelTravel();
-    drag = { x: e.clientX, y: e.clientY, id: e.pointerId };
+    drag = {
+      x: e.clientX,
+      y: e.clientY,
+      startX: e.clientX,
+      startY: e.clientY,
+      id: e.pointerId,
+      moved: false,
+    };
     canvas.setPointerCapture(e.pointerId);
   });
   events.on(canvas, 'pointermove', (e) => {
     if (!drag || drag.id !== e.pointerId) return;
+    if (Math.hypot(e.clientX - drag.startX, e.clientY - drag.startY) > 6) drag.moved = true;
     yaw -= (e.clientX - drag.x) * 0.004;
     pitch = THREE.MathUtils.clamp(pitch - (e.clientY - drag.y) * 0.003, -1.25, 1.25);
     drag.x = e.clientX;
     drag.y = e.clientY;
     apply();
   });
-  events.on(canvas, 'pointerup', () => (drag = null));
+  events.on(canvas, 'pointerup', (event) => {
+    const tap = drag && !drag.moved;
+    drag = null;
+    if (!tap || travel || ringDisplay?.status().active) return;
+    const visitor = visitors?.pick(event.clientX, event.clientY);
+    if (visitor)
+      parent.postMessage(
+        { type: 'tavern-talk', place: 'table', characterId: visitor.id },
+        location.origin,
+      );
+  });
   events.on(canvas, 'pointercancel', () => (drag = null));
   events.on(
     canvas,
@@ -713,6 +754,7 @@ export async function createTavernView() {
       }
     }
     if (mixer) mixer.update(dt);
+    visitors?.update();
     if (summonSurge > 0) summonSurge = Math.max(0, summonSurge - dt);
     const surgeBoost = summonSurge > 0 ? 1 + (summonSurge / 2.5) * 3 : 1;
     fieldMaterials.forEach((m) => (m.uniforms.uTime.value = elapsed * (summonSurge > 0 ? 2 : 1)));

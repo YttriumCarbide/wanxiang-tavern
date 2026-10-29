@@ -17,7 +17,7 @@ export function guardMouseGestures(events, target = document) {
       target,
       type,
       (event) => {
-        if (event.button !== 0) {
+        if (event.pointerType !== 'touch' && event.button > 0) {
           event.preventDefault();
           event.stopImmediatePropagation();
         }

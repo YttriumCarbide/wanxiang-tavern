@@ -369,6 +369,7 @@ export async function galWorkspaceChecks({ browser, baseURL, output }) {
       document.querySelector('.gal-text').textContent.includes('先坐'),
     );
     assert.equal(calls.filter((call) => call.kind === 'quick-chat').length, 1);
+    await page.locator('.gal-cast img[data-actor="official-edith"]').waitFor({ state: 'visible' });
     await finishPages();
     await page.setViewportSize({ width: 844, height: 390 });
     await inside('.gal-composer');

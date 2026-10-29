@@ -1,0 +1,31 @@
+{
+  "generator": "Built-in imagegen",
+  "processing": "原始1024×1536透明PNG逐字节复制；未缩放、未有损压缩。",
+  "purpose": "三维酒馆内朝向镜头的站立贴图实验；保留原始PNG和透明通道",
+  "assets": [
+    {
+      "id": "yuexi",
+      "file": "yuexi-full-v1.png",
+      "sourceSha256": "f6abdc5342beac48ec60832c501d9cc2345a35ecd6954ab2c18c8dc80fb8c445",
+      "reference": "assets/gal/yuexi-half.png",
+      "prompt": "Yuexi, adult moon knight woman, long flowing silvery-white hair, soft lavender eyes, crescent moon hair ornament, dark navy ribbons, ornate white and navy gown with gold stars, elegant fully clothed flowing skirt with dark blue lining, one hand resting near a slender moon sword at her side. Preserve her recognizable face, hair and moon-and-star costume design.",
+      "requirements": "Full body from head to both soles, upright natural front pose, matching reference identity, tall portrait canvas, genuine transparent alpha background, no scene or text."
+    },
+    {
+      "id": "edith",
+      "file": "edith-full-v1.png",
+      "sourceSha256": "f6ed4a0dfb0b1a79dce76590ef71405b7d0739e9afb44f626ead2e69bc89845a",
+      "reference": "assets/gal/edith-half.png",
+      "prompt": "Edith, adult blue-haired woman, long wavy sky-blue hair covering one eye, visible golden eye, gold star hair clip, white long coat and dark navy scarf embroidered with gold constellations, dark fitted underclothes, sensible lace-up boots; holding a navy constellation book against her chest, sheathed sword behind her shoulder. Preserve exact recognizable face, hair, clothing and calm reserved expression.",
+      "requirements": "Full body from head to both soles, upright natural front pose, matching reference identity, tall portrait canvas, genuine transparent alpha background, no scene or text."
+    },
+    {
+      "id": "pandora",
+      "file": "pandora-full-v1.png",
+      "sourceSha256": "4d81051f7fe89675e6229f277e9c5c05056d58bad437c38d8a111eed1a783478",
+      "reference": "assets/gal/pandora-half.png",
+      "prompt": "Pandora, adult purple-haired woman with gentle mysterious expression, very long lavender hair, lavender starry eyes, lace-trimmed bonnet and ornate gothic Victorian dress in black, ivory and muted purple with antique-gold pocket-watch and star ornaments, stockings and elegant closed shoes. Holding her white crowned stuffed rabbit. Preserve exact recognizable face, hairstyle and costume identity, tasteful fully clothed presentation.",
+      "requirements": "Full body from head to both soles, upright natural front pose, matching reference identity, tall portrait canvas, genuine transparent alpha background, no scene or text."
+    }
+  ]
+}

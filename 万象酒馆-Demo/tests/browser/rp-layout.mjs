@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import { legacySession } from './legacy-session.mjs';
-import { newLibrary, compileRoster } from '../../src/ai/library.js';
+import { newLibrary, officialCharacter, compileRoster } from '../../src/ai/library.js';
 import { normalizeScript } from '../../src/ai/contracts.js';
 import { adventureTestScript } from '../../src/content/generation-mode.js';
 import { createAdventureState } from '../../src/adventure/state.js';
@@ -17,6 +17,8 @@ export async function rpLayoutChecks({ browser, baseURL, output }) {
     page.on('pageerror', (error) => errors.push(error.message));
     await legacySession(page);
     const library = newLibrary();
+    library.characters.push(officialCharacter('edith'));
+    library.party[1] = 'official-edith';
     const book = normalizeScript(adventureTestScript(), `rp-layout-${node}`);
     const trip = newExpedition('bossGate', compileRoster(library));
     const battle = beginEncounter(trip);
@@ -41,7 +43,7 @@ export async function rpLayoutChecks({ browser, baseURL, output }) {
         JSON.stringify({ developerMode: true, allowRetreat: false, skipAiGeneration: false }),
       );
     }, snapshot);
-    const rawReply = `<wanxiang_chat>【旁白】这次交流已被记下。</wanxiang_chat>${node === 3 ? '<wanxiang_adventure>本次任务原始标签</wanxiang_adventure>' : ''}`;
+    const rawReply = `<wanxiang_chat>【对白:伊蒂丝】这次交流已被记下。</wanxiang_chat>${node === 3 ? '<wanxiang_adventure>本次任务原始标签</wanxiang_adventure>' : ''}`;
     let releaseReply;
     const replyReady = new Promise((resolve) => {
       releaseReply = resolve;
@@ -50,9 +52,16 @@ export async function rpLayoutChecks({ browser, baseURL, output }) {
       await replyReady;
       return route.fulfill({
         json: {
-          content: '【旁白】这次交流已被记下。',
+          content: '【对白:伊蒂丝】这次交流已被记下。',
           ...(node === 3
-            ? { adventure: { episodeId: trip.id, revision: 0, tasks: [], patches: [] } }
+            ? {
+                adventure: {
+                  episodeId: trip.id,
+                  revision: 0,
+                  tasks: [{ id: 'goal-1', status: 'completed', evidence: '这次交流已被记下。' }],
+                  patches: [],
+                },
+              }
             : {}),
           diagnostic: {
             kind: 'quick-chat',
@@ -196,6 +205,13 @@ export async function rpLayoutChecks({ browser, baseURL, output }) {
       );
       releaseReply();
       await page.waitForFunction(() => demo.getExpedition().adventure.responses.length === 1);
+      const portrait = page.locator('.gal-cast img[data-actor="official-edith"]');
+      await portrait.waitFor({ state: 'visible' });
+      assert.equal(await page.locator('.gal-speaker span').textContent(), '伊蒂丝');
+      await page.screenshot({ path: path.join(output, `reply-${node}-mobile.png`) });
+      await page.setViewportSize({ width: 1193, height: 800 });
+      assert(await portrait.isVisible(), 'speaker with a Gal portrait is visible on desktop');
+      await page.screenshot({ path: path.join(output, `reply-${node}-desktop.png`) });
       for (
         let index = 0;
         index < 30 && (await page.locator('#gal-stage').getAttribute('data-playing')) === 'true';
@@ -206,6 +222,30 @@ export async function rpLayoutChecks({ browser, baseURL, output }) {
             () => document.querySelector('#gal-stage').dataset.leaving !== 'true',
           );
         else await page.locator('.gal-page').click();
+      }
+      assert.equal(await portrait.isVisible(), false, 'portrait clears after the reply finishes');
+      if (node === 3) {
+        await page.locator('.rp-boss-ready').waitFor({ state: 'visible' });
+        assert(await page.locator('[data-rp="boss"]').isVisible());
+        await page.setViewportSize({ width: 667, height: 375 });
+        await page
+          .locator('.rp-boss-ready')
+          .evaluate((element) =>
+            Promise.all(element.getAnimations().map((animation) => animation.finished)),
+          );
+        await page.screenshot({ path: path.join(output, 'boss-prompt-mobile.png') });
+        await page.locator('[data-rp="stay"]').click();
+        const shortcut = page.locator('[data-rp="boss-shortcut"]');
+        assert(await shortcut.isVisible());
+        assert(await shortcut.isEnabled());
+        const bounds = await shortcut.boundingBox();
+        assert(
+          bounds.x >= 0 &&
+            bounds.y >= 0 &&
+            bounds.x + bounds.width <= 667 &&
+            bounds.y + bounds.height <= 375,
+        );
+        await page.screenshot({ path: path.join(output, 'boss-shortcut-mobile.png') });
       }
       await page.locator('[data-rp="raw"]').click();
       await page.locator('#generation-diagnostics').waitFor({ state: 'visible' });
