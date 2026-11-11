@@ -5,7 +5,7 @@ export function characterPresentation(entry) {
   const prose = characterWorldbook(entry);
   const headers = [
     ...prose.matchAll(
-      /^(姓名|性别|年龄|外貌|职业|性格|经历|攻击方式｜[^\n：:]+|技能动作描写｜[^\n：:]+|奥义动作描写｜[^\n：:]+)[：:][\t ]*/gm,
+      /^(姓名|性别|年龄|外貌|职业|性格|经历|攻击方式｜[^\n：:]+|技能动作描写｜[^\n：:]+|入场技动作描写｜[^\n：:]+|奥义动作描写｜[^\n：:]+)[：:][\t ]*/gm,
     ),
   ];
   const fields = headers.map((match, index) => ({
@@ -33,6 +33,7 @@ export function characterPresentation(entry) {
     ].filter((section) => section.text),
     attack: named('攻击方式｜')[0],
     skills: named('技能动作描写｜'),
+    entrySkill: named('入场技动作描写｜')[0],
     fallback: headers.length ? '' : prose,
   };
 }

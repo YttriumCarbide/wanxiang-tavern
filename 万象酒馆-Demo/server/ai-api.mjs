@@ -9,7 +9,7 @@ import { formatRegexPresentation } from './regex-presentation.mjs';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { compatibleRequest } from './compatible.mjs';
+import { createAntiRouteService } from '../src/ai/anti-route-service.js';
 import { summaryPlan } from './summary-request.mjs';
 import { creationPlan } from './creation-request.mjs';
 import { createHelperStorage } from './helper-storage.mjs';
@@ -29,6 +29,7 @@ export async function createAiApi({
     path.join(path.dirname(settingsFile), path.basename(settingsFile, '.json') + '-world-info'),
 }) {
   const settings = await createAiSettings(settingsFile);
+  const antiRoute = createAntiRouteService({ settings, fetchImpl });
   const helperStorage = await createHelperStorage(
     path.join(path.dirname(settingsFile), 'helper-storage.json'),
   );
@@ -144,6 +145,20 @@ export async function createAiApi({
       return true;
     }
     try {
+      if (url === '/api/ai/anti-route') {
+        const controller = new AbortController();
+        const cancel = () => {
+          if (!res.writableEnded) controller.abort();
+        };
+        res.on('close', cancel);
+        try {
+          const input = req.method === 'POST' ? await body(req) : undefined;
+          send(res, 200, await antiRoute.handle(input, controller.signal));
+        } finally {
+          res.off('close', cancel);
+        }
+        return true;
+      }
       if (url.startsWith('/api/ai/transport/') && req.method === 'POST') {
         const input = await body(req);
         expireDirectRequests();
@@ -235,7 +250,15 @@ export async function createAiApi({
         return true;
       }
       if (url === '/api/ai/summary/plan' && req.method === 'POST') {
-        send(res, 200, await summaryPlan(await body(req), settings.get('summary'), countTokens));
+        send(
+          res,
+          200,
+          await summaryPlan(
+            await body(req),
+            { ...settings.get('summary'), antiRoute: settings.routeSettings() },
+            countTokens,
+          ),
+        );
         return true;
       }
       if (url === '/api/ai/creation/plan' && req.method === 'POST') {
@@ -430,7 +453,7 @@ export async function createAiApi({
           event({ type: 'request', request: requestReport });
         }
         if (profile.tokenField === 'none') profile.maxTokens = 0;
-        const result = await compatibleRequest(profile, messages, {
+        const result = await antiRoute.request(profile, messages, {
           signal: controller.signal,
           fetchImpl,
           ...completionOptions({ kind, models, prepared, input }),

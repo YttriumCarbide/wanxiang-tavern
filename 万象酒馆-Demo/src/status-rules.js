@@ -1,5 +1,13 @@
 /** Stack rules are shared by application, decay, descriptions and generated combat. */
-export const DECAYING_STATUSES = Object.freeze(['weak', 'vulnerable', 'poison', 'bleed', 'regen']);
+export const DECAYING_STATUSES = Object.freeze([
+  'weak',
+  'vulnerable',
+  'poison',
+  'bleed',
+  'regen',
+  'flying',
+  'blind',
+]);
 export const NEGATIVE_STATUSES = Object.freeze([
   'bind',
   'weak',
@@ -7,6 +15,7 @@ export const NEGATIVE_STATUSES = Object.freeze([
   'poison',
   'slow',
   'bleed',
+  'blind',
 ]);
 
 export function statusStacks(key, value) {

@@ -28,7 +28,7 @@ export function upgradeCombatControl(source) {
     constant: true,
     preventRecursion: true,
     ignoreBudget: true,
-    apiTargets: ['character', 'script', 'chat', 'quick-chat', 'map', 'creation'],
+    apiTargets: ['character', 'script', 'chat', 'map', 'creation'],
     position: 4,
     role: 0,
     depth: 0,

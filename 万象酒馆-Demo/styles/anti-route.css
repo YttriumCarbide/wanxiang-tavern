@@ -1,0 +1,186 @@
+#ai-dialog[data-tab='anti-route'] .ai-workspace {
+  grid-template-columns: minmax(0, 1fr);
+}
+#ai-dialog[data-tab='anti-route'] .ai-result {
+  display: none;
+}
+#ai-dialog[data-tab='anti-route'] #ai-status {
+  display: none;
+}
+.route-settings {
+  max-width: 100%;
+  padding: 2px 2px 22px;
+}
+.route-settings > small {
+  color: #d9bd84;
+  font-size: 9px;
+  letter-spacing: 0.2em;
+}
+.route-settings h3 {
+  margin: 17px 0 7px;
+  color: #efd9a9;
+  font-family: Georgia, 'Songti SC', 'STSong', 'Microsoft YaHei', serif;
+  font-size: 17px;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+}
+.route-settings > h3:first-of-type {
+  margin-top: 14px;
+}
+.route-settings .ai-hint {
+  color: #a8b9b0;
+  line-height: 1.8;
+}
+.route-attribution {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: fit-content;
+  margin-top: 9px;
+  padding: 7px 9px 7px 12px;
+  border: 1px solid rgba(162, 186, 172, 0.16);
+  border-left: 2px solid rgba(226, 186, 111, 0.4);
+  border-radius: 5px;
+  color: #b9c7bf;
+  background: rgba(255, 255, 255, 0.018);
+  font-size: 11px;
+}
+.route-attribution a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  color: #b7bdff;
+  transition:
+    color 160ms,
+    background 160ms;
+}
+.route-attribution a:is(:hover, :focus-visible) {
+  color: #e0e3ff;
+  background: rgba(88, 101, 242, 0.2);
+}
+.route-switches {
+  display: grid;
+  gap: 7px;
+  margin-top: 12px;
+}
+.route-switches label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 10px 12px;
+  border: 1px solid rgba(174, 195, 174, 0.13);
+  border-radius: 7px;
+  background:
+    linear-gradient(100deg, rgba(226, 186, 111, 0.035), transparent 55%), rgba(255, 255, 255, 0.012);
+}
+.route-switches label:has(input:checked) {
+  border-color: rgba(226, 186, 111, 0.3);
+  background:
+    linear-gradient(100deg, rgba(226, 186, 111, 0.075), transparent 58%), rgba(255, 255, 255, 0.018);
+}
+.route-switches strong {
+  color: #e9dbc2;
+  font-weight: 500;
+}
+.route-switches small {
+  display: block;
+  margin-top: 4px;
+  color: #a8b9b0;
+  line-height: 1.55;
+}
+.route-switches input {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 auto;
+  accent-color: #d6b471;
+}
+.route-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+  margin-top: 12px;
+}
+.route-options label {
+  display: grid;
+  gap: 6px;
+  color: #bab196;
+  font-size: 11px;
+}
+.route-options :is(select, input) {
+  width: 100%;
+  min-width: 0;
+}
+.route-alias-input {
+  display: grid;
+  gap: 6px;
+  margin-top: 9px;
+}
+.route-probes {
+  margin: 18px 0;
+  padding: 13px 14px 15px;
+  border: 1px solid rgba(216, 188, 127, 0.22);
+  border-radius: 9px;
+  background:
+    radial-gradient(ellipse at 0 0, rgba(226, 186, 111, 0.06), transparent 44%),
+    rgba(255, 255, 255, 0.018);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025);
+}
+.route-probes h3 {
+  margin-top: 0;
+}
+.route-settings .ai-actions {
+  flex-wrap: wrap;
+}
+.route-table-wrap {
+  overflow-x: auto;
+  border: 1px solid rgba(174, 195, 174, 0.13);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.12);
+}
+.route-table {
+  width: 100%;
+  min-width: 850px;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+.route-table th,
+.route-table td {
+  padding: 8px 9px;
+  border-bottom: 1px solid rgba(174, 195, 174, 0.11);
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+.route-table th {
+  color: #d8c6a3;
+  background: rgba(226, 186, 111, 0.045);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.route-table tbody tr:hover {
+  background: rgba(226, 186, 111, 0.035);
+}
+.route-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+#route-raw {
+  font-family: monospace;
+}
+@media (max-width: 700px) {
+  .route-options {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+#ai-dialog[data-tab='anti-route'] {
+  width: min(1080px, calc(100vw - 30px));
+  max-width: calc(100vw - 30px);
+}
+#ai-dialog[data-tab='anti-route'] .ai-tabs [aria-selected='true'] {
+  color: #f6dfaa;
+  background: linear-gradient(135deg, rgba(66, 90, 71, 0.95), rgba(36, 51, 42, 0.95));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}

@@ -32,6 +32,21 @@
   align-items: center;
   gap: 4px;
 }
+.gal-people-launcher {
+  position: absolute;
+  left: var(--gal-people-left);
+  bottom: var(--gal-people-bottom);
+  z-index: 9;
+  width: var(--gal-people-size);
+  height: var(--gal-people-size);
+  padding: calc(var(--gal-people-size) / 4);
+  border: 1px solid #d9bd7b90;
+  border-radius: 50%;
+  color: #f8e7bd;
+  background: #28231e99;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 2px 14px #0004;
+}
 .gal-workspace-menu {
   margin-right: 0;
 }
@@ -76,6 +91,9 @@
 }
 .gal-stage {
   --gal-side-width: 232px;
+  --gal-people-size: 56px;
+  --gal-people-left: max(clamp(64px, 12vw, 180px), env(safe-area-inset-left));
+  --gal-people-bottom: max(32px, env(safe-area-inset-bottom));
 }
 .gal-stage[data-drawer='composer'] .gal-reading,
 .gal-stage[data-drawer='side'] .gal-reading,
@@ -127,7 +145,8 @@
   padding: 3px 6px;
 }
 .gal-side {
-  inset: 65px auto 48px max(18px, env(safe-area-inset-left));
+  inset: 65px auto calc(var(--gal-people-bottom) + var(--gal-people-size) + 12px)
+    max(18px, env(safe-area-inset-left));
   width: var(--gal-side-width);
   padding: 12px;
   display: flex;
@@ -224,10 +243,14 @@
 .gal-composer {
   inset: auto 0 0;
   padding: 14px max(14vw, env(safe-area-inset-left)) max(36px, env(safe-area-inset-bottom));
+  padding-left: max(14vw, calc(var(--gal-people-left) + var(--gal-people-size) + 16px));
   border-radius: 0;
   background: linear-gradient(180deg, transparent, #0b3a4b66 22%, #082b3c88);
   backdrop-filter: none;
   animation: gal-slide-up 220ms ease both;
+}
+.gal-stage[data-workspace='daily-invitation'] .gal-composer {
+  padding-bottom: calc(max(10px, env(safe-area-inset-bottom)) + 36px);
 }
 .gal-stage[data-persistent='true'] .gal-composer {
   animation: none;
@@ -254,7 +277,38 @@
   align-items: flex-end;
   gap: 8px;
 }
-#gal-stage :is(#chat-input, #quick-chat-input) {
+#gal-stage #daily-invitation {
+  display: grid;
+  align-items: stretch;
+}
+.invite-meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 4px 12px;
+}
+.invite-progress {
+  color: #d3e5e1b3;
+  font-size: 12px;
+}
+.invite-actions,
+.invite-reply {
+  display: flex;
+  gap: 8px;
+}
+.invite-reply {
+  align-items: flex-end;
+}
+.invite-error {
+  margin: 0;
+  color: #ff9d94;
+  font-size: 12px;
+}
+.invite-error:empty {
+  display: none;
+}
+#gal-stage :is(#chat-input, #quick-chat-input, #invite-input) {
   flex: 1;
   min-width: 0;
   height: 112px;
@@ -269,7 +323,7 @@
   border-radius: 0;
   background: #001b2726;
 }
-#gal-stage :is(#chat-input, #quick-chat-input, #rp-input) {
+#gal-stage :is(#chat-input, #quick-chat-input, #invite-input, #rp-input) {
   outline: none;
   border: 1px solid #d5ba7c40;
   border-radius: 5px;
@@ -278,7 +332,7 @@
     box-shadow 180ms ease,
     background 180ms ease;
 }
-#gal-stage :is(#chat-input, #quick-chat-input, #rp-input):focus {
+#gal-stage :is(#chat-input, #quick-chat-input, #invite-input, #rp-input):focus {
   outline: none;
   border-color: #e5c989aa;
   box-shadow:
@@ -286,7 +340,7 @@
     inset 0 0 16px #e6c78508;
   background: #d9bd7e0a;
 }
-#gal-stage :is(#chat-send, #quick-chat-send, #chat-cancel, [data-rp='send']) {
+#gal-stage :is(#chat-send, #quick-chat-send, #chat-cancel, #invite-send, [data-rp='send']) {
   width: 32px;
   height: 32px;
   min-width: 32px;
@@ -298,7 +352,7 @@
   padding: 5px;
   font-size: 13px;
 }
-#gal-stage :is(#chat-send, #quick-chat-send, #chat-cancel, [data-rp='send']) svg {
+#gal-stage :is(#chat-send, #quick-chat-send, #chat-cancel, #invite-send, [data-rp='send']) svg {
   width: 22px;
   height: 22px;
   opacity: 0.8;
@@ -307,7 +361,7 @@
   color: #f1dba7;
   visibility: visible;
 }
-#gal-stage :is(#chat-input, #quick-chat-input)::placeholder {
+#gal-stage :is(#chat-input, #quick-chat-input, #invite-input)::placeholder {
   color: #d3e5e1b3;
 }
 #gal-stage .chat-input-hint {
@@ -341,11 +395,6 @@
 .gal-tools-content {
   display: grid;
   gap: 12px;
-}
-.gal-tools #script-rewrite {
-  justify-self: start;
-  padding: 6px 10px;
-  font-size: 12px;
 }
 .gal-feedback {
   display: block;
@@ -402,6 +451,9 @@ body.gal-mode #story-toggle {
 @media (max-height: 500px), (max-width: 900px) {
   .gal-stage {
     --gal-side-width: 184px;
+    --gal-people-size: 48px;
+    --gal-people-left: max(clamp(40px, 9vw, 96px), env(safe-area-inset-left));
+    --gal-people-bottom: max(18px, env(safe-area-inset-bottom));
   }
   .gal-actionbar {
     inset: auto 4vw max(6px, env(safe-area-inset-bottom));
@@ -424,7 +476,6 @@ body.gal-mode #story-toggle {
   .gal-side {
     top: 42px;
     left: max(12px, env(safe-area-inset-left));
-    bottom: 38px;
     padding: 9px;
   }
   .gal-workspace header strong {
@@ -456,19 +507,20 @@ body.gal-mode #story-toggle {
   .gal-composer {
     inset: auto 0 0;
     padding: 10px max(10vw, env(safe-area-inset-left)) max(36px, env(safe-area-inset-bottom));
+    padding-left: max(10vw, calc(var(--gal-people-left) + var(--gal-people-size) + 16px));
     max-height: calc(100dvh - 78px);
   }
   .gal-composer > header {
     margin-bottom: 7px;
   }
-  #gal-stage :is(#chat-input, #quick-chat-input) {
+  #gal-stage :is(#chat-input, #quick-chat-input, #invite-input) {
     height: 100px;
     min-height: 100px;
     max-height: 32dvh;
     padding: 8px 10px;
     font-size: 13px;
   }
-  #gal-stage :is(#chat-send, #quick-chat-send, #chat-cancel, [data-rp='send']) {
+  #gal-stage :is(#chat-send, #quick-chat-send, #chat-cancel, #invite-send, [data-rp='send']) {
     min-width: 32px;
     padding: 5px;
     font-size: 12px;
@@ -482,4 +534,9 @@ body.gal-mode #story-toggle {
   .gal-workspace * {
     animation: none;
   }
+}
+
+.gal-people-launcher svg {
+  width: 100%;
+  height: 100%;
 }

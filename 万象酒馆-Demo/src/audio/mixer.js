@@ -1,5 +1,5 @@
 import { MUSIC, audioPreferences } from './config.js';
-import { SOUND_CUES, combatCues } from './cues.js';
+import { SERVICE_CUES, SOUND_CUES, combatCues } from './cues.js';
 import { SFX, SFX_NAMES } from './sfx.js';
 
 /** One audio context and two buses per application, created only on a trusted gesture. */
@@ -197,6 +197,7 @@ export function createAudioMixer(preferences, onChange = () => {}) {
   }
   function playSynth(name, delay) {
     for (const [wave, from, to, duration, level, offset = 0, cutoff = 1800] of SOUND_CUES[name] ||
+      SERVICE_CUES[name] ||
       []) {
       trimVoices();
       const at = context.currentTime + 0.005 + delay + offset,

@@ -18,17 +18,6 @@ export function createGenerationDiagnostics({ session, events, api, accept, toas
       : 'script';
   }
   function refreshButtons() {
-    const kind = ['battle', 'event'].includes(session.runtime.mode)
-      ? 'script'
-      : session.runtime.mode === 'inn' && session.runtime.summonVisible
-        ? 'character'
-        : null;
-    const button = $('#generation-review');
-    button.hidden = !kind;
-    button.disabled = !session.ai.diagnostics[kind];
-    button.title = session.ai.diagnostics[kind]
-      ? `查看上一次${kind === 'character' ? '角色' : '剧本'}API的原始回复`
-      : '尚无原始回复';
     document.querySelectorAll('[data-generation-review="character"]').forEach((button) => {
       button.hidden = !session.ai.diagnostics.character;
     });
@@ -118,7 +107,7 @@ export function createGenerationDiagnostics({ session, events, api, accept, toas
     session.ai.diagnostics[kind] = { ...diagnostic, input: structuredClone(input), accepted };
     render();
   }
-  for (const button of document.querySelectorAll('[data-generation-review]'))
+  for (const button of document.querySelectorAll('[data-generation-review="character"]'))
     events.on(button, 'click', () => {
       if (button.hidden || button.disabled) return;
       show(

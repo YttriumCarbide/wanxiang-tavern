@@ -16,6 +16,10 @@ export function mountRotatedScrolling(events) {
     document,
     'touchstart',
     (event) => {
+      if (event.target.closest('input,textarea,[contenteditable="true"]')) {
+        gesture = null;
+        return;
+      }
       if (event.touches.length !== 1) {
         gesture = null;
         return;

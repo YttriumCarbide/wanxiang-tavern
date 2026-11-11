@@ -1,5 +1,3 @@
-import { ITEMS } from '../content/items.js';
-
 export const ADVENTURE_NODE_TYPES = Object.freeze(['battle', 'event', 'elite', 'quest', 'boss']);
 export const ADVENTURE_NODE_LABELS = Object.freeze([
   '普通战',
@@ -34,25 +32,6 @@ export function normalizeSceneOverview(value, fallback = '') {
   });
 }
 
-/** Event rewards spend the original ordinary encounter's 20 gold budget. */
-export function normalizeEventReward(value) {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) throw Error('事件奖励无效');
-  if (Object.keys(value).some((key) => !['gold', 'items'].includes(key)))
-    throw Error('事件不能创造新的奖励类型');
-  const gold = value.gold ?? 0;
-  if (!Number.isInteger(gold) || gold < 0 || gold > 20) throw Error('事件金币范围为0～20');
-  if (!Array.isArray(value.items) || value.items.length > 2) throw Error('事件道具列表无效');
-  const items = {};
-  let cost = gold;
-  for (const item of value.items) {
-    if (!ITEMS[item.id] || item.count !== 1 || items[item.id]) throw Error('事件道具ID或数量无效');
-    items[item.id] = 1;
-    cost += ITEMS[item.id].price;
-  }
-  if (cost > 20) throw Error('事件奖励不能超过原普通战20金币的价值预算');
-  return { summonContracts: 0, gold, items };
-}
-
 export function normalizeAdventureDefinition(value) {
   if (!value?.event || !value?.quest) throw Error('五节点剧本缺少第二节点事件或第四节点任务');
   const { event, quest } = value;
@@ -79,7 +58,6 @@ export function normalizeAdventureDefinition(value) {
         id: `choice-${index + 1}`,
         label: text(choice.label, '选项', 180),
         detail: text(choice.detail, '选项说明', 500),
-        reward: normalizeEventReward(choice.reward),
       })),
     },
     quest: {
@@ -92,18 +70,15 @@ export function normalizeAdventureDefinition(value) {
   };
 }
 
-/** Existing books compile through the same normalizer after saving IDs and reward maps. */
+/** Restore authored choices without retaining obsolete AI-authored mechanical rewards. */
 export function savedAdventureInput(definition) {
   return {
     ...definition,
     event: {
       ...definition.event,
       choices: definition.event.choices.map((choice) => ({
-        ...choice,
-        reward: {
-          gold: choice.reward.gold,
-          items: Object.entries(choice.reward.items).map(([id, count]) => ({ id, count })),
-        },
+        label: choice.label,
+        detail: choice.detail,
       })),
     },
   };
@@ -128,21 +103,6 @@ export function adventureDefinitionSchema() {
         items: object({
           label: string(180),
           detail: string(500),
-          reward: object({
-            gold: { type: 'integer', minimum: 0, maximum: 20 },
-            items: {
-              type: 'array',
-              minItems: 0,
-              maxItems: 2,
-              items: object({
-                id: {
-                  type: 'string',
-                  enum: Object.keys(ITEMS).filter((id) => ITEMS[id].price <= 20),
-                },
-                count: { type: 'integer', const: 1 },
-              }),
-            },
-          }),
         }),
       },
     }),
@@ -151,8 +111,8 @@ export function adventureDefinitionSchema() {
       description: string(2000),
       overview: {
         type: 'array',
-        minItems: 1,
-        maxItems: 12,
+        minItems: 4,
+        maxItems: 4,
         items: object({ location: string(40), detail: string(240) }),
       },
       commonState: string(1000),

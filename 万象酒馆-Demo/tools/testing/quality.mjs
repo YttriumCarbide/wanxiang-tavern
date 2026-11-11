@@ -79,6 +79,7 @@ async function contracts() {
   for (const page of [
     'index.html',
     'tavern.html',
+    'street.html',
     'corridor.html',
     'guest-room.html',
     'master-bedroom.html',

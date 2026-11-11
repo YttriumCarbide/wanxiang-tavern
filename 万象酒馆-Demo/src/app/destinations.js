@@ -431,6 +431,7 @@ export function createDestinations(context) {
   function open() {
     if (session.runtime.mode !== 'inn' || session.ai.busy || dialog.open) return;
     if (session.runtime.needsStart) return context.onboarding.open();
+    if (context.daily && !context.daily.allowDungeon()) return;
     if (context.onboarding && !context.onboarding.allowPortal('script')) return;
     if (learning(session.ai.library) || !maps().includes(session.journey.regionMap))
       session.journey.regionMap = 'ruins';

@@ -3,6 +3,7 @@ import { finalSkillText } from './skill-text.js';
 import { characterGenerationPlan } from './character-generation.js';
 import { applyEmblemStats } from './emblems.js';
 import { applyCompanionModifiers } from './companion-mechanics.js';
+import { combatScale, scaleMoveEffects } from './combat-scale.js';
 /** Persistent growth is separate from authored combat definitions and battle snapshots. */
 export const RARITIES = Object.freeze({
   common: {
@@ -48,6 +49,9 @@ export function rarityFor(id) {
   return 'common';
 }
 export function restoreGrowth(value, id) {
+  const level = Number.isSafeInteger(value?.level) ? Math.max(1, Math.min(99, value.level)) : 1;
+  const storedXp = Number.isSafeInteger(value?.xp) ? Math.max(0, Math.min(1000000, value.xp)) : 0;
+  const oldThreshold = 240 + (level - 1) * 140 + (level - 1) ** 2 * 20;
   const bonus = Object.fromEntries(
     Object.keys(GROWTH_LABELS).map((key) => [
       key,
@@ -55,15 +59,16 @@ export function restoreGrowth(value, id) {
     ]),
   );
   return {
-    level: Number.isSafeInteger(value?.level) ? Math.max(1, Math.min(99, value.level)) : 1,
-    xp: Number.isSafeInteger(value?.xp) ? Math.max(0, Math.min(1000000, value.xp)) : 0,
+    level,
+    revision: 2,
+    xp: value?.revision === 2 ? storedXp : Math.floor((storedXp / oldThreshold) * xpToNext(level)),
     rarity: RARITIES[value?.rarity] ? value.rarity : rarityFor(id),
     seed: Number.isInteger(value?.seed) ? value.seed >>> 0 : seedOf(id),
     bonus,
   };
 }
 export function xpToNext(level) {
-  return 240 + (level - 1) * 140 + (level - 1) ** 2 * 20;
+  return 180 + (level - 1) * 45;
 }
 /** Replay stable per-skill resource choices so saving and previewing never reroll costs. */
 export function grownSkillCosts(skill, reductions, memberId) {
@@ -80,17 +85,25 @@ export function grownCombat(member) {
   const growth = restoreGrowth(member.growth, member.id);
   const combat = structuredClone(member.combat);
   combat.level = growth.level;
-  const b = growth.bonus;
-  combat.hp += b.hp;
-  combat.mp += b.mp;
-  combat.attack += b.attack;
-  combat.limit = Math.min(2, combat.limit + b.limit);
-  for (const skill of combat.skills) {
+  const scale = combatScale(growth.level);
+  combat.hp = Math.round(combat.hp * scale);
+  combat.mp = Math.round(combat.mp * Math.sqrt(scale));
+  combat.attack = Math.round(combat.attack * scale);
+  combat.limit = Math.min(2, combat.limit + growth.bonus.limit);
+  for (const skill of [...combat.skills, combat.entrySkill].filter(Boolean)) {
     if (skill.passive) continue;
-    const costs = grownSkillCosts(skill, b.manaCost, member.id);
-    skill.mp = costs.mp;
-    if (skill.hp) skill.hp = costs.hp;
-    for (const effect of skill.effects) if (effect.type === 'damage') effect.value += b.skillDamage;
+    const costs = grownSkillCosts(skill, growth.bonus.manaCost, member.id);
+    if (skill.mp) skill.mp = costs.mp;
+    if (skill.hp) skill.hp = Math.round(costs.hp * scale);
+    skill.effects = scaleMoveEffects(skill.effects, scale).map((effect) =>
+      ['heal', 'selfHeal', 'shield', 'selfShield'].includes(effect.type) && !effect.maxHpPercent
+        ? {
+            ...effect,
+            value: Math.round(effect.value * scale),
+            ...(effect.perMark ? { perMark: Math.round(effect.perMark * scale) } : {}),
+          }
+        : effect,
+    );
     skill.text = finalSkillText(skill, combat.mechanicMark?.name);
   }
   return combat;
@@ -100,31 +113,16 @@ export function gainExperience(member, amount) {
   const levels = [];
   const before = { level: growth.level, xp: growth.xp };
   growth.xp += amount;
-  function random() {
-    growth.seed = (Math.imul(growth.seed, 1664525) + 1013904223) >>> 0;
-    return growth.seed / 4294967296;
-  }
   while (growth.level < 99 && growth.xp >= xpToNext(growth.level)) {
+    const prior = grownCombat({ ...member, growth });
     growth.xp -= xpToNext(growth.level);
     growth.level++;
-    const gains = {};
-    const points = 1 + Math.floor(random() * 3);
-    for (let point = 0; point < points; point++) {
-      const choices = Object.entries(RARITIES[growth.rarity].rates).filter(([key]) => {
-        if (key === 'limit') return member.combat.limit + growth.bonus.limit < 2;
-        if (key === 'manaCost')
-          return member.combat.skills.some((skill) => {
-            if (skill.passive) return false;
-            const costs = grownSkillCosts(skill, growth.bonus.manaCost, member.id);
-            return costs.hp > 3 || costs.mp > 3;
-          });
-        return true;
-      });
-      let roll = random() * choices.reduce((sum, [, weight]) => sum + weight, 0);
-      const key = choices.find(([, weight]) => (roll -= weight) < 0)?.[0] || 'hp';
-      growth.bonus[key]++;
-      gains[key] = (gains[key] || 0) + 1;
-    }
+    const next = grownCombat({ ...member, growth });
+    const gains = Object.fromEntries(
+      ['hp', 'mp', 'attack']
+        .filter((key) => next[key] > prior[key])
+        .map((key) => [key, next[key] - prior[key]]),
+    );
     levels.push({ level: growth.level, gains });
   }
   if (growth.level === 99) growth.xp = 0;
@@ -149,7 +147,7 @@ export function claimKillExperience(library, expedition, state, result) {
     if (library.experienceClaims.includes(claim)) continue;
     library.experienceClaims.push(claim);
     const boss = expedition.boss === dead.id;
-    const amount = boss ? 60 : 12;
+    const amount = Math.round((boss ? 60 : 12) * (1 + ((state.level || 1) - 1) / 4));
     for (const id of expedition.partyIds || library.party.filter(Boolean)) {
       const member = library.characters.find((m) => m.id === id);
       if (member) gains.push(gainExperience(member, amount));
@@ -166,7 +164,9 @@ export function claimCompletionExperience(library, expedition) {
   return (expedition.partyIds || library.party.filter(Boolean))
     .map((id) => library.characters.find((m) => m.id === id))
     .filter(Boolean)
-    .map((member) => gainExperience(member, 40));
+    .map((member) =>
+      gainExperience(member, Math.round(40 * (1 + ((expedition.carried?.level || 1) - 1) / 4))),
+    );
 }
 export function generationNumbers(input) {
   const plan = characterGenerationPlan(input);
@@ -180,7 +180,7 @@ export function generationNumbers(input) {
     mp: plan.profiles.balanced.sp,
     attack: plan.fixed.attack,
     limit: plan.fixed.limit,
-    growthRates: RARITIES[rarity].rates,
+    growth: '生命、普攻和技能威力按统一等级曲线成长，法力按较缓的独立曲线成长。',
     guidance:
       plan.guidance +
       '所有参考均为1级无装备基础值，不含升级、装备、敏捷或结合。初始等级1，成长由代码处理。',

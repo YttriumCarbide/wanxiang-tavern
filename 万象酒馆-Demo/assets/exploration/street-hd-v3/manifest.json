@@ -1,0 +1,54 @@
+{
+  "generator": "image_gen built-in",
+  "prompts": "assets/exploration/street-hd-v3/prompts.md",
+  "reference": "assets/exploration/street-illustrated/connected-v1.png",
+  "assets": [
+    {
+      "file": "assets/exploration/street-hd-v3/tile-0.png",
+      "source": "C:/Users/Lenovo/.codex/generated_images/01a178f0-bd77-7b10-9f98-ca688a68afab/exec-290530d4-6de4-4e89-842a-9f5c9fc0431d.png",
+      "width": 1254,
+      "height": 1254,
+      "sha256": "d35b5d5ed17f465d692eefb633e7cf9e7872bd78b3265154e9d4ef6faabddc8c"
+    },
+    {
+      "file": "assets/exploration/street-hd-v3/tile-1.png",
+      "source": "C:/Users/Lenovo/.codex/generated_images/01a178f0-bd77-7b10-9f98-ca688a68afab/exec-7459c1de-d862-48b6-a47a-eefc2d05f7f9.png",
+      "width": 1254,
+      "height": 1254,
+      "sha256": "eb0a9b29d15bbed6ccdd947a09c73174c0c33d9ef84de1e89f95e122855c5da5"
+    },
+    {
+      "file": "assets/exploration/street-hd-v3/tile-2.png",
+      "source": "C:/Users/Lenovo/.codex/generated_images/01a178f0-bd77-7b10-9f98-ca688a68afab/exec-1fdb4fe3-d137-431f-8a03-478f658915b5.png",
+      "width": 1254,
+      "height": 1254,
+      "sha256": "4bc8f090d3ee897a2aa51ec29c8a039bdfb29e18d24e4b93a45cca60a36756c4"
+    },
+    {
+      "file": "assets/exploration/street-hd-v3/tile-3.png",
+      "source": "C:/Users/Lenovo/.codex/generated_images/01a178f0-bd77-7b10-9f98-ca688a68afab/exec-6c68722d-dab8-4ae3-8c2c-f4485f33f9eb.png",
+      "width": 1254,
+      "height": 1254,
+      "sha256": "9afc5596ae43939ad5f2f7c5390b9f721d7936965c07e27b1531500e8274a76f"
+    }
+  ],
+  "composition": {
+    "generator": "image_gen built-in",
+    "composition": "Native tiles at fixed source-crop positions; minimum-error seam and 20px feather. No resizing or camera recomposition.",
+    "offsets": [
+      0,
+      835,
+      1673,
+      2508
+    ],
+    "width": 3762,
+    "height": 1254,
+    "sha256": "317b040a8b2408ed09bafdadfe9aa5ebfb9449cc27d444a0f0c78ba10075e583",
+    "tiles": [
+      "tile-0.png",
+      "tile-1.png",
+      "tile-2.png",
+      "tile-3.png"
+    ]
+  }
+}

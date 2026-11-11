@@ -1,5 +1,6 @@
 import { claimKillExperience } from '../growth.js';
 import { claimCooperationAffection } from '../cooperation.js';
+import { claimEnemyDrops } from '../enemy-drops.js';
 import { advance } from '../engine.js';
 import { playbackBeats, PLAYBACK_BEAT_MS } from '../playback-timing.js';
 import { query as $, sleep } from './dom.js';
@@ -109,6 +110,17 @@ export function createPlayback(context) {
         ...gains.filter((gain) => gain.levels.length),
       );
       session.ai.library.inventory.items = structuredClone(result.final.items);
+      const drops = claimEnemyDrops(
+        session.ai.library,
+        session.journey.expedition,
+        session.battle.state,
+        result,
+      );
+      if (drops.length) {
+        const receipt = `击杀掉落 · ${drops.join('、')}`;
+        session.battle.history.push(receipt);
+        context.shell.toast(receipt);
+      }
       context.companionEvents?.accepted(session.battle.state, result);
       const cooperation = claimCooperationAffection(
         session.ai.library,
@@ -119,6 +131,8 @@ export function createPlayback(context) {
         context.shell.toast(`合作击破 · ${cooperation.name}好感 +${cooperation.delta}`);
       context.emblems?.accepted(result);
       session.battle.state = advance(result);
+      if (drops.length)
+        session.battle.state.items = structuredClone(session.ai.library.inventory.items);
       context.generation.save();
       session.battle.plan = [];
       context.selection.clearSelection(true);

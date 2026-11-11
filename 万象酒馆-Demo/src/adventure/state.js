@@ -1,11 +1,18 @@
 import { bossLines, linesProse, applyBossPatches } from './patches.js';
 import { claimBattleRewards } from '../rewards.js';
+import { eventReward, rollEventReward } from './rewards.js';
 
-export function createAdventureState(book) {
+export function createAdventureState(book, episodeId = book.runId || book.id) {
   const lines = bossLines(book.story[4]);
   return {
     version: 1,
-    event: { choiceId: null, supplement: '', resolved: false, rewardClaimed: false },
+    event: {
+      choiceId: null,
+      supplement: '',
+      resolved: false,
+      rewardClaimed: false,
+      reward: rollEventReward(`${episodeId}:event-2`),
+    },
     goals: Object.fromEntries(
       book.adventure.quest.goals.map((goal) => [goal.id, { status: 'pending', evidence: '' }]),
     ),
@@ -81,7 +88,7 @@ export function acceptAdventureReply(library, expedition, book, turn, reply, res
     const choice = book.adventure.event.choices.find((item) => item.id === state.event.choiceId);
     if (!choice || turn.choice?.id !== choice.id) throw Error('事件选项已变化');
     if (!state.event.resolved) {
-      claimBattleRewards(library, `${expedition.id}:event-2`, choice.reward);
+      claimBattleRewards(library, `${expedition.id}:event-2`, eventReward(expedition));
       state.event.rewardClaimed = true;
       state.event.resolved = true;
     }
@@ -91,7 +98,7 @@ export function acceptAdventureReply(library, expedition, book, turn, reply, res
       if (state.goals[task.id].status === 'completed') continue;
       state.goals[task.id] = { status: task.status, evidence: task.evidence };
     }
-    if (adventureReady(book.adventure, state)) {
+    if (adventureReady(book.adventure, state) && result.patches?.length) {
       warnings.push(
         ...applyBossPatches(state.boss, result.patches ?? [], result.revision, responseId),
       );
@@ -127,8 +134,12 @@ export function adventureTurnContext(expedition, book, playerText = '') {
     episodeId: expedition.id,
     node: expedition.index,
     playerText,
-    event,
-    choice: choice || null,
+    event: {
+      title: event.title,
+      description: event.description,
+      choices: event.choices.map(({ id, label, detail }) => ({ id, label, detail })),
+    },
+    choice: choice ? { id: choice.id, label: choice.label, detail: choice.detail } : null,
     goals: book.adventure.quest.goals.map((goal) => ({ ...goal, ...state.goals[goal.id] })),
     scene: book.adventure.quest,
     boss: { revision: state.boss.revision, lines: structuredClone(state.boss.lines) },

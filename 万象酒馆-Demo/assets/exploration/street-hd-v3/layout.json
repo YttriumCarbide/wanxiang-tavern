@@ -1,0 +1,10 @@
+{
+  "source": "../street-illustrated/connected-v1.png",
+  "sourceSize": [2172, 724],
+  "tiles": [
+    { "file": "tile-0.png", "sourceX": 0, "offset": 0 },
+    { "file": "tile-1.png", "sourceX": 482, "offset": 835 },
+    { "file": "tile-2.png", "sourceX": 966, "offset": 1673 },
+    { "file": "tile-3.png", "sourceX": 1448, "offset": 2508 }
+  ]
+}

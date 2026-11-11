@@ -19,7 +19,7 @@ import {
 import { applyBossPatches, linesProse } from '../src/adventure/patches.js';
 import { newLibrary, restoreLibrary, compileRoster } from '../src/ai/library.js';
 import { newExpedition, beginEncounter, completeAdventureNode } from '../src/expedition.js';
-import { pendingDungeonMemories, pendingMemories, applyMemorySummaries } from '../src/memory.js';
+import { pendingAdventureMemories, pendingMemories, applyMemorySummaries } from '../src/memory.js';
 import { adventureSnapshot, validAdventureSnapshot } from '../src/adventure/snapshot.js';
 import { createCheckpoint } from '../src/storage/checkpoint.js';
 import { chatResponse } from '../src/ai/pipeline/chat-response.js';
@@ -34,6 +34,43 @@ import { readGenerationResult } from '../server/generation-result.mjs';
 import { RP_CHAPTERS, rpChapterDirection } from '../src/content/rp-outlines.js';
 import { ALL_OFFICIAL_DUNGEONS } from '../src/content/official-dungeons.js';
 import { createAiPipeline } from '../src/ai/pipeline/runtime.js';
+import { EVENT_REWARD_POOL, rollEventReward, validEventReward } from '../src/adventure/rewards.js';
+import {
+  applyFutureDialogue,
+  dialogueTargets,
+  dungeonDialogueScenes,
+} from '../src/app/future-dialogue.js';
+
+test('quick chat applies later scenes and keeps the body when dialogue data is malformed', async () => {
+  const book = { story: ['【旁白】当前剧情。', '【旁白】后续甲。', '【旁白】后续乙。'] };
+  const scenes = dungeonDialogueScenes(book, {}, 0);
+  const dialogueScenes = dialogueTargets(scenes);
+  const patches = dialogueScenes.map(({ id, revision, lines }) => ({
+    id,
+    revision,
+    patches: [{ op: 'replace', id: lines[0].id, speaker: '旁白', text: '承接本轮对话。' }],
+  }));
+  const regex = async (_scripts, tasks) => tasks.map(({ text }) => ({ text }));
+  const body = '<wanxiang_output>本轮回复。</wanxiang_output>';
+  const result = await chatResponse(
+    'quick-chat',
+    body + '<wanxiang_dialogue>' + JSON.stringify(patches) + '</wanxiang_dialogue>',
+    [],
+    { dialogueScenes },
+    regex,
+  );
+  applyFutureDialogue(scenes, result.dialogue, 'turn');
+  assert.deepEqual(book.story, [
+    '【旁白】当前剧情。',
+    '【旁白】承接本轮对话。',
+    '【旁白】承接本轮对话。',
+  ]);
+  for (const appendix of ['', '<wanxiang_dialogue>[{']) {
+    const reply = await chatResponse('quick-chat', body + appendix, [], { dialogueScenes }, regex);
+    assert.equal(reply.content, '本轮回复。');
+    assert.equal(reply.dialogue, undefined);
+  }
+});
 
 test('RP raw replies retain protocol tags for review while redacting the connection secret', async () => {
   const f = fixture();
@@ -70,7 +107,7 @@ function fixture() {
   const library = newLibrary();
   library.scripts = [book];
   const expedition = newExpedition();
-  expedition.adventure = createAdventureState(book);
+  expedition.adventure = createAdventureState(book, expedition.id);
   expedition.index = 1;
   return { raw, book, library, expedition, state: expedition.adventure };
 }
@@ -79,6 +116,8 @@ test('v5 keeps prose and metadata, assigns stable IDs and preserves original thr
   const f = fixture();
   const raw = structuredClone(f.raw);
   delete raw.map;
+  checkOutputSchema(raw, scriptInputSchema(), 'script');
+  delete raw.data.tags;
   checkOutputSchema(raw, scriptOutputSchema(), 'script');
   checkOutputSchema(raw, scriptInputSchema(), 'script');
   assert.equal(
@@ -99,8 +138,31 @@ test('v5 keeps prose and metadata, assigns stable IDs and preserves original thr
   });
   assert.throws(() => normalizeScript(invalid, 'x'), /至少有一个/);
   invalid.data.adventure.quest.goals[0].required = true;
-  invalid.data.adventure.event.choices[0].reward.gold = 21;
-  assert.throws(() => normalizeAdventureDefinition(invalid.data.adventure), /金币/);
+  invalid.data.adventure.event.choices[0].reward = { gold: 999999, items: [] };
+  assert(
+    !('reward' in normalizeAdventureDefinition(invalid.data.adventure).event.choices[0]),
+    'legacy model-authored rewards are discarded',
+  );
+});
+
+test('event rewards cover the code-owned supply pool and remain fixed across restore and option changes', () => {
+  const seen = new Set();
+  for (let seed = 0; seed < 5000; seed++) {
+    const reward = rollEventReward(`run-${seed}:event-2`);
+    assert(validEventReward(reward));
+    assert.deepEqual(reward, rollEventReward(`run-${seed}:event-2`));
+    seen.add(reward.poolId);
+  }
+  assert.deepEqual([...seen].sort(), EVENT_REWARD_POOL.map((item) => item.id).sort());
+  const f = fixture();
+  const original = structuredClone(f.state.event.reward);
+  confirmEventChoice(f.book.adventure, f.state, 'choice-2');
+  assert.deepEqual(f.state.event.reward, original);
+  const turn = adventureTurnContext(f.expedition, f.book);
+  assert(!JSON.stringify(turn).includes('poolId'));
+  assert(!JSON.stringify(turn.event).includes('reward'));
+  const restored = structuredClone(f.state);
+  assert.deepEqual(restored.event.reward, original);
 });
 
 test('a locked event choice, response and reward are committed once, subsequent ordinary RP grants nothing', () => {
@@ -110,6 +172,7 @@ test('a locked event choice, response and reward are committed once, subsequent 
   assert.throws(() => confirmEventChoice(f.book.adventure, f.state, 'choice-2'), /不可更改/);
   const turn = adventureTurnContext(f.expedition, f.book, '补充');
   const gold = f.library.inventory.gold;
+  const reward = structuredClone(f.state.event.reward);
   acceptAdventureReply(
     f.library,
     f.expedition,
@@ -118,7 +181,11 @@ test('a locked event choice, response and reward are committed once, subsequent 
     { content: '【旁白】大家收好物资。' },
     'r1',
   );
-  assert.equal(f.library.inventory.gold, gold + 20);
+  assert.equal(f.library.inventory.gold, gold + reward.gold);
+  assert.equal(f.library.inventory.ether, reward.ether);
+  for (const [id, count] of Object.entries(reward.items))
+    assert.equal(f.library.inventory.items[id], count);
+  const inventory = structuredClone(f.library.inventory);
   assert(
     acceptAdventureReply(f.library, f.expedition, f.book, turn, { content: '重复' }, 'r1')
       .duplicate,
@@ -133,7 +200,7 @@ test('a locked event choice, response and reward are committed once, subsequent 
     { content: '【旁白】只聊了几句。' },
     'r2',
   );
-  assert.equal(f.library.inventory.gold, gold + 20);
+  assert.deepEqual(f.library.inventory, inventory);
   assert.equal(f.state.event.choiceId, 'choice-1');
   completeAdventureNode(f.expedition, f.book);
   assert.equal(f.expedition.index, 2);
@@ -338,9 +405,9 @@ test('three archived actual records produce independent atomic summaries; unplay
       complete: index < 3,
       lines: [{ speaker: '旁白', text: `真实经历${index}` }],
     });
-  assert.equal(pendingDungeonMemories(library).length, 3);
+  assert.equal(pendingAdventureMemories(library).length, 3);
   assert.equal(pendingMemories(library).length, 0);
-  const batch = pendingDungeonMemories(library).slice(0, 3);
+  const batch = pendingAdventureMemories(library).slice(0, 3);
   assert.throws(
     () => applyMemorySummaries(library, [], batch, [{ id: batch[0].id, summary: '遗漏' }]),
     /数量/,
@@ -352,7 +419,7 @@ test('three archived actual records produce independent atomic summaries; unplay
     batch,
     batch.map((item, index) => ({ id: item.id, summary: `这仅是第${index}次经历` })),
   );
-  assert.equal(pendingDungeonMemories(library).length, 0);
+  assert.equal(pendingAdventureMemories(library).length, 0);
   assert.deepEqual(
     library.history.slice(0, 3).map((record) => record.summary.text),
     ['这仅是第0次经历', '这仅是第1次经历', '这仅是第2次经历'],
@@ -413,7 +480,8 @@ test('RP protocol separates data from prose and rejects malformed task data with
     /任务数据无效/,
   );
   const rules = adventureChatRules(turn);
-  assert(rules.includes('未来') && rules.includes('不改') && rules.includes('patches'));
+  assert(rules.includes('过去') || rules.includes('已发生'));
+  assert(rules.includes('patches'));
   assert(!adventureChatRules({ mode: 'event' }).includes('wanxiang_adventure'));
 });
 

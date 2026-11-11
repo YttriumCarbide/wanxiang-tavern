@@ -187,7 +187,7 @@ test('both actual generation routes use tagged JSON, local validation and matchi
       const generated = await post(`generate/${kind}`, input);
       assert.equal(generated.status, 200, JSON.stringify(generated.body));
       assert.equal(generated.body.diagnostic.rawText, output);
-      assert.equal(generated.body.diagnostic.envelope.tag, 'wanxiang_json');
+      assert.equal(generated.body.diagnostic.envelope.tag, 'wanxiang_output');
       if (kind === 'script') {
         assert(generated.body.diagnostic.prose.characters < 1200);
         const validated = await post('validate/script', { content: JSON.stringify(script), input });
@@ -241,6 +241,15 @@ test('both actual generation routes use tagged JSON, local validation and matchi
     server.closeAllConnections();
     await new Promise((resolve) => server.close(resolve));
   }
+});
+
+test('legacy JSON tag remains readable but mixed old and new envelopes are rejected', () => {
+  const json = characterResponse();
+  const legacy = `<wanxiang_json>${json}</wanxiang_json>`;
+  const extracted = extractGenerationEnvelope('character', legacy);
+  assert.equal(extracted.candidateText, json);
+  assert.equal(extracted.envelope.tag, 'wanxiang_json');
+  assert.throws(() => extractGenerationEnvelope('character', legacy + wrap(json)));
 });
 
 test('generation v4 removes the old complete example, preserving custom protocol text and injection settings', async () => {
@@ -303,7 +312,7 @@ test('generation v4 removes the old complete example, preserving custom protocol
   );
   assert.equal(
     JSON.parse(await readFile(path.join(directory, 'builtin-content.json'), 'utf8')).version,
-    46,
+    60,
   );
 });
 

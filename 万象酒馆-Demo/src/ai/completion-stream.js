@@ -8,6 +8,7 @@ export async function readCompletionStream(
   onDelta = () => {},
   outputTool = null,
   outputProcessing = null,
+  onValue,
 ) {
   const started = performance.now();
   const decoder = new TextDecoder();
@@ -39,6 +40,7 @@ export async function readCompletionStream(
       return;
     }
     const value = JSON.parse(data);
+    onValue?.(value);
     if (value.error) {
       const detail =
         typeof value.error === 'string'
@@ -53,7 +55,11 @@ export async function readCompletionStream(
     if (value.usage) usage = value.usage;
     const choice = value.choices?.[0];
     if (choice?.finish_reason) finish = choice.finish_reason;
-    if (choice?.delta?.refusal) throw Error('模型拒绝了这次生成');
+    if (choice?.delta?.refusal || finish === 'content_filter') {
+      const failure = Error('模型拒绝了这次生成');
+      failure.stage = 'refusal';
+      throw failure;
+    }
     const delta = choice?.delta?.content;
     if (typeof delta === 'string') {
       content += delta;
@@ -84,7 +90,12 @@ export async function readCompletionStream(
     if (!ended && !finish && buffer.trim()) event(buffer.replaceAll('\r', ''));
     if (finish === 'length') throw Error('生成被长度上限截断，请提高回复上限后重试');
     if (tool) content = tool.finish();
-    if (!content.trim()) throw Error('模型没有返回正文');
+    if (!content.trim()) {
+      const failure = Error('模型没有返回正文');
+      failure.stage = 'empty';
+      failure.retryableEmpty = !tool && !content.length && (ended || finish === 'stop');
+      throw failure;
+    }
     const rawContent = content;
     if (tool && emittedRaw !== content) {
       // Multiple upstream channels can disagree. The preset selects one reply, never concatenates them.

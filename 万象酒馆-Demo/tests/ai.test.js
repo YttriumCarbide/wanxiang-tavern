@@ -90,10 +90,10 @@ test('script context receives green-light settings and confirmed history without
   assert.equal(context.characters.greenLight.length, 6);
   assert(context.characters.greenLight.every((entry) => !entry.data && !entry.combat && !entry.hp));
   assert.equal(context.encounters.length, 5);
-  assert(messages.at(-1).content.includes('SCRIPT v4'));
-  assert(messages.at(-1).content.includes('story'));
+  assert(messages.some((message) => message.content.includes('SCRIPT v4')));
+  assert(messages.some((message) => message.content.includes('story')));
   assert(messages.some((message) => message.role === 'user'));
-  assert(messages.at(-1).content.includes('JSON Schema'));
+  assert(messages.some((message) => message.content.includes('JSON Schema')));
   assert.equal(
     normalizeScript(scriptFixture(library.party), 'script-test', library.party).scenes.length,
     5,

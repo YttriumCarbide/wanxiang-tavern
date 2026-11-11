@@ -4,6 +4,7 @@ import { FROST_ROUTES } from '../content/frost-encounters.js';
 import { FROST_ENEMIES, FROST_BOSSES } from '../content/frost-adversaries.js';
 import { OFFICIAL_VISITORS } from '../content/official-visitors.js';
 import { officialCharacter } from './library.js';
+import { monsterNarrativeText } from './monster-narrative.js';
 
 /** Incremental official content: never replace a player's edited chapter or character entry. */
 export function upgradeFrostWorldbook(source) {
@@ -64,14 +65,14 @@ export function upgradeFrostWorldbook(source) {
     add(
       { monsterId: enemy.id },
       {
-        comment: '矿窟怪物图鉴：' + enemy.name,
+        comment: '怪物图鉴：' + enemy.name,
         ignoreBudget: true,
         key: [enemy.id, enemy.name],
-        content: `名称：${enemy.name}\n设定：${enemy.description}\n基础hp：${enemy.hp}；速度：${enemy.speed}\n${enemy.intents.map((move) => move.name + '：' + move.text).join('\n')}${enemy.enragedIntents ? '\n紧急肃清：hp低于60%或两门机炮均被击败时触发；进入后五回合循环，每回合额外5护盾。\n' + enemy.enragedIntents.map((move) => move.name + '：' + move.text).join('\n') : ''}\n只按真实战斗事件描写，不预写胜负。`,
+        content: `名称：${enemy.name}\n设定：${monsterNarrativeText(enemy.description)}`,
         matchScenario: true,
         preventRecursion: true,
         order: 210,
-        apiTargets: ['script', 'map'],
+        apiTargets: ['script', 'chat'],
       },
     );
   for (const id of Object.keys(OFFICIAL_VISITORS)) {

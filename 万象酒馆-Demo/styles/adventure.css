@@ -200,11 +200,13 @@ body.in-adventure.gal-playing :is(#ai-dialog, #generation-diagnostics)[open] {
   line-height: 1.6;
   color: #c4b7a8;
 }
-.rp-options em {
+.rp-reward-receipt {
   display: block;
   color: #d3ad76;
-  font: 11px sans-serif;
-  margin-top: 9px;
+  font: 13px / 1.8 sans-serif;
+  margin: 18px 0;
+  padding: 8px 0 8px 14px;
+  border-left: 2px solid #d3ad7655;
 }
 .rp-form {
   margin-top: 20px;

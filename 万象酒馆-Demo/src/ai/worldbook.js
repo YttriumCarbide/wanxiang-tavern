@@ -88,31 +88,72 @@ function strings(value, label) {
 export function newWorldEntry(uid = 0) {
   return { uid, ...structuredClone(WORLD_ENTRY_DEFAULTS), displayIndex: uid };
 }
-export function characterWorldEntry(character, uid = 0) {
-  const name = character?.setting?.name || character?.combat?.name || '未知角色';
-  const content = character?.setting?.worldbook || '';
+export function characterEntryCategory(entry) {
+  const kind = entry.extensions?.wanxiang?.characterCategory;
+  if (['protagonist', 'ai-character', 'character'].includes(kind)) return kind;
+  if (/^主角设定[：:]/u.test(entry.comment)) return 'protagonist';
+  if (/^ai角色条目[：:]/iu.test(entry.comment)) return 'ai-character';
+  if (
+    entry.extensions?.wanxiang?.characterId ||
+    /^(?:人物详情|角色详情|角色条目)[：:]/u.test(entry.comment)
+  )
+    return 'character';
+  return null;
+}
+
+export function classifyCharacterEntry(entry, character, protagonistId = null) {
+  const category =
+    character.id === protagonistId || character.id === 'character-qingyuan'
+      ? 'protagonist'
+      : character.source === 'generated' || character.id?.startsWith('character-')
+        ? 'ai-character'
+        : 'character';
+  const label = { protagonist: '主角设定', 'ai-character': 'ai角色条目', character: '角色条目' }[
+    category
+  ];
   return {
-    ...newWorldEntry(uid),
-    comment: `人物详情：${name}`,
-    key: [name],
-    keysecondary: [],
-    selectiveLogic: 0,
-    constant: false,
-    position: 1,
-    depth: 0,
-    order: 100,
-    probability: 100,
-    content,
-    excludeRecursion: true,
-    preventRecursion: true,
-    disable: false,
-    apiTargets: ['character', 'script'],
+    ...entry,
+    comment: `${label}：${character.setting?.name || character.combat?.name || '未知角色'}`,
     extensions: {
+      ...entry.extensions,
       wanxiang: {
-        characterId: character?.id || '',
+        ...entry.extensions?.wanxiang,
+        characterId: character.id || '',
+        characterCategory: category,
       },
     },
   };
+}
+
+export function characterWorldEntry(character, uid = 0, protagonistId = null) {
+  const name = character?.setting?.name || character?.combat?.name || '未知角色';
+  const content = character?.setting?.worldbook || '';
+  return classifyCharacterEntry(
+    {
+      ...newWorldEntry(uid),
+      comment: `人物详情：${name}`,
+      key: [name],
+      keysecondary: [],
+      selectiveLogic: 0,
+      constant: false,
+      position: 1,
+      depth: 0,
+      order: 100,
+      probability: 100,
+      content,
+      excludeRecursion: true,
+      preventRecursion: true,
+      disable: false,
+      apiTargets: ['script', 'chat'],
+      extensions: {
+        wanxiang: {
+          characterId: character?.id || '',
+        },
+      },
+    },
+    character,
+    protagonistId,
+  );
 }
 function convertEmbedded(raw) {
   const result = {};
@@ -167,17 +208,20 @@ export function normalizeWorldbook(raw, fallbackName = '未命名世界书') {
     if (!Number.isInteger(uid) || uid < 0 || uid > 100000000 || Object.hasOwn(entries, uid))
       throw Error('条目UID无效或重复');
     const entry = { ...newWorldEntry(uid), ...structuredClone(item), uid };
-    entry.apiTargets = item.apiTargets ??
+    const rawTargets = item.apiTargets ??
       item.extensions?.wanxiang?.apiTargets ?? ['character', 'script'];
+    entry.apiTargets = Array.isArray(rawTargets)
+      ? [...new Set(rawTargets.map((kind) => (kind === 'quick-chat' ? 'chat' : kind)))]
+      : rawTargets;
     if (
       !Array.isArray(entry.apiTargets) ||
       new Set(entry.apiTargets).size !== entry.apiTargets.length ||
       entry.apiTargets.some(
-        (kind) => !['character', 'script', 'chat', 'quick-chat', 'map', 'creation'].includes(kind),
+        (kind) => !['character', 'script', 'chat', 'summary', 'creation', 'map'].includes(kind),
       )
     )
       throw Error(
-        `条目${uid}.apiTargets只能包含character/script/chat/quick-chat，空数组表示都不发`,
+        `条目${uid}.apiTargets只能包含character/script/chat/summary/creation/map，空数组表示都不发`,
       );
     entry.extensions = {
       ...entry.extensions,

@@ -2,12 +2,16 @@
   width: min(880px, calc(100vw - 40px));
   height: min(720px, calc(100dvh - 48px));
   margin: auto;
-  padding: 26px;
-  color: #ece2cd;
-  border: 1px solid #bea56b66;
+  padding: 26px 30px;
+  color: #f2eee3;
+  border: 1px solid rgba(226, 186, 111, 0.45);
   border-radius: 18px;
-  background: linear-gradient(135deg, #22372e, #10231f 75%);
-  box-shadow: 0 24px 100px #0009;
+  background: radial-gradient(ellipse at 50% 0%, rgba(36, 68, 60, 0.7), transparent 75%), #0c1a18;
+  box-shadow:
+    0 28px 90px rgba(0, 0, 0, 0.85),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
 }
 #memory-dialog[open] {
   display: flex;
@@ -15,8 +19,8 @@
   gap: 14px;
 }
 #memory-dialog::backdrop {
-  background: #050e0bc9;
-  backdrop-filter: blur(5px);
+  background: rgba(4, 9, 11, 0.8);
+  backdrop-filter: blur(8px);
 }
 #memory-dialog header,
 #memory-dialog footer {
@@ -145,16 +149,20 @@
   width: min(860px, calc(100vw - 36px));
   height: min(560px, calc(100dvh - 36px));
   margin: auto;
-  padding: 24px;
-  color: #ece2cd;
-  border: 1px solid #ac936452;
+  padding: 26px;
+  color: #f2eee3;
+  border: 1px solid rgba(226, 186, 111, 0.45);
   border-radius: 16px;
-  background: linear-gradient(135deg, #25362e, #10231e);
-  box-shadow: 0 24px 100px #0009;
+  background: radial-gradient(ellipse at 50% 0%, rgba(36, 68, 60, 0.7), transparent 75%), #0c1a18;
+  box-shadow:
+    0 28px 90px rgba(0, 0, 0, 0.85),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
 }
 #bookshelf-dialog::backdrop {
-  background: #08110dd6;
-  backdrop-filter: blur(4px);
+  background: rgba(4, 9, 11, 0.8);
+  backdrop-filter: blur(8px);
 }
 #bookshelf-dialog[open] {
   display: flex;

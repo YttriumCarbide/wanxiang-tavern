@@ -32,6 +32,7 @@ export const TRIGGER_TARGETS = Object.freeze({
   lowestEnemy: '生命最低敌人',
 });
 export const POSITIVE_BUFFS = Object.freeze([
+  'flying',
   'haste',
   'strength',
   'guard',
@@ -41,6 +42,7 @@ export const POSITIVE_BUFFS = Object.freeze([
   'overload',
 ]);
 export const NEGATIVE_BUFFS = Object.freeze([
+  'blind',
   'bind',
   'weak',
   'vulnerable',

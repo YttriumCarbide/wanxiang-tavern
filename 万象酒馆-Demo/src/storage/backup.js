@@ -1,6 +1,7 @@
 import { normalizePromptPreset } from '../ai/presets.js';
 import { normalizeWorldbook, normalizeWorldSettings } from '../ai/worldbook.js';
 import { normalizeRegexScripts } from '../ai/regex.js';
+import { decodeStorageImage, encodeStorageValue } from './value-codec.js';
 
 function withoutKeys(value) {
   const copy = structuredClone(value);
@@ -13,15 +14,8 @@ function withoutKeys(value) {
 export async function exportDatabase(database, preferences) {
   const entries = [];
   for (const [key, original] of database.entries()) {
-    let value = key === 'api.config' ? withoutKeys(original) : original;
-    if (value instanceof Blob) {
-      const bytes = new Uint8Array(await value.arrayBuffer());
-      let text = '';
-      for (let offset = 0; offset < bytes.length; offset += 8192)
-        text += String.fromCharCode(...bytes.subarray(offset, offset + 8192));
-      value = { blob: true, mime: value.type, base64: btoa(text) };
-    }
-    entries.push([key, value]);
+    const value = key === 'api.config' ? withoutKeys(original) : original;
+    entries.push([key, await encodeStorageValue(value)]);
   }
   const settings = Object.fromEntries(
     Object.keys(preferences)
@@ -53,21 +47,7 @@ export function readDatabaseBackup(raw) {
       throw Error('备份记录损坏或重复');
     const [key, value] = entry;
     seen.add(key);
-    if (key.startsWith('portrait.')) {
-      if (
-        !value?.blob ||
-        !/^image\/(png|jpeg|webp|gif|avif)$/.test(value.mime) ||
-        typeof value.base64 !== 'string' ||
-        value.base64.length > 8500000
-      )
-        throw Error('备份图片无效');
-      return [
-        key,
-        new Blob([Uint8Array.from(atob(value.base64), (character) => character.charCodeAt(0))], {
-          type: value.mime,
-        }),
-      ];
-    }
+    if (key.startsWith('portrait.')) return [key, decodeStorageImage(value)];
     if (key.startsWith('world.book.')) normalizeWorldbook(value);
     if (key === 'world.settings') normalizeWorldSettings(value);
     if (key.startsWith('prompt.')) normalizePromptPreset(value, key.slice(7));

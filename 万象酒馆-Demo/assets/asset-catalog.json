@@ -1,0 +1,1814 @@
+{
+  "version": 1,
+  "files": {
+    "assets/arcane.glb": {
+      "bytes": 5099452,
+      "hash": "956d296d54101080fe7c4acb041c250cb94cc7602958e312843e483d6550179f"
+    },
+    "assets/ares-cannon-left.glb": {
+      "bytes": 17292,
+      "hash": "06eb32803b28d274a43be33edde18583be7a51e5ee4afe48a7aa14f82585fd4f"
+    },
+    "assets/ares-cannon-right.glb": {
+      "bytes": 17300,
+      "hash": "cbd6497a794164a38a90e60e47964352b8b507b19978b3e9e99010b28a74f11d"
+    },
+    "assets/ares.glb": {
+      "bytes": 47336,
+      "hash": "a7832f1bea0feea39f11ed01242230222191cbb10cfb25a5f65d34b90d52a233"
+    },
+    "assets/bark-acolyte.glb": {
+      "bytes": 133304,
+      "hash": "f52ff594902fe70f5721d9c4015bf2a6ddd0ac6a0fe1aecdccbaef0a5e17a4c0"
+    },
+    "assets/battle.glb": {
+      "bytes": 7766124,
+      "hash": "2613492da6c09d684498ad78f8edc9c1f20863f16d9526ef96e919c81b78c2d8"
+    },
+    "assets/bog-drifter.glb": {
+      "bytes": 33196,
+      "hash": "92df23289cd9cb4d4195af9dba3445da5c10bcd3f34a5f313b94b4833241f047"
+    },
+    "assets/bog-elemental.glb": {
+      "bytes": 39324,
+      "hash": "b34d6caaaee26a51a469ee3f84b14e3162c207654b45b96a43a7486442fdac9d"
+    },
+    "assets/bog-leech.glb": {
+      "bytes": 35308,
+      "hash": "acffef0b9ce82358d28b2afb199b4a4f41be4399b8345233d3861d058372eee1"
+    },
+    "assets/boss-tide.glb": {
+      "bytes": 153364,
+      "hash": "bed5fbc059ffdfd8c674bf9404508e007805218724005d3cfd30720922136fd2"
+    },
+    "assets/cargo-crawler.glb": {
+      "bytes": 35632,
+      "hash": "fea735024f321e7ce207d83ba3cf388c26f801bb3da9b877e2c72ba5e99d97e5"
+    },
+    "assets/castle.glb": {
+      "bytes": 5694976,
+      "hash": "9fda7772f4c9cfa3f8a0ecdcfc5c42f22fd1a0b28728c2dc358cba999f4aa7af"
+    },
+    "assets/cinder-imp.glb": {
+      "bytes": 67792,
+      "hash": "47545b9934ac8e309af8af4a6d3557bbf22da90f8b7f8d4e299948a24e44bdfd"
+    },
+    "assets/cling-larva.glb": {
+      "bytes": 43688,
+      "hash": "ae9e2ef5d93de19a683e605280b2c62955f209adf4766ab2caf631a55a699874"
+    },
+    "assets/conduit-wisp.glb": {
+      "bytes": 21068,
+      "hash": "3b555f1fed2635a1a916649b793a33e93e6901c258f65db30a37f528fdb92c02"
+    },
+    "assets/corridor.glb": {
+      "bytes": 510024,
+      "hash": "aba167c6776511e1f03ad2ee7d2990cad3f3108557a09f535de67fc99b66085e"
+    },
+    "assets/crystal-beetle.glb": {
+      "bytes": 84168,
+      "hash": "8f7727e750333c10db8172639224ef227f07753ac73d6e4ee09dec75e5996b76"
+    },
+    "assets/crystal-devourer.glb": {
+      "bytes": 41836,
+      "hash": "23ceea0eb80d4998384a1bacc662d20f6b78e49a0eafde365e4dd2715cf31a5c"
+    },
+    "assets/crystal-miner.glb": {
+      "bytes": 41768,
+      "hash": "94aaa061c09c4d0aa9413ff395f7dc74e2405e1a3364fe9eda525499c5c1ecf6"
+    },
+    "assets/dining/dishes.png": {
+      "bytes": 2590931,
+      "hash": "c220a2d5ddbcb078865c95dd522e3fe09cafcef0f9341d9700cfb7d7d47d2159"
+    },
+    "assets/dining/forage.png": {
+      "bytes": 2060083,
+      "hash": "bdf601a6f26f9048b1ddf55bb7165716c185fd5d6cc0edebffe4aff0507c2968"
+    },
+    "assets/dining/ingredients-a.png": {
+      "bytes": 2262469,
+      "hash": "029635b93b80e94b3407bd9045e02eaea5cf7020ced8b20cfbdce9a6704ef1dc"
+    },
+    "assets/dining/ingredients-b.png": {
+      "bytes": 2462466,
+      "hash": "36a812ada38ff24c6b6d6f26e3f5e9a40384226129eeaeb2f864c34385a37c50"
+    },
+    "assets/drill-matriarch.glb": {
+      "bytes": 53928,
+      "hash": "caa9a3cecc68a2dc747b5df042f07ba07731d289db30a3f1c9f34995d17ab78b"
+    },
+    "assets/drill-worm.glb": {
+      "bytes": 46704,
+      "hash": "0cb791015eec2951190c5e2075d953c4def3dbaefa4f7cc2bcdead696c715196"
+    },
+    "assets/dust-hexer.glb": {
+      "bytes": 126288,
+      "hash": "162ac4e31aa877290e527c8ad9b1a98684cc4456d34e5bd0c9d576f700a3b263"
+    },
+    "assets/dynasty.glb": {
+      "bytes": 5318084,
+      "hash": "307cae14e9d46f656c4c592429deb20f88d4747fbe6be05aae797b9f8f9e8dd7"
+    },
+    "assets/enemy-humanoid-bow-female.glb": {
+      "bytes": 248428,
+      "hash": "f38702197d87e4874dbc971f2c16dbf9d92ad026b7f0de5c5a3964cdc3f90dbe"
+    },
+    "assets/enemy-humanoid-bow-male.glb": {
+      "bytes": 236888,
+      "hash": "20868783aff18d7115d21b14d9fa5af834d9108341fdc82e29f8c2fa15625fb7"
+    },
+    "assets/enemy-humanoid-staff-female.glb": {
+      "bytes": 109396,
+      "hash": "3b92898e4f44c92cb4997d3274c7f49430604f399ea2cc23e45d66c1ae9bb4dc"
+    },
+    "assets/enemy-humanoid-staff-male.glb": {
+      "bytes": 97876,
+      "hash": "4292eeb8fc0049462c20fbdeb3b36c9b4dcf8a2b50e63ce597231541b1943248"
+    },
+    "assets/enemy-humanoid-sword-female.glb": {
+      "bytes": 106688,
+      "hash": "8b1b7f30a919a36b44a12fc149c56005ba9a235029e1fdcea95f12fbf2500c5a"
+    },
+    "assets/enemy-humanoid-sword-male.glb": {
+      "bytes": 95172,
+      "hash": "112d91bf709f8a00d53051e15f84d5a63d7e2a554caf37b9e028d30fe40e9e9e"
+    },
+    "assets/events/forest-event.png": {
+      "bytes": 3182025,
+      "hash": "c1404720969356ae51396b5096e0836438235480e60ed6bdb896b32ef0815c1f"
+    },
+    "assets/events/forest-quest.png": {
+      "bytes": 3448689,
+      "hash": "b1a249a740c2f375f9bfbabea8be5bed7059ca7d5cb5dd46e8601e83502d0019"
+    },
+    "assets/events/forge-event.png": {
+      "bytes": 2443933,
+      "hash": "103c4d5911825e9dec19c8977623d0f1f46accd0dbbe3c1a3565fef51afe4523"
+    },
+    "assets/events/forge-quest.png": {
+      "bytes": 2649207,
+      "hash": "77651685a2c8b9285b1d424275154ad10068eee5790f45addfed5e0c1cd245b7"
+    },
+    "assets/events/frost-event.png": {
+      "bytes": 2985891,
+      "hash": "579f41e4a41119bb1fbd03a643e1d8e643e9af733fe051a1a81fe72d3d29d21f"
+    },
+    "assets/events/frost-quest.png": {
+      "bytes": 3177796,
+      "hash": "3717da0548e44b02b93944798c6d04531637a1959ec03cca7fa4ee0b403b4837"
+    },
+    "assets/events/ruins-event.png": {
+      "bytes": 2377122,
+      "hash": "ee4627eb2ea3b9b0a2ea370c10c5846d9f7cee6a16d45dae0d1429eaec743c01"
+    },
+    "assets/events/ruins-quest.png": {
+      "bytes": 3011719,
+      "hash": "f65c746c95d5ba5d9197302beac6c61e2c11f5653dd23b551cd2e7b871823b25"
+    },
+    "assets/events/tide-event.png": {
+      "bytes": 2893611,
+      "hash": "0018307b45fb0959d7d47fbfd4a322d6aa5bba1ba92f9a5d46d6311393b9ba73"
+    },
+    "assets/events/tide-quest.png": {
+      "bytes": 2968934,
+      "hash": "d7e140b6554ef68c8947756b3cea2d0c161debce58340a26f566da53126aa610"
+    },
+    "assets/exploration/city-center-back-v1.png": {
+      "bytes": 3504549,
+      "hash": "3403eccf9a2b83d2a10cd18ca2b72a5ab3ee516627d1befc542edcba6a0ddc44"
+    },
+    "assets/exploration/city-center-band-v1.png": {
+      "bytes": 3217588,
+      "hash": "3c35b494ca1b966ca08bc2d2fc60e61c983798267ae17fa25c05597d1c563b25"
+    },
+    "assets/exploration/city-center-front-v1.png": {
+      "bytes": 3201824,
+      "hash": "85f7f6f72e1463f2b4ea50e0275f32c9dfc7c880520dc901bd24a6ad8362e497"
+    },
+    "assets/exploration/city-center-left-v1.png": {
+      "bytes": 3259452,
+      "hash": "a6e06ff3485a53b01e8edbf2486585074ae925386808fe3c47fb47317abfe9ed"
+    },
+    "assets/exploration/city-center-panorama-v1.png": {
+      "bytes": 3025962,
+      "hash": "8adc521a7083fdeea1befdd2a4ffa46a3104b1bd4c8f12ba2f0f0c1f96c31b27"
+    },
+    "assets/exploration/city-center-right-v1.png": {
+      "bytes": 3337068,
+      "hash": "041b033cf600523ada4edd66aa9efc816218eb3357948d4c92aa25bfad1a71d2"
+    },
+    "assets/exploration/city-center-sign-v1.png": {
+      "bytes": 1661965,
+      "hash": "94a6c0afad2fff874f49238a809f60cb6156e032942649efe19a69123da144af"
+    },
+    "assets/exploration/clues/damaged-cart.png": {
+      "bytes": 2548467,
+      "hash": "8d40483d4a657fbfa9c4921473274d5d1305c4b52422fb5c271e756ebc745ddc"
+    },
+    "assets/exploration/clues/eclipse-scales.png": {
+      "bytes": 2395497,
+      "hash": "5aa99204ea9f994c759704bfadf7189d59a0572e3c1560190199886c2644a882"
+    },
+    "assets/exploration/clues/flattened-grass.png": {
+      "bytes": 3164684,
+      "hash": "2ef77d585ad5af10394e8800768efbc810857efcf53d3a843aaa16866f3671fe"
+    },
+    "assets/exploration/fansheng-atlas.svg": {
+      "bytes": 3091873,
+      "hash": "dec8c2185b22a67438a02b31bb9ebcfdb560c42fafd83da05b4a8bf507b2efe3"
+    },
+    "assets/exploration/free-scenes-hd-v2/city-center/connected.png": {
+      "bytes": 12544727,
+      "hash": "542b5c6b493e39104b9c4b074ad55b77af36126b996e8d0fcde5817915ae2fdd"
+    },
+    "assets/exploration/free-scenes-hd-v2/city-center/reference-0.png": {
+      "bytes": 1452911,
+      "hash": "c92cd6d03367decb0bf9f09e87a33e8eb5ca76ae3cd360c87a61bbe0b8051715"
+    },
+    "assets/exploration/free-scenes-hd-v2/city-center/reference-1.png": {
+      "bytes": 1414596,
+      "hash": "014bd526039778f4de133ad937bf71bdd96a37ccffda50836d7ab528a88c9792"
+    },
+    "assets/exploration/free-scenes-hd-v2/city-center/reference-2.png": {
+      "bytes": 1421850,
+      "hash": "053347d66a02697d3a929a39c34328d13c2866f06a7602ba34ad9e97e585fc31"
+    },
+    "assets/exploration/free-scenes-hd-v2/city-center/reference-3.png": {
+      "bytes": 1479314,
+      "hash": "1240b2890c14b70e90fa108285d8b2f57a75cf408c28adbc09fc48b807a6d892"
+    },
+    "assets/exploration/free-scenes-hd-v2/city-center/tile-0.png": {
+      "bytes": 2407792,
+      "hash": "0f4a68ac7470c6a639a3e45006bf3b74b8a1c39837ba5c9937a3b1a78641d026"
+    },
+    "assets/exploration/free-scenes-hd-v2/city-center/tile-1.png": {
+      "bytes": 2250834,
+      "hash": "ac1c06e3fc9b429efc1d3a060815eb9c60540b97a906b71ec207818d648d8dc3"
+    },
+    "assets/exploration/free-scenes-hd-v2/city-center/tile-2.png": {
+      "bytes": 2316599,
+      "hash": "b1145baf55988a9f8eefba3078f5cc818e0621521cc962598688a0d44d836051"
+    },
+    "assets/exploration/free-scenes-hd-v2/city-center/tile-3.png": {
+      "bytes": 2325424,
+      "hash": "c5200304b5981207046343d602d39733061ceae62909cf544e7481dbfd26ad61"
+    },
+    "assets/exploration/free-scenes-hd-v2/market/connected.png": {
+      "bytes": 12988310,
+      "hash": "e40012a4b28534716d5da01556b80880870fca9f5ab91fd293abbe48e1da51e2"
+    },
+    "assets/exploration/free-scenes-hd-v2/market/reference-0.png": {
+      "bytes": 1493989,
+      "hash": "0c28b7c4bb55039381ad1eac01fbf8ecbfad5bdae98971ba2b864e03b43f514b"
+    },
+    "assets/exploration/free-scenes-hd-v2/market/reference-1.png": {
+      "bytes": 1493338,
+      "hash": "311e76d81c9b7d33f7916c61257077098f5b7491d5b71494fdef10c769060696"
+    },
+    "assets/exploration/free-scenes-hd-v2/market/reference-2.png": {
+      "bytes": 1502380,
+      "hash": "5bad82b5efa8af4ead263495a7d4d011c7f51c3412b2489347a50deee68bcc12"
+    },
+    "assets/exploration/free-scenes-hd-v2/market/reference-3.png": {
+      "bytes": 1519223,
+      "hash": "e886c1d3a6b226b239c1e499bb1d3257c0c344c4377060f31169da243ab2b8a4"
+    },
+    "assets/exploration/free-scenes-hd-v2/market/tile-0.png": {
+      "bytes": 2456418,
+      "hash": "f3f63007035b77c33a0db420190f184a88d8dbdf1d799a2799f796cbbeafd0a0"
+    },
+    "assets/exploration/free-scenes-hd-v2/market/tile-1.png": {
+      "bytes": 2456300,
+      "hash": "e690bc0071fe0c1e73c7aa3da6fce7d009c1b125885f872e87acc5123b9aaead"
+    },
+    "assets/exploration/free-scenes-hd-v2/market/tile-2.png": {
+      "bytes": 2433413,
+      "hash": "6889bd228f626454afa7ce473a94ec71ba1a04bcfd3b1bbccd7350b1c824a037"
+    },
+    "assets/exploration/free-scenes-hd-v2/market/tile-3.png": {
+      "bytes": 2416262,
+      "hash": "dda459263a765dbda6cd7f78d005886444d15c1feef7bcd59abec84a2a9cb154"
+    },
+    "assets/exploration/free-scenes-hd-v2/outskirts/connected.png": {
+      "bytes": 12997171,
+      "hash": "342cd959188ee6e6b97700ed13421c7c41796d9465099386519a5405b7cbcf17"
+    },
+    "assets/exploration/free-scenes-hd-v2/outskirts/reference-0.png": {
+      "bytes": 1446051,
+      "hash": "446a752c74ad69e91f79e882cf21de90c0e87fec34eece31d086af857f9cbd85"
+    },
+    "assets/exploration/free-scenes-hd-v2/outskirts/reference-1.png": {
+      "bytes": 1433838,
+      "hash": "0733d464e70b2b3cff789ced88bb09d254cb2720f3c0cd2ff6e5de003e9c45bf"
+    },
+    "assets/exploration/free-scenes-hd-v2/outskirts/reference-2.png": {
+      "bytes": 1403540,
+      "hash": "7a280b4b64a77396b99fea3d87de5e74c777e79b7a752dcc9125925aeb3ec33c"
+    },
+    "assets/exploration/free-scenes-hd-v2/outskirts/reference-3.png": {
+      "bytes": 1462708,
+      "hash": "4639060584e1e1ea1cb93eb0d51e9fa199d8167e342e3cb7dbafa1ed4241ec3b"
+    },
+    "assets/exploration/free-scenes-hd-v2/outskirts/tile-0.png": {
+      "bytes": 2539229,
+      "hash": "80e03f38971b5103d9cd3bdaa4aaaaf43dc1e216171bf6e1f92b0b7d04ab26a2"
+    },
+    "assets/exploration/free-scenes-hd-v2/outskirts/tile-1.png": {
+      "bytes": 2423789,
+      "hash": "00e1b68cdf8fa0520eda43ec4f309b09c4d85e900bf45df052ddeca378d1009f"
+    },
+    "assets/exploration/free-scenes-hd-v2/outskirts/tile-2.png": {
+      "bytes": 2389622,
+      "hash": "c55b33cb74cd43455c11d2aa8386ce930cada7b8ddc2200831a3ca60695a81a8"
+    },
+    "assets/exploration/free-scenes-hd-v2/outskirts/tile-3.png": {
+      "bytes": 2737807,
+      "hash": "87fffd45dba8b2278ecaf66097b56673372f74cdaee7e06f9254d742b8c7e4cb"
+    },
+    "assets/exploration/free-scenes-hd-v2/rampart/connected.png": {
+      "bytes": 12543020,
+      "hash": "09e0f840ddf229e59955da8a46b187270948cddccdac670b862bc68306d11584"
+    },
+    "assets/exploration/free-scenes-hd-v2/rampart/reference-0.png": {
+      "bytes": 1489724,
+      "hash": "6d464f443dbf605bc18fb8134d5fa776dbf261b201faa28a5987752444351196"
+    },
+    "assets/exploration/free-scenes-hd-v2/rampart/reference-1.png": {
+      "bytes": 1488384,
+      "hash": "f9a478c332a5f56c5ef67988bc8241098159ed2b8ed77952e7039afb07f14ffc"
+    },
+    "assets/exploration/free-scenes-hd-v2/rampart/reference-2.png": {
+      "bytes": 1476452,
+      "hash": "ece9840101378dd0f7601c0b71920d98e08360e1e80c80b0949219292b086dfb"
+    },
+    "assets/exploration/free-scenes-hd-v2/rampart/reference-3.png": {
+      "bytes": 1459866,
+      "hash": "dfe4da5a49afa739c22cb67c17cf077d39f45bd47e0862f3a6b305711cc665e5"
+    },
+    "assets/exploration/free-scenes-hd-v2/rampart/tile-0.png": {
+      "bytes": 2362652,
+      "hash": "0a41f22fa1ae597bf0611a955d99b731fe76fd05fc8e7beb7b187cb8be8e9fb9"
+    },
+    "assets/exploration/free-scenes-hd-v2/rampart/tile-1.png": {
+      "bytes": 2347864,
+      "hash": "9a7624cfdac634ae2feb45789863ecad970543fd348e455ce3631c22b68909c5"
+    },
+    "assets/exploration/free-scenes-hd-v2/rampart/tile-2.png": {
+      "bytes": 2315512,
+      "hash": "6e3d78bae531891fd0b74b5fbce78cbcdadc2e1961b80136b329579f7e6146ee"
+    },
+    "assets/exploration/free-scenes-hd-v2/rampart/tile-3.png": {
+      "bytes": 2283235,
+      "hash": "ed720948bc82950889f1fd0fb34ed0c0d3df6d60b625bb5b202c8c962bcabe97"
+    },
+    "assets/exploration/free-scenes-v1/city-center.png": {
+      "bytes": 3131456,
+      "hash": "29a4ade74887fd9e0e08beaffbcd43cee58e9df944de03d1e7097a386bb09b08"
+    },
+    "assets/exploration/free-scenes-v1/market.png": {
+      "bytes": 3610435,
+      "hash": "61f30f6d537ee91758a4dbf261d1815353a7fa3a950926ee473bdd1e0853be62"
+    },
+    "assets/exploration/free-scenes-v1/outskirts.png": {
+      "bytes": 3467766,
+      "hash": "765cefa7a7dc264afd4be4f180957636a6b6114f2094ae89eeb4617a14422c4d"
+    },
+    "assets/exploration/free-scenes-v1/rampart.png": {
+      "bytes": 3475648,
+      "hash": "fd6699553e4f8d4039f4a7565050a72b5886df9279f31d7b4cd67d9c351de984"
+    },
+    "assets/exploration/ground-cobble-v1.png": {
+      "bytes": 2810580,
+      "hash": "678b68e56731187cffc437290fbadedf3cc30cad72a89f547ecd2e4552df3e76"
+    },
+    "assets/exploration/ground-earth-v1.png": {
+      "bytes": 3042956,
+      "hash": "d4975c5fa85c69fa950fa4699663170c1e2eea744c07e06a789efb0c640c9123"
+    },
+    "assets/exploration/market-back-v2.png": {
+      "bytes": 2861386,
+      "hash": "df3983134e17220cff01bea8c6046edc3f36f1c786e6bdf406603dc084991507"
+    },
+    "assets/exploration/market-band-v1.png": {
+      "bytes": 3278419,
+      "hash": "a7c8ab97b6cf3d91020489a5e0a10d209800d9a9dc6b6fc3c237ea39ef4101dc"
+    },
+    "assets/exploration/market-front-v2.png": {
+      "bytes": 2790637,
+      "hash": "00cdd423716a16dbe6d8c0380b4a719df43de7d74615f493070d09a66e9df4e4"
+    },
+    "assets/exploration/market-left-v2.png": {
+      "bytes": 2921155,
+      "hash": "0acd1886d4bdde2d0a94aa39bf9bdbb28d0c73715426d19d54503f323f5713ad"
+    },
+    "assets/exploration/market-panorama-v2.png": {
+      "bytes": 3113121,
+      "hash": "0b76870b1a293c3102ef1f87767ebceae17728e31cb54e35a605a474d4d0a646"
+    },
+    "assets/exploration/market-right-v2.png": {
+      "bytes": 2925219,
+      "hash": "82c9211f20802058db29ce6d08cd5b50fff01788c5da5915ccb52aa773feeb82"
+    },
+    "assets/exploration/npc-cards/eirin.png": {
+      "bytes": 2880738,
+      "hash": "12aa8c903c870a966d06fe3764bc64947dda3563ee30ddf237ea71d97f66f0db"
+    },
+    "assets/exploration/npc-cards/mayor.png": {
+      "bytes": 2535402,
+      "hash": "5b1e04390fbc3888cdce33e369109656aa399c6a6de76b16a853e5a51aa3c63b"
+    },
+    "assets/exploration/npc-cards/mirei.png": {
+      "bytes": 2572985,
+      "hash": "3ba65529e289461a7f128bf90f7949406f55091a9e7c50b788bde8e83314cd2c"
+    },
+    "assets/exploration/npc-cards/novi.png": {
+      "bytes": 2782958,
+      "hash": "ad5ae62ea87fc3fd23e70f2531d61125458269eba461e61e0844b5c47ad57850"
+    },
+    "assets/exploration/outskirts-back-v2.png": {
+      "bytes": 2906204,
+      "hash": "e212f80d14b47b01a556659e2e89c59c8252c0e35a29343693e37acb1821d65a"
+    },
+    "assets/exploration/outskirts-band-v1.png": {
+      "bytes": 3321007,
+      "hash": "04061c0bad8abd336847cf0c3fc70698be993d5c65dd033842dee76c2ae2d4af"
+    },
+    "assets/exploration/outskirts-band-v2.png": {
+      "bytes": 3151312,
+      "hash": "ee11b7a9b9cc0841033f495603392a014eef94ae5ba00b0ba1c382924b58bab6"
+    },
+    "assets/exploration/outskirts-front-v2.png": {
+      "bytes": 2761737,
+      "hash": "ca555a6ca50ce6d368019aabf184f70fb9774dba06b9f7bea318f435449b524f"
+    },
+    "assets/exploration/outskirts-left-v2.png": {
+      "bytes": 2887030,
+      "hash": "90802f243405ce734e61e059a1a6e061ceacacbfef10067f99c115dbd0db719c"
+    },
+    "assets/exploration/outskirts-panorama-v2.png": {
+      "bytes": 3042388,
+      "hash": "a6f8bb336f8682c2e1b6029f86122622be3fd9442c6952a574855ba077a82b5d"
+    },
+    "assets/exploration/outskirts-right-v2.png": {
+      "bytes": 2893648,
+      "hash": "40dbf92ae4d55b4d6ce70734126eeb65021675a7362a9aa989278dc58c4e0059"
+    },
+    "assets/exploration/overland-road/road-aqueduct-wide.png": {
+      "bytes": 3130187,
+      "hash": "212657ec729455f2d645bfcc8bc982b40a7d3ac8c3a783ee7a81be7ff0a76c20"
+    },
+    "assets/exploration/overland-road/road-aqueduct.png": {
+      "bytes": 3274790,
+      "hash": "bc48e8d81182e0b75ea388cfaa65e7917bfeee71f7ac4745855b74155515250d"
+    },
+    "assets/exploration/overland-road/road-bridge-two-way.png": {
+      "bytes": 3407434,
+      "hash": "d23304ce31fcbffd1a6942925ad1526cd0aa5996ba65a9c5f1cc560d2a3729ec"
+    },
+    "assets/exploration/overland-road/road-bridge-wide.png": {
+      "bytes": 2824860,
+      "hash": "ee4f8110013057bc6f5e4320bcf11d915aca31a9170f4082415b328a9827103f"
+    },
+    "assets/exploration/overland-road/road-bridge.png": {
+      "bytes": 3247682,
+      "hash": "09e3ac080eefc251c1ba0d2088c0ada4043942ba3ef95b3d9efb9c390f1f87f6"
+    },
+    "assets/exploration/overland-road/road-capital-wide.png": {
+      "bytes": 3125074,
+      "hash": "6da0fbb14ad99b66ebb6b1e0bdd9e83bb7b921ede5d6e9948eedf2477877be74"
+    },
+    "assets/exploration/overland-road/road-capital.png": {
+      "bytes": 3040223,
+      "hash": "9b136c5244320796b249f0a8e90c7144fc9f2084f98ac56e9adfe72e83668607"
+    },
+    "assets/exploration/overland-road/road-causeway-wide.png": {
+      "bytes": 3283040,
+      "hash": "04d7bda1ef261ab6e042f24bb897632a12d931efaf5532bcbaf8569a94fb43c5"
+    },
+    "assets/exploration/overland-road/road-causeway.png": {
+      "bytes": 2780479,
+      "hash": "720cf271916c21df90cf6b26685113bef71840de18ceb2f2473ea2ef5c7aed98"
+    },
+    "assets/exploration/overland-road/road-downs-wide.png": {
+      "bytes": 3131838,
+      "hash": "8b57d1ab72003b93a67657c70891383672e5db415681e877d512c43ea0adc8f9"
+    },
+    "assets/exploration/overland-road/road-downs.png": {
+      "bytes": 3268414,
+      "hash": "aba68b82fda19af7498f48bfa0b8b5f258cb1db18e6eaa7ecd5c262a8e30e833"
+    },
+    "assets/exploration/overland-road/road-meadow-wide.png": {
+      "bytes": 3230197,
+      "hash": "470c36e1e3c04279579bccc1c081592398120b7f036eedb0704adefc1825b549"
+    },
+    "assets/exploration/overland-road/road-meadow.png": {
+      "bytes": 3106861,
+      "hash": "3f60b0349d1dcb4e9490f92cad935aac0c07f5034605742311b9de126c0a8688"
+    },
+    "assets/exploration/overland-road/road-orchard-two-way.png": {
+      "bytes": 3522715,
+      "hash": "b26fbd8d95804630c758438b7bf810f8effcbcb28e58157005ad82856f4653b3"
+    },
+    "assets/exploration/overland-road/road-orchard-wide.png": {
+      "bytes": 3025575,
+      "hash": "b2b0dcc5fb186af17bd6a6504bd76ec6e8634cf374aa74276f25ac6a23ac4197"
+    },
+    "assets/exploration/overland-road/road-orchard.png": {
+      "bytes": 3609650,
+      "hash": "714eb6530144ef21902c408eb6f0811d0a46edabb077acf2cef8e168acb7f60f"
+    },
+    "assets/exploration/overland-road/road-pines-wide.png": {
+      "bytes": 3505135,
+      "hash": "fa4ae6f5dee0b551fac2fdb2f9f89816e8547adf9f2dc83f646085b74bb2893d"
+    },
+    "assets/exploration/overland-road/road-pines.png": {
+      "bytes": 3595943,
+      "hash": "26fe0a492dfceb2fc4f0712337be64fd11594f7528217b7adb92b1dc60cf56d6"
+    },
+    "assets/exploration/overland-road/road-reeds-two-way.png": {
+      "bytes": 3293040,
+      "hash": "1f2185df6ff187280cafac752239ace63826230df723bb2bd36a4289596059c7"
+    },
+    "assets/exploration/overland-road/road-reeds-wide.png": {
+      "bytes": 2826601,
+      "hash": "1a15452a5eacca1e880bf71036dab962bf9263e7714a61c2ad451cbbffe88c63"
+    },
+    "assets/exploration/overland-road/road-reeds.png": {
+      "bytes": 3267725,
+      "hash": "8d38fd9601ce79e2de2b69adec300c9f037a233922f763a6f9afc872b1192dce"
+    },
+    "assets/exploration/overland-road/road-ridge-wide.png": {
+      "bytes": 3377049,
+      "hash": "36da4aa9e4ef4e2aec11c26f31c53306d3a526a85233a75e2f31c9427f1f356a"
+    },
+    "assets/exploration/overland-road/road-ridge.png": {
+      "bytes": 3429514,
+      "hash": "53345b21b1ccf2576045ba9b23ef9e0101be11c3b7f27b5afb6ab10afbc4d946"
+    },
+    "assets/exploration/rampart-back-v2.png": {
+      "bytes": 3055611,
+      "hash": "24d69d903ac08122b7d8dbd60afc78b847e355f547ac9564940dc95ca6b5c7c1"
+    },
+    "assets/exploration/rampart-band-v1.png": {
+      "bytes": 3145860,
+      "hash": "3301e38428114477e41fb247c68c9b360c250e115cfe73acb550bf5cc1e449cd"
+    },
+    "assets/exploration/rampart-front-v2.png": {
+      "bytes": 2936714,
+      "hash": "064e7a754ca8de6ef34582d8a3b466decd8384b747f2ce635efd2811fddd0dcf"
+    },
+    "assets/exploration/rampart-left-v2.png": {
+      "bytes": 2907610,
+      "hash": "ce91655a734532ab2e76a8b7a6c85fe81fd93fdd2dd5c62bb9be55efa7677c96"
+    },
+    "assets/exploration/rampart-panorama-v2.png": {
+      "bytes": 3000837,
+      "hash": "0b06c79f6acf75f68b28afce3041cb0b13f7d1e39aab3477ff1159d2444ac2f0"
+    },
+    "assets/exploration/rampart-right-v2.png": {
+      "bytes": 2871196,
+      "hash": "a08b0456d800c1d0e9549ecd67150d8747972a2bb28632376e9eadc283c559d4"
+    },
+    "assets/exploration/starlamp-band-v1.png": {
+      "bytes": 3209274,
+      "hash": "fab137724d1052141c3c64c12be58d17cfadb94f16c80affe8143243ba2b4dce"
+    },
+    "assets/exploration/starlamp-corner-back-v3.png": {
+      "bytes": 2468622,
+      "hash": "fc4fbce98b8345588f0404078b9d54402fea148efa0385ca1b3e746181c1fb4c"
+    },
+    "assets/exploration/starlamp-corner-front-v3.png": {
+      "bytes": 3281484,
+      "hash": "e32b034d6952a7ff91bf6384af35fa3a6b15896fc9c6bdcb9945e6c5ce649dc7"
+    },
+    "assets/exploration/starlamp-corner-front-v4.png": {
+      "bytes": 3109350,
+      "hash": "b9869c2f86ce8ab21779010528d2bce7379aa80fd8deb2faebaa5faf68e231ed"
+    },
+    "assets/exploration/starlamp-corner-front-v5.png": {
+      "bytes": 2955388,
+      "hash": "d8ec2af6623815e82c3a0c1b4666885d72b8869ba522d2d4ec1261097ac3f633"
+    },
+    "assets/exploration/starlamp-corner-left-v3.png": {
+      "bytes": 3408627,
+      "hash": "be510b58f2cbf4dd1e850c862889c880fba2799d3d0a1dbe62709dbe9de7c9b0"
+    },
+    "assets/exploration/starlamp-corner-left-v4.png": {
+      "bytes": 3150484,
+      "hash": "1122ce7582982d642580388b4f4c5df7133db1e4d2152e2dbacf3dd12ce13efe"
+    },
+    "assets/exploration/starlamp-corner-panorama-v2.png": {
+      "bytes": 2955651,
+      "hash": "9fb3060a127b3b761e7f209c241296611ee470d537af8c6479d967fa92f76a8f"
+    },
+    "assets/exploration/starlamp-corner-panorama-v3.png": {
+      "bytes": 2739089,
+      "hash": "5caad9592f1db64954c7249996195b88a31b5df4708c095a697e5c4328798152"
+    },
+    "assets/exploration/starlamp-corner-right-v3.png": {
+      "bytes": 3267728,
+      "hash": "a730e01e00ce9650b6a0f47f0a4b0bb2456be9bddab61db9ab406b8f870a1aa3"
+    },
+    "assets/exploration/starlamp-facades-v1.png": {
+      "bytes": 3354401,
+      "hash": "2bd9d7c8f6cb18080fce6977a415556dd3f4d7afee6580ede7b600607d369cdb"
+    },
+    "assets/exploration/starlamp-notice-v2.png": {
+      "bytes": 2298451,
+      "hash": "9db1ff218d71fc2ab8a89aa12438f445f7a15935e649777a5d8219919f5b91a8"
+    },
+    "assets/exploration/street-hd-v1/center.png": {
+      "bytes": 2219962,
+      "hash": "ee4a1fb3e261d40acbf9fe09f82a3699ee4a64089450066a1c559d43c621ad6a"
+    },
+    "assets/exploration/street-hd-v1/connected.png": {
+      "bytes": 10551637,
+      "hash": "9c53f1faddb367b98f6a1731472ac86d81bd5292f62c378c6277f610082bef79"
+    },
+    "assets/exploration/street-hd-v1/left.png": {
+      "bytes": 2194668,
+      "hash": "802a8e20de34cfe7b91765fbddccf9b8e64530f11a9a8b1acadd924e740dd55f"
+    },
+    "assets/exploration/street-hd-v1/right.png": {
+      "bytes": 2214881,
+      "hash": "14a138364347fccc89ed56386a21050af70e54ad6425bcf97d1ecf0d066b19ca"
+    },
+    "assets/exploration/street-hd-v1/scale-center-reference.png": {
+      "bytes": 39610,
+      "hash": "c676a03d2820d32ab681ba490638b52e31bca6a391cc9e4e84876fee4b69ae28"
+    },
+    "assets/exploration/street-hd-v1/scale-left-reference.png": {
+      "bytes": 39898,
+      "hash": "d75bccb243067d28ee1d2748a37374758814d5804483852d028173c65b059c55"
+    },
+    "assets/exploration/street-hd-v1/scale-reference.png": {
+      "bytes": 86820,
+      "hash": "4d33fdb7208a37f5cf1f8e69708198dc98f64b155c89e5ca2940395819ee3fdd"
+    },
+    "assets/exploration/street-hd-v1/scale-right-reference.png": {
+      "bytes": 25710,
+      "hash": "1c6eec7fda4950ba585405852025ca7771f86b7d57ce4c1a187d3cecfac86aac"
+    },
+    "assets/exploration/street-hd-v2/center.png": {
+      "bytes": 2408382,
+      "hash": "e0ec5c058e39873b3063e94eedf50862fe5d3a175ba9f19bcfbec6341438e323"
+    },
+    "assets/exploration/street-hd-v2/connected.png": {
+      "bytes": 9825941,
+      "hash": "dc4981817962750586949757da10b0dca19f927b947add48a9fa44d32f9b460d"
+    },
+    "assets/exploration/street-hd-v2/left.png": {
+      "bytes": 2521454,
+      "hash": "c21524e26532529ad16c67aaebae1177daf9db6517b1f40ceb5245bde3414934"
+    },
+    "assets/exploration/street-hd-v2/right.png": {
+      "bytes": 2374859,
+      "hash": "524fe328ed0523a1c640b08d721ffadc2abc9f5380f6245f2838923c67aae956"
+    },
+    "assets/exploration/street-hd-v3/connected.png": {
+      "bytes": 14069888,
+      "hash": "317b040a8b2408ed09bafdadfe9aa5ebfb9449cc27d444a0f0c78ba10075e583"
+    },
+    "assets/exploration/street-hd-v3/reference-0.png": {
+      "bytes": 1654284,
+      "hash": "8ffc880cd1eaa67e5f69946697c0a51a46e775eee30b4568c3ee3764b6ea8df3"
+    },
+    "assets/exploration/street-hd-v3/reference-1.png": {
+      "bytes": 1641337,
+      "hash": "4491fe7c529b5454aec71b6106c02a303278f68ca72e5b65ecfe580f29825dc8"
+    },
+    "assets/exploration/street-hd-v3/reference-2.png": {
+      "bytes": 1659182,
+      "hash": "9aa054cf50777239535027f86e74d8696c1e873dda22804df875acc71a9a16f3"
+    },
+    "assets/exploration/street-hd-v3/reference-3.png": {
+      "bytes": 1674315,
+      "hash": "ec62433b0cfa06a8b0c76be73c26ab6893b21f7be0d3b3b25e647ceee60d0f45"
+    },
+    "assets/exploration/street-hd-v3/tile-0.png": {
+      "bytes": 2826729,
+      "hash": "d35b5d5ed17f465d692eefb633e7cf9e7872bd78b3265154e9d4ef6faabddc8c"
+    },
+    "assets/exploration/street-hd-v3/tile-1.png": {
+      "bytes": 2742721,
+      "hash": "eb0a9b29d15bbed6ccdd947a09c73174c0c33d9ef84de1e89f95e122855c5da5"
+    },
+    "assets/exploration/street-hd-v3/tile-2.png": {
+      "bytes": 2752799,
+      "hash": "4bc8f090d3ee897a2aa51ec29c8a039bdfb29e18d24e4b93a45cca60a36756c4"
+    },
+    "assets/exploration/street-hd-v3/tile-3.png": {
+      "bytes": 2951959,
+      "hash": "9afc5596ae43939ad5f2f7c5390b9f721d7936965c07e27b1531500e8274a76f"
+    },
+    "assets/exploration/street-hd-v4/connected.png": {
+      "bytes": 12955123,
+      "hash": "a6e4e11ae707d15ef81970ad23eefb8230a44bd0702ae34c48225ed8af9f94f3"
+    },
+    "assets/exploration/street-hd-v4/tile-0.png": {
+      "bytes": 2453149,
+      "hash": "aebcba33d906703b6b7d8b2a1db6b571e9de63e60dcb4c3b94d0cb4b72b9deb4"
+    },
+    "assets/exploration/street-hd-v4/tile-1.png": {
+      "bytes": 2392634,
+      "hash": "ba1ef68656b3cc28cd9cc08b28d7117681ac9cf2172b668a9256abac1524718d"
+    },
+    "assets/exploration/street-hd-v4/tile-2.png": {
+      "bytes": 2322285,
+      "hash": "f909de6ad394809893c0897ef044ece07784d20dbc354af07254a110041a3d67"
+    },
+    "assets/exploration/street-hd-v4/tile-3.png": {
+      "bytes": 2420264,
+      "hash": "83b0303ddf48d3ac9c9c3eeaadfa2644c26bdc4611797010b646abd9354670d9"
+    },
+    "assets/exploration/street-illustrated/connected-v1.png": {
+      "bytes": 3572908,
+      "hash": "f4a42483e9b02a9da8ad9ddffc58fc2394b57056a8fdce7d6b96fd496caf1e71"
+    },
+    "assets/exploration/street-illustrated/courtyard.png": {
+      "bytes": 3334515,
+      "hash": "6875bae5a97aad70712f0a874fa320eb892a490ca85c1f6acea28a588675292d"
+    },
+    "assets/exploration/street-illustrated/entrance.png": {
+      "bytes": 3182262,
+      "hash": "d8bfe483333315122f08a63021e1e3bafe78897af8c8bedc91b02481aeab6fa6"
+    },
+    "assets/exploration/street-illustrated/street.png": {
+      "bytes": 3204889,
+      "hash": "baf4135ecf65d43b29f67c9be521688019053578efe0f77cdb491bed2e0bf8d8"
+    },
+    "assets/exploration/street-spatial/arch.png": {
+      "bytes": 2422025,
+      "hash": "1a28a11eea65f158db2783e9323bb5d05a26016d52e0e76991fcd0e86eacc050"
+    },
+    "assets/exploration/street-spatial/courtyard-fountain.png": {
+      "bytes": 2147924,
+      "hash": "4a0e74eb39042cafaa017ec0fe18c26609101c2e4d47507f749cfeb84cb67205"
+    },
+    "assets/exploration/street-spatial/distance.png": {
+      "bytes": 2844681,
+      "hash": "65a92593756a66432765c2c6e9a60dfd9ec2e0672913976eafb8994b3010f2ea"
+    },
+    "assets/exploration/street-spatial/far-street.png": {
+      "bytes": 3065502,
+      "hash": "2be50564764863ba5349837a0665ac58ae5a307998e61388822afde2152d64e9"
+    },
+    "assets/exploration/street-spatial/floor.png": {
+      "bytes": 2878518,
+      "hash": "ce581ffba0a1b5ebc2dc3ac90a69394627905adfbf8aabab0e80a3b958e1b63f"
+    },
+    "assets/exploration/street-spatial/houses.png": {
+      "bytes": 3064164,
+      "hash": "8675cde8b086d4b0edd947913866b3a0abc358beadda08bbd6ac454fb879a400"
+    },
+    "assets/exploration/street-spatial/pharmacy.png": {
+      "bytes": 2777994,
+      "hash": "f44bfbfbd733d3d8a30b709257fd08c041af081d5aa770a40720399732add4f0"
+    },
+    "assets/exploration/street-spatial/tavern.png": {
+      "bytes": 3091105,
+      "hash": "e3b80d74f29c5797ea0d93f6e472b33e4851b57ffeb296db32f5e658800de69a"
+    },
+    "assets/exploration/town-night/city-center.png": {
+      "bytes": 2660444,
+      "hash": "2998191d5079fb28d0f833eae2bc7e75b453f4a229db4c3ee5c8fb7b42cb19db"
+    },
+    "assets/exploration/town-night/market.png": {
+      "bytes": 2840620,
+      "hash": "ec9c448a18f1917597f856e0c5e2172cb0624382c7cfccecd504099fc7d67bc8"
+    },
+    "assets/exploration/town-night/outskirts.png": {
+      "bytes": 2766102,
+      "hash": "47bfa312f791914d10288a4503a60d1177453f1275e38e57e82a19784a33c525"
+    },
+    "assets/exploration/town-night/rampart.png": {
+      "bytes": 2536041,
+      "hash": "4212fd0f3a504b99e359fc590e7b40d2370846da5fb193c041077a16a7f763a9"
+    },
+    "assets/exploration/town-night/street.png": {
+      "bytes": 2756195,
+      "hash": "9811e294a04f8171a663a7c18f92c3e073afa724ed1cb1ddcdd6508aa9e39dc0"
+    },
+    "assets/exploration/town-side-places/clock-archive.png": {
+      "bytes": 2698292,
+      "hash": "d0e339b917fa087966c654afa39a212eb8e0f190c3234140a7ca4bc345636c21"
+    },
+    "assets/exploration/town-side-places/clock-roof-night.png": {
+      "bytes": 2918042,
+      "hash": "a87f1096253376dca8163acf43617a7b9d6caff22a7c7b5d3f4d0fc9108aa9ac"
+    },
+    "assets/exploration/town-side-places/clock-roof.png": {
+      "bytes": 3051015,
+      "hash": "54a28cf80c4a162e5d9407d9f52db6c886c455de84af8c9bfd5e34420432e94d"
+    },
+    "assets/exploration/town-side-places/guard-room.png": {
+      "bytes": 2465689,
+      "hash": "55eda7e4dd5059ff3fca28628606f6a44d81e93d33941daed788009df7385f68"
+    },
+    "assets/exploration/town-side-places/lantern-workshop.png": {
+      "bytes": 2481902,
+      "hash": "cc2573cc6141cef9700d054989ee28572ca0e7c9a747ce1e6a1e27d2dc1b0492"
+    },
+    "assets/exploration/town-side-places/market-alley-night.png": {
+      "bytes": 2825130,
+      "hash": "9c6f95f70dbe28abbdd3ab290249d0caf91fbea326a561fbb96b2ea018260a40"
+    },
+    "assets/exploration/town-side-places/market-alley.png": {
+      "bytes": 2852144,
+      "hash": "719e93b21186775d6fb9fc7cb258a60a72ad41fe76c63f9ee7735427025fc26d"
+    },
+    "assets/exploration/town-side-places/riverbank-night.png": {
+      "bytes": 3346384,
+      "hash": "0503c27d6407b64d1339fb9f6094520f6c05dee954354329b129d068f3413743"
+    },
+    "assets/exploration/town-side-places/riverbank.png": {
+      "bytes": 3290547,
+      "hash": "0ef61a5c1654c91e0a28b92322af2f3d31a631506492e551243338f0f5a3fdc8"
+    },
+    "assets/exploration-parchment.png": {
+      "bytes": 2753924,
+      "hash": "302bd08de18e9abdcbcfe4853d3456407fc784d1e3a6679a623e335399ecbebb"
+    },
+    "assets/facet-skitter.glb": {
+      "bytes": 45604,
+      "hash": "87dc4cb08f7f471bb92e03274488d0b7262f8e8e28e87b31067c3c64922fa0b1"
+    },
+    "assets/fog-spore.glb": {
+      "bytes": 91808,
+      "hash": "d32bfff9196b4d5386963c32b55d49ef1c2d5f6f9c88fbdacedfb834a8a4ad2c"
+    },
+    "assets/forest.glb": {
+      "bytes": 12194740,
+      "hash": "49e50210a23a6f51025ff9eaa75d75675b805f7a99310c55d9d4a4b5621c11ea"
+    },
+    "assets/forge.glb": {
+      "bytes": 2225728,
+      "hash": "a798d8b73c56e1d2bc6a271196cad70f34f714c1800ba60e55dbcab5b366e386"
+    },
+    "assets/frost-borer.glb": {
+      "bytes": 46704,
+      "hash": "12493b413bf4e47c4d4c385f6538f57f68a88c111ab0477c116aea69f0118db7"
+    },
+    "assets/frost-crusher.glb": {
+      "bytes": 35676,
+      "hash": "9718828ce64bd3f527ae8edd78b1ad0eac60f690aa3cf17384cca1af13e1ec23"
+    },
+    "assets/frost.glb": {
+      "bytes": 3851520,
+      "hash": "13cf46650aa12bf4c42da9fb98c5dfb228964753387e1ab054c9d66f6d6b392f"
+    },
+    "assets/gal/edith-half.png": {
+      "bytes": 2239531,
+      "hash": "38600f10837eb992e68786ddc3355527f0daa349779d2b5c37877d9843d059b1"
+    },
+    "assets/gal/luo-gongxu-half.png": {
+      "bytes": 2760071,
+      "hash": "69104b2dfb09d2bd48c21fae4ae15a28f226e23fd68b48c9c4741fdfcd345257"
+    },
+    "assets/gal/pandora-half.png": {
+      "bytes": 3158557,
+      "hash": "e63a603bc6bd9c02301da97d11bd0b0006b0352b3d62731b160be5dc96d9f508"
+    },
+    "assets/gal/silica-laps-half.png": {
+      "bytes": 2998868,
+      "hash": "c155528f28759f5c29eb9151be70a548ac3d9922430b7e52b643c3df9580fb99"
+    },
+    "assets/gal/yuexi-half.png": {
+      "bytes": 2867764,
+      "hash": "97e1008b7e92094c647ee1cb74ff5209474cf16e9bd860ec6a252e6eae4c1f00"
+    },
+    "assets/gal-npc-cast/child-boy.png": {
+      "bytes": 1772847,
+      "hash": "9a36c7d98bf41407db7b62b449f8f2528c86fbe59d904cc602b4ecfaf9c45f53"
+    },
+    "assets/gal-npc-cast/child-girl.png": {
+      "bytes": 1835689,
+      "hash": "d4f1192d0a4483b8b77cb4d6df87ce7577fe94a6c5f97c488b8534ecd926ea62"
+    },
+    "assets/gal-npc-cast/elder-scholar.png": {
+      "bytes": 1992211,
+      "hash": "b2fe5c59c854520f4b81376754f23a2a3e4bb92d4b21511bf80f5becc0a088fa"
+    },
+    "assets/gal-npc-cast/shadow-man.png": {
+      "bytes": 1820295,
+      "hash": "fb908b932f95bf803f00e8f0941a9577a720ede278383738ef79484539d348e6"
+    },
+    "assets/gal-npc-cast/shadow-woman.png": {
+      "bytes": 1616000,
+      "hash": "0cf754d34ec26ce2f899a58b69385fd70c9e33c360e1c67341a3b88995c988ee"
+    },
+    "assets/gal-npc-cast/town-guard-man.png": {
+      "bytes": 1804769,
+      "hash": "79a64c740623278c92dc62f2bc525725f96d148479c3efdc924f6c68ebda816a"
+    },
+    "assets/gal-npc-cast/town-guard-woman.png": {
+      "bytes": 1911611,
+      "hash": "c5711078cdd04ef4d8e0e147cbb6b1acb17faf52245c0dd58ad5e06359812737"
+    },
+    "assets/gal-npc-cast/traveling-merchant-woman.png": {
+      "bytes": 2116518,
+      "hash": "3567a32030c9e077db5fbaabd98b5d6eccc7b5fa7fcd85b9dc9e408e661a5950"
+    },
+    "assets/gal-npc-cast/villager-man.png": {
+      "bytes": 1874316,
+      "hash": "b7b0f40518633fd771f096ab8e82ed7f1051d2004ab8ebc5e8fb6b723e7bbe98"
+    },
+    "assets/gal-npc-cast/villager-woman.png": {
+      "bytes": 2136605,
+      "hash": "3075f541ef7917e922341987a67bb973062860bfc9d34bf4597db9b955d7ff3f"
+    },
+    "assets/grey-prowler.glb": {
+      "bytes": 55928,
+      "hash": "743003dd5136449dedbd41dab0523baf03fc2f4fdfe4ff0119c6526e69b6f843"
+    },
+    "assets/grey-stinger.glb": {
+      "bytes": 37320,
+      "hash": "403b5aef9d0034201603b0d29a507b4ce33b6f4894c846653e572b6d74ea01ab"
+    },
+    "assets/guest-room-a.glb": {
+      "bytes": 1318332,
+      "hash": "89fefa30d6d6265ad6017316bacebb13783f83059ac8d466596e423e98c93853"
+    },
+    "assets/guest-room-b.glb": {
+      "bytes": 1315772,
+      "hash": "8c86c2988d09afb32c2b2fba00278d3323934f5fa9eef74baf1d2e89e8a30b6c"
+    },
+    "assets/guest-room.glb": {
+      "bytes": 1318332,
+      "hash": "89fefa30d6d6265ad6017316bacebb13783f83059ac8d466596e423e98c93853"
+    },
+    "assets/hive-guard.glb": {
+      "bytes": 45560,
+      "hash": "b6c7fcef60e17a0a775b5489623bc402414168f13985bb3ce525554024e99ad3"
+    },
+    "assets/hollow-sentry.glb": {
+      "bytes": 55048,
+      "hash": "ea84e78a8390f45f3f0b8de991f7517ede7c3fa94e8240d5a5351b400c5e939c"
+    },
+    "assets/honey-larva.glb": {
+      "bytes": 41468,
+      "hash": "acf18471b1c16f8aef2cfef456502a62b250087eb5b02071e4bb877f2a395115"
+    },
+    "assets/icons/balance.svg": {
+      "bytes": 372,
+      "hash": "a6f9006fa0fddfe2a653006a554f79c956d1e9d3bcc24ff475eb6e682453f0db"
+    },
+    "assets/icons/ether.svg": {
+      "bytes": 388,
+      "hash": "5b2db96e177125adc35c7dd9c9f61e3f4590118da3d9207b812471bcb6b8789d"
+    },
+    "assets/icons/gold.svg": {
+      "bytes": 645,
+      "hash": "35e0661a3f5ec99e9c41998cb8dd60be69d1f23f2d4d46ae4376ca285f1a7714"
+    },
+    "assets/icons/summon-contract.svg": {
+      "bytes": 460,
+      "hash": "7494710098e27c6825e609cffefaf635218b373b1a0153603112cea5eff17209"
+    },
+    "assets/inn.glb": {
+      "bytes": 5012840,
+      "hash": "e1278c59ae3612ad643885c4b78f418782e394090a4f213091c3e28c86aa0d87"
+    },
+    "assets/insane-worker.glb": {
+      "bytes": 35616,
+      "hash": "e62609c19622bd6a163564232d2cd8c3059a8e90cc9e60f22b0445718e869119"
+    },
+    "assets/items/calamity-scroll.svg": {
+      "bytes": 461,
+      "hash": "540a212f09afb21cbf5c723a68d6f3d7df7cb13dcca91287cd247ea861f306c9"
+    },
+    "assets/items/fine-calamity-scroll.svg": {
+      "bytes": 522,
+      "hash": "5a1ee57e6ed9e723ee343ef991d35f550488c417737ad5f526a30e1d50bf6c05"
+    },
+    "assets/items/fine-health-potion.svg": {
+      "bytes": 610,
+      "hash": "7e5f6c2497cbdab41e7934daa4a2cdc1fa2e7cfa872e35f32aa33673ff412df2"
+    },
+    "assets/items/fine-mana-potion.svg": {
+      "bytes": 610,
+      "hash": "3f0658766bdacf52946fc717aa8313d7bfe225cc8f2142ae53f81efaddde2e4d"
+    },
+    "assets/items/fine-recovery-potion.svg": {
+      "bytes": 610,
+      "hash": "5c4415a7bbf32b6087c09013c39438f8cb5f34a0d6b255317fae2ebe0ab3e155"
+    },
+    "assets/items/fine-slow-potion.svg": {
+      "bytes": 610,
+      "hash": "24a4784065689d5e66e3f42e4ca321ae74ad449a7394b7bda5d8ce3b3b86d457"
+    },
+    "assets/items/fine-strength-potion.svg": {
+      "bytes": 610,
+      "hash": "bfbbebd7eff4b220fd02700ec041347e6cfef526d2203e780496824774656a56"
+    },
+    "assets/items/health-potion.svg": {
+      "bytes": 549,
+      "hash": "7907cae067715fb8242a10d1ed474cba01533a2640d70fd2d33c7bbd63246084"
+    },
+    "assets/items/mana-potion.svg": {
+      "bytes": 549,
+      "hash": "e00f5d17974e2fb3b97c98eb4a0e8d4280fd8d9ee0b9db900a1e3e3e068ba558"
+    },
+    "assets/items/recovery-potion.svg": {
+      "bytes": 549,
+      "hash": "ee78cf2adfec1bc6016ab9c9edf57d3594e0823ba7a8b2fcefd5b62db30d2c2d"
+    },
+    "assets/items/slow-potion.svg": {
+      "bytes": 549,
+      "hash": "ca59cb3f073992e5118e05ec2761ac92018922051f19051352f4336d005b2d0d"
+    },
+    "assets/items/strength-potion.svg": {
+      "bytes": 549,
+      "hash": "57c452279b3069ced6b63c5ea57c7244e7faa073fd5cb1776db3de936f7d8edc"
+    },
+    "assets/living-vine.glb": {
+      "bytes": 168664,
+      "hash": "9fa001dd512ee1587221fb6c56622731844c22516b2f79c44c633fa49974c5d8"
+    },
+    "assets/lost-welder.glb": {
+      "bytes": 37728,
+      "hash": "0bf8364f89b8a323f0f819bb58bf50a85c12c2fc4cb7a684eae4bcb92f25410e"
+    },
+    "assets/many-shell-beast.glb": {
+      "bytes": 73292,
+      "hash": "9ebaad90a40a79d6351318ec9140e6eb7e976cc6832f6c4b584376fcedd6ee15"
+    },
+    "assets/masked-forester.glb": {
+      "bytes": 263444,
+      "hash": "47268b5873ae4039ef2d8cca3a6256d4c50b605392b0baa7b290b7d809f6a94a"
+    },
+    "assets/master-bedroom.glb": {
+      "bytes": 873504,
+      "hash": "ed315acfb969068ef1f0a791a30de732a77ab60898b15178f338f2d0eb5ca29d"
+    },
+    "assets/metropolis.glb": {
+      "bytes": 4655864,
+      "hash": "761d9b26f0f773ac2e43395aca4052a9651d1516028ee5c8dcb51ec351d0345e"
+    },
+    "assets/moon-crown.glb": {
+      "bytes": 255408,
+      "hash": "276a7d77a028393fdba599e2bd7c2a72970cc370d274663db81014dfdd72a6d8"
+    },
+    "assets/moon-eye.glb": {
+      "bytes": 251580,
+      "hash": "7eb3f9f0288c60125159a82edbfa53c2832124db399e64ad33dc6bf5d7283fc9"
+    },
+    "assets/moon-moth.glb": {
+      "bytes": 107976,
+      "hash": "f4ed8230510c8010437018fd6ce6a4f91b5139b4c7dfb2449ddfb9a4e1da0eda"
+    },
+    "assets/moon-queen.glb": {
+      "bytes": 77920,
+      "hash": "bddc005f42b1eb7b4ce13403b6a20bb980cda50b3466dfe929447da7bd33f79f"
+    },
+    "assets/moon-root.glb": {
+      "bytes": 288664,
+      "hash": "b71d7f2665c303b6d5b26ac37e349398ceaf8890187eb2f2548b943258b0bf77"
+    },
+    "assets/moon-tendril.glb": {
+      "bytes": 162456,
+      "hash": "2ac6f10adcc74130aae594b08d691f2824028718207e76d7dae4b79ce4664bce"
+    },
+    "assets/moon-worker.glb": {
+      "bytes": 41512,
+      "hash": "8014bd81ab17fa899a142284a30abc869dafb783f482ff225bc497d5823aa0cf"
+    },
+    "assets/moss-gulon.glb": {
+      "bytes": 61876,
+      "hash": "76a23766573fd8354727570182d30bca825e0f415f2b8d59f342128c9aceddbd"
+    },
+    "assets/nexus.glb": {
+      "bytes": 4850212,
+      "hash": "c3d5eb05cca4bfd07209f6d52919d07f0635ca1cdfedf8125772009d0c65e831"
+    },
+    "assets/oathless-duelist.glb": {
+      "bytes": 100344,
+      "hash": "a1bf81ffc640c8ddc8d5d4e33128d9528bc718af011188fdc85a3ef13df17840"
+    },
+    "assets/ore-mite.glb": {
+      "bytes": 46692,
+      "hash": "bafb05bb19c9a2eb0a40a2ce966a372a71110372f18521c94c8d0acd4a6d2270"
+    },
+    "assets/parts-carrier.glb": {
+      "bytes": 35628,
+      "hash": "0d809f285c5b6f124b00118982e98e3ce89789ce91badb0d8ea44a6969f516f1"
+    },
+    "assets/portraits/apep-lamb.svg": {
+      "bytes": 9911,
+      "hash": "c60b381a77806776d1212aaad9e3061bd17a96491d3297ab8bd728cc12ce871f"
+    },
+    "assets/portraits/ares-cannon-left.svg": {
+      "bytes": 3031,
+      "hash": "369f69519f6a6d0be27c8579c99150e8781b2277516f9a57e141f79f9a69bdf2"
+    },
+    "assets/portraits/ares-cannon-right.svg": {
+      "bytes": 3032,
+      "hash": "84e5e94608cd13cfd35deafd6a7af5087fafec86999ba9ec9b32f9a82b9a117a"
+    },
+    "assets/portraits/ares.svg": {
+      "bytes": 7501,
+      "hash": "b82930010b6536d15b458fafd16fb056a9118f81f5e25626409e48f505a29c11"
+    },
+    "assets/portraits/bark-acolyte.svg": {
+      "bytes": 24939,
+      "hash": "c94546d5f44b9922e37c3fbd49089b8896986c456595ed8a9fdc5788abd875e0"
+    },
+    "assets/portraits/black-ooze.svg": {
+      "bytes": 9715,
+      "hash": "82e14820b3981babf4acb797321a5080c1d6925dcce6c53e6bcb5df70768a3e1"
+    },
+    "assets/portraits/bog-drifter.svg": {
+      "bytes": 6986,
+      "hash": "7e825560f97437596e3140620e288e71e3d9d1e8d12f877a0befc10b842c16cb"
+    },
+    "assets/portraits/bog-elemental.svg": {
+      "bytes": 8233,
+      "hash": "d5297cf31fe6eea8731ed1d9f8c9bcac8f05f66cb68ea312ed2534dc8474d3b4"
+    },
+    "assets/portraits/bog-leech.svg": {
+      "bytes": 7726,
+      "hash": "de935c08456276b8d0af7203cf12b646adfb2c63f6ee75d5f22ba86d36dade08"
+    },
+    "assets/portraits/boss-bloom.svg": {
+      "bytes": 1074,
+      "hash": "08c00a6c0a03463197ea51b5e489f6ecf66afea9dfaed7b1d36e125a0c123003"
+    },
+    "assets/portraits/boss-gate.svg": {
+      "bytes": 955,
+      "hash": "56458cb24adf7c183f1c886d15e6c85860c1783ba16ddcdb2fab045550148dd1"
+    },
+    "assets/portraits/boss-tide.svg": {
+      "bytes": 6461,
+      "hash": "29388726e5e35870f3af694f42dc6dbafb810d061f9194a27572f4f999483509"
+    },
+    "assets/portraits/brass-colossus.svg": {
+      "bytes": 5512,
+      "hash": "208474746b9c6c826698de267581f39cdd086b3b626f2cfc4441e0e036e2ae9e"
+    },
+    "assets/portraits/brass-seeker.svg": {
+      "bytes": 2517,
+      "hash": "bccfb23c8091bf741efaab11c78dda7005d596a7e1aac979a3e6281faab40e49"
+    },
+    "assets/portraits/cargo-crawler.svg": {
+      "bytes": 6727,
+      "hash": "7b3832a2dc49366c90c4e8355b8484604a04c819cd4cb3fe91bfc2e4adc2f224"
+    },
+    "assets/portraits/changjing-yuexi.png": {
+      "bytes": 2615445,
+      "hash": "9dbcc06b0acca68563f937daac69789409282e6f567fe119b7036dcaea65495b"
+    },
+    "assets/portraits/chasm-beast.svg": {
+      "bytes": 8914,
+      "hash": "9a03c546f4cebfdf505f309d4bb2f2a6ae71b4916de753a9486fb83d0e16122a"
+    },
+    "assets/portraits/chronomancer.svg": {
+      "bytes": 1288,
+      "hash": "a201b6328fa51287c5f2a88a114ac8418e4544a69423c898d48eff2ca4792de1"
+    },
+    "assets/portraits/cinder-imp.svg": {
+      "bytes": 4510,
+      "hash": "70073d70e339ac1f2628e3e167fa02b66ba2b952c1cd4ed918453eab332ea6ce"
+    },
+    "assets/portraits/cinder-priest.svg": {
+      "bytes": 5007,
+      "hash": "5a014844cecb2d7dc99099291653e894125a89febf2ebf9c48bde866bbeb1ba7"
+    },
+    "assets/portraits/cling-larva.svg": {
+      "bytes": 8741,
+      "hash": "6481daa3d0737c7e0b85d684d3dc01a0361bb7d948c9dd1425d11846dac7c55c"
+    },
+    "assets/portraits/conduit-wisp.svg": {
+      "bytes": 4755,
+      "hash": "66b659807b242531f804367efe0494bcc759e80dada86a9c0492cd7d3501c2f0"
+    },
+    "assets/portraits/corridor-guard.svg": {
+      "bytes": 4511,
+      "hash": "e40ed2e5d3507857358236b27fa99e064db6b6e9dd64ba92826855b6769aa12c"
+    },
+    "assets/portraits/crystal-beetle.svg": {
+      "bytes": 20271,
+      "hash": "e9e52b2dbeff8886f4ffa4ade4bb4a3dac19c929f493f3ecc89260a0e8f1f589"
+    },
+    "assets/portraits/crystal-devourer.svg": {
+      "bytes": 7983,
+      "hash": "fa79f5892aafaf874a9701eaba16cdc1776dcedda8d286180bda8bb6fea28d01"
+    },
+    "assets/portraits/crystal-miner.svg": {
+      "bytes": 7975,
+      "hash": "e2dcd6d27e815aeea3f01a159283eb99dea696c561308c10caa0c818c0c2b711"
+    },
+    "assets/portraits/cultist-specter.svg": {
+      "bytes": 4763,
+      "hash": "b6ffffb1fdae1aa65e629bebeadaad4bed75b8e4c9a8fb5a7e9244b98e3216ea"
+    },
+    "assets/portraits/cultist.svg": {
+      "bytes": 1040,
+      "hash": "6d58b792eb0ebbb70e64083de1373bcf4f1eb18964795e2f3e1632ff2416315a"
+    },
+    "assets/portraits/drill-matriarch.svg": {
+      "bytes": 10973,
+      "hash": "c34350b9faf877246e63784c552acb1ff34c7e2f0f0b60a7127c38e889615196"
+    },
+    "assets/portraits/drill-worm.svg": {
+      "bytes": 9487,
+      "hash": "9ade5a993b3357b0ba550c8ecc39a4e39ff77a5926a3e2c5a38e810c1102407c"
+    },
+    "assets/portraits/dust-hexer.svg": {
+      "bytes": 22927,
+      "hash": "14f643d098db13f09ec25f0e0a5ea67d49cebc439f1722af24c4813d18a9491a"
+    },
+    "assets/portraits/edith-before-20261101.png": {
+      "bytes": 2137890,
+      "hash": "3785240f6cf976b9dd6a1de91158daa79d26b7f925d327826d319c85d7265cd5"
+    },
+    "assets/portraits/edith-old-backup.png": {
+      "bytes": 2872988,
+      "hash": "2d8e5e3ec70c7e62e0d829c18d9782f7af9cbad85d90dd26575992481bcec4bf"
+    },
+    "assets/portraits/edith.png": {
+      "bytes": 2382343,
+      "hash": "bae351065bafa908a35105efae3a0b71a3441405ed3719fb411207ec28dbb2e7"
+    },
+    "assets/portraits/enemy-humanoid-bow-female.svg": {
+      "bytes": 53083,
+      "hash": "a28b3a642e719a4a7f1d49b96fc3a26af184921824504f911796c4515f733857"
+    },
+    "assets/portraits/enemy-humanoid-bow-male.svg": {
+      "bytes": 51338,
+      "hash": "76b0b2d1acc7fb25d04fe976fecb4a5e2e0f7965a012c4fe801ba44e02bf7540"
+    },
+    "assets/portraits/enemy-humanoid-staff-female.svg": {
+      "bytes": 18474,
+      "hash": "e3d687db70899e6dce071acb54f2b43cc1ce7281e22159f777e2404871496a73"
+    },
+    "assets/portraits/enemy-humanoid-staff-male.svg": {
+      "bytes": 16729,
+      "hash": "6e12a953d33c7c20540839ad430228419062eb8bfc34e76916972db1e4a0ecbf"
+    },
+    "assets/portraits/enemy-humanoid-sword-female.svg": {
+      "bytes": 16980,
+      "hash": "4abe47044deee15c8b2c40e032c836329778784de98af2cf977436589d2a4eea"
+    },
+    "assets/portraits/enemy-humanoid-sword-male.svg": {
+      "bytes": 15232,
+      "hash": "1f24ad45a7a71bb3724ebd7f1ac87bb4378307c163531d1bd361f8fda2916d54"
+    },
+    "assets/portraits/facet-skitter.svg": {
+      "bytes": 9195,
+      "hash": "4c104d1476cade22e06068cc5571b91e19cb68b3c7708582227e2e55cc9bbbd9"
+    },
+    "assets/portraits/fog-spore.svg": {
+      "bytes": 21405,
+      "hash": "b91611e94793808114d7a9290f980bfabee3d0b3b2883d9f48ee730c4555cfc3"
+    },
+    "assets/portraits/frost-borer.svg": {
+      "bytes": 9488,
+      "hash": "34007e0fc6a62b58d87aa77a19028ef9675c8dd561a28ca19f4153f2dbbf2a9e"
+    },
+    "assets/portraits/frost-crusher.svg": {
+      "bytes": 6732,
+      "hash": "ccc280a1f81e6b6bdaaf7819b9d1b274824b0079bd97870dc1726bfc6d7c0998"
+    },
+    "assets/portraits/golem.svg": {
+      "bytes": 1128,
+      "hash": "ac15b6bcf22f05782319868b688e0c13312b269b9ea012510f699abbea9fa5f5"
+    },
+    "assets/portraits/grey-prowler.svg": {
+      "bytes": 10671,
+      "hash": "521433f568655395b6abc32144103ba083081634f489a32115e0edfde1504042"
+    },
+    "assets/portraits/grey-stinger.svg": {
+      "bytes": 7930,
+      "hash": "599c938de30b6f6810d21fb0ab6817a1e960f29a9d7599bf5a76479392f39cbd"
+    },
+    "assets/portraits/guardian.svg": {
+      "bytes": 1284,
+      "hash": "ac84f1c57674ab617a6256bbfa7e9e3fd2d2cf38691194ce4fecb2cb89532256"
+    },
+    "assets/portraits/healer.svg": {
+      "bytes": 1303,
+      "hash": "65bd31c84a8d45f5e480ae086582c02f2a461610461e316273c6f4e728f0c25f"
+    },
+    "assets/portraits/hive-guard.svg": {
+      "bytes": 9422,
+      "hash": "518e8977c697143ceeed4bfd9d3d2814bdf6a861d55d94dc2f0d21b7f7053a3a"
+    },
+    "assets/portraits/hollow-sentry.svg": {
+      "bytes": 10240,
+      "hash": "9d5b4b31f91133cfa26c822c313ae55eb9770c50517770c9bc6330c265c87a35"
+    },
+    "assets/portraits/honey-larva.svg": {
+      "bytes": 8970,
+      "hash": "114d4f2570c7b5ebae993bef0e1d269c9341a2190c9da8c1c77acf6b3beed486"
+    },
+    "assets/portraits/hound.svg": {
+      "bytes": 1088,
+      "hash": "0a8f308d197bf3d13f2c70fa41205f18d7e2efbd88995bb9782ea36c32de531e"
+    },
+    "assets/portraits/insane-worker.svg": {
+      "bytes": 6727,
+      "hash": "774f56baebde73aa1aeb8bad833158ba11f68ac8161c96e8d2538b45d2534c65"
+    },
+    "assets/portraits/living-vine.svg": {
+      "bytes": 39749,
+      "hash": "1093d700cac3f8bd3e332216f96f4e1acfddc7b3b82e69041a4ec0dc70e75f55"
+    },
+    "assets/portraits/lost-welder.svg": {
+      "bytes": 6974,
+      "hash": "299db06e74bb91a98676fdc11b1cc5ef6ff3d34a637331bd2b682127fb07527e"
+    },
+    "assets/portraits/lumi-v1.png": {
+      "bytes": 2844446,
+      "hash": "96871224a98fcf9c1dac41d2840cbe41d7a244f35e34072087010af490c858a3"
+    },
+    "assets/portraits/luo-gongxu-v1.png": {
+      "bytes": 2417565,
+      "hash": "d24810128a5729ae5086923e8c02c3457dfeeb4dbcf76d5edaab2c97a5df7197"
+    },
+    "assets/portraits/luo-gongxu-v2.png": {
+      "bytes": 2646409,
+      "hash": "3eec796d68f07e8c3ea53ac665351e37e3d158773090118779c1334807c4afbc"
+    },
+    "assets/portraits/many-shell-beast.svg": {
+      "bytes": 14335,
+      "hash": "17e9d242fa7588098b5f21aee9da53a7636c37485a6e6274921589d81f8b267c"
+    },
+    "assets/portraits/masked-forester.svg": {
+      "bytes": 56715,
+      "hash": "488a0415d1ffae53927b750fe8a4f2d3f204666a51cacc633e6391add247ac06"
+    },
+    "assets/portraits/moon-crown.svg": {
+      "bytes": 60725,
+      "hash": "ccd86898861396b8b592d8d819e0104ea5b49d6d37d153ab026cf6281c93985f"
+    },
+    "assets/portraits/moon-eye.svg": {
+      "bytes": 59272,
+      "hash": "04a8f75043bc044cac42c55a516ee88d79dae32633b294229cbcfe5e5bb5dfa5"
+    },
+    "assets/portraits/moon-moth.svg": {
+      "bytes": 24866,
+      "hash": "135d54f5fd0a61fd1326c0e2d6d24696d3c9096097cf53347a85655e5aee422e"
+    },
+    "assets/portraits/moon-queen.svg": {
+      "bytes": 17103,
+      "hash": "bb097c3cebb68543ae722c64f640fbe9d4f83962184c49cb2238875a7c07b3df"
+    },
+    "assets/portraits/moon-root.svg": {
+      "bytes": 69236,
+      "hash": "9dd5d416e0e226ab6588c7973013a094007caed95e93caac1083214c422a5252"
+    },
+    "assets/portraits/moon-tendril.svg": {
+      "bytes": 38754,
+      "hash": "fc565c57c94c0195b9f62aeba1e87a1e0447195f25ff4fd9af69e639867b91a4"
+    },
+    "assets/portraits/moon-worker.svg": {
+      "bytes": 8427,
+      "hash": "64b83eb84ee7d32ed192fcd3142fed32f5d6f65a0cb148c06ec6603c5d77f6f1"
+    },
+    "assets/portraits/moss-gulon.svg": {
+      "bytes": 12722,
+      "hash": "3fce125e6fdb2f5f73e0ac31fce883d19f1513cae8546308d0089e4716013b00"
+    },
+    "assets/portraits/moss-slime.svg": {
+      "bytes": 1128,
+      "hash": "2cbb37aa2a586654614e408ba718cb52bc11292229475e4dcd98749f19252875"
+    },
+    "assets/portraits/oathless-duelist.svg": {
+      "bytes": 15967,
+      "hash": "06a37e8e6baf2af545d864ff7c19e30d891187e8bd0bda55786764cbb165f9e1"
+    },
+    "assets/portraits/ore-mite.svg": {
+      "bytes": 9482,
+      "hash": "9a39046b65610dd930501e34be3c097addbd5d7225c565fe829244fe93faf7a1"
+    },
+    "assets/portraits/pandora.png": {
+      "bytes": 2735969,
+      "hash": "3bb2923a3bd10556f56e5e92f4c30d0f50250da1eefadbba64baa282a2899d61"
+    },
+    "assets/portraits/parts-carrier.svg": {
+      "bytes": 6724,
+      "hash": "e617bf48d7be6a3148549c9edb32a59f12f51e5e1a8f3c2a9be56fd3c71de7d7"
+    },
+    "assets/portraits/patrol-hound.svg": {
+      "bytes": 4964,
+      "hash": "eb61605dd28f862f5c0bb02f8ffe4007684e9502736cb2f42a145436c4e1c3f3"
+    },
+    "assets/portraits/pebble.svg": {
+      "bytes": 1203,
+      "hash": "a3b7feb20685d731152eb74ccd89a423ee18d3047cb4ad22bd81aad1676c55a5"
+    },
+    "assets/portraits/rail-spider.svg": {
+      "bytes": 8204,
+      "hash": "2731d496c713ac11bb2f8a3c8d60248c51914457892ba688c7bee52d0d64b817"
+    },
+    "assets/portraits/ranger.svg": {
+      "bytes": 1311,
+      "hash": "dc366e8faba4a29b998fd27ea30e497a088671ac230d968dc3503b1113a3e3fa"
+    },
+    "assets/portraits/raptor-storm.svg": {
+      "bytes": 5461,
+      "hash": "e07daa503da5099c8c30469152cbf3f9a14e36ff805ba8c5cf269290c9b76cdb"
+    },
+    "assets/portraits/repair-overseer.svg": {
+      "bytes": 8243,
+      "hash": "22c42171094e63fa972782d92465193fbef9b7042907dc1936c42e6be18b396f"
+    },
+    "assets/portraits/returning-core.svg": {
+      "bytes": 20428,
+      "hash": "9407ba6f2cd37d3988c70f3103337e64fac20897afd60c8f85e845e754c8f118"
+    },
+    "assets/portraits/rift-mote.svg": {
+      "bytes": 10170,
+      "hash": "c6f01b222cd54304d92c1ef1ea2048eeaa62d541a117992f0621592c7b44aa8b"
+    },
+    "assets/portraits/rogue-arm.svg": {
+      "bytes": 7482,
+      "hash": "b14f7ded808e84fc65112ff6e47e75688fbd9d0a9388dc7fe4765f018c9a34ba"
+    },
+    "assets/portraits/root-hauler.svg": {
+      "bytes": 65339,
+      "hash": "a7c5a20d0e9fe6a8f7341323e6eeabd9f48d0801ead6eceb83a24192438b5947"
+    },
+    "assets/portraits/root-sentry.svg": {
+      "bytes": 64094,
+      "hash": "fb7a8a52670e1c46e1f13d6ef92ff9032e248963b450ce9c1b73841407bc2613"
+    },
+    "assets/portraits/ruins-gate.svg": {
+      "bytes": 7432,
+      "hash": "d4176660e010f3874b95dacd576247be24be8b3e0fa3ac3998f31dd0bb258cd3"
+    },
+    "assets/portraits/ruins-mud-golem.svg": {
+      "bytes": 4760,
+      "hash": "a05d92268fd213fc382b9f075127707bb8bb710d3c8905cad144aae66098e57c"
+    },
+    "assets/portraits/rust-miner.svg": {
+      "bytes": 6727,
+      "hash": "9eb35ac7fd9a6044de45a654ea95510140a152f1cab55ed246d0e216c294d911"
+    },
+    "assets/portraits/scale-archer.svg": {
+      "bytes": 52053,
+      "hash": "9b0e83386b2745e2c8a399c0c076237555ee0f6c983d3f79a799aadb6271cf34"
+    },
+    "assets/portraits/scale-captain.svg": {
+      "bytes": 27894,
+      "hash": "8fef4fba628eae4e81f0267fe787ac44a9bb5933aa43be4cb8efcd641ce84242"
+    },
+    "assets/portraits/scale-shield.svg": {
+      "bytes": 17439,
+      "hash": "8b587c15baee89266c2e0e109c979726a5c8d13b723d778490f0927b33e74d48"
+    },
+    "assets/portraits/scale-warrior.svg": {
+      "bytes": 15946,
+      "hash": "fc17a9a4bb70c767429edabb2dd257b3e439320f4f247d2c22235c9ff15ba659"
+    },
+    "assets/portraits/scrap-hound.svg": {
+      "bytes": 5252,
+      "hash": "00686b9f7258e0d0eaa1b02d19731a708041ee598038dde720456d47c9e54dd4"
+    },
+    "assets/portraits/sentry-drone.svg": {
+      "bytes": 2519,
+      "hash": "6c9885931c7a38d4b1b45d560562a32c6c1ac7ff37dd24db49df5ac377ba86c7"
+    },
+    "assets/portraits/settlement-leader.svg": {
+      "bytes": 7726,
+      "hash": "e9218b134e43e1ca456e6abdfe175d1b9fb2a2f1ac794e17da0d98fb04378b23"
+    },
+    "assets/portraits/shadow-stalker.svg": {
+      "bytes": 4268,
+      "hash": "c4121a2996fdf40cd46f8294f4ee83548b1f1460ea6e81115324e863fa54c62f"
+    },
+    "assets/portraits/shard-sprite.svg": {
+      "bytes": 4755,
+      "hash": "9187e753797038bacb88649ea2491523ce21f7d4358fe06683f0273f41e989b8"
+    },
+    "assets/portraits/shell-gatherer.svg": {
+      "bytes": 9940,
+      "hash": "3fbb0bcdfad43b668d586aef7999cf7993be11d39ec06a0a1293d6643e86bdfa"
+    },
+    "assets/portraits/silica-laps-v1.png": {
+      "bytes": 2877469,
+      "hash": "8b070694e311e3ea2d3145229be6191400231a67221f99c83e5e019362b7193d"
+    },
+    "assets/portraits/silica-laps-v2.png": {
+      "bytes": 3108621,
+      "hash": "224f483c458868f12af65d0364686961300437d3d6ccb2e924a4a5fcb83911d9"
+    },
+    "assets/portraits/silica-laps-v3.png": {
+      "bytes": 3134491,
+      "hash": "a338225cf5bb0e6607311396ca95bae068db878c29a105df4ce78168e611d315"
+    },
+    "assets/portraits/sprout.svg": {
+      "bytes": 1147,
+      "hash": "fe25b4caad156083cf0a1d9dba2c48d38fb503b586810afb437d01cb1a063704"
+    },
+    "assets/portraits/stone-ballista.svg": {
+      "bytes": 2273,
+      "hash": "2bb753c44133ca2559aec20ac3ee5e93471f70ec94bfcde4272af6e5e65233d8"
+    },
+    "assets/portraits/stone-beetle.svg": {
+      "bytes": 6700,
+      "hash": "50152cb864a6e42d6c85db29b8f7f90a59f2c8a7f74c386a4c6f8a50dffe72d4"
+    },
+    "assets/portraits/sunflower-angel-v1.png": {
+      "bytes": 2446395,
+      "hash": "d5a75de4ac7ef4a66fe475e1369f7f18911e256bb827c9127a0ccac80de2258b"
+    },
+    "assets/portraits/swordswoman.svg": {
+      "bytes": 1293,
+      "hash": "aaca1ee491d5ab92bf243e7741e43ef29dd7a50ee0773902f18c0ea54abedd58"
+    },
+    "assets/portraits/template-bow-female.webp": {
+      "bytes": 377518,
+      "hash": "804f65b7d4a969db6b41b23a3534f61d398cd82b539b18df230cbad331bdc248"
+    },
+    "assets/portraits/template-bow-male.webp": {
+      "bytes": 309000,
+      "hash": "274e7075805e43199bd3b1c39ba2437713aa553d2dae313fa0737054ab7e2d44"
+    },
+    "assets/portraits/template-staff-female.webp": {
+      "bytes": 349990,
+      "hash": "d16c48a66a615314ce60f05cded29d71e64597a7dd2dfd958b7cf80a498e8f68"
+    },
+    "assets/portraits/template-staff-male.webp": {
+      "bytes": 386800,
+      "hash": "a4875b3463d9ab4c4237b8457b3e27a9ad5c279fc78c53ba1a8bca37a6b4c84e"
+    },
+    "assets/portraits/template-sword-female.webp": {
+      "bytes": 337252,
+      "hash": "5ce016ad13b85fe28c8cac1fa2e6941e197d8b33f4b79b0fc0805b200c6cfa51"
+    },
+    "assets/portraits/template-sword-male.webp": {
+      "bytes": 377234,
+      "hash": "4c6966bf5b52ec674d8968bbc8ee86b423e4f4991c94d40050408aba12a60dbc"
+    },
+    "assets/portraits/tide-jelly.svg": {
+      "bytes": 3757,
+      "hash": "a7289a15623f2b1472436625dc6b0e5439d03ba29185b5feea0ce85018642395"
+    },
+    "assets/portraits/tomb-beetle.svg": {
+      "bytes": 6699,
+      "hash": "c16c65ef9e5d4a6c83e50b7fc6c6ad8734dfe527f43799388f18292e3628b26f"
+    },
+    "assets/portraits/tomb-warden.svg": {
+      "bytes": 4763,
+      "hash": "1b8337d85147ac0aae7f14762ab1d201d00c3fb5c9144eee2a082388c5a7890a"
+    },
+    "assets/portraits/trail-arbalist.svg": {
+      "bytes": 15971,
+      "hash": "2248daf600677b3d992102f6242d61a1e984a1e27b1f490b32faeeff4e7aa20e"
+    },
+    "assets/portraits/twisted-sapling.svg": {
+      "bytes": 51390,
+      "hash": "f1490ad1d7f1f577a09274f6228a2155a7b5d8df055037ebdb890092707a52ff"
+    },
+    "assets/portraits/unmoored-judge.svg": {
+      "bytes": 10371,
+      "hash": "b085f964cfbd9ec2abe5166911362406b359608c332715f290e04e03964872b5"
+    },
+    "assets/portraits/veil-mender.svg": {
+      "bytes": 20450,
+      "hash": "6489b3ee92ae98cafbf330752738950ecf0897a0f31a9cb22f5f37840406843e"
+    },
+    "assets/portraits/viper-shadow.svg": {
+      "bytes": 5232,
+      "hash": "06ecb0eac099c1bc78bfae64b98e0c9d37e3c02d18c62d591f343c323f11510e"
+    },
+    "assets/portraits/void-parasite.svg": {
+      "bytes": 7697,
+      "hash": "348f039bdbf9c3822243464f994b2490718586791c1e0c3884a4078ac0cb5b9c"
+    },
+    "assets/portraits/warlock.svg": {
+      "bytes": 1330,
+      "hash": "b4319d1cdf31ebe77e53da30f5d35533d11ea152ed0b8903ca6b8a8b6a86b6c3"
+    },
+    "assets/portraits/yuto-nakashi-v1.png": {
+      "bytes": 2246191,
+      "hash": "6b5d6c4bd52550ed99c82358c63f14be457c7dd0b45eb567a7f2f970434454e2"
+    },
+    "assets/preview-arcane.glb": {
+      "bytes": 1542688,
+      "hash": "fd9485cacffde3a77f3bf0d7b5d1bd74731fbb424f861173136f0716e67be2ba"
+    },
+    "assets/preview-castle.glb": {
+      "bytes": 2715272,
+      "hash": "bd3c411f664e13cb29a94f707e1395216ba457eb171f6b5b0b7ecf7c40101e7e"
+    },
+    "assets/preview-dynasty.glb": {
+      "bytes": 1953548,
+      "hash": "fe3afcf49d5d6a5dc75b2d57975dd125a39e682762c169bf3ea67d665c746149"
+    },
+    "assets/preview-forest.glb": {
+      "bytes": 1115776,
+      "hash": "36134d400bd9d64a0d5b0df212059107b0d6a8bb53f1b5a2611ac67df5e07fdf"
+    },
+    "assets/preview-forge.glb": {
+      "bytes": 881324,
+      "hash": "48229821c2e14b1e81f9f6d12281480e7bc1c2437f00bdda6694eb3e71b18c6c"
+    },
+    "assets/preview-frost.glb": {
+      "bytes": 982276,
+      "hash": "ac4c5e0345c54a0d1c977f28ee491a3d3e6b4affa39a6396b843f308058cc679"
+    },
+    "assets/preview-metropolis.glb": {
+      "bytes": 624488,
+      "hash": "e4eb9dc0fc40592fcfc44035c703aca2d2e29ccf4832441e287bb009a1f3854a"
+    },
+    "assets/preview-nexus.glb": {
+      "bytes": 1037764,
+      "hash": "cbf8c83a0b63dda5ec65cc4d9f0d4c0bfb53895fd55e450a79653687d9711ddd"
+    },
+    "assets/preview-relic.glb": {
+      "bytes": 487080,
+      "hash": "ff5c5a9b6c384d5f01ebe030fa4418f074dd4688fa1ca23e9ccd864af1db856b"
+    },
+    "assets/preview-ruins.glb": {
+      "bytes": 974448,
+      "hash": "18dac010399bf843eb2ec62b79e5aa68eef02c6ea62a9842d50b18815aff066d"
+    },
+    "assets/preview-tide.glb": {
+      "bytes": 1028544,
+      "hash": "08ac6ec151bfc59f0943931a6562e2dd5454a85c2aca6695f66f1c3f7088c92c"
+    },
+    "assets/preview-wasteland.glb": {
+      "bytes": 640788,
+      "hash": "48272705c3a8706101877781ad3689c324b62a761684b4c7e8f8a4e898061e98"
+    },
+    "assets/preview-xianxia.glb": {
+      "bytes": 1512384,
+      "hash": "2e79f72d963b753c0c2fc1baae0be1139367812cd98013cefde6799defe283f0"
+    },
+    "assets/rail-spider.glb": {
+      "bytes": 42700,
+      "hash": "df25c2ef694b5de612ce1975c179dcab0f260df479d372164809889fff8d324e"
+    },
+    "assets/relic.glb": {
+      "bytes": 4570436,
+      "hash": "94eb9b9e3039c0762bb5c42748c28a54dfbddb870ad0232aa8f5d5a5ccebaee2"
+    },
+    "assets/repair-overseer.glb": {
+      "bytes": 39468,
+      "hash": "da07dcd941cd746387bd0a0b67950454333a50a02e383ab3ee5cec71bcd557e5"
+    },
+    "assets/returning-core.glb": {
+      "bytes": 88732,
+      "hash": "6aecdb9da809733e510a7fcd30700022455cf14aa06feb09242466b74263a475"
+    },
+    "assets/rift-mote.glb": {
+      "bytes": 44284,
+      "hash": "83d2f9a0d25bcb49a3ef3ff41210f43dbdfd409825d5513a4d828bc0a71ddb61"
+    },
+    "assets/rogue-arm.glb": {
+      "bytes": 36388,
+      "hash": "100fceabdbd7c2ed512ec83d6aa9a7ee7714f9eed7ddc87fba217c3d6ee489bd"
+    },
+    "assets/root-hauler.glb": {
+      "bytes": 274688,
+      "hash": "2b7547e45bd14f192513a5fd3374572e08822bb6563f250e982ba2819e829271"
+    },
+    "assets/root-sentry.glb": {
+      "bytes": 267472,
+      "hash": "426db05c045d42ce42bbc028a4ca268f6b4b4d7edf22f758bf3759e528a4b59a"
+    },
+    "assets/rust-miner.glb": {
+      "bytes": 35612,
+      "hash": "a073daacf8cd65f0cb41338b234b36daaa767d9008ebb6e2337e820b22f33c73"
+    },
+    "assets/scale-archer.glb": {
+      "bytes": 240988,
+      "hash": "65836b8d251bc36cb1e9f834f705f57abed2940a4f76fddfc3767cf9ccf9c8af"
+    },
+    "assets/scale-captain.glb": {
+      "bytes": 153232,
+      "hash": "532f81db783b8a38a87ea047f38cbaa00ef612d0e9c05af05a1e9756820d2725"
+    },
+    "assets/scale-shield.glb": {
+      "bytes": 107528,
+      "hash": "5123a46ba80f9703fa9b6f396504e9d6465fdc979d4999fe5a98dd2702daefc4"
+    },
+    "assets/scale-warrior.glb": {
+      "bytes": 99240,
+      "hash": "7c7d82bd951dc49ad09d0de1c8b97cd35f42b1b452d5dc1f5b9b5ffb86fe3d7c"
+    },
+    "assets/scrap-hound.glb": {
+      "bytes": 30584,
+      "hash": "1364e6916defb3899f5df4ba385dbc90ccb6c9a3603198a0da6341a5bbd102ef"
+    },
+    "assets/sentry-drone.glb": {
+      "bytes": 15260,
+      "hash": "540b5492f824c445dd13269924a4d3a8c0b0e4ce3c025d91f20f36a5c48a0345"
+    },
+    "assets/settlement-leader.glb": {
+      "bytes": 40816,
+      "hash": "ea4e4506ee3e71b9d9b731057b4b2c24c6c3626eaab72a0decd9aca6fe9ba1f7"
+    },
+    "assets/shard-sprite.glb": {
+      "bytes": 21068,
+      "hash": "f05f62a79eaaa2cec381b08f4257230b245691ac5e909c6c519206cd38b94f13"
+    },
+    "assets/shell-gatherer.glb": {
+      "bytes": 48644,
+      "hash": "ad7c22b63466c9d0ce9d3b44368e6ba67530d43ac26737a2e38c1bd88c9255a7"
+    },
+    "assets/tavern-machines.glb": {
+      "bytes": 438336,
+      "hash": "61f6537a3780cf742726e210b0dcabc305495ea5684bbc09d07350242a529673"
+    },
+    "assets/tavern-visitors/edith-full-v1.png": {
+      "bytes": 2008524,
+      "hash": "f6ed4a0dfb0b1a79dce76590ef71405b7d0739e9afb44f626ead2e69bc89845a"
+    },
+    "assets/tavern-visitors/green-traveler-full-v2.png": {
+      "bytes": 1519666,
+      "hash": "1ace60875a262fdb929d3bd4ab12e40355c2f218d2419177508cf29adf0638c1"
+    },
+    "assets/tavern-visitors/lumi-full-v1.png": {
+      "bytes": 2200625,
+      "hash": "e5a707ac6bd943e4e339c66fa0d44e4ca3315b9ab094a15e509f3234a66e26dc"
+    },
+    "assets/tavern-visitors/luo-gongxu-full-v2.png": {
+      "bytes": 2482024,
+      "hash": "977b5a4f718330de749aeda6d1374552a8b68800e274721076a2e12d8b8f061f"
+    },
+    "assets/tavern-visitors/pandora-full-v1.png": {
+      "bytes": 2964873,
+      "hash": "4d81051f7fe89675e6229f277e9c5c05056d58bad437c38d8a111eed1a783478"
+    },
+    "assets/tavern-visitors/silica-laps-full-v2.png": {
+      "bytes": 2541994,
+      "hash": "16476b961ea0d8abe7a40c2ae261976109bafaee34ff134120d33d131e7eafcf"
+    },
+    "assets/tavern-visitors/sunflower-angel-full-v1.png": {
+      "bytes": 2157120,
+      "hash": "5a246fa3f89806fd1c57a441448ff1829c714784228058d605c1704b59bd5f52"
+    },
+    "assets/tavern-visitors/yuexi-full-v1.png": {
+      "bytes": 2682610,
+      "hash": "f6abdc5342beac48ec60832c501d9cc2345a35ecd6954ab2c18c8dc80fb8c445"
+    },
+    "assets/tide-jelly.glb": {
+      "bytes": 137704,
+      "hash": "5aca3d5fd6d5cba0423ee07e36d6aefec6a7c68f8fa712db9504fb095483ebde"
+    },
+    "assets/tide.glb": {
+      "bytes": 2621268,
+      "hash": "79d0fadb00d19379be3226cbb73b99997d8c9402e9a1f806a283ea763884bf94"
+    },
+    "assets/title-tavern.png": {
+      "bytes": 2247655,
+      "hash": "dcc1299be64e25ff9655e90e03873d714f543a4595d7482fd8674c2cbd0c8fa5"
+    },
+    "assets/trail-arbalist.glb": {
+      "bytes": 95864,
+      "hash": "c562974baac77c98a9c868b4bb10c37c570e84c00f837c2a63814f5f609525a9"
+    },
+    "assets/twisted-sapling.glb": {
+      "bytes": 217152,
+      "hash": "d83f54566b1cec44803553dbf5e439cad2790f282aab3f083cc4d116ccca121d"
+    },
+    "assets/unmoored-judge.glb": {
+      "bytes": 50820,
+      "hash": "d2683d894af62dd012d8d3e7f06e02b857afe2b5ad4e633bf8a9de15ac1e2edb"
+    },
+    "assets/veil-mender.glb": {
+      "bytes": 121756,
+      "hash": "2d73130d33ba1f01dcddf218843c0249998a50ba94e4a5e05b888a1c5d0faece"
+    },
+    "assets/wasteland.glb": {
+      "bytes": 4648264,
+      "hash": "208a427133f24238d00b22b1e33f5273bec532b8f77094e7add49c2f57b649f0"
+    },
+    "assets/xianxia.glb": {
+      "bytes": 5093728,
+      "hash": "d43133a023bb18980835a32f5ac9e942fd25f497a8fad461c1fd6c7eed9c3230"
+    }
+  },
+  "characterArt": [
+    "./assets/portraits/changjing-yuexi.png",
+    "./assets/portraits/swordswoman.svg",
+    "./assets/portraits/chronomancer.svg",
+    "./assets/portraits/healer.svg",
+    "./assets/portraits/warlock.svg",
+    "./assets/portraits/ranger.svg",
+    "./assets/portraits/sunflower-angel-v1.png",
+    "./assets/portraits/lumi-v1.png",
+    "./assets/portraits/yuto-nakashi-v1.png",
+    "./assets/portraits/luo-gongxu-v2.png",
+    "./assets/portraits/silica-laps-v3.png",
+    "./assets/tavern-visitors/yuexi-full-v1.png",
+    "./assets/tavern-visitors/edith-full-v1.png",
+    "./assets/tavern-visitors/pandora-full-v1.png",
+    "./assets/tavern-visitors/sunflower-angel-full-v1.png",
+    "./assets/tavern-visitors/lumi-full-v1.png",
+    "./assets/tavern-visitors/green-traveler-full-v2.png",
+    "./assets/tavern-visitors/luo-gongxu-full-v2.png",
+    "./assets/tavern-visitors/silica-laps-full-v2.png",
+    "./assets/portraits/edith.png",
+    "./assets/portraits/pandora.png",
+    "./assets/portraits/template-bow-female.webp",
+    "./assets/portraits/template-bow-male.webp",
+    "./assets/portraits/template-staff-female.webp",
+    "./assets/portraits/template-staff-male.webp",
+    "./assets/portraits/template-sword-female.webp",
+    "./assets/portraits/template-sword-male.webp"
+  ]
+}

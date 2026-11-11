@@ -21,11 +21,11 @@ test('normal play always generates; the combined developer switch migrates both 
     developerMode: false,
     allowRetreat: false,
     editArchives: false,
-    tavernVisitors: false,
     protagonistApi: true,
     scriptApi: true,
   };
   assert.deepEqual(restoreGenerationOptions(null), defaults);
+  assert.deepEqual(restoreGenerationOptions({ tavernVisitors: false }), defaults);
   assert.deepEqual(restoreGenerationOptions({ protagonistApi: false, scriptApi: false }), defaults);
   assert.deepEqual(
     restoreGenerationOptions({ developerMode: true, protagonistApi: false, scriptApi: false }),
@@ -223,8 +223,8 @@ test('chat API assembles world, green-light mentions, prose-only history, regex 
                 responseOverride ??
                 (requests
                   .at(-1)
-                  .messages.some((message) => message.content.includes('<wanxiang_chat>'))
-                  ? '<wanxiang_chat>你好，来客。</wanxiang_chat>'
+                  .messages.some((message) => message.content.includes('<wanxiang_output>'))
+                  ? '<wanxiang_output>你好，来客。</wanxiang_output>'
                   : '<p>你好，来客。</p>'),
             },
           },
@@ -250,6 +250,8 @@ test('chat API assembles world, green-light mentions, prose-only history, regex 
     return result;
   }
   try {
+    // This case compares preview bytes; random entropy has its own transport coverage.
+    await post('anti-route', { action: 'save', config: { entropy: false } });
     for (const kind of ['chat', 'quick-chat'])
       await post('config', {
         kind,

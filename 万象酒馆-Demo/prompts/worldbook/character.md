@@ -18,7 +18,7 @@ world是公共世界观，request是本次OC要求与避免重复名单；人物
 不生成ultimate、quest、awakening字段；当前版本没有奥义或觉醒系统，只设计普攻、两个技能与专属入场技。
 
 【角色生成输出格式 / CHARACTER v3】
-最终结果必须使用唯一一组 <wanxiang_json> 与 </wanxiang_json> 包裹，标签单独成行，内部为下述JSON。标签不要写进JSON字符串，不嵌套、不重复、不使用其他标签名。代码只读取这组标签内的内容，标签外的文字不属于角色或剧本；无需输出思考过程或自查。
+最终结果必须使用唯一一组 <wanxiang_output> 与 </wanxiang_output> 包裹，标签单独成行，内部为下述JSON。标签不要写进JSON字符串，不嵌套、不重复、不使用其他标签名。代码只读取这组标签内的内容，标签外的文字不属于角色或剧本；无需输出思考过程或自查。
 标签内仅输出一个完整JSON对象，schemaVersion固定数字3，按schemaVersion、setting、data顺序书写。禁止Markdown围栏、额外XML、game_data附录、尾逗号、省略号和未规定字段。
 setting只允许name/gender/age/appearance/personality/history/attack/skills/entrySkill，其中age可自由填写文字、数字、留空或省略，不做内容校验，其余字段必填（每个角色都必须有entrySkill）。attack、entrySkill、每项setting.skills恰好是{name,description}，两个值都为字符串。skills恰好两项。不得增加description_note、notes、reason、评价或说明子对象，正文写入规定字符串。
 personality必须直接写成一个字符串，例如"严谨务实，习惯先核实事实。"，不要写成{name,description}对象。name、gender、appearance、history也直接填写字符串。

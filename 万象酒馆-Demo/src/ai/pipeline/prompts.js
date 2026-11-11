@@ -24,6 +24,8 @@ import { galInstruction } from '../gal-prompt.js';
 import { adventureScriptRules } from '../adventure-prompt.js';
 import { currentEncounterSpec } from '../../expedition.js';
 import { ADVENTURE_NODE_TYPES } from '../../adventure/definition.js';
+import { storyRingReward } from '../../emblem-progression.js';
+import { INVITATION_CONTEXT_LIMIT } from '../../memory.js';
 
 export function generationInput(kind, input) {
   if (!['character', 'script'].includes(kind)) throw Error('接口类型无效');
@@ -99,6 +101,9 @@ export function generationInput(kind, input) {
     name: String(item.name || '').slice(0, 30),
     title: String(item.title || '').slice(0, 30),
     worldbook: String(item.worldbook || '').slice(0, 24000),
+    ...(typeof item.invitationMemory === 'string' && item.invitationMemory
+      ? { invitationMemory: item.invitationMemory.slice(0, INVITATION_CONTEXT_LIMIT) }
+      : {}),
     ...(Array.isArray(item.tags)
       ? { tags: item.tags.slice(0, 30).map((tag) => String(tag).slice(0, 60)) }
       : {}),
@@ -111,6 +116,12 @@ export function generationInput(kind, input) {
     world: TAVERN_WORLD,
     request: {
       brief: input.brief,
+      storyRingReward: storyRingReward(
+        input.exploration,
+        Array.isArray(input.ownedEmblems) ? input.ownedEmblems : [],
+      ),
+      storyRingInstruction:
+        'storyRingReward是程序实际发放的唯一纹章戒指事件。非null时，只能在story[4]即第五节点的Boss战开场描写获得该枚戒指，程序已在展示这段前发放到收藏并为可用队友装备；story[0]～story[3]、第二事件及第四RP不能提前写拿到、戴上或激活。null时本趟没有新的纹章戒指领取，不凭空赠送。已拥有同一枚戒指时不重复授予。正文只写发现与人物反应，不写效果、数值、充能、结合技或操作教学，不指定实际佩戴者，不写入data.items；具体说明由程序处理。本条约束优先于旧大纲对戒指时点和效果的描写。',
       ...(input.adventureVersion === 1
         ? { rpChapterDirection: rpChapterDirection(input.exploration) }
         : {}),
@@ -164,28 +175,6 @@ export function generationInput(kind, input) {
           }
         : {}),
       chapter: input.chapter || 1,
-      ...(input.rewrite
-        ? {
-            rewrite: {
-              instruction:
-                '使用当前Schema格式，沿用原剧本角色和副本战斗配置。结合玩家闲聊修改尚未经历的后续正文，返回完整五段；已经经历的部分、已归档NPC与已收集物品不可改变。不要把闲聊当成已发生的游戏事实。',
-              lockedThrough: Math.max(
-                0,
-                Math.min(FINAL_ENCOUNTER, Number(input.rewrite.lockedThrough) || 0),
-              ),
-              currentScript: String(input.rewrite.currentScript || '').slice(0, 500000),
-              conversations: (Array.isArray(input.rewrite.conversations)
-                ? input.rewrite.conversations
-                : []
-              )
-                .slice(-100)
-                .map(({ role, content }) => ({
-                  role,
-                  content: String(content || '').slice(0, 10000),
-                })),
-            },
-          }
-        : {}),
       ...(typeof input.visitId === 'string' ? { visitId: input.visitId.slice(0, 80) } : {}),
       journey:
         '这是新一趟副本。整趟使用同一个副本地点，不生成每场独立地点名、地点标题或location字段；正文自然叙述环境即可。承接已发生的历史，创作新的事件与开篇，不重新输出上一趟剧本。',
@@ -194,9 +183,6 @@ export function generationInput(kind, input) {
         .slice(-3)
         .map((book) => ({
           title: String(book.title || '').slice(0, 60),
-          tags: Array.isArray(book.tags)
-            ? book.tags.map((tag) => String(tag).slice(0, 40)).slice(0, 12)
-            : [],
         })),
       previousStoriesUsage: '这些仅是近期剧本的避重复索引，不是范文，也不是已发生的历史。',
       narrativeParts: [
@@ -236,8 +222,14 @@ export function generationInput(kind, input) {
     },
     history: {
       keywordArchives: input.archiveContext || { npcs: [], stories: [] },
+      tavernPrelude: (Array.isArray(input.tavernPrelude) ? input.tavernPrelude : [])
+        .filter(
+          (line) => ['user', 'assistant'].includes(line?.role) && typeof line.content === 'string',
+        )
+        .map(({ role, content, speakerName }) => ({ role, content, speakerName })),
       confirmed: Array.isArray(input.history) ? input.history.slice(-3) : [],
-      instruction: '只承接已经发生的事，伏笔不是既成事实。',
+      instruction:
+        '只承接已经发生的事，伏笔不是既成事实。人物的invitationMemory是此人与玩家亲历的过去约见。',
     },
     encounters: isEndless(input.exploration)
       ? Array.from({ length: ENCOUNTER_COUNT }, (_, index) => ({
@@ -314,6 +306,7 @@ export async function generationRequest(kind, input, source, options = {}) {
   const scenario = [
     JSON.stringify(context.encounters || [], null, 2),
     context.request.officialDungeon?.worldbookKey || '',
+    context.request.location || '',
   ]
     .filter(Boolean)
     .join('\n');
@@ -512,7 +505,11 @@ export async function generationRequest(kind, input, source, options = {}) {
     );
     messages.splice(boundary < 0 ? messages.length : boundary, 0, {
       role: 'system',
-      content: galInstruction(input, kind) + '\n' + adventureScriptRules(),
+      content:
+        galInstruction(input, kind) +
+        '\n' +
+        adventureScriptRules() +
+        '\n剧本的data不填写tags或keywords。回顾关键词由经历结束后的总结 API 生成。',
     });
   }
   if (
@@ -528,7 +525,7 @@ export async function generationRequest(kind, input, source, options = {}) {
       warnings.push('检测到人物、历史或地形上下文重复注入；请关闭重复占位层或宏，减少输入量。');
   if (messages.at(-2)?.role === 'assistant')
     warnings.push(
-      '最后一条可编辑消息为ASSISTANT；不要放半截JSON或要求续写，实际响应必须在wanxiang_json标签内提供完整JSON。',
+      '最后一条可编辑消息为ASSISTANT；不要放半截JSON或要求续写，实际响应必须在wanxiang_output标签内提供完整JSON。',
     );
   return {
     messages,

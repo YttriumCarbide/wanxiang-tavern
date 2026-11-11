@@ -1,0 +1,60 @@
+{
+  "generator": "image_gen built-in",
+  "assets": [
+    {
+      "id": "starlamp",
+      "source": "C:\\Users\\Lenovo\\.codex\\generated_images\\01a178f0-bd77-7b10-9f98-ca688a68afab\\exec-971cacd3-51f2-4a1f-a62f-68bceb59bfb8.png",
+      "file": "assets/exploration/starlamp-band-v1.png",
+      "width": 2172,
+      "height": 724,
+      "sha256": "fab137724d1052141c3c64c12be58d17cfadb94f16c80affe8143243ba2b4dce"
+    },
+    {
+      "id": "city-center",
+      "source": "C:\\Users\\Lenovo\\.codex\\generated_images\\01a178f0-bd77-7b10-9f98-ca688a68afab\\exec-e00fb4cc-54ff-4926-8ee5-af0125e39316.png",
+      "file": "assets/exploration/city-center-band-v1.png",
+      "width": 2172,
+      "height": 724,
+      "sha256": "3c35b494ca1b966ca08bc2d2fc60e61c983798267ae17fa25c05597d1c563b25"
+    },
+    {
+      "id": "rampart",
+      "source": "C:\\Users\\Lenovo\\.codex\\generated_images\\01a178f0-bd77-7b10-9f98-ca688a68afab\\exec-916f30c8-7f9d-41f5-a7a0-05dda76e5db6.png",
+      "file": "assets/exploration/rampart-band-v1.png",
+      "width": 2172,
+      "height": 724,
+      "sha256": "3301e38428114477e41fb247c68c9b360c250e115cfe73acb550bf5cc1e449cd"
+    },
+    {
+      "id": "market",
+      "source": "C:\\Users\\Lenovo\\.codex\\generated_images\\01a178f0-bd77-7b10-9f98-ca688a68afab\\exec-661d1964-8dff-4c0b-9ddc-739ebec87be7.png",
+      "file": "assets/exploration/market-band-v1.png",
+      "width": 2172,
+      "height": 724,
+      "sha256": "a7c8ab97b6cf3d91020489a5e0a10d209800d9a9dc6b6fc3c237ea39ef4101dc"
+    },
+    {
+      "id": "outskirts",
+      "source": "C:\\Users\\Lenovo\\.codex\\generated_images\\01a178f0-bd77-7b10-9f98-ca688a68afab\\exec-a81639b5-18f2-4b2e-ac12-f35bdf1b418e.png",
+      "file": "assets/exploration/outskirts-band-v2.png",
+      "width": 2172,
+      "height": 724,
+      "sha256": "ee11b7a9b9cc0841033f495603392a014eef94ae5ba00b0ba1c382924b58bab6"
+    },
+    {
+      "file": "assets/exploration/ground-cobble-v1.png",
+      "source": "C:\\Users\\Lenovo\\.codex\\generated_images\\01a178f0-bd77-7b10-9f98-ca688a68afab\\exec-22d3a421-87c9-4144-b0ae-a12ee043dc5d.png",
+      "width": 1254,
+      "height": 1254,
+      "sha256": "678b68e56731187cffc437290fbadedf3cc30cad72a89f547ecd2e4552df3e76"
+    },
+    {
+      "file": "assets/exploration/ground-earth-v1.png",
+      "source": "C:\\Users\\Lenovo\\.codex\\generated_images\\01a178f0-bd77-7b10-9f98-ca688a68afab\\exec-c57a3641-5a5e-4177-89a7-e16271f5a55e.png",
+      "width": 1254,
+      "height": 1254,
+      "sha256": "d4975c5fa85c69fa950fa4699663170c1e2eea744c07e06a789efb0c640c9123"
+    }
+  ],
+  "correctionPrompt": "Use case: precise-object-edit. Edit target is this extremely wide 3:1 continuous countryside panorama. Correct ONLY the misplaced close town buildings, ivy-covered stone arch and apothecary storefront at the far RIGHT of the image (roughly the rightmost 20%). This entire location is OUTSIDE the town walls. Replace those close street buildings/arch with the continuation of the same broad country road, low grass, a weathered wooden fence and trees, with only the distant fortified city wall visible behind. NO nearby houses, no pharmacy, no tavern, no stone arch right beside the viewer. Preserve the central watchtower exactly, the far city-wall silhouette, broken empty cart, left forest trail, road height, horizon, warm brown ink/cel-painted style, colors and all the rest of the composition. Preserve the extremely wide3:1 format at maximum native resolution. The left and right borders should both show a matching continuation of trees/country roadside so they wrap seamlessly for a360degree camera. No people, writing, UI, frames. Keep the foreground clear road for character sprites. Do not zoom, crop or turn it into a normal narrow view."
+}

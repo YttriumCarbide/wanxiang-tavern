@@ -1,4 +1,5 @@
 import test from 'node:test';
+import { monsterNarrativeText } from '../src/ai/monster-narrative.js';
 import assert from 'node:assert/strict';
 import { readFile, mkdtemp } from 'node:fs/promises';
 import path from 'node:path';
@@ -191,7 +192,7 @@ test('frost worldbook upgrades are idempotent and real browser/server requests i
       assert(text.includes(FROST_DUNGEONS[sequence].name));
       assert(text.includes(FROST_NPCS[0].design));
       for (const id of new Set(FROST_ROUTES[sequence].battles.flatMap((battle) => battle.enemyIds)))
-        assert(text.includes(DEFINITIONS[id].description), id);
+        assert(text.includes(monsterNarrativeText(DEFINITIONS[id].description)), id);
     }
 });
 

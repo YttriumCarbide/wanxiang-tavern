@@ -1,0 +1,61 @@
+#visitor-refresh {
+  position: fixed;
+  right: max(24px, env(safe-area-inset-right));
+  top: 86px;
+  z-index: 10;
+  padding: 8px 16px;
+  color: #f7edcf;
+  background: rgba(13, 23, 25, 0.84);
+  border: 1px solid rgba(162, 186, 172, 0.28);
+  border-radius: 6px;
+  font: 12px system-ui;
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.5),
+    0 0 12px rgba(226, 186, 111, 0.2);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: all 0.2s ease;
+}
+#visitor-refresh:hover {
+  background: rgba(36, 45, 40, 0.94);
+  border-color: #ffd899;
+  box-shadow:
+    0 6px 20px rgba(0, 0, 0, 0.6),
+    0 0 16px rgba(226, 186, 111, 0.4);
+  transform: translateY(-1px);
+}
+#visitor-refresh[hidden] {
+  display: none;
+}
+html[data-embedded] #visitor-refresh {
+  display: none;
+}
+body.ring-viewing #visitor-refresh,
+body.gal-covered #visitor-refresh {
+  visibility: hidden;
+}
+body[data-scene] #visitor-refresh {
+  right: max(28px, env(safe-area-inset-right));
+  top: 78px;
+}
+html[data-embedded] body[data-scene] #visitor-refresh {
+  top: 83px;
+}
+
+@media (max-height: 450px) {
+  #visitor-refresh {
+    right: 16px;
+    top: 68px;
+    font-size: 11px;
+    padding: 6px 10px;
+  }
+}
+@media (max-height: 540px), (max-width: 800px) {
+  html[data-embedded] body[data-scene] #visitor-refresh {
+    top: 64px;
+  }
+  body[data-scene] #visitor-refresh {
+    right: max(18px, env(safe-area-inset-right));
+    top: 68px;
+  }
+}

@@ -37,7 +37,11 @@ import { createModelPicker } from './model-picker.js';
 import { createAiPresetEditor } from './ai-presets.js';
 import { createGenerationDiagnostics } from './generation-diagnostics.js';
 import { createWorldbookEditor } from './worldbook-editor.js';
-import { characterWorldEntry } from '../ai/worldbook.js';
+import {
+  characterWorldEntry,
+  characterEntryCategory,
+  classifyCharacterEntry,
+} from '../ai/worldbook.js';
 import { createRegexEditor } from './regex-editor.js';
 import { characterSheet } from './character-sheet.js';
 import { scriptRepetitionWarnings } from '../ai/script-prose.js';
@@ -49,7 +53,7 @@ import {
 import { completeExploration } from '../exploration.js';
 import { REGIONS } from '../content/regions.js';
 import { assignParty, firstCompanion } from '../campaign.js';
-import { memoryHistory } from '../memory.js';
+import { archiveTavernPrelude, memoryHistory, tavernPrelude } from '../memory.js';
 import { developerOption } from '../generation-options.js';
 import { prepareSwapLesson } from '../companion-events.js';
 import { rearUnlocked } from '../formation-access.js';
@@ -161,8 +165,19 @@ export function createGeneration(context) {
             item.comment === `人物详情：${name}` ||
             item.extensions?.wanxiang?.characterId === char.id,
         );
+        if (entry) {
+          const classified = classifyCharacterEntry(entry, char, library().campaign?.protagonistId);
+          if (JSON.stringify(classified) !== JSON.stringify(entry)) {
+            Object.assign(entry, classified);
+            dirty = true;
+          }
+        }
         if (!entry) {
-          book.entries[nextUid] = characterWorldEntry(char, nextUid);
+          book.entries[nextUid] = characterWorldEntry(
+            char,
+            nextUid,
+            library().campaign?.protagonistId,
+          );
           nextUid++;
           dirty = true;
         } else if (
@@ -408,6 +423,7 @@ export function createGeneration(context) {
     if (!['inn', 'event'].includes(session.runtime.mode)) return;
     render();
     setTab('settings');
+    context.gal?.suspendForModal($('#ai-dialog'));
     if (!$('#ai-dialog').open) $('#ai-dialog').showModal();
     const controls = [
       ...document.querySelectorAll(
@@ -418,7 +434,7 @@ export function createGeneration(context) {
     status('正在读取连接设置…');
     try {
       profiles = await api('config');
-      if (kind) $('#ai-kind').value = kind;
+      if (kind) $('#ai-kind').value = kind === 'quick-chat' ? 'chat' : kind;
       await presetEditor.refresh();
       fillProfile();
       status(typeof notice === 'string' ? notice : '');
@@ -493,6 +509,10 @@ export function createGeneration(context) {
     const node = session.journey.selectedNode;
     const route = node ? library().exploration[routeKey(node)] : null;
     return {
+      tavernPrelude: tavernPrelude(library()),
+      journeyContinuationIds: (route?.history || [])
+        .slice(-3)
+        .map(({ runId }) => `dungeon:${runId}`),
       visitId: crypto.randomUUID(),
       storyArc: {
         phase: nextArcPhase(
@@ -519,10 +539,16 @@ export function createGeneration(context) {
           (book) => !node || (book.exploration && routeKey(book.exploration) === routeKey(node)),
         )
         .slice(-3)
-        .map((book) => ({ title: book.title, tags: book.tags })),
-      brief:
+        .map((book) => ({ title: book.title })),
+      brief: [
         $('#ai-script-brief').value.trim() ||
-        '让故事随旅程逐渐推进，并留下伏笔。文风、视角、节奏与描写方式沿用当前预设。',
+          '让故事随旅程逐渐推进，并留下伏笔。文风、视角、节奏与描写方式沿用当前预设。',
+        session.ai.scriptGuidance
+          ? '本次玩家引导方向（须遵守世界观与已有事实）：' + session.ai.scriptGuidance
+          : '',
+      ]
+        .filter(Boolean)
+        .join('\n'),
       boss: node
         ? explorationSpec(node, 4).enemyIds.find(
             (id) => (node.world?.enemyDefinitions[id] || DEFINITIONS[id])?.boss,
@@ -537,10 +563,18 @@ export function createGeneration(context) {
         : {}),
       chapter: route ? route.completed + 1 : library().chapter,
       adventureVersion: 1,
+      ownedEmblems: [...(library().emblems || [])],
       party: party().map(settingOnly),
       protagonistId: library().campaign?.protagonistId || null,
       ...(node ? { exploration: structuredClone(node) } : {}),
-      history: memoryHistory(library(), route ? route.history : library().history.slice(-3)),
+      history: memoryHistory(
+        library(),
+        (route?.history || []).map((record) =>
+          library().history.some((entry) => entry.runId === record.runId && entry.complete)
+            ? { ...record, runId: null, confirmedEvents: [] }
+            : record,
+        ),
+      ),
     };
   }
   function inputFor(kind) {
@@ -573,8 +607,8 @@ export function createGeneration(context) {
     onSaved(book) {
       let updated = false;
       for (const entry of Object.values(book?.entries || {})) {
-        if (!entry.comment?.startsWith('人物详情：')) continue;
-        const name = entry.comment.slice('人物详情：'.length).trim();
+        if (!characterEntryCategory(entry)) continue;
+        const name = entry.comment.replace(/^[^：:]*[：:]/u, '').trim();
         const member = library().characters.find(
           (c) => c.setting?.name === name || entry.extensions?.wanxiang?.characterId === c.id,
         );
@@ -1102,13 +1136,18 @@ export function createGeneration(context) {
         : null;
       if (book) {
         library().prepared = null;
+        const prelude = archiveTavernPrelude(library(), book.generationInput?.tavernPrelude, false);
         library().history.push({
           runId: session.ai.activeScript.runId,
           scriptId: book.id,
           title: book.title,
           tags: [...(book.tags || [])],
           setting: book.setting,
-          lines: [],
+          lines: prelude,
+          place: book.exploration ? explorationSpec(book.exploration).name : REGIONS.ruins.name,
+          people: (book.party || [])
+            .filter((member) => member.id !== library().campaign?.protagonistId)
+            .map((member) => member.name),
           played: [],
           complete: false,
           nextHook: null,

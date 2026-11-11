@@ -1,0 +1,29 @@
+{
+  "source": "../../free-scenes-v1/city-center.png",
+  "sourceSize": [
+    2172,
+    724
+  ],
+  "tiles": [
+    {
+      "file": "tile-0.png",
+      "sourceX": 0,
+      "offset": 0
+    },
+    {
+      "file": "tile-1.png",
+      "sourceX": 483,
+      "offset": 837
+    },
+    {
+      "file": "tile-2.png",
+      "sourceX": 965,
+      "offset": 1671
+    },
+    {
+      "file": "tile-3.png",
+      "sourceX": 1448,
+      "offset": 2508
+    }
+  ]
+}

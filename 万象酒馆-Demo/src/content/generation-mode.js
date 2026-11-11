@@ -40,12 +40,10 @@ export function adventureTestScript(map = 'ruins') {
             {
               label: '整理沿途物资',
               detail: '和同行者分享发现，收好能使用的东西。',
-              reward: { gold: 20, items: [] },
             },
             {
               label: '一起检查药箱',
-              detail: '确认补给，将一瓶生命药水放进背包。',
-              reward: { gold: 0, items: [{ id: 'health-potion', count: 1 }] },
+              detail: '和同行者核对补给，讨论后面的安排。',
             },
           ],
         },
@@ -55,6 +53,7 @@ export function adventureTestScript(map = 'ruins') {
             { location: '岔路旁', detail: '一座废弃岗亭，门槛留着新旧交错的脚印。' },
             { location: '墙边', detail: '几块写满地名的木牌靠在一起。' },
             { location: '树林里', detail: '偶尔传来人们的交谈声。' },
+            { location: '路面', detail: '几道车辙从碎石间穿过，深浅不一。' },
           ],
           description:
             '走过回廊后，队伍在一处分岔口停了下来。地图上原本相连的道路如今被坍塌的石墙隔开，没人能确定哪条路仍通向深处。同行者暂时收起武器，把沿途的发现放在一起商量；不远处偶尔传来交谈声，却看不见说话的人。此地还算安静，大家有时间歇脚、观察，也可以谈谈接下来的打算。怎样继续前行，需要由你们自己决定。',

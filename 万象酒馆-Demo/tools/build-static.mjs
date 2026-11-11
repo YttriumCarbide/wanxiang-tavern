@@ -3,12 +3,14 @@ import { cp, readdir, readFile, writeFile, mkdir, rm, stat } from 'node:fs/promi
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildBuiltinWorld } from './build-builtin-world.mjs';
+import { buildAssetCatalog } from './build-asset-catalog.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const destination = path.join(root, 'dist');
 
 export async function buildStatic() {
   await buildBuiltinWorld();
+  await buildAssetCatalog();
   await mkdir(path.join(root, 'vendor/runtime'), { recursive: true });
   const dependencies = {
     tiktoken: 'js-tiktoken/lite',

@@ -16,7 +16,7 @@ export function migrateTutorialWorldbook(source, { includeOutlines = true } = {}
       entries.push(book.entries[uid++]);
     }
     for (const entry of entries) {
-      entry.comment = `人物详情：${member.setting.name}`;
+      entry.comment = characterWorldEntry(member).comment;
       entry.content = member.setting.worldbook;
       entry.key = [
         member.setting.name,

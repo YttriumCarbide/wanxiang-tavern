@@ -11,14 +11,20 @@
 #portrait-dialog {
   width: min(660px, calc(100vw - 32px));
   max-height: calc(100dvh - 24px);
-  padding: 22px;
-  border: 1px solid #a6b18e80;
-  border-radius: 10px;
-  background: #152927f5;
-  color: #dfddc9;
+  padding: 24px 28px;
+  border: 1px solid rgba(226, 186, 111, 0.45);
+  border-radius: 16px;
+  background: radial-gradient(ellipse at 50% 0%, rgba(36, 68, 60, 0.7), transparent 75%), #0c1a18;
+  color: #f2eee3;
+  box-shadow:
+    0 24px 80px rgba(0, 0, 0, 0.85),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
 }
 #portrait-dialog::backdrop {
-  background: #03121077;
+  background: rgba(4, 9, 11, 0.8);
+  backdrop-filter: blur(8px);
 }
 #portrait-dialog header {
   display: flex;
@@ -83,4 +89,14 @@
     grid-template-columns: 96px minmax(0, 1fr);
     gap: 16px;
   }
+}
+.portrait-kind {
+  display: flex;
+  gap: 10px;
+  margin: 8px 0 18px;
+}
+.portrait-kind [aria-pressed='true'] {
+  color: #f5dfac;
+  border-color: #d4b16a;
+  background: #d4b16a20;
 }

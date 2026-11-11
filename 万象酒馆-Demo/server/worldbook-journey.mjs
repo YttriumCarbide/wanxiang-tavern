@@ -33,14 +33,14 @@ export function migrateJourneyWorldbook(source) {
     if (marker.generationExample === 'script') {
       try {
         const raw = JSON.parse(
-          entry.content.replace(/^\s*<wanxiang_json>\s*|\s*<\/wanxiang_json>\s*$/g, ''),
+          entry.content.replace(/^\s*<wanxiang_output>\s*|\s*<\/wanxiang_output>\s*$/g, ''),
         );
         if (raw.story?.length !== ENCOUNTER_COUNT + 1) continue;
         raw.story.splice(3, 2, raw.story[3] + '\n\n' + raw.story[4]);
         for (const list of [raw.data?.npcs, raw.data?.items])
           for (const item of list || [])
             if (item.encounter > 3) item.encounter = Math.min(FINAL_ENCOUNTER, item.encounter - 1);
-        entry.content = '<wanxiang_json>\n' + JSON.stringify(raw, null, 2) + '\n</wanxiang_json>';
+        entry.content = '<wanxiang_output>\n' + JSON.stringify(raw, null, 2) + '\n</wanxiang_output>';
       } catch {
         /* Non-JSON user examples remain unchanged. */
       }

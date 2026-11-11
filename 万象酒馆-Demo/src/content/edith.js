@@ -17,12 +17,12 @@ export const EDITH = {
       id: 'tidal-moonlight',
       name: '汐月凝辉',
       ap: 1,
-      mp: 5,
+      mp: 6,
       target: 'allEnemies',
-      text: '消耗5法力，回复自身7生命，对所有敌人造成6点伤害。',
+      text: '消耗6法力，回复自身6生命，对所有敌人造成5点伤害。',
       effects: [
-        { type: 'selfHeal', value: 7 },
-        { type: 'damage', value: 6 },
+        { type: 'selfHeal', value: 6 },
+        { type: 'damage', value: 5 },
       ],
     },
     {
@@ -32,9 +32,9 @@ export const EDITH = {
       mp: 0,
       hp: 6,
       target: 'enemy',
-      text: '回复自身8法力，对一名敌人造成12伤害。',
+      text: '消耗6生命，回复自身4法力，对一名敌人造成12伤害。',
       effects: [
-        { type: 'selfMana', value: 8 },
+        { type: 'selfMana', value: 4 },
         { type: 'damage', value: 12 },
       ],
     },

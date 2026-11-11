@@ -1,6 +1,8 @@
 /**
  * Explicit controller ports; no module globals or circular ES module imports.
  * @typedef {Object} AppContext
+ * @property {ReturnType<typeof import('../shared/asset-store.js').createAssetStore>} assets
+ * @property {ReturnType<typeof import('./asset-preload.js').createPortraitPreloader>} assetPreloader
  * @property {ReturnType<typeof import('./gal.js').createGalPlayer>} gal
  * @property {ReturnType<typeof import('./battle-reading.js').createBattleReading>} battleReading
  * @property {ReturnType<typeof import('./arcade.js').createArcade>} arcade
@@ -30,6 +32,9 @@
  * @property {ReturnType<typeof import('./onboarding.js').createOnboarding>} onboarding
  * @property {ReturnType<typeof import('./first-run.js').createFirstRun>} firstRun
  * @property {ReturnType<typeof import('./shop.js').createShop>} shop
+ * @property {ReturnType<typeof import('./dining.js').createDining>} dining
+ * @property {ReturnType<typeof import('./chapter.js').createChapter>} chapter
+ * @property {ReturnType<typeof import('./latest-response.js').createLatestResponse>} latestResponse
  * @property {ReturnType<typeof import('./loot-conflicts.js').createLootConflicts>} lootConflicts
  * @property {ReturnType<typeof import('./backpack.js').createBackpack>} backpack
  * @property {ReturnType<typeof import('./chat.js').createChat>} chat

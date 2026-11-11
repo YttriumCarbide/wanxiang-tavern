@@ -16,6 +16,36 @@ const example = async () =>
     await readFile(new URL('../prompts/worldbook/script-example.json', import.meta.url), 'utf8'),
   );
 
+test('an installed v50 worldbook upgrades its reward protocol without losing custom entries', async () => {
+  const directory = await mkdtemp(path.join(process.cwd(), '.runtime/tests/event-reward-upgrade-'));
+  const store = await createWorldbookStore(directory);
+  const saved = (await store.get('tavern-world')).book;
+  saved.extensions.wanxiang.adventureRevision = 50;
+  const rule = Object.values(saved.entries).find(
+    (entry) => entry.extensions?.wanxiang?.generationRule === 'adventure-nodes',
+  );
+  rule.content = '旧奖励要求：每个选项生成reward';
+  const customId = Math.max(...Object.keys(saved.entries).map(Number)) + 1;
+  saved.entries[customId] = {
+    ...structuredClone(rule),
+    uid: customId,
+    comment: '玩家自定义',
+    content: '保留我的独立设定',
+    extensions: {},
+  };
+  await writeFile(path.join(directory, 'books/tavern-world.json'), JSON.stringify(saved));
+  await writeFile(path.join(directory, 'builtin-content.json'), JSON.stringify({ version: 50 }));
+  const migrated = (await (await createWorldbookStore(directory)).get('tavern-world')).book;
+  assert.equal(migrated.extensions.wanxiang.adventureRevision, 51);
+  assert.match(
+    Object.values(migrated.entries).find(
+      (entry) => entry.extensions?.wanxiang?.generationRule === 'adventure-nodes',
+    ).content,
+    /不生成reward/,
+  );
+  assert.equal(migrated.entries[customId].content, '保留我的独立设定');
+});
+
 test('novel output accepts five unstructured prose blocks and retains strict metadata validation', async () => {
   const raw = await example();
   raw.story[0] = '风穿过空窗。\n\n' + '水面只有倒影，没有人说话。'.repeat(80);

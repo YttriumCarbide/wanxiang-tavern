@@ -128,6 +128,13 @@ test('server and browser upgrades inject final boundary after imported prose/for
       assert(all.slice(boundary).includes('不输出konatan_planning、tucao、emit_answer'));
       assert(all.slice(boundary).includes('小说正文只写入story字符串'));
       assert(all.slice(boundary).includes('不得继续该战斗'));
+      if (kind === 'map') {
+        assert(all.includes('【敌人ID硬性格式】'));
+        assert(all.includes('^enemy-[a-z0-9-]{1,70}$'));
+        assert(all.includes('正确示例：enemy-ruins-salt-scavenger'));
+        assert(all.includes('错误示例：ruins_saltScavenger'));
+        assert(all.includes('corridorGuard是合法的已有ID'));
+      }
       if (kind === 'creation' || kind === 'map') {
         const value =
           kind === 'map'

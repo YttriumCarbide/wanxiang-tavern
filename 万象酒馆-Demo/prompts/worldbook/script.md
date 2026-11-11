@@ -6,10 +6,10 @@
 本趟战斗路线与敌人名单由encounters提供，战斗结果由游戏结算。前四段在对应普通战斗开始前展示；第五段在Boss战开始时展示。
 历史只记录实际展示过的正文，nextHook保留为未发生的后续。数据层不改变本趟的地图、敌人或战斗数值。
 【副本剧本输出格式 / SCRIPT v4】
-最终结果放在唯一一组 <wanxiang_json> 与 </wanxiang_json> 内，标签单独成行。代码只读取标签内的JSON；标签外内容不属于正文或数据。
+最终结果放在唯一一组 <wanxiang_output> 与 </wanxiang_output> 内，标签单独成行。代码只读取标签内的JSON；标签外内容不属于正文或数据。
 标签内为一个完整JSON对象，根节点只含schemaVersion/story/data；schemaVersion为数字4。
 story是恰好五个字符串：前四项依次是第一至第四场普通战斗对应的小说正文；最后一项是最终Boss战开始时的推进正文。每项可包含多个自然段，用JSON转义换行。正文自由写作，无须拆解为说话人、动作、对白或开场等字段。
-data只含title/tags/npcs/items/nextHook。tags是关键词，供副本记录像世界书一样触发；不再生成概要、环境背景、后续场景类型或美术地点描述。nextHook包含setting后续线索与phase阶段。npcs最多12名，绝不能是队伍成员；每项包含name/appearance/history/encounter，外貌与简略经历分别至少25字，合计至少50字，encounter是初次出现的战斗索引0～4。items只记录玩家在正文中实际收集的道具，最多24项，每项包含name/description/value/encounter，description为20字以内的中文描述，value是非负整数以太价值，encounter是收集发生的战斗索引0～4。不提前归档尚未遇到的人或尚未收集的物品。副本所有收获在完整通关后折算成相同价值的以太，可在酒馆兑换；不直接修改装备、技能或战斗属性。
+data只含title/npcs/items/nextHook。回顾关键词由总结API在经历结束后提取；不再生成概要、环境背景、后续场景类型或美术地点描述。nextHook包含setting后续线索与phase阶段。npcs最多12名，绝不能是队伍成员；每项包含name/appearance/history/encounter，外貌与简略经历分别至少25字，合计至少50字，encounter是初次出现的战斗索引0～4。items只记录玩家在正文中实际收集的道具，最多24项，每项包含name/description/value/encounter，description为20字以内的中文描述，value是非负整数以太价值，encounter是收集发生的战斗索引0～4。不提前归档尚未遇到的人或尚未收集的物品。副本所有收获在完整通关后折算成相同价值的以太，可在酒馆兑换；不直接修改装备、技能或战斗属性。
 正文仅生成一次，不在数据层重复。字段类型与数据层范围见Schema。
 
 【中文输出与首尾篇幅】

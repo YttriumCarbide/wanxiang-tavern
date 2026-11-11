@@ -135,7 +135,8 @@ test('2AP rewards remain distinctly higher for every power tier and single/group
           rarity,
         });
         assert(
-          result.combat.skills[1].effects[0].value > result.combat.skills[0].effects[0].value + 5,
+          result.combat.skills[1].effects[0].value >=
+            result.combat.skills[0].effects[0].value * 1.75,
           `${target}/${power}/${rarity}`,
         );
       }

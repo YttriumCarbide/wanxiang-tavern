@@ -71,6 +71,10 @@ function effects(list, restoring = false, boss = false) {
       if (restoring) return [];
       throw Error('禁止给玩家队友施加迟缓；迟缓只影响敌人的行动速度');
     }
+    if (effect.type === 'buff' && effect.buff === 'blind') {
+      if (restoring) return [];
+      throw Error('生成敌人不能施加致盲');
+    }
     const value = number(
       effect.value,
       1,

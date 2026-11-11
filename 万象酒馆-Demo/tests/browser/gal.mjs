@@ -21,7 +21,23 @@ export async function galChecks({ browser, baseURL, output }) {
         () => document.querySelector('#gal-stage').dataset.leaving !== 'true',
       );
   }
+  async function waitForSpeakerPortrait() {
+    await page.waitForFunction(() => {
+      const image = document.querySelector('.gal-cast img.speaking');
+      return image?.complete && image.naturalWidth > 0;
+    });
+  }
   async function checkComposition() {
+    const decoration = await page.locator('.gal-reading').evaluate((element) => ({
+      blur: getComputedStyle(element).backdropFilter,
+      shadow: getComputedStyle(element).boxShadow,
+      pageBlur: getComputedStyle(element.querySelector('.gal-page')).backdropFilter,
+    }));
+    assert.deepEqual(
+      decoration,
+      { blur: 'none', shadow: 'none', pageBlur: 'none' },
+      'Gal keeps its original transparent reading band without button-shaped background blur',
+    );
     const viewport = page.viewportSize();
     const reading = await page.locator('.gal-reading').boundingBox();
     const controls = await page.locator('.gal-controls').boundingBox();
@@ -184,17 +200,31 @@ export async function galChecks({ browser, baseURL, output }) {
       });
       library.campaign = { protagonistId: library.characters[0].id };
       const session = {
-        ai: { library, generationOptions: { developerMode: true, galMode: true } },
+        ai: {
+          library,
+          generationOptions: { developerMode: true, galMode: true },
+          activeScript: {
+            npcs: [
+              {
+                id: 'npc-1',
+                name: '守门人',
+                appearance: '成年男性，城门守卫，穿着青蓝色制服与轻甲。',
+              },
+            ],
+          },
+        },
         runtime: {},
       };
-      const gal = createGalPlayer({ session });
+      const { createAssetStore } = await import('/src/shared/asset-store.js');
+      const assets = createAssetStore();
+      const gal = createGalPlayer({ session, assets });
       const events = createEventScope();
       const dialogue = createDialogue(events, 'fixture-dialogue', gal);
       const feed = createStoryFeed(session, () => {}, gal);
-      window.galFixture = { gal, dialogue, feed, session, completed: 0 };
+      window.galFixture = { gal, dialogue, feed, session, assets, completed: 0 };
       document.querySelector('#ai-dialog').showModal();
       void gal.play(
-        '【对白:伊蒂丝】你好。【旁白】灯火微微摇动。【对白:长景月汐】剑已经带好了。【对白:user】出发。【对白:npc:守门人】走左边。【退场:伊蒂丝】【旁白】她走出了酒馆。【对白:潘多拉】主人……',
+        '【对白:伊蒂丝】你好。【旁白】灯火微微摇动。【对白:长景月汐】剑已经带好了。【对白:user】出发。【对白:npc:守门人|guardWoman】走左边。【退场:伊蒂丝】【旁白】她走出了酒馆。【对白:潘多拉】主人……',
         { owner: 'fixture', title: '万象 · 星灯之间' },
       );
     });
@@ -206,7 +236,9 @@ export async function galChecks({ browser, baseURL, output }) {
     await nextPage();
     await revealPage();
     assert(
-      (await page.locator('.gal-cast img.speaking').getAttribute('src')).includes('yuexi-half'),
+      (await page.locator('.gal-cast img.speaking').getAttribute('data-asset')).includes(
+        'yuexi-full',
+      ),
     );
     await nextPage();
     assert.equal(await page.locator('#gal-stage').getAttribute('data-kind'), 'user');
@@ -214,16 +246,30 @@ export async function galChecks({ browser, baseURL, output }) {
     await nextPage();
     await revealPage();
     assert((await page.locator('.gal-speaker').textContent()).includes('守门人'));
-    assert.equal(await page.locator('.gal-cast img.speaking').count(), 0);
+    await waitForSpeakerPortrait();
+    assert(
+      (await page.locator('.gal-cast img.speaking').getAttribute('data-asset')).includes(
+        'town-guard-woman.png',
+      ),
+    );
     await page.locator('[data-gal="history"]').click();
-    assert((await page.locator('.gal-history').textContent()).includes('你好'));
-    await page.locator('[data-gal="history-close"]').click();
+    const transcript = page.getByRole('region', { name: '本次对话' });
+    assert.deepEqual(await transcript.locator('li strong').allTextContents(), [
+      '伊蒂丝',
+      '旁白',
+      '长景月汐',
+      '青缘',
+      '守门人',
+    ]);
+    assert.equal(await transcript.locator('li p').first().textContent(), '你好。');
+    await page.keyboard.press('Escape');
+    await transcript.waitFor({ state: 'hidden' });
     await nextPage();
     assert.equal(await page.locator('.gal-cast img.speaking').count(), 0);
     await nextPage();
     await revealPage();
+    await waitForSpeakerPortrait();
     await page.locator('.gal-cast img.speaking').evaluate(async (image) => {
-      await image.decode();
       await Promise.all(
         image.getAnimations().map((animation) => animation.finished.catch(() => {})),
       );
@@ -353,9 +399,11 @@ export async function galChecks({ browser, baseURL, output }) {
     await page.evaluate(() => document.querySelector('#result').close());
     const alpha = await page.evaluate(async () => {
       const results = [];
-      for (const key of ['edith', 'pandora', 'yuexi']) {
+      const { TAVERN_VISITORS, standingSprite } = await import('/src/content/tavern-visitors.js');
+      for (const definition of TAVERN_VISITORS) {
+        const key = definition.id;
         const image = new Image();
-        image.src = `./assets/gal/${key}-half.png`;
+        image.src = standingSprite(definition);
         await image.decode();
         const canvas = document.createElement('canvas');
         canvas.width = image.width;

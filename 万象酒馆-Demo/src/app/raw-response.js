@@ -20,7 +20,7 @@ export function createRawResponse(events, id, title) {
   events.on(close, 'click', () => panel.close());
   return {
     show(failure) {
-      const diagnostic = failure.diagnostic;
+      const diagnostic = failure.diagnostic || failure;
       if (!diagnostic?.rawText) return false;
       message.textContent = failure.message;
       text.value = diagnostic.rawText;

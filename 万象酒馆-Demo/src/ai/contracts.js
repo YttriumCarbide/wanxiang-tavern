@@ -9,7 +9,7 @@ import { checkOutputSchema } from './schema-check.js';
 import { normalizeRules, effectMetadata } from '../triggers.js';
 import { compileCharacterDesign } from '../character-generation.js';
 import { finalSkillText, finalPassiveText } from '../skill-text.js';
-import { normalizeAdventureDefinition, savedAdventureInput } from '../adventure/definition.js';
+import { normalizeAdventureDefinition } from '../adventure/definition.js';
 import {
   normalizeCharacterSetting,
   formatCharacterSetting,
@@ -290,11 +290,7 @@ function normalizeNovelScript(raw, id, encounterCount) {
     story,
     ...(raw.schemaVersion === 5
       ? {
-          adventure: normalizeAdventureDefinition(
-            data.adventure?.event?.choices?.some((choice) => !Array.isArray(choice.reward?.items))
-              ? savedAdventureInput(data.adventure)
-              : data.adventure,
-          ),
+          adventure: normalizeAdventureDefinition(data.adventure),
           original: structuredClone(raw.original || { story, data }),
         }
       : {}),
@@ -302,27 +298,29 @@ function normalizeNovelScript(raw, id, encounterCount) {
     title: text(data.title, '剧本名', 60),
     synopsis: modern ? '' : text(data.synopsis, '概要', 2000),
     setting: modern ? '' : text(data.setting, '世界设定', 4000),
-    tags: tags(data.tags),
+    tags: tags(raw.schemaVersion === 5 && data.tags === undefined ? [] : data.tags),
     npcs,
     ...(modern
       ? {
-          items: (data.items || []).map((item) => ({
-            name: text(typeof item === 'string' ? item : item.name, '道具名', 30),
-            ...(typeof item === 'string' ||
-            item.reference === true ||
-            (item.description === undefined && item.value === undefined)
-              ? { reference: true }
-              : {
-                  description: text(item.description, '道具描述', 20),
-                  value: integer(item.value, 0, 10000, '以太价值'),
-                }),
-            encounter: integer(
-              typeof item === 'string' ? encounterCount - 1 : item.encounter,
-              0,
-              encounterCount - 1,
-              '收集章节',
-            ),
-          })),
+          items: (data.items || [])
+            .filter((item) => raw.schemaVersion !== 5 || item.encounter !== 1)
+            .map((item) => ({
+              name: text(typeof item === 'string' ? item : item.name, '道具名', 30),
+              ...(typeof item === 'string' ||
+              item.reference === true ||
+              (item.description === undefined && item.value === undefined)
+                ? { reference: true }
+                : {
+                    description: text(item.description, '道具描述', 20),
+                    value: integer(item.value, 0, 10000, '以太价值'),
+                  }),
+              encounter: integer(
+                typeof item === 'string' ? encounterCount - 1 : item.encounter,
+                0,
+                encounterCount - 1,
+                '收集章节',
+              ),
+            })),
         }
       : {}),
     nextHook: {

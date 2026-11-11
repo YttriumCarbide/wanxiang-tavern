@@ -7,6 +7,7 @@ import { adventureTestScript } from '../../src/content/generation-mode.js';
 import { createAdventureState } from '../../src/adventure/state.js';
 import { newExpedition, beginEncounter } from '../../src/expedition.js';
 import { adventureSnapshot } from '../../src/adventure/snapshot.js';
+import { eventRewardText } from '../../src/adventure/rewards.js';
 
 /** Resume directly into RP to inspect layout and folding without replaying unrelated battles. */
 export async function rpLayoutChecks({ browser, baseURL, output }) {
@@ -111,7 +112,7 @@ export async function rpLayoutChecks({ browser, baseURL, output }) {
           await page.locator('.rp-event-introduction ~ .rp-goals ~ .rp-environment').count(),
           'introduction precedes objectives and environment observations',
         );
-        assert.equal(await page.locator('.rp-environment dt').count(), 3);
+        assert.equal(await page.locator('.rp-environment dt').count(), 4);
         assert((await page.locator('.rp-environment dd').first().textContent()).includes('岗亭'));
       }
       await page.locator('#rp-input').fill('保留这句补充。');
@@ -203,10 +204,26 @@ export async function rpLayoutChecks({ browser, baseURL, output }) {
         false,
         'only the scene header displays the title',
       );
+      await page.locator('[data-rp="settings"]').click();
+      await page.locator('#ai-dialog').waitFor({ state: 'visible' });
+      assert.equal(await page.locator('#gal-stage').isVisible(), false);
       releaseReply();
       await page.waitForFunction(() => demo.getExpedition().adventure.responses.length === 1);
+      assert.equal(await page.locator('#ai-dialog').isVisible(), true);
+      assert.equal(
+        await page.locator('#gal-stage').isVisible(),
+        false,
+        'an incoming reply cannot cover settings',
+      );
+      await page.locator('[data-ai-tab="game"]').click();
+      await page.locator('#ai-close').click();
       const portrait = page.locator('.gal-cast img[data-actor="official-edith"]');
       await portrait.waitFor({ state: 'visible' });
+      assert.equal(await page.locator('.gal-speaker span').textContent(), '伊蒂丝');
+      await page.locator('[data-rp="settings"]').click();
+      await page.locator('#ai-dialog').waitFor({ state: 'visible' });
+      assert.equal(await page.locator('#gal-stage').isVisible(), false);
+      await page.locator('#ai-close').click();
       assert.equal(await page.locator('.gal-speaker span').textContent(), '伊蒂丝');
       await page.screenshot({ path: path.join(output, `reply-${node}-mobile.png`) });
       await page.setViewportSize({ width: 1193, height: 800 });
@@ -224,6 +241,14 @@ export async function rpLayoutChecks({ browser, baseURL, output }) {
         else await page.locator('.gal-page').click();
       }
       assert.equal(await portrait.isVisible(), false, 'portrait clears after the reply finishes');
+      if (node === 1) {
+        const reward = await page.evaluate(() => demo.getExpedition().adventure.event.reward);
+        assert.equal(
+          await page.locator('.rp-reward-receipt').textContent(),
+          `本次收获 · ${eventRewardText(reward)}`,
+        );
+        await page.screenshot({ path: path.join(output, 'event-reward-receipt.png') });
+      }
       if (node === 3) {
         await page.locator('.rp-boss-ready').waitFor({ state: 'visible' });
         assert(await page.locator('[data-rp="boss"]').isVisible());

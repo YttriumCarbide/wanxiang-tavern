@@ -264,7 +264,7 @@
   stroke-width: 3 !important;
   opacity: 1;
 }
-.destination-node {
+#destination-dialog .destination-node {
   position: absolute;
   display: grid;
   justify-items: center;
@@ -275,6 +275,18 @@
   background: transparent;
   color: #493420;
   text-shadow: 0 1px 3px #fff2c4;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-radius: 0;
+  transition: color 160ms ease;
+}
+#destination-dialog .destination-node:hover,
+#destination-dialog .destination-node:active {
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+  color: #782a16;
 }
 .destination-node-mark {
   position: relative;
@@ -326,18 +338,17 @@
   position: absolute;
   bottom: calc(100% + 12px);
   padding: 6px 12px;
-  background: #853b22;
-  color: #fff0cc;
-  border: 1px solid #f4d5a1;
-  border-radius: 4px;
-  box-shadow: 0 3px 8px #59341c40;
+  background: transparent;
+  color: #853b22;
+  border: 0;
+  box-shadow: none;
   font-size: 12px;
   letter-spacing: 2px;
   white-space: nowrap;
   text-shadow: none;
 }
 .destination-selection-label::after {
-  content: '';
+  content: none;
   position: absolute;
   bottom: -6px;
   left: calc(50% - 5px);
@@ -350,17 +361,12 @@
   display: block;
 }
 .destination-node[aria-pressed='true'] .destination-node-mark {
-  background: #ffe3a9e8;
-  border-radius: 50%;
-  box-shadow:
-    0 0 0 5px #a0442326,
-    0 0 0 8px #a044235c;
+  color: #782a16;
 }
 .destination-node[aria-pressed='true'] strong {
-  padding: 4px 10px;
-  background: #ffedc7ed;
-  border-radius: 3px;
   font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 6px;
 }
 .destination-node[aria-pressed='true'] .destination-sketch-mark path {
   stroke: #873d26;

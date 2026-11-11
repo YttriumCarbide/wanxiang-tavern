@@ -40,15 +40,75 @@ export async function guestRoomChecks({ browser, baseURL, output }) {
     await page.goto(new URL('tavern.html', baseURL).href);
     await page.waitForFunction(() => window.modelReady === true, null, { timeout: 60000 });
     assert.equal(
-      await page.evaluate(() => Boolean(window.assetPreview.places.corridorDoor)),
+      await page.evaluate(() => Boolean(window.assetPreview.places.stairs)),
       true,
-      'The tavern must expose the existing entrance as the corridor door',
+      'Upstairs is accessed through the new indoor staircase',
     );
-    await page.evaluate(() => window.assetPreview.placeNow('corridorDoor'));
+    const geometry = await page.evaluate(async () => {
+      const THREE = await import('/vendor/build/three.module.js');
+      const { model, camera } = window.assetPreview;
+      const meshes = [];
+      model.traverse((object) => {
+        if (object.isMesh && object.name.startsWith('29_Interior_Staircase')) meshes.push(object);
+      });
+      const bounds = new THREE.Box3();
+      meshes.forEach((mesh) => bounds.union(new THREE.Box3().setFromObject(mesh)));
+      const oldFixtures = [];
+      model.traverse((object) => {
+        if (!object.isMesh || !/^(06_Windows|24_Wall_Dressing|04_Timber)/.test(object.name)) return;
+        const box = new THREE.Box3().setFromObject(object);
+        if (box.max.x < 6.2) return;
+        const positions = object.geometry.getAttribute('position');
+        for (let i = 0; i < positions.count; i++) {
+          const point = new THREE.Vector3()
+            .fromBufferAttribute(positions, i)
+            .applyMatrix4(object.matrixWorld);
+          if (point.x > 8.48 && point.y > 0.2 && point.z > -0.6 && point.z < 4.6)
+            oldFixtures.push(object.name);
+        }
+      });
+      const ray = new THREE.Raycaster();
+      const treads = Array.from({ length: 18 }, (_, i) => {
+        const expected = (i + 1) * 0.16;
+        ray.set(
+          new THREE.Vector3(7.92, expected + 0.5, -0.28 + i * 0.24),
+          new THREE.Vector3(0, -1, 0),
+        );
+        return ray.intersectObjects(meshes, false)[0]?.point.y;
+      });
+      camera.position.set(4.8, 1.55, -2.2);
+      camera.lookAt(7.92, 1.9, 2);
+      return { min: bounds.min.toArray(), max: bounds.max.toArray(), treads, oldFixtures };
+    });
+    assert(geometry.min[0] > 7 && geometry.max[0] <= 9.01);
+    assert(
+      geometry.min[2] > -1 && geometry.max[2] <= 5.21,
+      'stairs stay inside the rectangular hall',
+    );
+    geometry.treads.forEach((height, i) => assert(Math.abs(height - (i + 1) * 0.16) < 0.025));
+    assert.deepEqual(
+      geometry.oldFixtures,
+      [],
+      'the stair wall is clear of old windows, planters and projecting timber',
+    );
+    await page.waitForTimeout(300);
+    await page.screenshot({ path: path.join(output, 'tavern-interior-stairs.png') });
+    await page.evaluate(() => window.assetPreview.placeNow('stairs'));
     await page.locator('#corridor-open').waitFor({ state: 'visible' });
     const corridorNavigation = page.waitForURL('**/corridor.html', { timeout: 12000 });
+    const climbStarted = Date.now();
     await page.locator('#corridor-open').click();
+    await page.waitForFunction(() => window.assetPreview?.camera.position.y > 2.2);
+    const climbing = await page.evaluate(() => ({
+      ...window.assetPreview.getState(),
+      position: window.assetPreview.camera.position.toArray(),
+    }));
+    assert(climbing.moving && climbing.position[1] > 2.1 && climbing.position[1] < 4.4);
     await corridorNavigation;
+    assert(
+      Date.now() - climbStarted < 5000,
+      'the staircase uses a brisk transition including its exit fade',
+    );
     await page.waitForFunction(() => window.corridorReady === true, null, { timeout: 60000 });
     assert.equal(new URL(page.url()).pathname.endsWith('/corridor.html'), true);
     const doors = await page
@@ -89,6 +149,7 @@ export async function guestRoomChecks({ browser, baseURL, output }) {
     await page.locator('#spots .spot[data-door="tavern"]').click();
     await immediateReturn;
     await page.waitForFunction(() => window.modelReady === true, null, { timeout: 60000 });
+    await page.waitForFunction(() => window.assetPreview?.getState().moving === false);
     await page.evaluate(() => {
       for (let index = 0; index < 31; index++)
         window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft' }));

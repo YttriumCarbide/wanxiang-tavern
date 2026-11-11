@@ -8,7 +8,7 @@ import { relationship } from '../relationships.js';
 import { readableGalText } from '../gal.js';
 
 /** Portraits and speaker labels are presentation data, never added to model history. */
-export function createChatPresentation(session) {
+export function createChatPresentation(session, characters = () => session.ai.library.characters) {
   const library = () => session.ai.library;
   const protagonist = () =>
     library().characters.find((member) => member.id === library().campaign?.protagonistId) ||
@@ -68,8 +68,11 @@ export function createChatPresentation(session) {
   }
   function conversation(place) {
     $('#chat-place-select').value = place;
-    $('#chat-participants').innerHTML = library()
-      .characters.filter((member) => member.id !== library().campaign?.protagonistId)
+    $('#chat-participants').innerHTML = characters()
+      .filter((member) => member.id !== library().campaign?.protagonistId)
+      .sort(
+        (a, b) => Number(library().party.includes(a.id)) - Number(library().party.includes(b.id)),
+      )
       .map(
         (member) =>
           html`<label class="chat-person"
@@ -80,8 +83,7 @@ export function createChatPresentation(session) {
             />${portrait(member)}<span
               ><strong>${escapeText(member.setting.name)}</strong
               ><small
-                >好感 ${relationship(library(), member.id).affection} ·
-                ${relationship(library(), member.id).gains}/3</small
+                >${member.source === 'town' || library().characters.some((entry) => entry.id === member.id) ? `好感 ${relationship(library(), member.id).affection} · ${relationship(library(), member.id).gains}/3` : '当地角色'}</small
               ></span
             ></label
           >`,

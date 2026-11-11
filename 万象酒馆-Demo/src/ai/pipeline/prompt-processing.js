@@ -2,6 +2,7 @@ import { mergeMessages } from '../../../vendor/sillytavern/merge-messages.mjs';
 import { requestTokenReport } from './request-tokens.js';
 import { outputToolRequest } from '../preset-output.js';
 import { miaosaiyaFinalRequest, miaosaiyaPromptMessages } from '../miaosaiya-processing.js';
+import { prepareRouteMessages } from '../anti-route.js';
 import {
   processPresetMessages,
   prepareKeminiTransport,
@@ -25,7 +26,14 @@ export function processPrompt(messages, mode = 'merge_tools', names = []) {
 }
 
 export function finalizeRequest(prepared, profile, countTokens, names = []) {
-  const sampling = prepared.sampling || {};
+  const sampling = { ...prepared.sampling };
+  if (
+    profile.antiRoute?.enabled &&
+    !profile.antiRoute.safe &&
+    profile.antiRoute.thinking &&
+    !sampling.reasoning_effort
+  )
+    sampling.reasoning_effort = 'high';
   const maxOutput = profile.tokenField === 'none' ? 0 : (sampling.maxTokens ?? profile.maxTokens);
   const mode = prepared.transport?.promptProcessing || profile.promptProcessing || 'merge_tools';
   const processed = processPresetMessages(
@@ -39,7 +47,12 @@ export function finalizeRequest(prepared, profile, countTokens, names = []) {
     Boolean(prepared.transport?.outputTool),
   );
   const final = miaosaiyaFinalRequest(kemini.messages, prepared.transport?.presetProcessing);
-  const messages = final.messages;
+  const { messages, entropy } = profile.antiRoute
+    ? prepareRouteMessages(final.messages, profile.antiRoute, {
+        kind: profile.routeKind,
+        session: [profile.sessionId, profile.model, profile.routeKind].join(':'),
+      })
+    : { messages: final.messages, entropy: false };
   const outputTool = kemini.outputTool || prepared.transport?.outputTool;
   const tokens = requestTokenReport(
     messages,
@@ -55,11 +68,13 @@ export function finalizeRequest(prepared, profile, countTokens, names = []) {
     );
   return {
     ...prepared,
+    sampling,
     messages,
     tokens,
     transport: {
       ...prepared.transport,
       promptProcessing: mode,
+      routeEntropy: entropy,
       stream: sampling.stream ?? profile.stream ?? false,
       contextSize,
       ...(outputTool ? { outputTool } : {}),

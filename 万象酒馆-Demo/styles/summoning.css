@@ -4,34 +4,40 @@
   right: 18px;
   bottom: 18px;
   display: flex;
-  gap: 12px;
-  padding: 5px 10px 5px 6px;
-  border: 1px solid #bbab7752;
-  border-radius: 7px;
-  background: #122325de;
-  color: #e3ddc9;
+  gap: 14px;
+  padding: 6px 14px 6px 10px;
+  border: 1px solid rgba(226, 186, 111, 0.42);
+  border-radius: 10px;
+  background: rgba(12, 25, 24, 0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: #f2eee3;
+  box-shadow:
+    0 8px 28px rgba(0, 0, 0, 0.65),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
   pointer-events: none;
 }
 #inn-resources > div,
 #inn-resources > .inn-resource {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
 }
 #inn-resources img {
   width: 30px;
   height: 30px;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
 }
 #inn-resources span {
   font-size: 9px;
-  color: #b7c1af;
+  color: #c0cebe;
 }
 #inn-resources strong {
   display: block;
   font:
     15px Georgia,
     serif;
-  color: #e8cf92;
+  color: #fce7ba;
   margin-top: 2px;
 }
 .in-battle #inn-resources {
@@ -71,19 +77,27 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  padding: 6px;
+  gap: 6px;
+  padding: 6px 12px;
   border: 1px solid var(--summon-color, #8cd7b9);
-  border-radius: 10px;
-  background: #10231fe8;
+  border-radius: 12px;
+  background: rgba(14, 28, 25, 0.9);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   color: var(--summon-color, #8cd7b9);
   box-shadow:
-    0 0 24px #0008,
-    inset 0 0 18px #8cd7b90a;
+    0 8px 30px rgba(0, 0, 0, 0.65),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
   transition:
     opacity 260ms,
     translate 480ms cubic-bezier(0.2, 0.8, 0.2, 1),
-    box-shadow 260ms;
+    box-shadow 260ms,
+    border-color 260ms;
+}
+.summon-methods button:hover {
+  box-shadow:
+    0 12px 36px rgba(0, 0, 0, 0.75),
+    0 0 20px var(--summon-color);
 }
 .summon-methods button b {
   font-size: 12px;

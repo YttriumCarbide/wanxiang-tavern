@@ -56,6 +56,19 @@ export async function destinationPagerChecks({ browser, baseURL, output }) {
       .locator('.destination-map-canvas')
       .evaluate((element) => getComputedStyle(element).backgroundImage);
     assert(background.includes('exploration-parchment.png'));
+    const node = page.locator('.destination-node').first();
+    for (const hovered of [false, true]) {
+      if (hovered) await node.hover();
+      const style = await node.evaluate((element) => {
+        const css = getComputedStyle(element);
+        return { shadow: css.boxShadow, blur: css.backdropFilter, background: css.backgroundColor };
+      });
+      assert.deepEqual(
+        style,
+        { shadow: 'none', blur: 'none', background: 'rgba(0, 0, 0, 0)' },
+        'map marks stay ink on parchment, including hover',
+      );
+    }
   }
   async function reachable(selectors) {
     const viewport = page.viewportSize();
@@ -162,7 +175,11 @@ export async function destinationPagerChecks({ browser, baseURL, output }) {
       await page.locator('.destination-node.cleared').first().locator('em').textContent(),
       '1',
     );
-    assert.equal(await page.locator('[data-map-node]:not([disabled])').count(), 1);
+    assert.equal(
+      await page.locator('[data-map-node]:not([disabled])').count(),
+      5,
+      'four cleared landmarks allow recollection alongside the next destination',
+    );
     assert.equal(
       await page.locator('.destination-map-canvas .destination-trail').count(),
       (await page.locator('[data-map-node]').count()) - 1,
@@ -208,9 +225,18 @@ export async function destinationPagerChecks({ browser, baseURL, output }) {
         'Every open landmark must remain clickable',
       );
       assert.equal(await node.locator('.destination-selection-label').isVisible(), true);
-      assert((await page.locator('#destination-sites').textContent()).includes('已选择 · 第 5 处'));
-      assert((await page.locator('#destination-start').textContent()).includes('第 5 处'));
-      assert.equal(await page.locator('.destination-trail.selected-trail').count(), 4);
+      const sequence = Number(await node.locator('em').textContent());
+      assert(
+        (await page.locator('#destination-sites').textContent()).includes(
+          `已选择 · 第 ${sequence} 处`,
+        ),
+      );
+      assert(
+        (await page.locator('#destination-start').textContent()).includes(
+          sequence < 5 ? '回忆' : '第 5 处',
+        ),
+      );
+      assert.equal(await page.locator('.destination-trail.selected-trail').count(), sequence - 1);
       await page.screenshot({ path: path.join(output, 'destination-selected-landmark.png') });
     }
     for (const viewport of [
@@ -316,7 +342,7 @@ export async function destinationPagerChecks({ browser, baseURL, output }) {
     await ready('tide');
     await page.locator('#destination-region-confirm').click();
     assert.equal(await page.locator('#destination-start').isDisabled(), false);
-    assert((await page.locator('#destination-start').textContent()).includes('第 7 处'));
+    assert((await page.locator('#destination-start').textContent()).includes('继续探索'));
     assert.equal(await page.locator('.destination-node').count(), 7);
     assert.equal(await page.locator('.destination-node.cleared').count(), 6);
     await page.screenshot({ path: path.join(output, 'destination-six-sites-complete.png') });

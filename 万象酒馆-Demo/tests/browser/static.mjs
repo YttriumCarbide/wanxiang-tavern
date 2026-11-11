@@ -140,6 +140,12 @@ export async function staticChecks({ browser, output }) {
     await page.locator('#start-screen').waitFor();
     await page.screenshot({ path: path.join(output, 'start-screen.png') });
     await bootApi();
+    const routeDefaults = await request('anti-route');
+    assert.equal(routeDefaults.config.entropy, true);
+    await request('anti-route', {
+      action: 'save',
+      config: { ...routeDefaults.config, entropy: false },
+    });
     const profiles = await request('config');
     assert(
       Object.values(profiles).every(
@@ -219,12 +225,12 @@ export async function staticChecks({ browser, output }) {
         .map((entry) => entry.comment)
         .sort(),
       [
-        '人物详情：伊蒂丝',
-        '人物详情：潘多拉',
-        '人物详情：长景月汐',
-        '人物详情：青缘',
-        '人物详情：骆公绪',
-        '人物详情：西莉卡·梵·拉普斯',
+        '角色条目：伊蒂丝',
+        '角色条目：潘多拉',
+        '角色条目：长景月汐',
+        '主角设定：青缘',
+        '角色条目：骆公绪',
+        '角色条目：西莉卡·梵·拉普斯',
       ].sort(),
     );
     assert.deepEqual(
@@ -292,6 +298,19 @@ export async function staticChecks({ browser, output }) {
     assert.equal(chat.content, '你好，来客。');
     assert(chat.display.includes('朋友'));
     assert.deepEqual(chat.request.messages, preview.messages);
+    const routeRecords = await request('anti-route');
+    assert(routeRecords.records.some((entry) => entry.kind === 'chat'));
+    await request('anti-route', {
+      action: 'save',
+      config: { ...routeDefaults.config, entropy: true },
+    });
+    const mixedPreview = await request('prompts/preview', { kind: 'chat', input: chatInput });
+    assert(mixedPreview.messages.some((message) => message.content.startsWith('<!--')));
+    assert(mixedPreview.tokens.inputEstimate > preview.tokens.inputEstimate);
+    await request('anti-route', {
+      action: 'save',
+      config: { ...routeDefaults.config, entropy: false },
+    });
     assert(chat.request.tokens.contentTokens > 0);
     await request('prompts/save', { id: preset.id, preset: { ...preset, stream: true } });
     const streamed = await page.evaluate(async (input) => {

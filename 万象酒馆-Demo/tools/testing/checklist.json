@@ -1,15 +1,6 @@
 {
-  "description": "三位官方角色全身透明立绘及酒馆六个刷新位置实验；旧浏览器无popover状态选择器的启动与点击；新手连接配置优先填写区。保留上一轮RP/Gal修改，复核相关核心、静态及手机，不进行完整副本通关。",
-  "scopes": [
-    "quality",
-    "core",
-    "compatibility",
-    "tavern-visitors",
-    "settings",
-    "gal",
-    "mobile",
-    "static"
-  ],
-  "coreFiles": ["tests/chat.test.js", "tests/portrait-store.test.js", "tests/gal.test.js"],
+  "description": "验证中央荒地比例、外围荒地、各国地标和银冠大道。",
+  "scopes": ["quality", "town-places", "overland"],
+  "coreFiles": [],
   "browserConcurrency": 2
 }

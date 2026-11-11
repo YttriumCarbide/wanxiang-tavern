@@ -1,0 +1,29 @@
+{
+  "source": "../../free-scenes-v1/rampart.png",
+  "sourceSize": [
+    2171,
+    724
+  ],
+  "tiles": [
+    {
+      "file": "tile-0.png",
+      "sourceX": 0,
+      "offset": 0
+    },
+    {
+      "file": "tile-1.png",
+      "sourceX": 482,
+      "offset": 835
+    },
+    {
+      "file": "tile-2.png",
+      "sourceX": 965,
+      "offset": 1671
+    },
+    {
+      "file": "tile-3.png",
+      "sourceX": 1447,
+      "offset": 2506
+    }
+  ]
+}

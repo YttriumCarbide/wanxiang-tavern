@@ -270,6 +270,7 @@ export function explorationSpec(entry, index = 0) {
       map: entry.map,
       sequence: entry.sequence,
       seed: entry.seed,
+      level: encounterLevel(entry),
       tutorial: entry.tutorial,
       ...(entry.world ? { world: { id: entry.world.id } } : {}),
     },

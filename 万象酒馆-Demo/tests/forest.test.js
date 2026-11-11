@@ -1,4 +1,5 @@
 import test from 'node:test';
+import { monsterNarrativeText } from '../src/ai/monster-narrative.js';
 import assert from 'node:assert/strict';
 import { readFile, mkdtemp } from 'node:fs/promises';
 import path from 'node:path';
@@ -260,7 +261,7 @@ test('browser and server send actual forest outline, NPC design and matching mon
       ))
         if (all.some((enemy) => enemy.id === id))
           assert(
-            text.includes(DEFINITIONS[id].description),
+            text.includes(monsterNarrativeText(DEFINITIONS[id].description)),
             JSON.stringify(
               request.worldInfo.report.find(
                 (entry) => entry.title === '古林怪物图鉴：' + DEFINITIONS[id].name,

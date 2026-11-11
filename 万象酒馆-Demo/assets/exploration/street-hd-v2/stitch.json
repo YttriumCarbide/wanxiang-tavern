@@ -1,0 +1,17 @@
+{
+  "generator": "image_gen built-in",
+  "composition": "Native tiles; horizontal registration, minimum-error seam and 20px feather. No resizing.",
+  "offsets": [
+    0,
+    895,
+    1564
+  ],
+  "width": 2818,
+  "height": 1254,
+  "sha256": "dc4981817962750586949757da10b0dca19f927b947add48a9fa44d32f9b460d",
+  "tiles": [
+    "left.png",
+    "center.png",
+    "right.png"
+  ]
+}

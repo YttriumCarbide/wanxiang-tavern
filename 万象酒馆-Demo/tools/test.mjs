@@ -83,6 +83,7 @@ async function browserChecks(scopes) {
         await mkdir(directory, { recursive: true });
         return withTestServer((baseURL) => job.operation({ browser, baseURL, output: directory }), {
           browserOnly: job.browserOnly,
+          diskStorage: job.name === 'disk-storage',
         });
       }),
     );
@@ -135,7 +136,9 @@ async function main() {
   await Promise.all([
     runBatch(local, 2, (job) => run(job.name, job.operation)),
     browserChecks(scopes),
-    scopes.has('server') ? run('server', () => withTestServer(serverChecks)) : null,
+    scopes.has('server')
+      ? run('server', () => withTestServer(serverChecks, { diskStorage: true }))
+      : null,
   ]);
   // Full journeys remain explicit long checks, not part of the default checklist.
   if (scopes.has('expedition'))

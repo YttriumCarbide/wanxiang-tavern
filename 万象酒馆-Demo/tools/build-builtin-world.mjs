@@ -14,6 +14,7 @@ import { upgradeStatusEmblems } from '../src/ai/status-emblem-upgrade.js';
 import { upgradeUniversalEnemies } from '../src/ai/universal-enemy-upgrade.js';
 import { upgradeFrostWorldbook } from '../src/ai/frost-worldbook.js';
 import { upgradeEnemyBaseWorldbook } from '../src/ai/enemy-base-upgrade.js';
+import { upgradeTownGuests } from '../src/ai/town-guests-upgrade.js';
 
 /** Reproducible public canon, built without reading any user configuration or saved worldbook. */
 export async function buildBuiltinWorld() {
@@ -88,7 +89,8 @@ export async function buildBuiltinWorld() {
     book.extensions = {
       wanxiang: {
         publicSeed: 1,
-        adventureRevision: 50,
+        adventureRevision: 51,
+        mainWorldRevision: book.extensions.wanxiang.mainWorldRevision,
         characterCleanup: {
           revision: 'public-canon',
           removedIds: [
@@ -101,11 +103,12 @@ export async function buildBuiltinWorld() {
         },
       },
     };
+    const withGuests = upgradeTownGuests(book);
     await writeFile(
       path.join(root, 'assets/builtin-worldbook.json'),
-      JSON.stringify(book, null, 2) + '\n',
+      JSON.stringify(withGuests, null, 2) + '\n',
     );
-    return book;
+    return withGuests;
   } finally {
     await rm(resolved, { recursive: true, force: true });
   }

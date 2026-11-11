@@ -7,7 +7,7 @@ export function resetRelationshipGains(library) {
 }
 
 /** Only validated tavern replies affect relationships; no combat attributes are changed. */
-export function applyRelationshipActions(library, actions = {}) {
+export function applyRelationshipActions(library, actions = {}, residents = []) {
   library.relationships ||= {};
   const companions = new Set(
     library.characters
@@ -17,7 +17,7 @@ export function applyRelationshipActions(library, actions = {}) {
   const changed = [];
   const seen = new Set();
   for (const item of actions.affection || []) {
-    if (!companions.has(item.id) || seen.has(item.id)) continue;
+    if ((!companions.has(item.id) && !residents.includes(item.id)) || seen.has(item.id)) continue;
     seen.add(item.id);
     const state = (library.relationships[item.id] ||= { ...relationship(library, item.id) });
     if (state.gains >= 3 || !Number.isInteger(item.delta) || item.delta < 1 || item.delta > 5)

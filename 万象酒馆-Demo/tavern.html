@@ -5,15 +5,18 @@
     content="width=device-width,initial-scale=1"
   /><title>万象酒馆 · Demo 据点</title>
   <link rel="stylesheet" href="./styles/tavern.css" />
+  <link rel="stylesheet" href="./styles/scene-loading.css" />
+  <link rel="stylesheet" href="./styles/scene-visitors.css" />
   <link rel="stylesheet" href="./styles/ring-gallery.css" />
   <canvas aria-label="可以环视、点击场景中的位置按钮平滑移动的三维体素酒馆"></canvas>
   <button class="spot" id="enter" hidden>◇ 进入副本</button>
   <button class="spot" id="summon-open" hidden>◇ 召唤角色</button>
-  <button class="spot" id="corridor-open" hidden>◇ 走进二层走廊</button>
+  <button class="spot" id="corridor-open" hidden>◇ 沿楼梯上楼 · 客房走廊</button>
+  <button class="spot" id="street-open" hidden>◇ 推门外出 · 星灯街</button>
   <button class="talk-open" id="talk-open" hidden>交流</button>
   <div id="aim"></div>
   <div id="spots" aria-label="场景中的可抵达位置"></div>
-  <div id="status">正在打开酒馆房间…</div>
+  <div id="status" class="scene-loading">正在打开酒馆房间…</div>
   <div id="scene-fade" aria-hidden="true"></div>
   <script type="importmap">
     {

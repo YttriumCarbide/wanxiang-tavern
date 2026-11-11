@@ -17,7 +17,7 @@ export function createBattleReading(context) {
   menu.setAttribute('aria-label', '剧情与同行闲聊');
   menu.inert = true;
   menu.innerHTML =
-    '<button data-dungeon-gal="story">剧情</button><button data-dungeon-gal="quick">闲聊</button><button data-dungeon-gal="rewrite">修改剧本</button>';
+    '<button data-dungeon-gal="story">剧情</button><button data-dungeon-gal="quick">闲聊</button>';
   battle.append(button, menu);
   let expanded = false;
   function setExpanded(value) {
@@ -28,10 +28,11 @@ export function createBattleReading(context) {
     menu.inert = !value;
   }
   function render() {
-    menu.querySelector('[data-dungeon-gal="rewrite"]').disabled =
-      session.journey.expedition?.adventure?.boss.locked === true;
+    menu.querySelector('[data-dungeon-gal="story"]').hidden = !session.ai.activeScript;
     button.hidden =
-      !context.gal?.enabled || session.runtime.mode !== 'battle' || !session.ai.activeScript;
+      !context.gal?.enabled ||
+      session.runtime.mode !== 'battle' ||
+      (!session.ai.activeScript && !context.daily?.overlandRun?.());
     button.disabled = session.battle.playing;
     if (button.hidden) setExpanded(false);
     const orb = document.querySelector('#ap-orb').getBoundingClientRect();
@@ -52,7 +53,6 @@ export function createBattleReading(context) {
     const kind = event.target.closest('[data-dungeon-gal]')?.dataset.dungeonGal;
     if (kind === 'story') document.dispatchEvent(new CustomEvent('gal-open-script'));
     if (kind === 'quick') document.dispatchEvent(new CustomEvent('gal-open-quick'));
-    if (kind === 'rewrite') document.dispatchEvent(new CustomEvent('gal-rewrite-script'));
   });
   events.on(window, 'resize', render);
   return {

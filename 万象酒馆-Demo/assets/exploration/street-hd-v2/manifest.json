@@ -1,0 +1,45 @@
+{
+  "generator": "image_gen built-in",
+  "prompts": "assets/exploration/street-hd-v2/prompts.md",
+  "scaleReference": "assets/exploration/street-hd-v1/scale-reference.png",
+  "assets": [
+    {
+      "file": "assets/exploration/street-hd-v2/left.png",
+      "source": "C:/Users/Lenovo/.codex/generated_images/01a178f0-bd77-7b10-9f98-ca688a68afab/exec-e9147ba2-fe20-41eb-8240-01d8fbd4afdf.png",
+      "width": 1254,
+      "height": 1254,
+      "sha256": "c21524e26532529ad16c67aaebae1177daf9db6517b1f40ceb5245bde3414934"
+    },
+    {
+      "file": "assets/exploration/street-hd-v2/center.png",
+      "source": "C:/Users/Lenovo/.codex/generated_images/01a178f0-bd77-7b10-9f98-ca688a68afab/exec-c5caafd5-5c10-470e-8ac9-658389ecebc2.png",
+      "width": 1254,
+      "height": 1254,
+      "sha256": "e0ec5c058e39873b3063e94eedf50862fe5d3a175ba9f19bcfbec6341438e323"
+    },
+    {
+      "file": "assets/exploration/street-hd-v2/right.png",
+      "source": "C:/Users/Lenovo/.codex/generated_images/01a178f0-bd77-7b10-9f98-ca688a68afab/exec-5f22844d-cf95-4f1e-88d0-8fe328dda49e.png",
+      "width": 1254,
+      "height": 1254,
+      "sha256": "524fe328ed0523a1c640b08d721ffadc2abc9f5380f6245f2838923c67aae956"
+    }
+  ],
+  "composition": {
+    "generator": "image_gen built-in",
+    "composition": "Native tiles; horizontal registration, minimum-error seam and 20px feather. No resizing.",
+    "offsets": [
+      0,
+      895,
+      1564
+    ],
+    "width": 2818,
+    "height": 1254,
+    "sha256": "dc4981817962750586949757da10b0dca19f927b947add48a9fa44d32f9b460d",
+    "tiles": [
+      "left.png",
+      "center.png",
+      "right.png"
+    ]
+  }
+}

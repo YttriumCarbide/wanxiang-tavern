@@ -1,0 +1,88 @@
+{
+  "id": "sentryDrone",
+  "name": "裂镜侦察机",
+  "model": "sentry-drone.glb",
+  "portrait": "sentry-drone",
+  "blocks": [
+    {
+      "group": "FloatingHull",
+      "x": 0,
+      "y": 2.6,
+      "z": 0,
+      "w": 3.6,
+      "d": 2.8,
+      "h": 1.7,
+      "color": "#657f8b"
+    },
+    {
+      "group": "Thruster",
+      "x": -1.5,
+      "y": 2.8,
+      "z": 0,
+      "w": 0.7,
+      "d": 2.1,
+      "h": 1,
+      "color": "#293d48"
+    },
+    {
+      "group": "Stabilizers",
+      "x": -0.4,
+      "y": 3.2,
+      "z": -2.3,
+      "w": 2.7,
+      "d": 1.1,
+      "h": 0.4,
+      "color": "#899b9d"
+    },
+    {
+      "group": "ThrusterGlow",
+      "x": -1.7,
+      "y": 2.5,
+      "z": -0.7,
+      "w": 0.3,
+      "d": 0.5,
+      "h": 0.8,
+      "color": "#9ee9f1"
+    },
+    {
+      "group": "Stabilizers",
+      "x": -0.4,
+      "y": 3.2,
+      "z": 2.3,
+      "w": 2.7,
+      "d": 1.1,
+      "h": 0.4,
+      "color": "#899b9d"
+    },
+    {
+      "group": "ThrusterGlow",
+      "x": -1.7,
+      "y": 2.5,
+      "z": 0.7,
+      "w": 0.3,
+      "d": 0.5,
+      "h": 0.8,
+      "color": "#9ee9f1"
+    },
+    {
+      "group": "OpticHousing",
+      "x": 1.9,
+      "y": 2.9,
+      "z": 0,
+      "w": 0.4,
+      "d": 2.25,
+      "h": 0.8,
+      "color": "#293d48"
+    },
+    {
+      "group": "OpticLens",
+      "x": 2.1399999999999997,
+      "y": 3.1,
+      "z": 0,
+      "w": 0.15,
+      "d": 1.8,
+      "h": 0.32,
+      "color": "#e8c579"
+    }
+  ]
+}

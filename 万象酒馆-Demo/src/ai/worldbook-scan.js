@@ -96,7 +96,8 @@ export function scanWorldbooks({ books, settings: rawSettings, context, state = 
     const candidates = [];
     for (const entry of rows) {
       if (active.has(entry.id) || rejected.has(entry.id)) continue;
-      if (!(entry.apiTargets || ['character', 'script']).includes(context.kind || 'character')) {
+      const apiKind = context.kind === 'quick-chat' ? 'chat' : context.kind || 'character';
+      if (!(entry.apiTargets || ['character', 'script']).includes(apiKind)) {
         reason(entry, '未发送到当前API');
         continue;
       }

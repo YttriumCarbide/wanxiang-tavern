@@ -18,6 +18,7 @@ import { portraitUrl } from './catalog.js';
 import { createCardDeaths } from './card-death.js';
 import { stabilizeFloorGeometry } from './floor-geometry.js';
 import { enemyIntentBadge } from './enemy-intent.js';
+import { combatRank } from './combat-scale.js';
 import { deviceRenderQuality, createFrameBudget } from './shared/render-budget.js';
 
 export async function createBattleView(stage, onUnitClick, options = {}) {
@@ -25,6 +26,13 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
   stage.dataset.biome = options.map || 'ruins';
   stage.style.setProperty('--scene-accent', theme.accent);
   const definitions = { ...DEFINITIONS, ...options.enemyDefinitions, ...options.heroDefinitions };
+  const activeIds = new Set([
+    ...HEROES.map((hero) => hero.id),
+    ...(options.enemyIds || encounterSpec(0).enemyIds),
+  ]);
+  const visibleDefinitions = Object.values(definitions).filter((definition) =>
+    activeIds.has(definition.id),
+  );
   const canvas = stage.querySelector('canvas'),
     layer = stage.querySelector('.unit-layer'),
     effects = stage.querySelector('.battle-effects');
@@ -76,7 +84,12 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
   const camera = new THREE.OrthographicCamera(-8.5, 8.5, 5.85, -5.85, 0.1, 60);
   camera.position.set(0, 18, 10);
   camera.lookAt(0, 0, 0);
-  const gltf = await new GLTFLoader().loadAsync(`./assets/${theme.asset}.glb`).catch(fail),
+  const asset = `./assets/${theme.asset}.glb`;
+  if (options.loading)
+    await options.loading.prepare([asset, ...visibleDefinitions.map(portraitUrl)]).catch(fail);
+  const gltf = await (
+      options.loading ? options.loading.gltf(asset) : new GLTFLoader().loadAsync(asset)
+    ).catch(fail),
     model = resources.object(gltf.scene),
     roots = {};
   model.traverse((o) => {
@@ -109,48 +122,27 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
     weatherSurfaces,
     gltf.userData?.peripheryLayout,
   );
+  const loadPortraitTexture = (file) =>
+    options.loading ? options.loading.texture(file) : new THREE.TextureLoader().loadAsync(file);
   const textures = Object.fromEntries(
     await Promise.all(
-      Object.values(definitions).map(
-        (d) =>
-          new Promise((resolve, reject) =>
-            new THREE.TextureLoader().load(
-              portraitUrl(d),
-              (t) => {
-                resources.track(t);
-                const framed = resources.track(
-                  new THREE.CanvasTexture(portraitFrame(t.image, d.color)),
-                );
-                framed.colorSpace = THREE.SRGBColorSpace;
-                framed.flipY = false;
-                framed.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
-                resolve([d.id, framed]);
-              },
-              undefined,
-              (err) => {
-                if (d.customPortrait) {
-                  new THREE.TextureLoader().load(
-                    portraitUrl({ ...d, customPortrait: null }),
-                    (t) => {
-                      resources.track(t);
-                      const framed = resources.track(
-                        new THREE.CanvasTexture(portraitFrame(t.image, d.color)),
-                      );
-                      framed.colorSpace = THREE.SRGBColorSpace;
-                      framed.flipY = false;
-                      framed.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
-                      resolve([d.id, framed]);
-                    },
-                    undefined,
-                    reject,
-                  );
-                } else {
-                  reject(err);
-                }
-              },
-            ),
-          ),
-      ),
+      visibleDefinitions.map(async (definition) => {
+        let texture;
+        try {
+          texture = await loadPortraitTexture(portraitUrl(definition));
+        } catch (error) {
+          if (!definition.customPortrait) throw error;
+          texture = await loadPortraitTexture(portraitUrl({ ...definition, customPortrait: null }));
+        }
+        resources.track(texture);
+        const framed = resources.track(
+          new THREE.CanvasTexture(portraitFrame(texture.image, definition.color)),
+        );
+        framed.colorSpace = THREE.SRGBColorSpace;
+        framed.flipY = false;
+        framed.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+        return [definition.id, framed];
+      }),
     ).catch(fail),
   );
   const records = [],
@@ -430,7 +422,7 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
                   </g></svg
               ></span>`
             : ''
-        }${side === 'Enemy' ? html`<small class="enemy-level">Lv.${u.level || 1}</small>` : ''}<span
+        }${side === 'Enemy' ? html`<small class="enemy-level" title="${combatRank(u.level || 1)}">Lv.${u.level || 1}</small>` : ''}<span
           class="unit-info"
           ><span class="unit-name">${d.name}${u.hp === 0 ? ' ×' : ''}</span></span
         ><span class="unit-resources">${resourceBars(u, f)}</span
@@ -763,6 +755,7 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
   }
   return {
     draw,
+    scene,
     camera,
     renderer,
     model,

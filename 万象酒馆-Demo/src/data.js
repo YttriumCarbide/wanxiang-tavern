@@ -9,6 +9,16 @@ import {
   RUINS_BOSSES,
 } from './content/new-adversaries.js';
 export const BUFFS = {
+  flying: {
+    name: '飞行',
+    icon: '飞',
+    text: '受到的伤害减半（向下取整，攻击先减伤再扣护盾）；正常回合结束减少1层。',
+  },
+  blind: {
+    name: '致盲',
+    icon: '盲',
+    text: '敌人本次攻击若伤害两个及以上目标，其中一个目标的伤害变为0；随机目标由预演提前确定，正常回合结束减少1层。',
+  },
   balance: {
     name: '平衡',
     icon: '衡',
@@ -24,10 +34,10 @@ export const BUFFS = {
     icon: '禁',
     text: '跳过目标本回合尚未执行的主动行动，回合结束解除；层数不延长持续时间。',
   },
-  strength: { name: '力量', icon: '力', text: '每次攻击增加层数对应的伤害' },
+  strength: { name: '力量', icon: '力', text: '每层使直接伤害增加20%，与易伤合计最高50%' },
   guard: { name: '守势', icon: '守', text: '获得护盾时增加层数对应的护盾' },
   weak: { name: '虚弱', icon: '弱', text: '攻击伤害减少25%，正常回合结束减少1层' },
-  vulnerable: { name: '易伤', icon: '伤', text: '受到攻击伤害增加50%，正常回合结束减少1层' },
+  vulnerable: { name: '易伤', icon: '伤', text: '受到的直接伤害增加25%，正常回合结束减少1层' },
   regen: { name: '再生', icon: '生', text: '回合末先回复层数对应hp，再减少1层；濒死单位无法回复' },
   poison: { name: '中毒', icon: '毒', text: '回合末再生后失去层数对应hp，然后减少1层' },
   slow: {
@@ -622,6 +632,12 @@ export function ability(id, skillId, definitions = DEFINITIONS) {
   const d = definitions[id];
   if (!d) return undefined;
   if (skillId === 'attack')
-    return { ...BASIC, name: d.attackName, effects: [{ type: 'damage', value: d.attack }] };
+    return {
+      ...BASIC,
+      name: d.attackName,
+      target: d.attackTarget || BASIC.target,
+      ...(d.basicAttackInjuredMark ? { basicAttackInjuredMark: true } : {}),
+      effects: [{ type: 'damage', value: d.attack }],
+    };
   return d.skills?.find((s) => s.id === skillId && !s.passive);
 }

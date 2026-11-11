@@ -15,8 +15,11 @@ export const PROMPT_KINDS = Object.freeze([
   'map',
   'creation',
 ]);
+export const CONNECTION_KINDS = Object.freeze(
+  Object.keys(API_LABELS).filter((kind) => kind !== 'quick-chat'),
+);
 
 export function missingSetup(status, stage) {
-  const kinds = stage === 'connections' ? Object.keys(API_LABELS) : PROMPT_KINDS;
+  const kinds = stage === 'connections' ? CONNECTION_KINDS : PROMPT_KINDS;
   return kinds.filter((kind) => !status[kind]?.[stage === 'connections' ? 'connection' : 'prompt']);
 }

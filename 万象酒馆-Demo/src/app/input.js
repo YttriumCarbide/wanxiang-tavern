@@ -192,8 +192,7 @@ export function mountInput(context) {
     const editWrap = e.target.closest('[data-edit-portrait]');
     if (editWrap) {
       editingHeroId = editWrap.dataset.editPortrait;
-      portraitInput.value = '';
-      portraitInput.click();
+      portraitEditor.open(editingHeroId);
     }
   });
 

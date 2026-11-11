@@ -1,8 +1,10 @@
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { createSceneLoading } from '../shared/scene-loading.js';
 import { createEventScope } from '../shared/events.js';
 import { createResourceScope } from '../shared/resources.js';
 import { roomChatPlace } from '../chat-places.js';
+import { createSceneVisitors } from './visitor-scene.js';
+import { deviceRenderQuality, createFrameBudget } from '../shared/render-budget.js';
 
 const QUERY = new URLSearchParams(location.search);
 const REQUESTED_ROOM = document.body.dataset.room || QUERY.get('room');
@@ -158,14 +160,21 @@ const MASTER_PLACES = Object.freeze({
 const PLACES = ROOM_KIND === 'master' ? MASTER_PLACES : GUEST_PLACES;
 
 export async function createGuestRoomView() {
+  const loading = createSceneLoading(
+    document.getElementById('status'),
+    '正在打开' + ROOM.plaque.trim(),
+  );
+  let visitors = null;
+  const quality = deviceRenderQuality();
+  const budget = createFrameBudget(quality.fps);
   const canvas = document.querySelector('canvas');
   const renderer = new THREE.WebGLRenderer({
     canvas,
-    antialias: true,
+    antialias: quality.antialias,
     preserveDrawingBuffer: true,
   });
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-  renderer.shadowMap.enabled = true;
+  renderer.setPixelRatio(quality.pixelRatio);
+  renderer.shadowMap.enabled = quality.shadows;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.12;
@@ -419,6 +428,8 @@ export async function createGuestRoomView() {
   function dispose() {
     if (disposed) return;
     disposed = true;
+    loading.dispose();
+    visitors?.dispose();
     renderer.setAnimationLoop(null);
     events.dispose();
     resources.object(scene);
@@ -448,7 +459,8 @@ export async function createGuestRoomView() {
   makeSpots();
 
   try {
-    const gltf = await new GLTFLoader().loadAsync(ROOM.asset);
+    await loading.prepare([ROOM.asset]);
+    const gltf = await loading.gltf(ROOM.asset);
     model = gltf.scene;
     resources.object(model);
     if (disposed) return { dispose };
@@ -468,7 +480,16 @@ export async function createGuestRoomView() {
       }
     });
     scene.add(model);
-    document.getElementById('status').remove();
+    visitors = await createSceneVisitors({
+      scene,
+      camera,
+      model,
+      sceneId: 'room-' + ROOM_KIND,
+      events,
+      assets: loading.assets,
+    });
+    visitors.update();
+    await loading.finish(renderer, scene, camera);
     loaded = true;
     syncAngles();
     updateWhere(ROOM.enter);
@@ -484,6 +505,7 @@ export async function createGuestRoomView() {
       camera,
       renderer,
       model,
+      visitors: () => visitors.status(),
       places: PLACES,
       moveTo,
       placeNow,
@@ -500,29 +522,45 @@ export async function createGuestRoomView() {
       }),
     };
   } catch (error) {
+    if (disposed || error.name === 'AbortError') return { dispose };
     if (!disposed) {
-      const status = document.getElementById('status');
-      if (status) status.textContent = '客房载入失败：' + error.message;
+      loading.fail(error);
     }
     dispose();
-    throw error;
+    return { dispose };
   }
 
   let drag = null;
   events.on(canvas, 'pointerdown', (event) => {
     cancelTravel();
-    drag = { x: event.clientX, y: event.clientY, id: event.pointerId };
+    drag = {
+      x: event.clientX,
+      y: event.clientY,
+      startX: event.clientX,
+      startY: event.clientY,
+      id: event.pointerId,
+      moved: false,
+    };
     canvas.setPointerCapture(event.pointerId);
   });
   events.on(canvas, 'pointermove', (event) => {
     if (!drag || drag.id !== event.pointerId) return;
+    if (Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY) > 6) drag.moved = true;
     yaw -= (event.clientX - drag.x) * 0.004;
     pitch = THREE.MathUtils.clamp(pitch - (event.clientY - drag.y) * 0.003, -1.25, 1.25);
     drag.x = event.clientX;
     drag.y = event.clientY;
     apply();
   });
-  events.on(canvas, 'pointerup', () => (drag = null));
+  events.on(canvas, 'pointerup', (event) => {
+    const visitor = drag && !drag.moved && visitors?.pick(event.clientX, event.clientY);
+    drag = null;
+    if (visitor && !travel && !leaving)
+      parent.postMessage(
+        { type: 'tavern-talk', place: roomChatPlace(ROOM_KIND, current), characterId: visitor.id },
+        location.origin,
+      );
+  });
   events.on(canvas, 'pointercancel', () => (drag = null));
   events.on(
     canvas,
@@ -555,7 +593,12 @@ export async function createGuestRoomView() {
   resize();
   const clock = new THREE.Clock();
   let elapsed = 0;
-  renderer.setAnimationLoop(() => {
+  renderer.setAnimationLoop((now) => {
+    if (document.hidden || document.body.classList.contains('gal-covered')) {
+      clock.getDelta();
+      return;
+    }
+    if (!budget.accepts(now)) return;
     const dt = Math.min(clock.getDelta(), 0.05);
     elapsed += dt;
     if (travel) {
@@ -582,6 +625,7 @@ export async function createGuestRoomView() {
     const checkOcclusion = spotTimer > 0.12;
     updateSpots(checkOcclusion);
     if (checkOcclusion) spotTimer = 0;
+    visitors?.update();
     renderer.render(scene, camera);
   });
 

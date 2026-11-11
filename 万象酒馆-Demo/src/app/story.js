@@ -3,6 +3,20 @@ import { query as $ } from './dom.js';
 import { createEventScope } from '../shared/events.js';
 import { archiveMilestone } from '../archives.js';
 import { readableGalText } from '../gal.js';
+import { archiveTavernPrelude } from '../memory.js';
+
+function completeStoryRecord(library, book, record) {
+  record.complete = true;
+  record.finishedAt ||= Date.now();
+  archiveTavernPrelude(library, book.generationInput?.tavernPrelude);
+  record.nextHook = book.nextHook;
+  library.chapter = Math.max(library.chapter, book.chapter + 1);
+  const saved = library.scripts.find((entry) => entry.id === book.id);
+  if (saved && book.story) {
+    saved.story = structuredClone(book.story);
+    if (book.display?.story) (saved.display ||= {}).story = structuredClone(book.display.story);
+  }
+}
 
 /** Only confirmed milestones enter history; browsing pages never unlocks future prose. */
 export function createStoryFeed(session, save, gal = null) {
@@ -133,11 +147,8 @@ export function createStoryFeed(session, save, gal = null) {
       const part = stage === 'before' ? index : -1;
       if (part < 0) {
         record.played.push(key);
-        if (stage === 'after' && index === FINAL_ENCOUNTER) {
-          record.complete = true;
-          record.nextHook = book.nextHook;
-          session.ai.library.chapter = Math.max(session.ai.library.chapter, book.chapter + 1);
-        }
+        if (stage === 'after' && index === FINAL_ENCOUNTER)
+          completeStoryRecord(session.ai.library, book, record);
         save();
         return;
       }
@@ -182,11 +193,8 @@ export function createStoryFeed(session, save, gal = null) {
     record.played.push(key);
     if (!book.adventure || ![1, 3].includes(index))
       archiveMilestone(session.ai.library, book, record, index);
-    if (stage === 'after' && index === FINAL_ENCOUNTER) {
-      record.complete = true;
-      record.nextHook = book.nextHook;
-      session.ai.library.chapter = Math.max(session.ai.library.chapter, book.chapter + 1);
-    }
+    if (stage === 'after' && index === FINAL_ENCOUNTER)
+      completeStoryRecord(session.ai.library, book, record);
     render();
     save();
   }

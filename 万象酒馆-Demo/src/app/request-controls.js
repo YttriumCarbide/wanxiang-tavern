@@ -1,16 +1,34 @@
 import { API_LABELS } from './first-run-rules.js';
 import { skippingAi } from '../generation-options.js';
 import { galRequestInput } from '../gal.js';
+import { journeyMemories } from '../memory.js';
 /** Every paid/model request has a real AbortSignal and a visible control in its current panel. */
 export function createRequestControls(
   client,
   generationOptions = () => null,
   arcade = () => null,
   prepare = async () => {},
+  received = () => {},
+  library = () => null,
 ) {
   const active = new Set();
   const dock = document.createElement('div');
   dock.className = 'api-request-dock';
+  function generationInput(kind, data) {
+    if (kind === 'summary') return data;
+    const save = library();
+    const archiveContext = data?.archiveContext;
+    return galRequestInput(kind, {
+      ...data,
+      journeyMemories: journeyMemories(save),
+      archivedNpcs: (save?.archives?.npcs || []).map(({ id, name, content }) => ({
+        id,
+        name,
+        content,
+      })),
+      ...(archiveContext ? { archiveContext: { ...archiveContext, npcs: [], stories: [] } } : {}),
+    });
+  }
   function hostFor(kind, models) {
     const visible = (id) => {
       const panel = document.getElementById(id);
@@ -24,7 +42,7 @@ export function createRequestControls(
       chat: ['gal-stage'],
       'quick-chat': ['gal-stage', 'rp-scene'],
       character: ['ai-dialog', 'new-game'],
-      script: ['story-feed', 'party-panel', 'ai-dialog'],
+      script: ['daily-setup', 'story-feed', 'party-panel', 'ai-dialog'],
     };
     return (candidates[kind] || []).map(visible).find(Boolean) || document.body;
   }
@@ -36,7 +54,7 @@ export function createRequestControls(
       if (!match) {
         const preview =
           path === 'prompts/preview' && data?.kind
-            ? { ...data, input: galRequestInput(data.kind, data.input) }
+            ? { ...data, input: generationInput(data.kind, data.input) }
             : data;
         return client.request(path, preview, options);
       }
@@ -91,11 +109,15 @@ export function createRequestControls(
         controller.signal.throwIfAborted();
         if (match[1] === 'generate') await prepare(match[2]);
         controller.signal.throwIfAborted();
-        const input = match[1] === 'generate' ? galRequestInput(match[2], data) : data;
+        const input = match[1] === 'generate' ? generationInput(match[2], data) : data;
         const result = await client.request(path, input, { ...options, signal: controller.signal });
+        received(match[2], result);
         controller.signal.throwIfAborted();
         outcome = 'success';
         return result;
+      } catch (failure) {
+        if (!controller.signal.aborted) received(match[2], null, failure);
+        throw failure;
       } finally {
         if (controller.signal.aborted) outcome = 'cancel';
         arcade()?.completed(

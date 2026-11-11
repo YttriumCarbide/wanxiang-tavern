@@ -124,6 +124,8 @@ function novelV4Schema() {
 export function scriptOutputSchema() {
   const schema = novelV4Schema();
   schema.properties.schemaVersion.const = 5;
+  delete schema.properties.data.properties.tags;
+  schema.properties.data.required = schema.properties.data.required.filter((key) => key !== 'tags');
   schema.properties.data.properties.adventure = adventureDefinitionSchema();
   schema.properties.data.required.push('adventure');
   return schema;
@@ -131,9 +133,11 @@ export function scriptOutputSchema() {
 
 /** Existing v2 responses and saved chapters remain readable during preset migration. */
 export function scriptInputSchema(partyIds = []) {
+  const current = scriptOutputSchema();
+  current.properties.data.properties.tags = array(string(30), 0, 12);
   return {
     anyOf: [
-      scriptOutputSchema(),
+      current,
       novelV4Schema(),
       novelV3Schema(),
       legacyScriptSchema(partyIds, { acceptLegacyIndex: true }),

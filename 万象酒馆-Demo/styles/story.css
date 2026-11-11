@@ -29,15 +29,16 @@
   max-width: calc(100vw - 36px);
   max-height: calc(100dvh - 36px);
   margin: auto;
-  padding: 18px 24px 12px;
-  border: 1px solid #a2b79770;
-  border-radius: 14px;
-  background: linear-gradient(145deg, #17302ce3, #101e25e8);
-  backdrop-filter: blur(12px);
+  padding: 22px 28px 16px;
+  border: 1px solid rgba(226, 186, 111, 0.4);
+  border-radius: 16px;
+  background: radial-gradient(ellipse at 50% 0%, rgba(32, 56, 48, 0.7), transparent 75%), #0e1c1a;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   box-shadow:
-    0 20px 80px #0008,
-    inset 0 0 0 4px #a5bb9010;
-  color: #e3dec9;
+    0 24px 80px rgba(0, 0, 0, 0.8),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  color: #f2eee3;
   overflow: hidden;
   user-select: text;
   -webkit-user-select: text;
@@ -45,10 +46,11 @@
 #story-feed[open] {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 #story-feed::backdrop {
-  background: #06161450;
+  background: rgba(4, 10, 12, 0.75);
+  backdrop-filter: blur(6px);
 }
 #story-feed header {
   display: flex;
@@ -383,6 +385,29 @@
   line-height: 2;
   font-size: 14px;
 }
+.records-reading-tabs {
+  display: flex;
+  gap: 8px;
+  margin: 14px 0 18px;
+}
+.records-reading-tabs button {
+  padding: 7px 18px;
+  color: #c9c6b8;
+  background: #ffffff06;
+  border: 1px solid #cbb77b33;
+  border-radius: 18px;
+}
+.records-reading-tabs button[aria-pressed='true'] {
+  color: #f1dfad;
+  background: #c5a96619;
+  border-color: #d5ba7766;
+}
+#records-text .records-memory-status {
+  margin: 10px 0;
+  color: #bdb9a9;
+  font-size: 12px;
+  line-height: 1.7;
+}
 .archive-field {
   display: block;
   margin: 0 0 18px;
@@ -533,37 +558,6 @@
   background: #367a9b20;
   border: 1px solid #8bb9cb66;
   border-radius: 8px;
-}
-#rewrite-help {
-  width: min(520px, calc(100vw - 32px));
-  padding: 28px;
-  border: 1px solid #bfa66a;
-  border-radius: 12px;
-  background: linear-gradient(145deg, #203c35, #10211f);
-  color: #e2ddcb;
-  box-shadow: 0 20px 70px #0009;
-}
-#rewrite-help h2 {
-  margin: 0 0 20px;
-  font-weight: 400;
-  color: #dec991;
-}
-#rewrite-help p {
-  font-size: 14px;
-  line-height: 1.9;
-}
-#rewrite-help label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 22px 0;
-  color: #bdc7b9;
-  font-size: 13px;
-}
-#rewrite-help footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
 }
 @media (orientation: landscape) and (max-height: 600px) and (max-width: 1100px) {
   #story-toggle {

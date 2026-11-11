@@ -81,20 +81,22 @@ export function statusIcons(s, id, end = s, events = []) {
     const after = end.units[id]?.mark || 0;
     const label = mark.name || '标记';
     const maximum = mark.max || 3;
+    const markIcon = mark.icon || 'mark';
+    const countText = (count) => (mark.uncapped ? `${count}层` : `${count}/${maximum}`);
     if (now > 0)
       markupString += chip(
-        'mark',
+        markIcon,
         now,
         false,
-        `${label} ${now}/${maximum}${now !== after ? `\n预计结算后 ${after}/${maximum}` : ''}\n本场战斗内积累与消耗，下场清空。`,
+        `${label} ${countText(now)}${now !== after ? `\n预计结算后 ${countText(after)}` : ''}\n本场战斗内积累与消耗，下场清空。`,
         label,
       );
     if (after > now)
       markupString += chip(
-        'mark',
+        markIcon,
         after - now,
         true,
-        `预计新增 ${label} ${after - now}\n结算后共 ${after}/${maximum}`,
+        `预计新增 ${label} ${after - now}\n结算后共 ${countText(after)}`,
         label,
       );
   }

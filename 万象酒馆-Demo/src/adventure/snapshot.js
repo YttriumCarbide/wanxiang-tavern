@@ -1,4 +1,5 @@
 import { normalizeAdventureDefinition, savedAdventureInput } from './definition.js';
+import { validEventReward } from './rewards.js';
 
 /** New adventures resume only from coherent code-owned nodes, never half a combat animation. */
 export function adventureSnapshot(session) {
@@ -63,6 +64,7 @@ function checkAdventureSnapshot(snapshot) {
   )
     return false;
   const definition = normalizeAdventureDefinition(savedAdventureInput(book.adventure));
+  if (state.event.reward !== undefined && !validEventReward(state.event.reward)) return false;
   if (
     book.adventure.event.choices.some(
       (choice, index) => choice.id !== definition.event.choices[index].id,

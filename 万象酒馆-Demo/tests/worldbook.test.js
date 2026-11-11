@@ -14,6 +14,9 @@ import { generationRequest } from '../server/prompts.mjs';
 import { requestTokenReport } from '../server/request-tokens.mjs';
 import { createWorldbookCounter, createCharacterReader } from '../server/character-reader.mjs';
 import { readGenerationResult } from '../server/generation-result.mjs';
+import { upgradeOutputTagsWorldbook } from '../src/ai/output-tag-upgrade.js';
+import { upgradeMonsterCatalogWorldbook } from '../src/ai/monster-narrative.js';
+import { UNIVERSAL_ENEMIES, UNIVERSAL_BOSSES } from '../src/content/universal-adversaries.js';
 import { newLibrary, restoreLibrary } from '../src/ai/library.js';
 import { characterDocument, tavernPresetFixture } from './fixtures/ai.js';
 
@@ -35,6 +38,20 @@ const scan = (entries, options = {}) =>
     countTokens: (text) => text.length,
     ...options,
   });
+
+test('output tag migration updates owned prompt rules and preserves user entries', () => {
+  const source = book([
+    {
+      extensions: { wanxiang: { generationRule: 'script-output' } },
+      content: '格式 <wanxiang_json>{}</wanxiang_json> 与 <wanxiang_chat>正文</wanxiang_chat>',
+    },
+    { comment: '我的格式补充', content: '请保留 <wanxiang_chat>原样</wanxiang_chat>' },
+  ]);
+  const upgraded = upgradeOutputTagsWorldbook(source);
+  assert.match(upgraded.entries[0].content, /<wanxiang_output>\{\}<\/wanxiang_output>/u);
+  assert.match(upgraded.entries[0].content, /<wanxiang_output>正文<\/wanxiang_output>/u);
+  assert.equal(upgraded.entries[1].content, source.entries[1].content);
+});
 
 test('ST books and embedded character books round-trip every field and unknown extensions', () => {
   const source = book([
@@ -87,6 +104,34 @@ test('ST books and embedded character books round-trip every field and unknown e
   assert.equal(embedded.entries[0].matchCharacterDescription, true);
   assert.equal(embedded.entries[0].ignoreBudget, true);
   assert.throws(() => normalizeWorldbook({ entries: { 1: { uid: 1, position: 99 } } }), /位置/);
+});
+
+test('worldbook targets use the six current APIs and map legacy quick-chat to chat', () => {
+  const normalized = normalizeWorldbook({
+    entries: {
+      0: { uid: 0, apiTargets: ['script', 'quick-chat', 'chat', 'summary'], content: '怪物设定' },
+    },
+  }).book;
+  assert.deepEqual(normalized.entries[0].apiTargets, ['script', 'chat', 'summary']);
+  assert.deepEqual(normalized.entries[0].extensions.wanxiang.apiTargets, [
+    'script',
+    'chat',
+    'summary',
+  ]);
+  assert.throws(() =>
+    normalizeWorldbook({ entries: { 0: { uid: 0, apiTargets: ['quick-chat-old'] } } }),
+  );
+  const quickChatScan = scan(
+    [
+      {
+        key: ['怪物名'],
+        content: '被聊天提及的怪物设定',
+        apiTargets: ['chat'],
+      },
+    ],
+    { context: { kind: 'quick-chat', messages: [{ role: 'user', content: '怪物名' }] } },
+  );
+  assert.equal(quickChatScan.entries[0].content, '被聊天提及的怪物设定');
 });
 
 test('keyword, regex, all four secondary logics and field overrides activate correctly', () => {
@@ -246,9 +291,43 @@ test('worldbook CRUD, bindings and timer state survive restart without changing 
   await restored.delete(imported.id);
   assert.deepEqual((await restored.visible()).settings.script, []);
   await restored.delete('tavern-canon');
-  await restored.delete('tavern-bestiary');
   await restored.delete('tavern-world');
   assert.equal((await (await createWorldbookStore(directory)).list()).length, 0);
+});
+
+test('monster lore is split into named script/chat entries and game rules are removed', () => {
+  const source = {
+    entries: {
+      0: {
+        ...newWorldEntry(0),
+        comment: '通用敌人库：十名小怪与三位Boss',
+        content: '旧的合并目录',
+        apiTargets: ['map', 'script'],
+        extensions: { wanxiang: { generationRule: 'universal-enemies' } },
+      },
+      1: {
+        ...newWorldEntry(1),
+        comment: '古林怪物图鉴：月蚀树冠',
+        key: ['moonCrown', '月蚀树冠'],
+        content:
+          '名称：月蚀树冠\n外形：宽大冠层下悬着数枚半透明培养囊。\n三部位速度均为1，行动顺序树冠、魔眼、树根。必须全部击败才算胜利。',
+        apiTargets: ['script', 'map'],
+        extensions: { wanxiang: { monsterId: 'moonCrown' } },
+      },
+    },
+  };
+  const result = upgradeMonsterCatalogWorldbook(source);
+  const entries = Object.values(result.entries).filter(
+    (entry) => entry.extensions?.wanxiang?.monsterId,
+  );
+  assert.equal(entries.length, UNIVERSAL_ENEMIES.length + UNIVERSAL_BOSSES.length + 1);
+  assert(!Object.values(result.entries).some((entry) => /通用敌人库/.test(entry.comment || '')));
+  for (const entry of entries) {
+    assert.equal(entry.comment, '怪物图鉴：' + entry.key[1]);
+    assert.deepEqual(entry.key, [entry.extensions.wanxiang.monsterId, entry.key[1]]);
+    assert.deepEqual(entry.apiTargets, ['script', 'chat']);
+    assert(!/速度均为|行动顺序|必须全部击败/.test(entry.content));
+  }
 });
 
 test('design notes do not reject valid characters, while missing design and unknown executable data remain invalid', () => {
@@ -307,7 +386,8 @@ test('character worldbook entries conform to specification and are triggered dur
     },
   };
   const entry = characterWorldEntry(dummyChar, 42);
-  assert.equal(entry.comment, '人物详情：测试勇者');
+  assert.equal(entry.comment, 'ai角色条目：测试勇者');
+  assert.deepEqual(entry.apiTargets, ['script', 'chat']);
   assert.equal(entry.constant, false); // 绿灯
   assert.equal(entry.position, 1); // 角色定义之后
   assert.equal(entry.order, 100);
@@ -365,4 +445,70 @@ test('character worldbook entries conform to specification and are triggered dur
       `出场角色 ${member.name} 的世界书条目应被触发并发送`,
     );
   }
+});
+
+test('character entries use three dialogue purposes and separate protagonist, generated and recruitable categories', async () => {
+  const { classifyCharacterEntry, characterEntryCategory } = await import('../src/ai/worldbook.js');
+  const { upgradeCharacterEntries } = await import('../src/ai/character-entry-upgrade.js');
+  const entries = [
+    characterWorldEntry(
+      {
+        id: 'character-player',
+        source: 'generated',
+        setting: { name: '玩家', worldbook: '玩家资料' },
+      },
+      0,
+      'character-player',
+    ),
+    characterWorldEntry(
+      {
+        id: 'character-new',
+        source: 'generated',
+        setting: { name: '新客', worldbook: 'AI角色资料' },
+      },
+      1,
+    ),
+    characterWorldEntry(
+      {
+        id: 'official-aegis',
+        source: 'official',
+        setting: { name: '长景月汐', worldbook: '攻击方式｜月闪：挥剑。' },
+      },
+      2,
+    ),
+  ];
+  assert.deepEqual(
+    entries.map((entry) => entry.comment),
+    ['主角设定：玩家', 'ai角色条目：新客', '角色条目：长景月汐'],
+  );
+  for (const entry of entries) assert.deepEqual(entry.apiTargets, ['script', 'chat']);
+  assert.deepEqual(entries.map(characterEntryCategory), [
+    'protagonist',
+    'ai-character',
+    'character',
+  ]);
+  const upgraded = upgradeCharacterEntries({
+    entries: {
+      0: {
+        ...entries[1],
+        comment: '人物详情：新客',
+        apiTargets: ['character', 'script'],
+        order: 456,
+        content: '玩家编辑过的设定',
+      },
+    },
+  });
+  assert.equal(upgraded.entries[0].comment, 'ai角色条目：新客');
+  assert.equal(upgraded.entries[0].order, 456);
+  assert.equal(upgraded.entries[0].content, '玩家编辑过的设定');
+  assert.deepEqual(upgraded.entries[0].apiTargets, ['script', 'chat']);
+  assert.deepEqual(upgradeCharacterEntries(upgraded), upgraded);
+  assert.equal(
+    classifyCharacterEntry(
+      entries[1],
+      { id: 'character-new', source: 'generated', setting: { name: '新客' } },
+      'character-new',
+    ).comment,
+    '主角设定：新客',
+  );
 });

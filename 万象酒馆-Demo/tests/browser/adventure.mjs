@@ -230,6 +230,13 @@ export async function adventureChecks({ browser, baseURL, output }) {
     await read();
     const inn = page.frameLocator('#inn-frame iframe');
     await inn.locator('#status').waitFor({ state: 'detached', timeout: 60000 });
+    await inn.locator('canvas').evaluate(() => window.assetPreview.placeNow('bookshelf'));
+    await inn.locator('#bookshelf-records').click();
+    assert(
+      (await page.locator('.records-reading-content').textContent()).includes('过去独立经历1'),
+    );
+    assert.equal(await page.locator('[data-records-view]').count(), 0);
+    await page.locator('#records-close').click();
     await inn.locator('canvas').evaluate(() => window.assetPreview.placeNow('gate'));
     await inn.locator('#enter').click();
     await page.locator('#destination-region-confirm').click();
@@ -275,6 +282,12 @@ export async function adventureChecks({ browser, baseURL, output }) {
     await page.locator('#ai-close').click();
     assert(await page.locator('[data-rp="send"]').isDisabled());
     const gold = await page.evaluate(() => demo.getLibrary().inventory.gold);
+    const reward = await page.evaluate(() => demo.getExpedition().adventure.event.reward);
+    assert.equal(
+      await page.locator('.rp-options em').count(),
+      0,
+      'story choices do not advertise model-authored rewards',
+    );
     await page.locator('[data-rp-choice="choice-1"]').click();
     assert.match(await page.locator('.rp-locked-choice').textContent(), /整理沿途物资/);
     await page.locator('#rp-input').fill('');
@@ -288,13 +301,14 @@ export async function adventureChecks({ browser, baseURL, output }) {
     await page.locator('[data-rp="retry"]').click();
     await page.waitForFunction(() => demo.getExpedition().adventure.event.resolved);
     await read();
-    assert.equal(await page.evaluate(() => demo.getLibrary().inventory.gold), gold + 20);
+    assert.equal(await page.evaluate(() => demo.getLibrary().inventory.gold), gold + reward.gold);
+    const rewardedInventory = await page.evaluate(() => demo.getLibrary().inventory);
     assert.equal(
       requests.filter((item) => item.kind === 'quick-chat')[1].input.adventure.choice.id,
       'choice-1',
     );
     await send('继续聊几句。');
-    assert.equal(await page.evaluate(() => demo.getLibrary().inventory.gold), gold + 20);
+    assert.deepEqual(await page.evaluate(() => demo.getLibrary().inventory), rewardedInventory);
     for (const viewport of [
       { width: 1440, height: 836 },
       { width: 667, height: 375 },
@@ -380,6 +394,32 @@ export async function adventureChecks({ browser, baseURL, output }) {
     assert(current.lines.some((line) => line.stage === 'event-choice'));
     assert(current.lines.some((line) => line.stage === 'quest-state'));
     assert.equal(current.complete, true);
+    await inn.locator('canvas').evaluate(() => window.assetPreview.placeNow('bookshelf'));
+    await inn.locator('#bookshelf-records').click();
+    await page.locator('#journey-records').waitFor({ state: 'visible' });
+    assert(
+      (await page.locator('.records-reading-content').textContent()).includes(current.summary.text),
+    );
+    assert.match(
+      await page.locator('.records-memory-status').textContent(),
+      /原文 \d+ 字 · 总结 \d+ 字/,
+    );
+    await page.locator('[data-records-view="original"]').click();
+    assert(
+      (await page.locator('.records-reading-content').textContent()).includes(
+        current.lines.find((line) => line.stage !== 'combat').text,
+      ),
+    );
+    await page.locator('[data-records-view="summary"]').click();
+    await page.screenshot({ path: path.join(output, 'records-summary-toggle.png') });
+    await page.setViewportSize({ width: 667, height: 375 });
+    await page.locator('[data-records-view="original"]').click();
+    await page.locator('[data-records-view="summary"]').click();
+    assert(
+      (await page.locator('.records-reading-content').textContent()).includes(current.summary.text),
+    );
+    await page.screenshot({ path: path.join(output, 'records-summary-mobile.png') });
+    await page.locator('#records-close').click();
     assert.deepEqual(errors, []);
     return {
       battles: [0, 2, 4],

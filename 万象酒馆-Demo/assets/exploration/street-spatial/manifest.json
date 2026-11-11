@@ -1,0 +1,86 @@
+{
+  "generator": "image_gen built-in",
+  "purpose": "Single-scene prototype: separate near floor, upright architecture cutouts, painted distance. Native PNGs copied without resizing or compression.",
+  "assets": [
+    {
+      "id": "inn-front",
+      "file": "assets/exploration/street-spatial/tavern.png",
+      "source": "C:\\Users\\Lenovo\\.codex\\generated_images\\01a178f0-bd77-7b10-9f98-ca688a68afab\\exec-f9774ae9-1154-4b81-85cd-922736f13bc0.png",
+      "transparent": true,
+      "prompt": "Use case: stylized-concept. Production asset for the existing 万象酒馆 JRPG. Reference image supplies ONLY the exact painting style: crisp elegant brown ink outlines, hand-painted cel shaded facets, honey-cream limestone, weathered dark timber, terracotta, gold-green ivy, gentle warm afternoon ambience with restrained blue-violet shading. Match that game background, not photorealistic or 3D rendering. Do not copy the reference composition or road. One COMPLETE, STRAIGHT FRONT ORTHOGRAPHIC ELEVATION of a modest two-storey western fantasy tavern facade, on genuinely transparent background. Intended as one upright building cutout, mounted on a real 3D floor. Landscape 3:2 format; facade eleven metres wide and six metres tall. Ground-floor baseline is perfectly straight, full facade visible with a tiny safe margin, no perspective convergence or side surfaces. Two-storey cream plaster with dark timber posts, low stone plinth, warm windows, a restrained red-tile roof silhouette. A single central closed wooden doorway about2.4m tall and2m wide, with ONE brass eight-point star emblem; two normal human-sized downstairs windows at its sides, three small upper windows. Flat front projection; no fake street depth. A little ivy at the vertical outer edges only, no plant pot standing below the wall. Important: NO ground, NO pavement, NO doorstep extending towards viewer, NO floor strip, NO baked ground shadow, NO sky, NO surrounding streets or scenery, NO background rectangle. Keep all masonry and roof, sides included. No text, watermark, UI or people. The building wall must end cleanly at its lower baseline so the game floor can meet it.",
+      "width": 1536,
+      "height": 1024,
+      "sha256": "e3b80d74f29c5797ea0d93f6e472b33e4851b57ffeb296db32f5e658800de69a"
+    },
+    {
+      "id": "pharmacy-front",
+      "file": "assets/exploration/street-spatial/pharmacy.png",
+      "source": "C:\\Users\\Lenovo\\.codex\\generated_images\\01a178f0-bd77-7b10-9f98-ca688a68afab\\exec-cfa2f13f-0086-4b33-913a-64a98fce3465.png",
+      "transparent": true,
+      "prompt": "Use case: stylized-concept. Production asset for the existing 万象酒馆 JRPG. Reference image supplies ONLY the exact painting style: crisp elegant brown ink outlines, hand-painted cel shaded facets, honey-cream limestone, weathered dark timber, terracotta, gold-green ivy, gentle warm afternoon ambience with restrained blue-violet shading. Match that game background, not photorealistic or 3D rendering. Do not copy the reference composition or road. One COMPLETE, STRAIGHT FRONT ORTHOGRAPHIC ELEVATION of a modest two-storey apothecary facade. Genuinely transparent background. Eight metres wide and six metres tall; near-square landscape format. Flat front projection, no perspective and no side walls. Cream plaster, dark timber, low limestone plinth, red roof silhouette. Ground floor has a deep green fabric awning over a warm wooden shop window with a small collection of blue and amber bottles, one simple closed wood-and-glass door to its side. Upper floor has two normal windows with muted green shutters. Door roughly2.3m high, counter/windows about1m above floor; believable human scale, never giant bottles. Tiny ivy at the edges, no plant pots on the floor. The bottom of the wall is one perfectly straight baseline with tiny safety margins. NO pavement, road, ground, doorstep, ground shadow, sky, other buildings, people, captions, lettering or frame. This is a flat architectural sprite to be stood upright on a separately textured 3D road.",
+      "width": 1447,
+      "height": 1087,
+      "sha256": "f44bfbfbd733d3d8a30b709257fd08c041af081d5aa770a40720399732add4f0"
+    },
+    {
+      "id": "houses-front",
+      "file": "assets/exploration/street-spatial/houses.png",
+      "source": "C:\\Users\\Lenovo\\.codex\\generated_images\\01a178f0-bd77-7b10-9f98-ca688a68afab\\exec-eb5e2fd9-1b2d-4ee9-880c-16d173902fdf.png",
+      "transparent": true,
+      "prompt": "Use case: stylized-concept. Production asset for the existing 万象酒馆 JRPG. Reference image supplies ONLY the exact painting style: crisp elegant brown ink outlines, hand-painted cel shaded facets, honey-cream limestone, weathered dark timber, terracotta, gold-green ivy, gentle warm afternoon ambience with restrained blue-violet shading. Match that game background, not photorealistic or 3D rendering. Do not copy the reference composition or road. One COMPLETE, STRAIGHT FRONT ORTHOGRAPHIC ELEVATION showing two adjacent modest two-storey medieval fantasy townhouses, as ONE connected facade cutout. Genuine transparency outside the roof and sides. Two houses together about twelve metres wide and six metres high, landscape 2:1 format. Flat front view, no side planes or perspective convergence. Warm pale plaster, light limestone ground-floor base, subtly different timber frames and muted olive shutters; a simple wooden door on each house and several normal rectangular windows. Keep door heights about2.3m, upper-floor windows about1m. Restrained warm lighting, clean readable outlines, small ivy details on the walls. Straight lower baseline at ground level. NO street, sidewalk, road, floor strip, grass, ground shadow, sky, horizon, backdrop rectangle, people, text, UI or frames. A sprite for vertical planes beside a real separate floor; no scene illustration perspective.",
+      "width": 1774,
+      "height": 887,
+      "sha256": "8675cde8b086d4b0edd947913866b3a0abc358beadda08bbd6ac454fb879a400"
+    },
+    {
+      "id": "arch-wall",
+      "file": "assets/exploration/street-spatial/arch.png",
+      "source": "C:\\Users\\Lenovo\\.codex\\generated_images\\01a178f0-bd77-7b10-9f98-ca688a68afab\\exec-b0d87f89-646b-499f-affa-7f63c423e602.png",
+      "transparent": true,
+      "prompt": "Use case: stylized-concept. Production asset for the existing 万象酒馆 JRPG. Reference image supplies ONLY the exact painting style: crisp elegant brown ink outlines, hand-painted cel shaded facets, honey-cream limestone, weathered dark timber, terracotta, gold-green ivy, gentle warm afternoon ambience with restrained blue-violet shading. Match that game background, not photorealistic or 3D rendering. Do not copy the reference composition or road. One flat STRAIGHT FRONT ORTHOGRAPHIC ELEVATION of an ivy-edged old stone gateway wall, a genuine transparent architectural cutout. Wide 2:1 landscape. Wall eleven metres wide and five metres high, ending at a perfectly straight lower ground baseline. ONE round-topped open arch in its exact horizontal middle, opening about3.3m wide and3.5m tall, with substantial readable individual arch stones. Both the empty arch opening and the area outside the wall silhouette MUST be genuinely transparent, so a separate distant painting can be seen THROUGH the opening in the game. No door leaves, no scene or city painted inside the opening. Modest warm limestone blocks, gold-green ivy mostly on top and outer piers, hand-drawn brown contours, no elaborate sculpture. No perspective, no visible floor thickness. NO road, paving, ground, sky, scenery, backdrop, stand/base, ground shadow, people, text or UI. Keep complete outer edges and full piers. This is just an upright flat gateway wall; the road will be a separate real horizontal plane underneath.",
+      "width": 1774,
+      "height": 887,
+      "sha256": "1a28a11eea65f158db2783e9323bb5d05a26016d52e0e76991fcd0e86eacc050"
+    },
+    {
+      "id": "road-floor",
+      "file": "assets/exploration/street-spatial/floor.png",
+      "source": "C:\\Users\\Lenovo\\.codex\\generated_images\\01a178f0-bd77-7b10-9f98-ca688a68afab\\exec-e9dae432-5227-4f71-ad05-6140eec4f083.png",
+      "transparent": false,
+      "prompt": "Use case: stylized-concept. Production asset for the existing 万象酒馆 JRPG. Reference image supplies ONLY the exact painting style: crisp elegant brown ink outlines, hand-painted cel shaded facets, honey-cream limestone, weathered dark timber, terracotta, gold-green ivy, gentle warm afternoon ambience with restrained blue-violet shading. Match that game background, not photorealistic or 3D rendering. Do not copy the reference composition or road. One square seamless TOP-DOWN material image of the local street's worn pale limestone cobbles. Only the actual road surface, perfectly overhead, no perspective and no horizon. Even restrained warm daylight, no big baked directional shadow. Irregular medium-small rectangular paving stones in offset rows, their joints clean thin brown outlines, subdued cream/ochre stone with some gray-violet variation, not orange or fluorescent. Same stone material as the architecture reference. Seamlessly repeatable on all four edges, no border or central motif. NO buildings, wall, kerb, objects, plants, sky, text, UI or scene. This will be the only near ground texture, mapped in world units across a real polygonal street.",
+      "width": 1254,
+      "height": 1254,
+      "sha256": "ce581ffba0a1b5ebc2dc3ac90a69394627905adfbf8aabab0e80a3b958e1b63f"
+    },
+    {
+      "id": "far-town",
+      "file": "assets/exploration/street-spatial/distance.png",
+      "source": "C:\\Users\\Lenovo\\.codex\\generated_images\\01a178f0-bd77-7b10-9f98-ca688a68afab\\exec-e6d941c9-6ce9-44c4-b527-39271f952e03.png",
+      "transparent": false,
+      "prompt": "Use case: stylized-concept. Production asset for the existing 万象酒馆 JRPG. Reference image supplies ONLY the exact painting style: crisp elegant brown ink outlines, hand-painted cel shaded facets, honey-cream limestone, weathered dark timber, terracotta, gold-green ivy, gentle warm afternoon ambience with restrained blue-violet shading. Match that game background, not photorealistic or 3D rendering. Do not copy the reference composition or road. ONE continuous distant-only 360-degree equirectangular panoramic background, maximum native 3:1 wide format. A western fantasy city under a softly gold-clouded blue sky. Main near foreground NOT present: all buildings belong to the DISTANCE, small grouped town roofs and street endings around15-50m away; distant road views and connected alley mouths may be painted into this distant picture. One common level horizon, left/right edges wrapping in the same palette. Upper half mostly beautifully hand-painted sky and wispy clouds; lower part distant warm town facades and hints of receding paved streets. No giant close-up shop window, no close doorway, no huge foreground wall, no isolated props at the viewer's feet, no characters. At the exact middle suggest a modest street going further into town. This surrounds a separately built near junction: the real near road and upright facade sprites are NOT drawn into this far background. No floor disk, no picture panels, captions, writing or UI.",
+      "width": 2172,
+      "height": 724,
+      "sha256": "65a92593756a66432765c2c6e9a60dfd9ec2e0672913976eafb8994b3010f2ea"
+    },
+    {
+      "id": "far-street",
+      "file": "assets/exploration/street-spatial/far-street.png",
+      "source": "C:/Users/Lenovo/.codex/generated_images/01a178f0-bd77-7b10-9f98-ca688a68afab/exec-aaa95e98-5c41-4a7a-a94a-8be4417e602d.png",
+      "transparent": false,
+      "prompt": "Use case: stylized-concept. A SQUARE painted DISTANT STREET VIEW for a flat backdrop beyond a real near 3D lane. Same western fantasy JRPG painting as reference: crisp brown ink, warm honey-cream limestone, weathered dark wood, olive shutters, terracotta roofs, gold-green ivy, gentle golden daylight, blue-violet shadows. Eye-level stationary view at1.65m looking straight down a modest quiet paved alley; a single centered vanishing point and common horizon EXACTLY at50%image height. The visible street is distant, houses on either side form a little receding painted lane, just a small tower far beyond, not a close-up facade. Keep the road on the bottom edge, flat and level, continuing straight towards the center; muted pale cream limestone cobbles matching the near floor. Upper part sky and modest roofs, no tall dominating castle. No slope, steps, terrace, raised pavement, hill, cliff, valley view, overhead/bird's-eye view, giant doorway, arch frame, dramatic fisheye. No people, UI, lettering, borders. This full picture will be used as ONE upright distant background panel and should look like the physical near road continues into a painting, not a road made of distant 3D models. Native square PNG, maximum native dimensions.",
+      "width": 1254,
+      "height": 1254,
+      "sha256": "2be50564764863ba5349837a0665ac58ae5a307998e61388822afde2152d64e9"
+    },
+    {
+      "id": "courtyard-fountain",
+      "file": "assets/exploration/street-spatial/courtyard-fountain.png",
+      "source": "C:/Users/Lenovo/.codex/generated_images/01a178f0-bd77-7b10-9f98-ca688a68afab/exec-5174ed67-14b0-474f-83f9-e350c2cfbbea.png",
+      "transparent": true,
+      "prompt": "Use case: stylized-concept. Production transparent architectural prop for the same western fantasy illustrated JRPG as reference. Input reference is STYLE ONLY: warm cream limestone, elegant thin dark-brown ink contours, painted cel-shaded facets, terracotta and muted ivy green, restrained golden afternoon light, no photorealism. Draw ONE small old stone wall fountain, straight-on front view, approximately1.5m wide and1.6m high. A modest rounded limestone backplate with a worn bronze spout, a small trickle of water falling into a shallow stone trough at knee height, restrained ivy along one edge. Believable everyday city drinking fountain, not monumental or magical, no giant sculptures. Entire fountain visible from top to its flat ground-contact baseline. GENUINE transparent background, including around the backplate and trough, clean silhouette. No wall rectangle behind it, floor, road, ground strip, skyline, people, lettering, border, UI, baked ground shadow or vignette. This cutout will stand against a separately drawn building wall, on a real separately textured game floor. Native PNG with alpha, maximum native dimensions, do not rescale the output.",
+      "width": 1312,
+      "height": 1199,
+      "sha256": "4a0e74eb39042cafaa017ec0fe18c26609101c2e4d47507f749cfeb84cb67205"
+    }
+  ]
+}

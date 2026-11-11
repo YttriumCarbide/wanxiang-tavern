@@ -1,6 +1,7 @@
 import { mountLandscapeHost, mountOuterGestures } from './app/display.js';
 import { createApplication } from './app/application.js';
 import { openDatabase, createGameStorage } from './storage/database.js';
+import { openDiskDatabase } from './storage/disk-database.js';
 import { createStaticBackend } from './ai/static-backend.js';
 import { newCampaign } from './campaign.js';
 import { defaultProtagonist } from './content/qingyuan.js';
@@ -43,7 +44,17 @@ export async function startGame() {
   notice.textContent = '正在读取本地存档…';
   notice.setAttribute('role', 'status');
   document.body.append(notice);
-  const database = await openDatabase();
+  const browserDatabase = await openDatabase();
+  const diskEndpoint = document.querySelector('meta[name="wanxiang-disk-storage"]')?.content;
+  let cacheWarning = false;
+  const database =
+    diskEndpoint === '/__demo/storage'
+      ? await openDiskDatabase(diskEndpoint, browserDatabase, () => {
+          cacheWarning = true;
+          notice.hidden = false;
+          notice.textContent = '硬盘进度已保存，浏览器缓存写入失败。';
+        })
+      : browserDatabase;
   if (!database.get('installation')) {
     // User-authorized clean release. Run once on this browser, never on ordinary updates.
     for (const key of Object.keys(localStorage))
@@ -54,12 +65,14 @@ export async function startGame() {
       ['game.wanxiang.creation-pending.v1', 'true'],
     ]);
   }
-  const storage = createGameStorage(database, () => {
+  const storage = createGameStorage(database, (failure) => {
     notice.hidden = false;
-    notice.textContent = '本地保存失败，请检查设备空间并导出备份。';
+    notice.textContent = diskEndpoint
+      ? '硬盘保存失败：' + failure.message
+      : '本地保存失败，请检查设备空间并导出备份。';
   });
   const apiClient = await createStaticBackend(database, {
-    virtualImages: await enablePortraitWorker(),
+    virtualImages: database.cacheAvailable !== false && (await enablePortraitWorker()),
   });
   const application = createApplication({ storage, apiClient });
   const panel = createLocalDataPanel({
@@ -70,7 +83,7 @@ export async function startGame() {
   });
   window.demo = { ...application.api, dispose: application.dispose };
   window.addEventListener('pagehide', () => panel.dispose(), { once: true });
-  notice.hidden = true;
+  notice.hidden = !cacheWarning;
 }
 
 startGame().catch((failure) => {

@@ -5,6 +5,8 @@
     content="width=device-width,initial-scale=1"
   /><title>万象酒馆 · 客房</title>
   <link rel="stylesheet" href="./styles/tavern.css" />
+  <link rel="stylesheet" href="./styles/scene-loading.css" />
+  <link rel="stylesheet" href="./styles/scene-visitors.css" />
   <link rel="stylesheet" href="./styles/guest-room.css" />
   <body class="guest-room">
     <canvas aria-label="可以环视、点击场景中的位置按钮平滑移动的三维体素酒馆客房"></canvas>
@@ -19,7 +21,7 @@
     <div id="spots" aria-label="客房中的可抵达位置"></div>
     <div id="where" aria-live="polite">客房 · 推门而入</div>
     <p id="room-hint">拖动画面环视 · 点击光点前往</p>
-    <div id="status">正在推开客房门…</div>
+    <div id="status" class="scene-loading">正在推开客房门…</div>
     <div id="scene-fade" aria-hidden="true"></div>
     <script type="importmap">
       {

@@ -5,8 +5,21 @@ import {
   DRAGON_EMBLEM_ID,
   MASK_EMBLEM_ID,
   SUPREME_EMBLEM_ID,
+  EMBLEMS,
   applyEmblemStats,
 } from './emblems.js';
+
+/** This schedule is shared by actual grants and narrative requests. */
+export function storyRingReward(route, owned = []) {
+  if (!route || route.world) return null;
+  const id =
+    route.map === 'ruins'
+      ? { 1: EMBLEM_ID, 2: OVERLOAD_EMBLEM_ID, 5: DRAGON_EMBLEM_ID }[route.sequence]
+      : route.map === 'forest'
+        ? { 1: SUPREME_EMBLEM_ID, 3: MASK_EMBLEM_ID }[route.sequence]
+        : null;
+  return id && !owned.includes(id) ? { id, name: EMBLEMS[id].emblem.name, encounter: 4 } : null;
+}
 
 /** Choose once at the actual reward boundary; never replace another equipped ring. */
 function equipStoryRing(library, expedition, emblemId, random) {
@@ -44,14 +57,7 @@ function equipStoryRing(library, expedition, emblemId, random) {
 
 /** Grant the authored ring once at the corridor Boss boundary, never in a preview. */
 export function prepareCorridorRing(library, expedition, random = Math.random) {
-  const route = expedition.exploration;
-  if (
-    !library.campaign ||
-    route?.world ||
-    route?.map !== 'ruins' ||
-    route.sequence !== 1 ||
-    expedition.index !== 4
-  )
+  if (storyRingReward(expedition.exploration)?.id !== EMBLEM_ID || expedition.index !== 4)
     return false;
   if (library.progression?.corridorRingAcquired) return false;
   library.emblems ||= [];
@@ -66,23 +72,9 @@ export function prepareCorridorRing(library, expedition, random = Math.random) {
 
 /** Authored Boss rewards are granted once on entering the matching final battle. */
 export function prepareBossEmblem(library, expedition, random = Math.random) {
-  const route = expedition.exploration;
-  if (!route || route.world || expedition.index !== 4) return false;
-  const id =
-    route.map === 'ruins'
-      ? route.sequence === 2
-        ? OVERLOAD_EMBLEM_ID
-        : route.sequence === 5
-          ? DRAGON_EMBLEM_ID
-          : null
-      : route.map === 'forest'
-        ? route.sequence === 1
-          ? SUPREME_EMBLEM_ID
-          : route.sequence === 3
-            ? MASK_EMBLEM_ID
-            : null
-        : null;
-  if (!id || library.emblems?.includes(id)) return false;
+  if (expedition.index !== 4) return false;
+  const id = storyRingReward(expedition.exploration)?.id;
+  if (!id || id === EMBLEM_ID || library.emblems?.includes(id)) return false;
   library.emblems ||= [];
   library.emblems.push(id);
   const recipient = equipStoryRing(library, expedition, id, random);

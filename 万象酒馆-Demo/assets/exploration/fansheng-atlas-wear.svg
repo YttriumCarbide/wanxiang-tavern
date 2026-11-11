@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 3072 2048">
+  <defs>
+    <radialGradient id="field-tone" cx=".42" cy=".42" r=".72">
+      <stop stop-color="#fff0d1" stop-opacity=".10"/>
+      <stop offset=".69" stop-color="#947243" stop-opacity=".055"/>
+      <stop offset=".94" stop-color="#83613b" stop-opacity=".30"/>
+      <stop offset="1" stop-color="#573e23" stop-opacity=".49"/>
+    </radialGradient>
+    <radialGradient id="tide-mark">
+      <stop offset=".24" stop-color="#96613b" stop-opacity=".03"/>
+      <stop offset=".68" stop-color="#96613b" stop-opacity=".09"/>
+      <stop offset=".83" stop-color="#976233" stop-opacity=".13"/>
+      <stop offset="1" stop-color="#976233" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="finger-wear">
+      <stop stop-color="#fff9e9" stop-opacity=".47"/>
+      <stop offset="1" stop-color="#fff9e9" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="paper-seam" x1="0" x2="1" y1="0" y2="0">
+      <stop stop-color="#725337" stop-opacity="0"/>
+      <stop offset=".45" stop-color="#725337" stop-opacity=".10"/>
+      <stop offset=".50" stop-color="#725337" stop-opacity=".21"/>
+      <stop offset=".55" stop-color="#fff5d6" stop-opacity=".30"/>
+      <stop offset="1" stop-color="#fff5d6" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <path id="atlas-sheet-edge" d="M21 12 118 8 238 12 366 9 510 13 676 10 803 8 952 14 1103 11 1280 15 1436 11 1557 15 1696 9 1854 12 2014 8 2166 13 2331 9 2515 14 2727 10 2926 15 3016 10 3052 19 3061 56 3059 128 3066 235 3061 369 3067 552 3062 696 3068 862 3062 1014 3065 1196 3060 1372 3068 1510 3063 1693 3066 1804 3058 1940 3061 1997 3040 2037 2918 2040 2744 2035 2569 2041 2352 2035 2174 2041 2009 2036 1825 2042 1651 2037 1482 2041 1331 2036 1146 2040 969 2035 777 2041 603 2036 433 2040 264 2035 113 2039 39 2034 13 2015 11 1937 8 1802 13 1686 7 1515 11 1377 8 1202 14 1052 8 921 13 772 7 631 12 468 8 298 13 188 9 68Z"/>
+  <g id="atlas-sheet-patina">
+    <use href="#atlas-sheet-edge" fill="url(#field-tone)"/>
+    <path d="M1527 22 1541 22 1544 660 1541 1015 1547 1524 1541 2028 1529 2028 1532 1535 1528 1008 1531 669Z" fill="url(#paper-seam)" opacity=".52"/>
+    <path d="M24 1021c298 2 572-3 818 0 267 3 436-2 696 0 246 2 476-4 721-1 235 3 513 2 791 0" fill="none" stroke="#9f7c50" stroke-width="4" opacity=".14"/>
+    <path d="M39 1026c300-2 530 1 779-1 251-1 470 2 720 0 247-1 472 2 722-1 259-3 545 4 788-1" fill="none" stroke="#fff4d9" stroke-width="3" opacity=".40"/>
+    <path d="M167 299c133-95 336-35 417 58 109 127-36 280-161 290-120 10-316-75-342-164-16-64 17-145 86-184Z" fill="url(#tide-mark)" opacity=".65"/>
+    <path d="M2626 1680c87-50 216 16 261 95 48 82-42 142-141 144-114 2-225-89-197-157 13-34 43-63 77-82Z" fill="url(#tide-mark)" opacity=".81"/>
+    <g fill="none" stroke="#765b38">
+      <path d="M60 58H3011V1985H60Z" stroke-width="4" opacity=".68"/>
+      <path d="M74 72H2997V1971H74Z" stroke-width="1.5" opacity=".55"/>
+      <path d="M320 59v21m243-21v13m244-13v21m243-21v13m244-13v21m243-21v13m244-13v21m243-21v13m244-13v21m243-21v13m244-13v21M320 1984v-21m243 21v-13m244 13v-21m243 21v-13m244 13v-21m243 21v-13m244 13v-21m243 21v-13m244 13v-21m243 21v-13m244 13v-21" stroke-width="2" opacity=".55"/>
+    </g>
+  </g>
+  <g id="atlas-local-patina">
+    <path d="M-38-21c4-1 6 1 8 2 1.4.5 4.1.2 4.2 1.5.1 1.2-2.1 1.6-2.9 2.4-1.2 1.1-.1 2.5-2.2 3.1-4.8 1.6-8.1-.9-9.1-4.2-.5-1.7.5-3.7 2-4.8Z" fill="url(#tide-mark)" opacity=".81"/>
+    <path d="M25 9c1.5-1.3 4.5-.7 5.8-.1 1.8.7 2 1.7 3.6 2.1 1.4.5 2.9.3 3.6 1.4.8 1.2-.6 3.7-2.8 4.4-2.9.9-5.1-.5-7-1.5-1.3-.7-3.7-.7-4.3-2.2-.5-1.2.3-3.4 1.1-4.1Z" fill="url(#tide-mark)" opacity=".74"/>
+    <ellipse cx="-22" cy="2" rx="8" ry="6" fill="url(#finger-wear)" opacity=".56"/>
+    <ellipse cx="10" cy="-13" rx="14" ry="7" fill="url(#finger-wear)" opacity=".48"/>
+    <path d="M-37 13c10-1 19-1 24-.5 7 .6 14 .1 22-1 8-.9 18-.2 27-1.4" fill="none" stroke="#90734d" stroke-width=".31" opacity=".11"/>
+    <path d="M-36 13.2c5-.7 11-.9 14-.8m2 .02c3.4.02 5.1.3 7 .2 4.3.4 6.8.32 10.3.01m3-.25q6.4-.37 9-.84m3-.26c8-.5 14.5-.2 21.4-1.1" fill="none" stroke="#fff3d7" stroke-width=".075" opacity=".34"/>
+    <g fill="#8e6439" opacity=".23">
+      <circle cx="-32" cy="-14" r=".16"/><circle cx="-31.5" cy="-13.6" r=".07"/>
+      <circle cx="-29.4" cy="-14.6" r=".09"/><circle cx="-28.2" cy="-14.2" r=".06"/>
+      <circle cx="-30.1" cy="9.1" r=".11"/><circle cx="-31.7" cy="10.3" r=".07"/>
+      <circle cx="16.4" cy="-13.1" r=".08"/><circle cx="17.2" cy="-12.7" r=".14"/>
+      <circle cx="27.3" cy="11.7" r=".14"/><circle cx="27.8" cy="12" r=".06"/>
+      <circle cx="28.6" cy="12.4" r=".08"/><circle cx="30" cy="10.7" r=".12"/>
+      <circle cx="32.1" cy="10.2" r=".10"/><circle cx="31.7" cy="8.9" r=".06"/>
+    </g>
+  </g>
+</svg>

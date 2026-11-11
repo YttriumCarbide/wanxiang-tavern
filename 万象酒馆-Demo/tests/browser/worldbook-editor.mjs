@@ -9,6 +9,9 @@ export async function worldbookEditorChecks({ page, output }) {
   assert.equal(await page.locator('#ai-export,#ai-prompt-preset,#ai-edit-prompts').count(), 0);
   await page.locator('#ai-worldbooks').click();
   await page.locator('[data-world-format="script"]').click();
+  for (const kind of ['character', 'script', 'chat', 'summary', 'creation', 'map'])
+    assert.equal(await page.locator(`[data-world-target="${kind}"]`).count(), 1);
+  assert.equal(await page.locator('[data-world-target="quick-chat"]').count(), 0);
   const expanded = page.locator('.world-entry-row').filter({ has: page.locator('.world-editor') });
   const originalName = await expanded.locator('[data-world-head="comment"]').inputValue();
   assert(originalName.includes('JSON输出格式'));

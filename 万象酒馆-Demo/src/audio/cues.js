@@ -219,3 +219,56 @@ export const SOUND_CUES = {
     ['sine', 510, 220, 0.24, 0.07],
   ],
 };
+
+/** Small procedural cues for the tavern shift. They do not replace combat samples. */
+export const SERVICE_CUES = {
+  'service-bell': [
+    ['sine', 1046, 1046, 0.36, 0.06],
+    ['sine', 1568, 1568, 0.3, 0.035, 0.08],
+  ],
+  'service-chop': [
+    ['noise', 0, 0, 0.075, 0.1, 0, 2800],
+    ['triangle', 210, 85, 0.11, 0.045],
+  ],
+  'service-sizzle': [
+    ['noise', 0, 0, 0.55, 0.055, 0, 1500],
+    ['sine', 95, 62, 0.5, 0.035],
+  ],
+  'service-pour': [
+    ['noise', 0, 0, 0.38, 0.055, 0, 780],
+    ['sine', 300, 180, 0.34, 0.03],
+  ],
+  'service-stir': [
+    ['noise', 0, 0, 0.28, 0.035, 0, 520],
+    ['sine', 180, 260, 0.26, 0.025],
+  ],
+  'service-whisk': [
+    ['noise', 0, 0, 0.34, 0.045, 0, 2200],
+    ['triangle', 620, 940, 0.2, 0.025],
+  ],
+  'service-knead': [
+    ['sine', 82, 46, 0.24, 0.1],
+    ['noise', 0, 0, 0.13, 0.04, 0, 420],
+  ],
+  'service-pipe': [
+    ['triangle', 820, 1120, 0.08, 0.04],
+    ['noise', 0, 0, 0.1, 0.025, 0, 1800],
+  ],
+  'service-skim': [['noise', 0, 0, 0.24, 0.045, 0, 920]],
+  'service-tray': [['triangle', 290, 520, 0.13, 0.035]],
+  'service-cleaning': [['noise', 0, 0, 0.36, 0.045, 0, 1050]],
+  'service-done': [
+    ['sine', 784, 784, 0.12, 0.045],
+    ['sine', 1046, 1046, 0.15, 0.04, 0.065],
+    ['sine', 1318, 1318, 0.2, 0.032, 0.13],
+  ],
+  'service-fail': [['triangle', 190, 105, 0.22, 0.055]],
+  'service-coin': [
+    ['triangle', 880, 1320, 0.1, 0.04],
+    ['triangle', 1320, 1320, 0.08, 0.025, 0.055],
+  ],
+  'service-lost': [
+    ['sine', 220, 110, 0.32, 0.045],
+    ['triangle', 140, 78, 0.25, 0.04, 0.1],
+  ],
+};

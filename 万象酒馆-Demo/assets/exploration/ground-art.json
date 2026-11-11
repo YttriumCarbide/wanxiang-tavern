@@ -1,0 +1,12 @@
+{
+  "generator": "image_gen built-in",
+  "purpose": "Shared world-space road surface. Full native PNG, source pixels retained.",
+  "prompts": {
+    "cobble": "Use case: stylized-concept. Game asset: seamless square top-down stone paving material for an illustrated JRPG town. Match the attached existing approved town background rendering: warm honey limestone cobbles, crisp confident thin dark brown ink contours, hand-painted cel shaded facets, ocher and restrained desaturated blue-violet small stone crevices. This is ONLY a flat overhead texture, not a scene. Medium-small irregular rectangular worn paving stones 20-35cm across; mildly varied offset rows with irregular curves but NO strong road markings or directional trails, NO border, NO horizon, NO buildings, NO plants or objects. An evenly lit road surface at the game's afternoon light, NOT glowing saturated yellow, NO big dark shadow. All four edges tile seamlessly, no obvious central feature. Native full resolution square PNG. Reference image is painting/color style only; do not include the architecture.",
+    "dirt": "Use case: stylized-concept. Game asset: seamless square top-down packed earth and sparse flat worn limestone road material for an illustrated JRPG countryside outside a walled town. Match attached existing countryside background: thin dark brown drawn outlines, hand-painted warm ocher earth, subtle taupe clay patches, muted gray limestone fragments, clean soft cel-shaded facets. This is ONLY a flat overhead material, not a scene. Mostly compact dusty sandy soil with small embedded flat pebbles and a few irregular worn paving stones, NO grass tufts, NO bushes, NO large rocks, NO buildings, NO wheel tracks or directional paths, NO objects, NO shadows cast across the tile, no horizon. An evenly lit restrained warm surface, no bright glowing color. All four edges tile seamlessly, no obvious central feature. Native full resolution square PNG. Reference is painting/color style only."
+  },
+  "files": [
+    "ground-cobble-v1.png",
+    "ground-earth-v1.png"
+  ]
+}

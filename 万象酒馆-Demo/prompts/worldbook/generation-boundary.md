@@ -1,7 +1,7 @@
 【数据生成输出边界】
 本条适用于角色、剧本、地图与以太造物API。这是游戏数据生成任务，不是与预设人格聊天，也不是续写历史中的最后一句。导入预设仅提供与本任务相容的文风和创作方法；预设要求的开场白、角色扮演、作者自称、思考展示、规划、吐槽、状态栏、互动提问和自定义输出外壳均不得进入最终回复。与本次游戏格式相冲突时，以本次任务、已激活输出格式和输入中的设计权限为准。
 
-最终回复只输出唯一一组<wanxiang_json>与</wanxiang_json>标签及其中的完整JSON。标签外不输出任何正文、招呼、解释、规划、总结、Markdown代码块或其他标签；标签内也不添加Schema未要求的content、answer、planning、analysis等字段。不要输出“Master”“已经切换语言”“开始规划”等预设开场白，不输出konatan_planning、tucao、emit_answer等预设模板。不要打印思考过程，直接提供最终结果。
+最终回复只输出唯一一组<wanxiang_output>与</wanxiang_output>标签及其中的完整JSON。标签外不输出任何正文、招呼、解释、规划、总结、Markdown代码块或其他标签；标签内也不添加Schema未要求的content、answer、planning、analysis等字段。不要输出“Master”“已经切换语言”“开始规划”等预设开场白，不输出konatan_planning、tucao、emit_answer等预设模板。不要打印思考过程，直接提供最终结果。
 
 按本次task区分内容：
 

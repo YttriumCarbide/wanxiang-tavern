@@ -1,5 +1,7 @@
 import { upgradePlaytestWorldbook } from '../src/ai/playtest-upgrade.js';
 import { upgradeAdventureWorldbook } from '../src/ai/adventure-upgrade.js';
+import { upgradeOutputTagsWorldbook } from '../src/ai/output-tag-upgrade.js';
+import { upgradeJourneyKeywords } from '../src/ai/journey-keyword-upgrade.js';
 import { upgradeTutorialRevision } from '../src/ai/tutorial-revision.js';
 import { upgradeProtagonistRules } from '../src/ai/protagonist-rules.js';
 import { upgradeBattleDisplayRules } from '../src/ai/battle-display-rules.js';
@@ -15,6 +17,14 @@ import { upgradeGenerationBoundary } from '../src/ai/generation-boundary-upgrade
 import { upgradeBattleBalance } from '../src/ai/battle-balance-upgrade.js';
 import { upgradeFrostWorldbook } from '../src/ai/frost-worldbook.js';
 import { upgradeEnemyBaseWorldbook } from '../src/ai/enemy-base-upgrade.js';
+import {
+  upgradeMonsterNarrative,
+  removeMonsterBoundary,
+  upgradeMonsterCatalogWorldbook,
+} from '../src/ai/monster-narrative.js';
+import { upgradeMainWorld } from '../src/ai/main-world-upgrade.js';
+import { upgradeCharacterEntries } from '../src/ai/character-entry-upgrade.js';
+import { upgradeTownGuests } from '../src/ai/town-guests-upgrade.js';
 import { upgradeContinuityRules } from '../src/ai/continuity-upgrade.js';
 import { upgradeGenerationExperience } from '../src/ai/generation-experience-upgrade.js';
 import { upgradeStatusEmblems } from '../src/ai/status-emblem-upgrade.js';
@@ -46,7 +56,7 @@ import { stripRetiredLore } from '../src/ai/retired-abilities.js';
 import { officialCharacter } from '../src/ai/library.js';
 import { tavernCanonText } from '../src/content/world.js';
 import { TUTORIAL_DUNGEON } from '../src/content/official-dungeons.js';
-import { MONSTER_LORE, monsterWorldbook } from '../src/content/monsters.js';
+import { monsterWorldbook } from '../src/content/monsters.js';
 import { DEFINITIONS } from '../src/data.js';
 
 /** Local JSON books and selection settings. Never reads the user's SillyTavern private data. */
@@ -125,29 +135,6 @@ export async function createWorldbookStore(directory) {
     if (failure.code !== 'ENOENT') throw failure;
   }
   if (contentVersion < 1) {
-    const id = 'tavern-bestiary';
-    try {
-      await readFile(fileFor(id));
-    } catch (failure) {
-      if (failure.code !== 'ENOENT') throw failure;
-      const entries = Object.fromEntries(
-        Object.keys(MONSTER_LORE).map((key, uid) => [
-          uid,
-          {
-            ...newWorldEntry(uid),
-            comment: DEFINITIONS[key].name,
-            key: [key, DEFINITIONS[key].name],
-            content: monsterWorldbook(key, DEFINITIONS[key].name),
-            matchScenario: true,
-            order: 200,
-            preventRecursion: true,
-          },
-        ]),
-      );
-      await write(fileFor(id), { name: '副本怪物图鉴', entries });
-    }
-    if (!settings.script.includes(id)) settings.script.push(id);
-    await write(path.join(directory, 'settings.json'), settings);
     await write(contentVersionFile, { version: 1 });
   } else if (!initialized) await write(path.join(directory, 'settings.json'), settings);
   let states;
@@ -298,14 +285,14 @@ export async function createWorldbookStore(directory) {
           continue;
         book.entries[uid] = {
           ...newWorldEntry(uid),
-          comment: DEFINITIONS[key].name,
+          comment: '怪物图鉴：' + DEFINITIONS[key].name,
           key: [key, DEFINITIONS[key].name],
           content: monsterWorldbook(key, DEFINITIONS[key].name),
           matchScenario: true,
           order: 200,
           preventRecursion: true,
-          apiTargets: ['script'],
-          extensions: { wanxiang: { monsterId: key, apiTargets: ['script'] } },
+          apiTargets: ['script', 'chat'],
+          extensions: { wanxiang: { monsterId: key, apiTargets: ['script', 'chat'] } },
         };
         uid++;
       }
@@ -464,7 +451,11 @@ export async function createWorldbookStore(directory) {
         if (entry.extensions?.wanxiang?.generationExample === 'character') {
           try {
             const raw = JSON.parse(
-              entry.content.replace('<wanxiang_json>', '').replace('</wanxiang_json>', ''),
+              entry.content
+                .replace('<wanxiang_output>', '')
+                .replace('</wanxiang_output>', '')
+                .replace('<wanxiang_json>', '')
+                .replace('</wanxiang_json>', ''),
             );
             if (
               !Object.hasOwn(raw.setting || {}, 'ultimate') &&
@@ -476,7 +467,7 @@ export async function createWorldbookStore(directory) {
             delete raw.data?.ultimate;
             delete raw.data?.quest;
             entry.content =
-              '<wanxiang_json>\n' + JSON.stringify(raw, null, 2) + '\n</wanxiang_json>';
+              '<wanxiang_output>\n' + JSON.stringify(raw, null, 2) + '\n</wanxiang_output>';
           } catch {
             /* Preserve non-JSON user examples as inactive references. */
           }
@@ -509,7 +500,7 @@ export async function createWorldbookStore(directory) {
       depth: 0,
       order: 9999,
       ignoreBudget: true,
-      apiTargets: ['chat', 'quick-chat'],
+      apiTargets: ['chat'],
       content: await readFile(
         new URL('../prompts/worldbook/chat-boundary.md', import.meta.url),
         'utf8',
@@ -541,7 +532,7 @@ export async function createWorldbookStore(directory) {
     }
     for (const entry of canon) {
       entry.content = tavernCanonText();
-      entry.apiTargets = ['character', 'script', 'chat', 'quick-chat', 'map', 'creation'];
+      entry.apiTargets = ['character', 'script', 'chat', 'map', 'creation'];
       entry.extensions = {
         ...entry.extensions,
         wanxiang: { ...entry.extensions?.wanxiang, canon: 'tavern' },
@@ -555,7 +546,7 @@ export async function createWorldbookStore(directory) {
       book.entries[uid] = {
         ...characterWorldEntry(officialCharacter('edith'), uid),
         key: ['伊蒂丝', 'Edith', '上一任酒馆主人', '坍缩过载'],
-        apiTargets: ['character', 'script', 'chat', 'quick-chat', 'map', 'creation'],
+        apiTargets: ['character', 'script', 'chat', 'map', 'creation'],
       };
       uid++;
     }
@@ -726,14 +717,17 @@ export async function createWorldbookStore(directory) {
       if (entry.extensions?.wanxiang?.generationExample === 'script') {
         try {
           const raw = JSON.parse(
-            entry.content.replace(/^\s*<wanxiang_json>\s*|\s*<\/wanxiang_json>\s*$/g, ''),
+            entry.content.replace(
+              /^\s*<(?:wanxiang_output|wanxiang_json)>\s*|\s*<\/(?:wanxiang_output|wanxiang_json)>\s*$/g,
+              '',
+            ),
           );
           if (
             raw.schemaVersion === 3 &&
             raw.data?.title === example.data.title &&
             JSON.stringify(raw.story) === JSON.stringify(example.story)
           )
-            entry.content = `<wanxiang_json>\n${JSON.stringify(example, null, 2)}\n</wanxiang_json>`;
+            entry.content = `<wanxiang_output>\n${JSON.stringify(example, null, 2)}\n</wanxiang_output>`;
         } catch {
           /* Preserve user-written example prose. */
         }
@@ -758,7 +752,7 @@ export async function createWorldbookStore(directory) {
       constant: true,
       content:
         '从副本中获得的所有物资都会在完整通关后折算成相同价值的以太。以太是酒馆内用于兑换的货币，装备兑换功能将另行开放。剧情道具与NPC归档不直接改变战斗属性、装备或技能；酒馆交流不能凭空产生以太。',
-      apiTargets: ['script', 'chat', 'quick-chat'],
+      apiTargets: ['script', 'chat'],
       extensions: { wanxiang: { currencyRule: 'ether' } },
     };
     await write(fileFor('tavern-world'), book);
@@ -986,14 +980,90 @@ export async function createWorldbookStore(directory) {
     await write(fileFor('tavern-world'), upgradePlaytestWorldbook(record.book, sources.rules));
     await write(contentVersionFile, { version: 46 });
   }
-  if (contentVersion < 50) {
+  if (contentVersion < 51) {
     const record = await get('tavern-world');
     const output = await readFile(
       new URL('../prompts/worldbook/script-output.md', import.meta.url),
       'utf8',
     );
     await write(fileFor('tavern-world'), upgradeAdventureWorldbook(record.book, output));
-    await write(contentVersionFile, { version: 50 });
+    await write(contentVersionFile, { version: 51 });
+  }
+  if (contentVersion < 52) {
+    const record = await get('tavern-world');
+    await write(fileFor('tavern-world'), upgradeMonsterNarrative(record.book));
+    await write(contentVersionFile, { version: 52 });
+  }
+  if (contentVersion < 53) {
+    const record = await get('tavern-world');
+    await write(fileFor('tavern-world'), removeMonsterBoundary(record.book));
+    await write(contentVersionFile, { version: 53 });
+  }
+  if (contentVersion < 54) {
+    const record = await get('tavern-world');
+    const output = await readFile(
+      new URL('../prompts/worldbook/script-output.md', import.meta.url),
+      'utf8',
+    );
+    await write(fileFor('tavern-world'), upgradeMainWorld(record.book, output));
+    await write(contentVersionFile, { version: 54 });
+  }
+  if (contentVersion < 55) {
+    const record = await get('tavern-world');
+    await write(fileFor('tavern-world'), upgradeCharacterEntries(record.book));
+    await write(contentVersionFile, { version: 55 });
+  }
+  if (contentVersion < 56) {
+    const record = await get('tavern-world');
+    await write(fileFor('tavern-world'), upgradeTownGuests(record.book));
+    await write(contentVersionFile, { version: 56 });
+  }
+  if (contentVersion < 57) {
+    const record = await get('tavern-world');
+    await write(fileFor('tavern-world'), upgradeOutputTagsWorldbook(record.book));
+    await write(contentVersionFile, { version: 57 });
+  }
+  if (contentVersion < 58) {
+    const record = await get('tavern-world');
+    const legacyBestiary = await get('tavern-bestiary').catch((failure) => {
+      if (failure.code === 'ENOENT') return null;
+      throw failure;
+    });
+    if (legacyBestiary) {
+      const existingIds = new Set(
+        Object.values(record.book.entries)
+          .map((entry) => entry.extensions?.wanxiang?.monsterId)
+          .filter(Boolean),
+      );
+      let uid = Math.max(-1, ...Object.keys(record.book.entries).map(Number)) + 1;
+      for (const entry of Object.values(legacyBestiary.book.entries || {})) {
+        const id = entry.extensions?.wanxiang?.monsterId || entry.key?.[0];
+        if (!id || existingIds.has(id)) continue;
+        record.book.entries[uid] = { ...entry, uid };
+        uid++;
+      }
+      legacyBestiary.book.name = '旧版怪物图鉴（已停用）';
+      await write(fileFor('tavern-bestiary'), legacyBestiary.book);
+    }
+    settings.script = settings.script.filter((id) => id !== 'tavern-bestiary');
+    await write(path.join(directory, 'settings.json'), settings);
+    await write(fileFor('tavern-world'), upgradeMonsterCatalogWorldbook(record.book));
+    await write(contentVersionFile, { version: 58 });
+  }
+  if (contentVersion < 59) {
+    const record = await get('tavern-world');
+    await write(fileFor('tavern-world'), normalizeWorldbook(record.book).book);
+    await write(contentVersionFile, { version: 59 });
+  }
+  if (contentVersion < 60) {
+    const record = await get('tavern-world');
+    await write(fileFor('tavern-world'), upgradeJourneyKeywords(record.book));
+    await write(contentVersionFile, { version: 60 });
+  }
+  if (contentVersion < 63) {
+    const record = await get('tavern-world');
+    await write(fileFor('tavern-world'), upgradeMainWorld(record.book));
+    await write(contentVersionFile, { version: 63 });
   }
   return {
     get,

@@ -2,18 +2,26 @@
   width: min(620px, calc(100vw - 40px));
   max-height: calc(100dvh - 48px);
   overflow: auto;
-  padding: 24px 30px;
-  background: radial-gradient(ellipse at top, #284438, #10231f 75%);
-  border: 1px solid #c7ac7280;
-  border-radius: 14px;
+  padding: 28px 34px;
+  background: radial-gradient(ellipse at 50% 0%, rgba(40, 72, 60, 0.75), transparent 75%), #0c1a18;
+  border: 1px solid rgba(226, 186, 111, 0.45);
+  border-radius: 18px;
+  box-shadow:
+    0 28px 90px rgba(0, 0, 0, 0.85),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   text-align: left;
 }
 #result h2 {
   text-align: center;
   margin: 0 0 20px;
-  font-size: 23px;
-  font-weight: 400;
-  color: #e4ce96;
+  font-size: 25px;
+  font-weight: 500;
+  color: #f7edcf;
+  text-shadow:
+    0 2px 12px rgba(0, 0, 0, 0.8),
+    0 0 16px rgba(226, 186, 111, 0.35);
 }
 #result h3 {
   font-size: 13px;

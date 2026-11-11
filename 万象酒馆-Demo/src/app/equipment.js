@@ -1,10 +1,14 @@
 import { resourceText } from '../resource-text.js';
+import { foodBonusText } from '../content/dining.js';
 import { grownCombat } from '../growth.js';
 import { createEquipmentPicker } from './equipment-picker.js';
 import { createRawResponse } from './raw-response.js';
+import { createForgeResults } from './forge-results.js';
 import { EMBLEMS, equipEmblem } from '../emblems.js';
 import {
   equip,
+  favoriteEquipment,
+  deleteEquipmentPlan,
   buyEquipment,
   normalizeEquipment,
   equippedDefinitions,
@@ -53,6 +57,7 @@ export function preparationEquipment(library, member) {
   const currentEmblem = EMBLEMS[member.emblemId]?.emblem;
   return html`<section class="equipment-slots">
     <h3>角色装备</h3>
+    ${library.dining?.pending?.[member.id] ? html`<p class="meal-pending-bonus">下一次参战 · ${escapeText(foodBonusText(library.dining.pending[member.id].bonus))}</p>` : ''}
     <label class="prepare-emblem-row" role="button" tabindex="0"
       ><span>纹章士</span
       ><strong class="emblem-choice-label"
@@ -236,6 +241,11 @@ export function createEquipment(context) {
   let selected = null;
   let teaching = false;
   let exchangeOnly = false;
+  const batchResults = createForgeResults(context, equipmentDescription, () => {
+    page = 'exchange';
+    selected = null;
+    refresh();
+  });
   function explainForge() {
     lesson.hidden = !teaching;
     for (const target of panel.querySelectorAll('.tutorial-focus'))
@@ -302,14 +312,27 @@ export function createEquipment(context) {
         button.setAttribute('aria-pressed', String(button.dataset.forgePage === page)),
       );
     explainForge();
-    const entries = page === 'construct' ? pendingItems() : library().equipment.catalog;
+    const entries =
+      page === 'construct'
+        ? pendingItems()
+        : library()
+            .equipment.catalog.filter(
+              (item) =>
+                !library().equipment.hidden?.includes(item.id) && !batchResults.contains(item.id),
+            )
+            .sort(
+              (a, b) =>
+                Number(library().equipment.favorites?.includes(b.id)) -
+                Number(library().equipment.favorites?.includes(a.id)),
+            );
     if (!entries.some((item) => item.id === selected)) selected = entries[0]?.id || null;
     panel.querySelector('#forge-list').innerHTML =
       entries
         .map(
           (item) =>
             html`<button data-forge-select="${item.id}" aria-pressed="${item.id === selected}">
-              <span>✧</span><strong>${escapeText(item.name)}</strong>
+              <span>${library().equipment.favorites?.includes(item.id) ? '★' : '✧'}</span
+              ><strong>${escapeText(item.name)}</strong>
             </button>`,
         )
         .join('') || '<p class="forge-empty">暂无道具</p>';
@@ -318,6 +341,14 @@ export function createEquipment(context) {
       ? html`<article class="forge-item">
           <span class="equipment-emblem">✧</span>
           <h3>${escapeText(item.name)}</h3>
+          <div class="forge-item-actions">
+            <button
+              data-forge-favorite="${item.id}"
+              aria-pressed="${!!library().equipment.favorites?.includes(item.id)}"
+            >
+              ${library().equipment.favorites?.includes(item.id) ? '★ 已收藏' : '☆ 收藏'}</button
+            ><button data-forge-delete="${item.id}">删除此方案</button>
+          </div>
           <div class="forge-effects">${escapeText(equipmentDescription(item))}</div>
           <button
             class="primary"
@@ -410,6 +441,7 @@ export function createEquipment(context) {
             item.refinedTemplateId = template.id;
       context.generation.save();
       status.textContent = `已凝聚 ${result.length} 件装备；按原物品价值支付以太即可构造。`;
+      batchResults.open(result);
     } catch (failure) {
       status.textContent =
         failure.name === 'AbortError' ? '已取消，没有保存装备或扣除以太。' : failure.message;
@@ -442,6 +474,19 @@ export function createEquipment(context) {
     void context.generation.open('', 'creation');
   });
   events.on(panel, 'click', (event) => {
+    const favorite = event.target.closest('[data-forge-favorite]');
+    const remove = event.target.closest('[data-forge-delete]');
+    if (favorite || remove) {
+      if (request) return;
+      if (favorite) favoriteEquipment(library(), favorite.dataset.forgeFavorite);
+      else deleteEquipmentPlan(library(), remove.dataset.forgeDelete);
+      context.generation.save();
+      refresh();
+      panel.querySelector('#forge-status').textContent = remove
+        ? '已删除兑换方案，背包和已穿戴装备保留。'
+        : '收藏已保存';
+      return;
+    }
     const tab = event.target.closest('[data-forge-page]');
     if (tab) {
       page = tab.dataset.forgePage;
@@ -549,6 +594,7 @@ export function createEquipment(context) {
       request?.abort();
       panel.remove();
       rawResponse.dispose();
+      batchResults.dispose();
       bag.remove();
       picker.dispose();
     },

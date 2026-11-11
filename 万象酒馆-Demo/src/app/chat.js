@@ -1,41 +1,17 @@
-import { routeKey } from '../worlds.js';
+import { applyFutureDialogue, dialogueTargets, dungeonDialogueScenes } from './future-dialogue.js';
 import { skippingAi } from '../generation-options.js';
-import { FINAL_ENCOUNTER } from '../content/journey-rules.js';
-import { CHAT_PLACES, tavernActivities, mergeFutureScript } from '../chat.js';
+import { CHAT_PLACES, tavernActivities } from '../chat.js';
 import { settingOnly } from '../ai/contracts.js';
 import { createChatPresentation } from './chat-presentation.js';
 import { query as $ } from './dom.js';
 import { relevantArchives } from '../archives.js';
 import { applyRelationshipActions } from '../relationships.js';
 import { streamingChatText } from '../ai/output-tags.js';
-import { html } from '../shared/html.js';
-import {
-  memoryChat,
-  memoryHistory,
-  memoryText,
-  scriptMemory,
-  previousDungeonMemory,
-} from '../memory.js';
+import { memoryChat, memoryText } from '../memory.js';
 
 export function createChat(context) {
   const api = context.apiClient.request;
   const { session, events } = context;
-  const rewriteHelp = document.createElement('dialog');
-  rewriteHelp.id = 'rewrite-help';
-  rewriteHelp.setAttribute('aria-labelledby', 'rewrite-help-title');
-  rewriteHelp.innerHTML = html`<h2 id="rewrite-help-title">修改后续剧本</h2>
-    <p>
-      如果你对当前的剧本发展不满意，可以先在闲聊中表达想法、引导故事的方向，再点击“修改剧本”。AI
-      会结合当前剧本、已经发生的事件和本趟闲聊，调整接下来的发展。
-    </p>
-    <p>只会修改尚未经历的战斗与剧情；已经发生的内容和当前战斗保持不变。此操作会调用剧本 API。</p>
-    <label><input id="rewrite-help-remember" type="checkbox" />不再提示</label>
-    <footer>
-      <button id="rewrite-help-cancel">暂不修改</button
-      ><button id="rewrite-help-confirm" class="primary">确认修改</button>
-    </footer>`;
-  document.body.append(rewriteHelp);
-  const preferences = context.storage || localStorage;
   $('#chat-place-select').replaceChildren(
     ...Object.entries(CHAT_PLACES).map(([id, location]) => {
       const option = document.createElement('option');
@@ -44,20 +20,26 @@ export function createChat(context) {
       return option;
     }),
   );
-  const presentation = createChatPresentation(session);
+  const localCharacters = () => context.chapter?.chatCharacters() || [];
+  const conversationCharacters = () => [
+    ...localCharacters(),
+    ...library().characters.filter(
+      (member) => !localCharacters().some((npc) => npc.id === member.id),
+    ),
+  ];
+  const presentation = createChatPresentation(session, conversationCharacters);
   let place = 'table',
     activities = [],
     request = null,
-    rewrite = null,
     revision = 0;
   const state = () => session.ai.chat;
   const library = () => session.ai.library;
   const characters = () =>
-    library().characters.filter((member) => member.id !== library().campaign?.protagonistId);
+    conversationCharacters().filter((member) => member.id !== library().campaign?.protagonistId);
   function renderHistory(kind = 'chat') {
     presentation.history(kind);
   }
-  function playReply(kind, reply) {
+  function playReply(kind, reply, after) {
     if (!reply) return context.shell.toast('还没有可重播的对话');
     const content = /【(?:旁白|对白[:：])/u.test(reply.content)
       ? reply.content
@@ -67,10 +49,11 @@ export function createChat(context) {
             text: reply.content,
           },
         ];
-    void context.gal.play(content, {
+    const done = context.gal.play(content, {
       owner: kind,
       title: kind === 'chat' ? '酒馆 · 片刻交谈' : '旅途 · 片刻闲谈',
     });
+    if (after) void done.then(after);
   }
   function openGal(kind) {
     const quick = kind === 'quick-chat';
@@ -80,13 +63,13 @@ export function createChat(context) {
     presentation.history(kind);
     context.gal.workspace({
       owner: kind,
-      title: quick ? '旅途 · 同行闲谈' : `酒馆 · ${CHAT_PLACES[place].name}`,
+      title: quick ? '旅途 · 同行闲谈' : CHAT_PLACES[place].name,
       actors: quick
         ? library().party.filter((id) => id && id !== library().campaign?.protagonistId)
         : state().selected,
       selection: quick ? [] : [$('.chat-company')],
       composer: quick ? [$('#quick-chat-form')] : [$('.chat-composer')],
-      auxiliary: quick ? [$('#quick-chat-status'), $('#script-rewrite')] : [$('#chat-status')],
+      auxiliary: quick ? [$('#quick-chat-status')] : [$('#chat-status')],
       history: [$(quick ? '#quick-chat-log' : '#chat-messages')],
       replay: () =>
         playReply(
@@ -100,19 +83,30 @@ export function createChat(context) {
       },
     });
   }
-  function open(location) {
+  function open(location, actorId = null) {
     if (session.runtime.mode !== 'inn' || !CHAT_PLACES[location]) return;
+    if (context.daily?.allowTalk() === false || context.daily?.onInvitation()) return;
     place = location;
+    if (actorId && characters().some((member) => member.id === actorId)) {
+      state().selected = [actorId];
+      state().selectionInitialized = true;
+    }
+    const available = new Set(characters().map((member) => member.id));
+    state().selected = state().selected.filter((id) => available.has(id));
     activities = tavernActivities(characters(), place);
     if (!state().selectionInitialized) {
       state().selected = characters()
-        .filter((member) => library().party.includes(member.id))
+        .filter((member) =>
+          (context.daily?.outingCompanions() || library().party).includes(member.id),
+        )
         .map((member) => member.id);
       state().selectionInitialized = true;
     }
     const marker = `${
       state()
-        .selected.map((id) => library().characters.find((member) => member.id === id)?.setting.name)
+        .selected.map(
+          (id) => conversationCharacters().find((member) => member.id === id)?.setting.name,
+        )
         .filter(Boolean)
         .join('、') || '独自一人'
     }来了，在${CHAT_PLACES[place].name}处交流。`;
@@ -132,17 +126,29 @@ export function createChat(context) {
     openGal('chat');
     context.onboarding?.chatOpened(place);
   }
+  function futureScenes(kind) {
+    const travel = context.daily?.overlandDialogueScenes?.() || [];
+    if (travel.length || kind !== 'quick-chat') return travel;
+    return dungeonDialogueScenes(
+      session.ai.activeScript,
+      session.journey.expedition,
+      session.battle.state.encounter,
+    );
+  }
   function input(kind, text) {
     const quick = kind === 'quick-chat';
     const members = quick
-      ? library()
-          .party.filter(Boolean)
+      ? (session.journey.expedition?.partyIds || library().party)
+          .filter(Boolean)
           .map((id) => library().characters.find((member) => member.id === id))
-      : library().characters;
+          .filter(Boolean)
+      : conversationCharacters();
     const book = session.ai.activeScript;
     const record = book && library().history.find((item) => item.runId === book.runId);
     return {
       text,
+      dialogueScenes: dialogueTargets(futureScenes(kind)),
+      dialogueContext: context.daily?.overlandDialogueContext?.(),
       protagonistId: library().campaign?.protagonistId || null,
       relationships: structuredClone(library().relationships || {}),
       archiveContext: relevantArchives(
@@ -162,7 +168,6 @@ export function createChat(context) {
         .filter((activity) => state().selected.includes(activity.id))
         .map((activity) => activity.text)
         .join('\n'),
-      previousScript: quick ? '' : previousDungeonMemory(library()),
       environment: quick
         ? `${$('#mode-label').textContent}；第${session.battle.state.round}回合，阶段${session.battle.state.phase}。\n${
             record?.lines
@@ -170,8 +175,12 @@ export function createChat(context) {
               .map((line) => memoryText(line.text, line.summary))
               .join('\n') || ''
           }`
-        : '',
-      history: memoryChat(quick ? state().quick : library().tavernChat || []),
+        : context.chapter?.chatEnvironment() || '',
+      history: memoryChat(
+        quick
+          ? state().quick
+          : (library().tavernChat || []).filter((message) => !message.journeyArchived),
+      ),
     };
   }
   function status(kind, text, { technical = false } = {}) {
@@ -183,14 +192,14 @@ export function createChat(context) {
     document.querySelectorAll('[data-chat-retry]').forEach((button) => {
       button.disabled = value;
     });
-    for (const id of ['chat-send', 'quick-chat-send', 'script-rewrite'])
-      $('#' + id).disabled = value;
+    for (const id of ['chat-send', 'quick-chat-send']) $('#' + id).disabled = value;
     $('#chat-cancel').hidden = !value;
   }
   async function send(kind, retryId = null) {
     if (skippingAi(session.ai.generationOptions)) return;
     if (kind === 'quick-chat' && session.ai.activeScript?.recollection) return;
-    if (request || rewrite) return;
+    if (request) return;
+    if (kind === 'chat' && context.daily?.allowTalk() === false) return;
     if (kind === 'chat' ? session.runtime.mode !== 'inn' : session.runtime.mode !== 'battle')
       return;
     const field = $(kind === 'chat' ? '#chat-input' : '#quick-chat-input');
@@ -207,7 +216,9 @@ export function createChat(context) {
       token = session.runtime.token;
     const payload = input(kind, text);
     if (retryId) {
-      payload.history = memoryChat(history.slice(0, retryIndex));
+      payload.history = memoryChat(
+        history.slice(0, retryIndex).filter((message) => !message.journeyArchived),
+      );
       payload.archiveContext = relevantArchives(
         library(),
         text +
@@ -223,12 +234,16 @@ export function createChat(context) {
       kind === 'chat'
         ? [...state().selected]
         : library().party.filter((id) => id && id !== library().campaign?.protagonistId);
+    const outing = context.daily?.outOfTavern?.();
+    const overlandRun = context.daily?.overlandRun?.();
+    const currentBook = session.ai.activeScript;
     const userMessage = retryId
       ? history[retryIndex]
       : {
           id: crypto.randomUUID(),
           role: 'user',
           content: text,
+          ...(outing ? { outing: true } : {}),
           ...presentation.speaker('user'),
         };
     const replySpeaker = presentation.speaker('assistant', selected);
@@ -281,9 +296,47 @@ export function createChat(context) {
         content: result.content,
         display: result.display,
         ...replySpeaker,
+        ...(userMessage.outing ? { outing: true } : {}),
       };
       if (retryId) history.splice(retryIndex + 1, originalReply ? 1 : 0, reply);
       else history.push(reply);
+      const player = library().characters.find(
+        (member) => member.id === library().campaign?.protagonistId,
+      );
+      if (overlandRun === context.daily?.overlandRun?.() && currentBook === session.ai.activeScript)
+        applyFutureDialogue(
+          futureScenes(kind),
+          result.dialogue,
+          reply.id,
+          player && { id: player.id, name: player.setting.name },
+        );
+      if (overlandRun && overlandRun === context.daily?.overlandRun?.())
+        context.daily.recordOverlandDialogue(text, result.content, userMessage.id);
+      if (kind === 'quick-chat' && currentBook && !overlandRun) {
+        const record = library().history.find((item) => item.runId === currentBook.runId);
+        if (record) {
+          record.lines = record.lines.filter((line) => line.chatId !== userMessage.id);
+          record.lines.push(
+            {
+              speaker: '玩家',
+              text,
+              encounter: session.battle.state.encounter,
+              stage: 'quick-chat',
+              chatId: userMessage.id,
+            },
+            {
+              speaker: reply.speakerName || '旁白',
+              text: reply.content,
+              encounter: session.battle.state.encounter,
+              stage: 'quick-chat',
+              chatId: userMessage.id,
+            },
+          );
+        }
+        context.generation.save();
+        context.checkpoint?.saveNow();
+      }
+      const outOfActions = kind === 'chat' && !originalReply && context.daily?.talkFinished();
       if (state().responseErrors) delete state().responseErrors[userMessage.id];
       if (kind === 'chat') {
         applyRelationshipActions(
@@ -291,6 +344,9 @@ export function createChat(context) {
           originalReply
             ? { affection: [], agreeToAdventure: result.actions?.agreeToAdventure || [] }
             : result.actions,
+          localCharacters()
+            .filter((member) => member.source === 'town' && selected.includes(member.id))
+            .map((member) => member.id),
         );
         presentation.conversation(place, activities);
         context.generation.save();
@@ -315,7 +371,8 @@ export function createChat(context) {
           );
         });
         if (!signal.aborted && epoch === revision && !session.runtime.disposed)
-          playReply(kind, reply);
+          playReply(kind, reply, outOfActions ? () => context.daily.returnOuting() : null);
+        else if (outOfActions) context.daily.returnOuting();
       }
       state().lastRequest = result.request;
       status(
@@ -349,85 +406,11 @@ export function createChat(context) {
       context.gal?.settled(kind);
     }
   }
-  async function resetScript() {
-    if (skippingAi(session.ai.generationOptions)) return;
-    const book = session.ai.activeScript;
-    if (book?.adventure && session.journey.expedition?.adventure?.boss.locked) return;
-    if (book?.recollection) return;
-    if (request || rewrite || !book || session.runtime.mode !== 'battle') return;
-    if (session.battle.state.encounter >= FINAL_ENCOUNTER) {
-      status('quick-chat', '已进入最终战，没有未经历的战斗可改写。');
-      return;
-    }
-    const token = session.runtime.token,
-      epoch = revision;
-    const base = book.generationInput || context.generation.scriptInput();
-    const payload = {
-      ...structuredClone(base),
-      history: memoryHistory(library(), base.history || []),
-      protagonistId: library().campaign?.protagonistId || null,
-      party: structuredClone(book.party),
-      boss: book.boss,
-      chapter: book.chapter,
-      exploration: book.exploration,
-      archiveContext: relevantArchives(
-        library(),
-        state()
-          .quick.map((message) => message.content)
-          .join('\n'),
-        book.exploration ? routeKey(book.exploration) : session.battle.state.map,
-      ),
-      rewrite: {
-        lockedThrough: session.battle.state.encounter,
-        currentScript: scriptMemory(library(), book),
-        conversations: memoryChat(state().quick),
-      },
-    };
-    rewrite = new AbortController();
-    busy(true);
-    status('quick-chat', '正在结合闲聊改写后续剧本…');
-    try {
-      const result = await api('generate/script', payload, { signal: rewrite.signal });
-      if (
-        epoch !== revision ||
-        token !== session.runtime.token ||
-        session.ai.activeScript?.runId !== book.runId ||
-        session.runtime.disposed
-      )
-        return;
-      const merged = mergeFutureScript(
-        session.ai.activeScript,
-        result.entry,
-        session.battle.state.encounter,
-      );
-      session.ai.activeScript = merged;
-      if (merged.encounters && session.journey.expedition?.exploration)
-        session.journey.expedition.exploration.encounters = structuredClone(merged.encounters);
-      const index = library().scripts.findIndex((entry) => entry.id === book.id);
-      if (index >= 0) {
-        const { runId: _runId, ...saved } = merged;
-        library().scripts[index] = saved;
-      }
-      context.generation.save();
-      status(
-        'quick-chat',
-        `后续剧本已更新；前 ${session.battle.state.encounter + 1} 场保持原样。输入约 ${result.diagnostic.request.tokens.inputEstimate} TK。`,
-        { technical: true },
-      );
-    } catch (failure) {
-      if (epoch === revision)
-        status('quick-chat', failure.name === 'AbortError' ? '改写已取消' : failure.message);
-    } finally {
-      rewrite = null;
-      busy(false);
-    }
-  }
   function leave() {
     context.gal?.cancel('chat');
     context.gal?.cancel('quick-chat');
     revision++;
     request?.abort();
-    rewrite?.abort();
     for (const message of state().quick)
       if (state().responseErrors) delete state().responseErrors[message.id];
     state().quick = [];
@@ -448,11 +431,11 @@ export function createChat(context) {
     context.gal.selection(state().selected);
     const removed = [...previous]
       .filter((id) => !state().selected.includes(id))
-      .map((id) => library().characters.find((member) => member.id === id)?.setting.name)
+      .map((id) => conversationCharacters().find((member) => member.id === id)?.setting.name)
       .filter(Boolean);
     const added = state()
       .selected.filter((id) => !previous.has(id))
-      .map((id) => library().characters.find((member) => member.id === id)?.setting.name)
+      .map((id) => conversationCharacters().find((member) => member.id === id)?.setting.name)
       .filter(Boolean);
     library().tavernChat.push({
       id: crypto.randomUUID(),
@@ -464,7 +447,7 @@ export function createChat(context) {
         `当前在${CHAT_PLACES[place].name}处的同行者：${
           state()
             .selected.map(
-              (id) => library().characters.find((member) => member.id === id)?.setting.name,
+              (id) => conversationCharacters().find((member) => member.id === id)?.setting.name,
             )
             .filter(Boolean)
             .join('、') || '无，玩家独处'
@@ -483,7 +466,9 @@ export function createChat(context) {
     presentation.conversation(place, activities);
     const marker = `${
       state()
-        .selected.map((id) => library().characters.find((member) => member.id === id)?.setting.name)
+        .selected.map(
+          (id) => conversationCharacters().find((member) => member.id === id)?.setting.name,
+        )
         .filter(Boolean)
         .join('、') || '独自一人'
     }在${CHAT_PLACES[place].name}处交流。`;
@@ -519,7 +504,7 @@ export function createChat(context) {
       return;
     }
     const button = event.target.closest('[data-chat-delete]');
-    if (!button || request || rewrite) return;
+    if (!button || request) return;
     const index = state().quick.findIndex((item) => item.id === button.dataset.chatDelete);
     if (index < 0) return;
     state().quick.splice(index, 1);
@@ -533,10 +518,8 @@ export function createChat(context) {
     else openGal('chat');
   });
   events.on(document, 'gal-open-quick', () => openGal('quick-chat'));
-  events.on(document, 'gal-rewrite-script', () => $('#script-rewrite').click());
   events.on($('#chat-cancel'), 'click', () => {
     request?.abort();
-    rewrite?.abort();
   });
   events.on($('#chat-form'), 'submit', (event) => {
     event.preventDefault();
@@ -554,17 +537,6 @@ export function createChat(context) {
       event.currentTarget.form.requestSubmit();
     });
   }
-  events.on($('#script-rewrite'), 'click', () => {
-    if (preferences.getItem('wanxiang.rewrite-help.dismissed.v1') === 'true') void resetScript();
-    else if (!rewriteHelp.open) rewriteHelp.showModal();
-  });
-  events.on($('#rewrite-help-cancel'), 'click', () => rewriteHelp.close());
-  events.on($('#rewrite-help-confirm'), 'click', () => {
-    if ($('#rewrite-help-remember').checked)
-      preferences.setItem('wanxiang.rewrite-help.dismissed.v1', 'true');
-    rewriteHelp.close();
-    void resetScript();
-  });
   events.on($('#quick-chat-toggle'), 'click', () => {
     const body = $('#quick-chat-body');
     body.hidden = !body.hidden;
@@ -612,7 +584,6 @@ export function createChat(context) {
     resetSelection,
     dispose() {
       leave();
-      rewriteHelp.remove();
     },
   };
 }

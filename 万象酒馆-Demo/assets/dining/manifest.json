@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "assets": [
+    {
+      "id": "ingredients-a",
+      "file": "assets/dining/ingredients-a.png",
+      "width": 1254,
+      "height": 1254,
+      "rgba": true,
+      "sha256": "029635b93b80e94b3407bd9045e02eaea5cf7020ced8b20cfbdce9a6704ef1dc",
+      "grid": [
+        4,
+        4
+      ],
+      "prompt": "prompts.md",
+      "generator": "OpenAI ImageGen",
+      "source": "exec-794d5be1-84ce-420d-94d0-38de65909cdb.png"
+    },
+    {
+      "id": "ingredients-b",
+      "file": "assets/dining/ingredients-b.png",
+      "width": 1254,
+      "height": 1254,
+      "rgba": true,
+      "sha256": "36a812ada38ff24c6b6d6f26e3f5e9a40384226129eeaeb2f864c34385a37c50",
+      "grid": [
+        4,
+        4
+      ],
+      "prompt": "prompts.md",
+      "generator": "OpenAI ImageGen",
+      "source": "exec-2f7e465b-0495-42fb-a371-c5a7686ddeea.png"
+    },
+    {
+      "id": "dishes",
+      "file": "assets/dining/dishes.png",
+      "width": 1254,
+      "height": 1254,
+      "rgba": true,
+      "sha256": "c220a2d5ddbcb078865c95dd522e3fe09cafcef0f9341d9700cfb7d7d47d2159",
+      "grid": [
+        4,
+        4
+      ],
+      "prompt": "prompts.md",
+      "generator": "OpenAI ImageGen",
+      "source": "exec-29974ba8-1f40-47c4-ada4-934707a7428d.png"
+    },
+    {
+      "id": "forage",
+      "file": "assets/dining/forage.png",
+      "width": 1254,
+      "height": 1254,
+      "rgba": true,
+      "sha256": "bdf601a6f26f9048b1ddf55bb7165716c185fd5d6cc0edebffe4aff0507c2968",
+      "grid": [
+        4,
+        4
+      ],
+      "prompt": "prompts.md",
+      "generator": "OpenAI ImageGen",
+      "source": "exec-a084949c-b4e4-4fe7-bd28-fc1abb397128.png"
+    }
+  ]
+}

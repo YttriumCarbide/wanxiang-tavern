@@ -248,11 +248,9 @@ export function compileCharacterDesign(raw, input = {}) {
   const plan = characterGenerationPlan(input);
   const source = raw.data;
   validateComplexity(source, plan);
-  const tier = Object.keys(RARITY_WEIGHTS).indexOf(plan.rarity);
   const profile = plan.profiles[source.profile];
   assertDesign(profile, '职业定位无效');
-  const passiveCount = source.skills.filter((skill) => skill.kind === 'passive').length;
-  const numericEffect = (effect, ability, key, passive = false) => {
+  const numericEffect = (effect, ability, passive = false) => {
     const power = ['low', 'standard', 'high'].indexOf(effect.power);
     assertDesign(power >= 0, '效果强度档位无效');
     if (effect.type === 'buff') assertDesign(effect.buff, '状态效果缺少buff');
@@ -280,22 +278,19 @@ export function compileCharacterDesign(raw, input = {}) {
     const allTargets = ['allAllies', 'allEnemies', 'frontAllies', 'rearAllies'].includes(
       effect.target || ability.target,
     );
-    const count = ability.effects?.length || 1;
-    const cost = ['low', 'standard', 'high'].indexOf(ability.cost || 'standard');
-    const base = passive ? 2 + power : 7 + power * 2 + tier + cost;
-    const apFactor = ability.ap === 2 ? 1.95 : 1;
-    const scopeFactor = allTargets ? 0.57 : 1;
-    const secondaryFactor = count > 1 ? 0.84 : 1;
-    const passiveFactor = passive ? 1 : 1 - passiveCount * 0.08;
-    const computed = Math.max(
-      1,
-      Math.round(base * apFactor * scopeFactor * secondaryFactor * passiveFactor),
+    const weights = [1, 1.15, 1.3];
+    const total = ability.effects.reduce(
+      (sum, part) => sum + weights[['low', 'standard', 'high'].indexOf(part.power)],
+      0,
     );
-    const budget =
-      ability.ap === 2 && !passive
-        ? Math.max(allTargets ? 12 : 20, computed)
-        : Math.min(passive ? 8 : 16, computed);
-    const value = roll(plan.seed, key, Math.max(1, budget - 1), Math.min(32, budget + 1));
+    const multiplier = passive ? 0.45 : ability.ap === 2 ? 3.2 : 1.5;
+    const scope = allTargets ? 0.54 : 1;
+    const share = weights[power] / total;
+    const value = Math.min(
+      32,
+      Math.max(1, Math.round(plan.fixed.attack * multiplier * scope * share * (0.9 + 0.1 * power))),
+    );
+    const markDamage = effect.perMark ? Math.max(1, Math.floor(value / 7)) : 0;
     const result =
       effect.type === 'cleanse'
         ? { type: 'cleanse', buffs: [...new Set(effect.buffs)] }
@@ -315,10 +310,8 @@ export function compileCharacterDesign(raw, input = {}) {
                 : effect.type === 'mark'
                   ? 1
                   : effect.type === 'selfMana'
-                    ? ability.ap === 2
-                      ? roll(plan.seed, key + ':mana', 8, 10)
-                      : Math.max(1, Math.min(passive ? 2 : 6, Math.round(value * 0.5)))
-                    : value,
+                    ? Math.max(1, Math.min(passive ? 2 : 4, Math.round(value * 0.4)))
+                    : Math.max(1, value - markDamage * 3),
             ...(effect.type === 'buff' ? { buff: effect.buff } : {}),
           };
     if (effect.type === 'buff') {
@@ -332,14 +325,13 @@ export function compileCharacterDesign(raw, input = {}) {
       result.target = 'self';
     } else if (effect.target) result.target = effect.target;
     if (effect.when) result.when = structuredClone(effect.when);
-    if (effect.perMark)
-      result.perMark = roll(plan.seed, key + ':mark', 2, ability.ap === 2 ? 4 : 3);
+    if (markDamage) result.perMark = markDamage;
     if (effect.consumeMark) result.consumeMark = true;
     return result;
   };
-  const compileAbility = (ability, index) => {
+  const compileAbility = (ability, entry = false) => {
     if (ability.kind === 'passive') {
-      const rules = ability.rules.map((rule, ruleIndex) => {
+      const rules = ability.rules.map((rule) => {
         if (rule.mode === 'continuous')
           assertDesign(
             rule.effects.every(
@@ -356,9 +348,7 @@ export function compileCharacterDesign(raw, input = {}) {
           mode: rule.mode,
           conditions: structuredClone(rule.conditions),
           target: rule.target,
-          effects: rule.effects.map((effect, effectIndex) =>
-            numericEffect(effect, rule, `skill:${index}:rule:${ruleIndex}:${effectIndex}`, true),
-          ),
+          effects: rule.effects.map((effect) => numericEffect(effect, rule, true)),
           ...(rule.mode === 'event'
             ? {
                 event: rule.event,
@@ -373,9 +363,7 @@ export function compileCharacterDesign(raw, input = {}) {
       result.text = finalPassiveText(result);
       return result;
     }
-    const abilityEffects = ability.effects.map((effect, effectIndex) =>
-      numericEffect(effect, ability, `skill:${index}:${effectIndex}`),
-    );
+    const abilityEffects = ability.effects.map((effect) => numericEffect(effect, ability, entry));
     const strongControl = ability.effects.some(
       (effect) => effect.type === 'buff' && ['bind', 'overload'].includes(effect.buff),
     );
@@ -385,15 +373,7 @@ export function compileCharacterDesign(raw, input = {}) {
       ['allEnemies', 'allAllies'].includes(ability.target) ||
       ability.effects.some((effect) => effect.power === 'high' || effect.perMark);
     const band = Math.max(costTier, strongControl ? 2 : costly ? 1 : 0);
-    const mp = roll(
-      plan.seed,
-      `skill:${index}:cost`,
-      ...[
-        [5, 7],
-        [8, 11],
-        [12, 15],
-      ][band],
-    );
+    const mp = [6, 8, 12][band] + (ability.ap === 2 && band < 2 ? 2 : 0);
     const hpCost =
       ability.payment === 'hp'
         ? Math.max(strongControl ? 12 : 0, 4 + costTier * 2 + (ability.ap === 2 ? 2 : 0))
@@ -408,8 +388,8 @@ export function compileCharacterDesign(raw, input = {}) {
     result.text = finalSkillText(result);
     return result;
   };
-  const skills = source.skills.map(compileAbility);
-  const entrySkill = compileAbility({ ...source.entrySkill, ap: 1, cost: 'low' }, 'entry');
+  const skills = source.skills.map((skill) => compileAbility(skill));
+  const entrySkill = compileAbility({ ...source.entrySkill, ap: 1, cost: 'low' }, true);
   delete entrySkill.ap;
   delete entrySkill.mp;
   const hp = plan.protagonist

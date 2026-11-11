@@ -3,6 +3,147 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { legacySession } from './legacy-session.mjs';
 
+export async function antiRouteChecks({ browser, baseURL, output }) {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  const errors = [],
+    calls = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  await legacySession(page);
+  await page.route('https://route-fixture.invalid/**', async (route) => {
+    const request = route.request();
+    const headers = {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Headers': 'authorization,content-type,x-goog-api-key',
+      'Access-Control-Allow-Methods': 'POST,OPTIONS',
+    };
+    if (request.method() === 'OPTIONS') return route.fulfill({ status: 204, headers });
+    calls.push({ url: request.url(), body: request.postDataJSON(), headers: request.headers() });
+    if (request.url().includes(':generateContent'))
+      return route.fulfill({
+        headers,
+        json: {
+          modelVersion: 'gemini-3-pro',
+          candidates: [{ content: { parts: [{ text: 'ok' }] } }],
+        },
+      });
+    if (request.postDataJSON().model.includes('zzz-not-a-real-model'))
+      return route.fulfill({ headers, status: 404, json: { error: { message: 'unknown model' } } });
+    return route.fulfill({
+      headers,
+      json: { model: 'gemini-3-pro', choices: [{ message: { content: 'ok' } }] },
+    });
+  });
+  try {
+    await page.goto(baseURL);
+    await page.waitForFunction(() => !!window.demo);
+    await page.locator('#ai-open').click();
+    await page.waitForFunction(() => !document.querySelector('#ai-model').disabled);
+    await page.locator('#ai-kind').selectOption('character');
+    await page.locator('#ai-requestMode').selectOption('browser');
+    await page.locator('#ai-baseUrl').fill('https://route-fixture.invalid/v1');
+    await page.locator('#ai-model').fill('gemini-3-pro');
+    await page.locator('#ai-key').fill('ANTI_ROUTE_TEST_KEY');
+    await page.locator('#ai-profile-save').click();
+    await page.locator('#ai-status').filter({ hasText: '当前连接仅本次有效' }).waitFor();
+    await page.locator('[data-ai-tab="anti-route"]').click();
+    await page.waitForFunction(() => document.querySelector('#route-verify').checked);
+    assert.match(await page.locator('.route-settings > small').innerText(), /V0\.5.*8\.31/);
+    assert.equal(await page.locator('#route-entropy').isChecked(), false);
+    assert.equal(await page.locator('#route-entropyMode').inputValue(), 'refract');
+    assert.match(await page.locator('.route-attribution').innerText(), /原作者：凯撒王/);
+    assert.equal(
+      await page.locator('.route-attribution a').getAttribute('href'),
+      'https://discord.com/channels/1134557553011998840/1566099901245432009',
+    );
+    assert.equal(await page.locator('.route-attribution a svg').count(), 1);
+    assert.equal(await page.locator('#route-entropyStrength').inputValue(), 'mid');
+    const panelBox = await page.locator('.route-settings').boundingBox();
+    const workspaceBox = await page.locator('#ai-dialog .ai-workspace').boundingBox();
+    assert(panelBox.y >= workspaceBox.y, 'opening the tab resets the settings scroll position');
+    await page.screenshot({ path: path.join(output, 'anti-route-settings.png') });
+    await page.locator('#route-enabled').uncheck();
+    await page.locator('#route-entropyMode').selectOption('ref');
+    await page.locator('#route-entropyStrength').selectOption('heavy');
+    await page.locator('#route-scope').selectOption('only');
+    await page.locator('#route-scopeList').fill('gemini');
+    await page.locator('#route-know').selectOption('full');
+    await page.locator('#route-saltWin').fill('45');
+    await page.locator('#route-save').click();
+    await page.locator('#route-status').filter({ hasText: '防护设置已保存' }).waitFor();
+    await page.locator('[data-route-probe="native"]').click();
+    await page
+      .locator('#route-probe-result')
+      .filter({ hasText: 'modelVersion：gemini-3-pro' })
+      .waitFor();
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].headers['x-goog-api-key'], 'ANTI_ROUTE_TEST_KEY');
+    await page.locator('[data-route-probe="dual"]').click();
+    await page.locator('#route-probe-result').filter({ hasText: '明确拒绝' }).waitFor();
+    assert.equal(calls.length, 3);
+    await page.locator('#route-aliases').fill('gemini-3-pro gemini-3-pro-zzz-not-a-real-model');
+    await page.locator('[data-route-probe="aliases"]').click();
+    await page.locator('#route-probe-result').filter({ hasText: '探测未修改当前连接' }).waitFor();
+    assert.match(
+      await page.locator('#route-probe-result').innerText(),
+      /gemini-3-pro：成功.*接口明确拒绝/,
+    );
+    assert.equal(calls.length, 5);
+    await page.evaluate(async () => {
+      await fetch('/api/ai/anti-route', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'report',
+          report: {
+            at: Date.now(),
+            kind: 'character',
+            reqModel: '<img src=x onerror="window.routeXss=true">',
+            respModel: 'gemini-3-pro',
+            verdict: 'diff',
+            raw: '<script>example</script>',
+            thoughtTokens: -1,
+          },
+        }),
+      });
+    });
+    await page.locator('#route-refresh').click();
+    await page.locator('[data-route-record]').first().click();
+    assert((await page.locator('#route-raw').inputValue()).includes('<script>example</script>'));
+    assert.equal(await page.locator('#route-records img').count(), 0);
+    await page.screenshot({ path: path.join(output, 'anti-route-desktop.png') });
+    await page.setViewportSize({ width: 844, height: 390 });
+    await page.locator('#route-entropyStrength').scrollIntoViewIfNeeded();
+    assert(await page.locator('#route-entropyStrength').isVisible());
+    await page.screenshot({ path: path.join(output, 'anti-route-landscape.png') });
+    await page.reload();
+    await page.waitForFunction(() => !!window.demo);
+    await page.locator('#ai-open').click();
+    await page.locator('[data-ai-tab="anti-route"]').click();
+    await page.waitForFunction(() => document.querySelector('#route-entropyMode').value === 'ref');
+    assert.equal(await page.locator('#route-enabled').isChecked(), false);
+    assert.equal(await page.locator('#route-verify').isChecked(), true);
+    assert.equal(await page.locator('#route-entropyStrength').inputValue(), 'heavy');
+    assert.equal(await page.locator('#route-scope').inputValue(), 'only');
+    assert.equal(await page.locator('#route-scopeList').inputValue(), 'gemini');
+    assert.equal(await page.locator('#route-know').inputValue(), 'full');
+    assert.equal(await page.locator('#route-saltWin').inputValue(), '45');
+    await page.locator('#route-clear').click();
+    await page.locator('#route-records').filter({ hasText: '暂无响应记录' }).waitFor();
+    assert.equal(await page.locator('#route-raw').inputValue(), '');
+    assert.deepEqual(errors, []);
+    return {
+      persistence: true,
+      directNativeProbe: true,
+      dualProbe: true,
+      aliasProbe: true,
+      escapedRecords: true,
+      landscape: true,
+    };
+  } finally {
+    await page.close();
+  }
+}
+
 export async function firstRunApplyChecks({ browser, baseURL, output }) {
   const page = await browser.newPage({ viewport: { width: 667, height: 375 }, hasTouch: true });
   try {
@@ -26,7 +167,7 @@ export async function firstRunApplyChecks({ browser, baseURL, output }) {
     await page.locator('#ai-baseUrl').fill('http://127.0.0.1:9999/v1');
     await page.locator('#ai-model').fill('first-run-fixture');
     await page.locator('#ai-key').fill('test-only-key');
-    for (const id of ['script', 'quick-chat', 'creation'])
+    for (const id of ['script', 'chat', 'creation'])
       await page.locator(`[data-apply-kind][value="${id}"]`).check();
     const confirm = page.locator('#setup-apply');
     await confirm.scrollIntoViewIfNeeded();
@@ -40,7 +181,7 @@ export async function firstRunApplyChecks({ browser, baseURL, output }) {
       document.querySelector('#ai-status').textContent.includes('已将所选连接预设应用到 3'),
     );
     const profiles = await page.evaluate(async () => (await fetch('/api/ai/config')).json());
-    for (const id of ['script', 'quick-chat', 'creation'])
+    for (const id of ['script', 'chat', 'quick-chat', 'creation'])
       assert.equal(profiles[id].model, 'first-run-fixture');
     await page.screenshot({ path: path.join(output, 'first-run-confirm-mobile.png') });
     return { mobileConfirmation: true, appliesSelectedProfiles: true };
@@ -124,6 +265,14 @@ export async function apiSettingsChecks({ browser, baseURL, output }) {
     await page.locator('#api-preset-select').selectOption(second);
     await page.waitForFunction(() => document.querySelector('#ai-model').value === 'custom-model');
     assert.equal(await page.locator('#ai-key').inputValue(), '');
+    assert.equal(
+      await page.locator('#ai-key').evaluate((node) => {
+        const event = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
+        node.dispatchEvent(event);
+        return event.defaultPrevented;
+      }),
+      false,
+    );
     await page.screenshot({ path: path.join(output, 'api-connections-selectable.png') });
     await page.locator('#ai-kind').selectOption('summary');
     await page.locator('#api-preset-select').selectOption(first);
@@ -190,8 +339,35 @@ export async function apiSettingsChecks({ browser, baseURL, output }) {
     const separate = await post('prompts/save', { preset: { ...saved, name: '独立用途预设' } });
     imported.push(separate.preset.id);
     await post('prompts/select', { kind: 'creation', id: separate.preset.id });
-    await page.locator('[data-prompt-entry="main"] .prompt-edit-name').click();
+    await page.locator('[data-prompt-entry="main"] button[data-prompt-edit]').last().click();
     const main = page.locator('#prompt-entry-dialog [data-prompt-field="content"]');
+    await page.locator('#prompt-entry-dialog').waitFor({ state: 'visible' });
+    assert(await main.isVisible());
+    const desktopSize = page.viewportSize();
+    await page.setViewportSize({ width: 844, height: 390 });
+    assert.equal(
+      await page
+        .locator('#prompt-entry-dialog')
+        .evaluate((node) => node.parentElement === document.body),
+      true,
+    );
+    const editorBox = await page.locator('#prompt-entry-dialog').boundingBox();
+    assert(
+      editorBox.x >= 0 &&
+        editorBox.y >= 0 &&
+        editorBox.x + editorBox.width <= page.viewportSize().width + 1,
+    );
+    assert(editorBox.y + editorBox.height <= 391);
+    await page.screenshot({ path: path.join(output, 'preset-editor-mobile.png') });
+    await page.setViewportSize(desktopSize);
+    assert.equal(
+      await main.evaluate((node) => {
+        const event = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
+        node.dispatchEvent(event);
+        return event.defaultPrevented;
+      }),
+      false,
+    );
     await main.fill((await main.inputValue()) + '\nPRESET_NEXT_REQUEST_FRESH');
     await page.locator('#prompt-entry-save').click();
     await page.locator('[data-apply-prompt-kind][value="script"]').check();
@@ -324,6 +500,21 @@ export async function apiSettingsChecks({ browser, baseURL, output }) {
     await page.locator('#ai-requestMode').selectOption('local');
     await page.locator('#ai-baseUrl').fill('http://127.0.0.1:9999/v1');
     await page.locator('#ai-profile-save').click();
+    await page.locator('#ai-worldbooks').click();
+    await page.locator('#world-dialog').waitFor({ state: 'visible' });
+    await page.locator('#world-entry-list .world-expand').first().click();
+    const worldText = page.locator('#world-entry-fields textarea[data-world-field="content"]');
+    await worldText.waitFor({ state: 'visible' });
+    assert.equal(
+      await worldText.evaluate((node) => {
+        const event = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
+        node.dispatchEvent(event);
+        return event.defaultPrevented;
+      }),
+      false,
+    );
+    assert.equal(await worldText.evaluate((node) => getComputedStyle(node).userSelect), 'text');
+    await page.locator('#world-close').click();
     assert.deepEqual(failures, []);
     return {
       connectionSaveReload: true,

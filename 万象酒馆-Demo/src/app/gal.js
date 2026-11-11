@@ -4,8 +4,13 @@ import {
   resolveGalActor,
   nextGalStage,
   selectedGalStage,
+  galActorsForBeats,
 } from '../gal.js';
 import { portraitUrl } from '../portraits.js';
+import { TAVERN_VISITORS, standingSprite } from '../content/tavern-visitors.js';
+import { galNpcPortrait } from '../content/gal-npc-portraits.js';
+import { CHAPTER_NPCS } from '../chapters/starbell-content.js';
+import { STARBELL_ENABLED } from '../chapters/starbell-state.js';
 import { createEventScope } from '../shared/events.js';
 import { createGalWorkspace } from './gal-workspace.js';
 import { decorateGalButtons } from './gal-icons.js';
@@ -24,8 +29,8 @@ export function createGalPlayer(context) {
   panel.innerHTML = `<div class="gal-vignette"></div><div class="gal-cast" aria-hidden="true"></div>
     <nav class="gal-controls" aria-label="演出控制"><span class="gal-chapter"></span></nav>
     <section class="gal-reading"><div class="gal-speaker"><img hidden alt=""/><span></span><small></small></div><div class="gal-bonuses"></div><button class="gal-page" type="button" aria-label="展开全文或继续"><span class="gal-text"></span><span class="gal-cursor" aria-hidden="true">◇</span></button><div class="gal-footer"><small class="gal-count"></small><span class="gal-hint">点击展开 · 再点继续</span></div></section>
-    <div class="gal-actionbar"><nav class="gal-quick-menu" aria-label="阅读控制"><button data-gal="back">‹ 回退</button><button data-gal="next">继续 ›</button><button data-gal="skip" aria-pressed="false">快进</button><button data-gal="auto" aria-pressed="false">自动</button><button data-gal="history">历史</button><button data-gal="hide">隐藏</button><button data-gal="journal">剧情</button><button data-gal="compose">交流</button><button data-gal="close">退出</button></nav></div>
-    <section class="gal-history" hidden aria-label="已读内容"><header><strong>刚刚的故事</strong><button data-gal="history-close">返回演出</button></header><div></div></section>`;
+    <div class="gal-actionbar"><nav class="gal-quick-menu" aria-label="阅读控制"><button data-gal="back">‹ 回退</button><button data-gal="next">继续 ›</button><button data-gal="skip" aria-pressed="false">快进</button><button data-gal="auto" aria-pressed="false">自动</button><button data-gal="history">本次对话</button><button data-gal="hide">隐藏</button><button data-gal="journal">剧情</button><button data-gal="compose">交流</button><button data-gal="close">退出</button></nav></div>
+    <section class="gal-history" hidden aria-label="本次对话"><header><h2>本次对话</h2><button data-gal="history-close">返回演出</button></header><ol class="gal-dialogue-list" tabindex="0"></ol><p class="gal-dialogue-empty" hidden>还没有可以回看的对话。</p></section>`;
   document.body.append(panel);
   const part = (name) => panel.querySelector(name);
   const pending = [];
@@ -38,10 +43,12 @@ export function createGalPlayer(context) {
   let pageIndex = 0;
   let cast = [];
   let read = [];
+  let readOwner;
   let skip = false;
   let finishing = false;
   let transitionEpoch = 0;
   let exitAnimations = [];
+  let suspendedModal = null;
   const workspace = createGalWorkspace(panel, events, {
     show: showPanel,
     exit: () => part('[data-gal="close"]').click(),
@@ -58,13 +65,18 @@ export function createGalPlayer(context) {
     delete panel.dataset.leaving;
     // A body-owned popover has no inherited dialog filter/backdrop rectangle.
     surface.hide();
-    const modal = activeModal(document);
+    const modal = suspendedModal ? null : activeModal(document);
     (modal || document.body).append(panel);
-    panel.hidden = false;
-    document.body.classList.add('gal-playing');
+    panel.hidden = Boolean(suspendedModal);
+    document.body.classList.toggle('gal-playing', !suspendedModal);
     sceneVisibility(true);
     part('.gal-chapter').textContent = title || '万象 · 片刻';
-    surface.show();
+    const history = part('[data-gal="history"]');
+    const label = workspace.active?.history?.length ? '交流记录' : '本次对话';
+    history.title = label;
+    history.setAttribute('aria-label', label);
+    history.querySelector('.gal-control-label').textContent = label;
+    if (!suspendedModal) surface.show();
   }
   function sceneVisibility(visible) {
     for (const frame of document.querySelectorAll('#inn-frame iframe')) {
@@ -78,21 +90,22 @@ export function createGalPlayer(context) {
     const members = library.characters.map((member) => {
       const official = member.source === 'official';
       const key = member.combat?.id;
-      const sprite = official
-        ? {
-            edith: 'edith',
-            pandora: 'pandora',
-            aegis: 'yuexi',
-            'luo-gongxu': 'luo-gongxu',
-            'silica-laps': 'silica-laps',
-          }[key]
-        : null;
+      const sprite = official ? TAVERN_VISITORS.find((entry) => entry.combatId === key) : null;
       return {
         id: member.id,
         name: member.setting.name,
         avatar: portraitUrl(member.combat),
         user: member.id === protagonistId,
-        sprite: sprite ? `./assets/gal/${sprite}-half.png` : null,
+        sprite:
+          member.combat?.customStanding ||
+          (sprite
+            ? standingSprite(sprite)
+            : galNpcPortrait({
+                id: member.id,
+                name: member.setting.name,
+                setting: member.setting.worldbook,
+              })),
+        fullSprite: true,
         aliases: official
           ? { edith: ['伊迪斯', '伊蒂丝'], pandora: ['潘多拉'], aegis: ['月汐', '长景月汐'] }[
               key
@@ -107,10 +120,43 @@ export function createGalPlayer(context) {
       ['yuexi', '长景月汐', ['月汐']],
     ])
       if (!members.some((actor) => actor.name === name))
-        members.push({ id: `gal-${key}`, name, aliases, sprite: `./assets/gal/${key}-half.png` });
+        members.push({
+          id: `gal-${key}`,
+          name,
+          aliases,
+          sprite: standingSprite(TAVERN_VISITORS.find((entry) => entry.id === key)),
+          fullSprite: true,
+        });
     for (const npc of context.session.ai.activeScript?.npcs || [])
       if (!members.some((actor) => actor.id === npc.id || actor.name === npc.name))
-        members.push({ id: npc.id || `npc:${npc.name}`, name: npc.name });
+        members.push({
+          id: npc.id || `npc:${npc.name}`,
+          name: npc.name,
+          npc: true,
+          sprite: galNpcPortrait(npc),
+          fullSprite: true,
+        });
+    if (STARBELL_ENABLED && library.starbell?.phase !== 'idle')
+      for (const [key, npc] of Object.entries(CHAPTER_NPCS))
+        if (!members.some((actor) => actor.id === `starbell-${key}` || actor.name === npc.name))
+          members.push({
+            id: `starbell-${key}`,
+            name: npc.name,
+            sprite: npc.portrait,
+            fullSprite: true,
+          });
+    const invited = context.daily?.invitedMember();
+    for (const person of [
+      ...(context.chapter?.chatCharacters() || []),
+      ...(invited ? [invited] : []),
+    ])
+      if (!members.some((actor) => actor.id === person.id || actor.name === person.setting.name))
+        members.push({
+          id: person.id,
+          name: person.setting.name,
+          sprite: person.combat.customStanding || galNpcPortrait(person.setting),
+          fullSprite: true,
+        });
     return members;
   }
   function stop() {
@@ -207,7 +253,13 @@ export function createGalPlayer(context) {
   }
   function schedule() {
     clearTimeout(autoTimer);
-    if ((auto || skip) && current && !document.hidden && part('.gal-history').hidden)
+    if (
+      !suspendedModal &&
+      (auto || skip) &&
+      current &&
+      !document.hidden &&
+      part('.gal-history').hidden
+    )
       autoTimer = setTimeout(
         advance,
         skip ? 160 : Math.max(1600, current.pages[pageIndex].text.length * 45),
@@ -224,6 +276,58 @@ export function createGalPlayer(context) {
     part('.gal-hint').textContent =
       pageIndex === current.pages.length - 1 ? '点击结束本段' : '点击继续';
     schedule();
+  }
+  function paginate(beat, capacity) {
+    let offset = beat.offset || 0;
+    return paginateGalBeat(beat, capacity).map((page) => {
+      const result = { ...page, offset };
+      offset += page.text.length;
+      return result;
+    });
+  }
+  function speakerName(beat, actor) {
+    if (beat.type === 'narration') return '旁白';
+    const level = beat.speaker?.match(/\s*·\s*Lv\.\d+$/u)?.[0] || '';
+    return actor ? actor.name + level : beat.speaker || '来客';
+  }
+  function showHistory() {
+    const source =
+      !current || current.owner === workspace.active?.owner ? workspace.active?.transcript : null;
+    if (!source && workspace.active?.history?.length) return workspace.history();
+    clearTimeout(autoTimer);
+    const known = cast.length ? cast : actors();
+    const playerId = context.session.ai.library.campaign?.protagonistId;
+    const completed = (source?.() || [])
+      .filter((beat) => beat.text)
+      .map((beat) => ({
+        name: speakerName(beat, resolveGalActor(beat.speaker, known, playerId)),
+        text: beat.text,
+      }));
+    const visible =
+      current || (!source && workspace.active?.owner === readOwner) ? read.filter(Boolean) : [];
+    const rows = [...completed, ...visible];
+    const list = part('.gal-dialogue-list');
+    list.replaceChildren(
+      ...rows.map((line) => {
+        const item = document.createElement('li');
+        const name = document.createElement('strong');
+        name.textContent = line.name;
+        const text = document.createElement('p');
+        text.textContent = line.text;
+        item.append(name, text);
+        return item;
+      }),
+    );
+    list.hidden = !rows.length;
+    part('.gal-dialogue-empty').hidden = !!rows.length;
+    part('.gal-history').hidden = false;
+    list.scrollTop = 0;
+    part('[data-gal="history-close"]').focus({ preventScroll: true });
+  }
+  function closeHistory() {
+    part('.gal-history').hidden = true;
+    part('[data-gal="history"]').focus({ preventScroll: true });
+    if (!typing) schedule();
   }
   function renderCast(active) {
     const container = part('.gal-cast');
@@ -247,7 +351,8 @@ export function createGalPlayer(context) {
       if (!image) {
         image = document.createElement('img');
         image.dataset.actor = id;
-        image.src = actor.sprite;
+        image.dataset.full = String(actor.fullSprite === true);
+        void context.assets.attach(image, actor.sprite).catch(() => image.remove());
         image.alt = actor.name;
         image.addEventListener('error', () => image.remove(), { once: true });
         container.append(image);
@@ -281,6 +386,7 @@ export function createGalPlayer(context) {
     if (
       workspace.active?.owner === current.owner &&
       current.owner !== 'quick-chat' &&
+      !workspace.active.followSpeakers &&
       Array.isArray(workspace.active.actors)
     )
       stage = selectedGalStage(
@@ -301,8 +407,7 @@ export function createGalPlayer(context) {
     part('[data-gal="journal"]').hidden =
       current.mandatory === true || !context.session.ai.activeScript || Boolean(workspace.active);
     renderCast(narration ? null : actor?.id);
-    const level = beat.speaker?.match(/\s*·\s*Lv\.\d+$/u)?.[0] || '';
-    const name = narration ? '旁白' : actor ? actor.name + level : beat.speaker || '来客';
+    const name = speakerName(beat, actor);
     part('.gal-speaker span').textContent = name;
     part('.gal-speaker small').textContent = actor?.user
       ? '你的视角'
@@ -323,13 +428,16 @@ export function createGalPlayer(context) {
     part('.gal-count').textContent = `${pageIndex + 1} / ${current.pages.length}`;
     part('.gal-text').textContent = '';
     part('.gal-hint').textContent = '点击展开 · 再点继续';
-    read[pageIndex] = { name, text: beat.text };
+    const end = beat.offset + beat.text.length;
+    if (!read[beat.beatIndex] || read[beat.beatIndex].end < end)
+      read[beat.beatIndex] = { name, text: current.beats[beat.beatIndex].text.slice(0, end), end };
     part('[data-gal="back"]').disabled = pageIndex === 0;
     const characters = Array.from(beat.text.trim().replace(/\n[ \t]*\n+/gu, '\n'));
     let count = 0;
     typing = true;
     panel.dataset.typing = 'true';
     if (skip) return reveal();
+    if (suspendedModal) return;
     timer = setInterval(() => {
       count += 3;
       part('.gal-text').textContent = characters.slice(0, count).join('');
@@ -349,20 +457,33 @@ export function createGalPlayer(context) {
     current = pending.shift();
     skip = false;
     part('[data-gal="skip"]').setAttribute('aria-pressed', 'false');
-    cast = actors();
+    cast = galActorsForBeats(actors(), current.pages);
     stage = [];
     read = [];
+    readOwner = current.owner;
     pageIndex = 0;
     showPanel(current.title);
     workspace.playing(true);
     part('[data-gal="close"]').hidden = current.mandatory === true;
-    panel.focus({ preventScroll: true });
+    if (!suspendedModal) panel.focus({ preventScroll: true });
     render();
   }
   events.on(part('.gal-page'), 'click', advance);
   events.on(panel, 'pointerdown', (event) => event.stopPropagation());
   events.on(panel, 'click', (event) => {
     event.stopPropagation();
+    if (
+      !panel.classList.contains('gal-ui-hidden') &&
+      !event.target.closest(
+        'button, input, textarea, select, a, summary, .gal-side, .gal-composer, .gal-archive, .gal-tools, .gal-history, .gal-controls, .gal-actionbar',
+      ) &&
+      event.clientY > innerHeight * 0.12 &&
+      event.clientY < innerHeight * 0.74
+    ) {
+      if (current) advance();
+      else if (workspace.active) part('[data-gal="close"]').click();
+      return;
+    }
     const action = event.target.closest('[data-gal]')?.dataset.gal;
     if (action === 'close') {
       if (workspace.active?.persistent) {
@@ -403,26 +524,8 @@ export function createGalPlayer(context) {
       part('[data-gal="auto"]').setAttribute('aria-pressed', String(auto));
       if (!typing) schedule();
     }
-    if (action === 'history') {
-      if (workspace.active) return workspace.history();
-      clearTimeout(autoTimer);
-      part('.gal-history div').replaceChildren(
-        ...read.filter(Boolean).map((line) => {
-          const item = document.createElement('p');
-          const name = document.createElement('strong');
-          name.textContent = line.name;
-          const text = document.createElement('span');
-          text.textContent = line.text;
-          item.append(name, text);
-          return item;
-        }),
-      );
-      part('.gal-history').hidden = false;
-    }
-    if (action === 'history-close') {
-      part('.gal-history').hidden = true;
-      if (!typing) schedule();
-    }
+    if (action === 'history') showHistory();
+    if (action === 'history-close') closeHistory();
   });
   events.on(panel, 'click', (event) => {
     if (panel.classList.contains('gal-ui-hidden') && !event.target.closest('[data-gal="hide"]')) {
@@ -434,16 +537,22 @@ export function createGalPlayer(context) {
     window,
     'keydown',
     (event) => {
+      if (event.target.closest?.('dialog[open]') && !panel.contains(event.target)) return;
+      if (!part('.gal-history').hidden) {
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+          closeHistory();
+        }
+        return;
+      }
       if (event.target.closest?.('textarea,input,select')) return;
       if (!current || ![' ', 'Enter', 'ArrowLeft', 'ArrowRight', 'Escape'].includes(event.key))
         return;
       if (event.target.closest?.('[data-gal]') && [' ', 'Enter'].includes(event.key)) return;
       event.preventDefault();
       event.stopImmediatePropagation();
-      if (event.key === 'Escape' && !part('.gal-history').hidden) {
-        part('.gal-history').hidden = true;
-        if (!typing) schedule();
-      } else if (event.key === 'ArrowLeft') part('[data-gal="back"]').click();
+      if (event.key === 'ArrowLeft') part('[data-gal="back"]').click();
       else if (event.key === 'Escape' && !current.mandatory) part('[data-gal="close"]').click();
       else advance();
     },
@@ -460,12 +569,9 @@ export function createGalPlayer(context) {
     if (!current) return;
     const capacity = innerHeight < 500 || innerWidth < 900 ? 76 : 155;
     if (capacity >= current.capacity) return;
-    const remaining = current.pages
-      .slice(pageIndex)
-      .flatMap((beat) => paginateGalBeat(beat, capacity));
+    const remaining = current.pages.slice(pageIndex).flatMap((beat) => paginate(beat, capacity));
     current.pages = [...current.pages.slice(0, pageIndex), ...remaining];
     current.capacity = capacity;
-    read.pop();
     render();
   });
   return {
@@ -476,6 +582,27 @@ export function createGalPlayer(context) {
       return current?.owner;
     },
     actors,
+    suspendForModal(dialog) {
+      if (panel.hidden || suspendedModal === dialog) return;
+      suspendedModal = dialog;
+      stop();
+      surface.hide();
+      panel.hidden = true;
+      document.body.append(panel);
+      document.body.classList.remove('gal-playing');
+      events.on(
+        dialog,
+        'close',
+        () => {
+          if (suspendedModal !== dialog) return;
+          suspendedModal = null;
+          if (!current && !workspace.active) return;
+          showPanel(current?.title || workspace.active?.title);
+          if (current) render();
+        },
+        { once: true },
+      );
+    },
     workspace(options) {
       if (current) finish(false);
       workspace.open(options);
@@ -544,7 +671,8 @@ export function createGalPlayer(context) {
         pending.push({
           ...options,
           owner: options.owner || 'story',
-          pages: beats.flatMap((beat) => paginateGalBeat(beat, capacity)),
+          beats,
+          pages: beats.flatMap((beat, beatIndex) => paginate({ ...beat, beatIndex }, capacity)),
           capacity,
           resolve,
         });

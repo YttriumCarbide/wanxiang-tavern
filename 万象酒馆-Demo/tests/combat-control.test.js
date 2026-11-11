@@ -6,7 +6,7 @@ import { EMBLEM_ID, OVERLOAD_EMBLEM_ID } from '../src/emblems.js';
 import { newCampaign } from '../src/campaign.js';
 import { defaultProtagonist } from '../src/content/qingyuan.js';
 import { prepareCorridorRing, prepareBossEmblem } from '../src/emblem-progression.js';
-import { compileRoster, restoreLibrary } from '../src/ai/library.js';
+import { compileRoster, restoreLibrary, newLibrary } from '../src/ai/library.js';
 import { upgradeCombatControl } from '../src/ai/combat-control-upgrade.js';
 import { playbackBeats } from '../src/playback-timing.js';
 
@@ -172,6 +172,37 @@ test('story rings prefer actual front members without rings, save the recipient 
   const snapshot = structuredClone(library);
   assert(!prepareCorridorRing(library, expedition, () => 0.9));
   assert.deepEqual(library, snapshot);
+});
+
+test('legacy parties receive the corridor ring at the same boundary and retain its full charge after restore', async () => {
+  const { beginEncounter, newExpedition } = await import('../src/expedition.js');
+  const library = newLibrary();
+  const expedition = newExpedition('bossGate', compileRoster(library), {
+    map: 'ruins',
+    sequence: 1,
+    seed: 1,
+  });
+  expedition.partyIds = [...library.party];
+  for (const index of [0, 1, 2, 3]) {
+    expedition.index = index;
+    assert.equal(prepareCorridorRing(library, expedition), false);
+  }
+  expedition.index = 4;
+  assert.equal(
+    prepareCorridorRing(library, expedition, () => 0),
+    true,
+  );
+  const battle = beginEncounter(expedition);
+  const actor = expedition.corridorRing.actor;
+  assert.equal(battle.heroDefinitions[actor].emblemId, EMBLEM_ID);
+  assert.equal(battle.units[actor].emblemCharge, 6);
+  const restored = restoreLibrary(library);
+  assert(restored.emblems.includes(EMBLEM_ID));
+  assert.equal(
+    restored.characters.find((member) => member.id === expedition.corridorRing.memberId).emblemId,
+    EMBLEM_ID,
+  );
+  assert.equal(prepareCorridorRing(restored, expedition), false);
 });
 
 test('story ring randomness uses eligible candidates; fully occupied roster keeps reward in inventory', () => {

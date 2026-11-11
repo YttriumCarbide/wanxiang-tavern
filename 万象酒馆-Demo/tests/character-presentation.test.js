@@ -34,9 +34,10 @@ test('identity and motion prose join compiled numbers without persisting another
   );
   const markup = characterSheet(entry);
   assert(markup.includes('基础伤害 10') && markup.includes('迟缓 +1层'));
-  assert(markup.includes('1 AP · 3 sp'));
+  assert(markup.includes(`${entry.combat.skills[0].ap} AP · ${entry.combat.skills[0].mp} sp`));
   assert(markup.includes(sheet.skills[0].description));
-  assert.equal((markup.match(/<details /g) || []).length, 3);
+  assert.equal((markup.match(/<details /g) || []).length, 4);
+  assert.match(markup, /换入前场时自动触发/);
   assert.equal(JSON.stringify(entry), before);
   assert(!('data' in settingOnly(entry)));
 });

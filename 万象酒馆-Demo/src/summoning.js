@@ -3,6 +3,7 @@ import { officialCharacter } from './ai/library.js';
 import { BASE_WORLDS } from './worlds.js';
 import { REGIONS } from './content/regions.js';
 import { OFFICIAL_VISITORS } from './content/official-visitors.js';
+import { TOWN_GUESTS } from './content/town-guests.js';
 
 /** Canon NPCs join only after their six-site story; custom and endless encounters stay free. */
 export function npcSummonStatus(library, npc) {
@@ -31,6 +32,7 @@ export function knownNpcSummonPool(library) {
   return (library.archives?.npcs || []).filter(
     (npc) =>
       npc.name !== '潘多拉' &&
+      !Object.values(TOWN_GUESTS).some((guest) => guest.setting.name === npc.name.trim()) &&
       !library.characters.some((member) => member.setting.name === npc.name) &&
       npcSummonStatus(library, npc).allowed,
   );
@@ -41,6 +43,7 @@ export function officialSummonPool(library, book) {
   const owned = new Set(library.characters.map((entry) => entry.id));
   return [...HEROES.map((hero) => hero.id), 'edith', ...Object.keys(OFFICIAL_VISITORS)].flatMap(
     (id) => {
+      if (Object.hasOwn(TOWN_GUESTS, id)) return [];
       const entry = officialCharacter(id);
       if (owned.has(entry.id)) return [];
       const lore = Object.values(book?.entries || {}).find(

@@ -194,6 +194,7 @@
       <nav class="ai-tabs" role="tablist" aria-label="生成工坊">
         <button data-ai-tab="settings" role="tab">接口设置</button
         ><button data-ai-tab="game" role="tab">开发者模式</button
+        ><button data-ai-tab="anti-route" role="tab">Anti-Route 防护</button
         ><button data-ai-tab="prompts" role="tab">提示词预设</button
         ><button id="ai-worldbooks" role="tab">世界书</button
         ><button id="ai-regex" role="tab">正则</button>
@@ -203,14 +204,13 @@
           <div data-ai-page="settings">
             <p class="ai-hint">
               兼容 Chat
-              Completions，各用途独立配置。可选择本机转发或浏览器直连，总结与造物使用内置提示词。
+              Completions。酒馆交流与快速闲聊共用连接，提示词可分别选择。可使用本机转发或浏览器直连。
             </p>
             <label class="connection-purpose"
               >用途<select id="ai-kind">
                 <option value="character">角色生成 API</option>
                 <option value="script">剧本 API</option>
-                <option value="chat">酒馆交流 API</option>
-                <option value="quick-chat">快速闲聊 API</option>
+                <option value="chat">聊天 API（酒馆交流与快速闲聊）</option>
                 <option value="summary">记忆总结 API（内置提示词）</option>
                 <option value="map">地图 API</option>
                 <option value="creation">以太造物 API</option>
@@ -325,7 +325,7 @@
                 Schema偏好（标签生成时不发送）</label
               >
               <p class="ai-hint">
-                角色与剧本采用 wanxiang_json
+                角色与剧本采用 wanxiang_output
                 标签读取，兼容预设的其他返回文字。上游JSON模式与外层标签冲突，因此生成时不发送
                 response_format；本地始终严格校验字段、数值与规则。
               </p>
@@ -380,6 +380,7 @@
               ><button id="ai-models">读取模型列表</button>
             </div>
           </div>
+          <div data-ai-page="anti-route" hidden></div>
           <div data-ai-page="game" hidden>
             <div class="generation-options">
               <small>DEVELOPER / OPTIONS</small>
@@ -398,18 +399,6 @@
                   role="switch"
               /></label>
               <div id="developer-options" hidden>
-                <label
-                  ><span
-                    ><strong>酒馆立绘实验</strong
-                    ><small
-                      >让已招募的月汐、伊蒂丝和潘多拉站在酒馆中，可点击交流和刷新位置。</small
-                    ></span
-                  ><input
-                    autocomplete="off"
-                    type="checkbox"
-                    data-generation-option="tavernVisitors"
-                    role="switch"
-                /></label>
                 <label
                   ><span
                     ><strong>跳过AI生成</strong
@@ -824,7 +813,7 @@
     </dialog>
     <dialog id="portrait-dialog" aria-labelledby="portrait-url-title">
       <header>
-        <h2 id="portrait-url-title">从图床导入立绘</h2>
+        <h2 id="portrait-url-title">自定义卡面与立绘</h2>
         <button id="portrait-url-close" aria-label="关闭立绘导入">×</button>
       </header>
       <div class="portrait-url-body">
@@ -918,8 +907,7 @@
               maxlength="10000"
               placeholder="和同行者说句话…"
               aria-label="战斗闲聊"
-            /><button id="quick-chat-send" type="submit">闲聊</button
-            ><button id="script-rewrite" type="button">修改剧本</button>
+            /><button id="quick-chat-send" type="submit">闲聊</button>
           </form>
           <small id="quick-chat-status" role="status"></small>
         </div>

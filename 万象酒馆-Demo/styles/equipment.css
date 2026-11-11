@@ -1,11 +1,16 @@
 #ether-forge {
   width: min(920px, calc(100vw - 48px));
   height: min(600px, calc(100dvh - 48px));
-  color: #e7dcc0;
-  border: 1px solid #baa26988;
-  padding: 24px;
-  border-radius: 14px;
-  background: radial-gradient(ellipse at 70% 55%, #304d4944, transparent 65%), #10231f;
+  color: #f3ede2;
+  border: 1px solid rgba(226, 186, 111, 0.45);
+  padding: 26px;
+  border-radius: 16px;
+  background: radial-gradient(ellipse at 70% 30%, rgba(38, 72, 65, 0.75), transparent 75%), #0c1a18;
+  box-shadow:
+    0 28px 90px rgba(0, 0, 0, 0.85),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   overflow: hidden;
 }
 #ether-forge[open] {
@@ -14,8 +19,8 @@
   gap: 16px;
 }
 #ether-forge::backdrop {
-  background: #06110ecc;
-  backdrop-filter: blur(5px);
+  background: rgba(4, 9, 11, 0.8);
+  backdrop-filter: blur(8px);
 }
 #ether-forge header,
 .forge-toolbar {
@@ -1064,5 +1069,71 @@
   #equipment-picker h2 {
     font-size: 18px;
     margin: 4px 0 10px;
+  }
+}
+.forge-item-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin: 12px 0;
+}
+.forge-item-actions [aria-pressed='true'] {
+  color: #f8d986;
+  border-color: #c6a35a;
+}
+
+#forge-results {
+  width: min(1000px, calc(100vw - 28px));
+  max-height: calc(100dvh - 28px);
+  padding: 22px;
+  overflow: auto;
+  background: #142426f5;
+  border: 1px solid #bda57288;
+  border-radius: 12px;
+}
+#forge-results::backdrop {
+  background: #050b0dcc;
+}
+#forge-results header,
+#forge-results footer,
+.forge-result-grid nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+#forge-results h2 {
+  margin: 4px 0;
+}
+.forge-result-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
+  gap: 16px;
+  margin: 18px 0;
+}
+.forge-result-grid article {
+  padding: 18px;
+  background: #091b1c99;
+  border: 1px solid #d4be8744;
+  border-radius: 8px;
+}
+.forge-result-grid p {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.8;
+}
+.forge-result-grid nav {
+  flex-wrap: wrap;
+  justify-content: flex-start;
+}
+.forge-result-grid button {
+  padding: 7px 10px;
+}
+@media (max-height: 450px) {
+  #forge-results {
+    padding: 12px;
+  }
+  .forge-result-grid {
+    margin: 10px 0;
   }
 }

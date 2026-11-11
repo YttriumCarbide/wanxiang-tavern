@@ -1,14 +1,17 @@
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { createSceneLoading } from '../shared/scene-loading.js';
 import { createEventScope } from '../shared/events.js';
 import { createResourceScope } from '../shared/resources.js';
 import { synchronizeSummonCrystals } from './animation.js';
 import { deviceRenderQuality, createFrameBudget } from '../shared/render-budget.js';
 import { createRingDisplay } from './ring-display.js';
-import { createTavernVisitors } from './visitors.js';
-import { TAVERN_VISITORS } from '../content/tavern-visitors.js';
+import { createSceneVisitors } from './visitor-scene.js';
+import { expandedHallPosition, TAVERN_HALL, TAVERN_STAIRS } from '../content/tavern-layout.js';
+import { attachTavernSupplies, TAVERN_MODEL_FILES } from './hall-model.js';
+import { explorationHref } from '../exploration/scenes.js';
 
 export async function createTavernView() {
+  const loading = createSceneLoading(document.getElementById('status'), '正在打开酒馆');
   const quality = deviceRenderQuality();
   const frameBudget = createFrameBudget(quality.fps);
   let renderedFrames = 0;
@@ -65,13 +68,6 @@ export async function createTavernView() {
       focus: [1.14, 1.36, -4.5],
       anchor: [1.14, 1.25, -4.25],
     },
-    corridorDoor: {
-      name: '走廊门 · 客房与主卧',
-      button: '走向走廊门',
-      p: [0, 1.42, 3.3],
-      focus: [0, 1.3, 4.7],
-      anchor: [0, 1.3, 4.5],
-    },
     fate: {
       name: '命运桌 · 纹章戒指',
       button: '坐到命运桌',
@@ -102,6 +98,34 @@ export async function createTavernView() {
       anchor: [5.2, 2.65, -2.7],
     },
   };
+  for (const place of Object.values(places)) {
+    for (const key of ['p', 'focus', 'anchor']) place[key] = expandedHallPosition(place[key]);
+  }
+  for (const [index, key] of ['table', 'table2'].entries()) {
+    const {
+      at: [x, z],
+      radius,
+    } = TAVERN_HALL.tables[index];
+    const seat = z + radius + 0.32;
+    places[key].p = [x, 1.18, seat];
+    places[key].anchor = [x, 0.95, seat];
+  }
+  places.table2.focus = [TAVERN_HALL.tables[1].at[0], 1.05, 0.3];
+  for (const key of ['p', 'focus', 'anchor']) places.fate[key][0] -= 0.8;
+  places.stairs = {
+    name: '室内楼梯 · 二楼客房',
+    button: '走向楼梯',
+    p: TAVERN_STAIRS.approach,
+    focus: TAVERN_STAIRS.focus,
+    anchor: TAVERN_STAIRS.anchor,
+  };
+  places.streetDoor = {
+    name: '外出门 · 星灯街',
+    button: '走向外出门',
+    p: [TAVERN_HALL.entrance[0], 1.52, 3.1],
+    focus: [TAVERN_HALL.entrance[0], 1.35, TAVERN_HALL.entrance[1]],
+    anchor: [TAVERN_HALL.entrance[0], 1.3, 4.4],
+  };
   let current = 'table',
     yaw = -0.13,
     pitch = 0.01,
@@ -123,6 +147,7 @@ export async function createTavernView() {
     if (el) el.textContent = text;
   }
   function cancelTravel() {
+    if (travel?.stairway) return;
     if (travel) {
       travel = null;
       current = '';
@@ -155,7 +180,7 @@ export async function createTavernView() {
     spotStates[id] = { visible: false, occluded: false, candidate: false };
   }
   function moveTo(id) {
-    if (!loaded || !places[id]) return;
+    if (!loaded || !places[id] || leaving || travel?.stairway) return;
     const end = new THREE.Vector3(...places[id].p),
       targetCamera = camera.clone();
     targetCamera.position.copy(end);
@@ -178,16 +203,45 @@ export async function createTavernView() {
     camera.lookAt(new THREE.Vector3(...places[id].focus));
     syncAngles();
     updateWhere(places[id].name);
+    // Return navigation sets the camera before the scene and its controls are initialized.
+    if (loaded) updateSpots(true);
   }
   function enterCorridor() {
-    if (!loaded || leaving) return;
+    if (!loaded || leaving || travel || current !== 'stairs') return;
+    walkStairs(false);
+  }
+  function walkStairs(descending) {
+    const points = descending
+      ? [...TAVERN_STAIRS.route].reverse().concat([TAVERN_STAIRS.approach])
+      : TAVERN_STAIRS.route;
+    const route = [camera.position.clone(), ...points.map((point) => new THREE.Vector3(...point))];
+    travel = {
+      stairway: true,
+      descending,
+      curve: new THREE.CatmullRomCurve3(route, false, 'centripetal'),
+      position: new THREE.Vector3(),
+      lookAt: new THREE.Vector3(),
+      landingDoor: new THREE.Vector3(...TAVERN_STAIRS.landingDoor),
+      targetCamera: camera.clone(),
+      elapsed: 0,
+      duration: descending ? 2.4 : 2.6,
+    };
+    updateWhere(descending ? '沿楼梯返回酒馆…' : '正在上楼 · 前往二楼走廊…');
+  }
+  const query = new URLSearchParams(location.search);
+  let dailyManaged = false;
+  function enterStreet() {
+    if (!loaded || leaving || current !== 'streetDoor' || travel) return;
+    if (dailyManaged && parent !== window) {
+      parent.postMessage({ type: 'daily-outing-door' }, location.origin);
+      return;
+    }
     leaving = true;
     document.body.classList.add('leaving');
     setTimeout(() => {
-      location.href = './corridor.html';
+      location.href = explorationHref('street', query.get('time'));
     }, 380);
   }
-  const query = new URLSearchParams(location.search);
   if (query.get('arrival') === '1') {
     camera.position.set(-4.35, 1.6, 1.24);
     camera.lookAt(2.5, 1.45, 1.24);
@@ -196,16 +250,21 @@ export async function createTavernView() {
     updateWhere('召唤之门前 · 初到酒馆');
   } else if (query.get('return') === 'gate') {
     camera.position.set(1.14, 1.6, -3.7);
-    camera.lookAt(4.12, 1.25, -0.28);
+    camera.lookAt(...expandedHallPosition([4.12, 1.25, -0.28]));
     syncAngles();
     current = '';
     updateWhere('副本之门前 · 回到酒馆');
   } else if (query.get('return') === 'corridor') {
-    camera.position.set(0, 1.46, 3.34);
-    camera.lookAt(0.2, 1.2, -1.2);
+    camera.position.fromArray(TAVERN_STAIRS.route.at(-1));
+    camera.lookAt(7.92, 3.7, 2.8);
     syncAngles();
-    current = 'corridorDoor';
-    updateWhere('走廊门前 · 回到酒馆');
+    current = 'stairs';
+    walkStairs(true);
+    updateWhere('二楼平台 · 回到酒馆');
+  } else if (query.get('return') === 'street') {
+    placeNow('streetDoor');
+    camera.lookAt(1.4, 1.4, -2);
+    syncAngles();
   }
   const pulseMaterials = [],
     animatedLights = [],
@@ -256,23 +315,21 @@ export async function createTavernView() {
   let disposed = false;
   const resources = createResourceScope();
   const events = createEventScope();
+  events.on(
+    document,
+    'click',
+    () => {
+      if (parent !== window) parent.postMessage({ type: 'daily-scene-click' }, location.origin);
+    },
+    { capture: true },
+  );
   const shelfButtons = [];
   let ringDisplay = null;
   let visitors = null;
-  let visitorConfig = null;
-  events.on(window, 'message', (event) => {
-    if (
-      event.origin !== location.origin ||
-      event.source !== parent ||
-      event.data?.type !== 'tavern-visitors'
-    )
-      return;
-    visitorConfig = event.data;
-    visitors?.configure(visitorConfig);
-  });
   function dispose() {
     if (disposed) return;
     disposed = true;
+    loading.dispose();
     renderer.setAnimationLoop(null);
     ringDisplay?.dispose();
     visitors?.dispose();
@@ -288,25 +345,15 @@ export async function createTavernView() {
   }
   events.on(window, 'pagehide', dispose, { once: true });
   try {
-    const loader = new GLTFLoader();
-    const [gltf, machines] = await Promise.all([
-      loader.loadAsync('./assets/inn.glb'),
-      loader.loadAsync('./assets/tavern-machines.glb'),
-    ]);
+    await loading.prepare(TAVERN_MODEL_FILES);
+    const [gltf, machines] = await Promise.all(
+      TAVERN_MODEL_FILES.map((file) => loading.gltf(file)),
+    );
     model = gltf.scene;
     resources.object(model);
     resources.object(machines.scene);
     if (disposed) return { dispose };
-    // Older exported rooms still contain the removable barrel/crate group in this corner.
-    const oldCorner = [];
-    model.traverse((object) => {
-      if (object.name.startsWith('12_Corner_Barrels_and_Crates')) oldCorner.push(object);
-    });
-    for (const object of oldCorner) object.removeFromParent();
-    machines.scene.name = 'Tavern_Supply_Corner';
-    machines.scene.position.set(-3.75, 0, 4.45);
-    machines.scene.rotation.y = Math.PI;
-    model.add(machines.scene);
+    attachTavernSupplies(model, machines.scene);
     const dungeonShader = gateMaterial(0, [0.48, 0.24], [1.32, 2.12]),
       summonShader = gateMaterial(1, [-1.84, 0.2], [1.2, 2.2]);
     model.traverse((o) => {
@@ -356,19 +403,23 @@ export async function createTavernView() {
       }
     });
     scene.add(model);
-    visitors = createTavernVisitors(scene, camera, model);
-    if (query.get('visitors') === '1')
-      visitorConfig = {
-        enabled: true,
-        characters: TAVERN_VISITORS.map(({ id }) => ({ key: id, id })),
-      };
-    if (visitorConfig) visitors.configure(visitorConfig);
+    visitors = await createSceneVisitors({
+      scene,
+      camera,
+      model,
+      sceneId: 'tavern',
+      events,
+      assets: loading.assets,
+    });
     ringDisplay = createRingDisplay(renderer, scene, camera);
     mixer = new THREE.AnimationMixer(model);
     gltf.animations.forEach((a) => mixer.clipAction(synchronizeSummonCrystals(a)).play());
     addSparks(1.14, 0.24, -4.5, 1.32, 2.12, '#bb91ea', 0);
     addSparks(-5.44, 0.2, 1.24, 1.2, 2.2, '#7bdace', 1);
-    document.getElementById('status').remove();
+    visitors.update();
+    await loading.finish(renderer, scene, camera);
+    if (disposed) return { dispose };
+    parent.postMessage({ type: 'scene-ready', scene: 'tavern' }, location.origin);
     loaded = true;
     window.modelReady = true;
     window.assetPreview = {
@@ -381,6 +432,7 @@ export async function createTavernView() {
       placeNow,
       look,
       enterCorridor,
+      enterStreet,
       fieldMaterials,
       rings: () => ringDisplay.status(),
       visitors: () => visitors.status(),
@@ -400,13 +452,14 @@ export async function createTavernView() {
       }),
     };
   } catch (e) {
-    if (!disposed) document.getElementById('status').textContent = '模型载入失败：' + e.message;
+    if (disposed || e.name === 'AbortError') return { dispose };
+    if (!disposed) loading.fail(e);
     dispose();
-    throw e;
+    return { dispose };
   }
   let drag = null;
   events.on(canvas, 'pointerdown', (e) => {
-    if (ringDisplay?.status().active) return;
+    if (ringDisplay?.status().active || travel?.stairway || leaving) return;
     cancelTravel();
     drag = {
       x: e.clientX,
@@ -450,6 +503,7 @@ export async function createTavernView() {
     { passive: false },
   );
   events.on(window, 'keydown', (e) => {
+    if (travel?.stairway || leaving) return;
     if (ringDisplay?.status().active) return;
     if (e.key === 'Escape') {
       moveTo('table');
@@ -522,6 +576,15 @@ export async function createTavernView() {
     if (!talk.hidden && !travel)
       parent.postMessage({ type: 'tavern-talk', place: current }, location.origin);
   };
+  const dine = document.createElement('button');
+  dine.className = 'talk-open dining-open';
+  dine.textContent = '用餐';
+  dine.hidden = true;
+  talk.after(dine);
+  events.on(dine, 'click', () => {
+    if (!dine.hidden && !travel)
+      parent.postMessage({ type: 'tavern-dining', place: current }, location.origin);
+  });
   const enter = document.getElementById('enter');
   enter.onclick = () => {
     if (!enter.hidden && !enter.disabled)
@@ -536,11 +599,17 @@ export async function createTavernView() {
   corridorDoor.onclick = () => {
     if (!corridorDoor.hidden && !corridorDoor.disabled) enterCorridor();
   };
+  const streetDoor = document.getElementById('street-open');
+  streetDoor.onclick = () => {
+    if (!streetDoor.hidden && !streetDoor.disabled) enterStreet();
+  };
   let summonSurge = 0;
   let summonMode = null;
   let choosingSummon = false;
   const summonTint = new THREE.Color('#69cfad');
   events.on(window, 'message', (e) => {
+    if (e.origin === location.origin && e.source === parent && e.data?.type === 'daily-managed')
+      dailyManaged = e.data.enabled === true;
     if (e.origin === location.origin && e.source === parent && e.data?.type === 'gal-visibility')
       document.body.classList.toggle('gal-covered', e.data.visible === true);
     if (e.origin === location.origin && e.source === parent && e.data?.type === 'summon-mode') {
@@ -577,7 +646,7 @@ export async function createTavernView() {
     for (const shelf of shelfButtons) {
       shelf.button.hidden = !loaded || !!travel || current !== 'bookshelf';
       if (!shelf.button.hidden) {
-        projected.set(5.48, shelf.height, -3.08).project(camera);
+        projected.fromArray(expandedHallPosition([5.48, shelf.height, -3.08])).project(camera);
         shelf.button.hidden =
           projected.z < -1 ||
           projected.z > 1 ||
@@ -591,6 +660,7 @@ export async function createTavernView() {
     for (const button of Object.values(supplyButtons))
       button.hidden = !loaded || !!travel || current !== 'supplies';
     talk.hidden = !loaded || !!travel || !['bar', 'bar2', 'table', 'table2'].includes(current);
+    dine.hidden = talk.hidden;
     camera.getWorldDirection(direction);
     function updatePortal(button, id) {
       projected.fromArray(places[id].anchor);
@@ -620,7 +690,8 @@ export async function createTavernView() {
       summon.tabIndex = -1;
       summon.setAttribute('aria-hidden', 'true');
     }
-    updatePortal(corridorDoor, 'corridorDoor');
+    updatePortal(corridorDoor, 'stairs');
+    updatePortal(streetDoor, 'streetDoor');
     if (summonVisible !== !summon.hidden) {
       summonVisible = !summon.hidden;
       parent.postMessage(
@@ -669,7 +740,7 @@ export async function createTavernView() {
         'px,0) translate(-50%,-50%)';
     }
     const placed = [];
-    const buttons = [enter, summon, corridorDoor, ...Object.values(spotElements)];
+    const buttons = [enter, summon, corridorDoor, streetDoor, ...Object.values(spotElements)];
     for (const button of buttons) {
       button.style.translate = '';
       if (button.hidden || button.disabled) continue;
@@ -718,7 +789,8 @@ export async function createTavernView() {
       return;
     }
     if (!frameBudget.accepts(now)) return;
-    const dt = Math.min(clock.getDelta(), 0.05);
+    const frameDelta = Math.min(clock.getDelta(), 0.15);
+    const dt = Math.min(frameDelta, 0.05);
     if (ringDisplay?.render(dt)) {
       renderedFrames++;
       return;
@@ -740,7 +812,39 @@ export async function createTavernView() {
           dt,
         );
       }
-    if (travel) {
+    if (travel?.stairway) {
+      travel.elapsed += frameDelta;
+      const progress = Math.min(1, travel.elapsed / travel.duration);
+      const eased = progress * progress * (3 - 2 * progress);
+      travel.curve.getPointAt(eased, travel.position);
+      camera.position.copy(travel.position);
+      camera.position.y = THREE.MathUtils.clamp(camera.position.y, 1.52, 4.44);
+      camera.position.y += Math.sin(progress * Math.PI * 8) * Math.sin(progress * Math.PI) * 0.008;
+      travel.lookAt.set(
+        7.92,
+        camera.position.y + (travel.descending ? -0.32 : 0.15),
+        camera.position.z + (travel.descending ? -3 : 3),
+      );
+      if (!travel.descending)
+        travel.lookAt.lerp(travel.landingDoor, THREE.MathUtils.smoothstep(progress, 0.72, 1));
+      travel.targetCamera.position.copy(camera.position);
+      travel.targetCamera.lookAt(travel.lookAt);
+      camera.quaternion.slerp(travel.targetCamera.quaternion, 1 - Math.exp(-frameDelta * 8));
+      if (progress === 1) {
+        const descending = travel.descending;
+        travel = null;
+        current = 'stairs';
+        syncAngles();
+        updateWhere(places.stairs.name);
+        if (!descending) {
+          leaving = true;
+          document.body.classList.add('leaving');
+          setTimeout(() => {
+            if (!disposed) location.href = './corridor.html';
+          }, 380);
+        }
+      }
+    } else if (travel) {
       travel.elapsed += dt;
       const a = Math.min(1, travel.elapsed / travel.duration),
         e = a * a * a * (a * (a * 6 - 15) + 10);

@@ -1,4 +1,31 @@
+import { TOWN_SIDE_PLACES } from './content/town-side-places.js';
+
 const HALL_PLACES = Object.freeze({
+  market: {
+    name: '星钟商业街',
+    environment: '星钟城商业街，灯匠铺与医师的诊棚沿路分布。',
+    actions: ['在铺前交谈', '留意街上的动静'],
+  },
+  rampart: {
+    name: '城墙守备区',
+    environment: '星钟城城墙与守备区，城门连接城外大道。',
+    actions: ['在城墙下交谈', '看看城门方向'],
+  },
+  outskirts: {
+    name: '城外旧哨塔',
+    environment: '星钟城外的草地与大道，远处有一座旧哨塔。',
+    actions: ['在路旁交谈', '留意林边动静'],
+  },
+  street: {
+    name: '星灯街',
+    environment: '西幻城市酒馆门前的石板街角，夕阳映着铺面与石拱，街道通向市中心。',
+    actions: ['看看沿街橱窗', '听远处的钟声', '在路旁歇一会儿', '留意告示和来往行人'],
+  },
+  'city-square': {
+    name: '星钟广场',
+    environment: '市中心的石砌广场，喷泉、旅人公会和钟楼围着开阔的空地，偶有行人经过。',
+    actions: ['听喷泉水声', '看看钟楼', '在广场边等待同伴', '观察公会门前的告示'],
+  },
   bar: {
     name: '吧台',
     environment: '木质吧台上亮着暖灯，杯架映着微光，近旁有两张高脚凳。',
@@ -116,6 +143,12 @@ export function roomChatPlace(room, point = 'entry') {
 
 export const CHAT_PLACES = Object.freeze({
   ...HALL_PLACES,
+  ...Object.fromEntries(
+    Object.entries(TOWN_SIDE_PLACES).map(([id, { name, environment, actions }]) => [
+      id,
+      { name, environment, actions },
+    ]),
+  ),
   corridor: Object.freeze({
     name: '二层走廊',
     environment:

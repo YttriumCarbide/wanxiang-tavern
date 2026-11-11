@@ -3,11 +3,16 @@
   max-width: calc(100vw - 28px);
   height: min(840px, calc(100dvh - 28px));
   max-height: calc(100dvh - 28px);
-  padding: 22px;
-  color: #e8e2cc;
-  background: linear-gradient(135deg, #1e3430, #112322 70%);
-  border: 1px solid #ae9965;
-  border-radius: 12px;
+  padding: 26px 30px;
+  color: #f2ede3;
+  background: radial-gradient(ellipse at 50% 0%, rgba(36, 68, 60, 0.75), transparent 75%), #0c1a18;
+  border: 1px solid rgba(226, 186, 111, 0.45);
+  border-radius: 16px;
+  box-shadow:
+    0 28px 90px rgba(0, 0, 0, 0.85),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
 }
 #summoned-dialog[open] {
   display: flex;
@@ -15,7 +20,8 @@
   gap: 18px;
 }
 #summoned-dialog::backdrop {
-  background: #081515bd;
+  background: rgba(4, 9, 11, 0.8);
+  backdrop-filter: blur(8px);
 }
 #summoned-name {
   font-size: 19px;

@@ -1,0 +1,108 @@
+{
+  "id": "aresCannonLeft",
+  "name": "阿瑞斯·左浮游机炮",
+  "model": "ares-cannon-left.glb",
+  "portrait": "ares-cannon-left",
+  "blocks": [
+    {
+      "group": "FloatingHull",
+      "x": 0,
+      "y": 2.6,
+      "z": 0,
+      "w": 3.6,
+      "d": 2.8,
+      "h": 1.7,
+      "color": "#657f8b"
+    },
+    {
+      "group": "Thruster",
+      "x": -1.5,
+      "y": 2.8,
+      "z": 0,
+      "w": 0.7,
+      "d": 2.1,
+      "h": 1,
+      "color": "#293d48"
+    },
+    {
+      "group": "Stabilizers",
+      "x": -0.4,
+      "y": 3.2,
+      "z": -2.3,
+      "w": 2.7,
+      "d": 1.1,
+      "h": 0.4,
+      "color": "#a38156"
+    },
+    {
+      "group": "ThrusterGlow",
+      "x": -1.7,
+      "y": 2.5,
+      "z": -0.7,
+      "w": 0.3,
+      "d": 0.5,
+      "h": 0.8,
+      "color": "#9ee9f1"
+    },
+    {
+      "group": "Stabilizers",
+      "x": -0.4,
+      "y": 3.2,
+      "z": 2.3,
+      "w": 2.7,
+      "d": 1.1,
+      "h": 0.4,
+      "color": "#a38156"
+    },
+    {
+      "group": "ThrusterGlow",
+      "x": -1.7,
+      "y": 2.5,
+      "z": 0.7,
+      "w": 0.3,
+      "d": 0.5,
+      "h": 0.8,
+      "color": "#9ee9f1"
+    },
+    {
+      "group": "GunBarrel",
+      "x": 2,
+      "y": 3.1,
+      "z": -0.65,
+      "w": 3.2,
+      "d": 0.55,
+      "h": 0.55,
+      "color": "#293d48"
+    },
+    {
+      "group": "MuzzleRing",
+      "x": 3.5,
+      "y": 3.05,
+      "z": -0.65,
+      "w": 0.5,
+      "d": 0.8,
+      "h": 0.8,
+      "color": "#b8d4d8"
+    },
+    {
+      "group": "GunBarrel",
+      "x": 2,
+      "y": 3.1,
+      "z": 0.65,
+      "w": 3.2,
+      "d": 0.55,
+      "h": 0.55,
+      "color": "#293d48"
+    },
+    {
+      "group": "MuzzleRing",
+      "x": 3.5,
+      "y": 3.05,
+      "z": 0.65,
+      "w": 0.5,
+      "d": 0.8,
+      "h": 0.8,
+      "color": "#b8d4d8"
+    }
+  ]
+}

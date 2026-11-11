@@ -14,6 +14,53 @@
   z-index: 2000;
   isolation: isolate;
   --gal-gold: #d9c48e;
+  --ink: #e8e1cf;
+  --border: #82948a55;
+  --gold: #d8b984;
+  --teal: #82bdb3;
+  --muted: #bdcabf;
+  font:
+    13px 'Segoe UI',
+    'Microsoft YaHei',
+    sans-serif;
+}
+/* Use the original Gal defaults below the more specific workspace controls. */
+:where(#gal-stage) button {
+  padding: 8px 12px;
+  border-radius: 4px;
+  background: #20332c7a;
+}
+:where(#gal-stage) button:hover {
+  background: #3b594a99;
+}
+:where(#gal-stage) button:disabled {
+  opacity: 0.45;
+}
+:where(#gal-stage) button.primary {
+  border-color: #e1c994;
+  color: #172221;
+  background: #c4aa73;
+  text-shadow: none;
+}
+:where(#gal-stage) button.primary:hover {
+  background: #e0c38a;
+}
+:where(#gal-stage) select {
+  padding: revert;
+  color: revert;
+  background: revert;
+  border: revert;
+  border-radius: revert;
+}
+/* Keep the original light Gal controls independent of shared button decoration. */
+.gal-stage button {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+  transform: none;
+  transition:
+    background 180ms ease,
+    border-color 180ms ease;
 }
 body.gal-playing > .app-header,
 body.gal-playing > #inn-resources,
@@ -29,7 +76,8 @@ body.gal-playing #battle > :not(#stage),
 body.gal-playing #battle :is(.unit-layer, #intent-layer) {
   visibility: hidden;
 }
-body.gal-playing dialog:not(:has(> #gal-stage:not([hidden]))) {
+body.gal-playing
+  dialog:not(.raw-response):not(#generation-diagnostics):not(:has(> #gal-stage:not([hidden]))) {
   visibility: hidden;
 }
 body.gal-playing dialog::backdrop {
@@ -94,6 +142,12 @@ dialog:has(> #gal-stage:not([hidden])) > :not(.gal-stage) {
   left: 28%;
   translate: -50% 0;
 }
+.gal-cast img[data-full='true'] {
+  width: min(42vw, 84dvh);
+  height: 84dvh;
+  object-fit: cover;
+  object-position: center top;
+}
 .gal-cast img[data-position='right'] {
   left: 72%;
   translate: -50% 0;
@@ -114,6 +168,15 @@ dialog:has(> #gal-stage:not([hidden])) > :not(.gal-stage) {
   align-items: center;
   gap: 8px;
   z-index: 3;
+}
+.gal-controls #generation-review {
+  padding: 6px 12px;
+  border: 1px solid #d0bb8040;
+  border-radius: 18px;
+  background: #18242266;
+  color: #e2d4b7;
+  font-size: 12px;
+  white-space: nowrap;
 }
 .gal-controls button,
 .gal-history button {
@@ -246,13 +309,14 @@ dialog:has(> #gal-stage:not([hidden])) > :not(.gal-stage) {
 .gal-history {
   position: absolute;
   inset: 70px 12% 30px;
-  z-index: 5;
-  padding: 25px;
-  background: #0b1c27f5;
+  z-index: 10;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  background: #0c1b24fa;
   border: 1px solid #d9c48e55;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  touch-action: pan-x pan-y;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 18px 60px #050b11ab;
 }
 .gal-history[hidden] {
   display: none;
@@ -261,18 +325,43 @@ dialog:has(> #gal-stage:not([hidden])) > :not(.gal-stage) {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  gap: 12px;
+  padding: 12px 20px;
+  border-bottom: 1px solid #d9c48e42;
 }
-.gal-history p {
-  display: grid;
-  gap: 8px;
-  padding: 16px 0;
-  border-bottom: 1px solid #ffffff15;
-  white-space: pre-wrap;
-  line-height: 1.8;
-}
-.gal-history strong {
+.gal-history h2 {
+  margin: 0;
   color: var(--gal-gold);
+  font-size: 18px;
+}
+.gal-dialogue-list {
+  margin: 0;
+  padding: 4px 20px 16px;
+  list-style: none;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+}
+.gal-dialogue-list li {
+  display: grid;
+  grid-template-columns: clamp(72px, 14vw, 130px) minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+  padding: 11px 0;
+  border-bottom: 1px solid #ffffff15;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+.gal-dialogue-list strong {
+  color: var(--gal-gold);
+}
+.gal-dialogue-list p {
+  margin: 0;
+  white-space: pre-wrap;
+}
+.gal-dialogue-empty {
+  margin: 16px 20px;
+  color: #cbd7d6;
 }
 @keyframes gal-arrive {
   from {
@@ -338,7 +427,10 @@ dialog:has(> #gal-stage:not([hidden])) > :not(.gal-stage) {
   }
   .gal-history {
     inset: 45px 6% 15px;
-    padding: 15px;
+  }
+  .gal-history header,
+  .gal-dialogue-list {
+    padding-inline: 12px;
   }
 }
 @media (prefers-reduced-motion: reduce) {

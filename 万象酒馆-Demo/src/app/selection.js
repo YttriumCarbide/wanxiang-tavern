@@ -98,6 +98,8 @@ export function createSelection(context) {
       name: d.name,
       at: event.at,
       move: move.name,
+      selfHeal: Math.max(0, event.after.units[id].hp - before.units[id].hp),
+      selfMana: Math.max(0, event.after.units[id].mp - before.units[id].mp),
       selfBuffs: [
         ...[
           ...new Set([

@@ -155,10 +155,15 @@ function converted(value, streaming, state) {
     (reason && !['STOP', 'MAX_TOKENS', 'CONTINUATION'].includes(reason) ? reason : null);
   const message = {
     content: text,
+    reasoning_content: parts
+      .filter((part) => part.thought)
+      .map((part) => part.text || '')
+      .join(''),
     ...(calls.length ? { tool_calls: calls } : {}),
     ...(blocked ? { refusal: `Vertex 返回受阻：${blocked}` } : {}),
   };
   return {
+    ...(value.modelVersion ? { modelVersion: value.modelVersion } : {}),
     choices: [
       {
         [streaming ? 'delta' : 'message']: message,
@@ -174,6 +179,13 @@ function converted(value, streaming, state) {
           usage: {
             prompt_tokens: value.usageMetadata.promptTokenCount || 0,
             completion_tokens: value.usageMetadata.candidatesTokenCount || 0,
+            ...(typeof value.usageMetadata.thoughtsTokenCount === 'number'
+              ? {
+                  completion_tokens_details: {
+                    reasoning_tokens: value.usageMetadata.thoughtsTokenCount,
+                  },
+                }
+              : {}),
           },
         }
       : {}),

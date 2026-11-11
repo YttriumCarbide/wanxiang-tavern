@@ -1,0 +1,78 @@
+{
+  "generator": "image_gen built-in",
+  "purpose": "One continuous native street painting shared by three overlapping framing positions, with original separate studies retained.",
+  "assets": [
+    {
+      "id": "street",
+      "file": "assets/exploration/street-illustrated/street.png",
+      "source": "C:/Users/Lenovo/.codex/generated_images/01a178f0-bd77-7b10-9f98-ca688a68afab/exec-d1d8ded9-2287-4955-9fe4-a4cb05b5b03d.png",
+      "prompt": "Use case: stylized-concept. Asset type: a complete WIDESCREEN 16:9 painted background for a Japanese fantasy adventure game. The reference supplies ONLY the established rendering style and architecture identity: elegant fine brown ink contours, hand-painted anime background, softly cel-shaded warm cream limestone, weathered timber, terracotta roofs, subdued olive ivy, restrained golden late-afternoon light and cooler violet shadows. Keep palette balanced, not an orange/yellow wash. A believable modest western fantasy city street at human eye height1.65m. This is ONE normal fixed-camera perspective painting, NOT a panorama, architectural elevation, fisheye or collage. Strong cohesive composition, consistent single ground plane and human-scale doors about2.3m tall. Depth from overlap, diagonal road direction and foreground/midground/distance, not from clutter. No people, characters, UI, readable text, border, watermark or giant magic effects. Open road at the lower center for two separate character sprites; keep their feet well clear of building bases. Native wide PNG at maximum native resolution, no upscaling. Scene1: look along a charming curved lane beside the tavern. Right midground: a modest apothecary with muted green awning, warm amber/blue bottle window, a simple door and small freestanding wooden noticeboard nearby. Left foreground: only the edge of a dark timber eave and a limestone house frame the view, with one low flower trough near the bottom-left corner. The paved road enters from the broad bottom-center foreground and gently bends toward a small ivy-covered stone arch at left-of-center middle distance; beyond that arch only the SAME level narrow lane continues between modest houses. There is NO large barrier wall facing the player, no fortress courtyard, no elevated city, hill, valley, cliff or city floating above the arch. Varied building setbacks with a short side recess. Sky occupies roughly upper25%, eye-level horizon around45%image height, spacious readable cobbled foreground lower35%. Paint a lived-in restful place with a clear route and beautiful light; no rows of identical front elevations.",
+      "width": 1672,
+      "height": 941,
+      "sha256": "baf4135ecf65d43b29f67c9be521688019053578efe0f77cdb491bed2e0bf8d8"
+    },
+    {
+      "id": "entrance",
+      "file": "assets/exploration/street-illustrated/entrance.png",
+      "source": "C:/Users/Lenovo/.codex/generated_images/01a178f0-bd77-7b10-9f98-ca688a68afab/exec-9966e530-ca5e-4b3b-8fab-a0aaa19bc669.png",
+      "prompt": "Use case: stylized-concept. Asset type: a complete WIDESCREEN 16:9 painted background for a Japanese fantasy adventure game. The reference supplies ONLY the established rendering style and architecture identity: elegant fine brown ink contours, hand-painted anime background, softly cel-shaded warm cream limestone, weathered timber, terracotta roofs, subdued olive ivy, restrained golden late-afternoon light and cooler violet shadows. Keep palette balanced, not an orange/yellow wash. A believable modest western fantasy city street at human eye height1.65m. This is ONE normal fixed-camera perspective painting, NOT a panorama, architectural elevation, fisheye or collage. Strong cohesive composition, consistent single ground plane and human-scale doors about2.3m tall. Depth from overlap, diagonal road direction and foreground/midground/distance, not from clutter. No people, characters, UI, readable text, border, watermark or giant magic effects. Open road at the lower center for two separate character sprites; keep their feet well clear of building bases. Native wide PNG at maximum native resolution, no upscaling. Scene2: turn toward the entrance of the same modest tavern. An intimate welcoming diagonal composition, NOT a centered symmetrical front elevation. The timber-and-cream-stone facade recedes gently to the right. A normal sized closed wooden door is at40%image width with ONE eight-point brass star emblem; warm two-pane window to its right, restrained ivy, wooden hanging lantern over the entry, a shallow stone doorstep. The covered eave frames the upper edge. On far right the same curved public street peeks past the building corner. A small barrel planter with olive foliage occupies the bottom-left corner ONLY, as a useful foreground occluder, not the middle. Broad clear flat paving in front of the door, lower30-40%picture, enough room for two full-standing sprites at bottom-center and right. Eye-level, door threshold around62%image height. Soft late afternoon from the left, no whole-city panorama, grand palace, massive stairs or extra ornate doors.",
+      "width": 1672,
+      "height": 941,
+      "sha256": "d8bfe483333315122f08a63021e1e3bafe78897af8c8bedc91b02481aeab6fa6"
+    },
+    {
+      "id": "courtyard",
+      "file": "assets/exploration/street-illustrated/courtyard.png",
+      "source": "C:/Users/Lenovo/.codex/generated_images/01a178f0-bd77-7b10-9f98-ca688a68afab/exec-636146d8-0c95-41c2-aa1e-087e3b670d88.png",
+      "prompt": "Use case: stylized-concept. Asset type: a complete WIDESCREEN 16:9 painted background for a Japanese fantasy adventure game. The reference supplies ONLY the established rendering style and architecture identity: elegant fine brown ink contours, hand-painted anime background, softly cel-shaded warm cream limestone, weathered timber, terracotta roofs, subdued olive ivy, restrained golden late-afternoon light and cooler violet shadows. Keep palette balanced, not an orange/yellow wash. A believable modest western fantasy city street at human eye height1.65m. This is ONE normal fixed-camera perspective painting, NOT a panorama, architectural elevation, fisheye or collage. Strong cohesive composition, consistent single ground plane and human-scale doors about2.3m tall. Depth from overlap, diagonal road direction and foreground/midground/distance, not from clutter. No people, characters, UI, readable text, border, watermark or giant magic effects. Open road at the lower center for two separate character sprites; keep their feet well clear of building bases. Native wide PNG at maximum native resolution, no upscaling. Scene3: look into a small everyday drinking courtyard recessed off that same lane. A human-scale old bronze spout in a simple arched limestone backplate pours into a low stone trough on the LEFT midground wall, beneath an ivy canopy. A modest timber house with green shutters sits beyond; to the RIGHT a narrow passage shows the street returning, partly hidden by the building corner. One simple wooden bench along the right wall, not a collection of furniture. The space is an asymmetrical trapezoid in perspective, NOT a square box or frontal stage set. A terracotta pot and leafy vine frame the lower-right corner, foreground separate from the trough. Open sun-dappled pale cobblestone paving at lower center/left for full-body characters; their standing feet around75-82%image height, clear of trough, walls, bench and steps. Soft cooler shade in the courtyard, warm sunlight over roofs, a quiet attractive place to talk. Eye-level horizon around45%height, no bird's-eye view, giant fountain, statue plaza, mountains, people or text.",
+      "width": 1672,
+      "height": 941,
+      "sha256": "6875bae5a97aad70712f0a874fa320eb892a490ca85c1f6acea28a588675292d"
+    },
+    {
+      "id": "connected-v1",
+      "file": "assets/exploration/street-illustrated/connected-v1.png",
+      "source": "C:/Users/Lenovo/.codex/generated_images/01a178f0-bd77-7b10-9f98-ca688a68afab/exec-d74f7d9b-a52f-4606-9291-fa24e954154f.png",
+      "prompt": "Use case: stylized-concept. Create ONE CONTINUOUS ULTRAWIDE 3:1 hand-painted western fantasy JRPG street illustration, native maximum-resolution PNG. This is a single connected location seen from ONE stationary human eye-level viewpoint. It will be viewed through overlapping windows that pan smoothly across this SAME painting, so all paving, walls, shadows and architectural edges MUST connect continuously. NOT three panels, NOT a triptych, no divides, no collage, no repeated streets, no 360 wrap, no fisheye. The three reference images provide only STYLE and LANDMARK IDENTITY; recombine their motifs into ONE coherent small street corner with one common eye height1.65m and common afternoon light. Left 0-30%: the same modest tavern timber-and-cream-stone facade at a slight angle, closed wooden door with ONE eight-point brass star, hanging warm lantern, low doorstep and one barrel planter at the far left. Middle30-70%: one open curving cobbled street, an ivy-covered small stone arch at around43%width in middle distance leading onward on the same level; beyond it only an ordinary modest lane. The near right side of this main street has ONE small apothecary with the same faded olive-green awning, amber/blue bottle window and one little wooden noticeboard; window centered around65%image width. Right70-100%: a SHALLOW RECESS directly adjoining the apothecary corner, recognizable as a small drinking courtyard, with a bronze spout in a simple arched limestone backplate and a low trough around88%image width, one simple bench at the far right. This recess must visibly open onto the very same near cobblestone space, not become a second independent street. KEEP ONE UNBROKEN foreground paving plane across the entire lower35-40% of the canvas, level and empty for character sprites. All three landmarks stand around this SAME shared open ground. Human-scale doors about2.3m high. Horizon around45%image height. Fine brown ink lines, clear graceful shapes, hand-painted anime cel shading, warm cream limestone, weathered timber, terracotta roofs, subdued olive ivy; soft golden light from upper left and cooler violet shadows, avoid an overwhelming yellow wash. Natural asymmetrical overlapping composition, no centered square fortress courtyard, no giant barrier wall, hills, elevated cities, cliffs, crowds, characters, UI, labels, lettering, border or watermark. Do not expand output by resizing, preserve the actual generated native pixels.",
+      "width": 2172,
+      "height": 724,
+      "sha256": "f4a42483e9b02a9da8ad9ddffc58fc2394b57056a8fdce7d6b96fd496caf1e71"
+    },
+    {
+      "id": "street-hd-v1",
+      "file": "assets/exploration/street-hd-v1/connected.png",
+      "source": "assets/exploration/street-hd-v1/manifest.json",
+      "prompt": "Three native generated tiles; exact prompts in assets/exploration/street-hd-v1/prompts.md. No resize.",
+      "width": 3284,
+      "height": 1254,
+      "sha256": "9c53f1faddb367b98f6a1731472ac86d81bd5292f62c378c6277f610082bef79"
+    },
+    {
+      "id": "street-hd-v2",
+      "file": "assets/exploration/street-hd-v2/connected.png",
+      "source": "assets/exploration/street-hd-v2/manifest.json",
+      "prompt": "Human scale repaint with native tiles. Exact prompts in assets/exploration/street-hd-v2/prompts.md.",
+      "width": 2818,
+      "height": 1254,
+      "sha256": "dc4981817962750586949757da10b0dca19f927b947add48a9fa44d32f9b460d"
+    },
+    {
+      "id": "street-hd-v3",
+      "file": "assets/exploration/street-hd-v3/connected.png",
+      "source": "assets/exploration/street-hd-v3/manifest.json",
+      "prompt": "Faithful texture restoration of four fixed overlapping crops from the approved original. Exact prompts in assets/exploration/street-hd-v3/prompts.md. Original geometry and 3:1 aspect preserved.",
+      "width": 3762,
+      "height": 1254,
+      "sha256": "317b040a8b2408ed09bafdadfe9aa5ebfb9449cc27d444a0f0c78ba10075e583"
+    },
+    {
+      "id": "street-hd-v4",
+      "file": "assets/exploration/street-hd-v4/connected.png",
+      "source": "assets/exploration/street-hd-v4/manifest.json",
+      "prompt": "Original approved 3:1 framing, native overlapping crops, clean v2 painting style with decorative clutter removed. Full actual prompts in assets/exploration/street-hd-v4/prompts.md.",
+      "width": 3762,
+      "height": 1254,
+      "sha256": "a6e4e11ae707d15ef81970ad23eefb8230a44bd0702ae34c48225ed8af9f94f3"
+    }
+  ]
+}

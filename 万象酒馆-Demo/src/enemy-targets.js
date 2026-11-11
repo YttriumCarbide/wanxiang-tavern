@@ -3,7 +3,7 @@ export function isPositiveEnemyEffect(effect) {
   return (
     ['heal', 'shield', 'mana'].includes(effect.type) ||
     (effect.type === 'buff' &&
-      ['strength', 'guard', 'iron', 'regen', 'haste'].includes(effect.buff))
+      ['strength', 'guard', 'iron', 'regen', 'haste', 'flying'].includes(effect.buff))
   );
 }
 export function enemyEffectSide(effect) {

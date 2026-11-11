@@ -126,15 +126,6 @@ body.leaving #scene-fade {
   opacity: 1;
   transition-duration: 0.34s;
 }
-body.guest-room #status {
-  z-index: 100;
-  background: radial-gradient(circle at 50% 44%, #3d2b22 0, transparent 32%), #1d1718;
-  font:
-    13px/1.7 Georgia,
-    'Songti SC',
-    serif;
-  letter-spacing: 0.12em;
-}
 .spot[data-place='window'] {
   border-color: #83afcc88;
 }

@@ -161,6 +161,9 @@ test('local and browser completions share prepared prompts, regex, TK, envelope 
       requestMode: 'local',
     };
     const input = { text: '你好', place: 'bar', selected: [], characters: [], history: [] };
+    // These independent requests compare deterministic transport behavior. Random entropy
+    // is covered separately by the Anti-Route request/preview tests.
+    await post('anti-route', { action: 'save', config: { entropy: false } });
     const preset = (
       await post('prompts/save', {
         preset: {

@@ -55,8 +55,8 @@ export function upgradeRuinsWorldbook(source) {
       matchScenario: true,
       preventRecursion: true,
       order: 200,
-      apiTargets: ['script'],
-      extensions: { wanxiang: { monsterId: id, apiTargets: ['script'] } },
+      apiTargets: ['script', 'chat'],
+      extensions: { wanxiang: { monsterId: id, apiTargets: ['script', 'chat'] } },
     };
     uid++;
   }

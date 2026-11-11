@@ -5,6 +5,8 @@ import { REGIONS } from '../content/regions.js';
 import { query as $ } from './dom.js';
 import { developerOption } from '../generation-options.js';
 import { enemyIntentText } from '../enemy-intent-text.js';
+import { dungeonMemoryText, restoredSummary } from '../memory.js';
+import { ADVENTURE_NODE_LABELS } from '../adventure/definition.js';
 
 /** Only reached prose is editable here; future battles remain in the script. */
 export function createRecords(context) {
@@ -44,13 +46,14 @@ export function createRecords(context) {
         .history.map((record, index) => {
           const button = document.createElement('button');
           button.dataset.record = index;
-          button.textContent = `${index + 1} · ${record.title}${record.complete ? ' · 完成' : ''}`;
+          const summarized = restoredSummary(record.summary, dungeonMemoryText(record));
+          button.textContent = `${index + 1} · ${record.title}${record.complete ? ' · 完成' : ''}${summarized ? ' · 已总结' : ''}`;
           return button;
         })
         .reverse(),
     );
   }
-  function select(index) {
+  function select(index, view) {
     selected = index;
     editing = false;
     $('#records-edit').textContent = '编辑';
@@ -67,19 +70,65 @@ export function createRecords(context) {
     title.textContent = record.title;
     area.append(title);
     const tags = document.createElement('small');
-    tags.textContent = `关键词：${(record.tags || []).join('、') || '无'}`;
+    const original = dungeonMemoryText(record);
+    const summary = restoredSummary(record.summary, original);
+    tags.textContent = `关键词：${summary ? (summary.keywords || []).filter(Boolean).join('、') || '无' : '待总结'}`;
     area.append(tags);
+    const showingSummary = !!summary && view !== 'original';
+    const information = document.createElement('p');
+    information.className = 'records-memory-status';
+    const count = (value) => Array.from(value.replace(/\s/gu, '')).length;
+    information.textContent = summary
+      ? `原文 ${count(original)} 字 · 总结 ${count(summary.text)} 字 · AI上下文使用总结`
+      : `${record.summary ? '总结已过期 · ' : '尚未总结 · '}原文 ${count(original)} 字 · AI上下文使用原文`;
+    area.append(information);
+    if (summary) {
+      const controls = document.createElement('nav');
+      controls.className = 'records-reading-tabs';
+      controls.setAttribute('aria-label', '记录阅读方式');
+      for (const [mode, label] of [
+        ['summary', '总结后'],
+        ['original', '原文'],
+      ]) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.dataset.recordsView = mode;
+        button.textContent = label;
+        button.setAttribute('aria-pressed', String((mode === 'summary') === showingSummary));
+        controls.append(button);
+      }
+      area.append(controls);
+    }
+    const content = document.createElement('section');
+    content.className = 'records-reading-content';
+    area.append(content);
+    if (showingSummary) {
+      const paragraph = document.createElement('p');
+      paragraph.textContent = summary.text;
+      content.append(paragraph);
+    } else renderOriginal(record, content);
+    area.scrollTop = 0;
+    $('#records-list')
+      .querySelectorAll('button')
+      .forEach((button) =>
+        button.setAttribute('aria-pressed', String(Number(button.dataset.record) === index)),
+      );
+  }
+  function renderOriginal(record, area) {
     for (
       let part = 0;
       part <= Math.max(0, ...(record.lines || []).map((line) => line.encounter ?? 0));
       part++
     ) {
       const lines = (record.lines || []).filter(
-        (line) => line.encounter === part && line.stage !== 'combat',
+        (line) => (line.encounter ?? 0) === part && line.stage !== 'combat',
       );
       if (!lines.length) continue;
       const heading = document.createElement('h4');
-      heading.textContent = `第 ${part + 1} 战`;
+      heading.textContent =
+        record.adventureVersion === 1
+          ? `第 ${part + 1} 阶段 · ${ADVENTURE_NODE_LABELS[part] || '旅途经历'}`
+          : `第 ${part + 1} 战`;
       area.append(heading);
       for (const line of lines) {
         const paragraph = document.createElement('p');
@@ -88,14 +137,12 @@ export function createRecords(context) {
         area.append(paragraph);
       }
     }
-    if (area.children.length === 2) area.append('这趟旅程还没有展示正文。');
-    area.scrollTop = 0;
-    $('#records-list')
-      .querySelectorAll('button')
-      .forEach((button) =>
-        button.setAttribute('aria-pressed', String(Number(button.dataset.record) === index)),
-      );
+    if (!area.children.length) area.append('这趟旅程还没有展示正文。');
   }
+  context.events.on($('#records-text'), 'click', (event) => {
+    const button = event.target.closest('[data-records-view]');
+    if (button) select(selected, button.dataset.recordsView);
+  });
   context.events.on($('#records-open'), 'click', () => {
     list();
     select(library().history.length - 1);
@@ -131,6 +178,7 @@ export function createRecords(context) {
           const previous = line.text;
           line.text = input.value;
           delete line.summary;
+          delete record.summary;
           for (const route of Object.values(library().exploration || {})) {
             for (const item of route.history || []) {
               if (item.runId !== record.runId) continue;
@@ -143,7 +191,7 @@ export function createRecords(context) {
                 }
             }
           }
-          if (book?.schemaVersion >= 3) {
+          if (book?.schemaVersion >= 3 && !['tavern-prelude', 'quick-chat'].includes(line.stage)) {
             book.story[line.encounter] = line.text;
             if (book.display?.story) book.display.story[line.encounter] = line.text;
             const active = context.session.ai.activeScript;

@@ -3,7 +3,7 @@ import { escapeText } from '../ui.js';
 import { portraitUrl } from '../portraits.js';
 import { GROWTH_LABELS, restoreGrowth, xpToNext } from '../growth.js';
 import { levelLines } from '../content/level-dialogue.js';
-import { chooseRest } from '../expedition.js';
+import { chooseRest, currentEncounterSpec } from '../expedition.js';
 import { createDialogue } from './dialogue.js';
 import { ITEMS } from '../content/items.js';
 import { ADVENTURE_NODE_LABELS } from '../adventure/definition.js';
@@ -219,6 +219,7 @@ export function createSettlement(context) {
     awards,
     onward,
     back,
+    backLabel = '返回酒馆',
     journal,
     retreat,
   }) {
@@ -234,7 +235,7 @@ export function createSettlement(context) {
           >`
         : '';
     panel.innerHTML = html`<h2>
-        ${won ? `${session.journey.expedition.adventure ? ADVENTURE_NODE_LABELS[encounter] : `第 ${encounter + 1} 场`}通过${complete ? ' · 副本完成' : ''}` : '本次旅途结束'}
+        ${session.journey.expedition.chapter ? `${escapeText(currentEncounterSpec(session.journey.expedition).name)} · ${won ? '交锋胜利' : '行动失败'}` : won ? `${session.journey.expedition.adventure ? ADVENTURE_NODE_LABELS[encounter] : `第 ${encounter + 1} 场`}通过${complete ? ' · 副本完成' : ''}` : '本次旅途结束'}
       </h2>
       <div class="battle-rewards">
         ${reward('gold', rewards?.gold || 0, '金币')}${reward('summon-contract', rewards?.summonContracts || 0, '召唤契约')}${reward('ether', ether, '以太', 'ether-reward')}
@@ -275,7 +276,7 @@ export function createSettlement(context) {
           id="result-back"
           ${won && !complete && !retreat ? 'hidden' : ''}
         >
-          返回酒馆
+          ${escapeText(backLabel)}
         </button>
       </div>`;
     panel.querySelector('#result-back').onclick = back;

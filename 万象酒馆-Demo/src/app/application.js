@@ -7,6 +7,7 @@ import { mountDisplay } from './display.js';
 import { createCheckpoint } from '../storage/checkpoint.js';
 import { createApiClient } from '../ai/api-client.js';
 import { createShop } from './shop.js';
+import { createDining } from './dining.js';
 import { createLootConflicts } from './loot-conflicts.js';
 import { createBackpack } from './backpack.js';
 import { createBattleReading } from './battle-reading.js';
@@ -43,6 +44,12 @@ import { createEquipment } from './equipment.js';
 import { createSettlement } from './settlement.js';
 import { createCompanionEvents } from './companion-events.js';
 import { createGalPlayer } from './gal.js';
+import { createAssetStore } from '../shared/asset-store.js';
+import { createPortraitPreloader } from './asset-preload.js';
+import { createChapter } from './chapter.js';
+import { createLatestResponse } from './latest-response.js';
+import { createAntiRoutePanel } from './anti-route.js';
+import { createDaily } from './daily.js';
 
 /** Composition root: wiring only, with one explicit application lifetime. */
 export function createApplication({
@@ -55,6 +62,7 @@ export function createApplication({
     storage,
     events: createEventScope(),
     apiClient,
+    assets: createAssetStore(),
   });
   context.apiClient = createRequestControls(
     apiClient,
@@ -65,8 +73,11 @@ export function createApplication({
       await context.extensions?.activate(kind);
       await context.extensions?.flush();
     },
+    (kind, result, failure) => context.latestResponse?.record(kind, result, failure),
+    () => context.session.ai.library,
   );
   context.generationAccess = createGenerationAccess(context);
+  context.assetPreloader = createPortraitPreloader(context);
   context.roster = createRoster(context);
   context.viewport = createViewport(context);
   context.audio = createAudio(context);
@@ -94,12 +105,17 @@ export function createApplication({
   context.adventure = createAdventure(context);
   context.bookshelf = createBookshelf(context);
   context.shop = createShop(context);
+  context.dining = createDining(context);
   context.lootConflicts = createLootConflicts(context);
   context.equipment = createEquipment(context);
   context.emblems = createEmblems(context);
   context.companionEvents = createCompanionEvents(context);
   context.settlement = createSettlement(context);
   context.arcade = createArcade(context);
+  context.chapter = createChapter(context);
+  context.daily = createDaily(context);
+  context.latestResponse = createLatestResponse(context);
+  const antiRoutePanel = createAntiRoutePanel(context);
 
   const records = createRecords(context);
   for (const field of document.querySelectorAll('input, textarea, form'))
@@ -125,6 +141,13 @@ export function createApplication({
     clearTimeout(runtime.toastTimer);
     clearTimeout(runtime.resizeTimer);
     context.arcade.dispose();
+    context.chapter.dispose();
+    context.daily.dispose();
+    context.shell.dispose();
+    context.latestResponse.dispose();
+    antiRoutePanel.dispose();
+    context.assetPreloader.dispose();
+    context.assets.dispose();
     context.events.dispose();
     context.generationAccess.dispose();
     context.checkpoint.dispose();
@@ -138,6 +161,7 @@ export function createApplication({
     context.backpack.dispose();
     context.battleReading.dispose();
     context.shop.dispose();
+    context.dining.dispose();
     context.lootConflicts.dispose();
     context.equipment.dispose();
     context.companionEvents.dispose();

@@ -10,11 +10,21 @@ export function bossLines(prose) {
     }));
 }
 
+export function galSceneLines(prose, sceneId) {
+  return parseGalText(prose).map((beat, index) => {
+    const id = `${sceneId}-${String(index + 1).padStart(3, '0')}`;
+    if (beat.text) return { id, speaker: beat.speaker || '旁白', text: beat.text };
+    return { id, speaker: beat.speaker, cue: beat.type };
+  });
+}
+
 export function linesProse(lines) {
   return lines
-    .map(
-      (line) => `${line.speaker === '旁白' ? '【旁白】' : `【对白:${line.speaker}】`}${line.text}`,
-    )
+    .map((line) => {
+      if (line.cue === 'clear') return '【清场】';
+      if (line.cue) return `【${line.cue === 'enter' ? '登场' : '退场'}:${line.speaker}】`;
+      return `${line.speaker === '旁白' ? '【旁白】' : `【对白:${line.speaker}】`}${line.text}`;
+    })
     .join('\n\n');
 }
 
@@ -33,12 +43,19 @@ function validLine(line) {
 }
 
 /** Invalid operations are isolated; no patch can touch enemies or erase accepted history. */
-export function applyBossPatches(boss, patches, revision, responseId) {
+export function applyDialoguePatches(
+  scene,
+  patches,
+  revision,
+  responseId,
+  prefix = 'boss',
+  limit = 12,
+) {
   const warnings = [];
-  if (!Array.isArray(patches) || patches.length > 12) return ['剧情补丁列表无效，保留原剧情'];
+  if (!Array.isArray(patches) || patches.length > limit) return ['剧情补丁列表无效，保留原剧情'];
   if (!patches.length) return warnings;
-  if (boss.locked || revision !== boss.revision) return ['剧情版本已变化，忽略过期补丁'];
-  const lines = structuredClone(boss.lines);
+  if (scene.locked || revision !== scene.revision) return ['剧情版本已变化，忽略过期补丁'];
+  const lines = structuredClone(scene.lines);
   const accepted = [];
   for (const [index, patch] of patches.entries()) {
     if (!patch || !validLine(patch) || !['replace', 'insert'].includes(patch.op)) {
@@ -55,7 +72,7 @@ export function applyBossPatches(boss, patches, revision, responseId) {
     }
     if (patch.op === 'replace') {
       const target = lines.find((line) => line.id === patch.id);
-      if (!target) {
+      if (!target || target.cue) {
         warnings.push('忽略未知台词ID');
         continue;
       }
@@ -68,12 +85,14 @@ export function applyBossPatches(boss, patches, revision, responseId) {
       if (
         after < 0 ||
         before <= after ||
+        lines[after].cue ||
+        lines[before].cue ||
         lines.slice(after + 1, before).some((line) => line.gap !== `${patch.after}:${patch.before}`)
       ) {
         warnings.push('忽略不相邻或不存在的插入位置');
         continue;
       }
-      const id = `boss-insert-${boss.revision + 1}-${index + 1}-${responseId}`;
+      const id = `${prefix}-insert-${scene.revision + 1}-${index + 1}-${responseId}`;
       lines.splice(before, 0, {
         id,
         speaker: patch.speaker.trim(),
@@ -85,9 +104,11 @@ export function applyBossPatches(boss, patches, revision, responseId) {
   }
   if (lines.length > 200 || linesProse(lines).length > 24000) return ['剧情补丁过长，保留当前剧情'];
   if (accepted.length) {
-    boss.lines = lines;
-    boss.revision++;
-    boss.patches.push({ revision: boss.revision, responseId, operations: accepted });
+    scene.lines = lines;
+    scene.revision++;
+    scene.patches.push({ revision: scene.revision, responseId, operations: accepted });
   }
   return warnings;
 }
+
+export { applyDialoguePatches as applyBossPatches };

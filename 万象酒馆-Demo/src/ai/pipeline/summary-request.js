@@ -1,4 +1,5 @@
 import { finalizeRequest } from './prompt-processing.js';
+import { memoryKeywords } from '../../memory.js';
 
 export function summaryItems(input) {
   if (!Array.isArray(input.items) || !input.items.length || input.items.length > 10000)
@@ -11,7 +12,7 @@ export function summaryItems(input) {
       !item.id ||
       item.id.length > 200 ||
       ids.has(item.id) ||
-      !['chat', 'quick', 'dungeon'].includes(item.kind) ||
+      !['chat', 'quick', 'dungeon', 'invitation', 'overland'].includes(item.kind) ||
       typeof item.label !== 'string' ||
       item.label.length > 300 ||
       typeof item.text !== 'string' ||
@@ -20,7 +21,21 @@ export function summaryItems(input) {
     )
       throw Error('总结条目格式无效或ID重复');
     ids.add(item.id);
-    return { id: item.id, kind: item.kind, label: item.label, text: item.text };
+    return {
+      id: item.id,
+      kind: item.kind,
+      label: item.label,
+      text: item.text,
+      ...(typeof item.place === 'string' ? { place: item.place.slice(0, 80) } : {}),
+      ...(Array.isArray(item.people)
+        ? {
+            people: item.people
+              .filter((name) => typeof name === 'string')
+              .slice(0, 12)
+              .map((name) => name.slice(0, 60)),
+          }
+        : {}),
+    };
   });
 }
 
@@ -90,20 +105,20 @@ export function summaryResponse(raw, expected) {
   } catch {
     throw Error('总结API未返回完整JSON，本次摘要未保存');
   }
-  const ids = new Set(expected.map((item) => item.id));
+  const sources = new Map(expected.map((item) => [item.id, item]));
   if (
     !result ||
     Object.keys(result).length !== 1 ||
     !Array.isArray(result.items) ||
-    result.items.length !== ids.size
+    result.items.length !== sources.size
   )
     throw Error('总结API遗漏或增加了条目，本次摘要未保存');
   const seen = new Set();
   for (const item of result.items) {
     if (
       !item ||
-      Object.keys(item).sort().join(',') !== 'id,summary' ||
-      !ids.has(item.id) ||
+      Object.keys(item).some((key) => !['id', 'summary', 'keywords'].includes(key)) ||
+      !sources.has(item.id) ||
       seen.has(item.id) ||
       typeof item.summary !== 'string' ||
       !item.summary.trim() ||
@@ -112,5 +127,14 @@ export function summaryResponse(raw, expected) {
       throw Error('总结API的条目ID或摘要格式不符，本次摘要未保存');
     seen.add(item.id);
   }
-  return result.items.map(({ id, summary }) => ({ id, summary: summary.trim() }));
+  return result.items.map(({ id, summary, keywords }) => {
+    const source = sources.get(id);
+    const longRecord = ['dungeon', 'overland', 'invitation'].includes(source.kind);
+    const result = { id, summary: summary.trim() };
+    if (!longRecord && !Array.isArray(keywords)) return result;
+    const words = memoryKeywords(keywords);
+    words[0] ||= source.place || '';
+    words[1] ||= source.people?.[0] || '';
+    return { ...result, keywords: memoryKeywords(words) };
+  });
 }

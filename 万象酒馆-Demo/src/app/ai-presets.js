@@ -4,7 +4,7 @@ import { escapeText } from '../ui.js';
 import { html } from '../shared/html.js';
 import { query as $ } from './dom.js';
 import { tokenSummary, formatRequestPreview } from './request-preview.js';
-import { API_LABELS, PROMPT_KINDS } from './first-run-rules.js';
+import { API_LABELS, CONNECTION_KINDS, PROMPT_KINDS } from './first-run-rules.js';
 
 /** The editor owns its draft; the platform store keeps presets and credentials on this device. */
 export function createAiPresetEditor({
@@ -133,7 +133,11 @@ export function createAiPresetEditor({
   }
   function captureEdit() {
     if (!editing) return;
-    const entry = draft.prompts.find((item) => item.identifier === editing);
+    const entry = draft?.prompts.find((item) => item.identifier === editing);
+    if (!entry) {
+      editing = null;
+      return;
+    }
     for (const field of document.querySelectorAll('#prompt-entry-dialog [data-prompt-field]')) {
       const key = field.dataset.promptField;
       entry[key] =
@@ -194,7 +198,10 @@ ${escapeText(entry.content)}</textarea>
       <p class="ai-hint">
         ${entry.marker ? `自动占位：${escapeText(entry.identifier)}` : '支持酒馆变量；内容按预设顺序发送。'}
       </p>`;
-    $('#prompt-entry-dialog').showModal();
+    const editor = $('#prompt-entry-dialog');
+    document.body.append(editor);
+    if (!editor.open) editor.showModal();
+    editor.querySelector('[data-prompt-field="content"]').focus({ preventScroll: true });
   }
   function capture() {
     if (!draft) throw Error('请先选择提示词预设');
@@ -291,7 +298,10 @@ ${escapeText(entry.content)}</textarea>
             : '连接预设已保存，包含URL、模型和API Key；可在角色与剧本接口中选用。',
     );
   }
-  $('#api-apply-targets').innerHTML = Object.entries(API_LABELS)
+  $('#api-apply-targets').innerHTML = CONNECTION_KINDS.map((id) => [
+    id,
+    id === 'chat' ? '聊天（共用）' : API_LABELS[id],
+  ])
     .map(
       ([id, name]) =>
         html`<label><input type="checkbox" value="${id}" data-apply-kind />${name}</label>`,
@@ -482,6 +492,10 @@ ${escapeText(entry.content)}</textarea>
     closeEntry();
   });
   events.on($('#prompt-messages'), 'dragstart', (event) => {
+    if (event.target.closest('button,input,textarea,select')) {
+      event.preventDefault();
+      return;
+    }
     const row = event.target.closest('[data-prompt-entry]');
     if (row) event.dataTransfer.setData('text/plain', row.dataset.promptEntry);
   });

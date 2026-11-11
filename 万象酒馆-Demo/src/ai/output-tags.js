@@ -1,3 +1,5 @@
+import { BODY_TAGS } from './output-protocol.js';
+
 /** Scan protocol boundaries, skipping references in reasoning wrappers and inline code. */
 export function readOutputTags(rawText, definitions, { partial = false } = {}) {
   const tokens =
@@ -83,10 +85,12 @@ export function streamingChatText(rawText) {
   try {
     const sections = readOutputTags(
       rawText,
-      [{ tag: 'wanxiang_chat' }, { tag: 'wanxiang_actions', json: true }],
+      [...BODY_TAGS.map((tag) => ({ tag })), { tag: 'wanxiang_actions', json: true }],
       { partial: true },
     );
-    const body = sections.find((section) => section.tag === 'wanxiang_chat');
+    const bodies = sections.filter((section) => BODY_TAGS.includes(section.tag));
+    if (bodies.length > 1) return null;
+    const body = bodies[0];
     if (!body) return null;
     // A chunk can stop halfway through a closing tag; don't briefly display its prefix.
     return body.complete ? body.content : body.content.replace(/<\/?[\w~:.-]*$/u, '');

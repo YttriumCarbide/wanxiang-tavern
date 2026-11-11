@@ -1,0 +1,84 @@
+{
+  "generator": "image_gen built-in",
+  "geometryReference": "assets/exploration/free-scenes-v1/market.png",
+  "styleReference": "assets/exploration/street-hd-v2/center.png",
+  "prompts": "assets/exploration/free-scenes-hd-v2/prompts.md",
+  "assets": [
+    {
+      "file": "assets/exploration/free-scenes-hd-v2/market/tile-0.png",
+      "source": "C:/Users/Lenovo/.codex/generated_images/01a178f0-bd77-7b10-9f98-ca688a68afab/exec-7515255b-dea0-42de-bb12-a8fb3e622138.png",
+      "width": 1254,
+      "height": 1254,
+      "sha256": "f3f63007035b77c33a0db420190f184a88d8dbdf1d799a2799f796cbbeafd0a0"
+    },
+    {
+      "file": "assets/exploration/free-scenes-hd-v2/market/tile-1.png",
+      "source": "C:/Users/Lenovo/.codex/generated_images/01a178f0-bd77-7b10-9f98-ca688a68afab/exec-f77be36b-dd00-4796-8ce5-86113098f78f.png",
+      "width": 1254,
+      "height": 1254,
+      "sha256": "e690bc0071fe0c1e73c7aa3da6fce7d009c1b125885f872e87acc5123b9aaead"
+    },
+    {
+      "file": "assets/exploration/free-scenes-hd-v2/market/tile-2.png",
+      "source": "C:/Users/Lenovo/.codex/generated_images/01a178f0-bd77-7b10-9f98-ca688a68afab/exec-87a72814-431f-409e-9eec-d63e9dbb74e4.png",
+      "width": 1254,
+      "height": 1254,
+      "sha256": "6889bd228f626454afa7ce473a94ec71ba1a04bcfd3b1bbccd7350b1c824a037"
+    },
+    {
+      "file": "assets/exploration/free-scenes-hd-v2/market/tile-3.png",
+      "source": "C:/Users/Lenovo/.codex/generated_images/01a178f0-bd77-7b10-9f98-ca688a68afab/exec-734467ec-346e-435d-94f7-7eb5a4896ae7.png",
+      "width": 1254,
+      "height": 1254,
+      "sha256": "dda459263a765dbda6cd7f78d005886444d15c1feef7bcd59abec84a2a9cb154"
+    }
+  ],
+  "layout": {
+    "source": "../../free-scenes-v1/market.png",
+    "sourceSize": [
+      2172,
+      724
+    ],
+    "tiles": [
+      {
+        "file": "tile-0.png",
+        "sourceX": 0,
+        "offset": 0
+      },
+      {
+        "file": "tile-1.png",
+        "sourceX": 483,
+        "offset": 837
+      },
+      {
+        "file": "tile-2.png",
+        "sourceX": 965,
+        "offset": 1671
+      },
+      {
+        "file": "tile-3.png",
+        "sourceX": 1448,
+        "offset": 2508
+      }
+    ]
+  },
+  "composition": {
+    "generator": "image_gen built-in",
+    "composition": "Native tiles at fixed source-crop positions; minimum-error seam and 20px feather. No resizing or camera recomposition.",
+    "offsets": [
+      0,
+      837,
+      1671,
+      2508
+    ],
+    "width": 3762,
+    "height": 1254,
+    "sha256": "e40012a4b28534716d5da01556b80880870fca9f5ab91fd293abbe48e1da51e2",
+    "tiles": [
+      "tile-0.png",
+      "tile-1.png",
+      "tile-2.png",
+      "tile-3.png"
+    ]
+  }
+}

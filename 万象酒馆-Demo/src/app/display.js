@@ -3,10 +3,14 @@ import { mountRotatedScrolling } from './touch-scroll.js';
 
 /** Stop page-owned mouse navigation while preserving left-button card dragging and scrolling. */
 export function guardMouseGestures(events, target = document) {
+  const editor = (event) =>
+    event.target instanceof Element &&
+    event.target.closest('input,textarea,[contenteditable="true"]');
   events.on(
     target,
     'contextmenu',
     (event) => {
+      if (editor(event)) return;
       event.preventDefault();
       event.stopImmediatePropagation();
     },
@@ -17,7 +21,7 @@ export function guardMouseGestures(events, target = document) {
       target,
       type,
       (event) => {
-        if (event.pointerType !== 'touch' && event.button > 0) {
+        if (!editor(event) && event.pointerType !== 'touch' && event.button > 0) {
           event.preventDefault();
           event.stopImmediatePropagation();
         }
@@ -28,7 +32,7 @@ export function guardMouseGestures(events, target = document) {
     target,
     'pointermove',
     (event) => {
-      if (event.buttons & 6) {
+      if (!editor(event) && event.buttons & 6) {
         event.preventDefault();
         event.stopImmediatePropagation();
       }

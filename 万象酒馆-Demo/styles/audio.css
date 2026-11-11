@@ -14,17 +14,20 @@
 }
 #audio-panel {
   position: fixed;
-  top: 60px;
+  top: 64px;
   right: 20px;
   width: min(260px, calc(100vw - 24px));
-  padding: 16px;
+  padding: 18px;
   z-index: 80;
-  color: #e9dfbf;
-  background: #142b2af2;
-  border: 1px solid #9a956966;
-  border-radius: 6px;
-  box-shadow: 0 10px 35px #0007;
-  backdrop-filter: blur(12px);
+  color: #f2eee3;
+  background: rgba(14, 28, 26, 0.9);
+  border: 1px solid rgba(226, 186, 111, 0.45);
+  border-radius: 12px;
+  box-shadow:
+    0 14px 40px rgba(0, 0, 0, 0.75),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
 }
 #audio-panel > strong {
   display: block;

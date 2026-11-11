@@ -3,6 +3,20 @@ import { html } from './shared/html.js';
 // Draw on a 64-pixel grid while retaining the existing 16px presentation size.
 // Silhouettes convey the effect; highlights, seams and chips provide close-up detail.
 const artwork = {
+  flying: html`<path fill="#203449" d="M6 10h52v44H6z" />
+    <path fill="#d9eee9" d="m8 37 8-22 9 5 7 14 7-14 9-5 8 22-10-6-7 14H25l-7-14z" />
+    <path fill="#8ac7d3" d="m12 33 6-13 5 3 6 15-9-9zM52 33l-6-13-5 3-6 15 9-9z" />
+    <path fill="#f0d69b" d="M29 12h6v7h-6zM30 24h4v27h-4zM23 48h18v4H23z" />`,
+  blind: html`<path fill="#30273e" d="M5 11h54v42H5z" />
+    <path fill="#c5b7db" d="m9 32 12-12h22l12 12-12 12H21z" />
+    <path fill="#786493" d="M23 24h18v16H23z" />
+    <path fill="#e2c485" d="M29 26h6v12h-6z" />
+    <path fill="#f0a294" d="m10 10 44 44-5 5L5 15z" />
+    <path fill="#542f49" d="m16 11 40 40-4 4-40-40z" />`,
+  melody: html`<path fill="#203c35" d="M6 6h52v52H6z" />
+    <path fill="#85b49a" d="M12 19h40v3H12zM12 29h40v3H12zM12 39h40v3H12z" />
+    <path fill="#f0d798" d="m26 14 24-6v34h-6V20l-12 3v25h-6z" />
+    <path fill="#e8efce" d="M18 43h14v9H18zM36 37h14v9H36zM28 14l20-5v5l-20 5z" />`,
   sinkingPlague: html`<path fill="#241b34" d="M5 5h54v54H5z" /><path
       fill="#8f63ac"
       d="M8 42h48v8H8zM14 32h8v10h-8zM42 30h8v12h-8z"

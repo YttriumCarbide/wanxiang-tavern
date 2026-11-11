@@ -724,3 +724,21 @@
   background: #213c39;
   color: #e7d5a8;
 }
+.departure-guidance {
+  display: grid;
+  gap: 6px;
+  padding: 10px 18px;
+  background: #d4b16a0c;
+  border-bottom: 1px solid #d4b16a30;
+}
+.departure-guidance textarea {
+  width: 100%;
+  min-height: 48px;
+  max-height: 90px;
+  resize: vertical;
+  color: #eee3cd;
+  background: #10191460;
+  border: 1px solid #d4b16a60;
+  border-radius: 8px;
+  padding: 8px;
+}

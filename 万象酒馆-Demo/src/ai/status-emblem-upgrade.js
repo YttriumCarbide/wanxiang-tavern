@@ -35,7 +35,7 @@ export function upgradeStatusEmblems(source) {
       comment: '战斗状态衰减、角色与五枚纹章',
       constant: true,
       order: 9998,
-      apiTargets: ['character', 'script', 'chat', 'quick-chat', 'map', 'creation'],
+      apiTargets: ['character', 'script', 'chat', 'map', 'creation'],
       content: rules,
       extensions: { wanxiang: { generationRule: 'status-emblems' } },
     };

@@ -21,6 +21,8 @@ test('长景月汐 replaces the first companion while old party IDs, other setti
   old.characters[1].setting.edited = true;
   old.history = [{ runId: 'past', lines: ['旧的故事'] }];
   const restored = restoreLibrary(old);
+  assert.equal(restored.characters[0].combat.attackName, '月闪');
+  assert(restored.characters[0].setting.worldbook.includes('攻击方式｜月闪'));
   assert.equal(restored.characters[0].setting.name, '长景月汐');
   assert(restored.characters[0].setting.worldbook.includes('长景月汐'));
   assert(!restored.characters[0].setting.worldbook.includes('私人编辑'));
@@ -58,7 +60,7 @@ test('official worldbook migration replaces only the former 格雷 entry and pre
   const updated = Object.values((await restored.get('tavern-world')).book.entries).find(
     (item) => item.uid === entry.uid,
   );
-  assert.equal(updated.comment, '人物详情：长景月汐');
+  assert.equal(updated.comment, '角色条目：长景月汐');
   assert(updated.content.includes('星月剑士'));
   assert.equal(updated.order, 321);
   assert.equal(updated.depth, 3);

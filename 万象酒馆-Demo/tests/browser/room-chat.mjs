@@ -6,6 +6,13 @@ import { CHAT_PLACES, roomChatPlace } from '../../src/chat-places.js';
 export async function roomChatChecks({ browser, baseURL, output }) {
   const page = await browser.newPage({ viewport: { width: 1440, height: 836 } });
   await legacySession(page);
+  await page.addInitScript(() => {
+    if (origin !== 'null')
+      localStorage.setItem(
+        'wanxiang.generation-options.v1',
+        JSON.stringify({ developerMode: false, skipAiGeneration: false }),
+      );
+  });
   const requests = [],
     errors = [];
   page.on('pageerror', (error) => errors.push(error.message));
@@ -75,9 +82,8 @@ export async function roomChatChecks({ browser, baseURL, output }) {
           .evaluate((_canvas, spot) => window.guestRoomPreview.placeNow(spot), spot);
         await frame.locator('#room-talk').click();
         const id = roomChatPlace(room, spot);
-        await page.locator('#chat-dialog').waitFor({ state: 'visible' });
+        await page.locator('#gal-stage[data-workspace="chat"]').waitFor({ state: 'visible' });
         assert.equal(await page.locator('#chat-place-select').inputValue(), id);
-        assert.equal(await page.locator('#chat-place').textContent(), CHAT_PLACES[id].name);
         if (spot === 'bed') {
           await page.locator('#chat-input').fill('在这个房间歇一会儿。');
           await page.locator('#chat-input').press('Enter');
@@ -103,7 +109,8 @@ export async function roomChatChecks({ browser, baseURL, output }) {
         locations++;
         if (room === 'master' && spot === 'sitting')
           await page.screenshot({ path: path.join(output, 'master-room-chat.png') });
-        await page.locator('#chat-close').click();
+        await page.locator('[data-gal="close"]').click();
+        await page.locator('#gal-stage').waitFor({ state: 'hidden' });
       }
     }
     assert.equal(

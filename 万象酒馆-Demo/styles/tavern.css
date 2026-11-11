@@ -1,3 +1,4 @@
+@import url('./communication.css');
 * {
   box-sizing: border-box;
 }
@@ -22,25 +23,6 @@ canvas {
 canvas:active {
   cursor: grabbing;
 }
-#visitor-refresh {
-  position: fixed;
-  left: 18px;
-  bottom: 20px;
-  z-index: 10;
-  padding: 8px 13px;
-  color: #ead9b8;
-  background: #241f1ac9;
-  border: 1px solid #d6b57d66;
-  border-radius: 20px;
-  font: 12px system-ui;
-  cursor: pointer;
-}
-#visitor-refresh[hidden] {
-  display: none;
-}
-body.ring-viewing #visitor-refresh {
-  visibility: hidden;
-}
 #aim {
   position: fixed;
   left: 50%;
@@ -51,30 +33,7 @@ body.ring-viewing #visitor-refresh {
   background: #e3cf9b66;
   pointer-events: none;
 }
-.talk-open {
-  position: fixed;
-  z-index: 10;
-  left: 50%;
-  bottom: 28px;
-  padding: 11px 28px;
-  color: #f2e3c5;
-  border: 1px solid #c7a57588;
-  border-radius: 7px;
-  background: #30261fe8;
-  box-shadow:
-    0 4px 24px #0005,
-    0 0 20px #c5965120;
-  font: 14px system-ui;
-  cursor: pointer;
-  transform: translateX(-50%);
-  backdrop-filter: blur(5px);
-}
-.talk-open:hover,
-.talk-open:focus-visible {
-  background: #72553cf2;
-  border-color: #efce99;
-  outline: 0;
-}
+
 .bookshelf-shelf {
   bottom: auto;
   width: 126px;
@@ -95,17 +54,18 @@ body.ring-viewing #visitor-refresh {
   top: 0;
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 10px;
   transform: translate(-50%, -50%);
-  padding: 12px 17px;
-  border: 1px solid #c7a57588;
-  border-radius: 7px;
-  color: #f2e3c5;
-  background: #30261fe8;
+  padding: 12px 20px;
+  border: 1px solid rgba(226, 186, 111, 0.55);
+  border-radius: 10px;
+  color: #f7edcf;
+  background: linear-gradient(135deg, rgba(38, 30, 24, 0.9), rgba(22, 16, 12, 0.92));
   box-shadow:
-    0 4px 24px #0005,
-    0 0 20px #c5965120;
-  font: 12px system-ui;
+    0 8px 25px rgba(0, 0, 0, 0.55),
+    0 0 16px rgba(226, 186, 111, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  font: 13px system-ui;
   white-space: nowrap;
   opacity: 0;
   visibility: hidden;
@@ -113,9 +73,12 @@ body.ring-viewing #visitor-refresh {
   transition:
     opacity 0.28s ease,
     visibility 0.28s,
-    background 0.2s;
+    background 0.2s,
+    transform 0.2s,
+    box-shadow 0.2s;
   cursor: pointer;
-  backdrop-filter: blur(5px);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   will-change: transform, opacity;
 }
 .spot.visible {
@@ -125,8 +88,12 @@ body.ring-viewing #visitor-refresh {
 }
 .spot:hover,
 .spot:focus-visible {
-  background: #72553cf2;
-  border-color: #efce99;
+  background: linear-gradient(135deg, rgba(78, 58, 42, 0.95), rgba(46, 32, 22, 0.98));
+  border-color: #ffd899;
+  box-shadow:
+    0 12px 32px rgba(0, 0, 0, 0.65),
+    0 0 24px rgba(226, 186, 111, 0.4);
+  transform: translate(-50%, -54%);
   outline: 0;
 }
 .spot .diamond {
@@ -151,15 +118,6 @@ body.ring-viewing #visitor-refresh {
 .spot[data-place='corridorDoor'] .diamond {
   color: #e9c78f;
 }
-#status {
-  position: fixed;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  background: #251d1a;
-  color: #cdbb9e;
-  pointer-events: none;
-}
 @media (max-width: 720px) {
   .spot {
     padding: 12px 13px;
@@ -167,7 +125,8 @@ body.ring-viewing #visitor-refresh {
 }
 #enter,
 #summon-open,
-#corridor-open {
+#corridor-open,
+#street-open {
   border-color: #c0a2df;
   background: #302444f2;
   opacity: 1;
@@ -176,7 +135,8 @@ body.ring-viewing #visitor-refresh {
 }
 #enter[hidden],
 #summon-open[hidden],
-#corridor-open[hidden] {
+#corridor-open[hidden],
+#street-open[hidden] {
   display: none;
 }
 
@@ -185,7 +145,8 @@ body.ring-viewing #visitor-refresh {
   background: #153a36ed;
 }
 
-#corridor-open {
+#corridor-open,
+#street-open {
   border-color: #d5b17b;
   background: #3d2c21f2;
   color: #ffe9c9;
@@ -254,8 +215,17 @@ body.leaving #scene-fade {
   border-color: #82c7ceaa;
   background: #16363bf0;
 }
+.talk-open.dining-open {
+  left: calc(50% + 90px);
+}
+#talk-open {
+  left: calc(50% - 60px);
+}
 .supply-open:hover,
 .supply-open:focus-visible {
   border-color: #f5dfa1;
   box-shadow: 0 0 22px #dbc27a55;
+}
+body.daily-parent-dock :is(#talk-open, .dining-open) {
+  display: none;
 }

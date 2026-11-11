@@ -95,16 +95,23 @@ export function createRenderer(context) {
     $('#emblem-screen')?.classList.toggle('active', emblemActive);
     const layout = captureLayout(),
       s = session.battle.display || session.battle.state;
-    $('#encounter-label').textContent =
-      `${session.battle.state.encounter + 1}/${ENCOUNTER_COUNT} · ${currentEncounterSpec(session.journey.expedition).name}`;
-    $('#journey-progress').innerHTML = ENCOUNTERS.map(
-      (r, i) =>
-        html`<i
-          class="${i < session.battle.state.encounter ? 'done' : i === session.battle.state.encounter ? 'current' : ''}"
-          title="${session.journey.expedition.adventure ? ADVENTURE_NODE_LABELS[i] : currentEncounterSpec(session.journey.expedition, i).name}"
-          >${i === FINAL_ENCOUNTER ? '◆' : session.journey.expedition.adventure && [1, 3].includes(i) ? '◇' : i + 1}</i
-        >`,
-    ).join('');
+    $('#encounter-label').textContent = session.journey.expedition.chapter
+      ? `星灯未熄 · 第${session.journey.expedition.chapter.day}天 · ${currentEncounterSpec(session.journey.expedition).name}`
+      : `${session.battle.state.encounter + 1}/${ENCOUNTER_COUNT} · ${currentEncounterSpec(session.journey.expedition).name}`;
+    $('#journey-progress').innerHTML = (
+      session.journey.expedition.chapter
+        ? [currentEncounterSpec(session.journey.expedition)]
+        : ENCOUNTERS
+    )
+      .map(
+        (r, i) =>
+          html`<i
+            class="${i < session.battle.state.encounter ? 'done' : i === session.battle.state.encounter ? 'current' : ''}"
+            title="${session.journey.expedition.adventure ? ADVENTURE_NODE_LABELS[i] : currentEncounterSpec(session.journey.expedition, i).name}"
+            >${i === FINAL_ENCOUNTER ? '◆' : session.journey.expedition.adventure && [1, 3].includes(i) ? '◇' : i + 1}</i
+          >`,
+      )
+      .join('');
     $('#round-label').textContent =
       session.battle.state.phase === 'opening'
         ? '第 1 回合'

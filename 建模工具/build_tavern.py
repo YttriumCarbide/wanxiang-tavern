@@ -7,7 +7,7 @@ from tavern_chair import tavern_chair
 OUT = Path(__file__).resolve().parents[1] / "万象酒馆-体素模型"
 S = 0.04
 ORIGIN = np.array([-6.32, -0.4, -5.32])
-SHAPE = (316, 100, 266)
+SHAPE = (386, 164, 266)
 rng = random.Random(142026)
 palette = []
 lookup = {}
@@ -331,6 +331,9 @@ box(-6, 3.24, -0.08, 12, 0.24, 0.2, "walnut")
 group("06_Windows_and_Entrance")
 # Continuous panes and distinct depth layers eliminate mosaic gaps and overlaps.
 for side in [-1, 1]:
+    # The east wall is reserved for the indoor stairs; keep its surface uninterrupted.
+    if side == 1:
+        continue
 
     def wb(depth, y, z, w, h, d, c):
         xx = -6 + depth if side == -1 else 6 - depth - w
@@ -354,17 +357,7 @@ for side in [-1, 1]:
         for yy in [0.96, 2.24]:
             for zz in [z0 + 0.04, z0 + 1.04]:
                 wb(0.36, yy, zz, 0.04, 0.04, 0.04, "iron")
-box(-0.64, 0, 4.76, 1.28, 2.32, 0.16, "walnutDark")
-for x in np.arange(-0.52, 0.52, 0.12):
-    facegrain(x, 0.04, 4.72, 0.08, 2.16, "oak", "oakDark")
-for yy in [0.36, 1.76]:
-    box(-0.52, yy, 4.68, 1.04, 0.08, 0.04, "iron")
-for xx in [-0.68, 0.6]:
-    box(xx, 0, 4.6, 0.08, 2.32, 0.2, "oakEdge")
-box(-0.68, 2.24, 4.6, 1.36, 0.12, 0.2, "oakEdge")
-box(0.32, 1, 4.6, 0.08, 0.12, 0.08, "brass")
-box(-0.48, 2.56, 4.64, 0.96, 0.28, 0.08, "walnutDark")
-box(-0.36, 2.64, 4.6, 0.72, 0.04, 0.04, "brass")
+# The former ground-floor corridor door is removed; the masonry stays continuous.
 
 group("10_Bar_Counter")
 box(-5.16, 0, -3.84, 3.52, 1, 0.76, "walnut")
@@ -425,18 +418,7 @@ def table(cx, cz, r=0.64):
     # Near-view tableware is built separately on a 2 cm grid below.
 
 
-table(0.2, 1.64, 0.64)
-table(3.84, 3.0, 0.56)
-# Keep the east bench; the west rear bench gives the supply corner a clear footprint.
-for x in [1.5]:
-    for dx in [0, 1.32]:
-        box(x + dx, 0, 4.24, 0.12, 0.44, 0.36, "walnut")
-    topgrain(x, 0.44, 4.12, 1.48, 0.48, "oak", "oakDark")
-    box(x, 0.52, 4.48, 1.48, 0.6, 0.08, "walnut")
-    for xx in np.arange(x + 0.04, x + 1.4, 0.2):
-        box(xx, 0.6, 4.4, 0.16, 0.44, 0.04, "oak")
-    for dx in [0.12, 0.8]:
-        box(x + dx, 0.48, 4.16, 0.52, 0.08, 0.32, "leather")
+# Seating is built after the structural expansion, as intact furniture assemblies.
 group("14_Woven_Rugs")
 
 
@@ -458,10 +440,6 @@ def rug(x, z, w, d, base="rug"):
                 cell(xx, 0, zz, "thread")
                 cell(xx + 0.04, 0, zz + 0.04, "rug2")
 
-
-rug(-1.16, 0.48, 2.72, 2.52)
-rug(3.04, 2.24, 1.64, 1.8)
-rug(3.24, -1.08, 1.72, 1.76, "green")
 
 group("15_Hearth_and_Firewood")
 box(3.76, 0, -4.96, 1.56, 0.12, 0.88, "stoneDark")
@@ -773,6 +751,153 @@ for name, vol in list(groups.items()):
 group("20_Wall_Mount")
 box(-5.96, 0.2, 0.28, 0.12, 2.6, 1.92, "cyanDark")
 
+# Insert a 2.8 m circulation bay between the runegate and the east furniture.
+# Translate whole voxel cells, preserving the scale of every existing furnishing.
+EXPANSION_X = 2.4
+EXPANSION_WIDTH = 2.8
+cut = ix(EXPANSION_X, 0)
+shift = round(EXPANSION_WIDTH / S)
+for name, vol in list(groups.items()):
+    if name == "22_Roguelike_Three_Choice_Desk":
+        expanded = np.zeros_like(vol)
+        desk_shift = round(2.0 / S)
+        expanded[desk_shift:] = vol[:-desk_shift]
+        groups[name] = expanded
+        continue
+    boundary = ix(0.5, 0) if name == "23_Lanterns_and_Chandeliers" else cut
+    expanded = np.zeros_like(vol)
+    expanded[:boundary] = vol[:boundary]
+    expanded[boundary + shift :] = vol[boundary:-shift]
+    groups[name] = expanded
+for light in lights:
+    if light["position"][0] >= EXPANSION_X or (
+        light["name"] == "Chandelier" and light["position"][0] > 0.5
+    ):
+        light["position"][0] += EXPANSION_WIDTH
+
+group("27_Expanded_Circulation_Bay")
+box(2.4, -0.4, -5.2, 2.8, 0.24, 10.4, "stoneDark")
+box(2.4, -0.16, -5.04, 2.8, 0.12, 10.08, "walnutDark")
+for row, zz in enumerate(np.arange(-5, 5, 0.2)):
+    for xx in np.arange(2.4, 5.2, 0.4):
+        box(xx, -0.04, zz, 0.4, 0.04, 0.16, rng.choice(["plank", "plank2", "plank3"]))
+        box(xx + 0.08, -0.04, zz + 0.04, 0.2, 0.04, 0.04, "grain")
+for zz in [-5.2, 5]:
+    box(2.4, 0, zz, 2.8, 3.52, 0.2, "plaster")
+for zz in [-4.96, 4.84]:
+    for yy, hh in [(0, 0.12), (0.96, 0.12), (3.2, 0.2)]:
+        box(2.4, yy, zz, 2.8, hh, 0.12, "walnut")
+    for yy in np.arange(0.16, 0.96, 0.16):
+        for xx in np.arange(2.4, 5.2, 0.4):
+            box(xx, yy, zz, 0.36, 0.12, 0.04, rng.choice(["stone", "stoneLight"]))
+box(2.4, 3.52, -5, 2.8, 0.08, 10, "oak")
+for xx in np.arange(2.4, 5.2, 0.16):
+    box(xx, 3.48, -5, 0.12, 0.04, 10, rng.choice(["oak", "oakGrain", "oakLight"]))
+box(3.68, 3.24, -5, 0.24, 0.28, 10, "walnut")
+box(2.4, 3.24, -0.08, 2.8, 0.24, 0.2, "walnut")
+
+group("28_Street_Exit_Door")
+# Closed oak exterior door: visible hinges, recessed panels and a glazed transom.
+box(2.92, 0, 4.72, 1.76, 2.84, 0.24, "stoneDark")
+box(3.08, 0.04, 4.64, 1.44, 2.56, 0.12, "walnutDark")
+for xx in [2.96, 4.48]:
+    box(xx, 0, 4.56, 0.16, 2.72, 0.24, "oakEdge")
+box(2.92, 2.68, 4.56, 1.76, 0.16, 0.24, "oakEdge")
+for xx in np.arange(3.16, 4.48, 0.16):
+    facegrain(xx, 0.12, 4.56, 0.12, 1.96, "oak", "oakDark")
+for yy in [0.36, 1.56, 2.04]:
+    box(3.12, yy, 4.52, 1.36, 0.08, 0.08, "oakLight")
+box(3.16, 2.2, 4.56, 1.28, 0.32, 0.04, "moon2")
+for xx in np.arange(3.16, 4.48, 0.24):
+    line((xx, 2.2, 4.52), (xx + 0.24, 2.52, 4.52), 0.04, "brass")
+for yy in [0.44, 1.8]:
+    box(3.12, yy, 4.48, 0.28, 0.08, 0.08, "iron")
+box(4.24, 1.04, 4.44, 0.12, 0.24, 0.08, "brass")
+box(3.0, 0, 4.32, 1.6, 0.08, 0.4, "stoneLight")
+framed(3.32, 2.96, 4.68, 0.96, 0.28, "green", "brass")
+rug(3.24, 2.48, 1.12, 1.72, "rug")
+lantern(2.64, 2.16, 4.56)
+
+# Move the complete exterior assembly to the midpoint of the 14.8 m south wall.
+door_shift = round(-2.4 / S)
+door = np.zeros_like(A)
+door[:door_shift] = A[-door_shift:]
+groups["28_Street_Exit_Door"] = door
+lights[-1]["position"][0] -= 2.4
+
+group("13_Seating_and_Tables")
+table(-0.6, 0.8, 0.64)
+table(4.2, 1.5, 0.56)
+for dx in [0, 1.32]:
+    box(4.2 + dx, 0, 4.24, 0.12, 0.44, 0.36, "walnut")
+topgrain(4.2, 0.44, 4.12, 1.48, 0.48, "oak", "oakDark")
+box(4.2, 0.52, 4.48, 1.48, 0.6, 0.08, "walnut")
+for xx in np.arange(4.24, 5.6, 0.2):
+    box(xx, 0.6, 4.4, 0.16, 0.44, 0.04, "oak")
+for dx in [0.12, 0.8]:
+    box(4.2 + dx, 0.48, 4.16, 0.52, 0.08, 0.32, "leather")
+
+group("14_Woven_Rugs")
+rug(-1.96, -0.36, 2.72, 2.52)
+rug(3.4, 0.74, 1.64, 1.8)
+rug(5.24, -1.08, 1.72, 1.76, "green")
+
+# An internal stairwell, wholly inside the existing rectangular footprint.
+# Open the ceiling above the ascent instead of putting steps through the back wall.
+groups["24_Wall_Dressing"][ix(6.2, 0) :, :, :] = 0
+groups["04_Timber_Frame"][ix(8.48, 0) :, :, ix(-0.6, 2) :] = 0
+for vol in groups.values():
+    vol[ix(7.04, 0) : ix(8.8, 0), ix(3.2, 1) :, ix(1.04, 2) : ix(4.84, 2)] = 0
+
+group("29_Interior_Staircase")
+# Flush wall trim replaces the projecting pilasters and planter shelf.
+for yy in [0.96, 3.2]:
+    box(8.76, yy, -0.6, 0.04, 0.12, 5.56, "walnut")
+for i in range(18):
+    z = -0.4 + i * 0.24
+    y = (i + 1) * 0.16
+    box(7.28, y - 0.12, z, 1.28, 0.12, 0.28, "walnut")
+    topgrain(7.24, y - 0.04, z - 0.04, 1.36, 0.28, "oakLight", "oakGrain")
+    box(7.24, y - 0.08, z - 0.04, 1.36, 0.04, 0.04, "oakEdge")
+    if i % 3 == 0:
+        for xx in [7.16, 8.6]:
+            box(xx, y, z, 0.08, 0.88, 0.08, "walnut")
+            box(xx - 0.04, y + 0.84, z - 0.04, 0.16, 0.08, 0.16, "oakEdge")
+for xx in [7.24, 8.48]:
+    line((xx, 0.04, -0.4), (xx, 2.76, 3.92), 0.12, "walnutDark")
+for xx in [7.16, 8.6]:
+    if xx < 8:
+        # End the inner rail before the inward-facing door, leaving the landing passage clear.
+        line((xx, 1.04, -0.48), (xx, 3.5, 3.32), 0.08, "oakEdge")
+    else:
+        line((xx, 1.04, -0.48), (xx, 3.92, 3.92), 0.08, "oakEdge")
+        box(xx, 2.88, 3.92, 0.08, 1.04, 0.08, "walnut")
+        box(xx, 3.84, 3.92, 0.08, 0.08, 0.76, "oakEdge")
+        for zz in [4.16, 4.48]:
+            box(xx, 2.88, zz, 0.08, 0.96, 0.08, "walnut")
+box(7.2, 2.72, 3.92, 1.48, 0.16, 0.92, "walnutDark")
+topgrain(7.2, 2.88, 3.92, 1.48, 0.92, "oakLight", "oakGrain")
+# Raised stair headroom and a landing doorway; no extension beyond x/z room bounds.
+box(8.8, 3.52, 1.04, 0.2, 2.08, 3.96, "plaster2")
+box(7.04, 3.52, 5.0, 1.96, 2.08, 0.2, "plaster")
+box(7.04, 5.6, 1.04, 1.76, 0.12, 3.96, "oak")
+box(7.04, 3.52, 1.04, 1.76, 0.12, 0.16, "walnut")
+for xx in [7.08, 8.64]:
+    box(xx, 3.52, 1.04, 0.12, 2.08, 0.12, "walnut")
+# The landing turns inward to the upstairs corridor, never out through the south wall.
+# Enclose the upper void so neither ascent nor descent exposes an empty storey.
+box(7.04, 2.92, 1.04, 0.16, 2.68, 2.36, "plaster")
+box(7.04, 2.92, 3.4, 0.16, 2.4, 1.44, "walnutDark")
+for zz in np.arange(3.48, 4.8, 0.12):
+    box(7.16, 3.0, zz, 0.04, 2.12, 0.08, "oak")
+for zz in [3.36, 4.84]:
+    box(7.12, 2.88, zz, 0.16, 2.48, 0.12, "oakEdge")
+box(7.12, 5.28, 3.36, 0.16, 0.12, 1.6, "oakEdge")
+box(7.24, 3.88, 3.64, 0.08, 0.16, 0.08, "brass")
+box(7.04, 2.92, 4.84, 1.76, 2.68, 0.16, "plaster")
+lantern(8.64, 4.68, 4.44)
+lantern(8.64, 1.84, -0.76)
+
 # Every native voxel has exactly one owner. Remove buried faces across groups.
 claimed = np.zeros(SHAPE, dtype="bool")
 for name in reversed(list(groups)):
@@ -960,6 +1085,25 @@ for xx in np.arange(0.56, 1.8, 0.16):
     hb(xx, 0.26, -4.34, 0.02, 0.02, 0.02, "violet")
 for xx in [0.2, 1.96]:
     hb(xx, 2.32, -4.48, 0.08, 0.02, 0.04, "copperDark")
+
+for name, cells in list(hero_groups.items()):
+    offset = {
+        "30_Round_Table_Close_Details": (-0.8, -0.84),
+        "31_Window_Table_Close_Details": (0.36, -1.5),
+        "34_Fate_Desk_Close_Details": (2.0, 0),
+    }.get(name)
+    hero_groups[name] = {
+        (
+            (
+                xx + round(offset[0] / HS)
+                if offset
+                else xx + (round(EXPANSION_WIDTH / HS) if xx * HS >= EXPANSION_X else 0)
+            ),
+            yy,
+            zz + round(offset[1] / HS) if offset else zz,
+        ): ci
+        for (xx, yy, zz), ci in cells.items()
+    }
 
 hero_arrays = {}
 for name, cells in hero_groups.items():
@@ -1385,7 +1529,9 @@ stats = {
     "near_view_voxel_edge_m": HS,
     "near_view_voxels": sum(len(cells) for cells in hero_groups.values()),
     "geometry_cleanup": "Unique native voxel ownership and shared hidden-face removal",
-    "interior_m": [12, 3.52, 10],
+    "interior_m": [14.8, 3.52, 10],
+    "street_exit": {"position": [1.4, 1.3, 4.5], "approach_width_m": 1.6},
+    "stairs": {"bounds_xz": [7.04, -0.48, 8.8, 4.84], "landing_height_m": 2.92},
     "table_top_m": 0.76,
     "chair_seat_m": 0.48,
     "bar_top_m": 1.08,
@@ -1408,6 +1554,6 @@ stats = {
     ],
 }
 (OUT / "模型规格.json").write_text(
-    json.dumps(stats, ensure_ascii=False, indent=2), encoding="utf-8"
+    json.dumps(stats, ensure_ascii=False, indent=2), encoding="utf-8", newline="\n"
 )
 print(json.dumps(stats, ensure_ascii=False), flush=True)

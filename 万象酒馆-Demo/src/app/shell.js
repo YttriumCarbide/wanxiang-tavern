@@ -5,11 +5,35 @@ import { escapeText } from '../ui.js';
 import { query as $ } from './dom.js';
 import { portraitUrl, saveCustomPortrait } from '../portraits.js';
 import { preparationEquipment } from './equipment.js';
-import { developerOption } from '../generation-options.js';
 import { TAVERN_VISITORS } from '../content/tavern-visitors.js';
+import { explorationHref } from '../exploration/scenes.js';
+import { dailySceneTime } from '../daily.js';
 
 /** @param {import('./context.js').AppContext} context */
 export function createShell(context) {
+  const visitorRefresh = document.createElement('button');
+  visitorRefresh.id = 'scene-visitors-refresh';
+  visitorRefresh.textContent = '换位 ↻';
+  visitorRefresh.title = '重新分布当前场景中的角色';
+  visitorRefresh.hidden = true;
+  document.querySelector('#ai-open').before(visitorRefresh);
+  const returnTavern = document.createElement('button');
+  returnTavern.id = 'scene-return-tavern';
+  returnTavern.textContent = '返回酒馆';
+  returnTavern.hidden = true;
+  document.querySelector('#ai-open').before(returnTavern);
+  context.events.on(returnTavern, 'click', () => {
+    if (session.runtime.mode !== 'inn') return;
+    if (context.daily?.onInvitation()) return context.shell.toast('请先在约见中结束本次同行。');
+    if (context.daily?.returnOuting()) return;
+    context.chat?.leave();
+    context.chapter?.goHome();
+  });
+  context.events.on(visitorRefresh, 'click', () => {
+    document
+      .querySelector('#inn-frame iframe')
+      ?.contentWindow?.postMessage({ type: 'tavern-visitors-refresh' }, location.origin);
+  });
   const { session } = context;
   function showRoute() {
     const container = $('#boss-options');
@@ -45,13 +69,16 @@ export function createShell(context) {
     session.runtime.toastTimer = setTimeout(() => $('#toast').classList.remove('visible'), 3300);
   }
   function mountInn(returnTo = null) {
+    document.body.classList.remove('street-atlas-open');
     const frame = document.createElement('iframe');
     frame.src =
-      session.ai.library.campaign?.tutorial === 'arrival'
-        ? './tavern.html?arrival=1'
-        : returnTo === 'gate'
-          ? './tavern.html?return=gate'
-          : './tavern.html';
+      returnTo && !['gate', 'tavern'].includes(returnTo)
+        ? explorationHref(returnTo, dailySceneTime(session.ai.library.daily?.active))
+        : session.ai.library.campaign?.tutorial === 'arrival'
+          ? './tavern.html?arrival=1'
+          : returnTo === 'gate'
+            ? './tavern.html?return=gate'
+            : './tavern.html';
     frame.title = '第一人称万象酒馆';
     context.audio.attachFrame(frame);
     context.events.on(frame, 'load', syncInnVisitors);
@@ -60,27 +87,77 @@ export function createShell(context) {
   }
   function syncInnVisitors() {
     const frame = $('#inn-frame iframe');
+    visitorRefresh.hidden =
+      session.runtime.mode !== 'inn' ||
+      session.runtime.needsStart ||
+      frame?.contentDocument?.querySelector('#visitor-refresh')?.hidden !== false;
     if (!frame) return;
     const characters = TAVERN_VISITORS.flatMap((definition) => {
-      const member = session.ai.library.characters.find(
-        (entry) => entry.source === 'official' && entry.combat.id === definition.combatId,
-      );
-      return member ? [{ key: definition.id, id: member.id }] : [];
+      const member =
+        session.ai.library.characters.find(
+          (entry) => entry.source === 'official' && entry.combat.id === definition.combatId,
+        ) ||
+        context.chapter
+          ?.chatCharacters()
+          .find((entry) => entry.source === 'town' && entry.combat.id === definition.combatId);
+      return member
+        ? [{ key: definition.id, id: member.id, image: member.combat.customStanding || null }]
+        : [];
     });
+    for (const member of session.ai.library.characters) {
+      if (!member.combat.customStanding || characters.some((entry) => entry.id === member.id))
+        continue;
+      characters.push({
+        key: member.id,
+        id: member.id,
+        name: member.setting.name,
+        image: member.combat.customStanding,
+      });
+    }
     frame.contentWindow?.postMessage(
       {
         type: 'tavern-visitors',
-        enabled: developerOption(session.ai.generationOptions, 'tavernVisitors'),
+        enabled: true,
         characters,
       },
       location.origin,
     );
   }
-  function setCustomPortrait(heroId, dataUrl) {
+  context.events.on(window, 'message', (event) => {
+    if (event.origin !== location.origin || event.source !== $('#inn-frame iframe')?.contentWindow)
+      return;
+    if (event.data?.type === 'tavern-visitors-request') syncInnVisitors();
+    if (['street-map-state', 'scene-ready'].includes(event.data?.type))
+      document.body.classList.toggle(
+        'street-atlas-open',
+        Boolean($('#inn-frame iframe')?.contentDocument?.getElementById('street-map')?.open),
+      );
+    if (event.data?.type === 'scene-ready') {
+      returnTavern.hidden =
+        event.data.scene === 'tavern' ||
+        session.runtime.mode !== 'inn' ||
+        session.runtime.needsStart;
+    }
+    if (event.data?.type === 'tavern-visitors-availability')
+      visitorRefresh.hidden =
+        event.data.available !== true ||
+        session.runtime.mode !== 'inn' ||
+        session.runtime.needsStart;
+  });
+  function setCustomPortrait(heroId, dataUrl, kind = 'card') {
     const member = session.ai.library.characters.find((entry) => entry.id === heroId);
     const index = session.ai.library.party.indexOf(heroId);
     const slotId = index >= 0 ? HEROES[index].id : null;
     if (!member) return;
+    if (kind === 'standing') {
+      saveCustomPortrait(member.id + ':standing', dataUrl);
+      if (dataUrl) member.combat.customStanding = dataUrl;
+      else delete member.combat.customStanding;
+      context.generation.save();
+      syncInnVisitors();
+      renderParty();
+      return;
+    }
     saveCustomPortrait(member.id, dataUrl);
     if (member?.combat) {
       if (dataUrl) member.combat.customPortrait = dataUrl;
@@ -197,7 +274,7 @@ export function createShell(context) {
         <details class="prepare-portrait-tools">
           <summary>更换立绘</summary>
           <div>
-            <button data-edit-portrait="${inspected.id}">本地图片</button>
+            <button data-edit-portrait="${inspected.id}">自定义卡面 / 立绘</button>
             <button data-portrait-url="${inspected.id}">图床链接</button>
             <button data-reset-portrait="${inspected.id}">恢复默认</button>
           </div>
@@ -235,5 +312,16 @@ export function createShell(context) {
     }
     context.equipment?.refresh();
   }
-  return { showRoute, toast, mountInn, renderParty, setCustomPortrait, syncInnVisitors };
+  return {
+    showRoute,
+    toast,
+    mountInn,
+    renderParty,
+    setCustomPortrait,
+    syncInnVisitors,
+    dispose() {
+      visitorRefresh.remove();
+      returnTavern.remove();
+    },
+  };
 }

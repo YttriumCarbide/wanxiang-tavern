@@ -1,6 +1,7 @@
 import { completionURL, validateApiKey } from './compatible.js';
 import { isVertex, vertexURL } from './vertex.js';
 import { readServiceAccount, serviceAccountBase } from './vertex-service-account.js';
+import { routeSettings } from './anti-route.js';
 const randomUUID = () => crypto.randomUUID();
 
 export const DEFAULT_OUTPUT_TOKENS = 32768;
@@ -15,6 +16,7 @@ export const API_KINDS = [
   'map',
 ];
 const kinds = API_KINDS;
+export const connectionKind = (kind) => (kind === 'quick-chat' ? 'chat' : kind);
 const publicProfile = ({ apiKey, ...profile }) => ({ ...profile, hasApiKey: !!apiKey });
 
 function sameConnection(left, right) {
@@ -120,6 +122,7 @@ export function createConnectionStore({ snapshot = {}, initial = {}, save = asyn
   );
   let presets = Array.isArray(snapshot.apiPresets) ? structuredClone(snapshot.apiPresets) : [];
   let writes = Promise.resolve();
+  let antiRoute = routeSettings(snapshot.antiRoute);
   for (const kind of kinds) {
     const value = snapshot.profiles?.[kind] || snapshot[kind];
     if (value)
@@ -130,14 +133,32 @@ export function createConnectionStore({ snapshot = {}, initial = {}, save = asyn
         ...((snapshot.version || 0) < 4 ? { rememberKey: true } : {}),
       };
   }
+  if ((snapshot.version || 0) < 5) {
+    const legacyChat = snapshot.profiles?.chat || snapshot.chat;
+    const legacyQuick = snapshot.profiles?.['quick-chat'] || snapshot['quick-chat'];
+    if (!legacyChat?.model && legacyQuick?.model)
+      profiles.chat = { ...profiles['quick-chat'], promptPresetId: profiles.chat.promptPresetId };
+  }
+  const effective = (kind) => ({
+    ...profiles[connectionKind(kind)],
+    promptPresetId: profiles[kind].promptPresetId,
+  });
   for (const kind of ['map', 'creation'])
     if (!profiles[kind].promptPresetId)
       profiles[kind].promptPresetId = profiles.chat.promptPresetId || `${kind}-default`;
   function persist() {
     const stored = (profile) => ({ ...profile, apiKey: profile.rememberKey ? profile.apiKey : '' });
     const value = {
-      version: 4,
-      profiles: Object.fromEntries(kinds.map((kind) => [kind, stored(profiles[kind])])),
+      version: 5,
+      antiRoute,
+      profiles: Object.fromEntries(
+        kinds.map((kind) => [
+          kind,
+          kind === 'quick-chat'
+            ? { promptPresetId: profiles[kind].promptPresetId }
+            : stored(profiles[kind]),
+        ]),
+      ),
       apiPresets: presets.map(stored),
     };
     writes = writes.catch(() => {}).then(() => save(value));
@@ -147,16 +168,30 @@ export function createConnectionStore({ snapshot = {}, initial = {}, save = asyn
     if (!kinds.includes(kind)) throw Error('接口类型无效');
   };
   const visible = () =>
-    Object.fromEntries(kinds.map((kind) => [kind, publicProfile(profiles[kind])]));
+    Object.fromEntries(kinds.map((kind) => [kind, publicProfile(effective(kind))]));
   return {
     visible,
+    routeSettings: () => ({ ...antiRoute }),
+    async saveRouteSettings(input) {
+      const previous = antiRoute;
+      const next = routeSettings(input);
+      antiRoute = next;
+      try {
+        await persist();
+      } catch (failure) {
+        if (antiRoute === next) antiRoute = previous;
+        throw failure;
+      }
+      return { ...antiRoute };
+    },
     get(kind) {
       checkKind(kind);
-      return { ...profiles[kind] };
+      return effective(kind);
     },
     listPresets: () => presets.map(publicProfile),
     async saveProfile(input) {
       checkKind(input.kind);
+      input = { ...input, kind: connectionKind(input.kind) };
       const old = profiles[input.kind];
       const next = {
         ...profileFrom(input, old),
@@ -195,6 +230,7 @@ export function createConnectionStore({ snapshot = {}, initial = {}, save = asyn
     },
     async preset(input) {
       checkKind(input.kind);
+      input = { ...input, kind: connectionKind(input.kind) };
       if (input.action === 'save') {
         const name = typeof input.name === 'string' ? input.name.trim() : '';
         if (!name || name.length > 60) throw Error('API预设名称需要1～60字');

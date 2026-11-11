@@ -1,0 +1,374 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+    <title>万象酒馆 · 星灯街</title>
+    <link rel="stylesheet" href="./styles/street.css" />
+    <link rel="stylesheet" href="./styles/scene-loading.css" />
+    <link rel="stylesheet" href="./styles/scene-visitors.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "./vendor/build/three.module.js",
+          "three/addons/": "./vendor/addons/"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <canvas tabindex="0" aria-label="星灯街全景，拖动或方向键环视，站位固定"></canvas>
+    <div class="street-vignette" aria-hidden="true"></div>
+    <header class="street-header">
+      <h1>酒馆门前</h1>
+    </header>
+    <nav class="street-actions" aria-label="外出操作">
+      <button id="street-map-open" type="button" aria-haspopup="dialog" aria-controls="street-map">
+        <svg
+          viewBox="0 0 24 24"
+          width="17"
+          height="17"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M3 5.5 9 3l6 2.5L21 3v15.5L15 21l-6-2.5L3 21ZM9 3v15.5m6-13V21" />
+        </svg>
+        大地图
+      </button>
+      <button id="street-return" aria-label="返回酒馆">
+        <span aria-hidden="true">↶</span> 酒馆
+      </button>
+    </nav>
+    <dialog id="street-map" aria-label="泛生界大地图">
+      <form method="dialog" class="street-map-close">
+        <button type="submit" autofocus aria-label="关闭地图">×</button>
+      </form>
+      <div class="street-map-body">
+        <svg
+          id="street-map-sheet"
+          class="street-map-sheet"
+          data-detail="local"
+          viewBox="0 0 72 48"
+          role="img"
+          aria-label="泛生界地图，含艾尔特拉大陆、海洋和各国边界。拖动或用方向键平移，滚轮、双指或加减键缩放"
+          tabindex="0"
+        >
+          <defs>
+            <svg id="atlas-fiber-sample" width="86" height="56" viewBox="285 225 946 616">
+              <use href="./assets/exploration/fansheng-atlas.svg#paper-quarter" />
+            </svg>
+            <pattern
+              id="atlas-fiber"
+              x="1896"
+              y="1164"
+              width="172"
+              height="112"
+              patternUnits="userSpaceOnUse"
+            >
+              <use href="#atlas-fiber-sample" />
+              <use href="#atlas-fiber-sample" transform="translate(172 0) scale(-1 1)" />
+              <use href="#atlas-fiber-sample" transform="translate(0 112) scale(1 -1)" />
+              <use href="#atlas-fiber-sample" transform="translate(172 112) scale(-1 -1)" />
+            </pattern>
+            <clipPath id="street-atlas-preview-clip">
+              <rect x="0" y="-22" width="0" height="44" />
+            </clipPath>
+            <mask
+              id="street-atlas-frame-mask"
+              width="3072"
+              height="2048"
+              maskUnits="userSpaceOnUse"
+            >
+              <use
+                href="./assets/exploration/fansheng-atlas.svg#ring-outline"
+                fill="white"
+                fill-rule="evenodd"
+              />
+            </mask>
+          </defs>
+          <g class="street-map-paper" aria-hidden="true">
+            <use
+              href="./assets/exploration/fansheng-atlas-wear.svg#atlas-sheet-edge"
+              fill="#ddc499"
+            />
+            <use
+              href="./assets/exploration/fansheng-atlas-wear.svg#atlas-sheet-edge"
+              fill="url(#atlas-fiber)"
+              opacity=".62"
+            />
+            <use
+              class="street-map-overview street-map-sea-wash"
+              href="./assets/exploration/fansheng-atlas.svg#ring-outline"
+            />
+            <use href="./assets/exploration/fansheng-atlas-wear.svg#atlas-sheet-patina" />
+            <use
+              href="./assets/exploration/fansheng-atlas-wear.svg#atlas-local-patina"
+              transform="translate(1962 1208)"
+            />
+          </g>
+          <g
+            class="street-map-overview street-map-territories"
+            mask="url(#street-atlas-frame-mask)"
+            aria-hidden="true"
+          >
+            <use href="./assets/exploration/fansheng-territories.svg#sea-engraving" />
+            <use href="./assets/exploration/fansheng-territories.svg#continental-atlas" />
+          </g>
+          <use
+            href="./assets/exploration/fansheng-atlas.svg#ring-outline"
+            class="street-map-edge-ink"
+            transform="translate(1536 1024) scale(1.012) translate(-1536 -1024)"
+            aria-hidden="true"
+          />
+          <use
+            href="./assets/exploration/fansheng-atlas.svg#ring-outline"
+            class="street-map-world-rim"
+          />
+          <g transform="translate(1962 1208)" aria-hidden="true">
+            <g class="street-map-local">
+              <use href="./assets/exploration/fansheng-silver-road.svg#silver-road-contours" />
+              <use href="./assets/exploration/fansheng-silver-road.svg#silver-road-scrub" />
+            </g>
+            <g class="street-map-terrain">
+              <use href="./assets/exploration/fansheng-silver-road.svg#silver-road-groves" />
+              <use href="./assets/exploration/fansheng-silver-road.svg#silver-road-route" />
+            </g>
+            <use
+              class="street-atlas-route-preview"
+              href="./assets/exploration/fansheng-silver-road.svg#road-course"
+              clip-path="url(#street-atlas-preview-clip)"
+            />
+            <g class="street-map-local">
+              <use href="./assets/exploration/fansheng-silver-road.svg#silver-road-bridge" />
+              <use href="./assets/exploration/fansheng-silver-road.svg#silver-road-starbell" />
+              <use href="./assets/exploration/fansheng-silver-road.svg#silver-road-silver-crown" />
+            </g>
+            <g class="street-map-local street-map-field-notes" text-anchor="middle">
+              <text class="street-map-route-label" x="-7.1" y="-2.45">双拱石桥</text>
+              <text class="street-map-route-label" x="6.3" y="6.3" transform="rotate(9 6.3 6.3)">
+                芦苇浅滩
+              </text>
+              <text x="14.6" y="4.7" transform="rotate(-7 14.6 4.7)">银冠大道</text>
+              <text x="8.8" y="-13.6" transform="rotate(-9 8.8 -13.6)">白石山口</text>
+              <g transform="translate(30.5 -13.4)">
+                <path
+                  d="M0-1.35.4-.16 1.07 0 .38.22 0 1.17-.25.22-1.03 0-.27-.19Z"
+                  fill="none"
+                  stroke="#79593b"
+                  stroke-width=".075"
+                />
+                <path d="M0-1.35V0H-1.03L-.27-.19ZM0 1.17V0h1.07L.38.22Z" fill="#79593b" />
+                <text y="-1.85">北</text>
+              </g>
+            </g>
+          </g>
+          <g class="street-map-city-labels" text-anchor="middle">
+            <text id="atlas-starbell" class="street-map-local" x="1938" y="1212">星钟城</text>
+            <text id="atlas-silver-crown" class="street-map-local" x="1986" y="1212">银冠城</text>
+          </g>
+          <g class="street-map-regional" text-anchor="middle" aria-hidden="true">
+            <g transform="translate(1938 1208)">
+              <g class="street-map-screen-marker street-map-point-name">
+                <circle r="4" />
+                <text>星钟城</text>
+              </g>
+            </g>
+            <g transform="translate(1986 1208)">
+              <g class="street-map-screen-marker street-map-point-name">
+                <circle r="4" />
+                <text>银冠城</text>
+              </g>
+            </g>
+          </g>
+          <g class="street-map-landmarks" text-anchor="middle">
+            <g transform="translate(765 617)" data-atlas-landmark="ruins">
+              <use
+                class="street-map-local"
+                transform="scale(.16)"
+                href="./assets/exploration/fansheng-landmarks.svg#ruins-terrain"
+              />
+              <g class="street-map-screen-marker street-map-landmark">
+                <circle r="3.3" />
+                <use
+                  class="street-map-local"
+                  href="./assets/exploration/fansheng-landmarks.svg#ruins-icon"
+                />
+                <text>界隙遗迹</text>
+              </g>
+            </g>
+            <g transform="translate(978 1356)" data-atlas-landmark="forest">
+              <use
+                class="street-map-local"
+                transform="scale(.16)"
+                href="./assets/exploration/fansheng-landmarks.svg#forest-terrain"
+              />
+              <g class="street-map-screen-marker street-map-landmark">
+                <circle r="3.3" />
+                <use
+                  class="street-map-local"
+                  href="./assets/exploration/fansheng-landmarks.svg#forest-icon"
+                />
+                <text>月痕古林</text>
+              </g>
+            </g>
+            <g transform="translate(1140 661)" data-atlas-landmark="frost">
+              <use
+                class="street-map-local"
+                transform="scale(.16)"
+                href="./assets/exploration/fansheng-landmarks.svg#frost-terrain"
+              />
+              <g class="street-map-screen-marker street-map-landmark">
+                <circle r="3.3" />
+                <use
+                  class="street-map-local"
+                  href="./assets/exploration/fansheng-landmarks.svg#frost-icon"
+                />
+                <text>霜晶矿窟</text>
+              </g>
+            </g>
+            <g transform="translate(2220 1360)" data-atlas-landmark="forge">
+              <use
+                class="street-map-local"
+                transform="scale(.16)"
+                href="./assets/exploration/fansheng-landmarks.svg#forge-terrain"
+              />
+              <g class="street-map-screen-marker street-map-landmark">
+                <circle r="3.3" />
+                <use
+                  class="street-map-local"
+                  href="./assets/exploration/fansheng-landmarks.svg#forge-icon"
+                />
+                <text>余烬铸坊</text>
+              </g>
+            </g>
+            <g transform="translate(1669 1458)" data-atlas-landmark="tide">
+              <use
+                class="street-map-local"
+                transform="scale(.16)"
+                href="./assets/exploration/fansheng-landmarks.svg#tide-terrain"
+              />
+              <g class="street-map-screen-marker street-map-landmark">
+                <circle r="3.3" />
+                <use
+                  class="street-map-local"
+                  href="./assets/exploration/fansheng-landmarks.svg#tide-icon"
+                />
+                <text>潮汐星殿</text>
+              </g>
+            </g>
+            <g transform="translate(1515 1339)" data-atlas-landmark="eternal-city">
+              <g class="street-map-screen-marker street-map-landmark">
+                <circle r="3.3" />
+                <use
+                  class="street-map-local"
+                  href="./assets/exploration/fansheng-landmarks.svg#capital-icon"
+                />
+                <text>永恒之城</text>
+              </g>
+            </g>
+            <g transform="translate(680 754)" data-atlas-landmark="five-ports">
+              <use
+                class="street-map-local"
+                transform="scale(.16)"
+                href="./assets/exploration/fansheng-landmarks.svg#port-terrain"
+              />
+              <g class="street-map-screen-marker street-map-landmark">
+                <circle r="3.3" />
+                <use
+                  class="street-map-local"
+                  href="./assets/exploration/fansheng-landmarks.svg#port-icon"
+                />
+                <text>五港同盟</text>
+              </g>
+            </g>
+            <g transform="translate(2315 1287)" data-atlas-landmark="yingtian">
+              <g class="street-map-screen-marker street-map-landmark">
+                <circle r="3.3" />
+                <use
+                  class="street-map-local"
+                  href="./assets/exploration/fansheng-landmarks.svg#gate-icon"
+                />
+                <text>应天府</text>
+              </g>
+            </g>
+            <g transform="translate(1536 1024)" data-atlas-landmark="jacobs-ladder">
+              <g class="street-map-screen-marker street-map-landmark street-map-realm-note">
+                <circle r="3.3" />
+                <use
+                  class="street-map-local"
+                  href="./assets/exploration/fansheng-landmarks.svg#ladder-icon"
+                />
+                <text>雅各布天梯入口</text>
+              </g>
+            </g>
+          </g>
+          <g
+            class="street-map-overview street-map-world-labels"
+            text-anchor="middle"
+            aria-hidden="true"
+          >
+            <text class="street-map-world-name" x="1540" y="165">泛生界</text>
+            <text class="street-map-continent-name" x="1580" y="875">艾尔特拉大陆</text>
+            <text class="street-map-geography-name" x="1505" y="1140">荒地</text>
+            <text class="street-map-sea-name" x="474" y="1096">海洋</text>
+            <text class="street-map-sea-name" x="2650" y="941">海洋</text>
+            <text class="street-map-annotation" x="2780" y="1910" text-anchor="end">
+              源生界 · 以利亚之冠
+            </text>
+            <g class="street-map-nation-names">
+              <text x="735" y="544" data-nation-label="rose">玫瑰联合王国</text>
+              <text x="1050" y="503" data-nation-label="eldoria">
+                <tspan x="1050">埃尔多里亚</tspan>
+                <tspan x="1050" dy="1.05em">共和国</tspan>
+              </text>
+              <text x="1345" y="528" data-nation-label="anvil">铁砧山帝国</text>
+              <text x="1450" y="587" data-nation-label="saar">萨尔王国</text>
+              <text x="1615" y="454" data-nation-label="snu">斯努涅联盟</text>
+              <text x="1850" y="552" data-nation-label="karka">卡尔卡西斯帝国</text>
+              <text x="2207" y="645" data-nation-label="orcs">兽人部落联盟</text>
+              <text x="1006" y="700" data-nation-label="astur">亚斯图王国</text>
+              <text x="1151" y="830" data-nation-label="ivre">伊夫雷亚王国</text>
+              <text x="1817" y="658" data-nation-label="al">阿勒王国</text>
+              <text x="778" y="992" data-nation-label="gri">格里希联邦</text>
+              <text x="1085" y="1069" data-nation-label="aust">奥斯堡帝国</text>
+              <text x="896" y="1303" data-nation-label="moon">银月联邦</text>
+              <text x="1520" y="1450" data-nation-label="ael">艾尔德兰帝国</text>
+              <text x="1930" y="963" data-nation-label="bel">贝尔克王国</text>
+              <text x="2213" y="1113" data-nation-label="tian">天启王朝</text>
+            </g>
+            <g transform="translate(1962 1208)">
+              <g class="street-map-screen-marker street-map-point-name">
+                <circle r="4" />
+                <text>星钟城 · 银冠城</text>
+              </g>
+            </g>
+          </g>
+        </svg>
+        <div class="street-atlas-travel" role="group" aria-label="外出路线" hidden>
+          <span class="street-atlas-turns" aria-live="polite"></span>
+        </div>
+      </div>
+    </dialog>
+    <div id="street-points" aria-label="可调查的地点与角色"></div>
+    <div class="street-reticle" aria-hidden="true"></div>
+    <aside id="street-inspector" aria-live="polite" hidden>
+      <div class="inspection-heading">
+        <div>
+          <p id="inspection-kind"></p>
+          <h2 id="inspection-name"></h2>
+        </div>
+        <button id="inspection-close" aria-label="收起调查">×</button>
+      </div>
+      <p id="inspection-text"></p>
+      <button id="inspection-return" hidden>
+        推门，回到酒馆 <span aria-hidden="true">→</span>
+      </button>
+    </aside>
+    <div id="street-status" class="scene-loading" role="status">推开门，街灯正在点亮…</div>
+    <div class="street-fade" aria-hidden="true"></div>
+    <script type="module" src="./src/exploration/street.js"></script>
+  </body>
+</html>

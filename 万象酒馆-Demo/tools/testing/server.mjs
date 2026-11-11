@@ -28,7 +28,25 @@ export async function serverChecks(baseURL, port) {
     assert.equal((await fetch(baseURL + url)).status, 403);
   assert.equal((await fetch(baseURL + '/__demo/stop', { method: 'POST' })).status, 403);
   assert.equal((await fetch(baseURL + '/__demo/stop')).status, 405);
-  return { assetsServed: true, privateControlBlocked: true, unauthorizedStopBlocked: true };
+  assert.equal(
+    (await fetch(baseURL + '/' + encodeURIComponent('存档') + '/save.json')).status,
+    403,
+  );
+  assert.equal(
+    (await fetch(baseURL + '/__demo/storage', { headers: { Origin: 'https://other.invalid' } }))
+      .status,
+    403,
+  );
+  assert.equal((await fetch(baseURL + '/__demo/storage', { method: 'POST' })).status, 403);
+  const disk = await fetch(baseURL + '/__demo/storage');
+  assert.equal(disk.headers.get('cache-control'), 'no-store');
+  assert.equal((await disk.json()).app, 'wanxiang-disk-storage');
+  return {
+    assetsServed: true,
+    privateControlBlocked: true,
+    unauthorizedStopBlocked: true,
+    diskPrivate: true,
+  };
 }
 
 export async function launchers() {

@@ -1,0 +1,6 @@
+{
+  "description": "广场、商业街、守备区、城外四处简洁画风与原生分块高清；定向检查资源、实际站位、调查路线、手机横屏和自由拖动。",
+  "scopes": ["quality", "core", "city-center", "starbell"],
+  "coreFiles": ["tests/assets.test.js"],
+  "browserConcurrency": 2
+}

@@ -2,8 +2,8 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 (async () => {
-  const { explorationJourneyChecks } = await import(
-    pathToFileURL(path.join(__dirname, 'exploration.mjs')).href
+  const { adventureChecks } = await import(
+    pathToFileURL(path.join(__dirname, 'adventure.mjs')).href
   );
   const browser = await chromium.launch({
     channel: process.env.TEST_BROWSER || 'msedge',
@@ -13,7 +13,7 @@ const { pathToFileURL } = require('node:url');
   try {
     console.log(
       JSON.stringify(
-        await explorationJourneyChecks({
+        await adventureChecks({
           browser,
           baseURL: process.env.DEMO_TEST_URL,
           output: process.env.TEST_OUTPUT_DIR,

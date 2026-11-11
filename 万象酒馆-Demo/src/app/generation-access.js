@@ -6,8 +6,6 @@ export function createGenerationAccess(context) {
     '#creation-generate',
     '#chat-send',
     '#quick-chat-send',
-    '#script-rewrite',
-    '#rewrite-help-confirm',
     '#memory-generate',
     '#forge-refine',
     '[data-world-submit]',

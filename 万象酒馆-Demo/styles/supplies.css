@@ -3,11 +3,16 @@
   width: min(860px, calc(100vw - 48px));
   max-height: calc(100dvh - 48px);
   overflow: auto;
-  background: radial-gradient(ellipse at top right, #37554444, transparent 70%), #10231f;
-  border: 1px solid #bfa46a88;
-  color: #e9dfc4;
-  padding: 24px;
-  border-radius: 14px;
+  background: radial-gradient(ellipse at 70% 20%, rgba(38, 70, 58, 0.72), transparent 75%), #0d1a18;
+  border: 1px solid rgba(226, 186, 111, 0.45);
+  color: #f3ede2;
+  padding: 26px;
+  border-radius: 16px;
+  box-shadow:
+    0 24px 90px rgba(0, 0, 0, 0.85),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
 }
 #void-shop header {
   display: flex;
@@ -15,7 +20,7 @@
   align-items: center;
   gap: 16px;
   padding-bottom: 18px;
-  border-bottom: 1px solid #bfa46a33;
+  border-bottom: 1px solid rgba(226, 186, 111, 0.25);
 }
 #void-shop header small {
   letter-spacing: 2px;
@@ -267,4 +272,27 @@
   color: #ecdfb1;
   background: #56613b;
   border-color: #cdb579;
+}
+.shop-departments {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.shop-departments button {
+  padding: 9px 20px;
+}
+.shop-departments [aria-pressed='true'] {
+  color: #f6d69d;
+  border-color: #d4b16a;
+}
+.ingredient-basket {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.ingredient-basket span {
+  display: grid;
+  justify-items: center;
+  font-size: 12px;
 }

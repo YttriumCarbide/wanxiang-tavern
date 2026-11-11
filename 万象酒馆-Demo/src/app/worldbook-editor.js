@@ -1,4 +1,13 @@
-import { normalizeWorldbook, newWorldEntry, characterWorldEntry } from '../ai/worldbook.js';
+import {
+  normalizeWorldbook,
+  newWorldEntry,
+  characterWorldEntry,
+  characterEntryCategory,
+  classifyCharacterEntry,
+} from '../ai/worldbook.js';
+import { isMonsterWorldEntry } from '../ai/monster-narrative.js';
+import { archivedNpcBook, journeyMemoryBook } from '../ai/journey-memory-worldbook.js';
+import { journeyMemories } from '../memory.js';
 import { parseWorldKeywords } from './worldbook-fields.js';
 import { html } from '../shared/html.js';
 import { escapeText } from '../ui.js';
@@ -8,6 +17,26 @@ import { formatRequestPreview, tokenSummary } from './request-preview.js';
 /** One inline ST-style editor; entries keep all imported fields outside the visible subset. */
 export function createWorldbookEditor({ session, events, api, inputFor, onSaved }) {
   const state = session.ai.worldEditor;
+  const category = document.createElement('select');
+  category.id = 'world-category';
+  category.setAttribute('aria-label', '世界书显示分类');
+  category.innerHTML =
+    '<option value="all">全部条目</option><option value="general">世界与规则</option><option value="protagonist">主角设定</option><option value="ai-character">ai角色条目</option><option value="character">角色条目</option><option value="monster">怪物设定</option>';
+  $('#world-search').before(category);
+  category.add(new Option('官设副本', 'official-dungeon'), 2);
+  category.add(new Option('NPC角色条目', 'npc'));
+  category.add(new Option('旅途记录', 'journey-memory'));
+  function entryCategory(entry) {
+    const marker = entry.extensions?.wanxiang;
+    if (marker?.officialNpcId || /^(?:官设NPC|NPC角色条目)[：:]/u.test(entry.comment)) return 'npc';
+    if (marker?.officialDungeonId || marker?.dungeonId || /^官设副本[：:]/u.test(entry.comment))
+      return 'official-dungeon';
+    return characterEntryCategory(entry) || (isMonsterWorldEntry(entry) ? 'monster' : 'general');
+  }
+  events.on(category, 'change', () => {
+    capture();
+    renderList();
+  });
   let tokenTimer = null,
     tokenRevision = 0;
   const notice = (text) => {
@@ -178,7 +207,7 @@ ${escapeText(entry.keysecondary.join(', '))}</textarea>
       </div>
       <div class="world-targets">
         <span>发送给</span
-        >${['character', 'script', 'chat', 'quick-chat', 'map', 'creation'].map((kind) => html`<label class="world-check"><input type="checkbox" data-world-target="${kind}" ${entry.apiTargets.includes(kind) ? 'checked' : ''} />${{ character: '角色 API', script: '剧本 API', chat: '酒馆交流 API', 'quick-chat': '快速闲聊 API', map: '地图 API', creation: '以太 API' }[kind]}</label>`).join('')}<small
+        >${['character', 'script', 'chat', 'summary', 'creation', 'map'].map((kind) => html`<label class="world-check"><input type="checkbox" data-world-target="${kind}" ${entry.apiTargets.includes(kind) ? 'checked' : ''} />${{ character: '角色 API', script: '剧本 API', chat: '聊天 API', summary: '总结 API', creation: '造物 API', map: '地图 API' }[kind]}</label>`).join('')}<small
           >仍需满足本条的触发条件；都不勾选则不发送。</small
         >
       </div>
@@ -212,8 +241,31 @@ ${escapeText(entry.content)}</textarea>`;
     $('#world-editor-parking').append(editor);
     const search = $('#world-search').value.trim().toLowerCase();
     const sort = $('#world-sort').value;
-    const entries = Object.values(state.draft.entries).filter((entry) =>
+    const library = session.ai.library;
+    const archive =
+      category.value === 'npc'
+        ? archivedNpcBook(library.archives?.npcs)
+        : category.value === 'journey-memory'
+          ? journeyMemoryBook({ journeyMemories: journeyMemories(library) })
+          : null;
+    const savedEntries = Object.values(archive?.entries || {}).filter((entry) =>
       `${entry.comment} ${entry.key.join(' ')} ${entry.content}`.toLowerCase().includes(search),
+    );
+    const savedRows = savedEntries
+      .map(
+        (entry) =>
+          html`<details class="world-entry-row">
+            <summary>${escapeText(entry.comment)}</summary>
+            <p>${escapeText(entry.constant ? '随请求发送' : entry.key.join('、'))}</p>
+            <textarea readonly class="world-content" rows="8">
+${escapeText(entry.content)}</textarea>
+          </details>`,
+      )
+      .join('');
+    const entries = Object.values(state.draft.entries).filter(
+      (entry) =>
+        (category.value === 'all' || entryCategory(entry) === category.value) &&
+        `${entry.comment} ${entry.key.join(' ')} ${entry.content}`.toLowerCase().includes(search),
     );
     entries.sort((a, b) =>
       sort === 'name'
@@ -222,7 +274,7 @@ ${escapeText(entry.content)}</textarea>`;
           ? b.order - a.order
           : (a.displayIndex ?? a.uid) - (b.displayIndex ?? b.uid),
     );
-    $('#world-count').textContent = `${entries.length} 条`;
+    $('#world-count').textContent = `${entries.length + savedEntries.length} 条`;
     $('#world-entry-list').innerHTML =
       entries
         .map(
@@ -323,7 +375,7 @@ ${escapeText(entry.content)}</textarea>`;
               <div data-world-expanded="${entry.uid}"></div>
             </article>`,
         )
-        .join('') || '<p class="world-empty">没有匹配条目</p>';
+        .join('') + savedRows || '<p class="world-empty">没有匹配条目</p>';
     const slot = !state.collapsed && document.querySelector(`[data-world-expanded="${state.uid}"]`);
     (slot || $('#world-editor-parking')).append(editor);
   }
@@ -357,9 +409,23 @@ ${escapeText(entry.content)}</textarea>`;
             entry.comment === comment || entry.extensions?.wanxiang?.characterId === char.id,
         );
         if (!existing) {
-          state.draft.entries[uid] = characterWorldEntry(char, uid);
+          state.draft.entries[uid] = characterWorldEntry(
+            char,
+            uid,
+            session.ai.library.campaign?.protagonistId,
+          );
           uid++;
           added = true;
+        } else {
+          const classified = classifyCharacterEntry(
+            existing,
+            char,
+            session.ai.library.campaign?.protagonistId,
+          );
+          if (JSON.stringify(classified) !== JSON.stringify(existing)) {
+            Object.assign(existing, classified);
+            added = true;
+          }
         }
       }
       if (added) dirty();
@@ -373,6 +439,8 @@ ${escapeText(entry.content)}</textarea>`;
   }
   function selectEntry(uid) {
     capture();
+    if (category.value !== 'all' && category.value !== entryCategory(state.draft.entries[uid]))
+      category.value = entryCategory(state.draft.entries[uid]);
     state.uid = String(uid);
     state.collapsed = false;
     renderEditor();

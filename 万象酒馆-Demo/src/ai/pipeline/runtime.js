@@ -23,6 +23,9 @@ import { characterOutputSchema } from '../character-schema.js';
 import { scriptOutputSchema } from '../script-schema.js';
 import { parseCharacterOutput } from '../contracts.js';
 import { characterGenerationPlan } from '../../character-generation.js';
+import { invitationRequest, invitationResponse } from './invitation-request.js';
+import { overlandRequest, overlandResponse } from './overland-request.js';
+import { archivedNpcBook, journeyMemoryBook } from '../journey-memory-worldbook.js';
 
 /** Shared prompt, parser and world-state pipeline. Network and storage are supplied by the host. */
 export function createAiPipeline({
@@ -37,13 +40,25 @@ export function createAiPipeline({
 }) {
   const pendingWorldStates = new Map();
   async function buildRequest(kind, input, source, override) {
-    const profile = settings.get(kind);
+    const antiRoute = settings.routeSettings?.();
+    const profile = { ...settings.get(kind), ...(antiRoute ? { antiRoute, routeKind: kind } : {}) };
+    if (kind === 'script' && input.invitation)
+      return invitationRequest(input, source, profile, countTokens);
+    if (kind === 'script' && input.overland) return overlandRequest(input, profile, countTokens);
     if (kind === 'summary') return summaryRequest(input, profile, countTokens, readText);
 
     const chatting = ['chat', 'quick-chat'].includes(kind);
     const normalized = chatting ? chatInput(kind, input) : input;
     const asset = ['map', 'creation'].includes(kind);
     const assetData = asset ? (kind === 'map' ? mapInput(input) : creationInput(input)) : null;
+    const worldInfo = await worlds.resolve(
+      kind,
+      chatting ? { ...input, party: normalized.characters } : input,
+      override,
+    );
+    for (const book of [journeyMemoryBook(input), archivedNpcBook(input.archivedNpcs)]) {
+      if (Object.keys(book.entries).length) worldInfo.books.push(book);
+    }
     const options = {
       ...(asset
         ? {
@@ -66,11 +81,7 @@ export function createAiPipeline({
       profile,
       readText,
       runRegexTasks,
-      worldInfo: await worlds.resolve(
-        kind,
-        chatting ? { ...input, party: normalized.characters } : input,
-        override,
-      ),
+      worldInfo,
       regexScripts: [...regexStore.get(), ...presetRegexScripts(source)],
       countTokens,
       maxOutput: profile.tokenField === 'none' ? 0 : profile.maxTokens,
@@ -99,9 +110,39 @@ export function createAiPipeline({
     const creating = kind === 'creation';
     if (requestReport) requestReport.usage = result.usage;
     if (models) return result;
-    else if (kind === 'map' || creating) {
+    if (kind === 'script' && input.overland)
+      return {
+        acts: overlandResponse(result.content, input),
+        request: requestReport,
+        usage: result.usage,
+      };
+    if (kind === 'script' && input.invitation) {
+      const raw = result.rawContent || result.content;
       try {
-        const candidate = /<wanxiang_json\b/i.test(result.content)
+        const invitation = invitationResponse(result.content);
+        return {
+          invitation,
+          diagnostic: redactDiagnostic(
+            generationDiagnostic(kind, raw, '', 'complete'),
+            profile?.apiKey,
+          ),
+          request: requestReport,
+          usage: result.usage,
+        };
+      } catch (failure) {
+        failure.diagnostic ||= generationDiagnostic(
+          kind,
+          raw,
+          failure.message,
+          'invitation-response',
+        );
+        failure.diagnostic.request = requestReport;
+        failure.diagnostic = redactDiagnostic(failure.diagnostic, profile?.apiKey);
+        throw failure;
+      }
+    } else if (kind === 'map' || creating) {
+      try {
+        const candidate = /<(?:wanxiang_output|wanxiang_json)\b/i.test(result.content)
           ? extractGenerationEnvelope(kind, result.content).candidateText
           : result.content;
         const scripts = [...regexStore.get(), ...presetRegexScripts(source)];
@@ -162,7 +203,7 @@ export function createAiPipeline({
       await worlds.commit(kind, prepared.nextWorldState, prepared.nextWorldState.step - 1);
       pendingWorldStates.delete(requestId);
       const reply = { ...response, request: requestReport, usage: result.usage };
-      if (input.adventure)
+      if (input.adventure || input.invitation)
         reply.diagnostic = redactDiagnostic(
           {
             ...generationDiagnostic(kind, result.rawContent || result.content, '', 'complete'),
@@ -244,6 +285,9 @@ export function createAiPipeline({
   function completionOptions(job) {
     const { kind, models, prepared, input } = job;
     return {
+      antiRoute: settings?.routeSettings?.(),
+      routeKind: kind,
+      routeEntropy: prepared?.transport?.routeEntropy,
       sampling: prepared?.sampling,
       models,
       outputEnvelope: !models,
@@ -254,7 +298,10 @@ export function createAiPipeline({
         : null,
       stop: prepared?.transport?.stop,
       responseSchema:
-        models || ['chat', 'quick-chat', 'summary', 'creation', 'map'].includes(kind)
+        models ||
+        input?.invitation ||
+        input?.overland ||
+        ['chat', 'quick-chat', 'summary', 'creation', 'map'].includes(kind)
           ? null
           : kind === 'character'
             ? characterOutputSchema({ plan: characterGenerationPlan(input) })

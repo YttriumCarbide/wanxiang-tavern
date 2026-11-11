@@ -1,6 +1,8 @@
 import { enemyEffectSide } from './enemy-targets.js';
+import { withoutDiningBonus } from './dining.js';
 import { aresDecision, shouldEnrage } from './ares.js';
 import { createCompanionMechanics } from './companion-mechanics.js';
+import { createTownGuestMechanics, blindedTarget } from './town-guest-mechanics.js';
 import { tacticalDecision, lockEnemyDecisions } from './enemy-tactics.js';
 import { canCombine, EMBLEMS, OVERLOAD_EMBLEM_ID } from './emblems.js';
 import { ITEMS, restoreBag } from './content/items.js';
@@ -90,8 +92,9 @@ export function effectiveBuff(s, id, key) {
 }
 export function intent(s, id) {
   const authored = definition(s, id);
-  if (authored.tactic?.mode === 'ares')
-    return leveledIntent(aresDecision(s, id, authored), s.units[id]?.attackBonus);
+  const scaleIntent = (move) =>
+    leveledIntent(move, s.units[id]?.attackBonus, s.units[id]?.damageScale);
+  if (authored.tactic?.mode === 'ares') return scaleIntent(aresDecision(s, id, authored));
   const tactical =
     s.enemyDecisions?.[id]?.round === s.round
       ? s.enemyDecisions[id]
@@ -99,7 +102,7 @@ export function intent(s, id) {
   if (tactical) {
     const def = definition(s, id);
     const list = tactical.enraged ? def.enragedIntents : def.intents;
-    return leveledIntent({ ...list[tactical.index], ...tactical }, s.units[id]?.attackBonus || 0);
+    return scaleIntent({ ...list[tactical.index], ...tactical });
   }
   const def = definition(s, id),
     enraged =
@@ -113,30 +116,27 @@ export function intent(s, id) {
     (!def.openingIntent.lowestHpPosition || s.round <= 1)
       ? def.openingIntent
       : list[(Math.max(1, s.round) - 1) % list.length];
-  return leveledIntent(
-    {
-      ...move,
-      ...(move.lowestHpPosition
-        ? s.openingTargetSlots?.[id] !== undefined
-          ? { slot: s.openingTargetSlots[id] }
-          : {
-              slot: s.formation
-                .slice(0, 3)
-                .reduce(
-                  (lowest, id, slot) =>
-                    s.units[id]?.hp > 0 &&
-                    (lowest < 0 || s.units[id].hp < s.units[s.formation[lowest]].hp)
-                      ? slot
-                      : lowest,
-                  -1,
-                ),
-            }
-        : {}),
-      ...(s.enemyIntentSlots?.[id] !== undefined ? { slot: s.enemyIntentSlots[id] } : {}),
-      enraged: !!enraged,
-    },
-    s.units[id]?.attackBonus || 0,
-  );
+  return scaleIntent({
+    ...move,
+    ...(move.lowestHpPosition
+      ? s.openingTargetSlots?.[id] !== undefined
+        ? { slot: s.openingTargetSlots[id] }
+        : {
+            slot: s.formation
+              .slice(0, 3)
+              .reduce(
+                (lowest, id, slot) =>
+                  s.units[id]?.hp > 0 &&
+                  (lowest < 0 || s.units[id].hp < s.units[s.formation[lowest]].hp)
+                    ? slot
+                    : lowest,
+                -1,
+              ),
+          }
+      : {}),
+    ...(s.enemyIntentSlots?.[id] !== undefined ? { slot: s.enemyIntentSlots[id] } : {}),
+    enraged: !!enraged,
+  });
 }
 export function enemyTimeline(s, extraSlow = {}) {
   if (s.phase === 'opening') return [null];
@@ -265,7 +265,9 @@ function simulate(s, plan, slots) {
     currentLogs = [],
     currentStatusTriggers = [],
     currentProcs = [],
-    attackHits = null;
+    attackHits = null,
+    attackInjuries = null,
+    blindMiss = null;
   work.procUses ||= {};
   work.cooperationHits = {};
   work.cooperations = [];
@@ -306,8 +308,10 @@ function simulate(s, plan, slots) {
       mechanics.onDeath(u.id);
     }
   }
-  function lose(u, n, reason) {
-    if (u.hp <= 0) return;
+  function lose(u, n, reason, reduced = false) {
+    if (u.hp <= 0) return 0;
+    if (!reduced && effectiveBuff(work, u.id, 'flying')) n = Math.floor(n / 2);
+    const before = u.hp;
     u.hp = Math.max(0, u.hp - n);
     for (const candidate of Object.values(work.units))
       if (shouldEnrage(work, candidate.id, definitions[candidate.id])) {
@@ -316,6 +320,7 @@ function simulate(s, plan, slots) {
         pendingPhases.add(candidate.id);
       }
     death(u, reason);
+    return before - u.hp;
   }
   function heal(id, n, generated = false) {
     const u = work.units[id];
@@ -357,6 +362,10 @@ function simulate(s, plan, slots) {
     effect: (id, effect) => effects(id, [id], [effect], true),
     basicAttack: counterAttack,
     record,
+  });
+  const guests = createTownGuestMechanics(work, definitions, {
+    effects,
+    log: (text) => currentLogs.push(text),
   });
   function effects(
     actor,
@@ -430,7 +439,9 @@ function simulate(s, plan, slots) {
         applied = true;
         if (eff.type === 'damage') {
           if (!generated && attackHits && u.side === 'enemy') attackHits.add(id);
-          let n = value + bonus + (actor && !eff.flat ? effectiveBuff(work, actor, 'strength') : 0);
+          const strength = actor && !eff.flat ? effectiveBuff(work, actor, 'strength') : 0;
+          const vulnerable = !eff.flat && effectiveBuff(work, id, 'vulnerable') ? 0.25 : 0;
+          let n = Math.round((value + bonus) * (1 + Math.min(0.5, strength * 0.2 + vulnerable)));
           if (work.units[actor]?.side === 'enemy')
             n = Math.max(1, Math.round(n * (work.enemyDamageScale || 1)));
           if (!eff.flat && actor && effectiveBuff(work, actor, 'weak')) n = Math.floor(n * 0.75);
@@ -439,12 +450,14 @@ function simulate(s, plan, slots) {
             const position = front(work).indexOf(id);
             n = Math.floor(total / 3) + (position < total % 3 ? 1 : 0);
           }
-          if (!eff.flat && effectiveBuff(work, id, 'vulnerable')) n = Math.floor(n * 1.5);
+          if (effectiveBuff(work, id, 'flying')) n = Math.floor(n / 2);
           n = Math.max(0, n - effectiveBuff(work, id, 'iron'));
+          if (blindMiss?.actor === actor && blindMiss.target === id) n = 0;
           const absorbed = Math.min(u.block, n);
           u.block -= absorbed;
           const damage = n - absorbed;
-          lose(u, damage, '攻击');
+          const lost = lose(u, damage, '攻击', true);
+          if (lost && u.side === 'enemy' && !generated) attackInjuries?.add(id);
           if (!generated) recordCooperationHit(work, actor, id, damage);
           const killed = u.hp === 0;
           currentLogs.push(
@@ -468,7 +481,8 @@ function simulate(s, plan, slots) {
           heal(id, recovery + bonus, generated);
         }
         if (eff.type === 'mana') {
-          const gained = Math.min(value, u.maxMp - u.mp);
+          const recovery = eff.maxMpPercent ? Math.round(u.maxMp * eff.maxMpPercent) : value;
+          const gained = Math.min(recovery, u.maxMp - u.mp);
           u.mp += gained;
           currentLogs.push(`${definitions[id].name}回复${gained}法力`);
           if (gained && !generated) trigger('manaRestored', id, { targets: [id] });
@@ -492,7 +506,7 @@ function simulate(s, plan, slots) {
     }
     return false;
   }
-  function triggerEntrySkill(id, actionId, slot) {
+  function triggerEntrySkill(id, actionId, slot, outgoing = null) {
     const unit = work.units[id],
       inDef = definitions[id];
     const es = inDef?.entrySkill || inDef?.combat?.entrySkill;
@@ -544,7 +558,7 @@ function simulate(s, plan, slots) {
     }
     const effectsList = Array.isArray(es.effects) ? es.effects : [{ type: 'damage', value: 5 }];
     if (es.selfDamage) lose(unit, es.selfDamage, '入场技 · 自身伤害');
-    if (unit.hp > 0) {
+    if (unit.hp > 0 && !guests.entry(id, es, outgoing)) {
       if (es.mechanic === 'luo-entry') {
         unit.block += definitions[id].attack;
         unit.nextBasicDouble = true;
@@ -637,6 +651,7 @@ function simulate(s, plan, slots) {
   for (const id of work.enemyIds) prepareAresRound(id);
   if (s.phase === 'opening') trigger('battleStart');
   else trigger('roundStart');
+  guests.roundStart(slots);
   if (JSON.stringify(work) !== beforeTriggers) record('trigger', null, '装备与被动 · 开始');
   else flushBossPhases();
   for (at = 0; at < slots.length; at++) {
@@ -677,6 +692,7 @@ function simulate(s, plan, slots) {
           [enemy],
           Object.entries(move.selfBuff).map(([buff, value]) => ({ type: 'buff', buff, value })),
         );
+      const resolvedEffects = [];
       for (const effect of move.effects) {
         const effectTarget = enemyEffectSide(effect);
         if (
@@ -705,6 +721,27 @@ function simulate(s, plan, slots) {
                   : effect.targetSlots
                     ? effect.targetSlots.map((slot) => work.formation[slot]).filter(Boolean)
                     : targets;
+        resolvedEffects.push({ effect, ownTargets, effectTarget });
+      }
+      const missed = blindedTarget(
+        work,
+        enemy,
+        resolvedEffects.flatMap(({ effect, ownTargets, effectTarget }) =>
+          effect.type !== 'damage' || effectTarget !== 'opponents'
+            ? []
+            : u.buffs.balance
+              ? front(work).filter(Boolean)
+              : ownTargets,
+        ),
+      );
+      blindMiss = missed ? { actor: enemy, target: missed } : null;
+      if (missed) {
+        currentLogs.push(
+          `${definitions[enemy].name} · 致盲：对${definitions[missed].name}的伤害变为0`,
+        );
+        currentStatusTriggers.push({ id: enemy, type: 'blind', value: 1 });
+      }
+      for (const { effect, ownTargets, effectTarget } of resolvedEffects) {
         effects(
           enemy,
           ownTargets,
@@ -723,7 +760,11 @@ function simulate(s, plan, slots) {
         enemy,
         (move.enraged ? '【第二阶段】' : '') + move.name,
         u.buffs.balance ? [...new Set([...targets, ...front(work).filter(Boolean)])] : targets,
+        null,
+        null,
+        { blindTarget: missed },
       );
+      blindMiss = null;
       if (move.effects.some((effect) => effect.type === 'damage'))
         companions.afterEnemyAttack(enemy, targets);
     } else if (a) {
@@ -808,7 +849,8 @@ function simulate(s, plan, slots) {
             if (id) {
               if (destination < 3) movedToFront.add(id);
               trigger(destination < 3 ? 'enterFront' : 'enterRear', id, { targets: [id] });
-              if (destination < 3) triggerEntrySkill(id, a.id, destination);
+              if (destination < 3)
+                triggerEntrySkill(id, a.id, destination, id === first ? second : first);
             }
           }
         }
@@ -849,7 +891,7 @@ function simulate(s, plan, slots) {
           [outgoing],
           a.id,
         );
-        triggerEntrySkill(a.incoming, a.id, a.slot);
+        triggerEntrySkill(a.incoming, a.id, a.slot, outgoing);
         continue;
       }
       const u = work.units[a.actor],
@@ -878,6 +920,7 @@ function simulate(s, plan, slots) {
           : skill.target === 'allEnemies'
             ? getEnemies(work).map((e) => e.id)
             : [a.target];
+      targets = guests.targets(a.actor, skill, targets);
       if (
         targets.some(
           (id) =>
@@ -937,6 +980,7 @@ function simulate(s, plan, slots) {
         if (attack) trigger('beforeAttack', a.actor, { targets });
         if (u.hp <= 0) break;
         attackHits = new Set();
+        attackInjuries = new Set();
         const echo =
           !!u.combined &&
           attack &&
@@ -962,7 +1006,10 @@ function simulate(s, plan, slots) {
           effects(a.actor, targets, list, false, echo, false, bonus);
         }
         mechanics.attack(a.actor, attackHits);
+        if (a.skill === 'attack') guests.afterBasicAttack(a.actor, attackInjuries);
+        guests.afterCast(a.actor, skill);
         attackHits = null;
+        attackInjuries = null;
         if (a.skill !== 'attack') trigger('skillCast', a.actor, { targets });
         if (cast === 0 && a.skill === 'attack' && attackedEnemy && def.basicAttackMark && u.hp > 0)
           u.mark = Math.min(def.mechanicMark?.max || 3, (u.mark || 0) + def.basicAttackMark);
@@ -1095,6 +1142,7 @@ export function newEncounter(spec, prior = null, index = 0, heroDefinitions = {}
     prior = clone(prior);
     clearBattleMechanics(prior);
   }
+  prior = withoutDiningBonus(prior);
   const s = newBattle(
     spec.enemyIds,
     prior?.heroDefinitions || heroDefinitions,
@@ -1133,17 +1181,16 @@ export function newEncounter(spec, prior = null, index = 0, heroDefinitions = {}
     const d = definition(s, id),
       growth = spec.growthEntry
         ? enemyGrowth(spec.growthEntry, index, id, d.boss)
-        : { level: 1, bonus: { hp: 0, attack: 0 } },
+        : { level: 1, hpScale: 1, damageScale: 1 },
       hp = Math.max(
         1,
-        Math.round(d.hp * (d.boss ? spec.bossHpScale || 1 : spec.hpScale || 1)) + growth.bonus.hp,
+        Math.round(d.hp * growth.hpScale * (d.boss ? spec.bossHpScale || 1 : spec.hpScale || 1)),
       );
     units[id] = {
       id,
       side: 'enemy',
       level: growth.level,
-      growth: growth.bonus,
-      attackBonus: growth.bonus.attack,
+      damageScale: growth.damageScale,
       hp,
       maxHp: hp,
       mp: 0,

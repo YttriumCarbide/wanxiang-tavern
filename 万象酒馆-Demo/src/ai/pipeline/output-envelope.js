@@ -1,7 +1,8 @@
 import { generationDiagnostic } from './generation-result.js';
 import { readOutputTags } from '../output-tags.js';
+import { LEGACY_JSON_TAGS, OUTPUT_TAG } from '../output-protocol.js';
 
-export const OUTPUT_TAG = 'wanxiang_json';
+export { OUTPUT_TAG };
 export const OUTPUT_OPEN = `<${OUTPUT_TAG}>`;
 export const OUTPUT_CLOSE = `</${OUTPUT_TAG}>`;
 
@@ -17,10 +18,14 @@ export function extractGenerationEnvelope(kind, rawText) {
   };
   let sections;
   try {
-    sections = readOutputTags(rawText, [{ tag: OUTPUT_TAG, json: true }]);
+    sections = readOutputTags(rawText, [
+      { tag: OUTPUT_TAG, json: true },
+      ...LEGACY_JSON_TAGS.map((tag) => ({ tag, json: true })),
+    ]);
   } catch (failure) {
     reject(failure.message);
   }
+  if (sections.length > 1) reject('发现多组或混用的新旧输出标签；最终结果必须只有一组。');
   const result = sections[0];
   if (!result) reject(`缺少 ${OUTPUT_OPEN} 输出标签；不会尝试读取标签外的JSON。`);
   const candidateText = result.content;
@@ -28,10 +33,10 @@ export function extractGenerationEnvelope(kind, rawText) {
   const ignoredCharacters = result.start + rawText.length - result.end;
   return {
     candidateText,
-    envelope: { tag: OUTPUT_TAG, ignoredCharacters },
+    envelope: { tag: result.tag, ignoredCharacters },
     repairs: [
       {
-        message: `提取 ${OUTPUT_OPEN} 内的JSON；忽略标签外 ${ignoredCharacters} 个字符（原始返回保留）`,
+        message: `提取 <${result.tag}> 内的JSON；忽略标签外 ${ignoredCharacters} 个字符（原始返回保留）`,
       },
     ],
   };

@@ -1,4 +1,7 @@
+import { TOWN_GUESTS } from './town-guests.js';
+
 export const OFFICIAL_VISITORS = {
+  ...TOWN_GUESTS,
   'luo-gongxu': {
     combat: {
       id: 'luo-gongxu',
@@ -10,7 +13,7 @@ export const OFFICIAL_VISITORS = {
       attackName: '节钺刺击',
       limit: 1,
       weapon: 'sword',
-      portrait: 'luo-gongxu-v1.png',
+      portrait: 'luo-gongxu-v2.png',
       color: '#a8c6aa',
       buffs: {},
       skills: [
@@ -82,7 +85,7 @@ export const OFFICIAL_VISITORS = {
       attackName: '餐前微调·银刃破空',
       limit: 1,
       weapon: 'sword',
-      portrait: 'silica-laps-v2.png',
+      portrait: 'silica-laps-v3.png',
       color: '#cfa9dc',
       buffs: {},
       skills: [

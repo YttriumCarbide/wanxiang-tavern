@@ -1,5 +1,6 @@
 import { finalSkillText } from './skill-text.js';
 import { normalizeRules } from './triggers.js';
+import { scaleMoveEffects } from './combat-scale.js';
 
 export const EQUIPMENT_STATS = Object.freeze({
   hp: '生命',
@@ -115,11 +116,31 @@ export function restoreEquipment(value) {
       return true;
     })
     .map(({ id, templateId }) => ({ id, templateId }));
-  return { catalog, owned: owned.slice(0, 1000) };
+  return {
+    catalog,
+    owned: owned.slice(0, 1000),
+    favorites: (value?.favorites || []).filter((id) => catalog.some((item) => item.id === id)),
+    hidden: (value?.hidden || []).filter((id) => catalog.some((item) => item.id === id)),
+  };
+}
+export function favoriteEquipment(library, id) {
+  const state = library.equipment;
+  if (!state.catalog.some((item) => item.id === id)) throw Error('装备方案不存在');
+  state.favorites ||= [];
+  state.favorites = state.favorites.includes(id)
+    ? state.favorites.filter((key) => key !== id)
+    : [...state.favorites, id];
+}
+export function deleteEquipmentPlan(library, id) {
+  const state = library.equipment;
+  if (!state.catalog.some((item) => item.id === id)) throw Error('装备方案不存在');
+  state.hidden = [...new Set([...(state.hidden || []), id])];
+  state.favorites = (state.favorites || []).filter((key) => key !== id);
 }
 export function buyEquipment(library, templateId, instanceId) {
   const template = library.equipment.catalog.find((item) => item.id === templateId);
-  if (!template || library.inventory.ether < template.price) throw Error('以太不足');
+  if (!template || library.equipment.hidden?.includes(templateId)) throw Error('装备方案已删除');
+  if (library.inventory.ether < template.price) throw Error('以太不足');
   if (library.equipment.owned.length >= 1000) throw Error('装备背包已满');
   if (library.equipment.owned.some((item) => item.id === instanceId)) throw Error('装备标识重复');
   library.inventory.ether -= template.price;
@@ -168,12 +189,15 @@ export function applyEquipment(combat, equipment) {
     for (const skill of result.skills) {
       if (skill.passive) continue;
       skill.mp = Math.max(0, skill.mp - (item.stats.manaCost || 0));
-      for (const effect of skill.effects)
-        if (effect.type === 'damage') effect.value += item.stats.skillDamage || 0;
     }
   }
-  for (const skill of result.skills)
-    if (!skill.passive) skill.text = finalSkillText(skill, result.mechanicMark?.name);
+  const skillDamage = equipment.reduce((total, item) => total + (item.stats.skillDamage || 0), 0);
+  const scale = result.attack / Math.max(1, combat.attack);
+  for (const skill of [...result.skills, result.entrySkill].filter(Boolean)) {
+    if (skill.passive) continue;
+    skill.effects = scaleMoveEffects(skill.effects, scale, skillDamage);
+    skill.text = finalSkillText(skill, result.mechanicMark?.name);
+  }
   result.limit = Math.min(6, result.limit);
   return result;
 }

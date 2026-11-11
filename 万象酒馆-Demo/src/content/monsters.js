@@ -1,5 +1,6 @@
 import { FOREST_MONSTER_LORE } from './forest-lore.js';
 import { FROST_ENEMIES, FROST_BOSSES } from './frost-adversaries.js';
+import { monsterNarrativeText } from '../ai/monster-narrative.js';
 /** Narrative setting only. Encounter identities and combat capabilities come from data.js. */
 export const MONSTER_LORE = Object.freeze({
   crystalBeetle: {
@@ -191,7 +192,7 @@ export const ALL_MONSTER_LORE = Object.freeze({
         habits: enemy.nonlethal
           ? '维持聚落安全，受到压制后会放下武器交涉，不得写成死亡。'
           : enemy.description,
-        motion: enemy.intents.map((move) => `${move.name}：${move.text}`).join('；'),
+        motion: enemy.intents.map((move) => move.name).join('、'),
       },
     ]),
   ),
@@ -200,11 +201,12 @@ export const ALL_MONSTER_LORE = Object.freeze({
 export function monsterWorldbook(id, name) {
   const lore = ALL_MONSTER_LORE[id] || MONSTER_LORE[id];
   if (!lore) throw Error(`缺少怪物设定：${id}`);
-  return [
-    `名称：${name}`,
-    `外形：${lore.appearance}`,
-    `习性与能力：${lore.habits}`,
-    `行动方式：${lore.motion}`,
-    '叙事边界：这些是可观察特征与可能的行动。实际伤害、技能使用、受伤和胜负以游戏已经确认的事件为准。',
-  ].join('\n');
+  return monsterNarrativeText(
+    [
+      `名称：${name}`,
+      `外形：${lore.appearance}`,
+      `习性与能力：${lore.habits}`,
+      `行动方式：${lore.motion}`,
+    ].join('\n'),
+  );
 }

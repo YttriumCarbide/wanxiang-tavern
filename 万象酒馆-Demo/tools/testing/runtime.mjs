@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:net';
 import { readFile } from 'node:fs/promises';
+import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
@@ -51,13 +52,15 @@ export async function stopServer(port) {
   }
 }
 
-export async function withTestServer(operation, { browserOnly = false } = {}) {
+export async function withTestServer(operation, { browserOnly = false, diskStorage = false } = {}) {
   const port = await freePort();
   const child = spawn(process.execPath, ['server.cjs'], {
     cwd: projectRoot,
     env: {
       ...process.env,
       PORT: String(port),
+      TAVERN_DISK_STORAGE: diskStorage ? '1' : '0',
+      TAVERN_SAVES_DIR: path.join(projectRoot, '.runtime/tests/disk-saves-' + randomUUID()),
       AI_CONFIG_FILE: browserOnly
         ? ''
         : path.join(projectRoot, `.runtime/tests/ai-config-${port}.json`),

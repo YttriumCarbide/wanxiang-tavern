@@ -1,0 +1,91 @@
+{
+  "generator": "image_gen built-in",
+  "geometryReference": "assets/exploration/free-scenes-v1/outskirts.png",
+  "styleReference": "assets/exploration/street-hd-v2/center.png",
+  "prompts": "assets/exploration/free-scenes-hd-v2/prompts.md",
+  "assets": [
+    {
+      "file": "assets/exploration/free-scenes-hd-v2/outskirts/tile-0.png",
+      "source": "C:/Users/Lenovo/.codex/generated_images/01a178f0-bd77-7b10-9f98-ca688a68afab/exec-56495793-8ec6-4f3a-a164-7cd0632c0d30.png",
+      "width": 1254,
+      "height": 1254,
+      "sha256": "80e03f38971b5103d9cd3bdaa4aaaaf43dc1e216171bf6e1f92b0b7d04ab26a2"
+    },
+    {
+      "file": "assets/exploration/free-scenes-hd-v2/outskirts/tile-1.png",
+      "source": "C:/Users/Lenovo/.codex/generated_images/01a178f0-bd77-7b10-9f98-ca688a68afab/exec-1d8f6bbb-a9ed-40f1-9f5a-ff73f432a225.png",
+      "width": 1254,
+      "height": 1254,
+      "sha256": "00e1b68cdf8fa0520eda43ec4f309b09c4d85e900bf45df052ddeca378d1009f"
+    },
+    {
+      "file": "assets/exploration/free-scenes-hd-v2/outskirts/tile-2.png",
+      "source": "C:/Users/Lenovo/.codex/generated_images/01a178f0-bd77-7b10-9f98-ca688a68afab/exec-8906ae9f-f02e-44ff-b47b-f898c879d797.png",
+      "width": 1254,
+      "height": 1254,
+      "sha256": "c55b33cb74cd43455c11d2aa8386ce930cada7b8ddc2200831a3ca60695a81a8"
+    },
+    {
+      "file": "assets/exploration/free-scenes-hd-v2/outskirts/tile-3.png",
+      "source": "C:/Users/Lenovo/.codex/generated_images/01a178f0-bd77-7b10-9f98-ca688a68afab/exec-58f581bf-ec6a-4a7f-b517-e6b0a25a7f1e.png",
+      "width": 1254,
+      "height": 1254,
+      "sha256": "87fffd45dba8b2278ecaf66097b56673372f74cdaee7e06f9254d742b8c7e4cb"
+    }
+  ],
+  "layout": {
+    "source": "../../free-scenes-v1/outskirts.png",
+    "sourceSize": [
+      2172,
+      724
+    ],
+    "tiles": [
+      {
+        "file": "tile-0.png",
+        "sourceX": 0,
+        "offset": 0
+      },
+      {
+        "file": "tile-1.png",
+        "sourceX": 483,
+        "offset": 837
+      },
+      {
+        "file": "tile-2.png",
+        "sourceX": 965,
+        "offset": 1671,
+        "seamX": 80,
+        "seamBand": [
+          0,
+          750,
+          100
+        ],
+        "skyFeather": 160
+      },
+      {
+        "file": "tile-3.png",
+        "sourceX": 1448,
+        "offset": 2508
+      }
+    ]
+  },
+  "composition": {
+    "generator": "image_gen built-in",
+    "composition": "Native tiles at fixed source-crop positions; minimum-error or protected landmark seams and local feathering defined in layout.json. No resizing or camera recomposition.",
+    "offsets": [
+      0,
+      837,
+      1671,
+      2508
+    ],
+    "width": 3762,
+    "height": 1254,
+    "sha256": "342cd959188ee6e6b97700ed13421c7c41796d9465099386519a5405b7cbcf17",
+    "tiles": [
+      "tile-0.png",
+      "tile-1.png",
+      "tile-2.png",
+      "tile-3.png"
+    ]
+  }
+}

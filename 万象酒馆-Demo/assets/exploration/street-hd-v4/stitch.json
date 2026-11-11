@@ -1,0 +1,19 @@
+{
+    "generator":  "image_gen built-in",
+    "composition":  "Native tiles at fixed source-crop positions; minimum-error seam and 20px feather. No resizing or camera recomposition.",
+    "offsets":  [
+                    0,
+                    835,
+                    1673,
+                    2508
+                ],
+    "width":  3762,
+    "height":  1254,
+    "sha256":  "a6e4e11ae707d15ef81970ad23eefb8230a44bd0702ae34c48225ed8af9f94f3",
+    "tiles":  [
+                  "tile-0.png",
+                  "tile-1.png",
+                  "tile-2.png",
+                  "tile-3.png"
+              ]
+}

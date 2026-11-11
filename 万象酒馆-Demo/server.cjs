@@ -24,6 +24,17 @@ const root = __dirname,
   };
 const controlToken = crypto.randomBytes(32).toString('hex');
 const serviceMode = Boolean(process.env.AI_CONFIG_FILE);
+const diskEnabled = process.env.TAVERN_DISK_STORAGE !== '0';
+const defaultSaveDirectory = path.join(root, '存档');
+const saveDirectory = path.resolve(process.env.TAVERN_SAVES_DIR || defaultSaveDirectory);
+const privateDirectories = [path.join(root, '.runtime'), defaultSaveDirectory, saveDirectory].map(
+  (directory) => directory.toLowerCase(),
+);
+const diskStorageApi = diskEnabled
+  ? import('./server/disk-storage-api.mjs').then(({ createDiskStorageApi }) =>
+      createDiskStorageApi({ directory: saveDirectory, port }),
+    )
+  : null;
 const aiApi = serviceMode
   ? import('./server/ai-api.mjs').then(({ createAiApi }) => createAiApi({ root, port }))
   : null;
@@ -38,12 +49,22 @@ const server = http.createServer(async (req, res) => {
     res.setHeader('Content-Type', 'application/json');
     res.setHeader('Cache-Control', 'no-store');
     return res.end(
-      JSON.stringify({ name: 'wanxiang-tavern-demo', pid: process.pid, port, opencodeRelay: true }),
+      JSON.stringify({
+        name: 'wanxiang-tavern-demo',
+        pid: process.pid,
+        port,
+        opencodeRelay: true,
+        diskStorage: diskEnabled,
+      }),
     );
   }
   if (url === '/__demo/opencode') {
     const { relayOpencode } = await import('./server/opencode-relay.mjs');
     return relayOpencode(req, res, { port });
+  }
+  if (url === '/__demo/storage') {
+    if (!diskStorageApi) return res.writeHead(404).end();
+    return (await diskStorageApi)(req, res);
   }
   if (url === '/__demo/stop') {
     if (req.method !== 'POST') return res.writeHead(405).end();
@@ -69,9 +90,13 @@ const server = http.createServer(async (req, res) => {
     return res.writeHead(403).end();
   const file = path.resolve(root, '.' + (url === '/' ? '/index.html' : url));
   if (file !== root && !file.startsWith(root + path.sep)) return res.writeHead(403).end();
-  const privateDirectory = path.join(root, '.runtime').toLowerCase(),
-    normalizedFile = file.toLowerCase();
-  if (normalizedFile.startsWith(privateDirectory + path.sep) || normalizedFile === privateDirectory)
+  const normalizedFile = file.toLowerCase();
+  if (
+    privateDirectories.some(
+      (directory) =>
+        normalizedFile === directory || normalizedFile.startsWith(directory + path.sep),
+    )
+  )
     return res.writeHead(403).end();
   fs.readFile(file, (err, data) => {
     if (err) return res.writeHead(404).end('Not found');
@@ -82,6 +107,12 @@ const server = http.createServer(async (req, res) => {
         data
           .toString('utf8')
           .replace('<head>', '<head><meta name="wanxiang-test-backend" content="local">'),
+      );
+    if (diskEnabled && !serviceMode && file === path.join(root, 'index.html'))
+      data = Buffer.from(
+        data
+          .toString('utf8')
+          .replace('<head>', '<head><meta name="wanxiang-disk-storage" content="/__demo/storage">'),
       );
     res.end(data);
   });

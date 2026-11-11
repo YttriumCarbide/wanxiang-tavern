@@ -9,6 +9,20 @@ function completed(transaction) {
   });
 }
 
+async function readRecords(connection) {
+  const records = new Map();
+  const transaction = connection.transaction(STORE, 'readonly');
+  const cursor = transaction.objectStore(STORE).openCursor();
+  cursor.onsuccess = () => {
+    const current = cursor.result;
+    if (!current) return;
+    records.set(current.key, current.value);
+    current.continue();
+  };
+  await completed(transaction);
+  return records;
+}
+
 /** The database belongs to one application lifetime; every write waits for its transaction. */
 export async function openDatabase({
   name = DATABASE_NAME,
@@ -23,19 +37,13 @@ export async function openDatabase({
     request.onblocked = () => reject(Error('本地数据库被其他游戏页面占用，请关闭其他页面后重试。'));
   });
   connection.onversionchange = () => connection.close();
-  const cache = new Map();
-  const read = connection.transaction(STORE, 'readonly');
-  const cursor = read.objectStore(STORE).openCursor();
-  cursor.onsuccess = () => {
-    const current = cursor.result;
-    if (!current) return;
-    cache.set(current.key, current.value);
-    current.continue();
-  };
-  await completed(read);
+  const cache = await readRecords(connection);
   return {
     get: (key) => structuredClone(cache.get(key)),
     entries: () => [...cache].map(([key, value]) => [key, structuredClone(value)]),
+    async readEntries() {
+      return [...(await readRecords(connection))];
+    },
     async write(entries, deleted = []) {
       const transaction = connection.transaction(
         STORE,

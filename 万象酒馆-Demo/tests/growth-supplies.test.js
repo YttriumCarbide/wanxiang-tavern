@@ -117,13 +117,18 @@ test('normal and fine supply effects use the exact same event preview as playbac
     for (const effect of item.effects) {
       const unit = result.final.units[target];
       if (effect.type === 'buff') assert.equal(unit.buffs[effect.buff], effect.value);
-      if (effect.type === 'mana') assert.equal(unit.mp, Math.min(effect.value, unit.maxMp));
-      if (effect.type === 'heal') assert.equal(unit.hp, Math.min(10 + effect.value, unit.maxHp));
+      if (effect.type === 'mana')
+        assert.equal(unit.mp, Math.round(unit.maxMp * effect.maxMpPercent));
+      if (effect.type === 'heal')
+        assert.equal(
+          unit.hp,
+          Math.min(10 + Math.round(unit.maxHp * effect.maxHpPercent), unit.maxHp),
+        );
     }
   }
 });
 
-test('growth claims kills and complete bonus once, persists random gains and keeps base definitions unchanged', () => {
+test('growth claims experience once and applies shared growth at the next encounter boundary', () => {
   const library = newCampaign(defaultProtagonist());
   const member = library.characters[0];
   const original = structuredClone(member.combat);
@@ -162,8 +167,8 @@ test('growth claims kills and complete bonus once, persists random gains and kee
   carried.units.aegis.mp = 3;
   const expeditionGrowth = { carried, heroDefinitions: { aegis: original }, partyIds: [member.id] };
   applyEncounterGrowth(expeditionGrowth, [member]);
-  assert.equal(carried.units.aegis.hp, 11 + member.growth.bonus.hp);
-  assert.equal(carried.units.aegis.mp, 3 + member.growth.bonus.mp);
+  assert.equal(carried.units.aegis.hp, 11 + grownCombat(member).hp - original.hp);
+  assert.equal(carried.units.aegis.mp, 3 + grownCombat(member).mp - original.mp);
   const unchanged = structuredClone(carried);
   applyEncounterGrowth(expeditionGrowth, [member]);
   assert.deepEqual(carried, unchanged);

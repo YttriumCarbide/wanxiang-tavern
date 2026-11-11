@@ -1,0 +1,146 @@
+{
+  "generator": "image_gen built-in",
+  "styleReferences": [
+    "assets/exploration/starlamp-corner-front-v5.png",
+    "assets/exploration/city-center-front-v1.png"
+  ],
+  "panoramaPrompt": "Edit image 1, the wide panorama, completely repainting its rendering to match reference images 2 and 3, the APPROVED existing game backgrounds. Image 1 is the edit target; images 2/3 are only painting-style, color and material references, NOT compositions to copy. Retain image 1's location, landmarks, panorama layout, full 2:1 format and open foreground. Critical style match: crisp and confident dark-brown drawn contours on every stone/roof/window and major leaf clump; illustrated cel-shaded light and shadow shapes, visible stylized painted facets, rich warm amber sunlight on creamy yellow limestone, deep teal blue and violet shadow shapes, bright saturated golden-green ivy and tree foliage, terracotta tile roofs, honey-colored wood, soft golden clouds against blue-violet sky, warm glowing windows where appropriate. It should unmistakably look painted by the same background artist as images 2/3. Remove ALL photorealistic granular/noisy textures, pale desaturated coloring, diffuse gray/brown rendering, realistic material rendering and miniature-diorama appearance from image 1. Preserve perspective, ground level and human scale. Keep the panorama's horizon at its middle and left/right seam consistent for a stationary 360-degree camera. No giant walls of duplicated town skyline behind a foreground gate, no floating/stacked cities. Keep near foreground open for separate human sprites. No people, no writing, no UI, no border, no blur. Native-resolution PNG, do not compress or resize the source into a thumbnail.",
+  "facePrompt": "Edit image1, the exact 90-degree square view projected from the game's panorama. Restore and REDRAW fine detail at the largest native square resolution. Reference image2 is the approved original game background: match its crisp dark-brown ink contours, clean hand-painted cel-shaded stone and foliage facets, warm golden highlights, blue-violet shadows, saturated natural yellow-green plants and terracotta roofs. Preserve image1 composition, perspective, camera angle, silhouettes, every landmark and precise outer edges; these square faces must join each other at their edges. No zoom, crop, re-layout or extra objects. Preserve a clear empty foreground for game characters. No people, no writing, no UI, no frame, no blur, no photorealistic textures. Full native PNG, no compression. The task is to restore clear professional JRPG background detail, not just sharpening a blurry picture.",
+  "assets": [
+    {
+      "scene": "market",
+      "face": "panorama",
+      "source": "C:\\Users\\Lenovo\\.codex\\generated_images\\01a178f0-bd77-7b10-9f98-ca688a68afab\\exec-59395933-daee-4c9b-aefa-65327a4815c2.png",
+      "file": "assets/exploration/market-panorama-v2.png",
+      "width": 1774,
+      "height": 887,
+      "sha256": "0b76870b1a293c3102ef1f87767ebceae17728e31cb54e35a605a474d4d0a646"
+    },
+    {
+      "scene": "market",
+      "face": "front",
+      "source": "C:\\Users\\Lenovo\\.codex\\generated_images\\01a178f0-bd77-7b10-9f98-ca688a68afab\\exec-5fddb0df-02be-4cec-962e-31f29a611c9c.png",
+      "file": "assets/exploration/market-front-v2.png",
+      "width": 1254,
+      "height": 1254,
+      "sha256": "00cdd423716a16dbe6d8c0380b4a719df43de7d74615f493070d09a66e9df4e4"
+    },
+    {
+      "scene": "market",
+      "face": "right",
+      "source": "C:\\Users\\Lenovo\\.codex\\generated_images\\01a178f0-bd77-7b10-9f98-ca688a68afab\\exec-66f237b3-e38e-4800-a333-7853ec96d16b.png",
+      "file": "assets/exploration/market-right-v2.png",
+      "width": 1254,
+      "height": 1254,
+      "sha256": "82c9211f20802058db29ce6d08cd5b50fff01788c5da5915ccb52aa773feeb82"
+    },
+    {
+      "scene": "market",
+      "face": "back",
+      "source": "C:\\Users\\Lenovo\\.codex\\generated_images\\01a178f0-bd77-7b10-9f98-ca688a68afab\\exec-2d8fed96-b8c7-4d7e-8f38-66073e794e00.png",
+      "file": "assets/exploration/market-back-v2.png",
+      "width": 1254,
+      "height": 1254,
+      "sha256": "df3983134e17220cff01bea8c6046edc3f36f1c786e6bdf406603dc084991507"
+    },
+    {
+      "scene": "market",
+      "face": "left",
+      "source": "C:\\Users\\Lenovo\\.codex\\generated_images\\01a178f0-bd77-7b10-9f98-ca688a68afab\\exec-81956365-c368-45a7-9663-ed67ae133eab.png",
+      "file": "assets/exploration/market-left-v2.png",
+      "width": 1254,
+      "height": 1254,
+      "sha256": "0acd1886d4bdde2d0a94aa39bf9bdbb28d0c73715426d19d54503f323f5713ad"
+    },
+    {
+      "scene": "rampart",
+      "face": "panorama",
+      "source": "C:\\Users\\Lenovo\\.codex\\generated_images\\01a178f0-bd77-7b10-9f98-ca688a68afab\\exec-f82d6dbd-1a63-4eab-9a16-a903d54cb34d.png",
+      "file": "assets/exploration/rampart-panorama-v2.png",
+      "width": 1774,
+      "height": 887,
+      "sha256": "0b06c79f6acf75f68b28afce3041cb0b13f7d1e39aab3477ff1159d2444ac2f0"
+    },
+    {
+      "scene": "rampart",
+      "face": "front",
+      "source": "C:\\Users\\Lenovo\\.codex\\generated_images\\01a178f0-bd77-7b10-9f98-ca688a68afab\\exec-4a5b347d-a8e5-464c-8f5a-f6604d67d9bf.png",
+      "file": "assets/exploration/rampart-front-v2.png",
+      "width": 1254,
+      "height": 1254,
+      "sha256": "064e7a754ca8de6ef34582d8a3b466decd8384b747f2ce635efd2811fddd0dcf"
+    },
+    {
+      "scene": "rampart",
+      "face": "right",
+      "source": "C:\\Users\\Lenovo\\.codex\\generated_images\\01a178f0-bd77-7b10-9f98-ca688a68afab\\exec-99ea5ef6-51dd-4623-b43e-033bb72a00bd.png",
+      "file": "assets/exploration/rampart-right-v2.png",
+      "width": 1254,
+      "height": 1254,
+      "sha256": "a08b0456d800c1d0e9549ecd67150d8747972a2bb28632376e9eadc283c559d4"
+    },
+    {
+      "scene": "rampart",
+      "face": "back",
+      "source": "C:\\Users\\Lenovo\\.codex\\generated_images\\01a178f0-bd77-7b10-9f98-ca688a68afab\\exec-b4184f8e-a021-4403-a19c-2278bb8c4e11.png",
+      "file": "assets/exploration/rampart-back-v2.png",
+      "width": 1254,
+      "height": 1254,
+      "sha256": "24d69d903ac08122b7d8dbd60afc78b847e355f547ac9564940dc95ca6b5c7c1"
+    },
+    {
+      "scene": "rampart",
+      "face": "left",
+      "source": "C:\\Users\\Lenovo\\.codex\\generated_images\\01a178f0-bd77-7b10-9f98-ca688a68afab\\exec-e3f372af-f07d-4e8e-9177-74a16552e26d.png",
+      "file": "assets/exploration/rampart-left-v2.png",
+      "width": 1254,
+      "height": 1254,
+      "sha256": "ce91655a734532ab2e76a8b7a6c85fe81fd93fdd2dd5c62bb9be55efa7677c96"
+    },
+    {
+      "scene": "outskirts",
+      "face": "panorama",
+      "source": "C:\\Users\\Lenovo\\.codex\\generated_images\\01a178f0-bd77-7b10-9f98-ca688a68afab\\exec-0375812f-0459-4ae2-b9e8-674a2177d518.png",
+      "file": "assets/exploration/outskirts-panorama-v2.png",
+      "width": 1774,
+      "height": 887,
+      "sha256": "a6f8bb336f8682c2e1b6029f86122622be3fd9442c6952a574855ba077a82b5d"
+    },
+    {
+      "scene": "outskirts",
+      "face": "front",
+      "source": "C:\\Users\\Lenovo\\.codex\\generated_images\\01a178f0-bd77-7b10-9f98-ca688a68afab\\exec-0f243099-9498-4695-91fb-8ed4e0231df8.png",
+      "file": "assets/exploration/outskirts-front-v2.png",
+      "width": 1254,
+      "height": 1254,
+      "sha256": "ca555a6ca50ce6d368019aabf184f70fb9774dba06b9f7bea318f435449b524f"
+    },
+    {
+      "scene": "outskirts",
+      "face": "right",
+      "source": "C:\\Users\\Lenovo\\.codex\\generated_images\\01a178f0-bd77-7b10-9f98-ca688a68afab\\exec-1bada9f9-2a39-4585-868b-65805228a817.png",
+      "file": "assets/exploration/outskirts-right-v2.png",
+      "width": 1254,
+      "height": 1254,
+      "sha256": "40dbf92ae4d55b4d6ce70734126eeb65021675a7362a9aa989278dc58c4e0059"
+    },
+    {
+      "scene": "outskirts",
+      "face": "back",
+      "source": "C:\\Users\\Lenovo\\.codex\\generated_images\\01a178f0-bd77-7b10-9f98-ca688a68afab\\exec-8cedc96a-7cc3-4359-8608-a43832082c1c.png",
+      "file": "assets/exploration/outskirts-back-v2.png",
+      "width": 1254,
+      "height": 1254,
+      "sha256": "e212f80d14b47b01a556659e2e89c59c8252c0e35a29343693e37acb1821d65a"
+    },
+    {
+      "scene": "outskirts",
+      "face": "left",
+      "source": "C:\\Users\\Lenovo\\.codex\\generated_images\\01a178f0-bd77-7b10-9f98-ca688a68afab\\exec-6c30e2a5-3d51-4a1e-ad57-43fde8c7d93f.png",
+      "file": "assets/exploration/outskirts-left-v2.png",
+      "width": 1254,
+      "height": 1254,
+      "sha256": "90802f243405ce734e61e059a1a6e061ceacacbfef10067f99c115dbd0db719c"
+    }
+  ]
+}

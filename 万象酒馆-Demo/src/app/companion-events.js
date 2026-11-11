@@ -94,6 +94,7 @@ export function createCompanionEvents(context) {
                 void context.generation.syncCharacters();
                 context.shell.toast('潘多拉加入酒馆。下一趟副本将学习前后场交换。');
                 context.emblems?.returned();
+                void context.daily?.rescued();
               }
             } catch (failure) {
               context.shell.toast(failure.message);

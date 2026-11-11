@@ -4,14 +4,24 @@
   max-width: calc(100vw - 28px);
   height: calc(100dvh - 36px);
   max-height: calc(100dvh - 36px);
-  padding: 18px;
-  color: #dedede;
-  background: #191919f8;
-  border: 1px solid #444;
-  border-radius: 12px;
+  padding: 24px 28px;
+  color: #f2ede3;
+  background: radial-gradient(ellipse at 50% 0%, rgba(32, 54, 48, 0.72), transparent 75%), #0c1816;
+  border: 1px solid rgba(226, 186, 111, 0.45);
+  border-radius: 16px;
+  box-shadow:
+    0 28px 90px rgba(0, 0, 0, 0.85),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   overflow: hidden;
   font:
-    14px/1.5 'Microsoft YaHei',
+    14px/1.55 -apple-system,
+    BlinkMacSystemFont,
+    'PingFang SC',
+    'HarmonyOS Sans',
+    'Segoe UI',
+    'Microsoft YaHei',
     sans-serif;
 }
 #world-dialog[open] {
@@ -20,20 +30,28 @@
   gap: 12px;
 }
 #world-dialog::backdrop {
-  background: #0009;
-  backdrop-filter: blur(4px);
+  background: rgba(4, 9, 11, 0.8);
+  backdrop-filter: blur(8px);
 }
 #world-dialog input:not([type='checkbox']),
 #world-dialog select,
 #world-dialog textarea {
   min-width: 0;
   width: 100%;
-  color: #ddd;
-  background: #0e0e0e;
-  border: 1px solid #303030;
+  color: #f2eee3;
+  background: rgba(10, 20, 18, 0.88);
+  border: 1px solid rgba(162, 186, 172, 0.25);
   border-radius: 6px;
-  padding: 6px 8px;
+  padding: 7px 10px;
   font: inherit;
+  transition: all 0.18s ease;
+}
+#world-dialog input:not([type='checkbox']):focus,
+#world-dialog select:focus,
+#world-dialog textarea:focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 10px var(--gold-glow);
+  outline: none;
 }
 #world-dialog input[type='number'] {
   appearance: textfield;
@@ -42,15 +60,17 @@
   display: none;
 }
 #world-dialog button {
-  color: #ccc;
-  background: #222;
-  border: 1px solid #333;
-  padding: 5px 9px;
-  border-radius: 5px;
+  color: #e5ded0;
+  background: rgba(22, 38, 34, 0.75);
+  border: 1px solid rgba(162, 186, 172, 0.25);
+  padding: 6px 12px;
+  border-radius: 6px;
+  transition: all 0.18s ease;
 }
 #world-dialog button:hover {
-  background: #333;
-  border-color: #777;
+  background: rgba(35, 62, 55, 0.9);
+  border-color: rgba(226, 186, 111, 0.55);
+  color: #fff;
 }
 .world-book-heading {
   display: flex;

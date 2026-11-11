@@ -1,15 +1,15 @@
 【副本剧本输出格式 / SCRIPT v5】
-最终结果放在唯一一组 <wanxiang_json> 与 </wanxiang_json> 内，标签单独成行。代码只读取标签内的JSON；标签外内容不属于正文或数据。
+最终结果放在唯一一组 <wanxiang_output> 与 </wanxiang_output> 内，标签单独成行。代码只读取标签内的JSON；标签外内容不属于正文或数据。
 标签内为一个完整JSON对象，根节点只含schemaVersion/story/data；schemaVersion为数字5。
 story恰好五段：普通战前、受限RP事件开场、精英战前、自由RP任务开场、Boss战前。只有索引0、2、4进入战斗。每项沿用Gal标记的完整文字，用JSON转义换行，不改成JSON对白数组。
-data.adventure包含event与quest。event给出title、description、2～4个choices；每项label、detail、reward，reward只含gold与items，道具项为现有id与count:1。金币与道具售价总额不超过20金币。quest给出title、开头情境description、独立场景观察overview、commonState与2～6个goals；每项目标仅含objective与required，至少一个必选。objective只用一句人话表达结果，例如“和洛雨完成交易”，不输出谜语标题加细节，不写方法、道具组合和操作步骤，允许多种合理方法，不预写玩家完成过程。ID由代码分配。第五段只从commonState开始，不能假定玩家如何完成第四节点。
+data.adventure包含event与quest。event给出title、description、2～4个choices；每项仅含label、detail，不输出reward或奖励字段。第二节点奖励完全由程序随机决定；开场正文、介绍、选项和后续回应均不宣布、预告或安排金币、以太、药水、契约等战利品，也不通过data.items为第二节点编写奖励。quest给出title、开头情境description、独立场景观察overview、commonState与2～6个goals；每项目标仅含objective与required，至少一个必选。objective只用一句人话表达结果，例如“和洛雨完成交易”，不输出谜语标题加细节，不写方法、道具组合和操作步骤，允许多种合理方法，不预写玩家完成过程。ID由代码分配。第五段只从commonState开始，不能假定玩家如何完成第四节点。
 
 【自由RP的留白与场景概览】
 story[1]、story[3]都只演出事件开头，不替玩家选择、解谜或达成目标；播放后才展开选项与任务。第四节点的objective应简短，例如“和洛雨完成交易”“摆脱追踪者”，不能写“拿起烟罐配合绳索，从东门绕过守卫”，不要用抽象隐喻代替实际目标。
 story[3]正常描写Gal开场。quest.description另写约120～180个中文字的一段事件介绍，固定放在第四阶段标题下面、任务上面，让玩家读懂当前处境、事件缘由和在场人物。这是开场后的简要回顾，不复制整段对白，不只写一句泛泛提示，不替玩家决定行动，不泄露解法或结局。
-事件介绍之后才显示目标与环境观察。quest.overview必须是数组，每项{location:"位置",detail:"该处客观可见的事物或动静"}，建议3～8项。例如{location:"树梢",detail:"一只鸟断断续续地叫着。"}、{location:"柜台",detail:"空杯旁压着几张旧票据。"}。这里只列“哪里有什么、正在发生什么”，不重复事件介绍或Gal正文；不写长对话、情绪独白、设问或解决任务的步骤。保留普通环境细节与有用事物，不要每一项都直指答案。
+事件介绍之后才显示目标与环境观察。quest.overview必须是数组，每项{location:"位置",detail:"该处客观可见的事物或动静"}，固定4项。例如{location:"树梢",detail:"一只鸟断断续续地叫着。"}、{location:"柜台",detail:"空杯旁压着几张旧票据。"}。这里只列“哪里有什么、正在发生什么”，不重复事件介绍或Gal正文；不写长对话、情绪独白、设问或解决任务的步骤。保留普通环境细节与有用事物，不要每一项都直指答案。
 第四节点的题材要有变化，调查、交易、休憩谈心、文化误会、协商、修复、采集、取舍均可，不固定为追杀、逃亡或倒计时；结合request.rpChapterDirection调整原大纲的节奏。第二节点也不必每次遇险。story[3]以150～350字的开头为宜，其他需要展开的环境信息放入overview；具体写作篇幅是创作指引，不是拒收条件。
-data只含title/tags/npcs/items/nextHook/adventure，以及无限模式的encounters。tags是关键词，供副本记录像世界书一样触发；不再生成概要、环境背景、后续场景类型或美术地点描述。nextHook包含setting后续线索与phase阶段。npcs最多12名，绝不能是队伍成员；每项包含name/appearance/history/encounter，外貌与简略经历分别至少25字，合计至少50字，encounter是初次出现的节点索引0～4。items只记录玩家在正文中实际收集的道具，最多24项，每项包含name/description/value/encounter，description为20字以内的中文描述，value是非负整数以太价值，encounter是收集发生的节点索引0～4。不提前归档尚未遇到的人或尚未收集的物品。副本所有收获在完整通关后折算成相同价值的以太，可在酒馆兑换；不直接修改装备、技能或战斗属性。
+data只含title/npcs/items/nextHook/adventure，以及无限模式的encounters。回顾关键词由总结API在经历结束后提取；不再生成概要、环境背景、后续场景类型或美术地点描述。nextHook包含setting后续线索与phase阶段。npcs最多12名，绝不能是队伍成员；每项包含name/appearance/history/encounter，外貌与简略经历分别至少25字，合计至少50字，encounter是初次出现的节点索引0～4。items只记录玩家在正文中实际收集的道具，最多24项，每项包含name/description/value/encounter，description为20字以内的中文描述，value是非负整数以太价值，encounter是收集发生的节点索引0～4。不提前归档尚未遇到的人或尚未收集的物品。副本所有收获在完整通关后折算成相同价值的以太，可在酒馆兑换；不直接修改装备、技能或战斗属性。
 正文仅生成一次，不在数据层重复。字段类型与数据层范围见Schema。
 
 【中文输出与首尾篇幅】

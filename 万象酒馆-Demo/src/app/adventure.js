@@ -5,8 +5,9 @@ import {
   acceptAdventureReply,
 } from '../adventure/state.js';
 import { bossLines } from '../adventure/patches.js';
+import { applyFutureDialogue, dungeonDialogueScenes } from './future-dialogue.js';
 import { rpBackground } from '../content/rp-backgrounds.js';
-import { ITEMS } from '../content/items.js';
+import { eventReward, eventRewardText } from '../adventure/rewards.js';
 import { skippingAi, developerOption } from '../generation-options.js';
 import { escapeText } from '../ui.js';
 import { memoryHash } from '../memory.js';
@@ -24,7 +25,7 @@ export function createAdventure(context) {
   const tool = (id, icon, label) =>
     `<button data-rp="${id}" title="${label}" aria-label="${label}">${galIconMarkup(icon, label)}<span>${label}</span></button>`;
   root.innerHTML = `<div class="rp-vignette"></div><header class="rp-header"><span data-rp="chapter"></span><button class="rp-boss-shortcut" data-rp="boss-shortcut" hidden>进入 Boss 战 <span aria-hidden="true">→</span></button><nav class="rp-tools" aria-label="事件工具">${tool('compose', 'compose', '发言')}${tool('history', 'history', '故事记录')}${tool('replay', 'replay', '重读开场')}${tool('raw', 'journal', '原始返回')}${tool('retreat', 'back', '返回酒馆')}${tool('settings', 'settings', '设置')}</nav></header>
-    <main class="rp-content"><div class="rp-kicker"></div><h1></h1><p class="rp-description"></p><div class="rp-options"></div><div class="rp-goals"></div><section class="rp-environment"><h2>周围</h2><dl></dl></section>
+    <main class="rp-content"><div class="rp-kicker"></div><h1></h1><p class="rp-description"></p><div class="rp-options"></div><p class="rp-reward-receipt" role="status" hidden></p><div class="rp-goals"></div><section class="rp-environment"><h2>周围</h2><dl></dl></section>
     <form class="rp-form"><label for="rp-input">说些什么，或描述你的行动</label><p class="rp-locked-choice" aria-label="已选行动，不可编辑" hidden></p><div><textarea id="rp-input" rows="2" maxlength="10000" placeholder="输入你想说的话，或想做的事……"></textarea><button type="submit" data-rp="send">确认选择</button></div></form>
     <p class="rp-status" role="status"></p><nav class="rp-footer"><button data-rp="retry" hidden>重试本次回应</button><button data-rp="skip" hidden>跳过RP（开发者）</button><button data-rp="next" hidden>继续冒险 →</button></nav></main>
     <aside class="rp-boss-ready" hidden><strong>主要目标已完成</strong><p>现在前往最后的战斗，还是再停留片刻？</p><div><button data-rp="stay">继续探索与交流</button><button data-rp="boss">进入 Boss 战 →</button></div></aside>`;
@@ -113,6 +114,13 @@ export function createAdventure(context) {
     find('.rp-description').hidden = false;
     find('.rp-description').classList.toggle('rp-event-introduction', !event);
     find('.rp-options').hidden = !event;
+    const receipt = find('.rp-reward-receipt');
+    receipt.hidden = !event || !state().event.rewardClaimed;
+    receipt.textContent = receipt.hidden
+      ? ''
+      : state().event.reward
+        ? `本次收获 · ${eventRewardText(state().event.reward)}`
+        : '本次收获已领取';
     find('.rp-goals').hidden = event;
     find('.rp-environment').hidden = event;
     if (!event)
@@ -130,16 +138,7 @@ export function createAdventure(context) {
         .filter((choice) => !state().event.resolved || choice.id === selected)
         .map((choice) => {
           const index = scene.choices.indexOf(choice);
-          const reward =
-            [
-              choice.reward.gold ? `${choice.reward.gold} 金币` : '',
-              ...Object.entries(choice.reward.items).map(
-                ([id, count]) => `${ITEMS[id].name} ×${count}`,
-              ),
-            ]
-              .filter(Boolean)
-              .join(' · ') || '一段独特的经历';
-          return `<button type="button" data-rp-choice="${choice.id}" aria-pressed="${selected === choice.id}" ${(state().event.choiceId && state().event.choiceId !== choice.id) || request || state().event.resolved ? 'disabled' : ''}><span class="rp-choice-number">0${index + 1}</span><span><strong>${escapeText(choice.label)}</strong><small>${escapeText(choice.detail)}</small><em>${escapeText(reward)}</em></span></button>`;
+          return `<button type="button" data-rp-choice="${choice.id}" aria-pressed="${selected === choice.id}" ${(state().event.choiceId && state().event.choiceId !== choice.id) || request || state().event.resolved ? 'disabled' : ''}><span class="rp-choice-number">0${index + 1}</span><span><strong>${escapeText(choice.label)}</strong><small>${escapeText(choice.detail)}</small></span></button>`;
         })
         .join('');
     } else
@@ -261,6 +260,14 @@ export function createAdventure(context) {
         turn.responseId,
       );
       if (accepted.duplicate) return;
+      const playerId = session.ai.library.campaign?.protagonistId;
+      const player = source.party?.find((member) => member.id === playerId);
+      applyFutureDialogue(
+        dungeonDialogueScenes(source, expedition, expedition.index),
+        result.dialogue,
+        turn.responseId,
+        player,
+      );
       const history = session.ai.library.history.find((entry) => entry.runId === source.runId);
       if (
         history &&
@@ -278,14 +285,7 @@ export function createAdventure(context) {
           'event-choice',
           turn.responseId,
         );
-        const reward = [
-          turn.choice.reward.gold ? `${turn.choice.reward.gold}金币` : '',
-          ...Object.entries(turn.choice.reward.items).map(
-            ([id, count]) => `${ITEMS[id].name}×${count}`,
-          ),
-        ]
-          .filter(Boolean)
-          .join('、');
+        const reward = eventRewardText(eventReward(expedition));
         record(
           '事件收获',
           reward || '没有额外的数值奖励。',

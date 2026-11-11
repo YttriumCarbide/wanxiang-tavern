@@ -1,4 +1,6 @@
 import { lockUnopenedRear } from '../formation-access.js';
+import { restoreDining } from '../dining.js';
+import { restoreDaily } from '../daily.js';
 import { restoreTetris } from '../tetris.js';
 import { upgradeLegacyStatuses } from '../status-rules.js';
 import { restoreWorlds } from '../worlds.js';
@@ -18,9 +20,11 @@ import { formatCharacterSetting } from './character-setting.js';
 import { loadCustomPortraits, savedPortrait } from '../portraits.js';
 import { newExploration, restoreExploration } from '../exploration.js';
 import { restoreInventory } from '../rewards.js';
-import { restoredSummary, conversationText } from '../memory.js';
+import { restoredSummary, conversationText, restoreInvitationHistory } from '../memory.js';
 import { restoreArchives, hydrateArchiveMaps } from '../archives.js';
 import { defaultProtagonist } from '../content/qingyuan.js';
+import { restoreStarbell } from '../chapters/starbell-state.js';
+import { chapterCompanion, CHAPTER_NPCS } from '../chapters/starbell-content.js';
 
 export function newLibrary() {
   return createLibrary(loadCustomPortraits());
@@ -30,10 +34,14 @@ function createLibrary(customPortraits) {
   return {
     version: 1,
     workshop: null,
+    dining: restoreDining(),
+    daily: restoreDaily(),
+    starbell: restoreStarbell(),
     statusRevision: 36,
     enabled: false,
     chapter: 1,
     history: [],
+    invitationHistory: [],
     tavernChat: [],
     archives: restoreArchives(),
     relationships: {},
@@ -190,6 +198,9 @@ export function restoreLibrary(value) {
   // The workshop controller restores this envelope against the active custom
   // catalog, so authored material IDs survive slots, backup imports and reloads.
   library.workshop = value.workshop?.version === 1 ? structuredClone(value.workshop) : null;
+  library.dining = restoreDining(value.dining);
+  library.daily = restoreDaily(value.daily);
+  library.starbell = restoreStarbell(value.starbell);
   const campaign = [1, 2, 3].includes(value.campaign?.version);
   if (campaign) {
     library.characters = [];
@@ -204,6 +215,7 @@ export function restoreLibrary(value) {
     library.exploration = restoreExploration(value.exploration, 17371, library.worlds);
   library.archives = restoreArchives(value.archives);
   library.relationships = structuredClone(value.relationships || {});
+  library.invitationHistory = restoreInvitationHistory(value.invitationHistory);
   library.tavernChat = (Array.isArray(value.tavernChat) ? value.tavernChat : [])
     .filter(
       (message) =>
@@ -212,8 +224,19 @@ export function restoreLibrary(value) {
         message.content.length <= 200000,
     )
     .map((message, index, messages) => {
-      const { role, content, display, speakerIds, speakerName, summary, turnSummary, id, divider } =
-        message;
+      const {
+        role,
+        content,
+        display,
+        speakerIds,
+        speakerName,
+        summary,
+        turnSummary,
+        id,
+        divider,
+        journeyArchived,
+        outing,
+      } = message;
       const validSummary = restoredSummary(summary, content);
       const player = messages[index - 1];
       const validTurn =
@@ -225,6 +248,8 @@ export function restoreLibrary(value) {
         content,
         ...(typeof id === 'string' ? { id } : {}),
         ...(divider ? { divider: true } : {}),
+        ...(journeyArchived ? { journeyArchived: true } : {}),
+        ...(outing ? { outing: true } : {}),
         ...(validSummary ? { summary: validSummary } : {}),
         ...(validTurn ? { turnSummary: validTurn } : {}),
         ...(typeof display === 'string' && display.length <= 200000 ? { display } : {}),
@@ -290,6 +315,22 @@ export function restoreLibrary(value) {
       ].slice(-2000)
     : [];
   for (const entry of Array.isArray(value.characters) ? value.characters.slice(0, 100) : []) {
+    if (entry.source === 'chapter' && entry.id?.startsWith('starbell-')) {
+      const key = entry.id.slice(9);
+      if (
+        CHAPTER_NPCS[key] &&
+        library.starbell.recruited.includes(key) &&
+        !library.characters.some((member) => member.id === entry.id)
+      ) {
+        library.characters.push({
+          ...chapterCompanion(key),
+          growth: restoreGrowth(entry.growth, entry.id),
+          equipment: structuredClone(entry.equipment || []),
+          ...(entry.emblemId && EMBLEMS[entry.emblemId] ? { emblemId: entry.emblemId } : {}),
+        });
+      }
+      continue;
+    }
     if (entry.source === 'official') {
       const official = [
         'official-pandora',
@@ -370,6 +411,15 @@ export function restoreLibrary(value) {
     }
   }
   for (const member of library.characters) {
+    const previous = value.characters?.find((entry) => entry.id === member.id);
+    const standing = customPortraits[member.id + ':standing'] || previous?.combat?.customStanding;
+    if (
+      typeof standing === 'string' &&
+      /^(?:data:image\/(?:png|jpeg|webp|gif|avif);base64,|\.\/__portraits\/[a-f0-9]{64}\.(?:png|jpg|webp|gif|avif)$|\/api\/ai\/portraits\/[a-f0-9]{64}\.(?:png|jpg|webp|gif|avif)$)/.test(
+        standing,
+      )
+    )
+      member.combat.customStanding = standing;
     delete member.setting.profession;
     if (member.setting.worldbook)
       member.setting.worldbook = stripRetiredLore(member.setting.worldbook);

@@ -1,0 +1,176 @@
+{
+  "schemaVersion": 1,
+  "assets": [
+    {
+      "file": "starlamp-corner-front-v5.png",
+      "width": 1254,
+      "height": 1254,
+      "sha256": "d8ec2af6623815e82c3a0c1b4666885d72b8869ba522d2d4ec1261097ac3f633",
+      "scene": "starlamp-street",
+      "generator": "built-in imagegen",
+      "processing": "Original native PNG copied byte-for-byte; no resizing or compression.",
+      "prompt": "Edit target: this square hand-painted western-fantasy street background. Fix the impossible DOUBLE CITY. KEEP the entire right-hand apothecary facade, green awning, windows, ivy, cobblestone foreground, full stone arch shape at x30%, warm sunset lighting, eye-level perspective and exact framing. CRITICAL CHANGE 1: REMOVE EVERY building, tower, castle, distant city skyline and elevated terrace ABOVE the stone arch and ABOVE the left wall. This entire upper-left region must contain ONLY continuous natural sunset sky and a few existing cypress/ivy silhouettes. Absolutely NO city, NO roofs, NO towers, NO cliff, NO mountain-top settlement above the wall. CRITICAL CHANGE 2: THROUGH the arch show only a narrow, ordinary cobbled lane continuing straight from the foreground on THE SAME GROUND LEVEL, with two small two-storey houses to its sides and a modest bend 20m away. The road must be continuously visible from outside to inside the arch, receding toward ONE consistent eye-level vanishing point. No miniature city panorama inside the gate, no castle, no distant towers, no hill-town, no steep drop. We are already standing inside a single ordinary flat town; the arch merely connects adjacent neighbourhood streets. All buildings belong to one continuous ground plane. Preserve painterly detailed Japanese adventure-game background style, sharp stonework, coherent human-scale architecture. No characters, UI or text. Square output, full bleed, highest native resolution, no zoom or crop."
+    },
+    {
+      "file": "starlamp-corner-left-v4.png",
+      "width": 1254,
+      "height": 1254,
+      "sha256": "1122ce7582982d642580388b4f4c5df7133db1e4d2152e2dbacf3dd12ce13efe",
+      "scene": "starlamp-street",
+      "generator": "built-in imagegen",
+      "processing": "Original native PNG copied byte-for-byte; no resizing or compression.",
+      "prompt": "Edit target: this exact square western-fantasy street LEFT directional background. Keep the close left houses and doors, narrow lane, cobblestones, entire ivy-covered stone wall, its lamp post, framing and sunset lighting UNCHANGED. REMOVE all distant city buildings, roof clusters, towers, castles, hillside settlements visible ABOVE the right-hand stone wall in the upper-right quadrant. Replace all of those upper-right elevated buildings with plain coherent golden sunset SKY with a few soft clouds, and sparse natural cypress/tree silhouettes if needed. There must be NO elevated city behind this wall, NO roofs or towers floating over it, NO hillside town, NO cliffs. This is one flat ordinary town at street level. The stone wall itself and rightmost edge geometry stay aligned with the reference. Preserve highest native detail, crisp hand-painted anime fantasy adventure background art, exact square 90-degree perspective and camera framing, no text, people or UI."
+    },
+    {
+      "file": "starlamp-corner-panorama-v3.png",
+      "width": 1774,
+      "height": 887,
+      "sha256": "5caad9592f1db64954c7249996195b88a31b5df4708c095a697e5c4328798152",
+      "scene": "starlamp-street",
+      "generator": "built-in imagegen",
+      "processing": "Original native PNG copied byte-for-byte; no resizing or compression.",
+      "prompt": "Edit target: this exact 2:1 equirectangular panoramic street texture. Preserve camera projection, horizon at 50%, seamless left/right boundary, all nearby tavern walls at the outer edges, apothecary right of center, ground cobblestones and warm sunset painting style. Correct physically impossible duplicated distant city: REMOVE ALL elevated city skyline, towers, castles and clusters of roofs visible ABOVE the central stone wall and arch. Replace this area by uninterrupted golden sunset sky and a few existing cypress silhouettes only. Above the wall there must be no distant city at all. THROUGH the arch instead draw a modest continuous cobbled lane at the SAME level as foreground pavement, with only two simple nearby two-storey houses along it and a bend a short distance away, no grand city panorama, no hills, no towers, no precipice. The player is inside an ordinary flat town and the arch connects adjacent streets. Keep its stone arch fully built and human-scaled. Preserve all other architecture and sparse uncluttered layout. Native high-resolution 2:1 equirectangular image with original projection, no crop, no text, no people, no UI."
+    },
+    {
+      "file": "starlamp-facades-v1.png",
+      "generator": "built-in imagegen",
+      "kind": "3 by 2 orthographic facade atlas",
+      "processing": "Original PNG copied byte-for-byte; no resizing or lossy conversion. UV selects each tile in the 3D scene.",
+      "sha256": "2bd9d7c8f6cb18080fce6977a415556dd3f4d7afee6580ede7b600607d369cdb",
+      "prompt": "Use case: stylized-concept. Asset type: production game texture atlas for a 2.5D western fantasy town, NOT a scene screenshot. Create one landscape image, a precise seamless rectangular GRID of SIX equally sized building FRONT ELEVATION textures, 3 columns by 2 rows. Each cell occupies EXACTLY one sixth of the image with no gutters, no captions, no borders. All six cells have identical physical aspect 1:1 and fill their whole tile edge to edge with facade, no sky, no ground, no roofs, no perspective, no sideways wall. Orthographic straight-on painted architectural elevations, 3-story storybook European fantasy buildings; deep ink contours, lovely painterly stone and timber, rich details appropriate anime adventure exploration. Doors at bottom, upper windows aligned on floor bands. Warm dusk lamplight baked gently into windows. Top row left: ivory plaster dark half timber bakery with arched door and warmly lit shop windows, a bread relief. Top center: sage green apothecary pale limestone with bottle displays and herb window boxes, no awning (added in 3D). Top right: burgundy wood rare-book shop with decorative carved lattice and tall stacked windows. Bottom row left: blue-gray adventurers guild stone facade with tall arched center door and ornamental shield, copper trim. Bottom center: warm ochre townhouse with blue shutters and ivy, elegant balconies drawn flush. Bottom right: reddish brown inn facade with golden window light and elaborate oak double door, star medallion no text. Darker low floor masonry, natural plaster variation, small brass hardware, woodgrain; consistent detailed hand-painted game art rather than photorealism, no people, no logos, NO LETTERS. Architecture fills tiles, do not draw perspective streets or complete isolated building silhouettes. Layout must be 3x2 equal rectangles."
+    },
+    {
+      "file": "starlamp-corner-panorama-v2.png",
+      "generator": "built-in imagegen",
+      "kind": "painted 360 degree small street corner panorama",
+      "processing": "Original generated PNG copied byte-for-byte; no resizing or compression.",
+      "sha256": "9fb3060a127b3b761e7f209c241296611ee470d537af8c6479d967fa92f76a8f",
+      "prompt": "Use case: stylized-concept. Production game BACKGROUND panorama, western fantasy small street corner, no people. Create a full 360 degree EQUIRECTANGULAR environment panorama (longitude 360 latitude 180), very wide 2:1 aspect ratio, horizon exactly 50 percent height. Fixed eye height 1.65 meters. Proper immersive VR environment projection, NOT a normal perspective illustration stretched wide. The left and right edges join seamlessly. The middle of the image (longitude center) is the FORWARD view, a calm compact town lane: in the midground slightly to the right a lovely modest two-story ivory and dark-wood apothecary with one faded sage awning and warm amber windows; left midground a low old stone wall and arched passage opening onto a glimpse of pale distant rooftops. Cobblestone pavement in foreground, open empty walking space occupying the lower half, continuous texture and believable human-scale perspective. To the left and right continuation are just a few quiet facades, plaster wall and climbing vine, with modest lanterns PAINTED INTO architecture. Behind viewer at the joining outer edges of image is a warm wooden tavern doorway with a simple star medallion. NOT a city plaza, NO fountain, NO flags or bunting, NO repeated endless shop rows, NO giant clock tower. No foreground freestanding objects, leave foreground clear for separate character sprites and one investigation card. Buildings on all four sides around the fixed viewpoint are around 6 to 12 meters away; restricted scale to a small street segment. Elegant 2D hand-painted anime game environment with thin ink contours, richly drawn stone and wood, soft late-afternoon warm ivory sunlight, restrained colors, beautiful perspective depth. Similar material quality to a polished Japanese illustrated mystery visual-novel exploration background: restrained, readable, lived-in details painted on surfaces rather than many geometric props. No UI, no writing, no people, no animals, no captions, no photorealism, no fisheye central oval. Keep exact equirectangular projection for full spherical 360 rendering."
+    },
+    {
+      "file": "starlamp-notice-v2.png",
+      "generator": "built-in imagegen",
+      "kind": "transparent foreground noticeboard cutout",
+      "processing": "Original generated RGBA PNG copied byte-for-byte; original alpha preserved.",
+      "sha256": "9db1ff218d71fc2ab8a89aa12438f445f7a15935e649777a5d8219919f5b91a8",
+      "prompt": "Use case: stylized-concept. Asset type: single transparent PNG cutout for a 2.5D hand-painted fantasy investigation game. A modest wooden street noticeboard on two short wooden legs, full object from top to feet, front facing with only subtle visible right side, camera near level at center. Object roughly 1.1 meter wide and 1.8 meters high; no huge heavy roof, just a slim weathered wood top beam with a tiny carved brass star. Three slightly curled cream paper notices pinned to the dark warm wood board, their markings are indistinct pen strokes and a simple cat drawing, no legible letters. Lower wooden crossbeam, little brass thumbtacks, pleasant restrained old European fantasy town design. Rich soft painted woodgrain, thin brown ink outlines, muted warm umber and cream with a little faded blue wax seal; no green UI appearance. Genuine TRANSPARENT background, clean alpha around entire silhouette and between legs, no floor, no ambient scene, no baked shadow (game adds contact shadow), no other props, no people. Composition centered with small margin, entire feet visible, object fills canvas, full original resolution. Hand-painted anime investigation scene prop, elegant understated high quality, not photorealism, not voxel, not pixel art, not a screenshot."
+    },
+    {
+      "direction": "front",
+      "file": "starlamp-corner-front-v3.png",
+      "width": 1254,
+      "height": 1254,
+      "sha256": "e32b034d6952a7ff91bf6384af35fa3a6b15896fc9c6bdcb9945e6c5ce649dc7",
+      "generator": "built-in imagegen",
+      "kind": "individually redrawn 90 degree perspective background",
+      "processing": "Native generated PNG, copied byte-for-byte; no resizing, sharpening filter or lossy compression.",
+      "prompt": "Edit the provided image, a blurry perspective-correct 90-degree square cube-map face of a hand-painted western fantasy street corner. Restore and REDRAW the missing fine detail at high native resolution, clean crisp professional 2D anime adventure background art. This is not just sharpening: reconstruct individual cobblestone edges, fine plaster grain, wood grain, window mullions, ivy leaves and painted architecture lines. PRESERVE EXACTLY the entire composition, framing, perspective, geometry, silhouettes, lamp positions, daylight direction and all architectural positions. In particular the image edges must match the reference: no cropping, no zoom, no rearrangement, no extra objects. The 90 degree pinhole perspective and square aspect are essential for joining neighboring cube-map faces. Preserve warm late-afternoon colors, hand-drawn environment style, no photorealism, no people, no sprites, no UI, no text, no new props. Crisp background detail throughout rather than depth-of-field blur. Output a full-resolution SQUARE image, preferably 2048 by 2048 or largest available square. Do not add any frame or border."
+    },
+    {
+      "direction": "right",
+      "file": "starlamp-corner-right-v3.png",
+      "width": 1254,
+      "height": 1254,
+      "sha256": "a730e01e00ce9650b6a0f47f0a4b0bb2456be9bddab61db9ab406b8f870a1aa3",
+      "generator": "built-in imagegen",
+      "kind": "individually redrawn 90 degree perspective background",
+      "processing": "Native generated PNG, copied byte-for-byte; no resizing, sharpening filter or lossy compression.",
+      "prompt": "Edit the provided image, a blurry perspective-correct 90-degree square cube-map face of a hand-painted western fantasy street corner. Restore and REDRAW the missing fine detail at high native resolution, clean crisp professional 2D anime adventure background art. This is not just sharpening: reconstruct individual cobblestone edges, fine plaster grain, wood grain, window mullions, ivy leaves and painted architecture lines. PRESERVE EXACTLY the entire composition, framing, perspective, geometry, silhouettes, lamp positions, daylight direction and all architectural positions. In particular the image edges must match the reference: no cropping, no zoom, no rearrangement, no extra objects. The 90 degree pinhole perspective and square aspect are essential for joining neighboring cube-map faces. Preserve warm late-afternoon colors, hand-drawn environment style, no photorealism, no people, no sprites, no UI, no text, no new props. Crisp background detail throughout rather than depth-of-field blur. Output a full-resolution SQUARE image, preferably 2048 by 2048 or largest available square. Do not add any frame or border."
+    },
+    {
+      "direction": "back",
+      "file": "starlamp-corner-back-v3.png",
+      "width": 1254,
+      "height": 1254,
+      "sha256": "fc4fbce98b8345588f0404078b9d54402fea148efa0385ca1b3e746181c1fb4c",
+      "generator": "built-in imagegen",
+      "kind": "individually redrawn 90 degree perspective background",
+      "processing": "Native generated PNG, copied byte-for-byte; no resizing, sharpening filter or lossy compression.",
+      "prompt": "Edit the provided image, a blurry perspective-correct 90-degree square cube-map face of a hand-painted western fantasy street corner. Restore and REDRAW the missing fine detail at high native resolution, clean crisp professional 2D anime adventure background art. This is not just sharpening: reconstruct individual cobblestone edges, fine plaster grain, wood grain, window mullions, ivy leaves and painted architecture lines. PRESERVE EXACTLY the entire composition, framing, perspective, geometry, silhouettes, lamp positions, daylight direction and all architectural positions. In particular the image edges must match the reference: no cropping, no zoom, no rearrangement, no extra objects. The 90 degree pinhole perspective and square aspect are essential for joining neighboring cube-map faces. Preserve warm late-afternoon colors, hand-drawn environment style, no photorealism, no people, no sprites, no UI, no text, no new props. Crisp background detail throughout rather than depth-of-field blur. Output a full-resolution SQUARE image, preferably 2048 by 2048 or largest available square. Do not add any frame or border.",
+      "correctionPrompt": "Edit ONLY the brass door emblem in the exact center of this illustration. It mistakenly contains two overlapping eight-point stars and two overlapping circular frames. Replace them with ONE elegant symmetrical eight-point gold compass star inside ONE round brass frame centered on the wooden door, with a single circular medallion, no split or duplicated star. Preserve absolutely everything else: door geometry, wood, lamps, plants, floor, exact outer image edges, camera perspective, colors and resolution. No other redesign, no people, no text. Keep square full-resolution original art."
+    },
+    {
+      "direction": "left",
+      "file": "starlamp-corner-left-v3.png",
+      "width": 1254,
+      "height": 1254,
+      "sha256": "be510b58f2cbf4dd1e850c862889c880fba2799d3d0a1dbe62709dbe9de7c9b0",
+      "generator": "built-in imagegen",
+      "kind": "individually redrawn 90 degree perspective background",
+      "processing": "Native generated PNG, copied byte-for-byte; no resizing, sharpening filter or lossy compression.",
+      "prompt": "Edit the provided image, a blurry perspective-correct 90-degree square cube-map face of a hand-painted western fantasy street corner. Restore and REDRAW the missing fine detail at high native resolution, clean crisp professional 2D anime adventure background art. This is not just sharpening: reconstruct individual cobblestone edges, fine plaster grain, wood grain, window mullions, ivy leaves and painted architecture lines. PRESERVE EXACTLY the entire composition, framing, perspective, geometry, silhouettes, lamp positions, daylight direction and all architectural positions. In particular the image edges must match the reference: no cropping, no zoom, no rearrangement, no extra objects. The 90 degree pinhole perspective and square aspect are essential for joining neighboring cube-map faces. Preserve warm late-afternoon colors, hand-drawn environment style, no photorealism, no people, no sprites, no UI, no text, no new props. Crisp background detail throughout rather than depth-of-field blur. Output a full-resolution SQUARE image, preferably 2048 by 2048 or largest available square. Do not add any frame or border."
+    },
+    {
+      "file": "city-center-back-v1.png",
+      "width": 1254,
+      "height": 1254,
+      "sha256": "3403eccf9a2b83d2a10cd18ca2b72a5ab3ee516627d1befc542edcba6a0ddc44",
+      "scene": "city-center",
+      "generator": "built-in imagegen",
+      "processing": "Original native PNG copied byte-for-byte; no resizing or lossy compression.",
+      "prompt": "Edit the provided image, an exact 90-degree square perspective view of a hand-painted western fantasy city square. Restore and REDRAW the missing fine detail at high native resolution, professional crisp 2D anime adventure background art: individual stone joints, cobblestones, ivy leaves, wood grain, plaster texture and architectural lines. Do not just sharpen a blurry image. Preserve EXACTLY the camera projection, square framing, architectural positions, silhouettes, light direction, palette and outer edges; the other directional views must join this one. No cropping, no zooming, no perspective correction, no camera leveling: the slight upward camera angle is intentional. No extra scenery, no people, no sprites, no UI, no text, no border. Entire environment stays sharp, no depth-of-field blur. Keep the illustrated late-afternoon ivory-stone western fantasy art style. Output largest native square resolution available. If a clock is visible, preserve a single coherent circular clock with two hands; no duplicated clock or random lettering.",
+      "detailPitchDegrees": 15
+    },
+    {
+      "file": "city-center-front-v1.png",
+      "width": 1254,
+      "height": 1254,
+      "sha256": "85f7f6f72e1463f2b4ea50e0275f32c9dfc7c880520dc901bd24a6ad8362e497",
+      "scene": "city-center",
+      "generator": "built-in imagegen",
+      "processing": "Original native PNG copied byte-for-byte; no resizing or lossy compression.",
+      "prompt": "Edit the provided image, an exact 90-degree square perspective view of a hand-painted western fantasy city square. Restore and REDRAW the missing fine detail at high native resolution, professional crisp 2D anime adventure background art: individual stone joints, cobblestones, ivy leaves, wood grain, plaster texture and architectural lines. Do not just sharpen a blurry image. Preserve EXACTLY the camera projection, square framing, architectural positions, silhouettes, light direction, palette and outer edges; the other directional views must join this one. No cropping, no zooming, no perspective correction, no camera leveling: the slight upward camera angle is intentional. No extra scenery, no people, no sprites, no UI, no text, no border. Entire environment stays sharp, no depth-of-field blur. Keep the illustrated late-afternoon ivory-stone western fantasy art style. Output largest native square resolution available. If a clock is visible, preserve a single coherent circular clock with two hands; no duplicated clock or random lettering.",
+      "detailPitchDegrees": 15
+    },
+    {
+      "file": "city-center-left-v1.png",
+      "width": 1254,
+      "height": 1254,
+      "sha256": "a6e06ff3485a53b01e8edbf2486585074ae925386808fe3c47fb47317abfe9ed",
+      "scene": "city-center",
+      "generator": "built-in imagegen",
+      "processing": "Original native PNG copied byte-for-byte; no resizing or lossy compression.",
+      "prompt": "Edit the provided image, an exact 90-degree square perspective view of a hand-painted western fantasy city square. Restore and REDRAW the missing fine detail at high native resolution, professional crisp 2D anime adventure background art: individual stone joints, cobblestones, ivy leaves, wood grain, plaster texture and architectural lines. Do not just sharpen a blurry image. Preserve EXACTLY the camera projection, square framing, architectural positions, silhouettes, light direction, palette and outer edges; the other directional views must join this one. No cropping, no zooming, no perspective correction, no camera leveling: the slight upward camera angle is intentional. No extra scenery, no people, no sprites, no UI, no text, no border. Entire environment stays sharp, no depth-of-field blur. Keep the illustrated late-afternoon ivory-stone western fantasy art style. Output largest native square resolution available. If a clock is visible, preserve a single coherent circular clock with two hands; no duplicated clock or random lettering.",
+      "detailPitchDegrees": 15
+    },
+    {
+      "file": "city-center-panorama-v1.png",
+      "width": 1774,
+      "height": 887,
+      "sha256": "8adc521a7083fdeea1befdd2a4ffa46a3104b1bd4c8f12ba2f0f0c1f96c31b27",
+      "scene": "city-center",
+      "generator": "built-in imagegen",
+      "processing": "Original native PNG copied byte-for-byte; no resizing or lossy compression.",
+      "prompt": "Use case: stylized-concept. Create a NEW LOCATION in the same western fantasy city as the reference, using the reference ONLY for hand-painted art style, stone/plaster/wood materials and warm late-afternoon lighting. This is the CITY CENTER, Starbell Square, not the existing street corner. Production environment texture: a full 360 degree EQUIRECTANGULAR panorama, 2:1 wide aspect, horizon at exactly 50 percent height, fixed human eye height 1.65m, seamless left/right edges. Restrained 2D anime adventure investigation background, crisp thin ink contours, rich warm ivory stone and muted blue slate, elegant illustrated city. FORWARD (middle of panorama): a modest civic hall 14m ahead with a square clock tower, one readable circular gold clock face without text, a single arched entry and blue heraldic banners; the building is human scale and 2 to 3 stories, not a giant castle. Slightly left of forward is one low circular stone fountain, a broad open cobblestone paved space is foreground. RIGHT quarter: a quiet adventurers guild with an oak double door, one carved shield sign, pale limestone and a restrained balcony. LEFT quarter: an arcade with two simple arches and one cypress tree, distant roof silhouettes beyond. BEHIND viewer (joining outer edges): a narrow downhill street returning to the tavern district, framed by two warm plaster buildings, no tavern front door here. Ground occupies lower half and remains clear for two separate foreground cutouts. Buildings around viewpoint 10 to 18m away. Keep scene uncluttered and airy: NO market stalls, NO carts, NO crates, NO crowds, NO freestanding statues, NO bunting or flag strings, NO extra focal points. All architecture, fountain, plants and lights are PAINTED into the single background, no separate object atlas, no room layout plan. No characters, no UI, no signs with writing, no captions, no photorealism, no pixel art. Maintain the exact equirectangular environment projection."
+    },
+    {
+      "file": "city-center-right-v1.png",
+      "width": 1254,
+      "height": 1254,
+      "sha256": "041b033cf600523ada4edd66aa9efc816218eb3357948d4c92aa25bfad1a71d2",
+      "scene": "city-center",
+      "generator": "built-in imagegen",
+      "processing": "Original native PNG copied byte-for-byte; no resizing or lossy compression.",
+      "prompt": "Edit the provided image, an exact 90-degree square perspective view of a hand-painted western fantasy city square. Restore and REDRAW the missing fine detail at high native resolution, professional crisp 2D anime adventure background art: individual stone joints, cobblestones, ivy leaves, wood grain, plaster texture and architectural lines. Do not just sharpen a blurry image. Preserve EXACTLY the camera projection, square framing, architectural positions, silhouettes, light direction, palette and outer edges; the other directional views must join this one. No cropping, no zooming, no perspective correction, no camera leveling: the slight upward camera angle is intentional. No extra scenery, no people, no sprites, no UI, no text, no border. Entire environment stays sharp, no depth-of-field blur. Keep the illustrated late-afternoon ivory-stone western fantasy art style. Output largest native square resolution available. If a clock is visible, preserve a single coherent circular clock with two hands; no duplicated clock or random lettering.",
+      "detailPitchDegrees": 15
+    },
+    {
+      "file": "city-center-sign-v1.png",
+      "width": 1024,
+      "height": 1536,
+      "sha256": "94a6c0afad2fff874f49238a809f60cb6156e032942649efe19a69123da144af",
+      "scene": "city-center",
+      "generator": "built-in imagegen",
+      "processing": "Original native PNG copied byte-for-byte; no resizing or lossy compression.",
+      "prompt": "Use case: stylized-concept. A single transparent PNG cutout for a hand-painted 2.5D western fantasy city square. A slim, tasteful wooden wayfinding signpost about 1.7m high, full object including base, facing camera. Three short arrow boards attached to an old warm oak post, pointing alternating left and right, with tiny carved motifs of a bell, a cup, and a shield but NO WRITTEN TEXT. One small brass star finial on top. Faded muted blue painted inset and warm brass bolts, hand drawn ink contours and subtle wood grain, matching an elegant Japanese illustrated adventure game. Restrained human-scale design, not a huge noticeboard, no additional props or scenery. Genuine transparent background including all negative spaces, no backdrop, no floor, no baked shadow, no vignette. Entire object centered in a portrait image with small safe margin, feet completely visible, preserve original native resolution and alpha. No people, no UI, no text, no photorealism, no voxel art."
+    },
+    {
+      "file": "starlamp-corner-front-v4.png",
+      "generator": "built-in imagegen",
+      "kind": "corrected full stone arch and continuous paved road",
+      "processing": "Original PNG copied byte-for-byte; no resizing or compression.",
+      "sha256": "b9869c2f86ce8ab21779010528d2bce7379aa80fd8deb2faebaa5faf68e231ed",
+      "prompt": "Repair the complete gate inside the front view, keep the right apothecary and dusk palette; continuous cobblestone pedestrian road at the same ground level through a human-scaled arch, no cliff or postcard panorama, square 90-degree painted view."
+    }
+  ]
+}

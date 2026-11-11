@@ -1,4 +1,5 @@
 import { compileRoster } from '../ai/library.js';
+import { officialDungeonFor } from '../content/official-dungeons.js';
 
 /** One existing draggable preparation screen, then the same screen with a locked party. */
 export function createDeparture(context) {
@@ -13,6 +14,12 @@ export function createDeparture(context) {
   supplies.innerHTML =
     '<button data-prepare-buy>购买道具</button><button data-prepare-exchange>兑换装备</button>';
   panel.querySelector('footer').prepend(supplies);
+  const guidance = document.createElement('label');
+  guidance.className = 'departure-guidance';
+  guidance.hidden = true;
+  guidance.innerHTML =
+    '<strong>这次想经历怎样的故事？</strong><textarea rows="2" maxlength="2000" placeholder="选填：想遇见的人、氛围、事件，或希望故事往哪个方向发展……"></textarea>';
+  panel.querySelector('.prepare-body').before(guidance);
   let active = null;
   events.on(supplies, 'click', (event) => {
     if (event.target.closest('[data-prepare-buy]')) context.shop.open({ preparation: true });
@@ -21,6 +28,8 @@ export function createDeparture(context) {
   function open({ selection = false, pending = false, onCancel } = {}) {
     if (active) return active;
     session.ai.formationLocked = !selection;
+    guidance.hidden = !selection || !!officialDungeonFor(session.journey.selectedNode);
+    guidance.querySelector('textarea').value = '';
     context.shell.renderParty();
     title.textContent = selection
       ? '选择本场同行者'
@@ -43,6 +52,9 @@ export function createDeparture(context) {
       if (selection) {
         try {
           compileRoster(session.ai.library);
+          session.ai.scriptGuidance = guidance.hidden
+            ? ''
+            : guidance.querySelector('textarea').value.trim();
         } catch (failure) {
           event.stopImmediatePropagation();
           context.shell.toast(failure.message);
@@ -56,6 +68,7 @@ export function createDeparture(context) {
       'close',
       () => {
         session.ai.formationLocked = false;
+        guidance.hidden = true;
         title.textContent = '战阵整备';
         done.textContent = '准备完成';
         done.disabled = false;
@@ -90,6 +103,7 @@ export function createDeparture(context) {
     dispose() {
       active?.cancel();
       supplies.remove();
+      guidance.remove();
     },
   };
 }

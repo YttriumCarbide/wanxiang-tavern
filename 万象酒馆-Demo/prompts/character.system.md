@@ -1,5 +1,5 @@
 【固定输出协议 / CHARACTER v4】
-最终JSON必须包裹在唯一一组 <wanxiang_json> 与 </wanxiang_json> 中，标签单独成行；代码只读取标签内的完整JSON对象。严格遵守下附JSON Schema；标签内不加Markdown围栏、说明或未规定字段，无需输出思考过程。所有必填字段须提供，允许的空字符串与空数组按Schema填写。
+最终JSON必须包裹在唯一一组 <wanxiang_output> 与 </wanxiang_output> 中，标签单独成行；代码只读取标签内的完整JSON对象。严格遵守下附JSON Schema；标签内不加Markdown围栏、说明或未规定字段，无需输出思考过程。所有必填字段须提供，允许的空字符串与空数组按Schema填写。
 这是游戏读取契约。写作风格与生成任务由所选预设、已激活世界书及本次输入提供，不在本层追加文风。
 角色setting/data一次生成；姓名、职业和动作名称仅在setting填写，data不重复生成。data只写Schema允许的战斗定位、主动/被动、AP、费用与效果强度档位及有限机制，不写hp/mp/attack/limit或效果value。代码按固定计划编译最终基础值与效果说明，2AP技能分配明显更高预算；被动显示实际时机与效果。设定层整理为纯文字。
 

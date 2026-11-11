@@ -1,0 +1,29 @@
+[
+  {
+    "file": "flattened-grass.png",
+    "prompt": "Use case: stylized-concept. Asset type: transparent fantasy adventure game investigation clue. A small isolated patch of crushed roadside grass with bent blades pressed in one direction, two staggered muddy indentations and broken thin twigs, natural green olive and earth tones. Hand painted detailed anime fantasy background-object art, soft daylight, three quarter elevated view. All outer edges fade to genuinely transparent alpha, no scene background, no frame, no letters, no characters, entire object visible.",
+    "tool": "built-in imagegen",
+    "width": 1536,
+    "height": 1024,
+    "colorType": 6,
+    "sha256": "2ef77d585ad5af10394e8800768efbc810857efcf53d3a843aaa16866f3671fe"
+  },
+  {
+    "file": "damaged-cart.png",
+    "prompt": "Use case: stylized-concept. Asset type: transparent fantasy adventure game investigation clue. A damaged medieval wooden two wheeled cargo cart, side boards smashed inward, crooked axle, torn off-white canvas and a few tied sacks still inside, no modern components. Hand painted detailed anime fantasy game illustration, soft daylight, three quarter view, entire cart visible. Genuinely transparent alpha background, no scenery, no frame, no text, no people.",
+    "tool": "built-in imagegen",
+    "width": 1536,
+    "height": 1024,
+    "colorType": 6,
+    "sha256": "8d40483d4a657fbfa9c4921473274d5d1305c4b52422fb5c271e756ebc745ddc"
+  },
+  {
+    "file": "eclipse-scales.png",
+    "prompt": "Use case: stylized-concept. Asset type: transparent fantasy adventure game investigation clue. Three broken dark indigo reptilian beast scales with subtle cold blue reflections, fresh irregular fractures, a sideways scratch, a tiny pale cloth fiber and wood splinter snagged at one edge. Detailed hand painted anime fantasy game inventory illustration, three quarter close view, entire group visible. Genuinely transparent alpha background, no ground or scenery, no frame, no text, no glowing magical symbols.",
+    "tool": "built-in imagegen",
+    "width": 1536,
+    "height": 1024,
+    "colorType": 6,
+    "sha256": "5aa99204ea9f994c759704bfadf7189d59a0572e3c1560190199886c2644a882"
+  }
+]

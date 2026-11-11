@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import path from 'node:path';
 import { legacySession } from './legacy-session.mjs';
 import { newLibrary, officialCharacter } from '../../src/ai/library.js';
+import { TAVERN_VISITOR_SPOTS } from '../../src/content/tavern-visitors.js';
 
 /** Real textures, camera projection, room depth and canvas input; no image-only UI stand-ins. */
 export async function tavernVisitorsChecks({ browser, baseURL, output }) {
@@ -10,13 +11,18 @@ export async function tavernVisitorsChecks({ browser, baseURL, output }) {
   page.on('pageerror', (error) => errors.push(error.message));
   await legacySession(page);
   const library = newLibrary();
-  library.characters.push(officialCharacter('edith'), officialCharacter('pandora'));
+  library.characters.push(
+    officialCharacter('edith'),
+    officialCharacter('pandora'),
+    officialCharacter('luo-gongxu'),
+    officialCharacter('silica-laps'),
+  );
   await page.addInitScript((library) => {
     if (origin === 'null') return;
     localStorage.setItem('wanxiang.worldbooks.v1', JSON.stringify(library));
     localStorage.setItem(
       'wanxiang.generation-options.v1',
-      JSON.stringify({ developerMode: true, skipAiGeneration: true, tavernVisitors: true }),
+      JSON.stringify({ developerMode: true, skipAiGeneration: true, tavernVisitors: false }),
     );
   }, library);
   try {
@@ -41,7 +47,17 @@ export async function tavernVisitorsChecks({ browser, baseURL, output }) {
     const visited = new Map();
     const blockedSpots = new Set();
     let initial;
-    for (let index = 0; index < 6; index++) {
+    for (let index = 0; index < 15; index++) {
+      await canvas.evaluate(
+        () =>
+          new Promise((resolve) => {
+            const check = () =>
+              window.assetPreview.visitors().characters.length === 3
+                ? resolve()
+                : requestAnimationFrame(check);
+            check();
+          }),
+      );
       const state = await canvas.evaluate(() => window.assetPreview.visitors());
       if (!initial) initial = state;
       assert.equal(new Set(state.characters.map((actor) => actor.spot)).size, 3);
@@ -78,13 +94,20 @@ export async function tavernVisitorsChecks({ browser, baseURL, output }) {
       if (index === 0) await page.screenshot({ path: path.join(output, 'visitors-room.png') });
       await inn.locator('#visitor-refresh').click();
     }
-    for (const spots of visited.values()) assert.equal(spots.size, 6);
+    assert.equal(visited.size, 5);
+    assert.equal(
+      new Set([...visited.values()].flatMap((spots) => [...spots])).size,
+      TAVERN_VISITOR_SPOTS.length,
+    );
     assert.deepEqual([...blockedSpots], [], 'all spawn locations keep the body clear of furniture');
     // Inspect the reported bar location directly after checking every refresh point.
-    if (
+    for (
+      let attempt = 0;
+      attempt < 9 &&
       !(await canvas.evaluate(() =>
         window.assetPreview.visitors().characters.some((actor) => actor.spot === 'bar-front'),
-      ))
+      ));
+      attempt++
     )
       await inn.locator('#visitor-refresh').click();
     const target = await canvas.evaluate(() => {
@@ -116,15 +139,15 @@ export async function tavernVisitorsChecks({ browser, baseURL, output }) {
     await page.locator('#gal-stage').waitFor({ state: 'hidden' });
     await page.locator('#ai-open').click();
     await page.locator('[data-ai-tab="game"]').click();
-    await page.locator('[data-generation-option="tavernVisitors"]').uncheck();
+    assert.equal(await page.locator('[data-generation-option="tavernVisitors"]').count(), 0);
     await page.locator('#ai-close').click();
-    assert.equal(await inn.locator('#visitor-refresh').isVisible(), false);
+    assert.equal(await inn.locator('#visitor-refresh').isVisible(), true);
     assert.deepEqual(errors, []);
     return {
-      officialSprites: 3,
-      spawnPointsPerCharacter: 6,
+      officialSprites: 5,
+      spawnPointsPerCharacter: 9,
       actualCanvasSelection: true,
-      developerToggle: true,
+      alwaysEnabledWithLegacyFalse: true,
       initial,
     };
   } finally {

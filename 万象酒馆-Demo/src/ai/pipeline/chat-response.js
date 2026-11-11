@@ -1,17 +1,22 @@
 import { chatRegexScripts } from './chat-request.js';
 import { readOutputTags } from '../output-tags.js';
 import { validateTaskReply } from '../../adventure/state.js';
+import { normalizeInvitationTurn } from '../../invitation.js';
+import { BODY_TAGS, OUTPUT_TAG } from '../output-protocol.js';
 
 export async function chatResponse(kind, content, scripts, input = {}, runRegexTasks) {
   scripts = chatRegexScripts(kind, scripts);
   let text = content;
   let actions = { affection: [], agreeToAdventure: [] };
   let adventure;
+  let invitation;
+  let dialogue;
   const invalidAdventure = [];
   if (kind === 'quick-chat' || kind === 'chat') {
     const sections = readOutputTags(content, [
-      { tag: 'wanxiang_chat' },
+      ...BODY_TAGS.map((tag) => ({ tag })),
       { tag: 'wanxiang_actions', json: true },
+      { tag: 'wanxiang_invitation', json: true },
       {
         tag: 'wanxiang_adventure',
         json: true,
@@ -27,9 +32,25 @@ export async function chatResponse(kind, content, scripts, input = {}, runRegexT
         },
       },
     ]);
-    const body = sections.find((section) => section.tag === 'wanxiang_chat');
-    if (!body?.content.trim()) throw Error('回复正文需要唯一一组wanxiang_chat标签');
+    const bodies = sections.filter((section) => BODY_TAGS.includes(section.tag));
+    if (bodies.length !== 1) throw Error(`回复正文需要唯一一组${OUTPUT_TAG}标签`);
+    const body = bodies[0];
+    if (!body.content.trim()) throw Error(`${OUTPUT_TAG}标签内的正文不能为空`);
     text = body.content.trim();
+    if (input.dialogueScenes?.length) {
+      try {
+        const section = readOutputTags(content, [{ tag: 'wanxiang_dialogue', json: true }])[0];
+        const changes = section?.start >= body.end && JSON.parse(section.content);
+        if (Array.isArray(changes) && changes.length <= 30) dialogue = changes;
+      } catch {
+        // Dialogue edits are optional data. The accepted chat body stays available.
+      }
+    }
+    if (kind === 'quick-chat' && input.invitation) {
+      const section = sections.find((item) => item.tag === 'wanxiang_invitation');
+      if (!section) throw Error('缺少约见评分，已确认进度保留');
+      invitation = normalizeInvitationTurn(JSON.parse(section.content), input.invitation);
+    }
     if (kind === 'quick-chat' && input.adventure?.mode === 'quest') {
       const section = sections.find((item) => item.tag === 'wanxiang_adventure');
       if (!section)
@@ -40,6 +61,7 @@ export async function chatResponse(kind, content, scripts, input = {}, runRegexT
         );
       try {
         adventure = validateTaskReply(JSON.parse(section.content), input.adventure);
+        if (input.dialogueScenes?.length) adventure.patches = [];
       } catch (failure) {
         throw Error('任务数据无效：' + failure.message, { cause: failure });
       }
@@ -87,5 +109,7 @@ export async function chatResponse(kind, content, scripts, input = {}, runRegexT
     display: display.text,
     ...(kind === 'chat' ? { actions } : {}),
     ...(adventure ? { adventure } : {}),
+    ...(invitation ? { invitation } : {}),
+    ...(dialogue ? { dialogue } : {}),
   };
 }

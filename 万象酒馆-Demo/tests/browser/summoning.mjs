@@ -101,6 +101,14 @@ export async function summoningChecks({ browser, baseURL, output }) {
     await page.locator('#summoned-join').click();
     while (await page.locator('#companion-dialogue').isVisible())
       await page.locator('#companion-dialogue button').click();
+    const stage = page.locator('#gal-stage');
+    for (let index = 0; index < 60 && (await stage.isVisible()); index++) {
+      if ((await stage.getAttribute('data-leaving')) === 'true')
+        await page.waitForFunction(
+          () => document.querySelector('#gal-stage').dataset.leaving !== 'true',
+        );
+      else await page.locator('.gal-page').click();
+    }
     await page.route('**/api/ai/prompts/fixture', (route) =>
       route.fulfill({ json: { preset: { ...tavernPresetFixture(), id: 'fixture' } } }),
     );

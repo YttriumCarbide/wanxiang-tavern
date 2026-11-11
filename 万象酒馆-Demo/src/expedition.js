@@ -1,5 +1,6 @@
 import { ENCOUNTERS, encounterSpec } from './data.js';
 import { newEncounter, campRest } from './engine.js';
+import { withoutDiningBonus } from './dining.js';
 import { explorationSpec } from './exploration.js';
 import { STORY_RING_CHARGE } from './content/journey-rules.js';
 import { ADVENTURE_NODE_TYPES } from './adventure/definition.js';
@@ -21,6 +22,10 @@ export function newExpedition(boss = 'bossGate', heroDefinitions = {}, explorati
   };
 }
 export function currentEncounterSpec(expedition, index = expedition.index) {
+  if (expedition.chapter)
+    return expedition.chapter.fullTrip
+      ? expedition.chapter.encounters[index]
+      : expedition.chapter.spec;
   const spec = expedition.exploration
     ? explorationSpec(expedition.exploration, index)
     : encounterSpec(index, expedition.boss);
@@ -80,7 +85,8 @@ export function completeEncounter(expedition, state) {
   expedition.id ||= crypto.randomUUID();
   const rewardId = `${expedition.id}:${state.encounter}`;
   const rewards = {
-    summonContracts: state.encounter === ENCOUNTERS.length - 1 ? 1 : 0,
+    summonContracts:
+      (expedition.chapter && spec.boss) || state.encounter === ENCOUNTERS.length - 1 ? 1 : 0,
     gold: spec.boss ? 100 : 20,
     ...(expedition.exploration?.replay && state.encounter === ENCOUNTERS.length - 1
       ? { ether: expedition.recollectionEther || 0 }
@@ -100,11 +106,14 @@ export function completeEncounter(expedition, state) {
         .map((id) => [id, { hp: state.units[id].hp, mp: state.units[id].mp }]),
     ),
   });
-  if (state.encounter === ENCOUNTERS.length - 1) {
+  if (
+    (expedition.chapter && !expedition.chapter.fullTrip) ||
+    state.encounter === ENCOUNTERS.length - 1
+  ) {
     expedition.status = 'complete';
     return { complete: true, changes: [], rewards, rewardId };
   }
-  const rest = campRest(state);
+  const rest = campRest(withoutDiningBonus(state));
   expedition.carried = rest.state;
   expedition.index++;
   if (state.encounter === 2) expedition.restPending = true;

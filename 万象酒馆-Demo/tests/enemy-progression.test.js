@@ -21,25 +21,26 @@ import { createWorldbookStore } from '../server/worldbook-store.mjs';
 import { createBrowserStores } from '../src/ai/browser-stores.js';
 import { generationRequest } from '../server/prompts.mjs';
 
-test('main six chapters grow slowly and endless/custom routes advance at every site', () => {
+test('six authored sites ease up and endless groups jump at their first site', () => {
   assert.deepEqual(
     Array.from({ length: 9 }, (_, sequence) => encounterLevel({ map: 'ruins', sequence })),
-    [1, 1, 2, 2, 3, 3, 4, 5, 6],
+    [1, 2, 2, 3, 3, 4, 9, 9, 9],
   );
   assert.deepEqual(
     Array.from({ length: 4 }, (_, sequence) =>
       encounterLevel({ map: 'forest', sequence, world: { id: 'custom' } }),
     ),
-    [1, 2, 3, 4],
+    [10, 10, 10, 10],
   );
-  assert.equal(encounterLevel({ map: 'tide', sequence: 5 }), 11);
+  assert.equal(encounterLevel({ map: 'ruins', sequence: 11 }), 9);
+  assert.equal(encounterLevel({ map: 'ruins', sequence: 12 }), 14);
+  assert.equal(encounterLevel({ map: 'tide', sequence: 5 }), 27);
   for (let seed = 0; seed < 100; seed++) {
     const entry = { map: 'ruins', sequence: 8, seed };
     const growth = enemyGrowth(entry, 0, 'slime');
     assert.deepEqual(growth, enemyGrowth(entry, 0, 'slime'));
-    assert(growth.level >= 5 && growth.level <= 7);
-    assert(growth.bonus.hp >= 0 && growth.bonus.attack >= 0);
-    assert(growth.bonus.hp + growth.bonus.attack > 0);
+    assert.equal(growth.level, 9);
+    assert(growth.hpScale > 1 && growth.damageScale > 1);
   }
 });
 
@@ -50,7 +51,7 @@ test('enemy growth drives authoritative hp, intention and damage without changin
   const before = structuredClone(spec);
   for (const id of state.enemyIds) {
     assert(state.units[id].level >= spec.level - 1);
-    assert(state.units[id].growth.hp > 0);
+    assert(state.units[id].damageScale > 1);
     const move = intent(state, id);
     assert(move.effects.every((effect) => effect.type !== 'damage' || effect.value > 0));
   }

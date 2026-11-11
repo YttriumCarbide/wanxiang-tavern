@@ -5,6 +5,8 @@
     content="width=device-width,initial-scale=1"
   /><title>万象酒馆 · 二层走廊</title>
   <link rel="stylesheet" href="./styles/tavern.css" />
+  <link rel="stylesheet" href="./styles/scene-loading.css" />
+  <link rel="stylesheet" href="./styles/scene-visitors.css" />
   <link rel="stylesheet" href="./styles/guest-room.css" />
   <link rel="stylesheet" href="./styles/corridor.css" />
   <body class="guest-room corridor">
@@ -20,7 +22,7 @@
     <div id="spots" aria-label="走廊中的三扇房门"></div>
     <div id="where" aria-live="polite">走廊 · 三扇房门</div>
     <p id="room-hint">拖动画面环视 · 点击房门进入</p>
-    <div id="status">正在推开走廊门…</div>
+    <div id="status" class="scene-loading">正在推开走廊门…</div>
     <div id="scene-fade" aria-hidden="true"></div>
     <script type="importmap">
       {

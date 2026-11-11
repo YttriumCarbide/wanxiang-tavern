@@ -19,6 +19,7 @@ import { statusIcons } from '../src/ui.js';
 import { combatCues } from '../src/audio/cues.js';
 import { playbackBeats } from '../src/playback-timing.js';
 import { OFFICIAL_VISITORS } from '../src/content/official-visitors.js';
+import { TOWN_GUESTS } from '../src/content/town-guests.js';
 import { normalizeCharacterSetting } from '../src/ai/character-setting.js';
 
 function party(visitor, slot = 'aegis') {
@@ -73,7 +74,14 @@ test('both visitors join official summon pool, survive save restoration and comp
       .find((member) => member.id === 'official-silica-laps')
       .setting.worldbook.includes('绝处逢生'),
   );
-  assert.equal(officialSummonPool(restored, book).length, 0);
+  assert.deepEqual(
+    officialSummonPool(restored, book)
+      .map((entry) => entry.id)
+      .sort(),
+    Object.keys(TOWN_GUESTS)
+      .map((id) => 'official-' + id)
+      .sort(),
+  );
 });
 
 test('Silica restores her own two active skills and removes mistaken static Pandora skills', () => {

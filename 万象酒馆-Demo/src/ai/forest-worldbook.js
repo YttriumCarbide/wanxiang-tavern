@@ -68,23 +68,14 @@ export function upgradeForestWorldbook(source) {
     add(
       { monsterId: enemy.id },
       {
-        comment: '古林怪物图鉴：' + enemy.name,
+        comment: '怪物图鉴：' + enemy.name,
         ignoreBudget: true,
         key: [enemy.id, enemy.name],
-        content:
-          monsterWorldbook(enemy.id, enemy.name) +
-          '\n基础hp：' +
-          enemy.hp +
-          '；速度：' +
-          enemy.speed +
-          '；每回合一次行动。' +
-          (enemy.tactic.mode === 'moon-tree'
-            ? '\n三部位速度均为1，行动顺序树冠、魔眼、树根。按三回合循环，第四回合重新开始；魔眼首轮激光21伤害，每个循环乘1.5；树根治疗各存活部位最大hp的20%。必须全部击败才算胜利。'
-            : ''),
+        content: monsterWorldbook(enemy.id, enemy.name),
         matchScenario: true,
         preventRecursion: true,
         order: 210,
-        apiTargets: ['script', 'map'],
+        apiTargets: ['script', 'chat'],
       },
     );
   return book;

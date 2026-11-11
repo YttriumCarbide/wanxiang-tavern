@@ -76,7 +76,11 @@ export async function enemyIntentChecks({ browser, baseURL, output }) {
     assert.equal(await page.locator('.intent-path').count(), 3);
     assert.equal(await page.locator('.intent-sword').count(), 3);
     for (const badge of await page.locator('.enemy-intent-summary').all()) {
-      assert.match(await badge.textContent(), /^[\s\d/]+$/, 'Only icons and numbers are visible');
+      assert.match(
+        await badge.textContent(),
+        /^[\s\d/自身]+$/,
+        'Per-target values and the separate self row are visible',
+      );
     }
     assert.equal(await page.locator('.enemy-intent-description').count(), 0);
     assert(
@@ -155,7 +159,10 @@ export async function enemyIntentChecks({ browser, baseURL, output }) {
           .locator('[data-enemy-intent="' + id + '"] .intent-buff')
           .all()) {
           const box = await buff.boundingBox();
-          assert(box.x >= sword.x + sword.width, 'Buff icons follow the sword and number');
+          assert(
+            box.x >= badge.x && box.x + box.width <= badge.x + badge.width,
+            'Target and self buffs stay inside their own intent summary',
+          );
         }
         cards.push(badge);
       }

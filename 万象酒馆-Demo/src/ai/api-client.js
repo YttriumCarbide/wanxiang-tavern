@@ -1,16 +1,25 @@
 import { REQUEST_TIMEOUT_MS } from './request-policy.js';
-import { compatibleRequest, completionURL, validateApiKey } from './compatible.js';
+import { completionURL, validateApiKey } from './compatible.js';
+import { createAntiRouteService } from './anti-route-service.js';
 import { localRequest } from './local-client.js';
 import { redactDiagnostic } from './diagnostic.js';
 import { readServiceAccount } from './vertex-service-account.js';
+import { connectionKind } from './connection-store.js';
 
 /** One application-owned gateway. Credentials stay in this page's memory, never in saves. */
 export function createApiClient({ fetchImpl = fetch, timeoutMs = REQUEST_TIMEOUT_MS } = {}) {
   const credentials = new Map();
   const controllers = new Set();
   let disposed = false;
-  const credentialId = (kind, profile) => `${kind}:${completionURL(profile.baseUrl).href}`;
+  const credentialId = (kind, profile) =>
+    `${connectionKind(kind)}:${completionURL(profile.baseUrl).href}`;
   const local = (path, data, options = {}) => localRequest(path, data, { ...options, fetchImpl });
+  let routeConfig = {};
+  const antiRoute = createAntiRouteService({
+    settings: { routeSettings: () => routeConfig },
+    fetchImpl,
+    publish: (report) => local('anti-route', { action: 'report', report }),
+  });
   function setCredential(kind, profile, key) {
     if (key && profile.vertexAuth === 'service-account') readServiceAccount(key);
     else validateApiKey(key);
@@ -23,6 +32,18 @@ export function createApiClient({ fetchImpl = fetch, timeoutMs = REQUEST_TIMEOUT
   }
   async function request(path, data, options = {}) {
     if (disposed) throw Error('接口已关闭');
+    if (path === 'anti-route' && data?.action === 'probe') {
+      const profiles = await local('config', undefined, options);
+      const profile = profiles[data.kind];
+      if (!profile) throw Error('接口类型无效');
+      if (profile.requestMode !== 'browser') return local(path, data, options);
+      routeConfig = (await local('anti-route', undefined, options)).config;
+      return antiRoute.probe(
+        { ...profile, apiKey: credentials.get(credentialId(data.kind, profile)) || '' },
+        data,
+        options.signal,
+      );
+    }
     const route =
       /^(generate|models)\/(character|script|chat|quick-chat|summary|creation|map)$/.exec(path);
     if (!route) return local(path, data, options);
@@ -49,7 +70,8 @@ export function createApiClient({ fetchImpl = fetch, timeoutMs = REQUEST_TIMEOUT
       ticket = plan.ticket;
       requestReport = plan.request;
       // The server returns no credential. It owns prompt preparation and validation for step one.
-      const result = await compatibleRequest({ ...plan.profile, apiKey: key }, plan.messages, {
+      routeConfig = plan.options.antiRoute || {};
+      const result = await antiRoute.request({ ...plan.profile, apiKey: key }, plan.messages, {
         ...plan.options,
         signal: controller.signal,
         fetchImpl,
@@ -82,6 +104,7 @@ export function createApiClient({ fetchImpl = fetch, timeoutMs = REQUEST_TIMEOUT
     hasCredential,
     dispose() {
       disposed = true;
+      antiRoute.dispose();
       for (const controller of controllers) controller.abort();
       controllers.clear();
       credentials.clear();

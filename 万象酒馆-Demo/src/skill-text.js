@@ -97,19 +97,30 @@ export function finalPassiveText(skill, markName = '标记') {
 
 /** Display the actual compiled effects, including growth, without explanatory growth suffixes. */
 export function finalSkillText(skill, markName = '标记') {
+  if (['libet-entry', 'melody-entry'].includes(skill.mechanic)) return resourceText(skill.text);
+  if (skill.id === 'amber-song')
+    return `为所有存活队友回复等同于自身${markName}层数的hp，并给予${skill.effects.find((effect) => effect.type === 'buff')?.value || 0}层力量；不消耗${markName}。`;
   if (skill.mechanic === 'junlue')
     return `造成${skill.effects.find((effect) => effect.type === 'damage')?.value || 0}伤害，目标下次攻击只能指向自己；目标下次获得正面状态或护盾时，自己也获得同等增益。`;
   if (['soul-revive', 'soul-banquet'].includes(skill.mechanic))
     return resourceText(skill.text || '');
   const parts = [];
   for (const effect of skill.effects || []) {
-    const target =
-      skill.target === 'allEnemies'
+    const target = skill.adjacentAllies
+      ? skill.includeSelf
+        ? '自身及同排左右紧邻的存活队友'
+        : '同排左右紧邻的存活队友（不含自身）'
+      : skill.target === 'allEnemies'
         ? '所有敌人'
         : skill.target === 'allAllies'
           ? '所有队友'
-          : '目标';
+          : skill.target === 'self'
+            ? '自身'
+            : '目标';
     parts.push(effectText(effect, effectTarget(effect, target), markName));
   }
+  if (skill.consumeMarkCount)
+    parts.push(`消耗自身${skill.consumeMarkCount}层${markName}（不足时扣至0）`);
+  if (skill.basicAttackInjuredMark) parts.push('每个实际受到生命伤害的敌人为自身提供1层悠扬');
   return resourceText(parts.join('，') + '。');
 }

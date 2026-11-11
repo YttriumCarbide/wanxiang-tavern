@@ -11,6 +11,7 @@ import {
   selectedGalStage,
   authoredGalContent,
   readableGalText,
+  galActorsForBeats,
 } from '../src/gal.js';
 import { restoreGenerationOptions } from '../src/generation-options.js';
 import { galInstruction } from '../src/ai/gal-prompt.js';
@@ -18,6 +19,96 @@ import { createAiPipeline } from '../src/ai/pipeline/runtime.js';
 import { createWorldbookStore } from '../server/worldbook-store.mjs';
 import { normalizePromptPreset } from '../src/ai/presets.js';
 import { runRegexTasks } from '../server/regex-runtime.mjs';
+import { galNpcPortrait, GAL_NPC_PORTRAITS } from '../src/content/gal-npc-portraits.js';
+import { generationInput } from '../src/ai/pipeline/prompts.js';
+import { storyRingReward } from '../src/emblem-progression.js';
+
+test('Gal NPCs use matching western-fantasy stand-ins and gendered anonymous shadows', () => {
+  assert.equal(
+    galNpcPortrait({ name: '卫兵', appearance: '成年女性，城门守卫，短发' }),
+    GAL_NPC_PORTRAITS.guardWoman,
+  );
+  assert.equal(
+    galNpcPortrait({ name: '村民', appearance: '男性村民，穿着粗布衣服' }),
+    GAL_NPC_PORTRAITS.villagerMan,
+  );
+  assert.equal(
+    galNpcPortrait({ name: '小女孩', appearance: '年约九岁的女童' }),
+    GAL_NPC_PORTRAITS.girl,
+  );
+  assert.equal(
+    galNpcPortrait({ name: '陌生男子', appearance: '成年男性，身份与来历无人知晓' }),
+    GAL_NPC_PORTRAITS.shadowMan,
+  );
+  assert.equal(
+    galNpcPortrait({ name: '陌生女子', appearance: '成年女性，身份与来历无人知晓' }),
+    GAL_NPC_PORTRAITS.shadowWoman,
+  );
+  assert.equal(
+    galNpcPortrait({ id: 'unknown-npc', name: '未具名来客' }),
+    galNpcPortrait({ id: 'unknown-npc', name: '未具名来客' }),
+  );
+});
+
+test('NPC markers bind real assets and stable identities without changing official portraits', () => {
+  const actors = [
+    { id: 'edith', name: '伊蒂丝', sprite: 'edith.png' },
+    { id: 'archive-npc', name: '灰伯', npc: true, sprite: GAL_NPC_PORTRAITS.shadowWoman },
+  ];
+  const source = structuredClone(actors);
+  const text =
+    '【对白:npc:灰伯|scholar】你好。【对白:npc:女卫兵|guardWoman】请进。' +
+    '【对白:npc:女卫兵|guardMan】慢走。【对白:npc:伊蒂丝|boy】别急。' +
+    '【对白:npc:陌生人|https://bad.example/a.png】停下。';
+  const beats = parseGalText(text);
+  const cast = galActorsForBeats(actors, beats);
+  assert.equal(resolveGalActor(beats[0].speaker, cast).sprite, GAL_NPC_PORTRAITS.scholar);
+  assert.equal(resolveGalActor(beats[1].speaker, cast).sprite, GAL_NPC_PORTRAITS.guardWoman);
+  assert.equal(resolveGalActor(beats[2].speaker, cast).sprite, GAL_NPC_PORTRAITS.guardWoman);
+  assert.equal(resolveGalActor(beats[3].speaker, cast).sprite, 'edith.png');
+  assert.equal(resolveGalActor(beats[4].speaker, cast).sprite, GAL_NPC_PORTRAITS.shadowMan);
+  assert.equal(cast.filter((actor) => actor.name === '女卫兵').length, 1);
+  assert.equal(resolveGalActor('npc:女卫兵', cast).name, '女卫兵');
+  assert.equal(readableGalText(text, cast).includes('|'), false);
+  assert.deepEqual(actors, source);
+  assert.equal(
+    galNpcPortrait({ galPortrait: 'girl', appearance: '男守卫' }),
+    GAL_NPC_PORTRAITS.girl,
+  );
+});
+
+test('script requests bind ring scenes to the same fifth-node schedule as actual rewards', () => {
+  for (const [map, sequence] of [
+    ['ruins', 1],
+    ['ruins', 2],
+    ['ruins', 5],
+    ['forest', 1],
+    ['forest', 3],
+  ]) {
+    const route = { map, sequence, seed: 1 };
+    const input = generationInput('script', {
+      brief: '沿官方大纲继续',
+      boss: 'bossGate',
+      party: [{ id: 'hero', name: '旅人' }],
+      exploration: route,
+    });
+    assert.deepEqual(input.request.storyRingReward, storyRingReward(route));
+    assert.equal(input.request.storyRingReward.encounter, 4);
+    assert(input.request.storyRingInstruction.includes('story[0]～story[3]'));
+  }
+  assert.equal(storyRingReward({ map: 'ruins', sequence: 0 }), null);
+  assert.equal(storyRingReward({ map: 'ruins', sequence: 1, world: {} }), null);
+  const route = { map: 'ruins', sequence: 1, seed: 1 };
+  const reward = storyRingReward(route);
+  const request = generationInput('script', {
+    brief: '再次探索回廊',
+    boss: 'bossGate',
+    party: [{ id: 'hero', name: '旅人' }],
+    exploration: route,
+    ownedEmblems: [reward.id],
+  });
+  assert.equal(request.request.storyRingReward, null);
+});
 
 test('selection fixes the first two identities without substituting missing portraits', () => {
   const actors = [
@@ -191,5 +282,11 @@ test('actual shared pipeline opts script and chat into Gal without changing the 
       if (otherKind !== kind) assert(!instruction.includes(heading));
     }
     assert(on.messages.some((message) => message.content.includes(headings[kind])));
+    for (const request of [off, on]) {
+      const finalText = request.messages.map((message) => message.content).join('\n');
+      assert(finalText.includes('【对白:npc:姓名|立绘编号】'));
+      assert(finalText.includes('老年男性学者'));
+      assert(finalText.includes('不在剧本或聊天正文写戒指的具体游戏效果'));
+    }
   }
 });

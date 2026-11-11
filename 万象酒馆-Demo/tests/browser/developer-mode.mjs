@@ -16,7 +16,6 @@ export async function developerModeChecks({ browser, baseURL, output }) {
     '#creation-generate',
     '#chat-send',
     '#quick-chat-send',
-    '#script-rewrite',
     '#memory-generate',
     '#forge-refine',
     '[data-world-submit]',

@@ -1,3 +1,5 @@
+import { GAL_NPC_PORTRAITS } from './content/gal-npc-portraits.js';
+
 /** Lightweight prose markers; the stored story remains complete, readable text. */
 export function galRequestInput(kind, input) {
   if (!['script', 'chat', 'quick-chat'].includes(kind)) return input;
@@ -136,7 +138,9 @@ export function readableGalText(source, actors = [], protagonistId) {
 export function resolveGalActor(speaker, actors, protagonistId) {
   const identity = String(speaker || '')
     .replace(/\s*·\s*Lv\.\d+$/u, '')
-    .replace(/^npc[:：]/u, '');
+    .replace(/^npc[:：]/u, '')
+    .split('|')[0]
+    .trim();
   if (!identity || ['旁白', 'narrator'].includes(identity)) return null;
   if (['user', 'player', '<user>', '主角', '玩家', '你'].includes(identity))
     return (
@@ -144,9 +148,33 @@ export function resolveGalActor(speaker, actors, protagonistId) {
     );
   const matches = actors.filter(
     (actor) =>
-      actor.id === identity || actor.name === identity || actor.aliases?.includes(identity),
+      actor.id === identity ||
+      actor.id === `npc:${identity}` ||
+      actor.name === identity ||
+      actor.aliases?.includes(identity),
   );
   return matches.length === 1 ? matches[0] : { id: identity, name: identity };
+}
+
+/** Bind each NPC once per reply to a whitelisted asset; known party portraits always win. */
+export function galActorsForBeats(actors, beats) {
+  const cast = actors.map((actor) => ({ ...actor }));
+  const assigned = new Set();
+  for (const beat of beats) {
+    if (!['dialogue', 'enter'].includes(beat.type) || !/^npc[:：]/u.test(beat.speaker)) continue;
+    const actor = resolveGalActor(beat.speaker, cast);
+    const existing = cast.find((entry) => entry.id === actor.id);
+    if (existing && !existing.npc) continue;
+    const portrait = beat.speaker.split('|')[1]?.trim();
+    if (existing && (!Object.hasOwn(GAL_NPC_PORTRAITS, portrait) || assigned.has(actor.id)))
+      continue;
+    const selected = Object.hasOwn(GAL_NPC_PORTRAITS, portrait);
+    const npc = existing || { ...actor, npc: true, fullSprite: true };
+    npc.sprite = selected ? GAL_NPC_PORTRAITS[portrait] : GAL_NPC_PORTRAITS.shadowMan;
+    if (!existing) cast.push(npc);
+    if (selected) assigned.add(actor.id);
+  }
+  return cast;
 }
 
 /** A speaker enters on their first line; narration dims but never invents an exit. */

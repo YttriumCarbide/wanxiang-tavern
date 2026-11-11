@@ -13,6 +13,13 @@ export function createGalWorkspace(panel, events, actions) {
   panel.append(root);
   const menu = root.querySelector('.gal-workspace-menu');
   panel.querySelector('.gal-actionbar').prepend(menu);
+  const people = menu.querySelector('[data-workspace="people"]');
+  people.className = 'gal-people-launcher';
+  people.innerHTML = galIconMarkup('people', '选择交谈人物');
+  people.setAttribute('aria-label', '选择交谈人物与任务');
+  people.title = '选择交谈人物与任务';
+  root.querySelector('.gal-side header strong').textContent = '在场角色';
+  root.append(people);
   menu.hidden = true;
   let config = null;
   let mounted = [];
@@ -119,7 +126,7 @@ export function createGalWorkspace(panel, events, actions) {
       mount(options.history, '.gal-archive-content');
       panel.dataset.persistent = String(options.persistent === true);
       for (const button of part('.gal-composer').querySelectorAll(
-        '#chat-send,#quick-chat-send,#chat-cancel,[data-rp="send"]',
+        '#chat-send,#quick-chat-send,#chat-cancel,#invite-send,[data-rp="send"]',
       )) {
         decorated.push({
           button,
@@ -127,12 +134,13 @@ export function createGalWorkspace(panel, events, actions) {
           label: button.getAttribute('aria-label'),
           title: button.getAttribute('title'),
         });
-        const label = button.id === 'chat-cancel' ? '取消请求' : '发送';
+        const label =
+          button.getAttribute('aria-label') || (button.id === 'chat-cancel' ? '取消请求' : '发送');
         button.setAttribute('aria-label', label);
         button.title = label;
         button.innerHTML = galIconMarkup(button.id === 'chat-cancel' ? 'close' : 'send', label);
       }
-      part('[data-workspace="people"]').hidden = !options.selection?.length;
+      people.hidden = !options.selection?.length;
       part('[data-workspace="compose"]').hidden = !options.composer?.length;
       part('[data-workspace="replay"]').hidden = !options.replay;
       part('.gal-side').hidden = true;

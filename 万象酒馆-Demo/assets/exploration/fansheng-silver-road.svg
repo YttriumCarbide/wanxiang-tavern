@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-36 -22 72 44">
+  <defs>
+    <path id="road-course" d="M-24 0C-20.9-.9-18.8-3-15.2-2.9c4.1.1 5.5 3 8.3 3.1 3.1.2 4.1-1.3 6.8-.4 3.9 1.2 6.1 3.7 9.4 3.3 3.4-.4 3.7-2.6 7-3.5 3-.8 5.2.3 7.7.4"/>
+    <path id="river-course" d="M-4.4-23c.6 2.5-1.5 3.4-2.3 5.2-1.1 2.5.5 4.4.4 6.3-.2 2.1-2.8 2.1-3.1 4.2-.3 2.4 2.9 3.1 2.6 5.8-.2 2.1-2.7 2.8-2.5 5.3.2 3.3 3 3.3 3.1 5.5.1 2.8-3.8 3.6-4.5 6.7-.4 1.9.7 4.1-.4 7.8"/>
+    <g id="pine" fill="none" stroke="#526148" stroke-width=".095" stroke-linecap="round">
+      <path d="M0-.52q-.12.25-.34.4l.19-.03-.30.27.24-.03-.32.29q.30.01.54-.12.25.13.49.06L.24.05l.20.04-.29-.26.17.02Q.11-.28 0-.52Zm0 .75v.35"/>
+      <path d="M-.19.19l.15-.12m.18.1.13.06" opacity=".55"/>
+    </g>
+    <g id="grove">
+      <path d="M-2.8.8c-.25-.53.41-1.31 1.16-1.33.39-.63 1.23-.66 1.81-.42.75-.22 1.58-.13 1.97.52.72.13 1.01.74.54 1.12-.7.63-1.7.65-2.53.58-.69.3-2.32.15-2.95-.47Z" fill="#8e9a6a" fill-opacity=".25"/>
+      <use href="#pine" x="-2.35" y=".23" transform="rotate(-7)"/>
+      <use href="#pine" x="-1.6" y="-.19"/>
+      <use href="#pine" x="-.91" y=".47"/>
+      <use href="#pine" x="-.55" y="-.55"/>
+      <use href="#pine" x=".18" y=".13" transform="rotate(8)"/>
+      <use href="#pine" x=".81" y="-.32"/>
+      <use href="#pine" x="1.47" y=".39"/>
+      <use href="#pine" x="2.17" y="-.04" transform="rotate(-6)"/>
+    </g>
+    <g id="reed" fill="none" stroke="#748066" stroke-width=".09" stroke-linecap="round">
+      <path d="M0 .27Q.05-.07.35-.37M0 .27Q-.11-.18-.27-.28M0 .26Q.28.02.50.04m.55.36Q.98.1.84-.06m.21.46q.18-.29.32-.37m.31.38.14-.12"/>
+    </g>
+    <g id="hill-hatch" fill="none" stroke="#795f43" stroke-linecap="round">
+      <path d="M-4.5 1.3c.91-1.77 2.83-2.57 4.55-2.38 1.1.12 1.74-.45 2.68-.38.97.07 1.79.48 2.52 1.03" stroke-width=".12"/>
+      <path d="M-4.9 1.82Q-4.51.87-4.02.46m-.16 1.54q.35-1.05.84-1.96m-.02 2.02q.33-1.16.85-2.32m.04 2.3q.28-1.18.63-2.51m.16 2.54q.26-1.43.53-2.68m.18 2.58q.22-1.29.48-2.72m.16 2.72q.2-1.33.38-2.64m.29 2.52q.07-1.24.2-2.54m.4 2.45Q.65.25.8-.93m.37 2.37q.11-1.23.12-2.5m.48 2.39q.16-1.12.15-2.44m.47 2.22q.16-1.09.17-2.21m.48 2.02q.16-.92.13-1.95m.5 1.7q.18-.80.15-1.55m.49 1.36q.11-.54.06-1.16" stroke-width=".075"/>
+      <path d="M-4.31 2.53q1.76.43 3.05.1m3.84-.97q1.06-.01 2.1-.46" stroke-width=".07" opacity=".7"/>
+    </g>
+  </defs>
+
+  <g id="silver-road-contours">
+    <path d="M-1-11c1.5-1.4 5.1-2.2 8.2-1.7 1.4.2 2.3-.6 3.9-.6 3.3.1 4.8 1.5 4.8 2.8-.1 1.9-3.4 3.4-5.8 3.5-3 .1-4.9 1.8-7.4 1.1-2.8-.7-5.5-3-3.7-5.1Zm10 18c2.8-1.1 6.4-2.2 9.3-1.5 2.8.7 3.5 2.7 1.9 4.3-2.1 2.1-4.9 1.7-7.3 2.7-1.8.8-3.8.6-5.2-.8-1.7-1.6-.8-3.5 1.3-4.7Z" fill="#b59157" fill-opacity=".15"/>
+    <use href="#hill-hatch" transform="translate(4.1 -8.6) rotate(-17)"/>
+    <use href="#hill-hatch" transform="translate(9.3 -10.9) rotate(-12) scale(.67)"/>
+    <use href="#hill-hatch" transform="translate(12.5 8.8) rotate(-22) scale(.93)"/>
+    <use href="#hill-hatch" transform="translate(16.6 7.6) rotate(165) scale(.56)"/>
+    <use href="#hill-hatch" transform="translate(-17 8.5) rotate(176) scale(.62)" opacity=".66"/>
+    <g fill="none" stroke="#6e827e" stroke-linecap="round">
+      <use href="#river-course" stroke="#8ea8a0" stroke-width=".42" opacity=".25"/>
+      <use href="#river-course" stroke-width=".105"/>
+      <path d="M-7.1-13.8c-.5 1.7 1.2 3 .1 4.2m-2.3 3.4c.8 1.1 2.2 1.9 2 3.6m-2.4 6.6c.08 1.5 1.3 2.1 1.9 3.1m-1.5 5.7c-.8 1.02-1.71 1.44-2 3" stroke-width=".082" opacity=".8"/>
+      <path d="M-11.8-4.3c-.6-1.0-.1-2.0.6-2.7m-.1 3.2c-.3-.7-.2-1.1.2-1.7m.35 11q.9 1.0.82 1.91m-.6-2.79q1.05.99 1.24 1.57" stroke-width=".084"/>
+    </g>
+    <path d="M3.4 3.85c1.15-.48 2.76-.22 3.67.09 1.18.39 2.2.33 3.44.04-.83.81-1.54 1.35-2.84 1.43-1.63.1-2.12-.7-3.25-.76-.62-.03-1.03-.3-1.02-.8Z" fill="#93a59a" fill-opacity=".26" stroke="#78998e" stroke-width=".055"/>
+    <use href="#reed" transform="translate(3.8 3.93)"/>
+    <use href="#reed" transform="translate(5.05 4.7) scale(.77)"/>
+    <use href="#reed" transform="translate(8.14 5.13) scale(.81)"/>
+    <use href="#reed" transform="translate(9.65 4.6) rotate(11) scale(.69)"/>
+  </g>
+
+  <g id="silver-road-groves">
+    <use href="#grove" transform="translate(-17.8 -7) rotate(-15) scale(1.04)"/>
+    <use href="#grove" transform="translate(-14.7 -8.3) rotate(17) scale(.89)"/>
+    <use href="#grove" transform="translate(20.1 -6.1) rotate(-12) scale(.84)"/>
+    <use href="#grove" transform="translate(21.6 -7.1) rotate(4) scale(.75)"/>
+    <use href="#grove" transform="translate(2.8 9.4) rotate(10) scale(.84)"/>
+  </g>
+
+  <g id="silver-road-scrub" opacity=".82">
+    <use href="#grove" transform="translate(-29.1 -7) rotate(21) scale(.52)"/>
+    <use href="#grove" transform="translate(-23.4 7.7) rotate(-13) scale(.49)"/>
+    <use href="#grove" transform="translate(-2.8 7.4) rotate(-18) scale(.61)"/>
+    <use href="#grove" transform="translate(29 6.9) rotate(12) scale(.62)"/>
+    <g fill="none" stroke="#7d7855" stroke-width=".083" opacity=".75">
+      <path d="M-31 4q2.1-.38 3.5.19m-.37.47 2.3.36m-6-15.6q1.73.42 3.4.08m-.8.56q1.15.1 2.4-.14m-5.3 19q1.2-.04 2.09.35m5.83 1.63q1.7-.17 2.66.25m32.51-26.6q1.8-.28 3.2.07m14.2 3.9q2 .13 3.31.79m-2.9.34q.98.13 1.84.54m-5.3 15.91q1.52.67 3.21.62m-9.2 3.7q1.58.45 2.8.3"/>
+      <path d="M-26.3-8.8l.5-.5 1.5-.4 1.45.31.6.54-.17.55-1.54.2-1.66-.23Zm.56-.27.82.66m.14-.99.8.95m.12-.84.70.77m.07-.58.44.5m42 13.7q2-.91 4.21-1.05l.86.37-1.8 1.07-2.22.61Zm1.08-.16.33.82m.41-1.08.42.86m.40-1.08.49.72m.40-.87.48.5"/>
+    </g>
+  </g>
+
+  <g id="silver-road-route" fill="none" stroke-linecap="round">
+    <use href="#road-course" stroke="#79523a" stroke-width=".23" opacity=".82"/>
+    <use href="#road-course" stroke="#c19572" stroke-width=".14" opacity=".93"/>
+    <use href="#road-course" stroke="#edd3a5" stroke-width=".053" opacity=".96"/>
+  </g>
+
+  <g id="silver-road-bridge" transform="translate(-7.48 .17) rotate(-6)" stroke-linecap="round">
+    <path d="M-.76-.23.78-.22.75.20-.75.22Z" fill="#e9d7aa" stroke="#674a36" stroke-width=".09"/>
+    <path d="M-.88-.29-.59-.25m1.19.0.29-.05m-1.77.56.30-.05m1.18 0 .30.05M-.34-.15v.28m.34-.29v.30m.34-.28v.26" fill="none" stroke="#674a36" stroke-width=".073"/>
+  </g>
+
+  <g id="silver-road-starbell" transform="translate(-24)" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M-2.1-1.16-1.6-2.27-.48-2.78.64-2.52 1.81-1.86 1.99-.7 1.41.17.4.64-.58.43-1.85.06Z" fill="#b98a61" fill-opacity=".36" stroke="#74513a" stroke-width=".14"/>
+    <path d="M-1.77-1.03-1.3-2.01-.44-2.43.56-2.22 1.53-1.65 1.65-.7 1.23-.02.37.35-.6.16-1.53-.22Z" fill="none" stroke="#74513a" stroke-width=".076"/>
+    <g fill="#84543a" stroke="#684632" stroke-width=".057">
+      <path d="M-1.25-1.50l.43-.2.2.38-.43.19Zm.04.71.36-.17.22.35-.39.19Zm.46.69.37-.21.17.26-.35.19Zm.96-.19.25-.39.39.20-.22.31ZM.90-.56l.31-.45.28.17-.27.43Zm.04-1.13.20-.34.30.14-.16.35Zm-.95-.60.37.10-.07.27-.37-.08Z"/>
+      <path d="M-.47-1.67h.78v.62h-.78Zm.31-.2h.16v.98h-.16Z"/>
+    </g>
+    <path d="M-.03-1.36c.7-.05 1.11.14 1.6.34M-.02-1.32q-.29.75-.23 1.55m.32-1.61q-.43-.29-.71-.68" fill="none" stroke="#f6e2b9" stroke-width=".093"/>
+  </g>
+
+  <g id="silver-road-silver-crown" transform="translate(24)" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M-2.07-1.72-1.76-2.23-1.31-2.09-.51-2.56-.34-2.97.25-3.02.44-2.61 1.20-2.32 1.66-2.5 2.09-2.07 1.95-1.57 2.14-.67 2.38-.37 2.15.09 1.68.03.74.38.42.72-.14.70-.36.43-1.24.18-1.72.24-2.04-.18-1.86-.65-1.95-1.22Z" fill="#b89268" fill-opacity=".43" stroke="#74513a" stroke-width=".15"/>
+    <path d="M-1.59-1.55-1.18-1.92-.39-2.27.32-2.25 1.26-1.99 1.6-1.55 1.79-.65 1.56-.30.54.12-.22.17-1.28-.13-1.58-.59Z" fill="none" stroke="#74513a" stroke-width=".083"/>
+    <g fill="#84543a" stroke="#684632" stroke-width=".055">
+      <path d="M-.36-1.87h.77v.71h-.77Zm-1.01.15.58-.21.16.28-.53.25Zm-.09.68.37-.12.13.34-.38.15Zm.58.63.49-.12.09.23-.46.17Zm1.57.16-.05-.32.55-.16.09.30Zm.34-.80-.11-.39.37-.14.17.42Z"/>
+      <path d="M-.04-1.92v.85m-.35-.41h.82" stroke="#f3deb4" stroke-width=".075"/>
+    </g>
+    <path d="M-1.97-.41q.84-.38 1.91-.32l1.80.01M-.03-1.06v1.42" fill="none" stroke="#f6e2b9" stroke-width=".105"/>
+  </g>
+</svg>

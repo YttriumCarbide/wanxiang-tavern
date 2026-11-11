@@ -13,6 +13,7 @@ export async function galWorkspaceChecks({ browser, baseURL, output }) {
   await legacySession(page);
   const initial = newLibrary();
   initial.inventory.bagUnlocked = true;
+  initial.daily.tutorial = 'done';
   for (const id of ['edith', 'pandora'])
     if (!initial.characters.some((member) => member.id === `official-${id}`))
       initial.characters.push(officialCharacter(id));
@@ -151,7 +152,7 @@ export async function galWorkspaceChecks({ browser, baseURL, output }) {
     const frame = page.frameLocator('#inn-frame iframe');
     await frame.locator('#status').waitFor({ state: 'detached', timeout: 60000 });
     await frame.locator('canvas').evaluate(() => window.assetPreview.placeNow('table'));
-    await frame.locator('#talk-open').click();
+    await page.locator('[data-daily="chat"]').click();
     await page.locator('.gal-composer').waitFor({ state: 'visible' });
     assert.equal(await page.locator('#chat-dialog').isVisible(), false);
     assert.equal(await page.locator('.gal-side').isVisible(), false);
@@ -180,7 +181,12 @@ export async function galWorkspaceChecks({ browser, baseURL, output }) {
         ids,
       );
     await choose(missing, true);
-    await assertCast([]);
+    await assertCast([missing]);
+    assert(
+      (
+        await page.locator(`.gal-cast img[data-actor="${missing}"]`).getAttribute('data-asset')
+      ).includes('/gal-npc-cast/'),
+    );
     await choose(missing, false);
     await choose(moon, true);
     await assertCast([moon]);
@@ -193,7 +199,7 @@ export async function galWorkspaceChecks({ browser, baseURL, output }) {
     await assertCast(['official-pandora']);
     await choose('official-pandora', false);
     await choose(missing, true);
-    await assertCast([]);
+    await assertCast([missing]);
     await choose(missing, false);
     await choose('official-edith', true);
     await choose('official-pandora', true);
@@ -244,7 +250,7 @@ export async function galWorkspaceChecks({ browser, baseURL, output }) {
     await finishPages();
     const saved = await page.evaluate(() => demo.getLibrary().tavernChat);
     await page.locator('[data-gal="close"]').click();
-    await frame.locator('#talk-open').click();
+    await page.locator('[data-daily="chat"]').click();
     await page.locator('[data-workspace="replay"]').click();
     await page.waitForFunction(() =>
       document.querySelector('.gal-text').textContent.includes('先坐'),
@@ -261,6 +267,10 @@ export async function galWorkspaceChecks({ browser, baseURL, output }) {
     );
     await finishPages();
     await page.locator('[data-gal="close"]').click();
+    await page.locator('[data-daily="open"]').click();
+    await page.locator('[data-daily-slot="0"]').click();
+    await page.locator('[data-daily-action="dungeon"]').click();
+    await page.locator('[data-daily="confirm"]').click();
     await frame.locator('canvas').evaluate(() => window.assetPreview.placeNow('gate'));
     await frame.locator('#enter').click();
     await page.locator('#destination-region-confirm').click();
@@ -380,9 +390,9 @@ export async function galWorkspaceChecks({ browser, baseURL, output }) {
       'token counts stay out of the composer',
     );
     assert.equal(
-      await page.locator('#script-rewrite').isVisible(),
-      false,
-      'rewrite stays in auxiliary tools',
+      await page.locator('#script-rewrite').count(),
+      0,
+      'chat handles subsequent dialogue edits without a rewrite button',
     );
     const inputBox = await page.locator('#quick-chat-input').boundingBox();
     const formBox = await page.locator('#quick-chat-form').boundingBox();
@@ -397,7 +407,6 @@ export async function galWorkspaceChecks({ browser, baseURL, output }) {
     );
     assert.equal(await page.locator('#quick-chat-send svg').count(), 1);
     await page.locator('.gal-actionbar [data-workspace="tools"]').click();
-    assert.equal(await page.locator('#script-rewrite').isVisible(), true);
     assert.equal(await page.locator('#quick-chat-status').isVisible(), true);
     assert.equal(await page.locator('#quick-chat-input').isVisible(), true);
     await page.locator('.gal-actionbar [data-workspace="tools"]').click();
@@ -432,7 +441,8 @@ export async function galWorkspaceChecks({ browser, baseURL, output }) {
       () => document.querySelector('#inn-frame iframe')?.contentWindow?.assetPreview,
     );
     await frame.locator('canvas').evaluate(() => window.assetPreview.placeNow('table'));
-    await frame.locator('#talk-open').click();
+    await page.locator('[data-daily="switch"]').click();
+    await page.locator('[data-daily="chat"]').click();
     await page.locator('[data-workspace="people"]').first().click();
     const refreshedSelection = await page
       .locator('#chat-participants input:checked')

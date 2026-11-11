@@ -8,7 +8,7 @@ import { rpChapterDirection } from '../content/rp-outlines.js';
 /** Migrate only owned rules; keep the previous text outside prompt-scanned entries. */
 export function upgradeAdventureWorldbook(source, outputRule) {
   const book = structuredClone(source);
-  if (book.extensions?.wanxiang?.adventureRevision >= 50) return book;
+  if (book.extensions?.wanxiang?.adventureRevision >= 51) return book;
   book.extensions ||= {};
   book.extensions.wanxiang ||= {};
   const archive = (book.extensions.wanxiang.retiredPromptArchive ||= []);
@@ -59,6 +59,6 @@ export function upgradeAdventureWorldbook(source, outputRule) {
     content: ADVENTURE_SCRIPT_RULES,
     extensions: { wanxiang: { generationRule: 'adventure-nodes' } },
   };
-  book.extensions.wanxiang.adventureRevision = 50;
+  book.extensions.wanxiang.adventureRevision = 51;
   return book;
 }

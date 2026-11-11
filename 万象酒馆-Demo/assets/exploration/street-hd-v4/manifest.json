@@ -1,0 +1,55 @@
+{
+  "generator": "image_gen built-in",
+  "prompts": "assets/exploration/street-hd-v4/prompts.md",
+  "geometryReference": "assets/exploration/street-illustrated/connected-v1.png",
+  "styleReference": "assets/exploration/street-hd-v2/center.png",
+  "assets": [
+    {
+      "file": "assets/exploration/street-hd-v4/tile-0.png",
+      "source": "C:/Users/Lenovo/.codex/generated_images/01a178f0-bd77-7b10-9f98-ca688a68afab/exec-f76085ef-e61b-4e00-b109-512f9b4e5ff0.png",
+      "width": 1254,
+      "height": 1254,
+      "sha256": "aebcba33d906703b6b7d8b2a1db6b571e9de63e60dcb4c3b94d0cb4b72b9deb4"
+    },
+    {
+      "file": "assets/exploration/street-hd-v4/tile-1.png",
+      "source": "C:/Users/Lenovo/.codex/generated_images/01a178f0-bd77-7b10-9f98-ca688a68afab/exec-e63aa55f-8fff-4ad0-8481-f790f5d479c6.png",
+      "width": 1254,
+      "height": 1254,
+      "sha256": "ba1ef68656b3cc28cd9cc08b28d7117681ac9cf2172b668a9256abac1524718d"
+    },
+    {
+      "file": "assets/exploration/street-hd-v4/tile-2.png",
+      "source": "C:/Users/Lenovo/.codex/generated_images/01a178f0-bd77-7b10-9f98-ca688a68afab/exec-ed924146-d891-42f7-9079-57b4e84c38e9.png",
+      "width": 1254,
+      "height": 1254,
+      "sha256": "f909de6ad394809893c0897ef044ece07784d20dbc354af07254a110041a3d67"
+    },
+    {
+      "file": "assets/exploration/street-hd-v4/tile-3.png",
+      "source": "C:/Users/Lenovo/.codex/generated_images/01a178f0-bd77-7b10-9f98-ca688a68afab/exec-b7f09aa9-7a04-4153-9d7a-afeb63a0d623.png",
+      "width": 1254,
+      "height": 1254,
+      "sha256": "83b0303ddf48d3ac9c9c3eeaadfa2644c26bdc4611797010b646abd9354670d9"
+    }
+  ],
+  "composition": {
+    "generator": "image_gen built-in",
+    "composition": "Native tiles at fixed source-crop positions; minimum-error seam and 20px feather. No resizing or camera recomposition.",
+    "offsets": [
+      0,
+      835,
+      1673,
+      2508
+    ],
+    "width": 3762,
+    "height": 1254,
+    "sha256": "a6e4e11ae707d15ef81970ad23eefb8230a44bd0702ae34c48225ed8af9f94f3",
+    "tiles": [
+      "tile-0.png",
+      "tile-1.png",
+      "tile-2.png",
+      "tile-3.png"
+    ]
+  }
+}

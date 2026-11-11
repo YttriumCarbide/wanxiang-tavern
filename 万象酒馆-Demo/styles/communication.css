@@ -1,0 +1,45 @@
+.talk-open {
+  position: fixed;
+  z-index: 10;
+  left: 50%;
+  bottom: 28px;
+  padding: 12px 30px;
+  border: 1px solid rgba(226, 186, 111, 0.52);
+  border-radius: 999px;
+  color: #f8edcf;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.055), transparent 42%),
+    linear-gradient(135deg, rgba(53, 39, 29, 0.94), rgba(23, 18, 15, 0.96));
+  box-shadow:
+    0 10px 32px rgba(0, 0, 0, 0.58),
+    0 0 20px rgba(226, 186, 111, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  font:
+    14px Georgia,
+    'Songti SC',
+    'Microsoft YaHei',
+    serif;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  transform: translateX(-50%);
+  backdrop-filter: blur(11px);
+  -webkit-backdrop-filter: blur(11px);
+  transition:
+    background 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    transform 180ms ease;
+}
+.talk-open:hover,
+.talk-open:focus-visible {
+  border-color: rgba(255, 224, 163, 0.88);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.08), transparent 42%),
+    linear-gradient(135deg, rgba(91, 67, 45, 0.96), rgba(45, 33, 24, 0.98));
+  box-shadow:
+    0 14px 38px rgba(0, 0, 0, 0.66),
+    0 0 26px rgba(226, 186, 111, 0.36),
+    inset 0 1px 0 rgba(255, 255, 255, 0.13);
+  transform: translateX(-50%) translateY(-2px);
+  outline: 0;
+}

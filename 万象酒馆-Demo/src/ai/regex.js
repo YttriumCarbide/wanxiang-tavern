@@ -40,7 +40,7 @@ export function normalizeRegexScripts(raw) {
     if (
       !Array.isArray(item.apiTargets) ||
       item.apiTargets.some(
-        (kind) => !['character', 'script', 'chat', 'quick-chat', 'map', 'creation'].includes(kind),
+        (kind) => !['character', 'script', 'chat', 'summary', 'creation', 'map'].includes(kind),
       )
     )
       throw Error('正则发送对象无效');
@@ -71,7 +71,7 @@ export function presetRegexScripts(preset) {
     [];
   return normalizeRegexScripts(
     scripts.map((script) => ({
-      apiTargets: ['character', 'script', 'chat', 'quick-chat', 'map', 'creation'],
+      apiTargets: ['character', 'script', 'chat', 'map', 'creation'],
       ...script,
     })),
   );

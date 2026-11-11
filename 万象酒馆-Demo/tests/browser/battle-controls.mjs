@@ -14,11 +14,39 @@ export async function battleControlChecks({ browser, baseURL, output }) {
     await page.waitForFunction(
       () => demo.getStatus().mode === 'battle' && !demo.getStatus().animating,
     );
+    for (const viewport of [
+      { width: 1440, height: 836 },
+      { width: 844, height: 390 },
+    ]) {
+      await page.setViewportSize(viewport);
+      const overlays = await page.locator('.unit-hit,.empty-slot').evaluateAll((elements) =>
+        elements.map((element) => {
+          const style = getComputedStyle(element);
+          return { standard: style.backdropFilter, prefixed: style.webkitBackdropFilter || 'none' };
+        }),
+      );
+      assert(
+        overlays.length >= 4 &&
+          overlays.every((style) => style.standard === 'none' && style.prefixed === 'none'),
+        'transparent card hit areas must never blur the actual artwork',
+      );
+      await page.mouse.move(5, 5);
+      await page.waitForTimeout(120);
+      await page.screenshot({ path: path.join(output, `portraits-sharp-${viewport.width}.png`) });
+    }
+    await page.setViewportSize({ width: 1440, height: 836 });
     const state = await page.evaluate(() => demo.getState());
     const rear = state.formation[3],
       front = state.formation[0];
-    const a = await page.locator(`[data-rear="${rear}"]`).boundingBox();
-    const b = await page.locator(`[data-unit="${front}"]`).boundingBox();
+    await page.locator(`[data-rear="${rear}"]`).waitFor({ state: 'visible' });
+    await page.locator(`[data-unit="${front}"]`).waitFor({ state: 'visible' });
+    const { a, b } = await page.evaluate(
+      ({ rear, front }) => ({
+        a: document.querySelector(`[data-rear="${rear}"]`).getBoundingClientRect().toJSON(),
+        b: document.querySelector(`[data-unit="${front}"]`).getBoundingClientRect().toJSON(),
+      }),
+      { rear, front },
+    );
     await page.mouse.move(a.x + a.width / 2, a.y + a.height / 2);
     await page.mouse.down();
     await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2, { steps: 14 });
@@ -58,7 +86,7 @@ export async function battleControlChecks({ browser, baseURL, output }) {
       input.checked = false;
       input.dispatchEvent(new Event('change', { bubbles: true }));
     });
-    await page.locator('#story-toggle').click();
+    await page.evaluate(() => document.dispatchEvent(new CustomEvent('gal-open-quick')));
     let held;
     await page.route('**/api/ai/generate/quick-chat', (route) => {
       held = route;
@@ -71,12 +99,20 @@ export async function battleControlChecks({ browser, baseURL, output }) {
     await held?.abort().catch(() => {});
     await page.unroute('**/api/ai/generate/quick-chat');
     await page.route('**/api/ai/generate/quick-chat', (route) =>
-      route.fulfill({ json: { content: '同行者点了点头。', usage: { input: 1, output: 1 } } }),
+      route.fulfill({
+        json: {
+          content: '同行者点了点头。',
+          usage: { input: 1, output: 1 },
+          request: { tokens: { inputEstimate: 1 }, warnings: [] },
+        },
+      }),
     );
     await page.locator('#quick-chat-input').fill('这一条可以删除');
     await page.locator('#quick-chat-send').click();
     await page.waitForFunction(() => demo.getChat().quick.length === 3);
+    await page.waitForFunction(() => !demo.getChat().sending);
     const deleted = (await page.evaluate(() => demo.getChat().quick))[1].id;
+    await page.locator('[data-gal="history"]').click();
     await page.locator(`[data-chat-delete="${deleted}"]`).click();
     assert(
       !(await page.evaluate(() => demo.getChat().quick)).some((message) => message.id === deleted),
@@ -110,6 +146,8 @@ export async function battleControlChecks({ browser, baseURL, output }) {
       ]) {
         for (const operation of ['generate', 'models']) {
           const pending = client.request(`${operation}/${kind}`, {}).catch((error) => error.name);
+          // Wait for the preset preparation step before testing an in-flight transport abort.
+          await new Promise((resolve) => setTimeout(resolve, 0));
           document.querySelector(`[data-request-stop="${kind}"]`).click();
           if ((await pending) !== 'AbortError') throw Error('Cancellation did not propagate');
         }

@@ -433,10 +433,10 @@ export async function generationChecks({ browser, baseURL, output }) {
       return area.firstElementChild?.dataset.stage === 'prologue' && area.scrollTop < 1;
     });
     await page.locator('.app-header [data-generation-review]').click();
-    assert((await page.locator('#diagnostic-summary').textContent()).includes('通过完整校验'));
-    assert((await page.locator('#diagnostic-repairs').textContent()).includes('围栏'));
-    assert((await page.locator('#diagnostic-summary').textContent()).includes('整章正文'));
-    await page.locator('#diagnostic-close').click();
+    assert(
+      (await page.locator('#latest-api-response textarea').inputValue()).includes('wanxiang_json'),
+    );
+    await page.locator('#latest-api-response button').click();
     await page.screenshot({ path: path.join(output, 'ai-left-story.png') });
     await page.setViewportSize({ width: 844, height: 390 });
     const feedBox = await page.locator('#story-feed').boundingBox();

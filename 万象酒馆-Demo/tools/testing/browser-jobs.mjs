@@ -17,13 +17,32 @@ export function browserJobs(scopes, results, root) {
       browserOnly,
     );
   simple('battle-controls', 'battle-controls', 'battleControlChecks');
+  simple('daily', 'daily', 'dailyChecks');
+  simple('overland', 'overland', 'overlandChecks');
+  simple('disk-storage', 'disk-storage', 'diskStorageChecks', [], true);
+  simple('folder-backup', 'folder-backup', 'folderBackupChecks', [], true);
+  simple('town-guests', 'town-guests', 'townGuestChecks');
+  simple('town-places', 'town-places', 'townPlaceChecks');
+  if (!scopes.has('settings')) simple('anti-route', 'api-settings', 'antiRouteChecks');
   simple('compatibility', 'compatibility', 'compatibilityChecks');
   simple('first-run', 'api-settings', 'firstRunApplyChecks');
   simple('tavern-visitors', 'tavern-visitors', 'tavernVisitorsChecks');
+  simple('street', 'street', 'streetChecks');
+  simple('exploration-grounding', 'exploration-grounding', 'explorationGroundingChecks');
+  simple('starbell', 'starbell', 'starbellChecks');
+  simple('starbell-story', 'starbell-story', 'starbellStoryChecks');
+  simple('chapter-ui', 'chapter-ui', 'chapterUiChecks');
+  simple('chapter-battle', 'chapter-ui', 'chapterBattleChecks');
+  simple('scene-loading', 'scene-loading', 'sceneLoadingChecks');
+  simple('scene-visitors', 'scene-visitors', 'sceneVisitorChecks');
+  simple('city-center', 'city-center', 'cityCenterChecks');
   simple('skill-menus', 'skill-menus', 'skillMenuChecks');
   simple('rp-layout', 'rp-layout', 'rpLayoutChecks');
   simple('ring-gallery', 'ring-gallery', 'ringGalleryChecks');
   simple('gal', 'gal', 'galChecks');
+  simple('dining', 'dining', 'diningChecks');
+  simple('customization', 'customization', 'customizationChecks');
+  simple('staircase', 'staircase', 'staircaseChecks');
   simple('adventure', 'adventure', 'adventureChecks');
   simple('equipment', 'equipment', 'equipmentChecks');
   simple('enemy-progression', 'enemy-progression', 'enemyProgressionChecks');
@@ -50,9 +69,10 @@ export function browserJobs(scopes, results, root) {
   simple('humanoid-enemies', 'humanoid-enemies', 'humanoidEnemyChecks');
   simple('worlds-emblems', 'worlds-emblems', 'worldsEmblemsChecks');
   simple('opencode', 'opencode', 'opencodeBrowserChecks');
-  simple('onboarding', 'onboarding', 'onboardingChecks');
+  // First-arrival Gal is checked by gal; this covers the current post-second-trip lesson.
+  simple('onboarding', 'dining-onboarding', 'diningOnboardingChecks');
   add('settings', async (options) => {
-    const { apiSettingsChecks, firstRunApplyChecks } =
+    const { apiSettingsChecks, firstRunApplyChecks, antiRouteChecks } =
       await import('../../tests/browser/api-settings.mjs');
     const { equipmentChecks } = await import('../../tests/browser/equipment.mjs');
     const { generationOptionsChecks } = await import('../../tests/browser/generation-options.mjs');
@@ -61,6 +81,7 @@ export function browserJobs(scopes, results, root) {
       generationOptions: await generationOptionsChecks(options),
       equipment: await equipmentChecks(options),
       firstRun: await firstRunApplyChecks(options),
+      antiRoute: await antiRouteChecks(options),
     };
   });
   add(

@@ -68,7 +68,7 @@ export function upgradeEnemyBaseWorldbook(source) {
     constant: true,
     ignoreBudget: true,
     preventRecursion: true,
-    apiTargets: ['map', 'script', 'character', 'chat', 'quick-chat'],
+    apiTargets: ['map', 'script', 'character', 'chat'],
     position: 4,
     depth: 0,
     role: 0,

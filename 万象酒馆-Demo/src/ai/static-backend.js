@@ -3,7 +3,7 @@ import { createBrowserStores } from './browser-stores.js';
 import { createBrowserPortraits } from './browser-portraits.js';
 import { createWorldbookCounter } from './tokenizer.js';
 import { createAiPipeline } from './pipeline/runtime.js';
-import { compatibleRequest } from './compatible.js';
+import { createAntiRouteService } from './anti-route-service.js';
 import { createOpencodeBrowserFetch } from './opencode-browser.js';
 import { summaryPlan } from './pipeline/summary-request.js';
 import { creationPlan } from './pipeline/creation-request.js';
@@ -31,6 +31,7 @@ export async function createStaticBackend(
   if (!bookResponse.ok) throw Error('内置世界书读取失败');
   const stores = await createBrowserStores(database, readText, await bookResponse.json());
   const { settings, prompts, worlds, regexStore, helperStorage } = stores;
+  const antiRoute = createAntiRouteService({ settings, fetchImpl: modelFetch });
   const countTokens = createWorldbookCounter();
   const pipeline = createAiPipeline({
     ...stores,
@@ -85,7 +86,7 @@ export async function createStaticBackend(
           expectedStep: prepared.nextWorldState.step - 1,
         });
       }
-      const result = await compatibleRequest(profile, messages, {
+      const result = await antiRoute.request(profile, messages, {
         ...pipeline.completionOptions(job),
         signal: controller.signal,
         fetchImpl: modelFetch,
@@ -117,6 +118,7 @@ export async function createStaticBackend(
   async function request(path, data, options = {}) {
     if (disposed) throw Error('接口已关闭');
     options.signal?.throwIfAborted();
+    if (path === 'anti-route') return antiRoute.handle(data, options.signal);
     if (/^(generate|models)\/(character|script|chat|quick-chat|summary|creation|map)$/.test(path))
       return generate(path, data || {}, options);
     if (path === 'config')
@@ -144,7 +146,12 @@ export async function createStaticBackend(
       return { counts: data.texts.map(countTokens), tokenizer: 'o200k_base' };
     }
     if (path === 'summary/plan')
-      return summaryPlan(data, settings.get('summary'), countTokens, readText);
+      return summaryPlan(
+        data,
+        { ...settings.get('summary'), antiRoute: settings.routeSettings() },
+        countTokens,
+        readText,
+      );
     if (path === 'creation/plan') return creationPlan(data, settings.get('creation'), countTokens);
     if (path === 'portrait') return portraits.import(data.url, options.signal);
     if (path === 'portrait/save') return portraits.save(data.dataUrl);
@@ -227,6 +234,7 @@ export async function createStaticBackend(
     },
     dispose() {
       disposed = true;
+      antiRoute.dispose();
       for (const controller of controllers) controller.abort();
       controllers.clear();
     },

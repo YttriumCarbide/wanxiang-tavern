@@ -130,6 +130,17 @@ export async function equipmentChecks({ browser, baseURL, output }) {
     await innMessage('tavern-condenser');
     await page.locator('#forge-refine').click();
     await page.locator('#forge-status').filter({ hasText: '已' }).waitFor();
+    await page.locator('#forge-results').waitFor({ state: 'visible' });
+    assert((await page.locator('#forge-results').innerText()).includes('hp+2'));
+    assert.equal(await page.locator('#forge-list [data-forge-select="item-test"]').count(), 0);
+    await page.locator('[data-batch-favorite="item-test"]').click();
+    assert(
+      (await page.evaluate(() => demo.getLibrary())).equipment.favorites.includes('item-test'),
+    );
+    await page.locator('[data-batch-buy="item-test"]').click();
+    assert.equal((await page.evaluate(() => demo.getLibrary())).inventory.ether, 30);
+    await page.screenshot({ path: path.join(output, 'new-batch-results.png') });
+    await page.locator('#forge-results [data-batch-close]').first().click();
     await page.locator('[data-forge-page="exchange"]').click();
     await page.locator('[data-buy-equipment]').waitFor();
     assert.equal(
@@ -138,7 +149,6 @@ export async function equipmentChecks({ browser, baseURL, output }) {
       'Only the compiled equipment effect is shown',
     );
     assert.equal(await page.locator('.forge-effects').count(), 1);
-    await page.locator('[data-buy-equipment]').click();
     assert.equal((await page.evaluate(() => demo.getLibrary())).inventory.ether, 30);
     await page.screenshot({ path: path.join(output, 'ether-construction.png') });
     await page.locator('[data-forge-close]').click();

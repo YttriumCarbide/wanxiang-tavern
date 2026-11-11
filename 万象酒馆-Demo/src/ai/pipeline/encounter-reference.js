@@ -21,7 +21,7 @@ export function enemiesForSpec(spec) {
           ...enemy.intents,
           ...(enemy.enragedIntents || []),
         ].map((intent) => intent.name),
-        settingSource: '已激活的副本怪物图鉴世界书；能力仅供描写，不是已发生事件',
+        settingSource: '世界书中的怪物设定；敌人能力与战斗行为以游戏数据和已发生事件为准',
       },
     ];
   });

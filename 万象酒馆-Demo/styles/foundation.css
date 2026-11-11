@@ -2,128 +2,250 @@
 
 :root {
   color-scheme: dark;
-  --bg: #141a1d;
-  --ink: #e8e1cf;
-  --teal: #82bdb3;
-  --red: #d8787c;
+  --bg: #0c1417;
+  --bg-deep: #070c0e;
+  --ink: #f2eee3;
+  --ink-sub: #b2c2bd;
+  --teal: #36c5b5;
+  --teal-glow: rgba(54, 197, 181, 0.35);
+  --gold: #e2ba6f;
+  --gold-glow: rgba(226, 186, 111, 0.32);
+  --gold-dark: #9f7b3a;
+  --red: #ff5e6e;
+  --red-glow: rgba(255, 94, 110, 0.35);
+  --purple: #b37ef8;
+  --panel: rgba(13, 23, 25, 0.84);
+  --panel-card: rgba(18, 33, 35, 0.88);
+  --panel-glass: rgba(10, 18, 20, 0.72);
+  --border: rgba(162, 186, 172, 0.28);
+  --border-gold: rgba(226, 186, 111, 0.42);
+  --border-glow: rgba(54, 197, 181, 0.4);
+  --muted: #a6b8b0;
   --safe-left: env(safe-area-inset-left, 0px);
   --safe-right: env(safe-area-inset-right, 0px);
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-pill: 9999px;
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.55);
+  --shadow-modal: 0 24px 68px rgba(0, 0, 0, 0.78), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  --transition-fast: 0.15s cubic-bezier(0.2, 0, 0, 1);
+  --transition-normal: 0.22s cubic-bezier(0.2, 0, 0, 1);
+  --night-ink: #07110f;
+  --night-panel: #0e1e1a;
+  --night-surface: #142721;
+  --brass: #e2be7d;
+  --brass-deep: #a98046;
+  --brass-muted: #b9a382;
+  --parchment: #f4ead7;
+  --parchment-muted: #b9af9d;
+  --display-serif: Georgia, 'Songti SC', 'STSong', 'Microsoft YaHei', serif;
 }
+
 * {
   box-sizing: border-box;
 }
+
+input,
+textarea,
+[contenteditable='true'] {
+  user-select: text;
+  -webkit-user-select: text;
+  -webkit-touch-callout: default;
+}
+
 body {
   margin: 0;
   background: var(--bg);
   color: var(--ink);
+  overflow: hidden;
   font:
-    13px 'Segoe UI',
+    13px/1.55 -apple-system,
+    BlinkMacSystemFont,
+    'PingFang SC',
+    'HarmonyOS Sans',
+    'Segoe UI',
     'Microsoft YaHei',
     sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
+
+/* Custom Sleek Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(226, 186, 111, 0.24);
+  border-radius: var(--radius-pill);
+  transition: background var(--transition-fast);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(226, 186, 111, 0.45);
+}
+
 button {
   font: inherit;
-}
-select {
-  font: inherit;
-}
-button {
   color: inherit;
   border: 1px solid var(--border);
   cursor: pointer;
-  border-radius: 4px;
-  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  padding: 7px 13px;
+  background: rgba(23, 38, 35, 0.65);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: var(--shadow-sm);
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast),
+    transform var(--transition-fast);
 }
+
 button:hover {
+  background: rgba(38, 64, 56, 0.85);
   border-color: var(--teal);
+  box-shadow: 0 0 12px var(--teal-glow);
+  transform: translateY(-1px);
 }
+
+button:active {
+  transform: translateY(1px) scale(0.99);
+  box-shadow: none;
+}
+
 button:focus-visible {
   outline: 2px solid var(--gold);
   outline-offset: 2px;
 }
-select:focus-visible {
-  outline: 2px solid var(--gold);
-  outline-offset: 2px;
-}
+
 button:disabled {
-  opacity: 0.45;
+  opacity: 0.42;
   cursor: default;
+  transform: none !important;
+  box-shadow: none !important;
 }
+
 button.primary {
-  background: #c4aa73;
-  border-color: #e1c994;
-  color: #172221;
+  background: linear-gradient(135deg, #d8bc7f, #eed59e);
+  border-color: #f7e6bd;
+  color: #121f1d;
   font-weight: 600;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.2);
+  box-shadow: 0 2px 14px var(--gold-glow);
 }
+
 button.primary:hover {
-  background: #e0c38a;
+  background: linear-gradient(135deg, #eed59e, #fff0cb);
+  border-color: #ffffff;
+  box-shadow: 0 4px 20px rgba(238, 213, 158, 0.55);
 }
+
+select {
+  font: inherit;
+  color: var(--ink);
+  background: rgba(14, 25, 27, 0.88);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+  outline: none;
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+select:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  border-color: var(--gold);
+  outline: none;
+  box-shadow: 0 0 10px var(--gold-glow);
+}
+
+input:not([type='checkbox']):not([type='radio']),
+textarea {
+  color: var(--ink);
+  background: rgba(12, 22, 24, 0.85);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 7px 10px;
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
 [hidden] {
   display: none !important;
 }
+
 .eyebrow {
   font-size: 9px;
   letter-spacing: 2px;
+  text-transform: uppercase;
   color: var(--muted);
+  font-weight: 500;
 }
+
 .muted {
   color: var(--muted);
   line-height: 1.8;
 }
+
 .bar {
   height: 5px;
   overflow: hidden;
-  background: #101a20;
+  background: #0d171b;
   position: absolute;
   left: 2px;
   right: 2px;
   bottom: 20px;
   border-radius: 2px;
 }
+
 .bar.mp {
   bottom: 1px;
   height: 4px;
 }
-:root {
-  --panel: #152126b8;
-  --border: #82948a55;
-  --muted: #bdcabf;
-  --gold: #d8b984;
-}
-body {
-  overflow: hidden;
-}
-button {
-  background: #20332c7a;
-  transition:
-    background 0.18s,
-    border-color 0.18s,
-    box-shadow 0.18s;
-}
-button:hover {
-  background: #3b594a99;
-}
-@media (max-width: 760px) {
-  body {
-    overflow: hidden;
-  }
-}
+
 .bar {
   position: relative !important;
   inset: auto !important;
   display: block;
   margin: 0 !important;
-  border: 1px solid #0b161b99;
+  border: 1px solid rgba(11, 22, 27, 0.85);
   pointer-events: auto;
   outline-offset: 3px;
   cursor: help;
-}
-.bar {
   overflow: visible !important;
   height: 13px !important;
+  border-radius: 3px;
 }
+
 .bar.mp {
   height: 12px !important;
+}
+
+:where(dialog) {
+  border: 1px solid var(--border-gold);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  color: var(--ink);
+  max-width: min(840px, 94vw);
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(28, 54, 48, 0.65), transparent 75%), var(--panel);
+  box-shadow: var(--shadow-modal);
+}
+
+:where(dialog)::backdrop {
+  background: rgba(4, 9, 11, 0.78);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 @media (pointer: coarse) {
@@ -136,7 +258,7 @@ button:hover {
   input {
     touch-action: manipulation;
   }
-  dialog {
+  dialog:not(#party-panel):not(#prepare-character-dialog) {
     overscroll-behavior: contain;
     touch-action: pan-x pan-y;
     -webkit-overflow-scrolling: touch;
@@ -148,28 +270,32 @@ button:hover {
   }
   dialog::backdrop {
     backdrop-filter: none;
+    -webkit-backdrop-filter: none;
   }
 }
+
 @media (pointer: coarse) and (max-width: 1100px) {
   img,
   [draggable='true'] {
     -webkit-user-drag: none;
   }
 }
+
 @media (max-height: 600px) and (orientation: landscape) {
-  dialog {
+  dialog:not(#party-panel):not(#prepare-character-dialog) {
     max-height: calc(100dvh - 12px);
     max-width: calc(100vw - 16px - var(--safe-left) - var(--safe-right));
   }
-  dialog input,
-  dialog textarea,
-  dialog pre,
-  dialog p {
+  dialog:not(#party-panel):not(#prepare-character-dialog) input,
+  dialog:not(#party-panel):not(#prepare-character-dialog) textarea,
+  dialog:not(#party-panel):not(#prepare-character-dialog) pre,
+  dialog:not(#party-panel):not(#prepare-character-dialog) p {
     overflow-wrap: anywhere;
   }
 }
+
 @media (max-width: 900px), (max-height: 500px) {
-  body dialog {
+  body dialog:not(#party-panel):not(#prepare-character-dialog):not(:has(> #gal-stage)) {
     max-width: calc(100vw - 16px - var(--safe-left) - var(--safe-right)) !important;
     max-height: calc(
       100dvh - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom)
@@ -178,19 +304,21 @@ button:hover {
     overscroll-behavior: contain;
     touch-action: pan-x pan-y;
   }
-  dialog > header,
-  dialog > footer {
+  dialog:not(#party-panel):not(#prepare-character-dialog):not(:has(> #gal-stage)) > header,
+  dialog:not(#party-panel):not(#prepare-character-dialog):not(:has(> #gal-stage)) > footer {
     flex-shrink: 0;
   }
-  dialog :is(input, textarea, select) {
+  dialog:not(#party-panel):not(#prepare-character-dialog):not(:has(> #gal-stage))
+    :is(input, textarea, select) {
     max-width: 100%;
     min-width: 0;
   }
-  dialog :is(pre, p, label, small) {
+  dialog:not(#party-panel):not(#prepare-character-dialog):not(:has(> #gal-stage))
+    :is(pre, p, label, small) {
     overflow-wrap: anywhere;
   }
-  dialog button {
-    padding: 6px 9px;
+  dialog:not(#party-panel):not(#prepare-character-dialog):not(:has(> #gal-stage)) button {
+    padding: 6px 10px;
     font-size: 12px;
   }
 }

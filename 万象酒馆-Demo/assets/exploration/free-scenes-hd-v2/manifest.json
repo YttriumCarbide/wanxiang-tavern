@@ -1,0 +1,42 @@
+{
+  "generator": "image_gen built-in",
+  "purpose": "Four clean high-resolution scenes preserving approved wide framing and all interaction coordinates.",
+  "assets": [
+    {
+      "id": "city-center",
+      "file": "assets/exploration/free-scenes-hd-v2/city-center/connected.png",
+      "source": "assets/exploration/free-scenes-hd-v2/city-center/manifest.json",
+      "prompt": "Native overlapping crops, approved clean style, original framing and standing coordinates. Full actual prompt in assets/exploration/free-scenes-hd-v2/prompts.md.",
+      "width": 3762,
+      "height": 1254,
+      "sha256": "542b5c6b493e39104b9c4b074ad55b77af36126b996e8d0fcde5817915ae2fdd"
+    },
+    {
+      "id": "market",
+      "file": "assets/exploration/free-scenes-hd-v2/market/connected.png",
+      "source": "assets/exploration/free-scenes-hd-v2/market/manifest.json",
+      "prompt": "Native overlapping crops, approved clean style, original framing and standing coordinates. Full actual prompt in assets/exploration/free-scenes-hd-v2/prompts.md.",
+      "width": 3762,
+      "height": 1254,
+      "sha256": "e40012a4b28534716d5da01556b80880870fca9f5ab91fd293abbe48e1da51e2"
+    },
+    {
+      "id": "rampart",
+      "file": "assets/exploration/free-scenes-hd-v2/rampart/connected.png",
+      "source": "assets/exploration/free-scenes-hd-v2/rampart/manifest.json",
+      "prompt": "Native overlapping crops, approved clean style, original framing and standing coordinates. Full actual prompt in assets/exploration/free-scenes-hd-v2/prompts.md.",
+      "width": 3760,
+      "height": 1254,
+      "sha256": "09e0f840ddf229e59955da8a46b187270948cddccdac670b862bc68306d11584"
+    },
+    {
+      "id": "outskirts",
+      "file": "assets/exploration/free-scenes-hd-v2/outskirts/connected.png",
+      "source": "assets/exploration/free-scenes-hd-v2/outskirts/manifest.json",
+      "prompt": "Native overlapping crops, approved clean style, original framing and standing coordinates. Full actual prompt in assets/exploration/free-scenes-hd-v2/prompts.md.",
+      "width": 3762,
+      "height": 1254,
+      "sha256": "342cd959188ee6e6b97700ed13421c7c41796d9465099386519a5405b7cbcf17"
+    }
+  ]
+}

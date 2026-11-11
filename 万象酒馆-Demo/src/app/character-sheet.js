@@ -5,6 +5,7 @@ import { characterPresentation } from '../ai/character-presentation.js';
 import { escapeText } from '../ui.js';
 import { html } from '../shared/html.js';
 import { portraitUrl } from '../catalog.js';
+import { ability } from '../data.js';
 import { applyEquipment } from '../equipment.js';
 import { finalPassiveText, finalSkillText } from '../skill-text.js';
 
@@ -23,12 +24,19 @@ function effectText(effect) {
   return `${{ damage: '基础伤害', heal: '治疗', shield: '护盾', selfHeal: '自身治疗', selfMana: '自身回复法力' }[effect.type]} ${effect.value}`;
 }
 function abilitySheet(skill, design, label, markName) {
-  const cost = skill.passive
-    ? `被动 · ${skill.location}`
-    : `${skill.ap} AP · ${skill.mp} sp${skill.hp ? ` · ${skill.hp} hp` : ''}`;
+  const cost =
+    label === '入场技'
+      ? '换入前场时自动触发'
+      : skill.passive
+        ? `被动 · ${skill.location}`
+        : `${skill.ap} AP · ${skill.mp} sp${skill.hp ? ` · ${skill.hp} hp` : ''}`;
   const effects = skill.passive
     ? [finalPassiveText(skill, markName)]
-    : skill.effects.some(
+    : skill.mechanic ||
+        skill.adjacentAllies ||
+        skill.consumeMarkCount ||
+        skill.basicAttackInjuredMark ||
+        skill.effects.some(
           (effect) => effect.when || effect.perMark || effect.consumeMark || effect.type === 'mark',
         )
       ? [finalSkillText(skill, markName)]
@@ -62,13 +70,7 @@ export function characterSheet(entry, equipment = [], options = {}) {
     combat = applyEquipment(grownCombat(entry), equipment);
   const growth = restoreGrowth(entry.growth, entry.id);
   const isPrep = options.mode === 'preparation';
-  const attack = {
-    name: combat.attackName,
-    ap: 1,
-    mp: 0,
-    target: 'enemy',
-    effects: [{ type: 'damage', value: combat.attack }],
-  };
+  const attack = ability(combat.id, 'attack', { [combat.id]: combat });
 
   const nextExp = xpToNext(growth.level);
   const expPercent = Math.min(100, Math.max(0, Math.round((growth.xp / nextExp) * 100)));
@@ -76,6 +78,7 @@ export function characterSheet(entry, equipment = [], options = {}) {
   const abilities = html`<section class="character-abilities">
     <h3>战斗方式 <small>${isPrep ? '战技数值、目标与消耗' : '展开查看数值与动作'}</small></h3>
     ${abilitySheet(attack, model.attack, '普攻')}${combat.skills.map((skill, index) => abilitySheet(skill, model.skills[index], skill.passive ? '被动' : '技能', combat.mechanicMark?.name)).join('')}
+    ${combat.entrySkill ? abilitySheet(combat.entrySkill, model.entrySkill, '入场技', combat.mechanicMark?.name) : ''}
   </section>`;
 
   const biography = html`<div class="character-biography">

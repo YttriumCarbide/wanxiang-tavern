@@ -54,6 +54,8 @@
   padding: 0;
   border: 2px dashed transparent;
   background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
   touch-action: none;
 }
 .is-dragging .empty-slot,
@@ -93,6 +95,8 @@
   pointer-events: auto;
   border: 1px solid transparent;
   background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
   padding: 0;
   box-shadow: none;
   touch-action: none;
@@ -997,6 +1001,26 @@
   align-items: center;
   gap: 6px;
 }
+.intent-target {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  white-space: nowrap;
+}
+.intent-divider {
+  opacity: 0.6;
+  padding: 0 2px;
+}
+.intent-self {
+  flex-basis: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
+  margin-top: 5px;
+  padding-top: 4px;
+  border-top: 1px solid #e8d8ad30;
+}
 .intent-damage {
   display: inline-flex;
   align-items: center;
@@ -1055,6 +1079,25 @@
   }
   .intent-buff b {
     font-size: 8px;
+  }
+  .enemy-intent-summary {
+    padding: 2px 4px;
+  }
+  .enemy-intent-impact {
+    row-gap: 1px;
+  }
+  .intent-self {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: 0;
+    line-height: 12px;
+  }
+  .intent-self small {
+    font-size: 8px;
+  }
+  .intent-self .intent-buff svg {
+    width: 11px;
+    height: 11px;
   }
   #battle:has(.enemy-intent-summary) #story-toggle {
     height: 32px;

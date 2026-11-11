@@ -10,10 +10,134 @@ import {
   memoryHistory,
   previousDungeonMemory,
   scriptMemory,
+  dungeonMemoryText,
+  memoryHash,
+  pendingAdventureMemories,
+  withInvitationMemories,
+  journeyMemories,
 } from '../src/memory.js';
+import { chatInput } from '../src/ai/pipeline/chat-request.js';
+import { journeyMemoryBook } from '../src/ai/journey-memory-worldbook.js';
+import { scanWorldbooks } from '../src/ai/worldbook-scan.js';
+
+test('completed dungeon summaries replace split Gal originals in every history projection', () => {
+  const record = {
+    runId: 'split-gal',
+    title: '五节点记录',
+    complete: true,
+    lines: [
+      { speaker: '旁白', encounter: 0, text: '原文第一小段。' },
+      { speaker: '伊蒂丝', encounter: 0, text: '原文第二小段。' },
+    ],
+  };
+  record.summary = {
+    text: '只发送这一份总结。',
+    sourceHash: memoryHash(dungeonMemoryText(record)),
+  };
+  const library = { history: [record] };
+  const book = {
+    schemaVersion: 5,
+    runId: record.runId,
+    story: ['【旁白】原文第一小段。【对白:伊蒂丝】原文第二小段。', '其他原文'],
+  };
+  for (const projection of [
+    previousDungeonMemory(library),
+    scriptMemory(library, book),
+    JSON.stringify(memoryHistory(library, [record])),
+  ]) {
+    assert(projection.includes(record.summary.text));
+    assert(!projection.includes('原文'));
+  }
+  record.lines[0].text = '编辑后的全文';
+  assert(previousDungeonMemory(library).includes('编辑后的全文'));
+  assert(!previousDungeonMemory(library).includes(record.summary.text));
+});
 import { newLibrary, restoreLibrary } from '../src/ai/library.js';
 import { createAiApi } from '../server/ai-api.mjs';
 import { summaryPlan, summaryRequest, summaryResponse } from '../server/summary-request.mjs';
+
+test('a completed overland story is sent in full until summarized and then uses five recall words and its ID', () => {
+  const library = newLibrary();
+  library.history.push({
+    runId: 'bridge-trip',
+    kind: 'overland',
+    title: '桥边的约定',
+    complete: true,
+    place: '旧石桥',
+    people: ['伊蒂丝'],
+    lines: [{ speaker: '旁白', text: '伊蒂丝在旧石桥拾到残页，约定明天归还。' }],
+  });
+  assert.equal(journeyMemories(library)[0].recent, true);
+  const snapshot = pendingAdventureMemories(library);
+  const keywords = ['旧石桥', '伊蒂丝', '拾到残页', '残页', '明天归还'];
+  const results = summaryResponse(
+    JSON.stringify({
+      items: [{ id: 'overland:bridge-trip', summary: '伊蒂丝约好归还残页。', keywords }],
+    }),
+    snapshot,
+  );
+  applyMemorySummaries(library, [], snapshot, results);
+  const saved = restoreLibrary(JSON.parse(JSON.stringify(library)));
+  const memories = journeyMemories(saved);
+  const book = journeyMemoryBook({ journeyMemories: memories });
+  const [entry] = Object.values(book.entries);
+  assert.deepEqual(entry.key, ['overland:bridge-trip', ...keywords]);
+  const scan = (text) =>
+    scanWorldbooks({
+      books: [book],
+      settings: {},
+      countTokens: (value) => value.length,
+      context: { kind: 'chat', messages: [{ role: 'user', content: text }] },
+    }).entries;
+  assert.equal(scan('天气怎样？').length, 0);
+  assert.match(scan('还记得旧石桥吗？')[0].content, /约好归还残页/u);
+});
+
+test('one whole invitation joins the dungeon batch and follows its actor through a save', () => {
+  const library = newLibrary();
+  library.history = ['first', 'second'].map((runId) => ({
+    runId,
+    complete: true,
+    adventureVersion: 1,
+    lines: [{ text: '已经走完的旅程。' }],
+  }));
+  library.invitationHistory.push({
+    id: 'tea',
+    member: 'official-libet',
+    title: '在广场试奏',
+    text: '莉贝特打开琴盒。\n玩家：我在这里听。\n莉贝特拉完一段旋律。',
+    recap: '莉贝特在广场试奏。',
+  });
+  const libet = { id: 'official-libet', name: '莉贝特', worldbook: '琴手' };
+  const edith = { id: 'official-edith', name: '伊蒂丝', worldbook: '同行者' };
+  const payload = { place: 'table', selected: [edith.id], characters: [libet, edith] };
+  const input = (owner, text) =>
+    chatInput('chat', withInvitationMemories('chat', { ...payload, text }, owner));
+  assert.match(input(library, '莉贝特也来吗？').characters[0].invitationMemory, /广场试奏/);
+  assert(!input(library, '今天聊点别的。').characters.some((member) => member.invitationMemory));
+  const batch = pendingAdventureMemories(library);
+  assert.deepEqual(
+    batch.map((item) => item.kind),
+    ['dungeon', 'dungeon', 'invitation'],
+  );
+  assert.equal(batch[2].text, library.invitationHistory[0].text);
+  applyMemorySummaries(
+    library,
+    [],
+    batch,
+    batch.map(({ id }) => ({ id, summary: `摘要 ${id}` })),
+  );
+  const loaded = restoreLibrary(JSON.parse(JSON.stringify(library)));
+  assert.deepEqual(pendingAdventureMemories(loaded), []);
+  assert.match(
+    input(loaded, '莉贝特也来吗？').characters[0].invitationMemory,
+    /摘要 invitation:tea/,
+  );
+  assert.equal(loaded.invitationHistory[0].text, batch[2].text);
+  const [partyMember] = withInvitationMemories('script', { party: [libet] }, loaded).party;
+  assert.match(partyMember.invitationMemory, /摘要 invitation:tea/);
+  assert.equal(libet.invitationMemory, undefined);
+});
 
 test('manual summaries preserve each original layer and replace only confirmed context after acceptance', () => {
   const library = newLibrary();

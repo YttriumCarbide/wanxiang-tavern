@@ -1,5 +1,5 @@
 【角色生成输出格式 / CHARACTER v4】
-最终结果必须使用唯一一组 <wanxiang_json> 与 </wanxiang_json> 包裹，标签单独成行，内部为一个完整JSON对象。标签不写进JSON字符串，不嵌套、不重复。无需输出思考过程或自查，不输出Markdown围栏、game_data、额外XML、省略号或未规定字段。
+最终结果必须使用唯一一组 <wanxiang_output> 与 </wanxiang_output> 包裹，标签单独成行，内部为一个完整JSON对象。标签不写进JSON字符串，不嵌套、不重复。无需输出思考过程或自查，不输出Markdown围栏、game_data、额外XML、省略号或未规定字段。
 根节点依次为schemaVersion、setting、data，schemaVersion固定4。召唤时附arrivalDialogue，2～5项{speaker:"character"或"player",text:"中文对白"}；主角附levelUpLines，恰好5句符合性格的升级台词。两者只按本次用途输出，不写入setting。
 setting只允许name/gender/age/appearance/personality/history/attack/skills/entrySkill。age可省略或自由文字/数字；attack、entrySkill和两项skills为{name,description}，其余直接是字符串。personality是字符串，不能写成对象。skills恰好两项，entrySkill必填。被动description解释实际效果、触发条件及次数，不能写成主动释放动作。
 data必须包含archetype/weapon/profile/skills/entrySkill，可按Schema增加唯一mark声明；不写hp、mp、attack、limit、等级或其他具体数值。archetype只决定现有战斗模板，weapon是sword/staff/bow演出类别，profile选择战斗定位。姓名与技能名称只在setting生成，data不重复，技能按同序槽位对应。

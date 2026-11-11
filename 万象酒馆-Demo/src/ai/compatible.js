@@ -7,6 +7,14 @@ import { opencodeHeaders } from './opencode-headers.js';
 import { upstreamError } from './upstream-error.js';
 import { isVertex, vertexRequest, vertexResponse } from './vertex.js';
 import { serviceAccountToken } from './vertex-service-account.js';
+import {
+  newRouteAccumulator,
+  absorbRouteResponse,
+  pinRoutePayload,
+  detectRouteEffort,
+  routeVerdict,
+  healRouteTags,
+} from './anti-route.js';
 
 export function validateApiKey(apiKey) {
   if (typeof apiKey !== 'string' || apiKey.length > 2000 || /[^\x21-\x7e]/.test(apiKey))
@@ -26,7 +34,42 @@ export function completionURL(base) {
     url.pathname.replace(/\/+$/, '').replace(/\/chat\/completions$/, '') + '/chat/completions';
   return url;
 }
-export async function compatibleRequest(
+export async function compatibleRequest(profile, messages, options = {}) {
+  const acc = newRouteAccumulator();
+  const started = Date.now();
+  let error = '';
+  let stage = '';
+  try {
+    return await executeRequest(profile, messages, { ...options, routeAcc: acc });
+  } catch (failure) {
+    error = failure.message;
+    stage = failure.diagnostic?.stage || 'transport';
+    throw failure;
+  } finally {
+    if (!options.models && options.antiRoute?.verify) {
+      const report = redactDiagnostic(
+        {
+          at: started,
+          reqModel: profile.model,
+          ...routeVerdict(profile.model, acc, options.antiRoute, options.routeChannel, stage),
+          ...acc,
+          level: acc.level || '未设（auto）',
+          entropy: options.routeEntropy === true,
+          ms: Date.now() - started,
+          error,
+        },
+        profile.apiKey,
+      );
+      try {
+        options.onRouteReport?.(report);
+      } catch {
+        // Diagnostic consumers must not change the generation result.
+      }
+    }
+  }
+}
+
+async function executeRequest(
   profile,
   messages,
   {
@@ -41,6 +84,8 @@ export async function compatibleRequest(
     outputProcessing = null,
     stop = null,
     onDelta,
+    antiRoute,
+    routeAcc,
   } = {},
 ) {
   const nativeVertex = isVertex(profile);
@@ -78,6 +123,10 @@ export async function compatibleRequest(
     if (maxTokens && profile.tokenField !== 'none') payload[profile.tokenField] = maxTokens;
   }
   let body = payload;
+  if (!models) {
+    pinRoutePayload(payload, antiRoute, url.hostname === 'openrouter.ai');
+    routeAcc.level = detectRouteEffort(payload);
+  }
   let vertexToken = '';
   if (nativeVertex) {
     if (serviceAccount)
@@ -90,19 +139,93 @@ export async function compatibleRequest(
     headers = vertex.headers;
     body = vertex.body;
   }
-  let response = await fetchImpl(url, {
+  const requestInit = {
     method: models ? 'GET' : 'POST',
     headers,
     ...(models ? {} : { body: JSON.stringify(body) }),
     signal,
     redirect: 'error',
-  });
+  };
+  let response = await fetchImpl(url, requestInit);
+  if (
+    !models &&
+    antiRoute?.enabled &&
+    !antiRoute.safe &&
+    antiRoute.retryEmpty &&
+    [429, 204].includes(response.status) &&
+    !signal?.aborted
+  ) {
+    await response.body?.cancel();
+    routeAcc.retries = 1;
+    response = await fetchImpl(url, requestInit);
+  }
+  const parse = (response) =>
+    readResponse(response, {
+      profile,
+      url,
+      models,
+      nativeVertex,
+      vertexToken,
+      responseSchema,
+      onDelta,
+      outputTool,
+      outputProcessing,
+      antiRoute,
+      routeAcc,
+    });
+  try {
+    return await parse(response);
+  } catch (failure) {
+    if (
+      models ||
+      !antiRoute?.enabled ||
+      antiRoute.safe ||
+      !antiRoute.retryOutput ||
+      routeAcc.retries ||
+      !failure.retryableEmpty ||
+      signal?.aborted
+    )
+      throw failure;
+    Object.assign(routeAcc, newRouteAccumulator(), { retries: 1, level: routeAcc.level });
+    return parse(await fetchImpl(url, requestInit));
+  }
+}
+
+async function readResponse(
+  response,
+  {
+    profile,
+    url,
+    models,
+    nativeVertex,
+    vertexToken,
+    responseSchema,
+    onDelta,
+    outputTool,
+    outputProcessing,
+    antiRoute,
+    routeAcc,
+  },
+) {
+  routeAcc.status = response.status;
   const redact = (value) =>
     redactDiagnostic(redactDiagnostic(value, vertexToken), profile.apiKey) ?? value;
   if (nativeVertex) response = await vertexResponse(response);
   if (!models && response.ok && response.headers.get('content-type')?.includes('text/event-stream'))
     try {
-      return await readCompletionStream(response, onDelta, outputTool, outputProcessing);
+      return await readCompletionStream(
+        response,
+        onDelta,
+        outputTool,
+        outputProcessing,
+        antiRoute?.verify
+          ? (value) => {
+              absorbRouteResponse(routeAcc, value);
+              if (routeAcc.raw.length < 4000)
+                routeAcc.raw = (routeAcc.raw + JSON.stringify(redact(value)) + '\n').slice(0, 4000);
+            }
+          : undefined,
+      );
     } catch (failure) {
       failure.diagnostic = redact({
         ...generationDiagnostic(
@@ -116,9 +239,11 @@ export async function compatibleRequest(
       throw failure;
     }
   const content = redact(await response.text());
+  routeAcc.raw = redact(response.vertexRawText || content).slice(0, 4000);
   if (content.length > 2000000) throw Error('接口返回内容过大');
   const rejected = (message, rawText = response.vertexRawText || content, stage = 'transport') => {
     const failure = Error(message);
+    failure.status = response.status;
     failure.diagnostic = redact(
       generationDiagnostic(
         responseSchema?.properties?.schemaVersion?.const === 2 ? 'script' : 'character',
@@ -129,6 +254,7 @@ export async function compatibleRequest(
     );
     return failure;
   };
+  if (!models && response.status === 204) throw rejected('接口未返回正文（HTTP 204）', '', 'empty');
   if (models && response.status === 404)
     throw rejected(
       `模型列表接口不存在（HTTP 404，路径 ${url.pathname}），请检查 Base URL 是否需要 /v1；也可手动填写模型 ID。`,
@@ -136,6 +262,7 @@ export async function compatibleRequest(
   let data;
   try {
     data = JSON.parse(content);
+    if (!models) absorbRouteResponse(routeAcc, data);
   } catch {
     if (response.status === 429) {
       const info = upstreamError(content, response.status);
@@ -179,8 +306,8 @@ export async function compatibleRequest(
       output || (outputTool ? JSON.stringify(result?.message?.tool_calls || []) : ''),
       'truncated',
     );
-  if (result?.message?.refusal)
-    throw rejected('模型拒绝了这次生成，请调整要求', result.message.refusal, 'refusal');
+  if (result?.message?.refusal || result?.finish_reason === 'content_filter')
+    throw rejected('模型拒绝了这次生成，请调整要求', result.message?.refusal || content, 'refusal');
   if (outputTool) {
     try {
       output = readToolContent(result?.message, outputTool);
@@ -188,10 +315,21 @@ export async function compatibleRequest(
       throw rejected(failure.message, content, 'tool-response');
     }
   }
-  if (typeof output !== 'string' || !output.trim())
-    throw rejected('模型没有返回正文，请检查模型是否支持Chat Completions');
+  if (typeof output !== 'string' || !output.trim()) {
+    const failure = rejected(
+      '模型没有返回正文，请检查模型是否支持Chat Completions',
+      content,
+      'empty',
+    );
+    failure.retryableEmpty =
+      result?.finish_reason === 'stop' && !result?.message?.tool_calls?.length;
+    throw failure;
+  }
   const processor = createPresetOutputProcessor(outputProcessing);
-  processor.feed(output);
+  const healed =
+    antiRoute?.enabled && !antiRoute.safe && antiRoute.healTags ? healRouteTags(output) : output;
+  routeAcc.healed = healed !== output;
+  processor.feed(healed);
   return {
     content: processor.finish(),
     rawContent: output,

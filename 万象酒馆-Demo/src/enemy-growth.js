@@ -1,5 +1,9 @@
 import { BASE_WORLDS } from './worlds.js';
 import { finalSkillText } from './skill-text.js';
+import { combatScale, scaleMoveEffects } from './combat-scale.js';
+
+const MAP_LEVELS = Object.freeze({ ruins: 1, forest: 5, frost: 9, forge: 14, tide: 24 });
+const MAIN_OFFSETS = [0, 1, 1, 2, 2, 3];
 
 function seedOf(text) {
   let value = 2166136261;
@@ -7,46 +11,31 @@ function seedOf(text) {
   return value >>> 0;
 }
 
-/** Main chapters ease into growth; endless and custom worlds gain a level at every site. */
 export function encounterLevel(entry) {
   if (!entry || entry.tutorial) return 1;
-  const main = BASE_WORLDS.indexOf(entry.world?.id || entry.map);
-  if (main < 0) return Math.min(99, 1 + entry.sequence);
-  return Math.min(
-    99,
-    1 + main * 2 + (entry.sequence < 6 ? Math.floor(entry.sequence / 2) : entry.sequence - 3),
-  );
+  if (Number.isInteger(entry.level)) return Math.max(1, Math.min(99, entry.level));
+  const base = MAP_LEVELS[entry.map] || 5;
+  const official = BASE_WORLDS.includes(entry.world?.id || entry.map);
+  if (official && entry.sequence < 6) return base + MAIN_OFFSETS[entry.sequence];
+  const tier = Math.floor(entry.sequence / 6) + (official ? 0 : 1);
+  return Math.min(99, base + (official ? 3 : 0) + 5 * tier);
 }
 
-/** A stable 1–3 point roll per level, weighted toward hp; no speed or status inflation. */
 export function enemyGrowth(entry, index, id, boss = false) {
-  let seed = seedOf(`${entry.seed}:${index}:${id}`);
-  const random = () => {
-    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
-    return seed / 4294967296;
-  };
-  const base = encounterLevel(entry);
-  const level = entry.tutorial
-    ? 1
-    : Math.max(1, Math.min(99, base + Math.floor(random() * 3) - 1 + Number(boss)));
-  const bonus = { hp: 0, attack: 0 };
-  for (let current = 1; current < level; current++) {
-    const points = 1 + Math.floor(random() * 3);
-    for (let point = 0; point < points; point++) {
-      if (random() < 0.75) bonus.hp += boss ? 5 : 3;
-      else bonus.attack++;
-    }
-  }
-  return { level, bonus };
+  const level = encounterLevel(entry);
+  const scale = combatScale(level);
+  const roll = level === 1 || boss ? 0 : (seedOf(`${entry.seed}:${index}:${id}`) % 3) - 1;
+  return { level, hpScale: scale * (1 + roll * 0.05), damageScale: scale * (1 - roll * 0.03) };
 }
 
 /** Decorate an authored move once, including tactical and multi-part boss attacks. */
-export function leveledIntent(move, bonus = 0) {
-  if (!bonus || !move.effects.some((effect) => effect.type === 'damage' && !effect.flat))
+export function leveledIntent(move, bonus = 0, scale = 1) {
+  if (
+    (!bonus && scale === 1) ||
+    !move.effects.some((effect) => effect.type === 'damage' && !effect.flat)
+  )
     return move;
-  const effects = move.effects.map((effect) =>
-    effect.type === 'damage' && !effect.flat ? { ...effect, value: effect.value + bonus } : effect,
-  );
+  const effects = scaleMoveEffects(move.effects, scale, bonus);
   const description = [
     ...effects,
     ...(move.selfShield ? [{ type: 'selfShield', value: move.selfShield }] : []),
