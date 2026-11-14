@@ -234,7 +234,7 @@ export async function overlandChecks({ browser, baseURL, output }) {
           );
         }).length,
     );
-    assert.equal(visiblePins, 4, 'all map pins can be reached on the narrow layout');
+    assert.equal(visiblePins, 8, 'all map pins can be reached on the narrow layout');
     const overlaps = await atlas.locator('.street-atlas-travel').evaluate((layer) => {
       const pins = [...layer.querySelectorAll('.street-atlas-pin-label')];
       const legs = [...layer.querySelectorAll('.street-atlas-leg')];
@@ -290,7 +290,7 @@ export async function overlandChecks({ browser, baseURL, output }) {
     const labelBoxes = await atlas
       .locator('.street-atlas-pin:not([data-travel-to^="world-"]) .street-atlas-pin-label:visible')
       .evaluateAll((labels) => labels.map((label) => label.getBoundingClientRect().toJSON()));
-    assert.equal(labelBoxes.length, 4);
+    assert.equal(labelBoxes.length, 8);
     for (const [i, a] of labelBoxes.entries())
       assert(
         !labelBoxes
@@ -351,7 +351,6 @@ export async function overlandChecks({ browser, baseURL, output }) {
     await chooseExit('street').click();
     await waitForStreet('starlamp-street');
     await frame.locator('#street-map-open').click();
-    await atlas.getByRole('button', { name: '艾尔鲁斯线' }).click();
     const capitalStops = [
       'eternal-road-orchard',
       'eternal-road-mill',
@@ -361,14 +360,13 @@ export async function overlandChecks({ browser, baseURL, output }) {
     for (const id of capitalStops) await pin(id).waitFor();
     assert.equal(
       await atlas.locator('.street-atlas-pin:visible:not([data-travel-to^="world-"])').count(),
-      5,
+      8,
     );
     assert.match(await pin('eternal-city').textContent(), /13 回合/);
     await page.screenshot({ path: path.join(output, 'eternal-city-route-mobile.png') });
     await page.setViewportSize({ width: 1280, height: 768 });
-    await atlas.getByRole('button', { name: '银冠城线' }).click();
-    await atlas.getByRole('button', { name: '艾尔鲁斯线' }).click();
-    await pin('eternal-city').focus();
+    await pin('eternal-city').hover();
+    await atlas.locator('[data-atlas-preview-leg].previewed').first().waitFor();
     assert.equal(await atlas.locator('[data-atlas-preview-leg].previewed').count(), 4);
     await page.screenshot({ path: path.join(output, 'eternal-city-route.png') });
     await pin('eternal-city').click();

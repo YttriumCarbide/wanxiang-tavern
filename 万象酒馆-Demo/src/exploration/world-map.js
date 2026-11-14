@@ -1,11 +1,12 @@
 import { createAtlasTravel } from './atlas-travel.js';
 import { populateAtlasGeography } from './atlas-geography.js';
-import { ATLAS_CAPITAL_ROAD, ATLAS_SILVER_ROAD } from '../content/atlas-geography.js';
-import { CAPITAL_ROAD_STOPS, overlandOrigin } from '../overland-travel.js';
+import { ATLAS_OVERLAND_CENTER } from '../content/atlas-geography.js';
+import { overlandOrigin } from '../overland-travel.js';
 
 const ATLAS_WIDTH = 3072;
 const ATLAS_HEIGHT = 2048;
-const LOCAL_VIEW_WIDTH = 72;
+const LOCAL_VIEW_WIDTH = 84;
+const LOCAL_VIEW_HEIGHT = 66;
 const REGION_VIEW_WIDTH = LOCAL_VIEW_WIDTH * 2;
 const WORLD_VIEW_WIDTH = LOCAL_VIEW_WIDTH * 6;
 const FULL_SHEET_FIT = 0.94;
@@ -18,12 +19,7 @@ function clamp(value, minimum, maximum) {
 export function createWorldMap({ dialog, events, scene, onTravel }) {
   const sheet = dialog.querySelector('.street-map-sheet');
   const fit = dialog.querySelector('#street-map-fit');
-  const routeButton = dialog.querySelector('#street-map-capital-route');
   const origin = overlandOrigin(scene);
-  let capitalRoute = CAPITAL_ROAD_STOPS.slice(1).some(({ id }) => id === origin);
-  function routeCenter() {
-    return capitalRoute ? ATLAS_CAPITAL_ROAD : ATLAS_SILVER_ROAD;
-  }
   populateAtlasGeography(sheet);
   const screenMarkers = sheet.querySelectorAll('.street-map-screen-marker');
   const travel = createAtlasTravel({ dialog, events, scene, onTravel });
@@ -54,37 +50,39 @@ export function createWorldMap({ dialog, events, scene, onTravel }) {
     if (width >= WORLD_VIEW_WIDTH) detail = 'world';
     else if (width >= REGION_VIEW_WIDTH) detail = 'region';
     sheet.dataset.detail = detail;
-    dialog.dataset.capitalRoute = String(capitalRoute);
-    const fitLabel = scale === camera.minimum ? (capitalRoute ? '回到首都线' : '回到两城') : '全图';
+    const fitLabel = scale === camera.minimum ? '回到两城' : '全图';
     if (fit.textContent !== fitLabel) fit.textContent = fitLabel;
     sheet.style.setProperty('--atlas-marker-scale', 1 / scale);
     for (const marker of screenMarkers) marker.setAttribute('transform', `scale(${1 / scale})`);
     sheet.setAttribute('viewBox', `${-x / scale} ${-y / scale} ${width} ${viewHeight / scale}`);
-    travel.layout({ x, y, scale, width: viewWidth, height: viewHeight, detail, capitalRoute });
+    travel.layout({ x, y, scale, width: viewWidth, height: viewHeight, detail });
   }
 
   function resize(reset = false) {
     const previousWidth = viewWidth;
     const previousHeight = viewHeight;
     const wasFitted = camera.scale === camera.minimum;
+    const previousLocalScale = Math.min(
+      (previousWidth || 1) / LOCAL_VIEW_WIDTH,
+      (previousHeight || 1) / LOCAL_VIEW_HEIGHT,
+    );
+    const wasLocal = Math.abs(camera.scale - previousLocalScale) < 0.1;
     const centerX = previousWidth ? (previousWidth / 2 - camera.x) / camera.scale : 0;
     const centerY = previousHeight ? (previousHeight / 2 - camera.y) / camera.scale : 0;
     viewWidth = window.innerWidth;
     viewHeight = window.innerHeight;
-    const localScale = capitalRoute
-      ? Math.min(viewWidth / LOCAL_VIEW_WIDTH, viewHeight / 54)
-      : viewWidth / LOCAL_VIEW_WIDTH;
+    const localScale = Math.min(viewWidth / LOCAL_VIEW_WIDTH, viewHeight / LOCAL_VIEW_HEIGHT);
     camera.minimum = Math.min(viewWidth / ATLAS_WIDTH, viewHeight / ATLAS_HEIGHT) * FULL_SHEET_FIT;
-    camera.maximum = localScale * 2;
-    if (reset || !previousWidth) {
+    camera.maximum = localScale * 2.5;
+    if (reset || !previousWidth || wasLocal) {
       camera.scale = localScale;
-      const center = routeCenter();
-      camera.x = viewWidth / 2 - center.x * camera.scale;
-      camera.y = viewHeight / 2 - center.y * camera.scale;
+      camera.x = viewWidth / 2 - ATLAS_OVERLAND_CENTER.x * camera.scale;
+      camera.y = viewHeight / 2 - ATLAS_OVERLAND_CENTER.y * camera.scale;
     } else {
+      const scaleFactor = Math.min(viewWidth / previousWidth, viewHeight / previousHeight);
       camera.scale = wasFitted
         ? camera.minimum
-        : clamp((camera.scale * viewWidth) / previousWidth, camera.minimum, camera.maximum);
+        : clamp(camera.scale * scaleFactor, camera.minimum, camera.maximum);
       camera.x = viewWidth / 2 - centerX * camera.scale;
       camera.y = viewHeight / 2 - centerY * camera.scale;
     }
@@ -163,51 +161,27 @@ export function createWorldMap({ dialog, events, scene, onTravel }) {
     render();
   }
 
-  function switchRoute(toCapital) {
-    if (capitalRoute === toCapital) return;
-    resetInput();
-    capitalRoute = toCapital;
-    routeButton.textContent = capitalRoute ? '银冠城线' : '艾尔鲁斯线';
-    travel.reset();
-    resize(true);
-  }
-
   function handleClick(target) {
+    const pin = target.closest('[data-travel-to]');
+    const pinId = pin?.dataset.travelTo;
+    if (pinId && travel.isAvailable()) {
+      onTravel(pinId);
+      return;
+    }
     const landmark = target.closest('[data-atlas-landmark]');
     const landmarkId = landmark?.dataset.atlasLandmark;
-    if (landmarkId === 'eternal-city') {
-      switchRoute(true);
-      if (travel.isAvailable()) onTravel('eternal-city');
-      return;
-    }
-    if (landmarkId === 'road-capital') {
-      switchRoute(false);
-      if (travel.isAvailable()) onTravel('road-capital');
-      return;
-    }
-    if (landmarkId === 'outskirts' && origin !== 'outskirts') {
-      if (travel.isAvailable()) onTravel('outskirts');
+    if (landmarkId && travel.isAvailable()) {
+      if (landmarkId === 'outskirts' && origin === 'outskirts') return;
+      onTravel(landmarkId);
       return;
     }
     const label = target.closest('#atlas-silver-crown, #atlas-starbell');
     if (label?.id === 'atlas-silver-crown') {
-      switchRoute(false);
       if (travel.isAvailable()) onTravel('road-capital');
       return;
     }
     if (label?.id === 'atlas-starbell' && origin !== 'outskirts') {
       if (travel.isAvailable()) onTravel('outskirts');
-      return;
-    }
-    const road = target.closest('[data-atlas-road], [data-atlas-preview-leg]');
-    const roadName = road?.dataset.atlasRoad || road?.dataset.atlasPreviewLeg || '';
-    if (roadName.includes('eternal')) {
-      switchRoute(true);
-      return;
-    }
-    if (roadName.includes('road-') || roadName.includes('bridge') || roadName.includes('reed')) {
-      switchRoute(false);
-      return;
     }
   }
 
@@ -280,14 +254,6 @@ export function createWorldMap({ dialog, events, scene, onTravel }) {
     resize(true);
   }
 
-  routeButton.textContent = capitalRoute ? '银冠城线' : '艾尔鲁斯线';
-  events.on(routeButton, 'click', () => {
-    resetInput();
-    capitalRoute = !capitalRoute;
-    routeButton.textContent = capitalRoute ? '银冠城线' : '艾尔鲁斯线';
-    travel.reset();
-    resize(true);
-  });
   events.on(sheet, 'pointerdown', pointerDown);
   events.on(sheet, 'pointermove', pointerMove);
   events.on(sheet, 'pointerup', pointerUp);
@@ -295,9 +261,14 @@ export function createWorldMap({ dialog, events, scene, onTravel }) {
   events.on(sheet, 'lostpointercapture', pointerUp);
   events.on(sheet, 'pointerover', (event) => {
     if (pointers.size > 0) return;
+    const pin = event.target.closest('[data-travel-to]');
+    if (pin) {
+      travel.setHovered(pin.dataset.travelTo);
+      return;
+    }
     const landmark = event.target.closest('[data-atlas-landmark]');
     const id = landmark?.dataset.atlasLandmark;
-    if (id === 'eternal-city' || id === 'road-capital') {
+    if (id) {
       travel.setHovered(id);
     } else {
       const label = event.target.closest('#atlas-silver-crown');
@@ -306,7 +277,9 @@ export function createWorldMap({ dialog, events, scene, onTravel }) {
   });
   events.on(sheet, 'pointerout', (event) => {
     if (pointers.size > 0) return;
-    const landmark = event.target.closest('[data-atlas-landmark], #atlas-silver-crown');
+    const landmark = event.target.closest(
+      '[data-travel-to], [data-atlas-landmark], #atlas-silver-crown',
+    );
     if (landmark) travel.setHovered(null);
   });
   events.on(dialog.querySelector('.street-map-body'), 'wheel', onWheel, { passive: false });

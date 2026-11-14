@@ -1,5 +1,4 @@
 import {
-  CAPITAL_ROAD_STOPS,
   OVERLAND_STOPS,
   SILVER_ROAD_LEGS,
   overlandOrigin,
@@ -170,19 +169,16 @@ export function createAtlasTravel({ dialog, events, scene, onTravel }) {
   function layout(next = view) {
     view = next;
     if (!view) return;
-    const compact = view.detail === 'region' || view.capitalRoute || view.scale * 13.5 < 70;
+    const compact = view.detail === 'region' || view.scale * 13.5 < 70;
     layer.dataset.compact = String(compact);
     balance.hidden = view.detail === 'world';
-    const pinSize = Math.min(44, Math.max(16, view.scale * (view.capitalRoute ? 8 : 13.5) - 2));
+    const pinSize = Math.min(44, Math.max(16, view.scale * 11 - 2));
     layer.style.setProperty('--atlas-pin-size', `${pinSize}px`);
-    for (const { id, linkId, button, anchor } of [...pins, ...discoveryPins]) {
-      const routePoint = linkId || id;
-      const onCapitalRoad = CAPITAL_ROAD_STOPS.some((stop) => stop.id === routePoint);
-      const onSelectedRoad = routePoint === 'outskirts' || onCapitalRoad === view.capitalRoute;
-      project(button, anchor, onSelectedRoad && view.detail !== 'world');
+    for (const { button, anchor } of [...pins, ...discoveryPins]) {
+      project(button, anchor, view.detail !== 'world');
     }
     for (const { label, anchor } of labels)
-      project(label, anchor, !view.capitalRoute && view.detail === 'local' && !compact);
+      project(label, anchor, view.detail === 'local' && !compact);
     preview();
   }
 

@@ -296,13 +296,13 @@ html[data-embedded] .street-actions {
   :is(#atlas-starbell, #atlas-silver-crown, .street-map-regional, .street-map-route-label) {
   visibility: hidden;
 }
-#street-map[data-travel='true'][data-capital-route='true']
+#street-map[data-travel='true']
   [data-atlas-landmark='eternal-city']
   :is(.street-map-screen-marker, .street-map-city-labels) {
   visibility: hidden;
 }
-#street-map:is([data-travel='true'], [data-capital-route='false']) .street-map-capital-stop {
-  visibility: hidden;
+#street-map[data-travel='true'] .street-map-capital-stop text {
+  display: none;
 }
 .street-map-sheet[data-detail='local'] .street-map-capital-stop circle {
   display: inline;
@@ -434,17 +434,17 @@ html[data-embedded] .street-actions {
   top: calc(50% + 14px);
   bottom: auto;
 }
-#street-map[data-capital-route='true']
+#street-map
   .street-atlas-travel[data-compact='true']
   .street-atlas-pin[data-above='true']
   .street-atlas-pin-label {
   top: auto;
   bottom: calc(50% + 14px);
 }
-#street-map[data-capital-route='true'] .street-atlas-pin[data-kind='city'] .street-atlas-pin-mark {
+#street-map .street-atlas-pin[data-kind='city'] .street-atlas-pin-mark {
   visibility: visible;
 }
-#street-map[data-capital-route='true']
+#street-map
   .street-atlas-travel[data-compact='true']
   [data-travel-to='eternal-city']
   .street-atlas-pin-label {
@@ -456,6 +456,7 @@ html[data-embedded] .street-actions {
   .street-atlas-pin-label {
   top: auto;
   bottom: calc(50% + 13px);
+  transform: translateX(-60%);
 }
 #street-map
   .street-atlas-travel[data-compact='true']
@@ -463,6 +464,19 @@ html[data-embedded] .street-actions {
   .street-atlas-pin-label {
   top: auto;
   bottom: calc(50% + 54px);
+  transform: translateX(-40%);
+}
+#street-map
+  .street-atlas-travel[data-compact='true']
+  [data-travel-to='eternal-road-mill']
+  .street-atlas-pin-label {
+  transform: translateX(-85%);
+}
+#street-map
+  .street-atlas-travel[data-compact='true']
+  [data-travel-to='eternal-road-orchard']
+  .street-atlas-pin-label {
+  transform: translateX(-40%);
 }
 .street-atlas-travel[data-compact='true'] .street-atlas-pin strong {
   font-size: clamp(11px, 2.6vw, 15px);
@@ -876,24 +890,13 @@ html[data-embedded] .street-actions {
   outline: none;
 }
 .street-map-close
-  :is(
-    #street-map-fit,
-    #street-map-step-out,
-    #street-map-workshop,
-    #street-map-companions,
-    #street-map-capital-route
-  ) {
+  :is(#street-map-fit, #street-map-step-out, #street-map-workshop, #street-map-companions) {
   width: auto;
   padding: 0 12px;
   border-radius: 22px;
   font:
     700 14px/1 'Microsoft YaHei',
     sans-serif;
-}
-#street-map-capital-route {
-  position: fixed;
-  top: max(64px, calc(env(safe-area-inset-top) + 54px));
-  right: max(10px, env(safe-area-inset-right));
 }
 #street-map-workshop {
   display: none;

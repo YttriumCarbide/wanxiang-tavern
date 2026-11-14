@@ -3,6 +3,7 @@ import { ETERNAL_CITY_STOPS } from './eternal-city-scenes.js';
 
 export const ATLAS_SILVER_ROAD = Object.freeze({ x: 1550, y: 1378 });
 export const ATLAS_CAPITAL_ROAD = Object.freeze({ x: 1515, y: 1358 });
+export const ATLAS_OVERLAND_CENTER = Object.freeze({ x: 1540, y: 1364 });
 
 // Scene IDs are shared with the playable road; other map nodes are geographic waypoints.
 export const ATLAS_PLACES = Object.freeze({
