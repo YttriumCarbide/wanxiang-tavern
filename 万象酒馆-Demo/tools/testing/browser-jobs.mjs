@@ -65,6 +65,7 @@ export function browserJobs(scopes, results, root) {
   simple('enemy-portraits', 'enemy-portraits', 'enemyPortraitChecks');
   simple('humanoid-enemies', 'humanoid-enemies', 'humanoidEnemyChecks');
   simple('worlds-emblems', 'worlds-emblems', 'worldsEmblemsChecks');
+  simple('worldbook-editor', 'worldbook-editor', 'standaloneWorldbookEditorChecks');
   simple('opencode', 'opencode', 'opencodeBrowserChecks');
   // First-arrival Gal is checked by gal; this covers the current post-second-trip lesson.
   simple('onboarding', 'dining-onboarding', 'diningOnboardingChecks');

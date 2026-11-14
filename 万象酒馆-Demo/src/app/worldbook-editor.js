@@ -21,6 +21,7 @@ import { formatRequestPreview, tokenSummary } from './request-preview.js';
 export function createWorldbookEditor({ session, events, api, inputFor, onSaved, savePrivate }) {
   const state = session.ai.worldEditor;
   const bookPicker = $('#world-book-select');
+  const exportButton = $('#world-export');
   const category = document.createElement('select');
   category.id = 'world-category';
   category.setAttribute('aria-label', '世界书显示分类');
@@ -453,8 +454,13 @@ ${escapeText(entry.content)}</textarea>`;
     'change',
     guard(async () => {
       const id = bookPicker.value;
-      await flush();
-      await loadBook(id);
+      bookPicker.disabled = exportButton.disabled = true;
+      try {
+        await flush();
+        await loadBook(id);
+      } finally {
+        bookPicker.disabled = exportButton.disabled = false;
+      }
     }),
   );
   function nextUid() {
@@ -611,6 +617,24 @@ ${escapeText(entry.content)}</textarea>`;
     }),
   );
   events.on($('#world-import'), 'click', () => $('#world-import-file').click());
+  events.on(
+    exportButton,
+    'click',
+    guard(() => {
+      capture();
+      const { book } = normalizeWorldbook(state.draft);
+      const filename = book.name.replace(/[<>:"/\\|?*]/g, '_');
+      const url = URL.createObjectURL(
+        new Blob([JSON.stringify(book, null, 2) + '\n'], { type: 'application/json' }),
+      );
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename + '.json';
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      notice('已开始下载当前世界书。');
+    }),
+  );
   events.on(
     $('#world-import-file'),
     'change',

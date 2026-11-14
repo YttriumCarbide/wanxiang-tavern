@@ -45,6 +45,7 @@ export const allScopes = [
   'opencode',
   'battle-controls',
   'worlds-emblems',
+  'worldbook-editor',
   'static',
   'environment',
   'rooms',

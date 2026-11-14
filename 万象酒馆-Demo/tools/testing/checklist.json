@@ -1,12 +1,6 @@
 {
-  "description": "装备与过载纹章的战斗资源、损坏快照恢复、跨战继承和正式版验收",
-  "scopes": ["quality", "core", "static", "battle-controls", "expedition"],
-  "coreFiles": [
-    "tests/equipment.test.js",
-    "tests/growth-supplies.test.js",
-    "tests/engine.test.js",
-    "tests/adventure.test.js",
-    "tests/dining.test.js"
-  ],
+  "description": "世界书一键导出 JSON、草稿与筛选、总结世界书及横屏交互",
+  "scopes": ["quality", "worldbook-editor"],
+  "coreFiles": [],
   "browserConcurrency": 2
 }

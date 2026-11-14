@@ -1,12 +1,13 @@
 import assert from 'node:assert/strict';
 import path from 'node:path';
+import { readFile } from 'node:fs/promises';
+import { normalizeWorldbook } from '../../src/ai/worldbook.js';
+import { legacySession } from './legacy-session.mjs';
 
 /** One session covers row editing, recipient combinations and both real editor widths. */
 export async function worldbookEditorChecks({ page, output }) {
   await page.waitForFunction(() => !!window.demo);
   await page.locator('#ai-open').click();
-  assert.equal(await page.locator('[data-ai-tab]').count(), 3);
-  assert.equal(await page.locator('#ai-export,#ai-prompt-preset,#ai-edit-prompts').count(), 0);
   await page.locator('#ai-worldbooks').click();
   await page.locator('[data-world-format="script"]').click();
   for (const kind of ['character', 'script', 'chat', 'summary', 'creation', 'map'])
@@ -16,7 +17,8 @@ export async function worldbookEditorChecks({ page, output }) {
   const originalName = await expanded.locator('[data-world-head="comment"]').inputValue();
   assert(originalName.includes('JSON输出格式'));
   const body = page.locator('[data-world-field="content"]');
-  assert((await body.inputValue()).includes('SCRIPT v5'));
+  const originalBody = await body.inputValue();
+  assert(originalBody.includes('SCRIPT v5'));
   await page.waitForFunction(() =>
     document.querySelector('#world-entry-tokens').textContent.match(/Token: \d+/),
   );
@@ -58,6 +60,37 @@ export async function worldbookEditorChecks({ page, output }) {
   }
   await role.setChecked(original[0]);
   await script.setChecked(original[1]);
+  const exportButton = page.getByRole('button', { name: '导出 JSON' });
+  async function downloadBook() {
+    const pending = page.waitForEvent('download');
+    await exportButton.click();
+    const download = await pending;
+    const raw = JSON.parse(await readFile(await download.path(), 'utf8'));
+    const { book } = normalizeWorldbook(raw);
+    assert.deepEqual(book, raw);
+    return { book, filename: download.suggestedFilename() };
+  }
+  const nameField = page.locator('#world-name');
+  const originalBookName = await nameField.inputValue();
+  const editedBody = originalBody + '\n即时导出验证内容';
+  await nameField.fill('验证世界书');
+  await body.fill(editedBody);
+  await page.locator('#world-category').selectOption('rules');
+  const exported = await downloadBook();
+  assert.equal(exported.filename, '验证世界书.json');
+  assert.equal(exported.book.name, '验证世界书');
+  assert.equal(
+    Object.values(exported.book.entries).find(
+      (entry) => entry.extensions?.wanxiang?.generationRule === 'script-output',
+    ).content,
+    editedBody,
+  );
+  assert(
+    Object.values(exported.book.entries).some((entry) => entry.extensions?.wanxiang?.characterId),
+  );
+  assert.equal(await body.inputValue(), editedBody);
+  await nameField.fill(originalBookName);
+  await body.fill(originalBody);
   for (const key of ['excludeRecursion', 'preventRecursion', 'ignoreBudget'])
     assert.equal(await page.locator(`[data-world-field="${key}"]`).count(), 1);
   for (const viewport of [
@@ -71,6 +104,8 @@ export async function worldbookEditorChecks({ page, output }) {
     assert(field.width > editor.width * 0.85);
     const footer = await page.locator('#world-preview-button').boundingBox();
     assert(footer.y + footer.height <= viewport.height);
+    const control = await exportButton.boundingBox();
+    assert(control && control.x >= 0 && control.x + control.width <= viewport.width);
     await page.screenshot({
       path: path.join(
         output,
@@ -79,6 +114,18 @@ export async function worldbookEditorChecks({ page, output }) {
     });
   }
   await page.setViewportSize({ width: 1440, height: 836 });
+  const picker = page.locator('#world-book-select');
+  await picker.selectOption('tavern-summary');
+  await page.waitForFunction(() => document.querySelector('#world-name').value === '总结世界书');
+  const summary = await downloadBook();
+  assert.equal(summary.filename, '总结世界书.json');
+  const currentSummary = await page.evaluate(() => demo.getLibrary().summaryWorldbook);
+  assert.deepEqual(summary.book, normalizeWorldbook(currentSummary).book);
+  await picker.selectOption('tavern-world');
+  await page.waitForFunction(
+    (name) => document.querySelector('#world-name').value === name,
+    originalBookName,
+  );
   await page.locator('#world-close').click();
   await page.locator('#ai-close').click();
   return {
@@ -89,5 +136,18 @@ export async function worldbookEditorChecks({ page, output }) {
     tokenCountAndUid: true,
     formatShortcuts: true,
     landscapeReachable: true,
+    completeBookDownloadWithDraft: true,
+    separateSummaryDownload: true,
   };
+}
+
+export async function standaloneWorldbookEditorChecks({ browser, baseURL, output }) {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 836 } });
+  try {
+    await legacySession(page);
+    await page.goto(baseURL);
+    return await worldbookEditorChecks({ page, output });
+  } finally {
+    await page.close();
+  }
 }

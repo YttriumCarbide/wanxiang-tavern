@@ -83,6 +83,9 @@
   white-space: nowrap;
   font-weight: 400;
 }
+#world-export {
+  white-space: nowrap;
+}
 #world-name {
   flex: 1;
 }
