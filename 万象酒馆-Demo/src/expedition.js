@@ -22,10 +22,7 @@ export function newExpedition(boss = 'bossGate', heroDefinitions = {}, explorati
   };
 }
 export function currentEncounterSpec(expedition, index = expedition.index) {
-  if (expedition.chapter)
-    return expedition.chapter.fullTrip
-      ? expedition.chapter.encounters[index]
-      : expedition.chapter.spec;
+  if (expedition.overlandBattle) return expedition.overlandBattle.spec;
   const spec = expedition.exploration
     ? explorationSpec(expedition.exploration, index)
     : encounterSpec(index, expedition.boss);
@@ -86,7 +83,7 @@ export function completeEncounter(expedition, state) {
   const rewardId = `${expedition.id}:${state.encounter}`;
   const rewards = {
     summonContracts:
-      (expedition.chapter && spec.boss) || state.encounter === ENCOUNTERS.length - 1 ? 1 : 0,
+      (expedition.overlandBattle && spec.boss) || state.encounter === ENCOUNTERS.length - 1 ? 1 : 0,
     gold: spec.boss ? 100 : 20,
     ...(expedition.exploration?.replay && state.encounter === ENCOUNTERS.length - 1
       ? { ether: expedition.recollectionEther || 0 }
@@ -106,10 +103,7 @@ export function completeEncounter(expedition, state) {
         .map((id) => [id, { hp: state.units[id].hp, mp: state.units[id].mp }]),
     ),
   });
-  if (
-    (expedition.chapter && !expedition.chapter.fullTrip) ||
-    state.encounter === ENCOUNTERS.length - 1
-  ) {
+  if (expedition.overlandBattle || state.encounter === ENCOUNTERS.length - 1) {
     expedition.status = 'complete';
     return { complete: true, changes: [], rewards, rewardId };
   }

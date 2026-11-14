@@ -330,6 +330,7 @@ export async function streetChecks({ browser, baseURL, output }) {
       'approach is clear of furniture',
     );
     await page.frameLocator('#inn-frame iframe').locator('#street-open').click();
+    await page.locator('[data-tavern-exit="street"]').click();
     await page.waitForFunction(() =>
       [...document.querySelectorAll('#inn-frame iframe')].some(
         (el) => el.contentWindow?.streetPreview,

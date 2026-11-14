@@ -1,4 +1,11 @@
 import { routeKey, isEndless } from './worlds.js';
+import { encounterLevel } from './enemy-growth.js';
+import {
+  rollEquipmentQuality,
+  resolveEquipmentQuality,
+  clampEquipmentLevel,
+  hashSeed,
+} from './equipment.js';
 import { memoryText, dungeonMemoryText, restoredSummary } from './memory.js';
 
 const normalizedName = (name) =>
@@ -91,9 +98,27 @@ export function archiveMilestone(library, book, record, encounter) {
     const resolved = item.reference ? resolveItemReferences([item], old ? [old] : [])[0] : item;
     const conflict =
       old && (old.description !== resolved.description || old.value !== resolved.value);
+    const dropLevel = Math.max(
+      1,
+      Math.min(
+        99,
+        Number(resolved.level) || (book.exploration ? encounterLevel(book.exploration) : 1),
+      ),
+    );
+    const dropContext =
+      book.boss && encounter >= 4 ? 'boss' : book.exploration?.elite ? 'elite' : 'dungeon';
+    const quality = resolved.quality
+      ? resolveEquipmentQuality(resolved.quality, resolved.value)
+      : rollEquipmentQuality({
+          context: dropContext,
+          value: resolved.value,
+          seed: hashSeed(`${record.runId}:${index}:${resolved.name}`),
+        });
     library.archives.items.push({
       ...structuredClone(resolved),
       map,
+      level: dropLevel,
+      quality,
       ...(conflict ? { conflictWith: old.id } : {}),
       id: `item-${record.runId}-${index}`,
       source,
@@ -101,6 +126,51 @@ export function archiveMilestone(library, book, record, encounter) {
     });
     record.archiveClaims.push(claim);
   }
+}
+
+export function archiveOverlandLoot(library, { runId, title, leg, items = [] }) {
+  library.archives ||= restoreArchives();
+  const matching = (items || []).filter((item) => item && item.stageId === leg.id);
+  if (!matching.length) return [];
+  if (library.archives.items.some((item) => item.source?.runId === runId)) return [];
+  const level = clampEquipmentLevel(leg.level || 1);
+  const source = {
+    runId,
+    title: title || leg.to?.name || '外出行程',
+    map: 'forest',
+    overland: true,
+    legId: leg.id,
+  };
+  const added = [];
+  for (const [index, item] of matching.entries()) {
+    const old = library.archives.items.findLast(
+      (archived) =>
+        !archived.superseded &&
+        !archived.conflictWith &&
+        normalizedName(archived.name) === normalizedName(item.name),
+    );
+    const conflict = old && (old.description !== item.description || old.value !== item.value);
+    const quality = rollEquipmentQuality({
+      context: 'overland',
+      value: item.value,
+      seed: hashSeed(`${runId}:${index}:${item.name}`),
+    });
+    const archived = {
+      id: `item-${runId}-${index}`,
+      name: item.name,
+      description: item.description,
+      value: item.value,
+      map: 'forest',
+      level,
+      quality,
+      ...(conflict ? { conflictWith: old.id } : {}),
+      source,
+      converted: false,
+    };
+    library.archives.items.push(archived);
+    added.push(archived);
+  }
+  return added;
 }
 
 export function dungeonLoot(library, runId) {

@@ -1,4 +1,4 @@
-import { equipmentBudget } from '../../equipment.js';
+import { clampEquipmentLevel, resolveEquipmentQuality } from '../../equipment.js';
 import { equipmentGenerationPlan, compileEquipmentDesign } from '../../equipment-generation.js';
 import { finalizeRequest } from './prompt-processing.js';
 
@@ -22,15 +22,19 @@ export function creationItems(input) {
     )
       throw Error('造物来源无效');
     ids.add(item.id);
+    const level = clampEquipmentLevel(item.level || 1);
+    const quality = resolveEquipmentQuality(item.quality, item.value);
+    const enriched = { ...item, level, quality };
     return {
       id: item.id,
       name: item.name,
       description: item.description,
       value: item.value,
+      level,
+      quality,
       map: item.map,
       script,
-      budget: equipmentBudget(item.value),
-      designPlan: equipmentGenerationPlan(item),
+      designPlan: equipmentGenerationPlan(enriched),
     };
   });
 }

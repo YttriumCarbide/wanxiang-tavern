@@ -179,7 +179,8 @@ export async function mobileChecks({ browser, baseURL, output }) {
       assert.equal(stats.fps, 30);
       assert.equal(stats.shadows, false);
       assert(stats.pixelRatio <= 1.25);
-      assert.equal(await page.locator('#workshop-open,#workshop-dialog').count(), 0);
+      assert.equal(await page.locator('#workshop-dialog').count(), 1);
+      assert.equal(await page.locator('#workshop-dialog').isVisible(), false);
       await page.locator('#ai-open').click();
       for (const tab of ['settings', 'prompts', 'game']) {
         await page.locator('[data-ai-tab="' + tab + '"]').click();
@@ -231,7 +232,7 @@ export async function mobileChecks({ browser, baseURL, output }) {
       await measure('#void-shop', 'shop');
       await page.locator('#shop-close').click();
       await frame.locator('canvas').evaluate(() => window.assetPreview.placeNow('table'));
-      await frame.locator('#talk-open').click();
+      await page.locator('[data-daily="chat"]').click();
       await measure('#gal-stage', 'chat');
       await page.locator('[data-gal="history"]').click();
       await swipeScroll(page, page.locator('.gal-archive'));
@@ -251,35 +252,36 @@ export async function mobileChecks({ browser, baseURL, output }) {
         }
         await page.locator('#' + close).click();
       }
-      // Exercise the production request wrapper and the real shared arcade without an upstream request.
+      // Exercise the workshop entry on the mobile request toolbar without an upstream request.
       await page.evaluate(async () => {
         const { createRequestControls } = await import('/src/app/request-controls.js');
         const finish = [];
-        const arcade = {
+        const workshop = {
           opens: 0,
           outcomes: [],
+          begin() {},
           open() {
             this.opens++;
           },
-          completed(label, success) {
-            this.outcomes.push({ label, success });
+          finish(id, outcome) {
+            this.outcomes.push({ id, outcome });
           },
         };
         const client = createRequestControls(
           { request: () => new Promise((resolve) => finish.push(resolve)), dispose() {} },
           () => ({}),
-          () => arcade,
+          () => workshop,
         );
         const kinds = ['character', 'script', 'chat', 'quick-chat', 'summary', 'creation', 'map'];
         window.mobileWait = {
           client,
-          arcade,
+          workshop,
           finish,
           requests: kinds.map((k) => client.request('generate/' + k, {})),
         };
       });
-      assert.equal(await page.locator('[data-request-arcade]').count(), 7);
-      await page.locator('[data-request-arcade="map"]').click();
+      assert.equal(await page.locator('[data-workshop-wait]').count(), 7);
+      await page.locator('[data-workshop-wait="map"]').click();
       await page.evaluate(async () => {
         const w = window.mobileWait;
         w.finish.forEach((resolve) => resolve({}));
@@ -287,8 +289,8 @@ export async function mobileChecks({ browser, baseURL, output }) {
       });
       assert.deepEqual(
         await page.evaluate(() => ({
-          opens: window.mobileWait.arcade.opens,
-          completed: window.mobileWait.arcade.outcomes.length,
+          opens: window.mobileWait.workshop.opens,
+          completed: window.mobileWait.workshop.outcomes.length,
         })),
         { opens: 1, completed: 7 },
       );

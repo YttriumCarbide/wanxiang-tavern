@@ -1,4 +1,11 @@
-import { buyEquipment, favoriteEquipment, deleteEquipmentPlan } from '../equipment.js';
+import {
+  EQUIPMENT_QUALITIES,
+  buyEquipment,
+  clampEquipmentLevel,
+  deleteEquipmentPlan,
+  favoriteEquipment,
+  resolveEquipmentQuality,
+} from '../equipment.js';
 import { escapeText } from '../ui.js';
 import { html } from '../shared/html.js';
 
@@ -25,16 +32,31 @@ export function createForgeResults(context, describe, onClose) {
             const item = library().equipment.catalog.find((entry) => entry.id === id);
             if (!item || library().equipment.hidden?.includes(id)) return '';
             const favorite = library().equipment.favorites?.includes(id);
-            return html`<article>
+            const qualityKey = resolveEquipmentQuality(item.quality, item.price);
+            const quality = EQUIPMENT_QUALITIES[qualityKey];
+            const level = clampEquipmentLevel(item.level || 1);
+            return html`<article data-quality="${qualityKey}">
               <span class="equipment-emblem">✧</span>
+              <div class="forge-badges">
+                <span class="quality-pill" data-quality="${qualityKey}"
+                  >${escapeText(quality.name)}</span
+                >
+                <span class="level-pill">Lv.${level}</span>
+                ${
+                  Number.isInteger(item.rollPercent)
+                    ? `<span class="roll-pill">极品度 ${item.rollPercent}%</span>`
+                    : ''
+                }
+              </div>
               <h3>${escapeText(item.name)}</h3>
+              ${item.flavor ? `<small class="forge-result-flavor">${escapeText(item.flavor)}</small>` : ''}
               <p>${escapeText(describe(item))}</p>
               <nav>
                 <button
                   data-batch-buy="${id}"
                   ${library().inventory.ether < item.price ? 'disabled' : ''}
                 >
-                  兑换 · ${item.price} 以太
+                  打造 · ${item.price} 以太
                 </button>
                 <button data-batch-favorite="${id}" aria-pressed="${!!favorite}">
                   ${favorite ? '★ 已收藏' : '☆ 收藏'}

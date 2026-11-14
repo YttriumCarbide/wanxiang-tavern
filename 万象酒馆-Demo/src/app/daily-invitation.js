@@ -1,3 +1,4 @@
+import { gameTime } from '../memory.js';
 import { settingOnly } from '../ai/contracts.js';
 import { applyFutureDialogue, dialogueTargets } from './future-dialogue.js';
 import { officialCharacter } from '../ai/library.js';
@@ -5,10 +6,10 @@ import { TOWN_GUESTS } from '../content/town-guests.js';
 import { townResidents } from '../town-residents.js';
 import { parseGalText } from '../gal.js';
 import { dailySceneTime } from '../daily.js';
+import { withInvitationMemories } from '../memory.js';
 import {
   INVITATION_SCENES,
   PERSONAL_EVENT_TRUST,
-  RECRUIT_TRUST,
   applyInvitationPatches,
   invitationAdvance,
   invitationBrief,
@@ -19,6 +20,7 @@ import {
   invitationTrust,
 } from '../invitation.js';
 import { relationship } from '../relationships.js';
+import { recruitmentPassed, recruitmentStatus } from '../recruitment.js';
 
 function invitationDialogueScenes(run) {
   return [...run.plan.stages.slice(run.index + 1), run.plan.finale].map((scene) => ({
@@ -39,14 +41,7 @@ export function invitationCandidates(library) {
 }
 
 export function canRecruitInvitation(library, id) {
-  const key = id?.replace(/^official-/, '');
-  return (
-    id === `official-${key}` &&
-    Object.hasOwn(TOWN_GUESTS, key) &&
-    !library.characters.some((member) => member.id === id) &&
-    (relationship(library, id).affection >= RECRUIT_TRUST ||
-      library.daily.unlocks[id]?.personal === true)
-  );
+  return recruitmentStatus(library, id)?.ready === true;
 }
 
 export function createDailyInvitation(context, { getScene, navigate, complete, refresh }) {
@@ -55,12 +50,15 @@ export function createDailyInvitation(context, { getScene, navigate, complete, r
   const current = () => (active()?.kind === 'invitation' ? active().run : null);
   const save = () => context.generation.save();
   const owner = 'daily-invitation';
+  const stagePanel = document.querySelector('#gal-stage');
+  const topicRequests = new Map();
   const form = document.createElement('form');
   form.id = 'daily-invitation';
   form.hidden = true;
   form.innerHTML = `<header class="invite-meta">
     <span class="invite-progress" aria-live="polite"></span>
     <div class="invite-actions"><button type="button" data-invite-end>结束约见</button></div></header>
+    <div class="invite-choices" aria-label="本幕选项" hidden></div>
     <div class="invite-reply">
       <textarea id="invite-input" rows="3" maxlength="3000" required
         aria-label="约见回应" placeholder="你想说什么，或做什么？"></textarea>
@@ -69,6 +67,7 @@ export function createDailyInvitation(context, { getScene, navigate, complete, r
     <p class="invite-error" role="status"></p>`;
   document.body.append(form);
   const field = form.querySelector('textarea');
+  const choices = form.querySelector('.invite-choices');
   const notice = form.querySelector('.invite-error');
   let request = null;
   let workspace = false;
@@ -98,6 +97,17 @@ export function createDailyInvitation(context, { getScene, navigate, complete, r
       !!request || reading || !!run.unread || !!run.destination || invitationAdvance(run);
     form.querySelector('[type="submit"]').disabled = field.disabled;
     form.querySelector('[data-invite-end]').disabled = !!request || reading;
+    const available = !field.disabled && !turns.length ? stage.choices || [] : [];
+    choices.hidden = !available.length;
+    choices.replaceChildren(
+      ...available.map((text) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.dataset.inviteChoice = '';
+        button.textContent = text;
+        return button;
+      }),
+    );
   }
 
   function sceneDialogue(run) {
@@ -124,8 +134,12 @@ export function createDailyInvitation(context, { getScene, navigate, complete, r
       actors: [run.member],
       followSpeakers: true,
       composer: [form],
+      onLayout({ height }) {
+        stagePanel.style.setProperty('--daily-invite-composer', `${height}px`);
+      },
       transcript: () => sceneDialogue(run),
       onClose() {
+        stagePanel.style.removeProperty('--daily-invite-composer');
         workspace = false;
         form.hidden = true;
         request?.abort();
@@ -134,6 +148,42 @@ export function createDailyInvitation(context, { getScene, navigate, complete, r
     });
     update();
     refresh();
+  }
+
+  async function prepareTopics(run, member, transcript) {
+    const book = library();
+    topicRequests.get(run.member)?.abort();
+    const control = new AbortController();
+    topicRequests.set(run.member, control);
+    try {
+      const result = await context.apiClient.request(
+        'generate/script',
+        {
+          invitationTopics: {
+            person: member?.setting.name,
+            title: run.plan.title,
+            premise: run.plan.premise,
+            transcript:
+              transcript.length > 10000
+                ? transcript.slice(0, 2000) + '\n…\n' + transcript.slice(-8000)
+                : transcript,
+          },
+        },
+        { signal: control.signal },
+      );
+      if (control.signal.aborted || book !== library()) return;
+      if (!Array.isArray(result.topics) || result.topics.length !== 4)
+        throw Error('约见主题缺少四个选项');
+      const topics = (book.daily.memory.invitationTopics ||= {});
+      topics[run.member] = result.topics;
+      save();
+      refresh();
+    } catch (failure) {
+      if (!control.signal.aborted && book === library())
+        context.shell.toast(`下次约见主题生成失败：${failure.message}`);
+    } finally {
+      if (topicRequests.get(run.member) === control) topicRequests.delete(run.member);
+    }
   }
 
   function finish(run, ended) {
@@ -152,7 +202,7 @@ export function createDailyInvitation(context, { getScene, navigate, complete, r
       );
     const bonus = completed && run.personal && !flags.personal ? 20 : 0;
     if (bonus) flags.personal = true;
-    const gain = Math.min(100 - state.affection, invitationTrust(run) + bonus);
+    const gain = Math.min(Number.MAX_SAFE_INTEGER - state.affection, invitationTrust(run) + bonus);
     state.affection += gain;
     const record = invitationRecord(run, ended ? 'completed' : 'ended');
     const text = invitationTranscript(run).join('\n\n');
@@ -166,6 +216,7 @@ export function createDailyInvitation(context, { getScene, navigate, complete, r
           title: record.title,
           text,
           finishedAt: Date.now(),
+          gameTime: run.gameTime || gameTime(library.daily),
           place: INVITATION_SCENES[run.plan.stages[0]?.scene] || INVITATION_SCENES[run.scene],
           person: member?.setting.name,
           recap: [record.premise, ...record.stages.map((stage) => stage.summary)]
@@ -173,13 +224,31 @@ export function createDailyInvitation(context, { getScene, navigate, complete, r
             .join('\n'),
         });
     }
+    const joined = run.recruitment && ended && recruit(run.member, run);
     context.gal.cancel(owner);
     complete(
       'invitation',
-      `${ended ? '事件结束' : '约见提前结束'} · ${member?.setting.name || '同伴'} · 好感 +${gain}${bonus ? ' · 个人事件完成' : ''}${canRecruitInvitation(library(), run.member) ? ' · 可以正式邀请入队' : ''}`,
+      `${ended ? '事件结束' : '约见提前结束'} · ${member?.setting.name || '同伴'} · 好感 +${gain}${bonus ? ' · 个人事件完成' : ''}${run.recruitment ? (joined ? ' · 招募成功' : ' · 交涉未通过') : ''}`,
       record,
     );
     if (text) void context.memory.autoSummarize();
+    if (ended && text) void prepareTopics(run, member, text);
+  }
+
+  function recruit(id, run = null) {
+    const status = recruitmentStatus(library(), id);
+    if (!status?.ready || !recruitmentPassed(run, status.difficulty)) return false;
+    if (library().characters.length >= 100) {
+      context.shell.toast('角色库已满');
+      return false;
+    }
+    library().characters.push(officialCharacter(id.slice(9)));
+    save();
+    context.shell.renderParty();
+    void context.generation.syncCharacters();
+    refresh();
+    context.shell.toast('已加入酒馆，可以在整备或排班时选择。');
+    return true;
   }
 
   async function read(run) {
@@ -339,6 +408,11 @@ export function createDailyInvitation(context, { getScene, navigate, complete, r
           people.find((person) => person.id === protagonistId),
         );
         run.turns.push({ stageId, score, completed, ...(note ? { note } : {}) });
+        context.quests?.collect(
+          result.quest,
+          `${(run.id ||= crypto.randomUUID())}:${run.turns.length}`,
+          run.scene,
+        );
         run.history.push(
           { role: 'user', content: text },
           { role: 'assistant', content: result.content },
@@ -355,10 +429,16 @@ export function createDailyInvitation(context, { getScene, navigate, complete, r
     const run = current();
     if (!run || request || reading) return;
     if (event.target.closest('[data-invite-end]')) finish(run, false);
+    const choice = event.target.closest('[data-invite-choice]');
+    if (choice && !field.disabled) {
+      field.value = choice.textContent;
+      form.requestSubmit();
+    }
   });
 
   return {
     member: () => target(current()?.member),
+    topics: (id) => library().daily.memory.invitationTopics?.[id] || [],
     busy: () => !!request,
     presenting: () => workspace,
     traveling: () => !!current()?.destination,
@@ -371,7 +451,7 @@ export function createDailyInvitation(context, { getScene, navigate, complete, r
       const run = current();
       return run?.plan ? invitationBrief(run) : null;
     },
-    async start(member, activity, onReady) {
+    async start({ member, activity, topic, playerIntent }, onReady) {
       if (request || !target(member)) return;
       const entry = active();
       if (entry?.kind !== 'invitation') return;
@@ -381,8 +461,10 @@ export function createDailyInvitation(context, { getScene, navigate, complete, r
         relationship(library(), member).affection >= PERSONAL_EVENT_TRUST &&
         !library().daily.unlocks[member]?.personal;
       const run = {
+        gameTime: gameTime(library().daily),
         id: crypto.randomUUID(),
         member,
+        recruitment: entry.recruitment === member,
         activity,
         personal,
         index: 0,
@@ -394,17 +476,24 @@ export function createDailyInvitation(context, { getScene, navigate, complete, r
       entry.run = run;
       const ok = await call(
         'generate/script',
-        {
-          party: party(run),
-          invitation: {
-            activity,
-            member,
-            timeOfDay: dailySceneTime(entry),
-            protagonistId: library().campaign?.protagonistId,
-            trust: relationship(library(), member).affection,
-            personal,
+        withInvitationMemories(
+          'script',
+          {
+            party: party(run),
+            playerIntent,
+            invitation: {
+              activity,
+              topic,
+              member,
+              stageCount: 3 + Math.floor(Math.random() * 3),
+              timeOfDay: dailySceneTime(entry),
+              protagonistId: library().campaign?.protagonistId,
+              trust: relationship(library(), member).affection,
+              personal,
+            },
           },
-        },
+          library(),
+        ),
         ({ invitation }) => {
           if (!invitation?.stages?.length || !invitation.finale) throw Error('约见缺少完整剧本');
           run.plan = invitation;
@@ -426,22 +515,15 @@ export function createDailyInvitation(context, { getScene, navigate, complete, r
       if (run.unread) void read(run);
       else if (invitationAdvance(run)) void advance(run);
     },
-    recruit(id) {
-      if (!canRecruitInvitation(library(), id)) return;
-      if (library().characters.length >= 100) throw Error('角色库已满');
-      library().characters.push(officialCharacter(id.slice(9)));
-      save();
-      context.shell.renderParty();
-      void context.generation.syncCharacters();
-      refresh();
-      context.shell.toast('已加入酒馆，可以在整备或排班时选她。');
-    },
+    recruit,
     close() {
       request?.abort();
       context.gal.cancel(owner);
     },
     dispose() {
       this.close();
+      for (const request of topicRequests.values()) request.abort();
+      topicRequests.clear();
       form.remove();
     },
   };

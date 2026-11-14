@@ -5,7 +5,7 @@ import { newLibrary, officialCharacter, restoreLibrary } from '../src/ai/library
 import { gainExperience, grownCombat, xpToNext } from '../src/growth.js';
 import { equipEmblem, EMBLEMS } from '../src/emblems.js';
 import { rulesFor, ruleAvailable, ruleUsageKey } from '../src/triggers.js';
-import { upgradePlaytestWorldbook } from '../src/ai/playtest-upgrade.js';
+import { stripRetiredLore } from '../src/ai/retired-abilities.js';
 import { PANDORA } from '../src/content/pandora.js';
 import { normalizeCharacter } from '../src/ai/contracts.js';
 import { compactCharacterDocument } from './fixtures/ai.js';
@@ -121,29 +121,10 @@ test('equipment availability reads the same condition and scope counter as the e
 });
 
 test('cleanup removes inactive migration entries, preserves user prose and strips retired profession', () => {
-  const old = {
-    entries: {
-      1: {
-        comment: '旧迁移',
-        disable: true,
-        content: '旧提示',
-        extensions: { wanxiangMigration: { preserved: true } },
-      },
-      2: { comment: '我的设定', disable: true, content: '保留我的文本' },
-      3: {
-        comment: '人物',
-        content: '姓名：小雨\n\n职业：旧职业\n旧描述\n\n性格：安静。',
-        extensions: { wanxiang: { characterId: 'character-rain' } },
-      },
-    },
-  };
-  const book = upgradePlaytestWorldbook(old);
-  assert(!book.entries[1]);
-  assert.equal(book.entries[2].content, old.entries[2].content);
-  assert(!book.entries[3].content.includes('旧职业'));
-  assert(book.entries[3].content.includes('性格：安静。'));
-  assert.deepEqual(upgradePlaytestWorldbook(book), book);
-  assert.equal(old.entries[1].content, '旧提示');
+  const prose = '姓名：小雨\n\n职业：旧职业\n旧描述\n\n性格：安静。';
+  const cleaned = stripRetiredLore(prose);
+  assert(!cleaned.includes('旧职业'));
+  assert(cleaned.includes('性格：安静。'));
 });
 
 test('generated mana bands are program-owned and new settings omit profession', () => {

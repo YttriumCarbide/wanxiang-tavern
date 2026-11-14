@@ -79,7 +79,14 @@ export function finalizeRequest(prepared, profile, countTokens, names = []) {
       contextSize,
       ...(outputTool ? { outputTool } : {}),
       ...(final.contextTool ? { contextTool: final.contextTool } : {}),
-      processingStatus: { ...processed.status, ...kemini.status, ...final.status },
+      processingStatus: {
+        ...processed.status,
+        ...kemini.status,
+        ...final.status,
+        ...(prepared.transport?.presetProcessing?.compatibility
+          ? { compatibility: prepared.transport.presetProcessing.compatibility }
+          : {}),
+      },
       stop: presetStopStrings(prepared.transport?.presetProcessing),
     },
   };

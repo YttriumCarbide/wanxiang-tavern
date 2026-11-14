@@ -43,3 +43,26 @@
   transform: translateX(-50%) translateY(-2px);
   outline: 0;
 }
+#scene-talk[hidden],
+body:has(#battle:not([hidden])) #scene-talk,
+body.gal-playing #scene-talk {
+  display: none;
+}
+#scene-talk {
+  z-index: 35;
+  bottom: max(24px, env(safe-area-inset-bottom));
+  width: 142px;
+  height: 46px;
+  min-width: 142px;
+  padding: 10px 20px;
+}
+@media (max-height: 520px), (max-width: 900px) {
+  #scene-talk {
+    bottom: max(12px, env(safe-area-inset-bottom));
+    width: 116px;
+    height: 40px;
+    min-width: 116px;
+    padding: 8px 18px;
+    font-size: 12px;
+  }
+}

@@ -12,6 +12,7 @@
 **/prompts/presets/
 **/参考资料/
 **/验证/
+**/backups/
 **/.env
 **/.env.*
 **/*.log

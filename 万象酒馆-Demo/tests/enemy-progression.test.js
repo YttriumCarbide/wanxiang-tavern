@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import { readFile, mkdtemp } from 'node:fs/promises';
 import path from 'node:path';
 import { encounterLevel, enemyGrowth, leveledIntent } from '../src/enemy-growth.js';
+import { grownCombat } from '../src/growth.js';
+import { combatScale } from '../src/combat-scale.js';
 import {
   newExploration,
   explorationSpec,
@@ -16,7 +18,7 @@ import { newLibrary } from '../src/ai/library.js';
 import { claimBattleRewards } from '../src/rewards.js';
 import { memoryHash, dungeonMemoryText } from '../src/memory.js';
 import { characterGenerationPlan } from '../src/character-generation.js';
-import { upgradeCharacterIdentity } from '../src/ai/character-identity-upgrade.js';
+import { syncBuiltinWorldbook } from '../src/ai/worldbook.js';
 import { createWorldbookStore } from '../server/worldbook-store.mjs';
 import { createBrowserStores } from '../src/ai/browser-stores.js';
 import { generationRequest } from '../server/prompts.mjs';
@@ -168,9 +170,17 @@ test('active recommendations approximate eighty percent and identity migration i
   }
   assert(active / 2000 > 0.75 && active / 2000 < 0.85);
   const source = { entries: { 0: { content: '玩家自己的世界观' } } };
-  const updated = upgradeCharacterIdentity(source, '新增写作要求');
+  const builtin = {
+    entries: {
+      1: {
+        content: '新增写作要求',
+        extensions: { wanxiang: { generationRule: 'character-identity' } },
+      },
+    },
+  };
+  const updated = syncBuiltinWorldbook(source, builtin);
   assert.equal(updated.entries[0].content, '玩家自己的世界观');
-  assert.deepEqual(upgradeCharacterIdentity(updated, '其他文本'), updated);
+  assert.deepEqual(syncBuiltinWorldbook(updated, builtin), updated);
 });
 
 test('browser and service really inject the v40 identity rule into character requests only', async () => {
@@ -190,7 +200,6 @@ test('browser and service really inject the v40 identity rule into character req
     (file) => readFile(new URL('../prompts/' + file, import.meta.url), 'utf8'),
     book,
   );
-  assert.equal(values.get('world.character-identity.v40'), true);
   for (const worlds of [server, browser.worlds]) {
     const input = { brief: '有明确说话习惯的旅人', rollId: 'identity-live' };
     const request = await generationRequest('character', input, undefined, {
@@ -212,4 +221,95 @@ test('browser and service really inject the v40 identity rule into character req
       ),
     );
   }
+});
+
+test('level growth scales DoTs, mana, passives and non-damage enemy intents while keeping bonus damage-only', () => {
+  const level = 15;
+  const scale = combatScale(level);
+  const member = {
+    id: 'test-hero',
+    growth: { level, xp: 0, rarity: 'common', seed: 1, bonus: {} },
+    combat: {
+      hp: 50,
+      mp: 20,
+      attack: 10,
+      limit: 1,
+      skills: [
+        {
+          id: 'dot-mana',
+          name: '毒泉',
+          ap: 1,
+          mp: 4,
+          target: 'enemy',
+          effects: [
+            { type: 'buff', buff: 'poison', value: 4 },
+            { type: 'buff', buff: 'bleed', value: 3 },
+            { type: 'buff', buff: 'weak', value: 2 },
+            { type: 'selfMana', value: 4 },
+          ],
+          text: '',
+        },
+        {
+          id: 'passive-heal',
+          name: '守望',
+          passive: true,
+          location: '全战斗',
+          endHeal: 3,
+          text: '',
+        },
+        {
+          id: 'passive-rules',
+          name: '反震',
+          passive: true,
+          rules: [
+            {
+              mode: 'event',
+              event: 'damageTaken',
+              conditions: [{ type: 'front' }],
+              target: 'self',
+              effects: [
+                { type: 'shield', value: 4 },
+                { type: 'buff', buff: 'bleed', value: 2, target: 'attacker' },
+              ],
+              limit: 2,
+              scope: 'round',
+            },
+          ],
+          text: '',
+        },
+      ],
+    },
+  };
+  const grown = grownCombat(member);
+  assert.equal(grown.skills[0].effects[0].value, Math.round(4 * scale));
+  assert.equal(grown.skills[0].effects[1].value, Math.round(3 * scale));
+  assert.equal(grown.skills[0].effects[2].value, 2);
+  assert.equal(grown.skills[0].effects[3].value, Math.round(4 * Math.sqrt(scale)));
+  assert.equal(grown.skills[1].endHeal, Math.round(3 * scale));
+  assert.match(grown.skills[1].text, new RegExp(`回复${Math.round(3 * scale)}hp`));
+  assert.equal(grown.skills[2].rules[0].effects[0].value, Math.round(4 * scale));
+  assert.equal(grown.skills[2].rules[0].effects[1].value, Math.round(2 * scale));
+
+  const supportMove = {
+    name: '毒雾护壳',
+    text: '',
+    slots: [0],
+    selfShield: 6,
+    selfHeal: 5,
+    selfBuff: { poison: 2 },
+    effects: [
+      { type: 'heal', target: 'allAllies', value: 8 },
+      { type: 'buff', target: 'opponents', buff: 'poison', value: 4 },
+      { type: 'buff', target: 'opponents', buff: 'vulnerable', value: 2 },
+    ],
+  };
+  assert.equal(leveledIntent(supportMove, 5, 1), supportMove);
+  const scaledEnemy = leveledIntent(supportMove, 0, scale);
+  assert.equal(scaledEnemy.effects[0].value, Math.round(8 * scale));
+  assert.equal(scaledEnemy.effects[1].value, Math.round(4 * scale));
+  assert.equal(scaledEnemy.effects[2].value, 2);
+  assert.equal(scaledEnemy.selfShield, Math.round(6 * scale));
+  assert.equal(scaledEnemy.selfHeal, Math.round(5 * scale));
+  assert.equal(scaledEnemy.selfBuff.poison, Math.round(2 * scale));
+  assert.match(scaledEnemy.text, new RegExp(`${Math.round(6 * scale)}护盾`));
 });

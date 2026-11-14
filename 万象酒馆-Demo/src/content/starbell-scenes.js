@@ -122,7 +122,7 @@ export const STARBELL_SCENES = {
         anchor: panoramaAnchor(0.31, 0.65),
         text: '支撑木没有固定，仍堆放在门边。守卫说庆典期间会让出这条路供商队通行。',
       },
-      exit('outskirts', '出城 · 前往旧哨塔', panoramaAnchor(0.475, 0.62)),
+      exit('outskirts', '前往旧哨塔', panoramaAnchor(0.475, 0.62)),
       exit('city-center', '返回星钟广场', panoramaAnchor(0.85, 0.63)),
       exit('market', '前往灯匠商业街', panoramaAnchor(0.14, 0.63)),
     ],

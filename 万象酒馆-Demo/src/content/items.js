@@ -71,7 +71,7 @@ export const ITEMS = Object.freeze(
         '#edbd75',
         30,
         [{ type: 'buff', buff: 'strength', value: 1 }],
-        '获得1层力量，每层使直接伤害增加20%，共享常规增伤上限50%。',
+        '获得1层力量，每层使直接伤害增加10%。',
       ),
       potion(
         'fine-strength-potion',
@@ -79,7 +79,7 @@ export const ITEMS = Object.freeze(
         '#ef954a',
         60,
         [{ type: 'buff', buff: 'strength', value: 2 }],
-        '获得2层力量，每层使直接伤害增加20%，共享常规增伤上限50%。',
+        '获得2层力量，每层使直接伤害增加10%。',
       ),
       potion(
         'recovery-potion',

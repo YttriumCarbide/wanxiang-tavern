@@ -15,6 +15,7 @@ import {
   pendingAdventureMemories,
   withInvitationMemories,
   journeyMemories,
+  journeyContinuity,
 } from '../src/memory.js';
 import { chatInput } from '../src/ai/pipeline/chat-request.js';
 import { journeyMemoryBook } from '../src/ai/journey-memory-worldbook.js';
@@ -55,6 +56,40 @@ test('completed dungeon summaries replace split Gal originals in every history p
 import { newLibrary, restoreLibrary } from '../src/ai/library.js';
 import { createAiApi } from '../server/ai-api.mjs';
 import { summaryPlan, summaryRequest, summaryResponse } from '../server/summary-request.mjs';
+
+test('continuity counts ten source experiences and interleaves dated tavern activity', () => {
+  const library = newLibrary();
+  library.history = Array.from({ length: 12 }, (_, index) => ({
+    runId: 'layer-' + index,
+    title: '层 ' + index,
+    adventureVersion: 1,
+    complete: true,
+    finishedAt: index * 2,
+    gameTime: '第 2 天 · 中午',
+    lines: [{ text: '实际经过 ' + index }],
+  }));
+  library.journeyActivities.push({
+    kind: 'service',
+    title: '营业完成',
+    finishedAt: 9,
+    gameTime: '第 2 天 · 中午',
+  });
+  const three = pendingAdventureMemories(library).slice(2, 5);
+  assert(three.every(({ gameTime }) => gameTime === '第 2 天 · 中午'));
+  const summaries = summaryResponse(
+    JSON.stringify({
+      items: three.map(({ id }) => ({ id, summary: '简短摘要' })),
+    }),
+    three,
+  );
+  applyMemorySummaries(library, [], three, summaries);
+  const continuity = journeyContinuity(library);
+  assert.equal(continuity.filter(({ id }) => id).length, 10);
+  assert.equal(continuity[0].id, 'dungeon:layer-2');
+  assert.match(continuity[0].text, /第 2 天 · 中午.*简短摘要/);
+  assert.equal(continuity[3].kind, 'service');
+  assert.equal(pendingAdventureMemories(library).length, 9);
+});
 
 test('a completed overland story is sent in full until summarized and then uses five recall words and its ID', () => {
   const library = newLibrary();
@@ -306,7 +341,7 @@ test('summary planning splits every item within context and output budgets witho
   );
 });
 
-test('real summary API uses its own connection and built-in prompt without presets, regex or worldbooks', async () => {
+test('real summary API uses its own preset and worldbook rules without leaking tavern lore, characters or history', async () => {
   const directory = await mkdtemp(path.join(process.cwd(), '.runtime/tests/summary-api-'));
   const calls = [];
   let omit = false;
@@ -318,7 +353,10 @@ test('real summary API uses its own connection and built-in prompt without prese
     fetchImpl: async (_url, options) => {
       const payload = JSON.parse(options.body);
       calls.push(payload);
-      const items = JSON.parse(payload.messages.at(-1).content).items;
+      const userMessage = payload.messages.find(
+        (message) => message.role === 'user' && message.content.startsWith('{"items"'),
+      );
+      const items = JSON.parse(userMessage.content).items;
       return Response.json({
         choices: [
           {
@@ -372,6 +410,8 @@ test('real summary API uses its own connection and built-in prompt without prese
     assert.equal(result.data.usage.input, 123);
     assert.equal(calls[0].model, 'memory-model');
     assert.equal(calls[0].stream, false);
+    assert(JSON.stringify(calls[0]).includes('每个item独立总结'));
+    assert(!JSON.stringify(calls[0]).includes('长景月汐'));
     assert(!JSON.stringify(calls[0]).includes('禁止额外'));
     assert(!JSON.stringify(calls[0]).includes('wanxiang_json'));
     assert(!JSON.stringify(result.data).includes(connection.apiKey));
@@ -380,7 +420,11 @@ test('real summary API uses its own connection and built-in prompt without prese
     assert.equal(calls.length, 2, 'failed summaries are not automatically retried');
     assert.equal(
       (await post('prompts/select', { kind: 'summary', id: 'chat-default' })).status,
-      400,
+      200,
+    );
+    assert.equal(
+      (await post('prompts/select', { kind: 'summary', id: 'summary-default' })).status,
+      200,
     );
   } finally {
     await new Promise((resolve) => server.close(resolve));

@@ -53,7 +53,7 @@ export async function credentialPersistenceChecks({ browser, baseURL, output }) 
     const library = newCampaign(defaultProtagonist());
     Object.assign(library.campaign, { completed: true, firstRecruit: true, tutorial: 'done' });
     const profiles = createConnectionStore().visible();
-    for (const [kind, profile] of Object.entries(profiles))
+    for (const profile of Object.values(profiles))
       Object.assign(profile, {
         baseUrl: 'https://persistence-fixture.invalid/v1',
         model: 'fixture-model',
@@ -61,7 +61,7 @@ export async function credentialPersistenceChecks({ browser, baseURL, output }) 
         requestMode: 'browser',
         rememberKey: false,
         apiPresetId: 'api-old',
-        promptPresetId: kind === 'summary' ? null : 'prompt-credential-test',
+        promptPresetId: 'prompt-credential-test',
       });
     await page.evaluate(
       async ({ profiles, library }) => {

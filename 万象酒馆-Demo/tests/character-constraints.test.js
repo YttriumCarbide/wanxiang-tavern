@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile, mkdtemp, writeFile } from 'node:fs/promises';
+import { readFile, mkdtemp } from 'node:fs/promises';
 import path from 'node:path';
 import { characterGenerationPlan, characterConstraintText } from '../src/character-generation.js';
 import { characterOutputSchema } from '../src/ai/character-schema.js';
@@ -10,8 +10,7 @@ import { compactCharacterDocument } from './fixtures/ai.js';
 import { generationInput } from '../src/ai/pipeline/prompts.js';
 import { generationRequest } from '../server/prompts.mjs';
 import { createWorldbookStore } from '../server/worldbook-store.mjs';
-import { upgradeCharacterConstraints } from '../src/ai/character-constraints-upgrade.js';
-import { newWorldEntry } from '../src/ai/worldbook.js';
+import { newWorldEntry, syncBuiltinWorldbook } from '../src/ai/worldbook.js';
 import { createBrowserStores } from '../src/ai/browser-stores.js';
 import { createAiPipeline } from '../src/ai/pipeline/runtime.js';
 import { createWorldbookCounter } from '../server/character-reader.mjs';
@@ -112,7 +111,9 @@ test('low-tier event error identifies the actual tier and required tier without 
   );
 });
 test('constraint migration is additive, editable, idempotent and limited to character requests', async () => {
-  const content = await readText('worldbook/character-complexity.md');
+  const builtin = JSON.parse(
+    await readFile(new URL('../assets/builtin-worldbook.json', import.meta.url), 'utf8'),
+  );
   const source = {
     name: '玩家世界书',
     entries: {
@@ -125,16 +126,17 @@ test('constraint migration is additive, editable, idempotent and limited to char
       },
     },
   };
-  const upgraded = upgradeCharacterConstraints(source, content);
-  assert.deepEqual(upgraded.entries[0], source.entries[0]);
+  const upgraded = syncBuiltinWorldbook(source, builtin);
+  assert.equal(upgraded.entries[0].content, source.entries[0].content);
+  assert.equal(upgraded.entries[0].disable, true);
   const entry = Object.values(upgraded.entries).find(
-    (e) => e.extensions?.wanxiang?.generationRule === 'character-complexity',
+    (e) => e.extensions?.wanxiang?.generationRule === 'character-output',
   );
   assert.deepEqual(entry.apiTargets, ['character']);
   assert.equal(entry.ignoreBudget, true);
   entry.content += '\n玩家编辑';
   entry.disable = true;
-  assert.deepEqual(upgradeCharacterConstraints(upgraded, content), upgraded);
+  assert.deepEqual(syncBuiltinWorldbook(upgraded, builtin), upgraded);
   assert.equal(Object.keys(source.entries).length, 1);
 });
 test('server and browser stores inject the same current-tier instruction and narrowed schema', async () => {
@@ -144,28 +146,10 @@ test('server and browser stores inject the same current-tier instruction and nar
   );
   const server = await createWorldbookStore(directory);
   const { book } = await server.get('tavern-world');
-  const records = new Map([
-    ['world.book.tavern-world', book],
-    ...[
-      'game-rules.v26',
-      'asset-rules.v27',
-      'protagonist-rules.v28',
-      'battle-display.v29',
-      'ruins-roster.v30',
-      'tutorial-equipment.v31',
-      'enemy-appearances.v32',
-      'character-generation.v33',
-      'continuity.v34',
-      'generation-experience.v35',
-      'status-emblems.v36',
-      'universal-enemies.v37',
-    ].map((id) => ['world.' + id, true]),
-  ]);
-  // Simulate an installed v37 browser whose existing prose must be preserved.
+  const records = new Map([['world.book.tavern-world', book]]);
   const old = structuredClone(book);
   for (const [id, entry] of Object.entries(old.entries))
-    if (entry.extensions?.wanxiang?.generationRule === 'character-complexity')
-      delete old.entries[id];
+    if (entry.extensions?.wanxiang?.generationRule === 'character-output') delete old.entries[id];
   records.set('world.book.tavern-world', old);
   const database = {
     get: (key) => structuredClone(records.get(key)),
@@ -175,7 +159,6 @@ test('server and browser stores inject the same current-tier instruction and nar
     },
   };
   const browser = await createBrowserStores(database, readText, book);
-  assert.equal(records.get('world.character-constraints.v38'), true);
   for (const level of [1, 3, 4, 6])
     for (const worlds of [server, browser.worlds]) {
       const input = { brief: '白翼巡狩者', rollId: 'constraints-' + level, complexity: level };
@@ -199,10 +182,9 @@ test('server and browser stores inject the same current-tier instruction and nar
       );
       assert(combined.includes(expected), 'Visible @D must contain this request’s narrowed schema');
     }
-  await writeFile(path.join(directory, 'builtin-content.json'), JSON.stringify({ version: 37 }));
   const restarted = await createWorldbookStore(directory);
   const again = Object.values((await restarted.get('tavern-world')).book.entries).filter(
-    (e) => e.extensions?.wanxiang?.generationRule === 'character-complexity',
+    (e) => e.extensions?.wanxiang?.generationRule === 'character-output',
   );
   assert.equal(again.length, 1);
 });

@@ -77,10 +77,12 @@ body.gal-playing #battle :is(.unit-layer, #intent-layer) {
   visibility: hidden;
 }
 body.gal-playing
-  dialog:not(.raw-response):not(#generation-diagnostics):not(:has(> #gal-stage:not([hidden]))) {
+  dialog:not(.raw-response):not(#generation-diagnostics):not(.workshop-layer):not(
+    :has(> #gal-stage:not([hidden]))
+  ) {
   visibility: hidden;
 }
-body.gal-playing dialog::backdrop {
+body.gal-playing dialog:not(.workshop-layer)::backdrop {
   background: transparent;
   backdrop-filter: none;
 }

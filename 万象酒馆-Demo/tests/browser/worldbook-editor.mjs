@@ -16,7 +16,7 @@ export async function worldbookEditorChecks({ page, output }) {
   const originalName = await expanded.locator('[data-world-head="comment"]').inputValue();
   assert(originalName.includes('JSON输出格式'));
   const body = page.locator('[data-world-field="content"]');
-  assert((await body.inputValue()).includes('SCRIPT v4'));
+  assert((await body.inputValue()).includes('SCRIPT v5'));
   await page.waitForFunction(() =>
     document.querySelector('#world-entry-tokens').textContent.match(/Token: \d+/),
   );

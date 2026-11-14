@@ -3,6 +3,7 @@ import { readOutputTags } from '../output-tags.js';
 import { validateTaskReply } from '../../adventure/state.js';
 import { normalizeInvitationTurn } from '../../invitation.js';
 import { BODY_TAGS, OUTPUT_TAG } from '../output-protocol.js';
+import { normalizeQuestLead } from '../../tavern-quests.js';
 
 export async function chatResponse(kind, content, scripts, input = {}, runRegexTasks) {
   scripts = chatRegexScripts(kind, scripts);
@@ -11,6 +12,8 @@ export async function chatResponse(kind, content, scripts, input = {}, runRegexT
   let adventure;
   let invitation;
   let dialogue;
+  let quest;
+  let questNegotiation;
   const invalidAdventure = [];
   if (kind === 'quick-chat' || kind === 'chat') {
     const sections = readOutputTags(content, [
@@ -37,6 +40,21 @@ export async function chatResponse(kind, content, scripts, input = {}, runRegexT
     const body = bodies[0];
     if (!body.content.trim()) throw Error(`${OUTPUT_TAG}标签内的正文不能为空`);
     text = body.content.trim();
+    if (input.questOffer) {
+      try {
+        const leads = readOutputTags(content, [{ tag: 'wanxiang_quest', json: true }]);
+        if (leads.length === 1 && leads[0].start >= body.end)
+          quest = normalizeQuestLead(JSON.parse(leads[0].content));
+      } catch {
+        // A malformed optional lead does not discard the dialogue.
+      }
+    }
+    if (input.questNegotiation) {
+      const response = readOutputTags(content, [{ tag: 'wanxiang_negotiation', json: true }]);
+      const score = response.length === 1 ? JSON.parse(response[0].content).score : null;
+      if (!Number.isInteger(score) || score < 0 || score > 5) throw Error('缺少有效的交涉评分');
+      questNegotiation = score;
+    }
     if (input.dialogueScenes?.length) {
       try {
         const section = readOutputTags(content, [{ tag: 'wanxiang_dialogue', json: true }])[0];
@@ -111,5 +129,7 @@ export async function chatResponse(kind, content, scripts, input = {}, runRegexT
     ...(adventure ? { adventure } : {}),
     ...(invitation ? { invitation } : {}),
     ...(dialogue ? { dialogue } : {}),
+    ...(quest ? { quest } : {}),
+    ...(questNegotiation !== undefined ? { questNegotiation } : {}),
   };
 }

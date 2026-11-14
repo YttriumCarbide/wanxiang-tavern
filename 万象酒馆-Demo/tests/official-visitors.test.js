@@ -10,8 +10,9 @@ import {
   makeReposition,
 } from '../src/engine.js';
 import { newLibrary, officialCharacter, compileRoster, restoreLibrary } from '../src/ai/library.js';
+import { readFile } from 'node:fs/promises';
 import { officialSummonPool } from '../src/summoning.js';
-import { upgradeFrostWorldbook } from '../src/ai/frost-worldbook.js';
+import { syncBuiltinWorldbook } from '../src/ai/worldbook.js';
 import { applyCompanionModifiers, canSoulRevive } from '../src/companion-mechanics.js';
 import { applyEncounterGrowth } from '../src/growth.js';
 import { abilityFor } from '../src/catalog.js';
@@ -19,7 +20,6 @@ import { statusIcons } from '../src/ui.js';
 import { combatCues } from '../src/audio/cues.js';
 import { playbackBeats } from '../src/playback-timing.js';
 import { OFFICIAL_VISITORS } from '../src/content/official-visitors.js';
-import { TOWN_GUESTS } from '../src/content/town-guests.js';
 import { normalizeCharacterSetting } from '../src/ai/character-setting.js';
 
 function party(visitor, slot = 'aegis') {
@@ -47,9 +47,12 @@ function planning(state) {
   return state;
 }
 
-test('both visitors join official summon pool, survive save restoration and compile into occupied slots', () => {
+test('both visitors join official summon pool, survive save restoration and compile into occupied slots', async () => {
+  const builtin = JSON.parse(
+    await readFile(new URL('../assets/builtin-worldbook.json', import.meta.url), 'utf8'),
+  );
   const library = newLibrary(),
-    book = upgradeFrostWorldbook({ entries: {} });
+    book = syncBuiltinWorldbook({ entries: {} }, builtin);
   for (const name of ['luo-gongxu', 'silica-laps']) {
     const member = officialSummonPool(library, book).find(
       (entry) => entry.id === 'official-' + name,
@@ -78,9 +81,7 @@ test('both visitors join official summon pool, survive save restoration and comp
     officialSummonPool(restored, book)
       .map((entry) => entry.id)
       .sort(),
-    Object.keys(TOWN_GUESTS)
-      .map((id) => 'official-' + id)
-      .sort(),
+    ['official-edith'],
   );
 });
 

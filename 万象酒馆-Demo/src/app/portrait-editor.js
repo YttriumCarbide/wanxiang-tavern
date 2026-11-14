@@ -1,5 +1,6 @@
 import { readPortraitFromUrl, portraitUrl, readFileAsOptimizedImage } from '../portraits.js';
 import { query as $ } from './dom.js';
+import { CHARACTER_IMAGE_PROMPTS } from '../content/portrait-templates.js';
 
 /** Remote images are imported once into the same optimized local portrait path as uploads. */
 export function createPortraitEditor(context) {
@@ -21,7 +22,17 @@ export function createPortraitEditor(context) {
   upload.textContent = '选择本地原图';
   const reset = document.createElement('button');
   reset.textContent = '恢复此类默认图片';
-  $('#portrait-url-apply').after(upload, reset, local);
+  const promptButton = document.createElement('button');
+  promptButton.type = 'button';
+  promptButton.textContent = '获取立绘提示词';
+  $('#portrait-url-apply').after(upload, reset, promptButton, local);
+  const promptOutput = document.createElement('textarea');
+  promptOutput.readOnly = true;
+  promptOutput.hidden = true;
+  promptOutput.rows = 6;
+  promptOutput.className = 'portrait-prompt-output';
+  promptOutput.setAttribute('aria-label', '立绘提示词');
+  dialog.querySelector('header').after(promptOutput);
   function preview() {
     const combat = context.session.ai.library.characters.find(
       (entry) => entry.id === heroId,
@@ -43,6 +54,7 @@ export function createPortraitEditor(context) {
     const next = event.target.closest('[data-portrait-kind]');
     if (next && !request) {
       kind = next.dataset.portraitKind;
+      promptOutput.hidden = true;
       preview();
     }
   });
@@ -54,6 +66,35 @@ export function createPortraitEditor(context) {
     if (!request) {
       context.shell.setCustomPortrait(heroId, null, kind);
       preview();
+    }
+  });
+  context.events.on(promptButton, 'click', async () => {
+    const member = context.session.ai.library.characters.find((entry) => entry.id === heroId);
+    if (!member) return;
+    const type = kind;
+    promptButton.disabled = true;
+    try {
+      const { book } = await context.apiClient.request('worldbooks/tavern-world');
+      if (!dialog.open || member.id !== heroId || type !== kind) return;
+      const entry = Object.values(book.entries).find(
+        (item) => item.extensions?.wanxiang?.characterId === member.id,
+      );
+      const lore = entry?.content || member.setting.worldbook || member.setting.name;
+      const text = `${CHARACTER_IMAGE_PROMPTS[type]}\n\n角色设定\n${lore}`;
+      promptOutput.value = text;
+      promptOutput.hidden = false;
+      promptOutput.focus();
+      promptOutput.select();
+      try {
+        await navigator.clipboard.writeText(text);
+        $('#portrait-url-status').textContent = '提示词已复制';
+      } catch {
+        $('#portrait-url-status').textContent = '提示词已选中，可复制';
+      }
+    } catch (failure) {
+      $('#portrait-url-status').textContent = failure.message;
+    } finally {
+      promptButton.disabled = false;
     }
   });
   context.events.on(local, 'change', async () => {
@@ -119,6 +160,7 @@ export function createPortraitEditor(context) {
     open(id) {
       heroId = id;
       kind = 'card';
+      promptOutput.hidden = true;
       $('#portrait-url').value = '';
       $('#portrait-url-preview').src = portraitUrl(
         context.session.ai.library.characters.find((entry) => entry.id === id)?.combat,

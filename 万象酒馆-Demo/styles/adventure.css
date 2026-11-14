@@ -445,18 +445,18 @@ body.in-adventure #mode-label {
 #automatic-memory {
   position: fixed;
   z-index: 60;
-  bottom: 20px;
-  left: 50%;
-  translate: -50% 0;
+  top: max(112px, 16vh);
+  right: max(12px, env(safe-area-inset-right));
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 18px;
-  width: min(620px, 88vw);
+  gap: 5px;
+  padding: 4px 8px;
+  width: max-content;
+  max-width: min(330px, 64vw);
   color: #dfd1bb;
   background: #211d29e8;
   border-bottom: 1px solid #c1a07588;
-  font-size: 13px;
+  font-size: 12px;
   box-shadow: 0 8px 24px #0004;
 }
 #automatic-memory button {

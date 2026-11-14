@@ -2,6 +2,16 @@ export function relationship(library, id) {
   return library.relationships?.[id] || { affection: 0, gains: 0, agreed: false };
 }
 
+export function affectionRank(points = 0) {
+  const total = Math.max(0, Number.isSafeInteger(points) ? points : 0);
+  return { level: Math.floor(total / 100), progress: total % 100 };
+}
+
+export function affectionLabel(points) {
+  const { level, progress } = affectionRank(points);
+  return `好感 Lv.${level} · ${progress}/100`;
+}
+
 export function resetRelationshipGains(library) {
   for (const value of Object.values(library.relationships || {})) value.gains = 0;
 }
@@ -22,7 +32,7 @@ export function applyRelationshipActions(library, actions = {}, residents = []) 
     const state = (library.relationships[item.id] ||= { ...relationship(library, item.id) });
     if (state.gains >= 3 || !Number.isInteger(item.delta) || item.delta < 1 || item.delta > 5)
       continue;
-    const gain = Math.min(item.delta, 100 - state.affection);
+    const gain = Math.min(item.delta, Number.MAX_SAFE_INTEGER - state.affection);
     if (gain <= 0) continue;
     state.affection += gain;
     state.gains++;

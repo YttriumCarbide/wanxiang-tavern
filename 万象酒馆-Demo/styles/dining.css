@@ -138,19 +138,6 @@
   font-weight: 400;
   letter-spacing: 0.09em;
 }
-#dining-dialog h3::before {
-  color: rgba(226, 186, 111, 0.66);
-  font:
-    10px/1 Georgia,
-    serif;
-  letter-spacing: 0;
-}
-.meal-company h3::before {
-  content: '01';
-}
-.meal-menu h3::before {
-  content: '02';
-}
 #dining-dialog small {
   display: block;
   color: #b5a68f;
@@ -425,6 +412,31 @@
 [data-meal-start] {
   grid-column: 2;
   grid-row: 1 / 3;
+}
+@media (min-width: 901px) and (min-height: 521px) {
+  .dining-body {
+    display: grid;
+    grid-template-columns: minmax(245px, 0.9fr) minmax(0, 2.1fr);
+    grid-template-rows: minmax(0, 1fr) auto;
+    align-items: stretch;
+  }
+  .meal-company {
+    display: flex;
+    flex-direction: column;
+    grid-row: span 2;
+    min-height: 0;
+  }
+  [data-meal-members] {
+    display: grid;
+    align-content: start;
+    overflow: auto;
+    padding: 2px 5px 6px 2px;
+    touch-action: pan-y;
+  }
+  [data-meal-foods] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-content: start;
+  }
 }
 #dining-dialog .meal-shortage {
   color: #e59a82;

@@ -1,5 +1,4 @@
 import { compileRoster } from '../ai/library.js';
-import { officialDungeonFor } from '../content/official-dungeons.js';
 
 /** One existing draggable preparation screen, then the same screen with a locked party. */
 export function createDeparture(context) {
@@ -18,7 +17,7 @@ export function createDeparture(context) {
   guidance.className = 'departure-guidance';
   guidance.hidden = true;
   guidance.innerHTML =
-    '<strong>这次想经历怎样的故事？</strong><textarea rows="2" maxlength="2000" placeholder="选填：想遇见的人、氛围、事件，或希望故事往哪个方向发展……"></textarea>';
+    '<strong>这次想做什么，或想说什么？</strong><textarea rows="2" maxlength="2000" placeholder="选填，可以直接出发"></textarea>';
   panel.querySelector('.prepare-body').before(guidance);
   let active = null;
   events.on(supplies, 'click', (event) => {
@@ -28,7 +27,7 @@ export function createDeparture(context) {
   function open({ selection = false, pending = false, onCancel } = {}) {
     if (active) return active;
     session.ai.formationLocked = !selection;
-    guidance.hidden = !selection || !!officialDungeonFor(session.journey.selectedNode);
+    guidance.hidden = !selection;
     guidance.querySelector('textarea').value = '';
     context.shell.renderParty();
     title.textContent = selection

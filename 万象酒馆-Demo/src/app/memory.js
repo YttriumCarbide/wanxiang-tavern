@@ -26,16 +26,17 @@ export function createMemory(context) {
     if (pendingAdventureMemories(library).length < 3) return;
     const controller = new AbortController();
     autoRequest = controller;
-    automatic.hidden = false;
+    automatic.hidden = true;
     automatic.querySelector('[data-summary-retry]').hidden = true;
     const message = (text) => {
       automatic.querySelector('span').textContent = text;
     };
-    try {
+    async function summarize() {
       while (library === session.ai.library && !session.runtime.disposed) {
+        controller.signal.throwIfAborted();
         const snapshot = pendingAdventureMemories(library).slice(0, 3);
         if (snapshot.length < 3) break;
-        message('正在整理三段经历 · 每次副本、外出或约见各一份');
+        automatic.hidden = true;
         const plan = await chatApi(
           'summary/plan',
           { items: snapshot },
@@ -49,7 +50,7 @@ export function createMemory(context) {
             {
               items: batch.ids.map((id) => byId.get(id)),
             },
-            { signal: controller.signal },
+            { signal: controller.signal, background: true },
           );
           controller.signal.throwIfAborted();
           items.push(...response.items);
@@ -64,9 +65,15 @@ export function createMemory(context) {
           throw failure;
         }
         message('三段经历的总结已保存');
+        automatic.hidden = false;
       }
+    }
+    try {
+      if (context.mapExpansion) await context.mapExpansion.afterMaps(summarize);
+      else await summarize();
     } catch (failure) {
       if (library === session.ai.library && !session.runtime.disposed) {
+        automatic.hidden = false;
         message('经历总结未完成：' + failure.message + '。原记录保留，可稍后重试。');
         automatic.querySelector('[data-summary-retry]').hidden = false;
       }

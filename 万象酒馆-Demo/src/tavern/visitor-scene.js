@@ -1,5 +1,7 @@
 import { createTavernVisitors } from './visitors.js';
 import { TAVERN_VISITORS, SCENE_VISITOR_SPOTS } from '../content/tavern-visitors.js';
+import { SILVER_CROWN_PLACES } from '../content/silver-crown-scenes.js';
+import { ETERNAL_CITY_PLACES, ETERNAL_CITY_VISITOR_SPOTS } from '../content/eternal-city-scenes.js';
 
 /** Shared by the hall, upstairs rooms and painted outdoor locations. */
 export async function createSceneVisitors({
@@ -15,7 +17,14 @@ export async function createSceneVisitors({
   flat = false,
 }) {
   const visitors = createTavernVisitors(scene, camera, model, {
-    spots: SCENE_VISITOR_SPOTS[sceneId],
+    spots:
+      SILVER_CROWN_PLACES[sceneId]?.spots.map((_, index) => ({
+        id: `crown-spot-${index}`,
+        position: [0, 0, 0],
+      })) ||
+      (Object.hasOwn(ETERNAL_CITY_PLACES, sceneId)
+        ? ETERNAL_CITY_VISITOR_SPOTS.map((id) => ({ id, position: [0, 0, 0] }))
+        : SCENE_VISITOR_SPOTS[sceneId]),
     maxVisible: sceneId === 'tavern' ? 3 : 2,
     assets,
     onChange,

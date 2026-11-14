@@ -78,6 +78,89 @@ test('unreviewed preset callbacks remain rejected instead of being executed', ()
     );
 });
 
+test(
+  'Meowssiah 2.0.10 uses the game protocol directly from the unmodified imported preset',
+  { skip: !process.env.WANXIANG_TEST_MEOWSSIAH_PRESET_FILE },
+  async () => {
+    const bytes = await readFile(process.env.WANXIANG_TEST_MEOWSSIAH_PRESET_FILE);
+    const { preset } = normalizePromptPreset(
+      JSON.parse(bytes.toString('utf8').replace(/^\uFEFF/u, '')),
+      'meowssiah-local-test',
+    );
+    const original = structuredClone(preset);
+    const world = JSON.parse(
+      await readFile(new URL('../assets/builtin-worldbook.json', import.meta.url), 'utf8'),
+    );
+    const pipeline = createAiPipeline({
+      worlds: {
+        resolve: async () => ({ books: [structuredClone(world)], settings: {}, state: {} }),
+        commit: async () => {},
+      },
+      settings: {
+        get: () => ({
+          model: 'local-mock',
+          tokenField: 'max_tokens',
+          maxTokens: 32768,
+          contextSize: 400000,
+          promptProcessing: 'merge_tools',
+        }),
+      },
+      regexStore: { get: () => [] },
+      helperStorage: { get: () => ({}) },
+      countTokens: (text) => Math.ceil(text.length / 3),
+      readText,
+      runRegexTasks,
+    });
+    const party = [{ id: 'traveller', name: '旅人', worldbook: '一位谨慎的旅人。' }];
+    const cases = {
+      character: { brief: '设计旅人', rollId: 'meowssiah-test' },
+      script: { brief: '探索遗迹', party, boss: 'bossGate' },
+      map: { brief: '潮灯之国' },
+      creation: {
+        items: [
+          {
+            id: 'ore',
+            name: '晶石',
+            description: '旧物',
+            value: 50,
+            map: 'forest',
+            script: '在回廊找到的晶体。',
+          },
+        ],
+      },
+      chat: { text: '倒一杯茶', place: 'bar', characters: party, selected: [], history: [] },
+      'quick-chat': { text: '接下来呢', characters: party, history: [] },
+    };
+    for (const [kind, input] of Object.entries(cases)) {
+      const prepared = await pipeline.buildRequest(kind, input, preset);
+      const text = prepared.messages.map(({ content }) => content).join('\n');
+      assert.equal(prepared.transport.processingStatus.compatibility, 'meowssiah-2.0.10');
+      assert.equal(prepared.transport.outputTool, undefined);
+      assert.equal(prepared.transport.contextTool, undefined);
+      assert.match(text, /wanxiang_output/u);
+      assert.doesNotMatch(
+        text,
+        /<run_tool_replacement>|<<<\|catgodml\||<8wanxiang_output>|soliumbra_reply/u,
+      );
+      if (kind === 'quick-chat') {
+        const reply = await pipeline.acceptResult(
+          { kind, input, source: preset, prepared },
+          {
+            content: '<wanxiang_output>继续前进。</wanxiang_output>',
+          },
+        );
+        assert.equal(reply.content, '继续前进。');
+      }
+    }
+    assert.deepEqual(preset, original);
+    assert.deepEqual(await readFile(process.env.WANXIANG_TEST_MEOWSSIAH_PRESET_FILE), bytes);
+    const unknown = structuredClone(preset);
+    unknown.extensions.SPreset.OutputPreprocessing.toolCallFormatter.script +=
+      '\n/* different callback */';
+    assert.throws(() => presetProcessing(unknown), /工具输出格式化脚本版本未适配/u);
+  },
+);
+
 function toolReply(content, stream) {
   const argumentsText = JSON.stringify({ content });
   if (!stream)

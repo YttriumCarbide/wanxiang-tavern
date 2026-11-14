@@ -3,11 +3,19 @@ import { html } from '../shared/html.js';
 import { HEROES, BOSSES } from '../data.js';
 import { escapeText } from '../ui.js';
 import { query as $ } from './dom.js';
-import { portraitUrl, saveCustomPortrait } from '../portraits.js';
+import { portraitUrl, saveCustomPortrait, UNKNOWN_STANDING } from '../portraits.js';
 import { preparationEquipment } from './equipment.js';
 import { TAVERN_VISITORS } from '../content/tavern-visitors.js';
 import { explorationHref } from '../exploration/scenes.js';
-import { dailySceneTime } from '../daily.js';
+import { tavernTime } from '../daily.js';
+import { grownCombat } from '../growth.js';
+import { affectionLabel, relationship } from '../relationships.js';
+import {
+  SERVICE_ROLES,
+  serviceProficiency,
+  serviceAutoChance,
+  serviceWaitBonus,
+} from '../service-progression.js';
 
 /** @param {import('./context.js').AppContext} context */
 export function createShell(context) {
@@ -27,7 +35,7 @@ export function createShell(context) {
     if (context.daily?.onInvitation()) return context.shell.toast('请先在约见中结束本次同行。');
     if (context.daily?.returnOuting()) return;
     context.chat?.leave();
-    context.chapter?.goHome();
+    context.daily?.goHome();
   });
   context.events.on(visitorRefresh, 'click', () => {
     document
@@ -73,7 +81,7 @@ export function createShell(context) {
     const frame = document.createElement('iframe');
     frame.src =
       returnTo && !['gate', 'tavern'].includes(returnTo)
-        ? explorationHref(returnTo, dailySceneTime(session.ai.library.daily?.active))
+        ? explorationHref(returnTo, tavernTime(session.ai.library.daily))
         : session.ai.library.campaign?.tutorial === 'arrival'
           ? './tavern.html?arrival=1'
           : returnTo === 'gate'
@@ -97,7 +105,7 @@ export function createShell(context) {
         session.ai.library.characters.find(
           (entry) => entry.source === 'official' && entry.combat.id === definition.combatId,
         ) ||
-        context.chapter
+        context.daily
           ?.chatCharacters()
           .find((entry) => entry.source === 'town' && entry.combat.id === definition.combatId);
       return member
@@ -105,13 +113,13 @@ export function createShell(context) {
         : [];
     });
     for (const member of session.ai.library.characters) {
-      if (!member.combat.customStanding || characters.some((entry) => entry.id === member.id))
-        continue;
+      const image = member.combat.customStanding || (member.questRecruit ? UNKNOWN_STANDING : null);
+      if (!image || characters.some((entry) => entry.id === member.id)) continue;
       characters.push({
         key: member.id,
         id: member.id,
         name: member.setting.name,
-        image: member.combat.customStanding,
+        image,
       });
     }
     frame.contentWindow?.postMessage(
@@ -127,6 +135,7 @@ export function createShell(context) {
     if (event.origin !== location.origin || event.source !== $('#inn-frame iframe')?.contentWindow)
       return;
     if (event.data?.type === 'tavern-visitors-request') syncInnVisitors();
+    if (event.data?.type === 'tavern-workshop') void context.workshop.open();
     if (['street-map-state', 'scene-ready'].includes(event.data?.type))
       document.body.classList.toggle(
         'street-atlas-open',
@@ -266,6 +275,13 @@ export function createShell(context) {
       return;
     }
     $('#prepare-character-title').textContent = inspected.setting.name;
+    const stats = grownCombat(inspected);
+    const roles = Object.entries(SERVICE_ROLES)
+      .map(([id, name]) => {
+        const level = serviceProficiency(library.daily.serviceGrowth, inspected.id, id);
+        return `<tr><th>${name}</th><td>${level}</td><td>+${serviceWaitBonus(level)} 秒</td><td>${serviceAutoChance(level)}%</td></tr>`;
+      })
+      .join('');
     $('#prepare-detail').innerHTML = html`<section class="prepare-portrait">
         <img
           src="${portraitUrl(inspected.combat)}"
@@ -281,7 +297,37 @@ export function createShell(context) {
         </details>
       </section>
       <section class="prepare-character-controls">
+        <p class="prepare-affection">
+          ${affectionLabel(relationship(library, inspected.id).affection)}
+        </p>
+        <dl class="prepare-stat-grid">
+          ${[
+            ['等级', stats.level],
+            ['生命', stats.hp],
+            ['法力', stats.mp],
+            ['普攻', stats.attack],
+            ['行动', stats.limit],
+          ]
+            .map(([label, value]) => `<div><dt>${label}</dt><dd>${value ?? '—'}</dd></div>`)
+            .join('')}
+        </dl>
         ${preparationEquipment(library, inspected)}
+        <details class="prepare-service">
+          <summary>营业能力</summary>
+          <table>
+            <thead>
+              <tr>
+                <th>岗位</th>
+                <th>熟练度</th>
+                <th>等候</th>
+                <th>自动</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${roles}
+            </tbody>
+          </table>
+        </details>
       </section>`;
     $('#prepare-status').textContent = session.ai.formationLocked
       ? '本场编队已锁定 · 点击角色调整装备'

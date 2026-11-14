@@ -1,5 +1,7 @@
 import { restoreServiceShift } from './tavern-service.js';
 import { TOWN_SIDE_PLACES } from './content/town-side-places.js';
+import { SILVER_CROWN_PLACES } from './content/silver-crown-scenes.js';
+import { ETERNAL_CITY_PLACES, ETERNAL_CITY_STOPS } from './content/eternal-city-scenes.js';
 import { OVERLAND_ROAD } from './content/overland-road.js';
 import { restoreServiceGrowth, SERVICE_ROLES } from './service-progression.js';
 import { restoreOverlandRun } from './overland-travel.js';
@@ -23,6 +25,9 @@ export const TOWN_SCENES = Object.freeze({
 });
 export const OUTING_SCENES = Object.freeze({
   ...TOWN_SCENES,
+  ...Object.fromEntries(Object.entries(SILVER_CROWN_PLACES).map(([id, place]) => [id, place.name])),
+  ...Object.fromEntries(Object.entries(ETERNAL_CITY_PLACES).map(([id, place]) => [id, place.name])),
+  ...ETERNAL_CITY_STOPS,
   ...Object.fromEntries(OVERLAND_ROAD.map(({ id, name }) => [id, name])),
 });
 
@@ -34,6 +39,50 @@ export function dailySceneTime(entry) {
     period += Math.max(0, Math.min(entry.ap - 1, Math.floor(used / OUTING_ACTIONS)));
   }
   return period === DAILY_PERIODS.length - 1 ? 'night' : 'day';
+}
+
+export function tavernTime(daily) {
+  return daily?.period === DAILY_PERIODS.length - 1 ? 'night' : 'day';
+}
+
+export function advanceTavernTime(daily, periods = 1) {
+  const elapsed = (daily.period || 0) + periods;
+  daily.day += Math.floor(elapsed / DAILY_PERIODS.length);
+  daily.period = elapsed % DAILY_PERIODS.length;
+}
+
+export function startTavernActivity(daily, kind) {
+  if (!Object.hasOwn(DAILY_ACTIONS, kind) || daily.active) return null;
+  daily.report = null;
+  daily.reportDetails = null;
+  daily.active = {
+    direct: true,
+    kind,
+    at: daily.period,
+    ap: DAILY_ACTIONS[kind].ap,
+    stage: 'ready',
+  };
+  if (kind === 'outing') daily.active.turns = 0;
+  if (kind === 'service' && daily.tutorial !== 'done') daily.tutorial = 'service';
+  return daily.active;
+}
+
+export function advanceOuting(daily, turns = 1) {
+  const entry = daily.active;
+  if (entry?.kind !== 'outing' || entry.stage !== 'roaming') return false;
+  const previous = entry.turns || 0;
+  entry.turns = previous + turns;
+  advanceTavernTime(
+    daily,
+    Math.floor(entry.turns / OUTING_ACTIONS) - Math.floor(previous / OUTING_ACTIONS),
+  );
+  return true;
+}
+
+export function tavernPromotion(daily, workshop) {
+  const shifts = daily.serviceGrowth.shifts || 0;
+  const cores = workshop?.items?.['clockwork-heart'] || 0;
+  return { rank: daily.rank, shifts, cores, ready: daily.rank === 0 && shifts >= 2 && cores >= 10 };
 }
 export const INVITATION_ACTIVITIES = Object.freeze({
   meal: '进餐',
@@ -107,6 +156,8 @@ export function restoreDaily(raw) {
   const day = Number.isSafeInteger(raw?.day) && raw.day > 0 ? raw.day : 1;
   const state = {
     day,
+    period: Number.isInteger(raw?.period) ? Math.max(0, Math.min(3, raw.period)) : 0,
+    rank: Number.isSafeInteger(raw?.rank) && raw.rank > 0 ? raw.rank : 0,
     draft: [],
     plan: [],
     cursor: 0,
@@ -121,6 +172,38 @@ export function restoreDaily(raw) {
     serviceGrowth: restoreServiceGrowth(raw?.serviceGrowth),
     unlocks: structuredClone(raw?.unlocks || {}),
   };
+  if (typeof raw?.report === 'string') {
+    state.report = raw.report.slice(0, 600);
+    const details = raw.reportDetails;
+    if (details && typeof details.title === 'string' && Array.isArray(details.stages))
+      state.reportDetails = {
+        title: details.title.slice(0, 70),
+        premise: String(details.premise || '').slice(0, 360),
+        state: details.state === 'completed' ? 'completed' : 'ended',
+        stages: details.stages.slice(0, 5).map((stage) => ({
+          title: String(stage?.title || '').slice(0, 65),
+          scene: String(stage?.scene || '').slice(0, 60),
+          summary: String(stage?.summary || '').slice(0, 360),
+          turns: Number(stage?.turns) || 0,
+          goals: Array.isArray(stage?.goals)
+            ? stage.goals.slice(0, 3).map((goal) => String(goal).slice(0, 180))
+            : [],
+        })),
+      };
+  }
+  if (raw?.active?.direct && Object.hasOwn(DAILY_ACTIONS, raw.active.kind)) {
+    const entry = structuredClone(raw.active);
+    if (entry.preview) return state;
+    if (entry.kind === 'outing') {
+      entry.turns = Number.isSafeInteger(entry.turns) ? Math.max(0, entry.turns) : 0;
+    }
+    entry.ap = DAILY_ACTIONS[entry.kind].ap;
+    if (entry.kind === 'service' && entry.shift) entry.shift = restoreServiceShift(entry.shift);
+    if (entry.kind === 'outing' && entry.overland)
+      entry.overland = restoreOverlandRun(entry.overland);
+    state.active = entry;
+    return state;
+  }
   try {
     state.draft = editableDailyPlan(dailyPlan(raw?.draft || []).plan);
     state.plan = dailyPlan(raw?.plan || []).plan;
@@ -138,25 +221,6 @@ export function restoreDaily(raw) {
       const overland = restoreOverlandRun(state.active.overland);
       if (overland) state.active.overland = overland;
       else delete state.active.overland;
-    }
-    if (typeof raw.report === 'string') {
-      state.report = raw.report.slice(0, 600);
-      const details = raw.reportDetails;
-      if (details && typeof details.title === 'string' && Array.isArray(details.stages))
-        state.reportDetails = {
-          title: details.title.slice(0, 70),
-          premise: String(details.premise || '').slice(0, 360),
-          state: details.state === 'completed' ? 'completed' : 'ended',
-          stages: details.stages.slice(0, 5).map((stage) => ({
-            title: String(stage?.title || '').slice(0, 65),
-            scene: String(stage?.scene || '').slice(0, 60),
-            summary: String(stage?.summary || '').slice(0, 360),
-            turns: Number(stage?.turns) || 0,
-            goals: Array.isArray(stage?.goals)
-              ? stage.goals.slice(0, 3).map((goal) => String(goal).slice(0, 180))
-              : [],
-          })),
-        };
     }
   } catch {
     return { ...state, draft: [], plan: [], cursor: 0, running: false, active: null, report: null };
@@ -202,8 +266,16 @@ export function activateDaily(state) {
 
 export function finishDaily(state, kind, report, details = null) {
   if (state.active?.kind !== kind) return false;
+  const entry = state.active;
+  if (entry.direct) {
+    if (kind !== 'outing') advanceTavernTime(state, entry.ap);
+    else if (!entry.turns || entry.turns % OUTING_ACTIONS) advanceTavernTime(state);
+    state.running = false;
+    state.plan = [];
+    state.draft = [];
+  }
   state.active = null;
-  state.cursor++;
+  state.cursor = entry.direct ? 0 : state.cursor + 1;
   state.report = report;
   state.reportDetails = details;
   if (kind === 'service' && state.tutorial === 'service') state.tutorial = 'done';

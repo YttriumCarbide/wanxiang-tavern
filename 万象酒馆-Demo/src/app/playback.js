@@ -33,7 +33,7 @@ export function createPlayback(context) {
   async function commit() {
     if (session.battle.playing || session.runtime.mode !== 'battle') return;
     context.planning.recompute();
-    if (!session.battle.forecast.valid) return context.shell.toast('请先修正标红的行动。');
+    if (!session.battle.forecast.valid) return context.shell?.toast('请先修正标红的行动。');
     if (context.onboarding && !context.onboarding.beforeCommit()) return;
     if (context.companionEvents && !context.companionEvents.beforeCommit()) return;
 
@@ -119,7 +119,7 @@ export function createPlayback(context) {
       if (drops.length) {
         const receipt = `击杀掉落 · ${drops.join('、')}`;
         session.battle.history.push(receipt);
-        context.shell.toast(receipt);
+        context.shell?.toast(receipt);
       }
       context.companionEvents?.accepted(session.battle.state, result);
       const cooperation = claimCooperationAffection(
@@ -128,7 +128,7 @@ export function createPlayback(context) {
         result,
       );
       if (cooperation?.delta)
-        context.shell.toast(`合作击破 · ${cooperation.name}好感 +${cooperation.delta}`);
+        context.shell?.toast(`合作击破 · ${cooperation.name}好感 +${cooperation.delta}`);
       context.emblems?.accepted(result);
       session.battle.state = advance(result);
       if (drops.length)

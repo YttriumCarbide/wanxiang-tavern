@@ -24,8 +24,9 @@ import { prepareBossEmblem } from '../src/emblem-progression.js';
 import { newLibrary, restoreLibrary, officialCharacter, compileRoster } from '../src/ai/library.js';
 import { CHANGJING_YUEXI } from '../src/content/changjing-yuexi.js';
 import { PANDORA } from '../src/content/pandora.js';
+import { readFile } from 'node:fs/promises';
 import { normalizeEquipment, equip } from '../src/equipment.js';
-import { upgradeStatusEmblems } from '../src/ai/status-emblem-upgrade.js';
+import { syncBuiltinWorldbook } from '../src/ai/worldbook.js';
 
 function battle(emblem, count = 1) {
   const heroes = Object.fromEntries(
@@ -94,7 +95,7 @@ test('statuses settle before one shared round-end decay; slow retains one and pe
   state.phase = 'plan';
   state.round = 1;
   const result = resolve(state);
-  assert.equal(result.final.units.aegis.hp, 49, '3 regen then 4 poison');
+  assert.equal(result.final.units.aegis.hp, 55, '3 regen (9% of 100) then 4 poison');
   assert.deepEqual(result.final.units.aegis.buffs, {
     weak: 1,
     vulnerable: 1,
@@ -160,11 +161,11 @@ test('legacy regeneration becomes a finite once-per-battle grant, and Pandora pa
   assert.equal(next.units.aegis.buffs.regen, 3);
   assert.equal(next.units.aegis.hp, 50, 'Opening does not settle regeneration');
   next = advance(resolve(next));
-  assert.equal(next.units.aegis.hp, 53);
+  assert.equal(next.units.aegis.hp, 59);
   next = advance(resolve(next));
   next = advance(resolve(next));
   assert.equal(next.units.aegis.buffs.regen, undefined);
-  assert.equal(advance(resolve(next)).units.aegis.hp, 56);
+  assert.equal(advance(resolve(next)).units.aegis.hp, 68);
   const entry = battle(null, 3);
   entry.phase = 'plan';
   entry.round = 1;
@@ -326,8 +327,8 @@ test('authored skills, cap rules, all five equipped emblems and three equipment 
   assert.equal(attack.events.find((event) => event.type === 'hero').repeatCount, 2);
   assert.equal(
     attack.final.units['target-0'].hp,
-    buffed.units['target-0'].hp - 16,
-    'Two attacks of 6 + 2 strength',
+    buffed.units['target-0'].hp - 14,
+    'Two attacks of 6 + 2 strength (10% each)',
   );
   const library = newLibrary();
   library.emblems = Object.keys(EMBLEMS);
@@ -353,7 +354,7 @@ test('authored skills, cap rules, all five equipped emblems and three equipment 
   assert.equal(pandora.combat.skills[0].effects[1].value, 2);
 });
 
-test('four Boss rewards use exact authored nodes once and worldbook upgrade is idempotent', () => {
+test('four Boss rewards use exact authored nodes once and worldbook upgrade is idempotent', async () => {
   const library = newLibrary();
   const scenarios = [
     ['ruins', 2, OVERLOAD_EMBLEM_ID],
@@ -371,7 +372,87 @@ test('four Boss rewards use exact authored nodes once and worldbook upgrade is i
   assert(
     !prepareBossEmblem(newLibrary(), { index: 3, exploration: { map: 'ruins', sequence: 2 } }),
   );
-  const book = upgradeStatusEmblems({ entries: {} });
-  assert.deepEqual(upgradeStatusEmblems(book), book);
-  assert.match(Object.values(book.entries)[0].content, /正常回合末各减1层/);
+  const builtin = JSON.parse(
+    await readFile(new URL('../assets/builtin-worldbook.json', import.meta.url), 'utf8'),
+  );
+  const book = syncBuiltinWorldbook({ entries: {} }, builtin);
+  assert.deepEqual(syncBuiltinWorldbook(book, builtin), book);
+  assert(
+    Object.values(book.entries).some(
+      (entry) =>
+        entry.extensions?.wanxiang?.generationRule === 'combat-encyclopedia' &&
+        entry.content?.includes('正常回合结束减少 1 层'),
+    ),
+  );
+});
+
+test('strength stacks at 10% without a 50% cap while weak (-25%) and vulnerable (+50%) stay independent non-stacking multipliers', () => {
+  const s1 = battle();
+  s1.heroDefinitions.aegis.skills = [
+    {
+      id: 'strike-ten',
+      name: '十伤',
+      ap: 1,
+      mp: 0,
+      target: 'enemy',
+      effects: [{ type: 'damage', value: 10 }],
+    },
+    {
+      id: 'strike-hundred',
+      name: '百伤',
+      ap: 1,
+      mp: 0,
+      target: 'enemy',
+      effects: [{ type: 'damage', value: 100 }],
+    },
+    {
+      id: 'shield-ten',
+      name: '十盾',
+      ap: 1,
+      mp: 0,
+      target: 'self',
+      effects: [{ type: 'selfShield', value: 10 }],
+    },
+  ];
+  const hp0 = s1.units['target-0'].hp;
+  s1.units.aegis.buffs = { strength: 6, guard: 2, regen: 12 };
+  assert.equal(hp0 - cast(s1, 'strike-hundred').final.units['target-0'].hp, 160);
+  s1.units['target-0'].buffs = { vulnerable: 3 };
+  assert.equal(hp0 - cast(s1, 'strike-hundred').final.units['target-0'].hp, 240);
+  assert.equal(cast(s1, 'shield-ten', 'aegis').final.units.aegis.block, 14);
+
+  const sVuln = battle();
+  sVuln.heroDefinitions.aegis.skills = s1.heroDefinitions.aegis.skills;
+  sVuln.units['target-0'].buffs = { vulnerable: 1 };
+  assert.equal(hp0 - cast(sVuln, 'strike-ten').final.units['target-0'].hp, 15);
+  sVuln.units['target-0'].buffs = { vulnerable: 4 };
+  assert.equal(hp0 - cast(sVuln, 'strike-ten').final.units['target-0'].hp, 15);
+
+  const sWeak = battle();
+  sWeak.heroDefinitions.aegis.skills = s1.heroDefinitions.aegis.skills;
+  sWeak.units.aegis.buffs = { weak: 1 };
+  assert.equal(hp0 - cast(sWeak, 'strike-ten').final.units['target-0'].hp, 7);
+  sWeak.units.aegis.buffs = { weak: 9 };
+  assert.equal(hp0 - cast(sWeak, 'strike-ten').final.units['target-0'].hp, 7);
+
+  const sIron = battle();
+  sIron.heroDefinitions.aegis.skills = [
+    ...s1.heroDefinitions.aegis.skills,
+    {
+      id: 'strike-one',
+      name: '一伤',
+      ap: 1,
+      mp: 0,
+      target: 'enemy',
+      effects: [{ type: 'damage', value: 1 }],
+    },
+  ];
+  sIron.units['target-0'].buffs = { iron: 9 };
+  assert.equal(hp0 - cast(sIron, 'strike-ten').final.units['target-0'].hp, 3);
+  assert.equal(hp0 - cast(sIron, 'strike-one').final.units['target-0'].hp, 1);
+
+  s1.units.aegis.hp = 50;
+  s1.phase = 'plan';
+  s1.round = 1;
+  assert.equal(resolve(s1).final.units.aegis.hp, 80);
 });

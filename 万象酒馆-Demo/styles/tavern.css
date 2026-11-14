@@ -172,9 +172,7 @@ body.leaving #scene-fade {
 #emblem-open {
   position: fixed;
   z-index: 10;
-  bottom: 28px;
-  left: 50%;
-  transform: translateX(-50%);
+  transform: translate(-50%, -50%);
   padding: 11px 28px;
   border: 1px solid #c7a57588;
   border-radius: 7px;
@@ -197,11 +195,9 @@ body.leaving #scene-fade {
 .supply-open {
   position: fixed;
   z-index: 10;
-  bottom: 28px;
-  left: calc(50% - 96px);
-  transform: translateX(-50%);
-  min-width: 180px;
-  padding: 12px 20px;
+  transform: translate(-50%, -50%);
+  padding: 8px 12px;
+  white-space: nowrap;
   border: 1px solid #c7a575aa;
   border-radius: 7px;
   background: #30261ff0;
@@ -211,7 +207,6 @@ body.leaving #scene-fade {
   font: 14px system-ui;
 }
 #condenser-open {
-  left: calc(50% + 96px);
   border-color: #82c7ceaa;
   background: #16363bf0;
 }

@@ -35,7 +35,7 @@ function roll(seed) {
 
 /** Only accepted kills mint loot. Each run, battle and enemy has one claim. */
 export function claimEnemyDrops(library, expedition, state, result) {
-  if (!expedition || expedition.chapter || !Array.isArray(result.deaths)) return [];
+  if (!expedition || expedition.overlandBattle || !Array.isArray(result.deaths)) return [];
   const loot = [];
   for (const death of result.deaths) {
     if (state.units[death.id]?.side !== 'enemy') continue;
@@ -51,8 +51,11 @@ export function claimEnemyDrops(library, expedition, state, result) {
     for (const id of drops) if (ITEMS[id]) items[id] = (items[id] || 0) + 1;
     if (!claimBattleRewards(library, claim, { summonContracts: 0, items })) continue;
     for (const id of drops) {
-      if (INGREDIENTS[id])
-        library.dining.inventory[id] = Math.min(9999, (library.dining.inventory[id] || 0) + 1);
+      if (INGREDIENTS[id]) {
+        const dining = (library.dining ||= {});
+        const inventory = (dining.inventory ||= {});
+        inventory[id] = Math.min(9999, (inventory[id] || 0) + 1);
+      }
       loot.push((INGREDIENTS[id] || ITEMS[id]).name);
     }
   }

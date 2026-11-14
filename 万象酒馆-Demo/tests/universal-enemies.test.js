@@ -8,7 +8,7 @@ import { newBattle, preview, advance, intent, makeReposition } from '../src/engi
 import { definitionsFor } from '../src/catalog.js';
 import { lockEnemyDecisions } from '../src/enemy-tactics.js';
 import { worldReference, normalizeWorld } from '../src/worlds.js';
-import { upgradeUniversalEnemies } from '../src/ai/universal-enemy-upgrade.js';
+import { syncBuiltinWorldbook } from '../src/ai/worldbook.js';
 import { universalEnemyBlocks } from '../tools/build-universal-enemies.mjs';
 import { renderVoxelEnemyPortrait } from '../tools/voxel-enemy-art.mjs';
 
@@ -145,17 +145,23 @@ test('every enemy has reproducible matching GLB source and full-size plinth-free
   }
 });
 
-test('the additive prompt migration is idempotent and preserves custom entries and switches', () => {
+test('the additive prompt migration is idempotent and preserves custom entries and switches', async () => {
+  const builtin = JSON.parse(
+    await readFile(new URL('../assets/builtin-worldbook.json', import.meta.url), 'utf8'),
+  );
   const source = {
     entries: { 2: { uid: 2, content: '玩家自定义的背景', disable: true, order: 123 } },
   };
-  const next = upgradeUniversalEnemies(source);
-  assert.deepEqual(next.entries[2], source.entries[2]);
-  assert.deepEqual(upgradeUniversalEnemies(next), next);
-  const entry = Object.values(next.entries).find(
-    (entry) => entry.extensions?.wanxiang?.generationRule === 'universal-enemies',
+  const next = syncBuiltinWorldbook(source, builtin);
+  assert.equal(next.entries[2].content, source.entries[2].content);
+  assert.equal(next.entries[2].disable, true);
+  assert.equal(next.entries[2].order, 123);
+  assert.deepEqual(syncBuiltinWorldbook(next, builtin), next);
+  const monsterIds = new Set(
+    Object.values(next.entries)
+      .map((entry) => entry.extensions?.wanxiang?.monsterId)
+      .filter(Boolean),
   );
-  assert.deepEqual(entry.apiTargets, ['map', 'script']);
-  for (const enemy of all) assert(entry.content.includes(enemy.id));
+  for (const enemy of all) assert(monsterIds.has(enemy.id));
   assert.equal(Object.keys(source.entries).length, 1);
 });

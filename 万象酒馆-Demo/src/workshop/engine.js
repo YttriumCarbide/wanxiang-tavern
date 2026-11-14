@@ -22,11 +22,13 @@ export function restoreWorkshop(value, catalog, now = 0) {
     research: {},
     manual: {},
     core: 0,
-    coins: 0,
     delivered: 0,
   };
+  for (const station of catalog.stations) {
+    if (station.initial > 0)
+      state.stations[station.id] = { count: station.initial, active: station.initial, jobs: {} };
+  }
   if (value?.version !== 1) return discoverWorkshop(state, catalog);
-  state.coins = count(value.coins);
   state.delivered = count(value.delivered);
   state.core = count(value.core, catalog.core.length);
   for (const item of catalog.items) {
@@ -50,11 +52,16 @@ export function restoreWorkshop(value, catalog, now = 0) {
       Object.keys(station.outputs).map((id) => [
         id,
         Math.min(
-          catalog.items.find((i) => i.id === id).seconds,
+          station.period || catalog.items.find((i) => i.id === id).seconds,
           Math.max(0, Number.isFinite(saved.jobs?.[id]) ? saved.jobs[id] : 0),
         ),
       ]),
     );
+    if (station.cycle)
+      jobs.batch = Math.min(
+        station.cycle,
+        Math.max(0, Number.isFinite(saved.jobs?.batch) ? saved.jobs.batch : 0),
+      );
     state.stations[station.id] = { count: built, active: count(saved.active, built), jobs };
     if (
       built ||
@@ -95,11 +102,12 @@ export function workshopVisible(state, catalog, type, entry) {
     );
   if (!workshopUnlocked(state, catalog, type, entry)) return false;
   const v = entry.visibility;
+  if (type === 'station' && state.stations[entry.id]?.count > 0) return true;
   const known =
     state.discovered.includes(type + ':' + entry.id) ||
     (type === 'item' ? state.known.includes(entry.id) : state.stations[entry.id]?.count > 0);
   if (v.permanent && known) return true;
-  function rule(mode) {
+  function rule(mode, logic) {
     if (mode === 'always') return true;
     if (mode === 'auto') return known;
     if (mode === 'passive')
@@ -110,11 +118,8 @@ export function workshopVisible(state, catalog, type, entry) {
       );
     if (mode === 'core_level') return state.core >= v.core;
     if (mode === 'base_materials') {
-      const inputs = Object.keys(v.items).length
-        ? v.items
-        : type === 'item'
-          ? entry.inputs
-          : entry.materials;
+      if (Object.keys(v.items).length) return has(state, v.items);
+      const inputs = type === 'item' ? entry.inputs : entry.materials;
       return (
         Object.keys(inputs).length > 0 &&
         Object.keys(inputs).every((id) => (state.items[id] || 0) > 0)
@@ -129,13 +134,18 @@ export function workshopVisible(state, catalog, type, entry) {
         hits.push(
           ...Object.entries(entry.requires).map(([id, n]) => (state.research[id] || 0) >= n),
         );
-      return hits.length > 0 && combine(hits, v.logic);
+      return hits.length > 0 && combine(hits, logic);
     }
     return false;
   }
   return v.mode === 'composite'
-    ? combine((v.rules.length ? v.rules : ['base_materials', 'core_level']).map(rule), v.logic)
-    : rule(v.mode);
+    ? combine(
+        (v.rules.length ? v.rules : ['base_materials', 'core_level']).map((mode) =>
+          rule(mode, 'and'),
+        ),
+        v.logic,
+      )
+    : rule(v.mode, v.logic);
 }
 
 function discoverWorkshop(state, catalog) {
@@ -182,24 +192,35 @@ export function workshopParallel(state, catalog, station, id) {
   let bonus = 0;
   for (const tech of catalog.research)
     for (const effect of tech.effects)
-      if (effect.type === 'station' && effect.id === station.id)
+      if (
+        (effect.type === 'station' && effect.id === station.id) ||
+        (effect.type === 'item' && effect.id === id)
+      )
         bonus += modifierValue(effect.parallel, state.research[tech.id] || 0, base, true);
   return count((base + bonus) * (state.stations[station.id]?.active || 0), 1e6);
 }
 
 export function workshopBuildCost(state, station) {
   const n = state.stations[station.id]?.count || 0;
+  const repeat = n > 0 ? station.repeat : null;
+  const fixed = station.construction?.[n];
   const factor =
     n < station.exponentialAt
       ? 1 + n * station.multiplier
       : (1 + (station.exponentialAt - 1) * station.multiplier) *
         Math.pow(station.exponential, n - station.exponentialAt + 1);
-  const bounded = (value) => Math.min(WORKSHOP_LIMIT, Math.ceil(value * factor));
+  const bounded = (value) => (value > 0 ? Math.min(WORKSHOP_LIMIT, Math.ceil(value * factor)) : 0);
   return {
-    coins: bounded(station.price),
-    materials: Object.fromEntries(
-      Object.entries(station.materials).map(([id, amount]) => [id, bounded(amount)]),
-    ),
+    gold: fixed?.gold == null ? bounded(repeat?.gold ?? station.price) : Math.ceil(fixed.gold),
+    ether: fixed?.ether == null ? bounded(repeat?.ether ?? station.ether) : Math.ceil(fixed.ether),
+    materials:
+      fixed?.materials ??
+      Object.fromEntries(
+        Object.entries(repeat?.materials ?? station.materials).map(([id, amount]) => [
+          id,
+          bounded(amount),
+        ]),
+      ),
   };
 }
 
@@ -223,12 +244,37 @@ export function advanceWorkshop(input, catalog, now) {
   for (const station of catalog.stations) {
     const record = state.stations[station.id];
     if (!record?.active || !workshopUnlocked(state, catalog, 'station', station)) continue;
-    for (const id of Object.keys(station.outputs)) {
+    const outputs = Object.keys(station.outputs).filter((id) =>
+      workshopUnlocked(
+        state,
+        catalog,
+        'item',
+        catalog.items.find((item) => item.id === id),
+      ),
+    );
+    if (station.cycle && outputs.length) {
+      tasks.push({
+        item: { seconds: station.cycle, inputs: station.inputs },
+        outputs,
+        station,
+        rate: workshopRate(state, catalog, '', station.id),
+        units: record.active,
+        get: () => record.jobs.batch || 0,
+        set: (n) => {
+          record.jobs.batch = n;
+        },
+      });
+      continue;
+    }
+    for (const id of outputs) {
       const item = catalog.items.find((i) => i.id === id);
-      if (!workshopUnlocked(state, catalog, 'item', item)) continue;
       tasks.push({
         id,
-        item,
+        item: {
+          ...item,
+          seconds: station.period || item.seconds,
+          inputs: Object.keys(item.inputs).length ? item.inputs : station.inputs || {},
+        },
         station,
         rate: workshopRate(state, catalog, id, station.id),
         units: workshopParallel(state, catalog, station, id),
@@ -277,8 +323,13 @@ export function advanceWorkshop(input, catalog, now) {
           units = Math.min(units, Math.floor((state.items[id] || 0) / n));
       if (units > 0) {
         if (!task.manual) spend(state, task.item.inputs, units);
-        add(state, task.id, units);
-        produced[task.id] = (produced[task.id] || 0) + units;
+        for (const id of task.outputs || [task.id]) {
+          const amount = task.outputs
+            ? Math.floor((workshopParallel(state, catalog, task.station, id) * units) / task.units)
+            : units;
+          add(state, id, amount);
+          produced[id] = (produced[id] || 0) + amount;
+        }
       }
       task.set(0);
       if (task.manual) task.manual.active = false;
@@ -293,10 +344,11 @@ export function advanceWorkshop(input, catalog, now) {
   };
 }
 
-export function workshopAction(input, catalog, action) {
+export function workshopAction(input, catalog, action, funds = {}) {
   const state = structuredClone(input),
     events = [];
-  const reject = (error) => ({ state: input, events, error });
+  const wallet = { gold: count(funds.gold, 999999999), ether: count(funds.ether, 999999999) };
+  const reject = (error) => ({ state: input, wallet: funds, events, error });
   const item = catalog.items.find((entry) => entry.id === action.id);
   const station = catalog.stations.find((entry) => entry.id === action.id);
   if (action.type === 'craft') {
@@ -311,9 +363,16 @@ export function workshopAction(input, catalog, action) {
     const cost = workshopBuildCost(state, station);
     const record = state.stations[station.id] || { count: 0, active: 0, jobs: {} };
     if (record.count >= station.max) return reject('设施已达上限');
-    if (state.coins < cost.coins || !has(state, cost.materials)) return reject('工坊券或建材不足');
+    if (
+      station.materialPrerequisite &&
+      Object.keys(station.materials).some((id) => !state.items[id] && !state.known.includes(id))
+    )
+      return reject('需先发现全部基础建材');
+    if (wallet.gold < cost.gold || wallet.ether < cost.ether || !has(state, cost.materials))
+      return reject('金币、以太或建材不足');
     spend(state, cost.materials);
-    state.coins -= cost.coins;
+    wallet.gold -= cost.gold;
+    wallet.ether -= cost.ether;
     record.count++;
     record.active++;
     state.stations[station.id] = record;
@@ -326,7 +385,7 @@ export function workshopAction(input, catalog, action) {
     const amount = count(action.amount, state.items[action.id] || 0);
     if (!item || !amount) return reject('没有可交付的物资');
     state.items[item.id] -= amount;
-    state.coins = count(state.coins + amount * item.value);
+    wallet.gold = count(wallet.gold + amount * item.value, 999999999);
     state.delivered = count(state.delivered + amount);
   } else if (action.type === 'research') {
     const tech = catalog.research.find((entry) => entry.id === action.id);
@@ -341,14 +400,19 @@ export function workshopAction(input, catalog, action) {
   } else if (action.type === 'core') {
     const step = catalog.core[state.core];
     if (!step) return reject('炉心已达最高等级');
-    if (state.coins < step.price || !has(state, step.materials)) return reject('炉心升级物资不足');
+    const ether = step.ether || 0;
+    if (wallet.gold < step.price || wallet.ether < ether || !has(state, step.materials))
+      return reject('炉心升级物资不足');
     spend(state, step.materials);
-    state.coins -= step.price;
+    wallet.gold -= step.price;
+    wallet.ether -= ether;
+    wallet.gold = count(wallet.gold + (step.goldReward || 0), 999999999);
+    wallet.ether = count(wallet.ether + (step.etherReward || 0), 999999999);
     state.core++;
     for (const [id, amount] of Object.entries(step.items)) add(state, id, amount);
   } else return reject('未知工坊操作');
   events.push({ type: action.type, id: action.id });
-  return { state: discoverWorkshop(state, catalog), events };
+  return { state: discoverWorkshop(state, catalog), wallet, events };
 }
 
 /** Debug values still pass the same state sanitizer; only the developer controller exposes this. */

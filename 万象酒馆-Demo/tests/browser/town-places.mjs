@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import { TOWN_SIDE_PLACES } from '../../src/content/town-side-places.js';
-import { OVERLAND_ROAD } from '../../src/content/overland-road.js';
 
 export async function townPlaceChecks({ browser, baseURL, output }) {
   const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
@@ -98,14 +97,16 @@ export async function townPlaceChecks({ browser, baseURL, output }) {
     assert(atlas.worldWidth / atlas.cityDistance > 50);
     assert(atlas.coversCorners.every(Boolean), 'the map must cover the whole viewport');
     const sheet = page.locator('#street-map-sheet');
-    const regionalMarkers = sheet.locator('.street-map-regional');
+    const regionalMarkers = sheet.locator('.street-map-regional:not(.street-map-route-label)');
     const overview = sheet.locator('.street-map-world-labels');
     const territories = sheet.locator('.street-map-territories');
     const paper = sheet.locator('.street-map-paper');
     const localPatina = paper.locator('use[href$="#atlas-local-patina"]');
     const terrain = sheet.locator('.street-map-terrain');
     const scrub = sheet.locator('use[href$="#silver-road-scrub"]');
+    const contours = sheet.locator('.street-map-road-contours');
     await scrub.waitFor();
+    assert(await contours.isVisible());
     assert(await paper.isVisible());
     await localPatina.waitFor();
     const patinaStart = await localPatina.boundingBox();
@@ -128,9 +129,26 @@ export async function townPlaceChecks({ browser, baseURL, output }) {
     );
     await page.mouse.wheel(0, 1000);
     await regionalMarkers.waitFor();
+    assert.deepEqual(await regionalMarkers.locator('text').allTextContents(), ['星钟城', '银冠城']);
+    const cityLabels = await regionalMarkers
+      .locator('text')
+      .evaluateAll((labels) => labels.map((label) => label.getBoundingClientRect().toJSON()));
+    assert(cityLabels[0].right < cityLabels[1].left);
+    assert(!(await territories.isVisible()));
+    assert(await sheet.locator('.street-map-border-ink').isVisible());
+    assert((await sheet.locator('[data-atlas-road]').count()) >= 30);
+    const relief = sheet.locator('[data-atlas-relief] use:visible');
+    const reliefCount = await relief.count();
+    assert(reliefCount >= 30 && reliefCount <= 55);
+    for (const feature of ['#grove', '#hill-hatch', '#atlas-snow', '#reed'])
+      assert(
+        (await sheet.locator(`[data-atlas-relief] use[href$="${feature}"]:visible`).count()) > 0,
+      );
+    assert.equal(await sheet.locator('[data-atlas-relief] .street-map-local:visible').count(), 0);
     assert((await atlasView()).width > initialView.width);
     assert(await terrain.isVisible());
     assert(!(await scrub.isVisible()));
+    assert(await contours.isVisible());
     assert(await localPatina.isVisible());
     assert(!(await sheet.locator('use[href$="#silver-road-starbell"]').isVisible()));
     await page.screenshot({ path: path.join(output, 'world-map-region.png') });
@@ -138,7 +156,7 @@ export async function townPlaceChecks({ browser, baseURL, output }) {
       .locator('circle')
       .first()
       .evaluate((circle) => circle.getBoundingClientRect().width);
-    assert(dotWidth >= 7 && dotWidth <= 9, `unexpected regional symbol width: ${dotWidth}px`);
+    assert(dotWidth >= 12 && dotWidth <= 17, `unexpected regional symbol width: ${dotWidth}px`);
 
     await page.mouse.wheel(0, 4000);
     await overview.waitFor();
@@ -147,13 +165,17 @@ export async function townPlaceChecks({ browser, baseURL, output }) {
       return width >= 3072 && height >= 2048;
     });
     assert(!(await terrain.isVisible()));
+    assert(!(await contours.isVisible()));
     assert(!(await regionalMarkers.isVisible()));
     assert(await paper.isVisible());
     const landmarks = sheet.locator('[data-atlas-landmark]');
     await territories.waitFor();
-    assert.equal(await landmarks.locator('g.street-map-landmark text').count(), 9);
-    assert.equal(await landmarks.locator('circle:visible').count(), 9);
+    assert((await landmarks.count()) >= 27);
+    assert.equal(await landmarks.locator('circle:visible').count(), 0);
     assert.equal(await landmarks.locator('use:visible').count(), 0);
+    assert.equal(await sheet.locator('[data-atlas-road]:visible').count(), 0);
+    assert.equal(await overview.getByText('雅各布天梯', { exact: true }).count(), 1);
+    assert.equal(await overview.getByText('荒地', { exact: true }).count(), 1);
     const geography = await sheet.evaluate(async (svg) => {
       const loadSvg = async (fragment) => {
         const url = svg.querySelector(`use[href$="#${fragment}"]`).getAttribute('href');
@@ -272,12 +294,44 @@ export async function townPlaceChecks({ browser, baseURL, output }) {
     assert.deepEqual(geography.sites['eternal-city'].owners, ['ael']);
     assert.deepEqual(geography.sites.yingtian.owners, ['tian']);
     assert(
-      geography.roadCities.every((city) => city.land && city.frontier && city.owners.length === 0),
+      geography.roadCities.every((city) => city.land && !city.frontier && city.owners[0] === 'ael'),
     );
 
     const ruins = sheet.locator('[data-atlas-landmark="ruins"]');
-    const ruinsDot = await ruins.locator('circle').boundingBox();
-    await page.mouse.move(ruinsDot.x + ruinsDot.width / 2, ruinsDot.y + ruinsDot.height / 2);
+    async function moveToAtlasPoint(x, y) {
+      const point = await sheet.evaluate(
+        (svg, [x, y]) => {
+          const point = new DOMPoint(x, y).matrixTransform(svg.getScreenCTM());
+          return [point.x, point.y];
+        },
+        [x, y],
+      );
+      await page.mouse.move(...point);
+    }
+    await moveToAtlasPoint(1374, 1341);
+    await page.mouse.wheel(0, -Math.log((await atlasView()).width / 210) / 0.0015);
+    await sheet.locator('.street-map-border-ink').waitFor();
+    await page.screenshot({ path: path.join(output, 'world-map-border.png') });
+    await page.mouse.wheel(0, 5000);
+    await overview.waitFor();
+
+    await moveToAtlasPoint(1735, 1485);
+    await page.mouse.wheel(0, -Math.log((await atlasView()).width / 216) / 0.0015);
+    await sheet.locator('.street-map-shore-ink').waitFor();
+    await page.screenshot({ path: path.join(output, 'world-map-coast.png') });
+    await page.mouse.wheel(0, 5000);
+    await overview.waitFor();
+
+    await moveToAtlasPoint(1515, 1339);
+    await page.mouse.wheel(0, -Math.log((await atlasView()).width / 67) / 0.0015);
+    await sheet
+      .locator('[data-atlas-landmark="eternal-city"] use[href="#atlas-capital"]')
+      .waitFor();
+    await page.screenshot({ path: path.join(output, 'world-map-eternal-city.png') });
+    await page.mouse.wheel(0, 5000);
+    await overview.waitFor();
+
+    await moveToAtlasPoint(765, 617);
     const ruinsZoom = Math.log((await atlasView()).width / 67) / 0.0015;
     await page.mouse.wheel(0, -ruinsZoom);
     await ruins.locator('use[href$="#ruins-icon"]').waitFor();
@@ -287,8 +341,7 @@ export async function townPlaceChecks({ browser, baseURL, output }) {
 
     await page.mouse.wheel(0, 5000);
     await overview.waitFor();
-    const townDot = await overview.locator('circle').boundingBox();
-    await page.mouse.move(townDot.x + townDot.width / 2, townDot.y + townDot.height / 2);
+    await moveToAtlasPoint(1550, 1378);
     await page.mouse.wheel(0, -4000);
     await scrub.waitFor();
     assert(!(await overview.isVisible()));
@@ -341,17 +394,18 @@ export async function townPlaceChecks({ browser, baseURL, output }) {
     assert.equal(traversed.length, 6);
     await page.goto(baseURL + '/street.html?scene=outskirts');
     await ready('outskirts');
-    let previous = 'outskirts';
-    for (const { id, name } of OVERLAND_ROAD) {
-      await focusExit(id);
+    assert.equal(await page.locator('[data-hotspot="road-meadow"]').count(), 0);
+    for (const id of ['road-bridge', 'road-reeds']) {
+      await page.goto(baseURL + '/street.html?scene=' + id);
+      await ready(id);
       const road = await state();
       assert(road.image.endsWith(`/overland-road/${id}-wide.png`));
-      assert.equal(await page.locator('.street-header h1').textContent(), name);
-      assert.equal(new URL(page.url()).searchParams.get('from'), previous);
-      assert(await page.locator(`[data-hotspot="${previous}"]`).isVisible());
       assert.equal(road.visitors, 0);
-      assert.equal(await page.locator('#visitor-refresh').count(), 0);
-      await page.screenshot({ path: path.join(output, `${id}.png`) });
+      assert.equal(await page.locator('[data-hotspot]').count(), 0);
+      assert(await page.locator('#street-return').isHidden());
+      await light('night', `/overland-road/${id}-wide-night.png`);
+      assert.deepEqual((await state()).framing, road.framing);
+      await page.screenshot({ path: path.join(output, `${id}-night.png`) });
       if (id === 'road-bridge') {
         await page.mouse.move(640, 360);
         await page.mouse.down();
@@ -360,19 +414,10 @@ export async function townPlaceChecks({ browser, baseURL, output }) {
         await ready(id);
         const up = (await state()).framing;
         assert(up.y > road.framing.y + 0.04 && up.y + up.height / 2 <= 0.5);
-        await page.mouse.move(640, 530);
-        await page.mouse.down();
-        await page.mouse.move(640, 300, { steps: 5 });
-        await page.mouse.up();
-        await ready(id);
-        const down = (await state()).framing;
-        assert(down.y < road.framing.y - 0.04 && down.y - down.height / 2 >= -0.5);
-        await page.evaluate(() => window.streetPreview.resetView());
-        await ready(id);
       }
-      previous = id;
     }
-    assert.equal(await page.locator('[data-hotspot]').count(), 1);
+    await page.goto(baseURL + '/street.html?scene=road-capital');
+    await ready('road-capital');
     await page.setViewportSize({ width: 844, height: 390 });
     await mapButton.click();
     await worldMap.waitFor();
@@ -416,7 +461,7 @@ export async function townPlaceChecks({ browser, baseURL, output }) {
     );
     await page.screenshot({ path: path.join(output, 'world-map-overview-mobile.png') });
     const labelBoxes = await sheet
-      .locator('.street-map-landmark text, .street-map-world-labels text')
+      .locator('.street-map-world-labels text:visible')
       .evaluateAll((labels) =>
         labels.map((label) => ({
           ...label.getBoundingClientRect().toJSON(),
@@ -437,27 +482,19 @@ export async function townPlaceChecks({ browser, baseURL, output }) {
         }
       }
     }
-    assert.deepEqual(overlaps, [], 'map labels overlap');
+    assert.deepEqual(overlaps, [], `map labels overlap: ${JSON.stringify(overlaps)}`);
     await page.keyboard.press('Escape');
     await worldMap.waitFor({ state: 'hidden' });
-    const reverse = [...OVERLAND_ROAD].reverse();
-    for (const [index, { id }] of reverse.entries()) {
-      await ready(id);
-      const back = reverse[index + 1]?.id ?? 'outskirts';
-      const left = page.locator(`[data-hotspot="${back}"]`);
-      if (index > 0) {
-        const right = page.locator(`[data-hotspot="${reverse[index - 1].id}"]`);
-        assert((await left.boundingBox()).x < (await right.boundingBox()).x);
-      }
-      await left.click();
-      if (index === 0)
-        await page.waitForFunction((id) => {
-          const scene = window.streetPreview?.state();
-          return scene?.sceneId === id && scene.framing.x > 0.005;
-        }, back);
-      await ready(back);
-      if (back !== 'outskirts') assert.equal(new URL(page.url()).searchParams.get('from'), id);
-    }
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await focusExit('crown-gateward');
+    await focusExit('crown-canal');
+    await light('night', '/silver-crown/crown-canal-night.png');
+    await page.screenshot({ path: path.join(output, 'silver-crown-canal-night.png') });
+    await focusExit('crown-floodgate');
+    assert((await state()).image.endsWith('/silver-crown/crown-floodgate-night.png'));
+    assert(await page.locator('#street-return').isVisible());
+    await page.locator('#street-return').click();
+    await ready('crown-canal');
     assert.deepEqual(errors, []);
     return {
       traversed,

@@ -95,7 +95,7 @@ function effects(list, path = 'effects') {
     }
     return {
       type,
-      value: integer(effect.value, 1, type === 'buff' ? 6 : type === 'mark' ? 3 : 32, '效果数值'),
+      value: integer(effect.value, 1, type === 'buff' ? 6 : type === 'mark' ? 3 : 40, '效果数值'),
       ...(type === 'buff' ? { buff: choice(effect.buff, Object.keys(BUFFS), '状态ID') } : {}),
       ...effectMetadata(effect),
     };

@@ -1,3 +1,5 @@
+import { sha256 } from '@noble/hashes/sha2.js';
+
 /** Reviewed behavior from Miaosaiya 1.6. Imported callbacks are identified, never evaluated. */
 export const MIAOSAIYA_FINGERPRINTS = {
   output: '8d9270a4fbef2ecb5245ceddacba7fcdb022baf50c9ecc7d9bd6fede02025486',
@@ -5,6 +7,62 @@ export const MIAOSAIYA_FINGERPRINTS = {
   reassembly: '54848e13d37196addeb97085190c22cdda9317d1761183823ce622c399db4193',
   finalRequest: 'd2b891e09d851b5f8132b76a507bdd0949d974124516034b7f9061f1b08cb1e3',
 };
+
+export const MEOWSSIAH_COMPATIBILITY = 'meowssiah-2.0.10';
+
+export function presetScriptFingerprint(text) {
+  const bytes = sha256(
+    new TextEncoder().encode(
+      String(text || '')
+        .replaceAll('\r\n', '\n')
+        .trim(),
+    ),
+  );
+  return Array.from(bytes, (value) => value.toString(16).padStart(2, '0')).join('');
+}
+
+export function isMeowssiah2010(preset) {
+  const sp = preset?.extensions?.SPreset;
+  const output = sp?.OutputPreprocessing;
+  const finalRequest = sp?.FinalRequestProcessing;
+  return (
+    typeof output?.toolCallFormatter?.script === 'string' &&
+    typeof finalRequest?.script === 'string' &&
+    presetScriptFingerprint(output.script) === MIAOSAIYA_FINGERPRINTS.output &&
+    presetScriptFingerprint(output.toolCallFormatter.script) ===
+      'f99d96da1a2cd800ca1934f7b803300d96c40c4557b27389bd1ff7c9f2f5b623' &&
+    presetScriptFingerprint(finalRequest.script) ===
+      'd3c49f8d2a3729574df6c1bc9bae2a1c01b4c8c6d30a0b0ce34b0356eda26527'
+  );
+}
+
+/** Translate the active prompt at request time while retaining the user's saved source. */
+export function meowssiahGamePreset(preset) {
+  const controls =
+    /<run_tool_replacement>|<\|(?:merge|sep)\|>|<<<\|catgodml\|(?!menu:)|<\/?(?:think_nya|game)\b|<8wanxiang_output>|\b(?:game_content|soliumbra_reply)\b/iu;
+  const disabled = new Set();
+  const prompts = preset.prompts.map((prompt) => {
+    if (prompt.marker) return prompt;
+    const content = prompt.content.replace(/<<<\|catgodml\|menu:[^\n]*?>>>[ \t]*/giu, '').trim();
+    if (!content || controls.test(content)) disabled.add(prompt.identifier);
+    return { ...prompt, content };
+  });
+  return {
+    ...preset,
+    prompts,
+    prompt_order: preset.prompt_order.map((group) => ({
+      ...group,
+      order: group.order.map((item) =>
+        disabled.has(item.identifier) ? { ...item, enabled: false } : item,
+      ),
+    })),
+    function_calling: false,
+    extensions: {},
+    assistant_prefill: '',
+    assistant_impersonation: '',
+    continue_prefill: '',
+  };
+}
 
 /** The preset starts with this header; keep game-injected context behind its boundary. */
 export function miaosaiyaPromptMessages(source, processing) {

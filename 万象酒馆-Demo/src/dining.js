@@ -178,7 +178,7 @@ export function finishMeal(library) {
   for (const id of meal.foods)
     for (const [key, amount] of Object.entries(MEAL_FOODS[id].bonus))
       bonus[key] = (bonus[key] || 0) + amount;
-  if (meal.quality === 'excellent') bonus.shield = (bonus.shield || 0) + 1;
+  if (meal.quality === 'excellent') bonus.shieldPercent = (bonus.shieldPercent || 0) + 3;
   const protagonist = library.campaign?.protagonistId;
   const gains = [];
   for (const id of meal.members) {
@@ -191,7 +191,7 @@ export function finishMeal(library) {
     library.relationships ||= {};
     const relationship = (library.relationships[id] ||= { affection: 0, gains: 0, agreed: false });
     const delta = Math.min(
-      100 - relationship.affection,
+      Number.MAX_SAFE_INTEGER - relationship.affection,
       affection + (meal.quality === 'excellent' ? 1 : 0),
     );
     relationship.affection += delta;
@@ -210,22 +210,40 @@ export function applyDiningToBattle(library, battle, partyIds, consume = true) {
     const unitId = Object.keys(battle.heroDefinitions)[index];
     const unit = battle.units[unitId];
     if (!pending || !unit || unit.hp <= 0 || battle.heroDefinitions[unitId].inactive) continue;
-    const bonus = pending.bonus;
+    const bonus = pending.bonus || {};
     const definition = battle.heroDefinitions[unitId];
-    definition.attack += Number(bonus.attack) || 0;
-    for (const skill of definition.skills || [])
-      for (const effect of skill.effects || [])
-        if (effect.type === 'damage') effect.value += Number(bonus.skillDamage) || 0;
-    const hp = Number(bonus.hp) || 0,
-      mp = Number(bonus.mp) || 0;
-    definition.hp += hp;
-    definition.mp += mp;
-    unit.maxHp += hp;
-    unit.maxMp += mp;
-    unit.hp += hp;
-    unit.mp += mp;
-    unit.block += Number(bonus.shield) || 0;
-    unit.mealBonus = structuredClone(pending);
+    const pctDelta = (base, pct) => (pct > 0 ? Math.max(1, Math.round((base * pct) / 100)) : 0);
+    const attackGain =
+      (Number(bonus.attack) || 0) + pctDelta(definition.attack, Number(bonus.attackPercent) || 0);
+    const hpGain = (Number(bonus.hp) || 0) + pctDelta(unit.maxHp, Number(bonus.hpPercent) || 0);
+    const mpGain = (Number(bonus.mp) || 0) + pctDelta(unit.maxMp, Number(bonus.mpPercent) || 0);
+    const shieldGain =
+      (Number(bonus.shield) || 0) + pctDelta(unit.maxHp, Number(bonus.shieldPercent) || 0);
+    const flatSkill = Number(bonus.skillDamage) || 0;
+    const pctSkill = Number(bonus.skillDamagePercent) || 0;
+    const skillDeltas = [];
+    definition.attack += attackGain;
+    for (const [sIdx, skill] of (definition.skills || []).entries()) {
+      for (const [eIdx, effect] of (skill.effects || []).entries()) {
+        if (effect.type !== 'damage') continue;
+        const delta = flatSkill + pctDelta(effect.value, pctSkill);
+        if (delta) {
+          effect.value += delta;
+          skillDeltas.push([sIdx, eIdx, delta]);
+        }
+      }
+    }
+    definition.hp += hpGain;
+    definition.mp += mpGain;
+    unit.maxHp += hpGain;
+    unit.maxMp += mpGain;
+    unit.hp += hpGain;
+    unit.mp += mpGain;
+    unit.block += shieldGain;
+    unit.mealBonus = {
+      ...structuredClone(pending),
+      applied: { hp: hpGain, mp: mpGain, attack: attackGain, skillDeltas },
+    };
     if (consume) delete dining.pending[id];
   }
 }
@@ -242,18 +260,29 @@ export function withoutDiningBonus(battle) {
   const copy = structuredClone(battle);
   for (const unit of Object.values(copy.units)) {
     if (!unit.mealBonus) continue;
-    const bonus = unit.mealBonus.bonus,
-      definition = copy.heroDefinitions[unit.id];
+    const applied = unit.mealBonus.applied;
+    const bonus = unit.mealBonus.bonus || {};
+    const definition = copy.heroDefinitions[unit.id];
+    const hp = applied ? applied.hp : Number(bonus.hp) || 0;
+    const mp = applied ? applied.mp : Number(bonus.mp) || 0;
+    const attack = applied ? applied.attack : Number(bonus.attack) || 0;
     if (definition) {
-      definition.hp -= Number(bonus.hp) || 0;
-      definition.mp -= Number(bonus.mp) || 0;
-      definition.attack -= Number(bonus.attack) || 0;
-      for (const skill of definition.skills || [])
-        for (const effect of skill.effects || [])
-          if (effect.type === 'damage') effect.value -= Number(bonus.skillDamage) || 0;
+      definition.hp -= hp;
+      definition.mp -= mp;
+      definition.attack -= attack;
+      if (applied?.skillDeltas) {
+        for (const [sIdx, eIdx, delta] of applied.skillDeltas) {
+          const eff = definition.skills?.[sIdx]?.effects?.[eIdx];
+          if (eff) eff.value -= delta;
+        }
+      } else {
+        for (const skill of definition.skills || [])
+          for (const effect of skill.effects || [])
+            if (effect.type === 'damage') effect.value -= Number(bonus.skillDamage) || 0;
+      }
     }
-    unit.maxHp -= Number(bonus.hp) || 0;
-    unit.maxMp -= Number(bonus.mp) || 0;
+    unit.maxHp -= hp;
+    unit.maxMp -= mp;
     unit.hp = Math.min(unit.hp, unit.maxHp);
     unit.mp = Math.min(unit.mp, unit.maxMp);
     delete unit.mealBonus;

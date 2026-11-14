@@ -4,12 +4,18 @@ import { scanWorldbooks, injectWorldbookMessages } from '../worldbook-scan.js';
 import { finalizeRequest } from './prompt-processing.js';
 import { presetOutputTransport, presetOutputWarnings } from '../preset-output.js';
 import { adviceTranscript } from '../advice.js';
-import { galInstruction } from '../gal-prompt.js';
-import { adventureChatRules, adventureOutputBoundary } from '../adventure-prompt.js';
+import { galInstruction, galActorListText } from '../gal-prompt.js';
+import {
+  adventureChatRules,
+  adventureOutputBoundary,
+  adventureTurnTask,
+  adventureBoundaryIds,
+} from '../adventure-prompt.js';
 import { FOOD_WORLDBOOK_CONTENT } from '../../content/dining.js';
 import { newWorldEntry } from '../worldbook.js';
-import { invitationChatInstruction } from './invitation-request.js';
-import { INVITATION_CONTEXT_LIMIT } from '../../memory.js';
+import { invitationChatInstruction, invitationTurnContext } from './invitation-request.js';
+import { INVITATION_CONTEXT_LIMIT, journeyContinuityMessage } from '../../memory.js';
+import { buildTriggerIds } from '../worldbook-triggers.js';
 
 export function chatInput(kind, input) {
   if (!['chat', 'quick-chat'].includes(kind)) throw Error('聊天接口类型无效');
@@ -59,13 +65,10 @@ export async function chatRequest(
   const input = chatInput(kind, rawInput);
   // Legacy world entries enabled for script are also useful to chat, except generation contracts.
   const books = structuredClone(worldInfo.books);
-  if (
-    kind === 'chat' &&
-    input.dining &&
-    !books.some((book) =>
-      Object.values(book.entries).some((entry) => entry.extensions?.wanxiang?.dining),
-    )
-  ) {
+  const hasDiningEntry = books.some((book) =>
+    Object.values(book.entries).some((entry) => entry.extensions?.wanxiang?.dining),
+  );
+  if (kind === 'chat' && input.dining && !hasDiningEntry) {
     books.push({
       id: 'meal-context',
       name: '酒馆食材与菜肴',
@@ -73,7 +76,8 @@ export async function chatRequest(
         0: {
           ...newWorldEntry(0),
           comment: '酒馆食材与菜肴 · 仅用餐',
-          constant: true,
+          key: ['chat:dining'],
+          constant: false,
           ignoreBudget: true,
           position: 4,
           depth: 0,
@@ -85,21 +89,25 @@ export async function chatRequest(
       },
     });
   }
+  const CHAT_RULE_BLOCKLIST = new Set(['generation-boundary-output', 'adventure-nodes']);
   for (const book of books)
     for (const entry of Object.values(book.entries)) {
-      if (entry.extensions?.wanxiang?.dining) {
-        if (kind !== 'chat' || !input.dining) entry.disable = true;
-        else entry.content += '\n本次餐桌：' + JSON.stringify(input.dining);
+      if (entry.extensions?.wanxiang?.dining && (kind !== 'chat' || !input.dining)) {
+        entry.disable = true;
       }
       const rule = entry.extensions?.wanxiang?.generationRule;
+      const chatAllowedRule =
+        rule &&
+        (['chat-writing', 'chat-boundary'].includes(rule) ||
+          (entry.apiTargets?.includes('chat') &&
+            !CHAT_RULE_BLOCKLIST.has(rule) &&
+            !/^(character|script|map|creation|summary)-/.test(rule)));
       if (
-        (rule && rule !== 'chat-boundary') ||
+        (rule && !chatAllowedRule) ||
         entry.extensions?.wanxiang?.generationExample ||
         entry.extensions?.wanxiang?.officialDungeonId
       )
         entry.disable = true;
-      else if (entry.apiTargets?.includes('script') && !entry.apiTargets.includes(kind))
-        entry.apiTargets.push(kind);
     }
   const history = input.history.map(({ role, content }) => ({ role, content }));
   if (kind === 'chat')
@@ -132,6 +140,7 @@ export async function chatRequest(
     countTokens,
     context: {
       kind,
+      triggerIds: buildTriggerIds(kind, input),
       messages: [...history, { role: 'user', content: input.text }],
       names: input.characters.map((character) => character.name),
       characterIds: input.characters.map((character) => character.id),
@@ -142,12 +151,21 @@ export async function chatRequest(
       tags: [],
     },
   });
+  const hasWorldbookChatTeaching =
+    scan.entries.some((entry) => entry.extensions?.wanxiang?.generationRule === 'chat-writing') &&
+    scan.entries.some((entry) => entry.extensions?.wanxiang?.generationRule === 'chat-boundary');
   const sampling = presetSampling(preset);
   const warnings = presetOutputWarnings(preset);
   const rules =
     kind === 'chat'
       ? '直接续写当前酒馆内的人物言语、行动与环境正文，沿用预设文风，可以使用HTML，不说明“正在聊天”、不解释界面、不写聊天总结。正文只放在唯一一组<wanxiang_output>与</wanxiang_output>内。随后在唯一一组<wanxiang_actions>与</wanxiang_actions>内输出JSON：{"affection":[{"id":"队友ID","delta":1}],"agreeToAdventure":[]}。affection中的id与agreeToAdventure中的每一项，都必须原样使用人物资料标明的内部id，不能填写角色姓名、昵称、站位或编造ID；正文仍自然称呼角色姓名，不展示内部id。根据本轮实际互动给出0～5的好感增量；没有变化时affection为空。只有角色在正文中明确同意与玩家一起进入副本，才把其ID放入agreeToAdventure。指令只针对在场或本轮提及的已知角色，不含主角，不凭空替玩家作决定。'
       : '这是当前战斗/剧情间隙的简短闲聊，不是后续剧本。只回复一组<wanxiang_output>正文</wanxiang_output>标签，不返回JSON。不得推进剧情或改变战斗。';
+  const leanTaskRule =
+    kind === 'chat'
+      ? `【本轮模式：chat】\n${galActorListText(input)}`
+      : input.invitation
+        ? `【本轮模式：quick-chat / invitation】\n${galActorListText(input)}`
+        : `【本轮模式：quick-chat / quick】\n${galActorListText(input)}`;
   const previousScript = String(input.previousScript || '').slice(0, 500000);
   const base = [
     {
@@ -172,10 +190,7 @@ export async function chatRequest(
     delete stateContext.history;
     base.push({
       role: 'system',
-      content:
-        (input.adventure.chapter
-          ? '当前主线任务，仅包含已发生的阶段资料：\n'
-          : '当前五节点冒险上下文（未来预定不是已发生历史）：\n') + JSON.stringify(stateContext),
+      content: '当前五节点冒险上下文（未来预定不是已发生历史）：\n' + JSON.stringify(stateContext),
     });
   }
   if (input.archiveContext)
@@ -188,10 +203,18 @@ export async function chatRequest(
       role: 'system',
       content: `【当前外出行程及已演出内容】\n${JSON.stringify(input.dialogueContext)}`,
     });
+  if (kind === 'chat' && input.dining)
+    base.push({
+      role: 'system',
+      content: `【本次餐桌数据】${JSON.stringify(input.dining)}`,
+    });
   if (kind === 'chat' && input.protagonistId)
     base.push({
       role: 'system',
-      content: `玩家主角ID：${String(input.protagonistId).slice(0, 100)}。这是user所指的人物，具体设定见人物资料，不把主角写成另一个同行者。关系状态：${JSON.stringify(input.relationships || {})}`,
+      content: `【玩家主角与关系状态】${JSON.stringify({
+        protagonistId: String(input.protagonistId).slice(0, 100),
+        relationships: input.relationships || {},
+      })}`,
     });
   let dropped = 0;
   async function assemble() {
@@ -256,12 +279,15 @@ export async function chatRequest(
     );
     messages.push({
       role: 'system',
-      content:
-        (kind === 'quick-chat' && input.adventure
-          ? adventureChatRules(input.adventure, !!input.dialogueScenes?.length)
-          : rules) +
-        '\n' +
-        galInstruction(input, kind),
+      content: hasWorldbookChatTeaching
+        ? kind === 'quick-chat' && input.adventure
+          ? `${adventureTurnTask(input.adventure, !!input.dialogueScenes?.length)}\n${galActorListText(input)}`
+          : leanTaskRule
+        : (kind === 'quick-chat' && input.adventure
+            ? adventureChatRules(input.adventure, !!input.dialogueScenes?.length)
+            : rules) +
+          '\n' +
+          galInstruction(input, kind),
     });
     const processed = await runRegexTasks(
       regexScripts,
@@ -285,14 +311,38 @@ export async function chatRequest(
     retained.forEach((index, position) => {
       messages[index] = transfer.messages[position];
     });
-    const boundary = adventureOutputBoundary(input.adventure, !!input.dialogueScenes?.length);
+    const boundary = hasWorldbookChatTeaching
+      ? adventureBoundaryIds(input.adventure, !!input.dialogueScenes?.length)
+      : adventureOutputBoundary(input.adventure, !!input.dialogueScenes?.length);
+    messages.unshift(...journeyContinuityMessage(input));
     if (kind === 'quick-chat' && boundary) messages.push({ role: 'system', content: boundary });
-    if (kind === 'quick-chat' && input.invitation)
-      messages.push({ role: 'system', content: invitationChatInstruction(input.invitation) });
+    if (input.questOffer)
+      messages.push({
+        role: 'system',
+        content:
+          '只有当本轮正文自然提到值得玩家亲自追查的特殊事件、地点或人物，并且已有具体可行动线索时，正文后可附至多一组<wanxiang_quest>{"title":"任务名","description":"给玩家看的具体介绍","hook":"本轮正文中的线索与后续悬念","type":"social|character|battle 三选一","level":1}</wanxiang_quest>。level 为1至99，按真实内容判断；普通寒暄、重复线索、无实质后果的跑腿一律省略。',
+      });
+    if (input.questNegotiation)
+      messages.push({
+        role: 'system',
+        content:
+          '这是任务角色的招募交涉。根据角色立场回应，态度和条件可以拒绝玩家。正文后附一组<wanxiang_negotiation>{"score":0}</wanxiang_negotiation>。score 为0至5整数，0代表无进展，5代表有充分理由接受。结合既往交涉判断，不因玩家口头声称而跳过门槛。\n' +
+          JSON.stringify(input.questNegotiation),
+      });
+    if (kind === 'quick-chat' && input.invitation) {
+      messages.push({
+        role: 'system',
+        content: hasWorldbookChatTeaching
+          ? invitationTurnContext(input.invitation)
+          : invitationChatInstruction(input.invitation),
+      });
+    }
     if (Array.isArray(input.dialogueScenes) && input.dialogueScenes.length) {
       messages.push({
         role: 'system',
-        content: `【本轮闲聊后的台词修改】先完整输出当前回复及本轮任务数据，再输出一组<wanxiang_dialogue>JSON数组</wanxiang_dialogue>。
+        content: hasWorldbookChatTeaching
+          ? `【本轮后续可编辑场景数据】${JSON.stringify(input.dialogueScenes)}`
+          : `【本轮闲聊后的台词修改】先完整输出当前回复及本轮任务数据，再输出一组<wanxiang_dialogue>JSON数组</wanxiang_dialogue>。
 本轮每个尚未演出的场景都要根据本次对话修改台词或旁白。逐幕逐句处理，充分落实对话产生的影响，不能只象征性改一句或省略后续场景。每个可编辑的台词ID都要给出完整文字，沿用原句时也完整写出。人物、出场顺序、地点、选项、目标、战斗和奖励沿用原安排。保留说话人，跳过舞台指令和玩家台词，不在当前回复提前演出后续内容。
 每幕填写原id和revision。patches逐条使用{"op":"replace","id":"已有台词ID","speaker":"原说话人","text":"完整的新台词或旁白"}。保留已有台词ID，不输出HTML或舞台标签。
 尚未演出的场景：${JSON.stringify(input.dialogueScenes)}`,

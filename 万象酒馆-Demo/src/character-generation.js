@@ -2,7 +2,7 @@ import { defaultProtagonist } from './content/qingyuan.js';
 import { EDITH } from './content/edith.js';
 import { PANDORA } from './content/pandora.js';
 import { CHANGJING_YUEXI } from './content/changjing-yuexi.js';
-import { POSITIVE_BUFFS } from './triggers.js';
+import { EXCLUSIVE_BUFFS, GENERATED_POSITIVE_BUFFS } from './triggers.js';
 import { generatedStatusValue } from './status-rules.js';
 import { finalSkillText, finalPassiveText } from './skill-text.js';
 
@@ -167,6 +167,10 @@ function validateComplexity(data, plan) {
       for (const rule of ability.rules) {
         assertDesign(rule.conditions.length <= 1, '每条规则最多一个条件');
         assertDesign(!rule.conditions.length || plan.complexity >= 3, '本档不允许条件');
+        assertDesign(
+          !rule.conditions.some((condition) => EXCLUSIVE_BUFFS.includes(condition.buff)),
+          '条件不能引用角色或纹章专属状态',
+        );
         if (rule.conditions.some((condition) => condition.type === 'mark'))
           assertDesign(data.mark && plan.complexity >= 5, '标记条件需要本角色专属标记');
         assertDesign(
@@ -253,8 +257,19 @@ export function compileCharacterDesign(raw, input = {}) {
   const numericEffect = (effect, ability, passive = false) => {
     const power = ['low', 'standard', 'high'].indexOf(effect.power);
     assertDesign(power >= 0, '效果强度档位无效');
-    if (effect.type === 'buff') assertDesign(effect.buff, '状态效果缺少buff');
-    if (effect.type === 'cleanse') assertDesign(effect.buffs?.length, '净化效果缺少buffs');
+    if (effect.type === 'buff') {
+      assertDesign(effect.buff, '状态效果缺少buff');
+      assertDesign(!EXCLUSIVE_BUFFS.includes(effect.buff), '不能生成角色或纹章专属状态');
+    }
+    if (effect.type === 'cleanse') {
+      assertDesign(effect.buffs?.length, '净化效果缺少buffs');
+      assertDesign(
+        !effect.buffs.some((key) => EXCLUSIVE_BUFFS.includes(key)),
+        '净化列表不能包含专属状态',
+      );
+    }
+    if (effect.when?.buff)
+      assertDesign(!EXCLUSIVE_BUFFS.includes(effect.when.buff), '不能判断专属状态条件');
     const target = effect.target === 'target' ? ability.target : effect.target || ability.target;
     const enemyTarget = ['enemy', 'allEnemies', 'lowestEnemy', 'opposite', 'attacker'].includes(
       target,
@@ -269,10 +284,10 @@ export function compileCharacterDesign(raw, input = {}) {
     ].includes(target);
     const beneficial =
       ['heal', 'shield', 'cleanse'].includes(effect.type) ||
-      (effect.type === 'buff' && [...POSITIVE_BUFFS, 'overload'].includes(effect.buff));
+      (effect.type === 'buff' && GENERATED_POSITIVE_BUFFS.includes(effect.buff));
     const harmful =
       effect.type === 'damage' ||
-      (effect.type === 'buff' && ![...POSITIVE_BUFFS, 'overload'].includes(effect.buff));
+      (effect.type === 'buff' && !GENERATED_POSITIVE_BUFFS.includes(effect.buff));
     assertDesign(!beneficial || !enemyTarget, '治疗、护盾和正面状态必须指向友方');
     assertDesign(!harmful || !allyTarget, '伤害和负面状态必须指向敌方');
     const allTargets = ['allAllies', 'allEnemies', 'frontAllies', 'rearAllies'].includes(
@@ -287,7 +302,7 @@ export function compileCharacterDesign(raw, input = {}) {
     const scope = allTargets ? 0.54 : 1;
     const share = weights[power] / total;
     const value = Math.min(
-      32,
+      40,
       Math.max(1, Math.round(plan.fixed.attack * multiplier * scope * share * (0.9 + 0.1 * power))),
     );
     const markDamage = effect.perMark ? Math.max(1, Math.floor(value / 7)) : 0;

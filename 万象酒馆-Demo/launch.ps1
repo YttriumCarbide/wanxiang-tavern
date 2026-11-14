@@ -1,9 +1,10 @@
-﻿param([switch]$Stop, [switch]$NoBrowser, [ValidateRange(1024,65535)][int]$Port = 4180)
+﻿param([switch]$Stop, [switch]$NoBrowser, [switch]$WorkshopEditor, [ValidateRange(1024,65535)][int]$Port = 4180)
 $ErrorActionPreference = 'Stop'
 $projectDirectory = $PSScriptRoot
 $baseUrl = "http://127.0.0.1:$Port"
 $projectVersion = (Get-Content -LiteralPath (Join-Path $projectDirectory 'package.json') -Raw | ConvertFrom-Json).version
-$gameUrl = "$baseUrl/?v=$projectVersion"
+$page = if ($WorkshopEditor) { "/tools/workshop-editor.html" } else { "/" }
+$pageUrl = "$baseUrl${page}?v=$projectVersion"
 
 function Test-DemoServer {
     try {
@@ -65,8 +66,8 @@ try {
         if (-not $ready) { throw "服务启动失败，请查看 .runtime\server-$Port.error.log。" }
         Write-Host '游戏服务已启动。'
     } else { Write-Host '游戏已在运行，直接打开当前版本。' }
-    if (-not $NoBrowser) { Start-Process -FilePath $gameUrl }
-    Write-Host "游戏地址：$gameUrl"
+    if (-not $NoBrowser) { Start-Process -FilePath $pageUrl }
+    if ($WorkshopEditor) { Write-Host "工坊修改器地址：$pageUrl" } else { Write-Host "游戏地址：$pageUrl" }
     exit 0
 } catch {
     Write-Host $_.Exception.Message -ForegroundColor Red

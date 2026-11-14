@@ -6,8 +6,9 @@ import { RUINS_MONSTER_LORE } from '../src/content/monsters.js';
 import { DEFINITIONS } from '../src/data.js';
 import { explorationSpec, newExploration } from '../src/exploration.js';
 import { newExpedition, beginEncounter, completeEncounter, chooseRest } from '../src/expedition.js';
+import { readFile } from 'node:fs/promises';
 import { generationInput } from '../src/ai/pipeline/prompts.js';
-import { upgradeRuinsWorldbook } from '../src/ai/ruins-worldbook.js';
+import { syncBuiltinWorldbook } from '../src/ai/worldbook.js';
 import { newCampaign } from '../src/campaign.js';
 import { defaultProtagonist } from '../src/content/qingyuan.js';
 import { settingOnly } from '../src/ai/contracts.js';
@@ -81,7 +82,10 @@ test('six authored ruins trips use their own fixed cast in both engine and gener
   assert(endless.encounters.every((encounter) => !encounter.enemies));
 });
 
-test('ruins worldbook migration preserves edits and controls and is idempotent with no duplicate chapters', () => {
+test('ruins worldbook migration preserves edits and controls and is idempotent with no duplicate chapters', async () => {
+  const builtin = JSON.parse(
+    await readFile(new URL('../assets/builtin-worldbook.json', import.meta.url), 'utf8'),
+  );
   const source = {
     entries: {
       42: {
@@ -93,13 +97,19 @@ test('ruins worldbook migration preserves edits and controls and is idempotent w
       },
     },
   };
-  const migrated = upgradeRuinsWorldbook(source);
+  const migrated = syncBuiltinWorldbook(source, builtin);
   assert.equal(source.entries[42].content, '自定义大纲');
-  assert(migrated.entries[42].content.startsWith('自定义大纲'));
   assert.equal(migrated.entries[42].disable, true);
   assert.equal(migrated.entries[42].order, 123);
   assert.equal(
-    Object.values(migrated.entries).filter((entry) => entry.extensions?.wanxiang?.monsterId).length,
+    Object.values(migrated.entries).filter(
+      (entry) =>
+        entry.extensions?.wanxiang?.monsterId &&
+        Object.prototype.hasOwnProperty.call(
+          RUINS_MONSTER_LORE,
+          entry.extensions.wanxiang.monsterId,
+        ),
+    ).length,
     19,
   );
   for (const route of RUINS_ROUTES) {
@@ -110,7 +120,9 @@ test('ruins worldbook migration preserves edits and controls and is idempotent w
       ].includes(route.id),
     );
     assert.equal(matches.length, 1);
-    assert(matches[0].content.includes(DEFINITIONS[route.boss].name));
+    const dungeon = ALL_OFFICIAL_DUNGEONS.find((entry) => entry.id === route.id);
+    const body = dungeon.outline.slice(dungeon.outline.indexOf('\n') + 1);
+    assert(matches[0].content.includes(body));
   }
-  assert.deepEqual(upgradeRuinsWorldbook(migrated), migrated);
+  assert.deepEqual(syncBuiltinWorldbook(migrated, builtin), migrated);
 });

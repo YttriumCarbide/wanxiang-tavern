@@ -14,8 +14,21 @@
       <use href="#fir" x="35" y="6" />
     </g>
     <g id="ridge" fill="none" stroke="currentColor" stroke-width=".95" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M-33-4 11-48l30 35-14 9-16-12-9 16Z" fill="#f7efe0" fill-opacity=".46" stroke="none" />
+      <path d="M11-48 41-13l17-12 17 28-39 8-31-9 9-16-10-3Z" fill="currentColor" fill-opacity=".16" stroke="none" />
       <path d="M-90 20q19-4 33-24l18-24 22 16L11-48l30 35 17-12 17 28 21 12M-20-9 11-48l-6 21 10 3-9 16m35-5 8 10m-82-14-6-11-9 25-14 11m116-26 4-7 6 26 15 12" />
       <path d="m-9-6-8 15m29-14-9 18m20-9-7 12m37-11-5 11m-96-12-9 9m-20 2-12 8m162-13 6 9" opacity=".64" />
+    </g>
+    <g id="ridge-glacier" fill="none" stroke="currentColor" stroke-width=".95" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M-56-16-24-54 4-22l28-36 26 34-18 8-10-16-16 14-18-14-14 16Z" fill="#f7efe0" fill-opacity=".5" stroke="none" />
+      <path d="M-24-54 4-22-8 14-31 8Zm56-4 26 34 19 26-34 8-19-24Z" fill="currentColor" fill-opacity=".18" stroke="none" />
+      <path d="M-96 18q22-6 40-34l32-38 28 32 28-36 26 34 22 26q12 11 26 15M-24-54l-7 28 9 6-8 24M32-58l-6 26 11 5-9 25m-84-14-12 20m130-22 14 20" />
+      <path d="m-38-18-9 16m21-10-7 16m42-22-8 17m22-11-7 15m28-8 9 14" opacity=".64" />
+    </g>
+    <g id="ridge-crag" fill="none" stroke="currentColor" stroke-width=".95" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M-42-32-8-12 28-40 58-8 18 14-26 12Z" fill="currentColor" fill-opacity=".15" stroke="none" />
+      <path d="M-84 16q18-5 42-48l34 20 36-28 30 32 28 22M-42-32l-6 22 8 5-7 17M28-40l-5 21 9 4-8 19" />
+      <path d="m-52-8-10 15m26-9-8 14m42-16-7 15m24-8-6 13" opacity=".62" />
     </g>
     <path id="waves" d="M0 0q13-6 27-1t30-1m-37 13q11-5 24-1t24 0m18-16q11-5 26 0t23-2" />
   </defs>
@@ -37,14 +50,14 @@
   </g>
   <g id="frost-terrain" color="#60747a">
     <path d="M-183 30q28-60 113-84t148-13l72 39 38 61-89 21-85-12-84 13Z" fill="#a3afb0" opacity=".23" />
-    <use href="#ridge" transform="translate(-101 -10) scale(1.1) rotate(-7)" />
+    <use href="#ridge-glacier" transform="translate(-101 -10) scale(1.06) rotate(-7)" />
     <use href="#ridge" transform="translate(79 -28) scale(1.18) rotate(8)" />
-    <use href="#ridge" transform="translate(122 27) scale(.58)" />
+    <use href="#ridge-crag" transform="translate(122 27) scale(.64)" />
     <path d="m-130 28 8-11 3 13-5 8Zm16 8 8-9 1 13m161-19 8-12 3 14-6 6Zm17 10 6-8 1 10" fill="none" stroke="#5c8286" stroke-width=".85" />
   </g>
   <g id="forge-terrain" color="#85533c">
     <path d="M-181 17q48-38 99-48t110-1l70-25 55 24 23 51-34 26-81 9-54-9-69 17-78-14Z" fill="#a46343" opacity=".2" />
-    <use href="#ridge" transform="translate(-102 -7) scale(.84) rotate(-12)" />
+    <use href="#ridge-crag" transform="translate(-102 -7) scale(.92) rotate(-12)" />
     <use href="#ridge" transform="translate(81 -19) scale(.91) rotate(8)" />
     <path d="M-150 35q51-23 74-9t46 9m83 10 21-10 12 3 21-12 16 4 37-15m-267 26-17 9m236-10 16-7m-79-9 21-10" fill="none" stroke="#a35d44" stroke-width="1.1" stroke-linecap="round" />
   </g>

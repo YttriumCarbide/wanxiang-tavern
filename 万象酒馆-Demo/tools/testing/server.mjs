@@ -10,6 +10,7 @@ export async function serverChecks(baseURL, port) {
     '/index.html',
     '/tavern.html',
     '/artbook.html',
+    '/tools/workshop-editor.html',
     '/src/app.js',
     '/styles/app.css',
     portraitUrl(HEROES[0]).replace('./', '/'),
@@ -41,11 +42,30 @@ export async function serverChecks(baseURL, port) {
   const disk = await fetch(baseURL + '/__demo/storage');
   assert.equal(disk.headers.get('cache-control'), 'no-store');
   assert.equal((await disk.json()).app, 'wanxiang-disk-storage');
+  const workshopURL = baseURL + '/__demo/workshop-catalog';
+  const workshop = await fetch(workshopURL);
+  assert.equal(workshop.headers.get('cache-control'), 'no-store');
+  const { catalog, revision } = await workshop.json();
+  assert.equal(catalog.items.length, 43);
+  assert.equal(
+    (await fetch(workshopURL, { headers: { Origin: 'https://other.invalid' } })).status,
+    403,
+  );
+  const put = (body, tag) =>
+    fetch(workshopURL, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Origin: baseURL, 'If-Match': tag },
+      body: JSON.stringify(body),
+    });
+  assert.equal((await put({ version: 99 }, revision)).status, 400);
+  assert.equal((await put(catalog, '"stale"')).status, 409);
+  assert.equal((await (await fetch(workshopURL)).json()).revision, revision);
   return {
     assetsServed: true,
     privateControlBlocked: true,
     unauthorizedStopBlocked: true,
     diskPrivate: true,
+    workshopCatalogProtected: true,
   };
 }
 
@@ -64,9 +84,12 @@ export async function launchers() {
     await invoke(root, '一键启动.cmd');
     const second = await waitForServer(`http://127.0.0.1:${port}`);
     assert.equal(first.pid, second.pid);
+    const modifier = await invoke(path.dirname(root), '一键启动工坊修改器.cmd');
+    assert.match(modifier, /\/tools\/workshop-editor\.html\?v=/);
+    assert.equal((await waitForServer(`http://127.0.0.1:${port}`)).pid, first.pid);
     await invoke(root, '一键关闭.cmd');
     await invoke(path.dirname(root), '一键关闭.cmd');
-    return { cmdEntryPoints: 4, reusedProcess: true, repeatedStopSafe: true };
+    return { cmdEntryPoints: 5, reusedProcess: true, repeatedStopSafe: true };
   } finally {
     await stopServer(port);
   }

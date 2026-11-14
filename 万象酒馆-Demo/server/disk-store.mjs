@@ -27,7 +27,7 @@ const imageTypes = {
   'image/avif': 'avif',
 };
 
-async function atomicWrite(file, text) {
+export async function atomicWrite(file, text) {
   const temporary = file + '.' + randomUUID() + '.tmp';
   const handle = await open(temporary, 'wx', 0o600);
   try {

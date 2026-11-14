@@ -7,7 +7,7 @@ import { normalizeInvitationPlan } from '../../src/invitation.js';
 import { memoryHash } from '../../src/memory.js';
 import { fullInvitation } from '../fixtures/invitation.js';
 import { legacySession } from './legacy-session.mjs';
-import { travelChapterScene } from './chapter-navigation.mjs';
+import { travelTownScene } from './town-navigation.mjs';
 
 export async function dailyChecks({ browser, baseURL, output }) {
   const page = await browser.newPage({ viewport: { width: 1120, height: 700 } });
@@ -23,6 +23,16 @@ export async function dailyChecks({ browser, baseURL, output }) {
   library.daily.tutorial = 'planning';
   Object.assign(library.dining.inventory, { 'frost-oyster': 2, milk: 3 });
   library.relationships['official-libet'] = { affection: 25, gains: 0, agreed: false };
+  const nextTopics = [
+    '有猫混进早市',
+    '找回试琴时遗落的琴弦',
+    '广场摊主托人捎来一封信',
+    '补完第七小节以后多出一行谱',
+  ];
+  library.daily.memory.invitationTopics = {
+    'official-libet': ['旧的主题'],
+    'official-pandora': ['潘多拉的主题'],
+  };
   const previousText = '一辆坏在城门口的餐车挡住了路。';
   library.invitationHistory = [
     {
@@ -54,11 +64,10 @@ export async function dailyChecks({ browser, baseURL, output }) {
   const rawOutline = `<wanxiang_json>${JSON.stringify(outline)}</wanxiang_json>`;
   const calls = [];
   const summaries = [];
-  let lastChat;
+  let firstRevision;
   const errors = [];
   page.on('pageerror', (error) => errors.push(error.message));
   await page.route('**/api/ai/generate/chat', (route) => {
-    lastChat = route.request().postDataJSON();
     return route.fulfill({
       json: {
         content: '【旁白】广场的钟声响了。',
@@ -80,8 +89,14 @@ export async function dailyChecks({ browser, baseURL, output }) {
     });
   });
   await page.route('**/api/ai/generate/script', async (route) => {
-    const { invitation, party } = route.request().postDataJSON();
+    const { invitation, invitationTopics, party, playerIntent } = route.request().postDataJSON();
+    if (invitationTopics) {
+      assert.equal(invitationTopics.title, fullInvitation.title);
+      assert.match(invitationTopics.transcript, /把最后一小节留在琴谱上/);
+      return route.fulfill({ json: { topics: nextTopics } });
+    }
     calls.push('script');
+    assert.equal(playerIntent, '我想问问她最近在忙什么。');
     assert.equal(invitation.member, 'official-libet');
     assert.match(
       party.find((person) => person.id === invitation.member).invitationMemory,
@@ -96,17 +111,18 @@ export async function dailyChecks({ browser, baseURL, output }) {
     });
   });
   await page.route('**/api/ai/generate/quick-chat', (route) => {
-    const { invitation } = route.request().postDataJSON();
+    const { invitation, dialogueScenes } = route.request().postDataJSON();
     calls.push(invitation.stageId);
-    const { nextScene } = invitation;
+    const [nextScene] = dialogueScenes;
     const first = nextScene.lines[0];
     let revised;
     if (invitation.stageId === 'stage-1' && !invitation.previous.length) {
       assert.equal(nextScene.id, 'stage-2');
+      firstRevision = nextScene.revision;
       revised = '莉贝特用指节敲了一遍刚才说好的节拍。';
     }
     if (invitation.stageId === 'stage-1' && invitation.previous.length) {
-      assert.equal(nextScene.revision, 1);
+      assert.notEqual(nextScene.revision, firstRevision);
       assert.match(first.text, /说好的节拍/);
     }
     if (invitation.stageId === 'stage-3') {
@@ -123,21 +139,21 @@ export async function dailyChecks({ browser, baseURL, output }) {
             invitation.stageId === 'stage-1' && invitation.previous.length ? 'goal-2' : 'goal-1',
           ],
           note: '莉贝特听取了玩家的建议。',
-          ...(revised
-            ? {
-                nextSceneId: nextScene.id,
-                revision: nextScene.revision,
-                patches: [{ op: 'replace', id: first.id, speaker: first.speaker, text: revised }],
-              }
-            : {}),
         },
+        ...(revised
+          ? {
+              dialogue: [
+                {
+                  id: nextScene.id,
+                  revision: nextScene.revision,
+                  patches: [{ op: 'replace', id: first.id, speaker: first.speaker, text: revised }],
+                },
+              ],
+            }
+          : {}),
       },
     });
   });
-  async function draft(index, action) {
-    await page.locator(`[data-daily-slot="${index}"]`).click();
-    await page.locator(`[data-daily-action="${action}"]`).click();
-  }
   async function clearGal(until) {
     for (let attempts = 0; attempts < 240; attempts++) {
       if (await until()) return;
@@ -189,19 +205,18 @@ export async function dailyChecks({ browser, baseURL, output }) {
     await page.clock.install();
     await page.goto(baseURL + '/?display=landscape');
     const frame = page.frameLocator('#inn-frame iframe');
-    await page.locator('[data-daily="open"]').click();
-    await draft(3, 'dungeon');
-    assert.match(await page.locator('.daily-rail footer').textContent(), /放不进/);
-    for (const [i, action] of ['service', 'outing', 'outing', 'invitation'].entries())
-      await draft(i, action);
+    const actions = page.locator('.daily-dock button');
+    assert.deepEqual(await actions.allTextContents(), ['闲聊', '用餐', '约见', '冒险', '外出']);
+    assert.match(await page.locator('[data-tavern-clock]').textContent(), /第 1 天 · 上午/);
+    await page.locator('[data-daily="promotion"]').click();
+    assert(await page.locator('[data-promotion-confirm]').isDisabled());
+    await page.locator('[data-promotion-close]').click();
     await frame.locator('#status').waitFor({ state: 'detached', timeout: 60000 });
-    await frame.locator('canvas').click({ position: { x: 28, y: 90 } });
-    await page.locator('[data-daily="open"]').waitFor();
-    await page.locator('.daily-rail').waitFor({ state: 'hidden' });
-    await page.locator('[data-daily="open"]').click();
-    assert.equal(await page.locator('[data-daily-slot="0"]').getAttribute('data-kind'), 'service');
-    await page.screenshot({ path: path.join(output, 'daily-timeline.png') });
-    await page.locator('[data-daily="confirm"]').click();
+    await page.screenshot({ path: path.join(output, 'daily-actions.png') });
+    await page.locator('[data-daily="dungeon"]').click();
+    await page.locator('#destination-dialog[open]').waitFor();
+    await page.locator('#destination-close').click();
+    await page.locator('[data-daily="service"]').click();
     await page.locator('#daily-setup[open]').waitFor();
     await page.locator('[data-daily-start]').click();
     const service = page.locator('#daily-service');
@@ -327,42 +342,32 @@ export async function dailyChecks({ browser, baseURL, output }) {
     await page.locator('[data-service-end]').click();
     assert.match(await status(), /本班接待 1 桌/);
     assert.match(await status(), /知名度.*熟练|知名度.*掌勺/);
-    await page.locator('[data-daily="next"]').click();
-    assert.match(await status(), /外出门/);
-    await frame.locator('#status').waitFor({ state: 'detached', timeout: 60000 });
-    await frame.locator('canvas').evaluate(() => window.assetPreview.placeNow('streetDoor'));
-    await frame.locator('#street-open').click();
-    assert.match(await page.locator('#daily-setup[open]').textContent(), /可行动 20 次/);
+    assert.match(await page.locator('[data-tavern-clock]').textContent(), /中午/);
+    await page.locator('[data-daily="outing"]').click();
+    await frame.locator('#street-map-workshop').click();
+    await page.locator('#workshop-dialog[open]:not([data-loading])').waitFor();
+    await page.locator('[data-ws-close]').click();
+    await frame.locator('#street-map-companions').click();
+    await page.locator('[data-daily-person="official-edith"]').click();
     await page.locator('[data-daily-start]').click();
-    await page.waitForFunction(
-      () => document.querySelector('#inn-frame iframe')?.contentWindow.streetPreview,
-    );
-    assert.match(await status(), /20/);
-    await travelChapterScene(page, 'city-center');
-    assert.match(await status(), /19/);
-    await travelChapterScene(page, 'road-meadow');
-    assert.match(await status(), /16/);
-    assert(await page.locator('#chapter-talk').isHidden());
-    await travelChapterScene(page, 'city-center');
-    await page.locator('[data-daily="home"]').click({ trial: true });
-    await page.evaluate(() => {
-      const key = 'wanxiang.worldbooks.v1';
-      const saved = JSON.parse(localStorage.getItem(key));
-      saved.daily.active.remaining = 1;
-      localStorage.setItem(key, JSON.stringify(saved));
-    });
-    await page.reload();
-    await page.locator('#chapter-talk').click();
-    await page.locator('#chat-input').fill('再听一次钟声，我们就回去吧。');
-    await page.locator('#chat-send').click();
-    await page.waitForFunction(() => document.querySelector('#gal-stage .gal-count')?.textContent);
-    assert.equal(await page.evaluate(() => demo.getLibrary().daily.active.remaining), 0);
-    await clearGal(async () => (await status()).includes('已使用 20 次'));
-    await page.locator('[data-daily="next"]').click();
+    assert.deepEqual(await page.evaluate(() => demo.getLibrary().daily.active.companions), [
+      'official-edith',
+    ]);
+    await frame.locator('#street-map-step-out').click();
+    assert.match(await status(), /已行 0 回合/);
+    await travelTownScene(page, 'city-center');
+    assert.match(await status(), /已行 1 回合/);
+    await travelTownScene(page, 'outskirts');
+    assert.match(await status(), /已行 3 回合/);
+    assert.equal(await frame.locator('[data-hotspot="road-meadow"]').count(), 0);
+    await page.locator('[data-daily="home"]').click();
+    await page.locator('[data-daily="invitation"]').click();
     await page.locator('[data-daily-person="official-libet"]').click();
     await page.locator('[data-daily-activity="walk"]').click();
     assert.equal(summaries.length, 0, 'two completed dungeons alone do not start a batch');
     await page.locator('[data-daily-start]').click();
+    await page.locator('#player-intent textarea').fill('我想问问她最近在忙什么。');
+    await page.locator('#player-intent button[value="continue"]').click();
     const compose = page.locator('#daily-invitation textarea');
     const ready = () => compose.isVisible();
     const record = page.locator('.daily-invitation-record');
@@ -393,8 +398,9 @@ export async function dailyChecks({ browser, baseURL, output }) {
     assert.equal(await rawDialog.locator('textarea').inputValue(), rawOutline);
     await rawDialog.getByRole('button', { name: '关闭原始回复' }).click();
     await checkInvitationComposer('desktop');
-    await compose.fill('我们一起走到广场吧。');
-    await page.locator('#daily-invitation [type="submit"]').click();
+    const choices = page.locator('[data-invite-choice]');
+    assert.deepEqual(await choices.allTextContents(), fullInvitation.stages[0].choices);
+    await choices.first().click();
     await clearGal(async () => (await ready()) && (await record.locator('li small').count()) === 1);
     assert.match(await record.locator('li').first().textContent(), /听莉贝特试奏一遍.*已完成/);
     await historyButton.click();
@@ -432,7 +438,7 @@ export async function dailyChecks({ browser, baseURL, output }) {
     await clearGal(async () => (await status()).includes('结束约见') && (await compose.isHidden()));
     assert.match(await record.textContent(), /酒馆 → 星钟广场/);
     assert(await frame.locator('#street-open').count(), 'the tavern is still the loaded scene');
-    await travelChapterScene(page, 'street');
+    await travelTownScene(page, 'street');
     assert.match(await record.textContent(), /酒馆街角 → 星钟广场/);
     assert(await compose.isHidden(), 'an intermediate scene does not start the next act');
     await page.reload();
@@ -444,7 +450,7 @@ export async function dailyChecks({ browser, baseURL, output }) {
       { timeout: 60000 },
     );
     assert.match(await record.textContent(), /酒馆街角 → 星钟广场/);
-    await travelChapterScene(page, 'city-center');
+    await travelTownScene(page, 'city-center');
     await clearGal(
       async () =>
         (await ready()) &&
@@ -452,10 +458,8 @@ export async function dailyChecks({ browser, baseURL, output }) {
     );
     await page.waitForFunction(
       () =>
-        document
-          .querySelector('#inn-frame iframe')
-          ?.contentWindow.streetPreview?.state()
-          .image.endsWith('/town-night/city-center.png'),
+        document.querySelector('#inn-frame iframe')?.contentWindow.streetPreview?.state()
+          .timeOfDay === 'day',
       null,
       { timeout: 60000 },
     );
@@ -463,7 +467,7 @@ export async function dailyChecks({ browser, baseURL, output }) {
     await page.locator('#daily-invitation [type="submit"]').click();
     await clearGal(async () => (await status()).includes('结束约见') && (await compose.isHidden()));
     assert.match(await record.textContent(), /星钟广场 → 商业街/);
-    await travelChapterScene(page, 'market');
+    await travelTownScene(page, 'market');
     await clearGal(
       async () =>
         (await page.locator('#gal-stage .gal-chapter').textContent()) ===
@@ -471,7 +475,14 @@ export async function dailyChecks({ browser, baseURL, output }) {
     );
     assert.doesNotMatch(await status(), /事件结束/);
     assert.equal(await record.locator('li').count(), 0);
-    await clearGal(async () => (await status()).includes('正式邀请入队'));
+    await clearGal(async () => (await status()).includes('事件结束'));
+    await page.waitForFunction(
+      () => demo.getLibrary().daily.memory.invitationTopics['official-libet'].length === 4,
+    );
+    assert.deepEqual(await page.evaluate(() => demo.getLibrary().daily.memory.invitationTopics), {
+      'official-libet': nextTopics,
+      'official-pandora': ['潘多拉的主题'],
+    });
     assert.deepEqual(calls, ['script', 'stage-1', 'stage-1', 'stage-2', 'stage-3']);
     assert.match(await status(), /事件结束.*个人事件完成/);
     await record.waitFor();
@@ -499,31 +510,17 @@ export async function dailyChecks({ browser, baseURL, output }) {
     await frame.locator('#status').waitFor({ state: 'detached', timeout: 60000 });
     await page.screenshot({ path: path.join(output, 'invitation-record.png') });
     await page.setViewportSize({ width: 1120, height: 700 });
-    await page.locator('[data-daily="recruit"]').click();
-    assert(
+    assert.equal(
       await page.evaluate(() =>
         demo.getLibrary().characters.some((entry) => entry.id === 'official-libet'),
       ),
+      false,
     );
-    await page.locator('[data-daily="next"]').click();
+    await travelTownScene(page, 'tavern');
+    await page.evaluate(() => demo.flushStorage());
     await page.reload();
-    await page.waitForFunction(() => window.demo?.getLibrary().daily.day === 2);
-    await page.locator('[data-daily="chat"]').click();
-    await page.locator('#chat-input').fill('莉贝特，你还记得那首曲子吗？');
-    const renewed = page.waitForRequest('**/api/ai/generate/chat');
-    await page.locator('#chat-send').click();
-    await renewed;
-    await clearGal(() => page.locator('#chat-input').isVisible());
-    assert.match(
-      lastChat.characters.find((member) => member.id === 'official-libet').invitationMemory,
-      /回忆：走一段路/,
-    );
-    assert.equal(lastChat.characters.filter((member) => member.invitationMemory).length, 1);
-    await page.locator('#gal-stage [data-gal="close"]').click();
-    await page.locator('#gal-stage').waitFor({ state: 'hidden' });
-    await page.locator('[data-daily="open"]').click();
-    await draft(0, 'service');
-    await page.locator('[data-daily="confirm"]').click();
+    await page.waitForFunction(() => window.demo?.getLibrary().daily.period === 3);
+    await page.locator('[data-daily="service"]').click();
     const setup = page.locator('#daily-setup[open]');
     assert.match(await setup.textContent(), /酒馆知名度.*熟练.*自动/s);
     await page.setViewportSize({ width: 390, height: 844 });
@@ -572,7 +569,11 @@ export async function dailyChecks({ browser, baseURL, output }) {
       await page.evaluate(() => demo.getLibrary().daily.active.shift.bookings.length),
       7,
     );
-    assert.deepEqual(await page.evaluate(() => demo.getLibrary().daily.active.shift.special), {
+    const { price, ...special } = await page.evaluate(
+      () => demo.getLibrary().daily.active.shift.special,
+    );
+    assert(Number.isInteger(price) && price > 0);
+    assert.deepEqual(special, {
       id: 'frost-chowder',
       portions: 2,
       sold: 0,
@@ -757,9 +758,9 @@ export async function dailyChecks({ browser, baseURL, output }) {
       dragAndWipe: true,
       centerWorkspace: true,
       shiftReceipt: true,
-      outingTwenty: true,
+      cumulativeOuting: true,
       invitationStages: true,
-      recruited: true,
+      recruitmentSeparateFromInvitation: true,
       persisted: true,
     };
   } catch (failure) {

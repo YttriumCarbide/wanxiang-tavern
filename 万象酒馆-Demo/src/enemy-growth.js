@@ -1,6 +1,6 @@
 import { BASE_WORLDS } from './worlds.js';
-import { finalSkillText } from './skill-text.js';
-import { combatScale, scaleMoveEffects } from './combat-scale.js';
+import { enemyIntentText } from './enemy-intent-text.js';
+import { combatScale, scaleLevelEffects } from './combat-scale.js';
 
 const MAP_LEVELS = Object.freeze({ ruins: 1, forest: 5, frost: 9, forge: 14, tide: 24 });
 const MAIN_OFFSETS = [0, 1, 1, 2, 2, 3];
@@ -30,22 +30,17 @@ export function enemyGrowth(entry, index, id, boss = false) {
 
 /** Decorate an authored move once, including tactical and multi-part boss attacks. */
 export function leveledIntent(move, bonus = 0, scale = 1) {
-  if (
-    (!bonus && scale === 1) ||
-    !move.effects.some((effect) => effect.type === 'damage' && !effect.flat)
-  )
-    return move;
-  const effects = scaleMoveEffects(move.effects, scale, bonus);
-  const description = [
-    ...effects,
-    ...(move.selfShield ? [{ type: 'selfShield', value: move.selfShield }] : []),
-    ...(move.selfHeal ? [{ type: 'selfHeal', value: move.selfHeal }] : []),
-    ...Object.entries(move.selfBuff || {}).map(([buff, value]) => ({
-      type: 'buff',
-      buff,
-      value,
-      target: 'self',
-    })),
-  ];
-  return { ...move, effects, text: finalSkillText({ effects: description, target: 'enemy' }) };
+  const hasDamage = move.effects?.some((effect) => effect.type === 'damage' && !effect.flat);
+  if (scale === 1 && (!bonus || !hasDamage)) return move;
+  const effects = scaleLevelEffects(move.effects || [], scale, bonus);
+  const scalePos = (v) => (v > 0 ? Math.max(1, Math.round(v * scale)) : v);
+  const scaled = { ...move, effects };
+  if (move.selfShield) scaled.selfShield = scalePos(move.selfShield);
+  if (move.selfHeal) scaled.selfHeal = scalePos(move.selfHeal);
+  if (move.selfBuff && scale !== 1 && (move.selfBuff.poison || move.selfBuff.bleed)) {
+    scaled.selfBuff = { ...move.selfBuff };
+    for (const key of ['poison', 'bleed'])
+      if (scaled.selfBuff[key]) scaled.selfBuff[key] = scalePos(scaled.selfBuff[key]);
+  }
+  return { ...scaled, text: enemyIntentText({ ...scaled, text: '' }) };
 }

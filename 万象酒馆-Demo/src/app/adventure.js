@@ -260,6 +260,7 @@ export function createAdventure(context) {
         turn.responseId,
       );
       if (accepted.duplicate) return;
+      context.quests?.collect(result.quest, turn.responseId, context.daily?.scene());
       const playerId = session.ai.library.campaign?.protagonistId;
       const player = source.party?.find((member) => member.id === playerId);
       applyFutureDialogue(

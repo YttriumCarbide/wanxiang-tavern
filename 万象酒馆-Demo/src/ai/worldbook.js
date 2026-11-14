@@ -47,6 +47,7 @@ export const WORLD_SETTINGS_DEFAULTS = Object.freeze({
   script: [],
   chat: [],
   'quick-chat': [],
+  summary: [],
   map: [],
   creation: [],
   bindings: {},
@@ -101,6 +102,13 @@ export function characterEntryCategory(entry) {
   return null;
 }
 
+function withCharacterKeys(keys, character) {
+  const existing = Array.isArray(keys) ? keys.map((item) => String(item || '').trim()) : [];
+  const name = character?.setting?.name || character?.combat?.name || '';
+  const ordered = [character?.id, ...existing, ...(existing.length ? [] : [name])];
+  return [...new Set(ordered.map((item) => String(item || '').trim()).filter(Boolean))];
+}
+
 export function classifyCharacterEntry(entry, character, protagonistId = null) {
   const category =
     character.id === protagonistId || character.id === 'character-qingyuan'
@@ -114,10 +122,13 @@ export function classifyCharacterEntry(entry, character, protagonistId = null) {
   return {
     ...entry,
     comment: `${label}：${character.setting?.name || character.combat?.name || '未知角色'}`,
+    key: withCharacterKeys(entry?.key, character),
+    apiTargets: ['script', 'chat'],
     extensions: {
       ...entry.extensions,
       wanxiang: {
         ...entry.extensions?.wanxiang,
+        apiTargets: ['script', 'chat'],
         characterId: character.id || '',
         characterCategory: category,
       },
@@ -132,7 +143,7 @@ export function characterWorldEntry(character, uid = 0, protagonistId = null) {
     {
       ...newWorldEntry(uid),
       comment: `人物详情：${name}`,
-      key: [name],
+      key: withCharacterKeys([name], character),
       keysecondary: [],
       selectiveLogic: 0,
       constant: false,
@@ -311,6 +322,7 @@ export function normalizeWorldSettings(raw = {}) {
     'script',
     'chat',
     'quick-chat',
+    'summary',
     'map',
     'creation',
   ])
@@ -355,4 +367,185 @@ export function normalizeWorldSettings(raw = {}) {
     if (typeof settings[field] !== 'string' || settings[field].length > 24000)
       throw Error(`世界书设置${field}必须是最多24000字的文字`);
   return settings;
+}
+
+function entryFingerprint(entry) {
+  const keys = Array.isArray(entry?.key) ? entry.key.join('\0') : '';
+  const source = `${entry?.comment || ''}\n${entry?.content || ''}\n${keys}\n${entry?.constant ? 1 : 0}`;
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < source.length; i++) {
+    hash ^= source.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return (hash >>> 0).toString(36);
+}
+
+const STALE_WANXIANG_META = [
+  'builtinRevision',
+  'retiredPromptArchive',
+  'playtestRevision',
+  'adventureRevision',
+  'mainWorldRevision',
+  'characterEntriesRevision',
+  'townGuestsRevision',
+];
+
+function stripPatchMeta(wanxiang) {
+  if (!wanxiang) return undefined;
+  const cleaned = { ...wanxiang };
+  for (const field of STALE_WANXIANG_META) delete cleaned[field];
+  return cleaned;
+}
+
+function builtinEntryKey(entry) {
+  const marker = entry?.extensions?.wanxiang;
+  if (marker) {
+    if (marker.officialDungeonId || marker.dungeonId) {
+      return `dungeonId:${marker.officialDungeonId || marker.dungeonId}`;
+    }
+    for (const field of [
+      'generationRule',
+      'canon',
+      'currencyRule',
+      'officialNpcId',
+      'monsterId',
+      'mainWorld',
+      'characterId',
+    ]) {
+      if (marker[field]) return `${field}:${marker[field]}`;
+    }
+    if (marker.dining) return 'dining:true';
+  }
+  if (entry?.comment === '万象酒馆 · 基础设定') return 'canon:tavern';
+  return '';
+}
+
+/** Sync a stored worldbook directly against the latest builtin worldbook while preserving user edits and custom entries. */
+export function syncBuiltinWorldbook(existing, builtin) {
+  const normalizedBuiltin = normalizeWorldbook(builtin, '万象酒馆世界书').book;
+  const builtinEntries = Object.values(normalizedBuiltin.entries);
+  const templateHashes = new Map();
+  const builtinKeys = new Set();
+  for (const template of builtinEntries) {
+    const key = builtinEntryKey(template);
+    if (!key) continue;
+    builtinKeys.add(key);
+    templateHashes.set(key, entryFingerprint(template));
+  }
+  if (!existing?.entries || !Object.keys(existing.entries).length) {
+    const fresh = structuredClone(normalizedBuiltin);
+    if (fresh.extensions?.wanxiang) {
+      fresh.extensions.wanxiang = stripPatchMeta(fresh.extensions.wanxiang);
+    }
+    for (const entry of Object.values(fresh.entries)) {
+      const key = builtinEntryKey(entry);
+      if (!key) continue;
+      entry.extensions = {
+        ...entry.extensions,
+        wanxiang: {
+          ...stripPatchMeta(entry.extensions?.wanxiang),
+          builtinHash: templateHashes.get(key),
+        },
+      };
+    }
+    return fresh;
+  }
+  const book = normalizeWorldbook(existing, normalizedBuiltin.name).book;
+  let nextUid = Math.max(-1, ...Object.keys(book.entries).map(Number)) + 1;
+  const seenKeys = new Set();
+  for (const [uid, entry] of Object.entries(book.entries)) {
+    const w = entry.extensions?.wanxiang;
+    const key = builtinEntryKey(entry);
+    if (
+      w?.generationExample === 'character' ||
+      (w?.generationRule && !builtinKeys.has(`generationRule:${w.generationRule}`)) ||
+      (w?.currencyRule && !builtinKeys.has(`currencyRule:${w.currencyRule}`)) ||
+      (w?.mainWorld && !builtinKeys.has(`mainWorld:${w.mainWorld}`)) ||
+      (key && seenKeys.has(key))
+    ) {
+      delete book.entries[uid];
+      continue;
+    }
+    if (key) seenKeys.add(key);
+  }
+  const existingByKey = new Map();
+  for (const entry of Object.values(book.entries)) {
+    const key = builtinEntryKey(entry);
+    if (key && !existingByKey.has(key)) existingByKey.set(key, entry);
+  }
+  for (const template of builtinEntries) {
+    const key = builtinEntryKey(template);
+    if (!key) continue;
+    const templateHash = templateHashes.get(key);
+    const match = existingByKey.get(key);
+    if (!match) {
+      const desiredUid = Number(template.uid);
+      const uid =
+        Number.isInteger(desiredUid) && desiredUid >= 0 && !book.entries[desiredUid]
+          ? desiredUid
+          : nextUid++;
+      if (uid >= nextUid) nextUid = uid + 1;
+      book.entries[uid] = {
+        ...structuredClone(template),
+        uid,
+        displayIndex: uid,
+        extensions: {
+          ...template.extensions,
+          wanxiang: {
+            ...stripPatchMeta(template.extensions?.wanxiang),
+            builtinHash: templateHash,
+          },
+        },
+      };
+    } else {
+      const prevHash = match.extensions?.wanxiang?.builtinHash;
+      const shouldSyncText = !prevHash || prevHash !== templateHash;
+      if (shouldSyncText) {
+        const isOfficialChar = Boolean(template.extensions?.wanxiang?.characterId);
+        const isLegacyChar =
+          isOfficialChar &&
+          (match.comment !== template.comment ||
+            match.content.includes('过期') ||
+            match.content.includes('格雷'));
+        if (!isOfficialChar || prevHash || isLegacyChar) {
+          match.comment = template.comment;
+          match.content = template.content;
+        }
+        const wxTemplate = template.extensions?.wanxiang || {};
+        const existingKeys = Array.isArray(match.key) ? match.key.filter(Boolean) : [];
+        const isSystemKeyed = Boolean(
+          wxTemplate.generationRule ||
+          wxTemplate.characterId ||
+          wxTemplate.officialNpcId ||
+          wxTemplate.officialDungeonId ||
+          wxTemplate.dining,
+        );
+        if (
+          Array.isArray(template.key) &&
+          template.key.length &&
+          (isSystemKeyed || !existingKeys.length)
+        ) {
+          if (!template.constant && match.constant && (isSystemKeyed || !existingKeys.length)) {
+            match.constant = false;
+          }
+          match.key = [...new Set([...existingKeys, ...template.key])];
+        }
+      }
+      match.extensions = {
+        ...match.extensions,
+        wanxiang: {
+          ...stripPatchMeta(template.extensions?.wanxiang),
+          ...stripPatchMeta(match.extensions?.wanxiang),
+          builtinHash: templateHash,
+        },
+      };
+    }
+  }
+  if (book.extensions?.wanxiang) {
+    book.extensions = {
+      ...book.extensions,
+      wanxiang: stripPatchMeta(book.extensions.wanxiang),
+    };
+  }
+  return normalizeWorldbook(book, normalizedBuiltin.name).book;
 }

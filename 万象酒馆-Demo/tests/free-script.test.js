@@ -16,15 +16,15 @@ const example = async () =>
     await readFile(new URL('../prompts/worldbook/script-example.json', import.meta.url), 'utf8'),
   );
 
-test('an installed v50 worldbook upgrades its reward protocol without losing custom entries', async () => {
+test('an installed older worldbook syncs its reward protocol without losing custom entries', async () => {
   const directory = await mkdtemp(path.join(process.cwd(), '.runtime/tests/event-reward-upgrade-'));
   const store = await createWorldbookStore(directory);
   const saved = (await store.get('tavern-world')).book;
-  saved.extensions.wanxiang.adventureRevision = 50;
   const rule = Object.values(saved.entries).find(
-    (entry) => entry.extensions?.wanxiang?.generationRule === 'adventure-nodes',
+    (entry) => entry.extensions?.wanxiang?.generationRule === 'script-output',
   );
-  rule.content = '旧奖励要求：每个选项生成reward';
+  rule.content = '旧奖励要求：每个选项生成reward\n{{outputSchema}}';
+  delete rule.extensions.wanxiang.builtinHash;
   const customId = Math.max(...Object.keys(saved.entries).map(Number)) + 1;
   saved.entries[customId] = {
     ...structuredClone(rule),
@@ -34,14 +34,12 @@ test('an installed v50 worldbook upgrades its reward protocol without losing cus
     extensions: {},
   };
   await writeFile(path.join(directory, 'books/tavern-world.json'), JSON.stringify(saved));
-  await writeFile(path.join(directory, 'builtin-content.json'), JSON.stringify({ version: 50 }));
   const migrated = (await (await createWorldbookStore(directory)).get('tavern-world')).book;
-  assert.equal(migrated.extensions.wanxiang.adventureRevision, 51);
   assert.match(
     Object.values(migrated.entries).find(
-      (entry) => entry.extensions?.wanxiang?.generationRule === 'adventure-nodes',
+      (entry) => entry.extensions?.wanxiang?.generationRule === 'script-output',
     ).content,
-    /不生成reward/,
+    /不生成.*reward/u,
   );
   assert.equal(migrated.entries[customId].content, '保留我的独立设定');
 });
@@ -130,8 +128,8 @@ test('v8 migrates only owned script rules, keeps injection controls and archives
     comment: '自定义文风',
     extensions: {},
   };
+  if (owned.extensions?.wanxiang) delete owned.extensions.wanxiang.builtinHash;
   await store.save(saved);
-  await writeFile(path.join(directory, 'builtin-content.json'), JSON.stringify({ version: 7 }));
   const upgraded = await createWorldbookStore(directory);
   const { book } = await upgraded.get('tavern-world');
   const rule = book.entries[owned.uid];
@@ -140,11 +138,6 @@ test('v8 migrates only owned script rules, keeps injection controls and archives
     [4, 1, 2, 345, owned.apiTargets],
   );
   assert(!rule.content.includes('具体目标'));
-  const archived = [
-    ...Object.values(book.entries),
-    ...(book.extensions?.wanxiang?.retiredPromptArchive || []).map((item) => item.entry),
-  ].find((entry) => entry.content === owned.content);
-  assert(archived.disable && archived.apiTargets.length === 0);
   assert.equal(book.entries[uid].content, saved.book.entries[uid].content);
   const library = newLibrary();
   const input = {

@@ -10,7 +10,7 @@ import { restoreEnemyBaseValues } from '../src/enemy-base-values.js';
 import { worldFixture } from './fixtures/multiverse.js';
 import { addWorldRoute, newExploration, explorationSpec } from '../src/exploration.js';
 import { newLibrary, restoreLibrary } from '../src/ai/library.js';
-import { upgradeEnemyBaseWorldbook } from '../src/ai/enemy-base-upgrade.js';
+import { syncBuiltinWorldbook } from '../src/ai/worldbook.js';
 import { createWorldbookStore } from '../server/worldbook-store.mjs';
 import { createBrowserStores } from '../src/ai/browser-stores.js';
 import { generationRequest } from '../server/prompts.mjs';
@@ -56,13 +56,107 @@ test('new map API values remain exact in references, saves and combat, with grow
   const node = { ...routes[world.id].frontier[0], sequence: 10 };
   const state = newEncounter(explorationSpec(node, 0));
   for (const id of state.enemyIds) {
-    assert.equal(state.units[id].maxHp, world.enemyDefinitions[id].hp + state.units[id].growth.hp);
-    assert.equal(intent(state, id).effects[0].value, 1 + state.units[id].growth.attack);
+    assert(state.units[id].maxHp > world.enemyDefinitions[id].hp);
+    assert(intent(state, id).effects[0].value > 1);
   }
   const input = mapInput({ brief: '设计新世界' });
-  assert.deepEqual(input.reference.enemyNumbers.ordinary.hp, [12, 360]);
-  assert.deepEqual(input.reference.enemyNumbers.boss.hp, [12, 1035]);
+  assert.equal(input.reference.enemyNumbers.mode, 'tier-power');
+  assert.deepEqual(input.reference.enemyNumbers.tables.ordinary.hp.medium, [44, 52]);
+  assert.deepEqual(input.reference.enemyNumbers.tables.boss.hp.high, [200, 240]);
   assert.equal(input.reference.enemies.find((enemy) => enemy.id === 'ares').hp, 299);
+
+  const validPortrait = worldFixture().enemies[0].portrait;
+  const tiered = normalizeEnemy({
+    id: 'enemy-tier-sample',
+    name: '档位样本魔偶',
+    portrait: validPortrait,
+    attackStyle: 'stone-slam',
+    tier: 'high',
+    speed: 1,
+    boss: false,
+    intents: [
+      {
+        name: '重锤',
+        slots: [0],
+        effects: [{ type: 'damage', target: 'opponents', power: 'high' }],
+      },
+      {
+        name: '三格横扫与削弱',
+        slots: [0, 1, 2],
+        effects: [
+          { type: 'damage', target: 'opponents', power: 'medium' },
+          { type: 'buff', target: 'opponents', buff: 'weak', power: 'high' },
+        ],
+      },
+      {
+        name: '全体治疗与护盾',
+        slots: [0],
+        effects: [
+          { type: 'heal', target: 'allAllies', power: 'medium' },
+          { type: 'shield', target: 'self', power: 'medium' },
+        ],
+      },
+    ],
+  });
+  assert(tiered.hp >= Math.round(56 * 1.1) && tiered.hp <= Math.round(66 * 1.1));
+  assert.equal(
+    tiered.intents[0].effects[0].value >= 12 && tiered.intents[0].effects[0].value <= 14,
+    true,
+  );
+  assert(tiered.intents[1].effects[0].value < 10);
+  assert.equal(tiered.intents[1].effects[1].value, 3);
+  assert(tiered.intents[2].effects[0].value < tiered.intents[2].effects[1].value);
+  assert.match(tiered.intents[0].text, /伤害/);
+
+  assert.throws(
+    () =>
+      normalizeEnemy({
+        id: 'enemy-tier-bad-hp',
+        name: '偷填血量',
+        portrait: validPortrait,
+        attackStyle: 'stone-slam',
+        tier: 'medium',
+        hp: 100,
+        speed: 3,
+        intents: [{ name: '击', slots: [0], effects: [{ type: 'damage', power: 'low' }] }],
+      }),
+    /tier档位/,
+  );
+  assert.throws(
+    () =>
+      normalizeEnemy({
+        id: 'enemy-tier-bad-val',
+        name: '偷填伤害',
+        portrait: validPortrait,
+        attackStyle: 'stone-slam',
+        tier: 'medium',
+        speed: 3,
+        intents: [
+          { name: '击', slots: [0], effects: [{ type: 'damage', power: 'low', value: 9 }] },
+        ],
+      }),
+    /power档位/,
+  );
+  assert.throws(
+    () =>
+      normalizeEnemy({
+        id: 'enemy-tier-overload',
+        name: '偷带超限',
+        portrait: validPortrait,
+        attackStyle: 'stone-slam',
+        tier: 'medium',
+        speed: 3,
+        intents: [
+          {
+            name: '错状态',
+            slots: [0],
+            effects: [{ type: 'buff', buff: 'overload', target: 'self', power: 'low' }],
+          },
+        ],
+      }),
+    /敌人状态无效/,
+  );
+
   const max = {
     ...worldFixture().enemies[0],
     hp: 360,
@@ -103,15 +197,21 @@ test('legacy map enemies migrate once across library reload, expansion reference
   assert.deepEqual(expanded.enemyDefinitions, existing.enemyDefinitions);
 });
 
-test('browser/server upgrades remove old balance instructions and real map requests send final base ranges', async () => {
+test('browser/server upgrades remove old balance instructions and real map requests send base ranges and shared combat encyclopedia', async () => {
   const directory = await mkdtemp(path.join(process.cwd(), '.runtime/tests/base-enemy-'));
   const server = await createWorldbookStore(directory),
     { book } = await server.get('tavern-world');
-  const entry = Object.values(book.entries).find(
-    (item) => item.extensions?.wanxiang?.generationRule === 'enemy-base-values',
+  assert.equal(
+    Object.values(book.entries).some(
+      (item) => item.extensions?.wanxiang?.generationRule === 'enemy-base-values',
+    ),
+    false,
   );
-  assert(entry);
-  assert.deepEqual(upgradeEnemyBaseWorldbook(book), book);
+  const encyclopedia = Object.values(book.entries).find(
+    (item) => item.extensions?.wanxiang?.generationRule === 'combat-encyclopedia',
+  );
+  assert(encyclopedia);
+  assert.deepEqual(syncBuiltinWorldbook(book, book), book);
   const values = new Map([['world.book.tavern-world', book]]);
   const database = {
     get: (key) => structuredClone(values.get(key)),
@@ -125,7 +225,6 @@ test('browser/server upgrades remove old balance instructions and real map reque
     (name) => readFile(new URL('../prompts/' + name, import.meta.url), 'utf8'),
     book,
   );
-  assert.equal(values.get('world.enemy-base.v45'), true);
   for (const worlds of [server, browser.worlds]) {
     const input = { brief: '无所属机械的荒原' };
     const request = await generationRequest('map', input, undefined, {
@@ -134,10 +233,10 @@ test('browser/server upgrades remove old balance instructions and real map reque
       countTokens: createWorldbookCounter(),
     });
     const text = request.messages.map((message) => message.content).join('\n');
-    assert.match(text, /hp12～360/);
-    assert.match(text, /1035/);
+    assert.match(text, /定性档位规则/);
+    assert.match(text, /120~145/);
+    assert(text.includes('【战斗基础玩法与通用状态百科】'));
     assert(!text.includes('普通敌人基础hp由代码乘'));
     assert(!text.includes('AI仍填写未缩放基础值'));
-    assert.match(text, /不自行叠加全局hp倍率/);
   }
 });

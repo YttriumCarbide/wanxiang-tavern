@@ -6,11 +6,9 @@ import {
   selectedGalStage,
   galActorsForBeats,
 } from '../gal.js';
-import { portraitUrl } from '../portraits.js';
+import { portraitUrl, UNKNOWN_STANDING } from '../portraits.js';
 import { TAVERN_VISITORS, standingSprite } from '../content/tavern-visitors.js';
 import { galNpcPortrait } from '../content/gal-npc-portraits.js';
-import { CHAPTER_NPCS } from '../chapters/starbell-content.js';
-import { STARBELL_ENABLED } from '../chapters/starbell-state.js';
 import { createEventScope } from '../shared/events.js';
 import { createGalWorkspace } from './gal-workspace.js';
 import { decorateGalButtons } from './gal-icons.js';
@@ -98,13 +96,15 @@ export function createGalPlayer(context) {
         user: member.id === protagonistId,
         sprite:
           member.combat?.customStanding ||
-          (sprite
-            ? standingSprite(sprite)
-            : galNpcPortrait({
-                id: member.id,
-                name: member.setting.name,
-                setting: member.setting.worldbook,
-              })),
+          (member.questRecruit
+            ? UNKNOWN_STANDING
+            : sprite
+              ? standingSprite(sprite)
+              : galNpcPortrait({
+                  id: member.id,
+                  name: member.setting.name,
+                  setting: member.setting.worldbook,
+                })),
         fullSprite: true,
         aliases: official
           ? { edith: ['伊迪斯', '伊蒂丝'], pandora: ['潘多拉'], aegis: ['月汐', '长景月汐'] }[
@@ -113,6 +113,7 @@ export function createGalPlayer(context) {
           : [],
       };
     });
+    members.push(...(context.quests?.actors() || []));
     // Tutorial speakers can be present before their official library entry is recruited.
     for (const [key, name, aliases] of [
       ['edith', '伊蒂丝', ['伊迪斯']],
@@ -136,18 +137,9 @@ export function createGalPlayer(context) {
           sprite: galNpcPortrait(npc),
           fullSprite: true,
         });
-    if (STARBELL_ENABLED && library.starbell?.phase !== 'idle')
-      for (const [key, npc] of Object.entries(CHAPTER_NPCS))
-        if (!members.some((actor) => actor.id === `starbell-${key}` || actor.name === npc.name))
-          members.push({
-            id: `starbell-${key}`,
-            name: npc.name,
-            sprite: npc.portrait,
-            fullSprite: true,
-          });
     const invited = context.daily?.invitedMember();
     for (const person of [
-      ...(context.chapter?.chatCharacters() || []),
+      ...(context.daily?.chatCharacters() || []),
       ...(invited ? [invited] : []),
     ])
       if (!members.some((actor) => actor.id === person.id || actor.name === person.setting.name))

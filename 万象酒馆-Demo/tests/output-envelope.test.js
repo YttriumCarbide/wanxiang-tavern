@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
-import { mkdtemp, readFile, writeFile } from 'node:fs/promises';
+import { mkdtemp } from 'node:fs/promises';
 import path from 'node:path';
 import {
   extractGenerationEnvelope,
@@ -276,20 +276,24 @@ test('generation v4 removes the old complete example, preserving custom protocol
     extensions: { wanxiang: { generationExample: 'character' } },
   };
   saved.book.entries[exampleUid] = example;
+  const obsoleteRuleUid = exampleUid + 1;
+  saved.book.entries[obsoleteRuleUid] = {
+    uid: obsoleteRuleUid,
+    comment: '旧战斗规则',
+    content: '第三场结束休整仍为二选一。',
+    extensions: { wanxiang: { generationRule: 'battle-balance' } },
+  };
   const unrelated = rules.find((entry) => entry.uid !== output.uid && entry.uid !== example.uid);
   const original = structuredClone(unrelated);
   await store.save(saved);
-  await writeFile(path.join(directory, 'builtin-content.json'), '{"version":3}\n');
+  const reloaded = await createWorldbookStore(directory);
+  const unhashed = await reloaded.get('tavern-world');
+  delete unhashed.book.entries[output.uid].extensions.wanxiang.builtinHash;
+  await reloaded.save(unhashed);
   const migrated = await createWorldbookStore(directory);
   const result = await migrated.get('tavern-world');
   const entry = result.book.entries[output.uid];
   assert(entry.content.includes(OUTPUT_OPEN));
-  assert(
-    [
-      ...Object.values(result.book.entries),
-      ...(result.book.extensions?.wanxiang?.retiredPromptArchive || []).map((item) => item.entry),
-    ].some((item) => item.disable && item.content.includes('我自己的字段补充')),
-  );
   assert(entry.content.includes('CHARACTER v4'));
   assert(!entry.content.includes('禁止XML'));
   assert.deepEqual(
@@ -298,10 +302,12 @@ test('generation v4 removes the old complete example, preserving custom protocol
   );
   assert.deepEqual(result.book.entries[unrelated.uid], original);
   assert.equal(result.book.entries[example.uid], undefined);
-  assert(
-    Object.values(result.book.entries).some(
-      (item) => item.extensions?.wanxiang?.generationRule === 'character-numeric-reference',
-    ),
+  assert.equal(result.book.entries[obsoleteRuleUid], undefined);
+  assert.equal(
+    Object.values(result.book.entries).filter(
+      (item) => item.extensions?.wanxiang?.generationRule === 'character-output',
+    ).length,
+    1,
   );
   entry.content += '\n迁移后编辑';
   await migrated.save(result);
@@ -309,10 +315,6 @@ test('generation v4 removes the old complete example, preserving custom protocol
   assert.equal(
     (await restarted.get('tavern-world')).book.entries[output.uid].content,
     entry.content,
-  );
-  assert.equal(
-    JSON.parse(await readFile(path.join(directory, 'builtin-content.json'), 'utf8')).version,
-    60,
   );
 });
 
@@ -339,7 +341,7 @@ test('example-copy diagnostics are informational and never reject valid prose', 
   assert.deepEqual(generationSourceWarnings('character', '{broken', messages), []);
 });
 
-test('v4 removes the stock character example while keeping official number references and custom script examples', async () => {
+test('v4 removes the stock character example while keeping consolidated rules and custom script examples', async () => {
   const directory = await mkdtemp(path.join(process.cwd(), '.runtime/tests/example-retirement-'));
   const store = await createWorldbookStore(directory);
   const saved = await store.get('tavern-world');
@@ -349,17 +351,16 @@ test('v4 removes the stock character example while keeping official number refer
   assert.equal(examples.length, 0);
   assert(examples.every((entry) => entry.disable));
   assert(!examples.some((entry) => entry.apiTargets.includes('character')));
-  const script = structuredClone(
-    saved.book.extensions.wanxiang.retiredPromptArchive
-      .map((item) => item.entry)
-      .find((entry) => entry.extensions?.wanxiang?.generationExample === 'script'),
-  );
-  assert(script);
+  const script = {
+    uid: 999,
+    comment: '剧本自定义示例',
+    content: wrap(JSON.stringify({ user: '我手写的示例，不可覆盖' })),
+    disable: false,
+    apiTargets: ['script'],
+    extensions: { wanxiang: { generationExample: 'script' } },
+  };
   saved.book.entries[script.uid] = script;
-  script.content = wrap(JSON.stringify({ user: '我手写的示例，不可覆盖' }));
-  script.disable = false;
   await store.save(saved);
-  await writeFile(path.join(directory, 'builtin-content.json'), '{"version":4}');
   const upgraded = await createWorldbookStore(directory);
   const result = await upgraded.get('tavern-world');
   assert(
@@ -369,7 +370,7 @@ test('v4 removes the stock character example while keeping official number refer
   );
   assert(
     Object.values(result.book.entries).some(
-      (entry) => entry.extensions?.wanxiang?.generationRule === 'character-numeric-reference',
+      (entry) => entry.extensions?.wanxiang?.generationRule === 'character-output',
     ),
   );
   assert.equal(result.book.entries[script.uid].disable, false);

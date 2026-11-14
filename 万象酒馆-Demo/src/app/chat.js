@@ -7,7 +7,7 @@ import { query as $ } from './dom.js';
 import { relevantArchives } from '../archives.js';
 import { applyRelationshipActions } from '../relationships.js';
 import { streamingChatText } from '../ai/output-tags.js';
-import { memoryChat, memoryText } from '../memory.js';
+import { gameTime, memoryChat, memoryText } from '../memory.js';
 
 export function createChat(context) {
   const api = context.apiClient.request;
@@ -20,7 +20,7 @@ export function createChat(context) {
       return option;
     }),
   );
-  const localCharacters = () => context.chapter?.chatCharacters() || [];
+  const localCharacters = () => context.daily?.chatCharacters() || [];
   const conversationCharacters = () => [
     ...localCharacters(),
     ...library().characters.filter(
@@ -83,7 +83,7 @@ export function createChat(context) {
       },
     });
   }
-  function open(location, actorId = null) {
+  function open(location, actorId = null, activity = false) {
     if (session.runtime.mode !== 'inn' || !CHAT_PLACES[location]) return;
     if (context.daily?.allowTalk() === false || context.daily?.onInvitation()) return;
     place = location;
@@ -124,6 +124,7 @@ export function createChat(context) {
     renderHistory();
     $('#chat-status').textContent = '';
     openGal('chat');
+    context.daily?.trackChat(activity);
     context.onboarding?.chatOpened(place);
   }
   function futureScenes(kind) {
@@ -175,7 +176,7 @@ export function createChat(context) {
               .map((line) => memoryText(line.text, line.summary))
               .join('\n') || ''
           }`
-        : context.chapter?.chatEnvironment() || '',
+        : context.daily?.chatEnvironment() || '',
       history: memoryChat(
         quick
           ? state().quick
@@ -243,6 +244,7 @@ export function createChat(context) {
           id: crypto.randomUUID(),
           role: 'user',
           content: text,
+          gameTime: gameTime(library().daily),
           ...(outing ? { outing: true } : {}),
           ...presentation.speaker('user'),
         };
@@ -296,10 +298,12 @@ export function createChat(context) {
         content: result.content,
         display: result.display,
         ...replySpeaker,
+        gameTime: userMessage.gameTime || gameTime(library().daily),
         ...(userMessage.outing ? { outing: true } : {}),
       };
       if (retryId) history.splice(retryIndex + 1, originalReply ? 1 : 0, reply);
       else history.push(reply);
+      context.quests?.collect(result.quest, userMessage.id, context.daily?.scene());
       const player = library().characters.find(
         (member) => member.id === library().campaign?.protagonistId,
       );
@@ -407,6 +411,7 @@ export function createChat(context) {
     }
   }
   function leave() {
+    context.daily?.trackChat(false);
     context.gal?.cancel('chat');
     context.gal?.cancel('quick-chat');
     revision++;

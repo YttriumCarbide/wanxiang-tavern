@@ -107,21 +107,17 @@ test('legacy routes send the exact cast and their editable bestiary supplies onl
       worldInfo: await restored.resolve('script', input),
       countTokens,
     });
+    const matchEnemy = (title) =>
+      [...ENEMIES, ...BOSSES].find(
+        (enemy) => enemy.name === title || `怪物图鉴：${enemy.name}` === title,
+      );
     const activated = request.worldInfo.report.filter(
-      (entry) =>
-        entry.active && [...ENEMIES, ...BOSSES].some((enemy) => enemy.name === entry.title),
+      (entry) => entry.active && Boolean(matchEnemy(entry.title)),
     );
     const expected = new Set(
       Array.from({ length: 5 }, (_, index) => encounterSpec(index, boss).enemyIds).flat(),
     );
-    assert.deepEqual(
-      new Set(
-        activated.map(
-          (entry) => [...ENEMIES, ...BOSSES].find((enemy) => enemy.name === entry.title).id,
-        ),
-      ),
-      expected,
-    );
+    assert.deepEqual(new Set(activated.map((entry) => matchEnemy(entry.title).id)), expected);
     assert(request.messages.some((message) => message.content.includes('习性与能力：')));
     assert(
       !activated.some((entry) =>

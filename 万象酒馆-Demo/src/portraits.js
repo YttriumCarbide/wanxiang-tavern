@@ -1,5 +1,7 @@
 import { localRequest } from './ai/local-client.js';
 const PORTRAITS_KEY = 'wanxiang.portraits.v1';
+export const UNKNOWN_CARD = 'unknown-card.png';
+export const UNKNOWN_STANDING = './assets/portraits/unknown-standing.png';
 
 function getStorage() {
   try {

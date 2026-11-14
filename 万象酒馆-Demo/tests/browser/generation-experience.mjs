@@ -8,6 +8,7 @@ import { completeExploration } from '../../src/exploration.js';
 import { worldFixture } from '../fixtures/multiverse.js';
 import { mapResponse } from '../../src/ai/pipeline/map-request.js';
 import { normalizeScript } from '../../src/ai/contracts.js';
+import { expandedHallPosition } from '../../src/content/tavern-layout.js';
 import { tavernPresetFixture } from '../fixtures/ai.js';
 
 export async function generationExperienceChecks({ browser, baseURL, output }) {
@@ -62,8 +63,7 @@ export async function generationExperienceChecks({ browser, baseURL, output }) {
       JSON.stringify({
         developerMode: true,
         allowRetreat: true,
-        protagonistApi: false,
-        scriptApi: true,
+        skipAiGeneration: false,
       }),
     );
     sessionStorage.setItem('experience-seeded', 'true');
@@ -243,7 +243,12 @@ export async function generationExperienceChecks({ browser, baseURL, output }) {
       const box = new THREE.Box3().setFromObject(bookcase);
       return { min: box.min.toArray(), max: box.max.toArray() };
     });
-    assert(bounds.min[0] > 5.3 && bounds.max[0] < 6.1, 'Bookcase stands against the east wall');
+    const [wallMin] = expandedHallPosition([5.3, 0, 0]);
+    const [wallMax] = expandedHallPosition([6.1, 0, 0]);
+    assert(
+      bounds.min[0] > wallMin && bounds.max[0] < wallMax,
+      'Bookcase stands against the east wall',
+    );
     await page.screenshot({ path: path.join(output, 'bookshelf-against-wall.png') });
     await shelf();
     await page.waitForFunction(
@@ -270,32 +275,55 @@ export async function generationExperienceChecks({ browser, baseURL, output }) {
       6,
     );
 
+    await page.locator('#ai-open').click();
+    await page.locator('#ai-worldbooks').click();
+    await page.locator('#world-book-select').selectOption('tavern-summary');
+    const memories = page.locator('#world-entry-list [data-world-row]');
+    assert((await memories.count()) >= 6);
+    await memories.first().locator('[data-world-uid]').click();
+    const firstMemory = memories.first().locator('textarea[data-world-field="content"]');
+    await firstMemory.fill('玩家私人的旅途总结。');
+    await page.locator('#world-save').click();
+    await page.waitForFunction(() =>
+      Object.values(demo.getLibrary().summaryWorldbook.entries).some(
+        (entry) => entry.content === '玩家私人的旅途总结。',
+      ),
+    );
+    await page.locator('#world-close').click();
+    await page.locator('#ai-close').click();
     await frame.locator('canvas').evaluate(() => window.assetPreview.placeNow('table'));
-    await frame.locator('#talk-open').click();
+    await page.locator('[data-daily="chat"]').click();
     await page.locator('#chat-input').fill('我在这里等下一段故事。');
     await page.locator('#chat-send').click();
     await page.locator('[data-request-stop="chat"]').waitFor();
     await chatStarted;
-    assert.equal(await page.locator('[data-request-arcade="chat"]').count(), 1);
+    const workshopButton = page.locator('[data-workshop-wait="chat"]');
+    assert.equal(await workshopButton.count(), 1);
+    assert.equal(await page.locator('[data-request-arcade]').count(), 0);
+    await workshopButton.click();
+    await page.locator('#workshop-dialog').waitFor();
     assert(releaseChat);
     releaseChat();
     await page.locator('[data-request-stop="chat"]').waitFor({ state: 'detached' });
-    await page.locator('#chat-close').click();
+    await page.locator('#workshop-completion [data-ws-return]').click();
+    await page.locator('#gal-stage [data-gal="close"]').click();
     await page.reload();
     await page.waitForFunction(() => !!window.demo);
     assert.equal((await page.evaluate(() => demo.getLibrary())).inventory.ether, 100);
     const sharedControls = await page.evaluate(async () => {
       const { createRequestControls } = await import('/src/app/request-controls.js');
-      const resolutions = [];
-      const client = createRequestControls({
-        request: () => new Promise((resolve) => resolutions.push(resolve)),
-        dispose() {},
-      });
+      const client = createRequestControls(
+        {
+          request: async () => ({}),
+          dispose() {},
+        },
+        undefined,
+        () => ({ begin() {}, finish() {}, open() {} }),
+      );
       const kinds = ['character', 'script', 'chat', 'quick-chat', 'summary', 'creation', 'map'];
       const requests = kinds.map((kind) => client.request('generate/' + kind, {}));
       const stops = document.querySelectorAll('[data-request-stop]').length;
-      const games = document.querySelectorAll('[data-request-arcade]').length;
-      resolutions.forEach((resolve) => resolve({}));
+      const games = document.querySelectorAll('[data-workshop-wait]').length;
       await Promise.all(requests);
       client.dispose();
       return { stops, games, remaining: document.querySelectorAll('.api-request-control').length };
@@ -325,12 +353,16 @@ export async function generationExperienceChecks({ browser, baseURL, output }) {
     assert.equal(await page.locator('#destination-start').textContent(), '继续探索 →');
     await page.screenshot({ path: path.join(output, 'continuation-world-ready.png') });
     await page.locator('#destination-start').click();
+    await page.locator('.departure-guidance textarea').fill('出发前问问向导。');
+    await page.locator('#prepare-done').filter({ hasText: '确认编队' }).click();
+    await page.locator('#prepare-done').filter({ hasText: '整备完成' }).click();
     await page.waitForFunction(
       () => demo.getStatus().mode === 'battle' && !demo.getStatus().animating,
       null,
       { timeout: 60000 },
     );
     assert.equal(scriptCalls.length, 1);
+    assert.equal(scriptCalls[0].playerIntent, '出发前问问向导。');
     assert.equal(scriptCalls[0].exploration.world.goals.length, 3);
     assert(
       (await page.evaluate(() => demo.getState())).enemyIds.every((id) =>

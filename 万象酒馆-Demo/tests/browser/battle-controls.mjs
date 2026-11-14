@@ -14,6 +14,7 @@ export async function battleControlChecks({ browser, baseURL, output }) {
     await page.waitForFunction(
       () => demo.getStatus().mode === 'battle' && !demo.getStatus().animating,
     );
+    assert(await page.locator('#scene-talk').isHidden());
     for (const viewport of [
       { width: 1440, height: 836 },
       { width: 844, height: 390 },

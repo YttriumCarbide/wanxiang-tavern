@@ -24,13 +24,22 @@ export async function staticChecks({ browser, output }) {
   const canonEntries = Object.values(canon.entries);
   for (const id of ['ruins-hall', 'ruins-sinkhole', 'ruins-tomb', 'ruins-curse'])
     assert(
-      canonEntries.some((entry) => entry.extensions?.wanxiang?.dungeonId === id),
+      canonEntries.some(
+        (entry) =>
+          (entry.extensions?.wanxiang?.officialDungeonId ||
+            entry.extensions?.wanxiang?.dungeonId) === id,
+      ),
       id,
     );
   assert(
     canonEntries.some(
-      (entry) => entry.extensions?.wanxiang?.generationRule === 'map-enemy-tactics',
+      (entry) =>
+        entry.extensions?.wanxiang?.generationRule === 'map-output' &&
+        String(entry.content || '').includes('战术原型'),
     ),
+  );
+  assert(
+    canonEntries.some((entry) => entry.extensions?.wanxiang?.generationRule === 'summary-output'),
   );
   const prefix = '/wanxiang-demo/';
   const types = {

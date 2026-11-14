@@ -148,7 +148,7 @@ test('regeneration occurs before poison and dying units cannot regenerate', () =
   s.units.serin.hp = 0;
   s.units.aegis.hp = 1;
   s.units.aegis.block = 100;
-  s.units.aegis.buffs = { regen: 2, poison: 3 };
+  s.units.aegis.buffs = { regen: 2, poison: 4 };
   const r = preview(s, []);
   assert.equal(r.final.units.aegis.hp, 0);
   assert.equal(r.deaths.find((d) => d.id === 'aegis').reason, '回合末中毒');

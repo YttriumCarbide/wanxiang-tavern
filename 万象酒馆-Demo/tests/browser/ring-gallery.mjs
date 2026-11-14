@@ -25,7 +25,16 @@ export async function ringGalleryChecks({ browser, baseURL, output }) {
     const scene = await (await page.locator('#inn-frame iframe').elementHandle()).contentFrame();
     const waitForSwitch = () =>
       scene.waitForFunction(() => !window.assetPreview.rings().transitioning);
+    await frame.locator('canvas').evaluate(() => window.assetPreview.placeNow('supplies'));
+    await frame.locator('#shop-open').waitFor({ state: 'visible' });
+    await frame.locator('#condenser-open').waitFor({ state: 'visible' });
+    const supply = await frame.locator('#shop-open').boundingBox();
+    const ether = await frame.locator('#condenser-open').boundingBox();
+    assert(supply.x + supply.width < ether.x || ether.x + ether.width < supply.x);
+    await page.screenshot({ path: path.join(output, 'supplies-actions.png') });
     await frame.locator('canvas').evaluate(() => window.assetPreview.placeNow('fate'));
+    await frame.locator('#shop-open').waitFor({ state: 'hidden' });
+    await frame.locator('#condenser-open').waitFor({ state: 'hidden' });
     await frame.locator('#emblem-open').waitFor({ state: 'visible' });
     const table = await frame.locator('canvas').evaluate(() => {
       const objects = [];

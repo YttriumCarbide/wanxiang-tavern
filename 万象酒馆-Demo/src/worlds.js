@@ -2,11 +2,15 @@ import { isPositiveEnemyEffect } from './enemy-targets.js';
 import { REGIONS } from './content/regions.js';
 import { MAP_IDS } from './content/biomes.js';
 import { DEFINITIONS, BUFFS } from './data.js';
+import { EXCLUSIVE_BUFFS } from './triggers.js';
 import { ENEMY_ATTACKS } from './combat-art.js';
 import { HUMANOID_ENEMY_TEMPLATES, restoredEnemyPortrait } from './content/enemy-templates.js';
 import {
   ENEMY_BASE_REVISION,
   ENEMY_DESIGN_LIMITS,
+  ENEMY_TIERS,
+  ENEMY_TIER_GUIDE,
+  compileEnemyDesign,
   restoreEnemyBaseValues,
 } from './enemy-base-values.js';
 
@@ -43,7 +47,7 @@ export function worldReference() {
       ...Object.values(DEFINITIONS).filter((entry) => entry.speed),
       ...HUMANOID_ENEMY_TEMPLATES,
     ].map(({ portrait, name }) => ({ portrait, name })),
-    enemyNumbers: structuredClone(ENEMY_DESIGN_LIMITS),
+    enemyNumbers: structuredClone(ENEMY_TIER_GUIDE),
   };
 }
 const number = (value, min, max, label) => {
@@ -55,26 +59,52 @@ const text = (value, min, max, label) => {
     throw Error(label + '长度无效');
   return value.trim();
 };
+function validatedEnemyEffectTarget(effect, restoring = false) {
+  if (!['damage', 'buff', 'heal', 'shield', 'mana'].includes(effect.type))
+    throw Error('敌人效果类型无效');
+  const positive = isPositiveEnemyEffect(effect);
+  const target = effect.target || (positive ? 'self' : 'opponents');
+  if (!['opponents', 'self', 'allAllies', 'lowestAlly'].includes(target))
+    throw Error('敌人效果目标无效');
+  if (positive && target === 'opponents')
+    throw Error('敌人治疗及正面状态必须指向敌方自身或敌方伙伴');
+  if (effect.type === 'buff' && effect.buff === 'slow' && target === 'opponents') {
+    if (restoring) return null;
+    throw Error('禁止给玩家队友施加迟缓；迟缓只影响敌人的行动速度');
+  }
+  if (effect.type === 'buff' && effect.buff === 'blind') {
+    if (restoring) return null;
+    throw Error('生成敌人不能施加致盲');
+  }
+  if (
+    effect.type === 'buff' &&
+    (!BUFFS[effect.buff] ||
+      EXCLUSIVE_BUFFS.includes(effect.buff) ||
+      (!restoring && effect.buff === 'overload'))
+  ) {
+    if (restoring) return null;
+    throw Error('敌人状态无效');
+  }
+  return target;
+}
+function validatedSlots(move) {
+  const slots = move.slots || [move.slot];
+  if (
+    !Array.isArray(slots) ||
+    !slots.length ||
+    slots.length > 3 ||
+    new Set(slots).size !== slots.length ||
+    slots.some((slot) => !Number.isInteger(slot) || slot < 0 || slot > 2)
+  )
+    throw Error('敌人攻击位置无效');
+  return slots;
+}
 function effects(list, restoring = false, boss = false) {
   if (!Array.isArray(list) || (!list.length && !restoring) || list.length > 5)
     throw Error('敌人效果数量无效');
   return list.flatMap((effect) => {
-    if (!['damage', 'buff', 'heal', 'shield', 'mana'].includes(effect.type))
-      throw Error('敌人效果类型无效');
-    const positive = isPositiveEnemyEffect(effect);
-    const target = effect.target || (positive ? 'self' : 'opponents');
-    if (!['opponents', 'self', 'allAllies', 'lowestAlly'].includes(target))
-      throw Error('敌人效果目标无效');
-    if (positive && target === 'opponents')
-      throw Error('敌人治疗及正面状态必须指向敌方自身或敌方伙伴');
-    if (effect.type === 'buff' && effect.buff === 'slow' && target === 'opponents') {
-      if (restoring) return [];
-      throw Error('禁止给玩家队友施加迟缓；迟缓只影响敌人的行动速度');
-    }
-    if (effect.type === 'buff' && effect.buff === 'blind') {
-      if (restoring) return [];
-      throw Error('生成敌人不能施加致盲');
-    }
+    const target = validatedEnemyEffectTarget(effect, restoring);
+    if (!target) return [];
     const value = number(
       effect.value,
       1,
@@ -85,8 +115,6 @@ function effects(list, restoring = false, boss = false) {
           : ENEMY_DESIGN_LIMITS.support[1],
       '效果',
     );
-    if (effect.type === 'buff' && (!BUFFS[effect.buff] || effect.buff === 'balance'))
-      throw Error('敌人状态无效');
     return [
       {
         type: effect.type,
@@ -97,26 +125,46 @@ function effects(list, restoring = false, boss = false) {
     ];
   });
 }
-function moves(list, restoring = false, boss = false) {
+function tieredMoves(list) {
   if (!Array.isArray(list) || !list.length || list.length > 6) throw Error('敌人行动意图无效');
   return list.map((move) => {
-    const slots = move.slots || [move.slot];
-    if (
-      !Array.isArray(slots) ||
-      !slots.length ||
-      slots.length > 3 ||
-      new Set(slots).size !== slots.length ||
-      slots.some((slot) => !Number.isInteger(slot) || slot < 0 || slot > 2)
-    )
-      throw Error('敌人攻击位置无效');
+    if (!Array.isArray(move.effects) || !move.effects.length || move.effects.length > 5)
+      throw Error('敌人效果数量无效');
+    if (move.selfShield !== undefined)
+      throw Error('请将护盾作为effects中的shield效果并填power，不要填写selfShield数值');
+    const compiledEffects = move.effects.map((effect) => {
+      const target = validatedEnemyEffectTarget(effect, false);
+      if (effect.value !== undefined)
+        throw Error('新敌人请使用power档位(low/medium/high)，不能直接填写效果数值');
+      if (!ENEMY_TIERS.includes(effect.power)) throw Error('敌人效果强度档位无效');
+      return {
+        type: effect.type,
+        target,
+        power: effect.power,
+        ...(effect.type === 'buff' ? { buff: effect.buff } : {}),
+      };
+    });
     return {
       name: text(move.name, 1, 40, '意图名称'),
-      text: text(move.text, 1, 300, '意图说明'),
-      slots,
-      effects: effects(move.effects, restoring, boss),
-      ...(move.selfShield ? { selfShield: number(move.selfShield, 1, 30, '护盾') } : {}),
+      slots: validatedSlots(move),
+      effects: compiledEffects,
     };
   });
+}
+function moves(list, restoring = false, boss = false) {
+  if (!Array.isArray(list) || !list.length || list.length > 6) throw Error('敌人行动意图无效');
+  return list.map((move) => ({
+    name: text(move.name, 1, 40, '意图名称'),
+    text: text(move.text, 1, 300, '意图说明'),
+    slots: validatedSlots(move),
+    effects: effects(move.effects, restoring, boss),
+    ...(move.selfShield ? { selfShield: number(move.selfShield, 1, 30, '护盾') } : {}),
+  }));
+}
+function hasTieredEffects(enemy) {
+  return [...(enemy.intents || []), ...(enemy.enragedIntents || [])].some((move) =>
+    (move?.effects || []).some((effect) => effect?.power !== undefined),
+  );
 }
 export function normalizeEnemy(enemy, { restoring = false } = {}) {
   if (!enemy || !/^enemy-[a-z0-9-]{1,70}$/.test(enemy.id) || DEFINITIONS[enemy.id])
@@ -128,19 +176,51 @@ export function normalizeEnemy(enemy, { restoring = false } = {}) {
     throw Error('敌人外貌或攻击表现无效');
   if (enemy.boss !== undefined && typeof enemy.boss !== 'boolean')
     throw Error('Boss标记必须是布尔值');
+  const boss = !!enemy.boss;
+  const tiered =
+    !restoring && (enemy.tier !== undefined || enemy.hp === undefined || hasTieredEffects(enemy));
+  if (tiered) {
+    if (enemy.hp !== undefined)
+      throw Error('新敌人请使用tier档位(low/medium/high)，不能直接填写hp');
+    if (!ENEMY_TIERS.includes(enemy.tier)) throw Error('敌人生命档位无效');
+    const speed = number(enemy.speed, 1, 5, '速度');
+    const intents = tieredMoves(enemy.intents);
+    const enraged = enemy.enragedIntents ? tieredMoves(enemy.enragedIntents) : null;
+    const compiled = compileEnemyDesign(enemy.id, enemy.tier, speed, intents, enraged, boss);
+    return {
+      id: enemy.id,
+      name: text(enemy.name, 1, 40, '敌人名称'),
+      portrait,
+      color: /^#[0-9a-f]{6}$/i.test(enemy.color) ? enemy.color : '#b3a996',
+      baseRevision: ENEMY_BASE_REVISION,
+      hp: compiled.hp,
+      mp: 0,
+      speed,
+      attackStyle: enemy.attackStyle,
+      buffs: {},
+      intents: compiled.intents,
+      ...(boss
+        ? {
+            boss: true,
+            phaseThreshold: 0.5,
+            enragedIntents: compiled.enragedIntents,
+          }
+        : {}),
+    };
+  }
   return {
     id: enemy.id,
     name: text(enemy.name, 1, 40, '敌人名称'),
     portrait,
     color: /^#[0-9a-f]{6}$/i.test(enemy.color) ? enemy.color : '#b3a996',
     baseRevision: ENEMY_BASE_REVISION,
-    hp: number(enemy.hp, ...ENEMY_DESIGN_LIMITS[enemy.boss ? 'boss' : 'ordinary'].hp, '生命'),
+    hp: number(enemy.hp, ...ENEMY_DESIGN_LIMITS[boss ? 'boss' : 'ordinary'].hp, '生命'),
     mp: 0,
     speed: number(enemy.speed, 1, 6, '速度'),
     attackStyle: enemy.attackStyle,
     buffs: {},
-    intents: moves(enemy.intents, restoring, !!enemy.boss),
-    ...(enemy.boss
+    intents: moves(enemy.intents, restoring, boss),
+    ...(boss
       ? {
           boss: true,
           phaseThreshold: 0.5,
@@ -210,6 +290,14 @@ export function normalizeWorld(
     landmarks: [...(existing?.landmarks || []), ...landmarks],
     enemyIds: ids,
     enemyDefinitions: definitions,
+    ...(existing?.expandedAt ||
+    (restoring && Number.isSafeInteger(raw.expandedAt) && raw.expandedAt > 0)
+      ? { expandedAt: existing?.expandedAt || raw.expandedAt }
+      : {}),
+    ...(existing?.baseLevel ||
+    (restoring && Number.isInteger(raw.baseLevel) && raw.baseLevel >= 1 && raw.baseLevel <= 99)
+      ? { baseLevel: existing?.baseLevel || raw.baseLevel }
+      : {}),
     goals: [
       ...(existing?.goals || []),
       ...(Array.isArray(raw.goals) ? raw.goals.map((goal) => text(goal, 1, 2000, '后续目标')) : []),

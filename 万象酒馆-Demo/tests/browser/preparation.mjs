@@ -78,7 +78,7 @@ export async function preparationChecks({ browser, baseURL, output }) {
     assert(bounds.width <= 970 && bounds.height <= 590);
     const formation = await page.locator('.prepare-formation-col').boundingBox();
     const reserve = await page.locator('.prepare-reserve-col').boundingBox();
-    assert(formation.x > reserve.x && formation.width > reserve.width * 2.8);
+    assert(formation.x + formation.width < reserve.x && formation.width > reserve.width);
     assert.equal(await page.locator('.prepare-slot').count(), 6);
     assert(
       await page
@@ -113,6 +113,8 @@ export async function preparationChecks({ browser, baseURL, output }) {
     await page.locator('[data-prepare-slot="0"]').click();
     const editor = page.locator('#prepare-character-dialog');
     await editor.waitFor({ state: 'visible' });
+    assert.match(await editor.locator('.prepare-affection').innerText(), /好感 Lv\./);
+    assert.equal(await editor.locator('.prepare-stat-grid dd').count(), 5);
     assert.equal(await editor.locator('[data-equipment-slot]').count(), 3);
     assert.equal(
       await editor.locator('[data-prepare-position], [data-prepare-use], .character-sheet').count(),
@@ -131,7 +133,22 @@ export async function preparationChecks({ browser, baseURL, output }) {
     );
     await editor.locator('.prepare-portrait-tools summary').click();
     assert.equal(await editor.locator('[data-edit-portrait]').isVisible(), true);
+    await editor.locator('[data-edit-portrait]').click();
+    const portrait = page.locator('#portrait-dialog');
+    const promptButton = portrait.getByRole('button', { name: '获取立绘提示词' });
+    const prompt = portrait.locator('.portrait-prompt-output');
+    await promptButton.click();
+    await prompt.waitFor({ state: 'visible' });
+    const cardPrompt = await prompt.inputValue();
+    assert.match(cardPrompt, /角色设定/);
+    await portrait.locator('[data-portrait-kind="standing"]').click();
+    await promptButton.click();
+    await prompt.waitFor({ state: 'visible' });
+    assert.notEqual(await prompt.inputValue(), cardPrompt);
+    await portrait.locator('#portrait-url-close').click();
     await editor.locator('.prepare-portrait-tools summary').click();
+    await editor.locator('.prepare-service summary').click();
+    assert.equal(await editor.locator('.prepare-service tbody tr').count(), 4);
     await page.waitForTimeout(230);
     await page.screenshot({ path: path.join(output, 'preparation-character.png') });
     await page.locator('#prepare-character-done').click();

@@ -31,6 +31,7 @@ export const TRIGGER_TARGETS = Object.freeze({
   allEnemies: '全体存活敌人',
   lowestEnemy: '生命最低敌人',
 });
+export const EXCLUSIVE_BUFFS = Object.freeze(['meteor', 'balance', 'sacrifice']);
 export const POSITIVE_BUFFS = Object.freeze([
   'flying',
   'haste',
@@ -49,6 +50,14 @@ export const NEGATIVE_BUFFS = Object.freeze([
   'poison',
   'slow',
   'bleed',
+]);
+export const GENERATED_POSITIVE_BUFFS = Object.freeze(
+  POSITIVE_BUFFS.filter((key) => !EXCLUSIVE_BUFFS.includes(key)),
+);
+export const GENERATED_NEGATIVE_BUFFS = NEGATIVE_BUFFS;
+export const GENERATED_BUFFS = Object.freeze([
+  ...GENERATED_POSITIVE_BUFFS,
+  ...GENERATED_NEGATIVE_BUFFS,
 ]);
 
 function integer(value, min, max, label) {
@@ -116,14 +125,14 @@ export function normalizeRules(value) {
         return { type: 'cleanse', buffs: [...new Set(effect.buffs)], ...effectMetadata(effect) };
       }
       if (effect.type === 'buff' && !Object.hasOwn(BUFFS, effect.buff)) throw Error('触发状态无效');
+      const maxValue = ['buff', 'mark'].includes(effect.type)
+        ? ['poison', 'bleed'].includes(effect.buff)
+          ? 2000
+          : 10
+        : 5000;
       return {
         type: effect.type,
-        value: integer(
-          effect.value,
-          1,
-          ['buff', 'mark'].includes(effect.type) ? 3 : 20,
-          '触发数值',
-        ),
+        value: integer(effect.value, 1, maxValue, '触发数值'),
         ...(effect.type === 'buff' ? { buff: effect.buff } : {}),
         ...effectMetadata(effect),
       };

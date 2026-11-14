@@ -5,8 +5,13 @@ export const SERVICE_ROLES = Object.freeze({
   clean: '保洁',
 });
 
-function bounded(value) {
-  return Number.isFinite(value) ? Math.max(0, Math.min(100, Math.floor(value))) : 0;
+export const SERVICE_REPUTATION_MAX = 5000;
+export const SERVICE_PROFICIENCY_MAX = 1000;
+export const SERVICE_REPUTATION_STEP = 400;
+export const SERVICE_MAX_TABLES = 19;
+
+function bounded(value, maximum) {
+  return Number.isFinite(value) ? Math.max(0, Math.min(maximum, Math.floor(value))) : 0;
 }
 
 export function serviceSeed(text) {
@@ -23,10 +28,22 @@ export function restoreServiceGrowth(raw) {
   const training = Object.fromEntries(
     Object.entries(raw?.training || {}).map(([id, roles]) => [
       id,
-      Object.fromEntries(Object.keys(SERVICE_ROLES).map((role) => [role, bounded(roles?.[role])])),
+      Object.fromEntries(
+        Object.keys(SERVICE_ROLES).map((role) => [
+          role,
+          bounded(roles?.[role], SERVICE_PROFICIENCY_MAX),
+        ]),
+      ),
     ]),
   );
-  return { reputation: bounded(raw?.reputation), training };
+  return {
+    reputation: bounded(raw?.reputation, SERVICE_REPUTATION_MAX),
+    training,
+    shifts: Number.isSafeInteger(raw?.shifts) ? Math.max(0, raw.shifts) : 0,
+    specialties: Object.fromEntries(
+      Object.entries(raw?.specialties || {}).map(([id, count]) => [id, bounded(count, 1000)]),
+    ),
+  };
 }
 
 export function serviceProficiency(growth, member, role) {
@@ -34,32 +51,40 @@ export function serviceProficiency(growth, member, role) {
   const base = 20 + (serviceSeed(`${member}:${role}`) % 26);
   const training = growth?.training;
   const experience = training && Object.hasOwn(training, member) ? training[member][role] : 0;
-  return bounded(base + (experience || 0));
+  return bounded(base + (experience || 0), SERVICE_PROFICIENCY_MAX);
 }
 
 export function serviceAutoChance(level) {
-  return level < 40 ? 0 : Math.min(30, 3 + Math.floor((level - 40) * 0.45));
+  return level < 40 ? 0 : Math.min(52, 3 + Math.floor(Math.sqrt(level - 40) * 1.6));
 }
 
 export function serviceWaitBonus(level) {
-  return Math.floor(level / 10);
+  return Math.floor(Math.sqrt(Math.max(0, level)) * 0.62);
 }
 
 export function servicePriceBonus(levels, reputation) {
   const total = Object.keys(SERVICE_ROLES).reduce((sum, role) => sum + (levels?.[role] || 0), 0);
-  return Math.floor(total / 20) + Math.floor((reputation || 0) / 4);
+  return Math.floor(total / 80) + Math.floor((reputation || 0) / 100);
 }
 
 export function expectedServiceTables(reputation) {
-  return 7 + Math.floor(bounded(reputation) / 25);
+  return Math.min(
+    SERVICE_MAX_TABLES,
+    7 + Math.floor(bounded(reputation, SERVICE_REPUTATION_MAX) / SERVICE_REPUTATION_STEP),
+  );
 }
 
 export function settleServiceGrowth(growth, shift) {
+  growth.shifts = (growth.shifts || 0) + 1;
   const trained = [];
   for (const role of Object.keys(SERVICE_ROLES)) {
     const id = shift.staff[role];
     const before = serviceProficiency(growth, id, role);
-    const points = Math.min(8, shift.completedByRole?.[role] || 0, 100 - before);
+    const points = Math.min(
+      8,
+      shift.completedByRole?.[role] || 0,
+      SERVICE_PROFICIENCY_MAX - before,
+    );
     if (!id || !points) continue;
     const training = Object.hasOwn(growth.training, id) ? growth.training[id] : {};
     growth.training = {
@@ -69,6 +94,14 @@ export function settleServiceGrowth(growth, shift) {
     trained.push({ id, role, points });
   }
   const previous = growth.reputation;
-  growth.reputation = bounded(previous + shift.served - shift.missed + (shift.special?.paid || 0));
+  growth.reputation = bounded(
+    previous + shift.served - shift.missed + (shift.special?.paid || 0),
+    SERVICE_REPUTATION_MAX,
+  );
+  if (shift.special?.paid > 0) {
+    growth.specialties ||= {};
+    const id = shift.special.id;
+    growth.specialties[id] = bounded((growth.specialties[id] || 0) + shift.special.paid, 1000);
+  }
   return { reputationChange: growth.reputation - previous, trained };
 }

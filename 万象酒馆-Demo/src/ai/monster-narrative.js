@@ -1,19 +1,5 @@
-import { UNIVERSAL_ENEMIES, UNIVERSAL_BOSSES } from '../content/universal-adversaries.js';
-import { FOOD_WORLDBOOK_CONTENT } from '../content/dining.js';
-import { newWorldEntry } from './worldbook.js';
-
 const RETIRED_BOUNDARY =
   '叙事边界：这些是可观察特征与可能的行动。实际伤害、技能使用、受伤和胜负以游戏已经确认的事件为准。';
-
-/** Remove only the retired boilerplate, preserving edited lore and activation settings. */
-export function removeMonsterBoundary(source) {
-  const book = structuredClone(source);
-  for (const entry of Object.values(book?.entries || {})) {
-    if (isMonsterWorldEntry(entry) && typeof entry.content === 'string')
-      entry.content = entry.content.replaceAll(RETIRED_BOUNDARY, '').trim();
-  }
-  return book;
-}
 
 export function isMonsterWorldEntry(entry) {
   const marker = entry.extensions?.wanxiang;
@@ -33,6 +19,7 @@ const GAME_RULE_SENTENCE =
 export function monsterNarrativeText(text) {
   return String(text || '')
     .replaceAll(RETIRED_BOUNDARY, '')
+    .replace(/^\s*替代旧数字】\s*$/gmu, '')
     .split('\n')
     .filter(
       (line) =>
@@ -52,105 +39,4 @@ export function monsterNarrativeText(text) {
     )
     .filter((line) => line.trim() && !/^[；;，,。\s]+$/u.test(line))
     .join('\n');
-}
-
-function monsterName(entry, id) {
-  const labeledName = /^名称：[ \t]*(.+)$/m.exec(entry.content || '')?.[1]?.trim();
-  if (labeledName) return labeledName;
-  return String(entry.comment || '').replace(/^(?:古林|矿窟|副本)?怪物图鉴[：:]\s*/, '') || id;
-}
-
-function normalizeMonsterEntry(entry, id, name) {
-  entry.comment = `怪物图鉴：${name}`;
-  entry.key = [id, name];
-  entry.apiTargets = ['script', 'chat'];
-  entry.extensions ||= {};
-  entry.extensions.wanxiang = {
-    ...(entry.extensions.wanxiang || {}),
-    monsterId: id,
-    apiTargets: ['script', 'chat'],
-  };
-  if (entry.extensions.wanxiangSource?.book === 'tavern-bestiary')
-    entry.extensions.wanxiangSource.book = 'tavern-world';
-  entry.content = monsterNarrativeText(entry.content);
-}
-
-function splitUniversalMonsterEntry(book, entry, uid) {
-  const existingIds = new Set(
-    Object.values(book.entries)
-      .map((candidate) => candidate.extensions?.wanxiang?.monsterId)
-      .filter(Boolean),
-  );
-  let nextUid = Math.max(-1, ...Object.keys(book.entries).map(Number)) + 1;
-  for (const enemy of [...UNIVERSAL_ENEMIES, ...UNIVERSAL_BOSSES]) {
-    if (existingIds.has(enemy.id)) continue;
-    const name = enemy.name;
-    const generated = {
-      ...structuredClone(entry),
-      uid: nextUid,
-      comment: `怪物图鉴：${name}`,
-      key: [enemy.id, name],
-      content: `名称：${name}\n设定：${monsterNarrativeText(enemy.description)}`,
-      apiTargets: ['script', 'chat'],
-      extensions: {
-        ...(entry.extensions || {}),
-        wanxiang: { monsterId: enemy.id, apiTargets: ['script', 'chat'] },
-      },
-    };
-    book.entries[nextUid] = generated;
-    nextUid++;
-  }
-  delete book.entries[uid];
-}
-
-/** Split the old pooled catalog and normalize all authored monster lore without replacing edits. */
-export function upgradeMonsterCatalogWorldbook(source) {
-  const book = structuredClone(source || { entries: {} });
-  book.entries ||= {};
-  for (const [uid, entry] of Object.entries({ ...book.entries })) {
-    const marker = entry.extensions?.wanxiang || {};
-    if (marker.generationRule === 'universal-enemies') {
-      splitUniversalMonsterEntry(book, entry, uid);
-      continue;
-    }
-    if (!isMonsterWorldEntry(entry)) continue;
-    const id = marker.monsterId || entry.key?.find((key) => /^[a-z][a-zA-Z0-9]+$/.test(key));
-    if (!id) continue;
-    normalizeMonsterEntry(entry, id, monsterName(entry, id));
-  }
-  return book;
-}
-
-export function upgradeMonsterNarrative(source) {
-  const book = structuredClone(source);
-  for (const entry of Object.values(book.entries || {})) {
-    if (entry.extensions?.wanxiang?.generationRule === 'universal-enemies') {
-      entry.content =
-        '通用来客与异兽可根据当地世界观赋予来历，引用其原有ID。\n\n' +
-        [...UNIVERSAL_ENEMIES, ...UNIVERSAL_BOSSES]
-          .map(
-            (enemy) =>
-              `${enemy.id} / ${enemy.name}\n${enemy.description}\n能力表现：${enemy.intents.map((move) => move.name).join('、')}`,
-          )
-          .join('\n\n');
-      continue;
-    }
-    if (isMonsterWorldEntry(entry)) entry.content = monsterNarrativeText(entry.content);
-  }
-  if (!Object.values(book.entries || {}).some((entry) => entry.extensions?.wanxiang?.dining)) {
-    const uid = Math.max(-1, ...Object.keys(book.entries || {}).map(Number)) + 1;
-    book.entries[uid] = {
-      ...newWorldEntry(uid),
-      comment: '酒馆食材与菜肴 · 仅用餐',
-      content: FOOD_WORLDBOOK_CONTENT,
-      constant: true,
-      ignoreBudget: true,
-      position: 4,
-      depth: 0,
-      order: 9000,
-      apiTargets: ['chat'],
-      extensions: { wanxiang: { dining: true } },
-    };
-  }
-  return book;
 }

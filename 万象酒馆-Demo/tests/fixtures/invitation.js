@@ -16,6 +16,11 @@ export const fullInvitation = {
     hint: ['听听这首曲子差在哪儿。', '想想曲子适合在哪里响起。', '看看这段旋律要留给谁。'][index],
     // A long controlled response exercises pagination without a live upstream call.
     intro: [scenes[index], ...scenes, ...scenes.slice(0, 2)].join('\n'),
+    choices: [
+      ['我们一起走到广场吧。', '请莉贝特先拉一遍卡住的那一小节。'],
+      ['先听酒馆里来往客人的脚步和说话声。', '聊聊她过去在广场听过的曲子。'],
+      ['说说石台附近的声音适合怎样的停顿。', '请她按今天试出来的节拍再拉一遍。'],
+    ][index],
     tasks: [
       ['听莉贝特试奏一遍', '说说刚才听到的停顿'],
       ['和莉贝特商量在哪里继续试奏'],

@@ -13,7 +13,7 @@ import { newExploration, explorationSpec, completeExploration } from '../src/exp
 import { newBattle, newEncounter, preview, advance, intent, enemyTimeline } from '../src/engine.js';
 import { definitionsFor } from '../src/catalog.js';
 import { lockEnemyDecisions } from '../src/enemy-tactics.js';
-import { upgradeForestWorldbook } from '../src/ai/forest-worldbook.js';
+import { syncBuiltinWorldbook } from '../src/ai/worldbook.js';
 import { createWorldbookStore } from '../server/worldbook-store.mjs';
 import { generationRequest } from '../server/prompts.mjs';
 import { createWorldbookCounter } from '../server/character-reader.mjs';
@@ -206,17 +206,20 @@ test('rescuing Yueling grants exactly two real potions once, and invalid rewards
   assert.deepEqual(library, before);
 });
 
-test('worldbook adds six outlines, two NPCs and twenty-four bestiary entries without overwriting edits', () => {
+test('worldbook sync adds six outlines, two NPCs and twenty-four bestiary entries without overwriting edits', async () => {
+  const builtin = JSON.parse(
+    await readFile(new URL('../assets/builtin-worldbook.json', import.meta.url), 'utf8'),
+  );
   const source = { entries: { 2: { uid: 2, content: '玩家的世界', disable: true, order: 199 } } };
-  const book = upgradeForestWorldbook(source);
-  assert.equal(Object.keys(book.entries).length, 33);
-  assert.deepEqual(book.entries[2], source.entries[2]);
+  const book = syncBuiltinWorldbook(source, builtin);
+  assert.equal(book.entries[2].content, source.entries[2].content);
+  assert.equal(book.entries[2].disable, true);
   const chapter = Object.values(book.entries).find(
     (e) => e.extensions?.wanxiang?.officialDungeonId === 'forest-fringe',
   );
   chapter.content += '\n自定义线索';
   chapter.disable = true;
-  assert.deepEqual(upgradeForestWorldbook(book), book);
+  assert.deepEqual(syncBuiltinWorldbook(book, builtin), book);
   assert.equal(Object.keys(source.entries).length, 1);
 });
 
@@ -237,7 +240,6 @@ test('browser and server send actual forest outline, NPC design and matching mon
     (name) => readFile(new URL('../prompts/' + name, import.meta.url), 'utf8'),
     book,
   );
-  assert.equal(values.get('world.forest-chapters.v39'), true);
   const countTokens = createWorldbookCounter();
   for (const worlds of [server, browser.worlds])
     for (const sequence of [0, 2, 4, 5]) {

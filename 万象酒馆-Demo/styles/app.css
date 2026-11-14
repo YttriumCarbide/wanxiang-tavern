@@ -26,7 +26,7 @@
 
 @import './supplies.css';
 @import './dining.css';
-@import './chapter.css';
+@import url('./communication.css');
 
 @import url('./equipment.css');
 
@@ -37,3 +37,4 @@
 @import url('./battle-reading.css');
 @import url('./daily.css');
 @import url('./tavern-service.css');
+@import url('./workshop.css');

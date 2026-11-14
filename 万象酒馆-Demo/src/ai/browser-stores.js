@@ -1,39 +1,12 @@
-import { upgradePlaytestWorldbook } from './playtest-upgrade.js';
-import { upgradeAdventureWorldbook } from './adventure-upgrade.js';
-import { upgradeOutputTagsWorldbook } from './output-tag-upgrade.js';
-import { upgradeJourneyKeywords } from './journey-keyword-upgrade.js';
-import { upgradeTutorialRevision } from './tutorial-revision.js';
-import { upgradeEnemyAppearanceRules } from './enemy-appearance-rules.js';
-import { upgradeProtagonistRules } from './protagonist-rules.js';
-import { upgradeBattleDisplayRules } from './battle-display-rules.js';
-import { upgradeRuinsWorldbook } from './ruins-worldbook.js';
-import { upgradeAssetWorldbook } from './asset-worldbook.js';
-import { upgradeGameRules } from './game-rules-upgrade.js';
 import { normalizePromptPreset } from './presets.js';
 import { normalizeRegexScripts } from './regex.js';
-import { normalizeWorldbook, normalizeWorldSettings, characterWorldEntry } from './worldbook.js';
-import { createConnectionStore } from './connection-store.js';
-import { upgradeCharacterGeneration } from './character-generation-upgrade.js';
-import { upgradeContinuityRules } from './continuity-upgrade.js';
-import { upgradeGenerationExperience } from './generation-experience-upgrade.js';
-import { upgradeStatusEmblems } from './status-emblem-upgrade.js';
-import { upgradeUniversalEnemies } from './universal-enemy-upgrade.js';
-import { upgradeCharacterConstraints } from './character-constraints-upgrade.js';
-import { upgradeForestWorldbook } from './forest-worldbook.js';
-import { upgradeCharacterIdentity } from './character-identity-upgrade.js';
-import { upgradeCombatControl } from './combat-control-upgrade.js';
-import { upgradeGenerationBoundary } from './generation-boundary-upgrade.js';
-import { upgradeBattleBalance } from './battle-balance-upgrade.js';
-import { upgradeFrostWorldbook } from './frost-worldbook.js';
-import { upgradeEnemyBaseWorldbook } from './enemy-base-upgrade.js';
 import {
-  upgradeMonsterNarrative,
-  removeMonsterBoundary,
-  upgradeMonsterCatalogWorldbook,
-} from './monster-narrative.js';
-import { upgradeMainWorld } from './main-world-upgrade.js';
-import { upgradeCharacterEntries } from './character-entry-upgrade.js';
-import { upgradeTownGuests } from './town-guests-upgrade.js';
+  normalizeWorldbook,
+  normalizeWorldSettings,
+  characterWorldEntry,
+  syncBuiltinWorldbook,
+} from './worldbook.js';
+import { createConnectionStore } from './connection-store.js';
 
 function checkedId(id) {
   if (typeof id !== 'string' || !/^[a-z0-9-]{1,100}$/.test(id)) throw Error('资料ID无效');
@@ -54,6 +27,7 @@ export async function createBrowserStores(database, readText, builtinBook) {
     'quick-chat-default',
     'map-default',
     'creation-default',
+    'summary-default',
   ];
   const prompts = {
     async get(id = 'character-default') {
@@ -86,270 +60,11 @@ export async function createBrowserStores(database, readText, builtinBook) {
       await database.write([], ['prompt.' + id, 'helper.' + id]);
     },
   };
-  if (!database.get('world.book.tavern-world'))
-    await database.write([['world.book.tavern-world', normalizeWorldbook(builtinBook).book]]);
-  if (!database.get('world.game-rules.v26')) {
-    const previous = database.get('world.book.tavern-world');
-    if (previous)
-      await database.write([
-        ['world.backup.before-game-rules-v26', previous],
-        ['world.book.tavern-world', upgradeGameRules(previous)],
-        ['world.game-rules.v26', true],
-      ]);
+  const existingWorld = database.get('world.book.tavern-world');
+  const syncedWorld = syncBuiltinWorldbook(existingWorld, builtinBook);
+  if (JSON.stringify(existingWorld) !== JSON.stringify(syncedWorld)) {
+    await database.write([['world.book.tavern-world', syncedWorld]]);
   }
-  if (!database.get('world.asset-rules.v27')) {
-    const previous = database.get('world.book.tavern-world');
-    const updated = upgradeAssetWorldbook(previous, {
-      map: await readText('worldbook/map-output.md'),
-      creation: await readText('worldbook/creation-output.md'),
-    });
-    await database.write([
-      ['world.book.tavern-world', updated],
-      ['world.asset-rules.v27', true],
-    ]);
-  }
-  if (!database.get('world.protagonist-rules.v28')) {
-    const updated = upgradeProtagonistRules(
-      database.get('world.book.tavern-world'),
-      await readText('worldbook/protagonist-strength.md'),
-    );
-    await database.write([
-      ['world.book.tavern-world', updated],
-      ['world.protagonist-rules.v28', true],
-    ]);
-  }
-  if (!database.get('world.battle-display.v29')) {
-    const updated = upgradeBattleDisplayRules(
-      database.get('world.book.tavern-world'),
-      await readText('worldbook/battle-display.md'),
-    );
-    await database.write([
-      ['world.book.tavern-world', updated],
-      ['world.battle-display.v29', true],
-    ]);
-  }
-  if (!database.get('world.ruins-roster.v30')) {
-    await database.write([
-      ['world.book.tavern-world', upgradeRuinsWorldbook(database.get('world.book.tavern-world'))],
-      ['world.ruins-roster.v30', true],
-    ]);
-  }
-  if (!database.get('world.tutorial-equipment.v31')) {
-    await database.write([
-      ['world.book.tavern-world', upgradeTutorialRevision(database.get('world.book.tavern-world'))],
-      ['world.tutorial-equipment.v31', true],
-    ]);
-  }
-  if (!database.get('world.enemy-appearances.v32')) {
-    await database.write([
-      [
-        'world.book.tavern-world',
-        upgradeEnemyAppearanceRules(database.get('world.book.tavern-world')),
-      ],
-      ['world.enemy-appearances.v32', true],
-    ]);
-  }
-  if (!database.get('world.character-generation.v33')) {
-    const names = [
-      'character-definition',
-      'character-mechanics',
-      'character-output',
-      'growth-numbers',
-    ];
-    const rules = Object.fromEntries(
-      await Promise.all(names.map(async (name) => [name, await readText(`worldbook/${name}.md`)])),
-    );
-    await database.write([
-      [
-        'world.book.tavern-world',
-        upgradeCharacterGeneration(database.get('world.book.tavern-world'), {
-          rules,
-          reference: await readText('worldbook/character-example.json'),
-        }),
-      ],
-      ['world.character-generation.v33', true],
-    ]);
-  }
-  if (!database.get('world.continuity.v34'))
-    await database.write([
-      ['world.book.tavern-world', upgradeContinuityRules(database.get('world.book.tavern-world'))],
-      ['world.continuity.v34', true],
-    ]);
-  if (!database.get('world.generation-experience.v35'))
-    await database.write([
-      [
-        'world.book.tavern-world',
-        upgradeGenerationExperience(
-          database.get('world.book.tavern-world'),
-          await readText('worldbook/creation-output.md'),
-        ),
-      ],
-      ['world.generation-experience.v35', true],
-    ]);
-  if (!database.get('world.status-emblems.v36'))
-    await database.write([
-      ['world.book.tavern-world', upgradeStatusEmblems(database.get('world.book.tavern-world'))],
-      ['world.status-emblems.v36', true],
-    ]);
-  if (!database.get('world.universal-enemies.v37'))
-    await database.write([
-      ['world.book.tavern-world', upgradeUniversalEnemies(database.get('world.book.tavern-world'))],
-      ['world.universal-enemies.v37', true],
-    ]);
-  if (!database.get('world.character-constraints.v38'))
-    await database.write([
-      [
-        'world.book.tavern-world',
-        upgradeCharacterConstraints(
-          database.get('world.book.tavern-world'),
-          await readText('worldbook/character-complexity.md'),
-        ),
-      ],
-      ['world.character-constraints.v38', true],
-    ]);
-  if (!database.get('world.forest-chapters.v39'))
-    await database.write([
-      ['world.book.tavern-world', upgradeForestWorldbook(database.get('world.book.tavern-world'))],
-      ['world.forest-chapters.v39', true],
-    ]);
-  if (!database.get('world.character-identity.v40'))
-    await database.write([
-      [
-        'world.book.tavern-world',
-        upgradeCharacterIdentity(
-          database.get('world.book.tavern-world'),
-          await readText('worldbook/character-identity.md'),
-        ),
-      ],
-      ['world.character-identity.v40', true],
-    ]);
-  if (!database.get('world.combat-control.v41'))
-    await database.write([
-      ['world.book.tavern-world', upgradeCombatControl(database.get('world.book.tavern-world'))],
-      ['world.combat-control.v41', true],
-    ]);
-  if (!database.get('world.generation-boundary.v42'))
-    await database.write([
-      [
-        'world.book.tavern-world',
-        upgradeGenerationBoundary(
-          database.get('world.book.tavern-world'),
-          await readText('worldbook/generation-boundary.md'),
-        ),
-      ],
-      ['world.generation-boundary.v42', true],
-    ]);
-  if (!database.get('world.battle-balance.v43'))
-    await database.write([
-      ['world.book.tavern-world', upgradeBattleBalance(database.get('world.book.tavern-world'))],
-      ['world.battle-balance.v43', true],
-    ]);
-  if (!database.get('world.frost-chapters.v44'))
-    await database.write([
-      ['world.book.tavern-world', upgradeFrostWorldbook(database.get('world.book.tavern-world'))],
-      ['world.frost-chapters.v44', true],
-    ]);
-  if (!database.get('world.enemy-base.v45'))
-    await database.write([
-      [
-        'world.book.tavern-world',
-        upgradeEnemyBaseWorldbook(database.get('world.book.tavern-world')),
-      ],
-      ['world.enemy-base.v45', true],
-    ]);
-  if (!database.get('world.playtest.v46')) {
-    const names = [
-      'character-definition',
-      'character-mechanics',
-      'character-output',
-      'growth-numbers',
-    ];
-    const rules = Object.fromEntries(
-      await Promise.all(
-        names.map(async (name) => [name, await readText('worldbook/' + name + '.md')]),
-      ),
-    );
-    await database.write([
-      [
-        'world.book.tavern-world',
-        upgradePlaytestWorldbook(database.get('world.book.tavern-world'), rules),
-      ],
-      ['world.playtest.v46', true],
-    ]);
-  }
-  if (!database.get('world.adventure.v51'))
-    await database.write([
-      [
-        'world.book.tavern-world',
-        upgradeAdventureWorldbook(
-          database.get('world.book.tavern-world'),
-          await readText('worldbook/script-output.md'),
-        ),
-      ],
-      ['world.adventure.v51', true],
-    ]);
-  if (!database.get('world.monster-narrative.v52'))
-    await database.write([
-      ['world.book.tavern-world', upgradeMonsterNarrative(database.get('world.book.tavern-world'))],
-      ['world.monster-narrative.v52', true],
-    ]);
-  if (!database.get('world.monster-boundary.v53'))
-    await database.write([
-      ['world.book.tavern-world', removeMonsterBoundary(database.get('world.book.tavern-world'))],
-      ['world.monster-boundary.v53', true],
-    ]);
-  if (!database.get('world.main-world.v54'))
-    await database.write([
-      [
-        'world.book.tavern-world',
-        upgradeMainWorld(
-          database.get('world.book.tavern-world'),
-          await readText('worldbook/script-output.md'),
-        ),
-      ],
-      ['world.main-world.v54', true],
-    ]);
-  if (!database.get('world.character-entries.v55'))
-    await database.write([
-      ['world.book.tavern-world', upgradeCharacterEntries(database.get('world.book.tavern-world'))],
-      ['world.character-entries.v55', true],
-    ]);
-  if (!database.get('world.town-guests.v56'))
-    await database.write([
-      ['world.book.tavern-world', upgradeTownGuests(database.get('world.book.tavern-world'))],
-      ['world.town-guests.v56', true],
-    ]);
-  if (!database.get('world.output-tags.v57'))
-    await database.write([
-      [
-        'world.book.tavern-world',
-        upgradeOutputTagsWorldbook(database.get('world.book.tavern-world')),
-      ],
-      ['world.output-tags.v57', true],
-    ]);
-  if (!database.get('world.monster-catalog.v58'))
-    await database.write([
-      [
-        'world.book.tavern-world',
-        upgradeMonsterCatalogWorldbook(database.get('world.book.tavern-world')),
-      ],
-      ['world.monster-catalog.v58', true],
-    ]);
-  if (!database.get('world.api-targets.v59'))
-    await database.write([
-      ['world.book.tavern-world', normalizeWorldbook(database.get('world.book.tavern-world')).book],
-      ['world.api-targets.v59', true],
-    ]);
-  if (!database.get('world.journey-keywords.v60'))
-    await database.write([
-      ['world.book.tavern-world', upgradeJourneyKeywords(database.get('world.book.tavern-world'))],
-      ['world.journey-keywords.v60', true],
-    ]);
-  if (!database.get('world.main-world.v63'))
-    await database.write([
-      ['world.book.tavern-world', upgradeMainWorld(database.get('world.book.tavern-world'))],
-      ['world.main-world.v63', true],
-    ]);
   let worldSettings = normalizeWorldSettings(
     database.get('world.settings') || { globalSelect: ['tavern-world'] },
   );
@@ -391,6 +106,9 @@ export async function createBrowserStores(database, readText, builtinBook) {
         ...next.script,
         ...next.chat,
         ...next['quick-chat'],
+        ...next.summary,
+        ...next.map,
+        ...next.creation,
         ...Object.values(next.bindings).flat(),
       ]))
         await getWorld(id);
@@ -407,6 +125,7 @@ export async function createBrowserStores(database, readText, builtinBook) {
         'script',
         'chat',
         'quick-chat',
+        'summary',
         'map',
         'creation',
       ])

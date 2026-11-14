@@ -1,4 +1,6 @@
 import { TOWN_SIDE_PLACES } from './content/town-side-places.js';
+import { SILVER_CROWN_PLACES } from './content/silver-crown-scenes.js';
+import { ETERNAL_CITY_PLACES } from './content/eternal-city-scenes.js';
 
 const HALL_PLACES = Object.freeze({
   market: {
@@ -143,6 +145,22 @@ export function roomChatPlace(room, point = 'entry') {
 
 export const CHAT_PLACES = Object.freeze({
   ...HALL_PLACES,
+  ...Object.fromEntries(
+    Object.entries(ETERNAL_CITY_PLACES).map(([id, { name, environment }]) => [
+      id,
+      { name: `艾尔鲁斯 · ${name}`, environment, actions: ['在路边与同伴交谈'] },
+    ]),
+  ),
+  ...Object.fromEntries(
+    Object.entries(SILVER_CROWN_PLACES).map(([id, place]) => [
+      id,
+      {
+        name: `银冠城 · ${place.name}`,
+        environment: place.environment,
+        actions: ['在一旁歇脚', '望向近处的石廊'],
+      },
+    ]),
+  ),
   ...Object.fromEntries(
     Object.entries(TOWN_SIDE_PLACES).map(([id, { name, environment, actions }]) => [
       id,

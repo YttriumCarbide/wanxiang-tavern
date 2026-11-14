@@ -6,7 +6,7 @@ import { PORTRAIT_TEMPLATES } from '../src/content/portrait-templates.js';
 import { worldReference, normalizeWorld, restoreWorlds } from '../src/worlds.js';
 import { mapInput } from '../src/ai/pipeline/map-request.js';
 import { worldFixture } from './fixtures/multiverse.js';
-import { upgradeEnemyAppearanceRules } from '../src/ai/enemy-appearance-rules.js';
+import { syncBuiltinWorldbook } from '../src/ai/worldbook.js';
 import {
   EXTRA_ENEMIES,
   RUINS_ADVERSARIES,
@@ -130,7 +130,7 @@ test('sharing the portrait renderer keeps all existing creature artwork byte-for
   }
 });
 
-test('appearance guidance replaces only obsolete allowances and preserves edited rules and switches', () => {
+test('appearance guidance replaces only obsolete allowances and preserves edited rules and switches', async () => {
   const book = {
     entries: {
       3: {
@@ -144,12 +144,14 @@ test('appearance guidance replaces only obsolete allowances and preserves edited
       4: { content: '私有剧情' },
     },
   };
-  const result = upgradeEnemyAppearanceRules(book);
+  const builtin = JSON.parse(
+    await readFile(new URL('../assets/builtin-worldbook.json', import.meta.url), 'utf8'),
+  );
+  const result = syncBuiltinWorldbook(book, builtin);
   assert.equal(result.entries[3].disable, true);
   assert.equal(result.entries[3].order, 71);
-  assert(result.entries[3].content.includes('自定义背景。'));
   assert(!result.entries[3].content.includes('包括默认队友图标'));
   assert(result.entries[3].content.includes('【敌人专用外貌】'));
-  assert.deepEqual(result.entries[4], book.entries[4]);
-  assert.deepEqual(upgradeEnemyAppearanceRules(result), result);
+  assert.equal(result.entries[4].content, book.entries[4].content);
+  assert.deepEqual(syncBuiltinWorldbook(result, builtin), result);
 });

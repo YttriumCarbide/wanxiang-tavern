@@ -81,6 +81,9 @@ export function scanWorldbooks({ books, settings: rawSettings, context, state = 
     round = 0;
   const history = context.messages || [];
   const nextEffects = structuredClone(state.effects || {});
+  const triggerIds = new Set(
+    (context.triggerIds || []).map((value) => String(value || '').trim()).filter(Boolean),
+  );
   const selectedGroups = new Set();
   const reason = (entry, value) => {
     report.get(entry.id).reason = value;
@@ -168,9 +171,11 @@ export function scanWorldbooks({ books, settings: rawSettings, context, state = 
       ])
         if (entry[field]) text += '\n' + (context[source] || '');
       text = (text + '\n' + recursionText).slice(-160000);
+      const idMatches = entry.key.filter((key) => triggerIds.has(expanded(key).trim())).length;
       const matches = entry.key.filter((key) =>
         matchKey(text, expanded(key), entry, settings, warnings),
       ).length;
+      const matched = idMatches + matches;
       const secondary = entry.keysecondary.map((key) =>
         matchKey(text, expanded(key), entry, settings, warnings),
       );
@@ -184,12 +189,12 @@ export function scanWorldbooks({ books, settings: rawSettings, context, state = 
           secondary.every(Boolean),
         ][entry.selectiveLogic];
       const forced = entry.content.startsWith('@@activate');
-      if (!(entry.constant || sticky || forced || (matches && selective))) {
+      if (!(entry.constant || sticky || forced || (matched && selective))) {
         reason(
           entry,
-          entry.vectorized && !matches
+          entry.vectorized && !matched
             ? '向量插件未连接；关键词未命中'
-            : matches
+            : matched
               ? '次关键词条件不满足'
               : '关键词未命中',
         );
@@ -218,7 +223,7 @@ export function scanWorldbooks({ books, settings: rawSettings, context, state = 
       candidates.push({
         ...entry,
         content,
-        score: matches + secondary.filter(Boolean).length,
+        score: matched + secondary.filter(Boolean).length,
         activation: sticky
           ? '黏性保持'
           : entry.constant
@@ -227,7 +232,9 @@ export function scanWorldbooks({ books, settings: rawSettings, context, state = 
               ? '@@activate'
               : round > 0
                 ? '递归关键词命中'
-                : '关键词命中',
+                : idMatches && !matches
+                  ? 'ID命中'
+                  : '关键词命中',
       });
     }
     const groups = new Map();

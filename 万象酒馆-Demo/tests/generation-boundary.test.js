@@ -4,7 +4,7 @@ import { readFile, mkdtemp } from 'node:fs/promises';
 import path from 'node:path';
 import { createWorldbookStore } from '../server/worldbook-store.mjs';
 import { createBrowserStores } from '../src/ai/browser-stores.js';
-import { upgradeGenerationBoundary } from '../src/ai/generation-boundary-upgrade.js';
+import { syncBuiltinWorldbook } from '../src/ai/worldbook.js';
 import { createAiPipeline } from '../src/ai/pipeline/runtime.js';
 import { runRegexTasks } from '../server/regex-runtime.mjs';
 import { extractGenerationEnvelope } from '../src/ai/pipeline/output-envelope.js';
@@ -42,15 +42,19 @@ function importedPreset() {
   ).preset;
 }
 
-test('boundary migration appends one scoped editable rule and preserves all existing entries', async () => {
-  const content = await readText('worldbook/generation-boundary.md');
+test('boundary sync appends one scoped editable rule and preserves all existing entries', async () => {
+  const builtin = JSON.parse(
+    await readFile(new URL('../assets/builtin-worldbook.json', import.meta.url), 'utf8'),
+  );
   const source = {
     entries: { 4: { uid: 4, content: '玩家原文', disable: true, extensions: { custom: true } } },
   };
-  const book = upgradeGenerationBoundary(source, content);
-  assert.deepEqual(book.entries[4], source.entries[4]);
-  assert.deepEqual(source, { entries: { 4: source.entries[4] } });
-  const guard = book.entries[5];
+  const book = syncBuiltinWorldbook(source, builtin);
+  assert.equal(book.entries[4].content, source.entries[4].content);
+  assert.equal(book.entries[4].disable, true);
+  const guard = Object.values(book.entries).find(
+    (entry) => entry.extensions?.wanxiang?.generationRule === 'generation-boundary-output',
+  );
   assert.deepEqual(guard.apiTargets, ['character', 'script', 'map', 'creation']);
   assert.equal(guard.order, 10000);
   assert.equal(guard.depth, 0);
@@ -58,10 +62,10 @@ test('boundary migration appends one scoped editable rule and preserves all exis
   assert(guard.ignoreBudget);
   guard.disable = true;
   guard.content += '\n玩家补充';
-  assert.deepEqual(upgradeGenerationBoundary(book, content), book);
+  assert.deepEqual(syncBuiltinWorldbook(book, builtin), book);
 });
 
-test('server and browser upgrades inject final boundary after imported prose/format in all four generation requests', async () => {
+test('server and browser stores inject final boundary after imported prose/format in all four generation requests', async () => {
   const directory = await mkdtemp(path.join(process.cwd(), '.runtime/tests/generation-boundary-'));
   const server = await createWorldbookStore(directory);
   const { book } = await server.get('tavern-world');
@@ -79,7 +83,6 @@ test('server and browser upgrades inject final boundary after imported prose/for
     },
   };
   const browser = await createBrowserStores(database, readText, book);
-  assert.equal(values.get('world.generation-boundary.v42'), true);
   const profile = { contextSize: 400000, maxTokens: 32768, promptProcessing: 'merge_tools' };
   const source = importedPreset();
   const originalPreset = structuredClone(source);

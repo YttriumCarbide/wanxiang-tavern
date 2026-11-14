@@ -69,8 +69,7 @@ export async function createAiApi({
       models = match[1] === 'models';
     const profile = settings.get(kind);
     if (profile.requestMode !== 'browser') throw Error('当前接口未选择浏览器直连');
-    const source =
-      models || kind === 'summary' ? null : (await prompts.get(profile.promptPresetId)).preset;
+    const source = models ? null : (await prompts.get(profile.promptPresetId)).preset;
     const prepared = models ? null : await buildRequest(kind, input, source);
     if (active + directRequests.size >= 2) throw Error('已有生成任务在进行，请稍候');
     const requestId = randomUUID();
@@ -250,14 +249,20 @@ export async function createAiApi({
         return true;
       }
       if (url === '/api/ai/summary/plan' && req.method === 'POST') {
+        const profile = { ...settings.get('summary'), antiRoute: settings.routeSettings() };
+        const preset = (await prompts.get(profile.promptPresetId)).preset;
+        const input = await body(req);
+        const worldInfo = await worlds.resolve('summary', input);
         send(
           res,
           200,
-          await summaryPlan(
-            await body(req),
-            { ...settings.get('summary'), antiRoute: settings.routeSettings() },
-            countTokens,
-          ),
+          await summaryPlan(input, profile, countTokens, undefined, {
+            preset,
+            worldInfo,
+            readText: (name) => readFile(new URL('../prompts/' + name, import.meta.url), 'utf8'),
+            runRegexTasks,
+            regexScripts: [...regexStore.get(), ...presetRegexScripts(preset)],
+          }),
         );
         return true;
       }
@@ -326,7 +331,7 @@ export async function createAiApi({
       if (url === '/api/ai/prompts' && req.method === 'GET') {
         const formats = Object.fromEntries(
           await Promise.all(
-            ['character', 'script', 'map', 'creation'].map(async (kind) => [
+            ['character', 'script', 'map', 'creation', 'summary'].map(async (kind) => [
               kind,
               await readFile(new URL(`../prompts/${kind}.system.md`, import.meta.url), 'utf8'),
             ]),
@@ -398,9 +403,7 @@ export async function createAiApi({
         models = match[1] === 'models';
       const profile = settings.get(kind);
       const chatting = ['chat', 'quick-chat'].includes(kind);
-      const summarizing = kind === 'summary';
-      const source =
-        models || summarizing ? null : (await prompts.get(profile.promptPresetId)).preset;
+      const source = models ? null : (await prompts.get(profile.promptPresetId)).preset;
       const prepared = models ? null : await buildRequest(kind, input, source);
       const messages = prepared?.messages || [];
       const requestId = randomUUID();

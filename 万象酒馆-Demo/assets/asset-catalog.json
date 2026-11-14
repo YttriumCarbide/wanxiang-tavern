@@ -201,21 +201,77 @@
       "bytes": 1661965,
       "hash": "94a6c0afad2fff874f49238a809f60cb6156e032942649efe19a69123da144af"
     },
-    "assets/exploration/clues/damaged-cart.png": {
-      "bytes": 2548467,
-      "hash": "8d40483d4a657fbfa9c4921473274d5d1305c4b52422fb5c271e756ebc745ddc"
+    "assets/exploration/eternal-city/eternal-academy.png": {
+      "bytes": 2493622,
+      "hash": "14cce8db81c4a8598cdfc5d6d02b535cef6c293dabda3b6fcd85cd18fb0108a7"
     },
-    "assets/exploration/clues/eclipse-scales.png": {
-      "bytes": 2395497,
-      "hash": "5aa99204ea9f994c759704bfadf7189d59a0572e3c1560190199886c2644a882"
+    "assets/exploration/eternal-city/eternal-archive.png": {
+      "bytes": 2268665,
+      "hash": "66b66c87ec3256b860e7ca0eb9543d4523c0160c9d836b22eff4d2c6b29f54bf"
     },
-    "assets/exploration/clues/flattened-grass.png": {
-      "bytes": 3164684,
-      "hash": "2ef77d585ad5af10394e8800768efbc810857efcf53d3a843aaa16866f3671fe"
+    "assets/exploration/eternal-city/eternal-arena.png": {
+      "bytes": 2371263,
+      "hash": "f04c59b857970da17ef84010b427d61734c343dc0c6b0bc2060ebaa4ef443dc2"
+    },
+    "assets/exploration/eternal-city/eternal-avenue-v2.png": {
+      "bytes": 2497051,
+      "hash": "b164fe8b9a489dd9d43c9dd4eb2c6b97d41b3d477ce8ab890fc4ef602ec74c0f"
+    },
+    "assets/exploration/eternal-city/eternal-garden.png": {
+      "bytes": 2233474,
+      "hash": "1fba330347d52c02374ae22ebdb997a73f3ccb11d7cd681e276e7e8428261b02"
+    },
+    "assets/exploration/eternal-city/eternal-garrison.png": {
+      "bytes": 2235648,
+      "hash": "00ee62dbe9db276883572943d698ecbe8ef94b48af82dcd81e483a3b91c2eeea"
+    },
+    "assets/exploration/eternal-city/eternal-gate.png": {
+      "bytes": 2052323,
+      "hash": "16758cf8bd7f32a56deba8b68f6872ebbc1d11558b4260a82869c0387f92ae01"
+    },
+    "assets/exploration/eternal-city/eternal-plaza.png": {
+      "bytes": 2286223,
+      "hash": "9f71e577de1546dd6f9cf976b8747c9085892b3d42c3acfc9623d5d8229a5bb3"
+    },
+    "assets/exploration/eternal-city/eternal-quay.png": {
+      "bytes": 2490551,
+      "hash": "7ab6e667391248385edd80eb2e6c75efd1305769138cb9fac5c3b0ca46913131"
+    },
+    "assets/exploration/eternal-city/eternal-road-checkpoint.png": {
+      "bytes": 2128763,
+      "hash": "21e830888de251c1586be7cd9ce4d7d97674367cfc81ababf7156ad32b5d2c52"
+    },
+    "assets/exploration/eternal-city/eternal-road-mill.png": {
+      "bytes": 2294495,
+      "hash": "d80d8afb6b0df3fe98dde8370366a7f22e07b3f02a4cfc574544efdc5f0d4196"
+    },
+    "assets/exploration/eternal-city/eternal-road-orchard.png": {
+      "bytes": 2221143,
+      "hash": "5e5cd7d8798e493014a6b02a4061c06dcd31decf37190e0e86715ae54baae868"
+    },
+    "assets/exploration/eternal-city/eternal-temple.png": {
+      "bytes": 2263115,
+      "hash": "52394c4be55a2ecc941ac9168bdb2a36a5d052d19a041a6cda441131895ab662"
+    },
+    "assets/exploration/fansheng-atlas-wear.svg": {
+      "bytes": 4829,
+      "hash": "901e15f574a19a14cbfdd6a567f4be97b083478d675ae3501e1830b73ab44bcc"
     },
     "assets/exploration/fansheng-atlas.svg": {
       "bytes": 3091873,
       "hash": "dec8c2185b22a67438a02b31bb9ebcfdb560c42fafd83da05b4a8bf507b2efe3"
+    },
+    "assets/exploration/fansheng-landmarks.svg": {
+      "bytes": 7449,
+      "hash": "081b225f0481344e892b7d94192a8edcf774051c3ace155b73a911fd636bc98b"
+    },
+    "assets/exploration/fansheng-silver-road.svg": {
+      "bytes": 8674,
+      "hash": "11726ada37e74eb84bab2675620c6bfaa12fbf19a3995c9997872ecca38cf611"
+    },
+    "assets/exploration/fansheng-territories.svg": {
+      "bytes": 570442,
+      "hash": "e345e20f36c5cbba8236030f25c1255bbc90de7a6566284197d3916c2f647a7f"
     },
     "assets/exploration/free-scenes-hd-v2/city-center/connected.png": {
       "bytes": 12544727,
@@ -409,22 +465,6 @@
       "bytes": 2925219,
       "hash": "82c9211f20802058db29ce6d08cd5b50fff01788c5da5915ccb52aa773feeb82"
     },
-    "assets/exploration/npc-cards/eirin.png": {
-      "bytes": 2880738,
-      "hash": "12aa8c903c870a966d06fe3764bc64947dda3563ee30ddf237ea71d97f66f0db"
-    },
-    "assets/exploration/npc-cards/mayor.png": {
-      "bytes": 2535402,
-      "hash": "5b1e04390fbc3888cdce33e369109656aa399c6a6de76b16a853e5a51aa3c63b"
-    },
-    "assets/exploration/npc-cards/mirei.png": {
-      "bytes": 2572985,
-      "hash": "3ba65529e289461a7f128bf90f7949406f55091a9e7c50b788bde8e83314cd2c"
-    },
-    "assets/exploration/npc-cards/novi.png": {
-      "bytes": 2782958,
-      "hash": "ad5ae62ea87fc3fd23e70f2531d61125458269eba461e61e0844b5c47ad57850"
-    },
     "assets/exploration/outskirts-back-v2.png": {
       "bytes": 2906204,
       "hash": "e212f80d14b47b01a556659e2e89c59c8252c0e35a29343693e37acb1821d65a"
@@ -464,6 +504,10 @@
     "assets/exploration/overland-road/road-bridge-two-way.png": {
       "bytes": 3407434,
       "hash": "d23304ce31fcbffd1a6942925ad1526cd0aa5996ba65a9c5f1cc560d2a3729ec"
+    },
+    "assets/exploration/overland-road/road-bridge-wide-night.png": {
+      "bytes": 2644594,
+      "hash": "8fe07b62968d7483ae8292e8f26c6aab288e97bef12f16a3edff1dac02964d69"
     },
     "assets/exploration/overland-road/road-bridge-wide.png": {
       "bytes": 2824860,
@@ -529,6 +573,10 @@
       "bytes": 3293040,
       "hash": "1f2185df6ff187280cafac752239ace63826230df723bb2bd36a4289596059c7"
     },
+    "assets/exploration/overland-road/road-reeds-wide-night.png": {
+      "bytes": 2663265,
+      "hash": "becc29968148f87cefc5428c9d84f665a0e0c20d27314a4c8fd07b74abbca62c"
+    },
     "assets/exploration/overland-road/road-reeds-wide.png": {
       "bytes": 2826601,
       "hash": "1a15452a5eacca1e880bf71036dab962bf9263e7714a61c2ad451cbbffe88c63"
@@ -568,6 +616,82 @@
     "assets/exploration/rampart-right-v2.png": {
       "bytes": 2871196,
       "hash": "a08b0456d800c1d0e9549ecd67150d8747972a2bb28632376e9eadc283c559d4"
+    },
+    "assets/exploration/silver-crown/crown-arcade-night.png": {
+      "bytes": 3209516,
+      "hash": "dfb70fa468ee75be3f54008431e475c6d43896c3a64a9bf4b7642690f056e4b9"
+    },
+    "assets/exploration/silver-crown/crown-arcade.png": {
+      "bytes": 3542263,
+      "hash": "b23643543a12b1e6d99447f694c5fad4411a5a7acfc2f351aa299b1cbd9da945"
+    },
+    "assets/exploration/silver-crown/crown-belvedere-night.png": {
+      "bytes": 3042348,
+      "hash": "3ffa953eaf2945bc259dca8cb98dcc7369a6de3e4580201d662126972bd03138"
+    },
+    "assets/exploration/silver-crown/crown-belvedere.png": {
+      "bytes": 3325046,
+      "hash": "4ce92a7e442edd6cf00c5982047624d6160b62747e05c65bcc6d981c4e7edd6c"
+    },
+    "assets/exploration/silver-crown/crown-canal-night.png": {
+      "bytes": 3035524,
+      "hash": "49885620cf2f50772de15008a3636834394c46b08d9efaa384ecf0614187e58b"
+    },
+    "assets/exploration/silver-crown/crown-canal.png": {
+      "bytes": 3390734,
+      "hash": "00d027fb5a19f2b7c9ab6f0a99d8a645239eb67ca6bed1b263d735ff946b83de"
+    },
+    "assets/exploration/silver-crown/crown-floodgate-night.png": {
+      "bytes": 2875813,
+      "hash": "2517d14fe1969419279358d4bf89488707d931bf19b55c484b924ac0e09818da"
+    },
+    "assets/exploration/silver-crown/crown-floodgate.png": {
+      "bytes": 3215094,
+      "hash": "e12f329409b59afbe3874f99b851f73c8b4d343626b9bdfdf73ca3a6882e7d09"
+    },
+    "assets/exploration/silver-crown/crown-gateward-night.png": {
+      "bytes": 2961823,
+      "hash": "24d39773b9ff264f7e29b3cfaa940d1d84fb3969f074ae078a24d0ff1be2950e"
+    },
+    "assets/exploration/silver-crown/crown-gateward.png": {
+      "bytes": 3435370,
+      "hash": "76281f964aa3cd560a86d5f4db60be9f792b257dc52b36fb34010dd0c3b07bda"
+    },
+    "assets/exploration/silver-crown/crown-ledger.png": {
+      "bytes": 2959424,
+      "hash": "0e6604d4a124b9e8066940751299851f83ba41ee3472e901f8dcf2c2ae7dcadb"
+    },
+    "assets/exploration/silver-crown/crown-map-room.png": {
+      "bytes": 3140216,
+      "hash": "f83487ea8473af2948fc2914c317c546f08f86896be9c09ec4d8116aecec1a8f"
+    },
+    "assets/exploration/silver-crown/crown-mint.png": {
+      "bytes": 3071410,
+      "hash": "52d56e135dc191243ba80c40c31ce0b86421c13defdf369f9fbc8f2ae2f09deb"
+    },
+    "assets/exploration/silver-crown/crown-promenade-night.png": {
+      "bytes": 2927240,
+      "hash": "8f4a184a3f2e0c58937980c2d91f86ad1f647fb94e7fd48cb503ed57a72119ce"
+    },
+    "assets/exploration/silver-crown/crown-promenade.png": {
+      "bytes": 3218469,
+      "hash": "ae75c65d719ae03b87b30ef08a29a770505bdbdb1b20b22cad78273ac0cc422f"
+    },
+    "assets/exploration/silver-crown/crown-tavern-door-night.png": {
+      "bytes": 2954824,
+      "hash": "3c28b0c186b5495a94e7d961641a82f32703b32c91e8cd74f11a0e45668c1a20"
+    },
+    "assets/exploration/silver-crown/crown-tavern-door.png": {
+      "bytes": 3341922,
+      "hash": "2ac02036b5eb54bc954f86e70a8a9e25afefe6e7fdec1d40ee44176341ca0743"
+    },
+    "assets/exploration/silver-crown/crown-terrace-night.png": {
+      "bytes": 2708012,
+      "hash": "670534d42923b6a0eb46ca9c8759cf2ce03415649466228e0788aa96c0a5e92c"
+    },
+    "assets/exploration/silver-crown/crown-terrace.png": {
+      "bytes": 3241736,
+      "hash": "817c327dfaee9de1c5bd7559cfdb3a91b332dc7570f132ef0f1929a4273a1c4f"
     },
     "assets/exploration/starlamp-band-v1.png": {
       "bytes": 3209274,
@@ -1560,6 +1684,14 @@
     "assets/portraits/twisted-sapling.svg": {
       "bytes": 51390,
       "hash": "f1490ad1d7f1f577a09274f6228a2155a7b5d8df055037ebdb890092707a52ff"
+    },
+    "assets/portraits/unknown-card.png": {
+      "bytes": 1857098,
+      "hash": "06d800be1dd234de5fd777c732bcfce9964d403356cd65017711fed090f18791"
+    },
+    "assets/portraits/unknown-standing.png": {
+      "bytes": 1675488,
+      "hash": "f8608d1d6dd7f15967e6b7ffcaf0eb084bd36f4e10fae50b7abf32427be2d8e4"
     },
     "assets/portraits/unmoored-judge.svg": {
       "bytes": 10371,

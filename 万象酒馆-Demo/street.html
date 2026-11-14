@@ -44,6 +44,11 @@
     </nav>
     <dialog id="street-map" aria-label="泛生界大地图">
       <form method="dialog" class="street-map-close">
+        <button id="street-map-workshop" type="button">工坊</button>
+        <button id="street-map-companions" type="button" hidden>同行</button>
+        <button id="street-map-step-out" type="button" hidden>出门</button>
+        <button id="street-map-capital-route" type="button">艾尔鲁斯线</button>
+        <button id="street-map-fit" type="button">全图</button>
         <button type="submit" autofocus aria-label="关闭地图">×</button>
       </form>
       <div class="street-map-body">
@@ -76,6 +81,274 @@
             <clipPath id="street-atlas-preview-clip">
               <rect x="0" y="-22" width="0" height="44" />
             </clipPath>
+            <mask id="street-atlas-land-mask" width="3072" height="2048" maskUnits="userSpaceOnUse">
+              <use href="./assets/exploration/fansheng-territories.svg#coastline" fill="white" />
+            </mask>
+            <mask id="street-atlas-sea-mask" width="3072" height="2048" maskUnits="userSpaceOnUse">
+              <use
+                href="./assets/exploration/fansheng-atlas.svg#ring-outline"
+                fill="white"
+                fill-rule="evenodd"
+              />
+              <use href="./assets/exploration/fansheng-territories.svg#coastline" fill="black" />
+            </mask>
+
+            <g id="atlas-city" stroke-linecap="round" stroke-linejoin="round">
+              <path
+                d="M-2.4-1.4-1.78-2.35.13-2.52 1.69-2.16 2.36-.9 2.02.24.53.81-.47.62-1.73.36-2.2-.18Z"
+                fill="#b98a61"
+                fill-opacity=".34"
+                stroke="#74513a"
+                stroke-width=".14"
+              />
+              <path
+                d="M-2.05-1.4-1.56-2.01.12-2.18 1.49-1.84 2.01-.85 1.75.04.53.49-.4.3-1.5.12-1.9-.35Z"
+                fill="none"
+                stroke="#74513a"
+                stroke-width=".074"
+              />
+              <path
+                d="M-1.6-1.57l.56-.18.1.34-.57.18Zm.12.76.5-.1.1.36-.49.15Zm1.19-1.05.76.02-.02.56-.76-.04Zm.82 1.11.35-.31.36.28-.34.35Zm.72-.78.32-.11.25.43-.36.16Zm-.1 1.26.41-.12.09.24-.41.13ZM-.75-.34l.54-.09.09.34-.55.1Z"
+                fill="#84543a"
+                stroke="#684632"
+                stroke-width=".058"
+              />
+              <path
+                d="M-1.93-.32Q-.7-.95.07-.96t1.86.39M.06-.94q-.1.71.36 1.48"
+                fill="none"
+                stroke="#f6e2b9"
+                stroke-width=".097"
+              />
+            </g>
+            <g id="atlas-capital" stroke-linecap="round" stroke-linejoin="round">
+              <path
+                d="M-3-1.45-2.46-2.24-1.28-2.69-.86-3.21.11-3.36.96-3.04 1.75-2.98 2.54-2.21 2.94-1.2 2.72-.22 1.91.42 1.04.48.53 1-.68.94-1.18.56-2.15.49-2.88-.4Z"
+                fill="#b98a61"
+                fill-opacity=".4"
+                stroke="#74513a"
+                stroke-width=".15"
+              />
+              <path
+                d="M-2.58-1.38-2.05-2.04-.68-2.48-.27-2.92.43-2.88 1.01-2.57 1.66-2.55 2.21-1.96 2.55-1.03 2.25-.18 1.57.11.78.12.39.58-.51.52-1.05.22-1.95.14-2.51-.5Z"
+                fill="none"
+                stroke="#74513a"
+                stroke-width=".078"
+              />
+              <path
+                d="M-.41-2.56l.79.02.16.8-.94.03Zm.23-.43.32.04.02 1.48-.34.02ZM-1.69-1.76l.58-.22.14.44-.57.21Zm.04.8.62-.14.09.34-.62.19Zm.33.72.51-.15.08.35-.51.14Zm2.35-1.68.66.03.13.44-.62-.01Zm.47.91.59-.13.15.43-.57.21ZM.94-.4l.49-.14.1.32-.49.12Z"
+                fill="#84543a"
+                stroke="#684632"
+                stroke-width=".06"
+              />
+              <path
+                d="M-2.45-.77q1.34-.52 2.45-.54 1.43.04 2.38.48M0-1.34Q-.12-.64.04.61"
+                fill="none"
+                stroke="#f6e2b9"
+                stroke-width=".11"
+              />
+            </g>
+            <g id="atlas-port">
+              <use href="#atlas-city" transform="scale(1.1 .85)" />
+              <path
+                d="M-1.35.25l-.16 1.08m.64-.91-.07 1.15M1.09.48l.15 1.07m.45-1.19.16.82"
+                fill="none"
+                stroke="#74513a"
+                stroke-width=".15"
+              />
+              <path
+                d="M-2.35 1.12q.43.16.92.05m.24.48q1.15.22 2.07-.07m.55-.23q.54.12.93-.03"
+                fill="none"
+                stroke="#688882"
+                stroke-width=".08"
+              />
+            </g>
+            <g id="atlas-fort">
+              <path
+                d="M-2.14-1.44-1.78-2.33-1.3-2.44-1.13-2.02-.45-2.18-.44-2.71.22-2.76.35-2.24 1.18-2.12 1.38-2.48 1.94-2.23 2.06-1.48 1.86-.44 1.27.14.62.08.27.53-.36.52-.67.16-1.6-.07Z"
+                fill="#a67957"
+                fill-opacity=".38"
+                stroke="#74513a"
+                stroke-width=".14"
+              />
+              <path
+                d="M-1.71-1.56-1.54-1.93-.32-1.83.19-1.89 1.67-1.65 1.6-.64 1.2-.19.25-.3-.36.19-.7-.16-1.34-.29Z"
+                fill="none"
+                stroke="#74513a"
+                stroke-width=".079"
+              />
+              <path
+                d="M-.58-1.58.53-1.56.57-.94-.64-.91Zm-.88.51.41-.08.09.42-.42.06Zm2.24-.13.45.09-.07.33-.48-.05Z"
+                fill="#84543a"
+                stroke="#684632"
+                stroke-width=".06"
+              />
+            </g>
+            <g id="atlas-gate">
+              <path
+                d="M-1.2.41-1.15-.68-.55-.87-.38-.45.52-.44.66-.92 1.22-.81 1.2.37.65.54.39.03-.36.03-.62.57Z"
+                fill="#b98a61"
+                fill-opacity=".52"
+                stroke="#74513a"
+                stroke-width=".13"
+              />
+              <path
+                d="M-.99-.45-.64-.53m1.38-.02.31-.09"
+                fill="none"
+                stroke="#74513a"
+                stroke-width=".08"
+              />
+            </g>
+            <g id="atlas-snow" stroke-width=".14">
+              <path
+                d="M-10.2 2.4q2.8-5.2 6.8-7.6 4.4-2.6 8.2-.8 3.6 1.7 5.8 6.8-4.8 2.1-10.4 2.3-5.4.1-10.4-.7Z"
+                fill="#9caab0"
+                fill-opacity=".22"
+                stroke="none"
+              />
+              <path
+                d="M-5.2-1.8-2.4-6.4.4-2.2 3.1-7.8 6.4-2.1 4.2-.8 3.1-3.4 1.6-1.4-.4-2.2-1.6-.6-2.5-3.2-3.8-1.1Z"
+                fill="#f7efe0"
+                fill-opacity=".58"
+                stroke="none"
+              />
+              <path
+                d="M-2.4-6.4.4-2.2-.8 2.1-3.1 1.6ZM3.1-7.8 6.4-2.1 8.8 1.6 4.9 2.2 2.2 1.8 3.6-2.4 2.5-3.1Z"
+                fill="#73878e"
+                fill-opacity=".24"
+                stroke="none"
+              />
+              <path
+                d="M-10.6 2.6q2.2-.6 3.8-2.8l1.6-2.4 2.8-3.8 2.8 4.2 2.7-5.6 3.3 5.7 1.8-1.3 1.9 3.2q1.2 1.8 2.6 2.4M-2.4-6.4l-.7 2.8 1.1.4-.9 2.6M3.1-7.8l-.6 2.6 1.1.4-.9 2.8m-8.1-.4-.8-1.1-1 2.4-1.4 1.2m12.8-3.1.5-.8.7 2.4 1.4 1.2"
+              />
+              <path
+                d="m-1.1-.8-.8 1.6m2.8-1.5-.8 1.8m1.9-.9-.7 1.3m3.6-1.2-.5 1.2m-9.2-1.1-.9.9m-1.8.3-1.1.8m15.2-1.2.6.9"
+                stroke-width=".1"
+                opacity=".65"
+              />
+            </g>
+            <g id="atlas-peak" stroke-width=".14">
+              <path
+                d="M-9.6 2.3q3.2-4.6 7.4-6.1 4.4-1.5 8.1.4 2.8 1.5 4.5 5.2-4.6 1.8-10.1 1.9-5.2 0-9.9-1.4Z"
+                fill="#b5966a"
+                fill-opacity=".22"
+                stroke="none"
+              />
+              <path
+                d="M-3.8-4.8-.6-1.4 2.8-6.2 6.1-1.2 8.2 1.9 3.8 2.3 1.4 1.6 2.3-1.8 1.4-2.4-.6-1.4-1.8 1.8-4.6 1.6Z"
+                fill="#93724c"
+                fill-opacity=".24"
+                stroke="none"
+              />
+              <path
+                d="M-10.2 2.4q2.1-.5 3.6-2.6l2.8-4.6 3.2 3.4 3.4-4.8 3.3 5 1.6-1.1 2.1 2.9q1.1 1.3 2.2 1.8M-3.8-4.8l-.6 2.3.9.4-.8 2.2M2.8-6.2l-.6 2.4 1 .4-.9 2.4m-8.4-.4-.7-.9-.9 2.1-1.3 1.1"
+              />
+              <path
+                d="m-2.4-.6-.8 1.5m2.4-1.1-.7 1.4m3.4-1.8-.8 1.7m2.1-.9-.6 1.3m2.8-.6.6 1.1m-10.8-.9-.9.9"
+                stroke-width=".1"
+                opacity=".65"
+              />
+            </g>
+            <g id="atlas-ridge" stroke-width=".135">
+              <path
+                d="M-13.4 2.2q4.8-4.2 10.6-5.2 6.2-1.1 11.8.8 3.4 1.2 5.4 4.1-6.2 1.9-13.9 2.1-7.4.1-13.9-1.8Z"
+                fill="#b19368"
+                fill-opacity=".2"
+                stroke="none"
+              />
+              <path
+                d="M-7.8-3.6-4.8-.8-1.2-5.4 2.1-1.1 5.6-4.4 8.6-.4 4.4 2.1-.4 2.2-5.6 1.9-8.8 1.5Z"
+                fill="#91714b"
+                fill-opacity=".22"
+                stroke="none"
+              />
+              <path
+                d="M-13.8 2.4q2.4-.5 4.2-2.7l1.8-3.3 3 2.8 3.6-4.6 3.3 4.3 3.5-3.3 3 4 1.8-1.4 2.2 2.6q1.1 1.1 2.2 1.5M-7.8-3.6l-.6 2.1.8.4-.7 1.8M-1.2-5.4l-.6 2.4.9.4-.8 2.1M5.6-4.4l-.5 2.1.8.3-.7 1.9"
+              />
+              <path
+                d="m-6.4-.4-.7 1.4m2.2-.9-.6 1.2m3.8-1.8-.8 1.6m2.1-.9-.6 1.3m3.6-1.4-.7 1.5m2-.8-.5 1.2m2.6-.5.6 1"
+                stroke-width=".095"
+                opacity=".64"
+              />
+            </g>
+            <g id="atlas-mesa" stroke-width=".135">
+              <path
+                d="M-9.6 2.2-6.8-2.6-1.8-3.2 2.8-2.9 5.4-1.8 8.6 2Q2.4 3.4-3.6 3.2-7.1 3-9.6 2.2Z"
+                fill="#b8986b"
+                fill-opacity=".22"
+                stroke="none"
+              />
+              <path
+                d="M-6.4-2.4-1.8-3 2.6-2.7 5.2-1.7 3.8-.9-1.4-.8-5.4-1.2Z"
+                fill="#ead8b1"
+                fill-opacity=".35"
+                stroke="none"
+              />
+              <path
+                d="M-10.2 2.3q1.8-.4 3.1-2.5l.6-2.4 4.7-.6 4.4.3 2.6 1.1 1.6 2.4q1.1 1.2 2.4 1.6M-5.8-1.3q3.8.5 7.6.3 2.2-.1 3.6-.4M-5.4-1.1-6.5 1.9m2.1-3-.7 3.1m2.4-3.2-.4 3.2m2.4-3.1-.2 3m2.3-2.8.3 2.8m2.2-2.4.7 2.4"
+              />
+            </g>
+            <g id="atlas-marsh" stroke-width=".12">
+              <path
+                d="M-5.8.6q2.6-1.4 6.2-1.1 3.8.3 6.2-.5-1.6 1.8-5.4 2.2-4.2.3-7-.6Z"
+                fill="#8ca398"
+                fill-opacity=".22"
+                stroke="none"
+              />
+              <path
+                d="M-4.6.4q2.2-.6 4.5 0t4.6-.2m-7.2 1.2q2.4-.5 5.1 0M-2.2.3l-.5-1.6m.8 1.6.4-1.8m3.4 1.6-.4-1.5m.7 1.5.5-1.7"
+              />
+            </g>
+            <g id="atlas-outcrop" stroke-width=".13">
+              <path
+                d="M-7.2 2q1.8-3.4 4.6-4.4 2.9-1 5.6.2 2.1.9 3.6 3.8-4.2 1.4-7.4 1.4-3.8 0-6.4-1Z"
+                fill="#b79b70"
+                fill-opacity=".22"
+                stroke="none"
+              />
+              <path
+                d="M-2.4-2.8-.4-.6 1.8-3.4 4.4-.8 2.8 1.8-3.2 1.7Z"
+                fill="#93744d"
+                fill-opacity=".22"
+                stroke="none"
+              />
+              <path
+                d="M-7.6 2.1q1.6-.4 2.8-2.2l2.4-2.7 2 2.2 2.2-2.8 2.6 2.6 1.4-.9 1.6 2.2q.8 1.1 1.8 1.5M-2.4-2.8l-.5 1.9.7.3-.6 1.8M1.8-3.4l-.4 2 .8.3-.6 1.9m-6.8.6 1.1-1.3m8.2 1.2.9-1.2"
+              />
+            </g>
+            <g id="atlas-ruin-stone" stroke-width=".12">
+              <path
+                d="M-3.2 1.2v-2.1l1.1-.4v2.5m1.6 0v-1.6l1.2.3v1.3"
+                fill="#c2a375"
+                fill-opacity=".26"
+              />
+              <path d="M-4.2 1.3h8.2M-1.8 1.9q2.1-.4 4.3 0m2.1-.9.8-.5.5.5" />
+            </g>
+            <g id="atlas-field" stroke-width=".11">
+              <path
+                d="M-5.9-.8q2.5-1.5 5.2-1.8l5.2.62 2.32 2.51Q2.31 2.36-2.03 2.59Z"
+                fill="#aa905e"
+                fill-opacity=".12"
+              />
+              <path
+                d="M-5-.73q4.37-1.4 8.46-1.04M-4.05.16Q.12-1.1 4.39-.79M-3.39 1.05Q.65-.21 5.38.12m-7.7 1.61q4.06-1.05 8.12-.8M-.94-2.32-.01.66"
+              />
+            </g>
+            <g id="atlas-steppe" stroke-width=".115">
+              <path
+                d="M-9.5.8q4.5-2.2 9.8-2 5.2.2 9.4 2.1-4.6 1.6-9.8 1.6-4.8 0-9.4-1.7Z"
+                fill="#ba9e6a"
+                fill-opacity=".16"
+                stroke="none"
+              />
+              <path
+                d="M-9-.8q4.2-2.6 9.2-1.8 4.4-.8 8.8 1.4M-6.2 1.8q4.4-2.2 9.6-1.4M-2.8 3.2q3.8-1.8 8.2-1.2M-4.6-.4l-.5-1.6m1.1 1.6.4-1.7m6.8 1.9-.4-1.5m1 1.5.5-1.6"
+              />
+            </g>
+            <radialGradient id="atlas-sea-ink" cx="52%" cy="46%" r="68%">
+              <stop offset="0" stop-color="#8eb3ae" />
+              <stop offset=".66" stop-color="#658d8d" />
+              <stop offset="1" stop-color="#3e666d" />
+            </radialGradient>
             <mask
               id="street-atlas-frame-mask"
               width="3072"
@@ -92,7 +365,8 @@
           <g class="street-map-paper" aria-hidden="true">
             <use
               href="./assets/exploration/fansheng-atlas-wear.svg#atlas-sheet-edge"
-              fill="#ddc499"
+              class="street-map-paper-base"
+              fill="#d9bf92"
             />
             <use
               href="./assets/exploration/fansheng-atlas-wear.svg#atlas-sheet-edge"
@@ -102,11 +376,12 @@
             <use
               class="street-map-overview street-map-sea-wash"
               href="./assets/exploration/fansheng-atlas.svg#ring-outline"
+              fill="url(#atlas-sea-ink)"
             />
             <use href="./assets/exploration/fansheng-atlas-wear.svg#atlas-sheet-patina" />
             <use
               href="./assets/exploration/fansheng-atlas-wear.svg#atlas-local-patina"
-              transform="translate(1962 1208)"
+              transform="translate(1550 1378)"
             />
           </g>
           <g
@@ -114,8 +389,12 @@
             mask="url(#street-atlas-frame-mask)"
             aria-hidden="true"
           >
-            <use href="./assets/exploration/fansheng-territories.svg#sea-engraving" />
+            <use
+              class="street-map-sea-engraving"
+              href="./assets/exploration/fansheng-territories.svg#sea-engraving"
+            />
             <use href="./assets/exploration/fansheng-territories.svg#continental-atlas" />
+            <use href="./assets/exploration/fansheng-territories.svg#atlas-political-edges" />
           </g>
           <use
             href="./assets/exploration/fansheng-atlas.svg#ring-outline"
@@ -127,9 +406,39 @@
             href="./assets/exploration/fansheng-atlas.svg#ring-outline"
             class="street-map-world-rim"
           />
-          <g transform="translate(1962 1208)" aria-hidden="true">
+          <g class="street-map-below-world" aria-hidden="true">
+            <rect
+              class="street-map-sea-region"
+              width="3072"
+              height="2048"
+              mask="url(#street-atlas-sea-mask)"
+            />
+            <use
+              class="street-map-region-territories"
+              href="./assets/exploration/fansheng-territories.svg#continental-atlas"
+            />
+            <use
+              class="street-map-topography"
+              href="./assets/exploration/fansheng-territories.svg#atlas-rivers"
+            />
+            <g class="street-map-relief" data-atlas-ranges mask="url(#street-atlas-land-mask)"></g>
+            <g class="street-map-relief" data-atlas-relief mask="url(#street-atlas-land-mask)"></g>
+            <use
+              class="street-map-border-ink"
+              href="./assets/exploration/fansheng-territories.svg#frontier-ink"
+            />
+            <use
+              class="street-map-shore-ink"
+              href="./assets/exploration/fansheng-territories.svg#coastline"
+            />
+            <g class="street-map-roads" data-atlas-roads></g>
+          </g>
+          <g transform="translate(1550 1378)" aria-hidden="true">
+            <use
+              class="street-map-road-contours"
+              href="./assets/exploration/fansheng-silver-road.svg#silver-road-contours"
+            />
             <g class="street-map-local">
-              <use href="./assets/exploration/fansheng-silver-road.svg#silver-road-contours" />
               <use href="./assets/exploration/fansheng-silver-road.svg#silver-road-scrub" />
             </g>
             <g class="street-map-terrain">
@@ -166,32 +475,46 @@
             </g>
           </g>
           <g class="street-map-city-labels" text-anchor="middle">
-            <text id="atlas-starbell" class="street-map-local" x="1938" y="1212">星钟城</text>
-            <text id="atlas-silver-crown" class="street-map-local" x="1986" y="1212">银冠城</text>
+            <text id="atlas-starbell" class="street-map-local" x="1526" y="1382">星钟城</text>
+            <text id="atlas-silver-crown" class="street-map-local" x="1574" y="1382">银冠城</text>
           </g>
           <g class="street-map-regional" text-anchor="middle" aria-hidden="true">
-            <g transform="translate(1938 1208)">
+            <g transform="translate(1526 1378)">
               <g class="street-map-screen-marker street-map-point-name">
-                <circle r="4" />
+                <circle r="6.5" />
                 <text>星钟城</text>
               </g>
             </g>
-            <g transform="translate(1986 1208)">
+            <g transform="translate(1574 1378)">
               <g class="street-map-screen-marker street-map-point-name">
-                <circle r="4" />
+                <circle r="6.5" />
                 <text>银冠城</text>
               </g>
             </g>
           </g>
-          <g class="street-map-landmarks" text-anchor="middle">
+          <g class="street-map-regional street-map-route-label">
+            <g transform="translate(1542.52 1378.17)">
+              <g class="street-map-screen-marker street-map-point-name street-map-bridge-label">
+                <circle r="5" />
+                <text>双拱石桥</text>
+              </g>
+            </g>
+            <g transform="translate(1556.15 1380.74)">
+              <g class="street-map-screen-marker street-map-point-name street-map-reeds-label">
+                <circle r="5" />
+                <text>芦苇浅滩</text>
+              </g>
+            </g>
+          </g>
+          <g class="street-map-landmarks street-map-below-world" text-anchor="middle">
             <g transform="translate(765 617)" data-atlas-landmark="ruins">
               <use
-                class="street-map-local"
-                transform="scale(.16)"
+                class="street-map-local street-map-landmark-terrain"
+                transform="scale(.095)"
                 href="./assets/exploration/fansheng-landmarks.svg#ruins-terrain"
               />
               <g class="street-map-screen-marker street-map-landmark">
-                <circle r="3.3" />
+                <circle r="6.5" />
                 <use
                   class="street-map-local"
                   href="./assets/exploration/fansheng-landmarks.svg#ruins-icon"
@@ -201,12 +524,12 @@
             </g>
             <g transform="translate(978 1356)" data-atlas-landmark="forest">
               <use
-                class="street-map-local"
-                transform="scale(.16)"
+                class="street-map-local street-map-landmark-terrain"
+                transform="scale(.095)"
                 href="./assets/exploration/fansheng-landmarks.svg#forest-terrain"
               />
               <g class="street-map-screen-marker street-map-landmark">
-                <circle r="3.3" />
+                <circle r="6.5" />
                 <use
                   class="street-map-local"
                   href="./assets/exploration/fansheng-landmarks.svg#forest-icon"
@@ -216,12 +539,12 @@
             </g>
             <g transform="translate(1140 661)" data-atlas-landmark="frost">
               <use
-                class="street-map-local"
-                transform="scale(.16)"
+                class="street-map-local street-map-landmark-terrain"
+                transform="scale(.095)"
                 href="./assets/exploration/fansheng-landmarks.svg#frost-terrain"
               />
               <g class="street-map-screen-marker street-map-landmark">
-                <circle r="3.3" />
+                <circle r="6.5" />
                 <use
                   class="street-map-local"
                   href="./assets/exploration/fansheng-landmarks.svg#frost-icon"
@@ -231,12 +554,12 @@
             </g>
             <g transform="translate(2220 1360)" data-atlas-landmark="forge">
               <use
-                class="street-map-local"
-                transform="scale(.16)"
+                class="street-map-local street-map-landmark-terrain"
+                transform="scale(.095)"
                 href="./assets/exploration/fansheng-landmarks.svg#forge-terrain"
               />
               <g class="street-map-screen-marker street-map-landmark">
-                <circle r="3.3" />
+                <circle r="6.5" />
                 <use
                   class="street-map-local"
                   href="./assets/exploration/fansheng-landmarks.svg#forge-icon"
@@ -246,12 +569,12 @@
             </g>
             <g transform="translate(1669 1458)" data-atlas-landmark="tide">
               <use
-                class="street-map-local"
-                transform="scale(.16)"
+                class="street-map-local street-map-landmark-terrain"
+                transform="scale(.095)"
                 href="./assets/exploration/fansheng-landmarks.svg#tide-terrain"
               />
               <g class="street-map-screen-marker street-map-landmark">
-                <circle r="3.3" />
+                <circle r="6.5" />
                 <use
                   class="street-map-local"
                   href="./assets/exploration/fansheng-landmarks.svg#tide-icon"
@@ -259,9 +582,14 @@
                 <text>潮汐星殿</text>
               </g>
             </g>
-            <g transform="translate(1515 1339)" data-atlas-landmark="eternal-city">
+            <g
+              transform="translate(1515 1339)"
+              data-atlas-landmark="eternal-city"
+              aria-label="首都 · 艾尔鲁斯"
+            >
+              <title>首都 · 艾尔鲁斯</title>
               <g class="street-map-screen-marker street-map-landmark">
-                <circle r="3.3" />
+                <circle r="6.5" />
                 <use
                   class="street-map-local"
                   href="./assets/exploration/fansheng-landmarks.svg#capital-icon"
@@ -271,12 +599,12 @@
             </g>
             <g transform="translate(680 754)" data-atlas-landmark="five-ports">
               <use
-                class="street-map-local"
-                transform="scale(.16)"
+                class="street-map-local street-map-landmark-terrain"
+                transform="scale(.095)"
                 href="./assets/exploration/fansheng-landmarks.svg#port-terrain"
               />
               <g class="street-map-screen-marker street-map-landmark">
-                <circle r="3.3" />
+                <circle r="6.5" />
                 <use
                   class="street-map-local"
                   href="./assets/exploration/fansheng-landmarks.svg#port-icon"
@@ -286,7 +614,7 @@
             </g>
             <g transform="translate(2315 1287)" data-atlas-landmark="yingtian">
               <g class="street-map-screen-marker street-map-landmark">
-                <circle r="3.3" />
+                <circle r="6.5" />
                 <use
                   class="street-map-local"
                   href="./assets/exploration/fansheng-landmarks.svg#gate-icon"
@@ -296,7 +624,7 @@
             </g>
             <g transform="translate(1536 1024)" data-atlas-landmark="jacobs-ladder">
               <g class="street-map-screen-marker street-map-landmark street-map-realm-note">
-                <circle r="3.3" />
+                <circle r="6.5" />
                 <use
                   class="street-map-local"
                   href="./assets/exploration/fansheng-landmarks.svg#ladder-icon"
@@ -305,45 +633,40 @@
               </g>
             </g>
           </g>
-          <g
-            class="street-map-overview street-map-world-labels"
-            text-anchor="middle"
-            aria-hidden="true"
-          >
-            <text class="street-map-world-name" x="1540" y="165">泛生界</text>
-            <text class="street-map-continent-name" x="1580" y="875">艾尔特拉大陆</text>
-            <text class="street-map-geography-name" x="1505" y="1140">荒地</text>
-            <text class="street-map-sea-name" x="474" y="1096">海洋</text>
-            <text class="street-map-sea-name" x="2650" y="941">海洋</text>
-            <text class="street-map-annotation" x="2780" y="1910" text-anchor="end">
+          <g class="street-map-world-labels" text-anchor="middle" aria-hidden="true">
+            <text class="street-map-overview street-map-world-name" x="1540" y="165">泛生界</text>
+            <text class="street-map-overview street-map-sea-name" x="474" y="1096">海洋</text>
+            <text class="street-map-overview street-map-sea-name" x="2650" y="941">海洋</text>
+            <text
+              class="street-map-overview street-map-annotation"
+              x="2780"
+              y="1910"
+              text-anchor="end"
+            >
               源生界 · 以利亚之冠
             </text>
             <g class="street-map-nation-names">
-              <text x="735" y="544" data-nation-label="rose">玫瑰联合王国</text>
-              <text x="1050" y="503" data-nation-label="eldoria">
-                <tspan x="1050">埃尔多里亚</tspan>
-                <tspan x="1050" dy="1.05em">共和国</tspan>
+              <text x="1580" y="875">荒地</text>
+              <text x="1536" y="1024">雅各布天梯</text>
+              <text x="801" y="593" data-nation-label="rose">玫瑰联合王国</text>
+              <text x="1122" y="496" data-nation-label="eldoria">
+                <tspan x="1122">埃尔多里亚</tspan>
+                <tspan x="1122" dy="1.05em">共和国</tspan>
               </text>
-              <text x="1345" y="528" data-nation-label="anvil">铁砧山帝国</text>
-              <text x="1450" y="587" data-nation-label="saar">萨尔王国</text>
-              <text x="1615" y="454" data-nation-label="snu">斯努涅联盟</text>
-              <text x="1850" y="552" data-nation-label="karka">卡尔卡西斯帝国</text>
-              <text x="2207" y="645" data-nation-label="orcs">兽人部落联盟</text>
-              <text x="1006" y="700" data-nation-label="astur">亚斯图王国</text>
-              <text x="1151" y="830" data-nation-label="ivre">伊夫雷亚王国</text>
-              <text x="1817" y="658" data-nation-label="al">阿勒王国</text>
-              <text x="778" y="992" data-nation-label="gri">格里希联邦</text>
-              <text x="1085" y="1069" data-nation-label="aust">奥斯堡帝国</text>
-              <text x="896" y="1303" data-nation-label="moon">银月联邦</text>
-              <text x="1520" y="1450" data-nation-label="ael">艾尔德兰帝国</text>
-              <text x="1930" y="963" data-nation-label="bel">贝尔克王国</text>
-              <text x="2213" y="1113" data-nation-label="tian">天启王朝</text>
-            </g>
-            <g transform="translate(1962 1208)">
-              <g class="street-map-screen-marker street-map-point-name">
-                <circle r="4" />
-                <text>星钟城 · 银冠城</text>
-              </g>
+              <text x="1248" y="630" data-nation-label="anvil">铁砧山帝国</text>
+              <text x="1456" y="562" data-nation-label="saar">萨尔王国</text>
+              <text x="1615" y="476" data-nation-label="snu">斯努涅联盟</text>
+              <text x="1830" y="537" data-nation-label="karka">卡尔卡西斯帝国</text>
+              <text x="2267" y="693" data-nation-label="orcs">兽人部落联盟</text>
+              <text x="1002" y="711" data-nation-label="astur">亚斯图王国</text>
+              <text x="1147" y="828" data-nation-label="ivre">伊夫雷亚王国</text>
+              <text x="1838" y="683" data-nation-label="al">阿勒王国</text>
+              <text x="806" y="969" data-nation-label="gri">格里希联邦</text>
+              <text x="1155" y="1064" data-nation-label="aust">奥斯堡帝国</text>
+              <text x="952" y="1298" data-nation-label="moon">银月联邦</text>
+              <text x="1552" y="1353" data-nation-label="ael">艾尔德兰帝国</text>
+              <text x="1910" y="998" data-nation-label="bel">贝尔克王国</text>
+              <text x="2191" y="1121" data-nation-label="tian">天启王朝</text>
             </g>
           </g>
         </svg>

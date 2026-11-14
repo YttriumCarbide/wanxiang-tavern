@@ -101,6 +101,7 @@ export async function createTavernView() {
   for (const place of Object.values(places)) {
     for (const key of ['p', 'focus', 'anchor']) place[key] = expandedHallPosition(place[key]);
   }
+  const ringButtonAnchor = expandedHallPosition([4.12, 0.98, -0.28]);
   for (const [index, key] of ['table', 'table2'].entries()) {
     const {
       at: [x, z],
@@ -656,9 +657,24 @@ export async function createTavernView() {
         shelf.button.style.top = (-projected.y * 0.5 + 0.5) * innerHeight + 'px';
       }
     }
-    emblem.hidden = !loaded || !!travel || current !== 'fate';
-    for (const button of Object.values(supplyButtons))
-      button.hidden = !loaded || !!travel || current !== 'supplies';
+    function projectAction(button, place, anchor) {
+      projected.fromArray(anchor).project(camera);
+      button.hidden =
+        !loaded ||
+        !!travel ||
+        current !== place ||
+        Math.abs(projected.x) > 0.94 ||
+        Math.abs(projected.y) > 0.9 ||
+        projected.z < -1 ||
+        projected.z > 1;
+      if (!button.hidden) {
+        button.style.left = `${(projected.x * 0.5 + 0.5) * innerWidth}px`;
+        button.style.top = `${(0.5 - projected.y * 0.5) * innerHeight}px`;
+      }
+    }
+    projectAction(emblem, 'fate', ringButtonAnchor);
+    projectAction(supplyButtons.shop, 'supplies', [-2.9, 1.44, 4.13]);
+    projectAction(supplyButtons.condenser, 'supplies', [-4.59, 1.48, 4.17]);
     talk.hidden = !loaded || !!travel || !['bar', 'bar2', 'table', 'table2'].includes(current);
     dine.hidden = talk.hidden;
     camera.getWorldDirection(direction);

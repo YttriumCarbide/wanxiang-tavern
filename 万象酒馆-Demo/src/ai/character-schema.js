@@ -1,5 +1,5 @@
 import { BUFFS } from '../data.js';
-import { TRIGGER_EVENTS, TRIGGER_TARGETS } from '../triggers.js';
+import { TRIGGER_EVENTS, TRIGGER_TARGETS, GENERATED_BUFFS } from '../triggers.js';
 
 const string = (maxLength, minLength = 1) => ({ type: 'string', minLength, maxLength });
 const integer = (minimum, maximum) => ({ type: 'integer', minimum, maximum });
@@ -12,13 +12,13 @@ const object = (properties) => ({
   additionalProperties: false,
 });
 
-function legacyCharacterSchema({ acceptLegacyNames = false } = {}) {
+function legacyCharacterSchema({ acceptLegacyNames = false, buffs = Object.keys(BUFFS) } = {}) {
   const namedDescription = object({ name: string(30), description: string(1200) });
-  const buff = choice(Object.keys(BUFFS));
+  const buff = choice(buffs);
   const effect = {
     anyOf: [
       ...['damage', 'heal', 'shield', 'selfHeal', 'selfMana', 'selfShield'].map((type) =>
-        object({ type: { const: type, type: 'string' }, value: integer(1, 32) }),
+        object({ type: { const: type, type: 'string' }, value: integer(1, 40) }),
       ),
       object({ type: { const: 'buff', type: 'string' }, buff, value: integer(1, 6) }),
       object({ type: { const: 'cleanse', type: 'string' }, buffs: array(buff, 1, 9) }),
@@ -37,7 +37,10 @@ function legacyCharacterSchema({ acceptLegacyNames = false } = {}) {
   });
   active.properties.hp = integer(1, 20);
   const passive = [
-    ability({ passive: { type: 'boolean', const: true }, rules: array(triggerRuleSchema(), 1, 4) }),
+    ability({
+      passive: { type: 'boolean', const: true },
+      rules: array(triggerRuleSchema({ buffs }), 1, 4),
+    }),
     ability({
       passive: { type: 'boolean', const: true },
       location: choice(['前场', '后场', '全战斗']),
@@ -126,7 +129,7 @@ function legacyCharacterSchema({ acceptLegacyNames = false } = {}) {
   return schema;
 }
 
-export function triggerRuleSchema() {
+export function triggerRuleSchema({ buffs = Object.keys(BUFFS) } = {}) {
   const condition = {
     type: 'object',
     properties: {
@@ -146,7 +149,7 @@ export function triggerRuleSchema() {
         'buff',
       ]),
       value: integer(0, 100),
-      buff: choice(Object.keys(BUFFS)),
+      buff: choice(buffs),
     },
     required: ['type'],
     additionalProperties: false,
@@ -156,8 +159,8 @@ export function triggerRuleSchema() {
       ...['damage', 'heal', 'mana', 'shield'].map((type) =>
         object({ type: { const: type }, value: integer(1, 20) }),
       ),
-      object({ type: { const: 'buff' }, buff: choice(Object.keys(BUFFS)), value: integer(1, 3) }),
-      object({ type: { const: 'cleanse' }, buffs: array(choice(Object.keys(BUFFS)), 1, 11) }),
+      object({ type: { const: 'buff' }, buff: choice(buffs), value: integer(1, 3) }),
+      object({ type: { const: 'cleanse' }, buffs: array(choice(buffs), 1, 11) }),
     ],
   };
   const rule = object({
@@ -193,7 +196,7 @@ export function characterOutputSchema({
   plan = null,
 } = {}) {
   if (version === 3) return legacyCharacterSchema({ acceptLegacyNames });
-  const schema = legacyCharacterSchema();
+  const schema = legacyCharacterSchema({ buffs: GENERATED_BUFFS });
   schema.properties.schemaVersion.const = 4;
   const condition = {
     type: 'object',
@@ -215,7 +218,7 @@ export function characterOutputSchema({
       ]),
       subject: choice(['self', 'target']),
       value: integer(0, 100),
-      buff: choice(Object.keys(BUFFS)),
+      buff: choice(GENERATED_BUFFS),
     },
     required: ['type'],
     additionalProperties: false,
@@ -225,8 +228,8 @@ export function characterOutputSchema({
     properties: {
       type: choice(['damage', 'heal', 'shield', 'selfHeal', 'selfMana', 'buff', 'cleanse', 'mark']),
       power: choice(['low', 'standard', 'high']),
-      buff: choice(Object.keys(BUFFS)),
-      buffs: array(choice(Object.keys(BUFFS)), 1, 3),
+      buff: choice(GENERATED_BUFFS),
+      buffs: array(choice(GENERATED_BUFFS), 1, 3),
       target: choice(['self', 'target', 'lowestAlly', 'allAllies', 'allEnemies']),
       when: condition,
       perMark: { type: 'boolean' },

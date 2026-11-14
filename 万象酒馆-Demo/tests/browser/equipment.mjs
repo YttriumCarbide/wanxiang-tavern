@@ -131,7 +131,7 @@ export async function equipmentChecks({ browser, baseURL, output }) {
     await page.locator('#forge-refine').click();
     await page.locator('#forge-status').filter({ hasText: '已' }).waitFor();
     await page.locator('#forge-results').waitFor({ state: 'visible' });
-    assert((await page.locator('#forge-results').innerText()).includes('hp+2'));
+    assert((await page.locator('#forge-results').innerText()).includes('hp上限 +2'));
     assert.equal(await page.locator('#forge-list [data-forge-select="item-test"]').count(), 0);
     await page.locator('[data-batch-favorite="item-test"]').click();
     assert(

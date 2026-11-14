@@ -1,7 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { INGREDIENTS, DISHES, MEAL_FOODS } from '../src/content/dining.js';
+import {
+  INGREDIENTS,
+  DISHES,
+  DIRECT_FOODS,
+  MEAL_FOODS,
+  foodBonusText,
+} from '../src/content/dining.js';
 import { newLibrary, restoreLibrary, compileRoster } from '../src/ai/library.js';
 import {
   diningState,
@@ -22,12 +28,7 @@ import {
   buyEquipment,
   restoreEquipment,
 } from '../src/equipment.js';
-import {
-  upgradeMonsterNarrative,
-  isMonsterWorldEntry,
-  monsterNarrativeText,
-  removeMonsterBoundary,
-} from '../src/ai/monster-narrative.js';
+import { isMonsterWorldEntry, monsterNarrativeText } from '../src/ai/monster-narrative.js';
 import { enemyIntentBadge } from '../src/enemy-intent.js';
 import { normalizePromptPreset } from '../src/ai/presets.js';
 import { chatRequest } from '../src/ai/pipeline/chat-request.js';
@@ -163,6 +164,40 @@ test('next-battle bonuses follow character IDs, replace old food and never mutat
   const member = { id: 'character-taste', source: 'generated', combat: {} };
   const taste = foodPreference(library, member, MEAL_FOODS['apple-pie']);
   assert.equal(foodPreference(library, member, MEAL_FOODS['apple-pie']), taste);
+
+  for (const dish of Object.values(DISHES)) {
+    assert(foodBonusText(dish.bonus).includes('%'), `${dish.name} should describe percentage buff`);
+    for (const [k, v] of Object.entries(dish.bonus)) {
+      assert(k.endsWith('Percent') && v >= 4 && v <= 10, `${dish.name} invalid percent ${k}:${v}`);
+    }
+  }
+  for (const food of Object.values(DIRECT_FOODS)) {
+    assert(foodBonusText(food.bonus).includes('%'), `${food.name} should describe percentage buff`);
+    for (const [k, v] of Object.entries(food.bonus)) {
+      assert(k.endsWith('Percent') && v >= 3 && v <= 5, `${food.name} invalid percent ${k}:${v}`);
+    }
+  }
+  const scaledDefs = structuredClone(definitions);
+  scaledDefs.aegis.hp = 120;
+  scaledDefs.aegis.mp = 40;
+  scaledDefs.aegis.attack = 30;
+  state.pending[id] = {
+    bonus: {
+      hpPercent: 10,
+      mpPercent: 10,
+      attackPercent: 5,
+      skillDamagePercent: 10,
+      shieldPercent: 5,
+    },
+    foods: ['hearth-stew'],
+  };
+  const pctBattle = newBattle(['sprout'], scaledDefs);
+  applyDiningToBattle(library, pctBattle, library.party);
+  assert.equal(pctBattle.units.aegis.maxHp, 132);
+  assert.equal(pctBattle.units.aegis.maxMp, 44);
+  assert.equal(pctBattle.heroDefinitions.aegis.attack, 32);
+  assert.equal(pctBattle.units.aegis.block, 6);
+  assert.deepEqual(withoutDiningBonus(pctBattle).heroDefinitions.aegis, scaledDefs.aegis);
 });
 test('deleting a forge plan preserves owned and equipped items across restore', () => {
   const library = newLibrary();
@@ -194,12 +229,10 @@ test('monster lore loses mechanical clauses without changing activation metadata
       '外形：披着灰色毛皮。\n基础hp：120；速度：2\n行动：对中间敌方单位造成21点伤害。\n习性：守护旧井。',
     extensions: { wanxiang: { monsterId: 'test' } },
   };
-  const next = upgradeMonsterNarrative({ entries: { 4: entry } }).entries[4];
-  assert(next.content.includes('灰色毛皮'));
-  assert(!next.content.includes('21'));
-  assert(!next.content.includes('基础hp'));
-  assert.deepEqual(next.key, entry.key);
-  assert.equal(next.position, entry.position);
+  const cleaned = monsterNarrativeText(entry.content);
+  assert(cleaned.includes('灰色毛皮'));
+  assert(!cleaned.includes('21'));
+  assert(!cleaned.includes('基础hp'));
   assert(monsterNarrativeText('外形：两点淡黄眼光。').includes('两点淡黄眼光'));
   assert.equal(monsterNarrativeText('攻击中位8伤害\n获得6护盾'), '');
   assert(
@@ -221,23 +254,9 @@ test('monster lore loses mechanical clauses without changing activation metadata
   assert.equal((badge.match(/class="intent-divider"/g) || []).length, 2);
   assert(badge.includes('intent-self'));
 });
-test('retired monster boundary is removed from saved lore without rewriting custom text', () => {
+test('retired monster boundary is removed by monsterNarrativeText without losing prose', () => {
   const boundary =
     '叙事边界：这些是可观察特征与可能的行动。实际伤害、技能使用、受伤和胜负以游戏已经确认的事件为准。';
-  const monster = {
-    uid: 7,
-    key: ['旧井守卫'],
-    content: '自定义设定：守护旧井，保留21点伤害的手写注解。\n' + boundary,
-    extensions: { wanxiang: { monsterId: 'test' } },
-  };
-  const book = { entries: { 7: monster, 8: { uid: 8, content: '其他条目' } } };
-  const next = removeMonsterBoundary(book);
-  assert.equal(next.entries[7].content, '自定义设定：守护旧井，保留21点伤害的手写注解。');
-  assert.deepEqual(next.entries[7].key, monster.key);
-  assert.deepEqual(next.entries[7].extensions, monster.extensions);
-  assert.deepEqual(next.entries[8], book.entries[8]);
-  assert.deepEqual(removeMonsterBoundary(next), next);
-  assert(book.entries[7].content.includes(boundary));
   assert.equal(monsterNarrativeText('外形：灰色毛皮。\n' + boundary), '外形：灰色毛皮。');
 });
 

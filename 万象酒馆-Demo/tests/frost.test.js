@@ -19,7 +19,7 @@ import {
   enemyTimeline,
   makeAction,
 } from '../src/engine.js';
-import { upgradeFrostWorldbook } from '../src/ai/frost-worldbook.js';
+import { syncBuiltinWorldbook } from '../src/ai/worldbook.js';
 import { createWorldbookStore } from '../server/worldbook-store.mjs';
 import { generationRequest } from '../server/prompts.mjs';
 import { createWorldbookCounter } from '../server/character-reader.mjs';
@@ -151,15 +151,14 @@ test('Ares phase starts below sixty percent or on the second cannon loss and per
   assert.equal(hit.final.units.ares.enraged, true);
 });
 
-test('frost worldbook upgrades are idempotent and real browser/server requests include chapter NPCs and monsters', async () => {
-  const empty = { entries: {} },
-    upgraded = upgradeFrostWorldbook(empty);
-  assert.equal(Object.keys(upgraded.entries).length, 35);
-  assert.deepEqual(upgradeFrostWorldbook(upgraded), upgraded);
-  assert.deepEqual(empty, { entries: {} });
+test('frost worldbook sync is idempotent and real browser/server requests include chapter NPCs and monsters', async () => {
   const directory = await mkdtemp(path.join(process.cwd(), '.runtime/tests/frost-world-'));
   const server = await createWorldbookStore(directory);
   const { book } = await server.get('tavern-world');
+  const empty = { entries: {} },
+    upgraded = syncBuiltinWorldbook(empty, book);
+  assert.deepEqual(syncBuiltinWorldbook(upgraded, book), upgraded);
+  assert.deepEqual(empty, { entries: {} });
   const values = new Map([['world.book.tavern-world', book]]);
   const database = {
     get: (key) => structuredClone(values.get(key)),
@@ -173,7 +172,6 @@ test('frost worldbook upgrades are idempotent and real browser/server requests i
     (name) => readFile(new URL('../prompts/' + name, import.meta.url), 'utf8'),
     book,
   );
-  assert.equal(values.get('world.frost-chapters.v44'), true);
   const countTokens = createWorldbookCounter();
   for (const worlds of [server, browser.worlds])
     for (let sequence = 0; sequence < 6; sequence++) {

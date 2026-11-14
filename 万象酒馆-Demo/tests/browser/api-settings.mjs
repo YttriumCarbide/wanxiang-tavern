@@ -285,8 +285,8 @@ export async function apiSettingsChecks({ browser, baseURL, output }) {
       async () => (await (await fetch('/api/ai/config')).json()).summary,
     );
     assert.equal(summaryConnection.contextSize, 64000);
-    assert.equal(summaryConnection.promptPresetId, null);
-    assert.equal(await page.locator('#prompt-kind option[value="summary"]').count(), 0);
+    assert.equal(summaryConnection.promptPresetId, 'summary-default');
+    assert.equal(await page.locator('#prompt-kind option[value="summary"]').count(), 1);
     await page.locator('[data-ai-tab="prompts"]').click();
     await page.locator('#prompt-kind').selectOption('chat');
     const file = process.env.WANXIANG_TEST_PRESET_FILE;

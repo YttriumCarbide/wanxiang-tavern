@@ -69,6 +69,8 @@ test('creation API uses an independent connection, exact source IDs and value bu
           name: '石片',
           description: '一枚晶体石片',
           value: 4,
+          level: 15,
+          quality: 'rare',
           script: '玩家在回廊拾起石片。',
           map: 'ruins',
         },
@@ -81,9 +83,17 @@ test('creation API uses an independent connection, exact source IDs and value bu
     const accepted = await post('generate/creation', input);
     assert.equal(accepted.status, 200, JSON.stringify(accepted.data));
     assert.equal(accepted.data.items[0].price, 4);
+    assert.equal(accepted.data.items[0].level, 15);
+    assert.equal(accepted.data.items[0].quality, 'rare');
     assert.equal(calls[0].model, 'creation-model');
     assert(!JSON.stringify(calls[0]).includes('禁止额外角色注入'));
     assert(!JSON.stringify(calls[0]).includes('禁止额外世界注入'));
+    assert(
+      calls[0].messages.some(
+        (message) =>
+          /"quality":\s*"rare"/.test(message.content) && !/"budget"\s*:/.test(message.content),
+      ),
+    );
     assert(calls[0].messages.some((message) => message.content.includes('以太装备设计者')));
     assert.equal(
       (await post('prompts/select', { kind: 'creation', id: 'character-default' })).status,

@@ -77,7 +77,7 @@ test('NPC markers bind real assets and stable identities without changing offici
   );
 });
 
-test('script requests bind ring scenes to the same fifth-node schedule as actual rewards', () => {
+test('script requests bind ring scenes to the same fifth-node schedule as actual rewards', async () => {
   for (const [map, sequence] of [
     ['ruins', 1],
     ['ruins', 2],
@@ -94,7 +94,16 @@ test('script requests bind ring scenes to the same fifth-node schedule as actual
     });
     assert.deepEqual(input.request.storyRingReward, storyRingReward(route));
     assert.equal(input.request.storyRingReward.encounter, 4);
-    assert(input.request.storyRingInstruction.includes('story[0]～story[3]'));
+    assert.equal(input.request.storyRingInstruction, undefined);
+    const { buildTriggerIds } = await import('../src/ai/worldbook-triggers.js');
+    assert(
+      buildTriggerIds('script', {
+        brief: '沿官方大纲继续',
+        boss: 'bossGate',
+        party: [{ id: 'hero', name: '旅人' }],
+        exploration: route,
+      }).includes('script:story-ring'),
+    );
   }
   assert.equal(storyRingReward({ map: 'ruins', sequence: 0 }), null);
   assert.equal(storyRingReward({ map: 'ruins', sequence: 1, world: {} }), null);

@@ -24,7 +24,11 @@ export function createDestinations(context) {
       : [
           ...BASE_WORLDS,
           ...(session.ai.library.worlds || [])
-            .filter((world) => !BASE_WORLDS.includes(world.id))
+            .filter(
+              (world) =>
+                !BASE_WORLDS.includes(world.id) &&
+                !session.ai.library.atlasDiscoveries?.some(({ id }) => id === world.id),
+            )
             .map((world) => world.id),
           'singularity',
         ];
@@ -232,6 +236,7 @@ export function createDestinations(context) {
       return;
     }
     const spec = explorationSpec(node);
+    const discovered = session.ai.library.atlasDiscoveries?.some(({ id }) => id === routeKey(node));
     $('#destination-sites').innerHTML = html`<article
       class="destination-site"
       data-destination="${node.id}"
@@ -243,7 +248,7 @@ export function createDestinations(context) {
           Lv.${spec.level}</span
         >
       </div>
-      <h3>${escapeText(spec.name)}</h3>
+      <h3>${escapeText(discovered ? regionFor(routeKey(node)).name : spec.name)}</h3>
       <p>
         ${node.continuation ? escapeText(node.continuation) : '穿过界门，沿这条路开启一段新的旅程。'}
       </p>
@@ -441,6 +446,29 @@ export function createDestinations(context) {
     dialog.showModal();
     setStage('region');
   }
+  function openDiscovery(id) {
+    const library = session.ai.library;
+    if (
+      dialog.open ||
+      session.runtime.mode !== 'inn' ||
+      session.ai.busy ||
+      !library.atlasDiscoveries.some((entry) => entry.id === id)
+    )
+      return;
+    session.journey.regionMap = id;
+    session.journey.selectedNode = structuredClone(recommended(id) || null);
+    dialog.showModal();
+    setStage('route');
+    dialog.dataset.discovery = 'true';
+    $('#destination-back').hidden = true;
+    $('#destination-origin').hidden = true;
+    $('#destination-title').textContent = regionFor(id).name;
+    const detail = document.createElement('p');
+    detail.className = 'destination-discovery-description';
+    detail.textContent = regionFor(id).description;
+    $('#destination-sites').prepend(detail);
+    $('#destination-start').focus();
+  }
   events.on($('#destination-regions'), 'click', (event) => {
     const button = event.target.closest('[data-region]');
     if (!button) return;
@@ -549,6 +577,8 @@ export function createDestinations(context) {
     touch = null;
   });
   events.on(dialog, 'close', () => {
+    if (dialog.dataset.discovery) context.daily?.leaveDiscovery();
+    delete dialog.dataset.discovery;
     touch = null;
     drag = null;
     suppressClick = false;
@@ -577,6 +607,7 @@ export function createDestinations(context) {
   });
   return {
     open,
+    openDiscovery,
     prepareContinuation() {
       if (!dialog.open) dialog.showModal();
       setStage('route');

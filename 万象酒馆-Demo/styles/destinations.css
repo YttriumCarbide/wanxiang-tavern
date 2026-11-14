@@ -891,3 +891,9 @@
   resize: none;
   font-size: 12px;
 }
+.destination-discovery-description {
+  max-height: 40vh;
+  overflow: auto;
+  white-space: pre-wrap;
+  line-height: 1.65;
+}

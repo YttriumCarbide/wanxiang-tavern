@@ -8,6 +8,7 @@ import { discardUnfinishedTrip } from '../src/abandoned-trip.js';
 import { createCheckpoint } from '../src/storage/checkpoint.js';
 import { requireNpcInteraction } from '../src/npc-interaction.js';
 import { generationInput } from '../src/ai/pipeline/prompts.js';
+import { buildTriggerIds } from '../src/ai/worldbook-triggers.js';
 import { newLibrary } from '../src/ai/library.js';
 import { settingOnly } from '../src/ai/contracts.js';
 
@@ -82,7 +83,7 @@ test('NPC request decision is stable with approximately twenty percent of indepe
     const a = generationInput('script', input);
     assert.deepEqual(generationInput('script', input), a);
     assert.equal(a.request.npcInteraction?.required === true, expected);
-    if (expected) assert.match(a.request.npcInteraction.instruction, /正文实际描写|正文安排/);
+    assert.equal(buildTriggerIds('script', input).includes('script:npc-required'), expected);
   }
 });
 

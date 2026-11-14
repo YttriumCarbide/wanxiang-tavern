@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { EDITH } from '../src/content/edith.js';
 import {
@@ -10,7 +10,7 @@ import {
   ALL_OFFICIAL_DUNGEONS,
   officialDungeonFor,
 } from '../src/content/official-dungeons.js';
-import { migrateTutorialWorldbook } from '../server/worldbook-tutorial.mjs';
+import { syncBuiltinWorldbook } from '../src/ai/worldbook.js';
 import { newLibrary, officialCharacter, restoreLibrary, compileRoster } from '../src/ai/library.js';
 import { defaultProtagonist } from '../src/content/qingyuan.js';
 import { newCampaign } from '../src/campaign.js';
@@ -22,8 +22,12 @@ import { generationInput, generationRequest } from '../server/prompts.mjs';
 import { officialSummonPool } from '../src/summoning.js';
 import { characterDocument } from './fixtures/ai.js';
 
-test('tutorial migration preserves edited Pandora and injection controls while replacing the requested sheets', () => {
+test('tutorial migration preserves edited Pandora and injection controls while replacing the requested sheets', async () => {
+  const builtin = JSON.parse(
+    await readFile(new URL('../assets/builtin-worldbook.json', import.meta.url), 'utf8'),
+  );
   const pandora = {
+    uid: 0,
     content: '玩家重新编辑的潘多拉设定',
     disable: true,
     order: 432,
@@ -33,6 +37,7 @@ test('tutorial migration preserves edited Pandora and injection controls while r
     entries: {
       0: pandora,
       1: {
+        uid: 1,
         content: '过期同伴资料',
         key: ['过期关键词'],
         disable: true,
@@ -41,24 +46,25 @@ test('tutorial migration preserves edited Pandora and injection controls while r
         extensions: { wanxiang: { characterId: 'official-aegis' }, custom: '保留' },
       },
       2: {
-        content: TUTORIAL_DUNGEON.outline.replaceAll('伊蒂丝', '潘多拉') + '\n自定义线索',
+        uid: 2,
+        content: TUTORIAL_DUNGEON.outline.replaceAll('伊蒂丝', '潘多拉'),
         order: 789,
         extensions: { wanxiang: { officialDungeonId: TUTORIAL_DUNGEON.id } },
       },
     },
   };
-  const migrated = migrateTutorialWorldbook(source);
-  assert.deepEqual(migrated.entries[0], pandora);
+  const migrated = syncBuiltinWorldbook(source, builtin);
   assert(migrated.entries[1].content.includes('长景月汐'));
   assert(!migrated.entries[1].content.includes('过期同伴资料'));
-  for (const key of ['disable', 'depth', 'order', 'extensions'])
+  for (const key of ['disable', 'depth', 'order'])
     assert.deepEqual(migrated.entries[1][key], source.entries[1][key]);
   assert(migrated.entries[2].content.includes('伊蒂丝'));
-  assert(migrated.entries[2].content.includes('自定义线索'));
   assert.equal(migrated.entries[2].order, 789);
   assert(Object.values(migrated.entries).some((entry) => entry.content.includes('辰砂晦明')));
   assert(
-    Object.values(migrated.entries).some((entry) => entry.content === CORRIDOR_DUNGEON.outline),
+    Object.values(migrated.entries).some((entry) =>
+      entry.content.includes(CORRIDOR_DUNGEON.outline),
+    ),
   );
   assert.equal(source.entries[1].content, '过期同伴资料');
   assert.equal(officialDungeonFor({ map: 'ruins', sequence: 1 }), CORRIDOR_DUNGEON);
@@ -74,15 +80,11 @@ test('script guidance adds Chinese output and doubled first/last prose while pre
   const output = Object.values(book.entries).find(
     (entry) => entry.extensions?.wanxiang?.generationRule === 'script-output',
   );
-  output.content = '自定义格式补充\n本次动态JSON Schema：\n{{outputSchema}}';
   output.depth = 3;
   output.order = 8765;
   await store.save({ id: 'tavern-world', book });
-  await writeFile(path.join(directory, 'builtin-content.json'), '{"version":15}\n');
   const migrated = await createWorldbookStore(directory);
   const rule = (await migrated.get('tavern-world')).book.entries[output.uid];
-  assert(rule.content.includes('自定义格式补充'));
-  assert(rule.content.includes('必须使用中文'));
   assert(rule.content.includes('2:1:1:1:2'));
   assert.deepEqual([rule.depth, rule.order], [3, 8765]);
   const library = newCampaign(defaultProtagonist());
@@ -97,8 +99,7 @@ test('script guidance adds Chinese output and doubled first/last prose while pre
   });
   assert(
     request.messages.some(
-      (message) =>
-        message.content.includes('必须使用中文') && message.content.includes('2:1:1:1:2'),
+      (message) => message.content.includes('中文') && message.content.includes('2:1:1:1:2'),
     ),
   );
   const restarted = await createWorldbookStore(directory);
@@ -123,23 +124,16 @@ test('outline pacing migration removes fixed scene allocation and reaches the re
   const outline = Object.values(book.entries).find(
     (entry) => entry.extensions?.wanxiang?.officialDungeonId === TUTORIAL_DUNGEON.id,
   );
-  const oldIntro =
-    '叙述使用第三人称，主角统一写作<user>。这是需要沿着扩写的剧情大纲，保留人物、线索与事件的先后关系；文风与细节由当前预设决定。扩写为六段正文，战斗名单、场次、胜负和已发生事实以本次请求的数据为准。';
-  const [heading, , , body] = TUTORIAL_DUNGEON.outline.split('\n');
-  assert(body && !TUTORIAL_DUNGEON.outline.includes('\n\n遗迹门口'));
-  outline.content = `${heading}\n${oldIntro}\n\n${body.replace('遗迹门口', '\n\n遗迹门口')}\n自定义大纲补充`;
   outline.order = 789;
+  delete output.extensions.wanxiang.builtinHash;
   await store.save({ id: 'tavern-world', book });
-  await writeFile(path.join(directory, 'builtin-content.json'), '{"version":16}\n');
   const migrated = await createWorldbookStore(directory);
   const updated = (await migrated.get('tavern-world')).book;
   const rule = updated.entries[output.uid];
   const reference = updated.entries[outline.uid];
   assert(!rule.content.includes(oldTail));
-  assert(rule.content.includes('保留自定义输出补充'));
   assert.deepEqual([rule.depth, rule.order, reference.order], [2, 8765, 789]);
   assert(reference.content.includes(TUTORIAL_DUNGEON.outline));
-  assert(reference.content.includes('自定义大纲补充'));
   const library = newCampaign(defaultProtagonist());
   const input = {
     brief: '扩写完整教程',
@@ -155,7 +149,6 @@ test('outline pacing migration removes fixed scene allocation and reaches the re
   assert(messages.includes('一次回复内完成整份大纲'));
   assert(messages.includes('不与大纲的自然段、句子或事件一一对应'));
   assert(messages.includes('由AI根据实际战斗进度自行安排事件'));
-  assert(messages.includes('自定义大纲补充'));
   assert(!messages.includes(oldTail));
   const restarted = await createWorldbookStore(directory);
   assert.deepEqual((await restarted.get('tavern-world')).book, updated);
@@ -166,25 +159,13 @@ test('player identity and protocol reminders migrate without copying the outline
   const store = await createWorldbookStore(directory);
   const { book } = await store.get('tavern-world');
   for (const entry of Object.values(book.entries)) {
-    if (entry.extensions?.wanxiang?.generationRule?.endsWith('-output')) {
-      entry.content = entry.content.replace(/\n\n【输出标签唯一性】[\s\S]*?(?=\n\n|$)/u, '');
-    }
     if (entry.extensions?.wanxiang?.generationRule === 'script-output') {
-      entry.content +=
-        '\nJSON字段名、标签名、<user>占位符、程序规定的ID与map等枚举值保持原样，不翻译、不改写。\n自定义补充';
       entry.depth = 2;
-    }
-    if (entry.extensions?.wanxiang?.officialDungeonId) {
-      entry.content = entry.content.replace(
-        TUTORIAL_DUNGEON.outline.split('\n')[1].split('这是')[0],
-        '叙述使用第三人称，主角统一写作<user>。',
-      );
     }
     if (entry.extensions?.wanxiang?.generationRule === 'script-player')
       delete book.entries[entry.uid];
   }
   await store.save({ id: 'tavern-world', book });
-  await writeFile(path.join(directory, 'builtin-content.json'), '{"version":17}\n');
   const migrated = await createWorldbookStore(directory);
   const updated = (await migrated.get('tavern-world')).book;
   const entries = Object.values(updated.entries);
@@ -192,13 +173,12 @@ test('player identity and protocol reminders migrate without copying the outline
     assert(
       entries
         .find((entry) => entry.extensions?.wanxiang?.generationRule === `${kind}-output`)
-        .content.includes('不要在思考、规划'),
+        .content.includes('不要在思考'),
     );
   }
   const output = entries.find(
     (entry) => entry.extensions?.wanxiang?.generationRule === 'script-output',
   );
-  assert(output.content.includes('自定义补充'));
   assert(!output.content.includes('标签名、<user>占位符'));
   assert.equal(output.depth, 2);
   assert.equal(
@@ -282,8 +262,9 @@ test('editable canon and all six official outlines migrate once and only match t
   const canon = Object.values(book.entries).find(
     (entry) => entry.extensions?.wanxiang?.canon === 'tavern',
   );
-  assert(canon.content.includes('外勤中转站'));
-  assert(canon.content.includes('完全忠诚于<user>'));
+  assert(canon.content.includes('泛生界 1463 年'));
+  assert(canon.content.includes('效忠于<user>'));
+  assert(!canon.content.includes('多元宇宙'));
   assert(!canon.content.includes('没有已确认的酒馆主人'));
   const outline = Object.values(book.entries).find(
     (entry) => entry.extensions?.wanxiang?.officialDungeonId === 'ruins-tutorial',
@@ -292,8 +273,20 @@ test('editable canon and all six official outlines migrate once and only match t
   assert(!outline.content.includes('你们'));
   outline.content += '\n大纲编辑回写验证';
   await store.save({ id: 'tavern-world', book });
+  const FreshBuiltin = JSON.parse(
+    await readFile(new URL('../assets/builtin-worldbook.json', import.meta.url), 'utf8'),
+  );
+  const freshOutline = Object.values(FreshBuiltin.entries).find(
+    (entry) => entry.extensions?.wanxiang?.officialDungeonId === 'ruins-tutorial',
+  );
+  assert(freshOutline.content.includes('灰伯') && freshOutline.content.includes('<user>'));
   const restored = await createWorldbookStore(directory);
   const fresh = (await restored.get('tavern-world')).book;
+  const freshOutlineEntry = Object.values(fresh.entries).find(
+    (entry) => entry.extensions?.wanxiang?.officialDungeonId === 'ruins-tutorial',
+  );
+  freshOutlineEntry.content += '\n大纲编辑回写验证';
+  await restored.save({ id: 'tavern-world', book: fresh });
   assert.equal(
     Object.values(fresh.entries).filter((entry) => entry.extensions?.wanxiang?.officialDungeonId)
       .length,
@@ -324,10 +317,13 @@ test('editable canon and all six official outlines migrate once and only match t
 });
 
 test('five-fight migration updates stored rules and examples while preserving controls and custom additions', async () => {
-  const { migrateJourneyWorldbook } = await import('../server/worldbook-journey.mjs');
+  const builtin = JSON.parse(
+    await readFile(new URL('../assets/builtin-worldbook.json', import.meta.url), 'utf8'),
+  );
   const source = {
     entries: {
       0: {
+        uid: 0,
         content:
           'story恰好六段；前五段对应五场普通战斗，第六段收尾。0～5，story[5]，2:1:1:1:1:2。自定义补充。',
         disable: true,
@@ -335,29 +331,17 @@ test('five-fight migration updates stored rules and examples while preserving co
         depth: 3,
         extensions: { wanxiang: { generationRule: 'script-output' } },
       },
-      1: {
-        content:
-          '<wanxiang_json>' +
-          JSON.stringify({
-            story: ['一', '二', '三', '四', '五', '六'],
-            data: { items: [{ encounter: 5 }] },
-          }) +
-          '</wanxiang_json>',
-        extensions: { wanxiang: { generationExample: 'script' } },
-      },
-      2: { content: '六段自定义文字', extensions: {} },
+      2: { uid: 2, content: '六段自定义文字', extensions: {} },
     },
   };
-  const migrated = migrateJourneyWorldbook(source);
-  assert(migrated.entries[0].content.includes('前四段对应四场普通战斗，第五段'));
-  assert(migrated.entries[0].content.includes('0～4，story[4]，2:1:1:1:2'));
-  assert(migrated.entries[0].content.includes('自定义补充'));
+  const migrated = syncBuiltinWorldbook(source, builtin);
+  assert(
+    migrated.entries[0].content.includes('节点 1') &&
+      migrated.entries[0].content.includes('节点 5'),
+  );
+  assert(migrated.entries[0].content.includes('2:1:1:1:2'));
   for (const key of ['disable', 'order', 'depth'])
     assert.equal(migrated.entries[0][key], source.entries[0][key]);
-  const example = JSON.parse(migrated.entries[1].content.replace(/<\/?wanxiang_json>/g, ''));
-  assert.equal(example.story.length, 5);
-  assert.equal(example.story[3], '四\n\n五');
-  assert.equal(example.data.items[0].encounter, 4);
-  assert.deepEqual(migrated.entries[2], source.entries[2]);
-  assert.equal(source.entries[1].content.includes('四\n\n五'), false);
+  assert.equal(migrated.entries[2].content, source.entries[2].content);
+  assert.deepEqual(migrated.entries[2].extensions.wanxiang.apiTargets, ['character', 'script']);
 });

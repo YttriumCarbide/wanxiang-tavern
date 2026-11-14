@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { createIllustratedPeople } from './illustrated-people.js';
 
 export function illustratedImage(source, timeOfDay) {
   return (timeOfDay === 'night' && source.nightImage) || source.image;
@@ -52,7 +53,7 @@ export async function createIllustratedStreet(
   background.position.z = -4;
   background.name = 'Illustrated_Connected_Background';
   root.add(background);
-  const characters = [];
+  const characters = await createIllustratedPeople(scene, resources, definition, loading, aspect);
   for (const polygon of source.foreground) {
     const shape = new THREE.Shape();
     polygon.forEach(([x, y], index) => {
@@ -115,10 +116,10 @@ export async function createIllustratedStreet(
   }
   function resize(camera, ratio) {
     if (source.fixed) {
-      height = Math.min(1, aspect / ratio);
+      height = source.fitWidth ? aspect / ratio : Math.min(1, aspect / ratio);
       width = height * ratio;
       centerX = 0;
-      centerY = (height - 1) / 2;
+      centerY = Math.min(0, (height - 1) / 2);
       project(camera);
       return;
     }

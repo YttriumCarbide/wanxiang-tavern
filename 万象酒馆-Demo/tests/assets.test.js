@@ -5,6 +5,8 @@ import { createHash } from 'node:crypto';
 import { createAssetStore } from '../src/shared/asset-store.js';
 import { GAL_NPC_PORTRAITS } from '../src/content/gal-npc-portraits.js';
 import { OVERLAND_ROAD } from '../src/content/overland-road.js';
+import { SILVER_CROWN_GATE, SILVER_CROWN_PLACES } from '../src/content/silver-crown-scenes.js';
+import { ETERNAL_CITY_PLACES, ETERNAL_CITY_STOPS } from '../src/content/eternal-city-scenes.js';
 import {
   TAVERN_VISITORS,
   standingSprite,
@@ -241,18 +243,21 @@ test('town night and side paintings have matching proportions and wired exits', 
     assert(Math.abs((await aspect(explorationScene(id).illustration.nightImage)) - 3) < 0.02);
 });
 
-test('the road connects the old watchtower to the outer gate without visitor slots', async () => {
+test('overland backgrounds retain their original files while travel uses the atlas', async () => {
   const { explorationScene } = await import('../src/exploration/scenes.js');
-  const { OUTING_SCENES, OUTING_ACTIONS } = await import('../src/daily.js');
+  const { OUTING_SCENES } = await import('../src/daily.js');
   assert.equal(OVERLAND_ROAD.length, 10);
-  assert.equal(OVERLAND_ROAD.length, OUTING_ACTIONS);
-  let previous = 'outskirts';
+  assert(
+    !explorationScene('outskirts').points.some((point) => point.destination === 'road-meadow'),
+  );
   for (const { id, name } of OVERLAND_ROAD) {
     const scene = explorationScene(id);
     assert.equal(OUTING_SCENES[id], name);
-    assert.equal(scene.returnDestination, previous);
-    assert(explorationScene(previous).points.some((point) => point.destination === id));
-    assert(scene.points.some((point) => point.destination === previous));
+    assert.equal(scene.returnDestination, null);
+    assert.deepEqual(
+      scene.points.map((point) => point.destination),
+      id === 'road-capital' ? [SILVER_CROWN_GATE] : [],
+    );
     assert.equal(SCENE_VISITOR_SPOTS[id], undefined);
     const png = await readFile(new URL('../' + scene.illustration.image.slice(2), import.meta.url));
     assert.equal(png.subarray(1, 4).toString(), 'PNG');
@@ -260,10 +265,35 @@ test('the road connects the old watchtower to the outer gate without visitor slo
     const height = png.readUInt32BE(20);
     assert.equal(width, height * 3);
     assert(width >= 2100);
-    previous = id;
+    if (id === 'road-bridge' || id === 'road-reeds') {
+      const night = await readFile(
+        new URL('../' + scene.illustration.nightImage.slice(2), import.meta.url),
+      );
+      assert.deepEqual(night.subarray(16, 24), png.subarray(16, 24));
+    }
   }
-  assert.deepEqual(
-    explorationScene(previous).points.map((point) => point.destination),
-    [OVERLAND_ROAD.at(-2).id],
-  );
+});
+
+test('Silver Crown outdoor night scenes use the exact dimensions of their day backgrounds', async () => {
+  const { explorationScene } = await import('../src/exploration/scenes.js');
+  for (const [id, place] of Object.entries(SILVER_CROWN_PLACES)) {
+    const art = explorationScene(id).illustration;
+    const day = await readFile(new URL('../' + art.image.slice(2), import.meta.url));
+    const aspect = day.readUInt32BE(16) / day.readUInt32BE(20);
+    assert(Math.abs(aspect - (place.wide ? 3 : 16 / 9)) < 0.01);
+    if (place.night) {
+      const night = await readFile(new URL('../' + art.nightImage.slice(2), import.meta.url));
+      assert.deepEqual(night.subarray(16, 24), day.subarray(16, 24));
+    }
+  }
+});
+
+test('all capital and route backgrounds are native continuous 3:1 PNGs', async () => {
+  const { explorationScene } = await import('../src/exploration/scenes.js');
+  for (const id of [...Object.keys(ETERNAL_CITY_PLACES), ...Object.keys(ETERNAL_CITY_STOPS)]) {
+    const { image } = explorationScene(id).illustration;
+    const png = await readFile(new URL('../' + image.slice(2), import.meta.url));
+    assert.equal(png.subarray(1, 4).toString(), 'PNG', image);
+    assert.equal(png.readUInt32BE(16), png.readUInt32BE(20) * 3, image);
+  }
 });

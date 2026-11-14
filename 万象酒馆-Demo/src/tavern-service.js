@@ -57,10 +57,16 @@ function bookGuests(seed, limit, reservation) {
       ).slice(0, reservation.portions)
     : [];
   const profiles = SERVICE_PARTIES.map((profile, index) => ({ ...profile, appearance: index + 1 }));
-  return shuffled(profiles, `${seed}:guests`)
+  return Array.from({ length: Math.ceil(limit / profiles.length) }, (_, wave) =>
+    shuffled(profiles, wave ? `${seed}:guests:${wave}` : `${seed}:guests`),
+  )
+    .flat()
     .slice(0, limit)
     .map((profile, index) => {
-      const order = shuffled(SERVICE_BASIC_MENU, `${seed}:orders:${index}`).slice(
+      const menu = special
+        ? SERVICE_BASIC_MENU.filter((id) => id !== special.index)
+        : SERVICE_BASIC_MENU;
+      const order = shuffled(menu, `${seed}:orders:${index}`).slice(
         0,
         index === 0 ? 1 : profile.order.length,
       );
@@ -369,7 +375,9 @@ function foodChoices(dish, index, shift, guest) {
 
 function orderedSpecial(shift, profile) {
   const special = serviceSpecial(shift.special?.id);
-  return special && profile.order.includes(special.index) ? special : null;
+  return special && profile.order.includes(special.index)
+    ? { ...special, price: shift.special.price || special.price }
+    : null;
 }
 
 function totalBill(shift, profile) {

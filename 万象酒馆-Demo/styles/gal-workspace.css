@@ -300,6 +300,17 @@
 .invite-reply {
   align-items: flex-end;
 }
+.invite-choices:not([hidden]) {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+#gal-stage .invite-choices button {
+  flex: 1 1 220px;
+  padding: 6px 10px;
+  white-space: normal;
+  text-align: left;
+}
 .invite-error {
   margin: 0;
   color: #ff9d94;

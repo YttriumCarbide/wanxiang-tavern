@@ -46,7 +46,7 @@ export async function townGuestChecks({ browser, baseURL, output }) {
       ),
     );
     await page.screenshot({ path: path.join(output, 'unrecruited-town-guests.png') });
-    await page.locator('#chapter-talk').click();
+    await page.locator('#scene-talk').click();
     await page.locator('.gal-people-launcher').click();
     for (const id of ['libet', 'lumi', 'yuto-nakashi'])
       assert.equal(

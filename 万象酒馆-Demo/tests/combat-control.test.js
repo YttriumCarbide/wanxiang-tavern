@@ -7,8 +7,9 @@ import { newCampaign } from '../src/campaign.js';
 import { defaultProtagonist } from '../src/content/qingyuan.js';
 import { prepareCorridorRing, prepareBossEmblem } from '../src/emblem-progression.js';
 import { compileRoster, restoreLibrary, newLibrary } from '../src/ai/library.js';
-import { upgradeCombatControl } from '../src/ai/combat-control-upgrade.js';
+import { syncBuiltinWorldbook } from '../src/ai/worldbook.js';
 import { playbackBeats } from '../src/playback-timing.js';
+import { readFile } from 'node:fs/promises';
 
 function fixture({ boss = false, speed = 4, bind = false, cycle = false } = {}) {
   const heroes = Object.fromEntries(
@@ -230,14 +231,38 @@ test('story ring randomness uses eligible candidates; fully occupied roster keep
   assert(library.characters.every((member) => member.emblemId === EMBLEM_ID));
 });
 
-test('combat worldbook upgrade preserves edits and remains idempotent with current numeric guidance', () => {
-  const source = { entries: { 0: { content: '玩家设定', disable: true } } };
-  const book = upgradeCombatControl(source);
-  assert.deepEqual(book.entries[0], source.entries[0]);
-  const content = book.entries[1].content;
-  assert(content.includes('1 AP、18 sp'));
-  assert(content.includes('优先前场'));
-  assert(content.includes('对我方同样生效'));
-  assert.deepEqual(upgradeCombatControl(book), book);
-  assert.equal(Object.keys(source.entries).length, 1);
+test('combat worldbook sync replaces obsolete EX patch rules with shared encyclopedia and preserves edits', async () => {
+  const builtin = JSON.parse(
+    await readFile(new URL('../assets/builtin-worldbook.json', import.meta.url), 'utf8'),
+  );
+  const source = {
+    entries: {
+      0: { content: '玩家设定', disable: true },
+      901: {
+        content: '旧补丁',
+        extensions: { wanxiang: { generationRule: 'combat-control' } },
+      },
+      902: {
+        content: '旧以太折算',
+        extensions: { wanxiang: { currencyRule: 'ether' } },
+      },
+    },
+  };
+  const book = syncBuiltinWorldbook(source, builtin);
+  assert.equal(book.entries[0].content, source.entries[0].content);
+  assert.equal(book.entries[0].disable, true);
+  assert.equal(book.entries[901], undefined);
+  assert.equal(book.entries[902], undefined);
+  const entry = Object.values(book.entries).find(
+    (item) => item.extensions?.wanxiang?.generationRule === 'combat-encyclopedia',
+  );
+  assert.deepEqual(entry.apiTargets, ['character', 'map', 'creation']);
+  assert(entry.content.includes('对敌我双方皆有效'));
+  assert(entry.content.includes('严禁任何生成角色、以太装备或敌人选用'));
+  const corridor = Object.values(book.entries).find(
+    (item) => item.extensions?.wanxiang?.officialDungeonId === 'ruins-corridor',
+  );
+  assert(corridor.content.includes('优先选择前场'));
+  assert.deepEqual(syncBuiltinWorldbook(book, builtin), book);
+  assert.equal(Object.keys(source.entries).length, 3);
 });

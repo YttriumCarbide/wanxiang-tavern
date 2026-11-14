@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile, writeFile, mkdtemp } from 'node:fs/promises';
+import { readFile, mkdtemp } from 'node:fs/promises';
 import path from 'node:path';
 import { readGenerationResult } from '../server/generation-result.mjs';
 import { createCharacterReader } from '../server/character-reader.mjs';
@@ -96,18 +96,15 @@ test('Qili passes unchanged and both old and compact responses retain executable
   }
 });
 
-test('version 6 updates only owned name-generation rules and preserves worldbook placement and custom additions', async () => {
+test('sync updates stale unhashed character rules directly and preserves placement and custom edits', async () => {
   const directory = await mkdtemp(path.join(process.cwd(), '.runtime/tests/name-migration-'));
   const store = await createWorldbookStore(directory);
   const saved = await store.get('tavern-world');
   const rule = Object.values(saved.book.entries).find(
     (entry) => entry.extensions?.wanxiang?.generationRule === 'character-output',
   );
-  rule.content =
-    rule.content.replace(
-      /^data必须包含[^\r\n]*/m,
-      'data必须包含name/title/archetype/hp/mp/attack/attackName/weapon/limit/skills/quest/ultimate。两层名称须逐字一致。',
-    ) + '\n我的自定义要求';
+  rule.content = '两层名称须逐字一致。旧版格式\n{{outputSchema}}';
+  delete rule.extensions.wanxiang.builtinHash;
   rule.depth = 2;
   rule.order = 4321;
   const unrelated = Object.values(saved.book.entries).find(
@@ -115,18 +112,18 @@ test('version 6 updates only owned name-generation rules and preserves worldbook
   );
   const untouched = structuredClone(unrelated);
   await store.save(saved);
-  await writeFile(path.join(directory, 'builtin-content.json'), '{"version":5}');
   const upgraded = await createWorldbookStore(directory);
   const current = await upgraded.get('tavern-world');
   const updated = current.book.entries[rule.uid];
-  assert(updated.content.includes('data必须包含archetype/weapon/profile/skills/entrySkill'));
+  assert(updated.content.includes('按槽位序号对应'));
   assert(!updated.content.includes('两层名称须逐字一致'));
-  assert(
-    [
-      ...Object.values(current.book.entries),
-      ...(current.book.extensions?.wanxiang?.retiredPromptArchive || []).map((item) => item.entry),
-    ].some((entry) => entry.disable && entry.content.includes('我的自定义要求')),
-  );
   assert.deepEqual([updated.depth, updated.order], [2, 4321]);
   assert.deepEqual(current.book.entries[unrelated.uid], untouched);
+  updated.content += '\n我的本地微调';
+  await upgraded.save(current);
+  const restarted = await createWorldbookStore(directory);
+  assert.equal(
+    (await restarted.get('tavern-world')).book.entries[rule.uid].content,
+    updated.content,
+  );
 });

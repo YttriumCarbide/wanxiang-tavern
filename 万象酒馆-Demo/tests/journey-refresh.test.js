@@ -8,8 +8,9 @@ import { newBattle, preview, makeReposition, advance, campRest } from '../src/en
 import { performedRetreat } from '../src/companion-events.js';
 import { mergedArchiveItems } from '../src/archives.js';
 import { nextArcPhase, arcFor } from '../src/story-arc.js';
-import { upgradeGameRules } from '../src/ai/game-rules-upgrade.js';
+import { syncBuiltinWorldbook } from '../src/ai/worldbook.js';
 import { createCheckpoint } from '../src/storage/checkpoint.js';
+import { readFile } from 'node:fs/promises';
 import { newLibrary, restoreLibrary } from '../src/ai/library.js';
 import { applyEquipment } from '../src/equipment.js';
 import { normalizeCharacter } from '../src/ai/contracts.js';
@@ -115,20 +116,6 @@ test('six story phases advance concretely and worldbook migration preserves pers
   }
   assert.deepEqual(phases, ['起', '承1', '承2', '转1', '转2', '合', '起']);
   assert.equal(arcFor({ storyArc: { phase: '承2' } }).phase, '承2');
-  const book = {
-    entries: {
-      a: {
-        content: '玩家自己的文风。第五段在Boss获胜后展示',
-        extensions: { wanxiang: { generationRule: 'script-output' } },
-      },
-    },
-  };
-  const upgraded = upgradeGameRules(book);
-  assert(upgraded.entries.a.content.includes('玩家自己的文风。'));
-  assert(!upgraded.entries.a.content.includes('第五段在Boss获胜后展示'));
-  assert(upgraded.entries.a.content.includes('70%'));
-  assert.deepEqual(upgradeGameRules(upgraded), upgraded);
-  assert.equal(book.entries.a.content, '玩家自己的文风。第五段在Boss获胜后展示');
   assert.equal(levelLines({ id: 'unknown' }).length, 10);
   assert.equal(levelLines({ id: 'official-pandora' }).length, 5);
   assert.equal(levelLines({ id: 'official-edith' }).length, 5);
@@ -204,29 +191,43 @@ test('equipment final damage and protagonist level dialogue remain correct after
   }
 });
 
-test('current authored worldbook rules are injected once and legacy growth and active-only guidance are retired', () => {
+test('current authored worldbook rules are injected once and legacy growth and active-only guidance are retired', async () => {
+  const builtin = JSON.parse(
+    await readFile(new URL('../assets/builtin-worldbook.json', import.meta.url), 'utf8'),
+  );
   const legacy = {
     entries: {
-      grow: {
+      0: {
         content: '升级由程序对六项分别判定，生命成长+2、其余成长+1',
-        extensions: { wanxiang: { generationRule: 'growth-numbers' } },
+        extensions: { wanxiang: { generationRule: 'character-numbers' } },
       },
-      skill: {
+      1: {
         content: '两个技能至少一个主动。保留这段自定义描述。',
         extensions: { wanxiang: { generationRule: 'character-mechanics' } },
       },
-      current: {
-        content: '【1.3 行程与成长规则更新】\n新的推进指导。',
-        extensions: { wanxiang: { generationRule: 'script-output' } },
+      2: {
+        content: '旧版剧本规则',
+        extensions: { wanxiang: { generationRule: 'script-facts' } },
       },
     },
   };
-  const next = upgradeGameRules(legacy);
-  assert(!next.entries.grow.content.includes('分别判定'));
-  assert(next.entries.grow.content.includes('1～3点'));
-  assert(!next.entries.skill.content.includes('至少一个主动'));
-  assert(next.entries.skill.content.includes('保留这段自定义描述。'));
-  assert(next.entries.current.content.startsWith(legacy.entries.current.content));
-  assert(next.entries.current.content.includes('【多元探索规则】'));
-  assert.deepEqual(upgradeGameRules(next), next);
+  const next = syncBuiltinWorldbook(legacy, builtin);
+  assert.equal(
+    Object.values(next.entries).some((entry) =>
+      ['character-numbers', 'character-mechanics'].includes(
+        entry.extensions?.wanxiang?.generationRule,
+      ),
+    ),
+    false,
+  );
+  assert.equal(next.entries[1], undefined);
+  assert(
+    Object.values(next.entries).some(
+      (entry) =>
+        entry.extensions?.wanxiang?.generationRule === 'character-output' &&
+        entry.content.includes('稀有度'),
+    ),
+  );
+  assert(next.entries[2].content.includes('【多元探索规则】'));
+  assert.deepEqual(syncBuiltinWorldbook(next, builtin), next);
 });

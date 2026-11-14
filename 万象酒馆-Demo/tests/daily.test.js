@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   activateDaily,
+  advanceOuting,
   arrangeDaily,
   consumeOutingAction,
   dailyPlan,
@@ -10,7 +11,11 @@ import {
   restoreDaily,
   serviceStaff,
   startDailyPlan,
+  startTavernActivity,
+  tavernPromotion,
 } from '../src/daily.js';
+import { recruitmentPassed, recruitmentStatus } from '../src/recruitment.js';
+import { syncSummaryWorldbook, requestMemoryBooks } from '../src/ai/journey-memory-worldbook.js';
 import {
   advanceService,
   newServiceShift,
@@ -32,6 +37,7 @@ import { serviceGameMarkup } from '../src/app/service-game-view.js';
 import { SERVICE_CUES } from '../src/audio/cues.js';
 import { SERVICE_ENTRY, seatPoint, servicePosition, serviceSeat } from '../src/service-walk.js';
 import {
+  INVITATION_SCENES,
   applyInvitationPatches,
   invitationAdvance,
   invitationBrief,
@@ -63,6 +69,61 @@ import {
   serviceSpecial,
 } from '../src/service-specials.js';
 import { ITEMS } from '../src/content/items.js';
+
+test('direct tavern activities cross day boundaries and round only partial outings on return', () => {
+  const daily = restoreDaily(null);
+  startTavernActivity(daily, 'dungeon');
+  finishDaily(daily, 'dungeon', '归来');
+  assert.equal(daily.period, 2);
+  startTavernActivity(daily, 'outing').stage = 'roaming';
+  advanceOuting(daily, 21);
+  assert.deepEqual([daily.day, daily.period], [2, 0]);
+  finishDaily(daily, 'outing', '归来');
+  assert.deepEqual([daily.day, daily.period], [2, 1]);
+  startTavernActivity(daily, 'outing').stage = 'roaming';
+  advanceOuting(daily, 10);
+  finishDaily(daily, 'outing', '归来');
+  assert.equal(daily.period, 2);
+  assert.equal(restoreDaily(daily).report, '归来');
+});
+
+test('promotion counts completed shifts and held cores, recruitment uses ranked affection and scene scores', () => {
+  const library = newLibrary();
+  const stock = { items: { 'clockwork-heart': 10 } };
+  library.daily.serviceGrowth.shifts = 2;
+  assert.equal(tavernPromotion(library.daily, stock).ready, true);
+  library.daily.rank = 1;
+  assert.equal(tavernPromotion(library.daily, stock).ready, false);
+  library.daily.rank = 2;
+  library.relationships['official-lumi'] = { affection: 199 };
+  assert.equal(recruitmentStatus(library, 'official-lumi').ready, false);
+  library.relationships['official-lumi'].affection++;
+  assert.equal(recruitmentStatus(library, 'official-lumi').ready, true);
+  const run = {
+    plan: { stages: [{ id: 'first' }, { id: 'second' }] },
+    turns: [
+      { stageId: 'first', score: 1 },
+      { stageId: 'second', score: 5 },
+    ],
+  };
+  assert.equal(recruitmentPassed(run, 'medium'), true);
+  assert.equal(recruitmentPassed(run, 'high'), false);
+});
+
+test('private worldbook preserves edits and deletions of generated entries', () => {
+  const library = newLibrary();
+  const records = [{ id: 'test-trip', title: '出城', text: '经过城门', recent: true }];
+  const book = syncSummaryWorldbook(library, records);
+  const [uid] = Object.keys(book.entries);
+  book.entries[uid].content = '玩家修改的记录';
+  syncSummaryWorldbook(library, [{ ...records[0], text: '另一条自动总结' }]);
+  assert.equal(
+    requestMemoryBooks({ summaryWorldbook: book })[0].entries[uid].content,
+    '玩家修改的记录',
+  );
+  delete book.entries[uid];
+  assert.deepEqual(syncSummaryWorldbook(library, records).entries, {});
+});
 import { normalizePromptPreset } from '../src/ai/presets.js';
 import { applyRelationshipActions } from '../src/relationships.js';
 
@@ -233,7 +294,7 @@ test('the menu has broad choices, real dish art and varied spoken orders', () =>
 });
 
 test('service experience persists by role and reputation increases orders and prices', () => {
-  const growth = restoreServiceGrowth({ reputation: 24 });
+  const growth = restoreServiceGrowth({ reputation: 398 });
   const staff = { front: 'a', cook: 'b', server: 'c', clean: 'd' };
   const before = serviceProficiency(growth, staff.front, 'front');
   const cook = serviceProficiency(growth, staff.front, 'cook');
@@ -252,7 +313,7 @@ test('service experience persists by role and reputation increases orders and pr
   assert.equal(newServiceShift(staff, false, 17, restored).limit, 8);
 
   const high = newServiceShift(staff, false, 17, {
-    reputation: 100,
+    reputation: 1600,
     training: { a: { front: 100 } },
   });
   assert.equal(high.limit, 11);
@@ -263,9 +324,11 @@ test('service experience persists by role and reputation increases orders and pr
     guest.phase = 'pay';
   }
   assert(high.guests[0].deadline > regular.guests[0].deadline);
-  const highBill = serviceJob(high, high.guests[0]).note;
-  const standardBill = serviceJob(regular, regular.guests[0]).note;
-  assert.notEqual(highBill, standardBill);
+  const splitBill = (shift) => {
+    const [guest] = shift.guests;
+    return [0, 1].map((step) => serviceJob(shift, { ...guest, step }).note);
+  };
+  assert.notDeepEqual(splitBill(high), splitBill(regular));
 });
 
 test('opening a skilled ticket resolves the entire order once using the normal phase transition', () => {
@@ -792,12 +855,21 @@ test('a complete invitation uses the visible tasks for scoring and advances with
     {
       invitation: { activity: 'walk' },
       party: [actor],
+      playerIntent: '想在桥边聊聊。',
     },
     preset,
     profile,
     (text) => text.length,
   );
   assert.equal(request.transport.tag, 'wanxiang_output');
+  assert.deepEqual(request.messages.at(-1), {
+    role: 'user',
+    content: '玩家本次想做或想说的事\n想在桥边聊聊。',
+  });
+  assert.deepEqual(
+    Object.keys(INVITATION_SCENES).filter((id) => id.startsWith('road-')),
+    ['road-bridge', 'road-reeds', 'road-capital'],
+  );
   assert(request.messages.some((entry) => entry.content.includes('"finale"')));
   assert.deepEqual(
     invitationResponse(`<wanxiang_output>${JSON.stringify(fullInvitation)}</wanxiang_output>`),
@@ -956,6 +1028,18 @@ test('invitation keeps the model reply separate from diagnostics and accepts sho
   assert.deepEqual(response.request.warnings, ['diagnostic only']);
   assert.equal(response.invitation.stages[0].intro, '【旁白】她取出了琴。');
   assert.equal(response.invitation.finale.intro, '【旁白】她把琴收了起来。');
+  const topicsJob = { kind: 'script', input: { invitationTopics: { title: '试琴' } } };
+  assert.equal(pipe.completionOptions(topicsJob).responseSchema, null);
+  const topics = {
+    unrelated: '一只猫混进早市',
+    weak: ['找琴弦', '摊主的信'],
+    strong: '把曲子演给新听众',
+  };
+  assert.deepEqual((await pipe.acceptResult(topicsJob, { content: tagged(topics) })).topics, [
+    topics.unrelated,
+    ...topics.weak,
+    topics.strong,
+  ]);
 });
 
 test('shared chat connection migrates legacy quick chat without losing either prompt preset', async () => {

@@ -1,37 +1,40 @@
 import {
   normalizeEquipment,
-  equipmentBudget,
-  equipmentCost,
   EQUIPMENT_STATS,
+  EQUIPMENT_QUALITIES,
+  clampEquipmentLevel,
+  resolveEquipmentQuality,
+  hashSeed,
+  materializeEquipment,
 } from './equipment.js';
-import { normalizeRules, TRIGGER_EVENTS, POSITIVE_BUFFS, NEGATIVE_BUFFS } from './triggers.js';
-import { finalPassiveText } from './skill-text.js';
+import {
+  TRIGGER_EVENTS,
+  EXCLUSIVE_BUFFS,
+  GENERATED_POSITIVE_BUFFS,
+  NEGATIVE_BUFFS,
+} from './triggers.js';
 
 export function equipmentGenerationPlan(source) {
-  const tier =
-    source.value <= 10
-      ? 1
-      : source.value <= 30
-        ? 2
-        : source.value <= 80
-          ? 3
-          : source.value <= 200
-            ? 4
-            : 5;
+  const qualityKey = resolveEquipmentQuality(source?.quality, source?.value);
+  const q = EQUIPMENT_QUALITIES[qualityKey];
+  const level = clampEquipmentLevel(source?.level || 1);
   return {
-    tier,
-    budget: equipmentBudget(source.value),
-    maxStats: Math.min(3, tier + 1),
+    tier: q.tier,
+    quality: q.id,
+    qualityName: q.name,
+    level,
+    maxStats: q.statCount,
     stats: Object.keys(EQUIPMENT_STATS).filter(
       (key) =>
-        !['limit', 'manaCost'].includes(key) || (key === 'manaCost' ? tier >= 4 : tier === 5),
+        !['limit', 'manaCost'].includes(key) ||
+        (key === 'manaCost' ? q.allowManaCost : q.allowLimit),
     ),
-    maxRules: tier === 1 ? 0 : tier === 5 ? 2 : 1,
-    maxEffects: tier >= 4 ? 2 : 1,
-    maxConditions: tier >= 3 ? 1 : 0,
-    continuous: tier >= 4,
+    maxRules: q.maxRules,
+    maxEffects: q.maxEffects,
+    maxConditions: q.maxConditions,
+    continuous: q.allowContinuous,
     targets:
-      tier >= 4
+      q.tier >= 4
         ? [
             'self',
             'lowestAlly',
@@ -41,15 +44,17 @@ export function equipmentGenerationPlan(source) {
             'lowestEnemy',
             'allEnemies',
           ]
-        : ['self', 'lowestAlly', 'lowestEnemy'],
+        : q.tier >= 3
+          ? ['self', 'lowestAlly', 'frontAllies', 'lowestEnemy', 'allEnemies']
+          : ['self', 'lowestAlly', 'lowestEnemy'],
     events: Object.keys(TRIGGER_EVENTS),
-    powers: ['low', 'standard', 'high'],
+    powers: ['low', 'medium', 'high'],
     instruction:
-      '只选择statFocus、触发时机、条件、目标和效果power档位；不填写基础属性点数、伤害、buff层数或触发次数。代码会按来源价值分配最终数值。不得创造额外技能、标记、递归或改变游戏规则。',
+      '只从designPlan中选择statFocus、触发时机、条件、目标和定性power档位（low/medium/high）；绝不填写budget、price、具体点数或状态层数。代码会按品质与等级换算范围并生成装备。',
   };
 }
 
-/** Value is code-owned. AI provides a bounded mechanism, never its final numerical strength. */
+/** Value and level scaling remain code-owned; AI only picks qualitative archetypes. */
 export function compileEquipmentDesign(raw, source) {
   const plan = equipmentGenerationPlan(source);
   const design = raw.design;
@@ -64,15 +69,10 @@ export function compileEquipmentDesign(raw, source) {
     design.rules.length > plan.maxRules ||
     Object.keys(design).some((key) => !['statFocus', 'rules'].includes(key))
   )
-    throw Error('装备设计不符合该以太价值档位');
-  let seed = 2166136261;
-  for (const char of `${source.id}:${source.value}:${source.name}`)
-    seed = Math.imul(seed ^ char.charCodeAt(0), 16777619);
-  const roll = () => {
-    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
-    return seed / 4294967296;
-  };
-  const rules = design.rules.map((rule) => {
+    throw Error('装备设计不符合该以太品质档位');
+
+  const allowedPowers = new Set([...plan.powers, 'standard']);
+  const validatedRules = design.rules.map((rule) => {
     if (
       !['mode', 'event', 'target', 'conditions', 'effects'].every(
         (key) => key in rule || key === 'event',
@@ -84,18 +84,21 @@ export function compileEquipmentDesign(raw, source) {
       !Array.isArray(rule.conditions) ||
       rule.conditions.length > plan.maxConditions ||
       rule.conditions.some(
-        (condition) => condition.subject === 'target' || condition.type === 'mark',
+        (condition) =>
+          condition.subject === 'target' ||
+          condition.type === 'mark' ||
+          EXCLUSIVE_BUFFS.includes(condition.buff),
       ) ||
       !Array.isArray(rule.effects) ||
       !rule.effects.length ||
       rule.effects.length > plan.maxEffects ||
       (rule.mode === 'continuous' && !plan.continuous)
     )
-      throw Error('装备事件复杂度超出价值档位');
+      throw Error('装备事件复杂度超出品质档位');
     const hostile = ['lowestEnemy', 'allEnemies'].includes(rule.target);
     const effects = rule.effects.map((effect) => {
       if (
-        !plan.powers.includes(effect.power) ||
+        !allowedPowers.has(effect.power) ||
         !['damage', 'heal', 'mana', 'shield', 'buff', 'cleanse'].includes(effect.type) ||
         Object.keys(effect).some((key) => !['type', 'power', 'buff', 'buffs'].includes(key))
       )
@@ -104,7 +107,7 @@ export function compileEquipmentDesign(raw, source) {
         (effect.type === 'damage' && !hostile) ||
         (['heal', 'mana', 'shield', 'cleanse'].includes(effect.type) && hostile) ||
         (effect.type === 'buff' &&
-          !(hostile ? NEGATIVE_BUFFS : POSITIVE_BUFFS).includes(effect.buff))
+          !(hostile ? NEGATIVE_BUFFS : GENERATED_POSITIVE_BUFFS).includes(effect.buff))
       )
         throw Error('装备效果目标阵营无效');
       if (effect.type === 'cleanse') {
@@ -116,56 +119,52 @@ export function compileEquipmentDesign(raw, source) {
           throw Error('装备净化状态无效');
         return {
           type: 'cleanse',
+          power: effect.power === 'standard' ? 'medium' : effect.power,
           buffs: [...new Set(effect.buffs)].slice(0, plan.tier >= 4 ? 2 : 1),
         };
       }
-      const power = { low: 0.6, standard: 0.85, high: 1 }[effect.power];
-      const value =
-        effect.type === 'buff'
-          ? 1
-          : Math.max(1, Math.min(10, Math.floor((1 + plan.tier * power) * (0.8 + roll() * 0.2))));
-      return { type: effect.type, value, ...(effect.type === 'buff' ? { buff: effect.buff } : {}) };
+      return {
+        type: effect.type,
+        power: effect.power === 'standard' ? 'medium' : effect.power,
+        ...(effect.type === 'buff' ? { buff: effect.buff } : {}),
+      };
     });
     return {
-      ...rule,
+      mode: rule.mode,
+      ...(rule.mode === 'event' ? { event: rule.event } : {}),
+      target: rule.target,
+      conditions: structuredClone(rule.conditions),
       effects,
-      ...(rule.mode === 'event' ? { limit: plan.tier >= 4 ? 3 : 1, scope: 'expedition' } : {}),
     };
   });
-  const equipment = { stats: {}, rules: normalizeRules(rules) };
-  // Spend at most half on event effects; low-value pieces may compile to useful stats alone.
-  while (
-    equipment.rules.length &&
-    equipmentCost(equipment) > Math.floor(plan.budget * (plan.tier >= 4 ? 0.85 : 0.65))
-  ) {
-    const rule = equipment.rules.at(-1);
-    const effect = rule.effects.find((entry) => entry.type !== 'buff' && entry.value > 1);
-    if (effect) effect.value--;
-    else equipment.rules.pop();
-  }
-  const caps = { hp: 20, mp: 12, attack: 5, skillDamage: 5, manaCost: 1, limit: 1 };
-  const allocation = ['hp', ...design.statFocus];
-  const target = Math.max(1, Math.floor(plan.budget * (0.85 + roll() * 0.15)));
-  for (let points = 0; points < 150; points++) {
-    const eligible = allocation.filter(
-      (key) =>
-        (equipment.stats[key] || 0) < caps[key] &&
-        equipmentCost({
-          ...equipment,
-          stats: { ...equipment.stats, [key]: (equipment.stats[key] || 0) + 1 },
-        }) <= target,
-    );
-    if (!eligible.length) break;
-    const key = eligible[Math.floor(roll() * eligible.length)];
-    equipment.stats[key] = (equipment.stats[key] || 0) + 1;
-  }
-  // Small leftover fractions still yield a safe, non-empty piece.
-  if (!Object.keys(equipment.stats).length && !equipment.rules.length) equipment.stats.hp = 1;
-  const statText = Object.entries(equipment.stats)
-    .map(([key, value]) => `${EQUIPMENT_STATS[key]}+${value}`)
-    .join('，');
-  const description = [statText, finalPassiveText({ rules: equipment.rules })]
-    .filter(Boolean)
-    .join('；');
-  return normalizeEquipment({ ...raw, ...equipment, description }, source);
+
+  const normalizedDesign = {
+    statFocus: [...design.statFocus],
+    rules: validatedRules,
+  };
+  const seed = hashSeed(
+    `${source.id}:${source.value}:${source.name}:${plan.level}:${plan.quality}`,
+  );
+  const compiled = materializeEquipment({
+    design: normalizedDesign,
+    level: plan.level,
+    quality: plan.quality,
+    seed,
+  });
+
+  return normalizeEquipment(
+    {
+      ...raw,
+      flavor: typeof raw.description === 'string' ? raw.description.trim() : '',
+      description: compiled.description,
+      level: compiled.level,
+      quality: compiled.quality,
+      design: normalizedDesign,
+      stats: compiled.stats,
+      rules: compiled.rules,
+      statRanges: compiled.statRanges,
+      rollPercent: compiled.rollPercent,
+    },
+    { ...source, level: compiled.level, quality: compiled.quality },
+  );
 }

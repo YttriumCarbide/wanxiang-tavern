@@ -11,12 +11,23 @@ import {
   campRest,
 } from '../src/engine.js';
 import {
+  EQUIPMENT_QUALITIES,
   normalizeEquipment,
   buyEquipment,
   equip,
   equippedDefinitions,
   applyEquipment,
+  reforgeEquipment,
+  temperEquipment,
+  ascendEquipment,
+  dismantleEquipment,
+  maxUnlockedEquipmentLevel,
+  restoreEquipment,
+  rollEquipmentQuality,
+  materializeEquipment,
 } from '../src/equipment.js';
+import { equipmentDescription } from '../src/skill-text.js';
+import { archiveMilestone, archiveOverlandLoot } from '../src/archives.js';
 import { normalizeRules } from '../src/triggers.js';
 import { HEROES } from '../src/data.js';
 import { newLibrary, compileRoster, restoreLibrary } from '../src/ai/library.js';
@@ -53,7 +64,10 @@ test('equipment has three slots, unique physical ownership, exact ether price an
   assert.throws(() => equip(library, 'official-lyria', 0, 'owned-1'), /已被使用/);
   assert.throws(() => equip(library, 'official-aegis', 3, null), /装备槽/);
   const restored = restoreLibrary(JSON.parse(JSON.stringify(library)));
-  assert.equal(compileRoster(restored).aegis.attack, HEROES[0].attack + 2);
+  assert.equal(
+    compileRoster(restored).aegis.attack,
+    HEROES[0].attack + library.equipment.owned[0].stats.attack,
+  );
   assert.equal(equippedDefinitions(restored, restored.characters[0])[0].price, 25);
   assert.throws(() => buyEquipment(library, 'ore', 'owned-2'), /以太不足/);
   assert.throws(
@@ -251,4 +265,105 @@ test('developer-only retreat and archive editing require both switches; equipmen
     { stats: { manaCost: 2 }, rules: [] },
   ]);
   assert.ok(combat.skills.every((skill) => skill.passive || skill.mp >= 0));
+});
+
+test('equipment quality tiers, Lv.1..99 scaling, reforge, temper, ascend, dismantle, restore and natural text', () => {
+  const library = newLibrary();
+  const droppedBook = {
+    id: 'book-1',
+    title: '深层回廊',
+    boss: true,
+    exploration: { map: 'frost', sequence: 6 },
+    items: [{ name: '冰髓指环', description: '寒气环绕', value: 42, encounter: 4 }],
+    npcs: [],
+  };
+  const record = { runId: 'run-frost-6', map: 'frost' };
+  archiveMilestone(library, droppedBook, record, 4);
+  const dropped = library.archives.items.at(-1);
+  assert(dropped.level >= 1 && dropped.level <= 99);
+  assert(dropped.quality in EQUIPMENT_QUALITIES);
+
+  const rolledBoss = rollEquipmentQuality({ context: 'boss', value: 42, seed: 99 });
+  assert(rolledBoss in EQUIPMENT_QUALITIES);
+
+  const design = {
+    statFocus: ['attack', 'hp'],
+    rules: [
+      {
+        mode: 'event',
+        event: 'damageTaken',
+        target: 'self',
+        conditions: [],
+        effects: [{ type: 'shield', power: 'medium' }],
+      },
+    ],
+  };
+  const rolledSpec = materializeEquipment({ design, level: 8, quality: 'rare', seed: 11 });
+  const template = normalizeEquipment(
+    {
+      name: '深寒长靴',
+      flavor: '踏雪留霜。',
+      level: 8,
+      quality: 'rare',
+      description: '临时描述',
+      design,
+      ...rolledSpec,
+      rules: normalizeRules(rolledSpec.rules),
+    },
+    { id: 'boots', name: '雪靴残片', value: 60, map: 'frost', level: 8, quality: 'rare' },
+  );
+  template.description = equipmentDescription(template);
+  assert(template.description.includes(`hp上限 +${template.stats.hp}`));
+  assert(
+    template.description.includes(
+      `受到hp伤害后，自身获得${template.rules[0].effects[0].value}点护盾`,
+    ),
+  );
+  assert(!template.description.includes('skillDamage'));
+
+  library.equipment.catalog.push(template);
+  library.inventory.ether = 2000;
+  library.characters[0].growth = { ...(library.characters[0].growth || {}), level: 12 };
+  const bought = buyEquipment(library, template.id, 'inst-1', { seed: 11 });
+  assert.equal(bought.level, 8);
+  assert.equal(bought.quality, 'rare');
+  assert.equal(maxUnlockedEquipmentLevel(library) >= 12, true);
+
+  const reforged = reforgeEquipment(library, 'inst-1', 77);
+  assert(reforged.rollPercent >= 0 && reforged.rollPercent <= 100);
+  const tempered = temperEquipment(library, 'inst-1', 12);
+  assert.equal(tempered.level, 12);
+  assert.throws(
+    () => temperEquipment(library, 'inst-1', maxUnlockedEquipmentLevel(library) + 1),
+    /解锁/,
+  );
+
+  const ascended = ascendEquipment(library, 'inst-1', 5);
+  assert.equal(ascended.quality, 'epic');
+
+  const restoredEq = restoreEquipment(JSON.parse(JSON.stringify(library.equipment)));
+  assert.equal(restoredEq.owned[0].quality, 'epic');
+  assert.equal(restoredEq.owned[0].level, 12);
+  assert(restoredEq.owned[0].statRanges);
+
+  equip(library, library.characters[0].id, 0, 'inst-1');
+  assert.throws(() => dismantleEquipment(library, 'inst-1'), /穿戴/);
+  equip(library, library.characters[0].id, 0, '');
+  const beforeEther = library.inventory.ether;
+  const refund = dismantleEquipment(library, 'inst-1');
+  assert(refund > 0);
+  assert.equal(library.inventory.ether, beforeEther + refund);
+  assert.equal(library.equipment.owned.length, 0);
+
+  archiveOverlandLoot(library, {
+    runId: 'overland-test-1',
+    title: '古道试炼',
+    leg: { id: 'outskirts->road-bridge', level: 5, to: { name: '石桥' } },
+    items: [
+      { stageId: 'outskirts->road-bridge', name: '巡林短匕', description: '轻巧刀锋', value: 18 },
+    ],
+  });
+  const ol = library.archives.items.find((entry) => entry.source?.overland);
+  assert.equal(ol.level, 5);
+  assert(ol.quality in EQUIPMENT_QUALITIES);
 });

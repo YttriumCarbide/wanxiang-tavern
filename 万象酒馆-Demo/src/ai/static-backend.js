@@ -58,8 +58,7 @@ export async function createStaticBackend(
     try {
       controller.signal.throwIfAborted();
       const profile = settings.get(kind);
-      const source =
-        models || kind === 'summary' ? null : (await prompts.get(profile.promptPresetId)).preset;
+      const source = models ? null : (await prompts.get(profile.promptPresetId)).preset;
       const prepared = models ? null : await pipeline.buildRequest(kind, input, source);
       controller.signal.throwIfAborted();
       const requestId = crypto.randomUUID(),
@@ -145,13 +144,18 @@ export async function createStaticBackend(
         throw Error('Token统计需要文字列表');
       return { counts: data.texts.map(countTokens), tokenizer: 'o200k_base' };
     }
-    if (path === 'summary/plan')
-      return summaryPlan(
-        data,
-        { ...settings.get('summary'), antiRoute: settings.routeSettings() },
-        countTokens,
+    if (path === 'summary/plan') {
+      const profile = { ...settings.get('summary'), antiRoute: settings.routeSettings() };
+      const preset = (await prompts.get(profile.promptPresetId)).preset;
+      const worldInfo = await worlds.resolve('summary', {});
+      return summaryPlan(data, profile, countTokens, readText, {
+        preset,
+        worldInfo,
         readText,
-      );
+        runRegexTasks: regexRunner,
+        regexScripts: [...regexStore.get(), ...presetRegexScripts(preset)],
+      });
+    }
     if (path === 'creation/plan') return creationPlan(data, settings.get('creation'), countTokens);
     if (path === 'portrait') return portraits.import(data.url, options.signal);
     if (path === 'portrait/save') return portraits.save(data.dataUrl);
@@ -178,6 +182,7 @@ export async function createStaticBackend(
           script: await readText('script.system.md'),
           map: await readText('map.system.md'),
           creation: await readText('creation.system.md'),
+          summary: await readText('summary.system.md'),
         },
       };
     if (path.startsWith('prompts/')) {

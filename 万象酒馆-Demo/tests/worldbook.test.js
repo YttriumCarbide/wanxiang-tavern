@@ -1,12 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp } from 'node:fs/promises';
+import { mkdtemp, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import {
   normalizeWorldbook,
   normalizeWorldSettings,
   newWorldEntry,
   characterWorldEntry,
+  syncBuiltinWorldbook,
 } from '../src/ai/worldbook.js';
 import { scanWorldbooks, injectWorldbookMessages } from '../src/ai/worldbook-scan.js';
 import { createWorldbookStore } from '../server/worldbook-store.mjs';
@@ -14,8 +15,6 @@ import { generationRequest } from '../server/prompts.mjs';
 import { requestTokenReport } from '../server/request-tokens.mjs';
 import { createWorldbookCounter, createCharacterReader } from '../server/character-reader.mjs';
 import { readGenerationResult } from '../server/generation-result.mjs';
-import { upgradeOutputTagsWorldbook } from '../src/ai/output-tag-upgrade.js';
-import { upgradeMonsterCatalogWorldbook } from '../src/ai/monster-narrative.js';
 import { UNIVERSAL_ENEMIES, UNIVERSAL_BOSSES } from '../src/content/universal-adversaries.js';
 import { newLibrary, restoreLibrary } from '../src/ai/library.js';
 import { characterDocument, tavernPresetFixture } from './fixtures/ai.js';
@@ -39,7 +38,10 @@ const scan = (entries, options = {}) =>
     ...options,
   });
 
-test('output tag migration updates owned prompt rules and preserves user entries', () => {
+test('output tag migration updates owned prompt rules and preserves user entries', async () => {
+  const builtin = JSON.parse(
+    await readFile(new URL('../assets/builtin-worldbook.json', import.meta.url), 'utf8'),
+  );
   const source = book([
     {
       extensions: { wanxiang: { generationRule: 'script-output' } },
@@ -47,9 +49,8 @@ test('output tag migration updates owned prompt rules and preserves user entries
     },
     { comment: '我的格式补充', content: '请保留 <wanxiang_chat>原样</wanxiang_chat>' },
   ]);
-  const upgraded = upgradeOutputTagsWorldbook(source);
-  assert.match(upgraded.entries[0].content, /<wanxiang_output>\{\}<\/wanxiang_output>/u);
-  assert.match(upgraded.entries[0].content, /<wanxiang_output>正文<\/wanxiang_output>/u);
+  const upgraded = syncBuiltinWorldbook(source, builtin);
+  assert.match(upgraded.entries[0].content, /<wanxiang_output>/u);
   assert.equal(upgraded.entries[1].content, source.entries[1].content);
 });
 
@@ -295,38 +296,21 @@ test('worldbook CRUD, bindings and timer state survive restart without changing 
   assert.equal((await (await createWorldbookStore(directory)).list()).length, 0);
 });
 
-test('monster lore is split into named script/chat entries and game rules are removed', () => {
-  const source = {
-    entries: {
-      0: {
-        ...newWorldEntry(0),
-        comment: '通用敌人库：十名小怪与三位Boss',
-        content: '旧的合并目录',
-        apiTargets: ['map', 'script'],
-        extensions: { wanxiang: { generationRule: 'universal-enemies' } },
-      },
-      1: {
-        ...newWorldEntry(1),
-        comment: '古林怪物图鉴：月蚀树冠',
-        key: ['moonCrown', '月蚀树冠'],
-        content:
-          '名称：月蚀树冠\n外形：宽大冠层下悬着数枚半透明培养囊。\n三部位速度均为1，行动顺序树冠、魔眼、树根。必须全部击败才算胜利。',
-        apiTargets: ['script', 'map'],
-        extensions: { wanxiang: { monsterId: 'moonCrown' } },
-      },
-    },
-  };
-  const result = upgradeMonsterCatalogWorldbook(source);
+test('monster lore is split into named script/chat entries and game rules are removed', async () => {
+  const builtin = JSON.parse(
+    await readFile(new URL('../assets/builtin-worldbook.json', import.meta.url), 'utf8'),
+  );
+  const result = syncBuiltinWorldbook({ entries: {} }, builtin);
   const entries = Object.values(result.entries).filter(
     (entry) => entry.extensions?.wanxiang?.monsterId,
   );
-  assert.equal(entries.length, UNIVERSAL_ENEMIES.length + UNIVERSAL_BOSSES.length + 1);
+  assert(entries.length >= UNIVERSAL_ENEMIES.length + UNIVERSAL_BOSSES.length + 1);
   assert(!Object.values(result.entries).some((entry) => /通用敌人库/.test(entry.comment || '')));
   for (const entry of entries) {
     assert.equal(entry.comment, '怪物图鉴：' + entry.key[1]);
     assert.deepEqual(entry.key, [entry.extensions.wanxiang.monsterId, entry.key[1]]);
     assert.deepEqual(entry.apiTargets, ['script', 'chat']);
-    assert(!/速度均为|行动顺序|必须全部击败/.test(entry.content));
+    assert(!/速度均为|行动顺序|必须全部击败|替代旧数字/.test(entry.content));
   }
 });
 
@@ -392,7 +376,7 @@ test('character worldbook entries conform to specification and are triggered dur
   assert.equal(entry.position, 1); // 角色定义之后
   assert.equal(entry.order, 100);
   assert.equal(entry.probability, 100);
-  assert.deepEqual(entry.key, ['测试勇者']);
+  assert.deepEqual(entry.key, ['character-test-1', '测试勇者']);
   assert.equal(entry.content, dummyChar.setting.worldbook);
   assert.equal(entry.excludeRecursion, true);
   assert.equal(entry.preventRecursion, true);
@@ -449,7 +433,6 @@ test('character worldbook entries conform to specification and are triggered dur
 
 test('character entries use three dialogue purposes and separate protagonist, generated and recruitable categories', async () => {
   const { classifyCharacterEntry, characterEntryCategory } = await import('../src/ai/worldbook.js');
-  const { upgradeCharacterEntries } = await import('../src/ai/character-entry-upgrade.js');
   const entries = [
     characterWorldEntry(
       {
@@ -487,22 +470,20 @@ test('character entries use three dialogue purposes and separate protagonist, ge
     'ai-character',
     'character',
   ]);
-  const upgraded = upgradeCharacterEntries({
-    entries: {
-      0: {
-        ...entries[1],
-        comment: '人物详情：新客',
-        apiTargets: ['character', 'script'],
-        order: 456,
-        content: '玩家编辑过的设定',
-      },
+  const classified = classifyCharacterEntry(
+    {
+      ...entries[1],
+      comment: '人物详情：新客',
+      apiTargets: ['character', 'script'],
+      order: 456,
+      content: '玩家编辑过的设定',
     },
-  });
-  assert.equal(upgraded.entries[0].comment, 'ai角色条目：新客');
-  assert.equal(upgraded.entries[0].order, 456);
-  assert.equal(upgraded.entries[0].content, '玩家编辑过的设定');
-  assert.deepEqual(upgraded.entries[0].apiTargets, ['script', 'chat']);
-  assert.deepEqual(upgradeCharacterEntries(upgraded), upgraded);
+    { id: 'character-new', source: 'generated', setting: { name: '新客' } },
+  );
+  assert.equal(classified.comment, 'ai角色条目：新客');
+  assert.equal(classified.order, 456);
+  assert.equal(classified.content, '玩家编辑过的设定');
+  assert.deepEqual(classified.apiTargets, ['script', 'chat']);
   assert.equal(
     classifyCharacterEntry(
       entries[1],
@@ -511,4 +492,218 @@ test('character entries use three dialogue purposes and separate protagonist, ge
     ).comment,
     '主角设定：新客',
   );
+});
+
+test('all builtin character and official NPC entries include IDs in keys and trigger modular rules via ID combinations', async () => {
+  const { buildTriggerIds } = await import('../src/ai/worldbook-triggers.js');
+  const { syncSummaryWorldbook, syncArchivedNpcEntries } =
+    await import('../src/ai/journey-memory-worldbook.js');
+  const builtin = JSON.parse(
+    await readFile(new URL('../assets/builtin-worldbook.json', import.meta.url), 'utf8'),
+  );
+  for (const entry of Object.values(builtin.entries)) {
+    const w = entry.extensions?.wanxiang;
+    if (w?.characterId) assert(entry.key.includes(w.characterId), entry.comment);
+    if (w?.officialNpcId) {
+      assert(entry.key.includes(w.officialNpcId), entry.comment);
+      assert(entry.apiTargets.includes('chat'), entry.comment);
+    }
+  }
+  assert.deepEqual(
+    new Set(
+      buildTriggerIds('script', {
+        invitation: { activity: 'walk', stageCount: 3 },
+        party: [{ id: 'official-edith', name: '伊蒂丝' }],
+      }),
+    ),
+    new Set(['official-edith', 'script:gal', 'script:invitation', 'script:invitation-acts-3']),
+  );
+  assert(
+    buildTriggerIds('summary', {
+      items: [
+        { id: 's1', kind: 'chat' },
+        { id: 's2', kind: 'invitation' },
+        { id: 's3', kind: 'dungeon' },
+        { id: 's4', kind: 'overland' },
+      ],
+    }).every((id) =>
+      ['summary:chat', 'summary:invitation', 'summary:dungeon', 'summary:overland'].includes(id),
+    ),
+  );
+  const library = newLibrary();
+  library.archives.npcs = [
+    { id: 'npc-gray', name: '灰伯', content: '港口老钟表匠。', recent: true },
+    { id: 'official-edith', name: '伊蒂丝', content: '重复测试' },
+  ];
+  library.summaryWorldbook = {
+    id: 'tavern-summary',
+    name: '总结世界书',
+    entries: {
+      99: {
+        comment: 'NPC角色条目：灰伯',
+        content: '旧摘要NPC',
+        key: ['灰伯'],
+        extensions: { wanxiang: { archivedNpcId: 'npc-gray' } },
+      },
+    },
+    extensions: { sources: { 'npc:npc-gray': { uid: 99 } } },
+  };
+  const summaryBook = syncSummaryWorldbook(library, []);
+  assert.equal(
+    Object.values(summaryBook.entries).some((entry) => /NPC角色条目/.test(entry.comment)),
+    false,
+  );
+  const mainBook = {
+    id: 'tavern-world',
+    name: '万象酒馆世界书',
+    entries: structuredClone(builtin.entries),
+  };
+  assert.equal(syncArchivedNpcEntries(mainBook, library.archives.npcs), true);
+  const npcEntries = Object.values(mainBook.entries).filter(
+    (entry) => entry.extensions?.wanxiang?.archivedNpcId,
+  );
+  assert.equal(npcEntries.length, 1);
+  assert.deepEqual(npcEntries[0].key, ['npc-gray', '灰伯']);
+});
+
+test('shared combat encyclopedia targets only design APIs, prunes obsolete EX entries, and blocks exclusive buffs', async () => {
+  const { characterGameReference } = await import('../src/ai/pipeline/game-reference.js');
+  const { characterOutputSchema } = await import('../src/ai/character-schema.js');
+  const { compileCharacterDesign, characterGenerationPlan } =
+    await import('../src/character-generation.js');
+  const { compileEquipmentDesign } = await import('../src/equipment-generation.js');
+  const { normalizeEnemy } = await import('../src/worlds.js');
+  const { worldFixture } = await import('./fixtures/multiverse.js');
+  const builtin = JSON.parse(
+    await readFile(new URL('../assets/builtin-worldbook.json', import.meta.url), 'utf8'),
+  );
+  const obsoleteBook = {
+    id: 'tavern-world',
+    entries: {
+      901: {
+        uid: 901,
+        content: '旧以太',
+        extensions: { wanxiang: { currencyRule: 'ether' } },
+      },
+      902: {
+        uid: 902,
+        content: '旧词典',
+        extensions: { wanxiang: { generationRule: 'status-emblems' } },
+      },
+      903: {
+        uid: 903,
+        content: '旧休整',
+        extensions: { wanxiang: { generationRule: 'battle-balance' } },
+      },
+      904: {
+        uid: 904,
+        content: '旧状态',
+        extensions: { wanxiang: { generationRule: 'town-guest-statuses' } },
+      },
+    },
+  };
+  const synced = syncBuiltinWorldbook(obsoleteBook, builtin);
+  for (const uid of [901, 902, 903, 904]) assert.equal(synced.entries[uid], undefined);
+  const encyclopedia = Object.values(synced.entries).find(
+    (entry) => entry.extensions?.wanxiang?.generationRule === 'combat-encyclopedia',
+  );
+  assert(encyclopedia);
+  assert.equal(encyclopedia.constant, true);
+  assert.deepEqual(encyclopedia.apiTargets, ['character', 'map', 'creation']);
+
+  const hasEncyclopedia = (kind) =>
+    scanWorldbooks({
+      books: [synced],
+      settings: normalizeWorldSettings({ globalSelect: [synced.id] }),
+      context: { kind, messages: [{ role: 'user', content: '测试' }] },
+      countTokens: (text) => text.length,
+    }).entries.some(
+      (entry) => entry.extensions?.wanxiang?.generationRule === 'combat-encyclopedia',
+    );
+
+  for (const kind of ['character', 'map', 'creation']) assert.equal(hasEncyclopedia(kind), true);
+  for (const kind of ['script', 'chat', 'summary']) assert.equal(hasEncyclopedia(kind), false);
+
+  const refIds = characterGameReference().statuses.map((item) => item.id);
+  for (const exclusive of ['meteor', 'balance', 'sacrifice']) assert(!refIds.includes(exclusive));
+  const schemaText = JSON.stringify(
+    characterOutputSchema({ plan: characterGenerationPlan({ complexity: 4 }) }),
+  );
+  for (const exclusive of ['meteor', 'balance', 'sacrifice'])
+    assert(!schemaText.includes(`"${exclusive}"`));
+
+  for (const exclusive of ['meteor', 'balance', 'sacrifice']) {
+    assert.throws(() =>
+      compileCharacterDesign({
+        schemaVersion: 4,
+        setting: {
+          name: '试作员',
+          gender: '女',
+          appearance: '短发。',
+          personality: '冷静。',
+          history: '来自港口的测绘员。',
+          attack: { name: '轻击', description: '攻击' },
+          skills: [
+            { name: '试作一', description: '造成伤害' },
+            { name: '试作二', description: '赋予状态' },
+          ],
+          entrySkill: { name: '入场', description: '入场技' },
+        },
+        data: {
+          archetype: 'lyria',
+          weapon: 'sword',
+          profile: 'balanced',
+          skills: [
+            {
+              kind: 'active',
+              ap: 1,
+              cost: 'low',
+              target: 'enemy',
+              effects: [{ type: 'damage', power: 'standard' }],
+            },
+            {
+              kind: 'active',
+              ap: 1,
+              cost: 'standard',
+              target: 'self',
+              effects: [{ type: 'buff', buff: exclusive, power: 'low' }],
+            },
+          ],
+          entrySkill: { target: 'opposite', effects: [{ type: 'damage', power: 'low' }] },
+        },
+      }),
+    );
+    assert.throws(() =>
+      compileEquipmentDesign(
+        {
+          design: {
+            statFocus: ['hp'],
+            rules: [
+              {
+                mode: 'event',
+                event: 'battleStart',
+                target: 'self',
+                conditions: [],
+                effects: [{ type: 'buff', buff: exclusive, power: 'low' }],
+              },
+            ],
+          },
+        },
+        { id: 'eq', name: '测试器', description: '测试', value: 120 },
+      ),
+    );
+    const enemy = {
+      ...structuredClone(worldFixture().enemies[0]),
+      id: `enemy-ex-${exclusive}`,
+      intents: [
+        {
+          name: '越界',
+          text: '专属状态',
+          slots: [0],
+          effects: [{ type: 'buff', buff: exclusive, value: 1, target: 'self' }],
+        },
+      ],
+    };
+    assert.throws(() => normalizeEnemy(enemy), /敌人状态无效/);
+  }
 });

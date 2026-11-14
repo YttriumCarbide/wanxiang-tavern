@@ -39,6 +39,7 @@ export function createShop(context) {
   let selected = Object.keys(ITEMS)[0];
   let fromPreparation = false;
   let department = 'items';
+  let ingredient = null;
   function render() {
     const inventory = context.session.ai.library.inventory;
     panel.querySelector('#shop-gold').innerHTML = html`<img
@@ -53,41 +54,37 @@ export function createShop(context) {
     panel.querySelector('#shop-categories').hidden = department === 'ingredients';
     if (department === 'ingredients') {
       const state = diningState(context.session.ai.library);
-      const rarities = ['常见', '优良', '珍稀', '传说'];
+      if (!state.stock.some(({ id }) => id === ingredient)) ingredient = state.stock[0]?.id;
       panel.querySelector('#shop-items').innerHTML = state.stock
         .map(({ id, left }) => {
           const food = INGREDIENTS[id];
-          return html`<button
-            data-food-buy="${id}"
-            ${!left || inventory.gold < food.price ? 'disabled' : ''}
-          >
+          return html`<button data-food-select="${id}" aria-pressed="${id === ingredient}">
             ${foodArt(food)}<strong>${food.name}</strong
-            ><small>${rarities[food.rarity]} · ${food.price} 金币 · 限购剩余 ${left}</small>
+            ><small>${food.price} 金币 · 库存 ${left}</small>
           </button>`;
         })
         .join('');
-      panel.querySelector('#shop-detail').innerHTML = html`<h3>今日食材</h3>
-        <p>完成一场战斗后刷新五种食材。原料可在吧台或圆桌制作菜肴，部分食物可以直接享用。</p>
-        <p>常见60% · 优良28% · 珍稀10% · 传说2%</p>
-        <h4>食材篮</h4>
-        <div class="ingredient-basket">
-          ${
-            Object.values(INGREDIENTS)
-              .filter((food) => state.inventory[food.id])
-              .map(
-                (food) =>
-                  html`<span>${foodArt(food)}${food.name} × ${state.inventory[food.id]}</span>`,
-              )
-              .join('') || '食材篮还是空的'
-          }
-        </div>
-        <button data-food-dine>去准备一桌饭菜</button>`;
+      const food = INGREDIENTS[ingredient];
+      const left = state.stock.find(({ id }) => id === ingredient)?.left || 0;
+      panel.querySelector('#shop-detail').innerHTML = food
+        ? html`
+            <div class="shop-art">${foodArt(food)}</div>
+            <h3>${food.name}</h3>
+            <small class="shop-stock"
+              >背包中 ${state.inventory[food.id] || 0} · 限购剩余 ${left}</small
+            >
+            <button
+              class="primary"
+              data-food-buy="${food.id}"
+              ${left && inventory.gold >= food.price ? '' : 'disabled'}
+            >
+              购买 <b>${food.price}</b><img src="./assets/icons/gold.svg" alt="金币" />
+            </button>
+            ${['buy', 'cook'].includes(state.tutorial) ? '<button data-food-dine>准备饭菜</button>' : ''}
+          `
+        : '<p>当前暂无食材。</p>';
       panel.querySelector('#shop-status').textContent =
-        state.tutorial === 'buy'
-          ? '教学：购买乡村面包与奶酪，再点击“去准备一桌饭菜”。'
-          : state.tutorial === 'cook'
-            ? '食材齐了，可以制作旅人奶酪拼盘。'
-            : '点击食材购买一份 · 库存随存档保存';
+        state.tutorial === 'buy' ? '购买乡村面包与奶酪。' : '';
       return;
     }
     panel.querySelector('#shop-categories').innerHTML = Object.entries(categories)
@@ -152,6 +149,11 @@ export function createShop(context) {
       context.dining.open();
       return;
     }
+    const selectedFood = event.target.closest('[data-food-select]');
+    if (selectedFood) {
+      ingredient = selectedFood.dataset.foodSelect;
+      return render();
+    }
     const food = event.target.closest('[data-food-buy]');
     if (food) {
       try {
@@ -159,6 +161,8 @@ export function createShop(context) {
         context.generation.save();
         context.audio.play('exchange');
         render();
+        panel.querySelector('#shop-status').textContent =
+          `${INGREDIENTS[food.dataset.foodBuy].name} +1 · 已放入背包`;
       } catch (failure) {
         panel.querySelector('#shop-status').textContent = failure.message;
       }

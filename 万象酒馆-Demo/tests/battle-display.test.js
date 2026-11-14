@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { resourceText } from '../src/resource-text.js';
 import { finalSkillText } from '../src/skill-text.js';
-import { upgradeBattleDisplayRules } from '../src/ai/battle-display-rules.js';
+import { syncBuiltinWorldbook } from '../src/ai/worldbook.js';
 import { newExploration, explorationSpec } from '../src/exploration.js';
 import { generationInput } from '../src/ai/pipeline/prompts.js';
 import { newLibrary } from '../src/ai/library.js';
@@ -42,7 +42,7 @@ test('every battle shares its selected dungeon location, and AI receives no per-
   }
 });
 
-test('display guidance migrates once without overwriting edits or re-enabling disabled rules', () => {
+test('display guidance syncs once without re-enabling disabled rules', () => {
   const source = {
     entries: {
       1: {
@@ -52,10 +52,16 @@ test('display guidance migrates once without overwriting edits or re-enabling di
       },
     },
   };
-  const guidance = '【战斗说明用语与地点】\nhp/sp';
-  const updated = upgradeBattleDisplayRules(source, guidance);
-  assert(updated.entries[1].content.startsWith('用户自定义'));
+  const builtin = {
+    entries: {
+      1: {
+        content: '【战斗说明用语与地点】\nhp/sp',
+        extensions: { wanxiang: { generationRule: 'script-output' } },
+      },
+    },
+  };
+  const updated = syncBuiltinWorldbook(source, builtin);
   assert.equal(updated.entries[1].disable, true);
-  assert.deepEqual(upgradeBattleDisplayRules(updated, guidance), updated);
+  assert.deepEqual(syncBuiltinWorldbook(updated, builtin), updated);
   assert.equal(source.entries[1].content, '用户自定义');
 });

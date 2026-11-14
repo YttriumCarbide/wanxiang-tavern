@@ -3,6 +3,16 @@ import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { normalizePromptPreset } from '../src/ai/presets.js';
 
+const DEFAULT_PRESET_IDS = [
+  'character-default',
+  'script-default',
+  'chat-default',
+  'quick-chat-default',
+  'map-default',
+  'creation-default',
+  'summary-default',
+];
+
 export async function createPromptStore(directory) {
   await mkdir(directory, { recursive: true });
   const fileFor = (id) => {
@@ -10,16 +20,7 @@ export async function createPromptStore(directory) {
     return path.join(directory, id + '.json');
   };
   async function get(id) {
-    const builtin =
-      !id ||
-      [
-        'character-default',
-        'script-default',
-        'chat-default',
-        'quick-chat-default',
-        'map-default',
-        'creation-default',
-      ].includes(id);
+    const builtin = !id || DEFAULT_PRESET_IDS.includes(id);
     const raw = JSON.parse(
       await readFile(
         builtin
@@ -38,17 +39,7 @@ export async function createPromptStore(directory) {
       for (const name of await readdir(directory)) {
         if (!name.endsWith('.json')) continue;
         const id = name.slice(0, -5);
-        if (
-          [
-            'character-default',
-            'script-default',
-            'chat-default',
-            'quick-chat-default',
-            'map-default',
-            'creation-default',
-          ].includes(id)
-        )
-          continue;
+        if (DEFAULT_PRESET_IDS.includes(id)) continue;
         try {
           const { preset, warnings } = await get(id);
           result.push({ id, name: preset.name, warnings, builtin: id.endsWith('-default') });
@@ -72,17 +63,7 @@ export async function createPromptStore(directory) {
       return result;
     },
     async delete(id) {
-      if (
-        [
-          'character-default',
-          'script-default',
-          'chat-default',
-          'quick-chat-default',
-          'map-default',
-          'creation-default',
-        ].includes(id)
-      )
-        throw Error('默认预设可以编辑，但不能删除');
+      if (DEFAULT_PRESET_IDS.includes(id)) throw Error('默认预设可以编辑，但不能删除');
       await unlink(fileFor(id));
     },
   };

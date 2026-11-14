@@ -1,4 +1,5 @@
 import { explorationSpec } from '../exploration.js';
+import { isQuestRecruit } from '../summoning.js';
 import { needsContinuationWorld } from '../continuation-world.js';
 import {
   validateServiceAccount,
@@ -37,6 +38,7 @@ import { createModelPicker } from './model-picker.js';
 import { createAiPresetEditor } from './ai-presets.js';
 import { createGenerationDiagnostics } from './generation-diagnostics.js';
 import { createWorldbookEditor } from './worldbook-editor.js';
+import { syncSummaryWorldbook, syncArchivedNpcEntries } from '../ai/journey-memory-worldbook.js';
 import {
   characterWorldEntry,
   characterEntryCategory,
@@ -53,7 +55,7 @@ import {
 import { completeExploration } from '../exploration.js';
 import { REGIONS } from '../content/regions.js';
 import { assignParty, firstCompanion } from '../campaign.js';
-import { archiveTavernPrelude, memoryHistory, tavernPrelude } from '../memory.js';
+import { archiveTavernPrelude, gameTime, memoryHistory, tavernPrelude } from '../memory.js';
 import { developerOption } from '../generation-options.js';
 import { prepareSwapLesson } from '../companion-events.js';
 import { rearUnlocked } from '../formation-access.js';
@@ -125,6 +127,7 @@ export function createGeneration(context) {
     context.summoning?.refresh();
     context.shell.syncInnVisitors();
     try {
+      syncSummaryWorldbook(library());
       storage.setItem(libraryKey, JSON.stringify(library()));
       context.saves?.autoSave?.('游戏进度保存');
       return true;
@@ -189,6 +192,9 @@ export function createGeneration(context) {
           char.setting.edited = true;
           save();
         }
+      }
+      if (syncArchivedNpcEntries(book, library().archives?.npcs)) {
+        dirty = true;
       }
       if (dirty) {
         await api('worldbooks/save', { id: 'tavern-world', book });
@@ -525,6 +531,7 @@ export function createGeneration(context) {
         library(),
         [
           $('#ai-script-brief').value,
+          session.ai.scriptGuidance,
           node?.continuation,
           ...library()
             .tavernChat.slice(-6)
@@ -540,15 +547,10 @@ export function createGeneration(context) {
         )
         .slice(-3)
         .map((book) => ({ title: book.title })),
-      brief: [
+      brief:
         $('#ai-script-brief').value.trim() ||
-          '让故事随旅程逐渐推进，并留下伏笔。文风、视角、节奏与描写方式沿用当前预设。',
-        session.ai.scriptGuidance
-          ? '本次玩家引导方向（须遵守世界观与已有事实）：' + session.ai.scriptGuidance
-          : '',
-      ]
-        .filter(Boolean)
-        .join('\n'),
+        '让故事随旅程逐渐推进，并留下伏笔。文风、视角、节奏与描写方式沿用当前预设。',
+      playerIntent: session.ai.scriptGuidance,
       boss: node
         ? explorationSpec(node, 4).enemyIds.find(
             (id) => (node.world?.enemyDefinitions[id] || DEFINITIONS[id])?.boss,
@@ -579,6 +581,33 @@ export function createGeneration(context) {
   }
   function inputFor(kind) {
     if (['chat', 'quick-chat'].includes(kind)) return context.chat.input(kind, '你好。');
+    if (kind === 'summary')
+      return {
+        items: [
+          {
+            id: 'preview:0',
+            kind: 'chat',
+            label: '示例记忆片段',
+            place: '酒馆大厅',
+            people: ['伊蒂丝', '潘多拉'],
+            text: '玩家坐在吧台旁向潘多拉和伊蒂丝打听下一次外出探测的时间。伊蒂丝约定次日清晨在侧门汇合。',
+          },
+        ],
+      };
+    if (kind === 'map') return { brief: '预览一座漂浮在云海裂隙间的旧时钟塔世界。' };
+    if (kind === 'creation')
+      return {
+        items: [
+          {
+            id: 'preview-relic',
+            name: '碎钟齿轮',
+            description: '一枚仍带余温的旧黄铜齿轮',
+            value: 30,
+            map: 'ruins',
+            script: '旅人从破碎钟楼石台下拾起这枚微热的齿轮。',
+          },
+        ],
+      };
     return kind === 'character'
       ? {
           brief:
@@ -604,6 +633,7 @@ export function createGeneration(context) {
     events,
     api,
     inputFor,
+    savePrivate: save,
     onSaved(book) {
       let updated = false;
       for (const entry of Object.values(book?.entries || {})) {
@@ -679,6 +709,7 @@ export function createGeneration(context) {
     }
   }
   async function recruit(entry, arrivalDialogue, npcId) {
+    if (isQuestRecruit(library(), entry.setting.name)) throw Error('此角色通过任务招募');
     if (library().characters.length >= 100) throw Error('角色池已满（100名）');
     if (library().characters.some((member) => member.id === entry.id))
       throw Error('这个角色已经加入酒馆');
@@ -1142,6 +1173,7 @@ export function createGeneration(context) {
           scriptId: book.id,
           title: book.title,
           tags: [...(book.tags || [])],
+          gameTime: gameTime(library().daily),
           setting: book.setting,
           lines: prelude,
           place: book.exploration ? explorationSpec(book.exploration).name : REGIONS.ruins.name,

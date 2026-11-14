@@ -64,3 +64,31 @@ export function scaleMoveEffects(effects, scale, bonus = 0) {
     };
   });
 }
+
+const LEVEL_SCALED_EFFECTS = new Set(['heal', 'selfHeal', 'shield', 'selfShield']);
+const DOT_STATUSES = new Set(['poison', 'bleed']);
+
+function scaledAmount(value, factor) {
+  const scaled = Math.round(value * factor);
+  return value > 0 ? Math.max(1, scaled) : scaled;
+}
+
+/** Scale damage, direct recovery/shield, numeric DoTs and mana effects for level. */
+export function scaleLevelEffects(effects, scale, bonus = 0) {
+  if (!effects?.length || (scale === 1 && !bonus)) return effects;
+  const manaScale = Math.sqrt(scale);
+  return scaleMoveEffects(effects, scale, bonus).map((effect) => {
+    if (effect.flat) return effect;
+    if (LEVEL_SCALED_EFFECTS.has(effect.type) && !effect.maxHpPercent)
+      return {
+        ...effect,
+        value: scaledAmount(effect.value, scale),
+        ...(effect.perMark ? { perMark: scaledAmount(effect.perMark, scale) } : {}),
+      };
+    if (['mana', 'selfMana'].includes(effect.type) && !effect.maxMpPercent)
+      return { ...effect, value: scaledAmount(effect.value, manaScale) };
+    if (effect.type === 'buff' && DOT_STATUSES.has(effect.buff))
+      return { ...effect, value: scaledAmount(effect.value, scale) };
+    return effect;
+  });
+}

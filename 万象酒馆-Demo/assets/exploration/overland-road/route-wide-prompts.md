@@ -52,3 +52,9 @@ Recompose the ninth stage of this road into a different but geographically adjac
 
 Image 1 is the existing capital exterior gate to extend to 3:1. Preserve its recognizable closed timber double doors, the pair of blue-roofed octagonal gate towers, teal banners, intact limestone walls and their existing skyline. Keep the core architecture faithful, widening the same scene with surrounding walls and grass, not inventing another scene or another gate. The well-maintained paved road comes in from the left foreground and continues across the approach to the closed gate roughly at center-right; visible paved ground around x=32% and the door end around x=58–65%. This is the endpoint with the gate shut. Keep close gate scale and natural perspective, not a distant view from the countryside. Image 2 is a quality reference.
 
+## road-bridge-wide-night.png 与 road-reeds-wide-night.png
+
+以双拱石桥和芦苇浅滩各自的日景长图为参考，单独生成夜景。
+
+Edit the supplied 3:1 game background to the same view at night. Preserve the entire framing, scale, horizon, approach paths, bridge arches or reed banks, and shoreline contours. Keep the original stone, vegetation, and water readable under deep blue night light and cool moon reflections. Match the existing hand-painted style. No people, lettering, UI, added architecture, or borders.
+

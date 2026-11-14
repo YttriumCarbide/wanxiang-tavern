@@ -72,7 +72,7 @@ export function createRecords(context) {
     const tags = document.createElement('small');
     const original = dungeonMemoryText(record);
     const summary = restoredSummary(record.summary, original);
-    tags.textContent = `关键词：${summary ? (summary.keywords || []).filter(Boolean).join('、') || '无' : '待总结'}`;
+    tags.textContent = `${record.gameTime ? record.gameTime + ' · ' : ''}关键词：${summary ? (summary.keywords || []).filter(Boolean).join('、') || '无' : '待总结'}`;
     area.append(tags);
     const showingSummary = !!summary && view !== 'original';
     const information = document.createElement('p');
@@ -320,11 +320,17 @@ export function createRecords(context) {
       .filter(Boolean)
       .map(
         (source) =>
-          `来自《${source.title}》· 地图 ${REGIONS[source.map || entry.map || 'ruins']?.name || source.map || entry.map || '遗迹'} · 第 ${source.encounter + 1} 战`,
+          `来自《${source.title}》· 地图 ${REGIONS[source.map || entry.map || 'ruins']?.name || source.map || entry.map || '遗迹'} · ${Number.isInteger(source.encounter) ? `第 ${source.encounter + 1} 战` : '城外行程'}`,
       )
       .join('\n');
-    if (tab === 'items')
-      sources.textContent += `\n价值 ${entry.value} 以太 · ${entry.converted ? '已折算' : '未折算'}`;
+    if (tab === 'items') {
+      const qual =
+        { common: '普通', uncommon: '精良', rare: '稀有', epic: '史诗', legendary: '传说' }[
+          entry.quality
+        ] || '';
+      const meta = [entry.level ? `Lv.${entry.level}` : '', qual].filter(Boolean).join(' · ');
+      sources.textContent += `\n${meta ? meta + ' · ' : ''}价值 ${entry.value} 以太 · ${entry.converted ? '已折算' : '未折算'}`;
+    }
     const save = document.createElement('button');
     save.textContent = '保存修改';
     const allowed =

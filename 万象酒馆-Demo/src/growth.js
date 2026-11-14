@@ -1,9 +1,9 @@
 import { applyEquipment } from './equipment.js';
-import { finalSkillText } from './skill-text.js';
+import { finalPassiveText, finalSkillText } from './skill-text.js';
 import { characterGenerationPlan } from './character-generation.js';
 import { applyEmblemStats } from './emblems.js';
 import { applyCompanionModifiers } from './companion-mechanics.js';
-import { combatScale, scaleMoveEffects } from './combat-scale.js';
+import { combatScale, scaleLevelEffects } from './combat-scale.js';
 /** Persistent growth is separate from authored combat definitions and battle snapshots. */
 export const RARITIES = Object.freeze({
   common: {
@@ -91,19 +91,21 @@ export function grownCombat(member) {
   combat.attack = Math.round(combat.attack * scale);
   combat.limit = Math.min(2, combat.limit + growth.bonus.limit);
   for (const skill of [...combat.skills, combat.entrySkill].filter(Boolean)) {
-    if (skill.passive) continue;
+    if (skill.passive) {
+      if (scale === 1) continue;
+      if (skill.endHeal) skill.endHeal = Math.max(1, Math.round(skill.endHeal * scale));
+      if (skill.rules)
+        skill.rules = skill.rules.map((rule) => ({
+          ...rule,
+          effects: scaleLevelEffects(rule.effects, scale),
+        }));
+      skill.text = finalPassiveText(skill, combat.mechanicMark?.name);
+      continue;
+    }
     const costs = grownSkillCosts(skill, growth.bonus.manaCost, member.id);
     if (skill.mp) skill.mp = costs.mp;
     if (skill.hp) skill.hp = Math.round(costs.hp * scale);
-    skill.effects = scaleMoveEffects(skill.effects, scale).map((effect) =>
-      ['heal', 'selfHeal', 'shield', 'selfShield'].includes(effect.type) && !effect.maxHpPercent
-        ? {
-            ...effect,
-            value: Math.round(effect.value * scale),
-            ...(effect.perMark ? { perMark: Math.round(effect.perMark * scale) } : {}),
-          }
-        : effect,
-    );
+    skill.effects = scaleLevelEffects(skill.effects, scale);
     skill.text = finalSkillText(skill, combat.mechanicMark?.name);
   }
   return combat;

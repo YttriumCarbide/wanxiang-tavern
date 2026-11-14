@@ -3,11 +3,12 @@ import { query as $ } from './dom.js';
 import { createEventScope } from '../shared/events.js';
 import { archiveMilestone } from '../archives.js';
 import { readableGalText } from '../gal.js';
-import { archiveTavernPrelude } from '../memory.js';
+import { archiveTavernPrelude, gameTime } from '../memory.js';
 
 function completeStoryRecord(library, book, record) {
   record.complete = true;
   record.finishedAt ||= Date.now();
+  record.gameTime ||= gameTime(library.daily);
   archiveTavernPrelude(library, book.generationInput?.tavernPrelude);
   record.nextHook = book.nextHook;
   library.chapter = Math.max(library.chapter, book.chapter + 1);

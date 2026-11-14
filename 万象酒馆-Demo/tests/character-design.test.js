@@ -3,7 +3,8 @@ import { readGenerationResult } from '../server/generation-result.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { OFFICIAL_SETTINGS } from '../src/content/official-characters.js';
-import { HEROES, BUFFS } from '../src/data.js';
+import { HEROES } from '../src/data.js';
+import { GENERATED_BUFFS } from '../src/triggers.js';
 import { formatCharacterSetting } from '../src/ai/character-setting.js';
 import { createWorldbookCounter, createCharacterReader } from '../server/character-reader.mjs';
 import {
@@ -136,13 +137,13 @@ test('age is optional free lore and accepts prose, numbers, empty or missing val
 test('character request classifies canon, design, complete mechanics and current intent into distinct sections', async () => {
   const messages = await generationMessages('character', { brief: '光明水晶法师', existing: [] });
   const context = requestContext(messages);
-  assert(context.world.location.includes('多元宇宙裂缝'));
-  assert(context.world.purpose.includes('下一任酒馆主人'));
-  assert(context.world.summoning.includes('四周变白'));
+  assert(context.world.location.includes('艾尔特拉'));
+  assert(context.world.purpose.includes('现任酒馆主人'));
+  assert(context.world.summoning.includes('白光'));
   assert.deepEqual(context.design.settingTextTokens, [1000, 1500]);
   assert.deepEqual(
     context.mechanics.statuses.map((entry) => entry.id).sort(),
-    Object.keys(BUFFS).sort(),
+    GENERATED_BUFFS.slice().sort(),
   );
   assert.deepEqual(context.mechanics.passives.locations, ['前场', '后场', '全战斗', '战斗外']);
   assert.equal(context.request.brief, '光明水晶法师');

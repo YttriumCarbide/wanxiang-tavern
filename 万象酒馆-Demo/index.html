@@ -434,7 +434,7 @@
             <section class="memory-settings">
               <h3>经历与聊天记忆</h3>
               <p>
-                手动总结尚未处理的记录，检查并确认后用于后续上下文。完整原文保留，总结API使用内置提示词。
+                手动总结尚未处理的记录，检查并确认后用于后续上下文。完整原文保留，可在“提示词”和“世界书”自定义总结预设与规则。
               </p>
               <p>顶部“总结”按钮可打开记忆整理。</p>
             </section>
@@ -451,6 +451,7 @@
                 <option value="quick-chat">快速闲聊 API</option>
                 <option value="map">地图 API</option>
                 <option value="creation">以太造物 API</option>
+                <option value="summary">记忆总结 API</option>
               </select></label
             >
             <label>提示词预设<select id="prompt-select"></select></label>
@@ -748,6 +749,7 @@
     <dialog id="world-dialog" aria-labelledby="world-title">
       <header class="world-book-heading">
         <h2 id="world-title">🌐 世界书</h2>
+        <select id="world-book-select" aria-label="选择世界书"></select>
         <input autocomplete="off" id="world-name" aria-label="世界书名称" maxlength="100" /><button
           id="world-import"
           title="导入条目"
@@ -778,8 +780,12 @@
         ><span id="world-count"></span>
       </div>
       <div class="world-format-links">
-        <span>输出格式</span><button data-world-format="character">角色格式 · @D</button
-        ><button data-world-format="script">剧本格式 · @D</button>
+        <span>输出格式</span><button data-world-format="character">角色 · @D</button
+        ><button data-world-format="script">剧本 · @D</button
+        ><button data-world-format="chat">聊天 · @D</button
+        ><button data-world-format="map">地图 · @D</button
+        ><button data-world-format="creation">以太 · @D</button
+        ><button data-world-format="summary">总结 · @D</button>
       </div>
       <div class="world-workspace">
         <div class="world-table-labels world-row-grid">
@@ -800,7 +806,8 @@
             <option value="chat">酒馆交流 API</option>
             <option value="quick-chat">快速闲聊 API</option>
             <option value="map">地图 API</option>
-            <option value="creation">以太造物 API</option></select
+            <option value="creation">以太造物 API</option>
+            <option value="summary">记忆总结 API</option></select
           ><button id="world-preview-button">最终发送预览 / TK</button
           ><button id="world-edit-view" hidden>返回编辑</button>
         </div>

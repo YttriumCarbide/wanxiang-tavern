@@ -30,9 +30,6 @@ export function browserJobs(scopes, results, root) {
   simple('street', 'street', 'streetChecks');
   simple('exploration-grounding', 'exploration-grounding', 'explorationGroundingChecks');
   simple('starbell', 'starbell', 'starbellChecks');
-  simple('starbell-story', 'starbell-story', 'starbellStoryChecks');
-  simple('chapter-ui', 'chapter-ui', 'chapterUiChecks');
-  simple('chapter-battle', 'chapter-ui', 'chapterBattleChecks');
   simple('scene-loading', 'scene-loading', 'sceneLoadingChecks');
   simple('scene-visitors', 'scene-visitors', 'sceneVisitorChecks');
   simple('city-center', 'city-center', 'cityCenterChecks');

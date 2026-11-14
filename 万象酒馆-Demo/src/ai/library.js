@@ -4,6 +4,8 @@ import { restoreDaily } from '../daily.js';
 import { restoreTetris } from '../tetris.js';
 import { upgradeLegacyStatuses } from '../status-rules.js';
 import { restoreWorlds } from '../worlds.js';
+import { restoreDiscoveries } from '../atlas-discoveries.js';
+import { restoreTavernQuests } from '../tavern-quests.js';
 import { EMBLEMS, applyEmblemStats } from '../emblems.js';
 import { grownCombat, restoreGrowth } from '../growth.js';
 import { restoreEquipment, applyEquipment, equippedDefinitions } from '../equipment.js';
@@ -23,8 +25,6 @@ import { restoreInventory } from '../rewards.js';
 import { restoredSummary, conversationText, restoreInvitationHistory } from '../memory.js';
 import { restoreArchives, hydrateArchiveMaps } from '../archives.js';
 import { defaultProtagonist } from '../content/qingyuan.js';
-import { restoreStarbell } from '../chapters/starbell-state.js';
-import { chapterCompanion, CHAPTER_NPCS } from '../chapters/starbell-content.js';
 
 export function newLibrary() {
   return createLibrary(loadCustomPortraits());
@@ -36,14 +36,15 @@ function createLibrary(customPortraits) {
     workshop: null,
     dining: restoreDining(),
     daily: restoreDaily(),
-    starbell: restoreStarbell(),
     statusRevision: 36,
     enabled: false,
     chapter: 1,
     history: [],
     invitationHistory: [],
     tavernChat: [],
+    journeyActivities: [],
     archives: restoreArchives(),
+    summaryWorldbook: null,
     relationships: {},
     prepared: null,
     inventory: restoreInventory(),
@@ -51,6 +52,8 @@ function createLibrary(customPortraits) {
     experienceClaims: [],
     equipment: restoreEquipment(),
     worlds: [],
+    atlasDiscoveries: [],
+    tavernQuests: [],
     emblems: [],
     refinedNpcs: [],
     progression: {
@@ -200,13 +203,14 @@ export function restoreLibrary(value) {
   library.workshop = value.workshop?.version === 1 ? structuredClone(value.workshop) : null;
   library.dining = restoreDining(value.dining);
   library.daily = restoreDaily(value.daily);
-  library.starbell = restoreStarbell(value.starbell);
   const campaign = [1, 2, 3].includes(value.campaign?.version);
   if (campaign) {
     library.characters = [];
     library.party = Array(6).fill(null);
   }
   library.worlds = restoreWorlds(value.worlds);
+  library.atlasDiscoveries = restoreDiscoveries(value.atlasDiscoveries, library.worlds);
+  library.tavernQuests = restoreTavernQuests(value.tavernQuests);
   if (value.statusRevision !== 36)
     for (const world of library.worlds)
       for (const enemy of Object.values(world.enemyDefinitions)) upgradeLegacyStatuses(enemy);
@@ -215,7 +219,25 @@ export function restoreLibrary(value) {
     library.exploration = restoreExploration(value.exploration, 17371, library.worlds);
   library.archives = restoreArchives(value.archives);
   library.relationships = structuredClone(value.relationships || {});
+  if (value.summaryWorldbook?.entries)
+    library.summaryWorldbook = structuredClone(value.summaryWorldbook);
   library.invitationHistory = restoreInvitationHistory(value.invitationHistory);
+  library.journeyActivities = (
+    Array.isArray(value.journeyActivities) ? value.journeyActivities : []
+  )
+    .filter(
+      (entry) =>
+        ['service', 'outing', 'promotion'].includes(entry?.kind) &&
+        typeof entry.title === 'string' &&
+        Number.isFinite(entry.finishedAt),
+    )
+    .slice(-100)
+    .map(({ kind, title, gameTime, finishedAt }) => ({
+      kind,
+      title: title.slice(0, 250),
+      gameTime: String(gameTime || '').slice(0, 60),
+      finishedAt,
+    }));
   library.tavernChat = (Array.isArray(value.tavernChat) ? value.tavernChat : [])
     .filter(
       (message) =>
@@ -236,6 +258,7 @@ export function restoreLibrary(value) {
         divider,
         journeyArchived,
         outing,
+        gameTime,
       } = message;
       const validSummary = restoredSummary(summary, content);
       const player = messages[index - 1];
@@ -250,6 +273,7 @@ export function restoreLibrary(value) {
         ...(divider ? { divider: true } : {}),
         ...(journeyArchived ? { journeyArchived: true } : {}),
         ...(outing ? { outing: true } : {}),
+        ...(typeof gameTime === 'string' ? { gameTime: gameTime.slice(0, 60) } : {}),
         ...(validSummary ? { summary: validSummary } : {}),
         ...(validTurn ? { turnSummary: validTurn } : {}),
         ...(typeof display === 'string' && display.length <= 200000 ? { display } : {}),
@@ -315,22 +339,6 @@ export function restoreLibrary(value) {
       ].slice(-2000)
     : [];
   for (const entry of Array.isArray(value.characters) ? value.characters.slice(0, 100) : []) {
-    if (entry.source === 'chapter' && entry.id?.startsWith('starbell-')) {
-      const key = entry.id.slice(9);
-      if (
-        CHAPTER_NPCS[key] &&
-        library.starbell.recruited.includes(key) &&
-        !library.characters.some((member) => member.id === entry.id)
-      ) {
-        library.characters.push({
-          ...chapterCompanion(key),
-          growth: restoreGrowth(entry.growth, entry.id),
-          equipment: structuredClone(entry.equipment || []),
-          ...(entry.emblemId && EMBLEMS[entry.emblemId] ? { emblemId: entry.emblemId } : {}),
-        });
-      }
-      continue;
-    }
     if (entry.source === 'official') {
       const official = [
         'official-pandora',
@@ -398,6 +406,10 @@ export function restoreLibrary(value) {
           .filter((tag) => typeof tag === 'string' && tag.length <= 60)
           .slice(0, 30);
       if (entry.display) restored.display = structuredClone(entry.display);
+      if (entry.questRecruit === true) {
+        restored.questRecruit = true;
+        restored.combat.portrait = 'unknown-card.png';
+      }
       if (
         (restored.setting?.name === '青缘' || restored.id === 'character-qingyuan') &&
         (!restored.combat.entrySkill || !restored.setting.entrySkill)

@@ -17,7 +17,9 @@ async function scripts(directory) {
 }
 async function contracts() {
   for (const folder of [root, path.dirname(root)]) {
-    for (const name of ['一键启动.cmd', '一键关闭.cmd']) {
+    const names = ['一键启动.cmd', '一键关闭.cmd'];
+    if (folder !== root) names.push('一键启动工坊修改器.cmd');
+    for (const name of names) {
       const bytes = await readFile(path.join(folder, name));
       assert(
         bytes.every((byte) => byte < 128),
@@ -84,12 +86,13 @@ async function contracts() {
     'guest-room.html',
     'master-bedroom.html',
     'artbook.html',
+    'tools/workshop-editor.html',
   ]) {
     const html = await readFile(path.join(root, page), 'utf8');
     assert(!/<style[>\s]/.test(html), `${page}: inline style block`);
     assert(!/<script type="module">/.test(html), `${page}: inline executable module`);
-    for (const match of html.matchAll(/(?:src|href)="(\.\/[^"?#]+)[^"]*"/g))
-      await access(path.resolve(root, match[1]));
+    for (const match of html.matchAll(/(?:src|href)="(\.\.?\/[^"?#]+)[^"]*"/g))
+      await access(path.resolve(path.dirname(path.join(root, page)), match[1]));
   }
   for (const name of [
     'inn',

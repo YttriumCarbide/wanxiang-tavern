@@ -1,7 +1,12 @@
 import { escapeText } from '../ui.js';
 import { overlandOrigin, overlandPlan, overlandRunPlan } from '../overland-travel.js';
+import { archiveOverlandLoot, dungeonLoot, settleEther } from '../archives.js';
+import { gameTime } from '../memory.js';
 
-export function createOverlandTravel(context, { active, scene, navigate, save, render }) {
+export function createOverlandTravel(
+  context,
+  { active, intent, scene, navigate, save, render, spendTurns },
+) {
   const { session } = context;
   const owner = 'overland-travel';
   const outing = () =>
@@ -29,19 +34,24 @@ export function createOverlandTravel(context, { active, scene, navigate, save, r
     const entry = outing();
     let control;
     try {
-      const plan = overlandPlan(overlandOrigin(scene()), to);
-      if (plan.turns > entry.remaining)
-        throw Error(`需要 ${plan.turns} 回合，剩余 ${entry.remaining} 回合`);
+      const discovery = session.ai.library.atlasDiscoveries?.find(({ id }) => id === to);
+      const plan = overlandPlan(overlandOrigin(scene()), to, discovery);
       control = new AbortController();
       request = control;
       render();
+      const destination = plan.stages.at(-1).to.name;
+      const playerIntent = await intent.ask(
+        '确认外出路线',
+        `前往 ${destination} · ${plan.turns} 回合`,
+      );
+      if (playerIntent === null || outing() !== entry || control.signal.aborted) return;
       const party = partyIds().map((id) => {
         const member = session.ai.library.characters.find((item) => item.id === id);
         return { id, name: member.setting.name, setting: member.setting };
       });
       const result = await context.apiClient.request(
         'generate/script',
-        { overland: { from: plan.from, to: plan.to }, party },
+        { overland: { from: plan.from, to: plan.to, discovery }, party, playerIntent },
         { signal: control.signal },
       );
       if (outing() !== entry || control.signal.aborted) return;
@@ -49,9 +59,12 @@ export function createOverlandTravel(context, { active, scene, navigate, save, r
         id: crypto.randomUUID(),
         from: plan.from,
         to: plan.to,
+        ...(discovery ? { discovery } : {}),
         acts: result.acts,
+        ...(Array.isArray(result.items) && result.items.length ? { items: result.items } : {}),
         index: 0,
         phase: 'depart',
+        gameTime: gameTime(session.ai.library.daily),
       };
       save();
       resume();
@@ -69,9 +82,8 @@ export function createOverlandTravel(context, { active, scene, navigate, save, r
     const entry = outing();
     const leg = stage(current);
     if (current.phase === 'depart') {
-      if (entry.remaining < leg.turns) return settle(current, false);
-      entry.remaining -= leg.turns;
-      entry.scene = leg.to.id;
+      spendTurns(leg.turns);
+      entry.scene = leg.to.id === current.discovery?.id ? leg.from.id : leg.to.id;
       current.phase = 'intro';
       save();
     }
@@ -99,13 +111,16 @@ export function createOverlandTravel(context, { active, scene, navigate, save, r
             .filter(Boolean),
           complete: true,
           finishedAt: Date.now(),
+          gameTime: current.gameTime || gameTime(library.daily),
           lines: current.lines,
         });
       }
-      entry.scene = (won ? leg.to : leg.from).id;
+      const reachedDiscovery = won && leg.to.id === current.discovery?.id;
+      entry.scene = (won && !reachedDiscovery ? leg.to : leg.from).id;
       entry.overlandReached = true;
       delete entry.overland;
       if (continueNow) navigate(entry.scene);
+      if (reachedDiscovery) context.daily.arriveDiscovery(current.discovery.id);
       context.shell.toast(won ? `已抵达${leg.to.name}` : `行程结束，退回${leg.from.name}`);
     } else {
       current.index++;
@@ -124,7 +139,7 @@ export function createOverlandTravel(context, { active, scene, navigate, save, r
     if (
       !current ||
       reading ||
-      at !== stage(current).to.id ||
+      at !== outing().scene ||
       !['intro', 'outcome'].includes(current.phase) ||
       session.runtime.mode !== 'inn'
     )
@@ -138,7 +153,7 @@ export function createOverlandTravel(context, { active, scene, navigate, save, r
     reading = true;
     let complete = false;
     try {
-      await context.gal.play(text, {
+      const playback = context.gal.play(text, {
         owner,
         title: act.title,
         mandatory: true,
@@ -146,6 +161,8 @@ export function createOverlandTravel(context, { active, scene, navigate, save, r
           complete = true;
         },
       });
+      if (current.index === 0 && phase === 'intro') context.mapExpansion?.discover(current);
+      await playback;
     } finally {
       reading = false;
     }
@@ -173,7 +190,7 @@ export function createOverlandTravel(context, { active, scene, navigate, save, r
     } else if (current.phase === 'battle' && choice === 'fight' && !fighting) {
       fighting = true;
       try {
-        await context.journey.startChapterBattle({
+        await context.journey.startOverlandBattle({
           overland: { run: current.id, leg: leg.id, partyIds: partyIds() },
           returnScene: leg.to.id,
           spec: {
@@ -195,14 +212,27 @@ export function createOverlandTravel(context, { active, scene, navigate, save, r
     const current = run();
     const won = session.battle.state.phase === 'victory';
     if (!expedition.pendingResult) {
+      const leg = current ? stage(current) : null;
+      const runId = current && leg ? `overland:${current.id}:${leg.id}` : null;
+      if (won && runId && current?.items?.length) {
+        archiveOverlandLoot(session.ai.library, {
+          runId,
+          title: current.acts[current.index]?.title || leg.to?.name || '外出行程',
+          leg,
+          items: current.items,
+        });
+        if (!(await context.lootConflicts.resolve(runId))) return;
+      }
+      const loot = won && runId ? dungeonLoot(session.ai.library, runId) : [];
+      const ether = won && runId ? settleEther(session.ai.library, runId) : 0;
       expedition.status = won ? 'complete' : 'failed';
       expedition.pendingResult = {
         won,
         complete: true,
         encounter: 0,
         awards: expedition.experienceAwards || [],
-        ether: 0,
-        loot: [],
+        ether,
+        loot,
       };
       context.audio.play(won ? 'victory' : 'defeat');
       save();
@@ -213,11 +243,11 @@ export function createOverlandTravel(context, { active, scene, navigate, save, r
       backLabel: won ? '继续行程' : '退回上一站',
       back() {
         if (
-          current?.id === expedition.chapter.overland.run &&
-          stage(current).id === expedition.chapter.overland.leg
+          current?.id === expedition.overlandBattle.overland.run &&
+          stage(current).id === expedition.overlandBattle.overland.leg
         ) {
           settle(current, won, false);
-          expedition.chapter.returnScene = outing()?.scene;
+          expedition.overlandBattle.returnScene = outing()?.scene;
         }
         context.journey.returnInn();
         context.checkpoint.saveNow();

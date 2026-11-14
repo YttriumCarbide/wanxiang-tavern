@@ -45,7 +45,7 @@ export async function diningOnboardingChecks({ browser, baseURL, output }) {
     assert.equal(state.progression.pandoraJoined, true);
     assert.equal(state.daily.tutorial, 'planning');
     assert(
-      await page.locator('[data-daily="open"]').isVisible(),
+      await page.locator('[data-daily="service"]').isVisible(),
       'Pan rescue introduces the day planner',
     );
     await page.locator('[data-daily="meal"]').click();
@@ -57,7 +57,9 @@ export async function diningOnboardingChecks({ browser, baseURL, output }) {
       else await page.waitForTimeout(50);
     }
     assert.equal((await page.evaluate(() => demo.getLibrary())).dining.tutorial, 'buy');
+    await page.locator('[data-food-select="bread"]').click();
     await page.locator('[data-food-buy="bread"]').click();
+    await page.locator('[data-food-select="cheese"]').click();
     await page.locator('[data-food-buy="cheese"]').click();
     assert.equal((await page.evaluate(() => demo.getLibrary())).dining.tutorial, 'cook');
     await page.locator('[data-food-dine]').click();

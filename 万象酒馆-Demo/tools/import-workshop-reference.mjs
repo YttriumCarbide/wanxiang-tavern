@@ -130,8 +130,36 @@ export function resourceFields(text) {
   );
 }
 
+function scenePositions(scene) {
+  const positions = new Map();
+  for (const node of scene.split(/^\[node /m)) {
+    if (!node.startsWith('name=') || !node.split('\n', 1)[0].includes('parent="Canvas/World"'))
+      continue;
+    const id = /^entry_id = "([^"]+)"/m.exec(node)?.[1];
+    const kind = /^kind = "([^"]+)"/m.exec(node)?.[1];
+    const x = /^offset_left = (-?[\d.]+)/m.exec(node)?.[1];
+    const y = /^offset_top = (-?[\d.]+)/m.exec(node)?.[1];
+    if (id && kind && x !== undefined && y !== undefined)
+      positions.set(`${kind}:${id}`, { x: Number(x), y: Number(y) });
+  }
+  const left = Math.min(0, ...[...positions.values()].map(({ x }) => x));
+  const top = Math.min(0, ...[...positions.values()].map(({ y }) => y));
+  for (const position of positions.values()) {
+    position.x -= left - 24;
+    position.y -= top - 24;
+  }
+  return positions;
+}
+
 export async function importWorkshopReference(root) {
   const text = await readFile(path.join(root, 'data/config/cave/洞府目录.tres'), 'utf8');
+  const [productionPositions, researchPositions] = await Promise.all(
+    ['production', 'research'].map(async (page) =>
+      scenePositions(
+        await readFile(path.join(root, `scenes/pages/game/cave/cave_${page}_page.tscn`), 'utf8'),
+      ),
+    ),
+  );
   const references = new Map(
     [...text.matchAll(/\[ext_resource[^\n]*path="res:\/\/([^"]+)"[^\n]*id="([^"]+)"/g)].map(
       (match) => [match[2], match[1]],
@@ -190,7 +218,7 @@ export async function importWorkshopReference(root) {
     inputs: quantities(entry.inputs),
     seconds: entry.duration_seconds || 3,
     visibility: visibility(entry),
-    position: null,
+    position: productionPositions.get(`item:${entry.item_id}`) || null,
   }));
   function valueOf(id, seen = new Set()) {
     if (seen.has(id)) throw Error('参考物资配方形成循环：' + id);
@@ -244,6 +272,7 @@ export async function importWorkshopReference(root) {
     ),
     stations: (entry.required_stations || []).map((id) => rename(id, stationMap)),
     visibility: visibility(entry),
+    position: productionPositions.get(`station:${entry.station_id}`) || null,
   }));
   const technologies = research.map((entry, index) => ({
     id: rename(entry.research_id, researchMap),
@@ -275,7 +304,7 @@ export async function importWorkshopReference(root) {
       id: rename(rule.target_id, rule.type === 'station' ? stationMap : itemMap),
       level: rule.level || 1,
     })),
-    position: null,
+    position: researchPositions.get(`research:${entry.research_id}`) || null,
   }));
   const core = resourceFields(text);
   const upgrades = (core.core_upgrades || []).map((step) => ({
@@ -291,7 +320,6 @@ export async function importWorkshopReference(root) {
   return {
     version: 1,
     name: '星隙工坊',
-    currency: '工坊券',
     researchKey: 'clockwork-heart',
     items: products,
     stations: facilities,

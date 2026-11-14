@@ -264,13 +264,21 @@ export function explorationSpec(entry, index = 0) {
     ...(entry.replay && entry.recollection?.encounters?.[index]
       ? { enemyIds: [...entry.recollection.encounters[index].enemyIds] }
       : {}),
-    level: encounterLevel(entry),
+    level: encounterLevel(
+      entry.world?.baseLevel
+        ? { ...entry, level: entry.world.baseLevel + Math.floor(entry.sequence / 2) }
+        : entry,
+    ),
     growthSeed: entry.seed,
     growthEntry: {
       map: entry.map,
       sequence: entry.sequence,
       seed: entry.seed,
-      level: encounterLevel(entry),
+      level: encounterLevel(
+        entry.world?.baseLevel
+          ? { ...entry, level: entry.world.baseLevel + Math.floor(entry.sequence / 2) }
+          : entry,
+      ),
       tutorial: entry.tutorial,
       ...(entry.world ? { world: { id: entry.world.id } } : {}),
     },

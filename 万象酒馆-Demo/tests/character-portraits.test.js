@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile, mkdtemp, writeFile } from 'node:fs/promises';
+import { readFile, mkdtemp } from 'node:fs/promises';
 import path from 'node:path';
 import { HEROES } from '../src/data.js';
 import { newBattle, preview, makeAction } from '../src/engine.js';
@@ -54,8 +54,8 @@ test('official worldbook migration replaces only the former 格雷 entry and pre
   entry.content = '姓名：格雷\n职业：铁卫';
   entry.order = 321;
   entry.depth = 3;
+  delete entry.extensions?.wanxiang?.builtinHash;
   await store.save({ id: 'tavern-world', book });
-  await writeFile(path.join(directory, 'builtin-content.json'), JSON.stringify({ version: 9 }));
   const restored = await createWorldbookStore(directory);
   const updated = Object.values((await restored.get('tavern-world')).book.entries).find(
     (item) => item.uid === entry.uid,

@@ -1,4 +1,5 @@
 import { EMBLEMS } from '../emblems.js';
+import { EQUIPMENT_QUALITIES, clampEquipmentLevel, resolveEquipmentQuality } from '../equipment.js';
 import { escapeText } from '../ui.js';
 
 /** Styled picker delegates to the existing equipment change transaction. */
@@ -37,26 +38,49 @@ export function createEquipmentPicker(context, description) {
     panel.querySelector('h2').textContent = ring ? '选择纹章士戒指' : '选择装备';
     panel.querySelector('.equipment-picker-list').innerHTML = [...select.options]
       .map((option) => {
+        const instance =
+          !ring && option.value
+            ? library.equipment.owned.find((owned) => owned.id === option.value)
+            : null;
+        const template =
+          !ring && instance
+            ? library.equipment.catalog.find((entry) => entry.id === instance.templateId)
+            : null;
         const item = ring
           ? EMBLEMS[option.value]?.emblem
-          : library.equipment.catalog.find(
-              (entry) =>
-                entry.id ===
-                library.equipment.owned.find((owned) => owned.id === option.value)?.templateId,
-            );
+          : template && instance
+            ? {
+                ...template,
+                ...instance,
+                id: instance.id,
+                name: template.name,
+                flavor: template.flavor,
+                price: template.price,
+              }
+            : template;
+        const qualityKey = !ring && item ? resolveEquipmentQuality(item.quality, item.price) : '';
+        const qualityName = qualityKey ? EQUIPMENT_QUALITIES[qualityKey].name : '';
+        const level = !ring && item ? clampEquipmentLevel(item.level || 1) : 0;
         const wearer =
           ring && option.value
             ? library.characters.find((member) => member.emblemId === option.value)
             : null;
         const selected = select.value === option.value;
+        const badgeText = qualityKey
+          ? `Lv.${level} · ${qualityName}${
+              Number.isInteger(item.rollPercent) ? ` · 极品度 ${item.rollPercent}%` : ''
+            }`
+          : '';
         const note = wearer
           ? `✓ ${wearer.setting.name}正在装备${selected ? '' : ' · 点击转移'}`
           : selected
-            ? '✓ 当前选择'
+            ? badgeText
+              ? `✓ 当前选择 · ${badgeText}`
+              : '✓ 当前选择'
             : option.value
-              ? '可装备'
+              ? badgeText || '可装备'
               : '清空此位置';
-        return `<button type="button" data-picker-value="${escapeText(option.value)}" aria-pressed="${selected}"><span class="picker-seal">${option.value ? (ring ? '◉' : '✧') : '－'}</span><span><strong>${escapeText(item?.name || option.textContent.trim() || '卸下')}</strong><small>${escapeText(note)}</small>${item ? `<p>${escapeText(ring ? item.text : description(item))}</p>` : ''}</span><b>${selected || wearer ? '✓' : '›'}</b></button>`;
+        return `<button type="button" data-picker-value="${escapeText(option.value)}" data-quality="${qualityKey || 'none'}" aria-pressed="${selected}"><span class="picker-seal">${option.value ? (ring ? '◉' : '✧') : '－'}</span><span><strong>${escapeText(item?.name || option.textContent.trim() || '卸下')}</strong><small>${escapeText(note)}</small>${item ? `<p>${escapeText(ring ? item.text : description(item))}</p>` : ''}</span><b>${selected || wearer ? '✓' : '›'}</b></button>`;
       })
       .join('');
     select.closest('.prepare-gear-row,.prepare-emblem-row').after(panel);

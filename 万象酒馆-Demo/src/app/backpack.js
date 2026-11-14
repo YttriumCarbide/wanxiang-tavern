@@ -1,4 +1,6 @@
 import { ITEMS } from '../content/items.js';
+import { INGREDIENTS } from '../content/dining.js';
+import { foodArt } from './food-art.js';
 import { html } from '../shared/html.js';
 import { escapeText } from '../ui.js';
 
@@ -22,6 +24,47 @@ export function createBackpack(context) {
   panel.className = 'backpack-panel';
   panel.inert = true;
   document.querySelector('#battle').append(panel);
+  const innButton = document.createElement('button');
+  innButton.type = 'button';
+  innButton.textContent = '背包';
+  innButton.id = 'inn-backpack-open';
+  document.querySelector('#ai-open').before(innButton);
+  const innBag = document.createElement('dialog');
+  innBag.id = 'inn-backpack';
+  innBag.innerHTML =
+    '<header><h2>背包</h2><form method="dialog"><button aria-label="关闭背包">×</button></form></header><div class="inn-bag-content"></div>';
+  document.body.append(innBag);
+  function ingredients() {
+    const stock = session.ai.library.dining?.inventory || {};
+    return Object.values(INGREDIENTS)
+      .filter(({ id }) => stock[id] > 0)
+      .map(
+        (item) =>
+          html`<span
+            class="bag-item bag-ingredient"
+            aria-label="${item.name}，持有${stock[item.id]}"
+            >${foodArt(item)}<span>${item.name}</span
+            ><b class="bag-count">${stock[item.id]}</b></span
+          >`,
+      )
+      .join('');
+  }
+  events.on(innButton, 'click', () => {
+    const counts = session.ai.library.inventory.items || {};
+    const items = Object.values(ITEMS)
+      .filter(({ id }) => counts[id] > 0)
+      .map(
+        (item) =>
+          html`<span class="bag-item"
+            ><img src="${item.icon}" alt="" /><span>${item.name}</span
+            ><b class="bag-count">${counts[item.id]}</b></span
+          >`,
+      )
+      .join('');
+    innBag.querySelector('.inn-bag-content').innerHTML =
+      items + ingredients() || '<p>背包是空的。</p>';
+    if (!innBag.open) innBag.showModal();
+  });
   function close() {
     panel.classList.remove('expanded');
     panel.inert = true;
@@ -39,12 +82,11 @@ export function createBackpack(context) {
     panel.style.bottom = `${innerHeight - orb.top + 12}px`;
     if (!panel.classList.contains('expanded')) return;
     const counts = session.battle.forecast.final.items || {};
-    panel.querySelector('#backpack-items').innerHTML =
-      Object.values(ITEMS)
-        .filter((item) => counts[item.id] > 0)
-        .map(
-          (item) =>
-            html`<button
+    const usable = Object.values(ITEMS)
+      .filter((item) => counts[item.id] > 0)
+      .map(
+        (item) =>
+          html`<button
             class="bag-item"
             data-item="${item.id}"
             data-tooltip="${escapeText(item.name + '\n' + item.text + '\n1 AP · ' + (item.target === 'enemy' ? '敌方单体' : '我方单体'))}"
@@ -54,8 +96,10 @@ export function createBackpack(context) {
             <img width="64" height="64" src="${item.icon}" alt="" /
             ><span>${item.name}</span><b class="bag-count">${counts[item.id]}</b>
           </button>`,
-        )
-        .join('') || '<p class="bag-empty">背包里暂时没有道具</p>';
+      )
+      .join('');
+    panel.querySelector('#backpack-items').innerHTML =
+      usable + ingredients() || '<p class="bag-empty">背包里暂时没有道具</p>';
   }
   function choose(id) {
     const item = ITEMS[id];
@@ -154,6 +198,8 @@ export function createBackpack(context) {
       close();
       panel.remove();
       button.remove();
+      innBag.remove();
+      innButton.remove();
     },
   };
 }

@@ -1,7 +1,7 @@
 import { createRequestControls } from './request-controls.js';
 import { createGenerationAccess } from './generation-access.js';
 import { createBookshelf } from './bookshelf.js';
-import { createArcade } from './arcade.js';
+import { createWorkshop } from './workshop.js';
 import { createEmblems } from './emblems.js';
 import { mountDisplay } from './display.js';
 import { createCheckpoint } from '../storage/checkpoint.js';
@@ -46,10 +46,11 @@ import { createCompanionEvents } from './companion-events.js';
 import { createGalPlayer } from './gal.js';
 import { createAssetStore } from '../shared/asset-store.js';
 import { createPortraitPreloader } from './asset-preload.js';
-import { createChapter } from './chapter.js';
 import { createLatestResponse } from './latest-response.js';
 import { createAntiRoutePanel } from './anti-route.js';
 import { createDaily } from './daily.js';
+import { createMapExpansion } from './map-expansion.js';
+import { createTavernQuests } from './tavern-quests.js';
 
 /** Composition root: wiring only, with one explicit application lifetime. */
 export function createApplication({
@@ -67,9 +68,8 @@ export function createApplication({
   context.apiClient = createRequestControls(
     apiClient,
     () => context.session.ai.generationOptions,
-    () => context.arcade,
+    () => context.workshop,
     async (kind) => {
-      if (kind === 'summary') return;
       await context.extensions?.activate(kind);
       await context.extensions?.flush();
     },
@@ -102,6 +102,8 @@ export function createApplication({
   context.extensions = createPresetExtensions(context);
   context.chat = createChat(context);
   context.memory = createMemory(context);
+  context.mapExpansion = createMapExpansion(context);
+  context.quests = createTavernQuests(context);
   context.adventure = createAdventure(context);
   context.bookshelf = createBookshelf(context);
   context.shop = createShop(context);
@@ -111,8 +113,7 @@ export function createApplication({
   context.emblems = createEmblems(context);
   context.companionEvents = createCompanionEvents(context);
   context.settlement = createSettlement(context);
-  context.arcade = createArcade(context);
-  context.chapter = createChapter(context);
+  context.workshop = createWorkshop(context);
   context.daily = createDaily(context);
   context.latestResponse = createLatestResponse(context);
   const antiRoutePanel = createAntiRoutePanel(context);
@@ -140,8 +141,7 @@ export function createApplication({
     runtime.token++;
     clearTimeout(runtime.toastTimer);
     clearTimeout(runtime.resizeTimer);
-    context.arcade.dispose();
-    context.chapter.dispose();
+    context.workshop.dispose();
     context.daily.dispose();
     context.shell.dispose();
     context.latestResponse.dispose();
@@ -171,6 +171,8 @@ export function createApplication({
     context.chat.dispose();
     context.gal.dispose();
     context.memory.dispose();
+    context.mapExpansion.dispose();
+    context.quests.dispose();
     context.adventure.dispose();
     context.bookshelf.dispose();
     context.extensions.dispose();

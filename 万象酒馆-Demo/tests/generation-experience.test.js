@@ -1,5 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { mkdtemp } from 'node:fs/promises';
+import path from 'node:path';
 import { equipmentGenerationPlan, compileEquipmentDesign } from '../src/equipment-generation.js';
 import { equipmentBudget, equipmentCost, restoreEquipment } from '../src/equipment.js';
 import { creationInput, creationResponse } from '../src/ai/pipeline/creation-request.js';
@@ -15,6 +17,10 @@ import {
 import { mapResponse } from '../src/ai/pipeline/map-request.js';
 import { worldFixture } from './fixtures/multiverse.js';
 import { generationInput } from '../src/ai/pipeline/prompts.js';
+import { buildTriggerIds } from '../src/ai/worldbook-triggers.js';
+import { createWorldbookStore } from '../server/worldbook-store.mjs';
+import { generationRequest } from '../server/prompts.mjs';
+import { createWorldbookCounter } from '../server/character-reader.mjs';
 import { emblemRing, EMBLEM_ID } from '../src/emblems.js';
 import { EDITH } from '../src/content/edith.js';
 import { finalSkillText } from '../src/skill-text.js';
@@ -131,7 +137,7 @@ test('ether-value plans bound stats, event complexity, side effects and code-gen
   );
 });
 
-test('six completed stories feed one guarded continuation world with three fresh goals and a new boss', () => {
+test('six completed stories feed one guarded continuation world with three fresh goals and a new boss', async () => {
   const library = newLibrary();
   for (let sequence = 0; sequence < 6; sequence++) {
     const node = library.exploration.ruins.frontier[0];
@@ -185,7 +191,7 @@ test('six completed stories feed one guarded continuation world with three fresh
   assert(restored.ruins.cleared.every((node) => !node.world));
   assert.equal(explorationPreview(restored.ruins, 'ruins').length, 7);
   assert.equal(restored.ruins.frontier[0].world.goals.length, 3);
-  const context = generationInput('script', {
+  const scriptInput = {
     brief: '继续旅行',
     boss: 'apepLamb',
     exploration: restored.ruins.frontier[0],
@@ -194,10 +200,21 @@ test('six completed stories feed one guarded continuation world with three fresh
       name: member.setting.name,
       worldbook: member.setting.worldbook,
     })),
-  });
-  assert(context.request.dynamicWorld.instruction.includes('可以分离'));
-  assert(context.request.dynamicWorld.instruction.includes('data.encounters'));
+  };
+  const context = generationInput('script', scriptInput);
+  assert(buildTriggerIds('script', scriptInput).includes('script:endless'));
   assert(!context.request.narrativeParts.at(-1).includes('Boss'));
+  const directory = await mkdtemp(path.join(process.cwd(), '.runtime/tests/endless-world-'));
+  const store = await createWorldbookStore(directory);
+  const { settings } = await store.resolve('script', scriptInput);
+  await store.configure({ ...settings, contextSize: 131072, budgetCap: 32768, recursive: false });
+  const request = await generationRequest('script', scriptInput, undefined, {
+    worldInfo: await store.resolve('script', scriptInput),
+    countTokens: createWorldbookCounter(),
+  });
+  const text = request.messages.map((message) => message.content).join('\n');
+  assert(text.includes('可以分离'));
+  assert(text.includes('data.encounters'));
 });
 
 test('emblem future segments blink distinctly without replacing actual current charge; HP cost stays in its UI label', () => {

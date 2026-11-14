@@ -59,48 +59,114 @@ export const INGREDIENTS = Object.freeze(
 );
 
 const recipes = [
-  ['hearth-stew', '炉火炖牛肉', ['beef', 'potato', 'onion'], ['肉食', '浓香'], { shield: 3 }],
-  ['herb-chicken', '香草烤鸡', ['chicken', 'herb'], ['肉食', '清淡'], { attack: 1 }],
-  ['pan-fish', '田园煎鱼', ['fish', 'carrot'], ['鱼鲜', '清淡'], { mp: 3 }],
-  ['mushroom-soup', '奶油蘑菇汤', ['mushroom', 'milk'], ['菌菇', '蛋奶', '清淡'], { hp: 4 }],
-  ['cheese-board', '旅人奶酪拼盘', ['bread', 'cheese'], ['谷物', '蛋奶'], { shield: 2 }],
-  ['tomato-egg', '番茄焗蛋', ['tomato', 'egg'], ['蔬菜', '蛋奶'], { hp: 3 }],
-  ['cabbage-rolls', '卷心菜肉卷', ['cabbage', 'pork'], ['肉食', '蔬菜'], { shield: 3 }],
-  ['roast-roots', '炉烤根蔬', ['potato', 'carrot', 'garlic'], ['蔬菜', '浓香'], { hp: 3, mp: 1 }],
-  ['apple-pie', '蜜苹果派', ['apple', 'flour', 'honey'], ['甜味', '果香'], { mp: 3 }],
-  ['berry-crepe', '野莓薄饼', ['berry', 'flour', 'egg'], ['甜味', '果香'], { skillDamage: 1 }],
+  [
+    'hearth-stew',
+    '炉火炖牛肉',
+    ['beef', 'potato', 'onion'],
+    ['肉食', '浓香'],
+    { shieldPercent: 8 },
+  ],
+  ['herb-chicken', '香草烤鸡', ['chicken', 'herb'], ['肉食', '清淡'], { attackPercent: 5 }],
+  ['pan-fish', '田园煎鱼', ['fish', 'carrot'], ['鱼鲜', '清淡'], { mpPercent: 8 }],
+  ['mushroom-soup', '奶油蘑菇汤', ['mushroom', 'milk'], ['菌菇', '蛋奶', '清淡'], { hpPercent: 8 }],
+  ['cheese-board', '旅人奶酪拼盘', ['bread', 'cheese'], ['谷物', '蛋奶'], { shieldPercent: 6 }],
+  ['tomato-egg', '番茄焗蛋', ['tomato', 'egg'], ['蔬菜', '蛋奶'], { hpPercent: 6 }],
+  ['cabbage-rolls', '卷心菜肉卷', ['cabbage', 'pork'], ['肉食', '蔬菜'], { shieldPercent: 7 }],
+  [
+    'roast-roots',
+    '炉烤根蔬',
+    ['potato', 'carrot', 'garlic'],
+    ['蔬菜', '浓香'],
+    { hpPercent: 6, mpPercent: 4 },
+  ],
+  ['apple-pie', '蜜苹果派', ['apple', 'flour', 'honey'], ['甜味', '果香'], { mpPercent: 9 }],
+  [
+    'berry-crepe',
+    '野莓薄饼',
+    ['berry', 'flour', 'egg'],
+    ['甜味', '果香'],
+    { skillDamagePercent: 5 },
+  ],
   [
     'walnut-bread',
     '蜂蜜坚果面包',
     ['wheat', 'walnut', 'honey'],
     ['甜味', '坚果', '谷物'],
-    { shield: 2, hp: 1 },
+    { shieldPercent: 5, hpPercent: 4 },
   ],
-  ['grape-salad', '葡萄奶酪沙拉', ['grape', 'cheese'], ['果香', '蛋奶', '清淡'], { mp: 2, hp: 1 }],
-  ['pepper-beef', '红椒铁锅牛肉', ['beef', 'chili', 'salt'], ['肉食', '辛辣'], { attack: 1 }],
-  ['milk-pudding', '星穗奶布丁', ['milk', 'stargrain'], ['甜味', '蛋奶', '谷物'], { mp: 4 }],
-  ['moonfish-soup', '月露银鳞汤', ['silverfin', 'moonflower'], ['鱼鲜', '清淡'], { hp: 3, mp: 3 }],
+  [
+    'grape-salad',
+    '葡萄奶酪沙拉',
+    ['grape', 'cheese'],
+    ['果香', '蛋奶', '清淡'],
+    { mpPercent: 5, hpPercent: 4 },
+  ],
+  [
+    'pepper-beef',
+    '红椒铁锅牛肉',
+    ['beef', 'chili', 'salt'],
+    ['肉食', '辛辣'],
+    { attackPercent: 6 },
+  ],
+  [
+    'milk-pudding',
+    '星穗奶布丁',
+    ['milk', 'stargrain'],
+    ['甜味', '蛋奶', '谷物'],
+    { mpPercent: 10 },
+  ],
+  [
+    'moonfish-soup',
+    '月露银鳞汤',
+    ['silverfin', 'moonflower'],
+    ['鱼鲜', '清淡'],
+    { hpPercent: 7, mpPercent: 7 },
+  ],
   [
     'sunfruit-tart',
     '日辉星穗塔',
     ['sunfruit', 'stargrain', 'butter'],
     ['甜味', '果香', '谷物'],
-    { shield: 3, skillDamage: 1 },
+    { shieldPercent: 7, skillDamagePercent: 5 },
   ],
-  ['frost-chowder', '霜蕈浓汤', ['frost-oyster', 'milk'], ['菌菇', '蛋奶'], { hp: 4, shield: 1 }],
-  ['mint-honey-tea', '青蜜薄荷茶', ['jade-honey', 'mint-leaf'], ['甜味', '清淡'], { mp: 3 }],
-  ['fir-roast', '冷杉烤禽', ['game-bird', 'fir-shoot'], ['肉食', '清淡'], { attack: 1 }],
-  ['amber-stew', '岩根蜜藻炖汤', ['amber-root', 'honey-kelp'], ['鱼鲜', '蔬菜'], { shield: 3 }],
+  [
+    'frost-chowder',
+    '霜蕈浓汤',
+    ['frost-oyster', 'milk'],
+    ['菌菇', '蛋奶'],
+    { hpPercent: 7, shieldPercent: 4 },
+  ],
+  ['mint-honey-tea', '青蜜薄荷茶', ['jade-honey', 'mint-leaf'], ['甜味', '清淡'], { mpPercent: 8 }],
+  ['fir-roast', '冷杉烤禽', ['game-bird', 'fir-shoot'], ['肉食', '清淡'], { attackPercent: 5 }],
+  [
+    'amber-stew',
+    '岩根蜜藻炖汤',
+    ['amber-root', 'honey-kelp'],
+    ['鱼鲜', '蔬菜'],
+    { shieldPercent: 7 },
+  ],
   [
     'ruby-tartlet',
     '绯莓挞',
     ['ruby-berry', 'flour', 'butter'],
     ['果香', '甜味'],
-    { skillDamage: 1 },
+    { skillDamagePercent: 5 },
   ],
-  ['glazed-roots', '青蜜烤岩根', ['jade-honey', 'amber-root'], ['蔬菜', '甜味'], { hp: 3 }],
-  ['evergreen-broth', '杉芽清汤', ['fir-shoot', 'mint-leaf'], ['清淡'], { mp: 2, hp: 1 }],
-  ['kelp-salad', '蜜藻凉拌', ['honey-kelp', 'garlic'], ['鱼鲜', '浓香'], { mp: 2, shield: 1 }],
+  ['glazed-roots', '青蜜烤岩根', ['jade-honey', 'amber-root'], ['蔬菜', '甜味'], { hpPercent: 6 }],
+  [
+    'evergreen-broth',
+    '杉芽清汤',
+    ['fir-shoot', 'mint-leaf'],
+    ['清淡'],
+    { mpPercent: 5, hpPercent: 4 },
+  ],
+  [
+    'kelp-salad',
+    '蜜藻凉拌',
+    ['honey-kelp', 'garlic'],
+    ['鱼鲜', '浓香'],
+    { mpPercent: 5, shieldPercent: 4 },
+  ],
 ];
 export const DISHES = Object.freeze(
   Object.fromEntries(
@@ -137,7 +203,14 @@ export const DIRECT_FOODS = Object.freeze(
       {
         ...INGREDIENTS[id],
         recipe: { [id]: 1 },
-        bonus: id === 'beer' || id === 'wine' ? { shield: 1 } : { hp: 1 },
+        bonus:
+          id === 'wine'
+            ? { shieldPercent: 4 }
+            : id === 'beer'
+              ? { shieldPercent: 3 }
+              : id === 'sunfruit'
+                ? { hpPercent: 5 }
+                : { hpPercent: 3 },
         game: null,
       },
     ]),
@@ -150,10 +223,21 @@ export const FOOD_BONUS_LABELS = Object.freeze({
   shield: '入场护盾',
   attack: '本场普攻',
   skillDamage: '本场技能伤害',
+  hpPercent: '本场hp上限',
+  mpPercent: '本场sp上限',
+  shieldPercent: '入场护盾',
+  attackPercent: '本场普攻',
+  skillDamagePercent: '本场技能伤害',
 });
-export function foodBonusText(bonus) {
-  return Object.entries(bonus)
-    .map(([key, amount]) => `${FOOD_BONUS_LABELS[key]}＋${amount}`)
+export function foodBonusText(input = {}) {
+  const bonus = input?.bonus && typeof input.bonus === 'object' ? input.bonus : input;
+  return Object.entries(bonus || {})
+    .filter(([, amount]) => amount)
+    .map(([key, amount]) =>
+      key.endsWith('Percent')
+        ? `${FOOD_BONUS_LABELS[key] || key}＋${amount}%`
+        : `${FOOD_BONUS_LABELS[key] || key}＋${amount}`,
+    )
     .join(' · ');
 }
 export const DINING_WORLDBOOK =

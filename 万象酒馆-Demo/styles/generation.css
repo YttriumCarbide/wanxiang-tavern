@@ -699,6 +699,20 @@
   max-width: calc(100vw - 48px);
   overflow: auto;
 }
+.api-request-dock.api-background-only {
+  top: max(67px, 10vh);
+  right: max(12px, env(safe-area-inset-right));
+  bottom: auto;
+  max-width: calc(100vw - 24px);
+}
+#gal-stage .api-background-only {
+  pointer-events: auto;
+}
+.api-request-control.api-background-control {
+  gap: 6px;
+  padding: 4px 8px;
+  font-size: 12px;
+}
 
 @media (max-height: 600px) and (orientation: landscape) {
   #ai-dialog[open] {

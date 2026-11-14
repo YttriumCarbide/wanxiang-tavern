@@ -4,8 +4,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { createConnectionStore } from '../src/ai/connection-store.js';
 import { createAiPipeline } from '../src/ai/pipeline/runtime.js';
-import { upgradeAssetWorldbook } from '../src/ai/asset-worldbook.js';
-import { normalizeWorldSettings } from '../src/ai/worldbook.js';
+import { newWorldEntry, normalizeWorldSettings } from '../src/ai/worldbook.js';
 import { normalizeWorld, restoreWorlds } from '../src/worlds.js';
 import { worldFixture } from './fixtures/multiverse.js';
 import { tavernPresetFixture } from './fixtures/ai.js';
@@ -104,18 +103,47 @@ test('keys persist by default, explicit opt-out stays ephemeral and public setti
 });
 
 test('map and creation use imported preset, editable worldbook format, wrapped responses and raw failure diagnostics', async () => {
-  const contents = Object.fromEntries(
-    await Promise.all(
-      ['map', 'creation'].map(async (kind) => [
-        kind,
-        await readText('worldbook/' + kind + '-output.md'),
-      ]),
-    ),
+  const builtin = JSON.parse(
+    await readFile(new URL('../assets/builtin-worldbook.json', import.meta.url), 'utf8'),
   );
-  const book = upgradeAssetWorldbook(
-    { id: 'asset-format', name: '资产格式', entries: {} },
-    contents,
-  );
+  const entryFor = (rule) =>
+    Object.values(builtin.entries).find(
+      (item) => item.extensions?.wanxiang?.generationRule === rule,
+    );
+  const contents = {
+    map: entryFor('map-output').content,
+    creation: entryFor('creation-output').content,
+  };
+  const book = {
+    id: 'asset-format',
+    name: '资产格式',
+    entries: {
+      0: {
+        ...newWorldEntry(0),
+        comment: '地图格式与敌我目标',
+        content: contents.map,
+        constant: true,
+        ignoreBudget: true,
+        position: 4,
+        depth: 0,
+        order: 9999,
+        apiTargets: ['map'],
+        extensions: { wanxiang: { generationRule: 'map-output' } },
+      },
+      1: {
+        ...newWorldEntry(1),
+        comment: '以太造物格式',
+        content: contents.creation,
+        constant: true,
+        ignoreBudget: true,
+        position: 4,
+        depth: 0,
+        order: 9999,
+        apiTargets: ['creation'],
+        extensions: { wanxiang: { generationRule: 'creation-output' } },
+      },
+    },
+  };
   const preset = tavernPresetFixture();
   preset.id = 'shared-community';
   preset.temperature = 0.63;

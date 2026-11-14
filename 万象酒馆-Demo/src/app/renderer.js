@@ -95,11 +95,11 @@ export function createRenderer(context) {
     $('#emblem-screen')?.classList.toggle('active', emblemActive);
     const layout = captureLayout(),
       s = session.battle.display || session.battle.state;
-    $('#encounter-label').textContent = session.journey.expedition.chapter
-      ? `星灯未熄 · 第${session.journey.expedition.chapter.day}天 · ${currentEncounterSpec(session.journey.expedition).name}`
+    $('#encounter-label').textContent = session.journey.expedition.overlandBattle
+      ? `旅途遭遇 · ${currentEncounterSpec(session.journey.expedition).name}`
       : `${session.battle.state.encounter + 1}/${ENCOUNTER_COUNT} · ${currentEncounterSpec(session.journey.expedition).name}`;
     $('#journey-progress').innerHTML = (
-      session.journey.expedition.chapter
+      session.journey.expedition.overlandBattle
         ? [currentEncounterSpec(session.journey.expedition)]
         : ENCOUNTERS
     )

@@ -120,3 +120,25 @@
     transition: none;
   }
 }
+#inn-backpack {
+  width: min(580px, calc(100vw - 24px));
+  color: #f4e4c0;
+  background: #192b25;
+  border: 1px solid #94794e;
+  border-radius: 10px;
+}
+#inn-backpack header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.inn-bag-content {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+  gap: 8px;
+}
+.bag-item img,
+.bag-ingredient .food-art {
+  max-width: 52px;
+  max-height: 52px;
+}

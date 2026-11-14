@@ -34,11 +34,23 @@ export const BUFFS = {
     icon: '禁',
     text: '跳过目标本回合尚未执行的主动行动，回合结束解除；层数不延长持续时间。',
   },
-  strength: { name: '力量', icon: '力', text: '每层使直接伤害增加20%，与易伤合计最高50%' },
-  guard: { name: '守势', icon: '守', text: '获得护盾时增加层数对应的护盾' },
-  weak: { name: '虚弱', icon: '弱', text: '攻击伤害减少25%，正常回合结束减少1层' },
-  vulnerable: { name: '易伤', icon: '伤', text: '受到的直接伤害增加25%，正常回合结束减少1层' },
-  regen: { name: '再生', icon: '生', text: '回合末先回复层数对应hp，再减少1层；濒死单位无法回复' },
+  strength: { name: '力量', icon: '力', text: '每层使直接伤害增加10%' },
+  guard: { name: '守势', icon: '守', text: '获得护盾时每层使护盾获得量增加20%' },
+  weak: {
+    name: '虚弱',
+    icon: '弱',
+    text: '攻击伤害减少25%（不随层数叠加），正常回合结束减少1层',
+  },
+  vulnerable: {
+    name: '易伤',
+    icon: '伤',
+    text: '受到的直接伤害增加50%（不随层数叠加），正常回合结束减少1层',
+  },
+  regen: {
+    name: '再生',
+    icon: '生',
+    text: '回合末先按最大hp的3%/层回复（单回合最高30%），再减少1层；濒死单位无法回复',
+  },
   poison: { name: '中毒', icon: '毒', text: '回合末再生后失去层数对应hp，然后减少1层' },
   slow: {
     name: '迟缓',
@@ -50,7 +62,11 @@ export const BUFFS = {
     icon: '血',
     text: '每次行动前失去层数对应hp，流血致死则取消行动；正常回合结束减少1层',
   },
-  iron: { name: '铁皮', icon: '铁', text: '每次受到攻击减少层数对应的伤害' },
+  iron: {
+    name: '铁皮',
+    icon: '铁',
+    text: '每次受到攻击时每层使该次伤害减少10%（最高70%，最低保留1点）',
+  },
   overload: {
     name: '超限',
     icon: '载',

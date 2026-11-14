@@ -38,6 +38,9 @@ const diskStorageApi = diskEnabled
 const aiApi = serviceMode
   ? import('./server/ai-api.mjs').then(({ createAiApi }) => createAiApi({ root, port }))
   : null;
+const workshopApi = import('./server/workshop-catalog-api.mjs').then(
+  ({ createWorkshopCatalogApi }) => createWorkshopCatalogApi({ directory: saveDirectory, port }),
+);
 const server = http.createServer(async (req, res) => {
   let url;
   try {
@@ -66,6 +69,7 @@ const server = http.createServer(async (req, res) => {
     if (!diskStorageApi) return res.writeHead(404).end();
     return (await diskStorageApi)(req, res);
   }
+  if (url === '/__demo/workshop-catalog') return (await workshopApi)(req, res);
   if (url === '/__demo/stop') {
     if (req.method !== 'POST') return res.writeHead(405).end();
     if (req.headers['x-demo-control'] !== controlToken) return res.writeHead(403).end();

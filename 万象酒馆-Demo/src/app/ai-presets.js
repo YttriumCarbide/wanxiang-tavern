@@ -88,7 +88,7 @@ export function createAiPresetEditor({
     }
     $('#prompt-name').value = draft.name;
     $('#prompt-source').textContent =
-      `导入的预设：${draft.name} · 游戏输出格式在世界书顶部的“角色 / 剧本 / 地图 / 以太格式”中编辑。`;
+      `导入的预设：${draft.name} · 各 API 的输出与写作规则在世界书顶部的快捷格式按钮中编辑。`;
     $('#prompt-warnings').textContent = warnings.join('\n');
     $('#prompt-contract').textContent = formats[kind()] || '';
     const order = draft.prompt_order[0].order;
@@ -307,12 +307,14 @@ ${escapeText(entry.content)}</textarea>
         html`<label><input type="checkbox" value="${id}" data-apply-kind />${name}</label>`,
     )
     .join('');
-  $('#prompt-apply-targets').innerHTML = PROMPT_KINDS.map(
-    (id) =>
-      html`<label
-        ><input type="checkbox" value="${id}" data-apply-prompt-kind />${API_LABELS[id]}</label
-      >`,
-  ).join('');
+  $('#prompt-apply-targets').innerHTML = [...PROMPT_KINDS, 'summary']
+    .map(
+      (id) =>
+        html`<label
+          ><input type="checkbox" value="${id}" data-apply-prompt-kind />${API_LABELS[id]}</label
+        >`,
+    )
+    .join('');
   events.on(
     $('#prompt-apply-many'),
     'click',
@@ -553,7 +555,7 @@ ${escapeText(entry.content)}</textarea>
       syncProfile();
       $('#prompt-import-file').value = '';
       status(
-        '已导入并应用到角色、剧本、交流、闲聊、地图和以太 API；之后可分别更换。总结使用独立提示词。',
+        '已导入并应用到角色、剧本、交流、闲聊、地图和以太 API；记忆总结仍保留默认总结预设，可在上方按需切换。',
       );
     }),
   );

@@ -1,6 +1,11 @@
 import { HEROES, BUFFS } from '../../data.js';
 import { PORTRAIT_TEMPLATES } from '../../content/portrait-templates.js';
-import { TRIGGER_EVENTS, TRIGGER_TARGETS, POSITIVE_BUFFS } from '../../triggers.js';
+import {
+  TRIGGER_EVENTS,
+  TRIGGER_TARGETS,
+  GENERATED_POSITIVE_BUFFS,
+  GENERATED_BUFFS,
+} from '../../triggers.js';
 
 /** A classified design reference, derived from the shipped game rather than scattered prose. */
 export function characterGameReference(plan = null) {
@@ -68,11 +73,11 @@ export function characterGameReference(plan = null) {
       buff: '选择buff与power，层数由程序决定；禁锢、敏捷、超限每次1层',
       cleanse: 'buffs数组列出需移除的状态ID',
     },
-    statuses: Object.entries(BUFFS).map(([id, value]) => ({
+    statuses: GENERATED_BUFFS.map((id) => ({
       id,
-      name: value.name,
-      meaning: value.text,
-      category: POSITIVE_BUFFS.includes(id) ? '增益' : '减益',
+      name: BUFFS[id].name,
+      meaning: BUFFS[id].text,
+      category: GENERATED_POSITIVE_BUFFS.includes(id) ? '增益' : '减益',
       note:
         id === 'slow'
           ? '只用于敌方，影响时间轴顺序'

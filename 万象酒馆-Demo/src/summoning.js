@@ -5,8 +5,21 @@ import { REGIONS } from './content/regions.js';
 import { OFFICIAL_VISITORS } from './content/official-visitors.js';
 import { TOWN_GUESTS } from './content/town-guests.js';
 
+export function isQuestRecruit(library, name) {
+  if (typeof name !== 'string') return false;
+  const normalized = name.normalize('NFKC').trim();
+  return (
+    library.tavernQuests?.some(
+      (quest) =>
+        quest.type === 'character' &&
+        quest.plan?.member?.setting?.name?.normalize('NFKC').trim() === normalized,
+    ) || false
+  );
+}
+
 /** Canon NPCs join only after their six-site story; custom and endless encounters stay free. */
 export function npcSummonStatus(library, npc) {
+  if (isQuestRecruit(library, npc.name)) return { allowed: false, reason: '通过角色任务招募' };
   const sources = npc.sources?.length ? npc.sources : [npc.source || {}];
   const locked = new Set();
   for (const source of sources) {
@@ -46,6 +59,7 @@ export function officialSummonPool(library, book) {
       if (Object.hasOwn(TOWN_GUESTS, id)) return [];
       const entry = officialCharacter(id);
       if (owned.has(entry.id)) return [];
+      if (isQuestRecruit(library, entry.setting.name)) return [];
       const lore = Object.values(book?.entries || {}).find(
         (item) => item.extensions?.wanxiang?.characterId === entry.id,
       );

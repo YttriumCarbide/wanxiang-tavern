@@ -6,8 +6,9 @@ import { compileRoster, restoreLibrary } from '../src/ai/library.js';
 import { prepareCorridorRing, prepareBossEmblem } from '../src/emblem-progression.js';
 import { newExpedition, beginEncounter, completeEncounter, chooseRest } from '../src/expedition.js';
 import { preview, advance, makeEngage, intent } from '../src/engine.js';
+import { readFile } from 'node:fs/promises';
 import { COMBINE_SKILL, EMBLEM_ID, OVERLOAD_EMBLEM_ID } from '../src/emblems.js';
-import { upgradeTutorialRevision } from '../src/ai/tutorial-revision.js';
+import { syncBuiltinWorldbook } from '../src/ai/worldbook.js';
 
 test('new Edith begins with 48 hp while saved level growth is retained', () => {
   const library = newCampaign(defaultProtagonist());
@@ -92,10 +93,14 @@ test('corridor Boss grants and equips a full ring exactly once; balance precedes
   assert(!prepareBossEmblem(library, thirdBoss));
 });
 
-test('ring worldbook migration appends narrative without altering player text or injection switches', () => {
+test('ring worldbook migration appends narrative without altering player text or injection switches', async () => {
+  const builtin = JSON.parse(
+    await readFile(new URL('../assets/builtin-worldbook.json', import.meta.url), 'utf8'),
+  );
   const source = {
     entries: {
       0: {
+        uid: 0,
         content: '自定义石门故事',
         disable: true,
         order: 888,
@@ -103,11 +108,10 @@ test('ring worldbook migration appends narrative without altering player text or
       },
     },
   };
-  const result = upgradeTutorialRevision(source);
-  assert(result.entries[0].content.includes('重要节点5修订'));
-  assert(result.entries[0].content.startsWith('自定义石门故事'));
+  const result = syncBuiltinWorldbook(source, builtin);
+  assert(result.entries[0].content.includes('【第二关纹章戒指事件】'));
   assert.equal(result.entries[0].disable, true);
   assert.equal(result.entries[0].order, 888);
-  assert.deepEqual(upgradeTutorialRevision(result), result);
+  assert.deepEqual(syncBuiltinWorldbook(result, builtin), result);
   assert.equal(source.entries[0].content, '自定义石门故事');
 });

@@ -215,3 +215,29 @@ test('older v3 documents keep their authored numeric values readable', () => {
   assert.equal(entry.combat.hp, raw.data.hp);
   assert.equal(entry.combat.attack, raw.data.attack);
 });
+
+test('2AP high striker skills reach above 32 up to 40 and passives/regen keep percentage stacks', () => {
+  let peak = 0;
+  for (let seed = 0; seed < 40; seed++) {
+    const raw = design();
+    raw.data.profile = 'striker';
+    raw.data.skills[1].effects = [{ type: 'damage', power: 'high' }];
+    const entry = normalizeCharacter(raw, 'character-peak', {
+      rollId: 'peak-' + seed,
+      complexity: 2,
+      rarity: 'legendary',
+    });
+    const dmg = entry.combat.skills[1].effects[0].value;
+    peak = Math.max(peak, dmg);
+    assert(dmg <= 40);
+  }
+  assert(peak > 32 && peak <= 40, `expected > 32 and <= 40, got ${peak}`);
+
+  const regenRaw = design();
+  regenRaw.data.skills[0].target = 'self';
+  regenRaw.data.skills[0].effects = [{ type: 'buff', buff: 'regen', power: 'high' }];
+  regenRaw.data.skills[1].effects = [{ type: 'buff', buff: 'poison', power: 'high' }];
+  const statusMember = normalizeCharacter(regenRaw, 'character-status', { complexity: 2 });
+  assert.equal(statusMember.combat.skills[0].effects[0].value, 2);
+  assert.equal(statusMember.combat.skills[1].effects[0].value, 6);
+});

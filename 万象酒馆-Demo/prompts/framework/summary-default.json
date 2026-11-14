@@ -1,0 +1,54 @@
+{
+  "id": "summary-default",
+  "name": "记忆总结默认",
+  "prompts": [
+    {
+      "identifier": "main",
+      "name": "主提示词",
+      "role": "system",
+      "content": "根据本轮已激活的世界书规则与待总结记录生成摘要。"
+    },
+    {
+      "identifier": "worldInfoBefore",
+      "name": "世界书（前置）",
+      "role": "system",
+      "marker": true
+    },
+    {
+      "identifier": "worldInfoAfter",
+      "name": "世界书（后置）",
+      "role": "system",
+      "marker": true
+    },
+    {
+      "identifier": "chatHistory",
+      "name": "待总结记录 / 当前任务",
+      "role": "user",
+      "marker": true,
+      "system_prompt": true
+    }
+  ],
+  "prompt_order": [
+    {
+      "character_id": 100001,
+      "order": [
+        {
+          "identifier": "main",
+          "enabled": true
+        },
+        {
+          "identifier": "worldInfoBefore",
+          "enabled": true
+        },
+        {
+          "identifier": "worldInfoAfter",
+          "enabled": true
+        },
+        {
+          "identifier": "chatHistory",
+          "enabled": true
+        }
+      ]
+    }
+  ]
+}

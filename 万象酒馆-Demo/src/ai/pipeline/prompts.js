@@ -20,12 +20,14 @@ import { explorationSpec } from '../../exploration.js';
 import { REGIONS } from '../../content/regions.js';
 import { presetOutputTransport, outputToolRequest } from '../preset-output.js';
 import { requireNpcInteraction } from '../../npc-interaction.js';
-import { galInstruction } from '../gal-prompt.js';
-import { adventureScriptRules } from '../adventure-prompt.js';
+import { galInstruction, galActorListText } from '../gal-prompt.js';
 import { currentEncounterSpec } from '../../expedition.js';
 import { ADVENTURE_NODE_TYPES } from '../../adventure/definition.js';
 import { storyRingReward } from '../../emblem-progression.js';
-import { INVITATION_CONTEXT_LIMIT } from '../../memory.js';
+import { INVITATION_CONTEXT_LIMIT, journeyContinuityMessage } from '../../memory.js';
+import { buildTriggerIds } from '../worldbook-triggers.js';
+
+import { playerIntentMessages, playerIntentText } from './player-intent.js';
 
 export function generationInput(kind, input) {
   if (!['character', 'script'].includes(kind)) throw Error('接口类型无效');
@@ -55,32 +57,11 @@ export function generationInput(kind, input) {
       },
       mechanics: { ...characterGameReference(plan), generationNumbers: plan },
       request: {
+        purpose: input.purpose || 'standard',
         brief: input.brief,
-        unavailableCharacters: ['潘多拉（仅第二次副本结算事件加入，不可抽取）'],
-        ...(input.purpose === 'npc'
-          ? {
-              knownNpc: input.npc,
-              guidance:
-                '细化此NPC并保留原姓名、外貌、经历与副本身份，补全战斗数据，不重新创作成其他人。',
-            }
-          : {}),
-        ...(input.purpose !== 'protagonist'
-          ? {
-              arrivalDialogue:
-                '根节点额外输出arrivalDialogue数组，2～5句角色与玩家主角的初见对话，每项{speaker:"character"或"player",text:"对白"}，轻松自然，无强制引导。不写入setting；此对话仅本次展示，不留作记忆。',
-            }
-          : {}),
-        ...(input.purpose === 'protagonist'
-          ? {
-              role: '玩家主角',
-              levelUpLines:
-                '根节点额外输出levelUpLines数组，恰好5句符合该主角性格的简短升级台词，不存进setting。',
-              guidance:
-                '忠实保留玩家填写的姓名、身份、性格与动作设想。主角固定出战，程序给予较高基础生命、法力、普攻与固定2次行动；AI只选定位、主动/被动、AP费用与效果档位，不再填写实际基础值。2AP技能必须体现高回报，不得突破本次复杂度或发明未支持的效果。',
-            }
-          : {}),
-        entrySkillGuidance:
-          '每个角色必须有一个专属入场技。setting.entrySkill填写{name,description}，data.entrySkill只填写target/effects，各效果写type/power及必要机制参数，不填具体value、AP或费用。支持opposite/lowestEnemy/lowestAlly/allEnemies/allAllies/self，后排就绪换入前场时自动触发。opposite对位为空时该次攻击落空，不追击其他敌人。被动description说明实际效果，不写挥剑、抬手等动作代替规则。',
+        ...(input.purpose === 'npc' ? { knownNpc: input.npc } : {}),
+        ...(input.purpose === 'protagonist' ? { role: '玩家主角' } : {}),
+        ...(input.questCharacter ? { questCharacter: input.questCharacter } : {}),
         existingCharacters: (input.existing || []).slice(0, 12).map((item) => ({
           name: String(item.name || '').slice(0, 30),
           title: String(item.title || '').slice(0, 30),
@@ -120,21 +101,11 @@ export function generationInput(kind, input) {
         input.exploration,
         Array.isArray(input.ownedEmblems) ? input.ownedEmblems : [],
       ),
-      storyRingInstruction:
-        'storyRingReward是程序实际发放的唯一纹章戒指事件。非null时，只能在story[4]即第五节点的Boss战开场描写获得该枚戒指，程序已在展示这段前发放到收藏并为可用队友装备；story[0]～story[3]、第二事件及第四RP不能提前写拿到、戴上或激活。null时本趟没有新的纹章戒指领取，不凭空赠送。已拥有同一枚戒指时不重复授予。正文只写发现与人物反应，不写效果、数值、充能、结合技或操作教学，不指定实际佩戴者，不写入data.items；具体说明由程序处理。本条约束优先于旧大纲对戒指时点和效果的描写。',
       ...(input.adventureVersion === 1
         ? { rpChapterDirection: rpChapterDirection(input.exploration) }
         : {}),
       storyArc: arcFor(input),
-      ...(requireNpcInteraction(input)
-        ? {
-            npcInteraction: {
-              required: true,
-              instruction:
-                '本次剧本必须安排至少一名非主角团NPC出场，并与主角团发生实质互动：对话、合作、交易、冲突或提供可执行帮助，不能只提到姓名。请在对应story正文实际描写互动，并在data.npcs中按现有格式归档该NPC，encounter填写实际出场场次。不得把队伍成员重复写成NPC；遵守本章大纲和已发生事实。',
-            },
-          }
-        : {}),
+      ...(requireNpcInteraction(input) ? { npcInteraction: { required: true } } : {}),
       ...(isEndless(input.exploration)
         ? {
             dynamicWorld: {
@@ -150,8 +121,6 @@ export function generationInput(kind, input) {
                     REGIONS[input.exploration.map].boss,
                   ]
                 ).map((id) => input.exploration.world?.enemyDefinitions[id] || DEFINITIONS[id]),
-              instruction:
-                '重要：无限探索的正文以人物、目标、事件、抉择和世界变化为主，不能受游戏战斗外观束缚。禁止在正文使用Boss或首领战等游戏称呼，大多数底层敌人不必出现在正文；叙事走到哪里与游戏打什么可以分离，不能为了循环敌人原地打转。只有敌人确实贴合当前情节才自然描写，不勉强塞入。数据仍由你为每场选择敌人：data.encounters恰好五项，每项{enemyIds:[当前世界敌人ID]}，每场1～3个不同ID，最终场至少一位boss=true，只从敌人池选择；这些是程序配置，不是必须写进小说的情节。不输出地图buff，不改写已经历的战斗配置。',
             },
           }
         : {}),
@@ -160,39 +129,40 @@ export function generationInput(kind, input) {
             officialDungeon: {
               id: officialDungeon.id,
               worldbookKey: officialDungeon.key,
-              ...(officialDungeon.npcs
-                ? {
-                    npcs: officialDungeon.npcs,
-                    npcArchiveGuidance:
-                      '官设NPC按实际参与剧情的场次记录到data.npcs，保留姓名、外貌与性格辨识点，不强行加入出战队伍。',
-                  }
-                : {}),
-              instruction:
-                '沿本次激活的完整官设大纲扩写，由AI根据实际战斗进度自行安排事件的叙述位置，在本次回复中讲完本次旅程。大纲不按场次预先分段，不照搬为已发生的历史。大纲中的<user>是玩家创建的主角代称，正文按characters.player所指角色的实际姓名和设定自然称呼。',
-              enemyPolicy:
-                '只有节点1、3、5发生战斗，使用encounters索引0、2、4的真实名单；索引1、3是旧战斗兼容资料，不要把第二、第四节点写成必打战斗。将完整大纲中的互动与调查融入第二事件和第四自由任务，不规定唯一解。',
+              ...(officialDungeon.npcs ? { npcs: officialDungeon.npcs } : {}),
             },
           }
         : {}),
       chapter: input.chapter || 1,
       ...(typeof input.visitId === 'string' ? { visitId: input.visitId.slice(0, 80) } : {}),
-      journey:
-        '这是新一趟副本。整趟使用同一个副本地点，不生成每场独立地点名、地点标题或location字段；正文自然叙述环境即可。承接已发生的历史，创作新的事件与开篇，不重新输出上一趟剧本。',
       location: selected?.name || REGIONS[input.map || 'ruins']?.name || '副本',
       previousStories: (Array.isArray(input.previousStories) ? input.previousStories : [])
         .slice(-3)
         .map((book) => ({
           title: String(book.title || '').slice(0, 60),
+          tags: Array.isArray(book.tags)
+            ? book.tags.slice(0, 12).map((tag) => String(tag).slice(0, 40))
+            : [],
         })),
-      previousStoriesUsage: '这些仅是近期剧本的避重复索引，不是范文，也不是已发生的历史。',
+      acts: [
+        { index: 0, type: 'battle', stage: 'normal' },
+        { index: 1, type: 'choice' },
+        { index: 2, type: 'battle', stage: 'elite' },
+        { index: 3, type: 'quest' },
+        {
+          index: 4,
+          type: 'battle',
+          stage: isEndless(input.exploration) ? 'endless-final' : 'boss',
+        },
+      ],
       narrativeParts: [
         '节点1：普通战斗前Gal正文',
-        '节点2：受限RP事件开场Gal正文，选择和奖励另填data.adventure.event',
+        '节点2：选择事件开场Gal正文，选项填data.adventure.event',
         '节点3：精英战斗前Gal正文',
-        '节点4：自由RP任务开场Gal正文，目标另填data.adventure.quest',
+        '节点4：自由任务开场Gal正文，任务与观察填data.adventure.quest',
         isEndless(input.exploration)
-          ? '旅程第五段，继续推进人物与目标，不强行绑定底层战斗或预写胜负'
-          : '最终Boss战开始时，推进剧情，不预写胜负',
+          ? '旅程第五段，继续推进人物与目标，不预写胜负'
+          : '节点5：最终Boss战前Gal正文，从commonState承接，不预写胜负',
       ],
       ...(selected
         ? {
@@ -205,19 +175,11 @@ export function generationInput(kind, input) {
               typeof input.exploration.continuation === 'string'
                 ? input.exploration.continuation.slice(0, 2000)
                 : null,
-            artReuse:
-              '美术地图仅为环境主题，可承载本路线剧情里的其他地点；承接的古堡等地点不要求更换美术模型。',
           }
         : {}),
     },
     characters: {
-      player: player
-        ? {
-            id: player.id,
-            name: player.name,
-            role: '玩家创建的主角；设定见greenLight中同一ID的角色，不是额外NPC',
-          }
-        : null,
+      player: player ? { id: player.id, name: player.name } : null,
       greenLight: party,
     },
     history: {
@@ -228,15 +190,11 @@ export function generationInput(kind, input) {
         )
         .map(({ role, content, speakerName }) => ({ role, content, speakerName })),
       confirmed: Array.isArray(input.history) ? input.history.slice(-3) : [],
-      instruction:
-        '只承接已经发生的事，伏笔不是既成事实。人物的invitationMemory是此人与玩家亲历的过去约见。',
     },
     encounters: isEndless(input.exploration)
       ? Array.from({ length: ENCOUNTER_COUNT }, (_, index) => ({
           index,
           bossRequired: index === FINAL_ENCOUNTER,
-          instruction:
-            '以剧情为先，从request.dynamicWorld.enemies中选择，输出在data.encounters；此处不预先指定敌人。',
         }))
       : selected
         ? Array.from({ length: ENCOUNTER_COUNT }, (_, index) => {
@@ -282,14 +240,15 @@ export async function generationRequest(kind, input, source, options = {}) {
   };
   const inputPass = await runRegexTasks(regexScripts, [
     { text: input.brief || '', placement: 1, options: { kind, variables: variablesForRegex } },
+    {
+      text: playerIntentText(input.playerIntent),
+      placement: 1,
+      options: { kind, variables: variablesForRegex },
+    },
   ]);
   input = { ...input, brief: inputPass[0].text };
   const context = options.assetContext || generationInput(kind, input);
-  if (options.worldInfo)
-    context.world = {
-      source: '本次已激活的世界书条目',
-      instruction: '公共设定来自世界书注入消息；人物私有经历来自characters，游戏协议不作为世界观。',
-    };
+  if (options.worldInfo) context.world = '本次已激活的世界书条目';
   const schema = options.assetContext
     ? { type: 'object', description: '完整结构见当前API世界书格式条目，数据参考见本次输入' }
     : kind === 'character'
@@ -305,17 +264,30 @@ export async function generationRequest(kind, input, source, options = {}) {
   const history = JSON.stringify(context.history?.confirmed || [], null, 2);
   const scenario = [
     JSON.stringify(context.encounters || [], null, 2),
-    context.request.officialDungeon?.worldbookKey || '',
-    context.request.location || '',
+    context.request?.officialDungeon?.worldbookKey || '',
+    context.request?.location || '',
   ]
     .filter(Boolean)
     .join('\n');
+  const triggerIds = buildTriggerIds(kind, {
+    ...input,
+    ...(kind === 'character' ? { purpose: context.request?.purpose || input.purpose } : {}),
+    ...(context.data?.existing ? { existing: context.data.existing } : {}),
+    ...(context.data?.continuation ? { continuation: context.data.continuation } : {}),
+    officialDungeon: context.request?.officialDungeon,
+    npcInteraction: context.request?.npcInteraction,
+    storyRingReward: context.request?.storyRingReward,
+    storyArc: context.request?.storyArc,
+    dynamicWorld: context.request?.dynamicWorld,
+    playerIntent: inputPass[1].text,
+  });
   const scan = options.worldInfo
     ? scanWorldbooks({
         ...options.worldInfo,
         countTokens: options.countTokens,
         context: {
           kind,
+          triggerIds,
           outputSchema: JSON.stringify(schema),
           characterLimits:
             kind === 'character'
@@ -329,15 +301,8 @@ export async function generationRequest(kind, input, source, options = {}) {
                 content: line.text || '',
               })),
             ),
-            ...(kind === 'script' && (input.party || []).length
-              ? [
-                  {
-                    role: 'system',
-                    content: `即将上场出战角色：${(input.party || []).map((entry) => entry.name).join('、')}`,
-                  },
-                ]
-              : []),
             { role: 'user', content: input.brief },
+            ...playerIntentMessages(inputPass[1].text),
           ],
           names: (input.party || []).map((entry) => entry.name),
           characterIds: (input.party || []).map((entry) => entry.id),
@@ -503,15 +468,39 @@ export async function generationRequest(kind, input, source, options = {}) {
     const boundary = messages.findLastIndex((message) =>
       message.content.startsWith('【数据生成输出边界】'),
     );
+    const hasWorldbookScriptTeaching =
+      scan?.entries.some(
+        (entry) => entry.extensions?.wanxiang?.generationRule === 'script-definition',
+      ) &&
+      scan?.entries.some((entry) => entry.extensions?.wanxiang?.generationRule === 'script-plot');
+    const baseText = hasWorldbookScriptTeaching
+      ? galActorListText(input)
+      : galInstruction(input, kind) +
+        (inputPass[1].text
+          ? '\n把玩家补充的意图用作可以尝试的行动或对话，保留玩家选择和实际结果。'
+          : '');
     messages.splice(boundary < 0 ? messages.length : boundary, 0, {
       role: 'system',
-      content:
-        galInstruction(input, kind) +
-        '\n' +
-        adventureScriptRules() +
-        '\n剧本的data不填写tags或keywords。回顾关键词由经历结束后的总结 API 生成。',
+      content: baseText,
     });
+    messages.splice(
+      boundary < 0 ? messages.length : boundary + 1,
+      0,
+      ...playerIntentMessages(inputPass[1].text),
+    );
   }
+  if (kind === 'character' && input.questCharacter)
+    messages.push({
+      role: 'system',
+      content:
+        '本次是任务角色。保留标准角色JSON，省略arrivalDialogue，顶层增加quest对象，包含scene（给定可达地点ID）、story（约500中文字的到场小剧场）、level（1至99，优先尊重身份与世界观）、requirements（tavern 0至10、affection 0至30、partyLevel 1至99、difficulty 为none/low/medium/high、reason 为条件说明）。强大角色可以推迟招募。不要改变本轮人物生成格式的其余字段。',
+    });
+  if (kind === 'map' && input.discovery)
+    messages.push({
+      role: 'system',
+      content:
+        '本次输出为泛生界中的实地地点。保留地图JSON的现有字段，并在同一JSON根对象额外写 linkId（路线中的连接地点ID）和 direction（八方位中文名称）。地点等级由程序依据连接点决定。战斗背景须符合当地气候。结合区域地理、文化和行路经历构思明确的探索吸引点。',
+    });
   if (
     scan &&
     !scan.entries.some((entry) => entry.extensions?.wanxiang?.generationRule === `${kind}-output`)
@@ -527,6 +516,7 @@ export async function generationRequest(kind, input, source, options = {}) {
     warnings.push(
       '最后一条可编辑消息为ASSISTANT；不要放半截JSON或要求续写，实际响应必须在wanxiang_output标签内提供完整JSON。',
     );
+  if (kind === 'script') messages.unshift(...journeyContinuityMessage(input));
   return {
     messages,
     sampling: presetSampling(preset),

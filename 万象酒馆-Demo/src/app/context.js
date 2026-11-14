@@ -5,7 +5,7 @@
  * @property {ReturnType<typeof import('./asset-preload.js').createPortraitPreloader>} assetPreloader
  * @property {ReturnType<typeof import('./gal.js').createGalPlayer>} gal
  * @property {ReturnType<typeof import('./battle-reading.js').createBattleReading>} battleReading
- * @property {ReturnType<typeof import('./arcade.js').createArcade>} arcade
+ * @property {ReturnType<typeof import('./workshop.js').createWorkshop>} workshop
  * @property {ReturnType<typeof import('./generation-access.js').createGenerationAccess>} generationAccess
  * @property {ReturnType<typeof import('./emblems.js').createEmblems>} emblems
  * @property {Storage|ReturnType<typeof import('../storage/database.js').createGameStorage>} storage
@@ -33,12 +33,14 @@
  * @property {ReturnType<typeof import('./first-run.js').createFirstRun>} firstRun
  * @property {ReturnType<typeof import('./shop.js').createShop>} shop
  * @property {ReturnType<typeof import('./dining.js').createDining>} dining
- * @property {ReturnType<typeof import('./chapter.js').createChapter>} chapter
+ * @property {ReturnType<typeof import('./daily.js').createDaily>} daily
  * @property {ReturnType<typeof import('./latest-response.js').createLatestResponse>} latestResponse
  * @property {ReturnType<typeof import('./loot-conflicts.js').createLootConflicts>} lootConflicts
  * @property {ReturnType<typeof import('./backpack.js').createBackpack>} backpack
  * @property {ReturnType<typeof import('./chat.js').createChat>} chat
  * @property {ReturnType<typeof import('./memory.js').createMemory>} memory
+ * @property {ReturnType<typeof import('./map-expansion.js').createMapExpansion>} mapExpansion
+ * @property {ReturnType<typeof import('./tavern-quests.js').createTavernQuests>} quests
  * @property {ReturnType<typeof import('./adventure.js').createAdventure>} adventure
  * @property {ReturnType<typeof import('./bookshelf.js').createBookshelf>} bookshelf
  * @property {ReturnType<typeof import('./equipment.js').createEquipment>} equipment

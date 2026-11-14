@@ -1,6 +1,13 @@
 {
-  "description": "验证中央荒地比例、外围荒地、各国地标和银冠大道。",
-  "scopes": ["quality", "town-places", "overland"],
-  "coreFiles": [],
+  "description": "总结时间和近十条连续性、行路生成地点与补充、任务、工坊教程及接口兼容",
+  "scopes": ["quality", "core", "overland", "workshop"],
+  "coreFiles": [
+    "tests/memory.test.js",
+    "tests/overland.test.js",
+    "tests/daily.test.js",
+    "tests/equipment.test.js",
+    "tests/summoning.test.js",
+    "tests/assets.test.js"
+  ],
   "browserConcurrency": 2
 }

@@ -1,4 +1,5 @@
 import { presetHelperScripts } from '../ai/helper-scripts.js';
+import { isMeowssiah2010 } from '../ai/miaosaiya-processing.js';
 import { query as $ } from './dom.js';
 import { createEventScope } from '../shared/events.js';
 import { adviceBinding } from '../ai/advice.js';
@@ -27,7 +28,7 @@ export function createPresetExtensions(context) {
         capability: active.capability,
         preset: active.preset,
         storage: active.storage,
-        scripts: presetHelperScripts(active.preset).filter((script) => script.enabled),
+        scripts: active.scripts,
       },
       '*',
     );
@@ -50,17 +51,22 @@ export function createPresetExtensions(context) {
     const { storage } = await api(`helper-storage/${id}`);
     if (ticket !== generation || session.runtime.disposed) return;
     unload();
+    const native = isMeowssiah2010(preset);
+    const scripts = native ? [] : presetHelperScripts(preset).filter((script) => script.enabled);
     active = {
       id,
       kind,
       preset,
       storage,
+      scripts,
       capability: crypto.randomUUID(),
-      advice: Boolean(adviceBinding(preset)),
+      advice: !native && Boolean(adviceBinding(preset)),
     };
-    if (!presetHelperScripts(preset).some((script) => script.enabled)) {
+    if (!scripts.length) {
       active.ready = true;
-      $('#helper-status').textContent = '此预设没有已启用的扩展脚本。';
+      $('#helper-status').textContent = native
+        ? 'Meowssiah 2.0.10 已由万象酒馆原生适配。'
+        : '此预设没有已启用的扩展脚本。';
       return;
     }
     frame = document.createElement('iframe');

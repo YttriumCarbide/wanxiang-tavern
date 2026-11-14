@@ -115,7 +115,7 @@ export function createConnectionStore({ snapshot = {}, initial = {}, save = asyn
         ...defaults,
         sessionId: randomUUID(),
         ...(kind === 'summary' ? { maxTokens: 8192, temperature: 0.2 } : {}),
-        promptPresetId: kind === 'summary' ? null : `${kind}-default`,
+        promptPresetId: `${kind}-default`,
         apiPresetId: null,
       },
     ]),
@@ -129,6 +129,7 @@ export function createConnectionStore({ snapshot = {}, initial = {}, save = asyn
       profiles[kind] = {
         ...profiles[kind],
         ...value,
+        promptPresetId: value.promptPresetId || `${kind}-default`,
         apiKey: value.apiKey || defaults.apiKey,
         ...((snapshot.version || 0) < 4 ? { rememberKey: true } : {}),
       };
@@ -223,7 +224,6 @@ export function createConnectionStore({ snapshot = {}, initial = {}, save = asyn
     },
     async selectPrompt(kind, id) {
       checkKind(kind);
-      if (kind === 'summary') throw Error('此API使用内置提示词，无需选择预设');
       profiles[kind].promptPresetId = id;
       await persist();
       return visible();

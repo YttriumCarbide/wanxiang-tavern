@@ -1,4 +1,22 @@
 import { scriptProse } from './chat.js';
+import { DAILY_PERIODS } from './daily.js';
+
+export function gameTime(daily) {
+  const period = DAILY_PERIODS[daily?.period];
+  return Number.isInteger(daily?.day) && daily.day > 0 && period
+    ? `第 ${daily.day} 天 · ${period}`
+    : '';
+}
+
+export function recordJourneyActivity(library, kind, title) {
+  (library.journeyActivities ||= []).push({
+    kind,
+    title,
+    gameTime: gameTime(library.daily),
+    finishedAt: Date.now(),
+  });
+  library.journeyActivities = library.journeyActivities.slice(-100);
+}
 
 /** Summaries are derived context only; original messages and confirmed events remain intact. */
 export function memoryHash(text) {
@@ -100,6 +118,7 @@ export function restoreInvitationHistory(raw) {
       ...(typeof entry.place === 'string' ? { place: entry.place } : {}),
       ...(typeof entry.person === 'string' ? { person: entry.person } : {}),
       ...(Number.isFinite(entry.finishedAt) ? { finishedAt: entry.finishedAt } : {}),
+      ...(typeof entry.gameTime === 'string' ? { gameTime: entry.gameTime.slice(0, 60) } : {}),
       ...(summary ? { summary } : {}),
     });
   }
@@ -161,6 +180,9 @@ function memorySources(library, quick = []) {
         kind,
         label: `${kind === 'chat' ? '酒馆交流' : '本趟闲聊'} · 第${round}轮对话`,
         text: conversationText(player, message),
+        ...(message.gameTime || player.gameTime
+          ? { gameTime: message.gameTime || player.gameTime }
+          : {}),
         target: message,
         summaryKey: 'turnSummary',
       });
@@ -168,11 +190,12 @@ function memorySources(library, quick = []) {
   }
   for (const [recordIndex, record] of (library.history || []).entries()) {
     sources.push({
-      id: `${record.kind === 'overland' ? 'overland' : 'dungeon'}:${record.runId || recordIndex}`,
-      kind: record.kind === 'overland' ? 'overland' : 'dungeon',
+      id: `${['overland', 'quest'].includes(record.kind) ? record.kind : 'dungeon'}:${record.runId || recordIndex}`,
+      kind: ['overland', 'quest'].includes(record.kind) ? record.kind : 'dungeon',
       label: record.title || '副本经历',
       ...(record.place ? { place: record.place } : {}),
       ...(record.people?.length ? { people: record.people } : {}),
+      ...(record.gameTime ? { gameTime: record.gameTime } : {}),
       text: dungeonMemoryText(record),
       target: record,
       summaryKey: 'summary',
@@ -185,6 +208,7 @@ function memorySources(library, quick = []) {
       label: record.title,
       ...(record.place ? { place: record.place } : {}),
       ...(record.person ? { people: [record.person] } : {}),
+      ...(record.gameTime ? { gameTime: record.gameTime } : {}),
       text: record.text,
       target: record,
       summaryKey: 'summary',
@@ -198,7 +222,7 @@ export function pendingMemories(library, quick = []) {
     .filter(
       (item) =>
         item.kind !== 'invitation' &&
-        item.kind !== 'overland' &&
+        !['overland', 'quest'].includes(item.kind) &&
         (item.kind !== 'dungeon' || item.target.adventureVersion !== 1),
     )
     .filter((item) => !restoredSummary(item.target[item.summaryKey], item.text))
@@ -210,7 +234,7 @@ export function pendingAdventureMemories(library) {
     .filter(
       (item) =>
         (item.kind === 'invitation' ||
-          item.kind === 'overland' ||
+          ['overland', 'quest'].includes(item.kind) ||
           (item.kind === 'dungeon' &&
             item.target.adventureVersion === 1 &&
             item.target.complete === true)) &&
@@ -225,13 +249,11 @@ export function journeyMemories(library) {
   const sources = memorySources(library).filter(
     (item) =>
       item.kind === 'invitation' ||
-      item.kind === 'overland' ||
+      ['overland', 'quest'].includes(item.kind) ||
       (item.kind === 'dungeon' && item.target.complete),
   );
-  const pending = sources
-    .filter((item) => !restoredSummary(item.target.summary, item.text))
-    .sort((a, b) => (a.target.finishedAt || 0) - (b.target.finishedAt || 0));
-  const recent = new Set(pending.slice(-3).map((item) => item.id));
+  sources.sort((a, b) => (a.target.finishedAt || 0) - (b.target.finishedAt || 0));
+  const recent = new Set(sources.slice(-10).map((item) => item.id));
   return sources.flatMap((item) => {
     const summary = restoredSummary(item.target.summary, item.text);
     if (!summary && !recent.has(item.id)) return [];
@@ -240,16 +262,50 @@ export function journeyMemories(library) {
         id: item.id,
         title: item.label,
         text: summary?.text || item.text,
+        finishedAt: item.target.finishedAt || 0,
+        ...(item.gameTime ? { gameTime: item.gameTime } : {}),
+        ...(recent.has(item.id) ? { recent: true } : {}),
+        ...(summary ? { summarized: true } : {}),
         ...(summary
           ? {
               keywords:
                 summary.keywords ||
                 [item.place, ...(item.people || []), item.label].filter(Boolean),
             }
-          : { recent: true }),
+          : {}),
       },
     ];
   });
+}
+
+export function journeyContinuity(library, records = journeyMemories(library)) {
+  const recent = records.filter((record) => record.recent);
+  const since = recent[0]?.finishedAt ?? 0;
+  return [
+    ...recent.map(({ id, title, text, gameTime, finishedAt, summarized }) => ({
+      id,
+      title,
+      text,
+      gameTime,
+      finishedAt,
+      summarized: Boolean(summarized),
+    })),
+    ...(library?.journeyActivities || []).filter((entry) => entry.finishedAt >= since).slice(-30),
+  ]
+    .sort((a, b) => a.finishedAt - b.finishedAt)
+    .map(({ finishedAt: _time, ...entry }) => entry);
+}
+
+export function journeyContinuityMessage(input) {
+  if (!Array.isArray(input?.journeyContinuity) || !input.journeyContinuity.length) return [];
+  return [
+    {
+      role: 'system',
+      content:
+        '【已发生的经历，按时间顺序】以下内容是历史事实，用于承接当前剧情。\n' +
+        JSON.stringify(input.journeyContinuity.slice(-40)),
+    },
+  ];
 }
 
 /** Validate every snapshot before applying anything, including edits or a changed save. */

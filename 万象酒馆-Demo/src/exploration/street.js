@@ -6,9 +6,10 @@ import { explorationScene, explorationHref } from './scenes.js';
 import { createStreetScene } from './street-scene.js';
 import { createSceneLoading } from '../shared/scene-loading.js';
 import { createIllustratedStreet, illustratedImage } from './illustrated-street.js';
-import { createInvestigationPointer } from './investigation-pointer.js';
 import { createSceneVisitors } from '../tavern/visitor-scene.js';
+import { GUEST_RECRUITMENT } from '../recruitment.js';
 import { createWorldMap } from './world-map.js';
+import { SILVER_CROWN_TAVERN } from '../content/silver-crown-scenes.js';
 
 export async function createStreetView() {
   const query = new URLSearchParams(location.search);
@@ -29,29 +30,58 @@ export async function createStreetView() {
   document.title = '万象酒馆 · ' + definition.name;
   document.querySelector('.street-header h1').textContent = definition.title;
   const returnButton = document.getElementById('street-return');
-  returnButton.setAttribute('aria-label', '返回' + definition.returnLabel);
-  returnButton.lastChild.textContent = ' ' + definition.returnLabel;
+  returnButton.hidden = !definition.returnDestination;
+  if (definition.returnDestination) {
+    returnButton.setAttribute('aria-label', '返回' + definition.returnLabel);
+    returnButton.lastChild.textContent = ' ' + definition.returnLabel;
+  }
   const loading = createSceneLoading(
     document.getElementById('street-status'),
     '正在前往' + definition.title,
   );
   const events = createEventScope();
   const mapDialog = document.getElementById('street-map');
+  const stepOut = document.getElementById('street-map-step-out');
+  const companions = document.getElementById('street-map-companions');
+  let mapChoice = '';
   const worldMap = createWorldMap({
     dialog: mapDialog,
     events,
     scene: definition.id,
     onTravel(to) {
+      mapChoice = 'route';
       mapDialog.close();
       parent.postMessage({ type: 'daily-overland-plan', to }, location.origin);
     },
   });
   function postMapState(open) {
-    parent.postMessage({ type: 'street-map-state', open }, location.origin);
+    parent.postMessage({ type: 'street-map-state', open, choice: mapChoice }, location.origin);
   }
-  events.on(document.getElementById('street-map-open'), 'click', () => {
+  function openAtlas(preview = false) {
+    mapChoice = '';
+    stepOut.hidden = preview !== true;
+    companions.hidden = stepOut.hidden;
     worldMap.open();
     postMapState(true);
+  }
+  events.on(document.getElementById('street-map-open'), 'click', openAtlas);
+  events.on(window, 'message', (event) => {
+    if (
+      event.origin === location.origin &&
+      event.source === parent &&
+      event.data?.type === 'daily-open-atlas'
+    )
+      openAtlas(true);
+  });
+  events.on(stepOut, 'click', () => {
+    mapChoice = 'walk';
+    mapDialog.close();
+  });
+  events.on(document.getElementById('street-map-workshop'), 'click', () => {
+    parent.postMessage({ type: 'tavern-workshop' }, location.origin);
+  });
+  events.on(companions, 'click', () => {
+    parent.postMessage({ type: 'daily-outing-companions' }, location.origin);
   });
   events.on(mapDialog, 'close', () => {
     if (!mapDialog.open) postMapState(false);
@@ -100,7 +130,6 @@ export async function createStreetView() {
     needsRender = true;
   let exitTimer = null;
   let visitors = null;
-  let chapterContext = null;
   let invitationLocked = false;
   let travelLocked = false;
   async function updateTime(value) {
@@ -120,36 +149,42 @@ export async function createStreetView() {
       event.data?.type === 'daily-managed'
     ) {
       invitationLocked = event.data.invitation === true;
-      travelLocked = event.data.outing?.locked === true || event.data.outing?.remaining === 0;
+      travelLocked = event.data.outing?.locked === true;
+      document.body.classList.toggle('street-daily-outing', Boolean(event.data.outing));
       worldMap.updateTravel(event.data.outing);
+      worldMap.updateDiscoveries(event.data.discoveries);
       void updateTime(event.data.timeOfDay);
     }
   });
-  const presentNpcs = document.createElement('aside');
-  presentNpcs.id = 'street-present-npcs';
-  presentNpcs.innerHTML = '<small>在场 NPC</small><p></p>';
-  presentNpcs.hidden = true;
-  document.body.append(presentNpcs);
-  const investigation = createInvestigationPointer({
-    canvas,
-    camera,
-    events,
-    model: () => model,
-    context: () => chapterContext,
-    scene: definition.id,
-  });
-  events.on(window, 'message', (event) => {
-    if (
-      event.origin !== location.origin ||
-      event.source !== parent ||
-      event.data?.type !== 'starbell-context'
-    )
-      return;
-    chapterContext = event.data.enabled ? event.data : null;
-    const npcs = Array.isArray(event.data.npcs) ? event.data.npcs : [];
-    presentNpcs.querySelector('p').textContent = npcs.map((npc) => npc.name).join('、');
-    presentNpcs.hidden = !npcs.length;
-    investigation.hide();
+  const visitorActions = document.createElement('div');
+  visitorActions.className = 'street-visitor-actions';
+  visitorActions.hidden = true;
+  visitorActions.innerHTML =
+    '<button type="button" data-visitor-talk>交流</button><button type="button" data-visitor-recruit>招募</button>';
+  document.body.append(visitorActions);
+  let visitorId = null;
+  function contactVisitor(id, type = 'tavern-talk') {
+    parent.postMessage(
+      {
+        type,
+        place:
+          definition.id === 'city-center'
+            ? 'city-square'
+            : definition.id === 'starlamp-street'
+              ? 'street'
+              : definition.id,
+        characterId: id,
+      },
+      location.origin,
+    );
+  }
+  events.on(visitorActions, 'click', (event) => {
+    if (!visitorId || !event.target.closest('button')) return;
+    contactVisitor(
+      visitorId,
+      event.target.closest('[data-visitor-recruit]') ? 'tavern-recruit' : 'tavern-talk',
+    );
+    visitorActions.hidden = true;
   });
 
   function closeInspection() {
@@ -163,29 +198,23 @@ export async function createStreetView() {
     active = id;
     document.getElementById('inspection-kind').textContent = point.kind;
     document.getElementById('inspection-name').textContent = point.name;
-    document.getElementById('inspection-text').textContent =
-      chapterContext && definition.id === 'city-center' && ['clock', 'guild'].includes(id)
-        ? chapterContext.phase === 'day3'
-          ? '警钟已经传到城里。沿星灯架引导的路，居民正前往石厅避难。'
-          : '钟楼下正在筹备星灯祭。灯架和桌椅尚未摆齐，居民在为节日后的生活作着打算。'
-        : point.text;
+    document.getElementById('inspection-text').textContent = point.text;
     const action = document.getElementById('inspection-return');
     action.hidden = !point.destination;
     action.textContent = point.actionLabel || point.name + ' →';
     inspector.hidden = false;
     inspector.scrollTop = 0;
-    if (parent !== window)
-      parent.postMessage(
-        { type: 'starbell-observe', scene: definition.id, point: id },
-        location.origin,
-      );
     for (const [key, button] of buttons) button.setAttribute('aria-expanded', String(key === id));
   }
   function leave(destination = definition.returnDestination) {
-    if (leaving || disposed) return;
+    if (!destination || leaving || disposed) return;
     if (travelLocked) return;
     if (invitationLocked) {
       parent.postMessage({ type: 'daily-invitation-leave' }, location.origin);
+      return;
+    }
+    if (destination === 'tavern' && definition.id === SILVER_CROWN_TAVERN && parent !== window) {
+      parent.postMessage({ type: 'silver-crown-tavern-enter' }, location.origin);
       return;
     }
     const href = explorationHref(destination, timeOfDay, definition.id);
@@ -212,7 +241,7 @@ export async function createStreetView() {
     button.append(symbol, label);
     button.hidden = true;
     events.on(button, 'click', () =>
-      point.destination ? leave(point.destination) : inspect(point.id),
+      point.destination && point.immediate ? leave(point.destination) : inspect(point.id),
     );
     buttons.set(point.id, button);
     document.getElementById('street-points').append(button);
@@ -222,10 +251,6 @@ export async function createStreetView() {
     const occupied = [];
     for (const point of definition.points) {
       const button = buttons.get(point.id);
-      if (!point.destination) {
-        button.hidden = true;
-        continue;
-      }
       const anchor = illustrated ? model?.pointAnchor(point.id) : point.anchor;
       if (!anchor) {
         button.hidden = true;
@@ -268,7 +293,6 @@ export async function createStreetView() {
     }
   }
   function apply() {
-    investigation.hide();
     if (illustrated) {
       needsRender = true;
       updatePoints();
@@ -280,7 +304,6 @@ export async function createStreetView() {
     updatePoints();
   }
   function resize() {
-    investigation.hide();
     renderer.setSize(innerWidth, innerHeight, false);
     camera.aspect = innerWidth / innerHeight;
     if (illustrated) model?.resize(camera, camera.aspect);
@@ -304,6 +327,7 @@ export async function createStreetView() {
   events.on(document.getElementById('inspection-close'), 'click', closeInspection);
   events.on(canvas, 'pointerdown', (event) => {
     if (event.pointerType === 'mouse' && event.button !== 0) return;
+    visitorActions.hidden = true;
     canvas.focus({ preventScroll: true });
     drag = {
       id: event.pointerId,
@@ -316,13 +340,9 @@ export async function createStreetView() {
     canvas.setPointerCapture(event.pointerId);
   });
   events.on(canvas, 'pointermove', (event) => {
-    if (!drag) {
-      investigation.move(event.clientX, event.clientY);
-      return;
-    }
+    if (!drag) return;
     if (event.pointerId !== drag.id) return;
     if (Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY) > 7) drag.moved = true;
-    if (drag.moved) investigation.hide();
     if (fixed) return;
     if (illustrated) {
       model?.drag((event.clientX - drag.x) / innerWidth, (event.clientY - drag.y) / innerHeight);
@@ -341,22 +361,13 @@ export async function createStreetView() {
     const tap = drag && drag.id === event.pointerId && !drag.moved;
     drag = null;
     if (tap) {
-      if (investigation.tap(event.clientX, event.clientY)) return;
       const visitor = visitors?.pick(event.clientX, event.clientY);
       if (visitor) {
-        parent.postMessage(
-          {
-            type: 'tavern-talk',
-            place:
-              definition.id === 'city-center'
-                ? 'city-square'
-                : definition.id === 'starlamp-street'
-                  ? 'street'
-                  : definition.id,
-            characterId: visitor.id,
-          },
-          location.origin,
-        );
+        if (!Object.hasOwn(GUEST_RECRUITMENT, visitor.id)) return contactVisitor(visitor.id);
+        visitorId = visitor.id;
+        visitorActions.style.left = `${Math.min(innerWidth - 146, Math.max(8, event.clientX - 64))}px`;
+        visitorActions.style.top = `${Math.max(10, event.clientY - 52)}px`;
+        visitorActions.hidden = false;
         return;
       }
     }
@@ -411,8 +422,6 @@ export async function createStreetView() {
     if (disposed) return;
     disposed = true;
     loading.dispose();
-    investigation.dispose();
-    presentNpcs.remove();
     visitors?.dispose();
     clearTimeout(exitTimer);
     renderer.setAnimationLoop(null);
@@ -450,7 +459,11 @@ export async function createStreetView() {
           : [definition.panorama, ...(definition.panoramaBand ? [definition.panoramaBand] : [])]),
       ...(!illustrated && definition.ground ? [definition.ground.image] : []),
       ...definition.cutouts
-        .filter((spec) => !illustrated && spec.kind !== 'character' && spec.kind !== 'npc')
+        .filter((spec) =>
+          illustrated
+            ? spec.kind === 'npc' && Boolean(definition.illustration.people?.[spec.id])
+            : spec.kind !== 'character' && spec.kind !== 'npc',
+        )
         .map((spec) => spec.image),
     ];
     await loading.prepare(files);

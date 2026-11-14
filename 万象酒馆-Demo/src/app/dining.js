@@ -1,7 +1,7 @@
 import { INGREDIENTS, MEAL_FOODS, foodBonusText } from '../content/dining.js';
 import { diningState, mealPreference, mealCost, prepareMeal, finishMeal } from '../dining.js';
 import { settingOnly } from '../ai/contracts.js';
-import { memoryChat } from '../memory.js';
+import { gameTime, memoryChat } from '../memory.js';
 import { skippingAi } from '../generation-options.js';
 import { createRawResponse } from './raw-response.js';
 import { foodArt } from './food-art.js';
@@ -18,26 +18,24 @@ export function createDining(context) {
   panel.setAttribute('aria-label', '围炉共餐');
   panel.innerHTML = html`<header>
       <div class="meal-heading">
-        <small>THE HEARTH TABLE · 酒馆厨房</small>
-        <h2>围炉共餐</h2>
-        <p>一桌热菜，把旅途里的风尘留在门外。</p>
+        <h2>用餐</h2>
       </div>
       <button data-meal-close aria-label="返回酒馆">×</button>
     </header>
     <div class="dining-body">
       <section class="meal-company">
-        <h3>邀请同伴 <small>最多三人 · 选菜后可查看各自口味</small></h3>
+        <h3>同桌 <small>最多三人</small></h3>
         <div data-meal-members></div>
         <button data-meal-shop>购买食材</button>
       </section>
       <section class="meal-menu">
-        <h3>今夜菜单 <small>最多三种 · 食材按整桌消耗</small></h3>
+        <h3>菜谱 <small>最多三道</small></h3>
         <div data-meal-foods></div>
       </section>
       <aside class="meal-order">
         <div data-meal-order></div>
         <p data-meal-status role="status"></p>
-        <button class="primary" data-meal-start>围上围裙 · 开始制作</button>
+        <button class="primary" data-meal-start>开始制作</button>
       </aside>
     </div>
     <section class="meal-kitchen" hidden>
@@ -80,7 +78,8 @@ export function createDining(context) {
     context.generation.save();
   }
   function render() {
-    const memberScroll = part('[data-meal-members]').scrollLeft;
+    const memberList = part('[data-meal-members]');
+    const memberScroll = [memberList.scrollLeft, memberList.scrollTop];
     const menuScroll = part('[data-meal-foods]').scrollTop;
     const state = diningState(library());
     part('[data-meal-members]').innerHTML = library()
@@ -155,7 +154,7 @@ export function createDining(context) {
         : state.tutorial === 'cook'
           ? '先选主角、潘多拉和一位伙伴，再制作旅人奶酪拼盘。'
           : '食材按整桌消耗 · 增益在用餐者下一次参战时生效';
-    part('[data-meal-members]').scrollLeft = memberScroll;
+    memberList.scrollTo(...memberScroll);
     part('[data-meal-foods]').scrollTop = menuScroll;
   }
   function stopCooking() {
@@ -189,6 +188,7 @@ export function createDining(context) {
   function commit() {
     const result = finishMeal(library());
     if (!result) return;
+    context.daily?.mealFinished();
     persist();
     part('[data-meal-request-status]').textContent =
       `${foodBonusText(result.bonus)}。${result.gains.map(({ id, delta }) => `${library().characters.find((member) => member.id === id)?.setting.name} 好感＋${delta}`).join(' · ')}`;
@@ -249,22 +249,27 @@ export function createDining(context) {
         },
       });
       if (turn !== epoch || owner !== library() || session.runtime.disposed) return;
+      const sentAt = gameTime(owner.daily);
       commit();
       owner.tavernChat ||= [];
+      const messageId = crypto.randomUUID();
       owner.tavernChat.push(
         {
-          id: crypto.randomUUID(),
+          id: messageId,
           role: 'user',
+          gameTime: sentAt,
           content: '在酒馆共餐：' + dining.foods.map((food) => food.name).join('、'),
         },
         {
           id: crypto.randomUUID(),
           role: 'assistant',
+          gameTime: sentAt,
           content: result.content,
           display: result.display,
           speakerIds: meal.members,
         },
       );
+      context.quests?.collect(result.quest, messageId, context.daily?.scene());
       persist();
       await context.gal.play(result.content, { owner: 'dining', title: '酒馆 · 围炉共餐' });
     } catch (error) {

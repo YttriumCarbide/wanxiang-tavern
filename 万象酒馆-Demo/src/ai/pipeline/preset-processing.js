@@ -1,24 +1,19 @@
 import { createPresetOutputProcessor } from '../output-processor.js';
 export { createPresetOutputProcessor } from '../output-processor.js';
-import { sha256 } from '@noble/hashes/sha2.js';
 import { rebornReassemble } from '../reborn-processing.js';
 import { presetHelperScripts } from '../helper-scripts.js';
 import { createMacroExpander } from '../prompt-macros.js';
-import { MIAOSAIYA_FINGERPRINTS, miaosaiyaReassemble } from '../miaosaiya-processing.js';
-
-function fingerprint(text) {
-  const bytes = sha256(
-    new TextEncoder().encode(
-      String(text || '')
-        .replaceAll('\r\n', '\n')
-        .trim(),
-    ),
-  );
-  return Array.from(bytes, (value) => value.toString(16).padStart(2, '0')).join('');
-}
+import {
+  MEOWSSIAH_COMPATIBILITY,
+  MIAOSAIYA_FINGERPRINTS,
+  isMeowssiah2010,
+  miaosaiyaReassemble,
+  presetScriptFingerprint as fingerprint,
+} from '../miaosaiya-processing.js';
 
 /** Describe only reviewed behavior, never send or evaluate user callbacks. */
 export function presetProcessing(preset, storage = {}) {
+  if (isMeowssiah2010(preset)) return { compatibility: MEOWSSIAH_COMPATIBILITY };
   const sp = preset.extensions?.SPreset || {};
   const result = {};
   if (sp.OutputPreprocessing?.enabled) {

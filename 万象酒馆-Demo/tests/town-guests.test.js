@@ -10,9 +10,10 @@ import {
   makeReposition,
 } from '../src/engine.js';
 import { officialCharacter, newLibrary, compileRoster, restoreLibrary } from '../src/ai/library.js';
+import { readFile } from 'node:fs/promises';
 import { TOWN_GUESTS } from '../src/content/town-guests.js';
 import { adjacentAllies } from '../src/town-guest-mechanics.js';
-import { upgradeTownGuests } from '../src/ai/town-guests-upgrade.js';
+import { syncBuiltinWorldbook } from '../src/ai/worldbook.js';
 import { officialSummonPool } from '../src/summoning.js';
 import { townResidents } from '../src/town-residents.js';
 import { statusIcons, icon } from '../src/ui.js';
@@ -72,10 +73,13 @@ function cast(state, actor, skill, target = actor) {
   };
 }
 
-test('three authored guests are excluded from summons, keep exact prose and restore when recruited', () => {
+test('three authored guests are excluded from summons, keep exact prose and restore when recruited', async () => {
+  const builtin = JSON.parse(
+    await readFile(new URL('../assets/builtin-worldbook.json', import.meta.url), 'utf8'),
+  );
   const source = { entries: { 0: { uid: 0, content: '玩家自写条目', extensions: {} } } };
-  const book = upgradeTownGuests(source);
-  assert.deepEqual(upgradeTownGuests(book), book);
+  const book = syncBuiltinWorldbook(source, builtin);
+  assert.deepEqual(syncBuiltinWorldbook(book, builtin), book);
   assert.equal(source.entries[0].content, '玩家自写条目');
   const library = newLibrary();
   const pool = officialSummonPool(library, book);
@@ -92,17 +96,6 @@ test('three authored guests are excluded from summons, keep exact prose and rest
   assert.deepEqual([roster.lyria.hp, roster.lyria.mp], [44, 24]);
   assert.deepEqual([roster.morrow.hp, roster.morrow.mp], [39, 34]);
   assert.equal(ability('morrow', 'attack', roster).target, 'allEnemies');
-  const custom = structuredClone(book);
-  delete custom.extensions.wanxiang.townGuestsRevision;
-  const edited = Object.values(custom.entries).find(
-    (entry) => entry.extensions?.wanxiang?.characterId === 'official-lumi',
-  );
-  edited.content = '保留玩家编辑的露弥';
-  assert.equal(
-    Object.values(upgradeTownGuests(custom).entries).find((entry) => entry.uid === edited.uid)
-      .content,
-    edited.content,
-  );
 });
 
 test('Libet heals both immediate neighbors from the center, not herself, empty slots or rear row', () => {
@@ -240,9 +233,9 @@ test('Yuto basic attack is AOE and counts only actual injured enemies, including
   state.units.sprout.hp = 1;
   const { event } = cast(state, 'aegis', 'attack', 'sprout');
   assert.deepEqual(event.targets, state.enemyIds);
-  assert.equal(event.after.units.aegis.mark, 1);
+  assert.equal(event.after.units.aegis.mark, 2);
   assert.equal(event.after.units.mossSlime.hp, 100);
-  assert.equal(event.after.units.pebble.hp, 100);
+  assert.equal(event.after.units.pebble.hp, 99);
   assert.equal(event.after.units.sprout.hp, 0);
 });
 

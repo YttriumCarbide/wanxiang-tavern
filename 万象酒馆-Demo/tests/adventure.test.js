@@ -24,15 +24,14 @@ import { adventureSnapshot, validAdventureSnapshot } from '../src/adventure/snap
 import { createCheckpoint } from '../src/storage/checkpoint.js';
 import { chatResponse } from '../src/ai/pipeline/chat-response.js';
 import { adventureChatRules } from '../src/ai/adventure-prompt.js';
-import { upgradeAdventureWorldbook } from '../src/ai/adventure-upgrade.js';
 import { tutorialCommitIssue } from '../src/tutorial-progress.js';
 import { chatRequest } from '../src/ai/pipeline/chat-request.js';
 import { normalizePromptPreset } from '../src/ai/presets.js';
-import { normalizeWorldSettings } from '../src/ai/worldbook.js';
+import { normalizeWorldSettings, syncBuiltinWorldbook } from '../src/ai/worldbook.js';
 import { tavernPresetFixture } from './fixtures/ai.js';
 import { readGenerationResult } from '../server/generation-result.mjs';
 import { RP_CHAPTERS, rpChapterDirection } from '../src/content/rp-outlines.js';
-import { ALL_OFFICIAL_DUNGEONS } from '../src/content/official-dungeons.js';
+import { readFile } from 'node:fs/promises';
 import { createAiPipeline } from '../src/ai/pipeline/runtime.js';
 import { EVENT_REWARD_POOL, rollEventReward, validEventReward } from '../src/adventure/rewards.js';
 import {
@@ -485,7 +484,7 @@ test('RP protocol separates data from prose and rejects malformed task data with
   assert(!adventureChatRules({ mode: 'event' }).includes('wanxiang_adventure'));
 });
 
-test('all thirty official chapter directions leave methods open and overview survives old and new saves', () => {
+test('all thirty official chapter directions leave methods open and overview survives old and new saves', async () => {
   assert.equal(Object.values(RP_CHAPTERS).flat().length, 30);
   for (const map of Object.keys(RP_CHAPTERS)) {
     assert.equal(RP_CHAPTERS[map].length, 6);
@@ -507,26 +506,14 @@ test('all thirty official chapter directions leave methods open and overview sur
     normalizeScript(f.raw, 'legacy-goals').adventure.quest.goals[0].title,
     legacyGoal.title,
   );
-  const previous = {
-    entries: Object.fromEntries(
-      ALL_OFFICIAL_DUNGEONS.map((chapter, uid) => [
-        uid,
-        {
-          uid,
-          content: chapter.outline,
-          extensions: { wanxiang: { officialDungeonId: chapter.id } },
-        },
-      ]),
-    ),
-    extensions: { wanxiang: { adventureRevision: 47 } },
-  };
-  const upgraded = upgradeAdventureWorldbook(previous);
+  const builtin = JSON.parse(
+    await readFile(new URL('../assets/builtin-worldbook.json', import.meta.url), 'utf8'),
+  );
   assert.equal(
-    Object.values(upgraded.entries).filter((entry) => entry.content.includes('第四节点RP改编'))
+    Object.values(builtin.entries).filter((entry) => entry.content.includes('第四节点RP改编'))
       .length,
     18,
   );
-  assert.deepEqual(upgradeAdventureWorldbook(upgraded), upgraded);
 });
 
 test('new tutorial elite retains vulnerable, slow and multiple-intent gates in the same battle', () => {
@@ -554,18 +541,22 @@ test('new tutorial elite retains vulnerable, slow and multiple-intent gates in t
   assert(tutorialCommitIssue(library, state, forecast).includes('迟缓'));
 });
 
-test('worldbook migration retires only owned output rules, retains user lore and is idempotent', () => {
+test('worldbook sync updates owned output rules, retains user lore and is idempotent', () => {
   const source = {
     entries: {
       0: { content: '我的世界观' },
       1: { content: '旧格式', extensions: { wanxiang: { generationRule: 'script-output' } } },
     },
   };
-  const migrated = upgradeAdventureWorldbook(source, '新格式');
+  const builtin = {
+    entries: {
+      1: { content: '新格式', extensions: { wanxiang: { generationRule: 'script-output' } } },
+    },
+  };
+  const migrated = syncBuiltinWorldbook(source, builtin);
   assert.equal(migrated.entries[0].content, '我的世界观');
   assert.equal(migrated.entries[1].content, '新格式');
-  assert.equal(migrated.extensions.wanxiang.retiredPromptArchive[0].entry.content, '旧格式');
-  assert.deepEqual(upgradeAdventureWorldbook(migrated, '不再覆盖'), migrated);
+  assert.deepEqual(syncBuiltinWorldbook(migrated, builtin), migrated);
 });
 
 test('RP prompt carries task state and latest Boss IDs while sending actual conversation history once', async () => {

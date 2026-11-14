@@ -17,7 +17,17 @@ import {
   ruleUsageKey,
   POSITIVE_BUFFS,
 } from './triggers.js';
-import { decayStatuses, statusStacks, NEGATIVE_STATUSES } from './status-rules.js';
+import {
+  decayStatuses,
+  statusStacks,
+  NEGATIVE_STATUSES,
+  applyStrengthBonus,
+  applyWeakReduction,
+  applyVulnerableBonus,
+  applyIronReduction,
+  applyGuardShield,
+  regenHealAmount,
+} from './status-rules.js';
 import { recordCooperationHit } from './cooperation.js';
 import { enemyGrowth, leveledIntent } from './enemy-growth.js';
 import { REST_LOSS_RECOVERY } from './content/journey-rules.js';
@@ -380,6 +390,15 @@ function simulate(s, plan, slots) {
     let consumedMark = false;
     const allowed = (effect, id) =>
       !effect.when || conditionsMet(work, actor, [effect.when], { target: id, mark: markSnapshot });
+    const grantShield = (unitId, baseValue) => {
+      const unit = work.units[unitId];
+      if (!unit || unit.hp <= 0) return false;
+      const n = applyGuardShield(baseValue, effectiveBuff(work, unitId, 'guard'));
+      unit.block += n;
+      companions.gain(unitId, { type: 'shield', value: n });
+      currentLogs.push(`${definitions[unitId].name}获得${n}护盾`);
+      return true;
+    };
     for (const eff of list || []) {
       const value = (eff.value || 0) + (eff.perMark || 0) * markSnapshot;
       let applied = false;
@@ -400,14 +419,8 @@ function simulate(s, plan, slots) {
         continue;
       }
       if ((eff.type === 'shield' && eff.target === 'self') || eff.type === 'selfShield') {
-        const unit = work.units[actor];
-        if (unit && unit.hp > 0 && allowed(eff, actor)) {
-          const n = value + effectiveBuff(work, actor, 'guard');
-          unit.block += n;
-          companions.gain(actor, { type: 'shield', value: n });
-          currentLogs.push(`${definitions[actor].name}获得${n}护盾`);
+        if (allowed(eff, actor) && grantShield(actor, value))
           consumedMark ||= eff.consumeMark === true;
-        }
         continue;
       }
       if (eff.type === 'mark') {
@@ -440,18 +453,18 @@ function simulate(s, plan, slots) {
         if (eff.type === 'damage') {
           if (!generated && attackHits && u.side === 'enemy') attackHits.add(id);
           const strength = actor && !eff.flat ? effectiveBuff(work, actor, 'strength') : 0;
-          const vulnerable = !eff.flat && effectiveBuff(work, id, 'vulnerable') ? 0.25 : 0;
-          let n = Math.round((value + bonus) * (1 + Math.min(0.5, strength * 0.2 + vulnerable)));
+          let n = applyStrengthBonus(value + bonus, strength);
           if (work.units[actor]?.side === 'enemy')
             n = Math.max(1, Math.round(n * (work.enemyDamageScale || 1)));
-          if (!eff.flat && actor && effectiveBuff(work, actor, 'weak')) n = Math.floor(n * 0.75);
+          if (!eff.flat && actor) n = applyWeakReduction(n, effectiveBuff(work, actor, 'weak'));
+          if (!eff.flat) n = applyVulnerableBonus(n, effectiveBuff(work, id, 'vulnerable'));
           if (split) {
             const total = n * split;
             const position = front(work).indexOf(id);
             n = Math.floor(total / 3) + (position < total % 3 ? 1 : 0);
           }
           if (effectiveBuff(work, id, 'flying')) n = Math.floor(n / 2);
-          n = Math.max(0, n - effectiveBuff(work, id, 'iron'));
+          n = applyIronReduction(n, effectiveBuff(work, id, 'iron'));
           if (blindMiss?.actor === actor && blindMiss.target === id) n = 0;
           const absorbed = Math.min(u.block, n);
           u.block -= absorbed;
@@ -470,12 +483,7 @@ function simulate(s, plan, slots) {
           if (killed && actor && !generated) trigger('kill', actor, { targets: [id] });
           if (!generated) mechanics.damage(actor, id, damage);
         }
-        if (eff.type === 'shield') {
-          const n = value + effectiveBuff(work, id, 'guard');
-          u.block += n;
-          companions.gain(id, { type: 'shield', value: n });
-          currentLogs.push(`${definitions[id].name}获得${n}护盾`);
-        }
+        if (eff.type === 'shield') grantShield(id, value);
         if (eff.type === 'heal') {
           const recovery = eff.maxHpPercent ? Math.round(u.maxHp * eff.maxHpPercent) : value;
           heal(id, recovery + bonus, generated);
@@ -1042,9 +1050,10 @@ function simulate(s, plan, slots) {
         unit.emblemCharge = Math.min(6, (unit.emblemCharge || 0) + 2);
     }
     record('emblem', null, '纹章 · 充能与结合时限');
-    for (const u of Object.values(work.units))
-      if (u.hp > 0 && effectiveBuff(work, u.id, 'regen'))
-        heal(u.id, effectiveBuff(work, u.id, 'regen'));
+    for (const u of Object.values(work.units)) {
+      const regen = u.hp > 0 ? effectiveBuff(work, u.id, 'regen') : 0;
+      if (regen) heal(u.id, regenHealAmount(u.maxHp, regen));
+    }
     record('regen', null, '回合末 · 再生先结算');
     for (const u of Object.values(work.units))
       if (u.hp > 0 && effectiveBuff(work, u.id, 'poison')) {

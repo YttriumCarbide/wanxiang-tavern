@@ -6,8 +6,11 @@ import {
   classifyCharacterEntry,
 } from '../ai/worldbook.js';
 import { isMonsterWorldEntry } from '../ai/monster-narrative.js';
-import { archivedNpcBook, journeyMemoryBook } from '../ai/journey-memory-worldbook.js';
-import { journeyMemories } from '../memory.js';
+import {
+  SUMMARY_WORLDBOOK,
+  syncSummaryWorldbook,
+  syncArchivedNpcEntries,
+} from '../ai/journey-memory-worldbook.js';
 import { parseWorldKeywords } from './worldbook-fields.js';
 import { html } from '../shared/html.js';
 import { escapeText } from '../ui.js';
@@ -15,23 +18,34 @@ import { query as $ } from './dom.js';
 import { formatRequestPreview, tokenSummary } from './request-preview.js';
 
 /** One inline ST-style editor; entries keep all imported fields outside the visible subset. */
-export function createWorldbookEditor({ session, events, api, inputFor, onSaved }) {
+export function createWorldbookEditor({ session, events, api, inputFor, onSaved, savePrivate }) {
   const state = session.ai.worldEditor;
+  const bookPicker = $('#world-book-select');
   const category = document.createElement('select');
   category.id = 'world-category';
   category.setAttribute('aria-label', '世界书显示分类');
   category.innerHTML =
-    '<option value="all">全部条目</option><option value="general">世界与规则</option><option value="protagonist">主角设定</option><option value="ai-character">ai角色条目</option><option value="character">角色条目</option><option value="monster">怪物设定</option>';
+    '<option value="all">全部条目</option><option value="general">世界观设定</option><option value="rules">规则与输出格式</option><option value="protagonist">主角设定</option><option value="ai-character">ai角色条目</option><option value="character">角色条目</option><option value="monster">怪物设定</option>';
   $('#world-search').before(category);
   category.add(new Option('官设副本', 'official-dungeon'), 2);
   category.add(new Option('NPC角色条目', 'npc'));
   category.add(new Option('旅途记录', 'journey-memory'));
   function entryCategory(entry) {
     const marker = entry.extensions?.wanxiang;
-    if (marker?.officialNpcId || /^(?:官设NPC|NPC角色条目)[：:]/u.test(entry.comment)) return 'npc';
+    if (marker?.journeyMemoryId) return 'journey-memory';
+    if (
+      marker?.archivedNpcId ||
+      marker?.officialNpcId ||
+      /^(?:官设NPC|NPC角色条目)[：:]/u.test(entry.comment)
+    )
+      return 'npc';
     if (marker?.officialDungeonId || marker?.dungeonId || /^官设副本[：:]/u.test(entry.comment))
       return 'official-dungeon';
-    return characterEntryCategory(entry) || (isMonsterWorldEntry(entry) ? 'monster' : 'general');
+    if (isMonsterWorldEntry(entry)) return 'monster';
+    return (
+      characterEntryCategory(entry) ||
+      (marker?.generationRule || marker?.currencyRule || marker?.dining ? 'rules' : 'general')
+    );
   }
   events.on(category, 'change', () => {
     capture();
@@ -109,12 +123,16 @@ export function createWorldbookEditor({ session, events, api, inputFor, onSaved 
     capture();
     const revision = state.revision;
     const book = normalizeWorldbook(state.draft).book;
-    state.savePromise = api('worldbooks/save', { id: state.id, book });
+    const privateBook = state.id === SUMMARY_WORLDBOOK;
+    if (privateBook) session.ai.library.summaryWorldbook = book;
+    state.savePromise = privateBook
+      ? Promise.resolve(savePrivate?.())
+      : api('worldbooks/save', { id: state.id, book });
     try {
       await state.savePromise;
       if (session.runtime.disposed) return;
       if (revision === state.revision) state.dirty = false;
-      onSaved?.(book);
+      if (!privateBook) onSaved?.(book);
       notice('已保存');
     } finally {
       state.savePromise = null;
@@ -241,27 +259,6 @@ ${escapeText(entry.content)}</textarea>`;
     $('#world-editor-parking').append(editor);
     const search = $('#world-search').value.trim().toLowerCase();
     const sort = $('#world-sort').value;
-    const library = session.ai.library;
-    const archive =
-      category.value === 'npc'
-        ? archivedNpcBook(library.archives?.npcs)
-        : category.value === 'journey-memory'
-          ? journeyMemoryBook({ journeyMemories: journeyMemories(library) })
-          : null;
-    const savedEntries = Object.values(archive?.entries || {}).filter((entry) =>
-      `${entry.comment} ${entry.key.join(' ')} ${entry.content}`.toLowerCase().includes(search),
-    );
-    const savedRows = savedEntries
-      .map(
-        (entry) =>
-          html`<details class="world-entry-row">
-            <summary>${escapeText(entry.comment)}</summary>
-            <p>${escapeText(entry.constant ? '随请求发送' : entry.key.join('、'))}</p>
-            <textarea readonly class="world-content" rows="8">
-${escapeText(entry.content)}</textarea>
-          </details>`,
-      )
-      .join('');
     const entries = Object.values(state.draft.entries).filter(
       (entry) =>
         (category.value === 'all' || entryCategory(entry) === category.value) &&
@@ -274,7 +271,7 @@ ${escapeText(entry.content)}</textarea>
           ? b.order - a.order
           : (a.displayIndex ?? a.uid) - (b.displayIndex ?? b.uid),
     );
-    $('#world-count').textContent = `${entries.length + savedEntries.length} 条`;
+    $('#world-count').textContent = `${entries.length} 条`;
     $('#world-entry-list').innerHTML =
       entries
         .map(
@@ -375,7 +372,7 @@ ${escapeText(entry.content)}</textarea>
               <div data-world-expanded="${entry.uid}"></div>
             </article>`,
         )
-        .join('') + savedRows || '<p class="world-empty">没有匹配条目</p>';
+        .join('') || '<p class="world-empty">没有匹配条目</p>';
     const slot = !state.collapsed && document.querySelector(`[data-world-expanded="${state.uid}"]`);
     (slot || $('#world-editor-parking')).append(editor);
   }
@@ -388,9 +385,24 @@ ${escapeText(entry.content)}</textarea>
     const result = await api('worldbooks');
     state.settings = result.settings;
     state.books = result.books;
-    state.id = result.books[0]?.id || 'tavern-world';
-    const { book } = await api(`worldbooks/${state.id}`);
-    state.draft = book;
+    const options = [...result.books, { id: SUMMARY_WORLDBOOK, name: '总结世界书' }];
+    bookPicker.replaceChildren(...options.map(({ id, name }) => new Option(name, id)));
+    await loadBook(options.some(({ id }) => id === state.id) ? state.id : options[0].id);
+    $('#world-dialog').showModal();
+  }
+  async function loadBook(id) {
+    state.id = id;
+    state.draft =
+      id === SUMMARY_WORLDBOOK
+        ? structuredClone(syncSummaryWorldbook(session.ai.library))
+        : (await api(`worldbooks/${id}`)).book;
+    bookPicker.value = id;
+    category.value = 'all';
+    for (const option of category.options) {
+      option.hidden = id === SUMMARY_WORLDBOOK && !['all', 'journey-memory'].includes(option.value);
+    }
+    $('#world-search').value = '';
+    $('.world-format-links').hidden = id === SUMMARY_WORLDBOOK;
     state.uid = null;
     state.collapsed = true;
     state.dirty = false;
@@ -428,12 +440,23 @@ ${escapeText(entry.content)}</textarea>
           }
         }
       }
+      if (syncArchivedNpcEntries(state.draft, session.ai.library.archives?.npcs)) added = true;
       if (added) dirty();
+    } else if (state.id === 'tavern-world' && session.ai.library?.archives?.npcs) {
+      if (syncArchivedNpcEntries(state.draft, session.ai.library.archives.npcs)) dirty();
     }
     render();
     notice('蓝灯常驻，绿灯按关键词触发。格式约束可从上方两个入口直接打开。');
-    $('#world-dialog').showModal();
   }
+  events.on(
+    bookPicker,
+    'change',
+    guard(async () => {
+      const id = bookPicker.value;
+      await flush();
+      await loadBook(id);
+    }),
+  );
   function nextUid() {
     return Math.max(-1, ...Object.keys(state.draft.entries).map(Number)) + 1;
   }
@@ -539,9 +562,12 @@ ${escapeText(entry.content)}</textarea>
     guard((event) => {
       const format = event.target.closest('[data-world-format]');
       if (format) {
+        const targetRule =
+          format.dataset.worldFormat === 'chat'
+            ? 'chat-boundary'
+            : `${format.dataset.worldFormat}-output`;
         const entry = Object.values(state.draft.entries).find(
-          (entry) =>
-            entry.extensions?.wanxiang?.generationRule === `${format.dataset.worldFormat}-output`,
+          (entry) => entry.extensions?.wanxiang?.generationRule === targetRule,
         );
         if (!entry) throw Error('未找到格式条目，请检查世界书是否已导入游戏格式要求。');
         $('#world-search').value = '';
@@ -618,8 +644,15 @@ ${escapeText(entry.content)}</textarea>
       const kind = $('#world-kind').value;
       const result = await api('prompts/preview', {
         kind,
-        input: inputFor(kind),
-        worldInfoOverride: { id: state.id, book: state.draft, settings: state.settings },
+        input: {
+          ...inputFor(kind),
+          ...(state.id === SUMMARY_WORLDBOOK ? { summaryWorldbook: state.draft } : {}),
+        },
+        ...(state.id === SUMMARY_WORLDBOOK
+          ? {}
+          : {
+              worldInfoOverride: { id: state.id, book: state.draft, settings: state.settings },
+            }),
       });
       $('#world-token-summary').textContent = tokenSummary(result.tokens);
       $('#world-preview').textContent = formatRequestPreview(result);

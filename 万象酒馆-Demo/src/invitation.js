@@ -1,8 +1,17 @@
-import { INVITATION_ACTIVITIES, TOWN_SCENES } from './daily.js';
+import { INVITATION_ACTIVITIES, OUTING_ACTIONS, TOWN_SCENES } from './daily.js';
+import { OVERLAND_STOPS, overlandPlan } from './overland-travel.js';
 import { parseGalText } from './gal.js';
 import { applyDialoguePatches, galSceneLines, linesProse } from './adventure/patches.js';
 
-export const INVITATION_SCENES = Object.freeze({ tavern: '酒馆', ...TOWN_SCENES });
+export const INVITATION_SCENES = Object.freeze({
+  tavern: '酒馆',
+  ...TOWN_SCENES,
+  ...Object.fromEntries(
+    OVERLAND_STOPS.slice(1)
+      .filter(({ id }) => overlandPlan('outskirts', id).turns <= OUTING_ACTIONS)
+      .map(({ id, name }) => [id, name]),
+  ),
+});
 export const RECRUIT_TRUST = 60;
 export const PERSONAL_EVENT_TRUST = 20;
 export const INVITATION_PATCH_LIMIT = 3;
@@ -30,7 +39,23 @@ function invitationScene(raw) {
   };
 }
 
-export function normalizeInvitationPlan(raw) {
+function distinctTexts(values, count, limit, field) {
+  if (!Array.isArray(values) || values.length !== count) throw Error(`${field}需要 ${count} 项`);
+  const texts = values.map((text) => boundedText(text, limit, field));
+  if (new Set(texts).size !== count) throw Error(`${field}不能重复`);
+  return texts;
+}
+
+export function normalizeInvitationTopics(raw) {
+  return distinctTexts(
+    [raw?.unrelated, ...distinctTexts(raw?.weak, 2, 60, '弱相关主题'), raw?.strong],
+    4,
+    60,
+    '约见主题',
+  );
+}
+
+export function normalizeInvitationPlan(raw, { requireChoices = false } = {}) {
   if (!Array.isArray(raw?.stages) || raw.stages.length < 3 || raw.stages.length > 5)
     throw Error('约见需要 3～5 幕互动和一幕收尾');
   return {
@@ -47,6 +72,9 @@ export function normalizeInvitationPlan(raw) {
         ...(typeof stage.hint === 'string' ? { hint: stage.hint.trim() } : {}),
         minTurns: 1,
         maxTurns: 4,
+        ...(requireChoices || stage.choices
+          ? { choices: distinctTexts(stage.choices, 2, 60, '本幕选项') }
+          : {}),
         goals: stage.tasks.map((task, i) => ({
           id: `goal-${i + 1}`,
           description: boundedText(task, 180, '本幕任务'),

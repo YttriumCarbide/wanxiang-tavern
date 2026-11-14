@@ -235,7 +235,7 @@ export function createSettlement(context) {
           >`
         : '';
     panel.innerHTML = html`<h2>
-        ${session.journey.expedition.chapter ? `${escapeText(currentEncounterSpec(session.journey.expedition).name)} · ${won ? '交锋胜利' : '行动失败'}` : won ? `${session.journey.expedition.adventure ? ADVENTURE_NODE_LABELS[encounter] : `第 ${encounter + 1} 场`}通过${complete ? ' · 副本完成' : ''}` : '本次旅途结束'}
+        ${session.journey.expedition.overlandBattle ? `${escapeText(currentEncounterSpec(session.journey.expedition).name)} · ${won ? '交锋胜利' : '行动失败'}` : won ? `${session.journey.expedition.adventure ? ADVENTURE_NODE_LABELS[encounter] : `第 ${encounter + 1} 场`}通过${complete ? ' · 副本完成' : ''}` : '本次旅途结束'}
       </h2>
       <div class="battle-rewards">
         ${reward('gold', rewards?.gold || 0, '金币')}${reward('summon-contract', rewards?.summonContracts || 0, '召唤契约')}${reward('ether', ether, '以太', 'ether-reward')}

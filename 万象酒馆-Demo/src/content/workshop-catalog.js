@@ -1,12 +1,13 @@
 export const WORKSHOP_CATALOG = {
   version: 1,
   name: '星隙工坊',
-  currency: '工坊券',
   researchKey: 'clockwork-heart',
   items: [
     {
       id: 'stardust',
       name: '星尘',
+      icon: 'sparkle',
+      tint: 'gold',
       inputs: {},
       seconds: 3,
       visibility: {
@@ -18,13 +19,18 @@ export const WORKSHOP_CATALOG = {
         core: 0,
         rules: [],
       },
-      position: null,
+      position: {
+        x: 696,
+        y: 520,
+      },
       value: 1,
       description: '酒馆工坊的基础物资，可手工收集或交由设施持续产出。',
     },
     {
       id: 'spring-water',
       name: '净泉',
+      icon: 'droplet',
+      tint: 'azure',
       inputs: {},
       seconds: 3,
       visibility: {
@@ -36,13 +42,18 @@ export const WORKSHOP_CATALOG = {
         core: 0,
         rules: [],
       },
-      position: null,
+      position: {
+        x: 600,
+        y: 520,
+      },
       value: 1,
       description: '酒馆工坊的基础物资，可手工收集或交由设施持续产出。',
     },
     {
       id: 'barley',
       name: '麦粒',
+      icon: 'grain',
+      tint: 'wheat',
       inputs: {},
       seconds: 3,
       visibility: {
@@ -54,13 +65,18 @@ export const WORKSHOP_CATALOG = {
         core: 0,
         rules: [],
       },
-      position: null,
+      position: {
+        x: 504,
+        y: 520,
+      },
       value: 1,
       description: '酒馆工坊的基础物资，可手工收集或交由设施持续产出。',
     },
     {
       id: 'malt-extract',
       name: '麦芽精华',
+      icon: 'vial',
+      tint: 'amber',
       inputs: {
         barley: 2,
       },
@@ -74,13 +90,18 @@ export const WORKSHOP_CATALOG = {
         core: 0,
         rules: [],
       },
-      position: null,
+      position: {
+        x: 408,
+        y: 520,
+      },
       value: 4,
       description: '以麦粒×2制作，供后续工序和设施建设使用。',
     },
     {
       id: 'fitting',
       name: '铜木构件',
+      icon: 'frame',
+      tint: 'copper',
       inputs: {
         stardust: 2,
       },
@@ -94,13 +115,18 @@ export const WORKSHOP_CATALOG = {
         core: 0,
         rules: [],
       },
-      position: null,
+      position: {
+        x: 312,
+        y: 520,
+      },
       value: 4,
       description: '以星尘×2制作，供后续工序和设施建设使用。',
     },
     {
       id: 'brewing-notes',
       name: '调酿手记',
+      icon: 'book',
+      tint: 'amber',
       inputs: {
         fitting: 2,
         'malt-extract': 1,
@@ -115,13 +141,18 @@ export const WORKSHOP_CATALOG = {
         core: 0,
         rules: [],
       },
-      position: null,
+      position: {
+        x: 696,
+        y: 372,
+      },
       value: 14,
       description: '以铜木构件×2、麦芽精华×1制作，供后续工序和设施建设使用。',
     },
     {
       id: 'blueprint',
       name: '工坊蓝图',
+      icon: 'blueprint',
+      tint: 'azure',
       inputs: {
         fitting: 3,
       },
@@ -135,13 +166,18 @@ export const WORKSHOP_CATALOG = {
         core: 0,
         rules: [],
       },
-      position: null,
+      position: {
+        x: 600,
+        y: 372,
+      },
       value: 14,
       description: '以铜木构件×3制作，供后续工序和设施建设使用。',
     },
     {
       id: 'clockwork-heart',
       name: '工坊机芯',
+      icon: 'mechanism',
+      tint: 'gold',
       inputs: {
         'brewing-notes': 1,
         blueprint: 1,
@@ -156,13 +192,18 @@ export const WORKSHOP_CATALOG = {
         core: 0,
         rules: [],
       },
-      position: null,
+      position: {
+        x: 504,
+        y: 372,
+      },
       value: 32,
       description: '以调酿手记×1、工坊蓝图×1制作，供后续工序和设施建设使用。',
     },
     {
       id: 'ember-charcoal',
       name: '余温炭',
+      icon: 'coal',
+      tint: 'ember',
       inputs: {},
       seconds: 15,
       visibility: {
@@ -174,13 +215,18 @@ export const WORKSHOP_CATALOG = {
         core: 0,
         rules: [],
       },
-      position: null,
+      position: {
+        x: 696,
+        y: 224,
+      },
       value: 5,
       description: '酒馆工坊的基础物资，可手工收集或交由设施持续产出。',
     },
     {
       id: 'hearth-brick',
       name: '温炉芯砖',
+      icon: 'brick',
+      tint: 'ember',
       inputs: {
         flux: 1,
         'ember-charcoal': 2,
@@ -195,13 +241,18 @@ export const WORKSHOP_CATALOG = {
         core: 0,
         rules: [],
       },
-      position: null,
+      position: {
+        x: 696,
+        y: 76,
+      },
       value: 48,
       description: '以助熔粉×1、余温炭×2制作，供后续工序和设施建设使用。',
     },
     {
       id: 'moon-sand',
       name: '清辉晶砂',
+      icon: 'sand',
+      tint: 'frost',
       inputs: {},
       seconds: 15,
       visibility: {
@@ -213,13 +264,18 @@ export const WORKSHOP_CATALOG = {
         core: 0,
         rules: [],
       },
-      position: null,
+      position: {
+        x: 600,
+        y: 224,
+      },
       value: 5,
       description: '酒馆工坊的基础物资，可手工收集或交由设施持续产出。',
     },
     {
       id: 'scented-chips',
       name: '酿香木屑',
+      icon: 'powder',
+      tint: 'earth',
       inputs: {},
       seconds: 15,
       visibility: {
@@ -231,13 +287,18 @@ export const WORKSHOP_CATALOG = {
         core: 0,
         rules: [],
       },
-      position: null,
+      position: {
+        x: 504,
+        y: 224,
+      },
       value: 5,
       description: '酒馆工坊的基础物资，可手工收集或交由设施持续产出。',
     },
     {
       id: 'brass-grit',
       name: '黄铜矿粒',
+      icon: 'nugget',
+      tint: 'gold',
       inputs: {},
       seconds: 15,
       visibility: {
@@ -249,13 +310,18 @@ export const WORKSHOP_CATALOG = {
         core: 0,
         rules: [],
       },
-      position: null,
+      position: {
+        x: 408,
+        y: 224,
+      },
       value: 5,
       description: '酒馆工坊的基础物资，可手工收集或交由设施持续产出。',
     },
     {
       id: 'kiln-clay',
       name: '窑泥',
+      icon: 'clay',
+      tint: 'earth',
       inputs: {},
       seconds: 15,
       visibility: {
@@ -267,13 +333,18 @@ export const WORKSHOP_CATALOG = {
         core: 0,
         rules: [],
       },
-      position: null,
+      position: {
+        x: 312,
+        y: 224,
+      },
       value: 5,
       description: '酒馆工坊的基础物资，可手工收集或交由设施持续产出。',
     },
     {
       id: 'fireproof-tile',
       name: '耐火陶片',
+      icon: 'tile',
+      tint: 'copper',
       inputs: {
         flux: 1,
         'kiln-clay': 2,
@@ -288,13 +359,18 @@ export const WORKSHOP_CATALOG = {
         core: 0,
         rules: [],
       },
-      position: null,
+      position: {
+        x: 312,
+        y: 76,
+      },
       value: 48,
       description: '以助熔粉×1、窑泥×2制作，供后续工序和设施建设使用。',
     },
     {
       id: 'brass-ingot',
       name: '黄铜锭',
+      icon: 'ingot',
+      tint: 'gold',
       inputs: {
         flux: 1,
         'brass-grit': 2,
@@ -309,13 +385,18 @@ export const WORKSHOP_CATALOG = {
         core: 0,
         rules: [],
       },
-      position: null,
+      position: {
+        x: 408,
+        y: 76,
+      },
       value: 48,
       description: '以助熔粉×1、黄铜矿粒×2制作，供后续工序和设施建设使用。',
     },
     {
       id: 'filter-crystal',
       name: '滤泉晶片',
+      icon: 'shard',
+      tint: 'frost',
       inputs: {
         flux: 1,
         'moon-sand': 2,
@@ -330,13 +411,18 @@ export const WORKSHOP_CATALOG = {
         core: 0,
         rules: [],
       },
-      position: null,
+      position: {
+        x: 600,
+        y: 76,
+      },
       value: 48,
       description: '以助熔粉×1、清辉晶砂×2制作，供后续工序和设施建设使用。',
     },
     {
       id: 'scented-wood',
       name: '香木条',
+      icon: 'plank',
+      tint: 'amber',
       inputs: {
         flux: 1,
         'scented-chips': 2,
@@ -351,13 +437,18 @@ export const WORKSHOP_CATALOG = {
         core: 0,
         rules: [],
       },
-      position: null,
+      position: {
+        x: 504,
+        y: 76,
+      },
       value: 48,
       description: '以助熔粉×1、酿香木屑×2制作，供后续工序和设施建设使用。',
     },
     {
       id: 'sealant',
       name: '封桶胶',
+      icon: 'glue',
+      tint: 'amber',
       inputs: {
         'spring-water': 2,
         'malt-extract': 1,
@@ -375,13 +466,18 @@ export const WORKSHOP_CATALOG = {
         core: 0,
         rules: [],
       },
-      position: null,
+      position: {
+        x: 216,
+        y: 520,
+      },
       value: 10,
       description: '以净泉×2、麦芽精华×1、星尘×2制作，供后续工序和设施建设使用。',
     },
     {
       id: 'flux',
       name: '助熔粉',
+      icon: 'powder',
+      tint: 'ember',
       inputs: {
         fitting: 1,
         sealant: 2,
@@ -396,13 +492,18 @@ export const WORKSHOP_CATALOG = {
         core: 0,
         rules: [],
       },
-      position: null,
+      position: {
+        x: 408,
+        y: 372,
+      },
       value: 26,
       description: '以铜木构件×1、封桶胶×2制作，供后续工序和设施建设使用。',
     },
     {
       id: 'loose-spark',
       name: '散逸星火',
+      icon: 'sparkle',
+      tint: 'ember',
       inputs: {},
       seconds: 15,
       visibility: {
@@ -416,13 +517,18 @@ export const WORKSHOP_CATALOG = {
         core: 0,
         rules: [],
       },
-      position: null,
+      position: {
+        x: 888,
+        y: 520,
+      },
       value: 5,
       description: '酒馆工坊的基础物资，可手工收集或交由设施持续产出。',
     },
     {
       id: 'bottled-spark',
       name: '束缚星火',
+      icon: 'spark-jar',
+      tint: 'amber',
       inputs: {
         'loose-spark': 5,
       },
@@ -438,13 +544,18 @@ export const WORKSHOP_CATALOG = {
         core: 0,
         rules: [],
       },
-      position: null,
+      position: {
+        x: 984,
+        y: 520,
+      },
       value: 29,
       description: '以散逸星火×5制作，供后续工序和设施建设使用。',
     },
     {
       id: 'oak-shoot',
       name: '香木嫩枝',
+      icon: 'sapling',
+      tint: 'jade',
       inputs: {
         'bottled-spark': 2,
         'scented-wood': 2,
@@ -460,13 +571,18 @@ export const WORKSHOP_CATALOG = {
         core: 0,
         rules: [],
       },
-      position: null,
+      position: {
+        x: 1176,
+        y: 520,
+      },
       value: 159,
       description: '以束缚星火×2、香木条×2、麦粒×1制作，供后续工序和设施建设使用。',
     },
     {
       id: 'rich-soil',
       name: '沃酿土',
+      icon: 'soil',
+      tint: 'earth',
       inputs: {},
       seconds: 3,
       visibility: {
@@ -478,13 +594,18 @@ export const WORKSHOP_CATALOG = {
         core: 0,
         rules: [],
       },
-      position: null,
+      position: {
+        x: 1080,
+        y: 520,
+      },
       value: 1,
       description: '酒馆工坊的基础物资，可手工收集或交由设施持续产出。',
     },
     {
       id: 'aged-oak',
       name: '陈酿橡木',
+      icon: 'log',
+      tint: 'earth',
       inputs: {
         'rich-soil': 1,
         'oak-shoot': 1,
@@ -500,13 +621,18 @@ export const WORKSHOP_CATALOG = {
         core: 0,
         rules: [],
       },
-      position: null,
+      position: {
+        x: 1272,
+        y: 520,
+      },
       value: 172,
       description: '以沃酿土×1、香木嫩枝×1、麦芽精华×2制作，供后续工序和设施建设使用。',
     },
     {
       id: 'oak-pipe',
       name: '铜木导管',
+      icon: 'pipe',
+      tint: 'copper',
       inputs: {
         'aged-oak': 3,
         'brass-ingot': 2,
@@ -522,13 +648,18 @@ export const WORKSHOP_CATALOG = {
         core: 0,
         rules: [],
       },
-      position: null,
+      position: {
+        x: 1368,
+        y: 520,
+      },
       value: 713,
       description: '以陈酿橡木×3、黄铜锭×2、滤泉晶片×2制作，供后续工序和设施建设使用。',
     },
     {
       id: 'echo-heart',
       name: '回响机芯',
+      icon: 'mechanism',
+      tint: 'violet',
       inputs: {
         'oak-pipe': 2,
         'clockwork-heart': 1,
@@ -545,13 +676,18 @@ export const WORKSHOP_CATALOG = {
         core: 0,
         rules: [],
       },
-      position: null,
+      position: {
+        x: 1464,
+        y: 520,
+      },
       value: 1561,
       description: '以铜木导管×2、工坊机芯×1、温炉芯砖×1、香木条×1制作，供后续工序和设施建设使用。',
     },
     {
       id: 'mist-crystal',
       name: '雾蓝原晶',
+      icon: 'crystal',
+      tint: 'azure',
       inputs: {},
       seconds: 15,
       visibility: {
@@ -563,13 +699,18 @@ export const WORKSHOP_CATALOG = {
         core: 0,
         rules: [],
       },
-      position: null,
+      position: {
+        x: 216,
+        y: 224,
+      },
       value: 5,
       description: '酒馆工坊的基础物资，可手工收集或交由设施持续产出。',
     },
     {
       id: 'clarifier',
       name: '澄清液',
+      icon: 'flask',
+      tint: 'frost',
       inputs: {
         'aged-oak': 2,
         'bottled-spark': 1,
@@ -585,13 +726,18 @@ export const WORKSHOP_CATALOG = {
         core: 0,
         rules: [],
       },
-      position: null,
+      position: {
+        x: 312,
+        y: 372,
+      },
       value: 1939,
       description: '以陈酿橡木×2、束缚星火×1、回响机芯×1制作，供后续工序和设施建设使用。',
     },
     {
       id: 'tasting-crystal',
       name: '醒味晶',
+      icon: 'gem',
+      tint: 'rose',
       inputs: {
         'mist-crystal': 4,
         clarifier: 1,
@@ -606,13 +752,18 @@ export const WORKSHOP_CATALOG = {
         core: 0,
         rules: [],
       },
-      position: null,
+      position: {
+        x: 216,
+        y: 76,
+      },
       value: 1969,
       description: '以雾蓝原晶×4、澄清液×1制作，供后续工序和设施建设使用。',
     },
     {
       id: 'thermal-crystal',
       name: '稳温晶',
+      icon: 'gem',
+      tint: 'ember',
       inputs: {
         'mist-crystal': 4,
         clarifier: 1,
@@ -627,13 +778,18 @@ export const WORKSHOP_CATALOG = {
         core: 0,
         rules: [],
       },
-      position: null,
+      position: {
+        x: 120,
+        y: 76,
+      },
       value: 1969,
       description: '以雾蓝原晶×4、澄清液×1制作，供后续工序和设施建设使用。',
     },
     {
       id: 'amber-stone',
       name: '酒光原石',
+      icon: 'ore',
+      tint: 'amber',
       inputs: {
         'mist-crystal': 4,
         clarifier: 1,
@@ -648,13 +804,18 @@ export const WORKSHOP_CATALOG = {
         core: 0,
         rules: [],
       },
-      position: null,
+      position: {
+        x: 24,
+        y: 76,
+      },
       value: 1969,
       description: '以雾蓝原晶×4、澄清液×1制作，供后续工序和设施建设使用。',
     },
     {
       id: 'condensed-dew',
       name: '凝露滴',
+      icon: 'droplet',
+      tint: 'teal',
       inputs: {
         'tasting-crystal': 1,
         'filter-crystal': 1,
@@ -669,13 +830,18 @@ export const WORKSHOP_CATALOG = {
         core: 0,
         rules: [],
       },
-      position: null,
+      position: {
+        x: 984,
+        y: 76,
+      },
       value: 2022,
       description: '以醒味晶×1、滤泉晶片×1制作，供后续工序和设施建设使用。',
     },
     {
       id: 'clay-crystal',
       name: '陶土结晶',
+      icon: 'crystal',
+      tint: 'earth',
       inputs: {
         'thermal-crystal': 1,
         'fireproof-tile': 1,
@@ -690,13 +856,18 @@ export const WORKSHOP_CATALOG = {
         core: 0,
         rules: [],
       },
-      position: null,
+      position: {
+        x: 888,
+        y: 76,
+      },
       value: 2022,
       description: '以稳温晶×1、耐火陶片×1制作，供后续工序和设施建设使用。',
     },
     {
       id: 'aroma-extract',
       name: '析香液',
+      icon: 'vial',
+      tint: 'rose',
       inputs: {
         'echo-heart': 1,
         'aged-oak': 2,
@@ -712,13 +883,18 @@ export const WORKSHOP_CATALOG = {
         core: 0,
         rules: [],
       },
-      position: null,
+      position: {
+        x: 216,
+        y: 372,
+      },
       value: 1914,
       description: '以回响机芯×1、陈酿橡木×2、麦芽精华×1制作，供后续工序和设施建设使用。',
     },
     {
       id: 'rough-amber',
       name: '粗酿琥珀',
+      icon: 'amber',
+      tint: 'copper',
       inputs: {
         'amber-stone': 2,
         'aroma-extract': 1,
@@ -733,13 +909,18 @@ export const WORKSHOP_CATALOG = {
         core: 0,
         rules: [],
       },
-      position: null,
+      position: {
+        x: 1080,
+        y: 76,
+      },
       value: 5857,
       description: '以酒光原石×2、析香液×1制作，供后续工序和设施建设使用。',
     },
     {
       id: 'aging-starter',
       name: '陈酿引子',
+      icon: 'jar',
+      tint: 'amber',
       inputs: {
         'clay-crystal': 1,
         'filter-crystal': 1,
@@ -755,13 +936,18 @@ export const WORKSHOP_CATALOG = {
         core: 0,
         rules: [],
       },
-      position: null,
+      position: {
+        x: 1176,
+        y: 76,
+      },
       value: 2094,
       description: '以陶土结晶×1、滤泉晶片×1、麦芽精华×5制作，供后续工序和设施建设使用。',
     },
     {
       id: 'wine-amber',
       name: '酒光琥珀',
+      icon: 'amber',
+      tint: 'amber',
       inputs: {
         'aging-starter': 1,
         'rough-amber': 2,
@@ -776,13 +962,18 @@ export const WORKSHOP_CATALOG = {
         core: 0,
         rules: [],
       },
-      position: null,
+      position: {
+        x: 1272,
+        y: 76,
+      },
       value: 13812,
       description: '以陈酿引子×1、粗酿琥珀×2制作，供后续工序和设施建设使用。',
     },
     {
       id: 'amber-purifier',
       name: '琥珀净化液',
+      icon: 'flask',
+      tint: 'amber',
       inputs: {
         'clay-crystal': 1,
         'condensed-dew': 1,
@@ -798,13 +989,18 @@ export const WORKSHOP_CATALOG = {
         core: 0,
         rules: [],
       },
-      position: null,
+      position: {
+        x: 1368,
+        y: 76,
+      },
       value: 5963,
       description: '以陶土结晶×1、凝露滴×1、析香液×1制作，供后续工序和设施建设使用。',
     },
     {
       id: 'clear-amber',
       name: '澄辉琥珀',
+      icon: 'amber',
+      tint: 'gold',
       inputs: {
         'wine-amber': 2,
         'amber-purifier': 1,
@@ -819,13 +1015,18 @@ export const WORKSHOP_CATALOG = {
         core: 0,
         rules: [],
       },
-      position: null,
+      position: {
+        x: 1464,
+        y: 76,
+      },
       value: 33594,
       description: '以酒光琥珀×2、琥珀净化液×1制作，供后续工序和设施建设使用。',
     },
     {
       id: 'amber-conduit',
       name: '琥珀导流管',
+      icon: 'pipe',
+      tint: 'amber',
       inputs: {
         'clear-amber': 1,
         'oak-pipe': 5,
@@ -840,13 +1041,18 @@ export const WORKSHOP_CATALOG = {
         core: 0,
         rules: [],
       },
-      position: null,
+      position: {
+        x: 1560,
+        y: 76,
+      },
       value: 37166,
       description: '以澄辉琥珀×1、铜木导管×5制作，供后续工序和设施建设使用。',
     },
     {
       id: 'spark-regulator',
       name: '星火限流环',
+      icon: 'ring',
+      tint: 'amber',
       inputs: {
         'clear-amber': 3,
         'echo-heart': 1,
@@ -861,13 +1067,18 @@ export const WORKSHOP_CATALOG = {
         core: 0,
         rules: [],
       },
-      position: null,
+      position: {
+        x: 1656,
+        y: 76,
+      },
       value: 102350,
       description: '以澄辉琥珀×3、回响机芯×1制作，供后续工序和设施建设使用。',
     },
     {
       id: 'perpetual-heart',
       name: '星隙恒动芯',
+      icon: 'core',
+      tint: 'gold',
       inputs: {
         'amber-conduit': 2,
         'spark-regulator': 1,
@@ -882,7 +1093,10 @@ export const WORKSHOP_CATALOG = {
         core: 0,
         rules: [],
       },
-      position: null,
+      position: {
+        x: 1752,
+        y: 76,
+      },
       value: 176691,
       description: '以琥珀导流管×2、星火限流环×1制作，供后续工序和设施建设使用。',
     },
@@ -891,6 +1105,8 @@ export const WORKSHOP_CATALOG = {
     {
       id: 'collector',
       name: '星尘收集台',
+      icon: 'collector',
+      tint: 'gold',
       outputs: {
         stardust: 1,
       },
@@ -913,10 +1129,16 @@ export const WORKSHOP_CATALOG = {
         core: 0,
         rules: [],
       },
+      position: {
+        x: 696,
+        y: 668,
+      },
     },
     {
       id: 'well',
       name: '净泉井',
+      icon: 'well',
+      tint: 'azure',
       outputs: {
         'spring-water': 1,
       },
@@ -940,10 +1162,16 @@ export const WORKSHOP_CATALOG = {
         core: 1,
         rules: [],
       },
+      position: {
+        x: 600,
+        y: 668,
+      },
     },
     {
       id: 'barley-bed',
       name: '麦圃',
+      icon: 'field',
+      tint: 'wheat',
       outputs: {
         barley: 1,
       },
@@ -967,10 +1195,16 @@ export const WORKSHOP_CATALOG = {
         core: 1,
         rules: [],
       },
+      position: {
+        x: 504,
+        y: 668,
+      },
     },
     {
       id: 'malthouse',
       name: '麦芽坊',
+      icon: 'vat',
+      tint: 'wheat',
       outputs: {
         'malt-extract': 1,
       },
@@ -995,10 +1229,16 @@ export const WORKSHOP_CATALOG = {
         core: 1,
         rules: [],
       },
+      position: {
+        x: 408,
+        y: 668,
+      },
     },
     {
       id: 'fitting-bench',
       name: '构件台',
+      icon: 'workbench',
+      tint: 'copper',
       outputs: {
         fitting: 1,
       },
@@ -1022,10 +1262,16 @@ export const WORKSHOP_CATALOG = {
         core: 1,
         rules: [],
       },
+      position: {
+        x: 312,
+        y: 668,
+      },
     },
     {
       id: 'brewing-desk',
       name: '调酿桌',
+      icon: 'lab',
+      tint: 'amber',
       outputs: {
         'brewing-notes': 1,
       },
@@ -1053,10 +1299,16 @@ export const WORKSHOP_CATALOG = {
         core: 1,
         rules: [],
       },
+      position: {
+        x: 696,
+        y: 816,
+      },
     },
     {
       id: 'drawing-desk',
       name: '绘图台',
+      icon: 'desk',
+      tint: 'azure',
       outputs: {
         blueprint: 1,
       },
@@ -1083,10 +1335,16 @@ export const WORKSHOP_CATALOG = {
         core: 1,
         rules: [],
       },
+      position: {
+        x: 600,
+        y: 816,
+      },
     },
     {
       id: 'heart-bench',
       name: '机芯装配台',
+      icon: 'assembler',
+      tint: 'gold',
       outputs: {
         'clockwork-heart': 1,
       },
@@ -1113,10 +1371,16 @@ export const WORKSHOP_CATALOG = {
         core: 1,
         rules: [],
       },
+      position: {
+        x: 504,
+        y: 816,
+      },
     },
     {
       id: 'material-mine',
       name: '异材采集站',
+      icon: 'mine',
+      tint: 'copper',
       outputs: {
         'ember-charcoal': 1,
         'kiln-clay': 1,
@@ -1145,10 +1409,16 @@ export const WORKSHOP_CATALOG = {
         core: 0,
         rules: [],
       },
+      position: {
+        x: 312,
+        y: 816,
+      },
     },
     {
       id: 'refinery',
       name: '精炼炉',
+      icon: 'furnace',
+      tint: 'ember',
       outputs: {
         'hearth-brick': 1,
         'brass-ingot': 1,
@@ -1181,10 +1451,16 @@ export const WORKSHOP_CATALOG = {
         core: 1,
         rules: [],
       },
+      position: {
+        x: 696,
+        y: 964,
+      },
     },
     {
       id: 'sealant-house',
       name: '封桶胶坊',
+      icon: 'cauldron',
+      tint: 'amber',
       outputs: {
         sealant: 1,
       },
@@ -1210,10 +1486,16 @@ export const WORKSHOP_CATALOG = {
         core: 1,
         rules: [],
       },
+      position: {
+        x: 216,
+        y: 668,
+      },
     },
     {
       id: 'flux-bench',
       name: '助熔工台',
+      icon: 'anvil',
+      tint: 'ember',
       outputs: {
         flux: 1,
       },
@@ -1240,10 +1522,16 @@ export const WORKSHOP_CATALOG = {
         core: 1,
         rules: [],
       },
+      position: {
+        x: 408,
+        y: 816,
+      },
     },
     {
       id: 'spark-net',
       name: '星火捕集网',
+      icon: 'net',
+      tint: 'amber',
       outputs: {
         'loose-spark': 1,
       },
@@ -1253,6 +1541,7 @@ export const WORKSHOP_CATALOG = {
         'filter-crystal': 5,
       },
       price: 100,
+      ether: 2,
       max: 100,
       multiplier: 0.2,
       exponentialAt: 20,
@@ -1270,10 +1559,16 @@ export const WORKSHOP_CATALOG = {
         core: 1,
         rules: [],
       },
+      position: {
+        x: 888,
+        y: 668,
+      },
     },
     {
       id: 'soil-vat',
       name: '堆酿池',
+      icon: 'vat',
+      tint: 'earth',
       outputs: {
         'rich-soil': 1,
       },
@@ -1283,6 +1578,7 @@ export const WORKSHOP_CATALOG = {
         'clockwork-heart': 5,
       },
       price: 500,
+      ether: 10,
       max: 100,
       multiplier: 0,
       exponentialAt: 20,
@@ -1302,10 +1598,16 @@ export const WORKSHOP_CATALOG = {
         core: 0,
         rules: [],
       },
+      position: {
+        x: 1080,
+        y: 668,
+      },
     },
     {
       id: 'nursery',
       name: '枝芽温床',
+      icon: 'nursery',
+      tint: 'jade',
       outputs: {
         'oak-shoot': 1,
       },
@@ -1315,6 +1617,7 @@ export const WORKSHOP_CATALOG = {
         'echo-heart': 1,
       },
       price: 500,
+      ether: 10,
       max: 100,
       multiplier: 0,
       exponentialAt: 20,
@@ -1334,10 +1637,16 @@ export const WORKSHOP_CATALOG = {
         core: 0,
         rules: [],
       },
+      position: {
+        x: 1176,
+        y: 668,
+      },
     },
     {
       id: 'oak-shop',
       name: '橡木作坊',
+      icon: 'press',
+      tint: 'earth',
       outputs: {
         'aged-oak': 1,
       },
@@ -1347,6 +1656,7 @@ export const WORKSHOP_CATALOG = {
         'echo-heart': 1,
       },
       price: 500,
+      ether: 10,
       max: 100,
       multiplier: 0,
       exponentialAt: 20,
@@ -1366,10 +1676,16 @@ export const WORKSHOP_CATALOG = {
         core: 0,
         rules: [],
       },
+      position: {
+        x: 1272,
+        y: 668,
+      },
     },
     {
       id: 'pipe-mill',
       name: '导管轧机',
+      icon: 'drill',
+      tint: 'copper',
       outputs: {
         'oak-pipe': 1,
       },
@@ -1379,6 +1695,7 @@ export const WORKSHOP_CATALOG = {
         'brass-ingot': 10,
       },
       price: 500,
+      ether: 10,
       max: 100,
       multiplier: 0,
       exponentialAt: 20,
@@ -1398,10 +1715,16 @@ export const WORKSHOP_CATALOG = {
         core: 0,
         rules: [],
       },
+      position: {
+        x: 1368,
+        y: 668,
+      },
     },
     {
       id: 'echo-assembler',
       name: '回响装配架',
+      icon: 'assembler',
+      tint: 'violet',
       outputs: {
         'echo-heart': 1,
       },
@@ -1411,6 +1734,7 @@ export const WORKSHOP_CATALOG = {
         'scented-wood': 5,
       },
       price: 500,
+      ether: 10,
       max: 100,
       multiplier: 0,
       exponentialAt: 20,
@@ -1430,10 +1754,16 @@ export const WORKSHOP_CATALOG = {
         core: 0,
         rules: [],
       },
+      position: {
+        x: 1464,
+        y: 668,
+      },
     },
     {
       id: 'spark-bottler',
       name: '星火封装台',
+      icon: 'altar',
+      tint: 'amber',
       outputs: {
         'bottled-spark': 1,
       },
@@ -1443,6 +1773,7 @@ export const WORKSHOP_CATALOG = {
         'bottled-spark': 5,
       },
       price: 500,
+      ether: 10,
       max: 100,
       multiplier: 0,
       exponentialAt: 20,
@@ -1462,10 +1793,16 @@ export const WORKSHOP_CATALOG = {
         core: 0,
         rules: [],
       },
+      position: {
+        x: 984,
+        y: 668,
+      },
     },
     {
       id: 'mist-well',
       name: '雾晶井',
+      icon: 'well',
+      tint: 'frost',
       outputs: {
         'mist-crystal': 1,
       },
@@ -1475,6 +1812,7 @@ export const WORKSHOP_CATALOG = {
         'hearth-brick': 5,
       },
       price: 500,
+      ether: 10,
       max: 100,
       multiplier: 0,
       exponentialAt: 20,
@@ -1490,10 +1828,16 @@ export const WORKSHOP_CATALOG = {
         core: 0,
         rules: [],
       },
+      position: {
+        x: 216,
+        y: 816,
+      },
     },
     {
       id: 'clarifier-vat',
       name: '澄清釜',
+      icon: 'cauldron',
+      tint: 'frost',
       outputs: {
         clarifier: 1,
       },
@@ -1503,6 +1847,7 @@ export const WORKSHOP_CATALOG = {
         'bottled-spark': 5,
       },
       price: 500,
+      ether: 10,
       max: 100,
       multiplier: 0,
       exponentialAt: 20,
@@ -1522,10 +1867,16 @@ export const WORKSHOP_CATALOG = {
         core: 0,
         rules: [],
       },
+      position: {
+        x: 600,
+        y: 964,
+      },
     },
     {
       id: 'crystal-sorter',
       name: '晶砂分选台',
+      icon: 'sorter',
+      tint: 'frost',
       outputs: {
         'tasting-crystal': 1,
         'thermal-crystal': 1,
@@ -1538,6 +1889,7 @@ export const WORKSHOP_CATALOG = {
         'echo-heart': 3,
       },
       price: 500,
+      ether: 10,
       max: 100,
       multiplier: 0,
       exponentialAt: 20,
@@ -1557,10 +1909,16 @@ export const WORKSHOP_CATALOG = {
         core: 0,
         rules: [],
       },
+      position: {
+        x: 504,
+        y: 964,
+      },
     },
     {
       id: 'aroma-mixer',
       name: '析香调配台',
+      icon: 'lab',
+      tint: 'rose',
       outputs: {
         'aroma-extract': 1,
       },
@@ -1571,6 +1929,7 @@ export const WORKSHOP_CATALOG = {
         'aged-oak': 5,
       },
       price: 500,
+      ether: 10,
       max: 100,
       multiplier: 0,
       exponentialAt: 20,
@@ -1590,10 +1949,16 @@ export const WORKSHOP_CATALOG = {
         core: 0,
         rules: [],
       },
+      position: {
+        x: 408,
+        y: 964,
+      },
     },
     {
       id: 'dew-extractor',
       name: '凝晶萃取台',
+      icon: 'still',
+      tint: 'teal',
       outputs: {
         'clay-crystal': 1,
         'condensed-dew': 1,
@@ -1604,6 +1969,7 @@ export const WORKSHOP_CATALOG = {
         'echo-heart': 5,
       },
       price: 500,
+      ether: 10,
       max: 100,
       multiplier: 0,
       exponentialAt: 20,
@@ -1619,10 +1985,16 @@ export const WORKSHOP_CATALOG = {
         core: 0,
         rules: [],
       },
+      position: {
+        x: 888,
+        y: 224,
+      },
     },
     {
       id: 'amber-extractor',
       name: '琥珀萃取台',
+      icon: 'still',
+      tint: 'amber',
       outputs: {
         'rough-amber': 1,
       },
@@ -1633,6 +2005,7 @@ export const WORKSHOP_CATALOG = {
         'echo-heart': 5,
       },
       price: 500,
+      ether: 10,
       max: 100,
       multiplier: 0,
       exponentialAt: 20,
@@ -1648,12 +2021,18 @@ export const WORKSHOP_CATALOG = {
         core: 0,
         rules: [],
       },
+      position: {
+        x: 1080,
+        y: 224,
+      },
     },
   ],
   research: [
     {
       id: 'tech-01',
       name: '净泉流速',
+      icon: 'speed',
+      tint: 'azure',
       description: '改进工坊生产工艺；各级效果按累计值生效。',
       costs: [
         {
@@ -1692,11 +2071,16 @@ export const WORKSHOP_CATALOG = {
         },
       ],
       unlocks: [],
-      position: null,
+      position: {
+        x: 244,
+        y: 520,
+      },
     },
     {
       id: 'tech-02',
       name: '麦圃育种',
+      icon: 'growth',
+      tint: 'wheat',
       description: '改进工坊生产工艺；各级效果按累计值生效。',
       costs: [
         {
@@ -1735,11 +2119,16 @@ export const WORKSHOP_CATALOG = {
         },
       ],
       unlocks: [],
-      position: null,
+      position: {
+        x: 340,
+        y: 520,
+      },
     },
     {
       id: 'tech-03',
       name: '麦芽精酿',
+      icon: 'refine',
+      tint: 'wheat',
       description: '改进工坊生产工艺；各级效果按累计值生效。',
       costs: [
         {
@@ -1777,11 +2166,16 @@ export const WORKSHOP_CATALOG = {
         },
       ],
       unlocks: [],
-      position: null,
+      position: {
+        x: 436,
+        y: 520,
+      },
     },
     {
       id: 'tech-04',
       name: '构件工艺',
+      icon: 'craft',
+      tint: 'copper',
       description: '改进工坊生产工艺；各级效果按累计值生效。',
       costs: [
         {
@@ -1819,11 +2213,16 @@ export const WORKSHOP_CATALOG = {
         },
       ],
       unlocks: [],
-      position: null,
+      position: {
+        x: 532,
+        y: 520,
+      },
     },
     {
       id: 'tech-05',
       name: '调酿入门',
+      icon: 'experiment',
+      tint: 'amber',
       description: '改进工坊生产工艺；各级效果按累计值生效。',
       costs: [
         {
@@ -1887,11 +2286,16 @@ export const WORKSHOP_CATALOG = {
           level: 1,
         },
       ],
-      position: null,
+      position: {
+        x: 148,
+        y: 668,
+      },
     },
     {
       id: 'tech-06',
       name: '蓝图绘制',
+      icon: 'compass',
+      tint: 'azure',
       description: '改进工坊生产工艺；各级效果按累计值生效。',
       costs: [
         {
@@ -1946,11 +2350,16 @@ export const WORKSHOP_CATALOG = {
           level: 1,
         },
       ],
-      position: null,
+      position: {
+        x: 244,
+        y: 668,
+      },
     },
     {
       id: 'tech-07',
       name: '机芯并装',
+      icon: 'parallel',
+      tint: 'gold',
       description: '改进工坊生产工艺；各级效果按累计值生效。',
       costs: [
         {
@@ -2006,11 +2415,16 @@ export const WORKSHOP_CATALOG = {
           level: 1,
         },
       ],
-      position: null,
+      position: {
+        x: 340,
+        y: 668,
+      },
     },
     {
       id: 'tech-08',
       name: '星尘采集',
+      icon: 'harvest',
+      tint: 'gold',
       description: '改进工坊生产工艺；各级效果按累计值生效。',
       costs: [
         {
@@ -2049,11 +2463,16 @@ export const WORKSHOP_CATALOG = {
         },
       ],
       unlocks: [],
-      position: null,
+      position: {
+        x: 148,
+        y: 520,
+      },
     },
     {
       id: 'tech-09',
       name: '星火捕集',
+      icon: 'target',
+      tint: 'amber',
       description: '改进工坊生产工艺；各级效果按累计值生效。',
       costs: [
         {
@@ -2097,11 +2516,16 @@ export const WORKSHOP_CATALOG = {
           level: 1,
         },
       ],
-      position: null,
+      position: {
+        x: 148,
+        y: 816,
+      },
     },
     {
       id: 'tech-10',
       name: '封桶工艺',
+      icon: 'lock',
+      tint: 'amber',
       description: '改进工坊生产工艺；各级效果按累计值生效。',
       costs: [
         {
@@ -2164,11 +2588,16 @@ export const WORKSHOP_CATALOG = {
           level: 1,
         },
       ],
-      position: null,
+      position: {
+        x: 436,
+        y: 668,
+      },
     },
     {
       id: 'tech-11',
       name: '助熔提炼',
+      icon: 'thermometer',
+      tint: 'ember',
       description: '改进工坊生产工艺；各级效果按累计值生效。',
       costs: [
         {
@@ -2212,11 +2641,16 @@ export const WORKSHOP_CATALOG = {
           level: 1,
         },
       ],
-      position: null,
+      position: {
+        x: 628,
+        y: 668,
+      },
     },
     {
       id: 'tech-12',
       name: '异材精炼',
+      icon: 'refine',
+      tint: 'copper',
       description: '改进工坊生产工艺；各级效果按累计值生效。',
       costs: [
         {
@@ -2254,11 +2688,16 @@ export const WORKSHOP_CATALOG = {
           level: 1,
         },
       ],
-      position: null,
+      position: {
+        x: 820,
+        y: 668,
+      },
     },
     {
       id: 'tech-13',
       name: '多程封装',
+      icon: 'multiply',
+      tint: 'amber',
       description: '改进工坊生产工艺；各级效果按累计值生效。',
       costs: [
         {
@@ -2273,11 +2712,16 @@ export const WORKSHOP_CATALOG = {
       station: '',
       effects: [],
       unlocks: [],
-      position: null,
+      position: {
+        x: 532,
+        y: 668,
+      },
     },
     {
       id: 'tech-14',
       name: '异材开采',
+      icon: 'upgrade',
+      tint: 'copper',
       description: '改进工坊生产工艺；各级效果按累计值生效。',
       costs: [
         {
@@ -2374,11 +2818,16 @@ export const WORKSHOP_CATALOG = {
         },
       ],
       unlocks: [],
-      position: null,
+      position: {
+        x: 724,
+        y: 668,
+      },
     },
     {
       id: 'tech-15',
       name: '沃土堆酿',
+      icon: 'cycle',
+      tint: 'earth',
       description: '改进工坊生产工艺；各级效果按累计值生效。',
       costs: [
         {
@@ -2422,11 +2871,16 @@ export const WORKSHOP_CATALOG = {
           level: 1,
         },
       ],
-      position: null,
+      position: {
+        x: 340,
+        y: 816,
+      },
     },
     {
       id: 'tech-16',
       name: '枝芽培育',
+      icon: 'growth',
+      tint: 'jade',
       description: '改进工坊生产工艺；各级效果按累计值生效。',
       costs: [
         {
@@ -2470,11 +2924,16 @@ export const WORKSHOP_CATALOG = {
           level: 1,
         },
       ],
-      position: null,
+      position: {
+        x: 436,
+        y: 816,
+      },
     },
     {
       id: 'tech-17',
       name: '橡木养护',
+      icon: 'shield',
+      tint: 'earth',
       description: '改进工坊生产工艺；各级效果按累计值生效。',
       costs: [
         {
@@ -2518,11 +2977,16 @@ export const WORKSHOP_CATALOG = {
           level: 1,
         },
       ],
-      position: null,
+      position: {
+        x: 532,
+        y: 816,
+      },
     },
     {
       id: 'tech-18',
       name: '导管轧制',
+      icon: 'puzzle',
+      tint: 'copper',
       description: '改进工坊生产工艺；各级效果按累计值生效。',
       costs: [
         {
@@ -2566,11 +3030,16 @@ export const WORKSHOP_CATALOG = {
           level: 1,
         },
       ],
-      position: null,
+      position: {
+        x: 628,
+        y: 816,
+      },
     },
     {
       id: 'tech-19',
       name: '回响组装',
+      icon: 'orbit',
+      tint: 'violet',
       description: '改进工坊生产工艺；各级效果按累计值生效。',
       costs: [
         {
@@ -2614,11 +3083,16 @@ export const WORKSHOP_CATALOG = {
           level: 1,
         },
       ],
-      position: null,
+      position: {
+        x: 724,
+        y: 816,
+      },
     },
     {
       id: 'tech-20',
       name: '星火封存',
+      icon: 'hourglass',
+      tint: 'amber',
       description: '改进工坊生产工艺；各级效果按累计值生效。',
       costs: [
         {
@@ -2662,11 +3136,16 @@ export const WORKSHOP_CATALOG = {
           level: 1,
         },
       ],
-      position: null,
+      position: {
+        x: 244,
+        y: 816,
+      },
     },
     {
       id: 'tech-21',
       name: '澄清反应',
+      icon: 'funnel',
+      tint: 'frost',
       description: '改进工坊生产工艺；各级效果按累计值生效。',
       costs: [
         {
@@ -2710,11 +3189,16 @@ export const WORKSHOP_CATALOG = {
           level: 1,
         },
       ],
-      position: null,
+      position: {
+        x: 148,
+        y: 964,
+      },
     },
     {
       id: 'tech-22',
       name: '晶砂分选',
+      icon: 'magnifier',
+      tint: 'frost',
       description: '改进工坊生产工艺；各级效果按累计值生效。',
       costs: [
         {
@@ -2735,11 +3219,16 @@ export const WORKSHOP_CATALOG = {
           level: 1,
         },
       ],
-      position: null,
+      position: {
+        x: 244,
+        y: 964,
+      },
     },
     {
       id: 'tech-23',
       name: '醒味调校',
+      icon: 'taste',
+      tint: 'rose',
       description: '改进工坊生产工艺；各级效果按累计值生效。',
       costs: [
         {
@@ -2777,11 +3266,16 @@ export const WORKSHOP_CATALOG = {
         },
       ],
       unlocks: [],
-      position: null,
+      position: {
+        x: 628,
+        y: 520,
+      },
     },
     {
       id: 'tech-24',
       name: '稳温调校',
+      icon: 'scale',
+      tint: 'ember',
       description: '改进工坊生产工艺；各级效果按累计值生效。',
       costs: [
         {
@@ -2816,11 +3310,16 @@ export const WORKSHOP_CATALOG = {
         },
       ],
       unlocks: [],
-      position: null,
+      position: {
+        x: 724,
+        y: 520,
+      },
     },
     {
       id: 'tech-25',
       name: '酒光调校',
+      icon: 'eye',
+      tint: 'amber',
       description: '改进工坊生产工艺；各级效果按累计值生效。',
       costs: [
         {
@@ -2855,11 +3354,16 @@ export const WORKSHOP_CATALOG = {
         },
       ],
       unlocks: [],
-      position: null,
+      position: {
+        x: 820,
+        y: 520,
+      },
     },
     {
       id: 'tech-26',
       name: '析香调配',
+      icon: 'sigil',
+      tint: 'rose',
       description: '改进工坊生产工艺；各级效果按累计值生效。',
       costs: [
         {
@@ -2880,7 +3384,10 @@ export const WORKSHOP_CATALOG = {
           level: 1,
         },
       ],
-      position: null,
+      position: {
+        x: 340,
+        y: 964,
+      },
     },
   ],
   core: [
