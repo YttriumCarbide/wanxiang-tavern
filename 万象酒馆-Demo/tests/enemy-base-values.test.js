@@ -197,6 +197,56 @@ test('legacy map enemies migrate once across library reload, expansion reference
   assert.deepEqual(expanded.enemyDefinitions, existing.enemyDefinitions);
 });
 
+test('discovered worlds keep compiled bleeding and poison on reload and in later map requests', () => {
+  const raw = worldFixture();
+  for (const [index, enemy] of raw.enemies.entries()) {
+    delete enemy.hp;
+    enemy.tier = 'medium';
+    enemy.intents = [
+      {
+        name: '持续伤害',
+        slots: [0],
+        effects: [{ type: 'buff', buff: index === 2 ? 'poison' : 'bleed', power: 'high' }],
+      },
+    ];
+  }
+  const world = mapResponse(JSON.stringify(raw), {});
+  const library = newLibrary();
+  library.worlds.push(world);
+  library.atlasDiscoveries.push({
+    id: world.id,
+    name: world.name,
+    direction: '南',
+    point: [100, 140],
+    level: 5,
+    linkId: 'eternal-road-mill',
+    generatedFrom: 'eternal-road-mill',
+  });
+  addWorldRoute(library.exploration, world, 1);
+  const restored = restoreLibrary(JSON.parse(JSON.stringify(library)));
+  assert.deepEqual(restored.worlds, library.worlds);
+  assert.deepEqual(restored.atlasDiscoveries, library.atlasDiscoveries);
+  assert.equal(restored.exploration[world.id].frontier[0].world.id, world.id);
+  const input = { brief: '在同一个地区继续探索', knownEnemies: world.enemyDefinitions };
+  const request = mapInput(input);
+  for (const enemy of Object.values(world.enemyDefinitions)) {
+    assert(enemy.intents[0].effects[0].value > 3);
+    assert.deepEqual(
+      request.reference.enemies.find(({ id }) => id === enemy.id),
+      enemy,
+    );
+  }
+  const reused = mapResponse(
+    JSON.stringify({ ...raw, id: 'world-lantern-east', enemies: [], enemyIds: world.enemyIds }),
+    input,
+  );
+  assert.deepEqual(reused.enemyDefinitions, world.enemyDefinitions);
+  const numeric = worldFixture().enemies[0];
+  numeric.intents[0].effects = [{ type: 'buff', buff: 'bleed', target: 'opponents', value: 99 }];
+  assert.throws(() => normalizeEnemy(numeric), /效果数值无效/);
+  assert.throws(() => normalizeEnemy(numeric, { restoring: true }), /效果数值无效/);
+});
+
 test('browser/server upgrades remove old balance instructions and real map requests send base ranges and shared combat encyclopedia', async () => {
   const directory = await mkdtemp(path.join(process.cwd(), '.runtime/tests/base-enemy-'));
   const server = await createWorldbookStore(directory),

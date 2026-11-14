@@ -10,6 +10,7 @@ import {
   ENEMY_DESIGN_LIMITS,
   ENEMY_TIERS,
   ENEMY_TIER_GUIDE,
+  ENEMY_TIER_TABLES,
   compileEnemyDesign,
   restoreEnemyBaseValues,
 } from './enemy-base-values.js';
@@ -102,19 +103,17 @@ function validatedSlots(move) {
 function effects(list, restoring = false, boss = false) {
   if (!Array.isArray(list) || (!list.length && !restoring) || list.length > 5)
     throw Error('敌人效果数量无效');
+  const tier = boss ? 'boss' : 'ordinary';
   return list.flatMap((effect) => {
     const target = validatedEnemyEffectTarget(effect, restoring);
     if (!target) return [];
-    const value = number(
-      effect.value,
-      1,
-      effect.type === 'buff'
-        ? 3
-        : effect.type === 'damage'
-          ? ENEMY_DESIGN_LIMITS[boss ? 'boss' : 'ordinary'].damage[1]
-          : ENEMY_DESIGN_LIMITS.support[1],
-      '效果',
-    );
+    let maximum = ENEMY_DESIGN_LIMITS.support[1];
+    if (effect.type === 'damage') maximum = ENEMY_DESIGN_LIMITS[tier].damage[1];
+    if (effect.type === 'buff') {
+      const savedDot = restoring && ['poison', 'bleed'].includes(effect.buff);
+      maximum = savedDot ? ENEMY_TIER_TABLES[tier].dot.high[1] : 3;
+    }
+    const value = number(effect.value, 1, maximum, '效果');
     return [
       {
         type: effect.type,
@@ -259,7 +258,8 @@ export function normalizeWorld(
     added.push(enemy.id);
   }
   for (const id of raw.enemyIds || [])
-    if (knownEnemies[id] && !definitions[id]) definitions[id] = normalizeEnemy(knownEnemies[id]);
+    if (knownEnemies[id] && !definitions[id])
+      definitions[id] = normalizeEnemy(knownEnemies[id], { restoring: true });
   const ids = [
     ...new Set([...(existing?.enemyIds || []), ...(raw.enemyIds || []), ...added, ...reused]),
   ];

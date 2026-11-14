@@ -2,7 +2,9 @@ import { worldReference, normalizeWorld, normalizeEnemy } from '../../worlds.js'
 import { TAVERN_WORLD } from '../../content/world.js';
 import { DISCOVERY_DIRECTIONS } from '../../atlas-discoveries.js';
 export function mapInput(input) {
-  const known = Object.values(input.knownEnemies || {}).map(normalizeEnemy);
+  const known = Object.values(input.knownEnemies || {}).map((enemy) =>
+    normalizeEnemy(enemy, { restoring: true }),
+  );
   const reference = worldReference();
   reference.enemies.push(...known);
   if (typeof input.brief !== 'string' || !input.brief.trim() || input.brief.length > 10000)
@@ -36,7 +38,7 @@ export function mapResponse(content, input) {
   }
   const knownEnemies = Object.fromEntries(
     Object.values(input.knownEnemies || {}).map((entry) => {
-      const enemy = normalizeEnemy(entry);
+      const enemy = normalizeEnemy(entry, { restoring: true });
       return [enemy.id, enemy];
     }),
   );

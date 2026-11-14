@@ -150,11 +150,7 @@ export async function staticChecks({ browser, output }) {
     await page.screenshot({ path: path.join(output, 'start-screen.png') });
     await bootApi();
     const routeDefaults = await request('anti-route');
-    assert.equal(routeDefaults.config.entropy, true);
-    await request('anti-route', {
-      action: 'save',
-      config: { ...routeDefaults.config, entropy: false },
-    });
+    assert.equal(routeDefaults.config.entropy, false);
     const profiles = await request('config');
     assert(
       Object.values(profiles).every(
@@ -183,10 +179,10 @@ export async function staticChecks({ browser, output }) {
     await page.locator('#ai-status').filter({ hasText: '连接预设已保存' }).waitFor();
     await page.locator('#setup-next').click();
     await page.locator('#setup-status').filter({ hasText: '还需配置' }).waitFor();
-    for (const kind of ['script', 'chat', 'quick-chat', 'summary', 'creation', 'map'])
+    for (const kind of ['script', 'chat', 'summary', 'creation', 'map'])
       await page.locator(`[data-apply-kind][value="${kind}"]`).check();
     await page.locator('#api-preset-apply-many').click();
-    await page.locator('#ai-status').filter({ hasText: '应用到 6 个 API' }).waitFor();
+    await page.locator('#ai-status').filter({ hasText: '应用到 5 个 API' }).waitFor();
     await page.screenshot({ path: path.join(output, 'first-run-connections.png') });
     await page.locator('#setup-next').click();
     await page.locator('#prompt-import').waitFor({ state: 'visible' });
@@ -240,6 +236,9 @@ export async function staticChecks({ browser, output }) {
         '主角设定：青缘',
         '角色条目：骆公绪',
         '角色条目：西莉卡·梵·拉普斯',
+        '角色条目：悠托-纳卡希',
+        '角色条目：莉贝特',
+        '角色条目：露弥',
       ].sort(),
     );
     assert.deepEqual(
@@ -311,7 +310,7 @@ export async function staticChecks({ browser, output }) {
     assert(routeRecords.records.some((entry) => entry.kind === 'chat'));
     await request('anti-route', {
       action: 'save',
-      config: { ...routeDefaults.config, entropy: true },
+      config: { ...routeDefaults.config, entropy: true, entropyMode: 'comment' },
     });
     const mixedPreview = await request('prompts/preview', { kind: 'chat', input: chatInput });
     assert(mixedPreview.messages.some((message) => message.content.startsWith('<!--')));

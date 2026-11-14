@@ -6,7 +6,7 @@ import { joinPandora } from '../../src/companion-events.js';
 import { overlandPlan } from '../../src/overland-travel.js';
 import { legacySession } from './legacy-session.mjs';
 import { worldFixture } from '../fixtures/multiverse.js';
-import { normalizeWorld } from '../../src/worlds.js';
+import { mapResponse } from '../../src/ai/pipeline/map-request.js';
 
 export async function overlandChecks({ browser, baseURL, output }) {
   const page = await browser.newPage({ viewport: { width: 1280, height: 768 } });
@@ -63,14 +63,19 @@ export async function overlandChecks({ browser, baseURL, output }) {
     const fixture = worldFixture();
     fixture.id = 'world-road-discovery-' + discoveries.length;
     fixture.name = '路旁遗址 ' + discoveries.length;
-    return route.fulfill({
-      json: {
-        world: {
-          ...normalizeWorld(fixture),
-          discovery: { linkId: discovery.route[0].id, direction: '南' },
-        },
+    fixture.linkId = discovery.route[0].id;
+    fixture.direction = '南';
+    const enemy = fixture.enemies[0];
+    delete enemy.hp;
+    enemy.tier = 'medium';
+    enemy.intents = [
+      {
+        name: '划伤',
+        slots: [0],
+        effects: [{ type: 'buff', buff: 'bleed', power: 'high' }],
       },
-    });
+    ];
+    return route.fulfill({ json: { world: mapResponse(JSON.stringify(fixture), { discovery }) } });
   });
   await page.route('**/api/ai/generate/script', (route) => {
     const { overland, playerIntent, socialQuest } = route.request().postDataJSON();
@@ -407,6 +412,9 @@ export async function overlandChecks({ browser, baseURL, output }) {
     assert(discoveries[1].route.some(({ id }) => id === 'eternal-city'));
     assert.notEqual(discoveries[0].point.id, discoveries[1].point.id);
     await page.locator('[data-daily="home"]').click();
+    await page.evaluate(() => demo.flushStorage());
+    await page.reload();
+    await page.waitForFunction(() => demo.getLibrary().atlasDiscoveries.length === 2);
     await openTavernDoor();
     await chooseExit('street').click();
     await waitForStreet('starlamp-street');
