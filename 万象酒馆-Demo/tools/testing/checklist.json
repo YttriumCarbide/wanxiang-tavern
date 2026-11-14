@@ -1,6 +1,12 @@
 {
-  "description": "生成地点读档、敌人数值往返和正式版静态验收",
-  "scopes": ["quality", "core", "overland", "static"],
-  "coreFiles": ["tests/enemy-base-values.test.js", "tests/overland.test.js"],
+  "description": "装备与过载纹章的战斗资源、损坏快照恢复、跨战继承和正式版验收",
+  "scopes": ["quality", "core", "static", "battle-controls", "expedition"],
+  "coreFiles": [
+    "tests/equipment.test.js",
+    "tests/growth-supplies.test.js",
+    "tests/engine.test.js",
+    "tests/adventure.test.js",
+    "tests/dining.test.js"
+  ],
   "browserConcurrency": 2
 }

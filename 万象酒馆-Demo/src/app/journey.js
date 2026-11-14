@@ -12,6 +12,7 @@ import {
   completeAdventureNode,
 } from '../expedition.js';
 import { createAdventureState, lockBoss } from '../adventure/state.js';
+import { restoreAdventureResources } from '../adventure/restore-resources.js';
 import { eventReward } from '../adventure/rewards.js';
 import { createSceneLoading } from '../shared/scene-loading.js';
 import { ADVENTURE_NODE_LABELS } from '../adventure/definition.js';
@@ -304,6 +305,7 @@ export function createJourney(context) {
   }
   async function resume(snapshot) {
     session.ai.library = restoreLibrary(snapshot.library);
+    restoreAdventureResources(snapshot, session.ai.library);
     session.battle.state = snapshot.state;
     session.battle.plan = snapshot.plan || [];
     session.battle.history = snapshot.history || [];

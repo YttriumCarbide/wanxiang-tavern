@@ -926,10 +926,8 @@ export function applyEquipment(combat, equipment = []) {
   const result = structuredClone(combat);
   const valid = equipment.filter((item) => item && item.stats);
   for (const item of valid) {
-    result.maxHp += item.stats.hp || 0;
     result.hp += item.stats.hp || 0;
-    result.maxMp += item.stats.mp || 0;
-    result.mp = Math.min(result.maxMp, result.mp + (item.stats.mp || 0));
+    result.mp += item.stats.mp || 0;
     result.attack += item.stats.attack || 0;
     result.skillDamageBonus = (result.skillDamageBonus || 0) + (item.stats.skillDamage || 0);
     result.limit = Math.min(6, result.limit + (item.stats.limit || 0));

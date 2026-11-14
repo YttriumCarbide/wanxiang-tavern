@@ -202,6 +202,14 @@ export function finishMeal(library) {
   if (state.tutorial === 'cook') state.tutorial = 'done';
   return { ...meal, bonus, gains };
 }
+export function diningResourceGain(bonus, resource, max) {
+  return (Number(bonus[resource]) || 0) + pctDelta(max, Number(bonus[resource + 'Percent']) || 0);
+}
+
+function pctDelta(base, pct) {
+  return pct > 0 ? Math.max(1, Math.round((base * pct) / 100)) : 0;
+}
+
 /** Apply once to this battle's private definitions, leaving expedition growth untouched. */
 export function applyDiningToBattle(library, battle, partyIds, consume = true) {
   const dining = diningState(library);
@@ -212,11 +220,10 @@ export function applyDiningToBattle(library, battle, partyIds, consume = true) {
     if (!pending || !unit || unit.hp <= 0 || battle.heroDefinitions[unitId].inactive) continue;
     const bonus = pending.bonus || {};
     const definition = battle.heroDefinitions[unitId];
-    const pctDelta = (base, pct) => (pct > 0 ? Math.max(1, Math.round((base * pct) / 100)) : 0);
     const attackGain =
       (Number(bonus.attack) || 0) + pctDelta(definition.attack, Number(bonus.attackPercent) || 0);
-    const hpGain = (Number(bonus.hp) || 0) + pctDelta(unit.maxHp, Number(bonus.hpPercent) || 0);
-    const mpGain = (Number(bonus.mp) || 0) + pctDelta(unit.maxMp, Number(bonus.mpPercent) || 0);
+    const hpGain = diningResourceGain(bonus, 'hp', unit.maxHp);
+    const mpGain = diningResourceGain(bonus, 'mp', unit.maxMp);
     const shieldGain =
       (Number(bonus.shield) || 0) + pctDelta(unit.maxHp, Number(bonus.shieldPercent) || 0);
     const flatSkill = Number(bonus.skillDamage) || 0;

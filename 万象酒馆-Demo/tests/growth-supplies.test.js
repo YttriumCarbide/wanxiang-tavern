@@ -29,6 +29,10 @@ import { restoreLibrary } from '../src/ai/library.js';
 import { compactCharacterDocument } from './fixtures/ai.js';
 import { createCharacterReader } from '../server/character-reader.mjs';
 import { officialCharacter } from '../src/ai/library.js';
+import { OVERLOAD_EMBLEM_ID, applyEmblemStats } from '../src/emblems.js';
+import { applyEquipment } from '../src/equipment.js';
+import { beginEncounter, newExpedition } from '../src/expedition.js';
+import { restoreAdventureResources } from '../src/adventure/restore-resources.js';
 
 test('growth reduces the resource actually paid, keeps zero costs and deterministically splits dual costs', () => {
   const edith = officialCharacter('edith');
@@ -172,6 +176,52 @@ test('growth claims experience once and applies shared growth at the next encoun
   const unchanged = structuredClone(carried);
   applyEncounterGrowth(expeditionGrowth, [member]);
   assert.deepEqual(carried, unchanged);
+});
+
+test('battle reload rebuilds lost resources with frozen equipment and carries valid losses forward', () => {
+  const library = newCampaign(defaultProtagonist());
+  const [hero, edith] = library.characters;
+  const heroCombat = applyEquipment(grownCombat(hero), [{ stats: { attack: 3 } }]);
+  edith.emblemId = OVERLOAD_EMBLEM_ID;
+  const edithCombat = applyEmblemStats(
+    applyEquipment(grownCombat(edith), [{ stats: { hp: 4, mp: 6 } }]),
+    edith.emblemId,
+  );
+  assert.equal(edithCombat.mp, Math.round((edith.combat.mp + 6) * 1.5));
+  assert.equal(edithCombat.hp, Math.round(edith.combat.hp + 4 + edithCombat.mp * 0.25));
+  const trip = newExpedition('bossGate', {
+    aegis: { ...heroCombat, id: 'aegis' },
+    lyria: { ...edithCombat, id: 'lyria', emblemId: edith.emblemId },
+  });
+  trip.partyIds = [...library.party];
+  const battle = beginEncounter(trip);
+  battle.units.aegis.hp = 0;
+  battle.units.aegis.mp = 3;
+  trip.carried = structuredClone(battle);
+  trip.index = 2;
+  const damaged = JSON.parse(JSON.stringify({ state: battle, journey: { expedition: trip } }));
+  const savedTrip = damaged.journey.expedition;
+  savedTrip.heroDefinitions.lyria.hp = null;
+  savedTrip.heroDefinitions.lyria.mp = null;
+  for (const state of [damaged.state, savedTrip.carried]) {
+    state.heroDefinitions.lyria.hp = null;
+    state.heroDefinitions.lyria.mp = null;
+    Object.assign(state.units.lyria, { hp: null, mp: null, maxHp: null, maxMp: null });
+    state.units.aegis.maxMp = null;
+  }
+  restoreAdventureResources(damaged, library);
+  assert.deepEqual(damaged.state.units, battle.units);
+  assert.deepEqual(savedTrip.heroDefinitions, trip.heroDefinitions);
+  const repaired = structuredClone(damaged);
+  restoreAdventureResources(damaged, library);
+  assert.deepEqual(damaged, repaired);
+  applyEncounterGrowth(savedTrip, library.characters);
+  const next = beginEncounter(savedTrip);
+  assert.equal(next.units.aegis.hp, 0, 'a real defeat is preserved');
+  assert.equal(next.units.aegis.mp, 3, 'valid spent SP is preserved');
+  assert.equal(next.units.lyria.maxHp, edithCombat.hp);
+  assert.equal(next.units.lyria.maxMp, edithCombat.mp);
+  assert.equal(next.units.lyria.mp, edithCombat.mp);
 });
 
 test('map item references resolve only known loot and conflicting values wait for a user choice', () => {

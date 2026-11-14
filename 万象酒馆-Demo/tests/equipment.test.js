@@ -64,10 +64,11 @@ test('equipment has three slots, unique physical ownership, exact ether price an
   assert.throws(() => equip(library, 'official-lyria', 0, 'owned-1'), /已被使用/);
   assert.throws(() => equip(library, 'official-aegis', 3, null), /装备槽/);
   const restored = restoreLibrary(JSON.parse(JSON.stringify(library)));
-  assert.equal(
-    compileRoster(restored).aegis.attack,
-    HEROES[0].attack + library.equipment.owned[0].stats.attack,
-  );
+  const roster = compileRoster(restored);
+  assert.equal(roster.aegis.attack, HEROES[0].attack + library.equipment.owned[0].stats.attack);
+  const battle = newBattle(['sprout'], roster);
+  assert.equal(battle.units.aegis.maxMp, HEROES[0].mp, 'attack-only gear preserves blue bar');
+  assert.equal(battle.units.aegis.mp, HEROES[0].mp);
   assert.equal(equippedDefinitions(restored, restored.characters[0])[0].price, 25);
   assert.throws(() => buyEquipment(library, 'ore', 'owned-2'), /以太不足/);
   assert.throws(

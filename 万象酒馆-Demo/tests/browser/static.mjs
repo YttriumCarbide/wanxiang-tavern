@@ -437,11 +437,25 @@ export async function staticChecks({ browser, output }) {
       const { defaultProtagonist } = await import(
         new URL('./src/content/qingyuan.js', location.href).href
       );
+      const { normalizeEquipment, buyEquipment, equip } = await import(
+        new URL('./src/equipment.js', location.href).href
+      );
+      const { OVERLOAD_EMBLEM_ID } = await import(new URL('./src/emblems.js', location.href).href);
       const library = newCampaign(defaultProtagonist());
       library.campaign.completed = true;
       library.inventory.summonContracts = 1;
       firstCompanion(library);
       library.campaign.tutorial = 'complete';
+      library.emblems.push(OVERLOAD_EMBLEM_ID);
+      library.characters.find(({ id }) => id === 'official-edith').emblemId = OVERLOAD_EMBLEM_ID;
+      const gear = normalizeEquipment(
+        { name: '回归测试护符', description: '增加生命与法力', stats: { hp: 3, mp: 4 } },
+        { id: 'test-resource-talisman', name: '护符', value: 25 },
+      );
+      library.equipment.catalog.push(gear);
+      library.inventory.ether = gear.price;
+      buyEquipment(library, gear.id, 'test-resource-item', { seed: 5 });
+      equip(library, 'official-edith', 0, 'test-resource-item');
       library.tavernChat.push({
         id: 'retained-message',
         role: 'user',
@@ -485,13 +499,39 @@ export async function staticChecks({ browser, output }) {
       () => demo.getStatus().mode === 'battle' && !demo.getStatus().animating,
       { timeout: 60000 },
     );
+    const edithBars = page.locator('[data-unit="lyria"]').locator('[role="meter"]');
+    await edithBars
+      .filter({ has: page.locator('.resource-number') })
+      .first()
+      .waitFor();
+    const resources = await page.evaluate(() => demo.getState().units.lyria);
+    const bars = [`${resources.hp}/${resources.maxHp}`, `${resources.mp}/${resources.maxMp}`];
+    assert(resources.maxHp > 48 && resources.maxMp > 33);
+    assert.deepEqual(await edithBars.locator('.resource-number').allTextContents(), bars);
     await page.evaluate(() => demo.flushStorage());
     const unfinished = await page.evaluate(() => demo.getActiveScript());
+    await page.evaluate(async () => {
+      const key = 'game.wanxiang.battle-checkpoint.v1';
+      const { openDatabase } = await import(
+        new URL('./src/storage/database.js', location.href).href
+      );
+      const db = await openDatabase();
+      const snapshot = JSON.parse(db.get(key));
+      Object.assign(snapshot.state.units.lyria, { hp: null, mp: null, maxHp: null, maxMp: null });
+      for (const roster of [
+        snapshot.state.heroDefinitions,
+        snapshot.journey.expedition.heroDefinitions,
+      ])
+        Object.assign(roster.lyria, { hp: null, mp: null, maxHp: null, maxMp: null });
+      await db.write([[key, JSON.stringify(snapshot)]]);
+      db.close();
+    });
     await page.reload();
     await page.waitForFunction(() => !!window.demo && demo.getStatus().mode === 'battle', {
       timeout: 60000,
     });
     assert.equal((await page.evaluate(() => demo.getActiveScript())).id, unfinished.id);
+    assert.deepEqual(await edithBars.locator('.resource-number').allTextContents(), bars);
     const returned = await page.evaluate(() => demo.getLibrary());
     assert(returned.scripts.some((entry) => entry.id === unfinished.id));
     assert(returned.history.some((entry) => entry.runId === unfinished.runId));

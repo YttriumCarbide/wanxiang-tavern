@@ -39,6 +39,21 @@ import {
   negativeImmune,
 } from './emblem-mechanics.js';
 export const clone = (x) => structuredClone(x);
+export function battleResourceLimits(definition) {
+  let hp = definition.hp;
+  let mp =
+    definition.mp +
+    (definition.skills || []).reduce(
+      (total, skill) => total + (skill.location === '战斗外' ? skill.bonusMp || 0 : 0),
+      0,
+    );
+  if (definition.emblemId === OVERLOAD_EMBLEM_ID && !definition._overloadApplied) {
+    mp = Math.round(mp * 1.5);
+    hp = Math.round(hp + mp * 0.25);
+  }
+  return { hp, mp };
+}
+
 export function newBattle(
   enemyIds = encounterSpec(0).enemyIds,
   heroDefinitions = {},
@@ -56,14 +71,7 @@ export function newBattle(
     formation: HEROES.map((h) => (heroes.some((hero) => hero.id === h.id) ? h.id : null)),
     units: Object.fromEntries(
       [...heroes, ...enemyIds.map((id) => enemyDefinitions[id] || DEFINITIONS[id])].map((d) => {
-        let mp =
-          d.mp +
-          (d.skills || []).reduce((n, s) => n + (s.location === '战斗外' ? s.bonusMp || 0 : 0), 0);
-        let hp = d.hp;
-        if (d.emblemId === OVERLOAD_EMBLEM_ID && !d._overloadApplied) {
-          mp = Math.round(mp * 1.5);
-          hp = Math.round(hp + mp * 0.25);
-        }
+        const { hp, mp } = battleResourceLimits(d);
         return [
           d.id,
           {
