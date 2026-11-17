@@ -1,4 +1,5 @@
 import { compileRoster } from '../ai/library.js';
+import { ensureLeftExpandControl, resetLeftExpand } from './prep-view.js';
 
 /** One existing draggable preparation screen, then the same screen with a locked party. */
 export function createDeparture(context) {
@@ -16,12 +17,37 @@ export function createDeparture(context) {
     '<strong>这次想做什么，或想说什么？</strong><textarea rows="2" maxlength="2000" placeholder="选填，可以直接出发"></textarea>';
   panel.querySelector('.prepare-body').before(guidance);
   let active = null;
+  let burstTimer = 0;
+
+  function clearReadyEffects() {
+    clearTimeout(burstTimer);
+    burstTimer = 0;
+    panel.classList.remove('script-ready');
+    done.classList.remove('depart-ready-fx', 'depart-ready-burst');
+  }
+
+  function triggerReadyEffects() {
+    clearTimeout(burstTimer);
+    panel.classList.add('script-ready');
+    done.classList.add('depart-ready-fx');
+    done.classList.remove('depart-ready-burst');
+    void done.offsetWidth;
+    done.classList.add('depart-ready-burst');
+    burstTimer = setTimeout(() => {
+      done.classList.remove('depart-ready-burst');
+      burstTimer = 0;
+    }, 1100);
+  }
+
   function open({ selection = false, pending = false, onCancel } = {}) {
     if (active) return active;
+    clearReadyEffects();
     session.ai.formationLocked = !selection;
     guidance.hidden = !selection;
     guidance.querySelector('textarea').value = '';
     context.shell.renderParty();
+    ensureLeftExpandControl();
+    resetLeftExpand(panel);
     title.textContent = selection
       ? '选择本场同行者'
       : pending
@@ -32,6 +58,7 @@ export function createDeparture(context) {
     cancel.hidden = !pending;
     if (pendingRow) pendingRow.hidden = !pending;
     panel.dataset.pendingGeneration = pending ? 'true' : 'false';
+    if (!selection && !pending) triggerReadyEffects();
     const oldClose = close.innerHTML;
     close.textContent = '取消出发';
     panel.showModal();
@@ -60,6 +87,8 @@ export function createDeparture(context) {
     panel.addEventListener(
       'close',
       () => {
+        clearReadyEffects();
+        resetLeftExpand(panel);
         session.ai.formationLocked = false;
         guidance.hidden = true;
         title.textContent = '战阵整备';
@@ -79,12 +108,16 @@ export function createDeparture(context) {
     active = {
       completion,
       ready() {
+        const wasPending = pending;
         pending = false;
         title.textContent = '剧本已就绪 · 调整装备';
         done.disabled = false;
         cancel.hidden = true;
         if (pendingRow) pendingRow.hidden = true;
         panel.dataset.pendingGeneration = 'false';
+        if (wasPending || !done.classList.contains('depart-ready-fx')) {
+          triggerReadyEffects();
+        }
       },
       cancel() {
         if (panel.open) panel.close();
@@ -100,9 +133,12 @@ export function createDeparture(context) {
     openOuting(onDone) {
       const panelEl = document.querySelector('#party-panel');
       if (panelEl.open) return false;
+      clearReadyEffects();
       session.ai.formationLocked = false;
       guidance.hidden = true;
       context.shell.renderParty();
+      ensureLeftExpandControl();
+      resetLeftExpand(panelEl);
       title.textContent = '外出战阵整备';
       done.textContent = '确认同行';
       done.disabled = false;
@@ -113,6 +149,8 @@ export function createDeparture(context) {
       panelEl.addEventListener(
         'close',
         () => {
+          clearReadyEffects();
+          resetLeftExpand(panelEl);
           title.textContent = '战阵整备';
           done.textContent = '返回';
           onDone?.();
@@ -122,6 +160,8 @@ export function createDeparture(context) {
       return true;
     },
     dispose() {
+      clearReadyEffects();
+      resetLeftExpand(panel);
       active?.cancel();
       guidance.remove();
     },

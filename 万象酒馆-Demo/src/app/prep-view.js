@@ -223,8 +223,63 @@ function serviceRank(p) {
   return p >= 80 ? 'S' : p >= 60 ? 'A' : p >= 40 ? 'B' : p >= 20 ? 'C' : 'D';
 }
 
+/** Sync the mobile formation-expand toggle label and ARIA state with `#party-panel`. */
+export function syncLeftExpandControl(
+  panel = typeof document !== 'undefined' ? document.querySelector('#party-panel') : null,
+) {
+  if (!panel) return;
+  const expanded = panel.classList.contains('left-expanded');
+  const button = panel.querySelector('#prepare-expand-left');
+  if (!button) return;
+  button.textContent = expanded ? '收起编队' : '放大编队';
+  button.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+}
+
+/** Collapse the expanded left formation panel and reset scroll offset. */
+export function resetLeftExpand(
+  panel = typeof document !== 'undefined' ? document.querySelector('#party-panel') : null,
+) {
+  if (!panel) return;
+  panel.classList.remove('left-expanded');
+  const col = panel.querySelector('.prepare-formation-col');
+  if (col) col.scrollTop = 0;
+  syncLeftExpandControl(panel);
+}
+
+/** Ensure `#prepare-expand-left` exists in `.prepare-formation-col` and cleans up on close/confirm. */
+export function ensureLeftExpandControl() {
+  if (typeof document === 'undefined') return;
+  const panel = document.querySelector('#party-panel');
+  const head = panel?.querySelector('.prepare-formation-col > .prepare-col-head');
+  if (!panel || !head) return;
+  let button = head.querySelector('#prepare-expand-left');
+  if (!button) {
+    button = document.createElement('button');
+    button.id = 'prepare-expand-left';
+    button.type = 'button';
+    button.className = 'prepare-expand-btn';
+    button.setAttribute('aria-controls', 'prepare-slots prepare-pool');
+    head.append(button);
+    button.addEventListener('click', () => {
+      const next = !panel.classList.contains('left-expanded');
+      panel.classList.toggle('left-expanded', next);
+      const col = panel.querySelector('.prepare-formation-col');
+      if (col) col.scrollTop = 0;
+      syncLeftExpandControl(panel);
+    });
+  }
+  if (!panel.dataset.leftExpandBound) {
+    panel.dataset.leftExpandBound = 'true';
+    panel.addEventListener('close', () => resetLeftExpand(panel));
+    panel.querySelector('#prepare-close')?.addEventListener('click', () => resetLeftExpand(panel));
+    panel.querySelector('#prepare-done')?.addEventListener('click', () => resetLeftExpand(panel));
+  }
+  syncLeftExpandControl(panel);
+}
+
 /** Render center showcase & right 4-tab inspector inside `#prepare-detail`. */
 export function prepDetailMarkup(library, inspected, activeTab = 'status') {
+  ensureLeftExpandControl();
   const tab = TABS.some(([key]) => key === activeTab) ? activeTab : 'status';
   const stats = grownCombat(inspected);
   const dcStats = effectiveDcAttrs(library, inspected);
