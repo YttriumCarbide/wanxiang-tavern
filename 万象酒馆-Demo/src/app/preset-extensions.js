@@ -1,5 +1,5 @@
 import { presetHelperScripts } from '../ai/helper-scripts.js';
-import { isMeowssiah2010 } from '../ai/miaosaiya-processing.js';
+import { isMeowssiahPreset } from '../ai/miaosaiya-processing.js';
 import { query as $ } from './dom.js';
 import { createEventScope } from '../shared/events.js';
 import { adviceBinding } from '../ai/advice.js';
@@ -51,7 +51,7 @@ export function createPresetExtensions(context) {
     const { storage } = await api(`helper-storage/${id}`);
     if (ticket !== generation || session.runtime.disposed) return;
     unload();
-    const native = isMeowssiah2010(preset);
+    const native = isMeowssiahPreset(preset);
     const scripts = native ? [] : presetHelperScripts(preset).filter((script) => script.enabled);
     active = {
       id,
@@ -65,7 +65,7 @@ export function createPresetExtensions(context) {
     if (!scripts.length) {
       active.ready = true;
       $('#helper-status').textContent = native
-        ? 'Meowssiah 2.0.10 已由万象酒馆原生适配。'
+        ? 'Meowssiah 预设已由万象酒馆原生适配。'
         : '此预设没有已启用的扩展脚本。';
       return;
     }

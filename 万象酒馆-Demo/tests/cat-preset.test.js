@@ -155,9 +155,9 @@ test(
     assert.deepEqual(preset, original);
     assert.deepEqual(await readFile(process.env.WANXIANG_TEST_MEOWSSIAH_PRESET_FILE), bytes);
     const unknown = structuredClone(preset);
-    unknown.extensions.SPreset.OutputPreprocessing.toolCallFormatter.script +=
-      '\n/* different callback */';
-    assert.throws(() => presetProcessing(unknown), /工具输出格式化脚本版本未适配/u);
+    unknown.extensions.SPreset.OutputPreprocessing.toolCallFormatter.script =
+      'return foreignFormatter(calls);';
+    assert.throws(() => presetProcessing(unknown), /版本未适配/u);
   },
 );
 
@@ -388,3 +388,217 @@ test(
     assert(!presetProcessing(changed).finalRequest);
   },
 );
+
+test('Meowssiah 2.1.7+ and future versions auto-disable options/comment/summary, convert <game> to <wanxiang_output>, and pass all 6 APIs', async () => {
+  const fixture = {
+    name: 'Meowssiah-2.1.7-test',
+    function_calling: true,
+    assistant_prefill: 'unused',
+    prompts: [
+      {
+        identifier: 'init-catgod',
+        name: '（不要关）token重定义+初始化',
+        role: 'system',
+        content:
+          '{{trim}}<|sep|><|merge|>小猫之神使用soliumbra_reply与<think_nya></think_nya><run_tool_replacement><<<|catgodml|enableMenu>>>',
+      },
+      {
+        identifier: 'cat-summon',
+        name: '（不要关）召唤术',
+        role: 'system',
+        content: '|小猫之神|加入`soliumbra_reply`和<think_nya>思考</think_nya>',
+      },
+      {
+        identifier: 'cat-style-future',
+        name: '📝文风|电影运镜',
+        role: 'system',
+        content:
+          '<<<|catgodml|radio:主文风选择:📝s喵特调一（电影运镜）>>>\n用电影远景与近景描写角色动作。',
+      },
+      {
+        identifier: 'cat-anti-meta',
+        name: '⚙️防全知（带思维链）',
+        role: 'system',
+        content:
+          '避免NPC拥有上帝视野\n<<<|catgodml|registerThinkingStep:20:检查每位角色视野边界>>>',
+      },
+      {
+        identifier: 'catgod-deepthink-steps-base',
+        name: '🧠大思考步骤（可改）',
+        role: 'system',
+        content: '{{// 纯注释头}}\n<<<|catgodml|registerThinkingStep:10:复盘前情>>>',
+      },
+      {
+        identifier: 'chatHistory',
+        name: 'Chat History',
+        role: 'system',
+        marker: true,
+        content: '',
+      },
+      {
+        identifier: 'new-uuid-game-tag',
+        name: '📏<game>标签（别关）',
+        role: 'system',
+        enabled: false,
+        content:
+          '<<<|catgodml|menu:输出格式模块:📏<game>正文包裹>>>\n正文要用<game></game>标签包上',
+      },
+      {
+        identifier: 'new-uuid-options',
+        name: '📏行动选择',
+        role: 'system',
+        content:
+          '<<<|catgodml|menu:输出格式模块:📏<options>行动选项>>>\n在剧情结束后给出3个行动选项：<options><option>1</option></options>',
+      },
+      {
+        identifier: 'new-uuid-summary',
+        name: '📏小总结',
+        role: 'system',
+        content:
+          '<<<|catgodml|menu:输出格式模块:📏<summary>高密度场记卡>>>\n必须在<summary></summary>标签内写场记。',
+      },
+      {
+        identifier: 'new-uuid-comment',
+        name: '📏猫猫留言~',
+        role: 'system',
+        content:
+          '<<<|catgodml|menu:输出格式模块:📏<comment>猫猫悄悄话>>>\n可以在<comment></comment>里悄悄说话。',
+      },
+      {
+        identifier: 'SPresetSettings',
+        name: 'SPreset配置',
+        role: 'system',
+        enabled: false,
+        content: JSON.stringify({ packedRegexBackup: 'x'.repeat(180000) }),
+      },
+    ],
+    prompt_order: [
+      {
+        character_id: 100001,
+        order: [
+          { identifier: 'init-catgod', enabled: true },
+          { identifier: 'cat-summon', enabled: true },
+          { identifier: 'cat-style-future', enabled: true },
+          { identifier: 'cat-anti-meta', enabled: true },
+          { identifier: 'catgod-deepthink-steps-base', enabled: true },
+          { identifier: 'chatHistory', enabled: true },
+          { identifier: 'new-uuid-game-tag', enabled: false },
+          { identifier: 'new-uuid-options', enabled: true },
+          { identifier: 'new-uuid-summary', enabled: true },
+          { identifier: 'new-uuid-comment', enabled: true },
+          { identifier: 'SPresetSettings', enabled: false },
+        ],
+      },
+    ],
+    extensions: {
+      tavern_helper: { scripts: [{ id: 's1', name: 'SPreset', content: 'void 0', enabled: true }] },
+      SPreset: {
+        OutputPreprocessing: {
+          enabled: true,
+          script:
+            '// future v2.2\n({ buffer }) => buffer.replace(/<think>[\\s\\S]*?(?=<think_nya|<report_nya)/gi, "")',
+          toolCallFormatter: {
+            enabled: true,
+            script:
+              '// future v2.2\n({ calls }) => calls.filter(c => /soliumbra_reply/.test(c.name))',
+          },
+        },
+        FinalRequestProcessing: {
+          enabled: true,
+          script: '// future CatGod Stage1\n// reads catgodml tags and soliumbra_reply',
+        },
+      },
+    },
+  };
+
+  const { preset, warnings } = normalizePromptPreset(fixture, 'meowssiah-217-future');
+  assert(warnings.some((line) => line.includes('默认关闭「行动选项」「猫猫留言」「小总结」')));
+  assert(!warnings.some((line) => line.includes('附带酒馆助手脚本')));
+
+  const orderById = Object.fromEntries(
+    preset.prompt_order[0].order.map((item) => [item.identifier, item.enabled]),
+  );
+  assert.equal(orderById['new-uuid-options'], false);
+  assert.equal(orderById['new-uuid-summary'], false);
+  assert.equal(orderById['new-uuid-comment'], false);
+  assert.equal(orderById['new-uuid-game-tag'], true);
+
+  const gamePrompt = preset.prompts.find((entry) => entry.identifier === 'new-uuid-game-tag');
+  assert.equal(gamePrompt.name, '📏<wanxiang_output>标签（别关）');
+  assert(gamePrompt.content.includes('<wanxiang_output></wanxiang_output>'));
+  assert(!/<\/?game>/u.test(gamePrompt.content));
+
+  // Manual re-enable after import must survive subsequent saves (idempotent adaptation).
+  const edited = structuredClone(preset);
+  edited.prompt_order[0].order.find((item) => item.identifier === 'new-uuid-comment').enabled =
+    true;
+  const resaved = normalizePromptPreset(edited, 'meowssiah-217-future').preset;
+  assert.equal(
+    resaved.prompt_order[0].order.find((item) => item.identifier === 'new-uuid-comment').enabled,
+    true,
+  );
+
+  const world = JSON.parse(
+    await readFile(new URL('../assets/builtin-worldbook.json', import.meta.url), 'utf8'),
+  );
+  const pipeline = createAiPipeline({
+    worlds: {
+      resolve: async () => ({ books: [structuredClone(world)], settings: {}, state: {} }),
+      commit: async () => {},
+    },
+    settings: {
+      get: () => ({
+        model: 'local-mock',
+        tokenField: 'max_tokens',
+        maxTokens: 32768,
+        contextSize: 400000,
+        promptProcessing: 'merge_tools',
+      }),
+    },
+    regexStore: { get: () => [] },
+    helperStorage: { get: () => ({}) },
+    countTokens: (text) => Math.ceil(text.length / 3),
+    readText,
+    runRegexTasks,
+  });
+
+  const party = [{ id: 'traveller', name: '旅人', worldbook: '一位谨慎的旅人。' }];
+  const cases = {
+    character: { brief: '设计旅人', rollId: 'meowssiah-217-test' },
+    script: { brief: '探索遗迹', party, boss: 'bossGate' },
+    map: { brief: '潮灯之国' },
+    creation: {
+      items: [
+        {
+          id: 'ore',
+          name: '晶石',
+          description: '旧物',
+          value: 50,
+          map: 'forest',
+          script: '在回廊找到的晶体。',
+        },
+      ],
+    },
+    chat: { text: '倒一杯茶', place: 'bar', characters: party, selected: [], history: [] },
+    'quick-chat': { text: '接下来呢', characters: party, history: [] },
+  };
+  for (const [kind, input] of Object.entries(cases)) {
+    const prepared = await pipeline.buildRequest(kind, input, preset);
+    const text = prepared.messages.map(({ content }) => content).join('\n');
+    assert.equal(prepared.transport.processingStatus.compatibility, 'meowssiah-2.0.10');
+    assert.equal(prepared.transport.outputTool, undefined);
+    assert.match(text, /wanxiang_output/u);
+    assert.match(text, /电影远景与近景描写角色动作/u);
+    assert.match(text, /避免NPC拥有上帝视野/u);
+    assert.doesNotMatch(
+      text,
+      /<run_tool_replacement>|<<<\|catgodml\||<8wanxiang_output>|soliumbra_reply|<options>|高密度场记卡|<comment>/u,
+    );
+  }
+
+  // Foreign unknown SPreset scripts must still fail loudly instead of executing unknown callbacks.
+  const foreign = structuredClone(preset);
+  foreign.extensions.SPreset.OutputPreprocessing.toolCallFormatter.script =
+    'return runForeignPlugin(calls);';
+  assert.throws(() => presetProcessing(foreign), /版本未适配/u);
+});

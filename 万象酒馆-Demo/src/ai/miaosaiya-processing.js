@@ -10,6 +10,11 @@ export const MIAOSAIYA_FINGERPRINTS = {
 
 export const MEOWSSIAH_COMPATIBILITY = 'meowssiah-2.0.10';
 
+export const MEOWSSIAH_FORMATTER_FINGERPRINT =
+  'f99d96da1a2cd800ca1934f7b803300d96c40c4557b27389bd1ff7c9f2f5b623';
+export const MEOWSSIAH_FINAL_REQUEST_FINGERPRINT =
+  'd3c49f8d2a3729574df6c1bc9bae2a1c01b4c8c6d30a0b0ce34b0356eda26527';
+
 export function presetScriptFingerprint(text) {
   const bytes = sha256(
     new TextEncoder().encode(
@@ -21,30 +26,184 @@ export function presetScriptFingerprint(text) {
   return Array.from(bytes, (value) => value.toString(16).padStart(2, '0')).join('');
 }
 
-export function isMeowssiah2010(preset) {
+function isMeowssiahScriptMatch(script, knownHash, pattern) {
+  return (
+    typeof script === 'string' &&
+    (presetScriptFingerprint(script) === knownHash || pattern.test(script))
+  );
+}
+
+export function isMeowssiahPreset(preset) {
   const sp = preset?.extensions?.SPreset;
   const output = sp?.OutputPreprocessing;
+  const formatter = output?.toolCallFormatter;
   const finalRequest = sp?.FinalRequestProcessing;
+  const squash = sp?.ChatSquash;
+  const hasCatGodIdentity =
+    preset?.extensions?.wanxiang?.adapter === 'meowssiah' ||
+    (Array.isArray(preset?.prompts) &&
+      preset.prompts.some(
+        (entry) =>
+          String(entry?.identifier || '').startsWith('catgod-') ||
+          (typeof entry?.content === 'string' && /<<<\|catgodml\|/i.test(entry.content)),
+      ));
+  if (!hasCatGodIdentity) return false;
+  if (
+    output?.enabled &&
+    !isMeowssiahScriptMatch(
+      output.script,
+      MIAOSAIYA_FINGERPRINTS.output,
+      /(?:think_nya|report_nya)/iu,
+    )
+  )
+    return false;
+  if (
+    formatter?.enabled &&
+    !isMeowssiahScriptMatch(
+      formatter.script,
+      MEOWSSIAH_FORMATTER_FINGERPRINT,
+      /(?:soliumbra_reply|think_nya)/iu,
+    )
+  )
+    return false;
+  if (
+    finalRequest?.enabled &&
+    !isMeowssiahScriptMatch(
+      finalRequest.script,
+      MEOWSSIAH_FINAL_REQUEST_FINGERPRINT,
+      /(?:catgodml|CatGod|soliumbra_reply)/iu,
+    )
+  )
+    return false;
+  if (
+    squash?.squashed_post_script_enable &&
+    squash.squashed_post_script?.trim() &&
+    !isMeowssiahScriptMatch(
+      squash.squashed_post_script,
+      MIAOSAIYA_FINGERPRINTS.reassembly,
+      /(?:catgodml|soliumbra|小猫之神)/iu,
+    )
+  )
+    return false;
+  return true;
+}
+
+export const isMeowssiah2010 = isMeowssiahPreset;
+
+function isOptionsPrompt(entry) {
   return (
-    typeof output?.toolCallFormatter?.script === 'string' &&
-    typeof finalRequest?.script === 'string' &&
-    presetScriptFingerprint(output.script) === MIAOSAIYA_FINGERPRINTS.output &&
-    presetScriptFingerprint(output.toolCallFormatter.script) ===
-      'f99d96da1a2cd800ca1934f7b803300d96c40c4557b27389bd1ff7c9f2f5b623' &&
-    presetScriptFingerprint(finalRequest.script) ===
-      'd3c49f8d2a3729574df6c1bc9bae2a1c01b4c8c6d30a0b0ce34b0356eda26527'
+    entry.identifier === '046af93d-0c63-4561-b0b2-052cd265fecd' ||
+    /行动选[项择]/u.test(entry.name || '') ||
+    /<<<\|catgodml\|(?:menu|radio):[^>\n]*<options>|<options>\s*<option>/iu.test(
+      entry.content || '',
+    )
   );
+}
+
+function isCommentPrompt(entry) {
+  return (
+    entry.identifier === '48863da8-9556-4f14-b5bf-1816e4d4207b' ||
+    /猫猫留言|猫猫悄悄话/u.test(entry.name || '') ||
+    /<<<\|catgodml\|(?:menu|radio):[^>\n]*<comment>|在\s*<comment>\s*<\/comment>/iu.test(
+      entry.content || '',
+    )
+  );
+}
+
+function isSummaryPrompt(entry) {
+  return (
+    entry.identifier === '3867af9e-9bad-4fdf-9ef8-83ca07d8c68e' ||
+    /小总结|场记状态卡|高密度场记卡/u.test(entry.name || '') ||
+    /<<<\|catgodml\|(?:menu|radio):[^>\n]*<summary>|必须在\s*<summary>\s*<\/summary>/iu.test(
+      entry.content || '',
+    )
+  );
+}
+
+function isGameTagPrompt(entry) {
+  return (
+    entry.identifier === 'f65144f0-d39e-43e6-84e7-5c1d78a1a23d' ||
+    /<game>\s*标签|<game>\s*正文/iu.test(entry.name || '') ||
+    /<<<\|catgodml\|(?:menu|radio):[^>\n]*<game>|要用\s*<game>\s*<\/game>/iu.test(
+      entry.content || '',
+    )
+  );
+}
+
+function replaceGameTags(text) {
+  return String(text || '')
+    .replaceAll('<game>', '<wanxiang_output>')
+    .replaceAll('</game>', '</wanxiang_output>');
+}
+
+/** One-time adaptation on import for Meowssiah 2.x+: disable noisy modules and swap <game> to <wanxiang_output>. */
+export function adaptMeowssiahPreset(preset) {
+  if (!isMeowssiahPreset(preset) || preset?.extensions?.wanxiang?.meowssiahAdapted === 1) {
+    return { preset, adapted: false };
+  }
+  const disableIds = new Set();
+  const gameIds = new Set();
+  const prompts = preset.prompts.map((entry) => {
+    if (entry.marker) return entry;
+    if (isOptionsPrompt(entry) || isCommentPrompt(entry) || isSummaryPrompt(entry)) {
+      disableIds.add(entry.identifier);
+      return { ...entry, enabled: false };
+    }
+    if (isGameTagPrompt(entry)) {
+      gameIds.add(entry.identifier);
+      return {
+        ...entry,
+        name: replaceGameTags(entry.name),
+        content: replaceGameTags(entry.content),
+        enabled: true,
+      };
+    }
+    return entry;
+  });
+  const prompt_order = (preset.prompt_order || []).map((group) => ({
+    ...group,
+    order: (group.order || []).map((item) => {
+      if (disableIds.has(item.identifier)) return { ...item, enabled: false };
+      if (gameIds.has(item.identifier)) return { ...item, enabled: true };
+      return item;
+    }),
+  }));
+  return {
+    preset: {
+      ...preset,
+      prompts,
+      prompt_order,
+      extensions: {
+        ...(preset.extensions || {}),
+        wanxiang: {
+          ...(preset.extensions?.wanxiang || {}),
+          adapter: 'meowssiah',
+          meowssiahAdapted: 1,
+        },
+      },
+    },
+    adapted: true,
+  };
 }
 
 /** Translate the active prompt at request time while retaining the user's saved source. */
 export function meowssiahGamePreset(preset) {
+  const stripHeaders =
+    /<<<\|catgodml\|(?:menu|radio|registerThinkingStep|deepthink|registerPart):[^\n]*?>>>[ \t]*\r?\n?/giu;
   const controls =
-    /<run_tool_replacement>|<\|(?:merge|sep)\|>|<<<\|catgodml\|(?!menu:)|<\/?(?:think_nya|game)\b|<8wanxiang_output>|\b(?:game_content|soliumbra_reply)\b/iu;
+    /<run_tool_replacement>|<\|(?:merge|sep)\|>|<<<\|catgodml\||<\/?(?:think_nya|report_nya|game)\b|<8wanxiang_output>|\b(?:game_content|soliumbra_reply)\b/iu;
   const disabled = new Set();
   const prompts = preset.prompts.map((prompt) => {
     if (prompt.marker) return prompt;
-    const content = prompt.content.replace(/<<<\|catgodml\|menu:[^\n]*?>>>[ \t]*/giu, '').trim();
-    if (!content || controls.test(content)) disabled.add(prompt.identifier);
+    const content = prompt.content.replace(stripHeaders, '').trim();
+    const visible = content.replace(/\{\{\/\/[\s\S]*?\}\}/g, '').trim();
+    if (
+      !visible ||
+      prompt.identifier === 'SPresetSettings' ||
+      prompt.identifier === 'version_info' ||
+      controls.test(content)
+    )
+      disabled.add(prompt.identifier);
     return { ...prompt, content };
   });
   return {
@@ -57,7 +216,9 @@ export function meowssiahGamePreset(preset) {
       ),
     })),
     function_calling: false,
-    extensions: {},
+    extensions: preset.extensions?.wanxiang
+      ? { wanxiang: structuredClone(preset.extensions.wanxiang) }
+      : {},
     assistant_prefill: '',
     assistant_impersonation: '',
     continue_prefill: '',

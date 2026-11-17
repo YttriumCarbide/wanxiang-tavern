@@ -1,5 +1,6 @@
 import { samplingFromPreset } from './sampling.js';
 import { createMacroExpander } from './prompt-macros.js';
+import { adaptMeowssiahPreset, isMeowssiahPreset } from './miaosaiya-processing.js';
 const roles = ['system', 'user', 'assistant'];
 export const PROMPT_MARKERS = [
   'taskContext',
@@ -28,7 +29,9 @@ export function normalizePromptPreset(raw, id = 'custom') {
     const role = ['ass', 'model'].includes(entry.role) ? 'assistant' : entry.role || 'system';
     if (!roles.includes(role)) throw Error(`${identifier}的角色只能是system、user、assistant`);
     const content = typeof entry.content === 'string' ? entry.content : '';
-    if (content.length > 128000) throw Error(`${identifier}内容过长（最多128000字）`);
+    const maxContentLength = identifier === 'SPresetSettings' ? 512000 : 128000;
+    if (content.length > maxContentLength)
+      throw Error(`${identifier}内容过长（最多${maxContentLength}字）`);
     if (entry.marker && !PROMPT_MARKERS.includes(identifier))
       warnings.push(`未适配的占位层 ${identifier} 将跳过，请改成普通消息或支持的占位层。`);
     if (entry.injection_trigger?.length)
@@ -52,7 +55,11 @@ export function normalizePromptPreset(raw, id = 'custom') {
   });
   if (new Set(prompts.map((entry) => entry.identifier)).size !== prompts.length)
     throw Error('消息identifier不能重复');
-  if (prompts.reduce((sum, entry) => sum + entry.content.length, 0) > 1000000)
+  if (
+    prompts
+      .filter((entry) => entry.identifier !== 'SPresetSettings')
+      .reduce((sum, entry) => sum + entry.content.length, 0) > 1000000
+  )
     throw Error('预设正文总量过大');
   const group =
     raw.prompt_order?.find((entry) => entry.character_id === 100001) ||
@@ -72,10 +79,6 @@ export function normalizePromptPreset(raw, id = 'custom') {
       knownOrder.push({ identifier: entry.identifier, enabled: false });
   samplingFromPreset(raw);
   const metadata = structuredClone(raw);
-  if (raw.assistant_prefill || raw.assistant_impersonation || raw.continue_prefill)
-    warnings.push(
-      '预设的回复预填充已保留，但生成接口要求完整JSON，不发送半截ASSISTANT前缀；以最终请求预览为准。',
-    );
   for (const key of [
     'api_key',
     'apiKey',
@@ -89,22 +92,37 @@ export function normalizePromptPreset(raw, id = 'custom') {
     'Authorization',
   ])
     delete metadata[key];
-  if (
-    Object.hasOwn(metadata.extensions || {}, 'tavern_helper') ||
-    JSON.stringify(metadata.extensions || {}).includes('TavernHelper') ||
-    /<script\b|<%/.test(JSON.stringify(metadata))
-  )
+  const built = {
+    ...metadata,
+    id,
+    name: String(raw.name || '导入的酒馆预设').slice(0, 80),
+    prompts,
+    prompt_order: [{ character_id: 100001, order: knownOrder }],
+  };
+  const { preset, adapted } = adaptMeowssiahPreset(built);
+  const isMeow = isMeowssiahPreset(preset);
+  if (isMeow) {
     warnings.push(
-      '附带酒馆助手脚本：选用预设时在扩展窗口运行；依赖其他插件的接口可能需要进一步适配。',
+      adapted
+        ? '已原生适配小猫之神（Meowssiah）预设：默认关闭「行动选项」「猫猫留言」「小总结」，并将 <game> 标签改为 <wanxiang_output>。'
+        : '已启用小猫之神（Meowssiah）原生适配。',
     );
+  } else {
+    if (raw.assistant_prefill || raw.assistant_impersonation || raw.continue_prefill)
+      warnings.push(
+        '预设的回复预填充已保留，但生成接口要求完整JSON，不发送半截ASSISTANT前缀；以最终请求预览为准。',
+      );
+    if (
+      Object.hasOwn(metadata.extensions || {}, 'tavern_helper') ||
+      JSON.stringify(metadata.extensions || {}).includes('TavernHelper') ||
+      /<script\b|<%/.test(JSON.stringify(metadata))
+    )
+      warnings.push(
+        '附带酒馆助手脚本：选用预设时在扩展窗口运行；依赖其他插件的接口可能需要进一步适配。',
+      );
+  }
   return {
-    preset: {
-      ...metadata,
-      id,
-      name: String(raw.name || '导入的酒馆预设').slice(0, 80),
-      prompts,
-      prompt_order: [{ character_id: 100001, order: knownOrder }],
-    },
+    preset,
     warnings,
   };
 }

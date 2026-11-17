@@ -190,7 +190,7 @@ export function createAiPresetEditor({
         >提示词<textarea
           data-prompt-field="content"
           rows="14"
-          maxlength="128000"
+          maxlength="${entry.identifier === 'SPresetSettings' ? 512000 : 128000}"
           ${entry.marker ? 'readonly' : ''}
         >
 ${escapeText(entry.content)}</textarea>
