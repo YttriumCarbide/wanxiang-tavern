@@ -1,5 +1,6 @@
 import { LEARNABLE_SKILLS, STARTER_LEARNED_SKILL_IDS } from './content/learnable-skills.js';
 
+export { LEARNABLE_SKILLS };
 export const UNIVERSAL_SKILL_SLOTS = 2;
 
 export const LEARNABLE_SKILL_MAP = Object.freeze(

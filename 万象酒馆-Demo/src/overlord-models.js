@@ -138,11 +138,18 @@ export async function createOverlordModels({
       const url = `./assets/${def.model}`;
       try {
         const gltf = loading ? await loading.gltf(url) : await new GLTFLoader().loadAsync(url);
+        const hasProceduralNode = Boolean(
+          gltf.scene?.children?.some(
+            (child) =>
+              child.userData?.nonVoxel ||
+              child.userData?.modelType === 'Articulated procedural creature',
+          ),
+        );
         templates.set(def.model, {
           scene: gltf.scene,
           animations: Array.isArray(gltf.animations) ? gltf.animations : [],
           triangles: gltf.userData?.triangles || countSceneTriangles(gltf.scene),
-          nonVoxel: Boolean(gltf.userData?.nonVoxel),
+          nonVoxel: Boolean(gltf.userData?.nonVoxel || hasProceduralNode),
         });
       } catch {
         // Fallback gracefully if a non-active asset is absent in an isolated partial test fixture.

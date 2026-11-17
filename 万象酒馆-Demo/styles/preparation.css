@@ -1135,6 +1135,12 @@
   border-color: var(--gold-hi);
   transform: translateY(-2px);
 }
+.pp-skill-card-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
 .pp-skill-ico {
   width: 44px;
   height: 44px;
@@ -1144,6 +1150,16 @@
   color: #fff;
   background: linear-gradient(135deg, var(--k1, #8fb8ff), var(--k2, #3f5fd0));
   clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+}
+.pp-skill-type-ico {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(8, 10, 26, 0.88);
+  border: 1px solid rgba(226, 192, 120, 0.35);
 }
 .pp-skill-top {
   display: flex;

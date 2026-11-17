@@ -5,9 +5,13 @@
       "bytes": 216480,
       "hash": "033b62ec7b4a16073fb593a20fbeb9485bf122589cef73e73c33f094b73094d0"
     },
+    "assets/alchemical-puppet.glb": {
+      "bytes": 4075300,
+      "hash": "48ccac2f05fb65f545f1fb11fdb5c90ff78c56803dca5500e34155804862d0ec"
+    },
     "assets/apep-lamb.glb": {
-      "bytes": 485112,
-      "hash": "bea47d34880867835db7bdff70ea34e267337f24e35839e8601859dc876c9239"
+      "bytes": 3012188,
+      "hash": "4eb02bc2cd17470b72b9f5dc2342c3591bbea68e1df147d839d53e631f7f4a95"
     },
     "assets/arcane.glb": {
       "bytes": 5099452,
@@ -22,8 +26,8 @@
       "hash": "35bfd2f1a1a0f9abcc9f58546a10120b2c452d34730606b5585868427ee3d1f1"
     },
     "assets/ares.glb": {
-      "bytes": 273908,
-      "hash": "d75ec0c78ff2223c1434ad35294b129509484e6151e1fbf381557ed163e5f515"
+      "bytes": 3974620,
+      "hash": "33dc9ad9df213479b0ddb7f58ba539b52e08523e24f1aa5de808e4c307cd6409"
     },
     "assets/bandit-alchemist.glb": {
       "bytes": 66560,
@@ -1161,6 +1165,10 @@
       "bytes": 129200,
       "hash": "0a7248204b64f323779760bcd8249cbd0135827393daade8a9a79ad56dfd4abe"
     },
+    "assets/greenfern-mill.glb": {
+      "bytes": 1548424,
+      "hash": "2d40f1be4bd4bfa2bc8aa08a8b628acf92bce72435f46fd8755c7a0d7f7461e4"
+    },
     "assets/grey-prowler.glb": {
       "bytes": 55928,
       "hash": "743003dd5136449dedbd41dab0523baf03fc2f4fdfe4ff0119c6526e69b6f843"
@@ -1305,13 +1313,69 @@
       "bytes": 4655864,
       "hash": "761d9b26f0f773ac2e43395aca4052a9651d1516028ee5c8dcb51ec351d0345e"
     },
+    "assets/mill-canal-frog.glb": {
+      "bytes": 78448,
+      "hash": "9d2e61ec19fa8435e89df4bd75141fdcdeebc722d08399980c63f236e37bbd4e"
+    },
+    "assets/mill-dust-bat.glb": {
+      "bytes": 86336,
+      "hash": "c6aab1a980576cfd62bc85d9159c5e3cc5c427670e03b55c25baddc519d17ef9"
+    },
+    "assets/mill-giant-vole.glb": {
+      "bytes": 156588,
+      "hash": "13fe1bbb5fd306f9a3b66004186265058e86b45291adf6d3f07b7e28995c9e7d"
+    },
+    "assets/mill-mini-mold-slime.glb": {
+      "bytes": 156284,
+      "hash": "34fecef2b8e8326a755c5cce624dd56b9bfe6d7ca3225f474d2c3efb11210a1e"
+    },
+    "assets/mill-mold-slime-boss.glb": {
+      "bytes": 287908,
+      "hash": "c37259556237aaf8722a262015534efcd407045f5e6936a5c68410518836a2f7"
+    },
+    "assets/mill-moss-bug.glb": {
+      "bytes": 70236,
+      "hash": "ab74b7a341f210daf40a3847af8798b74cceedc84c31dd9c4b140932b610aea5"
+    },
+    "assets/mill-nettle.glb": {
+      "bytes": 72204,
+      "hash": "565f45c46a8e93948d04c3efb810883e148348aa8be0d65854a0591ee8e7720a"
+    },
+    "assets/mill-pale-slug.glb": {
+      "bytes": 163124,
+      "hash": "7b1a4624d23ef11529936f87378183f56697bee663f18da40cc8ceb7039e45a7"
+    },
+    "assets/mill-roach-swarm.glb": {
+      "bytes": 280816,
+      "hash": "622b8d279b042ee69f8cf900342a340019d8ab9b7beb34ee2a6d9bce3d3f219b"
+    },
+    "assets/mill-shell-beetle.glb": {
+      "bytes": 79252,
+      "hash": "4e02aedb4cc4c3eb9dd95264e3d450f2c9673b7445d30827657aa66d2fd7c6b9"
+    },
+    "assets/mill-stray-cat.glb": {
+      "bytes": 82416,
+      "hash": "c9f5a8a85facd9cd90ada6e6986e11fc4814e16beec394753cff006f2a8914f4"
+    },
+    "assets/mill-vampire-bat.glb": {
+      "bytes": 271956,
+      "hash": "c0f6d8953609d8a96e25fcb3e5201183a19344c9bee79247b3b1420c6bf33b55"
+    },
+    "assets/mill-vole-alpha.glb": {
+      "bytes": 266072,
+      "hash": "f09a61397e2b08a66d518a82abe83a8c2ab0f46ff535df7515de084b67923f1e"
+    },
+    "assets/mill-vole-pup.glb": {
+      "bytes": 82584,
+      "hash": "edce461618e111973f06d51df0e02aa125519e4bc9e92393a5574aa932f109f3"
+    },
     "assets/moon-crown.glb": {
       "bytes": 211948,
       "hash": "63cc16898d201e9c49720abb15fd5c165e7e45039140878f27eca223fbc25853"
     },
     "assets/moon-eye.glb": {
-      "bytes": 201236,
-      "hash": "55013efdd17bc366f0a6d334689f46c46ca8ddcd30e63c7b40361c52c30ac96a"
+      "bytes": 2884552,
+      "hash": "27c2e185bf4781068bdfeb5bb173d878b1763eb179009f2359285cf4f592b743"
     },
     "assets/moon-moth.glb": {
       "bytes": 107976,
@@ -1368,6 +1432,10 @@
     "assets/portraits/abyss-devourer-python.svg": {
       "bytes": 49863,
       "hash": "8778f3b994e1070f812f6b988cb9f7d24628db0e87b0503261df684e43b3f6d5"
+    },
+    "assets/portraits/alchemical-puppet.svg": {
+      "bytes": 911402,
+      "hash": "bdb775c23a8b5407c050f8cfa4f119721f771c49a738f870e053d3e34c3293eb"
     },
     "assets/portraits/apep-lamb.svg": {
       "bytes": 503637,
@@ -1741,6 +1809,62 @@
       "bytes": 56715,
       "hash": "488a0415d1ffae53927b750fe8a4f2d3f204666a51cacc633e6391add247ac06"
     },
+    "assets/portraits/mill-canal-frog.svg": {
+      "bytes": 16220,
+      "hash": "4d10026e568d00e648eb5f5a96b9f3d3b2751f7727903346cfc148c05e0b46ef"
+    },
+    "assets/portraits/mill-dust-bat.svg": {
+      "bytes": 18408,
+      "hash": "d86eb1d92e0191f08f96f045cf87fcf9ddb4c29c79b9654abd485896a4cc6335"
+    },
+    "assets/portraits/mill-giant-vole.svg": {
+      "bytes": 33346,
+      "hash": "4c5fa2b1fc07033c74e983b5b14369909e7c63b7375a738655eb5bfc81e664ea"
+    },
+    "assets/portraits/mill-mini-mold-slime.svg": {
+      "bytes": 35400,
+      "hash": "242f134e0091da57f1340d4983371066a2f3ccf0d3a395f4116bb4cb1ac497d1"
+    },
+    "assets/portraits/mill-mold-slime-boss.svg": {
+      "bytes": 66708,
+      "hash": "d5cf8ff92846b970add0293e528565118fb414d3079a5e9a3af8376af5648198"
+    },
+    "assets/portraits/mill-moss-bug.svg": {
+      "bytes": 14970,
+      "hash": "487570d349770b2ef104f09acadfb41a23244f0684d98932cf622ee707d3450c"
+    },
+    "assets/portraits/mill-nettle.svg": {
+      "bytes": 15470,
+      "hash": "b49ff244604c81be5ead0c7d6ab56a706e8f1f0d289309c72b66684c0fb8300d"
+    },
+    "assets/portraits/mill-pale-slug.svg": {
+      "bytes": 37378,
+      "hash": "3888179bd6d565b1601d097707f1e0ea2c37166561515df433032de264813d6e"
+    },
+    "assets/portraits/mill-roach-swarm.svg": {
+      "bytes": 64770,
+      "hash": "29105fa1bd1af39dd8d5a23fbef80d2eb772a3805777c827100dd4f53f5b7ca4"
+    },
+    "assets/portraits/mill-shell-beetle.svg": {
+      "bytes": 16969,
+      "hash": "0b8494f824aa71eb6751053c211cba3a82ccd75aa20a4e2a92635f890ba24f49"
+    },
+    "assets/portraits/mill-stray-cat.svg": {
+      "bytes": 17464,
+      "hash": "a37244088d3d4beb6acdf3bfe8c74df0d01180ce9928f3df1cf29f2e6cff1e06"
+    },
+    "assets/portraits/mill-vampire-bat.svg": {
+      "bytes": 61614,
+      "hash": "dc701384823ccd6f74b43f276be86720e8fe8d9f8e96dcaf1d74f72c6c8790c5"
+    },
+    "assets/portraits/mill-vole-alpha.svg": {
+      "bytes": 58672,
+      "hash": "d429c6edf3654f99038a240126f198af68929301b235396af79a57649312bb01"
+    },
+    "assets/portraits/mill-vole-pup.svg": {
+      "bytes": 16722,
+      "hash": "7c4377023297abe8519a1f866cd905e8569576bf34969933e83ee89c5bac6a83"
+    },
     "assets/portraits/moon-crown.svg": {
       "bytes": 217104,
       "hash": "eb7149d4f191578299fefd4e867c7c94e30ca3c6c1f5f4990e64b8d186e66be6"
@@ -2082,8 +2206,8 @@
       "hash": "a7f8ff1fc143e4aa70bb519f7b2f721558567f341451e1d5a64e0ea76405f64d"
     },
     "assets/radiant-wyvern.glb": {
-      "bytes": 201132,
-      "hash": "cead8e72d78a9f0e04e479d99efb6450934a865fed0288e101d2b9cbed6c2b7c"
+      "bytes": 1924652,
+      "hash": "665fa204f07d2bf90e5fe57f2325f6e9cc7e43462d1f60e2e215fae8ee4dd592"
     },
     "assets/rail-spider.glb": {
       "bytes": 42700,

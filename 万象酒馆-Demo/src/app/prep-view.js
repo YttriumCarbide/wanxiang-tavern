@@ -7,10 +7,19 @@ import { preparationEquipment } from './equipment.js';
 import { finalPassiveText, finalSkillText } from '../skill-text.js';
 import { EMBLEMS } from '../emblems.js';
 import {
+  LEARNABLE_SKILLS,
   LEARNABLE_SKILL_MAP,
   restoreEquippedSkills,
   restoreLearnedSkills,
 } from '../learnable-skills.js';
+import {
+  DAMAGE_TYPES,
+  SUPPORT_TYPE,
+  damageTypeIcon,
+  damageTypeMeta,
+  inferDamageType,
+  resolveBasicAttackType,
+} from '../damage-types.js';
 import { DC_ATTRIBUTES, dcSuccessProbability, effectiveDcAttrs, formatMod } from '../dc.js';
 import {
   SERVICE_ROLES,
@@ -106,6 +115,7 @@ function skillsMarkup(stats, member, library) {
     kind: '普攻',
     name: member.setting?.attack?.name || '基础攻击',
     cost: '1 行动',
+    damageType: resolveBasicAttackType(stats),
     text: stats.attackText || `对前方敌人造成 ${stats.attack} 点伤害。`,
   });
   if (stats.entrySkill) {
@@ -113,6 +123,7 @@ function skillsMarkup(stats, member, library) {
       kind: '入场',
       name: stats.entrySkill.name || member.setting?.entrySkill?.name || '入场技',
       cost: '换入前场触发',
+      damageType: inferDamageType(stats.entrySkill, stats) || SUPPORT_TYPE,
       text: stats.entrySkill.text || finalSkillText(stats.entrySkill, markName),
     });
   }
@@ -128,6 +139,7 @@ function skillsMarkup(stats, member, library) {
       cost: isPassive
         ? '被动'
         : `${skill.ap || 1} 行动${skill.mp ? ` · ${skill.mp} SP` : ''}${skill.hp ? ` · ${skill.hp} HP` : ''}`,
+      damageType: isPassive ? SUPPORT_TYPE : inferDamageType(skill, stats) || SUPPORT_TYPE,
       text: isPassive
         ? skill.text || finalPassiveText(skill)
         : skill.text || finalSkillText(skill, markName),
@@ -139,6 +151,7 @@ function skillsMarkup(stats, member, library) {
       kind: '纹章被动',
       name: `${emblem.emblem.title} · ${emblem.emblem.name}`,
       cost: '纹章戒指',
+      damageType: SUPPORT_TYPE,
       text: emblem.emblem.text || '',
     });
   }
@@ -147,13 +160,17 @@ function skillsMarkup(stats, member, library) {
       kind: '纹章主动',
       name: emblem.skill.name || '纹章奥义',
       cost: `${emblem.skill.ap || 1} 行动${emblem.skill.mp ? ` · ${emblem.skill.mp} SP` : ''}`,
+      damageType: inferDamageType(emblem.skill, stats) || SUPPORT_TYPE,
       text: emblem.skill.text || finalSkillText(emblem.skill, markName),
     });
   }
   const slotBar = html`<div class="prepare-universal-bar">
     <div class="prepare-universal-head">
       <strong>通用战技配装 · 每人至多 2 槽</strong>
-      <small>公会「战技研习台」可解锁更多通用战技（已掌握 ${learnedIds.length}/12）</small>
+      <small
+        >公会「战技研习台」可解锁更多通用战技（已掌握
+        ${learnedIds.length}/${LEARNABLE_SKILLS.length}）</small
+      >
     </div>
     <div class="prepare-universal-slots">
       ${[0, 1]
@@ -171,7 +188,8 @@ function skillsMarkup(stats, member, library) {
                 .map((id) => {
                   const blueprint = LEARNABLE_SKILL_MAP[id];
                   if (!blueprint) return '';
-                  return `<option value="${escapeText(id)}" ${id === currentId ? 'selected' : ''}>${escapeText(blueprint.name)}（${blueprint.mp ? `${blueprint.mp}SP` : `${blueprint.hp || 0}HP`}）</option>`;
+                  const typeTag = DAMAGE_TYPES[blueprint.damageType]?.short || '技';
+                  return `<option value="${escapeText(id)}" ${id === currentId ? 'selected' : ''}>[${escapeText(typeTag)}] ${escapeText(blueprint.name)}（${blueprint.mp ? `${blueprint.mp}SP` : `${blueprint.hp || 0}HP`}）</option>`;
                 })
                 .join('')}
             </select>
@@ -186,8 +204,12 @@ function skillsMarkup(stats, member, library) {
       ${cards
         .map((card, i) => {
           const [k1, k2, glyph] = skillColor(card.kind);
+          const typeMeta = damageTypeMeta(card.damageType);
           return `<article class="prepare-ability-item" style="--k1:${k1};--k2:${k2};--i:${i}">
-          <div class="pp-skill-ico" aria-hidden="true">${glyph}</div>
+          <div class="pp-skill-card-head">
+            <div class="pp-skill-ico" aria-hidden="true">${glyph}</div>
+            <span class="pp-skill-type-ico" title="${escapeText(typeMeta.name)}">${damageTypeIcon(card.damageType, { size: 14 })}</span>
+          </div>
           <div>
             <div class="pp-skill-top"><u>${escapeText(card.kind)}</u><small>${escapeText(card.cost)}</small></div>
             <strong>${escapeText(card.name)}</strong>

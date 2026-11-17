@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { UNIVERSAL_ENEMIES, UNIVERSAL_BOSSES } from '../../src/content/universal-adversaries.js';
 
@@ -37,9 +38,16 @@ export async function universalEnemyChecks({ browser, baseURL, output }) {
       await page.evaluate(() => window.universalView.dispose());
     }
     const overlordResults = [];
-    for (const [name, mapId, ids, expectBadges] of [
-      ['overlords-standing-on-cards', 'relic', ['apepLamb', 'radiantWyvern', 'ares'], 3],
-      ['ares-formation-on-cards', 'frost', ['aresCannonLeft', 'ares', 'aresCannonRight'], 1],
+    for (const [name, mapId, ids, expectBadges, expectMounted] of [
+      ['overlords-standing-on-cards', 'relic', ['apepLamb', 'radiantWyvern', 'ares'], 3, 3],
+      ['ares-formation-on-cards', 'frost', ['aresCannonLeft', 'ares', 'aresCannonRight'], 1, 3],
+      [
+        'mill-overlord-battlefield',
+        'mill',
+        ['millVoleAlpha', 'alchemicalPuppet', 'millMoldSlimeBoss'],
+        1,
+        1,
+      ],
     ]) {
       const check = await page.evaluate(
         async ({ mapId, enemyIds }) => {
@@ -54,17 +62,35 @@ export async function universalEnemyChecks({ browser, baseURL, output }) {
             weather: 'clear',
           });
           window.universalView.draw(state, preview(state, []), null, null);
+          let visibleBattleCards = 0;
+          window.universalView.scene.traverse((node) => {
+            if (node.name && node.name.includes('Battle_Card') && node.visible) {
+              visibleBattleCards++;
+            }
+          });
           return {
             status: window.universalView.overlordStatus(),
             overlordBadges: document.querySelectorAll(
               '.unit-hit.is-overlord .enemy-tier-badge.is-overlord',
             ).length,
+            visibleBattleCards,
+            toughnessBadges: document.querySelectorAll('.enemy-toughness-badge').length,
+            unknownWeaknesses: document.querySelectorAll(
+              '.enemy-weakness-row .enemy-weakness-pill.is-unknown',
+            ).length,
           };
         },
         { mapId, enemyIds: ids },
       );
-      assert.equal(check.status.mounted.length, 3, `${name}: all 3 units must mount on cards`);
+      assert.equal(
+        check.status.mounted.length,
+        expectMounted,
+        `${name}: expected ${expectMounted} mounted card units`,
+      );
       assert.equal(check.overlordBadges, expectBadges, `${name}: overlord badge count`);
+      assert.equal(check.visibleBattleCards, 0, `${name}: Battle_Card base must stay hidden`);
+      assert.equal(check.toughnessBadges, 3, `${name}: enemy toughness badges`);
+      assert(check.unknownWeaknesses >= 3, `${name}: enemy ? unknown weakness pills`);
       for (const entry of check.status.mounted) {
         assert.equal(entry.standOnCard, true);
         assert.equal(entry.nonVoxel, true);
@@ -72,6 +98,16 @@ export async function universalEnemyChecks({ browser, baseURL, output }) {
         assert(entry.triangles >= 4000, `${entry.id}: triangles >= 4000`);
         assert(entry.mountLocalY > 0.3, `${entry.id}: mounted atop card`);
         assert(entry.height > 1.0, `${entry.id}: visible 3D height`);
+      }
+      if (name === 'mill-overlord-battlefield') {
+        const puppet = check.status.mounted.find((entry) => entry.id === 'alchemicalPuppet');
+        assert(
+          puppet && puppet.height > 3.0,
+          `alchemicalPuppet height > 3.0 (got ${puppet?.height})`,
+        );
+        for (const clipName of ['Idle', 'Normal_Attack', 'Special_Attack', 'Special_Action']) {
+          assert(puppet.animations.includes(clipName), `Missing puppet clip ${clipName}`);
+        }
       }
       overlordResults.push({ name, mounted: check.status.mounted });
       await page.waitForTimeout(700);
@@ -159,7 +195,7 @@ export async function universalEnemyChecks({ browser, baseURL, output }) {
     await page.locator('[data-enemy-tier="boss"]').click();
     assert.equal(await page.locator('#archive-text img').count(), 1);
     await page.locator('[data-enemy-tier="overlord"]').click();
-    assert.equal(await page.locator('#archive-list button').count(), 4);
+    assert.equal(await page.locator('#archive-list button').count(), 5);
     assert.equal(await page.locator('#archive-text img').count(), 0);
     await page
       .locator(
@@ -168,6 +204,20 @@ export async function universalEnemyChecks({ browser, baseURL, output }) {
       .waitFor({ timeout: 30000 });
     await page.waitForTimeout(300);
     await page.screenshot({ path: path.join(output, 'archive-overlord-single.png') });
+    await page.locator('#archive-list button').filter({ hasText: '失败的炼金傀偶' }).click();
+    await page
+      .locator(
+        '#archive-dialog .archive-overlord-stage[data-stage-ready="ready"][data-loaded-models="1"]',
+      )
+      .waitFor({ timeout: 30000 });
+    const puppetAnims = await page
+      .locator('#archive-dialog .archive-stage-anims [data-stage-anim]')
+      .evaluateAll((buttons) => buttons.map((btn) => btn.dataset.stageAnim));
+    for (const clipName of ['Idle', 'Normal_Attack', 'Special_Attack', 'Special_Action']) {
+      assert(puppetAnims.includes(clipName), `Missing archive puppet animation button ${clipName}`);
+    }
+    await page.waitForTimeout(300);
+    await page.screenshot({ path: path.join(output, 'archive-overlord-puppet.png') });
     await page.locator('#archive-list button').filter({ hasText: '母树' }).click();
     await page
       .locator(
@@ -286,6 +336,221 @@ export async function universalEnemyChecks({ browser, baseURL, output }) {
       path: path.join(output, 'expanded-monsters-gallery.png'),
       fullPage: true,
     });
+
+    const fixtureHtml = (
+      await readFile(new URL('../../index.html', import.meta.url), 'utf8')
+    ).replace('<script type="module" src="./src/app.js"></script>', '');
+
+    const hudPage = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+    hudPage.on('pageerror', (failure) => failures.push(failure.message));
+    try {
+      await hudPage.route('**/__combat-hud-fixture', (route) =>
+        route.fulfill({ contentType: 'text/html', body: fixtureHtml }),
+      );
+      await hudPage.goto(new URL('__combat-hud-fixture', baseURL).href);
+      const hudCheck = await hudPage.evaluate(async () => {
+        const [
+          { createBattleView },
+          { createSession },
+          { createRoster },
+          { createPlanning },
+          { createDetails },
+          { createTimeline },
+          { createSelection },
+          { newBattle, preview, makeAction, enemyTimeline },
+        ] = await Promise.all([
+          import('/src/scene.js'),
+          import('/src/app/session.js'),
+          import('/src/app/roster.js'),
+          import('/src/app/planning.js'),
+          import('/src/app/details.js'),
+          import('/src/app/timeline.js'),
+          import('/src/app/selection.js'),
+          import('/src/engine.js'),
+        ]);
+        document.body.classList.add('in-battle');
+        document.querySelector('#battle').hidden = false;
+        document.querySelector('#inn').hidden = true;
+        document.querySelector('#scene-loading').hidden = true;
+        document.querySelector('#story-toggle').hidden = false;
+
+        const enemyIds = ['millVoleAlpha', 'alchemicalPuppet', 'millMoldSlimeBoss'];
+        const session = createSession();
+        session.runtime.mode = 'battle';
+        const state = newBattle(enemyIds);
+        state.phase = 'plan';
+        state.round = 1;
+        state.revealedWeaknesses = { alchemicalPuppet: ['fire'] };
+        const heroId = state.formation[0];
+        state.units[heroId].maxHp = 72;
+        state.units[heroId].hp = 69;
+        state.units[heroId].block = 15;
+        session.battle.state = state;
+        const slots = enemyTimeline(state);
+        const freeSlot = slots.findIndex((entry) => entry === null);
+        session.battle.plan = [makeAction(state, heroId, 'attack', 'alchemicalPuppet', freeSlot)];
+        session.battle.forecast = preview(state, session.battle.plan);
+        session.selection.selected = heroId;
+
+        const context = {
+          session,
+          viewport: {
+            canPlan: () => true,
+            compactHUD: () => false,
+            compactLandscape: () => false,
+            openCharacterHUD() {},
+          },
+          drag: { clearDropHighlights() {} },
+          audio: { play() {} },
+          shell: { toast() {} },
+        };
+        context.roster = createRoster(context);
+        context.planning = createPlanning(context);
+        context.details = createDetails(context);
+        context.timeline = createTimeline(context);
+        context.selection = createSelection(context);
+
+        const view = await createBattleView(
+          document.querySelector('#stage'),
+          (...args) => context.selection.selectUnit(...args),
+          { map: 'mill', enemyIds, weather: 'clear' },
+        );
+        session.runtime.view = view;
+        context.renderer = {
+          render() {
+            view.draw(
+              session.battle.state,
+              session.battle.forecast,
+              session.selection.selected,
+              null,
+              false,
+            );
+            context.details.renderDetails(session.battle.state);
+            context.timeline.renderTimeline();
+          },
+        };
+        context.renderer.render();
+        window.combatHudView = view;
+        const heroEl = document.querySelector(`[data-unit="${heroId}"]`);
+        return {
+          heroShieldText: heroEl?.querySelector('.bar.hp .resource-number')?.textContent || '',
+          heroShieldFill: heroEl?.querySelectorAll('.bar.hp .bar-shield-fill').length || 0,
+          toughnessCount: document.querySelectorAll('.enemy-toughness-badge').length,
+          revealedWeakness: document.querySelectorAll('.enemy-weakness-pill[data-weakness="fire"]')
+            .length,
+          unknownWeakness: document.querySelectorAll('.enemy-weakness-pill.is-unknown').length,
+          timelineIcons: document.querySelectorAll('#timeline .dmg-type-svg').length,
+          detailsChips: document.querySelectorAll('#details .dmg-type-chip').length,
+        };
+      });
+      await hudPage.waitForFunction(() => !window.combatHudView.isAnimating());
+      assert(hudCheck.heroShieldText.includes('69/72（15）'), hudCheck.heroShieldText);
+      assert.equal(hudCheck.heroShieldFill, 1);
+      assert.equal(hudCheck.toughnessCount, 3);
+      assert.equal(hudCheck.revealedWeakness, 1);
+      assert(hudCheck.unknownWeakness >= 6);
+      assert(hudCheck.timelineIcons >= 3);
+      assert(hudCheck.detailsChips >= 3);
+      await hudPage.screenshot({ path: path.join(output, 'combat-overhaul-hud.png') });
+      await hudPage.evaluate(() => window.combatHudView.dispose());
+    } finally {
+      await hudPage.close();
+    }
+
+    const prepPage = await browser.newPage({
+      viewport: { width: 390, height: 844 },
+      hasTouch: true,
+    });
+    prepPage.on('pageerror', (failure) => failures.push(failure.message));
+    try {
+      await prepPage.route('**/__mobile-prep-fixture', (route) =>
+        route.fulfill({ contentType: 'text/html', body: fixtureHtml }),
+      );
+      await prepPage.goto(new URL('__mobile-prep-fixture', baseURL).href);
+      await prepPage.evaluate(async () => {
+        const [
+          { createSession },
+          { createShell },
+          { createDeparture },
+          { createEventScope },
+          { newCampaign, firstCompanion },
+          { defaultProtagonist },
+        ] = await Promise.all([
+          import('/src/app/session.js'),
+          import('/src/app/shell.js'),
+          import('/src/app/departure.js'),
+          import('/src/shared/events.js'),
+          import('/src/campaign.js'),
+          import('/src/content/qingyuan.js'),
+        ]);
+        const session = createSession();
+        const library = newCampaign(defaultProtagonist());
+        firstCompanion(library);
+        library.campaign.tutorial = 'complete';
+        library.progression.pandoraJoined = true;
+        library.learnedSkills = ['uni-feint-retreat', 'uni-serrated-cut', 'uni-ember-flare'];
+        session.ai.library = library;
+        session.ai.preparationTab = 'skill';
+        const context = {
+          session,
+          events: createEventScope(),
+          audio: { attachFrame() {} },
+          equipment: { refresh() {} },
+          onboarding: { preparationOpened() {} },
+        };
+        context.shell = createShell(context);
+        context.departure = createDeparture(context);
+        document.querySelector('#party-panel').addEventListener('click', (event) => {
+          const tab = event.target.closest('[data-prepare-tab]');
+          if (!tab) return;
+          session.ai.preparationTab = tab.dataset.prepareTab;
+          context.shell.renderParty();
+        });
+        const active = context.departure.equip({ pending: true });
+        active.ready();
+        window.mobilePrepFixture = context;
+      });
+      await prepPage.locator('#party-panel.script-ready').waitFor({ state: 'visible' });
+      await prepPage.locator('#prepare-done.depart-ready-fx').waitFor({ state: 'visible' });
+      const skillCheck = await prepPage.evaluate(() => ({
+        headCount: document.querySelectorAll(
+          '.pp-skill-card-head .pp-skill-type-ico svg.dmg-type-svg',
+        ).length,
+        universalHead: document.querySelector('.prepare-universal-head small')?.textContent || '',
+        options: [...document.querySelectorAll('.prepare-universal-slot select option')].map(
+          (o) => o.textContent,
+        ),
+      }));
+      assert(skillCheck.headCount >= 3, 'prep skill cards render damage type icons');
+      assert(skillCheck.universalHead.includes('/18'), skillCheck.universalHead);
+      assert(
+        skillCheck.options.some((text) => text.includes('[火]')),
+        'universal skill options include [type] prefix',
+      );
+      await prepPage.locator('#prepare-expand-left').click();
+      await prepPage.locator('#party-panel.left-expanded').waitFor({ state: 'visible' });
+      await prepPage.waitForTimeout(260);
+      const expandedMetrics = await prepPage.evaluate(() => ({
+        expanded: document.querySelector('#party-panel').classList.contains('left-expanded'),
+        readyFx: document.querySelector('#prepare-done').classList.contains('depart-ready-fx'),
+        stageHidden:
+          getComputedStyle(document.querySelector('.prepare-stage-col')).display === 'none',
+        overflow: document.documentElement.scrollWidth > window.innerWidth + 1,
+      }));
+      assert.equal(expandedMetrics.expanded, true);
+      assert.equal(expandedMetrics.readyFx, true);
+      assert.equal(expandedMetrics.stageHidden, true);
+      assert.equal(expandedMetrics.overflow, false);
+      await prepPage.screenshot({ path: path.join(output, 'mobile-prep-expanded-and-ready.png') });
+      await prepPage.evaluate(() => {
+        window.mobilePrepFixture.departure.dispose();
+        window.mobilePrepFixture.shell.dispose();
+        window.mobilePrepFixture.events.dispose();
+      });
+    } finally {
+      await prepPage.close();
+    }
+
     assert.deepEqual(failures, []);
     return {
       enemies: 10,

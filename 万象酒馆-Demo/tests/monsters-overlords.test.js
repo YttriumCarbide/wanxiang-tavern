@@ -36,6 +36,14 @@ async function inspectGlb(filename) {
   return { doc, triangles, meshes: (doc.meshes || []).length };
 }
 
+function isNonVoxelOverlordDoc(doc) {
+  return (
+    doc.extras?.nonVoxel === true ||
+    Boolean(doc.nodes?.[0]?.extras?.nonVoxel) ||
+    doc.nodes?.[0]?.extras?.modelType === 'Articulated procedural creature'
+  );
+}
+
 test('validateGameData accepts all expanded monsters and overlord flags cleanly', () => {
   assert.doesNotThrow(() => validateGameData());
 });
@@ -171,8 +179,8 @@ test('Overlord formations, standOnCard flags, and non-voxel vs 3-tier voxel GLB 
     assert.match(svg, /width="600"\s+height="900"/, `${enemy.portrait}.svg portrait dimensions`);
     const info = await inspectGlb(enemy.model);
     if (enemy.overlord) {
-      assert.equal(info.doc.extras?.nonVoxel, true, `${enemy.model}: expected nonVoxel=true`);
-      assert.equal(info.doc.extras?.voxelBoxes, 0, `${enemy.model}: expected voxelBoxes=0`);
+      assert.equal(isNonVoxelOverlordDoc(info.doc), true, `${enemy.model}: expected nonVoxel=true`);
+      assert.equal(info.doc.extras?.voxelBoxes ?? 0, 0, `${enemy.model}: expected voxelBoxes=0`);
       assert(info.meshes >= 6, `${enemy.model}: expected >= 6 meshes`);
       assert(info.triangles >= 3800, `${enemy.model}: expected >= 3800 triangles`);
       overlordTris.push(info.triangles);
@@ -216,8 +224,8 @@ test('Overlord formations, standOnCard flags, and non-voxel vs 3-tier voxel GLB 
       `${portraitSlug}.svg must use the sculpted overlord artwork`,
     );
     const info = await inspectGlb(modelName);
-    assert.equal(info.doc.extras?.nonVoxel, true, `${modelName}: expected nonVoxel=true`);
-    assert.equal(info.doc.extras?.voxelBoxes, 0, `${modelName}: expected voxelBoxes=0`);
+    assert.equal(isNonVoxelOverlordDoc(info.doc), true, `${modelName}: expected nonVoxel=true`);
+    assert.equal(info.doc.extras?.voxelBoxes ?? 0, 0, `${modelName}: expected voxelBoxes=0`);
     assert(info.meshes >= 6, `${modelName}: expected >= 6 meshes`);
     assert(info.triangles >= 4000, `${modelName}: expected >= 4000 triangles`);
     if (modelName !== 'radiant-wyvern.glb') overlordTris.push(info.triangles);

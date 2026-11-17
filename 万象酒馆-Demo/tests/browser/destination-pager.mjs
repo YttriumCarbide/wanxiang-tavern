@@ -344,6 +344,37 @@ export async function destinationPagerChecks({ browser, baseURL, output }) {
     assert.equal(await page.locator('.destination-node').count(), 7);
     assert.equal(await page.locator('.destination-node.cleared').count(), 6);
     await page.screenshot({ path: path.join(output, 'destination-six-sites-complete.png') });
+
+    await page.locator('#destination-back').click();
+    await page.locator('.destination-strip > button').first().click();
+    await page.locator('[data-region="mill"]').click();
+    await ready('mill');
+    await page.locator('#destination-region-confirm').click();
+    await page.locator('#destination-dialog[data-stage="route"]').waitFor();
+    assert.deepEqual(
+      await page.locator('.destination-node-mark em').allTextContents(),
+      REGIONS.mill.nodes.map((node) => node.label),
+    );
+    await page.waitForTimeout(150);
+    await page.screenshot({ path: path.join(output, 'mill-node-map.png') });
+
+    await page.locator('#destination-back').click();
+    await page.locator('[data-region="ruins"]').click();
+    await ready('ruins');
+    await page.locator('#destination-region-confirm').click();
+    await page.locator('#destination-dialog[data-stage="route"]').waitFor();
+    assert.deepEqual(
+      await page.locator('.destination-node-mark em').allTextContents(),
+      REGIONS.ruins.nodes.map((node) => node.label),
+    );
+    const ruinsLevels = await page.locator('.destination-node-meta').allTextContents();
+    assert(
+      ruinsLevels.some((text) => text.includes('Lv.20')),
+      `Expected ruins Lv.20+ on node map, got ${ruinsLevels.join(', ')}`,
+    );
+    await page.waitForTimeout(150);
+    await page.screenshot({ path: path.join(output, 'ruins-node-map.png') });
+
     assert.deepEqual(errors, []);
     return {
       centeredSteps: 2,

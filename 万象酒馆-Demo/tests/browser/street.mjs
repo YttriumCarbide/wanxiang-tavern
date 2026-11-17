@@ -200,6 +200,17 @@ export async function streetChecks({ browser, baseURL, output }) {
     );
     await page.evaluate(() => window.streetPreview.resetView());
     await settled();
+    await page.locator('#street-submap-open').click();
+    await page.locator('#street-city-submap[open] .city-submap-svg').waitFor({ state: 'visible' });
+    assert.equal(
+      await page.locator('#street-city-submap [data-city-node="starbell-undercroft"]').count(),
+      1,
+    );
+    assert.equal(await page.locator('#street-city-submap .city-block').count(), 0);
+    await page.waitForTimeout(150);
+    await page.screenshot({ path: path.join(output, 'starbell-submap.png') });
+    await page.locator('#street-city-submap-close').click();
+    await page.locator('#street-city-submap').waitFor({ state: 'hidden' });
     await page.evaluate(() => {
       window.visitorClick = null;
       window.addEventListener('message', (event) => {
