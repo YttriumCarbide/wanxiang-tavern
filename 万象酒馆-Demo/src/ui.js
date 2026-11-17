@@ -5,6 +5,8 @@ import { createEventScope } from './shared/events.js';
 import { BUFFS } from './data.js';
 import { effectiveBuff } from './engine.js';
 import { definition } from './catalog.js';
+import { damageTypeIcon, damageTypeMeta } from './damage-types.js';
+import { resolveEnemyBreakProfile, revealedWeaknessesFor } from './octopath.js';
 
 export const escapeText = (s) =>
   String(s).replace(
@@ -103,41 +105,107 @@ export function statusIcons(s, id, end = s, events = []) {
   return markupString;
 }
 export function resourceBars(u, f = u) {
-  const shield =
-    u.block || f.block
-      ? html`<span
-          class="resource-shield ${u.block !== f.block ? 'forecast' : ''}"
-          data-tooltip="${escapeText(`护盾 ${u.block}：优先抵挡伤害${u.block !== f.block ? `\n预计结算后 ${f.block}` : ''}`)}"
-          tabindex="0"
-          aria-label="护盾 ${u.block}${u.block !== f.block ? `，预计${f.block}` : ''}"
-          >${icon('shield')}<b>${u.block}</b>${u.block !== f.block ? html`<em>${f.block}</em>` : ''}</span
-        >`
-      : '';
-  return (
-    shield +
-    (u.maxMp > 0 ? ['hp', 'mp'] : ['hp'])
-      .map((k) => {
-        const max = k === 'hp' ? u.maxHp : u.maxMp,
-          label = k === 'hp' ? '生命' : '蓝量',
-          now = u[k],
-          end = f[k],
-          text = `${label} ${now}/${max}${now !== end ? `\n预计 ${end}/${max}` : ''}`;
+  const nowBlock = Math.max(0, Number(u.block) || 0);
+  const endBlock = Math.max(0, Number(f.block) || 0);
+  return (u.maxMp > 0 ? ['hp', 'mp'] : ['hp'])
+    .map((k) => {
+      const max = k === 'hp' ? u.maxHp : u.maxMp,
+        label = k === 'hp' ? '生命' : '蓝量',
+        now = u[k],
+        end = f[k],
+        shieldLabel =
+          k === 'hp' && (nowBlock > 0 || endBlock > 0)
+            ? `\n护盾 ${nowBlock}${nowBlock !== endBlock ? ` -> 预计 ${endBlock}` : ''}`
+            : '',
+        text = `${label} ${now}/${max}${now !== end ? `\n预计 ${end}/${max}` : ''}${shieldLabel}`;
+      const shieldPct = max ? Math.min(1, nowBlock / max) * 100 : 0;
+      const forecastShieldPct = max ? Math.min(1, endBlock / max) * 100 : 0;
+      const numberText =
+        k === 'hp'
+          ? nowBlock > 0
+            ? `${now}/${max}（${nowBlock}）`
+            : endBlock > 0
+              ? `${now}/${max}（+${endBlock}）`
+              : `${now}/${max}`
+          : `${now}/${max}`;
+      return html`<span
+        class="bar ${k} ${now !== end || (k === 'hp' && nowBlock !== endBlock) ? 'forecast' : ''}"
+        tabindex="0"
+        role="meter"
+        aria-label="${label}"
+        aria-valuenow="${now}"
+        aria-valuemin="0"
+        aria-valuemax="${max || 1}"
+        data-tooltip="${text}"
+        ><i style="width:${max ? (now / max) * 100 : 0}%"></i
+        ><em style="width:${max ? (end / max) * 100 : 0}%"></em>${
+          k === 'hp' && (nowBlock > 0 || endBlock > 0)
+            ? html`<span class="bar-shield-fill" style="width:${shieldPct}%"></span
+                ><span
+                  class="bar-shield-forecast ${nowBlock !== endBlock ? 'active' : ''}"
+                  style="width:${forecastShieldPct}%"
+                ></span>`
+            : ''
+        }<b class="resource-number">${numberText}</b></span
+      >`;
+    })
+    .join('');
+}
+
+export function enemyToughnessBadge(u, f = u) {
+  if (!u || u.side !== 'enemy') return '';
+  const maxT = Math.max(1, Number(u.maxToughness) || 1);
+  const nowT = Math.max(0, Number(u.toughness ?? maxT) || 0);
+  const endT = Math.max(0, Number(f?.toughness ?? nowT) || 0);
+  const broken = Boolean(u.broken);
+  const willBreak = !broken && Boolean(f?.broken);
+  const forecast = willBreak || endT !== nowT;
+  const tip = broken
+    ? `击破晕眩中 · 行动已跳过（恢复后韧性 ${maxT}）`
+    : `韧性 ${nowT}/${maxT}：命中弱点削减1点，归零将击破并跳过剩余及下一回合行动${
+        forecast ? `\n预计结算后 ${willBreak ? '击破' : endT}` : ''
+      }`;
+  return html`<span
+    class="enemy-toughness-badge ${broken ? 'is-broken' : ''} ${forecast ? 'forecast' : ''} ${willBreak ? 'will-break' : ''}"
+    data-tooltip="${escapeText(tip)}"
+    tabindex="0"
+    aria-label="${broken ? '击破晕眩' : `韧性 ${nowT}`}"
+    ><svg class="toughness-crest" viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="${
+          broken
+            ? 'M12 2L4 7v6c0 4.6 3.4 8.6 8 9.8 4.6-1.2 8-5.2 8-9.8V7l-8-5zm-1.4 4.2L9.2 11l3.6 1.5-2.1 5.3 1.4.4 2.5-6.6-3.4-1.4 1.1-3.6-1.7-.4z'
+            : 'M12 2L4 7v6c0 4.6 3.4 8.6 8 9.8 4.6-1.2 8-5.2 8-9.8V7l-8-5z'
+        }"
+        fill="currentColor"
+      /></svg
+    ><b>${broken ? '破' : nowT}</b
+    >${forecast ? html`<em>${willBreak ? '破' : endT}</em>` : ''}</span
+  >`;
+}
+
+export function enemyWeaknessRow(d, u, revealedMap, activeDamageType = null) {
+  if (!d || u?.side !== 'enemy') return '';
+  const profile = resolveEnemyBreakProfile(d);
+  const weaknesses =
+    Array.isArray(u.weaknesses) && u.weaknesses.length ? u.weaknesses : profile.weaknesses;
+  const revealed = revealedWeaknessesFor(revealedMap, d);
+  return html`<span class="enemy-weakness-row" aria-label="敌方弱点"
+    >${weaknesses
+      .map((w) => {
+        const known = revealed.includes(w);
+        const matched = known && activeDamageType && activeDamageType === w;
+        const meta = damageTypeMeta(known ? w : 'unknown');
         return html`<span
-          class="bar ${k} ${now !== end ? 'forecast' : ''}"
-          tabindex="0"
-          role="meter"
-          aria-label="${label}"
-          aria-valuenow="${now}"
-          aria-valuemin="0"
-          aria-valuemax="${max || 1}"
-          data-tooltip="${text}"
-          ><i style="width:${max ? (now / max) * 100 : 0}%"></i
-          ><em style="width:${max ? (end / max) * 100 : 0}%"></em
-          ><b class="resource-number">${now}/${max}</b></span
+          class="enemy-weakness-pill ${known ? 'is-revealed' : 'is-unknown'} ${matched ? 'is-matched' : ''}"
+          style="--dmg-color:${meta.color};--dmg-glow:${meta.glow}"
+          data-weakness="${known ? w : 'unknown'}"
+          title="${known ? `弱点：${meta.name}` : '未知弱点（用对应属性攻击后解锁）'}"
+          >${damageTypeIcon(known ? w : 'unknown', { size: 11, tint: !matched })}</span
         >`;
       })
-      .join('')
-  );
+      .join('')}</span
+  >`;
 }
 
 export function mountTooltips() {

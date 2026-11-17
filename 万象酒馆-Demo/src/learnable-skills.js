@@ -72,6 +72,7 @@ export function equippedUniversalSkills(member) {
       target: blueprint.target,
       effects: structuredClone(blueprint.effects),
       ...(blueprint.retreatSwap ? { retreatSwap: true } : {}),
+      damageType: blueprint.damageType ?? null,
       vfx: blueprint.vfx,
       vfxPalette: [...blueprint.vfxPalette],
       universal: true,

@@ -139,7 +139,11 @@ test('tutorial requires actual intended vulnerability event and shield lives bes
   assert(library.campaign.tasks.vulnerable);
   const unit = state.units.aegis;
   const markup = resourceBars(unit, { ...unit, block: unit.block + 8 });
-  assert(markup.includes('resource-shield forecast'));
+  assert(markup.includes('bar-shield-forecast active'));
+  assert(markup.includes('（+8）'));
+  const activeShield = resourceBars({ ...unit, hp: 69, maxHp: 72, block: 15 });
+  assert(activeShield.includes('69/72（15）'));
+  assert(activeShield.includes('bar-shield-fill'));
   assert(!statusIcons(state, 'aegis').includes('data-buff="shield"'));
 });
 

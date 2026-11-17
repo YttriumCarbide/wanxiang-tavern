@@ -31,6 +31,7 @@ import { encounterLevel } from '../enemy-growth.js';
 import { recollectionEther } from '../recollections.js';
 import { worldBattleTransition } from './world-battle-transition.js';
 import { refreshWorldSkirmishes } from '../skirmishes.js';
+import { mergeRevealedWeaknessMap } from '../octopath.js';
 
 /** @param {import('./context.js').AppContext} context */
 export function createJourney(context) {
@@ -137,6 +138,10 @@ export function createJourney(context) {
     if (prepareBossEmblem(session.ai.library, session.journey.expedition))
       context.generation.save();
     session.battle.state = beginEncounter(session.journey.expedition);
+    session.battle.state.revealedWeaknesses = mergeRevealedWeaknessMap(
+      session.ai.library.discoveredWeaknesses,
+      session.battle.state.revealedWeaknesses,
+    );
     applyDiningToBattle(
       session.ai.library,
       session.battle.state,
@@ -196,6 +201,10 @@ export function createJourney(context) {
     session.runtime.mode = 'loading';
     document.body.classList.add('in-battle');
     session.battle.state = beginEncounter(session.journey.expedition);
+    session.battle.state.revealedWeaknesses = mergeRevealedWeaknessMap(
+      session.ai.library.discoveredWeaknesses,
+      session.battle.state.revealedWeaknesses,
+    );
     applyDiningToBattle(
       session.ai.library,
       session.battle.state,

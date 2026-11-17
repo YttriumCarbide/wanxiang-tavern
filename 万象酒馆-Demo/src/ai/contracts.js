@@ -11,6 +11,7 @@ import { normalizeRules, effectMetadata } from '../triggers.js';
 import { compileCharacterDesign } from '../character-generation.js';
 import { normalizeDcAttrs } from '../dc.js';
 import { finalSkillText, finalPassiveText } from '../skill-text.js';
+import { inferDamageType, isDamageType, resolveBasicAttackType } from '../damage-types.js';
 import { normalizeAdventureDefinition } from '../adventure/definition.js';
 import { stripGalTags } from '../gal.js';
 import {
@@ -104,7 +105,7 @@ function effects(list, path = 'effects') {
     };
   });
 }
-function skill(value, id, allowPassive = true, strict = false) {
+function skill(value, id, allowPassive = true, strict = false, actorDef = null) {
   object(value, `${id}技能对象`);
   const common = {
     id,
@@ -145,13 +146,24 @@ function skill(value, id, allowPassive = true, strict = false) {
     else fail('被动必须有一个代码支持的效果');
     return result;
   }
+  const parsedEffects = effects(value.effects, `${id}.effects`);
+  const dealsDamage = parsedEffects.some((eff) => eff.type === 'damage');
+  const damageType = !dealsDamage
+    ? null
+    : isDamageType(value.damageType)
+      ? value.damageType
+      : inferDamageType(
+          { id, name: common.name, text: common.text, effects: parsedEffects },
+          actorDef,
+        );
   return {
     ...common,
     ap: integer(value.ap, 1, 2, `${id}.ap需要数字1或2`),
     mp: integer(value.mp, 0, 15, `${id}.mp需要0～15整数`),
     ...(value.hp === undefined ? {} : { hp: integer(value.hp, 1, 20, `${id}.hp需要1～20整数`) }),
     target: choice(value.target, ['enemy', 'ally', 'self', 'allAllies', 'allEnemies'], '技能目标'),
-    effects: effects(value.effects, `${id}.effects`),
+    damageType,
+    effects: parsedEffects,
   };
 }
 export function normalizeCharacter(raw, id, input = {}) {
@@ -198,6 +210,23 @@ export function normalizeCharacter(raw, id, input = {}) {
           );
   if (raw.schemaVersion === 1) lore.tags = tags(setting.tags);
   if (!Array.isArray(data.skills) || data.skills.length !== 2) fail('角色需要两个技能槽');
+  const resolvedAttackType = isDamageType(data.attackType)
+    ? data.attackType
+    : resolveBasicAttackType({
+        id,
+        name: lore.name,
+        title: lore.title,
+        weapon: data.weapon,
+        attackName: data.attackName,
+        bio: characterWorldbook({ setting: lore }),
+      });
+  const actorDefForInfer = {
+    id,
+    name: lore.name,
+    title: lore.title,
+    weapon: data.weapon,
+    attackType: resolvedAttackType,
+  };
   const combat = {
     id,
     name: display(lore.name),
@@ -212,10 +241,11 @@ export function normalizeCharacter(raw, id, input = {}) {
     attack: integer(data.attack, 3, 14, '普攻'),
     attackName: display(text(data.attackName, '普攻名', 30)),
     weapon: choice(data.weapon, ['sword', 'staff', 'bow'], '武器'),
+    attackType: resolvedAttackType,
     limit: integer(data.limit, 1, 2, '行动次数'),
     buffs: {},
     skills: data.skills.map((item, index) =>
-      skill(item, `generated-${index + 1}`, true, raw.schemaVersion === 3),
+      skill(item, `generated-${index + 1}`, true, raw.schemaVersion === 3, actorDefForInfer),
     ),
   };
   if (data.mechanicMark) {
@@ -229,18 +259,35 @@ export function normalizeCharacter(raw, id, input = {}) {
   if (data.entrySkill || setting.entrySkill) {
     const entryData = data.entrySkill || {};
     const entrySetting = setting.entrySkill || {};
+    const entryName = display(
+      text(entrySetting.name || entryData.name || '入场技', '入场技名', 30),
+    );
+    const entryText = resourceText(
+      text(entrySetting.description || entryData.text || '', '入场技说明', 300),
+    );
+    const entryEffects = Array.isArray(entryData.effects)
+      ? effects(entryData.effects, `${id}.entrySkill.effects`)
+      : [{ type: 'damage', value: 2 }];
+    const entryDealsDamage = entryEffects.some((eff) => eff.type === 'damage');
+    const entryDamageType = !entryDealsDamage
+      ? null
+      : isDamageType(entryData.damageType)
+        ? entryData.damageType
+        : inferDamageType(
+            { id: `${id}-entry`, name: entryName, text: entryText, effects: entryEffects },
+            actorDefForInfer,
+          );
     combat.entrySkill = {
       id: `${id}-entry`,
-      name: display(text(entrySetting.name || entryData.name || '入场技', '入场技名', 30)),
-      text: resourceText(text(entrySetting.description || entryData.text || '', '入场技说明', 300)),
+      name: entryName,
+      text: entryText,
       target: choice(
         entryData.target || 'opposite',
         ['opposite', 'enemy', 'allEnemies', 'allAllies', 'lowestAlly', 'lowestEnemy', 'self'],
         '入场技目标',
       ),
-      effects: Array.isArray(entryData.effects)
-        ? effects(entryData.effects, `${id}.entrySkill.effects`)
-        : [{ type: 'damage', value: 2 }],
+      damageType: entryDamageType,
+      effects: entryEffects,
     };
   }
   if (raw.schemaVersion !== 3 && combat.entrySkill && !lore.entrySkill) {

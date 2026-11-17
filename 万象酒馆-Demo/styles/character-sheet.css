@@ -311,3 +311,7 @@
     padding-top: 8px;
   }
 }
+.character-ability summary .dmg-type-chip {
+  margin-left: 4px;
+  vertical-align: middle;
+}

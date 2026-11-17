@@ -2712,3 +2712,55 @@ body.ring-cabinet-open #daily-hud {
 .guild-intel-masked {
   color: #8f8678;
 }
+.guild-skill-filters {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(216, 178, 110, 0.22);
+  border-radius: 8px;
+  background: rgba(14, 24, 23, 0.72);
+}
+.guild-filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.guild-filter-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(216, 178, 110, 0.26);
+  background: rgba(255, 255, 255, 0.04);
+  color: #d7ccb2;
+  font-size: 11px;
+  cursor: pointer;
+  transition:
+    background 0.14s ease,
+    border-color 0.14s ease,
+    color 0.14s ease;
+}
+.guild-filter-btn.is-type {
+  color: var(--dmg-color, #d7ccb2);
+}
+.guild-filter-btn.is-selected {
+  border-color: #f0ca75;
+  background: rgba(235, 189, 98, 0.2);
+  color: #fff2cc;
+}
+.guild-skill-heading {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.guild-empty-note {
+  grid-column: 1 / -1;
+  padding: 24px 16px;
+  text-align: center;
+  color: #a99f8d;
+  border: 1px dashed rgba(216, 178, 110, 0.24);
+  border-radius: 8px;
+}

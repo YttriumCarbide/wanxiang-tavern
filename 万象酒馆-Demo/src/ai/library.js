@@ -40,6 +40,7 @@ import { restoreArchives, hydrateArchiveMaps } from '../archives.js';
 import { defaultProtagonist } from '../content/qingyuan.js';
 import { OFFICIAL_DC_ATTRS, normalizeDcAttrs } from '../dc.js';
 import { restoreEquippedSkills, restoreLearnedSkills } from '../learnable-skills.js';
+import { mergeRevealedWeaknessMap } from '../octopath.js';
 
 export function newLibrary() {
   return createLibrary(loadCustomPortraits());
@@ -73,6 +74,7 @@ function createLibrary(customPortraits) {
     guild: newGuildState(),
     emblems: [],
     learnedSkills: restoreLearnedSkills(),
+    discoveredWeaknesses: {},
     refinedNpcs: [],
     progression: {
       settlements: [],
@@ -257,6 +259,7 @@ export function restoreLibrary(value) {
       for (const enemy of Object.values(world.enemyDefinitions)) upgradeLegacyStatuses(enemy);
   library.emblems = Array.isArray(value.emblems) ? value.emblems.filter((id) => EMBLEMS[id]) : [];
   library.learnedSkills = restoreLearnedSkills(value.learnedSkills);
+  library.discoveredWeaknesses = mergeRevealedWeaknessMap({}, value.discoveredWeaknesses);
   if (value.exploration)
     library.exploration = restoreExploration(value.exploration, 17371, library.worlds);
   library.unlockedDungeons = Array.isArray(value.unlockedDungeons)

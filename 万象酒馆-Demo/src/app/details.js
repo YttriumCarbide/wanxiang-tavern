@@ -7,6 +7,7 @@ import { portraitUrl } from '../catalog.js';
 import { finalPassiveText } from '../skill-text.js';
 import { rulesFor, ruleAvailable } from '../triggers.js';
 import { equipmentDescription } from './equipment.js';
+import { damageTypeChip, inferDamageType, resolveBasicAttackType } from '../damage-types.js';
 
 export function createDetails(context) {
   const { session } = context;
@@ -58,6 +59,8 @@ export function createDetails(context) {
         (combine
           ? '\n' + (!combined ? '需要结合后使用' : combineUsed ? '本次结合已使用' : '结合中可使用')
           : '');
+      const dmgType = skill.id === 'attack' ? resolveBasicAttackType(d) : inferDamageType(skill, d);
+      const chip = damageTypeChip(dmgType, { size: 12 });
       return (
         '<button class="ability ' +
         (selected ? 'active ' : '') +
@@ -77,8 +80,10 @@ export function createDetails(context) {
         (!inactive && !matchMedia('(pointer: coarse) and (max-width: 1100px)').matches) +
         '"' +
         (inactive ? ' disabled' : '') +
-        '><strong>' +
+        '><strong class="ability-title-row"><span>' +
         e(skill.name) +
+        '</span>' +
+        chip +
         '</strong><small>' +
         skill.ap +
         ' AP' +
@@ -151,7 +156,9 @@ export function createDetails(context) {
             entry.name,
             entry.text || entry.description || '',
             entryActive,
-            entryActive ? '已就绪 · 换入触发' : rear ? '蓄势中' : '换入前场时自动触发',
+            damageTypeChip(inferDamageType(entry, d), { size: 11 }) +
+              ' · ' +
+              (entryActive ? '已就绪 · 换入触发' : rear ? '蓄势中' : '换入前场时自动触发'),
           )
         : '<div class="action-empty-note">无入场技</div>');
     const emblemVisual = emblem ? emblemVisualFor(d.emblemId) : null;

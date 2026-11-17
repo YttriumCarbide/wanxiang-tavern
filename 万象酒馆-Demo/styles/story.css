@@ -696,6 +696,30 @@
   background: rgba(216, 178, 110, 0.24);
   color: #fff0c8;
 }
+.archive-stage-anims {
+  position: absolute;
+  left: 12px;
+  bottom: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  z-index: 3;
+}
+.archive-stage-anims button {
+  min-height: 24px;
+  padding: 2px 8px;
+  border: 1px solid rgba(130, 198, 224, 0.34);
+  border-radius: 3px;
+  background: rgba(14, 15, 19, 0.84);
+  color: #b7d2de;
+  font-size: 11px;
+  cursor: pointer;
+}
+.archive-stage-anims button[aria-pressed='true'] {
+  border-color: rgba(130, 224, 240, 0.72);
+  background: rgba(70, 146, 178, 0.26);
+  color: #e6fbff;
+}
 .archive-stage-hint {
   position: absolute;
   right: 12px;
