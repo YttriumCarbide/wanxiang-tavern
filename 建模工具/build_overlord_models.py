@@ -7,7 +7,10 @@ from sculpt_mesh import SculptedModel
 
 
 def circle_poly(r, sides=8, rx=1.0, rz=1.0):
-    return [[math.cos(i / sides * math.tau) * r * rx, -math.sin(i / sides * math.tau) * r * rz] for i in range(sides)]
+    return [
+        [math.cos(i / sides * math.tau) * r * rx, -math.sin(i / sides * math.tau) * r * rz]
+        for i in range(sides)
+    ]
 
 
 def hex_chamfer_poly(hx, hz, cut=0.28):
@@ -34,8 +37,16 @@ def build_apep_lamb():
 
     # Cloven hooves & draped ritual skirt
     for sx in (-0.48, 0.48):
-        m.lathe(serpent, [(0.0, 0.24), (0.35, 0.2), (1.05, 0.18), (1.35, 0.22)], center=(sx, 0, 0.1), segs=18, color="#261e2b")
-        m.ellipsoid(bone, (sx, 0.14, 0.26), (0.2, 0.14, 0.24), u_segs=14, v_segs=10, color="#c8bea8")
+        m.lathe(
+            serpent,
+            [(0.0, 0.24), (0.35, 0.2), (1.05, 0.18), (1.35, 0.22)],
+            center=(sx, 0, 0.1),
+            segs=18,
+            color="#261e2b",
+        )
+        m.ellipsoid(
+            bone, (sx, 0.14, 0.26), (0.2, 0.14, 0.24), u_segs=14, v_segs=10, color="#c8bea8"
+        )
 
     # Fluted liturgical robe + split chest altar cavity
     m.lathe(
@@ -74,7 +85,16 @@ def build_apep_lamb():
         )
 
     # Torn chest eye of Apep
-    m.torus(gold, (0, 2.45, 0.76), 0.42, 0.065, u_segs=32, v_segs=10, color="#c9a857", rot=(math.pi / 2, 0, 0))
+    m.torus(
+        gold,
+        (0, 2.45, 0.76),
+        0.42,
+        0.065,
+        u_segs=32,
+        v_segs=10,
+        color="#c9a857",
+        rot=(math.pi / 2, 0, 0),
+    )
     m.ellipsoid(eye_glow, (0, 2.45, 0.72), (0.34, 0.44, 0.2), u_segs=20, v_segs=14, color="#ff4c79")
     m.ellipsoid(serpent, (0, 2.45, 0.89), (0.09, 0.32, 0.06), u_segs=14, v_segs=10, color="#170c1c")
 
@@ -89,9 +109,24 @@ def build_apep_lamb():
         rot=(0.18, 0, 0),
         bump_fn=lambda th, ph: -0.08 * math.exp(-((ph - 1.45) ** 2) * 8) * math.cos(th * 2),
     )
-    m.ellipsoid(bone, (0, 3.88, 0.84), (0.28, 0.26, 0.38), u_segs=16, v_segs=12, color="#d6cbb4", rot=(0.3, 0, 0))
+    m.ellipsoid(
+        bone,
+        (0, 3.88, 0.84),
+        (0.28, 0.26, 0.38),
+        u_segs=16,
+        v_segs=12,
+        color="#d6cbb4",
+        rot=(0.3, 0, 0),
+    )
     for sx in (-1, 1):
-        m.ellipsoid(eye_glow, (sx * 0.32, 4.24, 0.82), (0.12, 0.14, 0.1), u_segs=14, v_segs=10, color="#ff5c93")
+        m.ellipsoid(
+            eye_glow,
+            (sx * 0.32, 4.24, 0.82),
+            (0.12, 0.14, 0.1),
+            u_segs=14,
+            v_segs=10,
+            color="#ff5c93",
+        )
 
     # Twin coiled spiral obsidian-gold ram horns
     for sx in (-1, 1):
@@ -121,15 +156,50 @@ def build_apep_lamb():
         m.tube(serpent, pts, rads, segs=12, color="#291d38")
         # Viper head on tip of coil beside shoulder
         hx, hy, hz = pts[-1]
-        m.ellipsoid(serpent, (hx, hy, hz + 0.12), (0.2, 0.16, 0.32), u_segs=14, v_segs=10, color="#3a2852")
-        m.ellipsoid(eye_glow, (hx, hy + 0.05, hz + 0.38), (0.06, 0.05, 0.05), u_segs=8, v_segs=6, color="#ff477e")
+        m.ellipsoid(
+            serpent, (hx, hy, hz + 0.12), (0.2, 0.16, 0.32), u_segs=14, v_segs=10, color="#3a2852"
+        )
+        m.ellipsoid(
+            eye_glow,
+            (hx, hy + 0.05, hz + 0.38),
+            (0.06, 0.05, 0.05),
+            u_segs=8,
+            v_segs=6,
+            color="#ff477e",
+        )
 
     # Floating intricate curse halo behind lamb head
-    m.torus(gold, (0, 4.42, -0.45), 1.38, 0.075, u_segs=42, v_segs=10, color="#e3c168", rot=(math.pi / 2, 0, 0))
-    m.torus(eye_glow, (0, 4.42, -0.45), 1.05, 0.045, u_segs=36, v_segs=8, color="#d45cff", rot=(math.pi / 2, 0, 0))
+    m.torus(
+        gold,
+        (0, 4.42, -0.45),
+        1.38,
+        0.075,
+        u_segs=42,
+        v_segs=10,
+        color="#e3c168",
+        rot=(math.pi / 2, 0, 0),
+    )
+    m.torus(
+        eye_glow,
+        (0, 4.42, -0.45),
+        1.05,
+        0.045,
+        u_segs=36,
+        v_segs=8,
+        color="#d45cff",
+        rot=(math.pi / 2, 0, 0),
+    )
     for i in range(8):
         a = (i / 8) * math.tau
-        m.ellipsoid(gold, (math.cos(a) * 1.48, 4.42 + math.sin(a) * 1.48, -0.45), (0.08, 0.18, 0.08), u_segs=10, v_segs=8, color="#fff0b5", rot=(0, 0, a - math.pi / 2))
+        m.ellipsoid(
+            gold,
+            (math.cos(a) * 1.48, 4.42 + math.sin(a) * 1.48, -0.45),
+            (0.08, 0.18, 0.08),
+            u_segs=10,
+            v_segs=8,
+            color="#fff0b5",
+            rot=(0, 0, a - math.pi / 2),
+        )
 
     return m.finish("apep-lamb.glb", portrait_slug="apep-lamb", bg_color="#341e3d")
 
@@ -139,7 +209,13 @@ def build_radiant_wyvern():
     scales = m.part("Wyvern_Scales", metallic=0.22, roughness=0.42)
     armor = m.part("Radiant_Plating", metallic=0.58, roughness=0.3)
     gold = m.part("Solar_Gold_Crest", metallic=0.84, roughness=0.22, emissive=[0.24, 0.18, 0.05])
-    wing_mem = m.part("Luminous_Wing_Membrane", metallic=0.1, roughness=0.35, emissive=[0.18, 0.28, 0.34], double_sided=True)
+    wing_mem = m.part(
+        "Luminous_Wing_Membrane",
+        metallic=0.1,
+        roughness=0.35,
+        emissive=[0.18, 0.28, 0.34],
+        double_sided=True,
+    )
     core = m.part("Prism_Core", metallic=0.15, roughness=0.15, emissive=[0.42, 0.62, 0.7])
     talons = m.part("Solar_Talons_Halo", metallic=0.86, roughness=0.2, emissive=[0.26, 0.2, 0.06])
 
@@ -157,13 +233,27 @@ def build_radiant_wyvern():
         flute_freq=6,
     )
     m.ellipsoid(core, (0, 2.68, 0.96), (0.34, 0.48, 0.24), u_segs=18, v_segs=12, color="#9cf7ff")
-    m.torus(gold, (0, 2.68, 0.94), 0.44, 0.06, u_segs=30, v_segs=8, color="#ffe28c", rot=(math.pi / 2, 0, 0))
+    m.torus(
+        gold,
+        (0, 2.68, 0.94),
+        0.44,
+        0.06,
+        u_segs=30,
+        v_segs=8,
+        color="#ffe28c",
+        rot=(math.pi / 2, 0, 0),
+    )
 
     # Hind legs & golden talons gripping the card
     for sx in (-1, 1):
         m.tube(
             scales,
-            [[sx * 0.72, 1.85, -0.05], [sx * 0.92, 1.15, -0.35], [sx * 0.78, 0.55, 0.18], [sx * 0.74, 0.14, 0.32]],
+            [
+                [sx * 0.72, 1.85, -0.05],
+                [sx * 0.92, 1.15, -0.35],
+                [sx * 0.78, 0.55, 0.18],
+                [sx * 0.74, 0.14, 0.32],
+            ],
             [0.44, 0.3, 0.22, 0.2],
             segs=14,
             color="#cfdbe2",
@@ -178,12 +268,28 @@ def build_radiant_wyvern():
             )
 
     # S-curved serpentine neck & regal horned dragon skull facing +Z
-    neck_pts = [[0, 3.25, 0.08], [0, 3.85, -0.18], [0, 4.48, -0.08], [0, 4.98, 0.35], [0, 5.22, 0.72]]
-    m.tube(scales, neck_pts, [0.56, 0.48, 0.42, 0.36, 0.32], segs=18, color="#e6edf0", flute_amp=0.07, flute_freq=8)
+    neck_pts = [
+        [0, 3.25, 0.08],
+        [0, 3.85, -0.18],
+        [0, 4.48, -0.08],
+        [0, 4.98, 0.35],
+        [0, 5.22, 0.72],
+    ]
+    m.tube(
+        scales,
+        neck_pts,
+        [0.56, 0.48, 0.42, 0.36, 0.32],
+        segs=18,
+        color="#e6edf0",
+        flute_amp=0.07,
+        flute_freq=8,
+    )
     m.ellipsoid(armor, (0, 5.24, 0.92), (0.48, 0.42, 0.65), u_segs=22, v_segs=16, color="#f0efe8")
     m.ellipsoid(armor, (0, 5.14, 1.56), (0.28, 0.24, 0.44), u_segs=18, v_segs=12, color="#e8d9a5")
     for sx in (-1, 1):
-        m.ellipsoid(core, (sx * 0.3, 5.36, 1.24), (0.09, 0.08, 0.14), u_segs=12, v_segs=8, color="#8efbff")
+        m.ellipsoid(
+            core, (sx * 0.3, 5.36, 1.24), (0.09, 0.08, 0.14), u_segs=12, v_segs=8, color="#8efbff"
+        )
         # Twin swept dragon horns
         m.tube(
             gold,
@@ -195,8 +301,18 @@ def build_radiant_wyvern():
 
     # Broad sweeping luminous dragon wings (framed tightly enough for card pedestal clarity)
     for sx in (-1, 1):
-        arm = [[sx * 0.68, 3.12, -0.18], [sx * 1.65, 4.25, -0.32], [sx * 2.55, 5.25, -0.18], [sx * 3.12, 4.85, 0.08]]
-        lower = [[sx * 0.58, 2.35, -0.28], [sx * 1.45, 2.65, -0.42], [sx * 2.25, 3.05, -0.25], [sx * 2.85, 3.45, 0.02]]
+        arm = [
+            [sx * 0.68, 3.12, -0.18],
+            [sx * 1.65, 4.25, -0.32],
+            [sx * 2.55, 5.25, -0.18],
+            [sx * 3.12, 4.85, 0.08],
+        ]
+        lower = [
+            [sx * 0.58, 2.35, -0.28],
+            [sx * 1.45, 2.65, -0.42],
+            [sx * 2.25, 3.05, -0.25],
+            [sx * 2.85, 3.45, 0.02],
+        ]
         m.tube(armor, arm, [0.16, 0.12, 0.09, 0.03], segs=10, color="#f2e6c2")
         m.wing_membrane(wing_mem, arm, lower, divs_u=16, divs_v=10, camber=0.18, color="#c8f4ff")
         # Articulated wing-finger struts
@@ -213,10 +329,27 @@ def build_radiant_wyvern():
         [-0.95, 2.35, 0.65],
     ]
     m.tube(scales, tail_pts, [0.45, 0.34, 0.25, 0.18, 0.12, 0.05], segs=14, color="#d8e3e8")
-    m.bevel_plate(talons, circle_poly(0.24, 4), 0.65, bevel=0.05, center=(-0.95, 2.65, 0.65), rot=(0.35, 0, -0.35), color="#ffe591")
+    m.bevel_plate(
+        talons,
+        circle_poly(0.24, 4),
+        0.65,
+        bevel=0.05,
+        center=(-0.95, 2.65, 0.65),
+        rot=(0.35, 0, -0.35),
+        color="#ffe591",
+    )
 
     # Floating solar halo ring above wyvern crest
-    m.torus(talons, (0, 5.15, 0.12), 1.42, 0.055, u_segs=42, v_segs=8, color="#ffe58f", rot=(math.pi / 2 - 0.18, 0, 0))
+    m.torus(
+        talons,
+        (0, 5.15, 0.12),
+        1.42,
+        0.055,
+        u_segs=42,
+        v_segs=8,
+        color="#ffe58f",
+        rot=(math.pi / 2 - 0.18, 0, 0),
+    )
 
     return m.finish("radiant-wyvern.glb", portrait_slug="radiant-wyvern", bg_color="#1d3247")
 
@@ -232,43 +365,174 @@ def build_ares():
 
     # Heavy armored legs & greaves
     for sx in (-0.65, 0.65):
-        m.bevel_plate(hull, hex_chamfer_poly(0.38, 0.65, 0.12), 0.34, 0.06, center=(sx, 0.17, 0.18), color="#566674")
-        m.tube(dark, [[sx, 0.3, 0], [sx * 1.06, 1.15, -0.18], [sx * 0.95, 1.95, 0.05]], [0.24, 0.2, 0.26], segs=14, color="#2f3742")
-        m.bevel_plate(hull, hex_chamfer_poly(0.32, 0.36, 0.1), 1.15, 0.06, center=(sx * 1.04, 1.05, 0.08), rot=(-0.12, 0, 0), color="#687a8c")
-        m.bevel_plate(trim, circle_poly(0.22, 6), 0.36, 0.04, center=(sx * 1.04, 1.52, 0.28), color="#d4b468")
+        m.bevel_plate(
+            hull,
+            hex_chamfer_poly(0.38, 0.65, 0.12),
+            0.34,
+            0.06,
+            center=(sx, 0.17, 0.18),
+            color="#566674",
+        )
+        m.tube(
+            dark,
+            [[sx, 0.3, 0], [sx * 1.06, 1.15, -0.18], [sx * 0.95, 1.95, 0.05]],
+            [0.24, 0.2, 0.26],
+            segs=14,
+            color="#2f3742",
+        )
+        m.bevel_plate(
+            hull,
+            hex_chamfer_poly(0.32, 0.36, 0.1),
+            1.15,
+            0.06,
+            center=(sx * 1.04, 1.05, 0.08),
+            rot=(-0.12, 0, 0),
+            color="#687a8c",
+        )
+        m.bevel_plate(
+            trim, circle_poly(0.22, 6), 0.36, 0.04, center=(sx * 1.04, 1.52, 0.28), color="#d4b468"
+        )
 
     # Sculpted waist & angular torso chassis with glowing reactor core
-    m.lathe(dark, [(1.88, 0.52), (2.25, 0.44), (2.6, 0.64)], center=(0, 0, 0), segs=20, color="#2e3540")
-    m.bevel_plate(hull, hex_chamfer_poly(0.95, 0.68, 0.25), 1.48, 0.09, center=(0, 3.35, 0.04), color="#617385")
-    m.bevel_plate(hull, hex_chamfer_poly(0.75, 0.55, 0.2), 0.85, 0.08, center=(0, 3.45, 0.32), rot=(0.2, 0, 0), color="#788da1")
-    m.torus(trim, (0, 3.45, 0.64), 0.34, 0.065, u_segs=28, v_segs=10, color="#dfb965", rot=(math.pi / 2, 0, 0))
+    m.lathe(
+        dark, [(1.88, 0.52), (2.25, 0.44), (2.6, 0.64)], center=(0, 0, 0), segs=20, color="#2e3540"
+    )
+    m.bevel_plate(
+        hull,
+        hex_chamfer_poly(0.95, 0.68, 0.25),
+        1.48,
+        0.09,
+        center=(0, 3.35, 0.04),
+        color="#617385",
+    )
+    m.bevel_plate(
+        hull,
+        hex_chamfer_poly(0.75, 0.55, 0.2),
+        0.85,
+        0.08,
+        center=(0, 3.45, 0.32),
+        rot=(0.2, 0, 0),
+        color="#788da1",
+    )
+    m.torus(
+        trim,
+        (0, 3.45, 0.64),
+        0.34,
+        0.065,
+        u_segs=28,
+        v_segs=10,
+        color="#dfb965",
+        rot=(math.pi / 2, 0, 0),
+    )
     m.ellipsoid(core, (0, 3.45, 0.62), (0.26, 0.26, 0.16), u_segs=18, v_segs=12, color="#ff6f5e")
 
     # Armored V-crest mecha helm & crimson visor
     m.lathe(dark, [(4.05, 0.28), (4.35, 0.26)], center=(0, 0, 0.04), segs=16, color="#303845")
-    m.bevel_plate(hull, hex_chamfer_poly(0.46, 0.48, 0.14), 0.72, 0.07, center=(0, 4.65, 0.06), color="#718599")
+    m.bevel_plate(
+        hull,
+        hex_chamfer_poly(0.46, 0.48, 0.14),
+        0.72,
+        0.07,
+        center=(0, 4.65, 0.06),
+        color="#718599",
+    )
     m.ellipsoid(core, (0, 4.64, 0.46), (0.34, 0.09, 0.1), u_segs=16, v_segs=10, color="#ff4a5f")
     for sx in (-1, 1):
-        m.tube(trim, [[0, 4.92, 0.45], [sx * 0.48, 5.25, 0.25], [sx * 0.78, 5.58, 0.05]], [0.09, 0.07, 0.02], segs=8, color="#edd07b")
+        m.tube(
+            trim,
+            [[0, 4.92, 0.45], [sx * 0.48, 5.25, 0.25], [sx * 0.78, 5.58, 0.05]],
+            [0.09, 0.07, 0.02],
+            segs=8,
+            color="#edd07b",
+        )
 
     # Massive sloped shoulder pauldrons & thruster backpack
     for sx in (-1, 1):
-        m.bevel_plate(hull, hex_chamfer_poly(0.62, 0.62, 0.18), 0.78, 0.08, center=(sx * 1.48, 3.95, 0.04), rot=(0, 0, sx * -0.28), color="#687c91")
-        m.bevel_plate(trim, hex_chamfer_poly(0.55, 0.5, 0.15), 0.16, 0.04, center=(sx * 1.56, 4.35, 0.04), rot=(0, 0, sx * -0.28), color="#dfc06b")
-        m.tube(dark, [[sx * 1.42, 3.65, 0.06], [sx * 1.52, 2.75, 0.35], [sx * 1.38, 2.15, 0.68]], [0.24, 0.2, 0.22], segs=12, color="#353f4d")
+        m.bevel_plate(
+            hull,
+            hex_chamfer_poly(0.62, 0.62, 0.18),
+            0.78,
+            0.08,
+            center=(sx * 1.48, 3.95, 0.04),
+            rot=(0, 0, sx * -0.28),
+            color="#687c91",
+        )
+        m.bevel_plate(
+            trim,
+            hex_chamfer_poly(0.55, 0.5, 0.15),
+            0.16,
+            0.04,
+            center=(sx * 1.56, 4.35, 0.04),
+            rot=(0, 0, sx * -0.28),
+            color="#dfc06b",
+        )
+        m.tube(
+            dark,
+            [[sx * 1.42, 3.65, 0.06], [sx * 1.52, 2.75, 0.35], [sx * 1.38, 2.15, 0.68]],
+            [0.24, 0.2, 0.22],
+            segs=12,
+            color="#353f4d",
+        )
         # Back jet thrusters
-        m.lathe(hull, [(0, 0.24), (0.65, 0.36), (1.15, 0.28)], center=(sx * 0.58, 3.25, -0.82), segs=18, color="#485666")
-        m.ellipsoid(blade, (sx * 0.58, 3.15, -0.82), (0.18, 0.22, 0.18), u_segs=12, v_segs=8, color="#7ef5ff")
+        m.lathe(
+            hull,
+            [(0, 0.24), (0.65, 0.36), (1.15, 0.28)],
+            center=(sx * 0.58, 3.25, -0.82),
+            segs=18,
+            color="#485666",
+        )
+        m.ellipsoid(
+            blade,
+            (sx * 0.58, 3.15, -0.82),
+            (0.18, 0.22, 0.18),
+            u_segs=12,
+            v_segs=8,
+            color="#7ef5ff",
+        )
 
     # Right arm (screen-left/viewer-right): heavy bevelled plasma greatsword
-    m.bevel_plate(hull, hex_chamfer_poly(0.18, 0.42, 0.05), 3.35, 0.04, center=(1.42, 2.85, 1.05), rot=(0.45, 0.12, -0.15), color="#596978")
-    m.bevel_plate(blade, hex_chamfer_poly(0.11, 0.26, 0.03), 3.15, 0.025, center=(1.42, 2.85, 1.15), rot=(0.45, 0.12, -0.15), color="#92fbff")
+    m.bevel_plate(
+        hull,
+        hex_chamfer_poly(0.18, 0.42, 0.05),
+        3.35,
+        0.04,
+        center=(1.42, 2.85, 1.05),
+        rot=(0.45, 0.12, -0.15),
+        color="#596978",
+    )
+    m.bevel_plate(
+        blade,
+        hex_chamfer_poly(0.11, 0.26, 0.03),
+        3.15,
+        0.025,
+        center=(1.42, 2.85, 1.15),
+        rot=(0.45, 0.12, -0.15),
+        color="#92fbff",
+    )
     # Left arm: rotary shield & chainsaw gauntlet
-    m.torus(shield, (-1.42, 2.15, 0.78), 0.72, 0.1, u_segs=32, v_segs=10, color="#6d7f91", rot=(0, math.pi / 2, 0))
-    m.ellipsoid(shield, (-1.42, 2.15, 0.78), (0.18, 0.56, 0.56), u_segs=18, v_segs=12, color="#4d5c6b")
+    m.torus(
+        shield,
+        (-1.42, 2.15, 0.78),
+        0.72,
+        0.1,
+        u_segs=32,
+        v_segs=10,
+        color="#6d7f91",
+        rot=(0, math.pi / 2, 0),
+    )
+    m.ellipsoid(
+        shield, (-1.42, 2.15, 0.78), (0.18, 0.56, 0.56), u_segs=18, v_segs=12, color="#4d5c6b"
+    )
     for i in range(12):
         a = (i / 12) * math.tau
-        m.bevel_plate(shield, circle_poly(0.09, 4), 0.14, 0.02, center=(-1.42, 2.15 + math.sin(a) * 0.84, 0.78 + math.cos(a) * 0.84), color="#f0d27a")
+        m.bevel_plate(
+            shield,
+            circle_poly(0.09, 4),
+            0.14,
+            0.02,
+            center=(-1.42, 2.15 + math.sin(a) * 0.84, 0.78 + math.cos(a) * 0.84),
+            color="#f0d27a",
+        )
 
     return m.finish("ares.glb", portrait_slug="ares", bg_color="#1b2b3d")
 
@@ -285,19 +549,55 @@ def build_ares_cannon(side_slug, enemy_id, title, sx):
     # Magnetic hover ring at card top
     m.torus(hover, (0, 0.24, 0), 0.86, 0.065, u_segs=36, v_segs=10, color="#7bf2ff")
     m.torus(trim, (0, 0.58, 0), 0.62, 0.045, u_segs=28, v_segs=8, color="#dfc16e")
-    m.lathe(hull, [(0.45, 0.22), (1.05, 0.42), (1.55, 0.34)], center=(0, 0, 0), segs=22, color="#4c5c6e")
+    m.lathe(
+        hull, [(0.45, 0.22), (1.05, 0.42), (1.55, 0.34)], center=(0, 0, 0), segs=22, color="#4c5c6e"
+    )
 
     # Main sculptural drone cowling
     m.ellipsoid(hull, (0, 1.92, -0.05), (0.88, 0.68, 0.95), u_segs=26, v_segs=18, color="#63768a")
-    m.bevel_plate(hull, hex_chamfer_poly(0.74, 0.72, 0.22), 0.48, 0.07, center=(0, 2.55, -0.06), rot=(0.12, 0, sx * -0.08), color="#788ea3")
-    m.bevel_plate(trim, hex_chamfer_poly(0.68, 0.52, 0.16), 0.22, 0.04, center=(sx * 0.48, 1.95, 0.15), rot=(0, 0, math.pi / 2), color="#ddb968")
+    m.bevel_plate(
+        hull,
+        hex_chamfer_poly(0.74, 0.72, 0.22),
+        0.48,
+        0.07,
+        center=(0, 2.55, -0.06),
+        rot=(0.12, 0, sx * -0.08),
+        color="#788ea3",
+    )
+    m.bevel_plate(
+        trim,
+        hex_chamfer_poly(0.68, 0.52, 0.16),
+        0.22,
+        0.04,
+        center=(sx * 0.48, 1.95, 0.15),
+        rot=(0, 0, math.pi / 2),
+        color="#ddb968",
+    )
     m.ellipsoid(optic, (0, 1.95, 0.84), (0.28, 0.28, 0.2), u_segs=18, v_segs=12, color="#ff596d")
-    m.torus(trim, (0, 1.95, 0.86), 0.34, 0.055, u_segs=26, v_segs=8, color="#e6c873", rot=(math.pi / 2, 0, 0))
+    m.torus(
+        trim,
+        (0, 1.95, 0.86),
+        0.34,
+        0.055,
+        u_segs=26,
+        v_segs=8,
+        color="#e6c873",
+        rot=(math.pi / 2, 0, 0),
+    )
 
     # Twin smooth lathe-turned railgun barrels protruding toward +Z
     for bz in (-0.42, 0.42):
         m.tube(barrel, [[bz, 1.72, 0.15], [bz, 1.75, 1.48]], [0.16, 0.14], segs=16, color="#8fa0b0")
-        m.torus(trim, (bz, 1.75, 1.15), 0.18, 0.045, u_segs=20, v_segs=8, color="#e3c26e", rot=(math.pi / 2, 0, 0))
+        m.torus(
+            trim,
+            (bz, 1.75, 1.15),
+            0.18,
+            0.045,
+            u_segs=20,
+            v_segs=8,
+            color="#e3c26e",
+            rot=(math.pi / 2, 0, 0),
+        )
         m.ellipsoid(hover, (bz, 1.75, 1.48), (0.1, 0.1, 0.1), u_segs=12, v_segs=8, color="#98fbff")
 
     # Swept stabilizer fins
@@ -345,18 +645,58 @@ def build_moon_eye():
         m.tube(buttress, pts, [0.34, 0.26, 0.18, 0.12], segs=12, color="#374840")
 
     # Giant embedded lunar metallic iris & glowing eye core
-    m.torus(brass, (0, 2.78, 0.72), 1.05, 0.12, u_segs=40, v_segs=12, color="#bfa565", rot=(math.pi / 2, 0, 0))
-    m.torus(brass, (0, 2.78, 0.78), 0.78, 0.075, u_segs=32, v_segs=10, color="#7ebdb5", rot=(math.pi / 2, 0, 0))
+    m.torus(
+        brass,
+        (0, 2.78, 0.72),
+        1.05,
+        0.12,
+        u_segs=40,
+        v_segs=12,
+        color="#bfa565",
+        rot=(math.pi / 2, 0, 0),
+    )
+    m.torus(
+        brass,
+        (0, 2.78, 0.78),
+        0.78,
+        0.075,
+        u_segs=32,
+        v_segs=10,
+        color="#7ebdb5",
+        rot=(math.pi / 2, 0, 0),
+    )
     m.ellipsoid(iris, (0, 2.78, 0.72), (0.82, 0.82, 0.36), u_segs=26, v_segs=18, color="#8ee2db")
     m.ellipsoid(pupil, (0, 2.78, 0.92), (0.36, 0.52, 0.28), u_segs=20, v_segs=14, color="#e6ffff")
 
     # Sweeping brass astrolabe crescent halo rings orbiting the upper trunk
-    m.torus(brass, (0, 4.25, -0.05), 1.68, 0.07, u_segs=42, v_segs=10, color="#d8bc74", rot=(1.1, 0.25, 0.2))
-    m.torus(iris, (0, 4.25, -0.05), 1.38, 0.05, u_segs=34, v_segs=8, color="#8cf2ea", rot=(-0.9, -0.3, 0.1), arc=math.pi * 1.45)
+    m.torus(
+        brass,
+        (0, 4.25, -0.05),
+        1.68,
+        0.07,
+        u_segs=42,
+        v_segs=10,
+        color="#d8bc74",
+        rot=(1.1, 0.25, 0.2),
+    )
+    m.torus(
+        iris,
+        (0, 4.25, -0.05),
+        1.38,
+        0.05,
+        u_segs=34,
+        v_segs=8,
+        color="#8cf2ea",
+        rot=(-0.9, -0.3, 0.1),
+        arc=math.pi * 1.45,
+    )
 
     # Coiling glowing sap vines weaving around trunk
     for s in (-1, 1):
-        vpts = [[s * math.cos(t * 7.0) * 1.15, 0.2 + t * 5.2, math.sin(t * 7.0) * 1.05 - 0.1] for t in np.linspace(0, 1, 24)]
+        vpts = [
+            [s * math.cos(t * 7.0) * 1.15, 0.2 + t * 5.2, math.sin(t * 7.0) * 1.05 - 0.1]
+            for t in np.linspace(0, 1, 24)
+        ]
         m.tube(vine, vpts, np.linspace(0.11, 0.05, 24), segs=10, color="#7ff2cf")
 
     return m.finish("moon-eye.glb", portrait_slug="moon-eye", bg_color="#1a3335")
@@ -372,7 +712,15 @@ def build_moon_crown():
     bronze = m.part("Censer_Rings", metallic=0.82, roughness=0.28)
 
     # Arched twisted main trunk rising into broad umbrella boughs
-    m.lathe(trunk, [(0, 1.15), (0.8, 0.85), (2.2, 0.65), (3.4, 0.58)], center=(0, 0, -0.15), segs=24, color="#3c4f46", flute_amp=0.1, flute_freq=6)
+    m.lathe(
+        trunk,
+        [(0, 1.15), (0.8, 0.85), (2.2, 0.65), (3.4, 0.58)],
+        center=(0, 0, -0.15),
+        segs=24,
+        color="#3c4f46",
+        flute_amp=0.1,
+        flute_freq=6,
+    )
     for i in range(6):
         a = (i / 6) * math.tau
         pts = [
@@ -405,7 +753,16 @@ def build_moon_crown():
 
     m.ellipsoid(canopy, (0, 4.95, -0.1), (1.45, 0.72, 1.35), u_segs=24, v_segs=16, color="#78b3a3")
     m.torus(bronze, (0, 3.75, -0.1), 1.48, 0.06, u_segs=36, v_segs=10, color="#cdb06a")
-    m.torus(vital, (0, 4.15, 0.05), 0.95, 0.045, u_segs=30, v_segs=8, color="#9cffea", rot=(0.45, 0, 0.2))
+    m.torus(
+        vital,
+        (0, 4.15, 0.05),
+        0.95,
+        0.045,
+        u_segs=30,
+        v_segs=8,
+        color="#9cffea",
+        rot=(0.45, 0, 0.2),
+    )
 
     return m.finish("moon-crown.glb", portrait_slug="moon-crown", bg_color="#1d3834")
 
@@ -431,7 +788,15 @@ def build_moon_root():
             z = math.sin(ang) * 1.15 * (1.0 - 0.4 * t) + (t - 0.5) * 1.1
             pts.append([x, y, z])
         rads = [0.38 - 0.14 * abs(t - 0.5) for t in np.linspace(0, 1, 20)]
-        m.tube(root_wood, pts, rads, segs=14, color="#4e5d52" if idx % 2 else "#3e4c43", flute_amp=0.09, flute_freq=6)
+        m.tube(
+            root_wood,
+            pts,
+            rads,
+            segs=14,
+            color="#4e5d52" if idx % 2 else "#3e4c43",
+            flute_amp=0.09,
+            flute_freq=6,
+        )
         m.ellipsoid(stone, pts[0], (0.34, 0.22, 0.38), u_segs=14, v_segs=10, color="#6b7a72")
         m.ellipsoid(stone, pts[-1], (0.32, 0.2, 0.36), u_segs=14, v_segs=10, color="#6b7a72")
 
@@ -445,18 +810,27 @@ def build_moon_root():
     )
     m.ellipsoid(sap, (0, 1.9, 0.36), (0.68, 0.85, 0.68), u_segs=22, v_segs=16, color="#86ffe2")
     m.torus(collars, (0, 1.9, 0.36), 0.78, 0.075, u_segs=32, v_segs=10, color="#dfc173")
-    m.torus(collars, (0, 2.45, 0.36), 0.66, 0.06, u_segs=28, v_segs=8, color="#dfc173", rot=(0.55, 0, 0))
+    m.torus(
+        collars, (0, 2.45, 0.36), 0.66, 0.06, u_segs=28, v_segs=8, color="#dfc173", rot=(0.55, 0, 0)
+    )
 
     # Sweeping spiked whip-roots extending forward & upward
     for sx in (-1, 1):
         m.tube(
             whips,
-            [[sx * 0.5, 1.8, 0.35], [sx * 1.35, 2.8, 0.95], [sx * 1.62, 3.85, 0.45], [sx * 1.15, 4.45, 0.15]],
+            [
+                [sx * 0.5, 1.8, 0.35],
+                [sx * 1.35, 2.8, 0.95],
+                [sx * 1.62, 3.85, 0.45],
+                [sx * 1.15, 4.45, 0.15],
+            ],
             [0.24, 0.18, 0.11, 0.03],
             segs=12,
             color="#586e62",
         )
-        m.ellipsoid(sap, (sx * 1.35, 2.8, 0.95), (0.24, 0.24, 0.24), u_segs=14, v_segs=10, color="#7bf7dc")
+        m.ellipsoid(
+            sap, (sx * 1.35, 2.8, 0.95), (0.24, 0.24, 0.24), u_segs=14, v_segs=10, color="#7bf7dc"
+        )
 
     return m.finish("moon-root.glb", portrait_slug="moon-root", bg_color="#1c302b")
 
@@ -466,8 +840,12 @@ def main():
         "apep-lamb": build_apep_lamb(),
         "radiant-wyvern": build_radiant_wyvern(),
         "ares": build_ares(),
-        "ares-cannon-left": build_ares_cannon("ares-cannon-left", "aresCannonLeft", "阿瑞斯·左浮游机炮", -1),
-        "ares-cannon-right": build_ares_cannon("ares-cannon-right", "aresCannonRight", "阿瑞斯·右浮游机炮", 1),
+        "ares-cannon-left": build_ares_cannon(
+            "ares-cannon-left", "aresCannonLeft", "阿瑞斯·左浮游机炮", -1
+        ),
+        "ares-cannon-right": build_ares_cannon(
+            "ares-cannon-right", "aresCannonRight", "阿瑞斯·右浮游机炮", 1
+        ),
         "moon-eye": build_moon_eye(),
         "moon-crown": build_moon_crown(),
         "moon-root": build_moon_root(),
