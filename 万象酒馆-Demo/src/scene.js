@@ -1,6 +1,7 @@
 import { createEmblemAura } from './emblem-aura.js';
-import { emblemRing } from './emblems.js';
+import { emblemRing, emblemVisualFor } from './emblems.js';
 import { BIOMES } from './content/biomes.js';
+import { REGIONS } from './content/regions.js';
 import { createSceneAmbience } from './scene-ambience.js';
 import { createWeatherSystem } from './scene-weather.js';
 import { createWeatherSurfaces } from './weather-surfaces.js';
@@ -19,11 +20,36 @@ import { createCardDeaths } from './card-death.js';
 import { stabilizeFloorGeometry } from './floor-geometry.js';
 import { enemyIntentBadge } from './enemy-intent.js';
 import { combatRank } from './combat-scale.js';
+import { createOverlordModels, overlordAssetUrls } from './overlord-models.js';
 import { deviceRenderQuality, createFrameBudget } from './shared/render-budget.js';
 
+function enemyTierBadge(definition) {
+  if (definition.overlord) {
+    return html`<span class="enemy-tier-badge is-overlord" title="霸主敌人" aria-label="霸主"
+      ><svg viewBox="0 0 24 24" aria-hidden="true">
+        <path
+          fill="currentColor"
+          d="M2 18h20v2.4H2V18zm1.2-1.8L2 6.8l5.5 4.2L12 3.2l4.5 7.8L22 6.8l-1.2 9.4H3.2zM12 10.2l-1.35 2.3L12 14.8l1.35-2.3L12 10.2z"
+        /></svg
+    ></span>`;
+  }
+  if (!definition.boss && !definition.elite) return '';
+  return html`<span
+    class="enemy-tier-badge ${definition.boss ? 'is-boss' : 'is-elite'}"
+    title="${definition.boss ? '首领敌人' : '精英敌人'}"
+    aria-label="${definition.boss ? '首领' : '精英'}"
+    >${
+      definition.boss
+        ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M2.5 4.2C3.9 7 5.7 8.5 7.8 9 9 8.3 10.4 7.9 12 7.9s3 .4 4.2 1.1c2.1-.5 3.9-2 5.3-4.8-.2 3.2-1 5.6-2.3 7 .25.7.4 1.4.4 2.2 0 2.2-1.1 4.1-2.8 5.3V21c0 .9-.75 1.6-1.7 1.6H8.9c-.95 0-1.7-.7-1.7-1.6v-2.3c-1.7-1.2-2.8-3.1-2.8-5.3 0-.8.15-1.5.4-2.2-1.3-1.4-2.1-3.8-2.3-7zm6.7 9.9a1.65 1.65 0 1 0 0-3.3 1.65 1.65 0 0 0 0 3.3zm5.6 0a1.65 1.65 0 1 0 0-3.3 1.65 1.65 0 0 0 0 3.3zM12 15.4l-1.2 2h2.4l-1.2-2zm-2 4.3v-1.8h1.3v1.8H10zm2.7 0v-1.8H14v1.8h-1.3z"/></svg>'
+        : '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2.5C7.6 2.5 4 5.8 4 9.9c0 2.35 1.15 4.45 3 5.8V19c0 1.1.9 2 2 2h6c1.1 0 2-.9 2-2v-3.3c1.85-1.35 3-3.45 3-5.8 0-4.1-3.6-7.4-8-7.4zm-3 9.4a1.65 1.65 0 1 1 0-3.3 1.65 1.65 0 0 1 0 3.3zm6 0a1.65 1.65 0 1 1 0-3.3 1.65 1.65 0 0 1 0 3.3zM10 18.2v-2h1.3v2H10zm2.7 0v-2H14v2h-1.3z"/></svg>'
+    }</span
+  >`;
+}
+
 export async function createBattleView(stage, onUnitClick, options = {}) {
-  const theme = BIOMES[options.map] || BIOMES.ruins;
-  stage.dataset.biome = options.map || 'ruins';
+  const biomeKey = BIOMES[options.map] ? options.map : REGIONS[options.map]?.biome || 'ruins';
+  const theme = BIOMES[biomeKey] || BIOMES.ruins;
+  stage.dataset.biome = biomeKey;
   stage.style.setProperty('--scene-accent', theme.accent);
   const definitions = { ...DEFINITIONS, ...options.enemyDefinitions, ...options.heroDefinitions };
   const activeIds = new Set([
@@ -86,7 +112,13 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
   camera.lookAt(0, 0, 0);
   const asset = `./assets/${theme.asset}.glb`;
   if (options.loading)
-    await options.loading.prepare([asset, ...visibleDefinitions.map(portraitUrl)]).catch(fail);
+    await options.loading
+      .prepare([
+        asset,
+        ...visibleDefinitions.map(portraitUrl),
+        ...overlordAssetUrls(visibleDefinitions),
+      ])
+      .catch(fail);
   const gltf = await (
       options.loading ? options.loading.gltf(asset) : new GLTFLoader().loadAsync(asset)
     ).catch(fail),
@@ -202,6 +234,9 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
     animationSpeed = 1,
     first = true;
   let instantNextDraw = false;
+  let currentState = null;
+  let hitStopUntil = 0;
+  let shakeTimer = 0;
   let intentData = null;
   let renderedIntent = '';
   const intentLayer = stage.querySelector('#intent-layer');
@@ -216,6 +251,13 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
     camera,
     stage,
     getSpeed: () => animationSpeed,
+    reduced,
+  });
+  const overlords = await createOverlordModels({
+    definitions,
+    activeDefinitions: visibleDefinitions,
+    loading: options.loading,
+    resources,
     reduced,
   });
   const ambience = createSceneAmbience(scene, model, options.map || 'ruins', resources, reduced);
@@ -251,6 +293,7 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
   }
   function draw(s, forecast, selected, enemySelected, playing = false, origins = new Map()) {
     if (disposed) return;
+    currentState = s;
     if (!playing && s.phase === 'plan') deaths.releaseCinematic();
     if (playing) clearHints();
     const formation = playing ? s.formation : forecast.final.formation,
@@ -307,6 +350,7 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
         beginMotion(r, r.goal, new THREE.Vector3(r.goal.x, 0.2, r.goal.z - 1.2), i * 70),
       );
     first = false;
+    overlords.sync(enemyRecords);
     for (const r of records) {
       if (!r.id) continue;
       const { id, side, slot, root, el } = r,
@@ -322,11 +366,19 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
         !!d.emblemId &&
         (playing ? u : f).emblemCharge === 6 &&
         !combined;
+      r.emblemId = d.emblemId || null;
       r.emblemActive = combined;
       r.emblemSelected = combined && selected === id;
+      const emblemVis = r.emblemId ? emblemVisualFor(r.emblemId) : null;
+      if (combined && emblemVis) {
+        for (const key of ['primary', 'secondary', 'glow', 'accent', 'core']) {
+          el.style.setProperty(`--emblem-${key}`, emblemVis[key]);
+        }
+      }
       el.classList.toggle('combined-unit', combined);
       el.classList.toggle('combined-selected', r.emblemSelected);
       el.classList.toggle('can-awaken', canAwaken);
+      if (s?.dragonVein && !reduced) schedule();
       r.restScale = d.boss ? 1.08 : 1;
       if (side === 'Friendly') {
         root.visible = true;
@@ -355,6 +407,8 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
       el.classList.toggle('selected', (side === 'Friendly' ? selected : enemySelected) === id);
       el.classList.toggle('fallen', u.hp === 0);
       el.classList.toggle('forecast-dead', f.hp === 0 && u.hp > 0);
+      el.classList.toggle('is-overlord', Boolean(d.overlord));
+      el.classList.toggle('is-stand-on-card', Boolean(d.overlord || d.standOnCard));
       el.style.setProperty('--unit', d.color);
       el.dataset.unit = id;
       el.dataset.side = side;
@@ -422,20 +476,7 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
                   </g></svg
               ></span>`
             : ''
-        }${
-          side === 'Enemy' && (d.boss || d.elite)
-            ? html`<span
-                class="enemy-tier-badge ${d.boss ? 'is-boss' : 'is-elite'}"
-                title="${d.boss ? '首领敌人' : '精英敌人'}"
-                aria-label="${d.boss ? '首领' : '精英'}"
-                >${
-                  d.boss
-                    ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M2.5 4.2C3.9 7 5.7 8.5 7.8 9 9 8.3 10.4 7.9 12 7.9s3 .4 4.2 1.1c2.1-.5 3.9-2 5.3-4.8-.2 3.2-1 5.6-2.3 7 .25.7.4 1.4.4 2.2 0 2.2-1.1 4.1-2.8 5.3V21c0 .9-.75 1.6-1.7 1.6H8.9c-.95 0-1.7-.7-1.7-1.6v-2.3c-1.7-1.2-2.8-3.1-2.8-5.3 0-.8.15-1.5.4-2.2-1.3-1.4-2.1-3.8-2.3-7zm6.7 9.9a1.65 1.65 0 1 0 0-3.3 1.65 1.65 0 0 0 0 3.3zm5.6 0a1.65 1.65 0 1 0 0-3.3 1.65 1.65 0 0 0 0 3.3zM12 15.4l-1.2 2h2.4l-1.2-2zm-2 4.3v-1.8h1.3v1.8H10zm2.7 0v-1.8H14v1.8h-1.3z"/></svg>'
-                    : '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2.5C7.6 2.5 4 5.8 4 9.9c0 2.35 1.15 4.45 3 5.8V19c0 1.1.9 2 2 2h6c1.1 0 2-.9 2-2v-3.3c1.85-1.35 3-3.45 3-5.8 0-4.1-3.6-7.4-8-7.4zm-3 9.4a1.65 1.65 0 1 1 0-3.3 1.65 1.65 0 0 1 0 3.3zm6 0a1.65 1.65 0 1 1 0-3.3 1.65 1.65 0 0 1 0 3.3zM10 18.2v-2h1.3v2H10zm2.7 0v-2H14v2h-1.3z"/></svg>'
-                }</span
-              >`
-            : ''
-        }${side === 'Enemy' ? html`<small class="enemy-level" title="${combatRank(u.level || 1)}">Lv.${u.level || 1}</small>` : ''}<span
+        }${side === 'Enemy' ? enemyTierBadge(d) : ''}${side === 'Enemy' ? html`<small class="enemy-level" title="${combatRank(u.level || 1)}">Lv.${u.level || 1}</small>` : ''}<span
           class="unit-info"
           ><span class="unit-name">${d.name}${u.hp === 0 ? ' ×' : ''}</span></span
         ><span class="unit-resources">${resourceBars(u, f)}</span
@@ -569,9 +610,15 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
       schedule();
       return;
     }
+    if (now < hitStopUntil && !reduced) {
+      raf = requestAnimationFrame(tick);
+      return;
+    }
     let moving = ambience.update(now);
-    moving = emblemAura.update(records, now) || moving;
+    moving = emblemAura.update(records, now, currentState) || moving;
+    overlords.update(now);
     moving = weather.update(now) || moving;
+    moving = fx.update(now) || moving;
     for (const r of records) {
       if (activeDrag?.record === r) continue;
       if (r.motion) {
@@ -663,10 +710,26 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
       height: a.height,
     };
   }
-  const fx = createEffects(effects, center, () => animationSpeed);
+  const fx = createEffects(effects, center, () => animationSpeed, {
+    onSpawn: schedule,
+    onImpact({ heavy, delay = 0 } = {}) {
+      if (reduced) return;
+      const waitMs = Math.max(0, delay) / Math.max(0.4, animationSpeed);
+      setTimeout(() => {
+        if (disposed) return;
+        if (heavy) hitStopUntil = performance.now() + 75;
+        stage.classList.remove('vfx-shake');
+        void stage.offsetWidth;
+        stage.classList.add('vfx-shake');
+        clearTimeout(shakeTimer);
+        shakeTimer = setTimeout(() => stage.classList.remove('vfx-shake'), 240);
+      }, waitMs);
+    },
+  });
   function playEvent(e, before) {
     if (disposed) return;
     const duration = fx.play(e, before, records);
+    schedule();
     const deathDelay = ['hero', 'enemy'].includes(e.type) ? duration * 0.7 : 0;
     for (const r of enemyRecords) {
       if (before.units[r.id]?.hp > 0 && e.after.units[r.id]?.hp === 0) {
@@ -776,8 +839,10 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
     playEvent,
     artStatus: () => ({ ...ambience.stats(), outerEnvironment }),
     emblemStatus: emblemAura.status,
+    vfxStatus: fx.status,
     weatherStatus: weather.stats,
     deathStatus: deaths.stats,
+    overlordStatus: overlords.status,
     floorStatus: () => ({ ...floorStatus }),
     clearHints,
     snapFormationOnNextDraw() {
@@ -847,6 +912,8 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
       for (const resolve of settledWaiters) resolve();
       settledWaiters.clear();
       cancelAnimationFrame(raf);
+      clearTimeout(shakeTimer);
+      stage.classList.remove('vfx-shake');
       ro.disconnect();
       modalObserver.disconnect();
       events.dispose();

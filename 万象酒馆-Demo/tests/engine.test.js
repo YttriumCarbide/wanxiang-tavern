@@ -186,3 +186,14 @@ test('a complete advanced encounter can be won with skills and valid queued acti
   }
   assert.equal(state.phase, 'victory');
 });
+
+test('multi-action enemy timeline slots carry distinct actionIndex values in preview events', () => {
+  const s = advance(preview(createBattle(['apepLamb']), []));
+  const res = preview(s, []);
+  const bossEvents = res.events.filter(
+    (e) => e.actor === 'apepLamb' && (e.type === 'enemy' || e.type === 'skip'),
+  );
+  assert(bossEvents.length >= 2);
+  const indices = [...new Set(bossEvents.map((e) => e.actionIndex))];
+  assert.deepEqual(indices, [0, 1]);
+});

@@ -6,6 +6,9 @@ from pathlib import Path
 from build_realms import Model
 
 
+OVERLORD_STAND_IDS = {"apepLamb", "ares", "aresCannonLeft", "aresCannonRight", "moonCrown", "moonEye", "moonRoot", "radiantWyvern"}
+
+
 def main():
     root = Path(__file__).resolve().parents[1]
     source = root / "万象异境-体素模型/月痕古林"
@@ -14,6 +17,8 @@ def main():
         raise ValueError("Prepare all sixteen minions and eight boss parts before exporting")
     for filename in files:
         data = json.loads(filename.read_text(encoding="utf-8"))
+        if data["id"] in OVERLORD_STAND_IDS:
+            continue
         model = Model(data["name"])
         for block in data["blocks"]:
             model.box(

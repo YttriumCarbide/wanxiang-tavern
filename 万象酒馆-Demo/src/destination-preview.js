@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { BIOMES } from './content/biomes.js';
+import { REGIONS } from './content/regions.js';
 import { createResourceScope } from './shared/resources.js';
 import { createEventScope } from './shared/events.js';
 
@@ -114,16 +115,17 @@ export function createDestinationPreview(host) {
     delete host.dataset.ready;
     resize();
     resume();
-    if (!models.has(map)) {
+    const biome = BIOMES[map] ? map : REGIONS[map]?.biome || 'ruins';
+    if (!models.has(biome)) {
       models.set(
-        map,
+        biome,
         loader
-          .loadAsync(`./assets/preview-${map}.glb`)
+          .loadAsync(`./assets/preview-${biome}.glb`)
           .then(({ scene: model }) => resources.object(model)),
       );
     }
     try {
-      const model = await models.get(map);
+      const model = await models.get(biome);
       if (disposed || !active || request !== ticket) return;
       if (outgoing) scene.remove(outgoing);
       outgoing = current === model ? null : current;
@@ -131,8 +133,8 @@ export function createDestinationPreview(host) {
       direction = step || 1;
       transition = reduced.matches ? 1 : 0;
       scene.add(current);
-      material.color.set(BIOMES[map].mote);
-      rim.color.set(BIOMES[map].fill);
+      material.color.set(BIOMES[biome].mote);
+      rim.color.set(BIOMES[biome].fill);
       host.dataset.ready = map;
       host.dataset.loading = 'false';
       host.dataset.error = 'false';

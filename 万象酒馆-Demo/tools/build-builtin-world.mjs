@@ -3,7 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { newWorldEntry, normalizeWorldbook } from '../src/ai/worldbook.js';
 import { isMonsterWorldEntry, monsterNarrativeText } from '../src/ai/monster-narrative.js';
-import { MONSTER_LORE, monsterWorldbook } from '../src/content/monsters.js';
+import { ALL_MONSTER_LORE, monsterWorldbook } from '../src/content/monsters.js';
 import { DEFINITIONS } from '../src/data.js';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
@@ -15,6 +15,10 @@ export async function buildBuiltinWorld() {
   for (const entry of Object.values(raw.entries || {})) {
     if (isMonsterWorldEntry(entry)) {
       entry.content = monsterNarrativeText(entry.content);
+      if (Array.isArray(entry.key) && entry.key.some(Boolean)) {
+        entry.constant = false;
+        entry.selective = true;
+      }
     }
   }
   const existingMonsterIds = new Set(
@@ -23,7 +27,7 @@ export async function buildBuiltinWorld() {
       .filter(Boolean),
   );
   let nextUid = Math.max(-1, ...Object.keys(raw.entries || {}).map(Number)) + 1;
-  for (const id of Object.keys(MONSTER_LORE)) {
+  for (const id of Object.keys(ALL_MONSTER_LORE)) {
     const def = DEFINITIONS[id];
     if (!def || existingMonsterIds.has(id)) continue;
     raw.entries[nextUid] = {

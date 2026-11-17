@@ -9,6 +9,7 @@ import { createIllustratedStreet, illustratedImage } from './illustrated-street.
 import { createSceneVisitors } from '../tavern/visitor-scene.js';
 import { GUEST_RECRUITMENT } from '../recruitment.js';
 import { createWorldMap } from './world-map.js';
+import { createCitySubmap } from './city-submap.js';
 import { SILVER_CROWN_TAVERN } from '../content/silver-crown-scenes.js';
 
 export async function createStreetView() {
@@ -146,6 +147,15 @@ export async function createStreetView() {
     document.body.dataset.illustrated = 'true';
   }
   if (parent !== window) document.documentElement.dataset.embedded = 'true';
+  const citySubmap = createCitySubmap({
+    events,
+    definition,
+    onNavigate: (targetId) => leave(targetId),
+    onOpenWorldMap: () => openAtlas(false),
+    onOpenGuild: (region) => {
+      parent.postMessage({ type: 'daily-open-guild', region }, location.origin);
+    },
+  });
   const inspector = document.getElementById('street-inspector');
   const buttons = new Map();
   const projected = new THREE.Vector3();
@@ -190,6 +200,10 @@ export async function createStreetView() {
         exploration: event.data.exploration,
         skirmishes: event.data.skirmishes,
         unlockedDungeons: event.data.unlockedDungeons,
+      });
+      citySubmap.update({
+        skirmishes: event.data.skirmishes,
+        locked: travelLocked || invitationLocked,
       });
       void updateTime(event.data.timeOfDay);
     }
@@ -436,7 +450,8 @@ export async function createStreetView() {
     drag = null;
   });
   events.on(window, 'keydown', (event) => {
-    if (mapDialog.open || event.target.closest('input, textarea, select')) return;
+    if (mapDialog.open || citySubmap?.isOpen() || event.target.closest('input, textarea, select'))
+      return;
     if (event.key === 'Escape') {
       closeInspection();
       return;

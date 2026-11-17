@@ -1,8 +1,20 @@
-import { BASE_WORLDS } from './worlds.js';
+import { BASE_WORLDS, EMPIRE_TRANSITION_DUNGEONS } from './worlds.js';
 import { enemyIntentText } from './enemy-intent-text.js';
 import { combatScale, scaleLevelEffects } from './combat-scale.js';
 
-const MAP_LEVELS = Object.freeze({ ruins: 5, forest: 11, frost: 16, forge: 21, tide: 26 });
+const MAP_LEVELS = Object.freeze({
+  'moss-hollow': 2,
+  ruins: 5,
+  'border-watch': 6,
+  'whisper-grove': 10,
+  forest: 11,
+  'silver-cistern': 15,
+  frost: 16,
+  'ash-foundry': 20,
+  forge: 21,
+  'astral-sanctum': 25,
+  tide: 26,
+});
 const MAIN_OFFSETS = [0, 1, 1, 2, 2, 3];
 
 function seedOf(text) {
@@ -14,8 +26,9 @@ function seedOf(text) {
 export function encounterLevel(entry) {
   if (!entry || entry.tutorial) return 1;
   if (Number.isInteger(entry.level)) return Math.max(1, Math.min(99, entry.level));
+  const id = entry.world?.id || entry.map;
   const base = MAP_LEVELS[entry.map] || 5;
-  const official = BASE_WORLDS.includes(entry.world?.id || entry.map);
+  const official = BASE_WORLDS.includes(id) || EMPIRE_TRANSITION_DUNGEONS.includes(id);
   if (official && entry.sequence < 6) return base + MAIN_OFFSETS[entry.sequence];
   const tier = Math.floor(entry.sequence / 6) + (official ? 0 : 1);
   return Math.min(99, base + (official ? 3 : 0) + 5 * tier);

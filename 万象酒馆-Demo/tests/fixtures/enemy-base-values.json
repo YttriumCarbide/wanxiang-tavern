@@ -1287,5 +1287,515 @@
         11
       ]
     ]
+  },
+  {
+    "id": "drakeBadlandSlime",
+    "hp": 48,
+    "intents": [
+      [
+        10
+      ],
+      [
+        7
+      ]
+    ]
+  },
+  {
+    "id": "drakeBadlandScorpion",
+    "hp": 54,
+    "intents": [
+      [
+        9
+      ],
+      [
+        11
+      ]
+    ]
+  },
+  {
+    "id": "drakeRattlesnake",
+    "hp": 46,
+    "intents": [
+      [
+        9
+      ],
+      [
+        6
+      ]
+    ]
+  },
+  {
+    "id": "drakeBadlandFalcon",
+    "hp": 50,
+    "intents": [
+      [
+        12
+      ],
+      [
+        6
+      ]
+    ]
+  },
+  {
+    "id": "ladderCarrionBat",
+    "hp": 44,
+    "intents": [
+      [
+        9
+      ],
+      [
+        7
+      ]
+    ]
+  },
+  {
+    "id": "ladderCliffLizard",
+    "hp": 58,
+    "intents": [
+      [
+        12
+      ],
+      [
+        10
+      ]
+    ]
+  },
+  {
+    "id": "ladderWebSpider",
+    "hp": 52,
+    "intents": [
+      [
+        8
+      ],
+      [
+        9
+      ]
+    ]
+  },
+  {
+    "id": "drakeCrystalBeetle",
+    "hp": 64,
+    "intents": [
+      [
+        11
+      ],
+      [
+        8
+      ]
+    ]
+  },
+  {
+    "id": "pureCreationElemental",
+    "hp": 52,
+    "intents": [
+      [
+        10
+      ],
+      []
+    ]
+  },
+  {
+    "id": "pureDestructionElemental",
+    "hp": 52,
+    "intents": [
+      [
+        13
+      ],
+      [
+        8
+      ]
+    ]
+  },
+  {
+    "id": "chaosBadlandFalcon",
+    "hp": 82,
+    "intents": [
+      [
+        9
+      ],
+      [
+        16
+      ]
+    ]
+  },
+  {
+    "id": "relicHermitCrab",
+    "hp": 96,
+    "intents": [
+      [
+        18
+      ],
+      [
+        15
+      ]
+    ]
+  },
+  {
+    "id": "bicolorScalePython",
+    "hp": 90,
+    "intents": [
+      [
+        11
+      ],
+      [
+        16
+      ]
+    ]
+  },
+  {
+    "id": "overloadCreationElemental",
+    "hp": 84,
+    "intents": [
+      [
+        10
+      ],
+      []
+    ]
+  },
+  {
+    "id": "overloadDestructionElemental",
+    "hp": 86,
+    "intents": [
+      [
+        12
+      ],
+      [
+        21
+      ]
+    ]
+  },
+  {
+    "id": "ladderRockGiant",
+    "hp": 108,
+    "intents": [
+      [
+        19
+      ],
+      [
+        9
+      ]
+    ]
+  },
+  {
+    "id": "bicolorSingularityLizard",
+    "hp": 210,
+    "intents": [
+      [
+        18
+      ],
+      [
+        10
+      ],
+      [
+        24
+      ],
+      [
+        14
+      ]
+    ]
+  },
+  {
+    "id": "eclipseWatcher",
+    "hp": 230,
+    "intents": [
+      [
+        13
+      ],
+      [
+        22
+      ],
+      [
+        15
+      ],
+      [
+        28
+      ]
+    ]
+  },
+  {
+    "id": "abyssDevourerPython",
+    "hp": 225,
+    "intents": [
+      [
+        20
+      ],
+      [
+        10
+      ],
+      [
+        13
+      ],
+      [
+        27
+      ]
+    ]
+  },
+  {
+    "id": "radiantWyvern",
+    "hp": 280,
+    "intents": [
+      [
+        13
+      ],
+      [
+        26
+      ],
+      [
+        17
+      ],
+      [
+        32
+      ]
+    ]
+  },
+  {
+    "id": "dragonscaleSandworm",
+    "hp": 240,
+    "intents": [
+      [
+        14
+      ],
+      [
+        12
+      ],
+      [
+        15
+      ],
+      [
+        29
+      ]
+    ]
+  },
+  {
+    "id": "banditCutthroat",
+    "hp": 36,
+    "intents": [
+      [
+        9
+      ],
+      [
+        7
+      ]
+    ]
+  },
+  {
+    "id": "banditPoacher",
+    "hp": 34,
+    "intents": [
+      [
+        8
+      ],
+      [
+        6
+      ]
+    ]
+  },
+  {
+    "id": "banditBruiser",
+    "hp": 48,
+    "intents": [
+      [
+        12
+      ],
+      [
+        6
+      ]
+    ]
+  },
+  {
+    "id": "banditAlchemist",
+    "hp": 35,
+    "intents": [
+      [
+        5
+      ],
+      [
+        8
+      ]
+    ]
+  },
+  {
+    "id": "banditExecutioner",
+    "hp": 74,
+    "intents": [
+      [
+        15
+      ],
+      [
+        9
+      ]
+    ]
+  },
+  {
+    "id": "goblinScavenger",
+    "hp": 30,
+    "intents": [
+      [
+        8
+      ],
+      [
+        5
+      ]
+    ]
+  },
+  {
+    "id": "goblinSlinger",
+    "hp": 28,
+    "intents": [
+      [
+        8
+      ],
+      [
+        4
+      ]
+    ]
+  },
+  {
+    "id": "goblinShaman",
+    "hp": 32,
+    "intents": [
+      [
+        6
+      ],
+      []
+    ]
+  },
+  {
+    "id": "goblinSapper",
+    "hp": 33,
+    "intents": [
+      [
+        8
+      ],
+      [
+        10
+      ]
+    ]
+  },
+  {
+    "id": "goblinWolfRider",
+    "hp": 70,
+    "intents": [
+      [
+        14
+      ],
+      [
+        8
+      ]
+    ]
+  },
+  {
+    "id": "erosionCrawler",
+    "hp": 42,
+    "intents": [
+      [
+        10
+      ],
+      [
+        7
+      ]
+    ]
+  },
+  {
+    "id": "erosionSpitter",
+    "hp": 38,
+    "intents": [
+      [
+        8
+      ],
+      [
+        5
+      ]
+    ]
+  },
+  {
+    "id": "erosionHound",
+    "hp": 40,
+    "intents": [
+      [
+        11
+      ],
+      [
+        9
+      ]
+    ]
+  },
+  {
+    "id": "erosionWing",
+    "hp": 36,
+    "intents": [
+      [
+        8
+      ],
+      [
+        9
+      ]
+    ]
+  },
+  {
+    "id": "erosionJuggernaut",
+    "hp": 88,
+    "intents": [
+      [
+        17
+      ],
+      [
+        8
+      ]
+    ]
+  },
+  {
+    "id": "banditSyndicateKing",
+    "hp": 158,
+    "intents": [
+      [
+        11
+      ],
+      [
+        16
+      ],
+      [
+        11
+      ],
+      [
+        22
+      ]
+    ]
+  },
+  {
+    "id": "goblinKingGorg",
+    "hp": 165,
+    "intents": [
+      [
+        15
+      ],
+      [
+        8
+      ],
+      [
+        12
+      ],
+      [
+        24
+      ]
+    ]
+  },
+  {
+    "id": "erosionRiftTyrant",
+    "hp": 188,
+    "intents": [
+      [
+        10
+      ],
+      [
+        18
+      ],
+      [
+        13
+      ],
+      [
+        25
+      ]
+    ]
   }
 ]

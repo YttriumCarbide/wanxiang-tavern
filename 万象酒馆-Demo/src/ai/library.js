@@ -3,9 +3,10 @@ import { restoreDining } from '../dining.js';
 import { restoreDaily } from '../daily.js';
 import { restoreTetris } from '../tetris.js';
 import { upgradeLegacyStatuses } from '../status-rules.js';
-import { restoreWorlds, BASE_WORLDS } from '../worlds.js';
+import { restoreWorlds, UNLOCKABLE_DUNGEONS } from '../worlds.js';
 import { restoreDiscoveries } from '../atlas-discoveries.js';
 import { restoreTavernQuests } from '../tavern-quests.js';
+import { newGuildState, restoreGuildState } from '../guild.js';
 import { EMBLEMS, applyEmblemStats } from '../emblems.js';
 import { grownCombat, restoreGrowth } from '../growth.js';
 import {
@@ -38,6 +39,7 @@ import { restoredSummary, conversationText, restoreInvitationHistory } from '../
 import { restoreArchives, hydrateArchiveMaps } from '../archives.js';
 import { defaultProtagonist } from '../content/qingyuan.js';
 import { OFFICIAL_DC_ATTRS, normalizeDcAttrs } from '../dc.js';
+import { restoreEquippedSkills, restoreLearnedSkills } from '../learnable-skills.js';
 
 export function newLibrary() {
   return createLibrary(loadCustomPortraits());
@@ -68,7 +70,9 @@ function createLibrary(customPortraits) {
     unlockedDungeons: [],
     atlasDiscoveries: [],
     tavernQuests: [],
+    guild: newGuildState(),
     emblems: [],
+    learnedSkills: restoreLearnedSkills(),
     refinedNpcs: [],
     progression: {
       settlements: [],
@@ -247,15 +251,17 @@ export function restoreLibrary(value) {
   library.worlds = restoreWorlds(value.worlds);
   library.atlasDiscoveries = restoreDiscoveries(value.atlasDiscoveries, library.worlds);
   library.tavernQuests = restoreTavernQuests(value.tavernQuests);
+  library.guild = restoreGuildState(value.guild);
   if (value.statusRevision !== 36)
     for (const world of library.worlds)
       for (const enemy of Object.values(world.enemyDefinitions)) upgradeLegacyStatuses(enemy);
   library.emblems = Array.isArray(value.emblems) ? value.emblems.filter((id) => EMBLEMS[id]) : [];
+  library.learnedSkills = restoreLearnedSkills(value.learnedSkills);
   if (value.exploration)
     library.exploration = restoreExploration(value.exploration, 17371, library.worlds);
   library.unlockedDungeons = Array.isArray(value.unlockedDungeons)
-    ? [...new Set(value.unlockedDungeons.filter((id) => BASE_WORLDS.includes(id)))]
-    : BASE_WORLDS.filter(
+    ? [...new Set(value.unlockedDungeons.filter((id) => UNLOCKABLE_DUNGEONS.includes(id)))]
+    : UNLOCKABLE_DUNGEONS.filter(
         (id) =>
           (library.exploration?.[id]?.completed || 0) > 0 ||
           (library.exploration?.[id]?.cleared?.length || 0) > 0,
@@ -559,10 +565,12 @@ export function restoreLibrary(value) {
       /* Ignore damaged scripts. */
     }
   }
+  const learnedSet = new Set(library.learnedSkills);
   for (const member of library.characters) {
     const saved = value.characters?.find((entry) => entry.id === member.id);
     member.growth = restoreGrowth(saved?.growth, member.id);
     member.dcAttrs = normalizeDcAttrs(saved?.dcAttrs ?? member.dcAttrs, member);
+    member.equippedSkills = restoreEquippedSkills(saved?.equippedSkills, learnedSet);
     if (Array.isArray(saved?.equipment))
       member.equipment = saved.equipment
         .slice(0, EQUIPMENT_SLOT_ORDER.length)

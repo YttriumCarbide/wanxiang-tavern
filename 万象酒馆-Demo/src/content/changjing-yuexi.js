@@ -8,7 +8,7 @@ export const CHANGJING_YUEXI = {
   color: '#b8b4e7',
   hp: 48,
   mp: 18,
-  attack: 6,
+  attack: 8,
   attackName: '月闪',
   limit: 1,
   skills: [
@@ -18,9 +18,9 @@ export const CHANGJING_YUEXI = {
       ap: 1,
       mp: 3,
       target: 'enemy',
-      text: '以大幅横斩攻击一名敌人，造成10伤害并附加2层易伤。',
+      text: '以大幅横斩攻击一名敌人，造成15伤害并附加2层易伤。',
       effects: [
-        { type: 'damage', value: 10 },
+        { type: 'damage', value: 15 },
         { type: 'buff', buff: 'vulnerable', value: 2 },
       ],
     },
@@ -42,10 +42,10 @@ export const CHANGJING_YUEXI = {
   entrySkill: {
     id: 'falling-starlight',
     name: '霜月·星陨穿刺',
-    text: '换入时对正对位敌人造成10点伤害并施加2层易伤。',
+    text: '换入时对正对位敌人造成14点伤害并施加2层易伤。',
     target: 'opposite',
     effects: [
-      { type: 'damage', value: 10 },
+      { type: 'damage', value: 14 },
       { type: 'buff', buff: 'vulnerable', value: 2 },
     ],
   },

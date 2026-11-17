@@ -54,6 +54,7 @@ import { createAntiRoutePanel } from './anti-route.js';
 import { createDaily } from './daily.js';
 import { createMapExpansion } from './map-expansion.js';
 import { createTavernQuests } from './tavern-quests.js';
+import { createGuild } from './guild.js';
 import { createLedgerSidebar } from './ledger-sidebar.js';
 
 /** Composition root: wiring only, with one explicit application lifetime. */
@@ -111,6 +112,7 @@ export function createApplication({
   context.memory = createMemory(context);
   context.mapExpansion = createMapExpansion(context);
   context.quests = createTavernQuests(context);
+  context.guild = createGuild(context);
   context.adventure = createAdventure(context);
   context.bookshelf = createBookshelf(context);
   context.shop = createShop(context);
@@ -151,6 +153,7 @@ export function createApplication({
     clearTimeout(runtime.resizeTimer);
     context.workshop.dispose();
     context.ledger.dispose();
+    context.guild.dispose();
     context.daily.dispose();
     context.shell.dispose();
     context.latestResponse.dispose();

@@ -16,6 +16,15 @@ import {
 } from './enemy-base-values.js';
 
 export const BASE_WORLDS = Object.freeze(['ruins', 'forest', 'frost', 'forge', 'tide']);
+export const EMPIRE_TRANSITION_DUNGEONS = Object.freeze([
+  'moss-hollow',
+  'border-watch',
+  'whisper-grove',
+  'silver-cistern',
+  'ash-foundry',
+  'astral-sanctum',
+]);
+export const UNLOCKABLE_DUNGEONS = Object.freeze([...BASE_WORLDS, ...EMPIRE_TRANSITION_DUNGEONS]);
 export const routeKey = (entry) => entry.world?.id || entry.map;
 export const isEndless = (entry) => !!entry?.world || entry?.sequence >= 6;
 export function worldRegion(library, id) {

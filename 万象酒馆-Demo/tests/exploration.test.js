@@ -1,4 +1,4 @@
-import { BASE_WORLDS } from '../src/worlds.js';
+import { BASE_WORLDS, EMPIRE_TRANSITION_DUNGEONS } from '../src/worlds.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
@@ -20,7 +20,7 @@ import { newLibrary, restoreLibrary } from '../src/ai/library.js';
 test('regions preserve independent progress and base worlds continue after six sites', () => {
   const routes = newExploration(817);
   assert.equal(Object.keys(routes).length, Object.keys(REGIONS).length);
-  assert.equal(Object.keys(routes).length, 13);
+  assert.equal(Object.keys(routes).length, 13 + EMPIRE_TRANSITION_DUNGEONS.length);
   const untouched = JSON.stringify(routes.frost);
   const combinations = new Set();
   for (let i = 0; i < 6; i++) {

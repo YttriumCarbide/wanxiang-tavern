@@ -205,163 +205,406 @@ body.ring-cabinet-open #daily-hud {
 .daily-quest[hidden] {
   display: none;
 }
-.daily-quest span,
-.tavern-quest-list article span {
+.daily-quest span {
   color: #b8ae9b;
   font-size: 12px;
 }
 #tavern-quests {
-  width: min(640px, calc(100vw - 28px));
-  max-height: min(660px, calc(100dvh - 28px));
-  padding: 24px 28px 26px;
-  color: #f3e8d2;
+  width: min(920px, calc(100vw - 24px));
+  height: min(630px, calc(100dvh - 28px));
+  max-width: none;
+  max-height: calc(100dvh - 24px);
+  padding: 0;
+  overflow: hidden;
+  color: #efe5cf;
   background:
-    radial-gradient(ellipse at 50% -15%, rgba(216, 178, 110, 0.14), transparent 58%),
-    linear-gradient(175deg, #1b1613, #100d0c);
-  border: 1px solid rgba(216, 178, 110, 0.48);
+    radial-gradient(ellipse at 72% 8%, rgba(214, 178, 108, 0.1), transparent 56%),
+    linear-gradient(170deg, rgba(16, 17, 21, 0.98), rgba(10, 10, 13, 0.99));
+  border: 1px solid rgba(216, 178, 110, 0.44);
   border-radius: 6px;
   box-shadow:
-    inset 0 0 0 1px rgba(216, 178, 110, 0.14),
-    inset 0 0 36px rgba(0, 0, 0, 0.48),
-    0 26px 80px rgba(0, 0, 0, 0.86);
+    inset 0 0 0 1px rgba(216, 178, 110, 0.12),
+    inset 0 0 42px rgba(0, 0, 0, 0.65),
+    0 28px 90px rgba(0, 0, 0, 0.9);
+}
+#tavern-quests[open] {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
 }
 #tavern-quests::backdrop,
+#guild-dialog::backdrop,
 :is(#tavern-promotion, #tavern-recruitment, #tavern-exit-picker)::backdrop {
-  background: rgba(6, 5, 4, 0.76);
-  backdrop-filter: blur(4px);
+  background: rgba(6, 5, 4, 0.8);
+  backdrop-filter: blur(6px);
 }
-.quests-header {
+.skyrim-head {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 14px;
-  padding-bottom: 14px;
-  border-bottom: 1px solid rgba(216, 178, 110, 0.34);
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 22px;
+  border-bottom: 1px solid rgba(216, 178, 110, 0.28);
+  background: linear-gradient(180deg, rgba(31, 27, 23, 0.96), rgba(18, 17, 20, 0.92));
 }
-.quests-heading {
-  margin-right: auto;
-}
-.quests-heading small {
+.skyrim-head-title small {
   display: block;
   color: #b79c71;
-  font-size: 9px;
-  letter-spacing: 0.22em;
+  font-size: 10px;
+  letter-spacing: 0.16em;
 }
-.quests-heading h2 {
-  margin: 4px 0 0;
+.skyrim-head-title h2 {
+  margin: 3px 0 0;
+  color: #f6e4b8;
   font: 600 22px/1.2 var(--daily-serif);
-  color: #f5dfb0;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.12em;
 }
-.quests-summary {
-  padding: 3px 10px;
+.skyrim-head-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.skyrim-count-pill {
+  padding: 4px 10px;
   border-bottom: 1px solid rgba(216, 178, 110, 0.28);
-  color: #ccb793;
+  color: #cab899;
   font-size: 11px;
-  letter-spacing: 0.04em;
 }
-.quests-close {
+.skyrim-guild-jump,
+.skyrim-secondary-btn {
+  min-height: 32px;
+  padding: 0 13px;
+  border: 1px solid rgba(216, 178, 110, 0.36);
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #eedbb4;
+  font-size: 12px;
+  cursor: pointer;
+}
+.skyrim-guild-jump:hover,
+.skyrim-secondary-btn:hover {
+  border-color: #ebc67c;
+  background: rgba(216, 178, 110, 0.14);
+}
+.quests-close,
+.guild-close {
   display: grid;
   place-items: center;
   width: 30px;
   height: 30px;
   padding: 0;
-  border: 1px solid rgba(216, 178, 110, 0.34);
+  border: 1px solid rgba(216, 178, 110, 0.36);
   border-radius: 50%;
-  background: rgba(25, 20, 17, 0.8);
+  background: rgba(20, 18, 16, 0.88);
   color: #e9d7b5;
   font-size: 18px;
+  cursor: pointer;
 }
-.tavern-quest-list {
+.skyrim-journal-grid {
   display: grid;
-  margin-top: 6px;
+  grid-template-columns: minmax(250px, 0.88fr) minmax(0, 1.35fr);
+  min-height: 0;
 }
-.quest-row {
-  position: relative;
-  display: grid;
-  gap: 6px;
-  padding: 14px 12px 14px 18px;
-  border: 0;
-  border-bottom: 1px solid rgba(216, 178, 110, 0.16);
-  background: transparent;
-  transition: background 160ms ease;
+.skyrim-index-col {
+  min-height: 0;
+  overflow: auto;
+  padding: 14px 12px 18px;
+  border-right: 1px solid rgba(216, 178, 110, 0.22);
+  background: rgba(8, 9, 12, 0.56);
 }
-.quest-row:last-child {
-  border-bottom: 0;
+.skyrim-group + .skyrim-group {
+  margin-top: 14px;
 }
-.quest-row[data-status='active'] {
-  background: linear-gradient(90deg, rgba(216, 178, 110, 0.12), transparent 82%);
+.skyrim-group-label {
+  margin: 0 0 8px;
+  padding: 0 8px 4px;
+  border-bottom: 1px solid rgba(216, 178, 110, 0.18);
+  color: #b79c71;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
 }
-.quest-row:hover {
-  background: linear-gradient(90deg, rgba(216, 178, 110, 0.09), transparent 85%);
-}
-.quest-row-head {
+.skyrim-quest-item {
   display: flex;
-  align-items: baseline;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  transition:
+    background 140ms ease,
+    border-color 140ms ease;
+}
+.skyrim-quest-item + .skyrim-quest-item {
+  margin-top: 4px;
+}
+.skyrim-quest-item:hover {
+  background: rgba(216, 178, 110, 0.08);
+}
+.skyrim-quest-item.is-selected {
+  border-color: rgba(216, 178, 110, 0.42);
+  background: linear-gradient(90deg, rgba(216, 178, 110, 0.16), rgba(216, 178, 110, 0.03));
+}
+.skyrim-quest-tab {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px 4px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.skyrim-pointer {
+  flex: 0 0 auto;
+  margin-top: 2px;
+  color: #d6b26e;
+  font-size: 12px;
+}
+.skyrim-quest-item.is-ready .skyrim-pointer {
+  color: #f6cf78;
+}
+.skyrim-item-copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.skyrim-item-copy strong {
+  color: #f4e6c8;
+  font: 500 14px/1.3 var(--daily-serif);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.skyrim-group.is-completed-group .skyrim-item-copy strong {
+  color: #9e9689;
+}
+.skyrim-item-copy small {
+  color: #ab987a;
+  font-size: 11px;
+}
+.skyrim-quick-pick {
+  flex: 0 0 auto;
+  min-height: 26px;
+  padding: 0 10px;
+  border: 1px solid rgba(216, 178, 110, 0.48);
+  border-radius: 3px;
+  background: rgba(216, 178, 110, 0.14);
+  color: #f5dfaf;
+  font-size: 11px;
+  cursor: pointer;
+}
+.skyrim-quick-pick:hover {
+  background: rgba(235, 198, 126, 0.3);
+  border-color: #f5cf7f;
+}
+.skyrim-folio-col {
+  min-height: 0;
+  overflow: auto;
+  padding: 24px 28px;
+  background: radial-gradient(ellipse at 50% 0%, rgba(216, 178, 110, 0.06), transparent 65%);
+}
+.skyrim-folio {
+  display: grid;
+  gap: 14px;
+}
+.skyrim-folio-badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 11px;
+}
+.skyrim-folio-badges span {
+  padding: 2px 9px;
+  border: 1px solid rgba(216, 178, 110, 0.3);
+  border-radius: 2px;
+  color: #dec392;
+  background: rgba(216, 178, 110, 0.08);
+}
+.skyrim-folio-badges em {
+  font-style: normal;
+  color: #a9d5b2;
+  font-weight: 600;
+}
+.skyrim-folio-title {
+  margin: 4px 0 0;
+  text-align: center;
+  color: #fae8be;
+  font: 600 24px/1.28 var(--daily-serif);
+  letter-spacing: 0.08em;
+}
+.skyrim-divider-svg {
+  display: block;
+  width: min(340px, 100%);
+  height: 20px;
+  margin: 0 auto;
+  color: #c7a05d;
+}
+.skyrim-folio-desc {
+  margin: 0;
+  color: #d6cbb8;
+  font-size: 13.5px;
+  line-height: 1.75;
+}
+.skyrim-folio-where {
+  margin: 0;
+  padding: 8px 12px;
+  border-left: 2px solid rgba(216, 178, 110, 0.6);
+  background: rgba(216, 178, 110, 0.06);
+  color: #ead3a4;
+  font-size: 12.5px;
+}
+.skyrim-obj-heading {
+  margin: 4px 0 0;
+  color: #c2a77c;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.skyrim-obj-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
   gap: 8px;
 }
-.quest-sigil {
-  color: #b79c71;
-  font-size: 11px;
-}
-.quest-row[data-status='active'] .quest-sigil {
-  color: #f2cb7d;
-}
-.quest-row[data-status='completed'] .quest-sigil {
-  color: #82b594;
-}
-.quest-row-head b {
-  font: 600 15px/1.3 var(--daily-serif);
-  color: #f5e6c8;
-  letter-spacing: 0.03em;
-}
-.quest-meta-tag {
-  margin-left: auto;
-  color: #bfa984;
-  font-size: 11px;
-  white-space: nowrap;
-}
-.quest-desc {
-  margin: 0;
-  padding-left: 19px;
-  color: #c7b8a0;
+.skyrim-obj {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border: 1px solid rgba(216, 178, 110, 0.16);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.024);
   font-size: 13px;
-  line-height: 1.65;
 }
-.quest-waypoint,
-.quest-req {
-  margin: 0;
-  padding-left: 19px;
+.skyrim-obj.is-current {
+  border-color: rgba(235, 198, 126, 0.45);
+  background: rgba(216, 178, 110, 0.09);
+}
+.skyrim-obj.is-done {
+  opacity: 0.62;
+}
+.skyrim-obj.is-done span:nth-child(2) {
+  text-decoration: line-through;
+}
+.skyrim-obj-diamond {
+  color: #e6bf75;
   font-size: 12px;
-  color: #d8b572;
 }
-.quest-req {
-  color: #b7a892;
+.skyrim-obj em {
+  font-style: normal;
+  color: #bca989;
+  font-size: 11px;
 }
-.quest-row-actions {
-  display: flex;
-  justify-content: flex-end;
-  padding-top: 4px;
+.skyrim-reward-box {
+  padding: 10px 14px;
+  border: 1px solid rgba(216, 178, 110, 0.28);
+  border-radius: 4px;
+  background: rgba(216, 178, 110, 0.07);
 }
-.quest-row-actions button {
-  min-height: 30px;
-  padding: 4px 16px;
-  border: 1px solid rgba(216, 178, 110, 0.56);
-  border-radius: 3px;
-  background: linear-gradient(180deg, rgba(216, 178, 110, 0.2), rgba(145, 108, 52, 0.16));
+.skyrim-reward-box small {
+  display: block;
+  color: #bda06c;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+}
+.skyrim-reward-box p {
+  margin: 4px 0 0;
   color: #f6e1b2;
-  font-size: 12px;
-  letter-spacing: 0.06em;
+  font-size: 13px;
 }
-.quest-row-actions button:enabled:hover {
-  border-color: #f2cf84;
-  background: linear-gradient(180deg, rgba(235, 198, 126, 0.34), rgba(168, 125, 62, 0.26));
-  color: #fff6de;
+.skyrim-folio-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 6px;
 }
+.skyrim-primary-btn,
+.guild-btn-gold {
+  min-height: 34px;
+  padding: 0 18px;
+  border: 1px solid rgba(242, 204, 128, 0.68);
+  border-radius: 3px;
+  background: linear-gradient(135deg, #b88433, #e6be6c);
+  color: #191105;
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+.skyrim-primary-btn:enabled:hover,
+.guild-btn-gold:enabled:hover {
+  filter: brightness(1.08);
+}
+.skyrim-folio-empty,
 .quests-empty {
-  margin: 26px 0;
+  display: grid;
+  place-items: center;
+  gap: 12px;
+  margin: 34px 12px;
   text-align: center;
   color: #a99880;
   font-size: 13px;
+}
+.skyrim-quest-banner {
+  position: fixed;
+  top: 22px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 80;
+  pointer-events: none;
+  padding: 12px 34px 10px;
+  min-width: min(460px, calc(100vw - 32px));
+  text-align: center;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(16, 15, 18, 0.94),
+    rgba(16, 15, 18, 0.68) 76%,
+    transparent
+  );
+  color: #f6e2b4;
+}
+.skyrim-quest-banner[hidden] {
+  display: none;
+}
+.skyrim-banner-kicker {
+  display: block;
+  color: #cda96a;
+  font-size: 10px;
+  letter-spacing: 0.24em;
+}
+.skyrim-banner-title {
+  display: block;
+  margin: 4px 0 2px;
+  font: 600 21px/1.25 var(--daily-serif);
+  letter-spacing: 0.1em;
+  color: #fff0c8;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.85);
+}
+.skyrim-banner-detail {
+  display: block;
+  margin-bottom: 2px;
+  color: #d6c49e;
+  font-size: 12px;
+}
+@media (max-width: 720px) {
+  .skyrim-journal-grid {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(150px, 0.45fr) minmax(0, 1fr);
+  }
+  .skyrim-index-col {
+    border-right: 0;
+    border-bottom: 1px solid rgba(216, 178, 110, 0.22);
+  }
 }
 .daily-clock-pill {
   display: inline-flex;
@@ -650,7 +893,7 @@ body.ring-cabinet-open #daily-hud {
   padding: 10px 0;
   border-bottom: 1px solid rgba(216, 178, 110, 0.18);
 }
-:is(#daily-hud, #daily-setup, .player-intent) button {
+:is(#daily-hud, #daily-setup) button {
   min-height: 40px;
   padding: 8px 14px;
   border: 1px solid var(--daily-line);
@@ -671,11 +914,11 @@ body.ring-cabinet-open #daily-hud {
     box-shadow 160ms ease,
     transform 160ms ease;
 }
-:is(#daily-hud, #daily-setup, .player-intent) button:focus-visible {
+:is(#daily-hud, #daily-setup) button:focus-visible {
   outline: 2px solid var(--daily-hot);
   outline-offset: 2px;
 }
-:is(#daily-hud, #daily-setup, .player-intent) button:enabled:hover {
+:is(#daily-hud, #daily-setup) button:enabled:hover {
   border-color: var(--daily-line-strong);
   color: #fff7e5;
   background: linear-gradient(180deg, rgba(58, 81, 66, 0.92), rgba(19, 35, 28, 0.95));
@@ -1047,9 +1290,10 @@ body.ring-cabinet-open #daily-hud {
   font-size: 10px;
 }
 
-/* Setup dialogs: engraved night panels, portraits as small framed cards. */
-:is(#daily-setup, .player-intent) {
+/* Setup dialog: engraved night panel, portraits as small framed cards. */
+#daily-setup {
   position: fixed;
+  width: min(720px, calc(100vw - 20px));
   max-width: none;
   max-height: calc(100dvh - 20px);
   margin: auto;
@@ -1067,43 +1311,299 @@ body.ring-cabinet-open #daily-hud {
     inset 0 0 0 5px rgba(226, 186, 111, 0.025);
   scrollbar-gutter: stable;
 }
-:is(#daily-setup, .player-intent)::backdrop {
+#daily-setup::backdrop {
   background: rgba(3, 8, 7, 0.78);
   backdrop-filter: blur(7px);
   -webkit-backdrop-filter: blur(7px);
 }
-#daily-setup {
-  width: min(720px, calc(100vw - 20px));
-}
 .player-intent {
-  width: min(480px, calc(100vw - 32px));
-  padding: 22px;
+  position: fixed;
+  width: min(520px, calc(100vw - 28px));
+  max-width: none;
+  max-height: calc(100dvh - 28px);
+  margin: auto;
+  padding: 24px 26px 22px;
+  overflow: auto;
+  border: 1px solid rgba(226, 186, 111, 0.36);
+  border-radius: 16px;
+  color: #f4ebd8;
+  background:
+    radial-gradient(ellipse at 50% -12%, rgba(232, 189, 108, 0.18), transparent 56%),
+    linear-gradient(155deg, rgba(16, 20, 34, 0.98), rgba(8, 11, 20, 0.99));
+  box-shadow:
+    0 28px 90px rgba(0, 0, 0, 0.88),
+    inset 0 1px 0 rgba(255, 244, 214, 0.14),
+    inset 0 0 0 1px rgba(226, 186, 111, 0.08);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  scrollbar-gutter: stable;
 }
-.player-intent h2,
-.player-intent p {
-  margin: 0;
+.player-intent::backdrop {
+  background: rgba(4, 7, 14, 0.8);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
-.player-intent p {
-  color: var(--daily-hot);
+.player-intent form {
+  display: grid;
+  gap: 16px;
 }
-.player-intent form,
-.player-intent label {
+.player-intent-head {
   display: grid;
   gap: 10px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(226, 186, 111, 0.18);
+}
+.player-intent-kicker {
+  color: rgba(232, 194, 122, 0.82);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  line-height: 1.4;
+}
+.player-intent h2 {
+  margin: 0;
+  color: #faeed5;
+  font-family: var(--daily-serif);
+  font-size: 23px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  line-height: 1.25;
+}
+.player-intent-route {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border: 1px solid rgba(226, 186, 111, 0.24);
+  border-radius: 11px;
+  background: linear-gradient(135deg, rgba(226, 186, 111, 0.09), rgba(20, 26, 44, 0.56));
+}
+.player-intent-stop {
+  display: grid;
+  gap: 2px;
+}
+.player-intent-stop small {
+  color: rgba(226, 196, 134, 0.66);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+}
+.player-intent-stop strong {
+  color: #f8ecd0;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.player-intent-stop-dest {
+  text-align: right;
+}
+.player-intent-track {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  min-width: 96px;
+}
+.player-intent-track-line {
+  position: relative;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    rgba(226, 186, 111, 0.25),
+    rgba(241, 206, 132, 0.85),
+    rgba(226, 186, 111, 0.25)
+  );
+}
+.player-intent-track-line::before {
+  content: '◆';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -52%);
+  padding: 0 5px;
+  color: #f2cb79;
+  background: #131827;
+  font-size: 10px;
+  line-height: 1;
+}
+.player-intent-track span {
+  color: #edd095;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.player-intent-detail {
+  justify-self: start;
+  margin: 0;
+  padding: 6px 12px;
+  border: 1px solid rgba(226, 186, 111, 0.26);
+  border-radius: 999px;
+  color: #edd095;
+  background: rgba(226, 186, 111, 0.09);
+  font-size: 12px;
+  letter-spacing: 0.03em;
+}
+.player-intent-body {
+  display: grid;
+  gap: 14px;
+}
+.player-intent-skip {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid rgba(226, 186, 111, 0.22);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.028);
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease;
+}
+.player-intent-skip:hover {
+  border-color: rgba(226, 186, 111, 0.44);
+  background: rgba(226, 186, 111, 0.07);
+}
+.player-intent[data-skip-api='true'] .player-intent-skip {
+  border-color: rgba(234, 194, 112, 0.62);
+  background: linear-gradient(135deg, rgba(226, 186, 111, 0.16), rgba(226, 186, 111, 0.05));
+}
+.player-intent-skip input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}
+.player-intent-skip-copy {
+  display: grid;
+  gap: 3px;
+}
+.player-intent-skip-copy strong {
+  color: #f6e7c7;
+  font-size: 13px;
+  font-weight: 600;
+}
+.player-intent-skip-copy small {
+  color: rgba(217, 212, 198, 0.68);
+  font-size: 11px;
+  line-height: 1.45;
+}
+.player-intent-switch-pill {
+  position: relative;
+  width: 42px;
+  height: 24px;
+  border: 1px solid rgba(226, 186, 111, 0.34);
+  border-radius: 999px;
+  background: rgba(7, 10, 18, 0.85);
+  transition:
+    background 160ms ease,
+    border-color 160ms ease;
+}
+.player-intent-switch-pill::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #cab68c;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+  transition:
+    transform 160ms ease,
+    background 160ms ease;
+}
+.player-intent-skip input:checked ~ .player-intent-switch-pill {
+  border-color: #f0ca7d;
+  background: linear-gradient(135deg, #c99742, #e5be70);
+}
+.player-intent-skip input:checked ~ .player-intent-switch-pill::after {
+  transform: translateX(18px);
+  background: #171209;
+}
+.player-intent-note {
+  display: grid;
+  gap: 8px;
+  transition: opacity 160ms ease;
+}
+.player-intent[data-skip-api='true'] .player-intent-note {
+  opacity: 0.45;
+}
+.player-intent-note > span {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  color: #e7dbc0;
+  font-size: 13px;
+}
+.player-intent-note > span small {
+  color: rgba(217, 212, 198, 0.56);
+  font-size: 11px;
 }
 .player-intent textarea {
   width: 100%;
-  padding: 9px 11px;
-  border: 1px solid var(--daily-line-strong);
-  color: inherit;
-  background: #0c1712;
+  min-height: 82px;
+  padding: 11px 13px;
+  border: 1px solid rgba(226, 186, 111, 0.24);
+  border-radius: 10px;
+  color: #f7eed9;
+  background: rgba(7, 10, 17, 0.78);
   font: inherit;
+  font-size: 13px;
+  line-height: 1.55;
   resize: vertical;
+  outline: none;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+.player-intent textarea:focus {
+  border-color: rgba(236, 196, 116, 0.72);
+  box-shadow: 0 0 0 3px rgba(226, 186, 111, 0.14);
 }
 .player-intent footer {
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
-  gap: 8px;
+  gap: 9px;
+  padding-top: 4px;
+}
+.player-intent footer button {
+  min-height: 36px;
+  padding: 0 15px;
+  border: 1px solid rgba(226, 186, 111, 0.24);
+  border-radius: 999px;
+  color: #e5dbc3;
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 13px;
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    color 160ms ease;
+}
+.player-intent footer button:hover {
+  border-color: rgba(226, 186, 111, 0.52);
+  background: rgba(226, 186, 111, 0.1);
+}
+.player-intent footer button[data-intent-fast] {
+  border-color: rgba(130, 198, 166, 0.34);
+  color: #b7ebd4;
+  background: rgba(45, 112, 86, 0.18);
+}
+.player-intent footer button.primary {
+  border-color: rgba(242, 204, 128, 0.65);
+  color: #1c1306;
+  background: linear-gradient(135deg, #d7a64e, #f1cf84);
+  font-weight: 600;
+}
+.player-intent footer button.primary:hover {
+  filter: brightness(1.06);
 }
 .daily-setup-body h3 {
   margin: 14px 0 6px;
@@ -1890,4 +2390,325 @@ body.ring-cabinet-open #daily-hud {
 }
 #daily-atlas-frame[hidden] {
   display: none;
+}
+
+/* Adventurer's Guild dialog */
+#guild-dialog {
+  width: min(940px, calc(100vw - 24px));
+  height: min(650px, calc(100dvh - 28px));
+  max-width: none;
+  max-height: calc(100dvh - 24px);
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid rgba(216, 178, 110, 0.44);
+  border-radius: 10px;
+  color: #efe5cf;
+  background:
+    radial-gradient(ellipse at 25% 0%, rgba(216, 178, 110, 0.14), transparent 52%),
+    linear-gradient(165deg, #151722, #0b0c12);
+  box-shadow: 0 30px 96px rgba(0, 0, 0, 0.9);
+}
+#guild-dialog[open] {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+}
+.guild-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 22px;
+  border-bottom: 1px solid rgba(216, 178, 110, 0.24);
+  background: rgba(18, 20, 30, 0.96);
+}
+.guild-crest-badge {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border: 2px solid #e6bf72;
+  border-radius: 10px;
+  background: radial-gradient(circle at 35% 28%, #5e4422, #23180b);
+  color: #ffefc2;
+  line-height: 1;
+}
+.guild-crest-badge span {
+  font: 700 22px/1 var(--daily-serif);
+}
+.guild-crest-badge small {
+  font-size: 8px;
+  letter-spacing: 0.16em;
+  color: #d6b67d;
+}
+.guild-head-info {
+  flex: 1 1 260px;
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+.guild-head-info > small {
+  color: #bfa172;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+}
+.guild-head-info h2 {
+  margin: 0;
+  color: #fae6b9;
+  font: 600 20px/1.2 var(--daily-serif);
+}
+.guild-merit-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: #cbb897;
+}
+.guild-merit-bar {
+  width: 110px;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+.guild-merit-bar i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #b88433, #f3ce7b);
+}
+.guild-rank-pips {
+  display: inline-flex;
+  gap: 3px;
+}
+.guild-tier-pip {
+  padding: 1px 5px;
+  border-radius: 2px;
+  border: 1px solid rgba(216, 178, 110, 0.22);
+  color: #8f8473;
+  font-size: 10px;
+}
+.guild-tier-pip.is-current {
+  border-color: #f0ca7d;
+  background: rgba(216, 178, 110, 0.2);
+  color: #fff2ce;
+  font-weight: 700;
+}
+.guild-head-right {
+  text-align: right;
+  font-size: 12px;
+}
+.guild-wallet b {
+  color: #f5d182;
+}
+.guild-perks {
+  color: #95d3ab;
+  font-size: 11px;
+  margin-top: 2px;
+}
+.guild-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 10px 22px;
+  border-bottom: 1px solid rgba(216, 178, 110, 0.18);
+  background: rgba(12, 13, 20, 0.88);
+}
+.guild-tabs button {
+  display: grid;
+  justify-items: start;
+  gap: 1px;
+  padding: 7px 14px;
+  border: 1px solid rgba(216, 178, 110, 0.24);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.03);
+  color: #cbbca0;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.guild-tabs button small {
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  color: #8f8069;
+}
+.guild-tabs button[aria-selected='true'] {
+  border-color: #ebc67c;
+  background: linear-gradient(135deg, rgba(216, 178, 110, 0.22), rgba(216, 178, 110, 0.06));
+  color: #fff0cb;
+}
+.guild-tabs button[aria-selected='true'] small {
+  color: #dfbd7b;
+}
+.guild-body {
+  min-height: 0;
+  overflow: auto;
+  padding: 18px 22px;
+}
+.guild-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(265px, 1fr));
+  gap: 12px;
+}
+.guild-card {
+  display: grid;
+  gap: 9px;
+  align-content: start;
+  padding: 14px;
+  border: 1px solid rgba(216, 178, 110, 0.22);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+}
+.guild-card.is-ready {
+  border-color: rgba(242, 204, 128, 0.65);
+  background: rgba(216, 178, 110, 0.08);
+}
+.guild-card-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.guild-rank-seal,
+.guild-supply-icon {
+  flex: 0 0 34px;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(216, 178, 110, 0.45);
+  border-radius: 6px;
+  background: rgba(216, 178, 110, 0.12);
+  color: #f6d58b;
+  font: 700 15px/1 var(--daily-serif);
+}
+.guild-card-meta small {
+  display: block;
+  color: #b79c71;
+  font-size: 11px;
+}
+.guild-card-meta h3 {
+  margin: 2px 0 0;
+  color: #f7e6bf;
+  font: 600 15px/1.25 var(--daily-serif);
+}
+.guild-badge {
+  margin-left: auto;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-style: normal;
+  font-size: 10px;
+}
+.guild-badge.is-ready {
+  background: rgba(240, 198, 108, 0.22);
+  color: #ffe39a;
+}
+.guild-badge.is-active {
+  background: rgba(114, 184, 146, 0.18);
+  color: #9de2b8;
+}
+.guild-badge.is-done {
+  background: rgba(255, 255, 255, 0.08);
+  color: #a99d88;
+}
+.guild-card-desc,
+.guild-card-obj {
+  margin: 0;
+  color: #ccc0ab;
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+.guild-card-obj {
+  color: #ead3a4;
+}
+.guild-card-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 8px;
+  border-top: 1px solid rgba(216, 178, 110, 0.14);
+}
+.guild-reward-text {
+  color: #e4c586;
+  font-size: 11.5px;
+}
+.guild-card-btns button,
+.guild-intel-actions button {
+  min-height: 30px;
+  padding: 0 12px;
+  border: 1px solid rgba(216, 178, 110, 0.34);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #efe2c8;
+  font-size: 12px;
+  cursor: pointer;
+}
+.guild-card-btns button.guild-btn-gold,
+.guild-intel-actions button.guild-btn-gold {
+  border-color: rgba(242, 204, 128, 0.68);
+  color: #191105;
+  background: linear-gradient(135deg, #b88433, #e6be6c);
+}
+.guild-intel-list {
+  display: grid;
+  gap: 9px;
+}
+.guild-intel-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid rgba(216, 178, 110, 0.2);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.025);
+}
+.guild-intel-row.is-open {
+  border-color: rgba(216, 178, 110, 0.36);
+}
+.guild-intel-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.guild-tier-tag {
+  padding: 1px 7px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  background: rgba(128, 186, 146, 0.2);
+  color: #a4e3ba;
+}
+.guild-tier-tag[data-tier='中阶'] {
+  background: rgba(216, 178, 110, 0.22);
+  color: #f3d082;
+}
+.guild-tier-tag[data-tier='高阶'] {
+  background: rgba(220, 96, 86, 0.24);
+  color: #f6b2ab;
+}
+.guild-gate-chip {
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-style: normal;
+  font-size: 10px;
+  background: rgba(114, 184, 146, 0.16);
+  color: #9ce0b5;
+}
+.guild-gate-chip.is-unvisited {
+  background: rgba(255, 255, 255, 0.07);
+  color: #9e9482;
+}
+.guild-intel-detail,
+.guild-intel-note,
+.guild-intel-masked {
+  margin: 5px 0 0;
+  color: #c5ba9e;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.guild-intel-masked {
+  color: #8f8678;
 }

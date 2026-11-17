@@ -1,4 +1,11 @@
-import { BASE_WORLDS, routeKey, isEndless, validateEncounters } from './worlds.js';
+import {
+  BASE_WORLDS,
+  EMPIRE_TRANSITION_DUNGEONS,
+  UNLOCKABLE_DUNGEONS,
+  routeKey,
+  isEndless,
+  validateEncounters,
+} from './worlds.js';
 import { ENCOUNTER_COUNT, FINAL_ENCOUNTER } from './content/journey-rules.js';
 import { REGIONS, regionTaskHookFor } from './content/regions.js';
 import { forestEncounterSpec } from './content/forest-encounters.js';
@@ -8,6 +15,8 @@ import { DEFINITIONS } from './data.js';
 import { tutorialSpec } from './content/tutorial.js';
 import { ruinsEncounterSpec } from './content/ruins-encounters.js';
 import { encounterLevel } from './enemy-growth.js';
+
+const ALL_ROUTE_MAP_IDS = Object.freeze([...MAP_IDS, ...EMPIRE_TRANSITION_DUNGEONS]);
 
 function random(seed) {
   let state = seed >>> 0;
@@ -33,7 +42,7 @@ function node(map, sequence, seed, continuation = null, parentId = null, depth =
 
 export function newExploration(seed = 17371) {
   return Object.fromEntries(
-    MAP_IDS.map((map, index) => [
+    ALL_ROUTE_MAP_IDS.map((map, index) => [
       map,
       {
         completed: 0,
@@ -109,8 +118,8 @@ export function explorationPreview(route, map) {
 export function restoreExploration(value, seed = 17371, worlds = []) {
   const result = newExploration(seed);
   for (const key of [
-    ...MAP_IDS,
-    ...worlds.filter((world) => !MAP_IDS.includes(world.id)).map((world) => world.id),
+    ...ALL_ROUTE_MAP_IDS,
+    ...worlds.filter((world) => !ALL_ROUTE_MAP_IDS.includes(world.id)).map((world) => world.id),
   ]) {
     const world = worlds.find((entry) => entry.id === key);
     const map = world?.map || key;
@@ -382,11 +391,11 @@ export function addWorldRoute(routes, world, seed = Math.floor(Math.random() * 4
   };
 }
 
-/** Record an overland-visited base ruin into the tavern's Dungeon Gate portal list. */
+/** Record an overland-visited base or transition ruin into the tavern's Dungeon Gate portal list. */
 export function unlockDungeonMap(library, mapId) {
-  if (!library || !BASE_WORLDS.includes(mapId)) return false;
+  if (!library || !UNLOCKABLE_DUNGEONS.includes(mapId)) return false;
   library.unlockedDungeons = Array.isArray(library.unlockedDungeons)
-    ? [...new Set(library.unlockedDungeons.filter((id) => BASE_WORLDS.includes(id)))]
+    ? [...new Set(library.unlockedDungeons.filter((id) => UNLOCKABLE_DUNGEONS.includes(id)))]
     : [];
   if (library.unlockedDungeons.includes(mapId)) return false;
   library.unlockedDungeons.push(mapId);

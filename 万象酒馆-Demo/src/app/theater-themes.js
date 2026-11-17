@@ -1,4 +1,5 @@
 import { BIOMES } from '../content/biomes.js';
+import { REGIONS } from '../content/regions.js';
 export {
   buildAstrolabeBackdropSvg,
   buildCornerFiligreeSvg,
@@ -211,7 +212,7 @@ function toRomanAct(act) {
 
 /** Resolve palette, artwork, crest, particles, and cues for a fullscreen Theater appearance. */
 export function resolveTheaterTheme({ map = 'ruins', mode = 'intro', place = '', act = 1 } = {}) {
-  const biomeKey = BIOMES[map] ? map : 'ruins';
+  const biomeKey = BIOMES[map] ? map : REGIONS[map]?.biome || 'ruins';
   const biome = BIOMES[biomeKey] || BIOMES.ruins;
   const profile = BIOME_PROFILE[biomeKey] || BIOME_PROFILE.ruins;
   const isEpilogue = mode === 'epilogue' || mode === 'overland-epilogue';

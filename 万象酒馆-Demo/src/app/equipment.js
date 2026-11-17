@@ -5,6 +5,7 @@ import { createEquipmentPicker } from './equipment-picker.js';
 import { createRawResponse } from './raw-response.js';
 import { createForgeResults } from './forge-results.js';
 import { EMBLEMS, equipEmblem } from '../emblems.js';
+import { equipUniversalSkill } from '../learnable-skills.js';
 import { emblemIconSvg, emblemVisual } from './emblem-icons.js';
 import {
   EQUIPMENT_CATEGORIES,
@@ -737,6 +738,25 @@ export function createEquipment(context) {
         await context.storage.flush?.();
         context.shell.renderParty();
         context.emblems?.equipped();
+      } catch (failure) {
+        context.shell.toast(failure.message);
+        context.shell.renderParty();
+      }
+      return;
+    }
+    const skillSelect = event.target.closest('[data-universal-skill-character]');
+    if (skillSelect) {
+      try {
+        if (session.runtime.mode === 'battle') throw Error('战斗中不能更换通用战技');
+        equipUniversalSkill(
+          library(),
+          skillSelect.dataset.universalSkillCharacter,
+          Number(skillSelect.dataset.universalSkillSlot),
+          skillSelect.value,
+        );
+        if (context.generation.save() === false) throw Error('战技未能保存，请先整理存储空间');
+        await context.storage.flush?.();
+        context.shell.renderParty();
       } catch (failure) {
         context.shell.toast(failure.message);
         context.shell.renderParty();

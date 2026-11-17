@@ -27,6 +27,12 @@ const STOP_LABELS = Object.freeze({
   frost: { dungeon: true },
   forge: { dungeon: true },
   tide: { dungeon: true },
+  'moss-hollow': { dungeon: true },
+  'border-watch': { dungeon: true },
+  'whisper-grove': { dungeon: true },
+  'silver-cistern': { dungeon: true },
+  'ash-foundry': { dungeon: true },
+  'astral-sanctum': { dungeon: true },
 });
 const LEG_ANCHORS = Object.freeze({
   'bridge-patrol': { x: -15.5, y: -2.9, above: true },
@@ -85,10 +91,16 @@ export function createAtlasTravel({ dialog, events, scene, onTravel }) {
   }
 
   const DUNGEON_LEVEL_RANGES = Object.freeze({
+    'moss-hollow': 'Lv.2-4',
+    'border-watch': 'Lv.6-8',
     ruins: 'Lv.5-8',
+    'whisper-grove': 'Lv.10-13',
     forest: 'Lv.12-16',
+    'silver-cistern': 'Lv.15-18',
     frost: 'Lv.16-20',
+    'ash-foundry': 'Lv.20-23',
     forge: 'Lv.22-26',
+    'astral-sanctum': 'Lv.25-28',
     tide: 'Lv.26-30',
   });
 

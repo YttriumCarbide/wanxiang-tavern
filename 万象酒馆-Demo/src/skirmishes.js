@@ -17,7 +17,7 @@ export const SKIRMISH_ELIGIBLE_NODES = Object.freeze([
   'ainoblin',
 ]);
 
-const ECOLOGIES = Object.freeze({
+export const SKIRMISH_ECOLOGIES = Object.freeze({
   plains: Object.freeze({
     label: '草原哨路巡逻队',
     mobs: [
@@ -29,9 +29,20 @@ const ECOLOGIES = Object.freeze({
       'greyProwler',
       'facetSkitter',
       'trailArbalist',
+      'banditCutthroat',
+      'banditPoacher',
+      'goblinScavenger',
+      'goblinSlinger',
     ],
-    elites: ['warden', 'corridorGuard', 'hollowSentry', 'oathlessDuelist'],
-    bosses: ['ruinsGate', 'mossGulon', 'manyShellBeast'],
+    elites: [
+      'warden',
+      'corridorGuard',
+      'hollowSentry',
+      'oathlessDuelist',
+      'banditExecutioner',
+      'goblinWolfRider',
+    ],
+    bosses: ['ruinsGate', 'mossGulon', 'manyShellBeast', 'banditSyndicateKing', 'goblinKingGorg'],
     ingredients: ['flour', 'butter', 'herb', 'honey', 'tomato', 'egg', 'pork'],
   }),
   ruins: Object.freeze({
@@ -46,9 +57,19 @@ const ECOLOGIES = Object.freeze({
       'cultistSpecter',
       'blackOoze',
       'voidParasite',
+      'erosionCrawler',
+      'erosionSpitter',
+      'erosionHound',
     ],
-    elites: ['shadowStalker', 'ruinsMudGolem', 'tombWarden', 'warden'],
-    bosses: ['ruinsGate', 'chasmBeast', 'brassColossus', 'cinderPriest', 'bossGate'],
+    elites: ['shadowStalker', 'ruinsMudGolem', 'tombWarden', 'warden', 'erosionJuggernaut'],
+    bosses: [
+      'ruinsGate',
+      'chasmBeast',
+      'brassColossus',
+      'cinderPriest',
+      'bossGate',
+      'erosionRiftTyrant',
+    ],
     ingredients: ['mushroom', 'garlic', 'cheese', 'amber-root', 'frost-oyster', 'wine'],
   }),
   forest: Object.freeze({
@@ -65,22 +86,49 @@ const ECOLOGIES = Object.freeze({
       'twistedSapling',
       'barkAcolyte',
       'moonTendril',
+      'goblinScavenger',
+      'goblinShaman',
+      'banditPoacher',
     ],
-    elites: ['bogDrifter', 'hiveGuard', 'scaleShield', 'rootHauler', 'rootSentry'],
+    elites: [
+      'bogDrifter',
+      'hiveGuard',
+      'scaleShield',
+      'rootHauler',
+      'rootSentry',
+      'goblinWolfRider',
+    ],
     bosses: [
       'mossGulon',
       'bogElemental',
-      'moonQueen',
       'scaleCaptain',
       'maskedForester',
       'bossBloom',
+      'goblinKingGorg',
     ],
     ingredients: ['mushroom', 'berry', 'honey', 'milk', 'chicken', 'fir-shoot', 'ruby-berry'],
   }),
   highland: Object.freeze({
     label: '北境矿道警戒群',
-    mobs: ['rustMiner', 'drillWorm', 'railSpider', 'greyStinger', 'dustHexer', 'veilMender'],
-    elites: ['frostBorer', 'hollowSentry', 'crystalBeetle'],
+    mobs: [
+      'rustMiner',
+      'drillWorm',
+      'railSpider',
+      'greyStinger',
+      'dustHexer',
+      'veilMender',
+      'banditBruiser',
+      'banditAlchemist',
+      'goblinSapper',
+      'erosionWing',
+    ],
+    elites: [
+      'frostBorer',
+      'hollowSentry',
+      'crystalBeetle',
+      'banditExecutioner',
+      'erosionJuggernaut',
+    ],
     bosses: [
       'frostCrusher',
       'drillMatriarch',
@@ -88,17 +136,37 @@ const ECOLOGIES = Object.freeze({
       'repairOverseer',
       'settlementLeader',
       'unmooredJudge',
+      'banditSyndicateKing',
     ],
     ingredients: ['potato', 'beef', 'onion', 'chili', 'cheese', 'game-bird', 'wine'],
   }),
   coast: Object.freeze({
     label: '东境荒潮异兽群',
-    mobs: ['cinderImp', 'tideJelly', 'hexer', 'riftMote', 'shellGatherer', 'brassSeeker'],
-    elites: ['crystalBeetle', 'hollowSentry', 'oathlessDuelist', 'tombWarden'],
-    bosses: ['bossTide', 'returningCore', 'unmooredJudge', 'manyShellBeast', 'brassColossus'],
+    mobs: [
+      'cinderImp',
+      'tideJelly',
+      'hexer',
+      'riftMote',
+      'shellGatherer',
+      'brassSeeker',
+      'erosionCrawler',
+      'erosionSpitter',
+      'erosionWing',
+    ],
+    elites: ['crystalBeetle', 'hollowSentry', 'oathlessDuelist', 'tombWarden', 'erosionJuggernaut'],
+    bosses: [
+      'bossTide',
+      'returningCore',
+      'unmooredJudge',
+      'manyShellBeast',
+      'brassColossus',
+      'erosionRiftTyrant',
+    ],
     ingredients: ['fish', 'honey-kelp', 'mint-leaf', 'salt', 'silverfin', 'moonflower'],
   }),
 });
+
+const ECOLOGIES = SKIRMISH_ECOLOGIES;
 
 const NODE_ECOLOGY_MAP = Object.freeze({
   'cross-meadow': { ecology: 'plains', level: 5 },
@@ -119,6 +187,12 @@ const NODE_ECOLOGY_MAP = Object.freeze({
   forge: { ecology: 'coast', level: 24 },
   'cross-causeway': { ecology: 'coast', level: 26 },
   tide: { ecology: 'coast', level: 29 },
+  'moss-hollow': { ecology: 'plains', level: 3 },
+  'border-watch': { ecology: 'ruins', level: 7 },
+  'whisper-grove': { ecology: 'forest', level: 11 },
+  'silver-cistern': { ecology: 'highland', level: 16 },
+  'ash-foundry': { ecology: 'coast', level: 22 },
+  'astral-sanctum': { ecology: 'coast', level: 27 },
 });
 
 function hashSeed(input) {

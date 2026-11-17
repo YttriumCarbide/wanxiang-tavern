@@ -1,5 +1,6 @@
 // Presentation only: routes and encounters remain owned by exploration.js.
 import { MAP_IDS } from './content/biomes.js';
+import { REGIONS } from './content/regions.js';
 
 function random(seed) {
   let value = seed >>> 0;
@@ -47,7 +48,7 @@ export function destinationMap(entries) {
   return {
     positions,
     width: Math.max(1180, ...[...positions.values()].map(({ x }) => x + 130)),
-    height: Math.max(780, ...[...positions.values()].map(({ y }) => y + 110)),
+    height: Math.max(820, ...[...positions.values()].map(({ y }) => y + 210)),
   };
 }
 
@@ -126,4 +127,46 @@ export function destinationMark(seed, cleared) {
     cross +
     '</svg>'
   );
+}
+
+/** Atmospheric hand-drawn ink terrain and contours for regional dungeon parchment. */
+export function destinationRegionTerrain(mapId, width, height, positions) {
+  const safeW = Math.max(800, Number(width) || 1200);
+  const safeH = Math.max(600, Number(height) || 780);
+  const motifKey = REGIONS[mapId]?.biome || mapId;
+  const motif =
+    {
+      ruins: (x, y) =>
+        `<path d="M${x - 18} ${y + 12}h36M${x - 12} ${y + 12}v-20h6v20M${x + 6} ${y + 12}v-14l6-4v18" />`,
+      forest: (x, y) =>
+        `<path d="M${x - 16} ${y + 8}q8-18 16 0t16 0M${x - 10} ${y + 14}q10-20 20 0" />`,
+      frost: (x, y) => `<path d="M${x} ${y - 16}l8 22h-16zM${x + 12} ${y - 8}l6 14h-12z" />`,
+      castle: (x, y) =>
+        `<path d="M${x - 16} ${y + 12}h32v-16h-6v4h-6v-4h-8v4h-6v-4h-6zM${x - 5} ${y + 12}v-7a5 5 0 0 1 10 0v7" />`,
+      arcane: (x, y) =>
+        `<circle cx="${x}" cy="${y}" r="12" /><path d="M${x} ${y - 15}L${x + 5} ${y}L${x} ${y + 15}L${x - 5} ${y}Z" />`,
+      forge: (x, y) =>
+        `<path d="M${x - 14} ${y + 10}h28v-8h-8l-4-12h-8l-3 12h-5zM${x - 3} ${y - 15}c-3-6 5-10 2-15" />`,
+      tide: (x, y) =>
+        `<path d="M${x - 18} ${y + 6}c6-6 12 6 18 0s12 6 18 0M${x - 12} ${y + 13}c5-4 10 4 15 0s10 4 15 0" />`,
+    }[motifKey] || ((x, y) => `<circle cx="${x}" cy="${y}" r="14" stroke-dasharray="3 4" />`);
+
+  const contours = [...positions.values()]
+    .map((pt, idx) => {
+      const rx = 56 + (idx % 3) * 14;
+      const ry = 36 + (idx % 2) * 10;
+      const mx = Math.round(pt.x + (idx % 2 ? -86 : 94));
+      const my = Math.round(pt.y + (idx % 2 ? 78 : -74));
+      return (
+        `<ellipse class="terrain-contour" cx="${Math.round(pt.x)}" cy="${Math.round(pt.y)}" rx="${rx}" ry="${ry}" />` +
+        `<g class="terrain-motif">${motif(mx, my)}</g>`
+      );
+    })
+    .join('');
+
+  return `<g class="destination-terrain-layer">
+    <rect class="terrain-frame-outer" x="18" y="18" width="${safeW - 36}" height="${safeH - 36}" rx="6" />
+    <rect class="terrain-frame-inner" x="26" y="26" width="${safeW - 52}" height="${safeH - 52}" rx="3" />
+    ${contours}
+  </g>`;
 }

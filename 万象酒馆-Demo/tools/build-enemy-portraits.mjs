@@ -283,11 +283,13 @@ export async function buildEnemyPortraits() {
     ...EXTRA_BOSSES,
     ...RUINS_BOSSES,
   ];
-  for (const enemy of enemies)
+  for (const enemy of enemies) {
+    if (enemy.overlord || enemy.standOnCard) continue;
     await writeFile(
       new URL(`../assets/portraits/${enemy.portrait}.svg`, import.meta.url),
       enemyPortrait(enemy),
     );
+  }
   return enemies.length;
 }
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1])

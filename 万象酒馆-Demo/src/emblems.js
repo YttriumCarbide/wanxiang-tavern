@@ -141,13 +141,96 @@ export function equipEmblem(library, memberId, emblemId) {
   member.emblemId = emblemId || null;
 }
 
+export const EMBLEM_VISUALS = Object.freeze({
+  [EMBLEM_ID]: Object.freeze({
+    id: EMBLEM_ID,
+    cssClass: 'emblem-tan-hongyu',
+    auraStyle: 'solar-scales',
+    primary: '#f2c15a',
+    secondary: '#4de1c4',
+    glow: '#ffe082',
+    accent: '#ffb300',
+    core: '#fff7d6',
+    deep: '#5c3c08',
+    pixelfxPalette: Object.freeze(['#482606', '#a86716', '#f2c15a', '#4de1c4', '#fff5cc']),
+    engageFx: 'holy-pillar',
+    skillFx: 'star-fall',
+    passiveFx: 'blessing',
+  }),
+  [OVERLOAD_EMBLEM_ID]: Object.freeze({
+    id: OVERLOAD_EMBLEM_ID,
+    cssClass: 'emblem-mizunatsuki-ran',
+    auraStyle: 'overload-arc',
+    primary: '#c87eff',
+    secondary: '#ff5eb8',
+    glow: '#e4a8ff',
+    accent: '#7848ff',
+    core: '#fdf2ff',
+    deep: '#33115e',
+    pixelfxPalette: Object.freeze(['#260a47', '#6c24b8', '#c87eff', '#ff5eb8', '#ffffff']),
+    engageFx: 'charge-up',
+    skillFx: 'chain-lightning',
+    passiveFx: 'zap-hit',
+  }),
+  [DRAGON_EMBLEM_ID]: Object.freeze({
+    id: DRAGON_EMBLEM_ID,
+    cssClass: 'emblem-kamui',
+    auraStyle: 'dragon-tide',
+    primary: '#3fd4c6',
+    secondary: '#2f82ff',
+    glow: '#88f5eb',
+    accent: '#18a4e0',
+    core: '#e6fffb',
+    deep: '#0a3342',
+    pixelfxPalette: Object.freeze(['#082438', '#14628c', '#2fb8ff', '#5cf2d6', '#ebfffe']),
+    engageFx: 'geyser',
+    skillFx: 'wave-crash',
+    passiveFx: 'ripples',
+  }),
+  [MASK_EMBLEM_ID]: Object.freeze({
+    id: MASK_EMBLEM_ID,
+    cssClass: 'emblem-wind-dance',
+    auraStyle: 'phantom-veil',
+    primary: '#ef4d6d',
+    secondary: '#9c2c52',
+    glow: '#ff8da3',
+    accent: '#c82348',
+    core: '#ffe8ed',
+    deep: '#2e0814',
+    pixelfxPalette: Object.freeze(['#21050c', '#6e1026', '#ef4d6d', '#ffa6b8', '#fff0f3']),
+    engageFx: 'hex-sigil',
+    skillFx: 'shadow-flames',
+    passiveFx: 'curse',
+  }),
+  [SUPREME_EMBLEM_ID]: Object.freeze({
+    id: SUPREME_EMBLEM_ID,
+    cssClass: 'emblem-jiu-qi',
+    auraStyle: 'moon-eclipse',
+    primary: '#ffd56b',
+    secondary: '#93a6ff',
+    glow: '#e8efff',
+    accent: '#6a7cff',
+    core: '#ffffff',
+    deep: '#19204a',
+    pixelfxPalette: Object.freeze(['#12183a', '#4457b8', '#93a6ff', '#ffd56b', '#ffffff']),
+    engageFx: 'eclipse',
+    skillFx: 'arcane-beam',
+    passiveFx: 'halo',
+  }),
+});
+
+export function emblemVisualFor(emblemId) {
+  return EMBLEM_VISUALS[emblemId] || EMBLEM_VISUALS[EMBLEM_ID];
+}
+
 export function emblemRing(definition, unit, selected = false, forecast = unit) {
   const currentCharge = unit.emblemCharge || 0;
   unit = unit.combined ? unit : forecast;
   const config = EMBLEMS[definition?.emblemId]?.emblem;
   if (!config) return '';
+  const visual = emblemVisualFor(definition?.emblemId);
   const charge = unit.emblemCharge || 0;
   if (selected && currentCharge === 6 && !unit.combined) return '';
   const future = !unit.combined && charge > currentCharge;
-  return `<span class="emblem-ring ${charge === 6 && !future ? 'charged' : ''} ${unit.combined ? 'combined' : ''}" data-tooltip="${config.name} · ${unit.combined ? '结合剩余' + unit.combined + '回合' : currentCharge + '/6充能' + (future ? '，本回合结束预计 +' + (charge - currentCharge) : '')}" aria-label="纹章充能 ${currentCharge}/6${future ? '，预计' + charge + '/6' : ''}"><svg viewBox="0 0 40 40" aria-hidden="true">${Array.from({ length: 6 }, (_, index) => `<circle class="${unit.combined || index < Math.min(currentCharge, charge) ? 'lit' : index < charge ? 'future-charge' : ''}" cx="20" cy="20" r="17" pathLength="60" stroke-dasharray="8 52" transform="rotate(${index * 60 - 88} 20 20)"/>`).join('')}</svg><b>✧</b></span>`;
+  return `<span class="emblem-ring ${charge === 6 && !future ? 'charged' : ''} ${unit.combined ? 'combined' : ''}" style="--emblem-ring-color:${visual.primary};--emblem-ring-glow:${visual.glow}" data-tooltip="${config.name} · ${unit.combined ? '结合剩余' + unit.combined + '回合' : currentCharge + '/6充能' + (future ? '，本回合结束预计 +' + (charge - currentCharge) : '')}" aria-label="纹章充能 ${currentCharge}/6${future ? '，预计' + charge + '/6' : ''}"><svg viewBox="0 0 40 40" aria-hidden="true">${Array.from({ length: 6 }, (_, index) => `<circle class="${unit.combined || index < Math.min(currentCharge, charge) ? 'lit' : index < charge ? 'future-charge' : ''}" cx="20" cy="20" r="17" pathLength="60" stroke-dasharray="8 52" transform="rotate(${index * 60 - 88} 20 20)"/>`).join('')}</svg><b>✧</b></span>`;
 }

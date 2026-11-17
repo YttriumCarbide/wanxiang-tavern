@@ -8,7 +8,7 @@ export const PANDORA = {
   color: '#cbb3ed',
   hp: 42,
   mp: 36,
-  attack: 8,
+  attack: 9,
   limit: 2,
   attackName: '星芒法术',
   skills: [
@@ -18,9 +18,9 @@ export const PANDORA = {
       ap: 1,
       mp: 3,
       target: 'enemy',
-      text: '玩偶变大扑向敌人，造成14伤害，施加2层虚弱。',
+      text: '玩偶变大扑向敌人，造成18伤害，施加2层虚弱。',
       effects: [
-        { type: 'damage', value: 14 },
+        { type: 'damage', value: 18 },
         { type: 'buff', buff: 'weak', value: 2 },
       ],
     },

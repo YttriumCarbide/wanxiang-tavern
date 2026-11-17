@@ -2,11 +2,14 @@ import { DEFINITIONS } from '../data.js';
 import { portraitUrl } from '../portraits.js';
 import { mergedArchiveItems } from '../archives.js';
 import { REGIONS } from '../content/regions.js';
+import { ENEMY_ARCHIVE_TIERS, buildEnemyArchiveEntries } from '../archive-enemies.js';
+import { createArchiveModelStage } from './archive-model-stage.js';
 import { query as $ } from './dom.js';
 import { developerOption } from '../generation-options.js';
 import { enemyIntentText } from '../enemy-intent-text.js';
 import { dungeonMemoryText, restoredSummary } from '../memory.js';
 import { ADVENTURE_NODE_LABELS } from '../adventure/definition.js';
+import { escapeText } from '../ui.js';
 
 /** Only reached prose is editable here; future battles remain in the script. */
 export function createRecords(context) {
@@ -239,40 +242,295 @@ export function createRecords(context) {
     if (button) select(Number(button.dataset.record));
   });
   context.events.on($('#records-close'), 'click', () => dialog.close());
+  const SKYRIM_DIVIDER_SVG =
+    '<svg class="skyrim-divider-svg" viewBox="0 0 360 22" aria-hidden="true"><path d="M12 11H158M202 11H348" stroke="currentColor" stroke-width="1" stroke-opacity=".55"/><path d="M180 2L192 11L180 20L168 11Z" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M180 6L185 11L180 16L175 11Z" fill="currentColor" fill-opacity=".8"/><circle cx="158" cy="11" r="2" fill="currentColor"/><circle cx="202" cy="11" r="2" fill="currentColor"/></svg>';
+  const MOON_PART_ROLES = {
+    moonCrown: '左翼冠层 · 瘟疫与生机',
+    moonEye: '中央核心 · 破坏射线',
+    moonRoot: '右翼根脉 · 扫击与修复',
+  };
   const archive = document.createElement('dialog');
   archive.id = 'archive-dialog';
+  archive.className = 'skyrim-archive-dialog';
+  archive.setAttribute('aria-label', '旅途归档');
   archive.innerHTML =
-    '<header><div class="records-title"><small>JOURNEY / COLLECTION</small><h2>旅途归档</h2></div><nav class="records-actions"><div class="archive-tabs"><button data-archive-tab="npcs">NPC</button><button data-archive-tab="items">道具</button><button data-archive-tab="enemies">敌人</button></div><button id="archive-close" aria-label="关闭归档">×</button></nav></header><div class="records-body"><nav id="archive-list"></nav><article id="archive-text"></article></div>';
+    '<header><div class="records-title"><small>CODEX / ARCHIVES · 典藏卷宗</small><h2>旅途归档</h2></div><nav class="records-actions"><div class="archive-tabs"><button type="button" data-archive-tab="npcs">NPC</button><button type="button" data-archive-tab="items">道具</button><button type="button" data-archive-tab="enemies">敌人</button></div><button type="button" id="archive-close" aria-label="关闭归档">×</button></nav></header><div class="records-body"><div class="archive-index-col"><nav class="archive-enemy-tiers" aria-label="敌人阶级" hidden></nav><nav id="archive-list"></nav></div><article id="archive-text"></article></div>';
   document.body.append(archive);
+  const modelStage = createArchiveModelStage();
   let tab = 'npcs';
+  let enemyTier = 'minion';
   let archiveEditing = false;
+
+  function buildDividerNode() {
+    const holder = document.createElement('div');
+    holder.className = 'skyrim-archive-divider';
+    holder.innerHTML = SKYRIM_DIVIDER_SVG;
+    return holder;
+  }
+
+  function buildBadgeRow(badges) {
+    const row = document.createElement('div');
+    row.className = 'skyrim-folio-badges';
+    for (const text of badges.filter(Boolean)) {
+      const span = document.createElement('span');
+      span.textContent = text;
+      row.append(span);
+    }
+    return row;
+  }
+
+  function buildIntentSection(titleText, moves) {
+    if (!moves?.length) return null;
+    const section = document.createElement('section');
+    section.className = 'skyrim-intent-section';
+    const heading = document.createElement('h4');
+    heading.className = 'skyrim-obj-heading';
+    heading.textContent = titleText;
+    const listEl = document.createElement('ul');
+    listEl.className = 'skyrim-obj-list';
+    for (const move of moves) {
+      const item = document.createElement('li');
+      item.className = 'skyrim-obj skyrim-archive-intent';
+      const diamond = document.createElement('span');
+      diamond.className = 'skyrim-obj-diamond';
+      diamond.setAttribute('aria-hidden', 'true');
+      diamond.textContent = '◇';
+      const body = document.createElement('span');
+      const strong = document.createElement('strong');
+      strong.textContent = `${move.name}：`;
+      body.append(strong, enemyIntentText(move));
+      item.append(diamond, body);
+      listEl.append(item);
+    }
+    section.append(heading, listEl);
+    return section;
+  }
+
+  function buildStatStrip(entry) {
+    const strip = document.createElement('div');
+    strip.className = 'skyrim-archive-stats';
+    const stats = [
+      ['基础生命', String(entry.hp)],
+      ['行动速度', String(entry.speed)],
+      ...(entry.phaseThreshold ? [['狂暴阈值', `${Math.round(entry.phaseThreshold * 100)}%`]] : []),
+      ...(entry.actions ? [['每回合行动', `${entry.actions} 次`]] : []),
+    ];
+    for (const [label, value] of stats) {
+      const box = document.createElement('div');
+      box.className = 'skyrim-stat-chip';
+      const small = document.createElement('small');
+      small.textContent = label;
+      const strong = document.createElement('strong');
+      strong.textContent = value;
+      box.append(small, strong);
+      strip.append(box);
+    }
+    return strip;
+  }
+
+  function appendUnitMoves(container, entry, regularTitle = '行动意图') {
+    if (entry.openingIntent) {
+      const opening = buildIntentSection('开场先手', [entry.openingIntent]);
+      if (opening) container.append(opening);
+    }
+    const regular = buildIntentSection(regularTitle, entry.intents || []);
+    if (regular) container.append(regular);
+    if (entry.enragedIntents?.length) {
+      const enraged = buildIntentSection('狂暴阶段', entry.enragedIntents);
+      if (enraged) container.append(enraged);
+    }
+  }
+
+  function renderEnemyFolio(area, item) {
+    const tierInfo = ENEMY_ARCHIVE_TIERS.find((entry) => entry.id === item.tier);
+    if (item.overlord) {
+      const header = document.createElement('div');
+      header.className = 'skyrim-folio-head';
+      header.append(
+        buildBadgeRow([
+          tierInfo?.badge || '灾厄霸主',
+          item.isComposite ? '三位一体 · 同台建模' : '高精度非体素雕塑',
+          item.sources,
+        ]),
+      );
+      const heading = document.createElement('h3');
+      heading.className = 'skyrim-folio-title';
+      heading.textContent = item.name;
+      header.append(heading);
+      if (item.subtitle) {
+        const sub = document.createElement('p');
+        sub.className = 'skyrim-overlord-subtitle';
+        sub.textContent = item.subtitle;
+        header.append(sub);
+      }
+      header.append(buildDividerNode());
+
+      const stage = document.createElement('div');
+      stage.className = 'archive-overlord-stage';
+      area.append(header, stage);
+      if (item.description) {
+        const desc = document.createElement('p');
+        desc.className = 'skyrim-folio-desc';
+        desc.textContent = item.description;
+        area.append(desc);
+      }
+
+      if (item.isComposite) {
+        const partsWrap = document.createElement('div');
+        partsWrap.className = 'skyrim-overlord-parts';
+        for (const part of item.parts) {
+          const card = document.createElement('section');
+          card.className = 'skyrim-overlord-part';
+          const partHead = document.createElement('div');
+          partHead.className = 'skyrim-part-head';
+          const role = document.createElement('small');
+          role.textContent = MOON_PART_ROLES[part.id] || '霸主部位';
+          const name = document.createElement('h4');
+          name.textContent = part.name;
+          const meta = document.createElement('span');
+          meta.textContent = `生命 ${part.hp} · 速度 ${part.speed}`;
+          partHead.append(role, name, meta);
+          card.append(partHead);
+          if (part.description) {
+            const partDesc = document.createElement('p');
+            partDesc.className = 'skyrim-part-desc';
+            partDesc.textContent = part.description;
+            card.append(partDesc);
+          }
+          appendUnitMoves(card, part, '部位行动');
+          partsWrap.append(card);
+        }
+        area.append(partsWrap);
+      } else {
+        area.append(buildStatStrip(item.entry));
+        appendUnitMoves(area, item.entry);
+      }
+
+      void modelStage.mount(stage, item);
+      return;
+    }
+
+    const entry = item.entry;
+    const header = document.createElement('div');
+    header.className = 'skyrim-folio-head';
+    header.append(buildBadgeRow([tierInfo?.badge || '敌人情报', item.sources]));
+    const heading = document.createElement('h3');
+    heading.className = 'skyrim-folio-title';
+    heading.textContent = entry.name;
+    header.append(heading, buildDividerNode());
+
+    const showcase = document.createElement('div');
+    showcase.className = 'skyrim-enemy-showcase';
+    const frame = document.createElement('div');
+    frame.className = 'skyrim-enemy-portrait-frame';
+    const picture = document.createElement('img');
+    picture.className = 'skyrim-enemy-portrait';
+    picture.src = portraitUrl(entry);
+    picture.width = 120;
+    picture.alt = entry.name;
+    frame.append(picture);
+
+    const summary = document.createElement('div');
+    summary.className = 'skyrim-enemy-summary';
+    if (entry.title && entry.title !== entry.name) {
+      const moniker = document.createElement('p');
+      moniker.className = 'skyrim-enemy-moniker';
+      moniker.textContent = entry.title;
+      summary.append(moniker);
+    }
+    if (entry.description) {
+      const desc = document.createElement('p');
+      desc.className = 'skyrim-folio-desc';
+      desc.textContent = entry.description;
+      summary.append(desc);
+    }
+    summary.append(buildStatStrip(entry));
+    showcase.append(frame, summary);
+    area.append(header, showcase);
+    appendUnitMoves(area, entry);
+  }
+
   function renderArchive(index = 0) {
-    const entries =
-      tab === 'enemies'
-        ? Object.values({
-            ...DEFINITIONS,
-            ...Object.assign(
-              {},
-              ...(library().worlds || []).map((world) => world.enemyDefinitions),
-            ),
-          }).filter((entry) => entry.speed)
-        : tab === 'items'
-          ? mergedArchiveItems(library().archives.items)
-          : library().archives[tab];
-    archive.classList.toggle('is-empty', !entries.length);
+    modelStage.unmount();
     archive.querySelectorAll('[data-archive-tab]').forEach((button) => {
       button.setAttribute('aria-pressed', String(button.dataset.archiveTab === tab));
     });
+    const tierBar = archive.querySelector('.archive-enemy-tiers');
+
+    if (tab === 'enemies') {
+      const buckets = buildEnemyArchiveEntries(DEFINITIONS, library().worlds || []);
+      const listEntries = buckets[enemyTier] || [];
+      const activeIndex = listEntries.length
+        ? Math.max(0, Math.min(index, listEntries.length - 1))
+        : -1;
+      archive.classList.remove('is-empty');
+      tierBar.hidden = false;
+      tierBar.innerHTML = ENEMY_ARCHIVE_TIERS.map(
+        ({ id, label }) =>
+          `<button type="button" data-enemy-tier="${id}" aria-pressed="${String(id === enemyTier)}">${escapeText(label)}<span>${buckets[id].length}</span></button>`,
+      ).join('');
+      $('#archive-list').replaceChildren(
+        ...listEntries.map((item, itemIndex) => {
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'skyrim-archive-item';
+          button.dataset.archiveIndex = itemIndex;
+          button.setAttribute('aria-pressed', String(activeIndex === itemIndex));
+          const pointer = document.createElement('span');
+          pointer.className = 'skyrim-pointer';
+          pointer.setAttribute('aria-hidden', 'true');
+          pointer.textContent = activeIndex === itemIndex ? '◆' : '◇';
+          const copy = document.createElement('span');
+          copy.className = 'skyrim-archive-item-copy';
+          const titleEl = document.createElement('strong');
+          titleEl.textContent = item.name;
+          const metaEl = document.createElement('small');
+          metaEl.textContent = item.isComposite
+            ? '三位一体 · 3 部位'
+            : `生命 ${item.entry.hp} · 速 ${item.entry.speed}`;
+          copy.append(titleEl, metaEl);
+          button.append(pointer, copy);
+          return button;
+        }),
+      );
+      const area = $('#archive-text');
+      area.replaceChildren();
+      const selectedItem = activeIndex >= 0 ? listEntries[activeIndex] : null;
+      if (!selectedItem) {
+        emptyState(area, '此阶级尚无敌人记录', '推进副本与探索后会收录对应魔物情报。');
+        return;
+      }
+      renderEnemyFolio(area, selectedItem);
+      area.scrollTop = 0;
+      return;
+    }
+
+    tierBar.hidden = true;
+    const entries =
+      tab === 'items' ? mergedArchiveItems(library().archives.items) : library().archives[tab];
+    const activeIndex = entries.length ? Math.max(0, Math.min(index, entries.length - 1)) : -1;
+    archive.classList.toggle('is-empty', !entries.length);
     $('#archive-list').replaceChildren(
       ...entries.map((entry, entryIndex) => {
         const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'skyrim-archive-item';
         button.dataset.archiveIndex = entryIndex;
-        button.textContent = entry.name;
-        button.setAttribute('aria-pressed', String(index === entryIndex));
+        button.setAttribute('aria-pressed', String(activeIndex === entryIndex));
+        const pointer = document.createElement('span');
+        pointer.className = 'skyrim-pointer';
+        pointer.setAttribute('aria-hidden', 'true');
+        pointer.textContent = activeIndex === entryIndex ? '◆' : '◇';
+        const copy = document.createElement('span');
+        copy.className = 'skyrim-archive-item-copy';
+        const titleEl = document.createElement('strong');
+        titleEl.textContent = entry.name;
+        copy.append(titleEl);
+        button.append(pointer, copy);
         return button;
       }),
     );
-    const entry = entries[index];
+    const entry = activeIndex >= 0 ? entries[activeIndex] : null;
     const area = $('#archive-text');
     area.replaceChildren();
     if (!entry) {
@@ -283,29 +541,15 @@ export function createRecords(context) {
       );
       return;
     }
-    if (tab === 'enemies') {
-      const picture = document.createElement('img');
-      picture.src = portraitUrl(entry);
-      picture.width = 96;
-      picture.alt = entry.name;
-      const heading = document.createElement('h3');
-      heading.textContent = entry.name + (entry.boss ? ' · Boss' : '');
-      const stats = document.createElement('p');
-      stats.textContent = `基础hp ${entry.hp} · 速度 ${entry.speed}`;
-      const source = document.createElement('p');
-      source.textContent =
-        (library().worlds || [])
-          .filter((world) => world.enemyIds.includes(entry.id))
-          .map((world) => world.name)
-          .join('、') || '官方敌人';
-      area.append(picture, heading, stats, source);
-      for (const move of [...entry.intents, ...(entry.enragedIntents || [])]) {
-        const line = document.createElement('p');
-        line.textContent = `${move.name}：${enemyIntentText(move)}`;
-        area.append(line);
-      }
-      return;
-    }
+    const header = document.createElement('div');
+    header.className = 'skyrim-folio-head';
+    header.append(
+      buildBadgeRow([
+        tab === 'npcs' ? '旅人名录 · CHARACTER' : '奇物收藏 · RELIC',
+        ...(tab === 'items' && entry.level ? [`Lv.${entry.level}`] : []),
+      ]),
+      buildDividerNode(),
+    );
     const name = field('姓名 / 名称', entry.name);
     const content = field(
       tab === 'npcs' ? '外貌与经历' : '描述（20字以内）',
@@ -344,7 +588,7 @@ export function createRecords(context) {
       'click',
       () => {
         archiveEditing = !archiveEditing;
-        renderArchive(index);
+        renderArchive(activeIndex);
       },
       { once: true },
     );
@@ -374,7 +618,7 @@ export function createRecords(context) {
                 )
               )
                 duplicate.sources.push(source);
-            entries.splice(index, 1);
+            entries.splice(activeIndex, 1);
           }
         } else {
           entry.description = content.input.value.slice(0, 20);
@@ -385,33 +629,44 @@ export function createRecords(context) {
             }
         }
         context.generation.save();
-        renderArchive(Math.min(index, entries.length - 1));
+        renderArchive(Math.min(activeIndex, entries.length - 1));
       },
       { once: true },
     );
-    area.append(name.wrapper, content.wrapper);
+    area.append(header, name.wrapper, content.wrapper);
     if (tab === 'npcs') area.append(keywords.wrapper);
     const actions = document.createElement('div');
     actions.className = 'archive-edit-actions';
     actions.append(edit, save);
     area.append(sources, actions);
+    area.scrollTop = 0;
   }
+
   context.events.on($('#archives-open'), 'click', () => {
     archiveEditing = false;
     renderArchive();
     if (!archive.open) archive.showModal();
   });
-  context.events.on($('#archive-close'), 'click', () => archive.close());
+  context.events.on($('#archive-close'), 'click', () => {
+    modelStage.unmount();
+    archive.close();
+  });
+  context.events.on(archive, 'close', () => modelStage.unmount());
   context.events.on(archive, 'click', (event) => {
     const type = event.target.closest('[data-archive-tab]');
+    const tierButton = event.target.closest('[data-enemy-tier]');
     const item = event.target.closest('[data-archive-index]');
     if (type) {
       tab = type.dataset.archiveTab;
+      renderArchive();
+    } else if (tierButton) {
+      enemyTier = tierButton.dataset.enemyTier;
       renderArchive();
     } else if (item) renderArchive(Number(item.dataset.archiveIndex));
   });
   return {
     dispose() {
+      modelStage.dispose();
       dialog.remove();
       archive.remove();
     },

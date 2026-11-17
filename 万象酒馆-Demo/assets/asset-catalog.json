@@ -1,21 +1,53 @@
 {
   "version": 1,
   "files": {
+    "assets/abyss-devourer-python.glb": {
+      "bytes": 216480,
+      "hash": "033b62ec7b4a16073fb593a20fbeb9485bf122589cef73e73c33f094b73094d0"
+    },
+    "assets/apep-lamb.glb": {
+      "bytes": 485112,
+      "hash": "bea47d34880867835db7bdff70ea34e267337f24e35839e8601859dc876c9239"
+    },
     "assets/arcane.glb": {
       "bytes": 5099452,
       "hash": "956d296d54101080fe7c4acb041c250cb94cc7602958e312843e483d6550179f"
     },
     "assets/ares-cannon-left.glb": {
-      "bytes": 17292,
-      "hash": "06eb32803b28d274a43be33edde18583be7a51e5ee4afe48a7aa14f82585fd4f"
+      "bytes": 159616,
+      "hash": "80830e417d8c6677607d9c2b0a5bcc4ed39d416370c71823730dcb9ae8ac9b1d"
     },
     "assets/ares-cannon-right.glb": {
-      "bytes": 17300,
-      "hash": "cbd6497a794164a38a90e60e47964352b8b507b19978b3e9e99010b28a74f11d"
+      "bytes": 159616,
+      "hash": "35bfd2f1a1a0f9abcc9f58546a10120b2c452d34730606b5585868427ee3d1f1"
     },
     "assets/ares.glb": {
-      "bytes": 47336,
-      "hash": "a7832f1bea0feea39f11ed01242230222191cbb10cfb25a5f65d34b90d52a233"
+      "bytes": 273908,
+      "hash": "d75ec0c78ff2223c1434ad35294b129509484e6151e1fbf381557ed163e5f515"
+    },
+    "assets/bandit-alchemist.glb": {
+      "bytes": 66560,
+      "hash": "4fff4060e0c2e783a414789b08f920be30a58049999ea376c4b473d990bb9408"
+    },
+    "assets/bandit-bruiser.glb": {
+      "bytes": 64328,
+      "hash": "8dee8420e5c94900a0d1b86bbe4aeac7526310096bd581262cb29bc87cba24e1"
+    },
+    "assets/bandit-cutthroat.glb": {
+      "bytes": 65468,
+      "hash": "daf6f9071d7aa49b0b9642b547ebd3261ca87d04d0655a4c0add0c7fe44fbc75"
+    },
+    "assets/bandit-executioner.glb": {
+      "bytes": 129184,
+      "hash": "cdbcf91f3e598315c6dde6074df815e7adf6a83f1a0a2a6dcf6add930d2bf0b0"
+    },
+    "assets/bandit-poacher.glb": {
+      "bytes": 67572,
+      "hash": "68adc0751d968f4d8eecc99e8c4fd14f0c801bd2870a7a91c0553404ec08ffe8"
+    },
+    "assets/bandit-syndicate-king.glb": {
+      "bytes": 225236,
+      "hash": "5fde2297a28cfa53c03663ceb7e758289923e61ec0e07146f813e1f5391905d3"
     },
     "assets/bark-acolyte.glb": {
       "bytes": 133304,
@@ -24,6 +56,14 @@
     "assets/battle.glb": {
       "bytes": 7766124,
       "hash": "2613492da6c09d684498ad78f8edc9c1f20863f16d9526ef96e919c81b78c2d8"
+    },
+    "assets/bicolor-scale-python.glb": {
+      "bytes": 119396,
+      "hash": "3034dc62d89346509543d027318f46bfca399588de24c8f1134e073305786d54"
+    },
+    "assets/bicolor-singularity-lizard.glb": {
+      "bytes": 218628,
+      "hash": "f2a8f24b232cd53ec646cb048abfd0da66fe66f671704d3cc3b20cccd7aba71e"
     },
     "assets/bog-drifter.glb": {
       "bytes": 33196,
@@ -48,6 +88,10 @@
     "assets/castle.glb": {
       "bytes": 5694976,
       "hash": "9fda7772f4c9cfa3f8a0ecdcfc5c42f22fd1a0b28728c2dc358cba999f4aa7af"
+    },
+    "assets/chaos-badland-falcon.glb": {
+      "bytes": 130720,
+      "hash": "a17bfbef6b3d85e236dba1a6391ccc651d35448ba150b6f72cdeb540aa34596a"
     },
     "assets/cinder-imp.glb": {
       "bytes": 67792,
@@ -93,6 +137,30 @@
       "bytes": 2462466,
       "hash": "36a812ada38ff24c6b6d6f26e3f5e9a40384226129eeaeb2f864c34385a37c50"
     },
+    "assets/dragonscale-sandworm.glb": {
+      "bytes": 213188,
+      "hash": "ed3f5ebda895f29810682d3353e815b8afa12813bc04b646e730e1ea3a349194"
+    },
+    "assets/drake-badland-falcon.glb": {
+      "bytes": 62916,
+      "hash": "7772282a5d7d8ad4e62cca7cdefbdfc787f4855b65e6eb77e01e92051dff7004"
+    },
+    "assets/drake-badland-scorpion.glb": {
+      "bytes": 69124,
+      "hash": "922b26d7cf8afd8457b16f74c68d37bf514d929377311c4cc11ffa32447fa257"
+    },
+    "assets/drake-badland-slime.glb": {
+      "bytes": 58936,
+      "hash": "cdf90526be58430d6036d104078c0daae1613102edac3025ceb9f93279b7d2dc"
+    },
+    "assets/drake-crystal-beetle.glb": {
+      "bytes": 57852,
+      "hash": "1f2b79a2e7e27a563ae4377faa0a2a0447ab46d78d7ac5db980844417a49314d"
+    },
+    "assets/drake-rattlesnake.glb": {
+      "bytes": 59908,
+      "hash": "25f644226c50ede8a109fe522f214526e4cad880ed90f0762bb13e18de970922"
+    },
     "assets/drill-matriarch.glb": {
       "bytes": 53928,
       "hash": "caa9a3cecc68a2dc747b5df042f07ba07731d289db30a3f1c9f34995d17ab78b"
@@ -108,6 +176,10 @@
     "assets/dynasty.glb": {
       "bytes": 5318084,
       "hash": "307cae14e9d46f656c4c592429deb20f88d4747fbe6be05aae797b9f8f9e8dd7"
+    },
+    "assets/eclipse-watcher.glb": {
+      "bytes": 215608,
+      "hash": "5626c82a49194cd84829384145cf1f1c30a2e80faee4aff63ff677f919722171"
     },
     "assets/enemy-humanoid-bow-female.glb": {
       "bytes": 248428,
@@ -132,6 +204,30 @@
     "assets/enemy-humanoid-sword-male.glb": {
       "bytes": 95172,
       "hash": "112d91bf709f8a00d53051e15f84d5a63d7e2a554caf37b9e028d30fe40e9e9e"
+    },
+    "assets/erosion-crawler.glb": {
+      "bytes": 58884,
+      "hash": "9f60f1a253ff7dbea3fb9573725e9052be739b921172e2a68cd86c67a9c76eed"
+    },
+    "assets/erosion-hound.glb": {
+      "bytes": 62024,
+      "hash": "58c32b43b732d716407a0141500237528df030bc157738c94ad2137c228a1ed2"
+    },
+    "assets/erosion-juggernaut.glb": {
+      "bytes": 128104,
+      "hash": "80a005e92fc7f5b492b7ca189fd43ccf22dc0338fb1e18e321159004053c4e5e"
+    },
+    "assets/erosion-rift-tyrant.glb": {
+      "bytes": 220804,
+      "hash": "4ad705d9f6e0467290d43611211b619fb4acf4491001fcf2ed8720d371280615"
+    },
+    "assets/erosion-spitter.glb": {
+      "bytes": 58824,
+      "hash": "d70f2d6e853aa59532566a8c10186cd30502f8061dc1573911c82f8de91bee69"
+    },
+    "assets/erosion-wing.glb": {
+      "bytes": 66816,
+      "hash": "fafb584100d87a2f7f8d014a6d152dccf12b8afba3e7a3a5a2abd7efee87cabc"
     },
     "assets/events/forest-event.png": {
       "bytes": 3182025,
@@ -1041,6 +1137,30 @@
       "bytes": 2136605,
       "hash": "3075f541ef7917e922341987a67bb973062860bfc9d34bf4597db9b955d7ff3f"
     },
+    "assets/goblin-king-gorg.glb": {
+      "bytes": 224392,
+      "hash": "0e532df057aec861dd79da6910c5ddc067327a1b5a30c6713c43e92fbb4b6d07"
+    },
+    "assets/goblin-sapper.glb": {
+      "bytes": 69676,
+      "hash": "39cbce071136d8ad347c771232783fa4c9daf21f5118b1a65974cc38ac8c4ea8"
+    },
+    "assets/goblin-scavenger.glb": {
+      "bytes": 66568,
+      "hash": "81ed767c48f911474218c66595f589ab3517a9503d5ba5ffbd6472227a424c11"
+    },
+    "assets/goblin-shaman.glb": {
+      "bytes": 67620,
+      "hash": "60cafe841000bff58f3a18da31f734064aa016f4fba5ddafccff26f1125a6ca7"
+    },
+    "assets/goblin-slinger.glb": {
+      "bytes": 65484,
+      "hash": "52526a333e3448d9beb043c27425f1f9c881c88fb3ec14cd48c29594e50e7e5c"
+    },
+    "assets/goblin-wolf-rider.glb": {
+      "bytes": 129200,
+      "hash": "0a7248204b64f323779760bcd8249cbd0135827393daade8a9a79ad56dfd4abe"
+    },
     "assets/grey-prowler.glb": {
       "bytes": 55928,
       "hash": "743003dd5136449dedbd41dab0523baf03fc2f4fdfe4ff0119c6526e69b6f843"
@@ -1145,6 +1265,22 @@
       "bytes": 549,
       "hash": "57c452279b3069ced6b63c5ea57c7244e7faa073fd5cb1776db3de936f7d8edc"
     },
+    "assets/ladder-carrion-bat.glb": {
+      "bytes": 64944,
+      "hash": "48d95b40b6cabcbf240177a5c16bda6a418adf822a77d2ba77f9ff396304bdb8"
+    },
+    "assets/ladder-cliff-lizard.glb": {
+      "bytes": 60928,
+      "hash": "75c26080d6ab3494211bf1adaf8fcac5b82d559a4ca592411221e8391ec0ea92"
+    },
+    "assets/ladder-rock-giant.glb": {
+      "bytes": 123848,
+      "hash": "fd9880306e39488cdb77aec253c2e6f96608b08400a44f95df86734a02c8e38a"
+    },
+    "assets/ladder-web-spider.glb": {
+      "bytes": 61068,
+      "hash": "ca3c757273e39287c46bceb70f32b302b220ade73fdac9715600c0dc9f0d5c80"
+    },
     "assets/living-vine.glb": {
       "bytes": 168664,
       "hash": "9fa001dd512ee1587221fb6c56622731844c22516b2f79c44c633fa49974c5d8"
@@ -1170,12 +1306,12 @@
       "hash": "761d9b26f0f773ac2e43395aca4052a9651d1516028ee5c8dcb51ec351d0345e"
     },
     "assets/moon-crown.glb": {
-      "bytes": 255408,
-      "hash": "276a7d77a028393fdba599e2bd7c2a72970cc370d274663db81014dfdd72a6d8"
+      "bytes": 211948,
+      "hash": "63cc16898d201e9c49720abb15fd5c165e7e45039140878f27eca223fbc25853"
     },
     "assets/moon-eye.glb": {
-      "bytes": 251580,
-      "hash": "7eb3f9f0288c60125159a82edbfa53c2832124db399e64ad33dc6bf5d7283fc9"
+      "bytes": 201236,
+      "hash": "55013efdd17bc366f0a6d334689f46c46ca8ddcd30e63c7b40361c52c30ac96a"
     },
     "assets/moon-moth.glb": {
       "bytes": 107976,
@@ -1186,8 +1322,8 @@
       "hash": "bddc005f42b1eb7b4ce13403b6a20bb980cda50b3466dfe929447da7bd33f79f"
     },
     "assets/moon-root.glb": {
-      "bytes": 288664,
-      "hash": "b71d7f2665c303b6d5b26ac37e349398ceaf8890187eb2f2548b943258b0bf77"
+      "bytes": 263600,
+      "hash": "7f5e9dcddbfe7c1fdea0507d855503c947fa53476786aaeaf204c45d8296278a"
     },
     "assets/moon-tendril.glb": {
       "bytes": 162456,
@@ -1213,6 +1349,14 @@
       "bytes": 46692,
       "hash": "bafb05bb19c9a2eb0a40a2ce966a372a71110372f18521c94c8d0acd4a6d2270"
     },
+    "assets/overload-creation-elemental.glb": {
+      "bytes": 122564,
+      "hash": "685ff2c80f1766d2de3b0c653806d65cc2c0a26918f83658e24bdf28d6dcf8be"
+    },
+    "assets/overload-destruction-elemental.glb": {
+      "bytes": 121596,
+      "hash": "e6f006129ee7c387a14febe8ac35c0f35c33720d623e323cbbc32fa5398fe910"
+    },
     "assets/parchment-theater.jpg": {
       "bytes": 263799,
       "hash": "22d57aee91ed008ede86c54c719128ef616db1cbce6b35743fae10fa233a5937"
@@ -1221,25 +1365,61 @@
       "bytes": 35628,
       "hash": "0d809f285c5b6f124b00118982e98e3ce89789ce91badb0d8ea44a6969f516f1"
     },
+    "assets/portraits/abyss-devourer-python.svg": {
+      "bytes": 49863,
+      "hash": "8778f3b994e1070f812f6b988cb9f7d24628db0e87b0503261df684e43b3f6d5"
+    },
     "assets/portraits/apep-lamb.svg": {
-      "bytes": 9911,
-      "hash": "c60b381a77806776d1212aaad9e3061bd17a96491d3297ab8bd728cc12ce871f"
+      "bytes": 503637,
+      "hash": "ee22356656dbc22e24a1505919114b81a70cc5e2d0a2a7183bab7c74cdcc0b59"
     },
     "assets/portraits/ares-cannon-left.svg": {
-      "bytes": 3031,
-      "hash": "369f69519f6a6d0be27c8579c99150e8781b2277516f9a57e141f79f9a69bdf2"
+      "bytes": 158726,
+      "hash": "5a9b2f69f5f81b65d94a45f7b819d26fb9d5740648b005b8082510ccd4e49f1f"
     },
     "assets/portraits/ares-cannon-right.svg": {
-      "bytes": 3032,
-      "hash": "84e5e94608cd13cfd35deafd6a7af5087fafec86999ba9ec9b32f9a82b9a117a"
+      "bytes": 158799,
+      "hash": "6217e0d404b178b04cd0f6b0ff3f6d01249d35b0590582f441058a12d2a58a63"
     },
     "assets/portraits/ares.svg": {
-      "bytes": 7501,
-      "hash": "b82930010b6536d15b458fafd16fb056a9118f81f5e25626409e48f505a29c11"
+      "bytes": 162350,
+      "hash": "d89553e99fbeaf6f785d08a8999bf35f9126e7251f59c63396d185adea567bf5"
+    },
+    "assets/portraits/bandit-alchemist.svg": {
+      "bytes": 12490,
+      "hash": "e6e7ef77535af13b6c2df9683d59c57034962d6943710f499c31a4ccab3356bf"
+    },
+    "assets/portraits/bandit-bruiser.svg": {
+      "bytes": 12488,
+      "hash": "9568371dba90f70817ace9500d83044f841f5e8178960013dc221560d3d6c628"
+    },
+    "assets/portraits/bandit-cutthroat.svg": {
+      "bytes": 12490,
+      "hash": "f0509e764cf1c704898dd26bf577c1e60d744e5fa0df55ab9d67a15570adbea3"
+    },
+    "assets/portraits/bandit-executioner.svg": {
+      "bytes": 27684,
+      "hash": "6da570699b04c42bab30c09f065e11a51a7cce3577808cdfd2e64764f4178e6b"
+    },
+    "assets/portraits/bandit-poacher.svg": {
+      "bytes": 12740,
+      "hash": "64eb6c3a1f8d5b5796debfd9082904065a417090b8942201cd06716f2460f177"
+    },
+    "assets/portraits/bandit-syndicate-king.svg": {
+      "bytes": 50551,
+      "hash": "8bb2b4925585da344bf35e34e311e65be1532917d2257ad920d5f10f2de2ef2c"
     },
     "assets/portraits/bark-acolyte.svg": {
       "bytes": 24939,
       "hash": "c94546d5f44b9922e37c3fbd49089b8896986c456595ed8a9fdc5788abd875e0"
+    },
+    "assets/portraits/bicolor-scale-python.svg": {
+      "bytes": 27210,
+      "hash": "5eaf9d45eb7d656a354679713a7e8f1df90141f5e6302a367d8923ba9934e139"
+    },
+    "assets/portraits/bicolor-singularity-lizard.svg": {
+      "bytes": 50091,
+      "hash": "ba11152e0329209117e8fd8ab0e56c0083bf834c42817f4d9135db8287d7d211"
     },
     "assets/portraits/black-ooze.svg": {
       "bytes": 9715,
@@ -1284,6 +1464,10 @@
     "assets/portraits/changjing-yuexi.png": {
       "bytes": 2615445,
       "hash": "9dbcc06b0acca68563f937daac69789409282e6f567fe119b7036dcaea65495b"
+    },
+    "assets/portraits/chaos-badland-falcon.svg": {
+      "bytes": 29460,
+      "hash": "34ad91ecbef45f0d53a05a5ea5417012a0716f0b6417192bdcd5faf4789a9e5a"
     },
     "assets/portraits/chasm-beast.svg": {
       "bytes": 8914,
@@ -1333,6 +1517,30 @@
       "bytes": 1040,
       "hash": "6d58b792eb0ebbb70e64083de1373bcf4f1eb18964795e2f3e1632ff2416315a"
     },
+    "assets/portraits/dragonscale-sandworm.svg": {
+      "bytes": 50540,
+      "hash": "8a843ab8760674af53f676433c29ab2e9c7a979cbf68f1062d0140230237bbab"
+    },
+    "assets/portraits/drake-badland-falcon.svg": {
+      "bytes": 13443,
+      "hash": "34464199973fe7e5036472f16ffeeae2405111956e99c019cba3be1f7cdb1ea0"
+    },
+    "assets/portraits/drake-badland-scorpion.svg": {
+      "bytes": 14745,
+      "hash": "5d81c55dbb709752ed0282cf0b50d8f7943f4854e60cc2831a30f43fa9a5815e"
+    },
+    "assets/portraits/drake-badland-slime.svg": {
+      "bytes": 12407,
+      "hash": "36d120bdde53f05d3cdd43b7e5a703276d8754b858d1bab73dee8a187ab01032"
+    },
+    "assets/portraits/drake-crystal-beetle.svg": {
+      "bytes": 12490,
+      "hash": "45897fc1204ee9341d8662afa56abfb2063fdf8e1f6075bdd50ff8387c3c7cdc"
+    },
+    "assets/portraits/drake-rattlesnake.svg": {
+      "bytes": 12752,
+      "hash": "f93662f0bae58eb56c36b985fd5fd283d94ccb57e4fa12687088141ce2b5956a"
+    },
     "assets/portraits/drill-matriarch.svg": {
       "bytes": 10973,
       "hash": "c34350b9faf877246e63784c552acb1ff34c7e2f0f0b60a7127c38e889615196"
@@ -1344,6 +1552,10 @@
     "assets/portraits/dust-hexer.svg": {
       "bytes": 22927,
       "hash": "14f643d098db13f09ec25f0e0a5ea67d49cebc439f1722af24c4813d18a9491a"
+    },
+    "assets/portraits/eclipse-watcher.svg": {
+      "bytes": 50034,
+      "hash": "5c2b3ed327257595ff22b1fc222c45ca4b047da8628304a14b93fa94fe63cc66"
     },
     "assets/portraits/edith-before-20261101.png": {
       "bytes": 2137890,
@@ -1381,6 +1593,30 @@
       "bytes": 15232,
       "hash": "1f24ad45a7a71bb3724ebd7f1ac87bb4378307c163531d1bd361f8fda2916d54"
     },
+    "assets/portraits/erosion-crawler.svg": {
+      "bytes": 12369,
+      "hash": "ade0779a23a6b7d5dbecb4436478fdbc879b1c330049cfac5ad4dafd3616c41f"
+    },
+    "assets/portraits/erosion-hound.svg": {
+      "bytes": 12708,
+      "hash": "1f797240c2dd546de82c8159a1a2d00fe69fb990f0aa2f66d174740bda74f06b"
+    },
+    "assets/portraits/erosion-juggernaut.svg": {
+      "bytes": 27678,
+      "hash": "87ffa3a0f3d28b0675f8871e36975faa45ef1a81967311b9afcc159759efd38d"
+    },
+    "assets/portraits/erosion-rift-tyrant.svg": {
+      "bytes": 49845,
+      "hash": "8cbbafd3642cd3d9abad904ce7cc4c5fbe10692d58266b5544a2b6c55c8e2520"
+    },
+    "assets/portraits/erosion-spitter.svg": {
+      "bytes": 12486,
+      "hash": "29fa02eea6176c4a03777fd1ec3c46f19a6886260951a5f890ff0893905b6cb1"
+    },
+    "assets/portraits/erosion-wing.svg": {
+      "bytes": 14668,
+      "hash": "45df11a6af50c02c5c6261d0214700d8f3de29ad1d2c443538e0d025360b69f8"
+    },
     "assets/portraits/facet-skitter.svg": {
       "bytes": 9195,
       "hash": "4c104d1476cade22e06068cc5571b91e19cb68b3c7708582227e2e55cc9bbbd9"
@@ -1396,6 +1632,30 @@
     "assets/portraits/frost-crusher.svg": {
       "bytes": 6732,
       "hash": "ccc280a1f81e6b6bdaaf7819b9d1b274824b0079bd97870dc1726bfc6d7c0998"
+    },
+    "assets/portraits/goblin-king-gorg.svg": {
+      "bytes": 50319,
+      "hash": "4fa31af21acd5b131b53ee3c3285fd2c2599ac8ac6a7f9884602d70ad6282dfe"
+    },
+    "assets/portraits/goblin-sapper.svg": {
+      "bytes": 12742,
+      "hash": "a0c926b01fe14d49fb5643f77908d5f66b4b3aa657574794847d4f2500192e08"
+    },
+    "assets/portraits/goblin-scavenger.svg": {
+      "bytes": 12493,
+      "hash": "3a9286898a5e967eb770c7fb2bb9272ea262425d3767f213a4b9314751cfaf52"
+    },
+    "assets/portraits/goblin-shaman.svg": {
+      "bytes": 12493,
+      "hash": "da159e87c59249ce1173cc89bcf3f5dc69a6884d530ca7950e5da7f1f6da1c35"
+    },
+    "assets/portraits/goblin-slinger.svg": {
+      "bytes": 12491,
+      "hash": "3476c42573426ad74014e413b784bcb0cc48220d908f1077f62aaa1abcf51337"
+    },
+    "assets/portraits/goblin-wolf-rider.svg": {
+      "bytes": 27360,
+      "hash": "14f68260dafca000dbec26ac830c7eb080db5aa82ac2463ce2793e86d75f7591"
     },
     "assets/portraits/golem.svg": {
       "bytes": 1128,
@@ -1437,6 +1697,22 @@
       "bytes": 6727,
       "hash": "774f56baebde73aa1aeb8bad833158ba11f68ac8161c96e8d2538b45d2534c65"
     },
+    "assets/portraits/ladder-carrion-bat.svg": {
+      "bytes": 13929,
+      "hash": "74b5e6171d9e216a87999c19a90f6e72fd5dff17ad738cf65f8de9a0db46f208"
+    },
+    "assets/portraits/ladder-cliff-lizard.svg": {
+      "bytes": 12608,
+      "hash": "cc6c997857d140ca75843d76d4d438718ab38d2b2140953cc34af370fea2828f"
+    },
+    "assets/portraits/ladder-rock-giant.svg": {
+      "bytes": 27424,
+      "hash": "f7aac79503ff5f75b0b46317edaa0cc27deb6b3d25977e0c53c43f16802c90da"
+    },
+    "assets/portraits/ladder-web-spider.svg": {
+      "bytes": 12481,
+      "hash": "4ca2221bcbdb7e74ba797362f71f2e8a67af2e683fc7192d093732056b15dbc2"
+    },
     "assets/portraits/living-vine.svg": {
       "bytes": 39749,
       "hash": "1093d700cac3f8bd3e332216f96f4e1acfddc7b3b82e69041a4ec0dc70e75f55"
@@ -1466,12 +1742,12 @@
       "hash": "488a0415d1ffae53927b750fe8a4f2d3f204666a51cacc633e6391add247ac06"
     },
     "assets/portraits/moon-crown.svg": {
-      "bytes": 60725,
-      "hash": "ccd86898861396b8b592d8d819e0104ea5b49d6d37d153ab026cf6281c93985f"
+      "bytes": 217104,
+      "hash": "eb7149d4f191578299fefd4e867c7c94e30ca3c6c1f5f4990e64b8d186e66be6"
     },
     "assets/portraits/moon-eye.svg": {
-      "bytes": 59272,
-      "hash": "04a8f75043bc044cac42c55a516ee88d79dae32633b294229cbcfe5e5bb5dfa5"
+      "bytes": 216170,
+      "hash": "9f5101895e58afb7829fdda8cc79fba9390694631557b394ae3978c8535b764b"
     },
     "assets/portraits/moon-moth.svg": {
       "bytes": 24866,
@@ -1482,8 +1758,8 @@
       "hash": "bb097c3cebb68543ae722c64f640fbe9d4f83962184c49cb2238875a7c07b3df"
     },
     "assets/portraits/moon-root.svg": {
-      "bytes": 69236,
-      "hash": "9dd5d416e0e226ab6588c7973013a094007caed95e93caac1083214c422a5252"
+      "bytes": 269743,
+      "hash": "726d7316e4f6e628a5ea0183d7f9529cc5b3df7db43c5c8de4a04693ac86a4fc"
     },
     "assets/portraits/moon-tendril.svg": {
       "bytes": 38754,
@@ -1509,6 +1785,14 @@
       "bytes": 9482,
       "hash": "9a39046b65610dd930501e34be3c097addbd5d7225c565fe829244fe93faf7a1"
     },
+    "assets/portraits/overload-creation-elemental.svg": {
+      "bytes": 27310,
+      "hash": "f2f43d708bc259de38b64c0531bd3d6914e1a00e8190bf3f179d65fc80779dfb"
+    },
+    "assets/portraits/overload-destruction-elemental.svg": {
+      "bytes": 27437,
+      "hash": "64ec1da03f8f82eeeef7d544d6411534abe4415e442c49acff1c4ff9e27738ae"
+    },
     "assets/portraits/pandora.png": {
       "bytes": 2735969,
       "hash": "3bb2923a3bd10556f56e5e92f4c30d0f50250da1eefadbba64baa282a2899d61"
@@ -1525,6 +1809,18 @@
       "bytes": 1203,
       "hash": "a3b7feb20685d731152eb74ccd89a423ee18d3047cb4ad22bd81aad1676c55a5"
     },
+    "assets/portraits/pure-creation-elemental.svg": {
+      "bytes": 12733,
+      "hash": "7c9f5b5ecfc7ac89c9db295946010be9e6c996940eb1edfbb20e68bed8a74566"
+    },
+    "assets/portraits/pure-destruction-elemental.svg": {
+      "bytes": 12502,
+      "hash": "474c794ad2bc0903597d723ff42c7eef4669897e74916c1fce29caba2a5984d0"
+    },
+    "assets/portraits/radiant-wyvern.svg": {
+      "bytes": 229160,
+      "hash": "487a6be3619dfeb4d1b9a71bf5a62c5f65e3a04214f19b09e42282d52a7b4f19"
+    },
     "assets/portraits/rail-spider.svg": {
       "bytes": 8204,
       "hash": "2731d496c713ac11bb2f8a3c8d60248c51914457892ba688c7bee52d0d64b817"
@@ -1536,6 +1832,10 @@
     "assets/portraits/raptor-storm.svg": {
       "bytes": 5461,
       "hash": "e07daa503da5099c8c30469152cbf3f9a14e36ff805ba8c5cf269290c9b76cdb"
+    },
+    "assets/portraits/relic-hermit-crab.svg": {
+      "bytes": 27394,
+      "hash": "9ff9c72d53cd5fa883d115875ca4e3b183ea0ed3cafe9ffe5becc85aa4e2ad18"
     },
     "assets/portraits/repair-overseer.svg": {
       "bytes": 8243,
@@ -1773,9 +2073,25 @@
       "bytes": 1512384,
       "hash": "2e79f72d963b753c0c2fc1baae0be1139367812cd98013cefde6799defe283f0"
     },
+    "assets/pure-creation-elemental.glb": {
+      "bytes": 59944,
+      "hash": "f543d46346273de117fd932a926ff8e32dbf12470650609303450deff5fe7f6f"
+    },
+    "assets/pure-destruction-elemental.glb": {
+      "bytes": 60048,
+      "hash": "a7f8ff1fc143e4aa70bb519f7b2f721558567f341451e1d5a64e0ea76405f64d"
+    },
+    "assets/radiant-wyvern.glb": {
+      "bytes": 201132,
+      "hash": "cead8e72d78a9f0e04e479d99efb6450934a865fed0288e101d2b9cbed6c2b7c"
+    },
     "assets/rail-spider.glb": {
       "bytes": 42700,
       "hash": "df25c2ef694b5de612ce1975c179dcab0f260df479d372164809889fff8d324e"
+    },
+    "assets/relic-hermit-crab.glb": {
+      "bytes": 126072,
+      "hash": "2c8d28e1fdabefa3816a92c62be21692ce744cf446100775ad6bd311e26574a4"
     },
     "assets/relic.glb": {
       "bytes": 4570436,

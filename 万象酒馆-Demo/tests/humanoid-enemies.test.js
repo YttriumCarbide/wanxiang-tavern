@@ -123,10 +123,17 @@ test('sharing the portrait renderer keeps all existing creature artwork byte-for
     ...EXTRA_BOSSES,
     ...RUINS_BOSSES,
   ]) {
-    assert.equal(
-      enemyPortrait(enemy),
-      await readFile(new URL(`../assets/portraits/${enemy.portrait}.svg`, import.meta.url), 'utf8'),
+    const svg = await readFile(
+      new URL(`../assets/portraits/${enemy.portrait}.svg`, import.meta.url),
+      'utf8',
     );
+    if (enemy.overlord || enemy.standOnCard) {
+      assert.match(svg, /width="600"\s+height="900"/);
+      assert.match(svg, /data-art-style="sculpted-overlord-v1"/);
+      assert.match(svg, new RegExp(`data-enemy-model="${enemy.id}"`));
+    } else {
+      assert.equal(svg, enemyPortrait(enemy));
+    }
   }
 });
 

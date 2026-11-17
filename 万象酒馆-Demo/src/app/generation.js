@@ -96,27 +96,33 @@ export function createGeneration(context) {
     context.generationAccess?.refresh();
   }
   renderDeveloperOptions();
+  function setOption(key, value) {
+    const next = restoreGenerationOptions({
+      ...session.ai.generationOptions,
+      [key]: Boolean(value),
+    });
+    try {
+      storage.setItem(GENERATION_OPTIONS_KEY, JSON.stringify(next));
+    } catch {
+      renderDeveloperOptions();
+      status('浏览器无法保存选项，请检查本地存储空间。');
+      return false;
+    }
+    session.ai.generationOptions = next;
+    renderDeveloperOptions();
+    context.onboarding?.generationModeChanged();
+    context.onboarding?.refresh();
+    context.shell.syncInnVisitors();
+    status('游戏选项已保存。');
+    return true;
+  }
   for (const checkbox of document.querySelectorAll('[data-generation-option]')) {
     const key = checkbox.dataset.generationOption;
     checkbox.checked = session.ai.generationOptions[key];
     events.on(checkbox, 'change', () => {
-      const next = restoreGenerationOptions({
-        ...session.ai.generationOptions,
-        [key]: checkbox.checked,
-      });
-      try {
-        storage.setItem(GENERATION_OPTIONS_KEY, JSON.stringify(next));
-      } catch {
+      if (!setOption(key, checkbox.checked)) {
         checkbox.checked = session.ai.generationOptions[key];
-        status('浏览器无法保存选项，请检查本地存储空间。');
-        return;
       }
-      session.ai.generationOptions = next;
-      renderDeveloperOptions();
-      context.onboarding?.generationModeChanged();
-      context.onboarding?.refresh();
-      context.shell.syncInnVisitors();
-      status('游戏选项已保存。');
     });
   }
   const party = () =>
@@ -1200,6 +1206,7 @@ export function createGeneration(context) {
     refreshReview: diagnostics.refreshButtons,
     openReview: diagnostics.show,
     recordReview: diagnostics.record,
+    setOption,
     setSummonVisible(visible) {
       session.runtime.summonVisible = visible;
       diagnostics.refreshButtons();

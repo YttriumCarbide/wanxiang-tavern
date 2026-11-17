@@ -1,5 +1,5 @@
 import { resourceText } from '../resource-text.js';
-import { EMBLEMS } from '../emblems.js';
+import { EMBLEMS, emblemVisualFor } from '../emblems.js';
 import { effectiveBuff } from '../engine.js';
 import { resourceBars, statusIcons, escapeText } from '../ui.js';
 import { query as $ } from './dom.js';
@@ -29,10 +29,11 @@ export function createDetails(context) {
       !context.viewport.canPlan() || u.hp <= 0 || !formation.slice(0, 3).includes(id);
     const limit = d.limit + effectiveBuff(session.battle.forecast.final, id, 'haste');
     const rules = rulesFor(d);
-    function badge(title, text, active, tag, attributes = '') {
+    function badge(title, text, active, tag, attributes = '', extraClass = '') {
       return (
         '<div class="ability-card passive-card ' +
         (active ? 'effect-active' : 'effect-inactive') +
+        (extraClass ? ' ' + extraClass : '') +
         '" ' +
         attributes +
         ' data-tooltip="' +
@@ -86,7 +87,9 @@ export function createDetails(context) {
         '</small>' +
         (skill.borrowedFrom
           ? '<span class="borrowed-skill-source">借自 ' + e(skill.borrowedFrom) + '</span>'
-          : '') +
+          : skill.universal
+            ? '<span class="borrowed-skill-source universal-skill-source">通用战技</span>'
+            : '') +
         '</button>'
       );
     }
@@ -151,6 +154,7 @@ export function createDetails(context) {
             entryActive ? '已就绪 · 换入触发' : rear ? '蓄势中' : '换入前场时自动触发',
           )
         : '<div class="action-empty-note">无入场技</div>');
+    const emblemVisual = emblem ? emblemVisualFor(d.emblemId) : null;
     const emblemSkills = emblem
       ? sectionLabel('结合技') +
         skillButton(emblem.skill, true) +
@@ -160,7 +164,8 @@ export function createDetails(context) {
           emblem.emblem.text,
           combined,
           combined ? '结合中 · 生效' : '未结合',
-          'data-emblem-passive aria-label="' + (combined ? '结合被动生效' : '未结合') + '"',
+          `data-emblem-passive style="--emblem-primary:${emblemVisual.primary};--emblem-glow:${emblemVisual.glow};--emblem-accent:${emblemVisual.accent}" aria-label="${combined ? '结合被动生效' : '未结合'}"`,
+          'emblem-passive emblem-passive-' + (combined ? 'active' : 'inactive'),
         )
       : '<div class="action-empty-note">未配戴纹章士</div>';
     $('#details').innerHTML =

@@ -17,6 +17,8 @@ export function createSelection(context) {
     session.selection.selectedCell = -1;
     session.selection.interactionStep = null;
     session.selection.inspectedEnemy = null;
+    session.selection.inspectedActionIndex = null;
+    session.selection.inspectedPreviewCell = null;
     session.selection.intentScope = 'single';
     session.selection.pending = null;
     $('#drag-menu').hidden = true;
@@ -25,13 +27,17 @@ export function createSelection(context) {
   }
   function chooseCell(start) {
     if (!context.viewport.canPlan()) return;
-    const enemy = session.battle.forecast.slots[start];
+    const slots = session.battle.forecast.slots;
+    const enemy = slots[start];
     if (enemy) {
+      const actionIndex = slots.slice(0, start).filter((entry) => entry === enemy).length;
       session.selection.selectedCell = start;
       session.selection.pending = null;
       session.selection.interactionStep = 'enemy-preview';
       session.selection.inspectedEnemy = enemy;
-      session.selection.intentScope = 'all';
+      session.selection.inspectedActionIndex = actionIndex;
+      session.selection.inspectedPreviewCell = null;
+      session.selection.intentScope = 'single';
       session.selection.target = enemy;
       $('#drag-menu').hidden = true;
       context.renderer.render();
@@ -44,21 +50,29 @@ export function createSelection(context) {
     session.selection.interactionStep = 'actor';
     if (context.viewport.compactHUD()) $('#details').classList.remove('mobile-open');
     session.selection.inspectedEnemy = null;
+    session.selection.inspectedActionIndex = null;
+    session.selection.inspectedPreviewCell = null;
     session.selection.pending = null;
     $('#drag-menu').hidden = true;
     context.renderer.render();
   }
-  function inspectEnemy(id, all = false) {
+  function inspectEnemy(id, all = true, options = {}) {
     if (!context.viewport.canPlan()) return;
     session.selection.inspectedEnemy = id;
     session.selection.intentScope = all ? 'all' : 'single';
+    session.selection.inspectedActionIndex = all ? null : (options.actionIndex ?? null);
+    session.selection.inspectedPreviewCell = all ? null : (options.previewCell ?? null);
     session.selection.target = id;
     session.selection.pending = null;
     session.selection.interactionStep = 'enemy-preview';
-    const at = session.battle.forecast.slots.indexOf(id);
-    if (at >= 0) session.selection.selectedCell = at;
+    if (options.previewCell !== undefined) {
+      session.selection.selectedCell = -1;
+    } else {
+      const at = session.battle.forecast.slots.indexOf(id);
+      if (at >= 0) session.selection.selectedCell = at;
+    }
     context.renderer.render();
-    if (all) context.onboarding?.intentViewed();
+    context.onboarding?.intentViewed();
   }
   function enemyIntentPreview() {
     if (
@@ -81,13 +95,20 @@ export function createSelection(context) {
       base.round = 1;
       result = preview(base, []);
     }
-    return ids.map((id) => previewEnemy(id, base, result));
+    const actionIndex =
+      session.selection.intentScope === 'single' ? session.selection.inspectedActionIndex : null;
+    return ids.map((id) => previewEnemy(id, base, result, actionIndex));
   }
-  function previewEnemy(id, base, result) {
+  function previewEnemy(id, base, result, actionIndex = null) {
     const d = context.roster.get(id);
     const matching = result.events
       .map((event, index) => ({ event, index }))
-      .filter(({ event }) => event.actor === id && ['enemy', 'skip'].includes(event.type));
+      .filter(
+        ({ event }) =>
+          event.actor === id &&
+          ['enemy', 'skip'].includes(event.type) &&
+          (actionIndex === null || (event.actionIndex ?? 0) === actionIndex),
+      );
     const active = matching.filter(({ event }) => event.type === 'enemy');
     if (!matching.length || !active.length)
       return { id, name: d.name, cancelled: true, targets: [] };
@@ -307,7 +328,7 @@ export function createSelection(context) {
         context.drag.showDropMenu(actor, id, 'Enemy');
         return;
       }
-      inspectEnemy(id);
+      inspectEnemy(id, true);
       return;
     }
     if (

@@ -39,6 +39,27 @@
         </svg>
         大地图
       </button>
+      <button
+        id="street-submap-open"
+        type="button"
+        hidden
+        aria-haspopup="dialog"
+        aria-controls="street-city-submap"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          width="16"
+          height="16"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.6"
+          aria-hidden="true"
+        >
+          <rect x="3" y="4" width="18" height="16" rx="2" />
+          <path d="M9 4v16M15 9h6M3 13h6" />
+        </svg>
+        城区图
+      </button>
       <button id="street-return" aria-label="返回酒馆">
         <span aria-hidden="true">↶</span> 酒馆
       </button>
@@ -674,6 +695,27 @@
           <span class="street-atlas-turns" aria-live="polite"></span>
         </div>
       </div>
+    </dialog>
+    <dialog
+      id="street-city-submap"
+      class="street-city-submap"
+      aria-labelledby="street-city-submap-title"
+    >
+      <header class="street-city-submap-head">
+        <div>
+          <small id="street-city-submap-kicker">CITY DISTRICT CHART</small>
+          <h2 id="street-city-submap-title">城区范围图</h2>
+        </div>
+        <div class="street-city-submap-actions">
+          <button id="street-city-submap-atlas" type="button">泛生界大地图</button>
+          <button id="street-city-submap-close" type="button" aria-label="关闭城区范围图">×</button>
+        </div>
+      </header>
+      <div id="street-city-submap-canvas" class="street-city-submap-canvas"></div>
+      <footer class="street-city-submap-foot">
+        <span id="street-city-submap-inspect">点击城内建筑徽记即可直接前往</span>
+        <span>✦ 当前位置 · ⚜ 冒险者公会 · ☠ 游荡敌情</span>
+      </footer>
     </dialog>
     <div id="street-points" aria-label="可调查的地点与角色"></div>
     <div class="street-reticle" aria-hidden="true"></div>

@@ -25,9 +25,9 @@ const QING_YUAN = {
     portrait: 'guardian',
     color: '#a9cfbb',
     weapon: 'sword',
-    hp: 68,
-    mp: 24,
-    attack: 9,
+    hp: 78,
+    mp: 28,
+    attack: 12,
     attackName: '清影破隙',
     limit: 2,
     buffs: {},
@@ -35,37 +35,37 @@ const QING_YUAN = {
       {
         id: 'generated-1',
         name: '素气还元',
-        text: '回复自身10生命，获得8护盾。',
+        text: '回复自身12生命，获得10护盾。',
         ap: 1,
         mp: 3,
         target: 'self',
         effects: [
           {
             type: 'heal',
-            value: 10,
+            value: 12,
           },
           {
             type: 'shield',
-            value: 8,
+            value: 10,
           },
         ],
       },
       {
         id: 'generated-2',
         name: '疾风断脉',
-        text: '造成14伤害，附加1流血和1迟缓。',
+        text: '造成19伤害，附加2流血和1迟缓。',
         ap: 1,
         mp: 3,
         target: 'enemy',
         effects: [
           {
             type: 'damage',
-            value: 14,
+            value: 19,
           },
           {
             type: 'buff',
             buff: 'bleed',
-            value: 1,
+            value: 2,
           },
           {
             type: 'buff',
@@ -78,11 +78,11 @@ const QING_YUAN = {
     entrySkill: {
       id: 'entry-qingyuan',
       name: '破阵·清影',
-      text: '换入时对正对位敌人造成8点伤害，并为自身施加6点护盾。',
+      text: '换入时对正对位敌人造成12点伤害，并为自身施加8点护盾。',
       target: 'opposite',
       effects: [
-        { type: 'damage', value: 8 },
-        { type: 'shield', target: 'self', value: 6 },
+        { type: 'damage', value: 12 },
+        { type: 'shield', target: 'self', value: 8 },
       ],
     },
   },

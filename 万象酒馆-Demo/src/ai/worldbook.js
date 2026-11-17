@@ -1,3 +1,5 @@
+import { isMonsterWorldEntry } from './monster-narrative.js';
+
 /** SillyTavern World Info wire format. Unknown extension data survives import/export. */
 export const WORLD_ENTRY_DEFAULTS = Object.freeze({
   apiTargets: ['character', 'script'],
@@ -445,6 +447,9 @@ export function syncBuiltinWorldbook(existing, builtin) {
         wanxiang: {
           ...stripPatchMeta(entry.extensions?.wanxiang),
           builtinHash: templateHashes.get(key),
+          ...(entry.extensions?.wanxiang?.monsterId || isMonsterWorldEntry(entry)
+            ? { monsterKeywordFixed: 1 }
+            : {}),
         },
       };
     }
@@ -494,14 +499,17 @@ export function syncBuiltinWorldbook(existing, builtin) {
           wanxiang: {
             ...stripPatchMeta(template.extensions?.wanxiang),
             builtinHash: templateHash,
+            ...(template.extensions?.wanxiang?.monsterId ? { monsterKeywordFixed: 1 } : {}),
           },
         },
       };
     } else {
       const prevHash = match.extensions?.wanxiang?.builtinHash;
       const shouldSyncText = !prevHash || prevHash !== templateHash;
+      const wxTemplate = template.extensions?.wanxiang || {};
+      const wxMatch = match.extensions?.wanxiang || {};
       if (shouldSyncText) {
-        const isOfficialChar = Boolean(template.extensions?.wanxiang?.characterId);
+        const isOfficialChar = Boolean(wxTemplate.characterId);
         const isLegacyChar =
           isOfficialChar &&
           (match.comment !== template.comment ||
@@ -511,13 +519,13 @@ export function syncBuiltinWorldbook(existing, builtin) {
           match.comment = template.comment;
           match.content = template.content;
         }
-        const wxTemplate = template.extensions?.wanxiang || {};
         const existingKeys = Array.isArray(match.key) ? match.key.filter(Boolean) : [];
         const isSystemKeyed = Boolean(
           wxTemplate.generationRule ||
           wxTemplate.characterId ||
           wxTemplate.officialNpcId ||
           wxTemplate.officialDungeonId ||
+          wxTemplate.monsterId ||
           wxTemplate.dining,
         );
         if (
@@ -531,13 +539,37 @@ export function syncBuiltinWorldbook(existing, builtin) {
           match.key = [...new Set([...existingKeys, ...template.key])];
         }
       }
+      if (wxTemplate.monsterId && !template.constant && !wxMatch.monsterKeywordFixed) {
+        if (match.constant) match.constant = false;
+        match.selective = true;
+        const keysNow = Array.isArray(match.key) ? match.key.filter(Boolean) : [];
+        if (Array.isArray(template.key) && template.key.length) {
+          match.key = [...new Set([...keysNow, ...template.key])];
+        }
+      }
       match.extensions = {
         ...match.extensions,
         wanxiang: {
           ...stripPatchMeta(template.extensions?.wanxiang),
           ...stripPatchMeta(match.extensions?.wanxiang),
           builtinHash: templateHash,
+          ...(wxTemplate.monsterId ? { monsterKeywordFixed: 1 } : {}),
         },
+      };
+    }
+  }
+  for (const entry of Object.values(book.entries)) {
+    if (
+      isMonsterWorldEntry(entry) &&
+      Array.isArray(entry.key) &&
+      entry.key.some(Boolean) &&
+      !entry.extensions?.wanxiang?.monsterKeywordFixed
+    ) {
+      entry.constant = false;
+      entry.selective = true;
+      entry.extensions = {
+        ...entry.extensions,
+        wanxiang: { ...entry.extensions?.wanxiang, monsterKeywordFixed: 1 },
       };
     }
   }

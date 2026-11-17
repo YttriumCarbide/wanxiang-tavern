@@ -369,7 +369,11 @@ export async function overlandChecks({ browser, baseURL, output }) {
     ];
     for (const id of capitalStops) await pin(id).waitFor();
     assert.equal(
-      await atlas.locator('.street-atlas-pin:visible:not([data-travel-to^="world-"])').count(),
+      await atlas
+        .locator(
+          '.street-atlas-pin:visible:not([data-travel-to^="world-"]):not([data-kind="dungeon"])',
+        )
+        .count(),
       8,
     );
     assert.match(await pin('eternal-city').textContent(), /13 回合/);
@@ -416,6 +420,14 @@ export async function overlandChecks({ browser, baseURL, output }) {
       await walk(id);
     }
     await page.screenshot({ path: path.join(output, 'eternal-city-temple.png') });
+    await frame.locator('#street-submap-open').click();
+    await frame.locator('#street-city-submap[open] .city-submap-svg').waitFor();
+    await page.screenshot({ path: path.join(output, 'eternal-city-blueprint.png') });
+    await frame.locator('#street-city-submap [data-city-node="guild-hall"]').click();
+    await page.locator('#guild-dialog[open]').waitFor();
+    await page.screenshot({ path: path.join(output, 'guild-hall.png') });
+    await page.locator('#guild-dialog [data-guild-accept="bounty-moss-clear"]').click();
+    await page.locator('#guild-dialog .guild-close').click();
     await page.waitForFunction(() => demo.getLibrary().atlasDiscoveries.length === 2);
     assert.deepEqual(
       discoveries[0].route.map(({ id }) => id),
@@ -432,6 +444,8 @@ export async function overlandChecks({ browser, baseURL, output }) {
     await waitForStreet('starlamp-street');
     await frame.locator('#street-map-open').click();
     await pin('world-road-discovery-1').click();
+    await page.locator('#player-intent[open]').waitFor();
+    await page.screenshot({ path: path.join(output, 'player-intent.png') });
     await page.locator('#player-intent button[value="continue"]').click();
     await readUntil('#overland-rp [data-overland-continue]:enabled');
     await page.locator('#overland-rp [data-overland-continue]').click();
@@ -454,6 +468,9 @@ export async function overlandChecks({ browser, baseURL, output }) {
     };
     await openLedger();
     await page.locator('[data-daily="quests"]').click();
+    await page.locator('#tavern-quests[open] .skyrim-journal-grid').waitFor();
+    await page.locator('#ledger-drawer-host').waitFor({ state: 'hidden' });
+    await page.screenshot({ path: path.join(output, 'skyrim-quests.png') });
     await page.locator('[data-quest-pick="test-social"]').click();
     const questStep = page.locator('[data-daily="quest-step"]');
     for (let index = 1; index <= 5; index++) {

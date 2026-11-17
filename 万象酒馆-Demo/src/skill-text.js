@@ -209,5 +209,6 @@ export function finalSkillText(skill, markName = '标记') {
   if (skill.consumeMarkCount)
     parts.push(`消耗自身${skill.consumeMarkCount}层${markName}（不足时扣至0）`);
   if (skill.basicAttackInjuredMark) parts.push('每个实际受到生命伤害的敌人为自身提供1层悠扬');
+  if (skill.retreatSwap) parts.push('施放后若后场有存活队友，自身退居后场并由首名存活后场队友补位');
   return resourceText(parts.join('，') + '。');
 }

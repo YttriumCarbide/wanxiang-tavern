@@ -17,6 +17,8 @@ export function createDebugAPI(context) {
     getArtStatus: () => session.runtime.view?.artStatus() || null,
     getWeatherStatus: () => session.runtime.view?.weatherStatus() || null,
     getEmblemStatus: () => session.runtime.view?.emblemStatus() || null,
+    getVfxStatus: () => session.runtime.view?.vfxStatus() || null,
+    getOverlordStatus: () => session.runtime.view?.overlordStatus?.() || null,
     getAudioStatus: context.audio.status,
     getForecast: () => structuredClone(session.battle.forecast),
     getSceneMotion: () => session.runtime.view?.motionStatus() || [],

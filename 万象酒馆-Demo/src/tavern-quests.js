@@ -1,7 +1,44 @@
 import { affectionRank } from './relationships.js';
 import { EQUIPMENT_STATS } from './equipment.js';
 
-export const QUEST_TYPES = Object.freeze({ social: '社交', character: '角色', battle: '战斗' });
+export const QUEST_TYPES = Object.freeze({
+  social: '社交',
+  character: '角色',
+  battle: '战斗',
+  bounty: '公会悬赏',
+});
+
+export function createBountyQuest(spec) {
+  return {
+    id: `guild-${spec.id}`,
+    sourceId: `guild:${spec.id}`,
+    bountyId: spec.id,
+    rank: spec.rank || 'E',
+    type: 'bounty',
+    title: spec.title,
+    description: spec.description,
+    hook: spec.description,
+    level: spec.level || 1,
+    origin: 'outskirts',
+    targetKind: spec.targetKind || 'dungeon',
+    targetMaps: [...(spec.targetMaps || [])],
+    objectives: [
+      {
+        id: 'bounty-main',
+        label: spec.objectiveLabel || spec.title,
+        current: 0,
+        target: spec.targetCount || 1,
+      },
+    ],
+    rewards: {
+      gold: spec.gold || 50,
+      ether: spec.ether || 15,
+      merit: spec.merit || 50,
+    },
+    status: 'active',
+    claimed: false,
+  };
+}
 
 function text(value, maximum) {
   return typeof value === 'string' ? value.trim().slice(0, maximum) : '';
@@ -98,5 +135,19 @@ export function restoreTavernQuests(value) {
         ['offered', 'active', 'completed'].includes(entry.status),
     )
     .slice(-100)
-    .map((entry) => structuredClone(entry));
+    .map((entry) => {
+      const copy = structuredClone(entry);
+      if (copy.type === 'bounty') {
+        copy.objectives = Array.isArray(copy.objectives)
+          ? copy.objectives.map((obj, idx) => ({
+              id: typeof obj?.id === 'string' ? obj.id : `obj-${idx + 1}`,
+              label: text(obj?.label || copy.title, 120),
+              current: Math.max(0, Number(obj?.current) || 0),
+              target: Math.max(1, Number(obj?.target) || 1),
+            }))
+          : [];
+        copy.claimed = copy.claimed === true;
+      }
+      return copy;
+    });
 }

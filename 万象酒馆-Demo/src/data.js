@@ -2,6 +2,8 @@ import { CHANGJING_YUEXI } from './content/changjing-yuexi.js';
 import { FOREST_ENEMIES, FOREST_BOSSES } from './content/forest-adversaries.js';
 import { FROST_ENEMIES, FROST_BOSSES } from './content/frost-adversaries.js';
 import { UNIVERSAL_ENEMIES, UNIVERSAL_BOSSES } from './content/universal-adversaries.js';
+import { LADDER_ENEMIES, LADDER_BOSSES } from './content/ladder-adversaries.js';
+import { COMMON_ENEMIES, COMMON_BOSSES } from './content/common-adversaries.js';
 import {
   EXTRA_ENEMIES,
   EXTRA_BOSSES,
@@ -91,7 +93,7 @@ export const HEROES = [
     hp: 36,
     mp: 18,
     limit: 2,
-    attack: 8,
+    attack: 9,
     attackName: '斩击',
     skills: [
       {
@@ -100,9 +102,9 @@ export const HEROES = [
         ap: 2,
         mp: 3,
         target: 'enemy',
-        text: '造成18伤害，施加4流血。',
+        text: '造成22伤害，施加4流血。',
         effects: [
-          { type: 'damage', value: 18 },
+          { type: 'damage', value: 22 },
           { type: 'buff', buff: 'bleed', value: 4 },
         ],
       },
@@ -119,10 +121,10 @@ export const HEROES = [
     entrySkill: {
       id: 'entry-lyria',
       name: '拔刀·瞬斩',
-      text: '换入时对正对位敌人造成8点伤害并施加4层流血。',
+      text: '换入时对正对位敌人造成12点伤害并施加4层流血。',
       target: 'opposite',
       effects: [
-        { type: 'damage', value: 8 },
+        { type: 'damage', value: 12 },
         { type: 'buff', buff: 'bleed', value: 4 },
       ],
     },
@@ -158,9 +160,9 @@ export const HEROES = [
         ap: 2,
         mp: 5,
         target: 'enemy',
-        text: '造成10伤害，施加3迟缓。',
+        text: '造成15伤害，施加3迟缓。',
         effects: [
-          { type: 'damage', value: 10 },
+          { type: 'damage', value: 15 },
           { type: 'buff', buff: 'slow', value: 3 },
         ],
       },
@@ -256,10 +258,10 @@ export const HEROES = [
     entrySkill: {
       id: 'entry-vesper',
       name: '影羽寄生',
-      text: '换入时甩出暗紫鸦羽没入正对位敌人影子，造成4点伤害并附加4层中毒与1层易伤。',
+      text: '换入时甩出暗紫鸦羽没入正对位敌人影子，造成8点伤害并附加4层中毒与1层易伤。',
       target: 'opposite',
       effects: [
-        { type: 'damage', value: 4 },
+        { type: 'damage', value: 8 },
         { type: 'buff', buff: 'poison', value: 4 },
         { type: 'buff', buff: 'vulnerable', value: 1 },
       ],
@@ -275,7 +277,7 @@ export const HEROES = [
     hp: 34,
     mp: 18,
     limit: 2,
-    attack: 7,
+    attack: 8,
     attackName: '穿弦',
     skills: [
       {
@@ -284,9 +286,9 @@ export const HEROES = [
         ap: 1,
         mp: 2,
         target: 'enemy',
-        text: '造成9伤害，施加2虚弱。',
+        text: '造成13伤害，施加2虚弱。',
         effects: [
-          { type: 'damage', value: 9 },
+          { type: 'damage', value: 13 },
           { type: 'buff', buff: 'weak', value: 2 },
         ],
       },
@@ -302,9 +304,9 @@ export const HEROES = [
     entrySkill: {
       id: 'entry-rook',
       name: '鹰眼狙击',
-      text: '换入时挽弓疾射精准狙击生命最低的敌人，造成11点穿透伤害。',
+      text: '换入时挽弓疾射精准狙击生命最低的敌人，造成16点穿透伤害。',
       target: 'lowestEnemy',
-      effects: [{ type: 'damage', value: 11 }],
+      effects: [{ type: 'damage', value: 16 }],
     },
   },
 ];
@@ -613,7 +615,17 @@ export const BOSSES = [
   ...FROST_BOSSES,
 ];
 export const DEFINITIONS = Object.fromEntries(
-  [...HEROES, ...ENEMIES, ...BOSSES, ...RUINS_ADVERSARIES, ...RUINS_BOSSES].map((d) => [d.id, d]),
+  [
+    ...HEROES,
+    ...ENEMIES,
+    ...BOSSES,
+    ...RUINS_ADVERSARIES,
+    ...RUINS_BOSSES,
+    ...LADDER_ENEMIES,
+    ...LADDER_BOSSES,
+    ...COMMON_ENEMIES,
+    ...COMMON_BOSSES,
+  ].map((d) => [d.id, d]),
 );
 export const ENCOUNTERS = [
   {
@@ -657,25 +669,42 @@ export function encounterSpec(index, boss = 'bossGate') {
   const spec = { ...ENCOUNTERS[index] };
   if (spec.boss) {
     spec.name = DEFINITIONS[boss]?.name || '首领战';
-    spec.map = boss === 'bossBloom' ? 'forest' : boss === 'bossTide' ? 'tide' : 'ruins';
+    spec.map =
+      boss === 'bossBloom' || boss === 'moonEye'
+        ? 'forest'
+        : boss === 'bossTide'
+          ? 'tide'
+          : boss === 'radiantWyvern'
+            ? 'relic'
+            : 'ruins';
     spec.enemyIds =
       boss === 'bossBloom'
         ? ['warden', boss, 'hound']
-        : boss === 'bossTide'
-          ? ['tideJelly', boss, 'crystalBeetle']
-          : boss === 'ruinsGate'
-            ? ['patrolHound', boss, 'stoneBallista']
-            : boss === 'chasmBeast'
-              ? ['viperShadow', boss, 'raptorStorm']
-              : boss === 'brassColossus'
-                ? ['stoneBeetle', boss, 'brassSeeker']
-                : boss === 'cinderPriest'
-                  ? ['tombBeetle', boss, 'cultistSpecter']
-                  : boss === 'apepLamb'
-                    ? ['blackOoze', boss, 'voidParasite']
-                    : boss === 'ares'
-                      ? ['aresCannonLeft', boss, 'aresCannonRight']
-                      : ['hound', boss, 'hexer'];
+        : boss === 'moonEye'
+          ? ['moonCrown', 'moonEye', 'moonRoot']
+          : boss === 'radiantWyvern'
+            ? ['pureCreationElemental', boss, 'pureDestructionElemental']
+            : boss === 'bossTide'
+              ? ['tideJelly', boss, 'crystalBeetle']
+              : boss === 'ruinsGate'
+                ? ['patrolHound', boss, 'stoneBallista']
+                : boss === 'chasmBeast'
+                  ? ['viperShadow', boss, 'raptorStorm']
+                  : boss === 'brassColossus'
+                    ? ['stoneBeetle', boss, 'brassSeeker']
+                    : boss === 'cinderPriest'
+                      ? ['tombBeetle', boss, 'cultistSpecter']
+                      : boss === 'apepLamb'
+                        ? ['blackOoze', boss, 'voidParasite']
+                        : boss === 'ares'
+                          ? ['aresCannonLeft', boss, 'aresCannonRight']
+                          : boss === 'banditSyndicateKing'
+                            ? ['banditPoacher', boss, 'banditBruiser']
+                            : boss === 'goblinKingGorg'
+                              ? ['goblinShaman', boss, 'goblinSapper']
+                              : boss === 'erosionRiftTyrant'
+                                ? ['erosionSpitter', boss, 'erosionWing']
+                                : ['hound', boss, 'hexer'];
   } else spec.enemyIds = [...spec.enemyIds];
   return spec;
 }

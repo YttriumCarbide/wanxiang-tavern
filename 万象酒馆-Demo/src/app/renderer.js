@@ -1,7 +1,7 @@
 import { resourceText } from '../resource-text.js';
 import { ADVENTURE_NODE_LABELS } from '../adventure/definition.js';
 import { rearUnlocked } from '../formation-access.js';
-import { emblemRing } from '../emblems.js';
+import { emblemRing, emblemVisualFor, EMBLEM_VISUALS } from '../emblems.js';
 import { ENCOUNTER_COUNT, FINAL_ENCOUNTER } from '../content/journey-rules.js';
 import { html } from '../shared/html.js';
 import { ENCOUNTERS } from '../data.js';
@@ -106,9 +106,26 @@ export function createRenderer(context) {
       session.selection.selected && emblemState?.units
         ? emblemState.units[session.selection.selected]
         : null;
+    const selectedDef = session.selection.selected
+      ? emblemState?.heroDefinitions?.[session.selection.selected] ||
+        context.roster.get(session.selection.selected)
+      : null;
     const emblemActive = !!selectedUnit && (selectedUnit.combined || 0) > 0;
+    const emblemScreen = $('#emblem-screen');
     $('#battle').classList.toggle('emblem-active', emblemActive);
-    $('#emblem-screen')?.classList.toggle('active', emblemActive);
+    emblemScreen?.classList.toggle('active', emblemActive);
+    if (emblemScreen) {
+      for (const visual of Object.values(EMBLEM_VISUALS)) {
+        emblemScreen.classList.remove(visual.cssClass);
+      }
+      if (emblemActive && selectedDef?.emblemId) {
+        const visual = emblemVisualFor(selectedDef.emblemId);
+        emblemScreen.classList.add(visual.cssClass);
+        for (const key of ['primary', 'secondary', 'glow', 'accent', 'core']) {
+          emblemScreen.style.setProperty(`--emblem-${key}`, visual[key]);
+        }
+      }
+    }
     const layout = captureLayout(),
       s = session.battle.display || session.battle.state;
     $('#encounter-label').textContent = session.journey.expedition.overlandBattle

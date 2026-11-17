@@ -3,11 +3,14 @@ import { createStatusEffects, triggeredStatusVisuals } from './status-effects.js
 import { createCombatDetails } from './combat-details.js';
 import { createAttackEffects } from './attack-effects.js';
 import { attackStyle, ATTACK_TIMING } from './combat-art.js';
-import { definition } from './catalog.js';
+import { abilityFor, definition } from './catalog.js';
+import { emblemVisualFor } from './emblems.js';
+import { createPixelFxStage } from './pixelfx-stage.js';
 import { roundBanner } from './motion.js';
-export function createEffects(layer, center, getSpeed) {
+export function createEffects(layer, center, getSpeed, options = {}) {
   const active = new Set();
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const pixelFx = createPixelFxStage(layer, getSpeed);
   function animate(el, frames, duration = 650, delay = 0) {
     active.add(el);
     layer.append(el);
@@ -104,6 +107,143 @@ export function createEffects(layer, center, getSpeed) {
   const attacks = createAttackEffects({ animate, ring, sparks, slash });
   const statuses = createStatusEffects({ animate, ring, sparks });
   const details = createCombatDetails({ animate });
+  const COMBINE_SKILLS = new Set([
+    'emblem-balance',
+    'emblem-overload',
+    'emblem-dragon-vein',
+    'emblem-deceit-sacrifice',
+    'emblem-moon-eye',
+  ]);
+  const DRAGON_PALETTE = ['#0a3d33', '#1c806a', '#38e89e', '#9dffda', '#ffffff'];
+
+  function skillPixelFxId(e, d, skillDef) {
+    if (skillDef?.vfx) return skillDef.vfx;
+    if (e.skill === 'attack') {
+      if (d?.weapon === 'staff') return 'mana-burst';
+      if (d?.weapon === 'bow') return 'thrust';
+      return 'sword-slash';
+    }
+    const targetKind = skillDef?.target || '';
+    if (targetKind === 'self' || targetKind.includes('Ally') || targetKind === 'allAllies') {
+      if (skillDef?.effects?.some((ef) => ef.type === 'shield')) return 'divine-shield';
+      if (skillDef?.effects?.some((ef) => ef.type === 'heal')) return 'heal-aoe';
+      return 'blessing';
+    }
+    if (d?.weapon === 'staff') return 'magic-circle-cast';
+    if (d?.weapon === 'bow') return 'crit-hit';
+    if (e.type === 'enemy') return 'heavy-cleave';
+    return 'double-slash';
+  }
+
+  function spawnPixelFx(e, before, d, source, impactDelay) {
+    const state = e.after || before;
+    const targetPoints = (e.targets || [])
+      .map((id) => ({ id, p: center(id) }))
+      .filter((item) => item.p);
+    let spawned = false;
+
+    if (e.type === 'bossPhase' && source) {
+      pixelFx.spawn('dark-explosion', { x: source.x, y: source.y, scale: 1.9, maxDuration: 1100 });
+      options.onImpact?.({ heavy: true, delay: 80 });
+      spawned = true;
+    } else if (e.type === 'engage') {
+      const point = source || targetPoints[0]?.p;
+      const visual = emblemVisualFor(d?.emblemId);
+      if (point) {
+        ring(point, visual.primary, 'impact-ring');
+        sparks(point, visual.glow, reduced ? 4 : 12);
+        pixelFx.spawn(visual.engageFx, {
+          x: point.x,
+          y: point.y,
+          palette: visual.pixelfxPalette,
+          scale: 1.9,
+          maxDuration: 1200,
+        });
+        options.onImpact?.({ heavy: true, delay: 90 });
+        spawned = true;
+      }
+    } else if (e.skill && COMBINE_SKILLS.has(e.skill)) {
+      const visual = emblemVisualFor(d?.emblemId);
+      const pts = targetPoints.length ? targetPoints.slice(0, 3) : source ? [{ p: source }] : [];
+      for (const item of pts) {
+        pixelFx.spawn(visual.skillFx, {
+          x: item.p.x,
+          y: item.p.y,
+          palette: visual.pixelfxPalette,
+          delay: impactDelay * 0.55,
+          scale: 1.85,
+        });
+      }
+      if (source && e.skill === 'emblem-overload') {
+        pixelFx.spawn('spark-arc', {
+          x: source.x,
+          y: source.y,
+          palette: visual.pixelfxPalette,
+          scale: 1.5,
+        });
+      } else if (source && e.skill === 'emblem-balance') {
+        pixelFx.spawn('halo', {
+          x: source.x,
+          y: source.y,
+          palette: visual.pixelfxPalette,
+          scale: 1.55,
+        });
+      } else if (e.skill === 'emblem-dragon-vein') {
+        const frontSlots = (state?.formation || []).slice(0, 3).filter(Boolean);
+        for (const fid of frontSlots) {
+          const fp = center(fid);
+          if (fp) {
+            pixelFx.spawn('ripples', {
+              x: fp.x,
+              y: fp.y,
+              palette: DRAGON_PALETTE,
+              delay: impactDelay * 0.65,
+              scale: 1.5,
+            });
+          }
+        }
+      }
+      options.onImpact?.({ heavy: true, delay: impactDelay });
+      spawned = true;
+    } else if (e.type === 'counter' || e.type === 'emblem') {
+      const visual = emblemVisualFor(d?.emblemId);
+      const point = targetPoints[0]?.p || source;
+      if (point) {
+        pixelFx.spawn(visual.passiveFx, {
+          x: point.x,
+          y: point.y,
+          palette: visual.pixelfxPalette,
+          delay: impactDelay * 0.6,
+          scale: 1.55,
+        });
+        spawned = true;
+      }
+    } else if (['hero', 'enemy', 'entrySkill'].includes(e.type)) {
+      const skillDef = e.skill
+        ? abilityFor(state, e.actor, e.skill) || abilityFor(before, e.actor, e.skill)
+        : null;
+      const fxId = skillPixelFxId(e, d, skillDef);
+      const pts = targetPoints.length ? targetPoints.slice(0, 3) : source ? [{ p: source }] : [];
+      for (const item of pts) {
+        pixelFx.spawn(fxId, {
+          x: item.p.x,
+          y: item.p.y,
+          ...(skillDef?.vfxPalette ? { palette: skillDef.vfxPalette } : {}),
+          delay: impactDelay * (skillDef?.vfx ? 0.52 : 0.72),
+          flip: e.type === 'enemy',
+          scale: skillDef?.vfx ? 1.78 : 1.55,
+        });
+        spawned = true;
+      }
+    }
+
+    const heavyHit = Object.values(e.after?.units || {}).some(
+      (u) => (before?.units?.[u.id]?.hp ?? u.hp) - u.hp >= 10,
+    );
+    if (heavyHit) options.onImpact?.({ heavy: true, delay: impactDelay });
+    if (spawned) options.onSpawn?.();
+  }
+
   function play(e, before, records) {
     const d = definition(e.after, e.actor),
       source = center(e.actor),
@@ -112,6 +252,7 @@ export function createEffects(layer, center, getSpeed) {
       isAction = ['hero', 'enemy', 'entrySkill', 'counter'].includes(e.type),
       duration = isAction ? ATTACK_TIMING[style] || 640 : 0,
       impactDelay = isAction ? duration * 0.7 : 0;
+    spawnPixelFx(e, before, d, source, impactDelay);
     if (e.type === 'bossPhase' && source) {
       roundBanner(`${d.name} · 第二阶段`);
       ring(source, d.color || '#d78ffe', 'boss-phase-ring');
@@ -230,7 +371,10 @@ export function createEffects(layer, center, getSpeed) {
   }
   return {
     play,
+    update: pixelFx.update,
+    status: pixelFx.status,
     dispose() {
+      pixelFx.dispose();
       for (const el of active) {
         el.getAnimations().forEach((a) => a.cancel());
         el.remove();

@@ -41,6 +41,8 @@ export function createSession(storage = globalThis.localStorage) {
       selectedCell: -1,
       interactionStep: null,
       inspectedEnemy: null,
+      inspectedActionIndex: null,
+      inspectedPreviewCell: null,
       intentScope: 'single',
     },
     journey: { expedition: null, bossChoice: 'bossGate', selectedNode: null, regionMap: 'ruins' },

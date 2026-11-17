@@ -1,5 +1,7 @@
 import { FOREST_MONSTER_LORE } from './forest-lore.js';
 import { FROST_ENEMIES, FROST_BOSSES } from './frost-adversaries.js';
+import { LADDER_ENEMIES, LADDER_BOSSES } from './ladder-adversaries.js';
+import { COMMON_ENEMIES, COMMON_BOSSES } from './common-adversaries.js';
 import { monsterNarrativeText } from '../ai/monster-narrative.js';
 /** Narrative setting only. Encounter identities and combat capabilities come from data.js. */
 export const MONSTER_LORE = Object.freeze({
@@ -180,22 +182,42 @@ export const RUINS_MONSTER_LORE = Object.freeze({
   },
 });
 
+function buildGeneratedLore(enemies) {
+  return Object.fromEntries(
+    enemies.map((enemy) => {
+      const moves = [...(enemy.intents || []), ...(enemy.enragedIntents || [])]
+        .map((move) => move.name)
+        .filter(Boolean);
+      let habits = enemy.description;
+      if (enemy.nonlethal) {
+        habits = '维持聚落安全，受到压制后会放下武器交涉，不得写成死亡。';
+      } else if (enemy.overlord) {
+        habits = `${enemy.description}（新层级霸主，以立体实体形态矗立于战牌之上。）`;
+      }
+      return [
+        enemy.id,
+        {
+          appearance: enemy.description,
+          habits,
+          motion: moves.join('、'),
+        },
+      ];
+    }),
+  );
+}
+
 export const ALL_MONSTER_LORE = Object.freeze({
   ...MONSTER_LORE,
   ...RUINS_MONSTER_LORE,
   ...FOREST_MONSTER_LORE,
-  ...Object.fromEntries(
-    [...FROST_ENEMIES, ...FROST_BOSSES].map((enemy) => [
-      enemy.id,
-      {
-        appearance: enemy.description,
-        habits: enemy.nonlethal
-          ? '维持聚落安全，受到压制后会放下武器交涉，不得写成死亡。'
-          : enemy.description,
-        motion: enemy.intents.map((move) => move.name).join('、'),
-      },
-    ]),
-  ),
+  ...buildGeneratedLore([
+    ...FROST_ENEMIES,
+    ...FROST_BOSSES,
+    ...LADDER_ENEMIES,
+    ...LADDER_BOSSES,
+    ...COMMON_ENEMIES,
+    ...COMMON_BOSSES,
+  ]),
 });
 
 export function monsterWorldbook(id, name) {

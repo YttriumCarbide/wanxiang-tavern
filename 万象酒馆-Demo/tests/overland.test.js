@@ -28,6 +28,11 @@ import {
 } from '../src/tavern-quests.js';
 import { chatResponse } from '../src/ai/pipeline/chat-response.js';
 import { createMapExpansion } from '../src/app/map-expansion.js';
+import { restoreGenerationOptions } from '../src/generation-options.js';
+import { buildCitySubmapData, cityRegionForScene } from '../src/exploration/city-submap.js';
+import { destinationMap, destinationRegionTerrain } from '../src/destination-map.js';
+import { explorationPreview } from '../src/exploration.js';
+import { newLibrary } from '../src/ai/library.js';
 
 test('at the second cleared area, map expansion finishes before summary and applies only once', async () => {
   const world = { id: 'world-example', name: '地点', map: 'ruins', enemyDefinitions: {} };
@@ -384,4 +389,31 @@ test('ruins sits one turn directly southwest of Starbell outskirts', () => {
   assert.equal(plan.legs[0].id, 'ruins-approach');
   assert.equal(plan.legs[0].from.id, 'outskirts');
   assert.equal(plan.legs[0].to.id, 'ruins');
+});
+
+test('skipOverlandApi option restores without developerMode and city/dungeon submaps populate cleanly', () => {
+  const opts = restoreGenerationOptions({ developerMode: false, skipOverlandApi: true });
+  assert.equal(opts.skipOverlandApi, true);
+  assert.equal(opts.scriptApi, true);
+
+  assert.equal(cityRegionForScene('street'), 'starbell');
+  assert.equal(cityRegionForScene('starlamp-street'), 'starbell');
+  assert.equal(cityRegionForScene('road-capital'), 'silver-crown');
+  assert.equal(cityRegionForScene('eternal-city'), 'eternal-city');
+  assert.equal(cityRegionForScene('road-bridge'), null);
+  assert.equal(cityRegionForScene('eternal-road-mill'), null);
+
+  for (const sceneId of ['street', 'road-capital', 'eternal-city']) {
+    const submap = buildCitySubmapData(sceneId);
+    assert(submap && submap.nodes.length >= 6);
+    assert(submap.nodes.some((n) => n.current));
+    assert(submap.edges.length >= 4);
+  }
+
+  const lib = newLibrary();
+  const entries = explorationPreview(lib.exploration.ruins, 'ruins');
+  const { positions, width, height } = destinationMap(entries);
+  const terrainSvg = destinationRegionTerrain('ruins', width, height, positions);
+  assert.match(terrainSvg, /destination-terrain-layer/);
+  assert.match(terrainSvg, /terrain-frame-outer/);
 });

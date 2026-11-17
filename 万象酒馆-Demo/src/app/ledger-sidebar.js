@@ -18,6 +18,7 @@ const LOCKED_CLOSE_SELECTOR = [
   '#ledger-condenser-open',
   '#ledger-emblem-open',
   '#ledger-atlas-open',
+  '#ledger-guild-open',
   '[data-daily="service"]',
   '[data-daily="promotion"]',
   '[data-daily="quests"]',
@@ -253,6 +254,10 @@ export function createLedgerSidebar(context) {
   atlasBtn.id = 'ledger-atlas-open';
   atlasBtn.type = 'button';
   atlasBtn.textContent = '世界地图';
+  const guildBtn = document.createElement('button');
+  guildBtn.id = 'ledger-guild-open';
+  guildBtn.type = 'button';
+  guildBtn.textContent = '冒险者公会';
 
   const archiveGrid = host.querySelector('[data-ledger-archive-grid]');
   const archiveTiles = {
@@ -264,6 +269,7 @@ export function createLedgerSidebar(context) {
     condenser: makeActionTile(archiveGrid, condenserBtn),
     emblem: makeActionTile(archiveGrid, emblemBtn),
     atlas: makeActionTile(archiveGrid, atlasBtn),
+    guild: makeActionTile(archiveGrid, guildBtn),
   };
 
   const foot = host.querySelector('[data-ledger-foot]');
@@ -490,6 +496,9 @@ export function createLedgerSidebar(context) {
       apiReason ||
       (state.dailyActive && state.scene === 'tavern' ? '结束当前日程后可用' : '');
     setTileAvailability(archiveTiles.atlas, Boolean(atlasReason), atlasReason);
+
+    const guildReason = battleOrEventReason || apiReason;
+    setTileAvailability(archiveTiles.guild, Boolean(guildReason), guildReason);
 
     if (fgApiBanner) {
       const progressEl = $('#generation-progress');
@@ -819,6 +828,11 @@ export function createLedgerSidebar(context) {
     if (atlasBtn.disabled) return;
     close();
     context.daily?.openAtlas?.();
+  });
+  events.on(guildBtn, 'click', () => {
+    if (guildBtn.disabled) return;
+    close();
+    context.guild?.open?.();
   });
   events.on(speedToggle, 'click', () => {
     const next = session.battle.speed === 1 ? 2 : 1;

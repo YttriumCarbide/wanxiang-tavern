@@ -206,13 +206,17 @@ test('every frost portrait and GLB comes from its own reproducible voxel source 
       ),
     );
     assert.deepEqual(source.blocks, blocks);
-    assert.equal(
-      await readFile(
-        new URL('../assets/portraits/' + enemy.portrait + '.svg', import.meta.url),
-        'utf8',
-      ),
-      renderVoxelEnemyPortrait(enemy, blocks),
+    const svg = await readFile(
+      new URL('../assets/portraits/' + enemy.portrait + '.svg', import.meta.url),
+      'utf8',
     );
+    if (enemy.overlord || enemy.standOnCard) {
+      assert.match(svg, /width="600"\s+height="900"/);
+      assert.match(svg, /data-art-style="sculpted-overlord-v1"/);
+      assert.match(svg, new RegExp(`data-enemy-model="${enemy.id}"`));
+    } else {
+      assert.equal(svg, renderVoxelEnemyPortrait(enemy, blocks));
+    }
     const glb = await readFile(new URL('../assets/' + enemy.model, import.meta.url));
     assert.equal(glb.toString('ascii', 0, 4), 'glTF');
     assert.equal(glb.readUInt32LE(8), glb.length);

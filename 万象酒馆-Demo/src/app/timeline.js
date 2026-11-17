@@ -57,7 +57,7 @@ export function createTimeline(context) {
         move = id ? intent(s, id, actionIndex) : null,
         phaseTag = totalActions > 1 ? ` ${ROMAN[actionIndex] || `#${actionIndex + 1}`}` : '';
       return html`<button
-        class="time-cell ${id ? 'enemy-cell' : ''} ${cancelled ? 'cancelled' : ''} ${bound ? 'bound' : ''} ${!readOnly && (session.battle.activeCell === i || (!session.battle.playing && session.selection.selectedCell === i)) ? 'playing' : ''} ${readOnly ? 'preview-cell' : ''} ${readOnly && id && id === session.selection.inspectedEnemy ? 'playing' : ''}"
+        class="time-cell ${id ? 'enemy-cell' : ''} ${cancelled ? 'cancelled' : ''} ${bound ? 'bound' : ''} ${!readOnly && (session.battle.activeCell === i || (!session.battle.playing && session.selection.selectedCell === i)) ? 'playing' : ''} ${readOnly ? 'preview-cell' : ''} ${readOnly && id && (session.selection.inspectedPreviewCell !== null ? session.selection.inspectedPreviewCell === i : session.selection.intentScope === 'all' && session.selection.inspectedEnemy ? true : id === session.selection.inspectedEnemy) ? 'playing' : ''}"
         ${readOnly ? `data-preview="${i}"` : `data-start="${i}" data-motion="${id ? `enemy-${id}` : `empty-${i}`}"`}
         ${session.battle.playing || (readOnly && !id) ? 'disabled' : ''}
         ${id ? `data-tooltip="${escapeText(`${context.roster.get(id).name}${phaseTag} · ${bound ? '禁锢，本回合行动取消' : `速度 ${Math.max(1, context.roster.get(id).speed - (s.units[id].buffs.slow || 0))}\n${move.name}：${move.text}`}`)}"` : ''}
@@ -185,10 +185,17 @@ export function createTimeline(context) {
     next.querySelectorAll('[data-preview]').forEach(
       (b) =>
         (b.onclick = () => {
-          const nextState = { ...session.battle.forecast.final, phase: 'plan', round: 1 },
-            id = enemyTimeline(nextState)[Number(b.dataset.preview)];
-          if (id) context.selection.inspectEnemy(id, true);
-          else context.shell.toast('结算先手后可编排第一回合。');
+          const previewIndex = Number(b.dataset.preview);
+          const nextState = { ...session.battle.forecast.final, phase: 'plan', round: 1 };
+          const slots = enemyTimeline(nextState);
+          const id = slots[previewIndex];
+          if (id) {
+            const actionIndex = slots.slice(0, previewIndex).filter((entry) => entry === id).length;
+            context.selection.inspectEnemy(id, false, {
+              actionIndex,
+              previewCell: previewIndex,
+            });
+          } else context.shell.toast('结算先手后可编排第一回合。');
         }),
     );
     const dropIndex = (e) =>

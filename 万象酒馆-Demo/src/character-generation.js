@@ -100,7 +100,7 @@ export function characterGenerationPlan(input = {}) {
   const protagonist = input.purpose === 'protagonist';
   const limit = protagonist || roll(seed, 'actions', 1, 100) <= [8, 18, 32, 50][tier] ? 2 : 1;
   const attack = protagonist
-    ? roll(seed, 'attack', 9, 11)
+    ? roll(seed, 'attack', 11, 13)
     : roll(seed, 'attack', 6 + Math.floor(tier / 2), 8 + tier);
   return {
     version: 1,
@@ -301,11 +301,18 @@ export function compileCharacterDesign(raw, input = {}) {
       0,
     );
     const multiplier = passive ? 0.45 : ability.ap === 2 ? 3.2 : 1.5;
+    const damageScale = !passive && effect.type === 'damage' ? (plan.protagonist ? 1.28 : 1.18) : 1;
     const scope = allTargets ? 0.54 : 1;
     const share = weights[power] / total;
+    const cap = effect.type === 'damage' ? 48 : 40;
     const value = Math.min(
-      40,
-      Math.max(1, Math.round(plan.fixed.attack * multiplier * scope * share * (0.9 + 0.1 * power))),
+      cap,
+      Math.max(
+        1,
+        Math.round(
+          plan.fixed.attack * multiplier * damageScale * scope * share * (0.9 + 0.1 * power),
+        ),
+      ),
     );
     const markDamage = effect.perMark ? Math.max(1, Math.floor(value / 7)) : 0;
     const result =
@@ -410,10 +417,10 @@ export function compileCharacterDesign(raw, input = {}) {
   delete entrySkill.ap;
   delete entrySkill.mp;
   const hp = plan.protagonist
-    ? roll(plan.seed, 'hp', 64, 74)
+    ? roll(plan.seed, 'hp', 74, 86)
     : roll(plan.seed, 'hp:' + source.profile, ...profile.hp);
   const mp = plan.protagonist
-    ? roll(plan.seed, 'mp', 26, 34)
+    ? roll(plan.seed, 'mp', 28, 36)
     : roll(plan.seed, 'mp:' + source.profile, ...profile.sp);
   const dcAttrs = input.dcAttrs
     ? normalizeDcAttrs(input.dcAttrs, {

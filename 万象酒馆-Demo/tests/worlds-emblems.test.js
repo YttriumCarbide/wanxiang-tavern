@@ -494,8 +494,8 @@ test('Qingyuan entrySkill triggers opposite strike and self shield, and old save
   const swapAction = makeSwap(HEROES[3].id, 0, 0);
   const result = preview(b, [swapAction]);
   assert(result.valid);
-  assert.equal(result.final.units[HEROES[3].id].block, 6); // 6 self shield
-  assert.equal(result.final.units[targetEnemyId].hp, targetInitialHp - 8); // 8 opposite damage
+  assert.equal(result.final.units[HEROES[3].id].block, 8); // 8 self shield
+  assert.equal(result.final.units[targetEnemyId].hp, targetInitialHp - 12); // 12 opposite damage
   const entryEvent = result.events.find((e) => e.type === 'entrySkill' && e.actor === HEROES[3].id);
   assert(entryEvent);
   assert.equal(entryEvent.skill, 'entry-qingyuan');

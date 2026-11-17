@@ -227,7 +227,7 @@ test('wild skirmishes generate 3 non-AI battles with ecological drops and known-
   assert.equal(isOverlandRouteKnown(lib, 'outskirts', 'ruins'), true);
   assert.equal(isAtlasLegKnown(lib, 'outskirts', 'ruins'), true);
   markOverlandRouteExplored(lib, overlandPlan('outskirts', 'cross-meadow'));
-  assert.equal(isAtlasLegKnown(lib, 'outskirts', 'cross-meadow'), true);
+  assert.equal(isAtlasLegKnown(lib, 'ruins', 'cross-meadow'), true);
 
   const state = refreshWorldSkirmishes(lib, 'seed-1');
   const entries = Object.values(state.nodes);
@@ -251,4 +251,14 @@ test('wild skirmishes generate 3 non-AI battles with ecological drops and known-
   assert.equal(lib.skirmishes.nodes[firstId], undefined);
   const restored = restoreLibrary(JSON.parse(JSON.stringify(lib)));
   assert.equal(isOverlandRouteKnown(restored, 'outskirts', 'ruins'), true);
+
+  const downs = IMPERIAL_CROSSROADS.find((item) => item.id === 'cross-downs');
+  const westRoute = ATLAS_ROUTES.find(
+    ([from, to]) => from === 'eternal-city' && to === 'west-pass',
+  );
+  assert(downs && westRoute);
+  assert(
+    westRoute[2].some(([x, y]) => x === downs.point[0] && y === downs.point[1]),
+    'cross-downs point aligns cleanly on eternal-city -> west-pass highway',
+  );
 });

@@ -10688,6 +10688,2307 @@
           ]
         }
       }
+    },
+    "215": {
+      "uid": 215,
+      "apiTargets": [
+        "script",
+        "chat"
+      ],
+      "key": [
+        "drakeBadlandSlime",
+        "荒地史莱姆（龙化）"
+      ],
+      "keysecondary": [],
+      "comment": "怪物图鉴：荒地史莱姆（龙化）",
+      "content": "名称：荒地史莱姆（龙化）\n外形：汲取天梯龙气后角质化的荒地史莱姆，体表凝出金褐龙鳞结晶，弹跳撞击裹挟灼热龙压。\n习性与能力：汲取天梯龙气后角质化的荒地史莱姆，体表凝出金褐龙鳞结晶，弹跳撞击裹挟灼热龙压。\n行动方式：龙压扑弹、鳞泥喷溅",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 180,
+      "position": 1,
+      "disable": false,
+      "ignoreBudget": false,
+      "excludeRecursion": true,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 215,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "drakeBadlandSlime",
+          "apiTargets": [
+            "script",
+            "chat"
+          ]
+        }
+      }
+    },
+    "216": {
+      "uid": 216,
+      "apiTargets": [
+        "script",
+        "chat"
+      ],
+      "key": [
+        "drakeBadlandScorpion",
+        "荒地毒蝎（龙化）"
+      ],
+      "keysecondary": [],
+      "comment": "怪物图鉴：荒地毒蝎（龙化）",
+      "content": "名称：荒地毒蝎（龙化）\n行动方式：龙毒尾刺、双螯钳碎",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 180,
+      "position": 1,
+      "disable": false,
+      "ignoreBudget": false,
+      "excludeRecursion": true,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 216,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "drakeBadlandScorpion",
+          "apiTargets": [
+            "script",
+            "chat"
+          ]
+        }
+      }
+    },
+    "217": {
+      "uid": 217,
+      "apiTargets": [
+        "script",
+        "chat"
+      ],
+      "key": [
+        "drakeRattlesnake",
+        "荒地响尾蛇（龙化）"
+      ],
+      "keysecondary": [],
+      "comment": "怪物图鉴：荒地响尾蛇（龙化）",
+      "content": "名称：荒地响尾蛇（龙化）\n外形：尾环化成晶质龙骨铃铛的荒地蝰蛇，震铃扰乱心神后迅猛撕咬渗血。\n习性与能力：尾环化成晶质龙骨铃铛的荒地蝰蛇，震铃扰乱心神后迅猛撕咬渗血。\n行动方式：晶铃突咬、蜕鳞闪避",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 180,
+      "position": 1,
+      "disable": false,
+      "ignoreBudget": false,
+      "excludeRecursion": true,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 217,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "drakeRattlesnake",
+          "apiTargets": [
+            "script",
+            "chat"
+          ]
+        }
+      }
+    },
+    "218": {
+      "uid": 218,
+      "apiTargets": [
+        "script",
+        "chat"
+      ],
+      "key": [
+        "drakeBadlandFalcon",
+        "荒地猎鹰（龙化）"
+      ],
+      "keysecondary": [],
+      "comment": "怪物图鉴：荒地猎鹰（龙化）",
+      "content": "名称：荒地猎鹰（龙化）\n外形：翅羽生出金属龙翎的高空猛禽，顺着天梯上升气流高速俯冲掠杀。\n习性与能力：翅羽生出金属龙翎的高空猛禽，顺着天梯上升气流高速俯冲掠杀。\n行动方式：龙翎俯冲、罡风掠翼",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 180,
+      "position": 1,
+      "disable": false,
+      "ignoreBudget": false,
+      "excludeRecursion": true,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 218,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "drakeBadlandFalcon",
+          "apiTargets": [
+            "script",
+            "chat"
+          ]
+        }
+      }
+    },
+    "219": {
+      "uid": 219,
+      "apiTargets": [
+        "script",
+        "chat"
+      ],
+      "key": [
+        "ladderCarrionBat",
+        "天梯食腐蝠"
+      ],
+      "keysecondary": [],
+      "comment": "怪物图鉴：天梯食腐蝠",
+      "content": "名称：天梯食腐蝠\n外形：栖息在天梯暗窟岩壁的食腐飞蝠，翼膜挂着坠落者的骨片，借吸血维生。\n习性与能力：栖息在天梯暗窟岩壁的食腐飞蝠，翼膜挂着坠落者的骨片，借吸血维生。\n行动方式：蚀血蝠吻、尖啸震荡",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 180,
+      "position": 1,
+      "disable": false,
+      "ignoreBudget": false,
+      "excludeRecursion": true,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 219,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "ladderCarrionBat",
+          "apiTargets": [
+            "script",
+            "chat"
+          ]
+        }
+      }
+    },
+    "220": {
+      "uid": 220,
+      "apiTargets": [
+        "script",
+        "chat"
+      ],
+      "key": [
+        "ladderCliffLizard",
+        "天梯攀岩巨蜥"
+      ],
+      "keysecondary": [],
+      "comment": "怪物图鉴：天梯攀岩巨蜥",
+      "content": "名称：天梯攀岩巨蜥\n外形：生有吸盘巨爪的石崖猎手，在禁飞井道的垂直浮石间如履平地般突袭攀登者。\n习性与能力：生有吸盘巨爪的石崖猎手，在禁飞井道的垂直浮石间如履平地般突袭攀登者。\n行动方式：岩壁飞扑、石脊反冲",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 180,
+      "position": 1,
+      "disable": false,
+      "ignoreBudget": false,
+      "excludeRecursion": true,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 220,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "ladderCliffLizard",
+          "apiTargets": [
+            "script",
+            "chat"
+          ]
+        }
+      }
+    },
+    "221": {
+      "uid": 221,
+      "apiTargets": [
+        "script",
+        "chat"
+      ],
+      "key": [
+        "ladderWebSpider",
+        "天梯魔蛛"
+      ],
+      "keysecondary": [],
+      "comment": "怪物图鉴：天梯魔蛛",
+      "content": "名称：天梯魔蛛\n行动方式：丝缚猎网、深窟毒咬",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 180,
+      "position": 1,
+      "disable": false,
+      "ignoreBudget": false,
+      "excludeRecursion": true,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 221,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "ladderWebSpider",
+          "apiTargets": [
+            "script",
+            "chat"
+          ]
+        }
+      }
+    },
+    "222": {
+      "uid": 222,
+      "apiTargets": [
+        "script",
+        "chat"
+      ],
+      "key": [
+        "drakeCrystalBeetle",
+        "龙晶背甲虫"
+      ],
+      "keysecondary": [],
+      "comment": "怪物图鉴：龙晶背甲虫",
+      "content": "名称：龙晶背甲虫\n外形：啃食天梯结晶岩髓生长的甲虫，背壳镶满黑白色龙晶簇，防御极厚。\n习性与能力：啃食天梯结晶岩髓生长的甲虫，背壳镶满黑白色龙晶簇，防御极厚。\n行动方式：晶铠冲撞、龙晶折射",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 180,
+      "position": 1,
+      "disable": false,
+      "ignoreBudget": false,
+      "excludeRecursion": true,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 222,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "drakeCrystalBeetle",
+          "apiTargets": [
+            "script",
+            "chat"
+          ]
+        }
+      }
+    },
+    "223": {
+      "uid": 223,
+      "apiTargets": [
+        "script",
+        "chat"
+      ],
+      "key": [
+        "pureCreationElemental",
+        "纯净创生元素"
+      ],
+      "keysecondary": [],
+      "comment": "怪物图鉴：纯净创生元素",
+      "content": "名称：纯净创生元素\n行动方式：清光脉动、生息调律",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 180,
+      "position": 1,
+      "disable": false,
+      "ignoreBudget": false,
+      "excludeRecursion": true,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 223,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "pureCreationElemental",
+          "apiTargets": [
+            "script",
+            "chat"
+          ]
+        }
+      }
+    },
+    "224": {
+      "uid": 224,
+      "apiTargets": [
+        "script",
+        "chat"
+      ],
+      "key": [
+        "pureDestructionElemental",
+        "纯净毁灭元素"
+      ],
+      "keysecondary": [],
+      "comment": "怪物图鉴：纯净毁灭元素",
+      "content": "名称：纯净毁灭元素\n行动方式：寂灭射线、暗能裂环",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 180,
+      "position": 1,
+      "disable": false,
+      "ignoreBudget": false,
+      "excludeRecursion": true,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 224,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "pureDestructionElemental",
+          "apiTargets": [
+            "script",
+            "chat"
+          ]
+        }
+      }
+    },
+    "225": {
+      "uid": 225,
+      "apiTargets": [
+        "script",
+        "chat"
+      ],
+      "key": [
+        "chaosBadlandFalcon",
+        "荒地猎鹰（混沌化）"
+      ],
+      "keysecondary": [],
+      "comment": "怪物图鉴：荒地猎鹰（混沌化）",
+      "content": "名称：荒地猎鹰（混沌化）\n外形：吞食过量混沌云幕紊流的双冠猛禽，羽间缠绕黑白紊乱电弧，行动迅疾难防。\n习性与能力：吞食过量混沌云幕紊流的双冠猛禽，羽间缠绕黑白紊乱电弧，行动迅疾难防。\n行动方式：混沌裂空斩、黑白旋羽刺",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 180,
+      "position": 1,
+      "disable": false,
+      "ignoreBudget": false,
+      "excludeRecursion": true,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 225,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "chaosBadlandFalcon",
+          "apiTargets": [
+            "script",
+            "chat"
+          ]
+        }
+      }
+    },
+    "226": {
+      "uid": 226,
+      "apiTargets": [
+        "script",
+        "chat"
+      ],
+      "key": [
+        "relicHermitCrab",
+        "遗骸寄居巨蟹"
+      ],
+      "keysecondary": [],
+      "comment": "怪物图鉴：遗骸寄居巨蟹",
+      "content": "名称：遗骸寄居巨蟹\n外形：背负半截起源纪石碑与远古龙骨的巨蟹，重钳既能碾碎盾牌又能缩入碑甲回护。\n习性与能力：背负半截起源纪石碑与远古龙骨的巨蟹，重钳既能碾碎盾牌又能缩入碑甲回护。\n行动方式：碑岩震砸、千钧夹碎",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 180,
+      "position": 1,
+      "disable": false,
+      "ignoreBudget": false,
+      "excludeRecursion": true,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 226,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "relicHermitCrab",
+          "apiTargets": [
+            "script",
+            "chat"
+          ]
+        }
+      }
+    },
+    "227": {
+      "uid": 227,
+      "apiTargets": [
+        "script",
+        "chat"
+      ],
+      "key": [
+        "bicolorScalePython",
+        "双色龙鳞巨蟒"
+      ],
+      "keysecondary": [],
+      "comment": "怪物图鉴：双色龙鳞巨蟒",
+      "content": "名称：双色龙鳞巨蟒\n外形：左半身银白右半身漆黑的盘踞巨蟒，蛇尾绞杀附带剧毒，眼眸闪烁黑白龙压。\n习性与能力：左半身银白右半身漆黑的盘踞巨蟒，蛇尾绞杀附带剧毒，眼眸闪烁黑白龙压。\n行动方式：双色绞缠、阴阳毒噬",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 180,
+      "position": 1,
+      "disable": false,
+      "ignoreBudget": false,
+      "excludeRecursion": true,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 227,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "bicolorScalePython",
+          "apiTargets": [
+            "script",
+            "chat"
+          ]
+        }
+      }
+    },
+    "228": {
+      "uid": 228,
+      "apiTargets": [
+        "script",
+        "chat"
+      ],
+      "key": [
+        "overloadCreationElemental",
+        "过载创生元素"
+      ],
+      "keysecondary": [],
+      "comment": "怪物图鉴：过载创生元素",
+      "content": "名称：过载创生元素\n外形：过度汲取索拉恩白光的圣辉元素体，外环铭文高速旋转，能一边疗愈全军一边齐射光矢。\n习性与能力：过度汲取索拉恩白光的圣辉元素体，外环铭文高速旋转，能一边疗愈全军一边齐射光矢。\n行动方式：超载光矢、过载生息环",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 180,
+      "position": 1,
+      "disable": false,
+      "ignoreBudget": false,
+      "excludeRecursion": true,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 228,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "overloadCreationElemental",
+          "apiTargets": [
+            "script",
+            "chat"
+          ]
+        }
+      }
+    },
+    "229": {
+      "uid": 229,
+      "apiTargets": [
+        "script",
+        "chat"
+      ],
+      "key": [
+        "overloadDestructionElemental",
+        "过载毁灭元素"
+      ],
+      "keysecondary": [],
+      "comment": "怪物图鉴：过载毁灭元素",
+      "content": "名称：过载毁灭元素\n行动方式：黑耀崩环、终末湮灭炮",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 180,
+      "position": 1,
+      "disable": false,
+      "ignoreBudget": false,
+      "excludeRecursion": true,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 229,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "overloadDestructionElemental",
+          "apiTargets": [
+            "script",
+            "chat"
+          ]
+        }
+      }
+    },
+    "230": {
+      "uid": 230,
+      "apiTargets": [
+        "script",
+        "chat"
+      ],
+      "key": [
+        "ladderRockGiant",
+        "天梯岩巨人"
+      ],
+      "keysecondary": [],
+      "comment": "怪物图鉴：天梯岩巨人",
+      "content": "名称：天梯岩巨人\n外形：由天梯坠落的千斤巨石顺应龙脉磁力拼合而成的巨像，双拳如陨石锤地。\n习性与能力：由天梯坠落的千斤巨石顺应龙脉磁力拼合而成的巨像，双拳如陨石锤地。\n行动方式：坠岩天锤、石壁护体",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 180,
+      "position": 1,
+      "disable": false,
+      "ignoreBudget": false,
+      "excludeRecursion": true,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 230,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "ladderRockGiant",
+          "apiTargets": [
+            "script",
+            "chat"
+          ]
+        }
+      }
+    },
+    "231": {
+      "uid": 231,
+      "apiTargets": [
+        "script",
+        "chat"
+      ],
+      "key": [
+        "bicolorSingularityLizard",
+        "双色奇点·猎蜥"
+      ],
+      "keysecondary": [],
+      "comment": "怪物图鉴：双色奇点·猎蜥",
+      "content": "名称：双色奇点·猎蜥\n外形：因黑白龙气失衡而吞噬同类融合成的双头龙蜥霸主，脊背高耸晶化棘刺，交替喷吐灼光与蚀暗吐息。\n习性与能力：因黑白龙气失衡而吞噬同类融合成的双头龙蜥霸主，脊背高耸晶化棘刺，交替喷吐灼光与蚀暗吐息。\n行动方式：奇点双颚咬、黑白吐息扫掠、极昼极夜狂咬、奇点坍缩啸叫",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 180,
+      "position": 1,
+      "disable": false,
+      "ignoreBudget": false,
+      "excludeRecursion": true,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 231,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "bicolorSingularityLizard",
+          "apiTargets": [
+            "script",
+            "chat"
+          ]
+        }
+      }
+    },
+    "232": {
+      "uid": 232,
+      "apiTargets": [
+        "script",
+        "chat"
+      ],
+      "key": [
+        "eclipseWatcher",
+        "日蚀守望者"
+      ],
+      "keysecondary": [],
+      "comment": "怪物图鉴：日蚀守望者",
+      "content": "名称：日蚀守望者\n外形：起源纪镇守天梯残碑石门的巨型守门构装体，胸口嵌着日蚀金环核心，举戟裁决一切擅闯门扉者。\n习性与能力：起源纪镇守天梯残碑石门的巨型守门构装体，胸口嵌着日蚀金环核心，举戟裁决一切擅闯门扉者。\n行动方式：日轮光戟斩、日蚀聚能束、天蚀全周扫描、起源断罪重劈",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 180,
+      "position": 1,
+      "disable": false,
+      "ignoreBudget": false,
+      "excludeRecursion": true,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 232,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "eclipseWatcher",
+          "apiTargets": [
+            "script",
+            "chat"
+          ]
+        }
+      }
+    },
+    "233": {
+      "uid": 233,
+      "apiTargets": [
+        "script",
+        "chat"
+      ],
+      "key": [
+        "abyssDevourerPython",
+        "噬渊巨蟒"
+      ],
+      "keysecondary": [],
+      "comment": "怪物图鉴：噬渊巨蟒",
+      "content": "名称：噬渊巨蟒\n外形：盘踞在攀升通道背光深窟中的吞石古蟒，腹腔吞咽着半消化的浮岩与晶骸，每一次翻身都在啃蚀崖壁。\n习性与能力：盘踞在攀升通道背光深窟中的吞石古蟒，腹腔吞咽着半消化的浮岩与晶骸，每一次翻身都在啃蚀崖壁。\n行动方式：深窟吞噬咬、暗渊毒雾吐息、噬岩风暴卷、巨蟒绝命吞",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 180,
+      "position": 1,
+      "disable": false,
+      "ignoreBudget": false,
+      "excludeRecursion": true,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 233,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "abyssDevourerPython",
+          "apiTargets": [
+            "script",
+            "chat"
+          ]
+        }
+      }
+    },
+    "234": {
+      "uid": 234,
+      "apiTargets": [
+        "script",
+        "chat"
+      ],
+      "key": [
+        "radiantWyvern",
+        "辉光亚龙"
+      ],
+      "keysecondary": [],
+      "comment": "怪物图鉴：辉光亚龙",
+      "content": "名称：辉光亚龙\n外形：仅在正午烈日贯通天梯井道时降临向阳岩台的天空霸主，浑身覆满白金与流金交织的耀光龙鳞，展翼之时如同白昼坠地。\n习性与能力：仅在正午烈日贯通天梯井道时降临向阳岩台的天空霸主，浑身覆满白金与流金交织的耀光龙鳞，展翼之时如同白昼坠地。（新层级霸主，以立体实体形态矗立于战牌之上。）\n行动方式：耀光翼斩、索拉恩圣炎、正午白昼降临、辉光龙爪裂天",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 180,
+      "position": 1,
+      "disable": false,
+      "ignoreBudget": false,
+      "excludeRecursion": true,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 234,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "radiantWyvern",
+          "apiTargets": [
+            "script",
+            "chat"
+          ]
+        }
+      }
+    },
+    "235": {
+      "uid": 235,
+      "apiTargets": [
+        "script",
+        "chat"
+      ],
+      "key": [
+        "dragonscaleSandworm",
+        "龙鳞沙虫"
+      ],
+      "keysecondary": [],
+      "comment": "怪物图鉴：龙鳞沙虫",
+      "content": "名称：龙鳞沙虫\n外形：沿天梯外围沙海不断吞噬外溢龙气的超巨型沙虫，体节包裹层层硬化龙鳞环，口器如旋转钻井。\n习性与能力：沿天梯外围沙海不断吞噬外溢龙气的超巨型沙虫，体节包裹层层硬化龙鳞环，口器如旋转钻井。\n行动方式：潜沙钻袭、龙气吞吐震波、沙暴绞肉涡旋、巨颚碾压",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 180,
+      "position": 1,
+      "disable": false,
+      "ignoreBudget": false,
+      "excludeRecursion": true,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 235,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "dragonscaleSandworm",
+          "apiTargets": [
+            "script",
+            "chat"
+          ]
+        }
+      }
+    },
+    "236": {
+      "uid": 236,
+      "apiTargets": [
+        "script",
+        "chat"
+      ],
+      "key": [
+        "banditCutthroat",
+        "荒路截道贼"
+      ],
+      "keysecondary": [],
+      "comment": "怪物图鉴：荒路截道贼",
+      "content": "名称：荒路截道贼\n外形：蒙面短袍的官道亡命徒，擅长从侧翼突刺抹喉，专门盯防疏于防御的队友。\n习性与能力：蒙面短袍的官道亡命徒，擅长从侧翼突刺抹喉，专门盯防疏于防御的队友。\n行动方式：黑刃突刺、飞刀牵制",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 180,
+      "position": 1,
+      "disable": false,
+      "ignoreBudget": false,
+      "excludeRecursion": true,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 236,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "banditCutthroat",
+          "apiTargets": [
+            "script",
+            "chat"
+          ]
+        }
+      }
+    },
+    "237": {
+      "uid": 237,
+      "apiTargets": [
+        "script",
+        "chat"
+      ],
+      "key": [
+        "banditPoacher",
+        "黑林偷猎弓手"
+      ],
+      "keysecondary": [],
+      "comment": "怪物图鉴：黑林偷猎弓手",
+      "content": "名称：黑林偷猎弓手\n外形：携带带倒钩猎弩的盗猎者，习惯瞄准高蓝量施法者点射倒刺箭。\n习性与能力：携带带倒钩猎弩的盗猎者，习惯瞄准高蓝量施法者点射倒刺箭。\n行动方式：倒钩毒箭、连弦齐射",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 180,
+      "position": 1,
+      "disable": false,
+      "ignoreBudget": false,
+      "excludeRecursion": true,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 237,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "banditPoacher",
+          "apiTargets": [
+            "script",
+            "chat"
+          ]
+        }
+      }
+    },
+    "238": {
+      "uid": 238,
+      "apiTargets": [
+        "script",
+        "chat"
+      ],
+      "key": [
+        "banditBruiser",
+        "碎颅重锤匪"
+      ],
+      "keysecondary": [],
+      "comment": "怪物图鉴：碎颅重锤匪",
+      "content": "名称：碎颅重锤匪\n外形：身披拼接铁肩甲的高大悍匪，双手抡起铁箍战锤正面破盾。\n习性与能力：身披拼接铁肩甲的高大悍匪，双手抡起铁箍战锤正面破盾。\n行动方式：破盾重锤、铁甲横挡",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 180,
+      "position": 1,
+      "disable": false,
+      "ignoreBudget": false,
+      "excludeRecursion": true,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 238,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "banditBruiser",
+          "apiTargets": [
+            "script",
+            "chat"
+          ]
+        }
+      }
+    },
+    "239": {
+      "uid": 239,
+      "apiTargets": [
+        "script",
+        "chat"
+      ],
+      "key": [
+        "banditAlchemist",
+        "黑市掷弹手"
+      ],
+      "keysecondary": [],
+      "comment": "怪物图鉴：黑市掷弹手",
+      "content": "名称：黑市掷弹手\n行动方式：焦油爆裂瓶、淬毒烟囊",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 180,
+      "position": 1,
+      "disable": false,
+      "ignoreBudget": false,
+      "excludeRecursion": true,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 239,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "banditAlchemist",
+          "apiTargets": [
+            "script",
+            "chat"
+          ]
+        }
+      }
+    },
+    "240": {
+      "uid": 240,
+      "apiTargets": [
+        "script",
+        "chat"
+      ],
+      "key": [
+        "banditExecutioner",
+        "疤面劫掠头目"
+      ],
+      "keysecondary": [],
+      "comment": "怪物图鉴：疤面劫掠头目",
+      "content": "名称：疤面劫掠头目\n外形：披着荒狼毛皮斗篷的悍匪头目，挥舞宽刃斩首斧，一旦闻到血腥味便越战越狂。\n习性与能力：披着荒狼毛皮斗篷的悍匪头目，挥舞宽刃斩首斧，一旦闻到血腥味便越战越狂。\n行动方式：嗜血劈斩、掠夺号令",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 180,
+      "position": 1,
+      "disable": false,
+      "ignoreBudget": false,
+      "excludeRecursion": true,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 240,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "banditExecutioner",
+          "apiTargets": [
+            "script",
+            "chat"
+          ]
+        }
+      }
+    },
+    "241": {
+      "uid": 241,
+      "apiTargets": [
+        "script",
+        "chat"
+      ],
+      "key": [
+        "goblinScavenger",
+        "哥布林拾荒兵"
+      ],
+      "keysecondary": [],
+      "comment": "怪物图鉴：哥布林拾荒兵",
+      "content": "名称：哥布林拾荒兵\n外形：戴着生锈铁锅当头盔的矮小绿皮杂兵，手举绑骨长矛借群势乱刺。\n习性与能力：戴着生锈铁锅当头盔的矮小绿皮杂兵，手举绑骨长矛借群势乱刺。\n行动方式：乱矛捅刺、铁锅抱头",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 180,
+      "position": 1,
+      "disable": false,
+      "ignoreBudget": false,
+      "excludeRecursion": true,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 241,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "goblinScavenger",
+          "apiTargets": [
+            "script",
+            "chat"
+          ]
+        }
+      }
+    },
+    "242": {
+      "uid": 242,
+      "apiTargets": [
+        "script",
+        "chat"
+      ],
+      "key": [
+        "goblinSlinger",
+        "哥布林投石手"
+      ],
+      "keysecondary": [],
+      "comment": "怪物图鉴：哥布林投石手",
+      "content": "名称：哥布林投石手\n行动方式：尖石投掷、散石乱飞",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 180,
+      "position": 1,
+      "disable": false,
+      "ignoreBudget": false,
+      "excludeRecursion": true,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 242,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "goblinSlinger",
+          "apiTargets": [
+            "script",
+            "chat"
+          ]
+        }
+      }
+    },
+    "243": {
+      "uid": 243,
+      "apiTargets": [
+        "script",
+        "chat"
+      ],
+      "key": [
+        "goblinShaman",
+        "哥布林骨杖祭司"
+      ],
+      "keysecondary": [],
+      "comment": "怪物图鉴：哥布林骨杖祭司",
+      "content": "名称：哥布林骨杖祭司\n外形：戴着野兽头骨面具、手持铃铛骨杖的部落巫医，擅长熬制草药毒汤救护部下。\n习性与能力：戴着野兽头骨面具、手持铃铛骨杖的部落巫医，擅长熬制草药毒汤救护部下。\n行动方式：苦毒咒烟、祖灵药膏",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 180,
+      "position": 1,
+      "disable": false,
+      "ignoreBudget": false,
+      "excludeRecursion": true,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 243,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "goblinShaman",
+          "apiTargets": [
+            "script",
+            "chat"
+          ]
+        }
+      }
+    },
+    "244": {
+      "uid": 244,
+      "apiTargets": [
+        "script",
+        "chat"
+      ],
+      "key": [
+        "goblinSapper",
+        "哥布林爆破工兵"
+      ],
+      "keysecondary": [],
+      "comment": "怪物图鉴：哥布林爆破工兵",
+      "content": "名称：哥布林爆破工兵\n外形：背着冒火星黑火药桶与大号引信剪的狂热哥布林，冲上去就是一记烈焰爆破。\n习性与能力：背着冒火星黑火药桶与大号引信剪的狂热哥布林，冲上去就是一记烈焰爆破。\n行动方式：火药桶炸击、火花乱抛",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 180,
+      "position": 1,
+      "disable": false,
+      "ignoreBudget": false,
+      "excludeRecursion": true,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 244,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "goblinSapper",
+          "apiTargets": [
+            "script",
+            "chat"
+          ]
+        }
+      }
+    },
+    "245": {
+      "uid": 245,
+      "apiTargets": [
+        "script",
+        "chat"
+      ],
+      "key": [
+        "goblinWolfRider",
+        "哥布林座狼骑手"
+      ],
+      "keysecondary": [],
+      "comment": "怪物图鉴：哥布林座狼骑手",
+      "content": "名称：哥布林座狼骑手\n外形：跨坐凶暴灰背座狼的部落斥候精锐，座狼扑咬配合骑手短矛形成高机动连击。\n习性与能力：跨坐凶暴灰背座狼的部落斥候精锐，座狼扑咬配合骑手短矛形成高机动连击。\n行动方式：狼骑突袭、野狼横撞",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 180,
+      "position": 1,
+      "disable": false,
+      "ignoreBudget": false,
+      "excludeRecursion": true,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 245,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "goblinWolfRider",
+          "apiTargets": [
+            "script",
+            "chat"
+          ]
+        }
+      }
+    },
+    "246": {
+      "uid": 246,
+      "apiTargets": [
+        "script",
+        "chat"
+      ],
+      "key": [
+        "erosionCrawler",
+        "蚀鳞爬行兽"
+      ],
+      "keysecondary": [],
+      "comment": "怪物图鉴：蚀鳞爬行兽",
+      "content": "名称：蚀鳞爬行兽\n外形：从往生界裂隙爬出的低阶四足蚀鳞，背生锯齿黑紫骨刺，受创时裂纹微亮。\n习性与能力：从往生界裂隙爬出的低阶四足蚀鳞，背生锯齿黑紫骨刺，受创时裂纹微亮。\n行动方式：黑棘爪撕、裂隙俯冲",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 180,
+      "position": 1,
+      "disable": false,
+      "ignoreBudget": false,
+      "excludeRecursion": true,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 246,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "erosionCrawler",
+          "apiTargets": [
+            "script",
+            "chat"
+          ]
+        }
+      }
+    },
+    "247": {
+      "uid": 247,
+      "apiTargets": [
+        "script",
+        "chat"
+      ],
+      "key": [
+        "erosionSpitter",
+        "蚀鳞喷吐者"
+      ],
+      "keysecondary": [],
+      "comment": "怪物图鉴：蚀鳞喷吐者",
+      "content": "名称：蚀鳞喷吐者\n外形：颈侧膨大毒囊翻涌黑紫浊液的蚀鳞怪，从远处喷吐强酸毒液腐蚀甲胄。\n习性与能力：颈侧膨大毒囊翻涌黑紫浊液的蚀鳞怪，从远处喷吐强酸毒液腐蚀甲胄。\n行动方式：蚀骨酸液、腐雾弥散",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 180,
+      "position": 1,
+      "disable": false,
+      "ignoreBudget": false,
+      "excludeRecursion": true,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 247,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "erosionSpitter",
+          "apiTargets": [
+            "script",
+            "chat"
+          ]
+        }
+      }
+    },
+    "248": {
+      "uid": 248,
+      "apiTargets": [
+        "script",
+        "chat"
+      ],
+      "key": [
+        "erosionHound",
+        "裂隙蚀鳞猎犬"
+      ],
+      "keysecondary": [],
+      "comment": "怪物图鉴：裂隙蚀鳞猎犬",
+      "content": "名称：裂隙蚀鳞猎犬\n外形：失去双眼的无面黑鳞猎犬，仅靠感知乙太波动撕咬伤痕累累的冒险者。\n习性与能力：失去双眼的无面黑鳞猎犬，仅靠感知乙太波动撕咬伤痕累累的冒险者。\n行动方式：蚀脉狂咬、影鳞穿梭",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 180,
+      "position": 1,
+      "disable": false,
+      "ignoreBudget": false,
+      "excludeRecursion": true,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 248,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "erosionHound",
+          "apiTargets": [
+            "script",
+            "chat"
+          ]
+        }
+      }
+    },
+    "249": {
+      "uid": 249,
+      "apiTargets": [
+        "script",
+        "chat"
+      ],
+      "key": [
+        "erosionWing",
+        "蚀鳞掠空蝠"
+      ],
+      "keysecondary": [],
+      "comment": "怪物图鉴：蚀鳞掠空蝠",
+      "content": "名称：蚀鳞掠空蝠\n行动方式：暮翼斩击、黑羽俯刺",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 180,
+      "position": 1,
+      "disable": false,
+      "ignoreBudget": false,
+      "excludeRecursion": true,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 249,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "erosionWing",
+          "apiTargets": [
+            "script",
+            "chat"
+          ]
+        }
+      }
+    },
+    "250": {
+      "uid": 250,
+      "apiTargets": [
+        "script",
+        "chat"
+      ],
+      "key": [
+        "erosionJuggernaut",
+        "蚀鳞重甲狂兽"
+      ],
+      "keysecondary": [],
+      "comment": "怪物图鉴：蚀鳞重甲狂兽",
+      "content": "名称：蚀鳞重甲狂兽\n外形：浑身覆盖层层叠叠黑耀石重鳞的半人形巨兽，双臂化作锯齿骨刃与重盾。\n习性与能力：浑身覆盖层层叠叠黑耀石重鳞的半人形巨兽，双臂化作锯齿骨刃与重盾。\n行动方式：黑鳞碎阵锤、硬鳞壁垒",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 180,
+      "position": 1,
+      "disable": false,
+      "ignoreBudget": false,
+      "excludeRecursion": true,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 250,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "erosionJuggernaut",
+          "apiTargets": [
+            "script",
+            "chat"
+          ]
+        }
+      }
+    },
+    "251": {
+      "uid": 251,
+      "apiTargets": [
+        "script",
+        "chat"
+      ],
+      "key": [
+        "banditSyndicateKing",
+        "暗巷匪王·黑鸦"
+      ],
+      "keysecondary": [],
+      "comment": "怪物图鉴：暗巷匪王·黑鸦",
+      "content": "名称：暗巷匪王·黑鸦\n外形：统领多支黑林劫匪与城郊暗桩的传奇刺客首领，披着黑羽大氅，双持涂毒细剑与暗藏火铳。\n习性与能力：统领多支黑林劫匪与城郊暗桩的传奇刺客首领，披着黑羽大氅，双持涂毒细剑与暗藏火铳。\n行动方式：乌羽双刺、黑鸦暗铳、夜枭连斩风暴、处决匕影",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 180,
+      "position": 1,
+      "disable": false,
+      "ignoreBudget": false,
+      "excludeRecursion": true,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 251,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "banditSyndicateKing",
+          "apiTargets": [
+            "script",
+            "chat"
+          ]
+        }
+      }
+    },
+    "252": {
+      "uid": 252,
+      "apiTargets": [
+        "script",
+        "chat"
+      ],
+      "key": [
+        "goblinKingGorg",
+        "碎铁哥布林王"
+      ],
+      "keysecondary": [],
+      "comment": "怪物图鉴：碎铁哥布林王",
+      "content": "名称：碎铁哥布林王\n外形：把废弃攻城盾与齿轮战锤焊接在身上的巨型哥布林领主，戴着镀金王冠统率群落冲锋。\n习性与能力：把废弃攻城盾与齿轮战锤焊接在身上的巨型哥布林领主，戴着镀金王冠统率群落冲锋。\n行动方式：废铁重砸、王权号角、碎铁暴走车轮、狼王夺命锤",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 180,
+      "position": 1,
+      "disable": false,
+      "ignoreBudget": false,
+      "excludeRecursion": true,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 252,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "goblinKingGorg",
+          "apiTargets": [
+            "script",
+            "chat"
+          ]
+        }
+      }
+    },
+    "253": {
+      "uid": 253,
+      "apiTargets": [
+        "script",
+        "chat"
+      ],
+      "key": [
+        "erosionRiftTyrant",
+        "裂隙蚀鳞暴君"
+      ],
+      "keysecondary": [],
+      "comment": "怪物图鉴：裂隙蚀鳞暴君",
+      "content": "名称：裂隙蚀鳞暴君\n外形：高阶蚀鳞聚合诞生的灾厄暴君，背后展开三对紫黑晶体棘翼，不断向现世喷吐浊暗瘴气。\n习性与能力：高阶蚀鳞聚合诞生的灾厄暴君，背后展开三对紫黑晶体棘翼，不断向现世喷吐浊暗瘴气。\n行动方式：暗瘴潮汐、裂渊晶爪、虚空破界波、蚀脉虹吸",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 180,
+      "position": 1,
+      "disable": false,
+      "ignoreBudget": false,
+      "excludeRecursion": true,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 253,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "erosionRiftTyrant",
+          "apiTargets": [
+            "script",
+            "chat"
+          ]
+        }
+      }
     }
   },
   "extensions": {

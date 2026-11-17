@@ -5,7 +5,7 @@ import { legacySession } from './legacy-session.mjs';
 import { newCampaign } from '../../src/campaign.js';
 import { officialCharacter } from '../../src/ai/library.js';
 import { defaultProtagonist } from '../../src/content/qingyuan.js';
-import { EMBLEMS, OVERLOAD_EMBLEM_ID } from '../../src/emblems.js';
+import { DRAGON_EMBLEM_ID, EMBLEMS, OVERLOAD_EMBLEM_ID } from '../../src/emblems.js';
 import { ITEMS } from '../../src/content/items.js';
 import { normalizeEquipment } from '../../src/equipment.js';
 
@@ -18,7 +18,12 @@ export async function statusEmblemChecks({ browser, baseURL, output }) {
     await page.goto(baseURL);
     await page.waitForFunction(() => !!window.demo);
     const library = newCampaign(defaultProtagonist());
-    Object.assign(library.campaign, { completed: true, firstRecruit: true, tutorial: 'done' });
+    Object.assign(library.campaign, {
+      completed: true,
+      firstRecruit: true,
+      tutorial: 'done',
+      tasks: { equipmentIntro: true },
+    });
     Object.assign(library.progression, {
       pandoraJoined: true,
       swapLesson: 'done',
@@ -29,12 +34,22 @@ export async function statusEmblemChecks({ browser, baseURL, output }) {
     library.party[3] = 'official-pandora';
     library.characters[0].growth.level = 4;
     library.emblems = Object.keys(EMBLEMS);
+    library.unlockedDungeons = ['ruins'];
+    library.inventory.gold = 500;
+    library.guild = { merit: 100, completedBounties: 1, sparringWins: 0, unlockedIntel: [] };
     library.inventory.bagUnlocked = true;
     library.inventory.items = Object.fromEntries(Object.keys(ITEMS).map((id) => [id, 2]));
+    const categories = ['weapon', 'armor', 'pendant'];
     for (let slot = 0; slot < 3; slot++) {
       library.equipment.catalog.push(
         normalizeEquipment(
-          { name: '测试装备' + slot, description: 'hp+1', stats: { hp: 1 }, rules: [] },
+          {
+            name: '测试装备' + slot,
+            category: categories[slot],
+            description: 'hp+1',
+            stats: { hp: 1 },
+            rules: [],
+          },
           { id: 'browser-gear-' + slot, name: '残片', value: 10 },
         ),
       );
@@ -71,6 +86,47 @@ export async function statusEmblemChecks({ browser, baseURL, output }) {
     }, library);
     await page.reload();
     await page.waitForFunction(() => !!window.demo);
+    const frame = page.frameLocator('#inn-frame iframe');
+    await frame.locator('canvas').evaluate(
+      () =>
+        new Promise((resolve) => {
+          const check = () => (window.modelReady ? resolve() : requestAnimationFrame(check));
+          check();
+        }),
+    );
+    await frame.locator('canvas').evaluate(() => window.assetPreview.placeNow('streetDoor'));
+    await frame.locator('#street-open').click();
+    await page.locator('[data-tavern-exit="street"]').click();
+    await page.waitForFunction(() =>
+      [...document.querySelectorAll('#inn-frame iframe')].some(
+        (el) => el.contentWindow?.streetPreview,
+      ),
+    );
+    await frame.locator('#street-submap-open').click();
+    await frame.locator('#street-city-submap[open] .city-submap-svg').waitFor();
+    await frame.locator('#street-city-submap [data-city-node="guild-hall"]').click();
+    await page.locator('#guild-dialog[open]').waitFor();
+    await page.locator('#guild-dialog [data-guild-tab="skills"]').click();
+    assert.equal(await page.locator('#guild-dialog .guild-card').count(), 12);
+    await page.locator('#guild-dialog [data-guild-learn="uni-smoke-veil"]').click();
+    await page.waitForFunction(() =>
+      window.demo.getLibrary().learnedSkills?.includes('uni-smoke-veil'),
+    );
+    await page.screenshot({ path: path.join(output, 'stage3-guild-grimoire.png') });
+    await page.locator('#guild-dialog .guild-close').click();
+    await frame.locator('#street-return').click();
+    await page.waitForFunction(
+      () =>
+        document.querySelector('#inn-frame iframe')?.contentWindow?.assetPreview &&
+        window.modelReady !== false,
+    );
+    await frame.locator('canvas').evaluate(
+      () =>
+        new Promise((resolve) => {
+          const check = () => (window.modelReady ? resolve() : requestAnimationFrame(check));
+          check();
+        }),
+    );
     const handle = await page.locator('#ledger-handle').boundingBox();
     await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2);
     await page.mouse.down();
@@ -84,6 +140,25 @@ export async function statusEmblemChecks({ browser, baseURL, output }) {
     for (let slot = 0; slot < 3; slot++)
       await page.locator(`[data-equipment-slot="${slot}"]`).selectOption('browser-owned-' + slot);
     await page.locator('[data-emblem-character]').selectOption(OVERLOAD_EMBLEM_ID);
+    await page.locator('[data-prepare-tab="skill"]').click();
+    assert((await page.locator('.prepare-universal-bar').innerText()).includes('3/12'));
+    await page.locator('[data-universal-skill-slot="0"]').selectOption('uni-feint-retreat');
+    await page.locator('[data-universal-skill-slot="1"]').selectOption('uni-serrated-cut');
+    assert((await page.locator('.prepare-skills-grid').innerText()).includes('通用战技'));
+    await page.screenshot({ path: path.join(output, 'stage3-prep-skills.png') });
+    await page.setViewportSize({ width: 390, height: 844 });
+    const mobileBox = await page.locator('#party-panel').boundingBox();
+    assert(
+      mobileBox.x >= 0 && mobileBox.x + mobileBox.width <= 391,
+      'Mobile preparation panel fits cleanly without overflow',
+    );
+    await page.setViewportSize({ width: 1440, height: 836 });
+    await page.locator('[data-prepare-slot="1"]').click();
+    await page.locator('[data-prepare-tab="skill"]').click();
+    await page.locator('[data-universal-skill-slot="0"]').selectOption('uni-smoke-veil');
+    await page.locator('[data-prepare-slot="3"]').click();
+    await page.locator('[data-prepare-tab="status"]').click();
+    await page.locator('[data-emblem-character]').selectOption(DRAGON_EMBLEM_ID);
     await page.evaluate(() => window.demo.flushStorage());
     await page.reload();
     await page.waitForFunction(() => !!window.demo);
@@ -92,7 +167,9 @@ export async function statusEmblemChecks({ browser, baseURL, output }) {
       'browser-owned-0',
       'browser-owned-1',
       'browser-owned-2',
+      null,
     ]);
+    assert.deepEqual(saved.characters[0].equippedSkills, ['uni-feint-retreat', 'uni-serrated-cut']);
     assert.equal(saved.characters[0].emblemId, OVERLOAD_EMBLEM_ID);
     assert.equal(saved.emblems.length, 5);
     const reloadHandle = await page.locator('#ledger-handle').boundingBox();
@@ -114,8 +191,13 @@ export async function statusEmblemChecks({ browser, baseURL, output }) {
     await page.screenshot({ path: path.join(output, 'equipment-after-static-reload.png') });
     await page.locator('#prepare-close').click();
     await page.evaluate(() => window.demo.startBattle());
+    await page.locator('#destination-regions button[data-region="ruins"]').click();
     await page.locator('#destination-region-confirm').click();
     await page.locator('#destination-start').click();
+    if (await page.locator('#prepare-done').isVisible())
+      await page.locator('#prepare-done').click();
+    if (await page.locator('#prepare-done').isVisible())
+      await page.locator('#prepare-done').click();
     await page.waitForFunction(
       () => window.demo.getStatus().mode === 'battle' && !window.demo.getStatus().animating,
     );
@@ -150,6 +232,94 @@ export async function statusEmblemChecks({ browser, baseURL, output }) {
       assert.equal(await page.locator('#backpack-dialog').getAttribute('inert'), '');
       assert.equal(await page.locator('#backpack-open').getAttribute('aria-expanded'), 'false');
     }
+    await page.setViewportSize({ width: 1440, height: 836 });
+    if ((await page.locator('#speed').textContent()).includes('×1')) {
+      await page.locator('#speed').click();
+    }
+    for (let round = 0; round < 4; round++) {
+      await page.waitForFunction(() => !window.demo.getStatus().animating);
+      await page.locator('#commit').click();
+      await page.waitForFunction(
+        () => !window.demo.getStatus().playing && !window.demo.getStatus().animating,
+        { timeout: 30000 },
+      );
+    }
+    const stateAfterCharge = await page.evaluate(() => window.demo.getState());
+    const edithId = stateAfterCharge.formation[1];
+    const pandoraId = stateAfterCharge.formation[3];
+    assert(edithId && pandoraId, 'Front slot 1 and rear slot 3 heroes exist in battle formation');
+    assert.equal(stateAfterCharge.units[pandoraId].emblemCharge, 6);
+    await page.locator(`[data-unit="${edithId}"]`).click();
+    assert.equal(
+      (
+        await page.locator('[data-skill="uni-smoke-veil"] .universal-skill-source').textContent()
+      )?.trim(),
+      '通用战技',
+    );
+    await page.locator('[data-skill="uni-smoke-veil"]').click();
+    if ((await page.evaluate(() => window.demo.getStatus())).interactionStep === 'target') {
+      await page.locator('[data-side="Enemy"]').first().click();
+    }
+    await page.locator('#commit').click();
+    await page.waitForFunction(
+      () => !window.demo.getStatus().playing && !window.demo.getStatus().animating,
+      { timeout: 30000 },
+    );
+    assert(
+      (await page.evaluate(() => window.demo.getVfxStatus()?.recentEffects || [])).includes(
+        'leaf-storm',
+      ),
+      'Casting uni-smoke-veil triggers leaf-storm PixelFX',
+    );
+    assert.equal(
+      (await page.evaluate(() => window.demo.getState())).formation[1],
+      pandoraId,
+      'retreatSwap brings rear slot 3 hero into slot 1',
+    );
+    await page.locator(`[data-unit="${pandoraId}"]`).click();
+    await page.locator(`[data-unit="${pandoraId}"]`).click();
+    assert(
+      await page
+        .locator('#emblem-screen')
+        .evaluate(
+          (element) =>
+            element.classList.contains('active') && element.classList.contains('emblem-kamui'),
+        ),
+    );
+    await page.waitForFunction(() => window.demo.getEmblemStatus()?.active >= 1, null, {
+      timeout: 5000,
+    });
+    assert((await page.evaluate(() => window.demo.getEmblemStatus().styles))?.includes('kamui'));
+    await page.locator('#commit').click();
+    await page.waitForFunction(
+      () => !window.demo.getStatus().playing && !window.demo.getStatus().animating,
+      { timeout: 30000 },
+    );
+    assert(
+      (await page.evaluate(() => window.demo.getVfxStatus()?.recentEffects || [])).includes(
+        'geyser',
+      ),
+      'Engaging Kamui triggers geyser PixelFX',
+    );
+    await page.locator(`[data-unit="${pandoraId}"]`).click();
+    await page.locator('[data-skill="emblem-dragon-vein"]').click();
+    if ((await page.evaluate(() => window.demo.getStatus())).interactionStep === 'target') {
+      await page.locator(`[data-unit="${pandoraId}"]`).click();
+    }
+    await page.locator('#commit').click();
+    await page.waitForFunction(
+      () => !window.demo.getStatus().playing && !window.demo.getStatus().animating,
+      { timeout: 30000 },
+    );
+    assert.equal((await page.evaluate(() => window.demo.getState())).dragonVein, true);
+    assert.equal(await page.evaluate(() => window.demo.getEmblemStatus()?.dragonVein), true);
+    assert(
+      (await page.evaluate(() => window.demo.getVfxStatus()?.recentEffects || [])).includes(
+        'wave-crash',
+      ),
+      'Casting emblem-dragon-vein triggers wave-crash PixelFX',
+    );
+    await page.screenshot({ path: path.join(output, 'stage3-dragon-vein-battle.png') });
     const markup = (await readFile(new URL('../../index.html', import.meta.url), 'utf8')).replace(
       '<script type="module" src="./src/app.js"></script>',
       '',

@@ -285,26 +285,32 @@ export const FROST_ENEMIES = [
     '从冷却管中浮出的能量结团，会把进入控制室的活物视为新的导电介质。',
     [move('过压放电', '全体各7伤害。', [hit(7)], { slots: [0, 1, 2] })],
   ),
-  enemy(
-    'aresCannonLeft',
-    '阿瑞斯·左浮游机炮',
-    78,
-    2,
-    'stone-ballista',
-    '与阿瑞斯共享警戒网络的左侧浮游火力单元，失去主机供能后仍能短时射击。',
-    [move('交叉机炮', '对左中位各8伤害。', [hit(8)], { slots: [0, 1] })],
-    { target: 'fixed' },
-  ),
-  enemy(
-    'aresCannonRight',
-    '阿瑞斯·右浮游机炮',
-    78,
-    2,
-    'stone-ballista',
-    '右侧浮游火力单元会封住中右通路；摧毁两门机炮也会触发主机紧急肃清。',
-    [move('封锁机炮', '对中右位各8伤害。', [hit(8)], { slots: [1, 2] })],
-    { target: 'fixed' },
-  ),
+  {
+    ...enemy(
+      'aresCannonLeft',
+      '阿瑞斯·左浮游机炮',
+      78,
+      2,
+      'stone-ballista',
+      '与阿瑞斯共享警戒网络的左侧浮游火力单元，失去主机供能后仍能短时射击。',
+      [move('交叉机炮', '对左中位各8伤害。', [hit(8)], { slots: [0, 1] })],
+      { target: 'fixed' },
+    ),
+    standOnCard: true,
+  },
+  {
+    ...enemy(
+      'aresCannonRight',
+      '阿瑞斯·右浮游机炮',
+      78,
+      2,
+      'stone-ballista',
+      '右侧浮游火力单元会封住中右通路；摧毁两门机炮也会触发主机紧急肃清。',
+      [move('封锁机炮', '对中右位各8伤害。', [hit(8)], { slots: [1, 2] })],
+      { target: 'fixed' },
+    ),
+    standOnCard: true,
+  },
 ];
 export const FROST_BOSSES = [
   boss(
@@ -494,6 +500,9 @@ export const FROST_BOSSES = [
       { mode: 'ares', target: 'fixed' },
     ),
     boss: true,
+    overlord: true,
+    standOnCard: true,
+    title: '霸主 / 战斗机兵·阿瑞斯',
     phaseThreshold: 0.6,
     enragedIntents: [
       move(

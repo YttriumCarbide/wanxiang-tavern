@@ -289,7 +289,13 @@ test('all forest enemies have matching full-body voxel portraits and valid plint
       new URL('../assets/portraits/' + enemy.portrait + '.svg', import.meta.url),
       'utf8',
     );
-    assert.equal(svg, renderVoxelEnemyPortrait(enemy, blocks));
+    if (enemy.overlord || enemy.standOnCard) {
+      assert.match(svg, /width="600"\s+height="900"/);
+      assert.match(svg, /data-art-style="sculpted-overlord-v1"/);
+      assert.match(svg, new RegExp(`data-enemy-model="${enemy.id}"`));
+    } else {
+      assert.equal(svg, renderVoxelEnemyPortrait(enemy, blocks));
+    }
     const glb = await readFile(new URL('../assets/' + enemy.model, import.meta.url));
     assert.equal(glb.toString('ascii', 0, 4), 'glTF');
     assert.equal(glb.readUInt32LE(8), glb.length);

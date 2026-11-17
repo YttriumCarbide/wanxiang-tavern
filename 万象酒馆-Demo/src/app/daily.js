@@ -1001,6 +1001,7 @@ export function createDaily(context) {
       return;
     }
     if (event.source !== frame()?.contentWindow) return;
+    if (event.data?.type === 'daily-open-guild') return context.guild?.open?.();
     if (event.data?.type === 'tavern-recruit') return showRecruitment(event.data.characterId);
     if (event.data?.type === 'daily-outing-companions' && active()?.preview) return openSetup();
     if (event.data?.type === 'street-map-state') {

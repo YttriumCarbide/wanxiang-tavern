@@ -60,14 +60,15 @@ export async function enemyIntentChecks({ browser, baseURL, output }) {
         },
       };
       context.renderer.render();
-      context.selection.chooseCell(session.battle.forecast.slots.findIndex(Boolean));
+      context.selection.inspectEnemy('hound', true);
       window.intentFixture = {
         context,
         view,
         cancelHound() {
           session.battle.state.units.hound.buffs.bind = 1;
           session.battle.forecast = engine.preview(session.battle.state, []);
-          context.selection.chooseCell(session.battle.forecast.slots.findIndex(Boolean));
+          const idx = session.battle.forecast.slots.indexOf('hound');
+          context.selection.chooseCell(idx);
         },
       };
     });
@@ -170,7 +171,11 @@ export async function enemyIntentChecks({ browser, baseURL, output }) {
         path: path.join(output, 'enemy-intents-' + viewport.width + '.png'),
       });
     }
-    await page.locator('[data-unit="hound"]').click();
+    await page.evaluate(() => {
+      const { context } = window.intentFixture;
+      const idx = context.session.battle.forecast.slots.indexOf('hound');
+      context.selection.chooseCell(idx);
+    });
     assert.equal(await page.locator('.enemy-intent-summary').count(), 1);
     assert.equal(await page.locator('.intent-path').count(), 1);
     await page.evaluate(() => window.intentFixture.cancelHound());

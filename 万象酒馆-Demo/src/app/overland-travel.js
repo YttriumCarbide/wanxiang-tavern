@@ -22,6 +22,7 @@ import { INGREDIENTS } from '../content/dining.js';
 import { IMPERIAL_DUNGEONS } from '../content/imperial-network.js';
 import { unlockDungeonMap } from '../exploration.js';
 import { learning } from '../campaign.js';
+import { recordGuildSparringWin } from '../guild.js';
 
 export function createOverlandTravel(
   context,
@@ -205,6 +206,47 @@ export function createOverlandTravel(
       .slice(0, 6);
   }
 
+  const isDungeonStop = (id) => IMPERIAL_DUNGEONS.some((item) => item.id === id);
+
+  function completeOverlandArrival(
+    library,
+    {
+      entry = null,
+      fromId,
+      toId,
+      toName,
+      reachedDiscovery = false,
+      discoveryId = null,
+      fast = false,
+      known = false,
+    },
+  ) {
+    const reachedDungeon = isDungeonStop(toId) ? toId : null;
+    const holdsPrevScene = reachedDiscovery || Boolean(reachedDungeon);
+    if (entry) {
+      entry.scene = holdsPrevScene ? fromId : toId;
+      entry.overlandReached = true;
+    }
+    dismissedSkirmish = null;
+    const newlyUnlocked = reachedDungeon ? unlockDungeonMap(library, reachedDungeon) : false;
+    save();
+    if (!reachedDungeon && entry) navigate(entry.scene);
+    else if (reachedDungeon && entry && scene() !== entry.scene) navigate(entry.scene);
+    if (reachedDiscovery && discoveryId) context.daily.arriveDiscovery(discoveryId);
+    if (reachedDungeon) context.daily.arriveDungeon?.(reachedDungeon);
+    context.shell.toast(
+      reachedDungeon
+        ? newlyUnlocked
+          ? `已抵达${toName}，并已将该遗迹加入副本之门`
+          : `已抵达${toName}`
+        : fast
+          ? `${known ? '已沿熟路抵达' : '已赶路抵达'}${toName}`
+          : `已抵达${toName}`,
+    );
+    if (!reachedDungeon && entry) queueMicrotask(() => checkSkirmish(entry.scene));
+    render();
+  }
+
   async function start(to, options = {}) {
     const fromTavern = options.fromTavern === true && !outing() && !active();
     const library = session.ai.library;
@@ -229,29 +271,50 @@ export function createOverlandTravel(
       render();
       const known = isOverlandRouteKnown(library, origin, plan.to);
       const destination = plan.stages.at(-1).to.name;
-      if (dungeonSite) {
-        if (!tutorialRuinsWalk && !entry) entry = options.ensureOuting?.();
+      if (tutorialRuinsWalk) {
         markOverlandRouteExplored(library, plan);
         const newlyUnlocked = unlockDungeonMap(library, dungeonSite.id);
-        if (entry && outing() === entry) {
-          spendTurns(plan.turns);
-          entry.scene = dungeonSite.id;
-          entry.overlandReached = true;
-        }
         dismissedSkirmish = null;
         save();
-        navigate(dungeonSite.id);
         context.daily.arriveDungeon?.(dungeonSite.id);
         context.shell.toast(
-          newlyUnlocked ? `已抵达${destination}，并已将该遗迹加入副本之门` : `已抵达${destination}`,
+          newlyUnlocked
+            ? `已沿碎石径抵达${destination}，并已将该遗迹加入副本之门`
+            : `已抵达${destination}`,
         );
         render();
         return;
       }
+      const originName = plan.stages[0]?.from?.name || origin;
+      const routeLevel =
+        dungeonSite?.level ||
+        plan.stages.at(-1)?.to?.level ||
+        Math.max(...plan.stages.map((step) => step.level || 1));
       const playerIntent = await intent.ask(
-        '确认外出路线',
-        `前往 ${destination} · ${plan.turns} 回合`,
-        { fastTravelLabel: known ? '熟路直行（跳过外出 API）' : '' },
+        dungeonSite ? `前往${destination}` : '确认外出路线',
+        `${originName} → ${destination} · 约 ${plan.turns} 回合 · 推荐 Lv.${routeLevel}`,
+        {
+          kicker: dungeonSite ? 'EXPEDITION MARCH · 遗迹远行' : 'OVERLAND MARCH · 大陆赶路',
+          fastTravelLabel: known ? '熟路直行（本次跳过）' : '',
+          showSkipApi: true,
+          skipApi: Boolean(session.ai.generationOptions?.skipOverlandApi),
+          routeMeta: {
+            originName,
+            destinationName: destination,
+            turns: plan.turns,
+            level: routeLevel,
+          },
+          onToggleSkip(checked) {
+            if (context.generation?.setOption) {
+              context.generation.setOption('skipOverlandApi', checked);
+            } else {
+              session.ai.generationOptions = {
+                ...session.ai.generationOptions,
+                skipOverlandApi: Boolean(checked),
+              };
+            }
+          },
+        },
       );
       if (playerIntent === null || control.signal.aborted) return;
       if (entry && outing() !== entry) return;
@@ -261,16 +324,17 @@ export function createOverlandTravel(
         const finalStage = plan.stages.at(-1);
         spendTurns(plan.turns);
         markOverlandRouteExplored(library, plan);
-        const reachedDiscovery = discovery && finalStage?.to?.id === discovery.id;
-        entry.scene = (reachedDiscovery ? finalStage.from : finalStage.to).id;
-        entry.overlandReached = true;
-        dismissedSkirmish = null;
-        save();
-        navigate(entry.scene);
-        if (reachedDiscovery) context.daily.arriveDiscovery(discovery.id);
-        context.shell.toast(`已沿熟路抵达${destination}`);
-        render();
-        queueMicrotask(() => checkSkirmish(entry.scene));
+        const reachedDiscovery = Boolean(discovery && finalStage?.to?.id === discovery.id);
+        completeOverlandArrival(library, {
+          entry,
+          fromId: finalStage.from.id,
+          toId: finalStage.to.id,
+          toName: destination,
+          reachedDiscovery,
+          discoveryId: discovery?.id,
+          fast: true,
+          known,
+        });
         return;
       }
       const party = partyIds()
@@ -323,7 +387,8 @@ export function createOverlandTravel(
     const leg = stage(current);
     if (current.phase === 'depart') {
       spendTurns(leg.turns);
-      entry.scene = leg.to.id === current.discovery?.id ? leg.from.id : leg.to.id;
+      const holdPrev = leg.to.id === current.discovery?.id || isDungeonStop(leg.to.id);
+      entry.scene = holdPrev ? leg.from.id : leg.to.id;
       current.phase = 'intro';
       save();
     }
@@ -360,15 +425,32 @@ export function createOverlandTravel(
         });
       }
       if (won) markOverlandRouteExplored(library, overlandRunPlan(current));
-      const reachedDiscovery = won && leg.to.id === current.discovery?.id;
-      entry.scene = (won && !reachedDiscovery ? leg.to : leg.from).id;
-      entry.overlandReached = true;
-      dismissedSkirmish = null;
+      const reachedDiscovery = Boolean(won && leg.to.id === current.discovery?.id);
       delete entry.overland;
-      if (continueNow) navigate(entry.scene);
-      if (reachedDiscovery) context.daily.arriveDiscovery(current.discovery.id);
-      context.shell.toast(won ? `已抵达${leg.to.name}` : `行程结束，退回${leg.from.name}`);
-      if (won && continueNow) queueMicrotask(() => checkSkirmish(entry.scene));
+      if (won) {
+        if (continueNow) {
+          completeOverlandArrival(library, {
+            entry,
+            fromId: leg.from.id,
+            toId: leg.to.id,
+            toName: leg.to.name,
+            reachedDiscovery,
+            discoveryId: current.discovery?.id,
+          });
+        } else {
+          const reachedDungeon = isDungeonStop(leg.to.id) ? leg.to.id : null;
+          entry.scene = reachedDiscovery || reachedDungeon ? leg.from.id : leg.to.id;
+          entry.overlandReached = true;
+          dismissedSkirmish = null;
+          if (reachedDungeon) unlockDungeonMap(library, reachedDungeon);
+        }
+      } else {
+        entry.scene = leg.from.id;
+        entry.overlandReached = true;
+        dismissedSkirmish = null;
+        if (continueNow) navigate(entry.scene);
+        context.shell.toast(`行程结束，退回${leg.from.name}`);
+      }
     } else {
       current.index++;
       current.phase = 'depart';
@@ -735,6 +817,39 @@ export function createOverlandTravel(
 
   async function finishBattle() {
     const expedition = session.journey.expedition;
+    const sparringRun = expedition.overlandBattle?.sparringRun;
+    if (sparringRun) {
+      const won = session.battle.state.phase === 'victory';
+      if (!expedition.pendingResult) {
+        if (won) await context.battleBarks?.battleWon();
+        const payout = won ? recordGuildSparringWin(session.ai.library, sparringRun) : null;
+        expedition.status = won ? 'complete' : 'failed';
+        expedition.pendingResult = {
+          won,
+          complete: true,
+          encounter: 0,
+          awards: expedition.experienceAwards || [],
+          ether: 0,
+          rewards: payout ? { gold: payout.gold, ether: 0, merit: payout.merit } : undefined,
+          loot: [],
+        };
+        context.audio.play(won ? 'victory' : 'defeat');
+        save();
+        context.checkpoint.saveNow();
+      }
+      await context.settlement.show({
+        ...expedition.pendingResult,
+        backLabel: '返回并打开公会',
+        back() {
+          document.querySelector('#result').close();
+          context.journey.returnInn();
+          context.daily.refresh?.();
+          context.checkpoint.saveNow();
+          context.guild?.open?.('trials');
+        },
+      });
+      return;
+    }
     const skirmishRun = expedition.overlandBattle?.skirmishRun;
     if (skirmishRun) {
       const won = session.battle.state.phase === 'victory';
@@ -745,6 +860,7 @@ export function createOverlandTravel(
         let settled = false;
         if (won && isFinalWave) {
           settleSkirmishVictory(session.ai.library, skirmishRun.plan);
+          context.quests?.skirmishWon?.(skirmishRun.plan.nodeId);
           settled = true;
         }
         expedition.status = !won || isFinalWave ? (won ? 'complete' : 'failed') : 'in-progress';

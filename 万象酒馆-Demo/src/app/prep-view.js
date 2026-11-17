@@ -6,6 +6,11 @@ import { affectionLabel, affectionRank, relationship } from '../relationships.js
 import { preparationEquipment } from './equipment.js';
 import { finalPassiveText, finalSkillText } from '../skill-text.js';
 import { EMBLEMS } from '../emblems.js';
+import {
+  LEARNABLE_SKILL_MAP,
+  restoreEquippedSkills,
+  restoreLearnedSkills,
+} from '../learnable-skills.js';
 import { DC_ATTRIBUTES, dcSuccessProbability, effectiveDcAttrs, formatMod } from '../dc.js';
 import {
   SERVICE_ROLES,
@@ -76,6 +81,7 @@ const SKILL_PALETTE = Object.freeze({
   普攻: ['#d6d2e2', '#6a6f90', '⚔'],
   入场: ['#9fe0a8', '#3f8a5a', '⚑'],
   主动: ['#8fb8ff', '#3f5fd0', '✦'],
+  通用战技: ['#6cecd6', '#218a7b', '✧'],
   被动: ['#fff1c4', '#c99b4a', '◈'],
   纹章主动: ['#ffb08a', '#d0503a', '⚡'],
   纹章被动: ['#ffd9a8', '#b87630', '♛'],
@@ -84,12 +90,16 @@ const SKILL_PALETTE = Object.freeze({
 function skillColor(kind) {
   if (kind.startsWith('纹章主动')) return SKILL_PALETTE.纹章主动;
   if (kind.startsWith('纹章被动')) return SKILL_PALETTE.纹章被动;
+  if (kind === '通用战技') return SKILL_PALETTE.通用战技;
   if (kind.startsWith('被动')) return SKILL_PALETTE.被动;
   if (kind.startsWith('主动')) return SKILL_PALETTE.主动;
   return SKILL_PALETTE[kind] || SKILL_PALETTE.主动;
 }
 
-function skillsMarkup(stats, member) {
+function skillsMarkup(stats, member, library) {
+  const learnedIds = restoreLearnedSkills(library?.learnedSkills);
+  const learnedSet = new Set(learnedIds);
+  const equippedSlots = restoreEquippedSkills(member.equippedSkills, learnedSet);
   const cards = [];
   const markName = stats.mechanicMark?.name || '标记';
   cards.push({
@@ -109,7 +119,11 @@ function skillsMarkup(stats, member) {
   (stats.skills || []).forEach((skill, idx) => {
     const isPassive = Boolean(skill.passive);
     cards.push({
-      kind: isPassive ? `被动 · 技能${idx + 1}` : `主动 · 技能${idx + 1}`,
+      kind: skill.universal
+        ? '通用战技'
+        : isPassive
+          ? `被动 · 技能${idx + 1}`
+          : `主动 · 技能${idx + 1}`,
       name: skill.name || member.setting?.skills?.[idx]?.name || `技能 ${idx + 1}`,
       cost: isPassive
         ? '被动'
@@ -136,11 +150,43 @@ function skillsMarkup(stats, member) {
       text: emblem.skill.text || finalSkillText(emblem.skill, markName),
     });
   }
-  return html`<div class="prepare-skills-grid">
-    ${cards
-      .map((card, i) => {
-        const [k1, k2, glyph] = skillColor(card.kind);
-        return `<article class="prepare-ability-item" style="--k1:${k1};--k2:${k2};--i:${i}">
+  const slotBar = html`<div class="prepare-universal-bar">
+    <div class="prepare-universal-head">
+      <strong>通用战技配装 · 每人至多 2 槽</strong>
+      <small>公会「战技研习台」可解锁更多通用战技（已掌握 ${learnedIds.length}/12）</small>
+    </div>
+    <div class="prepare-universal-slots">
+      ${[0, 1]
+        .map((slot) => {
+          const currentId = equippedSlots[slot] || '';
+          return `<label class="prepare-universal-slot">
+            <span>通用槽位 ${slot + 1}</span>
+            <select
+              data-universal-skill-character="${escapeText(member.id)}"
+              data-universal-skill-slot="${slot}"
+              aria-label="通用战技槽 ${slot + 1}"
+            >
+              <option value="">— 未配装通用战技 —</option>
+              ${learnedIds
+                .map((id) => {
+                  const blueprint = LEARNABLE_SKILL_MAP[id];
+                  if (!blueprint) return '';
+                  return `<option value="${escapeText(id)}" ${id === currentId ? 'selected' : ''}>${escapeText(blueprint.name)}（${blueprint.mp ? `${blueprint.mp}SP` : `${blueprint.hp || 0}HP`}）</option>`;
+                })
+                .join('')}
+            </select>
+          </label>`;
+        })
+        .join('')}
+    </div>
+  </div>`;
+  return (
+    slotBar +
+    html`<div class="prepare-skills-grid">
+      ${cards
+        .map((card, i) => {
+          const [k1, k2, glyph] = skillColor(card.kind);
+          return `<article class="prepare-ability-item" style="--k1:${k1};--k2:${k2};--i:${i}">
           <div class="pp-skill-ico" aria-hidden="true">${glyph}</div>
           <div>
             <div class="pp-skill-top"><u>${escapeText(card.kind)}</u><small>${escapeText(card.cost)}</small></div>
@@ -148,9 +194,10 @@ function skillsMarkup(stats, member) {
             <p>${escapeText(card.text)}</p>
           </div>
         </article>`;
-      })
-      .join('')}
-  </div>`;
+        })
+        .join('')}
+    </div>`
+  );
 }
 
 function loreMarkup(member) {
@@ -310,7 +357,7 @@ export function prepDetailMarkup(library, inspected, activeTab = 'status') {
           data-prepare-panel="skill"
           ${tab !== 'skill' ? 'hidden' : ''}
         >
-          ${skillsMarkup(stats, inspected)}
+          ${skillsMarkup(stats, inspected, library)}
         </div>
         <div
           class="prepare-tabpanel"

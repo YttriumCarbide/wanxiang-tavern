@@ -293,6 +293,7 @@ export async function worldsEmblemsChecks({ browser, baseURL, output }) {
     await page.screenshot({ path: path.join(output, 'return-facing-fate-table.png') });
     await openShelfPanel(page, 'archives');
     await page.locator('[data-archive-tab="enemies"]').click();
+    await page.locator('[data-enemy-tier="boss"]').click();
     assert((await page.locator('#archive-list').textContent()).includes('夜港执政官'));
     assert.deepEqual(errors, []);
     return {

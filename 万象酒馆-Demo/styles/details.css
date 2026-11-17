@@ -128,21 +128,26 @@
   filter: grayscale(1);
 }
 .emblem-passive-active {
-  border-color: #8cdbff;
+  border-color: var(--emblem-primary, #8cdbff);
   box-shadow:
-    0 0 12px #42acff66,
-    inset 0 0 14px #3293d92b;
+    0 0 12px color-mix(in srgb, var(--emblem-accent, #42acff) 42%, transparent),
+    inset 0 0 14px color-mix(in srgb, var(--emblem-primary, #3293d9) 18%, transparent);
 }
 .emblem-passive-active::after {
   content: '';
   position: absolute;
   inset: -3px;
-  border: 2px solid #8be6ff;
+  border: 2px solid var(--emblem-glow, #8be6ff);
   border-radius: inherit;
-  background: linear-gradient(120deg, #2489ff12, #8bebff38, transparent 55%);
+  background: linear-gradient(
+    120deg,
+    color-mix(in srgb, var(--emblem-accent, #2489ff) 10%, transparent),
+    color-mix(in srgb, var(--emblem-glow, #8bebff) 24%, transparent),
+    transparent 55%
+  );
   box-shadow:
-    0 0 9px #41aaff,
-    inset 0 0 8px #65cfff;
+    0 0 9px var(--emblem-primary, #41aaff),
+    inset 0 0 8px var(--emblem-glow, #65cfff);
   pointer-events: none;
   animation: emblem-passive-flame 1.1s ease-in-out infinite alternate;
 }
@@ -797,6 +802,9 @@
   flex-basis: 100%;
   font-size: 10px;
   color: #cbb1e1;
+}
+#details .universal-skill-source {
+  color: #8ee6d2;
 }
 #details .action-category-title {
   font-size: 13px;

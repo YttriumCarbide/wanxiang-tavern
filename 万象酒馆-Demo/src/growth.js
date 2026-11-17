@@ -4,6 +4,7 @@ import { characterGenerationPlan } from './character-generation.js';
 import { applyEmblemStats } from './emblems.js';
 import { applyCompanionModifiers } from './companion-mechanics.js';
 import { combatScale, scaleLevelEffects } from './combat-scale.js';
+import { equippedUniversalSkills } from './learnable-skills.js';
 /** Persistent growth is separate from authored combat definitions and battle snapshots. */
 export const RARITIES = Object.freeze({
   common: {
@@ -90,6 +91,11 @@ export function grownCombat(member) {
   combat.mp = Math.round(combat.mp * Math.sqrt(scale));
   combat.attack = Math.round(combat.attack * scale);
   combat.limit = Math.min(2, combat.limit + growth.bonus.limit);
+  for (const extra of equippedUniversalSkills(member)) {
+    if (!combat.skills.some((existing) => existing.id === extra.id)) {
+      combat.skills.push(extra);
+    }
+  }
   for (const skill of [...combat.skills, combat.entrySkill].filter(Boolean)) {
     if (skill.passive) {
       if (scale === 1) continue;

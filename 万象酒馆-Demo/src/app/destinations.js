@@ -1,7 +1,7 @@
 import { createRawResponse } from './raw-response.js';
 import { generationEnabled } from '../generation-options.js';
 import { needsContinuationWorld, continuationInput } from '../continuation-world.js';
-import { BASE_WORLDS, worldRegion, routeKey } from '../worlds.js';
+import { UNLOCKABLE_DUNGEONS, worldRegion, routeKey } from '../worlds.js';
 import { addWorldRoute } from '../exploration.js';
 import { REGIONS } from '../content/regions.js';
 import { explorationSpec, availableExplorations, explorationPreview } from '../exploration.js';
@@ -12,7 +12,12 @@ import { escapeText } from '../ui.js';
 import { createDestinationPreview } from '../destination-preview.js';
 import { query as $ } from './dom.js';
 import { learning } from '../campaign.js';
-import { destinationMap, destinationTrail, destinationMark } from '../destination-map.js';
+import {
+  destinationMap,
+  destinationTrail,
+  destinationMark,
+  destinationRegionTerrain,
+} from '../destination-map.js';
 import { canRecall } from '../recollections.js';
 
 /** Environment browsing and a persistent, pannable tree of complete journeys. */
@@ -22,7 +27,7 @@ export function createDestinations(context) {
     const unlocked = Array.isArray(session.ai.library.unlockedDungeons)
       ? session.ai.library.unlockedDungeons
       : [];
-    return BASE_WORLDS.filter((id) => unlocked.includes(id));
+    return UNLOCKABLE_DUNGEONS.filter((id) => unlocked.includes(id));
   };
   const maps = () =>
     learning(session.ai.library) || session.ai.library.campaign?.tutorial === 'depart-again'
@@ -34,7 +39,7 @@ export function createDestinations(context) {
           ...(session.ai.library.worlds || [])
             .filter(
               (world) =>
-                !BASE_WORLDS.includes(world.id) &&
+                !UNLOCKABLE_DUNGEONS.includes(world.id) &&
                 !session.ai.library.atlasDiscoveries?.some(({ id }) => id === world.id),
             )
             .map((world) => world.id),
@@ -305,11 +310,13 @@ export function createDestinations(context) {
     });
   }
   function renderMap() {
-    const route = session.ai.library.exploration[session.journey.regionMap];
-    const entries = explorationPreview(route, session.journey.regionMap);
-    const available = new Set(nodesFor(session.journey.regionMap).map((entry) => entry.id));
+    const mapId = session.journey.regionMap;
+    const route = session.ai.library.exploration[mapId];
+    const entries = explorationPreview(route, mapId);
+    const available = new Set(nodesFor(mapId).map((entry) => entry.id));
     const cleared = new Set((route.cleared || []).map((entry) => entry.id));
     const { positions, width, height } = destinationMap(entries);
+    const terrain = destinationRegionTerrain(mapId, width, height, positions);
     const paths = entries
       .filter((entry) => positions.has(entry.parentId))
       .map((entry) => {
@@ -322,17 +329,19 @@ export function createDestinations(context) {
       class="destination-map-canvas"
       style="width:${width}px;height:${height}px"
     >
-      <svg width="${width}" height="${height}" aria-hidden="true">${paths}</svg>
+      <svg width="${width}" height="${height}" aria-hidden="true">${terrain}${paths}</svg>
       ${entries
         .map((entry) => {
           const point = positions.get(entry.id);
           const done = cleared.has(entry.id);
+          const spec = explorationSpec(entry);
+          const isBoss = entry.sequence === 5 || (spec.boss && !entry.world && entry.sequence >= 5);
           return html`<button
-            class="destination-node ${done ? 'cleared' : !available.has(entry.id) ? 'locked' : ''}"
+            class="destination-node ${done ? 'cleared' : !available.has(entry.id) ? 'locked' : ''} ${isBoss ? 'is-boss' : ''}"
             data-map-node="${entry.id}"
             style="left:${point.x - 70}px;top:${point.y - 30}px;--ink-angle:${(entry.seed % 17) - 8}deg;--label-angle:${(entry.seed % 9) - 4}deg"
             aria-pressed="${entry.id === session.journey.selectedNode?.id}"
-            aria-label="${escapeText(explorationSpec(entry).name)} · ${done ? '已通关' : available.has(entry.id) ? '可探索' : '未解锁'}"
+            aria-label="${escapeText(spec.name)} · Lv.${spec.level} · ${done ? '已通关' : available.has(entry.id) ? '可探索' : '未解锁'}"
             title="${done && canRecall(session.ai.library, entry) ? '回忆：重玩此关，不请求API' : done ? '已通关' : available.has(entry.id) ? '点击选择此副本，再点击启程' : '按数字顺序通关前面的地点后解锁'}"
             ${!canRecall(session.ai.library, entry) && (done || !available.has(entry.id)) ? 'disabled' : ''}
           >
@@ -340,7 +349,10 @@ export function createDestinations(context) {
             <span class="destination-node-mark"
               >${destinationMark(entry.seed, done)}<em>${entry.sequence + 1}</em></span
             ><strong
-              >${escapeText(entry.sequence < 6 && !entry.world ? REGIONS[entry.map].sites[entry.sequence] : explorationSpec(entry).name)}</strong
+              >${escapeText(entry.sequence < 6 && !entry.world ? REGIONS[entry.map].sites[entry.sequence] : spec.name)}</strong
+            >
+            <small class="destination-node-meta"
+              >Lv.${spec.level}${isBoss ? ' · ♛ 首领' : ''}</small
             >
           </button>`;
         })
@@ -399,7 +411,7 @@ export function createDestinations(context) {
         map === 'singularity' ? '多元奇点，点击构筑新世界' : '场景预览',
       );
       if (map === 'singularity') preview.pause();
-      else void preview.show(region.map || map, direction);
+      else void preview.show(region.biome || region.map || map, direction);
     } catch {
       $('#destination-preview').dataset.error = 'true';
     }

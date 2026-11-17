@@ -6,6 +6,7 @@ export function restoreGenerationOptions(value) {
     skipAiGeneration,
     protagonistApi: !skipAiGeneration,
     scriptApi: !skipAiGeneration,
+    skipOverlandApi: value?.skipOverlandApi === true,
     developerMode: value?.developerMode === true,
     allowRetreat: value?.allowRetreat === true,
     editArchives: value?.editArchives === true,

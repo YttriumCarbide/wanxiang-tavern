@@ -12,6 +12,26 @@ const CREATURES = [
   { id: 'cinder-imp', name: '灰炉小偶', description: '旧炉砖与废铁之间，还有一点没熄灭的火。' },
   { id: 'tide-jelly', name: '潮灯水母', description: '灯心沉在伞盖之中，触须跟着水声摆动。' },
   { id: 'boss-tide', name: '星潮司灯者', description: '星环记录潮汐，青铜长臂守住最后一盏灯。' },
+  {
+    id: 'apep-lamb',
+    name: '阿佩普的羔羊',
+    description: '霸主雕塑 · 灰之诅咒与噬日邪蛇缠绕的祭坛羔羊。',
+  },
+  {
+    id: 'moon-eye',
+    name: '母树·月之魔眼',
+    description: '霸主雕塑 · 嵌着金属虹膜与月光星环的活体巨木核心。',
+  },
+  {
+    id: 'ares',
+    name: '战斗机兵·阿瑞斯',
+    description: '霸主雕塑 · 搭载重剑与反应炉的古代决战机兵。',
+  },
+  {
+    id: 'radiant-wyvern',
+    name: '辉光亚龙',
+    description: '霸主雕塑 · 展开圣白辉翼盘踞天梯之巅的亚龙霸主。',
+  },
 ];
 const DESCRIPTIONS = {
   ruins: '断柱与旧刻痕之间，尘埃仍在缓缓落下。',
@@ -64,15 +84,20 @@ async function creatureView(stage, id) {
   scene.add(engraving);
   resources.object(scene);
   const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 100);
+  const original = ['crystal-beetle', 'cinder-imp', 'tide-jelly', 'boss-tide'].includes(id);
   const boss = id === 'boss-tide';
-  camera.position.set(boss ? 6 : 4.1, boss ? 4.4 : 2.9, boss ? 7 : 4.7);
+  const box = new THREE.Box3().setFromObject(model);
+  const size = box.getSize(new THREE.Vector3());
   const events = createEventScope();
   const canvas = stage.querySelector('canvas');
-  const target = new THREE.Vector3(-0.6, boss ? 1.4 : 0.8, 0);
+  const target = original
+    ? new THREE.Vector3(-0.6, boss ? 1.4 : 0.8, 0)
+    : new THREE.Vector3(0, size.y * 0.46, 0);
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  let azimuth = 0.72;
+  let azimuth = original ? 0.72 : 0.54;
   let elevation = 1.12;
-  let distance = boss ? 10 : 6.5;
+  let distance = original ? (boss ? 10 : 6.5) : Math.max(8.5, size.y * 1.65);
+  camera.position.setFromSphericalCoords(distance, elevation, azimuth).add(target);
   let pointer = null;
   let lastTime = performance.now();
   let lastInteraction = 0;

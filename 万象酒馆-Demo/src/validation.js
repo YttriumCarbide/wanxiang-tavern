@@ -134,6 +134,10 @@ export function validateGameData(
       check(typeof enemy.splitActions === 'boolean', `${enemy.id}: invalid splitActions`);
     if (enemy.elite !== undefined)
       check(typeof enemy.elite === 'boolean', `${enemy.id}: invalid elite flag`);
+    if (enemy.overlord !== undefined)
+      check(typeof enemy.overlord === 'boolean', `${enemy.id}: invalid overlord flag`);
+    if (enemy.standOnCard !== undefined)
+      check(typeof enemy.standOnCard === 'boolean', `${enemy.id}: invalid standOnCard flag`);
     const moves = [
       ...(enemy.openingIntent ? [enemy.openingIntent] : []),
       ...(Array.isArray(enemy.intents) ? enemy.intents : []),

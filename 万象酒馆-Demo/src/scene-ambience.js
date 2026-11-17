@@ -1,15 +1,17 @@
 import * as THREE from 'three';
 import { BIOMES } from './content/biomes.js';
+import { REGIONS } from './content/regions.js';
 
 /** Decorative motion owns no battle state, damage, timers or extra animation loop. */
 export function createSceneAmbience(scene, model, map, resources, reduced) {
-  const theme = BIOMES[map] || BIOMES.ruins;
+  const biomeKey = BIOMES[map] ? map : REGIONS[map]?.biome || 'ruins';
+  const theme = BIOMES[biomeKey] || BIOMES.ruins;
   const group = new THREE.Group();
   group.name = 'Living_Environment';
   scene.add(group);
   const cube = new THREE.BoxGeometry(1, 1, 1);
   const insectBody = new THREE.MeshStandardMaterial({
-    color: map === 'frost' ? '#557e8a' : '#6c795c',
+    color: biomeKey === 'frost' ? '#557e8a' : '#6c795c',
     roughness: 0.8,
   });
   const insectLeg = new THREE.MeshStandardMaterial({ color: '#283d40' });
@@ -22,7 +24,7 @@ export function createSceneAmbience(scene, model, map, resources, reduced) {
     parent.add(mesh);
     return mesh;
   }
-  const bugCount = ['ruins', 'forest', 'frost', 'forge', 'tide'].includes(map) ? 8 : 0;
+  const bugCount = ['ruins', 'forest', 'frost', 'forge', 'tide'].includes(biomeKey) ? 8 : 0;
   for (let i = 0; i < bugCount; i++) {
     const bug = new THREE.Group();
     bug.name = `Border_Beetle_${i}`;

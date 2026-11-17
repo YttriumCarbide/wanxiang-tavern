@@ -216,7 +216,7 @@ test('older v3 documents keep their authored numeric values readable', () => {
   assert.equal(entry.combat.attack, raw.data.attack);
 });
 
-test('2AP high striker skills reach above 32 up to 40 and passives/regen keep percentage stacks', () => {
+test('2AP high striker skills reach above 36 up to 48 and passives/regen keep percentage stacks', () => {
   let peak = 0;
   for (let seed = 0; seed < 40; seed++) {
     const raw = design();
@@ -229,9 +229,9 @@ test('2AP high striker skills reach above 32 up to 40 and passives/regen keep pe
     });
     const dmg = entry.combat.skills[1].effects[0].value;
     peak = Math.max(peak, dmg);
-    assert(dmg <= 40);
+    assert(dmg <= 48);
   }
-  assert(peak > 32 && peak <= 40, `expected > 32 and <= 40, got ${peak}`);
+  assert(peak > 36 && peak <= 48, `expected > 36 and <= 48, got ${peak}`);
 
   const regenRaw = design();
   regenRaw.data.skills[0].target = 'self';

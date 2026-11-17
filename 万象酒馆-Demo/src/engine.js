@@ -1149,6 +1149,40 @@ function simulate(s, plan, slots) {
           repeatIndex: cast + 1,
           costs: { mp: cast ? 0 : mpCost, hp: cast ? 0 : hpCost },
         });
+        if (
+          cast === repeats - 1 &&
+          skill.retreatSwap &&
+          u.hp > 0 &&
+          front(work).includes(a.actor)
+        ) {
+          const frontSlot = work.formation.indexOf(a.actor);
+          const rearIncoming = work.formation
+            .slice(3)
+            .find((hid) => hid && work.units[hid]?.hp > 0);
+          const backSlot = rearIncoming ? work.formation.indexOf(rearIncoming) : -1;
+          if (frontSlot >= 0 && frontSlot < 3 && backSlot >= 3 && rearIncoming) {
+            [work.formation[frontSlot], work.formation[backSlot]] = [rearIncoming, a.actor];
+            movedToFront.add(rearIncoming);
+            trigger('enterFront', rearIncoming, { targets: [rearIncoming] });
+            trigger('enterRear', a.actor, { targets: [a.actor] });
+            const incDef = definitions[rearIncoming];
+            const incomingUnit = work.units[rearIncoming];
+            const hasEntry = incomingUnit?.entryReady && incDef?.entrySkill;
+            currentLogs.push(
+              hasEntry
+                ? `${def.name}撤至后场，${incDef.name}换入 · ${incDef.entrySkill.name}`
+                : `${def.name}撤至后场，${incDef.name}补位入阵`,
+            );
+            record(
+              'swap',
+              rearIncoming,
+              hasEntry ? `换入 · ${incDef.entrySkill.name}` : '战术撤换',
+              [a.actor],
+              a.id,
+            );
+            triggerEntrySkill(rearIncoming, a.id, frontSlot, a.actor);
+          }
+        }
       }
     } else if (!usedSlots.has(at)) record('wait', null, '保留行动');
   }

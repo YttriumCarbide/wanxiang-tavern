@@ -388,10 +388,12 @@ export async function buildForestEnemies() {
         2,
       ) + '\n',
     );
-    await writeFile(
-      new URL('../assets/portraits/' + enemy.portrait + '.svg', import.meta.url),
-      renderVoxelEnemyPortrait(enemy, blocks),
-    );
+    if (!enemy.overlord && !enemy.standOnCard) {
+      await writeFile(
+        new URL('../assets/portraits/' + enemy.portrait + '.svg', import.meta.url),
+        renderVoxelEnemyPortrait(enemy, blocks),
+      );
+    }
   }
   const result = spawnSync(
     fileURLToPath(new URL('../../建模工具/.venv/Scripts/python.exe', import.meta.url)),

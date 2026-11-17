@@ -1,16 +1,14 @@
 {
   "browserConcurrency": 2,
-  "scopes": ["quality", "core", "rp-layout", "destinations", "street"],
+  "scopes": ["quality", "core", "universal-enemies"],
   "coreFiles": [
-    "tests/phase-a-dc-gems-map.test.js",
-    "tests/phase-b-dc-pipeline.test.js",
-    "tests/phase-cd-service-skirmish.test.js",
-    "tests/overland.test.js",
-    "tests/exploration.test.js",
-    "tests/campaign.test.js",
-    "tests/adventure.test.js",
-    "tests/daily.test.js",
-    "tests/tutorial-revision.test.js",
-    "tests/worlds-emblems.test.js"
+    "tests/cat-preset.test.js",
+    "tests/preset-processing.test.js",
+    "tests/monsters-overlords.test.js",
+    "tests/worldbook.test.js",
+    "tests/forest.test.js",
+    "tests/frost.test.js",
+    "tests/humanoid-enemies.test.js",
+    "tests/universal-enemies.test.js"
   ]
 }
