@@ -22,6 +22,7 @@ const STOP_LABELS = Object.freeze({
   'cross-orchard': { above: true },
   'cross-causeway': { above: true },
   ainoblin: { city: true },
+  mill: { dungeon: true },
   ruins: { dungeon: true },
   forest: { dungeon: true },
   frost: { dungeon: true },
@@ -91,13 +92,15 @@ export function createAtlasTravel({ dialog, events, scene, onTravel }) {
   }
 
   const DUNGEON_LEVEL_RANGES = Object.freeze({
+    mill: 'Lv.1-5',
     'moss-hollow': 'Lv.2-4',
+    'starbell-undercroft': 'Lv.6-8',
     'border-watch': 'Lv.6-8',
-    ruins: 'Lv.5-8',
     'whisper-grove': 'Lv.10-13',
     forest: 'Lv.12-16',
     'silver-cistern': 'Lv.15-18',
-    frost: 'Lv.16-20',
+    frost: 'Lv.17-21',
+    ruins: 'Lv.20-25',
     'ash-foundry': 'Lv.20-23',
     forge: 'Lv.22-26',
     'astral-sanctum': 'Lv.25-28',
@@ -307,12 +310,12 @@ export function createAtlasTravel({ dialog, events, scene, onTravel }) {
       reset();
       return;
     }
+    const tutorialOnly = Boolean(outing.tutorialMillOnly || outing.tutorialRuinsOnly);
     balance.textContent = outing.preview
       ? '准备出门'
-      : outing.tutorialRuinsOnly
-        ? '初探指引 · 点击星钟城旁的界隙遗迹'
+      : tutorialOnly
+        ? '初探指引 · 点击星钟城旁的绿蕨磨坊'
         : `已外出 ${outing.turns || 0} 回合`;
-    const tutorialOnly = Boolean(outing.tutorialRuinsOnly);
     for (const { id, button, detail, availability } of [...pins, ...discoveryPins]) {
       const current = id === origin;
       const isDungeon = button.dataset.kind === 'dungeon';
@@ -323,16 +326,16 @@ export function createAtlasTravel({ dialog, events, scene, onTravel }) {
             id,
             discoveries.find((entry) => entry.id === id),
           ).turns;
-      const tutorialBlocked = tutorialOnly && !current && id !== 'ruins';
-      const reason = outing.locked ? '行程进行中' : tutorialBlocked ? '完成界隙遗迹初探后开放' : '';
+      const tutorialBlocked = tutorialOnly && !current && id !== 'mill';
+      const reason = outing.locked ? '行程进行中' : tutorialBlocked ? '完成绿蕨磨坊初探后开放' : '';
       button.disabled = current || Boolean(reason);
       button.dataset.current = String(current);
-      button.dataset.tutorialTarget = String(tutorialOnly && id === 'ruins' && !current);
+      button.dataset.tutorialTarget = String(tutorialOnly && id === 'mill' && !current);
       if (current) button.setAttribute('aria-current', 'location');
       else button.removeAttribute('aria-current');
       detail.textContent = current
         ? '当前位置'
-        : tutorialOnly && id === 'ruins'
+        : tutorialOnly && id === 'mill'
           ? '新手指引 · 步行前往'
           : isDungeon
             ? unlockedDungeons.has(id)

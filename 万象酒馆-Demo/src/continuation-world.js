@@ -1,10 +1,11 @@
-import { BASE_WORLDS } from './worlds.js';
+import { MAINLINE_DUNGEONS, isEndless } from './worlds.js';
 
 export function needsContinuationWorld(library, node) {
   return (
     !!node &&
-    BASE_WORLDS.includes(node.map) &&
-    node.sequence >= 6 &&
+    MAINLINE_DUNGEONS.includes(node.map) &&
+    (node.endless === true || isEndless(node)) &&
+    !node.world &&
     !(library.worlds || []).some((world) => world.id === node.map && world.continuationPrepared)
   );
 }
@@ -16,12 +17,12 @@ export function continuationInput(library, map) {
       record,
       book: library.scripts.find((book) => book.id === record.scriptId),
     }))
-    .filter(
-      ({ book, record }) =>
-        (book?.exploration?.sequence ??
-          library.exploration[map]?.cleared.find((node) => node.id === record.nodeId)?.sequence ??
-          6) < 6,
-    )
+    .filter(({ book, record }) => {
+      const node =
+        book?.exploration ||
+        library.exploration[map]?.cleared.find((item) => item.id === record.nodeId);
+      return node ? !isEndless(node) : (book?.exploration?.sequence ?? 6) < 6;
+    })
     .map(({ record, book }) => ({
       sequence:
         book?.exploration?.sequence ??

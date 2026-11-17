@@ -1,6 +1,6 @@
 import { HEROES } from './data.js';
 import { officialCharacter } from './ai/library.js';
-import { BASE_WORLDS } from './worlds.js';
+import { MAINLINE_DUNGEONS, isEndless } from './worlds.js';
 import { REGIONS } from './content/regions.js';
 import { OFFICIAL_VISITORS } from './content/official-visitors.js';
 import { TOWN_GUESTS } from './content/town-guests.js';
@@ -28,16 +28,27 @@ export function npcSummonStatus(library, npc) {
     const record = library.history?.find((entry) => entry.runId === source.runId);
     const map = source.worldId || node?.world?.id || source.map || node?.map || record?.map;
     const sequence = source.sequence ?? node?.sequence;
-    if (source.endless || node?.world || sequence >= 6 || !BASE_WORLDS.includes(map))
+    if (
+      source.endless ||
+      node?.world ||
+      isEndless(node) ||
+      sequence >= 6 ||
+      !MAINLINE_DUNGEONS.includes(map)
+    )
       return { allowed: true, reason: '' };
     const route = library.exploration?.[map];
-    if (route?.cleared?.some((entry) => entry.sequence === 5) || route?.completed >= 6)
+    if (
+      route?.cleared?.some(
+        (entry) => entry.overlord || entry.label === '4' || entry.sequence === 5,
+      ) ||
+      route?.completed >= 6
+    )
       return { allowed: true, reason: '' };
     locked.add(REGIONS[map].name);
   }
   return {
     allowed: false,
-    reason: `通关${[...locked].join('或')}第六关后可召唤`,
+    reason: `通关${[...locked].join('或')}主线终关后可召唤`,
   };
 }
 

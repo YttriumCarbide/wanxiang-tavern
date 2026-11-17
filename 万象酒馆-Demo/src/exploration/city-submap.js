@@ -15,6 +15,7 @@ function normalizeSceneId(sceneId) {
 
 const PIN_ICONS = Object.freeze({
   guild: '⚜',
+  dungeon: '⚔',
   tavern: '⚑',
   arena: '⚔',
   fort: '♜',
@@ -73,7 +74,14 @@ export function buildCitySubmapData(sceneId) {
 }
 
 /** Controller for the interactive Major City Parchment Blueprint Sub-map in street.html. */
-export function createCitySubmap({ events, definition, onNavigate, onOpenWorldMap, onOpenGuild }) {
+export function createCitySubmap({
+  events,
+  definition,
+  onNavigate,
+  onOpenWorldMap,
+  onOpenGuild,
+  onOpenDungeon,
+}) {
   const openBtn = document.getElementById('street-submap-open');
   const dialog = document.getElementById('street-city-submap');
   const kicker = document.getElementById('street-city-submap-kicker');
@@ -119,12 +127,14 @@ export function createCitySubmap({ events, definition, onNavigate, onOpenWorldMa
       .map((node) => {
         const hasCombat = combatId === node.id;
         const isGuild = node.action === 'guild';
+        const isDungeon = node.action === 'dungeon';
         const glyph = node.current ? '✦' : PIN_ICONS[node.kind] || '◆';
         return `<button
           type="button"
-          class="city-submap-pinbtn ${hasCombat ? 'has-skirmish' : ''} ${isGuild ? 'is-guild' : ''}"
+          class="city-submap-pinbtn ${hasCombat ? 'has-skirmish' : ''} ${isGuild ? 'is-guild' : ''} ${isDungeon ? 'is-dungeon' : ''}"
           data-city-node="${node.id}"
           data-city-action="${node.action || 'move'}"
+          ${isDungeon ? `data-city-dungeon="${node.dungeonId || node.id}"` : ''}
           data-city-desc="${node.name} · ${node.current ? '当前所在' : node.tag}"
           style="left:${((node.x / data.width) * 100).toFixed(2)}%;top:${((node.y / data.height) * 100).toFixed(2)}%"
           ${node.current ? 'aria-current="location"' : ''}
@@ -173,6 +183,10 @@ export function createCitySubmap({ events, definition, onNavigate, onOpenWorldMa
     close();
     if (action === 'guild') {
       onOpenGuild?.(data.region);
+      return;
+    }
+    if (action === 'dungeon') {
+      onOpenDungeon?.(button.dataset.cityDungeon || targetId);
       return;
     }
     if (targetId && targetId !== data.currentId) onNavigate?.(targetId);

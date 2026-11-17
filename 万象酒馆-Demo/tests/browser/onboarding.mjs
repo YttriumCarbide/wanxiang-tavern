@@ -129,14 +129,14 @@ export async function onboardingChecks({ browser, baseURL, output }) {
     await page.locator('#tutorial-action').click();
     const streetFrame = page.frameLocator('#inn-frame iframe');
     await streetFrame.locator('#street-map').waitFor({ state: 'visible', timeout: 15000 });
-    assert.equal(await streetFrame.locator('[data-travel-to="ruins"]').isDisabled(), false);
+    assert.equal(await streetFrame.locator('[data-travel-to="mill"]').isDisabled(), false);
     assert.equal(await streetFrame.locator('[data-travel-to="forest"]').isDisabled(), true);
-    await streetFrame.locator('[data-travel-to="ruins"]').click();
+    await streetFrame.locator('[data-travel-to="mill"]').click();
     await page
       .locator('#destination-dialog[data-stage="route"]')
       .waitFor({ state: 'visible', timeout: 15000 });
-    assert.equal(requests.length, 0, 'Walking to marked ruins must not call the script API');
-    assert.deepEqual((await page.evaluate(() => demo.getLibrary())).unlockedDungeons, ['ruins']);
+    assert.equal(requests.length, 0, 'Walking to marked mill must not call the script API');
+    assert.deepEqual((await page.evaluate(() => demo.getLibrary())).unlockedDungeons, ['mill']);
     await page.locator('#destination-start').click();
     await page.locator('#prepare-done').click();
     await page.locator('#prepare-done').click();
@@ -248,7 +248,7 @@ export async function onboardingChecks({ browser, baseURL, output }) {
         if (room === 1) {
           await page.locator('[data-unit="lyria"]').click();
           await page.locator('[data-skill="attack"]').click();
-          await page.locator('[data-unit="pebble"]').click();
+          await page.locator('[data-unit="millNettle"]').click();
         } else {
           assert.equal(
             (await page.evaluate(() => demo.getLibrary())).inventory.items['slow-potion'],
@@ -292,7 +292,7 @@ export async function onboardingChecks({ browser, baseURL, output }) {
           await page.setViewportSize({ width: 1440, height: 836 });
           await page.waitForTimeout(300);
           await page.locator('[data-item="slow-potion"]').click();
-          await page.locator('[data-unit="warden"]').click();
+          await page.locator('[data-unit="millGiantVole"]').click();
           assert.equal(
             (await page.evaluate(() => demo.getLibrary())).inventory.items['slow-potion'],
             1,
@@ -310,7 +310,7 @@ export async function onboardingChecks({ browser, baseURL, output }) {
         if (room === 2)
           assert(
             demonstration.events.some(
-              (event) => event.type === 'item' && event.after.units.warden.buffs.slow === 1,
+              (event) => event.type === 'item' && event.after.units.millGiantVole.buffs.slow === 1,
             ),
           );
         await page.locator('#commit').click();
@@ -341,7 +341,7 @@ export async function onboardingChecks({ browser, baseURL, output }) {
       }
       if (room === 4) {
         assert.equal((await page.evaluate(() => demo.getLibrary())).campaign.tutorial, 'boss');
-        assert((await page.evaluate(() => demo.getState())).units.bossGate.maxHp >= 74);
+        assert((await page.evaluate(() => demo.getState())).units.millVoleAlpha.maxHp >= 74);
         // Spend mana, then recover it through the actual 1 AP item path.
         await page.locator('[data-unit="lyria"]').click();
         await page.locator('[data-skill="tidal-moonlight"]').click();

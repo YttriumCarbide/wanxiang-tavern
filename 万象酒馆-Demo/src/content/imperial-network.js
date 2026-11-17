@@ -131,14 +131,24 @@ export const IMPERIAL_EXTRA_DUNGEONS = Object.freeze([
 
 export const IMPERIAL_DUNGEONS = Object.freeze([
   Object.freeze({
-    id: 'ruins',
-    name: '界隙遗迹',
+    id: 'mill',
+    name: '绿蕨磨坊',
     tier: '低阶',
-    biome: 'ruins',
+    biome: 'mill',
     imageId: 'road-meadow',
     point: Object.freeze([1502, 1390]),
-    level: 8,
-    enemyIds: Object.freeze(['mossSlime', 'hound']),
+    level: 1,
+    enemyIds: Object.freeze(['millMossBug', 'millCanalFrog']),
+  }),
+  Object.freeze({
+    id: 'ruins',
+    name: '界隙遗迹',
+    tier: '高阶',
+    biome: 'ruins',
+    imageId: 'road-orchard',
+    point: Object.freeze([1698, 1362]),
+    level: 22,
+    enemyIds: Object.freeze(['stoneBallista', 'brassSeeker']),
   }),
   Object.freeze({
     id: 'forest',
@@ -195,29 +205,29 @@ export const IMPERIAL_FORTS = Object.freeze([
 
 export const IMPERIAL_BRANCH_LEGS = Object.freeze([
   Object.freeze({
-    id: 'ruins-approach',
+    id: 'mill-approach',
     from: 'outskirts',
-    to: 'ruins',
+    to: 'mill',
     bends: Object.freeze([
       [1515, 1384],
       [1508, 1388],
     ]),
     turns: 1,
-    level: 4,
+    level: 1,
     type: 'event',
   }),
   Object.freeze({
-    id: 'meadow-to-ruins',
-    from: 'ruins',
+    id: 'meadow-to-mill',
+    from: 'mill',
     to: 'cross-meadow',
     bends: Object.freeze([
       [1489, 1396],
       [1477, 1400],
     ]),
     turns: 3,
-    level: 5,
+    level: 3,
     type: 'battle',
-    enemyIds: Object.freeze(['mossSlime', 'hound']),
+    enemyIds: Object.freeze(['millMossBug', 'millVolePup']),
   }),
   Object.freeze({
     id: 'meadow-to-downs',
@@ -364,6 +374,19 @@ export const IMPERIAL_BRANCH_LEGS = Object.freeze([
     turns: 5,
     level: 16,
     type: 'event',
+  }),
+  Object.freeze({
+    id: 'ruins-approach',
+    from: 'cross-orchard',
+    to: 'ruins',
+    bends: Object.freeze([
+      [1663, 1339],
+      [1682, 1351],
+    ]),
+    turns: 5,
+    level: 22,
+    type: 'battle',
+    enemyIds: Object.freeze(['patrolHound', 'corridorGuard']),
   }),
   Object.freeze({
     id: 'orchard-to-aqueduct',

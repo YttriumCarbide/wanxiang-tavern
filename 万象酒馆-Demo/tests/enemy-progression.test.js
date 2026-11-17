@@ -27,7 +27,7 @@ import { generationRequest } from '../server/prompts.mjs';
 test('six authored sites ease up and endless groups jump at their first site', () => {
   assert.deepEqual(
     Array.from({ length: 9 }, (_, sequence) => encounterLevel({ map: 'ruins', sequence })),
-    [5, 6, 6, 7, 7, 8, 13, 13, 13],
+    [20, 21, 21, 22, 22, 23, 28, 28, 28],
   );
   assert.deepEqual(
     Array.from({ length: 4 }, (_, sequence) =>
@@ -35,19 +35,19 @@ test('six authored sites ease up and endless groups jump at their first site', (
     ),
     [16, 16, 16, 16],
   );
-  assert.equal(encounterLevel({ map: 'ruins', sequence: 11 }), 13);
-  assert.equal(encounterLevel({ map: 'ruins', sequence: 12 }), 18);
+  assert.equal(encounterLevel({ map: 'ruins', sequence: 11 }), 28);
+  assert.equal(encounterLevel({ map: 'ruins', sequence: 12 }), 33);
   assert.equal(encounterLevel({ map: 'tide', sequence: 5 }), 29);
   const rolledLevels = new Set();
   for (let seed = 0; seed < 100; seed++) {
     const entry = { map: 'ruins', sequence: 8, seed };
     const growth = enemyGrowth(entry, 0, 'slime');
     assert.deepEqual(growth, enemyGrowth(entry, 0, 'slime'));
-    assert(growth.level >= 12 && growth.level <= 14);
+    assert(growth.level >= 27 && growth.level <= 29);
     assert(growth.hpScale > 1 && growth.damageScale > 1);
     rolledLevels.add(growth.level);
     const elite = enemyGrowth(entry, 0, 'slime', false, true);
-    assert.equal(elite.level, 13);
+    assert.equal(elite.level, 28);
   }
   assert(rolledLevels.size > 1);
   assert.deepEqual(

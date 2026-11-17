@@ -1,22 +1,27 @@
 import {
-  BASE_WORLDS,
+  MAINLINE_DUNGEONS,
+  CITY_DUNGEONS,
   EMPIRE_TRANSITION_DUNGEONS,
   UNLOCKABLE_DUNGEONS,
-  routeKey,
   isEndless,
   validateEncounters,
 } from './worlds.js';
 import { ENCOUNTER_COUNT, FINAL_ENCOUNTER } from './content/journey-rules.js';
 import { REGIONS, regionTaskHookFor } from './content/regions.js';
+import { millEncounterSpec } from './content/mill-encounters.js';
+import { ruinsEncounterSpec } from './content/ruins-encounters.js';
 import { forestEncounterSpec } from './content/forest-encounters.js';
 import { frostEncounterSpec } from './content/frost-encounters.js';
 import { MAP_IDS } from './content/biomes.js';
 import { DEFINITIONS } from './data.js';
 import { tutorialSpec } from './content/tutorial.js';
-import { ruinsEncounterSpec } from './content/ruins-encounters.js';
 import { encounterLevel } from './enemy-growth.js';
 
-const ALL_ROUTE_MAP_IDS = Object.freeze([...MAP_IDS, ...EMPIRE_TRANSITION_DUNGEONS]);
+const ALL_ROUTE_MAP_IDS = Object.freeze([
+  ...MAP_IDS,
+  ...EMPIRE_TRANSITION_DUNGEONS,
+  ...CITY_DUNGEONS,
+]);
 
 function random(seed) {
   let state = seed >>> 0;
@@ -26,92 +31,268 @@ function random(seed) {
   };
 }
 
-function node(map, sequence, seed, continuation = null, parentId = null, depth = 0, world = null) {
+function nextSeed(seed, offset) {
+  return (Math.imul(seed >>> 0, 1664525) + (offset * 7919 + 1013904223)) >>> 0;
+}
+
+function makeMainlineNode(map, bp, seed, parentId = null, depth = bp.step, continuation = null) {
   return {
-    id: `${world?.id || map}-${sequence}-${seed >>> 0}`,
+    id: `${map}-${bp.id}-${seed >>> 0}`,
     map,
-    ...(world ? { world: structuredClone(world) } : {}),
-    sequence,
+    nodeId: bp.id,
+    label: bp.label,
+    branch: bp.kind === 'branch',
+    step: bp.step,
+    authored: true,
+    sequence: bp.authoredIndex,
+    levelOffset: bp.levelOffset,
+    boss: bp.boss,
+    overlord: Boolean(bp.overlord),
+    pos: bp.pos,
+    endless: false,
     seed: seed >>> 0,
-    site: sequence % 6,
+    site: bp.authoredIndex,
     continuation,
     parentId,
     depth,
   };
 }
 
+function makeEndlessMainlineNode(
+  map,
+  step,
+  seed,
+  continuation = null,
+  parentId = null,
+  world = null,
+) {
+  const sequence = 6 + Math.max(0, step - 4);
+  return {
+    id: `${world?.id || map}-endless-${step + 1}-${seed >>> 0}`,
+    map,
+    ...(world ? { world: structuredClone(world) } : {}),
+    nodeId: null,
+    label: String(step + 1),
+    branch: false,
+    step,
+    authored: false,
+    endless: true,
+    sequence,
+    seed: seed >>> 0,
+    site: sequence % Math.max(1, REGIONS[map]?.sites?.length || 5),
+    continuation,
+    parentId,
+    depth: step,
+  };
+}
+
+function makeLinearNode(map, sequence, seed, continuation = null, parentId = null, world = null) {
+  const regionSites = REGIONS[map]?.sites?.length || 6;
+  const endless = Boolean(world) || sequence >= regionSites;
+  return {
+    id: `${world?.id || map}-${sequence}-${seed >>> 0}`,
+    map,
+    ...(world ? { world: structuredClone(world) } : {}),
+    label: String(sequence + 1),
+    step: sequence,
+    sequence,
+    seed: seed >>> 0,
+    site: sequence % regionSites,
+    endless,
+    continuation,
+    parentId,
+    depth: sequence,
+  };
+}
+
+function initialRoute(map, seed, world = null) {
+  const blueprint = !world && MAINLINE_DUNGEONS.includes(map) ? REGIONS[map]?.nodes : null;
+  if (blueprint?.length) {
+    const root = blueprint.find((item) => !item.parentId) || blueprint[0];
+    return {
+      completed: 0,
+      nextSequence: 1,
+      frontier: [makeMainlineNode(map, root, seed >>> 0, null, 0)],
+      cleared: [],
+      history: [],
+    };
+  }
+  return {
+    completed: 0,
+    nextSequence: 1,
+    frontier: [makeLinearNode(map, 0, seed >>> 0, null, null, world)],
+    cleared: [],
+    history: [],
+  };
+}
+
 export function newExploration(seed = 17371) {
   return Object.fromEntries(
-    ALL_ROUTE_MAP_IDS.map((map, index) => [
-      map,
-      {
-        completed: 0,
-        nextSequence: 1,
-        frontier: [node(map, 0, (seed + index * 7919) >>> 0)],
-        cleared: [],
-        history: [],
-      },
-    ]),
+    ALL_ROUTE_MAP_IDS.map((map, index) => [map, initialRoute(map, (seed + index * 7919) >>> 0)]),
   );
 }
 
 export function availableExplorations(route) {
-  const frontier = route.frontier.filter(
-    (entry) => isEndless(entry) || entry.sequence < REGIONS[entry.map].sites.length,
+  if (!route?.frontier?.length) return [];
+  const clearedIds = new Set((route.cleared || []).map((item) => item.nodeId).filter(Boolean));
+  const active = route.frontier.filter(
+    (entry) => !entry.locked && !(entry.nodeId && clearedIds.has(entry.nodeId)),
   );
-  const sequence = Math.min(...frontier.map((entry) => entry.sequence));
-  return frontier.filter((entry) => entry.sequence === sequence);
+  if (!active.some((entry) => entry.nodeId)) return active.slice(0, 1);
+  return active;
+}
+
+function mainlinePreview(route, map) {
+  const blueprint = REGIONS[map]?.nodes || [];
+  const clearedByNodeId = new Map(
+    (route.cleared || []).filter((item) => item.nodeId).map((item) => [item.nodeId, item]),
+  );
+  const frontierByNodeId = new Map(
+    (route.frontier || []).filter((item) => item.nodeId).map((item) => [item.nodeId, item]),
+  );
+  const resolvedIdByBp = new Map();
+  const entries = [];
+  for (const [index, bp] of blueprint.entries()) {
+    const existing = clearedByNodeId.get(bp.id) || frontierByNodeId.get(bp.id);
+    const parentRuntimeId = bp.parentId ? resolvedIdByBp.get(bp.parentId) || bp.parentId : null;
+    if (existing) {
+      const copy = {
+        ...existing,
+        label: existing.label || bp.label,
+        branch: bp.kind === 'branch',
+        authored: true,
+        levelOffset: bp.levelOffset,
+        boss: bp.boss,
+        overlord: Boolean(bp.overlord),
+        pos: bp.pos,
+        parentId: parentRuntimeId,
+      };
+      resolvedIdByBp.set(bp.id, copy.id);
+      entries.push(copy);
+    } else {
+      const seed = nextSeed(route.frontier?.[0]?.seed || 17371, index + 1);
+      const lockedNode = {
+        ...makeMainlineNode(map, bp, seed, parentRuntimeId, bp.step),
+        locked: true,
+      };
+      resolvedIdByBp.set(bp.id, lockedNode.id);
+      entries.push(lockedNode);
+    }
+  }
+  const endlessNodes = [...(route.cleared || []), ...(route.frontier || [])]
+    .filter((entry) => entry.endless || (!entry.nodeId && entry.sequence >= 6))
+    .sort((a, b) => a.sequence - b.sequence)
+    .map((entry) => ({ ...entry }));
+  const finalBp = blueprint.find((item) => item.overlord) || blueprint.at(-1);
+  let prevId = resolvedIdByBp.get(finalBp?.id) || entries.at(-1)?.id || null;
+  for (const [offset, extra] of endlessNodes.entries()) {
+    extra.parentId = prevId;
+    extra.endless = true;
+    extra.label = extra.label || String(5 + offset);
+    extra.step = extra.step ?? 4 + offset;
+    prevId = extra.id;
+    entries.push(extra);
+  }
+  return entries;
 }
 
 export function explorationPreview(route, map) {
-  if (route.frontier[0]?.world && !BASE_WORLDS.includes(map))
-    return route.frontier.map((entry) => ({ ...entry, parentId: null }));
-  const available = availableExplorations(route);
-  const latest = Math.max(0, ...available.map((entry) => entry.sequence));
-  const known = [...(route.cleared || []), ...route.frontier]
-    .filter(
-      (entry) =>
-        entry.sequence < 6 ||
-        (route.cleared || []).some(
-          (item) => item.id === entry.id && entry.sequence >= latest - 5,
-        ) ||
-        available.some((item) => item.id === entry.id),
-    )
-    .sort((a, b) => a.sequence - b.sequence)
-    .map((entry) => ({ ...entry }));
-  if (latest >= 6)
-    return known.map((entry, index) => ({
-      ...entry,
-      parentId: index ? known[index - 1].id : null,
-    }));
-  const entries = [];
-  for (
-    let sequence = 0;
-    sequence < Math.max(REGIONS[map].sites.length, ...known.map((entry) => entry.sequence + 1));
-    sequence++
-  ) {
-    const existing = known.find((entry) => entry.sequence === sequence);
-    if (existing) {
-      entries.push(existing);
-      continue;
-    }
-    const previous = entries.at(-1);
-    entries.push({
-      ...node(
-        map,
-        sequence,
-        (Math.imul(previous?.seed || 17371, 1664525) + sequence * 7919 + 1013904223) >>> 0,
-        null,
-        previous?.id || null,
-        previous ? previous.depth + 1 : 0,
-      ),
-      locked: true,
-    });
+  if (!route) return [];
+  if (MAINLINE_DUNGEONS.includes(map) && REGIONS[map]?.nodes?.length && !route.frontier[0]?.world) {
+    return mainlinePreview(route, map);
   }
-  entries.forEach((entry, index) => {
-    entry.parentId = index ? entries[index - 1].id : null;
-  });
-  return entries;
+  const combined = [...(route.cleared || []), ...(route.frontier || [])].sort(
+    (a, b) => a.sequence - b.sequence,
+  );
+  return combined.map((entry, index) => ({
+    ...entry,
+    label: entry.label || String(index + 1),
+    parentId: index ? combined[index - 1].id : null,
+  }));
+}
+
+function migrateLegacyMainlineRoute(route, map, seed, world) {
+  const blueprint = REGIONS[map]?.nodes || [];
+  const legacyCleared = Array.isArray(route.cleared) ? route.cleared : [];
+  const clearedSeqs = new Set(
+    legacyCleared.filter((entry) => entry.sequence < 6).map((entry) => entry.sequence),
+  );
+  const clearedNodes = [];
+  const clearedBpIds = new Set();
+  for (const bp of blueprint) {
+    const match = legacyCleared.find((entry) => entry.sequence === bp.authoredIndex);
+    if (match || clearedSeqs.has(bp.authoredIndex)) {
+      clearedBpIds.add(bp.id);
+      const baseNode = makeMainlineNode(
+        map,
+        bp,
+        match?.seed ?? nextSeed(seed, bp.authoredIndex + 1),
+        bp.parentId,
+      );
+      clearedNodes.push({
+        ...match,
+        ...baseNode,
+        id: match?.id || baseNode.id,
+      });
+    }
+  }
+  const endlessEntries = [...legacyCleared, ...(route.frontier || [])]
+    .filter((entry) => entry.sequence >= 6 || entry.endless)
+    .sort((a, b) => a.sequence - b.sequence);
+  const frontier = [];
+  for (const bp of blueprint) {
+    if (clearedBpIds.has(bp.id)) continue;
+    if (!bp.parentId || clearedBpIds.has(bp.parentId)) {
+      const oldFrontier = (route.frontier || []).find(
+        (entry) => entry.nodeId === bp.id || entry.sequence === bp.authoredIndex,
+      );
+      const created = makeMainlineNode(
+        map,
+        bp,
+        oldFrontier?.seed ?? nextSeed(seed, bp.authoredIndex + 10),
+        bp.parentId,
+      );
+      if (oldFrontier?.id) created.id = oldFrontier.id;
+      if (oldFrontier?.tutorial) created.tutorial = true;
+      frontier.push(created);
+    }
+  }
+  const finalBp = blueprint.find((item) => item.overlord);
+  if (finalBp && clearedBpIds.has(finalBp.id)) {
+    const endlessFrontier = (route.frontier || []).filter(
+      (entry) => entry.endless || entry.sequence >= 6,
+    );
+    if (endlessFrontier.length) {
+      for (const item of endlessFrontier) {
+        frontier.push({
+          ...item,
+          endless: true,
+          label: item.label || String(5 + Math.max(0, item.sequence - 6)),
+        });
+      }
+    } else {
+      const nextStep = 4 + endlessEntries.length;
+      frontier.push(
+        makeEndlessMainlineNode(map, nextStep, nextSeed(seed, nextStep + 20), null, null, world),
+      );
+    }
+  }
+  return {
+    completed: route.completed ?? clearedNodes.length,
+    nextSequence: Math.max(route.nextSequence || 1, clearedNodes.length + frontier.length),
+    frontier,
+    cleared: [
+      ...clearedNodes,
+      ...legacyCleared
+        .filter((entry) => entry.endless || entry.sequence >= 6)
+        .map((entry, idx) => ({
+          ...entry,
+          endless: true,
+          label: entry.label || String(5 + idx),
+        })),
+    ],
+    history: Array.isArray(route.history) ? structuredClone(route.history.slice(-3)) : [],
+  };
 }
 
 /** Persist only code-generated node descriptors, never arbitrary encounter definitions from AI. */
@@ -126,23 +307,54 @@ export function restoreExploration(value, seed = 17371, worlds = []) {
     const route = value?.[key];
     if (!route || !Array.isArray(route.frontier)) continue;
     try {
+      if (!world && MAINLINE_DUNGEONS.includes(map) && REGIONS[map]?.nodes?.length) {
+        const hasNodeGraph = [...(route.cleared || []), ...(route.frontier || [])].every(
+          (entry) =>
+            typeof entry.nodeId === 'string' || entry.endless === true || entry.sequence >= 6,
+        );
+        if (!hasNodeGraph) {
+          result[key] = migrateLegacyMainlineRoute(route, map, seed, world);
+          continue;
+        }
+      }
       const restoreNode = (entry) => {
         if (
           entry.map !== map ||
           !Number.isSafeInteger(entry.sequence) ||
           entry.sequence < 0 ||
-          !Number.isInteger(entry.seed)
+          !Number.isSafeInteger(entry.seed)
         )
-          throw Error('Invalid exploration node');
-        const restored = node(
+          throw Error('探索地点无效');
+        const restored = {
+          id: String(entry.id || `${key}-${entry.sequence}-${entry.seed}`),
           map,
-          entry.sequence,
-          entry.seed,
-          typeof entry.continuation === 'string' ? entry.continuation.slice(0, 2000) : null,
-          typeof entry.parentId === 'string' ? entry.parentId : null,
-          Number.isSafeInteger(entry.depth) && entry.depth >= 0 ? entry.depth : 0,
-          world && (!BASE_WORLDS.includes(key) || entry.sequence >= 6) ? world : null,
-        );
+          ...(entry.nodeId !== undefined
+            ? { nodeId: entry.nodeId ? String(entry.nodeId) : null }
+            : {}),
+          ...(entry.label ? { label: String(entry.label) } : {}),
+          ...(typeof entry.branch === 'boolean' ? { branch: entry.branch } : {}),
+          ...(Number.isInteger(entry.step) ? { step: entry.step } : {}),
+          ...(typeof entry.authored === 'boolean' ? { authored: entry.authored } : {}),
+          ...(Number.isInteger(entry.levelOffset) ? { levelOffset: entry.levelOffset } : {}),
+          ...(entry.boss ? { boss: String(entry.boss) } : {}),
+          ...(typeof entry.overlord === 'boolean' ? { overlord: entry.overlord } : {}),
+          ...(Array.isArray(entry.pos) ? { pos: [...entry.pos] } : {}),
+          endless: Boolean(entry.endless),
+          sequence: entry.sequence,
+          seed: entry.seed >>> 0,
+          site: Number.isInteger(entry.site)
+            ? entry.site
+            : entry.sequence % Math.max(1, REGIONS[map]?.sites?.length || 6),
+          continuation: typeof entry.continuation === 'string' ? entry.continuation : null,
+          parentId: entry.parentId ? String(entry.parentId) : null,
+          depth: Number.isSafeInteger(entry.depth) ? entry.depth : entry.sequence,
+          ...(entry.encounters ? { encounters: validateEncounters(entry.encounters, entry) } : {}),
+        };
+        const nodeWorld =
+          world && (!MAINLINE_DUNGEONS.includes(key) || isEndless(restored))
+            ? structuredClone(world)
+            : null;
+        if (nodeWorld) restored.world = nodeWorld;
         if (
           entry.recollection &&
           Number.isSafeInteger(entry.recollection.ether) &&
@@ -172,78 +384,159 @@ export function restoreExploration(value, seed = 17371, worlds = []) {
         }
         return restored;
       };
-      const valid = (entry) =>
-        world || BASE_WORLDS.includes(map) || entry.sequence < REGIONS[map].sites.length;
-      const frontier = route.frontier.map(restoreNode).filter(valid);
-      const cleared = Array.isArray(route.cleared)
-        ? route.cleared.map(restoreNode).filter(valid)
-        : [];
-      const all = [...cleared, ...frontier];
-      if (!all.length) continue;
-      if (new Set(all.map((entry) => entry.id)).size !== all.length) continue;
-      // Parents must precede their descendants, so damaged saves cannot create cycles.
-      const seen = new Set();
-      for (const entry of all) {
-        if (entry.parentId && !seen.has(entry.parentId)) throw Error('Invalid route parent');
-        seen.add(entry.id);
+      const cleared = Array.isArray(route.cleared) ? route.cleared.map(restoreNode) : [];
+      const frontier = route.frontier.map(restoreNode);
+      if (!frontier.length) {
+        if (!world && MAINLINE_DUNGEONS.includes(map) && REGIONS[map]?.nodes?.length) {
+          const blueprint = REGIONS[map].nodes;
+          const clearedNodeIds = new Set(cleared.map((item) => item.nodeId).filter(Boolean));
+          for (const bp of blueprint) {
+            if (clearedNodeIds.has(bp.id)) continue;
+            if (!bp.parentId || clearedNodeIds.has(bp.parentId)) {
+              const parentItem = bp.parentId
+                ? cleared.find((item) => item.nodeId === bp.parentId)
+                : null;
+              frontier.push(
+                makeMainlineNode(
+                  map,
+                  bp,
+                  nextSeed(parentItem?.seed || seed, bp.authoredIndex + 10),
+                  parentItem?.id || null,
+                  bp.step,
+                ),
+              );
+            }
+          }
+          const finalBp = blueprint.find((item) => item.overlord);
+          if (!frontier.length && finalBp && clearedNodeIds.has(finalBp.id)) {
+            const endlessCleared = cleared.filter((item) => item.endless || item.sequence >= 6);
+            const last = endlessCleared.at(-1) || cleared.at(-1);
+            const nextStep = 4 + endlessCleared.length;
+            frontier.push(
+              makeEndlessMainlineNode(
+                map,
+                nextStep,
+                nextSeed(last?.seed || seed, nextStep + 11),
+                null,
+                last?.id || null,
+                world,
+              ),
+            );
+          }
+        } else if (
+          world ||
+          MAINLINE_DUNGEONS.includes(map) ||
+          CITY_DUNGEONS.includes(map) ||
+          EMPIRE_TRANSITION_DUNGEONS.includes(map)
+        ) {
+          const last = cleared.at(-1);
+          if (last) {
+            frontier.push(
+              makeLinearNode(
+                map,
+                last.sequence + 1,
+                nextSeed(last.seed, last.sequence + 1),
+                null,
+                last.id,
+                world,
+              ),
+            );
+          }
+        }
       }
-      if (!frontier.length && (world || BASE_WORLDS.includes(map))) {
-        const last = cleared.at(-1);
-        if (last)
-          frontier.push(
-            node(
-              map,
-              last.sequence + 1,
-              (last.seed + 7919) >>> 0,
-              null,
-              last.id,
-              last.depth + 1,
-              world,
-            ),
-          );
-      }
+      const maxSeq = Math.max(-1, ...[...cleared, ...frontier].map((entry) => entry.sequence));
       result[key] = {
-        completed: cleared.length,
-        nextSequence: all.reduce((max, entry) => Math.max(max, entry.sequence + 1), 1),
+        completed:
+          Number.isSafeInteger(route.completed) && route.completed >= 0
+            ? route.completed
+            : cleared.length,
+        nextSequence:
+          Number.isSafeInteger(route.nextSequence) && route.nextSequence > maxSeq
+            ? route.nextSequence
+            : maxSeq + 1,
         frontier,
         cleared,
         history: Array.isArray(route.history) ? structuredClone(route.history.slice(-3)) : [],
       };
     } catch {
-      /* A damaged route resets independently of the other routes. */
+      if (world) result[key] = initialRoute(map, seed, world);
     }
   }
   return result;
 }
 
-function baseExplorationSpec(entry, index = 0) {
+export function explorationSpec(entry, index = 0) {
+  if (entry?.replay && entry.recollection?.tutorial) entry = { ...entry, tutorial: true };
   const region = REGIONS[entry?.map];
   if (
     !region ||
-    !Number.isSafeInteger(entry.sequence) ||
+    !Number.isInteger(entry?.sequence) ||
     entry.sequence < 0 ||
-    (!isEndless(entry) && entry.sequence >= region?.sites.length) ||
     !Number.isInteger(entry.seed)
   )
     throw Error('探索地点无效');
   if (!Number.isInteger(index) || index < 0 || index >= ENCOUNTER_COUNT)
     throw Error('战斗序号无效');
-  if (entry.tutorial === true && entry.map === 'ruins') return tutorialSpec(index);
-  if (!entry.world && entry.map === 'ruins' && entry.sequence < 6)
-    return ruinsEncounterSpec(entry.sequence, index);
-  if (!entry.world && entry.map === 'forest' && entry.sequence < 6)
-    return forestEncounterSpec(entry.sequence, index);
-  if (!entry.world && entry.map === 'frost' && entry.sequence < 6)
-    return frostEncounterSpec(entry.sequence, index);
-  const site = entry.sequence % 6;
+
+  const resolvedLevel = encounterLevel(
+    entry.world?.baseLevel
+      ? { ...entry, level: entry.world.baseLevel + Math.floor(entry.sequence / 2) }
+      : entry,
+  );
+  const endlessEntry = isEndless(entry);
+  const hook = regionTaskHookFor(entry);
+  const bp =
+    !entry.world && !endlessEntry ? region.nodes?.find((item) => item.id === entry.nodeId) : null;
+
+  const authoredSpec =
+    entry.tutorial === true && (entry.map === 'mill' || entry.map === 'ruins')
+      ? tutorialSpec(index)
+      : !entry.world && !endlessEntry
+        ? entry.map === 'mill' && entry.sequence < 5
+          ? millEncounterSpec(entry.sequence, index)
+          : entry.map === 'ruins' && entry.sequence < 6
+            ? ruinsEncounterSpec(entry.sequence, index)
+            : entry.map === 'forest' && entry.sequence < 6
+              ? forestEncounterSpec(entry.sequence, index)
+              : entry.map === 'frost' && entry.sequence < 6
+                ? frostEncounterSpec(entry.sequence, index)
+                : null
+        : null;
+
+  if (authoredSpec) {
+    return {
+      ...authoredSpec,
+      ...(entry.replay && entry.recollection?.encounters?.[index]
+        ? { enemyIds: [...entry.recollection.encounters[index].enemyIds] }
+        : {}),
+      ...(authoredSpec.subtitle
+        ? {}
+        : bp?.subtitle || hook?.title
+          ? { subtitle: bp?.subtitle || hook?.title }
+          : {}),
+      level: resolvedLevel,
+      growthSeed: entry.seed,
+      growthEntry: {
+        map: entry.map,
+        sequence: entry.sequence,
+        seed: entry.seed,
+        level: resolvedLevel,
+        ...(Number.isInteger(entry.levelOffset) ? { levelOffset: entry.levelOffset } : {}),
+        tutorial: entry.tutorial,
+      },
+      ...(entry.continuation ? { continuation: entry.continuation } : {}),
+    };
+  }
+
   const dynamic = entry.world;
   if (entry.encounters) validateEncounters(entry.encounters, entry);
   const definitions = dynamic?.enemyDefinitions || {};
-  const poolIds = dynamic?.enemyIds || [...region.enemies, region.boss];
+  const poolIds = dynamic?.enemyIds || [...region.enemies, bp?.boss || region.boss];
   const bossIds = poolIds.filter((id) => (definitions[id] || DEFINITIONS[id])?.boss);
   const ordinary = poolIds.filter((id) => !(definitions[id] || DEFINITIONS[id])?.boss);
   const rng = random((entry.seed + index * 7919) >>> 0);
   const pool = [...(dynamic ? (ordinary.length ? ordinary : poolIds) : region.enemies)];
+
   const shuffle = (items) => {
     const copy = [...items];
     for (let i = copy.length - 1; i > 0; i--) {
@@ -258,97 +551,152 @@ function baseExplorationSpec(entry, index = 0) {
   const fallbackPool = ordinaryPool.length ? ordinaryPool : shuffle(pool);
   const pickWave = () => {
     if (index === 2 && elitePool.length) {
-      return [elitePool[0], ...ordinaryPool.slice(0, 1 + Math.floor(rng() * 2))];
+      const rest = fallbackPool.filter((id) => id !== elitePool[0]);
+      return rest.length ? [elitePool[0], rest[0]] : [elitePool[0]];
     }
-    return fallbackPool.slice(
-      0,
-      index === 0 ? 1 + Math.floor(rng() * 3) : 2 + Math.floor(rng() * 2),
-    );
+    if (index === 0) return [fallbackPool[0]];
+    const count =
+      index === 3
+        ? fallbackPool.length >= 3
+          ? 3
+          : 2
+        : Math.min(3, Math.max(2, fallbackPool.length));
+    return fallbackPool.slice(0, Math.min(count, fallbackPool.length));
   };
-  const boss = index === FINAL_ENCOUNTER;
-  const boundHook = boss ? entry.taskHook || regionTaskHookFor(entry) : null;
-  const lockedBossId =
-    boundHook?.boss && (definitions[boundHook.boss] || DEFINITIONS[boundHook.boss])
-      ? boundHook.boss
-      : null;
-  return {
-    name: isEndless(entry) ? '继续探索' : region.sites[site],
-    map: entry.map,
-    enemyDefinitions: definitions,
-    enemyIds:
-      entry.encounters?.[index]?.enemyIds ||
-      (boss ? [lockedBossId || (dynamic ? bossIds[0] : region.boss)] : pickWave()),
-    hpScale: 1,
-    boss,
-    environment: {},
-    description: dynamic?.background || region.atmosphere,
-  };
-}
 
-export function explorationSpec(entry, index = 0) {
-  if (entry.replay && entry.recollection?.tutorial) entry = { ...entry, tutorial: true };
-  const spec = baseExplorationSpec(entry, index);
+  const chosenBoss = entry.boss || bp?.boss || bossIds[0] || region.boss;
+  const pickBossGroup = () => {
+    if (chosenBoss === 'ares') return ['aresCannonLeft', 'ares', 'aresCannonRight'];
+    if (chosenBoss === 'moonEye') return ['moonCrown', 'moonEye', 'moonRoot'];
+    if (chosenBoss === 'radiantWyvern' || chosenBoss === 'alchemicalPuppet') return [chosenBoss];
+    const aides = shuffle(fallbackPool).filter((id) => id !== chosenBoss);
+    return aides.length >= 2 ? [aides[0], chosenBoss, aides[1]] : [chosenBoss];
+  };
+
+  const authored = entry.encounters?.[index];
+  const enemyIds = authored
+    ? [...authored.enemyIds]
+    : index === FINAL_ENCOUNTER
+      ? pickBossGroup()
+      : pickWave();
+  const baseName = dynamic
+    ? dynamic.landmarks?.[entry.sequence % (dynamic.landmarks?.length || 1)] ||
+      (endlessEntry ? '继续探索' : `${dynamic.name} · 第 ${entry.label || entry.sequence + 1} 区域`)
+    : bp
+      ? `${region.name} · ${bp.name}`
+      : endlessEntry
+        ? '继续探索'
+        : entry.sequence < region.sites.length
+          ? `${region.name} · ${region.sites[entry.sequence]}`
+          : '继续探索';
+
   return {
-    ...spec,
-    ...(entry.replay && entry.recollection?.encounters?.[index]
-      ? { enemyIds: [...entry.recollection.encounters[index].enemyIds] }
-      : {}),
-    level: encounterLevel(
-      entry.world?.baseLevel
-        ? { ...entry, level: entry.world.baseLevel + Math.floor(entry.sequence / 2) }
-        : entry,
-    ),
+    map: entry.map,
+    name: baseName,
+    ...(bp?.subtitle || hook?.title ? { subtitle: bp?.subtitle || hook?.title } : {}),
+    hpScale: 1,
+    enemyIds,
+    ...(dynamic ? { enemyDefinitions: definitions } : {}),
+    boss: index === FINAL_ENCOUNTER,
+    environment: {},
+    level: resolvedLevel,
     growthSeed: entry.seed,
     growthEntry: {
       map: entry.map,
       sequence: entry.sequence,
       seed: entry.seed,
-      level: encounterLevel(
-        entry.world?.baseLevel
-          ? { ...entry, level: entry.world.baseLevel + Math.floor(entry.sequence / 2) }
-          : entry,
-      ),
+      level: resolvedLevel,
+      ...(Number.isInteger(entry.levelOffset) ? { levelOffset: entry.levelOffset } : {}),
+      ...(entry.endless ? { endless: true } : {}),
       tutorial: entry.tutorial,
       ...(entry.world ? { world: { id: entry.world.id } } : {}),
     },
+    ...(entry.continuation ? { continuation: entry.continuation } : {}),
   };
 }
 
-/** Only victory opens a successor; defeat, leaving and duplicate callbacks do not advance. */
-export function completeExploration(
-  routes,
-  entry,
-  { title, nextHook, lines = [], runId, scriptId, tags = [], encounters, ether = 0 } = {},
-) {
-  const route = routes[routeKey(entry)];
+export function completeExploration(routes, entry, outcome = {}) {
+  const {
+    title,
+    tags = [],
+    lines = [],
+    nextHook = null,
+    runId = null,
+    scriptId = null,
+    ether = 0,
+    encounters = null,
+  } = outcome;
+  const key = entry.world?.id || entry.map;
+  const route = routes[key];
   const at = route?.frontier.findIndex((item) => item.id === entry.id);
   if (at === undefined || at < 0) return null;
   if (!availableExplorations(route).some((item) => item.id === entry.id)) return null;
+
   const continuation =
     typeof nextHook?.setting === 'string' ? nextHook.setting.slice(0, 2000) : null;
   const current = route.frontier[at];
-  const successors = Array.from(
-    {
-      length:
-        entry.world ||
-        BASE_WORLDS.includes(entry.map) ||
-        route.nextSequence < REGIONS[entry.map].sites.length
-          ? 1
-          : 0,
-    },
-    () => {
-      const sequence = route.nextSequence++;
-      return node(
-        entry.map,
-        sequence,
-        (Math.imul(current.seed, 1664525) + sequence * 7919 + 1013904223) >>> 0,
+  const blueprint =
+    !current.world && MAINLINE_DUNGEONS.includes(current.map) ? REGIONS[current.map]?.nodes : null;
+  const clearedIds = new Set((route.cleared || []).map((item) => item.nodeId).filter(Boolean));
+  const frontierIds = new Set(route.frontier.map((item) => item.nodeId).filter(Boolean));
+
+  const successors = [];
+  if (blueprint?.length && current.nodeId) {
+    clearedIds.add(current.nodeId);
+    const children = blueprint.filter((bp) => bp.parentId === current.nodeId);
+    for (const [idx, bp] of children.entries()) {
+      if (clearedIds.has(bp.id) || frontierIds.has(bp.id)) continue;
+      successors.push(
+        makeMainlineNode(
+          current.map,
+          bp,
+          nextSeed(current.seed, route.nextSequence++ + idx),
+          current.id,
+          bp.step,
+          continuation,
+        ),
+      );
+    }
+    const currentBp = blueprint.find((bp) => bp.id === current.nodeId);
+    if (currentBp?.overlord) {
+      const nextStep = 4;
+      successors.push(
+        makeEndlessMainlineNode(
+          current.map,
+          nextStep,
+          nextSeed(current.seed, route.nextSequence++ + 11),
+          continuation,
+          current.id,
+          current.world,
+        ),
+      );
+    }
+  } else if (blueprint?.length && current.endless) {
+    const nextStep = (current.step ?? 4) + 1;
+    successors.push(
+      makeEndlessMainlineNode(
+        current.map,
+        nextStep,
+        nextSeed(current.seed, route.nextSequence++ + nextStep),
         continuation,
         current.id,
-        current.depth + 1,
         current.world,
-      );
-    },
-  );
+      ),
+    );
+  } else {
+    const sequence = Math.max(route.nextSequence++, (current.sequence ?? 0) + 1);
+    successors.push(
+      makeLinearNode(
+        current.map,
+        sequence,
+        nextSeed(current.seed, sequence),
+        continuation,
+        current.id,
+        current.world,
+      ),
+    );
+  }
+
   route.frontier.splice(at, 1, ...successors);
   route.cleared ||= [];
   route.cleared.push({
@@ -382,16 +730,10 @@ export function addWorldRoute(routes, world, seed = Math.floor(Math.random() * 4
     for (const entry of routes[world.id].frontier) entry.world = structuredClone(world);
     return;
   }
-  routes[world.id] = {
-    completed: 0,
-    nextSequence: 1,
-    frontier: [node(world.map, 0, seed, null, null, 0, world)],
-    cleared: [],
-    history: [],
-  };
+  routes[world.id] = initialRoute(world.map, seed, world);
 }
 
-/** Record an overland-visited base or transition ruin into the tavern's Dungeon Gate portal list. */
+/** Record an overland-visited or city-discovered dungeon into the Dungeon Gate portal list. */
 export function unlockDungeonMap(library, mapId) {
   if (!library || !UNLOCKABLE_DUNGEONS.includes(mapId)) return false;
   library.unlockedDungeons = Array.isArray(library.unlockedDungeons)

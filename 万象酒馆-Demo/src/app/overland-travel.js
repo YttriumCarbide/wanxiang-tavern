@@ -251,9 +251,9 @@ export function createOverlandTravel(
     const fromTavern = options.fromTavern === true && !outing() && !active();
     const library = session.ai.library;
     const dungeonSite = IMPERIAL_DUNGEONS.find((item) => item.id === to) || null;
-    const tutorialRuinsWalk = Boolean(dungeonSite?.id === 'ruins' && learning(library));
+    const tutorialMillWalk = Boolean(dungeonSite?.id === 'mill' && learning(library));
     if (
-      (!tutorialRuinsWalk && !fromTavern && !outing()) ||
+      (!tutorialMillWalk && !fromTavern && !outing()) ||
       request ||
       run() ||
       session.runtime.mode !== 'inn'
@@ -271,7 +271,7 @@ export function createOverlandTravel(
       render();
       const known = isOverlandRouteKnown(library, origin, plan.to);
       const destination = plan.stages.at(-1).to.name;
-      if (tutorialRuinsWalk) {
+      if (tutorialMillWalk) {
         markOverlandRouteExplored(library, plan);
         const newlyUnlocked = unlockDungeonMap(library, dungeonSite.id);
         dismissedSkirmish = null;
@@ -279,7 +279,7 @@ export function createOverlandTravel(
         context.daily.arriveDungeon?.(dungeonSite.id);
         context.shell.toast(
           newlyUnlocked
-            ? `已沿碎石径抵达${destination}，并已将该遗迹加入副本之门`
+            ? `已沿水渠小径抵达${destination}，并已将该副本加入副本之门`
             : `已抵达${destination}`,
         );
         render();

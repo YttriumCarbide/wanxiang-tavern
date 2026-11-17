@@ -331,7 +331,7 @@ export async function townPlaceChecks({ browser, baseURL, output }) {
     await page.mouse.wheel(0, 5000);
     await overview.waitFor();
 
-    await moveToAtlasPoint(765, 617);
+    await moveToAtlasPoint(1698, 1362);
     const ruinsZoom = Math.log((await atlasView()).width / 67) / 0.0015;
     await page.mouse.wheel(0, -ruinsZoom);
     await ruins.locator('use[href$="#ruins-icon"]').waitFor();

@@ -8,6 +8,8 @@ export const DROP_GROUPS = Object.freeze({
     'bog-drifter',
     'bog-elemental',
     'drake-badland-slime',
+    'mill-canal-frog',
+    'mill-pale-slug',
   ],
   'frost-oyster': [
     'sprout',
@@ -18,6 +20,8 @@ export const DROP_GROUPS = Object.freeze({
     'drill-worm',
     'drill-matriarch',
     'relic-hermit-crab',
+    'mill-mini-mold-slime',
+    'mill-mold-slime-boss',
   ],
   'amber-root': [
     'pebble',
@@ -31,6 +35,8 @@ export const DROP_GROUPS = Object.freeze({
     'drake-crystal-beetle',
     'ladder-rock-giant',
     'dragonscale-sandworm',
+    'mill-shell-beetle',
+    'mill-roach-swarm',
   ],
   'game-bird': [
     'hound',
@@ -42,6 +48,10 @@ export const DROP_GROUPS = Object.freeze({
     'chaos-badland-falcon',
     'goblin-wolf-rider',
     'erosion-hound',
+    'mill-vole-pup',
+    'mill-stray-cat',
+    'mill-giant-vole',
+    'mill-vole-alpha',
   ],
   'jade-honey': [
     'crystal-beetle',
@@ -73,6 +83,8 @@ export const DROP_GROUPS = Object.freeze({
     'drake-rattlesnake',
     'bicolor-scale-python',
     'goblin-shaman',
+    'mill-moss-bug',
+    'mill-nettle',
   ],
   'ruby-berry': [
     'trail-arbalist',
@@ -111,6 +123,8 @@ export const DROP_GROUPS = Object.freeze({
     'ladder-carrion-bat',
     'erosion-wing',
     'erosion-crawler',
+    'mill-dust-bat',
+    'mill-vampire-bat',
   ],
   chili: [
     'cinder-imp',
@@ -160,6 +174,7 @@ export const DROP_GROUPS = Object.freeze({
     'pure-destruction-elemental',
     'overload-destruction-elemental',
     'erosion-rift-tyrant',
+    'alchemical-puppet',
   ],
   'calamity-scroll': ['unmoored-judge', 'ares', 'ares-cannon-left', 'ares-cannon-right'],
 });

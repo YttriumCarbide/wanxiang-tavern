@@ -29,8 +29,8 @@ export function currentEncounterSpec(expedition, index = expedition.index) {
   if (expedition.adventure && expedition.exploration?.tutorial && index === 2)
     return {
       ...spec,
-      enemyIds: ['pebble', 'warden'],
-      initialEnemyBuffs: { pebble: { vulnerable: 1 } },
+      enemyIds: ['millNettle', 'millGiantVole'],
+      initialEnemyBuffs: { millNettle: { vulnerable: 1 } },
     };
   return spec;
 }

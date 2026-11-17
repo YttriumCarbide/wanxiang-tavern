@@ -1,172 +1,225 @@
-// Presentation only: routes and encounters remain owned by exploration.js.
-import { MAP_IDS } from './content/biomes.js';
-import { REGIONS } from './content/regions.js';
+const MIN_WIDTH = 1040;
+const BASE_HEIGHT = 520;
+const PAD_X = 88;
+const PAD_TOP = 72;
+const PAD_BOTTOM = 76;
 
-function random(seed) {
-  let value = seed >>> 0;
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function hashSeed(seed) {
+  let s = (Number(seed) || 1) >>> 0;
   return () => {
-    value = (Math.imul(value, 1664525) + 1013904223) >>> 0;
-    return value / 4294967296;
+    s = (Math.imul(s, 1664525) + 1013904223) >>> 0;
+    return s / 4294967296;
   };
 }
 
-/** Seeded wandering landmarks, without depth columns or equal branch spacing. */
-export function destinationMap(entries) {
-  const positions = new Map();
-  const siblings = new Map();
-  for (const entry of [...entries].sort((a, b) => a.sequence - b.sequence)) {
-    const parent = positions.get(entry.parentId);
-    const ordinal = siblings.get(entry.parentId) || 0;
-    siblings.set(entry.parentId, ordinal + 1);
-    const rng = random(entry.seed);
-    const mapPhase = MAP_IDS.indexOf(entry.map) * 0.83;
-    let x = 155 + ordinal * 235 + rng() * 35;
-    let y = 400 + Math.sin(ordinal * 2.4) * 225 + rng() * 25;
-    if (parent) {
-      const turn = Math.sin(entry.sequence * 1.7 + mapPhase) * 1.15 + (rng() - 0.5) * 0.7;
-      let distance = 195 + rng() * 105;
-      for (let attempt = 0; attempt < 100; attempt++) {
-        const angle = parent.heading + turn + attempt * 2.39996;
-        x = parent.x + Math.cos(angle) * distance;
-        y = parent.y + Math.sin(angle) * distance;
-        if (
-          x > 90 &&
-          y > 110 &&
-          [...positions.values()].every((point) => Math.hypot(point.x - x, point.y - y) > 165)
-        )
-          break;
-        distance += 7;
-      }
-    }
-    positions.set(entry.id, {
-      x,
-      y,
-      depth: parent ? parent.depth + 1 : 0,
-      heading: parent ? Math.atan2(y - parent.y, x - parent.x) : -0.45 + mapPhase * 0.2,
-    });
+function normalizePresetPoint(pos, authoredSpanW, height) {
+  if (!Array.isArray(pos) || pos.length < 2) return null;
+  const rawX = Number(pos[0]);
+  const rawY = Number(pos[1]);
+  if (!Number.isFinite(rawX) || !Number.isFinite(rawY)) return null;
+  const spanX = authoredSpanW - PAD_X * 2;
+  const spanY = height - PAD_TOP - PAD_BOTTOM;
+  if (rawX <= 1.2 && rawY <= 1.2) {
+    return {
+      x: Math.round(PAD_X + clamp(rawX, 0.04, 0.96) * spanX),
+      y: Math.round(PAD_TOP + clamp(rawY, 0.08, 0.92) * spanY),
+    };
+  }
+  if (rawX <= 100 && rawY <= 100) {
+    return {
+      x: Math.round(PAD_X + (clamp(rawX, 4, 96) / 100) * spanX),
+      y: Math.round(PAD_TOP + (clamp(rawY, 8, 92) / 100) * spanY),
+    };
   }
   return {
-    positions,
-    width: Math.max(1180, ...[...positions.values()].map(({ x }) => x + 130)),
-    height: Math.max(820, ...[...positions.values()].map(({ y }) => y + 210)),
+    x: Math.round(clamp(rawX, PAD_X, authoredSpanW - PAD_X)),
+    y: Math.round(clamp(rawY, PAD_TOP, height - PAD_BOTTOM)),
   };
 }
 
-function inkPath(points) {
-  const number = (value) => value.toFixed(1);
-  let path = 'M ' + number(points[0].x) + ' ' + number(points[0].y);
-  for (let index = 0; index < points.length - 1; index++) {
-    const a = points[Math.max(0, index - 1)];
-    const b = points[index];
-    const c = points[index + 1];
-    const d = points[Math.min(points.length - 1, index + 2)];
-    path +=
-      ' C ' +
-      [
-        b.x + (c.x - a.x) / 6,
-        b.y + (c.y - a.y) / 6,
-        c.x - (d.x - b.x) / 6,
-        c.y - (d.y - b.y) / 6,
-        c.x,
-        c.y,
-      ]
-        .map(number)
-        .join(' ');
+/**
+ * Compute parchment map coordinates for a dungeon route's entries.
+ * Authored mainline routes respect declarative `entry.pos` in 1040x520 canvas space;
+ * endless and linear routes extend smoothly left-to-right without colliding.
+ */
+export function destinationMap(entries = []) {
+  const list = Array.isArray(entries) ? entries : [];
+  const endlessCount = list.filter((entry) => entry?.endless).length;
+  const authoredEntries = list.filter((entry) => entry?.authored && Array.isArray(entry.pos));
+  const authoredWidth = Math.max(
+    MIN_WIDTH,
+    ...authoredEntries.map((entry) => Number(entry.pos[0]) + PAD_X),
+  );
+  const linearWidth =
+    list.length <= 1 ? MIN_WIDTH : Math.max(MIN_WIDTH, PAD_X * 2 + (list.length - 1) * 200);
+  const width =
+    authoredEntries.length > 0
+      ? Math.max(MIN_WIDTH, authoredWidth + endlessCount * 195)
+      : linearWidth;
+  const height = BASE_HEIGHT;
+  const positions = new Map();
+
+  for (let i = 0; i < list.length; i++) {
+    const entry = list[i];
+    if (!entry) continue;
+    const step = Number.isInteger(entry.step) ? entry.step : entry.sequence || i;
+    const branch = Boolean(entry.branch);
+    let point = entry.authored ? normalizePresetPoint(entry.pos, authoredWidth, height) : null;
+
+    if (!point && entry.endless && authoredEntries.length > 0) {
+      const parentPos = entry.parentId ? positions.get(entry.parentId) : null;
+      const baseX = parentPos ? parentPos.x : authoredWidth - PAD_X - 40;
+      const idxAfterFour = Math.max(1, step - 3);
+      const yWave = idxAfterFour % 2 === 1 ? -44 : 42;
+      point = {
+        x: Math.round(baseX + 185),
+        y: Math.round(clamp(height * 0.49 + yWave, PAD_TOP + 24, height - PAD_BOTTOM - 24)),
+      };
+    } else if (!point) {
+      const startX = list.length <= 1 ? Math.round(width * 0.5) : PAD_X + 68;
+      const spacing = list.length <= 1 ? 0 : 200;
+      const rand = hashSeed(entry.seed || i + 11);
+      const wave = list.length <= 1 ? 0 : (i % 2 === 0 ? -1 : 1) * (28 + Math.round(rand() * 24));
+      point = {
+        x: Math.round(startX + i * spacing),
+        y: Math.round(clamp(height * 0.49 + wave, PAD_TOP + 24, height - PAD_BOTTOM - 24)),
+      };
+    }
+
+    const parentPos = entry.parentId ? positions.get(entry.parentId) : null;
+    const heading = parentPos
+      ? Math.atan2(point.y - parentPos.y, Math.max(1, point.x - parentPos.x))
+      : 0;
+    positions.set(entry.id, {
+      x: point.x,
+      y: point.y,
+      depth: step,
+      heading,
+      branch,
+    });
   }
-  return path;
+
+  return { positions, width, height };
 }
 
-/** Unequal bends and small pen deviations, instead of identical S-shaped connectors. */
-export function destinationTrail(a, b, seed) {
-  const rng = random(seed ^ 0x728c1);
+/** Crisp curved parchment route trail between two map nodes. */
+export function destinationTrail(a, b, seed = 1, options = {}) {
+  if (!a || !b) return '';
   const dx = b.x - a.x;
   const dy = b.y - a.y;
-  const length = Math.hypot(dx, dy) || 1;
-  const nx = -dy / length;
-  const ny = dx / length;
-  const inset = Math.min(22, length * 0.15);
-  const travel = (length - inset * 2) / length;
-  const bend = (rng() - 0.5) * length * 0.52;
-  const drift = (rng() - 0.5) * length * 0.27;
-  const steps = Math.max(10, Math.min(24, Math.round(length / 20)));
-  const points = Array.from({ length: steps + 1 }, (_, index) => {
-    const t = index / steps;
-    const offset =
-      Math.sin(t * Math.PI) * bend +
-      Math.sin(t * Math.PI * 2) * drift +
-      (index && index < steps ? (rng() - 0.5) * 6 : 0);
-    return {
-      x: a.x + (dx / length) * inset + dx * travel * t + nx * offset,
-      y: a.y + (dy / length) * inset + dy * travel * t + ny * offset,
-    };
-  });
-  return inkPath(points);
+  const dist = Math.hypot(dx, dy) || 1;
+  const nx = -dy / dist;
+  const ny = dx / dist;
+  const rand = hashSeed(seed);
+  const archDir = options.branch ? 1 : rand() > 0.5 ? 1 : -1;
+  const curve = Math.min(34, dist * 0.14) * archDir;
+  const cx = Math.round((a.x + b.x) / 2 + nx * curve);
+  const cy = Math.round((a.y + b.y) / 2 + ny * curve);
+  return `M ${Math.round(a.x)} ${Math.round(a.y)} Q ${cx} ${cy} ${Math.round(b.x)} ${Math.round(b.y)}`;
 }
 
-/** An open, twice-traced pen loop and freehand cross; never a CSS-perfect circle. */
-export function destinationMark(seed, cleared) {
-  const rng = random(seed ^ 0x53e7);
-  const points = Array.from({ length: 24 }, (_, index) => {
-    const angle = -0.8 + (index / 23) * Math.PI * 2.16;
-    const radius = 20 + (rng() - 0.5) * 3.5;
-    return { x: 30 + Math.cos(angle) * radius, y: 30 + Math.sin(angle) * radius * 0.91 };
-  });
-  const loop = inkPath(points);
-  const retrace = inkPath(
-    points.slice(5, 12).map((point) => ({ x: point.x + 0.8, y: point.y - 0.6 })),
-  );
-  const cross = cleared
-    ? '<path class="sketch-cross" d="M 18 18 Q 29 30 42 43 M 42 17 Q 29 31 18 42"/>'
+/** Upright cartographic node stamp icon matching fansheng parchment map style. */
+export function destinationMark(seed = 1, cleared = false, options = {}) {
+  const { overlord = false, boss = false, branch = false, current = false } = options;
+  const ringStroke = overlord ? '#8c3328' : branch ? '#6d5742' : '#79523a';
+  const fillTone = cleared ? '#ead9bc' : overlord ? '#f6e1d3' : current ? '#fdf3df' : '#f2e5ce';
+  const outerRing = overlord
+    ? `<circle cx="24" cy="24" r="19" fill="none" stroke="${ringStroke}" stroke-width="1.3" stroke-dasharray="3 2.5"/>`
     : '';
-  return (
-    '<svg class="destination-sketch-mark" viewBox="0 0 60 60" aria-hidden="true"><path class="sketch-ring" d="' +
-    loop +
-    '"/><path class="sketch-retrace" d="' +
-    retrace +
-    '"/>' +
-    cross +
-    '</svg>'
-  );
+  const innerIcon = cleared
+    ? `<path class="sketch-cross" d="M 16 24.5 L 21.5 30 L 32.5 18" fill="none" stroke="#5d422d" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>`
+    : overlord
+      ? `<path d="M 15 29 L 17 19 L 21.5 24 L 24 16 L 26.5 24 L 31 19 L 33 29 Z" fill="#a23c2c" stroke="#5e2119" stroke-width="1.2" stroke-linejoin="round"/>`
+      : boss
+        ? `<polygon points="24,14 27.5,21 34,24 27.5,27 24,34 20.5,27 14,24 20.5,21" fill="#8f5d40" fill-opacity="0.22" stroke="${ringStroke}" stroke-width="1.4" stroke-linejoin="round"/>`
+        : branch
+          ? `<polygon points="24,12 36,24 24,36 12,24" fill="${fillTone}" stroke="${ringStroke}" stroke-width="1.25" stroke-opacity="0.65"/>`
+          : '';
+
+  const compassTicks =
+    !cleared && !branch
+      ? `<path d="M 24 6 V 10 M 24 38 V 42 M 6 24 H 10 M 38 24 H 42" stroke="${ringStroke}" stroke-width="1.15" stroke-opacity="0.58" stroke-linecap="round"/>`
+      : '';
+
+  return `<svg class="destination-sketch-mark" data-seed="${seed >>> 0}" viewBox="0 0 48 48" aria-hidden="true">
+    ${outerRing}
+    <circle class="sketch-ring" cx="24" cy="24" r="15" fill="${fillTone}" stroke="${ringStroke}" stroke-width="${current ? 2.1 : 1.6}"/>
+    <circle cx="24" cy="24" r="11.5" fill="none" stroke="${ringStroke}" stroke-width="0.8" stroke-opacity="0.48"/>
+    ${compassTicks}
+    ${innerIcon}
+  </svg>`;
 }
 
-/** Atmospheric hand-drawn ink terrain and contours for regional dungeon parchment. */
-export function destinationRegionTerrain(mapId, width, height, positions) {
-  const safeW = Math.max(800, Number(width) || 1200);
-  const safeH = Math.max(600, Number(height) || 780);
-  const motifKey = REGIONS[mapId]?.biome || mapId;
-  const motif =
-    {
-      ruins: (x, y) =>
-        `<path d="M${x - 18} ${y + 12}h36M${x - 12} ${y + 12}v-20h6v20M${x + 6} ${y + 12}v-14l6-4v18" />`,
-      forest: (x, y) =>
-        `<path d="M${x - 16} ${y + 8}q8-18 16 0t16 0M${x - 10} ${y + 14}q10-20 20 0" />`,
-      frost: (x, y) => `<path d="M${x} ${y - 16}l8 22h-16zM${x + 12} ${y - 8}l6 14h-12z" />`,
-      castle: (x, y) =>
-        `<path d="M${x - 16} ${y + 12}h32v-16h-6v4h-6v-4h-8v4h-6v-4h-6zM${x - 5} ${y + 12}v-7a5 5 0 0 1 10 0v7" />`,
-      arcane: (x, y) =>
-        `<circle cx="${x}" cy="${y}" r="12" /><path d="M${x} ${y - 15}L${x + 5} ${y}L${x} ${y + 15}L${x - 5} ${y}Z" />`,
-      forge: (x, y) =>
-        `<path d="M${x - 14} ${y + 10}h28v-8h-8l-4-12h-8l-3 12h-5zM${x - 3} ${y - 15}c-3-6 5-10 2-15" />`,
-      tide: (x, y) =>
-        `<path d="M${x - 18} ${y + 6}c6-6 12 6 18 0s12 6 18 0M${x - 12} ${y + 13}c5-4 10 4 15 0s10 4 15 0" />`,
-    }[motifKey] || ((x, y) => `<circle cx="${x}" cy="${y}" r="14" stroke-dasharray="3 4" />`);
+function terrainMotifPaths(mapId, width, height) {
+  switch (mapId) {
+    case 'mill':
+      return `<g class="terrain-motif" stroke="#79523a" fill="none" stroke-opacity="0.22" stroke-width="1.2">
+        <path d="M 36 ${height - 58} Q ${width * 0.3} ${height - 78} ${width * 0.58} ${height - 50} T ${width - 34} ${height - 62}"/>
+        <circle cx="88" cy="76" r="18"/>
+        <path d="M 88 54 V 98 M 66 76 H 110 M 74 62 L 102 90 M 102 62 L 74 90"/>
+      </g>`;
+    case 'ruins':
+      return `<g class="terrain-motif" stroke="#79523a" fill="none" stroke-opacity="0.22" stroke-width="1.2">
+        <path d="M 48 92 V 56 H 72 V 92 M 56 56 V 48 H 64 V 56"/>
+        <path d="M ${width - 96} ${height - 48} L ${width - 78} ${height - 76} L ${width - 58} ${height - 48}"/>
+      </g>`;
+    case 'forest':
+    case 'whisper-grove':
+      return `<g class="terrain-motif" stroke="#6f5a3f" fill="none" stroke-opacity="0.22" stroke-width="1.2">
+        <path d="M 62 96 L 74 66 L 86 96 Z M 90 96 L 100 72 L 110 96 Z"/>
+        <path d="M ${width - 92} 96 L ${width - 80} 66 L ${width - 68} 96 Z"/>
+      </g>`;
+    case 'frost':
+    case 'silver-cistern':
+      return `<g class="terrain-motif" stroke="#687279" fill="none" stroke-opacity="0.22" stroke-width="1.2">
+        <path d="M 52 86 L 74 52 L 94 86 M 78 86 L 98 60 L 116 86"/>
+        <path d="M ${width - 102} 84 L ${width - 80} 50 L ${width - 60} 84"/>
+      </g>`;
+    case 'forge':
+    case 'ash-foundry':
+      return `<g class="terrain-motif" stroke="#804b38" fill="none" stroke-opacity="0.22" stroke-width="1.2">
+        <path d="M 54 90 L 68 56 H 88 L 102 90"/>
+        <path d="M ${width - 98} 88 L ${width - 80} 54 L ${width - 62} 88"/>
+      </g>`;
+    default:
+      return `<g class="terrain-motif" stroke="#79523a" fill="none" stroke-opacity="0.2" stroke-width="1.15">
+        <path d="M 42 ${height - 44} Q ${width * 0.25} ${height - 62} ${width * 0.5} ${height - 42} T ${width - 42} ${height - 48}"/>
+        <circle cx="${width - 62}" cy="58" r="14"/>
+        <path d="M ${width - 62} 40 V 76 M ${width - 80} 58 H ${width - 44}"/>
+      </g>`;
+  }
+}
 
-  const contours = [...positions.values()]
-    .map((pt, idx) => {
-      const rx = 56 + (idx % 3) * 14;
-      const ry = 36 + (idx % 2) * 10;
-      const mx = Math.round(pt.x + (idx % 2 ? -86 : 94));
-      const my = Math.round(pt.y + (idx % 2 ? 78 : -74));
-      return (
-        `<ellipse class="terrain-contour" cx="${Math.round(pt.x)}" cy="${Math.round(pt.y)}" rx="${rx}" ry="${ry}" />` +
-        `<g class="terrain-motif">${motif(mx, my)}</g>`
-      );
-    })
-    .join('');
+/** Parchment chart border, contour lines, and subtle compass/terrain watermark for the dungeon route map. */
+export function destinationRegionTerrain(
+  mapId = 'mill',
+  width = MIN_WIDTH,
+  height = BASE_HEIGHT,
+  positions = null,
+) {
+  const safeW = Math.max(MIN_WIDTH, Number(width) || MIN_WIDTH);
+  const safeH = Math.max(BASE_HEIGHT, Number(height) || BASE_HEIGHT);
+  const contours = [];
+  if (positions instanceof Map && positions.size > 0) {
+    let idx = 0;
+    for (const pos of positions.values()) {
+      if (idx % 2 === 0) {
+        contours.push(
+          `<ellipse class="terrain-contour" cx="${Math.round(pos.x)}" cy="${Math.round(pos.y)}" rx="44" ry="24" fill="none" stroke="#8a684b" stroke-opacity="0.14" stroke-width="1" stroke-dasharray="3 4"/>`,
+        );
+      }
+      idx++;
+    }
+  }
 
-  return `<g class="destination-terrain-layer">
-    <rect class="terrain-frame-outer" x="18" y="18" width="${safeW - 36}" height="${safeH - 36}" rx="6" />
-    <rect class="terrain-frame-inner" x="26" y="26" width="${safeW - 52}" height="${safeH - 52}" rx="3" />
-    ${contours}
-  </g>`;
+  return `<svg class="destination-terrain-layer" viewBox="0 0 ${safeW} ${safeH}" preserveAspectRatio="none" aria-hidden="true">
+    <rect class="terrain-frame-outer" x="14" y="14" width="${safeW - 28}" height="${safeH - 28}" rx="4" fill="none" stroke="#8a6547" stroke-opacity="0.34" stroke-width="1.3"/>
+    <rect class="terrain-frame-inner" x="20" y="20" width="${safeW - 40}" height="${safeH - 40}" rx="2" fill="none" stroke="#8a6547" stroke-opacity="0.2" stroke-width="0.9" stroke-dasharray="6 4"/>
+    ${terrainMotifPaths(mapId, safeW, safeH)}
+    ${contours.join('')}
+  </svg>`;
 }

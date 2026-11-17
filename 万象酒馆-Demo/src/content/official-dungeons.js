@@ -90,18 +90,81 @@ ${OUTLINE_PREAMBLE}
 5.灰恢复普通老人模样，向<user>道谢后化作灰烬消散`,
 };
 
+export const MILL_DUNGEONS = Object.freeze([
+  {
+    id: 'mill-1-canal',
+    name: '绿蕨磨坊 · 外围水渠与篱笆',
+    key: 'official-dungeon:mill-1-canal',
+    outline: `【官设副本大纲：绿蕨磨坊 · 外围水渠与篱笆（田鼠泛滥）】
+${OUTLINE_PREAMBLE}
+
+<user>与伊蒂丝告别星钟城门，沿城外西南方干涸水渠步行抵达三十年前被炼金爆炸废弃的「绿蕨磨坊」外围。绿蕨村老村长霍尔特在路口焦急托付「田鼠泛滥」委托，倾倒的木篱笆外还缩着一个抱着酒坛、醉醺醺的地精拾荒者，他偷偷摸出捡来的烧焦炼金阵图残页和几支低阶伤药/微弱魔力药水，愿以小本买卖交易并再三提醒别惊动阁楼里的响动。一行人踏过湿苔水渠与荆棘篱笆，先逐退拦路的水渠青蛙，识别伤人荨麻的易伤破绽与巨型田鼠的高速扑击节奏，再于磨坊门口合力击溃披甲断耳的「田鼠头鼠」，稳稳扫清磨坊正门外患。`,
+  },
+  {
+    id: 'mill-2-hall',
+    name: '绿蕨磨坊 · 磨坊主厅',
+    key: 'official-dungeon:mill-2-hall',
+    outline: `【官设副本大纲：绿蕨磨坊 · 磨坊主厅（狼籍一片的磨坊主厅）】
+${OUTLINE_PREAMBLE}
+
+推开腐朽松动的磨坊正门，<user>与伴随同行的伊蒂丝（及召唤来的伙伴）踏入狼籍一片的磨坊主厅。发霉撕裂的麦粉麻袋堆成小丘，半扇碎裂石磨盘横倒堂中，陈年面粉微尘在漏光屋架下翻涌。寻猫误入窗边的村童与外围见习民兵此前提及的异动应验：从破烂粮袋与地板缝中陡然涌出大片黑壳「硬翅蟑螂群」，并夹杂着受惊野猫与腐叶甲虫。主厅一侧现出通往二楼的吱呀木梯，另一侧堆垛背后则露出一扇斜掀木制酒窖盖板，肃清主厅虫潮即可同时打通上楼与下探酒窖的道路。`,
+  },
+  {
+    id: 'mill-a-cellar',
+    name: '绿蕨磨坊 · 酒窖前的地下通道',
+    key: 'official-dungeon:mill-a-cellar',
+    outline: `【官设副本大纲：绿蕨磨坊 · 酒窖前的地下通道（酒窖霉潮）】
+${OUTLINE_PREAMBLE}
+
+<user>小队掀开磨坊主厅旁那扇歪斜潮湿的木窖门，沿覆满滑腻青苔的石阶踏入地下通道。破裂的橡木酒桶仍在渗流酸腐酒渍，霉菌孢子在潮气中散出绿光，灰白蛞蝓与小型霉斑史莱姆从桶底钻出拦路。在微光尽头，一团巨大的「霉斑史莱姆」正吞裹着半个嵌铜旧铁钱箱蠕动堵路——那是绿蕨村旧年封存农税银币与药酿的所在，彻底击败孢子母体即可驱散地窖霉潮、找回旧钱箱。`,
+  },
+  {
+    id: 'mill-3-loft',
+    name: '绿蕨磨坊 · 磨坊二楼',
+    key: 'official-dungeon:mill-3-loft',
+    outline: `【官设副本大纲：绿蕨磨坊 · 磨坊二楼（二楼的阴影）】
+${OUTLINE_PREAMBLE}
+
+踏上吱呀作响的老旧木梯来到磨坊二楼，陈年面粉积灰随脚步腾起。这里曾是原磨坊粮仓兼古怪炼金术士的临时书房，破木案上散落着焦边炼金笔记与未成形的重力符号草图（星钟见习学徒柯林一直惦记的线索便藏在这些零页间）。正当一行人打量桌案与屋架时，倒挂于横梁阴影深处的「灰尘蝠」成群惊起扑面，统率蝠群的猩红巨蝠「吸血灰尘蝠」更在尘雾旋涡中高速俯冲。击破蝠群首领后，头顶阁楼木板缝隙传来清晰规律、令人不安的金属咔哒声。`,
+  },
+  {
+    id: 'mill-4-attic',
+    name: '绿蕨磨坊 · 磨坊阁楼齿轮室',
+    key: 'official-dungeon:mill-4-attic',
+    outline: `【官设副本大纲：绿蕨磨坊 · 磨坊阁楼齿轮室（磨坊阁楼的咔哒声）】
+${OUTLINE_PREAMBLE}
+
+顺着窄陡木梯登上磨坊最高处的阁楼齿轮室，失修却仍在空转的黄铜时钟齿轮卡得嘎吱响，屋梁尽头悬浮着一枚泛出紫绿微光的失控**反重力炼金核心**。阴影骤降——一尊戴着龟裂米白瓷面具、以扭曲木杆与生锈铁钳为臂的半成品人偶竟**倒吊在天花板上贴脸现身**！「失败的炼金傀偶」口中含混吐出断续怨语，借错乱重力翻转砸落或疯狂错位重整发条，唯有火烧与重钝击能有效崩解其木瓷躯壳。击败这具失控造物后，反重力核心幽光敛去，绿蕨磨坊三十载怪声终于归于沉寂。`,
+  },
+]);
+
 export const OFFICIAL_DUNGEONS = [TUTORIAL_DUNGEON, CORRIDOR_DUNGEON];
 export const EXPANDED_DUNGEONS = [HALL_DUNGEON, SINKHOLE_DUNGEON, TOMB_DUNGEON, CURSE_DUNGEON];
 export const RUINS_DUNGEONS = [...OFFICIAL_DUNGEONS, ...EXPANDED_DUNGEONS];
-export const ALL_OFFICIAL_DUNGEONS = [...RUINS_DUNGEONS, ...FOREST_DUNGEONS, ...FROST_DUNGEONS];
+export const ALL_OFFICIAL_DUNGEONS = [
+  ...RUINS_DUNGEONS,
+  ...FOREST_DUNGEONS,
+  ...FROST_DUNGEONS,
+  ...MILL_DUNGEONS,
+];
 
 export function officialDungeonFor(exploration) {
   if (exploration?.world) return null;
-  if (exploration?.map === 'forest') return FOREST_DUNGEONS[exploration.sequence] || null;
-  if (exploration?.map === 'frost') return FROST_DUNGEONS[exploration.sequence] || null;
+  if (exploration?.map === 'mill') {
+    if (exploration.tutorial === true) return MILL_DUNGEONS[0];
+    if (Number.isInteger(exploration.sequence) && MILL_DUNGEONS[exploration.sequence])
+      return MILL_DUNGEONS[exploration.sequence];
+    const byId = MILL_DUNGEONS.find(
+      (entry) => entry.id === exploration.nodeId || entry.id === exploration.siteId,
+    );
+    return byId || null;
+  }
+  const index = exploration?.sequence;
+  if (exploration?.map === 'forest') return FOREST_DUNGEONS[index] || null;
+  if (exploration?.map === 'frost') return FROST_DUNGEONS[index] || null;
   if (exploration?.map !== 'ruins') return null;
-  if (exploration.tutorial === true || exploration.sequence === 0) return TUTORIAL_DUNGEON;
-  switch (exploration.sequence) {
+  if (exploration.tutorial === true || index === 0) return TUTORIAL_DUNGEON;
+  switch (index) {
     case 1:
       return CORRIDOR_DUNGEON;
     case 2:

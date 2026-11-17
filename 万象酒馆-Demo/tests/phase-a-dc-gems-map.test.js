@@ -221,13 +221,13 @@ test('imperial map places all 5 dungeons inside 艾尔德兰帝国 and connects 
 
 test('wild skirmishes generate 3 non-AI battles with ecological drops and known-route tracking', () => {
   const lib = newLibrary();
-  const plan = overlandPlan('outskirts', 'ruins');
-  assert.equal(isOverlandRouteKnown(lib, 'outskirts', 'ruins'), false);
+  const plan = overlandPlan('outskirts', 'mill');
+  assert.equal(isOverlandRouteKnown(lib, 'outskirts', 'mill'), false);
   markOverlandRouteExplored(lib, plan);
-  assert.equal(isOverlandRouteKnown(lib, 'outskirts', 'ruins'), true);
-  assert.equal(isAtlasLegKnown(lib, 'outskirts', 'ruins'), true);
+  assert.equal(isOverlandRouteKnown(lib, 'outskirts', 'mill'), true);
+  assert.equal(isAtlasLegKnown(lib, 'outskirts', 'mill'), true);
   markOverlandRouteExplored(lib, overlandPlan('outskirts', 'cross-meadow'));
-  assert.equal(isAtlasLegKnown(lib, 'ruins', 'cross-meadow'), true);
+  assert.equal(isAtlasLegKnown(lib, 'mill', 'cross-meadow'), true);
 
   const state = refreshWorldSkirmishes(lib, 'seed-1');
   const entries = Object.values(state.nodes);
@@ -250,7 +250,7 @@ test('wild skirmishes generate 3 non-AI battles with ecological drops and known-
   clearWorldSkirmish(lib, firstId);
   assert.equal(lib.skirmishes.nodes[firstId], undefined);
   const restored = restoreLibrary(JSON.parse(JSON.stringify(lib)));
-  assert.equal(isOverlandRouteKnown(restored, 'outskirts', 'ruins'), true);
+  assert.equal(isOverlandRouteKnown(restored, 'outskirts', 'mill'), true);
 
   const downs = IMPERIAL_CROSSROADS.find((item) => item.id === 'cross-downs');
   const westRoute = ATLAS_ROUTES.find(

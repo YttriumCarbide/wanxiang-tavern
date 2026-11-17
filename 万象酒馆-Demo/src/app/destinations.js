@@ -1,7 +1,7 @@
 import { createRawResponse } from './raw-response.js';
 import { generationEnabled } from '../generation-options.js';
 import { needsContinuationWorld, continuationInput } from '../continuation-world.js';
-import { UNLOCKABLE_DUNGEONS, worldRegion, routeKey } from '../worlds.js';
+import { MAINLINE_DUNGEONS, UNLOCKABLE_DUNGEONS, worldRegion, routeKey } from '../worlds.js';
 import { addWorldRoute } from '../exploration.js';
 import { REGIONS } from '../content/regions.js';
 import { explorationSpec, availableExplorations, explorationPreview } from '../exploration.js';
@@ -31,9 +31,11 @@ export function createDestinations(context) {
   };
   const maps = () =>
     learning(session.ai.library) || session.ai.library.campaign?.tutorial === 'depart-again'
-      ? unlockedBaseWorlds().includes('ruins')
-        ? ['ruins']
-        : ['singularity']
+      ? unlockedBaseWorlds().includes('mill')
+        ? ['mill']
+        : unlockedBaseWorlds().includes('ruins')
+          ? ['ruins']
+          : ['singularity']
       : [
           ...unlockedBaseWorlds(),
           ...(session.ai.library.worlds || [])
@@ -48,8 +50,8 @@ export function createDestinations(context) {
   const nodesFor = (map) =>
     map === 'singularity'
       ? []
-      : learning(session.ai.library)
-        ? (session.ai.library.exploration.ruins?.frontier || []).slice(0, 1)
+      : learning(session.ai.library) && map === 'mill'
+        ? (session.ai.library.exploration.mill?.frontier || []).slice(0, 1)
         : availableExplorations(session.ai.library.exploration[map] || { frontier: [] });
   const regionFor = (id) =>
     id === 'singularity'
@@ -226,9 +228,14 @@ export function createDestinations(context) {
     return (
       [...nodes]
         .sort(
-          (a, b) => Number(!!b.continuation) - Number(!!a.continuation) || b.sequence - a.sequence,
+          (a, b) =>
+            Number(!!b.continuation) - Number(!!a.continuation) ||
+            Number(!!a.branch) - Number(!!b.branch) ||
+            (a.step ?? a.sequence ?? 0) - (b.step ?? b.sequence ?? 0),
         )
-        .find((node) => node.continuation) || nodes[0]
+        .find((node) => node.continuation) ||
+      nodes.find((node) => !node.branch) ||
+      nodes[0]
     );
   }
   function animate(element, direction) {
@@ -246,25 +253,38 @@ export function createDestinations(context) {
     const node = session.journey.selectedNode;
     if (!node) {
       $('#destination-sites').innerHTML =
-        '<article class="destination-site"><h3>本图已完成</h3><p>六处副本均已通关。可以返回选择其他地图。</p></article>';
+        '<article class="destination-site"><h3>本图已完成</h3><p>当前路线已全部通关。可以返回选择其他地图。</p></article>';
       $('#destination-start').disabled = true;
       $('#destination-start').textContent = '本图已完成';
       return;
     }
     const spec = explorationSpec(node);
-    const discovered = session.ai.library.atlasDiscoveries?.some(({ id }) => id === routeKey(node));
+    const mapKey = routeKey(node);
+    const discovered = session.ai.library.atlasDiscoveries?.some(({ id }) => id === mapKey);
+    const label = node.label || String((node.sequence || 0) + 1);
+    const isMainline = MAINLINE_DUNGEONS.includes(node.map) && !node.world;
+    const ordinalText = node.branch
+      ? `支线 ${label}`
+      : isMainline && !node.endless
+        ? `主线第 ${label} 处`
+        : `第 ${label} 处`;
+    const bossId = node.boss || spec.boss;
+    const bossDef = bossId ? spec.enemyDefinitions?.[bossId] || DEFINITIONS[bossId] : null;
+    const bossBadge = bossDef
+      ? ` · ${bossDef.overlord || node.overlord ? '♛ 霸主' : '⚔ 首领'}：${escapeText(bossDef.name)}`
+      : '';
     $('#destination-sites').innerHTML = html`<article
       class="destination-site"
       data-destination="${node.id}"
     >
       <div class="destination-site-top">
-        <small>✓ 已选择 · 第 ${node.sequence + 1} 处 · 完整五场</small
+        <small>✓ 已选择 · ${ordinalText} · 完整五场${bossBadge}</small
         ><span
-          >${node.replay ? '回忆' : node.continuation ? '承接伏笔' : '未探索'} ·
+          >${node.replay ? '回忆' : node.continuation ? '承接伏笔' : '可探索'} ·
           Lv.${spec.level}</span
         >
       </div>
-      <h3>${escapeText(discovered ? regionFor(routeKey(node)).name : spec.name)}</h3>
+      <h3>${escapeText(discovered ? regionFor(mapKey).name : spec.name)}</h3>
       <p>
         ${node.continuation ? escapeText(node.continuation) : '穿过界门，沿这条路开启一段新的旅程。'}
       </p>
@@ -275,28 +295,35 @@ export function createDestinations(context) {
       </div>
     </article>`;
     $('#destination-start').disabled =
-      !canRecall(session.ai.library, node) &&
-      !nodesFor(routeKey(node)).some((item) => item.id === node.id);
+      !canRecall(session.ai.library, node) && !nodesFor(mapKey).some((item) => item.id === node.id);
     $('#destination-start').textContent = node.replay
       ? '回忆 →'
       : generationEnabled(session.ai.generationOptions) &&
           needsContinuationWorld(session.ai.library, node)
         ? '构筑继续探索 →'
-        : node.world || node.sequence >= 6
+        : node.world || node.endless
           ? '继续探索 →'
-          : `启程 · 第 ${node.sequence + 1} 处 →`;
+          : node.branch
+            ? `启程 · 支线 ${label} →`
+            : `启程 · 第 ${label} 处 →`;
     $('#destination-map')
       .querySelectorAll('[data-map-node]')
       .forEach((button) => {
         button.setAttribute('aria-pressed', String(button.dataset.mapNode === node.id));
       });
+    const route = session.ai.library.exploration[mapKey];
+    const entries = route ? explorationPreview(route, mapKey) : [];
+    const byId = new Map(entries.map((entry) => [entry.id, entry]));
+    const ancestorIds = new Set();
+    let cursor = byId.get(node.id) || node;
+    while (cursor) {
+      ancestorIds.add(cursor.id);
+      cursor = cursor.parentId ? byId.get(cursor.parentId) : null;
+    }
     $('#destination-map')
-      .querySelectorAll('[data-route-sequence]')
+      .querySelectorAll('[data-trail-to]')
       .forEach((path) => {
-        path.classList.toggle(
-          'selected-trail',
-          Number(path.dataset.routeSequence) <= node.sequence,
-        );
+        path.classList.toggle('selected-trail', ancestorIds.has(path.dataset.trailTo));
       });
   }
   function center() {
@@ -322,7 +349,12 @@ export function createDestinations(context) {
       .map((entry) => {
         const a = positions.get(entry.parentId);
         const b = positions.get(entry.id);
-        return `<path class="destination-trail ${cleared.has(entry.id) ? 'charted' : 'discovered'}" data-route-sequence="${entry.sequence}" style="stroke-width:${1.35 + (entry.seed % 6) * 0.12}" d="${destinationTrail(a, b, entry.seed)}"/>`;
+        const stateClass = cleared.has(entry.id)
+          ? 'charted'
+          : available.has(entry.id)
+            ? 'discovered'
+            : 'locked-trail';
+        return `<path class="destination-trail ${stateClass}${entry.branch ? ' branch-trail' : ''}" data-trail-to="${escapeText(entry.id)}" d="${destinationTrail(a, b, entry.seed, { branch: entry.branch })}"/>`;
       })
       .join('');
     $('#destination-map').innerHTML = html`<div
@@ -335,24 +367,34 @@ export function createDestinations(context) {
           const point = positions.get(entry.id);
           const done = cleared.has(entry.id);
           const spec = explorationSpec(entry);
-          const isBoss = entry.sequence === 5 || (spec.boss && !entry.world && entry.sequence >= 5);
+          const label = entry.label || String((entry.sequence || 0) + 1);
+          const bossId = entry.boss || spec.boss;
+          const bossDef = bossId ? spec.enemyDefinitions?.[bossId] || DEFINITIONS[bossId] : null;
+          const isOverlord = Boolean(entry.overlord || bossDef?.overlord);
+          const isBoss = Boolean(bossDef);
+          const siteTitle = (!entry.world && REGIONS[entry.map]?.sites?.[entry.site]) || spec.name;
           return html`<button
-            class="destination-node ${done ? 'cleared' : !available.has(entry.id) ? 'locked' : ''} ${isBoss ? 'is-boss' : ''}"
+            class="destination-node ${done ? 'cleared' : !available.has(entry.id) ? 'locked' : ''} ${entry.branch ? 'is-branch' : ''} ${isOverlord ? 'is-overlord' : isBoss ? 'is-boss' : ''}"
             data-map-node="${entry.id}"
-            style="left:${point.x - 70}px;top:${point.y - 30}px;--ink-angle:${(entry.seed % 17) - 8}deg;--label-angle:${(entry.seed % 9) - 4}deg"
+            style="left:${point.x - 70}px;top:${point.y - 24}px"
             aria-pressed="${entry.id === session.journey.selectedNode?.id}"
-            aria-label="${escapeText(spec.name)} · Lv.${spec.level} · ${done ? '已通关' : available.has(entry.id) ? '可探索' : '未解锁'}"
-            title="${done && canRecall(session.ai.library, entry) ? '回忆：重玩此关，不请求API' : done ? '已通关' : available.has(entry.id) ? '点击选择此副本，再点击启程' : '按数字顺序通关前面的地点后解锁'}"
+            aria-label="${escapeText(siteTitle)} · Lv.${spec.level} · ${done ? '已通关' : available.has(entry.id) ? '可探索' : '未解锁'}"
+            title="${done && canRecall(session.ai.library, entry) ? '回忆：重玩此关，不请求API' : done ? '已通关' : available.has(entry.id) ? '点击选择此副本，再点击启程' : '按前置路线通关后解锁'}"
             ${!canRecall(session.ai.library, entry) && (done || !available.has(entry.id)) ? 'disabled' : ''}
           >
-            <span class="destination-selection-label" aria-hidden="true">当前选择</span>
-            <span class="destination-node-mark"
-              >${destinationMark(entry.seed, done)}<em>${entry.sequence + 1}</em></span
-            ><strong
-              >${escapeText(entry.sequence < 6 && !entry.world ? REGIONS[entry.map].sites[entry.sequence] : spec.name)}</strong
+            <span class="destination-selection-label" aria-hidden="true"
+              >${entry.branch ? '当前支线' : '当前选择'}</span
             >
+            <span class="destination-node-mark"
+              >${destinationMark(entry.seed, done, {
+                overlord: isOverlord,
+                boss: isBoss,
+                branch: entry.branch,
+                current: available.has(entry.id),
+              })}<em>${escapeText(label)}</em></span
+            ><strong>${escapeText(siteTitle)}</strong>
             <small class="destination-node-meta"
-              >Lv.${spec.level}${isBoss ? ' · ♛ 首领' : ''}</small
+              >Lv.${spec.level}${isOverlord ? ' · ♛ 霸主' : isBoss ? ' · ⚔ 首领' : ''}</small
             >
           </button>`;
         })
@@ -366,6 +408,10 @@ export function createDestinations(context) {
     const availableMaps = maps();
     const index = availableMaps.indexOf(map);
     const route = session.ai.library.exploration[map];
+    const isMainlineMap = MAINLINE_DUNGEONS.includes(map) && !region.id;
+    const endlessReady = isMainlineMap
+      ? (route?.cleared || []).some((entry) => entry.authored && entry.step >= 3 && !entry.branch)
+      : Boolean(route?.completed >= 6 || region.id);
     dialog.dataset.region = map;
     $('#destination-region-name').textContent = region.name;
     $('#destination-region-confirm').textContent = `确认「${region.name}」 →`;
@@ -382,11 +428,14 @@ export function createDestinations(context) {
     $('#destination-status').textContent =
       map === 'singularity'
         ? '由你选择下一个世界'
-        : `已探索 ${route.completed} 处${route.completed >= 6 || region.id ? ' · 无限旅途' : ' / 6'}`;
+        : isMainlineMap
+          ? `已探索 ${route.completed} 处${endlessReady ? ' · 主线贯通 / 无限延伸' : ' · 主线4关含支线'}`
+          : `已探索 ${route.completed} 处${route.completed >= 1 ? ' · 深入延伸' : ''}`;
     stripPage = Math.min(stripPage, Math.ceil(availableMaps.length / 5) - 1);
     previous.disabled = stripPage === 0;
     next.disabled = (stripPage + 1) * 5 >= availableMaps.length;
-    expand.hidden = map === 'singularity' || !(route?.completed >= 6 || region.id);
+    expand.hidden =
+      map === 'singularity' || !(endlessReady || (route?.completed >= 1 && region.id));
     $('#destination-regions').innerHTML = availableMaps
       .slice(stripPage * 5, stripPage * 5 + 5)
       .map(
@@ -442,8 +491,11 @@ export function createDestinations(context) {
   }
   function changeRegion(map, direction) {
     if (stage !== 'region') return;
-    if (!maps().includes(map)) return;
+    const availableMaps = maps();
+    const index = availableMaps.indexOf(map);
+    if (index < 0) return;
     if (map === session.journey.regionMap) return;
+    stripPage = Math.floor(index / 5);
     session.journey.regionMap = map;
     session.journey.selectedNode = structuredClone(recommended(map) || null);
     render(direction);
@@ -462,18 +514,23 @@ export function createDestinations(context) {
     if (context.daily && !context.daily.allowDungeon()) return;
     if (context.onboarding && !context.onboarding.allowPortal('script')) return;
     const availableMaps = maps();
+    const tutorialMap = availableMaps.includes('mill') ? 'mill' : availableMaps[0];
     if (
-      (learning(session.ai.library) && availableMaps.includes('ruins')) ||
+      (learning(session.ai.library) && availableMaps.includes('mill')) ||
       !availableMaps.includes(session.journey.regionMap)
     ) {
-      session.journey.regionMap = availableMaps.includes('ruins') ? 'ruins' : availableMaps[0];
+      session.journey.regionMap = tutorialMap;
     }
     stripPage = Math.max(0, Math.floor(availableMaps.indexOf(session.journey.regionMap) / 5));
     session.journey.selectedNode =
       session.journey.regionMap === 'singularity'
         ? null
         : structuredClone(recommended(session.journey.regionMap) || null);
-    if (learning(session.ai.library) && session.journey.selectedNode)
+    if (
+      learning(session.ai.library) &&
+      session.journey.regionMap === 'mill' &&
+      session.journey.selectedNode
+    )
       session.journey.selectedNode.tutorial = true;
     dialog.showModal();
     setStage('region');
@@ -486,7 +543,7 @@ export function createDestinations(context) {
     if (dialog.open || session.runtime.mode !== 'inn' || session.ai.busy || !canOpen) return;
     session.journey.regionMap = id;
     session.journey.selectedNode = structuredClone(recommended(id) || null);
-    if (learning(library) && session.journey.selectedNode)
+    if (learning(library) && id === 'mill' && session.journey.selectedNode)
       session.journey.selectedNode.tutorial = true;
     dialog.showModal();
     setStage('route');
@@ -538,7 +595,8 @@ export function createDestinations(context) {
     if (!node) return;
     session.journey.selectedNode = structuredClone(node);
     if (canRecall(session.ai.library, node)) session.journey.selectedNode.replay = true;
-    if (learning(session.ai.library)) session.journey.selectedNode.tutorial = true;
+    if (learning(session.ai.library) && session.journey.regionMap === 'mill')
+      session.journey.selectedNode.tutorial = true;
     renderSite();
     center();
     if (!reduced.matches)
@@ -639,6 +697,9 @@ export function createDestinations(context) {
   return {
     open,
     openDiscovery,
+    render: () => {
+      if (dialog.open) render();
+    },
     prepareContinuation() {
       if (!dialog.open) dialog.showModal();
       setStage('route');

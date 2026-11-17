@@ -382,13 +382,18 @@ test('overland loot stages roll only for battle legs and validate optional loot 
   );
 });
 
-test('ruins sits one turn directly southwest of Starbell outskirts', () => {
-  const plan = overlandPlan('outskirts', 'ruins');
-  assert.equal(plan.turns, 1);
-  assert.equal(plan.legs.length, 1);
-  assert.equal(plan.legs[0].id, 'ruins-approach');
-  assert.equal(plan.legs[0].from.id, 'outskirts');
-  assert.equal(plan.legs[0].to.id, 'ruins');
+test('mill sits one turn directly southwest of Starbell outskirts while ruins lies further east', () => {
+  const millPlan = overlandPlan('outskirts', 'mill');
+  assert.equal(millPlan.turns, 1);
+  assert.equal(millPlan.legs.length, 1);
+  assert.equal(millPlan.legs[0].id, 'mill-approach');
+  assert.equal(millPlan.legs[0].from.id, 'outskirts');
+  assert.equal(millPlan.legs[0].to.id, 'mill');
+
+  const ruinsPlan = overlandPlan('outskirts', 'ruins');
+  assert(ruinsPlan.turns >= 3);
+  assert.equal(ruinsPlan.legs.at(-1).id, 'ruins-approach');
+  assert.equal(ruinsPlan.legs.at(-1).to.id, 'ruins');
 });
 
 test('skipOverlandApi option restores without developerMode and city/dungeon submaps populate cleanly', () => {

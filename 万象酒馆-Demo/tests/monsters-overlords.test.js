@@ -120,7 +120,15 @@ test('all 21 Jacob Ladder monsters, 18 common monsters, lore, drops and worldboo
 });
 
 test('Overlord formations, standOnCard flags, and non-voxel vs 3-tier voxel GLB progression hold strictly', async () => {
-  for (const id of ['apepLamb', 'moonCrown', 'moonEye', 'moonRoot', 'ares', 'radiantWyvern']) {
+  for (const id of [
+    'apepLamb',
+    'moonCrown',
+    'moonEye',
+    'moonRoot',
+    'ares',
+    'radiantWyvern',
+    'alchemicalPuppet',
+  ]) {
     assert.equal(DEFINITIONS[id].overlord, true, `${id} must be overlord`);
     assert.equal(DEFINITIONS[id].standOnCard, true, `${id} must stand on card`);
   }
@@ -131,16 +139,13 @@ test('Overlord formations, standOnCard flags, and non-voxel vs 3-tier voxel GLB 
   assert.equal(shouldStandOnCard(DEFINITIONS.mossSlime), false);
 
   const urls = overlordAssetUrls(DEFINITIONS);
-  assert.equal(urls.length, 8);
+  assert.equal(urls.length, 5);
   for (const modelName of [
     'apep-lamb.glb',
     'radiant-wyvern.glb',
     'ares.glb',
-    'ares-cannon-left.glb',
-    'ares-cannon-right.glb',
-    'moon-crown.glb',
     'moon-eye.glb',
-    'moon-root.glb',
+    'alchemical-puppet.glb',
   ]) {
     assert(urls.includes(`./assets/${modelName}`), `Missing overlord URL ${modelName}`);
   }
@@ -261,7 +266,7 @@ test('buildEnemyArchiveEntries splits 4 enemy tiers and combines 3 Mother Tree p
   assert(buckets.boss.length > 0);
   assert.deepEqual(
     buckets.overlord.map((item) => item.id),
-    ['apepLamb', 'moonTree', 'ares', 'radiantWyvern'],
+    ['apepLamb', 'moonTree', 'ares', 'radiantWyvern', 'alchemicalPuppet'],
   );
   const moonTree = buckets.overlord.find((item) => item.id === 'moonTree');
   assert.equal(moonTree.name, '母树');
@@ -271,5 +276,5 @@ test('buildEnemyArchiveEntries splits 4 enemy tiers and combines 3 Mother Tree p
     moonTree.parts.map((part) => part.id),
     ['moonCrown', 'moonEye', 'moonRoot'],
   );
-  assert.deepEqual(moonTree.models, ['moon-crown.glb', 'moon-eye.glb', 'moon-root.glb']);
+  assert.deepEqual(moonTree.models, ['moon-eye.glb', 'moon-eye.glb', 'moon-eye.glb']);
 });

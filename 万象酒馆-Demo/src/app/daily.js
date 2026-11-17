@@ -46,6 +46,7 @@ import { townResidents } from '../town-residents.js';
 import { createPlayerIntentPrompt } from './player-intent.js';
 import { createWorldLoadingOverlay } from '../shared/scene-loading.js';
 import { IMPERIAL_DUNGEONS } from '../content/imperial-network.js';
+import { unlockDungeonMap } from '../exploration.js';
 import { learning } from '../campaign.js';
 
 export function createDaily(context) {
@@ -573,7 +574,8 @@ export function createDaily(context) {
                   turns: 0,
                   locked: travel.busy(),
                   preview: false,
-                  tutorialRuinsOnly: !library().unlockedDungeons?.includes('ruins'),
+                  tutorialMillOnly: !library().unlockedDungeons?.includes('mill'),
+                  tutorialRuinsOnly: !library().unlockedDungeons?.includes('mill'),
                 }
               : null,
       },
@@ -1002,6 +1004,18 @@ export function createDaily(context) {
     }
     if (event.source !== frame()?.contentWindow) return;
     if (event.data?.type === 'daily-open-guild') return context.guild?.open?.();
+    if (event.data?.type === 'daily-open-dungeon' && typeof event.data.dungeonId === 'string') {
+      const dungeonId = event.data.dungeonId;
+      unlockDungeonMap(library(), dungeonId);
+      save();
+      if (active()?.kind === 'outing') returnOuting();
+      else navigate('tavern');
+      queueMicrotask(() => {
+        context.destinations?.openDiscovery?.(dungeonId);
+        render();
+      });
+      return;
+    }
     if (event.data?.type === 'tavern-recruit') return showRecruitment(event.data.characterId);
     if (event.data?.type === 'daily-outing-companions' && active()?.preview) return openSetup();
     if (event.data?.type === 'street-map-state') {
@@ -1149,7 +1163,7 @@ export function createDaily(context) {
     arriveDungeon(id) {
       queueMicrotask(() => {
         visitedDiscovery = id;
-        if (id === 'ruins') context.onboarding?.ruinsReached?.();
+        if (id === 'mill' || id === 'ruins') context.onboarding?.ruinsReached?.();
         context.destinations.openDiscovery(id);
         render();
       });

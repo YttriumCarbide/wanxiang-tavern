@@ -10522,7 +10522,7 @@
       "key": [],
       "keysecondary": [],
       "comment": "EX：战斗基础玩法与状态百科",
-      "content": "【战斗基础玩法与通用状态百科】\n本条目只发送给「角色生成」「地图构筑」「以太造物」三个设计类 API，用来说明万象酒馆的核心战斗逻辑、通用 Buff/Debuff 效果与禁用边界（剧本、聊天与总结无需接收）。\n\n一、游戏战斗底层逻辑与数值分工\n1. 站位与行动机制：\n   - 我方每场最多 6 名成员（前场 3 个格位 `0/1/2` 承受攻击、使用 `AP` 行动并触发大部分正面/负面交互；后场 3 格休整等待）。角色自带的 `entrySkill` 会在“从后场就绪换入前场”时自动触发。\n   - 敌人每回合按速度 `speed`（1～5）走时间轴行动，按自身 `intents` 锁定玩家前场格位（如单格、双翼或三格横扫）；Boss 在半血时切换 `enragedIntents`。\n   - 我方主动技能主要消耗 `sp`（法力，文案中写作 `sp`，勿写“蓝量/MP”）与 `AP`，少数招式可支付 `hp`。\n2. 数值抽取与成长分工（重点）：\n   - 玩家属性、技能伤害、治疗/护盾、被动效果与中毒/流血持续伤害都会随等级与价值曲线自动抽取并乘算缩放；**角色生成、以太造物、地图构筑三者全部使用定性档位**（以太造物与地图构筑为 `low` / `medium` / `high`，角色生成为 `low` / `standard` / `high`），**绝不自填具体数值或状态层数**。\n   - 程序会由档位确定 1 级基础值并在战斗时统一计算成长倍率；因此设计时只需区分强度档位与定位配合，不必手算高等级数值膨胀。\n\n二、通用状态词典（Buff / Debuff 释义）\n1. 通用正面增益（Positive）：\n   - `strength`（力量）：每层使直接伤害 **+10%**（无 50% 合计上限）。适合爆发输出。\n   - `iron`（铁皮）：每次受到攻击时，每层使该次伤害减少 **10%**（最高减伤 70%，进入铁皮判定时最低保留 1 点；百分比生效、不按回合清零，无需随等级加层数）。\n   - `guard`（守势）：获得护盾时，每层使护盾获得量增加 **20%**（百分比生效，无需随等级加层数）。适合护盾防线或前场承伤位。\n   - `haste`（敏捷）：每层使每回合行动次数上限 +1（最多额外 +2 次，每次行动仍需正常消耗 `AP`）。\n   - `regen`（再生）：回合末在中毒前先回复最大生命 **3%/层** 的 `hp`（单回合上限 30%），随后减少 1 层（濒死单位无法回复）。**允许角色、装备、敌人使用，但严禁放进持续光环（`mode: \"continuous\"`），只可由主动技能或有次数限制的事件施加**。\n   - `flying`（飞行）：受到攻击伤害减半（向下取整，先减半再扣铁皮与护盾）；正常回合结束减少 1 层。**允许角色、装备、敌人使用**。\n   - `overload`（超限）：上限 1 层；仅对我方角色的主动技能生效，使下一次角色主动技能消耗翻倍并额外生效一次，用后清除（跨回合保留、跨场清除，结合技不生效）。**对敌人不生效，地图构筑严禁给怪物挂 `overload`**。\n2. 通用负面减益（Negative）：\n   - `weak`（虚弱）：攻击伤害减少 **25%**（效果**不随层数叠加**，多层仅代表持续回合，正常回合结束减少 1 层）。\n   - `vulnerable`（易伤）：作为独立效果触发，使受到的直接伤害增加 **50%**（效果**不随层数叠加**，与力量各自独立计算，多层仅代表持续回合，正常回合结束减少 1 层）。\n   - `bleed`（流血）：每次主动行动前失去等同于层数的 `hp`（数值型持续伤害，随关卡与角色等级同比缩放），若因流血致死则取消本次行动；正常回合结束减少 1 层。\n   - `poison`（中毒）：回合末在再生结算后失去等同于层数的 `hp`（数值型持续伤害，随关卡与角色等级同比缩放），随后减少 1 层。\n   - `bind`（禁锢）：跳过目标本回合尚未执行的主动行动，回合结束解除（1 层即满，叠加层数不延长持续时间）。**对敌我双方皆有效**：打在敌人身上会跳过对方本回合后续未执行意图；打在我方身上则令本回合剩余行动失效且不可换位。\n   - `slow`（迟缓）：降低敌人速度并实时推后其在时间轴上的行动顺位；2 层及以上在正常回合末减少 1 层（最低保留 1 层）。\n   - `blind`（致盲）：敌人本次攻击若同时伤害 2 个及以上目标，其中 1 个随机目标本次伤害变为 0；正常回合结束减少 1 层（单目标攻击不受致盲影响）。\n\n三、目标指向与禁用红线（必守）\n1. 敌我指向不可混用：\n   - 伤害与负面状态只能指向敌方目标；治疗、回蓝、护盾、净化与正面状态只能指向自身、己方队友或怪物自身的友方。\n2. `slow`（迟缓）禁用边界：\n   - `slow` 仅影响敌人速度，**严禁生成敌人对玩家前场（`opponents`）施加 `slow`**（给对方套等同无效），也**严禁角色与装备给我方队友施加 `slow`**；仅允许我方对敌人施加。\n3. `blind`（致盲）禁用边界：\n   - 我方角色与装备可对敌人施加 `blind`；**禁止地图 API 生成的敌人或 Boss 拥有施加 `blind` 的意图**。\n4. 严禁使用专属状态与专属标记：\n   - `meteor`（流星剑姿）、`balance`（平衡）、`sacrifice`（欺之牺）以及官方 NPC 个人标记 `melody`（悠扬）均属于官方角色或纹章戒指专属，**严禁任何生成角色、以太装备或敌人选用**（代码也会直接校验拒收）。\n\n四、【后续开发与维护提示】\n今后若游戏内新增、删改通用 Buff 或 Debuff，请直接原地编辑本条目说明；**禁止再另建版本号或“修正/补充”类 `EX` 补丁条目**。",
+      "content": "【战斗基础玩法与通用状态百科】\n本条目只发送给「角色生成」「地图构筑」「以太造物」三个设计类 API，用来说明万象酒馆的核心战斗逻辑、通用 Buff/Debuff 效果与禁用边界（剧本、聊天与总结无需接收）。\n\n一、游戏战斗底层逻辑与数值分工\n1. 站位与行动机制：\n   - 我方每场最多 6 名成员（前场 3 个格位 `0/1/2` 承受攻击、使用 `AP` 行动并触发大部分正面/负面交互；后场 3 格休整等待）。角色自带的 `entrySkill` 会在“从后场就绪换入前场”时自动触发。\n   - 敌人每回合按速度 `speed`（1～5）走时间轴行动，按自身 `intents` 锁定玩家前场格位（如单格、双翼或三格横扫）；Boss 在半血时切换 `enragedIntents`。\n   - 我方主动技能主要消耗 `sp`（法力，文案中写作 `sp`，勿写“蓝量/MP”）与 `AP`，少数招式可支付 `hp`。\n2. 数值抽取与成长分工（重点）：\n   - 玩家属性、技能伤害、治疗/护盾、被动效果与中毒/流血持续伤害都会随等级与价值曲线自动抽取并乘算缩放；**角色生成、以太造物、地图构筑三者全部使用定性档位**（以太造物与地图构筑为 `low` / `medium` / `high`，角色生成为 `low` / `standard` / `high`），**绝不自填具体数值或状态层数**。\n   - 程序会由档位确定 1 级基础值并在战斗时统一计算成长倍率；因此设计时只需区分强度档位与定位配合，不必手算高等级数值膨胀。\n\n二、通用状态词典（Buff / Debuff 释义）\n1. 通用正面增益（Positive）：\n   - `strength`（力量）：每层使直接伤害 **+10%**（无 50% 合计上限）。适合爆发输出。\n   - `iron`（铁皮）：每次受到攻击时，每层使该次伤害减少 **10%**（最高减伤 70%，进入铁皮判定时最低保留 1 点；百分比生效、不按回合清零，无需随等级加层数）。\n   - `guard`（守势）：获得护盾时，每层使护盾获得量增加 **20%**（百分比生效，无需随等级加层数）。适合护盾防线或前场承伤位。\n   - `haste`（敏捷）：每层使每回合行动次数上限 +1（最多额外 +2 次，每次行动仍需正常消耗 `AP`）。\n   - `regen`（再生）：回合末在中毒前先回复最大生命 **3%/层** 的 `hp`（单回合上限 30%），随后减少 1 层（濒死单位无法回复）。**允许角色、装备、敌人使用，但严禁放进持续光环（`mode: \"continuous\"`），只可由主动技能或有次数限制的事件施加**。\n   - `flying`（飞行）：受到攻击伤害减半（向下取整，先减半再扣铁皮与护盾）；正常回合结束减少 1 层。**允许角色、装备、敌人使用**。\n   - `overload`（超限）：上限 1 层；仅对我方角色的主动技能生效，使下一次角色主动技能消耗翻倍并额外生效一次，用后清除（跨回合保留、跨场清除，结合技不生效）。**对敌人不生效，地图构筑严禁给怪物挂 `overload`**。\n2. 通用负面减益（Negative）：\n   - `weak`（虚弱）：攻击伤害减少 **25%**（效果**不随层数叠加**，多层仅代表持续回合，正常回合结束减少 1 层）。\n   - `vulnerable`（易伤）：作为独立效果触发，使受到的直接伤害增加 **50%**（效果**不随层数叠加**，与力量各自独立计算，多层仅代表持续回合，正常回合结束减少 1 层）。\n   - `bleed`（流血）：每次主动行动前失去等同于层数的 `hp`（数值型持续伤害，随关卡与角色等级同比缩放），若因流血致死则取消本次行动；正常回合结束减少 1 层。\n   - `poison`（中毒）：回合末在再生结算后失去等同于层数的 `hp`（数值型持续伤害，随关卡与角色等级同比缩放），随后减少 1 层。\n   - `bind`（禁锢）：跳过目标本回合尚未执行的主动行动，回合结束解除（1 层即满，叠加层数不延长持续时间）。**对敌我双方皆有效**：打在敌人身上会跳过对方本回合后续未执行意图；打在我方身上则令本回合剩余行动失效且不可换位。\n   - `slow`（迟缓）：降低敌人速度并实时推后其在时间轴上的行动顺位；2 层及以上在正常回合末减少 1 层（最低保留 1 层）。\n   - `blind`（致盲）：敌人本次攻击若同时伤害 2 个及以上目标，其中 1 个随机目标本次伤害变为 0；正常回合结束减少 1 层（单目标攻击不受致盲影响）。\n\n三、目标指向与禁用红线（必守）\n1. 敌我指向不可混用：\n   - 伤害与负面状态只能指向敌方目标；治疗、回蓝、护盾、净化与正面状态只能指向自身、己方队友或怪物自身的友方。\n2. `slow`（迟缓）禁用边界：\n   - `slow` 仅影响敌人速度，**严禁生成敌人对玩家前场（`opponents`）施加 `slow`**（给对方套等同无效），也**严禁角色与装备给我方队友施加 `slow`**；仅允许我方对敌人施加。\n3. `blind`（致盲）禁用边界：\n   - 我方角色与装备可对敌人施加 `blind`；**禁止地图 API 生成的敌人或 Boss 拥有施加 `blind` 的意图**。\n4. 严禁使用专属状态与专属标记：\n   - `meteor`（流星剑姿）、`balance`（平衡）、`sacrifice`（欺之牺）以及官方 NPC 个人标记 `melody`（悠扬）均属于官方角色或纹章戒指专属，**严禁任何生成角色、以太装备或敌人选用**（代码也会直接校验拒收）。\n\n五、武器与魔法伤害类型（12 种伤害属性 + 增幅标记）\n1. **5 种物理武器类型**：`sword`（剑）、`axe`（斧）、`spear`（枪）、`brawl`（格斗）、`special-weapon`（特殊武器）。\n2. **7 种元素魔法类型**：`fire`（火）、`ice`（冰）、`wind`（风）、`lightning`（电）、`light`（光）、`dark`（暗）、`special-magic`（特殊魔法）。\n3. **非伤害技能标签 `support`（增幅）**：当且仅当技能 `effects` 不包含 `type === 'damage'` 时使用，仅作自身/友方增益、治疗、护盾或纯粹减益辅助，不参与敌方弱点判定与削韧。\n4. **Schema 规范提示**：\n   - 角色设计可在 `data.attackType` 指定普攻伤害类型（上述 12 种之一），并为每个主动技能与 `entrySkill` 指定 `damageType`（12 种伤害类型之一或 `support`）。\n   - 未显式填写时，程序会依角色武器类型、技能描述自动归类默认属性，旧存档同样无缝兼容。\n\n六、敌方弱点、韧性槽与击破晕眩（Break）机制\n1. **弱点与韧性定义**：\n   - 每种敌人固定拥有 **2～5 个不重复弱点**（`weaknesses`，取自上述 12 种伤害属性）与统一固定的 **韧性上限**（`toughness` / `maxToughness`，参考档位：普通小怪 `2～4`、精英 `4～6`、首领 `6～9`、霸主 `8～14`）。\n   - 地图 API 设计自定义敌人时，可显式声明 `weaknesses` 与 `toughness`（同种敌人保持一致，不随单局随机漂移）。\n2. **未知盲盒与永久图鉴记忆**：\n   - 首次遭遇的敌方弱点槽默认以 `?` 隐藏展示；唯有在**确认提交并实际执行**的战斗事件中，以匹配其弱点属性的直接伤害命中该目标（且未因 `blind` 落空），该弱点才会被永久揭示并记忆至 `revealedWeaknesses`（预演阶段不会偷跑揭示 `?`）。\n3. **削韧、击破（Break）与跳回合节奏**：\n   - 我方每次匹配弱点属性的直接伤害命中未击破的敌人，扣减其 **`1` 点韧性**。\n   - 当敌方韧性降至 `0` 时立即触发 **击破晕眩（Break）**：对目标立刻施加 `bind` 跳过其**本回合尚未执行的剩余行动**，并标记 `brokenNextRound` 令其在**下一整回合完全跳过所有行动**；随后在再下一回合开始前解除 `broken` 状态并回满韧性至 `maxToughness`。\n\n七、【后续开发与维护提示】\n今后若游戏内新增、删改通用 Buff、Debuff 或伤害类型与韧性规则，请直接原地编辑本条目说明；**禁止再另建版本号或“修正/补充”类 `EX` 补丁条目**。",
       "constant": true,
       "vectorized": false,
       "selective": true,
@@ -12986,6 +12986,1298 @@
           "apiTargets": [
             "script",
             "chat"
+          ]
+        }
+      }
+    },
+    "254": {
+      "uid": 254,
+      "apiTargets": [
+        "script",
+        "chat"
+      ],
+      "key": [
+        "millMossBug",
+        "苔背虫"
+      ],
+      "keysecondary": [],
+      "comment": "怪物图鉴：苔背虫",
+      "content": "名称：苔背虫\n外形：生着厚实湿苔背壳与短短触角的绿褐甲虫，常紧贴水渠湿石爬行。\n习性与能力：喜湿怕火，靠啃食磨坊周边腐叶与溅湿面粉结块为生。\n行动方式：受惊时会弓起苔壳笨拙碰撞，或抖落背上的潮湿青苔孢粉。",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 180,
+      "position": 1,
+      "disable": false,
+      "ignoreBudget": false,
+      "excludeRecursion": true,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 254,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "millMossBug",
+          "apiTargets": [
+            "script",
+            "chat"
+          ]
+        }
+      }
+    },
+    "255": {
+      "uid": 255,
+      "apiTargets": [
+        "script",
+        "chat"
+      ],
+      "key": [
+        "millCanalFrog",
+        "水渠青蛙"
+      ],
+      "keysecondary": [],
+      "comment": "怪物图鉴：水渠青蛙",
+      "content": "名称：水渠青蛙\n外形：眼袋鼓胀、皮肤泛出青绿水斑的大体型水渠蛙，蹼爪沾满渠底淤泥。\n习性与能力：群居在绿蕨磨坊外围干涸水渠残留水洼里，听到脚步声便此起彼伏鼓鸣。",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 180,
+      "position": 1,
+      "disable": false,
+      "ignoreBudget": false,
+      "excludeRecursion": true,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 255,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "millCanalFrog",
+          "apiTargets": [
+            "script",
+            "chat"
+          ]
+        }
+      }
+    },
+    "256": {
+      "uid": 256,
+      "apiTargets": [
+        "script",
+        "chat"
+      ],
+      "key": [
+        "millShellBeetle",
+        "大壳甲虫"
+      ],
+      "keysecondary": [],
+      "comment": "怪物图鉴：大壳甲虫",
+      "content": "名称：大壳甲虫\n外形：背甲厚重发黑、缘角呈锯齿状的硬壳大甲虫，甲缝常沾着枯草与面粉灰。\n习性与能力：常藏在篱笆桩底与磨坊门槛阴影里，受袭就缩紧躯干护住软腹。\n行动方式：压低前足迈步顶撞，同时将厚壳合拢成坚硬甲壁。",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 180,
+      "position": 1,
+      "disable": false,
+      "ignoreBudget": false,
+      "excludeRecursion": true,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 256,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "millShellBeetle",
+          "apiTargets": [
+            "script",
+            "chat"
+          ]
+        }
+      }
+    },
+    "257": {
+      "uid": 257,
+      "apiTargets": [
+        "script",
+        "chat"
+      ],
+      "key": [
+        "millNettle",
+        "伤人荨麻"
+      ],
+      "keysecondary": [],
+      "comment": "怪物图鉴：伤人荨麻",
+      "content": "名称：伤人荨麻\n外形：缠绕腐朽木篱笆疯长的巨株野荨麻，锯齿阔叶与紫绿长藤遍布毒刺。\n习性与能力：扎根于磨坊外围潮泥与腐殖土间，畏火与快刃，藤梢脆嫩。\n行动方式：风过似地挥鞭抽打棘藤，散出带着麻痒感的小撮棘毛。",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 180,
+      "position": 1,
+      "disable": false,
+      "ignoreBudget": false,
+      "excludeRecursion": true,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 257,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "millNettle",
+          "apiTargets": [
+            "script",
+            "chat"
+          ]
+        }
+      }
+    },
+    "258": {
+      "uid": 258,
+      "apiTargets": [
+        "script",
+        "chat"
+      ],
+      "key": [
+        "millVolePup",
+        "巨型田鼠幼崽"
+      ],
+      "keysecondary": [],
+      "comment": "怪物图鉴：巨型田鼠幼崽",
+      "content": "名称：巨型田鼠幼崽\n外形：比普通家鼠略硕、门牙已经外露的棕灰幼年巨型田鼠，鼻尖总沾着陈年麦糠。\n习性与能力：成群钻出破粮袋与篱角地洞四处觅食，动作敏捷却身板单薄。\n行动方式：压低身形窜步近身快速撕咬后立刻退回鼠群遮掩。",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 180,
+      "position": 1,
+      "disable": false,
+      "ignoreBudget": false,
+      "excludeRecursion": true,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 258,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "millVolePup",
+          "apiTargets": [
+            "script",
+            "chat"
+          ]
+        }
+      }
+    },
+    "259": {
+      "uid": 259,
+      "apiTargets": [
+        "script",
+        "chat"
+      ],
+      "key": [
+        "millStrayCat",
+        "流浪野猫"
+      ],
+      "keysecondary": [],
+      "comment": "怪物图鉴：流浪野猫",
+      "content": "名称：流浪野猫\n外形：毛色杂乱、耳尖带缺口的瘦长流浪野猫，常在磨坊窗框与破屋檐间蹲伏。\n习性与能力：原本随村里抓鼠跑进废弃磨坊，久而久之变成地盘意识极强的半野化猎手。\n行动方式：弓背压低重心跃起，以迅疾挥爪交替试探破绽。",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 180,
+      "position": 1,
+      "disable": false,
+      "ignoreBudget": false,
+      "excludeRecursion": true,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 259,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "millStrayCat",
+          "apiTargets": [
+            "script",
+            "chat"
+          ]
+        }
+      }
+    },
+    "260": {
+      "uid": 260,
+      "apiTargets": [
+        "script",
+        "chat"
+      ],
+      "key": [
+        "millDustBat",
+        "灰尘蝠"
+      ],
+      "keysecondary": [],
+      "comment": "怪物图鉴：灰尘蝠",
+      "content": "名称：灰尘蝠\n外形：翼膜沾满苍白面粉粉尘的灰褐蝙蝠，双眼畏光却善听梁间微响。\n习性与能力：白日倒挂在磨坊二楼高梁与角落木架下，受惊便扬起粉尘四散俯冲。\n行动方式：扇动带粉尘的宽翼高速掠过半空，伴随刺耳高频尖啸。",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 180,
+      "position": 1,
+      "disable": false,
+      "ignoreBudget": false,
+      "excludeRecursion": true,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 260,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "millDustBat",
+          "apiTargets": [
+            "script",
+            "chat"
+          ]
+        }
+      }
+    },
+    "261": {
+      "uid": 261,
+      "apiTargets": [
+        "script",
+        "chat"
+      ],
+      "key": [
+        "millGiantVole",
+        "巨型田鼠"
+      ],
+      "keysecondary": [],
+      "comment": "怪物图鉴：巨型田鼠",
+      "content": "名称：巨型田鼠\n外形：体长近乎半人高的凶悍巨型田鼠，毛皮粗硬如毡，门牙泛黄锋利。\n习性与能力：长期啃食磨坊遗留陈麦与炼金废渣而体魄倍增，动作沉猛迅疾。\n行动方式：低吼踩碎木板直线冲锋，夹带麦糠与面尘横撞拦路者。",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 180,
+      "position": 1,
+      "disable": false,
+      "ignoreBudget": false,
+      "excludeRecursion": true,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 261,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "millGiantVole",
+          "apiTargets": [
+            "script",
+            "chat"
+          ]
+        }
+      }
+    },
+    "262": {
+      "uid": 262,
+      "apiTargets": [
+        "script",
+        "chat"
+      ],
+      "key": [
+        "millMiniMoldSlime",
+        "小型霉斑史莱姆"
+      ],
+      "keysecondary": [],
+      "comment": "怪物图鉴：小型霉斑史莱姆",
+      "content": "名称：小型霉斑史莱姆\n外形：表面浮满绿白斑点与微光菌丝的半透明黏液团，体内缠着麦壳与木屑。\n习性与能力：滋生于磨坊阴暗潮湿的墙角与酒窖石阶，靠吸收水渍与腐菌维持躯体。\n行动方式：缓慢蠕动鼓泡，随后猛然溅射苦涩发酸的霉绿泥浆。",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 180,
+      "position": 1,
+      "disable": false,
+      "ignoreBudget": false,
+      "excludeRecursion": true,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 262,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "millMiniMoldSlime",
+          "apiTargets": [
+            "script",
+            "chat"
+          ]
+        }
+      }
+    },
+    "263": {
+      "uid": 263,
+      "apiTargets": [
+        "script",
+        "chat"
+      ],
+      "key": [
+        "millPaleSlug",
+        "灰白蛞蝓"
+      ],
+      "keysecondary": [],
+      "comment": "怪物图鉴：灰白蛞蝓",
+      "content": "名称：灰白蛞蝓\n外形：通体苍白半透明、隐约可见暗绿内囊的肥厚巨型蛞蝓，爬行之处留下滑腻黏痕。\n习性与能力：怕火与强烈光线，常顺酒窖石壁与橡木桶阴面缓慢蠕行。\n行动方式：拖曳沉重软躯前压，分泌浑浊厚膜护住柔软体表。",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 180,
+      "position": 1,
+      "disable": false,
+      "ignoreBudget": false,
+      "excludeRecursion": true,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 263,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "millPaleSlug",
+          "apiTargets": [
+            "script",
+            "chat"
+          ]
+        }
+      }
+    },
+    "264": {
+      "uid": 264,
+      "apiTargets": [
+        "script",
+        "chat"
+      ],
+      "key": [
+        "millVoleAlpha",
+        "田鼠头鼠"
+      ],
+      "keysecondary": [],
+      "comment": "怪物图鉴：田鼠头鼠",
+      "content": "名称：田鼠头鼠\n外形：双耳残缺、额头顶着一块生锈废铁片的硕大鼠王，肩背疤痕累累。\n习性与能力：统率着绿蕨磨坊外围篱笆内的所有田鼠群，护巢心切且极为记仇。",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 180,
+      "position": 1,
+      "disable": false,
+      "ignoreBudget": false,
+      "excludeRecursion": true,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 264,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "millVoleAlpha",
+          "apiTargets": [
+            "script",
+            "chat"
+          ]
+        }
+      }
+    },
+    "265": {
+      "uid": 265,
+      "apiTargets": [
+        "script",
+        "chat"
+      ],
+      "key": [
+        "millRoachSwarm",
+        "硬翅蟑螂群"
+      ],
+      "keysecondary": [],
+      "comment": "怪物图鉴：硬翅蟑螂群",
+      "content": "名称：硬翅蟑螂群\n外形：由倾倒破麻袋与无数黑亮大壳硬翅蟑螂组成的虫潮集群，甲翅摩擦嗡嗡作响。\n习性与能力：盘踞于狼籍的磨坊主厅陈粉堆里，遇敌便成片自破袋与缝隙漫溢而出。\n行动方式：随面粉烟尘掀涌成浪扑向地面，并相互叠聚成厚甲阵列。",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 180,
+      "position": 1,
+      "disable": false,
+      "ignoreBudget": false,
+      "excludeRecursion": true,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 265,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "millRoachSwarm",
+          "apiTargets": [
+            "script",
+            "chat"
+          ]
+        }
+      }
+    },
+    "266": {
+      "uid": 266,
+      "apiTargets": [
+        "script",
+        "chat"
+      ],
+      "key": [
+        "millVampireBat",
+        "吸血灰尘蝠"
+      ],
+      "keysecondary": [],
+      "comment": "怪物图鉴：吸血灰尘蝠",
+      "content": "名称：吸血灰尘蝠\n外形：翼展惊人的苍灰巨蝠首领，吻部露着猩红尖牙，翼缘卷带面粉灰雾。\n习性与能力：盘踞在磨坊二楼最高木梁阴影中，习惯趁来客低头翻找残页时骤然俯冲。\n行动方式：借粉尘漩涡悬空滑翔，以锐齿掠咬吸食生气后再振翼退回高梁。",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 180,
+      "position": 1,
+      "disable": false,
+      "ignoreBudget": false,
+      "excludeRecursion": true,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 266,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "millVampireBat",
+          "apiTargets": [
+            "script",
+            "chat"
+          ]
+        }
+      }
+    },
+    "267": {
+      "uid": 267,
+      "apiTargets": [
+        "script",
+        "chat"
+      ],
+      "key": [
+        "millMoldSlimeBoss",
+        "霉斑史莱姆"
+      ],
+      "keysecondary": [],
+      "comment": "怪物图鉴：霉斑史莱姆",
+      "content": "名称：霉斑史莱姆\n外形：体躯庞大、内部清晰嵌着半只生锈嵌铜旧铁钱箱与发光孢子菇丛的腐绿史莱姆母体。\n习性与能力：堵在酒窖前潮湿通道尽头，将当年村镇遗落钱箱连同朽木酒桶一并吞裹保护。\n行动方式：抡动体内的旧铁钱箱重重砸地，同时引爆背脊菇伞散出腐绿霉雾。",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 180,
+      "position": 1,
+      "disable": false,
+      "ignoreBudget": false,
+      "excludeRecursion": true,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 267,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "millMoldSlimeBoss",
+          "apiTargets": [
+            "script",
+            "chat"
+          ]
+        }
+      }
+    },
+    "268": {
+      "uid": 268,
+      "apiTargets": [
+        "script",
+        "chat"
+      ],
+      "key": [
+        "alchemicalPuppet",
+        "失败的炼金傀偶"
+      ],
+      "keysecondary": [],
+      "comment": "怪物图鉴：失败的炼金傀偶",
+      "content": "名称：失败的炼金傀偶\n外形：三十年前失控炼金实验留下的半成品人偶：龟裂米白瓷面具下眼眶空洞，暗铜铸铁骨架胸口悬着旋转泛光的紫绿反重力炼金核心，背部咬合铜齿咔哒转动，不对称长木杆与生锈铁钳手臂低垂。\n习性与能力：平日以反重力核心倒吊于阁楼齿轮室天花板阴影内，听见梯声便贴脸骤降，嘴里反复吐出含混断续的怨气语句，极怕火烧与沉重钝击。\n行动方式：先笨拙挥舞长木杆横扫，或高速空转背部发条重整姿态，危急时翻转悬停连同碎齿轮倾砸重力冲击波。",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 180,
+      "position": 1,
+      "disable": false,
+      "ignoreBudget": false,
+      "excludeRecursion": true,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 268,
+      "extensions": {
+        "wanxiang": {
+          "monsterId": "alchemicalPuppet",
+          "apiTargets": [
+            "script",
+            "chat"
+          ]
+        }
+      }
+    },
+    "269": {
+      "uid": 269,
+      "apiTargets": [
+        "script",
+        "chat",
+        "map"
+      ],
+      "key": [
+        "绿蕨磨坊",
+        "绿蕨村",
+        "磨坊主厅",
+        "地下酒窖",
+        "齿轮室"
+      ],
+      "keysecondary": [],
+      "comment": "副本设定：绿蕨磨坊（区域结构与氛围）",
+      "content": "【绿蕨磨坊 · 区域结构与氛围设定】\n一、地理定位与危险级别\n绿蕨磨坊位于艾尔德兰帝国中南部「绿蕨村」外约半日路程的山脚河畔（紧邻星钟城西南郊外围水渠）。因三十余年前一次炼金事故而遭荒置，周围石砌水渠渐趋干涸，野生蕨草、带刺荨麻与湿地青苔沿墙疯长。整体魔物强度温和，属 **LV.1～5 低危新人副本**，也是星钟城南向最容易踏入的近郊勘探点。\n\n二、废弃前因\n磨坊原属绿蕨村公共谷物水磨，直到三十年前一名行事古怪的炼金术士出资买下并封锁了顶层阁楼作为私人实验室。某夜磨坊上层突然传出剧烈爆炸与刺鼻白烟，半扇砖木屋壁被震垮，术士就此失踪。村人忌惮残留异响不再靠近，日久天长，各类小兽、虫蚁与腐绿霉菌便占据了空楼。\n\n三、五大区域风貌\n1. **外围水渠与篱笆（主线 1）**：倾倒腐朽的木篱笆围住干涸石渠与半塌木水轮；渠底水洼混着青苔，水渠青蛙与苔背虫栖息其间，伤人荨麻与流浪野猫藏在草篱暗处，大群田鼠在篱角掘洞筑巢。\n2. **磨坊主厅（主线 2）**：散落着撕破发霉的鼓胀麻袋，陈年结块的面粉如薄霜般覆满地板与断裂石磨盘；阴影木柜与破粮堆间爬满黑亮大壳的硬翅蟑螂群，不时有瘦骨野猫穿梁窜过。\n3. **地下酒窖通道（支线 a）**：隐于主厅堆垛后方的斜掀木门与潮湿青苔石阶。下方原为囤放谷酒与干货的冷窖，如今橡木酒桶腐裂漏液，墙角生出大片孢子菇丛，一团巨大腐绿的霉斑史莱姆吞裹着半只旧铁钱箱堵在暗道尽头。\n4. **磨坊二楼（主线 3）**：原为储粮阁仓与炼金术士临时书房，吱呀木梯通向粉尘弥漫、散落手写笔记残页的木梁空间；成群灰尘蝠倒挂于屋架阴影里，由猩红眼瞳的吸血灰尘蝠统御夜袭。\n5. **阁楼齿轮室（主线 4）**：半倾陡峭木梯直抵顶层，布满锈迹的大型黄铜时钟齿轮仍在屋梁间咔哒咬合，中央试验台上悬空旋转着泛紫绿微光的**反重力炼金核心**。一具披着龟裂白瓷面具、拖着不对称长木杆与生锈铁钳的半成品「失败的炼金傀偶」倒吊于天花板阴影间，随时失重俯冲贴脸，畏火与重钝击，嘶哑吐出断续怨言。",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 210,
+      "position": 1,
+      "disable": false,
+      "ignoreBudget": false,
+      "excludeRecursion": true,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 269,
+      "extensions": {
+        "wanxiang": {
+          "millLore": "mill-setting",
+          "apiTargets": [
+            "script",
+            "chat",
+            "map"
+          ]
+        }
+      }
+    },
+    "270": {
+      "uid": 270,
+      "apiTargets": [
+        "script",
+        "chat"
+      ],
+      "key": [
+        "绿蕨磨坊",
+        "绿蕨村村长",
+        "地精拾荒者",
+        "田鼠泛滥",
+        "酒窖霉潮",
+        "失败的炼金傀偶"
+      ],
+      "keysecondary": [],
+      "comment": "副本生态与委托：绿蕨磨坊（NPC池与四主线一支线）",
+      "content": "【绿蕨磨坊 · NPC 池与四主线一支线委托结构】\n一、本地可出场 NPC 池（6 位）\n1. **绿蕨村老村长（霍尔特）**：拎着空面粉样袋守在村外路口，熟知三十年前炼金术士买下磨坊与当夜爆炸的前后经纬，最忧心田鼠与虫害漫延毁掉秋收麦田。\n2. **醉醺醺的地精拾荒者（格里克）**：抱着半坛麦酒窝在碎墙外拾荒，从坍塌屋檐与旧炉灰里摸出不少残缺器皿，愿意向礼貌问询的冒险者低价交易**基础炼金阵图残页、低阶伤药与微弱魔力药水**，唯独听到阁楼咔哒声就立刻抱着酒坛缩回石头后。\n3. **巡篱老农妇（玛莎婶）**：常在磨坊外围菜地边缘查看泥脚印，懂得分辨哪些荨麻丛藏着毒刺、哪段水渠闸口最容易卡住笨重动物。\n4. **寻猫村童（小汤米）**：偷偷跟着跑丢的街角野猫跑到绿蕨磨坊篱笆外，记得主厅破窗和阁楼偶尔掉下来的黄铜小零件。\n5. **星钟见习学徒（柯林）**：背着炭笔本收集帝国境内失落民间手稿，怀疑磨坊二楼散落着反重力试验手札，却无力独自通过蝠群封锁。\n6. **星钟城外哨民兵（莱恩）**：负责巡查西南郊水渠走向，可为新手旅人标明通往主厅和斜掀木窖门的安全落脚砖。\n\n二、四主线 + 一支线委托层次\n- **主线 1 · 外围水渠与篱笆「田鼠泛滥」**：清理水渠青蛙、伤人荨麻、巨型田鼠与披甲断耳的「田鼠头鼠」，打通推开磨坊正门的路途。\n- **主线 2 · 磨坊主厅「狼籍一片的磨坊主厅」**：穿过面粉堆与碎石磨盘，驱散倾袋涌出的「硬翅蟑螂群」，同时揭开主厅内通往酒窖暗阶与二楼木梯的两道门径。\n- **支线 a · 酒窖前的地下通道「酒窖霉潮」**：从主厅斜门沿青苔石阶下探冷窖，肃清孢子毒雾与吞裹旧钱箱的「霉斑史莱姆」，追回失落窖藏与旧银币箱。\n- **主线 3 · 磨坊二楼「二楼的阴影」**：在飘雪似的面粉微尘与散落炼金笔记间警戒梁上暗影，击退高速掠袭的「吸血灰尘蝠」。\n- **主线 4 · 磨坊阁楼齿轮室「磨坊阁楼的咔哒声」**：踏进永不停息的铜齿交错之室，迎战倒吊天花板贴脸降落、失控暴走的区域霸主「失败的炼金傀偶」，令失衡的反重力炼金核心恢复沉寂。",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 211,
+      "position": 1,
+      "disable": false,
+      "ignoreBudget": false,
+      "excludeRecursion": true,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 270,
+      "extensions": {
+        "wanxiang": {
+          "millLore": "mill-ecology",
+          "apiTargets": [
+            "script",
+            "chat"
+          ]
+        }
+      }
+    },
+    "271": {
+      "uid": 271,
+      "apiTargets": [
+        "script"
+      ],
+      "key": [
+        "official-dungeon:mill-1-canal"
+      ],
+      "keysecondary": [],
+      "comment": "官设副本：绿蕨磨坊 · 外围水渠与篱笆",
+      "content": "【官设副本大纲：绿蕨磨坊 · 外围水渠与篱笆（田鼠泛滥）】\n大纲以第三人称改写，<user>仅在本大纲中代指玩家创建的主角；生成正文时按该主角的实际姓名、设定与自然称呼叙述，不照抄代称。这是完整连续的大纲参考，保留人物、线索与事件的先后关系；文风与细节由当前预设决定。由AI根据实际战斗进度自行安排事件的叙述位置，在本次回复中讲完本次旅程，不预先按场次切分大纲。战斗名单、场次、胜负和已发生事实以本次请求的数据为准。\n\n<user>与伊蒂丝告别星钟城门，沿城外西南方干涸水渠步行抵达三十年前被炼金爆炸废弃的「绿蕨磨坊」外围。绿蕨村老村长霍尔特在路口焦急托付「田鼠泛滥」委托，倾倒的木篱笆外还缩着一个抱着酒坛、醉醺醺的地精拾荒者，他偷偷摸出捡来的烧焦炼金阵图残页和几支低阶伤药/微弱魔力药水，愿以小本买卖交易并再三提醒别惊动阁楼里的响动。一行人踏过湿苔水渠与荆棘篱笆，先逐退拦路的水渠青蛙，识别伤人荨麻的易伤破绽与巨型田鼠的高速扑击节奏，再于磨坊门口合力击溃披甲断耳的「田鼠头鼠」，稳稳扫清磨坊正门外患。",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 850,
+      "position": 1,
+      "disable": false,
+      "ignoreBudget": false,
+      "excludeRecursion": true,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 271,
+      "extensions": {
+        "wanxiang": {
+          "officialDungeonId": "mill-1-canal",
+          "apiTargets": [
+            "script"
+          ]
+        }
+      }
+    },
+    "272": {
+      "uid": 272,
+      "apiTargets": [
+        "script"
+      ],
+      "key": [
+        "official-dungeon:mill-2-hall"
+      ],
+      "keysecondary": [],
+      "comment": "官设副本：绿蕨磨坊 · 磨坊主厅",
+      "content": "【官设副本大纲：绿蕨磨坊 · 磨坊主厅（狼籍一片的磨坊主厅）】\n大纲以第三人称改写，<user>仅在本大纲中代指玩家创建的主角；生成正文时按该主角的实际姓名、设定与自然称呼叙述，不照抄代称。这是完整连续的大纲参考，保留人物、线索与事件的先后关系；文风与细节由当前预设决定。由AI根据实际战斗进度自行安排事件的叙述位置，在本次回复中讲完本次旅程，不预先按场次切分大纲。战斗名单、场次、胜负和已发生事实以本次请求的数据为准。\n\n推开腐朽松动的磨坊正门，<user>与伴随同行的伊蒂丝（及召唤来的伙伴）踏入狼籍一片的磨坊主厅。发霉撕裂的麦粉麻袋堆成小丘，半扇碎裂石磨盘横倒堂中，陈年面粉微尘在漏光屋架下翻涌。寻猫误入窗边的村童与外围见习民兵此前提及的异动应验：从破烂粮袋与地板缝中陡然涌出大片黑壳「硬翅蟑螂群」，并夹杂着受惊野猫与腐叶甲虫。主厅一侧现出通往二楼的吱呀木梯，另一侧堆垛背后则露出一扇斜掀木制酒窖盖板，肃清主厅虫潮即可同时打通上楼与下探酒窖的道路。",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 850,
+      "position": 1,
+      "disable": false,
+      "ignoreBudget": false,
+      "excludeRecursion": true,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 272,
+      "extensions": {
+        "wanxiang": {
+          "officialDungeonId": "mill-2-hall",
+          "apiTargets": [
+            "script"
+          ]
+        }
+      }
+    },
+    "273": {
+      "uid": 273,
+      "apiTargets": [
+        "script"
+      ],
+      "key": [
+        "official-dungeon:mill-a-cellar"
+      ],
+      "keysecondary": [],
+      "comment": "官设副本：绿蕨磨坊 · 酒窖前的地下通道",
+      "content": "【官设副本大纲：绿蕨磨坊 · 酒窖前的地下通道（酒窖霉潮）】\n大纲以第三人称改写，<user>仅在本大纲中代指玩家创建的主角；生成正文时按该主角的实际姓名、设定与自然称呼叙述，不照抄代称。这是完整连续的大纲参考，保留人物、线索与事件的先后关系；文风与细节由当前预设决定。由AI根据实际战斗进度自行安排事件的叙述位置，在本次回复中讲完本次旅程，不预先按场次切分大纲。战斗名单、场次、胜负和已发生事实以本次请求的数据为准。\n\n<user>小队掀开磨坊主厅旁那扇歪斜潮湿的木窖门，沿覆满滑腻青苔的石阶踏入地下通道。破裂的橡木酒桶仍在渗流酸腐酒渍，霉菌孢子在潮气中散出绿光，灰白蛞蝓与小型霉斑史莱姆从桶底钻出拦路。在微光尽头，一团巨大的「霉斑史莱姆」正吞裹着半个嵌铜旧铁钱箱蠕动堵路——那是绿蕨村旧年封存农税银币与药酿的所在，彻底击败孢子母体即可驱散地窖霉潮、找回旧钱箱。",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 850,
+      "position": 1,
+      "disable": false,
+      "ignoreBudget": false,
+      "excludeRecursion": true,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 273,
+      "extensions": {
+        "wanxiang": {
+          "officialDungeonId": "mill-a-cellar",
+          "apiTargets": [
+            "script"
+          ]
+        }
+      }
+    },
+    "274": {
+      "uid": 274,
+      "apiTargets": [
+        "script"
+      ],
+      "key": [
+        "official-dungeon:mill-3-loft"
+      ],
+      "keysecondary": [],
+      "comment": "官设副本：绿蕨磨坊 · 磨坊二楼",
+      "content": "【官设副本大纲：绿蕨磨坊 · 磨坊二楼（二楼的阴影）】\n大纲以第三人称改写，<user>仅在本大纲中代指玩家创建的主角；生成正文时按该主角的实际姓名、设定与自然称呼叙述，不照抄代称。这是完整连续的大纲参考，保留人物、线索与事件的先后关系；文风与细节由当前预设决定。由AI根据实际战斗进度自行安排事件的叙述位置，在本次回复中讲完本次旅程，不预先按场次切分大纲。战斗名单、场次、胜负和已发生事实以本次请求的数据为准。\n\n踏上吱呀作响的老旧木梯来到磨坊二楼，陈年面粉积灰随脚步腾起。这里曾是原磨坊粮仓兼古怪炼金术士的临时书房，破木案上散落着焦边炼金笔记与未成形的重力符号草图（星钟见习学徒柯林一直惦记的线索便藏在这些零页间）。正当一行人打量桌案与屋架时，倒挂于横梁阴影深处的「灰尘蝠」成群惊起扑面，统率蝠群的猩红巨蝠「吸血灰尘蝠」更在尘雾旋涡中高速俯冲。击破蝠群首领后，头顶阁楼木板缝隙传来清晰规律、令人不安的金属咔哒声。",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 850,
+      "position": 1,
+      "disable": false,
+      "ignoreBudget": false,
+      "excludeRecursion": true,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 274,
+      "extensions": {
+        "wanxiang": {
+          "officialDungeonId": "mill-3-loft",
+          "apiTargets": [
+            "script"
+          ]
+        }
+      }
+    },
+    "275": {
+      "uid": 275,
+      "apiTargets": [
+        "script"
+      ],
+      "key": [
+        "official-dungeon:mill-4-attic"
+      ],
+      "keysecondary": [],
+      "comment": "官设副本：绿蕨磨坊 · 磨坊阁楼齿轮室",
+      "content": "【官设副本大纲：绿蕨磨坊 · 磨坊阁楼齿轮室（磨坊阁楼的咔哒声）】\n大纲以第三人称改写，<user>仅在本大纲中代指玩家创建的主角；生成正文时按该主角的实际姓名、设定与自然称呼叙述，不照抄代称。这是完整连续的大纲参考，保留人物、线索与事件的先后关系；文风与细节由当前预设决定。由AI根据实际战斗进度自行安排事件的叙述位置，在本次回复中讲完本次旅程，不预先按场次切分大纲。战斗名单、场次、胜负和已发生事实以本次请求的数据为准。\n\n顺着窄陡木梯登上磨坊最高处的阁楼齿轮室，失修却仍在空转的黄铜时钟齿轮卡得嘎吱响，屋梁尽头悬浮着一枚泛出紫绿微光的失控**反重力炼金核心**。阴影骤降——一尊戴着龟裂米白瓷面具、以扭曲木杆与生锈铁钳为臂的半成品人偶竟**倒吊在天花板上贴脸现身**！「失败的炼金傀偶」口中含混吐出断续怨语，借错乱重力翻转砸落或疯狂错位重整发条，唯有火烧与重钝击能有效崩解其木瓷躯壳。击败这具失控造物后，反重力核心幽光敛去，绿蕨磨坊三十载怪声终于归于沉寂。",
+      "constant": false,
+      "vectorized": false,
+      "selective": true,
+      "selectiveLogic": 0,
+      "addMemo": false,
+      "order": 850,
+      "position": 1,
+      "disable": false,
+      "ignoreBudget": false,
+      "excludeRecursion": true,
+      "preventRecursion": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": true,
+      "matchCreatorNotes": false,
+      "delayUntilRecursion": 0,
+      "probability": 100,
+      "useProbability": true,
+      "depth": 4,
+      "outletName": "",
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "scanDepth": null,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": "",
+      "role": 0,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "triggers": [],
+      "displayIndex": 275,
+      "extensions": {
+        "wanxiang": {
+          "officialDungeonId": "mill-4-attic",
+          "apiTargets": [
+            "script"
           ]
         }
       }

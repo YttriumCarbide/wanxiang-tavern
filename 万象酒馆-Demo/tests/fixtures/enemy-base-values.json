@@ -1797,5 +1797,226 @@
         25
       ]
     ]
+  },
+  {
+    "id": "millMossBug",
+    "hp": 20,
+    "intents": [
+      [
+        5
+      ],
+      [
+        4
+      ]
+    ]
+  },
+  {
+    "id": "millCanalFrog",
+    "hp": 22,
+    "intents": [
+      [
+        5
+      ],
+      [
+        6
+      ]
+    ]
+  },
+  {
+    "id": "millShellBeetle",
+    "hp": 28,
+    "intents": [
+      [
+        6
+      ],
+      [
+        5
+      ]
+    ]
+  },
+  {
+    "id": "millNettle",
+    "hp": 24,
+    "intents": [
+      [
+        5
+      ],
+      [
+        4
+      ]
+    ]
+  },
+  {
+    "id": "millVolePup",
+    "hp": 20,
+    "intents": [
+      [
+        4
+      ],
+      [
+        5
+      ]
+    ]
+  },
+  {
+    "id": "millStrayCat",
+    "hp": 24,
+    "intents": [
+      [
+        5
+      ],
+      [
+        5
+      ]
+    ]
+  },
+  {
+    "id": "millDustBat",
+    "hp": 22,
+    "intents": [
+      [
+        5
+      ],
+      [
+        4
+      ]
+    ]
+  },
+  {
+    "id": "millGiantVole",
+    "hp": 56,
+    "intents": [
+      [
+        8
+      ],
+      [
+        7
+      ]
+    ]
+  },
+  {
+    "id": "millMiniMoldSlime",
+    "hp": 54,
+    "intents": [
+      [
+        7
+      ],
+      [
+        6
+      ]
+    ]
+  },
+  {
+    "id": "millPaleSlug",
+    "hp": 62,
+    "intents": [
+      [
+        8
+      ],
+      [
+        7
+      ]
+    ]
+  },
+  {
+    "id": "millVoleAlpha",
+    "hp": 84,
+    "intents": [
+      [
+        7
+      ],
+      [
+        8
+      ],
+      [
+        10
+      ],
+      [
+        8
+      ]
+    ]
+  },
+  {
+    "id": "millRoachSwarm",
+    "hp": 106,
+    "intents": [
+      [
+        8
+      ],
+      [
+        9
+      ],
+      [
+        7
+      ],
+      [
+        9
+      ],
+      [
+        8
+      ]
+    ]
+  },
+  {
+    "id": "millVampireBat",
+    "hp": 116,
+    "intents": [
+      [
+        9
+      ],
+      [
+        6
+      ],
+      [
+        8
+      ],
+      [
+        10
+      ],
+      [
+        9
+      ]
+    ]
+  },
+  {
+    "id": "millMoldSlimeBoss",
+    "hp": 122,
+    "intents": [
+      [
+        9
+      ],
+      [
+        8
+      ],
+      [
+        8
+      ],
+      [
+        10
+      ],
+      [
+        9
+      ]
+    ]
+  },
+  {
+    "id": "alchemicalPuppet",
+    "hp": 156,
+    "intents": [
+      [
+        11
+      ],
+      [],
+      [
+        10
+      ],
+      [
+        12
+      ],
+      [],
+      [
+        13
+      ]
+    ]
   }
 ]

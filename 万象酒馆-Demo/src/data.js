@@ -4,6 +4,26 @@ import { FROST_ENEMIES, FROST_BOSSES } from './content/frost-adversaries.js';
 import { UNIVERSAL_ENEMIES, UNIVERSAL_BOSSES } from './content/universal-adversaries.js';
 import { LADDER_ENEMIES, LADDER_BOSSES } from './content/ladder-adversaries.js';
 import { COMMON_ENEMIES, COMMON_BOSSES } from './content/common-adversaries.js';
+import { MILL_ENEMIES, MILL_BOSSES } from './content/mill-adversaries.js';
+
+const OVERLORD_MODEL_OVERRIDES = Object.freeze({
+  apepLamb: { model: 'apep-lamb.glb' },
+  moonEye: { model: 'moon-eye.glb', anatomyIndex: 0 },
+  moonCrown: { model: 'moon-eye.glb', anatomyIndex: 1 },
+  moonRoot: { model: 'moon-eye.glb', anatomyIndex: 2 },
+  ares: { model: 'ares.glb', anatomyIndex: 0 },
+  aresCannonLeft: { model: 'ares.glb', anatomyIndex: 1 },
+  aresCannonRight: { model: 'ares.glb', anatomyIndex: 2 },
+  radiantWyvern: { model: 'radiant-wyvern.glb' },
+  alchemicalPuppet: { model: 'alchemical-puppet.glb' },
+});
+
+const applyModelOverrides = (list) =>
+  list.map((entry) =>
+    Object.hasOwn(OVERLORD_MODEL_OVERRIDES, entry.id)
+      ? { ...entry, ...OVERLORD_MODEL_OVERRIDES[entry.id] }
+      : entry,
+  );
 import {
   EXTRA_ENEMIES,
   EXTRA_BOSSES,
@@ -481,7 +501,8 @@ export const ENEMIES = [
   ...EXTRA_ENEMIES,
   ...UNIVERSAL_ENEMIES,
   ...FOREST_ENEMIES,
-  ...FROST_ENEMIES,
+  ...applyModelOverrides(FROST_ENEMIES),
+  ...MILL_ENEMIES,
 ];
 export const BOSSES = [
   {
@@ -611,11 +632,12 @@ export const BOSSES = [
   },
   ...EXTRA_BOSSES,
   ...UNIVERSAL_BOSSES,
-  ...FOREST_BOSSES,
-  ...FROST_BOSSES,
+  ...applyModelOverrides(FOREST_BOSSES),
+  ...applyModelOverrides(FROST_BOSSES),
+  ...MILL_BOSSES,
 ];
 export const DEFINITIONS = Object.fromEntries(
-  [
+  applyModelOverrides([
     ...HEROES,
     ...ENEMIES,
     ...BOSSES,
@@ -625,7 +647,7 @@ export const DEFINITIONS = Object.fromEntries(
     ...LADDER_BOSSES,
     ...COMMON_ENEMIES,
     ...COMMON_BOSSES,
-  ].map((d) => [d.id, d]),
+  ]).map((d) => [d.id, d]),
 );
 export const ENCOUNTERS = [
   {
@@ -664,47 +686,55 @@ export const ENCOUNTERS = [
     description: '最终对决。敌人降到半血后更换意图。',
   },
 ];
+const BOSS_MAP_OVERRIDES = Object.freeze({
+  millVoleAlpha: 'mill',
+  millRoachSwarm: 'mill',
+  millVampireBat: 'mill',
+  millMoldSlimeBoss: 'mill',
+  alchemicalPuppet: 'mill',
+  bossBloom: 'forest',
+  moonEye: 'forest',
+  bossTide: 'tide',
+  abyssDevourerPython: 'tide',
+  unmooredJudge: 'tide',
+  ares: 'frost',
+  radiantWyvern: 'relic',
+});
+
+const bossSquadFor = (boss) => {
+  const squads = {
+    millVoleAlpha: ['millVolePup', boss, 'millCanalFrog'],
+    millRoachSwarm: ['millMossBug', boss, 'millShellBeetle'],
+    millVampireBat: ['millDustBat', boss, 'millStrayCat'],
+    millMoldSlimeBoss: ['millMiniMoldSlime', boss, 'millPaleSlug'],
+    alchemicalPuppet: [boss],
+    bossBloom: ['warden', boss, 'hound'],
+    moonEye: ['moonCrown', 'moonEye', 'moonRoot'],
+    radiantWyvern: ['pureCreationElemental', boss, 'pureDestructionElemental'],
+    bossTide: ['tideJelly', boss, 'crystalBeetle'],
+    abyssDevourerPython: ['tideJelly', boss, 'crystalBeetle'],
+    unmooredJudge: ['crystalBeetle', boss, 'tideJelly'],
+    returningCore: ['cinderImp', boss, 'pebble'],
+    ruinsGate: ['patrolHound', boss, 'stoneBallista'],
+    chasmBeast: ['viperShadow', boss, 'raptorStorm'],
+    brassColossus: ['stoneBeetle', boss, 'brassSeeker'],
+    cinderPriest: ['tombBeetle', boss, 'cultistSpecter'],
+    apepLamb: ['blackOoze', boss, 'voidParasite'],
+    ares: ['aresCannonLeft', boss, 'aresCannonRight'],
+    banditSyndicateKing: ['banditPoacher', boss, 'banditBruiser'],
+    goblinKingGorg: ['goblinShaman', boss, 'goblinSapper'],
+    erosionRiftTyrant: ['erosionSpitter', boss, 'erosionWing'],
+  };
+  return squads[boss] || ['hound', boss, 'hexer'];
+};
+
 export function encounterSpec(index, boss = 'bossGate') {
   if (!Number.isInteger(index) || !ENCOUNTERS[index]) throw Error('战斗序号无效');
   const spec = { ...ENCOUNTERS[index] };
   if (spec.boss) {
     spec.name = DEFINITIONS[boss]?.name || '首领战';
-    spec.map =
-      boss === 'bossBloom' || boss === 'moonEye'
-        ? 'forest'
-        : boss === 'bossTide'
-          ? 'tide'
-          : boss === 'radiantWyvern'
-            ? 'relic'
-            : 'ruins';
-    spec.enemyIds =
-      boss === 'bossBloom'
-        ? ['warden', boss, 'hound']
-        : boss === 'moonEye'
-          ? ['moonCrown', 'moonEye', 'moonRoot']
-          : boss === 'radiantWyvern'
-            ? ['pureCreationElemental', boss, 'pureDestructionElemental']
-            : boss === 'bossTide'
-              ? ['tideJelly', boss, 'crystalBeetle']
-              : boss === 'ruinsGate'
-                ? ['patrolHound', boss, 'stoneBallista']
-                : boss === 'chasmBeast'
-                  ? ['viperShadow', boss, 'raptorStorm']
-                  : boss === 'brassColossus'
-                    ? ['stoneBeetle', boss, 'brassSeeker']
-                    : boss === 'cinderPriest'
-                      ? ['tombBeetle', boss, 'cultistSpecter']
-                      : boss === 'apepLamb'
-                        ? ['blackOoze', boss, 'voidParasite']
-                        : boss === 'ares'
-                          ? ['aresCannonLeft', boss, 'aresCannonRight']
-                          : boss === 'banditSyndicateKing'
-                            ? ['banditPoacher', boss, 'banditBruiser']
-                            : boss === 'goblinKingGorg'
-                              ? ['goblinShaman', boss, 'goblinSapper']
-                              : boss === 'erosionRiftTyrant'
-                                ? ['erosionSpitter', boss, 'erosionWing']
-                                : ['hound', boss, 'hexer'];
+    spec.map = BOSS_MAP_OVERRIDES[boss] || 'ruins';
+    spec.enemyIds = bossSquadFor(boss);
   } else spec.enemyIds = [...spec.enemyIds];
   return spec;
 }

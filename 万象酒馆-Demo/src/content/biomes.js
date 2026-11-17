@@ -1,5 +1,15 @@
 /** Art direction shared by the renderer, route reference and preview gallery. */
 export const BIOMES = Object.freeze({
+  mill: {
+    name: '绿蕨磨坊',
+    asset: 'greenfern-mill',
+    sky: '#242e27',
+    light: '#ffe6b8',
+    fill: '#8cbda8',
+    mote: '#e8e2c8',
+    mood: 'dust',
+    accent: '#9bc47d',
+  },
   ruins: {
     name: '界隙遗迹',
     asset: 'battle',

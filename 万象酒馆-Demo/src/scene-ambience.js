@@ -24,7 +24,7 @@ export function createSceneAmbience(scene, model, map, resources, reduced) {
     parent.add(mesh);
     return mesh;
   }
-  const bugCount = ['ruins', 'forest', 'frost', 'forge', 'tide'].includes(biomeKey) ? 8 : 0;
+  const bugCount = ['mill', 'ruins', 'forest', 'frost', 'forge', 'tide'].includes(biomeKey) ? 8 : 0;
   for (let i = 0; i < bugCount; i++) {
     const bug = new THREE.Group();
     bug.name = `Border_Beetle_${i}`;
@@ -76,8 +76,17 @@ export function createSceneAmbience(scene, model, map, resources, reduced) {
     }
   }
   model.traverse((node) => {
-    if (node.name.startsWith('Motion_'))
-      mechanisms.push({ node, home: node.position.clone(), phase: mechanisms.length * 0.79 });
+    if (!node.name.startsWith('Motion_')) return;
+    const size = new THREE.Box3().setFromObject(node).getSize(new THREE.Vector3());
+    const axis =
+      node.name === 'Motion_Mill_Core'
+        ? 'y'
+        : size.x <= size.y && size.x <= size.z
+          ? 'x'
+          : size.z <= size.y && size.z <= size.x
+            ? 'z'
+            : 'y';
+    mechanisms.push({ node, home: node.position.clone(), phase: mechanisms.length * 0.79, axis });
   });
   const water = [];
   if (map === 'tide') {
@@ -143,12 +152,19 @@ export function createSceneAmbience(scene, model, map, resources, reduced) {
         leg.rotation.y = Math.sin(time * 16 + phase + index * 2) * 0.5;
       });
     }
-    for (const { node, home, phase } of mechanisms) {
+    for (const { node, home, phase, axis } of mechanisms) {
       if (node.name.startsWith('Motion_Minecart'))
         node.position.z = home.z + Math.sin(time * 0.2 + phase) * 1.7;
       else if (node.name.startsWith('Motion_Piston'))
         node.position.y = home.y + Math.pow((Math.sin(time * 1.8 + phase) + 1) * 0.5, 2) * 0.33;
-      else node.rotation.y = time * (node.name.startsWith('Motion_Gear') ? 0.23 : 0.12) + phase;
+      else if (node.name === 'Motion_Mill_Waterwheel') node.rotation[axis] = time * 0.28 + phase;
+      else if (node.name === 'Motion_Mill_Gear_A' || node.name === 'Motion_Mill_Gear_B') {
+        const dir = node.name.endsWith('_B') ? -1 : 1;
+        node.rotation[axis] = time * 0.42 * dir + phase;
+      } else if (node.name === 'Motion_Mill_Core') {
+        node.rotation.y = time * 0.48 + phase;
+        node.position.y = home.y + Math.sin(time * 1.6 + phase) * 0.08;
+      } else node.rotation.y = time * (node.name.startsWith('Motion_Gear') ? 0.23 : 0.12) + phase;
     }
     water.forEach((mesh, index) => {
       const phase = (time * 0.23 + index * 0.19) % 1;

@@ -107,6 +107,37 @@ export function createDestinationPreview(host) {
     }
   }
   events.on(document, 'visibilitychange', resume);
+  async function loadModelWithFallback(biome) {
+    const assetName = BIOMES[biome]?.asset;
+    const candidates = [
+      `./assets/preview-${biome}.glb`,
+      ...(assetName ? [`./assets/${assetName}.glb`] : []),
+      './assets/preview-forest.glb',
+      './assets/preview-ruins.glb',
+    ];
+    let lastErr;
+    for (const url of [...new Set(candidates)]) {
+      try {
+        const { scene: model } = await loader.loadAsync(url);
+        if (assetName && url.endsWith(`/${assetName}.glb`)) {
+          const box = new THREE.Box3().setFromObject(model);
+          const size = new THREE.Vector3();
+          const center = new THREE.Vector3();
+          box.getSize(size);
+          box.getCenter(center);
+          const span = Math.max(size.x, size.z, size.y, 1);
+          const fit = 9.5 / span;
+          model.scale.multiplyScalar(fit);
+          model.position.set(-center.x * fit, -box.min.y * fit, -center.z * fit);
+        }
+        return resources.object(model);
+      } catch (err) {
+        lastErr = err;
+      }
+    }
+    throw lastErr || Error(`Missing preview model for ${biome}`);
+  }
+
   async function show(map, step = 1) {
     const request = ++ticket;
     active = true;
@@ -117,12 +148,7 @@ export function createDestinationPreview(host) {
     resume();
     const biome = BIOMES[map] ? map : REGIONS[map]?.biome || 'ruins';
     if (!models.has(biome)) {
-      models.set(
-        biome,
-        loader
-          .loadAsync(`./assets/preview-${biome}.glb`)
-          .then(({ scene: model }) => resources.object(model)),
-      );
+      models.set(biome, loadModelWithFallback(biome));
     }
     try {
       const model = await models.get(biome);
@@ -140,7 +166,7 @@ export function createDestinationPreview(host) {
       host.dataset.error = 'false';
       resume();
     } catch {
-      models.delete(map);
+      models.delete(biome);
       if (disposed || request !== ticket) return;
       host.dataset.loading = 'false';
       host.dataset.error = 'true';
