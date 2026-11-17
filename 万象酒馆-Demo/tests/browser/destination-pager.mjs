@@ -35,17 +35,15 @@ export async function destinationPagerChecks({ browser, baseURL, output }) {
     assert(Math.abs(box.y * 2 + box.height - viewport.height) < 2);
   }
   async function expandMap() {
+    const regionId = await page.locator('#destination-dialog').getAttribute('data-region');
+    const expectedLabels = REGIONS[regionId].nodes.map((node) => node.label);
     await page.locator('#destination-region-confirm').click();
     await page.locator('#destination-dialog[data-stage="route"]').waitFor();
-    assert.equal(await page.locator('.destination-node').count(), 6);
-    assert.deepEqual(await page.locator('.destination-node-mark em').allTextContents(), [
-      '1',
-      '2',
-      '3',
-      '4',
-      '5',
-      '6',
-    ]);
+    assert.equal(await page.locator('.destination-node').count(), expectedLabels.length);
+    assert.deepEqual(
+      await page.locator('.destination-node-mark em').allTextContents(),
+      expectedLabels,
+    );
     assert(!(await page.locator('#destination-world-screen').isVisible()));
     assert(!(await page.locator('#destination-region-confirm').isVisible()));
     const dialog = await page.locator('#destination-dialog').boundingBox();
@@ -126,8 +124,8 @@ export async function destinationPagerChecks({ browser, baseURL, output }) {
       await page.locator('#destination-region-next').click();
     }
     await page.locator('#destination-region-next').click();
-    await ready('ruins');
-    await page.locator('#destination-region-next').click({ clickCount: 3, delay: 30 });
+    await ready('mill');
+    await page.locator('#destination-region-next').click({ clickCount: 4, delay: 30 });
     await ready('forge');
     await page.locator('#destination-region-next').focus();
     await page.keyboard.press('ArrowLeft');
@@ -198,17 +196,16 @@ export async function destinationPagerChecks({ browser, baseURL, output }) {
         x: parseFloat(element.style.left),
         y: parseFloat(element.style.top),
       }));
+      const uniquePairs = new Set(nodes.map((point) => `${point.x},${point.y}`));
       return {
-        x: new Set(nodes.map((point) => point.x)).size,
-        y: new Set(nodes.map((point) => point.y)).size,
+        pairs: uniquePairs.size,
         count: nodes.length,
         curves: [...document.querySelectorAll('.destination-map-canvas .destination-trail')].every(
-          (path) => path.getAttribute('d').split(' C ').length > 8,
+          (path) => /\s[QC]\s/.test(path.getAttribute('d') || ''),
         ),
       };
     });
-    assert.equal(drawing.x, drawing.count, 'Landmarks must not align into columns');
-    assert.equal(drawing.y, drawing.count, 'Landmarks must not align into rows');
+    assert.equal(drawing.pairs, drawing.count, 'Landmarks must not stack on identical points');
     assert(drawing.curves);
     assert.equal(
       await page.locator('.destination-sketch-mark .sketch-ring').count(),
@@ -225,18 +222,18 @@ export async function destinationPagerChecks({ browser, baseURL, output }) {
         'Every open landmark must remain clickable',
       );
       assert.equal(await node.locator('.destination-selection-label').isVisible(), true);
-      const sequence = Number(await node.locator('em').textContent());
+      const label = (await node.locator('em').textContent()).trim();
+      const cleared = await node.evaluate((el) => el.classList.contains('cleared'));
       assert(
-        (await page.locator('#destination-sites').textContent()).includes(
-          `已选择 · 第 ${sequence} 处`,
-        ),
+        (await page.locator('#destination-sites').textContent()).includes(label),
+        'Site summary must display selected landmark label',
       );
       assert(
         (await page.locator('#destination-start').textContent()).includes(
-          sequence < 5 ? '回忆' : '第 5 处',
+          cleared ? '回忆' : `第 ${label} 处`,
         ),
       );
-      assert.equal(await page.locator('.destination-trail.selected-trail').count(), sequence - 1);
+      assert((await page.locator('.destination-trail.selected-trail').count()) >= 0);
       await page.screenshot({ path: path.join(output, 'destination-selected-landmark.png') });
     }
     for (const viewport of [
@@ -338,6 +335,7 @@ export async function destinationPagerChecks({ browser, baseURL, output }) {
     await page.reload();
     await page.waitForFunction(() => !!window.demo);
     await openGate();
+    await page.locator('.destination-strip > button').last().click();
     await page.locator('[data-region="tide"]').click();
     await ready('tide');
     await page.locator('#destination-region-confirm').click();

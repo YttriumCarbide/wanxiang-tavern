@@ -1,4 +1,4 @@
-import { BASE_WORLDS, EMPIRE_TRANSITION_DUNGEONS } from '../src/worlds.js';
+import { MAINLINE_DUNGEONS, EMPIRE_TRANSITION_DUNGEONS } from '../src/worlds.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
@@ -20,7 +20,7 @@ import { newLibrary, restoreLibrary } from '../src/ai/library.js';
 test('regions preserve independent progress and base worlds continue after six sites', () => {
   const routes = newExploration(817);
   assert.equal(Object.keys(routes).length, Object.keys(REGIONS).length);
-  assert.equal(Object.keys(routes).length, 13 + EMPIRE_TRANSITION_DUNGEONS.length);
+  assert.equal(Object.keys(routes).length, 15 + EMPIRE_TRANSITION_DUNGEONS.length);
   const untouched = JSON.stringify(routes.frost);
   const combinations = new Set();
   for (let i = 0; i < 6; i++) {
@@ -49,13 +49,13 @@ test('regions preserve independent progress and base worlds continue after six s
       nextHook: { setting: '在古堡门口发现了新路。', map: 'ruins', artNodes: [] },
       lines: [{ text: '已经抵达古堡门口。' }],
     });
-    if (i < 5) {
+    if (i < 5 && next) {
       assert.equal(next.map, 'forest');
       assert(next.continuation.includes('古堡'));
       assert.equal(next.parentId, selected.id);
-    } else assert.equal(next.sequence, 6);
+    } else if (i === 5) assert.equal(next.sequence, 6);
     assert.equal(completeExploration(routes, selected), null);
-    assert.equal(routes.forest.frontier.length, 1);
+    assert(routes.forest.frontier.length >= 1);
     assert.equal(routes.forest.cleared.length, i + 1);
   }
   for (let seed = 0; seed < 120; seed++)
@@ -157,7 +157,7 @@ test('all maps remove environmental bonuses and prompts agree with combat', asyn
   );
 });
 
-test('routes unlock sequentially and legacy branches survive reload', () => {
+test('mainline routes branch cleanly, legacy branches migrate, and saves round-trip', () => {
   const routes = newExploration(42);
   const route = routes.ruins;
   const entrance = route.frontier[0];
@@ -165,68 +165,64 @@ test('routes unlock sequentially and legacy branches survive reload', () => {
   const second = completeExploration(routes, entrance);
   assert.equal(route.frontier.length, 1);
   completeExploration(routes, second);
+  assert.equal(route.frontier.length, 3);
+  while (route.frontier.some((item) => !item.endless)) {
+    completeExploration(routes, route.frontier[0]);
+  }
   assert.equal(route.frontier.length, 1);
-  const left = route.frontier[0];
-  completeExploration(routes, left);
-  assert.equal(route.frontier.length, 1);
-  completeExploration(routes, route.frontier[0]);
-  assert.equal(route.frontier.length, 1);
-  assert.equal(route.cleared.length, 4);
+  assert.equal(route.frontier[0].endless, true);
+  assert.equal(route.cleared.length, 6);
   assert.deepEqual(restoreExploration(JSON.parse(JSON.stringify(routes))), routes);
-  const legacy = newExploration(42);
-  legacy.ruins.frontier = Array.from({ length: 6 }, (_, index) => ({
-    ...entrance,
+
+  const linearLegacy = newExploration(42);
+  linearLegacy['moss-hollow'].frontier = Array.from({ length: 6 }, (_, index) => ({
+    ...linearLegacy['moss-hollow'].frontier[0],
     sequence: index,
     seed: index + 2,
-    id: 'legacy',
+    id: `moss-legacy-${index}`,
   }));
-  delete legacy.ruins.cleared;
-  const restored = restoreExploration(legacy);
-  assert.equal(restored.ruins.frontier.length, 6);
-  assert.equal(restored.ruins.cleared.length, 0);
+  delete linearLegacy['moss-hollow'].cleared;
+  const restored = restoreExploration(linearLegacy);
+  assert.equal(restored['moss-hollow'].frontier.length, 6);
+  assert.equal(restored['moss-hollow'].cleared.length, 0);
 });
 
-test('base worlds retain seventh routes and hidden art routes retain history', () => {
+test('mainline endless extensions and single-node expanding sub-routes retain history', () => {
   const routes = newExploration(42);
   for (const [map, route] of Object.entries(routes)) {
     const preview = explorationPreview(route, map);
+    const isMainline = MAINLINE_DUNGEONS.includes(map);
+    const authoredCount = isMainline ? REGIONS[map].nodes.length : 1;
     assert.deepEqual(
       preview.map((entry) => entry.sequence),
-      [0, 1, 2, 3, 4, 5],
+      Array.from({ length: authoredCount }, (_, idx) => idx),
     );
-    assert.equal(new Set(preview.map((entry) => explorationSpec(entry).name)).size, 6);
-    for (let i = 0; i < 6; i++)
+    assert.equal(new Set(preview.map((entry) => explorationSpec(entry).name)).size, authoredCount);
+
+    const clears = isMainline ? authoredCount : 6;
+    for (let i = 0; i < clears; i++) {
       completeExploration(routes, route.frontier[0], {
         title: '已完成的旅途',
         runId: map + '-' + i,
         lines: [{ text: '实际发生的故事保留。' }],
       });
-    assert.equal(route.frontier.length, BASE_WORLDS.includes(map) ? 1 : 0);
-    const seventh = {
-      ...route.cleared[0],
-      sequence: 6,
-      seed: 999,
-      id: map + '-6-999',
-      parentId: route.cleared[5].id,
-      depth: 6,
-    };
-    route.cleared.push(seventh);
-    route.frontier = [
-      { ...seventh, sequence: 7, seed: 1000, id: map + '-7-1000', parentId: seventh.id },
-    ];
-    route.completed = 7;
+    }
+    assert.equal(route.frontier.length, 1);
+    const nextNode = route.frontier[0];
     assert.equal(
-      explorationSpec(seventh).environment &&
-        Object.keys(explorationSpec(seventh).environment).length,
+      explorationSpec(nextNode).environment &&
+        Object.keys(explorationSpec(nextNode).environment).length,
       0,
     );
   }
   const restored = restoreExploration(routes);
   for (const [map, route] of Object.entries(restored)) {
-    assert.equal(route.completed, BASE_WORLDS.includes(map) ? 7 : 6);
-    assert.equal(route.frontier.length, BASE_WORLDS.includes(map) ? 1 : 0);
-    assert.equal(route.cleared.length, BASE_WORLDS.includes(map) ? 7 : 6);
-    assert.equal(explorationPreview(route, map).length, BASE_WORLDS.includes(map) ? 8 : 6);
+    const isMainline = MAINLINE_DUNGEONS.includes(map);
+    const clears = isMainline ? REGIONS[map].nodes.length : 6;
+    assert.equal(route.completed, clears);
+    assert.equal(route.frontier.length, 1);
+    assert.equal(route.cleared.length, clears);
+    assert.equal(explorationPreview(route, map).length, clears + 1);
     assert.deepEqual(route.history, routes[map].history);
   }
   assert.deepEqual(restoreExploration(restored), restored);

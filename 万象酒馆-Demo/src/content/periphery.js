@@ -1,5 +1,6 @@
 /** Repeatable scenery data. The central board and camera are never part of this plan. */
 const COLORS = Object.freeze({
+  mill: ['#4c5a46', '#72895b', '#8d7a59', '#d9d0b4'],
   ruins: ['#46504c', '#69716a', '#78836a', '#997e52'],
   forest: ['#344d3c', '#567246', '#72915c', '#b2bf87'],
   frost: ['#355363', '#668c9a', '#9cc9d6', '#d5e8eb'],
@@ -77,6 +78,7 @@ export function planPeriphery(map, occupied = () => false) {
     };
     box(0, 0.015, 0, 1.55, 0.08, 1.55, color(0));
     switch (map) {
+      case 'mill':
       case 'forest':
       case 'xianxia':
         box(0, 0.09, 0, 1.48, 0.07, 1.48, color(1));

@@ -1,4 +1,4 @@
-import { TUTORIAL_TARGETS } from './content/ruins-encounters.js';
+import { TUTORIAL_TARGETS } from './content/mill-encounters.js';
 import { FINAL_ENCOUNTER } from './content/journey-rules.js';
 
 export function tutorialTasks(campaign) {
@@ -25,19 +25,18 @@ export function demonstrated(result, name) {
         event.logs.some((line) => line.includes('→') && line.includes('伤害')),
     );
   if (name === 'slow')
-    return events.some(
-      (event, index) =>
-        event.type === 'item' &&
-        event.skill === 'slow-potion' &&
-        event.targets.includes(TUTORIAL_TARGETS.slow) &&
-        event.after.units[TUTORIAL_TARGETS.slow]?.buffs.slow >= 1 &&
+    return events.some((event, index) => {
+      if (event.type !== 'item' || event.skill !== 'slow-potion') return false;
+      const target = event.targets.find((id) => id === TUTORIAL_TARGETS.slow) || event.targets[0];
+      return (
+        target &&
+        event.after.units[target]?.buffs.slow >= 1 &&
         !events
           .slice(0, index)
-          .some((earlier) => earlier.type === 'enemy' && earlier.actor === TUTORIAL_TARGETS.slow) &&
-        events
-          .slice(index + 1)
-          .some((later) => later.type === 'enemy' && later.actor === TUTORIAL_TARGETS.slow),
-    );
+          .some((earlier) => earlier.type === 'enemy' && earlier.actor === target) &&
+        events.slice(index + 1).some((later) => later.type === 'enemy' && later.actor === target)
+      );
+    });
   if (name === 'mana')
     return events.some(
       (event) =>
@@ -77,12 +76,12 @@ export function tutorialCommitIssue(library, state, forecast) {
     (state.phase !== 'opening' || victory) &&
     !demonstrated(forecast, 'vulnerable')
   )
-    return '先用一次伤害攻击命中带有易伤的碎石幼灵，观察增伤。';
+    return '先用一次伤害攻击命中带有易伤的伤人荨麻，观察增伤。';
   if (index === 2 && !tasks.slow && (!campaign.adventureTutorial || tasks.vulnerable)) {
     if (state.phase === 'opening' && forecast.events.some((event) => event.skill === 'slow-potion'))
-      return '先结算先手，迟缓药水请在正式回合、石卫行动之前使用。';
+      return '先结算先手，迟缓药水请在正式回合、巨型田鼠行动之前使用。';
     if ((state.phase !== 'opening' || victory) && !demonstrated(forecast, 'slow'))
-      return '打开背包，选择迟缓药水并点选石卫，排在它行动之前，再确认结算。';
+      return '打开背包，选择迟缓药水并点选巨型田鼠，排在它行动之前，再确认结算。';
   }
   if (index === 3 && !tasks.crossfire && state.phase !== 'opening')
     return '先点敌方时间格，一起查看两名敌人的意图。';
@@ -112,7 +111,7 @@ export function tutorialCommitIssue(library, state, forecast) {
     if (!tasks.mana && !demonstrated(forecast, 'mana'))
       return '先使用魔力药水，为一名队友实际回复法力，再完成最终战。';
     if (!tasks.armour && !demonstrated(forecast, 'armour'))
-      return '先观察一次巨像行动后的护盾，再完成最终战。';
+      return '先观察一次田鼠头鼠行动后的护盾，再完成最终战。';
   }
   return '';
 }

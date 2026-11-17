@@ -36,7 +36,7 @@ test('city parchment SVG blueprints render architectural layers and Guild Halls 
 });
 
 test('empire transition dungeons cover low, mid, and high tiers cleanly using existing biomes', () => {
-  assert.deepEqual([...BASE_WORLDS], ['ruins', 'forest', 'frost', 'forge', 'tide']);
+  assert.deepEqual([...BASE_WORLDS], ['mill', 'ruins', 'forest', 'frost', 'forge', 'tide']);
   assert.equal(EMPIRE_TRANSITION_DUNGEONS.length, 6);
   const lib = newLibrary();
 
@@ -86,7 +86,7 @@ test('adventurers guild bounties, intel, quartermaster supplies, and sparring tr
   assert(lib.guild.merit >= firstBounty.merit);
 
   const intelBefore = guildIntelList(lib);
-  assert(intelBefore.length === 11);
+  assert(intelBefore.length === 12);
   const dossier = unlockGuildIntel(lib, 'moss-hollow');
   assert.equal(dossier.ok, true);
   assert.equal(lib.guild.unlockedIntel.includes('moss-hollow'), true);

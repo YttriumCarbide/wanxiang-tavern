@@ -155,6 +155,9 @@ export async function createStreetView() {
     onOpenGuild: (region) => {
       parent.postMessage({ type: 'daily-open-guild', region }, location.origin);
     },
+    onOpenDungeon: (dungeonId) => {
+      parent.postMessage({ type: 'daily-open-dungeon', dungeonId }, location.origin);
+    },
   });
   const inspector = document.getElementById('street-inspector');
   const buttons = new Map();

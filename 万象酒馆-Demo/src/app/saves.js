@@ -46,8 +46,8 @@ export function createSaveSnapshot(session, slotId = 'slot1', note = '') {
   const library = session?.ai?.library;
   const customPortraits = loadCustomPortraits();
   const journey = {
-    bossChoice: session?.journey?.bossChoice || 'bossGate',
-    regionMap: session?.journey?.regionMap || 'ruins',
+    bossChoice: session?.journey?.bossChoice || 'millVoleAlpha',
+    regionMap: session?.journey?.regionMap || 'mill',
   };
 
   const partyNames = (library?.party || []).filter(Boolean).map((id) => {

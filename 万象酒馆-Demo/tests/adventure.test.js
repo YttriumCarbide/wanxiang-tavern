@@ -532,7 +532,7 @@ test('new tutorial elite retains vulnerable, slow and multiple-intent gates in t
   expedition.adventure = f.state;
   expedition.index = 2;
   const state = beginEncounter(expedition);
-  assert.deepEqual(state.enemyIds.filter(Boolean), ['pebble', 'warden']);
+  assert.deepEqual(state.enemyIds.filter(Boolean), ['millNettle', 'millGiantVole']);
   const forecast = { final: structuredClone(state), events: [] };
   assert.equal(tutorialCommitIssue(library, state, forecast), '');
   state.phase = 'plan';

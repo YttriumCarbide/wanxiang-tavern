@@ -11,12 +11,13 @@ import {
 
 /** This schedule is shared by actual grants and narrative requests. */
 export function storyRingReward(route, owned = []) {
-  if (!route || route.world) return null;
+  if (!route || route.world || route.endless) return null;
+  const seq = route.sequence;
   const id =
     route.map === 'ruins'
-      ? { 1: EMBLEM_ID, 2: OVERLOAD_EMBLEM_ID, 5: DRAGON_EMBLEM_ID }[route.sequence]
+      ? { 1: EMBLEM_ID, 2: OVERLOAD_EMBLEM_ID, 5: DRAGON_EMBLEM_ID }[seq]
       : route.map === 'forest'
-        ? { 1: SUPREME_EMBLEM_ID, 3: MASK_EMBLEM_ID }[route.sequence]
+        ? { 1: SUPREME_EMBLEM_ID, 3: MASK_EMBLEM_ID }[seq]
         : null;
   return id && !owned.includes(id) ? { id, name: EMBLEMS[id].emblem.name, encounter: 4 } : null;
 }

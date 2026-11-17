@@ -46,7 +46,7 @@ function battle() {
 }
 test('world construction validates mechanics, excludes teammate appearances and only appends expansions', () => {
   const original = world();
-  assert.equal(worldReference().styles.length, 13);
+  assert.equal(worldReference().styles.length, 14);
   assert(
     !worldReference().appearances.some((entry) => entry.portrait === DEFINITIONS.aegis.portrait),
   );

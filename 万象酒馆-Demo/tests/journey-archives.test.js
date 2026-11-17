@@ -132,7 +132,7 @@ test('tutorial requires actual intended vulnerability event and shield lives bes
   assert.equal(tutorialCommitIssue(library, state, opening), '');
   const normal = advance(opening);
   assert(tutorialCommitIssue(library, normal, preview(normal, [])).includes('易伤'));
-  const result = preview(normal, [makeAction(normal, 'lyria', 'attack', 'pebble', 0)]);
+  const result = preview(normal, [makeAction(normal, 'lyria', 'attack', 'millNettle', 0)]);
   assert(result.valid);
   assert.equal(tutorialCommitIssue(library, normal, result), '');
   recordTutorialResult(library.campaign, false, result);
@@ -147,14 +147,18 @@ test('tutorial requires actual intended vulnerability event and shield lives bes
   assert(!statusIcons(state, 'aegis').includes('data-buff="shield"'));
 });
 
-test('map preview retains entrance and unlocks exactly the next number, including old branches', () => {
+test('map preview retains entrance and unlocks mainline plus branches while guarding stale nodes', () => {
   const routes = newExploration(42);
   const route = routes.ruins;
   const first = route.frontier[0];
-  for (let index = 0; index < 6; index++) {
-    assert.equal(availableExplorations(route).length, 1);
-    assert.equal(availableExplorations(route)[0].sequence, index);
-    assert.equal(explorationPreview(route, 'ruins')[0].id, first.id);
+  assert.equal(availableExplorations(route).length, 1);
+  assert.equal(availableExplorations(route)[0].sequence, 0);
+  completeExploration(routes, availableExplorations(route)[0]);
+  assert.equal(availableExplorations(route).length, 1);
+  assert.equal(availableExplorations(route)[0].sequence, 1);
+  completeExploration(routes, availableExplorations(route)[0]);
+  assert.equal(availableExplorations(route).length, 3);
+  while (availableExplorations(route).some((entry) => !entry.endless)) {
     completeExploration(routes, availableExplorations(route)[0]);
   }
   route.frontier.push({ ...first, sequence: 19, id: 'old-branch' });

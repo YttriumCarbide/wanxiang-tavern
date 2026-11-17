@@ -226,7 +226,8 @@ const crossroadArtScenes = Object.fromEntries(
 );
 
 const dungeonTrailImages = Object.freeze({
-  ruins: 'road-meadow-wide',
+  mill: 'road-meadow-wide',
+  ruins: 'road-orchard-wide',
   forest: 'road-pines-wide',
   frost: 'road-ridge-wide',
   forge: 'road-aqueduct-wide',
@@ -237,6 +238,7 @@ const dungeonTrailImages = Object.freeze({
   'silver-cistern': 'road-orchard-wide',
   'ash-foundry': 'road-aqueduct-wide',
   'astral-sanctum': 'road-causeway-wide',
+  'starbell-undercroft': 'road-downs-wide',
 });
 
 const imperialLandmarkScenes = Object.fromEntries(

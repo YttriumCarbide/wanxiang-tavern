@@ -80,7 +80,7 @@ test('tutorial gates require the slow item before action and actual recovered ma
   state.items['slow-potion'] = 1;
   const normal = advance(preview(state, []));
   assert(tutorialCommitIssue(library, normal, preview(normal, [])).includes('迟缓药水'));
-  const slow = preview(normal, [makeItem('slow-potion', 'warden', 0)]);
+  const slow = preview(normal, [makeItem('slow-potion', 'millGiantVole', 0)]);
   assert.equal(tutorialCommitIssue(library, normal, slow), '');
   const boss = newEncounter(tutorialSpec(4), null, 4, compileRoster(library));
   boss.items['mana-potion'] = 1;

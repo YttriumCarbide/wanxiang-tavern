@@ -1,10 +1,13 @@
 import * as THREE from 'three';
+import { BIOMES } from './content/biomes.js';
 import { planPeriphery } from './content/periphery.js';
+import { REGIONS } from './content/regions.js';
 
 /** Two instanced batches repeat themed scenery beyond the visible border. */
 export function createScenePeriphery(model, map, resources, surfaces, authoredLayout = null) {
   if (authoredLayout?.mode === 'authored-large') return { ...authoredLayout, drawBatches: 0 };
-  const plan = planPeriphery(map, (x, z) => surfaces.sample(x, z).y > 0.35);
+  const biomeKey = BIOMES[map] ? map : REGIONS[map]?.biome || 'ruins';
+  const plan = planPeriphery(biomeKey, (x, z) => surfaces.sample(x, z).y > 0.35);
   const group = new THREE.Group();
   group.name = 'Tiled_Outer_Environment';
   const geometry = resources.track(new THREE.BoxGeometry(1, 1, 1));

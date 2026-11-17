@@ -164,11 +164,9 @@ export const RUINS_ROUTES = Object.freeze([
   },
 ]);
 
-export const TUTORIAL_TARGETS = Object.freeze({
-  vulnerable: 'pebble',
-  slow: 'warden',
-  armour: 'bossGate',
-});
+import { TUTORIAL_TARGETS } from './mill-encounters.js';
+
+export { TUTORIAL_TARGETS };
 export const RUINS_ENEMY_IDS = Object.freeze(
   [
     ...new Set(RUINS_ROUTES.flatMap((route) => route.battles.flatMap((battle) => battle.enemyIds))),
@@ -183,18 +181,16 @@ export function ruinsEncounterSpec(sequence, index, { tutorial = false } = {}) {
     name: route.name,
     map: 'ruins',
     enemyIds: [...route.battles[index].enemyIds],
-    hpScale: tutorial ? (index === 0 ? 1.875 : 0.975) : 1,
+    hpScale: 1,
     ...(tutorial
       ? {
-          bossHpScale: 0.85,
-          enemyDamageScale: 1,
           occupiedOpeningTarget: index === 1,
           initialEnemyBuffs:
             index === 1 ? { [TUTORIAL_TARGETS.vulnerable]: { vulnerable: 1 } } : {},
         }
       : {}),
     boss: index === FINAL_ENCOUNTER,
-    environment: tutorial ? { shield: 2, regen: 1 } : {},
+    environment: {},
     description: route.battles[index].reason,
   };
 }

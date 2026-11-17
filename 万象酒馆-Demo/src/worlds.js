@@ -15,7 +15,15 @@ import {
   restoreEnemyBaseValues,
 } from './enemy-base-values.js';
 
-export const BASE_WORLDS = Object.freeze(['ruins', 'forest', 'frost', 'forge', 'tide']);
+export const MAINLINE_DUNGEONS = Object.freeze([
+  'mill',
+  'ruins',
+  'forest',
+  'frost',
+  'forge',
+  'tide',
+]);
+export const BASE_WORLDS = MAINLINE_DUNGEONS;
 export const EMPIRE_TRANSITION_DUNGEONS = Object.freeze([
   'moss-hollow',
   'border-watch',
@@ -24,9 +32,21 @@ export const EMPIRE_TRANSITION_DUNGEONS = Object.freeze([
   'ash-foundry',
   'astral-sanctum',
 ]);
-export const UNLOCKABLE_DUNGEONS = Object.freeze([...BASE_WORLDS, ...EMPIRE_TRANSITION_DUNGEONS]);
+export const CITY_DUNGEONS = Object.freeze(['starbell-undercroft']);
+export const UNLOCKABLE_DUNGEONS = Object.freeze([
+  ...MAINLINE_DUNGEONS,
+  ...EMPIRE_TRANSITION_DUNGEONS,
+  ...CITY_DUNGEONS,
+]);
 export const routeKey = (entry) => entry.world?.id || entry.map;
-export const isEndless = (entry) => !!entry?.world || entry?.sequence >= 6;
+export const isEndless = (entry) => {
+  if (!entry) return false;
+  if (entry.world || entry.endless === true) return true;
+  if (MAINLINE_DUNGEONS.includes(entry.map) && entry.sequence >= 6) return true;
+  if (entry.authored === true || entry.branch === true || typeof entry.nodeId === 'string')
+    return false;
+  return entry.sequence >= (REGIONS[entry.map]?.sites?.length || 6);
+};
 export function worldRegion(library, id) {
   const world = library.worlds?.find((entry) => entry.id === id);
   return world
@@ -244,7 +264,8 @@ export function normalizeWorld(
 ) {
   if (!raw || typeof raw !== 'object') throw Error('地图数据无效');
   const id = existing?.id || text(raw.id, 1, 80, '地图ID');
-  if (!/^(?:world-[a-z0-9-]+|ruins|forest|frost|forge|tide)$/.test(id)) throw Error('地图ID无效');
+  if (!/^(?:world-[a-z0-9-]+|mill|ruins|forest|frost|forge|tide|starbell-undercroft)$/.test(id))
+    throw Error('地图ID无效');
   if (!MAP_IDS.includes(raw.map)) throw Error('地图背景无效');
   if (existing && raw.map !== existing.map) throw Error('扩充不能更换已有地图背景');
   const definitions = { ...existing?.enemyDefinitions };

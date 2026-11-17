@@ -45,7 +45,12 @@ export function createSession(storage = globalThis.localStorage) {
       inspectedPreviewCell: null,
       intentScope: 'single',
     },
-    journey: { expedition: null, bossChoice: 'bossGate', selectedNode: null, regionMap: 'ruins' },
+    journey: {
+      expedition: null,
+      bossChoice: 'millVoleAlpha',
+      selectedNode: null,
+      regionMap: 'mill',
+    },
     ai: {
       generationOptions,
       library: newLibrary(),

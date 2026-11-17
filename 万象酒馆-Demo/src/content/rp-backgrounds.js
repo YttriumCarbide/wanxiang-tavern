@@ -1,4 +1,5 @@
 export function rpBackground(map, node) {
-  const region = ['ruins', 'forest', 'frost', 'forge', 'tide'].includes(map) ? map : 'ruins';
+  const mapped = map === 'mill' ? 'forest' : map;
+  const region = ['ruins', 'forest', 'frost', 'forge', 'tide'].includes(mapped) ? mapped : 'ruins';
   return `./assets/events/${region}-${node === 1 ? 'event' : 'quest'}.png`;
 }

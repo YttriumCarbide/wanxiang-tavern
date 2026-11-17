@@ -1,4 +1,4 @@
-import { BASE_WORLDS, routeKey } from './worlds.js';
+import { MAINLINE_DUNGEONS, isEndless, routeKey } from './worlds.js';
 import { dungeonMemoryText, restoredSummary } from './memory.js';
 import { ENCOUNTER_COUNT } from './content/journey-rules.js';
 
@@ -6,8 +6,8 @@ export function canRecall(library, entry) {
   return (
     !!entry &&
     !entry.world &&
-    BASE_WORLDS.includes(entry.map) &&
-    entry.sequence < 6 &&
+    !isEndless(entry) &&
+    MAINLINE_DUNGEONS.includes(entry.map) &&
     !!library.exploration[routeKey(entry)]?.cleared.some((node) => node.id === entry.id)
   );
 }

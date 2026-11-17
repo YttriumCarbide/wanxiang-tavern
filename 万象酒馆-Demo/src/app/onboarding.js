@@ -1,4 +1,4 @@
-import { TUTORIAL_TARGETS } from '../content/ruins-encounters.js';
+import { TUTORIAL_TARGETS } from '../content/mill-encounters.js';
 import { generationEnabled } from '../generation-options.js';
 import { createDialogue } from './dialogue.js';
 import { ARRIVAL_PROSE, EDITH_LESSONS, FIRST_RECRUIT_DIALOGUE } from '../content/edith-guide.js';
@@ -209,7 +209,9 @@ export function createOnboarding(context) {
       ![
         'arrival',
         'outing-door',
+        'map-mill',
         'map-ruins',
+        'mill-arrived',
         'ruins-arrived',
         'ether',
         'summon-return',
@@ -468,7 +470,7 @@ export function createOnboarding(context) {
       $('#inn-frame iframe')?.contentWindow?.assetPreview?.moveTo('table');
       return;
     }
-    if (guide.dataset.step === 'map-ruins') {
+    if (['map-mill', 'map-ruins'].includes(guide.dataset.step)) {
       const target = $('#inn-frame iframe')?.contentWindow;
       if (target) target.postMessage({ type: 'daily-open-atlas', preview: false }, location.origin);
       else context.shell.toast('街道正在载入，请稍候');
@@ -539,14 +541,16 @@ export function createOnboarding(context) {
       context.ledger?.sync();
     },
     allowPortal(kind) {
+      const unlocked = session.ai.library.unlockedDungeons || [];
+      const millOrLegacyUnlocked = unlocked.includes('mill') || unlocked.includes('ruins');
       if (
         kind === 'script' &&
         !state()?.completed &&
         learning(session.ai.library) &&
-        !session.ai.library.unlockedDungeons?.includes('ruins')
+        !millOrLegacyUnlocked
       ) {
         context.shell.toast(
-          '先从酒馆正门走出星钟城，亲脚前往近处的界隙遗迹记下坐标，再使用副本之门。',
+          '先从酒馆正门走出星钟城，亲脚前往近处的绿蕨磨坊记下坐标，再使用副本之门。',
         );
         return false;
       }
@@ -572,14 +576,14 @@ export function createOnboarding(context) {
     streetEntered() {
       if (!learning(session.ai.library) || state()?.completed) return;
       if (state()?.tutorial === 'outing-door') {
-        state().tutorial = 'map-ruins';
+        state().tutorial = 'map-mill';
         context.generation.save();
         refresh();
       }
     },
     tavernEntered() {
       if (!learning(session.ai.library) || state()?.completed) return;
-      if (state()?.tutorial === 'map-ruins') {
+      if (['map-mill', 'map-ruins'].includes(state()?.tutorial)) {
         state().tutorial = 'outing-door';
         context.generation.save();
         refresh();
@@ -587,8 +591,8 @@ export function createOnboarding(context) {
     },
     ruinsReached() {
       if (!learning(session.ai.library) || state()?.completed) return;
-      if (['outing-door', 'map-ruins'].includes(state()?.tutorial)) {
-        state().tutorial = 'ruins-arrived';
+      if (['outing-door', 'map-mill', 'map-ruins'].includes(state()?.tutorial)) {
+        state().tutorial = 'mill-arrived';
         context.generation.save();
         refresh();
       }
@@ -596,7 +600,7 @@ export function createOnboarding(context) {
     summonCompanion() {
       if (!state() || state().firstRecruit) return false;
       if (!state().completed) {
-        context.shell.toast('先完成遗迹探索，取得召唤契约后再来。');
+        context.shell.toast('先完成绿蕨磨坊探索，取得召唤契约后再来。');
         return true;
       }
       if (dialogue.open) return true;

@@ -36,13 +36,13 @@ test('moving into an empty base before an enemy attack dodges it and still costs
 
 test('the vulnerability lesson starts with a visible weakness in enemy armour; the next lesson uses slow items', () => {
   const opening = newEncounter(tutorialSpec(1), null, 1, compileRoster(campaign()));
-  assert.equal(opening.units.pebble.buffs.vulnerable, 1);
-  const hit = preview(opening, [makeAction(opening, 'lyria', 'attack', 'pebble', 0)]);
+  assert.equal(opening.units.millNettle.buffs.vulnerable, 1);
+  const hit = preview(opening, [makeAction(opening, 'lyria', 'attack', 'millNettle', 0)]);
   assert(hit.valid);
-  assert(hit.final.units.pebble.hp < opening.units.pebble.hp - 7);
+  assert(hit.final.units.millNettle.hp < opening.units.millNettle.hp - 7);
   const stone = newEncounter(tutorialSpec(2), null, 2, compileRoster(campaign()));
-  assert.deepEqual(stone.enemyIds, ['warden']);
-  assert(stone.units.warden.maxHp > 50);
+  assert.deepEqual(stone.enemyIds, ['millGiantVole']);
+  assert(stone.units.millGiantVole.maxHp > 50);
 });
 
 test('a new campaign starts with the protagonist and Edith; other slots stay empty after reload', () => {

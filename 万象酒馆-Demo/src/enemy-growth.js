@@ -3,13 +3,15 @@ import { enemyIntentText } from './enemy-intent-text.js';
 import { combatScale, scaleLevelEffects } from './combat-scale.js';
 
 const MAP_LEVELS = Object.freeze({
+  mill: 1,
   'moss-hollow': 2,
-  ruins: 5,
+  'starbell-undercroft': 6,
   'border-watch': 6,
   'whisper-grove': 10,
   forest: 11,
   'silver-cistern': 15,
   frost: 16,
+  ruins: 20,
   'ash-foundry': 20,
   forge: 21,
   'astral-sanctum': 25,
@@ -28,7 +30,13 @@ export function encounterLevel(entry) {
   if (Number.isInteger(entry.level)) return Math.max(1, Math.min(99, entry.level));
   const id = entry.world?.id || entry.map;
   const base = MAP_LEVELS[entry.map] || 5;
-  const official = BASE_WORLDS.includes(id) || EMPIRE_TRANSITION_DUNGEONS.includes(id);
+  if (Number.isInteger(entry.levelOffset) && !entry.endless) {
+    return Math.max(1, Math.min(99, base + entry.levelOffset));
+  }
+  const official =
+    BASE_WORLDS.includes(id) ||
+    EMPIRE_TRANSITION_DUNGEONS.includes(id) ||
+    id === 'starbell-undercroft';
   if (official && entry.sequence < 6) return base + MAIN_OFFSETS[entry.sequence];
   const tier = Math.floor(entry.sequence / 6) + (official ? 0 : 1);
   return Math.min(99, base + (official ? 3 : 0) + 5 * tier);
