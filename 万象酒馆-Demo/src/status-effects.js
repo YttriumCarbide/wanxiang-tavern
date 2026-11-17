@@ -32,6 +32,7 @@ export function createStatusEffects({ animate, ring, sparks }) {
       weak: '#93c5fd',
       slow: '#fde047',
       immobilize: '#c084fc',
+      break: '#ffcf6e',
     }[type];
     if (!color || !point) return;
     const halo = document.createElement('div');
@@ -51,7 +52,9 @@ export function createStatusEffects({ animate, ring, sparks }) {
                 ? '<svg viewBox="0 0 100 100"><path d="M50 20v60M35 60l15 20 15-20" fill="none" stroke="currentColor" stroke-width="3.5"/><path d="M25 35l25 30 25-30" fill="none" stroke="#60a5fa" stroke-width="2"/></svg>'
                 : type === 'slow'
                   ? '<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="30" fill="none" stroke="currentColor" stroke-width="3" stroke-dasharray="6 4"/><path d="M50 30v20l14 8" fill="none" stroke="currentColor" stroke-width="3"/></svg>'
-                  : '<svg viewBox="0 0 100 100"><rect x="30" y="38" width="40" height="34" rx="4" fill="none" stroke="currentColor" stroke-width="3"/><path d="M38 38V28a12 12 0 0 1 24 0v10" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="50" cy="55" r="4" fill="currentColor"/></svg>';
+                  : type === 'break'
+                    ? '<svg viewBox="0 0 100 100"><path d="M50 12l12 24 26 4-19 18 5 26-24-13-24 13 5-26-19-18 26-4z" fill="none" stroke="currentColor" stroke-width="3.5"/></svg>'
+                    : '<svg viewBox="0 0 100 100"><rect x="30" y="38" width="40" height="34" rx="4" fill="none" stroke="currentColor" stroke-width="3"/><path d="M38 38V28a12 12 0 0 1 24 0v10" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="50" cy="55" r="4" fill="currentColor"/></svg>';
     animate(
       halo,
       [

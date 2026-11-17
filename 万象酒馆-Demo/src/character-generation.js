@@ -6,6 +6,13 @@ import { EXCLUSIVE_BUFFS, GENERATED_POSITIVE_BUFFS } from './triggers.js';
 import { generatedStatusValue } from './status-rules.js';
 import { finalSkillText, finalPassiveText } from './skill-text.js';
 import { normalizeDcAttrs, validateGeneratedDcAttrs } from './dc.js';
+import {
+  DAMAGE_TYPE_IDS,
+  SUPPORT_TYPE,
+  inferDamageType,
+  isDamageType,
+  resolveBasicAttackType,
+} from './damage-types.js';
 
 const RARITY_WEIGHTS = Object.freeze({ common: 55, rare: 30, epic: 12, legendary: 3 });
 const COMPLEXITIES = Object.freeze([
@@ -59,6 +66,7 @@ export function characterConstraintText(plan) {
       ? '专属标记最多一种、最多3层，积累与消耗必须符合本档结构。'
       : '本次禁止mark、basicAttackMark、perMark、consumeMark及mark条件。',
     '六维检定属性 data.dcAttrs（str/dex/con/int/wis/cha）：各项 6～18 整数，六项总和必须恰好为 72 点，依角色人设与专长分配。',
+    `武器/元素伤害类型：data.attackType 必填 12 选 1（${DAMAGE_TYPE_IDS.join('/')}）；每个主动技能和入场技的 damageType 选择对应伤害类型（12 选 1），若技能不含 damage 效果（纯治疗/护盾/增益）则填 "${SUPPORT_TYPE}"。`,
   ].join('\n');
 }
 
@@ -353,7 +361,7 @@ export function compileCharacterDesign(raw, input = {}) {
     if (effect.consumeMark) result.consumeMark = true;
     return result;
   };
-  const compileAbility = (ability, entry = false) => {
+  const compileAbility = (ability, entry = false, index = 0) => {
     if (ability.kind === 'passive') {
       const rules = ability.rules.map((rule) => {
         if (rule.mode === 'continuous')
@@ -402,18 +410,42 @@ export function compileCharacterDesign(raw, input = {}) {
       ability.payment === 'hp'
         ? Math.max(strongControl ? 12 : 0, 4 + costTier * 2 + (ability.ap === 2 ? 2 : 0))
         : 0;
+    const dealsDamage = abilityEffects.some((effect) => effect.type === 'damage');
+    const settingAbility = entry ? raw.setting?.entrySkill : raw.setting?.skills?.[index];
+    const resolvedDamageType = !dealsDamage
+      ? null
+      : isDamageType(ability.damageType)
+        ? ability.damageType
+        : inferDamageType(
+            {
+              name: settingAbility?.name,
+              text: settingAbility?.description,
+              effects: abilityEffects,
+            },
+            { weapon: source.weapon, attackType },
+          );
     const result = {
       ap: ability.ap,
       mp,
       ...(hpCost ? { hp: hpCost } : {}),
       target: ability.target,
+      damageType: resolvedDamageType,
       effects: abilityEffects,
     };
     result.text = finalSkillText(result);
     return result;
   };
-  const skills = source.skills.map((skill) => compileAbility(skill));
-  const entrySkill = compileAbility({ ...source.entrySkill, ap: 1, cost: 'low' }, true);
+  const attackType = isDamageType(source.attackType)
+    ? source.attackType
+    : resolveBasicAttackType({
+        name: raw.setting?.name,
+        weapon: source.weapon,
+        bio: [raw.setting?.attack?.name, raw.setting?.attack?.description, raw.setting?.profession]
+          .filter(Boolean)
+          .join(' '),
+      });
+  const skills = source.skills.map((skill, index) => compileAbility(skill, false, index));
+  const entrySkill = compileAbility({ ...source.entrySkill, ap: 1, cost: 'low' }, true, 0);
   delete entrySkill.ap;
   delete entrySkill.mp;
   const hp = plan.protagonist
@@ -440,6 +472,7 @@ export function compileCharacterDesign(raw, input = {}) {
     data: {
       archetype: source.archetype,
       weapon: source.weapon,
+      attackType,
       dcAttrs,
       hp: Math.min(80, hp),
       mp: Math.min(40, mp),

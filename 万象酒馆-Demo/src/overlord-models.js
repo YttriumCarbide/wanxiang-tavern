@@ -80,6 +80,42 @@ function setCardArtworkTint(root, tintHex) {
   });
 }
 
+function prepareFigureVisibility(figure, def) {
+  const hasAnatomyIndex = def && def.anatomyIndex !== undefined && def.anatomyIndex !== null;
+  figure.traverse((node) => {
+    if (node.name && node.name.includes('Battle_Card')) {
+      node.visible = false;
+      return;
+    }
+    if (hasAnatomyIndex && node.userData?.anatomyIndex !== undefined) {
+      node.visible = Number(node.userData.anatomyIndex) === Number(def.anatomyIndex);
+    }
+  });
+}
+
+function isBranchVisible(node, root) {
+  for (let cur = node; cur; cur = cur.parent) {
+    if (!cur.visible) return false;
+    if (cur === root) break;
+  }
+  return true;
+}
+
+function measureVisibleBounds(object) {
+  object.updateMatrixWorld(true);
+  const box = new THREE.Box3();
+  const itemBox = new THREE.Box3();
+  object.traverse((node) => {
+    if (!node.isMesh || !node.geometry || !isBranchVisible(node, object)) return;
+    node.geometry.computeBoundingBox();
+    if (!node.geometry.boundingBox) return;
+    itemBox.copy(node.geometry.boundingBox).applyMatrix4(node.matrixWorld);
+    box.union(itemBox);
+  });
+  if (box.isEmpty()) box.setFromObject(object);
+  return box;
+}
+
 /** Preload and mount 3D sculpted Overlords onto their enemy battle cards. */
 export async function createOverlordModels({
   definitions,
@@ -104,6 +140,7 @@ export async function createOverlordModels({
         const gltf = loading ? await loading.gltf(url) : await new GLTFLoader().loadAsync(url);
         templates.set(def.model, {
           scene: gltf.scene,
+          animations: Array.isArray(gltf.animations) ? gltf.animations : [],
           triangles: gltf.userData?.triangles || countSceneTriangles(gltf.scene),
           nonVoxel: Boolean(gltf.userData?.nonVoxel),
         });
@@ -114,10 +151,15 @@ export async function createOverlordModels({
   );
 
   const mounted = new Map();
+  let lastNow = 0;
 
   function unmount(record) {
     const prev = mounted.get(record);
     if (!prev) return;
+    if (prev.mixer && prev.onFinished) {
+      prev.mixer.removeEventListener('finished', prev.onFinished);
+    }
+    prev.mixer?.stopAllAction();
     record.root.remove(prev.mount);
     setCardArtworkTint(record.root, '#ffffff');
     mounted.delete(record);
@@ -143,13 +185,14 @@ export async function createOverlordModels({
 
       const figure = tpl.scene.clone(true);
       figure.name = `Overlord_Figure_${record.id}`;
-      const bounds = new THREE.Box3().setFromObject(figure);
+      prepareFigureVisibility(figure, def);
+      const bounds = measureVisibleBounds(figure);
       const size = bounds.getSize(new THREE.Vector3());
       const center = bounds.getCenter(new THREE.Vector3());
 
-      const targetHeight = def.overlord ? 1.94 : 1.24;
-      const maxFootprintX = def.overlord ? 2.12 : 1.22;
-      const maxFootprintZ = def.overlord ? 1.85 : 1.22;
+      const targetHeight = def.overlord ? 3.9 : 2.25;
+      const maxFootprintX = def.overlord ? 4.5 : 2.3;
+      const maxFootprintZ = def.overlord ? 3.4 : 2.0;
       const scale = Math.min(
         targetHeight / Math.max(0.01, size.y),
         maxFootprintX / Math.max(0.01, size.x),
@@ -162,6 +205,19 @@ export async function createOverlordModels({
       const seal = createSealRing(def.color);
       mount.add(seal, figure);
       trackMountMaterials(mount, resources);
+
+      const mixer = tpl.animations.length ? new THREE.AnimationMixer(figure) : null;
+      const clips = {};
+      if (mixer) {
+        for (const clip of tpl.animations) {
+          clips[clip.name] = mixer.clipAction(clip);
+        }
+      }
+      const idleAction = clips.Idle || (tpl.animations[0] ? clips[tpl.animations[0].name] : null);
+      if (idleAction) {
+        idleAction.setLoop(THREE.LoopRepeat, Infinity);
+        idleAction.play();
+      }
 
       record.root.add(mount);
       setCardArtworkTint(record.root, '#36444b');
@@ -179,29 +235,92 @@ export async function createOverlordModels({
         mount,
         figure,
         seal,
+        mixer,
+        clips,
+        idleAction,
+        activeAction: idleAction,
+        playingClip: idleAction ? idleAction.getClip().name : null,
+        onFinished: null,
         floating: record.id.includes('Cannon') || record.id === 'radiantWyvern',
       };
+      if (mixer && idleAction) {
+        entry.onFinished = (event) => {
+          if (event.action === idleAction) return;
+          idleAction.reset();
+          idleAction.setLoop(THREE.LoopRepeat, Infinity);
+          idleAction.play();
+          event.action.crossFadeTo(idleAction, 0.22, true);
+          entry.activeAction = idleAction;
+          entry.playingClip = idleAction.getClip().name;
+        };
+        mixer.addEventListener('finished', entry.onFinished);
+      }
       mounted.set(record, entry);
       record.overlordMount = entry;
     }
   }
 
+  function playAction(id, move = {}) {
+    const entry = [...mounted.values()].find((item) => item.id === id);
+    if (!entry?.mixer) return false;
+    const candidates = !move.hasDamage
+      ? ['Special_Action', 'Normal_Attack', 'Idle']
+      : move.enraged || (move.actionIndex || 0) > 0 || (move.targets?.length || 0) > 1
+        ? ['Special_Attack', 'Talon_Rend', 'Normal_Attack', 'Idle']
+        : ['Normal_Attack', 'Special_Attack', 'Idle'];
+    const clipName = candidates.find((name) => Boolean(entry.clips[name]));
+    const action = clipName ? entry.clips[clipName] : entry.idleAction;
+    if (!action) return false;
+    if (action === entry.idleAction) {
+      action.reset();
+      action.setLoop(THREE.LoopRepeat, Infinity);
+      action.play();
+      entry.activeAction = action;
+      entry.playingClip = action.getClip().name;
+      return true;
+    }
+    action.reset();
+    action.setLoop(THREE.LoopOnce, 1);
+    action.clampWhenFinished = true;
+    action.timeScale = Math.max(0.5, Number(move.speed) || 1);
+    action.play();
+    if (entry.activeAction && entry.activeAction !== action) {
+      entry.activeAction.crossFadeTo(action, 0.14, true);
+    }
+    entry.activeAction = action;
+    entry.playingClip = action.getClip().name;
+    return true;
+  }
+
   function update(now) {
-    if (reduced || !mounted.size) return false;
+    if (!mounted.size) {
+      lastNow = now;
+      return false;
+    }
+    const dt = lastNow ? Math.min(0.05, Math.max(0.001, (now - lastNow) / 1000)) : 1 / 60;
+    lastNow = now;
+    if (reduced) return false;
     const t = now * 0.001;
     let index = 0;
+    let hasAnimation = false;
     for (const [record, entry] of mounted.entries()) {
       if (!record.root.visible) continue;
-      const phase = index * 1.15;
-      const hover = entry.floating ? 0.055 + Math.sin(t * 2.1 + phase) * 0.032 : 0;
-      const breathe = 1 + Math.sin(t * 1.8 + phase) * 0.014;
+      if (entry.mixer) {
+        entry.mixer.update(dt);
+        hasAnimation = true;
+      }
+      const hover =
+        !entry.mixer && entry.floating ? 0.055 + Math.sin(t * 2.1 + index * 1.15) * 0.032 : 0;
+      const breathe = entry.mixer ? 1 : 1 + Math.sin(t * 1.8 + index * 1.15) * 0.014;
       entry.figure.scale.set(entry.baseScale, entry.baseScale * breathe, entry.baseScale);
       entry.figure.position.y = entry.baseY + hover;
-      entry.figure.rotation.y = Math.sin(t * 0.9 + phase) * 0.06;
+      if (!entry.mixer) {
+        entry.figure.rotation.y = Math.sin(t * 0.9 + index * 1.15) * 0.06;
+      }
       entry.seal.rotation.y = t * 0.45 * (index % 2 ? -1 : 1);
       index++;
     }
-    return false;
+    return hasAnimation;
   }
 
   function status() {
@@ -219,6 +338,8 @@ export async function createOverlordModels({
           nonVoxel: entry.nonVoxel,
           triangles: entry.triangles,
           height: entry.height,
+          animations: Object.keys(entry.clips || {}),
+          playingClip: entry.playingClip,
           visible: record.root.visible,
           cardY: Number(record.root.position.y.toFixed(3)),
           mountLocalY: Number(entry.mount.position.y.toFixed(3)),
@@ -228,5 +349,5 @@ export async function createOverlordModels({
     };
   }
 
-  return { sync, update, status };
+  return { sync, playAction, update, status };
 }

@@ -8,9 +8,57 @@ const COMPOSITE_SLOTS = Object.freeze([
   { x: 2.35, z: 0.24, yaw: -0.24, height: 2.22, ringRadius: 1.05, focusDist: 4.5 },
 ]);
 
-function normalizeFigure(THREE, model, targetHeight, maxFootprint) {
+const ANIMATION_LABELS = Object.freeze({
+  Idle: '待机',
+  Normal_Attack: '普通攻击',
+  Special_Attack: '特殊攻击',
+  Special_Action: '特殊行动',
+  Talon_Rend: '利爪撕裂',
+});
+
+function applyArchiveVisibility(object, anatomyIndex = null) {
+  object.traverse((node) => {
+    if (node.name && node.name.includes('Battle_Card')) {
+      node.visible = false;
+      return;
+    }
+    if (anatomyIndex !== null && anatomyIndex !== undefined) {
+      if (node.userData?.anatomyIndex !== undefined) {
+        node.visible = Number(node.userData.anatomyIndex) === Number(anatomyIndex);
+      }
+    } else if (node.userData?.anatomyIndex !== undefined) {
+      node.visible = true;
+    }
+  });
+}
+
+function isBranchVisible(node, root) {
+  for (let cur = node; cur; cur = cur.parent) {
+    if (!cur.visible) return false;
+    if (cur === root) break;
+  }
+  return true;
+}
+
+function measureVisibleBounds(THREE, object) {
+  object.updateMatrixWorld(true);
+  const box = new THREE.Box3();
+  const itemBox = new THREE.Box3();
+  object.traverse((node) => {
+    if (!node.isMesh || !node.geometry || !isBranchVisible(node, object)) return;
+    node.geometry.computeBoundingBox();
+    if (!node.geometry.boundingBox) return;
+    itemBox.copy(node.geometry.boundingBox).applyMatrix4(node.matrixWorld);
+    box.union(itemBox);
+  });
+  if (box.isEmpty()) box.setFromObject(object);
+  return box;
+}
+
+function normalizeFigure(THREE, model, targetHeight, maxFootprint, anatomyIndex = null) {
   const wrapper = new THREE.Group();
-  const box = new THREE.Box3().setFromObject(model);
+  applyArchiveVisibility(model, anatomyIndex);
+  const box = measureVisibleBounds(THREE, model);
   const size = box.getSize(new THREE.Vector3());
   const center = box.getCenter(new THREE.Vector3());
   const scale = Math.min(
@@ -152,15 +200,22 @@ export function createArchiveModelStage() {
     rim.position.set(-5, 3.5, -4.5);
     scene.add(rim);
 
+    const uniqueModels = [...new Set(item.models)];
+    const sharedComposite =
+      isComposite &&
+      uniqueModels.length === 1 &&
+      (item.parts || []).some((part) => part.anatomyIndex !== undefined);
+
     const turntable = new THREE.Group();
     scene.add(turntable);
-    turntable.add(buildPedestal(THREE, item.color, isComposite));
+    turntable.add(buildPedestal(THREE, item.color, isComposite && !sharedComposite));
 
     const loader = new GLTFLoader();
-    let loadedScenes;
+    let loadedGltfs;
     try {
-      loadedScenes = await Promise.all(
-        item.models.map((file) => loader.loadAsync(`./assets/${file}`).then((gltf) => gltf.scene)),
+      const filesToLoad = sharedComposite ? uniqueModels : item.models;
+      loadedGltfs = await Promise.all(
+        filesToLoad.map((file) => loader.loadAsync(`./assets/${file}`)),
       );
     } catch {
       cleanup();
@@ -170,7 +225,7 @@ export function createArchiveModelStage() {
     }
 
     if (token !== mountSeq || disposed || !container.isConnected) {
-      for (const loaded of loadedScenes) resources.object(loaded);
+      for (const gltf of loadedGltfs) resources.object(gltf.scene);
       cleanup();
       if (activeCleanup === cleanup) activeCleanup = null;
       return;
@@ -178,9 +233,59 @@ export function createArchiveModelStage() {
 
     const slotAnchors = [];
     const animatedFigures = [];
+    const mixers = [];
+    const availableClipNames = [];
+    let sharedRootModel = null;
 
-    if (isComposite) {
-      loadedScenes.forEach((modelScene, idx) => {
+    const attachMixer = (modelScene, animations) => {
+      if (!Array.isArray(animations) || !animations.length) return;
+      const mixer = new THREE.AnimationMixer(modelScene);
+      const clips = {};
+      for (const clip of animations) {
+        clips[clip.name] = mixer.clipAction(clip);
+        if (!availableClipNames.includes(clip.name)) availableClipNames.push(clip.name);
+      }
+      const idleAction = clips.Idle || clips[animations[0].name];
+      if (idleAction) {
+        idleAction.setLoop(THREE.LoopRepeat, Infinity);
+        idleAction.play();
+      }
+      const entry = {
+        mixer,
+        clips,
+        idleAction,
+        activeAction: idleAction,
+      };
+      mixer.addEventListener('finished', (event) => {
+        if (!entry.idleAction || event.action === entry.idleAction) return;
+        entry.idleAction.reset();
+        entry.idleAction.setLoop(THREE.LoopRepeat, Infinity);
+        entry.idleAction.play();
+        event.action.crossFadeTo(entry.idleAction, 0.22, true);
+        entry.activeAction = entry.idleAction;
+        container
+          .querySelectorAll('[data-stage-anim]')
+          .forEach((btn) =>
+            btn.setAttribute('aria-pressed', String(btn.dataset.stageAnim === 'Idle')),
+          );
+      });
+      mixers.push(entry);
+    };
+
+    if (sharedComposite) {
+      sharedRootModel = loadedGltfs[0].scene;
+      const { wrapper, height } = normalizeFigure(THREE, sharedRootModel, 2.55, 2.35, null);
+      turntable.add(wrapper);
+      attachMixer(sharedRootModel, loadedGltfs[0].animations);
+      for (const _part of item.parts || []) {
+        slotAnchors.push({
+          target: new THREE.Vector3(0, Math.max(0.95, height * 0.48), 0),
+          distance: 5.2,
+        });
+      }
+    } else if (isComposite) {
+      loadedGltfs.forEach((gltf, idx) => {
+        const modelScene = gltf.scene;
         const slot = COMPOSITE_SLOTS[idx] || COMPOSITE_SLOTS[1];
         const subRing = new THREE.Mesh(
           new THREE.RingGeometry(slot.ringRadius - 0.05, slot.ringRadius, 40),
@@ -195,48 +300,104 @@ export function createArchiveModelStage() {
         subRing.position.set(slot.x, 0.008, slot.z);
         turntable.add(subRing);
 
-        const { wrapper, height } = normalizeFigure(THREE, modelScene, slot.height, 2.05);
+        const partAnatomy = item.parts?.[idx]?.anatomyIndex ?? null;
+        const { wrapper, height } = normalizeFigure(
+          THREE,
+          modelScene,
+          slot.height,
+          2.05,
+          partAnatomy,
+        );
         wrapper.position.set(slot.x, 0, slot.z);
         wrapper.rotation.y = slot.yaw;
         turntable.add(wrapper);
+        attachMixer(modelScene, gltf.animations);
 
         slotAnchors.push({
           target: new THREE.Vector3(slot.x, Math.max(0.85, height * 0.48), slot.z),
           distance: slot.focusDist,
         });
-        if (item.models[idx] === 'moon-eye.glb') {
+        if (!gltf.animations?.length && item.models[idx] === 'moon-eye.glb') {
           animatedFigures.push({ object: wrapper, amplitude: 0.045, phase: idx });
         }
       });
     } else {
-      const { wrapper, height } = normalizeFigure(THREE, loadedScenes[0], 2.45, 2.15);
+      const gltf = loadedGltfs[0];
+      const partAnatomy = item.parts?.[0]?.anatomyIndex ?? item.entry?.anatomyIndex ?? null;
+      const { wrapper, height } = normalizeFigure(THREE, gltf.scene, 2.45, 2.15, partAnatomy);
       turntable.add(wrapper);
+      attachMixer(gltf.scene, gltf.animations);
       slotAnchors.push({
         target: new THREE.Vector3(0, Math.max(0.95, height * 0.48), 0),
         distance: 5.4,
       });
-      if (item.models[0] === 'radiant-wyvern.glb') {
+      if (!gltf.animations?.length && item.models[0] === 'radiant-wyvern.glb') {
         animatedFigures.push({ object: wrapper, amplitude: 0.055, phase: 0 });
       }
     }
 
+    const animClips = Object.keys(ANIMATION_LABELS).filter((name) =>
+      availableClipNames.includes(name),
+    );
+    if (animClips.length) {
+      const nav = document.createElement('nav');
+      nav.className = 'archive-stage-anims';
+      nav.setAttribute('aria-label', '动作预览');
+      nav.innerHTML = animClips
+        .map(
+          (clip) =>
+            `<button type="button" data-stage-anim="${escapeText(clip)}" aria-pressed="${String(clip === 'Idle')}">${escapeText(ANIMATION_LABELS[clip])}</button>`,
+        )
+        .join('');
+      container.append(nav);
+      events.on(nav, 'click', (event) => {
+        const btn = event.target.closest('[data-stage-anim]');
+        if (!btn) return;
+        const clipName = btn.dataset.stageAnim;
+        nav
+          .querySelectorAll('button')
+          .forEach((b) => b.setAttribute('aria-pressed', String(b === btn)));
+        for (const mEntry of mixers) {
+          const action = mEntry.clips[clipName] || mEntry.idleAction;
+          if (!action) continue;
+          action.reset();
+          if (clipName === 'Idle') {
+            action.setLoop(THREE.LoopRepeat, Infinity);
+          } else {
+            action.setLoop(THREE.LoopOnce, 1);
+            action.clampWhenFinished = true;
+          }
+          action.play();
+          if (mEntry.activeAction && mEntry.activeAction !== action) {
+            mEntry.activeAction.crossFadeTo(action, 0.16, true);
+          }
+          mEntry.activeAction = action;
+        }
+        lastInteraction = performance.now();
+        if (!raf) tick();
+      });
+    }
+
     resources.object(scene);
 
-    const overviewTarget = new THREE.Vector3(0, isComposite ? 1.18 : 1.15, 0);
+    const overviewTarget = new THREE.Vector3(0, isComposite && !sharedComposite ? 1.18 : 1.15, 0);
     const desiredTarget = overviewTarget.clone();
     const target = overviewTarget.clone();
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 100);
-    let azimuth = isComposite ? 0.18 : 0.48;
-    let elevation = isComposite ? 1.24 : 1.16;
-    let baseDistance = isComposite ? 7.9 : 5.4;
+    let azimuth = isComposite && !sharedComposite ? 0.18 : 0.48;
+    let elevation = isComposite && !sharedComposite ? 1.24 : 1.16;
+    let baseDistance = isComposite && !sharedComposite ? 7.9 : 5.4;
     let zoomFactor = 1;
     let pointer = null;
     let lastInteraction = 0;
     let lastTime = performance.now();
 
     function applyCamera() {
-      const aspectFit = isComposite ? Math.max(1, 1.35 / Math.max(0.55, camera.aspect || 1.6)) : 1;
+      const aspectFit =
+        isComposite && !sharedComposite
+          ? Math.max(1, 1.35 / Math.max(0.55, camera.aspect || 1.6))
+          : 1;
       const dist = baseDistance * zoomFactor * aspectFit;
       camera.position.setFromSphericalCoords(dist, elevation, azimuth).add(target);
       camera.lookAt(target);
@@ -305,12 +466,18 @@ export function createArchiveModelStage() {
         zoomFactor = 1;
         lastInteraction = performance.now();
         if (focus === 'all') {
+          if (sharedRootModel) applyArchiveVisibility(sharedRootModel, null);
           desiredTarget.copy(overviewTarget);
-          baseDistance = 7.9;
-          azimuth = 0.18;
-          elevation = 1.24;
+          baseDistance = sharedComposite ? 5.4 : 7.9;
+          azimuth = sharedComposite ? 0.48 : 0.18;
+          elevation = sharedComposite ? 1.16 : 1.24;
         } else {
-          const anchor = slotAnchors[Number(focus)];
+          const partIndex = Number(focus);
+          if (sharedRootModel) {
+            const partAnatomy = item.parts?.[partIndex]?.anatomyIndex ?? null;
+            applyArchiveVisibility(sharedRootModel, partAnatomy);
+          }
+          const anchor = slotAnchors[partIndex];
           if (anchor) {
             desiredTarget.copy(anchor.target);
             baseDistance = anchor.distance;
@@ -334,9 +501,12 @@ export function createArchiveModelStage() {
       lastTime = now;
       target.lerp(desiredTarget, 0.18);
       if (!reduced && !pointer && now - lastInteraction > 2400) {
-        azimuth += delta * (isComposite ? 0.16 : 0.28);
+        azimuth += delta * (isComposite && !sharedComposite ? 0.16 : 0.28);
       }
       if (!reduced) {
+        for (const mEntry of mixers) {
+          mEntry.mixer.update(delta);
+        }
         const sec = now * 0.001;
         for (const itemFloat of animatedFigures) {
           itemFloat.object.position.y = Math.sin(sec * 1.9 + itemFloat.phase) * itemFloat.amplitude;
@@ -349,7 +519,7 @@ export function createArchiveModelStage() {
       }
     }
 
-    container.dataset.loadedModels = String(loadedScenes.length);
+    container.dataset.loadedModels = String(item.models.length);
     container.dataset.stageReady = 'ready';
     tick();
   }

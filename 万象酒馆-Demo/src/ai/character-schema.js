@@ -1,4 +1,5 @@
 import { BUFFS } from '../data.js';
+import { DAMAGE_TYPE_IDS, SUPPORT_TYPE } from '../damage-types.js';
 import { TRIGGER_EVENTS, TRIGGER_TARGETS, GENERATED_BUFFS } from '../triggers.js';
 import { DC_ATTR_MIN, DC_ATTR_MAX } from '../dc.js';
 
@@ -37,6 +38,9 @@ function legacyCharacterSchema({ acceptLegacyNames = false, buffs = Object.keys(
     effects: array(effect, 1, 4),
   });
   active.properties.hp = integer(1, 20);
+  active.properties.damageType = {
+    anyOf: [choice([...DAMAGE_TYPE_IDS, SUPPORT_TYPE]), { type: 'null' }],
+  };
   const passive = [
     ability({
       passive: { type: 'boolean', const: true },
@@ -79,6 +83,9 @@ function legacyCharacterSchema({ acceptLegacyNames = false, buffs = Object.keys(
     effects: array(effect, 1, 3),
   });
   if (acceptLegacyNames) entrySkillShape.properties.name = string(30);
+  entrySkillShape.properties.damageType = {
+    anyOf: [choice([...DAMAGE_TYPE_IDS, SUPPORT_TYPE]), { type: 'null' }],
+  };
   const schema = object({
     schemaVersion: { type: 'integer', const: 3 },
     setting: object({
@@ -109,6 +116,7 @@ function legacyCharacterSchema({ acceptLegacyNames = false, buffs = Object.keys(
       entrySkill: entrySkillShape,
     }),
   });
+  schema.properties.data.properties.attackType = choice([...DAMAGE_TYPE_IDS]);
   schema.properties.setting.required = schema.properties.setting.required.filter(
     (key) => !['age', 'entrySkill'].includes(key),
   );
@@ -290,6 +298,20 @@ export function characterOutputSchema({
     effects,
   });
   activeDesign.properties.payment = choice(['sp', 'hp']);
+  activeDesign.properties.damageType = choice([...DAMAGE_TYPE_IDS, SUPPORT_TYPE]);
+  const entrySkill = object({
+    target: choice([
+      'opposite',
+      'enemy',
+      'lowestEnemy',
+      'lowestAlly',
+      'allEnemies',
+      'allAllies',
+      'self',
+    ]),
+    effects,
+  });
+  entrySkill.properties.damageType = choice([...DAMAGE_TYPE_IDS, SUPPORT_TYPE]);
   schema.properties.data = object({
     archetype: choice(['aegis', 'lyria', 'morrow', 'serin', 'vesper', 'rook']),
     weapon: choice(['sword', 'staff', 'bow']),
@@ -304,19 +326,9 @@ export function characterOutputSchema({
       2,
       2,
     ),
-    entrySkill: object({
-      target: choice([
-        'opposite',
-        'enemy',
-        'lowestEnemy',
-        'lowestAlly',
-        'allEnemies',
-        'allAllies',
-        'self',
-      ]),
-      effects,
-    }),
+    entrySkill,
   });
+  schema.properties.data.properties.attackType = choice([...DAMAGE_TYPE_IDS]);
   schema.properties.data.properties.dcAttrs = object({
     str: integer(DC_ATTR_MIN, DC_ATTR_MAX),
     dex: integer(DC_ATTR_MIN, DC_ATTR_MAX),

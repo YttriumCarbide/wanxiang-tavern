@@ -107,7 +107,7 @@ export async function statusEmblemChecks({ browser, baseURL, output }) {
     await frame.locator('#street-city-submap [data-city-node="guild-hall"]').click();
     await page.locator('#guild-dialog[open]').waitFor();
     await page.locator('#guild-dialog [data-guild-tab="skills"]').click();
-    assert.equal(await page.locator('#guild-dialog .guild-card').count(), 12);
+    assert.equal(await page.locator('#guild-dialog .guild-card').count(), 18);
     await page.locator('#guild-dialog [data-guild-learn="uni-smoke-veil"]').click();
     await page.waitForFunction(() =>
       window.demo.getLibrary().learnedSkills?.includes('uni-smoke-veil'),

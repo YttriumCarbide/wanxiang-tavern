@@ -79,9 +79,9 @@ test('PixelFX headless renderer produces non-empty RGBA frames for all emblem & 
   assert(checked.size >= 18);
 });
 
-test('learnable skill catalog defines 12 valid skills across 4 categories with valid buffs', () => {
-  assert.equal(LEARNABLE_SKILLS.length, 12);
-  assert.equal(new Set(LEARNABLE_SKILLS.map((s) => s.id)).size, 12);
+test('learnable skill catalog defines 18 valid skills across 4 categories with valid buffs and damage types', () => {
+  assert.equal(LEARNABLE_SKILLS.length, 18);
+  assert.equal(new Set(LEARNABLE_SKILLS.map((s) => s.id)).size, 18);
   const categories = new Set(LEARNABLE_SKILLS.map((s) => s.category));
   assert.deepEqual(categories, new Set(Object.keys(LEARNABLE_SKILL_CATEGORIES)));
 

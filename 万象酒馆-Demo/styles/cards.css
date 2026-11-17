@@ -48,38 +48,127 @@
   stroke: #ffd875;
   stroke-width: 2;
 }
-.resource-shield {
+.bar.hp .bar-shield-fill,
+.bar.hp .bar-shield-forecast {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 2;
+  pointer-events: none;
+  border-radius: inherit;
+  transition: width 0.18s ease;
+}
+.bar.hp .bar-shield-fill {
+  background: linear-gradient(90deg, rgba(64, 168, 255, 0.78), rgba(132, 214, 255, 0.92));
+  box-shadow:
+    inset 0 1px 0 rgba(235, 249, 255, 0.55),
+    0 0 6px rgba(96, 196, 255, 0.45);
+}
+.bar.hp .bar-shield-forecast {
+  opacity: 0;
+  background: repeating-linear-gradient(
+    -45deg,
+    rgba(116, 206, 255, 0.46) 0 4px,
+    rgba(196, 240, 255, 0.62) 4px 8px
+  );
+  border-right: 1px solid rgba(198, 242, 255, 0.85);
+}
+.bar.hp .bar-shield-forecast.active {
+  opacity: 0.95;
+  animation: intent-visibility 1s ease-in-out infinite;
+}
+.bar .resource-number {
+  position: relative;
+  z-index: 4;
+}
+.enemy-toughness-badge {
   position: absolute;
   right: calc(100% + 5px);
   top: -5px;
   display: grid;
   place-items: center;
-  width: 32px;
-  height: 35px;
-  color: #e2f5ff;
-  filter: drop-shadow(0 2px 3px #000a);
+  width: 30px;
+  height: 33px;
+  color: #f6df9d;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.72));
+  z-index: 3;
 }
-.resource-shield svg,
-.resource-shield img {
+.enemy-toughness-badge .toughness-crest {
   position: absolute;
   width: 100%;
   height: 100%;
+  color: #2f3b4a;
+  stroke: #f0c26b;
+  stroke-width: 1.5;
 }
-.resource-shield b,
-.resource-shield em {
+.enemy-toughness-badge.is-broken .toughness-crest {
+  color: #5b2220;
+  stroke: #ff9a73;
+}
+.enemy-toughness-badge b,
+.enemy-toughness-badge em {
   position: relative;
-  font-size: 12px;
+  font-size: 11px;
   font-style: normal;
+  font-weight: 800;
   text-shadow: 0 1px 2px #000;
 }
-.resource-shield.forecast em {
+.enemy-toughness-badge.is-broken b {
+  color: #ffd3c4;
+}
+.enemy-toughness-badge.forecast em {
   position: absolute;
   right: -8px;
   bottom: -2px;
   padding: 1px 3px;
   border-radius: 3px;
-  background: #244963;
+  background: #614114;
+  color: #ffe8ad;
   animation: intent-visibility 1s ease-in-out infinite;
+}
+.enemy-toughness-badge.will-break em {
+  background: #8c2a1b;
+  color: #ffd8cf;
+}
+.enemy-weakness-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 3px;
+  margin-top: 2px;
+  pointer-events: auto;
+}
+.enemy-weakness-pill {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(11, 20, 24, 0.88);
+  color: var(--dmg-color, #9a8f7c);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+  transition:
+    transform 0.16s ease,
+    box-shadow 0.16s ease,
+    border-color 0.16s ease;
+}
+.enemy-weakness-pill.is-unknown {
+  color: #9e937f;
+  border-color: rgba(168, 152, 124, 0.28);
+}
+.enemy-weakness-pill.is-revealed {
+  border-color: var(--dmg-color, #d8c28a);
+  box-shadow: 0 0 6px var(--dmg-glow, rgba(255, 255, 255, 0.15));
+}
+.enemy-weakness-pill.is-matched {
+  transform: scale(1.16);
+  background: rgba(255, 232, 166, 0.2);
+  border-color: #ffe48d;
+  color: #fff3c4;
+  box-shadow: 0 0 10px rgba(255, 224, 128, 0.72);
+  animation: intent-visibility 0.9s ease-in-out infinite;
 }
 .hero-resources,
 .rear-resources {

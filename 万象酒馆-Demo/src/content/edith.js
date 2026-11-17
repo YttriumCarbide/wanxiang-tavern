@@ -4,6 +4,7 @@ export const EDITH = {
   name: '伊蒂丝',
   title: '星月重装战士',
   weapon: 'sword',
+  attackType: 'sword',
   portrait: 'edith.png',
   color: '#a8d9f0',
   hp: 48,
@@ -19,6 +20,7 @@ export const EDITH = {
       ap: 1,
       mp: 5,
       target: 'allEnemies',
+      damageType: 'special-magic',
       text: '消耗5法力，回复自身7生命，对所有敌人造成9点伤害。',
       effects: [
         { type: 'selfHeal', value: 7 },
@@ -32,6 +34,7 @@ export const EDITH = {
       mp: 0,
       hp: 6,
       target: 'enemy',
+      damageType: 'special-magic',
       text: '消耗6生命，回复自身4法力，对一名敌人造成17伤害。',
       effects: [
         { type: 'selfMana', value: 4 },
@@ -44,6 +47,7 @@ export const EDITH = {
     name: '引力奇点',
     text: '上场时对所有敌方单位造成5点伤害并附加1层虚弱。',
     target: 'allEnemies',
+    damageType: 'special-magic',
     effects: [
       { type: 'damage', value: 5 },
       { type: 'buff', buff: 'weak', value: 1 },

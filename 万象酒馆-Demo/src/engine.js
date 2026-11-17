@@ -38,6 +38,8 @@ import {
   clearBattleMechanics,
   negativeImmune,
 } from './emblem-mechanics.js';
+import { inferDamageType, isDamageType, resolveBasicAttackType } from './damage-types.js';
+import { mergeRevealedWeaknessMap, resolveEnemyBreakProfile, speciesKeyOf } from './octopath.js';
 export const clone = (x) => structuredClone(x);
 export function battleResourceLimits(definition) {
   let hp = definition.hp;
@@ -58,6 +60,7 @@ export function newBattle(
   enemyIds = encounterSpec(0).enemyIds,
   heroDefinitions = {},
   enemyDefinitions = {},
+  revealedWeaknesses = {},
 ) {
   const heroes = HEROES.map((hero) => heroDefinitions[hero.id] || hero).filter(
     (hero) => !hero.inactive,
@@ -65,6 +68,7 @@ export function newBattle(
   return {
     heroDefinitions: clone(heroDefinitions),
     enemyDefinitions: clone(enemyDefinitions),
+    revealedWeaknesses: mergeRevealedWeaknessMap({}, revealedWeaknesses),
     phase: 'opening',
     round: 0,
     enemyIds: [...enemyIds],
@@ -72,6 +76,7 @@ export function newBattle(
     units: Object.fromEntries(
       [...heroes, ...enemyIds.map((id) => enemyDefinitions[id] || DEFINITIONS[id])].map((d) => {
         const { hp, mp } = battleResourceLimits(d);
+        const enemyBreak = d.speed ? resolveEnemyBreakProfile(d) : null;
         return [
           d.id,
           {
@@ -88,6 +93,16 @@ export function newBattle(
             entryReady: false,
             used: 0,
             ...(d.mechanicMark ? { mark: 0 } : {}),
+            ...(enemyBreak
+              ? {
+                  speciesKey: enemyBreak.speciesKey,
+                  toughness: enemyBreak.maxToughness,
+                  maxToughness: enemyBreak.maxToughness,
+                  weaknesses: [...enemyBreak.weaknesses],
+                  broken: false,
+                  brokenNextRound: false,
+                }
+              : {}),
           },
         ];
       }),
@@ -483,6 +498,35 @@ function simulate(s, plan, slots) {
     effects,
     log: (text) => currentLogs.push(text),
   });
+  work.revealedWeaknesses = mergeRevealedWeaknessMap({}, work.revealedWeaknesses);
+  function applyBreakImpact(targetId, damageType, actorId) {
+    if (!isDamageType(damageType)) return;
+    const targetUnit = work.units[targetId];
+    if (!targetUnit || targetUnit.side !== 'enemy') return;
+    const weaknesses = Array.isArray(targetUnit.weaknesses)
+      ? targetUnit.weaknesses
+      : resolveEnemyBreakProfile(definitions[targetId] || targetId).weaknesses;
+    if (!weaknesses.includes(damageType)) return;
+    const spKey = targetUnit.speciesKey || speciesKeyOf(definitions[targetId] || targetId);
+    if (spKey) {
+      const existing = work.revealedWeaknesses[spKey] || [];
+      if (!existing.includes(damageType)) {
+        work.revealedWeaknesses[spKey] = [...existing, damageType];
+      }
+    }
+    if (targetUnit.hp > 0 && !targetUnit.broken && targetUnit.toughness > 0) {
+      targetUnit.toughness = Math.max(0, targetUnit.toughness - 1);
+      if (targetUnit.toughness === 0) {
+        targetUnit.broken = true;
+        targetUnit.brokenNextRound = true;
+        targetUnit.buffs.bind = 1;
+        currentStatusTriggers.push({ id: targetId, type: 'break', value: 1 });
+        currentLogs.push(
+          `${definitions[actorId]?.name || ''}击破了${definitions[targetId].name}的韧性，陷入晕眩！`,
+        );
+      }
+    }
+  }
   function effects(
     actor,
     targets,
@@ -492,6 +536,7 @@ function simulate(s, plan, slots) {
     split = false,
     bonus = 0,
     markSnapshot = work.units[actor]?.mark || 0,
+    damageType = null,
   ) {
     let consumedMark = false;
     const allowed = (effect, id) =>
@@ -571,11 +616,15 @@ function simulate(s, plan, slots) {
           }
           if (effectiveBuff(work, id, 'flying')) n = Math.floor(n / 2);
           n = applyIronReduction(n, effectiveBuff(work, id, 'iron'));
-          if (blindMiss?.actor === actor && blindMiss.target === id) n = 0;
+          const missedByBlind = blindMiss?.actor === actor && blindMiss.target === id;
+          if (missedByBlind) n = 0;
           const absorbed = Math.min(u.block, n);
           u.block -= absorbed;
           const damage = n - absorbed;
           const lost = lose(u, damage, '攻击', true);
+          if (!generated && !missedByBlind && damageType) {
+            applyBreakImpact(id, damageType, actor);
+          }
           if (lost && u.side === 'enemy' && !generated) attackInjuries?.add(id);
           if (!generated) recordCooperationHit(work, actor, id, damage);
           const killed = u.hp === 0;
@@ -671,22 +720,38 @@ function simulate(s, plan, slots) {
       esTargets = [id];
     }
     const effectsList = Array.isArray(es.effects) ? es.effects : [{ type: 'damage', value: 5 }];
+    const entryDamageType = inferDamageType({ ...es, effects: effectsList }, inDef);
     if (es.selfDamage) lose(unit, es.selfDamage, '入场技 · 自身伤害');
     if (unit.hp > 0 && !guests.entry(id, es, outgoing)) {
       if (es.mechanic === 'luo-entry') {
         unit.block += definitions[id].attack;
         unit.nextBasicDouble = true;
-      } else effects(id, esTargets, effectsList, false);
+      } else {
+        effects(
+          id,
+          esTargets,
+          effectsList,
+          false,
+          false,
+          false,
+          0,
+          work.units[id]?.mark || 0,
+          entryDamageType,
+        );
+      }
     }
     currentLogs.push(
       `${inDef.name}入场触发【${es.name}】${es.target === 'opposite' && !esTargets.length ? '，对位无存活敌人' : ''}`,
     );
-    record('entrySkill', id, es.name, esTargets, actionId, es.id);
+    record('entrySkill', id, es.name, esTargets, actionId, es.id, {
+      ...(entryDamageType ? { damageType: entryDamageType } : {}),
+    });
   }
   function counterAttack(actor, target) {
     const unit = work.units[actor];
     const before = work.units[target].hp;
     const repeats = unit.buffs.meteor ? 2 : 1;
+    const basicDamageType = resolveBasicAttackType(definitions[actor]);
     for (let cast = 0; cast < repeats && unit.hp > 0 && work.units[target].hp > 0; cast++) {
       const skill = abilityFor(work, actor, 'attack');
       const list = skill.effects.map((effect) => ({
@@ -702,6 +767,10 @@ function simulate(s, plan, slots) {
         list,
         false,
         !!unit.combined && definitions[actor].emblemId === 'tan-hongyu',
+        false,
+        0,
+        work.units[actor]?.mark || 0,
+        basicDamageType,
       );
       mechanics.attack(actor, attackHits);
       attackHits = null;
@@ -709,6 +778,7 @@ function simulate(s, plan, slots) {
       record('counter', actor, '毅明 · ' + skill.name, [target], null, 'attack', {
         repeatIndex: cast + 1,
         repeatCount: repeats,
+        damageType: basicDamageType,
       });
     }
     return Math.max(0, before - work.units[target].hp);
@@ -781,12 +851,25 @@ function simulate(s, plan, slots) {
         continue;
       }
       if (u.buffs.bind) {
-        currentLogs.push(`${definitions[enemy].name}受到禁锢，本回合行动取消`);
-        currentStatusTriggers.push({ id: enemy, type: 'bind', value: 1 });
-        record('skip', enemy, '禁锢 · 行动取消', [], null, null, {
-          blockedBy: 'bind',
-          actionIndex: actionIdx,
-        });
+        currentLogs.push(
+          u.broken
+            ? `${definitions[enemy].name}处于击破晕眩，本回合行动取消`
+            : `${definitions[enemy].name}受到禁锢，本回合行动取消`,
+        );
+        currentStatusTriggers.push({ id: enemy, type: u.broken ? 'break' : 'bind', value: 1 });
+        record(
+          'skip',
+          enemy,
+          u.broken ? '击破晕眩 · 行动取消' : '禁锢 · 行动取消',
+          [],
+          null,
+          null,
+          {
+            blockedBy: 'bind',
+            ...(u.broken ? { broken: true } : {}),
+            actionIndex: actionIdx,
+          },
+        );
         continue;
       }
       bleed(enemy);
@@ -866,6 +949,9 @@ function simulate(s, plan, slots) {
         );
         currentStatusTriggers.push({ id: enemy, type: 'blind', value: 1 });
       }
+      const enemyDamageType = move.effects.some((effect) => effect.type === 'damage')
+        ? inferDamageType(move, definitions[enemy]) || resolveBasicAttackType(definitions[enemy])
+        : null;
       for (const { effect, ownTargets, effectTarget } of resolvedEffects) {
         effects(
           enemy,
@@ -876,6 +962,9 @@ function simulate(s, plan, slots) {
           effectTarget === 'opponents' && u.buffs.balance
             ? (move.slots || [move.slot]).length
             : false,
+          0,
+          work.units[enemy]?.mark || 0,
+          enemyDamageType,
         );
       }
       if (move.sinkingPlague && !work.sinkingPlague)
@@ -887,7 +976,11 @@ function simulate(s, plan, slots) {
         u.buffs.balance ? [...new Set([...targets, ...front(work).filter(Boolean)])] : targets,
         null,
         null,
-        { blindTarget: missed, actionIndex: actionIdx },
+        {
+          blindTarget: missed,
+          actionIndex: actionIdx,
+          ...(enemyDamageType ? { damageType: enemyDamageType } : {}),
+        },
       );
       blindMiss = null;
       if (move.effects.some((effect) => effect.type === 'damage'))
@@ -1115,9 +1208,21 @@ function simulate(s, plan, slots) {
           def.emblemId === OVERLOAD_EMBLEM_ID && a.skill !== 'attack'
             ? Math.round(mpCost * 0.25)
             : 0;
+        const heroDamageType =
+          a.skill === 'attack' ? resolveBasicAttackType(def) : inferDamageType(skill, def);
         if (['junlue', 'soul-revive', 'soul-banquet'].includes(skill.mechanic)) {
           if (skill.mechanic === 'junlue')
-            effects(a.actor, targets, skill.effects, false, echo, false, bonus);
+            effects(
+              a.actor,
+              targets,
+              skill.effects,
+              false,
+              echo,
+              false,
+              bonus,
+              undefined,
+              heroDamageType,
+            );
           companions.cast(a.actor, skill, a.target);
         } else if (skill.mechanic) mechanics.cast(a.actor, skill, a.target);
         else {
@@ -1128,7 +1233,7 @@ function simulate(s, plan, slots) {
                 )
               : skill.effects;
           if (a.skill === 'attack') u.nextBasicDouble = false;
-          effects(a.actor, targets, list, false, echo, false, bonus);
+          effects(a.actor, targets, list, false, echo, false, bonus, undefined, heroDamageType);
         }
         mechanics.attack(a.actor, attackHits);
         if (a.skill === 'attack') guests.afterBasicAttack(a.actor, attackInjuries);
@@ -1148,6 +1253,7 @@ function simulate(s, plan, slots) {
           repeatCount: repeats,
           repeatIndex: cast + 1,
           costs: { mp: cast ? 0 : mpCost, hp: cast ? 0 : hpCost },
+          ...(heroDamageType ? { damageType: heroDamageType } : {}),
         });
         if (
           cast === repeats - 1 &&
@@ -1293,6 +1399,15 @@ export function advance(result) {
   for (const u of Object.values(s.units)) {
     u.used = 0;
     if (!opening) u.block = 0;
+    if (u.side === 'enemy') {
+      if (u.brokenNextRound) {
+        u.brokenNextRound = false;
+        u.buffs.bind = 1;
+      } else if (u.broken) {
+        u.broken = false;
+        u.toughness = u.maxToughness;
+      }
+    }
   }
   lockEnemyDecisions(s, definitionsFor(s));
   return s;
@@ -1307,6 +1422,7 @@ export function newEncounter(spec, prior = null, index = 0, heroDefinitions = {}
     spec.enemyIds,
     prior?.heroDefinitions || heroDefinitions,
     spec.enemyDefinitions || prior?.enemyDefinitions || {},
+    mergeRevealedWeaknessMap(prior?.revealedWeaknesses, spec.revealedWeaknesses),
   );
   s.formation = prior ? [...prior.formation] : s.formation;
   s.procUses = clone(prior?.procUses || {});
@@ -1346,6 +1462,7 @@ export function newEncounter(spec, prior = null, index = 0, heroDefinitions = {}
         1,
         Math.round(d.hp * growth.hpScale * (d.boss ? spec.bossHpScale || 1 : spec.hpScale || 1)),
       );
+    const enemyBreak = resolveEnemyBreakProfile(d);
     units[id] = {
       id,
       side: 'enemy',
@@ -1360,8 +1477,13 @@ export function newEncounter(spec, prior = null, index = 0, heroDefinitions = {}
       buffs: Object.fromEntries(
         Object.entries(d.buffs || {}).map(([key, value]) => [key, statusStacks(key, value)]),
       ),
-
       used: 0,
+      speciesKey: enemyBreak.speciesKey,
+      toughness: enemyBreak.maxToughness,
+      maxToughness: enemyBreak.maxToughness,
+      weaknesses: [...enemyBreak.weaknesses],
+      broken: false,
+      brokenNextRound: false,
     };
   }
   s.units = units;

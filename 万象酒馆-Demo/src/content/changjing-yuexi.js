@@ -4,6 +4,7 @@ export const CHANGJING_YUEXI = {
   name: '长景月汐',
   title: '星月剑士',
   weapon: 'sword',
+  attackType: 'sword',
   portrait: 'changjing-yuexi.png',
   color: '#b8b4e7',
   hp: 48,
@@ -18,6 +19,7 @@ export const CHANGJING_YUEXI = {
       ap: 1,
       mp: 3,
       target: 'enemy',
+      damageType: 'sword',
       text: '以大幅横斩攻击一名敌人，造成15伤害并附加2层易伤。',
       effects: [
         { type: 'damage', value: 15 },
@@ -30,6 +32,7 @@ export const CHANGJING_YUEXI = {
       ap: 1,
       mp: 7,
       target: 'self',
+      damageType: null,
       text: '获得2层力量、1层铁皮、1层敏捷；本场普通攻击额外攻击一次，重复施放不增加额外攻击次数。',
       effects: [
         { type: 'buff', buff: 'strength', value: 2 },
@@ -44,6 +47,7 @@ export const CHANGJING_YUEXI = {
     name: '霜月·星陨穿刺',
     text: '换入时对正对位敌人造成14点伤害并施加2层易伤。',
     target: 'opposite',
+    damageType: 'spear',
     effects: [
       { type: 'damage', value: 14 },
       { type: 'buff', buff: 'vulnerable', value: 2 },

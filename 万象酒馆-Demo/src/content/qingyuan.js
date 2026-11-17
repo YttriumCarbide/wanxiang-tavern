@@ -25,6 +25,7 @@ const QING_YUAN = {
     portrait: 'guardian',
     color: '#a9cfbb',
     weapon: 'sword',
+    attackType: 'wind',
     hp: 78,
     mp: 28,
     attack: 12,
@@ -39,6 +40,7 @@ const QING_YUAN = {
         ap: 1,
         mp: 3,
         target: 'self',
+        damageType: null,
         effects: [
           {
             type: 'heal',
@@ -57,6 +59,7 @@ const QING_YUAN = {
         ap: 1,
         mp: 3,
         target: 'enemy',
+        damageType: 'wind',
         effects: [
           {
             type: 'damage',
@@ -80,6 +83,7 @@ const QING_YUAN = {
       name: '破阵·清影',
       text: '换入时对正对位敌人造成12点伤害，并为自身施加8点护盾。',
       target: 'opposite',
+      damageType: 'wind',
       effects: [
         { type: 'damage', value: 12 },
         { type: 'shield', target: 'self', value: 8 },

@@ -1,14 +1,28 @@
 {
   "browserConcurrency": 2,
-  "scopes": ["quality", "core", "universal-enemies"],
+  "scopes": [
+    "quality",
+    "core",
+    "ui",
+    "status-emblems",
+    "intents",
+    "skill-menus",
+    "battle-controls"
+  ],
   "coreFiles": [
-    "tests/cat-preset.test.js",
-    "tests/preset-processing.test.js",
+    "tests/combat-overhaul.test.js",
+    "tests/stage3-vfx-skills.test.js",
+    "tests/journey-archives.test.js",
+    "tests/character-constraints.test.js",
+    "tests/character-design.test.js",
+    "tests/character-generation-plan.test.js",
     "tests/monsters-overlords.test.js",
-    "tests/worldbook.test.js",
-    "tests/forest.test.js",
-    "tests/frost.test.js",
-    "tests/humanoid-enemies.test.js",
-    "tests/universal-enemies.test.js"
+    "tests/combat-control.test.js",
+    "tests/status-emblems.test.js",
+    "tests/battle-balance.test.js",
+    "tests/battle-mechanic-execution.test.js",
+    "tests/town-guests.test.js",
+    "tests/enemy-base-values.test.js",
+    "tests/growth-supplies.test.js"
   ]
 }

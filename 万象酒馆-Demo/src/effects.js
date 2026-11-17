@@ -1,11 +1,17 @@
 import { BUFFS } from './data.js';
 import { createStatusEffects, triggeredStatusVisuals } from './status-effects.js';
 import { createCombatDetails } from './combat-details.js';
-import { createAttackEffects } from './attack-effects.js';
 import { attackStyle, ATTACK_TIMING } from './combat-art.js';
 import { abilityFor, definition } from './catalog.js';
 import { emblemVisualFor } from './emblems.js';
 import { createPixelFxStage } from './pixelfx-stage.js';
+import {
+  DIRECTIONAL_PIXELFX,
+  inferDamageType,
+  resolveBasicAttackType,
+  resolveDamagePixelFx,
+  skillDealsDamage,
+} from './damage-types.js';
 import { roundBanner } from './motion.js';
 export function createEffects(layer, center, getSpeed, options = {}) {
   const active = new Set();
@@ -65,22 +71,6 @@ export function createEffects(layer, center, getSpeed, options = {}) {
       );
     }
   }
-  function slash(p, color, claw = false, delay = 0) {
-    const el = document.createElement('div');
-    el.className = claw ? 'claw-effect' : 'slash-effect';
-    el.style.cssText = `left:${p.x}px;top:${p.y}px;--fx:${color}`;
-    el.innerHTML = claw ? '<i></i><i></i><i></i>' : '<i></i><i></i>';
-    animate(
-      el,
-      [
-        { opacity: 0, scale: '.3', rotate: '-25deg' },
-        { opacity: 1, scale: '1', rotate: '0deg', offset: 0.35 },
-        { opacity: 0, scale: '1.2', rotate: '12deg' },
-      ],
-      360,
-      delay,
-    );
-  }
   function floating(p, text, kind, delay = 0) {
     const el = document.createElement('div');
     el.className = `floating-number ${kind || ''}`;
@@ -104,7 +94,6 @@ export function createEffects(layer, center, getSpeed, options = {}) {
       delay,
     );
   }
-  const attacks = createAttackEffects({ animate, ring, sparks, slash });
   const statuses = createStatusEffects({ animate, ring, sparks });
   const details = createCombatDetails({ animate });
   const COMBINE_SKILLS = new Set([
@@ -116,23 +105,43 @@ export function createEffects(layer, center, getSpeed, options = {}) {
   ]);
   const DRAGON_PALETTE = ['#0a3d33', '#1c806a', '#38e89e', '#9dffda', '#ffffff'];
 
-  function skillPixelFxId(e, d, skillDef) {
-    if (skillDef?.vfx) return skillDef.vfx;
-    if (e.skill === 'attack') {
-      if (d?.weapon === 'staff') return 'mana-burst';
-      if (d?.weapon === 'bow') return 'thrust';
-      return 'sword-slash';
+  function skillPixelFxConfig(e, d, skillDef, targetCount) {
+    if (skillDef?.vfx) {
+      return {
+        id: skillDef.vfx,
+        palette: skillDef.vfxPalette || null,
+        directional: DIRECTIONAL_PIXELFX.has(skillDef.vfx),
+      };
     }
     const targetKind = skillDef?.target || '';
-    if (targetKind === 'self' || targetKind.includes('Ally') || targetKind === 'allAllies') {
-      if (skillDef?.effects?.some((ef) => ef.type === 'shield')) return 'divine-shield';
-      if (skillDef?.effects?.some((ef) => ef.type === 'heal')) return 'heal-aoe';
-      return 'blessing';
+    if (
+      !e.damageType &&
+      skillDef &&
+      (targetKind === 'self' ||
+        targetKind.includes('Ally') ||
+        targetKind === 'allAllies' ||
+        !skillDealsDamage(skillDef))
+    ) {
+      if (skillDef.effects?.some((ef) => ef.type === 'shield')) {
+        return { id: 'divine-shield', palette: null, directional: false };
+      }
+      if (skillDef.effects?.some((ef) => ef.type === 'heal' || ef.type === 'selfHeal')) {
+        return {
+          id: targetCount > 1 || targetKind === 'allAllies' ? 'heal-aoe' : 'heal',
+          palette: null,
+          directional: false,
+        };
+      }
+      return { id: 'blessing', palette: null, directional: false };
     }
-    if (d?.weapon === 'staff') return 'magic-circle-cast';
-    if (d?.weapon === 'bow') return 'crit-hit';
-    if (e.type === 'enemy') return 'heavy-cleave';
-    return 'double-slash';
+    const isBasic = e.skill === 'attack' || !skillDef;
+    const damageType =
+      e.damageType ||
+      (isBasic
+        ? resolveBasicAttackType(d)
+        : inferDamageType(skillDef, d) || resolveBasicAttackType(d));
+    const aoe = targetCount > 1 || targetKind === 'allEnemies';
+    return resolveDamagePixelFx(damageType, { aoe, basic: isBasic, skillDef });
   }
 
   function spawnPixelFx(e, before, d, source, impactDelay) {
@@ -209,29 +218,36 @@ export function createEffects(layer, center, getSpeed, options = {}) {
       const visual = emblemVisualFor(d?.emblemId);
       const point = targetPoints[0]?.p || source;
       if (point) {
+        const directional = DIRECTIONAL_PIXELFX.has(visual.passiveFx);
+        const side = before?.units?.[e.actor]?.side || 'hero';
         pixelFx.spawn(visual.passiveFx, {
           x: point.x,
           y: point.y,
           palette: visual.pixelfxPalette,
           delay: impactDelay * 0.6,
-          scale: 1.55,
+          scale: directional ? 1.44 : 1.5,
+          ...(directional ? { rotateDeg: side === 'enemy' ? 90 : -90 } : {}),
         });
         spawned = true;
       }
     } else if (['hero', 'enemy', 'entrySkill'].includes(e.type)) {
-      const skillDef = e.skill
-        ? abilityFor(state, e.actor, e.skill) || abilityFor(before, e.actor, e.skill)
-        : null;
-      const fxId = skillPixelFxId(e, d, skillDef);
+      const skillDef =
+        e.skill && e.skill !== 'attack'
+          ? abilityFor(state, e.actor, e.skill) || abilityFor(before, e.actor, e.skill)
+          : null;
       const pts = targetPoints.length ? targetPoints.slice(0, 3) : source ? [{ p: source }] : [];
+      const fxConfig = skillPixelFxConfig(e, d, skillDef, pts.length);
+      const attackerSide =
+        before?.units?.[e.actor]?.side || (e.type === 'enemy' ? 'enemy' : 'hero');
+      const rotateDeg = fxConfig.directional ? (attackerSide === 'enemy' ? 90 : -90) : 0;
       for (const item of pts) {
-        pixelFx.spawn(fxId, {
+        pixelFx.spawn(fxConfig.id, {
           x: item.p.x,
           y: item.p.y,
-          ...(skillDef?.vfxPalette ? { palette: skillDef.vfxPalette } : {}),
-          delay: impactDelay * (skillDef?.vfx ? 0.52 : 0.72),
-          flip: e.type === 'enemy',
-          scale: skillDef?.vfx ? 1.78 : 1.55,
+          ...(fxConfig.palette ? { palette: fxConfig.palette } : {}),
+          delay: impactDelay * (skillDef?.vfx ? 0.52 : 0.68),
+          scale: fxConfig.directional ? (skillDef?.vfx ? 1.48 : 1.38) : skillDef?.vfx ? 1.62 : 1.44,
+          ...(rotateDeg ? { rotateDeg } : {}),
         });
         spawned = true;
       }
@@ -290,7 +306,13 @@ export function createEffects(layer, center, getSpeed, options = {}) {
     const signals = triggeredStatusVisuals(e, before);
     for (const signal of signals) {
       const sp = center(signal.id);
-      if (sp) statuses.trigger(signal, sp, signal.type === 'bleed' ? duration * 0.8 : 0);
+      if (!sp) continue;
+      statuses.trigger(signal, sp, signal.type === 'bleed' ? duration * 0.8 : 0);
+      if (signal.type === 'break') {
+        pixelFx.spawn('impact-frame', { x: sp.x, y: sp.y, scale: 1.5, delay: impactDelay * 0.65 });
+        pixelFx.spawn('stunned', { x: sp.x, y: sp.y - 36, scale: 1.3, delay: impactDelay * 0.85 });
+        floating({ x: sp.x, y: sp.y - 54 }, 'BREAK · 击破', 'break-number', impactDelay);
+      }
     }
     if (attack && isAction) {
       attack.attack = {
@@ -318,7 +340,6 @@ export function createEffects(layer, center, getSpeed, options = {}) {
             start: performance.now() + impactDelay / getSpeed(),
             duration: 240 / getSpeed(),
           };
-        attacks.strike(style, source || p, p, d?.color || '#ffd97a');
         details.trace(p, style, impactDelay);
         if (old.block > u.block) statuses.shield(p, u.block === 0, impactDelay);
         if (e.type === 'hero' && ['delay', 'hourglass', 'stillness'].includes(e.skill))

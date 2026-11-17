@@ -13,7 +13,13 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { HEROES, DEFINITIONS, encounterSpec, enemySlots } from './data.js';
 import { createEffects } from './effects.js';
-import { resourceBars, statusIcons, escapeText } from './ui.js';
+import {
+  enemyToughnessBadge,
+  enemyWeaknessRow,
+  resourceBars,
+  statusIcons,
+  escapeText,
+} from './ui.js';
 import { portraitFrame } from './portrait-frame.js';
 import { portraitUrl } from './catalog.js';
 import { createCardDeaths } from './card-death.js';
@@ -107,7 +113,9 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
   const rim = new THREE.DirectionalLight(theme.fill, 0.7);
   rim.position.set(3, 6, -7);
   scene.add(rim);
-  const camera = new THREE.OrthographicCamera(-8.5, 8.5, 5.85, -5.85, 0.1, 60);
+  const hasOverlord = visibleDefinitions.some((def) => def.overlord);
+  const minOrthoHeight = hasOverlord ? 6.25 : 5.85;
+  const camera = new THREE.OrthographicCamera(-8.5, 8.5, minOrthoHeight, -minOrthoHeight, 0.1, 60);
   camera.position.set(0, 18, 10);
   camera.lookAt(0, 0, 0);
   const asset = `./assets/${theme.asset}.glb`;
@@ -291,7 +299,15 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
       new THREE.Vector3(),
     );
   }
-  function draw(s, forecast, selected, enemySelected, playing = false, origins = new Map()) {
+  function draw(
+    s,
+    forecast,
+    selected,
+    enemySelected,
+    playing = false,
+    origins = new Map(),
+    activeDamageType = null,
+  ) {
     if (disposed) return;
     currentState = s;
     if (!playing && s.phase === 'plan') deaths.releaseCinematic();
@@ -479,7 +495,10 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
         }${side === 'Enemy' ? enemyTierBadge(d) : ''}${side === 'Enemy' ? html`<small class="enemy-level" title="${combatRank(u.level || 1)}">Lv.${u.level || 1}</small>` : ''}<span
           class="unit-info"
           ><span class="unit-name">${d.name}${u.hp === 0 ? ' ×' : ''}</span></span
-        ><span class="unit-resources">${resourceBars(u, f)}</span
+        ><span class="unit-resources"
+          >${side === 'Enemy' ? enemyToughnessBadge(u, playing ? u : f) : ''}${resourceBars(u, f)}${
+            side === 'Enemy' ? enemyWeaknessRow(d, u, s.revealedWeaknesses, activeDamageType) : ''
+          }</span
         >${emblemRing(d, u, selected === id, playing ? u : f)}`;
       if (el.innerHTML !== markupString) el.innerHTML = markupString;
       el.onclick = () => onUnitClick(id, side, slot);
@@ -616,7 +635,7 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
     }
     let moving = ambience.update(now);
     moving = emblemAura.update(records, now, currentState) || moving;
-    overlords.update(now);
+    moving = overlords.update(now) || moving;
     moving = weather.update(now) || moving;
     moving = fx.update(now) || moving;
     for (const r of records) {
@@ -687,7 +706,7 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
     width = stage.clientWidth;
     height = stage.clientHeight;
     const aspect = width / height,
-      h = Math.max(5.85, 6.7 / aspect);
+      h = Math.max(minOrthoHeight, 6.7 / aspect);
     Object.assign(camera, { left: -h * aspect, right: h * aspect, top: h, bottom: -h });
     camera.updateProjectionMatrix();
     camera.updateMatrixWorld();
@@ -729,6 +748,16 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
   function playEvent(e, before) {
     if (disposed) return;
     const duration = fx.play(e, before, records);
+    if (e.type === 'enemy' && e.actor) {
+      overlords.playAction?.(e.actor, {
+        type: e.type,
+        hasDamage: Boolean(e.damageType),
+        enraged: Boolean(e.label?.includes('第二阶段')),
+        actionIndex: e.actionIndex || 0,
+        targets: e.targets || [],
+        speed: animationSpeed,
+      });
+    }
     schedule();
     const deathDelay = ['hero', 'enemy'].includes(e.type) ? duration * 0.7 : 0;
     for (const r of enemyRecords) {

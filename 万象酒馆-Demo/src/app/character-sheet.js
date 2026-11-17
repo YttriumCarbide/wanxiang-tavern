@@ -8,6 +8,7 @@ import { portraitUrl } from '../catalog.js';
 import { ability } from '../data.js';
 import { applyEquipment } from '../equipment.js';
 import { finalPassiveText, finalSkillText } from '../skill-text.js';
+import { damageTypeChip, inferDamageType, resolveBasicAttackType } from '../damage-types.js';
 import { DC_ATTRIBUTES, attrMod, formatMod, normalizeDcAttrs } from '../dc.js';
 
 const targets = {
@@ -24,7 +25,7 @@ function effectText(effect) {
   if (effect.type === 'mark') return `标记 +${effect.value}层`;
   return `${{ damage: '基础伤害', heal: '治疗', shield: '护盾', selfHeal: '自身治疗', selfMana: '自身回复法力' }[effect.type]} ${effect.value}`;
 }
-function abilitySheet(skill, design, label, markName) {
+function abilitySheet(skill, design, label, markName, actorDef = null) {
   const cost =
     label === '入场技'
       ? '换入前场时自动触发'
@@ -45,9 +46,16 @@ function abilitySheet(skill, design, label, markName) {
   const motion = escapeText(
     resourceText(design?.description || '这位来客的旧设定尚未记载具体动作。'),
   );
+  const dmgTypeBadge = skill.passive
+    ? ''
+    : damageTypeChip(
+        label === '普攻' ? resolveBasicAttackType(actorDef) : inferDamageType(skill, actorDef),
+        { size: 12 },
+      );
   return html`<details class="character-ability" data-character-ability="${escapeText(label)}">
     <summary>
-      <span class="ability-kind">${label}</span><strong>${escapeText(skill.name)}</strong
+      <span class="ability-kind">${label}</span>${dmgTypeBadge}<strong
+        >${escapeText(skill.name)}</strong
       ><small>${escapeText(cost)}</small>
     </summary>
     <div class="ability-content">
@@ -79,8 +87,8 @@ export function characterSheet(entry, equipment = [], options = {}) {
 
   const abilities = html`<section class="character-abilities">
     <h3>战斗方式 <small>${isPrep ? '战技数值、目标与消耗' : '展开查看数值与动作'}</small></h3>
-    ${abilitySheet(attack, model.attack, '普攻')}${combat.skills.map((skill, index) => abilitySheet(skill, model.skills[index], skill.passive ? '被动' : '技能', combat.mechanicMark?.name)).join('')}
-    ${combat.entrySkill ? abilitySheet(combat.entrySkill, model.entrySkill, '入场技', combat.mechanicMark?.name) : ''}
+    ${abilitySheet(attack, model.attack, '普攻', null, combat)}${combat.skills.map((skill, index) => abilitySheet(skill, model.skills[index], skill.passive ? '被动' : '技能', combat.mechanicMark?.name, combat)).join('')}
+    ${combat.entrySkill ? abilitySheet(combat.entrySkill, model.entrySkill, '入场技', combat.mechanicMark?.name, combat) : ''}
   </section>`;
 
   const biography = html`<div class="character-biography">

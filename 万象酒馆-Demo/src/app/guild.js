@@ -17,6 +17,15 @@ import {
 import { finalSkillText } from '../skill-text.js';
 import { DEFINITIONS } from '../data.js';
 import { escapeText } from '../ui.js';
+import { LEARNABLE_SKILL_CATEGORIES } from '../content/learnable-skills.js';
+import {
+  DAMAGE_TYPES,
+  DAMAGE_TYPE_IDS,
+  SUPPORT_TYPE,
+  damageTypeChip,
+  damageTypeIcon,
+  inferDamageType,
+} from '../damage-types.js';
 
 const TABS = Object.freeze([
   { id: 'bounties', label: '悬赏委托板', sub: 'BOUNTIES' },
@@ -36,6 +45,8 @@ export function createGuild(context) {
   document.body.append(dialog);
 
   let activeTab = 'bounties';
+  let activeSkillCategory = 'all';
+  let activeSkillType = 'all';
   let launching = false;
 
   const library = () => session.ai.library;
@@ -156,22 +167,46 @@ export function createGuild(context) {
 
   function renderSkills() {
     const catalog = guildSkillCatalog(library());
-    return `<div class="guild-cards">
-      ${catalog
-        .map((item) => {
-          const effectDesc = finalSkillText(item);
-          const costLine = item.learned
-            ? '已在全队战技库解锁'
-            : item.discountedCost < item.price
-              ? `<s>${item.price}</s> ${item.discountedCost} 金币`
-              : `${item.discountedCost} 金币`;
-          const meritNote = item.meritReq ? ` · 需功勋 ${item.meritReq}` : ' · 全阶可学';
-          return `<article class="guild-card ${item.learned ? 'is-ready' : ''}">
+    const filtered = catalog.filter((item) => {
+      if (activeSkillCategory !== 'all' && item.category !== activeSkillCategory) return false;
+      if (activeSkillType !== 'all') {
+        const dt = inferDamageType(item) || SUPPORT_TYPE;
+        if (dt !== activeSkillType) return false;
+      }
+      return true;
+    });
+    const catFilters = [
+      `<button type="button" class="guild-filter-btn ${activeSkillCategory === 'all' ? 'is-selected' : ''}" data-guild-cat-filter="all">全部分类</button>`,
+      ...Object.entries(LEARNABLE_SKILL_CATEGORIES).map(
+        ([catId, label]) =>
+          `<button type="button" class="guild-filter-btn ${activeSkillCategory === catId ? 'is-selected' : ''}" data-guild-cat-filter="${catId}">${escapeText(label)}</button>`,
+      ),
+    ].join('');
+    const typeFilters = [
+      `<button type="button" class="guild-filter-btn ${activeSkillType === 'all' ? 'is-selected' : ''}" data-guild-type-filter="all">全部属性</button>`,
+      ...DAMAGE_TYPE_IDS.map((typeId) => {
+        const meta = DAMAGE_TYPES[typeId];
+        return `<button type="button" class="guild-filter-btn is-type ${activeSkillType === typeId ? 'is-selected' : ''}" data-guild-type-filter="${typeId}" style="--dmg-color:${meta.color}">${damageTypeIcon(typeId, { size: 12, tint: false })}<span>${escapeText(meta.short)}</span></button>`;
+      }),
+      `<button type="button" class="guild-filter-btn is-type ${activeSkillType === SUPPORT_TYPE ? 'is-selected' : ''}" data-guild-type-filter="${SUPPORT_TYPE}" style="--dmg-color:#6ecfa3">${damageTypeIcon(SUPPORT_TYPE, { size: 12, tint: false })}<span>增幅</span></button>`,
+    ].join('');
+    const cardsHtml = filtered.length
+      ? filtered
+          .map((item) => {
+            const effectDesc = finalSkillText(item);
+            const costLine = item.learned
+              ? '已在全队战技库解锁'
+              : item.discountedCost < item.price
+                ? `<s>${item.price}</s> ${item.discountedCost} 金币`
+                : `${item.discountedCost} 金币`;
+            const meritNote = item.meritReq ? ` · 需功勋 ${item.meritReq}` : ' · 全阶可学';
+            const dmgType = inferDamageType(item);
+            return `<article class="guild-card ${item.learned ? 'is-ready' : ''}">
           <div class="guild-card-top">
             <span class="guild-rank-seal">${escapeText(item.rank)}</span>
             <div class="guild-card-meta">
               <small>${escapeText(item.categoryLabel)}${escapeText(meritNote)} · ${item.ap} AP${item.mp ? ` · ${item.mp} SP` : ''}${item.hp ? ` · ${item.hp} HP` : ''}</small>
-              <h3>${escapeText(item.name)}</h3>
+              <h3 class="guild-skill-heading"><span>${escapeText(item.name)}</span>${damageTypeChip(dmgType, { size: 12 })}</h3>
             </div>
             ${
               item.learned
@@ -194,9 +229,14 @@ export function createGuild(context) {
             </div>
           </footer>
         </article>`;
-        })
-        .join('')}
-    </div>`;
+          })
+          .join('')
+      : '<div class="guild-empty-note">当前筛选条件下暂无对应通用战技</div>';
+    return `<div class="guild-skill-filters" role="region" aria-label="战技筛选">
+        <div class="guild-filter-row">${catFilters}</div>
+        <div class="guild-filter-row is-types">${typeFilters}</div>
+      </div>
+      <div class="guild-cards">${cardsHtml}</div>`;
   }
 
   function renderTrials() {
@@ -321,6 +361,18 @@ export function createGuild(context) {
     const tabBtn = event.target.closest('[data-guild-tab]');
     if (tabBtn) {
       activeTab = tabBtn.dataset.guildTab;
+      render();
+      return;
+    }
+    const catFilter = event.target.closest('[data-guild-cat-filter]');
+    if (catFilter) {
+      activeSkillCategory = catFilter.dataset.guildCatFilter;
+      render();
+      return;
+    }
+    const typeFilter = event.target.closest('[data-guild-type-filter]');
+    if (typeFilter) {
+      activeSkillType = typeFilter.dataset.guildTypeFilter;
       render();
       return;
     }

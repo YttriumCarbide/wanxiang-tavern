@@ -7,7 +7,13 @@ export const ENEMY_ARCHIVE_TIERS = Object.freeze([
 ]);
 
 const MOON_TREE_PART_ORDER = ['moonCrown', 'moonEye', 'moonRoot'];
-const OVERLORD_CANONICAL_ORDER = ['apepLamb', 'moonTree', 'ares', 'radiantWyvern'];
+const OVERLORD_CANONICAL_ORDER = [
+  'apepLamb',
+  'moonTree',
+  'ares',
+  'radiantWyvern',
+  'alchemicalPuppet',
+];
 
 export function classifyEnemyArchiveTier(entry, isOfficial = false) {
   if (entry?.overlord) return 'overlord';

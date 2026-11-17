@@ -1,6 +1,7 @@
 import { EMBLEMS } from '../emblems.js';
 import { html } from '../shared/html.js';
 import { escapeText } from '../ui.js';
+import { damageTypeChip, inferDamageType, resolveBasicAttackType } from '../damage-types.js';
 import { query as $ } from './dom.js';
 
 /** @param {import('./context.js').AppContext} context */
@@ -47,14 +48,14 @@ export function createDrag(context) {
       >${side === 'Friendly' && !self ? '<button data-drop-swap>交换 · 1 AP</button>' : ''}${skills
         .map((a) => {
           const unavailable = !context.planning.canQueueSkill(actor, a.id, targetId);
+          const dmgType = a.id === 'attack' ? resolveBasicAttackType(d) : inferDamageType(a, d);
           return html`<button
             data-drop-skill="${a.id}"
             ${unavailable ? 'disabled' : ''}
             data-tooltip="${escapeText(`${a.text || `造成${d.attack}伤害`}\n消耗 ${a.ap} AP${a.mp ? ` · ${a.mp} sp` : ''}${a.hp ? ` · ${a.hp} hp` : ''}`)}"
           >
-            ${a.name}<small
-              >${a.ap} AP${a.mp ? ` · ${a.mp} sp` : ''}${a.hp ? ` · ${a.hp} hp` : ''}</small
-            >
+            <span class="drop-skill-head">${a.name}${damageTypeChip(dmgType, { size: 12 })}</span
+            ><small>${a.ap} AP${a.mp ? ` · ${a.mp} sp` : ''}${a.hp ? ` · ${a.hp} hp` : ''}</small>
           </button>`;
         })
         .join('')}`;

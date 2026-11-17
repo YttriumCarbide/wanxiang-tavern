@@ -809,3 +809,38 @@
 #details .action-category-title {
   font-size: 13px;
 }
+.dmg-type-svg {
+  display: inline-block;
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+.dmg-type-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--dmg-color, #d8c28a) 55%, transparent);
+  background: color-mix(in srgb, var(--dmg-color, #d8c28a) 14%, rgba(12, 24, 22, 0.84));
+  color: var(--dmg-color, #e8dcc2);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 15px;
+  white-space: nowrap;
+  box-shadow: 0 0 6px var(--dmg-glow, transparent);
+}
+.dmg-type-chip .dmg-type-label {
+  letter-spacing: 0.02em;
+}
+#details .ability-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  width: 100%;
+}
+.drop-skill-head {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}

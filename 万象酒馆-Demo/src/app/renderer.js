@@ -8,6 +8,7 @@ import { ENCOUNTERS } from '../data.js';
 import { currentEncounterSpec } from '../expedition.js';
 import { captureLayout, unitOrigins, animateLayout } from '../motion.js';
 import { resourceBars, statusIcons, escapeText } from '../ui.js';
+import { inferDamageType, resolveBasicAttackType } from '../damage-types.js';
 import { query as $ } from './dom.js';
 import { portraitUrl } from '../catalog.js';
 
@@ -162,6 +163,20 @@ export function createRenderer(context) {
         .map((t) => html`<p>${t}</p>`)
         .join('') || '<p>选角色、技能和目标，再放进左侧时间轴。</p>';
     session.runtime.view?.setSpeed(session.battle.speed);
+    let activeDamageType = null;
+    if (session.selection.pending?.kind === 'skill') {
+      const pendingActor = session.selection.pending.actor;
+      const pendingDef = context.roster.get(pendingActor);
+      if (session.selection.pending.skill === 'attack') {
+        activeDamageType = resolveBasicAttackType(pendingDef);
+      } else {
+        const pendingAbility = context.roster.ability(
+          pendingActor,
+          session.selection.pending.skill,
+        );
+        activeDamageType = inferDamageType(pendingAbility, pendingDef);
+      }
+    }
     session.runtime.view?.draw(
       s,
       session.battle.forecast,
@@ -169,6 +184,7 @@ export function createRenderer(context) {
       session.selection.target,
       session.battle.playing,
       unitOrigins(layout),
+      activeDamageType,
     );
     if (options.animate !== false) animateLayout(layout, context.roster.all());
     context.selection.refreshInteraction();
