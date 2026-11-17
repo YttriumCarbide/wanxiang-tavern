@@ -67,7 +67,7 @@ export async function audioChecks({ browser, baseURL, output }) {
     await page.locator('#audio-toggle').click();
     await page.locator('#audio-music-mute').click();
     await page.waitForTimeout(200);
-    await page.locator('#audio-toggle').click();
+    await page.keyboard.press('Escape');
     await page.locator('[data-unit="morrow"]').click();
     assert(
       (await page.evaluate(() => demo.getAudioStatus().voices)) > 0,
@@ -75,8 +75,9 @@ export async function audioChecks({ browser, baseURL, output }) {
     );
     await page.setViewportSize({ width: 844, height: 390 });
     await page.locator('#audio-toggle').click();
+    await page.locator('#audio-panel').waitFor({ state: 'visible' });
     const panel = await page.locator('#audio-panel').boundingBox();
-    assert(panel.x >= 0 && panel.x + panel.width <= 844 && panel.y + panel.height < 390);
+    assert(panel.x >= 0 && panel.x + panel.width <= 844 && panel.y + panel.height <= 390);
     await page.screenshot({ path: path.join(output, 'audio-landscape.png') });
     await page.keyboard.press('Escape');
     await page.evaluate(() => demo.returnInn());

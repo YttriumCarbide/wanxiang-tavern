@@ -64,6 +64,11 @@ export async function compatibilityChecks({ browser, baseURL, output }) {
           }),
         ),
       );
+      await page.locator('#ledger-handle').focus();
+      await page.keyboard.press('ArrowLeft');
+      await page.locator('#ledger-drawer-host.is-open').waitFor();
+      await activate(page.locator('#ledger-close'));
+      await page.locator('#ledger-drawer').waitFor({ state: 'hidden' });
       assert(accepted, 'touch contacts without a mouse button must not be blocked');
       assert.deepEqual(errors, []);
       results.push({ viewport, legacyStartup: true, galAdvances: true, controlsAfterGal: true });

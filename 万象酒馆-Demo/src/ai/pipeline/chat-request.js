@@ -16,6 +16,7 @@ import { newWorldEntry } from '../worldbook.js';
 import { invitationChatInstruction, invitationTurnContext } from './invitation-request.js';
 import { INVITATION_CONTEXT_LIMIT, journeyContinuityMessage } from '../../memory.js';
 import { buildTriggerIds } from '../worldbook-triggers.js';
+import { DC_RP_SYSTEM_RULES, fixedChoicePromptSummary, freeDcPromptSummary } from '../../dc-rp.js';
 
 export function chatInput(kind, input) {
   if (!['chat', 'quick-chat'].includes(kind)) throw Error('聊天接口类型无效');
@@ -156,16 +157,30 @@ export async function chatRequest(
     scan.entries.some((entry) => entry.extensions?.wanxiang?.generationRule === 'chat-boundary');
   const sampling = presetSampling(preset);
   const warnings = presetOutputWarnings(preset);
+  const fixedCheck =
+    input.dcContext?.mode === 'fixed'
+      ? input.dcContext.choiceCheck
+      : input.adventure?.mode === 'event'
+        ? input.adventure.choiceCheck
+        : null;
   const rules =
     kind === 'chat'
-      ? '直接续写当前酒馆内的人物言语、行动与环境正文，沿用预设文风，可以使用HTML，不说明“正在聊天”、不解释界面、不写聊天总结。正文只放在唯一一组<wanxiang_output>与</wanxiang_output>内。随后在唯一一组<wanxiang_actions>与</wanxiang_actions>内输出JSON：{"affection":[{"id":"队友ID","delta":1}],"agreeToAdventure":[]}。affection中的id与agreeToAdventure中的每一项，都必须原样使用人物资料标明的内部id，不能填写角色姓名、昵称、站位或编造ID；正文仍自然称呼角色姓名，不展示内部id。根据本轮实际互动给出0～5的好感增量；没有变化时affection为空。只有角色在正文中明确同意与玩家一起进入副本，才把其ID放入agreeToAdventure。指令只针对在场或本轮提及的已知角色，不含主角，不凭空替玩家作决定。'
-      : '这是当前战斗/剧情间隙的简短闲聊，不是后续剧本。只回复一组<wanxiang_output>正文</wanxiang_output>标签，不返回JSON。不得推进剧情或改变战斗。';
+      ? '直接续写当前酒馆内的人物言语、行动与环境正文，沿用预设文风，可以使用HTML，不说明“正在聊天”、不解释界面、不写聊天总结。正文只放在唯一一组<wanxiang_output>与</wanxiang_output>内。随后在唯一一组<wanxiang_actions>与</wanxiang_actions>内输出JSON：{"affection":[{"id":"队友ID","delta":1}],"agreeToAdventure":[]}。affection中的id与agreeToAdventure中的每一项，都必须原样使用人物资料标明的内部id，不能填写角色姓名、昵称、站位或编造ID；正文仍自然称呼角色姓名，不展示内部id。根据本轮实际互动给出-5～5的好感增量（冒犯或伤害关系可扣分，没有变化时affection为空）。只有角色在正文中明确同意与玩家一起进入副本，才把其ID放入agreeToAdventure。指令只针对在场或本轮提及的已知角色，不含主角，不凭空替玩家作决定。'
+      : input.dialogueContext
+        ? fixedCheck
+          ? '这是外出旅途中的固定抉择事件。顺着玩家所选方案与系统既定判定结果直接演对手戏，在行动爆发处单独另起一行插入 [[DC_CHECK]] 并外附唯一一组 <wanxiang_dc>JSON</wanxiang_dc>，正文放在唯一一组<wanxiang_output>正文</wanxiang_output>标签内。'
+          : input.dcContext?.mode === 'free'
+            ? '这是外出旅途中的奇遇自由互动。顺着玩家本轮的言行与当前旅途遭遇，直接演对手戏并推进眼前的事件。仅当行动面临明显阻力或风险时，才自主决定发起 2D6 DC 检定（插入 [[DC_CHECK]] 并外附 <wanxiang_dc>）；日常互动可免检。正文放在唯一一组<wanxiang_output>正文</wanxiang_output>标签内。'
+            : '这是外出旅途中的奇遇自由互动。顺着玩家本轮的言行与当前旅途遭遇，直接演对手戏并推进眼前的事件，不替玩家做后续决定，不擅自发放战斗数值奖励，也不进行DC检定（禁止输出 [[DC_CHECK]] 与 <wanxiang_dc>）。只回复唯一一组<wanxiang_output>正文</wanxiang_output>标签。'
+        : '这是当前战斗/剧情间隙的简短闲聊，不是后续剧本。只回复一组<wanxiang_output>正文</wanxiang_output>标签，不返回JSON。不得推进剧情或改变战斗。';
   const leanTaskRule =
     kind === 'chat'
       ? `【本轮模式：chat】\n${galActorListText(input)}`
       : input.invitation
         ? `【本轮模式：quick-chat / invitation】\n${galActorListText(input)}`
-        : `【本轮模式：quick-chat / quick】\n${galActorListText(input)}`;
+        : input.dialogueContext
+          ? `【本轮模式：quick-chat / overland】\n${galActorListText(input)}`
+          : `【本轮模式：quick-chat / quick】\n${galActorListText(input)}`;
   const previousScript = String(input.previousScript || '').slice(0, 500000);
   const base = [
     {
@@ -180,7 +195,7 @@ export async function chatRequest(
       ? [
           {
             role: 'system',
-            content: `上一次副本的内部剧本原文，仅作过去的背景，不继续推进：\n${previousScript}`,
+            content: `上一次副本的内部剧本原文，仅作过去的背景参考以保持文风与大体因果一致，不继续推进，也严禁模仿其叙事结构或桥段套路：\n${previousScript}`,
           },
         ]
       : []),
@@ -188,9 +203,46 @@ export async function chatRequest(
   if (kind === 'quick-chat' && input.adventure) {
     const stateContext = { ...input.adventure };
     delete stateContext.history;
+    if (stateContext.mode === 'event') {
+      delete stateContext.choiceCheck;
+      if (stateContext.choice) {
+        const { id, label, detail } = stateContext.choice;
+        stateContext.choice = { id, label, detail };
+      }
+      if (stateContext.event?.choices) {
+        stateContext.event = {
+          ...stateContext.event,
+          choices: stateContext.event.choices.map(({ id, label, detail }) => ({
+            id,
+            label,
+            detail,
+          })),
+        };
+      }
+    }
     base.push({
       role: 'system',
       content: '当前五节点冒险上下文（未来预定不是已发生历史）：\n' + JSON.stringify(stateContext),
+    });
+  }
+  if (fixedCheck) {
+    base.push({
+      role: 'system',
+      content: `${fixedChoicePromptSummary(fixedCheck)}\n${DC_RP_SYSTEM_RULES}`,
+    });
+  } else if (input.dcContext?.mode === 'free') {
+    const forcePrefix = input.dcContext?.forced
+      ? '【本轮为第四节点自由任务判定回合】你必须依据玩家本轮行动挑选最契合的属性与角色进行 2D6 判定：在出手关键处单独另起一行插入 [[DC_CHECK]]，并在 <wanxiang_output> 之外输出 <wanxiang_dc>（设为 "triggered": true）。注意：DC 判定成败只决定本回合代价与波折，任务目标是否 completed 仅看剧情是否达成目的，DC 失败绝不锁死任务。\n'
+      : '';
+    base.push({
+      role: 'system',
+      content: `${forcePrefix}${freeDcPromptSummary(input.dcContext)}\n${DC_RP_SYSTEM_RULES}`,
+    });
+  } else if (kind === 'quick-chat') {
+    base.push({
+      role: 'system',
+      content:
+        '【检定限制】本轮不是选择事件判定，严禁进行属性/DC检定，严禁在正文中写入 [[DC_CHECK]]，严禁输出 <wanxiang_dc> 标签。',
     });
   }
   if (input.archiveContext)
@@ -208,7 +260,7 @@ export async function chatRequest(
       role: 'system',
       content: `【本次餐桌数据】${JSON.stringify(input.dining)}`,
     });
-  if (kind === 'chat' && input.protagonistId)
+  if ((kind === 'chat' || input.dialogueContext) && input.protagonistId)
     base.push({
       role: 'system',
       content: `【玩家主角与关系状态】${JSON.stringify({
@@ -237,7 +289,7 @@ export async function chatRequest(
       lastcharmessage:
         projection.messages.findLast((message) => message.role === 'assistant')?.content || '',
       brief: projection.messages.at(-1).content,
-      task: kind === 'chat' ? '酒馆交流' : '战斗闲聊',
+      task: kind === 'chat' ? '酒馆交流' : input.dialogueContext ? '旅途奇遇扮演' : '战斗闲聊',
       char: input.characters.map((character) => character.name).join('、'),
       user: '玩家',
       description: characters,

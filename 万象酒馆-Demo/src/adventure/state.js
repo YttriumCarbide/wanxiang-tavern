@@ -31,14 +31,24 @@ export function adventureReady(definition, state) {
     .every((goal) => state.goals[goal.id]?.status === 'completed');
 }
 
-export function confirmEventChoice(definition, state, choiceId, supplement = '') {
+export function confirmEventChoice(
+  definition,
+  state,
+  choiceId,
+  supplement = '',
+  choiceCheck = null,
+) {
   const choice = definition.event.choices.find((item) => item.id === choiceId);
   if (!choice) throw Error('请先选择一个事件选项');
   if (state.event.resolved) throw Error('本事件已经结算');
   if (state.event.choiceId && state.event.choiceId !== choiceId)
     throw Error('已经确认的选项不可更改');
   if (typeof supplement !== 'string' || supplement.length > 10000) throw Error('补充内容过长');
-  Object.assign(state.event, { choiceId, supplement });
+  Object.assign(state.event, {
+    choiceId,
+    supplement,
+    ...(choiceCheck ? { choiceCheck } : {}),
+  });
   return choice;
 }
 
@@ -124,11 +134,13 @@ export function acceptAdventureReply(library, expedition, book, turn, reply, res
   return { duplicate: false, warnings };
 }
 
-export function adventureTurnContext(expedition, book, playerText = '') {
+export function adventureTurnContext(expedition, book, playerText = '', choiceCheck = null) {
   const state = expedition.adventure;
   if (!state || ![1, 3].includes(expedition.index)) return null;
   const event = book.adventure.event;
   const choice = event.choices.find((item) => item.id === state.event.choiceId);
+  const resolvedCheck =
+    expedition.index === 1 ? choiceCheck || state.event.choiceCheck || null : null;
   return {
     mode: expedition.index === 1 ? (state.event.resolved ? 'event-chat' : 'event') : 'quest',
     episodeId: expedition.id,
@@ -137,9 +149,22 @@ export function adventureTurnContext(expedition, book, playerText = '') {
     event: {
       title: event.title,
       description: event.description,
-      choices: event.choices.map(({ id, label, detail }) => ({ id, label, detail })),
+      choices: event.choices.map(({ id, label, detail, dcCheck }) => ({
+        id,
+        label,
+        detail,
+        ...(dcCheck ? { dcCheck } : {}),
+      })),
     },
-    choice: choice ? { id: choice.id, label: choice.label, detail: choice.detail } : null,
+    choice: choice
+      ? {
+          id: choice.id,
+          label: choice.label,
+          detail: choice.detail,
+          ...(choice.dcCheck ? { dcCheck: choice.dcCheck } : {}),
+        }
+      : null,
+    ...(resolvedCheck ? { choiceCheck: resolvedCheck } : {}),
     goals: book.adventure.quest.goals.map((goal) => ({ ...goal, ...state.goals[goal.id] })),
     scene: book.adventure.quest,
     boss: { revision: state.boss.revision, lines: structuredClone(state.boss.lines) },

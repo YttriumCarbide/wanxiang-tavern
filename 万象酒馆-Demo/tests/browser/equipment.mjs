@@ -32,6 +32,7 @@ export async function equipmentChecks({ browser, baseURL, output }) {
     library.inventory.summonContracts = 5;
     firstCompanion(library);
     library.campaign.tutorial = 'complete';
+    library.unlockedDungeons = ['ruins', 'forest'];
     // This suite exercises successful refinement, after the main world's sixth site.
     for (let site = 0; site < 6; site++)
       completeExploration(library.exploration, library.exploration.ruins.frontier[0]);
@@ -152,15 +153,20 @@ export async function equipmentChecks({ browser, baseURL, output }) {
     assert.equal((await page.evaluate(() => demo.getLibrary())).inventory.ether, 30);
     await page.screenshot({ path: path.join(output, 'ether-construction.png') });
     await page.locator('[data-forge-close]').click();
+    const handle = await page.locator('#ledger-handle').boundingBox();
+    await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(Math.max(10, handle.x - 140), handle.y + handle.height / 2, {
+      steps: 6,
+    });
+    await page.mouse.up();
+    await page.locator('#ledger-drawer-host.is-open').waitFor();
     await page.locator('#party-toggle').click();
     await page.locator('[data-prepare-slot="0"]').click();
-    const select = page.locator('[data-equipment-slot="0"]');
+    const select = page.locator('[data-equipment-slot="2"]');
     const id = await select.locator('option').nth(1).getAttribute('value');
     await select.selectOption(id);
-    assert.equal((await page.evaluate(() => demo.getLibrary())).characters[0].equipment[0], id);
-    await page.locator('#prepare-character-done').click();
-    await page.locator('#prepare-bag summary').click();
-    assert((await page.locator('#prepare-bag').innerText()).includes('生命药水'));
+    assert.equal((await page.evaluate(() => demo.getLibrary())).characters[0].equipment[2], id);
     await page.screenshot({ path: path.join(output, 'preparation-equipment.png') });
     await page.locator('#prepare-done').click();
     await page.route('**/api/ai/config', async (route) => {

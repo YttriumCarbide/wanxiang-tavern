@@ -28,7 +28,8 @@ export async function tavernVisitorsChecks({ browser, baseURL, output }) {
   try {
     await page.goto(baseURL + '/?display=landscape');
     const inn = page.frameLocator('#inn-frame iframe');
-    await inn.locator('#visitor-refresh').waitFor({ state: 'visible' });
+    const refreshBtn = page.locator('#scene-visitors-refresh');
+    await refreshBtn.waitFor({ state: 'visible' });
     const canvas = inn.locator('canvas');
     await canvas.evaluate(
       () =>
@@ -92,7 +93,7 @@ export async function tavernVisitorsChecks({ browser, baseURL, output }) {
       });
       blocked.forEach((spot) => blockedSpots.add(spot));
       if (index === 0) await page.screenshot({ path: path.join(output, 'visitors-room.png') });
-      await inn.locator('#visitor-refresh').click();
+      await refreshBtn.click();
     }
     assert.equal(visited.size, 5);
     assert.equal(
@@ -108,8 +109,9 @@ export async function tavernVisitorsChecks({ browser, baseURL, output }) {
         window.assetPreview.visitors().characters.some((actor) => actor.spot === 'bar-front'),
       ));
       attempt++
-    )
-      await inn.locator('#visitor-refresh').click();
+    ) {
+      await refreshBtn.click();
+    }
     const target = await canvas.evaluate(() => {
       const view = window.assetPreview;
       const actor = view.visitors().characters.find((entry) => entry.spot === 'bar-front');
@@ -140,8 +142,19 @@ export async function tavernVisitorsChecks({ browser, baseURL, output }) {
     await page.locator('#ai-open').click();
     await page.locator('[data-ai-tab="game"]').click();
     assert.equal(await page.locator('[data-generation-option="tavernVisitors"]').count(), 0);
+    await page.locator('[data-generation-option="developerMode"]').uncheck();
     await page.locator('#ai-close').click();
-    assert.equal(await inn.locator('#visitor-refresh').isVisible(), true);
+    assert.equal(
+      await refreshBtn.isVisible(),
+      false,
+      'Visitor swap button hides outside developer mode',
+    );
+    await page.locator('#ai-open').click();
+    await page.locator('[data-ai-tab="game"]').click();
+    await page.locator('[data-generation-option="developerMode"]').check();
+    await page.locator('#ai-close').click();
+    assert.equal(await refreshBtn.isVisible(), true);
+    assert.equal(await refreshBtn.isEnabled(), true);
     assert.deepEqual(errors, []);
     return {
       officialSprites: 5,

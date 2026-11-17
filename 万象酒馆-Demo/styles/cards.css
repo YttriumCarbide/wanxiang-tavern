@@ -11,6 +11,33 @@
   line-height: 14px;
   pointer-events: none;
 }
+.enemy-tier-badge {
+  position: absolute;
+  left: 5px;
+  top: 4px;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  pointer-events: none;
+}
+.enemy-tier-badge svg {
+  width: 14px;
+  height: 14px;
+}
+.enemy-tier-badge.is-elite {
+  background: radial-gradient(circle at 30% 25%, #5c3715, #291607);
+  border: 1px solid #f0bc68;
+  color: #ffe3a8;
+  box-shadow: 0 0 10px rgba(228, 169, 82, 0.55);
+}
+.enemy-tier-badge.is-boss {
+  background: radial-gradient(circle at 30% 25%, #731a25, #2f090f);
+  border: 1px solid #ff7d82;
+  color: #ffe4de;
+  box-shadow: 0 0 12px rgba(240, 110, 110, 0.65);
+}
 .resource-shield {
   position: absolute;
   right: calc(100% + 5px);
@@ -1914,15 +1941,20 @@
   position: absolute;
   top: 4px;
   right: 4px;
-  background: linear-gradient(135deg, #ffe082, #ffb300);
-  color: #2a1a00;
-  font-size: 9px;
-  font-weight: 700;
-  padding: 1px 4px;
-  border-radius: 3px;
-  box-shadow: 0 1px 4px #00000088;
-  letter-spacing: 0.5px;
+  display: grid;
+  place-items: center;
+  width: 21px;
+  height: 21px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 25%, #ffe694, #e59c1a);
+  color: #261400;
+  border: 1px solid #fff5c8;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.6);
   animation: entry-tag-glow 1.2s infinite alternate ease-in-out;
+}
+.rear-card .entry-tag svg {
+  width: 13px;
+  height: 13px;
 }
 .ability-card.entry-card.entry-ready {
   border-color: #ffd97a88;

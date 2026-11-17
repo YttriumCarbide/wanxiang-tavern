@@ -1,7 +1,6 @@
 import { recordJourneyActivity } from '../memory.js';
 import {
   DAILY_ACTIONS,
-  DAILY_PERIODS,
   DAILY_ROLES,
   INVITATION_ACTIVITIES,
   OUTING_ACTIONS,
@@ -9,6 +8,8 @@ import {
   TOWN_SCENES,
   advanceOuting,
   advanceTavernTime,
+  dailyCalendarDate,
+  dailyDateTimeText,
   dailyUnlocked,
   startTavernActivity,
   tavernPromotion,
@@ -16,14 +17,16 @@ import {
   finishDaily,
   serviceStaff,
 } from '../daily.js';
-import { newServiceShift } from '../tavern-service.js';
 import { settleServiceGrowth } from '../service-progression.js';
 import {
-  reserveServiceSpecial,
-  returnServiceSpecialStock,
-  serviceSpecial,
-  serviceSpecialCapacity,
-} from '../service-specials.js';
+  autoFillLiveHubMenu,
+  defaultHubMenus,
+  newLiveServiceShift,
+  settleLiveServiceShift,
+  toggleLiveHubDish,
+  upgradeLiveFacility,
+} from '../service-live.js';
+import { returnServiceSpecialStock } from '../service-specials.js';
 import { INVITATION_SCENES, invitationExcerpt } from '../invitation.js';
 import { affectionLabel, relationship } from '../relationships.js';
 import { recruitmentStatus, RECRUITMENT_DIFFICULTY } from '../recruitment.js';
@@ -41,6 +44,9 @@ import {
 import { townResidents } from '../town-residents.js';
 
 import { createPlayerIntentPrompt } from './player-intent.js';
+import { createWorldLoadingOverlay } from '../shared/scene-loading.js';
+import { IMPERIAL_DUNGEONS } from '../content/imperial-network.js';
+import { learning } from '../campaign.js';
 
 export function createDaily(context) {
   const { session, events } = context;
@@ -49,22 +55,29 @@ export function createDaily(context) {
   const active = () => state().active;
   const enabled = () => dailyUnlocked(library());
   const frame = () => document.querySelector('#inn-frame iframe');
+  const atlasFrame = () => document.getElementById('daily-atlas-frame');
+  const atlasLoading = createWorldLoadingOverlay('正在展开泛生界大地图');
   const save = () => context.generation.save();
   const root = document.createElement('section');
   root.id = 'daily-hud';
   root.hidden = true;
-  root.innerHTML = `<aside class="daily-invitation-record" hidden aria-label="约见手记"></aside>
-    <div class="daily-clock">
-      <div class="daily-clock-pill">
-        <em class="daily-rank-chip" data-tavern-rank>0 阶</em>
-        <span data-tavern-clock></span>
+  root.innerHTML = `<div class="daily-top-hud">
+      <div class="daily-plaque" id="hud-plaque" aria-live="polite">
+        <span class="daily-place-chip" data-tavern-place>酒馆大厅</span>
+        <span class="daily-clock-pill">
+          <span data-tavern-clock></span>
+          <em class="daily-rank-chip" data-tavern-rank>0 阶</em>
+        </span>
       </div>
+      <div class="daily-status" aria-live="polite"></div>
+    </div>
+    <aside class="daily-invitation-record" hidden aria-label="约见手记"></aside>
+    <div class="daily-clock">
       <button type="button" data-daily="service">营业</button>
       <button type="button" data-daily="promotion">酒馆进阶</button>
       <button type="button" data-daily="quests">任务</button>
     </div>
     <aside class="daily-quest" hidden aria-live="polite"></aside>
-    <div class="daily-status" aria-live="polite"></div>
     <nav class="daily-dock" aria-label="酒馆行动">
       <button type="button" data-daily="chat">闲聊</button>
       <button type="button" data-daily="meal">用餐</button>
@@ -78,12 +91,24 @@ export function createDaily(context) {
   setup.setAttribute('aria-labelledby', 'daily-setup-title');
   document.body.append(setup);
   const dock = root.querySelector('.daily-dock');
+  const placeChip = root.querySelector('[data-tavern-place]');
   const clock = root.querySelector('[data-tavern-clock]');
+  const clockActions = root.querySelector('.daily-clock');
+  const questHud = root.querySelector('.daily-quest');
   const rankChip = root.querySelector('[data-tavern-rank]');
-  const promoButton = root.querySelector('[data-daily="promotion"]');
+  const serviceButton = clockActions.querySelector('[data-daily="service"]');
+  const promoButton = clockActions.querySelector('[data-daily="promotion"]');
+  const questsButton = clockActions.querySelector('[data-daily="quests"]');
   const status = root.querySelector('.daily-status');
   const record = root.querySelector('.daily-invitation-record');
   const galStage = document.querySelector('#gal-stage');
+  const PLACE_TITLES = Object.freeze({
+    tavern: '酒馆大厅',
+    corridor: '二层走廊',
+    'guest-room': '二层 · 客房',
+    'master-bedroom': '主卧 · 主人房',
+  });
+  const sceneTitles = new Map(Object.entries(PLACE_TITLES));
   let scene = 'tavern';
   let visitedDiscovery = null;
   function activeScene() {
@@ -94,7 +119,15 @@ export function createDaily(context) {
       const detected =
         bodyScene ||
         paramScene ||
-        (win?.location?.pathname?.endsWith('/tavern.html') ? 'tavern' : '');
+        (win?.location?.pathname?.endsWith('/tavern.html')
+          ? 'tavern'
+          : win?.location?.pathname?.endsWith('/corridor.html')
+            ? 'corridor'
+            : win?.location?.pathname?.endsWith('/master-bedroom.html')
+              ? 'master-bedroom'
+              : win?.location?.pathname?.endsWith('/guest-room.html')
+                ? 'guest-room'
+                : '');
       if (detected) return detected === 'starlamp-street' ? 'street' : detected;
     } catch {
       /* Fallback to tracked scene before iframe is same-origin ready. */
@@ -171,15 +204,68 @@ export function createDaily(context) {
     recruitPanel.close();
     openSetup();
   });
+  function alignSceneTalk() {
+    if (talkButton.hidden) {
+      talkButton.classList.remove('is-docked');
+      talkButton.style.left = '';
+      talkButton.style.top = '';
+      return;
+    }
+    const doc = frame()?.contentDocument;
+    const bar = doc?.querySelector('.street-actions');
+    const mapBtn = doc?.querySelector('#street-map-open');
+    const barRect = bar?.getBoundingClientRect();
+    const mapRect = mapBtn?.getBoundingClientRect();
+    if (!barRect || !mapRect || mapRect.left - barRect.left < 60) {
+      talkButton.classList.remove('is-docked');
+      talkButton.style.left = '';
+      talkButton.style.top = '';
+      return;
+    }
+    talkButton.classList.add('is-docked');
+    const slotWidth = Math.max(40, mapRect.left - barRect.left - 8);
+    const talkHeight = talkButton.offsetHeight || Math.max(30, barRect.height - 10);
+    talkButton.style.left = `${barRect.left + 4 + slotWidth / 2}px`;
+    talkButton.style.top = `${barRect.top + (barRect.height - talkHeight) / 2}px`;
+  }
+  events.on(window, 'resize', alignSceneTalk);
+
   function renderPromotion() {
     const progress = tavernPromotion(state(), library().workshop);
-    promotion.innerHTML = `<header><h2>酒馆 · ${progress.rank} 阶</h2><button type="button" data-promotion-close aria-label="关闭">×</button></header>
+    const shiftPct = Math.min(100, Math.round((Math.min(progress.shifts, 2) / 2) * 100));
+    const corePct = Math.min(100, Math.round((Math.min(progress.cores, 10) / 10) * 100));
+    promotion.innerHTML = `<header class="promo-header">
+        <div class="promo-seal" aria-hidden="true"><span>${progress.rank}</span><small>阶</small></div>
+        <div class="promo-title">
+          <small>GUILD CHARTER · 酒馆勋阶</small>
+          <h2>酒馆 · ${progress.rank} 阶</h2>
+        </div>
+        <button type="button" data-promotion-close aria-label="关闭">×</button>
+      </header>
       ${
         progress.rank === 0
-          ? `<ul><li>完成营业 <b>${Math.min(progress.shifts, 2)} / 2</b></li>
-      <li>持有工坊机芯 <b>${Math.min(progress.cores, 10)} / 10</b></li></ul>
-      <button type="button" data-promotion-confirm ${progress.ready ? '' : 'disabled'}>升至 1 阶</button>`
-          : '<p>下一阶目标待开放</p>'
+          ? `<div class="promo-milestones">
+              <div class="promo-row" data-done="${progress.shifts >= 2}">
+                <div class="promo-row-meta">
+                  <span class="promo-mark">${progress.shifts >= 2 ? '◆' : '◇'}</span>
+                  <span>完成营业</span>
+                  <b>${Math.min(progress.shifts, 2)} / 2</b>
+                </div>
+                <div class="promo-meter"><i style="width:${shiftPct}%"></i></div>
+              </div>
+              <div class="promo-row" data-done="${progress.cores >= 10}">
+                <div class="promo-row-meta">
+                  <span class="promo-mark">${progress.cores >= 10 ? '◆' : '◇'}</span>
+                  <span>持有工坊机芯</span>
+                  <b>${Math.min(progress.cores, 10)} / 10</b>
+                </div>
+                <div class="promo-meter"><i style="width:${corePct}%"></i></div>
+              </div>
+            </div>
+            <footer class="promo-foot">
+              <button type="button" class="daily-confirm promo-confirm" data-promotion-confirm ${progress.ready ? '' : 'disabled'}>${progress.ready ? '授予 1 阶勋印' : '升至 1 阶'}</button>
+            </footer>`
+          : '<p class="promo-max-note">已达当前版本最高勋阶，下一阶目标待开放。</p>'
       }`;
   }
   events.on(promotion, 'click', (event) => {
@@ -197,6 +283,26 @@ export function createDaily(context) {
   const service = createServiceBoard(context, (shift) => {
     if (active()?.shift !== shift || !shift.finished) return;
     locked = false;
+    if (shift.mode === 'live') {
+      const { reputationChange, trained, totalGold, bonusIngredients } = settleLiveServiceShift(
+        library(),
+        shift,
+      );
+      const progress = trained.map(
+        ({ id, role, points }) => `${names(id)} · ${DAILY_ROLES[role]} +${points}`,
+      );
+      const reputation = reputationChange >= 0 ? `+${reputationChange}` : reputationChange;
+      const bonusCount = Object.values(bonusIngredients || {}).reduce((s, n) => s + n, 0);
+      complete(
+        'service',
+        [
+          `本班接待 ${shift.servedCount} 桌 · 收入 ${totalGold} 金币 · ${shift.leftAngry} 桌离席 · 知名度 ${reputation}`,
+          ...(bonusCount ? [`奇遇获赠食材 ×${bonusCount}`] : []),
+          ...progress,
+        ].join(' / '),
+      );
+      return;
+    }
     const { reputationChange, trained } = settleServiceGrowth(state().serviceGrowth, shift);
     const returned = returnServiceSpecialStock(library().dining.inventory, shift.special);
     library().inventory.gold = Math.min(999999999, library().inventory.gold + shift.earned);
@@ -228,6 +334,62 @@ export function createDaily(context) {
     render,
     spendTurns: (turns) => advanceOuting(state(), turns),
   });
+
+  function hideAtlasOverlay() {
+    atlasLoading.hide();
+    const el = atlasFrame();
+    if (el) {
+      delete el.dataset.loading;
+      el.hidden = true;
+    }
+    mapOpen = false;
+  }
+
+  function postAtlasManaged(target = atlasFrame()?.contentWindow) {
+    const entry = active();
+    target?.postMessage(
+      {
+        type: 'daily-managed',
+        enabled: true,
+        talkVisible: false,
+        timeOfDay: tavernTime(state()),
+        discoveries: library().atlasDiscoveries,
+        exploration: library().overlandExploration,
+        skirmishes: library().skirmishes,
+        unlockedDungeons: library().unlockedDungeons,
+        invitation: false,
+        outing: {
+          turns: entry?.turns || 0,
+          locked: travel.busy(),
+          preview: true,
+        },
+      },
+      location.origin,
+    );
+  }
+
+  function createOutingActivity(destination = state().memory?.tavernExit || 'street') {
+    const entry = startTavernActivity(state(), 'outing');
+    if (!entry) return null;
+    entry.scene = destination;
+    entry.stage = 'roaming';
+    entry.companions = state().memory.outing?.companions || [];
+    save();
+    return entry;
+  }
+
+  function editOutingCompanions() {
+    const opened = context.departure?.openOuting?.(() => {
+      const protagonist = library().campaign?.protagonistId;
+      const companions = library().party.filter((memberId) => memberId && memberId !== protagonist);
+      state().memory.outing = { companions: [...companions] };
+      const entry = active();
+      if (entry?.kind === 'outing') entry.companions = [...companions];
+      save();
+      render();
+    });
+    if (!opened && active()) openSetup();
+  }
 
   function navigate(destination) {
     visitedDiscovery = null;
@@ -273,18 +435,24 @@ export function createDaily(context) {
     if (state().report) return showReport();
     const entry = active();
     if (entry?.kind === 'dungeon') return '';
+    const current = activeScene();
+    const atDungeon = IMPERIAL_DUNGEONS.find((item) => item.id === current);
+    const dungeonBtn = atDungeon
+      ? `<button type="button" data-daily="enter-dungeon:${escapeText(atDungeon.id)}">进入${escapeText(atDungeon.name)} ›</button>`
+      : '';
     if (entry?.kind === 'outing' && entry.stage === 'roaming')
       return (
         travel.status() ||
-        `<span>外出 · 已行 <b>${entry.turns || 0}</b> 回合</span><button type="button" data-daily="companions">同行</button><button type="button" data-daily="home">结束外出</button>`
+        `${dungeonBtn}<span>外出 · 已行 <b>${entry.turns || 0}</b> 回合</span><button type="button" data-daily="companions">同行</button><button type="button" data-daily="home">结束外出</button>`
       );
+    if (!entry && atDungeon) {
+      return `${dungeonBtn}<button type="button" data-daily="go-tavern">返回酒馆</button>`;
+    }
     if (entry?.kind === 'invitation' && invitation.traveling())
       return '<button type="button" data-daily="invite-end">结束约见</button>';
     if (entry?.kind === 'invitation' && entry.run?.plan)
       return '<button type="button" data-daily="resume">继续约见</button>';
-    if (entry)
-      return `<button type="button" data-daily="setup">${DAILY_ACTIONS[entry.kind].name}整备</button>`;
-    return '';
+    return travel.status() || dungeonBtn;
   }
 
   function renderInvitationRecord(visible) {
@@ -299,7 +467,8 @@ export function createDaily(context) {
     const travel = destination
       ? `<section><b>行程</b><p>${escapeText(OUTING_SCENES[scene] || INVITATION_SCENES[scene] || '酒馆')} → ${escapeText(INVITATION_SCENES[destination])}</p></section>`
       : '';
-    const host = entry && invitation.presenting() ? galStage : root;
+    const fallbackHost = context.ledger?.invitationHost?.() || root;
+    const host = entry && invitation.presenting() ? galStage : fallbackHost;
     if (record.parentElement !== host) host.prepend(record);
     record.hidden = !entry;
     const markup = entry
@@ -340,21 +509,28 @@ export function createDaily(context) {
     }
     const current = activeScene();
     const visible = session.runtime.mode === 'inn' && !session.runtime.needsStart;
+    if (
+      (!visible || (active()?.kind && active().kind !== 'outing')) &&
+      atlasFrame() &&
+      !atlasFrame().hidden
+    ) {
+      hideAtlasOverlay();
+    }
     root.hidden = !visible || mapOpen;
     const home = current === 'tavern';
-    root.dataset.outdoors = String(!home);
+    const upstairs = ['corridor', 'guest-room', 'master-bedroom'].includes(current);
     const progress = tavernPromotion(state(), library().workshop);
+    placeChip.textContent = sceneTitles.get(current) || OUTING_SCENES[current] || '万象酒馆';
     rankChip.textContent = `${progress.rank} 阶`;
-    clock.textContent = `第 ${state().day} 天 · ${DAILY_PERIODS[state().period]}`;
+    clock.textContent = dailyDateTimeText(state());
     const quest = context.quests?.status();
-    const questHud = root.querySelector('.daily-quest');
     questHud.hidden = !quest;
     questHud.innerHTML = quest
       ? `<b>${escapeText(quest.title)}</b>
       ${quest.location ? `<span>${escapeText(quest.location)}</span>` : ''}
       ${quest.action ? `<button data-daily="quest-step">${escapeText(quest.action)}</button>` : ''}`
       : '';
-    root.querySelector('[data-daily="service"]').disabled = !enabled() || !!active() || !home;
+    if (serviceButton) serviceButton.disabled = !enabled() || !!active() || !home;
     promoButton.dataset.promotionReady = String(progress.ready);
     promoButton.title =
       progress.rank === 0
@@ -363,14 +539,26 @@ export function createDaily(context) {
           : `营业 ${Math.min(progress.shifts, 2)}/2 · 工坊机芯 ${Math.min(progress.cores, 10)}/10`
         : `当前酒馆 ${progress.rank} 阶`;
     const destination = frame()?.contentDocument;
-    destination?.body?.classList.toggle('daily-parent-dock', visible && home);
     const entry = active();
+    const dockTalk =
+      visible &&
+      !home &&
+      !upstairs &&
+      !current.startsWith('road-') &&
+      !locked &&
+      !(entry?.kind === 'invitation' && entry.stage === 'running');
+    destination?.body?.classList.toggle('daily-parent-dock', visible && home);
+    destination?.body?.classList.toggle('street-has-talk', dockTalk);
     frame()?.contentWindow?.postMessage(
       {
         type: 'daily-managed',
         enabled: visible,
+        talkVisible: dockTalk,
         timeOfDay: visible ? tavernTime(state()) : null,
         discoveries: library().atlasDiscoveries,
+        exploration: library().overlandExploration,
+        skirmishes: library().skirmishes,
+        unlockedDungeons: library().unlockedDungeons,
         invitation:
           entry?.kind === 'invitation' && entry.stage === 'running' && !invitation.traveling(),
         outing:
@@ -380,26 +568,36 @@ export function createDaily(context) {
                 locked: travel.busy(),
                 preview: entry.preview === true,
               }
-            : null,
+            : visible && !home && !upstairs && !entry && learning(library())
+              ? {
+                  turns: 0,
+                  locked: travel.busy(),
+                  preview: false,
+                  tutorialRuinsOnly: !library().unlockedDungeons?.includes('ruins'),
+                }
+              : null,
       },
       location.origin,
     );
+    if (atlasFrame() && !atlasFrame().hidden) postAtlasManaged();
     renderInvitationRecord(visible);
     if (!visible) {
       talkButton.hidden = true;
+      alignSceneTalk();
+      root.dataset.outdoors = 'false';
+      context.ledger?.sync();
       return;
     }
     dock.hidden = !home || locked || !!entry;
-    talkButton.hidden =
-      home ||
-      current.startsWith('road-') ||
-      locked ||
-      (entry?.kind === 'invitation' && entry.stage === 'running');
-    root.querySelector('.daily-clock').hidden = locked;
+    talkButton.hidden = !dockTalk;
+    root.dataset.outdoors = String(dockTalk);
+    alignSceneTalk();
+    if (dockTalk) requestAnimationFrame(alignSceneTalk);
     status.innerHTML = showStatus();
     status.hidden = !status.children.length;
     if (setup.open) showSetup();
     if (promotion.open) renderPromotion();
+    context.ledger?.sync();
   }
 
   function chooseMember(member, selected) {
@@ -425,21 +623,20 @@ export function createDaily(context) {
     let statusLine = message;
     let body;
     if (kind === 'service') {
-      if (setup.open)
-        serviceSelection.basic = setup.querySelector('.setup-basic-menu')?.open || false;
+      const menus = defaultHubMenus(state().serviceGrowth, library().dining.inventory);
       body = serviceSetupView({
+        library: library(),
         growth: state().serviceGrowth,
         members: candidate,
         staff: local,
         slot,
         selection: serviceSelection,
-        inventory: library().dining.inventory,
         tutorial: state().tutorial === 'service',
       });
       statusLine ||=
         staffed < 4
           ? `已安排 ${staffed}/4 岗，排满后开班`
-          : `四岗就绪 · ${serviceSelection.id ? `招牌预留 ${serviceSelection.portions} 份` : '基础菜单'}`;
+          : `四岗就绪 · 挂牌特色菜 ${menus.sigMenu.length} 道 · 基础菜 ${menus.regMenu.length} 道`;
     } else if (kind === 'outing') {
       body = `<p>选最多两位同行者，也可以独自出门。</p>
         <div class="daily-people">${candidate
@@ -469,7 +666,7 @@ export function createDaily(context) {
             : ''
         }`;
     }
-    setup.innerHTML = `<header><div><small>第 ${state().day} 天 · ${DAILY_PERIODS[state().period]}</small><h2 id="daily-setup-title">${DAILY_ACTIONS[kind].name}整备</h2></div>
+    setup.innerHTML = `<header><div><small>${dailyDateTimeText(state())}</small><h2 id="daily-setup-title">${DAILY_ACTIONS[kind].name}整备</h2></div>
       <button type="button" data-daily-close ${invitation.busy() ? 'disabled' : ''}>收起</button></header>
       <div class="daily-setup-body">${body}</div><footer><p role="status">${escapeText(statusLine)}</p>
         <button type="button" class="daily-confirm" data-daily-start ${invitation.busy() || (kind === 'service' && staffed < 4) ? 'disabled' : ''}>
@@ -484,7 +681,10 @@ export function createDaily(context) {
     const memory = state().memory[entry.kind] || {};
     if (entry.kind === 'service' && serviceDraftEntry !== entry) {
       serviceDraftEntry = entry;
-      serviceSelection = { id: '', portions: 0, menu: false, basic: false };
+      serviceSelection = {
+        tab: 'menu',
+        menuTab: state().tutorial === 'service' ? 'regular' : 'signature',
+      };
       const available = new Set(members().map((member) => member.id));
       local = Object.fromEntries(
         Object.keys(DAILY_ROLES).map((role) => [
@@ -492,13 +692,22 @@ export function createDaily(context) {
           available.has(memory[role]) ? memory[role] : '',
         ]),
       );
-      if (state().tutorial === 'service' && !Object.values(local).some(Boolean)) {
+      if (Object.values(local).filter(Boolean).length < 4 && members().length >= 4) {
         const first = [
           ...new Set([...library().party.filter(Boolean), ...members().map((member) => member.id)]),
-        ].slice(0, 4);
-        Object.keys(DAILY_ROLES).forEach((role, i) => (local[role] = first[i]));
+        ];
+        const used = new Set(Object.values(local).filter(Boolean));
+        for (const role of Object.keys(DAILY_ROLES)) {
+          if (!local[role]) {
+            const pick = first.find((id) => !used.has(id));
+            if (pick) {
+              local[role] = pick;
+              used.add(pick);
+            }
+          }
+        }
       }
-      slot = Object.keys(DAILY_ROLES).find((key) => !local[key]) || null;
+      slot = Object.keys(DAILY_ROLES).find((key) => !local[key]) || 'cook';
     } else if (entry.kind === 'outing') {
       local = {
         companions: (memory.companions || []).filter((id) =>
@@ -541,14 +750,13 @@ export function createDaily(context) {
       if (entry.shift) return;
       const staff = serviceStaff(local, members());
       const tutorial = state().tutorial === 'service';
-      const special = tutorial
-        ? null
-        : reserveServiceSpecial(
-            library().dining.inventory,
-            serviceSelection,
-            state().serviceGrowth,
-          );
-      entry.shift = newServiceShift(staff, tutorial, undefined, state().serviceGrowth, special);
+      entry.shift = newLiveServiceShift({
+        library: library(),
+        staff,
+        day: state().day,
+        growth: state().serviceGrowth,
+        tutorial,
+      });
       entry.stage = 'running';
       state().memory.service = { ...local };
       setup.close();
@@ -591,10 +799,8 @@ export function createDaily(context) {
 
   function beginOuting(openMap = false, destination = 'street') {
     if (active()) return;
-    const entry = startTavernActivity(state(), 'outing');
-    entry.scene = destination;
-    entry.stage = 'roaming';
-    entry.companions = state().memory.outing?.companions || [];
+    const entry = createOutingActivity(destination);
+    if (!entry) return;
     entry.preview = openMap;
     pendingAtlas = openMap;
     save();
@@ -629,6 +835,14 @@ export function createDaily(context) {
   }
 
   function action(id) {
+    if (id.startsWith('enter-dungeon:')) {
+      return context.destinations.openDiscovery(id.slice('enter-dungeon:'.length));
+    }
+    if (id === 'go-tavern') {
+      context.chat?.leave();
+      navigate('tavern');
+      return;
+    }
     if (id.startsWith('travel:'))
       return void travel.act(id.slice(7)).catch((failure) => context.shell.toast(failure.message));
     if (id === 'promotion') {
@@ -643,18 +857,14 @@ export function createDaily(context) {
       return context.dining.open('table');
     }
     if (id === 'dungeon') return context.destinations.open();
-    if (id === 'outing')
-      return beginOuting(
-        true,
-        state().unlocks.silverCrownTavern && state().memory.tavernExit === SILVER_CROWN_TAVERN
-          ? SILVER_CROWN_TAVERN
-          : 'street',
-      );
+    if (id === 'outing') return openExitPicker();
     if (id === 'service' || id === 'invitation') {
       if (startTavernActivity(state(), id)) return openSetup();
     }
     if (id === 'setup' || id === 'resume') launch();
-    if (id === 'companions' && active()?.kind === 'outing' && !travel.busy()) openSetup();
+    if (id === 'companions' && active()?.kind === 'outing' && !travel.busy()) {
+      editOutingCompanions();
+    }
     if (id === 'invite-end') invitation.endTravel();
     if (id === 'home') returnOuting();
     if (id === 'dismiss') {
@@ -665,10 +875,13 @@ export function createDaily(context) {
     render();
   }
 
-  events.on(root, 'click', (event) => {
-    const button = event.target.closest('[data-daily]');
-    if (button) action(button.dataset.daily);
-  });
+  for (const host of [dock, status, questHud, serviceButton, promoButton, questsButton].filter(
+    Boolean,
+  ))
+    events.on(host, 'click', (event) => {
+      const button = event.target.closest('[data-daily]');
+      if (button && !button.disabled) action(button.dataset.daily);
+    });
   events.on(record, 'click', (event) => event.stopPropagation());
   events.on(setup, 'close', () => {
     const entry = active();
@@ -680,42 +893,36 @@ export function createDaily(context) {
   });
   function editServiceSetup(button) {
     if (!button) return;
-    const { dailyRole, dailyPerson, serviceRecipe, servicePortion } = button.dataset;
-    let focus;
-    if (dailyRole) {
-      slot = slot === dailyRole ? null : dailyRole;
-      focus = `[data-daily-role="${dailyRole}"]`;
-    } else if (dailyPerson && slot) {
+    const { dailyRole, dailyPerson, serviceTab, serviceMenutab, serviceDish, serviceFac } =
+      button.dataset;
+    if (serviceTab) {
+      serviceSelection.tab = serviceTab;
+    } else if (serviceMenutab) {
+      serviceSelection.menuTab = serviceMenutab;
+    } else if (button.hasAttribute('data-service-autofill')) {
+      autoFillLiveHubMenu(library());
+      save();
+    } else if (serviceDish) {
+      toggleLiveHubDish(library(), serviceDish);
+      save();
+    } else if (serviceFac) {
+      upgradeLiveFacility(library(), serviceFac);
+      save();
+    } else if (button.hasAttribute('data-service-open-promo')) {
+      renderPromotion();
+      promotion.showModal();
+      return;
+    } else if (dailyRole) {
+      slot = dailyRole;
+    } else if (dailyPerson) {
+      const targetRole = Object.hasOwn(DAILY_ROLES, slot) ? slot : 'cook';
       const previous = Object.keys(DAILY_ROLES).find((key) => local[key] === dailyPerson);
-      if (previous && previous !== slot) local[previous] = local[slot];
-      local[slot] = dailyPerson;
-      focus = `[data-daily-role="${slot}"]`;
-      slot = Object.keys(DAILY_ROLES).find((key) => !local[key]) || null;
-    } else if (serviceRecipe !== undefined) {
-      serviceSelection.id = serviceRecipe;
-      serviceSelection.portions = serviceRecipe ? 1 : 0;
-      serviceSelection.menu = false;
-      focus = '[data-service-recipes]';
-    } else if (servicePortion) {
-      const capacity = serviceSpecialCapacity(
-        serviceSpecial(serviceSelection.id, state().serviceGrowth),
-        library().dining.inventory,
-      );
-      serviceSelection.portions = Math.max(
-        1,
-        Math.min(capacity, serviceSelection.portions + Number(servicePortion)),
-      );
-      focus = `[data-service-portion="${servicePortion}"]`;
-    } else if (button.hasAttribute('data-service-recipes')) {
-      serviceSelection.menu = !serviceSelection.menu;
-      focus = '[data-service-recipes]';
+      if (previous && previous !== targetRole) local[previous] = local[targetRole];
+      local[targetRole] = dailyPerson;
+      slot = Object.keys(DAILY_ROLES).find((key) => !local[key]) || targetRole;
     } else return;
     message = '';
     showSetup();
-    const next = setup.querySelector(focus);
-    (next?.disabled ? setup.querySelector('[data-service-portion]:enabled') : next)?.focus({
-      preventScroll: true,
-    });
   }
 
   events.on(setup, 'click', async (event) => {
@@ -758,7 +965,42 @@ export function createDaily(context) {
     if (invitation.busy()) event.preventDefault();
   });
   events.on(window, 'message', (event) => {
-    if (event.origin !== location.origin || event.source !== frame()?.contentWindow) return;
+    if (event.origin !== location.origin) return;
+    const fromAtlas = Boolean(
+      atlasFrame()?.contentWindow && event.source === atlasFrame().contentWindow,
+    );
+    if (fromAtlas) {
+      if (event.data?.type === 'atlas-only-ready') {
+        const el = atlasFrame();
+        if (el) delete el.dataset.loading;
+        atlasLoading.hide();
+        return postAtlasManaged(event.source);
+      }
+      if (event.data?.type === 'daily-outing-companions') return editOutingCompanions();
+      if (event.data?.type === 'street-map-state') {
+        mapOpen = event.data.open === true;
+        if (!mapOpen) {
+          hideAtlasOverlay();
+          if (event.data.choice === 'walk') {
+            beginOuting(false, state().memory?.tavernExit || 'street');
+          }
+        }
+        return render();
+      }
+      if (event.data?.type === 'daily-overland-plan') {
+        hideAtlasOverlay();
+        render();
+        const destination = state().memory?.tavernExit || 'street';
+        return void travel.start(event.data.to, {
+          fromTavern: true,
+          destination,
+          ensureOuting: () =>
+            !enabled() && learning(library()) ? null : createOutingActivity(destination),
+        });
+      }
+      return;
+    }
+    if (event.source !== frame()?.contentWindow) return;
     if (event.data?.type === 'tavern-recruit') return showRecruitment(event.data.characterId);
     if (event.data?.type === 'daily-outing-companions' && active()?.preview) return openSetup();
     if (event.data?.type === 'street-map-state') {
@@ -806,6 +1048,9 @@ export function createDaily(context) {
     if (event.data?.type !== 'scene-ready') return;
     mapOpen = false;
     scene = event.data.scene === 'starlamp-street' ? 'street' : event.data.scene;
+    if (event.data.title) sceneTitles.set(scene, event.data.title);
+    if (scene === 'street') context.onboarding?.streetEntered?.();
+    if (scene === 'tavern') context.onboarding?.tavernEntered?.();
     if (pendingAtlas && scene === active()?.scene) {
       pendingAtlas = false;
       frame()?.contentWindow?.postMessage({ type: 'daily-open-atlas' }, location.origin);
@@ -817,10 +1062,13 @@ export function createDaily(context) {
     if (scene === 'tavern' || Object.hasOwn(OUTING_SCENES, scene)) invitation.arrive(scene);
     if (active()?.kind === 'outing' && active().stage === 'roaming') {
       if (scene === 'tavern') returnOuting();
-      else if (Object.hasOwn(OUTING_SCENES, scene) && scene !== active().scene) {
-        active().scene = scene;
-        advanceOuting(state());
-        save();
+      else {
+        if (Object.hasOwn(OUTING_SCENES, scene) && scene !== active().scene) {
+          active().scene = scene;
+          advanceOuting(state());
+          save();
+        }
+        travel.checkSkirmish?.(scene);
       }
     }
     render();
@@ -831,8 +1079,21 @@ export function createDaily(context) {
     onInvitation: () => active()?.kind === 'invitation' && active().stage === 'running',
     invitedMember: invitation.member,
     refresh: render,
+    activeKind: () => active()?.kind || null,
+    isLocked: () => locked,
+    unlocked: enabled,
+    sceneTitle: () => placeChip.textContent || '万象酒馆',
+    dateLabel: () => dailyCalendarDate(state().day),
+    dateTimeText: () => dailyDateTimeText(state()),
+    promotionStatus: () => tavernPromotion(state(), library().workshop),
+    elements: () => ({
+      clockActions,
+      questHud,
+      invitationRecord: record,
+    }),
     returning() {
       visitedDiscovery = null;
+      hideAtlasOverlay();
       service.close();
       invitation.close();
       setup.close();
@@ -884,6 +1145,14 @@ export function createDaily(context) {
         render();
       });
     },
+    arriveDungeon(id) {
+      queueMicrotask(() => {
+        visitedDiscovery = id;
+        if (id === 'ruins') context.onboarding?.ruinsReached?.();
+        context.destinations.openDiscovery(id);
+        render();
+      });
+    },
     overlandRun: travel.run,
     overlandDialogueScenes: travel.dialogueScenes,
     overlandDialogueContext: travel.dialogueContext,
@@ -903,6 +1172,50 @@ export function createDaily(context) {
           : '';
     },
     goHome: () => navigate('tavern'),
+    openAtlas() {
+      const entry = active();
+      if (entry?.kind === 'outing' && entry.stage === 'roaming') {
+        frame()?.contentWindow?.postMessage({ type: 'daily-open-atlas' }, location.origin);
+        return true;
+      }
+      if (!entry && !travel.busy()) {
+        const originScene = state().memory?.tavernExit || 'street';
+        const href =
+          originScene === 'street'
+            ? './street.html?atlas-only=1'
+            : `./street.html?scene=${encodeURIComponent(originScene)}&atlas-only=1`;
+        let el = atlasFrame();
+        const host = document.querySelector('#inn') || document.body;
+        if (!el) {
+          el = document.createElement('iframe');
+          el.id = 'daily-atlas-frame';
+          el.title = '世界地图';
+          el.setAttribute('allowtransparency', 'true');
+          host.append(el);
+        } else if (el.parentElement !== host) {
+          host.append(el);
+        }
+        el.hidden = false;
+        mapOpen = true;
+        if (el.dataset.scene !== originScene) {
+          el.dataset.loading = 'true';
+          atlasLoading.show('正在展开泛生界大地图');
+          el.dataset.scene = originScene;
+          el.src = href;
+        } else {
+          delete el.dataset.loading;
+          atlasLoading.hide();
+          postAtlasManaged(el.contentWindow);
+          el.contentWindow?.postMessage(
+            { type: 'daily-open-atlas', preview: true },
+            location.origin,
+          );
+        }
+        render();
+        return true;
+      }
+      return false;
+    },
     outingCompanions: () => (active()?.kind === 'outing' ? active().companions : null),
     async rescued() {
       if (!enabled() || intro || state().tutorial !== 'intro') return;
@@ -931,6 +1244,8 @@ export function createDaily(context) {
       }
     },
     dispose() {
+      atlasLoading.dispose();
+      atlasFrame()?.remove();
       travel.dispose();
       intent.dispose();
       promotion.remove();

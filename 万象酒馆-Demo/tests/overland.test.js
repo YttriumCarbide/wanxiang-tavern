@@ -122,7 +122,7 @@ import {
 } from '../src/content/eternal-city-scenes.js';
 import { ATLAS_PLACES, ATLAS_ROUTES } from '../src/content/atlas-geography.js';
 
-test('the capital route has exactly three stops, with bends and working travel in either direction', () => {
+test('the capital route has condensed two-act stages, full legs with bends, and working travel in either direction', () => {
   const expected = ['outskirts', ...Object.keys(ETERNAL_CITY_STOPS), ETERNAL_CITY_GATE];
   assert.equal(expected.length, 5);
   const outward = overlandPlan(expected[0], expected.at(-1));
@@ -130,21 +130,30 @@ test('the capital route has exactly three stops, with bends and working travel i
   assert.equal(outward.turns, 13);
   assert.equal(home.turns, outward.turns);
   assert.deepEqual(
-    outward.stages.map(({ to }) => to.id),
+    outward.legs.map(({ to }) => to.id),
     expected.slice(1),
   );
   assert.deepEqual(
-    home.stages.map(({ to }) => to.id),
+    home.legs.map(({ to }) => to.id),
     expected.slice(0, -1).reverse(),
   );
-  assert.match(home.stages[0].choices[0].action, /出城/);
-  for (const { from, to } of outward.stages) {
+  assert.deepEqual(
+    outward.stages.map(({ to }) => to.id),
+    ['eternal-road-mill', ETERNAL_CITY_GATE],
+  );
+  assert.deepEqual(
+    home.stages.map(({ to }) => to.id),
+    ['eternal-road-mill', 'outskirts'],
+  );
+  for (const { from, to } of outward.legs) {
     assert(ATLAS_PLACES[to.id]);
     assert(ATLAS_ROUTES.some(([a, b, bends]) => a === from.id && b === to.id && bends.length > 0));
   }
   const across = overlandPlan('road-capital', ETERNAL_CITY_GATE);
   assert.equal(across.turns, 23);
-  assert.equal(across.stages[2].to.id, 'outskirts');
+  assert.equal(across.stages.length, 2);
+  assert.equal(across.stages[0].to.id, 'outskirts');
+  assert.equal(across.legs[2].to.id, 'outskirts');
 });
 
 test('all ten capital panoramas are reachable from the gate and have reciprocal exits', () => {
@@ -200,12 +209,22 @@ test('bridge and city request exactly the traversed legs, including reverse path
   const city = overlandPlan('outskirts', 'road-capital');
   assert.equal(city.turns, 10);
   assert.deepEqual(
-    city.stages.map((leg) => leg.to.id),
+    city.legs.map((leg) => leg.to.id),
     ['road-bridge', 'road-reeds', 'road-capital'],
   );
   assert.deepEqual(
-    overlandPlan('road-capital', 'outskirts').stages.map((leg) => leg.turns),
-    [4, 3, 3],
+    city.stages.map((leg) => [leg.to.id, leg.turns]),
+    [
+      ['road-bridge', 3],
+      ['road-capital', 7],
+    ],
+  );
+  assert.deepEqual(
+    overlandPlan('road-capital', 'outskirts').stages.map((leg) => [leg.to.id, leg.turns]),
+    [
+      ['road-bridge', 7],
+      ['outskirts', 3],
+    ],
   );
   const input = { overland: { from: bridge.from, to: bridge.to } };
   const request = overlandRequest(
@@ -219,30 +238,65 @@ test('bridge and city request exactly the traversed legs, including reverse path
   assert.equal(mechanics[0].level, 3);
 });
 
-test('overland output can author prose and choices only, with validated save restoration', () => {
+test('overland output can author prose and suggestion choices, with validated save restoration', () => {
   const plan = overlandPlan('outskirts', 'road-reeds');
   const raw = {
     acts: plan.stages.map((leg) => ({
       id: leg.id,
       title: '路况',
       story: '【旁白】沿岸传来水声。',
-      ...(leg.choices
-        ? {
-            choices: leg.choices.map(({ id, action }) => ({
-              id,
-              label: action,
-              outcome: '通过。',
-            })),
-          }
-        : {}),
+      ...(leg.type === 'event' ? { choices: ['上前搭话', '保持警惕'] } : {}),
     })),
   };
   const acts = overlandResponse(`<wanxiang_json>${JSON.stringify(raw)}</wanxiang_json>`, {
     overland: plan,
   });
-  const run = { id: 'route', from: plan.from, to: plan.to, acts, index: 0, phase: 'battle' };
+  assert.deepEqual(
+    acts[1].choices.map((item) => item.label),
+    ['上前搭话', '保持警惕'],
+  );
+  const run = {
+    id: 'route',
+    from: plan.from,
+    to: plan.to,
+    acts,
+    index: 1,
+    phase: 'choice',
+    history: [
+      { role: 'user', content: '上前搭话', index: 1 },
+      { role: 'assistant', content: '【旁白】对方抬眼看你。', index: 1 },
+    ],
+    draft: '再试着套两句近乎',
+  };
   assert.deepEqual(restoreOverlandRun(run), run);
-  const prior = { ...run, to: 'road-bridge', acts: [acts[1], acts[0]], index: 1 };
+  const legacyRaw = {
+    acts: plan.stages.map((leg) => ({
+      id: leg.id,
+      title: '旧路况',
+      story: '【旁白】沿岸传来水声。',
+      ...(leg.type === 'event'
+        ? {
+            choices: [
+              { id: 'legacy', label: '出示路引', outcome: '顺利通过。' },
+              { id: 'legacy-2', label: '绕道而行', outcome: '绕路离开。' },
+            ],
+          }
+        : {}),
+    })),
+  };
+  const legacyActs = overlandResponse(
+    `<wanxiang_json>${JSON.stringify(legacyRaw)}</wanxiang_json>`,
+    { overland: plan },
+  );
+  assert.equal(legacyActs[1].choices[0].outcome, '顺利通过。');
+  const prior = {
+    id: 'route',
+    from: plan.from,
+    to: 'road-bridge',
+    acts: [acts[1], acts[0]],
+    index: 1,
+    phase: 'battle',
+  };
   assert.deepEqual(restoreOverlandRun(prior), prior);
   assert.deepEqual(
     overlandRunPlan(prior).stages.map((leg) => leg.to.id),
@@ -321,4 +375,13 @@ test('overland loot stages roll only for battle legs and validate optional loot 
       ),
     /4～120/,
   );
+});
+
+test('ruins sits one turn directly southwest of Starbell outskirts', () => {
+  const plan = overlandPlan('outskirts', 'ruins');
+  assert.equal(plan.turns, 1);
+  assert.equal(plan.legs.length, 1);
+  assert.equal(plan.legs[0].id, 'ruins-approach');
+  assert.equal(plan.legs[0].from.id, 'outskirts');
+  assert.equal(plan.legs[0].to.id, 'ruins');
 });

@@ -36,7 +36,14 @@ export function createTimeline(context) {
     $('#timeline-title').textContent = '时间轴';
     $('#ap-label').textContent = String(Math.max(0, ap - used));
     $('#ap-orb').style.setProperty('--ap-fraction', Math.max(0, ap - used) / ap);
-    const cell = (id, i, readOnly = false, s = session.battle.state) => {
+    const ROMAN = ['Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ'];
+    const cell = (
+      id,
+      i,
+      readOnly = false,
+      s = session.battle.state,
+      slotList = session.battle.forecast.slots,
+    ) => {
       const cancelled =
           !readOnly && id && session.battle.forecast.deaths.some((d) => d.id === id && d.at < i),
         bound =
@@ -45,12 +52,15 @@ export function createTimeline(context) {
           session.battle.forecast.events.some(
             (event) => event.actor === id && event.at === i && event.blockedBy === 'bind',
           ),
-        move = id ? intent(s, id) : null;
+        totalActions = id ? slotList.filter((entry) => entry === id).length : 0,
+        actionIndex = id ? slotList.slice(0, i).filter((entry) => entry === id).length : 0,
+        move = id ? intent(s, id, actionIndex) : null,
+        phaseTag = totalActions > 1 ? ` ${ROMAN[actionIndex] || `#${actionIndex + 1}`}` : '';
       return html`<button
         class="time-cell ${id ? 'enemy-cell' : ''} ${cancelled ? 'cancelled' : ''} ${bound ? 'bound' : ''} ${!readOnly && (session.battle.activeCell === i || (!session.battle.playing && session.selection.selectedCell === i)) ? 'playing' : ''} ${readOnly ? 'preview-cell' : ''} ${readOnly && id && id === session.selection.inspectedEnemy ? 'playing' : ''}"
         ${readOnly ? `data-preview="${i}"` : `data-start="${i}" data-motion="${id ? `enemy-${id}` : `empty-${i}`}"`}
         ${session.battle.playing || (readOnly && !id) ? 'disabled' : ''}
-        ${id ? `data-tooltip="${escapeText(`${context.roster.get(id).name} · ${bound ? '禁锢，本回合行动取消' : `速度 ${Math.max(1, context.roster.get(id).speed - (s.units[id].buffs.slow || 0))}\n${move.name}：${move.text}`}`)}"` : ''}
+        ${id ? `data-tooltip="${escapeText(`${context.roster.get(id).name}${phaseTag} · ${bound ? '禁锢，本回合行动取消' : `速度 ${Math.max(1, context.roster.get(id).speed - (s.units[id].buffs.slow || 0))}\n${move.name}：${move.text}`}`)}"` : ''}
       >
         ${
           bound
@@ -80,7 +90,7 @@ export function createTimeline(context) {
         }
         <span class="num">${opening && !readOnly ? '◇' : i + 1}</span
         ><span class="cell-label"
-          >${id ? `${cancelled ? '× ' : ''}${context.roster.get(id).name}` : opening && !readOnly ? '先手' : readOnly ? '我方行动' : '＋'}${id ? html`<small>速度 ${Math.max(1, context.roster.get(id).speed - (s.units[id].buffs.slow || 0))}</small>` : ''}</span
+          >${id ? `${cancelled ? '× ' : ''}${context.roster.get(id).name}${phaseTag}` : opening && !readOnly ? '先手' : readOnly ? '我方行动' : '＋'}${id ? html`<small>${totalActions > 1 ? move.name : `速度 ${Math.max(1, context.roster.get(id).speed - (s.units[id].buffs.slow || 0))}`}</small>` : ''}</span
         >
       </button>`;
     };
@@ -166,7 +176,7 @@ export function createTimeline(context) {
           class="preview-grid"
           style="grid-template-columns:repeat(${nextSlots.length},1fr);grid-template-rows:${previewRow}px"
         >
-          ${nextSlots.map((id, i) => cell(id, i, true, nextState)).join('')}
+          ${nextSlots.map((id, i) => cell(id, i, true, nextState, nextSlots)).join('')}
         </div>`;
     }
     timeline

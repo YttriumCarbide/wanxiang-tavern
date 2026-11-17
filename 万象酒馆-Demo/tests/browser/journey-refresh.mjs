@@ -11,9 +11,15 @@ export async function journeyRefreshChecks({ browser, baseURL, output }) {
     await legacySession(page);
     await page.goto(baseURL);
     await page.waitForFunction(() => !!window.demo);
-    const audio = await page.locator('#audio-toggle').boundingBox();
+    await page.locator('#audio-toggle').click();
+    await page.locator('#audio-panel').waitFor({ state: 'visible' });
+    const audioPanel = await page.locator('#audio-panel').boundingBox();
     const fullscreen = await page.locator('#fullscreen-toggle').boundingBox();
-    assert(fullscreen.x > audio.x, 'Fullscreen belongs immediately to the right of volume');
+    assert(
+      audioPanel.y >= fullscreen.y + fullscreen.height,
+      'Floating audio panel sits cleanly below top-right corner icon bar',
+    );
+    await page.keyboard.press('Escape');
     assert(
       await page.evaluate(
         () =>
@@ -159,7 +165,7 @@ export async function journeyRefreshChecks({ browser, baseURL, output }) {
     await phone.goto(baseURL);
     await phone.locator('#landscape-frame').waitFor();
     const game = phone.frameLocator('#landscape-frame');
-    await game.locator('#party-toggle').waitFor();
+    await game.locator('#ledger-handle').waitFor();
     const viewport = await game
       .locator('body')
       .evaluate(() => ({ width: innerWidth, height: innerHeight, initialized: !!window.demo }));

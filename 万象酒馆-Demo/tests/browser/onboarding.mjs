@@ -118,13 +118,25 @@ export async function onboardingChecks({ browser, baseURL, output }) {
     await page.locator('#tutorial-action').click();
     await page
       .frameLocator('iframe')
-      .locator('#enter')
+      .locator('#street-open')
       .waitFor({ state: 'visible', timeout: 15000 });
-    await page.frameLocator('iframe').locator('#enter').click();
-    await page.locator('#destination-dialog').waitFor({ state: 'visible' });
-    assert.equal(await page.locator('#destination-regions [data-region]').count(), 1);
-    await page.locator('#destination-region-confirm').click();
-    assert.equal(await page.locator('[data-map-node]:not([disabled])').count(), 1);
+    await page.frameLocator('iframe').locator('#street-open').click();
+    await page
+      .frameLocator('iframe')
+      .locator('#street-map-open')
+      .waitFor({ state: 'visible', timeout: 15000 });
+    await page.waitForFunction(() => demo.getLibrary().campaign.tutorial === 'map-ruins');
+    await page.locator('#tutorial-action').click();
+    const streetFrame = page.frameLocator('#inn-frame iframe');
+    await streetFrame.locator('#street-map').waitFor({ state: 'visible', timeout: 15000 });
+    assert.equal(await streetFrame.locator('[data-travel-to="ruins"]').isDisabled(), false);
+    assert.equal(await streetFrame.locator('[data-travel-to="forest"]').isDisabled(), true);
+    await streetFrame.locator('[data-travel-to="ruins"]').click();
+    await page
+      .locator('#destination-dialog[data-stage="route"]')
+      .waitFor({ state: 'visible', timeout: 15000 });
+    assert.equal(requests.length, 0, 'Walking to marked ruins must not call the script API');
+    assert.deepEqual((await page.evaluate(() => demo.getLibrary())).unlockedDungeons, ['ruins']);
     await page.locator('#destination-start').click();
     await page.locator('#prepare-done').click();
     await page.locator('#prepare-done').click();
@@ -132,6 +144,8 @@ export async function onboardingChecks({ browser, baseURL, output }) {
       () =>
         demo.getStatus().mode === 'battle' &&
         document.querySelector('#scene-loading').hidden &&
+        document.querySelector('#chapter-theater').hidden &&
+        document.querySelector('#gal-stage').hidden &&
         !document.querySelector('#battle').classList.contains('entering') &&
         (!demo.getStatus().animating || document.querySelector('#guide-dialogue').open),
       null,
@@ -185,14 +199,13 @@ export async function onboardingChecks({ browser, baseURL, output }) {
     assert.equal(await page.locator('#tutorial-guide').getAttribute('data-step'), 'timeline');
     await page.locator('#timeline .enemy-cell').click();
     await finishDialogue();
-    assert.equal(await page.locator('#tutorial-guide').getAttribute('data-step'), 'intent');
+    assert.equal(await page.locator('#tutorial-guide').getAttribute('data-step'), 'swap');
+    assert.equal((await page.evaluate(() => demo.getLibrary())).campaign.tasks.journal, true);
     assert((await page.locator('#intent-layer .intent-path').count()) > 0);
     await page.locator('#story-toggle').click();
     assert.equal(await page.locator('#story-feed').isVisible(), true);
-    assert.equal(await page.locator('#tutorial-guide').getAttribute('data-step'), 'intent');
     await page.locator('#story-close').click();
     await page.locator('#story-feed').waitFor({ state: 'hidden' });
-    await finishDialogue();
     await page.locator('[data-start="0"]').first().click();
     const actor = await page.locator('[data-unit="aegis"]').boundingBox();
     const target = await page.locator('[data-empty-slot="2"]').boundingBox();

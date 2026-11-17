@@ -70,15 +70,25 @@ export async function summoningChecks({ browser, baseURL, output }) {
       assert(buttons[0].y + buttons[0].height < buttons[2].y);
       await page.screenshot({ path: path.join(output, 'summon-four-methods.png') });
     }
+    const handle = await page.locator('#ledger-handle').boundingBox();
+    await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(Math.max(10, handle.x - 140), handle.y + handle.height / 2, {
+      steps: 6,
+    });
+    await page.mouse.up();
+    await page.locator('#ledger-drawer-host.is-open').waitFor();
     assert.equal(await page.locator('#contract-count').textContent(), '3');
     assert.equal(await page.locator('#gold-count').textContent(), '200');
     const icon = await page.locator('#inn-resources img').first().boundingBox();
-    assert.equal(icon.width, 30);
-    assert.equal(icon.height, 30);
+    assert.equal(icon.width, 24);
+    assert.equal(icon.height, 24);
     const resource = await page.locator('#inn-resources > div').first().boundingBox();
-    const toolbar = await page.locator('#ai-open').boundingBox();
+    const toolbar = await page.locator('#ledger-speed-toggle').boundingBox();
     assert(resource.width * resource.height < toolbar.width * toolbar.height * 3);
     await page.screenshot({ path: path.join(output, 'inn-resources-compact.png') });
+    await page.locator('#ledger-close').click();
+    await page.locator('#ledger-drawer').waitFor({ state: 'hidden' });
     await page.route('**/api/ai/worldbooks/tavern-world', async (route) => {
       const response = await route.fetch();
       const result = await response.json();

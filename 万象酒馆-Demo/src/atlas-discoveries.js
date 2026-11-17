@@ -12,10 +12,11 @@ export const DISCOVERY_DIRECTIONS = Object.freeze({
 });
 
 export function routePoints(plan) {
-  return [plan.stages[0].from, ...plan.stages.map((stage) => stage.to)]
+  const legs = plan.legs || plan.stages;
+  return [legs[0].from, ...legs.map((stage) => stage.to)]
     .map((stop, index) => ({
       ...stop,
-      level: Math.max(plan.stages[index - 1]?.level || 1, plan.stages[index]?.level || 1),
+      level: Math.max(legs[index - 1]?.level || 1, legs[index]?.level || 1),
     }))
     .filter(({ id }) => Object.hasOwn(ATLAS_PLACES, id));
 }

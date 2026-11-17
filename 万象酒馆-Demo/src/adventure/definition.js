@@ -1,3 +1,5 @@
+import { computeMapDc, dcSpecPropertiesSchema, normalizeDcSpec } from '../dc.js';
+
 export const ADVENTURE_NODE_TYPES = Object.freeze(['battle', 'event', 'elite', 'quest', 'boss']);
 export const ADVENTURE_NODE_LABELS = Object.freeze([
   '普通战',
@@ -32,9 +34,25 @@ export function normalizeSceneOverview(value, fallback = '') {
   });
 }
 
-export function normalizeAdventureDefinition(value) {
+function normalizeChoiceActors(choice) {
+  const list = [];
+  if (Array.isArray(choice?.actors)) {
+    for (const entry of choice.actors) {
+      if (typeof entry === 'string' && entry.trim() && !list.includes(entry.trim())) {
+        list.push(entry.trim().slice(0, 80));
+      }
+    }
+  }
+  if (!list.length && typeof choice?.actor === 'string' && choice.actor.trim()) {
+    list.push(choice.actor.trim().slice(0, 80));
+  }
+  return list.slice(0, 2);
+}
+
+export function normalizeAdventureDefinition(value, { map = null, level = null } = {}) {
   if (!value?.event || !value?.quest) throw Error('五节点剧本缺少第二节点事件或第四节点任务');
   const { event, quest } = value;
+  const mapOrLevel = map ?? level ?? null;
   if (!Array.isArray(event.choices) || event.choices.length < 2 || event.choices.length > 4)
     throw Error('事件需要2～4个选项');
   if (!Array.isArray(quest.goals) || quest.goals.length < 2 || quest.goals.length > 6)
@@ -54,11 +72,23 @@ export function normalizeAdventureDefinition(value) {
       id: 'event-2',
       title: text(event.title, '事件名', 60),
       description: text(event.description, '事件场景', 1000),
-      choices: event.choices.map((choice, index) => ({
-        id: `choice-${index + 1}`,
-        label: text(choice.label, '选项', 180),
-        detail: text(choice.detail, '选项说明', 500),
-      })),
+      choices: event.choices.map((choice, index) => {
+        const dcCheck = normalizeDcSpec(choice.dcCheck || choice) || {
+          attr: ['str', 'wis', 'dex', 'cha'][index % 4],
+          dc: [8, 9, 10, 8][index % 4],
+        };
+        if (mapOrLevel != null) {
+          dcCheck.dc = computeMapDc(mapOrLevel, index);
+        }
+        const actors = normalizeChoiceActors(choice);
+        return {
+          id: `choice-${index + 1}`,
+          label: text(choice.label, '选项', 180),
+          detail: text(choice.detail, '选项说明', 500),
+          dcCheck,
+          ...(actors.length ? { actors } : {}),
+        };
+      }),
     },
     quest: {
       title: text(quest.title, '任务场景名', 60),
@@ -66,6 +96,19 @@ export function normalizeAdventureDefinition(value) {
       overview: normalizeSceneOverview(quest.overview, quest.description),
       commonState: text(quest.commonState, '通往Boss的共同剧情状态', 1000),
       goals,
+      ...(Array.isArray(quest.dcHints)
+        ? {
+            dcHints: quest.dcHints
+              .slice(0, 6)
+              .map((hint, index) => {
+                const spec = normalizeDcSpec(hint);
+                if (!spec || typeof hint?.action !== 'string' || !hint.action.trim()) return null;
+                if (mapOrLevel != null) spec.dc = computeMapDc(mapOrLevel, index);
+                return { action: hint.action.trim().slice(0, 120), ...spec };
+              })
+              .filter(Boolean),
+          }
+        : {}),
     },
   };
 }
@@ -79,6 +122,8 @@ export function savedAdventureInput(definition) {
       choices: definition.event.choices.map((choice) => ({
         label: choice.label,
         detail: choice.detail,
+        ...(choice.dcCheck ? { ...choice.dcCheck } : {}),
+        ...(choice.actors?.length ? { actors: [...choice.actors] } : {}),
       })),
     },
   };
@@ -86,12 +131,13 @@ export function savedAdventureInput(definition) {
 
 export function adventureDefinitionSchema() {
   const string = (maxLength) => ({ type: 'string', minLength: 1, maxLength });
-  const object = (properties) => ({
+  const object = (properties, required = Object.keys(properties)) => ({
     type: 'object',
     properties,
-    required: Object.keys(properties),
+    required,
     additionalProperties: false,
   });
+  const dcSpecProps = dcSpecPropertiesSchema();
   return object({
     event: object({
       title: string(60),
@@ -100,31 +146,56 @@ export function adventureDefinitionSchema() {
         type: 'array',
         minItems: 2,
         maxItems: 4,
-        items: object({
-          label: string(180),
-          detail: string(500),
-        }),
+        items: object(
+          {
+            label: string(180),
+            detail: string(500),
+            actors: {
+              type: 'array',
+              minItems: 1,
+              maxItems: 2,
+              items: string(80),
+            },
+            ...dcSpecProps,
+          },
+          ['label', 'detail'],
+        ),
       },
     }),
-    quest: object({
-      title: string(60),
-      description: string(2000),
-      overview: {
-        type: 'array',
-        minItems: 4,
-        maxItems: 4,
-        items: object({ location: string(40), detail: string(240) }),
+    quest: object(
+      {
+        title: string(60),
+        description: string(2000),
+        overview: {
+          type: 'array',
+          minItems: 4,
+          maxItems: 4,
+          items: object({ location: string(40), detail: string(240) }),
+        },
+        commonState: string(1000),
+        goals: {
+          type: 'array',
+          minItems: 2,
+          maxItems: 6,
+          items: object({
+            objective: string(180),
+            required: { type: 'boolean' },
+          }),
+        },
+        dcHints: {
+          type: 'array',
+          minItems: 0,
+          maxItems: 6,
+          items: object(
+            {
+              action: string(120),
+              ...dcSpecProps,
+            },
+            ['action', 'attr', 'dc'],
+          ),
+        },
       },
-      commonState: string(1000),
-      goals: {
-        type: 'array',
-        minItems: 2,
-        maxItems: 6,
-        items: object({
-          objective: string(180),
-          required: { type: 'boolean' },
-        }),
-      },
-    }),
+      ['title', 'description', 'overview', 'commonState', 'goals'],
+    ),
   });
 }

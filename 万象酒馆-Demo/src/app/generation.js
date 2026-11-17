@@ -61,12 +61,14 @@ import { prepareSwapLesson } from '../companion-events.js';
 import { rearUnlocked } from '../formation-access.js';
 import { npcSummonStatus } from '../summoning.js';
 import { createDeparture } from './departure.js';
+import { syncGenerationLoadingChrome } from '../shared/scene-loading.js';
 
 const libraryKey = 'wanxiang.worldbooks.v1';
 export function createGeneration(context) {
   const storage = context.storage || localStorage;
   const { session, events } = context;
   const departure = createDeparture(context);
+  context.departure = departure;
   let request = null,
     equipmentPreparation = null,
     profiles = null,
@@ -90,6 +92,7 @@ export function createGeneration(context) {
       checkbox.checked = session.ai.generationOptions[checkbox.dataset.generationOption];
     if (session.runtime.mode === 'battle')
       $('#back-inn').hidden = !developerOption(session.ai.generationOptions, 'allowRetreat');
+    context.shell?.syncInnVisitors?.();
     context.generationAccess?.refresh();
   }
   renderDeveloperOptions();
@@ -136,7 +139,7 @@ export function createGeneration(context) {
       return false;
     }
   }
-  const story = createStoryFeed(session, save, context.gal);
+  const story = createStoryFeed(session, save, context.gal, context.chapterTheater);
   function installRoster() {
     session.battle.state = newBattle(undefined, compileRoster(library()));
     session.battle.forecast = preview(session.battle.state, []);
@@ -627,6 +630,7 @@ export function createGeneration(context) {
     api,
     accept,
     toast: (message) => context.shell.toast(message),
+    onRetry: retryGeneration,
   });
   const worldEditor = createWorldbookEditor({
     session,
@@ -663,6 +667,7 @@ export function createGeneration(context) {
             {
               schemaVersion: 2,
               setting: generated.setting,
+              ...(generated.dcAttrs ? { dcAttrs: generated.dcAttrs } : {}),
               ...(generated.levelUpLines ? { levelUpLines: generated.levelUpLines } : {}),
               data: { ...generated.combat, archetype: generated.archetype },
             },
@@ -673,6 +678,7 @@ export function createGeneration(context) {
               generated,
               generated.id,
               input.party.map((item) => item.id),
+              { map: input.exploration?.map ?? null },
             ),
             generationInput: structuredClone(input),
             party: input.party,
@@ -741,6 +747,7 @@ export function createGeneration(context) {
   async function job(kind, override) {
     if (session.ai.busy) throw Error('已有生成任务在进行');
     session.ai.busy = true;
+    context.ledger?.sync();
     request = new AbortController();
     $('#generation-title').textContent =
       kind === 'character' ? '正在召唤异界来客' : '正在编织本章故事';
@@ -749,6 +756,9 @@ export function createGeneration(context) {
         ? '青色门扉泛起涟漪，一段新的来历正在浮现…'
         : '同行者跨越界门前，旅程的第一章正在展开…';
     $('#generation-progress').hidden = kind === 'script';
+    if (kind !== 'script') {
+      syncGenerationLoadingChrome($('#generation-progress'), $('#generation-title').textContent);
+    }
     if (kind === 'script') {
       session.ai.departureParty = library().party.filter(Boolean);
       context.shell.renderParty();
@@ -782,6 +792,7 @@ export function createGeneration(context) {
       if (!session.runtime.disposed) {
         $('#generation-progress').hidden = true;
         render();
+        context.ledger?.sync();
       }
     }
   }
@@ -881,8 +892,60 @@ export function createGeneration(context) {
         failure.name === 'AbortError' ? '已取消，尚未进入剧本或保存新角色。' : failure.message;
       context.shell.toast(message);
       diagnostics.refreshButtons();
-      if (failure.diagnostic) diagnostics.show(kind);
-      else if (failure.name !== 'AbortError') await open(message, kind);
+      if (failure.diagnostic) {
+        diagnostics.show(kind);
+      } else if (failure.name !== 'AbortError') {
+        diagnostics.record(
+          {
+            kind,
+            stage: 'transport',
+            issues: [{ path: kind, message }],
+            repairs: [],
+            rawText: '',
+            candidateText: '',
+          },
+          kind === 'script' ? scriptInput() : inputFor(kind),
+          false,
+        );
+        diagnostics.show(kind);
+      }
+    }
+  }
+  async function retryGeneration(kind, savedInput) {
+    if (session.runtime.mode !== 'inn' || session.ai.busy || session.runtime.disposed) return;
+    if (!['script', 'character'].includes(kind)) return;
+    try {
+      session.runtime.mode = 'loading';
+      diagnostics.refreshButtons();
+      const { entry, input, arrivalDialogue } = await job(kind, savedInput);
+      session.runtime.mode = 'inn';
+      diagnostics.refreshButtons();
+      await accept(kind, entry, input, arrivalDialogue);
+      if (kind === 'script') context.audio.play('shield');
+    } catch (failure) {
+      if (session.runtime.disposed) return;
+      session.runtime.mode = 'inn';
+      const message =
+        failure.name === 'AbortError' ? '已取消，尚未进入剧本或保存新角色。' : failure.message;
+      context.shell.toast(message);
+      diagnostics.refreshButtons();
+      if (failure.diagnostic) {
+        diagnostics.show(kind);
+      } else if (failure.name !== 'AbortError') {
+        diagnostics.record(
+          {
+            kind,
+            stage: 'transport',
+            issues: [{ path: kind, message }],
+            repairs: [],
+            rawText: '',
+            candidateText: '',
+          },
+          savedInput || (kind === 'script' ? scriptInput() : inputFor(kind)),
+          false,
+        );
+        diagnostics.show(kind);
+      }
     }
   }
   const presetEditor = createAiPresetEditor({
@@ -944,6 +1007,7 @@ export function createGeneration(context) {
   events.on($('#ai-cancel'), 'click', () => request?.abort());
   events.on($('#generation-progress-cancel'), 'click', () => request?.abort());
   events.on($('#prepare-cancel-generation'), 'click', () => request?.abort());
+  events.on($('#prepare-open-workshop'), 'click', () => void context.workshop?.open?.());
   events.on($('#party-panel'), 'cancel', (event) => {
     if (session.ai.departureParty) event.preventDefault();
   });
@@ -1061,12 +1125,22 @@ export function createGeneration(context) {
       }
       return true;
     },
-    async generateProtagonist(brief) {
-      if (!generationEnabled(session.ai.generationOptions, 'protagonistApi'))
-        return defaultProtagonist(library());
-      const input = { purpose: 'protagonist', brief, existing: [], rollId: crypto.randomUUID() };
+    async generateProtagonist(brief, dcAttrs) {
+      if (!generationEnabled(session.ai.generationOptions, 'protagonistApi')) {
+        const fallback = defaultProtagonist(library());
+        if (dcAttrs) fallback.dcAttrs = { ...dcAttrs };
+        return fallback;
+      }
+      const input = {
+        purpose: 'protagonist',
+        brief,
+        ...(dcAttrs ? { dcAttrs: { ...dcAttrs } } : {}),
+        existing: [],
+        rollId: crypto.randomUUID(),
+      };
       try {
         const result = await job('character', input);
+        if (dcAttrs && result.entry) result.entry.dcAttrs = { ...dcAttrs };
         return result.entry;
       } catch (failure) {
         if (failure.diagnostic) diagnostics.show('character');

@@ -11,6 +11,7 @@ import { attachTavernSupplies, TAVERN_MODEL_FILES } from './hall-model.js';
 import { explorationHref } from '../exploration/scenes.js';
 
 export async function createTavernView() {
+  if (parent !== window) document.documentElement.dataset.embedded = 'true';
   const loading = createSceneLoading(document.getElementById('status'), '正在打开酒馆');
   const quality = deviceRenderQuality();
   const frameBudget = createFrameBudget(quality.fps);
@@ -121,7 +122,7 @@ export async function createTavernView() {
     anchor: TAVERN_STAIRS.anchor,
   };
   places.streetDoor = {
-    name: '外出门 · 星灯街',
+    name: '外出门',
     button: '走向外出门',
     p: [TAVERN_HALL.entrance[0], 1.52, 3.1],
     focus: [TAVERN_HALL.entrance[0], 1.35, TAVERN_HALL.entrance[1]],
@@ -611,6 +612,12 @@ export async function createTavernView() {
   events.on(window, 'message', (e) => {
     if (e.origin === location.origin && e.source === parent && e.data?.type === 'daily-managed')
       dailyManaged = e.data.enabled === true;
+    if (
+      e.origin === location.origin &&
+      e.source === parent &&
+      e.data?.type === 'tavern-open-ring-gallery'
+    )
+      ringDisplay?.open();
     if (e.origin === location.origin && e.source === parent && e.data?.type === 'gal-visibility')
       document.body.classList.toggle('gal-covered', e.data.visible === true);
     if (e.origin === location.origin && e.source === parent && e.data?.type === 'summon-mode') {
@@ -643,6 +650,9 @@ export async function createTavernView() {
   let spotTimer = 0,
     summonVisible = null;
   function updateSpots(checkOcclusion = true) {
+    const embedded = parent !== window;
+    const minTop = embedded ? 62 : 12;
+    const maxBottom = innerHeight - (embedded ? (dailyManaged ? 104 : 76) : 12);
     camera.updateMatrixWorld();
     for (const shelf of shelfButtons) {
       shelf.button.hidden = !loaded || !!travel || current !== 'bookshelf';
@@ -653,8 +663,12 @@ export async function createTavernView() {
           projected.z > 1 ||
           Math.abs(projected.x) > 1 ||
           Math.abs(projected.y) > 1;
+        const y = Math.min(
+          Math.max((-projected.y * 0.5 + 0.5) * innerHeight, minTop + 20),
+          maxBottom - 20,
+        );
         shelf.button.style.left = (projected.x * 0.5 + 0.5) * innerWidth + 'px';
-        shelf.button.style.top = (-projected.y * 0.5 + 0.5) * innerHeight + 'px';
+        shelf.button.style.top = y + 'px';
       }
     }
     function projectAction(button, place, anchor) {
@@ -668,8 +682,12 @@ export async function createTavernView() {
         projected.z < -1 ||
         projected.z > 1;
       if (!button.hidden) {
+        const y = Math.min(
+          Math.max((0.5 - projected.y * 0.5) * innerHeight, minTop + 20),
+          maxBottom - 20,
+        );
         button.style.left = `${(projected.x * 0.5 + 0.5) * innerWidth}px`;
-        button.style.top = `${(0.5 - projected.y * 0.5) * innerHeight}px`;
+        button.style.top = `${y}px`;
       }
     }
     projectAction(emblem, 'fate', ringButtonAnchor);
@@ -771,7 +789,8 @@ export async function createTavernView() {
         )
           top = previous.bottom + 12;
       }
-      if (top + box.height > innerHeight - 100) top = Math.max(70, box.top - box.height - 18);
+      if (top + box.height > maxBottom) top = Math.max(minTop, box.top - box.height - 18);
+      if (top < minTop) top = minTop;
       button.style.translate = `0 ${top - box.top}px`;
       placed.push({ left: box.left, right: box.right, top, bottom: top + box.height });
     }

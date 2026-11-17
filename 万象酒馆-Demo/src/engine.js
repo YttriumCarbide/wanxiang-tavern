@@ -108,7 +108,20 @@ export function effectiveBuff(s, id, key) {
     (s.units[id]?.hp > 0 ? auraValue(s, heroesFor(s), id, key) : 0);
   return key === 'haste' ? Math.min(2, value) : value;
 }
-export function intent(s, id) {
+export function enemyActionsCount(s, id) {
+  const def = definition(s, id);
+  const unit = s?.units?.[id];
+  if (!def || !unit || unit.hp <= 0) return 0;
+  if (s.phase === 'opening') return 1;
+  const enraged = !!(
+    def.boss &&
+    def.phaseMode !== 'cycle' &&
+    (unit.enraged || shouldEnrage(s, id, def))
+  );
+  const count = enraged ? (def.enragedActions ?? def.actions ?? 1) : (def.actions ?? 1);
+  return Math.max(1, Number(count) || 1);
+}
+export function intent(s, id, actionIndex = 0) {
   const authored = definition(s, id);
   const scaleIntent = (move) =>
     leveledIntent(move, s.units[id]?.attackBonus, s.units[id]?.damageScale);
@@ -120,7 +133,42 @@ export function intent(s, id) {
   if (tactical) {
     const def = definition(s, id);
     const list = tactical.enraged ? def.enragedIntents : def.intents;
-    return scaleIntent({ ...list[tactical.index], ...tactical });
+    const useOpening =
+      Boolean(authored.openingIntent) &&
+      !s.units[id]?.openingAttackUsed &&
+      (!authored.openingIntent.lowestHpPosition || s.round <= 1);
+    if (useOpening && actionIndex === 0) {
+      const opening = authored.openingIntent;
+      const openingSlot = opening.slot ?? tactical.slot;
+      const openingSlots =
+        opening.slots ||
+        (opening.adjacent ? [openingSlot, openingSlot === 2 ? 1 : openingSlot + 1] : [openingSlot]);
+      return scaleIntent({
+        ...opening,
+        slot: openingSlot,
+        slots: openingSlots,
+        enraged: tactical.enraged,
+      });
+    }
+    const offset = useOpening ? actionIndex - 1 : actionIndex;
+    const tacticalIndex = (tactical.index + offset) % list.length;
+    if (actionIndex === 0) {
+      return scaleIntent({ ...list[tacticalIndex], ...tactical });
+    }
+    const move = list[tacticalIndex];
+    const targetSlot =
+      def.tactic?.target === 'fixed'
+        ? (move.slot ?? tactical.slot ?? 1)
+        : (move.slot ?? tactical.slot);
+    const targetSlots =
+      move.slots ||
+      (move.adjacent ? [targetSlot, targetSlot === 2 ? 1 : targetSlot + 1] : [targetSlot]);
+    return scaleIntent({
+      ...move,
+      slot: targetSlot,
+      slots: targetSlots,
+      enraged: tactical.enraged,
+    });
   }
   const def = definition(s, id),
     enraged =
@@ -128,12 +176,18 @@ export function intent(s, id) {
       def.phaseMode !== 'cycle' &&
       (s.units[id].enraged || s.units[id].hp <= s.units[id].maxHp * def.phaseThreshold);
   const list = enraged ? def.enragedIntents : def.intents;
-  const move =
+  const useOpening =
     def.openingIntent &&
     !s.units[id].openingAttackUsed &&
-    (!def.openingIntent.lowestHpPosition || s.round <= 1)
+    (!def.openingIntent.lowestHpPosition || s.round <= 1);
+  const move =
+    useOpening && actionIndex === 0
       ? def.openingIntent
-      : list[(Math.max(1, s.round) - 1) % list.length];
+      : useOpening && actionIndex > 0
+        ? list[(actionIndex - 1) % list.length]
+        : s.units[id].openingUsedRound === s.round
+          ? list[Math.max(0, actionIndex - 1) % list.length]
+          : list[(Math.max(1, s.round) - 1 + actionIndex) % list.length];
   return scaleIntent({
     ...move,
     ...(move.lowestHpPosition
@@ -156,33 +210,77 @@ export function intent(s, id) {
     enraged: !!enraged,
   });
 }
+export function enemyIntents(s, id) {
+  const count = enemyActionsCount(s, id);
+  return Array.from({ length: count }, (_, actionIndex) => intent(s, id, actionIndex));
+}
 export function enemyTimeline(s, extraSlow = {}) {
   if (s.phase === 'opening') return [null];
   const enemies = livingEnemies(s),
-    length = 3 + enemies.length,
-    slots = Array(length).fill(null);
-  const ranked = enemies
-    .map((e, i) => ({
+    entries = enemies.map((e, i) => ({
+      def: e,
       id: e.id,
+      count: enemyActionsCount(s, e.id),
       speed:
         e.tactic?.mode === 'ares' && aresDecision(s, e.id, e).priority
-          ? length + 1
+          ? 999
           : Math.max(1, e.speed - (s.units[e.id].buffs.slow || 0) - (extraSlow[e.id] || 0)),
-      // Equal-speed collisions fill backwards from the last time slot.
       tie:
         e.tactic?.mode === 'moon-tree'
           ? { crown: 2, eye: 1, root: 0 }[e.tactic.part]
           : (i * 17 + s.seed + s.round * 11) % 31,
-    }))
-    .sort((a, b) => b.speed - a.speed || a.tie - b.tie);
-  for (const e of ranked) {
-    let at = Math.max(0, Math.min(length - 1, length - e.speed));
+    })),
+    totalEnemyActions = entries.reduce((sum, entry) => sum + entry.count, 0),
+    length = 3 + totalEnemyActions,
+    slots = Array(length).fill(null);
+  const actions = [];
+  for (const entry of entries) {
+    const speed = entry.speed === 999 ? length + 1 : entry.speed;
+    if (entry.count === 1 || entry.def.splitActions === false) {
+      const desired = Math.max(0, Math.min(length - 1, length - speed));
+      for (let actionIndex = 0; actionIndex < entry.count; actionIndex++) {
+        actions.push({
+          id: entry.id,
+          speed,
+          tie: entry.tie,
+          actionIndex,
+          desired,
+        });
+      }
+    } else {
+      const first = Math.max(0, Math.min(length - entry.count, length - speed - (entry.count - 1)));
+      const span = length - 1 - first;
+      for (let actionIndex = 0; actionIndex < entry.count; actionIndex++) {
+        const desired =
+          entry.count === 2 && actionIndex === 1
+            ? Math.min(length - 1, first + Math.min(3, span))
+            : Math.min(
+                length - 1,
+                first + Math.round((actionIndex * span) / Math.max(1, entry.count - 1)),
+              );
+        actions.push({
+          id: entry.id,
+          speed,
+          tie: entry.tie,
+          actionIndex,
+          desired,
+        });
+      }
+    }
+  }
+  actions.sort((a, b) => b.speed - a.speed || a.tie - b.tie || a.actionIndex - b.actionIndex);
+  for (const item of actions) {
+    let at = item.desired;
     while (at < length && slots[at]) at++;
     if (at === length) {
-      at = length - 1;
-      while (slots[at]) at--;
+      at = item.desired - 1;
+      while (at >= 0 && slots[at]) at--;
+      if (at < 0) {
+        at = length - 1;
+        while (at >= 0 && slots[at]) at--;
+      }
     }
-    slots[at] = e.id;
+    slots[at] = item.id;
   }
   return slots;
 }
@@ -548,10 +646,10 @@ function simulate(s, plan, slots) {
       );
       esTargets = living.length ? [living[0]] : [];
     } else if (es.target === 'opposite') {
-      const opposite = enemySlots(work.enemyIds)[slot];
+      const opposite = enemySlots(work.enemyIds, definitions)[slot];
       esTargets = opposite && work.units[opposite]?.hp > 0 ? [opposite] : [];
     } else if (es.target === 'enemy') {
-      const eSlots = enemySlots(work.enemyIds);
+      const eSlots = enemySlots(work.enemyIds, definitions);
       let oppId = slot !== undefined && slot !== null ? eSlots[slot] : null;
       if (!oppId || work.units[oppId]?.hp <= 0) {
         const living = work.enemyIds.filter((eid) => work.units[eid]?.hp > 0);
@@ -670,27 +768,33 @@ function simulate(s, plan, slots) {
   guests.roundStart(slots);
   if (JSON.stringify(work) !== beforeTriggers) record('trigger', null, '装备与被动 · 开始');
   else flushBossPhases();
+  const enemyActionIndex = {};
   for (at = 0; at < slots.length; at++) {
     let a = valid.find((a) => a.start === at);
     const enemy = slots[at];
     if (enemy) {
       const u = work.units[enemy];
+      const actionIdx = enemyActionIndex[enemy] || 0;
+      enemyActionIndex[enemy] = actionIdx + 1;
       if (u.hp <= 0) {
-        record('skip', enemy, '敌人已濒死');
+        record('skip', enemy, '敌人已濒死', [], null, null, { actionIndex: actionIdx });
         continue;
       }
       if (u.buffs.bind) {
         currentLogs.push(`${definitions[enemy].name}受到禁锢，本回合行动取消`);
         currentStatusTriggers.push({ id: enemy, type: 'bind', value: 1 });
-        record('skip', enemy, '禁锢 · 行动取消', [], null, null, { blockedBy: 'bind' });
+        record('skip', enemy, '禁锢 · 行动取消', [], null, null, {
+          blockedBy: 'bind',
+          actionIndex: actionIdx,
+        });
         continue;
       }
       bleed(enemy);
       if (u.hp <= 0) {
-        record('skip', enemy, '流血致死 · 行动取消');
+        record('skip', enemy, '流血致死 · 行动取消', [], null, null, { actionIndex: actionIdx });
         continue;
       }
-      const move = intent(work, enemy),
+      const move = intent(work, enemy, actionIdx),
         originalTargets = (move.slots || [move.slot])
           .map((slot) => work.formation[slot])
           .filter(Boolean),
@@ -698,7 +802,12 @@ function simulate(s, plan, slots) {
           ? companions.forceTarget(enemy, originalTargets)
           : originalTargets;
       const forced = targets !== originalTargets;
-      if (definitions[enemy].openingIntent) u.openingAttackUsed = true;
+      if (definitions[enemy].openingIntent && !u.openingAttackUsed && actionIdx === 0) {
+        u.openingAttackUsed = true;
+        u.openingUsedRound = work.round;
+      } else if (definitions[enemy].openingIntent && !u.openingAttackUsed) {
+        u.openingAttackUsed = true;
+      }
       if (move.selfShield) effects(enemy, [enemy], [{ type: 'shield', value: move.selfShield }]);
       if (move.selfHeal) heal(enemy, move.selfHeal);
       if (move.selfCleanse) for (const key of NEGATIVE_STATUSES) delete u.buffs[key];
@@ -778,7 +887,7 @@ function simulate(s, plan, slots) {
         u.buffs.balance ? [...new Set([...targets, ...front(work).filter(Boolean)])] : targets,
         null,
         null,
-        { blindTarget: missed },
+        { blindTarget: missed, actionIndex: actionIdx },
       );
       blindMiss = null;
       if (move.effects.some((effect) => effect.type === 'damage'))
@@ -1197,7 +1306,7 @@ export function newEncounter(spec, prior = null, index = 0, heroDefinitions = {}
   for (const id of spec.enemyIds) {
     const d = definition(s, id),
       growth = spec.growthEntry
-        ? enemyGrowth(spec.growthEntry, index, id, d.boss)
+        ? enemyGrowth(spec.growthEntry, index, id, d.boss, d.elite)
         : { level: 1, hpScale: 1, damageScale: 1 },
       hp = Math.max(
         1,
@@ -1207,6 +1316,7 @@ export function newEncounter(spec, prior = null, index = 0, heroDefinitions = {}
       id,
       side: 'enemy',
       level: growth.level,
+      growth: { hp: hp - d.hp },
       damageScale: growth.damageScale,
       hp,
       maxHp: hp,

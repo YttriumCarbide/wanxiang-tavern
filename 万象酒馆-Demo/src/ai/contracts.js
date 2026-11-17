@@ -1,4 +1,5 @@
 import { resourceText } from '../resource-text.js';
+import { normalizeEquipmentCategory } from '../equipment.js';
 import { defaultCharacterPortrait } from '../content/portrait-templates.js';
 import { ENCOUNTER_COUNT } from '../content/journey-rules.js';
 import { stripRetiredFields, stripRetiredLore } from './retired-abilities.js';
@@ -8,8 +9,10 @@ import { characterInputSchema } from './character-schema.js';
 import { checkOutputSchema } from './schema-check.js';
 import { normalizeRules, effectMetadata } from '../triggers.js';
 import { compileCharacterDesign } from '../character-generation.js';
+import { normalizeDcAttrs } from '../dc.js';
 import { finalSkillText, finalPassiveText } from '../skill-text.js';
 import { normalizeAdventureDefinition } from '../adventure/definition.js';
+import { stripGalTags } from '../gal.js';
 import {
   normalizeCharacterSetting,
   formatCharacterSetting,
@@ -257,18 +260,56 @@ export function normalizeCharacter(raw, id, input = {}) {
     setting: lore,
     combat,
     archetype: base.id,
+    dcAttrs: normalizeDcAttrs(data.dcAttrs || raw.dcAttrs, {
+      id,
+      archetype: base.id,
+      combat,
+      setting: lore,
+    }),
     ...(raw.levelUpLines
       ? { levelUpLines: raw.levelUpLines.map((line) => text(line, '升级台词', 300)) }
       : {}),
   };
 }
+function normalizeBattleLines(rawLines) {
+  if (rawLines === undefined || rawLines === null) return null;
+  const source = object(rawLines, 'Boss战内台词');
+  const fields = [
+    ['bossIntro', 'Boss开战台词'],
+    ['partyReply', '我方迎战台词'],
+    ['bossDeclaration', 'Boss宣告台词'],
+    ['bossEnraged', 'Boss狂暴台词'],
+    ['bossDefeat', 'Boss败北台词'],
+  ];
+  const result = {};
+  for (const [key, label] of fields) {
+    if (typeof source[key] === 'string' && source[key].trim()) {
+      result[key] = stripGalTags(text(source[key], label, 200));
+    }
+  }
+  return Object.keys(result).length ? result : null;
+}
+
 /** v3 stores free prose once and compiles the unchanged metadata out of its wrapper. */
-function normalizeNovelScript(raw, id, encounterCount) {
+function normalizeNovelScript(raw, id, encounterCount, map = null) {
   const data = object(raw.data || raw, '剧本数据层');
   if (!Array.isArray(raw.story) || raw.story.length !== encounterCount)
     fail(`剧本正文需要${encounterCount}段文字`);
   const story = raw.story.map((part, index) => text(part, `story[${index}]`, 24000));
   const modern = raw.schemaVersion >= 4;
+  const prologue =
+    typeof data.prologue === 'string' && data.prologue.trim()
+      ? stripGalTags(text(data.prologue, '开场散文', 2000))
+      : '';
+  const battleLines = normalizeBattleLines(data.battleLines);
+  const epilogueGal =
+    typeof data.epilogueGal === 'string' && data.epilogueGal.trim()
+      ? text(data.epilogueGal, '战后Gal尾声', 6000)
+      : '';
+  const epilogueProse =
+    typeof data.epilogueProse === 'string' && data.epilogueProse.trim()
+      ? stripGalTags(text(data.epilogueProse, '尾声散文', 1500))
+      : '';
   const npcs =
     Array.isArray(data.npcs) && data.npcs.length <= (modern ? 12 : 3)
       ? data.npcs.map((npc, index) => ({
@@ -288,9 +329,13 @@ function normalizeNovelScript(raw, id, encounterCount) {
     id,
     schemaVersion: raw.schemaVersion,
     story,
+    ...(prologue ? { prologue } : {}),
+    ...(battleLines ? { battleLines } : {}),
+    ...(epilogueGal ? { epilogueGal } : {}),
+    ...(epilogueProse ? { epilogueProse } : {}),
     ...(raw.schemaVersion === 5
       ? {
-          adventure: normalizeAdventureDefinition(data.adventure),
+          adventure: normalizeAdventureDefinition(data.adventure, { map }),
           original: structuredClone(raw.original || { story, data }),
         }
       : {}),
@@ -305,14 +350,21 @@ function normalizeNovelScript(raw, id, encounterCount) {
           items: (data.items || [])
             .filter((item) => raw.schemaVersion !== 5 || item.encounter !== 1)
             .map((item) => ({
-              name: text(typeof item === 'string' ? item : item.name, '道具名', 30),
+              name: text(typeof item === 'string' ? item : item.name, '道具名', 40),
               ...(typeof item === 'string' ||
               item.reference === true ||
               (item.description === undefined && item.value === undefined)
                 ? { reference: true }
                 : {
-                    description: text(item.description, '道具描述', 20),
+                    description: text(item.description, '道具描述', 120).slice(0, 60),
                     value: integer(item.value, 0, 10000, '以太价值'),
+                    ...(item.category !== undefined
+                      ? (() => {
+                          const normalized = normalizeEquipmentCategory(item.category);
+                          if (normalized === 'gem') fail('道具分类无效');
+                          return normalized ? { category: normalized } : {};
+                        })()
+                      : {}),
                   }),
               encounter: integer(
                 typeof item === 'string' ? encounterCount - 1 : item.encounter,
@@ -341,9 +393,15 @@ function normalizeNovelScript(raw, id, encounterCount) {
   };
 }
 
-export function normalizeScript(raw, id, partyIds = [], { encounterCount = ENCOUNTER_COUNT } = {}) {
+export function normalizeScript(
+  raw,
+  id,
+  partyIds = [],
+  { encounterCount = ENCOUNTER_COUNT, map = null } = {},
+) {
   object(raw, '剧本');
-  if ([3, 4, 5].includes(raw.schemaVersion)) return normalizeNovelScript(raw, id, encounterCount);
+  if ([3, 4, 5].includes(raw.schemaVersion))
+    return normalizeNovelScript(raw, id, encounterCount, map);
   if (![1, 2].includes(raw.schemaVersion)) fail('剧本schemaVersion必须为3（旧存档兼容1/2）');
   const structured = raw.schemaVersion === 2;
   const npcs =

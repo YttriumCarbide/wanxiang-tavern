@@ -63,10 +63,19 @@ export function createTavernQuests(context) {
     if (dialog.open) render();
   }
   function render() {
-    dialog.innerHTML = `<header><h2>任务</h2><form method="dialog"><button aria-label="关闭">×</button></form></header>
+    const entries = [...library().tavernQuests].reverse();
+    const activeCount = entries.filter((quest) => quest.status === 'active').length;
+    const offeredCount = entries.filter((quest) => quest.status === 'offered').length;
+    dialog.innerHTML = `<header class="quests-header">
+        <div class="quests-heading">
+          <small>CHRONICLE BOUNTIES · 委托名录</small>
+          <h2>酒馆委托</h2>
+        </div>
+        <span class="quests-summary">进行中 ${activeCount} · 可接 ${offeredCount}</span>
+        <form method="dialog"><button class="quests-close" aria-label="关闭">×</button></form>
+      </header>
       <div class="tavern-quest-list">${
-        [...library().tavernQuests]
-          .reverse()
+        entries
           .map((quest) => {
             const location =
               availableScenes()[step(quest)?.scene] ||
@@ -75,22 +84,38 @@ export function createTavernQuests(context) {
             const status = { offered: '可接取', active: '进行中', completed: '已完成' }[
               quest.status
             ];
+            const glyph = quest.status === 'active' ? '◆' : quest.status === 'offered' ? '◇' : '✓';
             const action =
               quest.status === 'offered'
-                ? '接取'
+                ? '接取委托'
                 : quest.status === 'active'
-                  ? '追踪'
+                  ? '设为追踪'
                   : quest.type === 'social'
                     ? '继续故事'
                     : '';
             const recruit = quest.type === 'character' && quest.met && quest.status === 'active';
             const requirements = recruit ? quest.plan.requirements : null;
-            return `<article><div><b>${escapeText(quest.title)}</b><span>${QUEST_TYPES[quest.type]} · ${status}</span></div>
-          <p>${escapeText(quest.description)}</p>${location ? `<p>${escapeText(location)}</p>` : ''}
-          ${requirements ? `<p>${escapeText(requirements.reason)} · 酒馆 ${requirements.tavern} 阶 · 好感 ${requirements.affection} 级 · 队伍 ${requirements.partyLevel} 级${requirements.difficulty !== 'none' ? ' · 交涉' + RECRUITMENT_DIFFICULTY[requirements.difficulty] : ''}</p>` : ''}
-          ${action ? `<button data-quest-pick="${escapeText(quest.id)}" ${pending ? 'disabled' : ''}>${action}</button>` : ''}</article>`;
+            return `<article class="quest-row" data-status="${escapeText(quest.status)}">
+              <div class="quest-row-head">
+                <span class="quest-sigil" aria-hidden="true">${glyph}</span>
+                <b>${escapeText(quest.title)}</b>
+                <span class="quest-meta-tag">${QUEST_TYPES[quest.type]} · ${status}</span>
+              </div>
+              <p class="quest-desc">${escapeText(quest.description)}</p>
+              ${location ? `<p class="quest-waypoint">线索地点 · ${escapeText(location)}</p>` : ''}
+              ${
+                requirements
+                  ? `<p class="quest-req">${escapeText(requirements.reason)} · 酒馆 ${requirements.tavern} 阶 · 好感 ${requirements.affection} 级 · 队伍 ${requirements.partyLevel} 级${requirements.difficulty !== 'none' ? ' · 交涉' + RECRUITMENT_DIFFICULTY[requirements.difficulty] : ''}</p>`
+                  : ''
+              }
+              ${
+                action
+                  ? `<div class="quest-row-actions"><button type="button" data-quest-pick="${escapeText(quest.id)}" ${pending ? 'disabled' : ''}>${action}</button></div>`
+                  : ''
+              }
+            </article>`;
           })
-          .join('') || '<p>暂无任务线索</p>'
+          .join('') || '<p class="quests-empty">眼前暂无来自旅人与街巷的新委托。</p>'
       }</div>`;
   }
   function open() {

@@ -1,11 +1,11 @@
-import { legacySession } from './legacy-session.mjs';
+import { legacySession, finishSettlement } from './legacy-session.mjs';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import path from 'node:path';
 import {
   characterResponse,
   characterDocument,
-  scriptFixture,
+  scriptV5Fixture,
   requestContext,
   tavernPresetFixture,
 } from '../fixtures/ai.js';
@@ -28,12 +28,12 @@ export async function generationChecks({ browser, baseURL, output }) {
     calls.push(request);
     const context = requestContext(request.messages);
     const badCharacter = characterDocument();
-    badCharacter.setting.profession.description_note = '不属于协议的辅助备注';
+    badCharacter.setting.attack.description_note = '不属于协议的辅助备注';
     badCharacter.data.hp = 999;
     badCharacter.data.mp = 'wrong';
     const document = character
       ? badCharacter
-      : scriptFixture(context.characters.greenLight.map((entry) => entry.id));
+      : scriptV5Fixture(context.characters.greenLight.map((entry) => entry.id));
     const result =
       '<other>标签外文字</other>\n<wanxiang_json>@@RAW@@```json\n' +
       JSON.stringify(document).slice(0, -1) +
@@ -68,6 +68,10 @@ export async function generationChecks({ browser, baseURL, output }) {
       const library = JSON.parse(localStorage.getItem(key));
       library.inventory.summonContracts = 1;
       localStorage.setItem(key, JSON.stringify(library));
+      localStorage.setItem(
+        'wanxiang.generation-options.v1',
+        JSON.stringify({ developerMode: true, skipAiGeneration: false, allowRetreat: true }),
+      );
     });
     await page.reload();
     await page
@@ -127,19 +131,18 @@ export async function generationChecks({ browser, baseURL, output }) {
     await page.locator('#api-preset-name').fill('共享测试连接');
     await page.locator('#api-preset-save').click();
     await page.waitForFunction(() =>
-      document.querySelector('#ai-status').textContent.includes('共享列表'),
+      document.querySelector('#ai-status').textContent.includes('连接预设已保存'),
     );
     const shared = await page.locator('#api-preset-select').inputValue();
     await page.locator('#ai-kind').selectOption('script');
     await page.locator('#api-preset-select').selectOption(shared);
-    await page.locator('#api-preset-apply').click();
     await page.waitForFunction(() => document.querySelector('#ai-model').value === 'mock-model');
     assert.equal(await page.locator('#ai-maxTokens').inputValue(), '32768');
     assert((await page.locator('#ai-key').getAttribute('placeholder')).includes('已配置'));
     await page.locator('#ai-model').fill('');
     await page.locator('#ai-profile-save').click();
     await page.waitForFunction(() =>
-      document.querySelector('#ai-status').textContent.includes('接口已保存'),
+      document.querySelector('#ai-status').textContent.includes('当前连接已保存'),
     );
     await page.locator('#ai-regex').click();
     await page.locator('#regex-import-file').setInputFiles({
@@ -169,8 +172,7 @@ export async function generationChecks({ browser, baseURL, output }) {
     );
     await page.locator('#regex-close').click();
     await page.locator('#ai-kind').selectOption('character');
-    await page.locator('#ai-edit-prompts').click();
-    await page.locator('[data-prompt-entry="main"]').waitFor();
+    await page.locator('[data-ai-tab="prompts"]').click();
     await page.locator('#prompt-import-file').setInputFiles({
       name: '酒馆验收.json',
       mimeType: 'application/json',
@@ -179,17 +181,22 @@ export async function generationChecks({ browser, baseURL, output }) {
     await page.waitForFunction(
       () => document.querySelector('#prompt-name').value === '酒馆导入验收',
     );
+    await page.locator('[data-prompt-entry="main"]').waitFor();
     await page.locator('[data-prompt-entry="main"] [data-prompt-edit]').first().click();
     await page
       .locator('#prompt-entry-dialog textarea')
       .fill('你是角色设计API。浏览器已编辑这一层。{{brief}}');
     await page.locator('#prompt-entry-save').click();
     await page.locator('#prompt-add').click();
-    const added = page.locator('[data-prompt-entry]').last();
+    const addedId = await page
+      .locator('[data-prompt-entry]')
+      .last()
+      .getAttribute('data-prompt-entry');
+    const added = page.locator(`[data-prompt-entry="${addedId}"]`);
     await page.locator('#prompt-entry-dialog [data-prompt-field="role"]').selectOption('user');
     await page.locator('#prompt-entry-dialog textarea').fill('新增的USER消息层。');
     await page.locator('#prompt-entry-save').click();
-    await added.locator('[data-prompt-move="-1"]').click();
+    for (let step = 0; step < 3; step++) await added.locator('[data-prompt-move="-1"]').click();
     await page.locator('#prompt-save').click();
     await page.waitForFunction(() =>
       document.querySelector('#ai-status').textContent.includes('分层提示词已保存'),
@@ -223,6 +230,7 @@ export async function generationChecks({ browser, baseURL, output }) {
               comment: '公共细节',
               content: 'WORLD_TEST：酒馆窗边挂着铜铃。',
               constant: true,
+              ignoreBudget: true,
               position: 0,
               order: 100,
             },
@@ -233,6 +241,7 @@ export async function generationChecks({ browser, baseURL, output }) {
               key: ['遗迹'],
               // Match the actual route, independently of the editable default task brief.
               matchScenario: true,
+              ignoreBudget: true,
               position: 4,
               depth: 0,
               role: 0,
@@ -242,27 +251,38 @@ export async function generationChecks({ browser, baseURL, output }) {
         }),
       ),
     });
-    await page.waitForFunction(() =>
-      document.querySelector('#world-status').textContent.includes('已合并'),
+    await page.waitForFunction(
+      () =>
+        document.querySelector('[data-world-field="content"]')?.value.includes('WORLD_TEST') &&
+        document.querySelector('#world-status').textContent.includes('已保存'),
     );
-    assert.equal(await page.locator('#world-select option').count(), 1);
-    await page.locator('#world-api-targets').selectOption('["character","script"]');
-    assert.equal(await page.locator('[data-world-field="position"] option').count(), 8);
-    assert.equal(await page.locator('[data-world-field="delayUntilRecursion"]').count(), 1);
-    assert.equal(await page.locator('[data-world-field="matchScenario"]').count(), 1);
+    assert((await page.locator('#world-book-select option').count()) >= 1);
+    assert.equal(await page.locator('[data-world-target="character"]').isChecked(), true);
+    assert.equal(await page.locator('[data-world-target="script"]').isChecked(), true);
+    const expandedWorldRow = page
+      .locator('.world-entry-row')
+      .filter({ has: page.locator('.world-editor') });
+    assert.equal(await expandedWorldRow.locator('[data-world-head="position"] option').count(), 10);
+    assert.equal(await page.locator('#world-delay-recursion').count(), 1);
+    assert.equal(await page.locator('[data-world-field="excludeRecursion"]').count(), 1);
     await page
       .locator('[data-world-field="content"]')
       .fill('WORLD_TEST：酒馆窗边挂着铜铃，雨天会轻响。');
     await page.locator('#world-save').click();
-    await page.waitForFunction(() =>
-      document.querySelector('#world-status').textContent.includes('已保存'),
+    await page.waitForFunction(
+      () =>
+        document.querySelector('[data-world-field="content"]')?.value.includes('WORLD_TEST') &&
+        document.querySelector('#world-status').textContent.includes('已保存'),
     );
     await page.locator('#world-preview-button').click();
     await page.waitForFunction(() =>
       document.querySelector('#world-token-summary').textContent.includes('TK'),
     );
     const worldPreview = await page.locator('#world-preview').textContent();
-    assert(worldPreview.includes('WORLD_TEST') && worldPreview.includes('常驻'));
+    assert(
+      worldPreview.includes('WORLD_TEST') && worldPreview.includes('常驻'),
+      `worldPreview unexpected (kind=${await page.locator('#world-kind').inputValue()}): ${worldPreview.slice(0, 800)}`,
+    );
     assert.equal(calls.length, 0, 'World Info previews never call the model');
     await page.locator('#world-edit-view').click();
     await page.screenshot({ path: path.join(output, 'worldbook-editor-desktop.png') });
@@ -378,40 +398,94 @@ export async function generationChecks({ browser, baseURL, output }) {
     const prose = newcomer.setting.worldbook;
     await page.reload();
     await page.waitForFunction(() => !!window.demo);
+    const partyHandle = await page.locator('#ledger-handle').boundingBox();
+    await page.mouse.move(
+      partyHandle.x + partyHandle.width / 2,
+      partyHandle.y + partyHandle.height / 2,
+    );
+    await page.mouse.down();
+    await page.mouse.move(
+      Math.max(10, partyHandle.x - 140),
+      partyHandle.y + partyHandle.height / 2,
+      { steps: 6 },
+    );
+    await page.mouse.up();
+    await page.locator('#ledger-drawer-host.is-open').waitFor();
+    await page.locator('#party-toggle').click();
+    await page.locator('#party-panel').waitFor({ state: 'visible' });
+    await page
+      .locator(`[data-prepare-view="${newcomer.id}"]`)
+      .dragTo(page.locator('[data-prepare-slot="0"]'));
+    await page.waitForFunction(
+      (id) =>
+        document.querySelector('[data-prepare-slot="0"]')?.dataset.prepareHero === id &&
+        JSON.parse(localStorage.getItem('wanxiang.worldbooks.v1')).party[0] === id,
+      newcomer.id,
+    );
+    await page.locator('#prepare-done').click();
+    const findWorldRow = async (comment) => {
+      await page.waitForFunction(
+        (target) =>
+          [...document.querySelectorAll('#world-entry-list [data-world-head="comment"]')].some(
+            (input) => input.value === target,
+          ),
+        comment,
+      );
+      const uid = await page.evaluate((target) => {
+        const row = [...document.querySelectorAll('#world-entry-list [data-world-row]')].find(
+          (el) => el.querySelector('[data-world-head="comment"]')?.value === target,
+        );
+        return row?.dataset.worldRow || '';
+      }, comment);
+      assert(uid, `Worldbook row missing: ${comment}`);
+      return page.locator(`#world-entry-list [data-world-row="${uid}"]`);
+    };
     await page.locator('#ai-open').click();
-    await page.locator('[data-ai-tab="characters"]').click();
-    await page.locator('[data-party-slot="0"]').selectOption(newcomer.id);
+    await page.locator('#ai-worldbooks').click();
+    await page.locator('#world-dialog').waitFor({ state: 'visible' });
+    await page.locator('#world-book-select').selectOption('tavern-world');
+    const newcomerRow = await findWorldRow(`ai角色条目：${newcomer.setting.name}`);
+    await newcomerRow.locator('[data-world-uid]').click();
     assert.equal(
-      await page.locator('[data-party-slot="0"]').inputValue(),
-      await page.evaluate(
-        () => JSON.parse(localStorage.getItem('wanxiang.worldbooks.v1')).party[0],
-      ),
+      await newcomerRow.locator('textarea[data-world-field="content"]').inputValue(),
+      prose,
     );
-    assert.equal(await page.locator('.worldbook-light.active').count(), 6);
-    await page.locator('[data-lore^="character-"]').click();
-    assert.equal(await page.locator('#ai-preview').textContent(), prose);
-    await page.locator('[data-lore="official-rook"]').click();
-    const officialLore = await page.locator('#ai-lore-text').inputValue();
-    await page.locator('#ai-lore-text').fill(officialLore + '\n玩家补充：喜欢记录沿途的鸟鸣。');
-    await page.locator('#ai-lore-tags').fill('["探路"]');
-    await page.locator('#ai-lore-save').click();
+    const rookRow = await findWorldRow('角色条目：游隼');
+    await rookRow.locator('[data-world-uid]').click();
+    const officialLore = await rookRow.locator('textarea[data-world-field="content"]').inputValue();
+    await rookRow
+      .locator('textarea[data-world-field="content"]')
+      .fill(officialLore + '\n玩家补充：喜欢记录沿途的鸟鸣。');
+    await page.locator('#world-save').click();
     await page.waitForFunction(() =>
-      document.querySelector('#ai-status').textContent.includes('人物世界书已保存'),
+      document.querySelector('#world-status').textContent.includes('已保存'),
     );
+    await page.locator('#world-close').click();
+    await page.locator('#ai-close').click();
     await page.reload();
     await page.waitForFunction(() => !!window.demo);
     await page.locator('#ai-open').click();
-    await page.locator('[data-ai-tab="characters"]').click();
-    await page.locator('[data-lore="official-rook"]').click();
-    assert((await page.locator('#ai-lore-text').inputValue()).includes('玩家补充'));
-    assert.equal(await page.locator('#ai-lore-tags').inputValue(), '["探路"]');
+    await page.locator('#ai-worldbooks').click();
+    await page.locator('#world-dialog').waitFor({ state: 'visible' });
+    await page.locator('#world-book-select').selectOption('tavern-world');
+    const reloadedRookRow = await findWorldRow('角色条目：游隼');
+    await reloadedRookRow.locator('[data-world-uid]').click();
+    assert(
+      (await reloadedRookRow.locator('textarea[data-world-field="content"]').inputValue()).includes(
+        '玩家补充',
+      ),
+    );
+    await page.waitForFunction(() =>
+      demo
+        .getLibrary()
+        .characters.find((entry) => entry.id === 'official-rook')
+        ?.setting.worldbook.includes('玩家补充'),
+    );
+    await page.locator('#world-close').click();
     await page.locator('#ai-close').click();
-    await page.locator('#gate-nav').click();
-    await page
-      .frameLocator('iframe')
-      .locator('#enter')
-      .waitFor({ state: 'visible', timeout: 15000 });
     const gateFrame = page.frames().find((frame) => frame.url().includes('tavern.html'));
+    await gateFrame.evaluate(() => window.assetPreview.placeNow('gate'));
+    await gateFrame.locator('#enter').waitFor({ state: 'visible', timeout: 15000 });
     await gateFrame.evaluate(() => {
       const preview = window.assetPreview;
       preview.look(preview.camera.rotation.y + Math.PI, preview.camera.rotation.x);
@@ -420,52 +494,182 @@ export async function generationChecks({ browser, baseURL, output }) {
     await gateFrame.evaluate(() => window.assetPreview.placeNow('gate'));
     await gateFrame.locator('#enter').waitFor({ state: 'visible' });
     await page.frameLocator('iframe').locator('#enter').click();
+    await page.locator('#destination-dialog').waitFor({ state: 'visible' });
+    await page.locator('#destination-region-confirm').click();
+    await page.locator('#destination-start').click();
+    await page.locator('#party-panel').waitFor({ state: 'visible' });
+    await page.locator('#prepare-done').click();
     await page.locator('#ai-dialog').waitFor({ state: 'visible' });
     assert.equal(await page.locator('#ai-kind').inputValue(), 'script');
     await page.locator('#ai-dialog details').first().locator('summary').click();
     await page.locator('#ai-strictJson').check();
-    await configure();
+    await page.locator('#ai-baseUrl').fill(providerURL);
+    await page.locator('#ai-model').fill('mock-model');
+    await page.locator('#ai-key').fill('only-a-test-key');
+    await page.locator('#ai-profile-save').click();
+    await page.locator('#party-panel').waitFor({ state: 'visible' });
     assert((await page.locator('#generation-title').textContent()).includes('本章故事'));
-    await page.waitForFunction(() => demo.getStatus().mode === 'battle', { timeout: 60000 });
-    await page.locator('#story-feed').waitFor({ state: 'visible' });
-    await page.waitForFunction(() => {
-      const area = document.querySelector('#story-lines');
-      return area.firstElementChild?.dataset.stage === 'prologue' && area.scrollTop < 1;
+    await page.locator('#prepare-done').filter({ hasText: '确认编队' }).click();
+    await page.waitForFunction(() => !document.querySelector('#prepare-done').disabled, null, {
+      timeout: 60000,
     });
-    await page.locator('.app-header [data-generation-review]').click();
+    const prepState = await page.evaluate(() => ({
+      doneText: document.querySelector('#prepare-done')?.textContent,
+      partyOpen: document.querySelector('#party-panel')?.open,
+      diagOpen: document.querySelector('#generation-diagnostics')?.open,
+      diagSummary: document.querySelector('#diagnostic-summary')?.textContent,
+      toast: document.querySelector('#toast')?.textContent,
+      prepareStatus: document.querySelector('#prepare-status')?.textContent,
+    }));
+    assert(
+      prepState.doneText?.includes('整备完成'),
+      `Script preparation did not enter ready state (calls=${calls.length}, errors=${JSON.stringify(errors)}): ${JSON.stringify(prepState)}`,
+    );
+    await page.route('**/api/ai/generate/quick-chat', (route) => {
+      const input = route.request().postDataJSON();
+      const turn = input.adventure;
+      let adventure;
+      if (turn?.mode === 'quest') {
+        adventure = {
+          episodeId: turn.episodeId,
+          revision: turn.boss.revision,
+          tasks: [
+            { id: 'goal-1', status: 'completed', evidence: '核对分水碑刻度后确认了主闸室通路。' },
+          ],
+          patches: [],
+        };
+      }
+      return route.fulfill({
+        json: {
+          content: '【对白:灯河】先按线索往前看吧。【旁白】水渠旁暂时没有新的动静。',
+          ...(adventure ? { adventure } : {}),
+          usage: { input: 20, output: 20 },
+          request: { tokens: { inputEstimate: 40 }, warnings: [] },
+        },
+      });
+    });
+    const passTheater = async (expectedText) => {
+      const theater = page.locator('#chapter-theater');
+      await theater.waitFor({ state: 'visible', timeout: 15000 });
+      if (expectedText) assert((await theater.textContent()).includes(expectedText));
+      const button = theater.locator('#chapter-theater-continue');
+      for (let click = 0; click < 3; click++) {
+        const closed = await theater.evaluate(
+          (el) => el.hidden || el.classList.contains('is-closing'),
+        );
+        if (closed) break;
+        await button.click();
+        await page.waitForTimeout(80);
+      }
+      await theater.waitFor({ state: 'hidden', timeout: 5000 });
+    };
+    const galIsPlaying = () =>
+      page.evaluate(() => {
+        const el = document.querySelector('#gal-stage');
+        return Boolean(
+          el && !el.hidden && el.dataset.playing === 'true' && el.dataset.leaving !== 'true',
+        );
+      });
+    const advanceGalStep = async () => {
+      try {
+        await page.locator('#gal-stage [data-gal="next"]').click({ timeout: 1500 });
+      } catch (err) {
+        if (await galIsPlaying()) throw err;
+      }
+    };
+    const finishGal = async () => {
+      for (let step = 0; step < 30; step++) {
+        if (!(await galIsPlaying())) {
+          const leaving = await page.evaluate(
+            () => document.querySelector('#gal-stage')?.dataset.leaving === 'true',
+          );
+          if (leaving) {
+            await page.waitForFunction(
+              () => document.querySelector('#gal-stage')?.dataset.leaving !== 'true',
+            );
+            continue;
+          }
+          break;
+        }
+        await advanceGalStep();
+        await page.waitForTimeout(80);
+      }
+      await page.waitForFunction(() => {
+        const el = document.querySelector('#gal-stage');
+        return !el || el.hidden || el.dataset.playing !== 'true';
+      });
+    };
+    await page.locator('#prepare-done').filter({ hasText: '整备完成' }).click();
+    await page.waitForFunction(() => demo.getStatus().mode === 'battle', null, {
+      timeout: 60000,
+    });
+    await passTheater('古老引水渠');
+    await finishGal();
+    const rawHandle = await page.locator('#ledger-handle').boundingBox();
+    await page.mouse.move(rawHandle.x + rawHandle.width / 2, rawHandle.y + rawHandle.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(Math.max(10, rawHandle.x - 140), rawHandle.y + rawHandle.height / 2, {
+      steps: 6,
+    });
+    await page.mouse.up();
+    await page.locator('#ledger-drawer-host.is-open').waitFor();
+    await page.locator('#generation-review').click();
     assert(
       (await page.locator('#latest-api-response textarea').inputValue()).includes('wanxiang_json'),
     );
     await page.locator('#latest-api-response button').click();
-    await page.screenshot({ path: path.join(output, 'ai-left-story.png') });
-    await page.setViewportSize({ width: 844, height: 390 });
-    const feedBox = await page.locator('#story-feed').boundingBox();
-    const timelineBox = await page.locator('#timeline').boundingBox();
-    assert(
-      feedBox && timelineBox && feedBox.y + feedBox.height <= timelineBox.y,
-      'Landscape story panel stays above timeline',
-    );
-    await page.screenshot({ path: path.join(output, 'ai-left-story-landscape.png') });
-    await page.setViewportSize({ width: 1440, height: 836 });
     const rounds = [];
-    for (let room = 0; room < 5; room++) {
+    const checkRoomStory = async (room, captureScreenshots = false) => {
+      await finishGal();
       await page.waitForFunction(
-        (room) => document.querySelector('#story-lines').textContent.includes(`战前${room + 1}`),
+        (target) =>
+          document.querySelector('#story-lines')?.textContent.includes(`第${target + 1}幕`),
         room,
       );
-      assert((await page.locator('#story-lines').textContent()).includes('灯河'));
-      assert(
-        !(await page.locator('#story-lines').textContent()).includes(`战前${room + 2}`),
-        'Future scenes are not revealed',
+      const storyText = await page.locator('#story-lines').textContent();
+      assert(storyText.includes('灯河'));
+      assert(!storyText.includes(`第${room + 2}幕`), 'Future scenes are not revealed');
+      await page.locator('#battle-reading-toggle').click();
+      await page.locator('[data-dungeon-gal="story"]').click();
+      await page.locator('#gal-stage').waitFor({ state: 'visible', timeout: 15000 });
+      await page.waitForFunction(() => {
+        const text = document.querySelector('#gal-stage .gal-text')?.textContent || '';
+        return text.length > 0;
+      });
+      if (captureScreenshots) {
+        await page.screenshot({ path: path.join(output, 'ai-left-story.png') });
+        await page.setViewportSize({ width: 844, height: 390 });
+        const galBox = await page.locator('#gal-stage .gal-reading').boundingBox();
+        assert(galBox && galBox.y >= 0 && galBox.y + galBox.height <= 390);
+        await page.screenshot({ path: path.join(output, 'ai-left-story-landscape.png') });
+        await page.setViewportSize({ width: 1440, height: 836 });
+      }
+      await page.locator('#gal-stage [data-gal="close"]').click();
+      await page.locator('#gal-stage').waitFor({ state: 'hidden', timeout: 15000 });
+      await page.locator('#battle-reading-toggle').click();
+    };
+    const finishRpIntro = async () => {
+      for (let step = 0; step < 30; step++) {
+        const done = await page.evaluate(
+          () => document.querySelector('#rp-scene')?.dataset.intro === 'false',
+        );
+        if (done) break;
+        if (await galIsPlaying()) await advanceGalStep();
+        await page.waitForTimeout(80);
+      }
+      await page.waitForFunction(
+        () => document.querySelector('#rp-scene')?.dataset.intro === 'false',
       );
+    };
+    const fightCurrentRoom = async (label) => {
       await page.waitForFunction(() => !demo.getStatus().animating);
       assert.equal(await page.evaluate(() => demo.getState().heroDefinitions.aegis.name), '灯河');
-      if (room === 0 && (await page.locator('#speed').textContent()).includes('×1'))
+      if ((await page.locator('#speed').textContent()).includes('×1'))
         await page.locator('#speed').click();
       let count = 0;
       while (
         !['victory', 'defeat'].includes(await page.evaluate(() => demo.getState().phase)) &&
-        count++ < 30
+        count++ < 55
       ) {
         const state = await page.evaluate(() => demo.getState());
         for (const action of buildPlan(state)) {
@@ -474,10 +678,20 @@ export async function generationChecks({ browser, baseURL, output }) {
           if (action.kind === 'swap') {
             await page.locator(`[data-rear="${action.incoming}"]`).click();
             await page.locator(`[data-side="Friendly"][data-slot="${action.slot}"]`).click();
+          } else if (action.kind === 'item') {
+            await page.locator('#backpack-open').click();
+            await page.locator(`[data-item="${action.item}"]`).click();
+            await page
+              .locator(`[data-unit="${action.target}"],[data-rear="${action.target}"]`)
+              .first()
+              .click();
           } else {
             await page.locator(`[data-unit="${action.actor}"]`).click();
             await page.locator(`[data-skill="${action.skill}"]`).click();
-            if (['enemy', 'ally'].includes(abilityFor(state, action.actor, action.skill).target))
+            if (
+              ['enemy', 'ally'].includes(abilityFor(state, action.actor, action.skill).target) &&
+              (await page.evaluate(() => demo.getStatus().interactionStep === 'target'))
+            )
               await page
                 .locator(`[data-unit="${action.target}"],[data-rear="${action.target}"]`)
                 .first()
@@ -487,7 +701,7 @@ export async function generationChecks({ browser, baseURL, output }) {
         const forecast = await page.evaluate(() => demo.getForecast());
         assert(forecast.valid, JSON.stringify(forecast.invalid));
         await page.locator('#commit').click();
-        await page.waitForFunction(() => !demo.getStatus().playing, { timeout: 30000 });
+        await page.waitForFunction(() => !demo.getStatus().playing, null, { timeout: 30000 });
         const final = await page.evaluate(() => demo.getState());
         for (const [id, unit] of Object.entries(forecast.final.units)) {
           assert.equal(final.units[id].hp, unit.hp);
@@ -497,34 +711,100 @@ export async function generationChecks({ browser, baseURL, output }) {
       assert.equal(
         await page.evaluate(() => demo.getState().phase),
         'victory',
-        `Generated roster room ${room + 1}`,
+        `Generated roster ${label}`,
       );
       rounds.push(count);
-      await page.waitForFunction(
-        (room) => document.querySelector('#story-lines').textContent.includes(`战后${room + 1}`),
-        room,
-      );
-      await page.locator('#result').waitFor({ state: 'visible' });
-      if (room < 4) {
-        assert(!(await page.locator('#story-lines').textContent()).includes(`战间${room + 1}`));
-        await page.locator('#continue').click();
-        await page.waitForFunction(
-          (room) => document.querySelector('#story-lines').textContent.includes(`战间${room + 1}`),
-          room,
-        );
-      }
+    };
+
+    // Node 0: Battle 1
+    await checkRoomStory(0, true);
+    await fightCurrentRoom('room 1');
+    await finishGal();
+    await finishSettlement(page);
+    await page.locator('#continue').click();
+
+    // Node 1: RP Event
+    await page.waitForFunction(() => demo.getStatus().mode === 'event', null, { timeout: 60000 });
+    await finishRpIntro();
+    await page.locator('.rp-content').waitFor({ state: 'visible', timeout: 15000 });
+    await page.locator('[data-rp-choice="choice-1"]').click();
+    await page.locator('#rp-input').fill('沿渠道查看情况');
+    await page.locator('[data-rp="send"]').click();
+    await page.waitForFunction(() => !document.querySelector('#rp-input').disabled, null, {
+      timeout: 15000,
+    });
+    await finishGal();
+    await page.locator('[data-rp="next"]').click();
+
+    // Node 2: Elite Battle + Rest
+    await page.waitForFunction(
+      () =>
+        demo.getStatus().mode === 'battle' &&
+        demo.getState().encounter === 2 &&
+        !demo.getStatus().animating,
+      null,
+      { timeout: 60000 },
+    );
+    await checkRoomStory(2);
+    await fightCurrentRoom('room 3');
+    await finishGal();
+    await finishSettlement(page);
+    await page.locator('#continue').click();
+    await page.locator('[data-rest="meal"]').waitFor({ state: 'visible', timeout: 15000 });
+    await page.locator('[data-rest="meal"]').click();
+    await page.locator('#rest-continue').click();
+
+    // Node 3: RP Quest
+    await page.waitForFunction(
+      () => demo.getStatus().mode === 'event' && demo.getExpedition().index === 3,
+      null,
+      { timeout: 60000 },
+    );
+    await finishRpIntro();
+    await page.locator('#rp-input').fill('查看分水碑并前往主闸室');
+    await page.locator('[data-rp="send"]').click();
+    await page.waitForFunction(() => !document.querySelector('#rp-input').disabled, null, {
+      timeout: 15000,
+    });
+    await finishGal();
+    await page.locator('.rp-boss-ready').waitFor({ state: 'visible', timeout: 15000 });
+    await page.locator('[data-rp="boss"]').click();
+
+    // Node 4: Boss Battle + Epilogue Theater
+    await page.waitForFunction(
+      () =>
+        demo.getStatus().mode === 'battle' &&
+        demo.getState().encounter === 4 &&
+        !demo.getStatus().animating,
+      null,
+      { timeout: 60000 },
+    );
+    await checkRoomStory(4);
+    await fightCurrentRoom('room 5 (Boss)');
+    for (let step = 0; step < 40; step++) {
+      if (await page.locator('#chapter-theater').isVisible()) break;
+      if (await galIsPlaying()) await advanceGalStep();
+      await page.waitForTimeout(80);
+    }
+    await passTheater('暮色悄悄染透');
+    await finishSettlement(page);
+    if (await page.locator('#result-back').isVisible()) {
+      await page.locator('#result-back').click();
+      await page.waitForFunction(() => demo.getStatus().mode === 'inn', null, { timeout: 15000 });
     }
     const saved = await page.evaluate(() =>
       JSON.parse(localStorage.getItem('wanxiang.worldbooks.v1')),
     );
-    assert.equal(saved.history.at(-1).lines.filter((line) => line.stage !== 'combat').length, 24);
+    assert(saved.history.at(-1).lines.some((line) => line.stage === 'event-choice'));
+    assert(saved.history.at(-1).lines.some((line) => line.stage === 'quest-state'));
+    assert(saved.history.at(-1).lines.some((line) => line.text.includes('第1幕')));
     assert.equal(saved.history.at(-1).complete, true);
     assert.equal(saved.chapter, 2);
     assert(saved.history.at(-1).nextHook.setting.includes('铜灯'));
     assert.equal(
       calls.length,
       2,
-      'Combat and five rooms must not call character/script APIs again',
+      'Combat and five nodes must not call character/script APIs again',
     );
     assert(
       calls.every((call) =>
@@ -535,7 +815,7 @@ export async function generationChecks({ browser, baseURL, output }) {
     const monsterContext = requestContext(calls[1].messages);
     assert.deepEqual(
       monsterContext.encounters[0].enemies.map((enemy) => enemy.id),
-      ['mossSlime', 'sprout'],
+      ['mossSlime'],
     );
     assert(monsterContext.encounters[4].enemies.some((enemy) => enemy.id === 'bossGate'));
     assert(calls[1].messages.some((message) => message.content.includes('习性与能力：')));
@@ -590,12 +870,8 @@ export async function generationChecks({ browser, baseURL, output }) {
       plainWorldbook: true,
       loadingScreen: true,
       leftStoryFeed: true,
-      fiveBattles: rounds,
-      narrativeParagraphs: 24,
-      prologueAndSceneOpenings: 7,
-      prologueNotSkippedByAutoScroll: true,
-      actionDialogueParagraphs: 12,
-      confirmedInterludeParagraphs: 5,
+      threeBattlesTwoRpNodes: rounds,
+      chapterTheaterIntroAndEpilogue: true,
       confirmedHistoryOnly: true,
       nextHookStored: true,
       enemyDataOwnedByCode: true,

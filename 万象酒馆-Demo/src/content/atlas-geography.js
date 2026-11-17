@@ -1,9 +1,24 @@
 import { SILVER_ROAD_STOPS } from '../overland-travel.js';
 import { ETERNAL_CITY_STOPS } from './eternal-city-scenes.js';
+import {
+  IMPERIAL_BRANCH_LEGS,
+  IMPERIAL_CROSSROADS,
+  IMPERIAL_DUNGEONS,
+} from './imperial-network.js';
 
 export const ATLAS_SILVER_ROAD = Object.freeze({ x: 1550, y: 1378 });
 export const ATLAS_CAPITAL_ROAD = Object.freeze({ x: 1515, y: 1358 });
 export const ATLAS_OVERLAND_CENTER = Object.freeze({ x: 1540, y: 1364 });
+
+const imperialCrossroadPlaces = Object.fromEntries(
+  IMPERIAL_CROSSROADS.map((node) => [
+    node.id,
+    { name: node.name, point: [...node.point], marker: node.marker },
+  ]),
+);
+const imperialDungeonPlaces = Object.fromEntries(
+  IMPERIAL_DUNGEONS.map((node) => [node.id, { name: node.name, point: [...node.point] }]),
+);
 
 // Scene IDs are shared with the playable road; other map nodes are geographic waypoints.
 export const ATLAS_PLACES = Object.freeze({
@@ -11,7 +26,7 @@ export const ATLAS_PLACES = Object.freeze({
   'road-bridge': { name: '双拱石桥', point: [1542.52, 1378.17] },
   'road-reeds': { name: '芦苇浅滩', point: [1556.15, 1380.74] },
   'road-capital': { name: '银冠城', point: [1574, 1378] },
-  'silver-fork': { point: [1591, 1377] },
+  'silver-fork': { name: '东郊岔口', point: [1591, 1377] },
   'eternal-city': { name: '艾尔鲁斯', point: [1515, 1339], marker: 'capital' },
   'eternal-road-orchard': {
     name: ETERNAL_CITY_STOPS['eternal-road-orchard'],
@@ -28,16 +43,13 @@ export const ATLAS_PLACES = Object.freeze({
     point: [1507, 1351],
     marker: 'stop',
   },
+  ...imperialCrossroadPlaces,
   ainoblin: { name: '艾诺布林', point: [1511, 1190], marker: 'fort' },
   yingtian: { name: '应天府', point: [2315, 1287], marker: 'city' },
   luoan: { name: '洛安府', point: [2178, 1154], marker: 'city' },
   'five-ports': { name: '五港同盟', point: [680, 754], marker: 'port' },
   senali: { name: '塞纳黎', point: [840, 640], marker: 'city' },
-  ruins: { name: '界隙遗迹', point: [765, 617] },
-  forest: { name: '月痕古林', point: [978, 1356] },
-  frost: { name: '霜晶矿窟', point: [1140, 661] },
-  forge: { name: '余烬铸坊', point: [2220, 1360] },
-  tide: { name: '潮汐星殿', point: [1669, 1458] },
+  ...imperialDungeonPlaces,
   'jacobs-ladder': { name: '雅各布天梯入口', point: [1536, 1024] },
   'obsidian-pass': { name: '黑曜关', point: [1494, 1157], marker: 'gate' },
   'waste-post': { name: '荒地驿站', point: [1452, 1086], marker: 'gate' },
@@ -62,20 +74,39 @@ export const ATLAS_PLACES = Object.freeze({
 export const ATLAS_ROUTES = Object.freeze([
   // These three segments are painted by the existing silver road illustration.
   ...SILVER_ROAD_STOPS.slice(1).map(({ id }, index) => [SILVER_ROAD_STOPS[index].id, id]),
-  ['outskirts', 'eternal-road-orchard', [[1520, 1378]]],
-  ['eternal-road-orchard', 'eternal-road-mill', [[1514, 1373]]],
-  ['eternal-road-mill', 'eternal-road-checkpoint', [[1505, 1359]]],
-  ['eternal-road-checkpoint', 'eternal-city', [[1510, 1344]]],
   [
-    'eternal-city',
-    'ainoblin',
+    'outskirts',
+    'eternal-road-orchard',
     [
-      [1502, 1318],
-      [1509, 1291],
-      [1529, 1265],
-      [1520, 1237],
+      [1523, 1379],
+      [1519, 1374],
     ],
   ],
+  [
+    'eternal-road-orchard',
+    'eternal-road-mill',
+    [
+      [1515, 1369],
+      [1510, 1369],
+    ],
+  ],
+  [
+    'eternal-road-mill',
+    'eternal-road-checkpoint',
+    [
+      [1504, 1360],
+      [1509, 1356],
+    ],
+  ],
+  [
+    'eternal-road-checkpoint',
+    'eternal-city',
+    [
+      [1509, 1345],
+      [1514, 1344],
+    ],
+  ],
+  ...IMPERIAL_BRANCH_LEGS.map((leg) => [leg.from, leg.to, leg.bends]),
   [
     'ainoblin',
     'obsidian-pass',
@@ -126,16 +157,6 @@ export const ATLAS_ROUTES = Object.freeze([
   ],
   [
     'moon-pass',
-    'forest',
-    [
-      [1142, 1325],
-      [1103, 1340],
-      [1061, 1336],
-      [1019, 1347],
-    ],
-  ],
-  [
-    'moon-pass',
     'aust-pass',
     [
       [1178, 1282],
@@ -173,10 +194,10 @@ export const ATLAS_ROUTES = Object.freeze([
   ],
   [
     'astur-pass',
-    'frost',
+    'anvil-pass',
     [
-      [1114, 708],
-      [1139, 689],
+      [1126, 678],
+      [1152, 622],
     ],
   ],
   [
@@ -206,23 +227,6 @@ export const ATLAS_ROUTES = Object.freeze([
       [770, 670],
       [748, 704],
       [706, 726],
-    ],
-  ],
-  [
-    'senali',
-    'ruins',
-    [
-      [818, 625],
-      [790, 628],
-    ],
-  ],
-  [
-    'frost',
-    'anvil-pass',
-    [
-      [1169, 645],
-      [1169, 617],
-      [1188, 598],
     ],
   ],
   [
@@ -285,15 +289,6 @@ export const ATLAS_ROUTES = Object.freeze([
   ],
   [
     'silver-fork',
-    'tide',
-    [
-      [1609, 1389],
-      [1624, 1423],
-      [1651, 1442],
-    ],
-  ],
-  [
-    'silver-fork',
     'bel-pass',
     [
       [1614, 1358],
@@ -332,16 +327,6 @@ export const ATLAS_ROUTES = Object.freeze([
       [2258, 1207],
       [2292, 1214],
       [2321, 1251],
-    ],
-  ],
-  [
-    'luoan',
-    'forge',
-    [
-      [2208, 1200],
-      [2199, 1247],
-      [2168, 1284],
-      [2189, 1327],
     ],
   ],
   [

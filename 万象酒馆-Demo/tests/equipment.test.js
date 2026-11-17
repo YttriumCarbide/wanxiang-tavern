@@ -62,7 +62,7 @@ test('equipment has three slots, unique physical ownership, exact ether price an
   assert.equal(library.inventory.ether, 0);
   equip(library, 'official-aegis', 0, 'owned-1');
   assert.throws(() => equip(library, 'official-lyria', 0, 'owned-1'), /已被使用/);
-  assert.throws(() => equip(library, 'official-aegis', 3, null), /装备槽/);
+  assert.throws(() => equip(library, 'official-aegis', 4, null), /装备槽/);
   const restored = restoreLibrary(JSON.parse(JSON.stringify(library)));
   const roster = compileRoster(restored);
   assert.equal(roster.aegis.attack, HEROES[0].attack + library.equipment.owned[0].stats.attack);
@@ -347,9 +347,9 @@ test('equipment quality tiers, Lv.1..99 scaling, reforge, temper, ascend, disman
   assert.equal(restoredEq.owned[0].level, 12);
   assert(restoredEq.owned[0].statRanges);
 
-  equip(library, library.characters[0].id, 0, 'inst-1');
+  equip(library, library.characters[0].id, 1, 'inst-1');
   assert.throws(() => dismantleEquipment(library, 'inst-1'), /穿戴/);
-  equip(library, library.characters[0].id, 0, '');
+  equip(library, library.characters[0].id, 1, '');
   const beforeEther = library.inventory.ether;
   const refund = dismantleEquipment(library, 'inst-1');
   assert(refund > 0);

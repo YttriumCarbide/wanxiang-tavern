@@ -1,13 +1,15 @@
 import { resourceText } from '../resource-text.js';
 import { foodBonusText } from '../content/dining.js';
-import { grownCombat } from '../growth.js';
 import { equipmentDescription } from '../skill-text.js';
 import { createEquipmentPicker } from './equipment-picker.js';
 import { createRawResponse } from './raw-response.js';
 import { createForgeResults } from './forge-results.js';
 import { EMBLEMS, equipEmblem } from '../emblems.js';
+import { emblemIconSvg, emblemVisual } from './emblem-icons.js';
 import {
+  EQUIPMENT_CATEGORIES,
   EQUIPMENT_QUALITIES,
+  EQUIPMENT_SLOT_ORDER,
   EQUIPMENT_STATS,
   ascendCost,
   ascendEquipment,
@@ -19,11 +21,13 @@ import {
   equip,
   equippedDefinitions,
   favoriteEquipment,
+  hasLegacyCategorizedEquipment,
   maxUnlockedEquipmentLevel,
   normalizeEquipment,
   reforgeCost,
   reforgeEquipment,
   resolveEquipmentQuality,
+  resolveEquipmentTemplate,
   temperCost,
   temperEquipment,
 } from '../equipment.js';
@@ -185,16 +189,38 @@ function forgeWorkshopHtml(template, library, busy) {
   </section>`;
 }
 export function preparationEquipment(library, member) {
-  const definition = grownCombat(member);
   const currentEmblem = EMBLEMS[member.emblemId]?.emblem;
   return html`<section class="equipment-slots">
-    <h3>角色装备</h3>
+    <div class="prepare-subhead">
+      装备与纹章
+      ${
+        hasLegacyCategorizedEquipment(library)
+          ? '<small class="prepare-gear-note" title="新版已启用四分类（武器/护甲/挂坠/宝石），旧装备已自动归类（可在以太凝聚器用「删除此方案」清理）。">旧装已归类</small>'
+          : '<span>EQUIPMENT</span>'
+      }
+    </div>
     ${library.dining?.pending?.[member.id] ? html`<p class="meal-pending-bonus">下一次参战 · ${escapeText(foodBonusText(library.dining.pending[member.id].bonus))}</p>` : ''}
-    <label class="prepare-emblem-row" role="button" tabindex="0"
-      ><span>纹章士</span
-      ><strong class="emblem-choice-label"
-        >${escapeText(currentEmblem ? currentEmblem.title + ' · ' + currentEmblem.name : '选择戒指')}</strong
-      ><select data-emblem-character="${member.id}" aria-label="装备纹章士">
+    <label
+      class="prepare-emblem-row"
+      data-emblem-id="${escapeText(currentEmblem?.id || '')}"
+      style="--emblem-c:${emblemVisual(currentEmblem?.id).color}"
+      role="button"
+      tabindex="0"
+      title="${escapeText(resourceText(currentEmblem ? currentEmblem.text : '在各地 Boss 战中获得纹章戒指'))}"
+    >
+      <div class="pp-ring-ico" aria-hidden="true">
+        <span>${emblemIconSvg(currentEmblem?.id)}</span>
+      </div>
+      <div class="pp-ring-body">
+        <small>纹章戒指</small>
+        <h4 class="emblem-choice-label">
+          ${escapeText(currentEmblem ? `${currentEmblem.title} · ${currentEmblem.name}` : '未装备 · 点击选择')}
+        </h4>
+        <p>
+          ${escapeText(resourceText(currentEmblem ? currentEmblem.text : '在各地 Boss 战中获得纹章戒指'))}
+        </p>
+      </div>
+      <select data-emblem-character="${member.id}" aria-label="装备纹章士">
         <option value="">未装备</option>
         ${(library.emblems || [])
           .map((id) => {
@@ -202,16 +228,15 @@ export function preparationEquipment(library, member) {
             if (!item) return '';
             return `<option value="${item.id}" ${member.emblemId === item.id ? 'selected' : ''}>${item.title} · ${item.name}</option>`;
           })
-          .join('')}</select
-      ><small
-        >${escapeText(resourceText(currentEmblem ? currentEmblem.text : '在各地Boss战中获得纹章士'))}</small
-      ></label
-    >
+          .join('')}
+      </select>
+    </label>
     <div class="prepare-gear-list">
-      ${Array.from({ length: 3 }, (_, slot) => {
+      ${EQUIPMENT_SLOT_ORDER.map((categoryKey, slot) => {
+        const category = EQUIPMENT_CATEGORIES[categoryKey];
         const current = member.equipment?.[slot];
         const instance = library.equipment.owned.find((item) => item.id === current);
-        const template = library.equipment.catalog.find((item) => item.id === instance?.templateId);
+        const template = resolveEquipmentTemplate(library, instance?.templateId);
         const resolved = resolveInstanceView(template, instance);
         const qualityKey = resolved
           ? resolveEquipmentQuality(resolved.quality, resolved.price)
@@ -219,149 +244,70 @@ export function preparationEquipment(library, member) {
         const qualityName = qualityKey ? EQUIPMENT_QUALITIES[qualityKey].name : '';
         const level = resolved ? clampEquipmentLevel(resolved.level || 1) : 1;
         return html`<label
-          class="prepare-gear-row"
+          class="prepare-gear-row ${resolved ? '' : 'empty'}"
           role="button"
           tabindex="0"
           data-quality="${qualityKey || 'empty'}"
-          data-tooltip="${escapeText(resolved ? equipmentDescription(resolved) : '点击选择装备')}"
+          data-category="${categoryKey}"
+          data-tooltip="${escapeText(resolved ? equipmentDescription(resolved) : `点击选择${category.label}`)}"
         >
-          <span class="prepare-gear-icon">${resolved ? '✧' : '＋'}</span>
-          <span
-            ><strong>装备 ${slot + 1}</strong
-            ><small
-              >${
-                resolved ? escapeText(`Lv.${level} ${qualityName} · ${resolved.name}`) : '未装备'
-              }</small
-            ></span
-          ><b>›</b>
+          <span class="prepare-gear-icon">${category.icon}</span>
+          <span class="prepare-gear-copy">
+            <small>槽位 ${slot + 1} · ${category.label}</small>
+            <strong>${escapeText(resolved ? resolved.name : `— 未装备${category.label} —`)}</strong>
+            <em
+              >${escapeText(
+                resolved
+                  ? categoryKey === 'gem'
+                    ? `${qualityName} · ${equipmentDescription(resolved)}`
+                    : `Lv.${level} ${qualityName} · ${equipmentDescription(resolved)}`
+                  : '点击更换 / 装备',
+              )}</em
+            >
+          </span>
+          <b>${resolved ? '更换 ›' : '装备 ›'}</b>
           <select
             data-equipment-character="${member.id}"
             data-equipment-slot="${slot}"
-            aria-label="装备 ${slot + 1}"
+            aria-label="${category.label}"
           >
             <option value="">未装备</option>
             ${library.equipment.owned
-              .filter(
-                (item) =>
-                  item.id === current ||
-                  (!library.characters.some((entry) => entry.equipment?.includes(item.id)) &&
-                    !equippedDefinitions(library, member).some(
-                      (equipped) =>
-                        equipped.id !== current &&
-                        equipped.name ===
-                          library.equipment.catalog.find((entry) => entry.id === item.templateId)
-                            ?.name,
-                    )),
-              )
+              .filter((item) => {
+                const tpl = resolveEquipmentTemplate(library, item.templateId);
+                if (!tpl || tpl.category !== categoryKey) return false;
+                if (item.id === current) return true;
+                return (
+                  !library.characters.some((entry) => entry.equipment?.includes(item.id)) &&
+                  !equippedDefinitions(library, member).some(
+                    (equipped) => equipped.id !== current && equipped.name === tpl.name,
+                  )
+                );
+              })
               .map((item) => {
-                const entry = library.equipment.catalog.find((tpl) => tpl.id === item.templateId);
+                const entry = resolveEquipmentTemplate(library, item.templateId);
                 const view = resolveInstanceView(entry, item);
                 const qName = view
                   ? EQUIPMENT_QUALITIES[resolveEquipmentQuality(view.quality, view.price)].name
                   : '';
                 const lv = view ? clampEquipmentLevel(view.level || 1) : 1;
                 return html`<option value="${item.id}" ${item.id === current ? 'selected' : ''}>
-                  ${view ? escapeText(`[Lv.${lv} ${qName}] ${view.name}`) : '装备'}
+                  ${
+                    view
+                      ? escapeText(
+                          categoryKey === 'gem'
+                            ? `[${qName}] ${view.name}`
+                            : `[Lv.${lv} ${qName}] ${view.name}`,
+                        )
+                      : '装备'
+                  }
                 </option>`;
               })
               .join('')}
-          </select></label
-        >`;
+          </select>
+        </label>`;
       }).join('')}
     </div>
-    <section class="prepare-abilities-preview">
-      <h3>技能与实际效果</h3>
-      <div class="prepare-ability-category">
-        <div class="prepare-ability-label">普通攻击</div>
-        <div class="prepare-ability-item">
-          <div><strong>普通攻击</strong><small>1 AP · 0 sp</small></div>
-          <p>
-            造成 ${definition.attack || member.combat?.attack || member.attack || 6} 点基础伤害。
-          </p>
-        </div>
-      </div>
-      <div class="prepare-ability-category">
-        <div class="prepare-ability-label">角色技能</div>
-        ${(definition.skills || [])
-          .filter((s) => !s.passive)
-          .map(
-            (s) =>
-              html`<div class="prepare-ability-item">
-                <div>
-                  <strong>${escapeText(s.name)}</strong
-                  ><small
-                    >${s.ap} AP${s.mp ? ` · ${s.mp} sp` : ''}${s.hp ? ` · ${s.hp} hp` : ''}</small
-                  >
-                </div>
-                <p>${escapeText(resourceText(s.text || ''))}</p>
-              </div>`,
-          )
-          .join('')}
-      </div>
-      ${
-        currentEmblem
-          ? html`<div class="prepare-ability-category">
-              <div class="prepare-ability-label">结合技 · ${escapeText(currentEmblem.name)}</div>
-              ${
-                EMBLEMS[member.emblemId]?.skill
-                  ? html`<div class="prepare-ability-item">
-                      <div>
-                        <strong>${escapeText(EMBLEMS[member.emblemId].skill.name)}</strong
-                        ><small
-                          >${EMBLEMS[member.emblemId].skill.ap} AP ·
-                          ${EMBLEMS[member.emblemId].skill.mp} sp</small
-                        >
-                      </div>
-                      <p>${escapeText(resourceText(EMBLEMS[member.emblemId].skill.text || ''))}</p>
-                    </div>`
-                  : ''
-              }
-            </div>`
-          : ''
-      }
-      <div class="prepare-ability-category">
-        <div class="prepare-ability-label">入场技</div>
-        ${(() => {
-          const entry =
-            member.setting?.entrySkill || member.entrySkill || member.combat?.entrySkill;
-          if (!entry) return html`<p class="prepare-empty-ability">无入场技</p>`;
-          return html`<div class="prepare-ability-item">
-            <div>
-              <strong>${escapeText(entry.name || '入场技')}</strong
-              ><small>后排满回合换入自动触发</small>
-            </div>
-            <p>${escapeText(resourceText(entry.description || entry.text || ''))}</p>
-          </div>`;
-        })()}
-      </div>
-
-      <div class="prepare-ability-category">
-        <div class="prepare-ability-label">被动特质</div>
-        ${(definition.skills || [])
-          .filter((s) => s.passive)
-          .map(
-            (s) =>
-              html`<div class="prepare-ability-item">
-                <div>
-                  <strong>${escapeText(s.name)}</strong
-                  ><small>被动 · ${escapeText(s.location)}</small>
-                </div>
-                <p>${escapeText(resourceText(s.text || ''))}</p>
-              </div>`,
-          )
-          .join('')}
-        ${
-          currentEmblem
-            ? html`<div class="prepare-ability-item">
-                <div>
-                  <strong>${escapeText(currentEmblem.title)}</strong><small>纹章被动</small>
-                </div>
-                <p>${escapeText(resourceText(currentEmblem.text || ''))}</p>
-              </div>`
-            : ''
-        }
-      </div>
-    </section>
   </section>`;
 }
 
@@ -384,6 +330,7 @@ export function createEquipment(context) {
   panel.querySelector('.forge-toolbar').after(lesson);
   const bag = document.createElement('details');
   bag.id = 'prepare-bag';
+  bag.hidden = true;
   bag.innerHTML = '<summary>查看背包</summary><div></div>';
   document.querySelector('#party-panel > footer').prepend(bag);
   let request = null;
@@ -503,6 +450,7 @@ export function createEquipment(context) {
           const qualityKey = resolveEquipmentQuality(item.quality, item.price ?? item.value ?? 10);
           const qualityName = EQUIPMENT_QUALITIES[qualityKey].name;
           const level = clampEquipmentLevel(item.level || 1);
+          const categoryLabel = EQUIPMENT_CATEGORIES[item.category]?.label;
           return html`<button
             data-forge-select="${item.id}"
             data-quality="${qualityKey}"
@@ -511,7 +459,10 @@ export function createEquipment(context) {
             <span>${library().equipment.favorites?.includes(item.id) ? '★' : '✧'}</span>
             <div class="forge-list-meta">
               <strong>${escapeText(item.name)}</strong>
-              <small>Lv.${level} · ${escapeText(qualityName)}</small>
+              <small
+                >${categoryLabel ? `${categoryLabel} · ` : ''}Lv.${level} ·
+                ${escapeText(qualityName)}</small
+              >
             </div>
           </button>`;
         })
@@ -525,47 +476,63 @@ export function createEquipment(context) {
     const itemQuality = EQUIPMENT_QUALITIES[itemQualityKey];
     const itemLevel = item ? clampEquipmentLevel(item.level || 1) : 1;
     panel.querySelector('#forge-catalog').innerHTML = item
-      ? html`<article class="forge-item" data-quality="${itemQualityKey}">
-          <div class="forge-item-head">
-            <span class="equipment-emblem">✧</span>
-            <div class="forge-item-title">
-              <h3>${escapeText(item.name)}</h3>
-              ${badgesHtml({
-                qualityKey: itemQualityKey,
-                qualityName: itemQuality.name,
-                level: itemLevel,
-                rollPercent: item.rollPercent,
-                levelLabel: '设计 Lv.',
-              })}
-            </div>
-          </div>
-          ${item.flavor ? `<blockquote class="forge-flavor">${escapeText(item.flavor)}</blockquote>` : ''}
-          <div class="forge-effects">${escapeText(equipmentDescription(item))}</div>
-          <div class="forge-primary-row">
-            <button
-              class="primary"
-              data-buy-equipment="${escapeText(item.id)}"
-              ${request || library().inventory.ether < item.price ? 'disabled' : ''}
-            >
-              兑换 · 打造 ${item.price}<img src="./assets/icons/ether.svg" alt="以太" />
-            </button>
-            <div class="forge-item-actions">
-              <button
-                data-forge-favorite="${item.id}"
-                aria-pressed="${!!library().equipment.favorites?.includes(item.id)}"
+      ? html`${
+            item.legacyCategorized
+              ? '<p class="forge-migration-note">提示：旧存档未区分武器/护甲/挂坠，已自动随机分配分类；若想重新整理，可使用右侧「删除此方案」。</p>'
+              : ''
+          }
+          <article class="forge-item" data-quality="${itemQualityKey}">
+            <div class="forge-item-head">
+              <span class="equipment-emblem"
+                >${EQUIPMENT_CATEGORIES[item.category]?.icon || '✧'}</span
               >
-                ${library().equipment.favorites?.includes(item.id) ? '★ 已收藏' : '☆ 收藏'}</button
-              ><button data-forge-delete="${item.id}">删除此方案</button>
+              <div class="forge-item-title">
+                <h3>
+                  ${escapeText(item.name)}
+                  ${
+                    EQUIPMENT_CATEGORIES[item.category]
+                      ? html`<small class="forge-cat-tag"
+                          >[${EQUIPMENT_CATEGORIES[item.category].label}]</small
+                        >`
+                      : ''
+                  }
+                </h3>
+                ${badgesHtml({
+                  qualityKey: itemQualityKey,
+                  qualityName: itemQuality.name,
+                  level: itemLevel,
+                  rollPercent: item.rollPercent,
+                  levelLabel: '设计 Lv.',
+                })}
+              </div>
             </div>
-          </div>
-          ${statRangeBarsHtml(item.stats, item.statRanges)}
-          <div class="forge-source-line">
-            来源：${escapeText(item.sourceName)}${
-              item.sourceDescription ? ` · ${escapeText(item.sourceDescription)}` : ''
-            }
-          </div>
-          ${forgeWorkshopHtml(item, library(), Boolean(request))}
-        </article>`
+            ${item.flavor ? `<blockquote class="forge-flavor">${escapeText(item.flavor)}</blockquote>` : ''}
+            <div class="forge-effects">${escapeText(equipmentDescription(item))}</div>
+            <div class="forge-primary-row">
+              <button
+                class="primary"
+                data-buy-equipment="${escapeText(item.id)}"
+                ${request || library().inventory.ether < item.price ? 'disabled' : ''}
+              >
+                兑换 · 打造 ${item.price}<img src="./assets/icons/ether.svg" alt="以太" />
+              </button>
+              <div class="forge-item-actions">
+                <button
+                  data-forge-favorite="${item.id}"
+                  aria-pressed="${!!library().equipment.favorites?.includes(item.id)}"
+                >
+                  ${library().equipment.favorites?.includes(item.id) ? '★ 已收藏' : '☆ 收藏'}</button
+                ><button data-forge-delete="${item.id}">删除此方案</button>
+              </div>
+            </div>
+            ${statRangeBarsHtml(item.stats, item.statRanges)}
+            <div class="forge-source-line">
+              来源：${escapeText(item.sourceName)}${
+                item.sourceDescription ? ` · ${escapeText(item.sourceDescription)}` : ''
+              }
+            </div>
+            ${forgeWorkshopHtml(item, library(), Boolean(request))}
+          </article>`
       : '<p class="forge-empty">构筑道具后，可在这里兑换装备。</p>';
     bag.querySelector('div').innerHTML =
       Object.values(ITEMS)
@@ -795,27 +762,33 @@ export function createEquipment(context) {
     }
   });
   events.on(document.querySelector('#party-panel'), 'click', (event) => {
-    if (event.target.closest('[data-equipment-focus]'))
+    if (event.target.closest('[data-equipment-focus]')) {
+      session.ai.preparationTab = 'status';
+      context.shell.renderParty();
       document
         .querySelector('#prepare-detail .equipment-slots')
         ?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
   });
-  events.on(window, 'message', (event) => {
-    if (
-      event.origin !== location.origin ||
-      event.source !== document.querySelector('#inn-frame iframe')?.contentWindow ||
-      event.data?.type !== 'tavern-condenser' ||
-      session.runtime.mode !== 'inn' ||
-      session.ai.busy
-    )
-      return;
+  function openCondenser() {
+    if (session.runtime.mode !== 'inn' || session.ai.busy) return;
     teaching = context.onboarding?.condenserOpened() === true;
     exchangeOnly = false;
     if (teaching) page = 'construct';
     refresh();
-    panel.showModal();
+    if (!panel.open) panel.showModal();
+  }
+  events.on(window, 'message', (event) => {
+    if (
+      event.origin !== location.origin ||
+      event.source !== document.querySelector('#inn-frame iframe')?.contentWindow ||
+      event.data?.type !== 'tavern-condenser'
+    )
+      return;
+    openCondenser();
   });
   return {
+    openCondenser,
     openExchange() {
       if (!document.querySelector('#party-panel').open) return;
       exchangeOnly = true;

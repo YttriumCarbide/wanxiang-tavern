@@ -3,12 +3,19 @@ import { restoreDining } from '../dining.js';
 import { restoreDaily } from '../daily.js';
 import { restoreTetris } from '../tetris.js';
 import { upgradeLegacyStatuses } from '../status-rules.js';
-import { restoreWorlds } from '../worlds.js';
+import { restoreWorlds, BASE_WORLDS } from '../worlds.js';
 import { restoreDiscoveries } from '../atlas-discoveries.js';
 import { restoreTavernQuests } from '../tavern-quests.js';
 import { EMBLEMS, applyEmblemStats } from '../emblems.js';
 import { grownCombat, restoreGrowth } from '../growth.js';
-import { restoreEquipment, applyEquipment, equippedDefinitions } from '../equipment.js';
+import {
+  restoreEquipment,
+  applyEquipment,
+  equippedDefinitions,
+  EQUIPMENT_CATEGORIES,
+  EQUIPMENT_SLOT_ORDER,
+  resolveEquipmentTemplate,
+} from '../equipment.js';
 import { ENCOUNTER_COUNT } from '../content/journey-rules.js';
 import { REGIONS } from '../content/regions.js';
 import { PANDORA, PANDORA_SETTING } from '../content/pandora.js';
@@ -21,10 +28,16 @@ import { OFFICIAL_SETTINGS } from '../content/official-characters.js';
 import { formatCharacterSetting } from './character-setting.js';
 import { loadCustomPortraits, savedPortrait } from '../portraits.js';
 import { newExploration, restoreExploration } from '../exploration.js';
+import {
+  refreshWorldSkirmishes,
+  restoreOverlandExploration,
+  restoreSkirmishes,
+} from '../skirmishes.js';
 import { restoreInventory } from '../rewards.js';
 import { restoredSummary, conversationText, restoreInvitationHistory } from '../memory.js';
 import { restoreArchives, hydrateArchiveMaps } from '../archives.js';
 import { defaultProtagonist } from '../content/qingyuan.js';
+import { OFFICIAL_DC_ATTRS, normalizeDcAttrs } from '../dc.js';
 
 export function newLibrary() {
   return createLibrary(loadCustomPortraits());
@@ -52,6 +65,7 @@ function createLibrary(customPortraits) {
     experienceClaims: [],
     equipment: restoreEquipment(),
     worlds: [],
+    unlockedDungeons: [],
     atlasDiscoveries: [],
     tavernQuests: [],
     emblems: [],
@@ -66,6 +80,8 @@ function createLibrary(customPortraits) {
       emblemLesson: 'none',
     },
     exploration: newExploration(Math.floor(Math.random() * 4294967296)),
+    skirmishes: refreshWorldSkirmishes(null, 'init'),
+    overlandExploration: restoreOverlandExploration(),
     characters: HEROES.map((hero) => {
       const combat = structuredClone(hero);
       const portrait = savedPortrait(customPortraits, { id: `official-${hero.id}`, combat });
@@ -74,6 +90,11 @@ function createLibrary(customPortraits) {
         id: `official-${hero.id}`,
         source: 'official',
         archetype: hero.id,
+        dcAttrs: normalizeDcAttrs(OFFICIAL_DC_ATTRS[`official-${hero.id}`], {
+          id: `official-${hero.id}`,
+          archetype: hero.id,
+          combat,
+        }),
         growth: restoreGrowth(null, `official-${hero.id}`),
         combat,
         setting: {
@@ -91,12 +112,15 @@ function createLibrary(customPortraits) {
 export function officialCharacter(id) {
   if (OFFICIAL_VISITORS[id]) {
     const visitor = OFFICIAL_VISITORS[id];
+    const combat = structuredClone(visitor.combat);
+    const fullId = 'official-' + id;
     return {
-      id: 'official-' + id,
+      id: fullId,
       source: 'official',
       archetype: id === 'luo-gongxu' ? 'aegis' : 'morrow',
-      growth: restoreGrowth(null, 'official-' + id),
-      combat: structuredClone(visitor.combat),
+      dcAttrs: normalizeDcAttrs(OFFICIAL_DC_ATTRS[fullId], { id: fullId, combat }),
+      growth: restoreGrowth(null, fullId),
+      combat,
       setting: {
         name: visitor.setting.name,
         title: visitor.combat.title,
@@ -107,13 +131,18 @@ export function officialCharacter(id) {
       },
     };
   }
-  if (id === 'edith')
+  if (id === 'edith') {
+    const combat = structuredClone(EDITH);
     return {
       id: 'official-edith',
       growth: restoreGrowth(null, 'official-edith'),
       source: 'official',
       archetype: 'aegis',
-      combat: structuredClone(EDITH),
+      dcAttrs: normalizeDcAttrs(OFFICIAL_DC_ATTRS['official-edith'], {
+        id: 'official-edith',
+        combat,
+      }),
+      combat,
       setting: {
         name: EDITH.name,
         title: EDITH.title,
@@ -121,13 +150,19 @@ export function officialCharacter(id) {
         formatVersion: 3,
       },
     };
-  if (id === 'pandora')
+  }
+  if (id === 'pandora') {
+    const combat = structuredClone(PANDORA);
     return {
       id: 'official-pandora',
       growth: restoreGrowth(null, 'official-pandora'),
       source: 'official',
       archetype: 'morrow',
-      combat: structuredClone(PANDORA),
+      dcAttrs: normalizeDcAttrs(OFFICIAL_DC_ATTRS['official-pandora'], {
+        id: 'official-pandora',
+        combat,
+      }),
+      combat,
       setting: {
         name: PANDORA.name,
         title: PANDORA.title,
@@ -137,6 +172,7 @@ export function officialCharacter(id) {
         formatVersion: 3,
       },
     };
+  }
   const entry = newLibrary().characters.find((member) => member.archetype === id);
   if (!entry) throw Error('官方角色不存在');
   return entry;
@@ -217,6 +253,13 @@ export function restoreLibrary(value) {
   library.emblems = Array.isArray(value.emblems) ? value.emblems.filter((id) => EMBLEMS[id]) : [];
   if (value.exploration)
     library.exploration = restoreExploration(value.exploration, 17371, library.worlds);
+  library.unlockedDungeons = Array.isArray(value.unlockedDungeons)
+    ? [...new Set(value.unlockedDungeons.filter((id) => BASE_WORLDS.includes(id)))]
+    : BASE_WORLDS.filter(
+        (id) =>
+          (library.exploration?.[id]?.completed || 0) > 0 ||
+          (library.exploration?.[id]?.cleared?.length || 0) > 0,
+      );
   library.archives = restoreArchives(value.archives);
   library.relationships = structuredClone(value.relationships || {});
   if (value.summaryWorldbook?.entries)
@@ -292,6 +335,10 @@ export function restoreLibrary(value) {
     : [];
   library.inventory = restoreInventory(value.inventory);
   library.equipment = restoreEquipment(value.equipment);
+  library.skirmishes = value.skirmishes
+    ? restoreSkirmishes(value.skirmishes)
+    : refreshWorldSkirmishes(null, 'migrated');
+  library.overlandExploration = restoreOverlandExploration(value.overlandExploration);
   library.refinedNpcs = [
     ...new Set(
       (value.refinedNpcs || []).filter((name) => typeof name === 'string' && name.length <= 30),
@@ -388,6 +435,7 @@ export function restoreLibrary(value) {
         {
           schemaVersion: entry.setting?.worldbook ? 2 : 1,
           setting: entry.setting,
+          ...(entry.dcAttrs ? { dcAttrs: entry.dcAttrs } : {}),
           ...(entry.levelUpLines ? { levelUpLines: entry.levelUpLines } : {}),
           data: { ...entry.combat, archetype: entry.archetype },
         },
@@ -514,9 +562,10 @@ export function restoreLibrary(value) {
   for (const member of library.characters) {
     const saved = value.characters?.find((entry) => entry.id === member.id);
     member.growth = restoreGrowth(saved?.growth, member.id);
+    member.dcAttrs = normalizeDcAttrs(saved?.dcAttrs ?? member.dcAttrs, member);
     if (Array.isArray(saved?.equipment))
       member.equipment = saved.equipment
-        .slice(0, 3)
+        .slice(0, EQUIPMENT_SLOT_ORDER.length)
         .map((id) => (library.equipment.owned.some((item) => item.id === id) ? id : null));
   }
   for (const id of library.emblems) {
@@ -528,17 +577,20 @@ export function restoreLibrary(value) {
   for (const member of library.characters)
     if (member.equipment) {
       const names = new Set();
-      member.equipment = member.equipment.map((id) => {
-        if (!id || equipped.has(id)) return null;
+      const slots = [null, null, null, null];
+      for (const id of member.equipment) {
+        if (!id || equipped.has(id)) continue;
         const instance = library.equipment.owned.find((item) => item.id === id);
-        const name = library.equipment.catalog.find(
-          (item) => item.id === instance?.templateId,
-        )?.name;
-        if (!name || names.has(name)) return null;
+        const template = resolveEquipmentTemplate(library, instance?.templateId);
+        const name = template?.name;
+        if (!name || names.has(name)) continue;
+        const targetSlot = EQUIPMENT_CATEGORIES[template.category]?.slot ?? 0;
+        if (slots[targetSlot] !== null) continue;
         names.add(name);
         equipped.add(id);
-        return id;
-      });
+        slots[targetSlot] = id;
+      }
+      member.equipment = slots;
     }
   library.prepared =
     library.scripts.some(

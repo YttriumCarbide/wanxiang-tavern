@@ -1,407 +1,478 @@
-import { paintCookingTrail } from './service-cooking-view.js';
-import { createServiceDragView } from './service-drag-view.js';
-import { DAILY_ROLES } from '../daily.js';
-import {
-  advanceService,
-  performService,
-  performServiceGesture,
-  serviceGuest,
-  serviceJob,
-  tryAutoService,
-} from '../tavern-service.js';
+import { DISHES, INGREDIENTS } from '../content/dining.js';
 import { portraitUrl } from '../portraits.js';
+import { SERVICE_ROLES, serviceAutoChance, serviceWaitBonus } from '../service-progression.js';
+import {
+  SERVICE_CATALOG_MAP,
+  advanceLiveService,
+  boostLiveStove,
+  calcLiveDishPrice,
+  chefCookModForShift,
+  chooseLiveVipDish,
+  clickLiveStove,
+  clickLiveTable,
+  closeLiveCookMiniGame,
+  closeLiveShiftEarly,
+  confirmLiveCookDc,
+  confirmLiveEventCheck,
+  inputLiveCookMiniGame,
+  liveCraftableCount,
+  pickLiveEventOption,
+  pourLiveAle,
+  rerollLiveCookDc,
+  rerollLiveEventCheck,
+  seatLiveGuest,
+  serveLivePlate,
+  triggerLiveFever,
+} from '../service-live.js';
+import {
+  dcAttrLabel,
+  dcOutcomeLabel,
+  dcSuccessProbability,
+  formatMod,
+  isDcSuccess,
+} from '../dc.js';
 import { escapeText } from '../ui.js';
-import { createServiceMap, serviceMapMarkup } from './service-map.js';
-import { serviceIcon } from './service-icons.js';
+import { dieMarkup } from './dice-stage.js';
+import { foodArt } from './food-art.js';
+import { paintCookingTrail } from './service-cooking-view.js';
 import { paintServiceActivity, serviceGameMarkup } from './service-game-view.js';
 
-const stations = Object.freeze({
-  front: ['01', '♢', '迎宾 · 排座 · 收银'],
-  cook: ['02', '◉', '备料 · 掌火 · 出菜'],
-  server: ['03', '▱', '点单 · 托盘 · 加点'],
-  clean: ['04', '✦', '清桌 · 去渍 · 翻台'],
-});
+function dishArt(dish) {
+  const dining = dish?.artId && DISHES[dish.artId];
+  return dining
+    ? foodArt(dining)
+    : `<span class="ls-glyph">${escapeText(dish?.glyph || '菜')}</span>`;
+}
 
-const guides = Object.freeze({
-  front: { side: 'left', label: '前台', hint: '迎宾 / 收银', icon: '订单' },
-  cook: { side: 'top', label: '后厨', hint: '备料 / 掌火', icon: '锅' },
-  server: { side: 'right', label: '堂前', hint: '点单 / 送餐', icon: '托盘' },
-  clean: { side: 'bottom', label: '清台', hint: '收桌 / 翻台', icon: '餐篮' },
-});
+function qualityBadge(quality) {
+  if (quality === 'divine') return ['✦神品', '#ffb3ff'];
+  if (quality === 'great') return ['★极品', '#ffe484'];
+  if (quality === 'burnt') return ['微焦', '#a8b2d1'];
+  return ['标准', '#d8d2c0'];
+}
 
 export function createServiceBoard(context, closeShift) {
   const board = document.createElement('dialog');
   board.id = 'daily-service';
   board.setAttribute('aria-labelledby', 'service-title');
   document.body.append(board);
+
   let shift = null;
-  let map = null;
-  let focused = null;
   let frame = 0;
-  let last = 0;
-  let revision = 0;
+  let lastTick = 0;
+  let speed = 1;
   let savedAt = 0;
-  let roster = new Map();
   let gesture = null;
-  let cookingFinish = 0;
-  const drag = createServiceDragView(board);
-  let picked = null;
-  let lastMissed = 0;
-  let lastArrived = 0;
-  let wasFinished = false;
-  let alertTimer = 0;
-  const cookingCues = Object.freeze({
-    cut: 'service-chop',
-    heat: 'service-sizzle',
-    sear: 'service-sizzle',
-    pour: 'service-pour',
-    stir: 'service-stir',
-    whisk: 'service-whisk',
-    roll: 'service-stir',
-    knead: 'service-knead',
-    pipe: 'service-pipe',
-    season: 'service-pipe',
-    skim: 'service-skim',
-    flip: 'service-sizzle',
-    balance: 'service-tray',
-    catch: 'service-tray',
-    wipe: 'service-cleaning',
-    mop: 'service-cleaning',
-  });
+  let cookingCloseTimer = 0;
+
+  function save() {
+    if (!shift) return;
+    savedAt = shift.elapsed;
+    context.generation.save();
+  }
+
   function playCue(name) {
     context.audio?.play(name);
   }
-  function feedback(text, tone = 'good') {
-    const host = board.querySelector('.service-float-layer');
-    if (!host) return;
+
+  function floatNotice(text, tone = 'gold') {
+    const layer = board.querySelector('.ls-float-layer');
+    if (!layer) return;
     const node = document.createElement('span');
-    node.className = 'service-float';
-    node.dataset.tone = tone;
+    node.className = `ls-float-msg tone-${tone}`;
     node.textContent = text;
-    host.append(node);
-    window.setTimeout(() => node.remove(), 900);
-    if (tone === 'good') {
-      const card = board.querySelector('.service-workcard');
-      if (!card) return;
-      card.classList.remove('service-success');
-      void card.offsetWidth;
-      card.classList.add('service-success');
-      window.setTimeout(() => card.classList.remove('service-success'), 460);
+    layer.append(node);
+    window.setTimeout(() => node.remove(), 950);
+  }
+
+  function staffMember(role) {
+    const id = shift?.staff?.[role];
+    return context.session.ai.library.characters.find((c) => c.id === id) || null;
+  }
+
+  function queueHtml() {
+    if (!shift.queue.length) {
+      return '<div class="ls-empty-box">夜风轻拂门铃…<br>下一位宾客即将步入</div>';
     }
-  }
-  function shakeCard() {
-    const card = board.querySelector('.service-workcard');
-    if (!card) return;
-    card.classList.remove('service-shake');
-    void card.offsetWidth;
-    card.classList.add('service-shake');
-  }
-
-  function jobs() {
-    return new Map(
-      shift.guests.flatMap((guest) => {
-        const job = serviceJob(shift, guest);
-        return job ? [[guest.id, { guest, ...job }]] : [];
-      }),
-    );
-  }
-
-  function station(id, queue) {
-    const staff = context.session.ai.library.characters.find(
-      (entry) => entry.id === shift.staff[id],
-    );
-    const [number, symbol, duty] = stations[id];
-    return `<header class="service-role">
-      <span class="service-avatar">${staff ? `<img src="${escapeText(portraitUrl(staff.combat))}" alt="">` : symbol}</span>
-      <span><small>${number} / ${escapeText(staff?.setting.name || '')}</small><strong>${DAILY_ROLES[id]}</strong></span>
-      <span class="service-queue" aria-label="${queue.length} 张单">${queue.length}</span>
-    </header>
-    ${
-      queue.length
-        ? `<div class="service-tickets" aria-label="待办票签">${queue
-            .map(({ guest, title }) => {
-              const name = serviceGuest(shift, guest).name;
-              return `<button type="button" title="${escapeText(name)}" data-service-ticket="${guest.id}" aria-pressed="${focused === guest.id}">
-        <span>${guest.id}号 · ${title}</span><small data-service-time="${guest.id}"></small></button>`;
-            })
-            .join('')}</div>`
-        : `<p class="service-empty">${duty}</p>`
-    }`;
-  }
-
-  function mount() {
-    const wing = (roles) => {
-      const panels = roles.map(
-        (id) => `<section class="service-station" data-station="${id}"></section>`,
-      );
-      return `<div class="service-wing">${panels.join('')}</div>`;
-    };
-    board.innerHTML = `<header class="service-heading">
-      <div class="service-title"><span class="service-mark" aria-hidden="true">✦</span><div><small>万象酒馆 · 营业手帐</small><h2 id="service-title">${shift.tutorial ? '初灯试营业' : '酒馆营业'}</h2></div></div>
-      <div class="service-stats"><span>到店 <b data-service-stat="arrived"></b>/<b data-service-stat="limit"></b></span><span>已结账 <b data-service-stat="served"></b></span><span>收入 <b data-service-stat="earned"></b></span><span>超时 <b data-service-stat="missed"></b></span></div>
-    </header>
-    <div class="service-layout">${wing(['front', 'cook'])}${serviceMapMarkup()}${wing(['server', 'clean'])}</div>
-    <section class="service-workspace" data-service-workspace hidden aria-label="当前营业小游戏"></section>
-    <div class="service-float-layer" aria-hidden="true"></div>
-    <footer class="service-foot"><span></span><button type="button" data-service-end disabled>收班结算</button></footer>
-    <div class="service-alert" role="status" hidden></div>
-    <span class="service-drag-preview" hidden aria-hidden="true"></span>`;
-  }
-
-  function renderWorkspace(job) {
-    if (cookingFinish) return;
-    const node = board.querySelector('[data-service-workspace]');
-    node.hidden = !job;
-    const markup = job
-      ? `<div class="service-workcard"><header tabindex="-1">
-      <div><small>${job.guest.id}号 · ${escapeText(serviceGuest(shift, job.guest).name)}</small><strong>${escapeText(job.title)}</strong></div>
-      <small data-service-time="${job.guest.id}"></small><button type="button" data-service-dismiss aria-label="关闭小游戏">×</button>
-    </header>${serviceGameMarkup(job)}</div>`
-      : '';
-    if (node.renderedWorkspace === markup) return;
-    const current = node.firstElementChild;
-    const key = job ? [job.guest.id, job.phase, job.course].join(':') : '';
-    const previous = document.activeElement;
-    const choice = node.contains(previous) ? previous.dataset.serviceChoice : null;
-    node.renderedWorkspace = markup;
-    const reuse = current && key && current.dataset.task === key;
-    node.innerHTML = markup;
-    if (node.firstElementChild) {
-      node.firstElementChild.dataset.task = key;
-      node.firstElementChild.toggleAttribute('data-same-task', Boolean(reuse));
-    }
-    if (choice)
-      [...node.querySelectorAll('[data-service-choice]')]
-        .find((button) => button.dataset.serviceChoice === choice && !button.disabled)
-        ?.focus({ preventScroll: true });
-  }
-
-  function roleQueue(role) {
-    return [...roster.values()]
-      .filter((job) => job.role === role)
-      .sort((a, b) => a.guest.deadline - b.guest.deadline);
-  }
-
-  function renderGuides() {
-    const root = board.querySelector('[data-service-callouts]');
-    root.innerHTML = Object.entries(guides)
-      .map(([role, guide]) => {
-        const next = roleQueue(role)[0];
-        if (!next) return '';
-        const time = Math.max(0, Math.ceil(next.guest.deadline - shift.elapsed));
-        return `<button type="button" class="service-callout" data-service-guide="${role}"
-          data-side="${guide.side}" data-guest="${next.guest.id}" data-urgent="${time <= 8}"
-          aria-label="${guide.label}：${next.guest.id}号${escapeText(next.title)}，还剩${time}秒">
-          <span class="service-guide-arrow" aria-hidden="true"></span>
-          <span class="service-guide-icon">${serviceIcon(guide.icon)}</span>
-          <span class="service-guide-copy"><b>${guide.label}</b><small>${next.guest.id}号 · ${escapeText(next.title)}</small></span>
-          <em data-guide-time="${role}">${time}s</em>
+    return shift.queue
+      .map((g) => {
+        const pct = Math.max(0, Math.round((g.patience / Math.max(1, g.maxPatience)) * 100));
+        return `<button type="button" class="ls-guest-card ${g.patron.vip ? 'vip' : ''}" data-live-seat="${g.uid}">
+          <span class="ls-pbadge" style="--c:${g.patron.color}">${escapeText(g.patron.glyph)}</span>
+          <div class="ls-guest-body">
+            <div><b>${g.patron.vip ? '♛ ' : ''}${escapeText(g.patron.name)}</b><span>引座 ›</span></div>
+            <small>偏爱：${g.patron.likes.slice(0, 2).map(escapeText).join(' / ')}</small>
+            <div class="ls-pbar"><i style="width:${pct}%;background:${pct < 30 ? '#ff6458' : pct < 60 ? '#f4a261' : '#6fcf8a'}"></i></div>
+          </div>
         </button>`;
       })
       .join('');
   }
 
-  function flashAlert(message) {
-    const node = board.querySelector('.service-alert');
-    if (!node) return;
-    clearTimeout(alertTimer);
-    node.textContent = message;
-    node.hidden = false;
-    node.classList.remove('is-visible');
-    void node.offsetWidth;
-    node.classList.add('is-visible');
-    alertTimer = window.setTimeout(() => {
-      node.classList.remove('is-visible');
-      alertTimer = window.setTimeout(() => (node.hidden = true), 260);
-    }, 2600);
+  function tablesHtml() {
+    return shift.tables
+      .map((t) => {
+        if (!t.unlocked) {
+          return `<div class="ls-table locked"><strong>扩建餐桌 #${t.idx + 1}</strong><small>提升知名度解锁更多桌位</small></div>`;
+        }
+        const plate = t.state === 'waiting' ? shift.plates.find((p) => p.tableIdx === t.idx) : null;
+        const dish = t.recipeId ? SERVICE_CATALOG_MAP[t.recipeId] : null;
+        const pct =
+          t.maxPatience > 0 ? Math.max(0, Math.round((t.patience / t.maxPatience) * 100)) : 100;
+        const urgent = (t.state === 'ordering' || t.state === 'waiting') && pct < 28 && !plate;
+        const actionCls = t.state === 'ordering' || plate ? 'action' : '';
+        const payCls = t.state === 'pay' ? 'pay' : '';
+
+        let body = '';
+        if (t.state === 'empty') {
+          body = `<div class="ls-table-empty"><strong>${shift.queue.length ? '✦ 点击引客入座' : '烛光空席'}</strong>
+            <small>${shift.queue.length ? `门口有 ${shift.queue.length} 位客人` : '桌面整洁 · 静候来客'}</small></div>`;
+        } else if (t.patron) {
+          const [qLabel, qColor] = qualityBadge(t.quality);
+          let pill = '';
+          let dishCenter = '';
+          if (t.state === 'ordering') {
+            pill = `<span class="ls-bubble">${t.patron.vip ? '♛ 贵客求荐菜' : '✎ 点击点单'}</span>`;
+          } else if (t.state === 'waiting') {
+            pill = plate
+              ? '<span class="ls-bubble serve">✦ 出锅 · 点击上桌</span>'
+              : '<span class="ls-wait-hint">后厨烹制中…</span>';
+          } else if (t.state === 'eating') {
+            dishCenter = `<div class="ls-dish-center">${dishArt(dish)}<i class="ls-steam" aria-hidden="true"></i></div>`;
+            pill = `<span class="ls-eat-hint"><i style="color:${qColor}">${qLabel}</i> · 享用中 ${t.eatTimer.toFixed(1)}s</span>`;
+          } else if (t.state === 'pay') {
+            pill = `<span class="ls-bubble pay">🪙 收银清桌 +${t.billGold}G</span>`;
+          }
+          body = `<div class="ls-table-patron">
+            <span class="ls-pbadge" style="--c:${t.patron.color}">${escapeText(t.patron.glyph)}</span>
+            <div><b>${t.patron.vip ? '♛ ' : ''}${escapeText(t.patron.name)}</b><small>${dish ? escapeText(dish.name) : escapeText(t.patron.quote)}</small></div>
+          </div>
+          ${dishCenter}
+          ${pill}
+          ${
+            t.state === 'ordering' || t.state === 'waiting'
+              ? `<div class="ls-pbar"><i style="width:${pct}%;background:${pct < 30 ? '#ff6458' : pct < 60 ? '#f4a261' : '#6fcf8a'}"></i></div>`
+              : ''
+          }`;
+        }
+        return `<button type="button" class="ls-table ${actionCls} ${payCls} ${urgent ? 'urgent' : ''}" data-live-table="${t.idx}">
+          <span class="ls-tkey">${t.idx + 1}号桌</span><span class="ls-candle" aria-hidden="true"></span>${body}
+        </button>`;
+      })
+      .join('');
+  }
+
+  function stovesHtml() {
+    const mod = chefCookModForShift(shift);
+    return shift.stoves
+      .map((s) => {
+        if (!s.unlocked) {
+          return `<div class="ls-stove locked"><span>灶台 #${s.idx + 1}</span><small>升级秘银魔导灶解锁</small></div>`;
+        }
+        const dish = s.ticket ? SERVICE_CATALOG_MAP[s.ticket.recipeId] : null;
+        if (!dish) {
+          return `<div class="ls-stove idle"><span>灶台 #${s.idx + 1}</span><small>炉火待命</small></div>`;
+        }
+        if (s.status === 'dc_ready') {
+          const dc = Math.max(5, Math.min(12, dish.dc + (shift.weather?.dcDelta || 0)));
+          return `<button type="button" class="ls-stove dc-ready" data-live-stove="${s.idx}">
+            <div class="ls-stove-top"><span>灶台 #${s.idx + 1}</span><b>${s.ticket.tableIdx + 1}号桌</b></div>
+            <strong>✦ ${escapeText(dish.name)}</strong>
+            <span class="ls-dc-cta">🎲 火候 2D6 DC${dc} (${dcSuccessProbability(mod, dc)}%)</span>
+          </button>`;
+        }
+        const pct = Math.round(s.progress * 100);
+        return `<div class="ls-stove cooking">
+          <div class="ls-stove-top"><span>灶台 #${s.idx + 1}</span><b>${s.ticket.tableIdx + 1}号桌</b></div>
+          <strong>${dish.kind === 'signature' ? '✦ ' : ''}${escapeText(dish.name)}</strong>
+          <div class="ls-pbar"><i style="width:${pct}%;background:linear-gradient(90deg,#ff6b35,#ffe484)"></i></div>
+          <div class="ls-stove-btns">
+            <button type="button" data-live-minigame="${s.idx}">🔥 亲手烹调 (极品×1.35)</button>
+            <button type="button" data-live-boost="${s.idx}">⚡ 煽火</button>
+          </div>
+          <div class="ls-flames" aria-hidden="true"></div>
+        </div>`;
+      })
+      .join('');
+  }
+
+  function modalMarkup() {
+    if (shift.finished) {
+      const grade = shift.earnedGold >= 140 ? 'S' : shift.earnedGold >= 75 ? 'A' : 'B';
+      const bonusEntries = Object.entries(shift.bonusIngredients || {});
+      return `<div class="ls-modal-mask"><div class="ls-modal tv-panel" role="dialog" aria-modal="true" aria-label="打烊结算">
+        <small class="ls-kicker">MIDNIGHT LEDGER</small>
+        <div class="ls-settle-head"><h3>今夜打烊结算</h3><span>${grade} 级</span></div>
+        <div class="ls-settle-grid">
+          <div><small>金币收益</small><b style="color:#ffe484">+${shift.earnedGold} G</b><span>特色 ${shift.sigGold} · 基础 ${shift.regGold}</span></div>
+          <div><small>小费与事件</small><b>+${shift.tipGold + Math.max(0, shift.eventGold)} G</b><span>贵客 ${shift.vipsServed} 位</span></div>
+          <div><small>酒馆知名度</small><b style="color:#9fe0a8">+${Math.max(shift.repGain, shift.servedCount)}</b><span>极品/神品 ${shift.masterworkCount} 道</span></div>
+          <div><small>接待与连击</small><b>${shift.servedCount} 桌</b><span>最高 ${shift.maxCombo} 连 · 离席 ${shift.leftAngry}</span></div>
+        </div>
+        ${bonusEntries.length ? `<p class="ls-settle-bonus">奇遇食材入库：${bonusEntries.map(([id, n]) => `${escapeText(INGREDIENTS[id]?.name || id)}×${n}`).join('、')}</p>` : ''}
+        <p class="ls-settle-note">当班伙伴熟练度已累积 · 好感度 +2</p>
+        <button type="button" class="ls-gold-btn" data-live="settle-done" data-service-end>收下金币 · 结束营业</button>
+      </div></div>`;
+    }
+    if (shift.activeCookDc) {
+      const { dish, dc, mod, check } = shift.activeCookDc;
+      const win = isDcSuccess(check.outcome);
+      return `<div class="ls-modal-mask"><div class="ls-modal tv-panel" role="dialog" aria-modal="true" aria-label="特色火候 2D6 检定">
+        <small class="ls-kicker">SIGNATURE FLAME CHECK</small>
+        <h3>${escapeText(dish.name)} · 火候检定</h3>
+        <p class="ls-modal-sub">主厨火候 2D6 ${escapeText(formatMod(mod))} 对抗 难度 DC ${dc}（双6 ✦神品 ×1.75 / 成功 ★极品 ×1.35）</p>
+        <div class="ls-dice-row">
+          ${dieMarkup(check.dice[0], 'ivory', 0, [900, -720, 360])}
+          ${dieMarkup(check.dice[1], 'ivory', 80, [-900, 720, -360])}
+        </div>
+        <div class="ls-check-result ${check.outcome}">
+          <b>${check.dice[0]} + ${check.dice[1]} ${escapeText(formatMod(mod))} = ${check.total}</b>
+          <span>${escapeText(dcOutcomeLabel(check.outcome))}</span>
+        </div>
+        <div class="ls-modal-actions">
+          ${!win && shift.fateTokens > 0 ? `<button type="button" class="ls-sub-btn" data-live="cook-reroll">🎲 命运重掷（仅本班 · 余 ${shift.fateTokens}）</button>` : ''}
+          <button type="button" class="ls-gold-btn" data-live="cook-confirm">盛盘出锅！</button>
+        </div>
+      </div></div>`;
+    }
+    if (shift.activeMiniGame) {
+      const mg = shift.activeMiniGame;
+      const fakeJob = {
+        guest: { id: mg.stoveIdx, error: '' },
+        phase: 'cook',
+        course: 0,
+        order: [mg.dish.name],
+        dish: mg.dish.name,
+        activity: mg.activity,
+      };
+      return `<div class="ls-modal-mask"><div class="ls-modal ls-modal-game tv-panel" role="dialog" aria-modal="true" aria-label="交互烹饪小游戏">
+        <div class="ls-mg-head">
+          <div><small>灶台 #${mg.stoveIdx + 1} · 交互精烹（完成必出 ★极品 ×1.35）</small><h4>${escapeText(mg.dish.name)}</h4></div>
+          <button type="button" class="ls-sub-btn" data-live="mg-close">返回大厅</button>
+        </div>
+        <div class="ls-mg-stage">${serviceGameMarkup(fakeJob)}</div>
+      </div></div>`;
+    }
+    if (shift.vipModalTableIdx !== null) {
+      const table = shift.tables[shift.vipModalTableIdx];
+      const likes = table?.patron?.likes || [];
+      const ids = [...shift.sigMenu, ...shift.regMenu];
+      return `<div class="ls-modal-mask"><div class="ls-modal tv-panel" role="dialog" aria-modal="true" aria-label="贵客荐菜">
+        <small class="ls-kicker">VIP PATRON PAIRING</small>
+        <h3>♛ ${escapeText(table?.patron?.name || '贵客')} 求推荐料理</h3>
+        <p class="ls-modal-sub">偏爱风味：${likes.map((l) => `<span class="tv-tag hot">${escapeText(l)}</span>`).join(' ')}（命中1项 ×1.20 · 2项 ×1.45）</p>
+        <div class="ls-vip-grid">
+          ${ids
+            .map((id) => {
+              const dish = SERVICE_CATALOG_MAP[id];
+              if (!dish) return '';
+              const hits = dish.tags.filter((t) => likes.includes(t)).length;
+              const stock =
+                dish.kind === 'signature' ? liveCraftableCount(dish, shift.pantry) : 999;
+              const { price } = calcLiveDishPrice(dish, {
+                growth: {
+                  reputation: shift.reputationSnapshot,
+                  facilities: shift.facilities,
+                  specialties: shift.specialtiesSnapshot,
+                },
+                day: shift.day,
+              });
+              return `<button type="button" class="ls-vip-card ${hits > 0 ? 'match' : ''}" data-live-vip-pick="${dish.id}" ${stock <= 0 ? 'disabled' : ''}>
+                <span class="ls-vip-art">${dishArt(dish)}</span>
+                <div><b>${escapeText(dish.name)}</b><small>${dish.tags.map(escapeText).join('/')} ${hits ? `· 命中+${hits === 1 ? '20' : '45'}%` : ''}</small></div>
+                <strong>${price}G</strong>
+              </button>`;
+            })
+            .join('')}
+        </div>
+        <div class="ls-modal-actions"><button type="button" class="ls-sub-btn" data-live="vip-cancel">稍后再选</button></div>
+      </div></div>`;
+    }
+    if (shift.activeEvent) {
+      const ev = shift.activeEvent;
+      const roll = ev.roll;
+      const pickedOpt = ev.def.opts[ev.pickedIndex];
+      return `<div class="ls-modal-mask"><div class="ls-modal tv-panel" role="dialog" aria-modal="true" aria-label="突发事件 2D6 检定">
+        <small class="ls-kicker">TAVERN ENCOUNTER</small>
+        <h3>${ev.def.badge} ${escapeText(ev.def.title)}</h3>
+        <p class="ls-modal-sub">${escapeText(ev.def.desc)}</p>
+        ${
+          !roll
+            ? `<div class="ls-ev-opts">${ev.def.opts
+                .map((opt, idx) => {
+                  const mod = shift.staffMods?.[opt.post]?.[opt.attr] ?? 0;
+                  const pct = dcSuccessProbability(mod, opt.dc);
+                  const staffName = staffMember(opt.post)?.setting.name || SERVICE_ROLES[opt.post];
+                  return `<button type="button" class="ls-ev-opt" data-live-ev-opt="${idx}">
+                    <b>${escapeText(opt.label)}</b>
+                    <small>${escapeText(SERVICE_ROLES[opt.post])}·${escapeText(staffName)} · ${escapeText(dcAttrLabel(opt.attr))} ${escapeText(formatMod(mod))} vs DC ${opt.dc} (${pct}%)</small>
+                  </button>`;
+                })
+                .join('')}</div>`
+            : `<div class="ls-dice-row">
+                ${dieMarkup(roll.dice[0], 'arcane', 0, [900, -720, 360])}
+                ${dieMarkup(roll.dice[1], 'arcane', 80, [-900, 720, -360])}
+              </div>
+              <div class="ls-check-result ${roll.outcome}">
+                <b>${roll.dice[0]} + ${roll.dice[1]} ${escapeText(formatMod(ev.mod || 0))} = ${roll.total} / DC ${pickedOpt.dc}</b>
+                <span>${escapeText(dcOutcomeLabel(roll.outcome))}</span>
+              </div>
+              <p class="ls-ev-outcome">${escapeText(isDcSuccess(roll.outcome) ? pickedOpt.winText : pickedOpt.loseText)}</p>
+              <div class="ls-modal-actions">
+                ${!isDcSuccess(roll.outcome) && shift.fateTokens > 0 ? `<button type="button" class="ls-sub-btn" data-live="event-reroll">🎲 命运重掷（余 ${shift.fateTokens}）</button>` : ''}
+                <button type="button" class="ls-gold-btn" data-live="event-confirm">继续营业</button>
+              </div>`
+        }
+      </div></div>`;
+    }
+    return '';
+  }
+
+  function modalKeyForShift() {
+    if (shift.finished) return 'summary';
+    if (shift.activeCookDc) return `cook:${shift.activeCookDc.check.dice.join(',')}`;
+    if (shift.activeMiniGame)
+      return `mg:${shift.activeMiniGame.stoveIdx}:${shift.activeMiniGame.kind}`;
+    if (shift.vipModalTableIdx !== null) return `vip:${shift.vipModalTableIdx}`;
+    if (shift.activeEvent)
+      return `ev:${shift.activeEvent.def.id}:${shift.activeEvent.roll ? shift.activeEvent.roll.dice.join(',') : 'pick'}`;
+    return '';
+  }
+
+  function syncTimersAndHud() {
+    if (!shift) return;
+    const left = Math.max(0, Math.ceil(shift.duration - shift.elapsed));
+    const clockNum = board.querySelector('[data-live-stat="clock"]');
+    if (clockNum) clockNum.textContent = `${left}s`;
+    const clockFill = board.querySelector('[data-live-stat="clock-bar"]');
+    if (clockFill)
+      clockFill.style.width = `${Math.min(100, (shift.elapsed / shift.duration) * 100)}%`;
+    const goldNode = board.querySelector('[data-live-stat="gold"]');
+    if (goldNode) goldNode.textContent = `${shift.earnedGold} G`;
+    const repNode = board.querySelector('[data-live-stat="rep"]');
+    if (repNode) repNode.textContent = `+${shift.repGain}`;
+    const servedNode = board.querySelector('[data-live-stat="served"]');
+    if (servedNode) servedNode.textContent = `${shift.servedCount}`;
+    const fateNode = board.querySelector('[data-live-stat="fate"]');
+    if (fateNode) fateNode.textContent = `${shift.fateTokens}`;
+    board.classList.toggle('fever', shift.feverLeft > 0);
   }
 
   function render() {
-    roster = jobs();
-    if (!roster.has(focused)) focused = null;
-    for (const [id, value] of Object.entries({
-      arrived: shift.arrived,
-      limit: shift.limit,
-      served: shift.served,
-      earned: shift.earned,
-      missed: shift.missed,
-    }))
-      board.querySelector(`[data-service-stat="${id}"]`).textContent = value;
-    for (const id of Object.keys(stations)) {
-      const node = board.querySelector(`[data-station="${id}"]`);
-      const queue = [...roster.values()]
-        .filter((job) => job.role === id)
-        .sort((a, b) => a.guest.deadline - b.guest.deadline);
-      node.dataset.active = String(queue.length > 0);
-      const markup = station(id, queue);
-      if (node.renderedStation !== markup) {
-        const previous = document.activeElement;
-        const ticket = previous?.dataset.serviceTicket;
-        const restore = node.contains(previous);
-        node.renderedStation = markup;
-        node.innerHTML = markup;
-        if (restore) {
-          const replacement = [...node.querySelectorAll('[data-service-ticket]')].find(
-            (button) => ticket && button.dataset.serviceTicket === ticket,
-          );
-          replacement?.focus({ preventScroll: true });
-        }
-      }
-    }
-    renderWorkspace(roster.get(focused));
-    renderGuides();
-    map.update(shift, focused);
-    map.paint(shift, performance.now());
-    board.querySelector('.service-foot span').textContent = shift.finished
-      ? '本班结束 · 已翻台 ' + shift.cleaned + ' 处'
-      : '按四边提示去对应岗位接单 · 红色表示即将超时 · 客人还在等你。';
-    board.querySelector('[data-service-end]').disabled = !shift.finished;
-    if (shift.finished && !wasFinished) playCue('service-done');
-    wasFinished = shift.finished;
-    board.dataset.finished = String(shift.finished);
-    if (shift.arrived > lastArrived) {
-      playCue('service-bell');
-      lastArrived = shift.arrived;
-    }
-    if (shift.missed > lastMissed) {
-      playCue('service-lost');
-      flashAlert(`客人等太久离开了 · 目前超时 ${shift.missed} 桌`);
-      lastMissed = shift.missed;
-    }
-    meters();
-  }
-
-  function meters() {
-    let rush = false;
-    for (const element of board.querySelectorAll('[data-service-time]')) {
-      const guest = roster.get(Number(element.dataset.serviceTime))?.guest;
-      if (!guest) continue;
-      const time = Math.max(0, Math.ceil(guest.deadline - shift.elapsed));
-      if (element.textContent !== time + 's') element.textContent = time + 's';
-      element.classList.toggle('service-urgent', time <= 8);
-      rush ||= time <= 8;
-    }
-    for (const station of board.querySelectorAll('[data-station]')) {
-      const time = roleQueue(station.dataset.station)[0]?.guest.deadline;
-      station.toggleAttribute('data-urgent', time != null && time - shift.elapsed <= 8);
-    }
-    for (const guide of board.querySelectorAll('[data-service-guide]')) {
-      const queue = roleQueue(guide.dataset.serviceGuide);
-      const next = queue[0];
-      if (!next) continue;
-      const time = Math.max(0, Math.ceil(next.guest.deadline - shift.elapsed));
-      const meter = guide.querySelector('[data-guide-time]');
-      if (meter && meter.textContent !== time + 's') meter.textContent = time + 's';
-      guide.dataset.urgent = String(time <= 8);
-      rush ||= time <= 8;
-    }
-    board.dataset.rush = String(rush);
-    const area = board.querySelector('[data-activity]');
-    const job = roster.get(focused);
-    const card = board.querySelector('.service-workcard');
-    card?.classList.toggle(
-      'service-urgent',
-      Boolean(job && job.guest.deadline - shift.elapsed <= 8),
-    );
-    if (area && job && !cookingFinish) {
-      const current = serviceJob(shift, job.guest)?.activity;
-      paintServiceActivity(area, current, gesture?.mode === 'activity');
-    }
-  }
-
-  function selectGuest(id, keyboard = false) {
-    const job = roster.get(id);
-    if (!job) return;
-    clearInput();
-    clearCookingFinish();
-    if (tryAutoService(shift, id)) {
-      focused = null;
-      render();
-      save();
-      playCue(job.phase === 'pay' ? 'service-coin' : 'service-done');
-      feedback('自动完成', 'good');
+    if (!shift) return;
+    if (shift.activeMiniGame && board.querySelector('[data-activity]')) {
+      const area = board.querySelector('[data-activity]');
+      paintServiceActivity(area, shift.activeMiniGame.activity, Boolean(gesture));
+      syncTimersAndHud();
       return;
     }
-    focused = id;
-    render();
-    if (board.clientWidth <= 650)
-      board.querySelector('.service-floor').scrollIntoView({ block: 'nearest' });
-    if (keyboard) board.querySelector('.service-workcard header')?.focus({ preventScroll: true });
-  }
+    const front = staffMember('front');
+    const cook = staffMember('cook');
+    const frontLv = shift.staffLevels?.front || 0;
+    const cookMod = chefCookModForShift(shift);
+    const aleGold = 6 + (shift.facilities?.barrel || 0) * 3;
+    const comboMult = (1 + Math.min(0.6, shift.combo * 0.06)).toFixed(2);
+    const feverPct =
+      shift.feverLeft > 0 ? Math.round((shift.feverLeft / 10) * 100) : Math.round(shift.fever);
 
-  function save() {
-    savedAt = shift.elapsed;
-    revision = shift.revision;
-    context.generation.save();
-  }
-
-  function paint(time) {
-    if (!shift || !board.open) return;
-    const seconds = (time - last) / 1000;
-    advanceService(shift, seconds);
-    last = time;
-    if (
-      gesture?.mode === 'activity' &&
-      ['heat', 'pour', 'catch', 'balance', 'sear'].includes(gesture.kind)
-    ) {
-      activityInput(gesture, 'hold', gesture.point, seconds);
-    } else if (!gesture && !cookingFinish) {
-      const area = board.querySelector('[data-activity="heat"]');
-      const guest = roster.get(focused)?.guest;
-      if (area && guest?.activity?.recipe === 2) {
-        const point = { x: guest.activity.heat, y: 0.81 };
-        activityInput(
-          { guest: guest.id, kind: 'heat', area, point, start: point },
-          'idle',
-          point,
-          seconds,
-        );
-      }
-    }
-    if (shift.revision !== revision) {
-      render();
-      save();
-    } else {
-      map.paint(shift, time);
-      meters();
-      if (shift.elapsed - savedAt >= 5) save();
-    }
-    if (!shift.finished) frame = requestAnimationFrame(paint);
-  }
-
-  function choose(id, choice, target) {
-    const job = roster.get(id);
-    if (!job) return false;
-    focused = id;
-    const phase = job.guest.phase;
-    const ok = performService(shift, id, choice, target);
-    if (job.guest.phase !== phase || !shift.guests.includes(job.guest)) focused = null;
-    render();
-    save();
-    if (ok) {
-      playCue(phase === 'pay' ? 'service-coin' : 'service-done');
-      feedback(phase === 'pay' ? '收账' : '记下', 'good');
-    } else {
-      playCue('service-fail');
-      feedback('差一点', 'bad');
-      shakeCard();
-    }
-    return ok;
-  }
-
-  function clearCookingFinish() {
-    clearTimeout(cookingFinish);
-    cookingFinish = 0;
-  }
-
-  function clearInput() {
-    gesture = null;
-    picked = null;
-    drag.reset();
+    board.innerHTML = `<header class="ls-hud">
+      <div class="ls-clock">
+        <div class="ls-clock-top">
+          <span id="service-title">${shift.tutorial ? '试营业' : `第 ${shift.day} 夜`} · ${shift.weather.badge} ${escapeText(shift.weather.name)}</span>
+          <b data-live-stat="clock">${Math.max(0, Math.ceil(shift.duration - shift.elapsed))}s</b>
+        </div>
+        <div class="ls-clock-bar"><i data-live-stat="clock-bar" style="width:${Math.min(100, (shift.elapsed / shift.duration) * 100)}%"></i></div>
+      </div>
+      <div class="ls-kpi"><small>今夜金币</small><b data-live-stat="gold" style="color:#ffe484">${shift.earnedGold} G</b></div>
+      <div class="ls-kpi"><small>知名度</small><b data-live-stat="rep" style="color:#9fe0a8">+${shift.repGain}</b></div>
+      <div class="ls-kpi"><small>出餐</small><b data-live-stat="served">${shift.servedCount}</b></div>
+      <div class="ls-kpi" title="仅可在酒馆营业内失败重掷"><small>命运骰</small><b data-live-stat="fate" style="color:#d8c4ff">${shift.fateTokens}</b></div>
+      ${shift.combo >= 2 ? `<div class="ls-combo">${shift.combo} 连击 · ×${comboMult}</div>` : ''}
+      <button type="button" class="ls-fever-btn ${shift.fever >= 100 ? 'ready' : ''} ${shift.feverLeft > 0 ? 'active' : ''}" data-live="fever">
+        <i style="width:${feverPct}%"></i>
+        <span>${shift.feverLeft > 0 ? `🔥 狂欢中 ${Math.ceil(shift.feverLeft)}s` : shift.fever >= 100 ? '✦ 敲响狂欢铃！' : `狂欢 ${feverPct}%`}</span>
+      </button>
+      <button type="button" class="ls-hud-btn" data-live="speed">${speed === 1 ? '1.0×' : '1.4×'}</button>
+      <button type="button" class="ls-hud-btn" data-live="end">打烊</button>
+    </header>
+    <div class="ls-floor">
+      <section class="ls-queue-col tv-panel" aria-label="门口迎宾与酒桶">
+        <div class="ls-staff-strip">
+          ${front ? `<img src="${escapeText(portraitUrl(front.combat))}" alt="">` : ''}
+          <div><strong>前台 · ${escapeText(front?.setting.name || '未指派')}</strong><small>等候 +${serviceWaitBonus(frontLv)}s · 自动 ${serviceAutoChance(frontLv)}%</small></div>
+        </div>
+        <div class="ls-col-cap"><span>◆ 门口候客 (${shift.queue.length}/4)</span><small>点击入座</small></div>
+        <div class="ls-queue-list">${queueHtml()}</div>
+        <button type="button" class="ls-keg-btn" data-live="ale" ${shift.kegCd > 0 ? 'disabled' : ''}>
+          <span>🍺</span>
+          <div><strong>${shift.kegCd > 0 ? `酿桶加压 ${shift.kegCd.toFixed(1)}s` : '敬杯鲜麦酒'}</strong>
+          <small>安抚最急客 +7s · +${aleGold} G</small></div>
+        </button>
+      </section>
+      <section class="ls-hall" aria-label="酒馆大堂">
+        ${
+          shift.activeEvent
+            ? `<button type="button" class="ls-alert" data-live="event-open"><strong>${shift.activeEvent.def.badge} 突发事件：${escapeText(shift.activeEvent.def.title)}</strong><span>🎲 2D6 检定</span></button>`
+            : `<div class="ls-hall-top"><span>热销：${shift.weather.hotTags.map((t) => `<em class="tv-tag hot">${escapeText(t)} +${Math.round(shift.weather.tagBonus * 100)}%</em>`).join('')}</span><small>${shift.lastAutoProc ? escapeText(shift.lastAutoProc.note) : '点击餐桌迎宾 · 点单 · 上菜 · 收银'}</small></div>`
+        }
+        <div class="ls-tables">${tablesHtml()}</div>
+        <div class="ls-crew-bar">
+          ${Object.entries(SERVICE_ROLES)
+            .map(([role, label]) => {
+              const m = staffMember(role);
+              const lv = shift.staffLevels?.[role] || 0;
+              return `<div class="ls-crew-pill ${shift.lastAutoProc?.role === role ? 'proc' : ''}"><span>${escapeText(label)}</span><b>${escapeText(m?.setting.name || '—')}</b><small>${role === 'cook' ? `火候${formatMod(cookMod)}` : `自动${serviceAutoChance(lv)}%`}</small></div>`;
+            })
+            .join('')}
+        </div>
+      </section>
+      <section class="ls-kitchen tv-panel" aria-label="后厨灶台与传菜口">
+        <div class="ls-staff-strip">
+          ${cook ? `<img src="${escapeText(portraitUrl(cook.combat))}" alt="">` : ''}
+          <div><strong>主厨 · ${escapeText(cook?.setting.name || '未指派')}</strong><small>火候 2D6 ${escapeText(formatMod(cookMod))} · 可亲手小游戏精烹</small></div>
+          ${shift.orders.length ? `<span class="ls-pending-badge">待烹 ${shift.orders.length}</span>` : ''}
+        </div>
+        <div class="ls-stoves">${stovesHtml()}</div>
+        <div class="ls-col-cap"><span>◆ 出菜传菜口 (${shift.plates.length})</span><small>点击立即上桌</small></div>
+        <div class="ls-pass">
+          ${
+            shift.plates.length
+              ? shift.plates
+                  .slice(0, 4)
+                  .map((p) => {
+                    const dish = SERVICE_CATALOG_MAP[p.recipeId];
+                    const [qLabel, qColor] = qualityBadge(p.quality);
+                    return `<button type="button" class="ls-plate" data-live-plate="${p.uid}">
+                      <span class="ls-plate-art">${dishArt(dish)}</span>
+                      <div><b style="color:${qColor}">${qLabel}</b> <strong>${escapeText(dish?.name || '')}</strong><small>送往 ${p.tableIdx + 1} 号桌</small></div>
+                      <span>上菜</span>
+                    </button>`;
+                  })
+                  .join('')
+              : '<div class="ls-empty-box">出锅料理呈放于此 · 亲手小游戏或火候检定可产出极品加价！</div>'
+          }
+        </div>
+        ${
+          shift.sigMenu.length
+            ? `<div class="ls-pantry-strip"><strong>特色菜可做：</strong>${shift.sigMenu
+                .map((id) => {
+                  const dish = SERVICE_CATALOG_MAP[id];
+                  if (!dish) return '';
+                  const left = liveCraftableCount(dish, shift.pantry);
+                  return `<span class="${left > 0 ? 'ok' : 'out'}">${escapeText(dish.name)} ×${left}</span>`;
+                })
+                .join('')}</div>`
+            : ''
+        }
+      </section>
+    </div>
+    <div class="ls-float-layer" aria-hidden="true"></div>
+    <div class="ls-modal-host" data-modal-key="${escapeText(modalKeyForShift())}">${modalMarkup()}</div>`;
+    syncTimersAndHud();
   }
 
   function normalized(area, event) {
-    const clamp = (value) => Math.max(0, Math.min(1, value));
+    const clamp = (v) => Math.max(0, Math.min(1, v));
     const svg = area.querySelector('[data-cook-art]');
     const matrix = svg?.getScreenCTM();
     if (matrix) {
@@ -415,200 +486,238 @@ export function createServiceBoard(context, closeShift) {
     };
   }
 
-  function showCookingFinish(area, activity) {
-    paintServiceActivity(area, activity, false);
-    area.setAttribute('data-complete', '');
-    cookingFinish = window.setTimeout(
-      () => {
-        cookingFinish = 0;
-        if (shift && board.open) render();
-      },
-      matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 420,
-    );
+  function tick(now) {
+    if (!shift || !board.open) return;
+    const rawDt = Math.min(0.2, Math.max(0, (now - lastTick) / 1000)) * speed;
+    lastTick = now;
+    const prevKey = `${shift.queue.length}:${shift.tables.map((t) => t.state).join()}:${shift.stoves.map((s) => `${s.status}${Math.floor(s.progress * 10)}`).join()}:${shift.plates.length}:${shift.finished}:${Boolean(shift.activeEvent)}`;
+    advanceLiveService(shift, rawDt);
+    const nextKey = `${shift.queue.length}:${shift.tables.map((t) => t.state).join()}:${shift.stoves.map((s) => `${s.status}${Math.floor(s.progress * 10)}`).join()}:${shift.plates.length}:${shift.finished}:${Boolean(shift.activeEvent)}`;
+    if (prevKey !== nextKey || shift.elapsed - savedAt >= 5) {
+      render();
+      if (shift.elapsed - savedAt >= 5) save();
+    } else {
+      syncTimersAndHud();
+      if (!shift.finished) {
+        const bars = [...board.querySelectorAll('.ls-queue-list .ls-pbar i')];
+        shift.queue.forEach((g, idx) => {
+          if (bars[idx]) {
+            const pct = Math.max(0, Math.round((g.patience / Math.max(1, g.maxPatience)) * 100));
+            bars[idx].style.width = `${pct}%`;
+          }
+        });
+      }
+    }
+    if (!shift.finished) frame = requestAnimationFrame(tick);
   }
 
-  function activityInput(active, type, to, seconds) {
-    const guest = roster.get(active.guest)?.guest;
-    if (
-      !guest ||
-      !shift.guests.includes(guest) ||
-      shift.elapsed >= guest.deadline ||
-      serviceJob(shift, guest)?.activity?.kind !== active.kind
-    ) {
-      clearInput();
-      return;
-    }
-    const phase = guest.phase;
-    const previousError = guest.error;
-    const marksBefore = guest.activity?.marks?.length ?? 0;
-    let result;
-    const done = performServiceGesture(
-      shift,
-      guest.id,
-      active.kind,
-      {
-        type,
-        from: active.point,
-        to,
-        start: active.start,
-        seconds,
-      },
-      (frame) => {
-        result = frame;
-      },
-    );
-    const marked = (result?.state.marks?.length ?? 0) > marksBefore;
-    if (marked) playCue(cookingCues[active.kind] || 'service-tray');
-    active.point = to;
-    if (done) {
-      if (guest.phase !== phase || !shift.guests.includes(guest)) focused = null;
-      clearInput();
-      if (phase === 'cook') showCookingFinish(active.area, result);
-      render();
-      save();
+  function stepMiniGame(type, point, dt = 0) {
+    if (!shift?.activeMiniGame) return;
+    const res = inputLiveCookMiniGame(shift, {
+      type,
+      from: gesture?.point || point,
+      to: point,
+      start: gesture?.start || point,
+      seconds: dt,
+    });
+    if (!res.valid) return;
+    if (gesture) gesture.point = point;
+    const area = board.querySelector('[data-activity]');
+    if (res.done) {
+      const finalActivity = {
+        ...shift.activeMiniGame?.activity,
+        state: res.activity?.state || { progress: 1 },
+      };
+      gesture = null;
       playCue('service-done');
-      feedback('完成', 'good');
-    } else if (type === 'release') {
-      const failed = Boolean(guest.error && guest.error !== previousError);
-      clearInput();
-      render();
-      save();
-      if (failed) {
-        playCue('service-fail');
-        feedback('差一点', 'bad');
-        shakeCard();
+      if (area) {
+        paintServiceActivity(area, finalActivity, false);
+        area.setAttribute('data-complete', '');
       }
-    } else if (type !== 'idle') meters();
+      clearTimeout(cookingCloseTimer);
+      cookingCloseTimer = window.setTimeout(() => {
+        cookingCloseTimer = 0;
+        render();
+        save();
+        floatNotice('✦ 精烹出锅！★极品 ×1.35', 'gold');
+      }, 280);
+    } else if (area) {
+      paintServiceActivity(area, res.activity, Boolean(gesture));
+    }
   }
 
   context.events.on(board, 'pointerdown', (event) => {
-    if (!shift || gesture || cookingFinish || event.button !== 0) return;
     const area = event.target.closest('[data-activity]');
-    const item = event.target.closest('[data-drag-choice]');
-    if (!area && !item) return;
+    if (!area || !shift?.activeMiniGame || event.button !== 0) return;
     event.preventDefault();
-    clearInput();
+    const point = normalized(area, event);
+    gesture = {
+      id: event.pointerId,
+      area,
+      kind: area.dataset.activity,
+      start: point,
+      point,
+      trail: [point],
+      time: event.timeStamp,
+    };
     board.setPointerCapture(event.pointerId);
-    if (area) {
-      const point = normalized(area, event);
-      gesture = {
-        id: event.pointerId,
-        mode: 'activity',
-        guest: Number(area.dataset.activityFor),
-        kind: area.dataset.activity,
-        area,
-        start: point,
-        point,
-        trail: [point],
-        time: event.timeStamp,
-      };
-      if (gesture.kind !== 'cut') playCue(cookingCues[gesture.kind] || 'service-tray');
-      activityInput(gesture, 'start', point, 0);
-    } else {
-      gesture = {
-        id: event.pointerId,
-        mode: 'item',
-        guest: Number(item.dataset.serviceFor),
-        choice: item.dataset.dragChoice,
-      };
-      drag.start(item, event);
-    }
+    stepMiniGame('start', point, 0);
   });
 
   context.events.on(board, 'pointermove', (event) => {
-    if (gesture?.id !== event.pointerId) return;
-    if (gesture.mode === 'item') {
-      drag.move(event);
-      return;
+    if (!gesture || gesture.id !== event.pointerId) return;
+    const dt = Math.max(0, (event.timeStamp - gesture.time) / 1000);
+    gesture.time = event.timeStamp;
+    const point = normalized(gesture.area, event);
+    if (gesture.area.hasAttribute('data-kitchen')) {
+      gesture.trail.push(point);
+      if (gesture.trail.length > 9) gesture.trail.shift();
+      paintCookingTrail(gesture.area, gesture.trail);
     }
-    const active = gesture;
-    const points = event.getCoalescedEvents?.();
-    for (const sample of points?.length ? points : [event]) {
-      if (gesture !== active) break;
-      const seconds = active.kind === 'balance' ? (sample.timeStamp - active.time) / 1000 : 0;
-      active.time = sample.timeStamp;
-      const point = normalized(active.area, sample);
-      if (active.area.hasAttribute('data-kitchen')) {
-        active.trail.push(point);
-        if (active.trail.length > 9) active.trail.shift();
-        paintCookingTrail(active.area, active.trail);
-      }
-      activityInput(active, 'move', point, seconds);
-    }
+    stepMiniGame('move', point, dt);
   });
 
-  function release(event) {
-    if (gesture?.id !== event.pointerId) return;
-    const active = gesture;
-    if (event.type !== 'pointerup') {
-      clearInput();
-      if (active.mode === 'activity') meters();
-      return;
-    }
-    if (active.mode === 'activity') {
-      activityInput(active, 'release', normalized(active.area, event), 0);
-      return;
-    }
+  function endPointer(event) {
+    if (!gesture || gesture.id !== event.pointerId) return;
+    const point = normalized(gesture.area, event);
     gesture = null;
-    drag.release((target) => choose(active.guest, active.choice, target), event);
+    if (event.type === 'pointerup') stepMiniGame('release', point, 0);
   }
-  context.events.on(board, 'pointerup', release);
-  context.events.on(board, 'pointercancel', release);
-  context.events.on(board, 'lostpointercapture', release);
+  context.events.on(board, 'pointerup', endPointer);
+  context.events.on(board, 'pointercancel', endPointer);
 
-  function dismiss() {
-    const id = focused;
-    clearCookingFinish();
-    clearInput();
-    focused = null;
-    render();
-    board
-      .querySelector(`.service-tickets [data-service-ticket="${id}"]`)
-      ?.focus({ preventScroll: true });
-  }
-
-  context.events.on(board, 'cancel', (event) => {
-    event.preventDefault();
-    if (focused) dismiss();
-  });
   context.events.on(board, 'click', (event) => {
     if (!shift) return;
-    const button = event.target.closest('[data-service-choice]');
-    if (button) return choose(Number(button.dataset.serviceFor), button.dataset.serviceChoice);
-    const item = event.target.closest('[data-drag-choice]');
-    if (item && event.detail === 0) {
-      picked = item;
-      for (const tile of board.querySelectorAll('[data-drag-choice]'))
-        tile.setAttribute('aria-pressed', String(tile === picked));
+    const target = event.target.closest('button');
+    if (!target) return;
+    const action = target.dataset.live;
+    if (action === 'speed') {
+      speed = speed === 1 ? 1.4 : 1;
+      return render();
+    }
+    if (action === 'end') {
+      closeLiveShiftEarly(shift);
+      return render();
+    }
+    if (action === 'settle-done') {
+      const doneShift = shift;
+      close();
+      closeShift(doneShift);
       return;
     }
-    const target = event.target.closest('[data-service-dropzone]');
-    if (target && picked) {
-      const { serviceFor, dragChoice } = picked.dataset;
-      picked = null;
-      return choose(Number(serviceFor), dragChoice, target.dataset.serviceDropzone);
+    if (action === 'fever') {
+      if (triggerLiveFever(shift)) {
+        playCue('service-bell');
+        floatNotice('✦ 狂欢时间！售价 +35%', 'gold');
+        render();
+      }
+      return;
     }
-    const ticket = event.target.closest('[data-service-ticket]');
-    if (ticket) return selectGuest(Number(ticket.dataset.serviceTicket), event.detail === 0);
-    const guide = event.target.closest('[data-service-guide]');
-    if (guide) return selectGuest(Number(guide.dataset.guest), event.detail === 0);
-    if (event.target.closest('[data-service-dismiss]')) return dismiss();
-    if (event.target.closest('[data-service-end]') && shift.finished) {
-      const settled = shift;
-      close();
-      closeShift(settled);
+    if (action === 'ale') {
+      const res = pourLiveAle(shift);
+      if (res) {
+        playCue('service-pour');
+        floatNotice(`敬麦酒 +${res.gold}G`, 'gold');
+        save();
+        render();
+      }
+      return;
+    }
+    if (action === 'mg-close') {
+      closeLiveCookMiniGame(shift);
+      return render();
+    }
+    if (action === 'cook-reroll' && rerollLiveCookDc(shift)) return render();
+    if (action === 'cook-confirm') {
+      const res = confirmLiveCookDc(shift);
+      if (res) {
+        playCue('service-done');
+        floatNotice(res.quality === 'divine' ? '✦ 双六神品！×1.75' : '已盛盘出锅！', 'gold');
+        save();
+        render();
+      }
+      return;
+    }
+    if (action === 'vip-cancel') {
+      shift.vipModalTableIdx = null;
+      return render();
+    }
+    if (action === 'event-open') return render();
+    if (action === 'event-reroll' && rerollLiveEventCheck(shift)) return render();
+    if (action === 'event-confirm') {
+      const res = confirmLiveEventCheck(shift);
+      if (res) {
+        playCue(res.won ? 'service-done' : 'service-fail');
+        floatNotice(
+          res.ingName ? `获得 ${res.ingName}` : res.won ? '事件顺利化解！' : '惜败收场',
+          res.won ? 'gold' : 'bad',
+        );
+        save();
+        render();
+      }
+      return;
+    }
+    if (target.dataset.liveSeat) {
+      if (seatLiveGuest(shift, Number(target.dataset.liveSeat))) {
+        playCue('service-done');
+        save();
+        render();
+      }
+      return;
+    }
+    if (target.dataset.liveTable !== undefined) {
+      const res = clickLiveTable(shift, Number(target.dataset.liveTable));
+      if (res.action === 'pay') {
+        playCue('service-coin');
+        floatNotice(`+${res.gold} 金币`, 'gold');
+      } else if (res.action !== 'none' && res.action !== 'eating') {
+        playCue('service-done');
+      }
+      save();
+      return render();
+    }
+    if (target.dataset.liveVipPick) {
+      chooseLiveVipDish(shift, shift.vipModalTableIdx, target.dataset.liveVipPick);
+      playCue('service-done');
+      save();
+      return render();
+    }
+    if (target.dataset.liveStove !== undefined) {
+      clickLiveStove(shift, Number(target.dataset.liveStove));
+      return render();
+    }
+    if (target.dataset.liveMinigame !== undefined) {
+      clickLiveStove(shift, Number(target.dataset.liveMinigame));
+      return render();
+    }
+    if (target.dataset.liveBoost !== undefined) {
+      if (boostLiveStove(shift, Number(target.dataset.liveBoost))) {
+        playCue('service-sizzle');
+        render();
+      }
+      return;
+    }
+    if (target.dataset.livePlate) {
+      if (serveLivePlate(shift, Number(target.dataset.livePlate))) {
+        playCue('service-tray');
+        save();
+        render();
+      }
+      return;
+    }
+    if (target.dataset.liveEvOpt !== undefined) {
+      pickLiveEventOption(shift, Number(target.dataset.liveEvOpt));
+      return render();
     }
   });
 
   function close() {
     cancelAnimationFrame(frame);
-    clearTimeout(alertTimer);
+    clearTimeout(cookingCloseTimer);
+    cookingCloseTimer = 0;
+    gesture = null;
     shift = null;
-    clearCookingFinish();
-    clearInput();
-    map?.dispose();
-    map = null;
-    board.close();
+    if (board.open) board.close();
   }
 
   return {
@@ -616,25 +725,13 @@ export function createServiceBoard(context, closeShift) {
       if (shift === value && board.open) return;
       close();
       shift = value;
-      focused = null;
-      revision = shift.revision;
-      savedAt = shift.elapsed;
-      lastMissed = shift.missed;
-      lastArrived = shift.arrived;
-      wasFinished = shift.finished;
-      clearTimeout(alertTimer);
-      mount();
+      speed = 1;
+      savedAt = shift.elapsed || 0;
       board.showModal();
       playCue('service-bell');
-      map = createServiceMap(board);
-      const instance = map;
       render();
-      void instance.ready.then(() => {
-        if (map !== instance || !shift) return;
-        render();
-        last = performance.now();
-        if (!shift.finished) frame = requestAnimationFrame(paint);
-      });
+      lastTick = performance.now();
+      if (!shift.finished) frame = requestAnimationFrame(tick);
     },
     close,
     dispose() {

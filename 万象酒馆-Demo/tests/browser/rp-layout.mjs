@@ -83,13 +83,21 @@ export async function rpLayoutChecks({ browser, baseURL, output }) {
         await page.locator('#rp-scene > .rp-content').count(),
         'the narrative remains in its original scene container',
       );
-      await page.locator('[data-rp="settings"]').click();
+      await page.locator('#ledger-handle').click();
+      await page.locator('#ledger-drawer').waitFor({ state: 'visible' });
+      assert.equal(await page.locator('#ledger-retreat-btn').isVisible(), false);
+      await page.locator('#ledger-close').click();
+      await page.locator('#ledger-drawer-host').waitFor({ state: 'hidden' });
+      await page.locator('#ai-open').click();
       await page.locator('#ai-dialog').waitFor({ state: 'visible' });
-      assert.equal(await page.locator('[data-rp="retreat"]').isVisible(), false);
       await page.locator('[data-ai-tab="game"]').click();
       await page.locator('[data-generation-option="allowRetreat"]').check();
       await page.locator('#ai-close').click();
-      assert.equal(await page.locator('[data-rp="retreat"]').isVisible(), true);
+      await page.locator('#ledger-handle').click();
+      await page.locator('#ledger-drawer').waitFor({ state: 'visible' });
+      assert.equal(await page.locator('#ledger-retreat-btn').isVisible(), true);
+      await page.locator('#ledger-close').click();
+      await page.locator('#ledger-drawer-host').waitFor({ state: 'hidden' });
       if (node === 1) await page.locator('[data-rp-choice="choice-1"]').click();
       else {
         assert.equal(
@@ -188,7 +196,7 @@ export async function rpLayoutChecks({ browser, baseURL, output }) {
             rect.y + rect.height <= size.height,
         );
         const overlaps = await page.evaluate(() => {
-          const a = document.querySelector('.rp-tools').getBoundingClientRect();
+          const a = document.querySelector('.rp-header').getBoundingClientRect();
           const b = document.querySelector('.rp-content').getBoundingClientRect();
           return a.bottom > b.top && a.left < b.right && a.right > b.left;
         });
@@ -204,7 +212,7 @@ export async function rpLayoutChecks({ browser, baseURL, output }) {
         false,
         'only the scene header displays the title',
       );
-      await page.locator('[data-rp="settings"]').click();
+      await page.locator('#ai-open').click();
       await page.locator('#ai-dialog').waitFor({ state: 'visible' });
       assert.equal(await page.locator('#gal-stage').isVisible(), false);
       releaseReply();
@@ -220,7 +228,7 @@ export async function rpLayoutChecks({ browser, baseURL, output }) {
       const portrait = page.locator('.gal-cast img[data-actor="official-edith"]');
       await portrait.waitFor({ state: 'visible' });
       assert.equal(await page.locator('.gal-speaker span').textContent(), '伊蒂丝');
-      await page.locator('[data-rp="settings"]').click();
+      await page.locator('#ai-open').click();
       await page.locator('#ai-dialog').waitFor({ state: 'visible' });
       assert.equal(await page.locator('#gal-stage').isVisible(), false);
       await page.locator('#ai-close').click();
@@ -251,7 +259,7 @@ export async function rpLayoutChecks({ browser, baseURL, output }) {
       }
       if (node === 3) {
         await page.locator('.rp-boss-ready').waitFor({ state: 'visible' });
-        assert(await page.locator('[data-rp="boss"]').isVisible());
+        assert(await page.locator('[data-rp="next"]').isVisible());
         await page.setViewportSize({ width: 667, height: 375 });
         await page
           .locator('.rp-boss-ready')
@@ -260,10 +268,10 @@ export async function rpLayoutChecks({ browser, baseURL, output }) {
           );
         await page.screenshot({ path: path.join(output, 'boss-prompt-mobile.png') });
         await page.locator('[data-rp="stay"]').click();
-        const shortcut = page.locator('[data-rp="boss-shortcut"]');
-        assert(await shortcut.isVisible());
-        assert(await shortcut.isEnabled());
-        const bounds = await shortcut.boundingBox();
+        const nextBtn = page.locator('[data-rp="next"]');
+        assert(await nextBtn.isVisible());
+        assert(await nextBtn.isEnabled());
+        const bounds = await nextBtn.boundingBox();
         assert(
           bounds.x >= 0 &&
             bounds.y >= 0 &&
@@ -272,12 +280,16 @@ export async function rpLayoutChecks({ browser, baseURL, output }) {
         );
         await page.screenshot({ path: path.join(output, 'boss-shortcut-mobile.png') });
       }
-      await page.locator('[data-rp="raw"]').click();
+      await page.locator('#ledger-handle').click();
+      await page.locator('#ledger-drawer').waitFor({ state: 'visible' });
+      await page.locator('#ledger-raw-btn').click();
       await page.locator('#generation-diagnostics').waitFor({ state: 'visible' });
       assert.equal(await page.locator('#diagnostic-raw').inputValue(), rawReply);
       assert.equal(await page.locator('#diagnostic-validate').isVisible(), false);
       await page.locator('#diagnostic-close').click();
-      await page.locator('[data-rp="retreat"]').click();
+      await page.locator('#ledger-handle').click();
+      await page.locator('#ledger-drawer').waitFor({ state: 'visible' });
+      await page.locator('#ledger-retreat-btn').click();
       await page.waitForFunction(() => demo.getStatus().mode === 'inn');
       assert.deepEqual(errors, []);
       results.push({

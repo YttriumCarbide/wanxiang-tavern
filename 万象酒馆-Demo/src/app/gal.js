@@ -46,6 +46,7 @@ export function createGalPlayer(context) {
   let finishing = false;
   let transitionEpoch = 0;
   let exitAnimations = [];
+  let enterAnimation = null;
   let suspendedModal = null;
   const workspace = createGalWorkspace(panel, events, {
     show: showPanel,
@@ -58,15 +59,33 @@ export function createGalPlayer(context) {
   decorateGalButtons(panel);
   function showPanel(title) {
     transitionEpoch++;
+    enterAnimation?.cancel();
+    enterAnimation = null;
     for (const animation of exitAnimations) animation.cancel();
     exitAnimations = [];
     delete panel.dataset.leaving;
+    const wasHidden = panel.hidden;
     // A body-owned popover has no inherited dialog filter/backdrop rectangle.
     surface.hide();
     const modal = suspendedModal ? null : activeModal(document);
     (modal || document.body).append(panel);
     panel.hidden = Boolean(suspendedModal);
     document.body.classList.toggle('gal-playing', !suspendedModal);
+    if (wasHidden && !suspendedModal) {
+      const duration = matchMedia('(prefers-reduced-motion: reduce)').matches ? 1 : 320;
+      enterAnimation = panel.animate([{ opacity: 0 }, { opacity: 1 }], {
+        duration,
+        easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
+      });
+      enterAnimation.finished.then(
+        () => {
+          enterAnimation = null;
+        },
+        () => {
+          enterAnimation = null;
+        },
+      );
+    }
     sceneVisibility(true);
     part('.gal-chapter').textContent = title || '万象 · 片刻';
     const history = part('[data-gal="history"]');
@@ -75,6 +94,7 @@ export function createGalPlayer(context) {
     history.setAttribute('aria-label', label);
     history.querySelector('.gal-control-label').textContent = label;
     if (!suspendedModal) surface.show();
+    context.ledger?.syncTopLayer();
   }
   function sceneVisibility(visible) {
     for (const frame of document.querySelectorAll('#inn-frame iframe')) {
@@ -172,6 +192,7 @@ export function createGalPlayer(context) {
     part('.gal-cast').replaceChildren();
     part('.gal-history').hidden = true;
     stage = [];
+    context.ledger?.syncTopLayer();
   }
   async function animateExit() {
     stop();

@@ -4,6 +4,7 @@
  * @property {ReturnType<typeof import('../shared/asset-store.js').createAssetStore>} assets
  * @property {ReturnType<typeof import('./asset-preload.js').createPortraitPreloader>} assetPreloader
  * @property {ReturnType<typeof import('./gal.js').createGalPlayer>} gal
+ * @property {ReturnType<typeof import('./dice-stage.js').createDiceStage>} dice
  * @property {ReturnType<typeof import('./battle-reading.js').createBattleReading>} battleReading
  * @property {ReturnType<typeof import('./workshop.js').createWorkshop>} workshop
  * @property {ReturnType<typeof import('./generation-access.js').createGenerationAccess>} generationAccess
@@ -17,6 +18,7 @@
  * @property {ReturnType<typeof import('./audio.js').createAudio>} audio
  * @property {ReturnType<typeof import('./roster.js').createRoster>} roster
  * @property {ReturnType<typeof import('./generation.js').createGeneration>} generation
+ * @property {ReturnType<typeof import('./departure.js').createDeparture>} [departure]
  * @property {ReturnType<typeof import('./destinations.js').createDestinations>} destinations
  * @property {ReturnType<typeof import('./shell.js').createShell>} shell
  * @property {ReturnType<typeof import('./journey.js').createJourney>} journey

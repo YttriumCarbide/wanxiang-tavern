@@ -8,6 +8,7 @@ import { portraitUrl } from '../catalog.js';
 import { ability } from '../data.js';
 import { applyEquipment } from '../equipment.js';
 import { finalPassiveText, finalSkillText } from '../skill-text.js';
+import { DC_ATTRIBUTES, attrMod, formatMod, normalizeDcAttrs } from '../dc.js';
 
 const targets = {
   enemy: '一名敌人',
@@ -68,6 +69,7 @@ export function characterSheet(entry, equipment = [], options = {}) {
         : entry,
     ),
     combat = applyEquipment(grownCombat(entry), equipment);
+  const dcAttrs = normalizeDcAttrs(entry.dcAttrs, entry);
   const growth = restoreGrowth(entry.growth, entry.id);
   const isPrep = options.mode === 'preparation';
   const attack = ability(combat.id, 'attack', { [combat.id]: combat });
@@ -160,6 +162,17 @@ export function characterSheet(entry, equipment = [], options = {}) {
             <dd>${combat.limit}</dd>
           </div>
         </dl>
+        <div class="identity-dc-grid" aria-label="六维属性与检定修正">
+          ${DC_ATTRIBUTES.map((attr) => {
+            const val = dcAttrs[attr.key];
+            const mod = formatMod(attrMod(val));
+            return html`<div class="identity-dc-item" title="${attr.desc}">
+              <span>${attr.label}</span>
+              <strong>${val}</strong>
+              <small>${mod}</small>
+            </div>`;
+          }).join('')}
+        </div>
       </div>
     </aside>
     <div class="character-dossier">${dossierContent}</div>

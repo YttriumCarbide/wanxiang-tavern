@@ -14,6 +14,14 @@ export async function workshopChecks({ browser, baseURL, output }) {
   editorPage.on('pageerror', (error) => errors.push(error.message));
   let harness;
   async function openWorkshop() {
+    const handle = await page.locator('#ledger-handle').boundingBox();
+    await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(Math.max(10, handle.x - 140), handle.y + handle.height / 2, {
+      steps: 6,
+    });
+    await page.mouse.up();
+    await page.locator('#ledger-drawer-host.is-open').waitFor();
     await page.locator('#workshop-open').click();
     await page.locator('#workshop-dialog[open]:not([data-loading])').waitFor();
   }
@@ -289,7 +297,7 @@ export async function workshopChecks({ browser, baseURL, output }) {
     await page.route('**/__demo/workshop-catalog', (route) =>
       route.fulfill({ status: 500, json: { error: '工坊配置暂时无法读取' } }),
     );
-    await page.locator('#workshop-open').click();
+    await openWorkshop();
     await page.locator('.ws-loading').filter({ hasText: '工坊配置暂时无法读取' }).waitFor();
     await page.locator('[data-ws-close]').click();
     assert.equal((await page.evaluate(() => demo.getLibrary())).workshop.items[customId], 1);

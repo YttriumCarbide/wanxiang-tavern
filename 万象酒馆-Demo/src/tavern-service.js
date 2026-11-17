@@ -19,6 +19,7 @@ import {
   startServiceWalk,
 } from './service-walk.js';
 import { applyServiceGesture, serviceActivity } from './service-gestures.js';
+import { restoreLiveServiceShift } from './service-live.js';
 import { serviceSpecial } from './service-specials.js';
 import {
   expectedServiceTables,
@@ -655,6 +656,7 @@ export function performServiceGesture(shift, guestId, kind, input, onFrame) {
 }
 
 export function restoreServiceShift(raw) {
+  if (raw?.mode === 'live') return restoreLiveServiceShift(raw);
   if (raw.version === 4 || raw.version === 3) return raw;
   if (raw.version === 2) {
     const shift = { ...raw, version: 3, seed: 0, revision: raw.revision || 0 };

@@ -24,6 +24,8 @@ export function serviceSeed(text) {
   return (hash ^ (hash >>> 16)) >>> 0;
 }
 
+const FACILITY_KEYS = Object.freeze(['stove', 'table', 'barrel', 'lamp', 'dice']);
+
 export function restoreServiceGrowth(raw) {
   const training = Object.fromEntries(
     Object.entries(raw?.training || {}).map(([id, roles]) => [
@@ -36,6 +38,15 @@ export function restoreServiceGrowth(raw) {
       ),
     ]),
   );
+  const facilities = Object.fromEntries(
+    FACILITY_KEYS.map((key) => [key, bounded(raw?.facilities?.[key], 5)]),
+  );
+  const regMenu = Array.isArray(raw?.regMenu)
+    ? [...new Set(raw.regMenu.filter((id) => typeof id === 'string' && id.trim()))].slice(0, 6)
+    : null;
+  const sigMenu = Array.isArray(raw?.sigMenu)
+    ? [...new Set(raw.sigMenu.filter((id) => typeof id === 'string' && id.trim()))].slice(0, 6)
+    : null;
   return {
     reputation: bounded(raw?.reputation, SERVICE_REPUTATION_MAX),
     training,
@@ -43,6 +54,9 @@ export function restoreServiceGrowth(raw) {
     specialties: Object.fromEntries(
       Object.entries(raw?.specialties || {}).map(([id, count]) => [id, bounded(count, 1000)]),
     ),
+    facilities,
+    ...(regMenu ? { regMenu } : {}),
+    ...(sigMenu ? { sigMenu } : {}),
   };
 }
 

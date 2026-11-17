@@ -7,6 +7,7 @@ import {
   explorationSpec,
   completeExploration,
   explorationPreview,
+  unlockDungeonMap,
 } from '../src/exploration.js';
 import { REGIONS } from '../src/content/regions.js';
 import { DEFINITIONS } from '../src/data.js';
@@ -14,7 +15,7 @@ import { newExpedition, beginEncounter, completeEncounter, chooseRest } from '..
 import { generationInput, generationRequest } from '../server/prompts.mjs';
 import { scriptOutputSchema } from '../src/ai/script-schema.js';
 import { readGenerationResult } from '../server/generation-result.mjs';
-import { newLibrary } from '../src/ai/library.js';
+import { newLibrary, restoreLibrary } from '../src/ai/library.js';
 
 test('regions preserve independent progress and base worlds continue after six sites', () => {
   const routes = newExploration(817);
@@ -229,4 +230,24 @@ test('base worlds retain seventh routes and hidden art routes retain history', (
     assert.deepEqual(route.history, routes[map].history);
   }
   assert.deepEqual(restoreExploration(restored), restored);
+});
+
+test('dungeon gate unlocks start empty and unlock idempotently as marked sites are visited', () => {
+  const lib = newLibrary();
+  assert.deepEqual(lib.unlockedDungeons, []);
+  assert.equal(unlockDungeonMap(lib, 'ruins'), true);
+  assert.equal(unlockDungeonMap(lib, 'ruins'), false);
+  assert.equal(unlockDungeonMap(lib, 'unknown-site'), false);
+  assert.deepEqual(lib.unlockedDungeons, ['ruins']);
+
+  const unprogressedLegacy = { ...lib };
+  delete unprogressedLegacy.unlockedDungeons;
+  assert.deepEqual(restoreLibrary(unprogressedLegacy).unlockedDungeons, []);
+
+  const clearedRuinsLegacy = structuredClone(unprogressedLegacy);
+  completeExploration(
+    clearedRuinsLegacy.exploration,
+    clearedRuinsLegacy.exploration.ruins.frontier[0],
+  );
+  assert.deepEqual(restoreLibrary(clearedRuinsLegacy).unlockedDungeons, ['ruins']);
 });

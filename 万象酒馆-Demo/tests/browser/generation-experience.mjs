@@ -297,6 +297,19 @@ export async function generationExperienceChecks({ browser, baseURL, output }) {
     await page.locator('#chat-send').click();
     await page.locator('[data-request-stop="chat"]').waitFor();
     await chatStarted;
+    assert.equal(await page.locator('#saves-open').isDisabled(), true);
+    const handleBox = await page.locator('#ledger-handle').boundingBox();
+    await page.mouse.move(handleBox.x + handleBox.width / 2, handleBox.y + handleBox.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(Math.max(10, handleBox.x - 140), handleBox.y + handleBox.height / 2, {
+      steps: 6,
+    });
+    await page.mouse.up();
+    await page.locator('#ledger-drawer-host.is-open').waitFor();
+    await page.locator('[data-ledger-fg-api]').waitFor({ state: 'visible' });
+    assert.equal(await page.locator('#ledger-drawer #workshop-open').isDisabled(), false);
+    await page.locator('#ledger-close').click();
+    await page.locator('#ledger-drawer').waitFor({ state: 'hidden' });
     const workshopButton = page.locator('[data-workshop-wait="chat"]');
     assert.equal(await workshopButton.count(), 1);
     assert.equal(await page.locator('[data-request-arcade]').count(), 0);

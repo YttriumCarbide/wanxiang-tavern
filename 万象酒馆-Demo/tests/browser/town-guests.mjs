@@ -36,7 +36,9 @@ export async function townGuestChecks({ browser, baseURL, output }) {
         .locator('canvas')
         .evaluate(() => window.streetPreview.visitors().characters);
       for (const actor of actors) seen.add(actor.key);
-      if (index < 5) await page.locator('#scene-visitors-refresh').click();
+      if (index < 5) {
+        await page.locator('#scene-visitors-refresh').click();
+      }
     }
     for (const id of ['libet', 'lumi', 'yuto-nakashi'])
       assert(seen.has(id), id + ' appears before recruitment');

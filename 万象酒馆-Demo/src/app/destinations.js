@@ -18,11 +18,19 @@ import { canRecall } from '../recollections.js';
 /** Environment browsing and a persistent, pannable tree of complete journeys. */
 export function createDestinations(context) {
   const { session, events } = context;
+  const unlockedBaseWorlds = () => {
+    const unlocked = Array.isArray(session.ai.library.unlockedDungeons)
+      ? session.ai.library.unlockedDungeons
+      : [];
+    return BASE_WORLDS.filter((id) => unlocked.includes(id));
+  };
   const maps = () =>
     learning(session.ai.library) || session.ai.library.campaign?.tutorial === 'depart-again'
-      ? ['ruins']
+      ? unlockedBaseWorlds().includes('ruins')
+        ? ['ruins']
+        : ['singularity']
       : [
-          ...BASE_WORLDS,
+          ...unlockedBaseWorlds(),
           ...(session.ai.library.worlds || [])
             .filter(
               (world) =>
@@ -33,14 +41,17 @@ export function createDestinations(context) {
           'singularity',
         ];
   const nodesFor = (map) =>
-    learning(session.ai.library)
-      ? session.ai.library.exploration.ruins.frontier.slice(0, 1)
-      : availableExplorations(session.ai.library.exploration[map] || { frontier: [] });
+    map === 'singularity'
+      ? []
+      : learning(session.ai.library)
+        ? (session.ai.library.exploration.ruins?.frontier || []).slice(0, 1)
+        : availableExplorations(session.ai.library.exploration[map] || { frontier: [] });
   const regionFor = (id) =>
     id === 'singularity'
       ? {
           name: '多元奇点',
-          description: '前往尚未记录的世界。写下目的地与愿望，让奇点构筑一条新的道路。',
+          description:
+            '前往尚未记录的世界，或在世界地图踏足有标识的遗迹以纳入副本之门。写下目的地与愿望，让奇点构筑新的道路。',
           sites: [],
         }
       : worldRegion(session.ai.library, id);
@@ -438,25 +449,33 @@ export function createDestinations(context) {
     if (session.runtime.needsStart) return context.onboarding.open();
     if (context.daily && !context.daily.allowDungeon()) return;
     if (context.onboarding && !context.onboarding.allowPortal('script')) return;
-    if (learning(session.ai.library) || !maps().includes(session.journey.regionMap))
-      session.journey.regionMap = 'ruins';
-    stripPage = Math.floor(maps().indexOf(session.journey.regionMap) / 5);
-    session.journey.selectedNode = structuredClone(recommended(session.journey.regionMap) || null);
-    if (learning(session.ai.library)) session.journey.selectedNode.tutorial = true;
+    const availableMaps = maps();
+    if (
+      (learning(session.ai.library) && availableMaps.includes('ruins')) ||
+      !availableMaps.includes(session.journey.regionMap)
+    ) {
+      session.journey.regionMap = availableMaps.includes('ruins') ? 'ruins' : availableMaps[0];
+    }
+    stripPage = Math.max(0, Math.floor(availableMaps.indexOf(session.journey.regionMap) / 5));
+    session.journey.selectedNode =
+      session.journey.regionMap === 'singularity'
+        ? null
+        : structuredClone(recommended(session.journey.regionMap) || null);
+    if (learning(session.ai.library) && session.journey.selectedNode)
+      session.journey.selectedNode.tutorial = true;
     dialog.showModal();
     setStage('region');
   }
   function openDiscovery(id) {
     const library = session.ai.library;
-    if (
-      dialog.open ||
-      session.runtime.mode !== 'inn' ||
-      session.ai.busy ||
-      !library.atlasDiscoveries.some((entry) => entry.id === id)
-    )
-      return;
+    const canOpen =
+      library.atlasDiscoveries.some((entry) => entry.id === id) ||
+      library.unlockedDungeons?.includes(id);
+    if (dialog.open || session.runtime.mode !== 'inn' || session.ai.busy || !canOpen) return;
     session.journey.regionMap = id;
     session.journey.selectedNode = structuredClone(recommended(id) || null);
+    if (learning(library) && session.journey.selectedNode)
+      session.journey.selectedNode.tutorial = true;
     dialog.showModal();
     setStage('route');
     dialog.dataset.discovery = 'true';

@@ -7,6 +7,38 @@ import { restoreServiceGrowth, SERVICE_ROLES } from './service-progression.js';
 import { restoreOverlandRun } from './overland-travel.js';
 
 export const DAILY_PERIODS = Object.freeze(['上午', '中午', '下午', '夜晚']);
+export const TAVERN_START_DATE = Object.freeze({ year: 1463, month: 8, day: 24 });
+
+/** Map 1-based tavern day count onto the canonical Fangshen calendar starting 1463-08-24. */
+export function dailyCalendarDate(dayNumber = 1) {
+  const safeDay = Number.isInteger(dayNumber) && dayNumber > 0 ? dayNumber : 1;
+  const stamp = new Date(
+    Date.UTC(
+      TAVERN_START_DATE.year,
+      TAVERN_START_DATE.month - 1,
+      TAVERN_START_DATE.day + safeDay - 1,
+    ),
+  );
+  const year = stamp.getUTCFullYear();
+  const month = stamp.getUTCMonth() + 1;
+  const day = stamp.getUTCDate();
+  return {
+    year,
+    month,
+    day,
+    label: `${year}年${month}月${day}日`,
+    short: `${month}月${day}日`,
+    dot: `${year}.${month}.${day}`,
+  };
+}
+
+/** Format persisted daily state (`day`, `period`) as an in-world date and time of day. */
+export function dailyDateTimeText(daily) {
+  const period = DAILY_PERIODS[daily?.period];
+  return Number.isInteger(daily?.day) && daily.day > 0 && period
+    ? `${dailyCalendarDate(daily.day).label} · ${period}`
+    : '';
+}
 export const DAILY_ACTIONS = Object.freeze({
   dungeon: { name: '下副本', ap: 2, glyph: '⚔' },
   service: { name: '营业', ap: 1, glyph: '✦' },

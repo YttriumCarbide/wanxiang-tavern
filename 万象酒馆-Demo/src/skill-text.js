@@ -1,4 +1,5 @@
 import { BUFFS } from './data.js';
+import { gemBonusText } from './content/gems.js';
 import { resourceText } from './resource-text.js';
 import { TRIGGER_EVENTS, TRIGGER_TARGETS } from './triggers.js';
 
@@ -172,6 +173,10 @@ export function finalPassiveText(skill, markName = '标记') {
 
 /** Single authoritative readable description for any equipment template or owned instance. */
 export function equipmentDescription(equipment = {}) {
+  if (equipment.dcBonus && Object.keys(equipment.dcBonus).length) {
+    const bonusText = gemBonusText(equipment.dcBonus);
+    if (bonusText) return bonusText;
+  }
   const statText = formatEquipmentStats(equipment.stats || {});
   const ruleText = equipment.rules?.length ? finalPassiveText({ rules: equipment.rules }) : '';
   return [statText, ruleText].filter(Boolean).join('；');

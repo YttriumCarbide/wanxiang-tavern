@@ -7,7 +7,14 @@ export function checkOutputSchema(value, schema, path = 'output') {
   };
   if (schema.anyOf) {
     const errors = [];
-    for (const candidate of schema.anyOf) {
+    const isPlainObject = Boolean(value && typeof value === 'object' && !Array.isArray(value));
+    const ordered = isPlainObject
+      ? [
+          ...schema.anyOf.filter((c) => c?.type === 'object'),
+          ...schema.anyOf.filter((c) => c?.type !== 'object'),
+        ]
+      : schema.anyOf;
+    for (const candidate of ordered) {
       try {
         checkOutputSchema(value, candidate, path);
         return;

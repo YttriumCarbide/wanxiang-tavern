@@ -86,17 +86,29 @@ function novelV4Schema() {
       items: array(
         {
           anyOf: [
-            string(30),
             object({
-              name: string(30),
-              encounter: { type: 'integer', minimum: 0, maximum: FINAL_ENCOUNTER },
-            }),
-            object({
-              name: string(30),
-              description: string(20),
+              name: string(40),
+              description: string(120),
+              category: string(30),
               value: { type: 'integer', minimum: 0, maximum: 10000 },
               encounter: { type: 'integer', minimum: 0, maximum: FINAL_ENCOUNTER },
             }),
+            object({
+              name: string(40),
+              description: string(120),
+              value: { type: 'integer', minimum: 0, maximum: 10000 },
+              encounter: { type: 'integer', minimum: 0, maximum: FINAL_ENCOUNTER },
+            }),
+            object({
+              name: string(40),
+              encounter: { type: 'integer', minimum: 0, maximum: FINAL_ENCOUNTER },
+            }),
+            object({
+              name: string(40),
+              reference: { type: 'boolean' },
+              encounter: { type: 'integer', minimum: 0, maximum: FINAL_ENCOUNTER },
+            }),
+            string(40),
           ],
         },
         0,
@@ -121,23 +133,49 @@ function novelV4Schema() {
   return schema;
 }
 
-export function scriptOutputSchema() {
+function scriptV5Schema({ requireTheater = true, allowTags = false } = {}) {
   const schema = novelV4Schema();
   schema.properties.schemaVersion.const = 5;
-  delete schema.properties.data.properties.tags;
   schema.properties.data.required = schema.properties.data.required.filter((key) => key !== 'tags');
-  schema.properties.data.properties.adventure = adventureDefinitionSchema();
-  schema.properties.data.required.push('adventure');
+  if (!allowTags) {
+    delete schema.properties.data.properties.tags;
+  } else {
+    schema.properties.data.properties.tags = array(string(30), 0, 12);
+  }
+  const data = schema.properties.data;
+  data.properties.adventure = adventureDefinitionSchema();
+  data.properties.prologue = string(1200);
+  data.properties.battleLines = {
+    type: 'object',
+    additionalProperties: false,
+    properties: {
+      bossIntro: string(160),
+      partyReply: string(160),
+      bossDeclaration: string(160),
+      bossEnraged: string(160),
+      bossDefeat: string(160),
+    },
+    required: ['bossIntro', 'partyReply', 'bossEnraged', 'bossDefeat'],
+  };
+  data.properties.epilogueGal = string(6000);
+  data.properties.epilogueProse = string(1000);
+  data.required.push('adventure');
+  if (requireTheater) {
+    data.required.push('prologue', 'battleLines', 'epilogueGal', 'epilogueProse');
+  }
   return schema;
 }
 
-/** Existing v2 responses and saved chapters remain readable during preset migration. */
+export function scriptOutputSchema() {
+  return scriptV5Schema({ requireTheater: true, allowTags: false });
+}
+
+/** Existing v2/v3/v4/early-v5 responses and saved chapters remain readable during migration. */
 export function scriptInputSchema(partyIds = []) {
-  const current = scriptOutputSchema();
-  current.properties.data.properties.tags = array(string(30), 0, 12);
   return {
     anyOf: [
-      current,
+      scriptV5Schema({ requireTheater: true, allowTags: true }),
+      scriptV5Schema({ requireTheater: false, allowTags: true }),
       novelV4Schema(),
       novelV3Schema(),
       legacyScriptSchema(partyIds, { acceptLegacyIndex: true }),

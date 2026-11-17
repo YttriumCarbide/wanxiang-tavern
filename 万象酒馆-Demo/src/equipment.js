@@ -7,6 +7,60 @@ import {
 } from './triggers.js';
 import { combatScale, scaleMoveEffects } from './combat-scale.js';
 import { encounterLevel } from './enemy-growth.js';
+import { findGemById, gemBonusText } from './content/gems.js';
+
+export const EQUIPMENT_CATEGORIES = Object.freeze({
+  weapon: Object.freeze({ id: 'weapon', label: '武器', slot: 0, icon: '⚔' }),
+  armor: Object.freeze({ id: 'armor', label: '护甲', slot: 1, icon: '🛡' }),
+  pendant: Object.freeze({ id: 'pendant', label: '挂坠', slot: 2, icon: '◈' }),
+  gem: Object.freeze({ id: 'gem', label: '宝石', slot: 3, icon: '❖' }),
+});
+
+export const EQUIPMENT_SLOT_ORDER = Object.freeze(['weapon', 'armor', 'pendant', 'gem']);
+export const EQUIPMENT_CRAFT_CATEGORIES = Object.freeze(['weapon', 'armor', 'pendant']);
+
+const CATEGORY_ALIASES = Object.freeze({
+  weapon: 'weapon',
+  武器: 'weapon',
+  armor: 'armor',
+  护甲: 'armor',
+  防具: 'armor',
+  pendant: 'pendant',
+  挂坠: 'pendant',
+  饰品: 'pendant',
+  gem: 'gem',
+  宝石: 'gem',
+});
+
+export function normalizeEquipmentCategory(rawCategory) {
+  if (typeof rawCategory !== 'string') return null;
+  const trimmed = rawCategory.trim();
+  return CATEGORY_ALIASES[trimmed.toLowerCase()] || CATEGORY_ALIASES[trimmed] || null;
+}
+
+export function inferLegacyEquipmentCategory(name, id = '') {
+  const text = String(name || '');
+  if (/[甲铠盾袍衣衫靴帽冠篷皮胸护腕臂腿肩]/.test(text)) return 'armor';
+  if (/[剑刀斧枪矛戟锤弓弩杖镰匕刃矢棍爪鞭枪]/.test(text)) return 'weapon';
+  if (/[戒环佩坠链印符徽钟铃镜珠角羽]/.test(text)) return 'pendant';
+  return EQUIPMENT_CRAFT_CATEGORIES[hashSeed(`${id}:${text}`) % EQUIPMENT_CRAFT_CATEGORIES.length];
+}
+
+export function resolveEquipmentTemplate(library, templateId) {
+  if (!templateId) return null;
+  return (
+    library?.equipment?.catalog?.find((item) => item.id === templateId) ||
+    findGemById(templateId) ||
+    null
+  );
+}
+
+export function hasLegacyCategorizedEquipment(library) {
+  const hidden = new Set(library?.equipment?.hidden || []);
+  return (library?.equipment?.catalog || []).some(
+    (item) => item.legacyCategorized && !hidden.has(item.id),
+  );
+}
 
 export const EQUIPMENT_STATS = Object.freeze({
   hp: '生命',
@@ -579,10 +633,20 @@ export function normalizeEquipment(raw, source) {
       throw Error('装备基础属性无效');
     if (value) stats[key] = value;
   }
+  const explicitCategory =
+    normalizeEquipmentCategory(raw.category) || normalizeEquipmentCategory(source.category);
+  const category = explicitCategory || inferLegacyEquipmentCategory(raw.name, source.id);
+  const legacyCategorized = !explicitCategory || raw.legacyCategorized === true;
+  const dcBonus =
+    category === 'gem' && raw.dcBonus && typeof raw.dcBonus === 'object'
+      ? structuredClone(raw.dcBonus)
+      : undefined;
   const equipment = {
     id: source.id,
     name: raw.name.trim(),
-    description: raw.description.trim(),
+    category,
+    ...(legacyCategorized ? { legacyCategorized: true } : {}),
+    description: raw.description.trim() || (dcBonus ? gemBonusText(dcBonus) : ''),
     ...(typeof raw.flavor === 'string' && raw.flavor.trim() ? { flavor: raw.flavor.trim() } : {}),
     price: source.value,
     level,
@@ -592,11 +656,12 @@ export function normalizeEquipment(raw, source) {
     sourceDescription: source.description || raw.sourceDescription || '',
     stats,
     rules: normalizeRules(raw.rules || []),
+    ...(dcBonus ? { dcBonus } : {}),
     ...(raw.design ? { design: structuredClone(raw.design) } : {}),
     ...(raw.statRanges ? { statRanges: structuredClone(raw.statRanges) } : {}),
     ...(Number.isInteger(raw.rollPercent) ? { rollPercent: raw.rollPercent } : {}),
   };
-  if (!Object.keys(stats).length && !equipment.rules.length)
+  if (!Object.keys(stats).length && !equipment.rules.length && !dcBonus)
     throw Error('装备至少需要一项属性或规则');
   if (equipmentCost(equipment) > equipmentBudget(source, quality))
     throw Error('装备超过原物品的以太强度预算：' + source.name);
@@ -604,6 +669,23 @@ export function normalizeEquipment(raw, source) {
 }
 
 function restoreOwnedInstance(item, template) {
+  const category = normalizeEquipmentCategory(item.category) || template.category;
+  if (category === 'gem') {
+    const gem = findGemById(item.templateId) || template;
+    const dcBonus = structuredClone(item.dcBonus || gem.dcBonus || {});
+    return {
+      id: item.id,
+      templateId: item.templateId,
+      category: 'gem',
+      level: 1,
+      quality: gem.quality || 'common',
+      stats: {},
+      rules: [],
+      dcBonus,
+      description: gemBonusText(dcBonus),
+      ...(gem.flavor ? { flavor: gem.flavor } : {}),
+    };
+  }
   const level = clampEquipmentLevel(item.level ?? template.level ?? 1);
   const quality = resolveEquipmentQuality(item.quality ?? template.quality, template.price);
   const stats =
@@ -612,6 +694,7 @@ function restoreOwnedInstance(item, template) {
   const entry = {
     id: item.id,
     templateId: item.templateId,
+    category,
     level,
     quality,
     ...(item.seed !== undefined ? { seed: Number(item.seed) >>> 0 } : {}),
@@ -643,6 +726,7 @@ export function restoreEquipment(value) {
             id: item.id,
             name: item.sourceName || item.name,
             value: item.price,
+            category: item.category,
             description: item.sourceDescription,
             map: item.map,
             level: item.level,
@@ -657,7 +741,8 @@ export function restoreEquipment(value) {
   const owned = [];
   for (const item of Array.isArray(value?.owned) ? value.owned : []) {
     if (typeof item?.id !== 'string' || item.id.length > 100 || seen.has(item.id)) continue;
-    const template = catalog.find((entry) => entry.id === item.templateId);
+    const template =
+      catalog.find((entry) => entry.id === item.templateId) || findGemById(item.templateId);
     if (!template) continue;
     try {
       owned.push(restoreOwnedInstance(item, template));
@@ -782,21 +867,46 @@ function addEquipmentInstance(library, templateId, instanceId, options, purchase
   library.equipment.owned.push({
     id: instanceId,
     templateId,
+    category: template.category,
     ...rolled,
   });
   return library.equipment.owned.at(-1);
 }
 
+/** Grant a preset gem directly into inventory without going through ether crafting. */
+export function grantGem(library, gemId, instanceId) {
+  const gem = findGemById(gemId);
+  if (!gem) throw Error('宝石预设不存在');
+  if (!library?.equipment?.owned) throw Error('装备背包未初始化');
+  if (library.equipment.owned.length >= 1000) throw Error('装备背包已满');
+  if (library.equipment.owned.some((item) => item.id === instanceId)) throw Error('宝石标识重复');
+  const entry = {
+    id: instanceId,
+    templateId: gem.id,
+    category: 'gem',
+    level: 1,
+    quality: gem.quality,
+    stats: {},
+    rules: [],
+    dcBonus: structuredClone(gem.dcBonus),
+    description: gemBonusText(gem.dcBonus),
+    flavor: gem.flavor,
+  };
+  library.equipment.owned.push(entry);
+  return entry;
+}
+
 function ownedWithTemplate(library, instanceId) {
   const instance = library.equipment?.owned.find((item) => item.id === instanceId);
   if (!instance) throw Error('未持有该装备实例');
-  const template = library.equipment?.catalog.find((item) => item.id === instance.templateId);
+  const template = resolveEquipmentTemplate(library, instance.templateId);
   if (!template) throw Error('装备蓝图不存在');
   return { instance, template };
 }
 
 export function reforgeEquipment(library, instanceId, seed = null) {
   const { instance, template } = ownedWithTemplate(library, instanceId);
+  if (template.category === 'gem') throw Error('宝石专注于 DC 检定加成，无需重铸');
   const cost = reforgeCost(template, instance);
   if ((library.inventory.ether || 0) < cost) throw Error('以太不足以重铸属性');
   library.inventory.ether -= cost;
@@ -818,6 +928,7 @@ export function reforgeEquipment(library, instanceId, seed = null) {
 
 export function temperEquipment(library, instanceId, targetLevel = null) {
   const { instance, template } = ownedWithTemplate(library, instanceId);
+  if (template.category === 'gem') throw Error('宝石专注于 DC 检定加成，无需淬炼');
   const currentLevel = clampEquipmentLevel(instance.level || template.level || 1);
   const maxUnlocked = maxUnlockedEquipmentLevel(library);
   const desired = targetLevel === null ? currentLevel + 1 : clampEquipmentLevel(targetLevel);
@@ -840,6 +951,7 @@ export function temperEquipment(library, instanceId, targetLevel = null) {
 
 export function ascendEquipment(library, instanceId, seed = null) {
   const { instance, template } = ownedWithTemplate(library, instanceId);
+  if (template.category === 'gem') throw Error('宝石专注于 DC 检定加成，无需升阶');
   const currentQuality = resolveEquipmentQuality(
     instance.quality ?? template.quality,
     template.price,
@@ -878,42 +990,56 @@ export function dismantleEquipment(library, instanceId) {
 
 export function equip(library, characterId, slot, instanceId) {
   const member = library.characters.find((item) => item.id === characterId);
-  if (!member || !Number.isInteger(slot) || slot < 0 || slot > 2) throw Error('装备槽无效');
+  if (!member || !Number.isInteger(slot) || slot < 0 || slot >= EQUIPMENT_SLOT_ORDER.length)
+    throw Error('装备槽无效');
+  const slotCategory = EQUIPMENT_SLOT_ORDER[slot];
   if (instanceId && !library.equipment.owned.some((item) => item.id === instanceId))
     throw Error('未持有该装备');
   if (instanceId && library.characters.some((item) => item.equipment?.includes(instanceId)))
     throw Error('该装备已被使用，请先卸下');
   if (instanceId) {
     const instance = library.equipment.owned.find((item) => item.id === instanceId);
-    const name = library.equipment.catalog.find((item) => item.id === instance.templateId)?.name;
+    const template = resolveEquipmentTemplate(library, instance?.templateId);
+    const name = template?.name;
     if (
       equippedDefinitions(library, member).some(
         (item) => item.name === name && member.equipment?.[slot] !== item.id,
       )
     )
       throw Error('同名装备每名角色只能装备一件');
+    if (template?.category && template.category !== slotCategory) {
+      throw Error(`该槽位只能装备${EQUIPMENT_CATEGORIES[slotCategory].label}`);
+    }
   }
-  member.equipment ||= [null, null, null];
+  member.equipment ||= [null, null, null, null];
+  while (member.equipment.length < EQUIPMENT_SLOT_ORDER.length) member.equipment.push(null);
+  member.equipment = member.equipment.slice(0, EQUIPMENT_SLOT_ORDER.length);
   member.equipment[slot] = instanceId || null;
 }
 
 export function equippedDefinitions(library, member) {
   const names = new Set();
   return (member.equipment || [])
-    .slice(0, 3)
+    .slice(0, EQUIPMENT_SLOT_ORDER.length)
     .map((id) => {
+      if (!id) return null;
       const instance = library.equipment?.owned.find((item) => item.id === id);
-      const template = library.equipment?.catalog.find((item) => item.id === instance?.templateId);
+      const template = resolveEquipmentTemplate(library, instance?.templateId);
       if (!template) return null;
+      const stats = instance.stats || template.stats || {};
+      const rules = instance.rules || template.rules || [];
+      const dcBonus = instance.dcBonus || template.dcBonus;
       return {
         ...structuredClone(template),
         id,
         templateId: template.id,
+        category: template.category,
         level: clampEquipmentLevel(instance.level ?? template.level ?? 1),
         quality: resolveEquipmentQuality(instance.quality ?? template.quality, template.price),
         ...(instance.seed !== undefined ? { seed: instance.seed } : {}),
-        stats: structuredClone(instance.stats || template.stats),
-        rules: structuredClone(instance.rules || template.rules),
+        stats: structuredClone(stats),
+        rules: structuredClone(rules),
+        ...(dcBonus ? { dcBonus: structuredClone(dcBonus) } : {}),
         ...(instance.statRanges ? { statRanges: structuredClone(instance.statRanges) } : {}),
         ...(Number.isInteger(instance.rollPercent) ? { rollPercent: instance.rollPercent } : {}),
         ...(instance.description ? { description: instance.description } : {}),

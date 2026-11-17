@@ -1,6 +1,6 @@
 import { BASE_WORLDS, routeKey, isEndless, validateEncounters } from './worlds.js';
 import { ENCOUNTER_COUNT, FINAL_ENCOUNTER } from './content/journey-rules.js';
-import { REGIONS } from './content/regions.js';
+import { REGIONS, regionTaskHookFor } from './content/regions.js';
 import { forestEncounterSpec } from './content/forest-encounters.js';
 import { frostEncounterSpec } from './content/frost-encounters.js';
 import { MAP_IDS } from './content/biomes.js';
@@ -235,20 +235,40 @@ function baseExplorationSpec(entry, index = 0) {
   const ordinary = poolIds.filter((id) => !(definitions[id] || DEFINITIONS[id])?.boss);
   const rng = random((entry.seed + index * 7919) >>> 0);
   const pool = [...(dynamic ? (ordinary.length ? ordinary : poolIds) : region.enemies)];
-  for (let i = pool.length - 1; i > 0; i--) {
-    const j = Math.floor(rng() * (i + 1));
-    [pool[i], pool[j]] = [pool[j], pool[i]];
-  }
+  const shuffle = (items) => {
+    const copy = [...items];
+    for (let i = copy.length - 1; i > 0; i--) {
+      const j = Math.floor(rng() * (i + 1));
+      [copy[i], copy[j]] = [copy[j], copy[i]];
+    }
+    return copy;
+  };
+  const isElite = (id) => Boolean((definitions[id] || DEFINITIONS[id])?.elite);
+  const ordinaryPool = shuffle(pool.filter((id) => !isElite(id)));
+  const elitePool = shuffle(pool.filter((id) => isElite(id)));
+  const fallbackPool = ordinaryPool.length ? ordinaryPool : shuffle(pool);
+  const pickWave = () => {
+    if (index === 2 && elitePool.length) {
+      return [elitePool[0], ...ordinaryPool.slice(0, 1 + Math.floor(rng() * 2))];
+    }
+    return fallbackPool.slice(
+      0,
+      index === 0 ? 1 + Math.floor(rng() * 3) : 2 + Math.floor(rng() * 2),
+    );
+  };
   const boss = index === FINAL_ENCOUNTER;
+  const boundHook = boss ? entry.taskHook || regionTaskHookFor(entry) : null;
+  const lockedBossId =
+    boundHook?.boss && (definitions[boundHook.boss] || DEFINITIONS[boundHook.boss])
+      ? boundHook.boss
+      : null;
   return {
     name: isEndless(entry) ? '继续探索' : region.sites[site],
     map: entry.map,
     enemyDefinitions: definitions,
     enemyIds:
       entry.encounters?.[index]?.enemyIds ||
-      (boss
-        ? [dynamic ? bossIds[0] : region.boss]
-        : pool.slice(0, index === 0 ? 1 + Math.floor(rng() * 3) : 2 + Math.floor(rng() * 2))),
+      (boss ? [lockedBossId || (dynamic ? bossIds[0] : region.boss)] : pickWave()),
     hpScale: 1,
     boss,
     environment: {},
@@ -360,4 +380,15 @@ export function addWorldRoute(routes, world, seed = Math.floor(Math.random() * 4
     cleared: [],
     history: [],
   };
+}
+
+/** Record an overland-visited base ruin into the tavern's Dungeon Gate portal list. */
+export function unlockDungeonMap(library, mapId) {
+  if (!library || !BASE_WORLDS.includes(mapId)) return false;
+  library.unlockedDungeons = Array.isArray(library.unlockedDungeons)
+    ? [...new Set(library.unlockedDungeons.filter((id) => BASE_WORLDS.includes(id)))]
+    : [];
+  if (library.unlockedDungeons.includes(mapId)) return false;
+  library.unlockedDungeons.push(mapId);
+  return true;
 }

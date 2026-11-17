@@ -9,6 +9,11 @@ import {
   ETERNAL_CITY_STOPS,
   ETERNAL_CITY_VISITOR_SPOTS,
 } from '../content/eternal-city-scenes.js';
+import {
+  IMPERIAL_CROSSROADS,
+  IMPERIAL_DUNGEONS,
+  IMPERIAL_FORTS,
+} from '../content/imperial-network.js';
 
 const exit = (id, name) => ({ id, name, kind: '前往', destination: id, immediate: true });
 
@@ -194,6 +199,69 @@ const eternalRoadScenes = Object.fromEntries(
   ]),
 );
 
+const crossroadArtScenes = Object.fromEntries(
+  IMPERIAL_CROSSROADS.map(({ id, name, imageId }) => [
+    id,
+    {
+      id,
+      name,
+      title: name,
+      returnDestination: null,
+      visitors: false,
+      cutouts: [],
+      points: [],
+      illustration: {
+        image: `./assets/exploration/overland-road/${imageId}-wide.png`,
+        aspect: 3,
+        viewHeight: 0.86,
+        viewWidth: 2.05,
+        fullVerticalPan: true,
+        arrivalPan: true,
+        spots: {},
+        points: {},
+        foreground: [],
+      },
+    },
+  ]),
+);
+
+const dungeonTrailImages = Object.freeze({
+  ruins: 'road-meadow-wide',
+  forest: 'road-pines-wide',
+  frost: 'road-ridge-wide',
+  forge: 'road-aqueduct-wide',
+  tide: 'road-causeway-wide',
+});
+
+const imperialLandmarkScenes = Object.fromEntries(
+  [...IMPERIAL_DUNGEONS, ...IMPERIAL_FORTS].map(({ id, name }) => {
+    const artName = dungeonTrailImages[id] || 'road-ridge-wide';
+    return [
+      id,
+      {
+        id,
+        name,
+        title: name,
+        returnDestination: null,
+        visitors: false,
+        cutouts: [],
+        points: [],
+        illustration: {
+          image: `./assets/exploration/overland-road/${artName}.png`,
+          aspect: 3,
+          viewHeight: 0.86,
+          viewWidth: 2.05,
+          fullVerticalPan: true,
+          arrivalPan: true,
+          spots: {},
+          points: {},
+          foreground: [],
+        },
+      },
+    ];
+  }),
+);
+
 const SCENES = Object.freeze({
   street: STARLAMP_STREET,
   ...Object.fromEntries(
@@ -207,6 +275,8 @@ const SCENES = Object.freeze({
   ...capitalScenes,
   ...eternalCityScenes,
   ...eternalRoadScenes,
+  ...crossroadArtScenes,
+  ...imperialLandmarkScenes,
 });
 
 export function explorationScene(id) {

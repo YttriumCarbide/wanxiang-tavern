@@ -13,12 +13,21 @@ import { SILVER_CROWN_TAVERN } from '../content/silver-crown-scenes.js';
 
 export async function createStreetView() {
   const query = new URLSearchParams(location.search);
+  const atlasOnly = query.get('atlas-only') === '1';
   const definition = { ...explorationScene(query.get('scene')) };
   const illustrated = !!definition.illustration;
   const fixed = definition.illustration?.fixed === true;
   const enteredFrom = query.get('from');
   let timeOfDay = query.get('time') === 'night' ? 'night' : 'day';
   if (query.get('art-reference') === 'panorama') definition.panoramaBand = null;
+  if (atlasOnly) {
+    document.documentElement.dataset.atlasOnly = 'true';
+    const statusEl = document.getElementById('street-status');
+    if (statusEl) {
+      statusEl.hidden = true;
+      statusEl.remove();
+    }
+  }
   const viewDefaults = {
     fov: definition.fov ?? 65,
     yaw: definition.initialYaw ?? 0,
@@ -35,10 +44,6 @@ export async function createStreetView() {
     returnButton.setAttribute('aria-label', '返回' + definition.returnLabel);
     returnButton.lastChild.textContent = ' ' + definition.returnLabel;
   }
-  const loading = createSceneLoading(
-    document.getElementById('street-status'),
-    '正在前往' + definition.title,
-  );
   const events = createEventScope();
   const mapDialog = document.getElementById('street-map');
   const stepOut = document.getElementById('street-map-step-out');
@@ -71,7 +76,7 @@ export async function createStreetView() {
       event.source === parent &&
       event.data?.type === 'daily-open-atlas'
     )
-      openAtlas(true);
+      openAtlas(event.data.preview === true);
   });
   events.on(stepOut, 'click', () => {
     mapChoice = 'walk';
@@ -86,6 +91,33 @@ export async function createStreetView() {
   events.on(mapDialog, 'close', () => {
     if (!mapDialog.open) postMapState(false);
   });
+  if (atlasOnly) {
+    if (parent !== window) document.documentElement.dataset.embedded = 'true';
+    events.on(window, 'message', (event) => {
+      if (event.origin !== location.origin || event.source !== parent) return;
+      if (event.data?.type === 'daily-open-atlas') {
+        openAtlas(event.data.preview !== false);
+        return;
+      }
+      if (event.data?.type !== 'daily-managed') return;
+      worldMap.updateTravel(event.data.outing);
+      worldMap.updateDiscoveries(event.data.discoveries);
+      worldMap.updateWorldState({
+        exploration: event.data.exploration,
+        skirmishes: event.data.skirmishes,
+        unlockedDungeons: event.data.unlockedDungeons,
+      });
+    });
+    const disposeAtlasOnly = () => events.dispose();
+    events.on(window, 'pagehide', disposeAtlasOnly, { once: true });
+    openAtlas(true);
+    parent.postMessage({ type: 'atlas-only-ready', scene: definition.id }, location.origin);
+    return { dispose: disposeAtlasOnly };
+  }
+  const loading = createSceneLoading(
+    document.getElementById('street-status'),
+    '正在前往' + definition.title,
+  );
   const resources = createResourceScope();
   const quality = deviceRenderQuality();
   const budget = createFrameBudget(quality.fps);
@@ -151,8 +183,14 @@ export async function createStreetView() {
       invitationLocked = event.data.invitation === true;
       travelLocked = event.data.outing?.locked === true;
       document.body.classList.toggle('street-daily-outing', Boolean(event.data.outing));
+      document.body.classList.toggle('street-has-talk', event.data.talkVisible === true);
       worldMap.updateTravel(event.data.outing);
       worldMap.updateDiscoveries(event.data.discoveries);
+      worldMap.updateWorldState({
+        exploration: event.data.exploration,
+        skirmishes: event.data.skirmishes,
+        unlockedDungeons: event.data.unlockedDungeons,
+      });
       void updateTime(event.data.timeOfDay);
     }
   });
@@ -191,6 +229,8 @@ export async function createStreetView() {
     inspector.hidden = true;
     active = null;
     for (const button of buttons.values()) button.setAttribute('aria-expanded', 'false');
+    if (parent !== window)
+      parent.postMessage({ type: 'street-inspector-state', open: false }, location.origin);
   }
   function inspect(id) {
     const point = definition.points.find((entry) => entry.id === id);
@@ -205,6 +245,8 @@ export async function createStreetView() {
     inspector.hidden = false;
     inspector.scrollTop = 0;
     for (const [key, button] of buttons) button.setAttribute('aria-expanded', String(key === id));
+    if (parent !== window)
+      parent.postMessage({ type: 'street-inspector-state', open: true }, location.origin);
   }
   function leave(destination = definition.returnDestination) {
     if (!destination || leaving || disposed) return;
@@ -541,7 +583,10 @@ export async function createStreetView() {
       }),
       dispose,
     };
-    parent.postMessage({ type: 'scene-ready', scene: definition.id }, location.origin);
+    parent.postMessage(
+      { type: 'scene-ready', scene: definition.id, title: definition.title },
+      location.origin,
+    );
   } catch (error) {
     if (disposed || error.name === 'AbortError') return { dispose };
     if (!disposed) loading.fail(error);

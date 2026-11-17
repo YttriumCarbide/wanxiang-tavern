@@ -1,5 +1,4 @@
 import { ATLAS_PLACES, ATLAS_ROUTES, ATLAS_TERRAIN } from '../content/atlas-geography.js';
-import { CAPITAL_ROAD_STOPS } from '../overland-travel.js';
 
 const SVG = 'http://www.w3.org/2000/svg';
 const SILVER_ROAD_ART = './assets/exploration/fansheng-silver-road.svg';
@@ -12,13 +11,14 @@ function element(tag, attrs) {
 }
 
 function roadLine([first, ...points]) {
+  if (points.length < 2) return `M${first.join(' ')} L${points[0].join(' ')}`;
   let path = `M${first.join(' ')}`;
-  for (let i = 0; i < points.length - 1; i++) {
+  for (let i = 0; i < points.length - 2; i++) {
     const [x, y] = points[i];
     const [nextX, nextY] = points[i + 1];
     path += ` Q${x} ${y} ${(x + nextX) / 2} ${(y + nextY) / 2}`;
   }
-  return path + ` L${points.at(-1).join(' ')}`;
+  return `${path} Q${points.at(-2).join(' ')} ${points.at(-1).join(' ')}`;
 }
 
 function populateRoads(layer) {
@@ -29,21 +29,24 @@ function populateRoads(layer) {
     if (!bends) continue;
     const points = [ATLAS_PLACES[from].point, ...bends, ATLAS_PLACES[to].point];
     const d = roadLine(points);
-    layer.append(element('path', { d, 'data-atlas-road': `${from}:${to}` }));
-    fill.append(element('path', { d }));
-    seam.append(element('path', { d }));
-    if (
-      CAPITAL_ROAD_STOPS.some(({ id }) => id === from) &&
-      CAPITAL_ROAD_STOPS.some(({ id }) => id === to)
-    ) {
-      highlights.append(
-        element('path', {
-          d,
-          class: 'street-atlas-route-preview',
-          'data-atlas-preview-leg': `${from}:${to}`,
-        }),
-      );
-    }
+    const edgeKey = `${from}:${to}`;
+    layer.append(
+      element('path', {
+        d,
+        'data-atlas-road': edgeKey,
+        'data-atlas-edge': edgeKey,
+        'data-explored': 'false',
+      }),
+    );
+    fill.append(element('path', { d, 'data-atlas-edge': edgeKey, 'data-explored': 'false' }));
+    seam.append(element('path', { d, 'data-atlas-edge': edgeKey, 'data-explored': 'false' }));
+    highlights.append(
+      element('path', {
+        d,
+        class: 'street-atlas-route-preview',
+        'data-atlas-preview-leg': edgeKey,
+      }),
+    );
   }
   layer.append(fill, seam, highlights);
 }
@@ -114,7 +117,10 @@ export function populateAtlasGeography(sheet) {
   const markers = sheet.querySelector('.street-map-landmarks');
   for (const [id, place] of Object.entries(ATLAS_PLACES)) {
     const existing = markers.querySelector(`[data-atlas-landmark="${id}"]`);
-    if (existing) existing.querySelector('text').textContent = place.name;
+    if (existing) {
+      existing.setAttribute('transform', `translate(${place.point.join(' ')})`);
+      existing.querySelector('text').textContent = place.name || '';
+    }
     if (place.marker === 'stop')
       addMarker(markers, id, place).classList.add('street-map-capital-stop');
     else if (place.marker) engraveSettlement(existing || addMarker(markers, id, place), place);

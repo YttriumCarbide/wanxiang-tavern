@@ -236,9 +236,21 @@ export function createSaveManager(context) {
   const storage = context.storage || getStorage();
   let store = loadSavesStore(storage);
 
+  function mutationLocked() {
+    if (session.battle?.playing) return '战斗演出期间暂不可改动或读取存档';
+    if (session.ai?.busy) return '接口生成期间暂不可改动或读取存档';
+    return '';
+  }
+
   function renderDialog() {
     const container = $('#saves-slots-list');
     if (!container) return;
+    const lockedReason = mutationLocked();
+    const locked = Boolean(lockedReason);
+    if ($('#saves-create-btn'))
+      $('#saves-create-btn').disabled = locked || session.runtime.needsStart;
+    if ($('#saves-new-game-btn')) $('#saves-new-game-btn').disabled = locked;
+    if ($('#saves-import-input')) $('#saves-import-input').disabled = locked;
 
     container.innerHTML = SAVE_SLOTS.map((slot) => {
       const item = store.slots[slot.id];
@@ -301,14 +313,16 @@ export function createSaveManager(context) {
               ? html`<button
                   class="save-btn save-btn-create"
                   data-save-slot="${slot.id}"
-                  title="将当前游戏进度新建至此槽位"
+                  ${locked ? 'disabled' : ''}
+                  title="${lockedReason || '将当前游戏进度新建至此槽位'}"
                 >
                   ＋ 新建存档
                 </button>`
               : html`<button
                   class="save-btn save-btn-write"
                   data-save-slot="${slot.id}"
-                  title="将当前游戏进度覆盖存入此槽位"
+                  ${locked ? 'disabled' : ''}
+                  title="${lockedReason || '将当前游戏进度覆盖存入此槽位'}"
                 >
                   覆盖保存
                 </button>`
@@ -316,8 +330,8 @@ export function createSaveManager(context) {
           <button
             class="save-btn save-btn-load"
             data-load-slot="${slot.id}"
-            ${isEmpty ? 'disabled' : ''}
-            title="读取此槽位存档并恢复游戏"
+            ${isEmpty || locked ? 'disabled' : ''}
+            title="${lockedReason || '读取此槽位存档并恢复游戏'}"
           >
             读取
           </button>
@@ -334,7 +348,8 @@ export function createSaveManager(context) {
               ? html`<button
                   class="save-btn save-btn-clear"
                   data-clear-slot="${slot.id}"
-                  title="清空此槽位记录"
+                  ${locked ? 'disabled' : ''}
+                  title="${lockedReason || '清空此槽位记录'}"
                 >
                   清空
                 </button>`
@@ -362,6 +377,8 @@ export function createSaveManager(context) {
   }
 
   function saveSlot(slotId, note = '') {
+    const locked = mutationLocked();
+    if (locked) return context.shell?.toast?.(locked);
     if (session.runtime.needsStart) return context.shell.toast('请先创建并确认主角，再保存冒险');
     const slotConfig = SAVE_SLOTS.find((s) => s.id === slotId);
     if (!slotConfig) return;
@@ -373,6 +390,8 @@ export function createSaveManager(context) {
   }
 
   function loadSlot(slotId) {
+    const locked = mutationLocked();
+    if (locked) return context.shell?.toast?.(locked);
     const slotConfig = SAVE_SLOTS.find((s) => s.id === slotId);
     const snapshot = store.slots[slotId];
     if (!snapshot) {
@@ -389,6 +408,8 @@ export function createSaveManager(context) {
   }
 
   function clearSlot(slotId) {
+    const locked = mutationLocked();
+    if (locked) return context.shell?.toast?.(locked);
     const slotConfig = SAVE_SLOTS.find((s) => s.id === slotId);
     store.slots[slotId] = null;
     writeSavesStore(store, storage);
@@ -425,6 +446,8 @@ export function createSaveManager(context) {
   }
 
   async function importFromFile(file) {
+    const locked = mutationLocked();
+    if (locked) return context.shell?.toast?.(locked);
     try {
       const snapshot = await readSaveFile(
         file,
@@ -456,6 +479,8 @@ export function createSaveManager(context) {
   }
 
   function createNewSave(preferredSlotId = null) {
+    const locked = mutationLocked();
+    if (locked) return context.shell?.toast?.(locked);
     if (session.runtime.needsStart) return context.onboarding.open();
     let targetId = preferredSlotId;
     if (!targetId) {

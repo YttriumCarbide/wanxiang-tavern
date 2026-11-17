@@ -126,6 +126,14 @@ export function validateGameData(
   for (const enemy of [...config.enemies, ...config.bosses]) {
     check(ENEMY_ATTACKS.includes(enemy.attackStyle), `${enemy.id}: invalid attack presentation`);
     check(integer(enemy.speed, 1), `${enemy.id}: invalid speed`);
+    if (enemy.actions !== undefined)
+      check(integer(enemy.actions, 1), `${enemy.id}: invalid actions`);
+    if (enemy.enragedActions !== undefined)
+      check(integer(enemy.enragedActions, 1), `${enemy.id}: invalid enragedActions`);
+    if (enemy.splitActions !== undefined)
+      check(typeof enemy.splitActions === 'boolean', `${enemy.id}: invalid splitActions`);
+    if (enemy.elite !== undefined)
+      check(typeof enemy.elite === 'boolean', `${enemy.id}: invalid elite flag`);
     const moves = [
       ...(enemy.openingIntent ? [enemy.openingIntent] : []),
       ...(Array.isArray(enemy.intents) ? enemy.intents : []),

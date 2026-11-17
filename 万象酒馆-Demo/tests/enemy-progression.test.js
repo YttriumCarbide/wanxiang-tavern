@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile, mkdtemp } from 'node:fs/promises';
 import path from 'node:path';
 import { encounterLevel, enemyGrowth, leveledIntent } from '../src/enemy-growth.js';
+import { enemySlots } from '../src/data.js';
 import { grownCombat } from '../src/growth.js';
 import { combatScale } from '../src/combat-scale.js';
 import {
@@ -26,24 +27,47 @@ import { generationRequest } from '../server/prompts.mjs';
 test('six authored sites ease up and endless groups jump at their first site', () => {
   assert.deepEqual(
     Array.from({ length: 9 }, (_, sequence) => encounterLevel({ map: 'ruins', sequence })),
-    [1, 2, 2, 3, 3, 4, 9, 9, 9],
+    [5, 6, 6, 7, 7, 8, 13, 13, 13],
   );
   assert.deepEqual(
     Array.from({ length: 4 }, (_, sequence) =>
       encounterLevel({ map: 'forest', sequence, world: { id: 'custom' } }),
     ),
-    [10, 10, 10, 10],
+    [16, 16, 16, 16],
   );
-  assert.equal(encounterLevel({ map: 'ruins', sequence: 11 }), 9);
-  assert.equal(encounterLevel({ map: 'ruins', sequence: 12 }), 14);
-  assert.equal(encounterLevel({ map: 'tide', sequence: 5 }), 27);
+  assert.equal(encounterLevel({ map: 'ruins', sequence: 11 }), 13);
+  assert.equal(encounterLevel({ map: 'ruins', sequence: 12 }), 18);
+  assert.equal(encounterLevel({ map: 'tide', sequence: 5 }), 29);
+  const rolledLevels = new Set();
   for (let seed = 0; seed < 100; seed++) {
     const entry = { map: 'ruins', sequence: 8, seed };
     const growth = enemyGrowth(entry, 0, 'slime');
     assert.deepEqual(growth, enemyGrowth(entry, 0, 'slime'));
-    assert.equal(growth.level, 9);
+    assert(growth.level >= 12 && growth.level <= 14);
     assert(growth.hpScale > 1 && growth.damageScale > 1);
+    rolledLevels.add(growth.level);
+    const elite = enemyGrowth(entry, 0, 'slime', false, true);
+    assert.equal(elite.level, 13);
   }
+  assert(rolledLevels.size > 1);
+  assert.deepEqual(
+    enemySlots(['eliteMob', 'slimeA', 'slimeB'], {
+      eliteMob: { elite: true },
+      slimeA: {},
+      slimeB: {},
+    }),
+    ['slimeA', 'eliteMob', 'slimeB'],
+  );
+  assert.deepEqual(enemySlots(['eliteMob', 'slimeA'], { eliteMob: { elite: true }, slimeA: {} }), [
+    null,
+    'eliteMob',
+    'slimeA',
+  ]);
+  assert.deepEqual(enemySlots(['slimeA', 'eliteMob'], { eliteMob: { elite: true }, slimeA: {} }), [
+    'slimeA',
+    'eliteMob',
+    null,
+  ]);
 });
 
 test('enemy growth drives authoritative hp, intention and damage without changing original definitions', () => {

@@ -39,8 +39,18 @@ export function createChat(context) {
   function renderHistory(kind = 'chat') {
     presentation.history(kind);
   }
-  function playReply(kind, reply, after) {
+  function playReply(kind, reply, after, rawResult = null, actionText = '') {
     if (!reply) return context.shell.toast('还没有可重播的对话');
+    const title = kind === 'chat' ? '酒馆 · 片刻交谈' : '旅途 · 片刻闲谈';
+    if (rawResult?.dcOutcome?.triggered && context.dice) {
+      const done = context.dice.playReply(
+        rawResult,
+        { owner: kind, title },
+        { style: 'free', actionText, claimId: reply.id },
+      );
+      if (after) void done.then(after);
+      return;
+    }
     const content = /【(?:旁白|对白[:：])/u.test(reply.content)
       ? reply.content
       : [
@@ -51,7 +61,7 @@ export function createChat(context) {
         ];
     const done = context.gal.play(content, {
       owner: kind,
-      title: kind === 'chat' ? '酒馆 · 片刻交谈' : '旅途 · 片刻闲谈',
+      title,
     });
     if (after) void done.then(after);
   }
@@ -375,7 +385,13 @@ export function createChat(context) {
           );
         });
         if (!signal.aborted && epoch === revision && !session.runtime.disposed)
-          playReply(kind, reply, outOfActions ? () => context.daily.returnOuting() : null);
+          playReply(
+            kind,
+            reply,
+            outOfActions ? () => context.daily.returnOuting() : null,
+            result,
+            text,
+          );
         else if (outOfActions) context.daily.returnOuting();
       }
       state().lastRequest = result.request;

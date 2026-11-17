@@ -148,7 +148,7 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
   const records = [],
     friendRecords = [],
     enemyRecords = [],
-    enemies = enemySlots(options.enemyIds || encounterSpec(0).enemyIds);
+    enemies = enemySlots(options.enemyIds || encounterSpec(0).enemyIds, definitions);
   const emptySlots = Array.from({ length: 3 }, (_, slot) => {
     const el = document.createElement('button');
     el.type = 'button';
@@ -421,6 +421,19 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
                     </g>
                   </g></svg
               ></span>`
+            : ''
+        }${
+          side === 'Enemy' && (d.boss || d.elite)
+            ? html`<span
+                class="enemy-tier-badge ${d.boss ? 'is-boss' : 'is-elite'}"
+                title="${d.boss ? '首领敌人' : '精英敌人'}"
+                aria-label="${d.boss ? '首领' : '精英'}"
+                >${
+                  d.boss
+                    ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M2.5 4.2C3.9 7 5.7 8.5 7.8 9 9 8.3 10.4 7.9 12 7.9s3 .4 4.2 1.1c2.1-.5 3.9-2 5.3-4.8-.2 3.2-1 5.6-2.3 7 .25.7.4 1.4.4 2.2 0 2.2-1.1 4.1-2.8 5.3V21c0 .9-.75 1.6-1.7 1.6H8.9c-.95 0-1.7-.7-1.7-1.6v-2.3c-1.7-1.2-2.8-3.1-2.8-5.3 0-.8.15-1.5.4-2.2-1.3-1.4-2.1-3.8-2.3-7zm6.7 9.9a1.65 1.65 0 1 0 0-3.3 1.65 1.65 0 0 0 0 3.3zm5.6 0a1.65 1.65 0 1 0 0-3.3 1.65 1.65 0 0 0 0 3.3zM12 15.4l-1.2 2h2.4l-1.2-2zm-2 4.3v-1.8h1.3v1.8H10zm2.7 0v-1.8H14v1.8h-1.3z"/></svg>'
+                    : '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2.5C7.6 2.5 4 5.8 4 9.9c0 2.35 1.15 4.45 3 5.8V19c0 1.1.9 2 2 2h6c1.1 0 2-.9 2-2v-3.3c1.85-1.35 3-3.45 3-5.8 0-4.1-3.6-7.4-8-7.4zm-3 9.4a1.65 1.65 0 1 1 0-3.3 1.65 1.65 0 0 1 0 3.3zm6 0a1.65 1.65 0 1 1 0-3.3 1.65 1.65 0 0 1 0 3.3zM10 18.2v-2h1.3v2H10zm2.7 0v-2H14v2h-1.3z"/></svg>'
+                }</span
+              >`
             : ''
         }${side === 'Enemy' ? html`<small class="enemy-level" title="${combatRank(u.level || 1)}">Lv.${u.level || 1}</small>` : ''}<span
           class="unit-info"

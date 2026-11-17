@@ -20,7 +20,7 @@ function completeStoryRecord(library, book, record) {
 }
 
 /** Only confirmed milestones enter history; browsing pages never unlocks future prose. */
-export function createStoryFeed(session, save, gal = null) {
+export function createStoryFeed(session, save, gal = null, chapterTheater = null) {
   const events = createEventScope();
   const dialog = $('#story-feed');
   const toggle = $('#story-toggle');
@@ -33,8 +33,10 @@ export function createStoryFeed(session, save, gal = null) {
   let closing = null;
   const waiters = new Set();
   let galCompletion = null;
+  let theaterPlaying = false;
   function render() {
     const recollection = !!session.ai.activeScript?.recollection;
+    document.body.classList.toggle('is-recollection', recollection);
     $('.quick-chat-heading').hidden = recollection;
     $('#quick-chat-body').hidden =
       recollection || $('#quick-chat-toggle').getAttribute('aria-expanded') === 'false';
@@ -123,6 +125,7 @@ export function createStoryFeed(session, save, gal = null) {
       pages: Array.from({ length: ENCOUNTER_COUNT }, () => []),
     };
     const book = session.ai.activeScript;
+    document.body.classList.toggle('is-recollection', !!book?.recollection);
     toggle.hidden = !book;
     document.body.classList.toggle('has-story', !!book);
     $('#story-title').textContent = book?.title || '路途手记';
@@ -220,42 +223,80 @@ export function createStoryFeed(session, save, gal = null) {
     render();
   }
   function openStory(automatic = false) {
-    if (gal?.enabled) {
-      if (!session.ai.activeScript || gal.owner === 'script') return;
+    if (gal?.enabled && !session.ai.activeScript?.recollection) {
+      if (!session.ai.activeScript || gal.owner === 'script' || theaterPlaying) return;
       gal.cancel();
-      const completion = gal.play(
-        view().pages[view().page].map((line) => ({
-          speaker: line.speaker,
-          text: line.text,
-        })),
-        {
-          owner: 'script',
-          title: session.ai.activeScript.title || '路途手记',
-          automatic,
-          onRead(line) {
-            const book = session.ai.activeScript;
-            if (!book?.adventure || book.recollection) return;
-            const record = session.ai.library.history.find((item) => item.runId === book.runId);
-            if (
-              record &&
-              !record.lines.some(
-                (item) =>
-                  item.encounter === view().page &&
-                  item.stage === 'before' &&
-                  item.text === line.text,
-              )
-            ) {
-              record.lines.push({
-                speaker: line.speaker || '旁白',
-                text: line.text,
-                encounter: view().page,
-                stage: 'before',
-              });
-              save();
-            }
+      const completion = (async () => {
+        const book = session.ai.activeScript;
+        if (!book) return;
+        const record = session.ai.library.history.find((item) => item.runId === book.runId);
+        const prologueKey = `${book.id}-0-prologue`;
+        if (
+          chapterTheater &&
+          view().page === 0 &&
+          book.prologue &&
+          !book.recollection &&
+          !book._prologueShown &&
+          !record?.played?.includes(prologueKey)
+        ) {
+          book._prologueShown = true;
+          if (record) {
+            record.played.push(prologueKey);
+            save();
+          }
+          theaterPlaying = true;
+          try {
+            await chapterTheater.play({
+              heading: `第 ${book.chapter || session.ai.library.chapter || 1} 章 ｜ ${book.title || '无名篇章'}`,
+              prose: book.prologue,
+              buttonLabel: '踏入现场 ›',
+              mode: 'intro',
+              map: book.map || session.journey?.expedition?.exploration?.map || 'ruins',
+              place: session.journey?.expedition?.exploration?.place || '',
+              act: book.chapter || session.ai.library.chapter || 1,
+              automatic,
+              testScript: book.title === '旅途测试',
+            });
+          } finally {
+            theaterPlaying = false;
+          }
+        }
+        if (session.runtime.disposed || session.ai.activeScript !== book) return;
+        await gal.play(
+          view().pages[view().page].map((line) => ({
+            speaker: line.speaker,
+            text: line.text,
+          })),
+          {
+            owner: 'script',
+            title: book.title || '路途手记',
+            automatic,
+            onRead(line) {
+              if (!book?.adventure || book.recollection) return;
+              const currentRecord = session.ai.library.history.find(
+                (item) => item.runId === book.runId,
+              );
+              if (
+                currentRecord &&
+                !currentRecord.lines.some(
+                  (item) =>
+                    item.encounter === view().page &&
+                    item.stage === 'before' &&
+                    item.text === line.text,
+                )
+              ) {
+                currentRecord.lines.push({
+                  speaker: line.speaker || '旁白',
+                  text: line.text,
+                  encounter: view().page,
+                  stage: 'before',
+                });
+                save();
+              }
+            },
           },
-        },
-      );
+        );
+      })();
       galCompletion = completion;
       void completion.then(() => {
         if (galCompletion === completion) galCompletion = null;
@@ -313,10 +354,52 @@ export function createStoryFeed(session, save, gal = null) {
     event.preventDefault();
     page(view().page + (event.key === 'ArrowLeft' ? -1 : 1));
   });
+  async function playEpilogue() {
+    const book = session.ai.activeScript;
+    if (!book || book.recollection || session.runtime.disposed) return;
+    if (!book.epilogueGal && !book.epilogueProse) return;
+    const record = session.ai.library.history.find((item) => item.runId === book.runId);
+    const epilogueKey = `${book.id}-epilogue`;
+    if (book._epilogueShown || record?.played?.includes(epilogueKey)) return;
+    book._epilogueShown = true;
+    if (record) {
+      record.played.push(epilogueKey);
+      save();
+    }
+    const chapterHeading = `第 ${book.chapter || session.ai.library.chapter || 1} 章 ｜ ${book.title || '终章'}`;
+    if (book.epilogueGal && gal?.enabled) {
+      gal.cancel();
+      await gal.play(book.epilogueGal, {
+        owner: 'script',
+        title: `${book.title || '终章'} · 尾声`,
+        mandatory: true,
+        automatic: true,
+      });
+    }
+    if (book.epilogueProse && chapterTheater && !session.runtime.disposed) {
+      theaterPlaying = true;
+      try {
+        await chapterTheater.play({
+          heading: chapterHeading,
+          prose: book.epilogueProse,
+          buttonLabel: '完成章节 ›',
+          mode: 'epilogue',
+          map: book.map || session.journey?.expedition?.exploration?.map || 'ruins',
+          place: session.journey?.expedition?.exploration?.place || '',
+          act: book.chapter || session.ai.library.chapter || 1,
+          automatic: true,
+          testScript: book.title === '旅途测试',
+        });
+      } finally {
+        theaterPlaying = false;
+      }
+    }
+  }
   return {
     render,
     reset,
     showScene,
+    playEpilogue,
     recordRound,
     openStory,
     storyClosed() {
@@ -324,14 +407,16 @@ export function createStoryFeed(session, save, gal = null) {
       return dialog.open ? new Promise((resolve) => waiters.add(resolve)) : Promise.resolve();
     },
     cancelScene() {
+      chapterTheater?.cancel();
       close(true);
       toggle.hidden = true;
-      document.body.classList.remove('has-story');
+      document.body.classList.remove('has-story', 'is-recollection');
     },
     dispose() {
+      chapterTheater?.cancel();
       close(true);
       events.dispose();
-      document.body.classList.remove('has-story');
+      document.body.classList.remove('has-story', 'is-recollection');
     },
   };
 }

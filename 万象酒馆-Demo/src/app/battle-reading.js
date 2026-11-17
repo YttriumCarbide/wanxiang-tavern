@@ -32,6 +32,7 @@ export function createBattleReading(context) {
     button.hidden =
       !context.gal?.enabled ||
       session.runtime.mode !== 'battle' ||
+      Boolean(session.ai.activeScript?.recollection) ||
       (!session.ai.activeScript && !context.daily?.overlandRun?.());
     button.disabled = session.battle.playing;
     if (button.hidden) setExpanded(false);

@@ -1,6 +1,7 @@
 import { INVITATION_ACTIVITIES, OUTING_ACTIONS, TOWN_SCENES } from './daily.js';
 import { OVERLAND_STOPS, overlandPlan } from './overland-travel.js';
-import { parseGalText } from './gal.js';
+import { normalizeDcSpec } from './dc.js';
+import { parseGalText, stripGalTags } from './gal.js';
 import { applyDialoguePatches, galSceneLines, linesProse } from './adventure/patches.js';
 
 export const INVITATION_SCENES = Object.freeze({
@@ -55,16 +56,43 @@ export function normalizeInvitationTopics(raw) {
   );
 }
 
+function normalizeInvitationChoices(rawChoices, field = '本幕选项') {
+  if (!Array.isArray(rawChoices) || rawChoices.length !== 2) throw Error(`${field}需要 2 项`);
+  const labels = [];
+  const checks = [];
+  for (const item of rawChoices) {
+    if (typeof item === 'string') {
+      labels.push(boundedText(item, 60, field));
+      checks.push(null);
+    } else if (item && typeof item === 'object' && !Array.isArray(item)) {
+      labels.push(boundedText(item.label, 60, field));
+      checks.push(normalizeDcSpec(item));
+    } else {
+      throw Error(`${field}格式不正确`);
+    }
+  }
+  if (new Set(labels).size !== 2) throw Error(`${field}不能重复`);
+  return {
+    choices: labels,
+    ...(checks.some(Boolean) ? { choiceChecks: checks } : {}),
+  };
+}
+
 export function normalizeInvitationPlan(raw, { requireChoices = false } = {}) {
   if (!Array.isArray(raw?.stages) || raw.stages.length < 3 || raw.stages.length > 5)
     throw Error('约见需要 3～5 幕互动和一幕收尾');
   return {
     title: boundedText(raw.title, 70, '约见标题'),
+    ...(typeof raw?.prologue === 'string' && raw.prologue.trim()
+      ? { prologue: stripGalTags(boundedText(raw.prologue, 600, '开场散文')) }
+      : {}),
     premise: boundedText(raw.premise, Infinity, '事件缘由'),
     stages: raw.stages.map((stage, index) => {
       const scene = invitationScene(stage);
       if (!Array.isArray(stage.tasks) || !stage.tasks.length || stage.tasks.length > 3)
         throw Error('每幕需要1～3项任务');
+      const normalizedChoices =
+        requireChoices || stage.choices ? normalizeInvitationChoices(stage.choices) : null;
       return {
         ...scene,
         id: `stage-${index + 1}`,
@@ -72,8 +100,9 @@ export function normalizeInvitationPlan(raw, { requireChoices = false } = {}) {
         ...(typeof stage.hint === 'string' ? { hint: stage.hint.trim() } : {}),
         minTurns: 1,
         maxTurns: 4,
-        ...(requireChoices || stage.choices
-          ? { choices: distinctTexts(stage.choices, 2, 60, '本幕选项') }
+        ...(normalizedChoices || {}),
+        ...(Array.isArray(stage.choiceChecks) && !normalizedChoices?.choiceChecks
+          ? { choiceChecks: stage.choiceChecks.map((c) => normalizeDcSpec(c)) }
           : {}),
         goals: stage.tasks.map((task, i) => ({
           id: `goal-${i + 1}`,

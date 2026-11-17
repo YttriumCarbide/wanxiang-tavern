@@ -41,7 +41,18 @@
         <span class="brand"></span><span id="mode-label"></span>
       </div>
       <nav>
-        <button id="ai-open">设置</button>
+        <button id="ai-open" title="接口与游戏设置" aria-label="设置">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <circle cx="12" cy="12" r="3.2" stroke="currentColor" stroke-width="1.7" />
+            <path
+              d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"
+              stroke="currentColor"
+              stroke-width="1.65"
+              stroke-linejoin="round"
+            />
+          </svg>
+          <span class="corner-icon-label">设置</span>
+        </button>
         <button id="party-toggle">准备</button
         ><button id="generation-review" data-generation-review="context" hidden>查看原始回复</button
         ><button class="hud-toggle" id="turn-toggle">回合</button
@@ -180,11 +191,18 @@
         ><button id="summon-confirm" class="primary" hidden>开始召唤</button>
       </footer>
     </section>
-    <section id="generation-progress" hidden aria-live="polite">
-      <div class="generation-orbit" aria-hidden="true">◇</div>
-      <h2 id="generation-title">正在编织本章故事</h2>
-      <p id="generation-description">界门另一端的旅程正在展开…</p>
-      <small>等待接口返回，请稍候</small><button id="generation-progress-cancel">取消</button>
+    <section id="generation-progress" class="world-loading-scene" hidden aria-live="polite">
+      <div class="wl-gen-host" data-wl-gen-host></div>
+      <div class="wl-gen-controls">
+        <div class="wl-gen-text">
+          <h2 id="generation-title">正在编织本章故事</h2>
+          <p id="generation-description">界门另一端的旅程正在展开…</p>
+        </div>
+        <div class="wl-gen-actions">
+          <small>等待接口返回，请稍候</small>
+          <button id="generation-progress-cancel" type="button">取消</button>
+        </div>
+      </div>
     </section>
     <dialog id="ai-dialog" aria-labelledby="ai-title">
       <div class="ai-heading">
@@ -684,7 +702,10 @@
         <div class="ai-actions">
           <button id="diagnostic-copy">复制原文</button
           ><button id="diagnostic-download">下载原文</button
-          ><button id="diagnostic-validate" class="primary">本地重新校验并接收</button>
+          ><button id="diagnostic-validate" class="primary">本地重新校验并接收</button
+          ><button id="diagnostic-retry" type="button" class="primary" hidden>
+            重新生成 · 重试
+          </button>
         </div>
         <p id="diagnostic-note" role="status"></p>
       </footer>
@@ -844,44 +865,63 @@
       <div id="inn-frame"></div>
       <dialog id="party-panel" aria-labelledby="prepare-title">
         <header class="prepare-heading">
-          <h2 id="prepare-title">战阵整备</h2>
-          <button id="prepare-close" aria-label="关闭准备">返回酒馆 <span>×</span></button>
+          <button id="prepare-close" aria-label="关闭准备"><span>×</span></button>
         </header>
         <div class="prepare-body">
           <section class="prepare-formation-col">
-            <h3>当前阵容</h3>
+            <div class="prepare-col-head">
+              <h2 id="prepare-title">战阵整备</h2>
+              <small id="prepare-deployed-count"></small>
+            </div>
+            <div class="prepare-enemy-dir" aria-hidden="true">▲ 敌方方向 ▲</div>
             <div id="prepare-slots"></div>
+            <section class="prepare-reserve-col">
+              <div class="prepare-col-head">
+                <h3>待命成员</h3>
+                <small id="prepare-count"></small>
+              </div>
+              <div class="prepare-bench-row">
+                <span class="formation-row-label bench" aria-hidden="true">待命</span>
+                <div id="prepare-pool" aria-label="未上场角色"></div>
+              </div>
+            </section>
+            <div id="prepare-team-metrics" class="prepare-team-metrics"></div>
+            <div class="prepare-xbtns">
+              <button type="button" class="prepare-xbtn" data-prepare-exchange>
+                <span class="prepare-xbtn-ico" aria-hidden="true">✧</span>
+                <span><strong>以太凝聚器</strong><small id="prepare-ether-amt"></small></span>
+              </button>
+              <button type="button" class="prepare-xbtn" data-prepare-buy>
+                <span class="prepare-xbtn-ico" aria-hidden="true">⚖</span>
+                <span><strong>虚空售货机</strong><small id="prepare-gold-amt"></small></span>
+              </button>
+              <button id="prepare-done" class="primary">返回</button>
+            </div>
+            <div id="prepare-pending-actions" class="prepare-pending-row" hidden>
+              <button
+                id="prepare-cancel-generation"
+                type="button"
+                class="prepare-xbtn prepare-pending-btn is-danger"
+                hidden
+              >
+                <span class="prepare-xbtn-ico" aria-hidden="true">■</span>
+                <span><strong>取消生成</strong><small>中止当前剧本生成</small></span>
+              </button>
+              <button
+                id="prepare-open-workshop"
+                type="button"
+                class="prepare-xbtn prepare-pending-btn is-workshop"
+              >
+                <span class="prepare-xbtn-ico" aria-hidden="true">⚒</span>
+                <span><strong>打开工坊</strong><small>生成期间游玩星隙工坊</small></span>
+              </button>
+            </div>
           </section>
-          <section class="prepare-reserve-col">
-            <h3>未上场角色 <small id="prepare-count"></small></h3>
-            <input
-              autocomplete="off"
-              id="prepare-search"
-              type="search"
-              placeholder="搜索角色…"
-              aria-label="搜索未上场角色"
-            />
-            <div id="prepare-pool" aria-label="未上场角色"></div>
-          </section>
+          <div id="prepare-detail"></div>
         </div>
         <footer>
           <small id="prepare-status">阵容自动保存</small>
-          <div>
-            <button id="prepare-cancel-generation" hidden>取消剧本生成</button>
-            <button id="prepare-done" class="primary">准备完成</button>
-          </div>
         </footer>
-        <dialog id="prepare-character-dialog" aria-labelledby="prepare-character-title">
-          <header>
-            <h2 id="prepare-character-title">角色编辑</h2>
-            <button id="prepare-character-close" aria-label="关闭角色编辑">×</button>
-          </header>
-          <div id="prepare-detail"></div>
-          <footer>
-            <small>装备与立绘自动保存</small
-            ><button id="prepare-character-done" class="primary">完成编辑</button>
-          </footer>
-        </dialog>
       </dialog>
     </main>
     <main id="battle" hidden>
@@ -967,6 +1007,7 @@
       </aside>
       <div id="drag-menu" hidden></div>
       <div id="round-banner" aria-live="polite"></div>
+      <div id="battle-bark-banner" class="battle-bark-banner" hidden aria-live="polite"></div>
       <div id="round-start" hidden aria-live="polite"><small></small><strong>回合开始</strong></div>
     </main>
     <div id="emblem-screen" aria-hidden="true"></div>
@@ -1126,6 +1167,12 @@
       <div id="helper-content"></div>
       <small id="helper-status" role="status"></small>
     </dialog>
+    <section
+      id="chapter-theater"
+      class="chapter-theater"
+      hidden
+      aria-label="章节序幕与尾声"
+    ></section>
     <script type="module" src="./src/app.js"></script>
   </body>
 </html>

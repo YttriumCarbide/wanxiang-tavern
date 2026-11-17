@@ -43,11 +43,13 @@ function creature(
 }
 function boss(...args) {
   const entry = creature(...args);
+  const extra = args[9] || {};
   return {
     ...entry,
     tactic: args[8] || { target: 'fixed' },
     boss: true,
-    phaseMode: 'cycle',
+    phaseMode: extra.enragedIntents ? 'threshold' : 'cycle',
+    ...extra,
   };
 }
 export const FOREST_ENEMIES = [
@@ -105,22 +107,32 @@ export const FOREST_ENEMIES = [
     ],
     { target: 'unpoisoned' },
   ),
-  creature(
-    'bogDrifter',
-    '迷瘴泥兽',
-    55,
-    2,
-    'mud',
-    '#678a83',
-    '失去方向感的泥壳魔物，体表苔痕总向同一个节点流动，受伤后会本能收紧泥甲。',
-    [
-      move('泥甲横撞', '撞击护盾最少的位置：11伤害。', [damage(11)]),
-      move('泥壳蜷护', 'hp不足45%且无护盾时先获得9护盾。', [
-        { type: 'shield', value: 9, target: 'self' },
-      ]),
-    ],
-    { target: 'exposed', mode: 'survivor' },
-  ),
+  {
+    ...creature(
+      'bogDrifter',
+      '迷瘴泥兽',
+      76,
+      2,
+      'mud',
+      '#678a83',
+      '失去方向感的泥壳魔物，体表苔痕总向同一个节点流动，受伤后会本能收紧泥甲。',
+      [
+        move('泥甲横撞', '撞击护盾最少的位置：13伤害。', [damage(13)]),
+        move('泥壳蜷护', 'hp不足45%且无护盾时先获得12护盾。', [
+          { type: 'shield', value: 12, target: 'self' },
+        ]),
+      ],
+      { target: 'exposed', mode: 'survivor' },
+    ),
+    elite: true,
+    title: '精英 / 瘴林泥沼兽',
+    openingIntent: move(
+      '泥潮先涌',
+      '开场喷吐毒泥，对中位造成12伤害、3中毒并获得6护盾。',
+      [damage(12), buff('poison', 3)],
+      { slot: 1, selfShield: 6 },
+    ),
+  },
   creature(
     'moonWorker',
     '搬月工蜂',
@@ -132,22 +144,34 @@ export const FOREST_ENEMIES = [
     [move('护运毒针', '优先锁定未中毒位置：8伤害、4中毒。', [damage(8), buff('poison', 4)])],
     { target: 'unpoisoned' },
   ),
-  creature(
-    'hiveGuard',
-    '蜡甲巢卫',
-    65,
-    2,
-    'bee',
-    '#b19153',
-    '蜂蜡在胸腹形成六棱甲板，巢室受袭时优先为伤重的同类筑蜡墙。',
-    [
-      move('巢口冲撞', '撞击暴露位置：12伤害。', [damage(12)]),
-      move('筑蜡护巢', '同类受伤且缺少护盾时给予hp比例最低同类10护盾。', [
-        { type: 'shield', value: 10, target: 'lowestAlly' },
-      ]),
-    ],
-    { target: 'exposed', mode: 'protector' },
-  ),
+  {
+    ...creature(
+      'hiveGuard',
+      '蜡甲巢卫',
+      84,
+      2,
+      'bee',
+      '#b19153',
+      '蜂蜡在胸腹形成六棱甲板，巢室受袭时优先为伤重的同类筑蜡墙。',
+      [
+        move('巢口冲撞', '撞击暴露位置：14伤害。', [damage(14)]),
+        move('筑蜡护巢', '同类受伤且缺少护盾时给予hp比例最低同类12护盾。', [
+          { type: 'shield', value: 12, target: 'lowestAlly' },
+        ]),
+      ],
+      { target: 'exposed', mode: 'protector' },
+    ),
+    elite: true,
+    title: '精英 / 铁蜡禁卫',
+    openingIntent: move(
+      '重蜡闭门',
+      '开场筑起蜂蜡壁垒，对暴露位置造成12伤害并获得8护盾。',
+      [damage(12)],
+      {
+        selfShield: 8,
+      },
+    ),
+  },
   creature(
     'honeyLarva',
     '蜜囊幼虫',
@@ -167,22 +191,31 @@ export const FOREST_ENEMIES = [
     ],
     { target: 'exposed', mode: 'medic' },
   ),
-  creature(
-    'scaleShield',
-    '月瞳蜥蜴盾卫',
-    67,
-    2,
-    'lizard',
-    '#719b8d',
-    '环形盾面刻着陌生城徽，月牙瞳孔会在受击时收窄；总先守住受伤的同袍。',
-    [
-      move('盾沿重击', '攻击暴露位置：11伤害。', [damage(11)]),
-      move('交盾掩护', '优先为伤重且无护盾的同袍增加12护盾。', [
-        { type: 'shield', value: 12, target: 'lowestAlly' },
-      ]),
-    ],
-    { target: 'exposed', mode: 'protector' },
-  ),
+  {
+    ...creature(
+      'scaleShield',
+      '月瞳蜥蜴盾卫',
+      88,
+      2,
+      'lizard',
+      '#719b8d',
+      '环形盾面刻着陌生城徽，月牙瞳孔会在受击时收窄；总先守住受伤的同袍。',
+      [
+        move('盾沿重击', '攻击暴露位置：13伤害。', [damage(13)]),
+        move('交盾掩护', '优先为伤重且无护盾的同袍增加14护盾。', [
+          { type: 'shield', value: 14, target: 'lowestAlly' },
+        ]),
+      ],
+      { target: 'exposed', mode: 'protector' },
+    ),
+    elite: true,
+    title: '精英 / 古城金盾长',
+    buffs: { iron: 1 },
+    openingIntent: move('古城盾誓', '开场举盾迎击暴露位置造成12伤害，全员获得6护盾。', [
+      damage(12),
+      { type: 'shield', value: 6, target: 'allAllies' },
+    ]),
+  },
   creature(
     'scaleWarrior',
     '月瞳蜥蜴刃兵',
@@ -229,20 +262,33 @@ export const FOREST_ENEMIES = [
     ],
     { target: 'exposed', mode: 'beast' },
   ),
-  creature(
-    'rootHauler',
-    '驮土根行者',
-    74,
-    1,
-    'root',
-    '#8c8570',
-    '根束拖着一团湿土为同类铺路，坚硬砖面会让它运来的土团散开。',
-    [
-      move('土团抛砸', '对中间位置造成14伤害。', [damage(14)], { slot: 1 }),
-      move('湿土覆根', '为所有同类施加3再生。', [buff('regen', 3, 'allAllies')]),
-    ],
-    { target: 'fixed' },
-  ),
+  {
+    ...creature(
+      'rootHauler',
+      '驮土根行者',
+      92,
+      1,
+      'root',
+      '#8c8570',
+      '根束拖着一团湿土为同类铺路，坚硬砖面会让它运来的土团散开。',
+      [
+        move('土团抛砸', '对中间位置造成16伤害。', [damage(16)], { slot: 1 }),
+        move('湿土覆根', '为所有同类施加4再生。', [buff('regen', 4, 'allAllies')]),
+      ],
+      { target: 'fixed' },
+    ),
+    elite: true,
+    title: '精英 / 圣林载土巨灵',
+    openingIntent: move(
+      '沉土先落',
+      '开场掷出湿土压制中位造成14伤害，自身获得8护盾。',
+      [damage(14)],
+      {
+        slot: 1,
+        selfShield: 8,
+      },
+    ),
+  },
   creature(
     'barkAcolyte',
     '木面护林侍徒',
@@ -260,20 +306,30 @@ export const FOREST_ENEMIES = [
     ],
     { target: 'empowered' },
   ),
-  creature(
-    'rootSentry',
-    '树须守卫',
-    77,
-    2,
-    'root',
-    '#7c8c7e',
-    '从埋地导管中钻出的根须护卫，根心包着银蓝支架，表明母树同时使用活体组织与精密构装。',
-    [
-      move('锚须穿刺', '锁定护盾最少的位置：13伤害、3流血。', [damage(13), buff('bleed', 3)]),
-      move('根盘合拢', '为自身获得10护盾。', [{ type: 'shield', value: 10, target: 'self' }]),
-    ],
-    { target: 'exposed', mode: 'survivor' },
-  ),
+  {
+    ...creature(
+      'rootSentry',
+      '树须守卫',
+      96,
+      2,
+      'root',
+      '#7c8c7e',
+      '从埋地导管中钻出的根须护卫，根心包着银蓝支架，表明母树同时使用活体组织与精密构装。',
+      [
+        move('锚须穿刺', '锁定护盾最少的位置：15伤害、4流血。', [damage(15), buff('bleed', 4)]),
+        move('根盘合拢', '为自身获得13护盾。', [{ type: 'shield', value: 13, target: 'self' }]),
+      ],
+      { target: 'exposed', mode: 'survivor' },
+    ),
+    elite: true,
+    title: '精英 / 银络根心守卫',
+    openingIntent: move(
+      '银络急刺',
+      '开场锁定护盾最少的位置造成14伤害、3流血，自身获得6护盾。',
+      [damage(14), buff('bleed', 3)],
+      { selfShield: 6 },
+    ),
+  },
   creature(
     'moonTendril',
     '月华导藤',
@@ -293,66 +349,129 @@ export const FOREST_BOSSES = [
   boss(
     'mossGulon',
     '苔背巨蛙·咕隆',
-    133,
+    158,
     2,
     'frog',
     '#7d9f73',
     '背苔里扎着数根蓝光蜂针，愤怒的鼓鸣掩盖着仓促逃命的惊惧；击败后才看清蜂毒造成的伤口。',
     [
-      move('惊跃踏泥', '对两侧位置各造成10伤害。', [damage(10)], { slots: [0, 2] }),
-      move('鼓囊重撞', '对中间位置造成16伤害，并为自己获得6护盾。', [damage(16)], {
+      move('惊跃踏泥', '对两侧位置各造成7伤害。', [damage(7)], { slots: [0, 2] }),
+      move('鼓囊重撞', '对中间位置造成10伤害，并为自己获得5护盾。', [damage(10)], {
         slot: 1,
-        selfShield: 6,
+        selfShield: 5,
       }),
+      move('毒刺甩苔', '对左侧位置造成8伤害、2中毒。', [damage(8), buff('poison', 2)], { slot: 0 }),
     ],
+    { target: 'fixed' },
+    {
+      actions: 2,
+      enragedActions: 3,
+      splitActions: true,
+      phaseThreshold: 0.5,
+      enragedIntents: [
+        move('狂跃碎泥', '对所有前场造成6伤害。', [damage(6)], { slots: [0, 1, 2] }),
+        move(
+          '毒囊冲撞',
+          '对中间位置造成11伤害、3中毒，并获得6护盾。',
+          [damage(11), buff('poison', 3)],
+          {
+            slot: 1,
+            selfShield: 6,
+          },
+        ),
+        move('乱蛙震扑', '对两侧位置各造成8伤害，自身获得4护盾。', [damage(8)], {
+          slots: [0, 2],
+          selfShield: 4,
+        }),
+      ],
+    },
   ),
   boss(
     'bogElemental',
     '毒沼泥核',
-    163,
+    185,
     1,
     'mud',
     '#6c9b94',
     '三处毒沼支流汇成的元素生命，月苓的药剂能显露其流动核心，普通攻击同样能破坏裸露泥核。',
     [
-      move('蓝瘴奔涌', '对所有前场造成7伤害和3中毒。', [damage(7), buff('poison', 3)], {
+      move('蓝瘴奔涌', '对所有前场造成5伤害和2中毒。', [damage(5), buff('poison', 2)], {
         slots: [0, 1, 2],
       }),
-      move('泥核压陷', '对中位造成18伤害并施加1禁锢。', [damage(18), buff('bind', 1)], { slot: 1 }),
-      move('沉泥回流', '为自己回复20hp。', [{ type: 'heal', value: 20, target: 'self' }]),
+      move('泥核压陷', '对中位造成11伤害并施加1禁锢。', [damage(11), buff('bind', 1)], { slot: 1 }),
+      move('沉泥回流', '为自己回复12hp。', [{ type: 'heal', value: 12, target: 'self' }]),
     ],
+    { target: 'fixed' },
+    {
+      actions: 2,
+      enragedActions: 3,
+      splitActions: true,
+      phaseThreshold: 0.5,
+      enragedIntents: [
+        move('浊流倾泻', '对所有前场造成6伤害和3中毒。', [damage(6), buff('poison', 3)], {
+          slots: [0, 1, 2],
+        }),
+        move('泥渊吞压', '对中位造成12伤害、1禁锢，并回复8hp。', [damage(12), buff('bind', 1)], {
+          slot: 1,
+          selfHeal: 8,
+        }),
+        move('腐核聚流', '对两侧各造成8伤害，并回复10hp。', [damage(8)], {
+          slots: [0, 2],
+          selfHeal: 10,
+        }),
+      ],
+    },
   ),
   boss(
     'moonQueen',
     '月纹蜂后',
-    179,
+    196,
     2,
     'bee',
     '#d1b96a',
     '胸前月纹把蜂巢当成碎片传送网络；不靠蛮力追击，而以蜂蜡封路与毒针轮换压迫。',
     [
-      move('御巢毒雨', '对所有前场造成8伤害、3中毒。', [damage(8), buff('poison', 3)], {
+      move('御巢毒雨', '对所有前场造成5伤害、2中毒。', [damage(5), buff('poison', 2)], {
         slots: [0, 1, 2],
       }),
-      move('月纹长针', '对中位造成20伤害、2易伤。', [damage(20), buff('vulnerable', 2)], {
+      move('月纹长针', '对中位造成10伤害、1易伤。', [damage(10), buff('vulnerable', 1)], {
         slot: 1,
       }),
-      move('蜡巢封护', '为全部同巢单位增加10护盾。', [
-        { type: 'shield', value: 10, target: 'allAllies' },
+      move('蜡巢封护', '为全部同巢单位增加8护盾。', [
+        { type: 'shield', value: 8, target: 'allAllies' },
       ]),
     ],
+    { target: 'fixed' },
+    {
+      actions: 2,
+      enragedActions: 3,
+      splitActions: true,
+      phaseThreshold: 0.5,
+      enragedIntents: [
+        move('狂巢毒暴雨', '对所有前场造成6伤害、3中毒。', [damage(6), buff('poison', 3)], {
+          slots: [0, 1, 2],
+        }),
+        move('穿心月针', '对中位造成12伤害、2易伤。', [damage(12), buff('vulnerable', 2)], {
+          slot: 1,
+        }),
+        move('蜂群统御', '为全部同巢单位增加8护盾与1力量。', [
+          { type: 'shield', value: 8, target: 'allAllies' },
+          buff('strength', 1, 'allAllies'),
+        ]),
+      ],
+    },
   ),
   boss(
     'scaleCaptain',
     '月瞳近卫队长',
-    195,
+    215,
     2,
     'lizard',
     '#7f9f92',
     '甲裙刻着逐级军衔，月牙瞳孔随口令明灭；队长守护的是一座仍有秩序运转的古城。',
     [
-      move('近卫合击', '对两侧各造成13伤害。', [damage(13)], { slots: [0, 2] }),
-      move('破门斩击', '瞄准中位，先给予2易伤再造成17伤害。', [buff('vulnerable', 2), damage(17)], {
+      move('近卫合击', '对两侧各造成7伤害。', [damage(7)], { slots: [0, 2] }),
+      move('破门斩击', '瞄准中位，先给予1易伤再造成10伤害。', [buff('vulnerable', 1), damage(10)], {
         slot: 1,
       }),
       move('列阵守城', '为所有同袍增加1力量、1铁皮。', [
@@ -360,24 +479,75 @@ export const FOREST_BOSSES = [
         buff('iron', 1, 'allAllies'),
       ]),
     ],
+    { target: 'fixed' },
+    {
+      actions: 2,
+      enragedActions: 3,
+      splitActions: true,
+      phaseThreshold: 0.5,
+      enragedIntents: [
+        move('月刃双斩', '对两侧各造成8伤害、1流血。', [damage(8), buff('bleed', 1)], {
+          slots: [0, 2],
+        }),
+        move('裂甲破阵', '瞄准中位造成12伤害、2易伤。', [damage(12), buff('vulnerable', 2)], {
+          slot: 1,
+        }),
+        move(
+          '死守古城号令',
+          '对全体前场造成5伤害，全军获得6护盾与1力量。',
+          [
+            damage(5),
+            { type: 'shield', value: 6, target: 'allAllies' },
+            buff('strength', 1, 'allAllies'),
+          ],
+          { slots: [0, 1, 2] },
+        ),
+      ],
+    },
   ),
   boss(
     'maskedForester',
     '木面护林主祭',
-    191,
+    178,
     2,
     'cultist',
     '#92a579',
     '面具背后根须与皮肤相连，把保护林地曲解为不许任何生命离开；失去土路后仍以铜铃驱赶树怪拼命。',
     [
-      move('围林咒缚', '对两侧各造成9伤害、2虚弱。', [damage(9), buff('weak', 2)], {
+      move('围林咒缚', '对两侧各造成6伤害、1虚弱。', [damage(6), buff('weak', 1)], {
         slots: [0, 2],
       }),
-      move('根誓倾轧', '对中间位置造成22伤害。', [damage(22)], { slot: 1 }),
-      move('困兽号令', '为同类增加2力量，自身获得8护盾。', [buff('strength', 2, 'allAllies')], {
-        selfShield: 8,
-      }),
+      move('根誓倾轧', '对中间位置造成11伤害。', [damage(11)], { slot: 1 }),
+      move(
+        '困兽号令',
+        '为同类提供8护盾，自身获得6护盾。',
+        [{ type: 'shield', value: 8, target: 'allAllies' }],
+        {
+          selfShield: 6,
+        },
+      ),
     ],
+    { target: 'fixed' },
+    {
+      actions: 2,
+      enragedActions: 3,
+      splitActions: true,
+      phaseThreshold: 0.5,
+      enragedIntents: [
+        move('森域禁铃', '对所有前场造成6伤害、2虚弱。', [damage(6), buff('weak', 2)], {
+          slots: [0, 1, 2],
+        }),
+        move('狂根撕裂', '对中间位置造成9伤害、1易伤。', [damage(9), buff('vulnerable', 1)], {
+          slot: 1,
+        }),
+        move(
+          '誓林余威',
+          '对两侧造成6伤害，并为同类提供8护盾。',
+          [damage(6), { type: 'shield', value: 8, target: 'allAllies' }],
+          { slots: [0, 2] },
+        ),
+      ],
+    },
   ),
   boss(
     'moonCrown',

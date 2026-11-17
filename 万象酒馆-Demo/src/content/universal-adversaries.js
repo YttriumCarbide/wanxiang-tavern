@@ -61,20 +61,24 @@ export const UNIVERSAL_ENEMIES = [
       ]),
     ],
   ),
-  creature(
-    'hollowSentry',
-    '空壳哨兵',
-    '#83909c',
-    62,
-    2,
-    'warden-fist',
-    { role: '护盾压制', target: 'shielded', mode: 'breaker' },
-    '由坚硬外壳与微光核心驱动的无主守卫。优先敲击防护最厚的位置，1铁皮按4护盾比较。',
-    [
-      move('重拳校准', '锁定回合开始时护盾与铁皮防护最高的位置：12伤害。', [damage(12)]),
-      move('碎盾重锤', '目标防护达到6时改用重锤：19伤害；1铁皮按4护盾比较。', [damage(19)]),
-    ],
-  ),
+  {
+    ...creature(
+      'hollowSentry',
+      '空壳哨兵',
+      '#83909c',
+      62,
+      2,
+      'warden-fist',
+      { role: '护盾压制', target: 'shielded', mode: 'breaker' },
+      '由坚硬外壳与微光核心驱动的无主守卫。优先敲击防护最厚的位置，1铁皮按4护盾比较。',
+      [
+        move('重拳校准', '锁定回合开始时护盾与铁皮防护最高的位置：12伤害。', [damage(12)]),
+        move('碎盾重锤', '目标防护达到6时改用重锤：19伤害；1铁皮按4护盾比较。', [damage(19)]),
+      ],
+    ),
+    elite: true,
+    title: '精英 / 空壳哨兵',
+  },
   creature(
     'veilMender',
     '蒙面疗愈者',
@@ -183,26 +187,42 @@ export const UNIVERSAL_ENEMIES = [
       }),
     ],
   ),
-  creature(
-    'oathlessDuelist',
-    '无誓行者',
-    '#9d9aaf',
-    55,
-    4,
-    'shadow-strike',
-    { role: '防守反击', target: 'exposed', mode: 'duelist' },
-    '没有徽记与誓言的蒙甲旅人。先稳住防御，再寻找护盾薄弱的位置连续施压。',
-    [
-      move('斜刃守备', '每三个回合先守备一次：自身获得8护盾。', [
-        { type: 'shield', value: 8, target: 'self' },
-      ]),
-      move('试隙斩', '其余回合锁定护盾最少的位置：14伤害、1虚弱。', [damage(14), buff('weak', 1)]),
-    ],
-  ),
+  {
+    ...creature(
+      'oathlessDuelist',
+      '无誓行者',
+      '#9d9aaf',
+      55,
+      4,
+      'shadow-strike',
+      { role: '防守反击', target: 'exposed', mode: 'duelist' },
+      '没有徽记与誓言的蒙甲旅人。先稳住防御，再寻找护盾薄弱的位置连续施压。',
+      [
+        move('斜刃守备', '每三个回合先守备一次：自身获得8护盾。', [
+          { type: 'shield', value: 8, target: 'self' },
+        ]),
+        move('试隙斩', '其余回合锁定护盾最少的位置：14伤害、1虚弱。', [
+          damage(14),
+          buff('weak', 1),
+        ]),
+      ],
+    ),
+    elite: true,
+    title: '精英 / 无誓行者',
+  },
 ];
 
 function boss(entry, enragedIntents) {
-  return { ...entry, boss: true, phaseThreshold: 0.5, enragedIntents };
+  return {
+    ...entry,
+    boss: true,
+    actions: 2,
+    enragedActions: 3,
+    splitActions: true,
+    phaseMode: 'threshold',
+    phaseThreshold: 0.5,
+    enragedIntents,
+  };
 }
 
 export const UNIVERSAL_BOSSES = [
@@ -217,22 +237,22 @@ export const UNIVERSAL_BOSSES = [
       { role: '范围压制 / 负伤追击', target: 'wounded', mode: 'beast' },
       '披着多层风化甲壳的巨兽，没有固定的元素属性。多人挡路时横扫，落单时专注追击。',
       [
-        move('裂壳横扫', '有至少两名前场角色时横扫三个位置，各10伤害。', [damage(10)], {
+        move('裂壳横扫', '有至少两名前场角色时横扫三个位置，各7伤害。', [damage(7)], {
           slots: [0, 1, 2],
         }),
-        move('独猎重噬', '前场只剩一人时，锁定该位置：19伤害、3流血。', [
-          damage(19),
-          buff('bleed', 3),
+        move('独猎重噬', '前场只剩一人时，锁定该位置：13伤害、2流血。', [
+          damage(13),
+          buff('bleed', 2),
         ]),
       ],
     ),
     [
-      move('狂裂横扫', '有至少两名前场角色时横扫三个位置，各13伤害。', [damage(13)], {
+      move('狂裂横扫', '有至少两名前场角色时横扫三个位置，各8伤害。', [damage(8)], {
         slots: [0, 1, 2],
       }),
-      move('裂牙追猎', '前场只剩一人时，锁定该位置：23伤害、4流血。', [
-        damage(23),
-        buff('bleed', 4),
+      move('裂牙追猎', '前场只剩一人时，锁定该位置：14伤害、3流血。', [
+        damage(14),
+        buff('bleed', 3),
       ]),
     ],
   ),
@@ -247,24 +267,24 @@ export const UNIVERSAL_BOSSES = [
       { role: '强化判读 / 破盾', target: 'empowered', mode: 'judge' },
       '悬浮面甲、环形肩铠与平衡臂组成的无主构装体。将最显著的防护或强化判定为威胁。',
       [
-        move('强者裁定', '锁定回合开始时强化最多的位置：14伤害、1虚弱。', [
-          damage(14),
+        move('强者裁定', '锁定回合开始时强化最多的位置：9伤害、1虚弱。', [
+          damage(9),
           buff('weak', 1),
         ]),
-        move('壁垒裁定', '有人防护达到8时，锁定防护最高的位置：21伤害；1铁皮按4护盾比较。', [
-          damage(21),
+        move('壁垒裁定', '有人防护达到8时，锁定防护最高的位置：14伤害；1铁皮按4护盾比较。', [
+          damage(14),
         ]),
       ],
     ),
     [
       move(
         '双向裁定',
-        '锁定强化最多的位置与相邻一格，各12伤害、1虚弱。',
-        [damage(12), buff('weak', 1)],
+        '锁定强化最多的位置与相邻一格，各8伤害、1虚弱。',
+        [damage(8), buff('weak', 1)],
         { adjacent: true },
       ),
-      move('壁垒终裁', '有人防护达到8时，锁定防护最高的位置：26伤害；1铁皮按4护盾比较。', [
-        damage(26),
+      move('壁垒终裁', '有人防护达到8时，锁定防护最高的位置：16伤害；1铁皮按4护盾比较。', [
+        damage(16),
       ]),
     ],
   ),
@@ -273,31 +293,29 @@ export const UNIVERSAL_BOSSES = [
       'returningCore',
       '归环之核',
       '#81b7ae',
-      224,
+      184,
       2,
       'astral-cascade',
       { role: '同伴修复 / 周期爆发', target: 'charged', mode: 'core' },
       '围绕悬空晶核缓慢自转的三组残环。会修复受损同行者，蓄能后释放明显可预见的光潮。',
       [
-        move('聚环蓄能', '每三个回合蓄能一次：自身获得12护盾、1力量。', [
-          { type: 'shield', value: 12, target: 'self' },
-          buff('strength', 1, 'self'),
+        move('聚环蓄能', '每三个回合蓄能一次：自身获得10护盾。', [
+          { type: 'shield', value: 10, target: 'self' },
         ]),
-        move('光潮扩散', '蓄能后攻击三个前场位置，各9伤害。', [damage(9)], { slots: [0, 1, 2] }),
+        move('光潮扩散', '蓄能后攻击三个前场位置，各6伤害。', [damage(6)], { slots: [0, 1, 2] }),
         move('返光修补', '每三个回合最多修复一次：敌方hp比例最低且不足50%的单位回复16hp。', [
           { type: 'heal', value: 16, target: 'lowestAlly' },
         ]),
       ],
     ),
     [
-      move('过载聚环', '每三个回合蓄能一次：自身获得16护盾、1力量。', [
-        { type: 'shield', value: 16, target: 'self' },
-        buff('strength', 1, 'self'),
+      move('过载聚环', '每三个回合蓄能一次：自身获得12护盾。', [
+        { type: 'shield', value: 12, target: 'self' },
       ]),
       move(
         '逆环光潮',
-        '蓄能后攻击三个前场位置，各12伤害、1易伤。',
-        [damage(12), buff('vulnerable', 1)],
+        '蓄能后攻击三个前场位置，各7伤害、1易伤。',
+        [damage(7), buff('vulnerable', 1)],
         { slots: [0, 1, 2] },
       ),
       move('返光修补', '每三个回合最多修复一次：敌方hp比例最低且不足50%的单位回复16hp。', [

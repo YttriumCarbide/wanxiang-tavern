@@ -21,6 +21,7 @@ import {
 } from '../invitation.js';
 import { relationship } from '../relationships.js';
 import { recruitmentPassed, recruitmentStatus } from '../recruitment.js';
+import { prepareFreeDcContext } from '../dc-rp.js';
 
 function invitationDialogueScenes(run) {
   return [...run.plan.stages.slice(run.index + 1), run.plan.finale].map((scene) => ({
@@ -259,14 +260,46 @@ export function createDailyInvitation(context, { getScene, navigate, complete, r
     refresh();
     let readToEnd = false;
     const stage = run.plan.stages[run.index];
-    await context.gal.play(unread.text, {
+    if (
+      run.index === 0 &&
+      unread.type === 'intro' &&
+      run.plan.prologue &&
+      !run.prologueShown &&
+      context.chapterTheater
+    ) {
+      run.prologueShown = true;
+      save();
+      await context.chapterTheater.play({
+        heading: run.plan.title,
+        prose: run.plan.prologue,
+        buttonLabel: '走近搭话 ›',
+        mode: 'invitation',
+        map: 'tavern',
+        place: INVITATION_SCENES[run.plan.stages[0]?.scene] || INVITATION_SCENES[run.scene] || '',
+      });
+      if (current() !== run || context.session.runtime?.disposed) {
+        reading = false;
+        return;
+      }
+    }
+    const galOptions = {
       owner,
       title: unread.type === 'finale' ? run.plan.finale.title : run.plan.title,
       mandatory: true,
       onComplete: () => {
         readToEnd = true;
       },
-    });
+    };
+    if (unread.dcReply && context.dice) {
+      await context.dice.playReply(unread.dcReply, galOptions, {
+        style: 'free',
+        actionText: unread.actionText || '',
+        member: target(run.member),
+        claimId: unread.claimId || `${run.id || 'inv'}:${run.turns.length}`,
+      });
+    } else {
+      await context.gal.play(unread.text, galOptions);
+    }
     reading = false;
     if (current() !== run || !readToEnd) return;
     const played = (run.played ||= invitationTranscript(run));
@@ -381,6 +414,11 @@ export function createDailyInvitation(context, { getScene, navigate, complete, r
         selected: people.map(({ id }) => id),
         history: run.history,
         dialogueScenes: dialogueTargets(invitationDialogueScenes(run)),
+        dcContext: {
+          mode: 'free',
+          forced: false,
+          ...prepareFreeDcContext(library(), [target(run.member)].filter(Boolean)),
+        },
         invitation: {
           stageId: stage.id,
           stageTitle: stage.title,
@@ -417,7 +455,17 @@ export function createDailyInvitation(context, { getScene, navigate, complete, r
           { role: 'user', content: text },
           { role: 'assistant', content: result.content },
         );
-        run.unread = { type: 'reply', text: result.display || result.content };
+        run.unread = {
+          type: 'reply',
+          text: result.display || result.content,
+          ...(result.dcOutcome?.triggered
+            ? {
+                dcReply: result,
+                actionText: text,
+                claimId: `${(run.id ||= crypto.randomUUID())}:${run.turns.length}`,
+              }
+            : {}),
+        };
         run.draft = '';
         field.value = '';
       },

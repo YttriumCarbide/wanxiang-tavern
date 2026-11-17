@@ -407,29 +407,38 @@ export const ENEMIES = [
     id: 'warden',
     attackStyle: 'stone-slam',
     name: '遗迹石卫',
-    title: '耐久 / 护盾',
+    title: '精英 / 守门巨像',
+    elite: true,
     color: '#8d9fa6',
     portrait: 'golem',
-    hp: 66,
+    hp: 76,
     mp: 0,
     speed: 3,
     limit: 1,
     buffs: { iron: 1 },
+    openingIntent: {
+      name: '封门震击',
+      slot: 1,
+      selfShield: 8,
+      text: '获得8护盾，震击中位13伤害',
+      effects: [{ type: 'damage', value: 13 }],
+    },
     intents: [
       {
-        name: '筑壳震击',
+        name: '重盾反震',
         slot: 1,
-        text: '获得7护盾，再攻击中位10伤害',
-        selfShield: 7,
-        effects: [{ type: 'damage', value: 10 }],
+        selfShield: 10,
+        selfBuff: { guard: 1 },
+        text: '获得10护盾与1层守势，反震中位13伤害',
+        effects: [{ type: 'damage', value: 13 }],
       },
       {
-        name: '重锤左位',
+        name: '崩壁重锤',
         slot: 0,
-        text: '攻击左位17伤害，施加1易伤',
+        text: '猛砸左位17伤害，施加2易伤',
         effects: [
           { type: 'damage', value: 17 },
-          { type: 'buff', buff: 'vulnerable', value: 1 },
+          { type: 'buff', buff: 'vulnerable', value: 2 },
         ],
       },
     ],
@@ -479,36 +488,53 @@ export const BOSSES = [
     name: '缚界巨像',
     title: 'Boss / 石卫与界门核心',
     boss: true,
+    actions: 2,
+    enragedActions: 3,
+    splitActions: true,
     color: '#dfb46d',
     portrait: 'boss-gate',
-    hp: 126,
+    hp: 112,
     mp: 0,
     speed: 3,
     limit: 1,
     buffs: { iron: 1 },
     phaseThreshold: 0.5,
     intents: [
-      { name: '重铠震击中位', slot: 1, selfShield: 10, effects: [{ type: 'damage', value: 14 }] },
+      { name: '重铠震击', slot: 1, selfShield: 5, effects: [{ type: 'damage', value: 7 }] },
       {
         name: '两翼崩塌',
         slots: [0, 2],
         effects: [
-          { type: 'damage', value: 9 },
+          { type: 'damage', value: 4 },
           { type: 'buff', buff: 'vulnerable', value: 1 },
         ],
+      },
+      {
+        name: '界门蓄势',
+        slot: 0,
+        selfShield: 4,
+        effects: [{ type: 'damage', value: 5 }],
       },
     ],
     enragedIntents: [
       {
-        name: '裂核重锤中位',
+        name: '裂核重锤',
         slot: 1,
-        selfBuff: { strength: 1 },
         effects: [
-          { type: 'damage', value: 16 },
-          { type: 'buff', buff: 'bleed', value: 4 },
+          { type: 'damage', value: 7 },
+          { type: 'buff', buff: 'bleed', value: 2 },
         ],
       },
-      { name: '崩解全场', slots: [0, 1, 2], effects: [{ type: 'damage', value: 9 }] },
+      { name: '崩解全场', slots: [0, 1, 2], effects: [{ type: 'damage', value: 4 }] },
+      {
+        name: '残垣压顶',
+        slots: [0, 2],
+        selfShield: 4,
+        effects: [
+          { type: 'damage', value: 4 },
+          { type: 'buff', buff: 'weak', value: 1 },
+        ],
+      },
     ],
   },
   {
@@ -517,9 +543,13 @@ export const BOSSES = [
     name: '夜蕈母体',
     title: 'Boss / 古林孢子与再生',
     boss: true,
+    actions: 2,
+    enragedActions: 3,
+    splitActions: true,
+    phaseMode: 'threshold',
     color: '#bdaaed',
     portrait: 'boss-bloom',
-    hp: 115,
+    hp: 112,
     mp: 0,
     speed: 4,
     limit: 1,
@@ -530,17 +560,23 @@ export const BOSSES = [
         name: '毒花右位',
         slot: 2,
         effects: [
-          { type: 'damage', value: 10 },
-          { type: 'buff', buff: 'poison', value: 6 },
+          { type: 'damage', value: 6 },
+          { type: 'buff', buff: 'poison', value: 2 },
         ],
       },
       {
         name: '缠根左中位',
         slots: [0, 1],
         effects: [
-          { type: 'damage', value: 8 },
-          { type: 'buff', buff: 'bleed', value: 3 },
+          { type: 'damage', value: 5 },
+          { type: 'buff', buff: 'bleed', value: 2 },
         ],
+      },
+      {
+        name: '汲露聚孢',
+        slot: 1,
+        selfShield: 5,
+        effects: [{ type: 'damage', value: 6 }],
       },
     ],
     enragedIntents: [
@@ -548,17 +584,25 @@ export const BOSSES = [
         name: '孢子风全场',
         slots: [0, 1, 2],
         effects: [
-          { type: 'damage', value: 6 },
-          { type: 'buff', buff: 'poison', value: 4 },
+          { type: 'damage', value: 4 },
+          { type: 'buff', buff: 'poison', value: 2 },
         ],
       },
       {
         name: '噬生左位',
         slot: 0,
-        selfHeal: 8,
+        selfHeal: 4,
         effects: [
-          { type: 'damage', value: 15 },
+          { type: 'damage', value: 7 },
           { type: 'buff', buff: 'weak', value: 1 },
+        ],
+      },
+      {
+        name: '狂藤绞杀',
+        slots: [1, 2],
+        effects: [
+          { type: 'damage', value: 5 },
+          { type: 'buff', buff: 'bleed', value: 1 },
         ],
       },
     ],
@@ -620,7 +664,7 @@ export function encounterSpec(index, boss = 'bossGate') {
         : boss === 'bossTide'
           ? ['tideJelly', boss, 'crystalBeetle']
           : boss === 'ruinsGate'
-            ? ['corridorGuard', boss, 'stoneBallista']
+            ? ['patrolHound', boss, 'stoneBallista']
             : boss === 'chasmBeast'
               ? ['viperShadow', boss, 'raptorStorm']
               : boss === 'brassColossus'
@@ -635,8 +679,19 @@ export function encounterSpec(index, boss = 'bossGate') {
   } else spec.enemyIds = [...spec.enemyIds];
   return spec;
 }
-/** Empty enemy positions keep their stone bases; one enemy is centered, two use the wings. */
-export function enemySlots(ids) {
+/** Empty enemy positions keep their stone bases; non-boss elites take center stage while preserving authored boss layouts. */
+export function enemySlots(ids, definitions = DEFINITIONS) {
+  if (!Array.isArray(ids) || !ids.length) return [];
+  const eliteIdx = ids.findIndex((id) => definitions?.[id]?.elite && !definitions?.[id]?.boss);
+  if (eliteIdx >= 0) {
+    if (ids.length === 1) return [null, ids[0], null];
+    if (ids.length === 2) {
+      return eliteIdx === 0 ? [null, ids[0], ids[1]] : [ids[0], ids[1], null];
+    }
+    if (eliteIdx === 1) return [...ids];
+    const rest = ids.filter((_, idx) => idx !== eliteIdx);
+    return [rest[0], ids[eliteIdx], rest[1], ...rest.slice(2)];
+  }
   if (ids.length === 1) return [null, ids[0], null];
   if (ids.length === 2) return [ids[0], null, ids[1]];
   return [...ids];

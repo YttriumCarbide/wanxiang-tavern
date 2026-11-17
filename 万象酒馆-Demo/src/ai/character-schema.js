@@ -1,5 +1,6 @@
 import { BUFFS } from '../data.js';
 import { TRIGGER_EVENTS, TRIGGER_TARGETS, GENERATED_BUFFS } from '../triggers.js';
+import { DC_ATTR_MIN, DC_ATTR_MAX } from '../dc.js';
 
 const string = (maxLength, minLength = 1) => ({ type: 'string', minLength, maxLength });
 const integer = (minimum, maximum) => ({ type: 'integer', minimum, maximum });
@@ -315,6 +316,14 @@ export function characterOutputSchema({
       ]),
       effects,
     }),
+  });
+  schema.properties.data.properties.dcAttrs = object({
+    str: integer(DC_ATTR_MIN, DC_ATTR_MAX),
+    dex: integer(DC_ATTR_MIN, DC_ATTR_MAX),
+    con: integer(DC_ATTR_MIN, DC_ATTR_MAX),
+    int: integer(DC_ATTR_MIN, DC_ATTR_MAX),
+    wis: integer(DC_ATTR_MIN, DC_ATTR_MAX),
+    cha: integer(DC_ATTR_MIN, DC_ATTR_MAX),
   });
   schema.properties.data.properties.mark = object({ name: string(15) });
   schema.properties.data.properties.basicAttackMark = { type: 'boolean' };

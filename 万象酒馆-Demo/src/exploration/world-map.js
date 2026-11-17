@@ -303,5 +303,10 @@ export function createWorldMap({ dialog, events, scene, onTravel }) {
     travel.reset();
   });
 
-  return { open, updateTravel: travel.update, updateDiscoveries: travel.updateDiscoveries };
+  return {
+    open,
+    updateTravel: travel.update,
+    updateDiscoveries: travel.updateDiscoveries,
+    updateWorldState: travel.updateWorldState,
+  };
 }

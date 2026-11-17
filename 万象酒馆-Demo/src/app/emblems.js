@@ -208,6 +208,29 @@ export function createEmblems(context) {
       );
     }
   }
+  function syncRingCollection(targetWindow) {
+    if (!targetWindow) return;
+    const library = session.ai.library;
+    const collection = Object.fromEntries(
+      Object.keys(EMBLEMS).map((id) => [
+        id,
+        {
+          owned: library.emblems?.includes(id) || false,
+          wearer:
+            library.characters.find((member) => member.emblemId === id)?.setting?.name || null,
+        },
+      ]),
+    );
+    targetWindow.postMessage({ type: 'tavern-emblem-collection', collection }, location.origin);
+  }
+  function openGallery() {
+    const frameWindow = document.querySelector('#inn-frame iframe')?.contentWindow;
+    if (session.runtime.mode !== 'inn' || session.ai.busy || !frameWindow?.assetPreview)
+      return false;
+    syncRingCollection(frameWindow);
+    frameWindow.postMessage({ type: 'tavern-open-ring-gallery' }, location.origin);
+    return true;
+  }
   events.on(window, 'message', (event) => {
     if (
       event.origin !== location.origin ||
@@ -219,6 +242,7 @@ export function createEmblems(context) {
         'ring-cabinet-open',
         event.data.open === true && session.runtime.mode === 'inn',
       );
+      context.ledger?.sync();
       return;
     }
     if (
@@ -228,24 +252,14 @@ export function createEmblems(context) {
     )
       return;
     if (event.data.type === 'tavern-emblem') {
-      const library = session.ai.library;
-      const collection = Object.fromEntries(
-        Object.keys(EMBLEMS).map((id) => [
-          id,
-          {
-            owned: library.emblems?.includes(id) || false,
-            wearer:
-              library.characters.find((member) => member.emblemId === id)?.setting?.name || null,
-          },
-        ]),
-      );
-      event.source.postMessage({ type: 'tavern-emblem-collection', collection }, location.origin);
+      syncRingCollection(event.source);
       return;
     }
     context.shell.renderParty();
     document.querySelector('#party-panel').showModal();
   });
   return {
+    openGallery,
     returned,
     equipped,
     check,

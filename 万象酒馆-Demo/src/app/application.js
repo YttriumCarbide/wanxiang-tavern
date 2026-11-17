@@ -44,6 +44,9 @@ import { createEquipment } from './equipment.js';
 import { createSettlement } from './settlement.js';
 import { createCompanionEvents } from './companion-events.js';
 import { createGalPlayer } from './gal.js';
+import { createDiceStage } from './dice-stage.js';
+import { createChapterTheater } from './chapter-theater.js';
+import { createBattleBarks } from './battle-barks.js';
 import { createAssetStore } from '../shared/asset-store.js';
 import { createPortraitPreloader } from './asset-preload.js';
 import { createLatestResponse } from './latest-response.js';
@@ -51,6 +54,7 @@ import { createAntiRoutePanel } from './anti-route.js';
 import { createDaily } from './daily.js';
 import { createMapExpansion } from './map-expansion.js';
 import { createTavernQuests } from './tavern-quests.js';
+import { createLedgerSidebar } from './ledger-sidebar.js';
 
 /** Composition root: wiring only, with one explicit application lifetime. */
 export function createApplication({
@@ -82,6 +86,9 @@ export function createApplication({
   context.viewport = createViewport(context);
   context.audio = createAudio(context);
   context.gal = createGalPlayer(context);
+  context.dice = createDiceStage(context);
+  context.chapterTheater = createChapterTheater(context);
+  context.battleBarks = createBattleBarks(context);
   context.generation = createGeneration(context);
   context.destinations = createDestinations(context);
   context.shell = createShell(context);
@@ -116,6 +123,7 @@ export function createApplication({
   context.workshop = createWorkshop(context);
   context.daily = createDaily(context);
   context.latestResponse = createLatestResponse(context);
+  context.ledger = createLedgerSidebar(context);
   const antiRoutePanel = createAntiRoutePanel(context);
 
   const records = createRecords(context);
@@ -142,6 +150,7 @@ export function createApplication({
     clearTimeout(runtime.toastTimer);
     clearTimeout(runtime.resizeTimer);
     context.workshop.dispose();
+    context.ledger.dispose();
     context.daily.dispose();
     context.shell.dispose();
     context.latestResponse.dispose();
@@ -155,6 +164,7 @@ export function createApplication({
     context.audio.dispose();
     context.generation.dispose();
     context.destinations.dispose();
+    context.dice.dispose();
     context.saves?.dispose?.();
     context.onboarding.dispose();
     context.firstRun.dispose();
@@ -169,6 +179,8 @@ export function createApplication({
     context.settlement.dispose();
     context.summoning.dispose();
     context.chat.dispose();
+    context.battleBarks.dispose();
+    context.chapterTheater.dispose();
     context.gal.dispose();
     context.memory.dispose();
     context.mapExpansion.dispose();

@@ -44,6 +44,9 @@ body.ring-viewing :is(#spots, .spot, #emblem-open, .talk-open, .supply-open, #ai
   letter-spacing: 0.22em;
   font-size: 11px;
 }
+html[data-embedded] .ring-gallery header {
+  padding-right: 172px;
+}
 .ring-gallery header button {
   width: 40px;
   height: 40px;
@@ -176,6 +179,9 @@ body.ring-viewing :is(#spots, .spot, #emblem-open, .talk-open, .supply-open, #ai
   .ring-gallery header {
     inset: max(10px, env(safe-area-inset-top)) 3vw auto;
     font-size: 10px;
+  }
+  html[data-embedded] .ring-gallery header {
+    padding-right: 142px;
   }
   .ring-gallery header button {
     width: 31px;

@@ -450,6 +450,9 @@ export async function createGuestRoomView() {
   parent.postMessage({ type: 'tavern-portal-visibility', summon: false }, location.origin);
   document.title = ROOM.title;
   const plaque = document.getElementById('room-plaque');
+  const sceneKey = ROOM_KIND === 'master' ? 'master-bedroom' : 'guest-room';
+  document.body.dataset.scene = sceneKey;
+  if (parent !== window) document.documentElement.dataset.embedded = 'true';
   if (plaque) {
     const title = plaque.querySelector('strong'),
       small = plaque.querySelector('small');
@@ -497,6 +500,15 @@ export async function createGuestRoomView() {
     makeFlame(deskLight, deskLight.intensity);
     makeFlame(doorLight, doorLight.intensity);
     document.body.classList.add('ready');
+    if (parent !== window)
+      parent.postMessage(
+        {
+          type: 'scene-ready',
+          scene: sceneKey,
+          title: ROOM_KIND === 'master' ? '主卧 · 主人房' : ROOM.small,
+        },
+        location.origin,
+      );
     const hint = document.getElementById('room-hint');
     if (hint) setTimeout(() => hint.classList.add('quiet'), 4200);
     window.guestRoomReady = true;

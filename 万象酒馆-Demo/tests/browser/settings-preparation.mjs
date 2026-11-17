@@ -4,18 +4,52 @@ import { characterDocument } from '../fixtures/ai.js';
 import { normalizeCharacter } from '../../src/ai/contracts.js';
 
 export async function settingsPreparationChecks({ page, output }) {
+  const ensureLedgerOpen = async () => {
+    if (await page.locator('#ledger-drawer-host.is-open').count()) return;
+    const handle = await page.locator('#ledger-handle').boundingBox();
+    await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(Math.max(10, handle.x - 140), handle.y + handle.height / 2, {
+      steps: 6,
+    });
+    await page.mouse.up();
+    await page.locator('#ledger-drawer-host.is-open').waitFor();
+  };
+  assert.equal(await page.locator('.app-header').isVisible(), false);
+  assert.equal(await page.locator('#ledger-handle').isVisible(), true);
+  assert.equal(await page.locator('#ledger-toggle').count(), 0);
+  for (const id of ['#saves-open', '#audio-toggle', '#fullscreen-toggle', '#ai-open']) {
+    assert.equal(await page.locator(`#ledger-corner ${id}`).isVisible(), true, id);
+  }
+  assert.match(await page.locator('[data-tavern-clock]').textContent(), /1463年8月24日 · 上午/);
+  assert.deepEqual(await page.locator('.daily-dock button').allTextContents(), [
+    '闲聊',
+    '用餐',
+    '约见',
+    '冒险',
+    '外出',
+  ]);
+  await page.locator('#ledger-handle').click();
+  await page.locator('#ledger-drawer-host.is-open').waitFor();
+  await page.locator('#ledger-close').click();
+  await page.locator('#ledger-drawer').waitFor({ state: 'hidden' });
+  await ensureLedgerOpen();
+  assert.equal(await page.locator('#ledger-drawer #inn-resources').count(), 1);
   assert.deepEqual(
-    (await page.locator('.app-header nav button:visible').allTextContents()).map((text) =>
-      text.trim(),
-    ),
-    ['总结', '归档', '记录', '设置', '准备', '', ''],
+    await page
+      .locator('#ledger-drawer .ledger-foot button')
+      .evaluateAll((buttons) => buttons.map((button) => button.id)),
+    ['ledger-speed-toggle', 'generation-review'],
   );
+  assert.equal(await page.locator('#ledger-drawer #generation-review').isVisible(), true);
   assert.equal(
     await page
-      .locator('.app-header [data-generation-review]:visible,#gate-nav,#rules-open,#route-open')
+      .locator('#gate-nav,#rules-open,#route-open,[data-generation-review="character"]:visible')
       .count(),
     0,
   );
+  await page.locator('#ledger-close').click();
+  await page.locator('#ledger-drawer').waitFor({ state: 'hidden' });
   await page.locator('#ai-open').click();
   await page.locator('[data-ai-tab="prompts"]').click();
   assert.equal(await page.locator('#prompt-select option:not([value=""])').count(), 0);
@@ -76,6 +110,7 @@ export async function settingsPreparationChecks({ page, output }) {
   }, generated);
   await page.reload();
   await page.waitForFunction(() => !!window.demo);
+  await ensureLedgerOpen();
   await page.locator('#party-toggle').click();
   assert.equal(await page.locator('.prepare-slot').count(), 6);
   assert.equal(await page.locator('.prepare-member').count(), 1);
@@ -95,6 +130,7 @@ export async function settingsPreparationChecks({ page, output }) {
   await page.locator('#prepare-done').click();
   await page.evaluate(() => localStorage.removeItem('wanxiang.generated-reset.v1'));
   await page.reload();
+  await ensureLedgerOpen();
   await page.locator('#party-toggle').click();
   assert.equal(await page.locator('.prepare-member').count(), 0);
   assert((await page.locator('#prepare-status').textContent()).includes('6 / 6 位出发'));
@@ -105,6 +141,7 @@ export async function settingsPreparationChecks({ page, output }) {
     page.locator('#generation-reset-undo').click(),
   ]);
   await page.waitForFunction(() => document.querySelectorAll('.prepare-member').length === 1);
+  await ensureLedgerOpen();
   await page.locator('#party-toggle').click();
   assert.equal(await page.locator('.prepare-member').count(), 1);
   await page.locator('#prepare-done').click();

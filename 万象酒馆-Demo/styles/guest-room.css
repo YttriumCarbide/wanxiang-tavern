@@ -193,6 +193,10 @@ body.leaving #scene-fade {
     font-size: 12px;
   }
 }
+html[data-embedded] :is(#room-plaque, #where) {
+  display: none;
+}
+
 @media (max-height: 500px) {
   #room-plaque {
     top: 9px;

@@ -125,7 +125,9 @@ test('legacy routes send the exact cast and their editable bestiary supplies onl
       ),
     );
     assert(!request.messages.some((message) => message.content.includes('老舍《断魂枪》')));
-    assert(request.messages.some((message) => message.content.includes('自由叙事与伏笔')));
+    assert(
+      request.messages.some((message) => message.content.includes('单章五节点 JRPG 副本剧本')),
+    );
   }
 });
 

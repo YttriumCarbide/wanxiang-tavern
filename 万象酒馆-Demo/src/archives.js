@@ -160,6 +160,7 @@ export function archiveOverlandLoot(library, { runId, title, leg, items = [] }) 
       name: item.name,
       description: item.description,
       value: item.value,
+      ...(item.category ? { category: item.category } : {}),
       map: 'forest',
       level,
       quality,
@@ -245,6 +246,7 @@ export function resolveItemReferences(items, known) {
       name: old.name,
       description: old.description,
       value: old.value,
+      ...(old.category ? { category: old.category } : {}),
       encounter: item.encounter,
     };
   });

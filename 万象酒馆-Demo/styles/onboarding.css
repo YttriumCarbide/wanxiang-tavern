@@ -448,8 +448,8 @@
 #tutorial-guide {
   position: fixed;
   z-index: 39;
-  top: 80px;
-  left: 22px;
+  top: 62px;
+  left: 14px;
   width: 190px;
   padding: 12px;
   background: linear-gradient(130deg, #102a2bed, #172023e8);
@@ -765,7 +765,7 @@
 }
 @media (pointer: coarse) and (orientation: landscape) and (max-width: 1100px) and (max-height: 600px) {
   #tutorial-guide {
-    top: 73px;
+    top: 52px;
     left: calc(10px + var(--safe-left));
     width: 128px;
     padding: 9px;
@@ -815,5 +815,87 @@
   #setup-status {
     flex-basis: 100%;
     margin: 0;
+  }
+}
+.creation-dc-allocator {
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  border: 1px solid #c3ab7244;
+  border-radius: 6px;
+  background: #081817b8;
+}
+.creation-dc-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: #c3d3ca;
+}
+.creation-dc-head strong {
+  color: #82d4af;
+}
+.creation-dc-head strong.is-incomplete {
+  color: #e6a26e;
+}
+.creation-dc-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.creation-dc-presets button {
+  padding: 3px 9px;
+  font-size: 11px;
+  border-radius: 4px;
+}
+.creation-dc-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+.creation-dc-cell {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 5px 8px;
+  border: 1px solid #a4c4b52c;
+  border-radius: 4px;
+  background: #060f1570;
+  font-size: 11px;
+}
+.dc-cell-name {
+  color: #d6dfd9;
+  white-space: nowrap;
+}
+.dc-cell-name small {
+  color: #8ea69a;
+}
+.dc-cell-ctrl {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.dc-cell-ctrl button {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  line-height: 1;
+}
+.dc-cell-ctrl strong {
+  min-width: 44px;
+  text-align: center;
+  color: #efdfb8;
+}
+.dc-cell-ctrl em {
+  font-style: normal;
+  color: #82d4af;
+  margin-left: 2px;
+}
+@media (max-width: 900px) {
+  .creation-dc-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

@@ -17,7 +17,7 @@ import { requestTokenReport } from './request-tokens.js';
 import { auditPromptPreset } from './prompt-audit.js';
 import { encounterEnemies, enemiesForSpec } from './encounter-reference.js';
 import { explorationSpec } from '../../exploration.js';
-import { REGIONS } from '../../content/regions.js';
+import { REGIONS, localNpcPoolFor, regionTaskHookFor } from '../../content/regions.js';
 import { presetOutputTransport, outputToolRequest } from '../preset-output.js';
 import { requireNpcInteraction } from '../../npc-interaction.js';
 import { galInstruction, galActorListText } from '../gal-prompt.js';
@@ -91,6 +91,21 @@ export function generationInput(kind, input) {
   }));
   const selected = input.exploration ? explorationSpec(input.exploration) : null;
   const officialDungeon = officialDungeonFor(input.exploration);
+  const rawTaskHook = input.taskHook || regionTaskHookFor(input.exploration, input.boss);
+  const taskHook = rawTaskHook
+    ? typeof rawTaskHook === 'string'
+      ? { title: rawTaskHook, description: rawTaskHook }
+      : {
+          ...(rawTaskHook.id ? { id: rawTaskHook.id } : {}),
+          ...(rawTaskHook.title ? { title: rawTaskHook.title } : {}),
+          ...(rawTaskHook.boss ? { boss: rawTaskHook.boss, bossId: rawTaskHook.boss } : {}),
+          ...(rawTaskHook.bossName ? { bossName: rawTaskHook.bossName } : {}),
+          ...(rawTaskHook.description ? { description: rawTaskHook.description } : {}),
+        }
+    : null;
+  const localNpcPool = localNpcPoolFor(input.exploration);
+  const lockedBoss =
+    taskHook?.boss && DEFINITIONS[taskHook.boss]?.boss ? taskHook.boss : input.boss;
   const player = party.find((entry) => entry.id === input.protagonistId);
   return {
     task: 'script',
@@ -101,8 +116,19 @@ export function generationInput(kind, input) {
         input.exploration,
         Array.isArray(input.ownedEmblems) ? input.ownedEmblems : [],
       ),
+      ...(taskHook ? { taskHook } : {}),
+      ...(localNpcPool.length ? { localNpcPool } : {}),
       ...(input.adventureVersion === 1
-        ? { rpChapterDirection: rpChapterDirection(input.exploration) }
+        ? {
+            rpChapterDirection: [
+              rpChapterDirection(input.exploration),
+              taskHook
+                ? `本次任务引子：${taskHook.title || ''}${taskHook.bossName || taskHook.boss ? `（最终Boss：${taskHook.bossName || taskHook.boss}）` : ''}——${taskHook.description || ''}`
+                : '',
+            ]
+              .filter(Boolean)
+              .join(' '),
+          }
         : {}),
       storyArc: arcFor(input),
       ...(requireNpcInteraction(input) ? { npcInteraction: { required: true } } : {}),
@@ -218,12 +244,12 @@ export function generationInput(kind, input) {
             };
           })
         : Array.from({ length: ENCOUNTER_COUNT }, (_, index) => {
-            const spec = encounterSpec(index, input.boss);
+            const spec = encounterSpec(index, lockedBoss);
             return {
               index,
               map: spec.map,
               environment: EXPEDITION_PLACES[index],
-              enemies: encounterEnemies(index, input.boss),
+              enemies: encounterEnemies(index, lockedBoss),
               enemyCount: spec.enemyIds.length,
               boss: !!spec.boss,
             };

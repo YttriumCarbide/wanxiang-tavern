@@ -164,7 +164,8 @@ dialog:has(> #gal-stage:not([hidden])) > :not(.gal-stage) {
 }
 .gal-controls {
   position: absolute;
-  inset: max(18px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) auto;
+  inset: max(12px, env(safe-area-inset-top)) max(172px, calc(env(safe-area-inset-right) + 164px))
+    auto max(24px, env(safe-area-inset-left));
   display: flex;
   justify-content: flex-end;
   align-items: center;
@@ -383,7 +384,8 @@ dialog:has(> #gal-stage:not([hidden])) > :not(.gal-stage) {
 }
 @media (max-height: 500px), (max-width: 900px) {
   .gal-controls {
-    inset: max(8px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) auto;
+    inset: max(7px, env(safe-area-inset-top)) max(142px, calc(env(safe-area-inset-right) + 136px))
+      auto max(14px, env(safe-area-inset-left));
     gap: 5px;
   }
   .gal-controls button {

@@ -1,6 +1,7 @@
 import { DROP_GROUPS } from './content/enemy-drops.js';
 import { INGREDIENTS } from './content/dining.js';
 import { ITEMS } from './content/items.js';
+import { rollGemDrop } from './content/gems.js';
 import { claimBattleRewards } from './rewards.js';
 import { definition } from './catalog.js';
 import { DEFINITIONS } from './data.js';
@@ -46,10 +47,15 @@ export function claimEnemyDrops(library, expedition, state, result) {
     const drops = [];
     if (roll(`${claim}:primary`) < table.primaryChance) drops.push(table.primary);
     if (roll(`${claim}:extra`) < table.extraChance) drops.push(table.extra);
-    if (!drops.length) continue;
+    const gem = rollGemDrop(
+      `${claim}:gem`,
+      enemy.boss || bossCards.has(enemy?.portrait) ? 0.14 : 0.04,
+    );
+    if (!drops.length && !gem) continue;
     const items = {};
     for (const id of drops) if (ITEMS[id]) items[id] = (items[id] || 0) + 1;
-    if (!claimBattleRewards(library, claim, { summonContracts: 0, items })) continue;
+    const gems = gem ? [{ gemId: gem.id, instanceId: `gem-${claim}` }] : [];
+    if (!claimBattleRewards(library, claim, { summonContracts: 0, items, gems })) continue;
     for (const id of drops) {
       if (INGREDIENTS[id]) {
         const dining = (library.dining ||= {});
@@ -58,6 +64,7 @@ export function claimEnemyDrops(library, expedition, state, result) {
       }
       loot.push((INGREDIENTS[id] || ITEMS[id]).name);
     }
+    if (gem) loot.push(`宝石 · ${gem.name}`);
   }
   return loot;
 }

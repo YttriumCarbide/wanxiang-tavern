@@ -8,12 +8,22 @@ import { bossLines } from '../adventure/patches.js';
 import { applyFutureDialogue, dungeonDialogueScenes } from './future-dialogue.js';
 import { rpBackground } from '../content/rp-backgrounds.js';
 import { eventReward, eventRewardText } from '../adventure/rewards.js';
-import { skippingAi, developerOption } from '../generation-options.js';
+import { skippingAi } from '../generation-options.js';
 import { escapeText } from '../ui.js';
 import { memoryHash } from '../memory.js';
 import { archiveMilestone } from '../archives.js';
 import { galIconMarkup } from './gal-icons.js';
 import { normalizeSceneOverview } from '../adventure/definition.js';
+import { portraitUrl } from '../portraits.js';
+import {
+  DC_DEFAULT_DIFFICULTY,
+  computeMapDc,
+  dcAttrLabel,
+  dcSuccessProbability,
+  effectiveDcAttrs,
+  formatMod,
+} from '../dc.js';
+import { formatDcEffectSummary, prepareFreeDcContext, resolveFixedChoiceCheck } from '../dc-rp.js';
 
 /** One scene controller: rules, rewards and patches belong to the pure adventure modules. */
 export function createAdventure(context) {
@@ -24,14 +34,20 @@ export function createAdventure(context) {
   root.setAttribute('aria-label', '副本事件');
   const tool = (id, icon, label) =>
     `<button data-rp="${id}" title="${label}" aria-label="${label}">${galIconMarkup(icon, label)}<span>${label}</span></button>`;
-  root.innerHTML = `<div class="rp-vignette"></div><header class="rp-header"><span data-rp="chapter"></span><button class="rp-boss-shortcut" data-rp="boss-shortcut" hidden>进入 Boss 战 <span aria-hidden="true">→</span></button><nav class="rp-tools" aria-label="事件工具">${tool('compose', 'compose', '发言')}${tool('history', 'history', '故事记录')}${tool('replay', 'replay', '重读开场')}${tool('raw', 'journal', '原始返回')}${tool('retreat', 'back', '返回酒馆')}${tool('settings', 'settings', '设置')}</nav></header>
-    <main class="rp-content"><div class="rp-kicker"></div><h1></h1><p class="rp-description"></p><div class="rp-options"></div><p class="rp-reward-receipt" role="status" hidden></p><div class="rp-goals"></div><section class="rp-environment"><h2>周围</h2><dl></dl></section>
-    <form class="rp-form"><label for="rp-input">说些什么，或描述你的行动</label><p class="rp-locked-choice" aria-label="已选行动，不可编辑" hidden></p><div><textarea id="rp-input" rows="2" maxlength="10000" placeholder="输入你想说的话，或想做的事……"></textarea><button type="submit" data-rp="send">确认选择</button></div></form>
-    <p class="rp-status" role="status"></p><nav class="rp-footer"><button data-rp="retry" hidden>重试本次回应</button><button data-rp="skip" hidden>跳过RP（开发者）</button><button data-rp="next" hidden>继续冒险 →</button></nav></main>
-    <aside class="rp-boss-ready" hidden><strong>主要目标已完成</strong><p>现在前往最后的战斗，还是再停留片刻？</p><div><button data-rp="stay">继续探索与交流</button><button data-rp="boss">进入 Boss 战 →</button></div></aside>`;
+  root.innerHTML = `<div class="rp-vignette"></div><div class="rp-rays" aria-hidden="true"></div><div class="rp-tilt top" aria-hidden="true"></div><div class="rp-tilt bottom" aria-hidden="true"></div><header class="rp-header"><span data-rp="chapter"></span></header>
+    <main class="rp-content"><div class="rp-kicker"></div><h1></h1><p class="rp-description"></p><div class="rp-options"></div><div class="rp-goals"></div><section class="rp-environment"><h2>周围</h2><dl></dl></section>
+    <form class="rp-form" hidden><label for="rp-input">说些什么，或描述你的行动</label><p class="rp-locked-choice" aria-label="已选行动，不可编辑" hidden></p><div><textarea id="rp-input" rows="2" maxlength="10000" placeholder="输入你想说的话，或想做的事……"></textarea><button type="submit" data-rp="send">确认选择</button></div></form>
+    <p class="rp-status" role="status"></p></main>
+    <div class="rp-left-dock">
+      <p class="rp-reward-receipt" role="status" hidden></p>
+      <aside class="rp-boss-ready" hidden><strong>主要目标已完成</strong><p>前往最终首领战入口已在下方就绪，也可以继续停留探索。</p><div><button data-rp="stay">继续探索与交流</button></div></aside>
+      <nav class="rp-footer"><button data-rp="retry" hidden>重试本次回应</button><button data-rp="skip" hidden>跳过RP（开发者）</button><button data-rp="next" hidden>继续冒险 →</button></nav>
+    </div>
+    <nav class="rp-bottom-pill-bar" aria-label="事件操作">${tool('compose', 'compose', '发言')}${tool('replay', 'replay', '重读开场')}</nav>`;
   document.body.append(root);
   const content = root.querySelector('.rp-content');
   const form = root.querySelector('.rp-form');
+  const choiceActorMap = new Map();
   let request = null;
   let selected = null;
   let introEpoch = 0;
@@ -44,6 +60,55 @@ export function createAdventure(context) {
   const book = () => session.ai.activeScript;
   const trip = () => session.journey.expedition;
   const state = () => trip()?.adventure;
+  function partyMembers() {
+    const libChars = session.ai.library?.characters || [];
+    const ids =
+      trip()?.party?.map((m) => m.id) ||
+      book()?.party?.map((m) => m.id) ||
+      session.ai.library?.party ||
+      [];
+    const mapped = ids
+      .map((id) => libChars.find((c) => c.id === id) || book()?.party?.find((c) => c.id === id))
+      .filter(Boolean);
+    if (mapped.length) return mapped;
+    const protagId = session.ai.library?.campaign?.protagonistId;
+    const fallback = libChars.find((c) => c.id === protagId) || libChars[0];
+    return fallback ? [fallback] : [];
+  }
+  function matchMember(members, ref) {
+    if (!ref) return null;
+    const key = String(ref).trim();
+    return (
+      members.find(
+        (m) => m.id === key || m.setting?.name === key || m.combat?.name === key || m.name === key,
+      ) || null
+    );
+  }
+  function allowedActorsForChoice(choice, members, spec) {
+    if (!members.length) return [];
+    const requested = [];
+    for (const ref of choice?.actors || (spec?.actor ? [spec.actor] : [])) {
+      const m = matchMember(members, ref);
+      if (m && !requested.some((existing) => existing.id === m.id)) requested.push(m);
+    }
+    if (requested.length) return requested.slice(0, 2);
+    const attr = spec?.attr || 'str';
+    const sorted = [...members].sort(
+      (a, b) =>
+        (effectiveDcAttrs(session.ai.library, b).mods[attr]?.mod ?? 0) -
+        (effectiveDcAttrs(session.ai.library, a).mods[attr]?.mod ?? 0),
+    );
+    if (sorted.length < 2) return sorted;
+    const topMod = effectiveDcAttrs(session.ai.library, sorted[0]).mods[attr]?.mod ?? 0;
+    const secondMod = effectiveDcAttrs(session.ai.library, sorted[1]).mods[attr]?.mod ?? 0;
+    return topMod > secondMod ? [sorted[0]] : [sorted[0], sorted[1]];
+  }
+  function resolveChoiceActor(choice, members, spec) {
+    const allowed = allowedActorsForChoice(choice, members, spec);
+    if (!allowed.length) return null;
+    const storedId = choice?.id ? choiceActorMap.get(choice.id) : null;
+    return allowed.find((m) => m.id === storedId) || allowed[0];
+  }
   function save() {
     const index = session.ai.library.scripts.findIndex((entry) => entry.id === book()?.id);
     if (index >= 0 && book()?.adventure && !book().recollection)
@@ -70,13 +135,18 @@ export function createAdventure(context) {
       composer: [form],
       onLayout({ height, collapsed }) {
         root.dataset.composer = collapsed ? 'collapsed' : 'open';
-        root.style.setProperty('--rp-panel-bottom', collapsed ? '64px' : `${height + 12}px`);
+        root.style.setProperty('--rp-panel-bottom', collapsed ? '74px' : `${height + 16}px`);
+        root.style.setProperty('--rp-pill-bottom', 'max(14px, env(safe-area-inset-bottom))');
         find('[data-rp="compose"]').setAttribute('aria-expanded', String(!collapsed));
       },
       onClose() {
         workspaceOpen = false;
+        root.dataset.composer = 'closed';
+        root.style.removeProperty('--rp-panel-bottom');
+        root.style.removeProperty('--rp-pill-bottom');
         request?.abort();
         form.hidden = true;
+        find('[data-rp="compose"]')?.setAttribute('aria-expanded', 'false');
       },
     });
     render();
@@ -107,20 +177,32 @@ export function createAdventure(context) {
     const event = trip().index === 1;
     const definition = book().adventure;
     const scene = event ? definition.event : definition.quest;
+    const kicker = event ? '旅途片刻 / ENCOUNTER' : '歧路之间 / EXPLORE';
     find('[data-rp="chapter"]').textContent = `${book().title} · ${trip().index + 1} / 5`;
-    find('.rp-kicker').textContent = event ? '旅途片刻 / ENCOUNTER' : '歧路之间 / EXPLORE';
+    find('.rp-kicker').textContent = kicker;
     find('h1').textContent = scene.title;
     find('.rp-description').textContent = scene.description;
     find('.rp-description').hidden = false;
     find('.rp-description').classList.toggle('rp-event-introduction', !event);
     find('.rp-options').hidden = !event;
     const receipt = find('.rp-reward-receipt');
-    receipt.hidden = !event || !state().event.rewardClaimed;
-    receipt.textContent = receipt.hidden
-      ? ''
-      : state().event.reward
-        ? `本次收获 · ${eventRewardText(state().event.reward)}`
-        : '本次收获已领取';
+    const dcReceipt = event ? state().event.dcReceipt : state().questLastDc;
+    const baseRewardText =
+      event && state().event.rewardClaimed ? eventRewardText(state().event.reward) : '';
+    const dcSummary = dcReceipt ? formatDcEffectSummary(dcReceipt.reward, dcReceipt.penalty) : null;
+    const receiptParts = [];
+    if (baseRewardText || dcSummary?.gainsText) {
+      const gained = [baseRewardText, ...(dcSummary?.gains || [])].filter(Boolean).join(' · ');
+      if (gained)
+        receiptParts.push(`<span class="rp-receipt-gain">本次收获 · ${escapeText(gained)}</span>`);
+    }
+    if (dcSummary?.lossesText) {
+      receiptParts.push(`<span class="rp-receipt-loss">${escapeText(dcSummary.lossesText)}</span>`);
+    } else if (event && state().event.rewardClaimed && !receiptParts.length) {
+      receiptParts.push('<span class="rp-receipt-gain">本次事件已结算</span>');
+    }
+    receipt.hidden = receiptParts.length === 0;
+    receipt.innerHTML = receiptParts.join('');
     find('.rp-goals').hidden = event;
     find('.rp-environment').hidden = event;
     if (!event)
@@ -133,12 +215,47 @@ export function createAdventure(context) {
             `<div><dt>${escapeText(item.location)}</dt><dd>${escapeText(item.detail)}</dd></div>`,
         )
         .join('');
+    const resolved = event && state().event.resolved;
+    const members = partyMembers();
+    const pickedChoice = event ? scene.choices.find((item) => item.id === selected) : null;
+    const mapOrLevel = trip()?.exploration?.map || trip()?.exploration?.level || null;
     if (event) {
       find('.rp-options').innerHTML = scene.choices
         .filter((choice) => !state().event.resolved || choice.id === selected)
         .map((choice) => {
           const index = scene.choices.indexOf(choice);
-          return `<button type="button" data-rp-choice="${choice.id}" aria-pressed="${selected === choice.id}" ${(state().event.choiceId && state().event.choiceId !== choice.id) || request || state().event.resolved ? 'disabled' : ''}><span class="rp-choice-number">0${index + 1}</span><span><strong>${escapeText(choice.label)}</strong><small>${escapeText(choice.detail)}</small></span></button>`;
+          const rawSpec =
+            choice.dcCheck ||
+            (choice.attr ? { attr: choice.attr, dc: choice.dc ?? DC_DEFAULT_DIFFICULTY } : null);
+          const attr = rawSpec?.attr || ['str', 'wis', 'dex', 'cha'][index % 4];
+          const dc = computeMapDc(mapOrLevel, index, rawSpec?.dc ?? DC_DEFAULT_DIFFICULTY);
+          const spec = { ...rawSpec, attr, dc };
+          const allowed = allowedActorsForChoice(choice, members, spec);
+          const activeActor =
+            (resolved && state().event.choiceCheck?.actorId
+              ? members.find((m) => m.id === state().event.choiceCheck.actorId)
+              : null) || resolveChoiceActor(choice, members, spec);
+          if (activeActor) choiceActorMap.set(choice.id, activeActor.id);
+          const mod = activeActor
+            ? (effectiveDcAttrs(session.ai.library, activeActor).mods[attr]?.mod ?? 0)
+            : 0;
+          const pct = dcSuccessProbability(mod, dc);
+          const dcTag = `<b class="rp-dc-tag">DC ${dc} · ${escapeText(dcAttrLabel(attr))} (${escapeText(formatMod(mod))} / ${pct}%)</b>`;
+          const actorsMarkup = allowed.length
+            ? `<div class="rp-choice-actors" aria-label="适配角色">${allowed
+                .map((member) => {
+                  const mMod = effectiveDcAttrs(session.ai.library, member).mods[attr]?.mod ?? 0;
+                  const actorName = member.setting?.name || member.name || member.id;
+                  const thumb = portraitUrl(member.combat || member) || '';
+                  const isCurrent = member.id === activeActor?.id;
+                  const inner = `${thumb ? `<img src="${thumb}" alt="" onerror="this.remove()">` : ''}<span>${escapeText(actorName)}</span><small>${escapeText(formatMod(mMod))}</small>`;
+                  return allowed.length > 1 && !resolved && !request
+                    ? `<button type="button" class="rp-choice-actor-pill" data-rp-actor="${escapeText(member.id)}" data-rp-actor-choice="${escapeText(choice.id)}" aria-pressed="${isCurrent}">${inner}</button>`
+                    : `<span class="rp-choice-actor-pill is-locked" data-active="${isCurrent}">${inner}</span>`;
+                })
+                .join('')}</div>`
+            : '';
+          return `<div class="rp-choice-row" data-selected="${selected === choice.id}">${actorsMarkup}<button type="button" data-rp-choice="${choice.id}" aria-pressed="${selected === choice.id}" ${(state().event.choiceId && state().event.choiceId !== choice.id) || request || state().event.resolved ? 'disabled' : ''}><span class="ev-ch-mark" aria-hidden="true">◆</span><span class="rp-choice-number">0${index + 1}</span><span class="ev-ch-body"><strong>${escapeText(choice.label)}</strong><small>${escapeText(choice.detail)}</small></span>${dcTag}</button></div>`;
         })
         .join('');
     } else
@@ -148,8 +265,7 @@ export function createAdventure(context) {
           return `<article data-status="${progress.status}"><span>${progress.status === 'completed' ? '✓' : progress.status === 'failed' ? '—' : '◇'}</span><h2>${escapeText(goal.title)}${goal.required ? '' : '<small>可选</small>'}</h2></article>`;
         })
         .join('');
-    const resolved = event && state().event.resolved;
-    const choice = event && !resolved ? scene.choices.find((item) => item.id === selected) : null;
+    const choice = event && !resolved ? pickedChoice : null;
     find('.rp-locked-choice').hidden = !choice;
     find('.rp-locked-choice').textContent = choice ? `已选：${choice.label}` : '';
     find('[data-rp="send"]').setAttribute('aria-label', event && !resolved ? '确认选择' : '发送');
@@ -158,15 +274,9 @@ export function createAdventure(context) {
     find('[data-rp="next"]').hidden = event ? !resolved : !adventureReady(definition, state());
     find('[data-rp="next"]').disabled = !!request;
     find('[data-rp="next"]').textContent = event ? '继续冒险 →' : '进入Boss战 →';
-    find('[data-rp="boss-shortcut"]').hidden = event || !adventureReady(definition, state());
-    find('[data-rp="boss-shortcut"]').disabled = !!request;
     find('[data-rp="skip"]').hidden =
       book().recollection === true || !skippingAi(session.ai.generationOptions);
     find('[data-rp="skip"]').disabled = !!request;
-    find('[data-rp="retreat"]').hidden = !developerOption(
-      session.ai.generationOptions,
-      'allowRetreat',
-    );
   }
   function ready() {
     if (trip()?.index !== 3 || !adventureReady(book().adventure, state()) || state().readyPrompted)
@@ -185,11 +295,35 @@ export function createAdventure(context) {
       if (retry) turn = adventure.pendingTurn;
       else {
         const text = find('#rp-input').value.trim();
-        if (expedition.index === 1 && !adventure.event.resolved)
-          confirmEventChoice(source.adventure, adventure, selected, text);
-        else if (!text && !local) throw Error('写下一句话或一个行动，再发送');
+        let choiceCheck = null;
+        if (expedition.index === 1 && !adventure.event.resolved) {
+          const pickedIndex = source.adventure.event.choices.findIndex((c) => c.id === selected);
+          const pickedChoice = source.adventure.event.choices[pickedIndex];
+          const mapOrLevel = expedition.exploration?.map || expedition.exploration?.level || null;
+          const rawSpec =
+            pickedChoice?.dcCheck ||
+            (pickedChoice?.attr
+              ? { attr: pickedChoice.attr, dc: pickedChoice.dc ?? DC_DEFAULT_DIFFICULTY }
+              : {
+                  attr: ['str', 'wis', 'dex', 'cha'][Math.max(0, pickedIndex) % 4],
+                  dc: DC_DEFAULT_DIFFICULTY,
+                });
+          const spec = {
+            ...rawSpec,
+            dc: computeMapDc(mapOrLevel, Math.max(0, pickedIndex), rawSpec.dc),
+          };
+          const members = partyMembers();
+          const actor = resolveChoiceActor(pickedChoice, members, spec) || members[0] || null;
+          choiceCheck = resolveFixedChoiceCheck({
+            library: session.ai.library,
+            member: actor,
+            choice: { ...pickedChoice, dcCheck: spec },
+            seed: `${expedition.id}:event:${pickedChoice.id}:${actor?.id || ''}`,
+          });
+          confirmEventChoice(source.adventure, adventure, selected, text, choiceCheck);
+        } else if (!text && !local) throw Error('写下一句话或一个行动，再发送');
         turn = {
-          ...adventureTurnContext(expedition, source, text),
+          ...adventureTurnContext(expedition, source, text, choiceCheck),
           responseId: crypto.randomUUID(),
         };
         adventure.pendingTurn = turn;
@@ -232,10 +366,22 @@ export function createAdventure(context) {
           'quick-chat',
           turn.playerText || turn.choice?.label || '继续当前事件',
         );
+        const members = partyMembers();
+        const mapOrLevel = expedition.exploration?.map || expedition.exploration?.level || null;
         result = await context.apiClient.request(
           'generate/quick-chat',
           {
             ...input,
+            mapOrLevel,
+            ...(turn.mode === 'quest'
+              ? {
+                  dcContext: {
+                    mode: 'free',
+                    forced: true,
+                    ...prepareFreeDcContext(session.ai.library, members, Math.random, mapOrLevel),
+                  },
+                }
+              : {}),
             environment: `${source.title} · 第${expedition.index + 1}节点\n${expedition.index === 1 ? source.adventure.event.description : source.adventure.quest.description}`,
             adventure: turn,
             history: adventure.history.map(({ role, content }) => ({ role, content })),
@@ -315,7 +461,57 @@ export function createAdventure(context) {
       status(accepted.warnings.join('；'));
       request = null;
       render();
-      await play(result.display || result.content, turn.responseId);
+      const playOptions = {
+        owner: 'adventure',
+        title: book().title,
+        onRead(line) {
+          record(
+            line.speaker || '旁白',
+            line.text,
+            'rp',
+            `${turn.responseId}:${memoryHash(line.text)}`,
+          );
+        },
+      };
+      const members = partyMembers();
+      const actorRefId =
+        turn.mode === 'event' ? turn.choiceCheck?.actorId : result.dcOutcome?.actorId;
+      const chosenMember = members.find((m) => m.id === actorRefId) || members[0] || null;
+      if ((turn.mode === 'event' || turn.mode === 'quest') && context.dice?.playReply) {
+        const dcReceipt = await context.dice.playReply(result, playOptions, {
+          style: turn.mode === 'event' ? 'event' : 'free',
+          actionText: turn.choice?.label || turn.playerText || '',
+          fixedCheck: turn.mode === 'event' ? turn.choiceCheck || null : null,
+          member: chosenMember,
+          claimId: turn.responseId,
+          expedition,
+        });
+        if (dcReceipt) {
+          const effectSummary = formatDcEffectSummary(dcReceipt.reward, dcReceipt.penalty);
+          if (turn.mode === 'event') state().event.dcReceipt = dcReceipt;
+          else state().questLastDc = dcReceipt;
+          if (effectSummary.lossesText) {
+            record(
+              '检定代价',
+              effectSummary.lossesText,
+              'dc-penalty',
+              `${turn.responseId}:penalty`,
+            );
+          }
+          if (effectSummary.gainsText) {
+            record(
+              '检定收获',
+              effectSummary.gainsText,
+              'dc-reward',
+              `${turn.responseId}:dc-reward`,
+            );
+          }
+          save();
+          render();
+        }
+      } else {
+        await play(result.display || result.content, turn.responseId);
+      }
       if (!root.hidden && trip() === expedition) ready();
     } catch (failure) {
       if (trip() === expedition && !root.hidden) {
@@ -344,6 +540,7 @@ export function createAdventure(context) {
     session.runtime.view?.dispose();
     session.runtime.view = null;
     document.body.classList.add('in-adventure');
+    context.ledger?.sync();
     document.querySelector('#battle').hidden = true;
     document.querySelector('#inn').hidden = true;
     document.querySelector('#inn-frame').replaceChildren();
@@ -354,6 +551,14 @@ export function createAdventure(context) {
     document.querySelector('#ai-open').hidden = false;
     root.style.backgroundImage = `url("${rpBackground(trip().exploration?.map || 'ruins', trip().index)}")`;
     selected = state().event.choiceId;
+    if (state().event.choiceId && state().event.choiceCheck?.actorId) {
+      choiceActorMap.set(state().event.choiceId, state().event.choiceCheck.actorId);
+    }
+    workspaceOpen = false;
+    form.hidden = true;
+    root.dataset.composer = 'closed';
+    root.style.removeProperty('--rp-panel-bottom');
+    root.style.removeProperty('--rp-pill-bottom');
     root.hidden = false;
     root.dataset.intro = 'true';
     find('.rp-boss-ready').hidden = true;
@@ -372,6 +577,17 @@ export function createAdventure(context) {
     if (!resuming) {
       await context.generation.showScene(trip().index, 'before');
       await play(book().story[trip().index], `intro-${trip().index}`);
+      if (epoch !== introEpoch || root.hidden) return;
+      if (context.chapterTheater?.playOpening) {
+        const isEventNode = trip().index === 1;
+        const nodeData = isEventNode ? book().adventure?.event : book().adventure?.quest;
+        await context.chapterTheater.playOpening({
+          mode: isEventNode ? 'event-opening' : 'quest-opening',
+          heading: nodeData?.title || book().title,
+          prose: nodeData?.description || '',
+          map: trip().exploration?.map || 'ruins',
+        });
+      }
     }
     if (epoch === introEpoch && !root.hidden) {
       root.dataset.intro = 'false';
@@ -387,17 +603,29 @@ export function createAdventure(context) {
     context.gal.cancel('adventure');
     root.hidden = true;
     document.body.classList.remove('in-adventure');
+    context.ledger?.sync();
   }
   function click(event) {
+    const actor = event.target.closest('[data-rp-actor]');
+    if (actor && !state().event.choiceId && !state().event.resolved && !request) {
+      event.stopPropagation();
+      const targetChoice = actor.dataset.rpActorChoice || selected;
+      if (targetChoice) {
+        selected = targetChoice;
+        choiceActorMap.set(targetChoice, actor.dataset.rpActor);
+        render();
+        if (!workspaceOpen && !book().recollection) compose();
+      }
+      return;
+    }
     const choice = event.target.closest('[data-rp-choice]');
     if (choice && !state().event.choiceId) {
       selected = choice.dataset.rpChoice;
       render();
+      if (!workspaceOpen && !book().recollection) compose();
+      return;
     }
     const action = event.target.closest('[data-rp]')?.dataset.rp;
-    if (action === 'settings') void context.generation.open();
-    if (action === 'raw') context.generation.openReview();
-    if (action === 'retreat') context.journey.returnInn();
     if (action === 'compose') {
       if (workspaceOpen) context.gal.collapseComposer(root.dataset.composer !== 'collapsed');
       else compose();
@@ -407,18 +635,9 @@ export function createAdventure(context) {
       if (trip().index === 1 && !selected) selected = book().adventure.event.choices[0].id;
       void send(false, true);
     }
-    if (action === 'next' || action === 'boss' || action === 'boss-shortcut')
-      void context.journey.continueAdventure();
+    if (action === 'next' || action === 'boss') void context.journey.continueAdventure();
     if (action === 'stay') find('.rp-boss-ready').hidden = true;
     if (action === 'replay') void play(book().story[trip().index], `intro-${trip().index}`);
-    if (action === 'history')
-      void context.gal.play(
-        state().history.map((line) => ({
-          speaker: line.role === 'user' ? '玩家' : '旁白',
-          text: line.content,
-        })),
-        { owner: 'adventure-history', title: '已发生的故事' },
-      );
   }
   events.on(root, 'click', click);
   events.on(document.querySelector('#ai-dialog'), 'close', () => {

@@ -5,6 +5,7 @@ import { CHANGJING_YUEXI } from './content/changjing-yuexi.js';
 import { EXCLUSIVE_BUFFS, GENERATED_POSITIVE_BUFFS } from './triggers.js';
 import { generatedStatusValue } from './status-rules.js';
 import { finalSkillText, finalPassiveText } from './skill-text.js';
+import { normalizeDcAttrs, validateGeneratedDcAttrs } from './dc.js';
 
 const RARITY_WEIGHTS = Object.freeze({ common: 55, rare: 30, epic: 12, legendary: 3 });
 const COMPLEXITIES = Object.freeze([
@@ -57,6 +58,7 @@ export function characterConstraintText(plan) {
     limits.markTypes
       ? '专属标记最多一种、最多3层，积累与消耗必须符合本档结构。'
       : '本次禁止mark、basicAttackMark、perMark、consumeMark及mark条件。',
+    '六维检定属性 data.dcAttrs（str/dex/con/int/wis/cha）：各项 6～18 整数，六项总和必须恰好为 72 点，依角色人设与专长分配。',
   ].join('\n');
 }
 
@@ -413,12 +415,25 @@ export function compileCharacterDesign(raw, input = {}) {
   const mp = plan.protagonist
     ? roll(plan.seed, 'mp', 26, 34)
     : roll(plan.seed, 'mp:' + source.profile, ...profile.sp);
+  const dcAttrs = input.dcAttrs
+    ? normalizeDcAttrs(input.dcAttrs, {
+        archetype: source.archetype,
+        combat: { weapon: source.weapon },
+      })
+    : source.dcAttrs
+      ? validateGeneratedDcAttrs(source.dcAttrs)
+      : normalizeDcAttrs(null, {
+          archetype: source.archetype,
+          combat: { weapon: source.weapon },
+          setting: raw.setting,
+        });
   return {
     ...raw,
     schemaVersion: 3,
     data: {
       archetype: source.archetype,
       weapon: source.weapon,
+      dcAttrs,
       hp: Math.min(80, hp),
       mp: Math.min(40, mp),
       attack: plan.fixed.attack,

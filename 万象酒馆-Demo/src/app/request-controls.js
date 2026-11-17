@@ -3,6 +3,7 @@ import { skippingAi } from '../generation-options.js';
 import { galRequestInput } from '../gal.js';
 import { journeyContinuity, withInvitationMemories } from '../memory.js';
 import { syncSummaryWorldbook } from '../ai/journey-memory-worldbook.js';
+import { prepareFreeDcContext } from '../dc-rp.js';
 /** Every paid/model request has a real AbortSignal and a visible control in its current panel. */
 export function createRequestControls(
   client,
@@ -18,9 +19,15 @@ export function createRequestControls(
   const backgroundDock = document.createElement('div');
   backgroundDock.className = 'api-request-dock api-background-only';
   let stage = null;
+  let backgroundHost = null;
+  let stateChange = null;
+  function notify() {
+    stateChange?.();
+  }
   function placeBackgroundDock() {
     if (!backgroundDock.childElementCount) return;
-    const target = stage && !stage.hidden ? stage : document.body;
+    const galVisible = stage && !stage.hidden;
+    const target = galVisible ? stage : backgroundHost || document.body;
     if (backgroundDock.parentElement !== target) target.append(backgroundDock);
   }
   const stageObserver = new MutationObserver(placeBackgroundDock);
@@ -28,8 +35,28 @@ export function createRequestControls(
     if (kind === 'summary') return data;
     const save = library();
     const archiveContext = data?.archiveContext;
+    const fixedCheck =
+      data?.dcContext?.choiceCheck ||
+      (data?.adventure?.mode === 'event' ? data.adventure.choiceCheck : null);
+    let dcContext = data?.dcContext;
+    if (!preview && ['chat', 'quick-chat'].includes(kind) && !dcContext) {
+      if (fixedCheck) {
+        dcContext = { mode: 'fixed', choiceCheck: fixedCheck };
+      } else if (data?.adventure?.mode === 'quest' || data?.dialogueContext || data?.invitation) {
+        const selectedIds = new Set(Array.isArray(data.selected) ? data.selected : []);
+        const actors = (save?.characters || []).filter((c) => selectedIds.has(c.id));
+        const pool = actors.length ? actors : data.characters || [];
+        const mapOrLevel = data?.mapOrLevel ?? data?.dialogueContext?.level ?? null;
+        dcContext = {
+          mode: 'free',
+          forced: data?.adventure?.mode === 'quest',
+          ...prepareFreeDcContext(save, pool, Math.random, mapOrLevel),
+        };
+      }
+    }
     return galRequestInput(kind, {
       ...(['chat', 'quick-chat'].includes(kind) ? withInvitationMemories(kind, data, save) : data),
+      ...(dcContext ? { dcContext } : {}),
       summaryWorldbook: data?.summaryWorldbook || syncSummaryWorldbook(save),
       ...(['script', 'chat', 'quick-chat'].includes(kind)
         ? { journeyContinuity: journeyContinuity(save) }
@@ -129,8 +156,9 @@ export function createRequestControls(
         dock.append(control);
       } else if (galRequest) host.querySelector('.gal-actionbar').append(control);
       else host.append(control);
-      const record = { controller, control };
+      const record = { controller, control, background: Boolean(options.background) };
       active.add(record);
+      notify();
       let outcome = 'error';
       const stop = () => {
         controller.abort();
@@ -147,6 +175,15 @@ export function createRequestControls(
         received(match[2], result);
         controller.signal.throwIfAborted();
         outcome = 'success';
+        if (
+          match[1] === 'generate' &&
+          ['chat', 'quick-chat'].includes(match[2]) &&
+          input?.dcContext &&
+          result &&
+          typeof result === 'object'
+        ) {
+          return { ...result, dcPreRoll: input.dcContext };
+        }
         return result;
       } catch (failure) {
         if (!controller.signal.aborted) received(match[2], null, failure);
@@ -161,8 +198,21 @@ export function createRequestControls(
         if (!dock.childElementCount) dock.remove();
         if (!backgroundDock.childElementCount) backgroundDock.remove();
         active.delete(record);
+        notify();
       }
     },
+    setBackgroundHost(host, onStateChange = null) {
+      backgroundHost = host || null;
+      stateChange = onStateChange;
+      placeBackgroundDock();
+    },
+    activeCount: () => active.size,
+    foregroundCount() {
+      let count = 0;
+      for (const record of active) if (!record.background) count++;
+      return count;
+    },
+    backgroundCount: () => backgroundDock.childElementCount,
     dispose() {
       for (const { controller, control } of active) {
         controller.abort();

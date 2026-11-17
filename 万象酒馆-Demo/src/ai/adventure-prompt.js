@@ -8,13 +8,13 @@ export const ADVENTURE_SCRIPT_RULES = `【五节点冒险 · 三战与两次RP�
 1. 五节点结构（schemaVersion 为 5）
 - story 共五段 Gal 正文：0 普通战前、1 选择事件开场、2 精英战前、3 自由RP任务开场、4 Boss战前（仅索引 0、2、4 进入战斗）。
 2. 第二节点：选择事件（story[1] + data.adventure.event）
-- story[1] 停在玩家做决定前；data.adventure.event 提供 title、description 与 2～4 个 choices（每项仅含 label 与 detail，不生成 reward 字段）。
+- story[1] 停在玩家做决定前；data.adventure.event 提供 title、description 与 2～4 个 choices（每项含 label、detail，与 attr:"str|dex|con|int|wis|cha"、actors:["角色名"]（1～2位最契合该行动的角色名，依据其设定与特质指定；仅1人时该选项锁定由其执行，2人时允许二选一），绝不生成 reward 字段；dc 由代码按地图等级自动裁定）。
 - 第二节点奖励由程序独立随机结算；正文、介绍、选项与后续回应均不预告或承诺金币、以太、药水、契约等数值奖励，也不在 data.items 中为第二节点安排战利品。
 3. 第四节点：自由任务事件（story[3] + data.adventure.quest）
 - story[3] 只演出开场，把行动权留给玩家，不演完任务或透露解法。
 - quest.description：约 120～180 字的一段事件介绍，固定展示在第四阶段标题下方，简要回顾当前处境、在场人物与事件缘由（不逐句复制 story[3]）。
 - quest.overview：环境观察数组，固定4项，每项为 {location:"所在位置",detail:"那里可观察到什么"}，只列客观观察，不写长对话或解谜攻略。
-- quest.goals 与 commonState：goals 为 2～6 项（至少一个 required:true），每项只含 objective（一句普通人能看懂的话，如“和洛雨完成交易”）与 required，允许多种合理做法；第五段 story[4] 从 commonState 开始承接。
+- quest.goals 与 commonState：goals 为 2～6 项（至少一个 required:true），每项只含 objective（一句普通人能看懂的话，说明需要达成的明确结果）与 required，允许多种合理做法；可选 dcHints（[{"action":"情形","attr":"...","dc":10,"actor?":""}]）给实时裁判参考检定方向；第五段 story[4] 从 commonState 开始承接。
 ${OBJECTIVE_RP_RULES}`;
 
 export function adventureScriptRules() {
@@ -36,12 +36,16 @@ export function adventureChatRules(turn, dialogueScenes = false) {
     return (
       common +
       `
-这是第二节点${turn.mode === 'event' ? '正式选择' : '事件后的普通闲聊'}。正式选项是代码确认的choice，玩家补充无论是否矛盾都不能更改它；冲突、口胡装备属性的部分自然忽略，合理细节可回应。奖励由程序独立随机结算，不由你设计；正文不得宣布、预告或编造获得金币、以太、药水、契约、属性或其他战利品。只写事件经过和人物反应，后续闲聊也不重复奖励，不完成第四节点任务。只输出一组<wanxiang_output>正文</wanxiang_output>，不输出任务JSON。`
+这是第二节点${turn.mode === 'event' ? '正式选择' : '事件后的普通闲聊'}。正式选项是代码确认的choice，玩家补充无论是否矛盾都不能更改它；冲突、口胡装备属性的部分自然忽略，合理细节可回应。奖励由程序独立随机结算，不由你设计；正文不得宣布、预告或编造获得金币、以太、药水、契约、属性或其他战利品。${turn.mode === 'event' ? '如系统提供了固定选择既定成败结果，严禁在正文泄露任何骰点、加值或DC数字，仅在实际判定动作爆发句单独另起一行插入 [[DC_CHECK]] 并按既定成败演出后果；失败或大失败时必须在 <wanxiang_dc> 的 penalty 给出实在代价。' : ''}只写事件经过和人物反应，后续闲聊也不重复奖励，不完成第四节点任务。只输出一组<wanxiang_output>正文</wanxiang_output>（若触发判定/惩罚可外附唯一一组<wanxiang_dc>JSON</wanxiang_dc>）。`
     );
   return (
     common +
     `
-这是第四节点自由任务RP。不要直接用NPC或旁白告诉玩家标准解法，给观察和尝试合理的反馈，可以让队友提出不唯一的意见，保留思考空间。回复还必须在正文标签之外输出唯一一组<wanxiang_adventure>JSON</wanxiang_adventure>，仅最终结果输出；思考、自查、示例和代码围栏中不得重复机器标签。格式：
+这是第四节点自由任务RP。不要直接用NPC或旁白告诉玩家标准解法，给观察和尝试合理的反馈，可以让队友提出不唯一的意见，保留思考空间。
+【关键裁定原则：DC检定与任务完成互相独立】
+- 每次玩家行动都会伴随一次 2D6 命运裁定（请据实根据玩家行动描述选择最合适的属性：力量/敏捷/体质/智力/感知/魅力，禁止连续回合机械重复同一属性与同一固定桥段）；请在 <wanxiang_output> 正文爆发句单独另起一行插入 [[DC_CHECK]]，并在 <wanxiang_dc> 中填写触发的判定角色、属性与成败；失败时务必写出具体代价并填写 penalty.summary 说明失落了什么。
+- **DC 失败不等于任务失败！** DC 仅决定行动过程是否顺遂、是否遭遇阻力/掉血/耗蓝/失落金币等代价；自由任务各 goal 是否标记为 completed，**完全以剧情上是否达成了该目标目的为准**。即使检定失败，只要玩家通过变通策略、多次推进或承担代价后在剧情上确实实现了目标要求，仍应果断批准 completed。
+回复必须在正文标签之外输出唯一一组<wanxiang_adventure>JSON</wanxiang_adventure>，仅最终结果输出；思考、自查、示例和代码围栏中不得重复机器标签。格式：
 准确的副本ID、版本和完整外层模板见本轮请求末尾“任务结果输出边界”，不要把说明文字或占位符当成真实字段值。
 tasks可以只列本轮变化，不遗漏已有进度，不回退已完成目标；必选任务不能failed。只有正文确实发生的行为和结果才能批准完成，不能靠假设或自称完成。
 ${dialogueScenes ? '任务JSON的patches固定为空数组，后续台词统一在本轮的wanxiang_dialogue数据块中处理。' : '完成全部必选目标后才允许用patches调整boss.lines。使用现有台词ID及最新revision，保留已发生内容。'}玩家可以继续RP，不能自动进入Boss。

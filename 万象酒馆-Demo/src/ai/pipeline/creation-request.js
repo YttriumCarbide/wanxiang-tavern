@@ -30,6 +30,7 @@ export function creationItems(input) {
       name: item.name,
       description: item.description,
       value: item.value,
+      ...(item.category ? { category: item.category } : {}),
       level,
       quality,
       map: item.map,

@@ -220,8 +220,64 @@ export const SOUND_CUES = {
   ],
 };
 
-/** Small procedural cues for the tavern shift. They do not replace combat samples. */
+/** Small procedural cues for the tavern shift and chapter theater. They do not replace combat samples. */
 export const SERVICE_CUES = {
+  'theater-seal': [
+    ['sine', 130, 58, 0.28, 0.14],
+    ['noise', 0, 0, 0.12, 0.09, 0, 520],
+    ['triangle', 659, 988, 0.36, 0.045, 0.04],
+  ],
+  'theater-transition': [
+    ['sine', 196, 196, 0.85, 0.075],
+    ['triangle', 392, 392, 0.8, 0.04, 0.06],
+    ['sine', 587, 784, 0.75, 0.035, 0.12],
+    ['noise', 0, 0, 0.52, 0.025, 0.04, 980],
+  ],
+  'theater-curtain-ruins': [
+    ['triangle', 147, 147, 2.2, 0.08],
+    ['sine', 220, 220, 2.0, 0.055, 0.12],
+    ['sine', 294, 294, 1.8, 0.045, 0.24],
+    ['triangle', 587, 587, 1.6, 0.028, 0.5],
+    ['noise', 0, 0, 0.48, 0.024, 0.04, 900],
+  ],
+  'theater-curtain-forest': [
+    ['sine', 175, 175, 2.1, 0.07],
+    ['triangle', 262, 262, 1.9, 0.05, 0.14],
+    ['sine', 392, 392, 1.7, 0.04, 0.28],
+    ['sine', 659, 659, 1.4, 0.024, 0.52],
+  ],
+  'theater-curtain-frost': [
+    ['sine', 220, 220, 2.0, 0.06],
+    ['triangle', 494, 494, 1.8, 0.045, 0.12],
+    ['sine', 740, 740, 1.6, 0.03, 0.28],
+    ['sine', 1175, 1175, 1.4, 0.02, 0.46],
+    ['noise', 0, 0, 0.55, 0.018, 0.05, 2400],
+  ],
+  'theater-curtain-forge': [
+    ['triangle', 110, 110, 2.2, 0.085],
+    ['sine', 165, 165, 2.0, 0.06, 0.1],
+    ['triangle', 330, 330, 1.7, 0.04, 0.26],
+    ['sine', 494, 494, 1.4, 0.028, 0.48],
+  ],
+  'theater-curtain-tide': [
+    ['sine', 165, 165, 2.2, 0.07],
+    ['sine', 247, 247, 2.0, 0.055, 0.14],
+    ['triangle', 370, 370, 1.8, 0.04, 0.3],
+    ['sine', 740, 740, 1.5, 0.022, 0.52],
+  ],
+  'theater-curtain-tavern': [
+    ['triangle', 196, 196, 1.9, 0.065],
+    ['sine', 294, 294, 1.7, 0.05, 0.12],
+    ['sine', 370, 370, 1.5, 0.038, 0.26],
+    ['sine', 587, 587, 1.3, 0.024, 0.44],
+  ],
+  'theater-curtain-epilogue': [
+    ['sine', 262, 262, 2.5, 0.055],
+    ['sine', 330, 330, 2.4, 0.048, 0.16],
+    ['sine', 392, 392, 2.2, 0.042, 0.32],
+    ['sine', 494, 494, 2.0, 0.035, 0.48],
+    ['triangle', 587, 587, 1.8, 0.026, 0.64],
+  ],
   'service-bell': [
     ['sine', 1046, 1046, 0.36, 0.06],
     ['sine', 1568, 1568, 0.3, 0.035, 0.08],

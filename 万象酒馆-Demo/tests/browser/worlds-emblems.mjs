@@ -171,6 +171,14 @@ export async function worldsEmblemsChecks({ browser, baseURL, output }) {
     while (await page.locator('#emblem-dialogue').isVisible())
       await page.locator('#emblem-dialogue button').click();
     // Rings now come from authored Boss events; this fixture starts with a legitimately owned ring.
+    const handle = await page.locator('#ledger-handle').boundingBox();
+    await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(Math.max(10, handle.x - 140), handle.y + handle.height / 2, {
+      steps: 6,
+    });
+    await page.mouse.up();
+    await page.locator('#ledger-drawer-host.is-open').waitFor();
     await page.locator('#party-toggle').click();
     assert((await page.evaluate(() => demo.getLibrary())).emblems.includes('tan-hongyu'));
     await page.locator('[data-prepare-slot="0"]').click();
@@ -179,7 +187,6 @@ export async function worldsEmblemsChecks({ browser, baseURL, output }) {
       (await page.evaluate(() => demo.getLibrary())).characters[0].emblemId,
       'tan-hongyu',
     );
-    await page.locator('#prepare-character-close').click();
     await page.locator('#prepare-close').click();
     await openGate();
     await page.getByRole('button', { name: '下一页地图', exact: true }).click();

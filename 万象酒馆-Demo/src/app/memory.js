@@ -14,19 +14,26 @@ export function createMemory(context) {
     request = null;
   let counts = new Map();
   let autoRequest = null;
+  let noticeHost = null;
+  let noticeChanged = null;
   const automatic = document.createElement('aside');
   automatic.id = 'automatic-memory';
   automatic.hidden = true;
   automatic.innerHTML =
     '<span role="status"></span><button data-summary-retry hidden>重试</button><button data-summary-hide aria-label="收起总结提示">×</button>';
   document.body.append(automatic);
+  function showNotice(visible) {
+    if (noticeHost && automatic.parentElement !== noticeHost) noticeHost.append(automatic);
+    automatic.hidden = !visible;
+    noticeChanged?.();
+  }
   async function autoSummarize() {
     if (autoRequest || session.runtime.mode !== 'inn') return;
     const library = session.ai.library;
     if (pendingAdventureMemories(library).length < 3) return;
     const controller = new AbortController();
     autoRequest = controller;
-    automatic.hidden = true;
+    showNotice(false);
     automatic.querySelector('[data-summary-retry]').hidden = true;
     const message = (text) => {
       automatic.querySelector('span').textContent = text;
@@ -36,7 +43,7 @@ export function createMemory(context) {
         controller.signal.throwIfAborted();
         const snapshot = pendingAdventureMemories(library).slice(0, 3);
         if (snapshot.length < 3) break;
-        automatic.hidden = true;
+        showNotice(false);
         const plan = await chatApi(
           'summary/plan',
           { items: snapshot },
@@ -65,7 +72,7 @@ export function createMemory(context) {
           throw failure;
         }
         message('三段经历的总结已保存');
-        automatic.hidden = false;
+        showNotice(true);
       }
     }
     try {
@@ -73,9 +80,9 @@ export function createMemory(context) {
       else await summarize();
     } catch (failure) {
       if (library === session.ai.library && !session.runtime.disposed) {
-        automatic.hidden = false;
         message('经历总结未完成：' + failure.message + '。原记录保留，可稍后重试。');
         automatic.querySelector('[data-summary-retry]').hidden = false;
+        showNotice(true);
       }
     } finally {
       if (autoRequest === controller) autoRequest = null;
@@ -83,7 +90,7 @@ export function createMemory(context) {
   }
   events.on(automatic.querySelector('[data-summary-retry]'), 'click', () => void autoSummarize());
   events.on(automatic.querySelector('[data-summary-hide]'), 'click', () => {
-    automatic.hidden = true;
+    showNotice(false);
   });
   const status = (text) => {
     $('#memory-status').textContent = text;
@@ -275,6 +282,12 @@ export function createMemory(context) {
     open,
     reset,
     autoSummarize,
+    setNoticeHost(host, onChange = null) {
+      noticeHost = host || null;
+      noticeChanged = onChange;
+      if (noticeHost && automatic.parentElement !== noticeHost) noticeHost.append(automatic);
+    },
+    hasNotice: () => !automatic.hidden,
     dispose() {
       reset();
       automatic.remove();

@@ -29,6 +29,8 @@ const DOORS = Object.freeze({
 });
 
 export async function createCorridorView() {
+  document.body.dataset.scene = 'corridor';
+  if (parent !== window) document.documentElement.dataset.embedded = 'true';
   const loading = createSceneLoading(document.getElementById('status'), '正在走进二楼走廊');
   let visitors = null;
   const quality = deviceRenderQuality();
@@ -249,6 +251,11 @@ export async function createCorridorView() {
     const cameFrom = { a: '东厢客房', b: '西厢客房', master: '主卧' }[from];
     updateWhere(cameFrom ? `走廊 · 从${cameFrom}回到廊道` : '走廊 · 三扇房门');
     document.body.classList.add('ready');
+    if (parent !== window)
+      parent.postMessage(
+        { type: 'scene-ready', scene: 'corridor', title: '二层走廊' },
+        location.origin,
+      );
     const hint = document.getElementById('room-hint');
     if (hint) setTimeout(() => hint.classList.add('quiet'), 4600);
     window.corridorReady = true;

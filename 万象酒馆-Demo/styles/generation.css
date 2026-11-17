@@ -1,43 +1,53 @@
 #generation-progress {
-  position: fixed;
-  inset: 0;
   z-index: 100;
+}
+.wl-gen-host {
+  position: relative;
   display: flex;
+  flex: 1 1 auto;
   flex-direction: column;
-  gap: 18px;
+  justify-content: space-between;
+  min-height: 0;
+}
+.wl-gen-controls {
+  position: relative;
+  z-index: 20;
+  display: flex;
   align-items: center;
-  justify-content: center;
-  padding: 24px;
-  text-align: center;
-  color: #eadaba;
-  background: radial-gradient(ellipse at center, #20453ff5, #081817fc);
+  justify-content: space-between;
+  gap: 16px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(212, 175, 55, 0.2);
 }
-#generation-progress h2 {
+.wl-gen-text {
+  text-align: left;
+}
+#generation-progress .wl-gen-text h2 {
   margin: 0;
-  letter-spacing: 5px;
-  font-size: 26px;
+  letter-spacing: 0.16em;
+  font-size: 16px;
+  color: #f6ead0;
 }
-#generation-progress p {
-  margin: 0;
-  line-height: 1.8;
-  color: #b7cdbb;
+#generation-progress .wl-gen-text p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #cbb88f;
 }
-#generation-progress small {
-  color: #8ba69b;
+.wl-gen-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
-#generation-progress button {
-  margin-top: 20px;
+.wl-gen-actions small {
+  color: #a9956c;
 }
-.generation-orbit {
-  font-size: 76px;
-  color: #8ce2d4;
-  animation: summon-breathe 2s ease-in-out infinite;
-}
-@keyframes summon-breathe {
-  50% {
-    opacity: 0.4;
-    transform: scale(0.9);
-  }
+#generation-progress-cancel {
+  padding: 6px 16px;
+  border: 1px solid rgba(212, 175, 55, 0.48);
+  border-radius: 6px;
+  background: rgba(24, 18, 12, 0.85);
+  color: #f5dfab;
 }
 #ai-dialog {
   width: min(1080px, calc(100vw - 30px));

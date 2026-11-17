@@ -201,162 +201,160 @@ export async function dailyChecks({ browser, baseURL, output }) {
     assert(layout.recordAbove, suffix + ' the task list and Gal composer do not overlap');
     await page.screenshot({ path: path.join(output, 'invitation-' + suffix + '.png') });
   }
+  async function pullOpenLedger() {
+    if (await page.locator('#ledger-drawer-host.is-open').count()) return;
+    if (await page.locator('#ledger-drawer-host.is-closing').count()) {
+      await page.clock.fastForward(350);
+    }
+    await page.locator('#ledger-handle').waitFor({ state: 'visible' });
+    const handle = await page.locator('#ledger-handle').boundingBox();
+    await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(Math.max(10, handle.x - 140), handle.y + handle.height / 2, {
+      steps: 6,
+    });
+    await page.mouse.up();
+    await page.locator('#ledger-drawer-host.is-open').waitFor();
+  }
   try {
     await page.clock.install();
     await page.goto(baseURL + '/?display=landscape');
     const frame = page.frameLocator('#inn-frame iframe');
     const actions = page.locator('.daily-dock button');
     assert.deepEqual(await actions.allTextContents(), ['闲聊', '用餐', '约见', '冒险', '外出']);
-    assert.match(await page.locator('[data-tavern-clock]').textContent(), /第 1 天 · 上午/);
+    assert.match(await page.locator('[data-tavern-clock]').textContent(), /1463年8月24日 · 上午/);
+    await pullOpenLedger();
+    assert.match(await page.locator('[data-ledger-date]').textContent(), /1463年8月24日 · 上午/);
     await page.locator('[data-daily="promotion"]').click();
+    await page.locator('#tavern-promotion[open]').waitFor();
+    await page.clock.fastForward(350);
     assert(await page.locator('[data-promotion-confirm]').isDisabled());
+    await page.screenshot({ path: path.join(output, 'promotion-panel.png') });
     await page.locator('[data-promotion-close]').click();
+    await pullOpenLedger();
+    await page.locator('[data-daily="quests"]').click();
+    await page.locator('#tavern-quests[open]').waitFor();
+    await page.clock.fastForward(350);
+    await page.screenshot({ path: path.join(output, 'quests-panel.png') });
+    await page.locator('#tavern-quests .quests-close').click();
+    await pullOpenLedger();
+    await page.locator('#inn-backpack-open').click();
+    await page.locator('#inn-backpack[open]').waitFor();
+    await page.clock.fastForward(350);
+    await page.locator('#inn-backpack [data-bag-tab="ingredients"]').click();
+    assert.match(await page.locator('#inn-backpack').textContent(), /鲜奶|霜脆蕈/);
+    await page.locator('#inn-backpack [data-bag-tab="potions"]').click();
+    await page.screenshot({ path: path.join(output, 'inn-backpack.png') });
+    await page.locator('#inn-backpack .bag-close').click();
     await frame.locator('#status').waitFor({ state: 'detached', timeout: 60000 });
     await page.screenshot({ path: path.join(output, 'daily-actions.png') });
     await page.locator('[data-daily="dungeon"]').click();
     await page.locator('#destination-dialog[open]').waitFor();
     await page.locator('#destination-close').click();
+    await pullOpenLedger();
     await page.locator('[data-daily="service"]').click();
     await page.locator('#daily-setup[open]').waitFor();
+    assert.match(await page.locator('#daily-setup .tv-crest-card').textContent(), /LV\.?1/);
     await page.locator('[data-daily-start]').click();
     const service = page.locator('#daily-service');
-    await service.locator('.service-map[data-service-scene="ready"]').waitFor({ timeout: 60000 });
-    const pick = (name) => service.getByRole('button', { name, exact: true }).click();
-    const workspace = service.locator('[data-service-workspace]');
-    const chooseSeat = (id) => workspace.locator(`[data-service-choice="${id}"]`).click();
-    const ticket = (role, name) =>
-      service
-        .locator('[data-station="' + role + '"]')
-        .getByRole('button', { name })
-        .click();
-    async function activityScreenPoint(kind, x, y) {
-      return workspace.locator(`[data-activity="${kind}"]`).evaluate(
-        (area, [x, y]) => {
-          const art = area.querySelector('[data-cook-art]');
-          if (art) {
-            const point = new DOMPoint(x * 600, y * 300).matrixTransform(art.getScreenCTM());
-            return [point.x, point.y];
-          }
-          const box = area.getBoundingClientRect();
-          return [box.x + box.width * x, box.y + box.height * y];
-        },
-        [x, y],
-      );
+    await service.waitFor({ state: 'visible' });
+    assert.equal(await page.evaluate(() => demo.getLibrary().daily.active.shift.mode), 'live');
+    for (let i = 0; i < 6 && !(await service.locator('[data-live-seat]').count()); i++) {
+      await page.clock.fastForward(400);
     }
-    async function activityPoints(kind, points, delay = 0) {
-      const area = workspace.locator(`[data-activity="${kind}"]`);
-      await area.waitFor();
-      const screen = await Promise.all(points.map(([x, y]) => activityScreenPoint(kind, x, y)));
-      await page.mouse.move(...screen[0]);
-      await page.mouse.down();
-      for (const point of screen.slice(1)) {
-        await page.mouse.move(...point);
-        if (delay) await page.waitForTimeout(delay);
-      }
-      await page.mouse.up();
-    }
-    await service.locator('[data-route-guest="1"][data-direction="enter"]').waitFor();
-    const visitor = service.locator('[data-service-actor="1"]');
-    const position = await visitor.getAttribute('style');
-    await page.clock.fastForward(550);
-    assert.notEqual(await visitor.getAttribute('style'), position);
-    assert.equal(await service.locator('.service-map button').count(), 0);
-    const frontGuide = service.locator('[data-service-guide="front"]');
-    await frontGuide.waitFor();
-    assert.equal(await frontGuide.getAttribute('data-side'), 'left');
-    assert.match(await frontGuide.innerText(), /1号.*迎宾排座/s);
-    const guideSeconds = Number(
-      (await frontGuide.locator('[data-guide-time]').textContent()).replace(/\D/g, ''),
-    );
-    await page.clock.fastForward(Math.max(0, guideSeconds - 7) * 1000);
-    await page.waitForFunction(
-      () => document.querySelector('[data-service-guide="front"]')?.dataset.urgent === 'true',
-    );
-    assert.equal(await frontGuide.getAttribute('data-urgent'), 'true');
-    await frontGuide.click();
-    await workspace.waitFor();
-    assert.equal(await workspace.locator('.service-workcard.service-urgent').count(), 1);
-    assert.equal(await workspace.locator('.service-seat-cards button').count(), 5);
-    await chooseSeat('hall');
-    await service.locator('[data-route-guest="1"][data-direction="toSeat"]').waitFor();
-    await ticket('server', /1号 · 确认点单/);
-    assert.equal(
-      await workspace.locator('.service-story, .service-flavor').count(),
-      0,
-      'decorative prose is removed from the game stage',
-    );
-    assert.equal(
-      await workspace.locator('.service-focus-dish .food-art').count(),
-      1,
-      'the requested dish is shown as a large icon',
-    );
-    assert.equal(
-      await workspace.locator('[data-choice-type="dish"] .service-dish-art .food-art').count(),
-      4,
-      'dish choices are identified by icons',
-    );
-    await page.screenshot({ path: path.join(output, 'daily-service-order.png') });
-    await pick('香草烤鸡');
-    await ticket('cook', /1号 · 制作菜品/);
-    await workspace.locator('[data-activity="heat"]').waitFor();
-    await service.locator('[data-service-actor="2"]').waitFor();
-    await ticket('front', /2号 · 迎宾排座/);
-    assert.equal(await service.locator('[data-station] .service-game').count(), 0);
-    assert.match(await workspace.innerText(), /2号.*迎宾排座/s);
-    await chooseSeat('bar-1');
-    await ticket('cook', /1号 · 制作菜品/);
-    const desktopCard = await workspace.locator('.service-workcard').boundingBox();
-    const desktopHeat = await workspace.locator('[data-activity="heat"]').boundingBox();
-    assert(
-      desktopHeat.width >= desktopCard.width * 0.9 &&
-        desktopHeat.height >= desktopCard.height * 0.6,
-      JSON.stringify({ desktopCard, desktopHeat }),
-    );
+    await service.locator('[data-live-seat]').first().click();
+    await service.locator('[data-live-table="0"]').click();
+    await service.locator('[data-live-minigame="0"]').waitFor();
+    await service.locator('[data-live-minigame="0"]').click();
+    await service.locator('.ls-modal-game [data-activity]').waitFor();
+    await service.locator('[data-live="mg-close"]').click();
+    await service.locator('[data-live-boost="0"]').click();
+    await service.locator('[data-live-boost="0"]').click();
+    await service.locator('[data-live-boost="0"]').click();
+    await service.locator('.ls-pass [data-live-plate]').first().waitFor();
     await page.screenshot({ path: path.join(output, 'daily-service.png') });
-    await activityPoints(
-      'heat',
-      [
-        [0.25, 0.81],
-        [0.64, 0.81],
-      ],
-      1300,
-    );
-    await ticket('server', /1号 · 配盘送餐/);
-    const pathUp = Array.from({ length: 47 }, (_, i) => [0.5, 0.93 - i * 0.019]);
-    await activityPoints('balance', pathUp, 27);
-    await service.locator('[data-service-actor="1"][data-phase="eat"]').waitFor();
-    await ticket('front', /1号 · 算账找零/);
-    assert.equal(await workspace.locator('[data-choice-type="number"] button').count(), 4);
-    await pick('3');
-    await ticket('clean', /1号 · 清理翻台/);
-    await activityPoints('wipe', [
-      [0.25, 0.37],
-      [0.36, 0.61],
-      [0.47, 0.43],
-      [0.59, 0.65],
-      [0.67, 0.33],
-      [0.76, 0.56],
-    ]);
-    await workspace.waitFor({ state: 'hidden' });
-    await page.clock.fastForward(190000);
-    await page.locator('[data-service-end]').click();
+    await service.locator('[data-live-table="0"]').click();
+    for (let i = 0; i < 20 && !(await service.locator('[data-live-table="0"].pay').count()); i++) {
+      await page.clock.fastForward(200);
+    }
+    await service.locator('[data-live-table="0"].pay').waitFor();
+    await service.locator('[data-live-table="0"]').click();
+    await service.locator('[data-live="end"]').click();
+    await service.locator('[data-live="settle-done"]').waitFor();
+    await page.screenshot({ path: path.join(output, 'daily-service-settle.png') });
+    await service.locator('[data-live="settle-done"]').click();
     assert.match(await status(), /本班接待 1 桌/);
-    assert.match(await status(), /知名度.*熟练|知名度.*掌勺/);
+    assert.match(await status(), /收入 \d+ 金币/);
     assert.match(await page.locator('[data-tavern-clock]').textContent(), /中午/);
     await page.locator('[data-daily="outing"]').click();
+    await page.locator('#tavern-exit-picker[open]').waitFor();
+    await page.locator('[data-tavern-exit="street"]').click();
+    await page.waitForFunction(
+      () =>
+        document.querySelector('#inn-frame iframe')?.contentWindow?.streetPreview?.definition
+          ?.id === 'starlamp-street',
+      null,
+      { timeout: 60000 },
+    );
+    assert.equal(await frame.locator('#street-map[open]').count(), 0);
+    await frame.locator('#street-map-open').click();
     await frame.locator('#street-map-workshop').click();
     await page.locator('#workshop-dialog[open]:not([data-loading])').waitFor();
     await page.locator('[data-ws-close]').click();
-    await frame.locator('#street-map-companions').click();
-    await page.locator('[data-daily-person="official-edith"]').click();
-    await page.locator('[data-daily-start]').click();
-    assert.deepEqual(await page.evaluate(() => demo.getLibrary().daily.active.companions), [
-      'official-edith',
-    ]);
-    await frame.locator('#street-map-step-out').click();
+    await frame.locator('#street-map .street-map-close [type="submit"]').click();
+    await page.locator('[data-daily="companions"]').click();
+    await page.locator('#party-panel[open]').waitFor();
+    if (await page.locator('#prepare-pool [data-prepare-hero="official-edith"]').count()) {
+      await page
+        .locator('#prepare-pool [data-prepare-hero="official-edith"]')
+        .dragTo(page.locator('.prepare-slot:not([data-prepare-hero])').first());
+    }
+    await page.locator('#prepare-done').click();
+    assert(
+      (await page.evaluate(() => demo.getLibrary().daily.active.companions)).includes(
+        'official-edith',
+      ),
+    );
     assert.match(await status(), /已行 0 回合/);
     await travelTownScene(page, 'city-center');
     assert.match(await status(), /已行 1 回合/);
+    await page.locator('#scene-talk.is-docked').waitFor();
+    const streetGeometry = await page.evaluate(() => {
+      const iframe = document.querySelector('#inn-frame iframe');
+      const ir = iframe.getBoundingClientRect();
+      const fd = iframe.contentDocument;
+      const toScreen = (r) => ({
+        left: ir.left + r.left,
+        top: ir.top + r.top,
+        right: ir.left + r.right,
+        bottom: ir.top + r.bottom,
+        width: r.width,
+        height: r.height,
+      });
+      const dock = toScreen(fd.querySelector('.street-actions').getBoundingClientRect());
+      const talk = document.querySelector('#scene-talk').getBoundingClientRect();
+      const mapBtn = toScreen(fd.querySelector('#street-map-open').getBoundingClientRect());
+      const retBtn = toScreen(fd.querySelector('#street-return').getBoundingClientRect());
+      const hud = document.querySelector('#hud-plaque').getBoundingClientRect();
+      const daily = document.querySelector('.daily-status').getBoundingClientRect();
+      return { dock, talk, mapBtn, retBtn, hud, daily, vh: window.innerHeight };
+    });
+    assert(
+      streetGeometry.dock.top > streetGeometry.vh - 90 &&
+        streetGeometry.talk.left >= streetGeometry.dock.left - 2 &&
+        streetGeometry.talk.right <= streetGeometry.mapBtn.left + 2 &&
+        Math.abs(streetGeometry.talk.top - streetGeometry.mapBtn.top) < 8 &&
+        Math.abs(streetGeometry.mapBtn.top - streetGeometry.retBtn.top) < 4,
+      `Outdoor dock buttons align at bottom center: ${JSON.stringify(streetGeometry)}`,
+    );
+    assert(
+      streetGeometry.daily.top >= streetGeometry.hud.bottom - 1 &&
+        Math.abs(streetGeometry.daily.left - streetGeometry.hud.left) <= 2 &&
+        streetGeometry.daily.top < 140 &&
+        streetGeometry.daily.left < 60,
+      `Outing status ribbon sits cleanly at top-left below placard: ${JSON.stringify(streetGeometry)}`,
+    );
+    await page.screenshot({ path: path.join(output, 'street-dock.png') });
     await travelTownScene(page, 'outskirts');
     assert.match(await status(), /已行 3 回合/);
     assert.equal(await frame.locator('[data-hotspot="road-meadow"]').count(), 0);
@@ -485,6 +483,7 @@ export async function dailyChecks({ browser, baseURL, output }) {
     });
     assert.deepEqual(calls, ['script', 'stage-1', 'stage-1', 'stage-2', 'stage-3']);
     assert.match(await status(), /事件结束.*个人事件完成/);
+    await pullOpenLedger();
     await record.waitFor();
     assert.match(await record.textContent(), /来意.*莉贝特想请你.*结果.*琴谱上/s);
     assert.equal(await record.locator('section p').first().innerText(), fullInvitation.premise);
@@ -509,6 +508,7 @@ export async function dailyChecks({ browser, baseURL, output }) {
     assert.match(archived, /收好琴盒.*把你说的停顿也记了下来.*今天就到这儿吧/s);
     await frame.locator('#status').waitFor({ state: 'detached', timeout: 60000 });
     await page.screenshot({ path: path.join(output, 'invitation-record.png') });
+    await page.locator('#ledger-close').click();
     await page.setViewportSize({ width: 1120, height: 700 });
     assert.equal(
       await page.evaluate(() =>
@@ -518,27 +518,38 @@ export async function dailyChecks({ browser, baseURL, output }) {
     );
     await travelTownScene(page, 'tavern');
     await page.evaluate(() => demo.flushStorage());
+    await page.evaluate(() => {
+      const key = 'wanxiang.worldbooks.v1';
+      const saved = JSON.parse(localStorage.getItem(key));
+      saved.inventory.gold = Math.max(saved.inventory.gold || 0, 120);
+      localStorage.setItem(key, JSON.stringify(saved));
+    });
     await page.reload();
     await page.waitForFunction(() => window.demo?.getLibrary().daily.period === 3);
+    await pullOpenLedger();
     await page.locator('[data-daily="service"]').click();
     const setup = page.locator('#daily-setup[open]');
-    assert.match(await setup.textContent(), /酒馆知名度.*熟练.*自动/s);
-    await page.setViewportSize({ width: 390, height: 844 });
+    await setup.waitFor();
+    assert.match(await setup.textContent(), /今夜菜单.*当班排班.*设施扩建/s);
+    await setup.locator('[data-service-tab="staff"]').click();
     const frontRole = setup.locator('[data-daily-role="front"]');
     const cleanRole = setup.locator('[data-daily-role="clean"]');
-    const originalFront = await frontRole.locator('small').textContent();
-    const originalClean = await cleanRole.locator('small').textContent();
+    const originalFront = await frontRole.locator('strong').textContent();
+    const originalClean = await cleanRole.locator('strong').textContent();
     await frontRole.click();
-    await setup.getByRole('button', { name: /与保洁互换/ }).click();
-    assert.equal(await frontRole.locator('small').textContent(), originalClean);
-    assert.equal(await cleanRole.locator('small').textContent(), originalFront);
-    await setup.locator('[data-service-recipes]').click();
-    assert(await setup.locator('[data-service-recipe="fir-roast"]').isDisabled());
-    await setup.locator('[data-service-recipe="frost-chowder"]').click();
-    await setup.locator('[data-service-portion="1"]').click();
-    assert(await setup.locator('[data-service-portion="1"]').isDisabled());
-    await setup.locator('.setup-basic-menu summary').click();
-    assert.equal(await setup.locator('.setup-basic-menu[open] li').count(), 16);
+    await setup.locator('.tv-rchar', { hasText: originalClean }).click();
+    assert.equal(await frontRole.locator('strong').textContent(), originalClean);
+    assert.equal(await cleanRole.locator('strong').textContent(), originalFront);
+    await setup.locator('[data-service-tab="upgrade"]').click();
+    await setup.locator('[data-service-fac="table"]').click();
+    assert.equal(
+      await page.evaluate(() => demo.getLibrary().daily.serviceGrowth.facilities.table),
+      1,
+    );
+    await setup.locator('[data-service-tab="menu"]').click();
+    await setup.locator('[data-service-autofill]').click();
+    assert((await setup.locator('.tv-tonight-slots button').count()) >= 2);
+    await page.setViewportSize({ width: 390, height: 844 });
     const checkSetup = () =>
       setup.evaluate((dialog) => {
         const body = dialog.querySelector('.daily-setup-body');
@@ -554,8 +565,6 @@ export async function dailyChecks({ browser, baseURL, output }) {
       canScroll: true,
       reachable: true,
     });
-    await setup.locator('.setup-basic-menu summary').click();
-    await setup.locator('.daily-setup-body').evaluate((body) => (body.scrollTop = 0));
     await page.screenshot({ path: path.join(output, 'daily-service-setup-mobile.png') });
     await page.setViewportSize({ width: 844, height: 390 });
     assert.deepEqual(await checkSetup(), {
@@ -565,198 +574,34 @@ export async function dailyChecks({ browser, baseURL, output }) {
     });
     await page.screenshot({ path: path.join(output, 'daily-service-setup-landscape.png') });
     await page.locator('[data-daily-start]').click();
-    assert.equal(
-      await page.evaluate(() => demo.getLibrary().daily.active.shift.bookings.length),
-      7,
-    );
-    const { price, ...special } = await page.evaluate(
-      () => demo.getLibrary().daily.active.shift.special,
-    );
-    assert(Number.isInteger(price) && price > 0);
-    assert.deepEqual(special, {
-      id: 'frost-chowder',
-      portions: 2,
-      sold: 0,
-      paid: 0,
-    });
-    assert.equal(await page.evaluate(() => demo.getLibrary().dining.inventory['frost-oyster']), 0);
+    await service.waitFor({ state: 'visible' });
     await page.setViewportSize({ width: 1120, height: 700 });
-    // Resume a v3 shift to keep the following gesture and layout fixtures reproducible.
-    await page.evaluate(() => {
-      const key = 'wanxiang.worldbooks.v1';
-      const saved = JSON.parse(localStorage.getItem(key));
-      Object.assign(saved.dining.inventory, { 'frost-oyster': 2, milk: 3 });
-      Object.assign(saved.daily.active.shift, {
-        version: 3,
-        seed: 17,
-        bookings: null,
-        special: null,
-        staffLevels: {},
-      });
-      localStorage.setItem(key, JSON.stringify(saved));
-    });
-    await page.reload();
-    await service.locator('.service-map[data-service-scene="ready"]').waitFor({ timeout: 60000 });
-    await page.clock.fastForward(7500);
-    const arriving = service.locator('[data-route-guest="2"][data-direction="enter"]');
-    for (let i = 0; i < 12 && !(await arriving.isVisible()); i++) await page.clock.fastForward(500);
-    await arriving.waitFor();
-    assert.equal(await service.locator('[data-service-actor]').count(), 2);
-    const room = await service.locator('.service-map').boundingBox();
-    const occupiedLabel = await service.locator('[data-service-seat="hall"]').boundingBox();
-    assert(occupiedLabel.x > room.x + room.width * 0.15, 'disabled table markers stay projected');
+    for (let i = 0; i < 6 && !(await service.locator('[data-live-seat]').count()); i++) {
+      await page.clock.fastForward(400);
+    }
+    const goldBeforeAle = await page.evaluate(
+      () => demo.getLibrary().daily.active.shift.earnedGold,
+    );
+    await service.locator('[data-live="ale"]').click();
+    assert(
+      (await page.evaluate(() => demo.getLibrary().daily.active.shift.earnedGold)) > goldBeforeAle,
+    );
     await page.screenshot({ path: path.join(output, 'daily-service-rush.png') });
     await page.setViewportSize({ width: 844, height: 390 });
-    await ticket('front', /1号 · 迎宾排座/);
-    await workspace.waitFor();
-    const workcard = workspace.locator('.service-workcard');
-    await workcard.evaluate((element) =>
-      Promise.allSettled(element.getAnimations().map((animation) => animation.finished)),
-    );
-    const board = await service.boundingBox();
-    const center = await service.locator('.service-map').boundingBox();
-    const card = await workcard.boundingBox();
-    assert(card.width >= center.width * 1.02, JSON.stringify({ board, center, card }));
-    assert(card.width >= board.width * 0.58, 'the game stage uses the screen center');
-    assert(
-      Math.abs(card.x + card.width / 2 - (board.x + board.width / 2)) < 8,
-      'the game stage is horizontally centered',
-    );
-    assert(
-      Math.abs(card.y + card.height / 2 - (board.y + board.height / 2)) < 24,
-      'the game stage is vertically centered',
-    );
-    const options = await Promise.all(
-      (await workspace.locator('.service-seat-cards button').all()).map((item) =>
-        item.boundingBox(),
-      ),
-    );
-    assert(
-      options.every((option) => Math.abs(option.y - options[0].y) < 8 && option.width > 52),
-      JSON.stringify({ card, options }),
-    );
-    assert(
-      options.every((option) => option.y + option.height <= card.y + card.height),
-      JSON.stringify({ card, options }),
-    );
-    const [front, cook, server, clean] = await Promise.all(
-      ['front', 'cook', 'server', 'clean'].map((role) =>
-        service.locator(`[data-station="${role}"]`).boundingBox(),
-      ),
-    );
-    assert(front.x === cook.x && front.y < cook.y && front.x + front.width <= center.x);
-    assert(server.x === clean.x && server.y < clean.y && server.x >= center.x + center.width);
-    assert([front, cook, server, clean].every((station) => station.width >= 115));
+    assert.equal(await service.locator('.ls-tables').isVisible(), true);
     await page.screenshot({ path: path.join(output, 'daily-service-landscape.png') });
-    await chooseSeat('hall');
-    await ticket('server', /1号 · 确认点单/);
-    await pick('香草烤鸡');
-    await ticket('cook', /1号 · 制作菜品/);
-    assert.equal(await workspace.locator('.service-meter').count(), 1);
-    assert((await workspace.locator('.service-fx i').count()) >= 12);
-    await page.screenshot({ path: path.join(output, 'daily-service-touch-layout.png') });
     await page.setViewportSize({ width: 390, height: 844 });
-    const portraitHeat = await workspace.locator('[data-activity="heat"]').boundingBox();
-    assert(
-      portraitHeat.width >= 320 && portraitHeat.height >= 180,
-      JSON.stringify({ portraitHeat }),
-    );
+    assert.equal(await service.locator('.ls-hud').isVisible(), true);
     await page.screenshot({ path: path.join(output, 'daily-service-portrait.png') });
-    await page.setViewportSize({ width: 844, height: 390 });
-    const heat = await workspace.locator('[data-activity="heat"]').boundingBox();
-    const gameCard = await workspace.locator('.service-workcard').boundingBox();
-    assert(
-      heat.width >= gameCard.width * 0.9 && heat.height >= gameCard.height * 0.58,
-      JSON.stringify({ heat, gameCard }),
-    );
-    const touch = await page.context().newCDPSession(page);
-    try {
-      async function touchPoints(fraction) {
-        const [x, y] = await activityScreenPoint('heat', fraction, 0.81);
-        return [{ x, y }];
-      }
-      await touch.send('Input.dispatchTouchEvent', {
-        type: 'touchStart',
-        touchPoints: await touchPoints(0.25),
-      });
-      await touch.send('Input.dispatchTouchEvent', {
-        type: 'touchMove',
-        touchPoints: await touchPoints(0.64),
-      });
-      await service
-        .locator('[data-station="server"]')
-        .getByRole('button', { name: /1号 · 配盘送餐/ })
-        .waitFor();
-      await touch.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-    } finally {
-      await touch.detach();
-    }
-    await ticket('front', /2号 · 迎宾排座/);
-    await chooseSeat('window');
-    await ticket('server', /2号 · 确认点单/);
-    await pick('田园煎鱼');
-    await pick('薄荷蜜茶');
-    await ticket('cook', /2号 · 制作菜品/);
-    await page.mouse.move(...(await activityScreenPoint('cut', 0.18, 0.52)));
-    await page.mouse.down();
-    await page.mouse.move(...(await activityScreenPoint('cut', 0.8, 0.52)), { steps: 12 });
-    assert.equal(await workspace.locator('[data-activity="cut"] [data-cleared]').count(), 3);
-    await page.mouse.up();
-    await workspace.locator('[data-activity="pour"]').waitFor();
-    await page.mouse.move(...(await activityScreenPoint('pour', 0.24, 0.38)));
-    await page.mouse.down();
-    await page.mouse.move(...(await activityScreenPoint('pour', 0.59, 0.28)));
-    const pouring = workspace.locator('[data-activity="pour"][data-flow]');
-    await pouring.waitFor();
-    await page.screenshot({ path: path.join(output, 'daily-service-pouring.png') });
-    await page.waitForFunction(() => {
-      const area = document.querySelector('[data-activity="pour"]');
-      return (
-        area?.hasAttribute('data-flow') &&
-        Number(area.querySelector('[data-cook-liquid]').getAttribute('height')) >= 64
-      );
-    });
-    await service.dispatchEvent('pointercancel', { pointerId: 1 });
-    await pouring.waitFor({ state: 'hidden' });
-    await page.mouse.up();
-    await workspace.locator('[data-activity="pour"]').waitFor();
-    await page.mouse.down();
-    await page.mouse.move(...(await activityScreenPoint('pour', 0.28, 0.28)));
-    await page.mouse.up();
-    await ticket('server', /2号 · 配盘送餐/);
-    const tile = workspace.locator('[data-drag-choice="田园煎鱼"]');
-    const plate = workspace.locator('[data-service-dropzone="0"]');
-    const tileBox = await tile.boundingBox();
-    const plateBox = await plate.boundingBox();
-    await page.mouse.move(tileBox.x + tileBox.width / 2, tileBox.y + tileBox.height / 2);
-    await page.mouse.down();
-    const dragPreview = service.locator('.service-drag-preview');
-    await dragPreview.waitFor();
-    const dropPoint = { x: plateBox.x + plateBox.width / 2, y: plateBox.y + plateBox.height / 2 };
-    await page.mouse.move(dropPoint.x, dropPoint.y);
-    assert.equal(await plate.getAttribute('data-drop-hover'), '');
-    await page.waitForFunction(({ x, y }) => {
-      const box = document.querySelector('.service-drag-preview').getBoundingClientRect();
-      return Math.abs(box.left + box.width / 2 - x) < 3 && Math.abs(box.bottom - y) < 3;
-    }, dropPoint);
-    await page.screenshot({ path: path.join(output, 'daily-service-dragging.png') });
-    await page.mouse.up();
-    assert.equal(await plate.getAttribute('data-filled'), 'true');
-    await dragPreview.waitFor({ state: 'hidden' });
-    await page.screenshot({ path: path.join(output, 'daily-service-plating.png') });
-    const lostAlert = service.locator('.service-alert');
-    let lost = false;
-    for (let second = 0; second < 45 && !lost; second++) {
-      await page.clock.fastForward(1000);
-      lost = await lostAlert.isVisible();
-    }
-    assert(lost, 'a guest who waits too long raises the loss alert');
-    assert.match(await lostAlert.innerText(), /客人等太久离开了/);
+    await page.setViewportSize({ width: 1120, height: 700 });
+    await service.locator('[data-live="end"]').click();
+    await service.locator('[data-live="settle-done"]').click();
+    assert.equal(await page.evaluate(() => demo.getLibrary().daily.serviceGrowth.shifts), 2);
     assert.deepEqual(errors, []);
     return {
       fourRoles: true,
-      dragAndWipe: true,
-      centerWorkspace: true,
+      goldOnlyService: true,
+      liveShiftHubAndBoard: true,
       shiftReceipt: true,
       cumulativeOuting: true,
       invitationStages: true,

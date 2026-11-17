@@ -126,7 +126,7 @@ export function createGalWorkspace(panel, events, actions) {
       mount(options.history, '.gal-archive-content');
       panel.dataset.persistent = String(options.persistent === true);
       for (const button of part('.gal-composer').querySelectorAll(
-        '#chat-send,#quick-chat-send,#chat-cancel,#invite-send,[data-rp="send"]',
+        '#chat-send,#quick-chat-send,#chat-cancel,#invite-send,#overland-send,[data-rp="send"]',
       )) {
         decorated.push({
           button,

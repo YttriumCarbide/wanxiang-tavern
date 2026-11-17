@@ -4,18 +4,11 @@ import { HEROES, BOSSES } from '../data.js';
 import { escapeText } from '../ui.js';
 import { query as $ } from './dom.js';
 import { portraitUrl, saveCustomPortrait, UNKNOWN_STANDING } from '../portraits.js';
-import { preparationEquipment } from './equipment.js';
+import { prepDetailMarkup } from './prep-view.js';
 import { TAVERN_VISITORS } from '../content/tavern-visitors.js';
 import { explorationHref } from '../exploration/scenes.js';
 import { tavernTime } from '../daily.js';
 import { grownCombat } from '../growth.js';
-import { affectionLabel, relationship } from '../relationships.js';
-import {
-  SERVICE_ROLES,
-  serviceProficiency,
-  serviceAutoChance,
-  serviceWaitBonus,
-} from '../service-progression.js';
 
 /** @param {import('./context.js').AppContext} context */
 export function createShell(context) {
@@ -93,12 +86,22 @@ export function createShell(context) {
     $('#inn-frame').replaceChildren(frame);
     $('#party-panel').close();
   }
+  function canShowVisitorRefresh() {
+    return (
+      session.runtime.mode === 'inn' &&
+      !session.runtime.needsStart &&
+      session.ai.generationOptions?.developerMode === true
+    );
+  }
   function syncInnVisitors() {
     const frame = $('#inn-frame iframe');
-    visitorRefresh.hidden =
-      session.runtime.mode !== 'inn' ||
-      session.runtime.needsStart ||
-      frame?.contentDocument?.querySelector('#visitor-refresh')?.hidden !== false;
+    const available =
+      session.runtime.mode === 'inn' &&
+      !session.runtime.needsStart &&
+      frame?.contentDocument?.querySelector('#visitor-refresh')?.hidden === false;
+    visitorRefresh.dataset.available = String(available);
+    visitorRefresh.hidden = !available || !canShowVisitorRefresh();
+    context.ledger?.sync?.();
     if (!frame) return;
     const characters = TAVERN_VISITORS.flatMap((definition) => {
       const member =
@@ -132,26 +135,40 @@ export function createShell(context) {
     );
   }
   context.events.on(window, 'message', (event) => {
-    if (event.origin !== location.origin || event.source !== $('#inn-frame iframe')?.contentWindow)
+    const innWin = $('#inn-frame iframe')?.contentWindow;
+    const atlasWin = $('#daily-atlas-frame')?.contentWindow;
+    if (event.origin !== location.origin || (event.source !== innWin && event.source !== atlasWin))
       return;
-    if (event.data?.type === 'tavern-visitors-request') syncInnVisitors();
     if (event.data?.type === 'tavern-workshop') void context.workshop.open();
-    if (['street-map-state', 'scene-ready'].includes(event.data?.type))
-      document.body.classList.toggle(
-        'street-atlas-open',
-        Boolean($('#inn-frame iframe')?.contentDocument?.getElementById('street-map')?.open),
+    if (['street-map-state', 'scene-ready'].includes(event.data?.type)) {
+      const innOpen = Boolean(
+        $('#inn-frame iframe')?.contentDocument?.getElementById('street-map')?.open,
       );
-    if (event.data?.type === 'scene-ready') {
-      returnTavern.hidden =
-        event.data.scene === 'tavern' ||
-        session.runtime.mode !== 'inn' ||
-        session.runtime.needsStart;
+      const atlasEl = $('#daily-atlas-frame');
+      const atlasOpen = Boolean(
+        atlasEl && !atlasEl.hidden && atlasEl.contentDocument?.getElementById('street-map')?.open,
+      );
+      document.body.classList.toggle('street-atlas-open', innOpen || atlasOpen);
+      context.ledger?.syncTopLayer?.();
     }
-    if (event.data?.type === 'tavern-visitors-availability')
-      visitorRefresh.hidden =
-        event.data.available !== true ||
-        session.runtime.mode !== 'inn' ||
-        session.runtime.needsStart;
+    if (event.source !== innWin) return;
+    if (event.data?.type === 'tavern-visitors-request') syncInnVisitors();
+    if (event.data?.type === 'scene-ready') {
+      const upstairs = ['corridor', 'guest-room', 'master-bedroom'].includes(event.data.scene);
+      returnTavern.textContent = upstairs ? '回到大厅' : '返回酒馆';
+      returnTavern.hidden =
+        !upstairs || session.runtime.mode !== 'inn' || session.runtime.needsStart;
+      context.ledger?.sync?.();
+    }
+    if (event.data?.type === 'tavern-visitors-availability') {
+      const available =
+        event.data.available === true &&
+        session.runtime.mode === 'inn' &&
+        !session.runtime.needsStart;
+      visitorRefresh.dataset.available = String(available);
+      visitorRefresh.hidden = !available || !canShowVisitorRefresh();
+      context.ledger?.sync?.();
+    }
   });
   function setCustomPortrait(heroId, dataUrl, kind = 'card') {
     const member = session.ai.library.characters.find((entry) => entry.id === heroId);
@@ -219,116 +236,97 @@ export function createShell(context) {
     const slot = session.ai.preparationSlot;
     panel.classList.toggle('formation-locked', session.ai.formationLocked === true);
     panel.classList.toggle('rear-locked', !rearUnlocked(library));
+    const maxSlots = rearUnlocked(library) ? 6 : 3;
+    const deployedMembers = library.party
+      .slice(0, maxSlots)
+      .map((id) => (id ? library.characters.find((member) => member.id === id) : null))
+      .filter(Boolean);
+    const deployedStats = deployedMembers.map((member) => grownCombat(member));
+    const frontHp = library.party.slice(0, 3).reduce((sum, id) => {
+      const m = id ? library.characters.find((member) => member.id === id) : null;
+      return sum + (m ? grownCombat(m).hp : 0);
+    }, 0);
+    const teamPower = deployedStats.reduce(
+      (sum, s) => sum + s.hp + Math.round(s.mp / 2) + s.attack * 8 + s.level * 10,
+      0,
+    );
+    const avgLv = deployedStats.length
+      ? (deployedStats.reduce((sum, s) => sum + s.level, 0) / deployedStats.length).toFixed(1)
+      : '0';
+    const deployedCountEl = $('#prepare-deployed-count');
+    if (deployedCountEl)
+      deployedCountEl.textContent = `DEPLOY ${deployedMembers.length}/${maxSlots}`;
+    const metricsEl = $('#prepare-team-metrics');
+    if (metricsEl) {
+      metricsEl.innerHTML = `<div><small>队伍战力</small><b>${teamPower.toLocaleString()}</b></div>
+        <div><small>前场生命</small><b>${frontHp}</b></div>
+        <div><small>平均等级</small><b>${avgLv}</b></div>`;
+    }
+    const etherEl = $('#prepare-ether-amt');
+    if (etherEl) etherEl.textContent = `以太 ${library.inventory?.ether || 0}`;
+    const goldEl = $('#prepare-gold-amt');
+    if (goldEl) goldEl.textContent = `金币 ${library.inventory?.gold || 0}`;
+
     $('#prepare-slots').innerHTML = library.party
-      .slice(0, rearUnlocked(library) ? 6 : 3)
+      .slice(0, maxSlots)
       .map((id, index) => {
         const entry = library.characters.find((member) => member.id === id);
         const row =
           index % 3 === 0
-            ? `<span class="formation-row-label">${index < 3 ? '前场' : '后场'}</span>`
+            ? `<span class="formation-row-label ${index < 3 ? 'front' : 'back'}">${index < 3 ? '前场' : '后场'}</span>`
             : '';
+        const tone = entry?.combat?.color || (index < 3 ? '#c99b4a' : '#5b8def');
         return (
           row +
           html`<button
             class="prepare-slot ${slot === index ? 'selected' : ''}"
             data-prepare-slot="${index}"
             ${entry ? `data-prepare-hero="${entry.id}"` : ''}
+            style="--c:${escapeText(tone)}"
             draggable="${!!entry && !session.ai.formationLocked}"
             aria-pressed="${slot === index}"
             aria-label="${index < 3 ? '前场' : '后场'}${(index % 3) + 1}：${escapeText(entry?.setting.name || '空位')}"
           >
-            ${entry ? html`<span class="prepare-drag-handle" aria-label="拖拽角色">⠿</span><img src="${portraitUrl(entry.combat)}" alt="" /><strong>${escapeText(entry.setting.name)}</strong>${entry.id === library.campaign?.protagonistId ? '<span class="member-crown" title="主角">主</span>' : ''}` : '<span class="slot-plus">＋</span><small>空位</small>'}
+            ${entry ? html`<span class="prepare-drag-handle" aria-label="拖拽角色">⠿</span><span class="prepare-slot-lv">Lv.${grownCombat(entry).level}</span><img src="${portraitUrl(entry.combat)}" alt="" /><span class="pp-tile-name"><strong>${escapeText(entry.setting.name)}</strong>${entry.setting?.title ? `<small>${escapeText(entry.setting.title)}</small>` : ''}</span>${entry.id === library.campaign?.protagonistId ? '<span class="member-crown" title="主角">主</span>' : ''}` : '<span class="slot-plus"><i>＋</i><small>空位</small></span>'}
           </button>`
         );
       })
       .join('');
     const reserve = library.characters.filter((entry) => !library.party.includes(entry.id));
-    const query = (session.ai.preparationSearch || '').trim().toLocaleLowerCase();
-    const visible = reserve.filter((entry) =>
-      entry.setting.name.toLocaleLowerCase().includes(query),
-    );
     $('#prepare-count').textContent = `${reserve.length}`;
     $('#prepare-pool').innerHTML =
-      visible
-        .map(
-          (entry) =>
-            html`<button
-              class="prepare-member ${session.ai.preparationCharacter === entry.id ? 'selected' : ''}"
-              data-prepare-view="${entry.id}"
-              data-prepare-hero="${entry.id}"
-              draggable="true"
-            >
-              <span class="prepare-drag-handle" aria-label="拖拽角色">⠿</span
-              ><img src="${portraitUrl(entry.combat)}" alt="" /><strong
-                >${escapeText(entry.setting.name)}</strong
-              >
-            </button>`,
-        )
-        .join('') ||
-      `<p class="prepare-empty">${query ? '没有找到这位角色' : '所有成员都已加入阵容'}</p>`;
+      reserve
+        .map((entry) => {
+          const tone = entry.combat?.color || '#5b8def';
+          return html`<button
+            class="prepare-member ${session.ai.preparationCharacter === entry.id ? 'selected' : ''}"
+            data-prepare-view="${entry.id}"
+            data-prepare-hero="${entry.id}"
+            style="--c:${escapeText(tone)}"
+            draggable="true"
+          >
+            <span class="prepare-drag-handle" aria-label="拖拽角色">⠿</span>
+            <span class="prepare-slot-lv">Lv.${grownCombat(entry).level}</span>
+            <img src="${portraitUrl(entry.combat)}" alt="" />
+            <span class="pp-tile-name"><strong>${escapeText(entry.setting.name)}</strong></span>
+          </button>`;
+        })
+        .join('') || '<p class="prepare-empty">所有成员都已加入阵容</p>';
     const inspected =
       library.characters.find((entry) => entry.id === session.ai.preparationCharacter) ||
       library.characters.find((entry) => entry.id === library.party[slot]) ||
       library.characters[0];
     if (!inspected) {
       $('#prepare-detail').textContent = '尚无角色';
+      $('#prepare-status').textContent = '尚无可用角色';
       return;
     }
-    $('#prepare-character-title').textContent = inspected.setting.name;
-    const stats = grownCombat(inspected);
-    const roles = Object.entries(SERVICE_ROLES)
-      .map(([id, name]) => {
-        const level = serviceProficiency(library.daily.serviceGrowth, inspected.id, id);
-        return `<tr><th>${name}</th><td>${level}</td><td>+${serviceWaitBonus(level)} 秒</td><td>${serviceAutoChance(level)}%</td></tr>`;
-      })
-      .join('');
-    $('#prepare-detail').innerHTML = html`<section class="prepare-portrait">
-        <img
-          src="${portraitUrl(inspected.combat)}"
-          alt="${escapeText(inspected.setting.name)}的立绘"
-        />
-        <details class="prepare-portrait-tools">
-          <summary>更换立绘</summary>
-          <div>
-            <button data-edit-portrait="${inspected.id}">自定义卡面 / 立绘</button>
-            <button data-portrait-url="${inspected.id}">图床链接</button>
-            <button data-reset-portrait="${inspected.id}">恢复默认</button>
-          </div>
-        </details>
-      </section>
-      <section class="prepare-character-controls">
-        <p class="prepare-affection">
-          ${affectionLabel(relationship(library, inspected.id).affection)}
-        </p>
-        <dl class="prepare-stat-grid">
-          ${[
-            ['等级', stats.level],
-            ['生命', stats.hp],
-            ['法力', stats.mp],
-            ['普攻', stats.attack],
-            ['行动', stats.limit],
-          ]
-            .map(([label, value]) => `<div><dt>${label}</dt><dd>${value ?? '—'}</dd></div>`)
-            .join('')}
-        </dl>
-        ${preparationEquipment(library, inspected)}
-        <details class="prepare-service">
-          <summary>营业能力</summary>
-          <table>
-            <thead>
-              <tr>
-                <th>岗位</th>
-                <th>熟练度</th>
-                <th>等候</th>
-                <th>自动</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${roles}
-            </tbody>
-          </table>
-        </details>
-      </section>`;
+    session.ai.preparationCharacter = inspected.id;
+    $('#prepare-detail').innerHTML = prepDetailMarkup(
+      library,
+      inspected,
+      session.ai.preparationTab || 'status',
+    );
     $('#prepare-status').textContent = session.ai.formationLocked
       ? '本场编队已锁定 · 点击角色调整装备'
       : session.ai.departureParty

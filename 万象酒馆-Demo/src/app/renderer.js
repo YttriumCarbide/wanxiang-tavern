@@ -66,7 +66,23 @@ export function createRenderer(context) {
           ><span class="card-buffs"
             >${statusIcons(s, id, session.battle.forecast.final, session.battle.playing ? [] : session.battle.forecast.events)}</span
           ><strong class="rear-name">${escapeText(d.name)}</strong>
-          ${ready ? html`<span class="entry-tag" title="${escapeText(resourceText(d.entrySkill?.name ? `入场技【${d.entrySkill.name}】就绪：${d.entrySkill.text || ''}` : '入场技就绪'))}">入场</span>` : ''}
+          ${
+            ready
+              ? html`<span
+                  class="entry-tag"
+                  aria-label="入场技就绪"
+                  title="${escapeText(
+                    resourceText(
+                      d.entrySkill?.name
+                        ? `入场技【${d.entrySkill.name}】就绪：${d.entrySkill.text || ''}`
+                        : '入场技就绪',
+                    ),
+                  )}"
+                  ><svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path fill="currentColor" d="M13.5 2 4 14h7l-1.5 8L20 10h-7l.5-8z" /></svg
+                ></span>`
+              : ''
+          }
           <div class="rear-resources">${resourceBars(u, f)}</div>
           ${emblemRing(d, u, false, session.battle.playing ? u : f)}
         </button>`;

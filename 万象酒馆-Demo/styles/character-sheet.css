@@ -129,6 +129,33 @@
   font-size: 21px;
   color: #d4ddac;
 }
+.identity-dc-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 14px;
+}
+.identity-dc-item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px;
+  padding: 6px 8px;
+  border: 1px solid #91aa7944;
+  border-radius: 4px;
+  background: #0a1b1980;
+  font-size: 11px;
+}
+.identity-dc-item span {
+  color: #9db2a3;
+}
+.identity-dc-item strong {
+  color: #efdfb8;
+  font-size: 13px;
+}
+.identity-dc-item small {
+  color: #82d4af;
+}
 .character-dossier {
   min-width: 0;
   min-height: 0;

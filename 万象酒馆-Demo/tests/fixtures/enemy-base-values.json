@@ -2,461 +2,1290 @@
   {
     "id": "mossSlime",
     "hp": 26,
-    "intents": [[7]]
+    "intents": [
+      [
+        7
+      ]
+    ]
   },
   {
     "id": "sprout",
     "hp": 24,
-    "intents": [[6]]
+    "intents": [
+      [
+        6
+      ]
+    ]
   },
   {
     "id": "pebble",
     "hp": 34,
-    "intents": [[7]]
+    "intents": [
+      [
+        7
+      ]
+    ]
   },
   {
     "id": "hound",
     "hp": 43,
-    "intents": [[13], [14]]
+    "intents": [
+      [
+        13
+      ],
+      [
+        14
+      ]
+    ]
   },
   {
     "id": "warden",
-    "hp": 66,
-    "intents": [[10], [17]]
+    "hp": 76,
+    "intents": [
+      [
+        13
+      ],
+      [
+        13
+      ],
+      [
+        17
+      ]
+    ]
   },
   {
     "id": "hexer",
     "hp": 43,
-    "intents": [[9], [10]]
+    "intents": [
+      [
+        9
+      ],
+      [
+        10
+      ]
+    ]
   },
   {
     "id": "crystalBeetle",
-    "hp": 37,
-    "intents": [[9]]
+    "hp": 68,
+    "intents": [
+      [
+        13
+      ],
+      [
+        12
+      ],
+      [
+        9
+      ]
+    ]
   },
   {
     "id": "cinderImp",
     "hp": 38,
-    "intents": [[11], [9]]
+    "intents": [
+      [
+        11
+      ],
+      [
+        9
+      ]
+    ]
   },
   {
     "id": "tideJelly",
     "hp": 41,
-    "intents": [[9], [11]]
+    "intents": [
+      [
+        9
+      ],
+      [
+        11
+      ]
+    ]
   },
   {
     "id": "greyProwler",
     "hp": 43,
-    "intents": [[11], [13]]
+    "intents": [
+      [
+        11
+      ],
+      [
+        13
+      ]
+    ]
   },
   {
     "id": "facetSkitter",
     "hp": 50,
-    "intents": [[11], []]
+    "intents": [
+      [
+        11
+      ],
+      []
+    ]
   },
   {
     "id": "hollowSentry",
     "hp": 62,
-    "intents": [[12], [19]]
+    "intents": [
+      [
+        12
+      ],
+      [
+        19
+      ]
+    ]
   },
   {
     "id": "veilMender",
     "hp": 41,
-    "intents": [[8], []]
+    "intents": [
+      [
+        8
+      ],
+      []
+    ]
   },
   {
     "id": "dustHexer",
     "hp": 46,
-    "intents": [[], [10]]
+    "intents": [
+      [],
+      [
+        10
+      ]
+    ]
   },
   {
     "id": "greyStinger",
     "hp": 36,
-    "intents": [[7], [11]]
+    "intents": [
+      [
+        7
+      ],
+      [
+        11
+      ]
+    ]
   },
   {
     "id": "trailArbalist",
     "hp": 46,
-    "intents": [[], [18]]
+    "intents": [
+      [],
+      [
+        18
+      ]
+    ]
   },
   {
     "id": "shellGatherer",
     "hp": 53,
-    "intents": [[12], []]
+    "intents": [
+      [
+        12
+      ],
+      []
+    ]
   },
   {
     "id": "riftMote",
     "hp": 38,
-    "intents": [[9], [6]]
+    "intents": [
+      [
+        9
+      ],
+      [
+        6
+      ]
+    ]
   },
   {
     "id": "oathlessDuelist",
     "hp": 55,
-    "intents": [[], [14]]
+    "intents": [
+      [],
+      [
+        14
+      ]
+    ]
   },
   {
     "id": "livingVine",
     "hp": 43,
-    "intents": [[8], [9]]
+    "intents": [
+      [
+        8
+      ],
+      [
+        9
+      ]
+    ]
   },
   {
     "id": "moonMoth",
     "hp": 34,
-    "intents": [[6]]
+    "intents": [
+      [
+        6
+      ]
+    ]
   },
   {
     "id": "bogLeech",
     "hp": 48,
-    "intents": [[10]]
+    "intents": [
+      [
+        10
+      ]
+    ]
   },
   {
     "id": "fogSpore",
     "hp": 41,
-    "intents": [[], [9]]
+    "intents": [
+      [],
+      [
+        9
+      ]
+    ]
   },
   {
     "id": "bogDrifter",
-    "hp": 55,
-    "intents": [[11], []]
+    "hp": 76,
+    "intents": [
+      [
+        12
+      ],
+      [
+        13
+      ],
+      []
+    ]
   },
   {
     "id": "moonWorker",
     "hp": 43,
-    "intents": [[8]]
+    "intents": [
+      [
+        8
+      ]
+    ]
   },
   {
     "id": "hiveGuard",
-    "hp": 65,
-    "intents": [[12], []]
+    "hp": 84,
+    "intents": [
+      [
+        12
+      ],
+      [
+        14
+      ],
+      []
+    ]
   },
   {
     "id": "honeyLarva",
     "hp": 53,
-    "intents": [[9], []]
+    "intents": [
+      [
+        9
+      ],
+      []
+    ]
   },
   {
     "id": "scaleShield",
-    "hp": 67,
-    "intents": [[11], []]
+    "hp": 88,
+    "intents": [
+      [
+        12
+      ],
+      [
+        13
+      ],
+      []
+    ]
   },
   {
     "id": "scaleWarrior",
     "hp": 59,
-    "intents": [[13], [10]]
+    "intents": [
+      [
+        13
+      ],
+      [
+        10
+      ]
+    ]
   },
   {
     "id": "scaleArcher",
     "hp": 47,
-    "intents": [[12]]
+    "intents": [
+      [
+        12
+      ]
+    ]
   },
   {
     "id": "twistedSapling",
     "hp": 65,
-    "intents": [[10], []]
+    "intents": [
+      [
+        10
+      ],
+      []
+    ]
   },
   {
     "id": "rootHauler",
-    "hp": 74,
-    "intents": [[14], []]
+    "hp": 92,
+    "intents": [
+      [
+        14
+      ],
+      [
+        16
+      ],
+      []
+    ]
   },
   {
     "id": "barkAcolyte",
     "hp": 52,
-    "intents": [[], [11]]
+    "intents": [
+      [],
+      [
+        11
+      ]
+    ]
   },
   {
     "id": "rootSentry",
-    "hp": 77,
-    "intents": [[13], []]
+    "hp": 96,
+    "intents": [
+      [
+        14
+      ],
+      [
+        15
+      ],
+      []
+    ]
   },
   {
     "id": "moonTendril",
     "hp": 55,
-    "intents": [[11], []]
+    "intents": [
+      [
+        11
+      ],
+      []
+    ]
   },
   {
     "id": "rustMiner",
     "hp": 52,
-    "intents": [[9], [10]]
+    "intents": [
+      [
+        9
+      ],
+      [
+        10
+      ]
+    ]
   },
   {
     "id": "drillWorm",
     "hp": 42,
-    "intents": [[9]]
+    "intents": [
+      [
+        9
+      ]
+    ]
   },
   {
     "id": "railSpider",
     "hp": 46,
-    "intents": [[7], [12]]
+    "intents": [
+      [
+        7
+      ],
+      [
+        12
+      ]
+    ]
   },
   {
     "id": "frostBorer",
-    "hp": 58,
-    "intents": [[11]]
+    "hp": 76,
+    "intents": [
+      [
+        13
+      ],
+      [
+        13
+      ]
+    ]
   },
   {
     "id": "crystalMiner",
-    "hp": 70,
-    "intents": [[11], [15]]
+    "hp": 92,
+    "intents": [
+      [
+        14
+      ],
+      [
+        13
+      ],
+      [
+        17
+      ]
+    ]
   },
   {
     "id": "clingLarva",
     "hp": 41,
-    "intents": [[9]]
+    "intents": [
+      [
+        9
+      ]
+    ]
   },
   {
     "id": "oreMite",
     "hp": 38,
-    "intents": [[7]]
+    "intents": [
+      [
+        7
+      ]
+    ]
   },
   {
     "id": "shardSprite",
     "hp": 48,
-    "intents": [[6], []]
+    "intents": [
+      [
+        6
+      ],
+      []
+    ]
   },
   {
     "id": "rogueArm",
-    "hp": 61,
-    "intents": [[12], [9]]
+    "hp": 82,
+    "intents": [
+      [
+        13
+      ],
+      [
+        14
+      ],
+      [
+        11
+      ]
+    ]
   },
   {
     "id": "partsCarrier",
     "hp": 56,
-    "intents": [[10], []]
+    "intents": [
+      [
+        10
+      ],
+      []
+    ]
   },
   {
     "id": "lostWelder",
     "hp": 50,
-    "intents": [[8], []]
+    "intents": [
+      [
+        8
+      ],
+      []
+    ]
   },
   {
     "id": "cargoCrawler",
-    "hp": 76,
-    "intents": [[11]]
+    "hp": 98,
+    "intents": [
+      [
+        12
+      ],
+      [
+        13
+      ]
+    ]
   },
   {
     "id": "insaneWorker",
-    "hp": 58,
-    "intents": [[11]]
+    "hp": 78,
+    "intents": [
+      [
+        13
+      ],
+      [
+        13
+      ]
+    ]
   },
   {
     "id": "scrapHound",
     "hp": 49,
-    "intents": [[10]]
+    "intents": [
+      [
+        10
+      ]
+    ]
   },
   {
     "id": "sentryDrone",
     "hp": 40,
-    "intents": [[9]]
+    "intents": [
+      [
+        9
+      ]
+    ]
   },
   {
     "id": "conduitWisp",
     "hp": 44,
-    "intents": [[7]]
+    "intents": [
+      [
+        7
+      ]
+    ]
   },
   {
     "id": "aresCannonLeft",
     "hp": 78,
-    "intents": [[8]]
+    "intents": [
+      [
+        8
+      ]
+    ]
   },
   {
     "id": "aresCannonRight",
     "hp": 78,
-    "intents": [[8]]
+    "intents": [
+      [
+        8
+      ]
+    ]
   },
   {
     "id": "bossGate",
-    "hp": 126,
-    "intents": [[14], [9], [16], [9]]
+    "hp": 112,
+    "intents": [
+      [
+        7
+      ],
+      [
+        4
+      ],
+      [
+        5
+      ],
+      [
+        7
+      ],
+      [
+        4
+      ],
+      [
+        4
+      ]
+    ]
   },
   {
     "id": "bossBloom",
-    "hp": 115,
-    "intents": [[10], [8], [6], [15]]
+    "hp": 112,
+    "intents": [
+      [
+        6
+      ],
+      [
+        5
+      ],
+      [
+        6
+      ],
+      [
+        4
+      ],
+      [
+        7
+      ],
+      [
+        5
+      ]
+    ]
   },
   {
     "id": "bossTide",
-    "hp": 121,
-    "intents": [[11], [8], [8], [15]]
+    "hp": 152,
+    "intents": [
+      [
+        8
+      ],
+      [
+        6
+      ],
+      [
+        7
+      ],
+      [
+        6
+      ],
+      [
+        10
+      ],
+      [
+        7
+      ]
+    ]
   },
   {
     "id": "manyShellBeast",
     "hp": 207,
-    "intents": [[10], [19], [13], [23]]
+    "intents": [
+      [
+        7
+      ],
+      [
+        13
+      ],
+      [
+        8
+      ],
+      [
+        14
+      ]
+    ]
   },
   {
     "id": "unmooredJudge",
     "hp": 190,
-    "intents": [[14], [21], [12], [26]]
+    "intents": [
+      [
+        9
+      ],
+      [
+        14
+      ],
+      [
+        8
+      ],
+      [
+        16
+      ]
+    ]
   },
   {
     "id": "returningCore",
-    "hp": 224,
-    "intents": [[], [9], [], [], [12], []]
+    "hp": 184,
+    "intents": [
+      [],
+      [
+        6
+      ],
+      [],
+      [],
+      [
+        7
+      ],
+      []
+    ]
   },
   {
     "id": "mossGulon",
-    "hp": 133,
-    "intents": [[10], [16]]
+    "hp": 158,
+    "intents": [
+      [
+        7
+      ],
+      [
+        10
+      ],
+      [
+        8
+      ],
+      [
+        6
+      ],
+      [
+        11
+      ],
+      [
+        8
+      ]
+    ]
   },
   {
     "id": "bogElemental",
-    "hp": 163,
-    "intents": [[7], [18], []]
+    "hp": 185,
+    "intents": [
+      [
+        5
+      ],
+      [
+        11
+      ],
+      [],
+      [
+        6
+      ],
+      [
+        12
+      ],
+      [
+        8
+      ]
+    ]
   },
   {
     "id": "moonQueen",
-    "hp": 179,
-    "intents": [[8], [20], []]
+    "hp": 196,
+    "intents": [
+      [
+        5
+      ],
+      [
+        10
+      ],
+      [],
+      [
+        6
+      ],
+      [
+        12
+      ],
+      []
+    ]
   },
   {
     "id": "scaleCaptain",
-    "hp": 195,
-    "intents": [[13], [17], []]
+    "hp": 215,
+    "intents": [
+      [
+        7
+      ],
+      [
+        10
+      ],
+      [],
+      [
+        8
+      ],
+      [
+        12
+      ],
+      [
+        5
+      ]
+    ]
   },
   {
     "id": "maskedForester",
-    "hp": 191,
-    "intents": [[9], [22], []]
+    "hp": 178,
+    "intents": [
+      [
+        6
+      ],
+      [
+        11
+      ],
+      [],
+      [
+        6
+      ],
+      [
+        9
+      ],
+      [
+        6
+      ]
+    ]
   },
   {
     "id": "moonCrown",
     "hp": 126,
-    "intents": [[], [], []]
+    "intents": [
+      [],
+      [],
+      []
+    ]
   },
   {
     "id": "moonEye",
     "hp": 150,
-    "intents": [[21], [8], []]
+    "intents": [
+      [
+        21
+      ],
+      [
+        8
+      ],
+      []
+    ]
   },
   {
     "id": "moonRoot",
     "hp": 173,
-    "intents": [[7], [4], []]
+    "intents": [
+      [
+        7
+      ],
+      [
+        4
+      ],
+      []
+    ]
   },
   {
     "id": "frostCrusher",
-    "hp": 147,
-    "intents": [[13], [9]]
+    "hp": 172,
+    "intents": [
+      [
+        10
+      ],
+      [
+        6
+      ],
+      [
+        8
+      ],
+      [
+        6
+      ],
+      [
+        12
+      ],
+      [
+        7
+      ]
+    ]
   },
   {
     "id": "drillMatriarch",
-    "hp": 179,
-    "intents": [[15], [8]]
+    "hp": 205,
+    "intents": [
+      [
+        10
+      ],
+      [
+        5
+      ],
+      [
+        9
+      ],
+      [
+        12
+      ],
+      [
+        6
+      ],
+      [
+        8
+      ]
+    ]
   },
   {
     "id": "crystalDevourer",
-    "hp": 195,
-    "intents": [[10], [], [18]]
+    "hp": 218,
+    "intents": [
+      [
+        6
+      ],
+      [],
+      [
+        11
+      ],
+      [
+        6
+      ],
+      [],
+      [
+        13
+      ]
+    ]
   },
   {
     "id": "repairOverseer",
-    "hp": 198,
-    "intents": [[12], [16], []]
+    "hp": 222,
+    "intents": [
+      [
+        7
+      ],
+      [
+        11
+      ],
+      [],
+      [
+        6
+      ],
+      [
+        13
+      ],
+      [
+        8
+      ]
+    ]
   },
   {
     "id": "settlementLeader",
-    "hp": 207,
-    "intents": [[6], [10]]
+    "hp": 228,
+    "intents": [
+      [
+        4
+      ],
+      [
+        8
+      ],
+      [
+        6
+      ],
+      [
+        5
+      ],
+      [
+        10
+      ],
+      [
+        7
+      ]
+    ]
   },
   {
     "id": "ares",
     "hp": 299,
-    "intents": [[11], [13], [8], [21], [13], [24], [3], [], [44]]
+    "intents": [
+      [
+        11
+      ],
+      [
+        13
+      ],
+      [
+        8
+      ],
+      [
+        21
+      ],
+      [
+        13
+      ],
+      [
+        24
+      ],
+      [
+        3
+      ],
+      [],
+      [
+        44
+      ]
+    ]
   },
   {
     "id": "patrolHound",
     "hp": 34,
-    "intents": [[10], [12]]
+    "intents": [
+      [
+        10
+      ],
+      [
+        12
+      ]
+    ]
   },
   {
     "id": "corridorGuard",
-    "hp": 50,
-    "intents": [[], [13]]
+    "hp": 74,
+    "intents": [
+      [
+        10
+      ],
+      [],
+      [
+        15
+      ]
+    ]
   },
   {
     "id": "stoneBallista",
     "hp": 38,
-    "intents": [[], [14]]
+    "intents": [
+      [],
+      [
+        14
+      ]
+    ]
   },
   {
     "id": "viperShadow",
     "hp": 31,
-    "intents": [[8], [6]]
+    "intents": [
+      [
+        8
+      ],
+      [
+        6
+      ]
+    ]
   },
   {
     "id": "raptorStorm",
     "hp": 36,
-    "intents": [[9], [11]]
+    "intents": [
+      [
+        9
+      ],
+      [
+        11
+      ]
+    ]
   },
   {
     "id": "shadowStalker",
-    "hp": 30,
-    "intents": [[14], [9]]
+    "hp": 58,
+    "intents": [
+      [
+        13
+      ],
+      [
+        11
+      ],
+      [
+        15
+      ]
+    ]
   },
   {
     "id": "stoneBeetle",
     "hp": 46,
-    "intents": [[8], [9]]
+    "intents": [
+      [
+        8
+      ],
+      [
+        9
+      ]
+    ]
   },
   {
     "id": "brassSeeker",
     "hp": 32,
-    "intents": [[9], []]
+    "intents": [
+      [
+        9
+      ],
+      []
+    ]
   },
   {
     "id": "ruinsMudGolem",
-    "hp": 54,
-    "intents": [[12], [7]]
+    "hp": 82,
+    "intents": [
+      [
+        9
+      ],
+      [
+        11
+      ],
+      [
+        8
+      ]
+    ]
   },
   {
     "id": "tombBeetle",
     "hp": 41,
-    "intents": [[11], [9]]
+    "intents": [
+      [
+        11
+      ],
+      [
+        9
+      ]
+    ]
   },
   {
     "id": "tombWarden",
-    "hp": 58,
-    "intents": [[14], [9]]
+    "hp": 80,
+    "intents": [
+      [
+        10
+      ],
+      [
+        16
+      ],
+      [
+        8
+      ]
+    ]
   },
   {
     "id": "cultistSpecter",
     "hp": 35,
-    "intents": [[9], [7]]
+    "intents": [
+      [
+        9
+      ],
+      [
+        7
+      ]
+    ]
   },
   {
     "id": "blackOoze",
     "hp": 29,
-    "intents": [[8], [9]]
+    "intents": [
+      [
+        8
+      ],
+      [
+        9
+      ]
+    ]
   },
   {
     "id": "voidParasite",
     "hp": 36,
-    "intents": [[11], [9]]
+    "intents": [
+      [
+        11
+      ],
+      [
+        9
+      ]
+    ]
   },
   {
     "id": "ruinsGate",
-    "hp": 109,
-    "intents": [[24], [12], [8], [16], [9]]
+    "hp": 148,
+    "intents": [
+      [
+        24
+      ],
+      [],
+      [
+        10
+      ],
+      [
+        6
+      ],
+      [
+        12
+      ],
+      [
+        6
+      ],
+      [
+        8
+      ]
+    ]
   },
   {
     "id": "chasmBeast",
-    "hp": 113,
-    "intents": [[8], [13], [9], [17]]
+    "hp": 152,
+    "intents": [
+      [
+        7
+      ],
+      [
+        10
+      ],
+      [
+        7
+      ],
+      [
+        6
+      ],
+      [
+        13
+      ],
+      [
+        8
+      ]
+    ]
   },
   {
     "id": "brassColossus",
-    "hp": 121,
-    "intents": [[13], [9], [10], [18]]
+    "hp": 160,
+    "intents": [
+      [
+        10
+      ],
+      [
+        7
+      ],
+      [
+        6
+      ],
+      [
+        7
+      ],
+      [
+        13
+      ],
+      [
+        8
+      ]
+    ]
   },
   {
     "id": "cinderPriest",
-    "hp": 115,
-    "intents": [[10], [8], [9], [16]]
+    "hp": 154,
+    "intents": [
+      [
+        9
+      ],
+      [
+        7
+      ],
+      [
+        6
+      ],
+      [
+        7
+      ],
+      [
+        12
+      ],
+      [
+        7
+      ]
+    ]
   },
   {
     "id": "apepLamb",
-    "hp": 126,
-    "intents": [[9], [15], [10], [15]]
+    "hp": 168,
+    "intents": [
+      [
+        8
+      ],
+      [
+        15
+      ],
+      [
+        6
+      ],
+      [
+        7
+      ],
+      [
+        15
+      ],
+      [
+        11
+      ]
+    ]
   }
 ]

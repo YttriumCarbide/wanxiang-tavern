@@ -2,7 +2,7 @@ import { query as $ } from './dom.js';
 import { formatRequestPreview, tokenSummary } from './request-preview.js';
 
 /** Raw responses live only in this page session, outside saved worldbooks and AI context. */
-export function createGenerationDiagnostics({ session, events, api, accept, toast }) {
+export function createGenerationDiagnostics({ session, events, api, accept, toast, onRetry }) {
   const current = () => session.ai.diagnostics[session.ai.diagnosticKind];
   const labels = { character: '角色', script: '剧本', 'quick-chat': '事件RP' };
   const selector = document.createElement('select');
@@ -85,6 +85,15 @@ export function createGenerationDiagnostics({ session, events, api, accept, toas
     $('#diagnostic-edit').value = record.candidateText;
     $('#diagnostic-edit').readOnly = record.accepted || record.readOnly;
     $('#diagnostic-validate').hidden = record.accepted || record.readOnly;
+    const retryBtn = $('#diagnostic-retry');
+    if (retryBtn) {
+      retryBtn.hidden = !(
+        onRetry &&
+        !record.accepted &&
+        !record.readOnly &&
+        (record.kind === 'script' || record.kind === 'character')
+      );
+    }
     $('#diagnostic-note').textContent = record.readOnly
       ? '仅查看本次RP原始返回；不会重新请求或更改进度。原文只保留到刷新页面，不进入存档或后续提示词。'
       : record.accepted
@@ -205,5 +214,14 @@ export function createGenerationDiagnostics({ session, events, api, accept, toas
       $('#diagnostic-validate').disabled = false;
     }
   });
+  const retryBtn = $('#diagnostic-retry');
+  if (retryBtn) {
+    events.on(retryBtn, 'click', () => {
+      const record = current();
+      if (!record || record.accepted || session.ai.busy || !onRetry) return;
+      if ($('#generation-diagnostics').open) $('#generation-diagnostics').close();
+      void onRetry(record.kind, record.input);
+    });
+  }
   return { record, show, refreshButtons, latest: (kind) => session.ai.diagnostics[kind] };
 }

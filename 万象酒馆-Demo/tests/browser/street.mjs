@@ -306,10 +306,9 @@ export async function streetChecks({ browser, baseURL, output }) {
         }),
     );
     await canvas.evaluate(() => window.assetPreview.placeNow('streetDoor'));
-    await page
-      .frameLocator('#inn-frame iframe')
-      .locator('#street-open')
-      .waitFor({ state: 'visible' });
+    const streetDoor = page.frameLocator('#inn-frame iframe').locator('#street-open');
+    await streetDoor.waitFor({ state: 'visible' });
+    assert.equal((await streetDoor.textContent()).trim(), '◇ 推门外出');
     await page.waitForTimeout(150);
     await page.screenshot({ path: path.join(output, 'tavern-exterior-door.png') });
     const clearance = await canvas.evaluate(async () => {

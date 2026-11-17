@@ -2,6 +2,8 @@ import {
   normalizeEquipment,
   EQUIPMENT_STATS,
   EQUIPMENT_QUALITIES,
+  EQUIPMENT_CRAFT_CATEGORIES,
+  normalizeEquipmentCategory,
   clampEquipmentLevel,
   resolveEquipmentQuality,
   hashSeed,
@@ -23,6 +25,7 @@ export function equipmentGenerationPlan(source) {
     quality: q.id,
     qualityName: q.name,
     level,
+    categories: EQUIPMENT_CRAFT_CATEGORIES,
     maxStats: q.statCount,
     stats: Object.keys(EQUIPMENT_STATS).filter(
       (key) =>
@@ -152,9 +155,14 @@ export function compileEquipmentDesign(raw, source) {
     seed,
   });
 
+  const category =
+    normalizeEquipmentCategory(raw.category) || normalizeEquipmentCategory(source?.category);
+  if (category === 'gem') throw Error('宝石来自预设掉落池，不由造物 API 构筑');
+
   return normalizeEquipment(
     {
       ...raw,
+      ...(category ? { category } : {}),
       flavor: typeof raw.description === 'string' ? raw.description.trim() : '',
       description: compiled.description,
       level: compiled.level,

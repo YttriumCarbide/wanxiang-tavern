@@ -491,11 +491,13 @@ export function createWorkshop(context) {
     begin(id, label) {
       requests.set(id, label);
       if (dialog.open) render();
+      context.ledger?.sync();
     },
     finish(id, outcome) {
       const label = requests.get(id);
       requests.delete(id);
       if (disposed) return;
+      context.ledger?.sync();
       if (dialog.open && label) {
         completions.push(
           label +

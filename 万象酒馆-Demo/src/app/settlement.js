@@ -6,6 +6,8 @@ import { levelLines } from '../content/level-dialogue.js';
 import { chooseRest, currentEncounterSpec } from '../expedition.js';
 import { createDialogue } from './dialogue.js';
 import { ITEMS } from '../content/items.js';
+import { INGREDIENTS } from '../content/dining.js';
+import { findGemById } from '../content/gems.js';
 import { ADVENTURE_NODE_LABELS } from '../adventure/definition.js';
 
 /** Presentation consumes already-awarded experience and the engine's recovery changes. */
@@ -218,6 +220,7 @@ export function createSettlement(context) {
     loot,
     awards,
     onward,
+    onwardLabel = '',
     back,
     backLabel = '返回酒馆',
     journal,
@@ -249,6 +252,25 @@ export function createSettlement(context) {
               >`,
           )
           .join('')}
+        ${Object.entries(rewards?.ingredients || {})
+          .map(([id, count]) =>
+            INGREDIENTS[id] && count > 0
+              ? html`<span class="reward-token" title="${escapeText(INGREDIENTS[id].name)}"
+                  >${escapeText(INGREDIENTS[id].name)} <b>×${count}</b></span
+                >`
+              : '',
+          )
+          .join('')}
+        ${(rewards?.gems || [])
+          .map((entry) => {
+            const gem = findGemById(entry.gemId);
+            return gem
+              ? html`<span class="reward-token" title="${escapeText(gem.name)}"
+                  >◆ ${escapeText(gem.name)}</span
+                >`
+              : '';
+          })
+          .join('')}
       </div>
       <div class="experience-list">${experienceRows(grouped)}</div>
       ${
@@ -272,7 +294,7 @@ export function createSettlement(context) {
           : ''
       }
       <div class="result-buttons">
-        ${journal ? '<button id="result-journal">路途手记</button>' : ''}${won && !complete ? `<button id="continue" class="primary">${session.journey.expedition.restPending ? '休整' : '下一场'}</button>` : ''}<button
+        ${journal ? '<button id="result-journal">路途手记</button>' : ''}${won && !complete ? `<button id="continue" class="primary">${escapeText(onwardLabel || (session.journey.expedition.restPending ? '休整' : '下一场'))}</button>` : ''}<button
           id="result-back"
           ${won && !complete && !retreat ? 'hidden' : ''}
         >

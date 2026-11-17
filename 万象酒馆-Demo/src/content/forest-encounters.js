@@ -11,8 +11,8 @@ export const FOREST_ROUTES = Object.freeze([
         '从药篓附近的荧屑和蓝光飞蛾确认月痕污染，与普通萤火区分。',
       ),
       battle(
-        ['greyStinger', 'livingVine'],
-        '蜂群有序搬运发光碎片，月苓说明会呼吸的根与树冠蜂巢传说。',
+        ['bogDrifter', 'greyStinger', 'livingVine'],
+        '蜂群有序搬运发光碎片，在泥沼精英挡路处发现会呼吸的根与树冠蜂巢传说。',
       ),
       battle(['moonMoth', 'greyStinger'], '月苓回附近公会取药剂，队伍沿蜂针和蛙足印追踪林中异动。'),
       battle(['mossGulon'], '苔背巨蛙惊逃而来；击败后发现蜂毒伤口，开放通往蜂巢必经的毒沼。'),
@@ -27,12 +27,12 @@ export const FOREST_ROUTES = Object.freeze([
         ['fogSpore', 'bogLeech'],
         '蓝瘴使魔物神志混乱，观察有序蜂群避开的低洼雾道，定位第一节点。',
       ),
-      battle(['bogDrifter', 'greyStinger'], '沿蜂群绕行处找到第二毒沼节点，疏开堵住的排水石渠。'),
+      battle(['bogLeech', 'greyStinger'], '沿蜂群绕行处找到第二毒沼节点，疏开堵住的排水石渠。'),
       battle(
-        ['fogSpore', 'bogDrifter'],
+        ['bogDrifter', 'fogSpore'],
         '清除第三节点的瘴囊和淤泥，通风后蓝瘴减弱，发现深处元素泥核。',
       ),
-      battle(['bogLeech', 'bogDrifter'], '月苓带着公会寄存的药剂赶回，显露泥核通路并支援队伍。'),
+      battle(['bogLeech', 'fogSpore'], '月苓带着公会寄存的药剂赶回，显露泥核通路并支援队伍。'),
       battle(
         ['bogElemental'],
         '与月苓配合击败泥核，取得通向蜂鸣穹巢的安全路线；Boss开战获得至高纹章士玖柒。',
@@ -49,15 +49,15 @@ export const FOREST_ROUTES = Object.freeze([
         '驱散倒地骑士周围的搬运蜂与荧蛾，月苓施药唤醒A级搜救骑士杜克。',
       ),
       battle(
-        ['moonWorker', 'hiveGuard'],
+        ['moonWorker', 'honeyLarva'],
         '杜克用返程标记与烟熏草带路，确认蜂群搬运月痕碎片的入口。',
       ),
       battle(
-        ['honeyLarva', 'moonWorker'],
-        '沿蜜囊管道查清碎片加工与蜂后感染，并找到杜克遗落的蜂蜡钥齿。',
+        ['hiveGuard', 'honeyLarva', 'moonWorker'],
+        '沿蜜囊管道击破精英巢卫，查清碎片加工与蜂后感染，并找到杜克遗落的蜂蜡钥齿。',
       ),
       battle(
-        ['hiveGuard', 'honeyLarva', 'moonWorker'],
+        ['moonWorker', 'honeyLarva', 'moonMoth'],
         '打开蜂蜡内门，进入蜂后所在核心巢室，杜克承认活树林令其迷路中毒。',
       ),
       battle(
@@ -72,19 +72,19 @@ export const FOREST_ROUTES = Object.freeze([
     boss: 'scaleCaptain',
     battles: [
       battle(
-        ['scaleShield', 'scaleArcher'],
+        ['scaleWarrior', 'scaleArcher'],
         '月苓观察陌生建筑，主角团讨论地外文明仅是猜测；闯入惊动有组织的守卫。',
       ),
       battle(
-        ['scaleWarrior', 'scaleArcher'],
+        ['scaleArcher', 'scaleWarrior'],
         '从交叉火力与军号观察蜥蜴人的明确分工，发现月牙形瞳孔。',
       ),
       battle(
         ['scaleShield', 'scaleWarrior'],
-        '突破盾刃协防，从制式装备与居民遗迹确认古城拥有成熟文明。',
+        '突破精英盾卫与刃兵协防，从制式装备与居民遗迹确认古城拥有成熟文明。',
       ),
       battle(
-        ['scaleShield', 'scaleArcher', 'scaleWarrior'],
+        ['scaleWarrior', 'scaleArcher', 'moonTendril'],
         '穿过仍有能源运转的内城廊道，推断守卫在执行守城命令而非偶然变异。',
       ),
       battle(
@@ -99,19 +99,19 @@ export const FOREST_ROUTES = Object.freeze([
     boss: 'maskedForester',
     battles: [
       battle(
-        ['twistedSapling', 'rootHauler'],
+        ['twistedSapling', 'barkAcolyte'],
         '回到地上认出杜克所说的活树，观察树根沿湿土留下的移动轨迹。',
       ),
       battle(
-        ['rootHauler', 'barkAcolyte'],
+        ['twistedSapling', 'moonTendril'],
         '发现古城石砖能阻断根须，疏开排水沟、移开旧铺路板，准备可通行的石路。',
       ),
       battle(
-        ['twistedSapling', 'barkAcolyte'],
-        '主祭用铜铃驱树包围；队伍退守石砖并拔断越过砖缝的根束，适用于任何队伍。',
+        ['rootHauler', 'twistedSapling', 'barkAcolyte'],
+        '主祭驱赶载土巨灵并用铜铃围攻；队伍退守石砖拔断根束，适用于任何队伍。',
       ),
       battle(
-        ['twistedSapling', 'rootHauler', 'barkAcolyte'],
+        ['twistedSapling', 'barkAcolyte', 'moonTendril'],
         '破坏驮土路线，让树群无法把湿土铺到石路，趁其受阻反包围侍徒。',
       ),
       battle(
@@ -130,15 +130,15 @@ export const FOREST_ROUTES = Object.freeze([
         '清剿溃散月树，发现根须在一扇月华门后仍有规律地抽动。',
       ),
       battle(
-        ['rootSentry', 'moonTendril'],
-        '穿门发现科技与活体组织结合的母树，清除从土中钻出的护卫。',
+        ['barkAcolyte', 'moonTendril'],
+        '穿门发现科技与活体组织结合的母树，清除林边祭司与导藤。',
       ),
       battle(
-        ['rootSentry', 'barkAcolyte'],
-        '找到冠层培养囊、中央虹膜和根部修复管，确定三个部位的不同职责。',
+        ['rootSentry', 'barkAcolyte', 'moonTendril'],
+        '击败树须守卫找到冠层培养囊、中央虹膜和根部修复管，确定三个部位的不同职责。',
       ),
       battle(
-        ['rootSentry', 'moonTendril', 'rootHauler'],
+        ['twistedSapling', 'moonTendril', 'barkAcolyte'],
         '拆除外层供能支路取得直接攻击三个核心部位的位置，不要求任何元素能力。',
       ),
       battle(

@@ -50,19 +50,49 @@ body.gal-playing #scene-talk {
 }
 #scene-talk {
   z-index: 35;
-  bottom: max(24px, env(safe-area-inset-bottom));
-  width: 142px;
+  bottom: max(16px, env(safe-area-inset-bottom));
+  width: 118px;
   height: 46px;
-  min-width: 142px;
-  padding: 10px 20px;
+  min-width: 118px;
+  padding: 8px 18px;
+}
+#scene-talk.is-docked {
+  bottom: auto;
+  width: 98px;
+  min-width: 98px;
+  height: 38px;
+  padding: 7px 14px;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  color: #c2b49b;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
+#scene-talk.is-docked:hover,
+#scene-talk.is-docked:focus-visible {
+  border-color: rgba(216, 178, 110, 0.26);
+  color: #f6e0ae;
+  background: rgba(216, 178, 110, 0.1);
+  box-shadow: none;
+  transform: translateX(-50%);
 }
 @media (max-height: 520px), (max-width: 900px) {
   #scene-talk {
     bottom: max(12px, env(safe-area-inset-bottom));
-    width: 116px;
+    width: 102px;
     height: 40px;
-    min-width: 116px;
-    padding: 8px 18px;
+    min-width: 102px;
+    padding: 7px 14px;
     font-size: 12px;
+  }
+  #scene-talk.is-docked {
+    width: 84px;
+    min-width: 84px;
+    height: 34px;
+    padding: 5px 10px;
   }
 }

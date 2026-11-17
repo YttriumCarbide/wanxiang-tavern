@@ -4,6 +4,40 @@ import { validateTaskReply } from '../../adventure/state.js';
 import { normalizeInvitationTurn } from '../../invitation.js';
 import { BODY_TAGS, OUTPUT_TAG } from '../output-protocol.js';
 import { normalizeQuestLead } from '../../tavern-quests.js';
+import {
+  DC_SPLIT_MARKER,
+  normalizeDcTurnOutcome,
+  parseDcSplitProse,
+  splitChoiceProseFallback,
+} from '../../dc-rp.js';
+
+const ATTR_KEYWORDS = Object.freeze([
+  ['str', /打|砸|推|撞|扛|举|摔|揍|踢|拳|砍|劈|力|强拆|撬/],
+  ['dex', /偷|溜|潜|躲|爬|闪|翻|跳|绕|悄|阴影|灵巧|拆解/],
+  ['con', /忍|撑|喝|等|熬|憋|硬抗|蹲守|扛住|耐|抵/],
+  ['int', /魔|法术|咒|读|想|分析|计算|推理|炼|幻|阵|符文|机关|修复|研究/],
+  ['wis', /看|观察|听|找|搜|察|闻|盯|规律|直觉|辨认|感应/],
+  ['cha', /说|骗|劝|假装|贿赂|唱|谈|哄|吓|装|聊|送|请|夸|交涉|安抚/],
+]);
+
+function inferFallbackAttr(text, turnIndex = 0) {
+  const str = String(text || '');
+  const matched = ATTR_KEYWORDS.find(([, re]) => re.test(str));
+  if (matched) return matched[0];
+  const order = ['wis', 'int', 'cha', 'str', 'dex', 'con'];
+  let hash = Math.abs(Math.trunc(turnIndex));
+  for (let i = 0; i < str.length; i++) hash = (hash * 31 + str.charCodeAt(i)) >>> 0;
+  return order[hash % order.length];
+}
+
+function stripDcSplitMarker(text) {
+  return String(text || '')
+    .replace(
+      new RegExp(`\\r?\\n?${DC_SPLIT_MARKER.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\r?\\n?`, 'g'),
+      '\n',
+    )
+    .trim();
+}
 
 export async function chatResponse(kind, content, scripts, input = {}, runRegexTasks) {
   scripts = chatRegexScripts(kind, scripts);
@@ -14,12 +48,18 @@ export async function chatResponse(kind, content, scripts, input = {}, runRegexT
   let dialogue;
   let quest;
   let questNegotiation;
+  let dcOutcome;
   const invalidAdventure = [];
+  const fixedCheck =
+    input.dcContext?.choiceCheck ||
+    (input.adventure?.mode === 'event' ? input.adventure.choiceCheck : null);
+  const allowDc = Boolean(fixedCheck) || kind !== 'quick-chat' || input.dcContext?.mode === 'free';
   if (kind === 'quick-chat' || kind === 'chat') {
     const sections = readOutputTags(content, [
       ...BODY_TAGS.map((tag) => ({ tag })),
       { tag: 'wanxiang_actions', json: true },
       { tag: 'wanxiang_invitation', json: true },
+      { tag: 'wanxiang_dc', json: true },
       {
         tag: 'wanxiang_adventure',
         json: true,
@@ -84,6 +124,55 @@ export async function chatResponse(kind, content, scripts, input = {}, runRegexT
         throw Error('任务数据无效：' + failure.message, { cause: failure });
       }
     }
+    const forcedFree = Boolean(input.dcContext?.mode === 'free' && input.dcContext?.forced);
+    const dcMeta = { mapOrLevel: input.dcContext?.mapOrLevel ?? null };
+    const dcTag = allowDc ? sections.find((section) => section.tag === 'wanxiang_dc') : null;
+    if (dcTag) {
+      let parsedDc;
+      try {
+        parsedDc = JSON.parse(dcTag.content);
+      } catch {
+        throw Error('DC检定JSON格式错误');
+      }
+      const payload =
+        forcedFree && parsedDc?.triggered !== true ? { ...parsedDc, triggered: true } : parsedDc;
+      dcOutcome = normalizeDcTurnOutcome(payload, input.characters || [], fixedCheck, dcMeta);
+    } else if (fixedCheck) {
+      dcOutcome = normalizeDcTurnOutcome(
+        { triggered: true },
+        input.characters || [],
+        fixedCheck,
+        dcMeta,
+      );
+    } else if (forcedFree) {
+      const turnSeed = (input.history?.length || 0) + (input.adventure?.responses?.length || 0);
+      const inferredAttr = inferFallbackAttr(input.text, turnSeed);
+      const fallbackDc = input.dcContext?.defaultDc || 8;
+      const contextActors = input.dcContext?.actors || [];
+      const bestActor = [...contextActors].sort(
+        (a, b) => (b.attrs?.[inferredAttr]?.mod ?? 0) - (a.attrs?.[inferredAttr]?.mod ?? 0),
+      )[0];
+      const mod = bestActor?.attrs?.[inferredAttr]?.mod ?? 0;
+      const total = (input.dcContext?.diceSum ?? 7) + mod;
+      dcOutcome = normalizeDcTurnOutcome(
+        {
+          triggered: true,
+          actorId: bestActor?.id || input.characters?.[0]?.id,
+          attr: inferredAttr,
+          dc: fallbackDc,
+          outcome: input.dcContext?.doubleSix
+            ? 'crit'
+            : input.dcContext?.doubleOne
+              ? 'fumble'
+              : total >= fallbackDc
+                ? 'success'
+                : 'fail',
+        },
+        input.characters || [],
+        null,
+        dcMeta,
+      );
+    }
     if (kind === 'chat') {
       const actionTag = sections.find((section) => section.tag === 'wanxiang_actions');
       if (actionTag) {
@@ -105,7 +194,7 @@ export async function chatResponse(kind, content, scripts, input = {}, runRegexT
               !item ||
               !ids.has(item.id) ||
               !Number.isInteger(item.delta) ||
-              item.delta < 0 ||
+              item.delta < -5 ||
               item.delta > 5,
           ) ||
           actions.agreeToAdventure.some((id) => !ids.has(id))
@@ -122,14 +211,48 @@ export async function chatResponse(kind, content, scripts, input = {}, runRegexT
       { text: processed.text, placement: 2, options: { kind: 'script', isMarkdown: true } },
     ])
   )[0];
+  const forceSplit = Boolean(
+    fixedCheck || (input.dcContext?.mode === 'free' && input.dcContext?.forced),
+  );
+  const processedSplit = forceSplit
+    ? splitChoiceProseFallback(processed.text)
+    : parseDcSplitProse(processed.text);
+  const displaySplit = forceSplit
+    ? splitChoiceProseFallback(display.text)
+    : parseDcSplitProse(display.text);
+  const finalContent = parseDcSplitProse(processed.text).hasMarker
+    ? stripDcSplitMarker(processed.text)
+    : processed.text;
+  const finalDisplay = parseDcSplitProse(display.text).hasMarker
+    ? stripDcSplitMarker(display.text)
+    : display.text;
+  const includeDcSplit = allowDc && processedSplit.hasMarker && processedSplit.beforeText;
   return {
-    content: processed.text,
-    display: display.text,
+    content: finalContent,
+    display: finalDisplay,
     ...(kind === 'chat' ? { actions } : {}),
     ...(adventure ? { adventure } : {}),
     ...(invitation ? { invitation } : {}),
     ...(dialogue ? { dialogue } : {}),
     ...(quest ? { quest } : {}),
     ...(questNegotiation !== undefined ? { questNegotiation } : {}),
+    ...(allowDc && dcOutcome ? { dcOutcome } : {}),
+    ...(allowDc && Array.isArray(input.dcContext?.dice)
+      ? { dcPreRoll: { dice: input.dcContext.dice } }
+      : {}),
+    ...(includeDcSplit
+      ? {
+          dcSplit: {
+            beforeText: processedSplit.beforeText,
+            afterText: processedSplit.afterText,
+            displayBeforeText: displaySplit.hasMarker
+              ? displaySplit.beforeText
+              : processedSplit.beforeText,
+            displayAfterText: displaySplit.hasMarker
+              ? displaySplit.afterText
+              : processedSplit.afterText,
+          },
+        }
+      : {}),
   };
 }

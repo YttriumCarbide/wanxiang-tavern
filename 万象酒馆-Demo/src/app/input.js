@@ -137,6 +137,7 @@ export function mountInput(context) {
   context.events.on($('#speed'), 'click', () => {
     session.battle.speed = session.battle.speed === 1 ? 2 : 1;
     $('#speed').textContent = `演出 ×${session.battle.speed}`;
+    context.ledger?.sync();
   });
   context.events.on($('#back-inn'), 'click', () => {
     if (session.battle.playing) return context.shell.toast('请等待本轮结算完成。');
@@ -152,19 +153,39 @@ export function mountInput(context) {
   let editingHeroId = null;
 
   context.events.on($('#party-toggle'), 'click', () => {
+    if (session.runtime.mode !== 'inn' || (session.ai.busy && !session.ai.departureParty)) {
+      context.shell.toast(
+        session.runtime.mode !== 'inn'
+          ? '战斗中暂不可调整战阵。'
+          : '生成进行中，请稍后再调整战阵。',
+      );
+      return;
+    }
     context.shell.renderParty();
     if ($('#party-panel').open) $('#party-panel').close();
     else $('#party-panel').showModal();
   });
 
   context.events.on($('#party-panel'), 'click', (e) => {
+    const tabBtn = e.target.closest('[data-prepare-tab]');
+    if (tabBtn) {
+      session.ai.preparationTab = tabBtn.dataset.prepareTab;
+      context.shell.renderParty();
+      return;
+    }
+    if (e.target.closest('[data-prepare-buy]')) {
+      context.shop.open({ preparation: true });
+      return;
+    }
+    if (e.target.closest('[data-prepare-exchange]')) {
+      context.equipment.openExchange();
+      return;
+    }
     const slot = e.target.closest('[data-prepare-slot]');
     if (slot) {
       session.ai.preparationSlot = Number(slot.dataset.prepareSlot);
       if (slot.dataset.prepareHero) session.ai.preparationCharacter = slot.dataset.prepareHero;
       context.shell.renderParty();
-      if (slot.dataset.prepareHero && !$('#prepare-character-dialog').open)
-        $('#prepare-character-dialog').showModal();
       return;
     }
     const inspect = e.target.closest('[data-prepare-view]');
@@ -173,7 +194,6 @@ export function mountInput(context) {
       const empty = session.ai.library.party.findIndex((id) => !id);
       if (empty >= 0) session.ai.preparationSlot = empty;
       context.shell.renderParty();
-      if (!$('#prepare-character-dialog').open) $('#prepare-character-dialog').showModal();
       return;
     }
 
@@ -198,13 +218,6 @@ export function mountInput(context) {
 
   for (const id of ['prepare-close', 'prepare-done'])
     context.events.on($('#' + id), 'click', () => $('#party-panel').close());
-  for (const id of ['prepare-character-close', 'prepare-character-done'])
-    context.events.on($('#' + id), 'click', () => $('#prepare-character-dialog').close());
-  context.events.on($('#party-panel'), 'close', () => $('#prepare-character-dialog').close());
-  context.events.on($('#prepare-search'), 'input', (event) => {
-    session.ai.preparationSearch = event.target.value;
-    context.shell.renderParty();
-  });
   context.events.on($('#party-panel'), 'keydown', (e) => {
     if (e.key === 'Enter' || e.key === ' ') {
       const editWrap = e.target.closest('[data-edit-portrait]');

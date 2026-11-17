@@ -31,40 +31,82 @@ export function createBackpack(context) {
   document.querySelector('#ai-open').before(innButton);
   const innBag = document.createElement('dialog');
   innBag.id = 'inn-backpack';
-  innBag.innerHTML =
-    '<header><h2>背包</h2><form method="dialog"><button aria-label="关闭背包">×</button></form></header><div class="inn-bag-content"></div>';
+  innBag.setAttribute('aria-label', '旅人行囊');
+  innBag.innerHTML = html`<header class="bag-folio-head">
+      <div class="bag-folio-title">
+        <small>TRAVELLER SATCHEL · 随身行囊</small>
+        <h2>旅人背包</h2>
+      </div>
+      <nav class="bag-tabs" aria-label="背包分类">
+        <button type="button" data-bag-tab="potions" aria-pressed="true">战斗药水</button
+        ><button type="button" data-bag-tab="ingredients" aria-pressed="false">烹饪食材</button>
+      </nav>
+      <form method="dialog"><button class="bag-close" aria-label="关闭背包">×</button></form>
+    </header>
+    <div class="inn-bag-content"></div>`;
   document.body.append(innBag);
-  function ingredients() {
-    const stock = session.ai.library.dining?.inventory || {};
-    return Object.values(INGREDIENTS)
-      .filter(({ id }) => stock[id] > 0)
-      .map(
-        (item) =>
-          html`<span
-            class="bag-item bag-ingredient"
-            aria-label="${item.name}，持有${stock[item.id]}"
-            >${foodArt(item)}<span>${item.name}</span
-            ><b class="bag-count">${stock[item.id]}</b></span
-          >`,
-      )
-      .join('');
-  }
-  events.on(innButton, 'click', () => {
+  let innTab = 'potions';
+
+  function renderInnPotions() {
     const counts = session.ai.library.inventory.items || {};
-    const items = Object.values(ITEMS)
+    const rows = Object.values(ITEMS)
       .filter(({ id }) => counts[id] > 0)
       .map(
         (item) =>
-          html`<span class="bag-item"
-            ><img src="${item.icon}" alt="" /><span>${item.name}</span
-            ><b class="bag-count">${counts[item.id]}</b></span
-          >`,
+          html`<div class="bag-ledger-row">
+            <span class="bag-ledger-icon"><img src="${item.icon}" alt="" /></span>
+            <div class="bag-ledger-meta">
+              <strong>${item.name}</strong>
+              <small>${item.text}</small>
+            </div>
+            <b class="bag-ledger-qty">× ${counts[item.id]}</b>
+          </div>`,
       )
       .join('');
+    return rows || '<p class="inn-bag-empty">行囊里暂未存放战斗药水，可在虚空售货机购置。</p>';
+  }
+
+  function renderInnIngredients() {
+    const stock = session.ai.library.dining?.inventory || {};
+    const rows = Object.values(INGREDIENTS)
+      .filter(({ id }) => stock[id] > 0)
+      .map(
+        (item) =>
+          html`<div
+            class="bag-ledger-row bag-ingredient"
+            aria-label="${item.name}，持有${stock[item.id]}"
+          >
+            <span class="bag-ledger-icon">${foodArt(item)}</span>
+            <div class="bag-ledger-meta">
+              <strong>${item.name}</strong>
+              <small>酒馆烹饪用料</small>
+            </div>
+            <b class="bag-ledger-qty">× ${stock[item.id]}</b>
+          </div>`,
+      )
+      .join('');
+    return rows || '<p class="inn-bag-empty">厨房储藏中暂未存放烹饪食材。</p>';
+  }
+
+  function renderInnBag() {
+    innBag.querySelectorAll('[data-bag-tab]').forEach((tab) => {
+      tab.setAttribute('aria-pressed', String(tab.dataset.bagTab === innTab));
+    });
     innBag.querySelector('.inn-bag-content').innerHTML =
-      items + ingredients() || '<p>背包是空的。</p>';
+      innTab === 'ingredients' ? renderInnIngredients() : renderInnPotions();
+  }
+
+  events.on(innButton, 'click', () => {
+    renderInnBag();
     if (!innBag.open) innBag.showModal();
   });
+  events.on(innBag, 'click', (event) => {
+    const tab = event.target.closest('[data-bag-tab]');
+    if (!tab) return;
+    innTab = tab.dataset.bagTab;
+    renderInnBag();
+  });
+
   function close() {
     panel.classList.remove('expanded');
     panel.inert = true;
@@ -83,23 +125,22 @@ export function createBackpack(context) {
     if (!panel.classList.contains('expanded')) return;
     const counts = session.battle.forecast.final.items || {};
     const usable = Object.values(ITEMS)
-      .filter((item) => counts[item.id] > 0)
       .map(
         (item) =>
           html`<button
             class="bag-item"
             data-item="${item.id}"
             data-tooltip="${escapeText(item.name + '\n' + item.text + '\n1 AP · ' + (item.target === 'enemy' ? '敌方单体' : '我方单体'))}"
-            aria-label="${item.name}，持有${counts[item.id]}"
+            aria-label="${item.name}，持有${counts[item.id] || 0}"
             ${!counts[item.id] ? 'disabled' : ''}
           >
             <img width="64" height="64" src="${item.icon}" alt="" /
-            ><span>${item.name}</span><b class="bag-count">${counts[item.id]}</b>
+            ><span>${item.name}</span><b class="bag-count">${counts[item.id] || 0}</b>
           </button>`,
       )
       .join('');
     panel.querySelector('#backpack-items').innerHTML =
-      usable + ingredients() || '<p class="bag-empty">背包里暂时没有道具</p>';
+      usable || '<p class="bag-empty">行囊中暂无可用药水</p>';
   }
   function choose(id) {
     const item = ITEMS[id];

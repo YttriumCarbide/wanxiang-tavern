@@ -449,13 +449,18 @@ export async function staticChecks({ browser, output }) {
       library.emblems.push(OVERLOAD_EMBLEM_ID);
       library.characters.find(({ id }) => id === 'official-edith').emblemId = OVERLOAD_EMBLEM_ID;
       const gear = normalizeEquipment(
-        { name: '回归测试护符', description: '增加生命与法力', stats: { hp: 3, mp: 4 } },
+        {
+          name: '回归测试护符',
+          category: 'pendant',
+          description: '增加生命与法力',
+          stats: { hp: 3, mp: 4 },
+        },
         { id: 'test-resource-talisman', name: '护符', value: 25 },
       );
       library.equipment.catalog.push(gear);
       library.inventory.ether = gear.price;
       buyEquipment(library, gear.id, 'test-resource-item', { seed: 5 });
-      equip(library, 'official-edith', 0, 'test-resource-item');
+      equip(library, 'official-edith', 2, 'test-resource-item');
       library.tavernChat.push({
         id: 'retained-message',
         role: 'user',

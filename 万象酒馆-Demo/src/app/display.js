@@ -68,10 +68,14 @@ export function mountDisplay(context) {
   mountRotatedScrolling(context.events);
   const button = document.querySelector('#fullscreen-toggle');
   const host = window.top.document;
+  const label = document.createElement('span');
+  label.className = 'fullscreen-label';
+  button.append(label);
   const paint = () => {
     const active = !!host.fullscreenElement;
     button.setAttribute('aria-pressed', String(active));
     button.setAttribute('aria-label', active ? '退出全屏' : '进入全屏');
+    label.textContent = active ? '退出全屏' : '全屏显示';
   };
   context.events.on(button, 'click', async () => {
     try {

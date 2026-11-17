@@ -38,6 +38,7 @@ import {
   overlandRequest,
   overlandResponse,
   overlandItemsResponse,
+  overlandTheaterResponse,
 } from './overland-request.js';
 import { requestMemoryBooks, scanScenarioWorldbooks } from '../journey-memory-worldbook.js';
 import { buildSubScriptRequest } from './script-preset.js';
@@ -224,6 +225,7 @@ export function createAiPipeline({
       return {
         acts: overlandResponse(result.content, input),
         items: overlandItemsResponse(result.content, input),
+        ...overlandTheaterResponse(result.content),
         request: requestReport,
         usage: result.usage,
       };

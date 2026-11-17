@@ -277,7 +277,8 @@
   align-items: flex-end;
   gap: 8px;
 }
-#gal-stage #daily-invitation {
+#gal-stage #daily-invitation,
+#gal-stage #overland-rp {
   display: grid;
   align-items: stretch;
 }
@@ -319,7 +320,7 @@
 .invite-error:empty {
   display: none;
 }
-#gal-stage :is(#chat-input, #quick-chat-input, #invite-input) {
+#gal-stage :is(#chat-input, #quick-chat-input, #invite-input, #overland-input) {
   flex: 1;
   min-width: 0;
   height: 112px;
@@ -334,7 +335,7 @@
   border-radius: 0;
   background: #001b2726;
 }
-#gal-stage :is(#chat-input, #quick-chat-input, #invite-input, #rp-input) {
+#gal-stage :is(#chat-input, #quick-chat-input, #invite-input, #overland-input, #rp-input) {
   outline: none;
   border: 1px solid #d5ba7c40;
   border-radius: 5px;
@@ -343,7 +344,7 @@
     box-shadow 180ms ease,
     background 180ms ease;
 }
-#gal-stage :is(#chat-input, #quick-chat-input, #invite-input, #rp-input):focus {
+#gal-stage :is(#chat-input, #quick-chat-input, #invite-input, #overland-input, #rp-input):focus {
   outline: none;
   border-color: #e5c989aa;
   box-shadow:
@@ -351,7 +352,8 @@
     inset 0 0 16px #e6c78508;
   background: #d9bd7e0a;
 }
-#gal-stage :is(#chat-send, #quick-chat-send, #chat-cancel, #invite-send, [data-rp='send']) {
+#gal-stage
+  :is(#chat-send, #quick-chat-send, #chat-cancel, #invite-send, #overland-send, [data-rp='send']) {
   width: 32px;
   height: 32px;
   min-width: 32px;
@@ -363,7 +365,9 @@
   padding: 5px;
   font-size: 13px;
 }
-#gal-stage :is(#chat-send, #quick-chat-send, #chat-cancel, #invite-send, [data-rp='send']) svg {
+#gal-stage
+  :is(#chat-send, #quick-chat-send, #chat-cancel, #invite-send, #overland-send, [data-rp='send'])
+  svg {
   width: 22px;
   height: 22px;
   opacity: 0.8;
@@ -372,7 +376,7 @@
   color: #f1dba7;
   visibility: visible;
 }
-#gal-stage :is(#chat-input, #quick-chat-input, #invite-input)::placeholder {
+#gal-stage :is(#chat-input, #quick-chat-input, #invite-input, #overland-input)::placeholder {
   color: #d3e5e1b3;
 }
 #gal-stage .chat-input-hint {
@@ -426,7 +430,7 @@
   max-height: none;
   overflow: visible;
 }
-body.gal-mode #story-toggle {
+body.gal-mode:not(.is-recollection) #story-toggle {
   display: none;
 }
 @keyframes gal-slide-left {
@@ -524,14 +528,22 @@ body.gal-mode #story-toggle {
   .gal-composer > header {
     margin-bottom: 7px;
   }
-  #gal-stage :is(#chat-input, #quick-chat-input, #invite-input) {
+  #gal-stage :is(#chat-input, #quick-chat-input, #invite-input, #overland-input) {
     height: 100px;
     min-height: 100px;
     max-height: 32dvh;
     padding: 8px 10px;
     font-size: 13px;
   }
-  #gal-stage :is(#chat-send, #quick-chat-send, #chat-cancel, #invite-send, [data-rp='send']) {
+  #gal-stage
+    :is(
+      #chat-send,
+      #quick-chat-send,
+      #chat-cancel,
+      #invite-send,
+      #overland-send,
+      [data-rp='send']
+    ) {
     min-width: 32px;
     padding: 5px;
     font-size: 12px;

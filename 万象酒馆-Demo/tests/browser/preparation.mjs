@@ -70,15 +70,29 @@ export async function preparationChecks({ browser, baseURL, output }) {
   try {
     await page.goto(baseURL);
     await page.waitForFunction(() => window.demo?.getStatus().mode === 'inn');
+    const ledgerHandle = await page.locator('#ledger-handle').boundingBox();
+    await page.mouse.move(
+      ledgerHandle.x + ledgerHandle.width / 2,
+      ledgerHandle.y + ledgerHandle.height / 2,
+    );
+    await page.mouse.down();
+    await page.mouse.move(
+      Math.max(10, ledgerHandle.x - 140),
+      ledgerHandle.y + ledgerHandle.height / 2,
+      { steps: 6 },
+    );
+    await page.mouse.up();
+    await page.locator('#ledger-drawer-host.is-open').waitFor();
     await page.locator('#party-toggle').click();
     const panel = page.locator('#party-panel');
     await page.waitForTimeout(280);
     const bounds = await panel.boundingBox();
     inside(bounds, { width: 1440, height: 836 });
-    assert(bounds.width <= 970 && bounds.height <= 590);
+    assert(bounds.width <= 1340 && bounds.height <= 760);
     const formation = await page.locator('.prepare-formation-col').boundingBox();
-    const reserve = await page.locator('.prepare-reserve-col').boundingBox();
-    assert(formation.x + formation.width < reserve.x && formation.width > reserve.width);
+    const stage = await page.locator('.prepare-stage-col').boundingBox();
+    const inspector = await page.locator('.prepare-inspector-col').boundingBox();
+    assert(formation.x + formation.width < stage.x + 2 && stage.x + stage.width < inspector.x + 2);
     assert.equal(await page.locator('.prepare-slot').count(), 6);
     assert(
       await page
@@ -89,7 +103,7 @@ export async function preparationChecks({ browser, baseURL, output }) {
     for (const slot of await page.locator('.prepare-slot').all())
       inside(await slot.boundingBox(), { width: 1440, height: 836 });
     assert.equal(await page.locator('.prepare-member').count(), 3);
-    assert.equal(await page.locator('#prepare-character-dialog').isVisible(), false);
+    assert.equal(await page.locator('#prepare-detail .prepare-stage-col').isVisible(), true);
     assert.equal(
       await page
         .locator('.prepare-slot img')
@@ -99,9 +113,6 @@ export async function preparationChecks({ browser, baseURL, output }) {
     );
     await page.screenshot({ path: path.join(output, 'preparation-desktop.png') });
     const reserveId = library.characters[3].id;
-    await page.locator('#prepare-search').fill(library.characters[3].setting.name);
-    assert.equal(await page.locator('.prepare-member').count(), 1);
-    await page.locator('#prepare-search').fill('');
     await drag(page, `[data-prepare-view="${reserveId}"]`, '[data-prepare-slot="3"]');
     assert.equal((await page.evaluate(() => demo.getLibrary())).party[3], reserveId);
     assert.equal(await page.locator('.prepare-member').count(), 2);
@@ -111,11 +122,10 @@ export async function preparationChecks({ browser, baseURL, output }) {
     assert.equal((await page.evaluate(() => demo.getLibrary())).party[4], null);
     assert.equal(await page.locator('.prepare-member').count(), 3);
     await page.locator('[data-prepare-slot="0"]').click();
-    const editor = page.locator('#prepare-character-dialog');
-    await editor.waitFor({ state: 'visible' });
+    const editor = page.locator('#prepare-detail');
     assert.match(await editor.locator('.prepare-affection').innerText(), /好感 Lv\./);
     assert.equal(await editor.locator('.prepare-stat-grid dd').count(), 5);
-    assert.equal(await editor.locator('[data-equipment-slot]').count(), 3);
+    assert.equal(await editor.locator('[data-equipment-slot]').count(), 4);
     assert.equal(
       await editor.locator('[data-prepare-position], [data-prepare-use], .character-sheet').count(),
       0,
@@ -147,15 +157,11 @@ export async function preparationChecks({ browser, baseURL, output }) {
     assert.notEqual(await prompt.inputValue(), cardPrompt);
     await portrait.locator('#portrait-url-close').click();
     await editor.locator('.prepare-portrait-tools summary').click();
-    await editor.locator('.prepare-service summary').click();
+    await editor.locator('[data-prepare-tab="job"]').click();
     assert.equal(await editor.locator('.prepare-service tbody tr').count(), 4);
+    await editor.locator('[data-prepare-tab="status"]').click();
     await page.waitForTimeout(230);
     await page.screenshot({ path: path.join(output, 'preparation-character.png') });
-    await page.locator('#prepare-character-done').click();
-    await page.locator('#prepare-bag summary').click();
-    const bag = await page.locator('#prepare-bag > div').boundingBox();
-    assert(bag.y > bounds.y && bag.y + bag.height <= bounds.y + bounds.height);
-    await page.locator('#prepare-bag summary').click();
     await page.setViewportSize({ width: 390, height: 844 });
     await page.waitForTimeout(250);
     inside(await panel.boundingBox(), { width: 390, height: 844 });
@@ -178,16 +184,11 @@ export async function preparationChecks({ browser, baseURL, output }) {
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
     await cdp.detach();
     assert.equal((await page.evaluate(() => demo.getLibrary())).party[3], reserveId);
-    assert.equal(await editor.isVisible(), false);
     assert.equal(await page.locator('.prepare-drag-ghost').count(), 0);
     await page.screenshot({ path: path.join(output, 'preparation-portrait-horizontal.png') });
     await page.locator('[data-prepare-slot="0"]').click();
-    inside(await editor.boundingBox(), { width: 390, height: 844 });
-    await editor.evaluate((element) =>
-      Promise.all(element.getAnimations().map((animation) => animation.finished)),
-    );
+    assert.match(await editor.locator('#prepare-character-title').textContent(), /\S+/);
     await page.screenshot({ path: path.join(output, 'preparation-character-mobile.png') });
-    await page.locator('#prepare-character-close').click();
     await page.setViewportSize({ width: 844, height: 390 });
     inside(await panel.boundingBox(), { width: 844, height: 390 });
     await page.screenshot({ path: path.join(output, 'preparation-landscape.png') });

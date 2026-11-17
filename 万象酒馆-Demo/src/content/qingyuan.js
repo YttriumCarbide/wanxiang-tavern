@@ -1,8 +1,11 @@
+import { OFFICIAL_DC_ATTRS, normalizeDcAttrs } from '../dc.js';
+
 /** Temporary default: existing saved Qingyuan takes precedence over this authored fallback. */
 const QING_YUAN = {
   id: 'character-qingyuan',
   source: 'generated',
   archetype: 'aegis',
+  dcAttrs: { ...OFFICIAL_DC_ATTRS['character-qingyuan'] },
   setting: {
     name: '青缘',
     title: '灵枢行剑者',
@@ -95,6 +98,7 @@ export function defaultProtagonist(library) {
     if (!cloned.setting?.entrySkill) {
       cloned.setting.entrySkill = structuredClone(QING_YUAN.setting.entrySkill);
     }
+    cloned.dcAttrs = normalizeDcAttrs(cloned.dcAttrs, cloned);
     return cloned;
   }
   return structuredClone(QING_YUAN);

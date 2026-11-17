@@ -2,6 +2,7 @@ import { guardMouseGestures } from './display.js';
 import { createAudioMixer } from '../audio/mixer.js';
 import { audioPreferences } from '../audio/config.js';
 import { createEventScope } from '../shared/events.js';
+import { createPopoverSurface } from '../shared/top-layer.js';
 import { query as $ } from './dom.js';
 
 const storageKey = 'wanxiang.audio.v1';
@@ -42,9 +43,21 @@ export function createAudio(context) {
     }
     mixer.setPreferences(preferences);
   }
+  let embedded = false;
+  let onToggleRequest = null;
+  const panelSurface = createPopoverSurface($('#audio-panel'));
   function setOpen(open) {
-    $('#audio-panel').hidden = !open;
-    $('#audio-toggle').setAttribute('aria-expanded', String(open));
+    const panel = $('#audio-panel');
+    const button = $('#audio-toggle');
+    if (embedded) {
+      if (panel) panel.hidden = false;
+      button?.setAttribute('aria-expanded', 'true');
+      return;
+    }
+    if (panel) panel.hidden = !open;
+    if (open) panelSurface.show();
+    else panelSurface.hide();
+    button?.setAttribute('aria-expanded', String(open));
   }
   const unlock = () => {
     void mixer.unlock();
@@ -56,7 +69,7 @@ export function createAudio(context) {
     (event) => {
       if (event.repeat) return;
       unlock();
-      if (event.key === 'Escape') {
+      if (!embedded && event.key === 'Escape') {
         setOpen(false);
         mixer.play('cancel');
       }
@@ -67,9 +80,12 @@ export function createAudio(context) {
     if (document.hidden) mixer.suspend();
     else mixer.resume();
   });
-  events.on($('#audio-toggle'), 'click', () => setOpen($('#audio-panel').hidden));
+  events.on($('#audio-toggle'), 'click', () => {
+    if (embedded) onToggleRequest?.();
+    else setOpen($('#audio-panel').hidden);
+  });
   events.on(document, 'pointerdown', (event) => {
-    if (!event.target.closest('#audio-panel,#audio-toggle')) setOpen(false);
+    if (!embedded && !event.target.closest('#audio-panel,#audio-toggle')) setOpen(false);
   });
   for (const key of ['music', 'effects']) {
     events.on($(`#audio-${key}`), 'input', (event) => {
@@ -134,6 +150,11 @@ export function createAudio(context) {
           { capture: true },
         );
       });
+    },
+    setEmbedded(active, openHandler = null) {
+      embedded = active === true;
+      onToggleRequest = openHandler;
+      if (embedded) setOpen(true);
     },
     dispose() {
       events.dispose();

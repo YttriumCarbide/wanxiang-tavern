@@ -1,11 +1,8 @@
 import { scriptProse } from './chat.js';
-import { DAILY_PERIODS } from './daily.js';
+import { dailyDateTimeText } from './daily.js';
 
 export function gameTime(daily) {
-  const period = DAILY_PERIODS[daily?.period];
-  return Number.isInteger(daily?.day) && daily.day > 0 && period
-    ? `第 ${daily.day} 天 · ${period}`
-    : '';
+  return dailyDateTimeText(daily);
 }
 
 export function recordJourneyActivity(library, kind, title) {
@@ -302,7 +299,7 @@ export function journeyContinuityMessage(input) {
     {
       role: 'system',
       content:
-        '【已发生的经历，按时间顺序】以下内容是历史事实，用于承接当前剧情。\n' +
+        '【已发生的经历，按时间顺序】以下内容是已发生的历史事实，仅供保持文风一致、人物关系延续与大体因果连贯。创作新剧情时严禁模仿或复刻上文的桥段结构、开场方式与遇敌套路（如避免机械重复“男主进入秘境/道路→小怪冒出来拦路”等上文模式）。\n' +
         JSON.stringify(input.journeyContinuity.slice(-40)),
     },
   ];

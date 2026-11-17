@@ -2,7 +2,7 @@ import { BASE_WORLDS } from './worlds.js';
 import { enemyIntentText } from './enemy-intent-text.js';
 import { combatScale, scaleLevelEffects } from './combat-scale.js';
 
-const MAP_LEVELS = Object.freeze({ ruins: 1, forest: 5, frost: 9, forge: 14, tide: 24 });
+const MAP_LEVELS = Object.freeze({ ruins: 5, forest: 11, frost: 16, forge: 21, tide: 26 });
 const MAIN_OFFSETS = [0, 1, 1, 2, 2, 3];
 
 function seedOf(text) {
@@ -21,17 +21,21 @@ export function encounterLevel(entry) {
   return Math.min(99, base + (official ? 3 : 0) + 5 * tier);
 }
 
-export function enemyGrowth(entry, index, id, boss = false) {
+export function enemyGrowth(entry, index, id, boss = false, elite = false) {
   const level = encounterLevel(entry);
-  const scale = combatScale(level);
-  const roll = level === 1 || boss ? 0 : (seedOf(`${entry.seed}:${index}:${id}`) % 3) - 1;
-  return { level, hpScale: scale * (1 + roll * 0.05), damageScale: scale * (1 - roll * 0.03) };
+  const roll =
+    level === 1 || boss || elite || entry?.tutorial
+      ? 0
+      : (seedOf(`${entry.seed}:${index}:${id}`) % 3) - 1;
+  const unitLevel = Math.max(1, Math.min(99, level + roll));
+  const scale = combatScale(unitLevel);
+  return { level: unitLevel, hpScale: scale, damageScale: scale };
 }
 
 /** Decorate an authored move once, including tactical and multi-part boss attacks. */
 export function leveledIntent(move, bonus = 0, scale = 1) {
   const hasDamage = move.effects?.some((effect) => effect.type === 'damage' && !effect.flat);
-  if (scale === 1 && (!bonus || !hasDamage)) return move;
+  if ((scale === 1 && (!bonus || !hasDamage)) || move.lowestHpPosition) return move;
   const effects = scaleLevelEffects(move.effects || [], scale, bonus);
   const scalePos = (v) => (v > 0 ? Math.max(1, Math.round(v * scale)) : v);
   const scaled = { ...move, effects };

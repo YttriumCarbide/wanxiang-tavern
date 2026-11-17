@@ -1,4 +1,6 @@
 import { ITEMS, restoreBag } from './content/items.js';
+import { grantGem } from './equipment.js';
+import { findGemById } from './content/gems.js';
 export function restoreInventory(value) {
   const count = value?.summonContracts;
   return {
@@ -40,6 +42,18 @@ export function claimBattleRewards(library, claimId, rewards) {
     )
   )
     throw Error('道具奖励无效');
+  const gems = Array.isArray(rewards.gems) ? rewards.gems : [];
+  if (
+    gems.some(
+      (entry) =>
+        !entry ||
+        typeof entry.gemId !== 'string' ||
+        !findGemById(entry.gemId) ||
+        typeof entry.instanceId !== 'string' ||
+        !entry.instanceId,
+    )
+  )
+    throw Error('宝石奖励无效');
   library.inventory.summonContracts = Math.min(999999, library.inventory.summonContracts + count);
   library.inventory.gold = Math.min(999999999, (library.inventory.gold || 0) + gold);
   library.inventory.ether = Math.min(999999999, (library.inventory.ether || 0) + ether);
@@ -48,6 +62,11 @@ export function claimBattleRewards(library, claimId, rewards) {
     for (const [id, value] of Object.entries(items))
       library.inventory.items[id] = Math.min(9999, library.inventory.items[id] + value);
     library.inventory.bagUnlocked = true;
+  }
+  for (const entry of gems) {
+    if (!library.equipment?.owned?.some((item) => item.id === entry.instanceId)) {
+      grantGem(library, entry.gemId, entry.instanceId);
+    }
   }
   library.rewardClaims.push(claimId);
   library.rewardClaims = library.rewardClaims.slice(-2000);

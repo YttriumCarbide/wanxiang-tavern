@@ -15,7 +15,7 @@ export const TOWN_SIDE_PLACES = Object.freeze({
     back: '星钟广场',
     entrance: [0.613, 0.61],
     exit: [0.1, 0.42],
-    environment: '无窗的石砌档案室里放着城图、值班册和收好的公文，桌上的灯只照亮眼前几张纸。',
+    environment: '无窗的石砌藏书室里收着泛黄的旧城图与地方志，桌上的暖灯照亮木案。',
     actions: ['摊开一张旧城图', '在桌边低声交谈'],
   },
   'lantern-workshop': {
@@ -43,7 +43,7 @@ export const TOWN_SIDE_PLACES = Object.freeze({
     back: '城墙守备区',
     entrance: [0.758, 0.65],
     exit: [0.1, 0.57],
-    environment: '城墙内的无窗值房里有长凳、值勤册和烧水的小炉，几面旧盾牌靠着墙。',
+    environment: '城墙内的无窗休息室里有长凳和烧水的小炉，几面旧盾牌与披风靠着石墙。',
     actions: ['在炉边捧杯热水', '看看长凳上的巡逻披风'],
   },
   riverbank: {

@@ -15,7 +15,8 @@ export async function adventureChecks({ browser, baseURL, output }) {
   const page = await browser.newPage({ viewport: { width: 1440, height: 836 }, hasTouch: true });
   await legacySession(page);
   const library = newCampaign(defaultProtagonist());
-  library.campaign.tutorial = 'portal';
+  library.unlockedDungeons = ['ruins'];
+  library.campaign.tutorial = 'ruins-arrived';
   for (let index = 0; index < 2; index++)
     library.history.push({
       runId: `archived-${index}`,
@@ -153,7 +154,12 @@ export async function adventureChecks({ browser, baseURL, output }) {
     throw Error('Gal sequence did not finish');
   }
   async function settled() {
-    await page.waitForFunction(() => !demo.getStatus().playing && !demo.getStatus().animating);
+    await page.waitForFunction(
+      () =>
+        !demo.getStatus().playing &&
+        !demo.getStatus().animating &&
+        document.querySelector('#chapter-theater').hidden,
+    );
     await read();
   }
   async function queue(action) {
@@ -277,7 +283,7 @@ export async function adventureChecks({ browser, baseURL, output }) {
       'choices stay hidden until the introduction finishes',
     );
     await read();
-    await page.locator('[data-rp="settings"]').click();
+    await page.locator('#ai-open').click();
     await page.locator('#ai-dialog').waitFor({ state: 'visible' });
     await page.locator('#ai-close').click();
     assert(await page.locator('[data-rp="send"]').isDisabled());

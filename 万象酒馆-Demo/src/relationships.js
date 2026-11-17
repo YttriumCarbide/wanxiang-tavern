@@ -30,8 +30,18 @@ export function applyRelationshipActions(library, actions = {}, residents = []) 
     if ((!companions.has(item.id) && !residents.includes(item.id)) || seen.has(item.id)) continue;
     seen.add(item.id);
     const state = (library.relationships[item.id] ||= { ...relationship(library, item.id) });
-    if (state.gains >= 3 || !Number.isInteger(item.delta) || item.delta < 1 || item.delta > 5)
+    if (!Number.isInteger(item.delta) || item.delta === 0 || item.delta < -5 || item.delta > 5)
       continue;
+    if (item.delta < 0) {
+      const next = Math.max(-100, state.affection + item.delta);
+      const loss = next - state.affection;
+      if (loss !== 0) {
+        state.affection = next;
+        changed.push({ id: item.id, delta: loss });
+      }
+      continue;
+    }
+    if (state.gains >= 3) continue;
     const gain = Math.min(item.delta, Number.MAX_SAFE_INTEGER - state.affection);
     if (gain <= 0) continue;
     state.affection += gain;

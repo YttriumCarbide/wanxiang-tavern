@@ -2,17 +2,13 @@ import { compileRoster } from '../ai/library.js';
 
 /** One existing draggable preparation screen, then the same screen with a locked party. */
 export function createDeparture(context) {
-  const { session, events } = context;
+  const { session } = context;
   const panel = document.querySelector('#party-panel');
   const done = document.querySelector('#prepare-done');
   const close = document.querySelector('#prepare-close');
   const title = document.querySelector('#prepare-title');
   const cancel = document.querySelector('#prepare-cancel-generation');
-  const supplies = document.createElement('div');
-  supplies.className = 'preparation-supplies';
-  supplies.innerHTML =
-    '<button data-prepare-buy>购买道具</button><button data-prepare-exchange>兑换装备</button>';
-  panel.querySelector('footer').prepend(supplies);
+  const pendingRow = document.querySelector('#prepare-pending-actions');
   const guidance = document.createElement('label');
   guidance.className = 'departure-guidance';
   guidance.hidden = true;
@@ -20,10 +16,6 @@ export function createDeparture(context) {
     '<strong>这次想做什么，或想说什么？</strong><textarea rows="2" maxlength="2000" placeholder="选填，可以直接出发"></textarea>';
   panel.querySelector('.prepare-body').before(guidance);
   let active = null;
-  events.on(supplies, 'click', (event) => {
-    if (event.target.closest('[data-prepare-buy]')) context.shop.open({ preparation: true });
-    if (event.target.closest('[data-prepare-exchange]')) context.equipment.openExchange();
-  });
   function open({ selection = false, pending = false, onCancel } = {}) {
     if (active) return active;
     session.ai.formationLocked = !selection;
@@ -38,6 +30,8 @@ export function createDeparture(context) {
     done.textContent = selection ? '确认编队 · 开始生成' : '整备完成 · 出发';
     done.disabled = pending;
     cancel.hidden = !pending;
+    if (pendingRow) pendingRow.hidden = !pending;
+    panel.dataset.pendingGeneration = pending ? 'true' : 'false';
     const oldClose = close.innerHTML;
     close.textContent = '取消出发';
     panel.showModal();
@@ -69,9 +63,11 @@ export function createDeparture(context) {
         session.ai.formationLocked = false;
         guidance.hidden = true;
         title.textContent = '战阵整备';
-        done.textContent = '准备完成';
+        done.textContent = '返回';
         done.disabled = false;
         cancel.hidden = true;
+        if (pendingRow) pendingRow.hidden = true;
+        panel.dataset.pendingGeneration = 'false';
         close.innerHTML = oldClose;
         done.removeEventListener('click', confirm, { capture: true });
         active = null;
@@ -87,6 +83,8 @@ export function createDeparture(context) {
         title.textContent = '剧本已就绪 · 调整装备';
         done.disabled = false;
         cancel.hidden = true;
+        if (pendingRow) pendingRow.hidden = true;
+        panel.dataset.pendingGeneration = 'false';
       },
       cancel() {
         if (panel.open) panel.close();
@@ -99,9 +97,32 @@ export function createDeparture(context) {
       return open({ selection: true }).completion;
     },
     equip: open,
+    openOuting(onDone) {
+      const panelEl = document.querySelector('#party-panel');
+      if (panelEl.open) return false;
+      session.ai.formationLocked = false;
+      guidance.hidden = true;
+      context.shell.renderParty();
+      title.textContent = '外出战阵整备';
+      done.textContent = '确认同行';
+      done.disabled = false;
+      cancel.hidden = true;
+      if (pendingRow) pendingRow.hidden = true;
+      panel.dataset.pendingGeneration = 'false';
+      panelEl.showModal();
+      panelEl.addEventListener(
+        'close',
+        () => {
+          title.textContent = '战阵整备';
+          done.textContent = '返回';
+          onDone?.();
+        },
+        { once: true },
+      );
+      return true;
+    },
     dispose() {
       active?.cancel();
-      supplies.remove();
       guidance.remove();
     },
   };

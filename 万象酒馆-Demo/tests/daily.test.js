@@ -5,6 +5,8 @@ import {
   advanceOuting,
   arrangeDaily,
   consumeOutingAction,
+  dailyCalendarDate,
+  dailyDateTimeText,
   dailyPlan,
   dailySceneTime,
   finishDaily,
@@ -1118,4 +1120,14 @@ test('all enemy cards resolve to named loot and actual accepted kills can only m
   const saved = structuredClone(library);
   assert.deepEqual(claimEnemyDrops(library, expedition, state, result), []);
   assert.deepEqual(library, saved);
+});
+
+test('tavern calendar starts at 1463-08-24 and carries across month boundaries cleanly', () => {
+  assert.equal(dailyCalendarDate(1).label, '1463年8月24日');
+  assert.equal(dailyCalendarDate(8).label, '1463年8月31日');
+  assert.equal(dailyCalendarDate(9).label, '1463年9月1日');
+  assert.equal(dailyCalendarDate(27).label, '1463年9月19日');
+  assert.equal(dailyDateTimeText({ day: 1, period: 0 }), '1463年8月24日 · 上午');
+  assert.equal(dailyDateTimeText({ day: 27, period: 2 }), '1463年9月19日 · 下午');
+  assert.equal(dailyDateTimeText(null), '');
 });

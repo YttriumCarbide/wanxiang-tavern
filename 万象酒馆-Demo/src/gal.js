@@ -6,12 +6,27 @@ export function galRequestInput(kind, input) {
   return { ...input, presentationMode: 'gal' };
 }
 
-export function parseGalText(source, defaultSpeaker = '') {
-  const text = String(source || '')
+const GAL_STAGE_TAG =
+  /【(旁白|对白[:：][^】\n]{1,80}|登场[:：][^】\n]{1,80}|退场[:：][^】\n]{1,80}|清场)】/gu;
+
+function cleanGalMarkup(source) {
+  return String(source || '')
     .replace(/<br\s*\/?\s*>|<\/(?:p|div)>/giu, '\n')
     .replace(/<\/?(?:p|div|span|em|strong|b|i|small)\b[^>]*>/giu, '');
-  const pattern =
-    /【(旁白|对白[:：][^】\n]{1,80}|登场[:：][^】\n]{1,80}|退场[:：][^】\n]{1,80}|清场)】/gu;
+}
+
+/** Remove stage markers from prose fields such as prologues, epilogues and battle lines. */
+export function stripGalTags(source) {
+  return cleanGalMarkup(source)
+    .replace(GAL_STAGE_TAG, '')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+export function parseGalText(source, defaultSpeaker = '') {
+  const text = cleanGalMarkup(source);
+  const pattern = new RegExp(GAL_STAGE_TAG.source, 'gu');
   const beats = [];
   let cursor = 0;
   let kind = defaultSpeaker ? 'dialogue' : 'narration';

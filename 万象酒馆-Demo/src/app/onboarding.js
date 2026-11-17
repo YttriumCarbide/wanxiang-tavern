@@ -7,6 +7,16 @@ import { html } from '../shared/html.js';
 import { characterSheet } from './character-sheet.js';
 import { query as $ } from './dom.js';
 import { tutorialTasks, tutorialCommitIssue, recordTutorialResult } from '../tutorial-progress.js';
+import {
+  DC_ATTRIBUTES,
+  DC_ATTR_BUDGET,
+  DC_ATTR_MAX,
+  DC_ATTR_MIN,
+  DC_PROTAGONIST_PRESETS,
+  attrMod,
+  formatMod,
+  normalizeDcAttrs,
+} from '../dc.js';
 
 /** Creation is transactional: the active save changes only after a reviewed AI result. */
 export function createOnboarding(context) {
@@ -69,6 +79,19 @@ export function createOnboarding(context) {
         <button id="creation-cancel" type="button" hidden>取消生成</button>
       </form>
       <section class="creation-preview">
+        <div id="creation-dc-allocator" class="creation-dc-allocator" aria-label="六维属性分配">
+          <div class="creation-dc-head">
+            <span>六维属性加点（${DC_ATTR_MIN}~${DC_ATTR_MAX}）</span>
+            <strong id="creation-dc-budget">剩余 0 点 / 共 ${DC_ATTR_BUDGET}</strong>
+          </div>
+          <div class="creation-dc-presets">
+            ${DC_PROTAGONIST_PRESETS.map(
+              (preset) =>
+                html`<button type="button" data-dc-preset="${preset.id}">${preset.name}</button>`,
+            ).join('')}
+          </div>
+          <div class="creation-dc-grid" id="creation-dc-grid"></div>
+        </div>
         <div id="creation-review">
           <div class="creation-empty">
             <span>◇</span>
@@ -89,9 +112,54 @@ export function createOnboarding(context) {
     '<small id="tutorial-count"></small><h3 id="tutorial-title"></h3><p id="tutorial-text"></p><button id="tutorial-action"></button>';
   document.body.append(guide);
   let reviewed = null;
+  let dcAttrs = { ...DC_PROTAGONIST_PRESETS[0].attrs };
   let creationMode = null;
   let pending = false;
   let focus = null;
+  const remainingDcPoints = () =>
+    DC_ATTR_BUDGET - DC_ATTRIBUTES.reduce((sum, attr) => sum + (dcAttrs[attr.key] || 0), 0);
+  function renderDcAllocator() {
+    const remaining = remainingDcPoints();
+    $('#creation-dc-budget').textContent =
+      remaining === 0
+        ? `已配齐 ${DC_ATTR_BUDGET} 点`
+        : remaining > 0
+          ? `剩余 ${remaining} 点可分配（共 ${DC_ATTR_BUDGET}）`
+          : `超出 ${Math.abs(remaining)} 点（需减至共 ${DC_ATTR_BUDGET}）`;
+    $('#creation-dc-budget').classList.toggle('is-incomplete', remaining !== 0);
+    $('#creation-dc-grid').innerHTML = DC_ATTRIBUTES.map((attr) => {
+      const value = dcAttrs[attr.key];
+      const mod = formatMod(attrMod(value));
+      return html`<div class="creation-dc-cell" title="${attr.desc}">
+        <span class="dc-cell-name">${attr.label} <small>${attr.short}</small></span>
+        <div class="dc-cell-ctrl">
+          <button
+            type="button"
+            data-dc-step="${attr.key}:-1"
+            aria-label="减少${attr.label}"
+            ${value <= DC_ATTR_MIN ? 'disabled' : ''}
+          >
+            -
+          </button>
+          <strong>${value}<em>(${mod})</em></strong>
+          <button
+            type="button"
+            data-dc-step="${attr.key}:1"
+            aria-label="增加${attr.label}"
+            ${value >= DC_ATTR_MAX || remaining <= 0 ? 'disabled' : ''}
+          >
+            +
+          </button>
+        </div>
+      </div>`;
+    }).join('');
+    if (reviewed) {
+      reviewed.dcAttrs = { ...dcAttrs };
+      if (remaining === 0) $('#creation-review').innerHTML = characterSheet(reviewed);
+    }
+    $('#creation-start').disabled = !reviewed || remaining !== 0 || pending;
+  }
+  renderDcAllocator();
   const state = () => session.ai.library.campaign;
   function highlight(selector) {
     focus?.classList.remove('tutorial-focus');
@@ -134,11 +202,15 @@ export function createOnboarding(context) {
       campaign.tutorial = 'summon-return';
       context.generation.save();
     }
-    if (['welcome', 'summon', 'journal'].includes(campaign.tutorial)) campaign.tutorial = 'portal';
+    if (['welcome', 'summon', 'journal', 'portal'].includes(campaign.tutorial))
+      campaign.tutorial = 'outing-door';
     const step =
       session.runtime.mode === 'inn' &&
       ![
         'arrival',
+        'outing-door',
+        'map-ruins',
+        'ruins-arrived',
         'ether',
         'summon-return',
         'summon-guide',
@@ -149,7 +221,7 @@ export function createOnboarding(context) {
         'condenser',
         'depart-again',
       ].includes(campaign.tutorial)
-        ? 'portal'
+        ? 'outing-door'
         : campaign.tutorial;
     if (step === 'arrival') {
       if (shown === step) return;
@@ -160,7 +232,7 @@ export function createOnboarding(context) {
             return { speaker: '旁白', text: '【登场:伊蒂丝】' + text };
           return index === 0 ? { speaker: '旁白', text } : text;
         }),
-        () => advance('portal'),
+        () => advance('outing-door'),
         true,
       );
       return;
@@ -213,10 +285,12 @@ export function createOnboarding(context) {
         }
         context.backpack.render();
       }
+      if (step === 'intent') {
+        tutorialTasks(campaign).journal = true;
+        return advance('swap');
+      }
       guide.hidden = false;
-      highlight(
-        context.gal?.enabled && step === 'intent' ? '#battle-reading-toggle' : content.focus,
-      );
+      highlight(content.focus);
     }
     if (shown === step) {
       if (!dialogue.open) readyForAction();
@@ -226,9 +300,8 @@ export function createOnboarding(context) {
     const lines =
       context.gal?.enabled && step === 'intent'
         ? [
-            '背包右边的圆形切换按钮可以收起时间轴，显示剧情、闲聊和修改剧本。第一场正文等你点击“剧情”才播放，不会抢在教学前面。',
-            '“闲聊”可以和同行者说话，输入后发送即可；交流不消耗AP或推进回合，退出后继续安排战斗。',
-            '想引导后续发展，可以先在闲聊表达想法，再用“修改剧本”。它只改尚未经历的内容，会先说明作用并调用剧本API。现在先点切换，再打开剧情看看。',
+            'AP 环和背包再往右一点，那个圆形的「切换」按钮可以随时收起时间轴，用来翻剧情、跟同伴闲聊，或者微调后面还没走到的剧本。',
+            '平时随时都能点开看一眼——知道它在这儿就行，先不用点进去。趁对面还没扑过来，咱们先把这一击躲开吧。',
           ]
         : content.lines;
     dialogue.show(lines, readyForAction);
@@ -252,34 +325,66 @@ export function createOnboarding(context) {
     $('.creation-heading p').textContent = enabled
       ? '写下你是谁。角色 API 会保留你的设想，补全设定与战斗技能。'
       : '使用青缘开局。关闭开发者模式中的“跳过AI生成”即可创建自己的主角。';
-    if (!enabled) review(context.generation.defaultProtagonist());
-    else {
+    if (!enabled) {
+      const hero = context.generation.defaultProtagonist();
+      dcAttrs = normalizeDcAttrs(hero.dcAttrs, hero);
+      review(hero);
+    } else {
       reviewed = null;
       $('#creation-review').textContent = '填写设定，生成你的主角。';
       $('#creation-start').disabled = true;
       $('#creation-status').textContent = '请配置角色 API 与提示词预设，再生成主角。';
     }
+    renderDcAllocator();
   }
   function review(entry) {
+    entry.dcAttrs =
+      remainingDcPoints() === 0 ? { ...dcAttrs } : normalizeDcAttrs(entry.dcAttrs, entry);
+    dcAttrs = { ...entry.dcAttrs };
     reviewed = entry;
     $('#creation-review').innerHTML = characterSheet(entry);
-    $('#creation-start').disabled = false;
+    renderDcAllocator();
     $('#creation-status').textContent = generationEnabled(
       session.ai.generationOptions,
       'protagonistApi',
     )
-      ? '主角已生成。检查设定与技能后确认，也可以修改左侧设定重新生成。'
-      : '使用青缘开局，不请求主角生成 API。已有青缘优先沿用其设定、技能和角色立绘。';
+      ? '主角已生成。检查设定与技能后确认，也可以修改左侧设定或上方属性点。'
+      : '使用青缘开局，不请求主角生成 API。可在上方自由微调六维属性点数后开局。';
   }
   async function ready() {
     if (!generationEnabled(session.ai.generationOptions, 'protagonistApi')) return true;
     return context.generation.ensureReady('character');
   }
+  events.on($('#creation-dc-allocator'), 'click', (event) => {
+    const presetBtn = event.target.closest('[data-dc-preset]');
+    if (presetBtn) {
+      const preset = DC_PROTAGONIST_PRESETS.find((item) => item.id === presetBtn.dataset.dcPreset);
+      if (preset) {
+        dcAttrs = { ...preset.attrs };
+        renderDcAllocator();
+      }
+      return;
+    }
+    const stepBtn = event.target.closest('[data-dc-step]');
+    if (!stepBtn) return;
+    const [key, deltaRaw] = stepBtn.dataset.dcStep.split(':');
+    const delta = Number(deltaRaw);
+    if (!Object.hasOwn(dcAttrs, key) || !Number.isInteger(delta)) return;
+    if (delta > 0 && remainingDcPoints() <= 0) return;
+    const next = dcAttrs[key] + delta;
+    if (next < DC_ATTR_MIN || next > DC_ATTR_MAX) return;
+    dcAttrs[key] = next;
+    renderDcAllocator();
+  });
   events.on($('#creation-form'), 'submit', async (event) => {
     event.preventDefault();
     if (pending || !$('#creation-form').reportValidity()) return;
     if (!$('#creation-form').elements.namedItem('name').value.trim()) {
       $('#creation-status').textContent = '请填写主角姓名。';
+      return;
+    }
+    if (remainingDcPoints() !== 0) {
+      $('#creation-status').textContent = `请先将六维属性配齐 ${DC_ATTR_BUDGET} 点再生成。`;
       return;
     }
     pending = true;
@@ -288,7 +393,9 @@ export function createOnboarding(context) {
     try {
       if (!(await ready()) || session.runtime.disposed) return;
       const values = new FormData($('#creation-form'));
+      const attrSummary = DC_ATTRIBUTES.map((a) => `${a.label}${dcAttrs[a.key]}`).join(' / ');
       const brief =
+        `六维属性偏好：${attrSummary}。\n` +
         `技能槽一：${values.get('skillType1')}；技能槽二：${values.get('skillType2')}。共两个技能，普通攻击独立。\n` +
         fields
           .map(([key, label]) => `${label}：${String(values.get(key) || '').trim() || '由AI补全'}`)
@@ -296,7 +403,7 @@ export function createOnboarding(context) {
       $('#creation-status').textContent =
         '正在生成你的完整设定与技能，请稍候；失败时可查看原始回复并本地修正。';
       $('#creation-cancel').hidden = false;
-      const entry = await context.generation.generateProtagonist(brief);
+      const entry = await context.generation.generateProtagonist(brief, dcAttrs);
       if (!session.runtime.disposed) review(entry);
     } catch (failure) {
       if (!session.runtime.disposed)
@@ -306,12 +413,12 @@ export function createOnboarding(context) {
       if (!session.runtime.disposed) {
         $('#creation-cancel').hidden = true;
         $('#creation-generate').disabled = false;
-        $('#creation-start').disabled = !reviewed;
+        $('#creation-start').disabled = !reviewed || remainingDcPoints() !== 0;
       }
     }
   });
   events.on($('#creation-start'), 'click', async () => {
-    if (!reviewed || pending) return;
+    if (!reviewed || pending || remainingDcPoints() !== 0) return;
     pending = true;
     try {
       if (!(await ready()) || session.runtime.disposed) return;
@@ -329,6 +436,7 @@ export function createOnboarding(context) {
       context.journey.returnInn();
       context.saves.createNewSave();
       refresh();
+      context.ledger?.sync();
     } catch (failure) {
       if (!session.runtime.disposed) $('#creation-status').textContent = failure.message;
     } finally {
@@ -360,9 +468,21 @@ export function createOnboarding(context) {
       $('#inn-frame iframe')?.contentWindow?.assetPreview?.moveTo('table');
       return;
     }
-    if (['portal', 'summon-return'].includes(guide.dataset.step)) {
+    if (guide.dataset.step === 'map-ruins') {
+      const target = $('#inn-frame iframe')?.contentWindow;
+      if (target) target.postMessage({ type: 'daily-open-atlas', preview: false }, location.origin);
+      else context.shell.toast('街道正在载入，请稍候');
+      return;
+    }
+    if (['outing-door', 'summon-return', 'depart-again'].includes(guide.dataset.step)) {
       const preview = $('#inn-frame iframe')?.contentWindow?.assetPreview;
-      if (preview) preview.moveTo(guide.dataset.step === 'portal' ? 'gate' : 'summon');
+      const place =
+        guide.dataset.step === 'outing-door'
+          ? 'streetDoor'
+          : guide.dataset.step === 'depart-again'
+            ? 'gate'
+            : 'summon';
+      if (preview) preview.moveTo(place);
       else context.shell.toast('酒馆正在载入，请稍候');
     } else {
       shown = null;
@@ -416,8 +536,20 @@ export function createOnboarding(context) {
       storage.removeItem('wanxiang.creation-pending.v1');
       dialog.close();
       refresh();
+      context.ledger?.sync();
     },
     allowPortal(kind) {
+      if (
+        kind === 'script' &&
+        !state()?.completed &&
+        learning(session.ai.library) &&
+        !session.ai.library.unlockedDungeons?.includes('ruins')
+      ) {
+        context.shell.toast(
+          '先从酒馆正门走出星钟城，亲脚前往近处的界隙遗迹记下坐标，再使用副本之门。',
+        );
+        return false;
+      }
       if (
         kind === 'script' &&
         state()?.completed &&
@@ -436,6 +568,30 @@ export function createOnboarding(context) {
         return false;
       }
       return true;
+    },
+    streetEntered() {
+      if (!learning(session.ai.library) || state()?.completed) return;
+      if (state()?.tutorial === 'outing-door') {
+        state().tutorial = 'map-ruins';
+        context.generation.save();
+        refresh();
+      }
+    },
+    tavernEntered() {
+      if (!learning(session.ai.library) || state()?.completed) return;
+      if (state()?.tutorial === 'map-ruins') {
+        state().tutorial = 'outing-door';
+        context.generation.save();
+        refresh();
+      }
+    },
+    ruinsReached() {
+      if (!learning(session.ai.library) || state()?.completed) return;
+      if (['outing-door', 'map-ruins'].includes(state()?.tutorial)) {
+        state().tutorial = 'ruins-arrived';
+        context.generation.save();
+        refresh();
+      }
     },
     summonCompanion() {
       if (!state() || state().firstRecruit) return false;
@@ -605,9 +761,9 @@ export function createOnboarding(context) {
       tutorialTasks(state()).equipmentIntro = true;
       context.generation.save();
       dialogue.show([
-        '出发前，我们先检查装备。故事编织期间也可以整备，点一张已经出战的角色卡，就能打开他的装备页。',
-        '装备栏里一共有三个位置，选择背包中持有的装备即可戴上，留空就能卸下。同一件装备只能交给一个人；加成和特殊触发效果会一起带进战斗。',
-        '刚才确认的同行者和站位已经写进本场剧本，整备时只调整装备，也可以查看背包。进副本后就不能更换装备了。现在没有装备也没关系，先记住入口。',
+        '趁还没动身，先顺手看一眼装备栏吧。平时整备或编排队伍时，只要点一下已经上阵的角色卡就能打开装备页。',
+        '每人能带三件装备，选中包里的物件点上去即可，留空就是卸下。同一件装备只能交给一人带着，属性加成和特殊效果都会带进副本。',
+        '刚才确认过的同伴和站位都已经写进开场剧本了，整备时只换装备、也能看看背包，进副本之后就不能再临时调换。现在包里还空着也没关系，知道入口在哪就行。',
       ]);
     },
     tripStarted() {

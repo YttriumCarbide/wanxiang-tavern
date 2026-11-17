@@ -71,6 +71,14 @@ export async function statusEmblemChecks({ browser, baseURL, output }) {
     }, library);
     await page.reload();
     await page.waitForFunction(() => !!window.demo);
+    const handle = await page.locator('#ledger-handle').boundingBox();
+    await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(Math.max(10, handle.x - 140), handle.y + handle.height / 2, {
+      steps: 6,
+    });
+    await page.mouse.up();
+    await page.locator('#ledger-drawer-host.is-open').waitFor();
     await page.locator('#party-toggle').click();
     await page.locator('[data-prepare-slot="0"]').click();
     for (let slot = 0; slot < 3; slot++)
@@ -87,12 +95,23 @@ export async function statusEmblemChecks({ browser, baseURL, output }) {
     ]);
     assert.equal(saved.characters[0].emblemId, OVERLOAD_EMBLEM_ID);
     assert.equal(saved.emblems.length, 5);
+    const reloadHandle = await page.locator('#ledger-handle').boundingBox();
+    await page.mouse.move(
+      reloadHandle.x + reloadHandle.width / 2,
+      reloadHandle.y + reloadHandle.height / 2,
+    );
+    await page.mouse.down();
+    await page.mouse.move(
+      Math.max(10, reloadHandle.x - 140),
+      reloadHandle.y + reloadHandle.height / 2,
+      { steps: 6 },
+    );
+    await page.mouse.up();
+    await page.locator('#ledger-drawer-host.is-open').waitFor();
     await page.locator('#party-toggle').click();
     await page.locator('[data-prepare-slot="0"]').click();
     assert.equal(await page.locator('[data-emblem-character]').inputValue(), OVERLOAD_EMBLEM_ID);
-    await finishPanelAnimation(page, '#prepare-character-dialog');
     await page.screenshot({ path: path.join(output, 'equipment-after-static-reload.png') });
-    await page.locator('#prepare-character-done').click();
     await page.locator('#prepare-close').click();
     await page.evaluate(() => window.demo.startBattle());
     await page.locator('#destination-region-confirm').click();

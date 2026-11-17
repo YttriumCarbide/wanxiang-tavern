@@ -6,7 +6,7 @@ body.corridor {
   position: fixed;
   left: auto;
   right: 20px;
-  top: 72px;
+  top: 22px;
   z-index: 5;
   border-color: #c7a57588;
   background: #2b211de8;
@@ -53,10 +53,14 @@ body.corridor {
   color: #f2d596;
 }
 
+html[data-embedded] #leave-corridor {
+  display: none;
+}
+
 @media (max-width: 720px) {
   #leave-corridor {
     right: 12px;
-    top: 62px;
+    top: 14px;
     padding: 9px 13px;
     font-size: 11px;
   }

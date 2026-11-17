@@ -18,6 +18,14 @@ export async function portraitImportChecks({ browser, baseURL, output }) {
   try {
     await legacySession(page);
     await page.goto(baseURL);
+    const handle = await page.locator('#ledger-handle').boundingBox();
+    await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(Math.max(10, handle.x - 140), handle.y + handle.height / 2, {
+      steps: 6,
+    });
+    await page.mouse.up();
+    await page.locator('#ledger-drawer-host.is-open').waitFor();
     await page.locator('#party-toggle').click();
     await page.locator('[data-prepare-hero="official-aegis"]').click();
     assert((await page.locator('#prepare-character-title').textContent()).includes('长景月汐'));
@@ -50,6 +58,19 @@ export async function portraitImportChecks({ browser, baseURL, output }) {
     const original = await page.request.get(new URL(originalUrl, baseURL).href);
     assert.deepEqual(await original.body(), bytes, 'Imported image bytes must remain identical');
     await page.reload();
+    const reloadHandle = await page.locator('#ledger-handle').boundingBox();
+    await page.mouse.move(
+      reloadHandle.x + reloadHandle.width / 2,
+      reloadHandle.y + reloadHandle.height / 2,
+    );
+    await page.mouse.down();
+    await page.mouse.move(
+      Math.max(10, reloadHandle.x - 140),
+      reloadHandle.y + reloadHandle.height / 2,
+      { steps: 6 },
+    );
+    await page.mouse.up();
+    await page.locator('#ledger-drawer-host.is-open').waitFor();
     await page.locator('#party-toggle').click();
     await page.locator('[data-prepare-hero="official-aegis"]').click();
     assert(

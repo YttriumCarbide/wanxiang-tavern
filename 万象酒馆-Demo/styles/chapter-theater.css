@@ -1,0 +1,1845 @@
+/* Fullscreen JRPG cinematic chapter theater and non-blocking battle barks. */
+
+#chapter-theater[hidden] {
+  display: none !important;
+}
+
+#chapter-theater[data-enhanced='true'] {
+  position: fixed;
+  inset: 0;
+  z-index: 2150;
+  width: 100vw;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow: hidden;
+  background: #050407;
+  color: #f5edd9;
+  font-family: 'Noto Serif SC', 'Source Han Serif SC', 'STSong', Georgia, serif;
+  opacity: 0;
+  transition: opacity 0.48s cubic-bezier(0.22, 1, 0.36, 1);
+  user-select: none;
+}
+
+#chapter-theater[data-enhanced='true'].is-visible {
+  opacity: 1;
+}
+
+#chapter-theater[data-enhanced='true'].is-closing {
+  opacity: 1;
+  pointer-events: none;
+}
+
+/* Closing: the scene sinks back into the dark before the curtain covers it. */
+#chapter-theater[data-enhanced='true'].is-closing .chapter-theater-viewport,
+#chapter-theater[data-enhanced='true'].is-closing .chapter-theater-bar {
+  transition:
+    opacity 0.9s ease,
+    filter 0.9s ease,
+    transform 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+  opacity: 0.35;
+  filter: blur(4px) brightness(0.6);
+}
+
+#chapter-theater[data-enhanced='true'].is-closing .chapter-theater-viewport {
+  transform: scale(1.03);
+}
+
+/* Past the curtain peak the theater becomes see-through so the Gal scene fades in beneath. */
+#chapter-theater[data-enhanced='true'][data-veiled='true'] {
+  background: transparent;
+}
+
+#chapter-theater[data-enhanced='true'][data-veiled='true']
+  :is(.chapter-theater-bar, .chapter-theater-viewport) {
+  opacity: 0;
+  transition: none;
+}
+
+/* ==========================================================================
+   CINEMASCOPE LETTERBOX BARS
+   ========================================================================== */
+
+.chapter-theater-bar {
+  position: relative;
+  z-index: 20;
+  flex: 0 0 auto;
+  width: 100%;
+  background: #050407;
+  padding-inline: clamp(20px, 4vw, 52px);
+}
+
+.chapter-theater-bar.is-top {
+  height: clamp(42px, 7.5dvh, 68px);
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding-bottom: clamp(8px, 1.4dvh, 14px);
+  border-bottom: 1px solid rgba(212, 175, 55, 0.32);
+}
+
+.chapter-theater-bar.is-bottom {
+  position: relative;
+  height: clamp(24px, 4.5dvh, 42px);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  border-top: 1px solid rgba(212, 175, 55, 0.28);
+  cursor: pointer;
+}
+
+.chapter-theater-bar-en {
+  font-family: 'Cinzel', 'Times New Roman', Georgia, serif;
+  font-size: clamp(10px, 1vw, 12px);
+  letter-spacing: 0.34em;
+  color: rgba(203, 179, 122, 0.78);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.chapter-theater-bar-cn {
+  font-size: clamp(11px, 1.05vw, 13px);
+  letter-spacing: 0.32em;
+  color: rgba(203, 179, 122, 0.78);
+  white-space: nowrap;
+}
+
+/* ==========================================================================
+   FULL-BLEED PANORAMIC VIEWPORT
+   ========================================================================== */
+
+.chapter-theater-viewport {
+  position: relative;
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: #08070a;
+  cursor: pointer;
+}
+
+.chapter-theater-art-wrap {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  animation: theaterInkScrollOpen 2.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.chapter-theater-art {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  opacity: 0.78;
+  animation: theaterKenBurnsSlow 28s ease-in-out infinite;
+  transition:
+    opacity 1.8s ease,
+    filter 1.8s ease;
+}
+
+.chapter-theater-art.is-epilogue {
+  animation: theaterKenBurnsEpilogue 16s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* The scene stays readable behind the prose so both phases feel like one shot. */
+#chapter-theater[data-enhanced='true'].is-revealed .chapter-theater-art {
+  opacity: 0.6;
+  filter: blur(1px) brightness(0.82);
+}
+
+.chapter-theater-grad-h,
+.chapter-theater-grad-v,
+.chapter-theater-glow,
+.chapter-theater-vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.chapter-theater-grad-h {
+  background: linear-gradient(
+    90deg,
+    rgba(7, 5, 10, 0.9) 0%,
+    rgba(13, 9, 17, 0.44) 50%,
+    rgba(7, 5, 10, 0.9) 100%
+  );
+}
+
+.chapter-theater-grad-v {
+  background: linear-gradient(
+    180deg,
+    rgba(7, 5, 10, 0.62) 0%,
+    transparent 45%,
+    rgba(7, 5, 10, 0.78) 100%
+  );
+}
+
+.chapter-theater-vignette {
+  background: radial-gradient(
+    ellipse at center,
+    rgba(8, 7, 10, 0.06) 28%,
+    rgba(8, 7, 10, 0.56) 72%,
+    rgba(6, 5, 8, 0.94) 100%
+  );
+}
+
+/* Valley mist layers & film grain */
+
+.chapter-theater-fog-a,
+.chapter-theater-fog-b {
+  position: absolute;
+  left: -14%;
+  width: 128%;
+  border-radius: 100%;
+  pointer-events: none;
+  filter: blur(44px);
+}
+
+.chapter-theater-fog-a {
+  bottom: -48px;
+  height: 220px;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(215, 198, 162, 0.16) 0%,
+    rgba(110, 122, 155, 0.1) 48%,
+    transparent 76%
+  );
+  animation: theaterFogDriftA 18s ease-in-out infinite;
+}
+
+.chapter-theater-fog-b {
+  bottom: 12px;
+  height: 150px;
+  background: radial-gradient(ellipse at center, rgba(242, 208, 128, 0.12) 0%, transparent 72%);
+  animation: theaterFogDriftB 24s ease-in-out infinite;
+}
+
+.chapter-theater-grain {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.28;
+  background-image:
+    radial-gradient(rgba(255, 245, 220, 0.05) 1px, transparent 0),
+    radial-gradient(rgba(0, 0, 0, 0.08) 1px, transparent 0);
+  background-size:
+    3px 3px,
+    5px 5px;
+  background-position:
+    0 0,
+    1px 2px;
+  animation: theaterGrainShift 0.35s steps(3) infinite;
+}
+
+/* ==========================================================================
+   VOLUMETRIC SUNBEAMS & ATMOSPHERIC PARTICLES
+   ========================================================================== */
+
+.chapter-theater-atmosphere {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 2;
+}
+
+.chapter-theater-beams {
+  position: absolute;
+  inset: 0;
+  mix-blend-mode: screen;
+}
+
+.chapter-theater-beam {
+  position: absolute;
+  top: -34%;
+  height: 170%;
+  filter: blur(24px);
+}
+
+.chapter-theater-beam.is-a {
+  right: 8%;
+  width: 26%;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 233, 166, 0.22) 0%,
+    rgba(212, 175, 55, 0.09) 48%,
+    transparent 100%
+  );
+  animation: theaterSunbeamDrift 12s ease-in-out infinite;
+}
+
+.chapter-theater-beam.is-b {
+  right: 26%;
+  width: 14%;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 244, 204, 0.18) 0%,
+    rgba(224, 185, 84, 0.07) 55%,
+    transparent 100%
+  );
+  animation: theaterSunbeamDrift 16s ease-in-out -4s infinite;
+}
+
+.chapter-theater-beam.is-c {
+  right: 44%;
+  width: 10%;
+  background: linear-gradient(180deg, rgba(255, 236, 184, 0.14) 0%, transparent 78%);
+  animation: theaterSunbeamDrift 19s ease-in-out -8s infinite;
+}
+
+.chapter-theater-beams.is-bright .chapter-theater-beam {
+  opacity: 1.45;
+}
+
+.chapter-theater-petals,
+.chapter-theater-motes {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.chapter-theater-mote {
+  position: absolute;
+  bottom: -24px;
+  border-radius: 999px;
+  background: radial-gradient(circle, #fff6cf 0%, #dfb44a 55%, transparent 100%);
+  box-shadow: 0 0 8px rgba(244, 212, 120, 0.72);
+  animation: theaterMoteFloat 12s linear infinite;
+}
+
+.chapter-theater-motes.is-ember .chapter-theater-mote {
+  background: radial-gradient(circle, #ffd28a 0%, #e86b2a 55%, transparent 100%);
+  box-shadow: 0 0 8px rgba(242, 121, 53, 0.78);
+}
+
+.chapter-theater-motes.is-ivory .chapter-theater-mote {
+  background: radial-gradient(circle, #ffffff 0%, #f3e4bd 55%, transparent 100%);
+  box-shadow: 0 0 8px rgba(255, 248, 224, 0.72);
+}
+
+.chapter-theater-petal {
+  position: absolute;
+  top: -24px;
+  border-radius: 70% 15% 70% 15%;
+  background: linear-gradient(135deg, #d8434a 0%, #8c171e 65%, #4a0a0e 100%);
+  box-shadow: 0 0 8px rgba(176, 36, 44, 0.45);
+  animation: theaterPetalFall 11s linear infinite;
+}
+
+.chapter-theater-petals.is-dawn .chapter-theater-petal {
+  background: linear-gradient(135deg, #fffaf0 0%, #ebd8ac 70%, #b89858 100%);
+  box-shadow: 0 0 10px rgba(255, 240, 198, 0.55);
+}
+
+.chapter-theater-petals.is-emerald .chapter-theater-petal {
+  background: linear-gradient(135deg, #a8d5a2 0%, #4b8252 70%, #24472b 100%);
+  box-shadow: 0 0 8px rgba(120, 200, 145, 0.4);
+}
+
+.chapter-theater-petals.is-frost .chapter-theater-petal {
+  border-radius: 20% 80% 20% 80%;
+  background: linear-gradient(135deg, #ffffff 0%, #a8d8ff 65%, #5b9bd5 100%);
+  box-shadow: 0 0 9px rgba(168, 216, 255, 0.58);
+}
+
+.chapter-theater-petals.is-ember .chapter-theater-petal {
+  background: linear-gradient(135deg, #ffe29a 0%, #e06124 68%, #7a1c0a 100%);
+  box-shadow: 0 0 9px rgba(235, 108, 36, 0.58);
+}
+
+.chapter-theater-sheen {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+  background: linear-gradient(
+    112deg,
+    transparent 36%,
+    rgba(255, 244, 198, 0.14) 48%,
+    rgba(255, 250, 224, 0.22) 50%,
+    rgba(255, 244, 198, 0.14) 52%,
+    transparent 64%
+  );
+  transform: translateX(-140%) skewX(-24deg);
+  animation: theaterSheenGlide 2.2s cubic-bezier(0.22, 1, 0.36, 1) 3.9s forwards;
+}
+
+/* Outer frame borders & ornate corner filigree */
+
+.chapter-theater-border-outer {
+  position: absolute;
+  inset: clamp(12px, 2vw, 24px);
+  border: 1px solid rgba(212, 175, 55, 0.26);
+  pointer-events: none;
+  z-index: 4;
+}
+
+.chapter-theater-border-inner {
+  position: absolute;
+  inset: calc(clamp(12px, 2vw, 24px) + 5px);
+  border: 1px solid rgba(212, 175, 55, 0.11);
+  pointer-events: none;
+  z-index: 4;
+}
+
+.chapter-theater-corners {
+  position: absolute;
+  inset: clamp(8px, 1.6vw, 20px);
+  pointer-events: none;
+  color: #d4af37;
+  z-index: 5;
+}
+
+.chapter-theater-corners.is-compact {
+  inset: 6px;
+}
+
+.chapter-theater-corner {
+  position: absolute;
+  width: clamp(26px, 3.2vw, 36px);
+  height: clamp(26px, 3.2vw, 36px);
+}
+
+.chapter-theater-corners.is-compact .chapter-theater-corner {
+  width: 24px;
+  height: 24px;
+}
+
+.chapter-theater-corner svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.chapter-theater-corner.is-tl {
+  top: 0;
+  left: 0;
+}
+
+.chapter-theater-corner.is-tr {
+  top: 0;
+  right: 0;
+  transform: rotate(90deg);
+}
+
+.chapter-theater-corner.is-br {
+  bottom: 0;
+  right: 0;
+  transform: rotate(180deg);
+}
+
+.chapter-theater-corner.is-bl {
+  bottom: 0;
+  left: 0;
+  transform: rotate(-90deg);
+}
+
+/* ==========================================================================
+   ROTATING EIGHTFOLD ASTROLABE CREST & METALLIC GOLD FOIL TYPOGRAPHY
+   ========================================================================== */
+
+.chapter-theater-astrolabe {
+  position: absolute;
+  left: 50%;
+  top: 53%;
+  width: clamp(280px, 36vw, 410px);
+  height: clamp(280px, 36vw, 410px);
+  transform: translate(-50%, -50%);
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  opacity: 0.34;
+  z-index: 5;
+  transition:
+    opacity 1.6s ease,
+    transform 1.8s ease;
+}
+
+#chapter-theater[data-enhanced='true'].is-revealed .chapter-theater-astrolabe {
+  opacity: 0.2;
+  transform: translate(-50%, -50%) scale(1.06);
+}
+
+.chapter-theater-astrolabe-halo {
+  position: absolute;
+  inset: 14%;
+  border-radius: 999px;
+  background: radial-gradient(
+    circle,
+    rgba(243, 210, 122, 0.22) 0%,
+    rgba(212, 175, 55, 0.06) 52%,
+    transparent 74%
+  );
+  animation: theaterCrestHaloPulse 5s ease-in-out infinite;
+}
+
+.chapter-theater-astrolabe-outer,
+.chapter-theater-astrolabe-inner {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.chapter-theater-astrolabe-outer {
+  animation: theaterSpinCW 48s linear infinite;
+}
+
+.chapter-theater-astrolabe-inner {
+  animation: theaterSpinCCW 34s linear infinite;
+}
+
+.chapter-theater-astrolabe-core {
+  position: relative;
+  width: 34%;
+  height: 34%;
+}
+
+.text-gold-foil {
+  background: linear-gradient(180deg, #fff7d6 0%, #f4da8a 38%, #d7ab4e 72%, #f1d37e 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 4px 16px rgba(0, 0, 0, 0.85)) drop-shadow(0 0 22px rgba(212, 175, 55, 0.25));
+}
+
+.text-gold-shimmer {
+  background: linear-gradient(
+    112deg,
+    #d8b254 0%,
+    #f6df95 24%,
+    #fff9e4 38%,
+    #dfb94e 54%,
+    #b98e35 72%,
+    #f5dc8e 88%,
+    #d8b254 100%
+  );
+  background-size: 240% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: theaterGoldShimmer 6.5s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  filter: drop-shadow(0 6px 20px rgba(0, 0, 0, 0.92)) drop-shadow(0 0 30px rgba(212, 175, 55, 0.34));
+}
+
+/* ==========================================================================
+   PHASE 1 — CHOREOGRAPHED CEREMONY CENTERPIECE
+   ========================================================================== */
+
+.chapter-theater-ceremony {
+  position: relative;
+  z-index: 10;
+  width: min(94vw, 1180px);
+  padding: clamp(44px, 7.5dvh, 84px) clamp(16px, 3vw, 40px) clamp(14px, 2dvh, 24px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  transition:
+    opacity 1.1s ease,
+    transform 1.3s cubic-bezier(0.22, 1, 0.36, 1),
+    filter 1.1s ease,
+    visibility 1.1s ease;
+}
+
+/* The ceremony drifts upward and dissolves instead of vanishing in one cut. */
+#chapter-theater[data-enhanced='true'][data-phase='reading'] .chapter-theater-ceremony,
+#chapter-theater[data-enhanced='true'].is-revealed .chapter-theater-ceremony {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  filter: blur(6px);
+  transform: translateY(-28px) scale(0.96);
+}
+
+.chapter-theater-laurel {
+  margin-bottom: 6px;
+}
+
+.chapter-theater-laurel-svg {
+  width: clamp(132px, 16vw, 176px);
+  height: auto;
+  filter: drop-shadow(0 0 16px rgba(243, 210, 122, 0.55));
+}
+
+.chapter-theater-laurel-leaves {
+  opacity: 0;
+  animation: theaterSubtitleRise 1.4s cubic-bezier(0.22, 1, 0.36, 1) 1.9s both;
+}
+
+.ct-draw-stroke {
+  stroke-dasharray: var(--dash-len, 1000);
+  stroke-dashoffset: var(--dash-len, 1000);
+  animation: theaterDrawStroke var(--draw-dur, 1.8s) cubic-bezier(0.45, 0.05, 0.35, 1)
+    var(--draw-delay, 0s) forwards;
+}
+
+.chapter-theater-act {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  animation: theaterSubtitleRise 1.5s cubic-bezier(0.22, 1, 0.36, 1) 0.8s both;
+}
+
+.chapter-theater-act-en {
+  font-family: 'Cinzel', Georgia, serif;
+  font-size: clamp(10px, 1.05vw, 13px);
+  letter-spacing: 0.42em;
+  color: rgba(236, 209, 134, 0.9);
+  text-transform: uppercase;
+}
+
+.chapter-theater-act-cn {
+  font-size: clamp(12px, 1.2vw, 15px);
+  letter-spacing: 0.46em;
+  padding-left: 0.46em;
+  color: rgba(228, 207, 160, 0.88);
+}
+
+.chapter-theater-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: min(84vw, 540px);
+  margin: clamp(12px, 2dvh, 20px) 0;
+}
+
+.chapter-theater-divider.is-compact {
+  width: 100%;
+  margin: clamp(10px, 1.6dvh, 16px) 0;
+}
+
+.chapter-theater-divider-line {
+  flex: 1 1 auto;
+  height: 1px;
+  animation: theaterRuleExpand 1.6s cubic-bezier(0.22, 1, 0.36, 1) var(--rule-delay, 0.2s) both;
+}
+
+.chapter-theater-divider-line.is-left {
+  transform-origin: right center;
+  background: linear-gradient(90deg, transparent, rgba(183, 142, 52, 0.78), #e7c770);
+}
+
+.chapter-theater-divider-line.is-right {
+  transform-origin: left center;
+  background: linear-gradient(90deg, #e7c770, rgba(183, 142, 52, 0.78), transparent);
+}
+
+.chapter-theater-divider-gem-svg {
+  width: 64px;
+  height: 20px;
+  margin-inline: 10px;
+  flex-shrink: 0;
+  color: #eccd76;
+  filter: drop-shadow(0 0 8px rgba(212, 175, 55, 0.65));
+}
+
+.chapter-theater-title-row {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 100%;
+  gap: clamp(4px, 0.9vw, 14px);
+}
+
+.chapter-theater-bracket {
+  flex: 0 0 auto;
+  font-size: clamp(24px, 3.4vw, 46px);
+  font-weight: 300;
+  line-height: 1;
+  color: rgba(231, 197, 106, 0.82);
+  animation: theaterSubtitleRise 1.4s cubic-bezier(0.22, 1, 0.36, 1) 2.2s both;
+}
+
+.chapter-theater-bracket.is-left {
+  padding-bottom: 0.22em;
+}
+
+.chapter-theater-bracket.is-right {
+  padding-top: 0.22em;
+}
+
+.chapter-theater-ceremony-title {
+  margin: 0;
+  max-width: min(82vw, 960px);
+  font-size: clamp(22px, 3.6vw, 52px);
+  font-weight: 700;
+  line-height: 1.4;
+  letter-spacing: 0.14em;
+  padding-left: 0.14em;
+  text-wrap: balance;
+  overflow-wrap: break-word;
+  animation: theaterTitleSettle 2.4s cubic-bezier(0.16, 1, 0.3, 1) 1.9s both;
+}
+
+.chapter-theater-seal {
+  position: absolute;
+  right: clamp(-56px, -4.5vw, -38px);
+  bottom: clamp(-32px, -3.5vh, -26px);
+  pointer-events: none;
+  animation: theaterWaxStampImpact 0.8s cubic-bezier(0.22, 1, 0.36, 1) 3.5s both;
+}
+
+.chapter-theater-seal-svg {
+  display: block;
+  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.78));
+}
+
+.chapter-theater-stamp {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  animation: theaterSubtitleRise 1.5s cubic-bezier(0.22, 1, 0.36, 1) 4.1s both;
+}
+
+.chapter-theater-stamp-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 20px;
+  border-radius: 2px;
+  border: 1px solid rgba(212, 175, 55, 0.32);
+  background: rgba(17, 12, 18, 0.74);
+  backdrop-filter: blur(2px);
+}
+
+.chapter-theater-stamp-diamond {
+  width: 6px;
+  height: 6px;
+  transform: rotate(45deg);
+  background: #c9343b;
+}
+
+.chapter-theater-stamp-date {
+  font-size: clamp(12px, 1.25vw, 15px);
+  font-weight: 600;
+  letter-spacing: 0.32em;
+  color: #f4dfb0;
+}
+
+.chapter-theater-subtitle {
+  margin: 0;
+  font-family: 'Cinzel', 'Noto Serif SC', Georgia, serif;
+  font-size: clamp(11px, 1.15vw, 13px);
+  letter-spacing: 0.32em;
+  color: rgba(203, 182, 134, 0.84);
+}
+
+/* ==========================================================================
+   PHASE 2 — FULLSCREEN EDITORIAL PROSE READING PANEL (引子 / 尾声)
+   ========================================================================== */
+
+.chapter-theater-prose-wrap {
+  position: absolute;
+  inset: clamp(36px, 7dvh, 82px) clamp(20px, 5vw, 72px) clamp(12px, 2dvh, 24px);
+  padding-top: clamp(16px, 3dvh, 34px);
+  z-index: 12;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(26px);
+  filter: blur(6px);
+  transition:
+    opacity 1.2s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 1.4s cubic-bezier(0.16, 1, 0.3, 1),
+    filter 1.2s ease,
+    visibility 1.2s ease;
+}
+
+/* Starts while the ceremony is still dissolving, so the two phases overlap. */
+#chapter-theater[data-enhanced='true'][data-phase='reading'] .chapter-theater-prose-wrap,
+#chapter-theater[data-enhanced='true'].is-revealed .chapter-theater-prose-wrap {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateY(0);
+  filter: blur(0);
+  transition-delay: 0.35s;
+}
+
+.chapter-theater-panel {
+  position: relative;
+  width: min(100%, 900px);
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: clamp(22px, 3.6dvh, 38px) clamp(24px, 4vw, 52px);
+  background: radial-gradient(
+    ellipse at 50% 40%,
+    rgba(20, 17, 24, 0.7) 0%,
+    rgba(11, 10, 15, 0.82) 100%
+  );
+  backdrop-filter: blur(6px);
+  box-shadow:
+    inset 0 0 0 1px rgba(212, 175, 55, 0.3),
+    inset 0 0 40px rgba(0, 0, 0, 0.55),
+    0 0 90px rgba(0, 0, 0, 0.55);
+  overflow: hidden;
+}
+
+#chapter-theater[data-enhanced='true'].is-revealed .chapter-theater-header {
+  animation: theaterSubtitleRise 1.2s cubic-bezier(0.22, 1, 0.36, 1) 0.45s both;
+}
+
+.chapter-theater-header {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 6px;
+}
+
+.chapter-theater-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px 18px;
+  font-size: clamp(11px, 1.05vw, 13px);
+  letter-spacing: 0.24em;
+  color: rgba(216, 194, 138, 0.82);
+}
+
+.chapter-theater-title {
+  margin: 0;
+  max-width: 100%;
+  font-size: clamp(19px, 2.3vw, 30px);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  padding-left: 0.12em;
+  line-height: 1.42;
+  text-wrap: balance;
+  overflow-wrap: break-word;
+}
+
+.chapter-theater-prose {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: clamp(12px, 2dvh, 20px);
+  padding: clamp(6px, 1.2dvh, 14px) 4px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(212, 175, 55, 0.38) transparent;
+}
+
+.chapter-theater-clause {
+  margin: 0;
+  font-size: clamp(15px, 1.5vw, 19px);
+  line-height: 1.92;
+  letter-spacing: 0.06em;
+  text-indent: 2em;
+  text-align: justify;
+  color: #efe4cc;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.65);
+}
+
+/* Reading-speed typewriter: reveals one paragraph cleanly at a time. */
+.chapter-theater-char {
+  opacity: 0;
+}
+
+.chapter-theater-clause.is-typing .chapter-theater-char {
+  animation: theaterCharInk 0.28s ease-out var(--char-delay, 0s) both;
+}
+
+.chapter-theater-clause.is-done .chapter-theater-char,
+#chapter-theater[data-enhanced='true'].is-typed .chapter-theater-char {
+  animation: none;
+  opacity: 1;
+}
+
+.chapter-theater-fin {
+  flex: 0 0 auto;
+  margin-top: clamp(8px, 1.5dvh, 14px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+}
+
+.chapter-theater-fin-rule {
+  height: 1px;
+  width: clamp(44px, 7vw, 80px);
+  animation: theaterRuleExpand 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.4s both;
+}
+
+.chapter-theater-fin-rule.is-left {
+  transform-origin: right center;
+  background: linear-gradient(90deg, transparent, #e9ca74);
+}
+
+.chapter-theater-fin-rule.is-right {
+  transform-origin: left center;
+  background: linear-gradient(90deg, #e9ca74, transparent);
+}
+
+.chapter-theater-fin-svg {
+  width: clamp(112px, 14vw, 148px);
+  height: auto;
+  filter: drop-shadow(0 0 16px rgba(246, 216, 125, 0.6));
+}
+
+/* ==========================================================================
+   BOTTOM CINEMA TRIM (invisible automation hitbox only; clicks advance anywhere)
+   ========================================================================== */
+
+.chapter-theater-continue {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 2px;
+  height: 2px;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  appearance: none;
+  background: transparent;
+  opacity: 0;
+  cursor: pointer;
+}
+
+/* ==========================================================================
+   FULLSCREEN SCENE TRANSITION OVERLAY (SceneTransitionOverlay)
+   ========================================================================== */
+
+.chapter-theater-veil {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  opacity: 0;
+  background: #060508;
+}
+
+.chapter-theater-veil-glow {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle at center,
+    rgba(212, 175, 55, 0.18) 0%,
+    rgba(8, 7, 11, 0.92) 48%,
+    #050407 100%
+  );
+}
+
+.chapter-theater-veil-beam {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+  transform: translateY(-50%);
+  background: linear-gradient(90deg, transparent, rgba(243, 212, 125, 0.72), transparent);
+}
+
+.chapter-theater-veil-diamond {
+  position: relative;
+  width: 108px;
+  height: 108px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(236, 208, 125, 0.72);
+  background: rgba(12, 10, 16, 0.92);
+  box-shadow: 0 0 42px rgba(212, 175, 55, 0.36);
+}
+
+.chapter-theater-veil-diamond-inner {
+  width: 78px;
+  height: 78px;
+  border: 1px solid rgba(212, 175, 55, 0.45);
+}
+
+.chapter-theater-veil-diamond-core {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: #fff3c8;
+  box-shadow: 0 0 16px rgba(255, 243, 200, 0.95);
+}
+
+.chapter-theater-veil-label {
+  position: relative;
+  margin-top: 38px;
+  font-size: 12px;
+  letter-spacing: 0.42em;
+  padding-left: 0.42em;
+  color: rgba(230, 203, 129, 0.88);
+}
+
+#chapter-theater[data-enhanced='true'].is-closing .chapter-theater-veil {
+  animation: theaterCurtainFade 2.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+#chapter-theater[data-enhanced='true'].is-closing .chapter-theater-veil-beam {
+  animation: theaterRuleExpand 1s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+#chapter-theater[data-enhanced='true'].is-closing .chapter-theater-veil-diamond {
+  animation: theaterCurtainDiamond 2.3s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* ==========================================================================
+   SINGLE-PAGE OPENINGS (抉择事件 event-opening vs 自由探索 quest-opening)
+   ========================================================================== */
+
+.chapter-theater-single {
+  position: relative;
+  z-index: 12;
+  width: min(94vw, 940px);
+  max-height: calc(100% - clamp(24px, 4dvh, 48px));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chapter-theater-single-panel {
+  position: relative;
+  width: 100%;
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: clamp(24px, 4dvh, 40px) clamp(26px, 4.6vw, 56px) clamp(20px, 3dvh, 32px);
+  backdrop-filter: blur(8px);
+  overflow: hidden;
+  animation: theaterSubtitleRise 0.72s cubic-bezier(0.22, 1, 0.36, 1) 0.08s both;
+}
+
+.chapter-theater-single-crest {
+  margin-bottom: clamp(4px, 0.8dvh, 10px);
+}
+
+.chapter-theater-opening-crest-svg {
+  width: clamp(128px, 15vw, 172px);
+  height: auto;
+  filter: drop-shadow(0 0 14px rgba(240, 199, 114, 0.42));
+}
+
+.chapter-theater-opening-crest-svg.is-quest {
+  filter: drop-shadow(0 0 16px rgba(102, 206, 230, 0.48));
+}
+
+#chapter-theater[data-single='true'] .chapter-theater-act {
+  gap: 4px;
+  animation: theaterSubtitleRise 0.65s cubic-bezier(0.22, 1, 0.36, 1) 0.16s both;
+}
+
+#chapter-theater[data-single='true'] .chapter-theater-title-row {
+  max-width: 100%;
+  margin: clamp(2px, 0.5dvh, 6px) 0;
+}
+
+#chapter-theater[data-single='true'] .chapter-theater-ceremony-title {
+  font-size: clamp(22px, 3vw, 40px);
+  letter-spacing: 0.12em;
+  padding-left: 0.12em;
+  animation: theaterTitleSettle 0.85s cubic-bezier(0.16, 1, 0.3, 1) 0.24s both;
+}
+
+#chapter-theater[data-single='true'] .chapter-theater-bracket {
+  font-size: clamp(22px, 2.8vw, 38px);
+  animation: theaterSubtitleRise 0.68s cubic-bezier(0.22, 1, 0.36, 1) 0.28s both;
+}
+
+#chapter-theater[data-single='true'] .chapter-theater-seal {
+  right: clamp(-48px, -4vw, -30px);
+  bottom: clamp(-24px, -2.6dvh, -18px);
+  transform-origin: center;
+  animation: theaterWaxStampImpact 0.62s cubic-bezier(0.22, 1, 0.36, 1) 0.72s both;
+}
+
+.chapter-theater-prose.is-single {
+  width: min(100%, 740px);
+  max-height: clamp(120px, 26dvh, 230px);
+  padding: clamp(4px, 0.8dvh, 10px) 6px;
+}
+
+.chapter-theater-prose.is-single .chapter-theater-clause {
+  font-size: clamp(14.5px, 1.38vw, 17.5px);
+  line-height: 1.84;
+  text-align: center;
+  text-indent: 0;
+}
+
+.chapter-theater-single-foot {
+  margin-top: clamp(12px, 2dvh, 22px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  animation: theaterSubtitleRise 0.65s cubic-bezier(0.22, 1, 0.36, 1) 0.92s both;
+}
+
+.chapter-theater-single-hint {
+  margin: 0;
+  font-size: 12px;
+  letter-spacing: 0.28em;
+  padding-left: 0.28em;
+  color: rgba(232, 210, 152, 0.62);
+  transition: color 0.45s ease;
+}
+
+#chapter-theater[data-single='true'].is-settled .chapter-theater-single-hint {
+  color: rgba(248, 226, 166, 0.94);
+}
+
+/* --- Event Opening: Warm Molten Bronze & Crimson Crossroads Motif --- */
+
+#chapter-theater[data-mode='event-opening'] .chapter-theater-bar {
+  border-color: rgba(226, 142, 58, 0.36);
+}
+
+#chapter-theater[data-mode='event-opening'] .chapter-theater-single-panel {
+  background: radial-gradient(
+    ellipse at 50% 24%,
+    rgba(42, 22, 18, 0.78) 0%,
+    rgba(16, 11, 13, 0.88) 72%,
+    rgba(10, 8, 10, 0.94) 100%
+  );
+  box-shadow:
+    inset 0 0 0 1px rgba(232, 154, 68, 0.34),
+    inset 0 0 42px rgba(92, 28, 18, 0.38),
+    0 20px 72px rgba(0, 0, 0, 0.68);
+}
+
+#chapter-theater[data-mode='event-opening'] .chapter-theater-ceremony-title {
+  background-image: linear-gradient(
+    112deg,
+    #d68d46 0%,
+    #f9d988 26%,
+    #fff7df 42%,
+    #e59a4a 58%,
+    #b6682c 76%,
+    #f7d98c 90%,
+    #d68d46 100%
+  );
+}
+
+#chapter-theater[data-mode='event-opening'] .chapter-theater-act-en {
+  color: rgba(244, 182, 104, 0.94);
+}
+
+#chapter-theater[data-mode='event-opening'] .chapter-theater-veil-glow {
+  background: radial-gradient(
+    circle at center,
+    rgba(218, 122, 48, 0.22) 0%,
+    rgba(16, 10, 12, 0.92) 50%,
+    #050407 100%
+  );
+}
+
+/* --- Quest Opening: Cool Astral Cyan & Midnight Travel Folio --- */
+
+#chapter-theater[data-mode='quest-opening'] .chapter-theater-bar {
+  border-color: rgba(92, 194, 222, 0.36);
+}
+
+#chapter-theater[data-mode='quest-opening'] .chapter-theater-bar-en,
+#chapter-theater[data-mode='quest-opening'] .chapter-theater-bar-cn {
+  color: rgba(182, 228, 240, 0.84);
+}
+
+#chapter-theater[data-mode='quest-opening'] .chapter-theater-astrolabe-halo {
+  background: radial-gradient(
+    circle,
+    rgba(108, 208, 232, 0.24) 0%,
+    rgba(64, 146, 198, 0.08) 54%,
+    transparent 74%
+  );
+}
+
+#chapter-theater[data-mode='quest-opening'] .chapter-theater-single-panel {
+  border-radius: 10px;
+  background: radial-gradient(
+    ellipse at 50% 24%,
+    rgba(14, 29, 44, 0.82) 0%,
+    rgba(8, 14, 24, 0.9) 74%,
+    rgba(6, 9, 18, 0.95) 100%
+  );
+  box-shadow:
+    inset 0 0 0 1px rgba(108, 206, 228, 0.34),
+    inset 0 0 46px rgba(42, 118, 152, 0.28),
+    0 20px 72px rgba(0, 0, 0, 0.68);
+}
+
+#chapter-theater[data-mode='quest-opening'] .chapter-theater-ceremony-title {
+  background-image: linear-gradient(
+    112deg,
+    #7ccde2 0%,
+    #e8f8fc 26%,
+    #fbf2cc 46%,
+    #68bad2 66%,
+    #d2f1f8 88%,
+    #7ccde2 100%
+  );
+  filter: drop-shadow(0 6px 20px rgba(0, 0, 0, 0.9)) drop-shadow(0 0 26px rgba(96, 198, 224, 0.32));
+}
+
+#chapter-theater[data-mode='quest-opening'] .chapter-theater-bracket {
+  color: rgba(146, 220, 236, 0.84);
+}
+
+#chapter-theater[data-mode='quest-opening'] .chapter-theater-act-en {
+  color: rgba(146, 222, 240, 0.92);
+}
+
+#chapter-theater[data-mode='quest-opening'] .chapter-theater-act-cn {
+  color: rgba(212, 236, 242, 0.88);
+}
+
+#chapter-theater[data-mode='quest-opening'] .chapter-theater-divider-line.is-left {
+  background: linear-gradient(90deg, transparent, rgba(84, 178, 204, 0.72), #b9ebf4);
+}
+
+#chapter-theater[data-mode='quest-opening'] .chapter-theater-divider-line.is-right {
+  background: linear-gradient(90deg, #b9ebf4, rgba(84, 178, 204, 0.72), transparent);
+}
+
+#chapter-theater[data-mode='quest-opening'] .chapter-theater-divider-gem-svg {
+  color: #9be2f2;
+  filter: drop-shadow(0 0 8px rgba(98, 198, 224, 0.65));
+}
+
+#chapter-theater[data-mode='quest-opening'] .chapter-theater-stamp-pill {
+  border-color: rgba(98, 198, 224, 0.38);
+  background: rgba(10, 20, 32, 0.78);
+}
+
+#chapter-theater[data-mode='quest-opening'] .chapter-theater-stamp-diamond {
+  background: #4bc2dc;
+}
+
+#chapter-theater[data-mode='quest-opening'] .chapter-theater-stamp-date {
+  color: #daf3f8;
+}
+
+#chapter-theater[data-mode='quest-opening'] .chapter-theater-single-hint {
+  color: rgba(168, 224, 238, 0.66);
+}
+
+#chapter-theater[data-mode='quest-opening'].is-settled .chapter-theater-single-hint {
+  color: rgba(206, 244, 252, 0.96);
+}
+
+#chapter-theater[data-mode='quest-opening'] .chapter-theater-veil-glow {
+  background: radial-gradient(
+    circle at center,
+    rgba(86, 192, 220, 0.2) 0%,
+    rgba(8, 14, 24, 0.92) 50%,
+    #050407 100%
+  );
+}
+
+#chapter-theater[data-mode='quest-opening'] .chapter-theater-veil-diamond {
+  border-color: rgba(132, 222, 242, 0.75);
+  box-shadow: 0 0 42px rgba(86, 192, 220, 0.38);
+}
+
+/* ==========================================================================
+   BATTLE BARKS (non-blocking top combat banner - untouched)
+   ========================================================================== */
+
+.battle-bark-banner {
+  position: absolute;
+  top: 66px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 48;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: min(86vw, 660px);
+  padding: 10px 20px;
+  border-radius: 6px;
+  border: 1px solid rgba(226, 186, 111, 0.56);
+  border-left: 4px solid var(--gold);
+  background: linear-gradient(
+    90deg,
+    rgba(11, 18, 21, 0.94) 0%,
+    rgba(17, 29, 31, 0.9) 65%,
+    rgba(11, 18, 21, 0.86) 100%
+  );
+  box-shadow:
+    0 12px 32px rgba(0, 0, 0, 0.58),
+    inset 0 1px 0 rgba(255, 240, 200, 0.12);
+  color: var(--parchment);
+  backdrop-filter: blur(6px);
+}
+
+.battle-bark-banner[hidden] {
+  display: none;
+}
+
+.battle-bark-banner[data-versus='true'] {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  max-width: min(90vw, 720px);
+  padding: 12px 22px;
+}
+
+.battle-bark-versus {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  transform: skewX(-6deg);
+  padding: 4px 10px;
+  background: linear-gradient(
+    90deg,
+    rgba(148, 28, 38, 0.42),
+    rgba(14, 18, 32, 0.75) 50%,
+    rgba(36, 132, 126, 0.42)
+  );
+  border: 1px solid rgba(226, 186, 111, 0.38);
+}
+
+.bark-vs-side {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff2d6;
+}
+
+.bark-vs-side img {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1.5px solid var(--gold);
+}
+
+.bark-vs-mark {
+  font-style: italic;
+  font-weight: 900;
+  font-size: 13px;
+  letter-spacing: 0.14em;
+  color: #ffe399;
+}
+
+.battle-bark-body {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.battle-bark-step {
+  margin-left: auto;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  color: rgba(244, 235, 216, 0.68);
+  white-space: nowrap;
+}
+
+.battle-bark-banner[data-tone='party'] {
+  border-left-color: var(--teal);
+  border-color: rgba(54, 197, 181, 0.48);
+}
+
+.battle-bark-banner[data-tone='enraged'] {
+  border-left-color: var(--red);
+  border-color: rgba(255, 94, 110, 0.58);
+  box-shadow:
+    0 12px 36px rgba(120, 12, 24, 0.42),
+    inset 0 1px 0 rgba(255, 200, 200, 0.14);
+}
+
+.battle-bark-banner.is-entering {
+  animation: battleBarkIn 0.34s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.battle-bark-banner.is-leaving {
+  animation: battleBarkOut 0.28s ease-in forwards;
+}
+
+.battle-bark-speaker {
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--gold);
+  padding-right: 10px;
+  border-right: 1px solid rgba(226, 186, 111, 0.3);
+  white-space: nowrap;
+}
+
+.battle-bark-banner[data-tone='party'] .battle-bark-speaker {
+  color: var(--teal);
+  border-right-color: rgba(54, 197, 181, 0.3);
+}
+
+.battle-bark-banner[data-tone='enraged'] .battle-bark-speaker {
+  color: #ff8e99;
+  border-right-color: rgba(255, 94, 110, 0.34);
+}
+
+.battle-bark-text {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.45;
+  color: #f4ebd8;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.65);
+}
+
+/* ==========================================================================
+   KEYFRAMES
+   ========================================================================== */
+
+@keyframes theaterGoldShimmer {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+@keyframes theaterGrainShift {
+  0% {
+    transform: translate(0, 0);
+  }
+  33% {
+    transform: translate(-1px, 1px);
+  }
+  66% {
+    transform: translate(1px, -1px);
+  }
+  100% {
+    transform: translate(0, 0);
+  }
+}
+
+@keyframes theaterKenBurnsSlow {
+  0% {
+    transform: scale(1.02) translate3d(0%, 0%, 0);
+  }
+  50% {
+    transform: scale(1.09) translate3d(-1.2%, -0.8%, 0);
+  }
+  100% {
+    transform: scale(1.02) translate3d(0%, 0%, 0);
+  }
+}
+
+@keyframes theaterKenBurnsEpilogue {
+  0% {
+    transform: scale(1.12) translate3d(0%, 1%, 0);
+  }
+  100% {
+    transform: scale(1.02) translate3d(0%, -0.5%, 0);
+  }
+}
+
+@keyframes theaterSunbeamDrift {
+  0%,
+  100% {
+    opacity: 0.24;
+    transform: rotate(-24deg) translateX(-4%) scaleY(1);
+  }
+  50% {
+    opacity: 0.46;
+    transform: rotate(-22deg) translateX(4%) scaleY(1.08);
+  }
+}
+
+@keyframes theaterFogDriftA {
+  0% {
+    transform: translateX(-8%) translateY(0);
+    opacity: 0.28;
+  }
+  50% {
+    transform: translateX(8%) translateY(-10px);
+    opacity: 0.46;
+  }
+  100% {
+    transform: translateX(-8%) translateY(0);
+    opacity: 0.28;
+  }
+}
+
+@keyframes theaterFogDriftB {
+  0% {
+    transform: translateX(6%) translateY(0);
+    opacity: 0.2;
+  }
+  50% {
+    transform: translateX(-7%) translateY(8px);
+    opacity: 0.38;
+  }
+  100% {
+    transform: translateX(6%) translateY(0);
+    opacity: 0.2;
+  }
+}
+
+@keyframes theaterMoteFloat {
+  0% {
+    transform: translate3d(0, 20px, 0) scale(0.6);
+    opacity: 0;
+  }
+  18% {
+    opacity: var(--mote-opacity, 0.8);
+  }
+  55% {
+    transform: translate3d(var(--mote-sway, 24px), -45vh, 0) scale(1.1);
+    opacity: var(--mote-opacity, 0.8);
+  }
+  100% {
+    transform: translate3d(calc(var(--mote-sway, 24px) * -0.7), -92vh, 0) scale(0.45);
+    opacity: 0;
+  }
+}
+
+@keyframes theaterPetalFall {
+  0% {
+    transform: translate3d(0, -10vh, 0) rotateX(0deg) rotateY(0deg) rotateZ(0deg);
+    opacity: 0;
+  }
+  12% {
+    opacity: var(--petal-opacity, 0.85);
+  }
+  50% {
+    transform: translate3d(var(--petal-drift, 65px), 48vh, 0) rotateX(180deg) rotateY(140deg)
+      rotateZ(95deg);
+    opacity: var(--petal-opacity, 0.85);
+  }
+  88% {
+    opacity: var(--petal-opacity, 0.7);
+  }
+  100% {
+    transform: translate3d(calc(var(--petal-drift, 65px) * 1.6), 108vh, 0) rotateX(360deg)
+      rotateY(290deg) rotateZ(210deg);
+    opacity: 0;
+  }
+}
+
+@keyframes theaterSpinCW {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes theaterSpinCCW {
+  from {
+    transform: rotate(360deg);
+  }
+  to {
+    transform: rotate(0deg);
+  }
+}
+
+@keyframes theaterCrestHaloPulse {
+  0%,
+  100% {
+    opacity: 0.4;
+    transform: scale(0.97);
+  }
+  50% {
+    opacity: 0.85;
+    transform: scale(1.05);
+  }
+}
+
+@keyframes theaterRuleExpand {
+  0% {
+    transform: scaleX(0);
+    opacity: 0;
+  }
+  30% {
+    opacity: 1;
+  }
+  100% {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+}
+
+@keyframes theaterDrawStroke {
+  0% {
+    stroke-dashoffset: var(--dash-len, 1000);
+    opacity: 0.25;
+  }
+  12% {
+    opacity: 1;
+  }
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+}
+
+@keyframes theaterTitleSettle {
+  0% {
+    opacity: 0;
+    filter: blur(10px);
+    transform: translateY(14px) scale(1.06);
+  }
+  65% {
+    opacity: 1;
+    filter: blur(0px);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0px);
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes theaterSubtitleRise {
+  0% {
+    opacity: 0;
+    transform: translateY(12px);
+    filter: blur(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+@keyframes theaterInkScrollOpen {
+  0% {
+    clip-path: inset(8% 50% 8% 50%);
+    opacity: 0.2;
+    filter: brightness(1.5) sepia(0.35);
+  }
+  100% {
+    clip-path: inset(0% 0% 0% 0%);
+    opacity: 1;
+    filter: brightness(1) sepia(0);
+  }
+}
+
+@keyframes theaterParchmentUnfurl {
+  0% {
+    clip-path: inset(0% 0% 100% 0%);
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    clip-path: inset(0% 0% 0% 0%);
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes theaterWaxStampImpact {
+  0% {
+    opacity: 0;
+    transform: scale(2.4) rotate(-22deg);
+    filter: blur(5px);
+  }
+  58% {
+    opacity: 1;
+    transform: scale(0.92) rotate(4deg);
+    filter: blur(0);
+  }
+  78% {
+    transform: scale(1.05) rotate(-2deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(-4deg);
+  }
+}
+
+@keyframes theaterSheenGlide {
+  0% {
+    transform: translateX(-140%) skewX(-24deg);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.85;
+  }
+  80% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: translateX(260%) skewX(-24deg);
+    opacity: 0;
+  }
+}
+
+@keyframes theaterLoreSwapIn {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+    filter: blur(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+@keyframes theaterCharInk {
+  0% {
+    opacity: 0;
+    filter: blur(3px);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0);
+  }
+}
+
+@keyframes theaterCurtainFade {
+  0% {
+    opacity: 0;
+  }
+  38% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes theaterCurtainDiamond {
+  0% {
+    opacity: 0;
+    transform: rotate(45deg) scale(0.6);
+  }
+  38% {
+    opacity: 1;
+    transform: rotate(45deg) scale(1);
+  }
+  52% {
+    opacity: 1;
+    transform: rotate(45deg) scale(1.04);
+  }
+  100% {
+    opacity: 0;
+    transform: rotate(45deg) scale(1.3);
+  }
+}
+
+@keyframes battleBarkIn {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -10px) scale(0.97);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+
+@keyframes battleBarkOut {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -8px);
+  }
+}
+
+@media (max-width: 720px) {
+  .chapter-theater-bar.is-top {
+    height: 44px;
+    padding-inline: 16px;
+  }
+
+  .chapter-theater-bar-en,
+  .chapter-theater-bar-cn {
+    letter-spacing: 0.14em;
+  }
+
+  .chapter-theater-bar.is-bottom {
+    height: 28px;
+    padding-inline: 14px;
+  }
+
+  .chapter-theater-ceremony {
+    padding-top: 44px;
+  }
+
+  .chapter-theater-ceremony-title {
+    font-size: clamp(20px, 5.2vw, 28px);
+    letter-spacing: 0.08em;
+    padding-left: 0.08em;
+  }
+
+  .chapter-theater-bracket {
+    font-size: clamp(20px, 5.2vw, 28px);
+  }
+
+  .chapter-theater-title {
+    font-size: clamp(17px, 4.4vw, 22px);
+    letter-spacing: 0.08em;
+    padding-left: 0.08em;
+  }
+
+  .chapter-theater-seal {
+    display: none;
+  }
+
+  #chapter-theater[data-single='true'] .chapter-theater-seal {
+    display: block;
+    right: -28px;
+    bottom: -18px;
+    transform: scale(0.76);
+  }
+
+  .chapter-theater-single-panel {
+    padding: 20px 18px 16px;
+  }
+
+  .chapter-theater-prose-wrap {
+    inset: 28px 12px 10px;
+    padding-top: 12px;
+  }
+
+  .chapter-theater-panel {
+    padding: 18px 16px;
+  }
+
+  .battle-bark-banner {
+    top: 56px;
+    padding: 8px 14px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #chapter-theater[data-enhanced='true'],
+  #chapter-theater[data-enhanced='true'] *,
+  .battle-bark-banner {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

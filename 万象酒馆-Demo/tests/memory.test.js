@@ -6,6 +6,7 @@ import { createServer } from 'node:http';
 import {
   pendingMemories,
   applyMemorySummaries,
+  gameTime,
   memoryChat,
   memoryHistory,
   previousDungeonMemory,
@@ -429,4 +430,10 @@ test('real summary API uses its own preset and worldbook rules without leaking t
   } finally {
     await new Promise((resolve) => server.close(resolve));
   }
+});
+
+test('gameTime formats daily snapshots using the 1463-08-24 calendar datum', () => {
+  assert.equal(gameTime({ day: 1, period: 0 }), '1463年8月24日 · 上午');
+  assert.equal(gameTime({ day: 27, period: 1 }), '1463年9月19日 · 中午');
+  assert.equal(gameTime(null), '');
 });

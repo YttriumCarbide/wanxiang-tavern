@@ -1,6 +1,16 @@
 {
-  "description": "世界书一键导出 JSON、草稿与筛选、总结世界书及横屏交互",
-  "scopes": ["quality", "worldbook-editor"],
-  "coreFiles": [],
-  "browserConcurrency": 2
+  "browserConcurrency": 2,
+  "scopes": ["quality", "core", "rp-layout", "destinations", "street"],
+  "coreFiles": [
+    "tests/phase-a-dc-gems-map.test.js",
+    "tests/phase-b-dc-pipeline.test.js",
+    "tests/phase-cd-service-skirmish.test.js",
+    "tests/overland.test.js",
+    "tests/exploration.test.js",
+    "tests/campaign.test.js",
+    "tests/adventure.test.js",
+    "tests/daily.test.js",
+    "tests/tutorial-revision.test.js",
+    "tests/worlds-emblems.test.js"
+  ]
 }

@@ -9,6 +9,14 @@ export async function customizationChecks({ browser, baseURL, output }) {
   await legacySession(page);
   try {
     await page.goto(baseURL);
+    const handle = await page.locator('#ledger-handle').boundingBox();
+    await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(Math.max(10, handle.x - 140), handle.y + handle.height / 2, {
+      steps: 6,
+    });
+    await page.mouse.up();
+    await page.locator('#ledger-drawer-host.is-open').waitFor();
     await page.locator('#party-toggle').click();
     await page.locator('[data-prepare-hero="official-aegis"]').click();
     await page.locator('.prepare-portrait-tools summary').click();

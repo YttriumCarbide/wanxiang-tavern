@@ -30,6 +30,7 @@ import { prepareCorridorRing, prepareBossEmblem } from '../emblem-progression.js
 import { encounterLevel } from '../enemy-growth.js';
 import { recollectionEther } from '../recollections.js';
 import { worldBattleTransition } from './world-battle-transition.js';
+import { refreshWorldSkirmishes } from '../skirmishes.js';
 
 /** @param {import('./context.js').AppContext} context */
 export function createJourney(context) {
@@ -160,7 +161,11 @@ export function createJourney(context) {
     await mountEncounter();
   }
   async function startOverlandBattle(overlandBattle) {
-    if (session.runtime.mode !== 'inn' || session.battle.playing || session.runtime.needsStart)
+    if (
+      (session.runtime.mode !== 'inn' && !overlandBattle.forceTransition) ||
+      session.battle.playing ||
+      session.runtime.needsStart
+    )
       return false;
     return worldBattleTransition(() => enterOverlandBattle(overlandBattle));
   }
@@ -214,9 +219,8 @@ export function createJourney(context) {
     $('#speed').hidden = false;
     $('#inn').hidden = true;
     $('#battle').hidden = false;
-    $('#party-toggle').hidden = true;
-    $('#ai-open').hidden = true;
     $('#back-inn').hidden = !developerOption(session.ai.generationOptions, 'allowRetreat');
+    context.ledger?.sync();
     const spec = currentEncounterSpec(session.journey.expedition, session.battle.state.encounter);
     $('#mode-label').textContent = session.journey.expedition.overlandBattle
       ? `旅途遭遇 · ${spec.name} · Lv.${spec.level}`
@@ -278,6 +282,7 @@ export function createJourney(context) {
       context.generation.refreshReview();
       if (session.journey.expedition.overlandBattle) {
         roundBanner('先手准备 · 1 AP');
+        context.battleBarks?.roundOneStart();
         return;
       }
       if (resuming) {
@@ -287,17 +292,14 @@ export function createJourney(context) {
         return;
       }
       await context.generation.showScene(session.battle.state.encounter, 'before');
-      if (!(
-        session.journey.expedition.exploration?.tutorial && session.battle.state.encounter === 0
-      )) {
-        context.generation.openStory(true);
-        await context.generation.storyClosed();
-      }
+      context.generation.openStory(true);
+      await context.generation.storyClosed();
       if (load !== session.runtime.token || session.runtime.disposed) return;
       context.onboarding?.battleStarted();
       context.companionEvents?.battleStarted();
       context.emblems?.check();
       roundBanner(spec.boss ? `最终战 · ${spec.name}` : '先手准备 · 1 AP');
+      context.battleBarks?.roundOneStart();
     } catch (e) {
       loading.fail(e);
       console.error(e);
@@ -401,6 +403,8 @@ export function createJourney(context) {
       context.generation.save();
     }
     context.backpack?.close();
+    context.battleBarks?.clear();
+    context.chapterTheater?.cancel();
     context.adventure.leave();
     context.companionEvents?.leave();
     context.emblems?.leave();
@@ -421,10 +425,9 @@ export function createJourney(context) {
     $('#result').open && $('#result').close();
     $('#battle').hidden = true;
     $('#inn').hidden = false;
-    $('#party-toggle').hidden = false;
-    $('#ai-open').hidden = false;
     $('#back-inn').hidden = true;
     $('#mode-label').textContent = '';
+    context.ledger?.sync();
     const overlandBattle = session.journey.expedition?.overlandBattle;
     context.shell.mountInn(
       overlandBattle?.returnScene || (session.journey.expedition ? 'gate' : null),
@@ -440,8 +443,17 @@ export function createJourney(context) {
     if (session.journey.expedition.overlandBattle) return context.daily.finishOverlandBattle();
     if (session.journey.expedition.pendingResult)
       return presentResult(session.journey.expedition.pendingResult);
-    if (session.battle.state.phase === 'victory')
+    if (session.battle.state.phase === 'victory') {
+      await context.battleBarks?.battleWon();
       await context.generation.showScene(session.battle.state.encounter, 'after');
+      if (
+        !session.runtime.disposed &&
+        session.runtime.mode === 'battle' &&
+        session.battle.state.encounter === FINAL_ENCOUNTER
+      ) {
+        await context.generation.playEpilogue?.();
+      }
+    }
     if (session.runtime.disposed || session.runtime.mode !== 'battle') return;
     const won = session.battle.state.phase === 'victory',
       spec = currentEncounterSpec(session.journey.expedition, session.battle.state.encounter),
@@ -509,6 +521,7 @@ export function createJourney(context) {
       context.generation.save();
     }
     if (won && complete && explored && !replay) {
+      refreshWorldSkirmishes(session.ai.library, runId || Date.now());
       context.generation.explorationWon(explored, { ether });
       context.quests?.battleWon(explored);
     }

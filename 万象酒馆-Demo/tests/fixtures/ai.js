@@ -33,13 +33,48 @@ export function scriptFixture(ids) {
     })), nextHook: { setting: '铜灯下的旧图还留着一条尚未勘查的支渠。', map: 'forest', artNodes: ['旧路标'] } };
 }
 
+function jsonObjectEnd(text, start) {
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+  for (let i = start; i < text.length; i++) {
+    const ch = text[i];
+    if (escaped) escaped = false;
+    else if (ch === '\\' && inString) escaped = true;
+    else if (ch === '"') inString = !inString;
+    else if (!inString && ch === '{') depth++;
+    else if (!inString && ch === '}' && --depth === 0) return i + 1;
+  }
+  return -1;
+}
+
+function parseContextMessage(text) {
+  let offset = 0;
+  while (offset < text.length) {
+    const start = text.indexOf('{', offset);
+    if (start < 0) return null;
+    if (start === 0 || text[start - 1] === '\n') {
+      const end = jsonObjectEnd(text, start);
+      if (end > start) {
+        try {
+          const value = JSON.parse(text.slice(start, end));
+          if (value?.request?.brief && value.world && ['character', 'script'].includes(value.task))
+            return value;
+        } catch {
+          /* Only the structured current-input message is relevant. */
+        }
+      }
+    }
+    offset = start + 1;
+  }
+  return null;
+}
+
 export function requestContext(messages) {
   for (const message of messages) {
-    if (message.role !== 'user' || !message.content.trim().startsWith('{')) continue;
-    try {
-      const value = JSON.parse(message.content);
-      if (value.request?.brief && value.world && ['character', 'script'].includes(value.task)) return value;
-    } catch { /* Only the structured current-input message is relevant. */ }
+    if (message.role !== 'user' || typeof message.content !== 'string') continue;
+    const value = parseContextMessage(message.content);
+    if (value) return value;
   }
   throw Error('Current task context missing');
 }
@@ -65,4 +100,61 @@ export function compactCharacterDocument() {
   for (const key of ['name', 'title', 'attackName']) delete raw.data[key];
   for (const item of raw.data.skills) delete item.name;
   return raw;
+}
+
+export function scriptV5Fixture(ids) {
+  const lead = ids[0] || 'aegis';
+  return {
+    schemaVersion: 5,
+    story: [
+      `【旁白】雾气漫过水渠砖缝。\n【对白:${lead}】第1幕：前面有苔泥阻路，先把第一批敌人清理掉。`,
+      `【旁白】石阶拐角露出一处干爽平台。\n【对白:${lead}】第2幕：趁还没惊动深处守卫，先看看沿途有什么收获。`,
+      `【旁白】水声骤急，前方桥头蹲伏着高大石偶。\n【对白:${lead}】第3幕：精英守卫拦在闸门前，集中火力打破它。`,
+      `【旁白】岔路口刻着旧水工的标记。\n【对白:${lead}】第4幕：先找清通向中枢闸门的路径，再决定怎么应对门卫。`,
+      `【旁白】尽头铁门后的石像缓缓睁开眼瞳。\n【对白:${lead}】第5幕：最后就是守门石像了，大家准备迎战。`,
+    ],
+    data: {
+      title: '寻灯之路',
+      npcs: [],
+      items: [],
+      nextHook: { setting: '桥头遗留的铜灯还留着微温，指向更深处的暗渠。', phase: '承1' },
+      prologue:
+        '潮湿的晨雾贴着古老引水渠的石沿流动，旧铜灯在青风衣下摇出细碎金光。石缝间传来的水声时断时续，仿佛正催促一行人揭开主闸封堵背后的真相。',
+      battleLines: {
+        bossIntro: '未持令符者，不得越过此闸半步！',
+        partyReply: '路就在前面，别被它的威压吓退！',
+        bossEnraged: '石壳裂隙亮起炽光，它要强行聚力了！',
+        bossDefeat: '沉重的石躯轰然倾颓，水声重新奔涌起来。',
+      },
+      epilogueGal:
+        `【旁白】闸门终于重新敞开，蓄积多时的清泉顺着石槽欢快奔流。\n【对白:${lead}】总算赶在水路完全淤死之前修好了。先歇口气吧，回酒馆后再整理这些发现。`,
+      epilogueProse:
+        '暮色悄悄染透石渠上方的藤蔓时，一行人迎着重新响起的水声踏上归途。那盏微温的铜灯仍在掌心轻轻发亮，将下一个未知夜晚的轮廓照亮在远处。',
+      adventure: {
+        event: {
+          title: '渠道旁的小憩',
+          description: '水闸暂时静了下来，队伍决定趁机休整片刻。',
+          choices: [
+            { label: '擦亮旧铜灯', detail: '借着微光校对水渠图谱。' },
+            { label: '清理背包补给', detail: '把沿途捡到的药剂分装好。' },
+          ],
+        },
+        quest: {
+          title: '闸室前的谜题',
+          overview: [
+            { location: '分水碑', detail: '刻着三道磨损的水位刻度。' },
+            { location: '石栏边', detail: '挂着半截生锈的铁链。' },
+            { location: '排水口', detail: '水面漂着几片刚被冲落的青苔。' },
+            { location: '值守亭', detail: '石桌上放着半盏尚未燃尽的油灯。' },
+          ],
+          description: '通往最后一道门闸的走廊布满青苔，必须先弄清守卫与机关的规律。',
+          commonState: '机关谜题已解开，通往最终守门石像的道路已经畅通。',
+          goals: [
+            { objective: '找到通向主闸室的路', required: true },
+            { objective: '查明水渠断流的缘由', required: false },
+          ],
+        },
+      },
+    },
+  };
 }

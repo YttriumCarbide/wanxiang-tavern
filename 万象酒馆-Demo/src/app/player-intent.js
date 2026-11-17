@@ -6,21 +6,28 @@ export function createPlayerIntentPrompt(events, id = 'player-intent') {
   dialog.innerHTML = `<form method="dialog">
     <h2 id="${id}-title"></h2><p></p>
     <label>这次想做什么，或想说什么？<textarea rows="3" maxlength="2000" placeholder="选填，可以直接继续"></textarea></label>
-    <footer><button value="back">返回</button><button value="continue">继续</button></footer>
+    <footer><button value="back">返回</button><button type="button" data-intent-fast hidden></button><button value="continue">继续</button></footer>
   </form>`;
   document.body.append(dialog);
   const field = dialog.querySelector('textarea');
+  const fastButton = dialog.querySelector('[data-intent-fast]');
   let pending;
+  events.on(fastButton, 'click', () => {
+    dialog.close('fast');
+  });
   events.on(dialog, 'close', () => {
     const settle = pending;
     pending = null;
-    settle?.(dialog.returnValue === 'continue' ? field.value.trim() : null);
+    if (dialog.returnValue === 'fast') settle?.({ fast: true });
+    else settle?.(dialog.returnValue === 'continue' ? field.value.trim() : null);
   });
   return {
-    ask(title, detail) {
+    ask(title, detail, { fastTravelLabel = '' } = {}) {
       if (pending) return Promise.resolve(null);
       dialog.querySelector('h2').textContent = title;
       dialog.querySelector('p').textContent = detail;
+      fastButton.hidden = !fastTravelLabel;
+      fastButton.textContent = fastTravelLabel;
       dialog.returnValue = '';
       field.value = '';
       dialog.showModal();

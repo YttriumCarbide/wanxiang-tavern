@@ -1,5 +1,6 @@
 import { newLibrary } from '../../src/ai/library.js';
 import { applyGeneratedReset } from '../../src/app/generated-reset.js';
+import { BASE_WORLDS } from '../../src/worlds.js';
 
 export async function openShelfPanel(page, action) {
   const frame = page.frameLocator('#inn-frame iframe');
@@ -22,7 +23,9 @@ export async function legacySession(page) {
     getItem: (key) => values.get(key) || null,
     setItem: (key, value) => values.set(key, value),
   });
-  values.set('wanxiang.worldbooks.v1', JSON.stringify(newLibrary()));
+  const legacy = newLibrary();
+  legacy.unlockedDungeons = [...BASE_WORLDS];
+  values.set('wanxiang.worldbooks.v1', JSON.stringify(legacy));
   await page.addInitScript(
     (entries) => {
       if (window.origin === 'null') return;
@@ -51,8 +54,43 @@ export async function dismissAutomaticJournals(page) {
       window.automaticJournals = JSON.parse(
         sessionStorage.getItem('test-automatic-journals') || '[]',
       );
+      window.automaticTheaters = JSON.parse(
+        sessionStorage.getItem('test-automatic-theaters') || '[]',
+      );
       let scheduled = false;
+      let theaterScheduled = false;
       const observer = new MutationObserver(() => {
+        const theater = document.querySelector('#chapter-theater');
+        if (
+          theater &&
+          !theater.hidden &&
+          theater.dataset.testScript === 'true' &&
+          !theater.classList.contains('is-closing') &&
+          !theaterScheduled
+        ) {
+          theaterScheduled = true;
+          setTimeout(() => {
+            theaterScheduled = false;
+            if (
+              theater.hidden ||
+              theater.dataset.testScript !== 'true' ||
+              theater.classList.contains('is-closing')
+            )
+              return;
+            if (theater.dataset.revealed === 'true') {
+              window.automaticTheaters.push({
+                mode: theater.dataset.mode,
+                theme: theater.dataset.theme,
+                heading: theater.querySelector('.chapter-theater-title')?.textContent || '',
+              });
+              sessionStorage.setItem(
+                'test-automatic-theaters',
+                JSON.stringify(window.automaticTheaters),
+              );
+            }
+            theater.querySelector('#chapter-theater-continue')?.click();
+          }, 0);
+        }
         const stage = document.querySelector('#gal-stage');
         if (
           stage &&
@@ -92,10 +130,13 @@ export async function dismissAutomaticJournals(page) {
         attributeFilter: [
           'open',
           'hidden',
+          'class',
           'data-owner',
           'data-automatic',
           'data-typing',
           'data-leaving',
+          'data-revealed',
+          'data-test-script',
         ],
       });
     });

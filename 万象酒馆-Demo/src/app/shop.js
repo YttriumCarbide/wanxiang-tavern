@@ -59,8 +59,12 @@ export function createShop(context) {
         .map(({ id, left }) => {
           const food = INGREDIENTS[id];
           return html`<button data-food-select="${id}" aria-pressed="${id === ingredient}">
-            ${foodArt(food)}<strong>${food.name}</strong
-            ><small>${food.price} 金币 · 库存 ${left}</small>
+            <span class="shop-row-art">${foodArt(food)}</span>
+            <span class="shop-row-info">
+              <strong>${food.name}</strong>
+              <span class="shop-row-sub">限购剩余 ${left}</span>
+            </span>
+            <small>${food.price}<img src="./assets/icons/gold.svg" alt="金币" /></small>
           </button>`;
         })
         .join('');
@@ -68,21 +72,28 @@ export function createShop(context) {
       const left = state.stock.find(({ id }) => id === ingredient)?.left || 0;
       panel.querySelector('#shop-detail').innerHTML = food
         ? html`
-            <div class="shop-art">${foodArt(food)}</div>
+            <div class="shop-art"><span class="shop-orbit"></span>${foodArt(food)}</div>
             <h3>${food.name}</h3>
+            <p>${escapeText(food.note || '可带回后厨烹制本日膳食的严选食材。')}</p>
             <small class="shop-stock"
-              >背包中 ${state.inventory[food.id] || 0} · 限购剩余 ${left}</small
+              >行囊 ${state.inventory[food.id] || 0} · 今日余量 ${left}</small
             >
-            <button
-              class="primary"
-              data-food-buy="${food.id}"
-              ${left && inventory.gold >= food.price ? '' : 'disabled'}
-            >
-              购买 <b>${food.price}</b><img src="./assets/icons/gold.svg" alt="金币" />
-            </button>
-            ${['buy', 'cook'].includes(state.tutorial) ? '<button data-food-dine>准备饭菜</button>' : ''}
+            <div class="shop-detail-actions">
+              <button
+                class="primary"
+                data-food-buy="${food.id}"
+                ${left && inventory.gold >= food.price ? '' : 'disabled'}
+              >
+                购买 <b>${food.price}</b><img src="./assets/icons/gold.svg" alt="金币" />
+              </button>
+              ${
+                ['buy', 'cook'].includes(state.tutorial)
+                  ? '<button data-food-dine>准备饭菜</button>'
+                  : ''
+              }
+            </div>
           `
-        : '<p>当前暂无食材。</p>';
+        : '<p class="shop-empty">当前暂无食材。</p>';
       panel.querySelector('#shop-status').textContent =
         state.tutorial === 'buy' ? '购买乡村面包与奶酪。' : '';
       return;
@@ -98,8 +109,12 @@ export function createShop(context) {
       .map(
         (item) =>
           html`<button data-shop-item="${item.id}" aria-pressed="${selected === item.id}">
-            <img src="${item.icon}" alt="" /><strong>${item.name}</strong
-            ><small>${item.price}<img src="./assets/icons/gold.svg" alt="金币" /></small>
+            <span class="shop-row-art"><img src="${item.icon}" alt="" /></span>
+            <span class="shop-row-info">
+              <strong>${item.name}</strong>
+              <span class="shop-row-sub">持有 ${inventory.items[item.id] || 0}</span>
+            </span>
+            <small>${item.price}<img src="./assets/icons/gold.svg" alt="金币" /></small>
           </button>`,
       )
       .join('');
@@ -109,14 +124,16 @@ export function createShop(context) {
       </div>
       <h3>${item.name}</h3>
       <p>${escapeText(item.text)}</p>
-      <small class="shop-stock">背包中 ${inventory.items[item.id] || 0}</small
-      ><button
-        class="primary"
-        data-buy="${item.id}"
-        ${inventory.gold < item.price ? 'disabled' : ''}
-      >
-        购买 <b>${item.price}</b><img src="./assets/icons/gold.svg" alt="金币" />
-      </button>`;
+      <small class="shop-stock">行囊持有 ${inventory.items[item.id] || 0}</small>
+      <div class="shop-detail-actions">
+        <button
+          class="primary"
+          data-buy="${item.id}"
+          ${inventory.gold < item.price ? 'disabled' : ''}
+        >
+          购买 <b>${item.price}</b><img src="./assets/icons/gold.svg" alt="金币" />
+        </button>
+      </div>`;
   }
   function open({ preparation = false, ingredients = false } = {}) {
     if (
@@ -222,7 +239,7 @@ export function createShop(context) {
     panel.querySelector('.shop-stock').animate(
       [
         { color: '#f8df91', scale: '1.1' },
-        { color: '#9fbaa9', scale: '1' },
+        { color: '#b9aa90', scale: '1' },
       ],
       { duration: 650 },
     );

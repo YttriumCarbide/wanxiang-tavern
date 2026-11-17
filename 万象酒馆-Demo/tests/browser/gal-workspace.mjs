@@ -267,12 +267,8 @@ export async function galWorkspaceChecks({ browser, baseURL, output }) {
     );
     await finishPages();
     await page.locator('[data-gal="close"]').click();
-    await page.locator('[data-daily="open"]').click();
-    await page.locator('[data-daily-slot="0"]').click();
-    await page.locator('[data-daily-action="dungeon"]').click();
-    await page.locator('[data-daily="confirm"]').click();
-    await frame.locator('canvas').evaluate(() => window.assetPreview.placeNow('gate'));
-    await frame.locator('#enter').click();
+    await page.locator('[data-daily="dungeon"]').click();
+    await page.locator('#destination-dialog[open]').waitFor();
     await page.locator('#destination-region-confirm').click();
     await page.locator('#destination-start').click();
     await page.locator('#party-panel').waitFor({ state: 'visible' });
@@ -295,9 +291,8 @@ export async function galWorkspaceChecks({ browser, baseURL, output }) {
     assert.equal(await page.locator('#prepare-done').isDisabled(), true);
     assert.equal(await page.locator('#generation-progress').isVisible(), false);
     await page.locator('[data-prepare-slot="0"]').click();
-    await page.locator('.prepare-gear-row').first().click();
+    await page.locator('.prepare-gear-row').nth(2).click();
     await page.locator('[data-picker-value="gal-owned"]').click();
-    await page.locator('#prepare-character-done').click();
     assert(
       (await page.evaluate(() => demo.getLibrary())).characters
         .find((member) => member.id === reserveId)
@@ -340,7 +335,6 @@ export async function galWorkspaceChecks({ browser, baseURL, output }) {
       ),
       null,
     );
-    await page.locator('#prepare-character-done').click();
     releaseScript();
     await page.waitForFunction(() => !document.querySelector('#prepare-done').disabled);
     assert.equal(calls.filter((call) => call.kind === 'script').length, 1);
@@ -441,7 +435,6 @@ export async function galWorkspaceChecks({ browser, baseURL, output }) {
       () => document.querySelector('#inn-frame iframe')?.contentWindow?.assetPreview,
     );
     await frame.locator('canvas').evaluate(() => window.assetPreview.placeNow('table'));
-    await page.locator('[data-daily="switch"]').click();
     await page.locator('[data-daily="chat"]').click();
     await page.locator('[data-workspace="people"]').first().click();
     const refreshedSelection = await page

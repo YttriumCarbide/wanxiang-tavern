@@ -98,15 +98,21 @@ test('same-name equipment is limited per character across distinct templates and
   for (const id of ['one', 'two'])
     library.equipment.catalog.push(
       normalizeEquipment(
-        { name: '同名指环', description: 'hp+1', stats: { hp: 1 }, rules: [] },
+        { name: '同名长剑', category: 'weapon', description: 'hp+1', stats: { hp: 1 }, rules: [] },
         { id, name: '碎片', value: 10 },
       ),
     );
+  library.equipment.catalog.push(
+    normalizeEquipment(
+      { name: '同名长剑', category: 'armor', description: 'hp+1', stats: { hp: 1 }, rules: [] },
+      { id: 'three', name: '铁片', value: 10 },
+    ),
+  );
   buyEquipment(library, 'one', 'a');
   buyEquipment(library, 'two', 'b');
-  buyEquipment(library, 'two', 'c');
+  buyEquipment(library, 'three', 'c');
   equip(library, library.characters[0].id, 0, 'a');
-  assert.throws(() => equip(library, library.characters[0].id, 1, 'b'), /同名/);
+  assert.throws(() => equip(library, library.characters[0].id, 1, 'c'), /同名/);
   equip(library, library.characters[1].id, 0, 'b');
   library.characters[0].equipment[1] = 'c';
   assert.equal(equippedDefinitions(library, library.characters[0]).length, 1);

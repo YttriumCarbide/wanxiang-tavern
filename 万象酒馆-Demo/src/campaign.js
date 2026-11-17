@@ -1,11 +1,13 @@
 import { rearUnlocked } from './formation-access.js';
 import { restoreGrowth } from './growth.js';
 import { newLibrary, officialCharacter } from './ai/library.js';
+import { normalizeDcAttrs } from './dc.js';
 
 export function newCampaign(protagonist) {
   const library = newLibrary();
   library.characters = [structuredClone(protagonist), officialCharacter('edith')];
   library.characters[0].combat.limit = 2;
+  library.characters[0].dcAttrs = normalizeDcAttrs(protagonist.dcAttrs, library.characters[0]);
   library.characters[0].growth = restoreGrowth(
     { rarity: protagonist.growth?.rarity, seed: protagonist.growth?.seed },
     protagonist.id,

@@ -85,74 +85,103 @@ export function createSelection(context) {
   }
   function previewEnemy(id, base, result) {
     const d = context.roster.get(id);
-    const index = result.events.findIndex(
-      (e) => e.actor === id && ['enemy', 'skip'].includes(e.type),
-    );
-    if (index < 0 || result.events[index].type === 'skip')
+    const matching = result.events
+      .map((event, index) => ({ event, index }))
+      .filter(({ event }) => event.actor === id && ['enemy', 'skip'].includes(event.type));
+    const active = matching.filter(({ event }) => event.type === 'enemy');
+    if (!matching.length || !active.length)
       return { id, name: d.name, cancelled: true, targets: [] };
-    const event = result.events[index],
-      before = index ? result.events[index - 1].after : base,
-      move = intent(before, id);
-    return {
-      id,
-      name: d.name,
-      at: event.at,
-      move: move.name,
-      selfHeal: Math.max(0, event.after.units[id].hp - before.units[id].hp),
-      selfMana: Math.max(0, event.after.units[id].mp - before.units[id].mp),
-      selfBuffs: [
+    const moves = [];
+    const targetMap = new Map();
+    const selfBuffMap = new Map();
+    let selfHeal = 0;
+    let selfMana = 0;
+    const ROMAN = ['Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ'];
+    for (const { event, index } of active) {
+      const before = index ? result.events[index - 1].after : base;
+      const actionIdx = event.actionIndex ?? 0;
+      const move = intent(before, id, actionIdx);
+      moves.push(
+        active.length > 1 ? `${ROMAN[actionIdx] || actionIdx + 1} ${move.name}` : move.name,
+      );
+      selfHeal += Math.max(0, event.after.units[id].hp - before.units[id].hp);
+      selfMana += Math.max(0, event.after.units[id].mp - before.units[id].mp);
+      const selfBuffKeys = [
         ...[
           ...new Set([
             ...Object.keys(move.selfBuff || {}),
-            ...move.effects
+            ...(move.effects || [])
               .filter((effect) => effect.type === 'buff' && !targetsPlayer(effect))
               .map((effect) => effect.buff),
           ]),
-        ].map((key) => ({ key })),
-        ...(move.selfShield ? [{ key: 'shield' }] : []),
-      ]
-        .map(({ key }) => ({
-          key,
-          value:
-            key === 'shield'
-              ? Math.max(0, event.after.units[id].block - before.units[id].block)
-              : Math.max(
-                  0,
-                  (event.after.units[id].buffs[key] || 0) - (before.units[id].buffs[key] || 0),
-                ),
-        }))
-        .filter(({ value }) => value > 0),
-      cancelled: false,
-      targets: (move.effects.some(targetsPlayer)
+        ],
+        ...(move.selfShield ? ['shield'] : []),
+      ];
+      for (const key of selfBuffKeys) {
+        const gained =
+          key === 'shield'
+            ? Math.max(0, event.after.units[id].block - before.units[id].block)
+            : Math.max(
+                0,
+                (event.after.units[id].buffs[key] || 0) - (before.units[id].buffs[key] || 0),
+              );
+        if (gained > 0) selfBuffMap.set(key, (selfBuffMap.get(key) || 0) + gained);
+      }
+      const hitSlots = (move.effects || []).some(targetsPlayer)
         ? before.units[id].buffs.balance
           ? [0, 1, 2]
           : move.slots || [move.slot]
-        : []
-      ).map((slot) => {
-        if (!before.formation[slot]) return { slot, id: null, name: '空位', damage: 0, buffs: [] };
-        const id = before.formation[slot],
-          prefix = `${d.name} → ${context.roster.get(id).name}：`,
-          damage = event.logs
-            .filter((t) => t.startsWith(prefix))
-            .reduce((n, t) => n + Number(t.match(/：(\d+)伤害/)?.[1] || 0), 0);
+        : [];
+      for (const slot of hitSlots) {
+        const unitId = before.formation[slot];
+        if (!unitId) {
+          if (!targetMap.has(`empty-${slot}`))
+            targetMap.set(`empty-${slot}`, { slot, id: null, name: '空位', damage: 0, buffs: [] });
+          continue;
+        }
+        const targetName = context.roster.get(unitId).name;
+        const prefix = `${d.name} → ${targetName}：`;
+        const damage = event.logs
+          .filter((t) => t.startsWith(prefix))
+          .reduce((n, t) => n + Number(t.match(/：(\d+)伤害/)?.[1] || 0), 0);
         const buffs = (move.effects || [])
           .filter((e) => e.type === 'buff')
           .map((e) => ({
             key: e.buff,
             value: Math.max(
               0,
-              (event.after.units[id].buffs[e.buff] || 0) - (before.units[id].buffs[e.buff] || 0),
+              (event.after.units[unitId].buffs[e.buff] || 0) -
+                (before.units[unitId].buffs[e.buff] || 0),
             ),
           }))
           .filter((b) => b.value > 0);
-        return {
+        const key = `${slot}:${unitId}`;
+        const existing = targetMap.get(key) || {
           slot,
-          id,
-          name: context.roster.get(id).name,
-          damage,
-          buffs,
+          id: unitId,
+          name: targetName,
+          damage: 0,
+          buffs: [],
         };
-      }),
+        existing.damage += damage;
+        for (const b of buffs) {
+          const prev = existing.buffs.find((item) => item.key === b.key);
+          if (prev) prev.value += b.value;
+          else existing.buffs.push({ ...b });
+        }
+        targetMap.set(key, existing);
+      }
+    }
+    return {
+      id,
+      name: d.name,
+      at: active[0].event.at,
+      move: moves.join(' / '),
+      selfHeal,
+      selfMana,
+      selfBuffs: [...selfBuffMap.entries()].map(([key, value]) => ({ key, value })),
+      cancelled: false,
+      targets: [...targetMap.values()],
     };
   }
   function eligibleTargets() {

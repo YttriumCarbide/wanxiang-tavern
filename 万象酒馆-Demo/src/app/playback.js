@@ -39,6 +39,7 @@ export function createPlayback(context) {
 
     if (context.emblems && !context.emblems.beforeCommit()) return;
     session.battle.playing = true;
+    context.ledger?.sync();
     try {
       context.selection.clearSelection(true);
       const result = session.battle.forecast;
@@ -80,12 +81,14 @@ export function createPlayback(context) {
           context.renderer.render();
           session.runtime.view?.playEvent(event, before);
           context.audio.combat(event, before, session.battle.speed);
-          if (event.type === 'bossPhase')
+          if (event.type === 'bossPhase') {
+            context.battleBarks?.bossEnraged(event.actor);
             await showTurnNotice(
               '第二阶段',
               `${event.after.heroDefinitions?.[event.actor]?.name || event.after.enemyDefinitions?.[event.actor]?.name || event.actor} · 冲击禁锢，本回合剩余行动跳过`,
               2200 * session.battle.speed,
             );
+          }
         }
         context.renderer.render();
         await sleep(PLAYBACK_BEAT_MS / session.battle.speed);
@@ -147,6 +150,7 @@ export function createPlayback(context) {
       session.battle.activeCell = -1;
       context.renderer.render();
       context.emblems?.check();
+      context.ledger?.sync();
     }
   }
   return { showTurnNotice, commit };

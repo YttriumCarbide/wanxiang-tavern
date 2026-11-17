@@ -333,10 +333,17 @@ test('authored skills, cap rules, all five equipped emblems and three equipment 
   const library = newLibrary();
   library.emblems = Object.keys(EMBLEMS);
   for (const [index, id] of library.emblems.entries()) library.characters[index].emblemId = id;
+  const categories = ['weapon', 'armor', 'pendant'];
   for (let slot = 0; slot < 3; slot++) {
     library.equipment.catalog.push(
       normalizeEquipment(
-        { name: '测试装备' + slot, description: 'hp+1', stats: { hp: 1 }, rules: [] },
+        {
+          name: '测试装备' + slot,
+          category: categories[slot],
+          description: 'hp+1',
+          stats: { hp: 1 },
+          rules: [],
+        },
         { id: 'gear-' + slot, name: '残片', value: 10 },
       ),
     );
@@ -348,7 +355,7 @@ test('authored skills, cap rules, all five equipped emblems and three equipment 
     restored.characters.slice(0, 5).map((member) => member.emblemId),
     library.emblems,
   );
-  assert.deepEqual(restored.characters[0].equipment, ['owned-0', 'owned-1', 'owned-2']);
+  assert.deepEqual(restored.characters[0].equipment, ['owned-0', 'owned-1', 'owned-2', null]);
   assert.equal(compileRoster(restored).aegis.level, 1);
   const pandora = officialCharacter('pandora');
   assert.equal(pandora.combat.skills[0].effects[1].value, 2);

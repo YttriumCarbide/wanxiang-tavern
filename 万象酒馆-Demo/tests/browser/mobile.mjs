@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import path from 'node:path';
 import { legacySession } from './legacy-session.mjs';
 import { newLibrary } from '../../src/ai/library.js';
+import { ITEMS } from '../../src/content/items.js';
 import { normalizeEquipment } from '../../src/equipment.js';
 
 /** Send real touch input so browser panning, pointer cancellation and click suppression all run. */
@@ -104,6 +105,11 @@ export async function mobileChecks({ browser, baseURL, output }) {
   const library = newLibrary();
   library.inventory.ether = 450;
   library.inventory.gold = 500;
+  library.inventory.bagUnlocked = true;
+  library.dining = {
+    ...(library.dining || {}),
+    inventory: { ...(library.dining?.inventory || {}), 'country-bread': 3 },
+  };
   library.equipment.catalog.push(
     normalizeEquipment(
       {
@@ -132,7 +138,7 @@ export async function mobileChecks({ browser, baseURL, output }) {
     { width: 844, height: 390 },
   ]) {
     const page = await browser.newPage({ viewport, hasTouch: true, deviceScaleFactor: 3 });
-    page.on('pageerror', (error) => errors.push(error.message));
+    page.on('pageerror', (error) => errors.push(error.stack || error.message));
     await legacySession(page);
     await page.addInitScript((value) => {
       if (location.origin === 'null') return;
@@ -181,6 +187,34 @@ export async function mobileChecks({ browser, baseURL, output }) {
       assert(stats.pixelRatio <= 1.25);
       assert.equal(await page.locator('#workshop-dialog').count(), 1);
       assert.equal(await page.locator('#workshop-dialog').isVisible(), false);
+      const iconTextWidths = await page
+        .locator('#ledger-corner :is(#saves-open, #audio-toggle, #fullscreen-toggle, #ai-open)')
+        .evaluateAll((buttons) =>
+          buttons.map((button) => {
+            const label = button.querySelector('span');
+            return {
+              id: button.id,
+              visible: button.getBoundingClientRect().width > 0,
+              labelW: label ? label.getBoundingClientRect().width : 0,
+            };
+          }),
+        );
+      assert.deepEqual(
+        iconTextWidths.map((item) => item.id),
+        ['saves-open', 'audio-toggle', 'fullscreen-toggle', 'ai-open'],
+      );
+      assert(
+        iconTextWidths.every((item) => item.visible && item.labelW <= 1),
+        'Top-right corner buttons render stroke icons without visible text',
+      );
+      await page.locator('#ledger-handle').click();
+      await page.locator('#ledger-drawer-host.is-open').waitFor();
+      await page.locator('#ledger-close').click();
+      await page.locator('#ledger-drawer').waitFor({ state: 'hidden' });
+      await page.locator('#audio-toggle').click();
+      await page.locator('#audio-panel').waitFor({ state: 'visible' });
+      await page.keyboard.press('Escape');
+      await page.locator('#audio-panel').waitFor({ state: 'hidden' });
       await page.locator('#ai-open').click();
       for (const tab of ['settings', 'prompts', 'game']) {
         await page.locator('[data-ai-tab="' + tab + '"]').click();
@@ -199,6 +233,24 @@ export async function mobileChecks({ browser, baseURL, output }) {
         'Covered tavern stops rendering',
       );
       await page.locator('#ai-close').click();
+      const handleBox = await page.locator('#ledger-handle').boundingBox();
+      await page.mouse.move(handleBox.x + handleBox.width / 2, handleBox.y + handleBox.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(Math.max(10, handleBox.x - 140), handleBox.y + handleBox.height / 2, {
+        steps: 6,
+      });
+      await page.mouse.up();
+      await page.locator('#ledger-drawer-host.is-open').waitFor();
+      assert.deepEqual(
+        await page
+          .locator('#ledger-drawer .ledger-foot button')
+          .evaluateAll((buttons) => buttons.map((button) => button.id)),
+        ['ledger-speed-toggle', 'generation-review'],
+      );
+      await page.locator('#ledger-speed-toggle').click();
+      assert.match(await page.locator('#ledger-speed-toggle').textContent(), /×2/);
+      await page.locator('#ledger-speed-toggle').click();
+      assert.match(await page.locator('#ledger-speed-toggle').textContent(), /×1/);
       await page.locator('#party-toggle').click();
       await measure('#party-panel', 'preparation');
       const slots = await page.locator('[data-prepare-slot]').evaluateAll((nodes) =>
@@ -212,8 +264,7 @@ export async function mobileChecks({ browser, baseURL, output }) {
         if (slot.y + slot.h > viewport.height || slot.h < 30)
           problems.push({ label: 'formation', viewport, slot });
       await page.locator('[data-prepare-slot="0"]').click();
-      await measure('#prepare-character-dialog', 'character');
-      await page.locator('#prepare-character-close').click();
+      await page.locator('#prepare-detail .prepare-inspector-col').waitFor({ state: 'visible' });
       await page.locator('#prepare-close').click();
       await frame.locator('canvas').evaluate(() => window.assetPreview.placeNow('supplies'));
       await frame.locator('#condenser-open').click();
@@ -304,16 +355,53 @@ export async function mobileChecks({ browser, baseURL, output }) {
       await measure('.command-controls', 'battle-controls');
       await checkTimeline(page, viewport);
       const intersects = await page.evaluate(() => {
-        const save = document.querySelector('#saves-open').getBoundingClientRect();
+        const corner = document.querySelector('#ledger-corner').getBoundingClientRect();
+        const handle = document.querySelector('#ledger-handle').getBoundingClientRect();
         const round = document.querySelector('.round-indicator').getBoundingClientRect();
-        return (
-          save.left < round.right &&
-          save.right > round.left &&
-          save.top < round.bottom &&
-          save.bottom > round.top
-        );
+        const overlaps = (a, b) =>
+          a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+        return overlaps(corner, round) || overlaps(handle, round);
       });
-      assert.equal(intersects, false, 'Save and round indicator do not overlap');
+      assert.equal(intersects, false, 'Corner bar and edge handle do not overlap round indicator');
+      const battleHandle = await page.locator('#ledger-handle').boundingBox();
+      await page.mouse.move(
+        battleHandle.x + battleHandle.width / 2,
+        battleHandle.y + battleHandle.height / 2,
+      );
+      await page.mouse.down();
+      await page.mouse.move(
+        Math.max(10, battleHandle.x - 140),
+        battleHandle.y + battleHandle.height / 2,
+        { steps: 6 },
+      );
+      await page.mouse.up();
+      await page.locator('#ledger-drawer-host.is-open').waitFor();
+      await measure('#ledger-drawer', 'battle-ledger');
+      assert.equal(await page.locator('#ledger-drawer [data-daily="service"]').isDisabled(), true);
+      assert.equal(await page.locator('#ledger-drawer #party-toggle').isDisabled(), true);
+      await page.locator('#ledger-close').click();
+      await page.locator('#ledger-drawer').waitFor({ state: 'hidden' });
+      await page.locator('#backpack-open').click();
+      await page.locator('#backpack-dialog.expanded').waitFor();
+      await page
+        .locator('#backpack-dialog')
+        .evaluate((node) =>
+          Promise.all(node.getAnimations().map((a) => a.finished.catch(() => {}))),
+        );
+      assert.equal(
+        await page.locator('#backpack-items .bag-item').count(),
+        Object.keys(ITEMS).length,
+      );
+      assert.doesNotMatch(
+        await page.locator('#backpack-dialog').textContent(),
+        /乡村面包|烹饪食材/,
+        'Battle backpack shows only usable combat items, never cooking ingredients',
+      );
+      await page.screenshot({
+        path: path.join(output, 'backpack-battle-' + viewport.width + '.png'),
+      });
+      await page.keyboard.press('Escape');
+      await page.locator('#backpack-dialog').waitFor({ state: 'hidden' });
       const front = await page.evaluate(() => demo.getState().formation[0]);
       await page.locator(`[data-unit="${front}"]`).tap();
       await measure('#details', 'battle-details');

@@ -36,7 +36,7 @@ export const SILVER_CROWN_PLACES = Object.freeze({
   },
   'crown-canal': {
     name: '银渠码头',
-    environment: '货驳泊在刻有水位线的石岸旁，蓝瓦仓房与铜制闸机沿运河排列。',
+    environment: '货驳泊在石岸旁，蓝瓦商栈与运河拱桥沿水路依次排开。',
     wide: true,
     night: true,
     exits: {
@@ -85,7 +85,7 @@ export const SILVER_CROWN_PLACES = Object.freeze({
   },
   'crown-floodgate': {
     name: '水闸检修台',
-    environment: '闸门下方水声回响，堤壁水尺和黄铜升降机构仍在使用。',
+    environment: '拱桥下方的深水水道水声回响，高耸的青石堤壁隔开了内外河湾。',
     night: true,
     exits: { 'crown-canal': [0.2, 0.6] },
     spots: [[0.54, 0.87]],
@@ -98,7 +98,7 @@ export const SILVER_CROWN_PLACES = Object.freeze({
   },
   'crown-ledger': {
     name: '过关账房',
-    environment: '砝码、铅封与收好的账卷存放在门庭旁的有灯石室里。',
+    environment: '门庭旁的有灯石室里摆着木桌与旧长椅，供往来旅人与商队歇脚避风。',
     exits: { 'crown-gateward': [0.22, 0.6] },
     spots: [[0.52, 0.87]],
   },

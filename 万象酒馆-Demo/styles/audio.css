@@ -14,11 +14,12 @@
 }
 #audio-panel {
   position: fixed;
-  top: 64px;
-  right: 20px;
+  inset: max(54px, calc(env(safe-area-inset-top) + 44px)) max(14px, env(safe-area-inset-right)) auto
+    auto;
   width: min(260px, calc(100vw - 24px));
+  margin: 0;
   padding: 18px;
-  z-index: 80;
+  z-index: 2055;
   color: #f2eee3;
   background: rgba(14, 28, 26, 0.9);
   border: 1px solid rgba(226, 186, 111, 0.45);
@@ -28,6 +29,9 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
+}
+#audio-panel[hidden] {
+  display: none;
 }
 #audio-panel > strong {
   display: block;

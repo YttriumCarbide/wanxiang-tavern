@@ -19,6 +19,12 @@
   color: #a9b5a7;
   font-size: 11px;
 }
+body:not(.in-battle) .app-header {
+  display: none;
+}
+.in-battle .app-header {
+  padding-right: max(176px, calc(env(safe-area-inset-right) + 168px));
+}
 .in-battle :is(#scene-visitors-refresh, #scene-return-tavern) {
   display: none;
 }
@@ -1117,6 +1123,9 @@ dialog::backdrop {
 @media (pointer: coarse) and (orientation: landscape) and (max-width: 1100px) and (max-height: 600px) {
   .app-header {
     height: 35px;
+  }
+  .in-battle .app-header {
+    padding-right: max(146px, calc(var(--safe-right) + 140px));
   }
   .app-header nav {
     gap: 3px;

@@ -66,16 +66,11 @@ export function tutorialCommitIssue(library, state, forecast) {
     return '先在◇先手格编排并执行一次行动。';
   if (index === 0 && state.phase !== 'opening') {
     if (!tasks.intent) return '先点击敌方时间格，查看敌人的意图。';
-    if (!tasks.journal) return '先手动打开一次路途手记，再关闭继续。';
     if (!tasks.dodge && !demonstrated(forecast, 'dodge'))
       return '请在敌人行动前移到空位，让攻击落空后再结算。';
   }
-  if (
-    index === 0 &&
-    victory &&
-    !(tasks.intent && tasks.journal && (tasks.dodge || demonstrated(forecast, 'dodge')))
-  )
-    return '先完成查看意图、打开手记和换位躲避的教学。';
+  if (index === 0 && victory && !(tasks.intent && (tasks.dodge || demonstrated(forecast, 'dodge'))))
+    return '先完成查看意图和换位躲避的教学。';
   if (
     index === (campaign.adventureTutorial ? 2 : 1) &&
     !tasks.vulnerable &&

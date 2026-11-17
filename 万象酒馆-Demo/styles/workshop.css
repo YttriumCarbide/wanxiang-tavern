@@ -26,23 +26,6 @@
 #workshop-overlay-open {
   display: none;
 }
-body:is(.gal-playing, .ring-cabinet-open) #workshop-overlay-open {
-  position: fixed;
-  top: max(12px, env(safe-area-inset-top));
-  right: max(86px, calc(env(safe-area-inset-right) + 74px));
-  z-index: 2010;
-  display: block;
-  min-height: 34px;
-  padding: 5px 12px;
-  background: #172b25f0;
-  color: #f1dcaa;
-  border: 1px solid #dfbf7d77;
-  border-radius: 6px;
-  font-size: 12px;
-}
-body.gal-playing #workshop-overlay-open {
-  right: max(111px, calc(env(safe-area-inset-right) + 99px));
-}
 #workshop-dialog::backdrop,
 #workshop-completion::backdrop,
 .ws-inspector::backdrop {
