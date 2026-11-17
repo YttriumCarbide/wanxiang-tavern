@@ -345,7 +345,9 @@ class SculptedModel:
                 tris.append([a, c, d])
         part.append_mesh(verts, tris, color, smooth=True)
 
-    def wing_membrane(self, part, spine_a, spine_b, divs_u=14, divs_v=8, camber=0.14, color="#fff5d8"):
+    def wing_membrane(
+        self, part, spine_a, spine_b, divs_u=14, divs_v=8, camber=0.14, color="#fff5d8"
+    ):
         """Sculpted doubly-curved aerodynamic wing / fin / cape sheet between two 3D spine curves."""
         a = np.asarray(spine_a, dtype=np.float32)
         b = np.asarray(spine_b, dtype=np.float32)
@@ -380,12 +382,17 @@ class SculptedModel:
                 tris.append([i0, i2, i3])
         part.append_mesh(verts, tris, color, smooth=True)
 
-    def bevel_plate(self, part, poly_xz, height, bevel=0.06, center=(0, 0, 0), rot=(0, 0, 0), color="#7e94a8"):
+    def bevel_plate(
+        self, part, poly_xz, height, bevel=0.06, center=(0, 0, 0), rot=(0, 0, 0), color="#7e94a8"
+    ):
         """Chamfered multi-sided smooth-edged armor plate / blade prism."""
         cx, cy, cz = center
         pts = np.asarray(poly_xz, dtype=np.float32)
         # Ensure polygon is CCW around +Y (standard right-handed top view: signed area in (x, -z) > 0)
-        area2 = sum(pts[i][0] * (-pts[(i + 1) % len(pts)][1]) - pts[(i + 1) % len(pts)][0] * (-pts[i][1]) for i in range(len(pts)))
+        area2 = sum(
+            pts[i][0] * (-pts[(i + 1) % len(pts)][1]) - pts[(i + 1) % len(pts)][0] * (-pts[i][1])
+            for i in range(len(pts))
+        )
         if area2 < 0:
             pts = pts[::-1]
         m = len(pts)
@@ -432,10 +439,15 @@ class SculptedModel:
 
     def normalize_floor(self):
         """Translate whole sculpture so base sits cleanly on y = 0.0 and X/Z are centered."""
-        all_v = np.concatenate([np.asarray(p.positions, dtype=np.float32) for p in self.parts.values() if p.positions])
+        all_v = np.concatenate(
+            [np.asarray(p.positions, dtype=np.float32) for p in self.parts.values() if p.positions]
+        )
         min_v = all_v.min(axis=0)
         max_v = all_v.max(axis=0)
-        shift = np.array([-(min_v[0] + max_v[0]) * 0.5, -min_v[1], -(min_v[2] + max_v[2]) * 0.5], dtype=np.float32)
+        shift = np.array(
+            [-(min_v[0] + max_v[0]) * 0.5, -min_v[1], -(min_v[2] + max_v[2]) * 0.5],
+            dtype=np.float32,
+        )
         for part in self.parts.values():
             if not part.positions:
                 continue
@@ -469,7 +481,11 @@ class SculptedModel:
             all_verts.append(proj)
 
             tri_p = proj[tris]
-            tri_n = normalize_rows(normals_avg := np.cross(verts[tris[:, 1]] - verts[tris[:, 0]], verts[tris[:, 2]] - verts[tris[:, 0]]))
+            tri_n = normalize_rows(
+                normals_avg := np.cross(
+                    verts[tris[:, 1]] - verts[tris[:, 0]], verts[tris[:, 2]] - verts[tris[:, 0]]
+                )
+            )
             tri_c = cols[tris].mean(axis=1)
             depth = tri_p[:, :, 2].mean(axis=1)
             facing = tri_n @ cam_dir
@@ -507,10 +523,10 @@ class SculptedModel:
         return (
             f'<svg xmlns="http://www.w3.org/2000/svg" width="600" height="900" '
             f'viewBox="0 0 256 384" data-art-style="sculpted-overlord-v1">\n'
-            f'<title>{self.name}</title>\n'
+            f"<title>{self.name}</title>\n"
             f'<defs><radialGradient id="overlordBg" cx="50%" cy="48%" r="68%">'
             f'<stop stop-color="{bg_color}"/><stop offset="1" stop-color="#0b1019"/>'
-            f'</radialGradient></defs>\n'
+            f"</radialGradient></defs>\n"
             f'<path fill="url(#overlordBg)" d="M0 0h256v384H0z"/>\n'
             f'<ellipse cx="128" cy="{shadow_y:.1f}" rx="{shadow_rx:.1f}" ry="12" fill="#05080d" opacity="0.62"/>\n'
             f'<g data-enemy-model="{self.enemy_id}" shape-rendering="crispEdges">'

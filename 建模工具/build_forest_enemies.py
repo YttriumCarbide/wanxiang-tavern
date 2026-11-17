@@ -5,8 +5,16 @@ from pathlib import Path
 
 from build_realms import Model
 
-
-OVERLORD_STAND_IDS = {"apepLamb", "ares", "aresCannonLeft", "aresCannonRight", "moonCrown", "moonEye", "moonRoot", "radiantWyvern"}
+OVERLORD_STAND_IDS = {
+    "apepLamb",
+    "ares",
+    "aresCannonLeft",
+    "aresCannonRight",
+    "moonCrown",
+    "moonEye",
+    "moonRoot",
+    "radiantWyvern",
+}
 
 
 def main():
