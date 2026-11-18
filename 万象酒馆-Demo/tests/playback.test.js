@@ -102,3 +102,22 @@ test('actual playback uses identical beat durations when an attack kills, ignori
     else globalThis.document = previousDocument;
   }
 });
+
+test('consecutive active actions within the same timeline slot split into sequential beats', () => {
+  const events = [
+    { at: 0, type: 'swap', actor: 'aegis' },
+    { at: 0, type: 'entrySkill', actor: 'aegis' },
+    { at: 1, type: 'engage', actor: 'lyra' },
+    { at: 1, type: 'hero', actor: 'lyra' },
+  ];
+  const beats = playbackBeats({ slots: [null, null], events });
+  assert.deepEqual(
+    beats.map((beat) => ({ at: beat.at, types: beat.events.map((event) => event.type) })),
+    [
+      { at: 0, types: ['swap'] },
+      { at: 0, types: ['entrySkill'] },
+      { at: 1, types: ['engage'] },
+      { at: 1, types: ['hero'] },
+    ],
+  );
+});

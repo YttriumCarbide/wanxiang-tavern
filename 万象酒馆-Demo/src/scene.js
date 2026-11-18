@@ -813,7 +813,6 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
     if (disposed) return 0;
     const actorDef = e.actor ? definitions[e.actor] : null;
     const isOverlordEnemy = e.type === 'enemy' && Boolean(actorDef?.overlord);
-    const isBossEnemy = e.type === 'enemy' && Boolean(actorDef?.boss) && !isOverlordEnemy;
     const clipSpec = {
       type: e.type,
       clip: e.clip,
@@ -824,10 +823,8 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
       speed: animationSpeed,
     };
     const durationOverride = isOverlordEnemy
-      ? overlords.actionDurationMs?.(e.actor, clipSpec) || 2800
-      : isBossEnemy
-        ? 1280
-        : 0;
+      ? overlords.actionDurationMs?.(e.actor, clipSpec) || 1850
+      : 0;
     const duration = fx.play(e, before, records, durationOverride ? { durationOverride } : {});
     if ((e.type === 'enemy' || e.type === 'bossPhase') && e.actor) {
       let lunge = null;
@@ -844,19 +841,15 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
             aoe: tRecs.length > 1,
             parentScale: bossRec.restScale || 1,
             durationMs:
-              (durationOverride
-                ? durationOverride * 0.9
-                : e.clip === 'Special_Attack'
-                  ? 2400
-                  : 1800) / Math.max(0.4, animationSpeed),
+              Math.min(1360, (durationOverride || 1850) * 0.68) / Math.max(0.4, animationSpeed),
           };
         }
       }
       overlords.playAction?.(e.actor, { ...clipSpec, lunge });
     }
     if (e.bombArmed && e.actor) {
-      const bombStartMs = durationOverride ? durationOverride * 0.36 : 240;
-      const bombFlyMs = durationOverride ? durationOverride * 0.42 : 760;
+      const bombStartMs = durationOverride ? durationOverride * 0.22 : 180;
+      const bombFlyMs = durationOverride ? Math.min(460, durationOverride * 0.25) : 440;
       spawnBombProjectile(e.actor, e.bombArmed.target, bombStartMs, bombFlyMs);
     }
     schedule();

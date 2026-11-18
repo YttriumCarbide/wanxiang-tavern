@@ -1,17 +1,10 @@
 {
   "browserConcurrency": 2,
   "coreFiles": [
+    "tests/playback.test.js",
     "tests/overlord-puppet.test.js",
-    "tests/enemy-base-values.test.js",
-    "tests/monsters-overlords.test.js",
-    "tests/mill-worldmaps.test.js"
+    "tests/combat-control.test.js",
+    "tests/official-visitors.test.js"
   ],
-  "scopes": [
-    "quality",
-    "core",
-    "death-effects",
-    "battle-markers",
-    "developer-mode",
-    "universal-enemies"
-  ]
+  "scopes": ["core", "quality", "battle-markers", "developer-mode", "universal-enemies"]
 }

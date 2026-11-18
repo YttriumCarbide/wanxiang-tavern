@@ -87,7 +87,7 @@ function updateSealRingStage(seal, baseColorHex, stage = 1) {
   seal.scale.setScalar(s >= 3 ? 1.24 : s === 2 ? 1.12 : 1);
 }
 
-const OVERLORD_CLIP_PACE = 0.76;
+const OVERLORD_CLIP_PACE = 1.28;
 
 function resolveClipName(entry, move = {}) {
   if (!entry) return null;
@@ -307,7 +307,7 @@ export async function createOverlordModels({
           idleAction.reset();
           idleAction.setLoop(THREE.LoopRepeat, Infinity);
           idleAction.play();
-          event.action.crossFadeTo(idleAction, 0.22, true);
+          event.action.crossFadeTo(idleAction, 0.16, true);
           entry.activeAction = idleAction;
           entry.playingClip = idleAction.getClip().name;
         };
@@ -325,7 +325,7 @@ export async function createOverlordModels({
     const action = clipName ? entry.clips[clipName] : entry.idleAction;
     if (!action) return 0;
     const sec = action.getClip()?.duration || 2.2;
-    return Math.max(1200, Math.round((sec / OVERLORD_CLIP_PACE) * 1000));
+    return Math.max(900, Math.round((sec / OVERLORD_CLIP_PACE) * 1000));
   }
 
   function playAction(id, move = {}) {
@@ -358,12 +358,12 @@ export async function createOverlordModels({
     action.timeScale = Math.max(0.35, (Number(move.speed) || 1) * OVERLORD_CLIP_PACE);
     action.play();
     if (entry.activeAction && entry.activeAction !== action) {
-      entry.activeAction.crossFadeTo(action, 0.14, true);
+      entry.activeAction.crossFadeTo(action, 0.09, true);
     }
     entry.activeAction = action;
     entry.playingClip = action.getClip().name;
     return Math.max(
-      1200,
+      900,
       Math.round(((action.getClip()?.duration || 2.2) / OVERLORD_CLIP_PACE) * 1000),
     );
   }
@@ -401,20 +401,22 @@ export async function createOverlordModels({
         } else {
           let travel;
           let lift;
-          if (u < 0.38) {
-            const p = u / 0.38;
-            const ease = p * p * (3 - 2 * p);
-            travel = ease;
-            lift = Math.sin(p * Math.PI) * (L.aoe ? 1.25 : 0.48) + ease * (L.aoe ? 0.65 : 0.16);
-          } else if (u < 0.68) {
-            const p = (u - 0.38) / 0.3;
+          if (u < 0.13) {
+            const p = u / 0.13;
+            travel = -0.12 * Math.sin(p * Math.PI * 0.5);
+            lift = 0.06 * p;
+          } else if (u < 0.29) {
+            const p = (u - 0.13) / 0.16;
+            const accel = p * p * p;
+            travel = -0.12 * (1 - accel) + accel;
+            lift = Math.sin(p * Math.PI) * (L.aoe ? 1.18 : 0.46) + (1 - p) * 0.06;
+          } else if (u < 0.48) {
             travel = 1;
-            lift = (L.aoe ? 0.65 : 0.16) * (1 - p);
+            lift = 0;
           } else {
-            const p = (u - 0.68) / 0.32;
-            const ease = 1 - p * p * (3 - 2 * p);
-            travel = ease;
-            lift = Math.sin(p * Math.PI) * 0.42;
+            const p = (u - 0.48) / 0.52;
+            travel = Math.pow(1 - p, 2.3);
+            lift = Math.sin(p * Math.PI) * 0.38;
           }
           lungeX = L.dx * travel;
           lungeY = lift;

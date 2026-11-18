@@ -389,7 +389,11 @@ export function createEffects(layer, center, getSpeed, options = {}) {
         (u) => (before?.units?.[u.id]?.hp ?? u.hp) - u.hp >= 10,
       );
     if (e.type !== 'bombDetonate' && !(e.type === 'bossPhase' && e.overlord) && heavyHit)
-      options.onImpact?.({ heavy: true, delay: impactDelay * 0.9, hitStopMs: 95 });
+      options.onImpact?.({
+        heavy: true,
+        delay: impactDelay * 0.94,
+        hitStopMs: d?.overlord ? 115 : 85,
+      });
     if (spawned) options.onSpawn?.();
   }
 
@@ -400,7 +404,7 @@ export function createEffects(layer, center, getSpeed, options = {}) {
       style = attackStyle(e) || d?.weapon || 'sword',
       isAction = ['hero', 'enemy', 'entrySkill', 'counter'].includes(e.type),
       duration = playOpts.durationOverride || (isAction ? ATTACK_TIMING[style] || 640 : 0),
-      impactDelay = isAction ? duration * (d?.overlord && e.type === 'enemy' ? 0.5 : 0.7) : 0;
+      impactDelay = isAction ? duration * (d?.overlord && e.type === 'enemy' ? 0.21 : 0.7) : 0;
     spawnPixelFx(e, before, d, source, impactDelay);
     if (e.type === 'bossPhase' && source) {
       if (e.overlord) {
@@ -447,14 +451,17 @@ export function createEffects(layer, center, getSpeed, options = {}) {
         floating({ x: tp.x, y: tp.y - 42 }, '✦ 拆弹成功', 'shield-number', 60);
       }
     } else if (e.bombArmed) {
+      const bombLandDelay = duration
+        ? Math.round(duration * 0.22 + Math.min(460, duration * 0.25))
+        : 620;
       const tp = center(e.bombArmed.target);
       if (tp) {
-        ring(tp, '#6bf5a9', 'cast-rune', 480);
+        ring(tp, '#6bf5a9', 'cast-rune', bombLandDelay);
         floating(
           { x: tp.x, y: tp.y - 48 },
           `⏱ 炼金炸弹 · ${e.bombArmed.durationSec}s`,
           'equipment-proc-number',
-          500,
+          bombLandDelay + 20,
         );
       }
     }
@@ -485,14 +492,23 @@ export function createEffects(layer, center, getSpeed, options = {}) {
       }
     }
     if (attack && isAction) {
-      attack.attack = {
-        start: performance.now(),
-        duration: duration / getSpeed(),
-        distance:
-          (e.type === 'enemy' ? 1 : -1) * (style === 'staff' || style === 'bow' ? 0.12 : 0.55),
-        lift: style === 'slime-bounce' ? 0.5 : style === 'mushroom-bonk' ? 0.32 : 0.12,
-        tilt: style === 'staff' ? 0.035 : 0.09,
-      };
+      const overlordLeap = Boolean(d?.overlord && e.type === 'enemy' && e.damageType);
+      attack.attack = overlordLeap
+        ? {
+            start: performance.now(),
+            duration: Math.min(340, duration * 0.22) / getSpeed(),
+            distance: -0.12,
+            lift: 0.04,
+            tilt: -0.02,
+          }
+        : {
+            start: performance.now(),
+            duration: duration / getSpeed(),
+            distance:
+              (e.type === 'enemy' ? 1 : -1) * (style === 'staff' || style === 'bow' ? 0.12 : 0.55),
+            lift: style === 'slime-bounce' ? 0.5 : style === 'mushroom-bonk' ? 0.32 : 0.12,
+            tilt: style === 'staff' ? 0.035 : 0.09,
+          };
     }
     for (const id of e.targets) {
       const p = center(id),

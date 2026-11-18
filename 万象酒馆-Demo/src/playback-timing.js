@@ -1,5 +1,15 @@
 export const PLAYBACK_BEAT_MS = 800;
 
+const SEQUENTIAL_SLOT_TYPES = new Set([
+  'hero',
+  'enemy',
+  'entrySkill',
+  'counter',
+  'swap',
+  'engage',
+  'item',
+]);
+
 /** Every slot gets one beat, including the second slot of a 2 AP action. End effects share a beat. */
 export function playbackBeats(result) {
   const end = result.events.some((event) => event.at >= result.slots.length);
@@ -14,7 +24,10 @@ export function playbackBeats(result) {
           beat.events.some((item) =>
             ['bossPhase', 'bombDetonate', 'bombDefuse'].includes(item.type),
           ) ||
-          event.repeatIndex > 1)
+          event.repeatIndex > 1 ||
+          (at < result.slots.length &&
+            SEQUENTIAL_SLOT_TYPES.has(event.type) &&
+            beat.events.some((item) => SEQUENTIAL_SLOT_TYPES.has(item.type))))
       ) {
         beats.push(beat);
         beat = { at, events: [] };

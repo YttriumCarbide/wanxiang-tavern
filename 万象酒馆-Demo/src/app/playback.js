@@ -90,9 +90,15 @@ export function createPlayback(context) {
               event.after?.heroDefinitions?.[event.actor]
             : null;
           if (event.type === 'enemy' && (actorDef?.boss || actorDef?.overlord)) {
-            beatWaitMs = Math.max(beatWaitMs, eventMs + 280);
+            beatWaitMs = Math.max(beatWaitMs, eventMs + 140);
+          } else if (
+            ['enemy', 'entrySkill', 'counter'].includes(event.type) &&
+            eventMs > PLAYBACK_BEAT_MS &&
+            eventMs < 10000
+          ) {
+            beatWaitMs = Math.max(beatWaitMs, eventMs + 100);
           } else if (event.type === 'bombDetonate' || event.type === 'bombDefuse') {
-            beatWaitMs = Math.max(beatWaitMs, eventMs + 180);
+            beatWaitMs = Math.max(beatWaitMs, eventMs + 150);
           }
           context.audio.combat(event, before, session.battle.speed);
           if (event.type === 'bossPhase' && event.overlord) {
