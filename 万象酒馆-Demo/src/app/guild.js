@@ -206,7 +206,7 @@ export function createGuild(context) {
             <span class="guild-rank-seal">${escapeText(item.rank)}</span>
             <div class="guild-card-meta">
               <small>${escapeText(item.categoryLabel)}${escapeText(meritNote)} · ${item.ap} AP${item.mp ? ` · ${item.mp} SP` : ''}${item.hp ? ` · ${item.hp} HP` : ''}</small>
-              <h3 class="guild-skill-heading"><span>${escapeText(item.name)}</span>${damageTypeChip(dmgType, { size: 12 })}</h3>
+              <h3 class="guild-skill-heading">${damageTypeChip(dmgType, { size: 15 })}<span>${escapeText(item.name)}</span></h3>
             </div>
             ${
               item.learned

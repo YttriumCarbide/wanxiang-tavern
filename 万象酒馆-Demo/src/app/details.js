@@ -30,7 +30,7 @@ export function createDetails(context) {
       !context.viewport.canPlan() || u.hp <= 0 || !formation.slice(0, 3).includes(id);
     const limit = d.limit + effectiveBuff(session.battle.forecast.final, id, 'haste');
     const rules = rulesFor(d);
-    function badge(title, text, active, tag, attributes = '', extraClass = '') {
+    function badge(title, text, active, tag, attributes = '', extraClass = '', iconHtml = '') {
       return (
         '<div class="ability-card passive-card ' +
         (active ? 'effect-active' : 'effect-inactive') +
@@ -39,11 +39,13 @@ export function createDetails(context) {
         attributes +
         ' data-tooltip="' +
         e(text) +
-        '"><strong>' +
+        '"><div class="passive-card-head">' +
+        iconHtml +
+        '<strong>' +
         e(title) +
         '</strong><small>' +
         e(tag) +
-        '</small><p>' +
+        '</small></div><p>' +
         e(text) +
         '</p></div>'
       );
@@ -60,7 +62,7 @@ export function createDetails(context) {
           ? '\n' + (!combined ? '需要结合后使用' : combineUsed ? '本次结合已使用' : '结合中可使用')
           : '');
       const dmgType = skill.id === 'attack' ? resolveBasicAttackType(d) : inferDamageType(skill, d);
-      const chip = damageTypeChip(dmgType, { size: 12 });
+      const chip = damageTypeChip(dmgType, { size: 15 });
       return (
         '<button class="ability ' +
         (selected ? 'active ' : '') +
@@ -80,22 +82,22 @@ export function createDetails(context) {
         (!inactive && !matchMedia('(pointer: coarse) and (max-width: 1100px)').matches) +
         '"' +
         (inactive ? ' disabled' : '') +
-        '><strong class="ability-title-row"><span>' +
-        e(skill.name) +
-        '</span>' +
+        '>' +
         chip +
-        '</strong><small>' +
-        skill.ap +
-        ' AP' +
-        (skill.mp ? ' · ' + skill.mp + ' sp' : '') +
-        (skill.hp ? ' · ' + skill.hp + ' hp' : '') +
-        '</small>' +
+        '<span class="ability-main"><strong>' +
+        e(skill.name) +
+        '</strong>' +
         (skill.borrowedFrom
           ? '<span class="borrowed-skill-source">借自 ' + e(skill.borrowedFrom) + '</span>'
           : skill.universal
             ? '<span class="borrowed-skill-source universal-skill-source">通用战技</span>'
             : '') +
-        '</button>'
+        '</span><small>' +
+        skill.ap +
+        ' AP' +
+        (skill.mp ? ' · ' + skill.mp + ' sp' : '') +
+        (skill.hp ? ' · ' + skill.hp + ' hp' : '') +
+        '</small></button>'
       );
     }
     const passives = d.skills
@@ -156,9 +158,10 @@ export function createDetails(context) {
             entry.name,
             entry.text || entry.description || '',
             entryActive,
-            damageTypeChip(inferDamageType(entry, d), { size: 11 }) +
-              ' · ' +
-              (entryActive ? '已就绪 · 换入触发' : rear ? '蓄势中' : '换入前场时自动触发'),
+            entryActive ? '已就绪 · 换入触发' : rear ? '蓄势中' : '换入前场时自动触发',
+            '',
+            '',
+            damageTypeChip(inferDamageType(entry, d), { size: 15 }),
           )
         : '<div class="action-empty-note">无入场技</div>');
     const emblemVisual = emblem ? emblemVisualFor(d.emblemId) : null;

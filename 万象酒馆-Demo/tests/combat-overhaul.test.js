@@ -80,6 +80,7 @@ test('damage types cover exact 12 weapon/magic IDs, distinct SVG icons, and non-
   assert.equal(svgs.size, 12);
   assert(damageTypeIcon('unknown').includes('is-unknown'));
   assert(damageTypeChip(null).includes('增幅'));
+  assert(!damageTypeChip('sword').includes('dmg-type-label'));
   assert.equal(resolveBasicAttackType(HEROES[0]), 'sword');
   assert.equal(
     inferDamageType({ name: '护盾祷言', effects: [{ type: 'shield', value: 10 }] }, HEROES[0]),
@@ -132,9 +133,9 @@ test('PixelFX registry supports fire/ice palettes and rotates directional FX aro
   }
 });
 
-test('resourceBars overlays blue shield directly on HP bar with full-width parenthesis count', () => {
+test('resourceBars overlays blue shield directly on HP bar with blue bracketed value', () => {
   const htmlWithShield = resourceBars({ hp: 69, maxHp: 72, mp: 10, maxMp: 20, block: 15 });
-  assert(htmlWithShield.includes('69/72（15）'));
+  assert(htmlWithShield.includes('69/72<span class="bar-shield-text">（15）</span>'));
   assert(htmlWithShield.includes('bar-shield-fill'));
   assert(!htmlWithShield.includes('resource-shield'));
 
@@ -142,7 +143,7 @@ test('resourceBars overlays blue shield directly on HP bar with full-width paren
     { hp: 50, maxHp: 60, mp: 0, maxMp: 0, block: 0 },
     { hp: 50, maxHp: 60, mp: 0, maxMp: 0, block: 12 },
   );
-  assert(htmlForecast.includes('50/60（+12）'));
+  assert(htmlForecast.includes('50/60<span class="bar-shield-text is-forecast">（+12）</span>'));
   assert(htmlForecast.includes('bar-shield-forecast active'));
 });
 

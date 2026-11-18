@@ -590,27 +590,27 @@ export function resolveDamagePixelFx(
 
 const ICON_SVG_PATHS = Object.freeze({
   sword:
-    '<path d="M19.5 3.5L15 4.2l-6.6 6.6-2-2-1.8 1.8 2.1 2.1L3.5 16l1.5 1.5 3.3-3.2 2.1 2.1 1.8-1.8-2-2 6.6-6.6.7-4.5z" fill="currentColor"/><path d="M6.2 17.8l-2 2.7 2.7-2z" fill="currentColor"/>',
-  axe: '<path d="M13 3c4 0 7.2 2.6 8 6.4-2.8.8-5.3.2-7-1.4v12.5h-2.5V8.7c-1.5.7-3.4.9-5.5.2C6.8 5.2 9.5 3 13 3z" fill="currentColor"/>',
+    '<path d="M20.6 3.4l-5.2.9-7.1 7.1-1.9-1.9-1.7 1.7 2.2 2.2-3.5 3.5 1.8 1.8 3.5-3.5 2.2 2.2 1.7-1.7-1.9-1.9 7.1-7.1.9-5.2z" fill="currentColor"/><path d="M5.6 18.4l-2.4 2.4 1.6 1.6 2.4-2.4-1.6-1.6z" fill="currentColor"/>',
+  axe: '<path d="M13.5 2.8c4.3 0 7.7 2.8 8.2 7.2-2.9.9-5.4.4-7.2-1.2V21.5h-3V9.1c-1.8.8-3.8 1-6.1.1C6.2 5.1 9.2 2.8 13.5 2.8z" fill="currentColor"/>',
   spear:
-    '<path d="M20.5 3.5l-6.2 1.8 1.7 1.7-12 12 1.4 1.4 12-12 1.7 1.7 1.4-6.6z" fill="currentColor"/>',
+    '<path d="M21.2 2.8l-7 2 1.9 1.9L4.2 18.6l1.7 1.7L17.8 8.4l1.9 1.9 1.5-7.5z" fill="currentColor"/><path d="M13.2 5.4l5.4 5.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
   brawl:
-    '<path d="M6 10.5V7.8a1.5 1.5 0 0 1 3 0V9.5h1V6.8a1.5 1.5 0 0 1 3 0V9.5h1V7.3a1.5 1.5 0 0 1 3 0v4.4l1.5-1.1a1.5 1.5 0 0 1 2 2.2l-3.4 4.3a4 4 0 0 1-3.1 1.5H9.5A3.5 3.5 0 0 1 6 15.1v-4.6z" fill="currentColor"/>',
+    '<path d="M5.2 10.2V7.4a1.6 1.6 0 0 1 3.2 0v1.8h.8V6.2a1.6 1.6 0 0 1 3.2 0v3h.8V6.7a1.6 1.6 0 0 1 3.2 0v4.3l1.7-1.2a1.6 1.6 0 0 1 2.1 2.4l-3.7 4.8a4.2 4.2 0 0 1-3.3 1.7H9.6a3.8 3.8 0 0 1-4.4-3.7v-4.8z" fill="currentColor"/>',
   'special-weapon':
-    '<path d="M12 3a8 8 0 0 0-8 8c0 3.7 2.5 6.8 6 7.7V21h4v-2.3c3.5-.9 6-4 6-7.7a8 8 0 0 0-8-8zm0 3a5 5 0 0 1 5 5h-3a2 2 0 1 0-4 0H7a5 5 0 0 1 5-5z" fill="currentColor"/><circle cx="12" cy="11" r="1.8" fill="currentColor"/>',
-  fire: '<path d="M13.2 2.5c.8 3.1-1.3 4.8-1.3 7.2 0 1.4 1 2.3 2.1 2.3 1.4 0 2.3-1.4 2.1-3.4 2.3 1.6 3.7 4.1 3.7 6.8A7.8 7.8 0 0 1 12 22a7.5 7.5 0 0 1-7.5-7.5c0-3.3 2.1-6.5 4.9-8.1-.4 1.8.2 3.3 1.5 3.9-.3-2.6.6-5.5 2.3-7.8z" fill="currentColor"/>',
-  ice: '<path d="M11 2h2v4.1l2.7-1.6 1 1.7-3.7 2.2v2.4l2.1-1.2 1-1.7 1.7 1-.9 1.6 2.8 1.6-1 1.7-2.8-1.6-1 1.7-1.7-1 1-1.7L13 13v2.4l3.7 2.2-1 1.7L13 17.9V22h-2v-4.1l-2.7 1.4-1-1.7L11 15.4V13l-2.2 1.2 1 1.7-1.7 1-1-1.7-2.8 1.6-1-1.7 2.8-1.6-.9-1.6 1.7-1 1 1.7L11 10.8V8.4L7.3 6.2l1-1.7L11 6.1V2z" fill="currentColor"/>',
-  wind: '<path d="M3 9h10.5a2.5 2.5 0 1 0-2.4-3.1l-1.9-.6A4.5 4.5 0 1 1 13.5 11H3V9zm0 4h14a3 3 0 1 1-2.8 4l1.9-.7A1 1 0 1 0 17 15H3v-2zm0 4h8a2.5 2.5 0 1 1-2.3 3.4l1.8-.8a.5.5 0 1 0 .5-.6H3v-2z" fill="currentColor"/>',
-  lightning: '<path d="M13.8 2L5.5 13h5.3l-1.6 9 9.3-11.5h-5.3L13.8 2z" fill="currentColor"/>',
+    '<path fill-rule="evenodd" d="M12 2.2l2.1 4.1 4.5-1.1-1.1 4.5 4.1 2.3-4.1 2.1 1.1 4.5-4.5-1.1L12 21.8l-2.1-4.1-4.5 1.1 1.1-4.5L2.4 12l4.1-2.3-1.1-4.5 4.5 1.1L12 2.2zm0 6.8a3 3 0 1 0 0 6 3 3 0 0 0 0-6z" fill="currentColor"/>',
+  fire: '<path fill-rule="evenodd" d="M13.4 2.2c.9 3.3-1.1 5.1-1.1 7.4 0 1.4 1 2.3 2.2 2.3 1.5 0 2.5-1.5 2.2-3.6 2.7 1.8 4.1 4.4 4.1 7.2a8.2 8.2 0 0 1-8.8 7.3A8 8 0 0 1 3.8 15c0-3.5 2.1-6.8 5.2-8.7-.4 1.9.3 3.4 1.6 4.1-.3-2.8.8-5.9 2.8-8.2zM12 14.2c-1.4 1.2-2.2 2.5-2.2 3.8a2.3 2.3 0 0 0 4.6 0c0-1.3-.9-2.5-2.4-3.8z" fill="currentColor"/>',
+  ice: '<path d="M12 2v20M3.3 7l17.4 10M20.7 7L3.3 17" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/><path d="M9.6 4.6L12 7l2.4-2.4M9.6 19.4L12 17l2.4 2.4M4.8 10.2L7.7 9.5 6.8 6.6M19.2 13.8l-2.9.7.9 2.9M19.2 10.2l-2.9-.7.9-2.9M4.8 13.8l2.9.7-.9 2.9" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><polygon points="12,9.2 14.5,12 12,14.8 9.5,12" fill="currentColor"/>',
+  wind: '<path d="M2.5 8.5h11a2.6 2.6 0 1 0-2.5-3.3M2.5 13h15.2a2.9 2.9 0 1 1-2.7 3.9M2.5 17.5h8.8a2.3 2.3 0 1 1-2.2 3.1" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>',
+  lightning: '<path d="M14.4 1.8L4.8 13.2h5.8l-1.8 9 10.4-12.1h-5.8l1-8.3z" fill="currentColor"/>',
   light:
-    '<path d="M12 2l2.2 5.8L20 10l-5.8 2.2L12 18l-2.2-5.8L4 10l5.8-2.2L12 2zm0 5.1L10.9 9.9 8.1 11l2.8 1.1L12 14.9l1.1-2.8 2.8-1.1-2.8-1.1L12 7.1z" fill="currentColor"/>',
-  dark: '<path d="M14.8 3.2A8.8 8.8 0 1 0 20.8 16a7 7 0 0 1-6-12.8z" fill="currentColor"/><circle cx="16.5" cy="7.5" r="1.5" fill="currentColor"/>',
+    '<path d="M12 1.8l2.5 6.2 6.2 2.5-6.2 2.5L12 19.2l-2.5-6.2L3.3 10.5l6.2-2.5L12 1.8z" fill="currentColor"/><path d="M5.2 4.8l2.4 2.4M18.8 4.8l-2.4 2.4M5.2 16.2l2.4-2.4M18.8 16.2l-2.4-2.4" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>',
+  dark: '<path d="M14.6 2.8a9.2 9.2 0 1 0 6.8 13.7A7.2 7.2 0 0 1 14.6 2.8z" fill="currentColor"/><polygon points="17.2,5.6 18,7.4 19.8,8.2 18,9 17.2,10.8 16.4,9 14.6,8.2 16.4,7.4" fill="currentColor"/>',
   'special-magic':
-    '<path d="M12 2.5l2.7 5.2 5.8.9-4.1 4.1.9 5.8-5.3-2.7-5.3 2.7.9-5.8-4.1-4.1 5.8-.9L12 2.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="12" r="2.6" fill="currentColor"/>',
+    '<circle cx="12" cy="12" r="8.8" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 2.6l2.4 5.5 5.8.7-4.3 4 1.1 5.8-5-2.8-5 2.8 1.1-5.8-4.3-4 5.8-.7L12 2.6z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><circle cx="12" cy="12" r="2.3" fill="currentColor"/>',
   [SUPPORT_TYPE]:
-    '<path d="M12 3l6.5 3.1v5.2c0 4.6-2.8 8.5-6.5 9.7-3.7-1.2-6.5-5.1-6.5-9.7V6.1L12 3zm-1 4.5v3H8v2h3v3h2v-3h3v-2h-3v-3h-2z" fill="currentColor"/>',
+    '<path fill-rule="evenodd" d="M12 2.5l7.2 3.3v5.6c0 5-3.1 9.1-7.2 10.3-4.1-1.2-7.2-5.3-7.2-10.3V5.8L12 2.5zm-1.4 4.8v3.1H7.5v2.8h3.1v3.1h2.8v-3.1h3.1v-2.8h-3.1V7.3h-2.8z" fill="currentColor"/>',
   [UNKNOWN_TYPE]:
-    '<path d="M9.1 8.8A3 3 0 0 1 12 6a2.8 2.8 0 0 1 3 2.7c0 1.4-.9 2.1-1.9 2.8-.8.6-1.1 1-.1 2.2H11c-.4-1.5 0-2.5 1-3.3.8-.6 1.2-1 1.2-1.7a1 1 0 0 0-1.2-.9c-.7 0-1.1.4-1.3 1.1L9.1 8.8z" fill="currentColor"/><circle cx="12" cy="17.2" r="1.4" fill="currentColor"/>',
+    '<path d="M8.8 8.6a3.4 3.4 0 0 1 6.7-.1c0 1.6-1 2.4-2 3.1-.9.6-1.2 1.1-.8 2.4h-2.2c-.4-1.6.1-2.7 1.2-3.5.9-.7 1.4-1.1 1.4-1.9a1.2 1.2 0 0 0-2.4-.2l-1.9.2z" fill="currentColor"/><circle cx="11.8" cy="17.6" r="1.6" fill="currentColor"/>',
 });
 
 export function damageTypeIcon(typeOrNull, opts = {}) {
@@ -621,11 +621,11 @@ export function damageTypeIcon(typeOrNull, opts = {}) {
         ? typeOrNull
         : SUPPORT_TYPE;
   const meta = damageTypeMeta(key);
-  const size = Number.isFinite(opts.size) ? opts.size : 14;
+  const size = Number.isFinite(opts.size) ? opts.size : 16;
   const cls = opts.className ? ` ${opts.className}` : '';
   const style = opts.tint === false ? '' : ` style="color:${meta.color}"`;
   const titleAttr = opts.title ? ` title="${String(opts.title).replace(/"/g, '&quot;')}"` : '';
-  return `<svg class="dmg-type-svg is-${key}${cls}" viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"${style}${titleAttr}>${ICON_SVG_PATHS[key]}</svg>`;
+  return `<svg class="dmg-type-svg is-${key}${cls}" viewBox="0 0 24 24" width="${size}" height="${size}" shape-rendering="geometricPrecision" aria-hidden="true"${style}${titleAttr}>${ICON_SVG_PATHS[key]}</svg>`;
 }
 
 export function damageTypeChip(typeOrNull, opts = {}) {
@@ -637,7 +637,8 @@ export function damageTypeChip(typeOrNull, opts = {}) {
         : SUPPORT_TYPE;
   const meta = damageTypeMeta(key);
   const label = opts.short ? meta.short : meta.name;
-  const showLabel = opts.showLabel !== false;
+  const showLabel = opts.showLabel === true;
   const matchedCls = opts.matched ? ' is-matched' : '';
-  return `<span class="dmg-type-chip is-${key}${matchedCls}" style="--dmg-color:${meta.color};--dmg-glow:${meta.glow}" title="${meta.name}">${damageTypeIcon(key, { size: opts.size || 13, tint: false })}${showLabel ? `<span class="dmg-type-label">${label}</span>` : ''}</span>`;
+  const extraCls = opts.className ? ` ${opts.className}` : '';
+  return `<span class="dmg-type-chip is-${key}${matchedCls}${extraCls}" style="--dmg-color:${meta.color};--dmg-glow:${meta.glow}" title="${meta.name}" aria-label="${meta.name}">${damageTypeIcon(key, { size: opts.size || 15, tint: false })}${showLabel ? `<span class="dmg-type-label">${label}</span>` : ''}</span>`;
 }

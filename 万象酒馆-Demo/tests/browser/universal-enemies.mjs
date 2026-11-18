@@ -430,28 +430,102 @@ export async function universalEnemyChecks({ browser, baseURL, output }) {
           },
         };
         context.renderer.render();
+        const dummyDailyHud = document.createElement('section');
+        dummyDailyHud.id = 'daily-hud';
+        dummyDailyHud.innerHTML =
+          '<div class="daily-top-hud"><div class="daily-plaque"><span data-tavern-clock>1463年8月24日</span></div><div class="daily-status"><span>外出 · 已行 2 回合</span></div></div>';
+        document.body.append(dummyDailyHud);
+
         window.combatHudView = view;
+        const parseRgb = (cssColor) => {
+          const m = cssColor.match(/\d+/g);
+          return m ? m.slice(0, 3).map(Number) : [0, 0, 0];
+        };
+        const centerYDiff = (selector) => {
+          const bar = document.querySelector(selector);
+          const num = bar?.querySelector('.resource-number');
+          if (!bar || !num) return 999;
+          const bRect = bar.getBoundingClientRect();
+          const nRect = num.getBoundingClientRect();
+          return Math.abs(nRect.top + nRect.height / 2 - (bRect.top + bRect.height / 2));
+        };
         const heroEl = document.querySelector(`[data-unit="${heroId}"]`);
+        const shieldSpan = heroEl?.querySelector('.bar.hp .bar-shield-text');
+        const shieldRgb = shieldSpan ? parseRgb(getComputedStyle(shieldSpan).color) : [0, 0, 0];
+        const detailChips = [...document.querySelectorAll('#details .dmg-type-chip')];
+        const chipLefts = detailChips.map((el) => el.getBoundingClientRect().left);
+        const timelineNumbers = [
+          ...document.querySelectorAll(
+            '#timeline .time-cell .num, #timeline .time-action .action-number',
+          ),
+        ];
+        const numTops = timelineNumbers.map((el) => el.getBoundingClientRect().top);
+        const entryCard = [...document.querySelectorAll('#details .passive-card')].find((el) =>
+          el.textContent.includes('霜月·星陨穿刺'),
+        );
         return {
+          dailyHudDisplay: getComputedStyle(dummyDailyHud).display,
           heroShieldText: heroEl?.querySelector('.bar.hp .resource-number')?.textContent || '',
+          shieldSpanText: shieldSpan?.textContent || '',
+          shieldBlueDelta: shieldRgb[2] - shieldRgb[0],
           heroShieldFill: heroEl?.querySelectorAll('.bar.hp .bar-shield-fill').length || 0,
+          barCenterDiffs: [
+            centerYDiff(`[data-unit="${heroId}"] .bar.hp`),
+            centerYDiff(`[data-unit="${heroId}"] .bar.mp`),
+            centerYDiff('[data-side="Enemy"] .bar.hp'),
+            centerYDiff('#details .hero-resources .bar.hp'),
+          ],
           toughnessCount: document.querySelectorAll('.enemy-toughness-badge').length,
           revealedWeakness: document.querySelectorAll('.enemy-weakness-pill[data-weakness="fire"]')
             .length,
           unknownWeakness: document.querySelectorAll('.enemy-weakness-pill.is-unknown').length,
           timelineIcons: document.querySelectorAll('#timeline .dmg-type-svg').length,
-          detailsChips: document.querySelectorAll('#details .dmg-type-chip').length,
+          detailsChips: detailChips.length,
+          labelTextCount: document.querySelectorAll('.dmg-type-label').length,
+          chipLeftSpread:
+            chipLefts.length > 1 ? Math.max(...chipLefts) - Math.min(...chipLefts) : 999,
+          timelineNumTopSpread:
+            numTops.length > 1 ? Math.max(...numTops) - Math.min(...numTops) : 999,
+          entryHasSvg: Boolean(entryCard?.querySelector('.dmg-type-chip svg')),
+          entryGarbledHtml:
+            Boolean(entryCard?.textContent.includes('<span')) ||
+            Boolean(entryCard?.textContent.includes('<svg')),
         };
       });
       await hudPage.waitForFunction(() => !window.combatHudView.isAnimating());
+      assert.equal(hudCheck.dailyHudDisplay, 'none');
       assert(hudCheck.heroShieldText.includes('69/72（15）'), hudCheck.heroShieldText);
+      assert.equal(hudCheck.shieldSpanText, '（15）');
+      assert(
+        hudCheck.shieldBlueDelta > 60,
+        `Expected blue shield text, delta=${hudCheck.shieldBlueDelta}`,
+      );
       assert.equal(hudCheck.heroShieldFill, 1);
+      for (const diff of hudCheck.barCenterDiffs) {
+        assert(diff <= 2.5, `Expected .resource-number centered on .bar, diff=${diff}`);
+      }
       assert.equal(hudCheck.toughnessCount, 3);
       assert.equal(hudCheck.revealedWeakness, 1);
       assert(hudCheck.unknownWeakness >= 6);
       assert(hudCheck.timelineIcons >= 3);
-      assert(hudCheck.detailsChips >= 3);
+      assert(hudCheck.detailsChips >= 4);
+      assert.equal(hudCheck.labelTextCount, 0);
+      assert(
+        hudCheck.chipLeftSpread <= 1.5,
+        `Expected details chips left-aligned, spread=${hudCheck.chipLeftSpread}`,
+      );
+      assert(
+        hudCheck.timelineNumTopSpread <= 1.5,
+        `Expected timeline numbers top-aligned, spread=${hudCheck.timelineNumTopSpread}`,
+      );
+      assert.equal(hudCheck.entryHasSvg, true);
+      assert.equal(hudCheck.entryGarbledHtml, false);
       await hudPage.screenshot({ path: path.join(output, 'combat-overhaul-hud.png') });
+      await hudPage.evaluate(() => {
+        const panel = document.querySelector('#details');
+        if (panel) panel.scrollTop = panel.scrollHeight;
+      });
+      await hudPage.screenshot({ path: path.join(output, 'combat-overhaul-details-entry.png') });
       await hudPage.evaluate(() => window.combatHudView.dispose());
     } finally {
       await hudPage.close();
@@ -513,9 +587,7 @@ export async function universalEnemyChecks({ browser, baseURL, output }) {
       await prepPage.locator('#party-panel.script-ready').waitFor({ state: 'visible' });
       await prepPage.locator('#prepare-done.depart-ready-fx').waitFor({ state: 'visible' });
       const skillCheck = await prepPage.evaluate(() => ({
-        headCount: document.querySelectorAll(
-          '.pp-skill-card-head .pp-skill-type-ico svg.dmg-type-svg',
-        ).length,
+        headCount: document.querySelectorAll('.pp-skill-ico.is-dmg-emblem svg.dmg-type-svg').length,
         universalHead: document.querySelector('.prepare-universal-head small')?.textContent || '',
         options: [...document.querySelectorAll('.prepare-universal-slot select option')].map(
           (o) => o.textContent,

@@ -41,6 +41,13 @@ body.gal-playing #daily-hud {
 body.ring-cabinet-open #daily-hud {
   display: none;
 }
+#daily-hud[hidden],
+body.in-battle #daily-hud,
+body.in-battle #scene-talk,
+body.in-adventure #daily-hud,
+body.in-adventure #scene-talk {
+  display: none !important;
+}
 .daily-invitation-record {
   --daily-record-top: max(52px, calc(env(safe-area-inset-top) + 46px));
   --daily-record-limit: min(36dvh, 260px);

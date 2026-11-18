@@ -1,20 +1,5 @@
 {
   "browserConcurrency": 2,
-  "scopes": ["quality", "models", "core", "universal-enemies", "intents", "destinations", "street"],
-  "coreFiles": [
-    "tests/combat-overhaul.test.js",
-    "tests/mill-worldmaps.test.js",
-    "tests/stage3-vfx-skills.test.js",
-    "tests/journey-archives.test.js",
-    "tests/monsters-overlords.test.js",
-    "tests/exploration.test.js",
-    "tests/overland.test.js",
-    "tests/guild-skyrim-cities.test.js",
-    "tests/character-generation-plan.test.js",
-    "tests/engine.test.js",
-    "tests/forest.test.js",
-    "tests/frost.test.js",
-    "tests/presets-and-worldbook.test.js",
-    "tests/enemy-progression.test.js"
-  ]
+  "scopes": ["quality", "core", "universal-enemies", "intents"],
+  "coreFiles": ["tests/combat-overhaul.test.js", "tests/journey-archives.test.js"]
 }

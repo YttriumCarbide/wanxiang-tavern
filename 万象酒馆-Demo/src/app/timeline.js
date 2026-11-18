@@ -3,12 +3,7 @@ import { html } from '../shared/html.js';
 import { parseTimelineDrop } from './drag-payload.js';
 import { intent, enemyTimeline } from '../engine.js';
 import { escapeText } from '../ui.js';
-import {
-  damageTypeIcon,
-  damageTypeMeta,
-  inferDamageType,
-  resolveBasicAttackType,
-} from '../damage-types.js';
+import { damageTypeChip, inferDamageType, resolveBasicAttackType } from '../damage-types.js';
 import { query as $ } from './dom.js';
 
 /** @param {import('./context.js').AppContext} context */
@@ -102,13 +97,7 @@ export function createTimeline(context) {
             : ''
         }
         <span class="num">${opening && !readOnly ? '◇' : i + 1}</span>${
-          id
-            ? html`<span
-                class="cell-dmg-type is-${enemyDmgType || 'support'}"
-                title="${damageTypeMeta(enemyDmgType).name}"
-                >${damageTypeIcon(enemyDmgType, { size: 12 })}</span
-              >`
-            : ''
+          id ? damageTypeChip(enemyDmgType, { size: 13, className: 'cell-dmg-type' }) : ''
         }<span class="cell-label"
           >${id ? `${cancelled ? '× ' : ''}${context.roster.get(id).name}${phaseTag}` : opening && !readOnly ? '先手' : readOnly ? '我方行动' : '＋'}${id ? html`<small>${totalActions > 1 ? move.name : `速度 ${Math.max(1, context.roster.get(id).speed - (s.units[id].buffs.slow || 0))}`}</small>` : ''}</span
         >
@@ -149,15 +138,14 @@ export function createTimeline(context) {
           bound?.label ||
           `${context.planning.actionLabel(a)} · ${a.ap} AP\n拖动调整顺序`,
       );
+      const actionDmgChip = (dt) => damageTypeChip(dt, { size: 13, className: 'action-dmg-type' });
       let actionDmgBadge = '';
       if (a.kind === 'skill') {
         const actorDef = context.roster.get(a.actor);
         const ab = context.roster.ability(a.actor, a.skill);
         const dt =
           a.skill === 'attack' ? resolveBasicAttackType(actorDef) : inferDamageType(ab, actorDef);
-        actionDmgBadge = html`<span class="action-dmg-type" title="${damageTypeMeta(dt).name}"
-          >${damageTypeIcon(dt, { size: 12 })}</span
-        >`;
+        actionDmgBadge = actionDmgChip(dt);
       } else if (a.kind === 'engage' && a.followUp) {
         const actorDef = context.roster.get(a.actor);
         const ab = context.roster.ability(a.actor, a.followUp.skill);
@@ -165,24 +153,20 @@ export function createTimeline(context) {
           a.followUp.skill === 'attack'
             ? resolveBasicAttackType(actorDef)
             : inferDamageType(ab, actorDef);
-        actionDmgBadge = html`<span class="action-dmg-type" title="${damageTypeMeta(dt).name}"
-          >${damageTypeIcon(dt, { size: 12 })}</span
-        >`;
+        actionDmgBadge = actionDmgChip(dt);
       } else if (
         a.kind === 'swap' &&
         session.battle.state.units[a.incoming]?.entryReady &&
         context.roster.get(a.incoming)?.entrySkill
       ) {
         const incomingDef = context.roster.get(a.incoming);
-        const dt = inferDamageType(incomingDef.entrySkill, incomingDef);
-        actionDmgBadge = html`<span class="action-dmg-type" title="${damageTypeMeta(dt).name}"
-          >${damageTypeIcon(dt, { size: 12 })}</span
-        >`;
+        actionDmgBadge = actionDmgChip(inferDamageType(incomingDef.entrySkill, incomingDef));
       }
-      el.innerHTML = html`<span class="action-number">${opening ? '◇' : a.start + 1}</span>
-        <div>
+      el.innerHTML = html`<span class="action-number">${opening ? '◇' : a.start + 1}</span
+        >${actionDmgBadge}
+        <div class="time-action-body">
           <b
-            >${actionDmgBadge}${skip ? '× ' : bad ? '! ' : ''}${a.kind === 'item' ? ITEMS[a.item].name : a.kind === 'skill' ? context.roster.ability(a.actor, a.skill).name : a.kind === 'engage' ? `结合${a.followUp ? ' · ' + context.roster.ability(a.actor, a.followUp.skill).name : ''}` : a.kind === 'swap' ? (session.battle.state.units[a.incoming]?.entryReady && context.roster.get(a.incoming)?.entrySkill?.name ? `换入 · ${context.roster.get(a.incoming).entrySkill.name}` : '换入') : '交换'}</b
+            >${skip ? '× ' : bad ? '! ' : ''}${a.kind === 'item' ? ITEMS[a.item].name : a.kind === 'skill' ? context.roster.ability(a.actor, a.skill).name : a.kind === 'engage' ? `结合${a.followUp ? ' · ' + context.roster.ability(a.actor, a.followUp.skill).name : ''}` : a.kind === 'swap' ? (session.battle.state.units[a.incoming]?.entryReady && context.roster.get(a.incoming)?.entrySkill?.name ? `换入 · ${context.roster.get(a.incoming).entrySkill.name}` : '换入') : '交换'}</b
           >${repeated ? html`<span class="skill-repeat" aria-label="该行动生效两次">×2</span>` : ''}<small
             >${a.kind === 'item' ? context.roster.get(a.target).name : ['skill', 'engage'].includes(a.kind) ? context.roster.get(a.actor).name : a.kind === 'swap' ? context.roster.get(a.incoming).name : '阵型'}
             · ${bound ? (casts.length ? '后次禁锢跳过' : '禁锢 · 跳过') : `${a.ap} AP`}</small

@@ -54,7 +54,8 @@ export function createDrag(context) {
             ${unavailable ? 'disabled' : ''}
             data-tooltip="${escapeText(`${a.text || `造成${d.attack}伤害`}\n消耗 ${a.ap} AP${a.mp ? ` · ${a.mp} sp` : ''}${a.hp ? ` · ${a.hp} hp` : ''}`)}"
           >
-            <span class="drop-skill-head">${a.name}${damageTypeChip(dmgType, { size: 12 })}</span
+            <span class="drop-skill-head"
+              >${damageTypeChip(dmgType, { size: 14 })}<span>${a.name}</span></span
             ><small>${a.ap} AP${a.mp ? ` · ${a.mp} sp` : ''}${a.hp ? ` · ${a.hp} hp` : ''}</small>
           </button>`;
         })

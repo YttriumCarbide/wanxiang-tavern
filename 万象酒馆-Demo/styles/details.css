@@ -343,11 +343,11 @@
 }
 .ability {
   min-height: 44px;
-  padding: 12px 10px;
+  padding: 10px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 5px;
+  justify-content: flex-start;
+  gap: 8px;
   margin: 7px 0;
 }
 .ability strong {
@@ -356,6 +356,9 @@
 .ability small {
   font-size: 10px;
   white-space: nowrap;
+  float: none;
+  margin-left: auto;
+  flex-shrink: 0;
 }
 .ability.locked {
   opacity: 0.5;
@@ -813,31 +816,48 @@
   display: inline-block;
   flex-shrink: 0;
   vertical-align: middle;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.85));
 }
 .dmg-type-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  padding: 1px 6px;
-  border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--dmg-color, #d8c28a) 55%, transparent);
-  background: color-mix(in srgb, var(--dmg-color, #d8c28a) 14%, rgba(12, 24, 22, 0.84));
-  color: var(--dmg-color, #e8dcc2);
-  font-size: 10px;
-  font-weight: 600;
-  line-height: 15px;
-  white-space: nowrap;
-  box-shadow: 0 0 6px var(--dmg-glow, transparent);
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  flex-shrink: 0;
+  border-radius: 5px;
+  border: 1.25px solid color-mix(in srgb, var(--dmg-color, #d8c28a) 78%, #ffffff 14%);
+  background: radial-gradient(
+    circle at 32% 28%,
+    color-mix(in srgb, var(--dmg-color, #d8c28a) 28%, #16262a),
+    rgba(7, 14, 18, 0.94)
+  );
+  color: var(--dmg-color, #f0e4c8);
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.72),
+    0 0 8px var(--dmg-glow, transparent);
 }
-.dmg-type-chip .dmg-type-label {
-  letter-spacing: 0.02em;
+#details .ability-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
-#details .ability-title-row {
+#details .passive-card-head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-  width: 100%;
+  gap: 8px;
+}
+#details .passive-card-head strong {
+  flex: 1;
+  min-width: 0;
+}
+#details .passive-card-head small {
+  margin: 0;
+  float: none;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 .drop-skill-head {
   display: inline-flex;

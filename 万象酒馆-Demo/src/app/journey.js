@@ -228,6 +228,7 @@ export function createJourney(context) {
     $('#speed').hidden = false;
     $('#inn').hidden = true;
     $('#battle').hidden = false;
+    context.daily?.refresh?.();
     $('#back-inn').hidden = !developerOption(session.ai.generationOptions, 'allowRetreat');
     context.ledger?.sync();
     const spec = currentEncounterSpec(session.journey.expedition, session.battle.state.encounter);
@@ -427,6 +428,7 @@ export function createJourney(context) {
     context.generation.setSummonVisible(false);
     context.audio.setScene('inn');
     document.body.classList.remove('in-battle');
+    context.daily?.refresh?.();
     $('#speed').hidden = true;
     $('#drag-menu').hidden = true;
     session.selection.interactionStep = null;

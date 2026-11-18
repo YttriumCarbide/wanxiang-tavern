@@ -1122,7 +1122,8 @@
 }
 .prepare-ability-item {
   display: grid;
-  grid-template-columns: 44px 1fr;
+  grid-template-columns: 38px minmax(0, 1fr);
+  align-items: start;
   gap: 10px;
   background: rgba(0, 0, 0, 0.32);
   border: 1px solid rgba(226, 192, 120, 0.22);
@@ -1135,31 +1136,22 @@
   border-color: var(--gold-hi);
   transform: translateY(-2px);
 }
-.pp-skill-card-head {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-}
-.pp-skill-ico {
-  width: 44px;
-  height: 44px;
+.pp-skill-ico.is-dmg-emblem {
+  width: 38px;
+  height: 38px;
   display: grid;
   place-items: center;
-  font-size: 18px;
-  color: #fff;
-  background: linear-gradient(135deg, var(--k1, #8fb8ff), var(--k2, #3f5fd0));
-  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
-}
-.pp-skill-type-ico {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: rgba(8, 10, 26, 0.88);
-  border: 1px solid rgba(226, 192, 120, 0.35);
+  border-radius: 7px;
+  border: 1.5px solid color-mix(in srgb, var(--dmg-color, #d8c28a) 78%, #ffffff 15%);
+  background: radial-gradient(
+    circle at 30% 25%,
+    color-mix(in srgb, var(--dmg-color, #d8c28a) 26%, #13182a),
+    rgba(8, 10, 22, 0.96)
+  );
+  color: var(--dmg-color, #f4e6c2);
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.5),
+    0 0 12px var(--dmg-glow, transparent);
 }
 .pp-skill-top {
   display: flex;

@@ -220,6 +220,8 @@
   font-size: 11px;
 }
 .ability-kind {
+  min-width: 38px;
+  flex-shrink: 0;
   font-size: 10px;
   color: #ccb580;
 }
@@ -312,6 +314,5 @@
   }
 }
 .character-ability summary .dmg-type-chip {
-  margin-left: 4px;
-  vertical-align: middle;
+  flex-shrink: 0;
 }

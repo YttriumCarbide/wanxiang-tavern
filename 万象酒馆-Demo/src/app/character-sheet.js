@@ -46,17 +46,18 @@ function abilitySheet(skill, design, label, markName, actorDef = null) {
   const motion = escapeText(
     resourceText(design?.description || '这位来客的旧设定尚未记载具体动作。'),
   );
-  const dmgTypeBadge = skill.passive
-    ? ''
-    : damageTypeChip(
-        label === '普攻' ? resolveBasicAttackType(actorDef) : inferDamageType(skill, actorDef),
-        { size: 12 },
-      );
+  const dmgTypeBadge = damageTypeChip(
+    skill.passive
+      ? null
+      : label === '普攻'
+        ? resolveBasicAttackType(actorDef)
+        : inferDamageType(skill, actorDef),
+    { size: 15 },
+  );
   return html`<details class="character-ability" data-character-ability="${escapeText(label)}">
     <summary>
-      <span class="ability-kind">${label}</span>${dmgTypeBadge}<strong
-        >${escapeText(skill.name)}</strong
-      ><small>${escapeText(cost)}</small>
+      ${dmgTypeBadge}<span class="ability-kind">${label}</span
+      ><strong>${escapeText(skill.name)}</strong><small>${escapeText(cost)}</small>
     </summary>
     <div class="ability-content">
       <div class="ability-mechanics">

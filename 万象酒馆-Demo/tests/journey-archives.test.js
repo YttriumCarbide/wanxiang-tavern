@@ -142,7 +142,7 @@ test('tutorial requires actual intended vulnerability event and shield lives bes
   assert(markup.includes('bar-shield-forecast active'));
   assert(markup.includes('（+8）'));
   const activeShield = resourceBars({ ...unit, hp: 69, maxHp: 72, block: 15 });
-  assert(activeShield.includes('69/72（15）'));
+  assert(activeShield.includes('69/72<span class="bar-shield-text">（15）</span>'));
   assert(activeShield.includes('bar-shield-fill'));
   assert(!statusIcons(state, 'aegis').includes('data-buff="shield"'));
 });

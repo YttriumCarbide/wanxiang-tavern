@@ -120,14 +120,14 @@ export function resourceBars(u, f = u) {
         text = `${label} ${now}/${max}${now !== end ? `\n预计 ${end}/${max}` : ''}${shieldLabel}`;
       const shieldPct = max ? Math.min(1, nowBlock / max) * 100 : 0;
       const forecastShieldPct = max ? Math.min(1, endBlock / max) * 100 : 0;
-      const numberText =
+      const shieldMarkup =
         k === 'hp'
           ? nowBlock > 0
-            ? `${now}/${max}（${nowBlock}）`
+            ? html`<span class="bar-shield-text">（${nowBlock}）</span>`
             : endBlock > 0
-              ? `${now}/${max}（+${endBlock}）`
-              : `${now}/${max}`
-          : `${now}/${max}`;
+              ? html`<span class="bar-shield-text is-forecast">（+${endBlock}）</span>`
+              : ''
+          : '';
       return html`<span
         class="bar ${k} ${now !== end || (k === 'hp' && nowBlock !== endBlock) ? 'forecast' : ''}"
         tabindex="0"
@@ -146,7 +146,7 @@ export function resourceBars(u, f = u) {
                   style="width:${forecastShieldPct}%"
                 ></span>`
             : ''
-        }<b class="resource-number">${numberText}</b></span
+        }<b class="resource-number">${now}/${max}${shieldMarkup}</b></span
       >`;
     })
     .join('');

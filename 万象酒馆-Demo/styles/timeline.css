@@ -409,69 +409,98 @@
 .time-cell {
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  align-items: flex-start;
-  padding: 10px 12px;
-  gap: 8px;
+  justify-content: space-between;
+  align-items: stretch;
+  padding: 8px 10px;
+  gap: 4px;
 }
 .time-action {
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  align-items: flex-start;
-  padding: 10px 12px;
+  justify-content: space-between;
+  align-items: stretch;
+  padding: 8px 10px;
+  gap: 4px;
 }
 .time-cell .num {
   flex: 0 0 auto;
-  font-size: 31px;
-  line-height: 31px;
+  align-self: flex-start;
+  font-size: 24px;
+  line-height: 1;
 }
 .action-number {
   flex: 0 0 auto;
-  font-size: 31px;
-  line-height: 31px;
+  align-self: flex-start;
+  font-size: 24px;
+  line-height: 1;
 }
 .time-cell .cell-label {
-  font-size: 11px !important;
+  margin-top: auto;
+  min-width: 0;
+  width: 100%;
+  font-size: 12px !important;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .time-cell:not(.enemy-cell) .cell-label {
   align-self: flex-end;
-  font-size: 22px !important;
-  line-height: 18px;
+  text-align: right;
+  font-size: 18px !important;
+  line-height: 1;
 }
 .time-cell .cell-label small {
-  font-size: 9px;
-  margin-top: 5px;
+  display: block;
+  margin-top: 2px;
+  font-size: 10px;
+  line-height: 1.2;
+  color: #c9d6c6;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.time-action > div {
+  margin-top: auto;
+  min-width: 0;
+  width: 100%;
 }
 .time-action b {
   font-size: 12px;
-  margin: 0 10px 5px 0;
+  line-height: 1.25;
+  margin: 0 0 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 .time-action small {
-  font-size: 9px;
+  display: block;
+  font-size: 10px;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
-.time-action {
-  gap: 5px;
-}
 .time-action .action-number {
-  font-size: 25px;
-  line-height: 25px;
+  font-size: 24px;
+  line-height: 1;
 }
 .time-action .remove {
   font-size: 18px;
 }
 .opening-timeline .time-cell .num {
+  align-self: center;
   font-size: 22px;
   line-height: 22px;
 }
 .opening-timeline .time-action .action-number {
+  align-self: center;
   line-height: 22px;
 }
 .opening-timeline .cell-label {
   font-size: 10px !important;
   align-self: center !important;
+  text-align: center;
   line-height: 16px !important;
 }
 .opening-timeline .time-action div small {
@@ -482,16 +511,16 @@
   font-size: 10px;
 }
 .preview-grid .time-cell {
-  padding: 9px 12px;
-  gap: 7px;
+  padding: 8px 10px;
+  gap: 4px;
 }
 .preview-grid .time-cell .num {
-  font-size: 28px;
-  line-height: 28px;
+  font-size: 22px;
+  line-height: 1;
 }
 .preview-grid .time-cell:not(.enemy-cell) .cell-label {
   font-size: 10px !important;
-  align-self: flex-start !important;
+  align-self: flex-end !important;
   line-height: 15px;
 }
 #forecast-note {
@@ -509,10 +538,14 @@
     padding: 12px !important;
   }
   .time-cell {
-    padding: 9px 7px;
+    padding: 7px;
   }
   .time-action {
-    padding: 9px 7px;
+    padding: 7px;
+  }
+  .time-cell .num,
+  .time-action .action-number {
+    font-size: 21px;
   }
   .time-cell .cell-label {
     font-size: 10px !important;
@@ -525,8 +558,9 @@
   }
 }
 @media (max-width: 1000px) and (min-width: 761px) {
-  .time-cell .num {
-    font-size: 27px;
+  .time-cell .num,
+  .time-action .action-number {
+    font-size: 21px;
   }
 }
 @media (max-width: 760px) {
@@ -729,16 +763,16 @@
     max-width: 100%;
   }
   .time-cell {
-    padding: 5px 3px;
+    padding: 5px;
   }
   .time-action {
-    padding: 5px 3px;
+    padding: 5px;
   }
   .preview-grid .time-cell {
-    padding: 5px 3px;
+    padding: 5px;
   }
   .time-cell .cell-label {
-    font-size: 7px !important;
+    font-size: 8px !important;
   }
   .time-action b {
     font-size: 8px;
@@ -749,8 +783,23 @@
   .opening-timeline .time-cell:not(.enemy-cell) .cell-label {
     font-size: 8px !important;
   }
-  .time-cell .num {
-    font-size: 22px;
+  .time-cell .num,
+  .preview-grid .time-cell .num,
+  .time-action .action-number {
+    font-size: 18px;
+    line-height: 1;
+  }
+  .cell-dmg-type,
+  .action-dmg-type {
+    width: 16px;
+    height: 16px;
+    top: 4px;
+  }
+  .cell-dmg-type {
+    right: 4px;
+  }
+  .action-dmg-type {
+    right: 19px;
   }
 }
 .time-cell.card-slot-drop {
@@ -838,16 +887,16 @@
     gap: 4px;
   }
   .time-cell .num {
-    font-size: 23px;
-    line-height: 23px;
+    font-size: 18px;
+    line-height: 18px;
   }
   .preview-grid .time-cell .num {
-    font-size: 23px;
-    line-height: 23px;
+    font-size: 18px;
+    line-height: 18px;
   }
   .action-number {
-    font-size: 23px;
-    line-height: 23px;
+    font-size: 18px;
+    line-height: 18px;
   }
   .time-cell .cell-label {
     font-size: 8px !important;
@@ -855,8 +904,8 @@
     white-space: normal;
   }
   .time-action .action-number {
-    font-size: 21px;
-    line-height: 21px;
+    font-size: 18px;
+    line-height: 18px;
   }
   .time-action b {
     font-size: 9px;
@@ -905,9 +954,21 @@
   .time-cell .num,
   .preview-grid .time-cell .num,
   .time-action .action-number {
-    font-size: 17px;
-    line-height: 18px;
+    font-size: 15px;
+    line-height: 15px;
     margin-bottom: 0;
+  }
+  .cell-dmg-type,
+  .action-dmg-type {
+    width: 15px;
+    height: 15px;
+    top: 3px;
+  }
+  .cell-dmg-type {
+    right: 3px;
+  }
+  .action-dmg-type {
+    right: 17px;
   }
   .time-cell .cell-label,
   .opening-timeline .time-cell:not(.enemy-cell) .cell-label {
@@ -928,14 +989,21 @@
 }
 .cell-dmg-type,
 .action-dmg-type {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  vertical-align: middle;
-  margin-right: 4px;
-  line-height: 1;
+  position: absolute;
+  top: 7px;
+  z-index: 3;
+  width: 20px;
+  height: 20px;
 }
 .cell-dmg-type {
-  position: relative;
-  z-index: 2;
+  right: 8px;
+}
+.action-dmg-type {
+  right: 24px;
+}
+.time-cell.bound .timeline-chain {
+  right: 32px;
+  top: 6px;
+  width: 26px;
+  height: 22px;
 }

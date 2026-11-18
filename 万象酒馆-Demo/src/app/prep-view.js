@@ -203,12 +203,15 @@ function skillsMarkup(stats, member, library) {
     html`<div class="prepare-skills-grid">
       ${cards
         .map((card, i) => {
-          const [k1, k2, glyph] = skillColor(card.kind);
+          const [k1, k2] = skillColor(card.kind);
           const typeMeta = damageTypeMeta(card.damageType);
           return `<article class="prepare-ability-item" style="--k1:${k1};--k2:${k2};--i:${i}">
-          <div class="pp-skill-card-head">
-            <div class="pp-skill-ico" aria-hidden="true">${glyph}</div>
-            <span class="pp-skill-type-ico" title="${escapeText(typeMeta.name)}">${damageTypeIcon(card.damageType, { size: 14 })}</span>
+          <div
+            class="pp-skill-ico is-dmg-emblem"
+            style="--dmg-color:${typeMeta.color};--dmg-glow:${typeMeta.glow}"
+            title="${escapeText(typeMeta.name)}"
+          >
+            ${damageTypeIcon(card.damageType, { size: 22 })}
           </div>
           <div>
             <div class="pp-skill-top"><u>${escapeText(card.kind)}</u><small>${escapeText(card.cost)}</small></div>
