@@ -31,7 +31,7 @@ export const TRIGGER_TARGETS = Object.freeze({
   allEnemies: '全体存活敌人',
   lowestEnemy: '生命最低敌人',
 });
-export const EXCLUSIVE_BUFFS = Object.freeze(['meteor', 'balance', 'sacrifice']);
+export const EXCLUSIVE_BUFFS = Object.freeze(['meteor', 'balance', 'sacrifice', 'artifact']);
 export const POSITIVE_BUFFS = Object.freeze([
   'flying',
   'haste',
@@ -41,6 +41,7 @@ export const POSITIVE_BUFFS = Object.freeze([
   'iron',
   'meteor',
   'overload',
+  'artifact',
 ]);
 export const NEGATIVE_BUFFS = Object.freeze([
   'blind',
@@ -110,7 +111,9 @@ export function normalizeRules(value) {
     const effects = rule.effects.map((effect) => {
       if (
         rule.mode === 'continuous' &&
-        (effect.type !== 'buff' || !POSITIVE_BUFFS.includes(effect.buff))
+        (effect.type !== 'buff' ||
+          !POSITIVE_BUFFS.includes(effect.buff) ||
+          effect.buff === 'artifact')
       )
         throw Error('持续效果只支持正面状态光环');
       if (!['damage', 'heal', 'mana', 'shield', 'buff', 'cleanse', 'mark'].includes(effect.type))

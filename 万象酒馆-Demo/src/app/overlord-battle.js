@@ -33,7 +33,11 @@ export function createOverlordBattle(context) {
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   let disposed = false;
   let introPlayedKey = '';
-  let lineToken = 0;
+  let dialogueQueue = [];
+  let dialogueRunning = false;
+  let cancelSleep = null;
+  let closeToken = 0;
+  let domainLockedRound = -1;
   let activeBombKey = '';
   let bombStartAt = 0;
   let bombDeadlineAt = 0;
@@ -52,11 +56,6 @@ export function createOverlordBattle(context) {
     <div class="overlord-dark-veil" aria-hidden="true"></div>
     <div class="overlord-slash-beam" aria-hidden="true"></div>
     <div class="overlord-white-flash" aria-hidden="true"></div>
-    <div class="overlord-phase-scroll">
-      <small data-scroll-rank></small>
-      <strong data-scroll-title></strong>
-      <span data-scroll-sub></span>
-    </div>
   `;
   document.body.append(cutsceneLayer);
   const cutsceneSurface = createPopoverSurface(cutsceneLayer);
@@ -103,105 +102,133 @@ export function createOverlordBattle(context) {
     return null;
   }
 
+  function wakeDialogueSleep() {
+    const fn = cancelSleep;
+    cancelSleep = null;
+    fn?.();
+  }
+
+  function interruptibleSleep(ms) {
+    return new Promise((resolve) => {
+      let done = false;
+      const finish = () => {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        if (cancelSleep === finish) cancelSleep = null;
+        resolve();
+      };
+      const timer = setTimeout(finish, ms);
+      cancelSleep = finish;
+    });
+  }
+
   function clearDialogue() {
-    lineToken++;
-    dialogueBar.classList.remove('is-entering', 'is-leaving');
+    closeToken++;
+    dialogueQueue = [];
+    dialogueRunning = false;
+    wakeDialogueSleep();
+    dialogueBar.classList.remove('is-entering', 'is-leaving', 'is-swapping', 'is-glitch');
     dialogueSurface.hide();
     dialogueBar.hidden = true;
   }
 
-  async function showLine(speaker, text, { rankLabel = '', tone = 'boss', holdMs = 3400 } = {}) {
-    if (disposed || !text) return;
-    const myToken = ++lineToken;
-    const speed = Math.max(0.5, session.battle.speed || 1);
+  async function drainDialogueQueue() {
+    if (dialogueRunning || disposed) return;
+    dialogueRunning = true;
+    const myCloseToken = closeToken;
     const activeBoss = currentOverlordDef();
     const pack = OVERLORD_DIALOGUES[activeBoss?.id] || OVERLORD_DIALOGUES.alchemicalPuppet;
-    dialogueBar.querySelector('[data-dl-rank]').textContent =
-      rankLabel || pack.rankLabel || '♛ 霸主降临';
-    dialogueBar.querySelector('[data-dl-speaker]').textContent =
-      speaker || activeBoss?.def?.name || '霸主';
-    dialogueBar.querySelector('[data-dl-text]').innerHTML = formatKeywordText(text);
-    dialogueBar.dataset.tone = tone;
-    dialogueBar.classList.remove('is-leaving', 'is-glitch');
-    void dialogueBar.offsetWidth;
-    dialogueBar.classList.add('is-entering', 'is-glitch');
-    dialogueBar.hidden = false;
-    dialogueSurface.hide();
-    dialogueSurface.show();
-    await sleep(Math.round(holdMs / speed));
-    if (disposed || myToken !== lineToken) return;
-    dialogueBar.classList.remove('is-entering');
-    dialogueBar.classList.add('is-leaving');
-    await sleep(240);
-    if (disposed || myToken !== lineToken) return;
-    dialogueSurface.hide();
-    dialogueBar.hidden = true;
-    dialogueBar.classList.remove('is-leaving');
-  }
 
-  async function showSequence(items, holdMs = 3100) {
-    if (disposed || !items?.length) return;
-    const myToken = ++lineToken;
-    const speed = Math.max(0.5, session.battle.speed || 1);
-    const activeBoss = currentOverlordDef();
-    const pack = OVERLORD_DIALOGUES[activeBoss?.id] || OVERLORD_DIALOGUES.alchemicalPuppet;
-    for (const item of items) {
-      if (disposed || myToken !== lineToken) return;
-      dialogueBar.querySelector('[data-dl-rank]').textContent =
-        item.rankLabel || pack.rankLabel || '♛ 霸主降临';
-      dialogueBar.querySelector('[data-dl-speaker]').textContent =
-        item.speaker || activeBoss?.def?.name || '霸主';
-      dialogueBar.querySelector('[data-dl-text]').innerHTML = formatKeywordText(item.text);
-      dialogueBar.dataset.tone = item.tone || 'boss';
-      dialogueBar.classList.remove('is-leaving', 'is-glitch');
-      void dialogueBar.offsetWidth;
-      dialogueBar.classList.add('is-entering', 'is-glitch');
-      dialogueBar.hidden = false;
-      dialogueSurface.hide();
-      dialogueSurface.show();
-      await sleep(Math.round(holdMs / speed));
-      if (disposed || myToken !== lineToken) return;
-      dialogueBar.classList.remove('is-entering');
-      dialogueBar.classList.add('is-leaving');
-      await sleep(200);
-    }
-    if (!disposed && myToken === lineToken) {
-      dialogueSurface.hide();
-      dialogueBar.hidden = true;
-      dialogueBar.classList.remove('is-leaving');
+    try {
+      while (!disposed && myCloseToken === closeToken && dialogueQueue.length) {
+        const item = dialogueQueue.shift();
+        if (!item?.text) continue;
+        const speed = Math.max(0.5, session.battle.speed || 1);
+        const holdMs = Math.round((item.holdMs || 3200) / speed);
+        const alreadyVisible = !dialogueBar.hidden;
+
+        dialogueBar.querySelector('[data-dl-rank]').textContent =
+          item.rankLabel || pack.rankLabel || '磨坊阁楼 · 失控炼金造物';
+        dialogueBar.querySelector('[data-dl-speaker]').textContent =
+          item.speaker || activeBoss?.def?.name || '失败的炼金傀偶';
+        dialogueBar.querySelector('[data-dl-text]').innerHTML = formatKeywordText(item.text);
+        dialogueBar.dataset.tone = item.tone || 'boss';
+        dialogueBar.classList.remove('is-leaving', 'is-glitch', 'is-swapping');
+        void dialogueBar.offsetWidth;
+
+        if (alreadyVisible) {
+          dialogueBar.classList.add('is-swapping');
+        } else {
+          dialogueBar.classList.add('is-entering', 'is-glitch');
+          dialogueBar.hidden = false;
+          dialogueSurface.show();
+        }
+        await interruptibleSleep(holdMs);
+      }
+
+      if (!disposed && myCloseToken === closeToken && !dialogueBar.hidden) {
+        dialogueBar.classList.remove('is-entering', 'is-swapping', 'is-glitch');
+        dialogueBar.classList.add('is-leaving');
+        await interruptibleSleep(220);
+        if (!disposed && myCloseToken === closeToken && !dialogueQueue.length) {
+          dialogueSurface.hide();
+          dialogueBar.hidden = true;
+          dialogueBar.classList.remove('is-leaving');
+        }
+      }
+    } finally {
+      dialogueRunning = false;
+      if (!disposed && myCloseToken === closeToken && dialogueQueue.length) {
+        void drainDialogueQueue();
+      }
     }
   }
 
-  async function playPhaseCutscene({
-    bossId,
-    rankLabel = '♛ OVERLORD AWAKENING',
-    title = '',
-    subtitle = '',
-    tone = 'phase',
-    roarText = '',
-  }) {
+  function enqueueLines(items, { interrupt = false } = {}) {
+    if (disposed) return Promise.resolve();
+    const valid = (items || []).filter(
+      (item) => item && typeof item.text === 'string' && item.text,
+    );
+    if (!valid.length) return Promise.resolve();
+    if (interrupt) {
+      dialogueQueue = [...valid];
+      wakeDialogueSleep();
+    } else {
+      dialogueQueue.push(...valid);
+    }
+    return drainDialogueQueue();
+  }
+
+  function showLine(
+    speaker,
+    text,
+    { rankLabel = '', tone = 'boss', holdMs = 3200, interrupt = false } = {},
+  ) {
+    return enqueueLines([{ speaker, text, rankLabel, tone, holdMs }], { interrupt });
+  }
+
+  async function playPhaseCutscene({ bossId, tone = 'phase', roarLines = [] }) {
     if (disposed) return;
     const speed = Math.max(0.5, session.battle.speed || 1);
     const center = session.runtime.view?.unitScreenCenter?.(bossId) || { x: 50, y: 38 };
     cutsceneLayer.style.setProperty('--spot-x', `${center.x}%`);
     cutsceneLayer.style.setProperty('--spot-y', `${center.y}%`);
     cutsceneLayer.dataset.tone = tone;
-    cutsceneLayer.querySelector('[data-scroll-rank]').textContent = rankLabel;
-    cutsceneLayer.querySelector('[data-scroll-title]').textContent = title;
-    cutsceneLayer.querySelector('[data-scroll-sub]').textContent = subtitle;
     cutsceneLayer.classList.remove('is-dim', 'is-slash', 'is-impact', 'is-out');
     cutsceneLayer.hidden = false;
     cutsceneSurface.show();
     void cutsceneLayer.offsetWidth;
 
+    const lines = (roarLines || []).filter(Boolean);
     if (!reduced) {
       session.runtime.view?.playOverlordClip?.(bossId, 'Special_Action', speed);
       cutsceneLayer.classList.add('is-dim');
-      await sleep(Math.round(240 / speed));
+      await sleep(Math.round(220 / speed));
       if (disposed) return;
 
       cutsceneLayer.classList.add('is-slash');
-      await sleep(Math.round(230 / speed));
+      await sleep(Math.round(210 / speed));
       if (disposed) return;
 
       context.audio?.play?.('combine');
@@ -210,24 +237,33 @@ export function createOverlordBattle(context) {
       void $('#battle')?.offsetWidth;
       $('#battle')?.classList.add('overlord-heavy-shake');
       cutsceneLayer.classList.add('is-impact');
-      if (roarText)
-        void showLine(context.roster?.get?.(bossId)?.name, roarText, {
-          tone: 'enraged',
-          holdMs: 3600,
-        });
-      await sleep(Math.round(1150 / speed));
+      if (lines.length) {
+        const speaker = context.roster?.get?.(bossId)?.name;
+        void enqueueLines(
+          lines.map((text, idx) => ({
+            speaker,
+            text,
+            tone: idx > 0 ? 'enraged' : 'boss',
+            holdMs: 3200,
+          })),
+          { interrupt: true },
+        );
+      }
+      await sleep(Math.round(620 / speed));
       if (disposed) return;
 
       cutsceneLayer.classList.add('is-out');
-      await sleep(Math.round(260 / speed));
+      await sleep(Math.round(220 / speed));
     } else {
       cutsceneLayer.classList.add('is-dim', 'is-impact');
-      if (roarText)
-        void showLine(context.roster?.get?.(bossId)?.name, roarText, {
-          tone: 'enraged',
-          holdMs: 2600,
-        });
-      await sleep(600);
+      if (lines.length) {
+        const speaker = context.roster?.get?.(bossId)?.name;
+        void enqueueLines(
+          lines.map((text) => ({ speaker, text, tone: 'enraged', holdMs: 2600 })),
+          { interrupt: true },
+        );
+      }
+      await sleep(450);
     }
 
     if (disposed) return;
@@ -252,23 +288,9 @@ export function createOverlordBattle(context) {
     const pack = OVERLORD_DIALOGUES[activeBoss.id] || OVERLORD_DIALOGUES.alchemicalPuppet;
     await playPhaseCutscene({
       bossId: activeBoss.id,
-      rankLabel: pack.rankLabel || '♛ 霸主讨伐',
-      title: `${activeBoss.def.name} · 显现`,
-      subtitle: '定式金链啮合 · 三阶段压迫战开始',
       tone: 'entrance',
-      roarText: pack.entrance?.[0] || `${activeBoss.def.name}封锁了阁楼的退路！`,
+      roarLines: pack.entrance || [`${activeBoss.def.name}封锁了阁楼的退路！`],
     });
-    if (disposed || session.runtime.mode !== 'battle') return;
-    if (pack.entrance?.length > 1) {
-      await showSequence(
-        pack.entrance.slice(1).map((line) => ({
-          speaker: activeBoss.def.name,
-          text: line,
-          tone: 'enraged',
-        })),
-        3200,
-      );
-    }
   }
 
   function applySeal(locked) {
@@ -299,11 +321,12 @@ export function createOverlordBattle(context) {
 
   function triggerDomainLock(bossId) {
     applySeal(true);
+    domainLockedRound = session.battle.state?.round ?? 1;
     const activeBoss = currentOverlordDef();
     const id = bossId || activeBoss?.id || 'alchemicalPuppet';
     const pack = OVERLORD_DIALOGUES[id] || OVERLORD_DIALOGUES.alchemicalPuppet;
     const name = activeBoss?.def?.name || context.roster?.get?.(id)?.name || '失败的炼金傀偶';
-    void showLine(name, pack.domainLock, { tone: 'enraged', holdMs: 3600 });
+    void showLine(name, pack.domainLock, { tone: 'enraged', holdMs: 3200, interrupt: false });
   }
 
   function clearBombDom() {
@@ -421,6 +444,17 @@ export function createOverlordBattle(context) {
       session.runtime.mode === 'battle' && state && !['victory', 'defeat'].includes(state.phase);
     applySeal(Boolean(active && state.overlordUiLocked));
 
+    const activeBoss = currentOverlordDef();
+    const battleEl = $('#battle');
+    if (battleEl) {
+      if (active && activeBoss?.unit) {
+        const stage = overlordPhaseProfile(activeBoss.def, activeBoss.unit.bossStage || 1).stage;
+        battleEl.dataset.overlordStage = String(stage);
+      } else {
+        delete battleEl.dataset.overlordStage;
+      }
+    }
+
     const bomb = state?.activeAlchemicalBomb;
     if (!active || session.battle.playing || state.phase !== 'plan' || !bomb) {
       if (bombRaf || document.body.classList.contains('overlord-bomb-active')) {
@@ -441,10 +475,11 @@ export function createOverlordBattle(context) {
       const targetName = context.roster?.get?.(bomb.target)?.name || bomb.target;
       const pack = OVERLORD_DIALOGUES[bomb.owner] || OVERLORD_DIALOGUES.alchemicalPuppet;
       const ownerName = context.roster?.get?.(bomb.owner)?.name || '失败的炼金傀偶';
-      if (typeof pack.bombArmed === 'function') {
+      if (typeof pack.bombArmed === 'function' && (bomb.round ?? -2) !== domainLockedRound) {
         void showLine(ownerName, pack.bombArmed(targetName, bomb.durationSec), {
           tone: 'enraged',
-          holdMs: 3200,
+          holdMs: 3000,
+          interrupt: false,
         });
       }
     }
@@ -464,14 +499,13 @@ export function createOverlordBattle(context) {
       triggerDomainLock(event.actor);
     }
     if (event.type === 'bossPhase' && event.overlord) {
+      const battleEl = $('#battle');
+      if (battleEl && event.phaseStage) battleEl.dataset.overlordStage = String(event.phaseStage);
       const roarText = event.phaseStage >= 3 ? pack.phase3 : pack.phase2;
       await playPhaseCutscene({
         bossId: event.actor,
-        rankLabel: pack.rankLabel || '♛ 霸主转阶段',
-        title: event.label || overlordPhaseProfile(activeBoss?.def, event.phaseStage).title,
-        subtitle: event.subtitle || '',
         tone: event.phaseStage >= 3 ? 'critical' : 'phase',
-        roarText,
+        roarLines: [roarText],
       });
     } else if (event.type === 'bombDetonate') {
       const targetId = event.targets?.[0] || event.bomb?.target;
@@ -480,25 +514,30 @@ export function createOverlordBattle(context) {
         typeof pack.bombDetonate === 'function'
           ? pack.bombDetonate(targetName, event.damage || 0)
           : event.label;
-      void showLine(actorName, line, { tone: 'enraged', holdMs: 3400 });
+      void showLine(actorName, line, { tone: 'enraged', holdMs: 3200, interrupt: true });
     } else if (event.type === 'bombDefuse') {
       const targetId = event.targets?.[0] || event.bomb?.target;
       const targetName = context.roster?.get?.(targetId)?.name || targetId || '目标';
       const line = typeof pack.bombDefuse === 'function' ? pack.bombDefuse(targetName) : '';
-      if (line) void showLine(actorName, line, { tone: 'boss', holdMs: 2600 });
+      if (line) void showLine(actorName, line, { tone: 'boss', holdMs: 2600, interrupt: false });
     } else if (event.fixedSlotBroken && event.blockedBy === 'bind') {
-      void showLine(actorName, pack.broken, { tone: 'party', holdMs: 3200 });
+      void showLine(actorName, pack.broken, { tone: 'party', holdMs: 3200, interrupt: false });
     }
   }
 
   async function onVictory() {
     applySeal(false);
     disarmBombTimer({ resetKey: true });
+    delete $('#battle')?.dataset.overlordStage;
     const activeBoss = currentOverlordDef();
     if (!activeBoss) return false;
     const pack = OVERLORD_DIALOGUES[activeBoss.id] || OVERLORD_DIALOGUES.alchemicalPuppet;
     if (pack.defeat) {
-      await showLine(activeBoss.def.name, pack.defeat, { tone: 'boss', holdMs: 1800 });
+      await showLine(activeBoss.def.name, pack.defeat, {
+        tone: 'boss',
+        holdMs: 1800,
+        interrupt: true,
+      });
     }
     return true;
   }
@@ -521,6 +560,7 @@ export function createOverlordBattle(context) {
     void showLine(name, overlordSealedBark(id, sealed.dataset.overlordSealed), {
       tone: 'enraged',
       holdMs: 3000,
+      interrupt: true,
     });
   }
 
@@ -530,12 +570,17 @@ export function createOverlordBattle(context) {
 
   function reset() {
     introPlayedKey = '';
+    domainLockedRound = -1;
     clearDialogue();
     disarmBombTimer({ resetKey: true });
     applySeal(false);
     cutsceneSurface.hide();
     cutsceneLayer.hidden = true;
-    $('#battle')?.classList.remove('overlord-heavy-shake');
+    const battleEl = $('#battle');
+    if (battleEl) {
+      battleEl.classList.remove('overlord-heavy-shake');
+      delete battleEl.dataset.overlordStage;
+    }
   }
 
   /** Test & automation helper for time-bomb deadline acceleration without mutating combat math. */

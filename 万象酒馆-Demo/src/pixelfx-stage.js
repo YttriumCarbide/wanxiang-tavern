@@ -239,10 +239,11 @@ export function createPixelFxStage(layer, getSpeed = () => 1) {
     layer.append(canvas);
     const startAt = performance.now() + delayMs;
     const naturalDuration = Number(mod.meta?.duration) || 1;
+    const capMs = mod.meta?.loop === true ? 2200 : 4500;
     const maxDurationMs =
       opts.maxDuration !== undefined
         ? Number(opts.maxDuration)
-        : Math.min(1800, (naturalDuration * 1000) / (speed * speedRate) + 120);
+        : Math.min(capMs, (naturalDuration * 1000) / (speed * speedRate) + 220);
 
     active.push({
       id,
@@ -279,6 +280,11 @@ export function createPixelFxStage(layer, getSpeed = () => 1) {
         entry.canvas.style.opacity = '1';
         entry.lastAt = entry.startAt;
       }
+      const elapsedMs = now - entry.startAt;
+      const remainMs = entry.maxDurationMs - elapsedMs;
+      if (remainMs > 0 && remainMs < 180) {
+        entry.canvas.style.opacity = Math.max(0, remainMs / 180).toFixed(3);
+      }
       const rawDt = Math.max(1 / 60, (now - entry.lastAt) / 1000);
       const dt = Math.min(0.05, rawDt) * speed * entry.speedRate;
       entry.lastAt = now;
@@ -287,7 +293,7 @@ export function createPixelFxStage(layer, getSpeed = () => 1) {
       entry.fx.draw(entry.frame);
       composite(entry.frame, entry.img.data, null, entry.light);
       entry.ctx.putImageData(entry.img, 0, 0);
-      if (entry.fx.done() || now - entry.startAt >= entry.maxDurationMs) {
+      if (entry.fx.done() || elapsedMs >= entry.maxDurationMs) {
         removeEntry(i);
       }
     }

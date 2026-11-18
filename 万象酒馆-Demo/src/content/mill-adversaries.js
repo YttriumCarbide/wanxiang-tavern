@@ -499,6 +499,7 @@ export const MILL_BOSSES = [
       toughness: 7,
       hp: 320,
       speed: 3,
+      buffs: { artifact: 1 },
       tactic: { target: 'fixed' },
     },
     [
@@ -540,7 +541,7 @@ export const MILL_BOSSES = [
       overlordPhases: Object.freeze([0.66, 0.33]),
       toughnessByPhase: Object.freeze([7, 9, 10]),
       phaseShields: Object.freeze([0, 12, 16]),
-      phaseTitles: Object.freeze(['', '第二阶段 · 逆重发条失控', '第三阶段 · 破碎核心临爆']),
+      artifactByPhase: Object.freeze([0, 1, 1]),
       fixedFirstSlot: Object.freeze({
         id: 'alchemical-time-bomb',
         name: '定式投弹 · 炼金怀表',

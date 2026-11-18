@@ -155,6 +155,22 @@
   margin: 14px 0;
   flex-wrap: wrap;
 }
+.game-download {
+  margin-top: 16px;
+  border-top: 1px solid var(--border);
+}
+.game-download a {
+  color: var(--gold);
+}
+.game-download a.game-download-link {
+  padding: 7px 13px;
+  border: 1px solid var(--gold);
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+}
+.game-download-link:hover {
+  background: var(--gold-glow);
+}
 #ai-party {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

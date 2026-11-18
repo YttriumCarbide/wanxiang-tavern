@@ -153,6 +153,23 @@ const artwork = {
     <path fill="#dfbd78" d="m32 20 8 12-8 12-8-12z" />
     <path fill="#fff5cd" d="M30 25h4v14h-4zM25 30h14v4H25z" />
     <path fill="#9db4d9" d="M13 29h4v6h-4zM47 29h4v6h-4z" />`,
+  artifact: html`<path
+      fill="#241d15"
+      d="M24 4h16v6l5 2 5-5 7 7-5 5 2 5h6v16h-6l-2 5 5 5-7 7-5-5-5 2v6H24v-6l-5-2-5 5-7-7 5-5-2-5H4V24h6l2-5-5-5 7-7 5 5 5-2z"
+    />
+    <path
+      fill="#d8a444"
+      d="M27 7h10v7l4 2 5-5 5 5-5 5 2 4h7v10h-7l-2 4 5 5-5 5-5-5-4 2v7H27v-7l-4-2-5 5-5-5 5-5-2-4H7V27h7l2-4-5-5 5-5 5 5 4-2z"
+    />
+    <path
+      fill="#ffe28a"
+      d="M27 7h10v4H27zM16 14l5 5-2 2-5-5zM43 16l5-5 3 3-5 5zM7 27h7v3H7zM50 27h7v3h-7z"
+    />
+    <path fill="#82591c" d="M27 53h10v4H27zM11 33h5v4h-5zM48 33h5v4h-5z" />
+    <circle cx="32" cy="32" r="14" fill="#382b1d" />
+    <circle cx="32" cy="32" r="9" fill="#9c6e26" />
+    <path fill="#6bf5a9" d="M28 26h8v12h-8zM26 28h12v8H26z" />
+    <path fill="#fff7d6" d="M29 28h4v4h-4z" />`,
 };
 
 export function icon(key) {

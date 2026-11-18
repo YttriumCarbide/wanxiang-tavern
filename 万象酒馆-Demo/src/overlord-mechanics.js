@@ -31,6 +31,7 @@ export function overlordPhaseProfile(def, stage = 1) {
       bombSeconds,
       shield: 0,
       strengthBonus: 0,
+      artifactBonus: 0,
       title: '',
       subtitle: '',
     };
@@ -43,10 +44,9 @@ export function overlordPhaseProfile(def, stage = 1) {
       bombSeconds,
       shield: def?.phaseShields?.[1] ?? 12,
       strengthBonus: 0,
-      title: def?.phaseTitles?.[1] || '第二阶段 · 逆重发条失控',
-      subtitle:
-        def?.phaseSubtitles?.[1] ||
-        `韧性重铸 ${toughness} · 定时炸弹缩至 ${bombSeconds} 秒 · 解锁二连行动`,
+      artifactBonus: def?.artifactByPhase?.[1] ?? 1,
+      title: '',
+      subtitle: '',
     };
   }
   return {
@@ -56,10 +56,9 @@ export function overlordPhaseProfile(def, stage = 1) {
     bombSeconds,
     shield: def?.phaseShields?.[2] ?? 16,
     strengthBonus: 1,
-    title: def?.phaseTitles?.[2] || '第三阶段 · 破碎核心临爆',
-    subtitle:
-      def?.phaseSubtitles?.[2] ||
-      `韧性重铸 ${toughness} · 定时炸弹缩至 ${bombSeconds} 秒 · 炉心狂暴增伤`,
+    artifactBonus: def?.artifactByPhase?.[2] ?? 1,
+    title: '',
+    subtitle: '',
   };
 }
 
@@ -86,31 +85,32 @@ export function alchemicalBombDamage(targetUnit) {
 
 export const OVERLORD_DIALOGUES = Object.freeze({
   alchemicalPuppet: Object.freeze({
-    rankLabel: '♛ 阁楼霸主 · 实验残次品 NO.00',
+    rankLabel: '磨坊阁楼 · 失控炼金造物',
     entrance: Object.freeze([
-      '咔、咔哒……实验记录校准：检测到活体入侵者【六名】——清理程序启动。',
-      '【定式铁则】已啮合。怀表发条开始走字……在引信烧尽前，交出你们的回合！',
+      '咔、咔哒……三十年了……终于又有活人，踩响阁楼的木梯了……',
+      '胸口这枚【怀表】还在走字……在指针停下之前，谁也别想从齿轮底下走出去！',
     ]),
-    domainLock: '……休想触碰【存档】、【设置】或【退路】——在核心熄灭前，整座屏幕都只属于这场死斗！',
-    phase2: '咔——！反重力炉心偏转！发条过载——定时缩减至【30秒】，准备迎接【双倍砸击】！',
-    phase3: '滋滋……裂隙突破临界！烧瓶温度暴走！最后【20秒】——看你们还能怎么逃出齿轮室！',
-    bombArmed: (targetName, sec) =>
-      `滴答、滴答……【${targetName}】已挂载定时炼金炸弹！限你在【${sec}秒】内确认结算——`,
+    domainLock:
+      '咔哒……阁楼的门闩落锁了。不管是【退路】、【账簿】还是外面的按钮，在发条停转前全都别想碰！',
+    phase2: '嘎吱——！背上的发条彻底崩脱了……听见了吗？【怀表】跳得更快了，两只手都停不下来了……！',
+    phase3: '滋滋……瓷面裂开了，炉心要化掉了……只剩最后几声【滴答】了，全都留下来陪葬吧！！',
+    bombArmed: (targetName) =>
+      `滴答、滴答……滚烫的【炼金怀表】落进${targetName}怀里了——引信烧尽前，来得及出手吗？`,
     bombDetonate: (targetName, damage) =>
-      `【00.0秒】——时间到了！炼金怀表在【${targetName}】怀中炸裂，造成【${damage}】点轰击！`,
+      `滴答——归零了！怀表在【${targetName}】胸口炸裂，轰出【${damage}】点炼金冲击！`,
     bombDefuse: (targetName) =>
-      `切……赶在引信烧完前锁死了发条。算【${targetName}】运气好，下枚很快就会落下来。`,
-    broken: '嘎吱……！重击卡死了发条齿轨……【金链定式】暂时碎裂！别趁机靠近炉心……！',
-    defeat: '滴答……停、停下了……三十年后的实验评估……结果是……「不及格」吗……',
+      `切……赶在引信烧完前按住了簧片吗？别松气，【${targetName}】，下一枚已经在弦上了。`,
+    broken: '嘎吱——！！齿轮被硬生生砸卡住了……连【怀表】都扔不出去……别过来……！',
+    defeat: '滴答……发条……终于松开了……三十年的怪响……可以停下了吗……',
     sealedButtons: Object.freeze({
-      saves: '……想读取【存档】逃避这枚正在倒数的人造太阳？这里没有读档的退路。',
-      settings: '试图翻开【系统设置】关掉我的规则吗？在阁楼彻底坍塌前，专心看你的时间轴！',
-      ledger: '掌柜的账簿已经合上了——今天唯一要结算的，只有怀表上的【剩余秒数】！',
-      story: '别去翻【路途手记】了！下一行字是「全灭」还是「险胜」，只看你接下来几秒的选择！',
-      retreat: '通往楼下的木梯已经被逆重发条扯断——现在【返回酒馆】可不算数！',
-      party: '铁门焊死了，临阵可换不了阵外候补的装备与名册！',
-      review: '实验原始日志已被炼金酸雾融毁——你只需要看清眼前跳动的数字！',
-      default: '别乱点战盘之外的按钮……阁楼里的发条，可不会为了外面的窗口停下！',
+      saves: '想趁现在翻开【存档】逃出阁楼？炉心没凉透之前，时间只往一个方向走！',
+      settings: '想翻开【系统设置】改掉阁楼的规则吗？省省力气，盯着眼前跳动的指针吧！',
+      ledger: '算盘跟【账簿】都锁死在柜台后了——现在要算清的，是你手里还剩几口气！',
+      story: '别急着翻【路途手记】！是活下来还是化作炉灰，等打完这一轮自己看！',
+      retreat: '通往楼下的木梯已经被逆重发条扯断——现在想【返回酒馆】可没人替你开门！',
+      party: '阁楼的铁门已经焊死了，站在外头的人此刻可换不进来！',
+      review: '废纸和残稿早被炉灰烧穿了——你只需要看清眼前抡过来的铁钳！',
+      default: '别乱碰棋盘外面的开关……阁楼的发条可不会替你停下来喘气！',
     }),
   }),
 });

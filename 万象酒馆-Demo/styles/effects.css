@@ -765,56 +765,33 @@
 .overlord-cutscene-layer.is-impact .overlord-white-flash {
   animation: overlord-impact-flash 360ms ease-out forwards;
 }
-.overlord-phase-scroll {
-  position: absolute;
-  left: 50%;
-  top: 22%;
-  transform: translate(-50%, -50%) scaleX(0.3);
-  min-width: min(640px, 88vw);
-  padding: 16px 34px;
-  text-align: center;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(18, 12, 26, 0.95) 14%,
-    rgba(30, 18, 42, 0.96) 50%,
-    rgba(18, 12, 26, 0.95) 86%,
-    transparent
-  );
-  border-top: 2px solid #f4cc6c;
-  border-bottom: 2px solid #f4cc6c;
-  box-shadow: 0 0 42px rgba(0, 0, 0, 0.85);
-  opacity: 0;
+#battle[data-overlord-stage='2']::after,
+#battle[data-overlord-stage='3']::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 38;
+  transition: box-shadow 500ms ease;
 }
-.overlord-cutscene-layer.is-impact .overlord-phase-scroll {
-  animation: overlord-scroll-unfurl 1050ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+#battle[data-overlord-stage='2']::after {
+  box-shadow: inset 0 0 85px rgba(242, 168, 72, 0.24);
 }
-.overlord-cutscene-layer.is-out .overlord-phase-scroll {
-  opacity: 0;
-  transition: opacity 220ms ease-out;
+#battle[data-overlord-stage='3']::after {
+  box-shadow: inset 0 0 115px rgba(235, 58, 96, 0.34);
 }
-.overlord-phase-scroll small {
-  display: block;
-  color: #f4cc6c;
-  font-size: 11px;
-  letter-spacing: 0.22em;
-  margin-bottom: 4px;
+.overlord-dialogue-bar.is-swapping .overlord-dialogue-text {
+  animation: overlord-line-swap 240ms ease-out;
 }
-.overlord-phase-scroll strong {
-  display: block;
-  color: #fff6db;
-  font-size: clamp(22px, 3vw, 34px);
-  letter-spacing: 0.1em;
-  text-shadow:
-    0 2px 14px rgba(255, 206, 98, 0.65),
-    0 2px 4px #09060d;
-}
-.overlord-phase-scroll span {
-  display: block;
-  margin-top: 4px;
-  color: #96f2be;
-  font-size: 13px;
-  letter-spacing: 0.06em;
+@keyframes overlord-line-swap {
+  from {
+    opacity: 0.28;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 .overlord-dialogue-bar {
   position: fixed;
@@ -918,24 +895,6 @@
     opacity: 0;
   }
 }
-@keyframes overlord-scroll-unfurl {
-  0% {
-    opacity: 0;
-    transform: translate(-50%, -50%) scaleX(0.3);
-  }
-  18% {
-    opacity: 1;
-    transform: translate(-50%, -50%) scaleX(1.02);
-  }
-  84% {
-    opacity: 1;
-    transform: translate(-50%, -50%) scaleX(1);
-  }
-  100% {
-    opacity: 1;
-    transform: translate(-50%, -50%) scaleX(1);
-  }
-}
 @keyframes overlord-subtitle-jitter {
   0% {
     transform: translate3d(-2px, 1px, 0);
@@ -979,7 +938,7 @@
 @media (prefers-reduced-motion: reduce) {
   .overlord-cutscene-layer.is-slash .overlord-slash-beam,
   .overlord-cutscene-layer.is-impact .overlord-white-flash,
-  .overlord-cutscene-layer.is-impact .overlord-phase-scroll,
+  .overlord-dialogue-bar.is-swapping .overlord-dialogue-text,
   .overlord-dialogue-bar.is-glitch .overlord-dialogue-frame,
   .overlord-bomb-vignette,
   #battle.overlord-heavy-shake {

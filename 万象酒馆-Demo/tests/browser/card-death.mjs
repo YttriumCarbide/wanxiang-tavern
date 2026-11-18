@@ -39,6 +39,8 @@ export async function cardDeathChecks({ browser, baseURL, output }) {
           before.units[id].hp = 1;
           before.units[id].block = 0;
           before.units[id].buffs = {};
+          before.units[id].enraged = true;
+          before.units[id].bossStage = 3;
           const result = engine.preview(before, [
             engine.makeAction(before, before.formation[0], 'attack', id, 0),
           ]);
@@ -148,6 +150,7 @@ export async function cardDeathChecks({ browser, baseURL, output }) {
     assert(boss.boss && boss.zoom > 1.5 && boss.chunks > small.chunks && boss.chunks <= 10);
     assert.equal(boss.texturedMeshes, 0);
     assert.equal(await page.locator('.boss-death-cinema').count(), 1);
+    await page.waitForTimeout(850);
     await page.screenshot({ path: path.join(output, 'boss-death-closeup.png') });
     await page.locator('#result').evaluate((panel) => panel.showModal());
     await page.waitForFunction(() => window.deathFixture.view.deathStatus().active === 0);
@@ -164,6 +167,38 @@ export async function cardDeathChecks({ browser, baseURL, output }) {
       false,
     );
     assert.equal(await page.evaluate(() => window.deathFixture.view.camera.zoom), 1);
+
+    // Verify 5 distinct sculpted Overlord corpses
+    const overlordCorpses = [];
+    for (const ovId of ['alchemicalPuppet', 'apepLamb', 'ares', 'radiantWyvern', 'moonEye']) {
+      await page.evaluate((id) => window.deathFixture.start(id), ovId);
+      await page.waitForFunction(() => {
+        const status = window.deathFixture.view.deathStatus();
+        return status.boss && status.zoom > 1.3 && status.lowestChunkBase > 0.28;
+      });
+      const ovStatus = await page.evaluate(() => window.deathFixture.view.deathStatus());
+      assert.equal(ovStatus.chunks, 9, `${ovId} should produce 9 sculpted corpse parts`);
+      assert.equal(ovStatus.texturedMeshes, 0, `${ovId} corpse must not reuse textures`);
+      assert(ovStatus.lowestChunkBase > 0.28, `${ovId} corpse must remain above card surface`);
+      overlordCorpses.push(ovStatus.corpseArchetype);
+      if (ovId === 'alchemicalPuppet') {
+        await page.waitForTimeout(1300);
+        await page.screenshot({ path: path.join(output, 'overlord-corpse-puppet.png') });
+      } else if (ovId === 'radiantWyvern') {
+        await page.waitForTimeout(1300);
+        await page.screenshot({ path: path.join(output, 'overlord-corpse-wyvern.png') });
+      }
+    }
+    assert.equal(
+      new Set(overlordCorpses).size,
+      5,
+      `Expected 5 unique Overlord corpse archetypes, got: ${overlordCorpses.join(', ')}`,
+    );
+
+    // Clear prior Overlord fixture audio before testing reduced-motion silence
+    await page.evaluate(() => window.deathFixture.view?.dispose?.());
+    await page.waitForFunction(() => window.deathFixture.audio.status().voices === 0);
+
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.evaluate(() =>
       window.deathFixture.audio.setPreferences({ musicMuted: true, effectsMuted: true }),

@@ -67,6 +67,41 @@ function createSealRing(colorHex) {
   return ringGroup;
 }
 
+function updateSealRingStage(seal, baseColorHex, stage = 1) {
+  if (!seal) return;
+  const s = Math.max(1, Math.min(3, Number(stage) || 1));
+  const palette =
+    s >= 3
+      ? ['#ff3d6e', '#ffe47a']
+      : s === 2
+        ? ['#ff9442', '#6bf5a9']
+        : [baseColorHex || '#e7cf7a', '#ffffff'];
+  const meshes = seal.children || [];
+  if (meshes[0]?.material) meshes[0].material.color.set(palette[0]);
+  if (meshes[1]?.material) {
+    meshes[1].material.color.set(palette[1]);
+    if (s === 1 && baseColorHex) {
+      meshes[1].material.color.lerp(new THREE.Color('#ffffff'), 0.45);
+    }
+  }
+  seal.scale.setScalar(s >= 3 ? 1.24 : s === 2 ? 1.12 : 1);
+}
+
+const OVERLORD_CLIP_PACE = 0.76;
+
+function resolveClipName(entry, move = {}) {
+  if (!entry) return null;
+  const explicitClip = typeof move.clip === 'string' && entry.clips[move.clip] ? move.clip : null;
+  const candidates = explicitClip
+    ? [explicitClip]
+    : !move.hasDamage
+      ? ['Special_Action', 'Normal_Attack', 'Idle']
+      : move.enraged || (move.actionIndex || 0) > 0 || (move.targets?.length || 0) > 1
+        ? ['Special_Attack', 'Talon_Rend', 'Normal_Attack', 'Idle']
+        : ['Normal_Attack', 'Special_Attack', 'Idle'];
+  return candidates.find((name) => Boolean(entry.clips[name])) || null;
+}
+
 function setCardArtworkTint(root, tintHex) {
   const targetColor = new THREE.Color(tintHex);
   root.traverse((node) => {
@@ -173,7 +208,7 @@ export async function createOverlordModels({
     record.overlordMount = null;
   }
 
-  function sync(enemyRecords) {
+  function sync(enemyRecords, state = null) {
     for (const record of enemyRecords) {
       const def = record.id ? definitions[record.id] : null;
       const tpl = def && shouldStandOnCard(def) ? templates.get(def.model) : null;
@@ -181,8 +216,16 @@ export async function createOverlordModels({
         unmount(record);
         continue;
       }
+      const unitStage =
+        state?.units?.[record.id]?.bossStage || (state?.units?.[record.id]?.enraged ? 2 : 1);
       const current = mounted.get(record);
-      if (current?.id === record.id) continue;
+      if (current?.id === record.id) {
+        if (current.stage !== unitStage) {
+          current.stage = unitStage;
+          updateSealRingStage(current.seal, current.colorHex, unitStage);
+        }
+        continue;
+      }
       unmount(record);
 
       const mount = new THREE.Group();
@@ -234,6 +277,8 @@ export async function createOverlordModels({
       const entry = {
         id: record.id,
         model: def.model,
+        colorHex: def.color,
+        stage: unitStage,
         overlord: Boolean(def.overlord),
         standOnCard: true,
         triangles: tpl.triangles,
@@ -255,6 +300,7 @@ export async function createOverlordModels({
         lunge: null,
         floating: record.id.includes('Cannon') || record.id === 'radiantWyvern',
       };
+      updateSealRingStage(seal, def.color, unitStage);
       if (mixer && idleAction) {
         entry.onFinished = (event) => {
           if (event.action === idleAction) return;
@@ -272,25 +318,27 @@ export async function createOverlordModels({
     }
   }
 
+  function actionDurationMs(id, move = {}) {
+    const entry = [...mounted.values()].find((item) => item.id === id);
+    if (!entry?.mixer) return 0;
+    const clipName = resolveClipName(entry, move);
+    const action = clipName ? entry.clips[clipName] : entry.idleAction;
+    if (!action) return 0;
+    const sec = action.getClip()?.duration || 2.2;
+    return Math.max(1200, Math.round((sec / OVERLORD_CLIP_PACE) * 1000));
+  }
+
   function playAction(id, move = {}) {
     const entry = [...mounted.values()].find((item) => item.id === id);
-    if (!entry?.mixer) return false;
-    const explicitClip = typeof move.clip === 'string' && entry.clips[move.clip] ? move.clip : null;
-    const candidates = explicitClip
-      ? [explicitClip]
-      : !move.hasDamage
-        ? ['Special_Action', 'Normal_Attack', 'Idle']
-        : move.enraged || (move.actionIndex || 0) > 0 || (move.targets?.length || 0) > 1
-          ? ['Special_Attack', 'Talon_Rend', 'Normal_Attack', 'Idle']
-          : ['Normal_Attack', 'Special_Attack', 'Idle'];
-    const clipName = candidates.find((name) => Boolean(entry.clips[name]));
+    if (!entry?.mixer) return 0;
+    const clipName = resolveClipName(entry, move);
     const action = clipName ? entry.clips[clipName] : entry.idleAction;
-    if (!action) return false;
+    if (!action) return 0;
     if (move.lunge && !reduced) {
       const parentScale = Math.max(0.5, Number(move.lunge.parentScale) || 1);
       entry.lunge = {
         start: performance.now(),
-        duration: Math.max(400, Number(move.lunge.durationMs) || 960),
+        duration: Math.max(400, Number(move.lunge.durationMs) || 1800),
         dx: (Number(move.lunge.dx) || 0) / parentScale,
         dz: (Number(move.lunge.dz) || 0) / parentScale,
         aoe: Boolean(move.lunge.aoe),
@@ -302,19 +350,22 @@ export async function createOverlordModels({
       action.play();
       entry.activeAction = action;
       entry.playingClip = action.getClip().name;
-      return true;
+      return Math.round((action.getClip().duration || 1.6) * 1000);
     }
     action.reset();
     action.setLoop(THREE.LoopOnce, 1);
     action.clampWhenFinished = true;
-    action.timeScale = Math.max(0.5, Number(move.speed) || 1);
+    action.timeScale = Math.max(0.35, (Number(move.speed) || 1) * OVERLORD_CLIP_PACE);
     action.play();
     if (entry.activeAction && entry.activeAction !== action) {
       entry.activeAction.crossFadeTo(action, 0.14, true);
     }
     entry.activeAction = action;
     entry.playingClip = action.getClip().name;
-    return true;
+    return Math.max(
+      1200,
+      Math.round(((action.getClip()?.duration || 2.2) / OVERLORD_CLIP_PACE) * 1000),
+    );
   }
 
   function update(now) {
@@ -370,6 +421,22 @@ export async function createOverlordModels({
           lungeZ = L.dz * travel;
         }
       }
+      if (entry.overlord && entry.stage >= 2) {
+        const vibe = entry.stage >= 3 ? 0.025 : 0;
+        const pulse =
+          (0.5 + 0.5 * Math.sin(t * (entry.stage >= 3 ? 7 : 4))) * (entry.stage >= 3 ? 0.34 : 0.16);
+        lungeX += vibe ? Math.sin(t * 37) * vibe : 0;
+        entry.figure.traverse((node) => {
+          if (!node.isMesh || node.name.includes('Battle_Card')) return;
+          for (const mat of Array.isArray(node.material) ? node.material : [node.material]) {
+            if (mat?.emissive && mat.userData?.baseEmission) {
+              mat.emissive
+                .copy(mat.userData.baseEmission)
+                .add(new THREE.Color(entry.stage >= 3 ? 0xff4568 : 0xe89c3c).multiplyScalar(pulse));
+            }
+          }
+        });
+      }
       entry.figure.position.set(
         entry.baseX + lungeX,
         entry.baseY + hover + lungeY,
@@ -378,7 +445,8 @@ export async function createOverlordModels({
       if (!entry.mixer) {
         entry.figure.rotation.y = Math.sin(t * 0.9 + index * 1.15) * 0.06;
       }
-      entry.seal.rotation.y = t * 0.45 * (index % 2 ? -1 : 1);
+      const sealRate = entry.stage >= 3 ? 4.0 : entry.stage === 2 ? 2.4 : 1.0;
+      entry.seal.rotation.y = t * 0.45 * sealRate * (index % 2 ? -1 : 1);
       index++;
     }
     return hasAnimation;
@@ -410,5 +478,5 @@ export async function createOverlordModels({
     };
   }
 
-  return { sync, playAction, update, status };
+  return { sync, actionDurationMs, playAction, update, status };
 }

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { createResourceScope } from './shared/resources.js';
 import { debrisRandom, debrisShape } from './voxel-debris.js';
+import { buildBossCorpse, buildOverlordCorpse } from './corpse-models.js';
 
 /** Emit only exposed voxel faces; each main piece has its own chiseled geometry. */
 function debrisGeometry(shape, random, boss) {
@@ -176,6 +177,7 @@ function createBloom(resources, boss, reduced) {
 export function createCardDeaths({ scene, camera, stage, getSpeed, reduced }) {
   const active = new Map();
   const played = new Set();
+  const settledRemains = [];
   const home = camera.position.clone();
   let completed = 0;
   let disposed = false;
@@ -193,11 +195,20 @@ export function createCardDeaths({ scene, camera, stage, getSpeed, reduced }) {
     cinema = null;
   }
   function finish(effect) {
-    scene.remove(effect.group);
     effect.overlay?.remove();
     effect.record.root.visible = false;
-    effect.resources.dispose();
     active.delete(effect.record.id);
+    if (effect.leaveRemains && !disposed) {
+      updateCorpse(effect, 1);
+      settledRemains.push({
+        recordId: effect.record.id,
+        group: effect.group,
+        resources: effect.resources,
+      });
+    } else {
+      scene.remove(effect.group);
+      effect.resources.dispose();
+    }
     if (cinema === effect) restoreCamera();
     completed++;
   }
@@ -205,13 +216,18 @@ export function createCardDeaths({ scene, camera, stage, getSpeed, reduced }) {
     if (disposed || !record || played.has(record.id)) return 0;
     played.add(record.id);
     if (definition.nonlethal) return 0;
-    const boss = !!definition.boss;
+    const overlord = !!definition.overlord;
+    const boss = !!(definition.boss || overlord);
     const resources = createResourceScope();
-    const bloom = createBloom(resources, boss, reduced);
+    const bloom = overlord
+      ? buildOverlordCorpse(resources, definition, reduced)
+      : boss
+        ? buildBossCorpse(resources, definition, reduced)
+        : createBloom(resources, false, reduced);
     bloom.group.position.copy(record.goal);
-    bloom.group.scale.setScalar((record.restScale || 1) * (boss ? 1.25 : 1));
+    bloom.group.scale.setScalar((record.restScale || 1) * (overlord ? 1.32 : boss ? 1.25 : 1));
     scene.add(bloom.group);
-    const duration = reduced ? 650 : boss ? 2700 : 1700;
+    const duration = reduced ? 650 : overlord ? 3000 : boss ? 2500 : 1700;
     const effect = {
       ...bloom,
       record,
@@ -219,6 +235,7 @@ export function createCardDeaths({ scene, camera, stage, getSpeed, reduced }) {
       start: performance.now() + delay / getSpeed(),
       duration: duration / getSpeed(),
       boss,
+      overlord,
       broken: false,
       overlay: null,
     };
@@ -229,7 +246,7 @@ export function createCardDeaths({ scene, camera, stage, getSpeed, reduced }) {
       const label = document.createElement('strong');
       label.textContent = definition.name;
       const caption = document.createElement('small');
-      caption.textContent = '界隙消散';
+      caption.textContent = bloom.caption || '强敌陨落';
       overlay.append(label, caption);
       overlay.style.opacity = '0';
       stage.append(overlay);
@@ -238,6 +255,25 @@ export function createCardDeaths({ scene, camera, stage, getSpeed, reduced }) {
     }
     active.set(record.id, effect);
     return delay + duration;
+  }
+  function updateCorpse(effect, progress) {
+    const { light, haze } = effect.materials;
+    if (light) light.opacity = 1 - smooth(progress) * 0.74;
+    if (haze) haze.opacity = Math.sin(Math.PI * Math.min(1, progress * 1.6)) * 0.14;
+    const fall = Math.min(1, progress / 0.72);
+    const scatter = reduced ? 0.55 : smooth(Math.min(1, progress / 0.65));
+    const bounce =
+      fall >= 1 && !reduced
+        ? Math.sin(THREE.MathUtils.clamp((progress - 0.72) / 0.28, 0, 1) * Math.PI) * 0.055
+        : 0;
+    const liftArc = reduced ? 0 : Math.sin(Math.PI * fall * 0.5 + Math.PI * 0.5) * (1 - fall);
+    for (const chunk of effect.chunks) {
+      const { node, x, z, dx, dz, restY, peakY, rotX, rotY, rotZ } = chunk;
+      const y = restY + peakY * liftArc + bounce;
+      node.position.set(x + dx * scatter, y, z + dz * scatter);
+      node.rotation.set(rotX * scatter, rotY * scatter, rotZ * scatter);
+      node.scale.setScalar(0.88 + 0.12 * scatter);
+    }
   }
   function updateBloom(effect, progress) {
     const expand = reduced ? 1 : 1 - (1 - Math.min(1, progress / 0.65)) ** 3;
@@ -305,7 +341,8 @@ export function createCardDeaths({ scene, camera, stage, getSpeed, reduced }) {
       effect.broken = true;
       effect.group.visible = true;
       effect.record.root.visible = false;
-      updateBloom(effect, progress);
+      if (effect.leaveRemains) updateCorpse(effect, progress);
+      else updateBloom(effect, progress);
     }
     return active.size > 0;
   }
@@ -313,6 +350,14 @@ export function createCardDeaths({ scene, camera, stage, getSpeed, reduced }) {
     play,
     update,
     cinematicActive: () => !!cinema,
+    bossDeathRemainingMs(now = performance.now()) {
+      let maxRemain = 0;
+      for (const effect of active.values()) {
+        if (!effect.boss) continue;
+        maxRemain = Math.max(maxRemain, Math.max(0, effect.start + effect.duration - now));
+      }
+      return Math.round(maxRemain);
+    },
     releaseCinematic() {
       if (!cinema) return;
       cinema.overlay?.remove();
@@ -328,10 +373,12 @@ export function createCardDeaths({ scene, camera, stage, getSpeed, reduced }) {
         effect.group.traverse((node) => {
           if (node.material?.map) texturedMeshes++;
         });
+      const firstArchetype = effects[0]?.archetype || null;
       return {
         active: active.size,
         completed,
-        model: 'voxel-debris',
+        model: firstArchetype ? 'sculpted-corpse' : 'voxel-debris',
+        corpseArchetype: firstArchetype || 'voxel-debris',
         distinctChunkShapes: new Set(
           effects.flatMap((effect) => effect.chunks.map((chunk) => chunk.shape.signature)),
         ).size,
@@ -353,6 +400,10 @@ export function createCardDeaths({ scene, camera, stage, getSpeed, reduced }) {
     dispose() {
       disposed = true;
       for (const effect of [...active.values()]) finish(effect);
+      for (const entry of settledRemains.splice(0)) {
+        scene.remove(entry.group);
+        entry.resources.dispose();
+      }
       restoreCamera();
     },
   };

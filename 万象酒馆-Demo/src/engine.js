@@ -14,7 +14,7 @@ import { canCombine, EMBLEMS, OVERLOAD_EMBLEM_ID } from './emblems.js';
 import { ITEMS, restoreBag } from './content/items.js';
 import { definition, definitionsFor, heroesFor, abilityFor } from './catalog.js';
 import { validateAction } from './validation.js';
-import { HEROES, DEFINITIONS, encounterSpec, enemySlots } from './data.js';
+import { HEROES, DEFINITIONS, BUFFS, encounterSpec, enemySlots } from './data.js';
 import {
   auraValue,
   rulesFor,
@@ -543,6 +543,20 @@ function simulate(s, plan, slots) {
   function applyBuff(actor, id, key, value, generated = false) {
     const unit = work.units[id];
     if (!unit || unit.hp <= 0 || mechanics.reflect(actor, id, key, value)) return;
+    if (
+      NEGATIVE_STATUSES.includes(key) &&
+      value > 0 &&
+      !negativeImmune(work, id) &&
+      (unit.buffs.artifact || 0) > 0
+    ) {
+      unit.buffs.artifact -= 1;
+      if (unit.buffs.artifact <= 0) delete unit.buffs.artifact;
+      currentStatusTriggers.push({ id, type: 'artifactBlock', blockedBuff: key, value: 1 });
+      currentLogs.push(
+        `${definitions[id]?.name || id}的【人工制品】抵消了${BUFFS[key]?.name || key}（剩余${unit.buffs.artifact || 0}层）`,
+      );
+      return;
+    }
     const before = unit.buffs[key] || 0;
     unit.buffs[key] = statusStacks(key, before + value);
     if (POSITIVE_BUFFS.includes(key) && unit.buffs[key] > before)
@@ -906,16 +920,24 @@ function simulate(s, plan, slots) {
         if (profile.strengthBonus) {
           unit.buffs.strength = Math.max(unit.buffs.strength || 0, profile.strengthBonus);
         }
+        if (profile.artifactBonus) {
+          unit.buffs.artifact = statusStacks(
+            'artifact',
+            (unit.buffs.artifact || 0) + profile.artifactBonus,
+          );
+        }
         const targets = heroes.map((hero) => hero.id).filter((target) => work.units[target].hp > 0);
         // A phase transition interrupts the remaining player turn, even with negative-status immunity.
         for (const target of targets) work.units[target].buffs.bind = 1;
         currentLogs.push(
-          `${def.name}${profile.title} · ${profile.subtitle}，禁锢我方，本回合剩余行动跳过`,
+          nextStage >= 3
+            ? `${def.name}胸口的核心彻底碎裂暴走，滚烫炼金雾席卷全场（获得${profile.artifactBonus || 0}层人工制品与${shield}护盾，震退并打断我方本回合剩余行动）`
+            : `${def.name}体内的反重力发条猛然失衡逆转（获得${profile.artifactBonus || 0}层人工制品与${shield}护盾，震退并打断我方本回合剩余行动）`,
         );
-        record('bossPhase', id, profile.title, targets, null, null, {
+        record('bossPhase', id, def.name, targets, null, null, {
           phaseStage: nextStage,
           overlord: true,
-          subtitle: profile.subtitle,
+          enraged: nextStage >= 2,
           clip: 'Special_Action',
         });
         continue;
@@ -1176,16 +1198,20 @@ function simulate(s, plan, slots) {
       }
       if (move.sinkingPlague && !work.sinkingPlague)
         work.sinkingPlague = { source: enemy, ages: [0, 0, 0] };
+      const isOverlord = Boolean(definitions[enemy]?.overlord);
       record(
         'enemy',
         enemy,
-        (u.bossStage >= 3 ? '【第三阶段】' : move.enraged ? '【第二阶段】' : '') + move.name,
+        (isOverlord ? '' : u.bossStage >= 3 ? '【第三阶段】' : move.enraged ? '【第二阶段】' : '') +
+          move.name,
         u.buffs.balance ? [...new Set([...targets, ...front(work).filter(Boolean)])] : targets,
         null,
         null,
         {
           blindTarget: missed,
           actionIndex: actionIdx,
+          enraged: Boolean(u.enraged || move.enraged),
+          bossStage: u.bossStage || 1,
           ...(move.clip ? { clip: move.clip } : {}),
           ...(newlyLockedUi ? { overlordDomainLock: true } : {}),
           ...(enemyDamageType ? { damageType: enemyDamageType } : {}),

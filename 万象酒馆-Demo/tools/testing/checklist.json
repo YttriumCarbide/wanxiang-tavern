@@ -4,8 +4,14 @@
     "tests/overlord-puppet.test.js",
     "tests/enemy-base-values.test.js",
     "tests/monsters-overlords.test.js",
-    "tests/mill-worldmaps.test.js",
-    "tests/portrait-store.test.js"
+    "tests/mill-worldmaps.test.js"
   ],
-  "scopes": ["quality", "models", "core", "developer-mode", "universal-enemies", "destinations"]
+  "scopes": [
+    "quality",
+    "core",
+    "death-effects",
+    "battle-markers",
+    "developer-mode",
+    "universal-enemies"
+  ]
 }

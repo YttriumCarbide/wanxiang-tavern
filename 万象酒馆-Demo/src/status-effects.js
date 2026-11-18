@@ -33,6 +33,7 @@ export function createStatusEffects({ animate, ring, sparks }) {
       slow: '#fde047',
       immobilize: '#c084fc',
       break: '#ffcf6e',
+      artifactBlock: '#f2c96b',
     }[type];
     if (!color || !point) return;
     const halo = document.createElement('div');
@@ -40,21 +41,23 @@ export function createStatusEffects({ animate, ring, sparks }) {
     halo.dataset.statusTrigger = type;
     halo.style.cssText = `left:${point.x}px;top:${point.y}px;--fx:${color}`;
     halo.innerHTML =
-      type === 'bleed'
-        ? '<svg viewBox="0 0 100 100"><path d="M24 30 72 66M35 24 78 55" stroke="currentColor" stroke-width="3"/><path d="M34 58q-12 15-2 17 10-1 2-17zM65 67q-10 16 0 17 10-1 0-17z" fill="currentColor"/></svg>'
-        : type === 'poison'
-          ? '<i></i><i></i><i></i><svg viewBox="0 0 100 100"><path d="M34 35h32v9h9v23H25V44h9zM40 25h20v10H40z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M37 49h6v7h-6zM57 49h6v7h-6zM44 62h12v4H44z" fill="currentColor"/></svg>'
-          : type === 'regen'
-            ? '<svg viewBox="0 0 100 100"><path d="M50 76V30M50 59Q20 58 25 37q27-3 25 22M50 47q0-23 25-23 7 22-25 23" fill="none" stroke="currentColor" stroke-width="3"/><path d="M46 10h8v8h-8zM13 54h6v6h-6zM80 63h7v7h-7z" fill="currentColor"/></svg>'
-            : type === 'vulnerable'
-              ? '<svg viewBox="0 0 100 100"><path d="m50 15 30 16v30L50 85 20 61V31z" fill="none" stroke="currentColor" stroke-width="2.5"/><path d="m35 40 30 20M65 40 35 60" stroke="#f472b6" stroke-width="3"/></svg>'
-              : type === 'weak'
-                ? '<svg viewBox="0 0 100 100"><path d="M50 20v60M35 60l15 20 15-20" fill="none" stroke="currentColor" stroke-width="3.5"/><path d="M25 35l25 30 25-30" fill="none" stroke="#60a5fa" stroke-width="2"/></svg>'
-                : type === 'slow'
-                  ? '<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="30" fill="none" stroke="currentColor" stroke-width="3" stroke-dasharray="6 4"/><path d="M50 30v20l14 8" fill="none" stroke="currentColor" stroke-width="3"/></svg>'
-                  : type === 'break'
-                    ? '<svg viewBox="0 0 100 100"><path d="M50 12l12 24 26 4-19 18 5 26-24-13-24 13 5-26-19-18 26-4z" fill="none" stroke="currentColor" stroke-width="3.5"/></svg>'
-                    : '<svg viewBox="0 0 100 100"><rect x="30" y="38" width="40" height="34" rx="4" fill="none" stroke="currentColor" stroke-width="3"/><path d="M38 38V28a12 12 0 0 1 24 0v10" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="50" cy="55" r="4" fill="currentColor"/></svg>';
+      type === 'artifactBlock'
+        ? '<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="26" fill="none" stroke="currentColor" stroke-width="5" stroke-dasharray="10 6"/><circle cx="50" cy="50" r="12" fill="none" stroke="#6bf5a9" stroke-width="3"/></svg>'
+        : type === 'bleed'
+          ? '<svg viewBox="0 0 100 100"><path d="M24 30 72 66M35 24 78 55" stroke="currentColor" stroke-width="3"/><path d="M34 58q-12 15-2 17 10-1 2-17zM65 67q-10 16 0 17 10-1 0-17z" fill="currentColor"/></svg>'
+          : type === 'poison'
+            ? '<i></i><i></i><i></i><svg viewBox="0 0 100 100"><path d="M34 35h32v9h9v23H25V44h9zM40 25h20v10H40z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M37 49h6v7h-6zM57 49h6v7h-6zM44 62h12v4H44z" fill="currentColor"/></svg>'
+            : type === 'regen'
+              ? '<svg viewBox="0 0 100 100"><path d="M50 76V30M50 59Q20 58 25 37q27-3 25 22M50 47q0-23 25-23 7 22-25 23" fill="none" stroke="currentColor" stroke-width="3"/><path d="M46 10h8v8h-8zM13 54h6v6h-6zM80 63h7v7h-7z" fill="currentColor"/></svg>'
+              : type === 'vulnerable'
+                ? '<svg viewBox="0 0 100 100"><path d="m50 15 30 16v30L50 85 20 61V31z" fill="none" stroke="currentColor" stroke-width="2.5"/><path d="m35 40 30 20M65 40 35 60" stroke="#f472b6" stroke-width="3"/></svg>'
+                : type === 'weak'
+                  ? '<svg viewBox="0 0 100 100"><path d="M50 20v60M35 60l15 20 15-20" fill="none" stroke="currentColor" stroke-width="3.5"/><path d="M25 35l25 30 25-30" fill="none" stroke="#60a5fa" stroke-width="2"/></svg>'
+                  : type === 'slow'
+                    ? '<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="30" fill="none" stroke="currentColor" stroke-width="3" stroke-dasharray="6 4"/><path d="M50 30v20l14 8" fill="none" stroke="currentColor" stroke-width="3"/></svg>'
+                    : type === 'break'
+                      ? '<svg viewBox="0 0 100 100"><path d="M50 12l12 24 26 4-19 18 5 26-24-13-24 13 5-26-19-18 26-4z" fill="none" stroke="currentColor" stroke-width="3.5"/></svg>'
+                      : '<svg viewBox="0 0 100 100"><rect x="30" y="38" width="40" height="34" rx="4" fill="none" stroke="currentColor" stroke-width="3"/><path d="M38 38V28a12 12 0 0 1 24 0v10" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="50" cy="55" r="4" fill="currentColor"/></svg>';
     animate(
       halo,
       [

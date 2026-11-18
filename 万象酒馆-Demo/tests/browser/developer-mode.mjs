@@ -67,6 +67,25 @@ export async function developerModeChecks({ browser, baseURL, output }) {
     await page.locator('[data-generation-option="developerMode"]').uncheck();
     assert.equal(await page.locator('#developer-options').isVisible(), false);
     assert.equal(await page.locator('#creation-generate').isDisabled(), false);
+    const repository = 'https://github.com/YttriumCarbide/wanxiang-tavern';
+    await page.route(`${repository}/archive/refs/heads/main.zip`, (route) =>
+      route.fulfill({
+        headers: {
+          'content-type': 'application/zip',
+          'content-disposition': 'attachment; filename="wanxiang-tavern-main.zip"',
+        },
+        body: '',
+      }),
+    );
+    const [download] = await Promise.all([
+      page.waitForEvent('download'),
+      page.getByRole('link', { name: '下载游戏到本地' }).click(),
+    ]);
+    assert.equal(download.suggestedFilename(), 'wanxiang-tavern-main.zip');
+    assert.equal(
+      await page.getByRole('link', { name: '打开 GitHub 仓库' }).getAttribute('href'),
+      repository,
+    );
     await page.locator('[data-generation-option="developerMode"]').check();
     await checkbox.check();
     await page.locator('#ai-close').click();
@@ -259,7 +278,20 @@ export async function developerModeChecks({ browser, baseURL, output }) {
     const barkText = await page.locator('#overlord-dialogue-bar').innerText();
     assert(barkText.includes('系统设置') || barkText.includes('规则'), barkText);
 
-    // Verify dual countdown UI ticks downward
+    // Verify artifact gear buff & absence of stage 1/2/3 pips or meta-jargon text
+    assert.equal(await page.locator('.overlord-phase-pips').count(), 0);
+    assert.equal(
+      await page.locator('[data-unit="alchemicalPuppet"] [data-buff="artifact"]').count(),
+      1,
+    );
+    const battleText = await page.locator('#battle').innerText();
+    assert(!/压迫战|第二阶段|第三阶段/.test(battleText), battleText);
+
+    // Verify dual countdown UI ticks downward (pending is phantom icon-only, active shows ticking timer)
+    const pendingBadge = page.locator('.alchemical-bomb-badge.is-pending').first();
+    if ((await pendingBadge.count()) > 0) {
+      assert.equal((await pendingBadge.innerText()).trim(), '');
+    }
     await page.locator('.alchemical-bomb-badge.is-active').first().waitFor({ state: 'visible' });
     await page
       .locator('#commit.has-alchemical-bomb .commit-bomb-badge')

@@ -2168,38 +2168,13 @@
     stroke-dasharray: 3 2 3 52;
   }
 }
-.overlord-phase-pips {
-  position: absolute;
-  left: 30px;
-  top: 5px;
-  display: inline-flex;
-  gap: 3px;
-  z-index: 3;
-  pointer-events: none;
+.buff-icon[data-buff='artifact'] {
+  border-color: rgba(242, 201, 107, 0.78);
+  box-shadow: 0 0 8px rgba(216, 164, 68, 0.35);
 }
-.overlord-phase-pips i {
-  font-style: normal;
-  font-size: 9px;
-  line-height: 14px;
-  min-width: 15px;
-  padding: 0 3px;
-  border-radius: 3px;
-  text-align: center;
-  background: rgba(16, 12, 24, 0.82);
-  border: 1px solid rgba(208, 178, 108, 0.35);
-  color: rgba(232, 214, 168, 0.48);
-}
-.overlord-phase-pips i.is-passed {
-  color: rgba(244, 198, 114, 0.72);
-  border-color: rgba(244, 198, 114, 0.52);
-  background: rgba(54, 30, 62, 0.86);
-}
-.overlord-phase-pips i.is-current {
-  color: #fff2c4;
-  font-weight: 800;
-  border-color: #ffd978;
-  background: linear-gradient(135deg, #5d2c7a, #8d5c1e);
-  box-shadow: 0 0 8px rgba(255, 214, 112, 0.7);
+.buff-icon.consuming-buff {
+  border-color: #ff9f43;
+  animation: unresolved-pulse 1.15s ease-in-out infinite;
 }
 .alchemical-bomb-badge {
   position: absolute;
@@ -2227,8 +2202,13 @@
   flex-shrink: 0;
 }
 .alchemical-bomb-badge.is-pending {
-  opacity: 0.86;
+  padding: 3px;
   border-style: dashed;
+  border-color: rgba(143, 238, 196, 0.58);
+  background: rgba(26, 18, 38, 0.52);
+  box-shadow: 0 0 10px rgba(107, 245, 169, 0.36);
+  filter: saturate(0.75) drop-shadow(0 0 6px rgba(107, 245, 169, 0.45));
+  animation: alchemical-bomb-phantom 1.1s ease-in-out infinite;
 }
 .alchemical-bomb-badge.is-warning {
   border-color: #ff9f43;
@@ -2248,6 +2228,9 @@
   padding: 1px 5px 1px 4px;
   font-size: 10px;
 }
+.rear-card .alchemical-bomb-badge.is-pending {
+  padding: 2px;
+}
 @keyframes bomb-badge-pulse {
   from {
     transform: scale(1);
@@ -2256,7 +2239,20 @@
     transform: scale(1.09);
   }
 }
+@keyframes alchemical-bomb-phantom {
+  0%,
+  100% {
+    opacity: 0.24;
+    transform: scale(0.94);
+  }
+  50% {
+    opacity: 0.86;
+    transform: scale(1.04);
+  }
+}
 @media (prefers-reduced-motion: reduce) {
+  .buff-icon.consuming-buff,
+  .alchemical-bomb-badge.is-pending,
   .alchemical-bomb-badge.is-critical {
     animation: none;
   }

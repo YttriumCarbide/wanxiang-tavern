@@ -15,9 +15,16 @@ export const escapeText = (s) =>
   );
 export function statusIcons(s, id, end = s, events = []) {
   let markupString = '';
-  const chip = (key, value, future, text, label = key === 'shield' ? '护盾' : BUFFS[key]?.name) =>
+  const chip = (
+    key,
+    value,
+    future,
+    text,
+    label = key === 'shield' ? '护盾' : BUFFS[key]?.name,
+    consuming = false,
+  ) =>
     html`<span
-      class="buff-icon ${future ? 'future-buff' : 'current-buff'}"
+      class="buff-icon ${future ? 'future-buff' : 'current-buff'} ${consuming ? 'consuming-buff' : ''}"
       data-buff="${key}"
       data-count="${value}"
       tabindex="0"
@@ -35,6 +42,8 @@ export function statusIcons(s, id, end = s, events = []) {
         now,
         false,
         `${b.name} ${now}${now !== after ? `\n预计结算后 ${after}` : ''}\n${b.text}`,
+        b.name,
+        after < now,
       );
     if (after > now)
       markupString += chip(
@@ -220,7 +229,7 @@ export function alchemicalBombBadge(unitId, state, forecastState = null, playing
   const sec = Number(bomb.durationSec) || 40;
   const tip = activeBomb
     ? `定时炼金炸弹 · 需在 ${sec} 秒内确认结算\n超时将在本尊身上引爆高额伤害并强制结束回合`
-    : `定式先制预警 · 敌方第1格将向该角色投掷 ${sec} 秒炼金炸弹`;
+    : '先制预警 · 本回合将被投掷炼金怀表炸弹（下回合开始倒计时）';
   return html`<span
     class="alchemical-bomb-badge ${activeBomb ? 'is-active' : 'is-pending'}"
     data-bomb-target="${escapeText(unitId)}"
@@ -235,27 +244,9 @@ export function alchemicalBombBadge(unitId, state, forecastState = null, playing
         stroke-linecap="round"
       />
       <circle cx="17.5" cy="6.2" r="2.1" fill="#6bf5a9" /></svg
-    ><b ${activeBomb ? `data-bomb-readout="${escapeText(unitId)}"` : ''}
-      >${activeBomb ? `${sec.toFixed(1)}s` : `${sec}s`}</b
-    ></span
-  >`;
-}
-
-export function overlordPhasePips(def, u) {
-  if (!Array.isArray(def?.overlordPhases) || !u || u.side !== 'enemy') return '';
-  const total = def.overlordPhases.length + 1;
-  const current = Math.max(1, Math.min(total, Number(u.bossStage) || (u.enraged ? 2 : 1)));
-  return html`<span
-    class="overlord-phase-pips"
-    data-phase-stage="${current}"
-    aria-label="霸主阶段 ${current}/${total}"
-    title="三阶段霸主 · 当前第 ${current} 阶段"
-    >${Array.from({ length: total }, (_, idx) => {
-      const n = idx + 1;
-      return html`<i class="${n === current ? 'is-current' : n < current ? 'is-passed' : ''}"
-        >${['I', 'II', 'III'][idx] || n}</i
-      >`;
-    }).join('')}</span
+    >${
+      activeBomb ? html`<b data-bomb-readout="${escapeText(unitId)}">${sec.toFixed(1)}s</b>` : ''
+    }</span
   >`;
 }
 

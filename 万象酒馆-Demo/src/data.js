@@ -100,6 +100,11 @@ export const BUFFS = {
     icon: '牺',
     text: '下次敌人死亡时献祭此单位，由施术者吸收部分属性和一个技能；本场有效',
   },
+  artifact: {
+    name: '人工制品',
+    icon: '械',
+    text: '免疫一次负面状态施加（单次施加多层同一负面状态也仅消耗1层人工制品完全抵消；连续多次施加则逐次消耗）；跨回合保留。',
+  },
 };
 export const HEROES = [
   CHANGJING_YUEXI,

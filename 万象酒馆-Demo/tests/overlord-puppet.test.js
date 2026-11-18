@@ -42,9 +42,12 @@ test('alchemicalPuppet supports 3-phase Overlord escalation, toughness reforging
   assert(phase2Event);
   assert.equal(phase2Event.phaseStage, 2);
   assert.equal(phase2Event.overlord, true);
+  assert(!/第二阶段|第三阶段|压迫/.test(String(phase2Event.label || '')));
+  assert(!/第二阶段|第三阶段|压迫/.test(String(phase2Event.subtitle || '')));
   assert.equal(res.final.units.alchemicalPuppet.bossStage, 2);
   assert.equal(res.final.units.alchemicalPuppet.maxToughness, 9);
   assert(res.final.units.alchemicalPuppet.block >= 12);
+  assert.equal(res.final.units.alchemicalPuppet.buffs.artifact, 2);
 
   // Advance to round 2 and drop below 33% -> Phase 3
   state = advance(res);
@@ -55,9 +58,68 @@ test('alchemicalPuppet supports 3-phase Overlord escalation, toughness reforging
   );
   assert(phase3Event);
   assert.equal(phase3Event.phaseStage, 3);
+  assert(!/第二阶段|第三阶段|压迫/.test(String(phase3Event.label || '')));
   assert.equal(res.final.units.alchemicalPuppet.bossStage, 3);
   assert.equal(res.final.units.alchemicalPuppet.maxToughness, 10);
   assert(res.final.units.alchemicalPuppet.buffs.strength >= 1);
+  assert.equal(res.final.units.alchemicalPuppet.buffs.artifact, 3);
+});
+
+test('artifact buff negates one whole debuff application regardless of stacks, consumes sequentially on separate hits, and persists across rounds', () => {
+  const heroId = newBattle(['alchemicalPuppet']).formation[0];
+  const baseHero = DEFINITIONS[heroId];
+  const heroDefs = {
+    [heroId]: {
+      ...baseHero,
+      skills: [
+        ...baseHero.skills,
+        {
+          id: 'mass-bleed',
+          name: '十重出血斩',
+          ap: 1,
+          mp: 0,
+          target: 'enemy',
+          effects: [{ type: 'buff', buff: 'bleed', value: 10 }],
+        },
+        {
+          id: 'multi-debuff-barrage',
+          name: '十连刻毒咒',
+          ap: 1,
+          mp: 0,
+          target: 'enemy',
+          effects: Array.from({ length: 10 }, () => ({ type: 'buff', buff: 'poison', value: 1 })),
+        },
+      ],
+    },
+  };
+  let state = newBattle(['alchemicalPuppet'], heroDefs);
+  state.phase = 'plan';
+  state.round = 1;
+  assert.equal(state.units.alchemicalPuppet.buffs.artifact, 1);
+
+  // Single 10-stack debuff consumes 1 artifact and leaves bleed at 0
+  const singleRes = preview(state, [
+    makeAction(state, heroId, 'mass-bleed', 'alchemicalPuppet', 1),
+  ]);
+  assert.equal(singleRes.final.units.alchemicalPuppet.buffs.artifact || 0, 0);
+  assert.equal(singleRes.final.units.alchemicalPuppet.buffs.bleed || 0, 0);
+  const blockEv = singleRes.events.find((e) =>
+    e.statusTriggers?.some((t) => t.type === 'artifactBlock' && t.id === 'alchemicalPuppet'),
+  );
+  assert(blockEv, 'artifactBlock statusTrigger should be recorded');
+
+  // Persists across rounds without decay
+  const persisted = advance(preview(state, []));
+  assert.equal(persisted.units.alchemicalPuppet.buffs.artifact, 1);
+
+  // 10 consecutive debuff applications against 2 artifact stacks -> blocks first 2, lets 8 through
+  persisted.units.alchemicalPuppet.buffs.artifact = 2;
+  const barrageRes = preview(persisted, [
+    makeAction(persisted, heroId, 'multi-debuff-barrage', 'alchemicalPuppet', 1),
+  ]);
+  const poisonEv = barrageRes.events.find((e) => e.skill === 'multi-debuff-barrage');
+  assert.equal(poisonEv.after.units.alchemicalPuppet.buffs.artifact || 0, 0);
+  assert.equal(poisonEv.after.units.alchemicalPuppet.buffs.poison, 8);
 });
 
 test('gold-chain slot 0 is immune to slow but can be broken by weakness BREAK stun (unless breakable:false)', () => {

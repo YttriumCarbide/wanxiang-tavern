@@ -63,6 +63,7 @@ export function createPlayback(context) {
       for (const beat of playbackBeats(result)) {
         if (session.runtime.disposed) return;
         session.battle.activeCell = beat.at;
+        let beatWaitMs = PLAYBACK_BEAT_MS;
         for (const event of beat.events) {
           if (event.type === 'item') await context.backpack.playItem(event);
           if (event.type === 'engage') {
@@ -82,7 +83,17 @@ export function createPlayback(context) {
             ...event.logs,
           );
           context.renderer.render();
-          session.runtime.view?.playEvent(event, before);
+          const eventMs = session.runtime.view?.playEvent(event, before) || 0;
+          const actorDef = event.actor
+            ? context.roster?.get?.(event.actor) ||
+              event.after?.enemyDefinitions?.[event.actor] ||
+              event.after?.heroDefinitions?.[event.actor]
+            : null;
+          if (event.type === 'enemy' && (actorDef?.boss || actorDef?.overlord)) {
+            beatWaitMs = Math.max(beatWaitMs, eventMs + 280);
+          } else if (event.type === 'bombDetonate' || event.type === 'bombDefuse') {
+            beatWaitMs = Math.max(beatWaitMs, eventMs + 180);
+          }
           context.audio.combat(event, before, session.battle.speed);
           if (event.type === 'bossPhase' && event.overlord) {
             await context.overlordBattle?.onEvent(event);
@@ -103,8 +114,11 @@ export function createPlayback(context) {
           }
         }
         context.renderer.render();
-        await sleep(PLAYBACK_BEAT_MS / session.battle.speed);
+        await sleep(beatWaitMs / session.battle.speed);
       }
+
+      const remainingDeathMs = session.runtime.view?.bossDeathRemainingMs?.() || 0;
+      if (remainingDeathMs > 0) await sleep(remainingDeathMs);
 
       await showTurnNotice(
         session.battle.state.phase === 'opening' ? '准备结束' : '回合结束',

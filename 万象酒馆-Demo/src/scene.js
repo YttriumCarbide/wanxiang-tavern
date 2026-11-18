@@ -19,7 +19,6 @@ import {
   resourceBars,
   statusIcons,
   alchemicalBombBadge,
-  overlordPhasePips,
   escapeText,
 } from './ui.js';
 import { portraitFrame } from './portrait-frame.js';
@@ -383,7 +382,7 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
         beginMotion(r, r.goal, new THREE.Vector3(r.goal.x, 0.2, r.goal.z - 1.2), i * 70),
       );
     first = false;
-    overlords.sync(enemyRecords);
+    overlords.sync(enemyRecords, s);
     for (const r of records) {
       if (!r.id) continue;
       const { id, side, slot, root, el } = r,
@@ -509,7 +508,7 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
                   </g></svg
               ></span>`
             : ''
-        }${side === 'Enemy' ? enemyTierBadge(d) : ''}${side === 'Enemy' ? overlordPhasePips(d, u) : ''}${side === 'Enemy' ? html`<small class="enemy-level" title="${combatRank(u.level || 1)}">Lv.${u.level || 1}</small>` : ''}${
+        }${side === 'Enemy' ? enemyTierBadge(d) : ''}${side === 'Enemy' ? html`<small class="enemy-level" title="${combatRank(u.level || 1)}">Lv.${u.level || 1}</small>` : ''}${
           side === 'Friendly' ? alchemicalBombBadge(id, s, forecast.final, playing) : ''
         }<span class="unit-info"
           ><span class="unit-name">${d.name}${u.hp === 0 ? ' ×' : ''}</span></span
@@ -787,7 +786,7 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
       }, waitMs);
     },
   });
-  function spawnBombProjectile(bossId, targetHeroId) {
+  function spawnBombProjectile(bossId, targetHeroId, delayMs = 240, flyMs = 760) {
     if (reduced) return;
     const bossRec = enemyRecords.find((r) => r.id === bossId);
     const heroRec = records.find((r) => r.id === targetHeroId);
@@ -800,27 +799,39 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
     const to = heroRec.goal.clone().add(new THREE.Vector3(0, 0.65, 0));
     mesh.position.copy(from);
     scene.add(mesh);
+    const speed = Math.max(0.4, animationSpeed);
     projectiles.push({
       mesh,
       from,
       to,
       arc: 2.35,
-      start: performance.now() + 180 / Math.max(0.4, animationSpeed),
-      duration: 620 / Math.max(0.4, animationSpeed),
+      start: performance.now() + delayMs / speed,
+      duration: flyMs / speed,
     });
   }
   function playEvent(e, before) {
-    if (disposed) return;
-    const duration = fx.play(e, before, records);
+    if (disposed) return 0;
+    const actorDef = e.actor ? definitions[e.actor] : null;
+    const isOverlordEnemy = e.type === 'enemy' && Boolean(actorDef?.overlord);
+    const isBossEnemy = e.type === 'enemy' && Boolean(actorDef?.boss) && !isOverlordEnemy;
+    const clipSpec = {
+      type: e.type,
+      clip: e.clip,
+      hasDamage: Boolean(e.damageType),
+      enraged: Boolean(e.enraged || e.label?.includes('第二阶段') || e.label?.includes('第三阶段')),
+      actionIndex: e.actionIndex || 0,
+      targets: e.targets || [],
+      speed: animationSpeed,
+    };
+    const durationOverride = isOverlordEnemy
+      ? overlords.actionDurationMs?.(e.actor, clipSpec) || 2800
+      : isBossEnemy
+        ? 1280
+        : 0;
+    const duration = fx.play(e, before, records, durationOverride ? { durationOverride } : {});
     if ((e.type === 'enemy' || e.type === 'bossPhase') && e.actor) {
       let lunge = null;
-      if (
-        e.type === 'enemy' &&
-        definitions[e.actor]?.overlord &&
-        !e.fixedFirstSlot &&
-        e.damageType &&
-        e.targets?.length
-      ) {
+      if (isOverlordEnemy && !e.fixedFirstSlot && e.damageType && e.targets?.length) {
         const bossRec = enemyRecords.find((r) => r.id === e.actor);
         const tRecs = e.targets.map((tid) => records.find((r) => r.id === tid)).filter(Boolean);
         if (bossRec && tRecs.length) {
@@ -832,23 +843,21 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
             dz: avg.z - bossRec.goal.z - (tRecs.length > 1 ? 0.65 : 1.18),
             aoe: tRecs.length > 1,
             parentScale: bossRec.restScale || 1,
-            durationMs: (e.clip === 'Special_Attack' ? 1420 : 960) / Math.max(0.5, animationSpeed),
+            durationMs:
+              (durationOverride
+                ? durationOverride * 0.9
+                : e.clip === 'Special_Attack'
+                  ? 2400
+                  : 1800) / Math.max(0.4, animationSpeed),
           };
         }
       }
-      overlords.playAction?.(e.actor, {
-        type: e.type,
-        clip: e.clip,
-        hasDamage: Boolean(e.damageType),
-        enraged: Boolean(e.label?.includes('第二阶段') || e.label?.includes('第三阶段')),
-        actionIndex: e.actionIndex || 0,
-        targets: e.targets || [],
-        speed: animationSpeed,
-        lunge,
-      });
+      overlords.playAction?.(e.actor, { ...clipSpec, lunge });
     }
     if (e.bombArmed && e.actor) {
-      spawnBombProjectile(e.actor, e.bombArmed.target);
+      const bombStartMs = durationOverride ? durationOverride * 0.36 : 240;
+      const bombFlyMs = durationOverride ? durationOverride * 0.42 : 760;
+      spawnBombProjectile(e.actor, e.bombArmed.target, bombStartMs, bombFlyMs);
     }
     schedule();
     const deathDelay = ['hero', 'enemy'].includes(e.type) ? duration * 0.7 : 0;
@@ -963,6 +972,7 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
     vfxStatus: fx.status,
     weatherStatus: weather.stats,
     deathStatus: deaths.stats,
+    bossDeathRemainingMs: deaths.bossDeathRemainingMs,
     overlordStatus: overlords.status,
     floorStatus: () => ({ ...floorStatus }),
     clearHints,
