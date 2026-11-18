@@ -18,6 +18,8 @@ import {
   enemyWeaknessRow,
   resourceBars,
   statusIcons,
+  alchemicalBombBadge,
+  overlordPhasePips,
   escapeText,
 } from './ui.js';
 import { portraitFrame } from './portrait-frame.js';
@@ -155,6 +157,21 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
   scene.add(model);
   const floorStatus = stabilizeFloorGeometry(model, resources);
   const weatherSurfaces = createWeatherSurfaces(model);
+  const projectiles = [];
+  const bombOrbGeo = resources.track(new THREE.SphereGeometry(0.22, 14, 14));
+  const bombHaloGeo = resources.track(new THREE.RingGeometry(0.26, 0.34, 24));
+  const bombOrbMat = resources.material(
+    new THREE.MeshBasicMaterial({ color: '#68f5aa', toneMapped: false }),
+  );
+  const bombHaloMat = resources.material(
+    new THREE.MeshBasicMaterial({
+      color: '#d99cff',
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: 0.85,
+      toneMapped: false,
+    }),
+  );
   const outerEnvironment = createScenePeriphery(
     model,
     options.map || 'ruins',
@@ -492,8 +509,9 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
                   </g></svg
               ></span>`
             : ''
-        }${side === 'Enemy' ? enemyTierBadge(d) : ''}${side === 'Enemy' ? html`<small class="enemy-level" title="${combatRank(u.level || 1)}">Lv.${u.level || 1}</small>` : ''}<span
-          class="unit-info"
+        }${side === 'Enemy' ? enemyTierBadge(d) : ''}${side === 'Enemy' ? overlordPhasePips(d, u) : ''}${side === 'Enemy' ? html`<small class="enemy-level" title="${combatRank(u.level || 1)}">Lv.${u.level || 1}</small>` : ''}${
+          side === 'Friendly' ? alchemicalBombBadge(id, s, forecast.final, playing) : ''
+        }<span class="unit-info"
           ><span class="unit-name">${d.name}${u.hp === 0 ? ' ×' : ''}</span></span
         ><span class="unit-resources"
           >${side === 'Enemy' ? enemyToughnessBadge(u, playing ? u : f) : ''}${resourceBars(u, f)}${
@@ -672,15 +690,39 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
             (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) =>
               m.emissive
                 ?.copy(m.userData.baseEmission)
-                .add(new THREE.Color(0.38, 0.22, 0.12).multiplyScalar(Math.sin(t * Math.PI))),
+                .add(
+                  new THREE.Color(
+                    h.heavy ? 0.55 : 0.38,
+                    h.heavy ? 0.16 : 0.22,
+                    0.12,
+                  ).multiplyScalar(Math.sin(t * Math.PI)),
+                ),
             );
         });
-        r.root.position.x += Math.sin(t * Math.PI * 5) * (1 - t) * 0.055;
-        r.root.rotation.z = Math.sin(t * Math.PI * 4) * (1 - t) * 0.025;
+        if (h.heavy) {
+          r.root.position.y -= Math.sin(t * Math.PI) * 0.22;
+          r.root.rotation.x = Math.sin(t * Math.PI) * 0.2;
+        }
+        r.root.position.x += Math.sin(t * Math.PI * 5) * (1 - t) * (h.heavy ? 0.11 : 0.055);
+        r.root.rotation.z = Math.sin(t * Math.PI * 4) * (1 - t) * (h.heavy ? 0.05 : 0.025);
         if (t === 1) {
           r.hit = null;
+          r.root.rotation.x = 0;
           r.root.rotation.z = 0;
         } else moving = true;
+      }
+    }
+    for (let i = projectiles.length - 1; i >= 0; i--) {
+      const p = projectiles[i];
+      const u = Math.max(0, Math.min(1, (now - p.start) / p.duration));
+      p.mesh.position.lerpVectors(p.from, p.to, u);
+      p.mesh.position.y += Math.sin(u * Math.PI) * p.arc;
+      p.mesh.rotation.y = u * Math.PI * 6;
+      p.mesh.rotation.x = u * Math.PI * 3;
+      moving = true;
+      if (u >= 1) {
+        scene.remove(p.mesh);
+        projectiles.splice(i, 1);
       }
     }
     if (activeDrag) {
@@ -731,12 +773,12 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
   }
   const fx = createEffects(effects, center, () => animationSpeed, {
     onSpawn: schedule,
-    onImpact({ heavy, delay = 0 } = {}) {
+    onImpact({ heavy, delay = 0, hitStopMs = 75 } = {}) {
       if (reduced) return;
       const waitMs = Math.max(0, delay) / Math.max(0.4, animationSpeed);
       setTimeout(() => {
         if (disposed) return;
-        if (heavy) hitStopUntil = performance.now() + 75;
+        if (heavy) hitStopUntil = performance.now() + hitStopMs;
         stage.classList.remove('vfx-shake');
         void stage.offsetWidth;
         stage.classList.add('vfx-shake');
@@ -745,18 +787,68 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
       }, waitMs);
     },
   });
+  function spawnBombProjectile(bossId, targetHeroId) {
+    if (reduced) return;
+    const bossRec = enemyRecords.find((r) => r.id === bossId);
+    const heroRec = records.find((r) => r.id === targetHeroId);
+    if (!bossRec || !heroRec) return;
+    const mesh = new THREE.Group();
+    const orb = new THREE.Mesh(bombOrbGeo, bombOrbMat);
+    const halo = new THREE.Mesh(bombHaloGeo, bombHaloMat);
+    mesh.add(orb, halo);
+    const from = bossRec.goal.clone().add(new THREE.Vector3(0.4, 2.0, 0.5));
+    const to = heroRec.goal.clone().add(new THREE.Vector3(0, 0.65, 0));
+    mesh.position.copy(from);
+    scene.add(mesh);
+    projectiles.push({
+      mesh,
+      from,
+      to,
+      arc: 2.35,
+      start: performance.now() + 180 / Math.max(0.4, animationSpeed),
+      duration: 620 / Math.max(0.4, animationSpeed),
+    });
+  }
   function playEvent(e, before) {
     if (disposed) return;
     const duration = fx.play(e, before, records);
-    if (e.type === 'enemy' && e.actor) {
+    if ((e.type === 'enemy' || e.type === 'bossPhase') && e.actor) {
+      let lunge = null;
+      if (
+        e.type === 'enemy' &&
+        definitions[e.actor]?.overlord &&
+        !e.fixedFirstSlot &&
+        e.damageType &&
+        e.targets?.length
+      ) {
+        const bossRec = enemyRecords.find((r) => r.id === e.actor);
+        const tRecs = e.targets.map((tid) => records.find((r) => r.id === tid)).filter(Boolean);
+        if (bossRec && tRecs.length) {
+          const avg = tRecs
+            .reduce((acc, rec) => acc.add(rec.goal), new THREE.Vector3())
+            .divideScalar(tRecs.length);
+          lunge = {
+            dx: avg.x - bossRec.goal.x,
+            dz: avg.z - bossRec.goal.z - (tRecs.length > 1 ? 0.65 : 1.18),
+            aoe: tRecs.length > 1,
+            parentScale: bossRec.restScale || 1,
+            durationMs: (e.clip === 'Special_Attack' ? 1420 : 960) / Math.max(0.5, animationSpeed),
+          };
+        }
+      }
       overlords.playAction?.(e.actor, {
         type: e.type,
+        clip: e.clip,
         hasDamage: Boolean(e.damageType),
-        enraged: Boolean(e.label?.includes('第二阶段')),
+        enraged: Boolean(e.label?.includes('第二阶段') || e.label?.includes('第三阶段')),
         actionIndex: e.actionIndex || 0,
         targets: e.targets || [],
         speed: animationSpeed,
+        lunge,
       });
+    }
+    if (e.bombArmed && e.actor) {
+      spawnBombProjectile(e.actor, e.bombArmed.target);
     }
     schedule();
     const deathDelay = ['hero', 'enemy'].includes(e.type) ? duration * 0.7 : 0;
@@ -925,6 +1017,30 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
     setSpeed(n) {
       animationSpeed = n;
     },
+    unitScreenCenter(id) {
+      const rec = records.find((item) => item.id === id);
+      if (!rec) return { x: 50, y: 38 };
+      const p = project(rec.root.position.x, rec.root.position.y + 1.4, rec.root.position.z);
+      return {
+        x: Math.max(10, Math.min(90, (p.x * 0.5 + 0.5) * 100)),
+        y: Math.max(12, Math.min(82, (-p.y * 0.5 + 0.5) * 100)),
+      };
+    },
+    playOverlordClip(id, clip, speed = animationSpeed) {
+      const ok = overlords.playAction?.(id, { clip, hasDamage: false, speed });
+      if (ok) schedule();
+      return ok;
+    },
+    triggerImpact({ heavy = true, hitStopMs = 95 } = {}) {
+      if (reduced) return;
+      if (heavy) hitStopUntil = performance.now() + hitStopMs;
+      stage.classList.remove('vfx-shake');
+      void stage.offsetWidth;
+      stage.classList.add('vfx-shake');
+      clearTimeout(shakeTimer);
+      shakeTimer = setTimeout(() => stage.classList.remove('vfx-shake'), 260);
+      schedule();
+    },
     isAnimating() {
       return unitMotionActive();
     },
@@ -936,6 +1052,8 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
       });
     },
     dispose() {
+      for (const p of projectiles) scene.remove(p.mesh);
+      projectiles.length = 0;
       endDrag();
       disposed = true;
       for (const resolve of settledWaiters) resolve();

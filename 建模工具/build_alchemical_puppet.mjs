@@ -1022,6 +1022,17 @@ export function buildAlchemicalPuppet() {
     }
   }
 
+  // Held Clockwork Alchemical Time-Bomb Flask between pincers (visible during Bomb_Toss)
+  const bombFx = joint(
+    group(forearmR, "Clockwork_Time_Bomb", [0.04, -1.62, 0.66]),
+    "bombfx",
+  );
+  ball(bombFx, [0, 0, 0], [0.18, 0.21, 0.18], emerald);
+  ring(bombFx, [0, 0, 0], 0.21, 0.022, brass, [0, 1, 0], 22);
+  ring(bombFx, [0, 0, 0], 0.21, 0.018, violet, [1, 0.35, 0], 22);
+  box(bombFx, [0, 0.24, 0], [0.09, 0.11, 0.09], brass, [0, 0.4, 0]);
+  ball(bombFx, [0, 0.34, 0], [0.06, 0.06, 0.06], violet);
+
   // Hovering Anti-Gravity Lower Limbs (悬空虚踏的反重力下肢)
   for (const s of [-1, 1]) {
     const leg = joint(
@@ -1238,11 +1249,13 @@ export function buildAlchemicalPuppet() {
   // 1: Normal_Attack (2.4s - 木杆横扫)
   // 2: Special_Attack (4.2s - 逆重齿轮坠击, inverted ceiling hover + gravity gear slam)
   // 3: Special_Action (3.2s - 发条错位重整, non-attack clockwork overwind & core charge)
+  // 4: Bomb_Toss (2.4s - 定式投弹 · 炼金怀表)
   const clipSpecs = [
     ["Idle", 4.6],
     ["Normal_Attack", 2.4],
     ["Special_Attack", 4.2],
     ["Special_Action", 3.2],
+    ["Bomb_Toss", 2.4],
   ];
   const clips = [];
   const samples = 48;
@@ -1270,6 +1283,7 @@ export function buildAlchemicalPuppet() {
     const isNormal = c === 1;
     const isSpecial = c === 2;
     const isAction = c === 3;
+    const isBomb = c === 4;
 
     for (const j of joints) {
       const times = [];
@@ -1325,13 +1339,23 @@ export function buildAlchemicalPuppet() {
             p.y += 0.28 * bell + 0.025 * Math.sin(a * 8) * bell;
             rot.y += 0.12 * Math.sin(a * 2) * bell;
             rot.z += 0.06 * Math.sin(a * 6) * bell;
+          } else if (isBomb) {
+            // Reach into chest core, wind back, then hurl flask toward player side
+            const wind = smoothWindow(t, 0.08, 0.36);
+            const hurl = Math.exp(-(((t - 0.52) / 0.11) ** 2));
+            p.y += 0.22 * prep - 0.08 * hurl;
+            p.z += -0.18 * wind + 0.44 * hurl;
+            rot.y += 0.42 * wind - 0.55 * hurl;
+            rot.x += -0.22 * wind + 0.3 * hurl;
           }
         } else if (j.role === "core") {
-          rot.y += isAction ? a * 3 : isSpecial ? a * 2 : a;
+          rot.y += isAction || isBomb ? a * 3 : isSpecial ? a * 2 : a;
           rot.x += 0.35 * s;
           if (isAction) {
             const pulse = 1 + 0.38 * bell + 0.14 * Math.sin(a * 6) * bell;
             scl.setScalar(pulse);
+          } else if (isBomb) {
+            scl.setScalar(1 + 0.35 * smoothWindow(t, 0.08, 0.42));
           } else if (isSpecial) {
             scl.setScalar(1 + 0.34 * invHold + 0.25 * slamDip);
           }
@@ -1343,12 +1367,12 @@ export function buildAlchemicalPuppet() {
           rot.z += 0.28 * s2;
         } else if (j.role === "gear") {
           // Counter-rotating back clockwork gears (seamless integer multiples of TAU)
-          const turns = isAction ? 4 : isSpecial ? 3 : isNormal ? 2 : 1;
+          const turns = isAction || isBomb ? 4 : isSpecial ? 3 : isNormal ? 2 : 1;
           rot.z +=
             j.side * a * turns +
             (isAction ? j.side * 0.16 * Math.sin(a * 8) * bell : 0);
         } else if (j.role === "windkey") {
-          const turns = isAction ? 5 : isSpecial ? 2 : 1;
+          const turns = isAction || isBomb ? 5 : isSpecial ? 2 : 1;
           rot.z -= a * turns;
         } else if (j.role === "ratchet") {
           rot.z += isNormal
@@ -1395,6 +1419,10 @@ export function buildAlchemicalPuppet() {
             rot.x += -0.78 * bell;
             rot.z += -0.62 * bell;
             rot.y += 0.55 * bell;
+          } else if (isBomb) {
+            // Pull wooden pole arm back & inward to balance throw
+            rot.x += 0.42 * prep - 0.18 * hit;
+            rot.z += 0.38 * smoothWindow(t, 0.08, 0.72);
           }
         } else if (j.role === "forearmL") {
           rot.x += 0.07 * Math.sin(a - 0.8);
@@ -1421,6 +1449,13 @@ export function buildAlchemicalPuppet() {
             rot.x += -0.76 * bell;
             rot.z += 0.62 * bell;
             rot.y += -0.55 * bell;
+          } else if (isBomb) {
+            const reach = smoothWindow(t, 0.06, 0.36);
+            const cock = smoothWindow(t, 0.24, 0.46);
+            const snapForward = Math.exp(-(((t - 0.52) / 0.1) ** 2));
+            rot.x += -0.55 * reach - 0.85 * cock + 1.55 * snapForward;
+            rot.z += 0.52 * reach - 0.25 * snapForward;
+            rot.y += -0.45 * reach + 0.35 * snapForward;
           }
         } else if (j.role === "forearmR") {
           rot.x += -0.07 * Math.sin(a - 0.6);
@@ -1431,12 +1466,20 @@ export function buildAlchemicalPuppet() {
           } else if (isAction) {
             rot.x += -0.66 * bell;
             rot.z += 0.35 * bell;
+          } else if (isBomb) {
+            const reach = smoothWindow(t, 0.06, 0.36);
+            const snapForward = Math.exp(-(((t - 0.52) / 0.1) ** 2));
+            rot.x += -0.82 * reach + 0.95 * snapForward;
           }
         } else if (j.role === "pincer") {
           const snap =
             (isNormal ? -0.32 * prep + 0.44 * hit : 0) +
             (isSpecial ? -0.28 * slamPrep + 0.42 * slamDip : 0) +
-            (isAction ? 0.25 * Math.sin(a * 4) * bell : 0.08 * s2);
+            (isAction ? 0.25 * Math.sin(a * 4) * bell : 0) +
+            (isBomb
+              ? -0.34 * smoothWindow(t, 0.14, 0.44) +
+                0.56 * Math.exp(-(((t - 0.54) / 0.09) ** 2))
+              : 0.08 * s2);
           rot.z += -j.side * snap;
         } else if (j.role === "leg") {
           // Weightless anti-gravity pedaling drift
@@ -1468,6 +1511,15 @@ export function buildAlchemicalPuppet() {
           } else if (j.role === "actionfx" && isAction) {
             v = Math.max(0.00001, bell);
             rot.y += a * 2;
+          } else if (j.role === "bombfx" && isBomb) {
+            const held = smoothPlateau(t, 0.14, 0.22, 0.48, 0.54);
+            const launch = Math.max(0, (t - 0.48) / 0.08);
+            v = Math.max(0.00001, held);
+            if (t >= 0.48 && t <= 0.56) {
+              p.z += launch * 1.15;
+              p.y += launch * 0.55;
+            }
+            rot.y += a * 3;
           }
           if (!(j.role === "specialfx" && isSpecial)) {
             scl.setScalar(v);

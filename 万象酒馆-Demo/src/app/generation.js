@@ -95,6 +95,7 @@ export function createGeneration(context) {
     context.shell?.syncInnVisitors?.();
     context.generationAccess?.refresh();
     context.records?.refreshArchive?.();
+    context.destinations?.refreshQuickTest?.();
   }
   renderDeveloperOptions();
   function setOption(key, value) {
@@ -842,7 +843,8 @@ export function createGeneration(context) {
       if (kind === 'character' && !library().inventory.summonContracts)
         throw Error('召唤需要一份契约，完成副本后可获得。');
       if (kind === 'character') pendingSummon = summonInput;
-      if (kind === 'script') prepareSwapLesson(library());
+      if (kind === 'script' && !developerOption(session.ai.generationOptions, 'quickTest'))
+        prepareSwapLesson(library());
       if (kind === 'script' && !(await departure.choose())) return;
       if (kind === 'script' && !generationEnabled(session.ai.generationOptions, 'scriptApi')) {
         pendingPortal = null;

@@ -127,7 +127,7 @@ export function mountInput(context) {
     if (!empty || !context.viewport.canPlan() || !session.selection.selected) return;
     context.planning.queueSwap(session.selection.selected, Number(empty.dataset.emptySlot));
   });
-  context.events.on($('#commit'), 'click', context.playback.commit);
+  context.events.on($('#commit'), 'click', () => context.playback.commit());
   context.events.on($('#clear'), 'click', () => {
     session.battle.plan = [];
     context.selection.clearSelection(true);

@@ -13,6 +13,7 @@ const ANIMATION_LABELS = Object.freeze({
   Normal_Attack: '普通攻击',
   Special_Attack: '特殊攻击',
   Special_Action: '特殊行动',
+  Bomb_Toss: '投掷炸弹',
   Talon_Rend: '利爪撕裂',
 });
 

@@ -1,7 +1,6 @@
 const hit = (value) => ({ type: 'damage', value });
 const buff = (key, value, target = 'opponents') => ({ type: 'buff', buff: key, value, target });
 const selfShieldEffect = (value) => ({ type: 'shield', value, target: 'self' });
-const selfHealEffect = (value) => ({ type: 'heal', value, target: 'self' });
 
 function move(name, text, effects, extra = {}) {
   return { name, text, effects, ...extra };
@@ -497,49 +496,109 @@ export const MILL_BOSSES = [
       attackStyle: 'colossus-beam',
       attackType: 'special-weapon',
       weaknesses: ['fire', 'brawl', 'axe', 'lightning'],
-      toughness: 8,
-      hp: 156,
+      toughness: 7,
+      hp: 320,
       speed: 3,
       tactic: { target: 'fixed' },
     },
     [
-      move('木杆横扫', '挥动悬吊失衡的笨重长木杆猛击正前格11伤害。', [hit(11)], {
-        slot: 0,
-      }),
       move(
-        '发条错位重整',
-        '背部时钟齿轮狂转上弦、炼金核心闪烁稳固躯壳：获得10护盾与1层力量。',
-        [selfShieldEffect(10), buff('strength', 1, 'self')],
-        { slot: 0 },
+        '失衡木杆横扫',
+        '挥动悬吊失衡的笨重长木杆猛击相邻两格各9伤害并附加1层虚弱。',
+        [hit(9), buff('weak', 1)],
+        {
+          slot: 0,
+          adjacent: true,
+          damageType: 'brawl',
+          clip: 'Normal_Attack',
+        },
       ),
       move(
-        '逆重齿轮坠击',
-        '倒吊翻转自天花板震落重力冲击与碎齿轮，轰击全前排10伤害并附加1层虚弱。',
-        [hit(10), buff('weak', 1)],
-        { slots: [0, 1, 2] },
+        '重力铁钳猛砸',
+        '生锈铁钳借逆重力重锤中位14伤害并附加1层易伤。',
+        [hit(14), buff('vulnerable', 1)],
+        {
+          slot: 1,
+          damageType: 'axe',
+          clip: 'Normal_Attack',
+        },
+      ),
+      move(
+        '发条错位重整',
+        '背部时钟齿轮狂转上弦、炼金核心闪烁稳固躯壳：获得12护盾、1层力量与1层铁皮。',
+        [selfShieldEffect(12), buff('strength', 1, 'self'), buff('iron', 1, 'self')],
+        { slot: 0, clip: 'Special_Action' },
       ),
     ],
     {
       boss: true,
       overlord: true,
       standOnCard: true,
+      actions: 1,
+      enragedActions: 2,
+      finalPhaseActions: 2,
+      overlordPhases: Object.freeze([0.66, 0.33]),
+      toughnessByPhase: Object.freeze([7, 9, 10]),
+      phaseShields: Object.freeze([0, 12, 16]),
+      phaseTitles: Object.freeze(['', '第二阶段 · 逆重发条失控', '第三阶段 · 破碎核心临爆']),
+      fixedFirstSlot: Object.freeze({
+        id: 'alchemical-time-bomb',
+        name: '定式投弹 · 炼金怀表',
+        text: '先制投出定时炼金炸弹；下回合限时内未确认结算将当场引爆造成高额伤害并强制结束回合。',
+        clip: 'Bomb_Toss',
+        unSlowable: true,
+        hideSpeed: true,
+        breakable: true,
+        bombSecondsByPhase: Object.freeze([40, 30, 20]),
+      }),
       enragedIntents: [
         move(
           '逆重齿轮坠击',
-          '反重力核心骤然过载倒悬轰落，横扫全前排12伤害并附加1层易伤。',
-          [hit(12), buff('vulnerable', 1)],
-          { slots: [0, 1, 2], enraged: true },
+          '反重力核心骤然过载倒悬轰落，横扫全前排9伤害并附加1层易伤。',
+          [hit(9), buff('vulnerable', 1)],
+          { slots: [0, 1, 2], enraged: true, damageType: 'special-weapon', clip: 'Special_Attack' },
         ),
         move(
-          '失控发条超频',
-          '发条错位暴走收拢铁钳护躯：获得12护盾、回复8生命并获2层铁皮。',
-          [selfShieldEffect(12), selfHealEffect(8), buff('iron', 2, 'self')],
-          { slot: 0, enraged: true },
+          '双臂错位连槌',
+          '失衡木杆与铁钳错位狂砸左格造成13伤害并附加3层流血。',
+          [hit(13), buff('bleed', 3)],
+          { slot: 0, enraged: true, damageType: 'axe', clip: 'Normal_Attack' },
         ),
-        move('重力铁钳砸落', '借错乱重力猛然压向两翼造成13伤害。', [hit(13)], {
-          slots: [0, 1],
+        move('失控发条超频', '发条暴走震荡全前排7伤害，同时获得14护盾与1层铁皮。', [hit(7)], {
+          slots: [0, 1, 2],
+          selfShield: 14,
+          selfBuff: { iron: 1 },
           enraged: true,
+          damageType: 'special-weapon',
+          clip: 'Special_Action',
         }),
+      ],
+      finalPhaseIntents: [
+        move(
+          '终焉逆重崩落',
+          '临爆核心失重倾坠轰击全前排11伤害并附加1层易伤。',
+          [hit(11), buff('vulnerable', 1)],
+          { slots: [0, 1, 2], enraged: true, damageType: 'special-weapon', clip: 'Special_Attack' },
+        ),
+        move(
+          '熔炉铁钳处决',
+          '过载铁钳贯砸中格16伤害并撕裂造成4层流血。',
+          [hit(16), buff('bleed', 4)],
+          { slot: 1, enraged: true, damageType: 'axe', clip: 'Normal_Attack' },
+        ),
+        move(
+          '过载核心喷涌',
+          '紫绿炼金焰浪席卷相邻两格12伤害并附加1层虚弱，同时获得10护盾。',
+          [hit(12), buff('weak', 1)],
+          {
+            slot: 1,
+            adjacent: true,
+            selfShield: 10,
+            enraged: true,
+            damageType: 'special-magic',
+            clip: 'Special_Attack',
+          },
+        ),
       ],
     },
   ),

@@ -122,6 +122,174 @@ export async function developerModeChecks({ browser, baseURL, output }) {
     });
     assert.equal(gate.blocked.length, 7);
     assert.deepEqual(gate.forwarded, []);
+
+    async function openGateAndSelectMill() {
+      const frame = page.frameLocator('#inn-frame iframe');
+      await frame.locator('#status').waitFor({ state: 'detached', timeout: 60000 });
+      await frame.locator('canvas').evaluate(() => window.assetPreview.placeNow('gate'));
+      await frame.locator('#enter').click();
+      await page.locator('#destination-dialog[data-stage="region"]').waitFor({ state: 'visible' });
+      await page.locator('#destination-regions button[data-region="mill"]').click();
+      await page.locator('#destination-region-confirm').click();
+      await page.locator('#destination-route-screen').waitFor({ state: 'visible' });
+    }
+
+    // Return to inn and verify quickTest non-destructively swaps mill Stage 1 <-> Stage 4 & runs Overlord fight
+    await page.evaluate(() => window.demo.returnInn());
+    await page.waitForFunction(() => window.demo.getStatus().mode === 'inn');
+    await openOptions();
+    const quickCheckbox = page.locator('[data-generation-option="quickTest"]');
+    await quickCheckbox.check();
+    await page.locator('#ai-close').click();
+
+    await openGateAndSelectMill();
+    const swappedNodeText = await page
+      .locator('#destination-map [data-map-node]')
+      .first()
+      .innerText();
+    assert(swappedNodeText.includes('磨坊阁楼齿轮室'), swappedNodeText);
+    assert(
+      await page
+        .locator('#destination-map [data-map-node]')
+        .first()
+        .evaluate((el) => el.classList.contains('is-overlord')),
+      'Node 1 should show Overlord mark while quickTest is active',
+    );
+
+    // Toggle quickTest OFF -> node 1 restores to regular stage 1
+    await page.locator('#destination-close').click();
+    await openOptions();
+    await quickCheckbox.uncheck();
+    await page.locator('#ai-close').click();
+    await openGateAndSelectMill();
+    const restoredNodeText = await page
+      .locator('#destination-map [data-map-node]')
+      .first()
+      .innerText();
+    assert(restoredNodeText.includes('外围水渠与篱笆'), restoredNodeText);
+    assert(
+      !(await page
+        .locator('#destination-map [data-map-node]')
+        .first()
+        .evaluate((el) => el.classList.contains('is-overlord'))),
+      'Node 1 should restore when quickTest is disabled',
+    );
+
+    // Enable quickTest again and launch direct Overlord battle
+    await page.locator('#destination-close').click();
+    await openOptions();
+    await quickCheckbox.check();
+    await page.locator('#ai-close').click();
+    await openGateAndSelectMill();
+    await page.locator('#destination-start').click();
+    for (let step = 0; step < 6; step++) {
+      await page.waitForTimeout(180);
+      if (await page.locator('#party-panel').isVisible()) {
+        await page.locator('#prepare-done').click();
+      }
+      if (await page.evaluate(() => window.demo.getStatus().mode === 'battle')) break;
+    }
+    await page.waitForFunction(
+      () => window.demo.getStatus().mode === 'battle' && !window.demo.getStatus().animating,
+      null,
+      { timeout: 60000 },
+    );
+    const directExp = await page.evaluate(() => ({
+      index: window.demo.getExpedition().index,
+      enemies: window.demo.getState().enemyIds,
+    }));
+    assert.equal(directExp.index, 4);
+    assert.deepEqual(directExp.enemies, ['alchemicalPuppet']);
+
+    // Speed up cutscenes to x2 cleanly before committing opening
+    if ((await page.locator('#speed').textContent())?.includes('×1')) {
+      await page.locator('#speed').click();
+    }
+    await page.waitForFunction(
+      () => document.querySelector('#overlord-cutscene-layer')?.hidden !== false,
+      null,
+      {
+        timeout: 15000,
+      },
+    );
+    await page.locator('#commit').click();
+    await page.waitForFunction(
+      () => {
+        const s = window.demo.getState();
+        return s.phase === 'plan' && s.round === 1 && !window.demo.getStatus().playing;
+      },
+      null,
+      { timeout: 25000 },
+    );
+
+    // Check gold-chain fixed first slot without speed number
+    const firstSlotInfo = await page
+      .locator('#timeline .time-cell')
+      .first()
+      .evaluate((el) => ({
+        fixed: el.classList.contains('overlord-fixed-cell'),
+        hasChains: Boolean(el.querySelector('.timeline-gold-chains')),
+        text: el.innerText,
+      }));
+    assert.equal(firstSlotInfo.fixed, true);
+    assert.equal(firstSlotInfo.hasChains, true);
+    assert(!firstSlotInfo.text.includes('速度'), firstSlotInfo.text);
+    assert(firstSlotInfo.text.includes('定式先制'), firstSlotInfo.text);
+
+    // Commit Round 1 -> Overlord acts first -> locks UI & arms 40s bomb
+    await page.locator('#commit').click();
+    await page.waitForFunction(
+      () => {
+        const s = window.demo.getState();
+        return s.phase === 'plan' && s.round === 2 && !window.demo.getStatus().playing;
+      },
+      null,
+      { timeout: 30000 },
+    );
+    assert.equal(
+      await page.evaluate(() => document.body.classList.contains('overlord-ui-locked')),
+      true,
+    );
+    assert.equal(await page.locator('#ai-open').getAttribute('data-overlord-sealed'), 'settings');
+    assert.equal(await page.locator('#saves-open').getAttribute('data-overlord-sealed'), 'saves');
+    // Test fourth-wall seal interception & dialogue bark (aria-disabled requires force: true in Playwright)
+    await page.locator('#ai-open').click({ force: true });
+    assert.equal(await page.evaluate(() => document.querySelector('#ai-dialog').open), false);
+    await page.locator('#overlord-dialogue-bar').waitFor({ state: 'visible' });
+    const barkText = await page.locator('#overlord-dialogue-bar').innerText();
+    assert(barkText.includes('系统设置') || barkText.includes('规则'), barkText);
+
+    // Verify dual countdown UI ticks downward
+    await page.locator('.alchemical-bomb-badge.is-active').first().waitFor({ state: 'visible' });
+    await page
+      .locator('#commit.has-alchemical-bomb .commit-bomb-badge')
+      .waitFor({ state: 'visible' });
+    const t0 = await page.locator('#commit.has-alchemical-bomb .commit-bomb-badge').textContent();
+    await page.waitForTimeout(550);
+    const t1 = await page.locator('#commit.has-alchemical-bomb .commit-bomb-badge').textContent();
+    const n0 = Number.parseFloat(String(t0).replace(/[^0-9.]/g, ''));
+    const n1 = Number.parseFloat(String(t1).replace(/[^0-9.]/g, ''));
+    assert(
+      Number.isFinite(n0) && Number.isFinite(n1) && n1 < n0,
+      `Timer did not tick: ${t0} -> ${t1}`,
+    );
+
+    await page.screenshot({ path: path.join(output, 'overlord-puppet-battle.png') });
+
+    // Force timer expiry -> detonates bomb & auto-commits round
+    await page.evaluate(() => window.demo.expireBombNow());
+    await page.waitForFunction(
+      () => {
+        const s = window.demo.getState();
+        return (
+          !window.demo.getStatus().playing &&
+          (s.round >= 3 || s.phase === 'defeat' || s.phase === 'victory')
+        );
+      },
+      null,
+      { timeout: 30000 },
+    );
+
     assert.deepEqual(calls, []);
     assert.deepEqual(errors, []);
     return {
@@ -130,6 +298,9 @@ export async function developerModeChecks({ browser, baseURL, output }) {
       allSevenRequestsBlocked: true,
       disabledButtons: true,
       localDungeonAvailable: true,
+      quickTestDirectOverlord: true,
+      overlordDomainSeal: true,
+      alchemicalBombTimer: true,
       paidRequests: 0,
     };
   } catch (failure) {

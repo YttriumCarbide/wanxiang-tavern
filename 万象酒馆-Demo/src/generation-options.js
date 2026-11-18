@@ -11,6 +11,7 @@ export function restoreGenerationOptions(value) {
     allowRetreat: value?.allowRetreat === true,
     editArchives: value?.editArchives === true,
     unlockAllCodex: value?.unlockAllCodex === true,
+    quickTest: value?.quickTest === true,
   };
 }
 

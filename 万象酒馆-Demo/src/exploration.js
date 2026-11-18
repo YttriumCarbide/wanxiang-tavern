@@ -16,6 +16,7 @@ import { MAP_IDS } from './content/biomes.js';
 import { DEFINITIONS } from './data.js';
 import { tutorialSpec } from './content/tutorial.js';
 import { encounterLevel } from './enemy-growth.js';
+import { developerOption } from './generation-options.js';
 
 const ALL_ROUTE_MAP_IDS = Object.freeze([
   ...MAP_IDS,
@@ -196,10 +197,78 @@ function mainlinePreview(route, map) {
   return entries;
 }
 
-export function explorationPreview(route, map) {
+export function quickTestMillPreview(entries, options = {}) {
+  if (!developerOption(options, 'quickTest') || !Array.isArray(entries) || entries.length < 5) {
+    return entries;
+  }
+  const bp1 = REGIONS.mill.nodes.find((item) => item.id === 'mill-1-canal');
+  const bp4 = REGIONS.mill.nodes.find((item) => item.id === 'mill-4-attic');
+  if (!bp1 || !bp4) return entries;
+  const oldRoot = entries.find((item) => item.nodeId === 'mill-1-canal');
+  const quickRootId = 'mill-quick-test-alchemical-puppet';
+  return entries.map((entry) => {
+    if (entry.nodeId === 'mill-1-canal') {
+      return {
+        ...entry,
+        id: quickRootId,
+        nodeId: bp4.id,
+        label: '1',
+        branch: false,
+        step: 0,
+        authored: true,
+        sequence: bp4.authoredIndex,
+        site: bp4.authoredIndex,
+        levelOffset: bp4.levelOffset,
+        boss: bp4.boss,
+        overlord: true,
+        quickTestBoss: true,
+        tutorial: false,
+        locked: false,
+        pos: bp1.pos,
+        parentId: null,
+      };
+    }
+    if (entry.nodeId === 'mill-4-attic') {
+      return {
+        ...entry,
+        nodeId: bp1.id,
+        label: '4',
+        branch: false,
+        step: bp4.step,
+        authored: true,
+        sequence: bp1.authoredIndex,
+        site: bp1.authoredIndex,
+        levelOffset: bp1.levelOffset,
+        boss: bp1.boss,
+        overlord: false,
+        quickTestDisplaced: true,
+        tutorial: false,
+        pos: bp4.pos,
+        parentId: entry.parentId === oldRoot?.id ? quickRootId : entry.parentId,
+      };
+    }
+    return oldRoot && entry.parentId === oldRoot.id ? { ...entry, parentId: quickRootId } : entry;
+  });
+}
+
+export function quickTestMillFrontier(route, options = {}) {
+  const normal = availableExplorations(route || { frontier: [] });
+  if (!developerOption(options, 'quickTest')) return normal;
+  const previewEntries = quickTestMillPreview(
+    explorationPreview(route || { frontier: [] }, 'mill'),
+    options,
+  );
+  const bossEntry = previewEntries.find((entry) => entry.quickTestBoss);
+  return bossEntry
+    ? [bossEntry, ...normal.filter((entry) => entry.nodeId !== 'mill-1-canal')]
+    : normal;
+}
+
+export function explorationPreview(route, map, options = {}) {
   if (!route) return [];
   if (MAINLINE_DUNGEONS.includes(map) && REGIONS[map]?.nodes?.length && !route.frontier[0]?.world) {
-    return mainlinePreview(route, map);
+    const entries = mainlinePreview(route, map);
+    return map === 'mill' ? quickTestMillPreview(entries, options) : entries;
   }
   const combined = [...(route.cleared || []), ...(route.frontier || [])].sort(
     (a, b) => a.sequence - b.sequence,

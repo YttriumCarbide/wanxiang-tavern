@@ -1,5 +1,5 @@
 import { TUTORIAL_TARGETS } from '../content/mill-encounters.js';
-import { generationEnabled } from '../generation-options.js';
+import { developerOption, generationEnabled } from '../generation-options.js';
 import { createDialogue } from './dialogue.js';
 import { ARRIVAL_PROSE, EDITH_LESSONS, FIRST_RECRUIT_DIALOGUE } from '../content/edith-guide.js';
 import { newCampaign, learning, guiding } from '../campaign.js';
@@ -541,6 +541,8 @@ export function createOnboarding(context) {
       context.ledger?.sync();
     },
     allowPortal(kind) {
+      if (kind === 'script' && developerOption(session.ai.generationOptions, 'quickTest'))
+        return true;
       const unlocked = session.ai.library.unlockedDungeons || [];
       const millOrLegacyUnlocked = unlocked.includes('mill') || unlocked.includes('ruins');
       if (
@@ -660,6 +662,11 @@ export function createOnboarding(context) {
         advance('opening-confirm');
     },
     beforeCommit() {
+      if (
+        developerOption(session.ai.generationOptions, 'quickTest') ||
+        session.journey.expedition?.exploration?.quickTestBoss
+      )
+        return true;
       const issue = tutorialCommitIssue(
         session.ai.library,
         session.battle.state,
@@ -779,6 +786,11 @@ export function createOnboarding(context) {
       }
     },
     allowReturn() {
+      if (
+        developerOption(session.ai.generationOptions, 'quickTest') ||
+        session.journey.expedition?.exploration?.quickTestBoss
+      )
+        return true;
       if (state()?.tutorial === 'ether') {
         context.shell.toast('先查看以太说明，再带着收获返回酒馆。');
         return false;

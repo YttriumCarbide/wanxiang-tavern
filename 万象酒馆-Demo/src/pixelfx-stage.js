@@ -69,6 +69,12 @@ import * as shatterDeath from '../vendor/pixelfx/fx/spawn/shatter-death.js';
 import * as burning from '../vendor/pixelfx/fx/status/burning.js';
 import * as frozen from '../vendor/pixelfx/fx/status/frozen.js';
 import * as stunned from '../vendor/pixelfx/fx/status/stunned.js';
+import * as empBlast from '../vendor/pixelfx/fx/scifi/emp-blast.js';
+import * as energyCore from '../vendor/pixelfx/fx/scifi/energy-core.js';
+import * as glitch from '../vendor/pixelfx/fx/scifi/glitch.js';
+import * as heavyLanding from '../vendor/pixelfx/fx/impacts/heavy-landing.js';
+import * as hitFlash from '../vendor/pixelfx/fx/impacts/hit-flash.js';
+import * as disintegrate from '../vendor/pixelfx/fx/spawn/disintegrate.js';
 
 export const EFFECT_REGISTRY = Object.freeze({
   'holy-pillar': holyPillar,
@@ -141,6 +147,12 @@ export const EFFECT_REGISTRY = Object.freeze({
   burning,
   frozen,
   stunned,
+  'emp-blast': empBlast,
+  'energy-core': energyCore,
+  glitch,
+  'heavy-landing': heavyLanding,
+  'hit-flash': hitFlash,
+  disintegrate,
 });
 
 /** Headless PixelFX sample renderer for tests and telemetry. Returns RGBA bytes and active pixel count. */

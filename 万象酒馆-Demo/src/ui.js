@@ -208,6 +208,57 @@ export function enemyWeaknessRow(d, u, revealedMap, activeDamageType = null) {
   >`;
 }
 
+export function alchemicalBombBadge(unitId, state, forecastState = null, playing = false) {
+  const activeBomb =
+    state?.activeAlchemicalBomb?.target === unitId ? state.activeAlchemicalBomb : null;
+  const pendingBomb =
+    !activeBomb && !playing && forecastState?.pendingAlchemicalBomb?.target === unitId
+      ? forecastState.pendingAlchemicalBomb
+      : null;
+  const bomb = activeBomb || pendingBomb;
+  if (!bomb) return '';
+  const sec = Number(bomb.durationSec) || 40;
+  const tip = activeBomb
+    ? `定时炼金炸弹 · 需在 ${sec} 秒内确认结算\n超时将在本尊身上引爆高额伤害并强制结束回合`
+    : `定式先制预警 · 敌方第1格将向该角色投掷 ${sec} 秒炼金炸弹`;
+  return html`<span
+    class="alchemical-bomb-badge ${activeBomb ? 'is-active' : 'is-pending'}"
+    data-bomb-target="${escapeText(unitId)}"
+    data-tooltip="${escapeText(tip)}"
+    aria-label="${escapeText(tip)}"
+    ><svg viewBox="0 0 24 24" class="bomb-watch-ico" aria-hidden="true">
+      <circle cx="12" cy="13.5" r="7" fill="#23182a" stroke="#f0c368" stroke-width="1.8" />
+      <path
+        d="M9.5 3.5h5M12 3.5v3M12 13.5l2.8-2.2"
+        stroke="#f5dd9d"
+        stroke-width="1.8"
+        stroke-linecap="round"
+      />
+      <circle cx="17.5" cy="6.2" r="2.1" fill="#6bf5a9" /></svg
+    ><b ${activeBomb ? `data-bomb-readout="${escapeText(unitId)}"` : ''}
+      >${activeBomb ? `${sec.toFixed(1)}s` : `${sec}s`}</b
+    ></span
+  >`;
+}
+
+export function overlordPhasePips(def, u) {
+  if (!Array.isArray(def?.overlordPhases) || !u || u.side !== 'enemy') return '';
+  const total = def.overlordPhases.length + 1;
+  const current = Math.max(1, Math.min(total, Number(u.bossStage) || (u.enraged ? 2 : 1)));
+  return html`<span
+    class="overlord-phase-pips"
+    data-phase-stage="${current}"
+    aria-label="霸主阶段 ${current}/${total}"
+    title="三阶段霸主 · 当前第 ${current} 阶段"
+    >${Array.from({ length: total }, (_, idx) => {
+      const n = idx + 1;
+      return html`<i class="${n === current ? 'is-current' : n < current ? 'is-passed' : ''}"
+        >${['I', 'II', 'III'][idx] || n}</i
+      >`;
+    }).join('')}</span
+  >`;
+}
+
 export function mountTooltips() {
   const events = createEventScope();
   const tip = document.createElement('div');

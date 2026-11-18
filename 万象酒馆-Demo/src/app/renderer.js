@@ -7,7 +7,7 @@ import { html } from '../shared/html.js';
 import { ENCOUNTERS } from '../data.js';
 import { currentEncounterSpec } from '../expedition.js';
 import { captureLayout, unitOrigins, animateLayout } from '../motion.js';
-import { resourceBars, statusIcons, escapeText } from '../ui.js';
+import { resourceBars, statusIcons, alchemicalBombBadge, escapeText } from '../ui.js';
 import { inferDamageType, resolveBasicAttackType } from '../damage-types.js';
 import { query as $ } from './dom.js';
 import { portraitUrl } from '../catalog.js';
@@ -85,6 +85,7 @@ export function createRenderer(context) {
               : ''
           }
           <div class="rear-resources">${resourceBars(u, f)}</div>
+          ${alchemicalBombBadge(id, s, session.battle.forecast?.final, session.battle.playing)}
           ${emblemRing(d, u, false, session.battle.playing ? u : f)}
         </button>`;
       })
@@ -190,6 +191,7 @@ export function createRenderer(context) {
     context.selection.refreshInteraction();
     context.backpack?.render();
     context.battleReading?.render();
+    context.overlordBattle?.sync();
     context.checkpoint?.schedule();
   }
   return { renderRear, render };

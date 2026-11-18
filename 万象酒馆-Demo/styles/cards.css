@@ -2168,3 +2168,96 @@
     stroke-dasharray: 3 2 3 52;
   }
 }
+.overlord-phase-pips {
+  position: absolute;
+  left: 30px;
+  top: 5px;
+  display: inline-flex;
+  gap: 3px;
+  z-index: 3;
+  pointer-events: none;
+}
+.overlord-phase-pips i {
+  font-style: normal;
+  font-size: 9px;
+  line-height: 14px;
+  min-width: 15px;
+  padding: 0 3px;
+  border-radius: 3px;
+  text-align: center;
+  background: rgba(16, 12, 24, 0.82);
+  border: 1px solid rgba(208, 178, 108, 0.35);
+  color: rgba(232, 214, 168, 0.48);
+}
+.overlord-phase-pips i.is-passed {
+  color: rgba(244, 198, 114, 0.72);
+  border-color: rgba(244, 198, 114, 0.52);
+  background: rgba(54, 30, 62, 0.86);
+}
+.overlord-phase-pips i.is-current {
+  color: #fff2c4;
+  font-weight: 800;
+  border-color: #ffd978;
+  background: linear-gradient(135deg, #5d2c7a, #8d5c1e);
+  box-shadow: 0 0 8px rgba(255, 214, 112, 0.7);
+}
+.alchemical-bomb-badge {
+  position: absolute;
+  right: 5px;
+  top: 5px;
+  z-index: 6;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px 2px 5px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(35, 19, 44, 0.94), rgba(56, 28, 18, 0.94));
+  border: 1.5px solid #f0c368;
+  color: #ffe8a8;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  box-shadow:
+    0 2px 10px rgba(0, 0, 0, 0.72),
+    0 0 12px rgba(107, 245, 169, 0.35);
+  pointer-events: auto;
+}
+.alchemical-bomb-badge .bomb-watch-ico {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+.alchemical-bomb-badge.is-pending {
+  opacity: 0.86;
+  border-style: dashed;
+}
+.alchemical-bomb-badge.is-warning {
+  border-color: #ff9f43;
+  color: #ffd79e;
+  box-shadow: 0 0 14px rgba(255, 148, 56, 0.65);
+}
+.alchemical-bomb-badge.is-critical {
+  border-color: #ff5b6e;
+  color: #ffd3da;
+  background: linear-gradient(135deg, #4b0f1c, #240712);
+  box-shadow: 0 0 16px rgba(255, 65, 92, 0.85);
+  animation: bomb-badge-pulse 0.45s ease-in-out infinite alternate;
+}
+.rear-card .alchemical-bomb-badge {
+  top: 28px;
+  right: 4px;
+  padding: 1px 5px 1px 4px;
+  font-size: 10px;
+}
+@keyframes bomb-badge-pulse {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.09);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .alchemical-bomb-badge.is-critical {
+    animation: none;
+  }
+}

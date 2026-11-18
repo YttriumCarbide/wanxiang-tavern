@@ -1182,3 +1182,100 @@ body.ring-cabinet-open :is(.app-header, #inn-resources) {
   height: 100%;
   image-rendering: pixelated;
 }
+.command-controls #commit.has-alchemical-bomb {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: linear-gradient(135deg, #c99d4a, #9e6b29);
+  color: #160f08;
+  border: 2px solid #ffe49c;
+  box-shadow:
+    0 0 0 2px rgba(244, 198, 92, 0.35),
+    0 0 18px rgba(107, 245, 169, 0.4);
+  overflow: hidden;
+}
+.command-controls #commit.has-alchemical-bomb::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 3px;
+  width: calc(var(--bomb-progress, 1) * 100%);
+  background: linear-gradient(90deg, #5ef2a8, #ffd978, #ff625c);
+  pointer-events: none;
+}
+.command-controls #commit.has-alchemical-bomb.is-warning {
+  background: linear-gradient(135deg, #e5933a, #b8581c);
+  color: #fff6e8;
+  border-color: #ffd394;
+}
+.command-controls #commit.has-alchemical-bomb.is-critical {
+  background: linear-gradient(135deg, #c92a42, #7a1226);
+  color: #fff2f4;
+  border-color: #ff99a8;
+  box-shadow:
+    0 0 0 2px rgba(255, 86, 112, 0.58),
+    0 0 24px rgba(255, 62, 92, 0.85);
+  animation: bomb-badge-pulse 0.45s ease-in-out infinite alternate;
+}
+.commit-bomb-badge {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(14, 10, 18, 0.72);
+  color: #ffe8a8;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+[data-overlord-sealed] {
+  position: relative;
+  filter: sepia(0.35) brightness(0.8);
+  border-color: rgba(235, 188, 96, 0.78) !important;
+  box-shadow:
+    inset 0 0 10px rgba(226, 174, 82, 0.42),
+    0 0 10px rgba(34, 18, 48, 0.65) !important;
+  cursor: not-allowed;
+}
+[data-overlord-sealed]::after {
+  content: '⛓';
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 10px;
+  line-height: 1;
+  background: #2b1838;
+  color: #ffd875;
+  border: 1px solid #f4c66a;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+  pointer-events: none;
+}
+[data-overlord-sealed].sealed-rattle {
+  animation: overlord-seal-rattle 260ms ease-in-out;
+}
+@keyframes overlord-seal-rattle {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-4px) rotate(-2deg);
+  }
+  55% {
+    transform: translateX(4px) rotate(2deg);
+  }
+  80% {
+    transform: translateX(-2px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-overlord-sealed].sealed-rattle {
+    animation: none;
+  }
+}

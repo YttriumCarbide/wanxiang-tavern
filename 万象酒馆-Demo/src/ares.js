@@ -1,16 +1,28 @@
+import { overlordTargetStage } from './overlord-mechanics.js';
+
 /** Authored machine phase rules shared by intention, timeline and the sole simulation. */
-export function shouldEnrage(state, id, definition) {
+export function nextBossStage(state, id, definition) {
   const unit = state.units[id];
-  if (!definition?.boss || definition.phaseMode === 'cycle' || !unit?.hp || unit.enraged)
-    return false;
+  if (!definition?.boss || definition.phaseMode === 'cycle' || !unit?.hp) return 0;
+  if (Array.isArray(definition.overlordPhases) && definition.overlordPhases.length >= 2) {
+    const target = overlordTargetStage(unit, definition);
+    return target > (unit.bossStage || 1) ? target : 0;
+  }
+  if (unit.enraged) return 0;
   const threshold = unit.maxHp * (definition.phaseThreshold || 0.5);
-  if (definition.tactic?.mode === 'ares' ? unit.hp < threshold : unit.hp <= threshold) return true;
-  return (
+  if (definition.tactic?.mode === 'ares' ? unit.hp < threshold : unit.hp <= threshold) return 2;
+  if (
     definition.tactic?.mode === 'ares' &&
     ['aresCannonLeft', 'aresCannonRight'].every(
       (cannon) => state.units[cannon] && state.units[cannon].hp <= 0,
     )
-  );
+  )
+    return 2;
+  return 0;
+}
+
+export function shouldEnrage(state, id, definition) {
+  return nextBossStage(state, id, definition) > 0;
 }
 export function aresDecision(state, id, definition) {
   const unit = state.units[id];

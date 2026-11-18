@@ -2,7 +2,7 @@ import { ENCOUNTERS, encounterSpec } from './data.js';
 import { newEncounter, campRest } from './engine.js';
 import { withoutDiningBonus } from './dining.js';
 import { explorationSpec } from './exploration.js';
-import { STORY_RING_CHARGE } from './content/journey-rules.js';
+import { FINAL_ENCOUNTER, STORY_RING_CHARGE } from './content/journey-rules.js';
 import { ADVENTURE_NODE_TYPES } from './adventure/definition.js';
 import { adventureReady } from './adventure/state.js';
 
@@ -10,11 +10,12 @@ export function expeditionNodeType(expedition) {
   return expedition.adventure ? ADVENTURE_NODE_TYPES[expedition.index] : 'battle';
 }
 export function newExpedition(boss = 'bossGate', heroDefinitions = {}, exploration = null) {
+  const quickTestBoss = Boolean(exploration?.quickTestBoss);
   return {
     id: crypto.randomUUID(),
     boss,
     heroDefinitions: structuredClone(heroDefinitions),
-    index: 0,
+    index: quickTestBoss ? FINAL_ENCOUNTER : 0,
     records: [],
     carried: null,
     status: 'active',

@@ -39,6 +39,7 @@ export function createDebugAPI(context) {
     }),
     startBattle: context.journey.startBattle,
     returnInn: context.journey.returnInn,
+    expireBombNow: () => context.overlordBattle?.expireBombNowForTest?.() || false,
     getExploration: () => structuredClone(session.ai.library.exploration),
     getSaves: () => context.saves?.getStore?.(),
     saveSlot: (id) => context.saves?.saveSlot?.(id),

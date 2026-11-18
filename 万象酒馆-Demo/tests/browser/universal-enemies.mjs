@@ -254,7 +254,13 @@ export async function universalEnemyChecks({ browser, baseURL, output }) {
     const puppetAnims = await page
       .locator('#archive-dialog .archive-stage-anims [data-stage-anim]')
       .evaluateAll((buttons) => buttons.map((btn) => btn.dataset.stageAnim));
-    for (const clipName of ['Idle', 'Normal_Attack', 'Special_Attack', 'Special_Action']) {
+    for (const clipName of [
+      'Idle',
+      'Normal_Attack',
+      'Special_Attack',
+      'Special_Action',
+      'Bomb_Toss',
+    ]) {
       assert(puppetAnims.includes(clipName), `Missing archive puppet animation button ${clipName}`);
     }
     await page.waitForTimeout(300);

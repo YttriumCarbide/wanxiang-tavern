@@ -9,9 +9,11 @@ export function playbackBeats(result) {
     for (const event of result.events.filter((item) => item.at === at)) {
       if (
         beat.events.length &&
-        (event.type === 'bossPhase' ||
+        (['bossPhase', 'bombDetonate', 'bombDefuse'].includes(event.type) ||
           event.type === 'counter' ||
-          beat.events.some((item) => item.type === 'bossPhase') ||
+          beat.events.some((item) =>
+            ['bossPhase', 'bombDetonate', 'bombDefuse'].includes(item.type),
+          ) ||
           event.repeatIndex > 1)
       ) {
         beats.push(beat);

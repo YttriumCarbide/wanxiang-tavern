@@ -1,9 +1,15 @@
 import { enemyEffectSide } from './enemy-targets.js';
 import { withoutDiningBonus } from './dining.js';
-import { aresDecision, shouldEnrage } from './ares.js';
+import { aresDecision, nextBossStage, shouldEnrage } from './ares.js';
 import { createCompanionMechanics } from './companion-mechanics.js';
 import { createTownGuestMechanics, blindedTarget } from './town-guest-mechanics.js';
 import { tacticalDecision, lockEnemyDecisions } from './enemy-tactics.js';
+import {
+  alchemicalBombDamage,
+  overlordPhaseProfile,
+  overlordTargetStage,
+  pickBombTarget,
+} from './overlord-mechanics.js';
 import { canCombine, EMBLEMS, OVERLOAD_EMBLEM_ID } from './emblems.js';
 import { ITEMS, restoreBag } from './content/items.js';
 import { definition, definitionsFor, heroesFor, abilityFor } from './catalog.js';
@@ -95,6 +101,7 @@ export function newBattle(
             ...(d.mechanicMark ? { mark: 0 } : {}),
             ...(enemyBreak
               ? {
+                  bossStage: 1,
                   speciesKey: enemyBreak.speciesKey,
                   toughness: enemyBreak.maxToughness,
                   maxToughness: enemyBreak.maxToughness,
@@ -128,31 +135,73 @@ export function enemyActionsCount(s, id) {
   const unit = s?.units?.[id];
   if (!def || !unit || unit.hp <= 0) return 0;
   if (s.phase === 'opening') return 1;
+  const fixedExtra = def.fixedFirstSlot ? 1 : 0;
+  if (Array.isArray(def.overlordPhases) && def.overlordPhases.length >= 2) {
+    const stage = Math.max(unit.bossStage || 1, overlordTargetStage(unit, def));
+    return overlordPhaseProfile(def, stage).regularActions + fixedExtra;
+  }
   const enraged = !!(
     def.boss &&
     def.phaseMode !== 'cycle' &&
     (unit.enraged || shouldEnrage(s, id, def))
   );
   const count = enraged ? (def.enragedActions ?? def.actions ?? 1) : (def.actions ?? 1);
-  return Math.max(1, Number(count) || 1);
+  return Math.max(1, Number(count) || 1) + fixedExtra;
+}
+function fixedFirstIntent(s, id, authored) {
+  const bombTarget = pickBombTarget(s, s.round);
+  const frontSlot = bombTarget ? (s.formation || []).slice(0, 3).indexOf(bombTarget) : -1;
+  const slot = frontSlot >= 0 ? frontSlot : 1;
+  const unit = s.units?.[id];
+  const stage = Math.max(unit?.bossStage || 1, overlordTargetStage(unit, authored));
+  const sec = overlordPhaseProfile(authored, stage).bombSeconds;
+  return {
+    ...authored.fixedFirstSlot,
+    name: `${authored.fixedFirstSlot.name}（${sec}s）`,
+    text: `先制投出定时炼金炸弹，下回合需在 ${sec} 秒内确认结算，否则引爆造成高额伤害并强制结束回合。`,
+    slot,
+    slots: [slot],
+    effects: [],
+    enraged: stage >= 2,
+    fixedFirstSlot: true,
+    bombTarget,
+    bombSeconds: sec,
+  };
 }
 export function intent(s, id, actionIndex = 0) {
   const authored = definition(s, id);
   const scaleIntent = (move) =>
-    leveledIntent(move, s.units[id]?.attackBonus, s.units[id]?.damageScale);
+    move.fixedFirstSlot
+      ? move
+      : leveledIntent(move, s.units[id]?.attackBonus, s.units[id]?.damageScale);
   if (authored.tactic?.mode === 'ares') return scaleIntent(aresDecision(s, id, authored));
+  const hasFixedFirst = s.phase !== 'opening' && Boolean(authored.fixedFirstSlot);
+  if (hasFixedFirst && actionIndex === 0) return fixedFirstIntent(s, id, authored);
+  const regIndex = hasFixedFirst ? Math.max(0, actionIndex - 1) : actionIndex;
   const tactical =
     s.enemyDecisions?.[id]?.round === s.round
       ? s.enemyDecisions[id]
       : tacticalDecision(s, id, definition(s, id));
   if (tactical) {
     const def = definition(s, id);
-    const list = tactical.enraged ? def.enragedIntents : def.intents;
+    const bossStage =
+      tactical.bossStage ||
+      (Array.isArray(def.overlordPhases)
+        ? Math.max(s.units[id]?.bossStage || 1, overlordTargetStage(s.units[id], def))
+        : tactical.enraged
+          ? 2
+          : 1);
+    const list =
+      bossStage >= 3 && def.finalPhaseIntents?.length
+        ? def.finalPhaseIntents
+        : tactical.enraged
+          ? def.enragedIntents
+          : def.intents;
     const useOpening =
       Boolean(authored.openingIntent) &&
       !s.units[id]?.openingAttackUsed &&
       (!authored.openingIntent.lowestHpPosition || s.round <= 1);
-    if (useOpening && actionIndex === 0) {
+    if (useOpening && regIndex === 0) {
       const opening = authored.openingIntent;
       const openingSlot = opening.slot ?? tactical.slot;
       const openingSlots =
@@ -165,9 +214,9 @@ export function intent(s, id, actionIndex = 0) {
         enraged: tactical.enraged,
       });
     }
-    const offset = useOpening ? actionIndex - 1 : actionIndex;
+    const offset = useOpening ? regIndex - 1 : regIndex;
     const tacticalIndex = (tactical.index + offset) % list.length;
-    if (actionIndex === 0) {
+    if (regIndex === 0 && !hasFixedFirst) {
       return scaleIntent({ ...list[tacticalIndex], ...tactical });
     }
     const move = list[tacticalIndex];
@@ -182,27 +231,36 @@ export function intent(s, id, actionIndex = 0) {
       ...move,
       slot: targetSlot,
       slots: targetSlots,
-      enraged: tactical.enraged,
+      enraged: tactical.enraged || bossStage >= 2,
     });
   }
   const def = definition(s, id),
-    enraged =
-      def.boss &&
-      def.phaseMode !== 'cycle' &&
-      (s.units[id].enraged || s.units[id].hp <= s.units[id].maxHp * def.phaseThreshold);
-  const list = enraged ? def.enragedIntents : def.intents;
+    stage = Array.isArray(def.overlordPhases)
+      ? Math.max(s.units[id].bossStage || 1, overlordTargetStage(s.units[id], def))
+      : def.boss &&
+          def.phaseMode !== 'cycle' &&
+          (s.units[id].enraged || s.units[id].hp <= s.units[id].maxHp * def.phaseThreshold)
+        ? 2
+        : 1,
+    enraged = stage >= 2;
+  const list =
+    stage >= 3 && def.finalPhaseIntents?.length
+      ? def.finalPhaseIntents
+      : enraged
+        ? def.enragedIntents
+        : def.intents;
   const useOpening =
     def.openingIntent &&
     !s.units[id].openingAttackUsed &&
     (!def.openingIntent.lowestHpPosition || s.round <= 1);
   const move =
-    useOpening && actionIndex === 0
+    useOpening && regIndex === 0
       ? def.openingIntent
-      : useOpening && actionIndex > 0
-        ? list[(actionIndex - 1) % list.length]
+      : useOpening && regIndex > 0
+        ? list[(regIndex - 1) % list.length]
         : s.units[id].openingUsedRound === s.round
-          ? list[Math.max(0, actionIndex - 1) % list.length]
-          : list[(Math.max(1, s.round) - 1 + actionIndex) % list.length];
+          ? list[Math.max(0, regIndex - 1) % list.length]
+          : list[(Math.max(1, s.round) - 1 + regIndex) % list.length];
   return scaleIntent({
     ...move,
     ...(move.lowestHpPosition
@@ -236,6 +294,7 @@ export function enemyTimeline(s, extraSlow = {}) {
       def: e,
       id: e.id,
       count: enemyActionsCount(s, e.id),
+      fixedFirst: Boolean(e.fixedFirstSlot),
       speed:
         e.tactic?.mode === 'ares' && aresDecision(s, e.id, e).priority
           ? 999
@@ -248,36 +307,48 @@ export function enemyTimeline(s, extraSlow = {}) {
     totalEnemyActions = entries.reduce((sum, entry) => sum + entry.count, 0),
     length = 3 + totalEnemyActions,
     slots = Array(length).fill(null);
+  let lockedFrontCount = 0;
+  for (const entry of entries) {
+    if (!entry.fixedFirst) continue;
+    while (lockedFrontCount < length && slots[lockedFrontCount]) lockedFrontCount++;
+    if (lockedFrontCount < length) slots[lockedFrontCount++] = entry.id;
+  }
+  const minSlot = lockedFrontCount;
   const actions = [];
   for (const entry of entries) {
+    const regularCount = Math.max(0, entry.count - (entry.fixedFirst ? 1 : 0));
+    if (!regularCount) continue;
     const speed = entry.speed === 999 ? length + 1 : entry.speed;
-    if (entry.count === 1 || entry.def.splitActions === false) {
-      const desired = Math.max(0, Math.min(length - 1, length - speed));
-      for (let actionIndex = 0; actionIndex < entry.count; actionIndex++) {
+    if (regularCount === 1 || entry.def.splitActions === false) {
+      const desired = Math.max(minSlot, Math.min(length - 1, length - speed));
+      for (let actionIndex = 0; actionIndex < regularCount; actionIndex++) {
         actions.push({
           id: entry.id,
           speed,
           tie: entry.tie,
-          actionIndex,
+          actionIndex: actionIndex + (entry.fixedFirst ? 1 : 0),
           desired,
         });
       }
     } else {
-      const first = Math.max(0, Math.min(length - entry.count, length - speed - (entry.count - 1)));
+      const first = Math.max(
+        minSlot,
+        Math.min(length - regularCount, length - speed - (regularCount - 1)),
+      );
       const span = length - 1 - first;
-      for (let actionIndex = 0; actionIndex < entry.count; actionIndex++) {
+      for (let actionIndex = 0; actionIndex < regularCount; actionIndex++) {
         const desired =
-          entry.count === 2 && actionIndex === 1
+          regularCount === 2 && actionIndex === 1
             ? Math.min(length - 1, first + Math.min(3, span))
             : Math.min(
                 length - 1,
-                first + Math.round((actionIndex * span) / Math.max(1, entry.count - 1)),
+                first + Math.round((actionIndex * span) / Math.max(1, regularCount - 1)),
               );
         actions.push({
           id: entry.id,
           speed,
           tie: entry.tie,
-          actionIndex,
+          actionIndex: actionIndex + (entry.fixedFirst ? 1 : 0),
           desired,
         });
       }
@@ -289,13 +360,13 @@ export function enemyTimeline(s, extraSlow = {}) {
     while (at < length && slots[at]) at++;
     if (at === length) {
       at = item.desired - 1;
-      while (at >= 0 && slots[at]) at--;
-      if (at < 0) {
+      while (at >= minSlot && slots[at]) at--;
+      if (at < minSlot) {
         at = length - 1;
-        while (at >= 0 && slots[at]) at--;
+        while (at >= minSlot && slots[at]) at--;
       }
     }
-    slots[at] = item.id;
+    if (at >= minSlot) slots[at] = item.id;
   }
   return slots;
 }
@@ -356,14 +427,17 @@ function simulate(s, plan, slots) {
     skipped = [],
     deaths = [],
     slows = {},
-    pendingPhases = new Set(),
+    pendingPhases = new Map(),
     usedSlots = new Map();
-  for (const u of Object.values(work.units))
-    if (shouldEnrage(work, u.id, definitions[u.id])) {
-      u.enraged = true;
+  for (const u of Object.values(work.units)) {
+    const nextStage = nextBossStage(work, u.id, definitions[u.id]);
+    if (nextStage > 0) {
+      u.bossStage = nextStage;
+      u.enraged = nextStage >= 2;
       u.phaseStartRound = Math.max(1, s.round);
-      pendingPhases.add(u.id);
+      pendingPhases.set(u.id, nextStage);
     }
+  }
   const seenIDs = new Set();
   const sorted = plan
     .filter((action) => {
@@ -444,12 +518,15 @@ function simulate(s, plan, slots) {
     if (!reduced && effectiveBuff(work, u.id, 'flying')) n = Math.floor(n / 2);
     const before = u.hp;
     u.hp = Math.max(0, u.hp - n);
-    for (const candidate of Object.values(work.units))
-      if (shouldEnrage(work, candidate.id, definitions[candidate.id])) {
-        candidate.enraged = true;
+    for (const candidate of Object.values(work.units)) {
+      const nextStage = nextBossStage(work, candidate.id, definitions[candidate.id]);
+      if (nextStage > 0) {
+        candidate.bossStage = nextStage;
+        candidate.enraged = nextStage >= 2;
         candidate.phaseStartRound = Math.max(1, work.round);
-        pendingPhases.add(candidate.id);
+        pendingPhases.set(candidate.id, nextStage);
       }
+    }
     death(u, reason);
     return before - u.hp;
   }
@@ -471,7 +548,11 @@ function simulate(s, plan, slots) {
     if (POSITIVE_BUFFS.includes(key) && unit.buffs[key] > before)
       companions.gain(id, { type: 'buff', buff: key, value: unit.buffs[key] - before });
     const gained = unit.buffs[key] - before;
-    if (key === 'slow' && unit.side === 'enemy' && slots.indexOf(id) > at)
+    const hasMovableSlot = slots.some(
+      (slotId, slotIndex) =>
+        slotId === id && slotIndex > at && !(slotIndex === 0 && definitions[id]?.fixedFirstSlot),
+    );
+    if (key === 'slow' && unit.side === 'enemy' && hasMovableSlot)
       slows[id] = (slows[id] || 0) + gained;
     if (gained && !generated) {
       trigger('gainBuff', id, { targets: [id] });
@@ -786,7 +867,7 @@ function simulate(s, plan, slots) {
   function record(type, actor, label, targetIds = [], actionId = null, skill = null, detail = {}) {
     events.push({
       type,
-      at: type === 'bossPhase' ? Math.max(0, at) : at,
+      at: ['bossPhase', 'bombDetonate', 'bombDefuse'].includes(type) ? Math.max(0, at) : at,
       actor,
       label,
       targets: targetIds,
@@ -804,10 +885,41 @@ function simulate(s, plan, slots) {
     flushBossPhases();
   }
   function flushBossPhases() {
-    const ids = [...pendingPhases];
+    const entries = [...pendingPhases.entries()];
     pendingPhases.clear();
-    for (const id of ids) {
-      if (work.units[id].hp <= 0) continue;
+    for (const [id, nextStage] of entries) {
+      const unit = work.units[id];
+      const def = definitions[id];
+      if (!unit || unit.hp <= 0 || !def) continue;
+      if (Array.isArray(def.overlordPhases) && def.overlordPhases.length >= 2) {
+        const profile = overlordPhaseProfile(def, nextStage);
+        unit.bossStage = nextStage;
+        unit.enraged = nextStage >= 2;
+        unit.broken = false;
+        unit.brokenNextRound = false;
+        delete unit.buffs.bind;
+        unit.maxToughness = profile.toughness;
+        unit.toughness = profile.toughness;
+        const scale = unit.damageScale || 1;
+        const shield = Math.round((profile.shield || 0) * scale);
+        if (shield > 0) unit.block += shield;
+        if (profile.strengthBonus) {
+          unit.buffs.strength = Math.max(unit.buffs.strength || 0, profile.strengthBonus);
+        }
+        const targets = heroes.map((hero) => hero.id).filter((target) => work.units[target].hp > 0);
+        // A phase transition interrupts the remaining player turn, even with negative-status immunity.
+        for (const target of targets) work.units[target].buffs.bind = 1;
+        currentLogs.push(
+          `${def.name}${profile.title} · ${profile.subtitle}，禁锢我方，本回合剩余行动跳过`,
+        );
+        record('bossPhase', id, profile.title, targets, null, null, {
+          phaseStage: nextStage,
+          overlord: true,
+          subtitle: profile.subtitle,
+          clip: 'Special_Action',
+        });
+        continue;
+      }
       prepareAresRound(id);
       const targets = heroes.map((hero) => hero.id).filter((target) => work.units[target].hp > 0);
       // A phase transition interrupts the remaining player turn, even with negative-status immunity.
@@ -830,6 +942,56 @@ function simulate(s, plan, slots) {
     unit.block += 5 + (charge ? 100 : 0);
     currentLogs.push(`${definitions[id].name} · 紧急肃清：获得${charge ? 105 : 5}护盾`);
   }
+  if (s.phase !== 'opening' && work.activeAlchemicalBomb) {
+    const bomb = clone(work.activeAlchemicalBomb);
+    const targetUnit =
+      work.units[bomb.target]?.hp > 0
+        ? work.units[bomb.target]
+        : work.units[heroes.find((h) => work.units[h.id]?.hp > 0)?.id];
+    work.activeAlchemicalBomb = null;
+    const expired = Boolean(work.bombExpired);
+    work.bombExpired = false;
+    if (expired && targetUnit) {
+      const raw = alchemicalBombDamage(targetUnit);
+      const absorbed = Math.min(targetUnit.block, raw);
+      targetUnit.block -= absorbed;
+      const damage = raw - absorbed;
+      lose(targetUnit, damage, '定时炸弹引爆', true);
+      if (targetUnit.hp > 0) applyBuff(bomb.owner, targetUnit.id, 'vulnerable', 2, true);
+      currentLogs.push(
+        `${definitions[bomb.owner]?.name || '炼金傀偶'}的定时炸弹在${definitions[targetUnit.id]?.name || targetUnit.id}身上引爆：造成${damage}伤害${absorbed ? `（护盾抵挡${absorbed}）` : ''}并附加2层易伤`,
+      );
+      record(
+        'bombDetonate',
+        bomb.owner,
+        '超时引爆 · 炼金怀表炸裂！',
+        [targetUnit.id],
+        null,
+        'alchemical-bomb-blast',
+        {
+          bomb,
+          damage,
+          absorbed,
+        },
+      );
+      flushBossPhases();
+    } else if (targetUnit) {
+      currentLogs.push(
+        `${definitions[targetUnit.id]?.name || targetUnit.id}身上的定时炼金炸弹已在限时内安全拆解`,
+      );
+      record(
+        'bombDefuse',
+        bomb.owner,
+        '限时拆解 · 炼金引信锁死',
+        [targetUnit.id],
+        null,
+        'alchemical-bomb-defuse',
+        {
+          bomb,
+        },
+      );
+    }
+  }
   const beforeTriggers = JSON.stringify(work);
   if (s.phase === 'opening') companions.start();
   for (const id of work.enemyIds) prepareAresRound(id);
@@ -850,7 +1012,11 @@ function simulate(s, plan, slots) {
         record('skip', enemy, '敌人已濒死', [], null, null, { actionIndex: actionIdx });
         continue;
       }
-      if (u.buffs.bind) {
+      const move = intent(work, enemy, actionIdx);
+      const unbreakableFixed = Boolean(
+        move.fixedFirstSlot && definitions[enemy]?.fixedFirstSlot?.breakable === false,
+      );
+      if (u.buffs.bind && !unbreakableFixed) {
         currentLogs.push(
           u.broken
             ? `${definitions[enemy].name}处于击破晕眩，本回合行动取消`
@@ -860,13 +1026,18 @@ function simulate(s, plan, slots) {
         record(
           'skip',
           enemy,
-          u.broken ? '击破晕眩 · 行动取消' : '禁锢 · 行动取消',
+          u.broken
+            ? move.fixedFirstSlot
+              ? '击破震裂 · 定式先制跳过'
+              : '击破晕眩 · 行动取消'
+            : '禁锢 · 行动取消',
           [],
           null,
           null,
           {
             blockedBy: 'bind',
             ...(u.broken ? { broken: true } : {}),
+            ...(move.fixedFirstSlot ? { fixedSlotBroken: true } : {}),
             actionIndex: actionIdx,
           },
         );
@@ -877,8 +1048,44 @@ function simulate(s, plan, slots) {
         record('skip', enemy, '流血致死 · 行动取消', [], null, null, { actionIndex: actionIdx });
         continue;
       }
-      const move = intent(work, enemy, actionIdx),
-        originalTargets = (move.slots || [move.slot])
+      const newlyLockedUi = Boolean(definitions[enemy]?.overlord && !work.overlordUiLocked);
+      if (newlyLockedUi) work.overlordUiLocked = enemy;
+      if (move.fixedFirstSlot) {
+        const bombTarget =
+          move.bombTarget && work.units[move.bombTarget]?.hp > 0
+            ? move.bombTarget
+            : pickBombTarget(work, work.round);
+        const bombArmed = bombTarget
+          ? {
+              owner: enemy,
+              target: bombTarget,
+              durationSec: move.bombSeconds || 40,
+              phaseStage: u.bossStage || 1,
+              round: work.round,
+            }
+          : null;
+        if (bombArmed) work.pendingAlchemicalBomb = clone(bombArmed);
+        currentLogs.push(
+          `${definitions[enemy].name}触发先制【${move.name}】${bombTarget ? `，向${definitions[bombTarget]?.name || bombTarget}掷出定时炼金炸弹（限时${move.bombSeconds || 40}秒）` : ''}`,
+        );
+        record(
+          'enemy',
+          enemy,
+          move.name,
+          bombTarget ? [bombTarget] : [],
+          null,
+          'alchemical-time-bomb',
+          {
+            actionIndex: actionIdx,
+            fixedFirstSlot: true,
+            clip: move.clip || 'Bomb_Toss',
+            ...(bombArmed ? { bombArmed: clone(bombArmed) } : {}),
+            ...(newlyLockedUi ? { overlordDomainLock: true } : {}),
+          },
+        );
+        continue;
+      }
+      const originalTargets = (move.slots || [move.slot])
           .map((slot) => work.formation[slot])
           .filter(Boolean),
         targets = move.effects.some((effect) => effect.type === 'damage')
@@ -972,13 +1179,15 @@ function simulate(s, plan, slots) {
       record(
         'enemy',
         enemy,
-        (move.enraged ? '【第二阶段】' : '') + move.name,
+        (u.bossStage >= 3 ? '【第三阶段】' : move.enraged ? '【第二阶段】' : '') + move.name,
         u.buffs.balance ? [...new Set([...targets, ...front(work).filter(Boolean)])] : targets,
         null,
         null,
         {
           blindTarget: missed,
           actionIndex: actionIdx,
+          ...(move.clip ? { clip: move.clip } : {}),
+          ...(newlyLockedUi ? { overlordDomainLock: true } : {}),
           ...(enemyDamageType ? { damageType: enemyDamageType } : {}),
         },
       );
@@ -1383,7 +1592,11 @@ export function preview(s, plan = s?.plan || []) {
 export function advance(result) {
   if (!result.valid) throw Error('Invalid plan');
   const s = clone(result.final);
+  delete s.bombExpired;
   if (result.outcome) {
+    delete s.pendingAlchemicalBomb;
+    delete s.activeAlchemicalBomb;
+    delete s.overlordUiLocked;
     s.phase = result.outcome;
     return s;
   }
@@ -1407,6 +1620,15 @@ export function advance(result) {
         u.broken = false;
         u.toughness = u.maxToughness;
       }
+    }
+  }
+  if (s.pendingAlchemicalBomb) {
+    const pending = s.pendingAlchemicalBomb;
+    delete s.pendingAlchemicalBomb;
+    const ownerAlive = s.units[pending.owner]?.hp > 0;
+    const targetId = s.units[pending.target]?.hp > 0 ? pending.target : pickBombTarget(s, s.round);
+    if (ownerAlive && targetId) {
+      s.activeAlchemicalBomb = { ...pending, target: targetId };
     }
   }
   lockEnemyDecisions(s, definitionsFor(s));
@@ -1479,6 +1701,7 @@ export function newEncounter(spec, prior = null, index = 0, heroDefinitions = {}
       ),
       used: 0,
       speciesKey: enemyBreak.speciesKey,
+      bossStage: 1,
       toughness: enemyBreak.maxToughness,
       maxToughness: enemyBreak.maxToughness,
       weaknesses: [...enemyBreak.weaknesses],

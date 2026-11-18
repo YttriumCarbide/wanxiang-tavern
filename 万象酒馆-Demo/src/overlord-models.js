@@ -207,7 +207,9 @@ export async function createOverlordModels({
       );
       const baseY = -bounds.min.y * scale + 0.008;
       figure.scale.setScalar(scale);
-      figure.position.set(-center.x * scale, baseY, -center.z * scale);
+      const baseX = -center.x * scale;
+      const baseZ = -center.z * scale;
+      figure.position.set(baseX, baseY, baseZ);
 
       const seal = createSealRing(def.color);
       mount.add(seal, figure);
@@ -238,7 +240,9 @@ export async function createOverlordModels({
         nonVoxel: tpl.nonVoxel,
         height: Number((size.y * scale).toFixed(3)),
         baseScale: scale,
+        baseX,
         baseY,
+        baseZ,
         mount,
         figure,
         seal,
@@ -248,6 +252,7 @@ export async function createOverlordModels({
         activeAction: idleAction,
         playingClip: idleAction ? idleAction.getClip().name : null,
         onFinished: null,
+        lunge: null,
         floating: record.id.includes('Cannon') || record.id === 'radiantWyvern',
       };
       if (mixer && idleAction) {
@@ -270,14 +275,27 @@ export async function createOverlordModels({
   function playAction(id, move = {}) {
     const entry = [...mounted.values()].find((item) => item.id === id);
     if (!entry?.mixer) return false;
-    const candidates = !move.hasDamage
-      ? ['Special_Action', 'Normal_Attack', 'Idle']
-      : move.enraged || (move.actionIndex || 0) > 0 || (move.targets?.length || 0) > 1
-        ? ['Special_Attack', 'Talon_Rend', 'Normal_Attack', 'Idle']
-        : ['Normal_Attack', 'Special_Attack', 'Idle'];
+    const explicitClip = typeof move.clip === 'string' && entry.clips[move.clip] ? move.clip : null;
+    const candidates = explicitClip
+      ? [explicitClip]
+      : !move.hasDamage
+        ? ['Special_Action', 'Normal_Attack', 'Idle']
+        : move.enraged || (move.actionIndex || 0) > 0 || (move.targets?.length || 0) > 1
+          ? ['Special_Attack', 'Talon_Rend', 'Normal_Attack', 'Idle']
+          : ['Normal_Attack', 'Special_Attack', 'Idle'];
     const clipName = candidates.find((name) => Boolean(entry.clips[name]));
     const action = clipName ? entry.clips[clipName] : entry.idleAction;
     if (!action) return false;
+    if (move.lunge && !reduced) {
+      const parentScale = Math.max(0.5, Number(move.lunge.parentScale) || 1);
+      entry.lunge = {
+        start: performance.now(),
+        duration: Math.max(400, Number(move.lunge.durationMs) || 960),
+        dx: (Number(move.lunge.dx) || 0) / parentScale,
+        dz: (Number(move.lunge.dz) || 0) / parentScale,
+        aoe: Boolean(move.lunge.aoe),
+      };
+    }
     if (action === entry.idleAction) {
       action.reset();
       action.setLoop(THREE.LoopRepeat, Infinity);
@@ -320,7 +338,43 @@ export async function createOverlordModels({
         !entry.mixer && entry.floating ? 0.055 + Math.sin(t * 2.1 + index * 1.15) * 0.032 : 0;
       const breathe = entry.mixer ? 1 : 1 + Math.sin(t * 1.8 + index * 1.15) * 0.014;
       entry.figure.scale.set(entry.baseScale, entry.baseScale * breathe, entry.baseScale);
-      entry.figure.position.y = entry.baseY + hover;
+      let lungeX = 0;
+      let lungeY = 0;
+      let lungeZ = 0;
+      if (entry.lunge) {
+        const L = entry.lunge;
+        const u = Math.min(1, (now - L.start) / L.duration);
+        hasAnimation = true;
+        if (u >= 1) {
+          entry.lunge = null;
+        } else {
+          let travel;
+          let lift;
+          if (u < 0.38) {
+            const p = u / 0.38;
+            const ease = p * p * (3 - 2 * p);
+            travel = ease;
+            lift = Math.sin(p * Math.PI) * (L.aoe ? 1.25 : 0.48) + ease * (L.aoe ? 0.65 : 0.16);
+          } else if (u < 0.68) {
+            const p = (u - 0.38) / 0.3;
+            travel = 1;
+            lift = (L.aoe ? 0.65 : 0.16) * (1 - p);
+          } else {
+            const p = (u - 0.68) / 0.32;
+            const ease = 1 - p * p * (3 - 2 * p);
+            travel = ease;
+            lift = Math.sin(p * Math.PI) * 0.42;
+          }
+          lungeX = L.dx * travel;
+          lungeY = lift;
+          lungeZ = L.dz * travel;
+        }
+      }
+      entry.figure.position.set(
+        entry.baseX + lungeX,
+        entry.baseY + hover + lungeY,
+        entry.baseZ + lungeZ,
+      );
       if (!entry.mixer) {
         entry.figure.rotation.y = Math.sin(t * 0.9 + index * 1.15) * 0.06;
       }

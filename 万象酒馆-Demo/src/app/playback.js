@@ -31,14 +31,16 @@ export function createPlayback(context) {
       });
     if (!session.runtime.disposed) banner.hidden = true;
   }
-  async function commit() {
+  async function commit(options = {}) {
     if (session.battle.playing || session.runtime.mode !== 'battle') return;
+    const forcedByBomb = options?.forcedByBomb === true;
+    context.overlordBattle?.disarmBombTimer?.();
     context.planning.recompute();
     if (!session.battle.forecast.valid) return context.shell?.toast('请先修正标红的行动。');
-    if (context.onboarding && !context.onboarding.beforeCommit()) return;
-    if (context.companionEvents && !context.companionEvents.beforeCommit()) return;
+    if (!forcedByBomb && context.onboarding && !context.onboarding.beforeCommit()) return;
+    if (!forcedByBomb && context.companionEvents && !context.companionEvents.beforeCommit()) return;
 
-    if (context.emblems && !context.emblems.beforeCommit()) return;
+    if (!forcedByBomb && context.emblems && !context.emblems.beforeCommit()) return;
     session.battle.playing = true;
     context.ledger?.sync();
     try {
@@ -82,13 +84,22 @@ export function createPlayback(context) {
           context.renderer.render();
           session.runtime.view?.playEvent(event, before);
           context.audio.combat(event, before, session.battle.speed);
-          if (event.type === 'bossPhase') {
+          if (event.type === 'bossPhase' && event.overlord) {
+            await context.overlordBattle?.onEvent(event);
+          } else if (event.type === 'bossPhase') {
             context.battleBarks?.bossEnraged(event.actor);
             await showTurnNotice(
               '第二阶段',
               `${event.after.heroDefinitions?.[event.actor]?.name || event.after.enemyDefinitions?.[event.actor]?.name || event.actor} · 冲击禁锢，本回合剩余行动跳过`,
               2200 * session.battle.speed,
             );
+          } else if (
+            event.overlordDomainLock ||
+            event.type === 'bombDetonate' ||
+            event.type === 'bombDefuse' ||
+            (event.fixedSlotBroken && event.blockedBy === 'bind')
+          ) {
+            void context.overlordBattle?.onEvent(event);
           }
         }
         context.renderer.render();
@@ -147,8 +158,13 @@ export function createPlayback(context) {
       context.planning.recompute();
       context.renderer.render();
       context.onboarding?.roundFinished(wasOpening, result);
-      if (session.battle.state.phase === 'victory' || session.battle.state.phase === 'defeat')
+      if (session.battle.state.phase === 'victory' || session.battle.state.phase === 'defeat') {
+        context.overlordBattle?.disarmBombTimer?.();
+        context.overlordBattle?.clearSeal?.();
         context.journey.showResult();
+      } else {
+        context.overlordBattle?.sync?.();
+      }
     } finally {
       session.battle.display = null;
       session.battle.playing = false;

@@ -104,6 +104,17 @@ export function createEffects(layer, center, getSpeed, options = {}) {
     'emblem-moon-eye',
   ]);
   const DRAGON_PALETTE = ['#0a3d33', '#1c806a', '#38e89e', '#9dffda', '#ffffff'];
+  const ALCHEMICAL_PALETTE = [
+    '#12081f',
+    '#2d1846',
+    '#6b3fa0',
+    '#9f6ef5',
+    '#58e6a9',
+    '#f2cf78',
+    '#fff3c4',
+    '#ffffff',
+  ];
+  const BRASS_SHARD_PALETTE = ['#2b1e10', '#634822', '#9e7634', '#d8b058', '#fff2b0', '#ffffff'];
 
   function skillPixelFxConfig(e, d, skillDef, targetCount) {
     if (skillDef?.vfx) {
@@ -152,8 +163,104 @@ export function createEffects(layer, center, getSpeed, options = {}) {
     let spawned = false;
 
     if (e.type === 'bossPhase' && source) {
-      pixelFx.spawn('dark-explosion', { x: source.x, y: source.y, scale: 1.9, maxDuration: 1100 });
-      options.onImpact?.({ heavy: true, delay: 80 });
+      if (e.overlord) {
+        pixelFx.spawn('emp-blast', {
+          x: source.x,
+          y: source.y,
+          palette: ALCHEMICAL_PALETTE,
+          scale: 2.35,
+          maxDuration: 1500,
+        });
+        pixelFx.spawn('heavy-landing', {
+          x: source.x,
+          y: source.y,
+          palette: ALCHEMICAL_PALETTE,
+          scale: 1.95,
+          delay: 90,
+          maxDuration: 1200,
+        });
+        pixelFx.spawn('shatter-death', {
+          x: source.x,
+          y: source.y,
+          palette: BRASS_SHARD_PALETTE,
+          scale: 1.8,
+          delay: 140,
+          maxDuration: 1100,
+        });
+        pixelFx.spawn('hit-flash', { x: source.x, y: source.y, scale: 1.9 });
+        options.onImpact?.({ heavy: true, delay: 90, hitStopMs: 105 });
+      } else {
+        pixelFx.spawn('dark-explosion', {
+          x: source.x,
+          y: source.y,
+          scale: 1.9,
+          maxDuration: 1100,
+        });
+        options.onImpact?.({ heavy: true, delay: 80 });
+      }
+      spawned = true;
+    } else if (e.type === 'bombDetonate') {
+      const point = targetPoints[0]?.p || source;
+      if (point) {
+        pixelFx.spawn('emp-blast', {
+          x: point.x,
+          y: point.y,
+          palette: ALCHEMICAL_PALETTE,
+          scale: 2.2,
+          maxDuration: 1400,
+        });
+        pixelFx.spawn('dark-explosion', {
+          x: point.x,
+          y: point.y,
+          palette: ALCHEMICAL_PALETTE,
+          scale: 2.0,
+          delay: 40,
+        });
+        pixelFx.spawn('acid-splash', {
+          x: point.x,
+          y: point.y,
+          palette: ALCHEMICAL_PALETTE,
+          scale: 1.75,
+          delay: 120,
+        });
+        pixelFx.spawn('impact-frame', { x: point.x, y: point.y, scale: 1.85 });
+        options.onImpact?.({ heavy: true, delay: 40, hitStopMs: 110 });
+        spawned = true;
+      }
+    } else if (e.type === 'bombDefuse') {
+      const point = targetPoints[0]?.p || source;
+      if (point) {
+        pixelFx.spawn('halo', { x: point.x, y: point.y, scale: 1.55 });
+        pixelFx.spawn('parry', { x: point.x, y: point.y, scale: 1.45, delay: 70 });
+        spawned = true;
+      }
+    } else if (e.bombArmed) {
+      if (source) {
+        pixelFx.spawn('energy-core', {
+          x: source.x,
+          y: source.y,
+          palette: ALCHEMICAL_PALETTE,
+          scale: 1.55,
+          delay: 120,
+        });
+      }
+      if (targetPoints[0]?.p) {
+        const tp = targetPoints[0].p;
+        pixelFx.spawn('time-stop', {
+          x: tp.x,
+          y: tp.y,
+          palette: ALCHEMICAL_PALETTE,
+          scale: 1.5,
+          delay: Math.max(420, impactDelay * 0.72),
+        });
+        pixelFx.spawn('spark-arc', {
+          x: tp.x,
+          y: tp.y,
+          palette: ALCHEMICAL_PALETTE,
+          scale: 1.35,
+          delay: Math.max(460, impactDelay * 0.78),
+        });
+      }
       spawned = true;
     } else if (e.type === 'engage') {
       const point = source || targetPoints[0]?.p;
@@ -249,14 +356,41 @@ export function createEffects(layer, center, getSpeed, options = {}) {
           scale: fxConfig.directional ? (skillDef?.vfx ? 1.48 : 1.38) : skillDef?.vfx ? 1.62 : 1.44,
           ...(rotateDeg ? { rotateDeg } : {}),
         });
+        if (e.type === 'enemy' && d?.overlord && e.damageType) {
+          pixelFx.spawn(pts.length > 1 ? 'heavy-landing' : 'hammer-smash', {
+            x: item.p.x,
+            y: item.p.y,
+            palette: ALCHEMICAL_PALETTE,
+            delay: impactDelay * 0.85,
+            scale: pts.length > 1 ? 1.85 : 1.65,
+          });
+          pixelFx.spawn('hit-flash', {
+            x: item.p.x,
+            y: item.p.y,
+            delay: impactDelay * 0.88,
+            scale: 1.55,
+          });
+        }
         spawned = true;
+      }
+      if (e.type === 'enemy' && d?.overlord && e.damageType && pts.length > 1) {
+        pixelFx.spawn('glitch', {
+          x: pts[0].p.x,
+          y: pts[0].p.y,
+          palette: ALCHEMICAL_PALETTE,
+          delay: impactDelay * 0.7,
+          scale: 1.5,
+        });
       }
     }
 
-    const heavyHit = Object.values(e.after?.units || {}).some(
-      (u) => (before?.units?.[u.id]?.hp ?? u.hp) - u.hp >= 10,
-    );
-    if (heavyHit) options.onImpact?.({ heavy: true, delay: impactDelay });
+    const heavyHit =
+      (e.type === 'enemy' && d?.overlord && Boolean(e.damageType)) ||
+      Object.values(e.after?.units || {}).some(
+        (u) => (before?.units?.[u.id]?.hp ?? u.hp) - u.hp >= 10,
+      );
+    if (e.type !== 'bombDetonate' && !(e.type === 'bossPhase' && e.overlord) && heavyHit)
+      options.onImpact?.({ heavy: true, delay: impactDelay * 0.9, hitStopMs: 95 });
     if (spawned) options.onSpawn?.();
   }
 
@@ -270,12 +404,18 @@ export function createEffects(layer, center, getSpeed, options = {}) {
       impactDelay = isAction ? duration * 0.7 : 0;
     spawnPixelFx(e, before, d, source, impactDelay);
     if (e.type === 'bossPhase' && source) {
-      roundBanner(`${d.name} · 第二阶段`);
-      ring(source, d.color || '#d78ffe', 'boss-phase-ring');
-      sparks(source, '#d9a1ff', reduced ? 4 : 16);
+      if (e.overlord) {
+        roundBanner(`${d.name} · ${e.label || '阶段爆发'}`);
+        ring(source, '#ffd978', 'boss-phase-ring');
+        sparks(source, '#6bf5a9', reduced ? 6 : 22);
+      } else {
+        roundBanner(`${d.name} · 第二阶段`);
+        ring(source, d.color || '#d78ffe', 'boss-phase-ring');
+        sparks(source, '#d9a1ff', reduced ? 4 : 16);
+      }
       const flash = document.createElement('div');
       flash.className = 'boss-phase-flash';
-      flash.setAttribute('aria-label', 'Boss进入第二阶段');
+      flash.setAttribute('aria-label', 'Boss阶段转换');
       animate(flash, [{ opacity: 0 }, { opacity: 0.85, offset: 0.18 }, { opacity: 0 }], 1400);
       const shock = document.createElement('div');
       shock.className = 'boss-phase-shockwave';
@@ -290,6 +430,35 @@ export function createEffects(layer, center, getSpeed, options = {}) {
         ],
         1800,
       );
+    } else if (e.type === 'bombDetonate') {
+      for (const tid of e.targets || []) {
+        const tp = center(tid);
+        if (!tp) continue;
+        ring(tp, '#ff687c', 'boss-phase-ring', 40);
+        sparks(tp, '#f5c768', reduced ? 4 : 16, 40);
+        floating({ x: tp.x, y: tp.y - 46 }, '💥 超时引爆', 'break-number', 60);
+        const rec = records.find((item) => item.id === tid);
+        if (rec)
+          rec.hit = { start: performance.now() + 40, duration: 360 / getSpeed(), heavy: true };
+      }
+    } else if (e.type === 'bombDefuse') {
+      for (const tid of e.targets || []) {
+        const tp = center(tid);
+        if (!tp) continue;
+        ring(tp, '#73f0ac', 'shield-ring', 40);
+        floating({ x: tp.x, y: tp.y - 42 }, '✦ 拆弹成功', 'shield-number', 60);
+      }
+    } else if (e.bombArmed) {
+      const tp = center(e.bombArmed.target);
+      if (tp) {
+        ring(tp, '#6bf5a9', 'cast-rune', 480);
+        floating(
+          { x: tp.x, y: tp.y - 48 },
+          `⏱ 炼金炸弹 · ${e.bombArmed.durationSec}s`,
+          'equipment-proc-number',
+          500,
+        );
+      }
     }
     for (const proc of e.procs || []) {
       if (!proc.equipment) continue;
@@ -338,7 +507,8 @@ export function createEffects(layer, center, getSpeed, options = {}) {
         if (r)
           r.hit = {
             start: performance.now() + impactDelay / getSpeed(),
-            duration: 240 / getSpeed(),
+            duration: (d?.overlord ? 340 : 240) / getSpeed(),
+            heavy: Boolean(d?.overlord),
           };
         details.trace(p, style, impactDelay);
         if (old.block > u.block) statuses.shield(p, u.block === 0, impactDelay);
@@ -388,7 +558,12 @@ export function createEffects(layer, center, getSpeed, options = {}) {
         sparks(p, '#aca399', 9, impactDelay);
       }
     }
-    return Math.max(duration, signals.length || e.type === 'bossPhase' ? 700 : 0);
+    return Math.max(
+      duration,
+      signals.length || ['bossPhase', 'bombDetonate', 'bombDefuse'].includes(e.type) || e.bombArmed
+        ? 850
+        : 0,
+    );
   }
   return {
     play,

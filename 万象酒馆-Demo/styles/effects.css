@@ -689,3 +689,300 @@
     animation: none;
   }
 }
+.overlord-cutscene-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 21000;
+  width: 100vw;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  overflow: hidden;
+  pointer-events: none;
+}
+.overlord-cutscene-layer[hidden],
+.overlord-dialogue-bar[hidden],
+.overlord-bomb-vignette[hidden] {
+  display: none !important;
+}
+.overlord-dark-veil {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle at var(--spot-x, 50%) var(--spot-y, 38%),
+    rgba(16, 10, 26, 0.14) 0%,
+    rgba(8, 6, 14, 0.84) 24%,
+    rgba(5, 4, 10, 0.94) 68%
+  );
+  opacity: 0;
+  transition: opacity 220ms ease-out;
+}
+.overlord-cutscene-layer.is-dim .overlord-dark-veil {
+  opacity: 1;
+}
+.overlord-cutscene-layer.is-out .overlord-dark-veil {
+  opacity: 0;
+}
+.overlord-slash-beam {
+  position: absolute;
+  left: -30%;
+  top: 46%;
+  width: 160%;
+  height: 12px;
+  transform: rotate(-14deg) scaleX(0);
+  transform-origin: left center;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(182, 128, 255, 0.92) 28%,
+    #ffffff 52%,
+    rgba(255, 218, 126, 0.95) 75%,
+    transparent
+  );
+  box-shadow:
+    0 0 28px 10px rgba(255, 255, 255, 0.85),
+    0 0 60px 22px rgba(176, 110, 255, 0.72);
+  opacity: 0;
+}
+.overlord-cutscene-layer.is-slash .overlord-slash-beam {
+  animation: overlord-slash-sweep 320ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.overlord-white-flash {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle at var(--spot-x, 50%) var(--spot-y, 38%),
+    rgba(255, 255, 255, 0.92),
+    rgba(222, 188, 255, 0.45) 55%,
+    transparent 85%
+  );
+  opacity: 0;
+}
+.overlord-cutscene-layer.is-impact .overlord-white-flash {
+  animation: overlord-impact-flash 360ms ease-out forwards;
+}
+.overlord-phase-scroll {
+  position: absolute;
+  left: 50%;
+  top: 22%;
+  transform: translate(-50%, -50%) scaleX(0.3);
+  min-width: min(640px, 88vw);
+  padding: 16px 34px;
+  text-align: center;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(18, 12, 26, 0.95) 14%,
+    rgba(30, 18, 42, 0.96) 50%,
+    rgba(18, 12, 26, 0.95) 86%,
+    transparent
+  );
+  border-top: 2px solid #f4cc6c;
+  border-bottom: 2px solid #f4cc6c;
+  box-shadow: 0 0 42px rgba(0, 0, 0, 0.85);
+  opacity: 0;
+}
+.overlord-cutscene-layer.is-impact .overlord-phase-scroll {
+  animation: overlord-scroll-unfurl 1050ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.overlord-cutscene-layer.is-out .overlord-phase-scroll {
+  opacity: 0;
+  transition: opacity 220ms ease-out;
+}
+.overlord-phase-scroll small {
+  display: block;
+  color: #f4cc6c;
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  margin-bottom: 4px;
+}
+.overlord-phase-scroll strong {
+  display: block;
+  color: #fff6db;
+  font-size: clamp(22px, 3vw, 34px);
+  letter-spacing: 0.1em;
+  text-shadow:
+    0 2px 14px rgba(255, 206, 98, 0.65),
+    0 2px 4px #09060d;
+}
+.overlord-phase-scroll span {
+  display: block;
+  margin-top: 4px;
+  color: #96f2be;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+}
+.overlord-dialogue-bar {
+  position: fixed;
+  left: 50%;
+  bottom: clamp(16px, 3.5vh, 32px);
+  top: auto;
+  transform: translateX(-50%);
+  width: min(740px, 92vw);
+  max-width: 92vw;
+  z-index: 21500;
+  margin: 0;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  pointer-events: none;
+  color: #f4ebd4;
+}
+.overlord-dialogue-frame {
+  padding: 12px 22px 14px;
+  background: linear-gradient(170deg, rgba(20, 14, 28, 0.96), rgba(32, 22, 34, 0.96));
+  border: 1.5px solid #e6ba5e;
+  border-radius: 6px;
+  box-shadow:
+    0 12px 38px rgba(0, 0, 0, 0.85),
+    inset 0 0 24px rgba(244, 198, 92, 0.16);
+}
+.overlord-dialogue-bar[data-tone='enraged'] .overlord-dialogue-frame {
+  border-color: #ff9b72;
+  box-shadow:
+    0 12px 38px rgba(0, 0, 0, 0.88),
+    inset 0 0 26px rgba(176, 86, 255, 0.24);
+}
+.overlord-dialogue-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 5px;
+  border-bottom: 1px solid rgba(235, 192, 102, 0.25);
+  padding-bottom: 4px;
+}
+.overlord-dialogue-crown {
+  color: #ffd76a;
+  font-size: 14px;
+}
+.overlord-dialogue-meta small {
+  color: #d7bc7a;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+}
+.overlord-dialogue-meta strong {
+  margin-left: auto;
+  color: #fff2cc;
+  font-size: 13px;
+}
+.overlord-dialogue-text {
+  margin: 0;
+  font-size: clamp(14px, 1.35vw, 17px);
+  line-height: 1.55;
+  color: #f8f0dc;
+  letter-spacing: 0.02em;
+}
+.overlord-kw {
+  font-style: normal;
+  font-weight: 800;
+  color: #7df5b6;
+  text-shadow: 0 0 10px rgba(96, 240, 168, 0.55);
+}
+.overlord-dialogue-bar.is-glitch .overlord-dialogue-frame {
+  animation: overlord-subtitle-jitter 220ms steps(2) 1;
+}
+.overlord-bomb-vignette {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  pointer-events: none;
+  box-shadow: inset 0 0 90px 24px rgba(235, 42, 78, 0.58);
+  animation: overlord-vignette-pulse 0.5s ease-in-out infinite alternate;
+}
+#battle.overlord-heavy-shake {
+  animation: overlord-heavy-quake 420ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+@keyframes overlord-slash-sweep {
+  0% {
+    opacity: 0;
+    transform: rotate(-14deg) scaleX(0);
+  }
+  30% {
+    opacity: 1;
+    transform: rotate(-14deg) scaleX(1);
+  }
+  100% {
+    opacity: 0;
+    transform: rotate(-14deg) scaleX(1.08);
+  }
+}
+@keyframes overlord-impact-flash {
+  0% {
+    opacity: 0.95;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes overlord-scroll-unfurl {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scaleX(0.3);
+  }
+  18% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scaleX(1.02);
+  }
+  84% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scaleX(1);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scaleX(1);
+  }
+}
+@keyframes overlord-subtitle-jitter {
+  0% {
+    transform: translate3d(-2px, 1px, 0);
+  }
+  50% {
+    transform: translate3d(2px, -1px, 0);
+  }
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+}
+@keyframes overlord-vignette-pulse {
+  from {
+    opacity: 0.45;
+  }
+  to {
+    opacity: 0.92;
+  }
+}
+@keyframes overlord-heavy-quake {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  12% {
+    transform: translate3d(0, -10px, 0);
+  }
+  28% {
+    transform: translate3d(-7px, 8px, 0);
+  }
+  44% {
+    transform: translate3d(7px, -6px, 0);
+  }
+  62% {
+    transform: translate3d(-4px, 4px, 0);
+  }
+  80% {
+    transform: translate3d(3px, -2px, 0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .overlord-cutscene-layer.is-slash .overlord-slash-beam,
+  .overlord-cutscene-layer.is-impact .overlord-white-flash,
+  .overlord-cutscene-layer.is-impact .overlord-phase-scroll,
+  .overlord-dialogue-bar.is-glitch .overlord-dialogue-frame,
+  .overlord-bomb-vignette,
+  #battle.overlord-heavy-shake {
+    animation: none;
+  }
+}

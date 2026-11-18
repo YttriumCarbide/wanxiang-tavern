@@ -6,6 +6,7 @@
  * @property {ReturnType<typeof import('./gal.js').createGalPlayer>} gal
  * @property {ReturnType<typeof import('./dice-stage.js').createDiceStage>} dice
  * @property {ReturnType<typeof import('./battle-reading.js').createBattleReading>} battleReading
+ * @property {ReturnType<typeof import('./overlord-battle.js').createOverlordBattle>} [overlordBattle]
  * @property {ReturnType<typeof import('./workshop.js').createWorkshop>} workshop
  * @property {ReturnType<typeof import('./generation-access.js').createGenerationAccess>} generationAccess
  * @property {ReturnType<typeof import('./emblems.js').createEmblems>} emblems

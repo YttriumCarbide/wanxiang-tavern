@@ -42,7 +42,7 @@ test('greenfern mill biome, 15 monsters, 5 routes, and alchemicalPuppet overlord
   assert.equal(puppet.overlord, true);
   assert.equal(puppet.boss, true);
   assert.equal(puppet.standOnCard, true);
-  assert.equal(puppet.toughness, 8);
+  assert.equal(puppet.toughness, 7);
   assert.deepEqual(puppet.weaknesses, ['fire', 'brawl', 'axe', 'lightning']);
   const actionIntent = puppet.intents.find(
     (intent) => intent.name.includes('错位') || intent.selfShield,

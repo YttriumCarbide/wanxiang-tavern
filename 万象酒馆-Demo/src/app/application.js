@@ -47,6 +47,7 @@ import { createGalPlayer } from './gal.js';
 import { createDiceStage } from './dice-stage.js';
 import { createChapterTheater } from './chapter-theater.js';
 import { createBattleBarks } from './battle-barks.js';
+import { createOverlordBattle } from './overlord-battle.js';
 import { createAssetStore } from '../shared/asset-store.js';
 import { createPortraitPreloader } from './asset-preload.js';
 import { createLatestResponse } from './latest-response.js';
@@ -89,6 +90,7 @@ export function createApplication({
   context.gal = createGalPlayer(context);
   context.dice = createDiceStage(context);
   context.chapterTheater = createChapterTheater(context);
+  context.overlordBattle = createOverlordBattle(context);
   context.battleBarks = createBattleBarks(context);
   context.generation = createGeneration(context);
   context.destinations = createDestinations(context);
@@ -184,6 +186,7 @@ export function createApplication({
     context.summoning.dispose();
     context.chat.dispose();
     context.battleBarks.dispose();
+    context.overlordBattle.dispose();
     context.chapterTheater.dispose();
     context.gal.dispose();
     context.memory.dispose();

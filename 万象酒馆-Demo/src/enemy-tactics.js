@@ -1,14 +1,25 @@
+import { overlordTargetStage } from './overlord-mechanics.js';
+
 /** Decisions are pure, deterministic and frozen at the start of each planning round. */
 export function tacticalDecision(state, id, definition) {
   const tactic = definition.tactic;
   if (!tactic) return null;
   const unit = state.units[id];
-  const enraged = !!(
-    definition.phaseMode !== 'cycle' &&
-    definition.boss &&
-    (unit.enraged || unit.hp <= unit.maxHp * definition.phaseThreshold)
-  );
-  const list = enraged ? definition.enragedIntents : definition.intents;
+  const bossStage =
+    definition.boss && definition.phaseMode !== 'cycle'
+      ? Array.isArray(definition.overlordPhases)
+        ? Math.max(unit.bossStage || 1, overlordTargetStage(unit, definition))
+        : unit.enraged || unit.hp <= unit.maxHp * definition.phaseThreshold
+          ? 2
+          : 1
+      : 1;
+  const enraged = bossStage >= 2;
+  const list =
+    bossStage >= 3 && definition.finalPhaseIntents?.length
+      ? definition.finalPhaseIntents
+      : enraged
+        ? definition.enragedIntents
+        : definition.intents;
   const front = state.formation
     .slice(0, 3)
     .map((actor, slot) => ({ ...state.units[actor], slot }))
@@ -105,7 +116,7 @@ export function tacticalDecision(state, id, definition) {
   const move = list[index];
   if (tactic.target === 'fixed') slot = move.slot ?? 1;
   const slots = move.adjacent ? [slot, slot === 2 ? 1 : slot + 1] : move.slots || [slot];
-  return { round: state.round, index, enraged, slot, slots };
+  return { round: state.round, index, enraged, bossStage, slot, slots };
 }
 
 export function lockEnemyDecisions(state, definitions) {

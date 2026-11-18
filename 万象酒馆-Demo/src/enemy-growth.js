@@ -56,7 +56,8 @@ export function enemyGrowth(entry, index, id, boss = false, elite = false) {
 /** Decorate an authored move once, including tactical and multi-part boss attacks. */
 export function leveledIntent(move, bonus = 0, scale = 1) {
   const hasDamage = move.effects?.some((effect) => effect.type === 'damage' && !effect.flat);
-  if ((scale === 1 && (!bonus || !hasDamage)) || move.lowestHpPosition) return move;
+  if (move.fixedFirstSlot || (scale === 1 && (!bonus || !hasDamage)) || move.lowestHpPosition)
+    return move;
   const effects = scaleLevelEffects(move.effects || [], scale, bonus);
   const scalePos = (v) => (v > 0 ? Math.max(1, Math.round(v * scale)) : v);
   const scaled = { ...move, effects };

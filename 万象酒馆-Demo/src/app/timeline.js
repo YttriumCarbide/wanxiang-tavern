@@ -4,6 +4,7 @@ import { parseTimelineDrop } from './drag-payload.js';
 import { intent, enemyTimeline } from '../engine.js';
 import { escapeText } from '../ui.js';
 import { damageTypeChip, inferDamageType, resolveBasicAttackType } from '../damage-types.js';
+import { isFixedFirstSlot } from '../overlord-mechanics.js';
 import { query as $ } from './dom.js';
 
 /** @param {import('./context.js').AppContext} context */
@@ -57,19 +58,46 @@ export function createTimeline(context) {
         actionIndex = id ? slotList.slice(0, i).filter((entry) => entry === id).length : 0,
         move = id ? intent(s, id, actionIndex) : null,
         enemyDef = id ? context.roster.get(id) : null,
+        fixedFirst = id ? isFixedFirstSlot(s, slotList, i, enemyDef) : false,
         enemyDmgType =
           move && enemyDef
             ? move.effects?.some((ef) => ef.type === 'damage')
               ? inferDamageType(move, enemyDef) || resolveBasicAttackType(enemyDef)
               : null
             : null,
-        phaseTag = totalActions > 1 ? ` ${ROMAN[actionIndex] || `#${actionIndex + 1}`}` : '';
+        phaseTag = fixedFirst
+          ? ''
+          : totalActions > 1
+            ? ` ${ROMAN[actionIndex] || `#${actionIndex + 1}`}`
+            : '';
       return html`<button
-        class="time-cell ${id ? 'enemy-cell' : ''} ${cancelled ? 'cancelled' : ''} ${bound ? 'bound' : ''} ${!readOnly && (session.battle.activeCell === i || (!session.battle.playing && session.selection.selectedCell === i)) ? 'playing' : ''} ${readOnly ? 'preview-cell' : ''} ${readOnly && id && (session.selection.inspectedPreviewCell !== null ? session.selection.inspectedPreviewCell === i : session.selection.intentScope === 'all' && session.selection.inspectedEnemy ? true : id === session.selection.inspectedEnemy) ? 'playing' : ''}"
+        class="time-cell ${id ? 'enemy-cell' : ''} ${fixedFirst ? 'overlord-fixed-cell' : ''} ${fixedFirst && bound ? 'is-chain-broken' : ''} ${cancelled ? 'cancelled' : ''} ${bound ? 'bound' : ''} ${!readOnly && (session.battle.activeCell === i || (!session.battle.playing && session.selection.selectedCell === i)) ? 'playing' : ''} ${readOnly ? 'preview-cell' : ''} ${readOnly && id && (session.selection.inspectedPreviewCell !== null ? session.selection.inspectedPreviewCell === i : session.selection.intentScope === 'all' && session.selection.inspectedEnemy ? true : id === session.selection.inspectedEnemy) ? 'playing' : ''}"
         ${readOnly ? `data-preview="${i}"` : `data-start="${i}" data-motion="${id ? `enemy-${id}` : `empty-${i}`}"`}
         ${session.battle.playing || (readOnly && !id) ? 'disabled' : ''}
-        ${id ? `data-tooltip="${escapeText(`${context.roster.get(id).name}${phaseTag} · ${bound ? '禁锢，本回合行动取消' : `速度 ${Math.max(1, context.roster.get(id).speed - (s.units[id].buffs.slow || 0))}\n${move.name}：${move.text}`}`)}"` : ''}
+        ${id ? `data-tooltip="${escapeText(`${context.roster.get(id).name}${phaseTag} · ${bound ? (fixedFirst ? '击破震裂 · 定式金链已粉碎，本回合跳过' : '禁锢，本回合行动取消') : fixedFirst ? `定式先制 · 免疫迟缓\n${move.name}：${move.text}` : `速度 ${Math.max(1, context.roster.get(id).speed - (s.units[id].buffs.slow || 0))}\n${move.name}：${move.text}`}`)}"` : ''}
       >
+        ${
+          fixedFirst
+            ? html`<span class="timeline-gold-chains" aria-hidden="true"
+                ><svg viewBox="0 0 100 100" preserveAspectRatio="none">
+                  <rect
+                    x="2"
+                    y="2"
+                    width="96"
+                    height="96"
+                    rx="6"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="3"
+                    stroke-dasharray="10 4"
+                  />
+                  <circle cx="8" cy="8" r="4.5" fill="currentColor" />
+                  <circle cx="92" cy="8" r="4.5" fill="currentColor" />
+                  <circle cx="8" cy="92" r="4.5" fill="currentColor" />
+                  <circle cx="92" cy="92" r="4.5" fill="currentColor" /></svg
+              ></span>`
+            : ''
+        }
         ${
           bound
             ? html`<span class="timeline-chain" role="img" aria-label="禁锢，行动取消"
@@ -99,7 +127,7 @@ export function createTimeline(context) {
         <span class="num">${opening && !readOnly ? '◇' : i + 1}</span>${
           id ? damageTypeChip(enemyDmgType, { size: 13, className: 'cell-dmg-type' }) : ''
         }<span class="cell-label"
-          >${id ? `${cancelled ? '× ' : ''}${context.roster.get(id).name}${phaseTag}` : opening && !readOnly ? '先手' : readOnly ? '我方行动' : '＋'}${id ? html`<small>${totalActions > 1 ? move.name : `速度 ${Math.max(1, context.roster.get(id).speed - (s.units[id].buffs.slow || 0))}`}</small>` : ''}</span
+          >${id ? `${cancelled ? '× ' : ''}${context.roster.get(id).name}${phaseTag}` : opening && !readOnly ? '先手' : readOnly ? '我方行动' : '＋'}${id ? html`<small>${fixedFirst ? (bound ? '击破震裂' : '定式先制') : totalActions > 1 ? move.name : `速度 ${Math.max(1, context.roster.get(id).speed - (s.units[id].buffs.slow || 0))}`}</small>` : ''}</span
         >
       </button>`;
     };

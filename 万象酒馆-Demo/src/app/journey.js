@@ -292,9 +292,11 @@ export function createJourney(context) {
       context.renderer.render({ animate: false });
       context.backpack?.render();
       context.battleReading?.render();
+      context.overlordBattle?.sync();
       context.generation.refreshReview();
       if (session.journey.expedition.overlandBattle) {
-        roundBanner('先手准备 · 1 AP');
+        if (context.overlordBattle?.isOverlordBattle?.()) void context.overlordBattle.entrance();
+        else roundBanner('先手准备 · 1 AP');
         context.battleBarks?.roundOneStart();
         return;
       }
@@ -302,6 +304,7 @@ export function createJourney(context) {
         context.generation.refreshStory();
         context.onboarding?.resumed();
         context.emblems?.check();
+        context.overlordBattle?.sync();
         return;
       }
       await context.generation.showScene(session.battle.state.encounter, 'before');
@@ -311,8 +314,12 @@ export function createJourney(context) {
       context.onboarding?.battleStarted();
       context.companionEvents?.battleStarted();
       context.emblems?.check();
-      roundBanner(spec.boss ? `最终战 · ${spec.name}` : '先手准备 · 1 AP');
-      context.battleBarks?.roundOneStart();
+      if (context.overlordBattle?.isOverlordBattle?.()) {
+        await context.overlordBattle.entrance();
+      } else {
+        roundBanner(spec.boss ? `最终战 · ${spec.name}` : '先手准备 · 1 AP');
+        context.battleBarks?.roundOneStart();
+      }
     } catch (e) {
       loading.fail(e);
       console.error(e);
@@ -417,6 +424,7 @@ export function createJourney(context) {
       context.generation.save();
     }
     context.backpack?.close();
+    context.overlordBattle?.reset();
     context.battleBarks?.clear();
     context.chapterTheater?.cancel();
     context.adventure.leave();
@@ -451,7 +459,8 @@ export function createJourney(context) {
     context.companionEvents?.returned();
     context.daily?.returning();
     context.workshop?.unlockTutorial();
-    void context.mapExpansion?.extend(session.journey.expedition?.exploration);
+    if (!session.journey.expedition?.exploration?.quickTestBoss)
+      void context.mapExpansion?.extend(session.journey.expedition?.exploration);
     void context.memory?.autoSummarize();
   }
   async function showResult() {
@@ -489,6 +498,7 @@ export function createJourney(context) {
     if (
       complete &&
       !replay &&
+      !explored?.quickTestBoss &&
       runId &&
       session.ai.library.campaign &&
       !session.ai.library.campaign.completed &&
@@ -535,7 +545,7 @@ export function createJourney(context) {
       recordSettlement(session.ai.library, runId || session.journey.expedition.id);
       context.generation.save();
     }
-    if (won && complete && explored && !replay) {
+    if (won && complete && explored && !replay && !explored.quickTestBoss) {
       refreshWorldSkirmishes(session.ai.library, runId || Date.now());
       context.generation.explorationWon(explored, { ether });
       context.quests?.battleWon(explored);

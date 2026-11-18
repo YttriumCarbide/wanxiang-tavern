@@ -144,6 +144,7 @@ export function createBattleBarks(context) {
   }
 
   function roundOneStart() {
+    if (context.overlordBattle?.isOverlordBattle?.()) return;
     const key = battleKey();
     if (!key || shownBattleKey === key) return;
     const expedition = session.journey.expedition;
@@ -205,6 +206,7 @@ export function createBattleBarks(context) {
   }
 
   function bossEnraged(actorId) {
+    if (context.overlordBattle?.isOverlordBattle?.()) return;
     const key = battleKey();
     const lines = session.ai.activeScript?.battleLines;
     if (!key || enragedShownKey === key || !lines?.bossEnraged) return;
@@ -216,6 +218,10 @@ export function createBattleBarks(context) {
   }
 
   async function battleWon() {
+    if (context.overlordBattle?.isOverlordBattle?.()) {
+      await context.overlordBattle.onVictory();
+      return;
+    }
     const expedition = session.journey.expedition;
     if (expedition?.overlandBattle?.battleLines?.defeat) {
       await runSequence(
