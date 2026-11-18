@@ -283,6 +283,7 @@ export async function adventureChecks({ browser, baseURL, output }) {
       'choices stay hidden until the introduction finishes',
     );
     await read();
+    await page.waitForFunction(() => document.querySelector('#chapter-theater').hidden);
     await page.locator('#ai-open').click();
     await page.locator('#ai-dialog').waitFor({ state: 'visible' });
     await page.locator('#ai-close').click();
@@ -333,9 +334,15 @@ export async function adventureChecks({ browser, baseURL, output }) {
     await page.setViewportSize({ width: 1440, height: 836 });
     await nextBattle();
     assert.equal((await page.evaluate(() => demo.getState())).encounter, 2);
-    await queue({ kind: 'skill', start: 0, actor: 'aegis', skill: 'attack', target: 'pebble' });
+    await queue({ kind: 'skill', start: 0, actor: 'aegis', skill: 'attack', target: 'millNettle' });
     await commit();
-    await queue({ kind: 'item', start: 0, actor: 'aegis', item: 'slow-potion', target: 'warden' });
+    await queue({
+      kind: 'item',
+      start: 0,
+      actor: 'aegis',
+      item: 'slow-potion',
+      target: 'millGiantVole',
+    });
     await commit();
     await page.locator('#timeline .enemy-cell').first().click();
     await read();
@@ -345,6 +352,7 @@ export async function adventureChecks({ browser, baseURL, output }) {
     await page.locator('#rest-continue').click();
     await page.waitForFunction(() => demo.getStatus().mode === 'event');
     await read();
+    await page.waitForFunction(() => document.querySelector('#chapter-theater').hidden);
     assert.equal(await page.locator('.rp-goals article').count(), 2);
     await send('调查前方的路线，尝试与守卫交涉。');
     await page.locator('.rp-boss-ready').waitFor({ state: 'visible' });

@@ -443,6 +443,7 @@ export async function staticChecks({ browser, output }) {
       const { OVERLOAD_EMBLEM_ID } = await import(new URL('./src/emblems.js', location.href).href);
       const library = newCampaign(defaultProtagonist());
       library.campaign.completed = true;
+      library.unlockedDungeons = ['mill'];
       library.inventory.summonContracts = 1;
       firstCompanion(library);
       library.campaign.tutorial = 'complete';

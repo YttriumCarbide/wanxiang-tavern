@@ -197,17 +197,18 @@ function mainlinePreview(route, map) {
   return entries;
 }
 
-export function quickTestMillPreview(entries, options = {}) {
-  if (!developerOption(options, 'quickTest') || !Array.isArray(entries) || entries.length < 5) {
+function quickTestMainlinePreview(entries, config, options = {}) {
+  if (!developerOption(options, config.option) || !Array.isArray(entries) || entries.length < 5) {
     return entries;
   }
-  const bp1 = REGIONS.mill.nodes.find((item) => item.id === 'mill-1-canal');
-  const bp4 = REGIONS.mill.nodes.find((item) => item.id === 'mill-4-attic');
+  const nodes = REGIONS[config.map]?.nodes || [];
+  const bp1 = nodes.find((item) => item.id === config.node1);
+  const bp4 = nodes.find((item) => item.id === config.node4);
   if (!bp1 || !bp4) return entries;
-  const oldRoot = entries.find((item) => item.nodeId === 'mill-1-canal');
-  const quickRootId = 'mill-quick-test-alchemical-puppet';
+  const oldRoot = entries.find((item) => item.nodeId === config.node1);
+  const { quickRootId } = config;
   return entries.map((entry) => {
-    if (entry.nodeId === 'mill-1-canal') {
+    if (entry.nodeId === config.node1) {
       return {
         ...entry,
         id: quickRootId,
@@ -228,7 +229,7 @@ export function quickTestMillPreview(entries, options = {}) {
         parentId: null,
       };
     }
-    if (entry.nodeId === 'mill-4-attic') {
+    if (entry.nodeId === config.node4) {
       return {
         ...entry,
         nodeId: bp1.id,
@@ -251,24 +252,59 @@ export function quickTestMillPreview(entries, options = {}) {
   });
 }
 
-export function quickTestMillFrontier(route, options = {}) {
+function quickTestMainlineFrontier(route, config, options = {}) {
   const normal = availableExplorations(route || { frontier: [] });
-  if (!developerOption(options, 'quickTest')) return normal;
-  const previewEntries = quickTestMillPreview(
-    explorationPreview(route || { frontier: [] }, 'mill'),
+  if (!developerOption(options, config.option)) return normal;
+  const previewEntries = quickTestMainlinePreview(
+    explorationPreview(route || { frontier: [] }, config.map),
+    config,
     options,
   );
   const bossEntry = previewEntries.find((entry) => entry.quickTestBoss);
   return bossEntry
-    ? [bossEntry, ...normal.filter((entry) => entry.nodeId !== 'mill-1-canal')]
+    ? [bossEntry, ...normal.filter((entry) => entry.nodeId !== config.node1)]
     : normal;
+}
+
+const QUICK_TEST_MILL = Object.freeze({
+  map: 'mill',
+  option: 'quickTest',
+  node1: 'mill-1-canal',
+  node4: 'mill-4-attic',
+  quickRootId: 'mill-quick-test-alchemical-puppet',
+});
+
+const QUICK_TEST_RUINS = Object.freeze({
+  map: 'ruins',
+  option: 'quickTestApep',
+  node1: 'ruins-1-entrance',
+  node4: 'ruins-4-curse',
+  quickRootId: 'ruins-quick-test-apep-lamb',
+});
+
+export function quickTestMillPreview(entries, options = {}) {
+  return quickTestMainlinePreview(entries, QUICK_TEST_MILL, options);
+}
+
+export function quickTestMillFrontier(route, options = {}) {
+  return quickTestMainlineFrontier(route, QUICK_TEST_MILL, options);
+}
+
+export function quickTestRuinsPreview(entries, options = {}) {
+  return quickTestMainlinePreview(entries, QUICK_TEST_RUINS, options);
+}
+
+export function quickTestRuinsFrontier(route, options = {}) {
+  return quickTestMainlineFrontier(route, QUICK_TEST_RUINS, options);
 }
 
 export function explorationPreview(route, map, options = {}) {
   if (!route) return [];
   if (MAINLINE_DUNGEONS.includes(map) && REGIONS[map]?.nodes?.length && !route.frontier[0]?.world) {
     const entries = mainlinePreview(route, map);
-    return map === 'mill' ? quickTestMillPreview(entries, options) : entries;
+    if (map === 'mill') return quickTestMillPreview(entries, options);
+    if (map === 'ruins') return quickTestRuinsPreview(entries, options);
+    return entries;
   }
   const combined = [...(route.cleared || []), ...(route.frontier || [])].sort(
     (a, b) => a.sequence - b.sequence,

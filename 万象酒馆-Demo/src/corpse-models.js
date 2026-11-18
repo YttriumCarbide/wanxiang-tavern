@@ -173,7 +173,7 @@ function buildApepLambCorpse(resources, prim, lightMat) {
   group.name = 'Overlord_Corpse_ApepLamb';
   const bone = stdMat(resources, '#e8dec6', { roughness: 0.72, metalness: 0.06 });
   const obsidian = stdMat(resources, '#1f1827', { roughness: 0.58, metalness: 0.22 });
-  const gold = stdMat(resources, '#d6a646', { roughness: 0.32, metalness: 0.85 });
+  const gold = stdMat(resources, '#ae786b', { roughness: 0.44, metalness: 0.72 });
   const crimson = stdMat(resources, '#7a1c2f', { roughness: 0.78, metalness: 0.1 });
 
   const c0 = new THREE.Group();
@@ -477,7 +477,7 @@ export function buildOverlordCorpse(resources, def, reduced) {
     def?.id === 'alchemicalPuppet'
       ? '#6bf5a9'
       : def?.id === 'apepLamb'
-        ? '#ff6b52'
+        ? '#f76f80'
         : def?.id === 'radiantWyvern'
           ? '#a8eeff'
           : def?.id === 'ares' || def?.id?.startsWith('ares')

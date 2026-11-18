@@ -69,6 +69,7 @@ export async function frostChecks({ browser, baseURL, output }) {
         ...structuredClone(data.DEFINITIONS.frostCrusher),
         hp: 1000,
         boss: false,
+        actions: 1,
         speed: 1,
         intents: [{ name: '试探', slot: 0, effects: [{ type: 'damage', value: 1 }] }],
         tactic: { target: 'fixed' },

@@ -744,7 +744,13 @@ export function createChapterTheater(context) {
     });
   }
 
-  function playOpening({ mode = 'event-opening', heading = '', prose = '', map = '' } = {}) {
+  function playOpening({
+    mode = 'event-opening',
+    heading = '',
+    prose = '',
+    map = '',
+    testScript = false,
+  } = {}) {
     return play({
       mode,
       heading,
@@ -752,6 +758,7 @@ export function createChapterTheater(context) {
       map,
       automatic: true,
       singlePage: true,
+      testScript,
     });
   }
 

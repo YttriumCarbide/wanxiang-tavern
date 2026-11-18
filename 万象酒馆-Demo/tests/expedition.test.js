@@ -90,17 +90,37 @@ test('boss second phase remains after regeneration heals above the threshold', (
 for (const boss of BOSSES)
   test(`full five-encounter expedition can defeat ${boss.name}`, () => {
     const veterans = newLibrary();
-    // Ares is a sixth-chapter military boss, unlike the original level-one demo encounters.
-    if (boss.id === 'ares')
+    const veteranLevels =
+      boss.id === 'ares' ||
+      [
+        'frostCrusher',
+        'drillMatriarch',
+        'crystalDevourer',
+        'repairOverseer',
+        'settlementLeader',
+      ].includes(boss.id)
+        ? 19
+        : [
+              'bossBloom',
+              'bogElemental',
+              'moonQueen',
+              'scaleCaptain',
+              'moonCrown',
+              'moonEye',
+              'moonRoot',
+            ].includes(boss.id)
+          ? 11
+          : 0;
+    if (veteranLevels > 0)
       for (const member of veterans.characters)
         gainExperience(
           member,
-          Array.from({ length: 19 }, (_, level) => xpToNext(level + 1)).reduce(
+          Array.from({ length: veteranLevels }, (_, level) => xpToNext(level + 1)).reduce(
             (sum, value) => sum + value,
             0,
           ),
         );
-    const trip = newExpedition(boss.id, boss.id === 'ares' ? compileRoster(veterans) : {}),
+    const trip = newExpedition(boss.id, veteranLevels > 0 ? compileRoster(veterans) : {}),
       records = [];
     const supplies = newLibrary();
     supplies.inventory.gold = 200;

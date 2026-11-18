@@ -17,13 +17,11 @@ const artwork = {
     <path fill="#85b49a" d="M12 19h40v3H12zM12 29h40v3H12zM12 39h40v3H12z" />
     <path fill="#f0d798" d="m26 14 24-6v34h-6V20l-12 3v25h-6z" />
     <path fill="#e8efce" d="M18 43h14v9H18zM36 37h14v9H36zM28 14l20-5v5l-20 5z" />`,
-  sinkingPlague: html`<path fill="#241b34" d="M5 5h54v54H5z" /><path
-      fill="#8f63ac"
-      d="M8 42h48v8H8zM14 32h8v10h-8zM42 30h8v12h-8z"
-    /><path fill="#b8cf79" d="M27 12h10v7h7v13H20V19h7z" /><path
-      fill="#342445"
-      d="M25 23h5v5h-5zM35 23h5v5h-5z"
-    /><path fill="#d1b4e4" d="m29 37 5 4-5 4h7l-5 5 3 5h-6l-2-6 4-6-4-4z" />`,
+  sinkingPlague: html`<path fill="#21131f" d="M5 5h54v54H5z" />
+    <path fill="#76344b" d="m8 39 11-6 12 4 14-6 11 5v13l-10 5H20L8 48z" />
+    <path fill="#ea8e86" d="m8 39 11-6 12 4 14-6 11 5v5l-11-5-14 6-12-4-11 6z" />
+    <path fill="#ffdbc0" d="M29 10h6v14h8L32 35 21 24h8z" />
+    <path fill="#b6546a" d="m16 48 13-4 12 3 8-3v4l-8 4-12-3-13 4z" />`,
   meteor: html`<path fill="#213943" d="M8 7h48v50H8z" /><path
       fill="#a9e4e5"
       d="m36 10 4 14 14 4-14 4-4 14-4-14-14-4 14-4z"

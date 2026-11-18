@@ -2,8 +2,10 @@ import { createEventScope } from '../shared/events.js';
 import { html } from '../shared/html.js';
 import { createPopoverSurface } from '../shared/top-layer.js';
 import { escapeText } from '../ui.js';
+import { APEP_ID, apepAttack, apepPlague } from '../apep-presentation.js';
 import {
   OVERLORD_DIALOGUES,
+  overlordDialoguePack,
   overlordPhaseProfile,
   overlordReloadBark,
   overlordSealedBark,
@@ -137,12 +139,14 @@ export function createOverlordBattle(context) {
   }
 
   const cutsceneLayer = document.createElement('section');
+  let cutsceneToken = 0;
   cutsceneLayer.id = 'overlord-cutscene-layer';
   cutsceneLayer.className = 'overlord-cutscene-layer';
   cutsceneLayer.hidden = true;
   cutsceneLayer.setAttribute('aria-live', 'assertive');
   cutsceneLayer.innerHTML = html`
     <div class="overlord-dark-veil" aria-hidden="true"></div>
+    <div class="apep-eclipse-disc" aria-hidden="true"></div>
     <div class="overlord-slash-beam" aria-hidden="true"></div>
     <div class="overlord-white-flash" aria-hidden="true"></div>
   `;
@@ -174,6 +178,19 @@ export function createOverlordBattle(context) {
   bombVignette.setAttribute('aria-hidden', 'true');
   document.body.append(bombVignette);
 
+  const plagueEdge = document.createElement('div');
+  plagueEdge.id = 'apep-plague-edge';
+  plagueEdge.className = 'apep-plague-edge';
+  plagueEdge.hidden = true;
+  plagueEdge.setAttribute('aria-hidden', 'true');
+  plagueEdge.innerHTML = html`
+    <div class="apep-plague-edge-vignette"></div>
+    <div class="apep-plague-edge-veins"></div>
+    <div class="apep-plague-edge-pulse"></div>
+  `;
+  document.body.append(plagueEdge);
+  let lastCorruptBarkKey = '';
+
   function battleKey() {
     const state = session.battle.state;
     const exp = session.journey.expedition;
@@ -184,11 +201,17 @@ export function createOverlordBattle(context) {
   function currentOverlordDef() {
     const state = session.battle.state;
     if (!state?.enemyIds?.length) return null;
+    const overlords = [];
     for (const id of state.enemyIds) {
       const def = state.enemyDefinitions?.[id] || context.roster?.get?.(id);
-      if (def?.overlord) return { id, def, unit: state.units?.[id] };
+      if (def?.overlord) overlords.push({ id, def, unit: state.units?.[id] });
     }
-    return null;
+    if (!overlords.length) return null;
+    return (
+      overlords.find((entry) => entry.id === 'moonEye' && entry.unit?.hp > 0) ||
+      overlords.find((entry) => entry.unit?.hp > 0) ||
+      overlords[0]
+    );
   }
 
   function wakeDialogueSleep() {
@@ -243,6 +266,7 @@ export function createOverlordBattle(context) {
           item.speaker || activeBoss?.def?.name || '失败的炼金傀偶';
         dialogueBar.querySelector('[data-dl-text]').innerHTML = formatKeywordText(item.text);
         dialogueBar.dataset.tone = item.tone || 'boss';
+        dialogueBar.dataset.overlordTheme = activeBoss?.id === APEP_ID ? 'apep' : '';
         dialogueBar.classList.remove('is-leaving', 'is-glitch', 'is-swapping');
         void dialogueBar.offsetWidth;
 
@@ -299,11 +323,14 @@ export function createOverlordBattle(context) {
 
   async function playPhaseCutscene({ bossId, tone = 'phase', roarLines = [] }) {
     if (disposed) return;
+    const ticket = ++cutsceneToken;
+    const apep = bossId === APEP_ID;
     const speed = Math.max(0.5, session.battle.speed || 1);
     const center = session.runtime.view?.unitScreenCenter?.(bossId) || { x: 50, y: 38 };
     cutsceneLayer.style.setProperty('--spot-x', `${center.x}%`);
     cutsceneLayer.style.setProperty('--spot-y', `${center.y}%`);
     cutsceneLayer.dataset.tone = tone;
+    cutsceneLayer.dataset.overlordTheme = apep ? 'apep' : '';
     cutsceneLayer.classList.remove('is-dim', 'is-slash', 'is-impact', 'is-out');
     cutsceneLayer.hidden = false;
     cutsceneSurface.show();
@@ -311,16 +338,21 @@ export function createOverlordBattle(context) {
 
     const lines = (roarLines || []).filter(Boolean);
     if (!reduced) {
-      session.runtime.view?.playOverlordClip?.(bossId, 'Special_Action', speed);
+      const clip = apep
+        ? tone === 'entrance'
+          ? 'Apep_Entrance'
+          : 'Apep_Eclipse'
+        : 'Special_Action';
+      session.runtime.view?.playOverlordClip?.(bossId, clip, speed);
       cutsceneLayer.classList.add('is-dim');
-      await sleep(Math.round(220 / speed));
-      if (disposed) return;
+      await sleep(Math.round((apep ? 360 : 220) / speed));
+      if (disposed || ticket !== cutsceneToken) return;
 
       cutsceneLayer.classList.add('is-slash');
-      await sleep(Math.round(210 / speed));
-      if (disposed) return;
+      await sleep(Math.round((apep ? 390 : 210) / speed));
+      if (disposed || ticket !== cutsceneToken) return;
 
-      context.audio?.play?.('combine');
+      context.audio?.play?.(apep ? 'apep-eclipse' : 'combine');
       session.runtime.view?.triggerImpact?.({ heavy: true, hitStopMs: 105 });
       $('#battle')?.classList.remove('overlord-heavy-shake');
       void $('#battle')?.offsetWidth;
@@ -338,8 +370,8 @@ export function createOverlordBattle(context) {
           { interrupt: true },
         );
       }
-      await sleep(Math.round(620 / speed));
-      if (disposed) return;
+      await sleep(Math.round((apep ? 790 : 620) / speed));
+      if (disposed || ticket !== cutsceneToken) return;
 
       cutsceneLayer.classList.add('is-out');
       await sleep(Math.round(220 / speed));
@@ -355,7 +387,7 @@ export function createOverlordBattle(context) {
       await sleep(450);
     }
 
-    if (disposed) return;
+    if (disposed || ticket !== cutsceneToken) return;
     $('#battle')?.classList.remove('overlord-heavy-shake');
     cutsceneSurface.hide();
     cutsceneLayer.hidden = true;
@@ -378,7 +410,11 @@ export function createOverlordBattle(context) {
     armReloadWatch(activeBoss);
     const pack = OVERLORD_DIALOGUES[activeBoss.id] || OVERLORD_DIALOGUES.alchemicalPuppet;
     const lines = [...(pack.entrance || [`${activeBoss.def.name}封锁了阁楼的退路！`])];
-    if (prevWatch?.reenteredPending && pack.reenterAfterReload) {
+    if (
+      prevWatch?.bossId === activeBoss.id &&
+      prevWatch.reenteredPending &&
+      pack.reenterAfterReload
+    ) {
       lines.push(pack.reenterAfterReload);
       const nextWatch = readReloadWatch();
       if (nextWatch) {
@@ -536,6 +572,82 @@ export function createOverlordBattle(context) {
     bombRaf = requestAnimationFrame(renderBombTick);
   }
 
+  function syncPlague(battleEl, active, state) {
+    const commit = $('#commit');
+    const current = active && apepPlague(session.battle.display || state);
+    const forecast = session.battle.playing ? null : session.battle.forecast;
+    const next = active && apepPlague(forecast?.final);
+    if (!current && !next) {
+      delete battleEl.dataset.apepPlague;
+      plagueEdge.hidden = true;
+      delete plagueEdge.dataset.mode;
+      delete plagueEdge.dataset.rearDanger;
+      if (commit) {
+        delete commit.dataset.apepPlague;
+        commit.querySelector('.commit-plague-readout')?.remove();
+      }
+      return;
+    }
+    const mode = current ? 'active' : 'preview';
+    battleEl.dataset.apepPlague = mode;
+    const field = current || next;
+    const maxAge = Math.max(0, ...(field?.ages || [0]));
+    const maxRear = Math.max(0, ...Object.values(field?.backfieldTurns || {}));
+    const bossStage =
+      state?.units?.[APEP_ID]?.bossStage || (state?.units?.[APEP_ID]?.enraged ? 2 : 1);
+    const intensity = Math.min(
+      1,
+      0.28 + maxAge * 0.14 + maxRear * 0.22 + (bossStage >= 3 ? 0.24 : bossStage === 2 ? 0.12 : 0),
+    );
+    plagueEdge.hidden = false;
+    plagueEdge.dataset.mode = mode;
+    plagueEdge.dataset.rearDanger = maxRear > 0 ? '1' : '0';
+    plagueEdge.style.setProperty(
+      '--plague-intensity',
+      mode === 'preview' ? '0.26' : intensity.toFixed(2),
+    );
+    if (
+      current &&
+      !session.battle.playing &&
+      state?.phase === 'plan' &&
+      Number.isInteger(current.corruptedSlot)
+    ) {
+      const key = `${battleKey()}:corrupt`;
+      if (lastCorruptBarkKey !== key) {
+        lastCorruptBarkKey = key;
+        const pack = overlordDialoguePack(APEP_ID);
+        if (pack.corruptSlot) {
+          const bossName = context.roster?.get?.(APEP_ID)?.name || '阿佩普的羔羊';
+          void showLine(bossName, pack.corruptSlot, {
+            tone: 'enraged',
+            holdMs: 2800,
+            interrupt: false,
+          });
+        }
+      }
+    }
+    if (!commit) return;
+    commit.dataset.apepPlague = mode;
+    let chip = commit.querySelector('.commit-plague-readout');
+    if (!chip) {
+      chip = document.createElement('span');
+      chip.className = 'commit-plague-readout';
+      commit.append(chip);
+    }
+    const tick = forecast?.events?.find(
+      (event) => event.type === 'sinkingPlague' && event.actor === APEP_ID,
+    );
+    const amounts = (tick?.statusTriggers || [])
+      .filter(({ type }) => type === 'sinkingPlague')
+      .map(({ value }) => value);
+    const smallest = Math.min(...amounts);
+    const largest = Math.max(...amounts);
+    chip.textContent = amounts.length
+      ? `沉疫 −${smallest === largest ? largest : `${smallest}–${largest}`}`
+      : '沉疫';
+    chip.title = '回合末 · 前场浸染 / 后场连蹲溺蚀';
+  }
+
   function sync() {
     if (disposed) return;
     const state = session.battle.state;
@@ -551,11 +663,16 @@ export function createOverlordBattle(context) {
     }
     const battleEl = $('#battle');
     if (battleEl) {
+      syncPlague(battleEl, active, state);
       if (active && activeBoss?.unit) {
-        const stage = overlordPhaseProfile(activeBoss.def, activeBoss.unit.bossStage || 1).stage;
-        battleEl.dataset.overlordStage = String(stage);
+        const apep = activeBoss.id === APEP_ID;
+        const displayed = (apep && session.battle.display?.units[activeBoss.id]) || activeBoss.unit;
+        const stage = displayed.bossStage || (displayed.enraged ? 2 : 1);
+        battleEl.dataset.overlordStage = String(overlordPhaseProfile(activeBoss.def, stage).stage);
+        battleEl.dataset.overlordTheme = activeBoss.id === APEP_ID ? 'apep' : '';
       } else {
         delete battleEl.dataset.overlordStage;
+        delete battleEl.dataset.overlordTheme;
       }
     }
 
@@ -577,7 +694,7 @@ export function createOverlordBattle(context) {
       bombTriggered = false;
       lastCriticalTickSec = -1;
       const targetName = context.roster?.get?.(bomb.target)?.name || bomb.target;
-      const pack = OVERLORD_DIALOGUES[bomb.owner] || OVERLORD_DIALOGUES.alchemicalPuppet;
+      const pack = overlordDialoguePack(bomb.owner);
       const ownerName = context.roster?.get?.(bomb.owner)?.name || '失败的炼金傀偶';
       if (typeof pack.bombArmed === 'function' && (bomb.round ?? -2) !== domainLockedRound) {
         void showLine(ownerName, pack.bombArmed(targetName, bomb.durationSec), {
@@ -595,14 +712,25 @@ export function createOverlordBattle(context) {
   async function onEvent(event) {
     if (disposed || !event) return;
     const activeBoss = currentOverlordDef();
-    const pack =
-      OVERLORD_DIALOGUES[event.actor || activeBoss?.id] || OVERLORD_DIALOGUES.alchemicalPuppet;
+    const bossBroken =
+      activeBoss &&
+      event.statusTriggers?.some(
+        (signal) => signal.type === 'break' && signal.id === activeBoss.id,
+      );
+    const pack = overlordDialoguePack(bossBroken ? activeBoss.id : event.actor || activeBoss?.id);
     const actorName =
       context.roster?.get?.(event.actor)?.name || activeBoss?.def?.name || '失败的炼金傀偶';
     if (event.overlordDomainLock) {
       triggerDomainLock(event.actor);
     }
-    if (event.type === 'bossPhase' && event.overlord) {
+    if (event.clearedCorruptedSlot && pack.slowBreakSlot) {
+      void showLine(actorName, pack.slowBreakSlot, {
+        tone: 'boss',
+        holdMs: 2600,
+        interrupt: false,
+      });
+    }
+    if (event.type === 'bossPhase' && (event.overlord || event.actor === APEP_ID)) {
       const battleEl = $('#battle');
       if (battleEl && event.phaseStage) battleEl.dataset.overlordStage = String(event.phaseStage);
       const roarText = event.phaseStage >= 3 ? pack.phase3 : pack.phase2;
@@ -611,6 +739,29 @@ export function createOverlordBattle(context) {
         tone: event.phaseStage >= 3 ? 'critical' : 'phase',
         roarLines: [roarText],
       });
+    } else if (apepAttack(event)?.type === 'plague') {
+      const first = apepPlague(event.after)?.ages.every((age) => age === 0);
+      if (first)
+        void showLine(actorName, pack.plague, { tone: 'enraged', holdMs: 2700, interrupt: true });
+    } else if (event.type === 'sinkingPlague' && event.actor === APEP_ID) {
+      if (!reduced) {
+        $('#commit')?.animate(
+          [
+            { boxShadow: 'inset 0 -1px 0 #f4a394, 0 0 3px #a3485b', offset: 0 },
+            { boxShadow: 'inset 0 -12px 17px #c85a74ae, 0 0 25px #e05e78aa', offset: 0.2 },
+            { boxShadow: 'inset 0 -2px 0 #b25f75, 0 0 12px #a5445b48' },
+          ],
+          { duration: 640 / Math.max(0.5, session.battle.speed), easing: 'ease-out' },
+        );
+      }
+      const fieldAfter = apepPlague(event.after);
+      const age = fieldAfter?.ages[0];
+      const maxRear = Math.max(0, ...Object.values(fieldAfter?.backfieldTurns || {}));
+      if (event.rearTargets?.length && maxRear >= 2 && pack.rearPlagueAlert) {
+        void showLine(actorName, pack.rearPlagueAlert, { tone: 'enraged', holdMs: 2600 });
+      } else if (age === 2 && pack.plagueTick) {
+        void showLine(actorName, pack.plagueTick, { tone: 'enraged', holdMs: 2200 });
+      }
     } else if (event.type === 'bombDetonate') {
       const targetId = event.targets?.[0] || event.bomb?.target;
       const targetName = context.roster?.get?.(targetId)?.name || targetId || '前排目标';
@@ -630,11 +781,8 @@ export function createOverlordBattle(context) {
         holdMs: 3200,
         interrupt: false,
       });
-    } else if (
-      event.statusTriggers?.some((st) => st.type === 'break' && st.id === activeBoss?.id) &&
-      pack.breakShatter
-    ) {
-      void showLine(actorName, pack.breakShatter, {
+    } else if (bossBroken && pack.breakShatter) {
+      void showLine(activeBoss.def.name, pack.breakShatter, {
         tone: 'party',
         holdMs: 3200,
         interrupt: true,
@@ -724,17 +872,24 @@ export function createOverlordBattle(context) {
   }
 
   function reset() {
+    cutsceneToken++;
     introPlayedKey = '';
     domainLockedRound = -1;
+    lastCorruptBarkKey = '';
     clearDialogue();
     disarmBombTimer({ resetKey: true });
     applySeal(false);
     cutsceneSurface.hide();
     cutsceneLayer.hidden = true;
+    plagueEdge.hidden = true;
+    delete plagueEdge.dataset.mode;
+    delete plagueEdge.dataset.rearDanger;
     const battleEl = $('#battle');
     if (battleEl) {
       battleEl.classList.remove('overlord-heavy-shake');
       delete battleEl.dataset.overlordStage;
+      delete battleEl.dataset.overlordTheme;
+      syncPlague(battleEl, false, null);
     }
   }
 
@@ -765,6 +920,7 @@ export function createOverlordBattle(context) {
       cutsceneLayer.remove();
       dialogueBar.remove();
       bombVignette.remove();
+      plagueEdge.remove();
     },
   };
 }

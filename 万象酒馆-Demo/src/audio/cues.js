@@ -1,5 +1,6 @@
 import { attackStyle, ATTACK_TIMING } from '../combat-art.js';
 import { definition } from '../catalog.js';
+import { APEP_ID, APEP_RELEASE, apepAttack } from '../apep-presentation.js';
 
 /** New motion names reuse the matching shipped sound family instead of playing silence. */
 export function combatSoundStyle(style) {
@@ -13,8 +14,9 @@ export function combatSoundStyle(style) {
 }
 
 /** Only executed combat events create cues; forecasts remain silent. */
-export function combatCues(event, before, speed = 1) {
-  if (event.type === 'bossPhase') return [{ name: 'combine', delay: 0 }];
+export function combatCues(event, before, speed = 1, visualDuration = 0) {
+  if (event.type === 'bossPhase')
+    return event.actor === APEP_ID ? [] : [{ name: 'combine', delay: 0 }];
   const deaths = Object.keys(before.units).filter(
     (id) =>
       before.units[id].hp > 0 && event.after?.units[id]?.hp === 0 && definition(before, id)?.boss,
@@ -29,6 +31,17 @@ export function combatCues(event, before, speed = 1) {
   ]);
   if (event.type === 'item') return [{ name: 'cast', delay: 0 }];
   if (event.type === 'swap') return [{ name: 'exchange', delay: 0 }];
+  if (event.type === 'sinkingPlague' && event.actor === APEP_ID)
+    return [{ name: 'apep-plague-tick', delay: 0 }, ...deathCues];
+  const lambAttack = apepAttack(event);
+  if (lambAttack) {
+    const delay = ((visualDuration || 1500) * APEP_RELEASE) / (1000 * speed);
+    return [
+      { name: 'apep-inhale', delay: 0 },
+      { name: `apep-${lambAttack.type}`, delay },
+      ...deathCues,
+    ];
+  }
   if (!['hero', 'enemy', 'counter', 'entrySkill'].includes(event.type)) return deathCues;
   const friendly =
     event.targets.length > 0 &&
@@ -46,6 +59,41 @@ export function combatCues(event, before, speed = 1) {
 
 // [wave, start Hz, end Hz, seconds, level, delay seconds, noise filter Hz]
 export const SOUND_CUES = {
+  'apep-inhale': [
+    ['sine', 48, 81, 0.54, 0.14],
+    ['noise', 0, 0, 0.49, 0.085, 0.02, 460],
+  ],
+  'apep-splash': [
+    ['noise', 0, 0, 0.43, 0.13, 0, 680],
+    ['triangle', 168, 49, 0.29, 0.082, 0.03],
+  ],
+  'apep-plague': [
+    ['sine', 79, 31, 0.9, 0.22],
+    ['noise', 0, 0, 0.73, 0.16, 0.05, 610],
+    ['triangle', 232, 88, 0.55, 0.048, 0.14],
+  ],
+  'apep-plague-tick': [
+    ['sine', 87, 43, 0.32, 0.14],
+    ['noise', 0, 0, 0.33, 0.081, 0, 430],
+    ['sine', 61, 35, 0.36, 0.068, 0.15],
+  ],
+  'apep-shell': [
+    ['triangle', 541, 141, 0.18, 0.095],
+    ['noise', 0, 0, 0.3, 0.125, 0.06, 1460],
+  ],
+  'apep-tide': [
+    ['sine', 99, 31, 0.92, 0.22],
+    ['noise', 0, 0, 0.8, 0.19, 0, 760],
+  ],
+  'apep-gaze': [
+    ['triangle', 787, 273, 0.37, 0.068],
+    ['sine', 185, 59, 0.45, 0.13, 0.054],
+  ],
+  'apep-eclipse': [
+    ['sine', 68, 33, 1.1, 0.22],
+    ['triangle', 98, 63, 0.85, 0.082],
+    ['noise', 0, 0, 0.77, 0.14, 0.04, 640],
+  ],
   'boss-death-charge': [
     ['sine', 70, 170, 0.68, 0.13],
     ['noise', 0, 0, 0.64, 0.07, 0, 650],

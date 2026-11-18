@@ -17,6 +17,7 @@ export function browserJobs(scopes, results, root) {
       browserOnly,
     );
   simple('battle-controls', 'battle-controls', 'battleControlChecks');
+  simple('apep-vfx', 'apep-vfx', 'apepVfxChecks');
   simple('daily', 'daily', 'dailyChecks');
   simple('overland', 'overland', 'overlandChecks');
   simple('disk-storage', 'disk-storage', 'diskStorageChecks', [], true);

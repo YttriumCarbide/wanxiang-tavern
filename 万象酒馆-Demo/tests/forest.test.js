@@ -177,7 +177,7 @@ test('forest supports heal and shield enemies, never players; tactical targeting
   const heal = preview(state, []).events.find(
     (e) => e.actor === 'honeyLarva' && e.type === 'enemy',
   );
-  assert.equal(heal.after.units.hiveGuard.hp, 23);
+  assert.equal(heal.after.units.hiveGuard.hp, 30);
   assert.equal(heal.after.units.aegis.hp, 5);
 });
 

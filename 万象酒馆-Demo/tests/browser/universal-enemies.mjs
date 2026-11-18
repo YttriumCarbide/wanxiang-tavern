@@ -41,6 +41,7 @@ export async function universalEnemyChecks({ browser, baseURL, output }) {
     for (const [name, mapId, ids, expectBadges, expectMounted] of [
       ['overlords-standing-on-cards', 'relic', ['apepLamb', 'radiantWyvern', 'ares'], 3, 3],
       ['ares-formation-on-cards', 'frost', ['aresCannonLeft', 'ares', 'aresCannonRight'], 1, 3],
+      ['moon-tree-formation', 'forest', ['moonCrown', 'moonEye', 'moonRoot'], 3, 3],
       [
         'mill-overlord-battlefield',
         'mill',
@@ -53,6 +54,7 @@ export async function universalEnemyChecks({ browser, baseURL, output }) {
         async ({ mapId, enemyIds }) => {
           const { createBattleView } = await import('/src/scene.js');
           const { newBattle, preview } = await import('/src/engine.js');
+          const { Box3, Vector3 } = await import('three');
           const stage = document.querySelector('#art-stage');
           stage.style.inset = '0';
           const state = newBattle(enemyIds);
@@ -68,7 +70,38 @@ export async function universalEnemyChecks({ browser, baseURL, output }) {
               visibleBattleCards++;
             }
           });
+          let tree = null;
+          if (enemyIds.includes('moonEye')) {
+            await window.universalView.whenSettled();
+            const scene = window.universalView.scene;
+            const left = scene
+              .getObjectByName('Overlord_Figure_moonCrown')
+              .getObjectByName('Moon_Tree_Left');
+            const right = scene
+              .getObjectByName('Overlord_Figure_moonRoot')
+              .getObjectByName('Moon_Tree_Right');
+            const leftBounds = new Box3().setFromObject(left);
+            const rightBounds = new Box3().setFromObject(right);
+            const eye = scene.getObjectByName('Overlord_Figure_moonEye');
+            const crown = eye.getObjectByName('Moon_Crown_Continuous_Canopy');
+            const crownBounds = new Box3().setFromObject(crown);
+            tree = {
+              span: leftBounds.clone().union(rightBounds).getSize(new Vector3()).x,
+              crownWidth: Math.min(-crownBounds.min.x, crownBounds.max.x),
+              mirroredBounds: Math.max(
+                Math.abs(leftBounds.min.x + rightBounds.max.x),
+                Math.abs(leftBounds.max.x + rightBounds.min.x),
+                Math.abs(leftBounds.min.y - rightBounds.min.y),
+                Math.abs(leftBounds.min.z - rightBounds.min.z),
+              ),
+              hasSpeakerBoxes: Boolean(
+                scene.getObjectByName('Shoulder_Missile_Pod_L') ||
+                scene.getObjectByName('Shoulder_Missile_Pod_R'),
+              ),
+            };
+          }
           return {
+            tree,
             status: window.universalView.overlordStatus(),
             overlordBadges: document.querySelectorAll(
               '.unit-hit.is-overlord .enemy-tier-badge.is-overlord',
@@ -114,6 +147,21 @@ export async function universalEnemyChecks({ browser, baseURL, output }) {
           'Break_Stagger',
         ]) {
           assert(puppet.animations.includes(clipName), `Missing puppet clip ${clipName}`);
+        }
+      }
+      if (name === 'moon-tree-formation') {
+        assert(
+          check.tree.span > 9.6,
+          `Moon Tree crown and roots should span all three cards (${check.tree.span})`,
+        );
+        assert(check.tree.mirroredBounds < 0.04, 'Mother Tree must be mirrored in its battle pose');
+        assert(check.tree.crownWidth > 1.8, 'Mother Tree should have one continuous crown');
+        assert.equal(check.tree.hasSpeakerBoxes, false);
+      }
+      if (name === 'ares-formation-on-cards') {
+        const ares = check.status.mounted.find(({ id }) => id === 'ares');
+        for (const clip of ['Idle', 'Normal_Attack', 'Special_Attack', 'Special_Action']) {
+          assert(ares.animations.includes(clip), `Missing Ares clip ${clip}`);
         }
       }
       overlordResults.push({ name, mounted: check.status.mounted });

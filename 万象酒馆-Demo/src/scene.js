@@ -20,8 +20,10 @@ import { createCardDeaths } from './card-death.js';
 import { stabilizeFloorGeometry } from './floor-geometry.js';
 import { enemyIntentBadge } from './enemy-intent.js';
 import { combatRank } from './combat-scale.js';
-import { createOverlordModels, overlordAssetUrls } from './overlord-models.js';
+import { cardModelScale, createOverlordModels, overlordAssetUrls } from './overlord-models.js';
 import { deviceRenderQuality, createFrameBudget } from './shared/render-budget.js';
+import { APEP_ID, APEP_RELEASE, apepAttack, apepPlague } from './apep-presentation.js';
+import { createApepPlagueFloor } from './apep-plague-floor.js';
 
 function enemyTierBadge(definition) {
   if (definition.overlord) {
@@ -59,6 +61,7 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
   const visibleDefinitions = Object.values(definitions).filter((definition) =>
     activeIds.has(definition.id),
   );
+  const hasApep = activeIds.has(APEP_ID);
   const canvas = stage.querySelector('canvas'),
     layer = stage.querySelector('.unit-layer'),
     effects = stage.querySelector('.battle-effects');
@@ -84,7 +87,7 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
     throw error;
   };
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(theme.sky);
+  scene.background = new THREE.Color(hasApep ? '#271b24' : theme.sky);
   scene.add(
     new THREE.HemisphereLight('#c3d8de', '#364653', 1.25),
     new THREE.AmbientLight('#aab9c9', 0.2),
@@ -104,7 +107,7 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
   sun.shadow.bias = -0.00015;
   sun.shadow.normalBias = 0.025;
   scene.add(sun);
-  const rim = new THREE.DirectionalLight(theme.fill, 0.7);
+  const rim = new THREE.DirectionalLight(hasApep ? '#d59196' : theme.fill, 0.7);
   rim.position.set(3, 6, -7);
   scene.add(rim);
   const hasOverlord = visibleDefinitions.some((def) => def.overlord);
@@ -243,6 +246,7 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
       records.push(r);
       (side === 'Friendly' ? friendRecords : enemyRecords).push(r);
     }
+  const floorSlots = hasApep ? friendRecords.map(({ goal }) => goal.clone()) : [];
   let assignments = new Map(friendRecords.map((r) => [r.id, r])),
     width = 0,
     height = 0,
@@ -262,6 +266,7 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
   const releasedPositions = new Map(),
     dragMaterials = [];
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const plagueFloor = hasApep ? createApepPlagueFloor(scene, resources, floorSlots, reduced) : null;
   const emblemAura = createEmblemAura(scene, resources, reduced);
   const deaths = createCardDeaths({
     scene,
@@ -319,6 +324,7 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
   ) {
     if (disposed) return;
     currentState = s;
+    plagueFloor?.sync(s, forecast, playing);
     if (!playing && s.phase === 'plan') deaths.releaseCinematic();
     if (playing) clearHints();
     const formation = playing ? s.formation : forecast.final.formation,
@@ -366,6 +372,7 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
         delete record.el.dataset.unit;
         delete record.el.dataset.dragunit;
         delete record.el.dataset.side;
+        delete record.el.dataset.apepPlague;
         record.el.replaceChildren();
         record.motion = null;
       }
@@ -376,6 +383,8 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
       );
     first = false;
     overlords.sync(enemyRecords, s);
+    const currentPlague = apepPlague(s);
+    const nextPlague = playing ? null : apepPlague(forecast.final);
     for (const r of records) {
       if (!r.id) continue;
       const { id, side, slot, root, el } = r,
@@ -404,7 +413,7 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
       el.classList.toggle('combined-selected', r.emblemSelected);
       el.classList.toggle('can-awaken', canAwaken);
       if (s?.dragonVein && !reduced) schedule();
-      r.restScale = d.boss ? 1.08 : 1;
+      r.restScale = cardModelScale(d);
       if (side === 'Friendly') {
         root.visible = true;
         el.hidden = false;
@@ -445,6 +454,9 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
       el.dataset.unit = id;
       el.dataset.side = side;
       el.dataset.slot = slot;
+      if (side === 'Friendly' && (currentPlague || nextPlague) && u.hp > 0) {
+        el.dataset.apepPlague = currentPlague ? 'active' : 'preview';
+      } else delete el.dataset.apepPlague;
       if (side === 'Friendly') el.dataset.dragunit = id;
       el.disabled = playing;
       el.setAttribute(
@@ -655,6 +667,7 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
     moving = overlords.update(now) || moving;
     moving = weather.update(now) || moving;
     moving = fx.update(now) || moving;
+    moving = plagueFloor?.update(now) || moving;
     for (const r of records) {
       if (activeDrag?.record === r) continue;
       if (r.motion) {
@@ -772,6 +785,11 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
   }
   const fx = createEffects(effects, center, () => animationSpeed, {
     onSpawn: schedule,
+    plagueFloorPoints: () =>
+      floorSlots.map((position) => {
+        const point = project(position.x, 0.295, position.z + 1.53);
+        return { x: (point.x * 0.5 + 0.5) * width, y: (-point.y * 0.5 + 0.5) * height };
+      }),
     onImpact({ heavy, delay = 0, hitStopMs = 75 } = {}) {
       if (reduced) return;
       const waitMs = Math.max(0, delay) / Math.max(0.4, animationSpeed);
@@ -813,6 +831,8 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
     if (disposed) return 0;
     const actorDef = e.actor ? definitions[e.actor] : null;
     const isOverlordEnemy = e.type === 'enemy' && Boolean(actorDef?.overlord);
+    const lambAttack = apepAttack(e);
+    const lambPhase = e.actor === APEP_ID && e.type === 'bossPhase';
     const clipSpec = {
       type: e.type,
       clip: e.clip,
@@ -825,27 +845,74 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
     const durationOverride = isOverlordEnemy
       ? overlords.actionDurationMs?.(e.actor, clipSpec) || 1850
       : 0;
-    const duration = fx.play(e, before, records, durationOverride ? { durationOverride } : {});
+    let sourceOverride;
+    if (lambAttack || lambPhase) {
+      const actor = enemyRecords.find(({ id }) => id === APEP_ID);
+      const eye = actor?.overlordMount?.figure.getObjectByName('Apep_Sternum_Eye');
+      if (eye) {
+        const point = eye.getWorldPosition(new THREE.Vector3()).project(camera);
+        sourceOverride = { x: (point.x * 0.5 + 0.5) * width, y: (-point.y * 0.5 + 0.5) * height };
+      }
+    }
+    const duration = fx.play(e, before, records, { durationOverride, sourceOverride });
+    if (lambAttack?.type === 'plague' || (e.actor === APEP_ID && e.type === 'sinkingPlague')) {
+      plagueFloor?.play(e, lambAttack ? duration * APEP_RELEASE : 0, animationSpeed);
+    }
     if ((e.type === 'enemy' || e.type === 'bossPhase') && e.actor) {
       let lunge = null;
-      if (isOverlordEnemy && !e.fixedFirstSlot && e.damageType && e.targets?.length) {
-        const bossRec = enemyRecords.find((r) => r.id === e.actor);
-        const tRecs = e.targets.map((tid) => records.find((r) => r.id === tid)).filter(Boolean);
-        if (bossRec && tRecs.length) {
-          const avg = tRecs
+      let casterMotion = null;
+      const bossRec = enemyRecords.find((r) => r.id === e.actor);
+      const tRecs = (e.targets || [])
+        .map((tid) => records.find((r) => r.id === tid))
+        .filter(Boolean);
+      const avg = tRecs.length
+        ? tRecs
             .reduce((acc, rec) => acc.add(rec.goal), new THREE.Vector3())
-            .divideScalar(tRecs.length);
-          lunge = {
-            dx: avg.x - bossRec.goal.x,
-            dz: avg.z - bossRec.goal.z - (tRecs.length > 1 ? 0.65 : 1.18),
-            aoe: tRecs.length > 1,
-            parentScale: bossRec.restScale || 1,
-            durationMs:
-              Math.min(1360, (durationOverride || 1850) * 0.68) / Math.max(0.4, animationSpeed),
-          };
-        }
+            .divideScalar(tRecs.length)
+        : null;
+      if (e.actor === APEP_ID) {
+        const motionStyle = lambPhase
+          ? 'eclipse-ascend'
+          : {
+              Apep_Plague: 'plague-slam',
+              Apep_Tide: 'tide-surge',
+              Apep_Gaze: 'gaze-advance',
+              Apep_Splash: 'splash-whip',
+              Apep_Shell: 'shell-coil',
+              Apep_Eclipse: 'eclipse-ascend',
+            }[e.clip] || 'tide-surge';
+        casterMotion = {
+          style: motionStyle,
+          dx: avg && bossRec ? (avg.x - bossRec.goal.x) * 0.62 : 0,
+          dz: avg && bossRec ? (avg.z - bossRec.goal.z - 1.15) * 0.45 : -0.75,
+          parentScale: bossRec?.restScale || 1,
+          durationMs:
+            Math.max(1150, durationOverride || duration || 1850) / Math.max(0.45, animationSpeed),
+        };
+      } else if (
+        !lambPhase &&
+        isOverlordEnemy &&
+        !e.fixedFirstSlot &&
+        e.damageType &&
+        tRecs.length &&
+        bossRec &&
+        avg
+      ) {
+        lunge = {
+          dx: avg.x - bossRec.goal.x,
+          dz: avg.z - bossRec.goal.z - (tRecs.length > 1 ? 0.65 : 1.18),
+          aoe: tRecs.length > 1,
+          parentScale: bossRec.restScale || 1,
+          durationMs:
+            Math.min(1360, (durationOverride || 1850) * 0.68) / Math.max(0.4, animationSpeed),
+        };
       }
-      overlords.playAction?.(e.actor, { ...clipSpec, lunge });
+      overlords.playAction?.(e.actor, {
+        ...clipSpec,
+        ...(lambPhase ? { clip: 'Apep_Eclipse' } : {}),
+        lunge,
+        casterMotion,
+      });
     }
     for (const trig of e.statusTriggers || []) {
       if (trig.type === 'break' && trig.id) {

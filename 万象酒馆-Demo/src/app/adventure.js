@@ -586,6 +586,7 @@ export function createAdventure(context) {
           heading: nodeData?.title || book().title,
           prose: nodeData?.description || '',
           map: trip().exploration?.map || 'ruins',
+          testScript: book().title === '旅途测试',
         });
       }
     }

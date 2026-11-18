@@ -541,7 +541,11 @@ export function createOnboarding(context) {
       context.ledger?.sync();
     },
     allowPortal(kind) {
-      if (kind === 'script' && developerOption(session.ai.generationOptions, 'quickTest'))
+      if (
+        kind === 'script' &&
+        (developerOption(session.ai.generationOptions, 'quickTest') ||
+          developerOption(session.ai.generationOptions, 'quickTestApep'))
+      )
         return true;
       const unlocked = session.ai.library.unlockedDungeons || [];
       const millOrLegacyUnlocked = unlocked.includes('mill') || unlocked.includes('ruins');
@@ -664,6 +668,7 @@ export function createOnboarding(context) {
     beforeCommit() {
       if (
         developerOption(session.ai.generationOptions, 'quickTest') ||
+        developerOption(session.ai.generationOptions, 'quickTestApep') ||
         session.journey.expedition?.exploration?.quickTestBoss
       )
         return true;
@@ -799,6 +804,7 @@ export function createOnboarding(context) {
     allowReturn() {
       if (
         developerOption(session.ai.generationOptions, 'quickTest') ||
+        developerOption(session.ai.generationOptions, 'quickTestApep') ||
         session.journey.expedition?.exploration?.quickTestBoss
       )
         return true;

@@ -11,21 +11,35 @@ export function createPlanning(context) {
     context.audio.play('error');
     return context.shell.toast(message);
   }
-  function preferredStart(ap, actor = session.selection.selected) {
+  function blockedByPlagueSlot(start, ap, kind = 'skill') {
+    if (session.battle.state.phase === 'opening' || ['swap', 'reposition'].includes(kind)) {
+      return false;
+    }
+    const corrupted = session.battle.state.sinkingPlague?.corruptedSlot;
+    if (!Number.isInteger(corrupted)) return false;
+    const slots = session.battle.forecast.slots;
+    for (let i = start; i < start + ap; i += 1) {
+      if (i === corrupted && !slots[corrupted]) return true;
+    }
+    return false;
+  }
+  function preferredStart(ap, actor = session.selection.selected, kind = 'skill') {
     if (actor) {
       const emptyMarker = session.battle.plan.find(
         (entry) => entry.kind === 'engage' && !entry.followUp && entry.actor === actor,
       );
-      if (emptyMarker && fitsAt(emptyMarker.start, ap, emptyMarker.id)) {
+      if (emptyMarker && fitsAt(emptyMarker.start, ap, emptyMarker.id, kind)) {
         return emptyMarker.start;
       }
     }
-    return session.selection.selectedCell >= 0 &&
-      !session.battle.forecast.slots[session.selection.selectedCell]
-      ? session.selection.selectedCell
-      : fit(ap);
+    const chosen = session.selection.selectedCell;
+    return chosen >= 0 &&
+      !session.battle.forecast.slots[chosen] &&
+      !blockedByPlagueSlot(chosen, ap, kind)
+      ? chosen
+      : fit(ap, undefined, kind);
   }
-  function fit(ap, exclude) {
+  function fit(ap, exclude, kind = 'skill') {
     const occupied = new Set();
     for (const a of session.battle.plan) {
       if (a.id === exclude) continue;
@@ -33,6 +47,7 @@ export function createPlanning(context) {
     }
     for (let i = 0; i < session.battle.forecast.slots.length; i++) {
       if (i + ap > session.battle.forecast.slots.length) continue;
+      if (blockedByPlagueSlot(i, ap, kind)) continue;
       let ok = true;
       for (let j = i; j < i + ap; j++)
         if (session.battle.forecast.slots[j] || occupied.has(j)) ok = false;
@@ -43,8 +58,9 @@ export function createPlanning(context) {
   function recompute() {
     session.battle.forecast = preview(session.battle.state, session.battle.plan);
   }
-  function fitsAt(start, ap, exclude) {
+  function fitsAt(start, ap, exclude, kind = 'skill') {
     if (start < 0 || start + ap > session.battle.forecast.slots.length) return false;
+    if (blockedByPlagueSlot(start, ap, kind)) return false;
     for (let i = start; i < start + ap; i++) {
       if (session.battle.forecast.slots[i]) return false;
       if (session.battle.plan.some((a) => a.id !== exclude && i >= a.start && i < a.start + a.ap))
@@ -72,15 +88,21 @@ export function createPlanning(context) {
       const emptyMarker = session.battle.plan.find(
         (entry) => entry.kind === 'engage' && !entry.followUp && entry.actor === a.actor,
       );
-      if (emptyMarker && fitsAt(emptyMarker.start, a.ap, emptyMarker.id)) {
+      if (emptyMarker && fitsAt(emptyMarker.start, a.ap, emptyMarker.id, a.kind)) {
         marker = emptyMarker;
         start = emptyMarker.start;
       }
     }
     if (marker && (a.kind !== 'skill' || marker.actor !== a.actor))
       return blocked('结合格只能安排同一角色的行动。');
-    if (!fitsAt(start, a.ap, marker?.id))
-      return blocked(a.ap === 2 ? '2 AP技能需要两个连续空格。' : '这个时间格已被占据。');
+    if (!fitsAt(start, a.ap, marker?.id, a.kind))
+      return blocked(
+        blockedByPlagueSlot(start, a.ap, a.kind)
+          ? '该回合格已被【沉疫】腐化：仅限换位，或以缓慢逼敌踩占解除！'
+          : a.ap === 2
+            ? '2 AP技能需要两个连续空格。'
+            : '这个时间格已被占据。',
+      );
     if (marker) {
       marker.followUp = { skill: a.skill, target: a.target };
       marker.ap = a.ap;
@@ -96,12 +118,12 @@ export function createPlanning(context) {
     const marker = session.battle.plan.find(
       (entry) => entry.kind === 'engage' && entry.start === start && entry.actor === actor,
     );
-    return fitsAt(start, ap, marker?.id);
+    return fitsAt(start, ap, marker?.id, 'skill');
   }
   function queueEngage(actor) {
     if (!context.viewport.canPlan() || !canCombine(session.battle.forecast.final, actor))
       return false;
-    const start = fit(1);
+    const start = fit(1, undefined, 'engage');
     if (start < 0) return blocked('没有空余时间格可以结合。');
     session.battle.plan.push(makeEngage(actor, start));
     session.selection.selectedCell = start;
@@ -121,8 +143,9 @@ export function createPlanning(context) {
   }
   function queueSwap(id, slot) {
     if (!context.viewport.canPlan()) return false;
-    const start = preferredStart(1);
-    if (!fitsAt(start, 1)) return blocked('所选时间格无法交换，请选择空格或取消选择。');
+    const start = preferredStart(1, null, 'swap');
+    if (!fitsAt(start, 1, undefined, 'swap'))
+      return blocked('所选时间格无法交换，请选择空格或取消选择。');
     const formation = session.battle.forecast.final.formation,
       index = formation.indexOf(id);
     if ((index >= 3 || slot >= 3) && !rearUnlocked(session.ai.library))

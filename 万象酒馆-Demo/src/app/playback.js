@@ -4,6 +4,7 @@ import { claimEnemyDrops } from '../enemy-drops.js';
 import { advance } from '../engine.js';
 import { mergeRevealedWeaknessMap } from '../octopath.js';
 import { playbackBeats, PLAYBACK_BEAT_MS } from '../playback-timing.js';
+import { APEP_ID, apepAttack } from '../apep-presentation.js';
 import { query as $, sleep } from './dom.js';
 
 /** @param {import('./context.js').AppContext} context */
@@ -100,8 +101,8 @@ export function createPlayback(context) {
           } else if (event.type === 'bombDetonate' || event.type === 'bombDefuse') {
             beatWaitMs = Math.max(beatWaitMs, eventMs + 150);
           }
-          context.audio.combat(event, before, session.battle.speed);
-          if (event.type === 'bossPhase' && event.overlord) {
+          context.audio.combat(event, before, session.battle.speed, eventMs);
+          if (event.type === 'bossPhase' && (event.overlord || event.actor === APEP_ID)) {
             await context.overlordBattle?.onEvent(event);
           } else if (event.type === 'bossPhase') {
             context.battleBarks?.bossEnraged(event.actor);
@@ -111,6 +112,7 @@ export function createPlayback(context) {
               2200 * session.battle.speed,
             );
           } else if (
+            (event.actor === APEP_ID && (apepAttack(event) || event.type === 'sinkingPlague')) ||
             event.overlordDomainLock ||
             event.chargeStarted ||
             event.type === 'bombDetonate' ||
@@ -183,7 +185,7 @@ export function createPlayback(context) {
       if (session.battle.state.phase === 'victory' || session.battle.state.phase === 'defeat') {
         context.overlordBattle?.disarmBombTimer?.();
         context.overlordBattle?.clearSeal?.();
-        context.journey.showResult();
+        void context.journey.showResult().catch((error) => console.error(error));
       } else {
         context.overlordBattle?.sync?.();
       }

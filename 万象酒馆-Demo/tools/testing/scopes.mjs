@@ -1,4 +1,5 @@
 export const allScopes = [
+  'apep-vfx',
   'daily',
   'overland',
   'disk-storage',

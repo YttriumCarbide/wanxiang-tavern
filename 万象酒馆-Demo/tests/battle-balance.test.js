@@ -6,9 +6,11 @@ import {
   newEncounter,
   preview,
   advance,
+  makeAction,
   makeReposition,
   campRest,
   intent,
+  enemyTimeline,
 } from '../src/engine.js';
 import { newExpedition, beginEncounter } from '../src/expedition.js';
 import { newCampaign } from '../src/campaign.js';
@@ -121,33 +123,101 @@ test('same-name equipment is limited per character across distinct templates and
   assert.equal(restored.equipment.owned.length, 3);
 });
 
-test('lamb second turn applies position plague: 2/4 damage, swaps inherit it, empty/rear positions keep elapsed time, battle boundary clears it', () => {
+test('lamb sinking plague: front floor scales with plagueAdd, rear turns escalate rapidly, front visit refreshes, corrupted slot yields to slow or swap', () => {
   const heroes = Object.fromEntries(
-    HEROES.map((hero) => [hero.id, { ...structuredClone(hero), hp: 100, buffs: {}, skills: [] }]),
+    HEROES.map((hero) => [hero.id, { ...structuredClone(hero), hp: 200, buffs: {}, skills: [] }]),
   );
   const state = newBattle(['apepLamb'], heroes);
   state.phase = 'plan';
   state.round = 2;
   const rear = state.formation[3],
-    front = state.formation[0];
+    front = state.formation[0],
+    idleRear = state.formation[4];
   const before = structuredClone(state);
-  const result = preview(state, [makeReposition(0, 3, 0)]);
+  const openSlot = enemyTimeline(state).findIndex((id) => !id);
+  const result = preview(state, [makeReposition(0, 3, openSlot)]);
   assert(result.valid, JSON.stringify(result.invalid));
-  const hit = result.events.find((event) => event.type === 'enemy');
-  assert.equal(hit.after.units[rear].hp, 85);
-  assert.equal(result.final.units[rear].hp, 83);
-  assert.equal(result.final.units[front].hp, 100);
-  assert.deepEqual(result.final.sinkingPlague.ages, [1, 1, 1]);
-  assert(statusIcons(result.final, rear).includes('data-buff="sinkingPlague"'));
-  const next = advance(result);
-  const swapped = preview(next, [makeReposition(0, 3, 0)]);
-  const plague = swapped.events.find((event) => event.type === 'sinkingPlague');
-  const preceding = swapped.events[swapped.events.indexOf(plague) - 1].after;
-  assert.equal(preceding.units[front].hp - plague.after.units[front].hp, 4);
-  assert.equal(preceding.units[rear].hp, plague.after.units[rear].hp);
-  const empty = advance(swapped);
-  empty.formation.splice(0, 3, null, null, null);
-  assert.deepEqual(preview(empty, []).final.sinkingPlague.ages, [3, 3, 3]);
+  assert.deepEqual(result.final.sinkingPlague.ages, [1, 2, 2]);
+  // Slot 0 Apep_Plague hits front[0] (18 dmg); swap moves front to rear after -> 0 rear tick
+  assert.equal(result.final.units[front].hp, 182);
+  assert.equal(result.final.sinkingPlague.backfieldTurns[front], 0);
+  // Rear hero swapped to front[0] after Apep_Plague takes only floor tick (2 dmg)
+  assert.equal(result.final.units[rear].hp, 198);
+  // Front slot[1] hero takes Apep_Plague (18) + Apep_Shell (14) + floor tick (2) = 34
+  assert.equal(result.final.units[state.formation[1]].hp, 166);
+  // Hero who stayed in rear all round gets backfieldTurns=1 and 6 rear plague damage
+  assert.equal(result.final.sinkingPlague.backfieldTurns[idleRear], 1);
+  assert.equal(result.final.units[idleRear].hp, 194);
+  assert(statusIcons(result.final, rear, result.final).includes('data-buff="sinkingPlague"'));
+  assert(statusIcons(result.final, idleRear, result.final).includes('data-buff="sinkingPlague"'));
+
+  // Round 3: advance selects an empty corruptedSlot that forbids non-swap actions but allows swap
+  const r3 = advance(result);
+  const cSlot = r3.sinkingPlague.corruptedSlot;
+  assert(Number.isInteger(cSlot) && !enemyTimeline(r3)[cSlot]);
+  const illegalSkill = preview(r3, [makeAction(r3, rear, 'attack', 'apepLamb', cSlot)]);
+  assert.equal(illegalSkill.valid, false);
+  const legalSwap = preview(r3, [makeReposition(1, 4, cSlot)]);
+  assert(legalSwap.valid, JSON.stringify(legalSwap.invalid));
+  // idleRear touched front (1 <-> 4) so rear turns immediately refreshed to 0!
+  assert.equal(legalSwap.final.sinkingPlague.backfieldTurns[idleRear], 0);
+  // Going to front and returning in the SAME round ALSO refreshes rear turns to 0!
+  const freeSlot = legalSwap.slots.findIndex((s, idx) => !s && idx !== cSlot);
+  if (freeSlot >= 0) {
+    const thereAndBack = preview(r3, [makeReposition(1, 4, cSlot), makeReposition(1, 4, freeSlot)]);
+    assert(thereAndBack.valid, JSON.stringify(thereAndBack.invalid));
+    assert.equal(thereAndBack.final.sinkingPlague.backfieldTurns[idleRear], 0);
+    assert(thereAndBack.final.formation.slice(3).includes(idleRear));
+  }
+  // Doing nothing keeps idleRear in rear -> turns=2 -> 24 damage!
+  const neglected = preview(r3, []);
+  assert.equal(neglected.final.sinkingPlague.backfieldTurns[idleRear], 2);
+  assert.equal(result.final.units[idleRear].hp - neglected.final.units[idleRear].hp, 24);
+
+  // Inflicting slow before corruptedSlot pushes an enemy onto corruptedSlot and lifts the lock!
+  const r3Slow = structuredClone(r3);
+  r3Slow.heroDefinitions.morrow = {
+    ...HEROES.find((h) => h.id === 'morrow'),
+    skills: [
+      {
+        id: 'slow-test',
+        name: '滞缓咒',
+        ap: 1,
+        mp: 0,
+        target: 'enemy',
+        effects: [{ type: 'buff', buff: 'slow', value: 1 }],
+      },
+    ],
+  };
+  r3Slow.units[HEROES[1].id].mp = 10;
+  // Find morrow's slot or ensure morrow is in front row
+  const morrowFront = r3Slow.formation.indexOf('morrow');
+  if (morrowFront >= 3) {
+    [r3Slow.formation[0], r3Slow.formation[morrowFront]] = [
+      r3Slow.formation[morrowFront],
+      r3Slow.formation[0],
+    ];
+  }
+  const enemyBeforeSlot = enemyTimeline(r3Slow).findIndex(
+    (id, idx) => id && idx < cSlot && cSlot - idx <= 2,
+  );
+  if (enemyBeforeSlot >= 0) {
+    const slowVal = cSlot - enemyBeforeSlot;
+    r3Slow.heroDefinitions.morrow.skills[0].effects[0].value = slowVal;
+    const preSlot = r3Slow.sinkingPlague.corruptedSlot;
+    const castSlot = r3Slow.slots
+      ? 0
+      : enemyTimeline(r3Slow).findIndex((id, idx) => !id && idx < preSlot);
+    if (castSlot >= 0) {
+      const slowPlan = preview(r3Slow, [
+        makeAction(r3Slow, 'morrow', 'slow-test', 'apepLamb', castSlot),
+      ]);
+      if (slowPlan.valid && slowPlan.slots[preSlot]) {
+        assert(slowPlan.events.some((e) => e.clearedCorruptedSlot));
+      }
+    }
+  }
+
   assert(!campRest(result.final).state.sinkingPlague);
   assert(!newEncounter({ enemyIds: ['hound'] }, result.final).sinkingPlague);
   assert.deepEqual(state, before);

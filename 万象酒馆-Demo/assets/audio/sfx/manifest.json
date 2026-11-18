@@ -295,6 +295,54 @@
       "file": "assets/audio/sfx/boss-death-tail.wav",
       "seconds": 1.55,
       "bytes": 136754
+    },
+    {
+      "name": "apep-inhale",
+      "file": "assets/audio/sfx/apep-inhale.wav",
+      "seconds": 0.71,
+      "bytes": 62666
+    },
+    {
+      "name": "apep-splash",
+      "file": "assets/audio/sfx/apep-splash.wav",
+      "seconds": 0.52,
+      "bytes": 45908
+    },
+    {
+      "name": "apep-plague",
+      "file": "assets/audio/sfx/apep-plague.wav",
+      "seconds": 1.1,
+      "bytes": 97064
+    },
+    {
+      "name": "apep-plague-tick",
+      "file": "assets/audio/sfx/apep-plague-tick.wav",
+      "seconds": 0.57,
+      "bytes": 50318
+    },
+    {
+      "name": "apep-shell",
+      "file": "assets/audio/sfx/apep-shell.wav",
+      "seconds": 0.62,
+      "bytes": 54728
+    },
+    {
+      "name": "apep-tide",
+      "file": "assets/audio/sfx/apep-tide.wav",
+      "seconds": 1.1,
+      "bytes": 97064
+    },
+    {
+      "name": "apep-gaze",
+      "file": "assets/audio/sfx/apep-gaze.wav",
+      "seconds": 0.76,
+      "bytes": 67076
+    },
+    {
+      "name": "apep-eclipse",
+      "file": "assets/audio/sfx/apep-eclipse.wav",
+      "seconds": 1.48,
+      "bytes": 130580
     }
   ]
 }

@@ -46,6 +46,10 @@ export function createTimeline(context) {
       s = session.battle.state,
       slotList = session.battle.forecast.slots,
     ) => {
+      const openingSlot = opening && !readOnly && !id;
+      const hasAction =
+        openingSlot && session.battle.plan.some((a) => i >= a.start && i < a.start + a.ap);
+      const openingEmpty = openingSlot && !hasAction;
       const cancelled =
           !readOnly && id && session.battle.forecast.deaths.some((d) => d.id === id && d.at < i),
         bound =
@@ -71,13 +75,25 @@ export function createTimeline(context) {
           ? ''
           : totalActions > 1
             ? ` ${ROMAN[actionIndex] || `#${actionIndex + 1}`}`
-            : '';
+            : '',
+        corruptedSlot =
+          !readOnly && s.phase !== 'opening' && Number.isInteger(s.sinkingPlague?.corruptedSlot)
+            ? s.sinkingPlague.corruptedSlot
+            : null,
+        isCorruptedEmpty = corruptedSlot === i && !id,
+        isCorruptedCleansed = corruptedSlot === i && Boolean(id);
       return html`<button
-        class="time-cell ${id ? 'enemy-cell' : ''} ${fixedFirst ? 'overlord-fixed-cell' : ''} ${isChargeCell ? 'is-charge-cell' : ''} ${isChargedRelease ? 'is-charged-release' : ''} ${fixedFirst && bound ? 'is-chain-broken' : ''} ${cancelled ? 'cancelled' : ''} ${bound ? 'bound' : ''} ${!readOnly && (session.battle.activeCell === i || (!session.battle.playing && session.selection.selectedCell === i)) ? 'playing' : ''} ${readOnly ? 'preview-cell' : ''} ${readOnly && id && (session.selection.inspectedPreviewCell !== null ? session.selection.inspectedPreviewCell === i : session.selection.intentScope === 'all' && session.selection.inspectedEnemy ? true : id === session.selection.inspectedEnemy) ? 'playing' : ''}"
+        class="time-cell ${openingEmpty ? 'opening-empty' : ''} ${id ? 'enemy-cell' : ''} ${fixedFirst ? 'overlord-fixed-cell' : ''} ${isChargeCell ? 'is-charge-cell' : ''} ${isChargedRelease ? 'is-charged-release' : ''} ${fixedFirst && bound ? 'is-chain-broken' : ''} ${isCorruptedEmpty ? 'is-corrupted-slot' : ''} ${isCorruptedCleansed ? 'is-corrupted-cleansed' : ''} ${cancelled ? 'cancelled' : ''} ${bound ? 'bound' : ''} ${!readOnly && (session.battle.activeCell === i || (!session.battle.playing && session.selection.selectedCell === i)) ? 'playing' : ''} ${readOnly ? 'preview-cell' : ''} ${readOnly && id && (session.selection.inspectedPreviewCell !== null ? session.selection.inspectedPreviewCell === i : session.selection.intentScope === 'all' && session.selection.inspectedEnemy ? true : id === session.selection.inspectedEnemy) ? 'playing' : ''}"
         ${readOnly ? `data-preview="${i}"` : `data-start="${i}" data-motion="${id ? `enemy-${id}` : `empty-${i}`}"`}
+        ${hasAction ? 'tabindex="-1" aria-hidden="true"' : ''}
         ${session.battle.playing || (readOnly && !id) ? 'disabled' : ''}
-        ${id ? `data-tooltip="${escapeText(`${context.roster.get(id).name}${phaseTag} · ${bound ? (fixedFirst ? '破防失衡 · 定式金链已粉碎，本回合跳过' : '破防/禁锢，本回合行动取消') : fixedFirst ? `定式先制 · 免疫迟缓\n${move.name}：${move.text}` : `速度 ${Math.max(1, context.roster.get(id).speed - (s.units[id].buffs.slow || 0))}\n${move.name}：${move.text}`}`)}"` : ''}
+        ${id ? `data-tooltip="${escapeText(`${context.roster.get(id).name}${phaseTag} · ${bound ? (fixedFirst ? '破防失衡 · 定式金链已粉碎，本回合跳过' : '破防/禁锢，本回合行动取消') : fixedFirst ? `定式先制 · 免疫迟缓\n${move.name}：${move.text}` : `速度 ${Math.max(1, context.roster.get(id).speed - (s.units[id].buffs.slow || 0))}\n${move.name}：${move.text}`}${isCorruptedCleansed ? '\n★ 已被【缓慢】逼入沉疫腐化格，格位封锁解除！' : ''}`)}"` : isCorruptedEmpty ? `data-tooltip="${escapeText('沉疫腐化回合格\n仅允许放入【换位/调整站位】。\n若用【缓慢】将敌方推到此格，即可破除封锁！')}"` : ''}
       >
+        ${
+          isCorruptedEmpty
+            ? html`<span class="timeline-corrupt-sigil" aria-hidden="true"></span>`
+            : ''
+        }
         ${
           fixedFirst
             ? html`<span class="timeline-gold-chains" aria-hidden="true"
@@ -126,11 +142,15 @@ export function createTimeline(context) {
               ></span>`
             : ''
         }
-        <span class="num">${opening && !readOnly ? '◇' : i + 1}</span>${
+        ${hasAction ? '' : html`<span class="num">${openingEmpty ? '◇' : i + 1}</span>`}${
           id ? damageTypeChip(enemyDmgType, { size: 13, className: 'cell-dmg-type' }) : ''
-        }<span class="cell-label"
-          >${id ? `${cancelled ? '× ' : ''}${context.roster.get(id).name}${phaseTag}` : opening && !readOnly ? '先手' : readOnly ? '我方行动' : '＋'}${id ? html`<small>${fixedFirst ? (bound ? '破防震裂' : '定式先制') : isChargedRelease ? (bound ? '破防打断' : '⚡蓄力释放') : isChargeCell ? '蓄力聚能' : totalActions > 1 ? move.name : `速度 ${Math.max(1, context.roster.get(id).speed - (s.units[id].buffs.slow || 0))}`}</small>` : ''}</span
-        >
+        }${
+          hasAction
+            ? ''
+            : html`<span class="cell-label"
+                >${id ? `${cancelled ? '× ' : ''}${context.roster.get(id).name}${phaseTag}` : openingEmpty ? '先手' : isCorruptedEmpty ? '换位格' : readOnly ? '我方行动' : '＋'}${id ? html`<small>${fixedFirst ? (bound ? '破防震裂' : '定式先制') : isChargedRelease ? (bound ? '破防打断' : '⚡蓄力释放') : isChargeCell ? '蓄力聚能' : isCorruptedCleansed ? '已踩消腐格' : totalActions > 1 ? move.name : `速度 ${Math.max(1, context.roster.get(id).speed - (s.units[id].buffs.slow || 0))}`}</small>` : isCorruptedEmpty ? html`<small>沉疫·只换位</small>` : ''}</span
+              >`
+        }
       </button>`;
     };
     timeline.innerHTML = session.battle.forecast.slots.map((id, i) => cell(id, i)).join('');
@@ -192,8 +212,7 @@ export function createTimeline(context) {
         const incomingDef = context.roster.get(a.incoming);
         actionDmgBadge = actionDmgChip(inferDamageType(incomingDef.entrySkill, incomingDef));
       }
-      el.innerHTML = html`<span class="action-number">${opening ? '◇' : a.start + 1}</span
-        >${actionDmgBadge}
+      el.innerHTML = html`<span class="action-number">${a.start + 1}</span>${actionDmgBadge}
         <div class="time-action-body">
           <b
             >${skip ? '× ' : bad ? '! ' : ''}${a.kind === 'item' ? ITEMS[a.item].name : a.kind === 'skill' ? context.roster.ability(a.actor, a.skill).name : a.kind === 'engage' ? `结合${a.followUp ? ' · ' + context.roster.ability(a.actor, a.followUp.skill).name : ''}` : a.kind === 'swap' ? (session.battle.state.units[a.incoming]?.entryReady && context.roster.get(a.incoming)?.entrySkill?.name ? `换入 · ${context.roster.get(a.incoming).entrySkill.name}` : '换入') : '交换'}</b

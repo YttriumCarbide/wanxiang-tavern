@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { DEFINITIONS } from '../src/data.js';
+import { DEFINITIONS, encounterSpec } from '../src/data.js';
 import {
   newBattle,
   newEncounter,
@@ -11,18 +11,26 @@ import {
   makeAction,
 } from '../src/engine.js';
 import { playbackBeats } from '../src/playback-timing.js';
-import { explorationPreview, quickTestMillFrontier } from '../src/exploration.js';
-import { newExpedition, currentEncounterSpec } from '../src/expedition.js';
-import { newLibrary } from '../src/ai/library.js';
 import {
+  explorationPreview,
+  quickTestMillFrontier,
+  quickTestRuinsFrontier,
+} from '../src/exploration.js';
+import { ruinsEncounterSpec } from '../src/content/ruins-encounters.js';
+import { newExpedition, currentEncounterSpec } from '../src/expedition.js';
+import { newLibrary, purgeLegacyRuinsProgress, restoreLibrary } from '../src/ai/library.js';
+import {
+  overlordDialoguePack,
   overlordPhaseProfile,
   overlordReloadBark,
+  overlordSealedBark,
   overlordTargetStage,
+  resolveOverlordId,
 } from '../src/overlord-mechanics.js';
 
 test('alchemicalPuppet supports 3-phase Overlord escalation, break layer ramp, and buff ramp', () => {
   const def = DEFINITIONS.alchemicalPuppet;
-  assert.equal(def.hp, 320);
+  assert.equal(def.hp, 360);
   assert.equal(def.overlord, true);
   assert.equal(def.standOnCard, true);
   assert.deepEqual(def.overlordPhases, [0.66, 0.33]);
@@ -249,7 +257,10 @@ test('quickTest option non-destructively swaps mill node 1 to Overlord direct ba
   const spec = currentEncounterSpec(exp);
   assert.deepEqual(spec.enemyIds, ['alchemicalPuppet']);
   const encounterState = newEncounter(spec);
-  assert.equal(encounterState.units.alchemicalPuppet.maxHp, Math.round(320 * 1.35));
+  assert.equal(
+    encounterState.units.alchemicalPuppet.maxHp,
+    Math.round(DEFINITIONS.alchemicalPuppet.hp * 1.35),
+  );
 
   // Verify saved library exploration was never mutated
   assert.equal(lib.exploration.mill.frontier[0].boss, 'millVoleAlpha');
@@ -339,4 +350,128 @@ test('alchemicalPuppet charge cycle opens Round 2 Break Window, cancels charged 
 
   assert(overlordReloadBark('alchemicalPuppet', 1).includes('刷新网页'));
   assert(overlordReloadBark('alchemicalPuppet', 2).includes('刷新'));
+});
+
+test('apepLamb is a solo 3-phase Overlord with charge window, and all Overlords lock UI and expose rewritten dialogue packs', () => {
+  const apep = DEFINITIONS.apepLamb;
+  assert.equal(apep.hp, 460);
+  assert.equal(apep.overlord, true);
+  assert.deepEqual(apep.overlordPhases, [0.66, 0.33]);
+  assert.deepEqual(ruinsEncounterSpec(5, 4).enemyIds, ['apepLamb']);
+  assert.deepEqual(encounterSpec(4, 'apepLamb').enemyIds, ['apepLamb']);
+  assert.deepEqual(currentEncounterSpec({ ...newExpedition('apepLamb'), index: 4 }).enemyIds, [
+    'apepLamb',
+  ]);
+  assert.equal(apep.chargeMechanic.cadenceRounds, 3);
+  assert.equal(overlordTargetStage({ hp: Math.floor(apep.hp * 0.65), maxHp: apep.hp }, apep), 2);
+  assert.equal(overlordTargetStage({ hp: Math.floor(apep.hp * 0.32), maxHp: apep.hp }, apep), 3);
+
+  const expectedOverlords = [
+    ['alchemicalPuppet', 'alchemicalPuppet'],
+    ['apepLamb', 'apepLamb'],
+    ['moonCrown', 'moonEye'],
+    ['moonEye', 'moonEye'],
+    ['moonRoot', 'moonEye'],
+    ['ares', 'ares'],
+    ['radiantWyvern', 'radiantWyvern'],
+  ];
+  for (const [id, resolved] of expectedOverlords) {
+    assert.equal(resolveOverlordId(id), resolved);
+    const pack = overlordDialoguePack(id);
+    assert(pack.entrance.length >= 1);
+    assert(pack.domainLock && !/一二三阶段|压迫感/.test(pack.domainLock));
+    assert(pack.phase2 && !/第三阶段/.test(pack.phase2));
+    assert(pack.phase3 && !/第三阶段/.test(pack.phase3));
+    assert(pack.defeat);
+    assert(overlordSealedBark(id, 'settings').length > 4);
+    assert(overlordReloadBark(id, 1).includes('刷新网页'));
+    const state = advance(preview(newBattle([id]), []));
+    const run = preview(state, []);
+    const expectedLock = id === 'moonCrown' || id === 'moonRoot' ? 'moonEye' : id;
+    if (id === 'moonCrown' || id === 'moonRoot') {
+      const treeState = advance(preview(newBattle(['moonCrown', 'moonEye', 'moonRoot']), []));
+      assert.equal(preview(treeState, []).final.overlordUiLocked, 'moonEye');
+    } else {
+      assert.equal(run.final.overlordUiLocked, expectedLock);
+    }
+  }
+});
+
+test('purgeLegacyRuinsProgress clears old ruins progress and quickTestApep swaps Ruins node 1 cleanly', () => {
+  const fresh = newLibrary();
+  assert.equal(fresh.migrations.ruinsResetV2, true);
+  assert.equal(purgeLegacyRuinsProgress(fresh), false);
+
+  const legacy = restoreLibrary(newLibrary());
+  delete legacy.migrations;
+  legacy.unlockedDungeons = ['mill', 'ruins', 'forest'];
+  legacy.atlasDiscoveries = [
+    { id: 'ruins', name: '界隙遗迹' },
+    { id: 'forest', name: '月痕古林' },
+  ];
+  legacy.exploration.ruins.completed = 6;
+  legacy.exploration.ruins.frontier = [{ id: 'old-ruins', sequence: 6 }];
+  legacy.exploration.mill.completed = 4;
+  legacy.overlandExploration = {
+    routes: ['starbell->ruins', 'starbell->forest'],
+    legs: ['starbell:ruins', 'starbell:forest'],
+  };
+  legacy.scripts = [
+    { id: 'r1', exploration: { map: 'ruins', id: 'ruins-curse' } },
+    { id: 'f1', exploration: { map: 'forest', id: 'forest-1' } },
+  ];
+  legacy.prepared = 'r1';
+  legacy.history = [
+    { id: 'r1', map: 'ruins' },
+    { id: 'f1', map: 'forest' },
+  ];
+
+  assert.equal(purgeLegacyRuinsProgress(legacy), true);
+  assert.equal(legacy.migrations.ruinsResetV2, true);
+  assert.deepEqual(legacy.unlockedDungeons, ['mill', 'forest']);
+  assert.deepEqual(legacy.atlasDiscoveries, [{ id: 'forest', name: '月痕古林' }]);
+  assert.equal(legacy.exploration.ruins.completed, 0);
+  assert.equal(legacy.exploration.ruins.frontier[0].sequence, 0);
+  assert.equal(legacy.exploration.mill.completed, 4);
+  assert.deepEqual(legacy.overlandExploration.routes, ['starbell->forest']);
+  assert.deepEqual(legacy.overlandExploration.legs, ['starbell:forest']);
+  assert.deepEqual(
+    legacy.scripts.map((s) => s.id),
+    ['f1'],
+  );
+  assert.equal(legacy.prepared, null);
+  assert.deepEqual(
+    legacy.history.map((h) => h.id),
+    ['f1'],
+  );
+  assert.equal(purgeLegacyRuinsProgress(legacy), false);
+
+  const normalPreview = explorationPreview(fresh.exploration.ruins, 'ruins', {
+    developerMode: true,
+    quickTestApep: false,
+  });
+  assert.equal(normalPreview[0].boss, 'bossGate');
+  const quickPreview = explorationPreview(fresh.exploration.ruins, 'ruins', {
+    developerMode: true,
+    quickTestApep: true,
+  });
+  assert.equal(quickPreview[0].boss, 'apepLamb');
+  assert.equal(quickPreview[0].quickTestBoss, true);
+  const quickFrontier = quickTestRuinsFrontier(fresh.exploration.ruins, {
+    developerMode: true,
+    quickTestApep: true,
+  });
+  assert.equal(quickFrontier[0].boss, 'apepLamb');
+});
+
+test('resolveTheaterTheme supplies valid intro and epilogue artwork across all biomes including mill', async () => {
+  const { MAP_IDS } = await import('../src/content/biomes.js');
+  const { resolveTheaterTheme } = await import('../src/app/theater-themes.js');
+  for (const map of [...MAP_IDS, 'unknown-custom-biome']) {
+    for (const mode of ['intro', 'epilogue', 'event-opening', 'quest-opening']) {
+      const theme = resolveTheaterTheme({ map, mode });
+      assert.equal(typeof theme.artwork, 'string');
+      assert(theme.artwork.length > 0, `Missing artwork for ${map}/${mode}`);
+    }
+  }
 });

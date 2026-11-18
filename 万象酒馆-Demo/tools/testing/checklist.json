@@ -4,10 +4,18 @@
     "tests/combat-overhaul.test.js",
     "tests/overlord-puppet.test.js",
     "tests/enemy-base-values.test.js",
-    "tests/playback.test.js",
-    "tests/mill-worldmaps.test.js",
+    "tests/battle-balance.test.js",
     "tests/combat-control.test.js",
-    "tests/official-visitors.test.js"
+    "tests/chat.test.js",
+    "tests/exploration.test.js",
+    "tests/engine.test.js",
+    "tests/forest.test.js",
+    "tests/expedition.test.js",
+    "tests/playback.test.js",
+    "tests/adventure.test.js",
+    "tests/campaign.test.js",
+    "tests/saves.test.js",
+    "tests/turn-flow.test.js"
   ],
-  "scopes": ["core", "quality", "battle-markers", "developer-mode", "universal-enemies"]
+  "scopes": ["core", "quality"]
 }

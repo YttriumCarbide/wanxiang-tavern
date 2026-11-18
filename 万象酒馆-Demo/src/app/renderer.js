@@ -42,12 +42,31 @@ export function createRenderer(context) {
         const ready = Boolean(
           u.entryReady && (d.entrySkill || d.combat?.entrySkill || d.setting?.entrySkill),
         );
+        const plagueState = s.sinkingPlague;
+        const forecastPlague = session.battle.forecast?.final?.sinkingPlague;
+        const rearTurnsNow = plagueState?.backfieldTurns?.[id] || 0;
+        const willBeRearAtEnd =
+          !session.battle.playing &&
+          u.hp > 0 &&
+          (session.battle.forecast?.final?.formation || s.formation).slice(3).includes(id);
+        const rearTurnsNext = willBeRearAtEnd
+          ? (forecastPlague?.backfieldTurns?.[id] ?? rearTurnsNow)
+          : 0;
+        const movedOutOfRear = rearTurnsNow > 0 && !willBeRearAtEnd;
+        const showPlagueDanger = Boolean((plagueState || forecastPlague) && u.hp > 0);
+        const plagueBadgeText = movedOutOfRear
+          ? '已入前场·刷新'
+          : rearTurnsNext > 0
+            ? `溺蚀${rearTurnsNext}轮`
+            : showPlagueDanger && willBeRearAtEnd
+              ? '需轮换前场'
+              : '';
         return html`<button
-          class="rear-card ${session.selection.selected === id ? 'selected' : ''} ${u.hp === 0 ? 'fallen' : ''} ${ready ? 'entry-ready' : ''}"
+          class="rear-card ${session.selection.selected === id ? 'selected' : ''} ${u.hp === 0 ? 'fallen' : ''} ${ready ? 'entry-ready' : ''} ${rearTurnsNext >= 2 ? 'rear-plague-critical' : rearTurnsNext >= 1 ? 'rear-plague-danger' : ''}"
           style="--unit:${d.color || '#9e9e9e'}"
           data-dragunit="${id}"
           data-rear="${id}"
-          aria-label="${escapeText(d.name)}，后场角色${ready ? '，入场技就绪' : ''}"
+          aria-label="${escapeText(d.name)}，后场角色${ready ? '，入场技就绪' : ''}${plagueBadgeText ? `，${plagueBadgeText}` : ''}"
           ${session.battle.playing ? 'disabled' : ''}
         >
           <img src="${portraitUrl(d)}" alt="" /><svg
@@ -85,6 +104,7 @@ export function createRenderer(context) {
               : ''
           }
           <div class="rear-resources">${resourceBars(u, f)}</div>
+          ${plagueBadgeText ? html`<span class="rear-plague-pill">${plagueBadgeText}</span>` : ''}
           ${alchemicalBombBadge(id, s, session.battle.forecast?.final, session.battle.playing)}
           ${emblemRing(d, u, false, session.battle.playing ? u : f)}
         </button>`;

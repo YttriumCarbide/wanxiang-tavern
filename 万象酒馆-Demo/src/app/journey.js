@@ -468,14 +468,18 @@ export function createJourney(context) {
     if (session.journey.expedition.pendingResult)
       return presentResult(session.journey.expedition.pendingResult);
     if (session.battle.state.phase === 'victory') {
-      await context.battleBarks?.battleWon();
-      await context.generation.showScene(session.battle.state.encounter, 'after');
-      if (
-        !session.runtime.disposed &&
-        session.runtime.mode === 'battle' &&
-        session.battle.state.encounter === FINAL_ENCOUNTER
-      ) {
-        await context.generation.playEpilogue?.();
+      try {
+        await context.battleBarks?.battleWon();
+        await context.generation.showScene(session.battle.state.encounter, 'after');
+        if (
+          !session.runtime.disposed &&
+          session.runtime.mode === 'battle' &&
+          session.battle.state.encounter === FINAL_ENCOUNTER
+        ) {
+          await context.generation.playEpilogue?.();
+        }
+      } catch (error) {
+        console.error('Post-victory presentation error:', error);
       }
     }
     if (session.runtime.disposed || session.runtime.mode !== 'battle') return;

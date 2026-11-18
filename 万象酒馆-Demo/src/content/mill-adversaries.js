@@ -339,41 +339,41 @@ export const MILL_BOSSES = [
       attackType: 'brawl',
       weaknesses: ['fire', 'wind', 'brawl'],
       toughness: 6,
-      hp: 106,
+      hp: 132,
       speed: 4,
       tactic: { target: 'exposed' },
     },
     [
       move(
         '麦袋倾覆',
-        '撞倒鼓胀面袋扬尘扑击前两格各8伤害并附加1层虚弱。',
-        [hit(8), buff('weak', 1)],
+        '撞倒鼓胀面袋扬尘扑击前两格各10伤害并附加1层虚弱。',
+        [hit(10), buff('weak', 1)],
         {
           slots: [0, 1],
         },
       ),
-      move('群甲结阵', '硬翅叠成盾潮冲撞正前9伤害并获7护盾。', [hit(9)], {
+      move('群甲结阵', '硬翅叠成盾潮冲撞正前11伤害并获10护盾。', [hit(11)], {
         slot: 0,
-        selfShield: 7,
+        selfShield: 10,
       }),
-      move('甲壳潮涌', '黑色虫群漫过前排全格造成7伤害。', [hit(7)], {
+      move('甲壳潮涌', '黑色虫群漫过前排全格造成9伤害。', [hit(9)], {
         slots: [0, 1, 2],
       }),
     ],
     {
       boss: true,
       enragedIntents: [
-        move('黑翅狂噬', '虫群沸腾扑向三格各9伤害并附加1层流血。', [hit(9), buff('bleed', 1)], {
+        move('黑翅狂噬', '虫群沸腾扑向三格各11伤害并附加2层流血。', [hit(11), buff('bleed', 2)], {
           slots: [0, 1, 2],
           enraged: true,
         }),
         move(
           '死灰复涌',
-          '残虫聚集重整阵线造成8伤害并获8护盾与1层力量。',
-          [hit(8), buff('strength', 1, 'self')],
+          '残虫聚集重整阵线造成10伤害并获10护盾与1层力量。',
+          [hit(10), buff('strength', 1, 'self')],
           {
             slots: [0, 1],
-            selfShield: 8,
+            selfShield: 10,
             enraged: true,
           },
         ),
@@ -391,39 +391,39 @@ export const MILL_BOSSES = [
       attackType: 'dark',
       weaknesses: ['light', 'wind', 'spear'],
       toughness: 6,
-      hp: 116,
+      hp: 146,
       speed: 5,
       tactic: { target: 'wounded' },
     },
     [
-      move('翼影吸血', '从旧木梁无声俯冲咬击9伤害并吸取5生命。', [hit(9)], {
+      move('翼影吸血', '从旧木梁无声俯冲咬击11伤害并吸取7生命。', [hit(11)], {
         slot: 1,
-        selfHeal: 5,
+        selfHeal: 7,
       }),
       move(
         '梁间隐伏',
-        '收翼盘旋于高梁之上，为自身附加1层飞行并掠击6伤害。',
-        [hit(6), buff('flying', 1, 'self')],
+        '收翼盘旋于高梁之上，为自身附加1层飞行并掠击8伤害。',
+        [hit(8), buff('flying', 1, 'self')],
         {
           slot: 0,
         },
       ),
-      move('利齿裂伤', '尖啸着掠过两翼造成8伤害并附加2层流血。', [hit(8), buff('bleed', 2)], {
+      move('利齿裂伤', '尖啸着掠过两翼造成10伤害并附加3层流血。', [hit(10), buff('bleed', 3)], {
         slots: [0, 1],
       }),
     ],
     {
       boss: true,
       enragedIntents: [
-        move('猩红俯冲', '狂躁扑击两格各10伤害并吸取7生命。', [hit(10)], {
+        move('猩红俯冲', '狂躁扑击两格各13伤害并吸取9生命。', [hit(13)], {
           slots: [0, 1],
-          selfHeal: 7,
+          selfHeal: 9,
           enraged: true,
         }),
         move(
           '尘旋吸血',
-          '煽动积灰旋涡横扫三格各9伤害并获1层飞行。',
-          [hit(9), buff('flying', 1, 'self')],
+          '煽动积灰旋涡横扫三格各11伤害并获1层飞行。',
+          [hit(11), buff('flying', 1, 'self')],
           {
             slots: [0, 1, 2],
             enraged: true,
@@ -443,26 +443,26 @@ export const MILL_BOSSES = [
       attackType: 'special-magic',
       weaknesses: ['fire', 'light', 'axe'],
       toughness: 7,
-      hp: 122,
+      hp: 156,
       speed: 2,
       tactic: { target: 'fixed' },
     },
     [
-      move('钱箱砸压', '挥动嵌在体内的旧铁钱箱重砸9伤害并获8护盾。', [hit(9)], {
+      move('钱箱砸压', '挥动嵌在体内的旧铁钱箱重砸11伤害并获10护盾。', [hit(11)], {
         slot: 0,
-        selfShield: 8,
+        selfShield: 10,
       }),
       move(
         '酒窖霉雾',
-        '爆裂孢子菇丛席卷前排全格8伤害并附加2层中毒。',
-        [hit(8), buff('poison', 2)],
+        '爆裂孢子菇丛席卷前排全格10伤害并附加3层中毒。',
+        [hit(10), buff('poison', 3)],
         {
           slots: [0, 1, 2],
         },
       ),
-      move('吞噬菌毯', '裹紧酿酒桶残片猛撞两格各8伤害并自愈6生命。', [hit(8)], {
+      move('吞噬菌毯', '裹紧酿酒桶残片猛撞两格各10伤害并自愈8生命。', [hit(10)], {
         slots: [0, 1],
-        selfHeal: 6,
+        selfHeal: 8,
       }),
     ],
     {
@@ -470,17 +470,17 @@ export const MILL_BOSSES = [
       enragedIntents: [
         move(
           '腐绿潮溢',
-          '酒窖霉潮漫溢三格各10伤害，附加2层中毒与1层易伤。',
-          [hit(10), buff('poison', 2), buff('vulnerable', 1)],
+          '酒窖霉潮漫溢三格各12伤害，附加3层中毒与1层易伤。',
+          [hit(12), buff('poison', 3), buff('vulnerable', 1)],
           {
             slots: [0, 1, 2],
             enraged: true,
           },
         ),
-        move('孢核固结', '自愈8生命并叠加10护盾，撞击正前9伤害。', [hit(9)], {
+        move('孢核固结', '自愈11生命并叠加13护盾，撞击正前11伤害。', [hit(11)], {
           slot: 0,
-          selfShield: 10,
-          selfHeal: 8,
+          selfShield: 13,
+          selfHeal: 11,
           enraged: true,
         }),
       ],
@@ -497,7 +497,7 @@ export const MILL_BOSSES = [
       attackType: 'special-weapon',
       weaknesses: ['fire', 'brawl', 'axe', 'lightning'],
       toughness: 7,
-      hp: 320,
+      hp: 360,
       speed: 3,
       buffs: { artifact: 1 },
       tactic: { target: 'fixed' },
@@ -505,8 +505,8 @@ export const MILL_BOSSES = [
     [
       move(
         '失衡木杆横扫',
-        '挥动悬吊失衡的笨重长木杆猛击相邻两格各9伤害并附加1层虚弱。',
-        [hit(9), buff('weak', 1)],
+        '挥动悬吊失衡的笨重长木杆猛击相邻两格各11伤害并附加1层虚弱。',
+        [hit(11), buff('weak', 1)],
         {
           slot: 0,
           adjacent: true,
@@ -516,8 +516,8 @@ export const MILL_BOSSES = [
       ),
       move(
         '重力铁钳猛砸',
-        '生锈铁钳借逆重力重锤中位14伤害并附加1层易伤。',
-        [hit(14), buff('vulnerable', 1)],
+        '生锈铁钳借逆重力重锤中位17伤害并附加1层易伤。',
+        [hit(17), buff('vulnerable', 1)],
         {
           slot: 1,
           damageType: 'axe',
@@ -526,8 +526,8 @@ export const MILL_BOSSES = [
       ),
       move(
         '发条错位重整',
-        '背部时钟齿轮狂转上弦、炼金核心闪烁稳固躯壳：获得12护盾、1层力量与1层铁皮。',
-        [selfShieldEffect(12), buff('strength', 1, 'self'), buff('iron', 1, 'self')],
+        '背部时钟齿轮狂转上弦、炼金核心闪烁稳固躯壳：获得16护盾、1层力量与1层铁皮。',
+        [selfShieldEffect(16), buff('strength', 1, 'self'), buff('iron', 1, 'self')],
         { slot: 0, clip: 'Special_Action' },
       ),
     ],
@@ -541,16 +541,16 @@ export const MILL_BOSSES = [
       overlordPhases: Object.freeze([0.66, 0.33]),
       toughnessByPhase: Object.freeze([7, 9, 10]),
       breakLayersByPhase: Object.freeze([2, 2, 3]),
-      phaseShields: Object.freeze([0, 12, 16]),
+      phaseShields: Object.freeze([0, 16, 22]),
       artifactByPhase: Object.freeze([0, 1, 1]),
       chargeMechanic: Object.freeze({
         cadenceRounds: 3,
         chargeMove: Object.freeze({
           id: 'puppet-core-charge',
           name: '炉心逆重蓄能',
-          text: '双钳收拢胸口炉心逆向拧死发条，获得10护盾并积蓄毁灭能量；下回合露出元素破绽，并于时间轴靠前位置释放【湮灭炼金坍缩】。',
+          text: '双钳收拢胸口炉心逆向拧死发条，获得14护盾并积蓄毁灭能量；下回合露出元素破绽，并于时间轴靠前位置释放【湮灭炼金坍缩】。',
           slot: 1,
-          selfShield: 10,
+          selfShield: 14,
           effects: [],
           clip: 'Charge_Up',
           isCharge: true,
@@ -558,8 +558,8 @@ export const MILL_BOSSES = [
         releaseMovesByPhase: Object.freeze([
           move(
             '湮灭炼金坍缩',
-            '失控炉心引爆蓄积的逆重熔流轰击全前排18伤害，并附加1层易伤与1层虚弱。',
-            [hit(18), buff('vulnerable', 1), buff('weak', 1)],
+            '失控炉心引爆蓄积的逆重熔流轰击全前排22伤害，并附加1层易伤与1层虚弱。',
+            [hit(22), buff('vulnerable', 1), buff('weak', 1)],
             {
               slots: [0, 1, 2],
               damageType: 'special-magic',
@@ -569,8 +569,8 @@ export const MILL_BOSSES = [
           ),
           move(
             '湮灭炼金坍缩',
-            '双倍过载的炼金坍缩焰浪轰击全前排21伤害，并附加1层易伤与1层虚弱。',
-            [hit(21), buff('vulnerable', 1), buff('weak', 1)],
+            '双倍过载的炼金坍缩焰浪轰击全前排26伤害，并附加1层易伤与1层虚弱。',
+            [hit(26), buff('vulnerable', 1), buff('weak', 1)],
             {
               slots: [0, 1, 2],
               enraged: true,
@@ -581,8 +581,8 @@ export const MILL_BOSSES = [
           ),
           move(
             '终极炼金坍缩',
-            '彻底失控的炉心洪流吞没全前排造成24伤害，并附加1层易伤与1层虚弱。',
-            [hit(24), buff('vulnerable', 1), buff('weak', 1)],
+            '彻底失控的炉心洪流吞没全前排造成30伤害，并附加1层易伤与1层虚弱。',
+            [hit(30), buff('vulnerable', 1), buff('weak', 1)],
             {
               slots: [0, 1, 2],
               enraged: true,
@@ -606,19 +606,19 @@ export const MILL_BOSSES = [
       enragedIntents: [
         move(
           '逆重齿轮坠击',
-          '反重力核心骤然过载倒悬轰落，横扫全前排9伤害并附加1层易伤。',
-          [hit(9), buff('vulnerable', 1)],
+          '反重力核心骤然过载倒悬轰落，横扫全前排12伤害并附加1层易伤。',
+          [hit(12), buff('vulnerable', 1)],
           { slots: [0, 1, 2], enraged: true, damageType: 'special-weapon', clip: 'Special_Attack' },
         ),
         move(
           '双臂错位连槌',
-          '失衡木杆与铁钳错位狂砸左格造成13伤害并附加3层流血。',
-          [hit(13), buff('bleed', 3)],
+          '失衡木杆与铁钳错位狂砸左格造成16伤害并附加4层流血。',
+          [hit(16), buff('bleed', 4)],
           { slot: 0, enraged: true, damageType: 'axe', clip: 'Normal_Attack' },
         ),
-        move('失控发条超频', '发条暴走震荡全前排7伤害，同时获得14护盾与1层铁皮。', [hit(7)], {
+        move('失控发条超频', '发条暴走震荡全前排10伤害，同时获得18护盾与1层铁皮。', [hit(10)], {
           slots: [0, 1, 2],
-          selfShield: 14,
+          selfShield: 18,
           selfBuff: { iron: 1 },
           enraged: true,
           damageType: 'special-weapon',
@@ -628,24 +628,24 @@ export const MILL_BOSSES = [
       finalPhaseIntents: [
         move(
           '终焉逆重崩落',
-          '临爆核心失重倾坠轰击全前排11伤害并附加1层易伤。',
-          [hit(11), buff('vulnerable', 1)],
+          '临爆核心失重倾坠轰击全前排14伤害并附加1层易伤。',
+          [hit(14), buff('vulnerable', 1)],
           { slots: [0, 1, 2], enraged: true, damageType: 'special-weapon', clip: 'Special_Attack' },
         ),
         move(
           '熔炉铁钳处决',
-          '过载铁钳贯砸中格16伤害并撕裂造成4层流血。',
-          [hit(16), buff('bleed', 4)],
+          '过载铁钳贯砸中格20伤害并撕裂造成5层流血。',
+          [hit(20), buff('bleed', 5)],
           { slot: 1, enraged: true, damageType: 'axe', clip: 'Normal_Attack' },
         ),
         move(
           '过载核心喷涌',
-          '紫绿炼金焰浪席卷相邻两格12伤害并附加1层虚弱，同时获得10护盾。',
-          [hit(12), buff('weak', 1)],
+          '紫绿炼金焰浪席卷相邻两格15伤害并附加1层虚弱，同时获得14护盾。',
+          [hit(15), buff('weak', 1)],
           {
             slot: 1,
             adjacent: true,
-            selfShield: 10,
+            selfShield: 14,
             enraged: true,
             damageType: 'special-magic',
             clip: 'Special_Attack',

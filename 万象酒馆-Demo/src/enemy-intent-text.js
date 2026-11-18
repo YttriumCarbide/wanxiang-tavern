@@ -29,6 +29,9 @@ export function enemyIntentText(move) {
         finalSkillText({ effects: [{ type: 'buff', buff, value }] }).replaceAll('目标', '敌方自身'),
       );
   if (move.sinkingPlague)
-    parts.push('三个前场地板获得沉疫，回合末受到持续回合数×2伤害，换人不清除。');
+    parts.push(
+      '三个前场地板染上【沉疫】，按滞留轮数剧痛加剧；每轮腐化1空时间格（只许换位，或用缓慢逼敌踩消）；连蹲后排受致命溺蚀，换入前场可刷新。',
+    );
+  else if (move.plagueAdd) parts.push(`加深命中前场格位【沉疫】${move.plagueAdd}层。`);
   return parts.join('') || (move.charging ? '蓄力，准备下一次攻击。' : '本次不造成伤害。');
 }

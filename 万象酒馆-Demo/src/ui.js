@@ -6,6 +6,7 @@ import { BUFFS } from './data.js';
 import { effectiveBuff } from './engine.js';
 import { definition } from './catalog.js';
 import { damageTypeIcon, damageTypeMeta } from './damage-types.js';
+import { sinkingPlagueFrontDamage, sinkingPlagueRearDamage } from './overlord-mechanics.js';
 
 export const escapeText = (s) =>
   String(s).replace(
@@ -60,14 +61,35 @@ export function statusIcons(s, id, end = s, events = []) {
   const plague = floor >= 0 && floor < 3 ? s.sinkingPlague?.ages[floor] : undefined;
   const futurePlague =
     futureFloor >= 0 && futureFloor < 3 ? end.sinkingPlague?.ages[futureFloor] : undefined;
-  if (plague !== undefined || futurePlague !== undefined)
+  const rearTurnsNow = s.sinkingPlague?.backfieldTurns?.[id] || 0;
+  const rearTurnsEnd =
+    futureFloor >= 3 ? (end.sinkingPlague?.backfieldTurns?.[id] ?? rearTurnsNow) : 0;
+  if (plague !== undefined || futurePlague !== undefined) {
+    const dmg = sinkingPlagueFrontDamage(
+      plague !== undefined ? s : end,
+      plague !== undefined ? floor : futureFloor,
+      plague ?? futurePlague,
+    );
+    const refreshedHint =
+      rearTurnsNow > 0 && futureFloor < 3 ? '\n已调入前场，后场溺蚀层数刷新清零！' : '';
     markupString += chip(
       'sinkingPlague',
       (plague ?? futurePlague) + 1,
       plague === undefined,
-      `沉疫 · 地板效果\n下次回合结束受到${((plague ?? futurePlague) + 1) * 2}伤害。换人不清除，后场不受伤害；空位与后撤期间仍累计回合。`,
+      `沉疫 · 前场浸染\n下次回合结束预计受到 ${dmg} 伤害，连蹲后场会触发溺蚀；换入前场可刷新后场层数。${refreshedHint}`,
       '沉疫',
     );
+  } else if (rearTurnsNow > 0 || rearTurnsEnd > 0) {
+    const turns = Math.max(rearTurnsEnd, rearTurnsNow);
+    const dmg = sinkingPlagueRearDamage(end.sinkingPlague ? end : s, turns);
+    markupString += chip(
+      'sinkingPlague',
+      turns,
+      rearTurnsEnd > rearTurnsNow,
+      `沉疫 · 后场溺蚀\n已连续滞留后场 ${turns} 轮，本回合不入前场将承受 ${dmg} 伤害！换入前场立即刷新清零。`,
+      '沉疫·后场',
+    );
+  }
   const mark = definition(s, id)?.mechanicMark;
   const modifier = s.expeditionModifiers?.[id] || end.expeditionModifiers?.[id];
   if (modifier?.scale < 1)

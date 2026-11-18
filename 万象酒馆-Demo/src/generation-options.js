@@ -12,6 +12,7 @@ export function restoreGenerationOptions(value) {
     editArchives: value?.editArchives === true,
     unlockAllCodex: value?.unlockAllCodex === true,
     quickTest: value?.quickTest === true,
+    quickTestApep: value?.quickTestApep === true,
   };
 }
 

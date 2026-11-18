@@ -127,6 +127,39 @@
         "Branching_Coral": 38
       },
       "bytes": 1028544
+    },
+    {
+      "theme": "mill",
+      "asset": "preview-mill.glb",
+      "boxes": 1212,
+      "components": {
+        "Floating_Bedrock": 329,
+        "Terrain": 329,
+        "Surface_Chips": 63,
+        "Mill_Stone_Footing": 2,
+        "Mill_Plaster": 1,
+        "Mill_Timber": 4,
+        "Mill_Doorway": 2,
+        "Mill_Window_Frames": 4,
+        "Mill_Window_Glass": 2,
+        "Mill_Gable": 9,
+        "Mill_Slate_Roof": 163,
+        "Mill_Attic_Vent": 4,
+        "Mill_Stream": 15,
+        "Mill_Stream_Ripples": 15,
+        "Mill_Canal_Walls": 30,
+        "Mill_Wheel_Support": 1,
+        "Mill_Waterwheel": 79,
+        "Mill_Paddles": 12,
+        "Mill_Footbridge": 7,
+        "Mill_Path": 28,
+        "Mill_Broken_Fence": 6,
+        "Tree_Trunks": 12,
+        "Layered_Canopy": 62,
+        "Tree_Roots": 3,
+        "Mill_Ferns": 30
+      },
+      "bytes": 1250428
     }
   ]
 }

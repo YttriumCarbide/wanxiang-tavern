@@ -13,6 +13,8 @@ import {
   skillDealsDamage,
 } from './damage-types.js';
 import { roundBanner } from './motion.js';
+import { createApepEffects } from './apep-effects.js';
+import { APEP_ID, APEP_RELEASE, apepAttack } from './apep-presentation.js';
 export function createEffects(layer, center, getSpeed, options = {}) {
   const active = new Set();
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -96,6 +98,7 @@ export function createEffects(layer, center, getSpeed, options = {}) {
   }
   const statuses = createStatusEffects({ animate, ring, sparks });
   const details = createCombatDetails({ animate });
+  const apep = createApepEffects({ pixelFx, animate, ring, sparks, reduced });
   const COMBINE_SKILLS = new Set([
     'emblem-balance',
     'emblem-overload',
@@ -162,7 +165,26 @@ export function createEffects(layer, center, getSpeed, options = {}) {
       .filter((item) => item.p);
     let spawned = false;
 
-    if (e.type === 'bossPhase' && source) {
+    const lambAttack = apepAttack(e);
+    if (lambAttack) {
+      apep.attack(
+        lambAttack,
+        source,
+        targetPoints.map(({ p }) => p),
+        options.plagueFloorPoints?.() || [],
+        impactDelay,
+      );
+      spawned = true;
+    } else if (e.actor === APEP_ID && e.type === 'sinkingPlague') {
+      apep.tick(
+        options.plagueFloorPoints?.() || [],
+        targetPoints.map(({ p }) => p),
+      );
+      spawned = true;
+    } else if (e.actor === APEP_ID && e.type === 'bossPhase') {
+      apep.phase(source);
+      spawned = true;
+    } else if (e.type === 'bossPhase' && source) {
       if (e.overlord) {
         pixelFx.spawn('mana-burst', {
           x: source.x,
@@ -399,15 +421,19 @@ export function createEffects(layer, center, getSpeed, options = {}) {
   }
 
   function play(e, before, records, playOpts = {}) {
+    const lambAttack = apepAttack(e);
+    const lambPhase = e.actor === APEP_ID && e.type === 'bossPhase';
     const d = definition(e.after, e.actor),
-      source = center(e.actor),
+      source = playOpts.sourceOverride || center(e.actor),
       attack = records.find((r) => r.id === e.actor),
       style = attackStyle(e) || d?.weapon || 'sword',
       isAction = ['hero', 'enemy', 'entrySkill', 'counter'].includes(e.type),
       duration = playOpts.durationOverride || (isAction ? ATTACK_TIMING[style] || 640 : 0),
-      impactDelay = isAction ? duration * (d?.overlord && e.type === 'enemy' ? 0.21 : 0.7) : 0;
+      impactDelay = isAction
+        ? duration * (lambAttack ? APEP_RELEASE : d?.overlord && e.type === 'enemy' ? 0.21 : 0.7)
+        : 0;
     spawnPixelFx(e, before, d, source, impactDelay);
-    if (e.type === 'bossPhase' && source) {
+    if (e.type === 'bossPhase' && source && !lambPhase) {
       if (e.overlord) {
         ring(source, '#ffd978', 'boss-phase-ring');
         sparks(source, '#6bf5a9', reduced ? 6 : 22);
@@ -499,7 +525,9 @@ export function createEffects(layer, center, getSpeed, options = {}) {
         floating({ x: sp.x, y: sp.y - 34 }, '✦ 破防打断', 'break-number', 60);
         continue;
       }
-      statuses.trigger(signal, sp, signal.type === 'bleed' ? duration * 0.8 : 0);
+      const lambStatus = lambAttack && ['poison', 'weak'].includes(signal.type);
+      const statusDelay = lambStatus ? impactDelay : signal.type === 'bleed' ? duration * 0.8 : 0;
+      statuses.trigger(signal, sp, statusDelay, lambStatus ? '#ee9297' : null);
       if (signal.type === 'artifactBlock') {
         floating({ x: sp.x, y: sp.y - 44 }, '⚙ 人工制品抵消', 'shield-number', impactDelay * 0.5);
       }
@@ -524,7 +552,7 @@ export function createEffects(layer, center, getSpeed, options = {}) {
         options.onSpawn?.();
       }
     }
-    if (attack && isAction) {
+    if (attack && isAction && !lambAttack) {
       const overlordLeap = Boolean(d?.overlord && e.type === 'enemy' && e.damageType);
       attack.attack = overlordLeap
         ? {
@@ -560,7 +588,7 @@ export function createEffects(layer, center, getSpeed, options = {}) {
             duration: (d?.overlord ? 340 : 240) / getSpeed(),
             heavy: Boolean(d?.overlord),
           };
-        details.trace(p, style, impactDelay);
+        if (!lambAttack) details.trace(p, style, impactDelay);
         if (old.block > u.block) statuses.shield(p, u.block === 0, impactDelay);
         if (e.type === 'hero' && ['delay', 'hourglass', 'stillness'].includes(e.skill))
           ring(p, '#88e8dd', 'clock-effect', impactDelay);
@@ -579,11 +607,13 @@ export function createEffects(layer, center, getSpeed, options = {}) {
           `${hp > 0 ? '+' : ''}${hp}`,
           hp > 0
             ? 'heal'
-            : e.type === 'poison'
-              ? 'poison-number'
-              : old.broken && hp < 0
-                ? 'break-amp-number'
-                : '',
+            : e.type === 'sinkingPlague'
+              ? 'apep-plague-number'
+              : e.type === 'poison'
+                ? 'poison-number'
+                : old.broken && hp < 0
+                  ? 'break-amp-number'
+                  : '',
           impactDelay,
         );
       else if (shield > 0) {

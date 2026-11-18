@@ -31,7 +31,8 @@ function spine(T, t) {
   let th = -Math.PI / 2 + lean, x = T.x - Math.cos(th) * hidden, y = T.y - Math.sin(th) * hidden;
   const pts = [], n = Math.ceil(T.L / 0.5);
   for (let i = 0; i <= n; i++) {
-    const s = i * 0.5, u = s / T.L;
+    // The rounded-up sample count must end at the tip, where the width is still finite.
+    const s = Math.min(i * 0.5, T.L), u = s / T.L;
     pts.push({ x, y, th, w: T.W * Math.pow(1 - u, 0.75) + 0.45, u, s });
     th += 0.5 * (writhe * Math.sin((s / T.lam) * TAU - T.om * t + T.ph) + T.curl * hook * smooth(0.58, 1, u));
     x += Math.cos(th) * 0.5;

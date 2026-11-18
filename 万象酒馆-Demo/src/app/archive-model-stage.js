@@ -15,6 +15,14 @@ const ANIMATION_LABELS = Object.freeze({
   Special_Action: '特殊行动',
   Bomb_Toss: '投掷炸弹',
   Talon_Rend: '利爪撕裂',
+  Apep_Entrance: '入场',
+  Apep_Splash: '诅咒黑液泼溅',
+  Apep_Plague: '沉疫降临',
+  Apep_Shell: '黑水凝壳',
+  Apep_Tide: '灭世暗潮涌动',
+  Apep_Gaze: '邪神凝视',
+  Apep_Eclipse: '转阶段',
+  Break_Stagger: '击破',
 });
 
 function applyArchiveVisibility(object, anatomyIndex = null) {
@@ -191,7 +199,8 @@ export function createArchiveModelStage() {
 
     const scene = new THREE.Scene();
     scene.background = new THREE.Color('#101116');
-    scene.add(new THREE.HemisphereLight('#efe5d0', '#252a38', 2.4));
+    const fill = new THREE.HemisphereLight('#efe5d0', '#252a38', 2.4);
+    scene.add(fill);
 
     const key = new THREE.DirectionalLight('#ffe2b0', 2.9);
     key.position.set(4.5, 7.5, 5.5);
@@ -209,7 +218,6 @@ export function createArchiveModelStage() {
 
     const turntable = new THREE.Group();
     scene.add(turntable);
-    turntable.add(buildPedestal(THREE, item.color, isComposite && !sharedComposite));
 
     const loader = new GLTFLoader();
     let loadedGltfs;
@@ -231,6 +239,24 @@ export function createArchiveModelStage() {
       if (activeCleanup === cleanup) activeCleanup = null;
       return;
     }
+
+    const wideAnatomy = sharedComposite && Boolean(loadedGltfs[0].userData?.battleAssembly);
+    const pedestal = buildPedestal(
+      THREE,
+      item.color,
+      isComposite && (!sharedComposite || wideAnatomy),
+    );
+    if (wideAnatomy) {
+      pedestal.scale.set(0.64, 1, 0.85);
+      // The moon tree's pale vertex colors need softer light than the metallic overlords.
+      fill.color.set('#d7e3f5');
+      fill.intensity = 1.15;
+      key.color.set('#e1e7f5');
+      key.intensity = 1.65;
+      rim.color.set('#9ba9d6');
+      rim.intensity = 0.85;
+    }
+    turntable.add(pedestal);
 
     const slotAnchors = [];
     const animatedFigures = [];
@@ -275,15 +301,32 @@ export function createArchiveModelStage() {
 
     if (sharedComposite) {
       sharedRootModel = loadedGltfs[0].scene;
-      const { wrapper, height } = normalizeFigure(THREE, sharedRootModel, 2.55, 2.35, null);
+      const { wrapper, height } = normalizeFigure(
+        THREE,
+        sharedRootModel,
+        2.55,
+        wideAnatomy ? 4.85 : 2.35,
+        null,
+      );
       turntable.add(wrapper);
       attachMixer(sharedRootModel, loadedGltfs[0].animations);
-      for (const _part of item.parts || []) {
+      for (const part of item.parts || []) {
+        if (wideAnatomy) {
+          applyArchiveVisibility(sharedRootModel, part.anatomyIndex);
+          const bounds = measureVisibleBounds(THREE, sharedRootModel);
+          const size = bounds.getSize(new THREE.Vector3());
+          slotAnchors.push({
+            target: bounds.getCenter(new THREE.Vector3()),
+            distance: Math.max(3.5, Math.max(size.x, size.y) * 1.3),
+          });
+          continue;
+        }
         slotAnchors.push({
           target: new THREE.Vector3(0, Math.max(0.95, height * 0.48), 0),
           distance: 5.2,
         });
       }
+      if (wideAnatomy) applyArchiveVisibility(sharedRootModel, null);
     } else if (isComposite) {
       loadedGltfs.forEach((gltf, idx) => {
         const modelScene = gltf.scene;
@@ -381,24 +424,25 @@ export function createArchiveModelStage() {
 
     resources.object(scene);
 
-    const overviewTarget = new THREE.Vector3(0, isComposite && !sharedComposite ? 1.18 : 1.15, 0);
+    const wideOverview = isComposite && (!sharedComposite || wideAnatomy);
+    const overviewTarget = new THREE.Vector3(0, wideOverview ? 1.18 : 1.15, 0);
+    const overviewDistance = wideAnatomy ? 6.7 : wideOverview ? 7.9 : 5.4;
+    const overviewAzimuth = wideOverview ? 0.18 : 0.48;
+    const overviewElevation = wideOverview ? 1.24 : 1.16;
     const desiredTarget = overviewTarget.clone();
     const target = overviewTarget.clone();
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 100);
-    let azimuth = isComposite && !sharedComposite ? 0.18 : 0.48;
-    let elevation = isComposite && !sharedComposite ? 1.24 : 1.16;
-    let baseDistance = isComposite && !sharedComposite ? 7.9 : 5.4;
+    let azimuth = overviewAzimuth;
+    let elevation = overviewElevation;
+    let baseDistance = overviewDistance;
     let zoomFactor = 1;
     let pointer = null;
     let lastInteraction = 0;
     let lastTime = performance.now();
 
     function applyCamera() {
-      const aspectFit =
-        isComposite && !sharedComposite
-          ? Math.max(1, 1.35 / Math.max(0.55, camera.aspect || 1.6))
-          : 1;
+      const aspectFit = wideOverview ? Math.max(1, 1.35 / Math.max(0.55, camera.aspect || 1.6)) : 1;
       const dist = baseDistance * zoomFactor * aspectFit;
       camera.position.setFromSphericalCoords(dist, elevation, azimuth).add(target);
       camera.lookAt(target);
@@ -469,9 +513,9 @@ export function createArchiveModelStage() {
         if (focus === 'all') {
           if (sharedRootModel) applyArchiveVisibility(sharedRootModel, null);
           desiredTarget.copy(overviewTarget);
-          baseDistance = sharedComposite ? 5.4 : 7.9;
-          azimuth = sharedComposite ? 0.48 : 0.18;
-          elevation = sharedComposite ? 1.16 : 1.24;
+          baseDistance = overviewDistance;
+          azimuth = overviewAzimuth;
+          elevation = overviewElevation;
         } else {
           const partIndex = Number(focus);
           if (sharedRootModel) {

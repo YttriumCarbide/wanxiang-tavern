@@ -63,7 +63,7 @@ test('new map API values remain exact in references, saves and combat, with grow
   assert.equal(input.reference.enemyNumbers.mode, 'tier-power');
   assert.deepEqual(input.reference.enemyNumbers.tables.ordinary.hp.medium, [44, 52]);
   assert.deepEqual(input.reference.enemyNumbers.tables.boss.hp.high, [200, 240]);
-  assert.equal(input.reference.enemies.find((enemy) => enemy.id === 'ares').hp, 299);
+  assert.equal(input.reference.enemies.find((enemy) => enemy.id === 'ares').hp, 420);
 
   const validPortrait = worldFixture().enemies[0].portrait;
   const tiered = normalizeEnemy({

@@ -20,7 +20,7 @@ import {
 import { defaultProtagonist } from '../content/qingyuan.js';
 import { HEROES } from '../data.js';
 import { newBattle, preview } from '../engine.js';
-import { compileRoster, restoreLibrary } from '../ai/library.js';
+import { compileRoster, purgeLegacyRuinsProgress, restoreLibrary } from '../ai/library.js';
 import {
   normalizeCharacter,
   normalizeScript,
@@ -81,6 +81,18 @@ export function createGeneration(context) {
     session.runtime.needsStart = storage.getItem('wanxiang.creation-pending.v1') === 'true';
     if (!context.apiClient.staticMode) applyGeneratedReset(storage);
     session.ai.library = restoreLibrary(JSON.parse(storage.getItem(libraryKey)));
+    if (purgeLegacyRuinsProgress(session.ai.library)) {
+      storage.setItem(libraryKey, JSON.stringify(session.ai.library));
+      try {
+        const rawCheckpoint = storage.getItem('wanxiang.battle-checkpoint.v1');
+        const checkpoint = rawCheckpoint ? JSON.parse(rawCheckpoint) : null;
+        if (checkpoint?.adventure?.expedition?.map === 'ruins') {
+          storage.removeItem('wanxiang.battle-checkpoint.v1');
+        }
+      } catch {
+        // Ignore malformed checkpoint entries.
+      }
+    }
   } catch {
     /* Retain the seeded official pool. */
   }
@@ -843,7 +855,11 @@ export function createGeneration(context) {
       if (kind === 'character' && !library().inventory.summonContracts)
         throw Error('召唤需要一份契约，完成副本后可获得。');
       if (kind === 'character') pendingSummon = summonInput;
-      if (kind === 'script' && !developerOption(session.ai.generationOptions, 'quickTest'))
+      if (
+        kind === 'script' &&
+        !developerOption(session.ai.generationOptions, 'quickTest') &&
+        !developerOption(session.ai.generationOptions, 'quickTestApep')
+      )
         prepareSwapLesson(library());
       if (kind === 'script' && !(await departure.choose())) return;
       if (kind === 'script' && !generationEnabled(session.ai.generationOptions, 'scriptApi')) {

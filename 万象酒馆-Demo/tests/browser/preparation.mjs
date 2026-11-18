@@ -121,9 +121,11 @@ export async function preparationChecks({ browser, baseURL, output }) {
     await drag(page, '[data-prepare-slot="4"]', '#prepare-pool');
     assert.equal((await page.evaluate(() => demo.getLibrary())).party[4], null);
     assert.equal(await page.locator('.prepare-member').count(), 3);
-    await page.locator('[data-prepare-slot="0"]').click();
+    await page.locator('[data-prepare-slot="1"]').click();
     const editor = page.locator('#prepare-detail');
     assert.match(await editor.locator('.prepare-affection').innerText(), /好感 Lv\./);
+    await page.locator('[data-prepare-slot="0"]').click();
+    assert.equal(await editor.locator('.prepare-protagonist-core').isVisible(), true);
     assert.equal(await editor.locator('.prepare-stat-grid dd').count(), 5);
     assert.equal(await editor.locator('[data-equipment-slot]').count(), 4);
     assert.equal(

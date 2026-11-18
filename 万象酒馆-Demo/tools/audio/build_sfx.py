@@ -6,6 +6,7 @@ Run with the modeling/audio venv:
 
 import json
 import math
+import sys
 import wave
 from pathlib import Path
 
@@ -724,28 +725,113 @@ def ui_and_game_sounds():
     return sounds
 
 
-def build():
+def apep_sounds():
+    rng = np.random.default_rng(726410)
+
+    def water(duration, low, high, attack, tail):
+        grain = rng.normal(0, 1, count(duration))
+        return spectral(grain, low, high, 1.4) * pulse(duration, attack, tail)
+
+    return {
+        "apep-inhale": mix(
+            0.71,
+            [
+                (thump(39, 82, 0.68, 0.34), 0, 0.30),
+                (water(0.62, 1400, 120, 0.41, 0.81), 0, 0.54),
+                (pluck(93, 0.18, 0.065), 0.52, 0.14),
+            ],
+        ),
+        "apep-splash": mix(
+            0.52,
+            [
+                (thump(135, 46, 0.34, 0.13), 0, 0.46),
+                (water(0.47, 2040, 230, 0.012, 0.12), 0.015, 0.70),
+                (water(0.27, 3430, 920, 0.015, 0.055), 0.11, 0.33),
+            ],
+        ),
+        "apep-plague": mix(
+            1.1,
+            [
+                (thump(79, 29, 0.92, 0.34), 0, 0.73),
+                (water(0.87, 1030, 105, 0.055, 0.34), 0.02, 0.72),
+                (bell(115, 0.73, 0.19, 0.52), 0.18, 0.14),
+            ],
+        ),
+        "apep-plague-tick": mix(
+            0.57,
+            [
+                (thump(99, 38, 0.42, 0.12), 0, 0.63),
+                (water(0.46, 960, 160, 0.033, 0.18), 0, 0.47),
+                (thump(63, 40, 0.28, 0.085), 0.16, 0.37),
+            ],
+        ),
+        "apep-shell": mix(
+            0.62,
+            [
+                (water(0.38, 4920, 890, 0.01, 0.06), 0.015, 0.68),
+                (bell(388, 0.48, 0.105, 0.44), 0.05, 0.41),
+                (thump(120, 41, 0.43, 0.18), 0.065, 0.48),
+            ],
+        ),
+        "apep-tide": mix(
+            1.1,
+            [
+                (thump(88, 25, 1.06, 0.37), 0, 0.81),
+                (water(0.88, 2040, 106, 0.075, 0.31), 0.015, 0.72),
+                (water(0.58, 1150, 96, 0.026, 0.20), 0.17, 0.44),
+            ],
+        ),
+        "apep-gaze": mix(
+            0.76,
+            [
+                (bell(607, 0.65, 0.11, 0.85), 0, 0.35),
+                (thump(249, 74, 0.58, 0.18), 0.04, 0.43),
+                (water(0.35, 3700, 640, 0.002, 0.09), 0.05, 0.43),
+            ],
+        ),
+        "apep-eclipse": mix(
+            1.48,
+            [
+                (thump(68, 29, 1.45, 0.61), 0, 0.86),
+                (water(1.29, 1360, 138, 0.025, 0.48), 0.01, 0.66),
+                (bell(82, 1.07, 0.46, 0.57), 0.09, 0.23),
+                (bell(109, 0.7, 0.21, 0.42), 0.39, 0.13),
+            ],
+        ),
+    }
+
+
+def build(apep_only=False):
     OUT.mkdir(parents=True, exist_ok=True)
-    sounds = {}
-    sounds.update(weapon_sounds())
-    for style in [
-        "slime-bounce",
-        "mushroom-bonk",
-        "pebble-shards",
-        "claw-pounce",
-        "stone-slam",
-        "ember-bolt",
-        "gate-crush",
-        "spore-volley",
-        "crystal-ram",
-        "cinder-spark",
-        "tide-ribbon",
-        "astral-cascade",
-    ]:
-        sounds[style] = enemy_attack(style)
-        sounds[style + "-hit"] = enemy_hit(style)
-    sounds.update(ui_and_game_sounds())
+    manifest_path = OUT / "manifest.json"
     manifest = []
+    sounds = {}
+    if apep_only:
+        manifest = [
+            item
+            for item in json.loads(manifest_path.read_text(encoding="utf-8"))["sounds"]
+            if not item["name"].startswith("apep-")
+        ]
+    else:
+        sounds.update(weapon_sounds())
+        for style in [
+            "slime-bounce",
+            "mushroom-bonk",
+            "pebble-shards",
+            "claw-pounce",
+            "stone-slam",
+            "ember-bolt",
+            "gate-crush",
+            "spore-volley",
+            "crystal-ram",
+            "cinder-spark",
+            "tide-ribbon",
+            "astral-cascade",
+        ]:
+            sounds[style] = enemy_attack(style)
+            sounds[style + "-hit"] = enemy_hit(style)
+        sounds.update(ui_and_game_sounds())
+    sounds.update(apep_sounds())
     for name, signal in sounds.items():
         frames = write(name, signal)
         manifest.append(
@@ -757,13 +843,14 @@ def build():
             }
         )
         print(f"{name:24} {frames / SR:5.2f}s {(OUT / (name + '.wav')).stat().st_size:7d} bytes")
-    (OUT / "manifest.json").write_text(
+    manifest_path.write_text(
         json.dumps({"format": "16-bit mono PCM", "sampleRate": SR, "sounds": manifest}, indent=2)
         + "\n",
         encoding="utf-8",
+        newline="\r\n",
     )
     print(f"Wrote {len(sounds)} original SFX to {OUT}")
 
 
 if __name__ == "__main__":
-    build()
+    build(apep_only=sys.argv[1:] == ["--apep"])

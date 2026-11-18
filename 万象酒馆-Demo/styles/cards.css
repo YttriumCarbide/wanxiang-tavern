@@ -569,6 +569,40 @@
 .rear-card.is-drag-source {
   opacity: 0.3;
 }
+.rear-card.rear-plague-danger {
+  border-color: #c84c6c;
+  box-shadow:
+    inset 0 0 14px rgba(186, 36, 74, 0.45),
+    0 0 14px rgba(192, 42, 78, 0.38);
+}
+.rear-card.rear-plague-critical {
+  border-color: #ff587e;
+  box-shadow:
+    inset 0 0 18px rgba(236, 40, 86, 0.68),
+    0 0 18px rgba(244, 54, 98, 0.56);
+}
+.rear-plague-pill {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  top: 4px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: rgba(24, 6, 18, 0.88);
+  border: 1px solid rgba(232, 86, 118, 0.65);
+  color: #ffb6bf;
+  font-size: 9px;
+  font-weight: 700;
+  text-align: center;
+  line-height: 1.3;
+  pointer-events: none;
+  z-index: 4;
+}
+.rear-card.rear-plague-critical .rear-plague-pill {
+  background: rgba(88, 10, 34, 0.92);
+  border-color: #ff7a96;
+  color: #ffe2e6;
+}
 .unit-hit {
   border-radius: 3px;
   transition:
@@ -2304,6 +2338,20 @@
 .buff-icon[data-buff='artifact'] {
   border-color: rgba(242, 201, 107, 0.78);
   box-shadow: 0 0 8px rgba(216, 164, 68, 0.35);
+}
+.buff-icon[data-buff='sinkingPlague'] {
+  border-color: #c97b86;
+  color: #ffbdad;
+  box-shadow: 0 0 9px #b8436169;
+}
+.buff-icon[data-buff='sinkingPlague'].future-buff {
+  border-style: dashed;
+  box-shadow: none;
+}
+.unit-hit[data-apep-plague='active'] .unit-name {
+  text-shadow:
+    0 1px 2px #100910,
+    0 0 10px #db5379;
 }
 .buff-icon.consuming-buff {
   border-color: #ff9f43;

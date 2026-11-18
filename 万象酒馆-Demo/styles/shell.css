@@ -1229,6 +1229,26 @@ body.ring-cabinet-open :is(.app-header, #inn-resources) {
   font-size: 11px;
   font-variant-numeric: tabular-nums;
 }
+.command-controls #commit[data-apep-plague] {
+  border-color: #d38b8e;
+  background: linear-gradient(160deg, #472737, #321b2a 69%, #5a2a40);
+  box-shadow:
+    inset 0 -2px 0 #b25f75,
+    0 0 12px #a5445b48;
+  color: #fae2cc;
+}
+.command-controls #commit[data-apep-plague='preview'] {
+  border-style: dashed;
+  box-shadow: inset 0 -2px 0 #92566b;
+}
+.commit-plague-readout {
+  display: block;
+  color: #ffac9f;
+  font-size: 10px;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
 [data-overlord-sealed] {
   position: relative;
   filter: sepia(0.35) brightness(0.8);

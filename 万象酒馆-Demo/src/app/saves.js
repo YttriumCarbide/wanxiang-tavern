@@ -1,7 +1,7 @@
 import { html } from '../shared/html.js';
 import { escapeText } from '../ui.js';
 import { query as $ } from './dom.js';
-import { restoreLibrary, compileRoster } from '../ai/library.js';
+import { restoreLibrary, purgeLegacyRuinsProgress, compileRoster } from '../ai/library.js';
 import { loadCustomPortraits } from '../portraits.js';
 import { packagePortraitAssets, restorePortraitAssets } from '../portrait-archive.js';
 import { newBattle, preview } from '../engine.js';
@@ -164,7 +164,11 @@ export function applySaveSnapshot(context, snapshot) {
   const storage = context.storage || getStorage();
 
   session.ai.library = restoreLibrary(snapshot.data.library);
-  if (validAdventureSnapshot(snapshot.data.adventure)) {
+  const ruinsPurged = purgeLegacyRuinsProgress(session.ai.library);
+  if (
+    validAdventureSnapshot(snapshot.data.adventure) &&
+    (!ruinsPurged || snapshot.data.adventure?.expedition?.map !== 'ruins')
+  ) {
     if (snapshot.data.customPortraits && typeof localStorage !== 'undefined')
       localStorage.setItem('wanxiang.portraits.v1', JSON.stringify(snapshot.data.customPortraits));
     context.gal?.cancel();

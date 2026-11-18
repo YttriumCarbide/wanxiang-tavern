@@ -9,6 +9,7 @@ import {
   availableExplorations,
   explorationPreview,
   quickTestMillFrontier,
+  quickTestRuinsFrontier,
 } from '../exploration.js';
 import { DEFINITIONS } from '../data.js';
 import { portraitUrl } from '../catalog.js';
@@ -30,17 +31,22 @@ import { canRecall } from '../recollections.js';
 export function createDestinations(context) {
   const { session, events } = context;
   const isQuickTest = () => developerOption(session.ai.generationOptions, 'quickTest');
+  const isQuickTestApep = () => developerOption(session.ai.generationOptions, 'quickTestApep');
+  const isAnyQuickTest = () => isQuickTest() || isQuickTestApep();
   const unlockedBaseWorlds = () => {
     const unlocked = Array.isArray(session.ai.library.unlockedDungeons)
       ? session.ai.library.unlockedDungeons
       : [];
-    const list = UNLOCKABLE_DUNGEONS.filter((id) => unlocked.includes(id));
-    if (isQuickTest() && !list.includes('mill')) list.unshift('mill');
-    return list;
+    const effective = new Set(unlocked);
+    if (isQuickTest()) effective.add('mill');
+    if (isQuickTestApep()) effective.add('ruins');
+    return UNLOCKABLE_DUNGEONS.filter((id) => effective.has(id));
   };
+  const isStarterTutorialMap = (mapId) =>
+    mapId === 'mill' || (mapId === 'ruins' && !unlockedBaseWorlds().includes('mill'));
   const maps = () =>
     (learning(session.ai.library) || session.ai.library.campaign?.tutorial === 'depart-again') &&
-    !isQuickTest()
+    !isAnyQuickTest()
       ? unlockedBaseWorlds().includes('mill')
         ? ['mill']
         : unlockedBaseWorlds().includes('ruins')
@@ -62,9 +68,14 @@ export function createDestinations(context) {
       ? []
       : map === 'mill' && isQuickTest()
         ? quickTestMillFrontier(session.ai.library.exploration.mill, session.ai.generationOptions)
-        : learning(session.ai.library) && map === 'mill'
-          ? (session.ai.library.exploration.mill?.frontier || []).slice(0, 1)
-          : availableExplorations(session.ai.library.exploration[map] || { frontier: [] });
+        : map === 'ruins' && isQuickTestApep()
+          ? quickTestRuinsFrontier(
+              session.ai.library.exploration.ruins,
+              session.ai.generationOptions,
+            )
+          : learning(session.ai.library) && map === 'mill'
+            ? (session.ai.library.exploration.mill?.frontier || []).slice(0, 1)
+            : availableExplorations(session.ai.library.exploration[map] || { frontier: [] });
   const regionFor = (id) =>
     id === 'singularity'
       ? {
@@ -582,9 +593,14 @@ export function createDestinations(context) {
     if (context.daily && !context.daily.allowDungeon()) return;
     if (context.onboarding && !context.onboarding.allowPortal('script')) return;
     const availableMaps = maps();
-    const tutorialMap = availableMaps.includes('mill') ? 'mill' : availableMaps[0];
+    const tutorialMap =
+      isQuickTestApep() && !isQuickTest() && availableMaps.includes('ruins')
+        ? 'ruins'
+        : availableMaps.includes('mill')
+          ? 'mill'
+          : availableMaps[0];
     if (
-      (learning(session.ai.library) && availableMaps.includes('mill')) ||
+      (learning(session.ai.library) && availableMaps.includes(tutorialMap)) ||
       !availableMaps.includes(session.journey.regionMap)
     ) {
       session.journey.regionMap = tutorialMap;
@@ -596,7 +612,7 @@ export function createDestinations(context) {
         : structuredClone(recommended(session.journey.regionMap) || null);
     if (
       learning(session.ai.library) &&
-      session.journey.regionMap === 'mill' &&
+      isStarterTutorialMap(session.journey.regionMap) &&
       session.journey.selectedNode &&
       !session.journey.selectedNode.quickTestBoss
     )
@@ -609,13 +625,14 @@ export function createDestinations(context) {
     const canOpen =
       library.atlasDiscoveries.some((entry) => entry.id === id) ||
       library.unlockedDungeons?.includes(id) ||
-      (id === 'mill' && isQuickTest());
+      (id === 'mill' && isQuickTest()) ||
+      (id === 'ruins' && isQuickTestApep());
     if (dialog.open || session.runtime.mode !== 'inn' || session.ai.busy || !canOpen) return;
     session.journey.regionMap = id;
     session.journey.selectedNode = structuredClone(recommended(id) || null);
     if (
       learning(library) &&
-      id === 'mill' &&
+      isStarterTutorialMap(id) &&
       session.journey.selectedNode &&
       !session.journey.selectedNode.quickTestBoss
     )
@@ -673,7 +690,11 @@ export function createDestinations(context) {
     session.journey.selectedNode = structuredClone(node);
     if (!node.quickTestBoss && canRecall(session.ai.library, node))
       session.journey.selectedNode.replay = true;
-    if (learning(session.ai.library) && session.journey.regionMap === 'mill' && !node.quickTestBoss)
+    if (
+      learning(session.ai.library) &&
+      isStarterTutorialMap(session.journey.regionMap) &&
+      !node.quickTestBoss
+    )
       session.journey.selectedNode.tutorial = true;
     renderSite();
     center();
@@ -809,10 +830,12 @@ export function createDestinations(context) {
     openDiscovery,
     refreshQuickTest() {
       if (
-        session.journey.regionMap === 'mill' &&
-        (dialog.open || session.journey.selectedNode?.map === 'mill')
+        ['mill', 'ruins'].includes(session.journey.regionMap) &&
+        (dialog.open || ['mill', 'ruins'].includes(session.journey.selectedNode?.map))
       ) {
-        session.journey.selectedNode = structuredClone(recommended('mill') || null);
+        session.journey.selectedNode = structuredClone(
+          recommended(session.journey.regionMap) || null,
+        );
       }
       if (!dialog.open) return;
       if (stage === 'route') {

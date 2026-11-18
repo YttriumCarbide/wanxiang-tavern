@@ -153,12 +153,12 @@ export const RUINS_ROUTES = Object.freeze([
         reason: '被邪神诅咒侵蚀的精英暗影猎杀者携虚空寄生物扑出截杀。',
       },
       {
-        enemyIds: ['voidParasite', 'cultistSpecter'],
-        reason: '邪能寄生物与祭祀残魂拱卫异变本体，为最后正面对抗清开道路。',
+        enemyIds: ['shadowStalker', 'voidParasite', 'blackOoze'],
+        reason: '邪能寄生物、黑色物质与残存魔怪拱卫异变本体；前四战肃清阻路群落。',
       },
       {
-        enemyIds: ['blackOoze', 'apepLamb', 'voidParasite'],
-        reason: '阿佩普的羔羊作为多动邪神化身彻底显现；只有最终击败后，灰才恢复人形并化灰消散。',
+        enemyIds: ['apepLamb'],
+        reason: '阿佩普的羔羊作为独尊邪神化身降临单人深渊战场；击溃后灰才会恢复人形并化灰消散。',
       },
     ],
   },

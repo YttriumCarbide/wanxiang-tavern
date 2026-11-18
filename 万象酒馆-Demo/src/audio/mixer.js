@@ -297,8 +297,8 @@ export function createAudioMixer(preferences, onChange = () => {}) {
       updateLevels();
       onChange();
     },
-    combat(event, before, speed) {
-      for (const cue of combatCues(event, before, speed)) play(cue.name, cue.delay);
+    combat(event, before, speed, visualDuration) {
+      for (const cue of combatCues(event, before, speed, visualDuration)) play(cue.name, cue.delay);
     },
     suspend() {
       if (context?.state === 'running') void context.suspend().catch(() => {});

@@ -10,6 +10,10 @@ export {
 const ROMAN_ACTS = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
 
 const VERIFIED_ARTWORK = {
+  mill: {
+    intro: './assets/events/forest-event.png',
+    epilogue: './assets/events/forest-quest.png',
+  },
   ruins: {
     intro: './assets/events/ruins-event.png',
     epilogue: './assets/events/ruins-quest.png',
@@ -73,6 +77,16 @@ const VERIFIED_ARTWORK = {
 };
 
 const BIOME_PROFILE = {
+  mill: {
+    seal: '磨',
+    sealColor: '#3f6a45',
+    moteTone: 'gold',
+    petalVariant: 'emerald',
+    cueGroup: 'forest',
+    subtitle: '绿蕨磨坊 · 纪行',
+    beams: 'bright',
+    glow: 'radial-gradient(ellipse at 52% 46%, rgba(84, 146, 86, 0.22) 0%, rgba(212, 184, 108, 0.1) 42%, transparent 74%)',
+  },
   ruins: {
     seal: '纪',
     sealColor: '#8b1e24',
@@ -230,7 +244,9 @@ export function resolveTheaterTheme({ map = 'ruins', mode = 'intro', place = '',
   let cueGroup = profile.cueGroup;
   let beamIntensity = profile.beams;
   let glow = profile.glow;
-  let artwork = VERIFIED_ARTWORK[biomeKey][isEpilogue || isQuestOpening ? 'epilogue' : 'intro'];
+  const artworkEntry =
+    VERIFIED_ARTWORK[biomeKey] || VERIFIED_ARTWORK[profile.cueGroup] || VERIFIED_ARTWORK.ruins;
+  let artwork = artworkEntry[isEpilogue || isQuestOpening ? 'epilogue' : 'intro'];
   let subtitle = place
     ? `${biome.name} · ${place}`
     : `${biome.name} · ${profile.subtitle.split(' · ')[0]}`;

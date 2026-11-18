@@ -6,9 +6,13 @@ import { createTownGuestMechanics, blindedTarget } from './town-guest-mechanics.
 import { tacticalDecision, lockEnemyDecisions } from './enemy-tactics.js';
 import {
   alchemicalBombDamage,
+  overlordPhaseLog,
   overlordPhaseProfile,
   overlordTargetStage,
   pickBombTarget,
+  pickCorruptedTimelineSlot,
+  sinkingPlagueFrontDamage,
+  sinkingPlagueRearDamage,
 } from './overlord-mechanics.js';
 import { canCombine, EMBLEMS, OVERLOAD_EMBLEM_ID } from './emblems.js';
 import { ITEMS, restoreBag } from './content/items.js';
@@ -205,10 +209,15 @@ export function intent(s, id, actionIndex = 0) {
       }
     }
     const cadence = Math.max(2, Number(chargeSpec.cadenceRounds) || 3);
+    const chargeBaseline =
+      unit?.lastChargeRound ??
+      (Number.isInteger(chargeSpec.firstChargeRound)
+        ? chargeSpec.firstChargeRound - cadence
+        : -cadence);
     if (
       chargeSpec.chargeMove &&
       unit?.lastChargeRound !== s.round &&
-      s.round - (unit?.lastChargeRound ?? -cadence) >= cadence
+      s.round - chargeBaseline >= cadence
     ) {
       const chargeMove = chargeSpec.chargeMove;
       return {
@@ -469,6 +478,7 @@ function simulate(s, plan, slots) {
   const definitions = definitionsFor(s),
     heroes = heroesFor(s);
   const work = clone(s),
+    frontAtStart = new Set(front(s)),
     rearAtStart = new Set(rear(s)),
     movedToFront = new Set(),
     events = [],
@@ -499,6 +509,10 @@ function simulate(s, plan, slots) {
       return false;
     })
     .sort((a, b) => a.start - b.start);
+  const corruptedSlot =
+    s.phase !== 'opening' && Number.isInteger(work.sinkingPlague?.corruptedSlot)
+      ? work.sinkingPlague.corruptedSlot
+      : null;
   const valid = [];
   for (const a of sorted) {
     let error = '';
@@ -507,6 +521,15 @@ function simulate(s, plan, slots) {
     for (let i = a.start; i < a.start + a.ap; i++) {
       if (slots[i]) error = '与敌人行动重叠';
       if (usedSlots.has(i)) error = '与其他行动重叠';
+      if (
+        !error &&
+        corruptedSlot !== null &&
+        i === corruptedSlot &&
+        !slots[corruptedSlot] &&
+        !['swap', 'reposition'].includes(a.kind)
+      ) {
+        error = '该格已被【沉疫】腐化：仅限换位，或以迟缓逼敌踩占解除';
+      }
     }
     if (error) {
       invalid.push({ id: a.id, message: error });
@@ -979,16 +1002,12 @@ function simulate(s, plan, slots) {
         const targets = heroes.map((hero) => hero.id).filter((target) => work.units[target].hp > 0);
         // A phase transition interrupts the remaining player turn, even with negative-status immunity.
         for (const target of targets) work.units[target].buffs.bind = 1;
-        currentLogs.push(
-          nextStage >= 3
-            ? `${def.name}胸口的核心彻底碎裂暴走，滚烫炼金雾席卷全场（获得${profile.artifactBonus || 0}层人工制品与${shield}护盾，震退并打断我方本回合剩余行动）`
-            : `${def.name}体内的反重力发条猛然失衡逆转（获得${profile.artifactBonus || 0}层人工制品与${shield}护盾，震退并打断我方本回合剩余行动）`,
-        );
+        currentLogs.push(overlordPhaseLog(id, def, nextStage, profile, shield));
         record('bossPhase', id, def.name, targets, null, null, {
           phaseStage: nextStage,
           overlord: true,
           enraged: nextStage >= 2,
-          clip: 'Special_Action',
+          clip: id === 'apepLamb' ? 'Apep_Eclipse' : 'Special_Action',
         });
         continue;
       }
@@ -1126,8 +1145,10 @@ function simulate(s, plan, slots) {
         record('skip', enemy, '流血致死 · 行动取消', [], null, null, { actionIndex: actionIdx });
         continue;
       }
+      const lockOwner =
+        ['moonCrown', 'moonRoot'].includes(enemy) && work.units.moonEye?.hp > 0 ? 'moonEye' : enemy;
       const newlyLockedUi = Boolean(definitions[enemy]?.overlord && !work.overlordUiLocked);
-      if (newlyLockedUi) work.overlordUiLocked = enemy;
+      if (newlyLockedUi) work.overlordUiLocked = lockOwner;
       if (move.fixedFirstSlot) {
         const bombTarget =
           move.bombTarget && work.units[move.bombTarget]?.hp > 0
@@ -1252,8 +1273,37 @@ function simulate(s, plan, slots) {
           enemyDamageType,
         );
       }
-      if (move.sinkingPlague && !work.sinkingPlague)
-        work.sinkingPlague = { source: enemy, ages: [0, 0, 0] };
+      if (move.sinkingPlague) {
+        if (!work.sinkingPlague) {
+          work.sinkingPlague = {
+            source: enemy,
+            ages: [0, 0, 0],
+            backfieldTurns: {},
+            corruptedSlot: null,
+          };
+        } else {
+          work.sinkingPlague.source = enemy;
+        }
+      }
+      if (move.plagueAdd && work.sinkingPlague) {
+        const hitFrontSlots = (move.slots || [move.slot]).filter(
+          (slotIdx) => Number.isInteger(slotIdx) && slotIdx >= 0 && slotIdx < 3,
+        );
+        for (const slotIdx of hitFrontSlots) {
+          work.sinkingPlague.ages[slotIdx] =
+            (work.sinkingPlague.ages[slotIdx] || 0) + move.plagueAdd;
+        }
+      }
+      const slowClearedCorrupt = Boolean(
+        corruptedSlot !== null &&
+        at === corruptedSlot &&
+        work.sinkingPlague &&
+        !work.sinkingPlague.slowCleansed,
+      );
+      if (slowClearedCorrupt) {
+        work.sinkingPlague.slowCleansed = true;
+        currentLogs.push(`${definitions[enemy].name}踩中腐化回合格，沉疫格位封锁解除！`);
+      }
       if (move.isCharge) {
         u.chargingMove = { round: work.round + 1, stage: u.bossStage || 1 };
         u.lastChargeRound = work.round;
@@ -1284,6 +1334,7 @@ function simulate(s, plan, slots) {
           ...(move.isCharge ? { chargeStarted: true } : {}),
           ...(move.isChargedRelease ? { chargedRelease: true } : {}),
           ...(newlyLockedUi ? { overlordDomainLock: true } : {}),
+          ...(slowClearedCorrupt ? { clearedCorruptedSlot: true } : {}),
           ...(enemyDamageType ? { damageType: enemyDamageType } : {}),
         },
       );
@@ -1625,13 +1676,15 @@ function simulate(s, plan, slots) {
         currentStatusTriggers.push({ id: u.id, type: 'poison', value });
       }
     record('poison', null, '回合末 · 中毒结算');
-    if (work.sinkingPlague) {
+    if (work.sinkingPlague && work.units[work.sinkingPlague.source]?.hp > 0) {
       const targets = [];
+      const backfieldTurns = { ...(work.sinkingPlague.backfieldTurns || {}) };
       work.sinkingPlague.ages = work.sinkingPlague.ages.map((age, slot) => {
-        const elapsed = age + 1;
+        const elapsed = (age || 0) + 1;
         const id = work.formation[slot];
         if (work.units[id]?.hp > 0) {
-          const value = elapsed * 2;
+          backfieldTurns[id] = 0;
+          const value = sinkingPlagueFrontDamage(work, slot, age);
           lose(work.units[id], value, '沉疫');
           currentLogs.push(`${definitions[id].name}受到沉疫${value}伤害（第${elapsed}回合）`);
           currentStatusTriggers.push({ id, type: 'sinkingPlague', value });
@@ -1639,7 +1692,38 @@ function simulate(s, plan, slots) {
         }
         return elapsed;
       });
-      record('sinkingPlague', work.sinkingPlague.source, '回合末 · 沉疫', targets);
+      for (const id of rear(work)) {
+        if (!id || work.units[id]?.hp <= 0) {
+          if (id) backfieldTurns[id] = 0;
+          continue;
+        }
+        if (frontAtStart.has(id) || movedToFront.has(id)) {
+          backfieldTurns[id] = 0;
+          continue;
+        }
+        const turns = (backfieldTurns[id] || 0) + 1;
+        backfieldTurns[id] = turns;
+        const rearValue = sinkingPlagueRearDamage(work, turns);
+        lose(work.units[id], rearValue, '沉疫 · 后场溺蚀');
+        currentLogs.push(
+          `${definitions[id].name}滞留后场第${turns}轮，沉疫深水溺蚀${rearValue}伤害（换入前场可刷新）`,
+        );
+        currentStatusTriggers.push({
+          id,
+          type: 'sinkingPlague',
+          value: rearValue,
+          rearTurns: turns,
+        });
+        targets.push(id);
+      }
+      for (const id of front(work).filter(Boolean)) backfieldTurns[id] = 0;
+      work.sinkingPlague.backfieldTurns = backfieldTurns;
+      const maxFrontAge = Math.max(...work.sinkingPlague.ages, 1);
+      const maxRearTurn = Math.max(0, ...Object.values(backfieldTurns));
+      record('sinkingPlague', work.sinkingPlague.source, '回合末 · 沉疫', targets, null, null, {
+        plagueIntensity: Math.min(1, maxFrontAge * 0.14 + maxRearTurn * 0.24),
+        rearTargets: rear(work).filter((hid) => backfieldTurns[hid] > 0),
+      });
     }
     const decay = decayStatuses(work.units);
     for (const change of decay)
@@ -1772,6 +1856,10 @@ export function advance(result) {
   }
   syncEnemyBreakWindows(s);
   lockEnemyDecisions(s, definitionsFor(s));
+  if (s.sinkingPlague) {
+    delete s.sinkingPlague.slowCleansed;
+    s.sinkingPlague.corruptedSlot = pickCorruptedTimelineSlot(s, enemyTimeline(s));
+  }
   return s;
 }
 export function newEncounter(spec, prior = null, index = 0, heroDefinitions = {}) {

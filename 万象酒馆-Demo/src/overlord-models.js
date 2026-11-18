@@ -1,8 +1,13 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { shouldStandOnCard, overlordAssetUrls } from './overlord-registry.js';
+import { APEP_ID } from './apep-presentation.js';
 
 export { shouldStandOnCard, overlordAssetUrls };
+
+export function cardModelScale(definition) {
+  return definition.boss ? 1.08 : 1;
+}
 
 function countSceneTriangles(object) {
   const total = { count: 0 };
@@ -67,15 +72,17 @@ function createSealRing(colorHex) {
   return ringGroup;
 }
 
-function updateSealRingStage(seal, baseColorHex, stage = 1) {
+function updateSealRingStage(seal, baseColorHex, stage = 1, id = '') {
   if (!seal) return;
   const s = Math.max(1, Math.min(3, Number(stage) || 1));
   const palette =
-    s >= 3
-      ? ['#ff3d6e', '#ffe47a']
-      : s === 2
-        ? ['#ff9442', '#6bf5a9']
-        : [baseColorHex || '#e7cf7a', '#ffffff'];
+    id === APEP_ID && s >= 2
+      ? ['#ed6579', '#ffcab1']
+      : s >= 3
+        ? ['#ff3d6e', '#ffe47a']
+        : s === 2
+          ? ['#ff9442', '#6bf5a9']
+          : [baseColorHex || '#e7cf7a', '#ffffff'];
   const meshes = seal.children || [];
   if (meshes[0]?.material) meshes[0].material.color.set(palette[0]);
   if (meshes[1]?.material) {
@@ -270,6 +277,7 @@ export async function createOverlordModels({
           animations: Array.isArray(gltf.animations) ? gltf.animations : [],
           triangles: gltf.userData?.triangles || countSceneTriangles(gltf.scene),
           nonVoxel: Boolean(gltf.userData?.nonVoxel || hasProceduralNode),
+          battleAssembly: gltf.userData?.battleAssembly,
         });
       } catch {
         // Fallback gracefully if a non-active asset is absent in an isolated partial test fixture.
@@ -302,14 +310,15 @@ export async function createOverlordModels({
         continue;
       }
       const unit = state?.units?.[record.id];
-      const unitStage = unit?.bossStage || (unit?.enraged ? 2 : 1);
+      const unitStage =
+        record.id === APEP_ID && unit?.enraged ? 2 : unit?.bossStage || (unit?.enraged ? 2 : 1);
       const isCharging = Boolean(unit?.chargingMove || unit?.breakWindow?.source === 'charge');
       const isBroken = Boolean(unit?.broken);
       const current = mounted.get(record);
       if (current?.id === record.id) {
         if (current.stage !== unitStage) {
           current.stage = unitStage;
-          updateSealRingStage(current.seal, current.colorHex, unitStage);
+          updateSealRingStage(current.seal, current.colorHex, unitStage, record.id);
         }
         current.charging = isCharging;
         current.broken = isBroken;
@@ -325,6 +334,19 @@ export async function createOverlordModels({
       const figure = tpl.scene.clone(true);
       figure.name = `Overlord_Figure_${record.id}`;
       prepareFigureVisibility(figure, def);
+      const assembly = tpl.battleAssembly;
+      const assembled =
+        assembly &&
+        new Set(
+          enemyRecords
+            .map(({ id }) => definitions[id])
+            .filter((part) => part?.model === def.model)
+            .map((part) => part.anatomyIndex),
+        ).size === assembly.parts;
+      if (assembled && def.anatomyIndex !== 0) {
+        const halo = figure.getObjectByName('Resonance_Halo');
+        if (halo) halo.visible = false;
+      }
       const bounds = measureVisibleBounds(figure);
       const size = bounds.getSize(new THREE.Vector3());
       const center = bounds.getCenter(new THREE.Vector3());
@@ -332,15 +354,18 @@ export async function createOverlordModels({
       const targetHeight = def.overlord ? 3.9 : 2.25;
       const maxFootprintX = def.overlord ? 4.5 : 2.3;
       const maxFootprintZ = def.overlord ? 3.4 : 2.0;
-      const scale = Math.min(
-        targetHeight / Math.max(0.01, size.y),
-        maxFootprintX / Math.max(0.01, size.x),
-        maxFootprintZ / Math.max(0.01, size.z),
-      );
-      const baseY = -bounds.min.y * scale + 0.008;
+      const scale = assembled
+        ? assembly.scale
+        : Math.min(
+            targetHeight / Math.max(0.01, size.y),
+            maxFootprintX / Math.max(0.01, size.x),
+            maxFootprintZ / Math.max(0.01, size.z),
+          );
+      // Each selectable card carries one anatomical part in the same model coordinates.
+      const baseY = assembled ? 0.008 : -bounds.min.y * scale + 0.008;
       figure.scale.setScalar(scale);
-      const baseX = -center.x * scale;
-      const baseZ = -center.z * scale;
+      const baseX = assembled ? -record.goal.x / cardModelScale(def) : -center.x * scale;
+      const baseZ = assembled ? 0 : -center.z * scale;
       figure.position.set(baseX, baseY, baseZ);
 
       const seal = createSealRing(def.color);
@@ -374,6 +399,7 @@ export async function createOverlordModels({
         broken: isBroken,
         overlord: Boolean(def.overlord),
         standOnCard: true,
+        assembled,
         triangles: tpl.triangles,
         nonVoxel: tpl.nonVoxel,
         height: Number((size.y * scale).toFixed(3)),
@@ -392,9 +418,11 @@ export async function createOverlordModels({
         playingClip: idleAction ? idleAction.getClip().name : null,
         onFinished: null,
         lunge: null,
-        floating: record.id.includes('Cannon') || record.id === 'radiantWyvern',
+        casterMotion: null,
+        floating:
+          record.id.includes('Cannon') || record.id === 'radiantWyvern' || record.id === APEP_ID,
       };
-      updateSealRingStage(seal, def.color, unitStage);
+      updateSealRingStage(seal, def.color, unitStage, record.id);
       if (mixer && idleAction) {
         entry.onFinished = (event) => {
           if (event.action === idleAction) return;
@@ -428,7 +456,7 @@ export async function createOverlordModels({
     const clipName = resolveClipName(entry, move);
     const action = clipName ? entry.clips[clipName] : entry.idleAction;
     if (!action) return 0;
-    if (move.lunge && !reduced) {
+    if (move.lunge && !reduced && !entry.assembled) {
       const parentScale = Math.max(0.5, Number(move.lunge.parentScale) || 1);
       entry.lunge = {
         start: performance.now(),
@@ -436,6 +464,16 @@ export async function createOverlordModels({
         dx: (Number(move.lunge.dx) || 0) / parentScale,
         dz: (Number(move.lunge.dz) || 0) / parentScale,
         aoe: Boolean(move.lunge.aoe),
+      };
+    }
+    if (move.casterMotion && !reduced && !entry.assembled) {
+      const parentScale = Math.max(0.5, Number(move.casterMotion.parentScale) || 1);
+      entry.casterMotion = {
+        style: move.casterMotion.style || 'tide-surge',
+        start: performance.now(),
+        duration: Math.max(600, Number(move.casterMotion.durationMs) || 1600),
+        dx: (Number(move.casterMotion.dx) || 0) / parentScale,
+        dz: (Number(move.casterMotion.dz) || 0) / parentScale,
       };
     }
     if (action === entry.idleAction) {
@@ -481,11 +519,21 @@ export async function createOverlordModels({
       }
       const hover =
         !entry.mixer && entry.floating ? 0.055 + Math.sin(t * 2.1 + index * 1.15) * 0.032 : 0;
+      const casterHover =
+        entry.id === APEP_ID && !reduced
+          ? entry.broken
+            ? -0.18
+            : (entry.stage >= 3 ? 0.34 : entry.stage === 2 ? 0.2 : 0.08) +
+              Math.sin(t * 2.35) * 0.065
+          : 0;
       const breathe = entry.mixer ? 1 : 1 + Math.sin(t * 1.8 + index * 1.15) * 0.014;
       entry.figure.scale.set(entry.baseScale, entry.baseScale * breathe, entry.baseScale);
       let lungeX = 0;
       let lungeY = 0;
       let lungeZ = 0;
+      let rotX = 0;
+      let rotY = 0;
+      let rotZ = 0;
       if (entry.lunge) {
         const L = entry.lunge;
         const u = Math.min(1, (now - L.start) / L.duration);
@@ -517,6 +565,60 @@ export async function createOverlordModels({
           lungeZ = L.dz * travel;
         }
       }
+      if (entry.casterMotion) {
+        const C = entry.casterMotion;
+        const u = Math.min(1, (now - C.start) / C.duration);
+        hasAnimation = true;
+        if (u >= 1) {
+          entry.casterMotion = null;
+        } else if (C.style === 'plague-slam' || C.style === 'eclipse-ascend') {
+          const peak = C.style === 'eclipse-ascend' ? 1.12 : 0.86;
+          if (u < 0.38) {
+            const p = u / 0.38;
+            const rise = Math.sin(p * Math.PI * 0.5);
+            lungeY += peak * rise;
+            lungeZ -= 0.18 * rise;
+            rotX = -0.15 * rise;
+          } else if (u < 0.54) {
+            const p = (u - 0.38) / 0.16;
+            const snap = p * p;
+            lungeY += peak * (1 - snap) - 0.12 * snap;
+            lungeX += C.dx * 0.24 * snap;
+            lungeZ += C.dz * 0.35 * snap;
+            rotX = -0.15 * (1 - snap) + 0.19 * snap;
+          } else {
+            const p = (u - 0.54) / 0.46;
+            const settle = Math.pow(1 - p, 1.8);
+            lungeY -= 0.12 * settle;
+            lungeX += C.dx * 0.24 * settle;
+            lungeZ += C.dz * 0.35 * settle;
+            rotX = 0.19 * settle;
+          }
+        } else if (C.style === 'gaze-advance') {
+          const forward =
+            u < 0.28
+              ? Math.sin((u / 0.28) * Math.PI * 0.5)
+              : u < 0.68
+                ? 1
+                : Math.pow(1 - (u - 0.68) / 0.32, 2);
+          lungeX += C.dx * 0.72 * forward;
+          lungeY += 0.34 * forward;
+          lungeZ += C.dz * 0.85 * forward;
+          rotX = 0.16 * forward;
+        } else if (C.style === 'shell-coil') {
+          const arc = Math.sin(u * Math.PI);
+          lungeY += 0.36 * arc;
+          rotY = Math.sin(u * Math.PI * 2) * 0.14;
+        } else {
+          const arc = Math.sin(u * Math.PI);
+          const sweep = Math.sin(u * Math.PI * 2);
+          lungeX += sweep * 0.34 + C.dx * 0.38 * arc;
+          lungeY += 0.48 * arc;
+          lungeZ += C.dz * 0.46 * arc;
+          rotZ = -sweep * 0.1;
+          rotX = 0.08 * arc;
+        }
+      }
       const vibe = entry.broken
         ? 0.032
         : entry.charging
@@ -536,13 +638,16 @@ export async function createOverlordModels({
               ? 0.34
               : 0.16;
         const pulse = (0.5 + 0.5 * Math.sin(t * pulseRate)) * pulseAmp;
-        const tintHex = entry.broken
-          ? 0xff5442
-          : entry.charging
-            ? 0xffd25a
-            : entry.stage >= 3
-              ? 0xff4568
-              : 0xe89c3c;
+        const tintHex =
+          entry.id === APEP_ID
+            ? 0xff4975
+            : entry.broken
+              ? 0xff5442
+              : entry.charging
+                ? 0xffd25a
+                : entry.stage >= 3
+                  ? 0xff4568
+                  : 0xe89c3c;
         entry.figure.traverse((node) => {
           if (!node.isMesh || node.name.includes('Battle_Card')) return;
           for (const mat of Array.isArray(node.material) ? node.material : [node.material]) {
@@ -566,11 +671,17 @@ export async function createOverlordModels({
       }
       entry.figure.position.set(
         entry.baseX + lungeX,
-        entry.baseY + hover + lungeY + staggerY,
+        entry.baseY + hover + casterHover + lungeY + staggerY,
         entry.baseZ + lungeZ,
       );
-      if (!entry.mixer) {
-        entry.figure.rotation.y = Math.sin(t * 0.9 + index * 1.15) * 0.06;
+      if (entry.casterMotion || entry.id === APEP_ID) {
+        entry.figure.rotation.set(
+          rotX,
+          (!entry.mixer ? Math.sin(t * 0.9 + index * 1.15) * 0.06 : 0) + rotY,
+          rotZ,
+        );
+      } else if (!entry.mixer) {
+        entry.figure.rotation.set(0, Math.sin(t * 0.9 + index * 1.15) * 0.06, 0);
       }
       const sealRate = entry.broken
         ? 0.2
