@@ -21,8 +21,10 @@ test('normal play always generates; the combined developer switch migrates both 
     developerMode: false,
     allowRetreat: false,
     editArchives: false,
+    unlockAllCodex: false,
     protagonistApi: true,
     scriptApi: true,
+    skipOverlandApi: false,
   };
   assert.deepEqual(restoreGenerationOptions(null), defaults);
   assert.deepEqual(restoreGenerationOptions({ tavernVisitors: false }), defaults);

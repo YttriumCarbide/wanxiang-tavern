@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { createAssetStore } from './asset-store.js';
+import { createPopoverSurface } from './top-layer.js';
 import {
   buildAstrolabeBackdropSvg,
   buildCornerBracketsHtml,
@@ -226,7 +227,13 @@ export function createWorldLoadingOverlay(title = '正在展开世界地图') {
     </div>`;
   const dest = element.querySelector('[data-wl-dest]');
   if (dest) dest.textContent = title;
+  const surface = createPopoverSurface(element);
   let rotateTimer = null;
+  const promote = () => {
+    surface.hide();
+    surface.show();
+  };
+  const nextFrame = () => new Promise((resolve) => requestAnimationFrame(resolve));
   const onClick = (event) => {
     const nextBtn = event.target.closest('[data-wl-next-lore]');
     if (nextBtn) {
@@ -243,8 +250,11 @@ export function createWorldLoadingOverlay(title = '正在展开世界地图') {
       const titleEl = element.querySelector('[data-wl-dest]');
       if (titleEl) titleEl.textContent = nextTitle;
       if (!element.isConnected) document.body.append(element);
+      element.getAnimations().forEach((animation) => animation.cancel());
+      element.style.opacity = '';
       element.classList.remove('complete');
       element.hidden = false;
+      promote();
       clearInterval(rotateTimer);
       rotateTimer = setInterval(() => {
         if (!element.hidden) applyLoreIndex(element, (Number(element.dataset.loreIdx) || 0) + 1);
@@ -252,10 +262,12 @@ export function createWorldLoadingOverlay(title = '正在展开世界地图') {
     },
     async transition(
       nextTitle = title,
-      { phaseText = '正在踏入异境入口，展开探索舆图…', durationMs = 600 } = {},
+      { phaseText = '正在踏入异境入口，展开探索舆图…', durationMs = 420, onCovered = null } = {},
     ) {
       const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-      const ms = reduced ? 30 : Math.max(240, durationMs);
+      const fadeInMs = reduced ? 10 : 150;
+      const holdMs = reduced ? 20 : Math.max(240, durationMs);
+      const fadeOutMs = reduced ? 15 : 210;
       const trackEl = element.querySelector('.wl-sword-track');
       const fillEl = element.querySelector('.wl-sword-fill');
       const phaseEl = element.querySelector('.scene-loading-phase');
@@ -265,17 +277,38 @@ export function createWorldLoadingOverlay(title = '正在展开世界地图') {
       if (tagEl) tagEl.textContent = 'EXPEDITION';
       if (trackEl) trackEl.classList.remove('is-indeterminate');
       if (fillEl) {
-        fillEl.style.transition = `width ${ms}ms cubic-bezier(.22,1,.36,1)`;
-        fillEl.style.width = '12%';
+        fillEl.style.transition = 'none';
+        fillEl.style.width = '10%';
       }
-      if (detailsEl) detailsEl.textContent = '12%';
+      if (detailsEl) detailsEl.textContent = '10%';
       this.show(nextTitle);
-      await new Promise((resolve) => requestAnimationFrame(resolve));
-      if (fillEl) fillEl.style.width = '100%';
+      await element
+        .animate([{ opacity: 0 }, { opacity: 1 }], {
+          duration: fadeInMs,
+          easing: 'ease',
+          fill: 'forwards',
+        })
+        .finished.catch(() => {});
+      await nextFrame();
+      if (fillEl) {
+        fillEl.style.transition = `width ${holdMs}ms cubic-bezier(.22,1,.36,1)`;
+        fillEl.style.width = '100%';
+      }
       if (detailsEl) detailsEl.textContent = '100%';
-      await new Promise((resolve) => setTimeout(resolve, ms));
+      await onCovered?.();
+      promote();
+      await nextFrame();
+      await nextFrame();
+      await new Promise((resolve) => setTimeout(resolve, holdMs));
       element.classList.add('complete');
-      await new Promise((resolve) => setTimeout(resolve, reduced ? 20 : 180));
+      await element
+        .animate([{ opacity: 1 }, { opacity: 0 }], {
+          duration: fadeOutMs,
+          easing: 'ease',
+          fill: 'forwards',
+        })
+        .finished.catch(() => {});
+      element.getAnimations().forEach((animation) => animation.cancel());
       this.hide();
       if (trackEl) trackEl.classList.add('is-indeterminate');
       if (fillEl) {
@@ -288,11 +321,15 @@ export function createWorldLoadingOverlay(title = '正在展开世界地图') {
     hide() {
       clearInterval(rotateTimer);
       rotateTimer = null;
+      element.getAnimations().forEach((animation) => animation.cancel());
+      element.style.opacity = '';
+      surface.hide();
       element.hidden = true;
     },
     dispose() {
       clearInterval(rotateTimer);
       rotateTimer = null;
+      surface.hide();
       element.removeEventListener('click', onClick);
       element.remove();
     },

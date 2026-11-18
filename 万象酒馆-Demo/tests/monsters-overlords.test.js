@@ -48,9 +48,10 @@ test('validateGameData accepts all expanded monsters and overlord flags cleanly'
   assert.doesNotThrow(() => validateGameData());
 });
 
-test('all 21 Jacob Ladder monsters, 18 common monsters, lore, drops and worldbook entries resolve', async () => {
+test("all 22 Jacob's Ladder monsters, 18 common monsters, lore, drops and worldbook entries resolve", async () => {
   const phenomenon = WORLD_PHENOMENA.find((entry) => entry.id === 'jacobs-ladder-exploration');
   assert(phenomenon, 'Missing jacobs-ladder-exploration phenomenon');
+  assert.equal(phenomenon.comment, '地点详情：雅各布天梯');
   const parseNames = (prefix) => {
     const line = phenomenon.content
       .split('\n')
@@ -66,10 +67,12 @@ test('all 21 Jacob Ladder monsters, 18 common monsters, lore, drops and worldboo
   };
   const mobNames = parseNames('1.小怪：');
   const eliteNames = parseNames('2.精英：');
-  const bossNames = parseNames('3.boss：');
-  assert.equal(mobNames.length, 10);
+  const bossNames = parseNames('3.首领：');
+  const overlordNames = parseNames('4.霸主：');
+  assert.equal(mobNames.length, 9);
   assert.equal(eliteNames.length, 6);
-  assert.equal(bossNames.length, 5);
+  assert.equal(bossNames.length, 6);
+  assert.equal(overlordNames.length, 1);
 
   const byName = new Map(Object.values(DEFINITIONS).map((def) => [def.name, def]));
   for (const name of mobNames) {
@@ -85,10 +88,17 @@ test('all 21 Jacob Ladder monsters, 18 common monsters, lore, drops and worldboo
   for (const name of bossNames) {
     const def = byName.get(name);
     assert(def, `Missing Jacob's Ladder boss ${name}`);
-    assert(def.boss);
+    assert(def.boss && !def.overlord);
+  }
+  for (const name of overlordNames) {
+    const def = byName.get(name);
+    assert(def, `Missing Jacob's Ladder overlord ${name}`);
+    assert(def.boss && def.overlord);
   }
   assert.equal(DEFINITIONS.radiantWyvern.overlord, true);
   assert.equal(DEFINITIONS.radiantWyvern.standOnCard, true);
+  assert.equal(DEFINITIONS.ladderWebSpider.boss, true);
+  assert.equal(DEFINITIONS.ladderCrowman.boss, true);
 
   const book = JSON.parse(await readFile(path.join(ASSETS, 'builtin-worldbook.json'), 'utf8'));
   const worldEntriesByMonster = new Map(
@@ -100,8 +110,8 @@ test('all 21 Jacob Ladder monsters, 18 common monsters, lore, drops and worldboo
   assert(apepEntry);
   assert.deepEqual(apepEntry.key, ['apepLamb', '阿佩普的羔羊']);
 
-  assert.equal(LADDER_ENEMIES.length, 16);
-  assert.equal(LADDER_BOSSES.length, 5);
+  assert.equal(LADDER_ENEMIES.length, 15);
+  assert.equal(LADDER_BOSSES.length, 7);
   assert.equal(COMMON_ENEMIES.length, 15);
   assert.equal(COMMON_BOSSES.length, 3);
 
@@ -231,9 +241,9 @@ test('Overlord formations, standOnCard flags, and non-voxel vs 3-tier voxel GLB 
     if (modelName !== 'radiant-wyvern.glb') overlordTris.push(info.triangles);
   }
 
-  assert.equal(mobTris.length, 22);
+  assert.equal(mobTris.length, 21);
   assert.equal(eliteTris.length, 9);
-  assert.equal(bossTris.length, 7);
+  assert.equal(bossTris.length, 9);
   assert.equal(overlordTris.length, 8);
   assert(Math.max(...mobTris) < Math.min(...eliteTris), 'Mobs must have fewer tris than elites');
   assert(

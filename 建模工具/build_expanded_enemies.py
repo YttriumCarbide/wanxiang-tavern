@@ -12,8 +12,8 @@ def main():
     root = Path(__file__).resolve().parents[1]
     source = root / "万象异境-体素模型/扩展怪物"
     files = sorted(source.glob("*.json"))
-    if len(files) != 38:
-        raise ValueError(f"Expected 38 expanded enemy JSONs, found {len(files)}")
+    if len(files) != 39:
+        raise ValueError(f"Expected 39 expanded enemy JSONs, found {len(files)}")
     for filename in files:
         data = json.loads(filename.read_text(encoding="utf-8"))
         model = Model(data["name"])

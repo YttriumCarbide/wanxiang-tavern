@@ -238,13 +238,14 @@ export function createCitySubmap({
     if (!button || button.disabled) return;
     const action = button.dataset.cityAction;
     const targetId = button.dataset.cityNode;
+    if (action === 'dungeon') {
+      onOpenDungeon?.(button.dataset.cityDungeon || targetId);
+      setTimeout(close, 180);
+      return;
+    }
     close();
     if (action === 'guild') {
       onOpenGuild?.(data.region);
-      return;
-    }
-    if (action === 'dungeon') {
-      onOpenDungeon?.(button.dataset.cityDungeon || targetId);
       return;
     }
     if (targetId && targetId !== data.currentId) onNavigate?.(targetId);

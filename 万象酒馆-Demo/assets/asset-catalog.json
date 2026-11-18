@@ -1281,13 +1281,17 @@
       "bytes": 60928,
       "hash": "75c26080d6ab3494211bf1adaf8fcac5b82d559a4ca592411221e8391ec0ea92"
     },
+    "assets/ladder-crowman.glb": {
+      "bytes": 226512,
+      "hash": "c7c4188fbf35771a2798a5343ab47599b6c36962269d4b3d26cbb36042e0c42d"
+    },
     "assets/ladder-rock-giant.glb": {
       "bytes": 123848,
       "hash": "fd9880306e39488cdb77aec253c2e6f96608b08400a44f95df86734a02c8e38a"
     },
     "assets/ladder-web-spider.glb": {
-      "bytes": 61068,
-      "hash": "ca3c757273e39287c46bceb70f32b302b220ade73fdac9715600c0dc9f0d5c80"
+      "bytes": 219728,
+      "hash": "aeb9bdae85ee1fab00ae378f67158d0d0d79939f6e382643582816421c32e4c2"
     },
     "assets/living-vine.glb": {
       "bytes": 168664,
@@ -1773,13 +1777,17 @@
       "bytes": 12608,
       "hash": "cc6c997857d140ca75843d76d4d438718ab38d2b2140953cc34af370fea2828f"
     },
+    "assets/portraits/ladder-crowman.svg": {
+      "bytes": 50092,
+      "hash": "2f4667f264a0e40684cbfda9dd90854d19bafeada773c87f2bcf3a875250111e"
+    },
     "assets/portraits/ladder-rock-giant.svg": {
       "bytes": 27424,
       "hash": "f7aac79503ff5f75b0b46317edaa0cc27deb6b3d25977e0c53c43f16802c90da"
     },
     "assets/portraits/ladder-web-spider.svg": {
-      "bytes": 12481,
-      "hash": "4ca2221bcbdb7e74ba797362f71f2e8a67af2e683fc7192d093732056b15dbc2"
+      "bytes": 50418,
+      "hash": "57036b638140a61315d1dfeeb56895ba1c124fddd626ad7081376481a5bb6fae"
     },
     "assets/portraits/living-vine.svg": {
       "bytes": 39749,

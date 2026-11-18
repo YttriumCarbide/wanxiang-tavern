@@ -1,7 +1,7 @@
 import { shade } from './voxel-enemy-art.mjs';
 import { createVoxelBuilder, finalizeVoxelComplexity } from './expanded-voxel-helpers.mjs';
 
-/** Build progressive voxel anatomies for all 20 non-Overlord Jacob's Ladder monsters. */
+/** Build progressive voxel anatomies for all non-Overlord Jacob's Ladder monsters. */
 export function buildLadderVoxelBlocks(enemy) {
   const b = createVoxelBuilder(enemy);
   const {
@@ -136,29 +136,6 @@ export function buildLadderVoxelBlocks(enemy) {
       spineRidge('Crest', -1.2, 2.55, 0.45, 7, 0.95, crimson);
       hornPair('Horns', 1.65, 2.55, 0.38, 3, -0.25, 0.32, 0.14, 0.28, bone);
       tailSweep('Tail', -1.75, 1.25, 8, -0.45, 0.32, 0.35, 0.68, b.base, crimson);
-      break;
-    }
-
-    case 'ladderWebSpider': {
-      add('Body', 0.65, 1.35, 0, 1.3, 1.25, 0.95, b.dark);
-      add('Abdomen', -1.15, 1.45, 0, 2.25, 2.15, 1.85, b.base);
-      add('Markings', -1.15, 2.85, 0, 1.25, 1.3, 0.62, crimson);
-      add('Core', -2.25, 2.15, 0, 0.5, 0.65, 0.65, glowAmber);
-      eyes(1.34, 1.85, 0.36, 0.18, crimson);
-      eyes(1.36, 1.6, 0.18, 0.15, glowAmber);
-      pair('Fangs', 1.32, 1.22, 0.24, 0.35, 0.2, 0.45, obsidian);
-      for (let i = 0; i < 4; i++) {
-        const x = 0.85 - i * 0.52;
-        const zA = 0.72;
-        const zB = 1.95 + (i === 1 || i === 2 ? 0.5 : 0);
-        for (const side of [-1, 1]) {
-          add('Legs', x, 1.85, side * ((zA + zB) * 0.48), 0.28, 1.1, 0.28, b.mid);
-          add('Legs', x, 1.05, side * zB, 0.26, 0.28, 1.45, b.dark);
-          add('Feet', x + 0.1, 0.06, side * (zB + 0.18), 0.38, 0.38, 0.25, obsidian);
-        }
-      }
-      // Web spire above abdomen so vertical height > 3.5
-      line('Crest', [-1.15, 3.3, 0], [-1.35, 4.1, 0], 0.22, b.light, 3);
       break;
     }
 
@@ -528,6 +505,117 @@ export function buildLadderVoxelBlocks(enemy) {
         );
       }
       orbitingShards('SandStorm', 0.2, 1.6, 0, 2.8, 22, 0.28, '#d4b375', 0.55);
+      break;
+    }
+
+    case 'ladderWebSpider': {
+      // Boss-tier armored Jacob's Ladder drake-silk brood spider (height > 4.6)
+      add('Base', 0, 0.06, 0, 4.2, 4.2, 0.26, '#2e2a38');
+      add('Body', 1.05, 1.55, 0, 1.75, 1.65, 1.25, obsidian);
+      add('Armor', 1.05, 2.45, 0, 1.55, 1.45, 0.42, gold);
+      add('Head', 1.95, 1.75, 0, 1.15, 1.25, 1.05, b.dark);
+      // Armored multi-tiered giant abdomen with crimson drake markings
+      add('Abdomen', -1.25, 1.35, 0, 2.85, 2.75, 1.45, b.dark);
+      add('Abdomen', -1.35, 2.35, 0, 2.55, 2.45, 1.25, b.base);
+      add('Abdomen', -1.45, 3.25, 0, 1.85, 1.75, 0.82, b.mid);
+      add('Markings', -1.35, 3.75, 0, 1.45, 1.35, 0.38, crimson);
+      add('Core', -2.65, 2.25, 0, 0.65, 0.85, 0.85, glowAmber);
+      spineRidge('Crest', -2.35, 3.85, 0.48, 8, 1.05, gold);
+      // Eight venomous ruby/amber eyes + heavy curved fangs + pedipalps
+      eyes(2.54, 2.45, 0.44, 0.22, crimson);
+      eyes(2.58, 2.15, 0.22, 0.2, glowAmber);
+      eyes(2.42, 2.65, 0.58, 0.16, '#ff98ff');
+      eyes(2.56, 1.92, 0.48, 0.16, crimson);
+      pair('Fangs', 2.48, 1.45, 0.36, 0.55, 0.24, 0.65, obsidian);
+      pair('Fangs', 2.72, 1.15, 0.28, 0.28, 0.18, 0.48, glowCyan);
+      // 8 heavy multi-jointed arachnid legs with golden knee-plates and obsidian claws
+      for (let i = 0; i < 4; i++) {
+        const x = 1.25 - i * 0.72;
+        const innerZ = 0.88;
+        const kneeZ = 2.05 + (i === 1 || i === 2 ? 0.55 : 0.15);
+        const footZ = kneeZ + 0.55;
+        const kneeY = 2.75 + (i % 2 ? 0.35 : 0.1);
+        for (const side of [-1, 1]) {
+          line('Legs', [x, 1.85, side * innerZ], [x, kneeY, side * kneeZ], 0.34, b.mid, 3);
+          line('Legs', [x, kneeY, side * kneeZ], [x + 0.12, 0.35, side * footZ], 0.28, b.dark, 4);
+          add('Armor', x, kneeY + 0.18, side * kneeZ, 0.4, 0.38, 0.32, gold);
+          add('Claws', x + 0.22, 0.08, side * (footZ + 0.14), 0.46, 0.36, 0.28, bone);
+        }
+      }
+      // Tall silk-crystal spire & orbiting web rune halo reaching y > 5.0
+      line('Crest', [-1.45, 3.85, 0], [-1.75, 5.15, 0], 0.26, glowCyan, 5);
+      orbitingShards('Runes', -0.45, 3.1, 0, 2.85, 20, 0.24, gold, 0.65);
+      break;
+    }
+
+    case 'ladderCrowman': {
+      // Jacob's Ladder Voice-Mimic Corvid-Humanoid Boss perched on floating spire
+      // Broken floating-stone pillar base
+      add('StonePillar', 0, 0.06, 0, 2.95, 2.95, 0.42, '#3a3f4a');
+      add('StonePillar', -0.1, 0.45, 0.1, 2.25, 2.15, 0.48, '#4d5462');
+      add('StonePillar', 0.15, 0.88, -0.05, 1.55, 1.65, 0.38, '#5f6778');
+      add('Runes', 0.65, 0.62, 0.95, 0.32, 0.32, 0.65, gold);
+      add('Runes', -0.75, 0.55, -0.88, 0.3, 0.3, 0.58, glowAmber);
+      // Digitigrade avian legs & sharp brass-banded talons
+      for (const side of [-1, 1]) {
+        line('Legs', [0.05, 2.25, side * 0.55], [-0.32, 1.65, side * 0.72], 0.4, obsidian, 3);
+        line('Legs', [-0.32, 1.65, side * 0.72], [0.28, 1.15, side * 0.68], 0.32, '#434b5c', 3);
+        add('Armor', -0.05, 1.38, side * 0.68, 0.38, 0.38, 0.22, gold);
+        add('Talons', 0.48, 0.95, side * 0.68, 0.72, 0.46, 0.24, gold);
+        add('Claws', 0.82, 0.92, side * 0.56, 0.42, 0.16, 0.16, bone);
+        add('Claws', 0.82, 0.92, side * 0.8, 0.42, 0.16, 0.16, bone);
+      }
+      // Hunched humanoid torso, tattered feather cape & voice-mimic acoustic core
+      add('Body', 0, 2.35, 0, 1.35, 1.45, 1.55, obsidian);
+      add('Body', 0.18, 3.05, 0, 1.45, 1.68, 0.95, b.base);
+      add('Armor', 0.62, 2.95, 0, 0.58, 1.18, 1.05, '#2b3040');
+      add('Core', 0.78, 3.45, 0, 0.48, 0.58, 0.62, glowAmber);
+      pair('Shoulders', 0.08, 3.62, 1.02, 0.92, 0.78, 0.72, '#3c4559');
+      pair('Armor', 0.12, 3.92, 1.08, 0.65, 0.55, 0.28, gold);
+      // Tattered climber trophies hanging at waist & shoulders (tiny lanterns + bone relics)
+      pair('Trophies', 0.38, 2.15, 0.86, 0.28, 0.28, 0.42, bone);
+      add('Trophies', 0.48, 1.85, -0.88, 0.28, 0.28, 0.36, glowCyan);
+      add('Trophies', 0.52, 2.28, 0.92, 0.24, 0.24, 0.28, crimson);
+      // Feathered cloak draping down behind torso
+      for (let row = 0; row < 4; row++) {
+        add(
+          'Cloak',
+          -0.75 - row * 0.22,
+          3.35 - row * 0.58,
+          0,
+          0.36,
+          1.85 + row * 0.28,
+          0.68,
+          row % 2 ? obsidian : '#333b4d',
+        );
+      }
+      // Long clawed predator arms reaching forward
+      for (const side of [-1, 1]) {
+        line('Arms', [0.15, 3.42, side * 0.98], [0.95, 2.75, side * 1.35], 0.34, '#394154', 3);
+        line('Arms', [0.95, 2.75, side * 1.35], [1.65, 2.28, side * 1.12], 0.28, obsidian, 3);
+        for (let c = -1; c <= 1; c++) {
+          add('Claws', 2.02, 2.18 + c * 0.1, side * (1.08 + c * 0.12), 0.58, 0.14, 0.14, gold);
+        }
+      }
+      // Neck collar & gaping mimic-voice corvid skull head
+      add('Neck', 0.28, 3.88, 0, 0.92, 0.92, 0.65, '#3b4254');
+      add('Neck', 0.48, 4.32, 0, 0.85, 0.85, 0.52, obsidian);
+      add('Head', 0.72, 4.58, 0, 1.25, 1.08, 1.02, '#222633');
+      add('Head', 0.62, 5.18, 0, 0.95, 0.88, 0.48, bone);
+      // Hooked black upper & slightly opened lower beak with glowing vocal mimic core
+      add('Beak', 1.48, 4.92, 0, 0.95, 0.48, 0.36, obsidian);
+      add('Beak', 1.98, 4.78, 0, 0.42, 0.28, 0.28, '#171922');
+      add('Beak', 1.42, 4.46, 0, 0.78, 0.36, 0.22, '#2c303e');
+      add('Core', 1.32, 4.68, 0, 0.38, 0.28, 0.24, glowAmber);
+      eyes(1.18, 5.05, 0.42, 0.24, crimson);
+      eyes(1.26, 5.06, 0.4, 0.12, glowAmber);
+      hornPair('Crest', 0.35, 5.38, 0.32, 6, -0.32, 0.22, 0.14, 0.26, obsidian);
+      // Dual-tier sweeping black-indigo wings with gilded pinion tips
+      wingPair('Wings', -0.22, 3.75, 0.78, 3.45, 1.35, '#2b344a', obsidian, 10);
+      wingPair('LowerWings', -0.35, 2.55, 0.68, 2.45, 1.05, '#4c5773', gold, 7);
+      // Tail feather fan & orbiting mimic echo rune rings
+      tailSweep('Tail', -0.85, 1.85, 10, -0.36, -0.1, 0.28, 0.48, obsidian, gold);
+      orbitingShards('Runes', 0.35, 4.05, 0, 2.75, 20, 0.22, glowAmber, 0.75);
       break;
     }
 

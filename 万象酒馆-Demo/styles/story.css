@@ -404,6 +404,35 @@
   border-right: 1px solid rgba(216, 178, 110, 0.22);
   background: rgba(8, 9, 12, 0.62);
 }
+.archive-codex-progress {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px 7px;
+  border-bottom: 1px solid rgba(216, 178, 110, 0.16);
+  background: rgba(20, 18, 22, 0.92);
+  color: #cab899;
+  font-size: 12px;
+}
+.archive-codex-progress[hidden] {
+  display: none;
+}
+.archive-codex-count {
+  margin-left: auto;
+  color: #f4dfb0;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+.archive-codex-dev {
+  font-style: normal;
+  padding: 1px 6px;
+  border: 1px solid rgba(216, 178, 110, 0.42);
+  border-radius: 3px;
+  background: rgba(216, 178, 110, 0.16);
+  color: #f7dfaa;
+  font-size: 10px;
+}
 .archive-enemy-tiers {
   flex: 0 0 auto;
   display: grid;

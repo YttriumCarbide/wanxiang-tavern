@@ -46,7 +46,9 @@ import { townResidents } from '../town-residents.js';
 import { createPlayerIntentPrompt } from './player-intent.js';
 import { createWorldLoadingOverlay } from '../shared/scene-loading.js';
 import { IMPERIAL_DUNGEONS } from '../content/imperial-network.js';
+import { REGIONS } from '../content/regions.js';
 import { unlockDungeonMap } from '../exploration.js';
+import { worldRegion } from '../worlds.js';
 import { learning } from '../campaign.js';
 
 export function createDaily(context) {
@@ -59,7 +61,11 @@ export function createDaily(context) {
   const atlasFrame = () => document.getElementById('daily-atlas-frame');
   const atlasLoading = createWorldLoadingOverlay('正在展开泛生界大地图');
   const dungeonTransition = createWorldLoadingOverlay('正在前往异境副本');
-  const dungeonDisplayName = (id) => IMPERIAL_DUNGEONS.find((entry) => entry.id === id)?.name || id;
+  const dungeonDisplayName = (id) =>
+    IMPERIAL_DUNGEONS.find((entry) => entry.id === id)?.name ||
+    worldRegion(library(), id)?.name ||
+    REGIONS[id]?.name ||
+    id;
   const save = () => context.generation.save();
   const root = document.createElement('section');
   root.id = 'daily-hud';
@@ -153,18 +159,45 @@ export function createDaily(context) {
     dungeonId,
     phaseText = '正在踏入异境入口，展开探索舆图…',
     titlePrefix = '正在前往 · ',
+    beforeOpen = null,
   ) {
     if (enteringDungeon || session.runtime.disposed) return;
     enteringDungeon = true;
     try {
-      visitedDiscovery = dungeonId;
       await dungeonTransition.transition(`${titlePrefix}${dungeonDisplayName(dungeonId)}`, {
         phaseText,
-        durationMs: 600,
+        durationMs: 520,
+        onCovered: () => {
+          if (session.runtime.disposed) return;
+          if (beforeOpen && beforeOpen() === false) return;
+          visitedDiscovery = dungeonId;
+          context.destinations?.openDiscovery?.(dungeonId);
+          render();
+        },
       });
-      if (session.runtime.disposed) return;
-      context.destinations?.openDiscovery?.(dungeonId);
-      render();
+    } finally {
+      enteringDungeon = false;
+    }
+  }
+  async function closeDiscoveryWithTransition(performClose) {
+    if (session.runtime.disposed) return;
+    if (enteringDungeon) {
+      performClose?.();
+      return;
+    }
+    enteringDungeon = true;
+    const placeName =
+      TOWN_SCENES[activeScene()]?.title || SILVER_CROWN_PLACES[activeScene()]?.name || '万象酒馆';
+    try {
+      await dungeonTransition.transition(`正在返回 · ${placeName}`, {
+        phaseText: '正在退出异境舆图，返回原先所在处…',
+        durationMs: 420,
+        onCovered: () => {
+          if (session.runtime.disposed) return;
+          performClose?.();
+          render();
+        },
+      });
     } finally {
       enteringDungeon = false;
     }
@@ -1185,13 +1218,13 @@ export function createDaily(context) {
       visitedDiscovery = null;
       render();
     },
+    closeDiscoveryWithTransition,
     arriveDiscovery(id) {
       queueMicrotask(() => {
-        if (!returnOuting()) return;
-        if (!context.quests?.arrived(id)) {
-          void openDungeonWithTransition(id, '正在踏入异境入口，展开探索舆图…', '正在踏入 · ');
-        }
-        render();
+        void openDungeonWithTransition(id, '正在踏入异境入口，展开探索舆图…', '正在踏入 · ', () => {
+          if (!returnOuting()) return false;
+          return !context.quests?.arrived(id);
+        });
       });
     },
     arriveDungeon(id) {

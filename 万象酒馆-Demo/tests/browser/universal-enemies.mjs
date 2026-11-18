@@ -159,8 +159,9 @@ export async function universalEnemyChecks({ browser, baseURL, output }) {
                 },
               ],
             },
+            seenMonsters: ['mossSlime', 'chaosBadlandFalcon', 'ladderCrowman'],
           },
-          generationOptions: { developerMode: false, editArchives: false },
+          generationOptions: { developerMode: false, editArchives: false, unlockAllCodex: false },
         },
       };
       const controller = createRecords({
@@ -170,6 +171,10 @@ export async function universalEnemyChecks({ browser, baseURL, output }) {
         shell: { toast: () => {} },
       });
       window.archiveTestHost = {
+        setOptions(next) {
+          Object.assign(session.ai.generationOptions, next);
+          controller.refreshArchive();
+        },
         cleanup() {
           controller.dispose();
           events.dispose();
@@ -189,11 +194,47 @@ export async function universalEnemyChecks({ browser, baseURL, output }) {
     assert((await page.locator('#archive-text').innerText()).includes('以太'));
     await page.locator('[data-archive-tab="enemies"]').click();
     assert.equal(await page.locator('[data-enemy-tier]').count(), 4);
+    const defaultProgress = await page.locator('.archive-codex-count').textContent();
+    const [, totalMonsters] = defaultProgress.match(/3\s*\/\s*(\d+)/) || [];
+    assert(Number(totalMonsters) > 50, `Expected seen count 3 / >50, got ${defaultProgress}`);
+    assert.equal(await page.locator('#archive-list button').count(), 1);
     assert.equal(await page.locator('#archive-text img').count(), 1);
     await page.locator('[data-enemy-tier="elite"]').click();
+    assert.equal(await page.locator('#archive-list button').count(), 1);
     assert.equal(await page.locator('#archive-text img').count(), 1);
     await page.locator('[data-enemy-tier="boss"]').click();
+    assert.equal(await page.locator('#archive-list button').count(), 1);
+    assert(
+      (await page.locator('#archive-list button').first().innerText()).includes('天梯鸦人'),
+      'Seen boss ladderCrowman must display in Boss tier',
+    );
     assert.equal(await page.locator('#archive-text img').count(), 1);
+    await page.locator('[data-enemy-tier="overlord"]').click();
+    assert.equal(await page.locator('#archive-list button').count(), 0);
+    assert((await page.locator('#archive-text').innerText()).includes('尚未解锁'));
+
+    // Turning on unlockAllCodex without developerMode master switch must stay locked
+    await page.evaluate(() =>
+      window.archiveTestHost.setOptions({ developerMode: false, unlockAllCodex: true }),
+    );
+    assert.equal(
+      (await page.locator('.archive-codex-count').textContent()).trim(),
+      `3 / ${totalMonsters}`,
+    );
+
+    // Enable both developerMode + unlockAllCodex -> shows all monsters
+    await page.evaluate(() =>
+      window.archiveTestHost.setOptions({ developerMode: true, unlockAllCodex: true }),
+    );
+    assert.equal(
+      (await page.locator('.archive-codex-count').textContent()).trim(),
+      `${totalMonsters} / ${totalMonsters}`,
+    );
+    await page.locator('[data-enemy-tier="boss"]').click();
+    const bossNames = await page.locator('#archive-list button strong').allTextContents();
+    assert(bossNames.includes('天梯魔蛛'), 'Upgraded ladderWebSpider should list under 首领');
+    assert(bossNames.includes('天梯鸦人'), 'New ladderCrowman should list under 首领');
+
     await page.locator('[data-enemy-tier="overlord"]').click();
     assert.equal(await page.locator('#archive-list button').count(), 5);
     assert.equal(await page.locator('#archive-text img').count(), 0);
@@ -230,6 +271,17 @@ export async function universalEnemyChecks({ browser, baseURL, output }) {
     }
     await page.waitForTimeout(300);
     await page.screenshot({ path: path.join(output, 'archive-overlord-moontree.png') });
+
+    // Turning off unlockAllCodex reverts immediately back to the save's real seen count (3 / total)
+    await page.evaluate(() =>
+      window.archiveTestHost.setOptions({ developerMode: true, unlockAllCodex: false }),
+    );
+    assert.equal(
+      (await page.locator('.archive-codex-count').textContent()).trim(),
+      `3 / ${totalMonsters}`,
+    );
+    assert.equal(await page.locator('#archive-list button').count(), 0);
+
     await page.locator('#archive-close').click();
     await page.evaluate(() => window.archiveTestHost.cleanup());
     await page.setViewportSize({ width: 1500, height: 990 });

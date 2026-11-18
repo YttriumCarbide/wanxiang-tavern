@@ -57,9 +57,11 @@ test('AI defaults preserve an existing Qingyuan for explicit developer fallback'
     skipAiGeneration: false,
     protagonistApi: true,
     scriptApi: true,
+    skipOverlandApi: false,
     developerMode: false,
     allowRetreat: false,
     editArchives: false,
+    unlockAllCodex: false,
   });
   const initial = defaultProtagonist({ characters: [] });
   assert.equal(initial.setting.name, '青缘');

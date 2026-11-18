@@ -19,6 +19,13 @@ import {
 import { mergeFutureScript } from '../src/chat.js';
 import { resourceBars, statusIcons } from '../src/ui.js';
 import { chatResponse } from '../server/chat-response.mjs';
+import { DEFINITIONS } from '../src/data.js';
+import {
+  buildEnemyArchiveEntries,
+  filterEnemyArchiveBuckets,
+  recordSeenMonsters,
+} from '../src/archive-enemies.js';
+import { developerOption, restoreGenerationOptions } from '../src/generation-options.js';
 
 const document = () => ({
   schemaVersion: 4,
@@ -166,4 +173,73 @@ test('map preview retains entrance and unlocks mainline plus branches while guar
   assert.equal(availableExplorations(route)[0].sequence, 6);
   assert.equal(explorationPreview(route, 'ruins').length, 7);
   assert.equal(completeExploration(routes, route.frontier[1]), null);
+});
+
+test('enemy codex filters to seen monsters by default, shows totals, and reverts cleanly from developer unlock toggle', () => {
+  const library = newCampaign(defaultProtagonist());
+  assert.deepEqual(library.seenMonsters, []);
+  const buckets = buildEnemyArchiveEntries(DEFINITIONS);
+
+  const empty = filterEnemyArchiveBuckets(buckets, {
+    seenMonsters: library.seenMonsters,
+    unlockAll: developerOption(restoreGenerationOptions({}), 'unlockAllCodex'),
+  });
+  assert.equal(empty.unlockedCount, 0);
+  assert(empty.totalCount > 50);
+  assert.deepEqual(empty.visibleBuckets.minion, []);
+  assert.deepEqual(empty.visibleBuckets.boss, []);
+
+  // Encounter one mob and one Mother Tree part
+  assert.equal(
+    recordSeenMonsters(library, [{ id: 'mossSlime#2', speciesKey: 'mossSlime' }, 'moonCrown']),
+    true,
+  );
+  assert.equal(recordSeenMonsters(library, ['mossSlime']), false);
+  const partial = filterEnemyArchiveBuckets(buckets, {
+    seenMonsters: library.seenMonsters,
+    unlockAll: false,
+  });
+  assert.equal(partial.unlockedCount, 2);
+  assert.equal(partial.totalCount, empty.totalCount);
+  assert.deepEqual(
+    partial.visibleBuckets.minion.map((item) => item.id),
+    ['mossSlime'],
+  );
+  assert.deepEqual(
+    partial.visibleBuckets.overlord.map((item) => item.id),
+    ['moonTree'],
+  );
+  assert.equal(partial.visibleBuckets.boss.length, 0);
+  assert.equal(partial.tierStats.overlord.unlocked, 1);
+  assert.equal(partial.tierStats.overlord.total, 5);
+
+  // Developer sub-toggle only works when developerMode is also enabled
+  assert.equal(
+    developerOption(
+      restoreGenerationOptions({ developerMode: false, unlockAllCodex: true }),
+      'unlockAllCodex',
+    ),
+    false,
+  );
+  const devOptions = restoreGenerationOptions({ developerMode: true, unlockAllCodex: true });
+  assert.equal(developerOption(devOptions, 'unlockAllCodex'), true);
+  const unlockedAll = filterEnemyArchiveBuckets(buckets, {
+    seenMonsters: library.seenMonsters,
+    unlockAll: developerOption(devOptions, 'unlockAllCodex'),
+  });
+  assert.equal(unlockedAll.unlockedCount, empty.totalCount);
+  assert(unlockedAll.visibleBuckets.boss.some((item) => item.id === 'ladderCrowman'));
+  assert(unlockedAll.visibleBuckets.boss.some((item) => item.id === 'ladderWebSpider'));
+
+  // Turning the developer toggle off reverts to real saved seenMonsters without data loss
+  const turnedOff = restoreGenerationOptions({ ...devOptions, unlockAllCodex: false });
+  const reverted = filterEnemyArchiveBuckets(buckets, {
+    seenMonsters: restoreLibrary(library).seenMonsters,
+    unlockAll: developerOption(turnedOff, 'unlockAllCodex'),
+  });
+  assert.equal(reverted.unlockedCount, 2);
+  assert.deepEqual(
+    reverted.visibleBuckets.minion.map((item) => item.id),
+    ['mossSlime'],
+  );
 });

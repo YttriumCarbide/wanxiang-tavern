@@ -1361,18 +1361,6 @@
     ]
   },
   {
-    "id": "ladderWebSpider",
-    "hp": 52,
-    "intents": [
-      [
-        8
-      ],
-      [
-        9
-      ]
-    ]
-  },
-  {
     "id": "drakeCrystalBeetle",
     "hp": 64,
     "intents": [
@@ -1563,6 +1551,42 @@
       ],
       [
         29
+      ]
+    ]
+  },
+  {
+    "id": "ladderWebSpider",
+    "hp": 215,
+    "intents": [
+      [
+        11
+      ],
+      [
+        18
+      ],
+      [
+        14
+      ],
+      [
+        26
+      ]
+    ]
+  },
+  {
+    "id": "ladderCrowman",
+    "hp": 220,
+    "intents": [
+      [
+        11
+      ],
+      [
+        20
+      ],
+      [
+        14
+      ],
+      [
+        27
       ]
     ]
   },

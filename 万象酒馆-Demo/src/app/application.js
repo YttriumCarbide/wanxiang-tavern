@@ -129,6 +129,7 @@ export function createApplication({
   const antiRoutePanel = createAntiRoutePanel(context);
 
   const records = createRecords(context);
+  context.records = records;
   for (const field of document.querySelectorAll('input, textarea, form'))
     field.setAttribute('autocomplete', 'off');
   mountInput(context);

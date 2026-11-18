@@ -41,6 +41,7 @@ import { defaultProtagonist } from '../content/qingyuan.js';
 import { OFFICIAL_DC_ATTRS, normalizeDcAttrs } from '../dc.js';
 import { restoreEquippedSkills, restoreLearnedSkills } from '../learnable-skills.js';
 import { mergeRevealedWeaknessMap } from '../octopath.js';
+import { normalizeSeenMonsters } from '../archive-enemies.js';
 
 export function newLibrary() {
   return createLibrary(loadCustomPortraits());
@@ -75,6 +76,7 @@ function createLibrary(customPortraits) {
     emblems: [],
     learnedSkills: restoreLearnedSkills(),
     discoveredWeaknesses: {},
+    seenMonsters: [],
     refinedNpcs: [],
     progression: {
       settlements: [],
@@ -260,6 +262,7 @@ export function restoreLibrary(value) {
   library.emblems = Array.isArray(value.emblems) ? value.emblems.filter((id) => EMBLEMS[id]) : [];
   library.learnedSkills = restoreLearnedSkills(value.learnedSkills);
   library.discoveredWeaknesses = mergeRevealedWeaknessMap({}, value.discoveredWeaknesses);
+  library.seenMonsters = normalizeSeenMonsters(value.seenMonsters, library.discoveredWeaknesses);
   if (value.exploration)
     library.exploration = restoreExploration(value.exploration, 17371, library.worlds);
   library.unlockedDungeons = Array.isArray(value.unlockedDungeons)

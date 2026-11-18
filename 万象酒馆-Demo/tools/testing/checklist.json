@@ -1,5 +1,15 @@
 {
   "browserConcurrency": 2,
-  "scopes": ["quality", "core", "street", "destinations", "overland"],
-  "coreFiles": ["tests/guild-skyrim-cities.test.js", "tests/mill-worldmaps.test.js"]
+  "coreFiles": [
+    "tests/journey-archives.test.js",
+    "tests/monsters-overlords.test.js",
+    "tests/mill-worldmaps.test.js",
+    "tests/main-world.test.js",
+    "tests/enemy-base-values.test.js",
+    "tests/guild-skyrim-cities.test.js",
+    "tests/daily.test.js",
+    "tests/exploration.test.js",
+    "tests/portrait-store.test.js"
+  ],
+  "scopes": ["quality", "models", "core", "street", "destinations", "overland", "universal-enemies"]
 }

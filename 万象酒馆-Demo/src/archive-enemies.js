@@ -1,3 +1,5 @@
+import { speciesKeyOf } from './octopath.js';
+
 /** Classify enemies into archive tiers and combine multi-part Overlords cleanly. */
 export const ENEMY_ARCHIVE_TIERS = Object.freeze([
   { id: 'minion', label: '小怪', badge: '普通魔物' },
@@ -34,6 +36,69 @@ function worldSourcesFor(ids, worlds) {
   return matched.length ? matched.join('、') : '官方敌人';
 }
 
+function speciesIdsForEntry(entry) {
+  if (entry.id === 'ares') return ['ares', 'aresCannonLeft', 'aresCannonRight'];
+  return [entry.id];
+}
+
+export function normalizeSeenMonsters(seenMonsters = [], discoveredWeaknesses = {}) {
+  const seen = [];
+  const pushKey = (value) => {
+    const key = speciesKeyOf(value);
+    if (key && !seen.includes(key)) seen.push(key);
+  };
+  for (const item of Array.isArray(seenMonsters) ? seenMonsters : []) {
+    pushKey(item);
+  }
+  if (discoveredWeaknesses && typeof discoveredWeaknesses === 'object') {
+    for (const key of Object.keys(discoveredWeaknesses)) {
+      pushKey(key);
+    }
+  }
+  return seen;
+}
+
+/** Record encountered species keys on the player's save library without touching unlock flags. */
+export function recordSeenMonsters(library, unitsOrIds = []) {
+  if (!library || !Array.isArray(unitsOrIds) || !unitsOrIds.length) return false;
+  library.seenMonsters = normalizeSeenMonsters(library.seenMonsters, library.discoveredWeaknesses);
+  let changed = false;
+  for (const unit of unitsOrIds) {
+    const key = speciesKeyOf(unit);
+    if (key && !library.seenMonsters.includes(key)) {
+      library.seenMonsters.push(key);
+      changed = true;
+    }
+  }
+  return changed;
+}
+
+/** Filter enemy archive tiers to only seen monsters unless developer full-codex is active. */
+export function filterEnemyArchiveBuckets(buckets, { seenMonsters = [], unlockAll = false } = {}) {
+  const seenSet = new Set(normalizeSeenMonsters(seenMonsters));
+  const visibleBuckets = {};
+  const tierStats = {};
+  let totalCount = 0;
+  let unlockedCount = 0;
+
+  for (const { id } of ENEMY_ARCHIVE_TIERS) {
+    const entries = Array.isArray(buckets?.[id]) ? buckets[id] : [];
+    const seenEntries = entries.filter((item) => {
+      const ids =
+        Array.isArray(item.speciesIds) && item.speciesIds.length ? item.speciesIds : [item.id];
+      return ids.some((speciesId) => seenSet.has(speciesId));
+    });
+    const tierTotal = entries.length;
+    const tierUnlocked = unlockAll ? tierTotal : seenEntries.length;
+    totalCount += tierTotal;
+    unlockedCount += tierUnlocked;
+    tierStats[id] = { unlocked: tierUnlocked, total: tierTotal };
+    visibleBuckets[id] = unlockAll ? [...entries] : seenEntries;
+  }
+
+  return { visibleBuckets, totalCount, unlockedCount, tierStats };
+}
+
 export function buildEnemyArchiveEntries(officialDefinitions, worlds = []) {
   const officialIds = new Set(Object.keys(officialDefinitions || {}));
   const merged = Object.values({
@@ -52,6 +117,7 @@ export function buildEnemyArchiveEntries(officialDefinitions, worlds = []) {
       } else {
         buckets.overlord.push({
           id: entry.id,
+          speciesIds: speciesIdsForEntry(entry),
           name: entry.name,
           subtitle: entry.title || '灾厄霸主',
           tier: 'overlord',
@@ -69,6 +135,7 @@ export function buildEnemyArchiveEntries(officialDefinitions, worlds = []) {
     }
     buckets[tier].push({
       id: entry.id,
+      speciesIds: speciesIdsForEntry(entry),
       name: entry.name,
       subtitle: entry.title || ENEMY_ARCHIVE_TIERS.find((t) => t.id === tier)?.badge || '',
       tier,
@@ -89,6 +156,7 @@ export function buildEnemyArchiveEntries(officialDefinitions, worlds = []) {
     );
     buckets.overlord.push({
       id: 'moonTree',
+      speciesIds: ['moonTree', ...orderedParts.map((part) => part.id)],
       name: '母树',
       subtitle: orderedParts.map((part) => part.name).join(' · '),
       tier: 'overlord',

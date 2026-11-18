@@ -86,6 +86,20 @@ test('builtin worldbook holds mill lore, 15 mill monsters, 5 outlines, and singl
   }
   const millLore = entries.filter((entry) => entry.extensions?.wanxiang?.millLore);
   assert.equal(millLore.length, 2);
+  assert.deepEqual(
+    millLore.map((entry) => entry.comment),
+    ['地点简介：绿蕨磨坊', '地点详情：绿蕨磨坊'],
+  );
+  const ladderSummary = entries.find(
+    (entry) => entry.extensions?.wanxiang?.mainWorld === 'three-realms-crossings',
+  );
+  const ladderDetail = entries.find(
+    (entry) => entry.extensions?.wanxiang?.mainWorld === 'jacobs-ladder-exploration',
+  );
+  assert.equal(ladderSummary?.comment, '地点简介：雅各布天梯');
+  assert.equal(ladderDetail?.comment, '地点详情：雅各布天梯');
+  assert(ladderDetail?.content.includes('天梯魔蛛，天梯鸦人'));
+  assert(ladderDetail?.content.includes('4.霸主：辉光亚龙'));
   for (const id of [...MILL_ENEMIES, ...MILL_BOSSES].map((enemy) => enemy.id)) {
     assert(MILL_MONSTER_LORE[id] && ALL_MONSTER_LORE[id], `Missing lore for ${id}`);
     const match = entries.find((entry) => entry.extensions?.wanxiang?.monsterId === id);

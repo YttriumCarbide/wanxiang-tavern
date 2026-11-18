@@ -94,6 +94,7 @@ export function createGeneration(context) {
       $('#back-inn').hidden = !developerOption(session.ai.generationOptions, 'allowRetreat');
     context.shell?.syncInnVisitors?.();
     context.generationAccess?.refresh();
+    context.records?.refreshArchive?.();
   }
   renderDeveloperOptions();
   function setOption(key, value) {

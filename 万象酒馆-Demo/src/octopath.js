@@ -81,6 +81,8 @@ export const OFFICIAL_ENEMY_BREAK_PROFILES = Object.freeze({
   settlementLeader: { maxToughness: 9, weaknesses: ['sword', 'lightning', 'ice', 'special-magic'] },
   ares: { maxToughness: 12, weaknesses: ['lightning', 'brawl', 'axe', 'ice', 'special-magic'] },
   alchemicalPuppet: { maxToughness: 8, weaknesses: ['fire', 'brawl', 'axe', 'lightning'] },
+  ladderWebSpider: { maxToughness: 8, weaknesses: ['fire', 'axe', 'ice', 'light'] },
+  ladderCrowman: { maxToughness: 8, weaknesses: ['lightning', 'spear', 'fire', 'light'] },
 });
 
 function hashString(str) {

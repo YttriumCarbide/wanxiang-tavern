@@ -48,6 +48,7 @@
  * @property {ReturnType<typeof import('./equipment.js').createEquipment>} equipment
  * @property {ReturnType<typeof import('./companion-events.js').createCompanionEvents>} companionEvents
  * @property {ReturnType<typeof import('./preset-extensions.js').createPresetExtensions>} extensions
+ * @property {ReturnType<typeof import('./records.js').createRecords>} [records]
  * @property {ReturnType<typeof import('./summoning.js').createSummoning>} summoning
  */
 export {};

@@ -2,7 +2,11 @@ import { DEFINITIONS } from '../data.js';
 import { portraitUrl } from '../portraits.js';
 import { mergedArchiveItems } from '../archives.js';
 import { REGIONS } from '../content/regions.js';
-import { ENEMY_ARCHIVE_TIERS, buildEnemyArchiveEntries } from '../archive-enemies.js';
+import {
+  ENEMY_ARCHIVE_TIERS,
+  buildEnemyArchiveEntries,
+  filterEnemyArchiveBuckets,
+} from '../archive-enemies.js';
 import { createArchiveModelStage } from './archive-model-stage.js';
 import { query as $ } from './dom.js';
 import { developerOption } from '../generation-options.js';
@@ -254,12 +258,13 @@ export function createRecords(context) {
   archive.className = 'skyrim-archive-dialog';
   archive.setAttribute('aria-label', '旅途归档');
   archive.innerHTML =
-    '<header><div class="records-title"><small>CODEX / ARCHIVES · 典藏卷宗</small><h2>旅途归档</h2></div><nav class="records-actions"><div class="archive-tabs"><button type="button" data-archive-tab="npcs">NPC</button><button type="button" data-archive-tab="items">道具</button><button type="button" data-archive-tab="enemies">敌人</button></div><button type="button" id="archive-close" aria-label="关闭归档">×</button></nav></header><div class="records-body"><div class="archive-index-col"><nav class="archive-enemy-tiers" aria-label="敌人阶级" hidden></nav><nav id="archive-list"></nav></div><article id="archive-text"></article></div>';
+    '<header><div class="records-title"><small>CODEX / ARCHIVES · 典藏卷宗</small><h2>旅途归档</h2></div><nav class="records-actions"><div class="archive-tabs"><button type="button" data-archive-tab="npcs">NPC</button><button type="button" data-archive-tab="items">道具</button><button type="button" data-archive-tab="enemies">敌人</button></div><button type="button" id="archive-close" aria-label="关闭归档">×</button></nav></header><div class="records-body"><div class="archive-index-col"><div class="archive-codex-progress" hidden></div><nav class="archive-enemy-tiers" aria-label="敌人阶级" hidden></nav><nav id="archive-list"></nav></div><article id="archive-text"></article></div>';
   document.body.append(archive);
   const modelStage = createArchiveModelStage();
   let tab = 'npcs';
   let enemyTier = 'minion';
   let archiveEditing = false;
+  let selectedIndex = 0;
 
   function buildDividerNode() {
     const holder = document.createElement('div');
@@ -456,18 +461,30 @@ export function createRecords(context) {
       button.setAttribute('aria-pressed', String(button.dataset.archiveTab === tab));
     });
     const tierBar = archive.querySelector('.archive-enemy-tiers');
+    const progressBar = archive.querySelector('.archive-codex-progress');
 
     if (tab === 'enemies') {
-      const buckets = buildEnemyArchiveEntries(DEFINITIONS, library().worlds || []);
-      const listEntries = buckets[enemyTier] || [];
+      const unlockAll = developerOption(context.session.ai.generationOptions, 'unlockAllCodex');
+      const rawBuckets = buildEnemyArchiveEntries(DEFINITIONS, library().worlds || []);
+      const { visibleBuckets, totalCount, unlockedCount, tierStats } = filterEnemyArchiveBuckets(
+        rawBuckets,
+        {
+          seenMonsters: library().seenMonsters,
+          unlockAll,
+        },
+      );
+      const listEntries = visibleBuckets[enemyTier] || [];
       const activeIndex = listEntries.length
         ? Math.max(0, Math.min(index, listEntries.length - 1))
         : -1;
+      selectedIndex = Math.max(0, activeIndex);
       archive.classList.remove('is-empty');
+      progressBar.hidden = false;
+      progressBar.innerHTML = `<span class="archive-codex-label">魔物图鉴 · 已解锁</span><strong class="archive-codex-count">${unlockedCount} / ${totalCount}</strong>${unlockAll ? '<em class="archive-codex-dev">开发者全开</em>' : ''}`;
       tierBar.hidden = false;
       tierBar.innerHTML = ENEMY_ARCHIVE_TIERS.map(
         ({ id, label }) =>
-          `<button type="button" data-enemy-tier="${id}" aria-pressed="${String(id === enemyTier)}">${escapeText(label)}<span>${buckets[id].length}</span></button>`,
+          `<button type="button" data-enemy-tier="${id}" aria-pressed="${String(id === enemyTier)}">${escapeText(label)}<span>${tierStats[id].unlocked}/${tierStats[id].total}</span></button>`,
       ).join('');
       $('#archive-list').replaceChildren(
         ...listEntries.map((item, itemIndex) => {
@@ -497,7 +514,11 @@ export function createRecords(context) {
       area.replaceChildren();
       const selectedItem = activeIndex >= 0 ? listEntries[activeIndex] : null;
       if (!selectedItem) {
-        emptyState(area, '此阶级尚无敌人记录', '推进副本与探索后会收录对应魔物情报。');
+        emptyState(
+          area,
+          '尚未解锁此阶级魔物',
+          `当前已解锁 ${unlockedCount} / ${totalCount} 种魔物，遭遇新敌人后将自动收录于此。`,
+        );
         return;
       }
       renderEnemyFolio(area, selectedItem);
@@ -505,10 +526,12 @@ export function createRecords(context) {
       return;
     }
 
+    progressBar.hidden = true;
     tierBar.hidden = true;
     const entries =
       tab === 'items' ? mergedArchiveItems(library().archives.items) : library().archives[tab];
     const activeIndex = entries.length ? Math.max(0, Math.min(index, entries.length - 1)) : -1;
+    selectedIndex = Math.max(0, activeIndex);
     archive.classList.toggle('is-empty', !entries.length);
     $('#archive-list').replaceChildren(
       ...entries.map((entry, entryIndex) => {
@@ -665,6 +688,9 @@ export function createRecords(context) {
     } else if (item) renderArchive(Number(item.dataset.archiveIndex));
   });
   return {
+    refreshArchive() {
+      if (archive.open) renderArchive(selectedIndex);
+    },
     dispose() {
       modelStage.dispose();
       dialog.remove();

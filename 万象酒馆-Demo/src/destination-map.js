@@ -1,5 +1,9 @@
-const MIN_WIDTH = 1040;
-const BASE_HEIGHT = 520;
+const CORE_WIDTH = 1040;
+const CORE_HEIGHT = 520;
+const PAN_MARGIN_X = 240;
+const PAN_MARGIN_Y = 70;
+const MIN_WIDTH = CORE_WIDTH + PAN_MARGIN_X * 2;
+const BASE_HEIGHT = CORE_HEIGHT + PAN_MARGIN_Y * 2;
 const PAD_X = 88;
 const PAD_TOP = 72;
 const PAD_BOTTOM = 76;
@@ -50,15 +54,17 @@ export function destinationMap(entries = []) {
   const list = Array.isArray(entries) ? entries : [];
   const endlessCount = list.filter((entry) => entry?.endless).length;
   const authoredEntries = list.filter((entry) => entry?.authored && Array.isArray(entry.pos));
-  const authoredWidth = Math.max(
-    MIN_WIDTH,
+  const authoredSpanW = Math.max(
+    CORE_WIDTH,
     ...authoredEntries.map((entry) => Number(entry.pos[0]) + PAD_X),
   );
   const linearWidth =
-    list.length <= 1 ? MIN_WIDTH : Math.max(MIN_WIDTH, PAD_X * 2 + (list.length - 1) * 200);
+    list.length <= 1
+      ? MIN_WIDTH
+      : Math.max(MIN_WIDTH, PAN_MARGIN_X * 2 + PAD_X * 2 + (list.length - 1) * 200);
   const width =
     authoredEntries.length > 0
-      ? Math.max(MIN_WIDTH, authoredWidth + endlessCount * 195)
+      ? Math.max(MIN_WIDTH, authoredSpanW + PAN_MARGIN_X * 2 + endlessCount * 195)
       : linearWidth;
   const height = BASE_HEIGHT;
   const positions = new Map();
@@ -68,25 +74,40 @@ export function destinationMap(entries = []) {
     if (!entry) continue;
     const step = Number.isInteger(entry.step) ? entry.step : entry.sequence || i;
     const branch = Boolean(entry.branch);
-    let point = entry.authored ? normalizePresetPoint(entry.pos, authoredWidth, height) : null;
+    let point = entry.authored ? normalizePresetPoint(entry.pos, authoredSpanW, CORE_HEIGHT) : null;
+    if (point) {
+      point = { x: point.x + PAN_MARGIN_X, y: point.y + PAN_MARGIN_Y };
+    }
 
     if (!point && entry.endless && authoredEntries.length > 0) {
       const parentPos = entry.parentId ? positions.get(entry.parentId) : null;
-      const baseX = parentPos ? parentPos.x : authoredWidth - PAD_X - 40;
+      const baseX = parentPos ? parentPos.x : PAN_MARGIN_X + authoredSpanW - PAD_X - 40;
       const idxAfterFour = Math.max(1, step - 3);
       const yWave = idxAfterFour % 2 === 1 ? -44 : 42;
       point = {
         x: Math.round(baseX + 185),
-        y: Math.round(clamp(height * 0.49 + yWave, PAD_TOP + 24, height - PAD_BOTTOM - 24)),
+        y: Math.round(
+          clamp(
+            height * 0.49 + yWave,
+            PAN_MARGIN_Y + PAD_TOP + 24,
+            height - PAN_MARGIN_Y - PAD_BOTTOM - 24,
+          ),
+        ),
       };
     } else if (!point) {
-      const startX = list.length <= 1 ? Math.round(width * 0.5) : PAD_X + 68;
+      const startX = list.length <= 1 ? Math.round(width * 0.5) : PAN_MARGIN_X + PAD_X + 68;
       const spacing = list.length <= 1 ? 0 : 200;
       const rand = hashSeed(entry.seed || i + 11);
       const wave = list.length <= 1 ? 0 : (i % 2 === 0 ? -1 : 1) * (28 + Math.round(rand() * 24));
       point = {
         x: Math.round(startX + i * spacing),
-        y: Math.round(clamp(height * 0.49 + wave, PAD_TOP + 24, height - PAD_BOTTOM - 24)),
+        y: Math.round(
+          clamp(
+            height * 0.49 + wave,
+            PAN_MARGIN_Y + PAD_TOP + 24,
+            height - PAN_MARGIN_Y - PAD_BOTTOM - 24,
+          ),
+        ),
       };
     }
 

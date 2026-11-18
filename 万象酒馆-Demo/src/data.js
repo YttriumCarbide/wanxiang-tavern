@@ -721,6 +721,8 @@ const bossSquadFor = (boss) => {
     cinderPriest: ['tombBeetle', boss, 'cultistSpecter'],
     apepLamb: ['blackOoze', boss, 'voidParasite'],
     ares: ['aresCannonLeft', boss, 'aresCannonRight'],
+    ladderWebSpider: ['ladderCliffLizard', boss, 'ladderCarrionBat'],
+    ladderCrowman: ['ladderCarrionBat', boss, 'drakeBadlandFalcon'],
     banditSyndicateKing: ['banditPoacher', boss, 'banditBruiser'],
     goblinKingGorg: ['goblinShaman', boss, 'goblinSapper'],
     erosionRiftTyrant: ['erosionSpitter', boss, 'erosionWing'],

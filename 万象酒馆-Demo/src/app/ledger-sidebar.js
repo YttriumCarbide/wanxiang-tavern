@@ -365,7 +365,8 @@ export function createLedgerSidebar(context) {
     }
 
     const theaterVisible = Boolean(document.querySelector('#chapter-theater:not([hidden])'));
-    const baseVisible = !session.runtime.needsStart && !modal && !theaterVisible;
+    const loadingVisible = Boolean(document.querySelector('.world-loading-scene:not([hidden])'));
+    const baseVisible = !session.runtime.needsStart && !modal && !theaterVisible && !loadingVisible;
     cornerShown = syncSurfaceVisibility(
       corner,
       cornerSurface,
@@ -868,7 +869,9 @@ export function createLedgerSidebar(context) {
     const relevant = mutations.some(
       (mutation) =>
         (mutation.type === 'attributes' &&
-          (mutation.target.nodeName === 'DIALOG' || mutation.target.id === 'chapter-theater')) ||
+          (mutation.target.nodeName === 'DIALOG' ||
+            mutation.target.id === 'chapter-theater' ||
+            mutation.target.classList?.contains('world-loading-scene'))) ||
         [...mutation.addedNodes, ...mutation.removedNodes].some(
           (node) => node.nodeName === 'DIALOG',
         ),

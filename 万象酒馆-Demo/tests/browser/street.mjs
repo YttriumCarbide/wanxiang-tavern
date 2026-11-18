@@ -424,6 +424,87 @@ export async function streetChecks({ browser, baseURL, output }) {
         document.querySelector('#inn-frame iframe')?.contentWindow?.streetPreview?.state()
           .sceneId === 'starlamp-street',
     );
+    // Open starbell-undercroft via city submap and verify seamless Top-Layer transition on open & close
+    await page.evaluate(() => {
+      const log = (window.__cutsceneTrack = {
+        active: true,
+        openSawUncoveredDialog: false,
+        closeSawUncoveredGap: false,
+        ledgerVisibleDuringCurtain: false,
+      });
+      const step = () => {
+        if (!log.active) return;
+        const dlg = document.querySelector('#destination-dialog');
+        const curtain = document.querySelector('.world-loading-scene:not([hidden])');
+        const ledgerHandle = document.querySelector('#ledger-handle');
+        const curtainCovering =
+          curtain &&
+          !curtain.hidden &&
+          curtain.matches(':popover-open') &&
+          parseFloat(getComputedStyle(curtain).opacity) >= 0.85;
+        if (curtain && !curtain.hidden && ledgerHandle && !ledgerHandle.hidden) {
+          log.ledgerVisibleDuringCurtain = true;
+        }
+        if (log.phase === 'opening' && dlg?.open && !log.openRecordedFirst) {
+          log.openRecordedFirst = true;
+          if (!curtainCovering) log.openSawUncoveredDialog = true;
+        }
+        if (log.phase === 'closing' && log.closeStarted && !dlg?.open && !log.closeRecordedFirst) {
+          log.closeRecordedFirst = true;
+          if (!curtainCovering) log.closeSawUncoveredGap = true;
+        }
+        if (log.phase === 'closing' && dlg?.open) log.closeStarted = true;
+        requestAnimationFrame(step);
+      };
+      log.phase = 'opening';
+      requestAnimationFrame(step);
+    });
+    await page.frameLocator('#inn-frame iframe').locator('#street-submap-open').click();
+    await page
+      .frameLocator('#inn-frame iframe')
+      .locator('#street-city-submap')
+      .waitFor({ state: 'visible' });
+    await page
+      .frameLocator('#inn-frame iframe')
+      .locator('[data-city-node="starbell-undercroft"]')
+      .click();
+    await page.locator('#destination-dialog[data-discovery="true"]').waitFor({ state: 'visible' });
+    await page.waitForFunction(
+      () => !document.querySelector('.world-loading-scene:not([hidden])'),
+      { timeout: 10000 },
+    );
+    await page.evaluate(() => {
+      window.__cutsceneTrack.phase = 'closing';
+      window.__cutsceneTrack.closeStarted = Boolean(
+        document.querySelector('#destination-dialog')?.open,
+      );
+    });
+    await page.locator('#destination-close').click();
+    await page.waitForFunction(
+      () =>
+        !document.querySelector('#destination-dialog')?.open &&
+        !document.querySelector('.world-loading-scene:not([hidden])'),
+      { timeout: 10000 },
+    );
+    const cutsceneReport = await page.evaluate(() => {
+      window.__cutsceneTrack.active = false;
+      return window.__cutsceneTrack;
+    });
+    assert.equal(
+      cutsceneReport.openSawUncoveredDialog,
+      false,
+      'Opening dialog must happen behind opaque Top-Layer curtain',
+    );
+    assert.equal(
+      cutsceneReport.closeSawUncoveredGap,
+      false,
+      'Closing dialog must happen behind opaque Top-Layer curtain',
+    );
+    assert.equal(
+      cutsceneReport.ledgerVisibleDuringCurtain,
+      false,
+      '#ledger-handle must hide while curtain is shown',
+    );
     await page.frameLocator('#inn-frame iframe').locator('#street-return').click();
     await page.waitForFunction(
       () =>

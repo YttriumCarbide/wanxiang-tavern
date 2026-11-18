@@ -110,6 +110,35 @@ export async function destinationPagerChecks({ browser, baseURL, output }) {
       await lockedNodes.first().locator('.destination-node-meta').textContent(),
       'Lv.??',
     );
+    // Verify 4-way drag immediately after opening on Stage 1
+    const mapBox = await page.locator('#destination-map').boundingBox();
+    const cx = Math.round(mapBox.x + mapBox.width / 2);
+    const cy = Math.round(mapBox.y + mapBox.height / 2);
+    const dragMap = async (dx, dy) => {
+      const beforePan = await page
+        .locator('#destination-map')
+        .evaluate((el) => ({ left: el.scrollLeft, top: el.scrollTop }));
+      await page.mouse.move(cx, cy);
+      await page.mouse.down();
+      await page.mouse.move(cx + dx, cy + dy, { steps: 6 });
+      await page.mouse.up();
+      const afterPan = await page
+        .locator('#destination-map')
+        .evaluate((el) => ({ left: el.scrollLeft, top: el.scrollTop }));
+      return {
+        dxScrolled: afterPan.left - beforePan.left,
+        dyScrolled: afterPan.top - beforePan.top,
+      };
+    };
+    const panRight = await dragMap(-80, 0);
+    const panLeft = await dragMap(90, 0);
+    const panDown = await dragMap(0, -50);
+    const panUp = await dragMap(0, 60);
+    assert(panRight.dxScrolled > 20, `Expected right pan on Stage 1, got ${panRight.dxScrolled}`);
+    assert(panLeft.dxScrolled < -20, `Expected left pan on Stage 1, got ${panLeft.dxScrolled}`);
+    assert(panDown.dyScrolled > 15, `Expected down pan on Stage 1, got ${panDown.dyScrolled}`);
+    assert(panUp.dyScrolled < -15, `Expected up pan on Stage 1, got ${panUp.dyScrolled}`);
+    await page.locator('#destination-center').click();
     await page.locator('#destination-back').click();
     for (const [index, map] of BASE_WORLDS.entries()) {
       await ready(map);

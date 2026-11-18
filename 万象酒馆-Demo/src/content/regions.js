@@ -1148,7 +1148,7 @@ export const JACOBS_LADDER_CONFIG = Object.freeze({
     {
       id: 'jacobs-hook-3',
       title: '暗窟深处的回响',
-      boss: 'abyssDevourerSerpent',
+      boss: 'abyssDevourerPython',
       bossName: '噬渊巨蟒',
       description:
         '攀升通道中段一处被浮石半掩的背光深窟里，频繁传出吞石轰鸣，且连续有数十位攀登者失踪。队伍需趁游移浮石错开的间隙跳入暗窟，才会见到盘踞深渊的巨蟒（对应Boss：噬渊巨蟒｜攀升通道）。',
@@ -1156,7 +1156,7 @@ export const JACOBS_LADDER_CONFIG = Object.freeze({
     {
       id: 'jacobs-hook-4',
       title: '辉光试炼',
-      boss: 'radiantDrake',
+      boss: 'radiantWyvern',
       bossName: '辉光亚龙',
       description:
         '只有在正午烈日笔直贯通井道、悬浮巨石受光热牵引短暂停稳成“光之阶梯”时，辉光亚龙才会降临通道高处的向阳岩台。队伍必须精确把握正午日照的时间窗口，在禁飞条件下沿浮石接力急攀登台，才能向这位天空霸主发起挑战（对应Boss：辉光亚龙｜攀升通道）。',

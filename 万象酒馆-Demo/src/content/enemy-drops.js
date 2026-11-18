@@ -46,6 +46,7 @@ export const DROP_GROUPS = Object.freeze({
     'raptor-storm',
     'drake-badland-falcon',
     'chaos-badland-falcon',
+    'ladder-crowman',
     'goblin-wolf-rider',
     'erosion-hound',
     'mill-vole-pup',

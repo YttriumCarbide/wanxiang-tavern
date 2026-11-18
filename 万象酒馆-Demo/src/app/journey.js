@@ -32,6 +32,7 @@ import { recollectionEther } from '../recollections.js';
 import { worldBattleTransition } from './world-battle-transition.js';
 import { refreshWorldSkirmishes } from '../skirmishes.js';
 import { mergeRevealedWeaknessMap } from '../octopath.js';
+import { recordSeenMonsters } from '../archive-enemies.js';
 
 /** @param {import('./context.js').AppContext} context */
 export function createJourney(context) {
@@ -138,6 +139,7 @@ export function createJourney(context) {
     if (prepareBossEmblem(session.ai.library, session.journey.expedition))
       context.generation.save();
     session.battle.state = beginEncounter(session.journey.expedition);
+    recordSeenMonsters(session.ai.library, getEnemies(session.battle.state));
     session.battle.state.revealedWeaknesses = mergeRevealedWeaknessMap(
       session.ai.library.discoveredWeaknesses,
       session.battle.state.revealedWeaknesses,
@@ -201,6 +203,7 @@ export function createJourney(context) {
     session.runtime.mode = 'loading';
     document.body.classList.add('in-battle');
     session.battle.state = beginEncounter(session.journey.expedition);
+    recordSeenMonsters(session.ai.library, getEnemies(session.battle.state));
     session.battle.state.revealedWeaknesses = mergeRevealedWeaknessMap(
       session.ai.library.discoveredWeaknesses,
       session.battle.state.revealedWeaknesses,
@@ -319,6 +322,7 @@ export function createJourney(context) {
     session.ai.library = restoreLibrary(snapshot.library);
     restoreAdventureResources(snapshot, session.ai.library);
     session.battle.state = snapshot.state;
+    recordSeenMonsters(session.ai.library, getEnemies(snapshot.state));
     session.battle.plan = snapshot.plan || [];
     session.battle.history = snapshot.history || [];
     session.battle.forecast = preview(snapshot.state, session.battle.plan);

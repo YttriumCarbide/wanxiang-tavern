@@ -69,6 +69,7 @@ export function createDestinations(context) {
   let touch = null;
   let drag = null;
   let suppressClick = false;
+  let closingDiscovery = false;
   const rawResponse = createRawResponse(events, 'map-raw-response', '地图 API 原始回复');
   let stage = 'region';
   let stripPage = 0;
@@ -341,19 +342,37 @@ export function createDestinations(context) {
     const selected =
       viewport.querySelector('[aria-pressed="true"]') || viewport.querySelector('[data-map-node]');
     if (!selected) return;
-    viewport.scrollTo({
-      left: selected.offsetLeft - viewport.clientWidth / 2 + selected.offsetWidth / 2,
-      top: selected.offsetTop - viewport.clientHeight / 2 + selected.offsetHeight / 2,
-    });
+    const maxLeft = Math.max(0, viewport.scrollWidth - viewport.clientWidth);
+    const maxTop = Math.max(0, viewport.scrollHeight - viewport.clientHeight);
+    let left = selected.offsetLeft - viewport.clientWidth / 2 + selected.offsetWidth / 2;
+    let top = selected.offsetTop - viewport.clientHeight / 2 + selected.offsetHeight / 2;
+    if (maxLeft > 0) {
+      const minSlackX = Math.min(96, maxLeft * 0.35);
+      const maxSlackX = Math.max(maxLeft - 96, maxLeft * 0.65);
+      left = Math.max(minSlackX, Math.min(maxSlackX, left));
+    } else {
+      left = 0;
+    }
+    if (maxTop > 0) {
+      const minSlackY = Math.min(56, maxTop * 0.35);
+      const maxSlackY = Math.max(maxTop - 56, maxTop * 0.65);
+      top = Math.max(minSlackY, Math.min(maxSlackY, top));
+    } else {
+      top = 0;
+    }
+    viewport.scrollTo({ left, top });
   }
   function renderMap() {
+    const viewport = $('#destination-map');
     const mapId = session.journey.regionMap;
     const route = session.ai.library.exploration[mapId];
     const entries = explorationPreview(route, mapId);
     const available = new Set(nodesFor(mapId).map((entry) => entry.id));
     const cleared = new Set((route.cleared || []).map((entry) => entry.id));
     const { positions, width, height } = destinationMap(entries);
-    const terrain = destinationRegionTerrain(mapId, width, height, positions);
+    const canvasWidth = Math.max(width, (viewport.clientWidth || 0) + 360);
+    const canvasHeight = Math.max(height, (viewport.clientHeight || 0) + 180);
+    const terrain = destinationRegionTerrain(mapId, canvasWidth, canvasHeight, positions);
     const backdropPaper = buildOverlandPaperSvg({
       prefix: 'dest-bg',
       id: mapId,
@@ -373,14 +392,16 @@ export function createDestinations(context) {
         return `<path class="destination-trail ${stateClass}${entry.branch ? ' branch-trail' : ''}" data-trail-to="${escapeText(entry.id)}" d="${destinationTrail(a, b, entry.seed, { branch: entry.branch })}"/>`;
       })
       .join('');
-    $('#destination-map').innerHTML = html`<div
+    viewport.innerHTML = html`<div
       class="destination-map-canvas"
-      style="width:${width}px;height:${height}px"
+      style="width:${canvasWidth}px;height:${canvasHeight}px"
     >
       <svg class="destination-paper-backdrop" width="100%" height="100%" aria-hidden="true">
         ${backdropPaper.defs}${backdropPaper.layers}
       </svg>
-      <svg width="${width}" height="${height}" aria-hidden="true">${terrain}${paths}</svg>
+      <svg width="${canvasWidth}" height="${canvasHeight}" aria-hidden="true">
+        ${terrain}${paths}
+      </svg>
       ${entries
         .map((entry) => {
           const point = positions.get(entry.id);
@@ -487,7 +508,7 @@ export function createDestinations(context) {
       $('#destination-preview').dataset.error = 'true';
     }
   }
-  function setStage(next) {
+  function setStage(next, { animateStage = true } = {}) {
     stage = next;
     dialog.dataset.stage = next;
     const route = next === 'route';
@@ -503,7 +524,7 @@ export function createDestinations(context) {
     $('#destination-title').textContent = route
       ? `${regionFor(session.journey.regionMap).name} · 探索地图`
       : '选择去往的地方';
-    if (!reduced.matches) {
+    if (!reduced.matches && animateStage) {
       const target = route ? $('#destination-route-screen') : $('#destination-world-screen');
       target.getAnimations().forEach((animation) => animation.cancel());
       target.animate(
@@ -581,7 +602,7 @@ export function createDestinations(context) {
     if (learning(library) && id === 'mill' && session.journey.selectedNode)
       session.journey.selectedNode.tutorial = true;
     dialog.showModal();
-    setStage('route');
+    setStage('route', { animateStage: false });
     dialog.dataset.discovery = 'true';
     $('#destination-back').hidden = true;
     $('#destination-origin').hidden = true;
@@ -642,7 +663,7 @@ export function createDestinations(context) {
       });
   });
   events.on($('#destination-map'), 'pointerdown', (event) => {
-    if (event.button !== 0) return;
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
     suppressClick = false;
     drag = {
       id: event.pointerId,
@@ -671,8 +692,18 @@ export function createDestinations(context) {
     });
   }
   events.on(dialog, 'keydown', (event) => {
-    if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
-    if (stage !== 'region') return;
+    if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) return;
+    if (stage === 'route') {
+      const viewport = $('#destination-map');
+      const deltaX = event.key === 'ArrowLeft' ? -120 : event.key === 'ArrowRight' ? 120 : 0;
+      const deltaY = event.key === 'ArrowUp' ? -120 : event.key === 'ArrowDown' ? 120 : 0;
+      if (deltaX || deltaY) {
+        event.preventDefault();
+        viewport.scrollBy({ left: deltaX, top: deltaY });
+      }
+      return;
+    }
+    if (stage !== 'region' || !['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
     event.preventDefault();
     const step = event.key === 'ArrowRight' ? 1 : -1;
     pageRegion(step);
@@ -702,7 +733,29 @@ export function createDestinations(context) {
   events.on($('#destination-preview'), 'pointercancel', () => {
     touch = null;
   });
+  function requestClose() {
+    if (!dialog.open || closingDiscovery) return;
+    if (dialog.dataset.discovery === 'true' && context.daily?.closeDiscoveryWithTransition) {
+      closingDiscovery = true;
+      void context.daily
+        .closeDiscoveryWithTransition(() => {
+          if (dialog.open) dialog.close();
+        })
+        .finally(() => {
+          closingDiscovery = false;
+        });
+      return;
+    }
+    dialog.close();
+  }
+  events.on(dialog, 'cancel', (event) => {
+    if (dialog.dataset.discovery === 'true' && context.daily?.closeDiscoveryWithTransition) {
+      event.preventDefault();
+      requestClose();
+    }
+  });
   events.on(dialog, 'close', () => {
+    closingDiscovery = false;
     if (dialog.dataset.discovery) context.daily?.leaveDiscovery();
     delete dialog.dataset.discovery;
     touch = null;
@@ -713,7 +766,7 @@ export function createDestinations(context) {
       .querySelectorAll('*')
       .forEach((element) => element.getAnimations().forEach((animation) => animation.cancel()));
   });
-  events.on($('#destination-close'), 'click', () => dialog.close());
+  events.on($('#destination-close'), 'click', requestClose);
   events.on($('#destination-start'), 'click', () => {
     if (stage !== 'route' || !session.journey.selectedNode || session.ai.busy) return;
     if (session.journey.selectedNode.replay) {

@@ -181,24 +181,6 @@ export const LADDER_ENEMIES = [
     ],
   ),
   ladderMob(
-    'ladderWebSpider',
-    '天梯魔蛛',
-    '攀升通道',
-    'beetle-burrow',
-    '#6e6888',
-    52,
-    4,
-    '在浮石与峭壁之间结出高韧龙丝网的魔蛛，先以丝网缠缚目标再灌入麻痹毒液。',
-    [
-      move('丝缚猎网', '造成8伤害并施加1层禁锢。', [hit(8), buff('bind', 1)]),
-      move('深窟毒咬', '造成9伤害、3中毒、1易伤。', [
-        hit(9),
-        buff('poison', 3),
-        buff('vulnerable', 1),
-      ]),
-    ],
-  ),
-  ladderMob(
     'drakeCrystalBeetle',
     '龙晶背甲虫',
     '攀升通道',
@@ -498,5 +480,83 @@ export const LADDER_BOSSES = [
       }),
       move('巨颚碾压', '猛噬中位29伤害并恢复14生命。', [hit(29), heal(14)], { slot: 1 }),
     ],
+  ),
+  ladderBoss(
+    'ladderWebSpider',
+    '天梯魔蛛',
+    'beetle-burrow',
+    '#6e6888',
+    215,
+    4,
+    '栖息于攀升通道悬壁石隙与浮石阴影间的巨型魔蛛首领，背甲刻满暗金龙纹，能吐出堪比精钢的龙丝布下覆崖天罗，将误触丝网的攀登者拖入暗巢吞食。',
+    [
+      move(
+        '龙丝天罗网',
+        '横扫全前场造成11伤害与1层禁锢，自身获14护盾。',
+        [hit(11), buff('bind', 1)],
+        {
+          slots: [0, 1, 2],
+          selfShield: 14,
+        },
+      ),
+      move(
+        '深窟蚀毒牙',
+        '重咬中位造成18伤害与4中毒、2易伤。',
+        [hit(18), buff('poison', 4), buff('vulnerable', 2)],
+        { slot: 1 },
+      ),
+    ],
+    [
+      move(
+        '千丝裂甲阵',
+        '全前场14伤害、2虚弱、1禁锢。',
+        [hit(14), buff('weak', 2), buff('bind', 1)],
+        { slots: [0, 1, 2] },
+      ),
+      move(
+        '巨蛛噬髓穿刺',
+        '贯刺中位26伤害并回复12生命，施加5中毒。',
+        [hit(26), heal(12), buff('poison', 5)],
+        { slot: 1 },
+      ),
+    ],
+  ),
+  ladderBoss(
+    'ladderCrowman',
+    '天梯鸦人',
+    'storm-dive',
+    '#5c6884',
+    220,
+    5,
+    '潜伏在攀升通道迷雾与背光石台间的诡谲鸟首人形首领，咽喉能逼真模仿人类攀登者的求救与呼喊声，将闻声驰援的旅人诱入浮石死角后俯冲猎食。',
+    [
+      move(
+        '拟声哀鸣诱捕',
+        '模仿人类求救呼喊惑乱战阵，对全前场造成11伤害、2虚弱、1易伤。',
+        [hit(11), buff('weak', 2), buff('vulnerable', 1)],
+        { slots: [0, 1, 2] },
+      ),
+      move(
+        '黑羽断喉袭',
+        '自盲区骤扑中位20伤害与3流血，自身获1层飞行与12护盾。',
+        [hit(20), buff('bleed', 3)],
+        { slot: 1, selfShield: 12, selfBuff: { flying: 1 } },
+      ),
+    ],
+    [
+      move(
+        '百口同悲回响',
+        '多重拟人惨叫震荡浮石井道，全前场14伤害、2易伤、1禁锢。',
+        [hit(14), buff('vulnerable', 2), buff('bind', 1)],
+        { slots: [0, 1, 2] },
+      ),
+      move(
+        '鸦喙裂心俯冲',
+        '收翼俯冲撕裂右位27伤害、4流血，并吸取10生命。',
+        [hit(27), buff('bleed', 4), heal(10)],
+        { slot: 2 },
+      ),
+    ],
+    { buffs: { flying: 1 } },
   ),
 ];
