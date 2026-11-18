@@ -58,6 +58,8 @@ export function createDaily(context) {
   const frame = () => document.querySelector('#inn-frame iframe');
   const atlasFrame = () => document.getElementById('daily-atlas-frame');
   const atlasLoading = createWorldLoadingOverlay('正在展开泛生界大地图');
+  const dungeonTransition = createWorldLoadingOverlay('正在前往异境副本');
+  const dungeonDisplayName = (id) => IMPERIAL_DUNGEONS.find((entry) => entry.id === id)?.name || id;
   const save = () => context.generation.save();
   const root = document.createElement('section');
   root.id = 'daily-hud';
@@ -145,6 +147,28 @@ export function createDaily(context) {
   let locked = false;
   let intro = false;
   let mapOpen = false;
+  let enteringDungeon = false;
+
+  async function openDungeonWithTransition(
+    dungeonId,
+    phaseText = '正在踏入异境入口，展开探索舆图…',
+    titlePrefix = '正在前往 · ',
+  ) {
+    if (enteringDungeon || session.runtime.disposed) return;
+    enteringDungeon = true;
+    try {
+      visitedDiscovery = dungeonId;
+      await dungeonTransition.transition(`${titlePrefix}${dungeonDisplayName(dungeonId)}`, {
+        phaseText,
+        durationMs: 600,
+      });
+      if (session.runtime.disposed) return;
+      context.destinations?.openDiscovery?.(dungeonId);
+      render();
+    } finally {
+      enteringDungeon = false;
+    }
+  }
   const intent = createPlayerIntentPrompt(events);
   const promotion = document.createElement('dialog');
   promotion.id = 'tavern-promotion';
@@ -796,7 +820,12 @@ export function createDaily(context) {
   }
 
   function allowDungeon() {
-    return !active() || active().kind === 'dungeon';
+    const entry = active();
+    return (
+      !entry ||
+      entry.kind === 'dungeon' ||
+      (entry.kind === 'outing' && entry.stage === 'roaming' && !travel.busy())
+    );
   }
 
   function beginOuting(openMap = false, destination = 'street') {
@@ -838,7 +867,9 @@ export function createDaily(context) {
 
   function action(id) {
     if (id.startsWith('enter-dungeon:')) {
-      return context.destinations.openDiscovery(id.slice('enter-dungeon:'.length));
+      const dungeonId = id.slice('enter-dungeon:'.length);
+      void openDungeonWithTransition(dungeonId, '正在踏入异境入口，展开探索舆图…', '正在前往 · ');
+      return;
     }
     if (id === 'go-tavern') {
       context.chat?.leave();
@@ -1008,12 +1039,11 @@ export function createDaily(context) {
       const dungeonId = event.data.dungeonId;
       unlockDungeonMap(library(), dungeonId);
       save();
-      if (active()?.kind === 'outing') returnOuting();
-      else navigate('tavern');
-      queueMicrotask(() => {
-        context.destinations?.openDiscovery?.(dungeonId);
-        render();
-      });
+      void openDungeonWithTransition(
+        dungeonId,
+        '正在穿过城区暗道，展开异境探索舆图…',
+        '正在前往 · ',
+      );
       return;
     }
     if (event.data?.type === 'tavern-recruit') return showRecruitment(event.data.characterId);
@@ -1125,6 +1155,9 @@ export function createDaily(context) {
       render();
     },
     departed() {
+      if (active()?.kind === 'outing' && active().stage === 'roaming') {
+        finishDaily(state(), 'outing', `外出衔接副本 · 已行 ${active().turns || 0} 回合`);
+      }
       if (!active()) startTavernActivity(state(), 'dungeon');
       if (active()?.kind !== 'dungeon') return;
       active().stage = 'departed';
@@ -1155,17 +1188,16 @@ export function createDaily(context) {
     arriveDiscovery(id) {
       queueMicrotask(() => {
         if (!returnOuting()) return;
-        visitedDiscovery = id;
-        if (!context.quests?.arrived(id)) context.destinations.openDiscovery(id);
+        if (!context.quests?.arrived(id)) {
+          void openDungeonWithTransition(id, '正在踏入异境入口，展开探索舆图…', '正在踏入 · ');
+        }
         render();
       });
     },
     arriveDungeon(id) {
       queueMicrotask(() => {
-        visitedDiscovery = id;
         if (id === 'mill' || id === 'ruins') context.onboarding?.ruinsReached?.();
-        context.destinations.openDiscovery(id);
-        render();
+        void openDungeonWithTransition(id, '正在勘测遗迹入口与探索路线…', '正在抵达 · ');
       });
     },
     overlandRun: travel.run,
@@ -1259,6 +1291,7 @@ export function createDaily(context) {
       }
     },
     dispose() {
+      dungeonTransition.dispose();
       atlasLoading.dispose();
       atlasFrame()?.remove();
       travel.dispose();

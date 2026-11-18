@@ -278,21 +278,30 @@ export function createDestinations(context) {
       class="destination-site"
       data-destination="${node.id}"
     >
-      <div class="destination-site-top">
-        <small>✓ 已选择 · ${ordinalText} · 完整五场${bossBadge}</small
-        ><span
-          >${node.replay ? '回忆' : node.continuation ? '承接伏笔' : '可探索'} ·
-          Lv.${spec.level}</span
-        >
+      <div class="destination-site-main">
+        <div class="destination-site-top">
+          <span class="destination-site-chip">${ordinalText}</span>
+          <small>完整五场${bossBadge}</small>
+          <em class="destination-site-lv"
+            >${node.replay ? '回忆' : node.continuation ? '承接伏笔' : '可探索'} ·
+            Lv.${spec.level}</em
+          >
+        </div>
+        <h3>${escapeText(discovered ? regionFor(mapKey).name : spec.name)}</h3>
+        ${node.continuation ? `<p>${escapeText(node.continuation)}</p>` : ''}
       </div>
-      <h3>${escapeText(discovered ? regionFor(mapKey).name : spec.name)}</h3>
-      <p>
-        ${node.continuation ? escapeText(node.continuation) : '穿过界门，沿这条路开启一段新的旅程。'}
-      </p>
-      <div class="destination-enemies">
-        ${spec.enemyIds.map((id) => html`<img src="${portraitUrl(spec.enemyDefinitions?.[id] || DEFINITIONS[id])}" alt="${escapeText((spec.enemyDefinitions?.[id] || DEFINITIONS[id]).name)}" title="${escapeText((spec.enemyDefinitions?.[id] || DEFINITIONS[id]).name)}" />`).join('')}<small
-          >可能遭遇</small
-        >
+      <div class="destination-enemies" title="可能遭遇">
+        ${spec.enemyIds
+          .slice(0, 5)
+          .map(
+            (id) =>
+              html`<img
+                src="${portraitUrl(spec.enemyDefinitions?.[id] || DEFINITIONS[id])}"
+                alt="${escapeText((spec.enemyDefinitions?.[id] || DEFINITIONS[id]).name)}"
+                title="${escapeText((spec.enemyDefinitions?.[id] || DEFINITIONS[id]).name)}"
+              />`,
+          )
+          .join('')}<small>可能遭遇</small>
       </div>
     </article>`;
     $('#destination-start').disabled =
@@ -376,6 +385,7 @@ export function createDestinations(context) {
         .map((entry) => {
           const point = positions.get(entry.id);
           const done = cleared.has(entry.id);
+          const unlocked = done || available.has(entry.id);
           const spec = explorationSpec(entry);
           const label = entry.label || String((entry.sequence || 0) + 1);
           const bossId = entry.boss || spec.boss;
@@ -383,12 +393,16 @@ export function createDestinations(context) {
           const isOverlord = Boolean(entry.overlord || bossDef?.overlord);
           const isBoss = Boolean(bossDef);
           const siteTitle = (!entry.world && REGIONS[entry.map]?.sites?.[entry.site]) || spec.name;
+          const displayTitle = unlocked ? siteTitle : '？？？';
+          const displayMeta = unlocked
+            ? `Lv.${spec.level}${isOverlord ? ' · ♛ 霸主' : isBoss ? ' · ⚔ 首领' : ''}`
+            : 'Lv.??';
           return html`<button
             class="destination-node ${done ? 'cleared' : !available.has(entry.id) ? 'locked' : ''} ${entry.branch ? 'is-branch' : ''} ${isOverlord ? 'is-overlord' : isBoss ? 'is-boss' : ''}"
             data-map-node="${entry.id}"
             style="left:${point.x - 70}px;top:${point.y - 24}px"
             aria-pressed="${entry.id === session.journey.selectedNode?.id}"
-            aria-label="${escapeText(siteTitle)} · Lv.${spec.level} · ${done ? '已通关' : available.has(entry.id) ? '可探索' : '未解锁'}"
+            aria-label="${escapeText(displayTitle)} · ${unlocked ? `Lv.${spec.level}` : 'Lv.??'} · ${done ? '已通关' : unlocked ? '可探索' : '未解锁'}"
             title="${done && canRecall(session.ai.library, entry) ? '回忆：重玩此关，不请求API' : done ? '已通关' : available.has(entry.id) ? '点击选择此副本，再点击启程' : '按前置路线通关后解锁'}"
             ${!canRecall(session.ai.library, entry) && (done || !available.has(entry.id)) ? 'disabled' : ''}
           >
@@ -402,10 +416,8 @@ export function createDestinations(context) {
                 branch: entry.branch,
                 current: available.has(entry.id),
               })}<em>${escapeText(label)}</em></span
-            ><strong>${escapeText(siteTitle)}</strong>
-            <small class="destination-node-meta"
-              >Lv.${spec.level}${isOverlord ? ' · ♛ 霸主' : isBoss ? ' · ⚔ 首领' : ''}</small
-            >
+            ><strong>${escapeText(displayTitle)}</strong>
+            <small class="destination-node-meta">${displayMeta}</small>
           </button>`;
         })
         .join('')}
@@ -482,6 +494,8 @@ export function createDestinations(context) {
     $('#destination-origin').hidden = !route;
     $('#destination-world-screen').hidden = route;
     $('#destination-route-screen').hidden = !route;
+    $('#destination-sites').hidden = !route;
+    $('#destination-status').hidden = route;
     $('#destination-region-confirm').hidden = route;
     $('#destination-start').hidden = !route;
     $('#destination-back').hidden = !route;
@@ -489,6 +503,17 @@ export function createDestinations(context) {
     $('#destination-title').textContent = route
       ? `${regionFor(session.journey.regionMap).name} · 探索地图`
       : '选择去往的地方';
+    if (!reduced.matches) {
+      const target = route ? $('#destination-route-screen') : $('#destination-world-screen');
+      target.getAnimations().forEach((animation) => animation.cancel());
+      target.animate(
+        [
+          { opacity: 0, transform: `translateY(${route ? 8 : -8}px)` },
+          { opacity: 1, transform: 'translateY(0)' },
+        ],
+        { duration: 220, easing: 'cubic-bezier(.16,1,.3,1)' },
+      );
+    }
     if (route) {
       preview?.pause();
       renderMap();
@@ -564,7 +589,9 @@ export function createDestinations(context) {
     const detail = document.createElement('p');
     detail.className = 'destination-discovery-description';
     detail.textContent = regionFor(id).description;
-    $('#destination-sites').prepend(detail);
+    detail.title = regionFor(id).description;
+    const host = $('#destination-sites .destination-site-main') || $('#destination-sites');
+    host.append(detail);
     $('#destination-start').focus();
   }
   events.on($('#destination-regions'), 'click', (event) => {

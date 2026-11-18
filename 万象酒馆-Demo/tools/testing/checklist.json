@@ -1,5 +1,5 @@
 {
   "browserConcurrency": 2,
-  "scopes": ["quality", "destinations"],
+  "scopes": ["quality", "core", "street", "destinations", "overland"],
   "coreFiles": ["tests/guild-skyrim-cities.test.js", "tests/mill-worldmaps.test.js"]
 }

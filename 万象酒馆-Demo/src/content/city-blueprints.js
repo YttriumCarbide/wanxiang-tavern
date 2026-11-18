@@ -415,7 +415,7 @@ export function buildBlueprintSvg(blueprint) {
     maxGroves: 5,
   });
 
-  return `<svg class="city-submap-svg" viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+  return `<svg class="city-submap-svg" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true">
     ${paper.defs}
     ${paper.layers}
     ${terrain}

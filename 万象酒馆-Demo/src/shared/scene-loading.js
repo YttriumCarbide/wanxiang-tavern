@@ -250,6 +250,41 @@ export function createWorldLoadingOverlay(title = '正在展开世界地图') {
         if (!element.hidden) applyLoreIndex(element, (Number(element.dataset.loreIdx) || 0) + 1);
       }, 4200);
     },
+    async transition(
+      nextTitle = title,
+      { phaseText = '正在踏入异境入口，展开探索舆图…', durationMs = 600 } = {},
+    ) {
+      const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const ms = reduced ? 30 : Math.max(240, durationMs);
+      const trackEl = element.querySelector('.wl-sword-track');
+      const fillEl = element.querySelector('.wl-sword-fill');
+      const phaseEl = element.querySelector('.scene-loading-phase');
+      const detailsEl = element.querySelector('.scene-loading-details span');
+      const tagEl = element.querySelector('.wl-percent-tag');
+      if (phaseEl) phaseEl.textContent = phaseText;
+      if (tagEl) tagEl.textContent = 'EXPEDITION';
+      if (trackEl) trackEl.classList.remove('is-indeterminate');
+      if (fillEl) {
+        fillEl.style.transition = `width ${ms}ms cubic-bezier(.22,1,.36,1)`;
+        fillEl.style.width = '12%';
+      }
+      if (detailsEl) detailsEl.textContent = '12%';
+      this.show(nextTitle);
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+      if (fillEl) fillEl.style.width = '100%';
+      if (detailsEl) detailsEl.textContent = '100%';
+      await new Promise((resolve) => setTimeout(resolve, ms));
+      element.classList.add('complete');
+      await new Promise((resolve) => setTimeout(resolve, reduced ? 20 : 180));
+      this.hide();
+      if (trackEl) trackEl.classList.add('is-indeterminate');
+      if (fillEl) {
+        fillEl.style.transition = '';
+        fillEl.style.width = '';
+      }
+      if (detailsEl) detailsEl.textContent = 'LOADING';
+      if (tagEl) tagEl.textContent = 'WORLD ATLAS';
+    },
     hide() {
       clearInterval(rotateTimer);
       rotateTimer = null;

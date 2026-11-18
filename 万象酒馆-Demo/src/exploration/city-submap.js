@@ -94,11 +94,29 @@ export function createCitySubmap({
 
   let skirmishes = null;
   let locked = false;
+  let panX = 0;
+  let panY = 0;
+  let drag = null;
+  let suppressClick = false;
 
   openBtn.hidden = false;
 
   function skirmishStop() {
     return skirmishes?.pending?.stop || skirmishes?.active?.stop || null;
+  }
+
+  function applyPan() {
+    const stageEl = canvas.querySelector('.city-submap-stage');
+    if (!stageEl) return;
+    const canvasRect = canvas.getBoundingClientRect();
+    const stageWidth = stageEl.offsetWidth || canvasRect.width;
+    const stageHeight = stageEl.offsetHeight || canvasRect.height;
+    const maxX = Math.max(0, (stageWidth - canvasRect.width) / 2);
+    const maxY = Math.max(0, (stageHeight - canvasRect.height) / 2);
+    panX = Math.max(-maxX, Math.min(maxX, panX));
+    panY = Math.max(-maxY, Math.min(maxY, panY));
+    stageEl.style.setProperty('--submap-pan-x', `${panX.toFixed(1)}px`);
+    stageEl.style.setProperty('--submap-pan-y', `${panY.toFixed(1)}px`);
   }
 
   function render() {
@@ -108,8 +126,8 @@ export function createCitySubmap({
     const currentNode = data.nodes.find((n) => n.current);
     if (inspectEl) {
       inspectEl.textContent = currentNode
-        ? `当前所在：${currentNode.name}（${currentNode.tag}）· 点击建筑徽记前往或进入公会`
-        : '点击城内建筑徽记即可直接前往';
+        ? `当前所在：${currentNode.name}（${currentNode.tag}）· 拖动可微移地图，点击徽记前往或进入公会`
+        : '拖动可微移地图，点击城内建筑徽记即可前往';
     }
 
     const pins = data.nodes
@@ -140,17 +158,26 @@ export function createCitySubmap({
       })
       .join('');
 
-    canvas.innerHTML = `${buildBlueprintSvg(data.blueprint)}
-      <div class="city-submap-pins">${pins}</div>`;
+    canvas.innerHTML = `<div class="city-submap-stage">${buildBlueprintSvg(data.blueprint)}
+      <div class="city-submap-pins">${pins}</div></div>`;
+    applyPan();
   }
 
   function open() {
     if (dialog.open) return;
+    panX = 0;
+    panY = 0;
+    drag = null;
+    suppressClick = false;
     render();
     dialog.showModal();
+    requestAnimationFrame(applyPan);
   }
 
   function close() {
+    drag = null;
+    suppressClick = false;
+    canvas.classList.remove('dragging');
     if (dialog.open) dialog.close();
   }
 
@@ -160,11 +187,49 @@ export function createCitySubmap({
     close();
     onOpenWorldMap?.();
   });
+  events.on(window, 'resize', () => {
+    if (dialog.open) applyPan();
+  });
+  events.on(canvas, 'pointerdown', (event) => {
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+    suppressClick = false;
+    drag = {
+      id: event.pointerId,
+      x: event.clientX,
+      y: event.clientY,
+      panX,
+      panY,
+    };
+  });
+  events.on(canvas, 'pointermove', (event) => {
+    if (!drag || drag.id !== event.pointerId) return;
+    const dx = event.clientX - drag.x;
+    const dy = event.clientY - drag.y;
+    if (Math.hypot(dx, dy) > 6) {
+      suppressClick = true;
+      canvas.setPointerCapture(event.pointerId);
+      canvas.classList.add('dragging');
+    }
+    if (!suppressClick) return;
+    panX = drag.panX + dx;
+    panY = drag.panY + dy;
+    applyPan();
+  });
+  for (const name of ['pointerup', 'pointercancel', 'lostpointercapture']) {
+    events.on(canvas, name, () => {
+      drag = null;
+      canvas.classList.remove('dragging');
+    });
+  }
   events.on(dialog, 'pointerover', (event) => {
     const button = event.target.closest?.('[data-city-desc]');
     if (button && inspectEl) inspectEl.textContent = button.dataset.cityDesc;
   });
   events.on(dialog, 'click', (event) => {
+    if (suppressClick) {
+      suppressClick = false;
+      return;
+    }
     if (event.target === dialog) {
       close();
       return;

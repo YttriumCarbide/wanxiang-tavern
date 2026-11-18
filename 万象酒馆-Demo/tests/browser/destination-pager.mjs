@@ -48,8 +48,12 @@ export async function destinationPagerChecks({ browser, baseURL, output }) {
     assert(!(await page.locator('#destination-region-confirm').isVisible()));
     const dialog = await page.locator('#destination-dialog').boundingBox();
     const map = await page.locator('#destination-map').boundingBox();
-    assert(Math.abs(map.width - dialog.width) < 3);
-    assert(Math.abs(map.height - dialog.height) < 3);
+    const sites = await page.locator('#destination-sites').boundingBox();
+    assert(map.width > dialog.width * 0.9 && map.height > dialog.height * 0.55);
+    assert(
+      sites.y >= map.y + map.height - 2,
+      'Bottom summary bar must sit cleanly below map viewport',
+    );
     const background = await page
       .locator('.destination-map-canvas')
       .evaluate((element) => getComputedStyle(element).backgroundImage);
@@ -99,6 +103,13 @@ export async function destinationPagerChecks({ browser, baseURL, output }) {
     await expandMap();
     assert.equal(await page.locator('[data-map-node] em').first().textContent(), '1');
     assert(!(await page.locator('[data-map-node]').first().innerText()).includes('新手教程'));
+    const lockedNodes = page.locator('.destination-node.locked');
+    assert((await lockedNodes.count()) >= 3, 'Locked stages must appear masked before unlock');
+    assert.equal(await lockedNodes.first().locator('strong').textContent(), '？？？');
+    assert.equal(
+      await lockedNodes.first().locator('.destination-node-meta').textContent(),
+      'Lv.??',
+    );
     await page.locator('#destination-back').click();
     for (const [index, map] of BASE_WORLDS.entries()) {
       await ready(map);

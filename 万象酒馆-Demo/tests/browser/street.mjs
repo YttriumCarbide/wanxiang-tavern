@@ -127,6 +127,14 @@ export async function streetChecks({ browser, baseURL, output }) {
     assert.equal(middle.texture, initial.texture);
     await page.mouse.up();
     await settled();
+    const beforeVertical = await snapshot();
+    await drag(page, 0, 140);
+    const afterVertical = await snapshot();
+    bounded(afterVertical);
+    assert(
+      Math.abs(afterVertical.state.framing.y - beforeVertical.state.framing.y) > 0.02,
+      'free dragging allows gentle vertical sway as well as horizontal looking',
+    );
     await page.evaluate(() => window.streetPreview.resetView());
     await settled();
     for (const [name, delta] of [
@@ -221,7 +229,44 @@ export async function streetChecks({ browser, baseURL, output }) {
     );
     assert.equal(await page.locator('#street-city-submap .city-block').count(), 0);
     await page.waitForTimeout(150);
+    const alignmentError = await page.locator('#street-city-submap').evaluate((root) => {
+      const stage = root.querySelector('.city-submap-stage');
+      const svg = root.querySelector('.city-submap-svg');
+      const stageBox = stage.getBoundingClientRect();
+      const svgBox = svg.getBoundingClientRect();
+      let maxErr = Math.max(
+        Math.abs(svgBox.width - stageBox.width),
+        Math.abs(svgBox.height - stageBox.height),
+      );
+      for (const pin of root.querySelectorAll('.city-submap-pinbtn')) {
+        const sealBox = pin.querySelector('.city-submap-seal').getBoundingClientRect();
+        const expectedX = stageBox.left + (parseFloat(pin.style.left) / 100) * stageBox.width;
+        const expectedY = stageBox.top + (parseFloat(pin.style.top) / 100) * stageBox.height;
+        const actualX = sealBox.left + sealBox.width / 2;
+        const actualY = sealBox.top + sealBox.height / 2;
+        maxErr = Math.max(maxErr, Math.hypot(actualX - expectedX, actualY - expectedY));
+      }
+      return maxErr;
+    });
+    assert(alignmentError < 2, `City submap seal drifted from trail node by ${alignmentError}px`);
     await page.screenshot({ path: path.join(output, 'starbell-submap.png') });
+    const submapBox = await page.locator('#street-city-submap-canvas').boundingBox();
+    await page.mouse.move(submapBox.x + submapBox.width / 2, submapBox.y + submapBox.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(
+      submapBox.x + submapBox.width / 2 + 28,
+      submapBox.y + submapBox.height / 2 + 18,
+      { steps: 6 },
+    );
+    await page.mouse.up();
+    const submapPan = await page
+      .locator('#street-city-submap .city-submap-stage')
+      .evaluate((el) => ({
+        x: parseFloat(el.style.getPropertyValue('--submap-pan-x')) || 0,
+        y: parseFloat(el.style.getPropertyValue('--submap-pan-y')) || 0,
+      }));
+    assert(Math.abs(submapPan.x) > 10 && Math.abs(submapPan.y) > 8);
+    assert.equal(await page.locator('#street-city-submap[open]').count(), 1);
     await page.locator('#street-city-submap-close').click();
     await page.locator('#street-city-submap').waitFor({ state: 'hidden' });
     await page.evaluate(() => {

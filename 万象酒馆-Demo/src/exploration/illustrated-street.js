@@ -86,19 +86,28 @@ export async function createIllustratedStreet(
   function limits() {
     const limitX = Math.max(0, (aspect - width) / 2 - 0.012);
     const limitY = Math.max(0, (1 - height) / 2 - 0.006);
+    if (source.fixed) {
+      return { limitX, bottom: -limitY, top: limitY, baseY: 0 };
+    }
     if (source.fullVerticalPan) return { limitX, bottom: -limitY, top: limitY, baseY: 0 };
     const feet = [...Object.values(source.spots), ...Object.values(source.people || {})].map(
       (spot) => spot.foot[1],
     );
     const lowestFoot = Math.max(0.76, ...feet);
     const safeTop = Math.max(-limitY, Math.min(limitY, 0.5 - lowestFoot + 0.44 * height));
-    const travel = Math.min(height * 0.045, (safeTop + limitY) / 2);
+    const travelOld = Math.min(height * 0.045, (safeTop + limitY) / 2);
     const baseY = THREE.MathUtils.clamp(
       0.5 - lowestFoot + 0.365 * height,
-      -limitY + travel,
-      safeTop - travel,
+      -limitY + travelOld,
+      safeTop - travelOld,
     );
-    return { limitX, bottom: baseY - travel, top: baseY + travel, baseY };
+    const swayY = height * 0.095;
+    return {
+      limitX,
+      bottom: Math.max(-limitY, baseY - swayY),
+      top: Math.min(safeTop, baseY + swayY),
+      baseY,
+    };
   }
   function destination() {
     const { limitX, bottom, top, baseY } = limits();
@@ -116,11 +125,22 @@ export async function createIllustratedStreet(
   }
   function resize(camera, ratio) {
     if (source.fixed) {
-      height = source.fitWidth ? aspect / ratio : Math.min(1, aspect / ratio);
+      const overscan = 0.92;
+      height =
+        source.fitWidth && ratio < aspect
+          ? (aspect * 0.94) / ratio
+          : Math.min(overscan, (aspect * overscan) / ratio);
       width = height * ratio;
-      centerX = 0;
-      centerY = Math.min(0, (height - 1) / 2);
+      const { limitX, bottom, top, baseY } = limits();
+      if (centerX === null) {
+        centerX = 0;
+        centerY = baseY;
+      } else {
+        centerX = THREE.MathUtils.clamp(centerX, -limitX, limitX);
+        centerY = THREE.MathUtils.clamp(centerY, bottom, top);
+      }
       project(camera);
+      moving = true;
       return;
     }
     height = Math.min(source.viewHeight ?? 0.86, (source.viewWidth ?? 1.85) / ratio);
@@ -171,12 +191,10 @@ export async function createIllustratedStreet(
       moving = true;
     },
     reset() {
-      if (source.fixed) return;
       panX = panY = 0;
       moving = true;
     },
     drag(dx, dy) {
-      if (source.fixed) return;
       const { limitX, bottom, top, baseY } = limits();
       panX = THREE.MathUtils.clamp(panX - dx * width, -limitX, limitX);
       panY = THREE.MathUtils.clamp(panY + dy * height, bottom - baseY, top - baseY);
@@ -208,7 +226,7 @@ export async function createIllustratedStreet(
       return hit.object.visible && hit.object.parent.visible;
     },
     update(camera, now = performance.now()) {
-      if (source.fixed || arrivalPending) return false;
+      if (arrivalPending) return false;
       const target = destination();
       const delta = lastTime ? Math.min(32, Math.max(1, now - lastTime)) : 16;
       lastTime = now;

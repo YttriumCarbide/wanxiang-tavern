@@ -36,7 +36,7 @@ export async function createStreetView() {
   };
   document.body.dataset.scene = definition.id;
   document.body.dataset.timeOfDay = timeOfDay;
-  if (fixed) document.body.dataset.fixedView = 'true';
+  if (fixed && !illustrated) document.body.dataset.fixedView = 'true';
   document.title = '万象酒馆 · ' + definition.name;
   document.querySelector('.street-header h1').textContent = definition.title;
   const returnButton = document.getElementById('street-return');
@@ -371,7 +371,7 @@ export async function createStreetView() {
     updatePoints();
   }
   function adjustView(action) {
-    if (!illustrated || fixed || !model || disposed || leaving) return;
+    if ((fixed && !illustrated) || !model || disposed || leaving) return;
     closeInspection();
     if (action === 'reset') model.reset();
     else model.drag(action === 'left' ? 0.1 : -0.1, 0);
@@ -402,7 +402,7 @@ export async function createStreetView() {
     if (!drag) return;
     if (event.pointerId !== drag.id) return;
     if (Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY) > 7) drag.moved = true;
-    if (fixed) return;
+    if (fixed && !illustrated) return;
     if (illustrated) {
       model?.drag((event.clientX - drag.x) / innerWidth, (event.clientY - drag.y) / innerHeight);
       drag.x = event.clientX;
@@ -460,13 +460,13 @@ export async function createStreetView() {
       return;
     }
     if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) return;
-    if (fixed) return;
+    if (fixed && !illustrated) return;
     if (illustrated) {
       event.preventDefault();
       closeInspection();
       model?.drag(
         event.key === 'ArrowLeft' ? 0.1 : event.key === 'ArrowRight' ? -0.1 : 0,
-        event.key === 'ArrowUp' ? 0.02 : event.key === 'ArrowDown' ? -0.02 : 0,
+        event.key === 'ArrowUp' ? 0.06 : event.key === 'ArrowDown' ? -0.06 : 0,
       );
       apply();
       return;

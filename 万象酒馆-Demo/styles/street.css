@@ -1663,6 +1663,24 @@ html[data-atlas-only='true']
   max-height: min(68dvh, 490px);
   overflow: hidden;
   background: #d9bf92;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.street-city-submap-canvas.dragging {
+  cursor: grabbing;
+}
+.city-submap-stage {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: max(112%, calc(100% + 80px));
+  aspect-ratio: 820 / 470;
+  transform: translate(
+    calc(-50% + var(--submap-pan-x, 0px)),
+    calc(-50% + var(--submap-pan-y, 0px))
+  );
+  will-change: transform;
 }
 .city-submap-svg {
   position: absolute;
@@ -1678,12 +1696,12 @@ html[data-atlas-only='true']
 }
 .city-submap-pinbtn {
   position: absolute;
-  transform: translate(-50%, -12px);
-  display: inline-flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  padding: 2px 4px;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  transform: translate(-50%, -50%);
   border: none;
   background: transparent;
   color: #562e1f;
@@ -1692,7 +1710,7 @@ html[data-atlas-only='true']
   transition: transform 140ms ease;
 }
 .city-submap-pinbtn:not(:disabled):hover {
-  transform: translate(-50%, -14px) scale(1.06);
+  transform: translate(-50%, -50%) scale(1.1);
   z-index: 5;
 }
 .city-submap-seal {
@@ -1753,7 +1771,7 @@ html[data-atlas-only='true']
 }
 .city-dungeon-lv {
   position: absolute;
-  bottom: calc(100% + 2px);
+  bottom: calc(100% + 1px);
   left: 50%;
   transform: translateX(-50%);
   padding: 1px 6px;
@@ -1770,6 +1788,10 @@ html[data-atlas-only='true']
   pointer-events: none;
 }
 .city-submap-label {
+  position: absolute;
+  top: calc(100% - 2px);
+  left: 50%;
+  transform: translateX(-50%);
   padding: 0;
   border: none;
   background: transparent;
@@ -1779,6 +1801,7 @@ html[data-atlas-only='true']
   font-weight: 700;
   line-height: 1.25;
   white-space: nowrap;
+  pointer-events: none;
   text-shadow:
     0 0 3px #ffedc3,
     0 0 5px #ffedc3,

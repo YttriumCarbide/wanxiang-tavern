@@ -641,9 +641,14 @@
           <small>沿舆图路线深入 · 可择支线探索 · 拖动查看</small
           ><button id="destination-center" aria-label="定位所选地点">定位</button>
         </div>
-        <section id="destination-sites" aria-label="当前副本地点" aria-live="polite"></section>
       </section>
       <footer>
+        <section
+          id="destination-sites"
+          aria-label="当前副本地点"
+          aria-live="polite"
+          hidden
+        ></section>
         <span id="destination-status"></span
         ><button id="destination-region-confirm" class="primary">选择此异境 · 展开地图</button
         ><button id="destination-start" class="primary" hidden>启程</button>
