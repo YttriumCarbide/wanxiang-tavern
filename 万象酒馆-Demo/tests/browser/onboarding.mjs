@@ -187,7 +187,7 @@ export async function onboardingChecks({ browser, baseURL, output }) {
     await page.locator('[data-unit="aegis"]').click();
     assert((await page.locator('#details .skill-targetable').count()) > 0);
     await page.locator('[data-skill="attack"]').click();
-    assert.equal((await page.evaluate(() => demo.getPlan()))[0].target, 'mossSlime');
+    assert.equal((await page.evaluate(() => demo.getPlan()))[0].target, 'millCanalFrog');
     assert.equal(
       await page.locator('#tutorial-guide').getAttribute('data-step'),
       'opening-confirm',

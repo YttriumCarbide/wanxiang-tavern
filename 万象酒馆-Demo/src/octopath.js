@@ -1,89 +1,137 @@
 import { DAMAGE_TYPE_IDS, isDamageType, resolveBasicAttackType } from './damage-types.js';
 
-export const OFFICIAL_ENEMY_BREAK_PROFILES = Object.freeze({
-  mossSlime: { maxToughness: 2, weaknesses: ['fire', 'sword', 'wind'] },
-  sprout: { maxToughness: 2, weaknesses: ['fire', 'axe', 'ice'] },
-  pebble: { maxToughness: 3, weaknesses: ['brawl', 'lightning', 'ice'] },
-  hound: { maxToughness: 3, weaknesses: ['spear', 'fire', 'light'] },
-  warden: { maxToughness: 5, weaknesses: ['axe', 'brawl', 'lightning', 'special-magic'] },
-  hexer: { maxToughness: 3, weaknesses: ['ice', 'sword', 'light'] },
-  crystalBeetle: { maxToughness: 5, weaknesses: ['brawl', 'axe', 'fire', 'lightning'] },
-  cinderImp: { maxToughness: 3, weaknesses: ['ice', 'wind', 'spear'] },
-  tideJelly: { maxToughness: 3, weaknesses: ['lightning', 'spear', 'fire'] },
-  greyProwler: { maxToughness: 3, weaknesses: ['sword', 'fire', 'light'] },
-  facetSkitter: { maxToughness: 3, weaknesses: ['brawl', 'fire', 'lightning'] },
-  hollowSentry: { maxToughness: 5, weaknesses: ['axe', 'lightning', 'light', 'special-magic'] },
-  veilMender: { maxToughness: 3, weaknesses: ['sword', 'dark', 'fire'] },
-  dustHexer: { maxToughness: 3, weaknesses: ['light', 'wind', 'spear'] },
-  greyStinger: { maxToughness: 3, weaknesses: ['ice', 'special-weapon', 'lightning'] },
-  trailArbalist: { maxToughness: 3, weaknesses: ['sword', 'brawl', 'wind'] },
-  shellGatherer: { maxToughness: 4, weaknesses: ['axe', 'brawl', 'lightning'] },
-  riftMote: { maxToughness: 3, weaknesses: ['dark', 'light', 'special-weapon'] },
-  oathlessDuelist: { maxToughness: 5, weaknesses: ['spear', 'lightning', 'light', 'dark'] },
-  livingVine: { maxToughness: 3, weaknesses: ['fire', 'axe', 'ice'] },
-  moonMoth: { maxToughness: 3, weaknesses: ['fire', 'wind', 'light'] },
-  bogLeech: { maxToughness: 3, weaknesses: ['fire', 'lightning', 'spear'] },
-  fogSpore: { maxToughness: 3, weaknesses: ['fire', 'wind', 'sword'] },
-  bogDrifter: { maxToughness: 5, weaknesses: ['fire', 'light', 'axe', 'wind'] },
-  moonWorker: { maxToughness: 3, weaknesses: ['fire', 'special-weapon', 'ice'] },
-  hiveGuard: { maxToughness: 5, weaknesses: ['fire', 'brawl', 'axe', 'ice'] },
-  honeyLarva: { maxToughness: 2, weaknesses: ['fire', 'sword', 'wind'] },
-  scaleShield: { maxToughness: 5, weaknesses: ['lightning', 'brawl', 'fire', 'special-magic'] },
-  scaleWarrior: { maxToughness: 4, weaknesses: ['ice', 'spear', 'light'] },
-  scaleArcher: { maxToughness: 3, weaknesses: ['sword', 'brawl', 'lightning'] },
-  twistedSapling: { maxToughness: 4, weaknesses: ['fire', 'axe', 'light'] },
-  rootHauler: { maxToughness: 5, weaknesses: ['fire', 'axe', 'wind', 'special-weapon'] },
-  barkAcolyte: { maxToughness: 3, weaknesses: ['fire', 'sword', 'light'] },
-  rootSentry: { maxToughness: 5, weaknesses: ['fire', 'axe', 'ice', 'special-magic'] },
-  moonTendril: { maxToughness: 3, weaknesses: ['fire', 'light', 'sword'] },
-  rustMiner: { maxToughness: 4, weaknesses: ['lightning', 'brawl', 'fire'] },
-  drillWorm: { maxToughness: 4, weaknesses: ['ice', 'lightning', 'brawl'] },
-  railSpider: { maxToughness: 3, weaknesses: ['lightning', 'brawl', 'fire'] },
-  frostBorer: { maxToughness: 5, weaknesses: ['fire', 'brawl', 'lightning', 'axe'] },
-  crystalMiner: { maxToughness: 5, weaknesses: ['brawl', 'fire', 'lightning', 'axe'] },
-  clingLarva: { maxToughness: 2, weaknesses: ['fire', 'brawl', 'lightning'] },
-  oreMite: { maxToughness: 3, weaknesses: ['brawl', 'axe', 'lightning'] },
-  shardSprite: { maxToughness: 3, weaknesses: ['fire', 'brawl', 'special-magic'] },
-  rogueArm: { maxToughness: 5, weaknesses: ['lightning', 'axe', 'fire', 'special-weapon'] },
-  partsCarrier: { maxToughness: 4, weaknesses: ['lightning', 'brawl', 'axe'] },
-  lostWelder: { maxToughness: 4, weaknesses: ['ice', 'lightning', 'spear'] },
-  cargoCrawler: { maxToughness: 5, weaknesses: ['lightning', 'axe', 'fire', 'brawl'] },
-  insaneWorker: { maxToughness: 5, weaknesses: ['lightning', 'spear', 'ice', 'light'] },
-  scrapHound: { maxToughness: 3, weaknesses: ['lightning', 'brawl', 'sword'] },
-  sentryDrone: { maxToughness: 4, weaknesses: ['special-weapon', 'wind', 'brawl'] },
-  conduitWisp: { maxToughness: 3, weaknesses: ['brawl', 'dark', 'special-weapon'] },
-  aresCannonLeft: { maxToughness: 5, weaknesses: ['lightning', 'axe', 'brawl', 'special-weapon'] },
-  aresCannonRight: { maxToughness: 5, weaknesses: ['lightning', 'ice', 'spear', 'special-magic'] },
-  bossGate: { maxToughness: 7, weaknesses: ['axe', 'brawl', 'lightning', 'special-magic'] },
-  bossBloom: { maxToughness: 7, weaknesses: ['fire', 'wind', 'light', 'sword'] },
-  bossTide: { maxToughness: 7, weaknesses: ['lightning', 'dark', 'spear', 'special-weapon'] },
-  manyShellBeast: { maxToughness: 8, weaknesses: ['brawl', 'axe', 'fire', 'lightning'] },
-  unmooredJudge: {
-    maxToughness: 8,
-    weaknesses: ['dark', 'sword', 'special-weapon', 'special-magic'],
-  },
-  returningCore: { maxToughness: 9, weaknesses: ['special-magic', 'lightning', 'sword', 'light'] },
-  mossGulon: { maxToughness: 7, weaknesses: ['fire', 'spear', 'ice', 'lightning'] },
-  bogElemental: { maxToughness: 7, weaknesses: ['fire', 'wind', 'light', 'special-magic'] },
-  moonQueen: { maxToughness: 8, weaknesses: ['fire', 'ice', 'special-weapon', 'light'] },
-  scaleCaptain: { maxToughness: 8, weaknesses: ['lightning', 'spear', 'ice', 'light'] },
-  maskedForester: { maxToughness: 8, weaknesses: ['fire', 'sword', 'light', 'wind'] },
-  moonCrown: { maxToughness: 8, weaknesses: ['fire', 'axe', 'wind', 'light'] },
-  moonEye: {
-    maxToughness: 11,
-    weaknesses: ['light', 'fire', 'special-weapon', 'lightning', 'sword'],
-  },
-  moonRoot: { maxToughness: 8, weaknesses: ['fire', 'axe', 'ice', 'spear'] },
-  frostCrusher: { maxToughness: 8, weaknesses: ['fire', 'lightning', 'brawl', 'axe'] },
-  drillMatriarch: { maxToughness: 8, weaknesses: ['ice', 'lightning', 'axe', 'fire'] },
-  crystalDevourer: { maxToughness: 8, weaknesses: ['fire', 'brawl', 'lightning', 'special-magic'] },
-  repairOverseer: { maxToughness: 8, weaknesses: ['lightning', 'fire', 'axe', 'spear'] },
-  settlementLeader: { maxToughness: 9, weaknesses: ['sword', 'lightning', 'ice', 'special-magic'] },
-  ares: { maxToughness: 12, weaknesses: ['lightning', 'brawl', 'axe', 'ice', 'special-magic'] },
-  alchemicalPuppet: { maxToughness: 7, weaknesses: ['fire', 'brawl', 'axe', 'lightning'] },
-  ladderWebSpider: { maxToughness: 8, weaknesses: ['fire', 'axe', 'ice', 'light'] },
-  ladderCrowman: { maxToughness: 8, weaknesses: ['lightning', 'spear', 'fire', 'light'] },
+const PLAIN_ORDINARY_LAYERS = Object.freeze({
+  hound: 2,
+  hexer: 1,
+  cinderImp: 2,
+  greyProwler: 1,
+  trailArbalist: 2,
+  riftMote: 1,
+  livingVine: 2,
+  bogLeech: 1,
+  moonWorker: 2,
+  scaleArcher: 1,
+  barkAcolyte: 2,
+  railSpider: 1,
+  shardSprite: 2,
+  lostWelder: 2,
+  scrapHound: 1,
+  conduitWisp: 2,
+  millDustBat: 1,
+  patrolHound: 2,
+  stoneBallista: 2,
+  stoneBeetle: 1,
+  cultistSpecter: 2,
+  drakeBadlandScorpion: 1,
+  ladderCarrionBat: 1,
+  banditCutthroat: 2,
+  goblinShaman: 1,
+  erosionCrawler: 2,
 });
+
+const NO_BREAK_ELITES = new Set([
+  'millGiantVole',
+  'shellGatherer',
+  'rootSentry',
+  'crystalMiner',
+  'cargoCrawler',
+  'shadowStalker',
+  'tombWarden',
+  'relicHermitCrab',
+  'bicolorScalePython',
+  'overloadCreationElemental',
+]);
+
+const SPECIAL_BREAK_PRESETS = Object.freeze({
+  // Elites (20 / 30 ~= 2/3)
+  warden: { layers: 3, weaknesses: ['lightning', 'axe', 'brawl', 'special-magic'] },
+  crystalBeetle: { layers: 3, weaknesses: ['brawl', 'axe', 'fire', 'lightning'] },
+  hollowSentry: { layers: 3, weaknesses: ['axe', 'lightning', 'light', 'special-magic'] },
+  oathlessDuelist: { layers: 3, weaknesses: ['spear', 'lightning', 'light', 'dark'] },
+  bogDrifter: { layers: 3, weaknesses: ['fire', 'light', 'axe', 'wind'] },
+  hiveGuard: { layers: 3, weaknesses: ['fire', 'brawl', 'axe', 'ice'] },
+  scaleShield: { layers: 3, weaknesses: ['lightning', 'brawl', 'fire', 'special-magic'] },
+  rootHauler: { layers: 3, weaknesses: ['fire', 'axe', 'wind', 'special-weapon'] },
+  frostBorer: { layers: 3, weaknesses: ['fire', 'brawl', 'lightning', 'axe'] },
+  rogueArm: { layers: 3, weaknesses: ['lightning', 'axe', 'fire', 'special-weapon'] },
+  insaneWorker: { layers: 3, weaknesses: ['lightning', 'spear', 'ice', 'light'] },
+  millMiniMoldSlime: { layers: 2, weaknesses: ['fire', 'wind', 'special-magic'] },
+  millPaleSlug: { layers: 2, weaknesses: ['fire', 'lightning', 'sword'] },
+  corridorGuard: { layers: 2, weaknesses: ['lightning', 'spear', 'axe'] },
+  ruinsMudGolem: { layers: 3, weaknesses: ['wind', 'ice', 'brawl'] },
+  chaosBadlandFalcon: { layers: 2, weaknesses: ['ice', 'spear', 'wind'] },
+  overloadDestructionElemental: { layers: 3, weaknesses: ['ice', 'light', 'special-magic'] },
+  ladderRockGiant: { layers: 3, weaknesses: ['brawl', 'axe', 'lightning'] },
+  banditExecutioner: { layers: 2, weaknesses: ['sword', 'fire', 'light'] },
+  goblinWolfRider: { layers: 2, weaknesses: ['fire', 'spear', 'wind'] },
+  erosionJuggernaut: { layers: 3, weaknesses: ['light', 'brawl', 'fire'] },
+  aresCannonLeft: { layers: 2, weaknesses: ['lightning', 'axe', 'brawl'] },
+  aresCannonRight: { layers: 2, weaknesses: ['lightning', 'ice', 'special-magic'] },
+
+  // Bosses (100%)
+  millVoleAlpha: { layers: 2, weaknesses: ['special-magic', 'wind', 'sword', 'fire'] },
+  millRoachSwarm: { layers: 3, weaknesses: ['fire', 'wind', 'brawl'] },
+  millVampireBat: { layers: 3, weaknesses: ['light', 'wind', 'spear'] },
+  millMoldSlimeBoss: { layers: 3, weaknesses: ['fire', 'lightning', 'sword'] },
+  bossGate: { layers: 3, weaknesses: ['lightning', 'axe', 'brawl', 'special-magic'] },
+  bossBloom: { layers: 3, weaknesses: ['fire', 'wind', 'light', 'sword'] },
+  bossTide: { layers: 3, weaknesses: ['lightning', 'dark', 'spear', 'special-weapon'] },
+  manyShellBeast: { layers: 3, weaknesses: ['brawl', 'axe', 'fire', 'lightning'] },
+  unmooredJudge: { layers: 3, weaknesses: ['dark', 'sword', 'special-weapon', 'special-magic'] },
+  returningCore: { layers: 3, weaknesses: ['special-magic', 'lightning', 'sword', 'light'] },
+  mossGulon: { layers: 3, weaknesses: ['fire', 'spear', 'ice', 'lightning'] },
+  bogElemental: { layers: 3, weaknesses: ['fire', 'wind', 'light', 'special-magic'] },
+  moonQueen: { layers: 3, weaknesses: ['fire', 'ice', 'special-weapon', 'light'] },
+  scaleCaptain: { layers: 3, weaknesses: ['lightning', 'spear', 'ice', 'light'] },
+  maskedForester: { layers: 3, weaknesses: ['fire', 'sword', 'light', 'wind'] },
+  frostCrusher: { layers: 3, weaknesses: ['fire', 'lightning', 'brawl', 'axe'] },
+  drillMatriarch: { layers: 3, weaknesses: ['ice', 'lightning', 'axe', 'fire'] },
+  crystalDevourer: { layers: 3, weaknesses: ['fire', 'brawl', 'lightning', 'special-magic'] },
+  repairOverseer: { layers: 3, weaknesses: ['lightning', 'fire', 'axe', 'spear'] },
+  settlementLeader: { layers: 3, weaknesses: ['sword', 'lightning', 'ice', 'special-magic'] },
+  ruinsGate: { layers: 3, weaknesses: ['lightning', 'brawl', 'sword', 'fire'] },
+  chasmBeast: { layers: 3, weaknesses: ['ice', 'spear', 'fire', 'brawl'] },
+  brassColossus: { layers: 3, weaknesses: ['lightning', 'brawl', 'axe', 'fire'] },
+  cinderPriest: { layers: 3, weaknesses: ['ice', 'light', 'spear', 'wind'] },
+  bicolorSingularityLizard: { layers: 3, weaknesses: ['ice', 'fire', 'special-weapon', 'light'] },
+  eclipseWatcher: { layers: 3, weaknesses: ['light', 'special-magic', 'sword', 'lightning'] },
+  abyssDevourerPython: { layers: 3, weaknesses: ['light', 'fire', 'axe', 'spear'] },
+  dragonscaleSandworm: { layers: 3, weaknesses: ['ice', 'brawl', 'wind', 'lightning'] },
+  ladderWebSpider: { layers: 3, weaknesses: ['fire', 'axe', 'ice', 'light'] },
+  ladderCrowman: { layers: 3, weaknesses: ['lightning', 'spear', 'fire', 'light'] },
+  banditSyndicateKing: { layers: 3, weaknesses: ['sword', 'fire', 'lightning', 'brawl'] },
+  goblinKingGorg: { layers: 3, weaknesses: ['fire', 'spear', 'light', 'axe'] },
+  erosionRiftTyrant: { layers: 3, weaknesses: ['light', 'special-magic', 'brawl', 'fire'] },
+
+  // Overlords (100%)
+  alchemicalPuppet: { layers: 2, weaknesses: ['fire', 'brawl', 'axe', 'lightning'] },
+  moonCrown: { layers: 3, weaknesses: ['fire', 'axe', 'wind', 'light'] },
+  moonEye: { layers: 3, weaknesses: ['light', 'fire', 'special-weapon', 'lightning', 'sword'] },
+  moonRoot: { layers: 3, weaknesses: ['fire', 'axe', 'ice', 'spear'] },
+  ares: { layers: 3, weaknesses: ['lightning', 'brawl', 'axe', 'ice', 'special-magic'] },
+  apepLamb: { layers: 3, weaknesses: ['light', 'fire', 'spear', 'special-magic'] },
+  radiantWyvern: { layers: 3, weaknesses: ['ice', 'spear', 'dark', 'lightning'] },
+});
+
+function buildOfficialTable() {
+  const entries = {};
+  for (const [id, layers] of Object.entries(PLAIN_ORDINARY_LAYERS)) {
+    entries[id] = { hasBreak: true, mode: 'plain', maxToughness: layers, weaknesses: [] };
+  }
+  for (const [id, preset] of Object.entries(SPECIAL_BREAK_PRESETS)) {
+    entries[id] = {
+      hasBreak: true,
+      mode: 'special',
+      maxToughness: preset.layers,
+      weaknesses: [...preset.weaknesses],
+      majorWeakness: preset.weaknesses[0],
+      minorWeaknesses: preset.weaknesses.slice(1),
+    };
+  }
+  return Object.freeze(entries);
+}
+
+export const OFFICIAL_ENEMY_BREAK_PROFILES = buildOfficialTable();
 
 function hashString(str) {
   let h = 2166136261;
@@ -134,59 +182,240 @@ function deterministicWeaknesses(key, count, def) {
   return chosen;
 }
 
-export function resolveEnemyBreakProfile(defOrId) {
+function splitWeaknesses(weaknesses, explicitMajor = null) {
+  const clean = [...new Set((weaknesses || []).filter((w) => isDamageType(w)))].slice(0, 5);
+  if (!clean.length) return { majorWeakness: null, minorWeaknesses: [], weaknesses: [] };
+  const majorWeakness = explicitMajor && isDamageType(explicitMajor) ? explicitMajor : clean[0];
+  const minorWeaknesses = clean.filter((w) => w !== majorWeakness);
+  return {
+    majorWeakness,
+    minorWeaknesses,
+    weaknesses: [majorWeakness, ...minorWeaknesses],
+  };
+}
+
+/** Resolve conditional Break Window profile by enemy tier and stage. */
+export function resolveEnemyBreakProfile(defOrId, stage = 1) {
   const def = typeof defOrId === 'string' ? { id: defOrId } : defOrId || {};
   const speciesKey = speciesKeyOf(def);
   const official = OFFICIAL_ENEMY_BREAK_PROFILES[speciesKey];
+  const s = Math.max(1, Math.min(3, Number(stage) || 1));
 
-  const explicitWeaknesses = Array.isArray(def.weaknesses)
-    ? [...new Set(def.weaknesses.filter((w) => isDamageType(w)))].slice(0, 5)
-    : null;
-  const explicitToughness = Number.isFinite(def.maxToughness)
-    ? Math.max(1, Math.round(def.maxToughness))
-    : null;
-
-  if (explicitWeaknesses && explicitWeaknesses.length >= 2 && explicitToughness) {
+  if (def.breakProfile && typeof def.breakProfile === 'object') {
+    const bp = def.breakProfile;
+    if (bp.hasBreak === false) {
+      return {
+        speciesKey,
+        hasBreak: false,
+        mode: 'none',
+        maxToughness: 0,
+        majorWeakness: null,
+        minorWeaknesses: [],
+        weaknesses: [],
+        alwaysBreakWindow: false,
+      };
+    }
+    const mode = bp.mode || (bp.majorWeakness || bp.weaknesses?.length ? 'special' : 'plain');
+    const split =
+      mode === 'special'
+        ? splitWeaknesses(
+            bp.weaknesses || [bp.majorWeakness, ...(bp.minorWeaknesses || [])],
+            bp.majorWeakness,
+          )
+        : { majorWeakness: null, minorWeaknesses: [], weaknesses: [] };
     return {
       speciesKey,
-      maxToughness: explicitToughness,
-      weaknesses: explicitWeaknesses,
+      hasBreak: true,
+      mode,
+      maxToughness: Math.max(1, Math.round(Number(bp.layers ?? bp.maxToughness) || 2)),
+      ...split,
+      alwaysBreakWindow: Boolean(bp.alwaysBreakWindow),
+    };
+  }
+
+  // Overlord stage-specific overrides (e.g. alchemicalPuppet shifts core weakness on Phase 2).
+  if (speciesKey === 'alchemicalPuppet') {
+    const layers = def.breakLayersByPhase?.[s - 1] ?? (s >= 3 ? 3 : 2);
+    const ordered =
+      s === 2
+        ? ['lightning', 'fire', 'axe', 'special-magic']
+        : ['fire', 'lightning', 'brawl', 'axe'];
+    return {
+      speciesKey,
+      hasBreak: true,
+      mode: 'special',
+      maxToughness: layers,
+      ...splitWeaknesses(ordered, ordered[0]),
+      alwaysBreakWindow: false,
+    };
+  }
+
+  // Custom / synthetic test definitions with explicit maxToughness (and no official table override).
+  if (!official && Number.isFinite(def.maxToughness)) {
+    const layers = Math.max(0, Math.round(def.maxToughness));
+    if (layers <= 0) {
+      return {
+        speciesKey,
+        hasBreak: false,
+        mode: 'none',
+        maxToughness: 0,
+        majorWeakness: null,
+        minorWeaknesses: [],
+        weaknesses: [],
+        alwaysBreakWindow: false,
+      };
+    }
+    const rawList = Array.isArray(def.weaknesses) ? def.weaknesses : [];
+    const mode = def.breakMode || (rawList.length || def.majorWeakness ? 'special' : 'plain');
+    const split =
+      mode === 'special'
+        ? splitWeaknesses(rawList.length ? rawList : ['sword', 'fire'], def.majorWeakness)
+        : { majorWeakness: null, minorWeaknesses: [], weaknesses: [] };
+    return {
+      speciesKey,
+      hasBreak: true,
+      mode,
+      maxToughness: layers,
+      ...split,
+      alwaysBreakWindow: def.alwaysBreakWindow !== false,
     };
   }
 
   if (official) {
+    const layers =
+      def.overlord && s >= 3
+        ? Math.min(4, official.maxToughness + 1)
+        : def.breakLayersByPhase?.[s - 1] || official.maxToughness;
     return {
       speciesKey,
-      maxToughness: explicitToughness || official.maxToughness,
-      weaknesses:
-        explicitWeaknesses && explicitWeaknesses.length > 0
-          ? explicitWeaknesses
-          : [...official.weaknesses],
+      hasBreak: true,
+      mode: official.mode,
+      maxToughness: layers,
+      majorWeakness: official.majorWeakness || null,
+      minorWeaknesses: [...(official.minorWeaknesses || [])],
+      weaknesses: [...(official.weaknesses || [])],
+      alwaysBreakWindow: false,
+    };
+  }
+
+  if (NO_BREAK_ELITES.has(speciesKey)) {
+    return {
+      speciesKey,
+      hasBreak: false,
+      mode: 'none',
+      maxToughness: 0,
+      majorWeakness: null,
+      minorWeaknesses: [],
+      weaknesses: [],
+      alwaysBreakWindow: false,
+    };
+  }
+
+  // Fallback for authored ordinary enemies omitted from PLAIN_ORDINARY_LAYERS & dynamic AI enemies.
+  if (!def.overlord && !def.boss && !def.elite) {
+    const h = hashString(speciesKey || def.name || 'enemy');
+    // Authoritative mill / region ordinary enemies not in PLAIN_ORDINARY_LAYERS keep ~2/3 no-break ratio.
+    const isDynamic = Boolean(
+      def.source === 'generated' || def.baseRevision || speciesKey.startsWith('enemy-'),
+    );
+    if (!isDynamic || h % 3 !== 0) {
+      return {
+        speciesKey,
+        hasBreak: false,
+        mode: 'none',
+        maxToughness: 0,
+        majorWeakness: null,
+        minorWeaknesses: [],
+        weaknesses: [],
+        alwaysBreakWindow: false,
+      };
+    }
+    return {
+      speciesKey,
+      hasBreak: true,
+      mode: 'plain',
+      maxToughness: 1 + ((h >> 3) % 2),
+      majorWeakness: null,
+      minorWeaknesses: [],
+      weaknesses: [],
+      alwaysBreakWindow: false,
     };
   }
 
   const h = hashString(speciesKey || def.name || 'enemy');
-  const maxToughness = explicitToughness
-    ? explicitToughness
-    : def.overlord
-      ? 8 + (h % 5)
-      : def.boss
-        ? 6 + (h % 4)
-        : def.elite
-          ? 4 + (h % 3)
-          : 2 + (h % 3);
+  if (def.elite && !def.boss && !def.overlord && h % 3 === 0) {
+    return {
+      speciesKey,
+      hasBreak: false,
+      mode: 'none',
+      maxToughness: 0,
+      majorWeakness: null,
+      minorWeaknesses: [],
+      weaknesses: [],
+      alwaysBreakWindow: false,
+    };
+  }
 
-  const count = def.overlord ? 4 + (h % 2) : def.boss ? 4 : def.elite ? 3 + (h % 2) : 2 + (h % 2);
+  const layers = def.overlord ? (s >= 3 ? 4 : 3) : def.boss ? 3 : 2 + (h % 2);
   const weaknesses =
-    explicitWeaknesses && explicitWeaknesses.length > 0
-      ? explicitWeaknesses
-      : deterministicWeaknesses(speciesKey || def.name || 'enemy', count, def);
-
+    Array.isArray(def.weaknesses) && def.weaknesses.length >= 2
+      ? def.weaknesses
+      : deterministicWeaknesses(speciesKey || def.name || 'enemy', def.overlord ? 4 : 3, def);
   return {
     speciesKey,
-    maxToughness,
-    weaknesses,
+    hasBreak: true,
+    mode: 'special',
+    maxToughness: layers,
+    ...splitWeaknesses(weaknesses, def.majorWeakness),
+    alwaysBreakWindow: false,
   };
+}
+
+/** Decide whether an enemy opens its single-round Break Window at the start of a planning round. */
+export function shouldOpenBreakWindow(state, id, def, enemyIndex = 0) {
+  if (!state || state.phase === 'opening' || !def) return false;
+  const unit = state.units?.[id];
+  if (!unit || unit.hp <= 0) return false;
+  const stage = unit.bossStage || (unit.enraged ? 2 : 1);
+  const profile = resolveEnemyBreakProfile(def, stage);
+  if (!profile.hasBreak) return false;
+  if (profile.alwaysBreakWindow || unit.forceBreakWindow) return true;
+  if (def.chargeMechanic) return Boolean(unit.chargingMove);
+  const round = Math.max(1, Number(state.round) || 1);
+  if (def.overlord) return round >= 2 && round % 2 === 0;
+  if (def.boss) return Boolean(unit.justEnragedWindow) || (round >= 2 && round % 2 === 0);
+  if (def.elite) return round >= 2 && round % 2 === 0;
+  return (round + enemyIndex) % 2 === 0;
+}
+
+/** Build a fresh single-round Break Window object for state.units[id].breakWindow. */
+export function createBreakWindow(def, unit, stage = 1, hasFixedFirst = false) {
+  const profile = resolveEnemyBreakProfile(def, stage);
+  if (!profile.hasBreak || profile.maxToughness <= 0) return null;
+  return {
+    active: true,
+    mode: profile.mode,
+    current: profile.maxToughness,
+    max: profile.maxToughness,
+    majorWeakness: profile.majorWeakness,
+    minorWeaknesses: [...profile.minorWeaknesses],
+    triggerActionIndex: hasFixedFirst ? 1 : 0,
+    source: unit?.chargingMove ? 'charge' : 'window',
+  };
+}
+
+/** Calculate how many break pips a direct-damage hit of damageType removes. */
+export function breakImpactDelta(breakWindow, damageType) {
+  if (!breakWindow?.active || !(breakWindow.current > 0) || !isDamageType(damageType)) return 0;
+  if (breakWindow.mode === 'plain') return 1;
+  if (breakWindow.majorWeakness && breakWindow.majorWeakness === damageType) return 2;
+  if (
+    Array.isArray(breakWindow.minorWeaknesses) &&
+    breakWindow.minorWeaknesses.includes(damageType)
+  ) {
+    return 1;
+  }
+  return 0;
 }
 
 export function revealedWeaknessesFor(revealedMap, defOrId) {

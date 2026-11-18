@@ -87,10 +87,95 @@ function updateSealRingStage(seal, baseColorHex, stage = 1) {
   seal.scale.setScalar(s >= 3 ? 1.24 : s === 2 ? 1.12 : 1);
 }
 
+function createChargeHalo(colorHex) {
+  const halo = new THREE.Group();
+  halo.name = 'Overlord_Charge_Halo';
+  halo.visible = false;
+  const primary = new THREE.Color('#ffd96b');
+  const secondary = new THREE.Color(colorHex || '#6bf5a9');
+  const outer = new THREE.Mesh(
+    new THREE.RingGeometry(0.42, 0.49, 40),
+    new THREE.MeshBasicMaterial({
+      color: primary,
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: 0.9,
+      toneMapped: false,
+    }),
+  );
+  outer.rotation.x = -Math.PI / 2;
+  outer.position.y = 0.028;
+  const inner = new THREE.Mesh(
+    new THREE.RingGeometry(0.24, 0.29, 6),
+    new THREE.MeshBasicMaterial({
+      color: secondary,
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: 0.85,
+      toneMapped: false,
+    }),
+  );
+  inner.rotation.x = -Math.PI / 2;
+  inner.position.y = 0.036;
+  halo.add(outer, inner);
+  return halo;
+}
+
+function makeEulerQuatTrack(times, eulers) {
+  const values = [];
+  const q = new THREE.Quaternion();
+  const e = new THREE.Euler();
+  for (const [rx, ry, rz] of eulers) {
+    e.set(rx, ry, rz, 'XYZ');
+    q.setFromEuler(e);
+    values.push(q.x, q.y, q.z, q.w);
+  }
+  return new THREE.QuaternionKeyframeTrack('.quaternion', times, values);
+}
+
+function registerProceduralOverlordClips(mixer, clips) {
+  if (!mixer) return;
+  if (!clips.Charge_Up) {
+    const chargeClip = new THREE.AnimationClip('Charge_Up', 1.85, [
+      makeEulerQuatTrack(
+        [0, 0.28, 0.65, 1.0, 1.32, 1.62, 1.85],
+        [
+          [0, 0, 0],
+          [0.24, -0.06, 0],
+          [-0.18, 0.1, 0.05],
+          [-0.22, -0.1, -0.05],
+          [-0.25, 0.06, 0.03],
+          [-0.14, 0, 0],
+          [0, 0, 0],
+        ],
+      ),
+    ]);
+    clips.Charge_Up = mixer.clipAction(chargeClip);
+  }
+  if (!clips.Break_Stagger) {
+    const breakClip = new THREE.AnimationClip('Break_Stagger', 1.35, [
+      makeEulerQuatTrack(
+        [0, 0.16, 0.42, 0.72, 1.05, 1.35],
+        [
+          [0, 0, 0],
+          [-0.36, 0.08, -0.14],
+          [-0.26, -0.12, 0.16],
+          [0.18, 0.06, -0.08],
+          [0.12, 0, 0],
+          [0, 0, 0],
+        ],
+      ),
+    ]);
+    clips.Break_Stagger = mixer.clipAction(breakClip);
+  }
+}
+
 const OVERLORD_CLIP_PACE = 1.28;
 
 function resolveClipName(entry, move = {}) {
   if (!entry) return null;
+  if ((move.clip === 'Charge_Up' || move.isCharge) && entry.clips.Charge_Up) return 'Charge_Up';
+  if (move.clip === 'Break_Stagger' && entry.clips.Break_Stagger) return 'Break_Stagger';
   const explicitClip = typeof move.clip === 'string' && entry.clips[move.clip] ? move.clip : null;
   const candidates = explicitClip
     ? [explicitClip]
@@ -216,14 +301,18 @@ export async function createOverlordModels({
         unmount(record);
         continue;
       }
-      const unitStage =
-        state?.units?.[record.id]?.bossStage || (state?.units?.[record.id]?.enraged ? 2 : 1);
+      const unit = state?.units?.[record.id];
+      const unitStage = unit?.bossStage || (unit?.enraged ? 2 : 1);
+      const isCharging = Boolean(unit?.chargingMove || unit?.breakWindow?.source === 'charge');
+      const isBroken = Boolean(unit?.broken);
       const current = mounted.get(record);
       if (current?.id === record.id) {
         if (current.stage !== unitStage) {
           current.stage = unitStage;
           updateSealRingStage(current.seal, current.colorHex, unitStage);
         }
+        current.charging = isCharging;
+        current.broken = isBroken;
         continue;
       }
       unmount(record);
@@ -255,15 +344,17 @@ export async function createOverlordModels({
       figure.position.set(baseX, baseY, baseZ);
 
       const seal = createSealRing(def.color);
-      mount.add(seal, figure);
+      const chargeHalo = createChargeHalo(def.color);
+      mount.add(seal, chargeHalo, figure);
       trackMountMaterials(mount, resources);
 
-      const mixer = tpl.animations.length ? new THREE.AnimationMixer(figure) : null;
+      const mixer = tpl.animations.length || def.overlord ? new THREE.AnimationMixer(figure) : null;
       const clips = {};
       if (mixer) {
         for (const clip of tpl.animations) {
           clips[clip.name] = mixer.clipAction(clip);
         }
+        registerProceduralOverlordClips(mixer, clips);
       }
       const idleAction = clips.Idle || (tpl.animations[0] ? clips[tpl.animations[0].name] : null);
       if (idleAction) {
@@ -279,6 +370,8 @@ export async function createOverlordModels({
         model: def.model,
         colorHex: def.color,
         stage: unitStage,
+        charging: isCharging,
+        broken: isBroken,
         overlord: Boolean(def.overlord),
         standOnCard: true,
         triangles: tpl.triangles,
@@ -291,6 +384,7 @@ export async function createOverlordModels({
         mount,
         figure,
         seal,
+        chargeHalo,
         mixer,
         clips,
         idleAction,
@@ -423,35 +517,83 @@ export async function createOverlordModels({
           lungeZ = L.dz * travel;
         }
       }
-      if (entry.overlord && entry.stage >= 2) {
-        const vibe = entry.stage >= 3 ? 0.025 : 0;
-        const pulse =
-          (0.5 + 0.5 * Math.sin(t * (entry.stage >= 3 ? 7 : 4))) * (entry.stage >= 3 ? 0.34 : 0.16);
-        lungeX += vibe ? Math.sin(t * 37) * vibe : 0;
+      const vibe = entry.broken
+        ? 0.032
+        : entry.charging
+          ? 0.018
+          : entry.overlord && entry.stage >= 3
+            ? 0.025
+            : 0;
+      const staggerY = entry.broken ? -0.16 : 0;
+      if (vibe) lungeX += Math.sin(t * 37) * vibe;
+      if (entry.overlord && (entry.stage >= 2 || entry.charging || entry.broken)) {
+        const pulseRate = entry.charging ? 9 : entry.stage >= 3 ? 7 : 4;
+        const pulseAmp = entry.broken
+          ? 0.08
+          : entry.charging
+            ? 0.42
+            : entry.stage >= 3
+              ? 0.34
+              : 0.16;
+        const pulse = (0.5 + 0.5 * Math.sin(t * pulseRate)) * pulseAmp;
+        const tintHex = entry.broken
+          ? 0xff5442
+          : entry.charging
+            ? 0xffd25a
+            : entry.stage >= 3
+              ? 0xff4568
+              : 0xe89c3c;
         entry.figure.traverse((node) => {
           if (!node.isMesh || node.name.includes('Battle_Card')) return;
           for (const mat of Array.isArray(node.material) ? node.material : [node.material]) {
             if (mat?.emissive && mat.userData?.baseEmission) {
               mat.emissive
                 .copy(mat.userData.baseEmission)
-                .add(new THREE.Color(entry.stage >= 3 ? 0xff4568 : 0xe89c3c).multiplyScalar(pulse));
+                .add(new THREE.Color(tintHex).multiplyScalar(pulse));
             }
           }
         });
       }
+      if (entry.chargeHalo) {
+        const haloActive = Boolean(entry.charging && !entry.broken);
+        entry.chargeHalo.visible = haloActive;
+        if (haloActive) {
+          hasAnimation = true;
+          const haloPulse = 1 + Math.sin(t * 8) * 0.09;
+          entry.chargeHalo.scale.setScalar(haloPulse);
+          entry.chargeHalo.rotation.y = -t * 2.6;
+        }
+      }
       entry.figure.position.set(
         entry.baseX + lungeX,
-        entry.baseY + hover + lungeY,
+        entry.baseY + hover + lungeY + staggerY,
         entry.baseZ + lungeZ,
       );
       if (!entry.mixer) {
         entry.figure.rotation.y = Math.sin(t * 0.9 + index * 1.15) * 0.06;
       }
-      const sealRate = entry.stage >= 3 ? 4.0 : entry.stage === 2 ? 2.4 : 1.0;
+      const sealRate = entry.broken
+        ? 0.2
+        : entry.charging
+          ? 4.8
+          : entry.stage >= 3
+            ? 4.0
+            : entry.stage === 2
+              ? 2.4
+              : 1.0;
       entry.seal.rotation.y = t * 0.45 * sealRate * (index % 2 ? -1 : 1);
       index++;
     }
     return hasAnimation;
+  }
+
+  function playBreak(id) {
+    const entry = [...mounted.values()].find((item) => item.id === id);
+    if (!entry) return 0;
+    entry.broken = true;
+    entry.charging = false;
+    if (entry.chargeHalo) entry.chargeHalo.visible = false;
+    return playAction(id, { clip: 'Break_Stagger', hasDamage: false });
   }
 
   function status() {
@@ -480,5 +622,5 @@ export async function createOverlordModels({
     };
   }
 
-  return { sync, actionDurationMs, playAction, update, status };
+  return { sync, actionDurationMs, playAction, playBreak, update, status };
 }

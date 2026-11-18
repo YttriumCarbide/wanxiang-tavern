@@ -1,8 +1,11 @@
 {
   "browserConcurrency": 2,
   "coreFiles": [
-    "tests/playback.test.js",
+    "tests/combat-overhaul.test.js",
     "tests/overlord-puppet.test.js",
+    "tests/enemy-base-values.test.js",
+    "tests/playback.test.js",
+    "tests/mill-worldmaps.test.js",
     "tests/combat-control.test.js",
     "tests/official-visitors.test.js"
   ],

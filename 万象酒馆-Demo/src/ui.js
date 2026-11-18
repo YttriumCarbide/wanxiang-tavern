@@ -6,7 +6,6 @@ import { BUFFS } from './data.js';
 import { effectiveBuff } from './engine.js';
 import { definition } from './catalog.js';
 import { damageTypeIcon, damageTypeMeta } from './damage-types.js';
-import { resolveEnemyBreakProfile, revealedWeaknessesFor } from './octopath.js';
 
 export const escapeText = (s) =>
   String(s).replace(
@@ -161,59 +160,107 @@ export function resourceBars(u, f = u) {
     .join('');
 }
 
-export function enemyToughnessBadge(u, f = u) {
+export function enemyBreakBar(d, u, f = u, activeDamageType = null) {
   if (!u || u.side !== 'enemy') return '';
-  const maxT = Math.max(1, Number(u.maxToughness) || 1);
-  const nowT = Math.max(0, Number(u.toughness ?? maxT) || 0);
-  const endT = Math.max(0, Number(f?.toughness ?? nowT) || 0);
-  const broken = Boolean(u.broken);
-  const willBreak = !broken && Boolean(f?.broken);
-  const forecast = willBreak || endT !== nowT;
-  const tip = broken
-    ? `击破晕眩中 · 行动已跳过（恢复后韧性 ${maxT}）`
-    : `韧性 ${nowT}/${maxT}：命中弱点削减1点，归零将击破并跳过剩余及下一回合行动${
-        forecast ? `\n预计结算后 ${willBreak ? '击破' : endT}` : ''
-      }`;
+  if (u.broken) {
+    return html`<span
+      class="enemy-break-rail is-broken"
+      data-tooltip="${escapeText(
+        '破防失衡（BREAK）· 本回合行动已取消，受到直接伤害提高 50%（下回合恢复行动）',
+      )}"
+      tabindex="0"
+      aria-label="破防失衡"
+      ><svg class="break-shatter-crest" viewBox="0 0 24 24" aria-hidden="true">
+        <path
+          d="M12 2L4 7v5.5c0 4.8 3.4 8.7 8 10 4.6-1.3 8-5.2 8-10V7l-8-5zm-1.2 4.3L9.3 11l3.6 1.5-2.1 5.4 1.4.5 2.6-6.7-3.4-1.4 1.1-3.6-1.7-.4z"
+          fill="currentColor"
+        /></svg
+      ><span class="break-broken-label">BREAK · 受伤+50%</span></span
+    >`;
+  }
+  const bw = u.breakWindow;
+  if (!bw?.active || !(bw.max > 0)) return '';
+  const maxT = Math.max(1, Number(bw.max) || 1);
+  const nowT = Math.max(0, Math.min(maxT, Number(bw.current) || 0));
+  const fBw = f?.breakWindow;
+  const willBreak = Boolean(f?.broken);
+  const endT = willBreak
+    ? 0
+    : fBw?.active
+      ? Math.max(0, Math.min(maxT, Number(fBw.current) || 0))
+      : nowT;
+  const forecastLoss = Math.max(0, nowT - endT);
+  const pipsHtml = Array.from({ length: maxT }, (_, idx) => {
+    const filled = idx < nowT;
+    const losing = filled && idx >= endT;
+    return html`<i
+      class="break-pip ${filled ? 'is-filled' : 'is-spent'} ${losing ? 'is-forecast-loss' : ''}"
+    ></i>`;
+  }).join('');
+
+  if (bw.mode === 'plain') {
+    const anyMatched = Boolean(
+      activeDamageType && activeDamageType !== 'support' && activeDamageType !== 'unknown',
+    );
+    const tip = `普通破绽（${nowT}/${maxT}）：本回合限时出现，任意直接伤害命中削减 1 格\n敌方行动后立即关闭；归零触发 BREAK：取消本回合剩余行动且受伤 +50%${
+      forecastLoss > 0 ? `\n预计本轮削减 ${forecastLoss} 格${willBreak ? ' → 破防失衡！' : ''}` : ''
+    }`;
+    return html`<span
+      class="enemy-break-rail is-plain ${willBreak ? 'will-break' : ''} ${forecastLoss > 0 ? 'has-forecast' : ''} ${anyMatched ? 'is-matched' : ''}"
+      data-break-mode="plain"
+      data-tooltip="${escapeText(tip)}"
+      tabindex="0"
+      aria-label="普通破绽 ${nowT}/${maxT}"
+      ><span class="break-mode-tag">破绽</span><span class="break-gauge-track">${pipsHtml}</span
+      ><b class="break-count">${willBreak ? 'BREAK' : `${nowT}/${maxT}`}</b></span
+    >`;
+  }
+
+  const major = bw.majorWeakness;
+  const minors = Array.isArray(bw.minorWeaknesses) ? bw.minorWeaknesses : [];
+  const majorMeta = major ? damageTypeMeta(major) : null;
+  const majorMatched = Boolean(major && activeDamageType && activeDamageType === major);
+  const majorHtml = major
+    ? html`<span
+        class="enemy-weakness-pill is-major ${majorMatched ? 'is-matched' : ''}"
+        style="--dmg-color:${majorMeta.color};--dmg-glow:${majorMeta.glow}"
+        data-weakness="${major}"
+        data-weakness-tier="major"
+        title="大弱点：${escapeText(majorMeta.name)}（命中直接削减 2 格破绽）"
+        >${damageTypeIcon(major, { size: 13, tint: false })}<i class="weakness-mult">-2</i></span
+      >`
+    : '';
+  const minorsHtml = minors
+    .map((w) => {
+      const meta = damageTypeMeta(w);
+      const matched = Boolean(activeDamageType && activeDamageType === w);
+      return html`<span
+        class="enemy-weakness-pill is-minor ${matched ? 'is-matched' : ''}"
+        style="--dmg-color:${meta.color};--dmg-glow:${meta.glow}"
+        data-weakness="${w}"
+        data-weakness-tier="minor"
+        title="小弱点：${escapeText(meta.name)}（命中削减 1 格破绽）"
+        >${damageTypeIcon(w, { size: 11, tint: !matched })}</span
+      >`;
+    })
+    .join('');
+
+  const minorNames = minors.map((w) => damageTypeMeta(w).name).join(' / ');
+  const tip = `特殊破绽（${nowT}/${maxT}）· ${d?.name || ''}本回合暴露破绽！\n金色大弱点：${majorMeta?.name || '无'}（命中 -2 格）${
+    minorNames ? `\n小弱点：${minorNames}（命中 -1 格）` : ''
+  }\n对应招式放出后破绽立即消失；打空触发 BREAK 取消本回合后续行动且本回合受伤 +50%${
+    forecastLoss > 0 ? `\n预计本轮削减 ${forecastLoss} 格${willBreak ? ' → 破防失衡！' : ''}` : ''
+  }`;
   return html`<span
-    class="enemy-toughness-badge ${broken ? 'is-broken' : ''} ${forecast ? 'forecast' : ''} ${willBreak ? 'will-break' : ''}"
+    class="enemy-break-rail is-special ${willBreak ? 'will-break' : ''} ${forecastLoss > 0 ? 'has-forecast' : ''}"
+    data-break-mode="special"
     data-tooltip="${escapeText(tip)}"
     tabindex="0"
-    aria-label="${broken ? '击破晕眩' : `韧性 ${nowT}`}"
-    ><svg class="toughness-crest" viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        d="${
-          broken
-            ? 'M12 2L4 7v6c0 4.6 3.4 8.6 8 9.8 4.6-1.2 8-5.2 8-9.8V7l-8-5zm-1.4 4.2L9.2 11l3.6 1.5-2.1 5.3 1.4.4 2.5-6.6-3.4-1.4 1.1-3.6-1.7-.4z'
-            : 'M12 2L4 7v6c0 4.6 3.4 8.6 8 9.8 4.6-1.2 8-5.2 8-9.8V7l-8-5z'
-        }"
-        fill="currentColor"
-      /></svg
-    ><b>${broken ? '破' : nowT}</b
-    >${forecast ? html`<em>${willBreak ? '破' : endT}</em>` : ''}</span
-  >`;
-}
-
-export function enemyWeaknessRow(d, u, revealedMap, activeDamageType = null) {
-  if (!d || u?.side !== 'enemy') return '';
-  const profile = resolveEnemyBreakProfile(d);
-  const weaknesses =
-    Array.isArray(u.weaknesses) && u.weaknesses.length ? u.weaknesses : profile.weaknesses;
-  const revealed = revealedWeaknessesFor(revealedMap, d);
-  return html`<span class="enemy-weakness-row" aria-label="敌方弱点"
-    >${weaknesses
-      .map((w) => {
-        const known = revealed.includes(w);
-        const matched = known && activeDamageType && activeDamageType === w;
-        const meta = damageTypeMeta(known ? w : 'unknown');
-        return html`<span
-          class="enemy-weakness-pill ${known ? 'is-revealed' : 'is-unknown'} ${matched ? 'is-matched' : ''}"
-          style="--dmg-color:${meta.color};--dmg-glow:${meta.glow}"
-          data-weakness="${known ? w : 'unknown'}"
-          title="${known ? `弱点：${meta.name}` : '未知弱点（用对应属性攻击后解锁）'}"
-          >${damageTypeIcon(known ? w : 'unknown', { size: 11, tint: !matched })}</span
-        >`;
-      })
-      .join('')}</span
+    aria-label="特殊破绽 ${nowT}/${maxT}"
+    ><span class="break-gauge-head"
+      ><span class="break-gauge-track">${pipsHtml}</span
+      ><b class="break-count">${willBreak ? 'BREAK' : `${nowT}/${maxT}`}</b></span
+    ><span class="enemy-weakness-row" aria-label="破绽弱点">${majorHtml}${minorsHtml}</span></span
   >`;
 }
 

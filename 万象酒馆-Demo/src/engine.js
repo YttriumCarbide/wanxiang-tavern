@@ -45,7 +45,14 @@ import {
   negativeImmune,
 } from './emblem-mechanics.js';
 import { inferDamageType, isDamageType, resolveBasicAttackType } from './damage-types.js';
-import { mergeRevealedWeaknessMap, resolveEnemyBreakProfile, speciesKeyOf } from './octopath.js';
+import {
+  breakImpactDelta,
+  createBreakWindow,
+  mergeRevealedWeaknessMap,
+  resolveEnemyBreakProfile,
+  shouldOpenBreakWindow,
+  speciesKeyOf,
+} from './octopath.js';
 export const clone = (x) => structuredClone(x);
 export function battleResourceLimits(definition) {
   let hp = definition.hp;
@@ -103,11 +110,13 @@ export function newBattle(
               ? {
                   bossStage: 1,
                   speciesKey: enemyBreak.speciesKey,
-                  toughness: enemyBreak.maxToughness,
-                  maxToughness: enemyBreak.maxToughness,
+                  toughness: enemyBreak.alwaysBreakWindow ? enemyBreak.maxToughness : 0,
+                  maxToughness: enemyBreak.alwaysBreakWindow ? enemyBreak.maxToughness : 0,
                   weaknesses: [...enemyBreak.weaknesses],
+                  breakWindow: enemyBreak.alwaysBreakWindow
+                    ? createBreakWindow(d, null, 1, Boolean(d.fixedFirstSlot))
+                    : null,
                   broken: false,
-                  brokenNextRound: false,
                 }
               : {}),
           },
@@ -178,6 +187,39 @@ export function intent(s, id, actionIndex = 0) {
   const hasFixedFirst = s.phase !== 'opening' && Boolean(authored.fixedFirstSlot);
   if (hasFixedFirst && actionIndex === 0) return fixedFirstIntent(s, id, authored);
   const regIndex = hasFixedFirst ? Math.max(0, actionIndex - 1) : actionIndex;
+  const chargeSpec = authored.chargeMechanic;
+  if (s.phase !== 'opening' && chargeSpec && regIndex === 0) {
+    const unit = s.units[id];
+    const bossStage = Array.isArray(authored.overlordPhases)
+      ? Math.max(unit?.bossStage || 1, overlordTargetStage(unit, authored))
+      : 1;
+    if (unit?.chargingMove) {
+      const release =
+        chargeSpec.releaseMovesByPhase?.[bossStage - 1] || chargeSpec.releaseMovesByPhase?.[0];
+      if (release) {
+        return scaleIntent({
+          ...release,
+          enraged: bossStage >= 2,
+          isChargedRelease: true,
+        });
+      }
+    }
+    const cadence = Math.max(2, Number(chargeSpec.cadenceRounds) || 3);
+    if (
+      chargeSpec.chargeMove &&
+      unit?.lastChargeRound !== s.round &&
+      s.round - (unit?.lastChargeRound ?? -cadence) >= cadence
+    ) {
+      const chargeMove = chargeSpec.chargeMove;
+      return {
+        ...chargeMove,
+        slots: chargeMove.slots || [chargeMove.slot ?? 1],
+        effects: chargeMove.effects || [],
+        enraged: bossStage >= 2,
+        isCharge: true,
+      };
+    }
+  }
   const tactical =
     s.enemyDecisions?.[id]?.round === s.round
       ? s.enemyDecisions[id]
@@ -290,20 +332,27 @@ export function enemyIntents(s, id) {
 export function enemyTimeline(s, extraSlow = {}) {
   if (s.phase === 'opening') return [null];
   const enemies = livingEnemies(s),
-    entries = enemies.map((e, i) => ({
-      def: e,
-      id: e.id,
-      count: enemyActionsCount(s, e.id),
-      fixedFirst: Boolean(e.fixedFirstSlot),
-      speed:
-        e.tactic?.mode === 'ares' && aresDecision(s, e.id, e).priority
-          ? 999
-          : Math.max(1, e.speed - (s.units[e.id].buffs.slow || 0) - (extraSlow[e.id] || 0)),
-      tie:
-        e.tactic?.mode === 'moon-tree'
-          ? { crown: 2, eye: 1, root: 0 }[e.tactic.part]
-          : (i * 17 + s.seed + s.round * 11) % 31,
-    })),
+    entries = enemies.map((e, i) => {
+      const unit = s.units[e.id];
+      const stage =
+        unit?.bossStage || (Array.isArray(e.overlordPhases) ? overlordTargetStage(unit, e) : 1);
+      const chargingStage3 = Boolean(e.overlord && unit?.chargingMove && stage >= 3);
+      const baseSpeed = chargingStage3 ? Math.max(1, e.speed - 1) : e.speed;
+      return {
+        def: e,
+        id: e.id,
+        count: enemyActionsCount(s, e.id),
+        fixedFirst: Boolean(e.fixedFirstSlot),
+        speed:
+          e.tactic?.mode === 'ares' && aresDecision(s, e.id, e).priority
+            ? 999
+            : Math.max(1, baseSpeed - (unit.buffs.slow || 0) - (extraSlow[e.id] || 0)),
+        tie:
+          e.tactic?.mode === 'moon-tree'
+            ? { crown: 2, eye: 1, root: 0 }[e.tactic.part]
+            : (i * 17 + s.seed + s.round * 11) % 31,
+      };
+    }),
     totalEnemyActions = entries.reduce((sum, entry) => sum + entry.count, 0),
     length = 3 + totalEnemyActions,
     slots = Array(length).fill(null);
@@ -598,10 +647,9 @@ function simulate(s, plan, slots) {
     if (!isDamageType(damageType)) return;
     const targetUnit = work.units[targetId];
     if (!targetUnit || targetUnit.side !== 'enemy') return;
-    const weaknesses = Array.isArray(targetUnit.weaknesses)
-      ? targetUnit.weaknesses
-      : resolveEnemyBreakProfile(definitions[targetId] || targetId).weaknesses;
-    if (!weaknesses.includes(damageType)) return;
+    if (targetUnit.hp <= 0 || targetUnit.broken || !targetUnit.breakWindow?.active) return;
+    const delta = breakImpactDelta(targetUnit.breakWindow, damageType);
+    if (delta <= 0) return;
     const spKey = targetUnit.speciesKey || speciesKeyOf(definitions[targetId] || targetId);
     if (spKey) {
       const existing = work.revealedWeaknesses[spKey] || [];
@@ -609,17 +657,17 @@ function simulate(s, plan, slots) {
         work.revealedWeaknesses[spKey] = [...existing, damageType];
       }
     }
-    if (targetUnit.hp > 0 && !targetUnit.broken && targetUnit.toughness > 0) {
-      targetUnit.toughness = Math.max(0, targetUnit.toughness - 1);
-      if (targetUnit.toughness === 0) {
-        targetUnit.broken = true;
-        targetUnit.brokenNextRound = true;
-        targetUnit.buffs.bind = 1;
-        currentStatusTriggers.push({ id: targetId, type: 'break', value: 1 });
-        currentLogs.push(
-          `${definitions[actorId]?.name || ''}击破了${definitions[targetId].name}的韧性，陷入晕眩！`,
-        );
-      }
+    targetUnit.breakWindow.current = Math.max(0, targetUnit.breakWindow.current - delta);
+    targetUnit.toughness = targetUnit.breakWindow.current;
+    if (targetUnit.breakWindow.current === 0) {
+      targetUnit.broken = true;
+      targetUnit.breakWindow = null;
+      targetUnit.toughness = 0;
+      delete targetUnit.chargingMove;
+      currentStatusTriggers.push({ id: targetId, type: 'break', value: delta });
+      currentLogs.push(
+        `${definitions[actorId]?.name || ''}击破了${definitions[targetId].name}的破绽！本回合后续行动全部打断，陷入破防失衡（本回合受伤+50%）！`,
+      );
     }
   }
   function effects(
@@ -704,6 +752,7 @@ function simulate(s, plan, slots) {
             n = Math.max(1, Math.round(n * (work.enemyDamageScale || 1)));
           if (!eff.flat && actor) n = applyWeakReduction(n, effectiveBuff(work, actor, 'weak'));
           if (!eff.flat) n = applyVulnerableBonus(n, effectiveBuff(work, id, 'vulnerable'));
+          if (!eff.flat && u.broken) n = Math.round(n * 1.5);
           if (split) {
             const total = n * split;
             const position = front(work).indexOf(id);
@@ -910,10 +959,11 @@ function simulate(s, plan, slots) {
         unit.bossStage = nextStage;
         unit.enraged = nextStage >= 2;
         unit.broken = false;
-        unit.brokenNextRound = false;
+        unit.breakWindow = null;
+        unit.toughness = 0;
+        unit.maxToughness = 0;
+        delete unit.chargingMove;
         delete unit.buffs.bind;
-        unit.maxToughness = profile.toughness;
-        unit.toughness = profile.toughness;
         const scale = unit.damageScale || 1;
         const shield = Math.round((profile.shield || 0) * scale);
         if (shield > 0) unit.block += shield;
@@ -943,6 +993,12 @@ function simulate(s, plan, slots) {
         continue;
       }
       prepareAresRound(id);
+      unit.broken = false;
+      unit.breakWindow = null;
+      unit.toughness = 0;
+      unit.maxToughness = 0;
+      unit.justEnragedWindow = true;
+      delete unit.chargingMove;
       const targets = heroes.map((hero) => hero.id).filter((target) => work.units[target].hp > 0);
       // A phase transition interrupts the remaining player turn, even with negative-status immunity.
       for (const target of targets) work.units[target].buffs.bind = 1;
@@ -1038,20 +1094,20 @@ function simulate(s, plan, slots) {
       const unbreakableFixed = Boolean(
         move.fixedFirstSlot && definitions[enemy]?.fixedFirstSlot?.breakable === false,
       );
-      if (u.buffs.bind && !unbreakableFixed) {
+      if ((u.broken || u.buffs.bind) && !unbreakableFixed) {
         currentLogs.push(
           u.broken
-            ? `${definitions[enemy].name}处于击破晕眩，本回合行动取消`
+            ? `${definitions[enemy].name}处于破防失衡，本回合行动取消`
             : `${definitions[enemy].name}受到禁锢，本回合行动取消`,
         );
-        currentStatusTriggers.push({ id: enemy, type: u.broken ? 'break' : 'bind', value: 1 });
+        currentStatusTriggers.push({ id: enemy, type: u.broken ? 'breakSkip' : 'bind', value: 1 });
         record(
           'skip',
           enemy,
           u.broken
             ? move.fixedFirstSlot
-              ? '击破震裂 · 定式先制跳过'
-              : '击破晕眩 · 行动取消'
+              ? '破防失衡 · 定式先制跳过'
+              : '破防失衡 · 行动取消'
             : '禁锢 · 行动取消',
           [],
           null,
@@ -1198,6 +1254,18 @@ function simulate(s, plan, slots) {
       }
       if (move.sinkingPlague && !work.sinkingPlague)
         work.sinkingPlague = { source: enemy, ages: [0, 0, 0] };
+      if (move.isCharge) {
+        u.chargingMove = { round: work.round + 1, stage: u.bossStage || 1 };
+        u.lastChargeRound = work.round;
+      } else if (
+        !move.fixedFirstSlot &&
+        u.breakWindow?.active &&
+        actionIdx >= (u.breakWindow.triggerActionIndex ?? 0)
+      ) {
+        u.breakWindow = null;
+        u.toughness = 0;
+        delete u.chargingMove;
+      }
       const isOverlord = Boolean(definitions[enemy]?.overlord);
       record(
         'enemy',
@@ -1213,6 +1281,8 @@ function simulate(s, plan, slots) {
           enraged: Boolean(u.enraged || move.enraged),
           bossStage: u.bossStage || 1,
           ...(move.clip ? { clip: move.clip } : {}),
+          ...(move.isCharge ? { chargeStarted: true } : {}),
+          ...(move.isChargedRelease ? { chargedRelease: true } : {}),
           ...(newlyLockedUi ? { overlordDomainLock: true } : {}),
           ...(enemyDamageType ? { damageType: enemyDamageType } : {}),
         },
@@ -1615,6 +1685,52 @@ export function preview(s, plan = s?.plan || []) {
         : null;
   return result;
 }
+export function syncEnemyBreakWindows(s) {
+  if (!s?.enemyIds || !s?.units) return s;
+  const defs = definitionsFor(s);
+  s.enemyIds.forEach((id, enemyIndex) => {
+    const u = s.units[id];
+    const d = defs[id];
+    if (!u || !d || u.hp <= 0) return;
+    if (shouldOpenBreakWindow(s, id, d, enemyIndex)) {
+      const stage = u.bossStage || (u.enraged ? 2 : 1);
+      const win = createBreakWindow(d, u, stage, Boolean(d.fixedFirstSlot));
+      u.breakWindow = win;
+      u.toughness = win ? win.current : 0;
+      u.maxToughness = win ? win.max : 0;
+    } else {
+      u.breakWindow = null;
+      u.toughness = 0;
+      u.maxToughness = 0;
+    }
+    delete u.justEnragedWindow;
+    delete u.forceBreakWindow;
+  });
+  return s;
+}
+export function openBreakWindow(s, id, options = {}) {
+  const u = s?.units?.[id];
+  const d = definition(s, id);
+  if (!u || !d || u.hp <= 0) return null;
+  const stage = u.bossStage || (u.enraged ? 2 : 1);
+  let win = createBreakWindow(d, u, stage, Boolean(d.fixedFirstSlot));
+  if (!win && options.force) {
+    win = {
+      active: true,
+      mode: 'plain',
+      current: Math.max(1, Math.min(2, Number(options.layers) || 1)),
+      max: Math.max(1, Math.min(2, Number(options.layers) || 1)),
+      majorWeakness: null,
+      minorWeaknesses: [],
+      triggerActionIndex: d.fixedFirstSlot ? 1 : 0,
+      source: 'window',
+    };
+  }
+  u.breakWindow = win;
+  u.toughness = win ? win.current : 0;
+  u.maxToughness = win ? win.max : 0;
+  return win;
+}
 export function advance(result) {
   if (!result.valid) throw Error('Invalid plan');
   const s = clone(result.final);
@@ -1639,13 +1755,10 @@ export function advance(result) {
     u.used = 0;
     if (!opening) u.block = 0;
     if (u.side === 'enemy') {
-      if (u.brokenNextRound) {
-        u.brokenNextRound = false;
-        u.buffs.bind = 1;
-      } else if (u.broken) {
-        u.broken = false;
-        u.toughness = u.maxToughness;
-      }
+      u.broken = false;
+      u.breakWindow = null;
+      u.toughness = 0;
+      u.maxToughness = 0;
     }
   }
   if (s.pendingAlchemicalBomb) {
@@ -1657,6 +1770,7 @@ export function advance(result) {
       s.activeAlchemicalBomb = { ...pending, target: targetId };
     }
   }
+  syncEnemyBreakWindows(s);
   lockEnemyDecisions(s, definitionsFor(s));
   return s;
 }
@@ -1728,11 +1842,13 @@ export function newEncounter(spec, prior = null, index = 0, heroDefinitions = {}
       used: 0,
       speciesKey: enemyBreak.speciesKey,
       bossStage: 1,
-      toughness: enemyBreak.maxToughness,
-      maxToughness: enemyBreak.maxToughness,
+      toughness: enemyBreak.alwaysBreakWindow ? enemyBreak.maxToughness : 0,
+      maxToughness: enemyBreak.alwaysBreakWindow ? enemyBreak.maxToughness : 0,
       weaknesses: [...enemyBreak.weaknesses],
+      breakWindow: enemyBreak.alwaysBreakWindow
+        ? createBreakWindow(d, null, 1, Boolean(d.fixedFirstSlot))
+        : null,
       broken: false,
-      brokenNextRound: false,
     };
   }
   s.units = units;

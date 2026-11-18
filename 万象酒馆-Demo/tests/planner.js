@@ -14,6 +14,7 @@ function score(result) {
         );
         n += Math.min(u.hp, attrition * 2) * 1.15;
         if (u.buffs.weak) n += 2;
+        if (u.broken) n += 14;
       }
     } else {
       n += u.hp * 0.9 - (u.hp === 0 ? 65 : 0);

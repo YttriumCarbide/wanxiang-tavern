@@ -722,6 +722,17 @@ export function createOnboarding(context) {
         })
       )
         advance('boss-armour');
+      else if (
+        session.battle.state.phase === 'plan' &&
+        session.battle.state.encounter === 4 &&
+        !tutorialTasks(state()).breakLesson &&
+        result.events.some((event) =>
+          event.statusTriggers?.some((trigger) => trigger.type === 'break'),
+        )
+      ) {
+        tutorialTasks(state()).breakLesson = true;
+        advance('boss-break');
+      }
       if (
         learning(session.ai.library) &&
         opening &&

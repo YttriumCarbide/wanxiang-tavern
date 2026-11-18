@@ -239,6 +239,7 @@ export function createEffects(layer, center, getSpeed, options = {}) {
         pixelFx.spawn('magic-circle-cast', {
           x: source.x,
           y: source.y,
+          anchorToOrigin: true,
           palette: ALCHEMICAL_PALETTE,
           scale: 1.45,
           delay: 120,
@@ -476,19 +477,51 @@ export function createEffects(layer, center, getSpeed, options = {}) {
           impactDelay,
         );
     }
+    if (e.chargeStarted && source) {
+      pixelFx.spawn('magic-circle-cast', {
+        x: source.x,
+        y: source.y,
+        anchorToOrigin: true,
+        palette: ALCHEMICAL_PALETTE,
+        scale: 1.55,
+        delay: 100,
+      });
+      sparks(source, '#ffd96b', reduced ? 4 : 16, 120);
+      floating({ x: source.x, y: source.y - 54 }, '⚡ 蓄力聚能', 'equipment-proc-number', 140);
+      options.onSpawn?.();
+    }
     if (isAction && source) details.thread(layer, source, d?.color, duration);
     const signals = triggeredStatusVisuals(e, before);
     for (const signal of signals) {
       const sp = center(signal.id);
       if (!sp) continue;
+      if (signal.type === 'breakSkip') {
+        floating({ x: sp.x, y: sp.y - 34 }, '✦ 破防打断', 'break-number', 60);
+        continue;
+      }
       statuses.trigger(signal, sp, signal.type === 'bleed' ? duration * 0.8 : 0);
       if (signal.type === 'artifactBlock') {
         floating({ x: sp.x, y: sp.y - 44 }, '⚙ 人工制品抵消', 'shield-number', impactDelay * 0.5);
       }
       if (signal.type === 'break') {
-        pixelFx.spawn('crit-hit', { x: sp.x, y: sp.y, scale: 1.55, delay: impactDelay * 0.65 });
-        pixelFx.spawn('stunned', { x: sp.x, y: sp.y - 36, scale: 1.3, delay: impactDelay * 0.85 });
-        floating({ x: sp.x, y: sp.y - 54 }, 'BREAK · 击破', 'break-number', impactDelay);
+        options.onImpact?.({ heavy: true, delay: impactDelay * 0.78, hitStopMs: 125 });
+        ring(sp, '#ffd86b', 'boss-phase-ring', impactDelay * 0.7);
+        pixelFx.spawn('crit-hit', {
+          x: sp.x,
+          y: sp.y,
+          palette: BRASS_SHARD_PALETTE,
+          scale: 1.75,
+          delay: impactDelay * 0.65,
+        });
+        pixelFx.spawn('mana-burst', {
+          x: sp.x,
+          y: sp.y - 18,
+          palette: BRASS_SHARD_PALETTE,
+          scale: 1.55,
+          delay: impactDelay * 0.82,
+        });
+        floating({ x: sp.x, y: sp.y - 56 }, '✦ BREAK · 破防失衡', 'break-number', impactDelay);
+        options.onSpawn?.();
       }
     }
     if (attack && isAction) {
@@ -544,7 +577,13 @@ export function createEffects(layer, center, getSpeed, options = {}) {
         floating(
           p,
           `${hp > 0 ? '+' : ''}${hp}`,
-          hp > 0 ? 'heal' : e.type === 'poison' ? 'poison-number' : '',
+          hp > 0
+            ? 'heal'
+            : e.type === 'poison'
+              ? 'poison-number'
+              : old.broken && hp < 0
+                ? 'break-amp-number'
+                : '',
           impactDelay,
         );
       else if (shield > 0) {

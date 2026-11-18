@@ -93,92 +93,199 @@
 .bar .bar-shield-text.is-forecast {
   color: #b4f0ff;
 }
-.enemy-toughness-badge {
+.enemy-break-rail {
   position: absolute;
-  right: calc(100% + 5px);
-  top: -5px;
-  display: grid;
-  place-items: center;
-  width: 30px;
-  height: 33px;
-  color: #f6df9d;
-  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.72));
-  z-index: 3;
+  left: 50%;
+  top: calc(100% + 5px);
+  transform: translateX(-50%);
+  z-index: 12;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: max-content;
+  padding: 4px 7px;
+  border-radius: 7px;
+  border: 1px solid rgba(154, 186, 198, 0.34);
+  background: linear-gradient(180deg, rgba(14, 24, 29, 0.94), rgba(9, 16, 20, 0.96));
+  box-shadow:
+    0 3px 10px rgba(0, 0, 0, 0.72),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  pointer-events: auto;
 }
-.enemy-toughness-badge .toughness-crest {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  color: #2f3b4a;
-  stroke: #f0c26b;
-  stroke-width: 1.5;
+.enemy-break-rail.is-plain {
+  flex-direction: row;
+  gap: 5px;
+  padding: 3px 7px;
+  border-color: rgba(182, 212, 224, 0.45);
 }
-.enemy-toughness-badge.is-broken .toughness-crest {
-  color: #5b2220;
-  stroke: #ff9a73;
+.enemy-break-rail.is-special {
+  border-color: rgba(242, 198, 102, 0.55);
+  box-shadow:
+    0 3px 12px rgba(0, 0, 0, 0.78),
+    0 0 12px rgba(240, 194, 96, 0.22),
+    inset 0 1px 0 rgba(255, 234, 168, 0.16);
 }
-.enemy-toughness-badge b,
-.enemy-toughness-badge em {
-  position: relative;
-  font-size: 11px;
-  font-style: normal;
+.enemy-break-rail.is-matched {
+  border-color: #ffe89e;
+  box-shadow: 0 0 12px rgba(255, 226, 134, 0.58);
+}
+.enemy-break-rail.will-break {
+  border-color: #ff9c6e;
+  background: linear-gradient(180deg, rgba(58, 21, 18, 0.95), rgba(34, 11, 10, 0.97));
+  box-shadow: 0 0 14px rgba(255, 118, 76, 0.65);
+}
+.enemy-break-rail.is-broken {
+  flex-direction: row;
+  gap: 5px;
+  padding: 3px 8px;
+  border-color: #ffb86c;
+  background: linear-gradient(90deg, rgba(84, 24, 20, 0.96), rgba(46, 15, 24, 0.96));
+  color: #ffe0b8;
+  box-shadow:
+    0 2px 12px rgba(255, 110, 72, 0.62),
+    inset 0 1px 0 rgba(255, 220, 160, 0.35);
+}
+.break-shatter-crest {
+  width: 14px;
+  height: 14px;
+  color: #ffd06b;
+  flex-shrink: 0;
+}
+.break-broken-label {
+  font-size: 10px;
   font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #ffe8c8;
   text-shadow: 0 1px 2px #000;
 }
-.enemy-toughness-badge.is-broken b {
-  color: #ffd3c4;
+.break-gauge-head {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
-.enemy-toughness-badge.forecast em {
-  position: absolute;
-  right: -8px;
-  bottom: -2px;
-  padding: 1px 3px;
-  border-radius: 3px;
-  background: #614114;
-  color: #ffe8ad;
-  animation: intent-visibility 1s ease-in-out infinite;
+.break-mode-tag {
+  font-size: 10px;
+  font-weight: 700;
+  color: #b7d7e0;
+  letter-spacing: 0.04em;
 }
-.enemy-toughness-badge.will-break em {
-  background: #8c2a1b;
-  color: #ffd8cf;
+.break-gauge-track {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.break-pip {
+  width: 13px;
+  height: 6px;
+  border-radius: 2px;
+  transform: skewX(-16deg);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(24, 34, 40, 0.88);
+  transition:
+    background 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.18s ease;
+}
+.enemy-break-rail.is-plain .break-pip.is-filled {
+  background: linear-gradient(180deg, #e0f0f5, #89b2c2);
+  border-color: rgba(235, 248, 255, 0.72);
+  box-shadow: 0 0 6px rgba(164, 220, 240, 0.45);
+}
+.enemy-break-rail.is-special .break-pip.is-filled {
+  background: linear-gradient(180deg, #ffe58f, #e59c34);
+  border-color: rgba(255, 236, 172, 0.85);
+  box-shadow: 0 0 7px rgba(255, 200, 92, 0.52);
+}
+.break-pip.is-forecast-loss {
+  background: linear-gradient(180deg, #fff1c9, #ff6c54) !important;
+  border-color: #ffd7ba !important;
+  animation: intent-visibility 0.85s ease-in-out infinite;
+}
+.break-count {
+  font-size: 10px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: #f6df9d;
+  text-shadow: 0 1px 2px #000;
+}
+.enemy-break-rail.will-break .break-count {
+  color: #ffbe9e;
+  letter-spacing: 0.04em;
 }
 .enemy-weakness-row {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   justify-content: center;
-  gap: 3px;
-  margin-top: 4px;
+  align-items: center;
+  gap: 4px;
   pointer-events: auto;
 }
 .enemy-weakness-pill {
+  position: relative;
   display: inline-grid;
   place-items: center;
-  width: 18px;
-  height: 18px;
   border-radius: 4px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  background: rgba(11, 20, 24, 0.88);
+  background: rgba(11, 20, 24, 0.92);
   color: var(--dmg-color, #9a8f7c);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
   transition:
     transform 0.16s ease,
     box-shadow 0.16s ease,
     border-color 0.16s ease;
 }
-.enemy-weakness-pill.is-unknown {
-  color: #9e937f;
-  border-color: rgba(168, 152, 124, 0.28);
+.enemy-weakness-pill.is-minor {
+  z-index: 1;
+  width: 19px;
+  height: 19px;
+  border: 1px solid var(--dmg-color, rgba(255, 255, 255, 0.34));
+  box-shadow: 0 1px 4px var(--dmg-glow, rgba(0, 0, 0, 0.6));
 }
-.enemy-weakness-pill.is-revealed {
-  border-color: var(--dmg-color, #d8c28a);
-  box-shadow: 0 0 6px var(--dmg-glow, rgba(255, 255, 255, 0.15));
+.enemy-weakness-pill.is-major {
+  z-index: 5;
+  width: 24px;
+  height: 24px;
+  border: 2px solid #ffd86b;
+  background: radial-gradient(circle at 30% 25%, rgba(92, 62, 18, 0.95), rgba(26, 17, 7, 0.98));
+  box-shadow:
+    0 0 10px rgba(255, 212, 96, 0.72),
+    inset 0 0 6px rgba(255, 232, 158, 0.42);
+}
+.enemy-weakness-pill .weakness-mult {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  z-index: 2;
+  padding: 0 3px;
+  border-radius: 3px;
+  border: 1px solid #ffe79a;
+  background: #61390a;
+  color: #fff2be;
+  font-size: 8px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 11px;
+  text-shadow: 0 1px 1px #000;
 }
 .enemy-weakness-pill.is-matched {
-  transform: scale(1.16);
-  background: rgba(255, 232, 166, 0.2);
-  border-color: #ffe48d;
-  color: #fff3c4;
-  box-shadow: 0 0 10px rgba(255, 224, 128, 0.72);
+  transform: scale(1.18);
+  background: rgba(255, 232, 166, 0.28);
+  border-color: #fff1b8;
+  color: #fff9df;
+  box-shadow: 0 0 13px rgba(255, 224, 128, 0.88);
+  animation: intent-visibility 0.85s ease-in-out infinite;
+}
+.unit-hit.is-broken-state .selection-frame rect {
+  stroke: #ff8c61;
+  stroke-dasharray: 6 3;
+}
+.unit-hit.is-charging-state::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 212, 92, 0.72);
+  box-shadow: 0 0 16px rgba(255, 198, 72, 0.42);
+  pointer-events: none;
   animation: intent-visibility 0.9s ease-in-out infinite;
 }
 .hero-resources,
@@ -1476,6 +1583,7 @@
   left: 50%;
   top: var(--field-resource-top);
   translate: -50% 0;
+  z-index: 2;
   width: 128%;
   display: grid;
   gap: 5px;
@@ -1483,6 +1591,9 @@
   pointer-events: auto;
   cursor: inherit;
   filter: drop-shadow(0 1px 2px #071317);
+}
+.unit-hit[data-side='Enemy'] .unit-resources {
+  z-index: 9;
 }
 .unit-resources .bar {
   position: relative;
@@ -1633,6 +1744,28 @@
   }
   .rear-card .card-buffs {
     top: 22px;
+  }
+  .enemy-break-rail {
+    top: calc(100% + 3px);
+    padding: 2px 5px;
+    gap: 3px;
+  }
+  .break-pip {
+    width: 10px;
+    height: 4px;
+  }
+  .enemy-weakness-pill.is-major {
+    width: 19px;
+    height: 19px;
+  }
+  .enemy-weakness-pill.is-minor {
+    width: 15px;
+    height: 15px;
+  }
+  .break-count,
+  .break-mode-tag,
+  .break-broken-label {
+    font-size: 8px;
   }
 }
 
@@ -2253,7 +2386,10 @@
 @media (prefers-reduced-motion: reduce) {
   .buff-icon.consuming-buff,
   .alchemical-bomb-badge.is-pending,
-  .alchemical-bomb-badge.is-critical {
+  .alchemical-bomb-badge.is-critical,
+  .break-pip.is-forecast-loss,
+  .enemy-weakness-pill.is-matched,
+  .unit-hit.is-charging-state::after {
     animation: none;
   }
 }

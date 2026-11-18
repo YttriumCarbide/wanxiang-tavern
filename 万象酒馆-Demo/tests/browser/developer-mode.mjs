@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import { legacySession } from './legacy-session.mjs';
+import { meta as magicCircle } from '../../vendor/pixelfx/fx/arcane/magic-circle-cast.js';
 
 export async function developerModeChecks({ browser, baseURL, output }) {
   const page = await browser.newPage({ viewport: { width: 1440, height: 836 } });
@@ -256,7 +257,24 @@ export async function developerModeChecks({ browser, baseURL, output }) {
     assert(firstSlotInfo.text.includes('定式先制'), firstSlotInfo.text);
 
     // Commit Round 1 -> Overlord acts first -> locks UI & arms 40s bomb
+    const thrower = await page.locator('[data-unit="alchemicalPuppet"]').boundingBox();
     await page.locator('#commit').click();
+    const castOrigin = await page
+      .locator('.pixelfx-canvas[data-effect-id="magic-circle-cast"]')
+      .evaluate((canvas, [x, y]) => {
+        const bounds = canvas.getBoundingClientRect();
+        return {
+          x: bounds.left + (x / canvas.width) * bounds.width,
+          y: bounds.top + (y / canvas.height) * bounds.height,
+        };
+      }, magicCircle.origin);
+    assert(
+      Math.hypot(
+        castOrigin.x - (thrower.x + thrower.width / 2),
+        castOrigin.y - (thrower.y + thrower.height / 2),
+      ) < 2,
+      'The base of the casting beam must align with the puppet',
+    );
     await page.waitForFunction(
       () => {
         const s = window.demo.getState();
@@ -278,12 +296,20 @@ export async function developerModeChecks({ browser, baseURL, output }) {
     const barkText = await page.locator('#overlord-dialogue-bar').innerText();
     assert(barkText.includes('系统设置') || barkText.includes('规则'), barkText);
 
-    // Verify artifact gear buff & absence of stage 1/2/3 pips or meta-jargon text
+    // Verify artifact gear buff, Round 2 Break Window (from Round 1 Charge_Up), and absence of meta-jargon or ? pills
     assert.equal(await page.locator('.overlord-phase-pips').count(), 0);
     assert.equal(
       await page.locator('[data-unit="alchemicalPuppet"] [data-buff="artifact"]').count(),
       1,
     );
+    await page
+      .locator('[data-unit="alchemicalPuppet"] .enemy-break-rail.is-special')
+      .waitFor({ state: 'visible' });
+    assert.equal(
+      await page.locator('[data-unit="alchemicalPuppet"] .enemy-weakness-pill.is-major').count(),
+      1,
+    );
+    assert.equal(await page.locator('.enemy-weakness-pill.is-unknown').count(), 0);
     const battleText = await page.locator('#battle').innerText();
     assert(!/压迫战|第二阶段|第三阶段/.test(battleText), battleText);
 
@@ -322,6 +348,13 @@ export async function developerModeChecks({ browser, baseURL, output }) {
       { timeout: 30000 },
     );
 
+    // Reloading browser during active Overlord battle triggers the fourth-wall reload bark
+    await page.reload();
+    await page.waitForFunction(() => !!window.demo);
+    await page.locator('#overlord-dialogue-bar').waitFor({ state: 'visible', timeout: 10000 });
+    const reloadBarkText = await page.locator('#overlord-dialogue-bar').innerText();
+    assert(reloadBarkText.includes('刷新'), reloadBarkText);
+
     assert.deepEqual(calls, []);
     assert.deepEqual(errors, []);
     return {
@@ -333,6 +366,7 @@ export async function developerModeChecks({ browser, baseURL, output }) {
       quickTestDirectOverlord: true,
       overlordDomainSeal: true,
       alchemicalBombTimer: true,
+      reloadFourthWallBark: true,
       paidRequests: 0,
     };
   } catch (failure) {

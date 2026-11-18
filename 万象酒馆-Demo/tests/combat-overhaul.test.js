@@ -12,10 +12,18 @@ import {
 import { EFFECT_REGISTRY, createPixelFxStage, renderEffectSample } from '../src/pixelfx-stage.js';
 import { buildEnemyArchiveEntries } from '../src/archive-enemies.js';
 import { resolveEnemyBreakProfile } from '../src/octopath.js';
-import { advance, enemyTimeline, newBattle, newEncounter, preview } from '../src/engine.js';
+import {
+  advance,
+  enemyTimeline,
+  newBattle,
+  newEncounter,
+  openBreakWindow,
+  preview,
+  syncEnemyBreakWindows,
+} from '../src/engine.js';
 import { DEFINITIONS, HEROES } from '../src/data.js';
 import { LEARNABLE_SKILLS } from '../src/content/learnable-skills.js';
-import { enemyToughnessBadge, enemyWeaknessRow, resourceBars } from '../src/ui.js';
+import { enemyBreakBar, resourceBars } from '../src/ui.js';
 import { characterOutputSchema } from '../src/ai/character-schema.js';
 import { characterConstraintText, characterGenerationPlan } from '../src/character-generation.js';
 import { normalizeCharacter } from '../src/ai/contracts.js';
@@ -147,31 +155,84 @@ test('resourceBars overlays blue shield directly on HP bar with blue bracketed v
   assert(htmlForecast.includes('bar-shield-forecast active'));
 });
 
-test('Octopath break reveals weaknesses on hit, skips remaining & full next round, then recovers', () => {
+test('conditional Break Window: stratified tiers, major (-2)/minor (-1) open weaknesses, same-round break amplification, and post-move closure', () => {
+  // Verify stratified tier distribution across authored DEFINITIONS
+  const allEnemies = Object.values(DEFINITIONS).filter((entry) => entry.speed);
+  const ordinary = allEnemies.filter((d) => !d.elite && !d.boss && !d.overlord && !d.standOnCard);
+  const elites = allEnemies.filter((d) => d.elite && !d.boss && !d.overlord);
+  const bosses = allEnemies.filter((d) => d.boss && !d.overlord);
+  const overlords = allEnemies.filter((d) => d.overlord);
+  const ordWithBreak = ordinary.filter((d) => resolveEnemyBreakProfile(d).hasBreak);
+  const eliteWithBreak = elites.filter((d) => resolveEnemyBreakProfile(d).hasBreak);
+  assert(
+    ordWithBreak.length >= Math.floor(ordinary.length * 0.25) &&
+      ordWithBreak.length <= Math.ceil(ordinary.length * 0.42),
+    `Expected ~1/3 ordinary break profiles, got ${ordWithBreak.length}/${ordinary.length}`,
+  );
+  assert(
+    ordWithBreak.every((d) => {
+      const p = resolveEnemyBreakProfile(d);
+      return p.mode === 'plain' && p.maxToughness >= 1 && p.maxToughness <= 2;
+    }),
+  );
+  assert(
+    eliteWithBreak.length >= Math.floor(elites.length * 0.55) &&
+      eliteWithBreak.length <= Math.ceil(elites.length * 0.78),
+    `Expected ~2/3 elite break profiles, got ${eliteWithBreak.length}/${elites.length}`,
+  );
+  assert(
+    bosses.every(
+      (d) => resolveEnemyBreakProfile(d).hasBreak && resolveEnemyBreakProfile(d).mode === 'special',
+    ),
+  );
+  assert(
+    overlords.every(
+      (d) => resolveEnemyBreakProfile(d).hasBreak && resolveEnemyBreakProfile(d).mode === 'special',
+    ),
+  );
+
+  // When a break window is not open, enemyBreakBar renders nothing (no permanent shield or ? pills).
+  const closedState = newBattle(['millVoleAlpha']);
+  closedState.phase = 'plan';
+  closedState.round = 1;
+  syncEnemyBreakWindows(closedState);
+  assert.equal(closedState.units.millVoleAlpha.breakWindow, null);
+  assert.equal(enemyBreakBar(DEFINITIONS.millVoleAlpha, closedState.units.millVoleAlpha), '');
+
+  // Special break window: major weakness (-2) vs minor weakness (-1), zero '?' icons, +50% break damage, 1-round duration.
   const dummyEnemy = {
     id: 'puppetDummy',
     name: '试作魔偶',
-    speed: [2],
+    speed: 1,
     hp: 300,
     attack: 5,
-    maxToughness: 2,
-    weaknesses: ['sword', 'fire'],
-    intents: [{ name: '重击', slot: 0, effects: [{ type: 'damage', value: 5 }] }],
+    maxToughness: 3,
+    weaknesses: ['fire', 'sword'],
+    intents: [{ name: '重击', effects: [{ type: 'damage', value: 5 }] }],
   };
   const customHero = {
     ...HEROES[0],
     id: 'aegis',
-    limit: 2,
+    limit: 3,
     attackType: 'sword',
     skills: [
       {
-        id: 'slash-twice',
-        name: '破韧剑击',
+        id: 'slash-minor',
+        name: '小弱点剑击',
         ap: 1,
         mp: 0,
         target: 'enemy',
         damageType: 'sword',
-        effects: [{ type: 'damage', value: 8 }],
+        effects: [{ type: 'damage', value: 10 }],
+      },
+      {
+        id: 'fire-major',
+        name: '大弱点爆炎',
+        ap: 1,
+        mp: 0,
+        target: 'enemy',
+        damageType: 'fire',
+        effects: [{ type: 'damage', value: 10 }],
       },
       {
         id: 'guard-up',
@@ -188,13 +249,21 @@ test('Octopath break reveals weaknesses on hit, skips remaining & full next roun
   let state = newBattle(['puppetDummy'], { aegis: customHero }, { puppetDummy: dummyEnemy });
   state.phase = 'plan';
   state.round = 1;
+  syncEnemyBreakWindows(state);
 
-  // Before true hit, true revealedWeaknesses stays empty -> enemyWeaknessRow shows all unknowns.
-  const preRow = enemyWeaknessRow(dummyEnemy, state.units.puppetDummy, state.revealedWeaknesses);
-  assert(!preRow.includes('data-weakness="sword"'));
-  assert(preRow.includes('data-weakness="unknown"'));
+  // UI displays all weaknesses openly (no '?') and highlights the golden -2 major weakness.
+  const openUi = enemyBreakBar(
+    dummyEnemy,
+    state.units.puppetDummy,
+    state.units.puppetDummy,
+    'fire',
+  );
+  assert(!openUi.includes('is-unknown') && !openUi.includes('data-weakness="unknown"'));
+  assert(openUi.includes('data-weakness="fire"') && openUi.includes('data-weakness-tier="major"'));
+  assert(openUi.includes('is-major') && openUi.includes('-2'));
+  assert(openUi.includes('data-weakness="sword"') && openUi.includes('is-minor'));
 
-  // Non-damage skill keeps toughness untouched.
+  // Non-damage skill leaves breakWindow untouched.
   const supportRes = preview(state, [
     {
       id: 'act-sup',
@@ -206,73 +275,104 @@ test('Octopath break reveals weaknesses on hit, skips remaining & full next roun
       start: 0,
     },
   ]);
-  assert.equal(supportRes.final.units.puppetDummy.toughness, 2);
+  assert.equal(supportRes.events[0].after.units.puppetDummy.breakWindow.current, 3);
+  assert.equal(supportRes.final.units.puppetDummy.breakWindow, null);
 
-  // Two sword hits break toughness (2 -> 0) and unlock sword weakness while fire stays unknown.
+  // Minor weakness hit (-1: 3 -> 2), then Major weakness hit (-2: 2 -> 0 -> BREAK!) + follow-up hit deals +50% (10 -> 15).
   const slots = enemyTimeline(state);
-  const firstHeroSlot = slots.findIndex((x) => x === null);
-  const secondHeroSlot = slots.findIndex((x, idx) => x === null && idx > firstHeroSlot);
+  const s0 = slots.findIndex((x) => x === null);
+  const s1 = slots.findIndex((x, idx) => x === null && idx > s0);
+  const s2 = slots.findIndex((x, idx) => x === null && idx > s1);
   const breakRes = preview(state, [
     {
-      id: 'act-1',
+      id: 'hit-minor',
       actor: 'aegis',
       kind: 'skill',
-      skill: 'slash-twice',
+      skill: 'slash-minor',
       target: 'puppetDummy',
       ap: 1,
-      start: firstHeroSlot,
+      start: s0,
     },
     {
-      id: 'act-2',
+      id: 'hit-major',
       actor: 'aegis',
       kind: 'skill',
-      skill: 'slash-twice',
+      skill: 'fire-major',
       target: 'puppetDummy',
       ap: 1,
-      start: secondHeroSlot,
+      start: s1,
+    },
+    {
+      id: 'hit-amp',
+      actor: 'aegis',
+      kind: 'skill',
+      skill: 'slash-minor',
+      target: 'puppetDummy',
+      ap: 1,
+      start: s2,
     },
   ]);
 
-  assert(breakRes.valid);
-  assert.equal(breakRes.final.units.puppetDummy.toughness, 0);
+  assert(breakRes.valid, JSON.stringify(breakRes.invalid));
   assert.equal(breakRes.final.units.puppetDummy.broken, true);
-  assert.equal(breakRes.final.units.puppetDummy.brokenNextRound, true);
-  assert.deepEqual(breakRes.final.revealedWeaknesses.puppetDummy, ['sword']);
+  assert.equal(breakRes.final.units.puppetDummy.breakWindow, null);
+  assert.equal(breakRes.final.units.puppetDummy.buffs.bind || 0, 0);
+  assert.equal(breakRes.final.units.puppetDummy.hp, 300 - 10 - 10 - 15);
   assert(breakRes.events.some((ev) => ev.statusTriggers?.some((st) => st.type === 'break')));
-
-  // UI row shows sword unlocked and fire still unknown.
-  const unlockedRow = enemyWeaknessRow(
-    dummyEnemy,
-    breakRes.final.units.puppetDummy,
-    breakRes.final.revealedWeaknesses,
-    'sword',
+  assert(
+    breakRes.events.some(
+      (ev) => ev.type === 'skip' && ev.actor === 'puppetDummy' && ev.broken === true,
+    ),
   );
-  assert(unlockedRow.includes('data-weakness="sword"'));
-  assert(unlockedRow.includes('is-matched'));
-  assert(unlockedRow.includes('data-weakness="unknown"'));
-  assert(enemyToughnessBadge(breakRes.final.units.puppetDummy).includes('is-broken'));
+  const brokenUi = enemyBreakBar(dummyEnemy, breakRes.final.units.puppetDummy);
+  assert(brokenUi.includes('is-broken') && brokenUi.includes('受伤+50%'));
 
-  // Advancing into Round 2 keeps bind active for the whole round, skipping enemy action.
+  // Advancing into Round 2 immediately clears broken and lets enemy act again (no 2-round stun).
   const round2 = advance(breakRes);
-  assert.equal(round2.units.puppetDummy.broken, true);
-  assert.equal(round2.units.puppetDummy.brokenNextRound, false);
-  assert.equal(round2.units.puppetDummy.buffs.bind, 1);
+  assert.equal(round2.units.puppetDummy.broken, false);
+  const r2Preview = preview(round2, []);
+  assert(r2Preview.events.some((ev) => ev.type === 'enemy' && ev.actor === 'puppetDummy'));
 
-  const round2Res = preview(round2, []);
-  const round2Skip = round2Res.events.find(
-    (ev) => ev.type === 'skip' && ev.actor === 'puppetDummy',
+  // If the enemy acts before being broken, its breakWindow closes immediately on that move.
+  const missedState = newBattle(
+    ['puppetDummy'],
+    { aegis: customHero },
+    {
+      puppetDummy: {
+        ...dummyEnemy,
+        speed: 4,
+      },
+    },
   );
-  assert(round2Skip && round2Skip.blockedBy === 'bind' && round2Skip.broken === true);
+  missedState.phase = 'plan';
+  missedState.round = 1;
+  syncEnemyBreakWindows(missedState);
+  const missedSlots = enemyTimeline(missedState);
+  const enemySlot = missedSlots.indexOf('puppetDummy');
+  const postEnemySlot = missedSlots.findIndex((x, idx) => x === null && idx > enemySlot);
+  const postRes = preview(missedState, [
+    {
+      id: 'late-hit',
+      actor: 'aegis',
+      kind: 'skill',
+      skill: 'fire-major',
+      target: 'puppetDummy',
+      ap: 1,
+      start: postEnemySlot,
+    },
+  ]);
+  assert.equal(postRes.final.units.puppetDummy.broken, false);
+  assert.equal(postRes.final.units.puppetDummy.breakWindow, null);
 
-  // Advancing into Round 3 clears broken and restores maxToughness.
-  const round3 = advance(round2Res);
-  assert.equal(round3.units.puppetDummy.broken, false);
-  assert.equal(round3.units.puppetDummy.toughness, 2);
-
-  // Explicit alchemicalPuppet break profile matches specification.
-  const puppetProfile = resolveEnemyBreakProfile({ id: 'alchemicalPuppet', overlord: true });
-  assert.equal(puppetProfile.maxToughness, 8);
-  assert.deepEqual(puppetProfile.weaknesses, ['fire', 'brawl', 'axe', 'lightning']);
+  // Plain ordinary monster break bar takes any damage type (-1) and renders without weakness icons.
+  const houndState = newBattle(['hound']);
+  houndState.phase = 'plan';
+  houndState.round = 2;
+  openBreakWindow(houndState, 'hound');
+  assert.equal(houndState.units.hound.breakWindow.mode, 'plain');
+  assert(houndState.units.hound.breakWindow.max <= 2);
+  const houndUi = enemyBreakBar(DEFINITIONS.hound, houndState.units.hound);
+  assert(houndUi.includes('is-plain') && !houndUi.includes('enemy-weakness-pill'));
 });
 
 test('character schema, compiler, and library preserve compatibility and discoveredWeaknesses', () => {
@@ -323,14 +423,12 @@ test('character schema, compiler, and library preserve compatibility and discove
   assert.deepEqual(restored.discoveredWeaknesses, { alchemicalPuppet: ['fire', 'brawl'] });
 
   const enc = newEncounter(
-    { enemyIds: ['mossSlime'], map: 'forest', revealedWeaknesses: { mossSlime: ['fire'] } },
+    { enemyIds: ['bossGate'], map: 'ruins', revealedWeaknesses: { bossGate: ['lightning'] } },
     null,
     0,
   );
-  assert.deepEqual(enc.revealedWeaknesses, { mossSlime: ['fire'] });
-  assert(
-    Array.isArray(enc.units.mossSlime.weaknesses) && enc.units.mossSlime.weaknesses.length >= 2,
-  );
+  assert.deepEqual(enc.revealedWeaknesses, { bossGate: ['lightning'] });
+  assert(Array.isArray(enc.units.bossGate.weaknesses) && enc.units.bossGate.weaknesses.length >= 2);
 });
 
 test('archive-enemies places alchemicalPuppet in canonical overlord order when defined', () => {

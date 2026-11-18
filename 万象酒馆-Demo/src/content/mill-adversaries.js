@@ -299,7 +299,7 @@ export const MILL_BOSSES = [
       weaknesses: ['fire', 'axe', 'lightning'],
       toughness: 6,
       hp: 84,
-      speed: 3,
+      speed: 2,
       tactic: { target: 'fixed' },
     },
     [
@@ -540,8 +540,59 @@ export const MILL_BOSSES = [
       finalPhaseActions: 2,
       overlordPhases: Object.freeze([0.66, 0.33]),
       toughnessByPhase: Object.freeze([7, 9, 10]),
+      breakLayersByPhase: Object.freeze([2, 2, 3]),
       phaseShields: Object.freeze([0, 12, 16]),
       artifactByPhase: Object.freeze([0, 1, 1]),
+      chargeMechanic: Object.freeze({
+        cadenceRounds: 3,
+        chargeMove: Object.freeze({
+          id: 'puppet-core-charge',
+          name: '炉心逆重蓄能',
+          text: '双钳收拢胸口炉心逆向拧死发条，获得10护盾并积蓄毁灭能量；下回合露出元素破绽，并于时间轴靠前位置释放【湮灭炼金坍缩】。',
+          slot: 1,
+          selfShield: 10,
+          effects: [],
+          clip: 'Charge_Up',
+          isCharge: true,
+        }),
+        releaseMovesByPhase: Object.freeze([
+          move(
+            '湮灭炼金坍缩',
+            '失控炉心引爆蓄积的逆重熔流轰击全前排18伤害，并附加1层易伤与1层虚弱。',
+            [hit(18), buff('vulnerable', 1), buff('weak', 1)],
+            {
+              slots: [0, 1, 2],
+              damageType: 'special-magic',
+              clip: 'Special_Attack',
+              isChargedRelease: true,
+            },
+          ),
+          move(
+            '湮灭炼金坍缩',
+            '双倍过载的炼金坍缩焰浪轰击全前排21伤害，并附加1层易伤与1层虚弱。',
+            [hit(21), buff('vulnerable', 1), buff('weak', 1)],
+            {
+              slots: [0, 1, 2],
+              enraged: true,
+              damageType: 'special-magic',
+              clip: 'Special_Attack',
+              isChargedRelease: true,
+            },
+          ),
+          move(
+            '终极炼金坍缩',
+            '彻底失控的炉心洪流吞没全前排造成24伤害，并附加1层易伤与1层虚弱。',
+            [hit(24), buff('vulnerable', 1), buff('weak', 1)],
+            {
+              slots: [0, 1, 2],
+              enraged: true,
+              damageType: 'special-magic',
+              clip: 'Special_Attack',
+              isChargedRelease: true,
+            },
+          ),
+        ]),
+      }),
       fixedFirstSlot: Object.freeze({
         id: 'alchemical-time-bomb',
         name: '定式投弹 · 炼金怀表',

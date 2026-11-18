@@ -59,6 +59,8 @@ export function createTimeline(context) {
         move = id ? intent(s, id, actionIndex) : null,
         enemyDef = id ? context.roster.get(id) : null,
         fixedFirst = id ? isFixedFirstSlot(s, slotList, i, enemyDef) : false,
+        isChargeCell = Boolean(move?.isCharge && !fixedFirst),
+        isChargedRelease = Boolean(move?.isChargedRelease && !fixedFirst),
         enemyDmgType =
           move && enemyDef
             ? move.effects?.some((ef) => ef.type === 'damage')
@@ -71,10 +73,10 @@ export function createTimeline(context) {
             ? ` ${ROMAN[actionIndex] || `#${actionIndex + 1}`}`
             : '';
       return html`<button
-        class="time-cell ${id ? 'enemy-cell' : ''} ${fixedFirst ? 'overlord-fixed-cell' : ''} ${fixedFirst && bound ? 'is-chain-broken' : ''} ${cancelled ? 'cancelled' : ''} ${bound ? 'bound' : ''} ${!readOnly && (session.battle.activeCell === i || (!session.battle.playing && session.selection.selectedCell === i)) ? 'playing' : ''} ${readOnly ? 'preview-cell' : ''} ${readOnly && id && (session.selection.inspectedPreviewCell !== null ? session.selection.inspectedPreviewCell === i : session.selection.intentScope === 'all' && session.selection.inspectedEnemy ? true : id === session.selection.inspectedEnemy) ? 'playing' : ''}"
+        class="time-cell ${id ? 'enemy-cell' : ''} ${fixedFirst ? 'overlord-fixed-cell' : ''} ${isChargeCell ? 'is-charge-cell' : ''} ${isChargedRelease ? 'is-charged-release' : ''} ${fixedFirst && bound ? 'is-chain-broken' : ''} ${cancelled ? 'cancelled' : ''} ${bound ? 'bound' : ''} ${!readOnly && (session.battle.activeCell === i || (!session.battle.playing && session.selection.selectedCell === i)) ? 'playing' : ''} ${readOnly ? 'preview-cell' : ''} ${readOnly && id && (session.selection.inspectedPreviewCell !== null ? session.selection.inspectedPreviewCell === i : session.selection.intentScope === 'all' && session.selection.inspectedEnemy ? true : id === session.selection.inspectedEnemy) ? 'playing' : ''}"
         ${readOnly ? `data-preview="${i}"` : `data-start="${i}" data-motion="${id ? `enemy-${id}` : `empty-${i}`}"`}
         ${session.battle.playing || (readOnly && !id) ? 'disabled' : ''}
-        ${id ? `data-tooltip="${escapeText(`${context.roster.get(id).name}${phaseTag} · ${bound ? (fixedFirst ? '击破震裂 · 定式金链已粉碎，本回合跳过' : '禁锢，本回合行动取消') : fixedFirst ? `定式先制 · 免疫迟缓\n${move.name}：${move.text}` : `速度 ${Math.max(1, context.roster.get(id).speed - (s.units[id].buffs.slow || 0))}\n${move.name}：${move.text}`}`)}"` : ''}
+        ${id ? `data-tooltip="${escapeText(`${context.roster.get(id).name}${phaseTag} · ${bound ? (fixedFirst ? '破防失衡 · 定式金链已粉碎，本回合跳过' : '破防/禁锢，本回合行动取消') : fixedFirst ? `定式先制 · 免疫迟缓\n${move.name}：${move.text}` : `速度 ${Math.max(1, context.roster.get(id).speed - (s.units[id].buffs.slow || 0))}\n${move.name}：${move.text}`}`)}"` : ''}
       >
         ${
           fixedFirst
@@ -127,7 +129,7 @@ export function createTimeline(context) {
         <span class="num">${opening && !readOnly ? '◇' : i + 1}</span>${
           id ? damageTypeChip(enemyDmgType, { size: 13, className: 'cell-dmg-type' }) : ''
         }<span class="cell-label"
-          >${id ? `${cancelled ? '× ' : ''}${context.roster.get(id).name}${phaseTag}` : opening && !readOnly ? '先手' : readOnly ? '我方行动' : '＋'}${id ? html`<small>${fixedFirst ? (bound ? '击破震裂' : '定式先制') : totalActions > 1 ? move.name : `速度 ${Math.max(1, context.roster.get(id).speed - (s.units[id].buffs.slow || 0))}`}</small>` : ''}</span
+          >${id ? `${cancelled ? '× ' : ''}${context.roster.get(id).name}${phaseTag}` : opening && !readOnly ? '先手' : readOnly ? '我方行动' : '＋'}${id ? html`<small>${fixedFirst ? (bound ? '破防震裂' : '定式先制') : isChargedRelease ? (bound ? '破防打断' : '⚡蓄力释放') : isChargeCell ? '蓄力聚能' : totalActions > 1 ? move.name : `速度 ${Math.max(1, context.roster.get(id).speed - (s.units[id].buffs.slow || 0))}`}</small>` : ''}</span
         >
       </button>`;
     };

@@ -5,9 +5,12 @@ import { escapeText } from '../ui.js';
 import {
   OVERLORD_DIALOGUES,
   overlordPhaseProfile,
+  overlordReloadBark,
   overlordSealedBark,
 } from '../overlord-mechanics.js';
 import { query as $, sleep } from './dom.js';
+
+const RELOAD_WATCH_KEY = 'wanxiang.overlord-reload-watch.v1';
 
 const SEALED_TARGETS = Object.freeze([
   ['#saves-open', 'saves'],
@@ -46,6 +49,92 @@ export function createOverlordBattle(context) {
   let bombRaf = 0;
   let bombTriggered = false;
   let lastCriticalTickSec = -1;
+  let markedUnloadThisPage = false;
+
+  function readReloadWatch() {
+    for (const store of [globalThis.localStorage, context.storage]) {
+      try {
+        const raw = store?.getItem?.(RELOAD_WATCH_KEY);
+        if (raw) return JSON.parse(raw);
+      } catch {
+        // Storage may be unavailable in restricted harnesses.
+      }
+    }
+    return null;
+  }
+
+  function writeReloadWatch(payload) {
+    const json = JSON.stringify(payload);
+    for (const store of [globalThis.localStorage, context.storage]) {
+      try {
+        store?.setItem?.(RELOAD_WATCH_KEY, json);
+      } catch {
+        // Ignore quota or restricted storage errors.
+      }
+    }
+  }
+
+  function clearReloadWatch() {
+    for (const store of [globalThis.localStorage, context.storage]) {
+      try {
+        store?.removeItem?.(RELOAD_WATCH_KEY);
+      } catch {
+        // Ignore restricted storage errors.
+      }
+    }
+  }
+
+  function armReloadWatch(activeBoss) {
+    if (!activeBoss || disposed) return;
+    const prev = readReloadWatch();
+    const pack = OVERLORD_DIALOGUES[activeBoss.id] || OVERLORD_DIALOGUES.alchemicalPuppet;
+    writeReloadWatch({
+      bossId: activeBoss.id,
+      bossName: activeBoss.def?.name || '失败的炼金傀偶',
+      rankLabel: pack.rankLabel || '磨坊阁楼 · 失控炼金造物',
+      armed: true,
+      reloadedPending: Boolean(prev?.reloadedPending),
+      reenteredPending: Boolean(prev?.reenteredPending),
+      reloadCount: Number(prev?.reloadCount) || 0,
+    });
+  }
+
+  function markReloadOnUnload() {
+    if (disposed) return;
+    const state = session.battle.state;
+    const activeBoss = currentOverlordDef();
+    if (
+      session.runtime.mode !== 'battle' ||
+      !activeBoss ||
+      !state ||
+      ['victory', 'defeat'].includes(state.phase)
+    ) {
+      return;
+    }
+    const prev = readReloadWatch();
+    const pack = OVERLORD_DIALOGUES[activeBoss.id] || OVERLORD_DIALOGUES.alchemicalPuppet;
+    const nextCount = (Number(prev?.reloadCount) || 0) + (markedUnloadThisPage ? 0 : 1);
+    markedUnloadThisPage = true;
+    const payload = JSON.stringify({
+      bossId: activeBoss.id,
+      bossName: activeBoss.def?.name || prev?.bossName || '失败的炼金傀偶',
+      rankLabel: pack.rankLabel || prev?.rankLabel || '磨坊阁楼 · 失控炼金造物',
+      armed: true,
+      reloadedPending: true,
+      reenteredPending: Boolean(prev?.reenteredPending),
+      reloadCount: nextCount,
+    });
+    try {
+      globalThis.localStorage?.setItem?.(RELOAD_WATCH_KEY, payload);
+    } catch {
+      // Ignore restricted storage errors.
+    }
+    try {
+      context.storage?.setItem?.(RELOAD_WATCH_KEY, payload);
+    } catch {
+      // Ignore restricted storage errors.
+    }
+  }
 
   const cutsceneLayer = document.createElement('section');
   cutsceneLayer.id = 'overlord-cutscene-layer';
@@ -285,11 +374,21 @@ export function createOverlordBattle(context) {
       return;
     }
     introPlayedKey = key;
+    const prevWatch = readReloadWatch();
+    armReloadWatch(activeBoss);
     const pack = OVERLORD_DIALOGUES[activeBoss.id] || OVERLORD_DIALOGUES.alchemicalPuppet;
+    const lines = [...(pack.entrance || [`${activeBoss.def.name}封锁了阁楼的退路！`])];
+    if (prevWatch?.reenteredPending && pack.reenterAfterReload) {
+      lines.push(pack.reenterAfterReload);
+      const nextWatch = readReloadWatch();
+      if (nextWatch) {
+        writeReloadWatch({ ...nextWatch, reenteredPending: false });
+      }
+    }
     await playPhaseCutscene({
       bossId: activeBoss.id,
       tone: 'entrance',
-      roarLines: pack.entrance || [`${activeBoss.def.name}封锁了阁楼的退路！`],
+      roarLines: lines,
     });
   }
 
@@ -445,6 +544,11 @@ export function createOverlordBattle(context) {
     applySeal(Boolean(active && state.overlordUiLocked));
 
     const activeBoss = currentOverlordDef();
+    if (active && activeBoss) {
+      armReloadWatch(activeBoss);
+    } else if (state && ['victory', 'defeat'].includes(state.phase) && activeBoss) {
+      clearReloadWatch();
+    }
     const battleEl = $('#battle');
     if (battleEl) {
       if (active && activeBoss?.unit) {
@@ -520,12 +624,28 @@ export function createOverlordBattle(context) {
       const targetName = context.roster?.get?.(targetId)?.name || targetId || '目标';
       const line = typeof pack.bombDefuse === 'function' ? pack.bombDefuse(targetName) : '';
       if (line) void showLine(actorName, line, { tone: 'boss', holdMs: 2600, interrupt: false });
+    } else if (event.chargeStarted && pack.chargeStart) {
+      void showLine(actorName, pack.chargeStart, {
+        tone: 'enraged',
+        holdMs: 3200,
+        interrupt: false,
+      });
+    } else if (
+      event.statusTriggers?.some((st) => st.type === 'break' && st.id === activeBoss?.id) &&
+      pack.breakShatter
+    ) {
+      void showLine(actorName, pack.breakShatter, {
+        tone: 'party',
+        holdMs: 3200,
+        interrupt: true,
+      });
     } else if (event.fixedSlotBroken && event.blockedBy === 'bind') {
       void showLine(actorName, pack.broken, { tone: 'party', holdMs: 3200, interrupt: false });
     }
   }
 
   async function onVictory() {
+    clearReloadWatch();
     applySeal(false);
     disarmBombTimer({ resetKey: true });
     delete $('#battle')?.dataset.overlordStage;
@@ -567,6 +687,41 @@ export function createOverlordBattle(context) {
   events.on(window, 'click', handleSealedInteraction, { capture: true });
   events.on(window, 'pointerdown', handleSealedInteraction, { capture: true });
   events.on(window, 'keydown', handleSealedInteraction, { capture: true });
+  events.on(window, 'pagehide', markReloadOnUnload);
+  events.on(window, 'beforeunload', markReloadOnUnload);
+
+  function checkReloadFourthWall() {
+    if (disposed) return false;
+    const saved = readReloadWatch();
+    if (!saved) return false;
+    let isReloadNav;
+    try {
+      const navEntry = performance?.getEntriesByType?.('navigation')?.[0];
+      isReloadNav = navEntry?.type === 'reload';
+    } catch {
+      isReloadNav = false;
+    }
+    if (!saved.reloadedPending && !(saved.armed && isReloadNav)) return false;
+    const count = Math.max(1, Number(saved.reloadCount) || 1);
+    writeReloadWatch({
+      ...saved,
+      armed: Boolean(currentOverlordDef()),
+      reloadedPending: false,
+      reenteredPending: true,
+      reloadCount: count,
+    });
+    const text = overlordReloadBark(saved.bossId, count);
+    setTimeout(() => {
+      if (disposed) return;
+      void showLine(saved.bossName || '失败的炼金傀偶', text, {
+        rankLabel: saved.rankLabel || '磨坊阁楼 · 失控炼金造物',
+        tone: 'enraged',
+        holdMs: 4200,
+        interrupt: true,
+      });
+    }, 260);
+    return true;
+  }
 
   function reset() {
     introPlayedKey = '';
@@ -594,6 +749,7 @@ export function createOverlordBattle(context) {
     isOverlordBattle: () => Boolean(currentOverlordDef()),
     isSealed: () => document.body.classList.contains('overlord-ui-locked'),
     entrance,
+    checkReloadFourthWall,
     sync,
     onEvent,
     onVictory,

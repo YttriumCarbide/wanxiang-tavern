@@ -146,6 +146,7 @@ export function createApplication({
   }
   context.shell.renderParty();
   context.generationAccess.refresh();
+  context.overlordBattle.checkReloadFourthWall();
 
   function dispose() {
     const runtime = context.session.runtime;

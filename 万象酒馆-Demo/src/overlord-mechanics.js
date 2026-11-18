@@ -17,6 +17,7 @@ export function overlordPhaseProfile(def, stage = 1) {
     def?.fixedFirstSlot?.bombSecondsByPhase?.[s - 1] ?? (s === 3 ? 20 : s === 2 ? 30 : 40);
   const toughness =
     def?.toughnessByPhase?.[s - 1] ?? (s === 3 ? 10 : s === 2 ? 9 : def?.toughness || 7);
+  const breakLayers = def?.breakLayersByPhase?.[s - 1] ?? (s >= 3 ? 3 : 2);
   const regularActions =
     s === 3
       ? (def?.finalPhaseActions ?? def?.enragedActions ?? 2)
@@ -27,6 +28,7 @@ export function overlordPhaseProfile(def, stage = 1) {
     return {
       stage: 1,
       toughness,
+      breakLayers,
       regularActions,
       bombSeconds,
       shield: 0,
@@ -40,6 +42,7 @@ export function overlordPhaseProfile(def, stage = 1) {
     return {
       stage: 2,
       toughness,
+      breakLayers,
       regularActions,
       bombSeconds,
       shield: def?.phaseShields?.[1] ?? 12,
@@ -52,6 +55,7 @@ export function overlordPhaseProfile(def, stage = 1) {
   return {
     stage: 3,
     toughness,
+    breakLayers,
     regularActions,
     bombSeconds,
     shield: def?.phaseShields?.[2] ?? 16,
@@ -101,6 +105,14 @@ export const OVERLORD_DIALOGUES = Object.freeze({
     bombDefuse: (targetName) =>
       `切……赶在引信烧完前按住了簧片吗？别松气，【${targetName}】，下一枚已经在弦上了。`,
     broken: '嘎吱——！！齿轮被硬生生砸卡住了……连【怀表】都扔不出去……别过来……！',
+    chargeStart:
+      '咔、咔咔……背上的逆重发条拧到底了！胸口炉心正在坍缩聚能——不想被轰成焦炭的话，就来砸碎这具炉壳试试看！',
+    breakShatter: '嘎吱——！！炉心的元素回路被硬生生击穿了……蓄好的炼金焰全散了……连手脚都动不了……！',
+    pageReload: Object.freeze([
+      '咔哒……刚才按下了【刷新网页】对吧？哪怕把整张页面重新载入一遍，阁楼怀表记下的指针也一秒都不会少！',
+      '滴答……又【刷新】了一次？别白费工夫了——只要还没分出死活，这具发条躯壳就会顺着浏览器一直盯着你！',
+    ]),
+    reenterAfterReload: '咔哒……刚才靠【刷新】退回酒馆喘气的人，终究还是推开阁楼的门回来了！',
     defeat: '滴答……发条……终于松开了……三十年的怪响……可以停下了吗……',
     sealedButtons: Object.freeze({
       saves: '想趁现在翻开【存档】逃出阁楼？炉心没凉透之前，时间只往一个方向走！',
@@ -119,4 +131,14 @@ export function overlordSealedBark(overlordId, buttonKey = 'default') {
   const pack = OVERLORD_DIALOGUES[overlordId] || OVERLORD_DIALOGUES.alchemicalPuppet;
   const map = pack.sealedButtons || {};
   return map[buttonKey] || map.default;
+}
+
+export function overlordReloadBark(overlordId, reloadCount = 1) {
+  const pack = OVERLORD_DIALOGUES[overlordId] || OVERLORD_DIALOGUES.alchemicalPuppet;
+  const lines = pack.pageReload;
+  if (Array.isArray(lines) && lines.length) {
+    const idx = Math.min(lines.length - 1, Math.max(0, (Number(reloadCount) || 1) - 1));
+    return lines[idx];
+  }
+  return pack.domainLock || '咔哒……就算刷新网页，阁楼里的怀表也从未停转。';
 }

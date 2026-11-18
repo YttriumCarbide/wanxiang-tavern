@@ -13,14 +13,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { HEROES, DEFINITIONS, encounterSpec, enemySlots } from './data.js';
 import { createEffects } from './effects.js';
-import {
-  enemyToughnessBadge,
-  enemyWeaknessRow,
-  resourceBars,
-  statusIcons,
-  alchemicalBombBadge,
-  escapeText,
-} from './ui.js';
+import { enemyBreakBar, resourceBars, statusIcons, alchemicalBombBadge, escapeText } from './ui.js';
 import { portraitFrame } from './portrait-frame.js';
 import { portraitUrl } from './catalog.js';
 import { createCardDeaths } from './card-death.js';
@@ -441,6 +434,13 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
       el.classList.toggle('forecast-dead', f.hp === 0 && u.hp > 0);
       el.classList.toggle('is-overlord', Boolean(d.overlord));
       el.classList.toggle('is-stand-on-card', Boolean(d.overlord || d.standOnCard));
+      el.classList.toggle('is-broken-state', Boolean(side === 'Enemy' && u.broken));
+      el.classList.toggle(
+        'is-charging-state',
+        Boolean(
+          side === 'Enemy' && !u.broken && (u.chargingMove || u.breakWindow?.source === 'charge'),
+        ),
+      );
       el.style.setProperty('--unit', d.color);
       el.dataset.unit = id;
       el.dataset.side = side;
@@ -513,8 +513,8 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
         }<span class="unit-info"
           ><span class="unit-name">${d.name}${u.hp === 0 ? ' ×' : ''}</span></span
         ><span class="unit-resources"
-          >${side === 'Enemy' ? enemyToughnessBadge(u, playing ? u : f) : ''}${resourceBars(u, f)}${
-            side === 'Enemy' ? enemyWeaknessRow(d, u, s.revealedWeaknesses, activeDamageType) : ''
+          >${resourceBars(u, f)}${
+            side === 'Enemy' ? enemyBreakBar(d, u, playing ? u : f, activeDamageType) : ''
           }</span
         >${emblemRing(d, u, selected === id, playing ? u : f)}`;
       if (el.innerHTML !== markupString) el.innerHTML = markupString;
@@ -846,6 +846,11 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
         }
       }
       overlords.playAction?.(e.actor, { ...clipSpec, lunge });
+    }
+    for (const trig of e.statusTriggers || []) {
+      if (trig.type === 'break' && trig.id) {
+        overlords.playBreak?.(trig.id);
+      }
     }
     if (e.bombArmed && e.actor) {
       const bombStartMs = durationOverride ? durationOverride * 0.22 : 180;

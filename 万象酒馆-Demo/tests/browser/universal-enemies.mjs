@@ -74,7 +74,7 @@ export async function universalEnemyChecks({ browser, baseURL, output }) {
               '.unit-hit.is-overlord .enemy-tier-badge.is-overlord',
             ).length,
             visibleBattleCards,
-            toughnessBadges: document.querySelectorAll('.enemy-toughness-badge').length,
+            breakRails: document.querySelectorAll('.enemy-break-rail').length,
             unknownWeaknesses: document.querySelectorAll(
               '.enemy-weakness-row .enemy-weakness-pill.is-unknown',
             ).length,
@@ -89,8 +89,8 @@ export async function universalEnemyChecks({ browser, baseURL, output }) {
       );
       assert.equal(check.overlordBadges, expectBadges, `${name}: overlord badge count`);
       assert.equal(check.visibleBattleCards, 0, `${name}: Battle_Card base must stay hidden`);
-      assert.equal(check.toughnessBadges, 3, `${name}: enemy toughness badges`);
-      assert(check.unknownWeaknesses >= 3, `${name}: enemy ? unknown weakness pills`);
+      assert.equal(check.breakRails, 0, `${name}: no permanent break bar outside active window`);
+      assert.equal(check.unknownWeaknesses, 0, `${name}: no ? hidden weakness pills`);
       for (const entry of check.status.mounted) {
         assert.equal(entry.standOnCard, true);
         assert.equal(entry.nonVoxel, true);
@@ -105,7 +105,14 @@ export async function universalEnemyChecks({ browser, baseURL, output }) {
           puppet && puppet.height > 3.0,
           `alchemicalPuppet height > 3.0 (got ${puppet?.height})`,
         );
-        for (const clipName of ['Idle', 'Normal_Attack', 'Special_Attack', 'Special_Action']) {
+        for (const clipName of [
+          'Idle',
+          'Normal_Attack',
+          'Special_Attack',
+          'Special_Action',
+          'Charge_Up',
+          'Break_Stagger',
+        ]) {
           assert(puppet.animations.includes(clipName), `Missing puppet clip ${clipName}`);
         }
       }
@@ -415,7 +422,7 @@ export async function universalEnemyChecks({ browser, baseURL, output }) {
           { createDetails },
           { createTimeline },
           { createSelection },
-          { newBattle, preview, makeAction, enemyTimeline },
+          { newBattle, openBreakWindow, preview, makeAction, enemyTimeline },
         ] = await Promise.all([
           import('/src/scene.js'),
           import('/src/app/session.js'),
@@ -437,8 +444,8 @@ export async function universalEnemyChecks({ browser, baseURL, output }) {
         session.runtime.mode = 'battle';
         const state = newBattle(enemyIds);
         state.phase = 'plan';
-        state.round = 1;
-        state.revealedWeaknesses = { alchemicalPuppet: ['fire'] };
+        state.round = 2;
+        for (const eid of enemyIds) openBreakWindow(state, eid);
         const heroId = state.formation[0];
         state.units[heroId].maxHp = 72;
         state.units[heroId].hp = 69;
@@ -533,7 +540,8 @@ export async function universalEnemyChecks({ browser, baseURL, output }) {
             centerYDiff('[data-side="Enemy"] .bar.hp'),
             centerYDiff('#details .hero-resources .bar.hp'),
           ],
-          toughnessCount: document.querySelectorAll('.enemy-toughness-badge').length,
+          breakRailCount: document.querySelectorAll('.enemy-break-rail').length,
+          majorWeaknessCount: document.querySelectorAll('.enemy-weakness-pill.is-major').length,
           revealedWeakness: document.querySelectorAll('.enemy-weakness-pill[data-weakness="fire"]')
             .length,
           unknownWeakness: document.querySelectorAll('.enemy-weakness-pill.is-unknown').length,
@@ -562,9 +570,10 @@ export async function universalEnemyChecks({ browser, baseURL, output }) {
       for (const diff of hudCheck.barCenterDiffs) {
         assert(diff <= 2.5, `Expected .resource-number centered on .bar, diff=${diff}`);
       }
-      assert.equal(hudCheck.toughnessCount, 3);
-      assert.equal(hudCheck.revealedWeakness, 1);
-      assert(hudCheck.unknownWeakness >= 6);
+      assert.equal(hudCheck.breakRailCount, 3);
+      assert.equal(hudCheck.majorWeaknessCount, 3);
+      assert(hudCheck.revealedWeakness >= 1);
+      assert.equal(hudCheck.unknownWeakness, 0);
       assert(hudCheck.timelineIcons >= 3);
       assert(hudCheck.detailsChips >= 4);
       assert.equal(hudCheck.labelTextCount, 0);

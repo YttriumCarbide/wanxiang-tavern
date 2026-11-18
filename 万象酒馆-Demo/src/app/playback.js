@@ -112,9 +112,11 @@ export function createPlayback(context) {
             );
           } else if (
             event.overlordDomainLock ||
+            event.chargeStarted ||
             event.type === 'bombDetonate' ||
             event.type === 'bombDefuse' ||
-            (event.fixedSlotBroken && event.blockedBy === 'bind')
+            (event.fixedSlotBroken && event.blockedBy === 'bind') ||
+            event.statusTriggers?.some((st) => st.type === 'break')
           ) {
             void context.overlordBattle?.onEvent(event);
           }

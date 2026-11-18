@@ -14,9 +14,13 @@ import { playbackBeats } from '../src/playback-timing.js';
 import { explorationPreview, quickTestMillFrontier } from '../src/exploration.js';
 import { newExpedition, currentEncounterSpec } from '../src/expedition.js';
 import { newLibrary } from '../src/ai/library.js';
-import { overlordPhaseProfile, overlordTargetStage } from '../src/overlord-mechanics.js';
+import {
+  overlordPhaseProfile,
+  overlordReloadBark,
+  overlordTargetStage,
+} from '../src/overlord-mechanics.js';
 
-test('alchemicalPuppet supports 3-phase Overlord escalation, toughness reforging, and buff ramp', () => {
+test('alchemicalPuppet supports 3-phase Overlord escalation, break layer ramp, and buff ramp', () => {
   const def = DEFINITIONS.alchemicalPuppet;
   assert.equal(def.hp, 320);
   assert.equal(def.overlord, true);
@@ -25,12 +29,15 @@ test('alchemicalPuppet supports 3-phase Overlord escalation, toughness reforging
   assert.equal(overlordPhaseProfile(def, 1).bombSeconds, 40);
   assert.equal(overlordPhaseProfile(def, 2).bombSeconds, 30);
   assert.equal(overlordPhaseProfile(def, 3).bombSeconds, 20);
+  assert.equal(overlordPhaseProfile(def, 1).breakLayers, 2);
+  assert.equal(overlordPhaseProfile(def, 2).breakLayers, 2);
+  assert.equal(overlordPhaseProfile(def, 3).breakLayers, 3);
 
   let state = newBattle(['alchemicalPuppet']);
   state.phase = 'plan';
   state.round = 1;
   assert.equal(state.units.alchemicalPuppet.bossStage, 1);
-  assert.equal(state.units.alchemicalPuppet.maxToughness, 7);
+  assert.equal(state.units.alchemicalPuppet.breakWindow, null);
 
   // Drop below 66% -> Phase 2
   state.units.alchemicalPuppet.hp = Math.floor(state.units.alchemicalPuppet.maxHp * 0.65);
@@ -45,7 +52,6 @@ test('alchemicalPuppet supports 3-phase Overlord escalation, toughness reforging
   assert(!/第二阶段|第三阶段|压迫/.test(String(phase2Event.label || '')));
   assert(!/第二阶段|第三阶段|压迫/.test(String(phase2Event.subtitle || '')));
   assert.equal(res.final.units.alchemicalPuppet.bossStage, 2);
-  assert.equal(res.final.units.alchemicalPuppet.maxToughness, 9);
   assert(res.final.units.alchemicalPuppet.block >= 12);
   assert.equal(res.final.units.alchemicalPuppet.buffs.artifact, 2);
 
@@ -60,7 +66,6 @@ test('alchemicalPuppet supports 3-phase Overlord escalation, toughness reforging
   assert.equal(phase3Event.phaseStage, 3);
   assert(!/第二阶段|第三阶段|压迫/.test(String(phase3Event.label || '')));
   assert.equal(res.final.units.alchemicalPuppet.bossStage, 3);
-  assert.equal(res.final.units.alchemicalPuppet.maxToughness, 10);
   assert(res.final.units.alchemicalPuppet.buffs.strength >= 1);
   assert.equal(res.final.units.alchemicalPuppet.buffs.artifact, 3);
 });
@@ -248,4 +253,90 @@ test('quickTest option non-destructively swaps mill node 1 to Overlord direct ba
 
   // Verify saved library exploration was never mutated
   assert.equal(lib.exploration.mill.frontier[0].boss, 'millVoleAlpha');
+});
+
+test('alchemicalPuppet charge cycle opens Round 2 Break Window, cancels charged release + later actions when broken, closes immediately if unleashed, and provides reload barks', () => {
+  const baseHero = DEFINITIONS.aegis;
+  const heroDefs = {
+    aegis: {
+      ...baseHero,
+      limit: 3,
+      skills: [
+        ...baseHero.skills,
+        {
+          id: 'fire-breaker',
+          name: '熔炉裂斩',
+          ap: 1,
+          mp: 0,
+          target: 'enemy',
+          damageType: 'fire',
+          effects: [{ type: 'damage', value: 12 }],
+        },
+        {
+          id: 'lightning-breaker',
+          name: '雷枢贯击',
+          ap: 1,
+          mp: 0,
+          target: 'enemy',
+          damageType: 'lightning',
+          effects: [{ type: 'damage', value: 12 }],
+        },
+      ],
+    },
+  };
+  let state = newBattle(['alchemicalPuppet'], heroDefs);
+  state.phase = 'plan';
+  state.round = 1;
+
+  // Round 1 regIndex 0 uses Charge_Up -> opens chargingMove for Round 2
+  const r1 = preview(state, []);
+  const chargeEv = r1.events.find((e) => e.type === 'enemy' && e.chargeStarted);
+  assert(chargeEv, 'Round 1 should execute alchemicalPuppet Charge_Up move');
+  assert.equal(chargeEv.clip, 'Charge_Up');
+
+  // Round 2 opens special break window and queues Charged Release at slot 2
+  const r2 = advance(r1);
+  assert.equal(r2.round, 2);
+  assert(r2.units.alchemicalPuppet.breakWindow?.active);
+  assert.equal(r2.units.alchemicalPuppet.breakWindow.majorWeakness, 'fire');
+  const r2ReleaseIntent = intent(r2, 'alchemicalPuppet', 1);
+  assert.equal(r2ReleaseIntent.isChargedRelease, true);
+
+  // Trigger Phase 2 count (2 regular actions -> release at slot 2 + followup at slot 5) to verify ALL later actions cancel
+  r2.units.alchemicalPuppet.bossStage = 2;
+  r2.units.alchemicalPuppet.enraged = true;
+  r2.units.alchemicalPuppet.breakWindow.majorWeakness = 'lightning';
+  const slots2 = enemyTimeline(r2);
+  assert.equal(slots2[2], 'alchemicalPuppet');
+  assert.equal(slots2[5], 'alchemicalPuppet');
+
+  // Strike with major weakness (lightning -> -2) at slot 1 BEFORE slot 2 release
+  const brokenRun = preview(r2, [
+    makeAction(r2, 'aegis', 'lightning-breaker', 'alchemicalPuppet', 1),
+  ]);
+  assert.equal(brokenRun.final.units.alchemicalPuppet.broken, true);
+  const cancelledSlots = brokenRun.events.filter(
+    (e) => e.type === 'skip' && e.actor === 'alchemicalPuppet' && e.broken,
+  );
+  assert.equal(cancelledSlots.length, 2, 'Charged release and follow-up attack must both cancel');
+
+  // Next round Puppet recovers cleanly and continues acting
+  const r3 = advance(brokenRun);
+  assert.equal(r3.units.alchemicalPuppet.broken, false);
+  const r3Run = preview(r3, []);
+  assert(
+    r3Run.events.some(
+      (e) => e.type === 'enemy' && e.actor === 'alchemicalPuppet' && !e.fixedFirstSlot,
+    ),
+  );
+
+  // If player waits until slot 3 (after slot 2 release fires), breakWindow vanishes when release fires
+  const missedRun = preview(r2, [
+    makeAction(r2, 'aegis', 'lightning-breaker', 'alchemicalPuppet', 3),
+  ]);
+  assert.equal(missedRun.final.units.alchemicalPuppet.broken, false);
+  assert.equal(missedRun.final.units.alchemicalPuppet.breakWindow, null);
+
+  assert(overlordReloadBark('alchemicalPuppet', 1).includes('刷新网页'));
+  assert(overlordReloadBark('alchemicalPuppet', 2).includes('刷新'));
 });

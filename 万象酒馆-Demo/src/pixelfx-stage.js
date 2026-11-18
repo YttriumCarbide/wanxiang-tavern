@@ -213,7 +213,10 @@ export function createPixelFxStage(layer, getSpeed = () => 1) {
     canvas.style.height = `${Math.round(h * scale)}px`;
     canvas.style.left = `${Math.round(opts.x ?? 0)}px`;
     canvas.style.top = `${Math.round(opts.y ?? 0)}px`;
-    const transforms = ['translate(-50%, -50%)'];
+    // Grounded effects can anchor the drawn base instead of the center of the canvas.
+    const origin = opts.anchorToOrigin ? [(ox / w) * 100, (oy / h) * 100] : [50, 50];
+    const transforms = [`translate(${-origin[0]}%, ${-origin[1]}%)`];
+    if (opts.anchorToOrigin) canvas.style.transformOrigin = `${origin[0]}% ${origin[1]}%`;
     if (Number.isFinite(opts.rotateDeg) && opts.rotateDeg !== 0) {
       transforms.push(`rotate(${opts.rotateDeg}deg)`);
     }
