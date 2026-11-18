@@ -106,7 +106,131 @@ export function destinationMap(entries = []) {
   return { positions, width, height };
 }
 
-/** Crisp curved parchment route trail between two map nodes. */
+export const OVERLAND_DUNGEON_ARCH_SVG =
+  '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20V11a7 7 0 0 1 14 0v9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8.5 20v-7.5a3.5 3.5 0 0 1 7 0V20M3 20h18" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M12 10.5l1.6 3.5L12 16l-1.6-2Z" fill="currentColor"/></svg>';
+
+function sanitizeSvgId(value) {
+  return String(value || 'map').replace(/[^a-zA-Z0-9_-]/g, '_');
+}
+
+function stringSeed(value, fallback = 17) {
+  let hash = fallback >>> 0;
+  const text = String(value || '');
+  for (let i = 0; i < text.length; i++) {
+    hash = (Math.imul(hash, 33) ^ text.charCodeAt(i)) >>> 0;
+  }
+  return hash || fallback;
+}
+
+/** Shared seamless borderless Overland paper matching fansheng-atlas #paper-quarter grain. */
+export function buildOverlandPaperSvg({
+  prefix = 'overland',
+  id = 'map',
+  width = MIN_WIDTH,
+  height = BASE_HEIGHT,
+} = {}) {
+  const safeId = sanitizeSvgId(id);
+  const w = typeof width === 'string' ? width : Math.max(1, Number(width) || MIN_WIDTH);
+  const h = typeof height === 'string' ? height : Math.max(1, Number(height) || BASE_HEIGHT);
+  return {
+    defs: `<defs>
+      <svg id="${prefix}-paper-sample-${safeId}" width="86" height="56" viewBox="285 225 946 616">
+        <use href="./assets/exploration/fansheng-atlas.svg#paper-quarter"/>
+      </svg>
+      <pattern id="${prefix}-paper-fiber-${safeId}" x="0" y="0" width="172" height="112" patternUnits="userSpaceOnUse">
+        <use href="#${prefix}-paper-sample-${safeId}"/>
+        <use href="#${prefix}-paper-sample-${safeId}" transform="translate(172 0) scale(-1 1)"/>
+        <use href="#${prefix}-paper-sample-${safeId}" transform="translate(0 112) scale(1 -1)"/>
+        <use href="#${prefix}-paper-sample-${safeId}" transform="translate(172 112) scale(-1 -1)"/>
+      </pattern>
+    </defs>`,
+    layers: `<rect width="${w}" height="${h}" fill="#d9bf92"/>
+      <rect width="${w}" height="${h}" fill="url(#${prefix}-paper-fiber-${safeId})" opacity=".62"/>
+      <rect width="${w}" height="${h}" fill="#e4cc9f" opacity=".18"/>`,
+  };
+}
+
+function isClearOfNodes(x, y, points, minX = 82, minY = 58) {
+  for (const pt of points) {
+    if (Math.abs(x - pt.x) < minX && Math.abs(y - pt.y) < minY) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/** Subtle Overland hills and pine groves placed only in empty parchment pockets. */
+export function buildOverlandTerrainAccents({
+  width = MIN_WIDTH,
+  height = BASE_HEIGHT,
+  points = [],
+  seed = 1,
+  maxHills = 3,
+  maxGroves = 5,
+} = {}) {
+  const rand = hashSeed(seed);
+  const w = Math.max(320, Number(width) || MIN_WIDTH);
+  const h = Math.max(240, Number(height) || BASE_HEIGHT);
+  const hillSpots = [
+    [0.14, 0.16],
+    [0.84, 0.16],
+    [0.5, 0.14],
+    [0.16, 0.84],
+    [0.82, 0.84],
+    [0.48, 0.86],
+  ];
+  const groveSpots = [
+    [0.09, 0.28],
+    [0.24, 0.18],
+    [0.64, 0.17],
+    [0.89, 0.3],
+    [0.11, 0.72],
+    [0.34, 0.84],
+    [0.68, 0.83],
+    [0.9, 0.72],
+    [0.52, 0.28],
+  ];
+
+  const accents = [];
+  const placed = [];
+  let hillCount = 0;
+  for (const [fx, fy] of hillSpots) {
+    if (hillCount >= maxHills) break;
+    const x = Math.round(fx * w + (rand() - 0.5) * 34);
+    const y = Math.round(fy * h + (rand() - 0.5) * 24);
+    if (!isClearOfNodes(x, y, points, 92, 62) || !isClearOfNodes(x, y, placed, 95, 58)) {
+      continue;
+    }
+    placed.push({ x, y });
+    const rx = 48 + Math.round(rand() * 24);
+    const ry = 22 + Math.round(rand() * 10);
+    accents.push(
+      `<ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" fill="#b59157" fill-opacity="0.13"/>`,
+      `<use href="./assets/exploration/fansheng-silver-road.svg#hill-hatch" transform="translate(${x} ${y}) scale(8.2)" opacity="0.46"/>`,
+    );
+    hillCount++;
+  }
+
+  let groveCount = 0;
+  for (const [fx, fy] of groveSpots) {
+    if (groveCount >= maxGroves) break;
+    const x = Math.round(fx * w + (rand() - 0.5) * 36);
+    const y = Math.round(fy * h + (rand() - 0.5) * 26);
+    if (!isClearOfNodes(x, y, points, 78, 54) || !isClearOfNodes(x, y, placed, 72, 46)) {
+      continue;
+    }
+    placed.push({ x, y });
+    const scale = (9.5 + rand() * 3).toFixed(1);
+    accents.push(
+      `<use href="./assets/exploration/fansheng-silver-road.svg#grove" transform="translate(${x} ${y}) scale(${scale})" opacity="0.52"/>`,
+    );
+    groveCount++;
+  }
+
+  return `<g class="overland-terrain-accents">${accents.join('')}</g>`;
+}
+
+/** Crisp curved Overland route trail between two map nodes. */
 export function destinationTrail(a, b, seed = 1, options = {}) {
   if (!a || !b) return '';
   const dx = b.x - a.x;
@@ -116,85 +240,43 @@ export function destinationTrail(a, b, seed = 1, options = {}) {
   const ny = dx / dist;
   const rand = hashSeed(seed);
   const archDir = options.branch ? 1 : rand() > 0.5 ? 1 : -1;
-  const curve = Math.min(34, dist * 0.14) * archDir;
+  const maxCurve = options.maxCurve ?? 34;
+  const curveFactor = options.curveFactor ?? 0.14;
+  const curve = Math.min(maxCurve, dist * curveFactor) * archDir;
   const cx = Math.round((a.x + b.x) / 2 + nx * curve);
   const cy = Math.round((a.y + b.y) / 2 + ny * curve);
   return `M ${Math.round(a.x)} ${Math.round(a.y)} Q ${cx} ${cy} ${Math.round(b.x)} ${Math.round(b.y)}`;
 }
 
-/** Upright cartographic node stamp icon matching fansheng parchment map style. */
+/** Overland node pin: 45deg diamond for regular/branch stages, Dungeon Arch crest for Overlords. */
 export function destinationMark(seed = 1, cleared = false, options = {}) {
   const { overlord = false, boss = false, branch = false, current = false } = options;
-  const ringStroke = overlord ? '#8c3328' : branch ? '#6d5742' : '#79523a';
-  const fillTone = cleared ? '#ead9bc' : overlord ? '#f6e1d3' : current ? '#fdf3df' : '#f2e5ce';
-  const outerRing = overlord
-    ? `<circle cx="24" cy="24" r="19" fill="none" stroke="${ringStroke}" stroke-width="1.3" stroke-dasharray="3 2.5"/>`
-    : '';
-  const innerIcon = cleared
-    ? `<path class="sketch-cross" d="M 16 24.5 L 21.5 30 L 32.5 18" fill="none" stroke="#5d422d" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>`
-    : overlord
-      ? `<path d="M 15 29 L 17 19 L 21.5 24 L 24 16 L 26.5 24 L 31 19 L 33 29 Z" fill="#a23c2c" stroke="#5e2119" stroke-width="1.2" stroke-linejoin="round"/>`
-      : boss
-        ? `<polygon points="24,14 27.5,21 34,24 27.5,27 24,34 20.5,27 14,24 20.5,21" fill="#8f5d40" fill-opacity="0.22" stroke="${ringStroke}" stroke-width="1.4" stroke-linejoin="round"/>`
-        : branch
-          ? `<polygon points="24,12 36,24 24,36 12,24" fill="${fillTone}" stroke="${ringStroke}" stroke-width="1.25" stroke-opacity="0.65"/>`
-          : '';
-
-  const compassTicks =
-    !cleared && !branch
-      ? `<path d="M 24 6 V 10 M 24 38 V 42 M 6 24 H 10 M 38 24 H 42" stroke="${ringStroke}" stroke-width="1.15" stroke-opacity="0.58" stroke-linecap="round"/>`
+  if (overlord) {
+    const cross = cleared
+      ? '<path class="sketch-cross" d="M8.5 14.5l3.2 3.2 6.8-7.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>'
       : '';
+    return `<svg class="destination-sketch-mark is-overlord-crest" data-seed="${seed >>> 0}" viewBox="0 0 28 28" aria-hidden="true">
+      <rect class="sketch-ring is-dungeon-crest" x="2" y="2" width="24" height="24" rx="6"/>
+      <path class="dungeon-arch-line" d="M7.5 21.5V13a6.5 6.5 0 0 1 13 0v8.5" fill="none" stroke-width="1.9" stroke-linecap="round"/>
+      <path class="dungeon-arch-inner" d="M10.8 21.5v-6.8a3.2 3.2 0 0 1 6.4 0v6.8M5.8 21.5h16.4" fill="none" stroke-width="1.45" stroke-linecap="round"/>
+      <path class="dungeon-arch-gem" d="M14 12.2l1.5 3.1-1.5 1.8-1.5-1.8Z"/>
+      ${cross}
+    </svg>`;
+  }
 
-  return `<svg class="destination-sketch-mark" data-seed="${seed >>> 0}" viewBox="0 0 48 48" aria-hidden="true">
-    ${outerRing}
-    <circle class="sketch-ring" cx="24" cy="24" r="15" fill="${fillTone}" stroke="${ringStroke}" stroke-width="${current ? 2.1 : 1.6}"/>
-    <circle cx="24" cy="24" r="11.5" fill="none" stroke="${ringStroke}" stroke-width="0.8" stroke-opacity="0.48"/>
-    ${compassTicks}
-    ${innerIcon}
+  const variant = current ? 'is-current' : boss ? 'is-boss' : branch ? 'is-branch' : 'is-stop';
+  return `<svg class="destination-sketch-mark ${variant}" data-seed="${seed >>> 0}" viewBox="0 0 24 24" aria-hidden="true">
+    <rect class="sketch-halo" x="5.5" y="5.5" width="13" height="13" rx="1.6" transform="rotate(45 12 12)"/>
+    <rect class="sketch-ring is-diamond" x="5.5" y="5.5" width="13" height="13" rx="1.6" transform="rotate(45 12 12)"/>
+    ${
+      cleared
+        ? '<path class="sketch-cross" d="M8.3 12.3l2.5 2.5 4.9-5.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>'
+        : ''
+    }
   </svg>`;
 }
 
-function terrainMotifPaths(mapId, width, height) {
-  switch (mapId) {
-    case 'mill':
-      return `<g class="terrain-motif" stroke="#79523a" fill="none" stroke-opacity="0.22" stroke-width="1.2">
-        <path d="M 36 ${height - 58} Q ${width * 0.3} ${height - 78} ${width * 0.58} ${height - 50} T ${width - 34} ${height - 62}"/>
-        <circle cx="88" cy="76" r="18"/>
-        <path d="M 88 54 V 98 M 66 76 H 110 M 74 62 L 102 90 M 102 62 L 74 90"/>
-      </g>`;
-    case 'ruins':
-      return `<g class="terrain-motif" stroke="#79523a" fill="none" stroke-opacity="0.22" stroke-width="1.2">
-        <path d="M 48 92 V 56 H 72 V 92 M 56 56 V 48 H 64 V 56"/>
-        <path d="M ${width - 96} ${height - 48} L ${width - 78} ${height - 76} L ${width - 58} ${height - 48}"/>
-      </g>`;
-    case 'forest':
-    case 'whisper-grove':
-      return `<g class="terrain-motif" stroke="#6f5a3f" fill="none" stroke-opacity="0.22" stroke-width="1.2">
-        <path d="M 62 96 L 74 66 L 86 96 Z M 90 96 L 100 72 L 110 96 Z"/>
-        <path d="M ${width - 92} 96 L ${width - 80} 66 L ${width - 68} 96 Z"/>
-      </g>`;
-    case 'frost':
-    case 'silver-cistern':
-      return `<g class="terrain-motif" stroke="#687279" fill="none" stroke-opacity="0.22" stroke-width="1.2">
-        <path d="M 52 86 L 74 52 L 94 86 M 78 86 L 98 60 L 116 86"/>
-        <path d="M ${width - 102} 84 L ${width - 80} 50 L ${width - 60} 84"/>
-      </g>`;
-    case 'forge':
-    case 'ash-foundry':
-      return `<g class="terrain-motif" stroke="#804b38" fill="none" stroke-opacity="0.22" stroke-width="1.2">
-        <path d="M 54 90 L 68 56 H 88 L 102 90"/>
-        <path d="M ${width - 98} 88 L ${width - 80} 54 L ${width - 62} 88"/>
-      </g>`;
-    default:
-      return `<g class="terrain-motif" stroke="#79523a" fill="none" stroke-opacity="0.2" stroke-width="1.15">
-        <path d="M 42 ${height - 44} Q ${width * 0.25} ${height - 62} ${width * 0.5} ${height - 42} T ${width - 42} ${height - 48}"/>
-        <circle cx="${width - 62}" cy="58" r="14"/>
-        <path d="M ${width - 62} 40 V 76 M ${width - 80} 58 H ${width - 44}"/>
-      </g>`;
-  }
-}
-
-/** Parchment chart border, contour lines, and subtle compass/terrain watermark for the dungeon route map. */
+/** Seamless borderless Overland parchment surface + sparse terrain reliefs for dungeon route maps. */
 export function destinationRegionTerrain(
   mapId = 'mill',
   width = MIN_WIDTH,
@@ -203,23 +285,25 @@ export function destinationRegionTerrain(
 ) {
   const safeW = Math.max(MIN_WIDTH, Number(width) || MIN_WIDTH);
   const safeH = Math.max(BASE_HEIGHT, Number(height) || BASE_HEIGHT);
-  const contours = [];
-  if (positions instanceof Map && positions.size > 0) {
-    let idx = 0;
-    for (const pos of positions.values()) {
-      if (idx % 2 === 0) {
-        contours.push(
-          `<ellipse class="terrain-contour" cx="${Math.round(pos.x)}" cy="${Math.round(pos.y)}" rx="44" ry="24" fill="none" stroke="#8a684b" stroke-opacity="0.14" stroke-width="1" stroke-dasharray="3 4"/>`,
-        );
-      }
-      idx++;
-    }
-  }
+  const points = positions instanceof Map ? [...positions.values()] : [];
+  const paper = buildOverlandPaperSvg({
+    prefix: 'dest',
+    id: mapId,
+    width: safeW,
+    height: safeH,
+  });
+  const terrain = buildOverlandTerrainAccents({
+    width: safeW,
+    height: safeH,
+    points,
+    seed: stringSeed(mapId, 41),
+    maxHills: 4,
+    maxGroves: 5,
+  });
 
   return `<svg class="destination-terrain-layer" viewBox="0 0 ${safeW} ${safeH}" preserveAspectRatio="none" aria-hidden="true">
-    <rect class="terrain-frame-outer" x="14" y="14" width="${safeW - 28}" height="${safeH - 28}" rx="4" fill="none" stroke="#8a6547" stroke-opacity="0.34" stroke-width="1.3"/>
-    <rect class="terrain-frame-inner" x="20" y="20" width="${safeW - 40}" height="${safeH - 40}" rx="2" fill="none" stroke="#8a6547" stroke-opacity="0.2" stroke-width="0.9" stroke-dasharray="6 4"/>
-    ${terrainMotifPaths(mapId, safeW, safeH)}
-    ${contours.join('')}
+    ${paper.defs}
+    ${paper.layers}
+    ${terrain}
   </svg>`;
 }

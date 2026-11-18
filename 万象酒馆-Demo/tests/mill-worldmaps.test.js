@@ -120,10 +120,11 @@ test('mill starts Lv.1-5 near Starbell, ruins moves east to Lv.20-25, and starbe
   );
   const svg = buildBlueprintSvg(CITY_BLUEPRINTS.starbell);
   assert(
-    !svg.includes('city-block'),
-    'Simplified blueprint should not render noisy block rectangles',
+    !svg.includes('city-block') && !svg.includes('stroke-width="10.5"'),
+    'Overland city map should use borderless paper and single-stroke trails without walls or pipes',
   );
-  assert(svg.includes('city-vellum-starbell'));
+  assert(svg.includes('fansheng-atlas.svg#paper-quarter'));
+  assert(svg.includes('city-submap-trail'));
 });
 
 test('all 6 mainline dungeons use 4-step branching graph with side branches and overlord endless continuation', () => {
@@ -139,7 +140,10 @@ test('all 6 mainline dungeons use 4-step branching graph with side branches and 
     assert.equal(layout.positions.size, preview.length);
     const terrain = destinationRegionTerrain(map, layout.width, layout.height, layout.positions);
     assert(terrain.includes('destination-terrain-layer'));
-    assert(destinationMark(1, false, { overlord: true }).includes('destination-sketch-mark'));
+    assert(terrain.includes('fansheng-atlas.svg#paper-quarter'));
+    assert(!terrain.includes('terrain-frame-outer'));
+    assert(destinationMark(1, false, { overlord: true }).includes('is-overlord-crest'));
+    assert(destinationMark(1, false, { branch: false }).includes('is-diamond'));
   }
 
   const mill = routes.mill;

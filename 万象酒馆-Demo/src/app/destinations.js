@@ -13,6 +13,7 @@ import { createDestinationPreview } from '../destination-preview.js';
 import { query as $ } from './dom.js';
 import { learning } from '../campaign.js';
 import {
+  buildOverlandPaperSvg,
   destinationMap,
   destinationTrail,
   destinationMark,
@@ -344,6 +345,12 @@ export function createDestinations(context) {
     const cleared = new Set((route.cleared || []).map((entry) => entry.id));
     const { positions, width, height } = destinationMap(entries);
     const terrain = destinationRegionTerrain(mapId, width, height, positions);
+    const backdropPaper = buildOverlandPaperSvg({
+      prefix: 'dest-bg',
+      id: mapId,
+      width: '100%',
+      height: '100%',
+    });
     const paths = entries
       .filter((entry) => positions.has(entry.parentId))
       .map((entry) => {
@@ -361,6 +368,9 @@ export function createDestinations(context) {
       class="destination-map-canvas"
       style="width:${width}px;height:${height}px"
     >
+      <svg class="destination-paper-backdrop" width="100%" height="100%" aria-hidden="true">
+        ${backdropPaper.defs}${backdropPaper.layers}
+      </svg>
       <svg width="${width}" height="${height}" aria-hidden="true">${terrain}${paths}</svg>
       ${entries
         .map((entry) => {

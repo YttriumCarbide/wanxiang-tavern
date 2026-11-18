@@ -29,9 +29,13 @@ test('city parchment SVG blueprints render architectural layers and Guild Halls 
     assert(submap && submap.blueprint);
     assert(submap.nodes.some((node) => node.action === 'guild' && node.id === 'guild-hall'));
     const svg = buildBlueprintSvg(CITY_BLUEPRINTS[submap.region]);
-    assert.match(svg, /city-vellum-/);
+    assert.match(svg, /fansheng-atlas\.svg#paper-quarter/);
     assert.match(svg, /stroke="#79523a"/);
-    assert.match(svg, /fill="#8f5d40"/);
+    assert(
+      !svg.includes('stroke-width="10.5"'),
+      'City submaps should use Overland trails, not pipes',
+    );
+    assert(!svg.includes('<rect x="12"'), 'City submaps should use borderless Overland paper');
   }
 });
 

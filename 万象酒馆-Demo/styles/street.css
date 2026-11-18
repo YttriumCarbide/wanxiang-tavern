@@ -1605,10 +1605,7 @@ html[data-atlas-only='true']
   border-radius: 14px;
   overflow: hidden;
   color: #3b2718;
-  background:
-    radial-gradient(ellipse at 50% 0%, rgba(255, 245, 222, 0.45), transparent 60%),
-    url('../assets/exploration/exploration-parchment.png') center / cover no-repeat,
-    #edd7ab;
+  background: #d9bf92;
   box-shadow: 0 28px 80px rgba(0, 0, 0, 0.72);
 }
 .street-city-submap::backdrop {
@@ -1625,8 +1622,8 @@ html[data-atlas-only='true']
   justify-content: space-between;
   gap: 12px;
   padding: 14px 18px;
-  border-bottom: 1px solid rgba(124, 83, 43, 0.25);
-  background: rgba(247, 229, 193, 0.55);
+  border-bottom: 1px solid rgba(121, 82, 58, 0.24);
+  background: rgba(232, 208, 163, 0.92);
 }
 .street-city-submap-head small {
   display: block;
@@ -1665,7 +1662,7 @@ html[data-atlas-only='true']
   aspect-ratio: 820 / 470;
   max-height: min(68dvh, 490px);
   overflow: hidden;
-  background: #e2c895;
+  background: #d9bf92;
 }
 .city-submap-svg {
   position: absolute;
@@ -1681,112 +1678,131 @@ html[data-atlas-only='true']
 }
 .city-submap-pinbtn {
   position: absolute;
-  transform: translate(-50%, -50%);
-  display: grid;
-  justify-items: center;
-  gap: 2px;
-  padding: 2px;
+  transform: translate(-50%, -12px);
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 4px;
   border: none;
   background: transparent;
-  color: #3a2211;
+  color: #562e1f;
   cursor: pointer;
   z-index: 2;
   transition: transform 140ms ease;
 }
 .city-submap-pinbtn:not(:disabled):hover {
-  transform: translate(-50%, calc(-50% - 2px)) scale(1.06);
+  transform: translate(-50%, -14px) scale(1.06);
   z-index: 5;
 }
 .city-submap-seal {
   display: grid;
   place-items: center;
-  width: 24px;
-  height: 24px;
-  border: 1.5px solid #59361d;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #fff6dc, #dcb676);
-  color: #542e16;
-  font-size: 12px;
-  line-height: 1;
-  box-shadow:
-    0 2px 5px rgba(48, 28, 10, 0.36),
-    inset 0 1px 0 rgba(255, 252, 240, 0.72);
+  width: 15px;
+  height: 15px;
+  transform: rotate(45deg);
+  border-radius: 2px;
+  border: 2px solid #6d3f28;
+  background: #f8e6b8;
+  box-shadow: 0 0 0 2px #f1d9a5;
+  transition:
+    transform 0.16s ease,
+    background 0.16s ease,
+    border-color 0.16s ease;
 }
-.city-submap-pinbtn.is-guild .city-submap-seal {
-  width: 27px;
-  height: 27px;
-  border-color: #f3d285;
-  background: radial-gradient(circle at 35% 30%, #7f592e, #362210);
-  color: #ffeab3;
-  box-shadow:
-    0 0 0 2px rgba(212, 165, 82, 0.42),
-    0 3px 8px rgba(32, 16, 4, 0.5);
+.city-submap-pinbtn:not(:disabled):hover .city-submap-seal {
+  background: #8a3a29;
+  border-color: #fff2cc;
+  box-shadow: 0 0 0 2px rgba(255, 224, 152, 0.7);
 }
-.city-submap-pinbtn.is-dungeon .city-submap-seal {
-  width: 27px;
-  height: 27px;
-  border-color: #f6cf9e;
-  background: radial-gradient(circle at 35% 30%, #a53c29, #541610);
-  color: #fff2dc;
-  box-shadow:
-    0 0 0 2px rgba(165, 60, 41, 0.34),
-    0 3px 8px rgba(48, 12, 8, 0.45);
+.city-submap-pinbtn[data-kind='guild'] .city-submap-seal {
+  width: 17px;
+  height: 17px;
+  background: #f5cf76;
+  border-color: #6d3f28;
+  box-shadow: 0 0 0 2px #f1d9a5;
 }
 .city-submap-pinbtn[aria-current='location'] .city-submap-seal {
-  width: 28px;
-  height: 28px;
-  border-color: #fff2cf;
-  background: radial-gradient(circle at 35% 30%, #d4522b, #7d1b12);
-  color: #fff8e2;
-  box-shadow:
-    0 0 0 3px rgba(154, 42, 24, 0.28),
-    0 3px 10px rgba(82, 18, 8, 0.45);
+  background: #355c4f;
+  border-color: #f8e6b8;
+  box-shadow: 0 0 0 2px #355c4f;
 }
-.city-submap-label {
+.city-submap-pinbtn[data-kind='dungeon'] .city-submap-seal {
+  width: 24px;
+  height: 24px;
+  transform: none;
+  border-radius: 6px;
+  border: 2px solid #d6ad67;
+  background: linear-gradient(155deg, #43232c, #241219);
+  color: #ffdf9a;
+  box-shadow:
+    0 0 0 2px rgba(241, 217, 165, 0.72),
+    0 3px 10px rgba(36, 18, 25, 0.48);
+}
+.city-submap-pinbtn[data-kind='dungeon'] .city-submap-seal svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+.city-submap-pinbtn[data-kind='dungeon']:not(:disabled):hover .city-submap-seal {
+  background: linear-gradient(155deg, #5c2732, #2e151d);
+  border-color: #ffe8a8;
+  box-shadow:
+    0 0 0 2px rgba(255, 224, 152, 0.8),
+    0 4px 12px rgba(36, 18, 25, 0.56);
+}
+.city-dungeon-lv {
+  position: absolute;
+  bottom: calc(100% + 2px);
+  left: 50%;
+  transform: translateX(-50%);
   padding: 1px 6px;
-  border-bottom: 1px solid rgba(94, 57, 30, 0.45);
-  border-radius: 3px;
-  background: rgba(248, 234, 200, 0.88);
-  color: #3a2010;
-  font-family: Georgia, 'Songti SC', serif;
-  font-size: 11px;
+  border-radius: 999px;
+  border: 1px solid #d6ad67;
+  background: rgba(36, 18, 25, 0.92);
+  color: #ffe3a8;
+  font-family: Georgia, serif;
+  font-size: 9.5px;
+  font-style: normal;
   font-weight: 700;
   line-height: 1.3;
   white-space: nowrap;
-  text-shadow: 0 1px 0 rgba(255, 249, 234, 0.9);
-  box-shadow: 0 1px 3px rgba(44, 26, 10, 0.16);
+  pointer-events: none;
 }
-.city-submap-pinbtn.is-guild .city-submap-label {
-  background: rgba(54, 34, 16, 0.92);
-  border-bottom-color: #d4a654;
-  color: #ffe9b3;
-  text-shadow: none;
+.city-submap-label {
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #562e1f;
+  font-family: 'KaiTi', 'Kaiti SC', 'STKaiti', 'Songti SC', serif;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.25;
+  white-space: nowrap;
+  text-shadow:
+    0 0 3px #ffedc3,
+    0 0 5px #ffedc3,
+    0 1px #ffedc3;
 }
-.city-submap-pinbtn.is-dungeon .city-submap-label {
-  background: rgba(102, 27, 18, 0.92);
-  border-bottom-color: #f3b582;
-  color: #fff3de;
-  text-shadow: none;
+.city-submap-pinbtn[data-kind='dungeon'] .city-submap-label {
+  color: #4f1d1d;
 }
 .city-submap-pinbtn[aria-current='location'] .city-submap-label {
-  background: rgba(126, 32, 19, 0.92);
-  border-bottom-color: #f3cc82;
-  color: #fff6de;
-  text-shadow: none;
+  color: #214136;
 }
 .city-node-skirmish {
   position: absolute;
-  top: -5px;
+  top: -8px;
   right: -4px;
   display: grid;
   place-items: center;
-  width: 18px;
-  height: 18px;
+  width: 17px;
+  height: 17px;
   border: 1.5px solid #f7d996;
   border-radius: 50%;
   background: #8e2318;
   color: #fff3df;
-  font-size: 10px;
+  font-size: 9.5px;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.42);
 }
 .street-city-submap-foot {
@@ -1794,8 +1810,8 @@ html[data-atlas-only='true']
   justify-content: space-between;
   gap: 10px;
   padding: 9px 18px;
-  border-top: 1px solid rgba(124, 83, 43, 0.22);
+  border-top: 1px solid rgba(121, 82, 58, 0.22);
   color: #5b3b20;
-  background: rgba(244, 224, 184, 0.72);
+  background: rgba(232, 208, 163, 0.92);
   font-size: 11px;
 }

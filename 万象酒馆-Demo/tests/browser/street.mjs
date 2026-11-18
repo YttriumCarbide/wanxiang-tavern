@@ -203,8 +203,21 @@ export async function streetChecks({ browser, baseURL, output }) {
     await page.locator('#street-submap-open').click();
     await page.locator('#street-city-submap[open] .city-submap-svg').waitFor({ state: 'visible' });
     assert.equal(
-      await page.locator('#street-city-submap [data-city-node="starbell-undercroft"]').count(),
-      1,
+      await page
+        .locator('#street-city-submap [data-city-node="starbell-undercroft"]')
+        .getAttribute('data-kind'),
+      'dungeon',
+    );
+    assert.equal(
+      await page
+        .locator('#street-city-submap [data-city-node="city-center"]')
+        .getAttribute('data-kind'),
+      'stop',
+    );
+    assert(
+      (await page.locator('#street-city-submap use[href*="paper-quarter"]').count()) > 0 &&
+        (await page.locator('#street-city-submap pattern').count()) > 0,
+      'City submap must use borderless Overland #paper-quarter paper',
     );
     assert.equal(await page.locator('#street-city-submap .city-block').count(), 0);
     await page.waitForTimeout(150);

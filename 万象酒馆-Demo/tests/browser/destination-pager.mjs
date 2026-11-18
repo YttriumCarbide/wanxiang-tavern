@@ -53,7 +53,13 @@ export async function destinationPagerChecks({ browser, baseURL, output }) {
     const background = await page
       .locator('.destination-map-canvas')
       .evaluate((element) => getComputedStyle(element).backgroundImage);
-    assert(background.includes('exploration-parchment.png'));
+    assert(!background.includes('exploration-parchment.png'));
+    assert(
+      (await page.locator('.destination-terrain-layer use[href*="paper-quarter"]').count()) > 0 &&
+        (await page.locator('.destination-terrain-layer pattern').count()) > 0,
+      'Route map must use borderless Overland #paper-quarter surface',
+    );
+    assert.equal(await page.locator('.destination-terrain-layer .terrain-frame-outer').count(), 0);
     const node = page.locator('.destination-node').first();
     for (const hovered of [false, true]) {
       if (hovered) await node.hover();

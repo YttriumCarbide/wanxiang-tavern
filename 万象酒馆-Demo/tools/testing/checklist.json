@@ -1,5 +1,5 @@
 {
   "browserConcurrency": 2,
-  "scopes": ["quality", "core", "universal-enemies", "intents"],
-  "coreFiles": ["tests/combat-overhaul.test.js", "tests/journey-archives.test.js"]
+  "scopes": ["quality", "destinations"],
+  "coreFiles": ["tests/guild-skyrim-cities.test.js", "tests/mill-worldmaps.test.js"]
 }
