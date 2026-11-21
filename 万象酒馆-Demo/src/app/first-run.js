@@ -3,9 +3,9 @@ import { API_LABELS, CONNECTION_KINDS, missingSetup } from './first-run-rules.js
 
 const DOWNLOADS = Object.freeze({
   windows:
-    'https://github.com/YttriumCarbide/wanxiang-tavern/releases/download/v2.3/wanxiang-tavern-2.3-windows-x64.zip',
+    'https://github.com/YttriumCarbide/wanxiang-tavern/releases/download/v2.3.1/wanxiang-tavern-2.3.1-windows-x64.zip',
   android:
-    'https://github.com/YttriumCarbide/wanxiang-tavern/releases/download/v2.3/wanxiang-tavern-2.3-android.apk',
+    'https://github.com/YttriumCarbide/wanxiang-tavern/releases/download/v2.3.1/wanxiang-tavern-2.3.1-android.apk',
 });
 
 const WIZARD_HEADERS = Object.freeze({

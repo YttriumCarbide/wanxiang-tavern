@@ -27,7 +27,7 @@ export async function packagePortraitAssets(snapshot, request = fetch) {
 
 export async function restorePortraitAssets(snapshot, request = fetch, savePortrait) {
   const copy = structuredClone(snapshot);
-  for (const url of references(copy.data.library)) {
+  for (const url of references(copy.data)) {
     const dataUrl = copy.data.portraitAssets?.[url];
     if (!dataUrl) continue;
     let nextUrl;

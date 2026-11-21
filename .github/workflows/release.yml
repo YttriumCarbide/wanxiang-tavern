@@ -1,9 +1,9 @@
-name: Release v2.3
+name: Release installation packages
 
 on:
   push:
     tags:
-      - v2.3
+      - "v*.*.*"
 
 permissions:
   contents: write
@@ -21,6 +21,29 @@ jobs:
           node-version: "22.13"
           cache: npm
           cache-dependency-path: 万象酒馆-Demo/package-lock.json
+
+      - name: Verify release version
+        id: version
+        working-directory: 万象酒馆-Demo
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFileSync, appendFileSync } from 'node:fs';
+
+          const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
+          const version = pkg.version;
+          const semver = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
+
+          if (typeof version !== 'string' || !semver.test(version)) {
+            throw new Error(`package.json version is not a valid semantic version: ${version}`);
+          }
+
+          const expected = `v${version}`;
+          if (process.env.GITHUB_REF_NAME !== expected) {
+            throw new Error(`Tag ${process.env.GITHUB_REF_NAME} does not match package version ${expected}`);
+          }
+
+          appendFileSync(process.env.GITHUB_ENV, `RELEASE_VERSION=${version}\n`);
+          NODE
 
       - name: Set up Temurin JDK 17
         uses: actions/setup-java@v4
@@ -76,13 +99,11 @@ jobs:
         run: |
           test -d .runtime/native/pc-win-x64
           cd .runtime/native
-          zip -r wanxiang-tavern-2.3-windows-x64.zip pc-win-x64
-          test -f wanxiang-tavern-2.3-windows-x64.zip
+          zip -r "wanxiang-tavern-${{ env.RELEASE_VERSION }}-windows-x64.zip" pc-win-x64
+          test -f "wanxiang-tavern-${{ env.RELEASE_VERSION }}-windows-x64.zip"
 
       - name: Build Android package
         working-directory: 万象酒馆-Demo
-        env:
-          WANXIANG_ANDROID_VERSION_CODE: "20300"
         run: npm run build:android
 
       - name: Copy Android APK
@@ -90,18 +111,19 @@ jobs:
         run: |
           APK=native/android/build/outputs/apk/debug/WanxiangTavern-debug.apk
           test -f "$APK"
-          cp "$APK" .runtime/native/wanxiang-tavern-2.3-android.apk
-          test -f .runtime/native/wanxiang-tavern-2.3-android.apk
+          cp "$APK" ".runtime/native/wanxiang-tavern-${{ env.RELEASE_VERSION }}-android.apk"
+          test -f ".runtime/native/wanxiang-tavern-${{ env.RELEASE_VERSION }}-android.apk"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v2.3
-          name: v2.3
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          fail_on_unmatched_files: true
           body: |
-            2.3 完整资源包：修复攻击特效偶发出现在屏幕左上角的问题，并在开始界面和设置页提供下载入口。
-            Android APK 安装后即可读取全部游戏资源；Windows ZIP 解压后运行 WanxiangTavern.exe。
-            无需热更新或额外下载资源。AI 功能仍需自行配置联网接口。
+            存档导入反馈与兼容性修复，完整离线安装包。
+            Android APK 使用调试签名；Windows ZIP 解压后运行 WanxiangTavern.exe。
+            两端包含完整运行资源，AI 功能仍需自行配置联网接口。
           files: |
-            万象酒馆-Demo/.runtime/native/wanxiang-tavern-2.3-windows-x64.zip
-            万象酒馆-Demo/.runtime/native/wanxiang-tavern-2.3-android.apk
+            万象酒馆-Demo/.runtime/native/wanxiang-tavern-${{ env.RELEASE_VERSION }}-windows-x64.zip
+            万象酒馆-Demo/.runtime/native/wanxiang-tavern-${{ env.RELEASE_VERSION }}-android.apk

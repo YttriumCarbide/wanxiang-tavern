@@ -71,7 +71,7 @@ export async function developerModeChecks({ browser, baseURL, output }) {
     const repository = 'https://github.com/YttriumCarbide/wanxiang-tavern';
     assert.equal(
       await page.locator('#settings-download-windows').getAttribute('href'),
-      `${repository}/releases/download/v2.3/wanxiang-tavern-2.3-windows-x64.zip`,
+      `${repository}/releases/download/v2.3.1/wanxiang-tavern-2.3.1-windows-x64.zip`,
     );
     assert.equal(
       await page.locator('#settings-download-develop').getAttribute('href'),

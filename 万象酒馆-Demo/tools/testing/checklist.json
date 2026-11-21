@@ -1,5 +1,12 @@
 {
   "browserConcurrency": 2,
-  "scopes": ["quality", "settings", "static"],
-  "coreFiles": []
+  "scopes": ["quality", "core", "folder-backup", "static", "developer-mode"],
+  "coreFiles": [
+    "tests/saves.test.js",
+    "tests/portrait-store.test.js",
+    "tests/logic-audit-storage.test.js",
+    "tests/logic-audit-folder-backup.test.js",
+    "tests/content-updates.test.js",
+    "tests/logic-audit-updates.test.js"
+  ]
 }

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import path from 'node:path';
+import { readFile } from 'node:fs/promises';
 import { newCampaign } from '../../src/campaign.js';
 import { officialCharacter } from '../../src/ai/library.js';
 import { defaultProtagonist } from '../../src/content/qingyuan.js';
@@ -148,6 +149,85 @@ async function saveSlotChecks(page, output, library) {
   assert.equal(afterRename.slots.slot1.dateString, slot1Before.dateString);
   assert.deepEqual(afterRename.slots.slot1.data, slot1Before.data);
 
+  // Export slot1 and verify the downloaded payload matches the stored save.
+  const downloadPromise = page.waitForEvent('download');
+  await page.locator('[data-export-slot="slot1"]').click();
+  const download = await downloadPromise;
+  const exportedText = await readFile(await download.path(), 'utf8');
+  const exported = JSON.parse(exportedText);
+  assert.deepEqual(exported.data, afterRename.slots.slot1.data, 'export matches stored slot1');
+  const exportStatus = page.locator('#saves-import-status');
+  await exportStatus.waitFor({ state: 'visible' });
+  assert.match(await exportStatus.textContent(), /导出/);
+
+  // Re-import the exported file (with BOM) into slot1, then cancel.
+  await page.locator('#saves-import-input').setInputFiles({
+    name: 'reuse-save.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from('\uFEFF' + exportedText),
+  });
+  await page.locator('[data-import-slot="slot1"]').waitFor({ state: 'visible' });
+  await page.locator('#saves-import-cancel').click();
+  assert.deepEqual(await readSavesStore(page), afterRename, 'cancel after re-import keeps store');
+
+  // Malformed JSON shows an error and keeps the store untouched.
+  await page.locator('#saves-import-input').setInputFiles({
+    name: 'retry-save.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from('{ not valid json'),
+  });
+  await page.waitForFunction(() => {
+    const status = document.querySelector('#saves-import-status');
+    return status && status.textContent.includes('JSON');
+  });
+  assert.equal(await page.locator('#saves-import-status').isVisible(), true);
+  assert.equal(await page.locator('#saves-dialog').isVisible(), true);
+  assert.equal(await page.locator('#saves-import-input').inputValue(), '');
+  assert.deepEqual(await readSavesStore(page), afterRename, 'malformed import keeps store');
+
+  // Retry with valid content under the same name, then cancel.
+  await page.locator('#saves-import-input').setInputFiles({
+    name: 'retry-save.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(exportedText),
+  });
+  await page.locator('[data-import-slot="slot1"]').waitFor({ state: 'visible' });
+  await page.locator('#saves-import-cancel').click();
+  assert.deepEqual(await readSavesStore(page), afterRename, 'retry cancel keeps store');
+
+  // Slow file read: cancel while reading, then release the pending read.
+  await page.evaluate(() => {
+    window.saveImportOriginalText = File.prototype.text;
+    File.prototype.text = async function () {
+      if (this.name === 'slow-save.json') {
+        return new Promise((resolve) => {
+          window.saveImportRelease = () => resolve(window.saveImportOriginalText.call(this));
+        });
+      }
+      return window.saveImportOriginalText.call(this);
+    };
+  });
+  await page.locator('#saves-import-input').setInputFiles({
+    name: 'slow-save.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(exportedText),
+  });
+  await page.waitForFunction(() => typeof window.saveImportRelease === 'function');
+  const slowStatus = page.locator('#saves-import-status');
+  await slowStatus.waitFor({ state: 'visible' });
+  assert.match(await slowStatus.textContent(), /读取/);
+  assert.equal(await page.locator('#saves-import-cancel').isVisible(), true);
+  await page.locator('#saves-import-cancel').click();
+  await page.evaluate(() => {
+    window.saveImportRelease();
+    File.prototype.text = window.saveImportOriginalText;
+    delete window.saveImportOriginalText;
+    delete window.saveImportRelease;
+  });
+  await page.waitForFunction(() => document.querySelector('#saves-import-input').value === '');
+  assert.equal(await page.locator('[data-import-slot="slot1"]').count(), 0);
+  assert.deepEqual(await readSavesStore(page), afterRename, 'slow cancel keeps store');
+
   // Import a normal save file into an occupied slot: dismiss confirm keeps pending.
   const fixture = buildFixtureSave(library, 'slot1', 'fixture-gold731');
   const [fileChooser] = await Promise.all([
@@ -180,6 +260,9 @@ async function saveSlotChecks(page, output, library) {
     1,
     'pending import still selectable after dismiss',
   );
+  const dismissStatus = page.locator('#saves-import-status');
+  await dismissStatus.waitFor({ state: 'visible' });
+  assert.match(await dismissStatus.textContent(), /取消覆盖/);
 
   // Navigate to page 5 (slot19) and import there.
   for (let index = 0; index < 4; index++) await page.locator('#saves-next-page').click();
@@ -193,6 +276,25 @@ async function saveSlotChecks(page, output, library) {
     'next disabled on page 5',
   );
   await page.locator('[data-import-slot="slot19"]').waitFor({ state: 'visible' });
+  await page.evaluate((savesKey) => {
+    const originalPut = IDBObjectStore.prototype.put;
+    IDBObjectStore.prototype.put = function (value, key) {
+      if (key === savesKey) {
+        IDBObjectStore.prototype.put = originalPut;
+        throw new Error('fixture save write failed');
+      }
+      return originalPut.call(this, value, key);
+    };
+  }, savesKey);
+  await page.locator('[data-import-slot="slot19"]').click();
+  await page.waitForFunction(() =>
+    document
+      .querySelector('#saves-import-status')
+      ?.textContent.includes('fixture save write failed'),
+  );
+  assert.equal(await page.locator('#saves-import-status').isVisible(), true);
+  assert.deepEqual(await readSavesStore(page), afterRename, 'failed slot import preserves store');
+  assert.equal(await page.locator('[data-import-slot="slot19"]').isEnabled(), true);
   await page.locator('[data-import-slot="slot19"]').click();
   await page.waitForFunction(() => {
     const card = document.querySelector('[data-slot-id="slot19"]');

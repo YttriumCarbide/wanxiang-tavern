@@ -177,9 +177,12 @@ export async function readSaveFile(file, savePortrait) {
   const text = await file.text();
   let parsed;
   try {
-    parsed = JSON.parse(text);
+    parsed = JSON.parse(text.replace(/^\uFEFF/, ''));
   } catch {
     throw new Error('存档文件不是合法的 JSON 格式');
+  }
+  if (parsed?.app === 'wanxiang-static-backup') {
+    throw new Error('这是完整备份，请勾选“开启完整备份导入”后使用“导入完整备份”');
   }
   if (!validateSaveSnapshot(parsed)) {
     throw new Error('存档数据结构损坏或格式不兼容');
@@ -311,11 +314,12 @@ export function createSaveManager(context) {
   let highlightTimer = null;
   let page = 0;
   let pendingImport = null;
+  let importMessage = '';
 
-  function mutationLocked() {
+  function mutationLocked({ allowPendingImport = false } = {}) {
     if (disposed) return '存档面板已关闭';
     if ($('#saves-dialog')?.dataset?.storageBusy === 'true') return '正在处理完整备份，请稍候';
-    if (pendingImport) return '请先选择导入栏位或取消导入';
+    if (pendingImport && !allowPendingImport) return '请先选择导入栏位或取消导入';
     if (importing) return '正在读取存档，请稍候';
     if (pendingWrites) return '正在保存存档，请稍候';
     if (session.battle?.playing) return '战斗演出期间暂不可改动或读取存档';
@@ -383,8 +387,16 @@ export function createSaveManager(context) {
   }
 
   function renderImportStatus() {
+    const message = importing
+      ? pendingImport
+        ? '正在写入目标栏位，请稍候。'
+        : '正在读取存档文件及立绘，请稍候，可取消导入。'
+      : importMessage ||
+        (pendingImport
+          ? `已选择「${pendingImport.filename || '存档文件'}」，请选择要导入的栏位，或取消导入。`
+          : '');
     const selection = $('#saves-import-selection');
-    if (selection) selection.hidden = !pendingImport;
+    if (selection) selection.hidden = !message;
     const dialog = $('#saves-dialog');
     if (dialog?.dataset) {
       if (pendingImport || importing || pendingWrites) dialog.dataset.slotBusy = 'true';
@@ -393,16 +405,17 @@ export function createSaveManager(context) {
     const status = $('#saves-import-status');
     const cancel = $('#saves-import-cancel');
     if (status) {
-      if (pendingImport) {
-        const filename = pendingImport.filename || '存档文件';
-        status.textContent = `已选择「${filename}」，请选择要导入的栏位，或取消导入。`;
-        status.hidden = false;
-      } else {
-        status.textContent = '';
-        status.hidden = true;
-      }
+      status.textContent = message;
+      status.hidden = !message;
     }
-    if (cancel) cancel.hidden = !pendingImport;
+    if (cancel) cancel.hidden = !pendingImport && !importing;
+  }
+
+  function reportImportStatus(message) {
+    importMessage = message;
+    renderImportStatus();
+    $('#saves-import-status')?.scrollIntoView?.({ block: 'nearest' });
+    context.shell?.toast?.(message);
   }
 
   function renderDialog() {
@@ -493,7 +506,7 @@ export function createSaveManager(context) {
                 ? html`<button
                     class="save-btn save-btn-import"
                     data-import-slot="${slot.id}"
-                    ${importing || pendingWrites || session.battle?.playing || session.ai?.busy ? 'disabled' : ''}
+                    ${mutationLocked({ allowPendingImport: true }) ? 'disabled' : ''}
                     title="将已选择的存档导入到此栏位"
                   >
                     ${isEmpty ? '导入到此栏位' : '覆盖导入'}
@@ -581,10 +594,11 @@ export function createSaveManager(context) {
   }
 
   function cancelImport() {
-    if (!pendingImport) return false;
+    if (!pendingImport && !importing) return false;
     importSequence += 1;
     importing = false;
     pendingImport = null;
+    importMessage = '';
     renderDialog();
     return true;
   }
@@ -597,6 +611,7 @@ export function createSaveManager(context) {
     importSequence += 1;
     importing = false;
     pendingImport = null;
+    importMessage = '';
     store = loadSavesStore(storage);
     renderDialog();
     const dialog = $('#saves-dialog');
@@ -610,6 +625,7 @@ export function createSaveManager(context) {
       importSequence += 1;
       importing = false;
       pendingImport = null;
+      importMessage = '';
     }
     const dialog = $('#saves-dialog');
     if (dialog && dialog.open) {
@@ -716,38 +732,39 @@ export function createSaveManager(context) {
   async function exportSlot(slotId) {
     const snapshot = store.slots[slotId];
     if (!snapshot) {
-      context.shell?.toast?.('该槽位为空，无法导出');
+      reportImportStatus('该槽位为空，无法导出');
       return;
     }
     try {
       await exportSnapshotToFile(snapshot);
-      context.shell?.toast?.('存档文件导出完成');
+      reportImportStatus('存档文件导出完成');
     } catch (failure) {
-      context.shell?.toast?.(failure.message);
+      reportImportStatus(`导出失败: ${failure.message}`);
     }
   }
 
   async function exportCurrent() {
     if (session.runtime.needsStart) return context.shell.toast('请先完成主角创建');
-    const snapshot = createSaveSnapshot(session, 'live', '实时进度导出');
     const now = new Date();
     const pad = (n) => String(n).padStart(2, '0');
     const dateTag = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}`;
     try {
+      const snapshot = createSaveSnapshot(session, 'live', '实时进度导出');
       await exportSnapshotToFile(snapshot, `wanxiang-live-save-${dateTag}.json`);
-      context.shell?.toast?.('实时进度已导出为 JSON 文件');
+      reportImportStatus('实时进度已导出为 JSON 文件');
     } catch (failure) {
-      context.shell?.toast?.(failure.message);
+      reportImportStatus(`导出失败: ${failure.message}`);
     }
   }
 
   async function importFromFile(file) {
     const locked = mutationLocked();
     if (locked) {
-      context.shell?.toast?.(locked);
+      reportImportStatus(locked);
       return false;
     }
     const request = ++importSequence;
+    importMessage = '';
     importing = true;
     renderDialog();
     const runtimeToken = session.runtime.token;
@@ -787,8 +804,7 @@ export function createSaveManager(context) {
       context.shell?.toast?.('请选择要导入的栏位');
       return true;
     } catch (err) {
-      if (!disposed && request === importSequence)
-        context.shell?.toast?.(`导入失败: ${err.message}`);
+      if (!disposed && request === importSequence) reportImportStatus(`导入失败: ${err.message}`);
       return false;
     } finally {
       if (request === importSequence) importing = false;
@@ -797,16 +813,18 @@ export function createSaveManager(context) {
   }
 
   async function importToSlot(slotId) {
-    if (!pendingImport) return false;
-    if (!SAVE_SLOT_IDS.includes(slotId)) return false;
-    if (
-      disposed ||
-      importing ||
-      pendingWrites ||
-      session.battle?.playing ||
-      session.ai?.busy ||
-      $('#saves-dialog')?.dataset?.storageBusy === 'true'
-    ) {
+    if (disposed) return false;
+    if (!pendingImport) {
+      reportImportStatus('请先选择要导入的存档文件');
+      return false;
+    }
+    if (!SAVE_SLOT_IDS.includes(slotId)) {
+      reportImportStatus('无效的目标栏位，请重新选择');
+      return false;
+    }
+    const locked = mutationLocked({ allowPendingImport: true });
+    if (locked) {
+      reportImportStatus(locked);
       return false;
     }
     const staged = pendingImport;
@@ -822,6 +840,7 @@ export function createSaveManager(context) {
     if (!stillCurrent()) {
       pendingImport = null;
       renderDialog();
+      reportImportStatus('导入期间游戏状态已改变，已取消导入，请重新选择存档文件');
       return false;
     }
 
@@ -832,11 +851,15 @@ export function createSaveManager(context) {
       const confirmed = globalThis.confirm(
         `栏位 [${slotLabel(slotId)}] 已有存档「${occupantName}」，导入将覆盖且无法恢复，是否继续？`,
       );
-      if (!confirmed) return false;
+      if (!confirmed) {
+        reportImportStatus('已取消覆盖，可选择其他栏位或重试');
+        return false;
+      }
     }
 
     const targetRaw = JSON.stringify(occupant ?? null);
     const request = ++importSequence;
+    importMessage = '';
     importing = true;
     const guard = () =>
       !disposed &&
@@ -869,11 +892,10 @@ export function createSaveManager(context) {
       if (!guard()) throw new Error('导入期间游戏状态已改变，已取消载入');
       pendingImport = null;
       renderDialog();
-      context.shell?.toast?.(`已保存至 [${slotLabel(slotId)}]，点击读取即可开始游戏`);
+      reportImportStatus(`导入成功：已保存至 [${slotLabel(slotId)}]，点击该栏位的“读取”恢复游戏`);
       return true;
     } catch (err) {
-      if (!disposed && request === importSequence)
-        context.shell?.toast?.(`导入失败: ${err.message}`);
+      if (!disposed && request === importSequence) reportImportStatus(`导入失败: ${err.message}`);
       return false;
     } finally {
       if (request === importSequence) importing = false;
@@ -979,6 +1001,7 @@ export function createSaveManager(context) {
       importSequence += 1;
       importing = false;
       pendingImport = null;
+      importMessage = '';
       renderImportStatus();
     });
     events.on(dialog, 'close', () => {
@@ -986,6 +1009,7 @@ export function createSaveManager(context) {
       importSequence += 1;
       importing = false;
       pendingImport = null;
+      importMessage = '';
       renderImportStatus();
     });
   }
@@ -1024,7 +1048,9 @@ export function createSaveManager(context) {
   const importButton = $('#saves-import-btn');
   if (importButton && importInput) {
     events.on(importButton, 'click', () => {
-      if (!mutationLocked()) importInput.click();
+      const locked = mutationLocked();
+      if (locked) reportImportStatus(locked);
+      else importInput.click();
     });
   }
   if (importInput) {

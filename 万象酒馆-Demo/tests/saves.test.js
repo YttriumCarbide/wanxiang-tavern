@@ -519,3 +519,105 @@ test('importToSlot keeps the original slot when flush fails', async (t) => {
   assert.equal(saves.getStore().slots.slot1.timestamp, original.timestamp);
   assert.ok(saves.getPendingImport());
 });
+
+test('importFromFile accepts a leading BOM and stages without writing', async (t) => {
+  const { storage, saves } = installManagerFixture(t);
+  const payload = `\uFEFF${validSnapshotPayload('auto', 'bom note')}`;
+
+  assert.equal(await saves.importFromFile(makeFile(payload)), true);
+  const pending = saves.getPendingImport();
+  assert.ok(pending);
+  assert.equal(pending.note, 'bom note');
+  assert.equal(storage.getItem(SAVES_STORAGE_KEY), null);
+  assert.equal(saves.getStore().slots.auto, null);
+});
+
+test('importFromFile rejects a full backup payload without staging or writing', async (t) => {
+  const { storage, saves, notices } = installManagerFixture(t);
+  const backup = JSON.stringify({
+    app: 'wanxiang-static-backup',
+    version: 1,
+    entries: [],
+  });
+
+  assert.equal(await saves.importFromFile(makeFile(backup)), false);
+  assert.ok(notices.length > 0);
+  assert.match(notices[notices.length - 1], /完整备份/);
+  assert.equal(saves.getPendingImport(), null);
+  assert.equal(storage.getItem(SAVES_STORAGE_KEY), null);
+  assert.equal(saves.getStore().slots.auto, null);
+});
+
+test('importFromFile reports parse and read failures, then stages a valid file', async (t) => {
+  const { storage, saves, notices } = installManagerFixture(t);
+
+  assert.equal(await saves.importFromFile(makeFile('{ not json')), false);
+  assert.ok(notices.length > 0);
+  assert.match(notices[notices.length - 1], /JSON|格式|解析/);
+  assert.equal(saves.getPendingImport(), null);
+  assert.equal(storage.getItem(SAVES_STORAGE_KEY), null);
+
+  const unreadable = {
+    text: async () => {
+      throw new Error('file read failed');
+    },
+  };
+  assert.equal(await saves.importFromFile(unreadable), false);
+  assert.ok(notices.length > 0);
+  assert.match(notices[notices.length - 1], /file read failed/);
+  assert.equal(saves.getPendingImport(), null);
+  assert.equal(storage.getItem(SAVES_STORAGE_KEY), null);
+
+  assert.equal(
+    await saves.importFromFile(makeFile(validSnapshotPayload('auto', 'after errors'))),
+    true,
+  );
+  assert.ok(saves.getPendingImport());
+  assert.equal(saves.getPendingImport().note, 'after errors');
+  assert.equal(storage.getItem(SAVES_STORAGE_KEY), null);
+});
+
+test('importToSlot reports stale runtime, library and battle state without writing', async (t) => {
+  const { session, storage, saves, notices } = installManagerFixture(t);
+
+  for (const mutate of [
+    () => (session.runtime.token += 1),
+    () => (session.ai.library = structuredClone(session.ai.library)),
+    () => (session.battle.state = structuredClone(session.battle.state)),
+  ]) {
+    assert.equal(await saves.importFromFile(makeFile(validSnapshotPayload('auto', 'stale'))), true);
+    mutate();
+    assert.equal(await saves.importToSlot('slot1'), false);
+    assert.equal(saves.getPendingImport(), null);
+    assert.match(notices.at(-1), /状态.*改变|已改变/);
+    assert.equal(storage.getItem(SAVES_STORAGE_KEY), null);
+    assert.equal(saves.getStore().slots.slot1, null);
+  }
+});
+
+test('cancelImport aborts a pending read and a later valid import still stages', async (t) => {
+  const { storage, saves } = installManagerFixture(t);
+  const payload = validSnapshotPayload('auto', 'released');
+  let releaseRead;
+  const file = {
+    text: () =>
+      new Promise((resolve) => {
+        releaseRead = () => resolve(payload);
+      }),
+  };
+
+  const pending = saves.importFromFile(file);
+  await Promise.resolve();
+  assert.equal(saves.cancelImport(), true);
+  releaseRead();
+
+  assert.equal(await pending, false);
+  assert.equal(saves.getPendingImport(), null);
+  assert.equal(storage.getItem(SAVES_STORAGE_KEY), null);
+  assert.equal(saves.getStore().slots.auto, null);
+
+  assert.equal(await saves.importFromFile(makeFile(validSnapshotPayload('auto', 'later'))), true);
+  assert.ok(saves.getPendingImport());
+  assert.equal(saves.getPendingImport().note, 'later');
+  assert.equal(storage.getItem(SAVES_STORAGE_KEY), null);
+});

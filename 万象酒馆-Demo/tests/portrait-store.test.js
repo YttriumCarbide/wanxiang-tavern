@@ -39,6 +39,77 @@ test('portable saves carry one original image and restore it before storing ligh
   );
 });
 
+test('customPortraits-only references are packaged and restored through the save callback', async () => {
+  const url = '/api/ai/portraits/' + 'b'.repeat(64) + '.png';
+  const nextUrl = './__portraits/' + 'c'.repeat(64) + '.png';
+  const snapshot = {
+    data: {
+      library: { characters: [{ combat: { customPortrait: null } }] },
+      customPortraits: { hero: url },
+    },
+  };
+  const bytes = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10, 0, 255]);
+  let reads = 0;
+  const portable = await packagePortraitAssets(snapshot, async (path) => {
+    assert.equal(path, url);
+    reads++;
+    return new Response(bytes, { headers: { 'content-type': 'image/png' } });
+  });
+  assert.equal(reads, 1);
+  assert.equal(portable.data.customPortraits.hero, url);
+  assert.equal(portable.data.library.characters[0].combat.customPortrait, null);
+  assert.deepEqual(Object.keys(portable.data.portraitAssets), [url]);
+  const originalPortable = structuredClone(portable);
+  let saves = 0;
+  const restored = await restorePortraitAssets(portable, undefined, async (dataUrl) => {
+    saves++;
+    assert.equal(dataUrl.split(',')[0], 'data:image/png;base64');
+    assert.deepEqual(Buffer.from(dataUrl.split(',')[1], 'base64'), Buffer.from(bytes));
+    return { url: nextUrl };
+  });
+  assert.equal(saves, 1);
+  assert.equal(restored.data.customPortraits.hero, nextUrl);
+  assert.equal(restored.data.library.characters[0].combat.customPortrait, null);
+  assert(!('portraitAssets' in restored.data));
+  assert.equal(portable.data.customPortraits.hero, url);
+  assert.deepEqual(portable, originalPortable);
+  assert.deepEqual(snapshot.data.customPortraits, { hero: url });
+});
+
+test('shared library and customPortraits references are read and saved exactly once', async () => {
+  const url = '/api/ai/portraits/' + 'd'.repeat(64) + '.png';
+  const nextUrl = './__portraits/' + 'e'.repeat(64) + '.png';
+  const snapshot = {
+    data: {
+      library: { characters: [{ combat: { customPortrait: url } }] },
+      customPortraits: { hero: url },
+    },
+  };
+  const bytes = new Uint8Array([137, 80, 78, 71, 1, 2, 3, 4]);
+  let reads = 0;
+  const portable = await packagePortraitAssets(snapshot, async (path) => {
+    assert.equal(path, url);
+    reads++;
+    return new Response(bytes, { headers: { 'content-type': 'image/png' } });
+  });
+  assert.equal(reads, 1);
+  assert.deepEqual(Object.keys(portable.data.portraitAssets), [url]);
+  const originalPortable = structuredClone(portable);
+  let saves = 0;
+  const restored = await restorePortraitAssets(portable, undefined, async (dataUrl) => {
+    saves++;
+    assert.deepEqual(Buffer.from(dataUrl.split(',')[1], 'base64'), Buffer.from(bytes));
+    return { url: nextUrl };
+  });
+  assert.equal(saves, 1);
+  assert.equal(restored.data.library.characters[0].combat.customPortrait, nextUrl);
+  assert.equal(restored.data.customPortraits.hero, nextUrl);
+  assert(!('portraitAssets' in restored.data));
+  assert.equal(snapshot.data.library.characters[0].combat.customPortrait, url);
+  assert.equal(snapshot.data.customPortraits.hero, url);
+  assert.deepEqual(portable, originalPortable);
+});
+
 test('original portrait bytes and color profile survive storage and service restart without recompression', async () => {
   const directory = await mkdtemp(path.join(process.cwd(), '.runtime/tests/portrait-original-'));
   const bytes = await readFile(new URL('../assets/portraits/pandora.png', import.meta.url));

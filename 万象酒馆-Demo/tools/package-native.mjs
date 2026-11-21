@@ -104,8 +104,18 @@ function run(command, args, options) {
     throw Error(command + ' exited with ' + (result.status ?? result.signal));
 }
 
+function androidVersionCode(version) {
+  const match = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.exec(version);
+  if (!match) throw Error('Android packages require a MAJOR.MINOR.PATCH release version');
+  const [major, minor, patch] = match.slice(1).map(Number);
+  if (![major, minor, patch].every(Number.isSafeInteger) || minor > 99 || patch > 99)
+    throw Error('Android release minor and patch versions must be between 0 and 99');
+  return String(major * 10000 + minor * 100 + patch);
+}
+
 async function buildAndroid(release) {
-  const revision = process.env.WANXIANG_ANDROID_VERSION_CODE ?? '20300';
+  const revision =
+    process.env.WANXIANG_ANDROID_VERSION_CODE ?? androidVersionCode(release.manifest.version);
   if (!/^[1-9]\d*$/.test(revision) || Number(revision) > 2_100_000_000)
     throw Error('WANXIANG_ANDROID_VERSION_CODE must be a positive Android version code');
   await stageOfflinePack(offlinePack, release);
