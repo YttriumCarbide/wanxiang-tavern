@@ -39,33 +39,6 @@
       "sha256": "f4a42483e9b02a9da8ad9ddffc58fc2394b57056a8fdce7d6b96fd496caf1e71"
     },
     {
-      "id": "street-hd-v1",
-      "file": "assets/exploration/street-hd-v1/connected.png",
-      "source": "assets/exploration/street-hd-v1/manifest.json",
-      "prompt": "Three native generated tiles; exact prompts in assets/exploration/street-hd-v1/prompts.md. No resize.",
-      "width": 3284,
-      "height": 1254,
-      "sha256": "9c53f1faddb367b98f6a1731472ac86d81bd5292f62c378c6277f610082bef79"
-    },
-    {
-      "id": "street-hd-v2",
-      "file": "assets/exploration/street-hd-v2/connected.png",
-      "source": "assets/exploration/street-hd-v2/manifest.json",
-      "prompt": "Human scale repaint with native tiles. Exact prompts in assets/exploration/street-hd-v2/prompts.md.",
-      "width": 2818,
-      "height": 1254,
-      "sha256": "dc4981817962750586949757da10b0dca19f927b947add48a9fa44d32f9b460d"
-    },
-    {
-      "id": "street-hd-v3",
-      "file": "assets/exploration/street-hd-v3/connected.png",
-      "source": "assets/exploration/street-hd-v3/manifest.json",
-      "prompt": "Faithful texture restoration of four fixed overlapping crops from the approved original. Exact prompts in assets/exploration/street-hd-v3/prompts.md. Original geometry and 3:1 aspect preserved.",
-      "width": 3762,
-      "height": 1254,
-      "sha256": "317b040a8b2408ed09bafdadfe9aa5ebfb9449cc27d444a0f0c78ba10075e583"
-    },
-    {
       "id": "street-hd-v4",
       "file": "assets/exploration/street-hd-v4/connected.png",
       "source": "assets/exploration/street-hd-v4/manifest.json",

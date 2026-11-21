@@ -23,7 +23,7 @@ test('ordinary backups exclude keys without silently switching remembered connec
     {
       entries: () => [
         ['installation', { version: 1 }],
-        ['game.wanxiang.worldbooks.v1', '{}'],
+        ['game.wanxiang.worldbooks.v1', JSON.stringify({ version: 1, characters: [], party: [] })],
         ['api.config', saved],
       ],
     },

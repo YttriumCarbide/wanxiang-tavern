@@ -1,34 +1,44 @@
+import { resolveBattleRoundEnd } from './battle-round-end.js';
+export {
+  makeAction,
+  makeEngage,
+  makeItem,
+  makeReposition,
+  makeSwap,
+} from './battle-plan-actions.js';
+import { enemyTimeline, intent } from './battle-enemy-intents.js';
+export { enemyActionsCount, enemyIntents, enemyTimeline, intent } from './battle-enemy-intents.js';
+import { effectiveBuff, front, getEnemies, livingEnemies, rear } from './battle-state-readers.js';
+export { effectiveBuff, front, getEnemies, livingEnemies, rear } from './battle-state-readers.js';
+import { createAuxiliaryActions } from './battle-auxiliary-actions.js';
 import { enemyEffectSide } from './enemy-targets.js';
 import { withoutDiningBonus } from './dining.js';
-import { aresDecision, nextBossStage, shouldEnrage } from './ares.js';
+import { aresDecision, nextBossStage } from './ares.js';
 import { createCompanionMechanics } from './companion-mechanics.js';
 import { createTownGuestMechanics, blindedTarget } from './town-guest-mechanics.js';
-import { tacticalDecision, lockEnemyDecisions } from './enemy-tactics.js';
+import { lockEnemyDecisions } from './enemy-tactics.js';
 import {
   alchemicalBombDamage,
+  isPlagueSealed,
   overlordPhaseLog,
   overlordPhaseProfile,
-  overlordTargetStage,
   pickBombTarget,
   pickCorruptedTimelineSlot,
-  sinkingPlagueFrontDamage,
-  sinkingPlagueRearDamage,
 } from './overlord-mechanics.js';
-import { canCombine, EMBLEMS, OVERLOAD_EMBLEM_ID } from './emblems.js';
-import { ITEMS, restoreBag } from './content/items.js';
+import { BREAKER_EMBLEM_ID, canCombine, EMBLEMS, OVERLOAD_EMBLEM_ID } from './emblems.js';
+import { restoreBag } from './content/items.js';
 import { definition, definitionsFor, heroesFor, abilityFor } from './catalog.js';
 import { validateAction } from './validation.js';
 import { HEROES, DEFINITIONS, BUFFS, encounterSpec, enemySlots } from './data.js';
 import {
-  auraValue,
   rulesFor,
   conditionsMet,
   triggerTargets,
   ruleUsageKey,
+  ruleHasUnlimitedUses,
   POSITIVE_BUFFS,
 } from './triggers.js';
 import {
-  decayStatuses,
   statusStacks,
   NEGATIVE_STATUSES,
   applyStrengthBonus,
@@ -36,14 +46,12 @@ import {
   applyVulnerableBonus,
   applyIronReduction,
   applyGuardShield,
-  regenHealAmount,
 } from './status-rules.js';
 import { recordCooperationHit } from './cooperation.js';
-import { enemyGrowth, leveledIntent } from './enemy-growth.js';
+import { enemyGrowth } from './enemy-growth.js';
 import { REST_LOSS_RECOVERY } from './content/journey-rules.js';
 import {
   createEmblemMechanics,
-  positionBuff,
   emblemTargetError,
   clearBattleMechanics,
   negativeImmune,
@@ -59,17 +67,13 @@ import {
 } from './octopath.js';
 export const clone = (x) => structuredClone(x);
 export function battleResourceLimits(definition) {
-  let hp = definition.hp;
-  let mp =
+  const hp = definition.hp;
+  const mp =
     definition.mp +
     (definition.skills || []).reduce(
       (total, skill) => total + (skill.location === '战斗外' ? skill.bonusMp || 0 : 0),
       0,
     );
-  if (definition.emblemId === OVERLOAD_EMBLEM_ID && !definition._overloadApplied) {
-    mp = Math.round(mp * 1.5);
-    hp = Math.round(hp + mp * 0.25);
-  }
   return { hp, mp };
 }
 
@@ -131,354 +135,10 @@ export function newBattle(
     seed: 37,
   };
 }
-export const front = (s) => s.formation.slice(0, 3);
-export const rear = (s) => s.formation.slice(3);
-export const getEnemies = (s) => s.enemyIds.map((id) => definition(s, id));
-export const livingEnemies = (s) => getEnemies(s).filter((e) => s.units[e.id].hp > 0);
-export function effectiveBuff(s, id, key) {
-  if (NEGATIVE_STATUSES.includes(key) && negativeImmune(s, id)) return 0;
-  const value =
-    (s.units[id]?.buffs[key] || 0) +
-    positionBuff(s, id, key) +
-    (s.units[id]?.hp > 0 ? auraValue(s, heroesFor(s), id, key) : 0);
-  return key === 'haste' ? Math.min(2, value) : value;
-}
-export function enemyActionsCount(s, id) {
-  const def = definition(s, id);
-  const unit = s?.units?.[id];
-  if (!def || !unit || unit.hp <= 0) return 0;
-  if (s.phase === 'opening') return 1;
-  const fixedExtra = def.fixedFirstSlot ? 1 : 0;
-  if (Array.isArray(def.overlordPhases) && def.overlordPhases.length >= 2) {
-    const stage = Math.max(unit.bossStage || 1, overlordTargetStage(unit, def));
-    return overlordPhaseProfile(def, stage).regularActions + fixedExtra;
-  }
-  const enraged = !!(
-    def.boss &&
-    def.phaseMode !== 'cycle' &&
-    (unit.enraged || shouldEnrage(s, id, def))
-  );
-  const count = enraged ? (def.enragedActions ?? def.actions ?? 1) : (def.actions ?? 1);
-  return Math.max(1, Number(count) || 1) + fixedExtra;
-}
-function fixedFirstIntent(s, id, authored) {
-  const bombTarget = pickBombTarget(s, s.round);
-  const frontSlot = bombTarget ? (s.formation || []).slice(0, 3).indexOf(bombTarget) : -1;
-  const slot = frontSlot >= 0 ? frontSlot : 1;
-  const unit = s.units?.[id];
-  const stage = Math.max(unit?.bossStage || 1, overlordTargetStage(unit, authored));
-  const sec = overlordPhaseProfile(authored, stage).bombSeconds;
-  return {
-    ...authored.fixedFirstSlot,
-    name: `${authored.fixedFirstSlot.name}（${sec}s）`,
-    text: `先制投出定时炼金炸弹，下回合需在 ${sec} 秒内确认结算，否则引爆造成高额伤害并强制结束回合。`,
-    slot,
-    slots: [slot],
-    effects: [],
-    enraged: stage >= 2,
-    fixedFirstSlot: true,
-    bombTarget,
-    bombSeconds: sec,
-  };
-}
-export function intent(s, id, actionIndex = 0) {
-  const authored = definition(s, id);
-  const scaleIntent = (move) =>
-    move.fixedFirstSlot
-      ? move
-      : leveledIntent(move, s.units[id]?.attackBonus, s.units[id]?.damageScale);
-  if (authored.tactic?.mode === 'ares') return scaleIntent(aresDecision(s, id, authored));
-  const hasFixedFirst = s.phase !== 'opening' && Boolean(authored.fixedFirstSlot);
-  if (hasFixedFirst && actionIndex === 0) return fixedFirstIntent(s, id, authored);
-  const regIndex = hasFixedFirst ? Math.max(0, actionIndex - 1) : actionIndex;
-  const chargeSpec = authored.chargeMechanic;
-  if (s.phase !== 'opening' && chargeSpec && regIndex === 0) {
-    const unit = s.units[id];
-    const bossStage = Array.isArray(authored.overlordPhases)
-      ? Math.max(unit?.bossStage || 1, overlordTargetStage(unit, authored))
-      : 1;
-    if (unit?.chargingMove) {
-      const release =
-        chargeSpec.releaseMovesByPhase?.[bossStage - 1] || chargeSpec.releaseMovesByPhase?.[0];
-      if (release) {
-        return scaleIntent({
-          ...release,
-          enraged: bossStage >= 2,
-          isChargedRelease: true,
-        });
-      }
-    }
-    const cadence = Math.max(2, Number(chargeSpec.cadenceRounds) || 3);
-    const chargeBaseline =
-      unit?.lastChargeRound ??
-      (Number.isInteger(chargeSpec.firstChargeRound)
-        ? chargeSpec.firstChargeRound - cadence
-        : -cadence);
-    if (
-      chargeSpec.chargeMove &&
-      unit?.lastChargeRound !== s.round &&
-      s.round - chargeBaseline >= cadence
-    ) {
-      const chargeMove = chargeSpec.chargeMove;
-      return {
-        ...chargeMove,
-        slots: chargeMove.slots || [chargeMove.slot ?? 1],
-        effects: chargeMove.effects || [],
-        enraged: bossStage >= 2,
-        isCharge: true,
-      };
-    }
-  }
-  const tactical =
-    s.enemyDecisions?.[id]?.round === s.round
-      ? s.enemyDecisions[id]
-      : tacticalDecision(s, id, definition(s, id));
-  if (tactical) {
-    const def = definition(s, id);
-    const bossStage =
-      tactical.bossStage ||
-      (Array.isArray(def.overlordPhases)
-        ? Math.max(s.units[id]?.bossStage || 1, overlordTargetStage(s.units[id], def))
-        : tactical.enraged
-          ? 2
-          : 1);
-    const list =
-      bossStage >= 3 && def.finalPhaseIntents?.length
-        ? def.finalPhaseIntents
-        : tactical.enraged
-          ? def.enragedIntents
-          : def.intents;
-    const useOpening =
-      Boolean(authored.openingIntent) &&
-      !s.units[id]?.openingAttackUsed &&
-      (!authored.openingIntent.lowestHpPosition || s.round <= 1);
-    if (useOpening && regIndex === 0) {
-      const opening = authored.openingIntent;
-      const openingSlot = opening.slot ?? tactical.slot;
-      const openingSlots =
-        opening.slots ||
-        (opening.adjacent ? [openingSlot, openingSlot === 2 ? 1 : openingSlot + 1] : [openingSlot]);
-      return scaleIntent({
-        ...opening,
-        slot: openingSlot,
-        slots: openingSlots,
-        enraged: tactical.enraged,
-      });
-    }
-    const offset = useOpening ? regIndex - 1 : regIndex;
-    const tacticalIndex = (tactical.index + offset) % list.length;
-    if (regIndex === 0 && !hasFixedFirst) {
-      return scaleIntent({ ...list[tacticalIndex], ...tactical });
-    }
-    const move = list[tacticalIndex];
-    const targetSlot =
-      def.tactic?.target === 'fixed'
-        ? (move.slot ?? tactical.slot ?? 1)
-        : (move.slot ?? tactical.slot);
-    const targetSlots =
-      move.slots ||
-      (move.adjacent ? [targetSlot, targetSlot === 2 ? 1 : targetSlot + 1] : [targetSlot]);
-    return scaleIntent({
-      ...move,
-      slot: targetSlot,
-      slots: targetSlots,
-      enraged: tactical.enraged || bossStage >= 2,
-    });
-  }
-  const def = definition(s, id),
-    stage = Array.isArray(def.overlordPhases)
-      ? Math.max(s.units[id].bossStage || 1, overlordTargetStage(s.units[id], def))
-      : def.boss &&
-          def.phaseMode !== 'cycle' &&
-          (s.units[id].enraged || s.units[id].hp <= s.units[id].maxHp * def.phaseThreshold)
-        ? 2
-        : 1,
-    enraged = stage >= 2;
-  const list =
-    stage >= 3 && def.finalPhaseIntents?.length
-      ? def.finalPhaseIntents
-      : enraged
-        ? def.enragedIntents
-        : def.intents;
-  const useOpening =
-    def.openingIntent &&
-    !s.units[id].openingAttackUsed &&
-    (!def.openingIntent.lowestHpPosition || s.round <= 1);
-  const move =
-    useOpening && regIndex === 0
-      ? def.openingIntent
-      : useOpening && regIndex > 0
-        ? list[(regIndex - 1) % list.length]
-        : s.units[id].openingUsedRound === s.round
-          ? list[Math.max(0, regIndex - 1) % list.length]
-          : list[(Math.max(1, s.round) - 1 + regIndex) % list.length];
-  return scaleIntent({
-    ...move,
-    ...(move.lowestHpPosition
-      ? s.openingTargetSlots?.[id] !== undefined
-        ? { slot: s.openingTargetSlots[id] }
-        : {
-            slot: s.formation
-              .slice(0, 3)
-              .reduce(
-                (lowest, id, slot) =>
-                  s.units[id]?.hp > 0 &&
-                  (lowest < 0 || s.units[id].hp < s.units[s.formation[lowest]].hp)
-                    ? slot
-                    : lowest,
-                -1,
-              ),
-          }
-      : {}),
-    ...(s.enemyIntentSlots?.[id] !== undefined ? { slot: s.enemyIntentSlots[id] } : {}),
-    enraged: !!enraged,
-  });
-}
-export function enemyIntents(s, id) {
-  const count = enemyActionsCount(s, id);
-  return Array.from({ length: count }, (_, actionIndex) => intent(s, id, actionIndex));
-}
-export function enemyTimeline(s, extraSlow = {}) {
-  if (s.phase === 'opening') return [null];
-  const enemies = livingEnemies(s),
-    entries = enemies.map((e, i) => {
-      const unit = s.units[e.id];
-      const stage =
-        unit?.bossStage || (Array.isArray(e.overlordPhases) ? overlordTargetStage(unit, e) : 1);
-      const chargingStage3 = Boolean(e.overlord && unit?.chargingMove && stage >= 3);
-      const baseSpeed = chargingStage3 ? Math.max(1, e.speed - 1) : e.speed;
-      return {
-        def: e,
-        id: e.id,
-        count: enemyActionsCount(s, e.id),
-        fixedFirst: Boolean(e.fixedFirstSlot),
-        speed:
-          e.tactic?.mode === 'ares' && aresDecision(s, e.id, e).priority
-            ? 999
-            : Math.max(1, baseSpeed - (unit.buffs.slow || 0) - (extraSlow[e.id] || 0)),
-        tie:
-          e.tactic?.mode === 'moon-tree'
-            ? { crown: 2, eye: 1, root: 0 }[e.tactic.part]
-            : (i * 17 + s.seed + s.round * 11) % 31,
-      };
-    }),
-    totalEnemyActions = entries.reduce((sum, entry) => sum + entry.count, 0),
-    length = 3 + totalEnemyActions,
-    slots = Array(length).fill(null);
-  let lockedFrontCount = 0;
-  for (const entry of entries) {
-    if (!entry.fixedFirst) continue;
-    while (lockedFrontCount < length && slots[lockedFrontCount]) lockedFrontCount++;
-    if (lockedFrontCount < length) slots[lockedFrontCount++] = entry.id;
-  }
-  const minSlot = lockedFrontCount;
-  const actions = [];
-  for (const entry of entries) {
-    const regularCount = Math.max(0, entry.count - (entry.fixedFirst ? 1 : 0));
-    if (!regularCount) continue;
-    const speed = entry.speed === 999 ? length + 1 : entry.speed;
-    if (regularCount === 1 || entry.def.splitActions === false) {
-      const desired = Math.max(minSlot, Math.min(length - 1, length - speed));
-      for (let actionIndex = 0; actionIndex < regularCount; actionIndex++) {
-        actions.push({
-          id: entry.id,
-          speed,
-          tie: entry.tie,
-          actionIndex: actionIndex + (entry.fixedFirst ? 1 : 0),
-          desired,
-        });
-      }
-    } else {
-      const first = Math.max(
-        minSlot,
-        Math.min(length - regularCount, length - speed - (regularCount - 1)),
-      );
-      const span = length - 1 - first;
-      for (let actionIndex = 0; actionIndex < regularCount; actionIndex++) {
-        const desired =
-          regularCount === 2 && actionIndex === 1
-            ? Math.min(length - 1, first + Math.min(3, span))
-            : Math.min(
-                length - 1,
-                first + Math.round((actionIndex * span) / Math.max(1, regularCount - 1)),
-              );
-        actions.push({
-          id: entry.id,
-          speed,
-          tie: entry.tie,
-          actionIndex: actionIndex + (entry.fixedFirst ? 1 : 0),
-          desired,
-        });
-      }
-    }
-  }
-  actions.sort((a, b) => b.speed - a.speed || a.tie - b.tie || a.actionIndex - b.actionIndex);
-  for (const item of actions) {
-    let at = item.desired;
-    while (at < length && slots[at]) at++;
-    if (at === length) {
-      at = item.desired - 1;
-      while (at >= minSlot && slots[at]) at--;
-      if (at < minSlot) {
-        at = length - 1;
-        while (at >= minSlot && slots[at]) at--;
-      }
-    }
-    if (at >= minSlot) slots[at] = item.id;
-  }
-  return slots;
-}
-export function makeReposition(a, b, start) {
-  return {
-    id: globalThis.crypto?.randomUUID?.() || Math.random().toString(36),
-    kind: 'reposition',
-    a,
-    b,
-    start,
-    ap: 1,
-  };
-}
-export function makeAction(s, actor, skill, target, start) {
-  const a = abilityFor(s, actor, skill);
-  if (!a) throw Error('Unknown ability');
-  return {
-    id: globalThis.crypto?.randomUUID?.() || Math.random().toString(36),
-    actor,
-    skill,
-    target,
-    start,
-    ap: a.ap,
-    kind: 'skill',
-  };
-}
-export function makeItem(item, target, start) {
-  return {
-    id: globalThis.crypto?.randomUUID?.() || Math.random().toString(36),
-    kind: 'item',
-    item,
-    target,
-    start,
-    ap: 1,
-  };
-}
-export function makeSwap(incoming, slot, start) {
-  return {
-    id: globalThis.crypto?.randomUUID?.() || Math.random().toString(36),
-    kind: 'swap',
-    incoming,
-    slot,
-    start,
-    ap: 1,
-  };
-}
-export function makeEngage(actor, start) {
-  return { id: globalThis.crypto.randomUUID(), kind: 'engage', actor, start, ap: 1 };
-}
 function simulate(s, plan, slots) {
   const definitions = definitionsFor(s),
     heroes = heroesFor(s);
   const work = clone(s),
-    frontAtStart = new Set(front(s)),
     rearAtStart = new Set(rear(s)),
     movedToFront = new Set(),
     events = [],
@@ -516,8 +176,17 @@ function simulate(s, plan, slots) {
   const valid = [];
   for (const a of sorted) {
     let error = '';
-    if (!Number.isInteger(a.start) || a.start < 0 || a.start + a.ap > slots.length)
-      error = '没有足够的连续时间格';
+    if (
+      !Number.isSafeInteger(a.start) ||
+      a.start < 0 ||
+      !Number.isSafeInteger(a.ap) ||
+      a.ap < 1 ||
+      a.start > slots.length ||
+      a.ap > slots.length - a.start
+    ) {
+      invalid.push({ id: a.id, message: '没有足够的连续时间格' });
+      continue;
+    }
     for (let i = a.start; i < a.start + a.ap; i++) {
       if (slots[i]) error = '与敌人行动重叠';
       if (usedSlots.has(i)) error = '与其他行动重叠';
@@ -541,7 +210,9 @@ function simulate(s, plan, slots) {
   let at = -1,
     currentLogs = [],
     currentStatusTriggers = [],
+    currentStatusApplications = [],
     currentProcs = [],
+    procSource = null,
     attackHits = null,
     attackInjuries = null,
     blindMiss = null;
@@ -556,13 +227,16 @@ function simulate(s, plan, slots) {
         if (
           rule.mode !== 'event' ||
           (rule.event !== event && rule.event !== 'conditionStart') ||
-          !conditionsMet(work, hero.id, rule.conditions, { target: detail.targets?.[0] }) ||
-          (work.procUses[key] || 0) >= rule.limit
+          !conditionsMet(work, hero.id, rule.conditions, {
+            target: detail.targets?.[0],
+            allowDefeatedTarget: event === 'kill',
+          }) ||
+          (!ruleHasUnlimitedUses(rule) && (work.procUses[key] || 0) >= rule.limit)
         )
           continue;
         const targets = triggerTargets(work, hero.id, rule.target, detail);
         if (!targets.length) continue;
-        work.procUses[key] = (work.procUses[key] || 0) + 1;
+        if (!ruleHasUnlimitedUses(rule)) work.procUses[key] = (work.procUses[key] || 0) + 1;
         currentLogs.push(`${hero.name} · ${rule.name}`);
         currentProcs.push({
           owner: hero.id,
@@ -570,7 +244,13 @@ function simulate(s, plan, slots) {
           name: rule.name,
           equipment: rule.key.startsWith('equipment:'),
         });
-        effects(hero.id, targets, rule.effects, true);
+        const previousSource = procSource;
+        procSource = rule.name;
+        try {
+          effects(hero.id, targets, rule.effects, true);
+        } finally {
+          procSource = previousSource;
+        }
       }
     }
   }
@@ -589,7 +269,7 @@ function simulate(s, plan, slots) {
     if (u.hp <= 0) return 0;
     if (!reduced && effectiveBuff(work, u.id, 'flying')) n = Math.floor(n / 2);
     const before = u.hp;
-    u.hp = Math.max(0, u.hp - n);
+    u.hp = Math.max(work.developerLockHp === true && u.side === 'hero' ? 1 : 0, u.hp - n);
     for (const candidate of Object.values(work.units)) {
       const nextStage = nextBossStage(work, candidate.id, definitions[candidate.id]);
       if (nextStage > 0) {
@@ -604,15 +284,45 @@ function simulate(s, plan, slots) {
   }
   function heal(id, n, generated = false) {
     const u = work.units[id];
-    if (u.hp <= 0) return;
-    const gain = Math.min(n, u.maxHp - u.hp);
+    if (!u || u.hp <= 0) return;
+    if (isPlagueSealed(work, id)) {
+      if (n > 0) currentLogs.push(`${definitions[id].name}受【沉疫封锁】影响，无法回复生命`);
+      return;
+    }
+    const gain = Math.max(0, Math.min(n, u.maxHp - u.hp));
     u.hp += gain;
     if (gain) {
       currentLogs.push(`${definitions[id].name}回复${gain}生命`);
       if (!generated) trigger('healed', id, { targets: [id] });
     }
   }
-  function applyBuff(actor, id, key, value, generated = false) {
+  function restoreMana(id, n, generated = false) {
+    const unit = work.units[id];
+    if (!unit || unit.hp <= 0) return 0;
+    if (isPlagueSealed(work, id)) {
+      if (n > 0) currentLogs.push(`${definitions[id].name}受【沉疫封锁】影响，无法回复法力`);
+      return 0;
+    }
+    const gained = Math.max(0, Math.min(n, unit.maxMp - unit.mp));
+    unit.mp += gained;
+    if (gained) currentLogs.push(`${definitions[id].name}回复${gained}法力`);
+    if (gained && !generated) trigger('manaRestored', id, { targets: [id] });
+    return gained;
+  }
+  function clearRearPlagueSeals() {
+    if (!work.sinkingPlague) return;
+    work.sinkingPlague.frontStreak ||= {};
+    work.sinkingPlague.sealed ||= {};
+    for (const id of rear(work)) {
+      if (!id) continue;
+      work.sinkingPlague.frontStreak[id] = 0;
+      if (work.sinkingPlague.sealed[id]) {
+        delete work.sinkingPlague.sealed[id];
+        currentLogs.push(`${definitions[id].name}退回后场，【沉疫封锁】立刻解除！`);
+      }
+    }
+  }
+  function applyBuff(actor, id, key, value, generated = false, source = procSource) {
     const unit = work.units[id];
     if (!unit || unit.hp <= 0 || mechanics.reflect(actor, id, key, value)) return;
     if (
@@ -634,6 +344,9 @@ function simulate(s, plan, slots) {
     if (POSITIVE_BUFFS.includes(key) && unit.buffs[key] > before)
       companions.gain(id, { type: 'buff', buff: key, value: unit.buffs[key] - before });
     const gained = unit.buffs[key] - before;
+    if (gained > 0 && NEGATIVE_STATUSES.includes(key) && !negativeImmune(work, id)) {
+      currentStatusApplications.push({ actor, target: id, buff: key, value: gained, source });
+    }
     const hasMovableSlot = slots.some(
       (slotId, slotIndex) =>
         slotId === id && slotIndex > at && !(slotIndex === 0 && definitions[id]?.fixedFirstSlot),
@@ -650,6 +363,7 @@ function simulate(s, plan, slots) {
   const mechanics = createEmblemMechanics(work, definitions, {
     lose,
     heal,
+    restoreMana,
     buff: applyBuff,
     log: (text) => currentLogs.push(text),
     damage: (actor, target, value) =>
@@ -659,6 +373,8 @@ function simulate(s, plan, slots) {
     log: (text) => currentLogs.push(text),
     effect: (id, effect) => effects(id, [id], [effect], true),
     basicAttack: counterAttack,
+    heal: (id, amount) => heal(id, amount, true),
+    restoreMana: (id, amount) => restoreMana(id, amount, true),
     record,
   });
   const guests = createTownGuestMechanics(work, definitions, {
@@ -666,18 +382,53 @@ function simulate(s, plan, slots) {
     log: (text) => currentLogs.push(text),
   });
   work.revealedWeaknesses = mergeRevealedWeaknessMap({}, work.revealedWeaknesses);
+  const isBreakerCombined = (actorId) =>
+    Boolean(
+      actorId &&
+      work.units[actorId]?.hp > 0 &&
+      work.units[actorId]?.combined > 0 &&
+      definitions[actorId]?.emblemId === BREAKER_EMBLEM_ID,
+    );
+  const grantShield = (unitId, baseValue) => {
+    const unit = work.units[unitId];
+    if (!unit || unit.hp <= 0) return false;
+    if (isPlagueSealed(work, unitId)) {
+      if (baseValue > 0)
+        currentLogs.push(`${definitions[unitId].name}受【沉疫封锁】影响，无法获得护盾`);
+      return false;
+    }
+    const n = applyGuardShield(baseValue, effectiveBuff(work, unitId, 'guard'));
+    unit.block += n;
+    companions.gain(unitId, { type: 'shield', value: n });
+    currentLogs.push(`${definitions[unitId].name}获得${n}护盾`);
+    return true;
+  };
+  const grantFrontBreakerShield = (actorId, reason) => {
+    for (const fid of front(work)) {
+      if (work.units[fid]?.hp > 0) grantShield(fid, 6);
+    }
+    currentLogs.push(
+      `${definitions[actorId]?.name || actorId} · 破壳共鸣：${reason}，全前排获得6护盾`,
+    );
+  };
   function applyBreakImpact(targetId, damageType, actorId) {
-    if (!isDamageType(damageType)) return;
+    const breakerActive = isBreakerCombined(actorId);
+    if (!isDamageType(damageType) && !breakerActive) return;
     const targetUnit = work.units[targetId];
     if (!targetUnit || targetUnit.side !== 'enemy') return;
     if (targetUnit.hp <= 0 || targetUnit.broken || !targetUnit.breakWindow?.active) return;
-    const delta = breakImpactDelta(targetUnit.breakWindow, damageType);
+    const baseDelta = isDamageType(damageType)
+      ? breakImpactDelta(targetUnit.breakWindow, damageType)
+      : 0;
+    const delta = baseDelta + (breakerActive ? 1 : 0);
     if (delta <= 0) return;
-    const spKey = targetUnit.speciesKey || speciesKeyOf(definitions[targetId] || targetId);
-    if (spKey) {
-      const existing = work.revealedWeaknesses[spKey] || [];
-      if (!existing.includes(damageType)) {
-        work.revealedWeaknesses[spKey] = [...existing, damageType];
+    if (baseDelta > 0 && isDamageType(damageType)) {
+      const spKey = targetUnit.speciesKey || speciesKeyOf(definitions[targetId] || targetId);
+      if (spKey) {
+        const existing = work.revealedWeaknesses[spKey] || [];
+        if (!existing.includes(damageType)) {
+          work.revealedWeaknesses[spKey] = [...existing, damageType];
+        }
       }
     }
     targetUnit.breakWindow.current = Math.max(0, targetUnit.breakWindow.current - delta);
@@ -691,6 +442,7 @@ function simulate(s, plan, slots) {
       currentLogs.push(
         `${definitions[actorId]?.name || ''}击破了${definitions[targetId].name}的破绽！本回合后续行动全部打断，陷入破防失衡（本回合受伤+50%）！`,
       );
+      if (breakerActive) grantFrontBreakerShield(actorId, '触发破防');
     }
   }
   function effects(
@@ -707,31 +459,19 @@ function simulate(s, plan, slots) {
     let consumedMark = false;
     const allowed = (effect, id) =>
       !effect.when || conditionsMet(work, actor, [effect.when], { target: id, mark: markSnapshot });
-    const grantShield = (unitId, baseValue) => {
-      const unit = work.units[unitId];
-      if (!unit || unit.hp <= 0) return false;
-      const n = applyGuardShield(baseValue, effectiveBuff(work, unitId, 'guard'));
-      unit.block += n;
-      companions.gain(unitId, { type: 'shield', value: n });
-      currentLogs.push(`${definitions[unitId].name}获得${n}护盾`);
-      return true;
-    };
     for (const eff of list || []) {
       const value = (eff.value || 0) + (eff.perMark || 0) * markSnapshot;
       let applied = false;
       if (eff.type === 'selfHeal') {
         if (!allowed(eff, actor)) continue;
-        heal(actor, value + bonus, generated);
+        heal(actor, value, generated);
         consumedMark ||= eff.consumeMark === true;
         continue;
       }
       if (eff.type === 'selfMana') {
         const unit = work.units[actor];
-        if (unit.hp <= 0 || !allowed(eff, actor)) continue;
-        const gained = Math.min(value, unit.maxMp - unit.mp);
-        unit.mp += gained;
-        if (gained) currentLogs.push(`${definitions[actor].name}回复${gained}法力`);
-        if (gained && !generated) trigger('manaRestored', actor, { targets: [actor] });
+        if (!unit || unit.hp <= 0 || !allowed(eff, actor)) continue;
+        restoreMana(actor, value, generated);
         consumedMark ||= eff.consumeMark === true;
         continue;
       }
@@ -768,12 +508,13 @@ function simulate(s, plan, slots) {
         if (!u || u.hp <= 0 || !allowed(eff, id)) continue;
         applied = true;
         if (eff.type === 'damage') {
-          if (!generated && attackHits && u.side === 'enemy') attackHits.add(id);
           const strength = actor && !eff.flat ? effectiveBuff(work, actor, 'strength') : 0;
           let n = applyStrengthBonus(value + bonus, strength);
           if (work.units[actor]?.side === 'enemy')
             n = Math.max(1, Math.round(n * (work.enemyDamageScale || 1)));
           if (!eff.flat && actor) n = applyWeakReduction(n, effectiveBuff(work, actor, 'weak'));
+          if (!eff.flat && actor && n > 0 && effectiveBuff(work, actor, 'balance'))
+            n = Math.max(1, Math.floor((n * 85) / 100));
           if (!eff.flat) n = applyVulnerableBonus(n, effectiveBuff(work, id, 'vulnerable'));
           if (!eff.flat && u.broken) n = Math.round(n * 1.5);
           if (split) {
@@ -785,11 +526,25 @@ function simulate(s, plan, slots) {
           n = applyIronReduction(n, effectiveBuff(work, id, 'iron'));
           const missedByBlind = blindMiss?.actor === actor && blindMiss.target === id;
           if (missedByBlind) n = 0;
-          const absorbed = Math.min(u.block, n);
-          u.block -= absorbed;
-          const damage = n - absorbed;
+          if (!generated && !missedByBlind && attackHits && u.side === 'enemy') attackHits.add(id);
+          const breakerActive = !generated && u.side === 'enemy' && isBreakerCombined(actor);
+          const hadShield = u.block > 0;
+          let absorbed;
+          let damage;
+          if (breakerActive && hadShield && n > 0) {
+            absorbed = Math.min(u.block, n * 2);
+            u.block -= absorbed;
+            damage = Math.max(0, n - Math.ceil(absorbed / 2));
+          } else {
+            absorbed = Math.min(u.block, n);
+            u.block -= absorbed;
+            damage = n - absorbed;
+          }
           const lost = lose(u, damage, '攻击', true);
-          if (!generated && !missedByBlind && damageType) {
+          if (breakerActive && hadShield && u.block === 0) {
+            grantFrontBreakerShield(actor, '击破护盾');
+          }
+          if (!generated && !missedByBlind && (damageType || breakerActive)) {
             applyBreakImpact(id, damageType, actor);
           }
           if (lost && u.side === 'enemy' && !generated) attackInjuries?.add(id);
@@ -808,14 +563,11 @@ function simulate(s, plan, slots) {
         if (eff.type === 'shield') grantShield(id, value);
         if (eff.type === 'heal') {
           const recovery = eff.maxHpPercent ? Math.round(u.maxHp * eff.maxHpPercent) : value;
-          heal(id, recovery + bonus, generated);
+          heal(id, recovery, generated);
         }
         if (eff.type === 'mana') {
           const recovery = eff.maxMpPercent ? Math.round(u.maxMp * eff.maxMpPercent) : value;
-          const gained = Math.min(recovery, u.maxMp - u.mp);
-          u.mp += gained;
-          currentLogs.push(`${definitions[id].name}回复${gained}法力`);
-          if (gained && !generated) trigger('manaRestored', id, { targets: [id] });
+          restoreMana(id, recovery, generated);
         }
         if (eff.type === 'cleanse') for (const buff of eff.buffs) delete u.buffs[buff];
         if (eff.type === 'buff') applyBuff(actor, id, eff.buff, value, generated);
@@ -891,7 +643,11 @@ function simulate(s, plan, slots) {
     if (es.selfDamage) lose(unit, es.selfDamage, '入场技 · 自身伤害');
     if (unit.hp > 0 && !guests.entry(id, es, outgoing)) {
       if (es.mechanic === 'luo-entry') {
-        unit.block += definitions[id].attack;
+        if (!isPlagueSealed(work, id)) {
+          unit.block += definitions[id].attack;
+        } else {
+          currentLogs.push(`${definitions[id].name}受【沉疫封锁】影响，无法获得护盾`);
+        }
         unit.nextBasicDouble = true;
       } else {
         effects(
@@ -916,7 +672,7 @@ function simulate(s, plan, slots) {
   }
   function counterAttack(actor, target) {
     const unit = work.units[actor];
-    const before = work.units[target].hp;
+    let damage = 0;
     const repeats = unit.buffs.meteor ? 2 : 1;
     const basicDamageType = resolveBasicAttackType(definitions[actor]);
     for (let cast = 0; cast < repeats && unit.hp > 0 && work.units[target].hp > 0; cast++) {
@@ -927,7 +683,9 @@ function simulate(s, plan, slots) {
       }));
       unit.nextBasicDouble = false;
       trigger('beforeAttack', actor, { targets: [target] });
+      if (unit.hp <= 0 || work.units[target].hp <= 0) break;
       attackHits = new Set();
+      const before = work.units[target].hp;
       effects(
         actor,
         [target],
@@ -939,6 +697,7 @@ function simulate(s, plan, slots) {
         work.units[actor]?.mark || 0,
         basicDamageType,
       );
+      damage += Math.max(0, before - work.units[target].hp);
       mechanics.attack(actor, attackHits);
       attackHits = null;
       trigger('afterAttack', actor, { targets: [target] });
@@ -948,9 +707,17 @@ function simulate(s, plan, slots) {
         damageType: basicDamageType,
       });
     }
-    return Math.max(0, before - work.units[target].hp);
+    return damage;
   }
   function record(type, actor, label, targetIds = [], actionId = null, skill = null, detail = {}) {
+    const statusApplications = currentStatusApplications.map((application) => ({
+      ...application,
+      source: application.source || label,
+    }));
+    const statusLogs = statusApplications.map(
+      ({ actor: sourceId, target, buff, value, source }) =>
+        `${definitions[sourceId]?.name || '效果'} · ${source} → ${definitions[target].name}：施加${value}层${BUFFS[buff]?.name || buff}`,
+    );
     events.push({
       type,
       at: ['bossPhase', 'bombDetonate', 'bombDefuse'].includes(type) ? Math.max(0, at) : at,
@@ -960,13 +727,15 @@ function simulate(s, plan, slots) {
       actionId,
       skill,
       ...detail,
-      logs: [...currentLogs],
+      logs: [...currentLogs, ...statusLogs],
       statusTriggers: [...currentStatusTriggers],
+      ...(statusApplications.length ? { statusApplications } : {}),
       procs: [...currentProcs],
       after: clone(work),
     });
     currentLogs = [];
     currentStatusTriggers = [];
+    currentStatusApplications = [];
     currentProcs = [];
     flushBossPhases();
   }
@@ -1097,6 +866,20 @@ function simulate(s, plan, slots) {
   guests.roundStart(slots);
   if (JSON.stringify(work) !== beforeTriggers) record('trigger', null, '装备与被动 · 开始');
   else flushBossPhases();
+  const auxiliaryActions = createAuxiliaryActions({
+    work,
+    definitions,
+    invalid,
+    movedToFront,
+    log: (entry) => currentLogs.push(entry),
+    record,
+    effects,
+    trigger,
+    bleed,
+    clearRearPlagueSeals,
+    triggerEntrySkill,
+    rear,
+  });
   const enemyActionIndex = {};
   for (at = 0; at < slots.length; at++) {
     let a = valid.find((a) => a.start === at);
@@ -1278,21 +1061,22 @@ function simulate(s, plan, slots) {
           work.sinkingPlague = {
             source: enemy,
             ages: [0, 0, 0],
+            frontStreak: {},
+            sealed: {},
             backfieldTurns: {},
             corruptedSlot: null,
+            stage2CorruptTick: 0,
           };
         } else {
           work.sinkingPlague.source = enemy;
+          work.sinkingPlague.frontStreak ||= {};
+          work.sinkingPlague.sealed ||= {};
         }
       }
       if (move.plagueAdd && work.sinkingPlague) {
-        const hitFrontSlots = (move.slots || [move.slot]).filter(
-          (slotIdx) => Number.isInteger(slotIdx) && slotIdx >= 0 && slotIdx < 3,
+        work.sinkingPlague.ages = (work.sinkingPlague.ages || [0, 0, 0]).map(
+          (age) => (age || 0) + move.plagueAdd,
         );
-        for (const slotIdx of hitFrontSlots) {
-          work.sinkingPlague.ages[slotIdx] =
-            (work.sinkingPlague.ages[slotIdx] || 0) + move.plagueAdd;
-        }
       }
       const slowClearedCorrupt = Boolean(
         corruptedSlot !== null &&
@@ -1377,95 +1161,38 @@ function simulate(s, plan, slots) {
           continue;
         }
         const unit = work.units[a.actor],
-          embName = EMBLEMS[definitions[a.actor]?.emblemId]?.emblem?.name || '檀虹羽';
+          emblemId = definitions[a.actor]?.emblemId,
+          embName = EMBLEMS[emblemId]?.emblem?.name || '檀虹羽';
         unit.emblemCharge = 0;
         unit.combined = 3;
         unit.combineSkillUsed = false;
+        if (emblemId === OVERLOAD_EMBLEM_ID) {
+          const baseMaxHp = unit.maxHp;
+          const baseMaxMp = unit.maxMp;
+          unit.maxMp = baseMaxMp * 2;
+          unit.mp = unit.maxMp;
+          unit.overloadEngage = {
+            baseMaxHp,
+            baseMaxMp,
+            gainedMaxMp: baseMaxMp,
+            gainedMaxHp: 0,
+          };
+          currentLogs.push(
+            `${definitions[a.actor].name} · 灵能血装：最大法力翻倍至${unit.maxMp}并回满`,
+          );
+        }
         record('engage', a.actor, `结合 · ${embName}`, [a.actor], a.id);
         if (!a.followUp) continue;
-        a = { ...a, ...a.followUp, kind: 'skill', actor: a.actor };
+        a = {
+          ...a,
+          kind: 'skill',
+          skill: a.followUp.skill,
+          target: a.followUp.target,
+        };
       }
-      if (a.kind === 'item') {
-        const item = ITEMS[a.item];
-        const unit = work.units[a.target];
-        const count = work.items?.[a.item] || 0;
-        const error = !unit || unit.hp <= 0 ? '道具目标已濒死' : count < 1 ? '道具数量不足' : '';
-        if (error) {
-          invalid.push({ id: a.id, message: error });
-          record('invalid', null, error, [], a.id);
-          continue;
-        }
-        work.items[a.item]--;
-        currentLogs.push(`使用${item.name} → ${definitions[a.target].name}（1 AP）`);
-        effects(null, [a.target], item.effects);
-        trigger('itemUsed', null, { targets: [a.target] });
-        record('item', null, item.name, [a.target], a.id, a.item);
-        continue;
-      }
-      if (a.kind === 'reposition') {
-        if (a.a === a.b || ![a.a, a.b].every((x) => Number.isInteger(x) && x >= 0 && x < 6)) {
-          invalid.push({ id: a.id, message: '交换位置无效' });
-          record('invalid', null, '交换位置无效', [], a.id);
-          continue;
-        }
-        const first = work.formation[a.a],
-          second = work.formation[a.b];
-        if (bleed(first)) {
-          record('skip', first, '流血致死 · 换位取消', [], a.id);
-          continue;
-        }
-        [work.formation[a.a], work.formation[a.b]] = [second, first];
-        if (a.a < 3 !== a.b < 3) {
-          for (const [id, destination] of [
-            [first, a.b],
-            [second, a.a],
-          ]) {
-            if (id) {
-              if (destination < 3) movedToFront.add(id);
-              trigger(destination < 3 ? 'enterFront' : 'enterRear', id, { targets: [id] });
-              if (destination < 3)
-                triggerEntrySkill(id, a.id, destination, id === first ? second : first);
-            }
-          }
-        }
-        currentLogs.push(
-          `${definitions[first]?.name || '空位'}与${definitions[second]?.name || '空位'}调整站位（1 AP）`,
-        );
-        record('swap', first || second, '调整站位', [second], a.id);
-        continue;
-      }
-      if (a.kind === 'swap') {
-        const outgoing = work.formation[a.slot],
-          incoming = work.units[a.incoming];
-        if (!incoming || incoming.hp <= 0 || !rear(work).includes(a.incoming)) {
-          invalid.push({ id: a.id, message: '换入角色必须是存活的后场角色' });
-          record('invalid', outgoing, '替换无效', [], a.id);
-          continue;
-        }
-        if (bleed(outgoing || a.incoming)) {
-          record('skip', outgoing || a.incoming, '流血致死 · 替换取消', [], a.id);
-          continue;
-        }
-        const back = work.formation.indexOf(a.incoming);
-        [work.formation[a.slot], work.formation[back]] = [a.incoming, outgoing];
-        movedToFront.add(a.incoming);
-        trigger('enterFront', a.incoming, { targets: [a.incoming] });
-        if (outgoing) trigger('enterRear', outgoing, { targets: [outgoing] });
-        const incDef = definitions[a.incoming];
-        const hasEntry = incoming.entryReady && incDef?.entrySkill;
-        currentLogs.push(
-          hasEntry
-            ? `${incDef.name}换入 · ${incDef.entrySkill.name}`
-            : `${incDef.name}换入${['左', '中', '右'][a.slot]}位，${definitions[outgoing]?.name || '空位'}退到后场`,
-        );
-        record(
-          'swap',
-          a.incoming,
-          hasEntry ? `换入 · ${incDef.entrySkill.name}` : '替换前场',
-          [outgoing],
-          a.id,
-        );
-        triggerEntrySkill(a.incoming, a.id, a.slot, outgoing);
+      const auxiliary = auxiliaryActions[a.kind];
+      if (auxiliary) {
+        auxiliary(a);
         continue;
       }
       const u = work.units[a.actor],
@@ -1476,10 +1203,9 @@ function simulate(s, plan, slots) {
         record('skip', a.actor, '濒死行动取消', [], a.id);
         continue;
       }
-      const isOverloaded =
-        !!u.buffs.overload && a.skill !== 'attack' && EMBLEMS[def.emblemId]?.skill?.id !== a.skill;
-      const mpCost = skill.mp * (isOverloaded ? 2 : 1);
-      const hpCost = (skill.hp || 0) * (isOverloaded ? 2 : 1);
+      const isOverloaded = !!u.buffs.overload && EMBLEMS[def.emblemId]?.skill?.id !== a.skill;
+      const mpCost = skill.mp;
+      const hpCost = skill.hp || 0;
       let error = '';
       if (EMBLEMS[def.emblemId]?.skill?.id === a.skill && (!u.combined || u.combineSkillUsed))
         error = '结合技需要结合状态，且每次结合限用一次';
@@ -1528,15 +1254,18 @@ function simulate(s, plan, slots) {
         u.hp -= hpCost;
         currentLogs.push(`${definitions[a.actor].name}消耗${hpCost}生命`);
       }
+      let savedOverloadBonus = 0;
       if (isOverloaded) {
+        savedOverloadBonus = u.overloadSavedBonus || 0;
+        delete u.overloadSavedBonus;
         delete u.buffs.overload;
-        currentLogs.push(`${definitions[a.actor].name}超限负荷：消耗翻倍`);
+        currentLogs.push(`${definitions[a.actor].name}超限负荷：行动重复生效`);
       }
       u.used++;
       const attack = skill.effects.some((effect) => effect.type === 'damage');
       const attackedEnemy =
         attack && targets.some((id) => work.units[id]?.side === 'enemy' && work.units[id].hp > 0);
-      const repeats = isOverloaded || (a.skill === 'attack' && u.buffs.meteor) ? 2 : 1;
+      const repeats = 1 + (isOverloaded ? 1 : 0) + (a.skill === 'attack' && u.buffs.meteor ? 1 : 0);
       for (let cast = 0; cast < repeats && u.hp > 0; cast++) {
         if (cast && u.buffs.bind) {
           const message = `${def.name}被禁锢，后一次施放跳过`;
@@ -1549,7 +1278,7 @@ function simulate(s, plan, slots) {
         }
         if (cast)
           currentLogs.push(
-            `${def.name} · ${isOverloaded ? '超限负荷：技能额外生效一次' : '流星剑姿：普通攻击额外攻击一次'}`,
+            `${def.name} · ${isOverloaded ? '超限负荷：行动额外生效一次' : '流星剑姿：普通攻击额外攻击一次'}`,
           );
         if (attack) trigger('beforeAttack', a.actor, { targets });
         if (u.hp <= 0) break;
@@ -1561,8 +1290,10 @@ function simulate(s, plan, slots) {
           skill.target === 'enemy' &&
           (!def.emblemId || def.emblemId === 'tan-hongyu');
         const bonus =
-          def.emblemId === OVERLOAD_EMBLEM_ID && a.skill !== 'attack'
-            ? Math.round(mpCost * 0.25)
+          isOverloaded && attack
+            ? u.overloadEngage
+              ? (u.overloadEngage.gainedMaxMp || 0) + (u.overloadEngage.gainedMaxHp || 0)
+              : savedOverloadBonus
             : 0;
         const heroDamageType =
           a.skill === 'attack' ? resolveBasicAttackType(def) : inferDamageType(skill, def);
@@ -1624,6 +1355,7 @@ function simulate(s, plan, slots) {
           const backSlot = rearIncoming ? work.formation.indexOf(rearIncoming) : -1;
           if (frontSlot >= 0 && frontSlot < 3 && backSlot >= 3 && rearIncoming) {
             [work.formation[frontSlot], work.formation[backSlot]] = [rearIncoming, a.actor];
+            clearRearPlagueSeals();
             movedToFront.add(rearIncoming);
             trigger('enterFront', rearIncoming, { targets: [rearIncoming] });
             trigger('enterRear', a.actor, { targets: [a.actor] });
@@ -1650,94 +1382,19 @@ function simulate(s, plan, slots) {
   }
   if (s.phase !== 'opening') {
     at = slots.length;
-    trigger('roundEnd');
-    mechanics.roundEnd();
-    for (const hero of heroes) {
-      const unit = work.units[hero.id];
-      if (!unit || unit.hp <= 0) continue;
-      if (rearAtStart.has(hero.id) && !movedToFront.has(hero.id) && rear(work).includes(hero.id)) {
-        unit.entryReady = true;
-      }
-      if (!hero.emblemId) continue;
-      if (!unit.combined && rear(work).includes(hero.id))
-        unit.emblemCharge = Math.min(6, (unit.emblemCharge || 0) + 2);
-    }
-    record('emblem', null, '纹章 · 充能与结合时限');
-    for (const u of Object.values(work.units)) {
-      const regen = u.hp > 0 ? effectiveBuff(work, u.id, 'regen') : 0;
-      if (regen) heal(u.id, regenHealAmount(u.maxHp, regen));
-    }
-    record('regen', null, '回合末 · 再生先结算');
-    for (const u of Object.values(work.units))
-      if (u.hp > 0 && effectiveBuff(work, u.id, 'poison')) {
-        const value = effectiveBuff(work, u.id, 'poison');
-        lose(u, value, '回合末中毒');
-        currentLogs.push(`${definitions[u.id].name}中毒${value}`);
-        currentStatusTriggers.push({ id: u.id, type: 'poison', value });
-      }
-    record('poison', null, '回合末 · 中毒结算');
-    if (work.sinkingPlague && work.units[work.sinkingPlague.source]?.hp > 0) {
-      const targets = [];
-      const backfieldTurns = { ...(work.sinkingPlague.backfieldTurns || {}) };
-      work.sinkingPlague.ages = work.sinkingPlague.ages.map((age, slot) => {
-        const elapsed = (age || 0) + 1;
-        const id = work.formation[slot];
-        if (work.units[id]?.hp > 0) {
-          backfieldTurns[id] = 0;
-          const value = sinkingPlagueFrontDamage(work, slot, age);
-          lose(work.units[id], value, '沉疫');
-          currentLogs.push(`${definitions[id].name}受到沉疫${value}伤害（第${elapsed}回合）`);
-          currentStatusTriggers.push({ id, type: 'sinkingPlague', value });
-          targets.push(id);
-        }
-        return elapsed;
-      });
-      for (const id of rear(work)) {
-        if (!id || work.units[id]?.hp <= 0) {
-          if (id) backfieldTurns[id] = 0;
-          continue;
-        }
-        if (frontAtStart.has(id) || movedToFront.has(id)) {
-          backfieldTurns[id] = 0;
-          continue;
-        }
-        const turns = (backfieldTurns[id] || 0) + 1;
-        backfieldTurns[id] = turns;
-        const rearValue = sinkingPlagueRearDamage(work, turns);
-        lose(work.units[id], rearValue, '沉疫 · 后场溺蚀');
-        currentLogs.push(
-          `${definitions[id].name}滞留后场第${turns}轮，沉疫深水溺蚀${rearValue}伤害（换入前场可刷新）`,
-        );
-        currentStatusTriggers.push({
-          id,
-          type: 'sinkingPlague',
-          value: rearValue,
-          rearTurns: turns,
-        });
-        targets.push(id);
-      }
-      for (const id of front(work).filter(Boolean)) backfieldTurns[id] = 0;
-      work.sinkingPlague.backfieldTurns = backfieldTurns;
-      const maxFrontAge = Math.max(...work.sinkingPlague.ages, 1);
-      const maxRearTurn = Math.max(0, ...Object.values(backfieldTurns));
-      record('sinkingPlague', work.sinkingPlague.source, '回合末 · 沉疫', targets, null, null, {
-        plagueIntensity: Math.min(1, maxFrontAge * 0.14 + maxRearTurn * 0.24),
-        rearTargets: rear(work).filter((hid) => backfieldTurns[hid] > 0),
-      });
-    }
-    const decay = decayStatuses(work.units);
-    for (const change of decay)
-      currentLogs.push(
-        `${definitions[change.id].name}的${change.buff}从${change.before}层衰减至${change.after}层`,
-      );
-    if (decay.length) record('decay', null, '回合末 · 状态衰减', [], null, null, { decay });
-    for (const unit of Object.values(work.units)) {
-      if (unit.combined) {
-        unit.combined--;
-        if (!unit.combined) unit.combineSkillUsed = false;
-      }
-    }
-    record('emblem', null, '回合末 · 结合时限');
+    resolveBattleRoundEnd(work, {
+      definitions,
+      heroes,
+      rearAtStart,
+      movedToFront,
+      trigger,
+      mechanics,
+      record,
+      heal,
+      lose,
+      log: (entry) => currentLogs.push(entry),
+      statusTrigger: (entry) => currentStatusTriggers.push(entry),
+    });
   }
   for (const u of Object.values(work.units)) delete u.buffs.bind;
   return { final: work, events, invalid, skipped, deaths, slows, slots };
@@ -1854,10 +1511,19 @@ export function advance(result) {
       s.activeAlchemicalBomb = { ...pending, target: targetId };
     }
   }
+  if (s.dragonVeinMeta?.expiredAtNextRoundStart) {
+    delete s.dragonVein;
+    delete s.dragonVeinMeta;
+  }
   syncEnemyBreakWindows(s);
   lockEnemyDecisions(s, definitionsFor(s));
   if (s.sinkingPlague) {
     delete s.sinkingPlague.slowCleansed;
+    const sourceUnit = s.units?.[s.sinkingPlague.source];
+    const stage = sourceUnit?.bossStage || (sourceUnit?.enraged ? 2 : 1);
+    if (stage === 2) {
+      s.sinkingPlague.stage2CorruptTick = (s.sinkingPlague.stage2CorruptTick || 0) + 1;
+    }
     s.sinkingPlague.corruptedSlot = pickCorruptedTimelineSlot(s, enemyTimeline(s));
   }
   return s;
@@ -1902,6 +1568,10 @@ export function newEncounter(spec, prior = null, index = 0, heroDefinitions = {}
         }
       : s.units[h.id];
     if (spec.environment?.bonusMp) units[h.id].maxMp = s.units[h.id].maxMp;
+    for (const [key, value] of Object.entries(spec.initialHeroDebuffs?.[h.id] || {})) {
+      const stacks = statusStacks(key, units[h.id].buffs[key]) + statusStacks(key, value);
+      units[h.id].buffs[key] = statusStacks(key, stacks);
+    }
   }
   for (const id of spec.enemyIds) {
     const d = definition(s, id),
@@ -1972,8 +1642,10 @@ export function campRest(s, recovery = null) {
   for (const hero of heroesFor(s)) {
     const unit = rested.units[hero.id];
     const before = { hp: unit.hp, mp: unit.mp };
-    if (recovery === 'sleep') unit.hp += Math.ceil((unit.maxHp - unit.hp) * REST_LOSS_RECOVERY);
-    if (recovery === 'meal') unit.mp += Math.ceil((unit.maxMp - unit.mp) * REST_LOSS_RECOVERY);
+    if (recovery === 'sleep')
+      unit.hp += Math.ceil(Math.max(0, unit.maxHp - unit.hp) * REST_LOSS_RECOVERY);
+    if (recovery === 'meal')
+      unit.mp += Math.ceil(Math.max(0, unit.maxMp - unit.mp) * REST_LOSS_RECOVERY);
     unit.block = 0;
     unit.buffs = {};
     unit.used = 0;

@@ -10,7 +10,7 @@ import { loadTestPlan } from './testing/plan.mjs';
 import { runBatch } from './testing/batch.mjs';
 import { browserJobs } from './testing/browser-jobs.mjs';
 
-const output = path.join(root, '.runtime/tests');
+const output = path.resolve(root, process.env.DEMO_TEST_REPORT_DIR || '.runtime/tests');
 const require = createRequire(import.meta.url);
 const results = [];
 let inherited = [];

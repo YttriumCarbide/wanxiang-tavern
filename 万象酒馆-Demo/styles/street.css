@@ -1838,3 +1838,120 @@ html[data-atlas-only='true']
   background: rgba(232, 208, 163, 0.92);
   font-size: 11px;
 }
+.street-atlas-walker,
+.city-submap-walker {
+  position: absolute;
+  z-index: 6;
+  width: 34px;
+  height: 40px;
+  transform: translate(-50%, -86%);
+  pointer-events: none;
+  filter: drop-shadow(0 3px 4px rgba(34, 18, 10, 0.45));
+}
+.street-atlas-walker svg,
+.city-submap-walker svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  overflow: visible;
+  transition: transform 0.14s ease;
+}
+.street-atlas-walker[data-facing='left'] svg,
+.city-submap-walker[data-facing='left'] svg {
+  transform: scaleX(-1);
+}
+.walker-shadow {
+  fill: rgba(32, 16, 8, 0.36);
+}
+.walker-ring {
+  fill: none;
+  stroke: #e2b862;
+  stroke-width: 1.6;
+  stroke-dasharray: 4 3;
+  opacity: 0.85;
+}
+.walker-cloak {
+  fill: #7f2d28;
+  stroke: #3c1614;
+  stroke-width: 1.1;
+  transform-origin: 16px 15px;
+}
+.walker-torso {
+  fill: #2d4c49;
+  stroke: #172726;
+  stroke-width: 1.1;
+}
+.walker-hood {
+  fill: #b88a4a;
+  stroke: #462d18;
+  stroke-width: 1.1;
+}
+.walker-face {
+  fill: #f6dfbf;
+}
+.walker-leg-a,
+.walker-leg-b {
+  stroke: #2c201a;
+  stroke-width: 2.6;
+  transform-origin: 18px 25px;
+}
+.walker-arm-a,
+.walker-arm-b {
+  stroke: #4e3b2e;
+  stroke-width: 2.2;
+  transform-origin: 18px 16px;
+}
+.walker-arm-b,
+.walker-leg-b {
+  opacity: 0.78;
+}
+:is(.street-atlas-walker, .city-submap-walker).is-walking .walker-body {
+  animation: walkerBob 0.28s ease-in-out infinite alternate;
+}
+:is(.street-atlas-walker, .city-submap-walker).is-walking .walker-cloak {
+  animation: walkerCloak 0.28s ease-in-out infinite alternate;
+}
+:is(.street-atlas-walker, .city-submap-walker).is-walking .walker-leg-a {
+  animation: walkerLegA 0.28s ease-in-out infinite alternate;
+}
+:is(.street-atlas-walker, .city-submap-walker).is-walking .walker-leg-b {
+  animation: walkerLegB 0.28s ease-in-out infinite alternate;
+}
+:is(.street-atlas-walker, .city-submap-walker).is-walking .walker-arm-a {
+  animation: walkerLegB 0.28s ease-in-out infinite alternate;
+}
+:is(.street-atlas-walker, .city-submap-walker).is-walking .walker-arm-b {
+  animation: walkerLegA 0.28s ease-in-out infinite alternate;
+}
+@keyframes walkerBob {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-2.4px);
+  }
+}
+@keyframes walkerCloak {
+  from {
+    transform: rotate(2deg);
+  }
+  to {
+    transform: rotate(-12deg);
+  }
+}
+@keyframes walkerLegA {
+  from {
+    transform: rotate(-22deg);
+  }
+  to {
+    transform: rotate(24deg);
+  }
+}
+@keyframes walkerLegB {
+  from {
+    transform: rotate(24deg);
+  }
+  to {
+    transform: rotate(-22deg);
+  }
+}

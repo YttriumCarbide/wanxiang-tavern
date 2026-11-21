@@ -333,13 +333,18 @@ export function createDiceStage(context) {
     actionText = '',
     reward = null,
     penalty = null,
+    signal,
   }) {
-    if (!displayCheck) return Promise.resolve();
+    if (!displayCheck || signal?.aborted) return Promise.resolve();
     if (session.ai.generationOptions?.galMode === false) {
       return Promise.resolve();
     }
     return new Promise((resolve) => {
-      activeResolver = resolve;
+      activeResolver = () => {
+        signal?.removeEventListener('abort', closeStage);
+        resolve();
+      };
+      signal?.addEventListener('abort', closeStage, { once: true });
       overlay.dataset.ready = 'false';
       overlay.dataset.style = style;
       overlay.dataset.phase = style === 'free' ? 'inscribe' : 'focus';
@@ -412,9 +417,13 @@ export function createDiceStage(context) {
           effectLine,
           passiveTag,
         });
+        const continueButton = verdictSlot.querySelector('[data-dc-continue]');
+        if (continueButton && document.documentElement.dataset.gameLayout === 'mobile') {
+          overlay.append(continueButton);
+        }
         overlay.dataset.phase = 'result';
         overlay.dataset.ready = 'true';
-        verdictSlot.querySelector('[data-dc-continue]')?.focus({ preventScroll: true });
+        continueButton?.focus({ preventScroll: true });
       };
 
       if (style === 'free') {
@@ -549,8 +558,11 @@ export function createDiceStage(context) {
       member = null,
       claimId = crypto.randomUUID(),
       expedition = null,
+      signal,
+      onSettled,
     } = {},
   ) {
+    if (signal?.aborted) return null;
     const library = session.ai.library;
     const outcome = result?.dcOutcome || null;
     let settledReward = null;
@@ -567,8 +579,14 @@ export function createDiceStage(context) {
           expedition,
         );
       }
-      if (settledReward || settledPenalty) context.generation?.save?.();
     }
+    const receipt = {
+      reward: settledReward,
+      penalty: settledPenalty,
+      ambush: Boolean(outcome?.penalty?.ambush),
+    };
+    if (onSettled) onSettled(receipt);
+    else if (settledReward || settledPenalty) context.generation?.save?.();
 
     const split = result?.dcSplit;
     const actorMember =
@@ -581,6 +599,7 @@ export function createDiceStage(context) {
         ...playOptions,
         onComplete: undefined,
       });
+      if (signal?.aborted) return null;
       const displayCheck = buildDcDisplayCheck({
         library,
         member: actorMember,
@@ -595,7 +614,9 @@ export function createDiceStage(context) {
         actionText,
         reward: settledReward,
         penalty: settledPenalty,
+        signal,
       });
+      if (signal?.aborted) return null;
       if (split.afterText) {
         await context.gal.play(split.displayAfterText || split.afterText, playOptions);
       } else {
@@ -605,11 +626,7 @@ export function createDiceStage(context) {
       await context.gal.play(result.display || result.content, playOptions);
     }
 
-    return {
-      reward: settledReward,
-      penalty: settledPenalty,
-      ambush: Boolean(outcome?.penalty?.ambush),
-    };
+    return signal?.aborted ? null : receipt;
   }
 
   return {

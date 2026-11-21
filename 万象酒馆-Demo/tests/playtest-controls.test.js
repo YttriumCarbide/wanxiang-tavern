@@ -118,13 +118,17 @@ test('equipment availability reads the same condition and scope counter as the e
   assert(!ruleAvailable(state, 'a', rule));
   state.encounter++;
   assert(ruleAvailable(state, 'a', rule));
+  state.formation = [null, null, null, 'a'];
+  assert.equal(ruleAvailable(state, 'a', rule), false);
+  state.formation = ['a'];
+  state.units.a.hp = 0;
+  assert.equal(ruleAvailable(state, 'a', rule), false);
 });
 
-test('cleanup removes inactive migration entries, preserves user prose and strips retired profession', () => {
+test('removing retired profession prose preserves the surrounding setting', () => {
   const prose = '姓名：小雨\n\n职业：旧职业\n旧描述\n\n性格：安静。';
   const cleaned = stripRetiredLore(prose);
-  assert(!cleaned.includes('旧职业'));
-  assert(cleaned.includes('性格：安静。'));
+  assert.equal(cleaned, '姓名：小雨\n\n性格：安静。');
 });
 
 test('generated mana bands are program-owned and new settings omit profession', () => {

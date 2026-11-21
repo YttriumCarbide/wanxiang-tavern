@@ -146,6 +146,8 @@ test('Overlord formations, standOnCard flags, and non-voxel vs 3-tier voxel GLB 
     'ares',
     'radiantWyvern',
     'alchemicalPuppet',
+    'darkscaleWarlord',
+    'banditSyndicateKing',
   ]) {
     assert.equal(DEFINITIONS[id].overlord, true, `${id} must be overlord`);
     assert.equal(DEFINITIONS[id].standOnCard, true, `${id} must stand on card`);
@@ -157,13 +159,15 @@ test('Overlord formations, standOnCard flags, and non-voxel vs 3-tier voxel GLB 
   assert.equal(shouldStandOnCard(DEFINITIONS.mossSlime), false);
 
   const urls = overlordAssetUrls(DEFINITIONS);
-  assert.equal(urls.length, 5);
+  assert.equal(urls.length, 7);
   for (const modelName of [
     'apep-lamb.glb',
     'radiant-wyvern.glb',
     'ares.glb',
     'moon-eye.glb',
     'alchemical-puppet.glb',
+    'darkscale-warlord.glb',
+    'bandit-syndicate-king.glb',
   ]) {
     assert(urls.includes(`./assets/${modelName}`), `Missing overlord URL ${modelName}`);
   }
@@ -221,6 +225,8 @@ test('Overlord formations, standOnCard flags, and non-voxel vs 3-tier voxel GLB 
     'moon-crown.glb',
     'moon-eye.glb',
     'moon-root.glb',
+    'darkscale-warlord.glb',
+    'bandit-syndicate-king.glb',
   ]) {
     const portraitSlug = modelName.replace(/\.glb$/, '');
     const portraitSvg = await readFile(
@@ -238,13 +244,14 @@ test('Overlord formations, standOnCard flags, and non-voxel vs 3-tier voxel GLB 
     assert.equal(info.doc.extras?.voxelBoxes ?? 0, 0, `${modelName}: expected voxelBoxes=0`);
     assert(info.meshes >= 6, `${modelName}: expected >= 6 meshes`);
     assert(info.triangles >= 4000, `${modelName}: expected >= 4000 triangles`);
-    if (modelName !== 'radiant-wyvern.glb') overlordTris.push(info.triangles);
+    if (!['radiant-wyvern.glb', 'bandit-syndicate-king.glb'].includes(modelName))
+      overlordTris.push(info.triangles);
   }
 
   assert.equal(mobTris.length, 21);
   assert.equal(eliteTris.length, 9);
-  assert.equal(bossTris.length, 9);
-  assert.equal(overlordTris.length, 8);
+  assert.equal(bossTris.length, 8);
+  assert.equal(overlordTris.length, 10);
   assert(Math.max(...mobTris) < Math.min(...eliteTris), 'Mobs must have fewer tris than elites');
   assert(
     Math.max(...eliteTris) < Math.min(...bossTris),
@@ -284,7 +291,15 @@ test('buildEnemyArchiveEntries splits 4 enemy tiers and combines 3 Mother Tree p
   assert(buckets.boss.length > 0);
   assert.deepEqual(
     buckets.overlord.map((item) => item.id),
-    ['apepLamb', 'moonTree', 'ares', 'radiantWyvern', 'alchemicalPuppet'],
+    [
+      'apepLamb',
+      'moonTree',
+      'ares',
+      'radiantWyvern',
+      'alchemicalPuppet',
+      'darkscaleWarlord',
+      'banditSyndicateKing',
+    ],
   );
   const moonTree = buckets.overlord.find((item) => item.id === 'moonTree');
   assert.equal(moonTree.name, '母树');

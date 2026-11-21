@@ -1,7 +1,7 @@
 {
   "generator": "image_gen built-in",
   "geometryReference": "assets/exploration/free-scenes-v1/outskirts.png",
-  "styleReference": "assets/exploration/street-hd-v2/center.png",
+  "styleReference": "../建模工具/场景参考/酒馆门前-v2画风.png",
   "prompts": "assets/exploration/free-scenes-hd-v2/prompts.md",
   "assets": [
     {

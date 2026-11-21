@@ -6,11 +6,18 @@
     <title>星隙工坊修改器</title>
     <link rel="stylesheet" href="../styles/workshop.css" />
     <link rel="stylesheet" href="../styles/workshop-editor.css" />
+    <link rel="stylesheet" href="../styles/developer-tools.css" />
   </head>
   <body class="workshop-editor-page">
+    <nav class="developer-tabs" aria-label="修改器">
+      <button type="button" data-modifier-tab="workshop" aria-pressed="true">工坊目录</button>
+      <button type="button" data-modifier-tab="developer" aria-pressed="false">游戏调试</button>
+      <a href="../" target="_blank" rel="noopener">打开游戏</a>
+    </nav>
     <main id="workshop-editor" aria-label="星隙工坊修改器">
       <p role="status">正在读取游戏工坊配置…</p>
     </main>
+    <main id="game-developer-editor" aria-label="游戏调试" hidden></main>
     <script type="module" src="./workshop-editor.mjs"></script>
   </body>
 </html>

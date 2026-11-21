@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import path from 'node:path';
-import { legacySession } from './legacy-session.mjs';
+import { legacySession, finishGalDialogue } from './legacy-session.mjs';
 import { meta as magicCircle } from '../../vendor/pixelfx/fx/arcane/magic-circle-cast.js';
 
 export async function developerModeChecks({ browser, baseURL, output }) {
@@ -256,11 +256,16 @@ export async function developerModeChecks({ browser, baseURL, output }) {
     assert(!firstSlotInfo.text.includes('速度'), firstSlotInfo.text);
     assert(firstSlotInfo.text.includes('定式先制'), firstSlotInfo.text);
 
-    // Commit Round 1 -> Overlord acts first -> locks UI & arms 40s bomb
-    const thrower = await page.locator('[data-unit="alchemicalPuppet"]').boundingBox();
+    // Commit Round 1 -> Overlord acts first -> locks UI & arms 40s bomb on target hero
+    const bombedId = await page.evaluate(
+      () => window.demo.getForecast().events.find((e) => e.bombArmed)?.bombArmed?.target,
+    );
+    assert(bombedId, 'Expected a predicted bomb target in Round 1 forecast');
+    const bombedHero = await page.locator(`[data-unit="${bombedId}"]`).boundingBox();
     await page.locator('#commit').click();
     const castOrigin = await page
       .locator('.pixelfx-canvas[data-effect-id="magic-circle-cast"]')
+      .first()
       .evaluate((canvas, [x, y]) => {
         const bounds = canvas.getBoundingClientRect();
         return {
@@ -270,10 +275,10 @@ export async function developerModeChecks({ browser, baseURL, output }) {
       }, magicCircle.origin);
     assert(
       Math.hypot(
-        castOrigin.x - (thrower.x + thrower.width / 2),
-        castOrigin.y - (thrower.y + thrower.height / 2),
+        castOrigin.x - (bombedHero.x + bombedHero.width / 2),
+        castOrigin.y - (bombedHero.y + bombedHero.height / 2),
       ) < 2,
-      'The base of the casting beam must align with the puppet',
+      'The base of the bomb magic-circle-cast must align with the bombed target hero',
     );
     await page.waitForFunction(
       () => {
@@ -283,6 +288,34 @@ export async function developerModeChecks({ browser, baseURL, output }) {
       null,
       { timeout: 30000 },
     );
+
+    // Illustrated Overlord mechanic tutorial dialog opens after Round 1 & pauses the bomb timer
+    const tutDialog = page.locator('#overlord-tutorial-dialog');
+    await tutDialog.waitFor({ state: 'visible', timeout: 8000 });
+    assert((await tutDialog.locator('#overlord-tutorial-title').innerText()).includes('炼金炸弹'));
+    const portrait = tutDialog.locator('.overlord-tutorial-portrait');
+    assert.equal(await portrait.getAttribute('alt'), '失败的炼金傀偶');
+    const portraitSrc = await portrait.getAttribute('src');
+    assert(portraitSrc?.endsWith('.svg'), portraitSrc);
+    const paused0 = await page
+      .locator('#commit.has-alchemical-bomb .commit-bomb-badge')
+      .textContent();
+    await page.waitForTimeout(350);
+    const paused1 = await page
+      .locator('#commit.has-alchemical-bomb .commit-bomb-badge')
+      .textContent();
+    assert.equal(
+      paused1,
+      paused0,
+      'Bomb countdown must remain paused while tutorial dialog is open',
+    );
+    await page.locator('#overlord-tutorial-close').click();
+    await tutDialog.waitFor({ state: 'hidden', timeout: 5000 });
+
+    const emblemDialogue = page.locator('#gal-stage[data-owner="emblem-dialogue"]');
+    await emblemDialogue.waitFor({ state: 'visible', timeout: 5000 });
+    await finishGalDialogue(page, 'emblem-dialogue');
+
     assert.equal(
       await page.evaluate(() => document.body.classList.contains('overlord-ui-locked')),
       true,
@@ -305,6 +338,19 @@ export async function developerModeChecks({ browser, baseURL, output }) {
     await page
       .locator('[data-unit="alchemicalPuppet"] .enemy-break-rail.is-special')
       .waitFor({ state: 'visible' });
+    assert(
+      (await page.locator('[data-unit="alchemicalPuppet"] .break-ring .break-seg').count()) >= 2,
+    );
+    assert.equal(await page.locator('.break-pip').count(), 0);
+    assert.equal(await page.locator('.enemy-break-rail [title]').count(), 0);
+    const breakTooltips = page.locator('.enemy-break-rail [data-tooltip]');
+    assert((await breakTooltips.count()) >= 1);
+    await breakTooltips.first().hover();
+    await page.locator('#hover-tooltip').waitFor({ state: 'visible' });
+    assert.equal(
+      await page.locator('#hover-tooltip').evaluate((el) => getComputedStyle(el).pointerEvents),
+      'none',
+    );
     assert.equal(
       await page.locator('[data-unit="alchemicalPuppet"] .enemy-weakness-pill.is-major').count(),
       1,
@@ -370,6 +416,7 @@ export async function developerModeChecks({ browser, baseURL, output }) {
       paidRequests: 0,
     };
   } catch (failure) {
+    if (errors.length) failure.message += `\nPage errors: ${errors.join(' | ')}`;
     await page
       .screenshot({ path: path.join(output, 'developer-mode-failure.png') })
       .catch(() => {});

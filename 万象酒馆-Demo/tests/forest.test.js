@@ -258,18 +258,18 @@ test('browser and server send actual forest outline, NPC design and matching mon
       assert(text.includes(FOREST_DUNGEONS[sequence].name));
       assert(text.includes(FOREST_NPCS[0].design));
       if (sequence >= 2) assert(text.includes(FOREST_NPCS[1].design));
-      for (const id of new Set(
+      const encountered = new Set(
         FOREST_ROUTES[sequence].battles.flatMap((battle) => battle.enemyIds),
-      ))
-        if (all.some((enemy) => enemy.id === id))
-          assert(
-            text.includes(monsterNarrativeText(DEFINITIONS[id].description)),
-            JSON.stringify(
-              request.worldInfo.report.find(
-                (entry) => entry.title === '古林怪物图鉴：' + DEFINITIONS[id].name,
-              ),
-            ),
-          );
+      );
+      for (const { id } of all) {
+        const description = monsterNarrativeText(DEFINITIONS[id].description);
+        if (!description) continue;
+        assert.equal(
+          text.includes(description),
+          encountered.has(id),
+          `古林路线 ${sequence + 1} 的怪物设定：${DEFINITIONS[id].name}`,
+        );
+      }
     }
 });
 

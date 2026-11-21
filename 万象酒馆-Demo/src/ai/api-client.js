@@ -1,4 +1,4 @@
-import { REQUEST_TIMEOUT_MS } from './request-policy.js';
+import { REQUEST_TIMEOUT_MS, createRequestScope } from './request-policy.js';
 import { completionURL, validateApiKey } from './compatible.js';
 import { createAntiRouteService } from './anti-route-service.js';
 import { localRequest } from './local-client.js';
@@ -47,12 +47,8 @@ export function createApiClient({ fetchImpl = fetch, timeoutMs = REQUEST_TIMEOUT
     const route =
       /^(generate|models)\/(character|script|chat|quick-chat|summary|creation|map)$/.exec(path);
     if (!route) return local(path, data, options);
-    const controller = new AbortController();
+    const controller = createRequestScope({ signal: options.signal, timeoutMs });
     controllers.add(controller);
-    const cancel = () => controller.abort(options.signal?.reason);
-    options.signal?.addEventListener('abort', cancel, { once: true });
-    if (options.signal?.aborted) cancel();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
     const bounded = { ...options, signal: controller.signal };
     let key = '',
       ticket = null,
@@ -92,8 +88,7 @@ export function createApiClient({ fetchImpl = fetch, timeoutMs = REQUEST_TIMEOUT
       failure.diagnostic = redactDiagnostic(failure.diagnostic, key);
       throw failure;
     } finally {
-      clearTimeout(timer);
-      options.signal?.removeEventListener('abort', cancel);
+      controller.close();
       controllers.delete(controller);
       if (ticket) void local('transport/cancel', { ticket }).catch(() => {});
     }

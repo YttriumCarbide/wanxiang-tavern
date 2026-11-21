@@ -64,7 +64,7 @@ function setTileAvailability(entry, disabled, reason = '') {
 /** Ensure corner utility buttons render crisp line icons without visible text labels. */
 function installCornerIcons({ savesBtn, audioBtn, fullscreenBtn, aiBtn }) {
   if (savesBtn) savesBtn.setAttribute('aria-label', '存档');
-  if (audioBtn) audioBtn.setAttribute('aria-label', '声音设置');
+  if (audioBtn) audioBtn.setAttribute('aria-label', 'BGM 播放与声音设置');
   if (fullscreenBtn && !fullscreenBtn.getAttribute('aria-label'))
     fullscreenBtn.setAttribute('aria-label', '进入全屏');
   if (aiBtn) {
@@ -260,11 +260,15 @@ export function createLedgerSidebar(context) {
   guildBtn.textContent = '冒险者公会';
 
   const archiveGrid = host.querySelector('[data-ledger-archive-grid]');
+  const hiddenActions = document.createElement('div');
+  hiddenActions.hidden = true;
+  hiddenActions.setAttribute('aria-hidden', 'true');
+  for (const legacyBtn of [$('#records-open'), $('#memory-open'), bookshelfBtn].filter(Boolean)) {
+    hiddenActions.append(legacyBtn);
+  }
+  host.append(hiddenActions);
   const archiveTiles = {
-    archives: makeActionTile(archiveGrid, $('#archives-open')),
-    records: makeActionTile(archiveGrid, $('#records-open')),
-    memory: makeActionTile(archiveGrid, $('#memory-open')),
-    bookshelf: makeActionTile(archiveGrid, bookshelfBtn),
+    archives: makeActionTile(archiveGrid, $('#archives-open'), '图鉴·记录·总结·手册'),
     shop: makeActionTile(archiveGrid, shopBtn),
     condenser: makeActionTile(archiveGrid, condenserBtn),
     emblem: makeActionTile(archiveGrid, emblemBtn),
@@ -472,13 +476,7 @@ export function createLedgerSidebar(context) {
           : '打开存档管理';
     }
 
-    setTileAvailability(archiveTiles.archives, false, '');
-    setTileAvailability(archiveTiles.records, false, '');
-
-    const memoryReason = battleOrEventReason || (state.foregroundApiBusy ? '请求中暂缓总结' : '');
-    setTileAvailability(archiveTiles.memory, Boolean(memoryReason), memoryReason);
-
-    setTileAvailability(archiveTiles.bookshelf, false, '');
+    setTileAvailability(archiveTiles.archives, false, '图鉴·记录·总结·手册');
 
     const shopReason = battleOrEventReason || apiReason || (state.dailyBusy ? '外出移动中' : '');
     setTileAvailability(archiveTiles.shop, Boolean(shopReason), shopReason);

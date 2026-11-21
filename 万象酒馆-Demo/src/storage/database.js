@@ -1,5 +1,13 @@
 const DATABASE_NAME = 'wanxiang-tavern-static-v1';
 const STORE = 'records';
+const PREFIX = 'game.';
+const GAME_REVISION = '__game-revision';
+const gameKey = (key) => typeof key === 'string' && key.startsWith(PREFIX);
+
+function withoutGameRevision(records) {
+  records.delete(GAME_REVISION);
+  return records;
+}
 
 function completed(transaction) {
   return new Promise((resolve, reject) => {
@@ -38,27 +46,79 @@ export async function openDatabase({
   });
   connection.onversionchange = () => connection.close();
   const cache = await readRecords(connection);
+  let gameRevision = cache.get(GAME_REVISION) ?? 0;
+  withoutGameRevision(cache);
   return {
     get: (key) => structuredClone(cache.get(key)),
     entries: () => [...cache].map(([key, value]) => [key, structuredClone(value)]),
     async readEntries() {
-      return [...(await readRecords(connection))];
+      return [...withoutGameRevision(await readRecords(connection))];
     },
-    async write(entries, deleted = []) {
+    async write(entries, deleted = [], { guardGame = false, expectedConnection } = {}) {
+      const keys = [...entries.map(([key]) => key), ...deleted];
+      const changesGame = keys.some(gameKey);
       const transaction = connection.transaction(
         STORE,
         'readwrite',
-        entries.some(([key]) => key === 'api.config') ? { durability: 'strict' } : undefined,
+        keys.includes('api.config') ? { durability: 'strict' } : undefined,
       );
       const done = completed(transaction);
       const store = transaction.objectStore(STORE);
-      for (const key of deleted) store.delete(key);
-      for (const [key, value] of entries) store.put(value, key);
-      await done;
+      let failure;
+      let nextRevision;
+      function apply() {
+        try {
+          for (const key of deleted) store.delete(key);
+          for (const [key, value] of entries) store.put(value, key);
+          if (changesGame) store.put(nextRevision, GAME_REVISION);
+        } catch (error) {
+          failure = error;
+          transaction.abort();
+        }
+      }
+      function checkConnection() {
+        if (!expectedConnection) return apply();
+        const request = store.get('api.config');
+        request.onsuccess = () => {
+          try {
+            if (JSON.stringify(request.result) !== JSON.stringify(expectedConnection.value))
+              throw Error('另一游戏页面已修改接口连接，请重新载入后继续。');
+            apply();
+          } catch (error) {
+            failure = error;
+            transaction.abort();
+          }
+        };
+      }
+      if (changesGame || guardGame) {
+        const request = store.get(GAME_REVISION);
+        request.onsuccess = () => {
+          const current = request.result ?? 0;
+          if (guardGame && current !== gameRevision) {
+            failure = Error('另一游戏页面已保存新进度，请重新载入后继续。');
+            transaction.abort();
+            return;
+          }
+          if (changesGame) nextRevision = current + 1;
+          checkConnection();
+        };
+      } else {
+        checkConnection();
+      }
+      await done.catch((reason) => {
+        throw failure ?? reason;
+      });
+      if (changesGame) gameRevision = nextRevision;
       for (const key of deleted) cache.delete(key);
       for (const [key, value] of entries) cache.set(key, structuredClone(value));
     },
     async update(key, transform) {
+      if (gameKey(key)) {
+        const next = transform(structuredClone(cache.get(key)));
+        if (next === undefined) return false;
+        await this.write([[key, next]], [], { guardGame: true });
+        return true;
+      }
       const transaction = connection.transaction(STORE, 'readwrite');
       const done = completed(transaction);
       const store = transaction.objectStore(STORE);
@@ -85,26 +145,54 @@ export async function openDatabase({
 
 /** Small synchronous game ports read a cache; durable writes are ordered and observable. */
 export function createGameStorage(database, onFailure = () => {}) {
-  const prefix = 'game.';
   const values = new Map(
     database
       .entries()
-      .filter(([key]) => key.startsWith(prefix))
-      .map(([key, value]) => [key.slice(prefix.length), value]),
+      .filter(([key]) => gameKey(key))
+      .map(([key, value]) => [key.slice(PREFIX.length), value]),
   );
+  const durableValues = new Map(values);
   let writes = Promise.resolve();
-  let failure = null;
-  function enqueue(operation) {
+  const failures = new Map();
+  let frozen = false;
+  function setItems(entries, deleted = []) {
+    if (frozen) throw Error('正在导入存档，暂时无法保存进度。');
+    const next = new Map(deleted.map((key) => [key, undefined]));
+    for (const [key, value] of entries) next.set(key, String(value));
+    for (const [key, text] of next) {
+      if (text === undefined) values.delete(key);
+      else values.set(key, text);
+    }
     writes = writes
       .catch(() => {})
-      .then(operation)
-      .catch((error) => {
-        failure = error;
-        onFailure(error);
-        throw error;
+      .then(async () => {
+        const changed = [...next].filter(
+          ([key, text]) => durableValues.get(key) !== text || failures.has(key),
+        );
+        if (!changed.length) return;
+        try {
+          await database.write(
+            changed
+              .filter(([, text]) => text !== undefined)
+              .map(([key, text]) => [PREFIX + key, text]),
+            changed.filter(([, text]) => text === undefined).map(([key]) => PREFIX + key),
+            { guardGame: true },
+          );
+          for (const [key, text] of changed) {
+            failures.delete(key);
+            if (text === undefined) durableValues.delete(key);
+            else durableValues.set(key, text);
+          }
+        } catch (error) {
+          for (const [key] of changed) failures.set(key, error);
+          onFailure(error);
+        }
       });
-    // The UI can continue while the failure remains visible and flush() still rejects.
     void writes.catch(() => {});
+  }
+  async function flush() {
+    await writes;
+    if (failures.size) throw failures.values().next().value;
   }
   return {
     get length() {
@@ -112,18 +200,24 @@ export function createGameStorage(database, onFailure = () => {}) {
     },
     key: (index) => [...values.keys()][index] ?? null,
     getItem: (key) => values.get(key) ?? null,
+    setItems,
     setItem(key, value) {
-      const text = String(value);
-      values.set(key, text);
-      enqueue(() => database.write([[prefix + key, text]]));
+      setItems([[key, value]]);
     },
     removeItem(key) {
-      values.delete(key);
-      enqueue(() => database.write([], [prefix + key]));
+      setItems([], [key]);
     },
-    async flush() {
-      await writes;
-      if (failure) throw failure;
+    flush,
+    async replace(operation) {
+      if (frozen) throw Error('正在导入存档。');
+      frozen = true;
+      try {
+        await flush();
+        await operation();
+      } catch (failure) {
+        if (!failure.requiresReload) frozen = false;
+        throw failure;
+      }
     },
   };
 }

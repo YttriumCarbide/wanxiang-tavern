@@ -58,11 +58,22 @@ test('support enemies choose a wounded enemy ally without healing player charact
   state.units.lyria.hp = 5;
   lockEnemyDecisions(state, definitionsFor(state));
   assert.equal(intent(state, 'veilMender').name, '紧急包扎');
+  const healAmount = intent(state, 'veilMender').effects.find(
+    (effect) => effect.type === 'heal',
+  ).value;
   const result = preview(state, []);
-  const heal = result.events.find(
+  assert(result.valid, JSON.stringify(result.invalid));
+  const healIndex = result.events.findIndex(
     (entry) => entry.actor === 'veilMender' && entry.type === 'enemy',
   );
-  assert.equal(heal.after.units.hollowSentry.hp, 22);
+  const heal = result.events[healIndex];
+  assert(heal);
+  const before = result.events[healIndex - 1]?.after || state;
+  assert.equal(
+    heal.after.units.hollowSentry.hp,
+    Math.min(before.units.hollowSentry.maxHp, before.units.hollowSentry.hp + healAmount),
+  );
+  assert.equal(heal.after.units.lyria.hp, before.units.lyria.hp);
   assert.equal(heal.after.units.lyria.hp, 5);
   state.round = 2;
   lockEnemyDecisions(state, definitionsFor(state));
@@ -115,10 +126,22 @@ test('judge locks armor and adjacent positions, while the core repairs only its 
   core.round = 3;
   lockEnemyDecisions(core, definitionsFor(core));
   assert.equal(intent(core, 'returningCore').name, '返光修补');
-  const event = preview(core, []).events.find(
+  const healAmount = intent(core, 'returningCore').effects.find(
+    (effect) => effect.type === 'heal',
+  ).value;
+  const result = preview(core, []);
+  assert(result.valid, JSON.stringify(result.invalid));
+  const eventIndex = result.events.findIndex(
     (entry) => entry.actor === 'returningCore' && entry.type === 'enemy',
   );
-  assert.equal(event.after.units.greyProwler.hp, 17);
+  const event = result.events[eventIndex];
+  assert(event);
+  const before = result.events[eventIndex - 1]?.after || core;
+  assert.equal(
+    event.after.units.greyProwler.hp,
+    Math.min(before.units.greyProwler.maxHp, before.units.greyProwler.hp + healAmount),
+  );
+  assert.equal(event.after.units.aegis.hp, before.units.aegis.hp);
   assert.equal(event.after.units.aegis.hp, core.units.aegis.hp);
 });
 

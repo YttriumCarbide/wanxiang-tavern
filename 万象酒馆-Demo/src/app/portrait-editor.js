@@ -9,6 +9,34 @@ export function createPortraitEditor(context) {
   let request = null;
   let ticket = 0;
   let kind = 'card';
+  let disposed = false;
+  const imports = new Map();
+  async function importFile(file, id, type = 'card') {
+    if (disposed) throw new DOMException('portrait editor disposed', 'AbortError');
+    const key = `${id}:${type}`;
+    imports.get(key)?.abort();
+    const controller = new AbortController();
+    imports.set(key, controller);
+    try {
+      const data = await readFileAsOptimizedImage(
+        file,
+        context.apiClient.request,
+        controller.signal,
+      );
+      if (disposed || imports.get(key) !== controller) return null;
+      context.shell.setCustomPortrait(id, data, type);
+      return data;
+    } finally {
+      if (imports.get(key) === controller) imports.delete(key);
+    }
+  }
+  function cancel() {
+    ticket++;
+    request?.abort();
+    request = null;
+    for (const active of imports.values()) active.abort();
+    imports.clear();
+  }
   const selector = document.createElement('nav');
   selector.className = 'portrait-kind';
   selector.innerHTML =
@@ -72,10 +100,11 @@ export function createPortraitEditor(context) {
     const member = context.session.ai.library.characters.find((entry) => entry.id === heroId);
     if (!member) return;
     const type = kind;
+    const turn = ticket;
     promptButton.disabled = true;
     try {
       const { book } = await context.apiClient.request('worldbooks/tavern-world');
-      if (!dialog.open || member.id !== heroId || type !== kind) return;
+      if (turn !== ticket || !dialog.open || member.id !== heroId || type !== kind) return;
       const entry = Object.values(book.entries).find(
         (item) => item.extensions?.wanxiang?.characterId === member.id,
       );
@@ -87,12 +116,12 @@ export function createPortraitEditor(context) {
       promptOutput.select();
       try {
         await navigator.clipboard.writeText(text);
-        $('#portrait-url-status').textContent = '提示词已复制';
+        if (turn === ticket) $('#portrait-url-status').textContent = '提示词已复制';
       } catch {
-        $('#portrait-url-status').textContent = '提示词已选中，可复制';
+        if (turn === ticket) $('#portrait-url-status').textContent = '提示词已选中，可复制';
       }
     } catch (failure) {
-      $('#portrait-url-status').textContent = failure.message;
+      if (turn === ticket) $('#portrait-url-status').textContent = failure.message;
     } finally {
       promptButton.disabled = false;
     }
@@ -105,7 +134,12 @@ export function createPortraitEditor(context) {
     request = new AbortController();
     upload.disabled = true;
     try {
-      const data = await readFileAsOptimizedImage(local.files[0], context.apiClient.request);
+      const { signal } = request;
+      const data = await readFileAsOptimizedImage(
+        local.files[0],
+        context.apiClient.request,
+        signal,
+      );
       if (turn === ticket && dialog.open) {
         context.shell.setCustomPortrait(id, data, type);
         preview();
@@ -144,18 +178,13 @@ export function createPortraitEditor(context) {
     }
   });
   context.events.on($('#portrait-url-close'), 'click', () => dialog.close());
-  context.events.on(dialog, 'close', () => {
-    ticket++;
-    request?.abort();
-    request = null;
-  });
+  context.events.on(dialog, 'close', cancel);
   context.events.on($('#portrait-url'), 'keydown', (event) => {
     if (event.key === 'Enter') {
       event.preventDefault();
       $('#portrait-url-apply').click();
     }
   });
-  context.events.on(window, 'pagehide', () => request?.abort(), { once: true });
   return {
     open(id) {
       heroId = id;
@@ -170,6 +199,11 @@ export function createPortraitEditor(context) {
       $('#portrait-url-apply').disabled = false;
       if (!dialog.open) dialog.showModal();
       preview();
+    },
+    importFile,
+    dispose() {
+      disposed = true;
+      cancel();
     },
   };
 }

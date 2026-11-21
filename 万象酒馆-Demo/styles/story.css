@@ -267,8 +267,8 @@
   box-shadow: 0 24px 80px #0009;
 }
 #archive-dialog {
-  width: min(1040px, calc(100vw - 36px));
-  height: min(680px, calc(100dvh - 48px));
+  width: min(1120px, calc(100vw - 32px));
+  height: min(700px, calc(100dvh - 44px));
   padding: 0;
   color: #ebe0c8;
   font-family: 'Noto Serif SC', 'Source Han Serif SC', 'Songti SC', Georgia, serif;
@@ -350,6 +350,7 @@
 }
 .archive-tabs {
   display: flex;
+  flex-wrap: wrap;
   gap: 3px;
   padding: 3px;
   border: 1px solid rgba(216, 178, 110, 0.34);
@@ -360,7 +361,9 @@
   border: 1px solid transparent;
   background: transparent;
   color: #cab899;
-  min-width: 62px;
+  min-width: auto;
+  padding: 5px 10px;
+  white-space: nowrap;
   border-radius: 3px;
   cursor: pointer;
 }
@@ -471,34 +474,35 @@
 .archive-enemy-tiers button[aria-pressed='true'] span {
   color: #f0cf88;
 }
-#archive-list {
+#archive-list,
+#records-list,
+#memory-index {
   flex: 1 1 auto;
   padding: 12px 10px 16px;
 }
 #records-list,
+#memory-index,
+.archive-content-col,
 #records-text,
 #archive-list,
-#archive-text {
+#archive-text,
+#memory-pane {
   overflow: auto;
   min-height: 0;
 }
-#records-list button {
-  display: block;
-  width: 100%;
-  margin-bottom: 7px;
-  padding: 12px;
-  text-align: left;
-  line-height: 1.6;
-  font-size: 12px;
-  border-color: transparent;
-  background: transparent;
+.archive-content-col {
+  display: grid;
+  min-height: 0;
+  overflow: hidden;
+  background: radial-gradient(ellipse at 50% 0%, rgba(216, 178, 110, 0.06), transparent 65%);
 }
-#records-list button[aria-pressed='true'] {
-  border-color: #bca16b66;
-  background: #bca16b16;
-  color: #eddbac;
+.archive-content-col > [hidden],
+.archive-index-col > [hidden] {
+  display: none !important;
 }
-#archive-list .skyrim-archive-item {
+#archive-list .skyrim-archive-item,
+#records-list .skyrim-archive-item,
+#memory-index .skyrim-archive-item {
   display: flex;
   align-items: flex-start;
   gap: 8px;
@@ -512,10 +516,14 @@
   text-align: left;
   cursor: pointer;
 }
-#archive-list .skyrim-archive-item:hover {
+#archive-list .skyrim-archive-item:hover,
+#records-list .skyrim-archive-item:hover,
+#memory-index .skyrim-archive-item:hover {
   background: rgba(216, 178, 110, 0.08);
 }
-#archive-list .skyrim-archive-item[aria-pressed='true'] {
+#archive-list .skyrim-archive-item[aria-pressed='true'],
+#records-list .skyrim-archive-item[aria-pressed='true'],
+#memory-index .skyrim-archive-item[aria-pressed='true'] {
   border-color: rgba(216, 178, 110, 0.45);
   background: linear-gradient(90deg, rgba(216, 178, 110, 0.17), rgba(216, 178, 110, 0.03));
   color: #fae8be;
@@ -543,14 +551,73 @@
   color: #ab987a;
   font-size: 11px;
 }
-#records-text {
-  padding: 22px 28px;
-  user-select: text;
-}
-#archive-text {
+#records-text,
+#archive-text,
+#memory-pane {
   padding: 22px 26px 28px;
   user-select: text;
-  background: radial-gradient(ellipse at 50% 0%, rgba(216, 178, 110, 0.06), transparent 65%);
+}
+#memory-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow: hidden;
+}
+.records-folio-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  margin-bottom: 14px;
+  border: 1px solid rgba(216, 178, 110, 0.22);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.025);
+}
+.records-folio-toolbar .records-memory-status {
+  margin: 0 auto 0 0;
+}
+.records-folio-toolbar button {
+  min-height: 30px;
+  padding: 4px 12px;
+  border: 1px solid rgba(216, 178, 110, 0.34);
+  border-radius: 3px;
+  background: rgba(216, 178, 110, 0.08);
+  color: #f3dfb0;
+  font-size: 12px;
+  cursor: pointer;
+}
+.records-folio-toolbar button:hover {
+  background: rgba(216, 178, 110, 0.2);
+}
+.memory-pane-footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(216, 178, 110, 0.24);
+  flex-shrink: 0;
+}
+.manual-folio-summary {
+  margin-bottom: 14px !important;
+}
+.manual-chip-strip {
+  margin-bottom: 14px;
+}
+.manual-rule-card {
+  padding: 12px 14px;
+}
+.manual-rule-copy {
+  display: grid;
+  gap: 5px;
+}
+.manual-rule-copy p {
+  margin: 0;
+  white-space: pre-wrap;
+  color: #cfc5b4;
+  font-size: 13px;
+  line-height: 1.75;
 }
 #archive-dialog .skyrim-folio-head {
   display: grid;
@@ -923,7 +990,7 @@
   gap: 10px;
   margin-top: 20px;
 }
-.is-empty .records-body {
+#archive-dialog.is-empty .records-body {
   grid-template-columns: 1fr;
 }
 .is-empty #records-list,
@@ -967,32 +1034,39 @@
   }
 }
 @media (max-width: 600px) {
-  #journey-records,
   #archive-dialog {
     width: calc(100vw - 24px);
     height: calc(100dvh - 32px);
   }
-  #journey-records > header,
   #archive-dialog > header {
-    padding: 12px 14px;
+    padding: 10px 12px;
     gap: 8px;
   }
-  .records-title h2,
   #archive-dialog .records-title h2 {
-    font-size: 18px;
+    font-size: 16px;
+    white-space: nowrap;
   }
-  .records-title small,
   #archive-dialog .records-title small {
     display: none;
   }
   .records-actions {
     gap: 4px;
+    min-width: 0;
+  }
+  .archive-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    max-width: calc(100vw - 154px);
+    scrollbar-width: none;
+  }
+  .archive-tabs::-webkit-scrollbar {
+    display: none;
   }
   .records-actions button {
-    padding: 6px 8px;
+    padding: 5px 8px;
     min-width: 30px;
+    font-size: 11px;
   }
-  .records-body,
   #archive-dialog .records-body {
     grid-template-columns: 128px minmax(0, 1fr);
   }
@@ -1014,24 +1088,21 @@
     height: 210px;
   }
   #records-text,
-  #archive-text {
+  #archive-text,
+  #memory-pane {
     padding: 14px;
   }
 }
 @media (max-height: 500px) {
-  #journey-records,
   #archive-dialog {
     height: calc(100dvh - 24px);
   }
-  #journey-records > header,
   #archive-dialog > header {
     padding: 10px 20px;
   }
-  .records-title small,
   #archive-dialog .records-title small {
     display: none;
   }
-  .records-title h2,
   #archive-dialog .records-title h2 {
     margin: 0;
     font-size: 20px;

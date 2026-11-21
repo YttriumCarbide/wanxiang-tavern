@@ -3,10 +3,12 @@ import { developerOption, generationEnabled } from '../generation-options.js';
 import { createDialogue } from './dialogue.js';
 import { ARRIVAL_PROSE, EDITH_LESSONS, FIRST_RECRUIT_DIALOGUE } from '../content/edith-guide.js';
 import { newCampaign, learning, guiding } from '../campaign.js';
+import { EQUIPMENT_CATEGORIES, EQUIPMENT_SLOT_ORDER } from '../equipment.js';
 import { html } from '../shared/html.js';
 import { characterSheet } from './character-sheet.js';
 import { query as $ } from './dom.js';
 import { tutorialTasks, tutorialCommitIssue, recordTutorialResult } from '../tutorial-progress.js';
+import { TUTORIAL_GATE } from '../updates/manifest.js';
 import {
   DC_ATTRIBUTES,
   DC_ATTR_BUDGET,
@@ -35,50 +37,162 @@ export function createOnboarding(context) {
     ['skill2', '二技能：名字、动作与效果', 'textarea', 1000],
     ['notes', '其他设定与补充', 'textarea', 1000],
   ];
+  const GENDER_PRESETS = ['男', '女', '中性', '无性别', '双性', '由AI决定'];
+  const PERSONALITY_PRESETS = [
+    '冷静果决',
+    '毒舌护短',
+    '温柔治愈',
+    '玩世不恭',
+    '好奇探索',
+    '偏执求知',
+    '孤高剑意',
+    '幽默话痨',
+  ];
+  const SKILL_STYLE_OPTIONS = [
+    '均衡泛用（由AI发挥）',
+    '爆发强攻',
+    '破盾削韧',
+    '守护护盾',
+    '治疗辅助',
+    '异常状态 / 减益',
+    '反击反制',
+    '法力循环 / 续航',
+    '机动换位 / 控速',
+  ];
+  const renderField = ([key, label, tag, max]) => {
+    const slotNum = key.at(-1);
+    return html`<label
+      class="creation-field ${tag === 'input' ? 'short' : ''} ${key === 'gender' || key === 'personality' ? 'has-chips' : ''}"
+      data-field-key="${key}"
+      ><span>${label}</span>${
+        key === 'skill1' || key === 'skill2'
+          ? html`<div class="creation-skill-controls">
+              <select
+                name="skillType${slotNum}"
+                aria-label="${key === 'skill1' ? '一技能' : '二技能'}类型"
+              >
+                <option value="主动">主动技能</option>
+                <option value="被动">被动技能</option>
+              </select>
+              <select
+                name="skillStyle${slotNum}"
+                aria-label="${key === 'skill1' ? '一技能' : '二技能'}风格"
+              >
+                ${SKILL_STYLE_OPTIONS.map((style) => html`<option value="${style}">${style}</option>`).join('')}
+              </select>
+            </div>`
+          : ''
+      }${
+        tag === 'input'
+          ? html`<input
+              name="${key}"
+              ${key === 'age' ? '' : html`maxlength="${max}"`}
+              ${key === 'name' ? 'required autocomplete="off"' : 'autocomplete="off"'}
+              placeholder="${key === 'gender' ? '可点选预设或自由输入…' : ''}"
+            />`
+          : html`<textarea name="${key}" maxlength="${max}" rows="3"></textarea>`
+      }${
+        key === 'gender'
+          ? html`<div class="creation-chip-row" data-chip-group="gender">
+              ${GENDER_PRESETS.map(
+                (choice) =>
+                  html`<button
+                    type="button"
+                    class="creation-chip"
+                    data-gender-preset="${choice}"
+                    aria-pressed="false"
+                  >
+                    ${choice}
+                  </button>`,
+              ).join('')}
+            </div>`
+          : key === 'personality'
+            ? html`<div class="creation-chip-row" data-chip-group="personality">
+                ${PERSONALITY_PRESETS.map(
+                  (trait) =>
+                    html`<button
+                      type="button"
+                      class="creation-chip"
+                      data-personality-preset="${trait}"
+                      aria-pressed="false"
+                    >
+                      + ${trait}
+                    </button>`,
+                ).join('')}
+              </div>`
+            : ''
+      }</label
+    >`;
+  };
+  const fieldSections = [
+    ['01 · 基础档案', 'CORE DOSSIER', ['name', 'age', 'identity', 'gender']],
+    ['02 · 人物风貌', 'PERSONA & LORE', ['appearance', 'personality', 'history']],
+    ['03 · 战斗构筑', 'COMBAT ARTS', ['attack', 'skill1', 'skill2', 'notes']],
+  ];
+  const emptyReviewMarkup = html`<div class="creation-empty">
+    <span>◇</span>
+    <h2>尚未定稿的旅人</h2>
+    <p>生成后在这里检查主角的设定与技能，确认后才会开启新存档。</p>
+  </div>`;
   const dialog = document.createElement('dialog');
   dialog.id = 'new-game';
   dialog.setAttribute('aria-labelledby', 'new-game-title');
   dialog.innerHTML = html`<header class="creation-heading">
-      <div>
+      <div class="creation-heading-copy">
         <small>WANXIANG / A NEW JOURNEY</small>
         <h1 id="new-game-title">你的故事，从这里开始</h1>
         <p>写下你是谁。角色 API 会保留你的设想，补全设定与战斗技能。</p>
       </div>
-      <button id="creation-close" aria-label="返回当前冒险">×</button>
+      <div class="creation-heading-actions">
+        <div class="creation-toolbar">
+          <button id="creation-api" type="button">配置 API</button>
+          <button id="creation-load" type="button">读取存档</button>
+          <span class="creation-party-note">主角固定出战 · 最多五名同伴</span>
+        </div>
+        <button id="creation-close" type="button" aria-label="返回当前冒险">×</button>
+      </div>
     </header>
-    <div class="creation-toolbar">
-      <button id="creation-api">配置 API 与预设</button><button id="creation-load">读取存档</button
-      ><span>主角固定出战 · 最多五名同伴</span>
-    </div>
     <div class="creation-workspace">
       <form id="creation-form">
+        <div class="creation-pane-head">
+          <small>STEP 01 · 主角创作</small>
+          <span>填写设定并由 AI 润色补全</span>
+        </div>
         <div class="creation-fields">
-          ${fields
+          ${fieldSections
             .map(
-              ([key, label, tag, max]) =>
-                html`<label class="creation-field ${tag === 'input' ? 'short' : ''}"
-                  ><span>${label}</span>${
-                    key === 'skill1' || key === 'skill2'
-                      ? html`<select
-                          name="skillType${key.at(-1)}"
-                          aria-label="${key === 'skill1' ? '一技能' : '二技能'}类型"
-                        >
-                          <option value="主动">主动技能</option>
-                          <option value="被动">被动技能</option>
-                        </select>`
-                      : ''
-                  }${tag === 'input' ? html`<input name="${key}" ${key === 'age' ? '' : html`maxlength="${max}"`} ${key === 'name' ? 'required autocomplete="off"' : ''} />` : html`<textarea name="${key}" maxlength="${max}" rows="3"></textarea>`}</label
-                >`,
+              ([title, sub, keys]) =>
+                html`<section class="creation-section">
+                  <header class="creation-section-head">
+                    <small>${sub}</small>
+                    <h3>${title}</h3>
+                  </header>
+                  <div class="creation-section-grid">
+                    ${keys
+                      .map((k) => fields.find(([key]) => key === k))
+                      .filter(Boolean)
+                      .map(renderField)
+                      .join('')}
+                  </div>
+                </section>`,
             )
             .join('')}
         </div>
-        <p class="creation-hint">
-          姓名必填，其余可以留给 AI 补全。可以写动作和效果设想，无需填写 JSON。
-        </p>
-        <button id="creation-generate" class="primary" type="submit">润色设定并生成主角</button>
-        <button id="creation-cancel" type="button" hidden>取消生成</button>
+        <div class="creation-pane-foot">
+          <p class="creation-hint">
+            姓名必填，其余可以留给 AI 补全。可自由搭配性格标签与技能风格，无需填写 JSON。
+          </p>
+          <div class="creation-form-actions">
+            <button id="creation-generate" class="primary" type="submit">润色设定并生成主角</button>
+            <button id="creation-cancel" type="button" hidden>取消生成</button>
+          </div>
+        </div>
       </form>
       <section class="creation-preview">
+        <div class="creation-pane-head">
+          <small>STEP 02 · 属性与定稿</small>
+          <span>分配六维点数并确认档案</span>
+        </div>
         <div id="creation-dc-allocator" class="creation-dc-allocator" aria-label="六维属性分配">
           <div class="creation-dc-head">
             <span>六维属性加点（${DC_ATTR_MIN}~${DC_ATTR_MAX}）</span>
@@ -92,15 +206,11 @@ export function createOnboarding(context) {
           </div>
           <div class="creation-dc-grid" id="creation-dc-grid"></div>
         </div>
-        <div id="creation-review">
-          <div class="creation-empty">
-            <span>◇</span>
-            <h2>尚未定稿的旅人</h2>
-            <p>生成后在这里检查主角的设定与技能，确认后才会开启新存档。</p>
-          </div>
+        <div id="creation-review">${emptyReviewMarkup}</div>
+        <div class="creation-pane-foot">
+          <p id="creation-status" role="status">接口已就绪，可以填写主角设定。</p>
+          <button id="creation-start" class="primary" disabled>以此身份开始</button>
         </div>
-        <p id="creation-status" role="status">接口与提示词预设已就绪，可以填写主角设定。</p>
-        <button id="creation-start" class="primary" disabled>以此身份开始</button>
       </section>
     </div>`;
   document.body.append(dialog);
@@ -265,7 +375,9 @@ export function createOnboarding(context) {
           crossfire: '精英战 · 一起查看意图',
         }[step] || content.title
       : content.title;
-    $('#tutorial-text').textContent = '';
+    $('#tutorial-text').textContent = ['shop', 'condenser'].includes(step)
+      ? content.lines.join('\n')
+      : '';
     $('#tutorial-action').textContent = content.action || '再听一遍';
     $('#tutorial-action').hidden = false;
     function readyForAction() {
@@ -293,6 +405,7 @@ export function createOnboarding(context) {
       }
       guide.hidden = false;
       highlight(content.focus);
+      context.emblems?.check?.();
     }
     if (shown === step) {
       if (!dialogue.open) readyForAction();
@@ -333,9 +446,9 @@ export function createOnboarding(context) {
       review(hero);
     } else {
       reviewed = null;
-      $('#creation-review').textContent = '填写设定，生成你的主角。';
+      $('#creation-review').innerHTML = emptyReviewMarkup;
       $('#creation-start').disabled = true;
-      $('#creation-status').textContent = '请配置角色 API 与提示词预设，再生成主角。';
+      $('#creation-status').textContent = '请配置角色 API，再生成主角。';
     }
     renderDcAllocator();
   }
@@ -378,6 +491,51 @@ export function createOnboarding(context) {
     dcAttrs[key] = next;
     renderDcAllocator();
   });
+  const creationForm = $('#creation-form');
+  const genderInput = creationForm.elements.namedItem('gender');
+  const personalityInput = creationForm.elements.namedItem('personality');
+  function syncPresetChips() {
+    const genderVal = String(genderInput?.value || '').trim();
+    for (const btn of creationForm.querySelectorAll('[data-gender-preset]')) {
+      const choice = btn.dataset.genderPreset;
+      const active = choice === '由AI决定' ? genderVal === '' : genderVal === choice;
+      btn.setAttribute('aria-pressed', String(active));
+    }
+    const tokens = String(personalityInput?.value || '')
+      .split(/[、,，\s]+/u)
+      .map((item) => item.trim())
+      .filter(Boolean);
+    for (const btn of creationForm.querySelectorAll('[data-personality-preset]')) {
+      const active = tokens.includes(btn.dataset.personalityPreset);
+      btn.setAttribute('aria-pressed', String(active));
+    }
+  }
+  syncPresetChips();
+  events.on(creationForm, 'click', (event) => {
+    const genderBtn = event.target.closest('[data-gender-preset]');
+    if (genderBtn && genderInput) {
+      const choice = genderBtn.dataset.genderPreset;
+      genderInput.value = choice === '由AI决定' ? '' : choice;
+      syncPresetChips();
+      return;
+    }
+    const traitBtn = event.target.closest('[data-personality-preset]');
+    if (traitBtn && personalityInput) {
+      const trait = traitBtn.dataset.personalityPreset;
+      const tokens = String(personalityInput.value || '')
+        .split(/[、,，\n]+/u)
+        .map((item) => item.trim())
+        .filter(Boolean);
+      const next = tokens.includes(trait)
+        ? tokens.filter((item) => item !== trait)
+        : [...tokens, trait];
+      personalityInput.value = next.join('、');
+      syncPresetChips();
+    }
+  });
+  events.on(creationForm, 'input', (event) => {
+    if (event.target === genderInput || event.target === personalityInput) syncPresetChips();
+  });
   events.on($('#creation-form'), 'submit', async (event) => {
     event.preventDefault();
     if (pending || !$('#creation-form').reportValidity()) return;
@@ -398,7 +556,8 @@ export function createOnboarding(context) {
       const attrSummary = DC_ATTRIBUTES.map((a) => `${a.label}${dcAttrs[a.key]}`).join(' / ');
       const brief =
         `六维属性偏好：${attrSummary}。\n` +
-        `技能槽一：${values.get('skillType1')}；技能槽二：${values.get('skillType2')}。共两个技能，普通攻击独立。\n` +
+        `技能槽一：${values.get('skillType1')} · 风格：${values.get('skillStyle1') || '均衡泛用（由AI发挥）'}；` +
+        `技能槽二：${values.get('skillType2')} · 风格：${values.get('skillStyle2') || '均衡泛用（由AI发挥）'}。共两个技能，普通攻击独立。\n` +
         fields
           .map(([key, label]) => `${label}：${String(values.get(key) || '').trim() || '由AI补全'}`)
           .join('\n');
@@ -540,7 +699,7 @@ export function createOnboarding(context) {
       refresh();
       context.ledger?.sync();
     },
-    allowPortal(kind) {
+    allowPortal(kind, { entering = false } = {}) {
       if (
         kind === 'script' &&
         (developerOption(session.ai.generationOptions, 'quickTest') ||
@@ -576,6 +735,16 @@ export function createOnboarding(context) {
                 : '先完成以太结算和首次召唤教学。',
         );
         return false;
+      }
+      if (
+        entering &&
+        kind === 'script' &&
+        state()?.completed &&
+        state().tutorial === 'depart-again' &&
+        !session.journey.selectedNode?.replay
+      ) {
+        const gate = context.contentUpdates?.requestGate(TUTORIAL_GATE, { retry: true });
+        if (gate?.state === 'waiting') return false;
       }
       return true;
     },
@@ -787,9 +956,10 @@ export function createOnboarding(context) {
         return;
       tutorialTasks(state()).equipmentIntro = true;
       context.generation.save();
+      const slots = EQUIPMENT_SLOT_ORDER.map((category) => EQUIPMENT_CATEGORIES[category].label);
       dialogue.show([
         '趁还没动身，先顺手看一眼装备栏吧。平时整备或编排队伍时，只要点一下已经上阵的角色卡就能打开装备页。',
-        '每人能带三件装备，选中包里的物件点上去即可，留空就是卸下。同一件装备只能交给一人带着，属性加成和特殊效果都会带进副本。',
+        `每人有${slots.length}个装备槽，分别是${slots.join('、')}。选择对应类别的装备并确认，选择空位可以卸下。同一件装备只能交给一人带着，属性加成和特殊效果都会带进副本。`,
         '刚才确认过的同伴和站位都已经写进开场剧本了，整备时只换装备、也能看看背包，进副本之后就不能再临时调换。现在包里还空着也没关系，知道入口在哪就行。',
       ]);
     },
@@ -813,6 +983,9 @@ export function createOnboarding(context) {
         return false;
       }
       return true;
+    },
+    isDialogueOpen() {
+      return !!dialogue.open;
     },
     dispose() {
       highlight(null);

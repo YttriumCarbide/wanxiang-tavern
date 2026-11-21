@@ -4,13 +4,23 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildBuiltinWorld } from './build-builtin-world.mjs';
 import { buildAssetCatalog } from './build-asset-catalog.mjs';
+import { buildUpdateManifests } from './build-update-manifests.mjs';
+import { TUTORIAL_GATE } from '../src/updates/manifest.js';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const destination = path.join(root, 'dist');
 
+function releasePath(file) {
+  return path.relative(root, file).replaceAll('\\', '/');
+}
+
 export async function buildStatic() {
+  const plan = JSON.parse(await readFile(path.join(root, '发布资产划分.json'), 'utf8'));
+  const version = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8')).version;
+  const exclusions = plan.staticExcludes.map((pattern) => new RegExp(pattern));
+  const isPublic = (relative) => !exclusions.some((pattern) => pattern.test(relative));
   await buildBuiltinWorld();
-  await buildAssetCatalog();
+  const catalog = await buildAssetCatalog();
   await mkdir(path.join(root, 'vendor/runtime'), { recursive: true });
   const dependencies = {
     tiktoken: 'js-tiktoken/lite',
@@ -46,10 +56,17 @@ export async function buildStatic() {
   for (const directory of ['src', 'styles', 'assets', 'vendor'])
     await cp(path.join(root, directory), path.join(destination, directory), {
       recursive: true,
-      filter: (source) =>
-        path.relative(path.join(root, 'assets'), source).replaceAll('\\', '/') !==
-        'portraits/fan-yuexi.webp',
+      filter: (source) => isPublic(releasePath(source)),
     });
+  const publicCatalog = {
+    ...catalog,
+    files: Object.fromEntries(Object.entries(catalog.files).filter(([file]) => isPublic(file))),
+    characterArt: catalog.characterArt.filter((file) => isPublic(file.replace(/^\.\//, ''))),
+  };
+  await writeFile(
+    path.join(destination, 'assets/asset-catalog.json'),
+    JSON.stringify(publicCatalog, null, 2) + '\n',
+  );
   await mkdir(path.join(destination, 'prompts'));
   for (const directory of ['framework', 'worldbook'])
     await cp(path.join(root, 'prompts', directory), path.join(destination, 'prompts', directory), {
@@ -61,6 +78,17 @@ export async function buildStatic() {
   for (const entry of await readdir(root))
     if (entry.endsWith('.html') || entry === 'service-worker.js')
       await cp(path.join(root, entry), path.join(destination, entry));
+  const indexFile = path.join(destination, 'index.html');
+  const indexPage = await readFile(indexFile, 'utf8');
+  const gate = plan.updates.gates[TUTORIAL_GATE]?.length ? 'required' : 'empty';
+  await writeFile(
+    indexFile,
+    indexPage.replace(
+      /(<meta charset="utf-8" \/>)/,
+      '$1\n    <meta name="wanxiang-update-manifest" content="./manifest.json"' +
+        ` data-version="${version}" data-tutorial-gate="${gate}" />`,
+    ),
+  );
   await writeFile(path.join(destination, '.nojekyll'), '');
   const files = [];
   async function inventory(directory) {
@@ -75,9 +103,10 @@ export async function buildStatic() {
     }
   }
   await inventory(destination);
+  files.push(...(await buildUpdateManifests(destination, version, files, plan)));
   const manifest = {
     app: 'wanxiang-tavern-static',
-    version: JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8')).version,
+    version,
     backend: 'browser',
     privateData: false,
     files,

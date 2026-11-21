@@ -1,32 +1,36 @@
 import { pendingMemories, pendingAdventureMemories, applyMemorySummaries } from '../memory.js';
 import { query as $ } from './dom.js';
 
-/** Manual generation stages editable summaries; only explicit acceptance changes saved context. */
+/** Manual generation stages editable summaries inside #archive-dialog; only explicit acceptance changes saved context. */
 export function createMemory(context) {
   const chatApi = context.apiClient.request;
   const { session, events } = context;
-  const dialog = $('#memory-dialog');
+  const dialog = $('#archive-dialog');
   let page = 0,
     snapshot = [],
     results = new Map(),
     owner = null,
     quickOwner = null,
-    request = null;
+    request = null,
+    activeCardId = null;
   let counts = new Map();
   let autoRequest = null;
   let noticeHost = null;
   let noticeChanged = null;
+
   const automatic = document.createElement('aside');
   automatic.id = 'automatic-memory';
   automatic.hidden = true;
   automatic.innerHTML =
     '<span role="status"></span><button data-summary-retry hidden>重试</button><button data-summary-hide aria-label="收起总结提示">×</button>';
   document.body.append(automatic);
+
   function showNotice(visible) {
     if (noticeHost && automatic.parentElement !== noticeHost) noticeHost.append(automatic);
     automatic.hidden = !visible;
     noticeChanged?.();
   }
+
   async function autoSummarize() {
     if (autoRequest || session.runtime.mode !== 'inn') return;
     const library = session.ai.library;
@@ -41,15 +45,11 @@ export function createMemory(context) {
     async function summarize() {
       while (library === session.ai.library && !session.runtime.disposed) {
         controller.signal.throwIfAborted();
-        const snapshot = pendingAdventureMemories(library).slice(0, 3);
-        if (snapshot.length < 3) break;
+        const chunk = pendingAdventureMemories(library).slice(0, 3);
+        if (chunk.length < 3) break;
         showNotice(false);
-        const plan = await chatApi(
-          'summary/plan',
-          { items: snapshot },
-          { signal: controller.signal },
-        );
-        const byId = new Map(snapshot.map((item) => [item.id, item]));
+        const plan = await chatApi('summary/plan', { items: chunk }, { signal: controller.signal });
+        const byId = new Map(chunk.map((item) => [item.id, item]));
         const items = [];
         for (const batch of plan.batches) {
           const response = await chatApi(
@@ -63,7 +63,7 @@ export function createMemory(context) {
           items.push(...response.items);
         }
         if (library !== session.ai.library || session.runtime.disposed) return;
-        const rollback = applyMemorySummaries(library, [], snapshot, items);
+        const rollback = applyMemorySummaries(library, [], chunk, items);
         try {
           if (!context.generation.save()) throw Error('本地保存失败，原记录保留');
           await context.storage.flush?.();
@@ -88,35 +88,93 @@ export function createMemory(context) {
       if (autoRequest === controller) autoRequest = null;
     }
   }
+
   events.on(automatic.querySelector('[data-summary-retry]'), 'click', () => void autoSummarize());
   events.on(automatic.querySelector('[data-summary-hide]'), 'click', () => {
     showNotice(false);
   });
+
   const status = (text) => {
-    $('#memory-status').textContent = text;
+    const el = $('#memory-status');
+    if (el) el.textContent = text;
   };
+
   function busy(value) {
-    $('#memory-generate').disabled = value || !snapshot.length || results.size === snapshot.length;
-    $('#memory-accept').disabled = value || !snapshot.length || results.size !== snapshot.length;
-    $('#memory-cancel').hidden = !value;
-    $('#memory-prev').disabled = value || page === 0;
-    $('#memory-next').disabled = value || (page + 1) * 30 >= snapshot.length;
-    $('#memory-items')
-      .querySelectorAll('textarea')
-      .forEach((area) => {
-        area.disabled = value;
-      });
+    const gen = $('#memory-generate');
+    const acceptBtn = $('#memory-accept');
+    const cancelBtn = $('#memory-cancel');
+    const prevBtn = $('#memory-prev');
+    const nextBtn = $('#memory-next');
+    const itemsHost = $('#memory-items');
+    if (!gen || !itemsHost) return;
+    gen.disabled = value || !snapshot.length || results.size === snapshot.length;
+    acceptBtn.disabled = value || !snapshot.length || results.size !== snapshot.length;
+    cancelBtn.hidden = !value;
+    prevBtn.disabled = value || page === 0;
+    nextBtn.disabled = value || (page + 1) * 30 >= snapshot.length;
+    itemsHost.querySelectorAll('textarea').forEach((area) => {
+      area.disabled = value;
+    });
   }
+
   function render() {
-    $('#memory-count').textContent = snapshot.length
-      ? `${snapshot.length}条等待总结 · 每个副本一条，每轮聊天一条`
+    const countEl = $('#memory-count');
+    const pageEl = $('#memory-page');
+    const itemsHost = $('#memory-items');
+    const indexHost = $('#memory-index');
+    if (!countEl || !itemsHost) return;
+
+    countEl.textContent = snapshot.length
+      ? `${snapshot.length} 条等待总结 · 每个副本一条，每轮聊天一条`
       : '暂无待总结的完整对话或副本记录';
-    $('#memory-page').textContent = snapshot.length
+    pageEl.textContent = snapshot.length
       ? `${page + 1} / ${Math.ceil(snapshot.length / 30)}`
       : '0 / 0';
-    $('#memory-items').replaceChildren(
-      ...snapshot.slice(page * 30, (page + 1) * 30).map((item) => {
+
+    const slice = snapshot.slice(page * 30, (page + 1) * 30);
+    if (!activeCardId || !slice.some((item) => item.id === activeCardId)) {
+      activeCardId = slice[0]?.id || null;
+    }
+
+    const progressBar = dialog?.querySelector('.archive-codex-progress');
+    if (
+      progressBar &&
+      dialog?.querySelector('[data-archive-tab="memory"]')?.getAttribute('aria-pressed') === 'true'
+    ) {
+      progressBar.hidden = false;
+      progressBar.innerHTML = `<span class="archive-codex-label">记忆总结 · 待处理</span><strong class="archive-codex-count">${snapshot.length} 条</strong>`;
+    }
+
+    if (indexHost) {
+      indexHost.replaceChildren(
+        ...slice.map((item) => {
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'skyrim-archive-item';
+          button.dataset.memoryJump = item.id;
+          button.setAttribute('aria-pressed', String(item.id === activeCardId));
+          const pointer = document.createElement('span');
+          pointer.className = 'skyrim-pointer';
+          pointer.setAttribute('aria-hidden', 'true');
+          pointer.textContent = item.id === activeCardId ? '◆' : '◇';
+          const copy = document.createElement('span');
+          copy.className = 'skyrim-archive-item-copy';
+          const titleEl = document.createElement('strong');
+          titleEl.textContent = item.label;
+          const metaEl = document.createElement('small');
+          const tk = counts.has(item.id) ? `${counts.get(item.id)} TK` : '统计 TK…';
+          metaEl.textContent = `${tk}${results.has(item.id) ? ' · 已生成摘要' : ''}`;
+          copy.append(titleEl, metaEl);
+          button.append(pointer, copy);
+          return button;
+        }),
+      );
+    }
+
+    itemsHost.replaceChildren(
+      ...slice.map((item) => {
         const article = document.createElement('article');
+        article.dataset.memoryArticle = item.id;
         const title = document.createElement('h3');
         title.textContent = item.label;
         const tokens = document.createElement('small');
@@ -138,6 +196,7 @@ export function createMemory(context) {
     );
     busy(false);
   }
+
   function reset() {
     autoRequest?.abort();
     autoRequest = null;
@@ -148,8 +207,10 @@ export function createMemory(context) {
     results = new Map();
     owner = null;
     quickOwner = null;
-    if (dialog.open) dialog.close();
+    activeCardId = null;
+    context.records?.closeIfTab?.('memory');
   }
+
   function unchanged() {
     if (
       session.runtime.disposed ||
@@ -158,18 +219,23 @@ export function createMemory(context) {
     )
       throw Error('存档或本趟闲聊已切换，请重新打开总结界面');
   }
-  async function open() {
-    if (request) return;
+
+  async function syncPanel() {
+    if (request) {
+      render();
+      return;
+    }
     owner = session.ai.library;
     quickOwner = session.ai.chat.quick;
     snapshot = pendingMemories(owner, quickOwner);
     page = 0;
     results = new Map();
     counts = new Map();
+    activeCardId = null;
     status('点击全部总结，处理所有待总结记录。TK为原文参考分词数量。');
     render();
-    if (!dialog.open) dialog.showModal();
     const items = snapshot;
+    if (!items.length) return;
     try {
       for (let offset = 0; offset < items.length; offset += 1000) {
         const batch = items.slice(offset, offset + 1000);
@@ -182,6 +248,11 @@ export function createMemory(context) {
       if (snapshot === items) status(failure.message);
     }
   }
+
+  async function open() {
+    context.records?.openTab?.('memory');
+  }
+
   async function generate() {
     if (request || !snapshot.length) return;
     const controller = new AbortController();
@@ -239,6 +310,7 @@ export function createMemory(context) {
       }
     }
   }
+
   function accept() {
     if (request || results.size !== snapshot.length || !snapshot.length) return;
     try {
@@ -254,32 +326,64 @@ export function createMemory(context) {
       status(failure.message);
     }
   }
-  for (const id of ['memory-open', 'chat-memory-open']) events.on($('#' + id), 'click', open);
-  events.on($('#memory-close'), 'click', () => dialog.close());
-  events.on(dialog, 'close', () => request?.abort());
-  events.on($('#memory-cancel'), 'click', () => request?.abort());
-  events.on($('#memory-generate'), 'click', () => void generate());
-  events.on($('#memory-accept'), 'click', accept);
+
+  for (const id of ['memory-open', 'chat-memory-open']) {
+    const trigger = $('#' + id);
+    if (trigger) events.on(trigger, 'click', open);
+  }
+  if (dialog) events.on(dialog, 'close', () => request?.abort());
+  const cancelBtn = $('#memory-cancel');
+  if (cancelBtn) events.on(cancelBtn, 'click', () => request?.abort());
+  const genBtn = $('#memory-generate');
+  if (genBtn) events.on(genBtn, 'click', () => void generate());
+  const acceptBtn = $('#memory-accept');
+  if (acceptBtn) events.on(acceptBtn, 'click', accept);
   for (const [id, direction] of [
     ['memory-prev', -1],
     ['memory-next', 1],
   ]) {
-    events.on($('#' + id), 'click', () => {
-      page = Math.max(0, Math.min(Math.ceil(snapshot.length / 30) - 1, page + direction));
-      render();
-      $('#memory-items').scrollTop = 0;
+    const btn = $('#' + id);
+    if (btn)
+      events.on(btn, 'click', () => {
+        page = Math.max(0, Math.min(Math.ceil(snapshot.length / 30) - 1, page + direction));
+        render();
+        const pane = $('#memory-pane');
+        if (pane) pane.scrollTop = 0;
+      });
+  }
+  const indexEl = $('#memory-index');
+  if (indexEl) {
+    events.on(indexEl, 'click', (event) => {
+      const btn = event.target.closest('[data-memory-jump]');
+      if (!btn) return;
+      activeCardId = btn.dataset.memoryJump;
+      for (const node of indexEl.querySelectorAll('[data-memory-jump]')) {
+        const isCurrent = node.dataset.memoryJump === activeCardId;
+        node.setAttribute('aria-pressed', String(isCurrent));
+        const pointer = node.querySelector('.skyrim-pointer');
+        if (pointer) pointer.textContent = isCurrent ? '◆' : '◇';
+      }
+      const target = [...document.querySelectorAll('#memory-items article')].find(
+        (el) => el.dataset.memoryArticle === activeCardId,
+      );
+      target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
   }
-  events.on($('#memory-items'), 'input', (event) => {
-    const id = event.target.dataset.memoryId;
-    if (!id) return;
-    if (event.target.value.trim())
-      results.set(id, { ...results.get(id), id, summary: event.target.value });
-    else results.delete(id);
-    busy(false);
-  });
+  const itemsEl = $('#memory-items');
+  if (itemsEl) {
+    events.on(itemsEl, 'input', (event) => {
+      const id = event.target.dataset.memoryId;
+      if (!id) return;
+      if (event.target.value.trim())
+        results.set(id, { ...results.get(id), id, summary: event.target.value });
+      else results.delete(id);
+      busy(false);
+    });
+  }
+
   return {
     open,
+    syncPanel,
     reset,
     autoSummarize,
     setNoticeHost(host, onChange = null) {

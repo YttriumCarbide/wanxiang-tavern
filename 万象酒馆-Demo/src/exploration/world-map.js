@@ -129,13 +129,22 @@ export function createWorldMap({ dialog, events, scene, onTravel }) {
       pointerDownTarget = event.target;
       drag = { x: event.clientX, y: event.clientY, cameraX: camera.x, cameraY: camera.y };
       pinch = null;
-    } else if (pointers.size === 2) {
-      beginPinch();
+    } else {
+      pointerDownOrigin = null;
+      pointerDownTarget = null;
+      if (pointers.size === 2) beginPinch();
     }
   }
 
   function pointerMove(event) {
     if (!pointers.has(event.pointerId)) return;
+    if (
+      pointerDownOrigin &&
+      Math.hypot(event.clientX - pointerDownOrigin.x, event.clientY - pointerDownOrigin.y) >= 7
+    ) {
+      pointerDownOrigin = null;
+      pointerDownTarget = null;
+    }
     pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
     if (pointers.size === 1 && drag) {
       camera.x = drag.cameraX + event.clientX - drag.x;
@@ -165,28 +174,30 @@ export function createWorldMap({ dialog, events, scene, onTravel }) {
     const pin = target.closest('[data-travel-to]');
     const pinId = pin?.dataset.travelTo;
     if (pinId && travel.isAvailable()) {
-      onTravel(pinId);
+      travel.walkTo(pinId);
       return;
     }
     const landmark = target.closest('[data-atlas-landmark]');
     const landmarkId = landmark?.dataset.atlasLandmark;
     if (landmarkId && travel.isAvailable()) {
       if (landmarkId === 'outskirts' && origin === 'outskirts') return;
-      onTravel(landmarkId);
+      travel.walkTo(landmarkId);
       return;
     }
     const label = target.closest('#atlas-silver-crown, #atlas-starbell');
     if (label?.id === 'atlas-silver-crown') {
-      if (travel.isAvailable()) onTravel('road-capital');
+      if (travel.isAvailable()) travel.walkTo('road-capital');
       return;
     }
     if (label?.id === 'atlas-starbell' && origin !== 'outskirts') {
-      if (travel.isAvailable()) onTravel('outskirts');
+      if (travel.isAvailable()) travel.walkTo('outskirts');
     }
   }
 
   function pointerUp(event) {
+    if (!pointers.has(event.pointerId)) return;
     const isClick =
+      event.type === 'pointerup' &&
       pointerDownOrigin &&
       pointers.size === 1 &&
       Math.hypot(event.clientX - pointerDownOrigin.x, event.clientY - pointerDownOrigin.y) < 7;
@@ -221,7 +232,13 @@ export function createWorldMap({ dialog, events, scene, onTravel }) {
   }
 
   function resetInput() {
+    const captured = [...pointers.keys()];
     pointers.clear();
+    for (const id of captured) {
+      if (sheet.hasPointerCapture(id)) sheet.releasePointerCapture(id);
+    }
+    pointerDownOrigin = null;
+    pointerDownTarget = null;
     drag = null;
     pinch = null;
     sheet.classList.remove('dragging');
@@ -305,8 +322,13 @@ export function createWorldMap({ dialog, events, scene, onTravel }) {
 
   return {
     open,
+    dispose() {
+      resetInput();
+      travel.reset();
+    },
     updateTravel: travel.update,
     updateDiscoveries: travel.updateDiscoveries,
     updateWorldState: travel.updateWorldState,
+    resetWalker: travel.resetWalker,
   };
 }

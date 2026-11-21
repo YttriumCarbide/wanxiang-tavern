@@ -2,6 +2,7 @@ import { completionURL, validateApiKey } from './compatible.js';
 import { isVertex, vertexURL } from './vertex.js';
 import { readServiceAccount, serviceAccountBase } from './vertex-service-account.js';
 import { routeSettings } from './anti-route.js';
+import { normalizePromptOptions } from './builtin-prompt.js';
 const randomUUID = () => crypto.randomUUID();
 
 export const DEFAULT_OUTPUT_TOKENS = 32768;
@@ -123,6 +124,7 @@ export function createConnectionStore({ snapshot = {}, initial = {}, save = asyn
   let presets = Array.isArray(snapshot.apiPresets) ? structuredClone(snapshot.apiPresets) : [];
   let writes = Promise.resolve();
   let antiRoute = routeSettings(snapshot.antiRoute);
+  let promptOptions = normalizePromptOptions(snapshot.promptOptions);
   for (const kind of kinds) {
     const value = snapshot.profiles?.[kind] || snapshot[kind];
     if (value)
@@ -152,6 +154,7 @@ export function createConnectionStore({ snapshot = {}, initial = {}, save = asyn
     const value = {
       version: 5,
       antiRoute,
+      promptOptions,
       profiles: Object.fromEntries(
         kinds.map((kind) => [
           kind,
@@ -172,6 +175,19 @@ export function createConnectionStore({ snapshot = {}, initial = {}, save = asyn
     Object.fromEntries(kinds.map((kind) => [kind, publicProfile(effective(kind))]));
   return {
     visible,
+    promptOptions: () => ({ ...promptOptions }),
+    async savePromptOptions(input) {
+      const previous = promptOptions;
+      const next = normalizePromptOptions(input);
+      promptOptions = next;
+      try {
+        await persist();
+      } catch (failure) {
+        if (promptOptions === next) promptOptions = previous;
+        throw failure;
+      }
+      return { ...next };
+    },
     routeSettings: () => ({ ...antiRoute }),
     async saveRouteSettings(input) {
       const previous = antiRoute;

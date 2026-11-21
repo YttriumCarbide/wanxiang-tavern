@@ -9,6 +9,7 @@ import {
 import { IMPERIAL_BRANCH_LEGS } from '../content/imperial-network.js';
 import { ATLAS_PLACES, ATLAS_ROUTES, ATLAS_SILVER_ROAD } from '../content/atlas-geography.js';
 import { edgeExploreKey } from '../skirmishes.js';
+import { animatePathWalk, MAP_WALKER_SVG } from '../destination-map.js';
 
 const STOP_LABELS = Object.freeze({
   outskirts: { city: true },
@@ -29,6 +30,7 @@ const STOP_LABELS = Object.freeze({
   forge: { dungeon: true },
   tide: { dungeon: true },
   'moss-hollow': { dungeon: true },
+  'graystone-quarry': { dungeon: true },
   'border-watch': { dungeon: true },
   'whisper-grove': { dungeon: true },
   'silver-cistern': { dungeon: true },
@@ -58,13 +60,23 @@ export function createAtlasTravel({ dialog, events, scene, onTravel }) {
   let knownLegs = new Set();
   let unlockedDungeons = new Set();
   let skirmishes = {};
+  const originPoint = ATLAS_PLACES[origin]?.point;
+  let walkerAnchor = originPoint ? { x: originPoint[0], y: originPoint[1] } : null;
+  let walking = false;
+  let cancelWalk = null;
+  const walker = document.createElement('div');
+  walker.className = 'street-atlas-walker';
+  walker.setAttribute('aria-hidden', 'true');
+  walker.dataset.facing = 'right';
+  walker.innerHTML = MAP_WALKER_SVG;
+  layer.append(walker);
   const roads = dialog.querySelector('[data-atlas-roads]');
   const edgePaths = [...dialog.querySelectorAll('[data-atlas-edge]')];
 
   function preview() {
     const destination = hovered || focused;
     const plan =
-      available && destination && view?.detail !== 'world'
+      available && destination && destination !== origin && view?.detail !== 'world'
         ? overlandPlan(
             origin,
             destination,
@@ -94,6 +106,7 @@ export function createAtlasTravel({ dialog, events, scene, onTravel }) {
   const DUNGEON_LEVEL_RANGES = Object.freeze({
     mill: 'Lv.1-5',
     'moss-hollow': 'Lv.2-4',
+    'graystone-quarry': 'Lv.5-10',
     'starbell-undercroft': 'Lv.6-8',
     'border-watch': 'Lv.6-8',
     'whisper-grove': 'Lv.10-13',
@@ -180,7 +193,7 @@ export function createAtlasTravel({ dialog, events, scene, onTravel }) {
       if (focused === stop.id) focused = null;
       preview();
     });
-    events.on(button, 'click', () => onTravel(stop.id));
+    events.on(button, 'click', () => walkTo(stop.id));
     return {
       id: stop.id,
       anchor: { x, y },
@@ -298,7 +311,105 @@ export function createAtlasTravel({ dialog, events, scene, onTravel }) {
     for (const { label, anchor } of labels)
       project(label, anchor, view.detail === 'local' && !compact);
     for (const { label, anchor } of roadTags) project(label, anchor, view.detail !== 'world');
+    if (walkerAnchor) project(walker, walkerAnchor, available && view.detail !== 'world');
+    else walker.hidden = true;
     preview();
+  }
+
+  function routeWaypoints(toId) {
+    const discovery = discoveries.find((entry) => entry.id === toId);
+    const plan = overlandPlan(origin, toId, discovery);
+    const stages = plan?.legs || plan?.stages || [];
+    const pts = [];
+    const pushPt = (pair) => {
+      if (!Array.isArray(pair) || pair.length < 2) return;
+      const last = pts.at(-1);
+      if (!last || Math.hypot(pair[0] - last[0], pair[1] - last[1]) > 0.01) {
+        pts.push([pair[0], pair[1]]);
+      }
+    };
+    for (const { from, to } of stages) {
+      const aPt = ATLAS_PLACES[from.id]?.point;
+      const bPt =
+        ATLAS_PLACES[to.id]?.point || discoveries.find((entry) => entry.id === to.id)?.point;
+      if (!aPt || !bPt) continue;
+      pushPt(aPt);
+      if (discovery && to.id === discovery.id) {
+        const cx = aPt[0] + (bPt[0] - aPt[0]) * 0.28 + 3;
+        const cy = aPt[1] + (bPt[1] - aPt[1]) * 0.65 - 2;
+        for (let step = 1; step <= 5; step++) {
+          const t = step / 5;
+          const u = 1 - t;
+          pushPt([
+            u * u * aPt[0] + 2 * u * t * cx + t * t * bPt[0],
+            u * u * aPt[1] + 2 * u * t * cy + t * t * bPt[1],
+          ]);
+        }
+        continue;
+      }
+      const route = ATLAS_ROUTES.find(
+        ([a, b]) => (a === from.id && b === to.id) || (a === to.id && b === from.id),
+      );
+      const bends = Array.isArray(route?.[2])
+        ? route[0] === from.id
+          ? route[2]
+          : [...route[2]].reverse()
+        : [];
+      for (const bend of bends) pushPt(bend);
+      pushPt(bPt);
+    }
+    return pts;
+  }
+
+  function resetWalker() {
+    if (cancelWalk) {
+      cancelWalk();
+      cancelWalk = null;
+    }
+    walking = false;
+    walker.classList.remove('is-walking');
+    const pt = ATLAS_PLACES[origin]?.point;
+    walkerAnchor = pt ? { x: pt[0], y: pt[1] } : null;
+    if (view && walkerAnchor) project(walker, walkerAnchor, available && view.detail !== 'world');
+  }
+
+  function walkTo(toId) {
+    if (!available || !toId || walking) return;
+    if (toId === origin || outingState?.locked) {
+      onTravel(toId);
+      return;
+    }
+    const points = routeWaypoints(toId);
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduced || points.length < 2) {
+      const end = points.at(-1);
+      if (end) walkerAnchor = { x: end[0], y: end[1] };
+      if (view && walkerAnchor) project(walker, walkerAnchor, available && view.detail !== 'world');
+      onTravel(toId);
+      return;
+    }
+    hovered = toId;
+    preview();
+    walking = true;
+    walker.classList.add('is-walking');
+    cancelWalk = animatePathWalk({
+      points,
+      reduced,
+      durationPerUnit: 4.2,
+      minMs: 320,
+      maxMs: 600,
+      onStep(pt, dx) {
+        walkerAnchor = pt;
+        if (Math.abs(dx) > 0.03) walker.dataset.facing = dx < 0 ? 'left' : 'right';
+        if (view) project(walker, walkerAnchor, available && view.detail !== 'world');
+      },
+      onDone() {
+        cancelWalk = null;
+        walking = false;
+        walker.classList.remove('is-walking');
+        onTravel(toId);
+      },
+    });
   }
 
   function update(outing) {
@@ -353,12 +464,16 @@ export function createAtlasTravel({ dialog, events, scene, onTravel }) {
   }
 
   function reset() {
+    resetWalker();
     hovered = null;
     focused = null;
     preview();
   }
 
   function setHovered(id) {
+    if (id && !pins.some((pin) => pin.id === id) && !discoveryPins.some((pin) => pin.id === id)) {
+      id = null;
+    }
     if (hovered === id) return;
     hovered = id;
     preview();
@@ -406,5 +521,7 @@ export function createAtlasTravel({ dialog, events, scene, onTravel }) {
     updateWorldState,
     setHovered,
     isAvailable,
+    walkTo,
+    resetWalker,
   };
 }

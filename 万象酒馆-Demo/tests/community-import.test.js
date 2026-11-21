@@ -3,10 +3,9 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { normalizePromptPreset } from '../src/ai/presets.js';
 import { generationRequest } from '../src/ai/pipeline/prompts.js';
-import { applyRegexScripts, presetRegexScripts } from '../src/ai/regex.js';
 import { presetProcessing } from '../src/ai/pipeline/preset-processing.js';
 
-test('supplied community preset imports, expands active portable layers and applies text regexes without executing HTML', async (t) => {
+test('supplied community preset imports, expands active portable layers without executing scripts', async (t) => {
   let raw;
   try {
     raw = JSON.parse(
@@ -25,9 +24,6 @@ test('supplied community preset imports, expands active portable layers and appl
     preset,
     {
       readText: (file) => readFile(new URL('../prompts/' + file, import.meta.url), 'utf8'),
-      regexScripts: presetRegexScripts(preset),
-      runRegexTasks: async (scripts, tasks) =>
-        tasks.map((task) => applyRegexScripts(task.text, scripts, task.placement, task.options)),
       presetProcessing: presetProcessing(preset),
     },
   );
@@ -40,7 +36,6 @@ test('supplied community preset imports, expands active portable layers and appl
     JSON.stringify({
       layers: preset.prompts.length,
       enabled: preset.prompt_order[0].order.filter((entry) => entry.enabled).length,
-      regex: presetRegexScripts(preset).length,
       warnings,
     }),
   );

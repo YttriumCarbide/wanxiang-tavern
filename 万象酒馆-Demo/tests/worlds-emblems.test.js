@@ -46,7 +46,7 @@ function battle() {
 }
 test('world construction validates mechanics, excludes teammate appearances and only appends expansions', () => {
   const original = world();
-  assert.equal(worldReference().styles.length, 14);
+  assert.equal(worldReference().styles.length, 17);
   assert(
     !worldReference().appearances.some((entry) => entry.portrait === DEFINITIONS.aegis.portrait),
   );
@@ -219,8 +219,10 @@ test('balance sums multi-position damage, shares among three positions and keeps
   state.units[id].buffs.balance = 1;
   const result = preview(state, []);
   assert(result.valid);
-  for (const target of state.formation.slice(0, 3))
-    assert.equal(state.units[target].hp - result.final.units[target].hp, 6);
+  const frontDamages = state.formation
+    .slice(0, 3)
+    .map((target) => state.units[target].hp - result.final.units[target].hp);
+  assert.deepEqual(frontDamages, [5, 5, 4]);
   const attacked = result.events.find((event) => event.type === 'enemy');
   assert.equal(attacked.after.units[state.formation[0]].buffs.weak, 1);
   assert.equal(attacked.after.units[state.formation[1]].buffs.weak, 1);
@@ -229,7 +231,7 @@ test('balance sums multi-position damage, shares among three positions and keeps
   assert(!result.final.units[state.formation[2]].buffs.weak);
   state.formation[1] = null;
   const empty = preview(state, []);
-  assert.equal(state.units[state.formation[0]].hp - empty.final.units[state.formation[0]].hp, 6);
+  assert.equal(state.units[state.formation[0]].hp - empty.final.units[state.formation[0]].hp, 5);
 });
 test('owned emblem and dynamic world survive saves; future script rewrite locks encountered enemy plans', () => {
   const library = newLibrary();
@@ -317,7 +319,7 @@ test('repeated world expansion restores more than thirty enemies and long lore, 
   assert(seen.length <= 12);
 });
 
-test('Overload emblem Mizunatsuki Ran scales stats, doubles next skill cost and casts it twice with MP cost bonus', () => {
+test('Overload emblem Mizunatsuki Ran doubles maxMp on Engage, adds maxHp on damage and adds gained caps to repeated casts without extra cost', () => {
   const w = world();
   const heroDefs = {
     aegis: { ...structuredClone(DEFINITIONS.aegis), emblemId: OVERLOAD_EMBLEM_ID },
@@ -325,19 +327,20 @@ test('Overload emblem Mizunatsuki Ran scales stats, doubles next skill cost and 
   const b = newBattle(w.enemyIds, heroDefs, w.enemyDefinitions);
   const baseMp = DEFINITIONS.aegis.mp;
   const baseHp = DEFINITIONS.aegis.hp;
-  const expectedMp = Math.round(baseMp * 1.5);
-  const expectedHp = Math.round(baseHp + expectedMp * 0.25);
-  assert.equal(b.units.aegis.maxMp, expectedMp);
-  assert.equal(b.units.aegis.maxHp, expectedHp);
+  assert.equal(b.units.aegis.maxMp, baseMp);
+  assert.equal(b.units.aegis.maxHp, baseHp);
   assert.equal(OVERLOAD_SKILL.id, 'emblem-overload');
-  b.units.aegis.combined = 3;
-  const castOverload = makeAction(b, 'aegis', OVERLOAD_SKILL.id, 'aegis', 0);
-  const overloadPreview = preview(b, [castOverload]);
-  assert(overloadPreview.valid);
-  assert.equal(overloadPreview.final.units.aegis.buffs.overload, 1);
 
-  // Overload skill test
-  b.units.aegis.buffs.overload = 1;
+  // Engaging doubles maxMp and refills MP immediately
+  b.units.aegis.mp = 2;
+  b.units.aegis.emblemCharge = 6;
+  const engageResult = preview(b, [{ id: 'eng', kind: 'engage', actor: 'aegis', start: 0, ap: 1 }]);
+  assert(engageResult.valid);
+  const engaged = advance(engageResult);
+  assert.equal(engaged.units.aegis.maxMp, baseMp * 2);
+  assert.equal(engaged.units.aegis.mp, baseMp * 2);
+  assert.equal(engaged.units.aegis.overloadEngage.gainedMaxMp, baseMp);
+
   const testSkill = {
     id: 'test-nuke',
     name: '灵能轰击',
@@ -346,19 +349,35 @@ test('Overload emblem Mizunatsuki Ran scales stats, doubles next skill cost and 
     target: 'enemy',
     effects: [{ type: 'damage', value: 10 }],
   };
-  b.heroDefinitions.aegis.skills = [testSkill];
-  const targetId = b.enemyIds[0];
-  const targetInitialHp = b.units[targetId].hp;
-  const initialMp = b.units.aegis.mp;
+  engaged.heroDefinitions.aegis.limit = 2;
+  engaged.heroDefinitions.aegis.skills = [testSkill];
+  const targetId = engaged.enemyIds[0];
+  engaged.units[targetId].hp = 500;
+  engaged.units[targetId].maxHp = 500;
+  const mpBeforeCast = engaged.units.aegis.mp;
 
-  // mpCost = 4 * 2 = 8. bonus = Math.round(8 * 0.25) = 2.
-  // Each cast does 10 + 2 = 12 damage. Two casts = 24 damage.
-  const action = makeAction(b, 'aegis', 'test-nuke', targetId, 0);
-  const result = preview(b, [action]);
-  assert(result.valid);
-  assert.equal(result.final.units.aegis.mp, initialMp - 8);
-  assert.equal(result.final.units[targetId].hp, targetInitialHp - 24);
+  // Cast emblem-overload then test-nuke: cost stays 4 (not doubled), deals bonus (gainedMaxMp + gainedMaxHp) per cast
+  const ovCast = makeAction(engaged, 'aegis', OVERLOAD_SKILL.id, 'aegis', 0);
+  const nukeCast = makeAction(engaged, 'aegis', 'test-nuke', targetId, 1);
+  const result = preview(engaged, [ovCast, nukeCast]);
+  assert(result.valid, JSON.stringify(result.invalid));
+  assert.equal(result.final.units.aegis.mp, mpBeforeCast - 4);
   assert(!result.final.units.aegis.buffs.overload);
+  const heroEvents = result.events.filter((e) => e.actionId === nukeCast.id && e.type === 'hero');
+  assert.equal(heroEvents.length, 2);
+  assert.equal(
+    500 - heroEvents[0].after.units[targetId].hp,
+    10 + baseMp,
+    'First cast gains gainedMaxMp bonus',
+  );
+  const firstHpGain = 10 + baseMp;
+  const secondDmg = heroEvents[0].after.units[targetId].hp - heroEvents[1].after.units[targetId].hp;
+  assert.equal(
+    secondDmg,
+    10 + baseMp + firstHpGain,
+    'Second repeated cast includes updated gainedMaxMp + gainedMaxHp',
+  );
+  assert.equal(result.final.units.aegis.maxHp, baseHp + (500 - result.final.units[targetId].hp));
 });
 
 test('rear character gains entryReady after staying in rear for a full round, and swap triggers entrySkill', () => {

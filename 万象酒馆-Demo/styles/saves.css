@@ -183,6 +183,8 @@
 .slot-badge-group {
   display: flex;
   align-items: center;
+  min-width: 0;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
@@ -207,6 +209,7 @@
   font-size: 14px;
   color: #f3f4f6;
   font-weight: 600;
+  overflow-wrap: anywhere;
 }
 
 .slot-status-badge {
@@ -287,6 +290,7 @@
 .slot-card-actions {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 6px;
   padding-top: 8px;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
@@ -417,4 +421,25 @@
   background: rgba(248, 113, 113, 0.2);
   border-color: rgba(248, 113, 113, 0.5);
   color: #fff;
+}
+
+.saves-pagination,
+.saves-import-selection:not([hidden]) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.saves-import-selection p {
+  flex: 1 1 220px;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.saves-tool-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }

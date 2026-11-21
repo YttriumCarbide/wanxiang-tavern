@@ -2,7 +2,7 @@
   "generator": "image_gen built-in",
   "prompts": "assets/exploration/street-hd-v4/prompts.md",
   "geometryReference": "assets/exploration/street-illustrated/connected-v1.png",
-  "styleReference": "assets/exploration/street-hd-v2/center.png",
+  "styleReference": "../建模工具/场景参考/酒馆门前-v2画风.png",
   "assets": [
     {
       "file": "assets/exploration/street-hd-v4/tile-0.png",

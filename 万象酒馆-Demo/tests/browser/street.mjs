@@ -269,6 +269,44 @@ export async function streetChecks({ browser, baseURL, output }) {
     assert.equal(await page.locator('#street-city-submap[open]').count(), 1);
     await page.locator('#street-city-submap-close').click();
     await page.locator('#street-city-submap').waitFor({ state: 'hidden' });
+    await page.locator('#street-submap-open').click();
+    await page.locator('[data-city-node="city-center"]').evaluate((button) => button.click());
+    await page.keyboard.press('Escape');
+    await page.locator('#street-city-submap').waitFor({ state: 'hidden' });
+    await page.waitForTimeout(420);
+    assert.equal(await page.locator('body.leaving').count(), 0, 'Escape cancels the pending walk');
+    const gestureStartedTravel = await page.evaluate(async () => {
+      const dialog = document.getElementById('street-map');
+      document.getElementById('street-map-open').click();
+      const managed = { type: 'daily-managed', outing: { turns: 0 } };
+      window.postMessage(managed, location.origin);
+      await new Promise((resolve) =>
+        window.addEventListener('message', function onMessage(event) {
+          if (event.data?.type !== 'daily-managed') return;
+          window.removeEventListener('message', onMessage);
+          resolve();
+        }),
+      );
+      const pin = dialog.querySelector('[data-atlas-landmark="mill"]');
+      const dispatch = (type, pointerId, x) =>
+        pin.dispatchEvent(
+          new PointerEvent(type, { bubbles: true, pointerType: 'touch', pointerId, clientX: x }),
+        );
+      dispatch('pointerdown', 1, 20);
+      dispatch('pointercancel', 1, 20);
+      const walker = dialog.querySelector('.street-atlas-walker');
+      const cancelled = walker.classList.contains('is-walking');
+      dispatch('pointerdown', 1, 20);
+      dispatch('pointerdown', 2, 80);
+      dispatch('pointermove', 2, 140);
+      dispatch('pointerup', 2, 140);
+      dispatch('pointerup', 1, 20);
+      const pinched = walker.classList.contains('is-walking');
+      dialog.close();
+      window.dispatchEvent(new PageTransitionEvent('pagehide', { persisted: true }));
+      return { cancelled, pinched, sceneReady: Boolean(window.streetPreview) };
+    });
+    assert.deepEqual(gestureStartedTravel, { cancelled: false, pinched: false, sceneReady: true });
     await page.evaluate(() => {
       window.visitorClick = null;
       window.addEventListener('message', (event) => {
@@ -522,7 +560,7 @@ export async function streetChecks({ browser, baseURL, output }) {
     await canvas.evaluate(() => window.assetPreview.placeNow('bookshelf'));
     await page
       .frameLocator('#inn-frame iframe')
-      .locator('#bookshelf-records')
+      .locator('#bookshelf-archives')
       .waitFor({ state: 'visible' });
     assert.deepEqual(errors, []);
     return {

@@ -1,22 +1,31 @@
-import { REQUEST_TIMEOUT_MS } from './request-policy.js';
+import { createRequestScope } from './request-policy.js';
 import { createBrowserStores } from './browser-stores.js';
 import { createBrowserPortraits } from './browser-portraits.js';
 import { createWorldbookCounter } from './tokenizer.js';
 import { createAiPipeline } from './pipeline/runtime.js';
 import { createAntiRouteService } from './anti-route-service.js';
 import { createOpencodeBrowserFetch } from './opencode-browser.js';
-import { summaryPlan } from './pipeline/summary-request.js';
 import { creationPlan } from './pipeline/creation-request.js';
 import { readGenerationResult, redactDiagnostic } from './pipeline/generation-result.js';
-import { formatRegexPresentation } from './pipeline/regex-presentation.js';
-import { presetRegexScripts, normalizeRegexScripts } from './regex.js';
+import { createBuiltinPromptSource } from './builtin-prompt.js';
 import { API_KINDS } from './connection-store.js';
-import { runRegexTasks } from './regex-runtime.js';
+
+function normalizeRequestObject(value, field = '请求正文') {
+  if (value == null) return {};
+  if (typeof value === 'object' && !Array.isArray(value)) {
+    const prototype = Object.getPrototypeOf(value);
+    if (prototype === Object.prototype || prototype === null) return value;
+  }
+  throw Object.assign(new TypeError(`${field}必须是对象`), {
+    code: 'AI_INVALID_REQUEST',
+    status: 400,
+  });
+}
 
 /** In-process backend: requests here are function calls, with AI sent directly by the browser. */
 export async function createStaticBackend(
   database,
-  { fetchImpl = fetch, virtualImages = true, regexRunner = runRegexTasks } = {},
+  { fetchImpl = fetch, virtualImages = true } = {},
 ) {
   const modelFetch = await createOpencodeBrowserFetch(fetchImpl);
   const readText = async (name) => {
@@ -30,35 +39,34 @@ export async function createStaticBackend(
   );
   if (!bookResponse.ok) throw Error('内置世界书读取失败');
   const stores = await createBrowserStores(database, readText, await bookResponse.json());
-  const { settings, prompts, worlds, regexStore, helperStorage } = stores;
+  const { settings, worlds } = stores;
+  const promptSource = await createBuiltinPromptSource(readText, settings);
   const antiRoute = createAntiRouteService({ settings, fetchImpl: modelFetch });
   const countTokens = createWorldbookCounter();
   const pipeline = createAiPipeline({
     ...stores,
     countTokens,
     readText,
-    runRegexTasks: regexRunner,
+    promptSource,
   });
   const portraits = createBrowserPortraits(database, { fetchImpl, virtualImages });
   const controllers = new Set();
+  const openGenerationIds = new Set();
   let disposed = false;
-  async function generate(path, input, options) {
-    const match =
-      /^(generate|models)\/(character|script|chat|quick-chat|summary|creation|map)$/.exec(path);
+  async function generate(match, data, options) {
     const kind = match[2],
       models = match[1] === 'models';
-    if (controllers.size >= 2) throw Error('已有生成任务在进行，请稍候');
-    const controller = new AbortController();
-    const cancel = () => controller.abort(options.signal?.reason);
-    options.signal?.addEventListener('abort', cancel, { once: true });
-    if (options.signal?.aborted) cancel();
-    const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    if (controllers.size >= 2) {
+      throw Object.assign(Error('已有生成任务在进行，请稍候'), { code: 'AI_BUSY', status: 429 });
+    }
+    const input = normalizeRequestObject(data);
+    const controller = createRequestScope(options);
     controllers.add(controller);
     let job;
     try {
       controller.signal.throwIfAborted();
       const profile = settings.get(kind);
-      const source = models ? null : (await prompts.get(profile.promptPresetId)).preset;
+      const source = models ? null : await promptSource.get(kind);
       const prepared = models ? null : await pipeline.buildRequest(kind, input, source);
       controller.signal.throwIfAborted();
       const requestId = crypto.randomUUID(),
@@ -72,10 +80,10 @@ export async function createStaticBackend(
             warnings: prepared.warnings,
             sampling: prepared.sampling,
             transport: prepared.transport,
-            regex: prepared.regex,
           }
         : null;
       job = { input, kind, models, profile, source, prepared, messages, requestId, requestReport };
+      openGenerationIds.add(requestId);
       if (prepared?.nextWorldState) {
         if (pipeline.pendingWorldStates.size >= 20)
           pipeline.pendingWorldStates.delete(pipeline.pendingWorldStates.keys().next().value);
@@ -92,12 +100,12 @@ export async function createStaticBackend(
         onDelta: options.onDelta,
       });
       controller.signal.throwIfAborted();
-      return await pipeline.acceptResult(job, result);
+      return await pipeline.acceptResult(job, result, controller.signal);
     } catch (failure) {
-      if (controller.signal.aborted || failure.name === 'AbortError')
+      if (controller.signal.aborted || failure.name === 'AbortError') {
+        if (job) pipeline.pendingWorldStates.delete(job.requestId);
         throw Error('请求已取消或超过15分钟，请检查服务后重试', { cause: failure });
-      if (failure instanceof TypeError && !failure.diagnostic)
-        failure.message = '浏览器无法连接此接口，请检查网络、HTTPS及跨域支持（CORS）。未自动重试。';
+      }
       if (failure.diagnostic) {
         failure.diagnostic.kind = kind;
         failure.diagnostic.request = job?.requestReport;
@@ -109,32 +117,26 @@ export async function createStaticBackend(
       }
       throw failure;
     } finally {
-      clearTimeout(timer);
-      options.signal?.removeEventListener('abort', cancel);
+      if (job) openGenerationIds.delete(job.requestId);
+      controller.close();
       controllers.delete(controller);
     }
   }
   async function request(path, data, options = {}) {
     if (disposed) throw Error('接口已关闭');
     options.signal?.throwIfAborted();
-    if (path === 'anti-route') return antiRoute.handle(data, options.signal);
-    if (/^(generate|models)\/(character|script|chat|quick-chat|summary|creation|map)$/.test(path))
-      return generate(path, data || {}, options);
+    const match =
+      /^(generate|models)\/(character|script|chat|quick-chat|summary|creation|map)$/.exec(path);
+    if (match) return generate(match, data, options);
+    const hasData = data != null;
+    data = normalizeRequestObject(data);
+    if (path === 'anti-route') return antiRoute.handle(hasData ? data : undefined, options.signal);
     if (path === 'config')
-      return data ? settings.saveProfile({ ...data, requestMode: 'browser' }) : settings.visible();
+      return hasData
+        ? settings.saveProfile({ ...data, requestMode: 'browser' })
+        : settings.visible();
     if (path === 'presets')
-      return data ? settings.preset(data) : { presets: settings.listPresets() };
-    if (path === 'regex') return data ? regexStore.save(data) : { scripts: regexStore.get() };
-    if (path === 'regex-test')
-      return (
-        await regexRunner(normalizeRegexScripts(data.scripts), [
-          {
-            text: String(data.text || '').slice(0, 100000),
-            placement: data.placement ?? 2,
-            options: data.options || {},
-          },
-        ])
-      )[0];
+      return hasData ? settings.preset(data) : { presets: settings.listPresets() };
     if (path === 'tokens') {
       if (
         !Array.isArray(data.texts) ||
@@ -144,29 +146,14 @@ export async function createStaticBackend(
         throw Error('Token统计需要文字列表');
       return { counts: data.texts.map(countTokens), tokenizer: 'o200k_base' };
     }
-    if (path === 'summary/plan') {
-      const profile = { ...settings.get('summary'), antiRoute: settings.routeSettings() };
-      const preset = (await prompts.get(profile.promptPresetId)).preset;
-      const worldInfo = await worlds.resolve('summary', {});
-      return summaryPlan(data, profile, countTokens, readText, {
-        preset,
-        worldInfo,
-        readText,
-        runRegexTasks: regexRunner,
-        regexScripts: [...regexStore.get(), ...presetRegexScripts(preset)],
-      });
-    }
+    if (path === 'summary/plan') return pipeline.planSummary(data);
     if (path === 'creation/plan') return creationPlan(data, settings.get('creation'), countTokens);
     if (path === 'portrait') return portraits.import(data.url, options.signal);
     if (path === 'portrait/save') return portraits.save(data.dataUrl);
-    if (path.startsWith('helper-storage/')) {
-      const id = path.slice(15);
-      return data ? helperStorage.save(id, data.storage) : { storage: helperStorage.get(id) };
-    }
     if (path === 'worldbooks') return worlds.visible();
     if (path.startsWith('worldbooks/')) {
       const action = path.slice(11);
-      if (!data) return worlds.get(action);
+      if (!hasData) return worlds.get(action);
       if (action === 'save') return worlds.save(data);
       if (action === 'settings') return { settings: await worlds.configure(data.settings) };
       if (action === 'delete') {
@@ -174,59 +161,50 @@ export async function createStaticBackend(
         return worlds.visible();
       }
     }
-    if (path === 'prompts')
-      return {
-        presets: await prompts.list(),
-        formats: {
-          character: await readText('character.system.md'),
-          script: await readText('script.system.md'),
-          map: await readText('map.system.md'),
-          creation: await readText('creation.system.md'),
-          summary: await readText('summary.system.md'),
-        },
-      };
-    if (path.startsWith('prompts/')) {
-      const action = path.slice(8);
-      if (!data) return prompts.get(action);
-      if (action === 'save') return prompts.save(data);
-      if (action === 'select') {
-        await prompts.get(data.id);
-        return settings.selectPrompt(data.kind, data.id);
-      }
-      if (action === 'delete') {
-        for (const [kind, profile] of Object.entries(settings.visible()))
-          if (profile.promptPresetId === data.id)
-            await settings.selectPrompt(kind, `${kind}-default`);
-        await prompts.delete(data.id);
-        return { deleted: true };
-      }
-      if (action === 'preview') {
-        const source =
-          data.preset || (await prompts.get(settings.get(data.kind).promptPresetId)).preset;
-        const { nextWorldState: _state, ...preview } = await pipeline.buildRequest(
-          data.kind,
-          data.input,
-          source,
-          data.worldInfoOverride,
-        );
-        return preview;
-      }
+    if (path === 'prompt-options') {
+      const options = hasData
+        ? await settings.savePromptOptions(data.options)
+        : settings.promptOptions();
+      return { options, attribution: promptSource.attribution };
+    }
+    if (path === 'prompts/preview') {
+      const input = normalizeRequestObject(data.input, 'input');
+      const source =
+        data.preset == null ? await promptSource.get(data.kind) : structuredClone(data.preset);
+      const { nextWorldState: _state, ...preview } = await pipeline.buildRequest(
+        data.kind,
+        input,
+        source,
+        data.worldInfoOverride,
+      );
+      return preview;
     }
     if (/^validate\/(character|script)$/.test(path)) {
       const kind = path.slice(9);
+      const input = normalizeRequestObject(data.input, 'input');
       if (typeof data.content !== 'string' || data.content.length > 1000000)
         throw Error('待校验正文超过容量');
-      const result = readGenerationResult(kind, data.content, data.input || {});
-      const preset = (await prompts.get(settings.get(kind).promptPresetId)).preset;
-      await formatRegexPresentation(
-        result.entry,
-        kind,
-        [...regexStore.get(), ...presetRegexScripts(preset)],
-        regexRunner,
-      );
-      await pipeline.commitWorldState(data.requestId, kind);
-      result.diagnostic = redactDiagnostic(result.diagnostic, settings.get(kind).apiKey);
-      return result;
+      if (openGenerationIds.has(data.requestId)) {
+        throw Object.assign(Error('请求仍在进行，请稍后再校验'), {
+          code: 'AI_REQUEST_ACTIVE',
+          status: 409,
+        });
+      }
+      try {
+        const result = readGenerationResult(kind, data.content, input);
+        await pipeline.commitWorldState(data.requestId, kind);
+        for (const purpose of API_KINDS) {
+          result.diagnostic = redactDiagnostic(result.diagnostic, settings.get(purpose).apiKey);
+        }
+        return result;
+      } catch (failure) {
+        for (const purpose of API_KINDS) {
+          const key = settings.get(purpose).apiKey;
+          failure.message = redactDiagnostic(failure.message, key);
+          failure.diagnostic = redactDiagnostic(failure.diagnostic, key);
+        }
+        throw failure;
+      }
     }
     throw Error('操作不存在：' + path);
   }

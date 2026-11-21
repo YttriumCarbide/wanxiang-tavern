@@ -44,9 +44,9 @@ export function summaryItems(input) {
   });
 }
 
-async function buildPipelineSummary(items, source, options = {}) {
-  const { profile = {}, readText, runRegexTasks } = options;
-  const regexScripts = options.regexScripts || [];
+async function buildPipelineSummary(input, items, source, options = {}) {
+  const { profile = {}, readText } = options;
+  const party = Array.isArray(input.party) ? input.party : [];
   const inputText = JSON.stringify({ items });
   const raw =
     source ||
@@ -58,32 +58,19 @@ async function buildPipelineSummary(items, source, options = {}) {
         countTokens: options.countTokens,
         context: {
           kind: 'summary',
-          triggerIds: buildTriggerIds('summary', { items }),
+          triggerIds: buildTriggerIds('summary', { ...input, items }),
           trigger: 'normal',
           messages: [{ role: 'user', content: inputText }],
-          names: [],
-          characterIds: [],
+          names: party.map((entry) => entry?.name).filter((name) => typeof name === 'string'),
+          characterIds: party.map((entry) => entry?.id).filter((id) => typeof id === 'string'),
           characters: '',
           personalities: '',
           scenario: '',
           persona: '',
-          tags: [],
+          tags: party.flatMap((entry) => (Array.isArray(entry?.tags) ? entry.tags : [])),
         },
       })
     : null;
-  if (scan && regexScripts.length && runRegexTasks) {
-    const processed = await runRegexTasks(
-      regexScripts,
-      scan.entries.map((entry) => ({
-        text: entry.content,
-        placement: 5,
-        options: { kind: 'summary', isPrompt: true, variables: { user: '玩家', char: '' } },
-      })),
-    );
-    scan.entries.forEach((entry, index) => {
-      entry.content = processed[index].text;
-    });
-  }
   const wiBefore =
     scan?.entries
       .filter((entry) => entry.position === 0)
@@ -180,25 +167,7 @@ async function buildPipelineSummary(items, source, options = {}) {
       '当前API的总结规范 @D条目未激活；请在世界书检查开关与发送对象。代码仍会校验返回结构。',
     );
   }
-  let regexChanges = [];
-  if (runRegexTasks && regexScripts.length) {
-    const regexResults = await runRegexTasks(
-      regexScripts,
-      messages.map((msg, index) => ({
-        text: msg.content,
-        placement: msg.role === 'assistant' ? 2 : msg.role === 'user' ? 1 : -1,
-        options: {
-          kind: 'summary',
-          isPrompt: true,
-          depth: messages.length - index - 1,
-          variables: { user: '玩家', char: '' },
-        },
-      })),
-    );
-    messages = messages.map((msg, index) => ({ ...msg, content: regexResults[index].text }));
-    regexChanges = regexResults.flatMap((result) => result.changes || []);
-  }
-  return finalizeRequest(
+  return finalizeSummaryRequest(
     {
       messages,
       sampling: { temperature: 0.2, ...presetSampling(preset), stream: false },
@@ -207,7 +176,6 @@ async function buildPipelineSummary(items, source, options = {}) {
         presetProcessing: options.presetProcessing,
         presetVariables: { user: '玩家', char: '' },
       },
-      regex: { scripts: regexScripts.length, changes: regexChanges },
       ...(scan
         ? {
             worldInfo: {
@@ -230,14 +198,33 @@ async function buildPipelineSummary(items, source, options = {}) {
 export async function summaryRequest(input, profileOrPreset, countTokensOrOptions, readText) {
   const items = summaryItems(input);
   if (typeof countTokensOrOptions === 'object' && countTokensOrOptions !== null) {
-    return buildPipelineSummary(items, profileOrPreset, countTokensOrOptions);
+    const options = countTokensOrOptions;
+    const worldInfo = options.resolveWorldInfo
+      ? await options.resolveWorldInfo(input)
+      : options.worldInfo;
+    return buildPipelineSummary(input, items, profileOrPreset, { ...options, worldInfo });
   }
   const system = await readText('summary.system.md');
   return buildSummaryRequest(items, system, profileOrPreset, countTokensOrOptions);
 }
 
+class SummaryContextLimitError extends Error {}
+
+function finalizeSummaryRequest(prepared, profile, countTokens) {
+  try {
+    return finalizeRequest(prepared, profile, countTokens);
+  } catch (failure) {
+    // The shared finalizer currently reports context overflow with an untyped error.
+    const contextLimit = /^请求需要约[0-9]+ TK，超过上下文[0-9]+；请减少上下文或回复上限$/u;
+    if (contextLimit.test(failure?.message)) {
+      throw new SummaryContextLimitError(failure.message, { cause: failure });
+    }
+    throw failure;
+  }
+}
+
 function buildSummaryRequest(items, system, profile, countTokens) {
-  return finalizeRequest(
+  return finalizeSummaryRequest(
     {
       messages: [
         { role: 'system', content: system },
@@ -253,28 +240,40 @@ function buildSummaryRequest(items, system, profile, countTokens) {
 }
 
 /** Plan without truncation; one click can cover all items with bounded sequential requests. */
-export async function summaryPlan(input, profile, countTokens, readText, options = null) {
-  const items = summaryItems(input);
-  const system =
-    options?.preset || options?.worldInfo
-      ? ''
-      : await (options?.readText || readText)('summary.system.md');
-  const buildBatch = async (batchItems) => {
-    if (options?.preset || options?.worldInfo) {
-      return buildPipelineSummary(batchItems, options.preset, {
+export async function summaryPlan(
+  input,
+  profileOrPreset,
+  countTokensOrOptions,
+  readText,
+  legacyOptions = null,
+) {
+  summaryItems(input);
+  const modern = typeof countTokensOrOptions === 'object' && countTokensOrOptions !== null;
+  const options = modern ? countTokensOrOptions : legacyOptions;
+  const profile = modern ? (options.profile ?? {}) : profileOrPreset;
+  const countTokens = modern ? options.countTokens : countTokensOrOptions;
+  const reader = options?.readText || readText;
+  const preset = modern ? profileOrPreset : options?.preset;
+  const usePipeline = modern || preset || options?.worldInfo || options?.resolveWorldInfo;
+  const system = usePipeline ? '' : await reader('summary.system.md');
+  async function buildBatch(batchItems) {
+    const batchInput = { ...input, items: batchItems };
+    if (usePipeline) {
+      return summaryRequest(batchInput, preset, {
         ...options,
         profile,
         countTokens,
+        readText: reader,
       });
     }
-    return buildSummaryRequest(batchItems, system, profile, countTokens);
-  };
+    return buildSummaryRequest(summaryItems(batchInput), system, profile, countTokens);
+  }
   const batches = [];
   let batch = [],
     prepared = null;
   const outputLimit = profile.tokenField === 'none' ? 8192 : profile.maxTokens;
   const maxItems = Math.max(1, Math.min(20, Math.floor(outputLimit / 500)));
-  async function flush() {
+  function flush() {
     if (!batch.length) return;
     batches.push({
       ids: batch.map((item) => item.id),
@@ -283,18 +282,28 @@ export async function summaryPlan(input, profile, countTokens, readText, options
     batch = [];
     prepared = null;
   }
-  for (const item of items) {
-    if (batch.length >= maxItems) await flush();
-    try {
-      prepared = await buildBatch([...batch, item]);
-    } catch (failure) {
-      if (!failure.message.includes('超过上下文')) throw failure;
-      await flush();
-      prepared = await buildBatch([item]);
+  for (const [index, item] of input.items.entries()) {
+    if (batch.length >= maxItems) flush();
+    for (;;) {
+      try {
+        prepared = await buildBatch([...batch, item]);
+        break;
+      } catch (failure) {
+        if (!(failure instanceof SummaryContextLimitError)) throw failure;
+        if (!batch.length) {
+          throw Object.assign(
+            Error(`第 ${index + 1} 条总结记录无法放入上下文，请缩短记录或降低回复上限`, {
+              cause: failure,
+            }),
+            { code: 'AI_SUMMARY_ITEM_TOO_LARGE', status: 400 },
+          );
+        }
+        flush();
+      }
     }
     batch.push(item);
   }
-  await flush();
+  flush();
   return {
     batches,
     inputEstimate: batches.reduce((sum, item) => sum + item.inputEstimate, 0),

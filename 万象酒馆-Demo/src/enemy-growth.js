@@ -5,6 +5,7 @@ import { combatScale, scaleLevelEffects } from './combat-scale.js';
 const MAP_LEVELS = Object.freeze({
   mill: 1,
   'moss-hollow': 2,
+  'graystone-quarry': 5,
   'starbell-undercroft': 6,
   'border-watch': 6,
   'whisper-grove': 10,
@@ -29,7 +30,7 @@ export function encounterLevel(entry) {
   if (!entry || entry.tutorial) return 1;
   if (Number.isInteger(entry.level)) return Math.max(1, Math.min(99, entry.level));
   const id = entry.world?.id || entry.map;
-  const base = MAP_LEVELS[entry.map] || 5;
+  const base = Object.hasOwn(MAP_LEVELS, entry.map) ? MAP_LEVELS[entry.map] : 5;
   if (Number.isInteger(entry.levelOffset) && !entry.endless) {
     return Math.max(1, Math.min(99, base + entry.levelOffset));
   }
@@ -37,17 +38,19 @@ export function encounterLevel(entry) {
     BASE_WORLDS.includes(id) ||
     EMPIRE_TRANSITION_DUNGEONS.includes(id) ||
     id === 'starbell-undercroft';
-  if (official && entry.sequence < 6) return base + MAIN_OFFSETS[entry.sequence];
-  const tier = Math.floor(entry.sequence / 6) + (official ? 0 : 1);
+  const sequence = Number.isInteger(entry.sequence) && entry.sequence >= 0 ? entry.sequence : 0;
+  if (official && sequence < 6) return base + MAIN_OFFSETS[sequence];
+  const tier = Math.floor(sequence / 6) + (official ? 0 : 1);
   return Math.min(99, base + (official ? 3 : 0) + 5 * tier);
 }
 
 export function enemyGrowth(entry, index, id, boss = false, elite = false) {
   const level = encounterLevel(entry);
+  const unitIndex = Number.isInteger(index) && index >= 0 ? index : 0;
   const roll =
     level === 1 || boss || elite || entry?.tutorial
       ? 0
-      : (seedOf(`${entry.seed}:${index}:${id}`) % 3) - 1;
+      : (seedOf(`${entry.seed}:${unitIndex}:${id}`) % 3) - 1;
   const unitLevel = Math.max(1, Math.min(99, level + roll));
   const scale = combatScale(unitLevel);
   return { level: unitLevel, hpScale: scale, damageScale: scale };

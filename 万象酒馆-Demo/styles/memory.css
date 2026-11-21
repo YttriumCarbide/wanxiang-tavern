@@ -1,64 +1,26 @@
-#memory-dialog {
-  width: min(880px, calc(100vw - 40px));
-  height: min(720px, calc(100dvh - 48px));
-  margin: auto;
-  padding: 26px 30px;
-  color: #f2eee3;
-  border: 1px solid rgba(226, 186, 111, 0.45);
-  border-radius: 18px;
-  background: radial-gradient(ellipse at 50% 0%, rgba(36, 68, 60, 0.7), transparent 75%), #0c1a18;
-  box-shadow:
-    0 28px 90px rgba(0, 0, 0, 0.85),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-}
-#memory-dialog[open] {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-#memory-dialog::backdrop {
-  background: rgba(4, 9, 11, 0.8);
-  backdrop-filter: blur(8px);
-}
-#memory-dialog header,
-#memory-dialog footer {
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-  gap: 12px;
-}
 .memory-pages {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 16px;
+  gap: 10px;
+  padding: 10px;
+  border-top: 1px solid rgba(216, 178, 110, 0.18);
   flex-shrink: 0;
-  font-size: 13px;
-  color: #c4b58c;
+  font-size: 12px;
+  color: #cab899;
 }
 .memory-pages button {
-  padding: 6px 12px;
+  padding: 4px 10px;
   font-size: 12px;
-}
-#memory-dialog header > div {
-  flex: 1;
-}
-#memory-dialog h2 {
-  margin: 8px 0 0;
-  color: #dcc48a;
-  font-size: 25px;
-  font-weight: 400;
-}
-#memory-dialog small {
-  color: #b9ad88;
-  letter-spacing: 3px;
+  border: 1px solid rgba(216, 178, 110, 0.3);
+  border-radius: 3px;
+  background: rgba(216, 178, 110, 0.08);
+  color: #fae8be;
 }
 #memory-count,
 #memory-status {
   margin: 0;
-  color: #bfc7b6;
+  color: #cec2ae;
   font-size: 13px;
   line-height: 1.6;
   flex-shrink: 0;
@@ -67,25 +29,31 @@
   flex: 1;
   min-height: 0;
   overflow: auto;
-  padding-right: 8px;
+  padding-right: 6px;
 }
 #memory-items article {
-  padding: 18px;
-  margin-bottom: 14px;
-  border: 1px solid #baa36b38;
-  border-radius: 10px;
-  background: #0b1b1880;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+  border: 1px solid rgba(216, 178, 110, 0.24);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.025);
 }
 #memory-items h3 {
-  margin: 0 0 12px;
-  color: #d9c899;
+  margin: 0 0 8px;
+  color: #fae8be;
   font-size: 15px;
-  font-weight: 400;
+  font-weight: 600;
+}
+#memory-items article > small {
+  display: block;
+  color: #b79c71;
+  letter-spacing: 0.04em;
+  margin-bottom: 10px;
 }
 #memory-items details {
-  color: #b7c2b5;
+  color: #c8bca7;
   font-size: 13px;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
 }
 #memory-items details p {
   white-space: pre-wrap;
@@ -96,142 +64,37 @@
 #memory-items label {
   display: grid;
   gap: 8px;
-  color: #c4b58c;
-  font-size: 13px;
+  color: #dec392;
+  font-size: 12px;
 }
 #memory-items textarea {
   width: 100%;
   min-height: 84px;
   resize: vertical;
-  border: 1px solid #baa36b45;
-  border-radius: 7px;
+  border: 1px solid rgba(216, 178, 110, 0.3);
+  border-radius: 4px;
   padding: 10px 12px;
-  background: #091b17;
-  color: #e9e1ce;
-  line-height: 1.6;
-}
-#memory-dialog footer {
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  border-top: 1px solid #baa36b38;
-  padding-top: 14px;
+  background: rgba(10, 11, 14, 0.72);
+  color: #f0e6d0;
+  line-height: 1.65;
 }
 .memory-settings {
   margin-top: 20px;
   padding-top: 18px;
-  border-top: 1px solid #baa36b38;
+  border-top: 1px solid rgba(216, 178, 110, 0.25);
 }
 .memory-settings p {
-  color: #acb9aa;
+  color: #c2b6a1;
   font-size: 13px;
   line-height: 1.7;
 }
 @media (max-height: 480px), (max-width: 600px) {
-  #memory-dialog {
-    width: calc(100vw - 24px);
-    height: calc(100dvh - 24px);
-    padding: 16px;
-    gap: 8px;
-  }
-  #memory-dialog h2 {
-    font-size: 20px;
-  }
-  #memory-dialog footer {
+  .memory-pane-footer {
     padding-top: 8px;
     gap: 8px;
   }
-  #memory-dialog footer button {
-    font-size: 13px;
-    padding: 9px 12px;
-  }
-}
-#bookshelf-dialog {
-  width: min(860px, calc(100vw - 36px));
-  height: min(560px, calc(100dvh - 36px));
-  margin: auto;
-  padding: 26px;
-  color: #f2eee3;
-  border: 1px solid rgba(226, 186, 111, 0.45);
-  border-radius: 16px;
-  background: radial-gradient(ellipse at 50% 0%, rgba(36, 68, 60, 0.7), transparent 75%), #0c1a18;
-  box-shadow:
-    0 28px 90px rgba(0, 0, 0, 0.85),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-}
-#bookshelf-dialog::backdrop {
-  background: rgba(4, 9, 11, 0.8);
-  backdrop-filter: blur(8px);
-}
-#bookshelf-dialog[open] {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-#bookshelf-dialog header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-#bookshelf-dialog h2 {
-  margin: 8px 0 0;
-  color: #e0c98f;
-}
-#bookshelf-dialog small {
-  color: #a9b9a6;
-  letter-spacing: 2px;
-}
-.bookshelf-actions {
-  display: flex;
-  gap: 10px;
-  border-bottom: 1px solid #ad966347;
-  padding-bottom: 14px;
-}
-.bookshelf-actions button {
-  flex: 1;
-}
-.bookshelf-layout {
-  display: grid;
-  grid-template-columns: 180px 1fr;
-  flex: 1;
-  min-height: 0;
-  gap: 20px;
-}
-#bookshelf-books {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-#bookshelf-books [aria-pressed='true'] {
-  color: #eddaa5;
-  background: #65744a40;
-  border-color: #bfab70;
-}
-#bookshelf-text {
-  padding: 6px 18px;
-  overflow: auto;
-  line-height: 1.9;
-  background: #0716114d;
-  border-radius: 10px;
-}
-#bookshelf-text h3 {
-  color: #e2c98d;
-}
-#memory-items article > small {
-  display: block;
-  letter-spacing: 0;
-  margin-bottom: 10px;
-}
-@media (max-height: 480px) {
-  #bookshelf-dialog {
-    padding: 14px;
-    gap: 10px;
-  }
-  .bookshelf-layout {
-    grid-template-columns: 150px 1fr;
-  }
-  #bookshelf-dialog h2 {
-    font-size: 20px;
+  .memory-pane-footer button {
+    font-size: 12px;
+    padding: 7px 10px;
   }
 }

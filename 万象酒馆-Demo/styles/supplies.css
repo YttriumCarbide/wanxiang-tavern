@@ -525,6 +525,25 @@
   gap: 12px;
   margin-bottom: 16px;
 }
+:root[data-game-layout='mobile'] {
+  #void-shop header small {
+    display: none;
+  }
+  #void-shop header {
+    padding-bottom: 4px;
+  }
+  #shop-close {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  #shop-items button,
+  .shop-detail-actions button {
+    min-height: 44px;
+  }
+  .shop-detail-actions :is([data-buy], [data-food-buy]) {
+    min-width: min(162px, 100%);
+  }
+}
 .ingredient-basket span {
   display: grid;
   justify-items: center;

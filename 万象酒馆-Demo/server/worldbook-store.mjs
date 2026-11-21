@@ -1,8 +1,8 @@
-import { setTimeout as waitForFile } from 'node:timers/promises';
-import { mkdir, readFile, writeFile, rename, readdir, unlink } from 'node:fs/promises';
+import { mkdir, readFile, readdir, unlink } from 'node:fs/promises';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
+import { atomicWrite } from './disk-store.mjs';
 import {
   normalizeWorldbook,
   normalizeWorldSettings,
@@ -29,28 +29,14 @@ export async function createWorldbookStore(directory) {
   const booksDirectory = path.join(directory, 'books');
   await mkdir(booksDirectory, { recursive: true });
   let writes = Promise.resolve();
-  const write = (file, value) => {
-    writes = writes
-      .catch(() => {})
-      .then(async () => {
-        await writeFile(file + '.tmp', JSON.stringify(value, null, 2) + '\n');
-        for (let attempt = 0; ; attempt++) {
-          try {
-            await rename(file + '.tmp', file);
-            break;
-          } catch (failure) {
-            if (
-              process.platform !== 'win32' ||
-              !['EPERM', 'EBUSY'].includes(failure.code) ||
-              attempt >= 5
-            )
-              throw failure;
-            await waitForFile(25 * 2 ** attempt);
-          }
-        }
-      });
+  const enqueueWrite = (operation) => {
+    writes = writes.catch(() => {}).then(operation);
     return writes;
   };
+  async function writeJson(file, value) {
+    await atomicWrite(file, JSON.stringify(value, null, 2) + '\n');
+  }
+  const write = (file, value) => enqueueWrite(() => writeJson(file, value));
   const fileFor = (id) => {
     if (typeof id !== 'string' || !/^[a-z0-9-]{1,100}$/.test(id)) throw Error('世界书ID无效');
     return path.join(booksDirectory, id + '.json');
@@ -143,63 +129,91 @@ export async function createWorldbookStore(directory) {
     }
     return [...ids];
   };
+  async function visible() {
+    return { books: (await list()).filter((book) => book.id !== 'tavern-canon'), settings };
+  }
   return {
-    list,
-    get,
-    async visible() {
-      return { books: (await list()).filter((book) => book.id !== 'tavern-canon'), settings };
-    },
+    list: () => enqueueWrite(list),
+    get: (id) => enqueueWrite(() => get(id)),
+    visible: () => enqueueWrite(visible),
     async save({ id = 'world-' + randomUUID().slice(0, 8), book }) {
       const normalized = normalizeWorldbook(book, book?.name || id);
       await write(fileFor(id), normalized.book);
       return { id, ...normalized };
     },
     async delete(id) {
-      await unlink(fileFor(id));
-      const clean = (items = []) => items.filter((item) => item !== id);
-      settings = normalizeWorldSettings({
-        ...settings,
-        globalSelect: clean(settings.globalSelect),
-        character: clean(settings.character),
-        script: clean(settings.script),
-        chat: clean(settings.chat),
-        summary: clean(settings.summary),
-        map: clean(settings.map),
-        creation: clean(settings.creation),
-        bindings: Object.fromEntries(
-          Object.entries(settings.bindings || {}).map(([key, value]) => [key, clean(value)]),
-        ),
+      const file = fileFor(id);
+      return enqueueWrite(async () => {
+        const original = await readFile(file);
+        const clean = (items = []) => items.filter((item) => item !== id);
+        const next = normalizeWorldSettings({
+          ...settings,
+          globalSelect: clean(settings.globalSelect),
+          character: clean(settings.character),
+          script: clean(settings.script),
+          chat: clean(settings.chat),
+          summary: clean(settings.summary),
+          map: clean(settings.map),
+          creation: clean(settings.creation),
+          bindings: Object.fromEntries(
+            Object.entries(settings.bindings || {}).map(([key, value]) => [key, clean(value)]),
+          ),
+        });
+        await unlink(file);
+        try {
+          await writeJson(path.join(directory, 'settings.json'), next);
+        } catch (failure) {
+          try {
+            await atomicWrite(file, original);
+          } catch (rollback) {
+            throw new AggregateError(
+              [failure, rollback],
+              '删除世界书失败，恢复原文件也失败，请从备份恢复。',
+              { cause: rollback },
+            );
+          }
+          throw failure;
+        }
+        settings = next;
+        return visible();
       });
-      await write(path.join(directory, 'settings.json'), settings);
-      return this.visible();
     },
     async configure(next) {
-      settings = normalizeWorldSettings(next);
-      await write(path.join(directory, 'settings.json'), settings);
-      return this.visible();
+      const normalized = normalizeWorldSettings(next);
+      return enqueueWrite(async () => {
+        await writeJson(path.join(directory, 'settings.json'), normalized);
+        settings = normalized;
+        return visible();
+      });
     },
     async resolve(kind, input = {}) {
-      const books = [];
-      for (const id of selectedIds(kind, input)) {
-        try {
-          const { book } = await get(id);
-          books.push({ ...book, id });
-        } catch (failure) {
-          if (failure.code !== 'ENOENT') throw failure;
+      return enqueueWrite(async () => {
+        const books = [];
+        for (const id of selectedIds(kind, input)) {
+          try {
+            const { book } = await get(id);
+            books.push({ ...book, id });
+          } catch (failure) {
+            if (failure.code !== 'ENOENT') throw failure;
+          }
         }
-      }
-      return {
-        books,
-        settings,
-        state: states[kind] || { step: 0, effects: {} },
-      };
+        return {
+          books,
+          settings,
+          state: states[kind] || { step: 0, effects: {} },
+        };
+      });
     },
-    async commit(kind, nextState, expectedStep) {
-      const current = states[kind]?.step || 0;
-      if (expectedStep !== undefined && current !== expectedStep) return false;
-      states[kind] = nextState;
-      await write(path.join(directory, 'state.json'), states);
-      return true;
+    commit(kind, nextState, expectedStep, signal) {
+      return enqueueWrite(async () => {
+        signal?.throwIfAborted();
+        const current = states[kind]?.step || 0;
+        if (expectedStep !== undefined && current !== expectedStep) return false;
+        const snapshot = { ...states, [kind]: nextState };
+        await writeJson(path.join(directory, 'state.json'), snapshot);
+        states = snapshot;
+        return true;
+      });
     },
   };
 }

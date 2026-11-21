@@ -173,6 +173,27 @@ export function normalizeDcDifficulty(dc, fallback = DC_DEFAULT_DIFFICULTY) {
   return Math.min(18, Math.max(5, Math.round(num)));
 }
 
+/** Runtime check targets can drop below the authored DC range after progression bonuses. */
+export function normalizeCheckDc(dc, fallback = DC_DEFAULT_DIFFICULTY) {
+  const num = Number(dc);
+  if (!Number.isFinite(num)) return fallback;
+  return Math.min(18, Math.max(3, Math.round(num)));
+}
+
+export function protagonistDcReduction(library) {
+  const campaign = library?.campaign;
+  if (!campaign) return 0;
+  const protagonist = library.characters?.find((member) => member.id === campaign.protagonistId);
+  const level = Number.isSafeInteger(protagonist?.growth?.level)
+    ? Math.max(1, protagonist.growth.level)
+    : 1;
+  return level < 15 ? 2 : level <= 30 ? 1 : 0;
+}
+
+export function adjustDcForProtagonist(library, dc) {
+  return normalizeCheckDc(normalizeDcDifficulty(dc) - protagonistDcReduction(library));
+}
+
 /** Compute balanced 2D6 DC target scaled by dungeon biome or route level. */
 export function computeMapDc(mapOrLevel, index = 0, fallback = DC_DEFAULT_DIFFICULTY) {
   let base = null;
@@ -196,6 +217,15 @@ export function computeMapDc(mapOrLevel, index = 0, fallback = DC_DEFAULT_DIFFIC
           : [0, 1, 1, 2];
   const delta = spread[Math.abs(Math.trunc(index)) % spread.length];
   return normalizeDcDifficulty(base + delta);
+}
+
+export function computeProtagonistMapDc(
+  library,
+  mapOrLevel,
+  index = 0,
+  fallback = DC_DEFAULT_DIFFICULTY,
+) {
+  return adjustDcForProtagonist(library, computeMapDc(mapOrLevel, index, fallback));
 }
 
 export function dcOutcomeLabel(outcome) {
@@ -326,18 +356,35 @@ export function effectiveDcAttrs(library, member) {
 }
 
 export function roll2d6(rng = Math.random) {
-  const d1 = 1 + Math.floor(rng() * 6);
-  const d2 = 1 + Math.floor(rng() * 6);
-  return [Math.min(6, Math.max(1, d1)), Math.min(6, Math.max(1, d2))];
+  return [0, 1].map(() => {
+    const sample = rng();
+    if (!Number.isFinite(sample) || sample < 0 || sample >= 1) throw RangeError('掷骰随机值无效');
+    return 1 + Math.floor(sample * 6);
+  });
+}
+
+function validDice(dice) {
+  return (
+    Array.isArray(dice) &&
+    dice.length === 2 &&
+    [...dice].every((value) => Number.isInteger(value) && value >= 1 && value <= 6)
+  );
+}
+
+function finiteModifier(value) {
+  const modifier = Math.trunc(value);
+  return Number.isFinite(modifier) ? modifier : 0;
 }
 
 /** Evaluate 2D6 + mod + bonus against DC, with double-6 crit and double-1 fumble. */
 export function evaluate2d6Check({ dice, mod = 0, bonus = 0, dc = DC_DEFAULT_DIFFICULTY }) {
-  const [d1, d2] = Array.isArray(dice) && dice.length === 2 ? dice : [3, 4];
+  const [d1, d2] = validDice(dice) ? dice : [3, 4];
   const diceSum = d1 + d2;
-  const totalMod = Math.trunc(mod) + Math.trunc(bonus);
+  const modifier = finiteModifier(mod);
+  const extra = finiteModifier(bonus);
+  const totalMod = modifier + extra;
   const total = diceSum + totalMod;
-  const targetDc = normalizeDcDifficulty(dc);
+  const targetDc = normalizeCheckDc(dc);
   let outcome = 'fail';
   if (d1 === 6 && d2 === 6) outcome = 'crit';
   else if (d1 === 1 && d2 === 1) outcome = 'fumble';
@@ -345,8 +392,8 @@ export function evaluate2d6Check({ dice, mod = 0, bonus = 0, dc = DC_DEFAULT_DIF
   return {
     dice: [d1, d2],
     diceSum,
-    mod: Math.trunc(mod),
-    bonus: Math.trunc(bonus),
+    mod: modifier,
+    bonus: extra,
     totalMod,
     total,
     dc: targetDc,
@@ -358,8 +405,8 @@ export function evaluate2d6Check({ dice, mod = 0, bonus = 0, dc = DC_DEFAULT_DIF
 
 /** Exact discrete percentage across all 36 2D6 pairs (accounting for double-6/double-1 rules). */
 export function dcSuccessProbability(totalMod = 0, dc = DC_DEFAULT_DIFFICULTY) {
-  const targetDc = normalizeDcDifficulty(dc);
-  const modifier = Math.trunc(totalMod);
+  const targetDc = normalizeCheckDc(dc);
+  const modifier = finiteModifier(totalMod);
   let wins = 0;
   for (let d1 = 1; d1 <= 6; d1++) {
     for (let d2 = 1; d2 <= 6; d2++) {
@@ -390,15 +437,15 @@ export function calibrateDisplayCheck({
   const targetOutcome = ['crit', 'success', 'fail', 'fumble'].includes(outcome)
     ? outcome
     : 'success';
-  const totalMod = Math.trunc(mod) + Math.trunc(bonus);
-  let displayDc = normalizeDcDifficulty(dc);
+  const totalMod = finiteModifier(mod) + finiteModifier(bonus);
+  let displayDc = normalizeCheckDc(dc);
   if (targetOutcome === 'crit') {
     return evaluate2d6Check({ dice: [6, 6], mod, bonus, dc: displayDc });
   }
   if (targetOutcome === 'fumble') {
     return evaluate2d6Check({ dice: [1, 1], mod, bonus, dc: displayDc });
   }
-  if (Array.isArray(dice) && dice.length === 2) {
+  if (validDice(dice)) {
     const direct = evaluate2d6Check({ dice, mod, bonus, dc: displayDc });
     if (direct.outcome === targetOutcome) return direct;
   }
@@ -426,8 +473,8 @@ export function calibrateDisplayCheck({
 
 /** Compute an auto-pass threshold: very routine checks pass passively when mod is comfortably ahead. */
 export function isPassiveBypass({ totalMod = 0, dc = DC_DEFAULT_DIFFICULTY }) {
-  const targetDc = normalizeDcDifficulty(dc);
-  return 2 + Math.trunc(totalMod) >= targetDc && targetDc <= 10;
+  const targetDc = normalizeCheckDc(dc);
+  return 2 + finiteModifier(totalMod) >= targetDc && targetDc <= 10;
 }
 
 export function normalizeDcSpec(raw) {

@@ -10,6 +10,9 @@ export function createDeparture(context) {
   const title = document.querySelector('#prepare-title');
   const cancel = document.querySelector('#prepare-cancel-generation');
   const pendingRow = document.querySelector('#prepare-pending-actions');
+  if (document.documentElement.dataset.gameLayout === 'mobile') {
+    panel.querySelector('footer').prepend(pendingRow, panel.querySelector('.prepare-xbtns'));
+  }
   const guidance = document.createElement('label');
   guidance.className = 'departure-guidance';
   guidance.hidden = true;
@@ -72,6 +75,20 @@ export function createDeparture(context) {
       if (selection) {
         try {
           compileRoster(session.ai.library);
+          const node = session.journey.selectedNode;
+          const partySize = session.ai.library.party.filter(Boolean).length;
+          if (
+            node?.map === 'mill' &&
+            node.nodeId === 'mill-4-attic' &&
+            partySize < 6 &&
+            !globalThis.confirm(
+              '磨坊第四关「阁楼齿轮室」是霸主战，难度极高。当前队伍未满六人，推荐满编再来。仍要以当前队伍出发吗？',
+            )
+          ) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            return;
+          }
           session.ai.scriptGuidance = guidance.hidden
             ? ''
             : guidance.querySelector('textarea').value.trim();

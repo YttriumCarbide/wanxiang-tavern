@@ -3,6 +3,7 @@ import path from 'node:path';
 import { legacySession } from './legacy-session.mjs';
 import { newLibrary } from '../../src/ai/library.js';
 import { ITEMS } from '../../src/content/items.js';
+import { DEFINITIONS } from '../../src/data.js';
 import { normalizeEquipment } from '../../src/equipment.js';
 
 /** Send real touch input so browser panning, pointer cancellation and click suppression all run. */
@@ -97,12 +98,57 @@ async function checkTimeline(page, viewport) {
   }
 }
 
+async function checkDiceContinue(page, output) {
+  await page.evaluate(async () => {
+    const { createDiceStage } = await import('/src/app/dice-stage.js');
+    const { createEventScope } = await import('/src/shared/events.js');
+    const original = document.querySelector('#dc-stage');
+    original.remove();
+    const events = createEventScope();
+    const dice = createDiceStage({ session: { ai: {} }, events });
+    void dice
+      .playCheck({
+        displayCheck: {
+          actorName: '长景月汐',
+          attrLabel: '敏捷',
+          dice: [3, 4],
+          mod: 2,
+          dc: 8,
+          total: 9,
+          success: true,
+        },
+      })
+      .finally(() => {
+        dice.dispose();
+        events.dispose();
+        document.body.append(original);
+      });
+  });
+  const button = page.locator('#dc-stage[data-ready="true"] > .dc-continue');
+  await button.waitFor();
+  assert.equal(await page.locator('#dc-stage .ev-total').textContent(), '9');
+  assert.equal(await page.locator('#ledger-corner').isVisible(), false);
+  assert(
+    await button.evaluate((node) => {
+      const { right, bottom, height } = node.getBoundingClientRect();
+      return height >= 44 && innerWidth - right <= 24 && innerHeight - bottom <= 24;
+    }),
+    'The dice continue action is in the mobile bottom-right corner',
+  );
+  await page.screenshot({ path: path.join(output, 'dice-continue-667.png') });
+  await button.tap();
+  await page.locator('#dc-stage').waitFor({ state: 'hidden' });
+}
+
 /** One batch covers actual small landscape panels and renderer suspension, with isolated saves. */
 export async function mobileChecks({ browser, baseURL, output }) {
   const errors = [],
     problems = [],
     screens = [];
   const library = newLibrary();
+  library.seenMonsters = Object.values(DEFINITIONS)
+    .filter((entry) => entry.speed)
+    .map((entry) => entry.id);
   library.inventory.ether = 450;
   library.inventory.gold = 500;
   library.inventory.bagUnlocked = true;
@@ -150,6 +196,7 @@ export async function mobileChecks({ browser, baseURL, output }) {
     try {
       await page.goto(baseURL + '/?display=landscape');
       await page.waitForFunction(() => !!window.demo);
+      assert.equal(await page.locator('html').getAttribute('data-game-layout'), 'mobile');
       const frame = page.frameLocator('#inn-frame iframe');
       await frame.locator('#status').waitFor({ state: 'detached', timeout: 60000 });
       const measure = async (selector, label) => {
@@ -243,9 +290,9 @@ export async function mobileChecks({ browser, baseURL, output }) {
       await page.locator('#ledger-drawer-host.is-open').waitFor();
       assert.deepEqual(
         await page
-          .locator('#ledger-drawer .ledger-foot button')
+          .locator('#ledger-drawer .ledger-foot button:visible')
           .evaluateAll((buttons) => buttons.map((button) => button.id)),
-        ['ledger-speed-toggle', 'generation-review'],
+        ['ledger-speed-toggle', 'ledger-raw-btn'],
       );
       await page.locator('#ledger-speed-toggle').click();
       assert.match(await page.locator('#ledger-speed-toggle').textContent(), /×2/);
@@ -253,6 +300,15 @@ export async function mobileChecks({ browser, baseURL, output }) {
       assert.match(await page.locator('#ledger-speed-toggle').textContent(), /×1/);
       await page.locator('#party-toggle').click();
       await measure('#party-panel', 'preparation');
+      const prepareDone = page.locator('#party-panel > footer #prepare-done');
+      assert(await prepareDone.isVisible());
+      assert((await prepareDone.boundingBox()).height >= 44);
+      assert.equal(
+        await page
+          .locator('.prepare-body')
+          .evaluate((node) => getComputedStyle(node).gridTemplateColumns.split(' ').length),
+        2,
+      );
       const slots = await page.locator('[data-prepare-slot]').evaluateAll((nodes) =>
         nodes.map((n) => {
           const b = n.getBoundingClientRect();
@@ -266,6 +322,7 @@ export async function mobileChecks({ browser, baseURL, output }) {
       await page.locator('[data-prepare-slot="0"]').click();
       await page.locator('#prepare-detail .prepare-inspector-col').waitFor({ state: 'visible' });
       await page.locator('#prepare-close').click();
+      if (viewport.width === 667) await checkDiceContinue(page, output);
       await frame.locator('canvas').evaluate(() => window.assetPreview.placeNow('supplies'));
       await frame.locator('#condenser-open').click();
       await page.locator('[data-forge-page="exchange"]').click();
@@ -290,19 +347,14 @@ export async function mobileChecks({ browser, baseURL, output }) {
       await page.locator('[data-gal="close"]').click();
       await page.locator('#gal-stage').waitFor({ state: 'hidden' });
       await frame.locator('canvas').evaluate(() => window.assetPreview.placeNow('bookshelf'));
-      for (const [button, dialog, close] of [
-        ['archives', 'archive-dialog', 'archive-close'],
-        ['records', 'journey-records', 'records-close'],
-        ['memory', 'memory-dialog', 'memory-close'],
-      ]) {
-        await frame.locator('#bookshelf-' + button).click();
-        await measure('#' + dialog, button);
-        if (button === 'archives') {
-          await page.locator('[data-archive-tab="enemies"]').click();
-          await swipeScroll(page, page.locator('#archive-list'));
-        }
-        await page.locator('#' + close).click();
+      await frame.locator('#bookshelf-archives').click();
+      await measure('#archive-dialog', 'archives');
+      for (const tab of ['enemies', 'records', 'memory', 'manual']) {
+        await page.locator(`#archive-dialog [data-archive-tab="${tab}"]`).click();
+        if (tab === 'enemies') await swipeScroll(page, page.locator('#archive-list'));
+        await measure('#archive-dialog', tab);
       }
+      await page.locator('#archive-close').click();
       // Exercise the workshop entry on the mobile request toolbar without an upstream request.
       await page.evaluate(async () => {
         const { createRequestControls } = await import('/src/app/request-controls.js');
@@ -502,10 +554,24 @@ export async function mobileChecks({ browser, baseURL, output }) {
       .locator('body')
       .evaluate(() => ({ width: innerWidth, height: innerHeight }));
     assert.deepEqual(size, { width: 844, height: 390 });
+    assert.equal(await game.locator('html').getAttribute('data-game-layout'), 'mobile');
     await game.locator('#ai-open').click();
     await swipeScroll(portrait, game.locator('#ai-dialog'), { rotated: true });
   } finally {
     await portrait.close();
+  }
+  const desktopLayout = await browser.newPage({
+    viewport: { width: 844, height: 390 },
+    hasTouch: true,
+  });
+  try {
+    await legacySession(desktopLayout);
+    await desktopLayout.goto(baseURL + '/?display=landscape&layout=desktop');
+    await desktopLayout.waitForFunction(() => !!window.demo);
+    assert.equal(await desktopLayout.locator('html').getAttribute('data-game-layout'), 'desktop');
+    assert.equal(await desktopLayout.locator('.prepare-formation-col #prepare-done').count(), 1);
+  } finally {
+    await desktopLayout.close();
   }
   assert.deepEqual(errors, []);
   assert.deepEqual(problems, [], 'All mobile panel failures are collected together');

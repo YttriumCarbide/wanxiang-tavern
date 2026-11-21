@@ -328,3 +328,91 @@ export function destinationRegionTerrain(
     ${terrain}
   </svg>`;
 }
+
+export const MAP_WALKER_SVG = `<svg viewBox="0 0 36 42" aria-hidden="true">
+  <ellipse class="walker-shadow" cx="18" cy="36" rx="8.5" ry="3.2"/>
+  <circle class="walker-ring" cx="18" cy="36" r="10"/>
+  <g class="walker-body">
+    <path class="walker-cloak" d="M16 15 C11 19 8 24 7 29 L15 27 Z"/>
+    <path class="walker-leg-b" d="M16.5 25 L14.5 34.5" stroke-linecap="round"/>
+    <path class="walker-arm-b" d="M17.5 16.5 L13.5 22.5" stroke-linecap="round"/>
+    <path class="walker-torso" d="M14.5 14.5 L21.5 14.5 L20.5 25.5 L15.5 25.5 Z"/>
+    <path class="walker-leg-a" d="M19.5 25 L21.5 34.5" stroke-linecap="round"/>
+    <path class="walker-arm-a" d="M20 16.5 L24 22" stroke-linecap="round"/>
+    <path class="walker-hood" d="M13 13 C13 7 16 4.5 19.5 5.2 C22.8 5.8 24 9.5 22.2 13.5 Z"/>
+    <circle class="walker-face" cx="19.5" cy="10.2" r="2.6"/>
+  </g>
+</svg>`;
+
+/** Animate a token smoothly along an ordered 2D point polyline using requestAnimationFrame. */
+export function animatePathWalk({
+  points = [],
+  reduced = false,
+  durationPerUnit = 3.5,
+  minMs = 240,
+  maxMs = 600,
+  onStep,
+  onDone,
+} = {}) {
+  const clean = [];
+  for (const pt of points || []) {
+    const x = Number(pt?.x ?? pt?.[0]);
+    const y = Number(pt?.y ?? pt?.[1]);
+    if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
+    const prev = clean.at(-1);
+    if (!prev || Math.hypot(x - prev.x, y - prev.y) > 0.01) clean.push({ x, y });
+  }
+  if (clean.length < 2 || reduced || typeof requestAnimationFrame !== 'function') {
+    const last = clean.at(-1);
+    if (last) onStep?.(last, 0);
+    onDone?.();
+    return () => {};
+  }
+  const cum = [0];
+  let total = 0;
+  for (let i = 1; i < clean.length; i++) {
+    total += Math.hypot(clean[i].x - clean[i - 1].x, clean[i].y - clean[i - 1].y);
+    cum.push(total);
+  }
+  if (total < 0.05) {
+    onStep?.(clean.at(-1), 0);
+    onDone?.();
+    return () => {};
+  }
+  const duration = Math.max(minMs, Math.min(maxMs, total * durationPerUnit));
+  const started = performance.now();
+  let cancelled = false;
+  let rafId = 0;
+
+  function sampleAt(dist) {
+    for (let i = 1; i < cum.length; i++) {
+      if (dist <= cum[i] || i === cum.length - 1) {
+        const span = Math.max(1e-5, cum[i] - cum[i - 1]);
+        const t = Math.max(0, Math.min(1, (dist - cum[i - 1]) / span));
+        const a = clean[i - 1];
+        const b = clean[i];
+        return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, dx: b.x - a.x };
+      }
+    }
+    const last = clean.at(-1);
+    return { x: last.x, y: last.y, dx: 0 };
+  }
+
+  function tick(now) {
+    if (cancelled) return;
+    const p = Math.min(1, (now - started) / duration);
+    const eased = p < 0.5 ? 2 * p * p : 1 - (-2 * p + 2) ** 2 / 2;
+    const pos = sampleAt(total * eased);
+    onStep?.({ x: pos.x, y: pos.y }, pos.dx);
+    if (p < 1) {
+      rafId = requestAnimationFrame(tick);
+    } else {
+      onDone?.();
+    }
+  }
+  rafId = requestAnimationFrame(tick);
+  return () => {
+    cancelled = true;
+    if (rafId && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(rafId);
+  };
+}

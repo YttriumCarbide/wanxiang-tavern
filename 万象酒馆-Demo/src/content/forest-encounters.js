@@ -33,10 +33,7 @@ export const FOREST_ROUTES = Object.freeze([
         '清除第三节点的瘴囊和淤泥，通风后蓝瘴减弱，发现深处元素泥核。',
       ),
       battle(['bogLeech', 'fogSpore'], '月苓带着公会寄存的药剂赶回，显露泥核通路并支援队伍。'),
-      battle(
-        ['bogElemental'],
-        '与月苓配合击败泥核，取得通向蜂鸣穹巢的安全路线；Boss开战获得至高纹章士玖柒。',
-      ),
+      battle(['bogElemental'], '与月苓配合击败泥核，取得通向蜂鸣穹巢的安全路线。'),
     ],
   },
   {

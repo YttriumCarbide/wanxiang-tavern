@@ -18,7 +18,6 @@ import { galInstruction } from '../src/ai/gal-prompt.js';
 import { createAiPipeline } from '../src/ai/pipeline/runtime.js';
 import { createWorldbookStore } from '../server/worldbook-store.mjs';
 import { normalizePromptPreset } from '../src/ai/presets.js';
-import { runRegexTasks } from '../server/regex-runtime.mjs';
 import { galNpcPortrait, GAL_NPC_PORTRAITS } from '../src/content/gal-npc-portraits.js';
 import { generationInput } from '../src/ai/pipeline/prompts.js';
 import { storyRingReward } from '../src/emblem-progression.js';
@@ -79,10 +78,8 @@ test('NPC markers bind real assets and stable identities without changing offici
 
 test('script requests bind ring scenes to the same fifth-node schedule as actual rewards', async () => {
   for (const [map, sequence] of [
-    ['ruins', 1],
     ['ruins', 2],
     ['ruins', 5],
-    ['forest', 1],
     ['forest', 3],
   ]) {
     const route = { map, sequence, seed: 1 };
@@ -106,8 +103,10 @@ test('script requests bind ring scenes to the same fifth-node schedule as actual
     );
   }
   assert.equal(storyRingReward({ map: 'ruins', sequence: 0 }), null);
-  assert.equal(storyRingReward({ map: 'ruins', sequence: 1, world: {} }), null);
-  const route = { map: 'ruins', sequence: 1, seed: 1 };
+  assert.equal(storyRingReward({ map: 'ruins', sequence: 1 }), null);
+  assert.equal(storyRingReward({ map: 'forest', sequence: 1 }), null);
+  assert.equal(storyRingReward({ map: 'ruins', sequence: 2, world: {} }), null);
+  const route = { map: 'ruins', sequence: 2, seed: 1 };
   const reward = storyRingReward(route);
   const request = generationInput('script', {
     brief: '再次探索回廊',
@@ -257,10 +256,10 @@ test('actual shared pipeline opts script and chat into Gal without changing the 
   const pipeline = createAiPipeline({
     worlds,
     settings: { get: () => profile },
-    regexStore: { get: () => [] },
+
     helperStorage: { get: () => ({}) },
     countTokens: (text) => Math.ceil(text.length / 3),
-    runRegexTasks,
+
     readText: (file) => readFile(new URL('../prompts/' + file, import.meta.url), 'utf8'),
   });
   const source = normalizePromptPreset({
@@ -294,6 +293,8 @@ test('actual shared pipeline opts script and chat into Gal without changing the 
     for (const request of [off, on]) {
       const finalText = request.messages.map((message) => message.content).join('\n');
       assert(finalText.includes('【对白:npc:姓名|立绘编号】'));
+      assert(finalText.includes('女守卫·玛莎'));
+      assert(!finalText.includes('【对白:npc:城门女卫兵|guardWoman】'));
       assert(finalText.includes('老年男性学者'));
       assert(finalText.includes('不在剧本或聊天正文写戒指的具体游戏效果'));
     }

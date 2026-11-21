@@ -95,7 +95,7 @@ test('tutorial descriptors, AI reference and five encounter progression share th
     assert.equal(level, 1);
     assert.equal(growthSeed, node.seed);
     assert.equal(growthEntry.tutorial, true);
-    assert(spec.enemyIds.length <= 2);
+    assert(spec.enemyIds.length >= 1 && spec.enemyIds.length <= 3);
     let state = beginEncounter(expedition);
     assert.equal(heroesFor(state).length, 2);
     state = advance(preview(state, [makeAction(state, 'aegis', 'attack', state.enemyIds[0], 0)]));
@@ -117,7 +117,7 @@ test('tutorial descriptors, AI reference and five encounter progression share th
   assert.equal(context.characters.greenLight.length, 2);
   assert.deepEqual(
     context.encounters.map((item) => item.enemyCount),
-    [1, 2, 1, 2, 1],
+    Array.from({ length: 5 }, (_, index) => tutorialSpec(index).enemyIds.length),
   );
   assert.equal(
     generationInput('character', { brief: '主角名：旅人', purpose: 'protagonist' }).request.role,

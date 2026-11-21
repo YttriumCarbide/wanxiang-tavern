@@ -2,6 +2,7 @@
  * Explicit controller ports; no module globals or circular ES module imports.
  * @typedef {Object} AppContext
  * @property {ReturnType<typeof import('../shared/asset-store.js').createAssetStore>} assets
+ * @property {ReturnType<typeof import('../updates/content-updates.js').createContentUpdates>} [contentUpdates]
  * @property {ReturnType<typeof import('./asset-preload.js').createPortraitPreloader>} assetPreloader
  * @property {ReturnType<typeof import('./gal.js').createGalPlayer>} gal
  * @property {ReturnType<typeof import('./dice-stage.js').createDiceStage>} dice
@@ -48,7 +49,6 @@
  * @property {ReturnType<typeof import('./bookshelf.js').createBookshelf>} bookshelf
  * @property {ReturnType<typeof import('./equipment.js').createEquipment>} equipment
  * @property {ReturnType<typeof import('./companion-events.js').createCompanionEvents>} companionEvents
- * @property {ReturnType<typeof import('./preset-extensions.js').createPresetExtensions>} extensions
  * @property {ReturnType<typeof import('./records.js').createRecords>} [records]
  * @property {ReturnType<typeof import('./summoning.js').createSummoning>} summoning
  */

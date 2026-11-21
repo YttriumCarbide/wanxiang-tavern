@@ -21,6 +21,18 @@ import { createWorldbookStore } from '../server/worldbook-store.mjs';
 import { generationInput, generationRequest } from '../server/prompts.mjs';
 import { officialSummonPool } from '../src/summoning.js';
 import { characterDocument } from './fixtures/ai.js';
+import { scriptOutputSchema } from '../src/ai/script-schema.js';
+
+async function builtinGenerationRule(id, builtin) {
+  const book =
+    builtin ??
+    JSON.parse(
+      await readFile(new URL('../assets/builtin-worldbook.json', import.meta.url), 'utf8'),
+    );
+  return Object.values(book.entries).find(
+    (entry) => entry.extensions?.wanxiang?.generationRule === id,
+  );
+}
 
 test('tutorial migration preserves edited Pandora and injection controls while replacing the requested sheets', async () => {
   const builtin = JSON.parse(
@@ -131,6 +143,9 @@ test('outline pacing migration removes fixed scene allocation and reaches the re
   const updated = (await migrated.get('tavern-world')).book;
   const rule = updated.entries[output.uid];
   const reference = updated.entries[outline.uid];
+  const template = await builtinGenerationRule('script-output');
+  assert.equal(rule.content, template.content);
+  assert(template.content.includes('{{outputSchema}}'));
   assert(!rule.content.includes(oldTail));
   assert.deepEqual([rule.depth, rule.order, reference.order], [2, 8765, 789]);
   assert(reference.content.includes(TUTORIAL_DUNGEON.outline));
@@ -146,10 +161,26 @@ test('outline pacing migration removes fixed scene allocation and reaches the re
     countTokens: (value) => Math.ceil(value.length / 4),
   });
   const messages = request.messages.map((message) => message.content).join('\n');
-  assert(messages.includes('一次回复内完成整份大纲'));
-  assert(messages.includes('不与大纲的自然段、句子或事件一一对应'));
-  assert(messages.includes('由AI根据实际战斗进度自行安排事件'));
+  const schema = scriptOutputSchema();
+  assert(
+    [0, 2].some((indent) =>
+      messages.includes(
+        template.content
+          .replace('{{outputSchema}}', () => JSON.stringify(schema, null, indent))
+          .trim(),
+      ),
+    ),
+    'The request includes the canonical output rule with its schema substituted',
+  );
+  assert(messages.includes(TUTORIAL_DUNGEON.outline));
   assert(!messages.includes(oldTail));
+  assert.deepEqual(generationInput('script', input).request.acts, [
+    { index: 0, type: 'battle', stage: 'normal' },
+    { index: 1, type: 'choice' },
+    { index: 2, type: 'battle', stage: 'elite' },
+    { index: 3, type: 'quest' },
+    { index: 4, type: 'battle', stage: 'boss' },
+  ]);
   const restarted = await createWorldbookStore(directory);
   assert.deepEqual((await restarted.get('tavern-world')).book, updated);
 });
@@ -181,10 +212,13 @@ test('player identity and protocol reminders migrate without copying the outline
   );
   assert(!output.content.includes('标签名、<user>占位符'));
   assert.equal(output.depth, 2);
-  assert.equal(
-    entries.filter((entry) => entry.extensions?.wanxiang?.generationRule === 'script-player')
-      .length,
-    1,
+  const playerRule = await builtinGenerationRule('script-player');
+  const playerRules = entries.filter(
+    (entry) => entry.extensions?.wanxiang?.generationRule === 'script-player',
+  );
+  assert.deepEqual(
+    playerRules.map(({ content }) => content),
+    [playerRule.content],
   );
   const library = newCampaign(defaultProtagonist());
   const player = library.characters.find((entry) => entry.id === library.campaign.protagonistId);
@@ -204,11 +238,20 @@ test('player identity and protocol reminders migrate without copying the outline
     countTokens: (value) => Math.ceil(value.length / 4),
   });
   const content = request.messages.map((message) => message.content).join('\n');
-  assert.deepEqual(generationInput('script', input).characters.player, {
-    id: player.id,
-    name: '林舟',
-    role: '玩家创建的主角；设定见greenLight中同一ID的角色，不是额外NPC',
-  });
+  const { characters } = generationInput('script', input);
+  assert.deepEqual(characters.player, { id: player.id, name: '林舟' });
+  assert.deepEqual(
+    characters.greenLight.map(({ id }) => id),
+    input.party.map(({ id }) => id),
+  );
+  const setting = input.party.find(({ id }) => id === player.id);
+  assert.equal(typeof setting.worldbook, 'string');
+  assert.deepEqual(
+    characters.greenLight
+      .filter(({ id }) => id === player.id)
+      .map(({ id, name, worldbook }) => ({ id, name, worldbook })),
+    [{ id: player.id, name: '林舟', worldbook: setting.worldbook }],
+  );
   assert(content.includes('不是另一个同行NPC'));
   assert(content.includes('不输出字面量<user>'));
   assert(!content.includes('主角统一写作<user>'));
@@ -230,13 +273,14 @@ test('Edith restores as an official guest and pays health for real capped mana a
   state.units.aegis.hp = 40;
   state.units.aegis.mp = 19;
   state.units.aegis.block = 20;
-  const action = makeAction(state, 'aegis', 'cinnabar-eclipse', 'warden', 0);
+  const enemyId = state.enemyIds[0];
+  const action = makeAction(state, 'aegis', 'cinnabar-eclipse', enemyId, 0);
   const result = preview(state, [action]);
   assert(result.valid, JSON.stringify(result.invalid));
   assert.equal(result.final.units.aegis.hp, 34);
   assert.equal(result.final.units.aegis.mp, 22);
   assert.equal(result.final.units.aegis.block, 20);
-  assert(result.final.units.warden.hp < state.units.warden.hp);
+  assert(result.final.units[enemyId].hp < state.units[enemyId].hp);
   state.units.aegis.hp = 6;
   const rejected = preview(state, [action]);
   assert(!rejected.valid);
@@ -244,7 +288,7 @@ test('Edith restores as an official guest and pays health for real capped mana a
   assert.equal(rejected.final.units.aegis.mp, 19);
   state.units.aegis.hp = 40;
   state.units.aegis.mp = 10;
-  const heal = preview(state, [makeAction(state, 'aegis', 'tidal-moonlight', 'warden', 0)]);
+  const heal = preview(state, [makeAction(state, 'aegis', 'tidal-moonlight', enemyId, 0)]);
   assert(heal.valid);
   assert.equal(heal.final.units.aegis.hp, 47);
   assert.equal(heal.final.units.aegis.mp, 5);
@@ -316,7 +360,7 @@ test('editable canon and all six official outlines migrate once and only match t
   assert(!normal.messages.some((message) => message.content.includes('大纲编辑回写验证')));
 });
 
-test('five-fight migration updates stored rules and examples while preserving controls and custom additions', async () => {
+test('five-node migration updates stored rules while preserving controls and custom additions', async () => {
   const builtin = JSON.parse(
     await readFile(new URL('../assets/builtin-worldbook.json', import.meta.url), 'utf8'),
   );
@@ -334,14 +378,15 @@ test('five-fight migration updates stored rules and examples while preserving co
       2: { uid: 2, content: '六段自定义文字', extensions: {} },
     },
   };
+  const original = structuredClone(source);
   const migrated = syncBuiltinWorldbook(source, builtin);
-  assert(
-    migrated.entries[0].content.includes('节点 1') &&
-      migrated.entries[0].content.includes('节点 5'),
-  );
+  const rule = await builtinGenerationRule('script-output', builtin);
+  assert.equal(migrated.entries[0].content, rule.content);
   assert(migrated.entries[0].content.includes('2:1:1:1:2'));
   for (const key of ['disable', 'order', 'depth'])
     assert.equal(migrated.entries[0][key], source.entries[0][key]);
   assert.equal(migrated.entries[2].content, source.entries[2].content);
   assert.deepEqual(migrated.entries[2].extensions.wanxiang.apiTargets, ['character', 'script']);
+  assert.deepEqual(syncBuiltinWorldbook(migrated, builtin), migrated);
+  assert.deepEqual(source, original);
 });

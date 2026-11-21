@@ -345,15 +345,20 @@ export async function createTavernView() {
     window.modelReady = false;
     window.assetPreview = null;
   }
-  events.on(window, 'pagehide', dispose, { once: true });
+  events.on(window, 'pagehide', (event) => {
+    if (!event.persisted) dispose();
+  });
   try {
     await loading.prepare(TAVERN_MODEL_FILES);
+    if (disposed) return { dispose };
     const [gltf, machines] = await Promise.all(
-      TAVERN_MODEL_FILES.map((file) => loading.gltf(file)),
+      TAVERN_MODEL_FILES.map(async (file) => {
+        const loaded = await loading.gltf(file);
+        resources.object(loaded.scene);
+        return loaded;
+      }),
     );
     model = gltf.scene;
-    resources.object(model);
-    resources.object(machines.scene);
     if (disposed) return { dispose };
     attachTavernSupplies(model, machines.scene);
     const dungeonShader = gateMaterial(0, [0.48, 0.24], [1.32, 2.12]),
@@ -413,6 +418,10 @@ export async function createTavernView() {
       events,
       assets: loading.assets,
     });
+    if (disposed) {
+      visitors.dispose();
+      return { dispose };
+    }
     ringDisplay = createRingDisplay(renderer, scene, camera);
     mixer = new THREE.AnimationMixer(model);
     gltf.animations.forEach((a) => mixer.clipAction(synchronizeSummonCrystals(a)).play());
@@ -555,11 +564,7 @@ export async function createTavernView() {
   }
   const talk = document.getElementById('talk-open');
   shelfButtons.push(
-    ...[
-      { action: 'archives', label: '归档', height: 1.78 },
-      { action: 'records', label: '记录', height: 1.24 },
-      { action: 'memory', label: '总结', height: 0.7 },
-    ].map((shelf) => {
+    ...[{ action: 'archives', label: '归档', height: 1.24 }].map((shelf) => {
       const button = document.createElement('button');
       button.id = 'bookshelf-' + shelf.action;
       button.className = 'talk-open bookshelf-shelf';

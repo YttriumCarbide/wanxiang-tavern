@@ -439,7 +439,9 @@ export async function createGuestRoomView() {
     window.guestRoomPreview = null;
   }
 
-  events.on(window, 'pagehide', dispose, { once: true });
+  events.on(window, 'pagehide', (event) => {
+    if (!event.persisted) dispose();
+  });
   events.on(document.getElementById('room-talk'), 'click', () => {
     if (leaving || travel) return;
     parent.postMessage(
@@ -463,6 +465,7 @@ export async function createGuestRoomView() {
 
   try {
     await loading.prepare([ROOM.asset]);
+    if (disposed) return { dispose };
     const gltf = await loading.gltf(ROOM.asset);
     model = gltf.scene;
     resources.object(model);
@@ -491,8 +494,13 @@ export async function createGuestRoomView() {
       events,
       assets: loading.assets,
     });
+    if (disposed) {
+      visitors.dispose();
+      return { dispose };
+    }
     visitors.update();
     await loading.finish(renderer, scene, camera);
+    if (disposed) return { dispose };
     loaded = true;
     syncAngles();
     updateWhere(ROOM.enter);

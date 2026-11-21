@@ -1,0 +1,194 @@
+{
+  "schemaVersion": 1,
+  "status": "draft",
+  "inventory": "dist/release.json",
+  "matching": "first-match-wins",
+  "scope": "首包覆盖普通新档、绿蕨磨坊 mill-1-canal 五节点及结算返馆、招募、补给、凝聚器、再次出发到教程 complete，兼顾第二节点开场。正文生成沿用现有 AI 连接。静态构建生成完整发布包及逻辑分包清单。",
+  "updates": {
+    "background": ["rooms"],
+    "priorities": {
+      "startup": 0,
+      "rooms": 10,
+      "travel": 20,
+      "dungeon-art": 30,
+      "dining": 40,
+      "archive-art": 50,
+      "runtime-review": 60
+    },
+    "mirrors": [
+      {
+        "id": "github-release",
+        "kind": "github-release",
+        "priority": 10,
+        "env": "WANXIANG_UPDATE_GITHUB_RELEASE"
+      },
+      {
+        "id": "github-raw",
+        "kind": "github-raw",
+        "priority": 20,
+        "env": "WANXIANG_UPDATE_GITHUB_RAW"
+      },
+      { "id": "gitee", "kind": "gitee", "priority": 30, "env": "WANXIANG_UPDATE_GITEE" }
+    ],
+    "gates": { "after-tutorial-first-level": [] }
+  },
+  "staticExcludes": [
+    "^assets/(?:[^/]+/)*[^/]+\\.md$",
+    "^assets/(?:[^/]+/)*manifest\\.json$",
+    "^assets/(?:[^/]+/)*prompts\\.json$",
+    "^assets/character-art\\.json$",
+    "^assets/exploration/continuous-art\\.json$",
+    "^assets/exploration/ground-art\\.json$",
+    "^assets/exploration/native-sources\\.json$",
+    "^assets/exploration/starbell-art\\.json$",
+    "^assets/exploration/(?:street-hd-v4|free-scenes-hd-v2)/(?:[^/]+/)*layout\\.json$",
+    "^assets/exploration/(?:street-hd-v4|free-scenes-hd-v2)/(?:[^/]+/)*stitch\\.json$",
+    "^assets/exploration/(?:street-hd-v4|free-scenes-hd-v2)/(?:[^/]+/)*reference-[0-3]\\.png$",
+    "^assets/exploration/(?:street-hd-v4|free-scenes-hd-v2)/(?:[^/]+/)*tile-[0-3]\\.png$",
+    "^assets/exploration/free-scenes-v1(?:/|$)",
+    "^assets/guest-room\\.glb$",
+    "^assets/portraits/fan-yuexi\\.webp$",
+    "^vendor/sillytavern/README\\.md$",
+    "^vendor/sillytavern/prompt-converters\\.source\\.txt$",
+    "^vendor/sillytavern/chat-layout\\.source\\.html$"
+  ],
+  "nativeInputExcludes": [
+    ".runtime/",
+    "backups/",
+    "存档/",
+    "node_modules/",
+    "tests/",
+    "tools/",
+    "server/",
+    "server.cjs",
+    "launch.ps1",
+    ".npmrc",
+    ".nvmrc",
+    "package*.json",
+    "*.md",
+    "*.cmd",
+    "*.config.mjs",
+    "jsconfig.json",
+    "静态发布验收.json",
+    "发布资产划分.json",
+    "src/",
+    "styles/",
+    "../建模工具/",
+    "../万象酒馆-体素模型/",
+    "../万象古林-体素模型/",
+    "../万象异境-体素模型/"
+  ],
+  "nativeInputPolicy": "以上条目从项目目录及仓库开发素材排除，原生端以 Web 构建产物为输入。未进行 Web 自有代码打包前，dist/src 与 dist/styles 是浏览器需要的运行时文件。",
+  "groups": [
+    {
+      "id": "startup",
+      "delivery": "initial",
+      "reason": "首包：启动、教程、绿蕨磨坊 mill-1-canal 五节点及结算返馆、招募、补给、凝聚器、再次出发到教程 complete 所需；兼顾第二节点开场；浏览器直接 ES modules 为现状，保留所有当前代码、协议与许可证。",
+      "match": [
+        "^\\.nojekyll$",
+        "^[^/]+\\.html$",
+        "^service-worker\\.js$",
+        "^(?:src|styles|vendor|prompts)(?:/|$)",
+        "^assets/asset-catalog\\.json$",
+        "^assets/builtin-worldbook\\.json$",
+        "^assets/title-tavern\\.png$",
+        "^assets/exploration-parchment\\.png$",
+        "^assets/parchment-theater\\.jpg$",
+        "^assets/inn\\.glb$",
+        "^assets/tavern-machines\\.glb$",
+        "^assets/greenfern-mill\\.glb$",
+        "^assets/preview-mill\\.glb$",
+        "^assets/preview-forest\\.glb$",
+        "^assets/preview-ruins\\.glb$",
+        "^assets/mill-[^/]+\\.glb$",
+        "^assets/portraits/mill-[^/]+\\.svg$",
+        "^assets/events/forest-event\\.png$",
+        "^assets/events/forest-quest\\.png$",
+        "^assets/audio/tavern\\.mp3$",
+        "^assets/audio/tavern-2\\.mp3$",
+        "^assets/audio/tavern-3\\.mp3$",
+        "^assets/audio/starbell-town\\.mp3$",
+        "^assets/audio/encounter\\.mp3$",
+        "^assets/audio/boss\\.m4a$",
+        "^assets/audio/sfx(?:/|$)",
+        "^assets/icons(?:/|$)",
+        "^assets/items(?:/|$)",
+        "^assets/gal(?:/|$)",
+        "^assets/gal-npc-cast(?:/|$)",
+        "^assets/tavern-visitors(?:/|$)",
+        "^assets/portraits/template-[^/]+\\.webp$",
+        "^assets/portraits/unknown-card\\.png$",
+        "^assets/portraits/unknown-standing\\.png$",
+        "^assets/portraits/edith\\.png$",
+        "^assets/portraits/changjing-yuexi\\.png$",
+        "^assets/portraits/aegis\\.svg$",
+        "^assets/portraits/pandora\\.png$",
+        "^assets/portraits/luo-gongxu-v2\\.png$",
+        "^assets/portraits/silica-laps-v3\\.png$",
+        "^assets/portraits/sunflower-angel-v1\\.png$",
+        "^assets/portraits/lumi-v1\\.png$",
+        "^assets/portraits/yuto-nakashi-v1\\.png$",
+        "^assets/exploration/fansheng-[^/]+\\.svg$",
+        "^assets/exploration/street-hd-v4/connected\\.png$",
+        "^assets/exploration/free-scenes-hd-v2/city-center/connected\\.png$",
+        "^assets/exploration/free-scenes-hd-v2/outskirts/connected\\.png$",
+        "^assets/exploration/town-night/street\\.png$",
+        "^assets/exploration/town-night/city-center\\.png$",
+        "^assets/exploration/town-night/outskirts\\.png$",
+        "^assets/exploration/overland-road/road-meadow-wide\\.png$",
+        "^assets/exploration/ground-cobble-v1\\.png$",
+        "^assets/exploration/ground-earth-v1\\.png$",
+        "^assets/exploration/street-spatial/courtyard-fountain\\.png$"
+      ]
+    },
+    {
+      "id": "rooms",
+      "delivery": "on-demand",
+      "reason": "延后：走廊与客房、主卧模型，进入对应房间前拉取。",
+      "match": [
+        "^assets/corridor\\.glb$",
+        "^assets/guest-room-a\\.glb$",
+        "^assets/guest-room-b\\.glb$",
+        "^assets/master-bedroom\\.glb$"
+      ]
+    },
+    {
+      "id": "travel",
+      "delivery": "on-demand",
+      "reason": "延后：其余 assets/exploration/ 场景资源；小镇其他出口、外围路段、银冠城、永恒城、旧全景/降级候选需先确认。",
+      "match": ["^assets/exploration(?:/|$)"]
+    },
+    {
+      "id": "dungeon-art",
+      "delivery": "on-demand",
+      "reason": "延后：其余 assets/events/、assets/audio/ 的战地选曲（第一包先匹配）、剩余所有根资产 .glb；其他区域完整预览、战场与敌模，进入各地前拉取，未来可细分。",
+      "match": ["^assets/events(?:/|$)", "^assets/audio(?:/|$)", "^assets/[^/]+\\.glb$"]
+    },
+    {
+      "id": "dining",
+      "delivery": "on-demand",
+      "reason": "延后：餐饮相关资源，进入餐饮场景前拉取。",
+      "match": ["^assets/dining(?:/|$)"]
+    },
+    {
+      "id": "archive-art",
+      "delivery": "on-demand",
+      "reason": "延后：其余 assets/portraits/；人物与怪物图鉴、角色导入/旧档需门禁，启动预取需要按分包可用性过滤。",
+      "match": ["^assets/portraits(?:/|$)"]
+    },
+    {
+      "id": "runtime-review",
+      "delivery": "on-demand",
+      "reason": "延后：剩余 assets/，待核对资产有动态引用时入对应包或并回首包。",
+      "match": ["^assets(?:/|$)"]
+    }
+  ],
+  "gates": [
+    "构建 inventory 的每个运行文件按首次命中规则归组。发布控制文件由构建器单独管理。",
+    "各包维持原路径，不改变运行时引用。",
+    "后续内容确认后，在 updates.gates 注册必需分包，并按需启用后台预取。",
+    "AI 网络仍需现有服务。",
+    "旧存档兼容按需门禁。",
+    "当前静态产物完整，没有切物理包和实机覆盖。"
+  ]
+}

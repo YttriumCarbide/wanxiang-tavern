@@ -2,6 +2,10 @@ html,
 body {
   overscroll-behavior: none;
 }
+:root[data-game-layout='mobile'] {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
 #fullscreen-toggle {
   width: 42px;
   padding: 8px;

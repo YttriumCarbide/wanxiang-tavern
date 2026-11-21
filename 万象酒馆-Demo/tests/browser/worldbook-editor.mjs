@@ -121,9 +121,51 @@ export async function worldbookEditorChecks({ page, output }) {
   assert.equal(summary.filename, '总结世界书.json');
   const currentSummary = await page.evaluate(() => demo.getLibrary().summaryWorldbook);
   assert.deepEqual(summary.book, normalizeWorldbook(currentSummary).book);
+
+  const tavernRoute = '**/api/ai/worldbooks/tavern-world';
+  const rejected = (route) => route.fulfill({ status: 503, json: { error: 'read failed' } });
+  await page.route(tavernRoute, rejected);
+  const failure = page.waitForResponse(
+    (response) => response.url().endsWith('/worldbooks/tavern-world') && response.status() === 503,
+  );
   await picker.selectOption('tavern-world');
+  await failure;
+  await page.waitForFunction(() => !document.querySelector('#world-book-select').disabled);
+  assert.equal(await picker.inputValue(), 'tavern-summary');
+  assert.equal(await nameField.inputValue(), '总结世界书');
+  await page.unroute(tavernRoute, rejected);
+
+  const release = Promise.withResolvers();
+  const started = Promise.withResolvers();
+  await page.route(
+    tavernRoute,
+    async (route) => {
+      started.resolve();
+      await release.promise;
+      await route.continue();
+    },
+    { times: 1 },
+  );
+  await picker.selectOption('tavern-world');
+  await started.promise;
+  try {
+    await nameField.fill('切书期间的草稿');
+    await page.waitForTimeout(700);
+  } finally {
+    release.resolve();
+  }
   await page.waitForFunction(
     (name) => document.querySelector('#world-name').value === name,
+    originalBookName,
+  );
+  assert.equal(
+    await page.evaluate(() => demo.getLibrary().summaryWorldbook.name),
+    '切书期间的草稿',
+  );
+  assert.equal(
+    await page.evaluate(
+      async () => (await (await fetch('/api/ai/worldbooks/tavern-world')).json()).book.name,
+    ),
     originalBookName,
   );
   await page.locator('#world-close').click();
@@ -138,6 +180,7 @@ export async function worldbookEditorChecks({ page, output }) {
     landscapeReachable: true,
     completeBookDownloadWithDraft: true,
     separateSummaryDownload: true,
+    failedAndDelayedSwitchOwnTheirDraft: true,
   };
 }
 

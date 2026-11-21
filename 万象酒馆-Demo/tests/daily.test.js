@@ -578,6 +578,13 @@ test('the first shift admits a new party while cooking progress is preserved', (
 
 test('whisking, searing, skimming, kneading and piping add different cooking motions', () => {
   const whisk = serviceActivity('whisk', { cookSince: 0 }, 2);
+  const left = { x: 0.2, y: 0.5 };
+  const right = { x: 0.8, y: 0.5 };
+  const forward = { type: 'move', from: left, to: right, start: left, seconds: 0 };
+  const firstStroke = applyServiceGesture(whisk, forward);
+  const repeatedStroke = applyServiceGesture({ ...whisk, state: firstStroke.state }, forward);
+  assert(firstStroke.state.progress > 0);
+  assert.equal(repeatedStroke.state.progress, firstStroke.state.progress);
   let whiskState = { ...whisk.state };
   let whisked = false;
   let from = { x: 0.2, y: 0.5 };
@@ -760,8 +767,8 @@ test('one held sweep cuts multiple ingredients before pointer release', () => {
 });
 
 test('stirring, rolling, flipping, seasoning and catching use different gesture rules', () => {
-  function run(kind, move) {
-    let activity = serviceActivity(kind, { cookSince: 0 }, 2);
+  function run(kind, move, elapsed = 2) {
+    let activity = serviceActivity(kind, { cookSince: 0 }, elapsed);
     for (const [from, to, seconds = 0.08, type = 'move'] of move) {
       const result = applyServiceGesture(activity, {
         from: { x: from[0], y: from[1] },
@@ -802,7 +809,9 @@ test('stirring, rolling, flipping, seasoning and catching use different gesture 
       ],
     ]),
   );
-  assert(run('flip', [[[0.5, 0.8], [0.5, 0.2], 0, 'move']]));
+  const flipMotion = [[[0.5, 0.8], [0.5, 0.2], 0, 'move']];
+  assert.equal(run('flip', flipMotion, 0.5), false);
+  assert.equal(run('flip', flipMotion), true);
   assert(
     run('season', [
       [

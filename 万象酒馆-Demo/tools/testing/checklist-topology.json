@@ -1,0 +1,9 @@
+{
+  "browserConcurrency": 2,
+  "scopes": ["core"],
+  "coreFiles": [
+    "tests/content-topology.test.js",
+    "tests/content-topology-probes.test.js",
+    "tests/content-topology-region-probes.test.js"
+  ]
+}

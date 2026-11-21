@@ -258,21 +258,8 @@ export function generationInput(kind, input) {
 }
 
 export async function generationRequest(kind, input, source, options = {}) {
-  const { readText, runRegexTasks } = options;
-  const regexScripts = options.regexScripts || [];
-  const variablesForRegex = {
-    char: (input.party || []).map((entry) => entry.name).join('、') || '待生成角色',
-    user: (input.party || []).find((entry) => entry.id === input.protagonistId)?.name || '玩家',
-  };
-  const inputPass = await runRegexTasks(regexScripts, [
-    { text: input.brief || '', placement: 1, options: { kind, variables: variablesForRegex } },
-    {
-      text: playerIntentText(input.playerIntent),
-      placement: 1,
-      options: { kind, variables: variablesForRegex },
-    },
-  ]);
-  input = { ...input, brief: inputPass[0].text };
+  const { readText } = options;
+  const intentText = playerIntentText(input.playerIntent);
   const context = options.assetContext || generationInput(kind, input);
   if (options.worldInfo) context.world = '本次已激活的世界书条目';
   const schema = options.assetContext
@@ -305,7 +292,7 @@ export async function generationRequest(kind, input, source, options = {}) {
     storyRingReward: context.request?.storyRingReward,
     storyArc: context.request?.storyArc,
     dynamicWorld: context.request?.dynamicWorld,
-    playerIntent: inputPass[1].text,
+    playerIntent: intentText,
   });
   const scan = options.worldInfo
     ? scanWorldbooks({
@@ -328,7 +315,7 @@ export async function generationRequest(kind, input, source, options = {}) {
               })),
             ),
             { role: 'user', content: input.brief },
-            ...playerIntentMessages(inputPass[1].text),
+            ...playerIntentMessages(intentText),
           ],
           names: (input.party || []).map((entry) => entry.name),
           characterIds: (input.party || []).map((entry) => entry.id),
@@ -349,19 +336,6 @@ export async function generationRequest(kind, input, source, options = {}) {
         },
       })
     : null;
-  if (scan && regexScripts.length) {
-    const processed = await runRegexTasks(
-      regexScripts,
-      scan.entries.map((entry) => ({
-        text: entry.content,
-        placement: 5,
-        options: { kind, isPrompt: true, variables: variablesForRegex },
-      })),
-    );
-    scan.entries.forEach((entry, index) => {
-      entry.content = processed[index].text;
-    });
-  }
   const wiBefore =
     scan?.entries
       .filter((entry) => entry.position === 0)
@@ -466,20 +440,6 @@ export async function generationRequest(kind, input, source, options = {}) {
           `Outlet ${entry.outletName}已激活，但预设没有引用{{outlet::${entry.outletName}}}，因此未发送。`,
         );
   }
-  const regexResults = await runRegexTasks(
-    regexScripts,
-    messages.map((message, index) => ({
-      text: message.content,
-      placement: message.role === 'assistant' ? 2 : message.role === 'user' ? 1 : -1,
-      options: {
-        kind,
-        isPrompt: true,
-        depth: messages.length - index - 1,
-        variables: variablesForRegex,
-      },
-    })),
-  );
-  messages = messages.map((message, index) => ({ ...message, content: regexResults[index].text }));
   // Live API generation receives its format from the visible @D worldbook entry.
   // Standalone callers without a worldbook retain a minimal legacy fallback.
   if (!options.worldInfo) {
@@ -502,9 +462,7 @@ export async function generationRequest(kind, input, source, options = {}) {
     const baseText = hasWorldbookScriptTeaching
       ? galActorListText(input)
       : galInstruction(input, kind) +
-        (inputPass[1].text
-          ? '\n把玩家补充的意图用作可以尝试的行动或对话，保留玩家选择和实际结果。'
-          : '');
+        (intentText ? '\n把玩家补充的意图用作可以尝试的行动或对话，保留玩家选择和实际结果。' : '');
     messages.splice(boundary < 0 ? messages.length : boundary, 0, {
       role: 'system',
       content: baseText,
@@ -512,7 +470,7 @@ export async function generationRequest(kind, input, source, options = {}) {
     messages.splice(
       boundary < 0 ? messages.length : boundary + 1,
       0,
-      ...playerIntentMessages(inputPass[1].text),
+      ...playerIntentMessages(intentText),
     );
   }
   if (kind === 'character' && input.questCharacter)
@@ -553,10 +511,6 @@ export async function generationRequest(kind, input, source, options = {}) {
       ...outputTransport,
       presetProcessing: options.presetProcessing,
       presetVariables: { user: variables.user, char: variables.char },
-    },
-    regex: {
-      scripts: regexScripts.length,
-      changes: [...inputPass[0].changes, ...regexResults.flatMap((result) => result.changes)],
     },
     ...(options.countTokens
       ? {

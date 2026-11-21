@@ -11,13 +11,54 @@ import { compatibleRequest } from '../src/ai/compatible.js';
 import { miaosaiyaReassemble, miaosaiyaFinalRequest } from '../src/ai/miaosaiya-processing.js';
 import { createWorldbookStore } from '../server/worldbook-store.mjs';
 import { createBrowserStores } from '../src/ai/browser-stores.js';
-import { runRegexTasks } from '../server/regex-runtime.mjs';
 import { compactCharacterDocument, scriptFixture } from './fixtures/ai.js';
 import { worldFixture } from './fixtures/multiverse.js';
 import { formatRequestPreview } from '../src/app/request-preview.js';
 import { vertexRequest } from '../src/ai/vertex.js';
+import {
+  builtinPrompt,
+  createBuiltinPromptSource,
+  normalizePromptOptions,
+} from '../src/ai/builtin-prompt.js';
 
 const readText = (file) => readFile(new URL('../prompts/' + file, import.meta.url), 'utf8');
+
+test('the built-in 2.1.7 keeps the upgraded body envelope, adult modes and portable transport', async () => {
+  const config = JSON.parse(await readText('framework/meowssiah-2.1.7.json'));
+  const defaults = normalizePromptOptions();
+  const { preset: chat } = normalizePromptPreset(builtinPrompt(config, 'chat', defaults, true));
+  assert.match(chat.prompts.find(({ row }) => row === 2).content, /<wanxiang_output>/u);
+  assert(!chat.prompts.some(({ row }) => [8, 12, 14, 18, 23, 46, 47].includes(row)));
+  assert(!chat.prompts.some(({ content }) => content?.includes('catgodml')));
+  const { outputTool } = presetOutputTransport(chat);
+  assert.equal(outputToolRequest(outputTool).tool_choice.function.name, 'game_content');
+  assert.equal(
+    presetOutputTransport(builtinPrompt(config, 'chat', defaults)).outputTool,
+    undefined,
+  );
+  for (const { key, row } of config.adultChoices) {
+    const options = normalizePromptOptions({ adult: key });
+    const selected = builtinPrompt(config, 'chat', options).prompts;
+    assert.equal(
+      selected.filter((entry) => config.adultChoices.some((item) => item.row === entry.row)).length,
+      1,
+    );
+    const source = config.prompts.find((entry) => entry.row === row).content;
+    assert.equal(
+      selected.find((entry) => entry.row === row).content,
+      source.slice(source.indexOf('>>>') + 3).trimStart(),
+    );
+  }
+  const map = builtinPrompt(config, 'map', defaults, true);
+  assert(!map.prompts.some(({ row }) => [2, 5, 43].includes(row)));
+  assert.equal(presetOutputTransport(map).outputTool, undefined);
+  const source = await createBuiltinPromptSource(readText, {
+    get: (kind) => ({ promptProcessing: kind === 'script' ? 'strict' : 'merge_tools' }),
+    promptOptions: () => normalizePromptOptions({ toolTransport: true }),
+  });
+  assert.equal(presetOutputTransport(await source.get('chat')).outputTool.name, 'game_content');
+  assert.equal(presetOutputTransport(await source.get('script')).outputTool, undefined);
+});
 
 test('Miaosaiya rewrites roles, removes private blocks and numbers only older standalone summaries', () => {
   const source =
@@ -105,11 +146,10 @@ test(
           promptProcessing: 'merge_tools',
         }),
       },
-      regexStore: { get: () => [] },
+
       helperStorage: { get: () => ({}) },
       countTokens: (text) => Math.ceil(text.length / 3),
       readText,
-      runRegexTasks,
     });
     const party = [{ id: 'traveller', name: '旅人', worldbook: '一位谨慎的旅人。' }];
     const cases = {
@@ -315,11 +355,10 @@ test(
       const pipeline = createAiPipeline({
         worlds,
         settings: { get: () => profile },
-        regexStore: { get: () => [] },
+
         helperStorage: { get: () => ({}) },
         countTokens: (text) => Math.ceil(text.length / 3),
         readText,
-        runRegexTasks,
       });
       for (const [kind, input] of Object.entries(inputs))
         await t.test(`${host}: ${kind}`, async () => {
@@ -555,11 +594,10 @@ test('Meowssiah 2.1.7+ and future versions auto-disable options/comment/summary,
         promptProcessing: 'merge_tools',
       }),
     },
-    regexStore: { get: () => [] },
+
     helperStorage: { get: () => ({}) },
     countTokens: (text) => Math.ceil(text.length / 3),
     readText,
-    runRegexTasks,
   });
 
   const party = [{ id: 'traveller', name: '旅人', worldbook: '一位谨慎的旅人。' }];

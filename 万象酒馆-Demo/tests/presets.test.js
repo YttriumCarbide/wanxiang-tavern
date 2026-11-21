@@ -7,7 +7,8 @@ import { generationMessages } from '../server/prompts.mjs';
 import { createAiSettings, DEFAULT_OUTPUT_TOKENS } from '../server/ai-settings.mjs';
 import { createPromptStore } from '../server/prompt-store.mjs';
 import { compatibleRequest } from '../server/compatible.mjs';
-import { scriptOutputSchema } from '../src/ai/script-schema.js';
+import { scriptInputSchema, scriptOutputSchema } from '../src/ai/script-schema.js';
+import { checkOutputSchema } from '../src/ai/schema-check.js';
 import { normalizeScript } from '../src/ai/contracts.js';
 import { tavernPresetFixture, requestContext } from './fixtures/ai.js';
 import { createMacroExpander } from '../src/ai/prompt-macros.js';
@@ -327,16 +328,100 @@ test('optional strict script mode sends the five-block novel schema and unchange
   );
   assert.equal(payload.response_format.type, 'json_schema');
   assert.equal(payload.response_format.json_schema.strict, true);
-  assert.equal(schema.properties.story.minItems, 5);
-  assert.equal(schema.properties.story.items.type, 'string');
-  assert.deepEqual(Object.keys(schema.properties.data.properties.nextHook.properties), [
-    'setting',
-    'phase',
-  ]);
-  assert.equal(
-    schema.properties.data.properties.items.items.anyOf[2].properties.description.maxLength,
-    20,
+  const sent = payload.response_format.json_schema.schema;
+  assert.deepEqual(sent, schema);
+  assert.deepEqual(sent.required, ['schemaVersion', 'story', 'data']);
+  assert.equal(sent.additionalProperties, false);
+  const { schemaVersion, story, data } = sent.properties;
+  assert.equal(schemaVersion.const, 5);
+  assert.deepEqual([story.minItems, story.maxItems, story.items.type], [5, 5, 'string']);
+  assert.equal(data.additionalProperties, false);
+  assert.deepEqual(
+    new Set(data.required),
+    new Set([
+      'title',
+      'npcs',
+      'items',
+      'nextHook',
+      'adventure',
+      'prologue',
+      'battleLines',
+      'epilogueGal',
+      'epilogueProse',
+    ]),
   );
-  assert.deepEqual(schema.required, ['schemaVersion', 'story', 'data']);
-  assert.equal(schema.additionalProperties, false);
+  assert.equal(data.properties.tags, undefined);
+  const { adventure, battleLines, items, nextHook } = data.properties;
+  assert.deepEqual(new Set(adventure.required), new Set(['event', 'quest']));
+  assert.deepEqual(battleLines.required, ['bossIntro', 'partyReply', 'bossEnraged', 'bossDefeat']);
+  assert.deepEqual(Object.keys(nextHook.properties), ['setting', 'phase']);
+  assert.deepEqual(nextHook.required, ['setting']);
+  assert.equal(nextHook.additionalProperties, false);
+  const descriptions = items.items.anyOf
+    .filter(({ properties }) => Object.hasOwn(properties ?? {}, 'description'))
+    .map(({ properties }) => properties.description.maxLength);
+  assert.deepEqual(descriptions, [20, 20]);
+});
+
+test('script item description output and compatibility input remain isolated', () => {
+  const inputBefore = scriptInputSchema();
+  const inputSnapshot = structuredClone(inputBefore);
+  const output = scriptOutputSchema();
+  const inputAfter = scriptInputSchema();
+  assert.deepEqual(inputBefore, inputSnapshot);
+  assert.deepEqual(inputAfter, inputSnapshot);
+  assert.deepEqual(inputBefore, inputAfter);
+
+  const outputItems = output.properties.data.properties.items.items;
+  const inputCandidates = (schema) =>
+    schema.anyOf.filter(({ properties }) => [4, 5].includes(properties.schemaVersion.const));
+  const beforeCandidates = inputCandidates(inputBefore);
+  const afterCandidates = inputCandidates(inputAfter);
+  assert.equal(beforeCandidates.length, 3);
+  assert.equal(afterCandidates.length, 3);
+  const beforeItems = beforeCandidates.map(
+    ({ properties }) => properties.data.properties.items.items,
+  );
+  const afterItems = afterCandidates.map(
+    ({ properties }) => properties.data.properties.items.items,
+  );
+
+  const itemShapes = [
+    { name: 'item-boundary', value: 1, encounter: 0 },
+    { name: 'item-boundary', value: 1, encounter: 0, category: 'weapon' },
+  ];
+  const withDescription = (item, length) => ({
+    ...item,
+    description: '甲'.repeat(length),
+  });
+  const accepts = (schema, value) => {
+    assert.doesNotThrow(() => checkOutputSchema(value, schema));
+  };
+  const rejects = (schema, value) => {
+    assert.throws(() => checkOutputSchema(value, schema));
+  };
+
+  for (const item of itemShapes) {
+    accepts(outputItems, withDescription(item, 20));
+    rejects(outputItems, withDescription(item, 21));
+    for (const items of beforeItems) {
+      accepts(items, withDescription(item, 120));
+      rejects(items, withDescription(item, 121));
+    }
+    for (const items of afterItems) {
+      accepts(items, withDescription(item, 120));
+      rejects(items, withDescription(item, 121));
+    }
+  }
+
+  const references = [
+    { name: 'known', encounter: 0 },
+    { name: 'known', reference: true, encounter: 0 },
+    'known',
+  ];
+  for (const reference of references) {
+    accepts(outputItems, reference);
+    for (const items of beforeItems) accepts(items, reference);
+    for (const items of afterItems) accepts(items, reference);
+  }
 });

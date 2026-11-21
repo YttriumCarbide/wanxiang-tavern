@@ -21,3 +21,37 @@
 - 应用结构以 `万象酒馆-Demo/架构.md` 为准；源代码没有可变模块全局状态，控制器经组装入口连接。
 - 自有代码由Prettier／ESLint检查，组件样式只维护 `styles/`，禁止恢复旧的覆盖样式文件。
 - 新依赖必须更新npm锁文件；Python工具依赖位于其独立venv和冻结requirements中。
+
+
+## 多模型职能分工与 DeepSeek Flash 子 API 强制分流规范（GPT & Gemini 通用）
+
+本项目由 **Gemini**、**GPT (Codex)** 与后台 **DeepSeek Flash (`deepseek-v4-1-flash-1017`)** 协同开发。所有主模型在每轮执行前**必须主动做分流检查，无需等待用户提醒，严禁因为“防御性编程”而由主模型硬抗机械苦力活**：
+
+1. **主模型职责边界（严禁越界）**
+   - **文案与世界观创作**（酒馆剧情、角色台词、卡牌／遗物 `flavorText` 风味文案）：**仅限 Gemini 主模型亲自撰写**。GPT 主模型与 DeepSeek 严禁创作或篡改正式风味文案（GPT 遇到需新增文案时，仅填结构字段或占位符，并提示交由 Gemini 撰写）。
+   - **UI 视觉与动画审美**（`styles/` 样式排版、配色光影、动效表现）：优先由 **Gemini (`4h`／`4neon`)** 负责；**GPT (`6.2 sol`／`astar`)** 专注于 `engine/` 纯数据战斗引擎、状态机算法与 `tools/` 测试工具链。
+
+2. **DeepSeek Flash 强制主动触发阈值（命中任一条件时，第一步必须直接调用子工具，禁止主模型手写或硬读）**
+   - **批量数据／配置落盘（≥ 40 行）**：凡是将文案草稿／策划规则转为 JSON／JS 配置表、批量补全卡牌／遗物／波次字段、生成单测 Mock 数据或重复样板代码预计达 40 行以上，**必须委托 DeepSeek Flash 直接生成并落盘**，主模型仅负责校验结果。
+   - **长日志与大文件初筛（≥ 80 行）**：凡是 `node tools/test.mjs` 报错堆栈、构建日志或待排查数据文件超过 80 行，**必须先调 DeepSeek Flash 提炼故障摘要与行号**。
+   - **机械性批处理**：批量补全 JSDoc 注释、机械字段重命名映射、格式标准化。
+
+3. **DeepSeek Flash 调用方式（按优先级自动选用，无需向用户请示）**
+   - **方式 A（已挂载 MCP 工具时直调）**：
+     - AGY (Gemini)：直接调用 `deepseek-worker` 的 `ds_file_worker`（文件到文件直写，最省 Token）或 `ds_ask`。
+     - Codex (GPT)：直接调用已挂载的 DeepSeek Flash MCP 工具（或直接使用下方方式 B）。
+   - **方式 B（通用终端 CLI 直调，GPT 与 Gemini 均可通过命令行直接执行）**：
+     ```powershell
+     # 1. 读本地文件并在后台直接生成/转换目标文件（不占主模型输出 Token）
+     @{
+       instruction = "严格按引擎 Schema 转换配置，完整保留原有 flavorText 文案一字不改"
+       input_files = @("D:/万界酒馆/输入参考路径")
+       output_file = "D:/万界酒馆/输出目标路径"
+       json_mode   = $true
+     } | ConvertTo-Json -Compress | node "C:\Users\Lenovo\.gemini\config\mcp\deepseek-worker.mjs" --cli ds_file_worker --stdin
+
+     # 2. 长日志摘要或快速结构化生成
+     @{
+       prompt = "提炼以下测试失败堆栈的核心原因与涉及文件行号：..."
+     } | ConvertTo-Json -Compress | node "C:\Users\Lenovo\.gemini\config\mcp\deepseek-worker.mjs" --cli ds_ask --stdin
+     ```

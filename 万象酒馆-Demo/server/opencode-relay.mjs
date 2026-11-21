@@ -1,13 +1,17 @@
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
-import { REQUEST_TIMEOUT_MS } from '../src/ai/request-policy.js';
+import { createRequestScope } from '../src/ai/request-policy.js';
+import { readRequestBytes, RequestBodyError } from './request-json.mjs';
 
 /** Optional loopback transport. No credential storage, general proxy, or game logic. */
 export async function relayOpencode(req, res, { port, fetchImpl = fetch }) {
   const hosts = [`127.0.0.1:${port}`, `localhost:${port}`];
   const origin = req.headers.origin;
-  if (!hosts.includes(req.headers.host) || (origin && origin !== `http://${req.headers.host}`)) {
-    res.writeHead(403).end('Local origin required');
+  if (
+    !hosts.includes(req.headers.host) ||
+    (origin !== undefined && origin !== `http://${req.headers.host}`)
+  ) {
+    res.writeHead(403, { Connection: 'close' }).end('Local origin required');
     return;
   }
   let target;
@@ -29,25 +33,18 @@ export async function relayOpencode(req, res, { port, fetchImpl = fetch }) {
     const expected = target.pathname.endsWith('/models') ? 'GET' : 'POST';
     if (req.method !== expected) throw Error('Invalid method');
   } catch {
-    res.writeHead(400).end('Unsupported OpenCode endpoint');
+    res.writeHead(400, { Connection: 'close' }).end('Unsupported OpenCode endpoint');
     return;
   }
-  const controller = new AbortController();
-  const abort = () => controller.abort();
-  const timer = setTimeout(abort, REQUEST_TIMEOUT_MS);
-  req.once('aborted', abort);
-  res.once('close', abort);
+  const scope = createRequestScope();
+  const cancel = () => {
+    if (!res.writableFinished) scope.abort();
+  };
+  res.once('close', cancel);
+  if (res.destroyed) cancel();
   try {
-    const chunks = [];
-    let size = 0;
-    for await (const chunk of req) {
-      size += chunk.length;
-      if (size > 2000000) {
-        res.writeHead(413).end('Request too large');
-        return;
-      }
-      chunks.push(chunk);
-    }
+    const body = await readRequestBytes(req, 2_000_000, scope.signal);
+    scope.signal.throwIfAborted();
     const headers = { 'User-Agent': 'wanxiang-tavern/1.0' };
     for (const name of [
       'authorization',
@@ -61,8 +58,8 @@ export async function relayOpencode(req, res, { port, fetchImpl = fetch }) {
     const response = await fetchImpl(target, {
       method: req.method,
       headers,
-      ...(req.method === 'POST' ? { body: Buffer.concat(chunks) } : {}),
-      signal: controller.signal,
+      ...(req.method === 'POST' ? { body } : {}),
+      signal: scope.signal,
       redirect: 'error',
     });
     res.writeHead(response.status, {
@@ -71,10 +68,16 @@ export async function relayOpencode(req, res, { port, fetchImpl = fetch }) {
       'X-Content-Type-Options': 'nosniff',
     });
     if (response.body)
-      await pipeline(Readable.fromWeb(response.body), res, { signal: controller.signal });
+      await pipeline(Readable.fromWeb(response.body), res, { signal: scope.signal });
     else res.end();
-  } catch {
+  } catch (failure) {
+    scope.abort();
     if (!res.headersSent && !res.destroyed) {
+      if (failure instanceof RequestBodyError && failure.status === 413) {
+        res.writeHead(413, { Connection: 'close' }).end('Request too large');
+        return;
+      }
+      if (!req.complete) res.setHeader('Connection', 'close');
       res.writeHead(502, { 'Content-Type': 'application/json' });
       res.end(
         JSON.stringify({
@@ -83,8 +86,7 @@ export async function relayOpencode(req, res, { port, fetchImpl = fetch }) {
       );
     } else if (!res.destroyed) res.destroy();
   } finally {
-    clearTimeout(timer);
-    req.removeListener('aborted', abort);
-    res.removeListener('close', abort);
+    scope.close();
+    res.off('close', cancel);
   }
 }

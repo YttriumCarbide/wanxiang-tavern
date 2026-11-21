@@ -149,7 +149,7 @@ test('map and creation use imported preset, editable worldbook format, wrapped r
   preset.temperature = 0.63;
   preset.prompts.find((entry) => entry.identifier === 'main').content = 'IMPORTED_COMMUNITY_PRESET';
   const pipeline = createAiPipeline({
-    settings: createConnectionStore(),
+    settings: createConnectionStore({ initial: { contextSize: 200000 } }),
     worlds: {
       async resolve() {
         return {
@@ -160,12 +160,9 @@ test('map and creation use imported preset, editable worldbook format, wrapped r
       },
       async commit() {},
     },
-    regexStore: { get: () => [] },
     helperStorage: { get: () => ({}) },
     countTokens: (text) => Math.ceil(text.length / 3),
     readText,
-    runRegexTasks: async (_scripts, tasks) =>
-      tasks.map((task) => ({ text: task.text, changes: [] })),
   });
   const cases = [
     ['map', { brief: '去潮灯港' }, worldFixture()],

@@ -413,6 +413,38 @@ test('corrupt state and custom material IDs survive library restore without leak
     5000,
   );
   assert.equal(state.at, 5000);
+  for (const [at, now, expected] of [
+    [undefined, 5000, 5000],
+    [NaN, 5000, 5000],
+    [Infinity, 5000, 5000],
+    [-1, 5000, 0],
+    [0, 5000, 0],
+    [2500, 5000, 2500],
+    [5000, 5000, 5000],
+    [6000, 3000, 6000],
+    [6000.5, 3000, 6000.5],
+    [Number.MAX_SAFE_INTEGER, 3000, Number.MAX_SAFE_INTEGER],
+    [Number.MAX_SAFE_INTEGER + 1, 5000, 5000],
+    [-Number.MAX_SAFE_INTEGER, 5000, 0],
+    [-Number.MAX_SAFE_INTEGER - 1, 5000, 5000],
+    [undefined, NaN, 0],
+    [undefined, -1, 0],
+    [undefined, 2500.5, 2500.5],
+    [undefined, Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER],
+    [undefined, Number.MAX_SAFE_INTEGER + 1, 0],
+    [100, Infinity, 100],
+    [100, -1, 100],
+    [100, NaN, 100],
+    [0, Infinity, 0],
+    [0, -1, 0],
+  ]) {
+    assert.equal(restoreWorkshop({ version: 1, at }, custom, now).at, expected);
+  }
+  const restoredAgain = restoreWorkshop(state, custom, 5000);
+  assert.equal(restoredAgain.at, state.at);
+  const sameTime = advanceWorkshop(restoredAgain, custom, 5000);
+  assert.deepEqual(sameTime.events, []);
+  assert.deepEqual(sameTime.state.items, state.items);
   assert.equal(state.items.stardust, 0);
   assert.equal('coins' in state, false);
   assert.equal(state.stations.collector.count, 100);
@@ -421,6 +453,36 @@ test('corrupt state and custom material IDs survive library restore without leak
   const restored = restoreLibrary(JSON.parse(JSON.stringify(library)));
   assert.equal(restoreWorkshop(restored.workshop, custom, 5000).items['custom-test'], 7);
   assert.equal(restoreWorkshop(restored.workshop, catalog, 5000).items['custom-test'], undefined);
+});
+test('paid builds preserve production high-water during clock rollback', () => {
+  const initial = restoreWorkshop(
+    { version: 1, at: 0, stations: { collector: { count: 1, active: 1 } } },
+    catalog,
+    0,
+  );
+  const collector = catalog.stations.find((station) => station.id === 'collector');
+  const buildCost = workshopBuildCost(initial, collector).materials.stardust;
+  assert(buildCost > 0);
+  initial.items.stardust = buildCost;
+  const produced = advanceWorkshop(initial, catalog, 6000).state;
+  assert.equal(produced.items.stardust, buildCost + 2);
+  const restored = restoreWorkshop(JSON.parse(JSON.stringify(produced)), catalog, 3000);
+  assert.equal(restored.at, 6000);
+  const built = act(restored, { type: 'build', id: 'collector' });
+  assert.equal(built.at, 6000);
+  assert.equal(built.stations.collector.count, 2);
+  assert.equal(built.items.stardust, 2);
+  let state = built;
+  for (const now of [3000, 6000]) {
+    const result = advanceWorkshop(state, catalog, now);
+    assert.equal(result.state.at, 6000);
+    assert.equal(result.state.items.stardust, 2);
+    assert.deepEqual(result.events, []);
+    state = result.state;
+  }
+  const next = advanceWorkshop(state, catalog, 9000);
+  assert.equal(next.state.items.stardust, 4);
+  assert.deepEqual(next.events, [{ type: 'produce', id: 'stardust', amount: 2 }]);
 });
 test('invalid authoring data cannot replace the active catalog', () => {
   const mutations = [

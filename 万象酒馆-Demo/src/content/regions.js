@@ -234,10 +234,10 @@ export const REGIONS = Object.freeze({
       },
     ]),
     npcPool: [
-      '守着遗迹外门的清扫老人（灰伯）：自称只是扫地老头，熟悉残垣门廊却隐瞒着深处秘辛。',
-      '迷失在回廊暗影里的落单抄经人：携带残缺壁画摹本，能辨认古文字但畏惧机关石卫。',
-      '驻扎废墟边哨的伤兵斥候：曾随公会前锋探查大厅断崖，手里握着半份残破渡崖索具记录。',
-      '在迷宫风道旁拾荒的盲眼拾遗人：靠听风辨位穿梭地下通道，愿以情报交换纯净泉水与火油。',
+      '清扫老人·灰伯（遗迹外门）：自称只是扫地老头，熟悉残垣门廊却隐瞒着深处秘辛。',
+      '抄经人·卢卡斯（回廊暗影）：携带残缺壁画摹本的落单学者，能辨认古文字但畏惧机关石卫。',
+      '伤兵斥候·加雷斯（废墟边哨）：曾随公会前锋探查大厅断崖，手里握着半份残破渡崖索具记录。',
+      '盲眼拾遗人·马尔斯（迷宫风道）：靠听风辨位穿梭地下通道，愿以情报交换纯净泉水与火油。',
     ],
     taskHooks: [
       {
@@ -395,9 +395,9 @@ export const REGIONS = Object.freeze({
     ],
     boss: 'moonEye',
     npcPool: [
-      '背着草药篓的采药学徒：熟悉浅林药草分布与蜂针解毒偏方，但对月痕蓝瘴心怀忌惮。',
-      '受伤掉队的搜救骑士：带着旧返程绳结，熟知古林树冠蜂巢与暗沼险地。',
-      '守望月树外郭的蜥蜴人巡礼者：持古老木杖与月牙纹令牌，审视外来者是否守礼。',
+      '采药学徒·菲奥娜（浅林药径）：背着草药篓，熟悉药草分布与蜂针解毒偏方，对月痕蓝瘴心怀忌惮。',
+      '搜救骑士·罗兰（林间断桥）：受伤掉队的公会骑士，带着旧返程绳结，熟知树冠蜂巢与暗沼险地。',
+      '蜥蜴人巡礼者·萨克（月树外郭）：持古老木杖与月牙纹令牌，审视外来者是否守礼。',
     ],
     taskHooks: [
       {
@@ -555,9 +555,9 @@ export const REGIONS = Object.freeze({
     ],
     boss: 'ares',
     npcPool: [
-      '身穿改装外骨骼的独立机械师：带着旧工程终端，熟悉矿车轨道却不愿透露前雇主。',
-      '电力将尽的古旧维修机：保存着矿脉封存前的交班日志与应急电池坐标。',
-      '警戒外来勘探队的聚落守望工匠：对大公司标志极其敏感，掌握地下安全通路。',
+      '独立机械师·凯尔（矿轨入口）：身穿改装外骨骼、带着旧工程终端，熟悉矿车轨道却不愿透露前雇主。',
+      '旧型维修机·09号（废弃工位）：电力将尽的古旧维修机，保存着矿脉封存前的交班日志与应急电池坐标。',
+      '守望工匠·诺拉（地下聚落）：警戒外来勘探队的聚落工匠，对大公司标志极其敏感，掌握地下安全通路。',
     ],
     taskHooks: [
       {
@@ -623,9 +623,9 @@ export const REGIONS = Object.freeze({
     ],
     boss: 'ares',
     npcPool: [
-      '守着熄灭冷却池的老锻工：指节布满烫伤旧疤，能从锻锤节拍辨认炉区是否仍在超负荷运转。',
-      '抱着废料清单穿行的机械学徒：背囊里装着半箱备用铜铆钉，正在寻找能重新校准运料轨的工具。',
-      '蹲在废料库房外清点残件的退伍工兵：曾参与封炉撤离，记得哪条通风巷道能避开高温熔沟。',
+      '老锻工·巴克（冷却池边）：指节布满烫伤旧疤，能从锻锤节拍辨认炉区是否仍在超负荷运转。',
+      '机械学徒·托比（运料轨道旁）：抱着废料清单穿行，背囊里装着半箱备用铜铆钉，正在寻找校准工具。',
+      '退伍工兵·韦德（废料库房外）：曾参与封炉撤离，记得哪条通风巷道能避开高温熔沟。',
     ],
     nodes: Object.freeze([
       {
@@ -761,9 +761,9 @@ export const REGIONS = Object.freeze({
     ],
     boss: 'radiantWyvern',
     npcPool: [
-      '站在浅水阶梯边捞取浮标的水文记录员：随身带着潮汐刻度尺，熟知每次涨潮淹没石桥的时间差。',
-      '在珊瑚回廊修补古星盘铜环的盲眼占星徒：靠指尖摸索星纹刻线辨位，知道哪几盏潮灯已被海雾熄灭。',
-      '被浅滩漂流物困住的采珠潜行者：熟悉静水石桥下的暗流走向，却不敢靠近司灯高台附近的亮光。',
+      '水文记录员·米拉（浅水阶梯）：随身带着潮汐刻度尺捞取浮标，熟知每次涨潮淹没石桥的时间差。',
+      '盲眼占星徒·赛琳（珊瑚回廊）：在廊下修补古星盘铜环，靠指尖摸索星纹辨位，知道哪几盏潮灯已灭。',
+      '采珠潜行者·卡洛（静水浅滩）：被漂流物困住，熟悉静水石桥下的暗流走向，却不敢靠近司灯高台亮光。',
     ],
     nodes: Object.freeze([
       {
@@ -944,6 +944,159 @@ export const REGIONS = Object.freeze({
     enemies: ['pebble', 'warden', 'sprout', 'crystalBeetle'],
     boss: 'bossGate',
   },
+  'city-market': {
+    name: '灯影商街',
+    description:
+      '石板主街与红瓦骑楼交错的城内商区，灯匠铺、药摊、布棚与街角喷泉紧邻，适合承载城内追逐、市井冲突与护卫委托。',
+    atmosphere: '锻铁街灯垂着暖黄光晕，青石板缝间夹着马车辙痕与摊贩收摊后的碎花瓣。',
+    sites: ['星灯牌坊口', '药香长廊', '钟亭石阶', '布篷货集', '喷泉转角', '商行侧门'],
+    enemies: ['banditCutthroat', 'banditBruiser', 'banditPoacher', 'warden'],
+    boss: 'banditSyndicateKing',
+  },
+  'black-market': {
+    name: '暗巷黑市',
+    biome: 'black-market',
+    tier: '中阶',
+    level: 7,
+    description:
+      '隐匿于星钟城旧城拱廊与排水暗渠夹层间的地下黑市。近来一名牵线古董铺的落魄鉴宝师惨死在商街后巷，现场只留极细暗器贯孔与半张乌羽火漆号牌——顺藤摸瓜查出其因私扣一枚冷月古戒遭黑市灭口，那枚古戒已被黑鸦收作今夜地下拍卖厅的压轴秘宝。',
+    atmosphere: '潮湿砖石映着碧绿炼金灯与昏红油灯，水渠暗影里飘着火药、旧漆与劣质酒气。',
+    sites: ['暗门暗哨', '炼金黑摊', '潮湿暗渠桥', '赃物铁栈', '红幔赌廊', '地下拍卖厅'],
+    enemies: [
+      'banditAlchemist',
+      'banditCutthroat',
+      'banditBruiser',
+      'banditPoacher',
+      'banditExecutioner',
+      'hexer',
+    ],
+    boss: 'banditSyndicateKing',
+    nodes: Object.freeze([
+      {
+        id: 'black-market-1-gate',
+        label: '1',
+        kind: 'mainline',
+        step: 0,
+        parentId: null,
+        authoredIndex: 0,
+        levelOffset: 0,
+        boss: 'banditCutthroat',
+        overlord: false,
+        name: '暗门暗哨',
+        subtitle: '后巷暗孔与乌羽号牌',
+        pos: [155, 255],
+      },
+      {
+        id: 'black-market-2-stalls',
+        label: '2',
+        kind: 'mainline',
+        step: 1,
+        parentId: 'black-market-1-gate',
+        authoredIndex: 1,
+        levelOffset: 1,
+        boss: 'banditAlchemist',
+        overlord: false,
+        name: '炼金黑摊与暗渠桥',
+        subtitle: '绿灯黑摊的卖戒风声',
+        pos: [390, 240],
+      },
+      {
+        id: 'black-market-3-vault',
+        label: '3',
+        kind: 'mainline',
+        step: 2,
+        parentId: 'black-market-2-stalls',
+        authoredIndex: 2,
+        levelOffset: 2,
+        boss: 'banditBruiser',
+        overlord: false,
+        name: '赃物铁栈',
+        subtitle: '铁栈截账与移库回执',
+        pos: [635, 235],
+      },
+      {
+        id: 'black-market-a-parlor',
+        label: 'a',
+        kind: 'branch',
+        step: 2,
+        parentId: 'black-market-3-vault',
+        authoredIndex: 3,
+        levelOffset: 2,
+        boss: 'banditExecutioner',
+        overlord: false,
+        name: '红幔赌廊',
+        subtitle: '红幔秘钥与灭口黑账',
+        pos: [690, 420],
+      },
+      {
+        id: 'black-market-4-auction',
+        label: '4',
+        kind: 'mainline',
+        step: 3,
+        parentId: 'black-market-3-vault',
+        authoredIndex: 4,
+        levelOffset: 3,
+        boss: 'banditSyndicateKing',
+        overlord: true,
+        name: '地下拍卖厅',
+        subtitle: '拍卖台的冷月夺戒',
+        pos: [870, 250],
+      },
+    ]),
+    npcPool: [
+      '商街巡夜老兵·巴顿（商街后巷封锁线）：最先发现鉴宝师尸体的老城防，认出极细伤口出自地下暗巷独门暗器，暗中将半张乌羽号牌托付给冒险者追查。',
+      '典当行学徒·薇拉（后巷木门阴影）：被害鉴宝师的侄女兼帮手，记得叔父生前颤声提过那枚古戒在月光下泛着冷银瞳纹，只求查清死因、不让古戒落入歹人之手。',
+      '暗巷线人·细眼莫里（炼金黑摊暗角）：专倒卖黑市通行口令与摊位消息的情报贩子，赶跑逼债打手后便会吐露古戒已被抬进今夜地下拍卖厅压轴的内幕。',
+      '红幔赌廊荷官·赛琳（红幔赌廊暗门）：暗中记录黑鸦灭口黑账的前盗贼团成员，握有绕开正门重哨、直插拍卖厅侧廊的备用铜钥。',
+    ],
+    taskHooks: [
+      {
+        id: 'black-market-bm1',
+        nodeId: 'black-market-1-gate',
+        title: '后巷暗孔与乌羽号牌',
+        boss: 'banditCutthroat',
+        bossName: '暗哨头目·铁钩',
+        description:
+          '勘验商街后巷鉴宝师命案，凭极细暗器孔洞与乌羽火漆号牌锁定暗巷黑市入口；击退把守暗门的暗哨头目·铁钩，缴获黑市通行铁牌。',
+      },
+      {
+        id: 'black-market-bm2',
+        nodeId: 'black-market-2-stalls',
+        title: '绿灯黑摊的卖戒风声',
+        boss: 'banditAlchemist',
+        bossName: '黑摊毒匠·克鲁格',
+        description:
+          '持铁牌深入炼金黑摊与潮湿暗渠桥，从线人莫里处证实黑市正暗中兜售冷月古戒；撞破灭口小队并击溃黑摊毒匠·克鲁格，截下移库回执。',
+      },
+      {
+        id: 'black-market-bm3',
+        nodeId: 'black-market-3-vault',
+        title: '铁栈截账与移库回执',
+        boss: 'banditBruiser',
+        bossName: '铁栈管事·重锤',
+        description:
+          '循移库回执突入赃物铁栈，击败镇守货仓的铁栈管事·重锤，查明冷月古戒已送抵地下拍卖厅并由黑鸦亲自看管。',
+      },
+      {
+        id: 'black-market-bma',
+        nodeId: 'black-market-a-parlor',
+        title: '红幔秘钥与灭口黑账',
+        boss: 'banditExecutioner',
+        bossName: '红幔打手头目',
+        description:
+          '潜入红幔赌廊击退黑鸦直属红幔打手头目，从荷官赛琳处取得灭口黑账与直插地下拍卖厅侧廊的备用铜钥。',
+      },
+      {
+        id: 'black-market-bm4',
+        nodeId: 'black-market-4-auction',
+        title: '拍卖台的冷月夺戒',
+        boss: 'banditSyndicateKing',
+        bossName: '暗巷匪王·黑鸦',
+        description:
+          '闯入地下拍卖厅当众揭穿灭口夺戒黑幕，迎战极速换匣暗器的暗巷匪王·黑鸦；震翻拍卖匣夺回冷月古戒唤醒「玖柒」，反制暗器绝地破局。',
+      },
+    ],
+  },
   'moss-hollow': {
     name: '翠苔浅谷',
     biome: 'forest',
@@ -955,7 +1108,7 @@ export const REGIONS = Object.freeze({
     sites: ['牧道浅湾', '苔石饮水涧', '倒伏栎木阵', '野猪拱泥窝', '旧巡逻木亭', '谷底幽林坛'],
     enemies: ['mossSlime', 'sprout', 'pebble', 'hound'],
     boss: 'mossGulon',
-    npcPool: ['驻守西南哨卡的老猎户：熟知浅谷野兽作息，正悬赏清理拱坏围栏的苔背巨蛙。'],
+    npcPool: ['老猎户·伯纳德（西南哨卡）：熟知浅谷野兽作息，正悬赏清理拱坏围栏的苔背巨蛙。'],
     taskHooks: [
       {
         id: 'moss-hollow-hook',
@@ -976,7 +1129,9 @@ export const REGIONS = Object.freeze({
     sites: ['外壕断桥', '崩塌瓮城', '演武空场', '旧军械库', '垛口长廊', '瞭望主塔底'],
     enemies: ['pebble', 'hound', 'warden', 'mossSlime'],
     boss: 'ruinsGate',
-    npcPool: ['路过的商队护卫长：愿意重金买下戌堡西侧官道的通行安稳。'],
+    npcPool: [
+      '商队护卫长·雷蒙德（官道卡口）：路过的商队队长，愿意重金买下戌堡西侧官道的通行安稳。',
+    ],
     taskHooks: [
       {
         id: 'border-watch-hook',
@@ -984,6 +1139,88 @@ export const REGIONS = Object.freeze({
         boss: 'ruinsGate',
         bossName: '遗迹守门人',
         description: '清剿盘踞在断垣戍堡的游荡守卫与魔犬群，重开西境商道。',
+      },
+    ],
+  },
+  'graystone-quarry': {
+    name: '灰岩旧采石场',
+    biome: 'graystone-quarry',
+    tier: '低阶',
+    level: 5,
+    description:
+      '星钟城一日路程外的旧采石场与荒废哨塔。半年前因深层岩缝渗出黑紫暗气表面挂牌封停，实则遭人暗中蓄气私采暗晶，并将铁枷巨兽锁在底坑半年，催生出一头挣断铁枷的初生暗鳞督军。',
+    atmosphere: '新鲜重车辙、阶梯状灰岩矿坑、挡风蓄气油布棚、崩断铁锚桩的深层矿道与渗气岩缝。',
+    sites: [
+      '采石场外围林道与荒废哨塔',
+      '露天矿坑与旧工棚',
+      '深层掘进矿道',
+      '裂隙渗气岩缝',
+      '外围商道与矿坑边缘',
+      '东侧旧工棚与通风井',
+    ],
+    enemies: [
+      'erosionHound',
+      'erosionCrawler',
+      'erosionWing',
+      'erosionSpitter',
+      'erosionJuggernaut',
+      'pebble',
+    ],
+    boss: 'darkscaleWarlord',
+    npcPool: [
+      '守备区老哨长哈根（外围木栅卡口）：常年应对边境裂隙的老兵，熟悉蚀鳞习性，近日察觉狼群竟懂得避开换哨时段合围。',
+      '断腿的老石匠格雷戈（林道木棚）：熟知废弃通风井与侧巷的老工头，半年前因坚持封坑被辞退，仍惦记落在东侧旧工棚的测石锤与矿脉簿。',
+      '独行龙裔猎手索伦（矿坑岩坡）：循龙裔旧誓追踪至此的游侠，断定一道巴掌宽的浅层岩缝绝不会在半年内自然养出督军。',
+      '逃命的私采矿工皮特（东侧旧工棚顶）：受雇偷挖裂隙暗晶的矿工，见铁枷巨兽挣脱反噬后躲上棚顶求生，怀里揣着半页私采装箱账单。',
+      '矿商账房维克托（荒废哨塔附近）：矿商派来“慰问守备军”的精明管家，表面出资封堵裂隙，暗地想花钱买人烧掉工棚里的私采旧账。',
+      '星钟城测气师莉娜（露天矿坑中段）：复核暗气浓度的见习药剂师，发现有人违禁搭棚挡风蓄气凝晶，正冒险记录读数准备上报。',
+    ],
+    taskHooks: [
+      {
+        id: 'quarry-mq1',
+        title: '林道断链与反常围猎',
+        boss: 'erosionHound',
+        bossName: '蚀鳞头狼·断耳',
+        description:
+          '协助老哨长哈根击退卡着换哨空当设伏的蚀鳞头狼·断耳，从林道新鲜重车辙与采石铁枷断环察觉矿坑异状。',
+      },
+      {
+        id: 'quarry-mq2',
+        title: '挡风布后的私采黑账',
+        boss: 'erosionJuggernaut',
+        bossName: '暗鳞重甲蜥',
+        description:
+          '下探露天矿坑查明挡风油布蓄气凝晶的猫腻，击败守箱的暗鳞重甲蜥、救下棚顶逃兵矿工皮特并截获私采装箱账单。',
+      },
+      {
+        id: 'quarry-mq3',
+        title: '巷道深处的断枷空桩',
+        boss: 'erosionRiftTyrant',
+        bossName: '蚀鳞先锋',
+        description:
+          '借老石匠指点的通风侧巷潜入深层矿道，越过被巨兽蛮力扯崩的铁锚石桩，击溃把守裂隙入口的蚀鳞先锋。',
+      },
+      {
+        id: 'quarry-mq4',
+        title: '双晶崩枷与龙纹苏醒',
+        boss: 'darkscaleWarlord',
+        bossName: '初生暗鳞督军',
+        description:
+          '在渗气岩缝前迎战自暗紫晶石破晶而出、左腕拖着断枷的初生暗鳞督军，接住苍青晶石共振碎裂飞落的龙纹古戒，正面击败霸主并嵌上镇隙封石平息这场人祸引爆的危机。',
+      },
+      {
+        id: 'quarry-sq1',
+        title: '失巢的食腐巨蝎',
+        boss: 'erosionCrawler',
+        bossName: '矿坑食腐巨蝎',
+        description: '接受星钟城商队悬赏，清理因深坑异动失巢而窜上外围商路掀翻商车的本土巨蝎。',
+      },
+      {
+        id: 'quarry-sq2',
+        title: '旧工棚的测石锤与矿脉簿',
+        boss: 'erosionHound',
+        bossName: '蚀鳞猎兽',
+        description: '潜入东侧旧工棚击败潜伏的蚀鳞猎兽，替老石匠格雷戈取回祖传测石锤与矿脉勘探簿。',
       },
     ],
   },
@@ -997,7 +1234,9 @@ export const REGIONS = Object.freeze({
     sites: ['菌灯林径', '藤蔓拱桥', '沉水树洞', '孢子空地', '古树树皮祠', '苍苔祭石坪'],
     enemies: ['livingVine', 'fogSpore', 'bogDrifter', 'hound'],
     boss: 'bogElemental',
-    npcPool: ['采集夜光孢子的公会斥候：在林缘记录毒沼水位变化，警告旅人切勿深吸蓝雾。'],
+    npcPool: [
+      '公会斥候·艾丽丝（苔林边缘）：采集夜光孢子并记录毒沼水位变化，警告旅人切勿深吸蓝雾。',
+    ],
     taskHooks: [
       {
         id: 'whisper-grove-hook',
@@ -1018,7 +1257,9 @@ export const REGIONS = Object.freeze({
     sites: ['北麓暗闸口', '蓄水石拱室', '青砖巡检道', '旧水车机房', '暗渠分流口', '深井封存门'],
     enemies: ['warden', 'cinderImp', 'hexer', 'hound'],
     boss: 'bossGate',
-    npcPool: ['银冠城水务监工：悬赏排查旧水窖失控机关与潜入其中的火妖。'],
+    npcPool: [
+      '水务监工·霍华德（水窖北口）：银冠城水务老匠师，悬赏排查旧水窖失控机关与潜入其中的火妖。',
+    ],
     taskHooks: [
       {
         id: 'silver-cistern-hook',
@@ -1040,7 +1281,9 @@ export const REGIONS = Object.freeze({
     sites: ['冷灰斜坡', '碎砖鼓风机室', '半熔铁渣池', '锻锤旧轨', '灰烬烟道口', '主熔炉底座'],
     enemies: ['cinderImp', 'hollowSentry', 'brassSeeker', 'hexer'],
     boss: 'brassColossus',
-    npcPool: ['寻找秘法锻材的矮人行商：需要护卫清理炉区最外围的黄铜巨像。'],
+    npcPool: [
+      '矮人行商·布鲁诺（古窑斜坡）：寻找秘法锻材的矮人商人，需要护卫清理炉区最外围的黄铜巨像。',
+    ],
     taskHooks: [
       {
         id: 'ash-foundry-hook',
@@ -1061,7 +1304,9 @@ export const REGIONS = Object.freeze({
     sites: ['星阶残廊', '悬石观星台', '断碑仪轨阵', '晶尘秘库', '海崖祈星柱', '终末天象坛'],
     enemies: ['crystalBeetle', 'tideJelly', 'hexer', 'hollowSentry'],
     boss: 'bossTide',
-    npcPool: ['观测天象的星象学徒：恳请高阶冒险者在星象紊乱前稳定古坛中枢。'],
+    npcPool: [
+      '星象学徒·维拉（星阶残廊）：观测天象的年轻学徒，恳请高阶冒险者在星象紊乱前稳定古坛中枢。',
+    ],
     taskHooks: [
       {
         id: 'astral-sanctum-hook',
@@ -1097,17 +1342,18 @@ export const REGIONS = Object.freeze({
       'hollowSentry',
       'millMiniMoldSlime',
     ],
-    boss: 'banditSyndicateKing',
+    boss: 'banditExecutioner',
     npcPool: [
-      '提着煤油灯的星钟城老渠工：熟知广场水井下方各道锈闸暗门，正焦急清剿借水道潜行的暗巷匪徒。',
+      '老渠工·马修（老井井口）：提着煤油灯的星钟城渠工，熟知水井下方各道锈闸暗门，焦急清剿借水道潜行的暗巷匪徒。',
     ],
     taskHooks: [
       {
         id: 'starbell-undercroft-hook',
         title: '清理城底暗渠',
-        boss: 'banditSyndicateKing',
-        bossName: '暗巷匪王·黑鸦',
-        description: '沿星钟广场老井深入地下暗渠，肃清窃据水道暗栈的暗巷贼伙与霉潮魔物。',
+        boss: 'banditExecutioner',
+        bossName: '疤面劫掠头目',
+        description:
+          '沿星钟广场老井深入地下暗渠，肃清窃据水道暗栈的疤面劫掠头目与霉潮魔物，并顺藤摸瓜排查暗渠夹层后的黑市暗道。',
       },
     ],
   },
@@ -1117,16 +1363,16 @@ export const JACOBS_LADDER_CONFIG = Object.freeze({
   id: 'jacobs-ladder',
   name: '雅各布天梯',
   npcPool: [
-    '追猎蚀鳞的龙裔巡游者（泛生界荒地交界）：利用天梯外溢龙压拦截逃窜的蚀鳞群，监视外围龙化魔物异动，对外来者戒心极强。',
-    '曾登顶成功的退役老驿长（泛生界荒地驿站）：受外围龙化魔物亲近，在荒地边缘经营最后一座补给驿站，出售抗风沙物资与荒原情报。',
-    '考据起源纪石门的古文字学者（泛生界岩石带）：研究半埋地下的残破石门铭文，毫无自保能力，急需雇佣护卫清理周边魔物。',
-    '感知龙气潮汐的盲眼计时人（往生界入口营地）：替朝圣者计算“三天停留死限”，随时吹哨喝止企图在禁战区拔刀动武的闯入者。',
-    '托付遗物的往生界落魄贵族（往生界入口营地）：携带泛生界古老家徽，愿以全部家当委托有实力登顶者带信前往泛生界寻亲。',
-    '光柱营地的黑市换物商（往生界入口营地）：利用“绝对禁战”死规摆摊，只以物易物交换往生界奇珍与攀登者遗物。',
-    '只为看一眼太阳的濒死老朝圣者（往生界入口营地）：寿元将尽的普通老人，只求在三天龙气耐受期内亲眼沐浴一次正午落下的神迹日光。',
-    '卡在半途的岩棚拾遗人（攀升通道中下段）：距 65 级登顶门槛仅差一步的攀岩老手，在避风岩棚收集失败者遗物并传授禁飞攀岩技巧。',
-    '困在背光暗窟的受伤挑战者（攀升通道中段）：冲击通道时被游移浮石砸伤、被迫躲入暗窟并遭阴影魔物围困的独行强者。',
-    '寻亲的异乡武者（攀升通道断层石台）：为寻找失踪亲人硬闯通道、却因不熟浮石规律而困在断层石台上的固执旅人。',
+    '龙裔巡游者·卡斯（泛生界荒地交界）：利用天梯外溢龙压拦截逃窜的蚀鳞群，对外来者戒心极强。',
+    '老驿长·乔恩（泛生界荒地驿站）：曾登顶成功的退役老兵，受外围龙化魔物亲近，在边缘经营补给驿站。',
+    '古文字学者·奥古斯特（泛生界岩石带）：考据起源纪半埋石门铭文的学者，毫无自保能力，急需雇佣护卫。',
+    '盲眼计时人·塞缪尔（往生界入口营地）：感知龙气潮汐、替朝圣者计算“三天停留死限”的铁面长者。',
+    '落魄贵族·埃德温（往生界入口营地）：携带泛生界古老家徽，愿以全副家当委托强者在泛生界代为寻亲。',
+    '黑市换物商·莱拉（往生界入口营地）：利用“绝对禁战”死规在光柱营地摆摊，只以物易物交换奇珍与遗物。',
+    '老朝圣者·安东（往生界入口营地）：寿元将尽的普通老人，只求在三天龙气耐受期内亲眼沐浴一次神迹日光。',
+    '岩棚拾遗人·汉克（攀升通道中下段）：距 65 级登顶门槛仅差一步的攀岩老手，传授禁飞攀岩技巧。',
+    '独行武者·克莱尔（攀升通道暗窟）：冲击通道时被游移浮石砸伤腿骨、被阴影魔物围困在背光暗窟的强者。',
+    '寻亲武者·沈渡（攀升通道断层石台）：为寻失踪亲人硬闯通道、因不熟浮石规律被困在断层石台的固执旅人。',
   ],
   taskHooks: [
     {

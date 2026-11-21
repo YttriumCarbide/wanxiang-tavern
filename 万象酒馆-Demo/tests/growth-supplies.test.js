@@ -187,8 +187,8 @@ test('battle reload rebuilds lost resources with frozen equipment and carries va
     applyEquipment(grownCombat(edith), [{ stats: { hp: 4, mp: 6 } }]),
     edith.emblemId,
   );
-  assert.equal(edithCombat.mp, Math.round((edith.combat.mp + 6) * 1.5));
-  assert.equal(edithCombat.hp, Math.round(edith.combat.hp + 4 + edithCombat.mp * 0.25));
+  assert.equal(edithCombat.mp, edith.combat.mp + 6);
+  assert.equal(edithCombat.hp, edith.combat.hp + 4);
   const trip = newExpedition('bossGate', {
     aegis: { ...heroCombat, id: 'aegis' },
     lyria: { ...edithCombat, id: 'lyria', emblemId: edith.emblemId },

@@ -7,6 +7,25 @@ import { reorderPlan } from '../plan-order.js';
 /** @param {import('./context.js').AppContext} context */
 export function createPlanning(context) {
   const { session } = context;
+  let clearAwakeningEffect = null;
+
+  function clearAwakening() {
+    clearAwakeningEffect?.();
+    clearAwakeningEffect = null;
+  }
+
+  function playAwakening() {
+    clearAwakening();
+    const screen = document.querySelector('#emblem-screen');
+    if (!screen) return;
+    void screen.offsetWidth;
+    screen.classList.add('awakening');
+    const timer = setTimeout(clearAwakening, 1100);
+    clearAwakeningEffect = () => {
+      clearTimeout(timer);
+      screen.classList.remove('awakening');
+    };
+  }
   function blocked(message) {
     context.audio.play('error');
     return context.shell.toast(message);
@@ -131,13 +150,7 @@ export function createPlanning(context) {
     session.selection.interactionStep = 'skill';
     recompute();
     context.audio.play('combine');
-    const screen = document.querySelector('#emblem-screen');
-    if (screen) {
-      screen.classList.remove('awakening');
-      void screen.offsetWidth;
-      screen.classList.add('awakening');
-      setTimeout(() => screen.classList.remove('awakening'), 1100);
-    }
+    playAwakening();
     context.renderer.render();
     return true;
   }
@@ -224,6 +237,8 @@ export function createPlanning(context) {
     fitsAt,
     fitsSkillAt,
     queueEngage,
+    playAwakening,
+    clearAwakening,
     put,
     queueSwap,
     queueDirectSkill,

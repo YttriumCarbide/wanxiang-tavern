@@ -211,7 +211,7 @@ test('enemy codex filters to seen monsters by default, shows totals, and reverts
   );
   assert.equal(partial.visibleBuckets.boss.length, 0);
   assert.equal(partial.tierStats.overlord.unlocked, 1);
-  assert.equal(partial.tierStats.overlord.total, 5);
+  assert.equal(partial.tierStats.overlord.total, 7);
 
   // Developer sub-toggle only works when developerMode is also enabled
   assert.equal(

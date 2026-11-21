@@ -1,3 +1,4 @@
+import { createBattleIntentLayer } from './battle-intent-layer.js';
 import { createEmblemAura } from './emblem-aura.js';
 import { emblemRing, emblemVisualFor } from './emblems.js';
 import { BIOMES } from './content/biomes.js';
@@ -13,16 +14,17 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { HEROES, DEFINITIONS, encounterSpec, enemySlots } from './data.js';
 import { createEffects } from './effects.js';
-import { enemyBreakBar, resourceBars, statusIcons, alchemicalBombBadge, escapeText } from './ui.js';
+import { enemyBreakBar, resourceBars, statusIcons, alchemicalBombBadge } from './ui.js';
 import { portraitFrame } from './portrait-frame.js';
 import { portraitUrl } from './catalog.js';
 import { createCardDeaths } from './card-death.js';
 import { stabilizeFloorGeometry } from './floor-geometry.js';
-import { enemyIntentBadge } from './enemy-intent.js';
+
 import { combatRank } from './combat-scale.js';
 import { cardModelScale, createOverlordModels, overlordAssetUrls } from './overlord-models.js';
 import { deviceRenderQuality, createFrameBudget } from './shared/render-budget.js';
 import { APEP_ID, APEP_RELEASE, apepAttack, apepPlague } from './apep-presentation.js';
+import { isPlagueSealed } from './overlord-mechanics.js';
 import { createApepPlagueFloor } from './apep-plague-floor.js';
 
 function enemyTierBadge(definition) {
@@ -258,8 +260,6 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
   let currentState = null;
   let hitStopUntil = 0;
   let shakeTimer = 0;
-  let intentData = null;
-  let renderedIntent = '';
   const intentLayer = stage.querySelector('#intent-layer');
   let activeDrag = null;
   let lastDragRelease = null;
@@ -300,6 +300,13 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
     r.goal.copy(goal);
     schedule();
   }
+  const { clearHints, renderIntent, showIntent } = createBattleIntentLayer({
+    intentLayer,
+    records,
+    enemyRecords,
+    project,
+    viewport: () => ({ width, height }),
+  });
   function screenToWorld(rect) {
     const bounds = stage.getBoundingClientRect(),
       mouse = new THREE.Vector2(
@@ -373,6 +380,7 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
         delete record.el.dataset.dragunit;
         delete record.el.dataset.side;
         delete record.el.dataset.apepPlague;
+        delete record.el.dataset.plagueSealed;
         record.el.replaceChildren();
         record.motion = null;
       }
@@ -456,7 +464,15 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
       el.dataset.slot = slot;
       if (side === 'Friendly' && (currentPlague || nextPlague) && u.hp > 0) {
         el.dataset.apepPlague = currentPlague ? 'active' : 'preview';
-      } else delete el.dataset.apepPlague;
+        const sealedNow = Boolean(
+          isPlagueSealed(s, id) || (!playing && isPlagueSealed(forecast.final, id)),
+        );
+        if (sealedNow) el.dataset.plagueSealed = '1';
+        else delete el.dataset.plagueSealed;
+      } else {
+        delete el.dataset.apepPlague;
+        delete el.dataset.plagueSealed;
+      }
       if (side === 'Friendly') el.dataset.dragunit = id;
       el.disabled = playing;
       el.setAttribute(
@@ -538,82 +554,7 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
     renderer.render(scene, camera);
     schedule();
   }
-  function clearHints() {
-    intentData = null;
-    renderedIntent = '';
-    intentLayer?.replaceChildren();
-    records.forEach((r) => r.el.classList.remove('drop-target', 'drop-incoming'));
-  }
-  function renderIntent() {
-    if (!intentLayer) return;
-    if (!intentData) {
-      if (renderedIntent) intentLayer.replaceChildren();
-      renderedIntent = '';
-      return;
-    }
-    const markupString = intentData.map(intentMarkup).join('');
-    if (renderedIntent !== markupString) {
-      intentLayer.innerHTML = markupString;
-      renderedIntent = markupString;
-    }
-  }
-  function intentMarkup(data) {
-    const r = enemyRecords.find((r) => r.id === data.id);
-    if (!r) return '';
-    const xy = (x, y, z) => {
-        const p = project(x, y, z);
-        return { x: (p.x * 0.5 + 0.5) * width, y: (-p.y * 0.5 + 0.5) * height };
-      },
-      origin = xy(r.root.position.x, r.root.position.y + 0.4, r.root.position.z + 1.14),
-      head = xy(r.root.position.x, r.root.position.y + 0.38, r.root.position.z - 1.28);
-    const badge = html`<section
-      class="enemy-intent-summary"
-      data-enemy-intent="${data.id}"
-      style="left:${head.x}px;top:${head.y - 8}px;--intent-width:${Math.max(86, Math.min(178, r.el.offsetWidth + 16))}px"
-      aria-label="${escapeText(data.name)}的行动预演"
-    >
-      ${enemyIntentBadge(data)}
-    </section>`;
-    let markupString;
-    if (data.cancelled) {
-      markupString = badge;
-    } else {
-      let paths = '';
-      for (const t of data.targets) {
-        const target = xy([-3.014, 0, 3.014][t.slot], 0.5, 2.345 - 1.2),
-          bend = origin.x + (target.x - origin.x) * 0.5 + (target.x === origin.x ? 30 : 0),
-          midY = (origin.y + target.y) / 2;
-        paths += html`<path
-          class="intent-path"
-          data-intent-enemy="${data.id}"
-          data-intent-slot="${t.slot}"
-          data-target="${t.id}"
-          d="M ${origin.x.toFixed(1)} ${origin.y.toFixed(1)} Q ${bend.toFixed(1)} ${midY.toFixed(1)} ${target.x.toFixed(1)} ${target.y.toFixed(1)}"
-          marker-end="url(#intent-arrow-tip-${data.id})"
-        />`;
-      }
-      markupString = html`<svg
-          class="intent-arrows"
-          viewBox="0 0 ${width} ${height}"
-          aria-label="${escapeText(data.move)}"
-        >
-          <defs>
-            <marker
-              id="intent-arrow-tip-${data.id}"
-              markerWidth="7"
-              markerHeight="7"
-              refX="5"
-              refY="3"
-              orient="auto"
-            >
-              <path d="M0 0L6 3L0 6z" fill="#ffe2a1" />
-            </marker>
-          </defs>
-          ${paths}</svg
-        >${badge}`;
-    }
-    return markupString;
-  }
+
   function positions() {
     emptySlots.forEach((el, slot) => {
       const a = project([-3.014, 0, 3.014][slot] - 0.86, 0.38, 2.345 - 1.28);
@@ -786,10 +727,12 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
   const fx = createEffects(effects, center, () => animationSpeed, {
     onSpawn: schedule,
     plagueFloorPoints: () =>
-      floorSlots.map((position) => {
-        const point = project(position.x, 0.295, position.z + 1.53);
-        return { x: (point.x * 0.5 + 0.5) * width, y: (-point.y * 0.5 + 0.5) * height };
-      }),
+      [-4.6, 0, 4.6].flatMap((x) =>
+        [-3.2, 0.1, 3.2].map((z) => {
+          const point = project(x, 0.295, z);
+          return { x: (point.x * 0.5 + 0.5) * width, y: (-point.y * 0.5 + 0.5) * height };
+        }),
+      ),
     onImpact({ heavy, delay = 0, hitStopMs = 75 } = {}) {
       if (reduced) return;
       const waitMs = Math.max(0, delay) / Math.max(0.4, animationSpeed);
@@ -1052,8 +995,7 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
       });
     },
     showIntent(data) {
-      intentData = data;
-      renderIntent();
+      showIntent(data);
     },
     startDrag,
     moveDrag,

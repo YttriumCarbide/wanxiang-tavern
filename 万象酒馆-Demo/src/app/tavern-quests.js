@@ -7,6 +7,7 @@ import {
 } from '../tavern-quests.js';
 import {
   claimGuildBountyReward,
+  GUILD_BOUNTIES,
   isBountyReadyToClaim,
   recordGuildCombatProgress,
 } from '../guild.js';
@@ -140,12 +141,13 @@ export function createTavernQuests(context) {
 
   function renderObjectives(quest) {
     if (quest.type === 'bounty') {
+      const label = GUILD_BOUNTIES.find((bounty) => bounty.id === quest.bountyId)?.objectiveLabel;
       return (quest.objectives || [])
         .map((obj) => {
           const done = (obj.current || 0) >= (obj.target || 1);
           return `<li class="skyrim-obj ${done ? 'is-done' : ''}">
             <span class="skyrim-obj-diamond" aria-hidden="true">${done ? '◆' : '◇'}</span>
-            <span>${escapeText(obj.label)}</span>
+            <span>${escapeText(obj.id === 'bounty-main' ? label || obj.label : obj.label)}</span>
             <em>${obj.current || 0} / ${obj.target || 1}</em>
           </li>`;
         })

@@ -462,9 +462,8 @@ export const LADDER_BOSSES = [
       finalPhaseActions: 3,
       overlordPhases: [0.66, 0.33],
       phaseShields: [0, 26, 36],
-      artifactByPhase: [0, 1, 2],
       breakLayersByPhase: [2, 3, 4],
-      buffs: { flying: 1, artifact: 1 },
+      buffs: { flying: 1 },
       finalPhaseIntents: [
         move(
           '极昼炽阳坠落',

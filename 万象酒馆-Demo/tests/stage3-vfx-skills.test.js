@@ -6,6 +6,7 @@ import {
   DRAGON_EMBLEM_ID,
   MASK_EMBLEM_ID,
   SUPREME_EMBLEM_ID,
+  BREAKER_EMBLEM_ID,
   EMBLEM_VISUALS,
   emblemVisualFor,
 } from '../src/emblems.js';
@@ -33,10 +34,11 @@ const ALL_EMBLEM_IDS = [
   DRAGON_EMBLEM_ID,
   MASK_EMBLEM_ID,
   SUPREME_EMBLEM_ID,
+  BREAKER_EMBLEM_ID,
 ];
 
-test('all 5 emblems define distinct visual profiles mapped to valid PixelFX effects', () => {
-  assert.equal(Object.keys(EMBLEM_VISUALS).length, 5);
+test('all 6 emblems define distinct visual profiles mapped to valid PixelFX effects', () => {
+  assert.equal(Object.keys(EMBLEM_VISUALS).length, 6);
   const cssClasses = new Set();
   const auraStyles = new Set();
   const primaries = new Set();
@@ -53,29 +55,35 @@ test('all 5 emblems define distinct visual profiles mapped to valid PixelFX effe
     assert.equal(visual.pixelfxPalette.length, 5);
   }
 
-  assert.equal(cssClasses.size, 5);
-  assert.equal(auraStyles.size, 5);
-  assert.equal(primaries.size, 5);
+  assert.equal(cssClasses.size, 6);
+  assert.equal(auraStyles.size, 6);
+  assert.equal(primaries.size, 6);
 });
 
 test('PixelFX headless renderer produces non-empty RGBA frames for all emblem & skill VFX', () => {
+  function assertVisibleFrame(sample, label) {
+    assert.equal(sample.rgba.length, sample.width * sample.height * 4, label);
+    const visible = sample.rgba.filter((channel, index) => index % 4 === 3 && channel > 0);
+    assert(visible.length > 0, `${label} rendered zero visible pixels`);
+    assert.equal(sample.visiblePixels, visible.length, label);
+  }
+
   const checked = new Set();
   for (const id of ALL_EMBLEM_IDS) {
     const visual = emblemVisualFor(id);
     for (const fxId of [visual.engageFx, visual.skillFx, visual.passiveFx]) {
       checked.add(fxId);
       const sample = renderEffectSample(fxId, { palette: visual.pixelfxPalette });
-      assert(sample.visiblePixels > 0, `${fxId} for ${id} rendered zero visible pixels`);
+      assertVisibleFrame(sample, `${fxId} for ${id}`);
     }
   }
   for (const skill of LEARNABLE_SKILLS) {
     assert(EFFECT_REGISTRY[skill.vfx], `Missing skill vfx: ${skill.vfx}`);
     checked.add(skill.vfx);
     const sample = renderEffectSample(skill.vfx, { palette: skill.vfxPalette });
-    assert(sample.visiblePixels > 0, `${skill.vfx} for ${skill.id} rendered zero pixels`);
+    assertVisibleFrame(sample, `${skill.vfx} for ${skill.id}`);
   }
-  const bossSample = renderEffectSample('dark-explosion');
-  assert(bossSample.visiblePixels > 0, 'dark-explosion rendered zero pixels');
+  assertVisibleFrame(renderEffectSample('dark-explosion'), 'dark-explosion');
   assert(checked.size >= 18);
 });
 

@@ -19,9 +19,7 @@ import { encounterLevel } from './enemy-growth.js';
 import { developerOption } from './generation-options.js';
 
 const ALL_ROUTE_MAP_IDS = Object.freeze([
-  ...MAP_IDS,
-  ...EMPIRE_TRANSITION_DUNGEONS,
-  ...CITY_DUNGEONS,
+  ...new Set([...MAP_IDS, ...EMPIRE_TRANSITION_DUNGEONS, ...CITY_DUNGEONS]),
 ]);
 
 function random(seed) {

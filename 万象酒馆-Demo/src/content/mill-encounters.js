@@ -19,14 +19,14 @@ export const MILL_ROUTES = Object.freeze([
       { name: '荆棘篱笆', enemyIds: ['millNettle', 'millVolePup'] },
       { name: '蓄水闸口', enemyIds: ['millGiantVole', 'millMossBug'] },
       { name: '杂物篱院', enemyIds: ['millStrayCat', 'millShellBeetle'] },
-      { name: '篱笆鼠巢', enemyIds: ['millVoleAlpha'] },
+      { name: '篱笆鼠巢', enemyIds: ['millVolePup', 'millVoleAlpha', 'millCanalFrog'] },
     ],
     tutorialBattles: [
       { name: '水渠浅坡', enemyIds: ['millCanalFrog'] },
       { name: '破损木篱', enemyIds: ['millNettle', 'millVolePup'] },
       { name: '石渠挡道处', enemyIds: ['millGiantVole'] },
       { name: '磨坊门槛前', enemyIds: ['millStrayCat', 'millShellBeetle'] },
-      { name: '篱笆鼠巢', enemyIds: ['millVoleAlpha'] },
+      { name: '篱笆鼠巢', enemyIds: ['millVolePup', 'millVoleAlpha', 'millCanalFrog'] },
     ],
   },
   {

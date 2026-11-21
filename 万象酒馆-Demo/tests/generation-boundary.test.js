@@ -6,7 +6,6 @@ import { createWorldbookStore } from '../server/worldbook-store.mjs';
 import { createBrowserStores } from '../src/ai/browser-stores.js';
 import { syncBuiltinWorldbook } from '../src/ai/worldbook.js';
 import { createAiPipeline } from '../src/ai/pipeline/runtime.js';
-import { runRegexTasks } from '../server/regex-runtime.mjs';
 import { extractGenerationEnvelope } from '../src/ai/pipeline/output-envelope.js';
 import { normalizePromptPreset } from '../src/ai/presets.js';
 import { worldFixture } from './fixtures/multiverse.js';
@@ -111,11 +110,10 @@ test('server and browser stores inject final boundary after imported prose/forma
     const pipeline = createAiPipeline({
       worlds,
       settings: { get: () => profile },
-      regexStore: { get: () => [] },
+
       helperStorage: { get: () => ({}) },
       countTokens: (text) => Math.ceil(text.length / 3),
       readText,
-      runRegexTasks,
     });
     for (const [kind, input] of Object.entries(inputs)) {
       const request = await pipeline.buildRequest(kind, input, source);

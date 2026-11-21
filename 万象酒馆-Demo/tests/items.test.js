@@ -6,7 +6,16 @@ import { restoreLibrary, compileRoster } from '../src/ai/library.js';
 import { newCampaign } from '../src/campaign.js';
 import { defaultProtagonist } from '../src/content/qingyuan.js';
 import { tutorialSpec } from '../src/content/tutorial.js';
-import { demonstrated, tutorialCommitIssue } from '../src/tutorial-progress.js';
+import { ITEMS } from '../src/content/items.js';
+import { newExpedition, currentEncounterSpec, beginEncounter } from '../src/expedition.js';
+import { adventureTestScript } from '../src/content/generation-mode.js';
+import { normalizeScript } from '../src/ai/contracts.js';
+import { createAdventureState } from '../src/adventure/state.js';
+import {
+  demonstrated,
+  tutorialCommitIssue,
+  recordTutorialResult,
+} from '../src/tutorial-progress.js';
 
 function supplied() {
   const state = newBattle(['warden']);
@@ -24,7 +33,10 @@ test('items consume one real AP and one charge only in the accepted simulation, 
   const result = preview(state, [potion]);
   assert(result.valid);
   assert.equal(potion.ap, 1);
-  assert.equal(result.final.units.aegis.mp, 18);
+  const unit = source.units.aegis;
+  const effect = ITEMS['mana-potion'].effects.find((entry) => entry.type === 'mana');
+  const recovered = Math.round(unit.maxMp * effect.maxMpPercent);
+  assert.equal(result.final.units.aegis.mp, Math.min(unit.maxMp, unit.mp + recovered));
   assert.equal(result.final.units.aegis.used, 0);
   assert.equal(result.final.items['mana-potion'], 0);
   assert.deepEqual(state, source);
@@ -76,18 +88,47 @@ test('inventory survives saves, encounter carry-over and keeps ether archives se
 
 test('tutorial gates require the slow item before action and actual recovered mana before the final kill', () => {
   const library = newCampaign(defaultProtagonist());
-  const state = newEncounter(tutorialSpec(2), null, 2, compileRoster(library));
+  library.campaign.adventureTutorial = true;
+  const node = { ...library.exploration.ruins.frontier[0], tutorial: true };
+  const expedition = newExpedition('bossGate', compileRoster(library), node);
+  const script = normalizeScript(adventureTestScript('mill'), 'item-tutorial-script');
+  expedition.adventure = createAdventureState(script, expedition.id);
+  expedition.index = 2;
+  assert.deepEqual(currentEncounterSpec(expedition).enemyIds, ['millNettle', 'millGiantVole']);
+  const state = beginEncounter(expedition);
   state.items['slow-potion'] = 1;
-  const normal = advance(preview(state, []));
-  assert(tutorialCommitIssue(library, normal, preview(normal, [])).includes('迟缓药水'));
+  const opening = preview(state, [makeAction(state, 'aegis', 'attack', 'millNettle', 0)]);
+  assert(opening.valid, JSON.stringify(opening.invalid));
+  assert(demonstrated(opening, 'vulnerable'));
+  recordTutorialResult(library.campaign, true, opening);
+  assert.equal(library.campaign.tasks.vulnerable, true);
+  const openingSlow = preview(state, [makeItem('slow-potion', 'millGiantVole', 0)]);
+  assert(openingSlow.valid, JSON.stringify(openingSlow.invalid));
+  assert(tutorialCommitIssue(library, state, openingSlow).includes('正式回合'));
+  const normal = advance(opening);
+  const idle = preview(normal, []);
+  assert(idle.valid, JSON.stringify(idle.invalid));
+  assert(!demonstrated(idle, 'slow'));
+  assert(tutorialCommitIssue(library, normal, idle).includes('迟缓药水'));
   const slow = preview(normal, [makeItem('slow-potion', 'millGiantVole', 0)]);
+  assert(slow.valid, JSON.stringify(slow.invalid));
+  assert(demonstrated(slow, 'slow'));
   assert.equal(tutorialCommitIssue(library, normal, slow), '');
+  const late = preview(normal, [
+    makeItem('slow-potion', 'millGiantVole', idle.slots.lastIndexOf(null)),
+  ]);
+  assert(late.valid, JSON.stringify(late.invalid));
+  assert(!demonstrated(late, 'slow'));
+  assert(tutorialCommitIssue(library, normal, late).includes('迟缓药水'));
   const boss = newEncounter(tutorialSpec(4), null, 4, compileRoster(library));
   boss.items['mana-potion'] = 1;
   const full = preview(boss, [makeItem('mana-potion', 'lyria', 0)]);
+  assert(full.valid, JSON.stringify(full.invalid));
+  assert(!demonstrated(full, 'mana'));
   assert(tutorialCommitIssue(library, boss, full).includes('实际回复法力'));
   boss.units.lyria.mp -= 8;
   const refill = preview(boss, [makeItem('mana-potion', 'lyria', 0)]);
+  assert(refill.valid, JSON.stringify(refill.invalid));
   assert(demonstrated(refill, 'mana'));
   assert.equal(tutorialCommitIssue(library, boss, refill), '');
 });

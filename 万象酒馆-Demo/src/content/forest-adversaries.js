@@ -579,7 +579,7 @@ export const FOREST_BOSSES = [
       ),
     ],
     { mode: 'moon-tree', part: 'crown' },
-    { overlord: true, standOnCard: true, buffs: { artifact: 1 } },
+    { overlord: true, standOnCard: true },
   ),
   boss(
     'moonEye',
@@ -597,7 +597,7 @@ export const FOREST_BOSSES = [
       move('魔眼蓄能', '第3回合蓄力，本回合不产生效果。', [], { charging: true }),
     ],
     { mode: 'moon-tree', part: 'eye' },
-    { overlord: true, standOnCard: true, buffs: { artifact: 1 } },
+    { overlord: true, standOnCard: true },
   ),
   boss(
     'moonRoot',
@@ -615,6 +615,6 @@ export const FOREST_BOSSES = [
       ]),
     ],
     { mode: 'moon-tree', part: 'root' },
-    { overlord: true, standOnCard: true, buffs: { artifact: 1 } },
+    { overlord: true, standOnCard: true },
   ),
 ];

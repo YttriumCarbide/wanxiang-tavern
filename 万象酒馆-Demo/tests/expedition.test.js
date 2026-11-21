@@ -3,10 +3,11 @@ import { gainExperience, xpToNext } from '../src/growth.js';
 import { buyItem } from '../src/content/items.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { BOSSES, HEROES, encounterSpec } from '../src/data.js';
+import { BOSSES, DEFINITIONS, HEROES, encounterSpec } from '../src/data.js';
 import { preview, advance, intent, newEncounter, campRest, makeAction } from '../src/engine.js';
 import { newExpedition, beginEncounter, completeEncounter, chooseRest } from '../src/expedition.js';
 import { buildPlan } from './planner.js';
+import { choosePlan } from '../tools/battle-sim/policy.mjs';
 
 test('only rear entry skills become ready between battles; first arrival still requires charging', () => {
   const first = newEncounter(encounterSpec(0));
@@ -81,17 +82,21 @@ test('boss second phase remains after regeneration heals above the threshold', (
   const s = newEncounter(encounterSpec(4, 'bossBloom'));
   s.phase = 'plan';
   s.round = 1;
-  s.units.bossBloom.hp = 40;
+  const threshold = s.units.bossBloom.maxHp * DEFINITIONS.bossBloom.phaseThreshold;
+  s.units.bossBloom.hp = Math.floor(threshold);
   const r = preview(s, []);
-  assert(r.final.units.bossBloom.hp > 40);
-  assert(r.final.units.bossBloom.enraged);
-  assert(intent(r.final, 'bossBloom').enraged);
+  assert(r.final.units.bossBloom.hp > threshold);
+  assert.equal(r.final.units.bossBloom.enraged, true);
+  const next = advance(r);
+  assert.equal(intent(next, 'bossBloom').enraged, true);
+  assert.equal(preview(next, []).final.units.bossBloom.bossStage, 2);
 });
 for (const boss of BOSSES)
   test(`full five-encounter expedition can defeat ${boss.name}`, () => {
     const veterans = newLibrary();
     const veteranLevels =
       boss.id === 'ares' ||
+      boss.id === 'darkscaleWarlord' ||
       [
         'frostCrusher',
         'drillMatriarch',
@@ -120,8 +125,7 @@ for (const boss of BOSSES)
             0,
           ),
         );
-    const trip = newExpedition(boss.id, veteranLevels > 0 ? compileRoster(veterans) : {}),
-      records = [];
+    const trip = newExpedition(boss.id, veteranLevels > 0 ? compileRoster(veterans) : {});
     const supplies = newLibrary();
     supplies.inventory.gold = 200;
     for (let count = 0; count < 4; count++) assert(buyItem(supplies, 'fine-health-potion').ok);
@@ -130,17 +134,25 @@ for (const boss of BOSSES)
       let s = beginEncounter(trip);
       if (room === 0) s.items = structuredClone(supplies.inventory.items);
       for (let turn = 0; turn < 35 && !['victory', 'defeat'].includes(s.phase); turn++) {
-        const plan =
-            boss.id === 'ares' && room === 4 && s.phase === 'opening'
-              ? [makeAction(s, 'aegis', 'meteor-stance', 'aegis', 0)]
-              : buildPlan(s),
-          r = preview(s, plan);
+        const r =
+          boss.id === 'alchemicalPuppet' && room === 4
+            ? choosePlan(s, {
+                seed: 20261121,
+                policy: 'balanced',
+                candidateLimit: 12,
+                exerciseEmblem: false,
+              }).result
+            : preview(
+                s,
+                boss.id === 'ares' && room === 4 && s.phase === 'opening'
+                  ? [makeAction(s, 'aegis', 'meteor-stance', 'aegis', 0)]
+                  : buildPlan(s),
+              );
         assert(r.valid, JSON.stringify(r.invalid));
         s = advance(r);
       }
       assert.equal(s.phase, 'victory', `${boss.id} room ${room + 1}: ${JSON.stringify(s.units)}`);
       const mana = HEROES.map((h) => s.units[h.id].mp);
-      records.push(s.round);
       const result = completeEncounter(trip, s);
       if (trip.restPending) chooseRest(trip, 'sleep');
       if (!result.complete) {
@@ -153,5 +165,4 @@ for (const boss of BOSSES)
     }
     assert.equal(trip.status, 'complete');
     assert.equal(trip.records.length, 5);
-    console.log(boss.name, records);
   });

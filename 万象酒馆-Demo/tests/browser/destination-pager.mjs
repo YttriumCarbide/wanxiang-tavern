@@ -10,7 +10,12 @@ export async function destinationPagerChecks({ browser, baseURL, output }) {
   const errors = [];
   let generations = 0;
   let entrance;
+  let millPreviewLoaded = false;
+  const millPreviewUrl = new URL('assets/preview-mill.glb', baseURL).href;
   page.on('pageerror', (error) => errors.push(error.message));
+  page.on('response', (response) => {
+    if (response.url() === millPreviewUrl && response.ok()) millPreviewLoaded = true;
+  });
   await page.route('**/api/ai/generate/*', async (route) => {
     generations++;
     await route.abort();
@@ -171,6 +176,8 @@ export async function destinationPagerChecks({ browser, baseURL, output }) {
     }
     await page.locator('#destination-region-next').click();
     await ready('mill');
+    assert(millPreviewLoaded, 'Mill must load its dedicated miniature GLB');
+    await page.screenshot({ path: path.join(output, 'destination-mill-miniature.png') });
     await page.locator('#destination-region-next').click({ clickCount: 4, delay: 30 });
     await ready('forge');
     await page.locator('#destination-region-next').focus();

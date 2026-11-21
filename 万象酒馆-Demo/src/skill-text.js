@@ -149,13 +149,17 @@ export function finalPassiveText(skill, markName = '标记') {
                   : ''),
             )
             .join('，');
-          const scope = { round: '每回合', battle: '每场战斗', expedition: '每次副本' }[
-            rule.scope || 'expedition'
-          ];
+          const scope = {
+            round: '每回合',
+            unlimited: '不限次数',
+            battle: '每场战斗',
+            expedition: '每次副本',
+          }[rule.scope || 'expedition'];
           if (rule.mode === 'continuous') {
             return `${conditions ? `${conditions}时，` : ''}常驻${effects}。`;
           }
-          return `${timing}${conditions ? `，若${conditions}` : ''}，${effects}（${scope}最多${rule.limit}次）。`;
+          const uses = rule.scope === 'unlimited' ? scope : `${scope}最多${rule.limit}次`;
+          return `${timing}${conditions ? `，若${conditions}` : ''}，${effects}（${uses}）。`;
         })
         .join(''),
     );
@@ -173,13 +177,10 @@ export function finalPassiveText(skill, markName = '标记') {
 
 /** Single authoritative readable description for any equipment template or owned instance. */
 export function equipmentDescription(equipment = {}) {
-  if (equipment.dcBonus && Object.keys(equipment.dcBonus).length) {
-    const bonusText = gemBonusText(equipment.dcBonus);
-    if (bonusText) return bonusText;
-  }
+  const dcText = equipment.dcBonus ? gemBonusText(equipment.dcBonus) : '';
   const statText = formatEquipmentStats(equipment.stats || {});
   const ruleText = equipment.rules?.length ? finalPassiveText({ rules: equipment.rules }) : '';
-  return [statText, ruleText].filter(Boolean).join('；');
+  return [dcText, statText, ruleText].filter(Boolean).join('；');
 }
 
 /** Display the actual compiled effects, including growth, without explanatory growth suffixes. */

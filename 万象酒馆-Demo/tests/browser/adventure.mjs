@@ -237,12 +237,14 @@ export async function adventureChecks({ browser, baseURL, output }) {
     const inn = page.frameLocator('#inn-frame iframe');
     await inn.locator('#status').waitFor({ state: 'detached', timeout: 60000 });
     await inn.locator('canvas').evaluate(() => window.assetPreview.placeNow('bookshelf'));
-    await inn.locator('#bookshelf-records').click();
+    await inn.locator('#bookshelf-archives').click();
+    await page.locator('#archive-dialog').waitFor({ state: 'visible' });
+    await page.locator('#archive-dialog [data-archive-tab="records"]').click();
     assert(
       (await page.locator('.records-reading-content').textContent()).includes('过去独立经历1'),
     );
     assert.equal(await page.locator('[data-records-view]').count(), 0);
-    await page.locator('#records-close').click();
+    await page.locator('#archive-close').click();
     await inn.locator('canvas').evaluate(() => window.assetPreview.placeNow('gate'));
     await inn.locator('#enter').click();
     await page.locator('#destination-region-confirm').click();
@@ -409,8 +411,9 @@ export async function adventureChecks({ browser, baseURL, output }) {
     assert(current.lines.some((line) => line.stage === 'quest-state'));
     assert.equal(current.complete, true);
     await inn.locator('canvas').evaluate(() => window.assetPreview.placeNow('bookshelf'));
-    await inn.locator('#bookshelf-records').click();
-    await page.locator('#journey-records').waitFor({ state: 'visible' });
+    await inn.locator('#bookshelf-archives').click();
+    await page.locator('#archive-dialog').waitFor({ state: 'visible' });
+    await page.locator('#archive-dialog [data-archive-tab="records"]').click();
     assert(
       (await page.locator('.records-reading-content').textContent()).includes(current.summary.text),
     );
@@ -433,7 +436,7 @@ export async function adventureChecks({ browser, baseURL, output }) {
       (await page.locator('.records-reading-content').textContent()).includes(current.summary.text),
     );
     await page.screenshot({ path: path.join(output, 'records-summary-mobile.png') });
-    await page.locator('#records-close').click();
+    await page.locator('#archive-close').click();
     assert.deepEqual(errors, []);
     return {
       battles: [0, 2, 4],

@@ -420,8 +420,8 @@ body.in-adventure.gal-playing :is(#ai-dialog, #generation-diagnostics)[open] {
 }
 .rp-left-dock {
   position: fixed;
-  left: 5vw;
-  bottom: calc(var(--rp-panel-bottom, 74px) + 6px);
+  left: calc(5vw + 22px);
+  bottom: calc(var(--rp-panel-bottom, 74px) + 14px);
   width: min(420px, 38%);
   z-index: 4;
   display: flex;
@@ -668,8 +668,8 @@ body.in-adventure:has(#gal-stage[data-workspace='adventure'][data-playing='true'
 }
 @media (max-height: 500px) {
   .rp-left-dock {
-    left: 4vw;
-    bottom: calc(var(--rp-panel-bottom, 64px) + 4px);
+    left: calc(4vw + 18px);
+    bottom: calc(var(--rp-panel-bottom, 64px) + 12px);
     width: min(220px, 34vw);
     max-height: calc(100% - var(--rp-panel-bottom, 64px) - 24%);
     overflow-y: auto;
@@ -827,6 +827,25 @@ body.in-adventure #mode-label {
   .rp-content,
   .rp-left-dock {
     transition: none;
+  }
+}
+
+:root[data-game-layout='mobile'] {
+  #rp-scene :is([data-rp-choice], button.rp-choice-actor-pill, [data-rp='next'], [data-rp='send']) {
+    min-height: 44px;
+  }
+  #rp-scene [data-rp-choice] {
+    padding-inline: 8px;
+  }
+  #rp-scene [data-rp-choice]:is(:hover, [aria-pressed='true']) {
+    transform: none;
+  }
+  .rp-form > div {
+    gap: 8px;
+  }
+  #rp-scene [data-rp='send'] {
+    min-width: 64px;
+    padding-inline: 8px;
   }
 }
 @media (max-width: 700px) {

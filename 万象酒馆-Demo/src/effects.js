@@ -14,7 +14,7 @@ import {
 } from './damage-types.js';
 import { roundBanner } from './motion.js';
 import { createApepEffects } from './apep-effects.js';
-import { APEP_ID, APEP_RELEASE, apepAttack } from './apep-presentation.js';
+import { APEP_ID, APEP_PALETTE, APEP_RELEASE, apepAttack } from './apep-presentation.js';
 export function createEffects(layer, center, getSpeed, options = {}) {
   const active = new Set();
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -257,18 +257,16 @@ export function createEffects(layer, center, getSpeed, options = {}) {
         spawned = true;
       }
     } else if (e.bombArmed) {
-      if (source) {
+      if (targetPoints[0]?.p) {
+        const tp = targetPoints[0].p;
         pixelFx.spawn('magic-circle-cast', {
-          x: source.x,
-          y: source.y,
+          x: tp.x,
+          y: tp.y,
           anchorToOrigin: true,
           palette: ALCHEMICAL_PALETTE,
           scale: 1.45,
-          delay: 120,
+          delay: Math.max(320, impactDelay * 0.65),
         });
-      }
-      if (targetPoints[0]?.p) {
-        const tp = targetPoints[0].p;
         pixelFx.spawn('time-stop', {
           x: tp.x,
           y: tp.y,
@@ -504,16 +502,39 @@ export function createEffects(layer, center, getSpeed, options = {}) {
         );
     }
     if (e.chargeStarted && source) {
-      pixelFx.spawn('magic-circle-cast', {
-        x: source.x,
-        y: source.y,
-        anchorToOrigin: true,
-        palette: ALCHEMICAL_PALETTE,
-        scale: 1.55,
-        delay: 100,
-      });
-      sparks(source, '#ffd96b', reduced ? 4 : 16, 120);
-      floating({ x: source.x, y: source.y - 54 }, '⚡ 蓄力聚能', 'equipment-proc-number', 140);
+      if (e.actor === APEP_ID) {
+        pixelFx.spawn('eclipse', {
+          x: source.x,
+          y: source.y,
+          anchorToOrigin: true,
+          palette: APEP_PALETTE,
+          light: 0.45,
+          scale: 1.5,
+          delay: 100,
+        });
+        pixelFx.spawn('shadow-flames', {
+          x: source.x,
+          y: source.y,
+          anchorToOrigin: true,
+          palette: APEP_PALETTE,
+          light: 0.46,
+          scale: 1.18,
+          delay: 150,
+        });
+        sparks(source, '#c73c64', reduced ? 4 : 16, 120);
+        floating({ x: source.x, y: source.y - 54 }, '◉ 晦暗凝蓄', 'apep-plague-number', 140);
+      } else {
+        pixelFx.spawn('magic-circle-cast', {
+          x: source.x,
+          y: source.y,
+          anchorToOrigin: true,
+          palette: ALCHEMICAL_PALETTE,
+          scale: 1.55,
+          delay: 100,
+        });
+        sparks(source, '#ffd96b', reduced ? 4 : 16, 120);
+        floating({ x: source.x, y: source.y - 54 }, '⚡ 蓄力聚能', 'equipment-proc-number', 140);
+      }
       options.onSpawn?.();
     }
     if (isAction && source) details.thread(layer, source, d?.color, duration);

@@ -112,7 +112,7 @@ test('cancel and total timeout stop direct generation before acceptance', async 
   }
 });
 
-test('local and browser completions share prepared prompts, regex, TK, envelope validation and one-time acceptance', async () => {
+test('local and browser completions share prepared prompts, TK, envelope validation and one-time acceptance', async () => {
   const directory = await mkdtemp(path.join(process.cwd(), '.runtime/tests/transport-'));
   let content = '<wanxiang_chat>你好，来客。</wanxiang_chat>';
   let serviceCalls = 0;
@@ -169,9 +169,7 @@ test('local and browser completions share prepared prompts, regex, TK, envelope 
         preset: {
           name: 'direct fixture',
           prompts: [{ identifier: 'main', role: 'system', content: '自然交流' }],
-          extensions: {
-            regex_scripts: [{ findRegex: '来客', replaceString: '朋友', markdownOnly: true }],
-          },
+          extensions: {},
         },
       })
     ).preset;

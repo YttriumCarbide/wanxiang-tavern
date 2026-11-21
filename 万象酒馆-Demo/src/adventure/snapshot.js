@@ -1,14 +1,48 @@
 import { normalizeAdventureDefinition, savedAdventureInput } from './definition.js';
 import { validEventReward } from './rewards.js';
+import { FINAL_ENCOUNTER } from '../content/journey-rules.js';
+
+export function adventureResumeStage(trip, battle) {
+  if (!trip?.adventure || ![0, 1, 2, 3, FINAL_ENCOUNTER].includes(trip.index)) return null;
+  if (!Number.isInteger(battle?.encounter)) return null;
+  const { index, pendingResult, status } = trip;
+  const { encounter, phase } = battle;
+  const won = phase === 'victory';
+  const terminal = won || phase === 'defeat';
+  if (pendingResult) {
+    if (
+      !terminal ||
+      pendingResult.encounter !== encounter ||
+      pendingResult.won !== won ||
+      ![0, 2, FINAL_ENCOUNTER].includes(encounter)
+    )
+      return null;
+    if (status === 'complete')
+      return won && encounter === FINAL_ENCOUNTER && index === encounter ? 'settlement' : null;
+    return status === 'active' && index === encounter + (won ? 1 : 0) ? 'settlement' : null;
+  }
+  if (status !== 'active') return null;
+  if ([1, 3].includes(index)) {
+    if (won && encounter === index - 1) return 'event';
+    // Older fixtures can start directly at an RP node without a preceding result.
+    return phase === 'opening' && !trip.records?.length && encounter >= 0 && encounter < index
+      ? 'event'
+      : null;
+  }
+  if (index !== encounter) return null;
+  if (terminal) return 'settlement';
+  return ['opening', 'plan'].includes(phase) ? 'battle' : null;
+}
 
 /** New adventures resume only from coherent code-owned nodes, never half a combat animation. */
 export function adventureSnapshot(session) {
   const expedition = session.journey?.expedition;
   if (
     !expedition?.adventure ||
-    expedition.status !== 'active' ||
-    !['battle', 'event'].includes(session.runtime.mode) ||
-    session.battle.playing
+    (!['battle', 'event'].includes(session.runtime.mode) &&
+      !(session.runtime.mode === 'loading' && session.runtime.adventureCheckpointLoading)) ||
+    session.battle.playing ||
+    !adventureResumeStage(expedition, session.battle.state)
   )
     return null;
   return structuredClone({
@@ -37,7 +71,7 @@ function checkAdventureSnapshot(snapshot) {
   const state = trip?.adventure;
   if (
     snapshot?.version !== 2 ||
-    trip?.status !== 'active' ||
+    !adventureResumeStage(trip, snapshot?.state) ||
     book?.schemaVersion !== 5 ||
     !book.adventure ||
     !Array.isArray(book.adventure?.quest?.goals) ||
@@ -47,12 +81,13 @@ function checkAdventureSnapshot(snapshot) {
     typeof state.event !== 'object' ||
     Array.isArray(state.event) ||
     state.version !== 1 ||
-    !Number.isInteger(trip.index) ||
-    trip.index < 0 ||
-    trip.index > 4 ||
     !Array.isArray(book.story) ||
     book.story.length !== 5 ||
     !snapshot.state?.units ||
+    !Array.isArray(snapshot.state.enemyIds) ||
+    snapshot.state.enemyIds.some(
+      (id) => typeof id !== 'string' || !Object.hasOwn(snapshot.state.units, id),
+    ) ||
     !Array.isArray(snapshot.state.formation) ||
     !Array.isArray(state.responses) ||
     !Array.isArray(state.history) ||

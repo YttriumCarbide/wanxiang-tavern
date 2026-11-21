@@ -1,21 +1,24 @@
 {
   "browserConcurrency": 2,
+  "scopes": ["quality", "core", "folder-backup", "preparation", "equipment"],
   "coreFiles": [
-    "tests/combat-overhaul.test.js",
-    "tests/overlord-puppet.test.js",
-    "tests/enemy-base-values.test.js",
+    "tests/lamb-balance.test.js",
+    "tests/battle-sim.test.js",
     "tests/battle-balance.test.js",
-    "tests/combat-control.test.js",
-    "tests/chat.test.js",
-    "tests/exploration.test.js",
+    "tests/overlord-puppet.test.js",
+    "tests/enemy-progression.test.js",
+    "tests/logic-audit-enemy-values.test.js",
+    "tests/logic-audit-engine-damage.test.js",
     "tests/engine.test.js",
-    "tests/forest.test.js",
-    "tests/expedition.test.js",
-    "tests/playback.test.js",
-    "tests/adventure.test.js",
-    "tests/campaign.test.js",
+    "tests/equipment.test.js",
+    "tests/equipment-affixes.test.js",
+    "tests/equipment-damage.test.js",
     "tests/saves.test.js",
-    "tests/turn-flow.test.js"
-  ],
-  "scopes": ["core", "quality"]
+    "tests/character-generation-plan.test.js",
+    "tests/character-constraints.test.js",
+    "tests/battle-mechanic-execution.test.js",
+    "tests/playtest-controls.test.js",
+    "tests/status-emblems.test.js",
+    "tests/overland.test.js"
+  ]
 }

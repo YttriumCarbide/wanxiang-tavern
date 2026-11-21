@@ -109,11 +109,14 @@ export function acceptAdventureReply(library, expedition, book, turn, reply, res
       state.goals[task.id] = { status: task.status, evidence: task.evidence };
     }
     if (adventureReady(book.adventure, state) && result.patches?.length) {
+      const revision = state.boss.revision;
       warnings.push(
         ...applyBossPatches(state.boss, result.patches ?? [], result.revision, responseId),
       );
-      book.story[4] = linesProse(state.boss.lines);
-      if (book.display?.story) book.display.story[4] = book.story[4];
+      if (state.boss.revision !== revision) {
+        book.story[4] = linesProse(state.boss.lines);
+        if (book.display?.story) book.display.story[4] = book.story[4];
+      }
     } else if (result.patches?.length) warnings.push('主要目标尚未完成，未应用Boss剧情补丁');
   }
   state.responses.push(responseId);

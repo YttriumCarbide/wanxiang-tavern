@@ -79,13 +79,20 @@ export function createSceneAmbience(scene, model, map, resources, reduced) {
     if (!node.name.startsWith('Motion_')) return;
     const size = new THREE.Box3().setFromObject(node).getSize(new THREE.Vector3());
     const axis =
-      node.name === 'Motion_Mill_Core'
+      node.name === 'Motion_Mill_Core' ||
+      node.name === 'Motion_Quarry_Rift_Crystal' ||
+      node.name === 'Motion_Market_Weathervane' ||
+      node.name === 'Motion_BlackMarket_Pulley'
         ? 'y'
-        : size.x <= size.y && size.x <= size.z
-          ? 'x'
-          : size.z <= size.y && size.z <= size.x
-            ? 'z'
-            : 'y';
+        : node.name === 'Motion_Quarry_Crane_Load' ||
+            node.name === 'Motion_Market_Signboard' ||
+            node.name === 'Motion_BlackMarket_Cage'
+          ? 'z'
+          : size.x <= size.y && size.x <= size.z
+            ? 'x'
+            : size.z <= size.y && size.z <= size.x
+              ? 'z'
+              : 'y';
     mechanisms.push({ node, home: node.position.clone(), phase: mechanisms.length * 0.79, axis });
   });
   const water = [];
@@ -164,6 +171,21 @@ export function createSceneAmbience(scene, model, map, resources, reduced) {
       } else if (node.name === 'Motion_Mill_Core') {
         node.rotation.y = time * 0.48 + phase;
         node.position.y = home.y + Math.sin(time * 1.6 + phase) * 0.08;
+      } else if (node.name === 'Motion_Quarry_Rift_Crystal') {
+        node.rotation.y = time * 0.42 + phase;
+        node.position.y = home.y + Math.sin(time * 1.5 + phase) * 0.09;
+      } else if (node.name === 'Motion_Quarry_Crane_Load') {
+        node.rotation.z = Math.sin(time * 0.75 + phase) * 0.055;
+      } else if (node.name === 'Motion_Market_Weathervane') {
+        node.rotation.y = time * 0.35 + phase;
+      } else if (node.name === 'Motion_Market_Signboard') {
+        node.rotation.z = Math.sin(time * 1.1 + phase) * 0.08;
+        node.rotation.y = Math.sin(time * 0.85 + phase) * 0.05;
+      } else if (node.name === 'Motion_BlackMarket_Cage') {
+        node.rotation.z = Math.sin(time * 0.95 + phase) * 0.07;
+        node.position.y = home.y + Math.sin(time * 1.3 + phase) * 0.04;
+      } else if (node.name === 'Motion_BlackMarket_Pulley') {
+        node.rotation.y = time * 0.32 + phase;
       } else node.rotation.y = time * (node.name.startsWith('Motion_Gear') ? 0.23 : 0.12) + phase;
     }
     water.forEach((mesh, index) => {

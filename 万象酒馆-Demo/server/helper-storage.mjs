@@ -1,4 +1,5 @@
-import { readFile, writeFile, rename } from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
+import { atomicWrite } from './disk-store.mjs';
 
 /** Script-owned preferences stay on this machine, outside exported presets and AI context. */
 export async function createHelperStorage(file) {
@@ -10,12 +11,12 @@ export async function createHelperStorage(file) {
     if (failure.code !== 'ENOENT') throw failure;
   }
   function check(id) {
-    if (!/^[a-z0-9-]{1,100}$/.test(id)) throw Error('扩展存储ID无效');
+    if (typeof id !== 'string' || !/^[a-z0-9-]{1,100}$/.test(id)) throw Error('扩展存储ID无效');
   }
   return {
     get(id) {
       check(id);
-      return structuredClone(stored[id] || {});
+      return structuredClone(Object.hasOwn(stored, id) ? stored[id] : {});
     },
     async save(id, value) {
       check(id);
@@ -27,16 +28,17 @@ export async function createHelperStorage(file) {
         Buffer.byteLength(JSON.stringify(value)) > 4000000
       )
         throw Error('扩展存储需要不超过4MB的字符串字典');
-      stored[id] = structuredClone(value);
-      const snapshot = JSON.stringify(stored);
-      writes = writes
+      const nextValue = structuredClone(value);
+      const result = writes
         .catch(() => {})
         .then(async () => {
-          await writeFile(file + '.tmp', snapshot, { mode: 0o600 });
-          await rename(file + '.tmp', file);
+          const next = { ...stored, [id]: nextValue };
+          await atomicWrite(file, JSON.stringify(next));
+          stored = next;
+          return { saved: true };
         });
-      await writes;
-      return { saved: true };
+      writes = result;
+      return result;
     },
   };
 }

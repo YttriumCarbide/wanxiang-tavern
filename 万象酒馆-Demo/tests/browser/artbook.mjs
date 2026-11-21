@@ -10,7 +10,7 @@ export async function artbookChecks({ browser, baseURL, output }) {
   try {
     await page.goto(new URL('artbook.html?scene=frost', baseURL).href);
     await page.waitForFunction(() => window.artbook && !window.artbook.status().loading);
-    for (const id of ['frost', 'forge', 'tide']) {
+    for (const id of ['frost', 'forge', 'tide', 'mill']) {
       if (id !== 'frost') await page.evaluate((id) => window.artbook.select(id), id);
       await page.waitForTimeout(650);
       const before = await page.evaluate(() => window.artbook.status());
@@ -157,6 +157,86 @@ export async function artbookChecks({ browser, baseURL, output }) {
         mechanisms: status.mechanisms.length,
         weather: status.weather.type,
         outerEnvironment: status.outerEnvironment,
+      });
+    }
+    await page.evaluate(() => window.artbook.weather('clear'));
+    const customScenes = [
+      {
+        id: 'graystone-quarry',
+        landmark: 'Landmark_Quarry_Mine_Rift',
+        motions: ['Motion_Quarry_Rift_Crystal', 'Motion_Quarry_Crane_Load'],
+      },
+      {
+        id: 'city-market',
+        landmark: 'Landmark_Market_Archway',
+        motions: ['Motion_Market_Signboard', 'Motion_Market_Weathervane'],
+      },
+      {
+        id: 'black-market',
+        landmark: 'Landmark_BlackMarket_Auction',
+        motions: ['Motion_BlackMarket_Cage', 'Motion_BlackMarket_Pulley'],
+      },
+    ];
+    for (const sceneSpec of customScenes) {
+      await page.evaluate((sceneId) => window.artbook.select(sceneId), sceneSpec.id);
+      await page.waitForFunction(
+        () => !window.artbook.status().loading && !window.artbook.status().animating,
+        null,
+        { timeout: 60000 },
+      );
+      const before = await page.evaluate(() => window.artbook.status());
+      assert.equal(before.outerEnvironment.mode, 'authored-large');
+      assert.equal(before.outerEnvironment.mirroredRight, false);
+      assert.equal(before.outerEnvironment.drawBatches, 0);
+      assert(before.outerEnvironment.zones.length >= 5);
+      assert(before.landmarks.includes('Six_Grounded_Foundations'));
+      assert(before.landmarks.includes(sceneSpec.landmark));
+      for (const motion of sceneSpec.motions) assert(before.mechanisms.includes(motion));
+      await page.waitForFunction(
+        (poses) => JSON.stringify(window.artbook.status().mechanismPoses) !== JSON.stringify(poses),
+        before.mechanismPoses,
+        { timeout: 6000 },
+      );
+      const after = await page.evaluate(() => window.artbook.status());
+      assert.notDeepEqual(
+        before.mechanismPoses,
+        after.mechanismPoses,
+        `${sceneSpec.id} mechanisms must actually move`,
+      );
+      const sceneCards = await page.locator('.unit-hit').evaluateAll((elements) =>
+        elements.map((element) => {
+          const rect = element.getBoundingClientRect();
+          return {
+            id: element.dataset.unit,
+            x: rect.x,
+            y: rect.y,
+            width: rect.width,
+            height: rect.height,
+          };
+        }),
+      );
+      assert.equal(sceneCards.length, originalCards.length);
+      for (let index = 0; index < sceneCards.length; index++) {
+        assert.equal(sceneCards[index].id, originalCards[index].id);
+        for (const property of ['x', 'y', 'width', 'height'])
+          assert(
+            Math.abs(sceneCards[index][property] - originalCards[index][property]) < 0.1,
+            `${sceneSpec.id}: card ${property} must match the original map`,
+          );
+      }
+      await page.screenshot({ path: path.join(output, `art-${sceneSpec.id}.png`) });
+      await page.locator('.artbook-panel').evaluate((element) => {
+        element.style.visibility = 'hidden';
+      });
+      await page.screenshot({ path: path.join(output, `landscape-${sceneSpec.id}.png`) });
+      await page.locator('.artbook-panel').evaluate((element) => {
+        element.style.visibility = '';
+      });
+      views.push({
+        id: sceneSpec.id,
+        mechanisms: before.mechanisms.length,
+        weather: before.weather?.type,
+        outerEnvironment: before.outerEnvironment,
       });
     }
     await page.evaluate(() => window.artbook.select('metropolis'));

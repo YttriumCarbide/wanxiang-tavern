@@ -120,6 +120,7 @@ export function createRenderer(context) {
       );
   }
   function render(options = {}) {
+    context.developer?.sync();
     if (session.runtime.disposed || ['inn', 'event'].includes(session.runtime.mode)) return;
     const emblemState = session.battle.playing
       ? session.battle.display || session.battle.state
@@ -181,7 +182,7 @@ export function createRenderer(context) {
       session.battle.history
         .slice(-35)
         .reverse()
-        .map((t) => html`<p>${t}</p>`)
+        .map((t) => html`<p>${escapeText(t)}</p>`)
         .join('') || '<p>选角色、技能和目标，再放进左侧时间轴。</p>';
     session.runtime.view?.setSpeed(session.battle.speed);
     let activeDamageType = null;

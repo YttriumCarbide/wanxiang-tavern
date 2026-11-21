@@ -268,9 +268,9 @@ export async function dailyChecks({ browser, baseURL, output }) {
     await service.locator('[data-live-minigame="0"]').click();
     await service.locator('.ls-modal-game [data-activity]').waitFor();
     await service.locator('[data-live="mg-close"]').click();
-    await service.locator('[data-live-boost="0"]').click();
-    await service.locator('[data-live-boost="0"]').click();
-    await service.locator('[data-live-boost="0"]').click();
+    for (let i = 0; i < 3 && (await service.locator('[data-live-boost="0"]').count()); i++) {
+      await service.locator('[data-live-boost="0"]').click();
+    }
     await service.locator('.ls-pass [data-live-plate]').first().waitFor();
     await page.screenshot({ path: path.join(output, 'daily-service.png') });
     await service.locator('[data-live-table="0"]').click();
@@ -391,7 +391,8 @@ export async function dailyChecks({ browser, baseURL, output }) {
     await transcript.getByRole('button', { name: '返回演出' }).click();
     await record.getByText('眼下', { exact: true }).click();
     assert.notEqual(await page.locator('#gal-stage').getAttribute('data-leaving'), 'true');
-    await page.locator('#generation-review').click();
+    await pullOpenLedger();
+    await page.locator('#ledger-raw-btn').click();
     const rawDialog = page.locator('#latest-api-response');
     assert.equal(await rawDialog.locator('textarea').inputValue(), rawOutline);
     await rawDialog.getByRole('button', { name: '关闭原始回复' }).click();

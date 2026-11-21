@@ -8,6 +8,7 @@ import {
   filterEnemyArchiveBuckets,
 } from '../archive-enemies.js';
 import { createArchiveModelStage } from './archive-model-stage.js';
+import { TAVERN_MANUAL_SECTIONS } from './bookshelf.js';
 import { query as $ } from './dom.js';
 import { developerOption } from '../generation-options.js';
 import { enemyIntentText } from '../enemy-intent-text.js';
@@ -15,16 +16,82 @@ import { dungeonMemoryText, restoredSummary } from '../memory.js';
 import { ADVENTURE_NODE_LABELS } from '../adventure/definition.js';
 import { escapeText } from '../ui.js';
 
-/** Only reached prose is editable here; future battles remain in the script. */
+const SKYRIM_DIVIDER_SVG =
+  '<svg class="skyrim-divider-svg" viewBox="0 0 360 22" aria-hidden="true"><path d="M12 11H158M202 11H348" stroke="currentColor" stroke-width="1" stroke-opacity=".55"/><path d="M180 2L192 11L180 20L168 11Z" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M180 6L185 11L180 16L175 11Z" fill="currentColor" fill-opacity=".8"/><circle cx="158" cy="11" r="2" fill="currentColor"/><circle cx="202" cy="11" r="2" fill="currentColor"/></svg>';
+
+const MOON_PART_ROLES = {
+  moonCrown: '左翼冠层 · 瘟疫与生机',
+  moonEye: '中央核心 · 破坏射线',
+  moonRoot: '右翼根脉 · 扫击与修复',
+};
+
+/** Unified Skyrim-styled Codex hosting NPC/Item/Enemy archives, Journey Records, Memory Summaries, and the Tavern Manual. */
 export function createRecords(context) {
-  let selected = -1;
-  let editing = false;
-  const dialog = document.createElement('dialog');
-  dialog.id = 'journey-records';
-  dialog.innerHTML =
-    '<header><div class="records-title"><small>JOURNEY / JOURNAL</small><h2>旅途记录</h2></div><nav class="records-actions"><button id="records-edit">编辑</button><button id="records-delete">删除</button><button id="records-close" aria-label="关闭记录">×</button></nav></header><div class="records-body"><nav id="records-list"></nav><article id="records-text"></article></div>';
-  document.body.append(dialog);
+  let selectedRecord = -1;
+  let editingRecord = false;
+  let tab = 'npcs';
+  let enemyTier = 'minion';
+  let archiveEditing = false;
+  let selectedIndex = 0;
+
   const library = () => context.session.ai.library;
+
+  const archive = document.createElement('dialog');
+  archive.id = 'archive-dialog';
+  archive.className = 'skyrim-archive-dialog';
+  archive.setAttribute('aria-label', '旅途归档');
+  archive.innerHTML =
+    `<header>` +
+    `<div class="records-title"><small>CODEX / ARCHIVES · 典藏卷宗</small><h2>旅途归档</h2></div>` +
+    `<nav class="records-actions">` +
+    `<div class="archive-tabs">` +
+    `<button type="button" data-archive-tab="npcs">NPC</button>` +
+    `<button type="button" data-archive-tab="items">道具</button>` +
+    `<button type="button" data-archive-tab="enemies">敌人</button>` +
+    `<button type="button" data-archive-tab="records">记录</button>` +
+    `<button type="button" data-archive-tab="memory">总结</button>` +
+    `<button type="button" data-archive-tab="manual">酒馆手册</button>` +
+    `</div>` +
+    `<button type="button" id="archive-close" aria-label="关闭归档">×</button>` +
+    `</nav>` +
+    `</header>` +
+    `<div class="records-body">` +
+    `<div class="archive-index-col">` +
+    `<div class="archive-codex-progress" hidden></div>` +
+    `<nav class="archive-enemy-tiers" aria-label="敌人阶级" hidden></nav>` +
+    `<nav id="archive-list"></nav>` +
+    `<nav id="records-list" hidden></nav>` +
+    `<nav id="memory-index" hidden></nav>` +
+    `<nav class="memory-pages" aria-label="摘要预览分页" hidden>` +
+    `<button type="button" id="memory-prev">上一页</button>` +
+    `<span id="memory-page"></span>` +
+    `<button type="button" id="memory-next">下一页</button>` +
+    `</nav>` +
+    `</div>` +
+    `<div class="archive-content-col">` +
+    `<article id="archive-text"></article>` +
+    `<article id="records-text" hidden></article>` +
+    `<section id="memory-pane" hidden>` +
+    `<div class="skyrim-folio-head">` +
+    `<div class="skyrim-folio-badges"><span>MEMORY / SUMMARY · 记忆总结</span><span>长程上下文压缩</span></div>` +
+    `<h3 class="skyrim-folio-title">把经历留在记忆里</h3>` +
+    `<div class="skyrim-archive-divider">${SKYRIM_DIVIDER_SVG}</div>` +
+    `</div>` +
+    `<p id="memory-count"></p>` +
+    `<div id="memory-items"></div>` +
+    `<p id="memory-status" role="status"></p>` +
+    `<footer class="memory-pane-footer">` +
+    `<button type="button" id="memory-generate">全部总结</button>` +
+    `<button type="button" id="memory-cancel" hidden>取消请求</button>` +
+    `<button type="button" id="memory-accept" class="primary" disabled>确认使用摘要</button>` +
+    `</footer>` +
+    `</section>` +
+    `</div>` +
+    `</div>`;
+  document.body.append(archive);
+
+  const modelStage = createArchiveModelStage();
+
   function field(label, value, multiline = false) {
     const wrapper = document.createElement('label');
     wrapper.className = 'archive-field';
@@ -34,6 +101,7 @@ export function createRecords(context) {
     wrapper.append(input);
     return { wrapper, input };
   }
+
   function emptyState(area, title, hint) {
     const wrapper = document.createElement('div');
     wrapper.className = 'records-empty';
@@ -46,225 +114,6 @@ export function createRecords(context) {
     wrapper.append(icon, heading, caption);
     area.append(wrapper);
   }
-  function list() {
-    dialog.classList.toggle('is-empty', !library().history.length);
-    $('#records-list').replaceChildren(
-      ...library()
-        .history.map((record, index) => {
-          const button = document.createElement('button');
-          button.dataset.record = index;
-          const summarized = restoredSummary(record.summary, dungeonMemoryText(record));
-          button.textContent = `${index + 1} · ${record.title}${record.complete ? ' · 完成' : ''}${summarized ? ' · 已总结' : ''}`;
-          return button;
-        })
-        .reverse(),
-    );
-  }
-  function select(index, view) {
-    selected = index;
-    editing = false;
-    $('#records-edit').textContent = '编辑';
-    const record = library().history[index];
-    $('#records-edit').disabled = !record;
-    $('#records-delete').disabled = !record;
-    const area = $('#records-text');
-    area.replaceChildren();
-    if (!record) {
-      emptyState(area, '旅程尚未落笔', '已走过的副本故事会保存在这里。');
-      return;
-    }
-    const title = document.createElement('h3');
-    title.textContent = record.title;
-    area.append(title);
-    const tags = document.createElement('small');
-    const original = dungeonMemoryText(record);
-    const summary = restoredSummary(record.summary, original);
-    tags.textContent = `${record.gameTime ? record.gameTime + ' · ' : ''}关键词：${summary ? (summary.keywords || []).filter(Boolean).join('、') || '无' : '待总结'}`;
-    area.append(tags);
-    const showingSummary = !!summary && view !== 'original';
-    const information = document.createElement('p');
-    information.className = 'records-memory-status';
-    const count = (value) => Array.from(value.replace(/\s/gu, '')).length;
-    information.textContent = summary
-      ? `原文 ${count(original)} 字 · 总结 ${count(summary.text)} 字 · AI上下文使用总结`
-      : `${record.summary ? '总结已过期 · ' : '尚未总结 · '}原文 ${count(original)} 字 · AI上下文使用原文`;
-    area.append(information);
-    if (summary) {
-      const controls = document.createElement('nav');
-      controls.className = 'records-reading-tabs';
-      controls.setAttribute('aria-label', '记录阅读方式');
-      for (const [mode, label] of [
-        ['summary', '总结后'],
-        ['original', '原文'],
-      ]) {
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.dataset.recordsView = mode;
-        button.textContent = label;
-        button.setAttribute('aria-pressed', String((mode === 'summary') === showingSummary));
-        controls.append(button);
-      }
-      area.append(controls);
-    }
-    const content = document.createElement('section');
-    content.className = 'records-reading-content';
-    area.append(content);
-    if (showingSummary) {
-      const paragraph = document.createElement('p');
-      paragraph.textContent = summary.text;
-      content.append(paragraph);
-    } else renderOriginal(record, content);
-    area.scrollTop = 0;
-    $('#records-list')
-      .querySelectorAll('button')
-      .forEach((button) =>
-        button.setAttribute('aria-pressed', String(Number(button.dataset.record) === index)),
-      );
-  }
-  function renderOriginal(record, area) {
-    for (
-      let part = 0;
-      part <= Math.max(0, ...(record.lines || []).map((line) => line.encounter ?? 0));
-      part++
-    ) {
-      const lines = (record.lines || []).filter(
-        (line) => (line.encounter ?? 0) === part && line.stage !== 'combat',
-      );
-      if (!lines.length) continue;
-      const heading = document.createElement('h4');
-      heading.textContent =
-        record.adventureVersion === 1
-          ? `第 ${part + 1} 阶段 · ${ADVENTURE_NODE_LABELS[part] || '旅途经历'}`
-          : `第 ${part + 1} 战`;
-      area.append(heading);
-      for (const line of lines) {
-        const paragraph = document.createElement('p');
-        paragraph.textContent =
-          line.speaker && line.speaker !== '旁白' ? `${line.speaker}：${line.text}` : line.text;
-        area.append(paragraph);
-      }
-    }
-    if (!area.children.length) area.append('这趟旅程还没有展示正文。');
-  }
-  context.events.on($('#records-text'), 'click', (event) => {
-    const button = event.target.closest('[data-records-view]');
-    if (button) select(selected, button.dataset.recordsView);
-  });
-  context.events.on($('#records-open'), 'click', () => {
-    list();
-    select(library().history.length - 1);
-    if (!dialog.open) dialog.showModal();
-  });
-  context.events.on($('#records-edit'), 'click', () => {
-    if (editing) return;
-    const record = library().history[selected];
-    if (!record) return;
-    editing = true;
-    const title = field('标题', record.title);
-    const tags = field('关键词（用逗号分隔）', (record.tags || []).join('，'));
-    const lines = record.lines
-      .filter((line) => line.stage !== 'combat')
-      .map((line) => ({ line, ...field(`第 ${line.encounter + 1} 战`, line.text, true) }));
-    const save = document.createElement('button');
-    save.textContent = '保存记录';
-    save.addEventListener(
-      'click',
-      () => {
-        record.title = title.input.value.trim() || record.title;
-        record.tags = tags.input.value
-          .split(/[,，、]/)
-          .map((tag) => tag.trim())
-          .filter(Boolean);
-        const book = library().scripts.find((item) => item.id === record.scriptId);
-        if (book) {
-          book.title = record.title;
-          book.tags = [...record.tags];
-        }
-        for (const { line, input } of lines) {
-          if (line.text === input.value) continue;
-          const previous = line.text;
-          line.text = input.value;
-          delete line.summary;
-          delete record.summary;
-          for (const route of Object.values(library().exploration || {})) {
-            for (const item of route.history || []) {
-              if (item.runId !== record.runId) continue;
-              item.title = record.title;
-              item.tags = [...record.tags];
-              for (const event of item.confirmedEvents || [])
-                if (event.text === previous && event.encounter === line.encounter) {
-                  event.text = line.text;
-                  delete event.summary;
-                }
-            }
-          }
-          if (book?.schemaVersion >= 3 && !['tavern-prelude', 'quick-chat'].includes(line.stage)) {
-            book.story[line.encounter] = line.text;
-            if (book.display?.story) book.display.story[line.encounter] = line.text;
-            const active = context.session.ai.activeScript;
-            if (active?.runId === record.runId) {
-              active.story[line.encounter] = line.text;
-              if (active.display?.story) active.display.story[line.encounter] = line.text;
-              for (const paragraph of context.session.ai.storyView.pages[line.encounter])
-                if (paragraph.stage === line.stage) paragraph.text = line.text;
-            }
-          }
-        }
-        context.generation.save();
-        list();
-        select(selected);
-      },
-      { once: true },
-    );
-    $('#records-text').replaceChildren(
-      title.wrapper,
-      tags.wrapper,
-      ...lines.map((line) => line.wrapper),
-      save,
-    );
-  });
-  context.events.on($('#records-delete'), 'click', () => {
-    const record = library().history[selected];
-    if (!record) return;
-    if (
-      context.session.runtime.mode === 'battle' &&
-      context.session.ai.activeScript?.runId === record.runId
-    ) {
-      context.shell.toast('当前副本进行中，结束后可以删除记录。');
-      return;
-    }
-    library().history.splice(selected, 1);
-    library().scripts = library().scripts.filter((book) => book.id !== record.scriptId);
-    for (const route of Object.values(library().exploration || {}))
-      route.history = (route.history || []).filter((item) => item.runId !== record.runId);
-    context.generation.save();
-    list();
-    select(Math.min(selected, library().history.length - 1));
-  });
-  context.events.on($('#records-list'), 'click', (event) => {
-    const button = event.target.closest('[data-record]');
-    if (button) select(Number(button.dataset.record));
-  });
-  context.events.on($('#records-close'), 'click', () => dialog.close());
-  const SKYRIM_DIVIDER_SVG =
-    '<svg class="skyrim-divider-svg" viewBox="0 0 360 22" aria-hidden="true"><path d="M12 11H158M202 11H348" stroke="currentColor" stroke-width="1" stroke-opacity=".55"/><path d="M180 2L192 11L180 20L168 11Z" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M180 6L185 11L180 16L175 11Z" fill="currentColor" fill-opacity=".8"/><circle cx="158" cy="11" r="2" fill="currentColor"/><circle cx="202" cy="11" r="2" fill="currentColor"/></svg>';
-  const MOON_PART_ROLES = {
-    moonCrown: '左翼冠层 · 瘟疫与生机',
-    moonEye: '中央核心 · 破坏射线',
-    moonRoot: '右翼根脉 · 扫击与修复',
-  };
-  const archive = document.createElement('dialog');
-  archive.id = 'archive-dialog';
-  archive.className = 'skyrim-archive-dialog';
-  archive.setAttribute('aria-label', '旅途归档');
-  archive.innerHTML =
-    '<header><div class="records-title"><small>CODEX / ARCHIVES · 典藏卷宗</small><h2>旅途归档</h2></div><nav class="records-actions"><div class="archive-tabs"><button type="button" data-archive-tab="npcs">NPC</button><button type="button" data-archive-tab="items">道具</button><button type="button" data-archive-tab="enemies">敌人</button></div><button type="button" id="archive-close" aria-label="关闭归档">×</button></nav></header><div class="records-body"><div class="archive-index-col"><div class="archive-codex-progress" hidden></div><nav class="archive-enemy-tiers" aria-label="敌人阶级" hidden></nav><nav id="archive-list"></nav></div><article id="archive-text"></article></div>';
-  document.body.append(archive);
-  const modelStage = createArchiveModelStage();
-  let tab = 'npcs';
-  let enemyTier = 'minion';
-  let archiveEditing = false;
-  let selectedIndex = 0;
 
   function buildDividerNode() {
     const holder = document.createElement('div');
@@ -282,6 +131,53 @@ export function createRecords(context) {
       row.append(span);
     }
     return row;
+  }
+
+  function buildListItemButton({ active, titleText, metaText = '', dataset }) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'skyrim-archive-item';
+    Object.assign(button.dataset, dataset);
+    button.setAttribute('aria-pressed', String(active));
+    const pointer = document.createElement('span');
+    pointer.className = 'skyrim-pointer';
+    pointer.setAttribute('aria-hidden', 'true');
+    pointer.textContent = active ? '◆' : '◇';
+    const copy = document.createElement('span');
+    copy.className = 'skyrim-archive-item-copy';
+    const titleEl = document.createElement('strong');
+    titleEl.textContent = titleText;
+    copy.append(titleEl);
+    if (metaText) {
+      const metaEl = document.createElement('small');
+      metaEl.textContent = metaText;
+      copy.append(metaEl);
+    }
+    button.append(pointer, copy);
+    return button;
+  }
+
+  function syncModePanes() {
+    archive.querySelectorAll('[data-archive-tab]').forEach((button) => {
+      button.setAttribute('aria-pressed', String(button.dataset.archiveTab === tab));
+    });
+    const listNav = archive.querySelector('#archive-list');
+    const recordsNav = archive.querySelector('#records-list');
+    const memoryNav = archive.querySelector('#memory-index');
+    const memoryPages = archive.querySelector('.memory-pages');
+    const archiveArticle = archive.querySelector('#archive-text');
+    const recordsArticle = archive.querySelector('#records-text');
+    const memoryPane = archive.querySelector('#memory-pane');
+
+    const isRecords = tab === 'records';
+    const isMemory = tab === 'memory';
+    listNav.hidden = isRecords || isMemory;
+    recordsNav.hidden = !isRecords;
+    memoryNav.hidden = !isMemory;
+    memoryPages.hidden = !isMemory;
+    archiveArticle.hidden = isRecords || isMemory;
+    recordsArticle.hidden = !isRecords;
+    memoryPane.hidden = !isMemory;
   }
 
   function buildIntentSection(titleText, moves) {
@@ -455,11 +351,347 @@ export function createRecords(context) {
     appendUnitMoves(area, entry);
   }
 
+  function renderManual(index = 0) {
+    const tierBar = archive.querySelector('.archive-enemy-tiers');
+    const progressBar = archive.querySelector('.archive-codex-progress');
+    tierBar.hidden = true;
+    progressBar.hidden = false;
+    progressBar.innerHTML = `<span class="archive-codex-label">酒馆手册 · 机制百科</span><strong class="archive-codex-count">${TAVERN_MANUAL_SECTIONS.length} 卷</strong>`;
+    archive.classList.remove('is-empty');
+
+    const activeIndex = Math.max(0, Math.min(index, TAVERN_MANUAL_SECTIONS.length - 1));
+    selectedIndex = activeIndex;
+    $('#archive-list').replaceChildren(
+      ...TAVERN_MANUAL_SECTIONS.map((section, sectionIndex) =>
+        buildListItemButton({
+          active: sectionIndex === activeIndex,
+          titleText: section.title,
+          metaText: section.badge,
+          dataset: { archiveIndex: sectionIndex },
+        }),
+      ),
+    );
+
+    const section = TAVERN_MANUAL_SECTIONS[activeIndex];
+    const area = $('#archive-text');
+    area.replaceChildren();
+    const header = document.createElement('div');
+    header.className = 'skyrim-folio-head';
+    header.append(buildBadgeRow([section.badge, section.subtitle]));
+    const heading = document.createElement('h3');
+    heading.className = 'skyrim-folio-title';
+    heading.textContent = section.title;
+    header.append(heading, buildDividerNode());
+    area.append(header);
+
+    const desc = document.createElement('p');
+    desc.className = 'skyrim-folio-desc manual-folio-summary';
+    desc.textContent = section.summary;
+    area.append(desc);
+
+    if (section.chips?.length) {
+      const strip = document.createElement('div');
+      strip.className = 'skyrim-archive-stats manual-chip-strip';
+      for (const chip of section.chips) {
+        const box = document.createElement('div');
+        box.className = 'skyrim-stat-chip';
+        const small = document.createElement('small');
+        small.textContent = chip.label;
+        const strong = document.createElement('strong');
+        strong.textContent = chip.value;
+        box.append(small, strong);
+        strip.append(box);
+      }
+      area.append(strip);
+    }
+
+    const rulesSection = document.createElement('section');
+    rulesSection.className = 'skyrim-intent-section manual-rules-section';
+    const subHeading = document.createElement('h4');
+    subHeading.className = 'skyrim-obj-heading';
+    subHeading.textContent = '规则细则与实战要点';
+    const listEl = document.createElement('ul');
+    listEl.className = 'skyrim-obj-list manual-rule-list';
+    for (const item of section.items) {
+      const li = document.createElement('li');
+      li.className = 'skyrim-obj skyrim-archive-intent manual-rule-card';
+      const diamond = document.createElement('span');
+      diamond.className = 'skyrim-obj-diamond';
+      diamond.setAttribute('aria-hidden', 'true');
+      diamond.textContent = '◆';
+      const body = document.createElement('div');
+      body.className = 'manual-rule-copy';
+      const strong = document.createElement('strong');
+      strong.textContent = item.title;
+      const para = document.createElement('p');
+      para.textContent = item.detail;
+      body.append(strong, para);
+      li.append(diamond, body);
+      listEl.append(li);
+    }
+    rulesSection.append(subHeading, listEl);
+    area.append(rulesSection);
+    area.scrollTop = 0;
+  }
+
+  function renderRecordsList() {
+    const history = library().history;
+    archive.classList.toggle('is-empty', !history.length);
+    $('#records-list').replaceChildren(
+      ...history
+        .map((record, index) => {
+          const summarized = restoredSummary(record.summary, dungeonMemoryText(record));
+          const meta = [
+            `第 ${index + 1} 篇`,
+            record.complete ? '完成' : '未完结',
+            ...(summarized ? ['已总结'] : []),
+          ].join(' · ');
+          return buildListItemButton({
+            active: index === selectedRecord,
+            titleText: record.title || `旅途记录 #${index + 1}`,
+            metaText: meta,
+            dataset: { record: index },
+          });
+        })
+        .reverse(),
+    );
+  }
+
+  function renderRecordOriginal(record, area) {
+    for (
+      let part = 0;
+      part <= Math.max(0, ...(record.lines || []).map((line) => line.encounter ?? 0));
+      part++
+    ) {
+      const lines = (record.lines || []).filter(
+        (line) => (line.encounter ?? 0) === part && line.stage !== 'combat',
+      );
+      if (!lines.length) continue;
+      const heading = document.createElement('h4');
+      heading.textContent =
+        record.adventureVersion === 1
+          ? `第 ${part + 1} 阶段 · ${ADVENTURE_NODE_LABELS[part] || '旅途经历'}`
+          : `第 ${part + 1} 战`;
+      area.append(heading);
+      for (const line of lines) {
+        const paragraph = document.createElement('p');
+        paragraph.textContent =
+          line.speaker && line.speaker !== '旁白' ? `${line.speaker}：${line.text}` : line.text;
+        area.append(paragraph);
+      }
+    }
+    if (!area.children.length) area.append('这趟旅程还没有展示正文。');
+  }
+
+  function selectRecord(index, view) {
+    const history = library().history;
+    selectedRecord = history.length ? Math.max(0, Math.min(index, history.length - 1)) : -1;
+    editingRecord = false;
+    renderRecordsList();
+
+    const tierBar = archive.querySelector('.archive-enemy-tiers');
+    const progressBar = archive.querySelector('.archive-codex-progress');
+    tierBar.hidden = true;
+    progressBar.hidden = !history.length;
+    progressBar.innerHTML = `<span class="archive-codex-label">旅途记录 · 篇章</span><strong class="archive-codex-count">${history.length} 篇</strong>`;
+
+    const record = selectedRecord >= 0 ? history[selectedRecord] : null;
+    const area = $('#records-text');
+    area.replaceChildren();
+    if (!record) {
+      emptyState(area, '旅程尚未落笔', '已走过的副本故事会保存在这里。');
+      return;
+    }
+
+    const original = dungeonMemoryText(record);
+    const summary = restoredSummary(record.summary, original);
+    const keywords = (summary?.keywords || record.tags || []).filter(Boolean).join('、') || '无';
+
+    const header = document.createElement('div');
+    header.className = 'skyrim-folio-head';
+    header.append(
+      buildBadgeRow([
+        record.gameTime || '泛生界纪事',
+        record.complete ? '已完结剧本' : '探索记录',
+        summary ? 'AI 上下文使用总结' : '尚未总结',
+      ]),
+    );
+    const title = document.createElement('h3');
+    title.className = 'skyrim-folio-title';
+    title.textContent = record.title;
+    const sub = document.createElement('p');
+    sub.className = 'skyrim-overlord-subtitle';
+    sub.textContent = `关键词：${keywords}`;
+    header.append(title, sub, buildDividerNode());
+    area.append(header);
+
+    const toolbar = document.createElement('div');
+    toolbar.className = 'records-folio-toolbar';
+    const editBtn = document.createElement('button');
+    editBtn.id = 'records-edit';
+    editBtn.type = 'button';
+    editBtn.textContent = '编辑';
+    const deleteBtn = document.createElement('button');
+    deleteBtn.id = 'records-delete';
+    deleteBtn.type = 'button';
+    deleteBtn.textContent = '删除';
+    toolbar.append(editBtn, deleteBtn);
+
+    const showingSummary = !!summary && view !== 'original';
+    const information = document.createElement('p');
+    information.className = 'records-memory-status';
+    const count = (value) => Array.from(value.replace(/\s/gu, '')).length;
+    information.textContent = summary
+      ? `原文 ${count(original)} 字 · 总结 ${count(summary.text)} 字 · AI上下文使用总结`
+      : `${record.summary ? '总结已过期 · ' : '尚未总结 · '}原文 ${count(original)} 字 · AI上下文使用原文`;
+    toolbar.prepend(information);
+    area.append(toolbar);
+
+    if (summary) {
+      const controls = document.createElement('nav');
+      controls.className = 'records-reading-tabs';
+      controls.setAttribute('aria-label', '记录阅读方式');
+      for (const [mode, label] of [
+        ['summary', '总结后'],
+        ['original', '原文'],
+      ]) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.dataset.recordsView = mode;
+        button.textContent = label;
+        button.setAttribute('aria-pressed', String((mode === 'summary') === showingSummary));
+        controls.append(button);
+      }
+      area.append(controls);
+    }
+
+    const content = document.createElement('section');
+    content.className = 'records-reading-content';
+    area.append(content);
+    if (showingSummary) {
+      const paragraph = document.createElement('p');
+      paragraph.textContent = summary.text;
+      content.append(paragraph);
+    } else {
+      renderRecordOriginal(record, content);
+    }
+    area.scrollTop = 0;
+  }
+
+  function startEditingRecord() {
+    if (editingRecord) return;
+    const record = library().history[selectedRecord];
+    if (!record) return;
+    editingRecord = true;
+    const title = field('标题', record.title);
+    const tags = field('关键词（用逗号分隔）', (record.tags || []).join('，'));
+    const lines = record.lines
+      .filter((line) => line.stage !== 'combat')
+      .map((line) => ({ line, ...field(`第 ${line.encounter + 1} 战`, line.text, true) }));
+    const save = document.createElement('button');
+    save.type = 'button';
+    save.className = 'primary';
+    save.textContent = '保存记录';
+    save.addEventListener(
+      'click',
+      () => {
+        record.title = title.input.value.trim() || record.title;
+        record.tags = tags.input.value
+          .split(/[,，、]/)
+          .map((tag) => tag.trim())
+          .filter(Boolean);
+        const book = library().scripts.find((item) => item.id === record.scriptId);
+        if (book) {
+          book.title = record.title;
+          book.tags = [...record.tags];
+        }
+        for (const { line, input } of lines) {
+          if (line.text === input.value) continue;
+          const previous = line.text;
+          line.text = input.value;
+          delete line.summary;
+          delete record.summary;
+          for (const route of Object.values(library().exploration || {})) {
+            for (const item of route.history || []) {
+              if (item.runId !== record.runId) continue;
+              item.title = record.title;
+              item.tags = [...record.tags];
+              for (const event of item.confirmedEvents || [])
+                if (event.text === previous && event.encounter === line.encounter) {
+                  event.text = line.text;
+                  delete event.summary;
+                }
+            }
+          }
+          if (book?.schemaVersion >= 3 && !['tavern-prelude', 'quick-chat'].includes(line.stage)) {
+            book.story[line.encounter] = line.text;
+            if (book.display?.story) book.display.story[line.encounter] = line.text;
+            const active = context.session.ai.activeScript;
+            if (active?.runId === record.runId) {
+              active.story[line.encounter] = line.text;
+              if (active.display?.story) active.display.story[line.encounter] = line.text;
+              for (const paragraph of context.session.ai.storyView.pages[line.encounter])
+                if (paragraph.stage === line.stage) paragraph.text = line.text;
+            }
+          }
+        }
+        context.generation.save();
+        selectRecord(selectedRecord);
+      },
+      { once: true },
+    );
+    $('#records-text').replaceChildren(
+      title.wrapper,
+      tags.wrapper,
+      ...lines.map((line) => line.wrapper),
+      save,
+    );
+  }
+
+  function deleteSelectedRecord() {
+    const record = library().history[selectedRecord];
+    if (!record) return;
+    if (
+      context.session.runtime.mode === 'battle' &&
+      context.session.ai.activeScript?.runId === record.runId
+    ) {
+      context.shell.toast('当前副本进行中，结束后可以删除记录。');
+      return;
+    }
+    library().history.splice(selectedRecord, 1);
+    library().scripts = library().scripts.filter((book) => book.id !== record.scriptId);
+    for (const route of Object.values(library().exploration || {}))
+      route.history = (route.history || []).filter((item) => item.runId !== record.runId);
+    context.generation.save();
+    selectRecord(Math.min(selectedRecord, library().history.length - 1));
+  }
+
   function renderArchive(index = 0) {
     modelStage.unmount();
-    archive.querySelectorAll('[data-archive-tab]').forEach((button) => {
-      button.setAttribute('aria-pressed', String(button.dataset.archiveTab === tab));
-    });
+    syncModePanes();
+
+    if (tab === 'records') {
+      const fallbackIndex =
+        selectedRecord >= 0 && selectedRecord < library().history.length
+          ? selectedRecord
+          : library().history.length - 1;
+      selectRecord(fallbackIndex);
+      return;
+    }
+
+    if (tab === 'memory') {
+      const tierBar = archive.querySelector('.archive-enemy-tiers');
+      tierBar.hidden = true;
+      archive.classList.remove('is-empty');
+      void context.memory?.syncPanel?.();
+      return;
+    }
+
+    if (tab === 'manual') {
+      renderManual(index);
+      return;
+    }
+
     const tierBar = archive.querySelector('.archive-enemy-tiers');
     const progressBar = archive.querySelector('.archive-codex-progress');
 
@@ -487,28 +719,16 @@ export function createRecords(context) {
           `<button type="button" data-enemy-tier="${id}" aria-pressed="${String(id === enemyTier)}">${escapeText(label)}<span>${tierStats[id].unlocked}/${tierStats[id].total}</span></button>`,
       ).join('');
       $('#archive-list').replaceChildren(
-        ...listEntries.map((item, itemIndex) => {
-          const button = document.createElement('button');
-          button.type = 'button';
-          button.className = 'skyrim-archive-item';
-          button.dataset.archiveIndex = itemIndex;
-          button.setAttribute('aria-pressed', String(activeIndex === itemIndex));
-          const pointer = document.createElement('span');
-          pointer.className = 'skyrim-pointer';
-          pointer.setAttribute('aria-hidden', 'true');
-          pointer.textContent = activeIndex === itemIndex ? '◆' : '◇';
-          const copy = document.createElement('span');
-          copy.className = 'skyrim-archive-item-copy';
-          const titleEl = document.createElement('strong');
-          titleEl.textContent = item.name;
-          const metaEl = document.createElement('small');
-          metaEl.textContent = item.isComposite
-            ? '三位一体 · 3 部位'
-            : `生命 ${item.entry.hp} · 速 ${item.entry.speed}`;
-          copy.append(titleEl, metaEl);
-          button.append(pointer, copy);
-          return button;
-        }),
+        ...listEntries.map((item, itemIndex) =>
+          buildListItemButton({
+            active: activeIndex === itemIndex,
+            titleText: item.name,
+            metaText: item.isComposite
+              ? '三位一体 · 3 部位'
+              : `生命 ${item.entry.hp} · 速 ${item.entry.speed}`,
+            dataset: { archiveIndex: itemIndex },
+          }),
+        ),
       );
       const area = $('#archive-text');
       area.replaceChildren();
@@ -534,24 +754,13 @@ export function createRecords(context) {
     selectedIndex = Math.max(0, activeIndex);
     archive.classList.toggle('is-empty', !entries.length);
     $('#archive-list').replaceChildren(
-      ...entries.map((entry, entryIndex) => {
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.className = 'skyrim-archive-item';
-        button.dataset.archiveIndex = entryIndex;
-        button.setAttribute('aria-pressed', String(activeIndex === entryIndex));
-        const pointer = document.createElement('span');
-        pointer.className = 'skyrim-pointer';
-        pointer.setAttribute('aria-hidden', 'true');
-        pointer.textContent = activeIndex === entryIndex ? '◆' : '◇';
-        const copy = document.createElement('span');
-        copy.className = 'skyrim-archive-item-copy';
-        const titleEl = document.createElement('strong');
-        titleEl.textContent = entry.name;
-        copy.append(titleEl);
-        button.append(pointer, copy);
-        return button;
-      }),
+      ...entries.map((entry, entryIndex) =>
+        buildListItemButton({
+          active: activeIndex === entryIndex,
+          titleText: entry.name,
+          dataset: { archiveIndex: entryIndex },
+        }),
+      ),
     );
     const entry = activeIndex >= 0 ? entries[activeIndex] : null;
     const area = $('#archive-text');
@@ -665,35 +874,64 @@ export function createRecords(context) {
     area.scrollTop = 0;
   }
 
-  context.events.on($('#archives-open'), 'click', () => {
+  function openTab(nextTab = 'npcs') {
+    const valid = ['npcs', 'items', 'enemies', 'records', 'memory', 'manual'];
+    tab = valid.includes(nextTab) ? nextTab : 'npcs';
     archiveEditing = false;
-    renderArchive();
+    if (tab === 'records') selectedRecord = library().history.length - 1;
+    renderArchive(tab === 'manual' ? 0 : selectedIndex);
     if (!archive.open) archive.showModal();
-  });
+  }
+
+  const archivesBtn = $('#archives-open');
+  if (archivesBtn) context.events.on(archivesBtn, 'click', () => openTab('npcs'));
+  const recordsBtn = $('#records-open');
+  if (recordsBtn) context.events.on(recordsBtn, 'click', () => openTab('records'));
+
   context.events.on($('#archive-close'), 'click', () => {
     modelStage.unmount();
     archive.close();
   });
   context.events.on(archive, 'close', () => modelStage.unmount());
   context.events.on(archive, 'click', (event) => {
+    if (event.target.closest('#records-edit')) return startEditingRecord();
+    if (event.target.closest('#records-delete')) return deleteSelectedRecord();
+    const viewBtn = event.target.closest('[data-records-view]');
+    if (viewBtn) return selectRecord(selectedRecord, viewBtn.dataset.recordsView);
+    const recBtn = event.target.closest('[data-record]');
+    if (recBtn) return selectRecord(Number(recBtn.dataset.record));
     const type = event.target.closest('[data-archive-tab]');
     const tierButton = event.target.closest('[data-enemy-tier]');
     const item = event.target.closest('[data-archive-index]');
     if (type) {
       tab = type.dataset.archiveTab;
-      renderArchive();
+      if (tab === 'records') selectedRecord = library().history.length - 1;
+      renderArchive(0);
     } else if (tierButton) {
       enemyTier = tierButton.dataset.enemyTier;
-      renderArchive();
-    } else if (item) renderArchive(Number(item.dataset.archiveIndex));
+      renderArchive(0);
+    } else if (item) {
+      renderArchive(Number(item.dataset.archiveIndex));
+    }
   });
+
   return {
+    openTab,
+    close() {
+      modelStage.unmount();
+      if (archive.open) archive.close();
+    },
+    closeIfTab(target) {
+      if (archive.open && tab === target) {
+        modelStage.unmount();
+        archive.close();
+      }
+    },
     refreshArchive() {
-      if (archive.open) renderArchive(selectedIndex);
+      if (archive.open) renderArchive(tab === 'records' ? selectedRecord : selectedIndex);
     },
     dispose() {
       modelStage.dispose();
-      dialog.remove();
       archive.remove();
     },
   };

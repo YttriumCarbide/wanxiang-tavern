@@ -27,6 +27,7 @@ import {
   materializeEquipment,
 } from '../src/equipment.js';
 import { equipmentDescription } from '../src/skill-text.js';
+import { compileEquipmentDesign, equipmentGenerationPlan } from '../src/equipment-generation.js';
 import { archiveMilestone, archiveOverlandLoot } from '../src/archives.js';
 import { normalizeRules } from '../src/triggers.js';
 import { HEROES } from '../src/data.js';
@@ -367,4 +368,244 @@ test('equipment quality tiers, Lv.1..99 scaling, reforge, temper, ascend, disman
   const ol = library.archives.items.find((entry) => entry.source?.overland);
   assert.equal(ol.level, 5);
   assert(ol.quality in EQUIPMENT_QUALITIES);
+});
+
+test('event rule scopes normalize limits and render unlimited descriptions without undefined', () => {
+  const unlimited = normalizeRules([
+    {
+      mode: 'event',
+      event: 'afterAttack',
+      target: 'self',
+      effects: [{ type: 'shield', value: 3 }],
+      conditions: [],
+      scope: 'unlimited',
+    },
+  ]);
+  assert.equal(unlimited[0].scope, 'unlimited');
+  assert.equal('limit' in unlimited[0], false);
+  const battle = normalizeRules([
+    { ...eventRule('afterAttack', [{ type: 'shield', value: 3 }], 'self', 2), scope: 'battle' },
+  ]);
+  assert.equal(battle[0].scope, 'battle');
+  assert.equal(battle[0].limit, 2);
+  const expedition = normalizeRules([
+    {
+      mode: 'event',
+      event: 'afterAttack',
+      target: 'self',
+      effects: [{ type: 'shield', value: 3 }],
+      conditions: [],
+      scope: 'expedition',
+      limit: 2,
+    },
+  ]);
+  assert.equal(expedition[0].scope, 'expedition');
+  assert.equal(expedition[0].limit, 2);
+  assert.throws(
+    () =>
+      normalizeRules([
+        {
+          mode: 'event',
+          event: 'afterAttack',
+          target: 'self',
+          effects: [{ type: 'shield', value: 3 }],
+          conditions: [],
+          scope: 'unlimited',
+          limit: 2,
+        },
+      ]),
+    /次数上限/,
+  );
+  assert.throws(
+    () =>
+      normalizeRules([
+        {
+          mode: 'event',
+          event: 'afterAttack',
+          target: 'self',
+          effects: [{ type: 'shield', value: 3 }],
+          conditions: [],
+          scope: 'unknown',
+        },
+      ]),
+    /次数范围/,
+  );
+  const description = equipmentDescription({
+    name: '试炼指环',
+    description: '',
+    stats: {},
+    rules: unlimited,
+  });
+  assert(description.includes('不限次数'));
+  assert(!description.includes('undefined'));
+});
+
+test('event rule scopes reset across turns and encounters; unlimited never records proc uses', () => {
+  const unlimitedRules = [
+    {
+      mode: 'event',
+      event: 'afterAttack',
+      target: 'self',
+      effects: [{ type: 'shield', value: 3 }],
+      conditions: [],
+      scope: 'unlimited',
+    },
+  ];
+  const battleRules = [
+    {
+      mode: 'event',
+      event: 'afterAttack',
+      target: 'self',
+      effects: [{ type: 'shield', value: 3 }],
+      conditions: [],
+      scope: 'battle',
+      limit: 1,
+    },
+  ];
+  const expeditionRules = [
+    {
+      mode: 'event',
+      event: 'afterAttack',
+      target: 'self',
+      effects: [{ type: 'shield', value: 3 }],
+      conditions: [],
+      scope: 'expedition',
+      limit: 1,
+    },
+  ];
+  const unlimitedDefs = withRules(unlimitedRules);
+  delete unlimitedDefs.aegis.equipment[0].rules[0].limit;
+  let state = newBattle(['sprout'], unlimitedDefs);
+  const original = JSON.stringify(state);
+  let result = preview(state, [makeAction(state, 'aegis', 'attack', 'sprout', 0)]);
+  assert.equal(JSON.stringify(state), original);
+  assert.equal(result.final.units.aegis.block, 3);
+  assert(
+    !Object.keys(result.final.procUses || {}).some((key) => key.includes('equipment:test-ring')),
+  );
+  state = newEncounter({ enemyIds: ['sprout'], hpScale: 1, map: 'ruins' }, result.final, 1);
+  result = preview(state, [makeAction(state, 'aegis', 'attack', 'sprout', 0)]);
+  assert.equal(result.final.units.aegis.block, 3);
+  assert(
+    !Object.keys(result.final.procUses || {}).some((key) => key.includes('equipment:test-ring')),
+  );
+
+  const battleDefs = withRules(battleRules);
+  state = newBattle(['sprout'], battleDefs);
+  result = preview(state, [makeAction(state, 'aegis', 'attack', 'sprout', 0)]);
+  assert.equal(result.final.units.aegis.block, 3);
+  state = newEncounter({ enemyIds: ['sprout'], hpScale: 1, map: 'ruins' }, result.final, 1);
+  result = preview(state, [makeAction(state, 'aegis', 'attack', 'sprout', 0)]);
+  assert.equal(result.final.units.aegis.block, 3);
+
+  const expeditionDefs = withRules(expeditionRules);
+  state = newBattle(['sprout'], expeditionDefs);
+  result = preview(state, [makeAction(state, 'aegis', 'attack', 'sprout', 0)]);
+  assert.equal(result.final.units.aegis.block, 3);
+  state = newEncounter({ enemyIds: ['sprout'], hpScale: 1, map: 'ruins' }, result.final, 1);
+  result = preview(state, [makeAction(state, 'aegis', 'attack', 'sprout', 0)]);
+  assert.equal(result.final.units.aegis.block, 0);
+});
+
+test('materializeEquipment differentiates scopes for the same seed and quality', () => {
+  const design = {
+    ruleRevision: 2,
+    statFocus: ['hp'],
+    rules: [
+      {
+        mode: 'event',
+        event: 'afterAttack',
+        target: 'self',
+        conditions: [],
+        effects: [{ type: 'shield', power: 'medium' }],
+      },
+    ],
+  };
+  function compile(scope) {
+    const scoped = structuredClone(design);
+    scoped.rules[0].scope = scope;
+    return materializeEquipment({ design: scoped, level: 20, quality: 'legendary', seed: 44 });
+  }
+  const unlimited = compile('unlimited');
+  const battle = compile('battle');
+  const expedition = compile('expedition');
+  assert.equal(unlimited.rules[0].scope, 'unlimited');
+  assert.equal(unlimited.rules[0].limit, undefined);
+  assert.equal(battle.rules[0].scope, 'battle');
+  assert.equal(battle.rules[0].limit, 3);
+  assert.equal(expedition.rules[0].scope, 'expedition');
+  assert.equal(expedition.rules[0].limit, 4);
+  assert(unlimited.rules[0].effects[0].value < battle.rules[0].effects[0].value);
+  assert(battle.rules[0].effects[0].value < expedition.rules[0].effects[0].value);
+  assert.equal(unlimited.rules[0].triggerRevision, 2);
+  assert.equal(battle.rules[0].triggerRevision, 2);
+  assert.equal(expedition.rules[0].triggerRevision, 2);
+});
+
+test('legacy equipment blueprints keep their pre-scope materialization and budget semantics', () => {
+  const design = {
+    statFocus: ['hp'],
+    rules: [
+      {
+        mode: 'event',
+        event: 'afterAttack',
+        target: 'self',
+        conditions: [],
+        effects: [{ type: 'shield', power: 'medium' }],
+      },
+    ],
+  };
+  const legacy = materializeEquipment({ design, level: 20, quality: 'legendary', seed: 44 });
+  assert.equal(legacy.rules[0].scope, 'expedition');
+  assert.equal(legacy.rules[0].limit, 3);
+  assert.equal(legacy.rules[0].triggerRevision, undefined);
+  assert.equal(legacy.rules[0].effects[0].value, 30);
+});
+
+test('equipment generation advertises and rejects unlimited discrete effects by quality', () => {
+  assert.equal(
+    equipmentGenerationPlan({ quality: 'uncommon' }).scopeRestrictions.unlimitedCleanse,
+    false,
+  );
+  assert.equal(
+    equipmentGenerationPlan({ quality: 'rare' }).scopeRestrictions.unlimitedCleanse,
+    true,
+  );
+  assert.equal(
+    equipmentGenerationPlan({ quality: 'epic' }).scopeRestrictions.unlimitedNonDotBuffs,
+    true,
+  );
+  const create = (quality, effect) =>
+    compileEquipmentDesign(
+      {
+        name: '示例',
+        description: '',
+        design: {
+          statFocus: ['hp'],
+          rules: [
+            {
+              mode: 'event',
+              event: 'afterAttack',
+              scope: 'unlimited',
+              target: 'self',
+              conditions: [],
+              effects: [effect],
+            },
+          ],
+        },
+      },
+      { id: 'source', name: 'source', value: 100, quality, level: 20 },
+    );
+  assert.throws(
+    () => create('rare', { type: 'buff', buff: 'strength', power: 'low' }),
+    /史诗及以上/,
+  );
+  assert.throws(
+    () => create('uncommon', { type: 'cleanse', buffs: ['poison'], power: 'low' }),
+    /稀有及以上/,
+  );
+  assert.equal(
+    create('epic', { type: 'buff', buff: 'strength', power: 'low' }).rules[0].scope,
+    'unlimited',
+  );
 });

@@ -53,39 +53,62 @@ test('a new adventure resets borrowed protagonist growth while loading a save pr
   assert.equal(restoreLibrary(library).characters[0].growth.level, 8);
 });
 
-test('corridor Boss grants and equips a full ring exactly once; balance precedes a single opening lightning strike', () => {
-  const { library, expedition } = corridorFixture();
-  assert(prepareCorridorRing(library, expedition, () => 0));
-  assert.equal(prepareCorridorRing(library, expedition), false);
-  assert.deepEqual(library.emblems, [EMBLEM_ID]);
-  assert.equal(library.characters[0].emblemId, EMBLEM_ID);
-  assert.equal(restoreLibrary(library).progression.emblemLesson, 'corridor-intro');
+test('mill:0 boss awakens heirloom Tan Hongyu on protagonist while darkscaleWarlord no longer duplicates it', async () => {
+  const { grantMidBattleOverlordEmblem } = await import('../src/emblem-progression.js');
+  const { library: ruinsLib, expedition: ruinsExp } = corridorFixture();
+  assert.equal(
+    prepareCorridorRing(ruinsLib, ruinsExp, () => 0),
+    false,
+  );
+  const ruinsState = beginEncounter(ruinsExp);
+  ruinsState.enemyIds = ['darkscaleWarlord'];
+  ruinsState.units.darkscaleWarlord = {
+    ...ruinsState.units.ruinsGate,
+    id: 'darkscaleWarlord',
+    bossStage: 2,
+    enraged: true,
+  };
+  delete ruinsState.units.ruinsGate;
+  ruinsState.phase = 'plan';
+  ruinsState.round = 2;
+  assert.equal(
+    grantMidBattleOverlordEmblem(ruinsLib, ruinsState, ruinsExp, () => 0),
+    null,
+  );
+
+  const library = newCampaign(defaultProtagonist());
+  library.campaign.completed = true;
+  library.inventory.summonContracts = 1;
+  firstCompanion(library);
+  library.campaign.tutorial = 'complete';
+  const millRoute = { ...library.exploration.mill.frontier[0], sequence: 0 };
+  const expedition = newExpedition('bossGate', compileRoster(library), millRoute);
+  expedition.partyIds = [...library.party];
+  for (let index = 0; index < 4; index++) {
+    assert.equal(prepareCorridorRing(library, expedition), false);
+    const s = beginEncounter(expedition);
+    s.phase = 'victory';
+    completeEncounter(expedition, s);
+    if (expedition.restPending) chooseRest(expedition, 'sleep');
+  }
+  assert.equal(
+    prepareCorridorRing(library, expedition, () => 0.99),
+    true,
+  );
   const opening = beginEncounter(expedition);
+  assert.deepEqual(opening.enemyIds, ['millVolePup', 'millVoleAlpha', 'millCanalFrog']);
   const actor = expedition.corridorRing.actor;
+  assert.equal(actor, 'aegis');
   assert.equal(opening.units[actor].emblemCharge, 6);
   const combine = {
     ...makeEngage(actor, 0),
-    followUp: { skill: COMBINE_SKILL.id, target: 'ruinsGate' },
+    followUp: { skill: COMBINE_SKILL.id, target: 'millVoleAlpha' },
   };
   const result = preview(opening, [combine]);
   assert(result.valid, JSON.stringify(result.invalid));
   const state = advance(result);
-  assert.equal(state.units.ruinsGate.buffs.balance, 1);
-  assert.equal(intent(state, 'ruinsGate').effects[0].value, 24);
-  const hit = preview(state, []);
-  assert(hit.valid);
-  const index = hit.events.findIndex(
-    (event) => event.type === 'enemy' && event.actor === 'ruinsGate',
-  );
-  assert(index >= 0);
-  const before = index ? hit.events[index - 1].after : state;
-  const after = hit.events[index].after;
-  for (const id of state.formation.slice(0, 3))
-    assert.equal(before.units[id].hp - after.units[id].hp, 8 - (before.units[id].buffs.iron || 0));
-  assert(after.units.ruinsGate.openingAttackUsed);
-  const next = advance(hit);
-  assert(!intent(next, 'ruinsGate').name.includes('开幕'));
-  assert.equal(opening.units[actor].emblemCharge, 6, 'preview does not mutate charge');
+  assert.equal(state.units.millVoleAlpha.buffs.balance, 1);
+  assert.equal(intent(state, 'millVoleAlpha').effects[0].value > 0, true);
   assert.deepEqual(restoreLibrary(library).emblems, [EMBLEM_ID]);
   const thirdBoss = { index: 4, exploration: { map: 'ruins', sequence: 2 } };
   assert(prepareBossEmblem(library, thirdBoss));

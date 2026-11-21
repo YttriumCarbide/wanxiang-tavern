@@ -111,6 +111,7 @@ const SPECIAL_BREAK_PRESETS = Object.freeze({
   ares: { layers: 3, weaknesses: ['lightning', 'brawl', 'axe', 'ice', 'special-magic'] },
   apepLamb: { layers: 3, weaknesses: ['light', 'fire', 'spear', 'special-magic'] },
   radiantWyvern: { layers: 3, weaknesses: ['ice', 'spear', 'dark', 'lightning'] },
+  darkscaleWarlord: { layers: 3, weaknesses: ['light', 'fire', 'spear', 'axe'] },
 });
 
 function buildOfficialTable() {

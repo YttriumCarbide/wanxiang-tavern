@@ -15,6 +15,8 @@ const OVERLORD_CANONICAL_ORDER = [
   'ares',
   'radiantWyvern',
   'alchemicalPuppet',
+  'darkscaleWarlord',
+  'banditSyndicateKing',
 ];
 
 export function classifyEnemyArchiveTier(entry, isOfficial = false) {

@@ -849,40 +849,40 @@
   inset: 0;
   opacity: 0;
   pointer-events: none;
-  background: radial-gradient(ellipse at 50% 48%, transparent 36%, #2f102344 58%, #220918dc 86%);
+  background: radial-gradient(ellipse at 50% 48%, #21071828 24%, #26091e6e 56%, #140310f2 86%);
   box-shadow:
-    inset 0 0 110px rgba(178, 36, 74, 0.72),
-    inset 0 -46px 140px #4d1234e6,
-    inset 0 -14px 44px #e6547088;
+    inset 0 0 140px rgba(178, 28, 70, 0.85),
+    inset 0 -58px 160px #410a2ae6,
+    inset 0 -18px 54px #df3b649c;
 }
 .apep-screen-surge.apep-border-crush {
   background:
-    radial-gradient(ellipse at 50% 48%, transparent 32%, #290b1d70 58%, #13040eed 88%),
+    radial-gradient(ellipse at 50% 48%, #1d061630 22%, #24071b88 54%, #0d020bf5 88%),
     linear-gradient(
       180deg,
-      rgba(110, 20, 52, 0.42),
-      transparent 22%,
-      transparent 74%,
-      rgba(128, 22, 58, 0.56)
+      rgba(98, 14, 46, 0.58),
+      transparent 24%,
+      transparent 72%,
+      rgba(122, 16, 54, 0.68)
     );
   box-shadow:
-    inset 0 0 155px rgba(190, 32, 74, 0.82),
-    inset 0 0 36px rgba(18, 4, 14, 0.94);
+    inset 0 0 180px rgba(192, 24, 70, 0.9),
+    inset 0 0 46px rgba(10, 2, 10, 0.96);
 }
 .apep-screen-surge[data-surge='tide'] {
   background:
-    linear-gradient(0deg, #56162fe0, #340c21aa 24%, transparent 56%),
+    linear-gradient(0deg, #4b102ae8, #2b071abb 26%, transparent 58%),
     radial-gradient(
       ellipse at 50% 50%,
-      transparent 40%,
-      rgba(164, 34, 70, 0.45) 84%,
-      rgba(18, 4, 14, 0.88) 100%
+      #1a051520 34%,
+      rgba(156, 26, 64, 0.58) 80%,
+      rgba(12, 2, 10, 0.92) 100%
     );
 }
 .apep-screen-surge[data-surge='eclipse'] {
   box-shadow:
-    inset 0 0 190px rgba(198, 36, 82, 0.92),
-    inset 0 0 55px rgba(8, 2, 10, 0.96);
+    inset 0 0 215px rgba(196, 24, 74, 0.95),
+    inset 0 0 68px rgba(6, 1, 8, 0.98);
 }
 .apep-gaze-aperture {
   position: absolute;
@@ -892,24 +892,24 @@
   --apep-jaw: 0%;
   background: linear-gradient(
     180deg,
-    rgba(12, 3, 10, 0.95) 0%,
-    rgba(96, 18, 44, 0.82) calc(var(--apep-jaw) * 0.11),
-    transparent calc(var(--apep-jaw) * 0.21),
-    transparent calc(100% - var(--apep-jaw) * 0.21),
-    rgba(96, 18, 44, 0.82) calc(100% - var(--apep-jaw) * 0.11),
-    rgba(12, 3, 10, 0.95) 100%
+    rgba(8, 1, 8, 0.96) 0%,
+    rgba(92, 12, 42, 0.88) calc(var(--apep-jaw) * 0.12),
+    transparent calc(var(--apep-jaw) * 0.23),
+    transparent calc(100% - var(--apep-jaw) * 0.23),
+    rgba(92, 12, 42, 0.88) calc(100% - var(--apep-jaw) * 0.12),
+    rgba(8, 1, 8, 0.96) 100%
   );
   box-shadow:
-    inset 0 0 120px rgba(212, 54, 92, 0.52),
-    inset 0 0 28px rgba(16, 4, 14, 0.92);
+    inset 0 0 140px rgba(212, 42, 88, 0.66),
+    inset 0 0 36px rgba(12, 2, 10, 0.95);
 }
 .apep-plague-edge {
   position: fixed;
   inset: 0;
   pointer-events: none;
   z-index: 39;
-  --plague-intensity: 0.45;
-  opacity: clamp(0.18, calc(0.22 + var(--plague-intensity) * 0.78), 1);
+  --plague-intensity: 0.62;
+  opacity: clamp(0.32, calc(0.36 + var(--plague-intensity) * 0.64), 1);
   transition: opacity 420ms ease;
 }
 .apep-plague-edge[hidden] {
@@ -924,47 +924,51 @@
 .apep-plague-edge-vignette {
   background: radial-gradient(
     ellipse at 50% 48%,
-    transparent calc(56% - var(--plague-intensity) * 18%),
-    rgba(36, 10, 26, calc(0.28 + var(--plague-intensity) * 0.36)) 76%,
-    rgba(14, 3, 12, calc(0.58 + var(--plague-intensity) * 0.34)) 100%
+    transparent calc(44% - var(--plague-intensity) * 18%),
+    rgba(32, 6, 24, calc(0.38 + var(--plague-intensity) * 0.4)) 72%,
+    rgba(10, 2, 10, calc(0.72 + var(--plague-intensity) * 0.26)) 100%
   );
   box-shadow:
-    inset 0 0 calc(70px + var(--plague-intensity) * 105px)
-      rgba(154, 28, 66, calc(0.32 + var(--plague-intensity) * 0.48)),
-    inset 0 0 calc(22px + var(--plague-intensity) * 30px) rgba(10, 2, 10, 0.9);
+    inset 0 0 calc(92px + var(--plague-intensity) * 120px)
+      rgba(154, 22, 62, calc(0.42 + var(--plague-intensity) * 0.48)),
+    inset 0 0 calc(28px + var(--plague-intensity) * 34px) rgba(8, 1, 8, 0.94);
 }
 .apep-plague-edge-veins {
   background:
+    radial-gradient(ellipse 34% 38% at 0% 0%, rgba(140, 14, 52, 0.56), transparent 70%),
+    radial-gradient(ellipse 34% 38% at 100% 0%, rgba(140, 14, 52, 0.56), transparent 70%),
+    radial-gradient(ellipse 38% 42% at 0% 100%, rgba(158, 18, 58, 0.68), transparent 72%),
+    radial-gradient(ellipse 38% 42% at 100% 100%, rgba(158, 18, 58, 0.68), transparent 72%),
     linear-gradient(
       90deg,
-      rgba(168, 34, 72, 0.36),
-      transparent 10%,
-      transparent 90%,
-      rgba(168, 34, 72, 0.36)
+      rgba(132, 16, 54, 0.44),
+      transparent 16%,
+      transparent 84%,
+      rgba(132, 16, 54, 0.44)
     ),
     linear-gradient(
       180deg,
-      rgba(20, 4, 16, 0.72),
-      transparent 12%,
-      transparent 82%,
-      rgba(110, 18, 48, 0.62)
+      rgba(14, 2, 12, 0.86),
+      transparent 17%,
+      transparent 78%,
+      rgba(96, 10, 40, 0.78)
     );
   mix-blend-mode: screen;
-  opacity: calc(0.25 + var(--plague-intensity) * 0.65);
+  opacity: calc(0.34 + var(--plague-intensity) * 0.6);
 }
 .apep-plague-edge-pulse {
-  box-shadow: inset 0 0 calc(38px + var(--plague-intensity) * 64px) rgba(235, 76, 108, 0.42);
-  animation: apep-edge-breathe 2.4s ease-in-out infinite alternate;
+  box-shadow: inset 0 0 calc(52px + var(--plague-intensity) * 76px) rgba(232, 54, 96, 0.56);
+  animation: apep-edge-breathe 2.1s ease-in-out infinite alternate;
 }
 .apep-plague-edge[data-mode='preview'] .apep-plague-edge-pulse {
-  animation-duration: 3.4s;
-  opacity: 0.45;
+  animation-duration: 3.1s;
+  opacity: 0.54;
 }
 .apep-plague-edge[data-rear-danger='1'] .apep-plague-edge-pulse {
   box-shadow:
-    inset 0 0 calc(54px + var(--plague-intensity) * 86px) rgba(244, 62, 102, 0.68),
-    inset 0 -22px 64px rgba(196, 30, 74, 0.72);
-  animation-duration: 1.15s;
+    inset 0 0 calc(68px + var(--plague-intensity) * 98px) rgba(246, 46, 94, 0.78),
+    inset 0 -28px 76px rgba(196, 20, 68, 0.82);
+  animation-duration: 0.95s;
 }
 @keyframes apep-edge-breathe {
   from {
@@ -1059,8 +1063,8 @@
 }
 #battle[data-apep-plague='active']::after {
   box-shadow:
-    inset 0 -52px 136px #4c173b7a,
-    inset 0 0 62px #ab3f5d30;
+    inset 0 -72px 168px #3f0e2ec2,
+    inset 0 0 96px #a1204b5e;
 }
 .overlord-dialogue-bar.is-swapping .overlord-dialogue-text {
   animation: overlord-line-swap 240ms ease-out;
@@ -1229,7 +1233,347 @@
   .overlord-dialogue-bar.is-glitch .overlord-dialogue-frame,
   .overlord-bomb-vignette,
   .apep-plague-edge-pulse,
+  .overlord-tutorial-dialog[open],
   #battle.overlord-heavy-shake {
     animation: none;
+  }
+}
+
+/* ═════════ 霸主机制图文教学弹窗 ═════════ */
+.overlord-tutorial-dialog {
+  --tutorial-accent: #e2b95a;
+  width: min(860px, calc(100vw - 28px));
+  max-width: 96vw;
+  max-height: min(88dvh, 720px);
+  padding: 0;
+  color: #efe7d2;
+  background: radial-gradient(ellipse at 50% 0%, rgba(44, 30, 48, 0.72), transparent 65%), #0c121b;
+  border: 1px solid color-mix(in srgb, var(--tutorial-accent) 65%, #ffffff 10%);
+  border-radius: 14px;
+  box-shadow:
+    0 28px 90px rgba(0, 0, 0, 0.92),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+.overlord-tutorial-dialog[open] {
+  display: flex;
+  flex-direction: column;
+  animation: overlord-tut-enter 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.overlord-tutorial-dialog::backdrop {
+  background: rgba(5, 8, 14, 0.82);
+  backdrop-filter: blur(6px);
+}
+.overlord-tutorial-frame {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  max-height: min(88dvh, 720px);
+}
+.overlord-tutorial-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: linear-gradient(90deg, rgba(24, 18, 32, 0.96), rgba(14, 20, 29, 0.94));
+}
+.overlord-tutorial-portrait {
+  width: 64px;
+  height: 64px;
+  border-radius: 10px;
+  object-fit: cover;
+  border: 1.5px solid var(--tutorial-accent);
+  background: #080d14;
+  flex-shrink: 0;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.65);
+}
+.overlord-tutorial-titles {
+  flex: 1;
+  min-width: 0;
+}
+.overlord-tutorial-titles small {
+  display: block;
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: var(--tutorial-accent);
+  font-weight: 700;
+}
+.overlord-tutorial-titles h2 {
+  margin: 4px 0;
+  font-size: 20px;
+  color: #fff6dc;
+}
+.overlord-tutorial-titles p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.55;
+  color: #cad5d1;
+}
+#overlord-tutorial-x {
+  align-self: flex-start;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+.overlord-tutorial-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 16px 20px;
+  display: grid;
+  gap: 14px;
+}
+.overlord-tutorial-diagram {
+  margin: 0;
+  padding: 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(7, 11, 18, 0.84);
+}
+.overlord-tut-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 190px;
+}
+.overlord-tutorial-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 12px;
+}
+.overlord-tut-card {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  background: linear-gradient(180deg, rgba(22, 31, 44, 0.82), rgba(13, 18, 28, 0.9));
+}
+.overlord-tut-tag {
+  align-self: flex-start;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #13161e;
+  background: var(--tutorial-accent);
+}
+.overlord-tut-card h3 {
+  margin: 0;
+  font-size: 14px;
+  color: #fff2cf;
+}
+.overlord-tut-card p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #c2d0ce;
+}
+.overlord-tut-counter {
+  margin-top: auto;
+  padding: 7px 10px;
+  border-radius: 7px;
+  background: rgba(88, 206, 168, 0.1);
+  border: 1px solid rgba(98, 214, 174, 0.34);
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: #bdfae2;
+}
+.overlord-tut-counter b {
+  display: block;
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  color: #7df2c8;
+  margin-bottom: 2px;
+}
+.overlord-tutorial-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(10, 15, 23, 0.96);
+}
+.overlord-tut-takeaway {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #ffe3a3;
+  flex: 1;
+}
+@keyframes overlord-tut-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@media (max-width: 760px) {
+  .overlord-tutorial-head {
+    padding: 12px 14px;
+  }
+  .overlord-tutorial-portrait {
+    width: 48px;
+    height: 48px;
+  }
+  .overlord-tutorial-foot {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+.overlord-weapon-pill {
+  --weapon-accent: #ef5b7d;
+  --weapon-bg: rgba(24, 12, 20, 0.9);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--weapon-accent) 68%, transparent);
+  background:
+    linear-gradient(
+      120deg,
+      color-mix(in srgb, var(--weapon-accent) 18%, transparent),
+      transparent 65%
+    ),
+    var(--weapon-bg);
+  color: #f7eef2;
+  font-size: 12px;
+  line-height: 1.3;
+  box-shadow:
+    0 2px 10px rgba(0, 0, 0, 0.45),
+    inset 0 -1px 0 var(--weapon-accent);
+  animation: overlord-weapon-glow 2.2s ease-in-out infinite alternate;
+}
+.overlord-weapon-pill[hidden] {
+  display: none;
+}
+.overlord-weapon-pill[data-weapon='poison-needle'] {
+  --weapon-accent: #58d68d;
+  --weapon-bg: rgba(11, 32, 22, 0.92);
+}
+.overlord-weapon-pill[data-weapon='bleed-blade'] {
+  --weapon-accent: #ef5350;
+  --weapon-bg: rgba(38, 10, 14, 0.92);
+}
+.overlord-weapon-pill[data-weapon='numb-dart'] {
+  --weapon-accent: #a569bd;
+  --weapon-bg: rgba(26, 13, 40, 0.92);
+}
+.overlord-weapon-pill[data-weapon='pierce-awl'] {
+  --weapon-accent: #f5b041;
+  --weapon-bg: rgba(40, 24, 8, 0.92);
+}
+.overlord-weapon-pill-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--weapon-accent) 24%, transparent);
+  color: var(--weapon-accent);
+  font-size: 11px;
+  font-weight: 700;
+}
+.overlord-weapon-pill-name {
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 0.03em;
+}
+.overlord-weapon-pill-tag {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--weapon-accent) 22%, transparent);
+  color: var(--weapon-accent);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.overlord-darkscale-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 10px;
+  border-radius: 7px;
+  border: 1px solid rgba(169, 112, 255, 0.45);
+  background: rgba(20, 12, 34, 0.88);
+  color: #eadcff;
+  font-size: 11.5px;
+  box-shadow: 0 2px 10px rgba(10, 4, 20, 0.55);
+}
+.overlord-darkscale-badge[hidden] {
+  display: none;
+}
+.overlord-darkscale-pips {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.overlord-darkscale-pip {
+  width: 9px;
+  height: 9px;
+  transform: rotate(45deg);
+  border-radius: 1.5px;
+  border: 1px solid rgba(169, 112, 255, 0.45);
+  background: rgba(34, 20, 56, 0.7);
+  transition:
+    transform 180ms ease,
+    background-color 180ms ease,
+    box-shadow 180ms ease;
+}
+.overlord-darkscale-pip.is-lit {
+  border-color: #f0d9ff;
+  background: linear-gradient(135deg, #c699ff, #7e42d4);
+  box-shadow: 0 0 8px rgba(169, 112, 255, 0.75);
+}
+.overlord-darkscale-pip.is-shattered {
+  border-color: rgba(130, 110, 155, 0.3);
+  background: rgba(25, 18, 36, 0.35);
+  transform: rotate(45deg) scale(0.75);
+  opacity: 0.45;
+}
+
+@keyframes overlord-weapon-glow {
+  from {
+    box-shadow:
+      0 2px 10px rgba(0, 0, 0, 0.45),
+      inset 0 -1px 0 var(--weapon-accent);
+  }
+  to {
+    box-shadow:
+      0 2px 14px color-mix(in srgb, var(--weapon-accent) 42%, transparent),
+      inset 0 -1px 0 var(--weapon-accent);
+  }
+}
+
+@media (max-width: 760px) {
+  .overlord-weapon-pill {
+    padding: 4px 9px;
+    font-size: 11px;
+    gap: 6px;
+  }
+  .overlord-darkscale-badge {
+    padding: 3px 8px;
+    font-size: 11px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overlord-weapon-pill {
+    animation: none;
+  }
+  .overlord-darkscale-pip {
+    transition: none;
   }
 }

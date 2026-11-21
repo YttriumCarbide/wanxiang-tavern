@@ -6,6 +6,7 @@ import { tavernPresetFixture } from '../fixtures/ai.js';
 import { newLibrary, officialCharacter } from '../../src/ai/library.js';
 import { EMBLEMS } from '../../src/emblems.js';
 import { normalizeEquipment, buyEquipment } from '../../src/equipment.js';
+import { chatResponse } from '../../server/chat-response.mjs';
 
 /** Real controllers, mocked upstream: composition, replay, party transaction and touch dialogs. */
 export async function galWorkspaceChecks({ browser, baseURL, output }) {
@@ -14,6 +15,7 @@ export async function galWorkspaceChecks({ browser, baseURL, output }) {
   const initial = newLibrary();
   initial.inventory.bagUnlocked = true;
   initial.daily.tutorial = 'done';
+  initial.unlockedDungeons = ['mill'];
   for (const id of ['edith', 'pandora'])
     if (!initial.characters.some((member) => member.id === `official-${id}`))
       initial.characters.push(officialCharacter(id));
@@ -65,11 +67,18 @@ export async function galWorkspaceChecks({ browser, baseURL, output }) {
     route.fulfill({ json: { preset: { ...tavernPresetFixture(), id: 'gal-fixture' } } }),
   );
   for (const kind of ['chat', 'quick-chat'])
-    await page.route(`**/api/ai/generate/${kind}`, (route) => {
-      calls.push({ kind, input: route.request().postDataJSON(), time: Date.now() });
+    await page.route(`**/api/ai/generate/${kind}`, async (route) => {
+      const input = route.request().postDataJSON();
+      calls.push({ kind, input, time: Date.now() });
+      const reply = await chatResponse(
+        kind,
+        '<think>格式自查。</think>< wanxiang_output >【对白:伊蒂丝】先坐下吧。【旁白】\n\n她合上书。\n\n【对白:潘多拉】茶刚泡好。< /wanxiang_output >',
+        [],
+        input,
+      );
       return route.fulfill({
         json: {
-          content: '【对白:伊蒂丝】先坐下吧。【旁白】\n\n她合上书。\n\n【对白:潘多拉】茶刚泡好。',
+          ...reply,
           usage: { input: 20, output: 20 },
           request: { tokens: { inputEstimate: 40 }, warnings: [] },
         },
@@ -269,6 +278,7 @@ export async function galWorkspaceChecks({ browser, baseURL, output }) {
     await page.locator('[data-gal="close"]').click();
     await page.locator('[data-daily="dungeon"]').click();
     await page.locator('#destination-dialog[open]').waitFor();
+    await page.locator('#destination-regions [data-region="mill"]').click();
     await page.locator('#destination-region-confirm').click();
     await page.locator('#destination-start').click();
     await page.locator('#party-panel').waitFor({ state: 'visible' });
@@ -293,6 +303,7 @@ export async function galWorkspaceChecks({ browser, baseURL, output }) {
     await page.locator('[data-prepare-slot="0"]').click();
     await page.locator('.prepare-gear-row').nth(2).click();
     await page.locator('[data-picker-value="gal-owned"]').click();
+    await page.locator('[data-picker-confirm]').click();
     assert(
       (await page.evaluate(() => demo.getLibrary())).characters
         .find((member) => member.id === reserveId)
@@ -319,8 +330,9 @@ export async function galWorkspaceChecks({ browser, baseURL, output }) {
     await page.locator('[data-prepare-slot="0"]').click();
     await page.locator('.prepare-emblem-row').click();
     const ringChoice = page.locator('[data-picker-value="' + initial.emblems[0] + '"]');
-    assert((await ringChoice.textContent()).includes('点击转移'));
+    assert((await ringChoice.textContent()).includes('转移'));
     await ringChoice.click();
+    await page.locator('[data-picker-confirm]').click();
     assert.equal(
       await page.evaluate(
         (id) => demo.getLibrary().characters.find((member) => member.id === id).emblemId,

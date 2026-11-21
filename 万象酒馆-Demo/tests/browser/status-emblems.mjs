@@ -8,6 +8,7 @@ import { defaultProtagonist } from '../../src/content/qingyuan.js';
 import { DRAGON_EMBLEM_ID, EMBLEMS, OVERLOAD_EMBLEM_ID } from '../../src/emblems.js';
 import { ITEMS } from '../../src/content/items.js';
 import { normalizeEquipment } from '../../src/equipment.js';
+import { LEARNABLE_SKILLS } from '../../src/content/learnable-skills.js';
 
 export async function statusEmblemChecks({ browser, baseURL, output }) {
   const page = await browser.newPage({ viewport: { width: 1440, height: 836 } });
@@ -113,7 +114,12 @@ export async function statusEmblemChecks({ browser, baseURL, output }) {
       window.demo.getLibrary().learnedSkills?.includes('uni-smoke-veil'),
     );
     await page.screenshot({ path: path.join(output, 'stage3-guild-grimoire.png') });
-    await page.locator('#guild-dialog .guild-close').click();
+    await page.locator('#guild-dialog [data-guild-tab="intel"]').click();
+    await page.locator('#guild-dialog [data-guild-intel]').first().click();
+    await page.locator('#guild-dialog [data-guild-map]').first().click();
+    const atlas = frame.locator('#street-map');
+    await atlas.waitFor({ state: 'visible' });
+    await atlas.getByRole('button', { name: '关闭地图', exact: true }).click();
     await frame.locator('#street-return').click();
     await page.waitForFunction(
       () =>
@@ -141,7 +147,11 @@ export async function statusEmblemChecks({ browser, baseURL, output }) {
       await page.locator(`[data-equipment-slot="${slot}"]`).selectOption('browser-owned-' + slot);
     await page.locator('[data-emblem-character]').selectOption(OVERLOAD_EMBLEM_ID);
     await page.locator('[data-prepare-tab="skill"]').click();
-    assert((await page.locator('.prepare-universal-bar').innerText()).includes('3/12'));
+    assert(
+      (await page.locator('.prepare-universal-bar').innerText()).includes(
+        `3/${LEARNABLE_SKILLS.length}`,
+      ),
+    );
     await page.locator('[data-universal-skill-slot="0"]').selectOption('uni-feint-retreat');
     await page.locator('[data-universal-skill-slot="1"]').selectOption('uni-serrated-cut');
     assert((await page.locator('.prepare-skills-grid').innerText()).includes('通用战技'));
@@ -171,7 +181,7 @@ export async function statusEmblemChecks({ browser, baseURL, output }) {
     ]);
     assert.deepEqual(saved.characters[0].equippedSkills, ['uni-feint-retreat', 'uni-serrated-cut']);
     assert.equal(saved.characters[0].emblemId, OVERLOAD_EMBLEM_ID);
-    assert.equal(saved.emblems.length, 5);
+    assert.deepEqual([...saved.emblems].sort(), Object.keys(EMBLEMS).sort());
     const reloadHandle = await page.locator('#ledger-handle').boundingBox();
     await page.mouse.move(
       reloadHandle.x + reloadHandle.width / 2,
@@ -194,10 +204,8 @@ export async function statusEmblemChecks({ browser, baseURL, output }) {
     await page.locator('#destination-regions button[data-region="ruins"]').click();
     await page.locator('#destination-region-confirm').click();
     await page.locator('#destination-start').click();
-    if (await page.locator('#prepare-done').isVisible())
-      await page.locator('#prepare-done').click();
-    if (await page.locator('#prepare-done').isVisible())
-      await page.locator('#prepare-done').click();
+    await page.getByRole('button', { name: '确认编队 · 开始生成', exact: true }).click();
+    await page.getByRole('button', { name: '整备完成 · 出发', exact: true }).click();
     await page.waitForFunction(
       () => window.demo.getStatus().mode === 'battle' && !window.demo.getStatus().animating,
     );
@@ -353,7 +361,6 @@ export async function statusEmblemChecks({ browser, baseURL, output }) {
     for (const [map, sequence, name] of [
       ['ruins', 2, '水无月兰'],
       ['ruins', 5, '神威'],
-      ['forest', 1, '玖柒'],
       ['forest', 3, '风在舞'],
     ]) {
       await page.evaluate(

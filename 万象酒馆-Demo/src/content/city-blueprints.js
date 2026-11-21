@@ -18,6 +18,7 @@ const SECONDARY_ENDPOINTS = new Set([
   'starbell-undercroft',
   'lantern-workshop',
   'market-alley',
+  'black-market',
   'crown-belvedere',
   'crown-terrace',
   'crown-map-room',
@@ -127,6 +128,17 @@ export const CITY_BLUEPRINTS = Object.freeze({
         y: 342,
         kind: 'site',
       },
+      {
+        id: 'black-market',
+        name: '暗巷黑市',
+        tag: '暗巷副本 · Lv.7-10',
+        x: 742,
+        y: 416,
+        kind: 'dungeon',
+        action: 'dungeon',
+        dungeonId: 'black-market',
+        level: 7,
+      },
     ]),
     edges: [
       ['outskirts', 'street'],
@@ -142,6 +154,7 @@ export const CITY_BLUEPRINTS = Object.freeze({
       ['city-center', 'market'],
       ['market', 'lantern-workshop'],
       ['market', 'market-alley'],
+      ['market-alley', 'black-market'],
     ],
   }),
 

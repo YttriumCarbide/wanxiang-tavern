@@ -23,11 +23,13 @@ import { createRenderer } from './renderer.js';
 import { createPlayback } from './playback.js';
 import { createDrag } from './drag.js';
 import { mountInput } from './input.js';
+import { createPortraitEditor } from './portrait-editor.js';
 import { createDebugAPI } from './debug.js';
 import { createEventScope } from '../shared/events.js';
 import { mountTooltips } from '../ui.js';
 import { assertGameData } from '../validation.js';
 import { createGeneration } from './generation.js';
+import { createDeparture } from './departure.js';
 import { createRoster } from './roster.js';
 import { createAudio } from './audio.js';
 import { createDestinations } from './destinations.js';
@@ -36,7 +38,6 @@ import { createRecords } from './records.js';
 import { createOnboarding } from './onboarding.js';
 import { createFirstRun } from './first-run.js';
 import { createChat } from './chat.js';
-import { createPresetExtensions } from './preset-extensions.js';
 import { createSummoning } from './summoning.js';
 import { createMemory } from './memory.js';
 import { createAdventure } from './adventure.js';
@@ -57,11 +58,14 @@ import { createMapExpansion } from './map-expansion.js';
 import { createTavernQuests } from './tavern-quests.js';
 import { createGuild } from './guild.js';
 import { createLedgerSidebar } from './ledger-sidebar.js';
+import { createDeveloperTools } from './developer-tools.js';
 
 /** Composition root: wiring only, with one explicit application lifetime. */
 export function createApplication({
   storage = globalThis.localStorage,
   apiClient = createApiClient(),
+  developerSandbox = false,
+  contentUpdates,
 } = {}) {
   assertGameData();
   const context = /** @type {import('./context.js').AppContext} */ ({
@@ -69,18 +73,18 @@ export function createApplication({
     storage,
     events: createEventScope(),
     apiClient,
+    contentUpdates,
     assets: createAssetStore(),
   });
+  context.session.runtime.developerSandbox = developerSandbox;
   context.apiClient = createRequestControls(
     apiClient,
     () => context.session.ai.generationOptions,
     () => context.workshop,
-    async (kind) => {
-      await context.extensions?.activate(kind);
-      await context.extensions?.flush();
-    },
+    undefined,
     (kind, result, failure) => context.latestResponse?.record(kind, result, failure),
     () => context.session.ai.library,
+    () => context.developer?.simulateRequest(),
   );
   context.generationAccess = createGenerationAccess(context);
   context.assetPreloader = createPortraitPreloader(context);
@@ -92,6 +96,7 @@ export function createApplication({
   context.chapterTheater = createChapterTheater(context);
   context.overlordBattle = createOverlordBattle(context);
   context.battleBarks = createBattleBarks(context);
+  context.departure = createDeparture(context);
   context.generation = createGeneration(context);
   context.destinations = createDestinations(context);
   context.shell = createShell(context);
@@ -109,8 +114,9 @@ export function createApplication({
   context.onboarding = createOnboarding(context);
   context.firstRun = createFirstRun(context);
   context.summoning = createSummoning(context);
-  context.extensions = createPresetExtensions(context);
   context.chat = createChat(context);
+  const records = createRecords(context);
+  context.records = records;
   context.memory = createMemory(context);
   context.mapExpansion = createMapExpansion(context);
   context.quests = createTavernQuests(context);
@@ -130,14 +136,14 @@ export function createApplication({
   context.ledger = createLedgerSidebar(context);
   const antiRoutePanel = createAntiRoutePanel(context);
 
-  const records = createRecords(context);
-  context.records = records;
   for (const field of document.querySelectorAll('input, textarea, form'))
     field.setAttribute('autocomplete', 'off');
+  context.portraitEditor = createPortraitEditor(context);
   mountInput(context);
   mountDisplay(context);
   const disposeTooltips = mountTooltips();
   context.checkpoint = createCheckpoint(context);
+  context.developer = createDeveloperTools(context);
   const checkpoint = context.checkpoint.pending();
   if (checkpoint) void context.journey.resume(checkpoint);
   else {
@@ -147,6 +153,7 @@ export function createApplication({
   context.shell.renderParty();
   context.generationAccess.refresh();
   context.overlordBattle.checkReloadFourthWall();
+  void contentUpdates?.start();
 
   function dispose() {
     const runtime = context.session.runtime;
@@ -159,14 +166,19 @@ export function createApplication({
     context.ledger.dispose();
     context.guild.dispose();
     context.daily.dispose();
+    context.journey.dispose();
+    context.departure.dispose();
+    context.portraitEditor.dispose();
     context.shell.dispose();
     context.latestResponse.dispose();
     antiRoutePanel.dispose();
     context.assetPreloader.dispose();
+    contentUpdates?.dispose();
     context.assets.dispose();
     context.events.dispose();
     context.generationAccess.dispose();
     context.checkpoint.dispose();
+    context.developer.dispose();
     context.apiClient.dispose();
     context.audio.dispose();
     context.generation.dispose();
@@ -195,7 +207,6 @@ export function createApplication({
     context.quests.dispose();
     context.adventure.dispose();
     context.bookshelf.dispose();
-    context.extensions.dispose();
     records.dispose();
     document.querySelectorAll('#round-start,#round-banner').forEach((el) => {
       el.getAnimations().forEach((a) => a.cancel());
@@ -205,6 +216,8 @@ export function createApplication({
     disposeTooltips?.();
     document.querySelectorAll('.card-flight,.ui-exit').forEach((element) => element.remove());
   }
-  context.events.on(window, 'pagehide', dispose, { once: true });
+  context.events.on(window, 'pagehide', (event) => {
+    if (!event.persisted) dispose();
+  });
   return { api: createDebugAPI(context), dispose };
 }

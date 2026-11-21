@@ -607,7 +607,8 @@ dialog::backdrop {
   z-index: 80;
   max-width: 270px;
   white-space: pre-line;
-  pointer-events: none;
+  pointer-events: none !important;
+  user-select: none;
   padding: 10px 13px;
   background: #102127f5;
   border: 1px solid #b5c4ad88;
@@ -1163,24 +1164,7 @@ body.ring-cabinet-open :is(.app-header, #inn-resources) {
 }
 /* The veil owns no game state; the real scene stays covered until ready. */
 .world-battle-transition {
-  position: fixed;
-  inset: 0;
-  z-index: 12000;
-  display: grid;
-  place-content: center;
-  gap: 18px;
-  color: #eddbad;
-  background:
-    radial-gradient(ellipse at center, rgba(226, 186, 111, 0.12), transparent 58%), #07110f;
-  text-align: center;
-  pointer-events: auto;
-}
-.world-battle-transition canvas {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  image-rendering: pixelated;
+  z-index: 20500;
 }
 .command-controls #commit.has-alchemical-bomb {
   position: relative;

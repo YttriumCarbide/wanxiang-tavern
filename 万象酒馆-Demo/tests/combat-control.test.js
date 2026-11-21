@@ -2,11 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { HEROES, DEFINITIONS } from '../src/data.js';
 import { newBattle, preview, advance, makeAction, makeReposition } from '../src/engine.js';
-import { EMBLEM_ID, OVERLOAD_EMBLEM_ID } from '../src/emblems.js';
+import { EMBLEM_ID, OVERLOAD_EMBLEM_ID, SUPREME_EMBLEM_ID } from '../src/emblems.js';
 import { newCampaign } from '../src/campaign.js';
 import { defaultProtagonist } from '../src/content/qingyuan.js';
 import { prepareCorridorRing, prepareBossEmblem } from '../src/emblem-progression.js';
-import { compileRoster, restoreLibrary, newLibrary } from '../src/ai/library.js';
+import { compileRoster, restoreLibrary } from '../src/ai/library.js';
 import { syncBuiltinWorldbook } from '../src/ai/worldbook.js';
 import { playbackBeats } from '../src/playback-timing.js';
 import { readFile } from 'node:fs/promises';
@@ -124,7 +124,7 @@ test('initial threshold crossing has a playable phase event; cycle Boss and one-
   );
 });
 
-test('phase bind cancels the second overloaded cast without replaying an attack animation', () => {
+test('phase bind cancels the second overloaded cast without replaying an attack animation or doubling MP cost', () => {
   const state = fixture({ boss: true, speed: 1 });
   state.units['test-enemy'].hp = 65;
   state.heroDefinitions.aegis.emblemId = OVERLOAD_EMBLEM_ID;
@@ -147,66 +147,69 @@ test('phase bind cancels the second overloaded cast without replaying an attack 
       (event) => event.type === 'skip' && event.repeatIndex === 2 && event.blockedBy === 'bind',
     ),
   );
-  assert.equal(result.final.units.aegis.mp, state.units.aegis.mp - 4);
+  assert.equal(result.final.units.aegis.mp, state.units.aegis.mp - 2);
 });
 
-test('story rings prefer actual front members without rings, save the recipient and never replace existing rings', () => {
+test('overlord emblem unlocks award Supreme and Bearer without darkscale duplicate; corridor mill:0 awards Tan Hongyu', async () => {
+  const { grantMidBattleOverlordEmblem, OVERLORD_EMBLEM_UNLOCKS } =
+    await import('../src/emblem-progression.js');
+  assert.equal(OVERLORD_EMBLEM_UNLOCKS.darkscaleWarlord, undefined);
+  assert.equal(OVERLORD_EMBLEM_UNLOCKS.banditSyndicateKing, SUPREME_EMBLEM_ID);
+
   const library = newCampaign(defaultProtagonist());
   library.characters[0].emblemId = OVERLOAD_EMBLEM_ID;
-  const expedition = {
+  const ruinsExp = {
     index: 4,
     exploration: { map: 'ruins', sequence: 1 },
     partyIds: [...library.party],
     heroDefinitions: compileRoster(library),
   };
-  assert(prepareCorridorRing(library, expedition, () => 0));
-  assert.equal(expedition.corridorRing.actor, 'lyria');
-  assert.equal(expedition.corridorRing.name, '伊蒂丝');
-  assert.equal(expedition.heroDefinitions.lyria.emblemId, EMBLEM_ID);
-  assert.equal(library.characters[0].emblemId, OVERLOAD_EMBLEM_ID);
   assert.equal(
-    restoreLibrary(library).characters.find(
-      (member) => member.id === expedition.corridorRing.memberId,
-    ).emblemId,
-    EMBLEM_ID,
+    prepareCorridorRing(library, ruinsExp, () => 0),
+    false,
   );
-  const snapshot = structuredClone(library);
-  assert(!prepareCorridorRing(library, expedition, () => 0.9));
-  assert.deepEqual(library, snapshot);
-});
-
-test('legacy parties receive the corridor ring at the same boundary and retain its full charge after restore', async () => {
-  const { beginEncounter, newExpedition } = await import('../src/expedition.js');
-  const library = newLibrary();
-  const expedition = newExpedition('bossGate', compileRoster(library), {
-    map: 'ruins',
-    sequence: 1,
-    seed: 1,
-  });
-  expedition.partyIds = [...library.party];
-  for (const index of [0, 1, 2, 3]) {
-    expedition.index = index;
-    assert.equal(prepareCorridorRing(library, expedition), false);
-  }
-  expedition.index = 4;
+  const millExp = {
+    index: 4,
+    exploration: { map: 'mill', sequence: 0 },
+    partyIds: [...library.party],
+    heroDefinitions: compileRoster(library),
+  };
   assert.equal(
-    prepareCorridorRing(library, expedition, () => 0),
+    prepareCorridorRing(library, millExp, () => 0),
     true,
   );
-  const battle = beginEncounter(expedition);
-  const actor = expedition.corridorRing.actor;
-  assert.equal(battle.heroDefinitions[actor].emblemId, EMBLEM_ID);
-  assert.equal(battle.units[actor].emblemCharge, 6);
+  assert.equal(millExp.corridorRing.actor, 'lyria');
+  assert.equal(millExp.heroDefinitions.lyria.emblemId, EMBLEM_ID);
+  assert.equal(library.characters[0].emblemId, OVERLOAD_EMBLEM_ID);
+  assert(restoreLibrary(library).emblems.includes(EMBLEM_ID));
+
+  const state = fixture({ boss: true, speed: 1 });
+  state.enemyIds = ['banditSyndicateKing'];
+  state.units = {
+    ...state.units,
+    banditSyndicateKing: {
+      ...state.units['test-enemy'],
+      id: 'banditSyndicateKing',
+      bossStage: 2,
+      enraged: true,
+    },
+  };
+  delete state.units['test-enemy'];
+  state.phase = 'plan';
+  state.round = 2;
+  const arrival = grantMidBattleOverlordEmblem(library, state, ruinsExp, () => 0);
+  assert(arrival);
+  assert.equal(arrival.id, SUPREME_EMBLEM_ID);
+  assert.equal(library.characters[0].emblemId, OVERLOAD_EMBLEM_ID);
   const restored = restoreLibrary(library);
-  assert(restored.emblems.includes(EMBLEM_ID));
+  assert(restored.emblems.includes(EMBLEM_ID) && restored.emblems.includes(SUPREME_EMBLEM_ID));
   assert.equal(
-    restored.characters.find((member) => member.id === expedition.corridorRing.memberId).emblemId,
-    EMBLEM_ID,
+    grantMidBattleOverlordEmblem(restored, state, ruinsExp, () => 0.9),
+    null,
   );
-  assert.equal(prepareCorridorRing(restored, expedition), false);
 });
 
-test('story ring randomness uses eligible candidates; fully occupied roster keeps reward in inventory', () => {
+test('story ring randomness uses eligible candidates for remaining boss emblems; fully occupied roster keeps reward', async () => {
   for (const [random, actor] of [
     [0, 'aegis'],
     [0.99, 'lyria'],
@@ -214,7 +217,7 @@ test('story ring randomness uses eligible candidates; fully occupied roster keep
     const library = newCampaign(defaultProtagonist());
     const expedition = {
       index: 4,
-      exploration: { map: 'forest', sequence: 1 },
+      exploration: { map: 'forest', sequence: 3 },
       partyIds: [...library.party],
     };
     assert(prepareBossEmblem(library, expedition, () => random));

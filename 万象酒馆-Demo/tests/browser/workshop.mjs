@@ -13,7 +13,7 @@ export async function workshopChecks({ browser, baseURL, output }) {
   page.on('pageerror', (error) => errors.push(error.message));
   editorPage.on('pageerror', (error) => errors.push(error.message));
   let harness;
-  async function openWorkshop() {
+  async function openWorkshop({ expectLoadFailure = false } = {}) {
     const handle = await page.locator('#ledger-handle').boundingBox();
     await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2);
     await page.mouse.down();
@@ -23,7 +23,11 @@ export async function workshopChecks({ browser, baseURL, output }) {
     await page.mouse.up();
     await page.locator('#ledger-drawer-host.is-open').waitFor();
     await page.locator('#workshop-open').click();
-    await page.locator('#workshop-dialog[open]:not([data-loading])').waitFor();
+    await page
+      .locator(
+        expectLoadFailure ? '#workshop-dialog[open]' : '#workshop-dialog[open]:not([data-loading])',
+      )
+      .waitFor();
   }
   const editor = editorPage.locator('#workshop-editor');
   async function apply() {
@@ -297,7 +301,7 @@ export async function workshopChecks({ browser, baseURL, output }) {
     await page.route('**/__demo/workshop-catalog', (route) =>
       route.fulfill({ status: 500, json: { error: '工坊配置暂时无法读取' } }),
     );
-    await openWorkshop();
+    await openWorkshop({ expectLoadFailure: true });
     await page.locator('.ws-loading').filter({ hasText: '工坊配置暂时无法读取' }).waitFor();
     await page.locator('[data-ws-close]').click();
     assert.equal((await page.evaluate(() => demo.getLibrary())).workshop.items[customId], 1);

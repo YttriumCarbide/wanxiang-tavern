@@ -47,6 +47,11 @@ const DESCRIPTIONS = {
   nexus: '反应堆的青色脉冲扫过金属舱壁与服务器列阵。',
   wasteland: '断裂高架斜过废站上空，沙丘正吞没旧巴士与加油棚。',
   relic: '黄沙覆盖方碑与神殿台阶，古老浮雕仍在发亮。',
+  'graystone-quarry':
+    '木栅哨塔、起重吊架与挡风油布棚分列两翼，黑紫空间裂隙从北侧矿道深处透出微光。',
+  'city-market': '石板商道两侧错落排开红瓦商铺、布篷货摊与锻铁星灯，北端钟亭拱门映着傍晚人声。',
+  'black-market':
+    '暗渠石拱下挂满绿焰炼金灯与暗红帷幔，赃物铁笼、走私货栈与地下拍卖台藏于潮湿影中。',
 };
 
 async function creatureView(stage, id) {
@@ -328,7 +333,9 @@ async function main() {
     events.dispose();
     delete window.artbook;
   }
-  events.on(window, 'pagehide', dispose, { once: true });
+  events.on(window, 'pagehide', (event) => {
+    if (!event.persisted) dispose();
+  });
   window.artbook = {
     select,
     async weather(type) {

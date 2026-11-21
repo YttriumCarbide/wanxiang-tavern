@@ -12,14 +12,15 @@ export function createLatestResponse(context) {
   button.disabled = false;
   button.textContent = '原始返回';
   button.title = '查看最近一次 API 回复';
-  context.events.on(button, 'click', () => {
+  function show() {
     viewer.show(
       latest || {
         message: '本页尚未收到 API 回复。',
         diagnostic: { rawText: '暂无返回。调用 API 后，这里会显示最近一次收到的回复。' },
       },
     );
-  });
+  }
+  context.events.on(button, 'click', show);
   const stage = document.querySelector('#gal-stage');
   const place = () => {
     const host = stage.hidden ? home.parentNode : stage.querySelector('.gal-controls');
@@ -31,6 +32,7 @@ export function createLatestResponse(context) {
   const observer = new MutationObserver(place);
   observer.observe(stage, { attributes: true, attributeFilter: ['hidden'] });
   return {
+    show,
     record(kind, result, failure = null) {
       if (context.session.runtime.disposed) return;
       const diagnostic = (failure || result)?.diagnostic;

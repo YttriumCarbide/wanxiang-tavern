@@ -123,6 +123,17 @@ export async function apepVfxChecks({ browser, baseURL, output }) {
             trails: [...stage.querySelectorAll('.apep-strike-trail')].map((el) => el.dataset.trail),
             effects: view.vfxStatus().activeEffects,
             slots: view.scene.getObjectByName('Apep_Plague_Floor').children.length,
+            tentacles: view.scene
+              .getObjectByName('Apep_Plague_Floor')
+              .children.filter((c) => c.name?.startsWith('Apep_Plague_Tentacle_')).length,
+            perimeterVeil: Boolean(
+              view.scene
+                .getObjectByName('Apep_Plague_Floor')
+                .getObjectByName('Apep_Plague_Perimeter_Veil'),
+            ),
+            borderCount: view.scene
+              .getObjectByName('Apep_Plague_Floor')
+              .children.filter((c) => c.name?.startsWith('Apep_Plague_Border_')).length,
             victims: event.statusTriggers?.filter((signal) => signal.type === 'sinkingPlague')
               .length,
           });
@@ -240,14 +251,26 @@ export async function apepVfxChecks({ browser, baseURL, output }) {
     assert.equal(await page.locator('.unit-hit[data-apep-plague="active"]').count(), 3);
     assert.match(await page.locator('.commit-plague-readout').textContent(), /沉疫 −\d+(?:–\d+)?/);
     assert.equal(await page.locator('#apep-plague-edge').isVisible(), true);
+    // Stage 1 has no corrupted slot; corrupted slots appear in Stage 2/3.
+    assert.equal(await page.locator('.time-cell.is-corrupted-slot').count(), 0);
+    // Commit Round 2 so front heroes sustain 2 consecutive plague ticks -> plagueSealed + rearDanger='1'.
+    await page.evaluate(() => window.apepFixture.commit());
+    await waitForPlayback();
+    assert((await page.locator('.unit-hit[data-plague-sealed="1"]').count()) >= 1);
     assert.equal(await page.locator('#apep-plague-edge').getAttribute('data-rear-danger'), '1');
-    assert.equal(await page.locator('.time-cell.is-corrupted-slot').count(), 1);
     await page.screenshot({ path: path.join(output, 'apep-plague-field.png') });
     const combat = await page.evaluate(() => window.apepFixture.seen);
     const cast = combat.find((event) => event.clip === 'Apep_Plague');
-    assert.equal(cast.slots, 3);
-    assert.equal(cast.trails.filter((kind) => kind === 'current').length, 3);
+    assert(
+      cast.slots >= 25 && cast.tentacles >= 16 && cast.perimeterVeil && cast.borderCount === 4,
+    );
+    assert.equal(cast.trails.filter((kind) => kind === 'current').length, 9);
     assert(cast.effects.includes('shadow-tendrils'));
+    for (const entry of combat) {
+      assert(!entry.effects.includes('magic-circle-cast'), entry.effects.join(','));
+      assert(!entry.effects.includes('divine-shield'), entry.effects.join(','));
+      assert(!entry.effects.includes('mana-burst'), entry.effects.join(','));
+    }
     assert.equal(combat.find((event) => event.type === 'sinkingPlague').victims, 6);
     assert.equal(await page.evaluate(() => window.apepFixture.emptySlot()), true);
     assert.equal(await page.locator('.unit-hit[data-apep-plague="active"]').count(), 2);
@@ -257,6 +280,7 @@ export async function apepVfxChecks({ browser, baseURL, output }) {
     await page.locator('#overlord-cutscene-layer[data-tone="phase"].is-impact').waitFor();
     await page.screenshot({ path: path.join(output, 'apep-eclipse-phase.png') });
     await waitForPlayback();
+    assert((await page.locator('.time-cell.is-corrupted-slot').count()) >= 0);
     checking = 'attack clips and cleanup';
     const cases = await page.evaluate(() => window.apepFixture.attackCases());
     assert.deepEqual(cases.map((entry) => entry.clip).sort(), [

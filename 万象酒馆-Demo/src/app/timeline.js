@@ -161,6 +161,10 @@ export function createTimeline(context) {
           (event) => event.actionId === a.id && event.type === 'hero',
         ),
         repeated = casts.length > 1,
+        repeatTotal = casts.reduce(
+          (max, event) => Math.max(max, Number(event.repeatCount) || 1),
+          1,
+        ),
         bound = session.battle.forecast.events.find(
           (event) => event.actionId === a.id && event.blockedBy === 'bind',
         ),
@@ -216,7 +220,7 @@ export function createTimeline(context) {
         <div class="time-action-body">
           <b
             >${skip ? '× ' : bad ? '! ' : ''}${a.kind === 'item' ? ITEMS[a.item].name : a.kind === 'skill' ? context.roster.ability(a.actor, a.skill).name : a.kind === 'engage' ? `结合${a.followUp ? ' · ' + context.roster.ability(a.actor, a.followUp.skill).name : ''}` : a.kind === 'swap' ? (session.battle.state.units[a.incoming]?.entryReady && context.roster.get(a.incoming)?.entrySkill?.name ? `换入 · ${context.roster.get(a.incoming).entrySkill.name}` : '换入') : '交换'}</b
-          >${repeated ? html`<span class="skill-repeat" aria-label="该行动生效两次">×2</span>` : ''}<small
+          >${repeated ? html`<span class="skill-repeat" aria-label="该行动生效${repeatTotal}次">×${repeatTotal}</span>` : ''}<small
             >${a.kind === 'item' ? context.roster.get(a.target).name : ['skill', 'engage'].includes(a.kind) ? context.roster.get(a.actor).name : a.kind === 'swap' ? context.roster.get(a.incoming).name : '阵型'}
             · ${bound ? (casts.length ? '后次禁锢跳过' : '禁锢 · 跳过') : `${a.ap} AP`}</small
           >

@@ -9,7 +9,7 @@ export async function ringGalleryChecks({ browser, baseURL, output }) {
   const page = await browser.newPage({ viewport: { width: 1440, height: 836 } });
   const errors = [];
   page.on('pageerror', (error) => errors.push(error.message));
-  const ids = ['tan-hongyu', 'mizunatsuki-ran', 'kamui', 'wind-dance', 'jiu-qi'];
+  const ids = ['tan-hongyu', 'mizunatsuki-ran', 'kamui', 'wind-dance', 'jiu-qi', 'cang-ming'];
   try {
     await legacySession(page);
     await page.addInitScript(() => {
@@ -122,13 +122,13 @@ export async function ringGalleryChecks({ browser, baseURL, output }) {
       geometry.every((ring) => Number.isFinite(ring.crown) && ring.crown <= 1.1),
       'The crown stays outside the bore without an upright sign-like head',
     );
-    assert.equal(new Set(geometry.map((ring) => ring.triangles)).size, 5);
+    assert.equal(new Set(geometry.map((ring) => ring.triangles)).size, 6);
     for (const id of ['wind-dance', 'tan-hongyu', 'kamui'])
       await frame.locator('[data-ring-id="' + id + '"]').click();
     await waitForSwitch();
     const rapid = await frame.locator('canvas').evaluate(() => window.assetPreview.rings());
     assert.equal(rapid.selected, 'kamui');
-    assert.equal(rapid.models, 5, 'Rapid switching must reuse the five cached models');
+    assert.equal(rapid.models, 6, 'Rapid switching must reuse the six cached models');
     await frame.locator('.ring-gallery-owner').filter({ hasText: '未契约' }).waitFor();
     const before = await frame.locator('canvas').evaluate(() => window.assetPreview.rings());
     const bounds = await frame.locator('[data-ring-viewport]').boundingBox();
@@ -183,7 +183,7 @@ export async function ringGalleryChecks({ browser, baseURL, output }) {
     await waitForSwitch();
     assert.equal(
       await frame.locator('canvas').evaluate(() => window.assetPreview.rings().models),
-      5,
+      6,
     );
     await frame.locator('[data-ring-equip]').click();
     await page.locator('#party-panel').waitFor({ state: 'visible' });

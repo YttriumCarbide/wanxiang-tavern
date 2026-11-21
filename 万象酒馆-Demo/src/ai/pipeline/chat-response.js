@@ -1,4 +1,3 @@
-import { chatRegexScripts } from './chat-request.js';
 import { readOutputTags } from '../output-tags.js';
 import { validateTaskReply } from '../../adventure/state.js';
 import { normalizeInvitationTurn } from '../../invitation.js';
@@ -39,8 +38,8 @@ function stripDcSplitMarker(text) {
     .trim();
 }
 
-export async function chatResponse(kind, content, scripts, input = {}, runRegexTasks) {
-  scripts = chatRegexScripts(kind, scripts);
+export async function chatResponse(kind, content, scriptsOrInput = {}, legacyInput) {
+  const input = legacyInput ?? scriptsOrInput;
   let text = content;
   let actions = { affection: [], agreeToAdventure: [] };
   let adventure;
@@ -76,7 +75,8 @@ export async function chatResponse(kind, content, scripts, input = {}, runRegexT
       },
     ]);
     const bodies = sections.filter((section) => BODY_TAGS.includes(section.tag));
-    if (bodies.length !== 1) throw Error(`回复正文需要唯一一组${OUTPUT_TAG}标签`);
+    if (!bodies.length) throw Error(`未找到可识别的正文标签 <${OUTPUT_TAG}>，可查看原始返回`);
+    if (bodies.length > 1) throw Error(`回复正文需要唯一一组${OUTPUT_TAG}标签`);
     const body = bodies[0];
     if (!body.content.trim()) throw Error(`${OUTPUT_TAG}标签内的正文不能为空`);
     text = body.content.trim();
@@ -125,7 +125,10 @@ export async function chatResponse(kind, content, scripts, input = {}, runRegexT
       }
     }
     const forcedFree = Boolean(input.dcContext?.mode === 'free' && input.dcContext?.forced);
-    const dcMeta = { mapOrLevel: input.dcContext?.mapOrLevel ?? null };
+    const dcMeta = {
+      mapOrLevel: input.dcContext?.mapOrLevel ?? null,
+      dcReduction: input.dcContext?.dcReduction ?? 0,
+    };
     const dcTag = allowDc ? sections.find((section) => section.tag === 'wanxiang_dc') : null;
     if (dcTag) {
       let parsedDc;
@@ -147,7 +150,8 @@ export async function chatResponse(kind, content, scripts, input = {}, runRegexT
     } else if (forcedFree) {
       const turnSeed = (input.history?.length || 0) + (input.adventure?.responses?.length || 0);
       const inferredAttr = inferFallbackAttr(input.text, turnSeed);
-      const fallbackDc = input.dcContext?.defaultDc || 8;
+      const fallbackDc = input.dcContext?.defaultDc ?? 8;
+      const baseFallbackDc = input.dcContext?.baseDefaultDc ?? fallbackDc;
       const contextActors = input.dcContext?.actors || [];
       const bestActor = [...contextActors].sort(
         (a, b) => (b.attrs?.[inferredAttr]?.mod ?? 0) - (a.attrs?.[inferredAttr]?.mod ?? 0),
@@ -159,7 +163,7 @@ export async function chatResponse(kind, content, scripts, input = {}, runRegexT
           triggered: true,
           actorId: bestActor?.id || input.characters?.[0]?.id,
           attr: inferredAttr,
-          dc: fallbackDc,
+          dc: baseFallbackDc,
           outcome: input.dcContext?.doubleSix
             ? 'crit'
             : input.dcContext?.doubleOne
@@ -203,33 +207,14 @@ export async function chatResponse(kind, content, scripts, input = {}, runRegexT
       }
     }
   }
-  const processed = (
-    await runRegexTasks(scripts, [{ text, placement: 2, options: { kind: 'script' } }])
-  )[0];
-  const display = (
-    await runRegexTasks(scripts, [
-      { text: processed.text, placement: 2, options: { kind: 'script', isMarkdown: true } },
-    ])
-  )[0];
   const forceSplit = Boolean(
     fixedCheck || (input.dcContext?.mode === 'free' && input.dcContext?.forced),
   );
-  const processedSplit = forceSplit
-    ? splitChoiceProseFallback(processed.text)
-    : parseDcSplitProse(processed.text);
-  const displaySplit = forceSplit
-    ? splitChoiceProseFallback(display.text)
-    : parseDcSplitProse(display.text);
-  const finalContent = parseDcSplitProse(processed.text).hasMarker
-    ? stripDcSplitMarker(processed.text)
-    : processed.text;
-  const finalDisplay = parseDcSplitProse(display.text).hasMarker
-    ? stripDcSplitMarker(display.text)
-    : display.text;
+  const processedSplit = forceSplit ? splitChoiceProseFallback(text) : parseDcSplitProse(text);
+  const finalContent = parseDcSplitProse(text).hasMarker ? stripDcSplitMarker(text) : text;
   const includeDcSplit = allowDc && processedSplit.hasMarker && processedSplit.beforeText;
   return {
     content: finalContent,
-    display: finalDisplay,
     ...(kind === 'chat' ? { actions } : {}),
     ...(adventure ? { adventure } : {}),
     ...(invitation ? { invitation } : {}),
@@ -245,12 +230,6 @@ export async function chatResponse(kind, content, scripts, input = {}, runRegexT
           dcSplit: {
             beforeText: processedSplit.beforeText,
             afterText: processedSplit.afterText,
-            displayBeforeText: displaySplit.hasMarker
-              ? displaySplit.beforeText
-              : processedSplit.beforeText,
-            displayAfterText: displaySplit.hasMarker
-              ? displaySplit.afterText
-              : processedSplit.afterText,
           },
         }
       : {}),

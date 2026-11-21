@@ -71,7 +71,7 @@ async function savePortraitOriginal(dataUrl, signal, request) {
 }
 
 /** Keep original bytes and color profile; no canvas resampling or lossy recompression. */
-export function readFileAsOptimizedImage(file, request = localRequest) {
+export function readFileAsOptimizedImage(file, request = localRequest, signal) {
   return new Promise((resolve, reject) => {
     if (
       !file ||
@@ -81,10 +81,20 @@ export function readFileAsOptimizedImage(file, request = localRequest) {
       reject(Error('请选择6MB以内的PNG、JPG、WebP、GIF或AVIF立绘'));
       return;
     }
+    if (signal?.aborted) {
+      reject(signal.reason);
+      return;
+    }
     const reader = new FileReader();
+    const abort = () => {
+      reader.abort();
+      reject(signal.reason);
+    };
+    signal?.addEventListener('abort', abort, { once: true });
     reader.onerror = () => reject(Error('文件读取失败'));
     reader.onload = () =>
-      savePortraitOriginal(reader.result, undefined, request).then(resolve, reject);
+      savePortraitOriginal(reader.result, signal, request).then(resolve, reject);
+    reader.onloadend = () => signal?.removeEventListener('abort', abort);
     reader.readAsDataURL(file);
   });
 }

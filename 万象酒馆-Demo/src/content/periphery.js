@@ -14,7 +14,50 @@ const COLORS = Object.freeze({
   nexus: ['#263d4d', '#4a697b', '#8caab6', '#72dbe2'],
   wasteland: ['#68543d', '#998052', '#ad7649', '#584e42'],
   relic: ['#8c754f', '#b89a64', '#d3b77c', '#796b48'],
+  'graystone-quarry': ['#4d5259', '#6d747b', '#5e4631', '#9b6bff'],
+  'city-market': ['#6e737b', '#9e4b3a', '#694c33', '#f5c878'],
+  'black-market': ['#272a34', '#4d4446', '#6e1d28', '#5ad1a4'],
 });
+
+function woodlandGrowth(box, random, variant, colors, mill) {
+  const [ground, leaves, bark, newLeaves] = colors;
+  const x = (random() - 0.5) * 0.52;
+  const z = (random() - 0.5) * 0.58;
+  const scale = 0.78 + random() * 0.37;
+  const wood = mill ? bark : '#574637';
+  const darkLeaves = mill ? '#536a40' : '#395b48';
+  const tall = (mill ? 1.05 : 1.45) * scale;
+  if (variant === 0) {
+    box(x, 0.13, z, 0.19, tall, 0.21, wood);
+    box(x + 0.18, tall * 0.61, z, 0.41, 0.14, 0.13, wood);
+    box(x - 0.18, tall * 0.8, z - 0.07, 0.74 * scale, 0.25, 0.58 * scale, darkLeaves);
+    box(x + 0.29, tall * 0.67, z + 0.12, 0.56 * scale, 0.26, 0.5 * scale, leaves);
+    box(x - 0.23, tall * 0.8 + 0.23, z - 0.11, 0.46 * scale, 0.21, 0.43 * scale, leaves);
+  } else if (variant === 1) {
+    box(x, 0.13, z, 0.14, tall * 1.2, 0.14, wood);
+    for (let tier = 0; tier < 4; tier++) {
+      const width = (0.8 - tier * 0.16) * scale;
+      box(
+        x - tier * 0.025,
+        tall * 0.46 + tier * 0.205 * scale,
+        z + tier * 0.016,
+        width,
+        0.23 * scale,
+        width * 0.82,
+        tier < 2 ? darkLeaves : leaves,
+      );
+    }
+  } else {
+    const stump = variant === 2;
+    if (stump) {
+      box(x - 0.26, 0.15, z, 0.26, 0.32 * scale, 0.25, wood);
+      box(x - 0.26, 0.15 + 0.32 * scale, z, 0.21, 0.035, 0.2, mill ? newLeaves : '#927a56');
+    }
+    box(x + 0.19, 0.15, z + 0.2, 0.46 * scale, 0.25 * scale, 0.35, darkLeaves);
+    box(x - 0.11, 0.17, z - 0.24, 0.42, 0.28 * scale, 0.3, leaves);
+    box(x + 0.27, 0.15, z - 0.21, 0.35, 0.12, 0.28, ground);
+  }
+}
 
 export function planPeriphery(map, occupied = () => false) {
   const colors = COLORS[map] || COLORS.ruins;
@@ -80,14 +123,18 @@ export function planPeriphery(map, occupied = () => false) {
     switch (map) {
       case 'mill':
       case 'forest':
+        box(0, 0.09, 0, 1.48, 0.07, 1.48, color(1));
+        woodlandGrowth(box, random, variant, colors, map === 'mill');
+        rocks(color(0), 0.2);
+        break;
       case 'xianxia':
         box(0, 0.09, 0, 1.48, 0.07, 1.48, color(1));
-        if (map === 'xianxia' && variant === 0) {
+        if (variant === 0) {
           for (const dx of [-0.5, 0.5])
             for (const dz of [-0.5, 0.5]) box(dx, 0.1, dz, 0.09, 0.65, 0.09, color(2));
           roof('#355c58');
         } else {
-          plant(-0.2, 0.18, color(2), map === 'forest' ? 1.3 : 0.9);
+          plant(-0.2, 0.18, color(2), 0.9);
           plant(0.46, -0.35, color(1), 0.68);
           rocks(color(0), 0.2);
         }
@@ -161,6 +208,79 @@ export function planPeriphery(map, occupied = () => false) {
           box(0.15, 0.35, -0.15, 1.05, 0.12, 1.15, color(0));
           box(-0.4, 0.1, 0.45, 0.35, 0.7, 0.35, color(3));
           for (let n = 0; n < 4; n++) box(-0.5 + n * 0.32, 0.53, -0.15, 0.05, 0.06, 1.1, color(2));
+        }
+        break;
+      case 'graystone-quarry':
+        rocks(color(1), 0.34);
+        if (variant === 0) {
+          for (let tier = 0; tier < 3; tier++)
+            box(
+              0,
+              0.1 + tier * 0.22,
+              tier * 0.12 - 0.15,
+              1.15 - tier * 0.25,
+              0.22,
+              0.9 - tier * 0.15,
+              color(1),
+            );
+        } else if (variant === 1) {
+          box(-0.38, 0.1, -0.32, 0.14, 0.85, 0.14, color(2));
+          box(0.38, 0.1, -0.32, 0.14, 0.85, 0.14, color(2));
+          box(0, 0.88, -0.32, 1.0, 0.12, 0.18, color(2));
+        } else if (variant === 2) {
+          for (let n = 0; n < 3; n++)
+            box(
+              -0.3 + n * 0.3,
+              0.1,
+              n % 2 ? 0.2 : -0.2,
+              0.18,
+              0.28 + n * 0.12,
+              0.18,
+              color(3),
+              true,
+            );
+        } else {
+          box(0, 0.1, -0.22, 0.72, 0.42, 0.54, color(2));
+          box(0, 0.1, 0.35, 0.9, 0.08, 0.14, color(0));
+        }
+        break;
+      case 'city-market':
+        box(0, 0.09, 0, 1.48, 0.08, 1.48, color(0));
+        if (variant === 0) {
+          box(0, 0.17, -0.15, 1.24, 0.68, 0.96, color(2));
+          box(0, 0.85, -0.15, 1.36, 0.22, 1.08, color(1));
+          box(0, 1.07, -0.15, 0.92, 0.2, 0.76, color(1));
+        } else if (variant === 1) {
+          for (const dx of [-0.42, 0.42]) box(dx, 0.17, -0.25, 0.1, 0.72, 0.1, color(2));
+          box(0, 0.84, -0.05, 1.15, 0.08, 0.82, '#3b5d8a');
+          box(0, 0.17, 0.22, 0.88, 0.32, 0.44, color(2));
+        } else if (variant === 2) {
+          box(-0.22, 0.17, 0, 0.14, 0.82, 0.14, '#3b4047');
+          box(-0.22, 0.99, 0, 0.24, 0.22, 0.24, color(3), true);
+          box(0.28, 0.17, 0.12, 0.44, 0.26, 0.44, color(1));
+        } else {
+          box(-0.26, 0.17, -0.2, 0.36, 0.38, 0.36, color(2));
+          box(0.24, 0.17, 0.22, 0.42, 0.3, 0.42, '#486b42');
+          rocks(color(0), 0.18);
+        }
+        break;
+      case 'black-market':
+        box(0, 0.09, 0, 1.48, 0.08, 1.48, color(0));
+        if (variant === 0) {
+          box(-0.34, 0.17, -0.2, 0.48, 0.88, 0.88, color(1));
+          box(0.32, 0.17, 0.15, 0.42, 0.44, 0.42, '#473426');
+        } else if (variant === 1) {
+          for (const dx of [-0.36, 0.36]) box(dx, 0.17, -0.2, 0.1, 0.7, 0.1, '#33251b');
+          box(0, 0.82, -0.1, 1.06, 0.08, 0.86, color(2));
+          box(-0.18, 0.17, 0.18, 0.38, 0.34, 0.38, '#594230');
+        } else if (variant === 2) {
+          box(0, 0.17, 0, 0.36, 0.36, 0.36, '#2b3038');
+          box(0, 0.53, 0, 0.22, 0.24, 0.22, color(3), true);
+          rocks(color(1), 0.24);
+        } else {
+          box(-0.2, 0.17, -0.1, 0.56, 0.4, 0.56, color(1));
+          box(0.25, 0.17, 0.22, 0.46, 0.26, 0.46, '#214e54');
+          rocks(color(0), 0.22);
         }
         break;
       case 'castle':

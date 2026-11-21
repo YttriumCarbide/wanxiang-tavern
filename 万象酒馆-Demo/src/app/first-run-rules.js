@@ -7,19 +7,10 @@ export const API_LABELS = Object.freeze({
   creation: '以太造物',
   map: '地图构筑',
 });
-export const PROMPT_KINDS = Object.freeze([
-  'character',
-  'script',
-  'chat',
-  'quick-chat',
-  'map',
-  'creation',
-]);
 export const CONNECTION_KINDS = Object.freeze(
   Object.keys(API_LABELS).filter((kind) => kind !== 'quick-chat'),
 );
 
-export function missingSetup(status, stage) {
-  const kinds = stage === 'connections' ? CONNECTION_KINDS : PROMPT_KINDS;
-  return kinds.filter((kind) => !status[kind]?.[stage === 'connections' ? 'connection' : 'prompt']);
+export function missingSetup(status) {
+  return CONNECTION_KINDS.filter((kind) => !status[kind]?.connection);
 }

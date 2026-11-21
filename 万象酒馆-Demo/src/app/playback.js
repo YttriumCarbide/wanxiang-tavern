@@ -2,6 +2,7 @@ import { claimKillExperience } from '../growth.js';
 import { claimCooperationAffection } from '../cooperation.js';
 import { claimEnemyDrops } from '../enemy-drops.js';
 import { advance } from '../engine.js';
+import { grantMidBattleOverlordEmblem } from '../emblem-progression.js';
 import { mergeRevealedWeaknessMap } from '../octopath.js';
 import { playbackBeats, PLAYBACK_BEAT_MS } from '../playback-timing.js';
 import { APEP_ID, apepAttack } from '../apep-presentation.js';
@@ -33,15 +34,24 @@ export function createPlayback(context) {
     if (!session.runtime.disposed) banner.hidden = true;
   }
   async function commit(options = {}) {
-    if (session.battle.playing || session.runtime.mode !== 'battle') return;
+    if (session.runtime.disposed || session.battle.playing || session.runtime.mode !== 'battle')
+      return;
     const forcedByBomb = options?.forcedByBomb === true;
     context.overlordBattle?.disarmBombTimer?.();
     context.planning.recompute();
     if (!session.battle.forecast.valid) return context.shell?.toast('请先修正标红的行动。');
-    if (!forcedByBomb && context.onboarding && !context.onboarding.beforeCommit()) return;
-    if (!forcedByBomb && context.companionEvents && !context.companionEvents.beforeCommit()) return;
+    const guided = !forcedByBomb && !session.journey.expedition?.developerEncounter;
+    if (guided && context.onboarding && !context.onboarding.beforeCommit()) return;
+    if (guided && context.companionEvents && !context.companionEvents.beforeCommit()) return;
 
-    if (!forcedByBomb && context.emblems && !context.emblems.beforeCommit()) return;
+    if (guided && context.emblems && !context.emblems.beforeCommit()) return;
+    const token = session.runtime.token;
+    const expedition = session.journey.expedition;
+    const current = () =>
+      !session.runtime.disposed &&
+      session.runtime.mode === 'battle' &&
+      session.runtime.token === token &&
+      session.journey.expedition === expedition;
     session.battle.playing = true;
     context.ledger?.sync();
     try {
@@ -62,21 +72,13 @@ export function createPlayback(context) {
       await showTurnNotice('回合开始', subtitle, 320);
 
       for (const beat of playbackBeats(result)) {
-        if (session.runtime.disposed) return;
+        if (!current()) return;
         session.battle.activeCell = beat.at;
         let beatWaitMs = PLAYBACK_BEAT_MS;
         for (const event of beat.events) {
           if (event.type === 'item') await context.backpack.playItem(event);
-          if (event.type === 'engage') {
-            const screen = document.querySelector('#emblem-screen');
-            if (screen) {
-              screen.classList.remove('awakening');
-              void screen.offsetWidth;
-              screen.classList.add('awakening');
-              setTimeout(() => screen.classList.remove('awakening'), 1100);
-            }
-          }
-          if (session.runtime.disposed) return;
+          if (!current()) return;
+          if (event.type === 'engage') context.planning.playAwakening?.();
           const before = session.battle.display || session.battle.state;
           session.battle.display = event.after;
           session.battle.history.push(
@@ -122,20 +124,23 @@ export function createPlayback(context) {
           ) {
             void context.overlordBattle?.onEvent(event);
           }
+          if (!current()) return;
         }
         context.renderer.render();
         await sleep(beatWaitMs / session.battle.speed);
       }
 
+      if (!current()) return;
       const remainingDeathMs = session.runtime.view?.bossDeathRemainingMs?.() || 0;
       if (remainingDeathMs > 0) await sleep(remainingDeathMs);
+      if (!current()) return;
 
       await showTurnNotice(
         session.battle.state.phase === 'opening' ? '准备结束' : '回合结束',
         subtitle,
         440,
       );
-      if (session.runtime.disposed) return;
+      if (!current()) return;
       context.generation.recordRound(result, session.battle.state);
       const wasOpening = session.battle.state.phase === 'opening';
       const gains = claimKillExperience(
@@ -170,13 +175,19 @@ export function createPlayback(context) {
         context.shell?.toast(`合作击破 · ${cooperation.name}好感 +${cooperation.delta}`);
       context.emblems?.accepted(result);
       session.battle.state = advance(result);
+      if (!['victory', 'defeat'].includes(session.battle.state.phase)) {
+        grantMidBattleOverlordEmblem(
+          session.ai.library,
+          session.battle.state,
+          session.journey.expedition,
+        );
+      }
       session.ai.library.discoveredWeaknesses = mergeRevealedWeaknessMap(
         session.ai.library.discoveredWeaknesses,
         session.battle.state.revealedWeaknesses,
       );
       if (drops.length)
         session.battle.state.items = structuredClone(session.ai.library.inventory.items);
-      context.generation.save();
       session.battle.plan = [];
       context.selection.clearSelection(true);
       context.planning.recompute();
@@ -185,17 +196,27 @@ export function createPlayback(context) {
       if (session.battle.state.phase === 'victory' || session.battle.state.phase === 'defeat') {
         context.overlordBattle?.disarmBombTimer?.();
         context.overlordBattle?.clearSeal?.();
-        void context.journey.showResult().catch((error) => console.error(error));
       } else {
         context.overlordBattle?.sync?.();
+        context.overlordBattle?.checkMechanicTutorial?.(result, session.battle.state);
       }
     } finally {
-      session.battle.display = null;
-      session.battle.playing = false;
-      session.battle.activeCell = -1;
-      context.renderer.render();
-      context.emblems?.check();
-      context.ledger?.sync();
+      if (current()) {
+        session.battle.display = null;
+        session.battle.playing = false;
+        session.battle.activeCell = -1;
+        context.renderer.render();
+        context.emblems?.check();
+        context.ledger?.sync();
+      }
+    }
+    if (!current()) return;
+    context.generation.save();
+    if (['victory', 'defeat'].includes(session.battle.state.phase)) {
+      void context.journey.showResult().catch((error) => {
+        context.developer?.report(error);
+        console.error(error);
+      });
     }
   }
   return { showTurnNotice, commit };

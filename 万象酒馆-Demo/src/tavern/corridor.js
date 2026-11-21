@@ -213,7 +213,9 @@ export async function createCorridorView() {
     window.corridorPreview = null;
   }
 
-  events.on(window, 'pagehide', dispose, { once: true });
+  events.on(window, 'pagehide', (event) => {
+    if (!event.persisted) dispose();
+  });
   events.on(document.getElementById('corridor-talk'), 'click', () => {
     if (!leaving) parent.postMessage({ type: 'tavern-talk', place: 'corridor' }, location.origin);
   });
@@ -222,6 +224,7 @@ export async function createCorridorView() {
 
   try {
     await loading.prepare(['./assets/corridor.glb']);
+    if (disposed) return { dispose };
     const gltf = await loading.gltf('./assets/corridor.glb');
     model = gltf.scene;
     resources.object(model);
@@ -246,8 +249,13 @@ export async function createCorridorView() {
       events,
       assets: loading.assets,
     });
+    if (disposed) {
+      visitors.dispose();
+      return { dispose };
+    }
     visitors.update();
     await loading.finish(renderer, scene, camera);
+    if (disposed) return { dispose };
     const cameFrom = { a: '东厢客房', b: '西厢客房', master: '主卧' }[from];
     updateWhere(cameFrom ? `走廊 · 从${cameFrom}回到廊道` : '走廊 · 三扇房门');
     document.body.classList.add('ready');

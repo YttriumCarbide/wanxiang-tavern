@@ -5,6 +5,7 @@ import { UNIVERSAL_ENEMIES, UNIVERSAL_BOSSES } from './content/universal-adversa
 import { LADDER_ENEMIES, LADDER_BOSSES } from './content/ladder-adversaries.js';
 import { COMMON_ENEMIES, COMMON_BOSSES } from './content/common-adversaries.js';
 import { MILL_ENEMIES, MILL_BOSSES } from './content/mill-adversaries.js';
+import { QUARRY_BOSSES } from './content/quarry-adversaries.js';
 
 const OVERLORD_MODEL_OVERRIDES = Object.freeze({
   apepLamb: { model: 'apep-lamb.glb' },
@@ -16,6 +17,8 @@ const OVERLORD_MODEL_OVERRIDES = Object.freeze({
   aresCannonRight: { model: 'ares.glb', anatomyIndex: 2 },
   radiantWyvern: { model: 'radiant-wyvern.glb' },
   alchemicalPuppet: { model: 'alchemical-puppet.glb' },
+  darkscaleWarlord: { model: 'darkscale-warlord.glb' },
+  banditSyndicateKing: { model: 'bandit-syndicate-king.glb' },
 });
 
 const applyModelOverrides = (list) =>
@@ -44,7 +47,7 @@ export const BUFFS = {
   balance: {
     name: '平衡',
     icon: '衡',
-    text: '攻击伤害均分至三个前场位置，原有状态目标不变。空位不承受伤害。',
+    text: '攻击伤害降低15%（可与其他减伤叠加），并均分至三个前场位置，原有状态目标不变。空位不承受伤害。',
   },
   haste: {
     name: '敏捷',
@@ -92,7 +95,7 @@ export const BUFFS = {
   overload: {
     name: '超限',
     icon: '载',
-    text: '上限1层，下次角色技能消耗翻倍并额外生效一次，用后移除；跨回合、结合结束不消失，跨战斗清除。',
+    text: '上限1层，使下一次行动重复生效一次（×2）；若为攻击技能，每次攻击额外造成结合期间已增加的最大sp与最大hp之和的伤害。用后移除，跨回合保留。',
   },
   meteor: { name: '流星剑姿', icon: '星', text: '本场普通攻击额外攻击一次，不叠加攻击次数' },
   sacrifice: {
@@ -640,6 +643,7 @@ export const BOSSES = [
   ...applyModelOverrides(FOREST_BOSSES),
   ...applyModelOverrides(FROST_BOSSES),
   ...MILL_BOSSES,
+  ...applyModelOverrides(QUARRY_BOSSES),
 ];
 export const DEFINITIONS = Object.fromEntries(
   applyModelOverrides([
@@ -704,6 +708,8 @@ const BOSS_MAP_OVERRIDES = Object.freeze({
   unmooredJudge: 'tide',
   ares: 'frost',
   radiantWyvern: 'relic',
+  darkscaleWarlord: 'graystone-quarry',
+  banditSyndicateKing: 'black-market',
 });
 
 const bossSquadFor = (boss) => {
@@ -713,6 +719,7 @@ const bossSquadFor = (boss) => {
     millVampireBat: ['millDustBat', boss, 'millStrayCat'],
     millMoldSlimeBoss: ['millMiniMoldSlime', boss, 'millPaleSlug'],
     alchemicalPuppet: [boss],
+    darkscaleWarlord: [boss],
     bossBloom: ['warden', boss, 'hound'],
     moonEye: ['moonCrown', 'moonEye', 'moonRoot'],
     radiantWyvern: ['pureCreationElemental', boss, 'pureDestructionElemental'],
@@ -728,7 +735,7 @@ const bossSquadFor = (boss) => {
     ares: ['aresCannonLeft', boss, 'aresCannonRight'],
     ladderWebSpider: ['ladderCliffLizard', boss, 'ladderCarrionBat'],
     ladderCrowman: ['ladderCarrionBat', boss, 'drakeBadlandFalcon'],
-    banditSyndicateKing: ['banditPoacher', boss, 'banditBruiser'],
+    banditSyndicateKing: [boss],
     goblinKingGorg: ['goblinShaman', boss, 'goblinSapper'],
     erosionRiftTyrant: ['erosionSpitter', boss, 'erosionWing'],
   };

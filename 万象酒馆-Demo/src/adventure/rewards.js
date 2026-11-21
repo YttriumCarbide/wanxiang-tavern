@@ -76,3 +76,8 @@ export function eventRewardText(reward) {
     .filter(Boolean)
     .join(' · ');
 }
+
+export function claimedEventRewardText(expedition) {
+  if (!expedition.adventure.event.rewardClaimed) return '';
+  return eventRewardText(eventReward(expedition));
+}

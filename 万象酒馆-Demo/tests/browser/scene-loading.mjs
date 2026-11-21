@@ -45,7 +45,7 @@ export async function sceneLoadingChecks({ browser, baseURL, output }) {
     await navigation;
     await page.locator('#street-status [role="progressbar"]').waitFor();
     assert.equal(await page.evaluate(() => window.modelReady === true), false);
-    const bounds = await page.locator('.scene-loading-card').boundingBox();
+    const bounds = await page.locator('.scene-loading').boundingBox();
     assert(
       bounds.x >= 0 &&
         bounds.y >= 0 &&
@@ -77,6 +77,38 @@ export async function sceneLoadingChecks({ browser, baseURL, output }) {
     await page.locator('canvas').evaluate(() => window.assetPreview.placeNow('bar'));
     await page.locator('#talk-open').waitFor({ state: 'visible' });
     assert.equal(modelRequests, 1, 'outdoor return also reuses the verified model cache');
+    const guards = await page.evaluate(async () => {
+      const { createSceneLoading, createWorldLoadingOverlay } =
+        await import('/src/shared/scene-loading.js');
+      const loading = createSceneLoading(document.createElement('div'), 'Test', {
+        persistent: true,
+      });
+      let finishCompile;
+      let renders = 0;
+      const compile = new Promise((resolve) => {
+        finishCompile = resolve;
+      });
+      const finishing = loading.finish({
+        compileAsync: () => compile,
+        render: () => renders++,
+      });
+      loading.dispose();
+      finishCompile();
+      await finishing;
+      const overlay = createWorldLoadingOverlay('Test');
+      try {
+        await overlay.transition('Test', {
+          onCovered() {
+            throw Error('transition callback');
+          },
+        });
+      } catch (error) {
+        const result = { renders, hidden: overlay.element.hidden, error: error.message };
+        overlay.dispose();
+        return result;
+      }
+    });
+    assert.deepEqual(guards, { renders: 0, hidden: true, error: 'transition callback' });
     assert.deepEqual(errors, [], 'scene navigation has no initialization errors');
     return {
       modelCacheReused: true,

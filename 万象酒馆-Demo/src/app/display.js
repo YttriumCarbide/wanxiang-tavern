@@ -43,13 +43,24 @@ export function guardMouseGestures(events, target = document) {
     events.on(target, type, (event) => event.preventDefault(), { passive: false });
 }
 
+function isHandheld() {
+  return matchMedia('(pointer: coarse)').matches && Math.min(innerWidth, innerHeight) <= 768;
+}
+
+/** The requested layout and the device's landscape host are independent. */
+export function configureGameLayout() {
+  const preference = new URLSearchParams(location.search).get('layout');
+  document.documentElement.dataset.gameLayout =
+    preference === 'mobile' || preference === 'desktop'
+      ? preference
+      : isHandheld()
+        ? 'mobile'
+        : 'desktop';
+}
+
 /** The same game entry runs once inside a landscape viewport; no duplicate game or save owner. */
 export function mountLandscapeHost() {
-  if (
-    new URLSearchParams(location.search).get('display') === 'landscape' ||
-    !matchMedia('(pointer: coarse)').matches ||
-    Math.min(innerWidth, innerHeight) > 768
-  )
+  if (new URLSearchParams(location.search).get('display') === 'landscape' || !isHandheld())
     return false;
   const frame = document.createElement('iframe');
   frame.id = 'landscape-frame';
@@ -97,5 +108,7 @@ export function mountDisplay(context) {
 export function mountOuterGestures() {
   const events = createEventScope();
   guardMouseGestures(events);
-  events.on(window, 'pagehide', () => events.dispose(), { once: true });
+  events.on(window, 'pagehide', (event) => {
+    if (!event.persisted) events.dispose();
+  });
 }

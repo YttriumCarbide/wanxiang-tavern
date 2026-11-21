@@ -73,11 +73,12 @@ export async function launchers() {
   if (process.platform !== 'win32') return { skipped: 'Windows CMD launchers' };
   const port = await freePort();
   const cmd = process.env.ComSpec || path.join(process.env.SystemRoot, 'System32/cmd.exe');
-  const invoke = (folder, file) =>
-    command(cmd, ['/d', '/s', '/c', `""${path.join(folder, file)}" -NoBrowser -Port ${port}"`], {
-      windowsVerbatimArguments: true,
-      timeout: 25000,
-    });
+  const invoke = (folder, file, extra = '') =>
+    command(
+      cmd,
+      ['/d', '/s', '/c', `""${path.join(folder, file)}" -NoBrowser -Port ${port}${extra}"`],
+      { windowsVerbatimArguments: true, timeout: 25000 },
+    );
   try {
     await invoke(path.dirname(root), '一键启动.cmd');
     const first = await waitForServer(`http://127.0.0.1:${port}`);
@@ -89,7 +90,18 @@ export async function launchers() {
     assert.equal((await waitForServer(`http://127.0.0.1:${port}`)).pid, first.pid);
     await invoke(root, '一键关闭.cmd');
     await invoke(path.dirname(root), '一键关闭.cmd');
-    return { cmdEntryPoints: 5, reusedProcess: true, repeatedStopSafe: true };
+    const preview = '一键启动UI预览.cmd';
+    const previewOutput = await invoke(path.dirname(root), preview);
+    const baseURL = `http://127.0.0.1:${port}`;
+    assert(previewOutput.includes(baseURL));
+    assert.equal((await waitForServer(baseURL)).diskStorage, false);
+    await invoke(path.dirname(root), preview, ' -Stop');
+    return {
+      cmdEntryPoints: 6,
+      reusedProcess: true,
+      repeatedStopSafe: true,
+      previewIsolated: true,
+    };
   } finally {
     await stopServer(port);
   }

@@ -47,6 +47,8 @@ export function checkOutputSchema(value, schema, path = 'output') {
     if (!Number.isInteger(value)) fail('必须是整数');
     if (value < schema.minimum || value > schema.maximum)
       fail(`范围需要${schema.minimum}～${schema.maximum}`);
+  } else if (schema.type === 'null') {
+    if (value !== null) fail('必须为空值');
   } else if (schema.type === 'boolean' && typeof value !== 'boolean') fail('必须是布尔值');
 }
 
@@ -65,9 +67,9 @@ export function outputSchemaIssues(value, schema, path = 'output') {
         issues.push({ path: `${path}.${key}`, message: '缺少必填字段' });
     }
     for (const [key, item] of Object.entries(value)) {
-      const child = schema.properties[key];
-      if (!child) issues.push({ path: `${path}.${key}`, message: '不是规定字段' });
-      else issues.push(...outputSchemaIssues(item, child, `${path}.${key}`));
+      if (!Object.hasOwn(schema.properties, key))
+        issues.push({ path: `${path}.${key}`, message: '不是规定字段' });
+      else issues.push(...outputSchemaIssues(item, schema.properties[key], `${path}.${key}`));
     }
     return issues;
   }

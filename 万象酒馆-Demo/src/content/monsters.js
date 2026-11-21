@@ -288,11 +288,23 @@ export const MILL_MONSTER_LORE = Object.freeze({
   },
 });
 
+export const QUARRY_MONSTER_LORE = Object.freeze({
+  darkscaleWarlord: {
+    appearance:
+      '盘踞在灰岩旧采石场深层裂隙岩缝前的初生蚀鳞霸主。体型魁梧巍峨，披覆层叠如黑曜甲胄的暗紫龙鳞与苍白灰岩骨脊，双角向后弯卷成初生王冠之势；胸口骨肋间搏动着黑紫裂隙暗核，右臂畸化为丛生暗晶的裂刃巨爪，左腕犹自拖曳着挣断的采石铁枷，长尾末梢凝结着锋锐晶锤，周身环绕着悬浮游离暗尘。',
+    habits:
+      '自岩缝持续贪婪汲取黑龙残余侵蚀气息，已凝聚出清晰领地意识与统御低阶蚀鳞的本能。一旦有人逼近裂隙岩缝，便骤然苏醒并以咆哮号令游离暗尘围攻闯入者。',
+    motion:
+      '平日伏身低吼、暗核缓缓明灭；接敌时高昂龙首震耳咆哮驱使暗尘齐扑，挥动畸化右晶刃猛劈，腾空重砸震裂岩地，或蓄力回身甩出晶棘巨尾横扫全场。',
+  },
+});
+
 export const ALL_MONSTER_LORE = Object.freeze({
   ...MONSTER_LORE,
   ...RUINS_MONSTER_LORE,
   ...FOREST_MONSTER_LORE,
   ...MILL_MONSTER_LORE,
+  ...QUARRY_MONSTER_LORE,
   ...buildGeneratedLore([
     ...FROST_ENEMIES,
     ...FROST_BOSSES,

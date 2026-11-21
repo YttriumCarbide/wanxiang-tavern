@@ -27,6 +27,7 @@ import {
 } from './fixtures/ai.js';
 
 test('generated data compiles once into an independent combat snapshot with real custom skills', () => {
+  const officialHeroSnapshot = structuredClone(HEROES[0]);
   const library = newLibrary(),
     raw = characterFixture(),
     entry = normalizeCharacter(raw, 'character-test');
@@ -44,7 +45,7 @@ test('generated data compiles once into an independent combat snapshot with real
   );
   entry.combat.attack = 3;
   assert.equal(abilityFor(state, 'aegis', 'attack').effects[0].value, 12);
-  assert.equal(HEROES[0].attack, 6);
+  assert.deepEqual(HEROES[0], officialHeroSnapshot);
   const next = newEncounter(encounterSpec(1), advance(result), 1);
   assert.equal(abilityFor(next, 'aegis', 'attack').effects[0].value, 12);
   assert.equal(next.units.aegis.mp, result.final.units.aegis.mp);

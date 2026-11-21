@@ -157,10 +157,10 @@ export function characterGenerationPlan(input = {}) {
 function assertDesign(value, message) {
   if (!value) throw Error('角色机制设计不符：' + message);
 }
-function validateComplexity(data, plan) {
+function validateComplexity(data) {
   const abilities = [...data.skills, data.entrySkill];
   const marked = !!data.mark || data.basicAttackMark;
-  assertDesign(!marked || (data.mark && plan.complexity >= 5), '本档不允许专属标记');
+  assertDesign(!marked || data.mark, '标记效果需要本角色专属标记');
   for (const ability of abilities) {
     const lists =
       ability.kind === 'passive' ? ability.rules.map((rule) => rule.effects) : [ability.effects];
@@ -176,17 +176,12 @@ function validateComplexity(data, plan) {
     if (ability.kind === 'passive') {
       for (const rule of ability.rules) {
         assertDesign(rule.conditions.length <= 1, '每条规则最多一个条件');
-        assertDesign(!rule.conditions.length || plan.complexity >= 3, '本档不允许条件');
         assertDesign(
           !rule.conditions.some((condition) => EXCLUSIVE_BUFFS.includes(condition.buff)),
           '条件不能引用角色或纹章专属状态',
         );
         if (rule.conditions.some((condition) => condition.type === 'mark'))
-          assertDesign(data.mark && plan.complexity >= 5, '标记条件需要本角色专属标记');
-        assertDesign(
-          plan.limits.passiveModes.includes(rule.mode),
-          `本档不允许事件被动：当前第${plan.complexity}档「${plan.complexityName}」，事件被动需要第4档起；请改用本档允许的主动效果或持续正面状态光环，并同步修改技能描述`,
-        );
+          assertDesign(data.mark, '标记条件需要本角色专属标记');
         if (rule.mode === 'event')
           assertDesign(rule.event && rule.limit && rule.scope, '事件被动必须指定事件、次数和范围');
         assertDesign(
@@ -201,18 +196,13 @@ function validateComplexity(data, plan) {
       }
     }
     for (const list of lists) {
-      assertDesign(list.length <= plan.limits.effectsPerSkill, '效果数量超过本档上限');
       for (const effect of list) {
-        assertDesign(!effect.when || plan.complexity >= 3, '本档不允许条件强化');
         const usesMark =
           effect.type === 'mark' ||
           effect.perMark ||
           effect.consumeMark ||
           effect.when?.type === 'mark';
-        assertDesign(
-          !usesMark || (data.mark && plan.complexity >= 5),
-          '标记效果需要本角色专属标记',
-        );
+        assertDesign(!usesMark || data.mark, '标记效果需要本角色专属标记');
         assertDesign(!effect.consumeMark || effect.perMark, '消耗标记必须用于本次标记强化');
         assertDesign(
           !effect.perMark || ['damage', 'heal', 'shield'].includes(effect.type),
@@ -220,21 +210,6 @@ function validateComplexity(data, plan) {
         );
       }
     }
-  }
-  if (plan.complexity === 5 && marked) {
-    const markAbilities = abilities.filter(
-      (ability) =>
-        ability.rules?.some((rule) =>
-          rule.conditions.some((condition) => condition.type === 'mark'),
-        ) ||
-        (ability.effects || ability.rules?.flatMap((rule) => rule.effects) || []).some(
-          (effect) => effect.type === 'mark' || effect.perMark || effect.when?.type === 'mark',
-        ),
-    );
-    assertDesign(
-      markAbilities.length <= 1,
-      '第五档只允许普攻积累与一个技能消耗；跨技能联动需要第六档',
-    );
   }
   if (marked) {
     const all = abilities.flatMap(
@@ -261,7 +236,7 @@ export function compileCharacterDesign(raw, input = {}) {
   if (raw.schemaVersion !== 4) return raw;
   const plan = characterGenerationPlan(input);
   const source = raw.data;
-  validateComplexity(source, plan);
+  validateComplexity(source);
   const profile = plan.profiles[source.profile];
   assertDesign(profile, '职业定位无效');
   const numericEffect = (effect, ability, passive = false) => {

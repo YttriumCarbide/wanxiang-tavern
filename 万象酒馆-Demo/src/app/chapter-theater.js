@@ -661,7 +661,12 @@ export function createChapterTheater(context) {
     singlePage: singlePageParam = false,
     ceremonyMs = CEREMONY_DURATION_MS,
   } = {}) {
-    if (!root || session.runtime.disposed || !String(prose || heading || '').trim()) {
+    if (
+      !root ||
+      session.runtime.disposed ||
+      context.developer?.skipScenes() ||
+      !String(prose || heading || '').trim()
+    ) {
       return Promise.resolve(true);
     }
     if (active) finish(false);
@@ -782,6 +787,9 @@ export function createChapterTheater(context) {
     },
     play,
     playOpening,
+    skip() {
+      finish(true);
+    },
     cancel() {
       finish(false);
     },

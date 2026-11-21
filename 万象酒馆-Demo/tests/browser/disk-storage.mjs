@@ -43,18 +43,19 @@ export async function diskStorageChecks({ browser, baseURL, output }) {
     await first.goto(baseURL + '/?display=landscape');
     await first.waitForFunction(() => window.demo?.getLibrary().inventory.gold === 326);
     assert.equal(await first.locator('meta[name="wanxiang-disk-storage"]').count(), 1);
-    await first.locator('[data-daily="open"]').click();
-    await first.locator('[data-daily-slot="0"]').click();
+    await first.locator('[data-daily="outing"]').click();
+    await first.locator('[data-tavern-exit="street"]').click();
     const saved = first.waitForResponse((response) => {
       if (response.url() !== baseURL + '/__demo/storage' || response.request().method() !== 'POST')
         return false;
       const entries = response.request().postDataJSON()?.entries || [];
       return entries.some(
         ([key, value]) =>
-          key === libraryKey && JSON.parse(value).daily.draft.some(({ kind }) => kind === 'outing'),
+          key === libraryKey &&
+          JSON.parse(value).journeyActivities.some(({ kind }) => kind === 'outing'),
       );
     });
-    await first.locator('[data-daily-action="outing"]').click();
+    await first.locator('[data-daily="home"]').click();
     assert((await saved).ok(), 'regular gameplay is committed to disk automatically');
   } finally {
     await first.close();
@@ -67,13 +68,19 @@ export async function diskStorageChecks({ browser, baseURL, output }) {
   const file = path.join(state.directory, '当前存档.json');
   assert.equal(path.dirname(state.directory), path.resolve(output, '..'));
   const snapshot = JSON.parse(await readFile(file, 'utf8'));
-  assert.equal(JSON.parse(new Map(snapshot.records).get(libraryKey)).daily.draft[0].kind, 'outing');
+  assert(
+    JSON.parse(new Map(snapshot.records).get(libraryKey)).journeyActivities.some(
+      ({ kind }) => kind === 'outing',
+    ),
+  );
 
   const clean = await browser.newPage({ viewport: { width: 1120, height: 700 } });
   try {
     await dismissAutomaticJournals(clean);
     await clean.goto(baseURL + '/?display=landscape');
-    await clean.waitForFunction(() => window.demo?.getLibrary().daily.draft[0]?.kind === 'outing');
+    await clean.waitForFunction(() =>
+      window.demo?.getLibrary().journeyActivities.some(({ kind }) => kind === 'outing'),
+    );
     assert.equal(await clean.evaluate(() => demo.getLibrary().inventory.gold), 326);
     assert(!(await clean.locator('#start-screen').isVisible()));
     assert.match(await clean.locator('.local-data-panel p').first().textContent(), /自动保存到/);

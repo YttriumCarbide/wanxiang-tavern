@@ -54,6 +54,9 @@ export function createWorldbookEditor({ session, events, api, inputFor, onSaved,
   });
   let tokenTimer = null,
     tokenRevision = 0;
+  let draftLibrary = null;
+  let opening = false;
+  let switching = false;
   const notice = (text) => {
     $('#world-status').textContent = text;
   };
@@ -119,24 +122,38 @@ export function createWorldbookEditor({ session, events, api, inputFor, onSaved,
   }
   async function flush() {
     clearTimeout(state.saveTimer);
-    if (state.savePromise) await state.savePromise;
-    if (!state.dirty || !state.draft) return;
-    capture();
-    const revision = state.revision;
-    const book = normalizeWorldbook(state.draft).book;
-    const privateBook = state.id === SUMMARY_WORLDBOOK;
-    if (privateBook) session.ai.library.summaryWorldbook = book;
-    state.savePromise = privateBook
-      ? Promise.resolve(savePrivate?.())
-      : api('worldbooks/save', { id: state.id, book });
-    try {
-      await state.savePromise;
-      if (session.runtime.disposed) return;
-      if (revision === state.revision) state.dirty = false;
-      if (!privateBook) onSaved?.(book);
-      notice('已保存');
-    } finally {
-      state.savePromise = null;
+    while (!session.runtime.disposed && draftLibrary === session.ai.library && state.draft) {
+      if (state.savePromise) {
+        await state.savePromise;
+        continue;
+      }
+      if (!state.dirty) return;
+      capture();
+      const { id, revision } = state;
+      const book = normalizeWorldbook(state.draft).book;
+      const owner = draftLibrary;
+      state.savePromise = Promise.resolve().then(async () => {
+        if (session.runtime.disposed || owner !== session.ai.library) return;
+        if (id === SUMMARY_WORLDBOOK) {
+          const previous = owner.summaryWorldbook;
+          owner.summaryWorldbook = book;
+          if (savePrivate?.() === false) {
+            owner.summaryWorldbook = previous;
+            throw Error('浏览器存储空间不足，请导出世界书后整理');
+          }
+        } else {
+          await api('worldbooks/save', { id, book });
+        }
+        if (session.runtime.disposed || owner !== session.ai.library) return;
+        if (revision === state.revision) state.dirty = false;
+        if (id !== SUMMARY_WORLDBOOK) onSaved?.(book);
+        notice('已保存');
+      });
+      try {
+        await state.savePromise;
+      } finally {
+        state.savePromise = null;
+      }
     }
   }
   function dirty() {
@@ -383,20 +400,37 @@ ${escapeText(entry.content)}</textarea>`;
     renderList();
   }
   async function open() {
-    const result = await api('worldbooks');
-    state.settings = result.settings;
-    state.books = result.books;
-    const options = [...result.books, { id: SUMMARY_WORLDBOOK, name: '总结世界书' }];
-    bookPicker.replaceChildren(...options.map(({ id, name }) => new Option(name, id)));
-    await loadBook(options.some(({ id }) => id === state.id) ? state.id : options[0].id);
-    $('#world-dialog').showModal();
+    const dialog = $('#world-dialog');
+    if (opening || dialog.open) return;
+    opening = true;
+    const owner = session.ai.library;
+    try {
+      const result = await api('worldbooks');
+      if (session.runtime.disposed || owner !== session.ai.library) return;
+      const options = [...result.books, { id: SUMMARY_WORLDBOOK, name: '总结世界书' }];
+      const id = options.some((option) => option.id === state.id) ? state.id : options[0].id;
+      const draft = await readBook(id, owner);
+      if (!draft || session.runtime.disposed || owner !== session.ai.library) return;
+      state.settings = result.settings;
+      state.books = result.books;
+      bookPicker.replaceChildren(...options.map(({ id, name }) => new Option(name, id)));
+      showBook(id, draft, owner);
+      dialog.showModal();
+    } finally {
+      opening = false;
+    }
   }
-  async function loadBook(id) {
+  async function readBook(id, owner) {
+    return id === SUMMARY_WORLDBOOK
+      ? structuredClone(syncSummaryWorldbook(owner))
+      : (await api(`worldbooks/${id}`))?.book;
+  }
+  function showBook(id, draft, owner) {
+    draftLibrary = owner;
     state.id = id;
-    state.draft =
-      id === SUMMARY_WORLDBOOK
-        ? structuredClone(syncSummaryWorldbook(session.ai.library))
-        : (await api(`worldbooks/${id}`)).book;
+    state.draft = draft;
+    clearTimeout(tokenTimer);
+    tokenRevision++;
     bookPicker.value = id;
     category.value = 'all';
     for (const option of category.options) {
@@ -453,12 +487,24 @@ ${escapeText(entry.content)}</textarea>`;
     bookPicker,
     'change',
     guard(async () => {
+      if (switching) return;
       const id = bookPicker.value;
+      const owner = draftLibrary;
+      const dialog = $('#world-dialog');
+      switching = true;
       bookPicker.disabled = exportButton.disabled = true;
       try {
         await flush();
-        await loadBook(id);
+        if (!dialog.open || session.runtime.disposed || owner !== session.ai.library) return;
+        const draft = await readBook(id, owner);
+        if (!draft || !dialog.open || session.runtime.disposed || owner !== session.ai.library)
+          return;
+        await flush();
+        if (!dialog.open || session.runtime.disposed || owner !== session.ai.library) return;
+        showBook(id, draft, owner);
       } finally {
+        switching = false;
+        bookPicker.value = state.id;
         bookPicker.disabled = exportButton.disabled = false;
       }
     }),
@@ -478,7 +524,7 @@ ${escapeText(entry.content)}</textarea>`;
   events.on($('#ai-worldbooks'), 'click', guard(open));
   const close = async () => {
     await flush();
-    $('#world-dialog').close();
+    if (!session.runtime.disposed) $('#world-dialog').close();
   };
   events.on($('#world-close'), 'click', guard(close));
   events.on($('#world-dialog'), 'cancel', (event) => {
@@ -489,8 +535,7 @@ ${escapeText(entry.content)}</textarea>`;
     $('#world-save'),
     'click',
     guard(async () => {
-      capture();
-      state.dirty = true;
+      dirty();
       await flush();
     }),
   );

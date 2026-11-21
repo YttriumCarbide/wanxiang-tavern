@@ -1,5 +1,19 @@
 /** Read the declared text-only tool without evaluating imported code or changing prompts. */
 export function presetOutputTransport(preset) {
+  if (preset.extensions?.wanxiang?.builtinOutputTool === true) {
+    return {
+      outputTool: {
+        name: 'game_content',
+        description: '返回完整游戏回复，保留正文和任务要求的结构化标签。',
+        parameters: {
+          type: 'object',
+          properties: { content: { type: 'string' } },
+          required: ['content'],
+          additionalProperties: false,
+        },
+      },
+    };
+  }
   const bindings = preset.extensions?.SPreset?.ToolBindings || {};
   const active = new Set(
     preset.prompt_order[0].order.filter((entry) => entry.enabled).map((entry) => entry.identifier),

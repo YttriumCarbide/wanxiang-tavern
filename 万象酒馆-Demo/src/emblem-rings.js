@@ -32,6 +32,12 @@ export const RING_DESIGNS = Object.freeze({
     metal: '#dce4f2',
     detail: '渐宽的白金印戒肩承托月瞳包镶面。弦月与七粒星钻嵌于外沿，深蓝珐琅藏在外壁凹槽。',
   },
+  'cang-ming': {
+    name: '裂匣之鸣',
+    color: '#f28b49',
+    metal: '#c78a4e',
+    detail: '赤铜与锻金交叠成带楔棱的厚实戒肩，八角琥珀晶核嵌于裂隙托座间，外缘刻有四道破壁楔槽。',
+  },
 });
 
 /** Finger axis is Z. A smooth, continuous radius-0.63 bore stays free of ornaments.
@@ -595,6 +601,46 @@ export function createEmblemRing(id) {
       0.003,
       enamel,
     );
+  } else if (id === 'cang-ming') {
+    band(0.14);
+    outerRails(0.14, gold);
+    basket(0.22, 0.22, 0.875, 8, pale);
+    stepGem(0, 0.945, 0, 0.205, 0.205, 0.145);
+    oval(0.245, 0.245, 0.885, gold, 0.02);
+    for (const sign of [-1, 1]) {
+      shoulder(sign, true, metal);
+      for (const z of [-0.14, 0.14]) {
+        wire(
+          [
+            [sign * 0.48, 0.64, z * 0.72],
+            [sign * 0.32, 0.81, z * 0.95],
+            [sign * 0.17, 0.89, z * 0.88],
+          ],
+          0.02,
+          gold,
+        );
+      }
+      for (const sz of [-1, 1]) {
+        gem(sign * 0.205, 0.89, sz * 0.205, 0.028, 0.028, 0.035, 8, diamond);
+        bead([sign * 0.255, 0.855, sz * 0.155], 0.011, pale);
+      }
+    }
+    for (let i = 0; i < 4; i++) {
+      const a = Math.PI * 0.25 + (i * Math.PI) / 2;
+      const cos = Math.cos(a),
+        sin = Math.sin(a);
+      wire(
+        [
+          [cos * 0.26, 0.885, sin * 0.26],
+          [cos * 0.23, 0.945, sin * 0.23],
+          [cos * 0.175, 0.992, sin * 0.175],
+          [cos * 0.155, 0.975, sin * 0.155],
+        ],
+        0.013,
+        pale,
+      );
+    }
+    milgrain(0.245, 0.245, 0.896, 32, pale, 0, 0, 0.0055);
   } else {
     band(0.16);
     outerRails(0.16, pale);

@@ -1,5 +1,4 @@
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { legacySession } from './legacy-session.mjs';
 
@@ -150,6 +149,8 @@ export async function firstRunApplyChecks({ browser, baseURL, output }) {
     await page.goto(baseURL + '/?display=landscape');
     await page.waitForFunction(() => !!window.demo);
     await page.locator('#start-journey').click();
+    await page.locator('#setup-wizard[data-step="mode"]').waitFor({ state: 'visible' });
+    await page.locator('#setup-mode-free').click();
     await page.locator('#ai-dialog[data-setup="connections"]').waitFor();
     await page.waitForFunction(() => !document.querySelector('#ai-model').disabled);
     const intro = await page.locator('#setup-intro').boundingBox();
@@ -184,20 +185,86 @@ export async function firstRunApplyChecks({ browser, baseURL, output }) {
     for (const id of ['script', 'chat', 'quick-chat', 'creation'])
       assert.equal(profiles[id].model, 'first-run-fixture');
     await page.screenshot({ path: path.join(output, 'first-run-confirm-mobile.png') });
-    return { mobileConfirmation: true, appliesSelectedProfiles: true };
+    for (const id of ['summary', 'map'])
+      await page.locator(`[data-apply-kind][value="${id}"]`).check();
+    await confirm.click();
+    await page.locator('#ai-status').filter({ hasText: '已将所选连接预设应用到 5' }).waitFor();
+    await page.locator('#setup-next').click();
+    await page.locator('#new-game[open]').waitFor({ state: 'visible' });
   } finally {
     await page.close();
+  }
+
+  // Lazy mode onboarding + split dual-model setup without preset import + restyled protagonist creation
+  const lazyPage = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  try {
+    await lazyPage.route('**/api/ai/models/*', (route) =>
+      route.fulfill({ json: { models: ['strong-script-model', 'fast-helper-model'] } }),
+    );
+    await lazyPage.goto(baseURL);
+    await lazyPage.waitForFunction(() => !!window.demo);
+    await lazyPage.evaluate(() => localStorage.removeItem('wanxiang.setup.completed.v1'));
+    await lazyPage.locator('#start-journey').click();
+    await lazyPage.locator('#setup-wizard[data-step="mode"]').waitFor({ state: 'visible' });
+    await lazyPage.locator('#setup-mode-lazy').click();
+    await lazyPage.locator('#setup-wizard[data-step="lazy-primary"]').waitFor({ state: 'visible' });
+
+    await lazyPage.locator('#wizard-url').fill('http://127.0.0.1:9999/v1');
+    await lazyPage.locator('#wizard-key').fill('lazy-test-key');
+    await lazyPage.locator('#wizard-fetch-models').click();
+    await lazyPage.locator('#wizard-model-list').waitFor({ state: 'visible' });
+    await lazyPage.locator('#wizard-model-list').selectOption('strong-script-model');
+    assert.equal(await lazyPage.locator('#wizard-model').inputValue(), 'strong-script-model');
+    await lazyPage.locator('#wizard-primary-next').click();
+
+    await lazyPage.locator('#setup-wizard[data-step="lazy-split"]').waitFor({ state: 'visible' });
+    await lazyPage.locator('#wizard-split-yes').click();
+    await lazyPage
+      .locator('#setup-wizard[data-step="lazy-secondary"]')
+      .waitFor({ state: 'visible' });
+    assert.equal(
+      await lazyPage.locator('#wizard-sec-url').inputValue(),
+      'http://127.0.0.1:9999/v1',
+    );
+    assert.equal(await lazyPage.locator('#wizard-sec-key').inputValue(), 'lazy-test-key');
+    await lazyPage.locator('#wizard-sec-fetch-models').click();
+    await lazyPage.locator('#wizard-sec-model-list').waitFor({ state: 'visible' });
+    await lazyPage.locator('#wizard-sec-model-list').selectOption('fast-helper-model');
+    await lazyPage.locator('#wizard-secondary-next').click();
+
+    await lazyPage.locator('#new-game[open]').waitFor({ state: 'visible' });
+    assert.equal(await lazyPage.locator('#wizard-preset-file').count(), 0);
+    const cfg = await lazyPage.evaluate(async () => (await fetch('/api/ai/config')).json());
+    assert.equal(cfg.script.model, 'strong-script-model');
+    for (const k of ['character', 'chat', 'summary', 'map', 'creation']) {
+      assert.equal(cfg[k].model, 'fast-helper-model');
+    }
+
+    await lazyPage.locator('[data-gender-preset="女"]').click();
+    assert.equal(await lazyPage.locator('#creation-form input[name="gender"]').inputValue(), '女');
+    await lazyPage.locator('[data-personality-preset="冷静果决"]').click();
+    await lazyPage.locator('[data-personality-preset="毒舌护短"]').click();
+    assert.equal(
+      await lazyPage.locator('#creation-form textarea[name="personality"]').inputValue(),
+      '冷静果决、毒舌护短',
+    );
+    assert.equal(await lazyPage.locator('#creation-form select[name="skillStyle1"]').count(), 1);
+    assert.equal(await lazyPage.locator('#creation-form select[name="skillStyle2"]').count(), 1);
+    await lazyPage.screenshot({ path: path.join(output, 'lazy-setup-and-creation.png') });
+    return {
+      mobileConfirmation: true,
+      appliesSelectedProfiles: true,
+      lazySplitSetup: true,
+      creationChipsAndStyles: true,
+    };
+  } finally {
+    await lazyPage.close();
   }
 }
 
 export async function apiSettingsChecks({ browser, baseURL, output }) {
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
-  const failures = [],
-    imported = [];
-  let helperLoads = 0;
-  page.on('request', (request) => {
-    if (request.url().includes('/api/ai/helper-storage/')) helperLoads++;
-  });
+  const failures = [];
   page.on('pageerror', (failure) => failures.push(failure.message));
   await legacySession(page);
   await page.route('**/api/ai/models/*', (route) =>
@@ -230,7 +297,7 @@ export async function apiSettingsChecks({ browser, baseURL, output }) {
     await page.locator('#api-preset-name').fill('第一连接');
     await page.locator('#ai-models').click();
     await page.locator('#ai-model-list').waitFor({ state: 'visible' });
-    assert.equal(helperLoads, 0, 'connection settings must not load prompt helper scripts');
+    assert.equal(await page.locator('#helper-dialog').count(), 0);
     assert.equal(await page.locator('#api-preset-name').inputValue(), '第一连接');
     assert.deepEqual(await page.locator('#ai-model-list option').allTextContents(), [
       'a-model',
@@ -289,173 +356,25 @@ export async function apiSettingsChecks({ browser, baseURL, output }) {
     assert.equal(await page.locator('#prompt-kind option[value="summary"]').count(), 1);
     await page.locator('[data-ai-tab="prompts"]').click();
     await page.locator('#prompt-kind').selectOption('chat');
-    const file = process.env.WANXIANG_TEST_PRESET_FILE;
-    const fixture = file
-      ? { name: path.basename(file), mimeType: 'application/json', buffer: await readFile(file) }
-      : {
-          name: 'compatibility.json',
-          mimeType: 'application/json',
-          buffer: Buffer.from(
-            JSON.stringify({
-              prompts: [
-                {
-                  identifier: 'main',
-                  name: '主提示',
-                  content: '自然回答 {{lastUserMessage}}，骰子 {{roll 1d999999}}。',
-                  role: 'system',
-                },
-                { identifier: 'chatHistory', marker: true },
-              ],
-              openai_max_context: 2000000,
-              openai_max_tokens: 30000,
-              extensions: { regex_scripts: [], tavern_helper: { scripts: [] } },
-            }),
-          ),
-        };
-    await page.locator('#prompt-import-file').setInputFiles(fixture);
-    await page
-      .locator('#ai-status')
-      .filter({ hasText: '已导入并应用' })
-      .waitFor({ timeout: 60000 });
-    const id = await page.locator('#prompt-select').inputValue();
-    imported.push(id);
-    const saved = await page.evaluate(
-      async (id) => (await (await fetch('/api/ai/prompts/' + id)).json()).preset,
-      id,
-    );
-    const profile = await page.evaluate(async () => await (await fetch('/api/ai/config')).json());
-    assert.equal(profile.chat.promptPresetId, id);
-    assert.equal(
-      await page.locator('#ai-kind').inputValue(),
-      'summary',
-      'Prompt purpose must not change the connection form',
-    );
-    assert.equal(Number(await page.locator('[data-sampling="contextSize"]').inputValue()), 2000000);
-    if (file) {
-      assert.equal(saved.prompts.length, 232);
-      assert.equal(saved.extensions.regex_scripts.length, 32);
-      assert(saved.extensions.tavern_helper.scripts[0].content.length > 1000000);
-    }
-    const separate = await post('prompts/save', { preset: { ...saved, name: '独立用途预设' } });
-    imported.push(separate.preset.id);
-    await post('prompts/select', { kind: 'creation', id: separate.preset.id });
-    await page.locator('[data-prompt-entry="main"] button[data-prompt-edit]').last().click();
-    const main = page.locator('#prompt-entry-dialog [data-prompt-field="content"]');
-    await page.locator('#prompt-entry-dialog').waitFor({ state: 'visible' });
-    assert(await main.isVisible());
-    const desktopSize = page.viewportSize();
-    await page.setViewportSize({ width: 844, height: 390 });
-    assert.equal(
-      await page
-        .locator('#prompt-entry-dialog')
-        .evaluate((node) => node.parentElement === document.body),
-      true,
-    );
-    const editorBox = await page.locator('#prompt-entry-dialog').boundingBox();
-    assert(
-      editorBox.x >= 0 &&
-        editorBox.y >= 0 &&
-        editorBox.x + editorBox.width <= page.viewportSize().width + 1,
-    );
-    assert(editorBox.y + editorBox.height <= 391);
-    await page.screenshot({ path: path.join(output, 'preset-editor-mobile.png') });
-    await page.setViewportSize(desktopSize);
-    assert.equal(
-      await main.evaluate((node) => {
-        const event = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
-        node.dispatchEvent(event);
-        return event.defaultPrevented;
-      }),
-      false,
-    );
-    await main.fill((await main.inputValue()) + '\nPRESET_NEXT_REQUEST_FRESH');
-    await page.locator('#prompt-entry-save').click();
-    await page.locator('[data-apply-prompt-kind][value="script"]').check();
-    await page.locator('[data-apply-prompt-kind][value="quick-chat"]').check();
-    await page.locator('#prompt-apply-many').click();
-    await page.locator('#ai-status').filter({ hasText: '已将当前预设及调节应用到 2' }).waitFor();
-    const nextProfiles = await page.evaluate(async () => (await fetch('/api/ai/config')).json());
-    assert.equal(nextProfiles.script.promptPresetId, id);
-    assert.equal(nextProfiles['quick-chat'].promptPresetId, id);
-    assert.equal(
-      nextProfiles.creation.promptPresetId,
-      separate.preset.id,
-      'unselected purposes retain their own preset',
-    );
+    assert.equal(await page.locator('#prompt-import-file, #ai-regex, #helper-open').count(), 0);
+    const style = page.locator('[data-prompt-option="style"]');
+    await style.selectOption('sensory');
+    await page.locator('#prompt-options-save').click();
+    await page.locator('#ai-status').filter({ hasText: '已保存小猫之神' }).waitFor();
     const previewResponse = page.waitForResponse(
       (response) =>
         response.url().endsWith('/api/ai/prompts/preview') &&
         response.request().method() === 'POST',
     );
     await page.locator('#prompt-preview').click();
-    await page
-      .locator('#ai-result-title')
-      .filter({ hasText: '未调用模型' })
-      .waitFor({ timeout: 60000 });
-    const preview = await (await previewResponse).json();
-    assert(preview.messages.length >= 2);
-    assert(
-      preview.messages.some((message) => message.content.includes('PRESET_NEXT_REQUEST_FRESH')),
-      'saved adjustments enter the very next request without entering a dungeon',
-    );
-    assert.equal(profile.chat.promptProcessing, 'strict');
-    assert(preview.messages.some((message) => message.role === 'system'));
-    assert(preview.messages.some((message) => message.role === 'user'));
+    const response = await previewResponse;
+    const preview = await response.json();
+    assert(response.ok(), JSON.stringify(preview));
+    assert(preview.messages.some((message) => message.content.includes('五感')));
+    assert(preview.messages.some((message) => message.content.includes('wanxiang_output')));
     assert(preview.tokens.inputEstimate > 0);
-    assert(!preview.messages.some((message) => /{{(?:getvar|setvar|roll)\b/.test(message.content)));
-    await page.screenshot({ path: path.join(output, 'izumi-preset-preview.png') });
-    if (file) {
-      await page.locator('#helper-open').click();
-      const frame = page.frameLocator('#helper-frame');
-      await frame
-        .locator('#izumi-floating-window-v1')
-        .waitFor({ state: 'visible', timeout: 60000 });
-      await frame.locator('#izumi-floating-window-v1').click();
-      await frame.locator('#izumi-floating-window-v1-panel').waitFor({ state: 'visible' });
-      await frame
-        .locator('[data-action="function-section"][data-section]:not([data-section="overview"])')
-        .first()
-        .click();
-      const beforeToggle = saved.prompt_order[0].order
-        .map((entry) => `${entry.identifier}:${entry.enabled}`)
-        .join('|');
-      const toggle = frame.locator('[data-action="toggle"][data-index]:not([disabled])').first();
-      await toggle.scrollIntoViewIfNeeded();
-      await toggle.click();
-      await page.waitForFunction(
-        async ({ id, before }) => {
-          const value = (await (await fetch('/api/ai/prompts/' + id)).json()).preset;
-          return (
-            value.prompt_order[0].order
-              .map((entry) => `${entry.identifier}:${entry.enabled}`)
-              .join('|') !== before
-          );
-        },
-        { id, before: beforeToggle },
-        { timeout: 20000, polling: 300 },
-      );
-      await frame
-        .locator('body')
-        .evaluate(() =>
-          localStorage.setItem('compat-private-example', 'PRIVATE_HELPER_PREFERENCE'),
-        );
-      await page.waitForFunction(
-        async (id) =>
-          (await (await fetch('/api/ai/helper-storage/' + id)).json()).storage[
-            'compat-private-example'
-          ] === 'PRIVATE_HELPER_PREFERENCE',
-        id,
-        { polling: 300 },
-      );
-      assert(
-        !(
-          await page.evaluate(async (id) => (await fetch('/api/ai/prompts/' + id)).text(), id)
-        ).includes('PRIVATE_HELPER_PREFERENCE'),
-      );
-      await page.screenshot({ path: path.join(output, 'izumi-floating-window.png') });
-      assert((await frame.locator('#izumi-floating-window-v1-panel').innerText()).length > 100);
-      await page.locator('#helper-close').click();
-    }
+    assert.equal(preview.regex, undefined);
+    await page.screenshot({ path: path.join(output, 'builtin-preset-preview.png') });
     // Real browser fetch: the visible model picker uses the direct adapter and a page-only key.
     const directCalls = [];
     await page.route('https://direct-fixture.invalid/**', async (route) => {
@@ -523,23 +442,14 @@ export async function apiSettingsChecks({ browser, baseURL, output }) {
       twoConnectionsSelectable: true,
       visibleModelList: true,
       promptsSeparate: true,
-      imported: file ? path.basename(file) : 'portable fixture',
-      promptCount: saved.prompts.length,
-      regexCount: saved.extensions.regex_scripts.length,
+      builtinPreset: true,
       preview: true,
-      floatingWindow: !!file,
-      floatingToggleSaved: !!file,
     };
   } catch (failure) {
     await page.screenshot({ path: path.join(output, 'api-settings-failure.png') }).catch(() => {});
-    failure.message +=
-      '\n界面状态：' +
-      (await page.locator('#ai-status').textContent()) +
-      '\n扩展状态：' +
-      (await page.locator('#helper-status').textContent());
+    failure.message += '\n界面状态：' + (await page.locator('#ai-status').textContent());
     throw failure;
   } finally {
-    for (const id of imported) await post('prompts/delete', { id }).catch(() => {});
     for (const id of connections)
       await post('presets', { action: 'delete', kind: 'character', id }).catch(() => {});
     await page.close();

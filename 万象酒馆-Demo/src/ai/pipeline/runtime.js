@@ -6,12 +6,13 @@ import { normalizeQuestCharacter, normalizeSocialQuest } from '../../tavern-ques
 import { generationRequest } from './prompts.js';
 import { chatInput, chatRequest } from './chat-request.js';
 import { chatResponse } from './chat-response.js';
-import { summaryRequest, summaryResponse, summaryItems } from './summary-request.js';
+import { summaryPlan, summaryRequest, summaryResponse, summaryItems } from './summary-request.js';
 import { creationInput, creationResponse, creationItems } from './creation-request.js';
 import { presetProcessing, processGeneratedProse } from './preset-processing.js';
 import { MEOWSSIAH_COMPATIBILITY, meowssiahGamePreset } from '../miaosaiya-processing.js';
 import { adviceSettings } from '../advice.js';
-import { presetRegexScripts } from '../regex.js';
+import { BUILTIN_PROMPT_ID } from '../builtin-prompt.js';
+import { normalizeUsage } from '../usage.js';
 import { finalizeRequest } from './prompt-processing.js';
 import { extractGenerationEnvelope } from './output-envelope.js';
 import { generationSourceWarnings } from './generation-source.js';
@@ -20,7 +21,6 @@ import {
   redactDiagnostic,
   generationDiagnostic,
 } from './generation-result.js';
-import { formatRegexPresentation } from './regex-presentation.js';
 import { characterOutputSchema } from '../character-schema.js';
 import { scriptOutputSchema } from '../script-schema.js';
 import { parseCharacterOutput } from '../contracts.js';
@@ -44,18 +44,32 @@ import { requestMemoryBooks, scanScenarioWorldbooks } from '../journey-memory-wo
 import { buildSubScriptRequest } from './script-preset.js';
 import { journeyContinuityMessage } from '../../memory.js';
 
+function selectScriptMode(kind, input) {
+  if (kind !== 'script') return null;
+  const modes = ['socialQuest', 'invitationTopics', 'invitation', 'overland'].filter(
+    (mode) => input?.[mode],
+  );
+  if (modes.length > 1) {
+    throw Object.assign(Error('剧本请求只能指定一种子模式'), {
+      code: 'AI_SCRIPT_MODE_CONFLICT',
+      status: 400,
+    });
+  }
+  return modes[0] ?? null;
+}
+
 /** Shared prompt, parser and world-state pipeline. Network and storage are supplied by the host. */
 export function createAiPipeline({
   settings,
   worlds,
-  regexStore,
   helperStorage,
   countTokens,
   readText,
-  runRegexTasks,
+  promptSource,
   readCharacter = parseCharacterOutput,
 }) {
   const pendingWorldStates = new Map();
+  const worldStateCommits = new Map();
   async function resolveWorldbooks(kind, input, override) {
     const worldInfo = await worlds.resolve(kind, input, override);
     for (const book of requestMemoryBooks(input)) {
@@ -63,14 +77,38 @@ export function createAiPipeline({
     }
     return worldInfo;
   }
-  async function buildRequest(kind, input, source, override) {
+  function requestProfile(kind) {
     const antiRoute = settings.routeSettings?.();
-    const profile = { ...settings.get(kind), ...(antiRoute ? { antiRoute, routeKind: kind } : {}) };
-    const storage = helperStorage.get(source.id);
+    return { ...settings.get(kind), ...(antiRoute ? { antiRoute } : {}), routeKind: kind };
+  }
+  function requestPreset(source) {
+    const storage =
+      source.id && source.id !== BUILTIN_PROMPT_ID ? helperStorage.get(source.id) : {};
     const processing = presetProcessing(source, storage);
     const preset =
       processing.compatibility === MEOWSSIAH_COMPATIBILITY ? meowssiahGamePreset(source) : source;
-    if (kind === 'script' && input.socialQuest) {
+    return { preset, storage, processing };
+  }
+  function summaryOptions(profile, processing, override) {
+    return {
+      profile,
+      readText,
+      countTokens,
+      presetProcessing: processing,
+      resolveWorldInfo: (input) => worlds.resolve('summary', input, override),
+    };
+  }
+  async function planSummary(input = {}) {
+    if (!promptSource) throw Error('总结规划缺少提示词来源');
+    const profile = requestProfile('summary');
+    const { preset, processing } = requestPreset(await promptSource.get('summary'));
+    return summaryPlan(input, preset, summaryOptions(profile, processing));
+  }
+  async function buildRequest(kind, input, source, override) {
+    const scriptMode = selectScriptMode(kind, input);
+    const profile = requestProfile(kind);
+    const { preset, storage, processing } = requestPreset(source);
+    if (scriptMode === 'socialQuest') {
       const worldInfo = await resolveWorldbooks(kind, input, override);
       const built = await buildSubScriptRequest({
         input,
@@ -78,8 +116,6 @@ export function createAiPipeline({
         profile,
         worldInfo,
         countTokens,
-        regexScripts: [...regexStore.get(), ...presetRegexScripts(preset)],
-        runRegexTasks,
         presetProcessing: processing,
         taskLabel: '社交任务',
         brief: input.brief,
@@ -100,21 +136,19 @@ export function createAiPipeline({
         countTokens,
       );
     }
-    if (kind === 'script' && (input.invitationTopics || input.invitation || input.overland)) {
+    if (scriptMode) {
       const worldInfo = await resolveWorldbooks(kind, input, override);
       const subOptions = {
         worldInfo,
-        regexScripts: [...regexStore.get(), ...presetRegexScripts(preset)],
-        runRegexTasks,
         presetProcessing: processing,
       };
-      if (input.invitationTopics) {
+      if (scriptMode === 'invitationTopics') {
         return (
           (await buildInvitationTopicsRequest(input, preset, profile, countTokens, subOptions)) ||
           invitationTopicsRequest(input, profile, countTokens)
         );
       }
-      if (input.invitation) {
+      if (scriptMode === 'invitation') {
         return (
           (await buildInvitationRequest(input, preset, profile, countTokens, subOptions)) ||
           invitationRequest(input, source, profile, countTokens, worldInfo)
@@ -126,17 +160,7 @@ export function createAiPipeline({
       );
     }
     if (kind === 'summary') {
-      const worldInfo = await worlds.resolve('summary', input, override);
-      return summaryRequest(input, preset, {
-        profile,
-        readText,
-        runRegexTasks,
-        worldInfo,
-        regexScripts: [...regexStore.get(), ...presetRegexScripts(preset)],
-        countTokens,
-        maxOutput: profile.tokenField === 'none' ? 0 : profile.maxTokens,
-        presetProcessing: processing,
-      });
+      return summaryRequest(input, preset, summaryOptions(profile, processing, override));
     }
     const chatting = ['chat', 'quick-chat'].includes(kind);
     const normalized = chatting ? chatInput(kind, input) : input;
@@ -170,9 +194,7 @@ export function createAiPipeline({
         : {}),
       profile,
       readText,
-      runRegexTasks,
       worldInfo,
-      regexScripts: [...regexStore.get(), ...presetRegexScripts(preset)],
       countTokens,
       maxOutput: profile.tokenField === 'none' ? 0 : profile.maxTokens,
       presetProcessing: processing,
@@ -186,62 +208,75 @@ export function createAiPipeline({
       (input.party || []).map((entry) => entry.name),
     );
   }
-  async function commitWorldState(requestId, kind) {
-    const pending = pendingWorldStates.get(requestId);
-    if (!pending || pending.kind !== kind) return;
-    await worlds.commit(pending.kind, pending.nextState, pending.expectedStep);
-    pendingWorldStates.delete(requestId);
+  async function commitPendingWorldState(requestId, kind, signal, pending) {
+    signal?.throwIfAborted();
+    if (!pending || pending.kind !== kind || pendingWorldStates.get(requestId) !== pending) return;
+    const active = worldStateCommits.get(requestId);
+    if (active?.pending === pending) return active.promise;
+
+    const promise = Promise.resolve().then(async () => {
+      signal?.throwIfAborted();
+      if (pendingWorldStates.get(requestId) !== pending) return;
+      const committed = await worlds.commit(kind, pending.nextState, pending.expectedStep, signal);
+      if (committed === false) {
+        if (pendingWorldStates.get(requestId) === pending) pendingWorldStates.delete(requestId);
+        throw Object.assign(Error('世界书状态已变更，请基于当前状态重新规划后再试'), {
+          code: 'AI_STATE_CONFLICT',
+          status: 409,
+        });
+      }
+      if (pendingWorldStates.get(requestId) === pending) pendingWorldStates.delete(requestId);
+    });
+    const operation = { pending, promise };
+    worldStateCommits.set(requestId, operation);
+    try {
+      await promise;
+    } finally {
+      if (worldStateCommits.get(requestId) === operation) worldStateCommits.delete(requestId);
+    }
   }
-  async function acceptResult(job, result) {
-    const { input, kind, models, profile, source, prepared, messages, requestId, requestReport } =
-      job;
+  async function commitWorldState(requestId, kind, signal) {
+    await commitPendingWorldState(requestId, kind, signal, pendingWorldStates.get(requestId));
+  }
+  async function acceptResult(job, result, signal) {
+    signal?.throwIfAborted();
+    result = { ...result, usage: normalizeUsage(result.usage) };
+    const { input, kind, models, profile, prepared, messages, requestId, requestReport } = job;
     const chatting = ['chat', 'quick-chat'].includes(kind);
     const summarizing = kind === 'summary';
     const creating = kind === 'creation';
-    const responseScripts = () => [
-      ...regexStore.get(),
-      ...(prepared?.transport?.presetProcessing?.compatibility === MEOWSSIAH_COMPATIBILITY
-        ? []
-        : presetRegexScripts(source)),
-    ];
     if (requestReport) requestReport.usage = result.usage;
     if (models) return result;
-    if (kind === 'script' && input.socialQuest) {
+    const scriptMode = selectScriptMode(kind, input);
+    const pending = pendingWorldStates.get(requestId);
+    const commit = () => commitPendingWorldState(requestId, kind, signal, pending);
+    if (scriptMode === 'socialQuest') {
       const raw = JSON.parse(extractGenerationEnvelope(kind, result.content).candidateText);
       const quest = normalizeSocialQuest(raw, input.socialQuest.scenes, input.socialQuest.archives);
-      await commitWorldState(requestId, kind);
-      return {
-        quest,
-        request: requestReport,
-      };
+      await commit();
+      return { quest, request: requestReport, usage: result.usage };
     }
-    if (kind === 'script' && input.invitationTopics)
-      return {
-        topics: invitationTopicsResponse(result.content),
-        request: requestReport,
-        usage: result.usage,
-      };
-    if (kind === 'script' && input.overland)
-      return {
+    if (scriptMode === 'invitationTopics') {
+      const topics = invitationTopicsResponse(result.content);
+      await commit();
+      return { topics, request: requestReport, usage: result.usage };
+    }
+    if (scriptMode === 'overland') {
+      const reply = {
         acts: overlandResponse(result.content, input),
         items: overlandItemsResponse(result.content, input),
         ...overlandTheaterResponse(result.content),
         request: requestReport,
         usage: result.usage,
       };
-    if (kind === 'script' && input.invitation) {
+      await commit();
+      return reply;
+    }
+    if (scriptMode === 'invitation') {
       const raw = result.rawContent || result.content;
+      let invitation;
       try {
-        const invitation = invitationResponse(result.content);
-        return {
-          invitation,
-          diagnostic: redactDiagnostic(
-            generationDiagnostic(kind, raw, '', 'complete'),
-            profile?.apiKey,
-          ),
-          request: requestReport,
-          usage: result.usage,
-        };
+        invitation = invitationResponse(result.content);
       } catch (failure) {
         failure.diagnostic ||= generationDiagnostic(
           kind,
@@ -253,25 +288,29 @@ export function createAiPipeline({
         failure.diagnostic = redactDiagnostic(failure.diagnostic, profile?.apiKey);
         throw failure;
       }
-    } else if (kind === 'map' || creating) {
+      const reply = {
+        invitation,
+        diagnostic: redactDiagnostic(
+          generationDiagnostic(kind, raw, '', 'complete'),
+          profile?.apiKey,
+        ),
+        request: requestReport,
+        usage: result.usage,
+      };
+      await commit();
+      return reply;
+    }
+    if (kind === 'map' || creating) {
+      let value;
       try {
+        // Map and creation deliberately accept legacy bare JSON as well as tagged JSON.
         const candidate = /<(?:wanxiang_output|wanxiang_json)\b/i.test(result.content)
           ? extractGenerationEnvelope(kind, result.content).candidateText
           : result.content;
-        const scripts = responseScripts();
-        const processed = (
-          await runRegexTasks(scripts, [{ text: candidate, placement: 2, options: { kind } }])
-        )[0].text;
-        const value =
+        value =
           kind === 'map'
-            ? { world: mapResponse(processed, input) }
-            : { items: creationResponse(processed, creationItems(input)) };
-        await commitWorldState(requestId, kind);
-        return {
-          ...value,
-          request: { ...requestReport, tokens: prepared.tokens },
-          usage: result.usage,
-        };
+            ? { world: mapResponse(candidate, input) }
+            : { items: creationResponse(candidate, creationItems(input)) };
       } catch (failure) {
         failure.diagnostic = generationDiagnostic(
           kind,
@@ -282,29 +321,31 @@ export function createAiPipeline({
         failure.diagnostic.request = requestReport;
         throw failure;
       }
+      const reply = {
+        ...value,
+        request: { ...requestReport, tokens: prepared.tokens },
+        usage: result.usage,
+      };
+      await commit();
+      return reply;
     } else if (summarizing) {
-      const summaries = summaryResponse(result.content, summaryItems(input));
-      await commitWorldState(requestId, kind);
-      return {
+      const items = summaryItems(input);
+      const summaries = summaryResponse(result.content, items);
+      const reply = {
         items: summaries,
         textTokens: {
-          source: summaryItems(input).reduce((sum, item) => sum + countTokens(item.text), 0),
+          source: items.reduce((sum, item) => sum + countTokens(item.text), 0),
           summary: summaries.reduce((sum, item) => sum + countTokens(item.summary), 0),
         },
         request: { ...requestReport, tokens: prepared.tokens },
         usage: result.usage,
       };
+      await commit();
+      return reply;
     } else if (chatting) {
-      const scripts = responseScripts();
       let response;
       try {
-        response = await chatResponse(
-          kind,
-          result.content,
-          scripts,
-          chatInput(kind, input),
-          runRegexTasks,
-        );
+        response = await chatResponse(kind, result.content, chatInput(kind, input));
       } catch (failure) {
         failure.diagnostic = generationDiagnostic(
           kind,
@@ -314,8 +355,6 @@ export function createAiPipeline({
         );
         throw failure;
       }
-      await worlds.commit(kind, prepared.nextWorldState, prepared.nextWorldState.step - 1);
-      pendingWorldStates.delete(requestId);
       const reply = { ...response, request: requestReport, usage: result.usage };
       if (input.adventure || input.invitation)
         reply.diagnostic = redactDiagnostic(
@@ -325,67 +364,34 @@ export function createAiPipeline({
           },
           profile?.apiKey,
         );
+      await commit();
       return reply;
     } else {
-      const scripts = responseScripts();
       const extracted = extractGenerationEnvelope(kind, result.content);
-      let processed;
-      try {
-        processed = (
-          await runRegexTasks(scripts, [
-            {
-              text: extracted.candidateText,
-              placement: 2,
-              options: {
-                kind,
-                variables: {
-                  char: (input.party || []).map((entry) => entry.name).join('、'),
-                  user: '玩家',
-                },
-              },
-            },
-          ])
-        )[0];
-      } catch (failure) {
-        failure.diagnostic = generationDiagnostic(kind, result.content, failure.message, 'regex');
-        Object.assign(failure.diagnostic, extracted, {
-          candidateText: extracted.candidateText,
-        });
-        throw failure;
-      }
+      let candidate = extracted.candidateText;
       let validated;
       let questCharacter;
       try {
         if (kind === 'character' && input.questCharacter) {
-          const raw = JSON.parse(processed.text);
+          const raw = JSON.parse(candidate);
           questCharacter = normalizeQuestCharacter(raw.quest, input.questCharacter.scenes);
           delete raw.quest;
           delete raw.arrivalDialogue;
-          processed.text = JSON.stringify(raw);
+          candidate = JSON.stringify(raw);
         }
-        validated = readGenerationResult(kind, processed.text, input, readCharacter);
+        validated = readGenerationResult(kind, candidate, input, readCharacter);
       } catch (failure) {
         if (failure.diagnostic) {
           failure.diagnostic.rawText = result.content;
           failure.diagnostic.envelope = extracted.envelope;
-          failure.diagnostic.repairs.unshift(
-            ...extracted.repairs,
-            ...processed.changes.map((change) => ({
-              message: `正则：${change.name}（${change.beforeCharacters}→${change.afterCharacters}字符）`,
-            })),
-          );
+          failure.diagnostic.repairs.unshift(...extracted.repairs);
         }
         throw failure;
       }
-      validated.diagnostic.warnings = generationSourceWarnings(kind, processed.text, messages);
+      validated.diagnostic.warnings = generationSourceWarnings(kind, candidate, messages);
       validated.diagnostic.rawText = result.content;
       validated.diagnostic.envelope = extracted.envelope;
-      validated.diagnostic.repairs.unshift(
-        ...extracted.repairs,
-        ...processed.changes.map((change) => ({
-          message: `正则：${change.name}（${change.beforeCharacters}→${change.afterCharacters}字符）`,
-        })),
-      );
+      validated.diagnostic.repairs.unshift(...extracted.repairs);
       try {
         processGeneratedProse(validated.entry, kind, prepared.transport.presetProcessing);
       } catch (failure) {
@@ -397,10 +403,9 @@ export function createAiPipeline({
         );
         throw failure;
       }
-      await formatRegexPresentation(validated.entry, kind, scripts, runRegexTasks);
       validated.diagnostic.request = { ...requestReport, usage: result.usage };
-      await commitWorldState(requestId, kind);
       validated.diagnostic = redactDiagnostic(validated.diagnostic, profile.apiKey);
+      await commit();
       return { ...validated, ...(questCharacter ? { questCharacter } : {}), usage: result.usage };
     }
   }
@@ -421,10 +426,7 @@ export function createAiPipeline({
       stop: prepared?.transport?.stop,
       responseSchema:
         models ||
-        input?.invitation ||
-        input?.invitationTopics ||
-        input?.overland ||
-        input?.socialQuest ||
+        selectScriptMode(kind, input) ||
         input?.questCharacter ||
         ['chat', 'quick-chat', 'summary', 'creation', 'map'].includes(kind)
           ? null
@@ -433,5 +435,12 @@ export function createAiPipeline({
             : scriptOutputSchema(input.party.map((item) => item.id)),
     };
   }
-  return { buildRequest, commitWorldState, acceptResult, completionOptions, pendingWorldStates };
+  return {
+    buildRequest,
+    planSummary,
+    commitWorldState,
+    acceptResult,
+    completionOptions,
+    pendingWorldStates,
+  };
 }

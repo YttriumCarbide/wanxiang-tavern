@@ -2,6 +2,8 @@ import { decodeStorageImage, encodeStorageValue } from './value-codec.js';
 
 const connectionKey = 'api.config';
 
+class DiskResponseError extends Error {}
+
 async function readResponse(response) {
   let body;
   try {
@@ -9,7 +11,7 @@ async function readResponse(response) {
   } catch {
     throw Error('本地存档服务没有返回有效数据，请重新启动游戏服务。');
   }
-  if (!response.ok) throw Error(body.error || '本地存档服务不可用');
+  if (!response.ok) throw new DiskResponseError(body?.error || '本地存档服务不可用');
   return body;
 }
 
@@ -20,8 +22,16 @@ function decodeEntries(entries) {
   ]);
 }
 
-function sameValue(left, right) {
-  if (left === right || (left instanceof Blob && right instanceof Blob)) return true;
+async function sameValue(left, right) {
+  if (left === right) return true;
+  if (left instanceof Blob || right instanceof Blob) {
+    if (!(left instanceof Blob && right instanceof Blob)) return false;
+    if (left.size !== right.size || left.type !== right.type) return false;
+    const [leftBytes, rightBytes] = await Promise.all([left.arrayBuffer(), right.arrayBuffer()]);
+    const a = new Uint8Array(leftBytes);
+    const b = new Uint8Array(rightBytes);
+    return a.every((byte, index) => byte === b[index]);
+  }
   return JSON.stringify(left) === JSON.stringify(right);
 }
 
@@ -40,6 +50,7 @@ export async function openDiskDatabase(endpoint, browserDatabase, onCacheFailure
   let revision = snapshot.revision;
   let queue = Promise.resolve();
   let cacheAvailable = true;
+  let uncertain = false;
 
   function serialized(operation) {
     const result = queue.catch(() => {}).then(operation);
@@ -48,7 +59,10 @@ export async function openDiskDatabase(endpoint, browserDatabase, onCacheFailure
   }
 
   async function mirror(entries, deleted) {
-    const changed = entries.filter(([key, value]) => !sameValue(browserDatabase.get(key), value));
+    const changed = [];
+    for (const [key, value] of entries) {
+      if (!(await sameValue(browserDatabase.get(key), value))) changed.push([key, value]);
+    }
     const removed = deleted.filter((key) => browserDatabase.get(key) !== undefined);
     if (!changed.length && !removed.length) return;
     try {
@@ -60,7 +74,10 @@ export async function openDiskDatabase(endpoint, browserDatabase, onCacheFailure
   }
 
   async function commit(entries, deleted) {
-    const changed = entries.filter(([key, value]) => !sameValue(records.get(key), value));
+    const changed = [];
+    for (const [key, value] of entries) {
+      if (!(await sameValue(records.get(key), value))) changed.push([key, value]);
+    }
     const removed = deleted.filter((key) => records.has(key));
     if (!changed.length && !removed.length) return;
     const payload = {
@@ -71,15 +88,29 @@ export async function openDiskDatabase(endpoint, browserDatabase, onCacheFailure
       deleted: removed,
     };
     const body = JSON.stringify(payload);
-    const result = await readResponse(
-      await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Tavern-Storage': snapshot.token },
-        body,
-        keepalive: body.length <= 18000,
-      }),
-    );
-    revision = result.revision;
+    try {
+      const result = await readResponse(
+        await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Tavern-Storage': snapshot.token },
+          body,
+          keepalive: body.length <= 18000,
+        }),
+      );
+      if (result?.revision !== payload.revision + 1) throw Error('本地存档写入结果无效');
+    } catch (failure) {
+      if (failure instanceof DiskResponseError) throw failure;
+      const latest = await fetch(endpoint, { cache: 'no-store' })
+        .then(readResponse)
+        .catch(() => null);
+      if (!(await matchesCommittedWrite(latest, payload, records))) {
+        uncertain = true;
+        throw Object.assign(Error('存档写入结果无法确认，请重新载入后查看。', { cause: failure }), {
+          requiresReload: true,
+        });
+      }
+    }
+    revision = payload.revision + 1;
     for (const key of removed) records.delete(key);
     for (const [key, value] of changed) records.set(key, structuredClone(value));
     await mirror(changed, removed);
@@ -105,16 +136,43 @@ export async function openDiskDatabase(endpoint, browserDatabase, onCacheFailure
   }
 
   async function write(entries, deleted) {
-    await commit(
-      entries.filter(([key]) => key !== connectionKey),
-      deleted.filter((key) => key !== connectionKey),
-    );
+    if (uncertain)
+      throw Object.assign(Error('存档写入结果无法确认，请重新载入后查看。'), {
+        requiresReload: true,
+      });
+    const diskEntries = entries.filter(([key]) => key !== connectionKey);
+    const diskDeleted = deleted.filter((key) => key !== connectionKey);
     const connection = entries.find(([key]) => key === connectionKey);
-    if (connection || deleted.includes(connectionKey))
-      await browserDatabase.write(
-        connection ? [connection] : [],
-        deleted.filter((key) => key === connectionKey),
-      );
+    const removeConnection = deleted.includes(connectionKey);
+    if (!connection && !removeConnection) return commit(diskEntries, diskDeleted);
+
+    const previous = browserDatabase.get(connectionKey);
+    const next = connection?.[1];
+    await browserDatabase.write(
+      connection ? [connection] : [],
+      removeConnection ? [connectionKey] : [],
+      { expectedConnection: { value: previous } },
+    );
+    try {
+      await commit(diskEntries, diskDeleted);
+    } catch (failure) {
+      if (failure.requiresReload) throw failure;
+      try {
+        await browserDatabase.write(
+          previous === undefined ? [] : [[connectionKey, previous]],
+          previous === undefined ? [connectionKey] : [],
+          { expectedConnection: { value: next } },
+        );
+      } catch (restoreFailure) {
+        const rollbackError = new AggregateError(
+          [failure, restoreFailure],
+          '硬盘存档写入失败，接口连接无法自动恢复。' + restoreFailure.message,
+          { cause: failure },
+        );
+        throw rollbackError;
+      }
+      throw failure;
+    }
   }
 
   return {
@@ -139,4 +197,27 @@ export async function openDiskDatabase(endpoint, browserDatabase, onCacheFailure
       }),
     close: () => browserDatabase.close(),
   };
+}
+
+async function matchesCommittedWrite(latest, payload, records) {
+  if (
+    latest?.app !== 'wanxiang-disk-storage' ||
+    latest.revision !== payload.revision + 1 ||
+    !Array.isArray(latest.entries) ||
+    latest.entries.some(
+      (entry) => !Array.isArray(entry) || entry.length !== 2 || typeof entry[0] !== 'string',
+    )
+  )
+    return false;
+  const durable = new Map(latest.entries);
+  if (durable.size !== latest.entries.length) return false;
+  const expected = new Map();
+  for (const [key, value] of records) expected.set(key, await encodeStorageValue(value));
+  for (const key of payload.deleted) expected.delete(key);
+  for (const [key, value] of payload.entries) expected.set(key, value);
+  if (durable.size !== expected.size) return false;
+  for (const [key, value] of expected) {
+    if (!durable.has(key) || !(await sameValue(durable.get(key), value))) return false;
+  }
+  return true;
 }

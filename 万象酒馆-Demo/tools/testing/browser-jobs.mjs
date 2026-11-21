@@ -17,6 +17,8 @@ export function browserJobs(scopes, results, root) {
       browserOnly,
     );
   simple('battle-controls', 'battle-controls', 'battleControlChecks');
+  simple('ui-preview', 'ui-preview', 'uiPreviewChecks');
+  simple('developer-tools', 'developer-tools', 'developerToolChecks');
   simple('apep-vfx', 'apep-vfx', 'apepVfxChecks');
   simple('daily', 'daily', 'dailyChecks');
   simple('overland', 'overland', 'overlandChecks');
@@ -68,8 +70,11 @@ export function browserJobs(scopes, results, root) {
   simple('worlds-emblems', 'worlds-emblems', 'worldsEmblemsChecks');
   simple('worldbook-editor', 'worldbook-editor', 'standaloneWorldbookEditorChecks');
   simple('opencode', 'opencode', 'opencodeBrowserChecks');
-  // First-arrival Gal is checked by gal; this covers the current post-second-trip lesson.
-  simple('onboarding', 'dining-onboarding', 'diningOnboardingChecks');
+  // Cover the first-dungeon report and Edith's opening-battle handoff.
+  add('onboarding', async (options) => {
+    const { onboardingChecks } = await import('../../tests/browser/onboarding.mjs');
+    return onboardingChecks({ ...options, firstDungeonOnly: true });
+  });
   add('settings', async (options) => {
     const { apiSettingsChecks, firstRunApplyChecks, antiRouteChecks } =
       await import('../../tests/browser/api-settings.mjs');

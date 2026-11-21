@@ -1,0 +1,12 @@
+{
+  "browserConcurrency": 2,
+  "scopes": ["quality", "core"],
+  "coreFiles": [
+    "tests/logic-audit-storage.test.js",
+    "tests/logic-audit-checkpoint.test.js",
+    "tests/logic-audit-adventure.test.js",
+    "tests/logic-audit-updates.test.js",
+    "tests/logic-audit-turn-workshop.test.js",
+    "tests/logic-audit-folder-backup.test.js"
+  ]
+}

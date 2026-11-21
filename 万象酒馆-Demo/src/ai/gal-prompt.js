@@ -32,7 +32,7 @@ export function galInstruction(input, kind = 'script') {
 - 【登场:角色ID】、【退场:角色ID】、【清场】仅在角色中途进出或切换场景时使用；首次说话会自动登场，切到旁白不清空舞台。
 2. 【NPC立绘绑定，三类叙事共用】
 - 队伍成员和已有官方人物沿用真实 ID 与固有立绘，不套用 npc: 标记。
-- 其他 NPC 每次发言使用【对白:npc:姓名|立绘编号】（如【对白:npc:城门女卫兵|guardWoman】或【对白:npc:灰伯|scholar】），登场用【登场:npc:姓名|立绘编号】，退场用【退场:npc:姓名】。同一人物保持同一编号，姓名与 data.npcs 一致。可选编号及含义：${JSON.stringify(GAL_NPC_PORTRAIT_NAMES)}。
+- 其他 NPC 每次发言使用【对白:npc:姓名|立绘编号】格式，登场用【登场:npc:姓名|立绘编号】，退场用【退场:npc:姓名】。其中“姓名”必须写成「短身份·真实人名」（如【对白:npc:女守卫·玛莎|guardWoman】或【对白:npc:老学者·温特|scholar】），方便在通用立绘下清楚区分人物；严禁只写「女性守卫」「城门女卫兵」「商贩」「路人」等无名职业代号。同一人物全篇保持同一编号，姓名与 data.npcs 一致。可选编号及含义：${JSON.stringify(GAL_NPC_PORTRAIT_NAMES)}。
 3. 【剧情奖励边界】
 - 正文不能自行授予实际物品。纹章戒指仅可在本次请求明确提供 storyRingReward 时于指定节点描写外观与人物反应；storyRingReward 为 null 时不创作戒指赠送。不在剧本或聊天正文写戒指的具体游戏效果、数值、技能、充能格数或操作教学，也不将纹章戒指列入 data.items。
 4. 【短页阅读节奏】

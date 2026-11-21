@@ -5,7 +5,6 @@ import { resourceText } from '../src/resource-text.js';
 import { renderQuality, createFrameBudget } from '../src/shared/render-budget.js';
 import { createMacroExpander } from '../src/ai/prompt-macros.js';
 import { normalizePromptPreset, composePromptPreset } from '../src/ai/presets.js';
-import { presetRegexScripts } from '../src/ai/regex.js';
 import { presetHelperScripts } from '../src/ai/helper-scripts.js';
 import { adviceBinding } from '../src/ai/advice.js';
 
@@ -88,7 +87,7 @@ test('provided presets import their structure and neutral macro fixtures without
     const { preset } = normalizePromptPreset(raw, 'compatibility-fixture');
     assert.equal(preset.prompts.length, raw.prompts.length);
     assert(preset.prompts.every((p) => ['system', 'user', 'assistant'].includes(p.role)));
-    assert.equal(presetRegexScripts(preset).length, raw.extensions.regex_scripts.length);
+
     assert.deepEqual(preset.extensions, raw.extensions);
     for (const script of presetHelperScripts(preset)) assert(script.content.length > 0);
     // Retain identifiers, ordering, role aliases and switches; substitute neutral prose for this test.

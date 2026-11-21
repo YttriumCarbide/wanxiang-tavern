@@ -1,5 +1,5 @@
 ﻿param(
-  [string]$Directory = "assets/exploration/street-hd-v2"
+  [string]$Directory = "$PSScriptRoot/../assets/exploration/street-hd-v4"
 )
 
 $ErrorActionPreference = "Stop"

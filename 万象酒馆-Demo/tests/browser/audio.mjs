@@ -11,6 +11,11 @@ export async function audioChecks({ browser, baseURL, output }) {
     await page.goto(baseURL);
     await page.waitForFunction(() => !!window.demo);
     assert.equal(await page.evaluate(() => demo.getAudioStatus().state), 'locked');
+    await page.locator('#audio-toggle').click();
+    assert.equal(await page.locator('#audio-panel').isVisible(), true);
+    assert.equal(await page.locator('#audio-playlist .audio-track-item').count(), 0);
+    assert.equal(await page.locator('#audio-playlist-empty').isVisible(), true);
+    await page.locator('#audio-close').click();
     await page
       .frameLocator('iframe')
       .locator('#status')
@@ -20,7 +25,10 @@ export async function audioChecks({ browser, baseURL, output }) {
       .locator('canvas')
       .click({ position: { x: 30, y: 100 } });
     await page.waitForFunction(
-      () => demo.getAudioStatus().track === 'inn' && demo.getAudioStatus().rms > 0.0001,
+      () =>
+        ['inn', 'inn2', 'inn3'].includes(demo.getAudioStatus().track) &&
+        demo.getAudioStatus().scene === 'inn' &&
+        demo.getAudioStatus().rms > 0.0001,
     );
     await page.waitForFunction(
       () => {
@@ -32,15 +40,23 @@ export async function audioChecks({ browser, baseURL, output }) {
     );
     await page.locator('#audio-toggle').click();
     assert.equal(await page.locator('#audio-panel').isVisible(), true);
+    const initialTavernTrack = await page.evaluate(() => demo.getAudioStatus().track);
+    assert.equal(await page.locator('#audio-playlist .audio-track-item').count(), 1);
+    assert.equal(await page.locator('[data-track-id="warlordBoss"]').count(), 0);
+    assert.equal(await page.locator(`[data-track-id="${initialTavernTrack}"]`).count(), 1);
+    await page.locator('#audio-close').click();
     for (const [key, value] of [
       ['music', 19],
       ['effects', 47],
     ]) {
+      await page.locator('#audio-toggle').click();
       await page.locator(`#audio-${key}`).evaluate((input, value) => {
         input.value = String(value);
         input.dispatchEvent(new Event('input', { bubbles: true }));
       }, value);
+      await page.keyboard.press('Escape');
     }
+    await page.locator('#audio-toggle').click();
     await page.locator('#audio-music-mute').click();
     await page.locator('#audio-effects-mute').click();
     await page.waitForFunction(() => demo.getAudioStatus().rms < 0.00001);
@@ -52,8 +68,12 @@ export async function audioChecks({ browser, baseURL, output }) {
       musicMuted: true,
       effectsMuted: true,
     });
+    assert.deepEqual(await page.evaluate(() => demo.getAudioStatus().unlockedTracks), [
+      initialTavernTrack,
+    ]);
     assert.equal(await page.evaluate(() => demo.getAudioStatus().state), 'locked');
     await page.locator('#audio-toggle').click();
+    assert.equal(await page.locator('#audio-playlist .audio-track-item').count(), 1);
     await page.locator('#audio-music-mute').click();
     await page.locator('#audio-effects-mute').click();
     await page.keyboard.press('Escape');
@@ -65,6 +85,25 @@ export async function audioChecks({ browser, baseURL, output }) {
       () => demo.getAudioStatus().tracks === 1 && demo.getAudioStatus().rms > 0.0001,
     );
     await page.locator('#audio-toggle').click();
+    assert.equal(await page.locator('#audio-playlist .audio-track-item').count(), 2);
+    await page.locator(`[data-audio-preview="${initialTavernTrack}"]`).click();
+    await page.waitForFunction(
+      (trackId) => demo.getAudioStatus().track === trackId,
+      initialTavernTrack,
+    );
+    const previewStatus = await page.evaluate(() => demo.getAudioStatus());
+    assert.equal(previewStatus.previewTrack, initialTavernTrack);
+    assert.equal(previewStatus.activeTrack, 'battle');
+    await page.locator(`[data-audio-select="${initialTavernTrack}"]`).click();
+    await page.waitForFunction(
+      (trackId) =>
+        demo.getAudioStatus().pinnedTrack === trackId && demo.getAudioStatus().track === trackId,
+      initialTavernTrack,
+    );
+    await page.locator('#audio-auto-scene').click();
+    await page.waitForFunction(
+      () => demo.getAudioStatus().pinnedTrack === null && demo.getAudioStatus().track === 'battle',
+    );
     await page.locator('#audio-music-mute').click();
     await page.waitForTimeout(200);
     await page.keyboard.press('Escape');
@@ -82,7 +121,9 @@ export async function audioChecks({ browser, baseURL, output }) {
     await page.keyboard.press('Escape');
     await page.evaluate(() => demo.returnInn());
     await page.waitForFunction(
-      () => demo.getAudioStatus().track === 'inn' && demo.getAudioStatus().tracks === 1,
+      () =>
+        ['inn', 'inn2', 'inn3'].includes(demo.getAudioStatus().track) &&
+        demo.getAudioStatus().tracks === 1,
     );
     const disposed = await page.evaluate(() => {
       demo.dispose();
@@ -118,34 +159,71 @@ export async function battleMusicChecks({ browser, baseURL }) {
     );
     await page.goto(new URL('__music-fixture', baseURL).href);
     await page.evaluate(async () => {
-      const [{ createAudioMixer }, { encounterMusic, MUSIC }] = await Promise.all([
+      const [{ createAudioMixer }, { encounterMusic, locationMusic, MUSIC }] = await Promise.all([
         import('/src/audio/mixer.js'),
         import('/src/audio/config.js'),
       ]);
       const mixer = createAudioMixer({ music: 0.2 });
       document.querySelector('#unlock').onclick = () => mixer.unlock();
-      window.musicFixture = { mixer, encounterMusic, MUSIC };
+      window.musicFixture = { mixer, encounterMusic, locationMusic, MUSIC };
     });
     await page.locator('#unlock').click();
     const routes = [
-      { map: 'frost', boss: false, track: 'frostBattle' },
-      { map: 'forest', boss: false, track: 'battle' },
-      { map: 'ruins', boss: true, track: 'ruinsBoss' },
-      { map: 'frost', boss: true, track: 'boss' },
-      { map: 'forge', boss: false, track: 'forgeBattle' },
-      { map: 'tide', boss: false, track: 'battle' },
+      { map: 'frost', boss: false, tracks: ['frostBattle'] },
+      { map: 'forest', boss: false, tracks: ['battle'] },
+      { map: 'ruins', boss: true, tracks: ['ruinsBoss', 'boss', 'boss3'] },
+      { map: 'frost', boss: true, tracks: ['ruinsBoss', 'boss', 'boss3'] },
+      { map: 'forge', boss: false, tracks: ['forgeBattle'] },
+      { map: 'tide', boss: false, tracks: ['battle'] },
+      { map: 'mill', boss: true, enemyIds: ['alchemicalPuppet'], tracks: ['puppetBoss'] },
+      {
+        map: 'graystone-quarry',
+        boss: true,
+        enemyIds: ['darkscaleWarlord'],
+        tracks: ['warlordBoss'],
+      },
+      { map: 'tide', boss: true, enemyIds: ['radiantWyvern'], tracks: ['wyvernBoss'] },
+      {
+        map: 'black-market',
+        boss: true,
+        enemyIds: ['banditSyndicateKing'],
+        tracks: ['syndicateBoss'],
+      },
     ];
+    const lockedBefore = await page.evaluate(() => {
+      window.musicFixture.mixer.preview('boss3');
+      window.musicFixture.mixer.selectTrack('boss3');
+      return window.musicFixture.mixer.status();
+    });
+    assert.equal(lockedBefore.previewTrack, null);
+    assert.equal(lockedBefore.pinnedTrack, null);
     for (const route of routes) {
       await page.evaluate((route) => {
         const { mixer, encounterMusic } = window.musicFixture;
         mixer.setScene(encounterMusic(route));
       }, route);
       await page.waitForFunction(
+        (allowed) => {
+          const status = window.musicFixture.mixer.status();
+          return allowed.includes(status.track) && status.tracks === 1 && status.rms > 0.00001;
+        },
+        route.tracks,
+        { timeout: 20000 },
+      );
+    }
+    for (const scene of ['street', 'inn2', 'inn3', 'ruinsBoss', 'boss3']) {
+      const expected = await page.evaluate((scene) => {
+        const { mixer, locationMusic, MUSIC } = window.musicFixture;
+        const target = MUSIC[scene] ? scene : locationMusic(scene);
+        mixer.setScene(target);
+        return target;
+      }, scene);
+      await page.waitForFunction(
         (track) => {
           const status = window.musicFixture.mixer.status();
           return status.track === track && status.tracks === 1 && status.rms > 0.00001;
         },
-        route.track,
+        expected,
         { timeout: 20000 },
       );
     }
@@ -153,9 +231,14 @@ export async function battleMusicChecks({ browser, baseURL }) {
       const { mixer } = window.musicFixture;
       const status = mixer.status();
       mixer.dispose();
-      return { loaded: status.loaded, after: mixer.status() };
+      return {
+        loaded: status.loaded,
+        unlockedTracks: status.unlockedTracks,
+        after: mixer.status(),
+      };
     });
-    assert(routes.every((route) => status.loaded.includes(route.track)));
+    assert(status.unlockedTracks.includes('boss3'));
+    assert(routes.every((route) => route.tracks.some((id) => status.loaded.includes(id))));
     assert.equal(status.after.tracks, 0);
     assert.equal(status.after.disposed, true);
     assert.deepEqual(errors, []);

@@ -514,7 +514,6 @@ export const FROST_BOSSES = [
     boss: true,
     overlord: true,
     standOnCard: true,
-    buffs: { artifact: 1 },
     title: '霸主 / 战斗机兵·阿瑞斯',
     phaseThreshold: 0.6,
     enragedIntents: [

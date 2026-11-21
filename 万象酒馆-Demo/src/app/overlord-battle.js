@@ -1,3 +1,4 @@
+import { createOverlordReloadWatch } from './overlord-reload-watch.js';
 import { createEventScope } from '../shared/events.js';
 import { html } from '../shared/html.js';
 import { createPopoverSurface } from '../shared/top-layer.js';
@@ -7,12 +8,13 @@ import {
   OVERLORD_DIALOGUES,
   overlordDialoguePack,
   overlordPhaseProfile,
-  overlordReloadBark,
   overlordSealedBark,
 } from '../overlord-mechanics.js';
+import {
+  OVERLORD_TUTORIALS,
+  detectOverlordTutorialTrigger,
+} from '../content/overlord-tutorials.js';
 import { query as $, sleep } from './dom.js';
-
-const RELOAD_WATCH_KEY = 'wanxiang.overlord-reload-watch.v1';
 
 const SEALED_TARGETS = Object.freeze([
   ['#saves-open', 'saves'],
@@ -50,93 +52,31 @@ export function createOverlordBattle(context) {
   let bombTargetId = '';
   let bombRaf = 0;
   let bombTriggered = false;
+  let bombPausedAt = 0;
   let lastCriticalTickSec = -1;
-  let markedUnloadThisPage = false;
+  const {
+    readReloadWatch,
+    writeReloadWatch,
+    clearReloadWatch,
+    armReloadWatch,
+    markReloadOnUnload,
+    checkReloadFourthWall,
+    cancelReloadBark,
+  } = createOverlordReloadWatch({
+    context,
+    currentOverlordDef,
+    showLine,
+    isDisposed: () => disposed,
+  });
 
-  function readReloadWatch() {
-    for (const store of [globalThis.localStorage, context.storage]) {
-      try {
-        const raw = store?.getItem?.(RELOAD_WATCH_KEY);
-        if (raw) return JSON.parse(raw);
-      } catch {
-        // Storage may be unavailable in restricted harnesses.
-      }
-    }
-    return null;
-  }
-
-  function writeReloadWatch(payload) {
-    const json = JSON.stringify(payload);
-    for (const store of [globalThis.localStorage, context.storage]) {
-      try {
-        store?.setItem?.(RELOAD_WATCH_KEY, json);
-      } catch {
-        // Ignore quota or restricted storage errors.
-      }
-    }
-  }
-
-  function clearReloadWatch() {
-    for (const store of [globalThis.localStorage, context.storage]) {
-      try {
-        store?.removeItem?.(RELOAD_WATCH_KEY);
-      } catch {
-        // Ignore restricted storage errors.
-      }
-    }
-  }
-
-  function armReloadWatch(activeBoss) {
-    if (!activeBoss || disposed) return;
-    const prev = readReloadWatch();
-    const pack = OVERLORD_DIALOGUES[activeBoss.id] || OVERLORD_DIALOGUES.alchemicalPuppet;
-    writeReloadWatch({
-      bossId: activeBoss.id,
-      bossName: activeBoss.def?.name || '失败的炼金傀偶',
-      rankLabel: pack.rankLabel || '磨坊阁楼 · 失控炼金造物',
-      armed: true,
-      reloadedPending: Boolean(prev?.reloadedPending),
-      reenteredPending: Boolean(prev?.reenteredPending),
-      reloadCount: Number(prev?.reloadCount) || 0,
-    });
-  }
-
-  function markReloadOnUnload() {
-    if (disposed) return;
-    const state = session.battle.state;
-    const activeBoss = currentOverlordDef();
-    if (
-      session.runtime.mode !== 'battle' ||
-      !activeBoss ||
-      !state ||
-      ['victory', 'defeat'].includes(state.phase)
-    ) {
-      return;
-    }
-    const prev = readReloadWatch();
-    const pack = OVERLORD_DIALOGUES[activeBoss.id] || OVERLORD_DIALOGUES.alchemicalPuppet;
-    const nextCount = (Number(prev?.reloadCount) || 0) + (markedUnloadThisPage ? 0 : 1);
-    markedUnloadThisPage = true;
-    const payload = JSON.stringify({
-      bossId: activeBoss.id,
-      bossName: activeBoss.def?.name || prev?.bossName || '失败的炼金傀偶',
-      rankLabel: pack.rankLabel || prev?.rankLabel || '磨坊阁楼 · 失控炼金造物',
-      armed: true,
-      reloadedPending: true,
-      reenteredPending: Boolean(prev?.reenteredPending),
-      reloadCount: nextCount,
-    });
-    try {
-      globalThis.localStorage?.setItem?.(RELOAD_WATCH_KEY, payload);
-    } catch {
-      // Ignore restricted storage errors.
-    }
-    try {
-      context.storage?.setItem?.(RELOAD_WATCH_KEY, payload);
-    } catch {
-      // Ignore restricted storage errors.
-    }
-  }
+  const tutorialDialog = document.createElement('dialog');
+  tutorialDialog.id = 'overlord-tutorial-dialog';
+  tutorialDialog.className = 'overlord-tutorial-dialog';
+  tutorialDialog.setAttribute('aria-labelledby', 'overlord-tutorial-title');
+  document.body.append(tutorialDialog);
+  events.on(tutorialDialog, 'close', () => {
+    if (!disposed) context.emblems?.check?.();
+  });
 
   const cutsceneLayer = document.createElement('section');
   let cutsceneToken = 0;
@@ -491,6 +431,7 @@ export function createOverlordBattle(context) {
       bombDurationMs = 0;
       bombTargetId = '';
       bombTriggered = false;
+      bombPausedAt = 0;
       lastCriticalTickSec = -1;
     }
     clearBombDom();
@@ -509,7 +450,17 @@ export function createOverlordBattle(context) {
       disarmBombTimer({ resetKey: true });
       return;
     }
-    const remainMs = Math.max(0, bombDeadlineAt - now);
+    const paused = tutorialDialog.open || document.body.classList.contains('gal-playing');
+    if (paused) {
+      if (!bombPausedAt) bombPausedAt = now;
+    } else if (bombPausedAt) {
+      const pauseDelta = Math.max(0, now - bombPausedAt);
+      bombDeadlineAt += pauseDelta;
+      bombStartAt += pauseDelta;
+      bombPausedAt = 0;
+    }
+    const effectiveNow = paused ? bombPausedAt : now;
+    const remainMs = Math.max(0, bombDeadlineAt - effectiveNow);
     const remainSec = remainMs / 1000;
     const fraction = bombDurationMs > 0 ? Math.max(0, Math.min(1, remainMs / bombDurationMs)) : 0;
     const warning = remainSec <= 15 && remainSec > 5;
@@ -544,7 +495,7 @@ export function createOverlordBattle(context) {
       if (chip.textContent !== nextText) chip.textContent = nextText;
     }
 
-    if (critical) {
+    if (!paused && critical) {
       const ceilSec = Math.ceil(remainSec);
       if (ceilSec > 0 && ceilSec !== lastCriticalTickSec) {
         lastCriticalTickSec = ceilSec;
@@ -552,7 +503,7 @@ export function createOverlordBattle(context) {
       }
     }
 
-    if (remainMs <= 0 && !bombTriggered) {
+    if (!paused && remainMs <= 0 && !bombTriggered) {
       bombTriggered = true;
       disarmBombTimer({ resetKey: false });
       state.bombExpired = true;
@@ -592,16 +543,19 @@ export function createOverlordBattle(context) {
     battleEl.dataset.apepPlague = mode;
     const field = current || next;
     const maxAge = Math.max(0, ...(field?.ages || [0]));
-    const maxRear = Math.max(0, ...Object.values(field?.backfieldTurns || {}));
+    const sealedActive = Object.values(field?.sealed || {}).some(Boolean);
     const bossStage =
       state?.units?.[APEP_ID]?.bossStage || (state?.units?.[APEP_ID]?.enraged ? 2 : 1);
     const intensity = Math.min(
       1,
-      0.28 + maxAge * 0.14 + maxRear * 0.22 + (bossStage >= 3 ? 0.24 : bossStage === 2 ? 0.12 : 0),
+      0.28 +
+        maxAge * 0.14 +
+        (sealedActive ? 0.25 : 0) +
+        (bossStage >= 3 ? 0.24 : bossStage === 2 ? 0.12 : 0),
     );
     plagueEdge.hidden = false;
     plagueEdge.dataset.mode = mode;
-    plagueEdge.dataset.rearDanger = maxRear > 0 ? '1' : '0';
+    plagueEdge.dataset.rearDanger = sealedActive ? '1' : '0';
     plagueEdge.style.setProperty(
       '--plague-intensity',
       mode === 'preview' ? '0.26' : intensity.toFixed(2),
@@ -645,7 +599,7 @@ export function createOverlordBattle(context) {
     chip.textContent = amounts.length
       ? `沉疫 −${smallest === largest ? largest : `${smallest}–${largest}`}`
       : '沉疫';
-    chip.title = '回合末 · 前场浸染 / 后场连蹲溺蚀';
+    chip.title = '回合末 · 边缘沉疫全队同伤 / 前场连承2回合禁盾禁疗禁回蓝（退回后场解除）';
   }
 
   function sync() {
@@ -692,6 +646,7 @@ export function createOverlordBattle(context) {
       bombDeadlineAt = bombStartAt + bombDurationMs;
       bombTargetId = bomb.target;
       bombTriggered = false;
+      bombPausedAt = 0;
       lastCriticalTickSec = -1;
       const targetName = context.roster?.get?.(bomb.target)?.name || bomb.target;
       const pack = overlordDialoguePack(bomb.owner);
@@ -755,9 +710,9 @@ export function createOverlordBattle(context) {
         );
       }
       const fieldAfter = apepPlague(event.after);
-      const age = fieldAfter?.ages[0];
-      const maxRear = Math.max(0, ...Object.values(fieldAfter?.backfieldTurns || {}));
-      if (event.rearTargets?.length && maxRear >= 2 && pack.rearPlagueAlert) {
+      const age = fieldAfter?.ages?.[0];
+      const hasSealed = Object.values(fieldAfter?.sealed || {}).some(Boolean);
+      if (hasSealed && pack.rearPlagueAlert) {
         void showLine(actorName, pack.rearPlagueAlert, { tone: 'enraged', holdMs: 2600 });
       } else if (age === 2 && pack.plagueTick) {
         void showLine(actorName, pack.plagueTick, { tone: 'enraged', holdMs: 2200 });
@@ -835,47 +790,87 @@ export function createOverlordBattle(context) {
   events.on(window, 'click', handleSealedInteraction, { capture: true });
   events.on(window, 'pointerdown', handleSealedInteraction, { capture: true });
   events.on(window, 'keydown', handleSealedInteraction, { capture: true });
-  events.on(window, 'pagehide', markReloadOnUnload);
-  events.on(window, 'beforeunload', markReloadOnUnload);
+  events.on(window, 'pagehide', (event) => {
+    if (!event.persisted) markReloadOnUnload();
+  });
 
-  function checkReloadFourthWall() {
-    if (disposed) return false;
-    const saved = readReloadWatch();
-    if (!saved) return false;
-    let isReloadNav;
-    try {
-      const navEntry = performance?.getEntriesByType?.('navigation')?.[0];
-      isReloadNav = navEntry?.type === 'reload';
-    } catch {
-      isReloadNav = false;
+  function checkMechanicTutorial(result, nextState) {
+    if (
+      disposed ||
+      session.runtime.mode !== 'battle' ||
+      ['apep-vfx-test', 'animation-fixture'].includes(session.journey?.expedition?.id)
+    ) {
+      return false;
     }
-    if (!saved.reloadedPending && !(saved.armed && isReloadNav)) return false;
-    const count = Math.max(1, Number(saved.reloadCount) || 1);
-    writeReloadWatch({
-      ...saved,
-      armed: Boolean(currentOverlordDef()),
-      reloadedPending: false,
-      reenteredPending: true,
-      reloadCount: count,
-    });
-    const text = overlordReloadBark(saved.bossId, count);
-    setTimeout(() => {
-      if (disposed) return;
-      void showLine(saved.bossName || '失败的炼金傀偶', text, {
-        rankLabel: saved.rankLabel || '磨坊阁楼 · 失控炼金造物',
-        tone: 'enraged',
-        holdMs: 4200,
-        interrupt: true,
-      });
-    }, 260);
+    const bossId = detectOverlordTutorialTrigger(result, nextState);
+    if (!bossId) return false;
+    const library = session.ai?.library;
+    if (!library) return false;
+    library.seenOverlordTutorials ||= [];
+    if (library.seenOverlordTutorials.includes(bossId)) return false;
+    const spec = OVERLORD_TUTORIALS[bossId];
+    if (!spec) return false;
+    library.seenOverlordTutorials.push(bossId);
+    context.generation?.save?.();
+    tutorialDialog.style.setProperty('--tutorial-accent', spec.accent || '#e2b95a');
+    tutorialDialog.dataset.overlordId = spec.id;
+    tutorialDialog.innerHTML = html`<div class="overlord-tutorial-frame">
+      <header class="overlord-tutorial-head">
+        <img
+          class="overlord-tutorial-portrait"
+          src="${spec.portrait}"
+          alt="${escapeText(spec.bossName)}"
+        />
+        <div class="overlord-tutorial-titles">
+          <small>${escapeText(spec.rankLabel)} · 霸主机制解析</small>
+          <h2 id="overlord-tutorial-title">${escapeText(spec.headline)}</h2>
+          <p>${escapeText(spec.intro)}</p>
+        </div>
+        <button id="overlord-tutorial-x" type="button" aria-label="关闭机制解析">×</button>
+      </header>
+      <div class="overlord-tutorial-body">
+        <figure class="overlord-tutorial-diagram">${spec.diagramSvg}</figure>
+        <div class="overlord-tutorial-cards">
+          ${spec.mechanics
+            .map(
+              (item) =>
+                html`<article class="overlord-tut-card">
+                  <span class="overlord-tut-tag">${escapeText(item.tag)}</span>
+                  <h3>${escapeText(item.title)}</h3>
+                  <p>${escapeText(item.summary)}</p>
+                  <div class="overlord-tut-counter">
+                    <b>应对思路</b>
+                    <span>${escapeText(item.counter)}</span>
+                  </div>
+                </article>`,
+            )
+            .join('')}
+        </div>
+      </div>
+      <footer class="overlord-tutorial-foot">
+        <p class="overlord-tut-takeaway">★ ${escapeText(spec.keyTakeaway)}</p>
+        <button id="overlord-tutorial-close" type="button" class="primary">
+          明白了 · 继续迎战
+        </button>
+      </footer>
+    </div>`;
+    const dismiss = () => {
+      if (tutorialDialog.open) tutorialDialog.close();
+    };
+    tutorialDialog.querySelector('#overlord-tutorial-close').onclick = dismiss;
+    tutorialDialog.querySelector('#overlord-tutorial-x').onclick = dismiss;
+    if (!tutorialDialog.open) tutorialDialog.showModal();
     return true;
   }
 
   function reset() {
+    cancelReloadBark();
     cutsceneToken++;
     introPlayedKey = '';
     domainLockedRound = -1;
     lastCorruptBarkKey = '';
+    bombPausedAt = 0;
+    if (tutorialDialog.open) tutorialDialog.close();
     clearDialogue();
     disarmBombTimer({ resetKey: true });
     applySeal(false);
@@ -903,8 +898,11 @@ export function createOverlordBattle(context) {
   return {
     isOverlordBattle: () => Boolean(currentOverlordDef()),
     isSealed: () => document.body.classList.contains('overlord-ui-locked'),
+    isTutorialOpen: () => tutorialDialog.open,
     entrance,
     checkReloadFourthWall,
+    cancelReloadBark,
+    checkMechanicTutorial,
     sync,
     onEvent,
     onVictory,
@@ -917,6 +915,7 @@ export function createOverlordBattle(context) {
       disposed = true;
       events.dispose();
       reset();
+      tutorialDialog.remove();
       cutsceneLayer.remove();
       dialogueBar.remove();
       bombVignette.remove();

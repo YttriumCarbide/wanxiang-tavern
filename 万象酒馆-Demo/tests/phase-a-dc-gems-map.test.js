@@ -243,7 +243,10 @@ test('wild skirmishes generate 3 non-AI battles with ecological drops and known-
       }
     }
     assert.ok(encounterPlan.rewards.gold > 0);
-    assert.ok(encounterPlan.rewards.ether > 0);
+    assert.equal(encounterPlan.rewards.ether, 0);
+    assert.ok(
+      encounterPlan.rewards.equipmentVouchers >= 1 && encounterPlan.rewards.equipmentVouchers <= 3,
+    );
     assert.ok(Object.keys(encounterPlan.rewards.ingredients).length >= 1);
   }
   const firstId = entries[0].nodeId;

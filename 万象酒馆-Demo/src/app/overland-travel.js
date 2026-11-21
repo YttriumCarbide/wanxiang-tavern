@@ -1,3 +1,4 @@
+import { actHistory, createOverlandWorkspace } from './overland-workspace.js';
 import { escapeText } from '../ui.js';
 import {
   normalizeOverlandStory,
@@ -8,7 +9,7 @@ import {
 } from '../overland-travel.js';
 import { archiveOverlandLoot, dungeonLoot, settleEther } from '../archives.js';
 import { settingOnly } from '../ai/contracts.js';
-import { parseGalText } from '../gal.js';
+
 import { gameTime, memoryChat, withInvitationMemories } from '../memory.js';
 import { applyFutureDialogue, dialogueTargets } from './future-dialogue.js';
 import { prepareFreeDcContext, resolveFixedChoiceCheck } from '../dc-rp.js';
@@ -21,6 +22,8 @@ import {
 import { INGREDIENTS } from '../content/dining.js';
 import { IMPERIAL_DUNGEONS } from '../content/imperial-network.js';
 import { unlockDungeonMap } from '../exploration.js';
+import { grantVictoryOverlordEmblem } from '../emblem-progression.js';
+import { EMBLEMS } from '../emblems.js';
 import { learning } from '../campaign.js';
 import { recordGuildSparringWin } from '../guild.js';
 
@@ -30,111 +33,30 @@ export function createOverlandTravel(
 ) {
   const { session } = context;
   const owner = 'overland-travel';
-  const stagePanel = document.querySelector('#gal-stage');
-  const form = document.createElement('form');
-  form.id = 'overland-rp';
-  form.hidden = true;
   const skirmishDialog = document.createElement('dialog');
   skirmishDialog.id = 'skirmish-dialog';
   skirmishDialog.className = 'skirmish-dialog';
   skirmishDialog.setAttribute('aria-labelledby', 'skirmish-dialog-title');
   document.body.append(skirmishDialog);
   let dismissedSkirmish = null;
-  form.innerHTML = `<header class="invite-meta">
-    <span class="invite-progress" aria-live="polite"></span>
-    <div class="invite-actions"><button type="button" data-overland-continue></button></div></header>
-    <div class="invite-choices" aria-label="本幕建议行动" hidden></div>
-    <div class="invite-reply">
-      <textarea id="overland-input" rows="3" maxlength="3000" required
-        aria-label="旅途回应" placeholder="你想怎么应对眼前的旅途奇遇？"></textarea>
-      <button id="overland-send" type="submit" aria-label="回应">回应</button>
-    </div>
-    <p class="invite-error" role="status"></p>`;
-  const field = form.querySelector('textarea');
-  const choices = form.querySelector('.invite-choices');
-  const notice = form.querySelector('.invite-error');
   const outing = () =>
     active()?.kind === 'outing' && active().stage === 'roaming' ? active() : null;
   const run = () => outing()?.overland;
   const stage = (current) => overlandRunPlan(current).stages[current.index];
-  const actHistory = (current) =>
-    (current?.history || [])
-      .filter((item) => item.index === current.index)
-      .map(({ role, content }) => ({ role, content }));
   let request = null;
   let rpRequest = null;
-  let workspace = false;
   let reading = false;
   let fighting = false;
-
-  function sceneDialogue(current) {
-    const act = current?.acts?.[current.index];
-    if (!act || current.phase === 'depart' || (current.phase === 'intro' && reading)) return [];
-    const dialogue = parseGalText(act.story);
-    const history = actHistory(current);
-    for (const [index, message] of history.entries()) {
-      if (message.role === 'user') dialogue.push({ speaker: '玩家', text: message.content });
-      else if (!reading || index !== history.length - 1)
-        dialogue.push(...parseGalText(message.content));
-    }
-    return dialogue;
-  }
-
-  function updateForm() {
-    const current = run();
-    if (!current || form.hidden) return;
-    const act = current.acts[current.index];
-    const turns = Math.floor(actHistory(current).length / 2);
-    const last = current.index + 1 === current.acts.length;
-    form.querySelector('.invite-progress').textContent =
-      `第 ${current.index + 1}/${current.acts.length} 幕 · ${stage(current).to.name} · ${act.title}${turns ? ` · 已互动 ${turns} 轮` : ''}`;
-    const cont = form.querySelector('[data-overland-continue]');
-    cont.textContent = last ? '抵达终点 →' : '继续赶路 →';
-    const hasLegacyOutcomes = Boolean(act.choices?.some((item) => item.outcome));
-    const locked = Boolean(rpRequest || reading || current.phase !== 'choice' || hasLegacyOutcomes);
-    field.disabled = locked;
-    form.querySelector('[type="submit"]').disabled = locked;
-    cont.disabled = Boolean(rpRequest || reading || current.phase !== 'choice');
-    const available = !locked && !turns ? act.choices || [] : [];
-    choices.hidden = !available.length;
-    choices.replaceChildren(
-      ...available.map((item) => {
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.dataset.overlandChoice = item.id || '';
-        button.textContent = item.label;
-        return button;
-      }),
-    );
-  }
-
-  function openWorkspace(current) {
-    if (workspace || run() !== current) return;
-    workspace = true;
-    form.hidden = false;
-    field.value = current.draft || '';
-    notice.textContent = '';
-    context.gal.workspace({
-      owner,
-      title: current.acts[current.index].title,
-      actors: partyIds(),
-      followSpeakers: true,
-      composer: [form],
-      onLayout({ height }) {
-        stagePanel?.style.setProperty('--daily-invite-composer', `${height}px`);
-      },
-      transcript: () => sceneDialogue(current),
-      onClose() {
-        stagePanel?.style.removeProperty('--daily-invite-composer');
-        workspace = false;
-        form.hidden = true;
-        form.remove();
-        rpRequest?.abort();
-        render();
-      },
-    });
-    updateForm();
-  }
+  const { form, field, notice, updateForm, openWorkspace } = createOverlandWorkspace({
+    context,
+    owner,
+    run,
+    stage,
+    partyIds,
+    render,
+    activeRpRequest: () => rpRequest,
+    isReading: () => reading,
+  });
 
   async function playOverlandEpilogue(current) {
     if (!current || current.epilogueShown) return;
@@ -230,8 +152,8 @@ export function createOverlandTravel(
     dismissedSkirmish = null;
     const newlyUnlocked = reachedDungeon ? unlockDungeonMap(library, reachedDungeon) : false;
     save();
+    if (!reachedDungeon && !reachedDiscovery) context.daily.closeAtlasOverlay?.();
     if (!reachedDungeon && entry) navigate(entry.scene);
-    else if (reachedDungeon && entry && scene() !== entry.scene) navigate(entry.scene);
     if (reachedDiscovery && discoveryId) context.daily.arriveDiscovery(discoveryId);
     if (reachedDungeon) context.daily.arriveDungeon?.(reachedDungeon);
     context.shell.toast(
@@ -316,7 +238,10 @@ export function createOverlandTravel(
           },
         },
       );
-      if (playerIntent === null || control.signal.aborted) return;
+      if (playerIntent === null || control.signal.aborted) {
+        context.daily.cancelAtlasPlan?.();
+        return;
+      }
       if (entry && outing() !== entry) return;
       if (playerIntent?.fast) {
         if (!entry) entry = options.ensureOuting?.();
@@ -393,6 +318,7 @@ export function createOverlandTravel(
       save();
     }
     const previous = scene();
+    context.daily.closeAtlasOverlay?.();
     navigate(entry.scene);
     if (previous === entry.scene) queueMicrotask(() => arrive(scene()));
     return true;
@@ -798,7 +724,7 @@ export function createOverlandTravel(
     skirmishDialog.innerHTML = `<div class="skirmish-card">
       <small>WILD SKIRMISH · ${node.tier === 'boss' ? '首领级游荡遭遇' : '三波魔物巡逻'}</small>
       <h3 id="skirmish-dialog-title">${escapeText(plan.label)}（Lv.${plan.level}）</h3>
-      <p>前路巡逻魔物正在集结（连续 ${plan.encounters.length} 波交锋）。获胜可获得金币 ${plan.rewards.gold}、以太 ${plan.rewards.ether}${ingNames ? `，以及食材 ${escapeText(ingNames)}` : ''}${plan.rewards.gems?.length ? ' 与宝石碎片' : ''}。</p>
+      <p>前路巡逻魔物正在集结（连续 ${plan.encounters.length} 波交锋）。获胜可获得金币 ${plan.rewards.gold}、装备兑换券 ${plan.rewards.equipmentVouchers || 1}${ingNames ? `，以及食材 ${escapeText(ingNames)}` : ''}${plan.rewards.gems?.length ? ' 与宝石碎片' : ''}。</p>
       <div class="skirmish-actions">
         <button type="button" data-skirmish-skip>绕行避开</button>
         <button type="button" class="primary" data-skirmish-fight>迎战 ${plan.encounters.length} 波巡逻</button>
@@ -894,10 +820,12 @@ export function createOverlandTravel(
         retreat: won && !isFinalWave,
         backLabel: won && isFinalWave ? '收下战利品' : '撤回原地',
         back() {
-          document.querySelector('#result').close();
-          context.journey.returnInn();
-          context.daily.refresh?.();
-          context.checkpoint.saveNow();
+          if (session.journey.expedition !== expedition || session.runtime.mode !== 'battle')
+            return;
+          if (context.journey.returnInn({ skirmishRetreat: expedition })) {
+            context.daily.refresh?.();
+            context.checkpoint.saveNow();
+          }
         },
       });
       return;
@@ -905,7 +833,18 @@ export function createOverlandTravel(
     const current = run();
     const won = session.battle.state.phase === 'victory';
     if (!expedition.pendingResult) {
-      if (won) await context.battleBarks?.battleWon();
+      if (won) {
+        const unlockedEmblem = grantVictoryOverlordEmblem(
+          session.ai.library,
+          session.battle.state,
+          expedition,
+        );
+        if (unlockedEmblem) {
+          const embName = EMBLEMS[unlockedEmblem.id]?.emblem?.name || unlockedEmblem.id;
+          context.shell?.toast?.(`已获得纹章士戒指「${embName}」`);
+        }
+        await context.battleBarks?.battleWon();
+      }
       const leg = current ? stage(current) : null;
       const runId = current && leg ? `overland:${current.id}:${leg.id}` : null;
       if (won && runId && current?.items?.length) {

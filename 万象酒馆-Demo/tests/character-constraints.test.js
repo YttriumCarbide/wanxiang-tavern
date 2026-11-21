@@ -14,6 +14,7 @@ import { newWorldEntry, syncBuiltinWorldbook } from '../src/ai/worldbook.js';
 import { createBrowserStores } from '../src/ai/browser-stores.js';
 import { createAiPipeline } from '../src/ai/pipeline/runtime.js';
 import { createWorldbookCounter } from '../server/character-reader.mjs';
+import { readGenerationResult } from '../src/ai/pipeline/generation-result.js';
 
 const readText = (name) => readFile(new URL('../prompts/' + name, import.meta.url), 'utf8');
 function design(mode = 'event') {
@@ -57,33 +58,36 @@ function design(mode = 'event') {
   };
   return raw;
 }
-test('all six request schemas follow the compiler event/condition permissions', () => {
+test('all six request schemas share supported mechanisms while prompts retain tier guidance', () => {
   for (let level = 1; level <= 6; level++) {
     const plan = characterGenerationPlan({ complexity: level }),
       schema = characterOutputSchema({ plan });
+    assert.deepEqual(schema, characterOutputSchema());
     const event = design();
+    assert.doesNotThrow(() => checkOutputSchema(event, schema));
+    const normalized = normalizeCharacter(event, 'event-test', { complexity: level });
+    assert.equal(normalized.combat.skills[1].passive, true);
+    const rule = normalized.combat.skills[1].rules[0];
+    assert.equal(rule.mode, 'event');
+    assert.equal(rule.event, 'roundEnd');
+    assert.deepEqual(rule.conditions, event.data.skills[1].rules[0].conditions);
+    assert.equal(rule.effects[0].type, 'shield');
     if (level < 4) {
-      assert.throws(() => checkOutputSchema(event, schema));
-      assert.throws(() => normalizeCharacter(event, 'event-test', { complexity: level }));
       assert.match(characterConstraintText(plan), /本次禁止event事件被动/);
       assert.deepEqual(
         generationInput('character', { brief: '巡狩者', complexity: level }).mechanics.passives
           .unifiedRules.events,
         {},
       );
-    } else {
-      assert.doesNotThrow(() => checkOutputSchema(event, schema));
-      assert.doesNotThrow(() => normalizeCharacter(event, 'event-test', { complexity: level }));
     }
     const continuous = design('continuous');
-    if (level < 3) continuous.data.skills[1].rules[0].conditions = [];
     assert.doesNotThrow(() => checkOutputSchema(continuous, schema));
     assert.doesNotThrow(() => normalizeCharacter(continuous, 'aura-test', { complexity: level }));
     assert.equal(
       schema.properties.data.properties.skills.items.anyOf[0].properties.effects.maxItems,
-      level === 1 ? 1 : 2,
+      2,
     );
-    assert.equal(Object.hasOwn(schema.properties.data.properties, 'mark'), level >= 5);
+    assert.equal(Object.hasOwn(schema.properties.data.properties, 'mark'), true);
   }
 });
 test('changing event to continuous cannot smuggle recurring shield or recovery through the schema', () => {
@@ -104,11 +108,21 @@ test('changing event to continuous cannot smuggle recurring shield or recovery t
   raw.data.skills[1].rules[0].event = 'roundEnd';
   assert.throws(() => checkOutputSchema(raw, schema), /不是规定字段/);
 });
-test('low-tier event error identifies the actual tier and required tier without rerolling', () => {
-  assert.throws(
-    () => normalizeCharacter(design(), 'test', { complexity: 3 }),
-    /当前第3档「条件强化」.*第4档/,
-  );
+test('low-tier shared reader accepts event mechanisms without changing their structure', () => {
+  const raw = design(),
+    before = structuredClone(raw);
+  const result = readGenerationResult('character', JSON.stringify(raw), {
+    complexity: 1,
+    rollId: 'low-tier-event',
+  });
+  assert.equal(result.diagnostic.stage, 'complete');
+  assert.equal(result.entry.combat.skills[1].passive, true);
+  const rule = result.entry.combat.skills[1].rules[0];
+  assert.equal(rule.mode, 'event');
+  assert.equal(rule.event, 'roundEnd');
+  assert.equal(rule.scope, 'round');
+  assert.deepEqual(rule.conditions, raw.data.skills[1].rules[0].conditions);
+  assert.deepEqual(raw, before);
 });
 test('constraint migration is additive, editable, idempotent and limited to character requests', async () => {
   const builtin = JSON.parse(

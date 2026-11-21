@@ -100,11 +100,12 @@ export function createGenerationDiagnostics({ session, events, api, accept, toas
         ? '此结果已通过校验；本窗口仅供查看。原文只保留到刷新页面，不进入世界书或后续提示词。'
         : '可修改右侧文本并本地重新校验；不会调用模型。只修复格式，不补写设定、猜数值或绕过规则校验。';
   }
-  function show(kind = preferredKind()) {
+  function show(kind = preferredKind(), fallback) {
     session.ai.diagnosticKind = kind;
     render();
     if (!current()) {
-      toast('本页尚未收到这次API的原始返回；原文不会跨刷新保存。');
+      if (fallback) fallback();
+      else toast('本页尚未收到这次API的原始返回；原文不会跨刷新保存。');
       return;
     }
     if (current() && !$('#generation-diagnostics').open) $('#generation-diagnostics').showModal();

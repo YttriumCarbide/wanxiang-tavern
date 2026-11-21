@@ -20,7 +20,7 @@ import { newLibrary, restoreLibrary } from '../src/ai/library.js';
 test('regions preserve independent progress and base worlds continue after six sites', () => {
   const routes = newExploration(817);
   assert.equal(Object.keys(routes).length, Object.keys(REGIONS).length);
-  assert.equal(Object.keys(routes).length, 15 + EMPIRE_TRANSITION_DUNGEONS.length);
+  assert.equal(Object.keys(routes).length, 17 + EMPIRE_TRANSITION_DUNGEONS.length);
   const untouched = JSON.stringify(routes.frost);
   const combinations = new Set();
   for (let i = 0; i < 6; i++) {

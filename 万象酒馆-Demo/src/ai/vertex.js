@@ -1,3 +1,13 @@
+import { readBoundedResponseText } from './response-body.js';
+
+export const VERTEX_DEFAULT_MODELS = Object.freeze([
+  'gemini-4-argon',
+  'gemini-4-carbon',
+  'gemini-4-hydrogen',
+  'gemini-4-neon',
+  'gemini-3.8-flash',
+]);
+
 /** Translate the existing text-only transport to Google's native Gemini protocol. */
 export function isVertex(profile) {
   return (
@@ -177,9 +187,10 @@ function converted(value, streaming, state) {
     ...(value.usageMetadata
       ? {
           usage: {
-            prompt_tokens: value.usageMetadata.promptTokenCount || 0,
-            completion_tokens: value.usageMetadata.candidatesTokenCount || 0,
-            ...(typeof value.usageMetadata.thoughtsTokenCount === 'number'
+            prompt_tokens: value.usageMetadata.promptTokenCount,
+            completion_tokens: value.usageMetadata.candidatesTokenCount,
+            total_tokens: value.usageMetadata.totalTokenCount,
+            ...(value.usageMetadata.thoughtsTokenCount !== undefined
               ? {
                   completion_tokens_details: {
                     reasoning_tokens: value.usageMetadata.thoughtsTokenCount,
@@ -197,8 +208,7 @@ export async function vertexResponse(response) {
   if (!response.ok) return response;
   const state = { call: 0 };
   if (!response.headers.get('content-type')?.includes('text/event-stream')) {
-    const raw = await response.text();
-    if (raw.length > 2000000) throw Error('Vertex 接口返回内容过大');
+    const raw = await readBoundedResponseText(response, 'Vertex 接口返回内容过大');
     try {
       const result = Response.json(converted(JSON.parse(raw), false, state));
       result.vertexRawText = raw;

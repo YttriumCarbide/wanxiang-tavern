@@ -100,6 +100,11 @@ export function readGenerationResult(kind, rawText, input, readCharacter = parse
       throw Error('JSON格式错误：' + failure.message, { cause: failure });
     }
     diagnostic.stage = 'schema';
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+      const failure = Error(`生成格式不符：${kind}必须是对象`);
+      failure.path = kind;
+      throw failure;
+    }
     if (
       kind === 'character' &&
       raw?.setting &&

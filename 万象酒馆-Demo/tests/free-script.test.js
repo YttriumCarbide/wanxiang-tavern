@@ -7,9 +7,7 @@ import { readGenerationResult } from '../server/generation-result.mjs';
 import { settingOnly } from '../src/ai/contracts.js';
 import { newLibrary, restoreLibrary } from '../src/ai/library.js';
 import { createWorldbookStore } from '../server/worldbook-store.mjs';
-import { normalizeRegexScripts } from '../src/ai/regex.js';
 import { generationInput, generationRequest } from '../server/prompts.mjs';
-import { formatRegexPresentation } from '../server/regex-presentation.mjs';
 
 const example = async () =>
   JSON.parse(
@@ -35,13 +33,25 @@ test('an installed older worldbook syncs its reward protocol without losing cust
   };
   await writeFile(path.join(directory, 'books/tavern-world.json'), JSON.stringify(saved));
   const migrated = (await (await createWorldbookStore(directory)).get('tavern-world')).book;
-  assert.match(
-    Object.values(migrated.entries).find(
-      (entry) => entry.extensions?.wanxiang?.generationRule === 'script-output',
-    ).content,
-    /不生成.*reward/u,
+  const builtin = JSON.parse(
+    await readFile(new URL('../assets/builtin-worldbook.json', import.meta.url), 'utf8'),
   );
+  const outputRule = (book) =>
+    Object.values(book.entries).find(
+      (entry) => entry.extensions?.wanxiang?.generationRule === 'script-output',
+    );
+  assert.equal(outputRule(migrated).content, outputRule(builtin).content);
+  assert(outputRule(migrated).content.includes('{{outputSchema}}'));
+  const choice =
+    scriptOutputSchema().properties.data.properties.adventure.properties.event.properties.choices
+      .items;
+  assert.equal(choice.properties.reward, undefined);
+  assert.equal(choice.additionalProperties, false);
   assert.equal(migrated.entries[customId].content, '保留我的独立设定');
+  assert.deepEqual(
+    (await (await createWorldbookStore(directory)).get('tavern-world')).book,
+    migrated,
+  );
 });
 
 test('novel output accepts five unstructured prose blocks and retains strict metadata validation', async () => {
@@ -72,28 +82,10 @@ test('novel output accepts five unstructured prose blocks and retains strict met
   assert.throws(() => readGenerationResult('script', JSON.stringify(badData), { party: [] }));
 });
 
-test('compiled novel metadata survives a save without wrappers and display regex never edits the source', async () => {
+test('compiled novel metadata survives a save without wrappers', async () => {
   const raw = await example();
   raw.story[0] = '旧铜灯亮着。\n\n风从门里进来。';
   const { entry } = readGenerationResult('script', JSON.stringify(raw), { party: [] });
-  await formatRegexPresentation(
-    entry,
-    'script',
-    normalizeRegexScripts([
-      {
-        id: 'novel-view',
-        scriptName: '只改显示',
-        findRegex: '/旧铜灯/g',
-        replaceString: '新铜灯',
-        placement: [2],
-        markdownOnly: true,
-        promptOnly: false,
-        disabled: false,
-      },
-    ]),
-  );
-  assert.equal(entry.story[0], raw.story[0]);
-  assert(entry.display.story[0].includes('新铜灯'));
   const library = newLibrary();
   library.scripts.push({
     ...entry,

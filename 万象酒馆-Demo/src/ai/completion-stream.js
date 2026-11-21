@@ -1,6 +1,30 @@
 import { createToolContentStream } from './tool-content.js';
 import { createPresetOutputProcessor } from './output-processor.js';
 import { upstreamError } from './upstream-error.js';
+import { normalizeUsage } from './usage.js';
+
+export function normalizeCompletionUsage(value) {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+    return normalizeUsage(value);
+  }
+  const {
+    input,
+    output,
+    total,
+    input_tokens: inputTokens = input,
+    output_tokens: outputTokens = output,
+    prompt_tokens: promptTokens = inputTokens,
+    completion_tokens: completionTokens = outputTokens,
+    total_tokens: totalTokens = total,
+    ...rest
+  } = value;
+  return normalizeUsage({
+    ...rest,
+    input: promptTokens,
+    output: completionTokens,
+    total: totalTokens,
+  });
+}
 
 /** Decode upstream SSE across arbitrary UTF-8/chunk boundaries. */
 export async function readCompletionStream(
@@ -68,8 +92,16 @@ export async function readCompletionStream(
     }
     if (tool && choice?.delta?.tool_calls) tool.push(choice.delta.tool_calls);
   }
+  let reader;
+  let readToEnd = false;
   try {
-    for await (const chunk of response.body) {
+    reader = response.body.getReader();
+    for (;;) {
+      const { value: chunk, done } = await reader.read();
+      if (done) {
+        readToEnd = true;
+        break;
+      }
       size += chunk.byteLength;
       if (size > 8000000) throw Error('流式返回内容过大');
       const decoded = decoder.decode(chunk, { stream: true });
@@ -106,12 +138,10 @@ export async function readCompletionStream(
     return {
       content,
       rawContent,
-      usage: {
-        input: Number(usage.prompt_tokens || 0),
-        output: Number(usage.completion_tokens || 0),
-      },
+      usage: normalizeCompletionUsage(usage),
     };
-  } catch (failure) {
+  } catch (caught) {
+    const failure = caught instanceof Error ? caught : Error('流式回复中断');
     failure.rawText = tool?.raw() || content || failure.rawText || wireText;
     failure.delivery = {
       receivedBytes: size,
@@ -123,5 +153,11 @@ export async function readCompletionStream(
     };
     failure.stage ||= finish === 'length' ? 'truncated' : tool ? 'tool-response' : 'transport';
     throw failure;
+  } finally {
+    if (reader) {
+      // Cancellation can fail or wait on the underlying stream after the reply is settled.
+      if (!readToEnd) void reader.cancel().catch(() => {});
+      reader.releaseLock();
+    }
   }
 }

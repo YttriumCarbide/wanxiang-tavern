@@ -1,15 +1,12 @@
 import { DEFINITIONS } from '../data.js';
 import { query as $ } from './dom.js';
-import { readFileAsOptimizedImage } from '../portraits.js';
 import { mountBattleTextSelection } from './text-selection.js';
-import { createPortraitEditor } from './portrait-editor.js';
 import { mountPreparationTouch } from './preparation-touch.js';
 
 export function mountInput(context) {
   mountPreparationTouch(context);
   mountBattleTextSelection(context);
-  const portraitEditor = createPortraitEditor(context);
-  const { session } = context;
+  const { session, portraitEditor } = context;
   context.events.on(document, 'pointerdown', (e) => {
     if (e.button !== 0 || e.target.closest('[data-tooltip]')) return;
     const el = e.target.closest('[data-dragunit]');
@@ -297,13 +294,9 @@ export function mountInput(context) {
       e.preventDefault();
       const heroId = editWrap.dataset.editPortrait;
       try {
-        const dataUrl = await readFileAsOptimizedImage(
-          e.dataTransfer.files[0],
-          context.apiClient.request,
-        );
-        context.shell.setCustomPortrait(heroId, dataUrl);
+        await portraitEditor.importFile(e.dataTransfer.files[0], heroId);
       } catch (err) {
-        context.shell.toast(err.message || '图片读取失败');
+        if (err.name !== 'AbortError') context.shell.toast(err.message || '图片读取失败');
       }
       return;
     }
@@ -346,10 +339,9 @@ export function mountInput(context) {
     const file = portraitInput.files?.[0];
     if (!file || !editingHeroId) return;
     try {
-      const dataUrl = await readFileAsOptimizedImage(file, context.apiClient.request);
-      context.shell.setCustomPortrait(editingHeroId, dataUrl);
+      await portraitEditor.importFile(file, editingHeroId);
     } catch (err) {
-      context.shell.toast(err.message || '图片读取失败');
+      if (err.name !== 'AbortError') context.shell.toast(err.message || '图片读取失败');
     }
   });
   document.querySelectorAll('[data-close]').forEach((b) => (b.onclick = () => $('#rules').close()));

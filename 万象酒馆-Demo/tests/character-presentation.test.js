@@ -68,7 +68,9 @@ test('passive sheets show executable timing and effects instead of the action pr
     '技能动作描写｜守护：抬起手臂，光芒围绕身体旋转。',
   );
   const markup = characterSheet(entry);
-  const section = markup.slice(markup.indexOf('data-character-ability="被动"'));
+  const section = markup.split('data-character-ability="被动"')[1]?.split('</details>')[0];
+  assert(section, 'passive details are present');
+  assert(section.includes('被动 · 前场'));
   assert(section.includes('自身持续获得2层铁皮'));
   assert(!section.includes('抬起手臂，光芒围绕身体旋转'));
   assert(!section.includes('错误的动作说明'));

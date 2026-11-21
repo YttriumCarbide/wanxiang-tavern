@@ -88,6 +88,16 @@ export const IMPERIAL_EXTRA_DUNGEONS = Object.freeze([
     enemyIds: Object.freeze(['pebble', 'hound', 'warden']),
   }),
   Object.freeze({
+    id: 'graystone-quarry',
+    name: '灰岩旧采石场',
+    tier: '低阶',
+    biome: 'graystone-quarry',
+    imageId: 'road-ridge',
+    point: Object.freeze([1544, 1468]),
+    level: 5,
+    enemyIds: Object.freeze(['erosionHound', 'erosionCrawler', 'erosionJuggernaut']),
+  }),
+  Object.freeze({
     id: 'whisper-grove',
     name: '微光苔林',
     tier: '中阶',
@@ -546,5 +556,18 @@ export const IMPERIAL_BRANCH_LEGS = Object.freeze([
     level: 27,
     type: 'battle',
     enemyIds: Object.freeze(['crystalBeetle', 'hexer']),
+  }),
+  Object.freeze({
+    id: 'graystone-quarry-approach',
+    from: 'outskirts',
+    to: 'graystone-quarry',
+    bends: Object.freeze([
+      [1529, 1408],
+      [1538, 1438],
+    ]),
+    turns: 3,
+    level: 6,
+    type: 'battle',
+    enemyIds: Object.freeze(['erosionHound', 'erosionCrawler']),
   }),
 ]);

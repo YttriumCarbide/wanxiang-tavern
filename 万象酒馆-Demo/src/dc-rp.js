@@ -3,6 +3,7 @@ import {
   DC_ATTRIBUTES,
   DC_DEFAULT_DIFFICULTY,
   calibrateDisplayCheck,
+  adjustDcForProtagonist,
   computeMapDc,
   dcAttrLabel,
   dcOutcomeLabel,
@@ -10,11 +11,14 @@ import {
   evaluate2d6Check,
   isPassiveBypass,
   normalizeDcAttrKey,
+  normalizeCheckDc,
   normalizeDcDifficulty,
+  protagonistDcReduction,
   roll2d6,
 } from './dc.js';
 import { rollGemDrop } from './content/gems.js';
 import { ITEMS } from './content/items.js';
+import { HEROES } from './data.js';
 import { claimBattleRewards } from './rewards.js';
 
 export const DC_SPLIT_MARKER = '[[DC_CHECK]]';
@@ -173,6 +177,8 @@ export function prepareFreeDcContext(
   const diceSum = dice[0] + dice[1];
   const doubleSix = dice[0] === 6 && dice[1] === 6;
   const doubleOne = dice[0] === 1 && dice[1] === 1;
+  const dcReduction = protagonistDcReduction(library);
+  const baseDefaultDc = mapOrLevel != null ? computeMapDc(mapOrLevel, 1) : 8;
   const actors = (characters || []).map((member) => {
     const stats = effectiveDcAttrs(library, member);
     const attrs = {};
@@ -198,7 +204,10 @@ export function prepareFreeDcContext(
     doubleSix,
     doubleOne,
     actors,
-    ...(mapOrLevel != null ? { mapOrLevel, defaultDc: computeMapDc(mapOrLevel, 1) } : {}),
+    ...(mapOrLevel != null ? { mapOrLevel } : {}),
+    baseDefaultDc,
+    defaultDc: normalizeCheckDc(baseDefaultDc - dcReduction),
+    dcReduction,
   };
 }
 
@@ -218,7 +227,7 @@ export function resolveFixedChoiceCheck({
     dice,
     mod: modEntry.baseMod,
     bonus: modEntry.gemBonus,
-    dc: dcSpec.dc,
+    dc: adjustDcForProtagonist(library, dcSpec.dc),
   });
   return {
     choiceId: choice?.id || 'choice-1',
@@ -248,7 +257,7 @@ export function freeDcPromptSummary(context) {
     : context.doubleOne
       ? '【注意】本轮预抽骰出了双1，若检定则必为大失败(fumble)！'
       : '';
-  return `【本轮 2D6 预抽判定池】本次基础 2D6 = ${context.dice[0]} + ${context.dice[1]} = ${context.diceSum}。${note}\n各角色可用属性总值（含六维与宝石加成，可直接对比 DC 判断成败，或判断被动直通）：\n${actorLines}`;
+  return `【本轮 2D6 预抽判定池】本次基础 2D6 = ${context.dice[0]} + ${context.dice[1]} = ${context.diceSum}。当前情景基础 DC ${context.baseDefaultDc ?? context.defaultDc ?? 8}，主角等级优惠后的实际判定 DC ${context.defaultDc ?? 8}。请用实际判定 DC 对比总值判断成败；<wanxiang_dc> 中的 dc 请填写优惠前的基础 DC，游戏结算时会自动应用一次主角等级优惠。${note}\n各角色可用属性总值（含六维与宝石加成，可直接对比实际判定 DC 判断成败，或判断被动直通）：\n${actorLines}`;
 }
 
 export function fixedChoicePromptSummary(choiceCheck) {
@@ -265,7 +274,7 @@ export function normalizeDcTurnOutcome(
   raw,
   actors = [],
   fixedCheck = null,
-  { mapOrLevel = null } = {},
+  { mapOrLevel = null, dcReduction = 0 } = {},
 ) {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
     throw Error('<wanxiang_dc> 必须为 JSON 对象');
@@ -278,10 +287,13 @@ export function normalizeDcTurnOutcome(
       ? raw.actorId
       : fallbackActorId);
   const attr = fixedCheck?.attr || normalizeDcAttrKey(raw.attr) || 'str';
-  let dc = fixedCheck?.dc || normalizeDcDifficulty(raw.dc, DC_DEFAULT_DIFFICULTY);
+  const reduction = Number.isInteger(dcReduction) ? Math.max(0, Math.min(2, dcReduction)) : 0;
+  let dc =
+    fixedCheck?.dc ??
+    normalizeCheckDc(normalizeDcDifficulty(raw.dc, DC_DEFAULT_DIFFICULTY) - reduction);
   if (!fixedCheck && mapOrLevel != null) {
-    const minDc = computeMapDc(mapOrLevel, 0);
-    const maxDc = computeMapDc(mapOrLevel, 2);
+    const minDc = normalizeCheckDc(computeMapDc(mapOrLevel, 0) - reduction);
+    const maxDc = normalizeCheckDc(computeMapDc(mapOrLevel, 2) - reduction);
     dc = Math.min(maxDc, Math.max(minDc, dc));
   }
   const outcome =
@@ -446,13 +458,16 @@ export function applyDcPenalty(library, penalty, actorId, expedition = null) {
   }
   if (expedition?.carried?.units) {
     const units = expedition.carried.units;
-    const targetUnit =
-      units[actorId] || Object.values(units).find((u) => u && u.side === 'player' && u.hp > 1);
-    if (targetUnit) {
-      if (penalty.hpLoss > 0) {
-        const nextHp = Math.max(1, targetUnit.hp - penalty.hpLoss);
-        applied.hpLoss = targetUnit.hp - nextHp;
-        targetUnit.hp = nextHp;
+    const partyIds = expedition.partyIds || library.party;
+    const slot = HEROES[partyIds?.indexOf(actorId)]?.id;
+    const isAlly = (unit) => ['hero', 'player'].includes(unit?.side);
+    const targetUnit = actorId
+      ? units[slot || actorId]
+      : Object.values(units).find((unit) => isAlly(unit) && unit.hp > 1);
+    if (isAlly(targetUnit)) {
+      if (penalty.hpLoss > 0 && targetUnit.hp > 1) {
+        applied.hpLoss = Math.min(targetUnit.hp - 1, penalty.hpLoss);
+        targetUnit.hp -= applied.hpLoss;
       }
       if (penalty.mpLoss > 0) {
         const nextMp = Math.max(0, targetUnit.mp - penalty.mpLoss);
@@ -460,8 +475,9 @@ export function applyDcPenalty(library, penalty, actorId, expedition = null) {
         targetUnit.mp = nextMp;
       }
       if (penalty.debuff && penalty.debuff !== 'none') {
-        targetUnit.buffs ||= {};
-        targetUnit.buffs[penalty.debuff] = Math.min(6, (targetUnit.buffs[penalty.debuff] || 0) + 2);
+        expedition.nextBattleDebuffs ||= {};
+        const buffs = (expedition.nextBattleDebuffs[targetUnit.id || slot || actorId] ||= {});
+        buffs[penalty.debuff] = Math.min(6, (buffs[penalty.debuff] || 0) + 2);
         applied.debuff = penalty.debuff;
       }
     }

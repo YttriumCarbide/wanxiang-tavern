@@ -38,6 +38,9 @@ export function createDestinations(context) {
       ? session.ai.library.unlockedDungeons
       : [];
     const effective = new Set(unlocked);
+    for (const id of UNLOCKABLE_DUNGEONS) {
+      if ((session.ai.library.exploration?.[id]?.completed || 0) > 0) effective.add(id);
+    }
     if (isQuickTest()) effective.add('mill');
     if (isQuickTestApep()) effective.add('ruins');
     return UNLOCKABLE_DUNGEONS.filter((id) => effective.has(id));
@@ -811,7 +814,6 @@ export function createDestinations(context) {
   events.on($('#destination-start'), 'click', () => {
     if (stage !== 'route' || !session.journey.selectedNode || session.ai.busy) return;
     if (session.journey.selectedNode.replay) {
-      dialog.close();
       void context.journey.startBattle();
       return;
     }
@@ -819,10 +821,11 @@ export function createDestinations(context) {
       generationEnabled(session.ai.generationOptions) &&
       needsContinuationWorld(session.ai.library, session.journey.selectedNode)
     ) {
+      if (context.onboarding && !context.onboarding.allowPortal('script', { entering: true }))
+        return;
       openWorld(true, true);
       return;
     }
-    dialog.close();
     void context.generation.portal('script');
   });
   return {

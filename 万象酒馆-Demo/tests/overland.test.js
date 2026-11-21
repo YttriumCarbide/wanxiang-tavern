@@ -420,5 +420,6 @@ test('skipOverlandApi option restores without developerMode and city/dungeon sub
   const { positions, width, height } = destinationMap(entries);
   const terrainSvg = destinationRegionTerrain('ruins', width, height, positions);
   assert.match(terrainSvg, /destination-terrain-layer/);
-  assert.match(terrainSvg, /terrain-frame-outer/);
+  assert.match(terrainSvg, /fansheng-atlas\.svg#paper-quarter/);
+  assert.doesNotMatch(terrainSvg, /terrain-frame-outer/);
 });

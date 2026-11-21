@@ -10,8 +10,8 @@
       "hash": "94f650362c645a08e90ad27d970922e35f41cfbcef56af485317bc4db601aa38"
     },
     "assets/apep-lamb.glb": {
-      "bytes": 3012188,
-      "hash": "4eb02bc2cd17470b72b9f5dc2342c3591bbea68e1df147d839d53e631f7f4a95"
+      "bytes": 618576,
+      "hash": "29afa68597eee1e839e0d003ccca7b970a4945c2f35f07e2c895dc2d1d243bf8"
     },
     "assets/arcane.glb": {
       "bytes": 5099452,
@@ -26,8 +26,8 @@
       "hash": "35bfd2f1a1a0f9abcc9f58546a10120b2c452d34730606b5585868427ee3d1f1"
     },
     "assets/ares.glb": {
-      "bytes": 3974620,
-      "hash": "33dc9ad9df213479b0ddb7f58ba539b52e08523e24f1aa5de808e4c307cd6409"
+      "bytes": 4380860,
+      "hash": "041fb9eb7a673b3ea03545a065ffe011388fb5976a70e0ccebbebadbba723af8"
     },
     "assets/bandit-alchemist.glb": {
       "bytes": 66560,
@@ -50,8 +50,8 @@
       "hash": "68adc0751d968f4d8eecc99e8c4fd14f0c801bd2870a7a91c0553404ec08ffe8"
     },
     "assets/bandit-syndicate-king.glb": {
-      "bytes": 225236,
-      "hash": "5fde2297a28cfa53c03663ceb7e758289923e61ec0e07146f813e1f5391905d3"
+      "bytes": 2331568,
+      "hash": "fca155d4c752064c8b7b5749afd728910a290e9e89e9f4afcc39f8222cd40f36"
     },
     "assets/bark-acolyte.glb": {
       "bytes": 133304,
@@ -68,6 +68,10 @@
     "assets/bicolor-singularity-lizard.glb": {
       "bytes": 218628,
       "hash": "f2a8f24b232cd53ec646cb048abfd0da66fe66f671704d3cc3b20cccd7aba71e"
+    },
+    "assets/black-market.glb": {
+      "bytes": 2405748,
+      "hash": "9a167278d7313e11e3b33d326c039988a1484fd9cd219dea14d41e087d17d59a"
     },
     "assets/bog-drifter.glb": {
       "bytes": 33196,
@@ -101,6 +105,10 @@
       "bytes": 67792,
       "hash": "47545b9934ac8e309af8af4a6d3557bbf22da90f8b7f8d4e299948a24e44bdfd"
     },
+    "assets/city-market.glb": {
+      "bytes": 2281136,
+      "hash": "664ca18a6ff30573df79b757d9c9b61e5169db467fadd386f6a9d9ef477e160e"
+    },
     "assets/cling-larva.glb": {
       "bytes": 43688,
       "hash": "ae9e2ef5d93de19a683e605280b2c62955f209adf4766ab2caf631a55a699874"
@@ -124,6 +132,10 @@
     "assets/crystal-miner.glb": {
       "bytes": 41768,
       "hash": "94aaa061c09c4d0aa9413ff395f7dc74e2405e1a3364fe9eda525499c5c1ecf6"
+    },
+    "assets/darkscale-warlord.glb": {
+      "bytes": 3976796,
+      "hash": "98f9e1f3ff377da27f2849d5b24c3f1a95b8722cbdd434f3610ab97f62079314"
     },
     "assets/dining/dishes.png": {
       "bytes": 2590931,
@@ -233,6 +245,46 @@
       "bytes": 66816,
       "hash": "fafb584100d87a2f7f8d014a6d152dccf12b8afba3e7a3a5a2abd7efee87cabc"
     },
+    "assets/events/arcane-event.png": {
+      "bytes": 2641555,
+      "hash": "ced9ace37cfd9573a85d8d7ef7d73dde08a0ff64bc5abeb85d993b2df6304f9f"
+    },
+    "assets/events/arcane-quest.png": {
+      "bytes": 2543787,
+      "hash": "9affa93f7f9d7c2fa134df8d7060eff3eabdf8b9795a623f9a6dafce6638d5ef"
+    },
+    "assets/events/black-market-event.png": {
+      "bytes": 2655204,
+      "hash": "a0b6935cd20b5981cf2645d7270cb92429c4f41b162bb83a75e66165aa17ec24"
+    },
+    "assets/events/black-market-quest.png": {
+      "bytes": 2924811,
+      "hash": "273924b1d8496ac2761bab5c449922318dec7b95aba95275cff457458c564ec4"
+    },
+    "assets/events/castle-event.png": {
+      "bytes": 2643376,
+      "hash": "985828756e6cc384db4b450c90ff59bdeb2698034aff84dcd1a9b543e926aff3"
+    },
+    "assets/events/castle-quest.png": {
+      "bytes": 2833961,
+      "hash": "c31c3f88da9e9c1f67ef1cf641de4a16d0746113082c078678336c96f81da515"
+    },
+    "assets/events/city-market-event.png": {
+      "bytes": 2470682,
+      "hash": "ce97a345d50aaf88e63d032ff7b0941713ee034e43d35cd8b218e02f2dd4f435"
+    },
+    "assets/events/city-market-quest.png": {
+      "bytes": 2821211,
+      "hash": "68c9aaa2f60f075067c86692d33a20f19ea0c72c033ff77bdcb1a689bb461d16"
+    },
+    "assets/events/dynasty-event.png": {
+      "bytes": 2337238,
+      "hash": "7f56f143f11369f73fa9bb12a585d4101c06a90a9e723f3749df2adfe477bf78"
+    },
+    "assets/events/dynasty-quest.png": {
+      "bytes": 2759823,
+      "hash": "0e69d3d658eccb2e63fc85e60c6d7ad32fc0115e19e2bd39b8e6279204f82073"
+    },
     "assets/events/forest-event.png": {
       "bytes": 3182025,
       "hash": "c1404720969356ae51396b5096e0836438235480e60ed6bdb896b32ef0815c1f"
@@ -257,6 +309,46 @@
       "bytes": 3177796,
       "hash": "3717da0548e44b02b93944798c6d04531637a1959ec03cca7fa4ee0b403b4837"
     },
+    "assets/events/graystone-quarry-event.png": {
+      "bytes": 3234346,
+      "hash": "b161ccddbc0e6cfca0829f2adec3ef20395570ed124bc493f047963542b114c6"
+    },
+    "assets/events/graystone-quarry-quest.png": {
+      "bytes": 2828024,
+      "hash": "0ec074a8541ed078cada12f475a64e20f85f101249a495a30aa04959f4f0fee1"
+    },
+    "assets/events/metropolis-event.png": {
+      "bytes": 2617264,
+      "hash": "430f109abd72810139867fce0bf2db76e923c8a7720dab0179015e6f7c69f7de"
+    },
+    "assets/events/metropolis-quest.png": {
+      "bytes": 2876183,
+      "hash": "bbad848ce8e1667c2258c44b4976f5d4a45330996bb4f8d9f9d73da2d9a4c765"
+    },
+    "assets/events/mill-event.png": {
+      "bytes": 3520228,
+      "hash": "246988fc5962ac0b6948443b90afb896988e3b4173216ebb25bfea491c29bb75"
+    },
+    "assets/events/mill-quest.png": {
+      "bytes": 3179489,
+      "hash": "1d5a3af9b7c6af624a095ee8067aa2fb02166c2156988b8f7e7735121c7d1787"
+    },
+    "assets/events/nexus-event.png": {
+      "bytes": 2440932,
+      "hash": "359afd4f897840a6f81a68fbcf3632380e7d269c9c9d7109b0cc219e113b5f25"
+    },
+    "assets/events/nexus-quest.png": {
+      "bytes": 2445102,
+      "hash": "68e17162033098b5080e5136969e3179fc1614e7f81890577635b289a6ca014a"
+    },
+    "assets/events/relic-event.png": {
+      "bytes": 2643165,
+      "hash": "e3b870071bdc9f57eac25aa7719c75fb7bdf77e175f42e8236ad31ec2e21afa6"
+    },
+    "assets/events/relic-quest.png": {
+      "bytes": 2611740,
+      "hash": "1780f4b2c8dc816ee5164bd11a45b3e275708b25b4e12e041059f8d169debb97"
+    },
     "assets/events/ruins-event.png": {
       "bytes": 2377122,
       "hash": "ee4627eb2ea3b9b0a2ea370c10c5846d9f7cee6a16d45dae0d1429eaec743c01"
@@ -272,6 +364,22 @@
     "assets/events/tide-quest.png": {
       "bytes": 2968934,
       "hash": "d7e140b6554ef68c8947756b3cea2d0c161debce58340a26f566da53126aa610"
+    },
+    "assets/events/wasteland-event.png": {
+      "bytes": 2673814,
+      "hash": "ff1b3db8295e379cd3856e48902caa7ac083ed887eca57e7037f3769be738dff"
+    },
+    "assets/events/wasteland-quest.png": {
+      "bytes": 2866895,
+      "hash": "99f45a904cfb38aad6a581163441f8b1fbb7aa4813dd8f96e79012de36f1b87d"
+    },
+    "assets/events/xianxia-event.png": {
+      "bytes": 2964214,
+      "hash": "2d2c202794e66a2a9c6fd55326232ca9f214819a244c5029d5d1f331145be3ce"
+    },
+    "assets/events/xianxia-quest.png": {
+      "bytes": 3017076,
+      "hash": "3001eac0c1a10534f34ce89558e44dba83856530a22105f08ca6d5e541c1ab9d"
     },
     "assets/exploration/city-center-back-v1.png": {
       "bytes": 3504549,
@@ -841,90 +949,6 @@
       "bytes": 2298451,
       "hash": "9db1ff218d71fc2ab8a89aa12438f445f7a15935e649777a5d8219919f5b91a8"
     },
-    "assets/exploration/street-hd-v1/center.png": {
-      "bytes": 2219962,
-      "hash": "ee4a1fb3e261d40acbf9fe09f82a3699ee4a64089450066a1c559d43c621ad6a"
-    },
-    "assets/exploration/street-hd-v1/connected.png": {
-      "bytes": 10551637,
-      "hash": "9c53f1faddb367b98f6a1731472ac86d81bd5292f62c378c6277f610082bef79"
-    },
-    "assets/exploration/street-hd-v1/left.png": {
-      "bytes": 2194668,
-      "hash": "802a8e20de34cfe7b91765fbddccf9b8e64530f11a9a8b1acadd924e740dd55f"
-    },
-    "assets/exploration/street-hd-v1/right.png": {
-      "bytes": 2214881,
-      "hash": "14a138364347fccc89ed56386a21050af70e54ad6425bcf97d1ecf0d066b19ca"
-    },
-    "assets/exploration/street-hd-v1/scale-center-reference.png": {
-      "bytes": 39610,
-      "hash": "c676a03d2820d32ab681ba490638b52e31bca6a391cc9e4e84876fee4b69ae28"
-    },
-    "assets/exploration/street-hd-v1/scale-left-reference.png": {
-      "bytes": 39898,
-      "hash": "d75bccb243067d28ee1d2748a37374758814d5804483852d028173c65b059c55"
-    },
-    "assets/exploration/street-hd-v1/scale-reference.png": {
-      "bytes": 86820,
-      "hash": "4d33fdb7208a37f5cf1f8e69708198dc98f64b155c89e5ca2940395819ee3fdd"
-    },
-    "assets/exploration/street-hd-v1/scale-right-reference.png": {
-      "bytes": 25710,
-      "hash": "1c6eec7fda4950ba585405852025ca7771f86b7d57ce4c1a187d3cecfac86aac"
-    },
-    "assets/exploration/street-hd-v2/center.png": {
-      "bytes": 2408382,
-      "hash": "e0ec5c058e39873b3063e94eedf50862fe5d3a175ba9f19bcfbec6341438e323"
-    },
-    "assets/exploration/street-hd-v2/connected.png": {
-      "bytes": 9825941,
-      "hash": "dc4981817962750586949757da10b0dca19f927b947add48a9fa44d32f9b460d"
-    },
-    "assets/exploration/street-hd-v2/left.png": {
-      "bytes": 2521454,
-      "hash": "c21524e26532529ad16c67aaebae1177daf9db6517b1f40ceb5245bde3414934"
-    },
-    "assets/exploration/street-hd-v2/right.png": {
-      "bytes": 2374859,
-      "hash": "524fe328ed0523a1c640b08d721ffadc2abc9f5380f6245f2838923c67aae956"
-    },
-    "assets/exploration/street-hd-v3/connected.png": {
-      "bytes": 14069888,
-      "hash": "317b040a8b2408ed09bafdadfe9aa5ebfb9449cc27d444a0f0c78ba10075e583"
-    },
-    "assets/exploration/street-hd-v3/reference-0.png": {
-      "bytes": 1654284,
-      "hash": "8ffc880cd1eaa67e5f69946697c0a51a46e775eee30b4568c3ee3764b6ea8df3"
-    },
-    "assets/exploration/street-hd-v3/reference-1.png": {
-      "bytes": 1641337,
-      "hash": "4491fe7c529b5454aec71b6106c02a303278f68ca72e5b65ecfe580f29825dc8"
-    },
-    "assets/exploration/street-hd-v3/reference-2.png": {
-      "bytes": 1659182,
-      "hash": "9aa054cf50777239535027f86e74d8696c1e873dda22804df875acc71a9a16f3"
-    },
-    "assets/exploration/street-hd-v3/reference-3.png": {
-      "bytes": 1674315,
-      "hash": "ec62433b0cfa06a8b0c76be73c26ab6893b21f7be0d3b3b25e647ceee60d0f45"
-    },
-    "assets/exploration/street-hd-v3/tile-0.png": {
-      "bytes": 2826729,
-      "hash": "d35b5d5ed17f465d692eefb633e7cf9e7872bd78b3265154e9d4ef6faabddc8c"
-    },
-    "assets/exploration/street-hd-v3/tile-1.png": {
-      "bytes": 2742721,
-      "hash": "eb0a9b29d15bbed6ccdd947a09c73174c0c33d9ef84de1e89f95e122855c5da5"
-    },
-    "assets/exploration/street-hd-v3/tile-2.png": {
-      "bytes": 2752799,
-      "hash": "4bc8f090d3ee897a2aa51ec29c8a039bdfb29e18d24e4b93a45cca60a36756c4"
-    },
-    "assets/exploration/street-hd-v3/tile-3.png": {
-      "bytes": 2951959,
-      "hash": "9afc5596ae43939ad5f2f7c5390b9f721d7936965c07e27b1531500e8274a76f"
-    },
     "assets/exploration/street-hd-v4/connected.png": {
       "bytes": 12955123,
       "hash": "a6e4e11ae707d15ef81970ad23eefb8230a44bd0702ae34c48225ed8af9f94f3"
@@ -1062,8 +1086,8 @@
       "hash": "d32bfff9196b4d5386963c32b55d49ef1c2d5f6f9c88fbdacedfb834a8a4ad2c"
     },
     "assets/forest.glb": {
-      "bytes": 12194740,
-      "hash": "49e50210a23a6f51025ff9eaa75d75675b805f7a99310c55d9d4a4b5621c11ea"
+      "bytes": 11697816,
+      "hash": "7301b1344e6d993dbd33880a8c458469f3ed22e2e839ae116256d9b9c1caa6e7"
     },
     "assets/forge.glb": {
       "bytes": 2225728,
@@ -1101,6 +1125,14 @@
       "bytes": 2867764,
       "hash": "97e1008b7e92094c647ee1cb74ff5209474cf16e9bd860ec6a252e6eae4c1f00"
     },
+    "assets/gal-npc-cast/alley-informant-man.png": {
+      "bytes": 1259851,
+      "hash": "9fa971560a585477538671950f69fd1f9679e1b81262577797bf246d1a72f822"
+    },
+    "assets/gal-npc-cast/blacksmith-artisan-man.png": {
+      "bytes": 1736696,
+      "hash": "c84904d5f577edb6788b7e31fa7ca648fd5a50d86c7074ac3544514b826b521d"
+    },
     "assets/gal-npc-cast/child-boy.png": {
       "bytes": 1772847,
       "hash": "9a36c7d98bf41407db7b62b449f8f2528c86fbe59d904cc602b4ecfaf9c45f53"
@@ -1109,9 +1141,61 @@
       "bytes": 1835689,
       "hash": "d4f1192d0a4483b8b77cb4d6df87ce7577fe94a6c5f97c488b8534ecd926ea62"
     },
+    "assets/gal-npc-cast/dragonkin-hunter-man.png": {
+      "bytes": 1454395,
+      "hash": "1be4dd9960ded06d2772ceb52350dd8c0c590606039c3fe22f37283a771cbbd1"
+    },
+    "assets/gal-npc-cast/dwarf-artisan-man.png": {
+      "bytes": 2397870,
+      "hash": "17bb9f6ba501b541ae968c7a4f1889556fdfda966e0920d4d43b4ac82eb62650"
+    },
     "assets/gal-npc-cast/elder-scholar.png": {
       "bytes": 1992211,
       "hash": "b2fe5c59c854520f4b81376754f23a2a3e4bb92d4b21511bf80f5becc0a088fa"
+    },
+    "assets/gal-npc-cast/elder-woman.png": {
+      "bytes": 1582619,
+      "hash": "c849b1e5c87210199f295fd69e74c7e1affc63fcc3df720b79d78cc8d72050e1"
+    },
+    "assets/gal-npc-cast/elf-herbalist-woman.png": {
+      "bytes": 1335291,
+      "hash": "a4722944ffd04096b4a2228c50ba87522da9600d7a9d6cfc646adafc36da6d43"
+    },
+    "assets/gal-npc-cast/goblin-tinker.png": {
+      "bytes": 1819737,
+      "hash": "912b56d73f3d41dda16211a2ee553549123bb360c1c8570640b64acaa93cdc7d"
+    },
+    "assets/gal-npc-cast/healer-woman.png": {
+      "bytes": 1162101,
+      "hash": "02ee7269453746c48e994a23b7cbb21ae2a13b0458fde70a8531322350f556ba"
+    },
+    "assets/gal-npc-cast/mechanic-woman.png": {
+      "bytes": 1142247,
+      "hash": "a9d036abaf21826b9264b0d88ed50951e8c5abd3ac6f67659d081d8e3e98002f"
+    },
+    "assets/gal-npc-cast/mercenary-knight-man.png": {
+      "bytes": 1316569,
+      "hash": "37203d8288a2b2a0a46781c18cea336855022887e1719fc9d4ab7d5e46b37488"
+    },
+    "assets/gal-npc-cast/merchant-man.png": {
+      "bytes": 1291957,
+      "hash": "bbcee6748172071bef6136f0c7accf45cf0d4f3a6162b7ed8e0e22c8d3a4288e"
+    },
+    "assets/gal-npc-cast/noble-lady-woman.png": {
+      "bytes": 1338220,
+      "hash": "6236f98c69dd3b6ea2089e860bbafd0d585e17d9801f6e9f8dd2ab152d7fad5d"
+    },
+    "assets/gal-npc-cast/noble-official-man.png": {
+      "bytes": 1035143,
+      "hash": "2f9466c2992ad09d3ece288df9048fccb7d2e0c73aca412daa83793dd4c9cda6"
+    },
+    "assets/gal-npc-cast/ranger-scout-woman.png": {
+      "bytes": 1037153,
+      "hash": "3e84a48f18c5b76e036f73d34cd1ff55dda990dea5159231364c0e26efa829b8"
+    },
+    "assets/gal-npc-cast/scholar-woman.png": {
+      "bytes": 1102747,
+      "hash": "7f2e0c05d59642c020bdab5bc924c6d6129fb9d711583daaa2e46f81b24024c1"
     },
     "assets/gal-npc-cast/shadow-man.png": {
       "bytes": 1820295,
@@ -1120,6 +1204,10 @@
     "assets/gal-npc-cast/shadow-woman.png": {
       "bytes": 1616000,
       "hash": "0cf754d34ec26ce2f899a58b69385fd70c9e33c360e1c67341a3b88995c988ee"
+    },
+    "assets/gal-npc-cast/tavern-server-woman.png": {
+      "bytes": 1145459,
+      "hash": "85ee1b7c4b8063d76a1e3b0dc88269b9545922e1ff0dc6a5cc2b39c19cfa86e8"
     },
     "assets/gal-npc-cast/town-guard-man.png": {
       "bytes": 1804769,
@@ -1165,6 +1253,10 @@
       "bytes": 129200,
       "hash": "0a7248204b64f323779760bcd8249cbd0135827393daade8a9a79ad56dfd4abe"
     },
+    "assets/graystone-quarry.glb": {
+      "bytes": 2212812,
+      "hash": "b9e868a5fac7ed7e79d8eaad60bd500f4fe87cc3961f86ddbae54a30bfcc4ad5"
+    },
     "assets/greenfern-mill.glb": {
       "bytes": 1548424,
       "hash": "2d40f1be4bd4bfa2bc8aa08a8b628acf92bce72435f46fd8755c7a0d7f7461e4"
@@ -1204,6 +1296,10 @@
     "assets/icons/balance.svg": {
       "bytes": 372,
       "hash": "a6f9006fa0fddfe2a653006a554f79c956d1e9d3bcc24ff475eb6e682453f0db"
+    },
+    "assets/icons/equipment-voucher.svg": {
+      "bytes": 2017,
+      "hash": "494a07d6f8b9159d2513afb0466b65fc303b6127fc64d827cb7b7717bf8f1ace"
     },
     "assets/icons/ether.svg": {
       "bytes": 388,
@@ -1378,8 +1474,8 @@
       "hash": "63cc16898d201e9c49720abb15fd5c165e7e45039140878f27eca223fbc25853"
     },
     "assets/moon-eye.glb": {
-      "bytes": 2884552,
-      "hash": "27c2e185bf4781068bdfeb5bb173d878b1763eb179009f2359285cf4f592b743"
+      "bytes": 5226064,
+      "hash": "8b30c2cce255440f60c62484e1c9e23e348bfca752b23676772d0383a12b6600"
     },
     "assets/moon-moth.glb": {
       "bytes": 107976,
@@ -1442,8 +1538,8 @@
       "hash": "bdb775c23a8b5407c050f8cfa4f119721f771c49a738f870e053d3e34c3293eb"
     },
     "assets/portraits/apep-lamb.svg": {
-      "bytes": 503637,
-      "hash": "ee22356656dbc22e24a1505919114b81a70cc5e2d0a2a7183bab7c74cdcc0b59"
+      "bytes": 664685,
+      "hash": "8cfda475d13b3990ff4a1e2aa18c5e3f883b7d5e76d13d97b798fa03505b0cb1"
     },
     "assets/portraits/ares-cannon-left.svg": {
       "bytes": 158726,
@@ -1478,8 +1574,8 @@
       "hash": "64eb6c3a1f8d5b5796debfd9082904065a417090b8942201cd06716f2460f177"
     },
     "assets/portraits/bandit-syndicate-king.svg": {
-      "bytes": 50551,
-      "hash": "8bb2b4925585da344bf35e34e311e65be1532917d2257ad920d5f10f2de2ef2c"
+      "bytes": 744583,
+      "hash": "b6e7a8cc06d3b079c04e6965055312b740855cd1b00a9e2702357ec6b3f4778d"
     },
     "assets/portraits/bark-acolyte.svg": {
       "bytes": 24939,
@@ -1588,6 +1684,10 @@
     "assets/portraits/cultist.svg": {
       "bytes": 1040,
       "hash": "6d58b792eb0ebbb70e64083de1373bcf4f1eb18964795e2f3e1632ff2416315a"
+    },
+    "assets/portraits/darkscale-warlord.svg": {
+      "bytes": 736454,
+      "hash": "68845b29424a3cf0feed0199ee9a30df185bad32f55d875e9fc53ece0a9e7e0f"
     },
     "assets/portraits/dragonscale-sandworm.svg": {
       "bytes": 50540,
@@ -2157,9 +2257,17 @@
       "bytes": 1542688,
       "hash": "fd9485cacffde3a77f3bf0d7b5d1bd74731fbb424f861173136f0716e67be2ba"
     },
+    "assets/preview-black-market.glb": {
+      "bytes": 859704,
+      "hash": "6dc3a8aca228cc4d6920ab050eb1589efd877c8d8f6152d4a46999a4bfbd743a"
+    },
     "assets/preview-castle.glb": {
       "bytes": 2715272,
       "hash": "bd3c411f664e13cb29a94f707e1395216ba457eb171f6b5b0b7ecf7c40101e7e"
+    },
+    "assets/preview-city-market.glb": {
+      "bytes": 905320,
+      "hash": "f21bee4775406e5e45c81ccd87bed3e8c36cbf25afd899413a0bb5b0cf671ba8"
     },
     "assets/preview-dynasty.glb": {
       "bytes": 1953548,
@@ -2177,9 +2285,17 @@
       "bytes": 982276,
       "hash": "ac4c5e0345c54a0d1c977f28ee491a3d3e6b4affa39a6396b843f308058cc679"
     },
+    "assets/preview-graystone-quarry.glb": {
+      "bytes": 859912,
+      "hash": "63115a27e39eb3ef79c1dcb4b96b49ed2b2c6510ff09f0c2a30d80f2c83ad56a"
+    },
     "assets/preview-metropolis.glb": {
       "bytes": 624488,
       "hash": "e4eb9dc0fc40592fcfc44035c703aca2d2e29ccf4832441e287bb009a1f3854a"
+    },
+    "assets/preview-mill.glb": {
+      "bytes": 1250428,
+      "hash": "edc6ce95fd0dd2a5673618a8f5d281b197f5acf9c13f67f803fc0f31696b33ed"
     },
     "assets/preview-nexus.glb": {
       "bytes": 1037764,

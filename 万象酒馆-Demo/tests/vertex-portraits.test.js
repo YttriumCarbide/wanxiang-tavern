@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises';
 import { compatibleRequest } from '../src/ai/compatible.js';
 import { createConnectionStore } from '../src/ai/connection-store.js';
 import { vertexURL } from '../src/ai/vertex.js';
+import { VERTEX_DEFAULT_MODELS } from '../src/ai/vertex.js';
 import { PORTRAIT_TEMPLATES } from '../src/content/portrait-templates.js';
 import { normalizeCharacter } from '../src/ai/contracts.js';
 import { restoreLibrary } from '../src/ai/library.js';
@@ -228,13 +229,23 @@ test('Vertex errors retain diagnostic text, redact credentials, never retry, pro
   assert.equal(requests, 1);
   await assert.rejects(
     compatibleRequest(profile, messages, {
-      fetchImpl: async () => Response.json({ unexpectedNativeField: 'original diagnostic' }),
+      fetchImpl: async () => {
+        requests++;
+        return Response.json({
+          unexpectedNativeField: `original diagnostic ${profile.apiKey}`,
+          debug: { Authorization: `Bearer ${profile.apiKey}`, apiKey: profile.apiKey },
+        });
+      },
     }),
     (failure) => {
-      assert.match(JSON.stringify(failure.diagnostic), /unexpectedNativeField/);
+      assert.equal(failure.diagnostic.stage, 'empty');
+      const diagnostic = JSON.stringify(failure.diagnostic);
+      assert.match(diagnostic, /unexpectedNativeField.*original diagnostic/);
+      assert(!diagnostic.includes(profile.apiKey));
       return true;
     },
   );
+  assert.equal(requests, 2);
   await assert.rejects(
     compatibleRequest(profile, messages, {
       fetchImpl: async () =>
@@ -250,15 +261,22 @@ test('Vertex errors retain diagnostic text, redact credentials, never retry, pro
     }),
     /拒绝/,
   );
-  await assert.rejects(
-    compatibleRequest(profile, [], {
-      models: true,
-      fetchImpl: async () => {
-        throw Error('must not call');
-      },
-    }),
-    /手动|填写/,
-  );
+  const modelList = await compatibleRequest(profile, [], {
+    models: true,
+    fetchImpl: async () => {
+      throw Error('must not call');
+    },
+  });
+  assert.deepEqual(modelList, {
+    models: [
+      'gemini-4-argon',
+      'gemini-4-carbon',
+      'gemini-4-hydrogen',
+      'gemini-4-neon',
+      'gemini-3.8-flash',
+    ],
+  });
+  assert.deepEqual(modelList.models, [...VERTEX_DEFAULT_MODELS]);
   const controller = new AbortController();
   controller.abort();
   await assert.rejects(

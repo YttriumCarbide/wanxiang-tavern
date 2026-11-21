@@ -117,6 +117,9 @@ export function grownCombat(member) {
   return combat;
 }
 export function gainExperience(member, amount) {
+  if (!Number.isInteger(amount) || amount < 0) {
+    throw new RangeError('Experience amount must be a finite nonnegative integer');
+  }
   const growth = restoreGrowth(member.growth, member.id);
   const levels = [];
   const before = { level: growth.level, xp: growth.xp };

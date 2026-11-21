@@ -5,6 +5,7 @@ import {
 import { escapeText } from '../src/ui.js';
 import { html } from '../src/shared/html.js';
 import { createEventScope } from '../src/shared/events.js';
+import { mountDeveloperEditor } from './developer-editor.mjs';
 import {
   changeWorkshopRule,
   editWorkshopRule,
@@ -1349,6 +1350,7 @@ function createWorkshopEditor(dialog, current) {
 }
 
 const editor = globalThis.document.getElementById('workshop-editor');
+mountDeveloperEditor(editor);
 readLocalWorkshopCatalog()
   .then((current) => createWorkshopEditor(editor, current))
   .catch((failure) => {

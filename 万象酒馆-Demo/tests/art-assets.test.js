@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { BIOMES } from '../src/content/biomes.js';
+import { REGIONS } from '../src/content/regions.js';
 import { ENEMIES, BOSSES } from '../src/data.js';
 import { newBattle, preview, advance, makeAction } from '../src/engine.js';
 import { triggeredStatusVisuals } from '../src/status-effects.js';
@@ -140,6 +141,199 @@ test('eight additional theme arenas keep six card roots, packed geometry and pre
     const preview = await readFile(new URL(`../assets/preview-${id}.glb`, import.meta.url));
     assert.equal(preview.readUInt32LE(0), 0x46546c67);
     assert.equal(preview.readUInt32LE(8), preview.length);
+  }
+});
+
+test('graystone quarry arena and miniature preview keep six cards, asymmetric non-intruding scenery and motion nodes', async () => {
+  const readGlb = async (filename) => {
+    const file = await readFile(new URL(`../assets/${filename}`, import.meta.url));
+    assert.equal(file.readUInt32LE(0), 0x46546c67, `${filename}: invalid GLB magic`);
+    assert.equal(file.readUInt32LE(8), file.length, `${filename}: length mismatch`);
+    const jsonLen = file.readUInt32LE(12);
+    const gltf = JSON.parse(file.subarray(20, 20 + jsonLen).toString('utf8'));
+    for (const view of gltf.bufferViews)
+      assert((view.byteOffset || 0) + view.byteLength <= gltf.buffers[0].byteLength);
+    for (const mesh of gltf.meshes)
+      for (const primitive of mesh.primitives) {
+        assert(gltf.materials[primitive.material]);
+        assert(gltf.accessors[primitive.attributes.POSITION].count > 0);
+        for (const index of Object.values(primitive.attributes)) assert(gltf.accessors[index]);
+      }
+    return { file, jsonLen, gltf };
+  };
+
+  const { file, jsonLen, gltf } = await readGlb('graystone-quarry.glb');
+  assert(gltf.extras.voxelBoxes >= 1500);
+  assert.equal(
+    gltf.nodes.filter((node) => /^Placeholder_(Friendly|Enemy)_\d+$/.test(node.name)).length,
+    6,
+  );
+  const names = gltf.nodes.map((node) => node.name);
+  assert(names.includes('Six_Grounded_Foundations'));
+  assert(names.includes('Landmark_Quarry_Mine_Rift'));
+  assert(names.includes('Motion_Quarry_Rift_Crystal'));
+  assert(names.includes('Motion_Quarry_Crane_Load'));
+  assert.equal(gltf.extras.peripheryLayout.mode, 'authored-large');
+  assert.equal(gltf.extras.peripheryLayout.mirroredRight, false);
+  assert(gltf.extras.peripheryLayout.zones.length >= 5);
+  assert(gltf.extras.peripheryLayout.bounds.x >= 20);
+  assert(gltf.extras.peripheryLayout.bounds.z >= 15);
+
+  const centralPrefixes = new Set([
+    '00_Deep_Quarry_Bedrock',
+    '01_Quarry_Floor_Base',
+    '02_Central_Quarry_Slabs',
+    '03_Enemy_Blast_Slate',
+    '04_Center_Track_And_Ring',
+    'Six_Grounded_Foundations',
+    'Revealed_Dais_Engraving',
+    'Dais_Corner_Inlay',
+    'Edge_Curb',
+  ]);
+  for (const node of gltf.nodes.filter(
+    (entry) =>
+      Object.hasOwn(gltf.extras.components, entry.name) && !centralPrefixes.has(entry.name),
+  )) {
+    const primitive = gltf.meshes[node.mesh].primitives[0];
+    const accessor = gltf.accessors[primitive.attributes.POSITION];
+    const view = gltf.bufferViews[accessor.bufferView];
+    const start = 28 + jsonLen + (view.byteOffset || 0);
+    const vertices = file.subarray(start, start + view.byteLength);
+    const tx = node.translation || [0, 0, 0];
+    for (let offset = 0; offset < vertices.length; offset += 24 * 12) {
+      const min = [Infinity, Infinity, Infinity];
+      const max = [-Infinity, -Infinity, -Infinity];
+      for (let vertex = 0; vertex < 24; vertex++) {
+        for (let axis = 0; axis < 3; axis++) {
+          const value = vertices.readFloatLE(offset + vertex * 12 + axis * 4) + tx[axis];
+          min[axis] = Math.min(min[axis], value);
+          max[axis] = Math.max(max[axis], value);
+        }
+      }
+      assert(
+        max[1] <= 0.12 || max[0] <= -6.45 || min[0] >= 6.45 || max[2] <= -5.45 || min[2] >= 5.45,
+        `graystone-quarry: ${node.name} intruded into central battle zone`,
+      );
+    }
+  }
+
+  const { gltf: previewGltf } = await readGlb('preview-graystone-quarry.glb');
+  assert(previewGltf.extras.voxelBoxes >= 600);
+  const previewNames = previewGltf.nodes.map((node) => node.name);
+  assert(previewNames.includes('Minecart'));
+  assert(previewNames.includes('Flame'));
+  assert.equal(BIOMES['graystone-quarry'].asset, 'graystone-quarry');
+  assert.equal(REGIONS['graystone-quarry'].biome, 'graystone-quarry');
+});
+
+test('city market and black market arenas and miniature previews keep six cards, asymmetric non-intruding scenery and motion nodes', async () => {
+  const readGlb = async (filename) => {
+    const file = await readFile(new URL(`../assets/${filename}`, import.meta.url));
+    assert.equal(file.readUInt32LE(0), 0x46546c67, `${filename}: invalid GLB magic`);
+    assert.equal(file.readUInt32LE(8), file.length, `${filename}: length mismatch`);
+    const jsonLen = file.readUInt32LE(12);
+    const gltf = JSON.parse(file.subarray(20, 20 + jsonLen).toString('utf8'));
+    for (const view of gltf.bufferViews)
+      assert((view.byteOffset || 0) + view.byteLength <= gltf.buffers[0].byteLength);
+    for (const mesh of gltf.meshes)
+      for (const primitive of mesh.primitives) {
+        assert(gltf.materials[primitive.material]);
+        assert(gltf.accessors[primitive.attributes.POSITION].count > 0);
+        for (const index of Object.values(primitive.attributes)) assert(gltf.accessors[index]);
+      }
+    return { file, jsonLen, gltf };
+  };
+
+  const specs = [
+    {
+      id: 'city-market',
+      landmark: 'Landmark_Market_Archway',
+      motions: ['Motion_Market_Signboard', 'Motion_Market_Weathervane'],
+      centralPrefixes: new Set([
+        '00_Deep_City_Bedrock',
+        '01_City_Street_Base',
+        '02_Central_Market_Cobbles',
+        '03_Enemy_Shaded_Cobbles',
+        '04_Center_Crosswalk_Inlay',
+        'Six_Grounded_Foundations',
+        'Revealed_Dais_Engraving',
+        'Dais_Corner_Inlay',
+        'Edge_Curb',
+      ]),
+    },
+    {
+      id: 'black-market',
+      landmark: 'Landmark_BlackMarket_Auction',
+      motions: ['Motion_BlackMarket_Cage', 'Motion_BlackMarket_Pulley'],
+      centralPrefixes: new Set([
+        '00_Deep_Undercroft_Bedrock',
+        '01_Undercroft_Floor_Base',
+        '02_Central_Vault_Stones',
+        '03_Enemy_Auction_Floor',
+        '04_Center_Drain_Grate',
+        'Six_Grounded_Foundations',
+        'Revealed_Dais_Engraving',
+        'Dais_Corner_Inlay',
+        'Edge_Curb',
+      ]),
+    },
+  ];
+
+  for (const spec of specs) {
+    const { file, jsonLen, gltf } = await readGlb(`${spec.id}.glb`);
+    assert(gltf.extras.voxelBoxes >= 1500, `${spec.id}: expected >= 1500 voxel boxes`);
+    assert.equal(
+      gltf.nodes.filter((node) => /^Placeholder_(Friendly|Enemy)_\d+$/.test(node.name)).length,
+      6,
+    );
+    const names = gltf.nodes.map((node) => node.name);
+    assert(
+      names.includes('Six_Grounded_Foundations'),
+      `${spec.id}: missing Six_Grounded_Foundations`,
+    );
+    assert(names.includes(spec.landmark), `${spec.id}: missing ${spec.landmark}`);
+    for (const motion of spec.motions)
+      assert(names.includes(motion), `${spec.id}: missing ${motion}`);
+    assert.equal(gltf.extras.peripheryLayout.mode, 'authored-large');
+    assert.equal(gltf.extras.peripheryLayout.mirroredRight, false);
+    assert(gltf.extras.peripheryLayout.zones.length >= 5);
+    assert(gltf.extras.peripheryLayout.bounds.x >= 20);
+    assert(gltf.extras.peripheryLayout.bounds.z >= 15);
+
+    for (const node of gltf.nodes.filter(
+      (entry) =>
+        Object.hasOwn(gltf.extras.components, entry.name) && !spec.centralPrefixes.has(entry.name),
+    )) {
+      const primitive = gltf.meshes[node.mesh].primitives[0];
+      const accessor = gltf.accessors[primitive.attributes.POSITION];
+      const view = gltf.bufferViews[accessor.bufferView];
+      const start = 28 + jsonLen + (view.byteOffset || 0);
+      const vertices = file.subarray(start, start + view.byteLength);
+      const tx = node.translation || [0, 0, 0];
+      for (let offset = 0; offset < vertices.length; offset += 24 * 12) {
+        const min = [Infinity, Infinity, Infinity];
+        const max = [-Infinity, -Infinity, -Infinity];
+        for (let vertex = 0; vertex < 24; vertex++) {
+          for (let axis = 0; axis < 3; axis++) {
+            const value = vertices.readFloatLE(offset + vertex * 12 + axis * 4) + tx[axis];
+            min[axis] = Math.min(min[axis], value);
+            max[axis] = Math.max(max[axis], value);
+          }
+        }
+        assert(
+          max[1] <= 0.12 || max[0] <= -6.45 || min[0] >= 6.45 || max[2] <= -5.45 || min[2] >= 5.45,
+          `${spec.id}: ${node.name} intruded into central battle zone`,
+        );
+      }
+    }
+
+    const { gltf: previewGltf } = await readGlb(`preview-${spec.id}.glb`);
+    assert(previewGltf.extras.voxelBoxes >= 600, `preview-${spec.id}: expected >= 600 voxel boxes`);
+    const previewNames = previewGltf.nodes.map((node) => node.name);
+    assert(previewNames.includes('Minecart'), `preview-${spec.id}: missing Minecart`);
+    assert(previewNames.includes('Flame'), `preview-${spec.id}: missing Flame`);
+    assert.equal(BIOMES[spec.id].asset, spec.id);
+    assert.equal(REGIONS[spec.id].biome ?? spec.id, spec.id);
   }
 });
 

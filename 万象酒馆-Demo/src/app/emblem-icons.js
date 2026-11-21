@@ -26,6 +26,10 @@ export const EMBLEM_VISUALS = Object.freeze({
     color: '#c298ff',
     svg: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 12s3.5-5.5 8.5-5.5S20.5 12 20.5 12s-3.5 5.5-8.5 5.5S3.5 12 3.5 12z" fill="none" stroke="currentColor" stroke-width="1.75"/><circle cx="12" cy="12" r="2.8" fill="currentColor"/><path d="M12 3.5v2M12 18.5v2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>',
   }),
+  'cang-ming': Object.freeze({
+    color: '#f28b49',
+    svg: '<svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="8.2,3.5 15.8,3.5 20.5,8.2 20.5,15.8 15.8,20.5 8.2,20.5 3.5,15.8 3.5,8.2" fill="none" stroke="currentColor" stroke-width="1.8"/><polygon points="12,7 16,12 12,17 8,12" fill="currentColor" opacity="0.82"/><path d="M5 19L19 5" stroke="#fff4e0" stroke-width="1.7" stroke-linecap="round"/></svg>',
+  }),
 });
 
 export function emblemVisual(emblemId) {

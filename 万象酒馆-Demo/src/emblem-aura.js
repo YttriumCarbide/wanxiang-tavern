@@ -52,6 +52,10 @@ function updatePointsPattern(array, t, style, reduced) {
       angle = t * 0.75 * band + (i / 64) * Math.PI * 2;
       r = 0.62 + 0.26 * Math.cos(i * 0.7 + t);
       y = 0.85 + Math.sin(angle * 2) * 0.46 * band + p * 0.4;
+    } else if (style === 'shatter-crest') {
+      angle = t * 1.15 * (i % 2 === 0 ? 1 : -1) + (i / 64) * Math.PI * 4;
+      r = 0.5 + 0.36 * (1 - p * 0.65) + Math.abs(Math.sin(angle * 2)) * 0.14;
+      y = 0.14 + p * 1.72;
     }
 
     array[i * 3] = Math.cos(angle) * r + wobbleX;
@@ -253,6 +257,15 @@ export function createEmblemAura(scene, resources, reduced) {
       entry.spire.visible = true;
       entry.spire.rotation.y = Math.sin(t * 1.6) * 0.35;
       entry.spire.rotation.z = -t * 0.8;
+    } else if (style === 'shatter-crest') {
+      entry.ring.rotation.z = t * 1.1;
+      entry.arc.rotation.z = -t * 1.75;
+      entry.innerRing.position.y = 0.66 + pulse * 0.06;
+      entry.innerRing.rotation.x = -Math.PI / 2 + 0.18 * Math.cos(t * 1.6);
+      entry.innerRing.rotation.z = -t * 1.5;
+      entry.spire.visible = true;
+      entry.spire.position.y = 1.04 + pulse * 0.1;
+      entry.spire.rotation.z = Math.PI / 4 + Math.sin(t * 2.2) * 0.24;
     } else {
       entry.ring.rotation.z = t * 0.85;
       entry.arc.rotation.z = -t * 1.4;

@@ -11,8 +11,8 @@ const ROMAN_ACTS = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X']
 
 const VERIFIED_ARTWORK = {
   mill: {
-    intro: './assets/events/forest-event.png',
-    epilogue: './assets/events/forest-quest.png',
+    intro: './assets/events/mill-event.png',
+    epilogue: './assets/events/mill-quest.png',
   },
   ruins: {
     intro: './assets/events/ruins-event.png',
@@ -35,36 +35,48 @@ const VERIFIED_ARTWORK = {
     epilogue: './assets/events/tide-quest.png',
   },
   dynasty: {
-    intro: './assets/events/ruins-quest.png',
-    epilogue: './assets/events/ruins-event.png',
+    intro: './assets/events/dynasty-event.png',
+    epilogue: './assets/events/dynasty-quest.png',
   },
   xianxia: {
-    intro: './assets/events/forest-quest.png',
-    epilogue: './assets/events/forest-event.png',
+    intro: './assets/events/xianxia-event.png',
+    epilogue: './assets/events/xianxia-quest.png',
   },
   castle: {
-    intro: './assets/events/ruins-quest.png',
-    epilogue: './assets/title-tavern.png',
+    intro: './assets/events/castle-event.png',
+    epilogue: './assets/events/castle-quest.png',
   },
   arcane: {
-    intro: './assets/events/tide-quest.png',
-    epilogue: './assets/events/ruins-quest.png',
+    intro: './assets/events/arcane-event.png',
+    epilogue: './assets/events/arcane-quest.png',
   },
   metropolis: {
-    intro: './assets/title-tavern.png',
-    epilogue: './assets/exploration/overland-road/road-bridge-wide-night.png',
+    intro: './assets/events/metropolis-event.png',
+    epilogue: './assets/events/metropolis-quest.png',
   },
   nexus: {
-    intro: './assets/events/tide-event.png',
-    epilogue: './assets/events/ruins-quest.png',
+    intro: './assets/events/nexus-event.png',
+    epilogue: './assets/events/nexus-quest.png',
   },
   wasteland: {
-    intro: './assets/events/forge-event.png',
-    epilogue: './assets/events/forge-quest.png',
+    intro: './assets/events/wasteland-event.png',
+    epilogue: './assets/events/wasteland-quest.png',
   },
   relic: {
-    intro: './assets/events/ruins-quest.png',
-    epilogue: './assets/events/ruins-event.png',
+    intro: './assets/events/relic-event.png',
+    epilogue: './assets/events/relic-quest.png',
+  },
+  'graystone-quarry': {
+    intro: './assets/events/graystone-quarry-event.png',
+    epilogue: './assets/events/graystone-quarry-quest.png',
+  },
+  'city-market': {
+    intro: './assets/events/city-market-event.png',
+    epilogue: './assets/events/city-market-quest.png',
+  },
+  'black-market': {
+    intro: './assets/events/black-market-event.png',
+    epilogue: './assets/events/black-market-quest.png',
   },
   tavern: {
     intro: './assets/title-tavern.png',
@@ -216,6 +228,36 @@ const BIOME_PROFILE = {
     subtitle: '太古圣骸 · 纪行',
     beams: 'bright',
     glow: 'radial-gradient(ellipse at 50% 48%, rgba(182, 128, 48, 0.22) 0%, rgba(244, 212, 130, 0.1) 42%, transparent 74%)',
+  },
+  'graystone-quarry': {
+    seal: '岩',
+    sealColor: '#56457a',
+    moteTone: 'ivory',
+    petalVariant: 'crimson',
+    cueGroup: 'ruins',
+    subtitle: '灰岩旧采石场 · 纪行',
+    beams: 'soft',
+    glow: 'radial-gradient(ellipse at 50% 48%, rgba(116, 86, 178, 0.24) 0%, rgba(196, 178, 228, 0.1) 42%, transparent 74%)',
+  },
+  'city-market': {
+    seal: '市',
+    sealColor: '#8f5928',
+    moteTone: 'gold',
+    petalVariant: 'dawn',
+    cueGroup: 'ruins',
+    subtitle: '灯影商街 · 纪行',
+    beams: 'bright',
+    glow: 'radial-gradient(ellipse at 52% 46%, rgba(212, 152, 68, 0.24) 0%, rgba(126, 156, 184, 0.1) 42%, transparent 74%)',
+  },
+  'black-market': {
+    seal: '暗',
+    sealColor: '#24594c',
+    moteTone: 'ember',
+    petalVariant: 'crimson',
+    cueGroup: 'forge',
+    subtitle: '暗巷黑市 · 纪行',
+    beams: 'soft',
+    glow: 'radial-gradient(ellipse at 50% 50%, rgba(56, 168, 128, 0.22) 0%, rgba(168, 46, 62, 0.1) 42%, transparent 74%)',
   },
 };
 

@@ -56,7 +56,6 @@ export async function createStreetView() {
     scene: definition.id,
     onTravel(to) {
       mapChoice = 'route';
-      mapDialog.close();
       parent.postMessage({ type: 'daily-overland-plan', to }, location.origin);
     },
   });
@@ -72,12 +71,14 @@ export async function createStreetView() {
   }
   events.on(document.getElementById('street-map-open'), 'click', openAtlas);
   events.on(window, 'message', (event) => {
-    if (
-      event.origin === location.origin &&
-      event.source === parent &&
-      event.data?.type === 'daily-open-atlas'
-    )
-      openAtlas(event.data.preview === true);
+    if (event.origin !== location.origin || event.source !== parent) return;
+    if (event.data?.type === 'daily-open-atlas') openAtlas(event.data.preview === true);
+    else if (event.data?.type === 'daily-close-atlas') {
+      mapChoice = 'route';
+      if (mapDialog.open) mapDialog.close();
+    } else if (event.data?.type === 'daily-reset-atlas-walker') {
+      worldMap.resetWalker?.();
+    }
   });
   events.on(stepOut, 'click', () => {
     mapChoice = 'walk';
@@ -100,6 +101,15 @@ export async function createStreetView() {
         openAtlas(event.data.preview !== false);
         return;
       }
+      if (event.data?.type === 'daily-close-atlas') {
+        mapChoice = 'route';
+        if (mapDialog.open) mapDialog.close();
+        return;
+      }
+      if (event.data?.type === 'daily-reset-atlas-walker') {
+        worldMap.resetWalker?.();
+        return;
+      }
       if (event.data?.type !== 'daily-managed') return;
       worldMap.updateTravel(event.data.outing);
       worldMap.updateDiscoveries(event.data.discoveries);
@@ -109,8 +119,13 @@ export async function createStreetView() {
         unlockedDungeons: event.data.unlockedDungeons,
       });
     });
-    const disposeAtlasOnly = () => events.dispose();
-    events.on(window, 'pagehide', disposeAtlasOnly, { once: true });
+    const disposeAtlasOnly = () => {
+      worldMap.dispose();
+      events.dispose();
+    };
+    events.on(window, 'pagehide', (event) => {
+      if (!event.persisted) disposeAtlasOnly();
+    });
     openAtlas(true);
     parent.postMessage({ type: 'atlas-only-ready', scene: definition.id }, location.origin);
     return { dispose: disposeAtlasOnly };
@@ -483,6 +498,8 @@ export async function createStreetView() {
     disposed = true;
     loading.dispose();
     visitors?.dispose();
+    worldMap.dispose();
+    citySubmap.close();
     clearTimeout(exitTimer);
     renderer.setAnimationLoop(null);
     events.dispose();
@@ -492,7 +509,9 @@ export async function createStreetView() {
     window.streetPreview = null;
     window.modelReady = false;
   }
-  events.on(window, 'pagehide', dispose, { once: true });
+  events.on(window, 'pagehide', (event) => {
+    if (!event.persisted) dispose();
+  });
   resize();
   apply();
   renderer.setAnimationLoop((now) => {
@@ -527,10 +546,13 @@ export async function createStreetView() {
         .map((spec) => spec.image),
     ];
     await loading.prepare(files);
+    if (disposed) return { dispose };
     model = illustrated
       ? await createIllustratedStreet(scene, resources, definition, loading, timeOfDay, enteredFrom)
       : await createStreetScene(scene, resources, quality, definition, loading);
+    if (disposed) return { dispose };
     await model.setTime?.(timeOfDay);
+    if (disposed) return { dispose };
     resize();
     if (definition.visitors !== false) {
       visitors = await createSceneVisitors({

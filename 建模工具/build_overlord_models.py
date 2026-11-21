@@ -26,182 +26,345 @@ def hex_chamfer_poly(hx, hz, cut=0.28):
     ]
 
 
+def apep_rotation(x=0, y=0, z=0):
+    """XYZ rotations authored in radians, stored as glTF quaternions."""
+    cx, cy, cz = (math.cos(a / 2) for a in (x, y, z))
+    sx, sy, sz = (math.sin(a / 2) for a in (x, y, z))
+    return [
+        sx * cy * cz + cx * sy * sz,
+        cx * sy * cz - sx * cy * sz,
+        cx * cy * sz + sx * sy * cz,
+        cx * cy * cz - sx * sy * sz,
+    ]
+
+
+def apep_clips():
+    # Body pitch, head pitch, jaw, left and right snake flare, eclipse roll, eye tilt.
+    rest = (0, 0, 0, 0, 0, 0, 0)
+    poses = {
+        "Idle": (
+            3.8,
+            (0.03, -0.05, 0.025, 0.08, -0.04, 0.065, 0.06),
+            (-0.02, 0.03, 0.04, -0.07, 0.09, -0.05, -0.04),
+            (-0.035, 0.02, 0.025, -0.045, 0.035, -0.035, 0.03),
+        ),
+        "Apep_Entrance": (
+            2.3,
+            (0.23, 0.26, 0.03, -0.27, -0.27, -0.18, 0.52),
+            (-0.25, -0.26, 0.47, 0.38, 0.43, 0.32, 0),
+            (-0.13, -0.13, 0.18, 0.18, 0.22, 0.15, 0),
+        ),
+        "Apep_Splash": (
+            1.68,
+            (-0.14, -0.26, 0.11, -0.34, -0.12, -0.11, -0.05),
+            (0.23, 0.34, 0.41, 0.52, 0.19, 0.14, 0.11),
+            (0.12, 0.17, 0.15, 0.28, 0.11, 0.08, 0),
+        ),
+        "Apep_Plague": (
+            2.23,
+            (-0.22, -0.24, 0.15, -0.23, -0.21, -0.24, 0.48),
+            (0.23, 0.12, 0.52, 0.55, 0.59, 0.45, 0),
+            (0.11, 0.08, 0.30, 0.37, 0.43, 0.28, 0),
+        ),
+        "Apep_Shell": (
+            1.82,
+            (0.13, 0.32, 0.03, -0.29, -0.47, -0.2, 0.63),
+            (0.18, 0.19, 0.12, -0.15, 0.49, 0.22, 0.36),
+            (0.09, 0.12, 0.08, -0.08, 0.25, 0.11, 0.18),
+        ),
+        "Apep_Tide": (
+            2.2,
+            (-0.24, -0.35, 0.14, -0.26, -0.25, -0.4, 0.33),
+            (0.29, 0.34, 0.64, 0.69, 0.68, 0.51, 0),
+            (0.16, 0.16, 0.32, 0.42, 0.48, 0.28, -0.07),
+        ),
+        "Apep_Gaze": (
+            1.86,
+            (-0.19, 0.22, 0.02, 0.15, 0.21, -0.21, 0.72),
+            (0.07, -0.29, 0.20, -0.16, -0.1, 0.05, -0.07),
+            (0.04, -0.15, 0.12, -0.08, -0.02, 0.02, 0),
+        ),
+        "Apep_Eclipse": (
+            2.5,
+            (0.21, 0.23, 0.18, -0.37, -0.34, -0.43, 0.72),
+            (-0.27, -0.29, 0.66, 0.63, 0.61, 0.67, 0),
+            (-0.12, -0.14, 0.34, 0.32, 0.33, 0.36, 0),
+        ),
+        "Break_Stagger": (
+            1.46,
+            (-0.24, -0.23, 0.46, 0.34, -0.3, -0.38, 0.62),
+            (0.29, 0.25, 0.09, -0.42, -0.34, 0.24, 0.55),
+            (0.21, 0.13, 0.04, -0.15, -0.18, 0.14, 0.26),
+        ),
+    }
+    clips = {}
+    for name, (duration, brace, release, recoil) in poses.items():
+        frames = (rest, brace, release, recoil, rest)
+        times = [duration * t for t in (0, 0.23, 0.43, 0.66, 1)]
+        clips[name] = (
+            times,
+            {
+                "Apep_Body": [apep_rotation(x=p[0], z=p[3] * 0.09) for p in frames],
+                "Apep_Head": [apep_rotation(x=p[1], y=(p[3] - p[4]) * 0.38) for p in frames],
+                "Apep_Jaw": [apep_rotation(x=p[2]) for p in frames],
+                "Apep_Left_Serpent": [
+                    apep_rotation(x=p[3] * 0.5, y=-p[3] * 0.32, z=p[3]) for p in frames
+                ],
+                "Apep_Right_Serpent": [
+                    apep_rotation(x=p[4] * 0.5, y=p[4] * 0.35, z=-p[4]) for p in frames
+                ],
+                "Apep_Eclipse_Rig": [apep_rotation(y=p[5] * 0.3, z=p[5]) for p in frames],
+                "Apep_Sternum_Eye": [apep_rotation(x=p[6]) for p in frames],
+            },
+        )
+    return clips
+
+
 def build_apep_lamb():
     m = SculptedModel("apepLamb", "阿佩普的羔羊", tier="overlord")
-    wool = m.part("Fleece_Body", metallic=0.05, roughness=0.82)
-    robe = m.part("Curse_Mantle", metallic=0.12, roughness=0.68)
-    bone = m.part("Ovine_Skull", metallic=0.15, roughness=0.45)
-    gold = m.part("Astral_Horns_Halo", metallic=0.82, roughness=0.25, emissive=[0.22, 0.16, 0.04])
-    serpent = m.part("Apep_Tendrils", metallic=0.28, roughness=0.38)
-    eye_glow = m.part("Abyss_Eye_Core", metallic=0.1, roughness=0.2, emissive=[0.55, 0.14, 0.36])
+    flesh = m.part("Charred_Hide", metallic=0.12, roughness=0.61)
+    mantle = m.part("Cinder_Mantle", metallic=0.15, roughness=0.76, double_sided=True)
+    skull = m.part("Fractured_Ovine_Mask", metallic=0.08, roughness=0.54)
+    sockets = m.part("Recessed_Skull_Sockets", metallic=0.12, roughness=0.52)
+    horn = m.part("Fluted_Obsidian_Horns", metallic=0.58, roughness=0.38)
+    jaw = m.part("Hinged_Jaw", metallic=0.1, roughness=0.52)
+    ribs = m.part("Reliquary_Ribs", metallic=0.72, roughness=0.42)
+    eye = m.part("Sternum_Eye", metallic=0.12, roughness=0.25, emissive=[0.49, 0.023, 0.074])
+    pupil = m.part("Sternum_Slit", metallic=0.15, roughness=0.34)
+    glints = m.part("Skull_Fire", emissive=[0.66, 0.071, 0.12])
+    crown = m.part("Broken_Eclipse", metallic=0.62, roughness=0.38, emissive=[0.13, 0.03, 0.045])
 
-    # Cloven hooves & draped ritual skirt
-    for sx in (-0.48, 0.48):
-        m.lathe(
-            serpent,
-            [(0.0, 0.24), (0.35, 0.2), (1.05, 0.18), (1.35, 0.22)],
-            center=(sx, 0, 0.1),
-            segs=18,
-            color="#261e2b",
-        )
-        m.ellipsoid(
-            bone, (sx, 0.14, 0.26), (0.2, 0.14, 0.24), u_segs=14, v_segs=10, color="#c8bea8"
-        )
-
-    # Fluted liturgical robe + split chest altar cavity
     m.lathe(
-        robe,
-        [(0.18, 1.38), (0.85, 1.15), (1.65, 0.92), (2.45, 0.78), (3.15, 0.88), (3.55, 0.62)],
-        center=(0, 0, -0.04),
+        flesh,
+        [(0.04, 1.27), (0.54, 1.17), (1.58, 0.67), (2.37, 0.71), (3.29, 1.10), (3.62, 0.58)],
         segs=36,
-        color="#33263d",
-        flute_amp=0.07,
-        flute_freq=8,
+        color="#312430",
+        sx=1.14,
+        sz=0.76,
+        flute_amp=0.13,
+        flute_freq=7,
     )
-    # Cloud-like sculpted wool cape wrapping shoulders
-    for i in range(10):
-        a = (i / 10) * math.tau
-        r = 0.74
-        m.ellipsoid(
-            wool,
-            (math.cos(a) * r, 3.25 + math.sin(a * 2) * 0.1, math.sin(a) * r * 0.78 - 0.06),
-            (0.42, 0.38, 0.36),
-            u_segs=16,
-            v_segs=12,
-            color="#d8d1c2" if i % 2 else "#e6dfd0",
-            bump_fn=lambda th, ph: 0.12 * math.sin(th * 5) * math.sin(ph * 4),
-        )
-    # Flowing stole & fleece cowl
-    m.ellipsoid(wool, (0, 3.35, 0.08), (0.85, 0.52, 0.65), u_segs=24, v_segs=16, color="#ede6d6")
     for sx in (-1, 1):
-        m.wing_membrane(
-            robe,
-            [[sx * 0.65, 3.4, 0.3], [sx * 1.15, 2.5, 0.15], [sx * 1.45, 1.2, -0.15]],
-            [[sx * 0.25, 3.1, 0.55], [sx * 0.55, 2.0, 0.52], [sx * 0.72, 0.65, 0.35]],
-            divs_u=12,
-            divs_v=8,
-            camber=0.08,
-            color="#4a2847",
+        m.ellipsoid(flesh, (sx * 0.56, 0.14, 0.64), (0.32, 0.17, 0.51), color="#211820")
+        m.tube(
+            mantle,
+            [
+                [sx * 0.8, 3.02, 0.03],
+                [sx * 1.13, 2.59, -0.16],
+                [sx * 1.31, 1.48, -0.29],
+                [sx * 1.57, 0.37, 0.22],
+            ],
+            [0.31, 0.27, 0.15, 0.015],
+            color="#372c38",
         )
+        for strip in range(5):
+            u = strip / 4
+            m.wing_membrane(
+                mantle,
+                [
+                    [sx * (0.43 + u * 0.64), 3.38 - u * 0.13, 0.28 - u * 0.37],
+                    [sx * (0.69 + u * 0.57), 2.42, 0.46 - u * 0.54],
+                    [sx * (0.56 + u * 1.08), 0.27 + (strip % 3) * 0.14, 0.76 - u * 0.80],
+                ],
+                [
+                    [sx * (0.58 + u * 0.62), 3.38 - u * 0.19, 0.19 - u * 0.37],
+                    [sx * (0.85 + u * 0.48), 2.39, 0.43 - u * 0.51],
+                    [sx * (0.79 + u * 0.91), 0.42, 0.52 - u * 0.63],
+                ],
+                divs_u=10,
+                divs_v=4,
+                camber=0.09,
+                color=("#241d29", "#493344", "#322634")[strip % 3],
+            )
+        for i in range(6):
+            y = 2.18 + i * 0.2
+            reach = 0.68 - abs(i - 3) * 0.036
+            m.tube(
+                ribs,
+                [
+                    [sx * 0.93, y + 0.28, 0.17],
+                    [sx * reach, y + 0.15, 0.57],
+                    [sx * 0.41, y, 0.77],
+                    [sx * 0.28, y - 0.08, 0.82],
+                ],
+                [0.10, 0.083, 0.061, 0.019],
+                segs=9,
+                color="#886459" if i % 2 else "#ab866b",
+            )
+        m.ellipsoid(
+            mantle,
+            (sx * 0.82, 3.23, -0.12),
+            (0.63, 0.43, 0.62),
+            color="#34252e",
+            bump_fn=lambda th, ph: 0.17 * math.sin(6 * th) * math.sin(5 * ph),
+        )
+    m.ellipsoid(pupil, (0, 2.60, 0.67), (0.46, 0.59, 0.27), color="#150d19")
+    m.ellipsoid(eye, (0, 2.6, 0.86), (0.34, 0.46, 0.19), color="#e22750")
+    m.ellipsoid(pupil, (0, 2.6, 1.02), (0.07, 0.33, 0.055), color="#190a17")
+    m.ellipsoid(eye, (-0.13, 2.78, 1.035), (0.055, 0.08, 0.025), color="#ffd6bb")
 
-    # Torn chest eye of Apep
-    m.torus(
-        gold,
-        (0, 2.45, 0.76),
-        0.42,
-        0.065,
-        u_segs=32,
-        v_segs=10,
-        color="#c9a857",
-        rot=(math.pi / 2, 0, 0),
-    )
-    m.ellipsoid(eye_glow, (0, 2.45, 0.72), (0.34, 0.44, 0.2), u_segs=20, v_segs=14, color="#ff4c79")
-    m.ellipsoid(serpent, (0, 2.45, 0.89), (0.09, 0.32, 0.06), u_segs=14, v_segs=10, color="#170c1c")
-
-    # Smooth ovine skull mask & sunken crimson eyes
     m.ellipsoid(
-        bone,
-        (0, 4.18, 0.24),
-        (0.56, 0.66, 0.78),
+        skull,
+        (0, 4.01, 0.35),
+        (0.62, 0.55, 0.65),
         u_segs=26,
-        v_segs=18,
-        color="#e8decb",
-        rot=(0.18, 0, 0),
-        bump_fn=lambda th, ph: -0.08 * math.exp(-((ph - 1.45) ** 2) * 8) * math.cos(th * 2),
+        v_segs=16,
+        color="#cfc1b5",
+        bump_fn=lambda th, ph: 0.06 * math.sin(th * 7) * math.sin(ph * 7),
     )
-    m.ellipsoid(
-        bone,
-        (0, 3.88, 0.84),
-        (0.28, 0.26, 0.38),
-        u_segs=16,
-        v_segs=12,
-        color="#d6cbb4",
-        rot=(0.3, 0, 0),
-    )
+    m.ellipsoid(skull, (0, 3.65, 0.88), (0.29, 0.26, 0.49), color="#d7c5ad", rot=(0.32, 0, 0))
+    m.ellipsoid(jaw, (0, 3.49, 0.8), (0.28, 0.12, 0.43), color="#8e756b")
     for sx in (-1, 1):
         m.ellipsoid(
-            eye_glow,
-            (sx * 0.32, 4.24, 0.82),
-            (0.12, 0.14, 0.1),
-            u_segs=14,
-            v_segs=10,
-            color="#ff5c93",
-        )
-
-    # Twin coiled spiral obsidian-gold ram horns
-    for sx in (-1, 1):
-        pts, rads = [], []
-        for i in range(26):
-            t = i / 25.0
-            ang = t * math.pi * 2.15
-            x = sx * (0.38 + math.sin(ang * 0.55) * 0.65 + t * 0.62)
-            y = 4.55 + math.sin(ang + 0.3) * 0.52 - t * 0.35
-            z = 0.08 - t * 0.42 + math.cos(ang) * 0.42
-            pts.append([x, y, z])
-            rads.append(0.24 * (1.0 - 0.78 * t))
-        m.tube(gold, pts, rads, segs=12, color="#d8b55d", flute_amp=0.14, flute_freq=6)
-
-    # Coiling Apep shadow serpents rising from base around torso and behind shoulders
-    for side_idx, sx in enumerate((-1, 1)):
-        pts, rads = [], []
-        for i in range(28):
-            t = i / 27.0
-            a = t * math.pi * 3.1 + side_idx * math.pi
-            r = 1.25 - 0.45 * math.sin(t * math.pi)
-            x = math.cos(a) * r * (0.85 if t < 0.7 else 1.25) + sx * (0.55 * t)
-            y = 0.12 + t * 4.55
-            z = math.sin(a) * r * 0.72 - 0.1
-            pts.append([x, y, z])
-            rads.append(0.16 * (1.0 - 0.55 * t) + 0.04 * math.sin(t * math.pi * 4))
-        m.tube(serpent, pts, rads, segs=12, color="#291d38")
-        # Viper head on tip of coil beside shoulder
-        hx, hy, hz = pts[-1]
-        m.ellipsoid(
-            serpent, (hx, hy, hz + 0.12), (0.2, 0.16, 0.32), u_segs=14, v_segs=10, color="#3a2852"
+            sockets,
+            (sx * 0.29, 4.04, 0.866),
+            (0.22, 0.125, 0.10),
+            color="#231521",
+            rot=(0, sx * 0.25, -sx * 0.26),
         )
         m.ellipsoid(
-            eye_glow,
-            (hx, hy + 0.05, hz + 0.38),
-            (0.06, 0.05, 0.05),
-            u_segs=8,
-            v_segs=6,
-            color="#ff477e",
+            glints,
+            (sx * 0.27, 4.048, 0.95),
+            (0.082, 0.033, 0.036),
+            color="#ff556b",
+            rot=(0, 0, -sx * 0.25),
+        )
+        m.tube(
+            skull,
+            [[sx * 0.53, 4.12, 0.71], [sx * 0.38, 4.20, 0.91], [sx * 0.14, 4.09, 0.95]],
+            [0.065, 0.095, 0.047],
+            color="#e2cdb9",
+        )
+        m.tube(
+            sockets,
+            [
+                [sx * 0.39, 4.48, 0.53],
+                [sx * 0.21, 4.38, 0.78],
+                [sx * 0.27, 4.21, 0.92],
+                [sx * 0.19, 4.09, 0.93],
+            ],
+            [0.013, 0.018, 0.018, 0.013],
+            segs=5,
+            color="#382835",
+        )
+        for tooth in range(4):
+            z = 1.20 - tooth * 0.11
+            x = sx * (0.15 + tooth * 0.023)
+            m.tube(
+                jaw,
+                [[x, 3.52, z], [x, 3.60 - tooth * 0.01, z + 0.022]],
+                [0.047, 0.008],
+                segs=7,
+                color="#e7d7bb",
+            )
+        pts, radii = [], []
+        for i in range(29):
+            t = i / 28
+            pitch = t * math.pi * (1.94 if sx > 0 else 1.67)
+            pts.append(
+                [
+                    sx * (0.51 + 0.78 * math.sin(t * 2.7) + t * 0.42),
+                    4.20 + math.sin(pitch) * (0.72 - t * 0.25),
+                    -0.06 + math.cos(pitch) * 0.46 + t * 0.48,
+                ]
+            )
+            radii.append(0.30 * (1.0 - t * 0.94))
+        m.tube(horn, pts, radii, segs=13, color="#796062", flute_amp=0.2, flute_freq=7)
+        m.tube(horn, pts[-8:], [r * 0.98 for r in radii[-8:]], segs=12, color="#ae806b")
+
+    serpents = []
+    for sx, name, height in [(-1, "Left", 3.87), (1, "Right", 4.03)]:
+        skin = m.part(f"{name}_Serpent_Scales", metallic=0.36, roughness=0.35)
+        mouth = m.part(f"{name}_Serpent_Fangs", metallic=0.07, roughness=0.52)
+        light = m.part(f"{name}_Serpent_Embers", emissive=[0.62, 0.06, 0.105])
+        pivot = (sx * 0.76, 0.43, -0.40)
+        pts = [
+            [sx * 0.53, 0.37, -0.52],
+            [sx * 1.14, 0.44, -0.81],
+            [sx * 1.64, 1.24, -0.76],
+            [sx * 1.44, 2.21, -0.91],
+            [sx * 1.52, height - 0.91, -0.75],
+            [sx * 1.99, height - 0.30, -0.28],
+            [sx * 1.82, height, 0.36],
+        ]
+        m.tube(
+            skin,
+            pts,
+            [0.31, 0.36, 0.27, 0.234, 0.255, 0.29, 0.24],
+            segs=18,
+            color="#492837",
+            flute_amp=0.12,
+            flute_freq=7,
+        )
+        for index, (x, y, z) in enumerate(pts[2:]):
+            m.tube(
+                skin,
+                [[x, y, z - 0.15], [x + sx * 0.29, y + 0.25, z - 0.31]],
+                [0.15, 0.018],
+                segs=8,
+                color="#7c535e" if index % 2 else "#624754",
+            )
+        x = sx * 1.79
+        m.ellipsoid(skin, (x, height, 0.61), (0.29, 0.22, 0.49), color="#614152", rot=(-0.14, 0, 0))
+        m.ellipsoid(
+            skin, (x, height - 0.24, 0.72), (0.22, 0.075, 0.36), color="#3c2230", rot=(0.32, 0, 0)
+        )
+        for sign in (-1, 1):
+            m.ellipsoid(
+                light, (x + sign * 0.22, height + 0.04, 0.84), (0.075, 0.05, 0.09), color="#ff4b62"
+            )
+            m.tube(
+                mouth,
+                [[x + sign * 0.15, height - 0.06, 0.98], [x + sign * 0.14, height - 0.22, 1.025]],
+                [0.042, 0.009],
+                segs=8,
+                color="#d9b9a4",
+            )
+        serpents.append(
+            (f"Apep_{name}_Serpent", "Apep_Body", pivot, (skin.name, mouth.name, light.name))
         )
 
-    # Floating intricate curse halo behind lamb head
-    m.torus(
-        gold,
-        (0, 4.42, -0.45),
-        1.38,
-        0.075,
-        u_segs=42,
-        v_segs=10,
-        color="#e3c168",
-        rot=(math.pi / 2, 0, 0),
+    for start, extent in ((-0.3, 1.29), (1.19, 1.48), (2.94, 1.19), (4.42, 1.19)):
+        for r, w, color in [(1.52, 0.069, "#9c6d63"), (1.37, 0.032, "#d28a72")]:
+            pts = [
+                [math.cos(a) * r, 4.13 + math.sin(a) * r, -0.63]
+                for a in np.linspace(start, start + extent, 20)
+            ]
+            m.tube(crown, pts, [w] * len(pts), segs=8, color=color)
+    for a in (0.72, 1.46, 2.3, 3.28, 4.55, 5.30):
+        dx, dy = math.cos(a), math.sin(a)
+        m.tube(
+            crown,
+            [
+                [dx * 1.4, 4.13 + dy * 1.4, -0.63],
+                [dx * 1.70, 4.13 + dy * 1.70, -0.64],
+                [dx * 1.86, 4.13 + dy * 1.86, -0.63],
+            ],
+            [0.10, 0.088, 0.012],
+            segs=6,
+            color="#c38672",
+        )
+
+    joints = [
+        ("Apep_Body", None, (0, 0.18, 0.08), (flesh.name, mantle.name, ribs.name)),
+        (
+            "Apep_Head",
+            "Apep_Body",
+            (0, 3.61, 0.18),
+            (skull.name, sockets.name, horn.name, glints.name),
+        ),
+        ("Apep_Jaw", "Apep_Head", (0, 3.58, 0.51), (jaw.name,)),
+        ("Apep_Sternum_Eye", "Apep_Body", (0, 2.60, 0.72), (eye.name, pupil.name)),
+        ("Apep_Eclipse_Rig", "Apep_Body", (0, 4.13, -0.63), (crown.name,)),
+        *serpents,
+    ]
+    return m.finish(
+        "apep-lamb.glb",
+        portrait_slug="apep-lamb",
+        bg_color="#421b28",
+        joints=joints,
+        clips=apep_clips(),
     )
-    m.torus(
-        eye_glow,
-        (0, 4.42, -0.45),
-        1.05,
-        0.045,
-        u_segs=36,
-        v_segs=8,
-        color="#d45cff",
-        rot=(math.pi / 2, 0, 0),
-    )
-    for i in range(8):
-        a = (i / 8) * math.tau
-        m.ellipsoid(
-            gold,
-            (math.cos(a) * 1.48, 4.42 + math.sin(a) * 1.48, -0.45),
-            (0.08, 0.18, 0.08),
-            u_segs=10,
-            v_segs=8,
-            color="#fff0b5",
-            rot=(0, 0, a - math.pi / 2),
-        )
-
-    return m.finish("apep-lamb.glb", portrait_slug="apep-lamb", bg_color="#341e3d")
 
 
 def build_radiant_wyvern():

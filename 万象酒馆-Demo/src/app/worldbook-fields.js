@@ -100,7 +100,7 @@ export const WORLD_GLOBAL_FIELDS = [
   ['authorNote', '作者注释（位于作者注释前/后条目之间）', 'textarea'],
 ];
 
-/** Comma-separated ST keywords; commas inside slash-delimited regex stay in the expression. */
+/** Keep legacy slash-delimited keys intact so their commas cannot create new active keywords. */
 export function parseWorldKeywords(text) {
   if (!text.trim()) return [];
   if (/^\[\s*(?:"|\])/.test(text.trim())) {

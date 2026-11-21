@@ -56,6 +56,10 @@ export function createSummoning(context) {
     $('#contract-count').textContent = String(contracts);
     $('#gold-count').textContent = String(library().inventory?.gold || 0);
     $('#ether-count').textContent = String(library().inventory?.ether || 0);
+    const voucherEl = $('#voucher-count');
+    if (voucherEl) {
+      voucherEl.textContent = String(library().inventory?.equipmentVouchers || 0);
+    }
     $('#summon-contracts').textContent = `持有契约 ${contracts} 份`;
     $('#summon-confirm').disabled = busy || contracts < 1 || library().characters.length >= 100;
     $('#summon-confirm').dataset.requiresAi = String(mode !== 'official');
@@ -160,7 +164,7 @@ export function createSummoning(context) {
           signal: controller.signal,
         });
         if (session.runtime.disposed || dialog.hidden || session.runtime.mode !== 'inn') return;
-        const pool = officialSummonPool(library(), result.book);
+        const pool = officialSummonPool(library(), result.book, session.ai.generationOptions);
         if (!pool.length)
           throw Error(
             '世界书中的官设角色已全部加入，或缺少官设条目。可使用无限召唤术。此次未消耗契约。',

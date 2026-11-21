@@ -2,6 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { MAIN_WORLD_LORE } from '../src/content/main-world-lore.js';
+import { QUARRY_WORLDBOOK_ENTRIES } from '../src/content/quarry-lore.js';
+import { BLACK_MARKET_WORLDBOOK_ENTRIES } from '../src/content/black-market-lore.js';
+import { REGIONS } from '../src/content/regions.js';
+import { DEFINITIONS } from '../src/data.js';
 import { tavernCanonText } from '../src/content/world.js';
 import { scanWorldbooks } from '../src/ai/worldbook-scan.js';
 import { newWorldEntry, syncBuiltinWorldbook } from '../src/ai/worldbook.js';
@@ -141,4 +145,104 @@ test('merged world lore prunes obsolete entries while keeping settings on surviv
   assert(content.includes('冒险者公会常以 F 至 S 级来评定委托贡献与战力'));
   assert(content.endsWith('开辟乃至毁灭一整片星系。'));
   assert.deepEqual(syncBuiltinWorldbook(updated, builtin), updated);
+});
+
+test('graystone-quarry script overhaul keeps darkscaleWarlord intact, reflects millennial common sense, and migrates legacy saves', async () => {
+  const builtin = await loadBuiltin();
+  const byQuarryLore = new Map(
+    Object.values(builtin.entries || {})
+      .filter((entry) => entry.extensions?.wanxiang?.quarryLore)
+      .map((entry) => [entry.extensions.wanxiang.quarryLore, entry]),
+  );
+  for (const lore of QUARRY_WORLDBOOK_ENTRIES) {
+    const builtinEntry = byQuarryLore.get(lore.id);
+    assert(builtinEntry, `Missing builtin quarryLore entry: ${lore.id}`);
+    assert.equal(builtinEntry.content, lore.content);
+    assert.deepEqual(builtinEntry.key, lore.key);
+  }
+
+  const settingEntry = QUARRY_WORLDBOOK_ENTRIES.find((entry) => entry.id === 'quarry-setting');
+  const ecologyEntry = QUARRY_WORLDBOOK_ENTRIES.find((entry) => entry.id === 'quarry-ecology');
+  const quarry = REGIONS['graystone-quarry'];
+  const regionText = [
+    quarry.description,
+    quarry.atmosphere,
+    ...quarry.npcPool,
+    ...quarry.taskHooks.map((hook) => `${hook.title} ${hook.description}`),
+  ].join('\n');
+  const combinedText = [settingEntry.content, ecologyEntry.content, regionText].join('\n');
+
+  assert(!combinedText.includes('传染尸变'));
+  assert(!combinedText.includes('马库斯'));
+  assert(!combinedText.includes('写作指导'));
+  for (const forbidden of ['1340', '多元宇宙', '原生界', '寄生黑龙', '律动']) {
+    assert(!combinedText.includes(forbidden), `Unexpected forbidden token: ${forbidden}`);
+  }
+  assert.equal((settingEntry.content.match(/传染|感染/g) || []).length, 1);
+  assert.equal((ecologyEntry.content.match(/传染|感染/g) || []).length, 0);
+  assert.equal((regionText.match(/传染|感染/g) || []).length, 0);
+  assert(combinedText.includes('已历千余年'));
+  assert(combinedText.includes('不会抓咬传染'));
+  assert(combinedText.includes('私采暗晶'));
+  assert(combinedText.includes('断枷'));
+  assert(combinedText.includes('初生暗鳞督军'));
+
+  assert.equal(quarry.boss, 'darkscaleWarlord');
+  assert.equal(quarry.sites.length, 6);
+  assert.equal(quarry.taskHooks.length, 6);
+  assert.deepEqual(
+    quarry.taskHooks.map((hook) => hook.id),
+    ['quarry-mq1', 'quarry-mq2', 'quarry-mq3', 'quarry-mq4', 'quarry-sq1', 'quarry-sq2'],
+  );
+  for (const hook of quarry.taskHooks) {
+    assert(DEFINITIONS[hook.boss], `Missing enemy definition for hook ${hook.id}: ${hook.boss}`);
+  }
+
+  const legacySaved = {
+    entries: {
+      10: {
+        ...newWorldEntry(10),
+        key: ['灰岩旧采石场'],
+        content: '旧版采石场设定',
+        extensions: { wanxiang: { quarryLore: 'quarry-setting' } },
+      },
+      11: {
+        ...newWorldEntry(11),
+        key: ['灰岩旧采石场', '马库斯'],
+        content: '年轻哨长马库斯担心同伴被蚀鳞抓伤会传染尸变。',
+        extensions: { wanxiang: { quarryLore: 'quarry-ecology' } },
+      },
+    },
+  };
+  const migrated = syncBuiltinWorldbook(legacySaved, builtin);
+  assert.equal(migrated.entries[10].content, settingEntry.content);
+  assert.equal(migrated.entries[11].content, ecologyEntry.content);
+  assert(!migrated.entries[11].content.includes('马库斯'));
+  assert(!migrated.entries[11].content.includes('传染尸变'));
+  assert.deepEqual(syncBuiltinWorldbook(migrated, builtin), migrated);
+});
+
+test('black-market worldbook entries and multi-node graph stay synced while starbell-undercroft avoids banditSyndicateKing', async () => {
+  const builtin = await loadBuiltin();
+  const byBlackMarketLore = new Map(
+    Object.values(builtin.entries || {})
+      .filter((entry) => entry.extensions?.wanxiang?.blackMarketLore)
+      .map((entry) => [entry.extensions.wanxiang.blackMarketLore, entry]),
+  );
+  for (const lore of BLACK_MARKET_WORLDBOOK_ENTRIES) {
+    const builtinEntry = byBlackMarketLore.get(lore.id);
+    assert(builtinEntry, `Missing builtin blackMarketLore entry: ${lore.id}`);
+    assert.equal(builtinEntry.content, lore.content);
+    assert.deepEqual(builtinEntry.key, lore.key);
+  }
+
+  const blackMarket = REGIONS['black-market'];
+  assert.equal(blackMarket.boss, 'banditSyndicateKing');
+  assert.equal(blackMarket.nodes.length, 5);
+  assert.equal(blackMarket.taskHooks.length, 5);
+  for (const hook of blackMarket.taskHooks) {
+    assert(DEFINITIONS[hook.boss], `Missing enemy definition for hook ${hook.id}: ${hook.boss}`);
+  }
+  assert.notEqual(REGIONS['starbell-undercroft'].boss, 'banditSyndicateKing');
+  assert.equal(REGIONS['starbell-undercroft'].taskHooks[0].boss, 'banditExecutioner');
 });

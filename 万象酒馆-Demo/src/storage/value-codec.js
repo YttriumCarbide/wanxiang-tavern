@@ -1,5 +1,22 @@
+function validateJsonValue(value) {
+  try {
+    const serialized = JSON.stringify(value, (_, item) => {
+      if (typeof item === 'number' && !Number.isFinite(item)) {
+        throw Error('存档包含非有限数值');
+      }
+      return item;
+    });
+    if (serialized === undefined) throw Error('缺少存档值');
+  } catch (cause) {
+    throw Error('存档数据无法完整保存为 JSON', { cause });
+  }
+}
+
 export async function encodeStorageValue(value) {
-  if (!(value instanceof Blob)) return value;
+  if (!(value instanceof Blob)) {
+    validateJsonValue(value);
+    return value;
+  }
   const bytes = new Uint8Array(await value.arrayBuffer());
   let text = '';
   for (let offset = 0; offset < bytes.length; offset += 8192)

@@ -161,16 +161,6 @@ test('chat Advice preview equals JSON/SSE upstream, keeps world mentions and exa
         await post('prompts/select', { kind, id: saved.preset.id });
       }
       const binding = adviceBinding(saved.preset);
-      await post('regex', {
-        scripts: [
-          {
-            findRegex: '/<advice>[\\s\\S]*?<\\/advice>/g',
-            replaceString: '',
-            placement: [2],
-            promptOnly: true,
-          },
-        ],
-      });
       const off = await post('prompts/preview', { kind: 'chat', input });
       assert.equal(off.transport.advice.status, 'disabled');
       const storage = {
@@ -183,7 +173,6 @@ test('chat Advice preview equals JSON/SSE upstream, keeps world mentions and exa
         privateMarker: 'DO_NOT_SEND_PRIVATE_ADVICE_STORAGE',
       };
       await post(`helper-storage/${saved.preset.id}`, { storage });
-      // A common cleanup regex removes old advice; it must not erase newly transferred input.
       for (live of [false, true]) {
         await post('prompts/save', {
           id: saved.preset.id,

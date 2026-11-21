@@ -47,12 +47,15 @@ test('actual playback uses identical beat durations when an attack kills, ignori
   };
   globalThis.document = { querySelector: () => element, querySelectorAll: () => [] };
   const waits = [];
+  let interruptOnWait = null;
   t.mock.method(globalThis, 'setTimeout', (callback, duration) => {
     waits.push(duration);
+    interruptOnWait?.();
+    interruptOnWait = null;
     queueMicrotask(callback);
     return 0;
   });
-  async function play(kill) {
+  async function play(kill, interrupt = false) {
     let state = advance(preview(newBattle(['mossSlime', 'sprout']), []));
     if (kill) state.units.mossSlime.hp = 1;
     const plan = [makeAction(state, 'aegis', 'attack', 'mossSlime', 0)];
@@ -73,12 +76,18 @@ test('actual playback uses identical beat durations when an attack kills, ignori
         view: { snapFormationOnNextDraw() {}, playEvent: () => (kill ? 999999 : 640) },
       },
     };
+    let recordedRounds = 0;
     const context = {
       session,
       selection: { clearSelection() {} },
       renderer: { render() {} },
       audio: { play() {}, combat() {} },
-      generation: { recordRound() {}, save() {} },
+      generation: {
+        recordRound() {
+          recordedRounds++;
+        },
+        save() {},
+      },
       planning: {
         recompute() {
           session.battle.forecast = preview(session.battle.state, session.battle.plan);
@@ -86,17 +95,26 @@ test('actual playback uses identical beat durations when an attack kills, ignori
       },
     };
     const from = waits.length;
+    if (interrupt) {
+      interruptOnWait = () => {
+        session.runtime.token++;
+        session.runtime.mode = 'inn';
+        session.battle.playing = false;
+      };
+    }
     await createPlayback(context).commit();
-    assert.equal(session.battle.playing, false);
-    assert.equal(session.battle.state.phase, 'plan');
-    return waits.slice(from);
+    return { waits: waits.slice(from), session, recordedRounds };
   }
   try {
     const alive = await play(false);
     const killed = await play(true);
-    assert.deepEqual(killed, alive);
-    assert(alive.every((duration) => duration === PLAYBACK_BEAT_MS / 2));
-    assert.equal(alive.length, 6);
+    assert.deepEqual(killed.waits, alive.waits);
+    assert(alive.waits.every((duration) => duration === PLAYBACK_BEAT_MS / 2));
+    assert.equal(alive.waits.length, 6);
+    const interrupted = await play(false, true);
+    assert.equal(interrupted.session.battle.playing, false);
+    assert.equal(interrupted.recordedRounds, 0);
+    assert.equal(interrupted.session.runtime.mode, 'inn');
   } finally {
     if (previousDocument === undefined) delete globalThis.document;
     else globalThis.document = previousDocument;

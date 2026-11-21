@@ -1,4 +1,4 @@
-import { apiSettingsChecks } from './api-settings.mjs';
+import { apiSettingsChecks, firstRunApplyChecks } from './api-settings.mjs';
 import { generationOptionsChecks } from './generation-options.mjs';
 import { chatChecks } from './chat.mjs';
 import { legacySession } from './legacy-session.mjs';
@@ -31,6 +31,8 @@ export async function smoke({ browser, baseURL, output, settingsChecked, environ
     await legacySession(page);
     await page.goto(baseURL);
     const apiSettings = settingsChecked || (await apiSettingsChecks({ browser, baseURL, output }));
+    const firstRun =
+      settingsChecked?.firstRun || (await firstRunApplyChecks({ browser, baseURL, output }));
     const generationOptions =
       settingsChecked?.generationOptions ||
       (await generationOptionsChecks({ browser, baseURL, output }));
@@ -333,6 +335,7 @@ export async function smoke({ browser, baseURL, output, settingsChecked, environ
       portraitImport,
       worldbookEditor,
       apiSettings,
+      firstRun,
       generationOptions,
       chat,
       settingsPreparation,

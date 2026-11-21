@@ -13,7 +13,11 @@
     "check": "node tools/test.mjs --scope quality,core",
     "test:baseline": "node tools/capture-layout.mjs",
     "audio:build": "node tools/build-audio.mjs",
-    "build": "node tools/build-static.mjs"
+    "build": "node tools/build-static.mjs",
+    "build:android": "node tools/package-native.mjs android",
+    "build:pc": "node tools/package-native.mjs pc",
+    "build:updates": "node tools/package-native.mjs updates",
+    "check:native": "node tools/package-native.mjs check"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

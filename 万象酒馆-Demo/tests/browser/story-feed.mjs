@@ -237,7 +237,7 @@ export async function storyFeedChecks({ browser, baseURL, output }) {
       await page.evaluate(() => window.storyFixture.session.ai.library.scripts.length),
       0,
     );
-    await page.locator('#records-close').click();
+    await page.locator('#archive-close').click();
     await page.evaluate(() => {
       window.storyFixture.feed.dispose();
       window.storyFixture.records.dispose();

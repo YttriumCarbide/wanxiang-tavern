@@ -3,6 +3,7 @@ import path from 'node:path';
 import { legacySession, openShelfPanel } from './legacy-session.mjs';
 import { newCampaign, firstCompanion } from '../../src/campaign.js';
 import { defaultProtagonist } from '../../src/content/qingyuan.js';
+import { completeExploration } from '../../src/exploration.js';
 import { normalizeCharacter } from '../../src/ai/contracts.js';
 import { characterDocument } from '../fixtures/ai.js';
 import { normalizeEquipment, buyEquipment } from '../../src/equipment.js';
@@ -32,6 +33,12 @@ export async function preparationChecks({ browser, baseURL, output }) {
   firstCompanion(library);
   library.campaign.tutorial = 'complete';
   library.progression.pandoraJoined = true;
+  library.unlockedDungeons = ['mill'];
+  for (const nodeId of ['mill-1-canal', 'mill-2-hall', 'mill-3-loft']) {
+    const node = library.exploration.mill.frontier.find((entry) => entry.nodeId === nodeId);
+    assert(node);
+    completeExploration(library.exploration, node);
+  }
   for (let index = 0; index < 3; index++) {
     const document = characterDocument();
     document.setting.name = `旅人${index + 1}`;
@@ -219,7 +226,7 @@ export async function preparationChecks({ browser, baseURL, output }) {
     await openShelfPanel(page, 'records');
     assert((await page.locator('#records-text').innerText()).includes('沿着壁画走向石门'));
     await page
-      .locator('#journey-records')
+      .locator('#archive-dialog')
       .evaluate((element) =>
         Promise.all(element.getAnimations().map((animation) => animation.finished)),
       );
@@ -228,13 +235,29 @@ export async function preparationChecks({ browser, baseURL, output }) {
     await page.locator('#records-text input').first().fill('回廊新记录');
     await page.getByRole('button', { name: '保存记录', exact: true }).click();
     assert((await page.locator('#records-list').innerText()).includes('回廊新记录'));
-    await page.locator('#records-close').click();
+    await page.locator('#archive-close').click();
     await page.reload();
     await page.waitForFunction(() => !!window.demo);
     assert.equal(
       (await page.evaluate(() => demo.getLibrary())).characters[0].equipment[0],
       'owned-1',
     );
+    await page.evaluate(() => demo.startBattle());
+    await page.locator('#destination-dialog').waitFor({ state: 'visible' });
+    await page.locator('#destination-regions button[data-region="mill"]').click();
+    await page.locator('#destination-region-confirm').click();
+    await page.locator('[data-map-node*="mill-4-attic"]').click();
+    await page.locator('#destination-start').click();
+    await page.getByRole('button', { name: '确认编队 · 开始生成', exact: true }).waitFor();
+    const warningMessages = [];
+    page.on('dialog', async (dialog) => {
+      warningMessages.push(dialog.message());
+      await dialog.dismiss();
+    });
+    await page.locator('#prepare-done').click();
+    assert.equal(await panel.isVisible(), true, 'Canceling the warning keeps formation open');
+    assert.equal(warningMessages.length, 1);
+    assert.match(warningMessages[0], /难度极高.*未满六人.*推荐满编再来/);
     assert.deepEqual(errors, []);
     return {
       compactPanel: true,
@@ -245,6 +268,7 @@ export async function preparationChecks({ browser, baseURL, output }) {
       equipmentAndPortraitEditor: true,
       horizontalMobile: true,
       recordsAndArchives: true,
+      millOverlordRosterWarning: true,
     };
   } catch (failure) {
     await page.screenshot({ path: path.join(output, 'preparation-failure.png') }).catch(() => {});

@@ -30,8 +30,25 @@ test('malformed commands become invalid previews instead of throwing or creating
     const result = preview(state, [action]);
     assert.equal(result.valid, false);
     assert(result.invalid.length > 0);
+    assert.equal(
+      result.events.some((event) => ['hero', 'swap'].includes(event.type)),
+      false,
+    );
   }
 });
+
+test('an invalid action blocks settlement even when another action produced a forecast', () => {
+  const state = newBattle();
+  const action = makeAction(state, 'morrow', 'delay', 'hound', 0);
+  const before = structuredClone(state);
+  const result = preview(state, [action, { ...action, id: 'unknown', kind: 'unknown-command' }]);
+
+  assert.equal(result.valid, false);
+  assert.equal(result.final.units.hound.buffs.slow, 2);
+  assert.throws(() => advance(result), /Invalid plan/);
+  assert.deepEqual(state, before);
+});
+
 const normal = () => advance(preview(newBattle(), []));
 test('six different companions use valid statuses, four passive locations and action limits', () => {
   assert.equal(HEROES.length, 6);
@@ -55,8 +72,13 @@ test('opening grants one player AP with no enemy action', () => {
   assert(r.valid);
   assert.equal(r.final.units.hound.buffs.slow, 2);
   assert.equal(r.events.filter((e) => e.type === 'enemy').length, 0);
-  assert.equal(advance(r).round, 1);
-  assert.equal(advance(r).units.morrow.mp, 23);
+  const forecast = structuredClone(r);
+  const settled = advance(r);
+  assert.equal(settled.round, 1);
+  assert.equal(settled.units.morrow.mp, 23);
+  assert.equal(settled.units.hound.buffs.slow, 2);
+  settled.units.hound.buffs.slow = 1;
+  assert.deepEqual(r, forecast);
 });
 test('speed one goes last and the forecast remains deterministic', () => {
   const s = normal();

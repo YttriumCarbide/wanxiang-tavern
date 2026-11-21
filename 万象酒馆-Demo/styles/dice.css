@@ -1193,6 +1193,31 @@ body:has(#dc-stage:not([hidden]))
   letter-spacing: 0.14em;
   box-shadow: 0 3px 0 #080a1c;
 }
+
+:root[data-game-layout='mobile'] {
+  body:has(#dc-stage:not([hidden])) :is(.ledger-corner, .ledger-edge-handle, .ledger-drawer-host) {
+    visibility: hidden;
+    pointer-events: none;
+  }
+  #dc-stage[data-ready='true'] {
+    padding-bottom: calc(62px + var(--safe-bottom));
+  }
+  #dc-stage[data-ready='true'] .dc-frame {
+    max-height: calc(100dvh - 72px - var(--safe-top) - var(--safe-bottom));
+    justify-content: safe center;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  #dc-stage > .dc-continue {
+    position: absolute;
+    z-index: 3;
+    right: max(12px, var(--safe-right));
+    bottom: max(10px, var(--safe-bottom));
+    min-width: 136px;
+    min-height: 44px;
+    margin: 0;
+  }
+}
 @keyframes dc-fade-up {
   from {
     opacity: 0;

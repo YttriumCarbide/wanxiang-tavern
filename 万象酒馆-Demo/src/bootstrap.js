@@ -1,4 +1,4 @@
-import { mountLandscapeHost, mountOuterGestures } from './app/display.js';
+import { configureGameLayout, mountLandscapeHost, mountOuterGestures } from './app/display.js';
 import { createApplication } from './app/application.js';
 import { openDatabase, createGameStorage } from './storage/database.js';
 import { openDiskDatabase } from './storage/disk-database.js';
@@ -6,6 +6,15 @@ import { createStaticBackend } from './ai/static-backend.js';
 import { newCampaign } from './campaign.js';
 import { defaultProtagonist } from './content/qingyuan.js';
 import { createLocalDataPanel } from './storage/panel.js';
+import { createContentUpdates } from './updates/content-updates.js';
+import { loadUpdateRelease, TUTORIAL_GATE } from './updates/manifest.js';
+import { createCacheUpdateStore } from './updates/storage.js';
+import { createNativeUpdateStore } from './updates/native-storage.js';
+import {
+  isDeveloperCopy,
+  openDeveloperCopyDatabase,
+  developerCopyFetch,
+} from './storage/developer-copy.js';
 
 async function enablePortraitWorker() {
   if (!('serviceWorker' in navigator)) return false;
@@ -29,8 +38,21 @@ async function enablePortraitWorker() {
 }
 
 export async function startGame() {
+  configureGameLayout();
   if (mountLandscapeHost()) {
     mountOuterGestures();
+    return;
+  }
+  if (isDeveloperCopy()) {
+    const database = openDeveloperCopyDatabase();
+    const storage = createGameStorage(database);
+    const apiClient = await createStaticBackend(database, {
+      virtualImages: false,
+      fetchImpl: developerCopyFetch,
+    });
+    const application = createApplication({ storage, apiClient, developerSandbox: true });
+    window.demo = { ...application.api, dispose: application.dispose };
+    document.title = '万象酒馆 · 开发者测试档';
     return;
   }
   // Service-backed browser fixtures opt in explicitly; published HTML never carries this marker.
@@ -71,18 +93,39 @@ export async function startGame() {
       ? '硬盘保存失败：' + failure.message
       : '本地保存失败，请检查设备空间并导出备份。';
   });
+  const base = new URL('../', import.meta.url);
+  const nativeStore = createNativeUpdateStore({ base });
   const apiClient = await createStaticBackend(database, {
-    virtualImages: database.cacheAvailable !== false && (await enablePortraitWorker()),
+    virtualImages:
+      !globalThis.wanxiangNativeUpdate &&
+      database.cacheAvailable !== false &&
+      (await enablePortraitWorker()),
   });
-  const application = createApplication({ storage, apiClient });
+  const updateMeta = document.querySelector('meta[name="wanxiang-update-manifest"]');
+  const manifestUrl = updateMeta?.content && new URL(updateMeta.content, base);
+  const contentUpdates =
+    manifestUrl?.origin === base.origin
+      ? createContentUpdates({
+          load: (signal) =>
+            loadUpdateRelease(manifestUrl, { signal, expectedVersion: updateMeta.dataset.version }),
+          store: nativeStore ?? createCacheUpdateStore({ base }),
+          emptyGates: updateMeta.dataset.tutorialGate === 'empty' ? [TUTORIAL_GATE] : [],
+        })
+      : undefined;
+  const application = createApplication({ storage, apiClient, contentUpdates });
   const panel = createLocalDataPanel({
     database,
     storage,
     apiClient,
     dispose: application.dispose,
   });
-  window.demo = { ...application.api, dispose: application.dispose };
-  window.addEventListener('pagehide', () => panel.dispose(), { once: true });
+  window.demo = { ...application.api, contentUpdates, dispose: application.dispose };
+  function disposePanel(event) {
+    if (event.persisted) return;
+    window.removeEventListener('pagehide', disposePanel);
+    panel.dispose();
+  }
+  window.addEventListener('pagehide', disposePanel);
   notice.hidden = !cacheWarning;
 }
 

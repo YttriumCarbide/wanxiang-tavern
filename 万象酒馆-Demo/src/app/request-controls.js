@@ -12,6 +12,7 @@ export function createRequestControls(
   prepare = async () => {},
   received = () => {},
   library = () => null,
+  simulate = () => null,
 ) {
   const active = new Set();
   const dock = document.createElement('div');
@@ -81,7 +82,7 @@ export function createRequestControls(
     const candidates = {
       map: ['world-construction'],
       creation: ['ether-forge'],
-      summary: ['memory-dialog'],
+      summary: ['archive-dialog', 'memory-dialog'],
       chat: ['gal-stage'],
       'quick-chat': ['gal-stage', 'rp-scene'],
       character: ['ai-dialog', 'new-game'],
@@ -101,7 +102,8 @@ export function createRequestControls(
             : data;
         return client.request(path, preview, options);
       }
-      if (match[1] === 'generate' && skippingAi(generationOptions()))
+      const simulated = match[1] === 'generate' && !options.background ? simulate(match[2]) : null;
+      if (!simulated && match[1] === 'generate' && skippingAi(generationOptions()))
         throw Error('开发者模式已跳过AI生成，请关闭“跳过AI生成”后再使用。');
       const controller = new AbortController();
       const cancel = () => controller.abort(options.signal?.reason);
@@ -168,6 +170,7 @@ export function createRequestControls(
       button.addEventListener('click', stop);
       try {
         controller.signal.throwIfAborted();
+        if (simulated) await simulated(controller.signal);
         if (match[1] === 'generate') await prepare(match[2]);
         controller.signal.throwIfAborted();
         const input = match[1] === 'generate' ? generationInput(match[2], data) : data;

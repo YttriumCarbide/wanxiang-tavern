@@ -96,35 +96,48 @@
 .enemy-break-rail {
   position: absolute;
   left: 50%;
-  top: calc(100% + 5px);
+  top: calc(100% + 3px);
   transform: translateX(-50%);
-  z-index: 12;
+  z-index: 25;
   display: inline-flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  gap: 4px;
+  justify-content: center;
+  gap: 6px;
   min-width: max-content;
-  padding: 4px 7px;
-  border-radius: 7px;
-  border: 1px solid rgba(154, 186, 198, 0.34);
-  background: linear-gradient(180deg, rgba(14, 24, 29, 0.94), rgba(9, 16, 20, 0.96));
+  padding: 2px 9px 2px 3px;
+  border-radius: 999px;
+  border: 1px solid rgba(212, 184, 118, 0.36);
+  background: linear-gradient(
+    90deg,
+    rgba(10, 17, 24, 0.8),
+    rgba(16, 26, 36, 0.95) 20%,
+    rgba(16, 26, 36, 0.95) 80%,
+    rgba(10, 17, 24, 0.8)
+  );
   box-shadow:
-    0 3px 10px rgba(0, 0, 0, 0.72),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    0 4px 12px rgba(0, 0, 0, 0.78),
+    inset 0 1px 0 rgba(255, 240, 194, 0.14);
   pointer-events: auto;
 }
 .enemy-break-rail.is-plain {
-  flex-direction: row;
   gap: 5px;
-  padding: 3px 7px;
-  border-color: rgba(182, 212, 224, 0.45);
+  padding: 2px 9px 2px 3px;
+  border-color: rgba(182, 212, 224, 0.44);
 }
 .enemy-break-rail.is-special {
-  border-color: rgba(242, 198, 102, 0.55);
+  border-color: rgba(242, 198, 102, 0.62);
+  background: linear-gradient(
+    90deg,
+    rgba(18, 14, 24, 0.86),
+    rgba(28, 22, 34, 0.97) 20%,
+    rgba(28, 22, 34, 0.97) 80%,
+    rgba(18, 14, 24, 0.86)
+  );
   box-shadow:
-    0 3px 12px rgba(0, 0, 0, 0.78),
-    0 0 12px rgba(240, 194, 96, 0.22),
-    inset 0 1px 0 rgba(255, 234, 168, 0.16);
+    0 4px 14px rgba(0, 0, 0, 0.82),
+    0 0 12px rgba(240, 194, 96, 0.24),
+    inset 0 1px 0 rgba(255, 234, 168, 0.22);
 }
 .enemy-break-rail.is-matched {
   border-color: #ffe89e;
@@ -132,13 +145,13 @@
 }
 .enemy-break-rail.will-break {
   border-color: #ff9c6e;
-  background: linear-gradient(180deg, rgba(58, 21, 18, 0.95), rgba(34, 11, 10, 0.97));
+  background: linear-gradient(90deg, rgba(58, 21, 18, 0.95), rgba(34, 11, 10, 0.97));
   box-shadow: 0 0 14px rgba(255, 118, 76, 0.65);
 }
 .enemy-break-rail.is-broken {
   flex-direction: row;
   gap: 5px;
-  padding: 3px 8px;
+  padding: 2px 10px;
   border-color: #ffb86c;
   background: linear-gradient(90deg, rgba(84, 24, 20, 0.96), rgba(46, 15, 24, 0.96));
   color: #ffe0b8;
@@ -159,10 +172,77 @@
   color: #ffe8c8;
   text-shadow: 0 1px 2px #000;
 }
-.break-gauge-head {
+.break-ring {
+  position: relative;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 36% 30%, #24212c, #0f131b);
+  border: 1.5px solid rgba(224, 188, 108, 0.45);
+  box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.85);
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.enemy-break-rail.is-plain .break-ring {
+  border-color: rgba(164, 217, 235, 0.48);
+}
+.break-ring b {
+  position: relative;
+  z-index: 1;
+  font-size: 11px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  color: #fff2c6;
+  text-shadow: 0 1px 2px #000;
+}
+.break-ring svg {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  translate: -50% -50%;
+  width: calc(100% + 4px);
+  height: calc(100% + 4px);
+  overflow: visible;
+}
+.break-seg {
+  fill: none;
+  stroke: rgba(54, 62, 74, 0.72);
+  stroke-width: 4.5;
+  stroke-linecap: butt;
+  transition:
+    stroke 0.18s ease,
+    filter 0.18s ease;
+}
+.enemy-break-rail.is-special .break-seg.is-filled {
+  stroke: #ffd85c;
+  filter: drop-shadow(0 0 3px rgba(255, 206, 82, 0.75));
+}
+.enemy-break-rail.is-plain .break-seg.is-filled {
+  stroke: #a4d9eb;
+  filter: drop-shadow(0 0 3px rgba(132, 212, 238, 0.65));
+}
+.break-seg.is-forecast-loss {
+  stroke: #ff7a59 !important;
+  filter: drop-shadow(0 0 4px rgba(255, 118, 84, 0.9));
+  animation: intent-visibility 0.85s ease-in-out infinite;
+}
+.break-ring.will-break {
+  border-color: #ff9c6e;
+  background: radial-gradient(circle, #481a15, #1f0a09);
+}
+.break-ring.will-break b {
+  color: #ffbe9e;
+}
+.break-sep {
+  width: 5px;
+  height: 5px;
+  transform: rotate(45deg);
+  background: linear-gradient(135deg, #ffe79e, #a5772a);
+  box-shadow: 0 0 5px rgba(255, 216, 112, 0.65);
+  flex-shrink: 0;
 }
 .break-mode-tag {
   font-size: 10px;
@@ -170,85 +250,51 @@
   color: #b7d7e0;
   letter-spacing: 0.04em;
 }
-.break-gauge-track {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-}
-.break-pip {
-  width: 13px;
-  height: 6px;
-  border-radius: 2px;
-  transform: skewX(-16deg);
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  background: rgba(24, 34, 40, 0.88);
-  transition:
-    background 0.18s ease,
-    box-shadow 0.18s ease,
-    transform 0.18s ease;
-}
-.enemy-break-rail.is-plain .break-pip.is-filled {
-  background: linear-gradient(180deg, #e0f0f5, #89b2c2);
-  border-color: rgba(235, 248, 255, 0.72);
-  box-shadow: 0 0 6px rgba(164, 220, 240, 0.45);
-}
-.enemy-break-rail.is-special .break-pip.is-filled {
-  background: linear-gradient(180deg, #ffe58f, #e59c34);
-  border-color: rgba(255, 236, 172, 0.85);
-  box-shadow: 0 0 7px rgba(255, 200, 92, 0.52);
-}
-.break-pip.is-forecast-loss {
-  background: linear-gradient(180deg, #fff1c9, #ff6c54) !important;
-  border-color: #ffd7ba !important;
-  animation: intent-visibility 0.85s ease-in-out infinite;
-}
-.break-count {
-  font-size: 10px;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  color: #f6df9d;
-  text-shadow: 0 1px 2px #000;
-}
-.enemy-break-rail.will-break .break-count {
+.enemy-break-rail.will-break .break-mode-tag {
   color: #ffbe9e;
-  letter-spacing: 0.04em;
 }
 .enemy-weakness-row {
-  display: flex;
+  display: inline-flex;
   flex-wrap: nowrap;
   justify-content: center;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
   pointer-events: auto;
 }
 .enemy-weakness-pill {
   position: relative;
   display: inline-grid;
   place-items: center;
-  border-radius: 4px;
-  background: rgba(11, 20, 24, 0.92);
   color: var(--dmg-color, #9a8f7c);
   transition:
-    transform 0.16s ease,
     box-shadow 0.16s ease,
-    border-color 0.16s ease;
+    border-color 0.16s ease,
+    filter 0.16s ease;
+}
+.enemy-weakness-pill:hover {
+  filter: brightness(1.22);
 }
 .enemy-weakness-pill.is-minor {
   z-index: 1;
   width: 19px;
   height: 19px;
-  border: 1px solid var(--dmg-color, rgba(255, 255, 255, 0.34));
-  box-shadow: 0 1px 4px var(--dmg-glow, rgba(0, 0, 0, 0.6));
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, rgba(28, 38, 48, 0.94), rgba(10, 15, 20, 0.98));
+  border: 1px solid color-mix(in srgb, var(--dmg-color, #9a8f7c) 72%, #fff 12%);
+  box-shadow:
+    0 1px 5px var(--dmg-glow, rgba(0, 0, 0, 0.65)),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14);
 }
 .enemy-weakness-pill.is-major {
   z-index: 5;
-  width: 24px;
-  height: 24px;
-  border: 2px solid #ffd86b;
-  background: radial-gradient(circle at 30% 25%, rgba(92, 62, 18, 0.95), rgba(26, 17, 7, 0.98));
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1.5px solid #ffd86b;
+  background: radial-gradient(circle at 30% 25%, rgba(108, 70, 18, 0.96), rgba(30, 18, 6, 0.98));
   box-shadow:
-    0 0 10px rgba(255, 212, 96, 0.72),
-    inset 0 0 6px rgba(255, 232, 158, 0.42);
+    0 0 10px rgba(255, 212, 96, 0.78),
+    inset 0 0 6px rgba(255, 232, 158, 0.45);
 }
 .enemy-weakness-pill .weakness-mult {
   position: absolute;
@@ -256,22 +302,22 @@
   bottom: -4px;
   z-index: 2;
   padding: 0 3px;
-  border-radius: 3px;
+  border-radius: 999px;
   border: 1px solid #ffe79a;
-  background: #61390a;
+  background: linear-gradient(180deg, #8b1e28, #4d0d14);
   color: #fff2be;
   font-size: 8px;
   font-style: normal;
   font-weight: 900;
-  line-height: 11px;
+  line-height: 10px;
   text-shadow: 0 1px 1px #000;
+  pointer-events: none;
 }
 .enemy-weakness-pill.is-matched {
-  transform: scale(1.18);
-  background: rgba(255, 232, 166, 0.28);
+  background: radial-gradient(circle, rgba(255, 232, 166, 0.42), rgba(74, 52, 14, 0.92));
   border-color: #fff1b8;
   color: #fff9df;
-  box-shadow: 0 0 13px rgba(255, 224, 128, 0.88);
+  box-shadow: 0 0 14px rgba(255, 224, 128, 0.92);
   animation: intent-visibility 0.85s ease-in-out infinite;
 }
 .unit-hit.is-broken-state .selection-frame rect {
@@ -814,34 +860,41 @@
   background: none;
   letter-spacing: 0.5px;
 }
+.unit-hit[data-side='Enemy'] {
+  z-index: 16;
+}
+.unit-hit:hover,
+.unit-hit:focus-within {
+  z-index: 28;
+}
 .card-buffs {
   position: absolute;
   right: 4px;
-  top: -29px;
+  top: -23px;
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
-  gap: 3px;
+  gap: 2px;
   max-width: calc(100% - 8px);
   pointer-events: auto;
-  z-index: 2;
+  z-index: 4;
 }
 .buff-icon {
-  width: 25px;
-  height: 25px;
+  width: 21px;
+  height: 21px;
   position: relative;
   display: inline-block;
   border: 1px solid #a0b5a66b;
   background: #18272bea;
   border-radius: 3px;
-  padding: 3px;
+  padding: 2px;
   cursor: help;
   box-shadow: 0 2px 5px #0004;
 }
 .buff-icon svg {
   display: block;
-  width: 16px;
-  height: 16px;
+  width: 15px;
+  height: 15px;
 }
 .buff-icon b {
   position: absolute;
@@ -1780,23 +1833,25 @@
     top: 22px;
   }
   .enemy-break-rail {
-    top: calc(100% + 3px);
-    padding: 2px 5px;
-    gap: 3px;
+    top: calc(100% + 2px);
+    padding: 2px 7px 2px 2px;
+    gap: 4px;
   }
-  .break-pip {
-    width: 10px;
-    height: 4px;
+  .break-ring {
+    width: 22px;
+    height: 22px;
+  }
+  .break-ring b {
+    font-size: 9px;
   }
   .enemy-weakness-pill.is-major {
-    width: 19px;
-    height: 19px;
+    width: 18px;
+    height: 18px;
   }
   .enemy-weakness-pill.is-minor {
     width: 15px;
     height: 15px;
   }
-  .break-count,
   .break-mode-tag,
   .break-broken-label {
     font-size: 8px;
@@ -2344,6 +2399,12 @@
   color: #ffbdad;
   box-shadow: 0 0 9px #b8436169;
 }
+.buff-icon[data-buff='sinkingPlague'].plague-sealed {
+  border-color: #ff5884;
+  background: #3a1024f2;
+  color: #ffdbe6;
+  box-shadow: 0 0 12px rgba(255, 62, 118, 0.8);
+}
 .buff-icon[data-buff='sinkingPlague'].future-buff {
   border-style: dashed;
   box-shadow: none;
@@ -2352,6 +2413,10 @@
   text-shadow:
     0 1px 2px #100910,
     0 0 10px #db5379;
+}
+.unit-hit[data-plague-sealed='1'] .selection-frame rect {
+  stroke: #ff4f86;
+  stroke-dasharray: 5 3;
 }
 .buff-icon.consuming-buff {
   border-color: #ff9f43;
@@ -2435,7 +2500,7 @@
   .buff-icon.consuming-buff,
   .alchemical-bomb-badge.is-pending,
   .alchemical-bomb-badge.is-critical,
-  .break-pip.is-forecast-loss,
+  .break-seg.is-forecast-loss,
   .enemy-weakness-pill.is-matched,
   .unit-hit.is-charging-state::after {
     animation: none;

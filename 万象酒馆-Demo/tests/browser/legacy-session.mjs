@@ -6,18 +6,17 @@ export async function openShelfPanel(page, action) {
   const frame = page.frameLocator('#inn-frame iframe');
   await frame.locator('#status').waitFor({ state: 'detached', timeout: 60000 });
   await frame.locator('canvas').evaluate(() => window.assetPreview.placeNow('bookshelf'));
-  await frame.locator('#bookshelf-' + action).click();
-  const panels = {
-    archives: 'archive-dialog',
-    records: 'journey-records',
-    memory: 'memory-dialog',
-  };
-  await page.locator('#' + panels[action]).waitFor({ state: 'visible' });
+  await frame.locator('#bookshelf-archives').click();
+  await page.locator('#archive-dialog').waitFor({ state: 'visible' });
+  const targetTab = action === 'archives' ? 'npcs' : action;
+  if (targetTab && targetTab !== 'npcs') {
+    await page.locator(`#archive-dialog [data-archive-tab="${targetTab}"]`).click();
+  }
 }
 
 /** These suites exercise existing six-member saves; fresh creation has its own real API suite. */
-export async function legacySession(page) {
-  await dismissAutomaticJournals(page);
+export async function legacySession(page, { dismissJournals = true } = {}) {
+  if (dismissJournals) await dismissAutomaticJournals(page);
   const values = new Map();
   applyGeneratedReset({
     getItem: (key) => values.get(key) || null,
@@ -46,101 +45,126 @@ export async function legacySession(page) {
 }
 
 /** Simulate closing each automatic journal; manually opened journals stay available to tests. */
-export async function dismissAutomaticJournals(page) {
-  await page.addInitScript(() => {
-    document.addEventListener('DOMContentLoaded', () => {
-      const journal = document.querySelector('#story-feed');
-      if (!journal) return;
-      window.automaticJournals = JSON.parse(
-        sessionStorage.getItem('test-automatic-journals') || '[]',
-      );
-      window.automaticTheaters = JSON.parse(
-        sessionStorage.getItem('test-automatic-theaters') || '[]',
-      );
-      let scheduled = false;
-      let theaterScheduled = false;
-      const observer = new MutationObserver(() => {
-        const theater = document.querySelector('#chapter-theater');
-        if (
-          theater &&
-          !theater.hidden &&
-          theater.dataset.testScript === 'true' &&
-          !theater.classList.contains('is-closing') &&
-          !theaterScheduled
-        ) {
-          theaterScheduled = true;
-          setTimeout(() => {
-            theaterScheduled = false;
-            if (
-              theater.hidden ||
-              theater.dataset.testScript !== 'true' ||
-              theater.classList.contains('is-closing')
-            )
-              return;
-            if (theater.dataset.revealed === 'true') {
-              window.automaticTheaters.push({
-                mode: theater.dataset.mode,
-                theme: theater.dataset.theme,
-                heading: theater.querySelector('.chapter-theater-title')?.textContent || '',
-              });
-              sessionStorage.setItem(
-                'test-automatic-theaters',
-                JSON.stringify(window.automaticTheaters),
-              );
+export async function dismissAutomaticJournals(
+  page,
+  { dismissAllTheaters = false, dismissTheaters = true } = {},
+) {
+  await page.addInitScript(
+    ({ dismissAllTheaters, dismissTheaters }) => {
+      document.addEventListener('DOMContentLoaded', () => {
+        const journal = document.querySelector('#story-feed');
+        if (!journal) return;
+        window.automaticJournals = JSON.parse(
+          sessionStorage.getItem('test-automatic-journals') || '[]',
+        );
+        window.automaticTheaters = JSON.parse(
+          sessionStorage.getItem('test-automatic-theaters') || '[]',
+        );
+        let scheduled = false;
+        let theaterScheduled = false;
+        let theaterTimer = null;
+        let recordedTheater = '';
+        function advanceAutomaticTheater() {
+          const theater = document.querySelector('#chapter-theater');
+          if (
+            !theater ||
+            theater.hidden ||
+            !dismissTheaters ||
+            (!dismissAllTheaters && theater.dataset.automatic !== 'true') ||
+            theater.classList.contains('is-closing')
+          ) {
+            if (!dismissAllTheaters) {
+              clearInterval(theaterTimer);
+              theaterTimer = null;
             }
-            theater.querySelector('#chapter-theater-continue')?.click();
-          }, 0);
+            recordedTheater = '';
+            return;
+          }
+          const key = `${theater.dataset.mode}:${theater.dataset.theme}:${theater.querySelector('.chapter-theater-title')?.textContent || ''}`;
+          if (theater.dataset.revealed === 'true' && key !== recordedTheater) {
+            recordedTheater = key;
+            window.automaticTheaters.push({
+              mode: theater.dataset.mode,
+              theme: theater.dataset.theme,
+              heading: theater.querySelector('.chapter-theater-title')?.textContent || '',
+            });
+            sessionStorage.setItem(
+              'test-automatic-theaters',
+              JSON.stringify(window.automaticTheaters),
+            );
+          }
+          theater.querySelector('#chapter-theater-continue')?.click();
         }
-        const stage = document.querySelector('#gal-stage');
-        if (
-          stage &&
-          !stage.hidden &&
-          stage.dataset.owner === 'script' &&
-          stage.dataset.automatic === 'true' &&
-          stage.dataset.leaving !== 'true' &&
-          !scheduled
-        ) {
-          scheduled = true;
-          setTimeout(() => {
-            scheduled = false;
-            if (
-              !stage.hidden &&
-              stage.dataset.owner === 'script' &&
-              stage.dataset.automatic === 'true' &&
-              stage.dataset.leaving !== 'true'
-            )
-              stage.querySelector('.gal-page').click();
-          }, 0);
-        }
-        if (journal.open && journal.dataset.automatic === 'true') {
-          window.automaticJournals.push({
-            page: document.querySelector('#story-page-count').textContent,
-            resultVisible: document.querySelector('#result').open,
-          });
-          sessionStorage.setItem(
-            'test-automatic-journals',
-            JSON.stringify(window.automaticJournals),
-          );
-          document.querySelector('#story-close').click();
-        }
+        const observer = new MutationObserver(() => {
+          const theater = document.querySelector('#chapter-theater');
+          if (
+            theater &&
+            !theater.hidden &&
+            dismissTheaters &&
+            (dismissAllTheaters || theater.dataset.automatic === 'true') &&
+            !theater.classList.contains('is-closing') &&
+            !theaterScheduled
+          ) {
+            theaterScheduled = true;
+            setTimeout(() => {
+              theaterScheduled = false;
+              advanceAutomaticTheater();
+              if (!theaterTimer) theaterTimer = setInterval(advanceAutomaticTheater, 120);
+            }, 0);
+          }
+          const stage = document.querySelector('#gal-stage');
+          if (
+            stage &&
+            !stage.hidden &&
+            stage.dataset.owner === 'script' &&
+            stage.dataset.automatic === 'true' &&
+            stage.dataset.leaving !== 'true' &&
+            !scheduled
+          ) {
+            scheduled = true;
+            setTimeout(() => {
+              scheduled = false;
+              if (
+                !stage.hidden &&
+                stage.dataset.owner === 'script' &&
+                stage.dataset.automatic === 'true' &&
+                stage.dataset.leaving !== 'true'
+              )
+                stage.querySelector('.gal-page').click();
+            }, 0);
+          }
+          if (journal.open && journal.dataset.automatic === 'true') {
+            window.automaticJournals.push({
+              page: document.querySelector('#story-page-count').textContent,
+              resultVisible: document.querySelector('#result').open,
+            });
+            sessionStorage.setItem(
+              'test-automatic-journals',
+              JSON.stringify(window.automaticJournals),
+            );
+            document.querySelector('#story-close').click();
+          }
+        });
+        observer.observe(document.body, {
+          attributes: true,
+          subtree: true,
+          attributeFilter: [
+            'open',
+            'hidden',
+            'class',
+            'data-owner',
+            'data-automatic',
+            'data-typing',
+            'data-leaving',
+            'data-revealed',
+            'data-test-script',
+          ],
+        });
+        if (dismissTheaters && dismissAllTheaters) setInterval(advanceAutomaticTheater, 250);
       });
-      observer.observe(document.body, {
-        attributes: true,
-        subtree: true,
-        attributeFilter: [
-          'open',
-          'hidden',
-          'class',
-          'data-owner',
-          'data-automatic',
-          'data-typing',
-          'data-leaving',
-          'data-revealed',
-          'data-test-script',
-        ],
-      });
-    });
-  });
+    },
+    { dismissAllTheaters, dismissTheaters },
+  );
 }
 
 /** Read an authored Gal sequence; this never advances an action-gated lesson by itself. */

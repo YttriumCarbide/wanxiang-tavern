@@ -42,17 +42,21 @@ test('completed dungeon summaries replace split Gal originals in every history p
     runId: record.runId,
     story: ['【旁白】原文第一小段。【对白:伊蒂丝】原文第二小段。', '其他原文'],
   };
-  for (const projection of [
+  const historyProjections = () => [
     previousDungeonMemory(library),
     scriptMemory(library, book),
     JSON.stringify(memoryHistory(library, [record])),
-  ]) {
+  ];
+  for (const projection of historyProjections()) {
     assert(projection.includes(record.summary.text));
     assert(!projection.includes('原文'));
   }
   record.lines[0].text = '编辑后的全文';
-  assert(previousDungeonMemory(library).includes('编辑后的全文'));
-  assert(!previousDungeonMemory(library).includes(record.summary.text));
+  book.story[0] = book.story[0].replace('原文第一小段。', record.lines[0].text);
+  for (const projection of historyProjections()) {
+    assert(projection.includes(record.lines[0].text));
+    assert(!projection.includes(record.summary.text));
+  }
 });
 import { newLibrary, restoreLibrary } from '../src/ai/library.js';
 import { createAiApi } from '../server/ai-api.mjs';
@@ -338,7 +342,14 @@ test('summary planning splits every item within context and output budgets witho
   await assert.rejects(
     () =>
       summaryPlan({ items: [items[0]] }, { ...profile, contextSize: 1024 }, (text) => text.length),
-    /超过上下文/u,
+    (error) => {
+      assert.equal(error.code, 'AI_SUMMARY_ITEM_TOO_LARGE');
+      assert.equal(error.status, 400);
+      assert.match(error.message, /第 1 条总结记录/u);
+      assert(error.cause instanceof Error);
+      assert.match(error.cause.message, /超过上下文/u);
+      return true;
+    },
   );
 });
 

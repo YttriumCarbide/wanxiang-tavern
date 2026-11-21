@@ -453,6 +453,7 @@ class SculptedModel:
                 continue
             arr = np.asarray(part.positions, dtype=np.float32) + shift
             part.positions = arr.tolist()
+        return shift
 
     def total_triangles(self):
         return sum(len(p.indices) // 3 for p in self.parts.values())
@@ -534,8 +535,8 @@ class SculptedModel:
             + "</g>\n</svg>\n"
         )
 
-    def finish(self, filename, portrait_slug=None, bg_color="#2a1f36"):
-        self.normalize_floor()
+    def finish(self, filename, portrait_slug=None, bg_color="#2a1f36", joints=(), clips=None):
+        floor_shift = self.normalize_floor()
         binary = bytearray()
         doc = {
             "asset": {"version": "2.0", "generator": "Wanxiang sculpted overlord atelier"},
@@ -557,7 +558,7 @@ class SculptedModel:
                     "buffer": 0,
                     "byteOffset": len(binary),
                     "byteLength": len(content),
-                    "target": target,
+                    **({"target": target} if target else {}),
                 }
             )
             binary.extend(content)
@@ -571,19 +572,37 @@ class SculptedModel:
                 "count": len(arr),
                 "type": kind,
             }
-            if kind == "VEC3":
+            if kind == "VEC3" or (kind == "SCALAR" and target is None):
                 item.update(min=arr.min(axis=0).tolist(), max=arr.max(axis=0).tolist())
             idx = len(doc["accessors"])
             doc["accessors"].append(item)
             return idx
+
+        joint_nodes = {}
+        joint_positions = {}
+        part_joints = {}
+        scene_nodes = doc["scenes"][0]["nodes"]
+        for name, parent, pivot, parts in joints:
+            position = np.asarray(pivot) + floor_shift
+            translation = position - joint_positions[parent] if parent else position
+            node = len(doc["nodes"])
+            doc["nodes"].append({"name": name, "translation": translation.tolist(), "children": []})
+            (doc["nodes"][joint_nodes[parent]]["children"] if parent else scene_nodes).append(node)
+            joint_nodes[name] = node
+            joint_positions[name] = position
+            part_joints.update({part: name for part in parts})
 
         comp_counts = {}
         total_tris = 0
         for name, part in self.parts.items():
             if not part.indices:
                 continue
+            joint = part_joints.get(name)
+            positions = (
+                np.asarray(part.positions) - joint_positions[joint] if joint else part.positions
+            )
             attrs = {
-                "POSITION": add_acc(part.positions, "<f4", "VEC3", 34962),
+                "POSITION": add_acc(positions, "<f4", "VEC3", 34962),
                 "NORMAL": add_acc(part.normals, "<f4", "VEC3", 34962),
                 "COLOR_0": add_acc(part.colors, "<f4", "VEC3", 34962),
             }
@@ -610,10 +629,28 @@ class SculptedModel:
             )
             nid = len(doc["nodes"])
             doc["nodes"].append({"name": name, "mesh": mesh_id})
-            doc["scenes"][0]["nodes"].append(nid)
+            (doc["nodes"][joint_nodes[joint]]["children"] if joint else scene_nodes).append(nid)
             tris = len(part.indices) // 3
             comp_counts[name] = tris
             total_tris += tris
+
+        if clips:
+            doc["animations"] = []
+            for name, (times, poses) in clips.items():
+                clock = add_acc(np.asarray(times).reshape(-1, 1), "<f4", "SCALAR", None)
+                samplers, channels = [], []
+                for joint, keyframes in poses.items():
+                    if len(times) != len(keyframes):
+                        raise ValueError(f"{name}: wrong number of keyframes for {joint}")
+                    output = add_acc(keyframes, "<f4", "VEC4", None)
+                    channels.append(
+                        {
+                            "sampler": len(samplers),
+                            "target": {"node": joint_nodes[joint], "path": "rotation"},
+                        }
+                    )
+                    samplers.append({"input": clock, "output": output, "interpolation": "LINEAR"})
+                doc["animations"].append({"name": name, "channels": channels, "samplers": samplers})
 
         doc["extras"] = {
             "title": self.name,

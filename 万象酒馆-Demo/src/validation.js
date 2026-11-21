@@ -210,14 +210,27 @@ export function validateAction(state, action, seen = new Set()) {
   if (!action || !['skill', 'swap', 'reposition', 'item', 'engage'].includes(action.kind))
     return '行动类型无效';
   if (typeof action.id !== 'string' || !action.id || seen.has(action.id)) return '行动ID缺失或重复';
-  if (!integer(action.start)) return '时间位置无效';
+  if (!Number.isSafeInteger(action.start) || action.start < 0) return '时间位置无效';
+  if (!Number.isSafeInteger(action.ap) || action.ap < 1) return '行动AP无效';
   if (action.kind === 'engage') {
     if (state.units[action.actor]?.side !== 'hero' || !definition(state, action.actor)?.emblemId)
       return '结合角色没有装备纹章士';
-    if (!action.followUp) return action.ap === 1 ? null : '结合标记占据一个时间格';
+    if (action.followUp === undefined || action.followUp === null)
+      return action.ap === 1 ? null : '结合标记占据一个时间格';
+    if (
+      typeof action.followUp !== 'object' ||
+      Array.isArray(action.followUp) ||
+      Object.keys(action.followUp).some((key) => !['skill', 'target'].includes(key))
+    )
+      return '结合后续行动字段无效';
     return validateAction(
       state,
-      { ...action, ...action.followUp, kind: 'skill', actor: action.actor },
+      {
+        ...action,
+        kind: 'skill',
+        skill: action.followUp.skill,
+        target: action.followUp.target,
+      },
       seen,
     );
   }

@@ -1,12 +1,6 @@
 /** Fixed emblem rules; battle state is the sole owner of charge and duration. */
-export function applyEmblemStats(combat, emblemId) {
-  const result = structuredClone(combat);
-  if (emblemId === OVERLOAD_EMBLEM_ID && !result._overloadApplied) {
-    result.mp = Math.round(result.mp * 1.5);
-    result.hp = Math.round(result.hp + result.mp * 0.25);
-    result._overloadApplied = true;
-  }
-  return result;
+export function applyEmblemStats(combat) {
+  return structuredClone(combat);
 }
 export const EMBLEM_ID = 'tan-hongyu';
 export const EMBLEM = Object.freeze({
@@ -22,7 +16,7 @@ export const COMBINE_SKILL = Object.freeze({
   mp: 0,
   target: 'enemy',
   damageType: null,
-  text: '使敌人的攻击伤害均分至三个前场位置，状态目标不变。每次结合限用一次。',
+  text: '使敌人的攻击伤害降低15%（可与其他减伤叠乘）并均分至三个前场位置，状态目标不变。每次结合限用一次。',
   effects: [{ type: 'buff', buff: 'balance', value: 1 }],
 });
 
@@ -31,7 +25,7 @@ export const OVERLOAD_EMBLEM = Object.freeze({
   id: OVERLOAD_EMBLEM_ID,
   name: '水无月兰',
   title: '过载纹章士',
-  text: '灵能血装：最大法力值*1.5倍，最大生命值增加最大法力的0.25；技能伤害与回复增加该技能消耗法力×0.25。',
+  text: '灵能血装：结合期间，最大sp翻倍并立刻回满；每次造成伤害时，获得等同于伤害量的最大hp并同步回复生命（结合结束后上限恢复原值，已获得的生命不扣除）。',
 });
 export const OVERLOAD_SKILL = Object.freeze({
   id: 'emblem-overload',
@@ -40,13 +34,14 @@ export const OVERLOAD_SKILL = Object.freeze({
   mp: 0,
   target: 'self',
   damageType: null,
-  text: '获得1层超限，本场保留至下次角色技能使用：消耗翻倍、额外生效一次。不随回合或结合结束消失，每次结合限用一次。',
+  text: '获得1层超限，使下一次行动重复生效一次（×2）；若为攻击技能，每次攻击额外造成本次结合期间已累计增加的最大sp与最大hp之和的伤害。每次结合限用一次。',
   effects: [{ type: 'buff', buff: 'overload', value: 1 }],
 });
 
 export const DRAGON_EMBLEM_ID = 'kamui';
 export const MASK_EMBLEM_ID = 'wind-dance';
 export const SUPREME_EMBLEM_ID = 'jiu-qi';
+export const BREAKER_EMBLEM_ID = 'cang-ming';
 export const DRAGON_SKILL = Object.freeze({
   id: 'emblem-dragon-vein',
   name: '结合技 · 龙脉',
@@ -56,7 +51,7 @@ export const DRAGON_SKILL = Object.freeze({
   damageType: null,
   mechanic: 'dragonVein',
   effects: [],
-  text: '本场在前场三格留下龙脉：左位每回合回复8hp，右位每回合回复8sp，中位持续获得1层铁皮、力量和敏捷。效果属于位置，换人仍保留。每次结合限用一次。',
+  text: '在前场三格刻下龙脉，持续至结合结束后的下下回合开始时（结合结束后额外生效1回合）：左位每回合回复25%最大hp，右位每回合回复25%最大sp，中位持续获得3层铁皮、力量和敏捷。效果属于位置，换人仍保留。每次结合限用一次。',
 });
 export const MASK_SKILL = Object.freeze({
   id: 'emblem-deceit-sacrifice',
@@ -78,7 +73,18 @@ export const SUPREME_SKILL = Object.freeze({
   damageType: null,
   mechanic: 'moonEye',
   effects: [],
-  text: '只能选择至少有3种负面状态的非Boss敌人：令其死亡，并对其余敌人造成等同于该敌人当前hp的伤害。每次结合限用一次。',
+  text: '选择至少有3种负面状态的存活敌人：对非Boss目标令其直接死亡并对其余敌人造成等同于该敌人当前hp的伤害；对Boss目标造成等同于其当前生命值一半的伤害。每次结合限用一次。',
+});
+export const BREAKER_SKILL = Object.freeze({
+  id: 'emblem-shatter-shell',
+  name: '结合技 · 裂壳共鸣',
+  ap: 1,
+  mp: 0,
+  target: 'enemy',
+  damageType: null,
+  mechanic: 'shatterShell',
+  effects: [],
+  text: '移除目标所有护盾，并为我方全部存活角色回复等同于本次移除护盾数量的生命值；若目标处于可击破状态，将其剩余韧性调整为1层。每次结合限用一次。',
 });
 
 export const EMBLEMS = Object.freeze({
@@ -95,7 +101,7 @@ export const EMBLEMS = Object.freeze({
       id: DRAGON_EMBLEM_ID,
       name: '神威',
       title: '选择纹章士',
-      text: '龙咒：结合期间，一次攻击仅命中一名敌人时，对其施加1层易伤、虚弱和迟缓。',
+      text: '龙咒：结合期间，每回合第一次造成伤害时，对本次命中的所有敌人各施加1层易伤、虚弱和迟缓。',
     },
     skill: DRAGON_SKILL,
   },
@@ -116,6 +122,15 @@ export const EMBLEMS = Object.freeze({
       text: '万法归寂：结合期间，自己及所有队友免疫敌人施加的负面状态，并将其返还给施加者。',
     },
     skill: SUPREME_SKILL,
+  },
+  [BREAKER_EMBLEM_ID]: {
+    emblem: {
+      id: BREAKER_EMBLEM_ID,
+      name: '苍铭',
+      title: '破壁纹章士',
+      text: '破壳共鸣：结合期间，普攻与技能命中目标时额外削减1层韧性（未命中弱点亦可削减1层），并对护盾造成双倍破盾效果；每次击破敌方护盾或触发破防时，为我方全前排施加6点护盾。',
+    },
+    skill: BREAKER_SKILL,
   },
 });
 
@@ -221,6 +236,21 @@ export const EMBLEM_VISUALS = Object.freeze({
     engageFx: 'eclipse',
     skillFx: 'arcane-beam',
     passiveFx: 'halo',
+  }),
+  [BREAKER_EMBLEM_ID]: Object.freeze({
+    id: BREAKER_EMBLEM_ID,
+    cssClass: 'emblem-cang-ming',
+    auraStyle: 'shatter-crest',
+    primary: '#f28b49',
+    secondary: '#ffd17a',
+    glow: '#ffc180',
+    accent: '#e05a2b',
+    core: '#fff4e0',
+    deep: '#4a1b08',
+    pixelfxPalette: Object.freeze(['#3d1305', '#9e3614', '#f28b49', '#ffd17a', '#fff6e5']),
+    engageFx: 'holy-pillar',
+    skillFx: 'star-fall',
+    passiveFx: 'blessing',
   }),
 });
 

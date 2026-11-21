@@ -100,7 +100,7 @@ export async function equipmentChecks({ browser, baseURL, output }) {
     assert(!header.includes('总结') && !header.includes('归档'));
     assert.equal(
       await page.frameLocator('#inn-frame iframe').locator('[data-shelf-action]').count(),
-      3,
+      1,
     );
     await page.route('**/api/ai/generate/creation', async (route) => {
       const body = route.request().postDataJSON();
@@ -273,8 +273,8 @@ export async function equipmentChecks({ browser, baseURL, output }) {
     assert.deepEqual(after.filter(Boolean).sort(), before);
     await page.screenshot({ path: path.join(output, 'script-generating-preparation.png') });
     release();
-    await page.locator('#ai-dialog').waitFor({ state: 'visible' });
-    await page.locator('#ai-close').click();
+    await page.locator('#generation-diagnostics').waitFor({ state: 'visible' });
+    await page.locator('#diagnostic-close').click();
     await page.evaluate(() => {
       const library = demo.getLibrary();
       library.progression = {
@@ -370,6 +370,241 @@ export async function equipmentChecks({ browser, baseURL, output }) {
       realSwapLesson: true,
       retreatGuard: true,
       actualEntrySkillLesson: true,
+      ...(await forgeAffixWorkspaceChecks({ browser, baseURL, output })),
+    };
+  } finally {
+    await page.close();
+  }
+}
+
+async function forgeAffixWorkspaceChecks({ browser, baseURL, output }) {
+  const { normalizeEquipment, buyEquipment, equip, grantGem } =
+    await import('../../src/equipment.js');
+  const { GEM_POOL } = await import('../../src/content/gems.js');
+  const page = await browser.newPage({ viewport: { width: 1440, height: 836 } });
+  const errors = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  await legacySession(page);
+  try {
+    await page.goto(baseURL);
+    await page.waitForFunction(() => !!window.demo);
+    const library = newCampaign(defaultProtagonist());
+    library.campaign.completed = true;
+    library.inventory.summonContracts = 5;
+    firstCompanion(library);
+    library.campaign.tutorial = 'complete';
+    library.inventory.ether = 20000;
+    library.characters[0].growth.level = 25;
+
+    const templates = [
+      { id: 'ui-eq-1', category: 'weapon' },
+      { id: 'ui-eq-2', category: 'armor' },
+      { id: 'ui-eq-3', category: 'pendant' },
+    ].map(({ id, category }) =>
+      normalizeEquipment(
+        {
+          name: id,
+          description: 'UI fixture',
+          category,
+          stats: { hp: 2 },
+          rules: [],
+          level: 1,
+          quality: 'common',
+        },
+        { id, value: 10, name: id, category, level: 1, quality: 'common' },
+      ),
+    );
+    library.equipment.catalog = templates;
+    for (let index = 0; index < 2; index++)
+      buyEquipment(library, templates[0].id, `ui-owned-${index + 1}`);
+    buyEquipment(library, templates[1].id, 'ui-owned-armor');
+    buyEquipment(library, templates[2].id, 'ui-owned-pendant');
+    equip(library, library.characters[0].id, 1, 'ui-owned-armor');
+    equip(library, library.characters[0].id, 2, 'ui-owned-pendant');
+    library.equipment.affixesByTemplate = {
+      [templates[1].id]: { id: 'affix-offense', quality: 'rare' },
+      [templates[2].id]: { id: 'affix-offense', quality: 'rare' },
+    };
+    grantGem(library, GEM_POOL[0].id, 'ui-gem');
+
+    await page.evaluate((library) => {
+      localStorage.setItem('wanxiang.worldbooks.v1', JSON.stringify(library));
+      localStorage.setItem(
+        'wanxiang.generation-options.v1',
+        JSON.stringify({ developerMode: true, skipAiGeneration: false }),
+      );
+    }, library);
+    await page.reload();
+    await page.waitForFunction(() => !!window.demo);
+
+    const frame = page.frameLocator('#inn-frame iframe');
+    await frame.locator('#status').waitFor({ state: 'detached', timeout: 60000 });
+    await frame
+      .locator('canvas')
+      .evaluate(() => parent.postMessage({ type: 'tavern-condenser' }, location.origin));
+    await page.locator('[data-forge-page="exchange"]').click();
+    await page.locator('[data-forge-select="ui-eq-1"]').click();
+
+    const panel = page.locator('#ether-forge');
+    const box = await panel.boundingBox();
+    assert(box.width > 1000, `forge panel width ${box.width}`);
+    assert(box.height > 650, `forge panel height ${box.height}`);
+    const overflow = await panel.evaluate((node) => node.scrollWidth > node.clientWidth + 1);
+    assert.equal(overflow, false, 'forge panel has no horizontal overflow');
+    assert.equal(
+      (await page.evaluate(() => demo.getLibrary())).equipment.affixesByTemplate['ui-eq-1'],
+      undefined,
+    );
+
+    await page.locator('[data-buy-equipment]').first().click();
+    await page.waitForFunction(
+      (kind) => document.querySelector('.forge-operation-feedback')?.dataset.kind === kind,
+      'forge',
+    );
+    assert.equal(
+      (await page.evaluate(() => demo.getLibrary())).equipment.owned.filter(
+        (item) => item.templateId === 'ui-eq-1',
+      ).length,
+      3,
+    );
+
+    await page.locator('[data-temper-instance]').first().click();
+    await page.waitForFunction(
+      (kind) => document.querySelector('.forge-operation-feedback')?.dataset.kind === kind,
+      'temper',
+    );
+    assert.equal(
+      (await page.evaluate(() => demo.getLibrary())).equipment.owned.find(
+        (item) => item.templateId === 'ui-eq-1',
+      ).level,
+      2,
+    );
+
+    await page.locator('[data-reforge-instance]').first().click();
+    await page.locator('.equipment-feedback-dialog').waitFor({ state: 'visible' });
+    await page.locator('.equipment-feedback-confirm').click();
+    await page.waitForFunction(
+      (kind) => document.querySelector('.forge-operation-feedback')?.dataset.kind === kind,
+      'reforge',
+    );
+
+    await page.locator('[data-ascend-instance]').first().click();
+    await page.waitForFunction(
+      (kind) => document.querySelector('.forge-operation-feedback')?.dataset.kind === kind,
+      'ascend',
+    );
+
+    await page.locator('[data-add-affix="ui-eq-1"]').click();
+    await page.waitForFunction(
+      (kind) => document.querySelector('.forge-operation-feedback')?.dataset.kind === kind,
+      'affix',
+    );
+    assert((await page.evaluate(() => demo.getLibrary())).equipment.affixesByTemplate['ui-eq-1']);
+    const ownAffixes = await page.evaluate(() =>
+      demo
+        .getLibrary()
+        .equipment.owned.filter((item) => item.templateId === 'ui-eq-1')
+        .map((item) => Object.prototype.hasOwnProperty.call(item, 'affixes')),
+    );
+    assert.deepEqual(ownAffixes, [false, false, false]);
+
+    await page.locator('[data-refresh-affix="ui-eq-1"]').click();
+    const before = await page.evaluate(() => {
+      const library = demo.getLibrary();
+      return {
+        ether: library.inventory.ether,
+        affix: library.equipment.affixesByTemplate['ui-eq-1'],
+      };
+    });
+    await page.locator('.equipment-feedback-cancel').click();
+    const afterCancel = await page.evaluate(() => {
+      const library = demo.getLibrary();
+      return {
+        ether: library.inventory.ether,
+        affix: library.equipment.affixesByTemplate['ui-eq-1'],
+      };
+    });
+    assert.deepEqual(afterCancel, before);
+
+    await page.locator('[data-refresh-affix="ui-eq-1"]').click();
+    await page.locator('.equipment-feedback-confirm').click();
+    await page.waitForFunction(
+      (kind) => document.querySelector('.forge-operation-feedback')?.dataset.kind === kind,
+      'reroll',
+    );
+    const afterReroll = await page.evaluate(() => demo.getLibrary().inventory.ether);
+    assert(afterReroll < before.ether);
+
+    await page.locator(`[data-forge-select="${GEM_POOL[0].id}"]`).click();
+    assert.equal(await page.locator('[data-buy-equipment]').count(), 0);
+    assert(await page.locator('[data-add-affix]').first().isVisible());
+    await page.locator('[data-add-affix]').first().click();
+    await page.waitForFunction(
+      (kind) => document.querySelector('.forge-operation-feedback')?.dataset.kind === kind,
+      'affix',
+    );
+    assert(
+      (await page.evaluate(() => demo.getLibrary())).equipment.affixesByTemplate[GEM_POOL[0].id],
+    );
+
+    await page.screenshot({ path: path.join(output, 'forge-affixes-desktop.png') });
+    await page.locator('[data-forge-close]').click();
+
+    const handle = await page.locator('#ledger-handle').boundingBox();
+    await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(Math.max(10, handle.x - 140), handle.y + handle.height / 2, {
+      steps: 6,
+    });
+    await page.mouse.up();
+    await page.locator('#ledger-drawer-host.is-open').waitFor();
+    await page.locator('#party-toggle').click();
+    await page.locator('[data-prepare-slot="0"]').click();
+    const progress = page.locator('.prepare-affix-progress');
+    await progress.waitFor({ state: 'visible' });
+    await progress.locator('summary').first().click();
+    const progressText = await progress.textContent();
+    assert(progressText.includes('6 点'), progressText);
+    assert(progressText.includes('已解锁'), progressText);
+    await page.locator('#prepare-done').click();
+
+    await frame.locator('#status').waitFor({ state: 'detached', timeout: 60000 });
+    await frame
+      .locator('canvas')
+      .evaluate(() => parent.postMessage({ type: 'tavern-condenser' }, location.origin));
+    await page.locator('[data-forge-page="exchange"]').click();
+    await page.locator('[data-forge-select="ui-eq-1"]').click();
+    await page.setViewportSize({ width: 844, height: 390 });
+    await page.locator('[data-forge-drawer="details"]').click();
+    const catalogue = page.locator('#forge-catalog');
+    await catalogue.waitFor({ state: 'visible' });
+    await page.waitForFunction(() => {
+      const box = document.querySelector('#forge-catalog').getBoundingClientRect();
+      return box.right <= window.innerWidth + 1;
+    });
+    const catalogueBox = await catalogue.boundingBox();
+    assert(catalogueBox.x >= 0 && catalogueBox.x + catalogueBox.width <= 844);
+    assert(catalogueBox.y >= 0 && catalogueBox.y + catalogueBox.height <= 390);
+    assert(await page.locator('[data-buy-equipment]').first().isVisible());
+    await page.screenshot({ path: path.join(output, 'forge-affixes-844.png') });
+    const fits = await page.evaluate(() => {
+      const panel = document.querySelector('#ether-forge');
+      return {
+        noOverflow: document.documentElement.scrollWidth <= window.innerWidth,
+        panelFits: panel.scrollWidth <= panel.clientWidth + 1,
+      };
+    });
+    assert.equal(fits.noOverflow, true);
+    assert.equal(fits.panelFits, true);
+
+    assert.deepEqual(errors, []);
+    return {
+      sharedAffixes: true,
+      confirmCancel: true,
+      sixAnimations: true,
+      gemAffixes: true,
+      passiveProgress: true,
+      responsiveForge: true,
     };
   } finally {
     await page.close();

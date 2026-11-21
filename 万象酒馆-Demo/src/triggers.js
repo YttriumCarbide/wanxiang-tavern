@@ -140,16 +140,23 @@ export function normalizeRules(value) {
         ...effectMetadata(effect),
       };
     });
-    if (rule.scope && !['round', 'battle', 'expedition'].includes(rule.scope))
+    if (rule.scope && !['round', 'unlimited', 'battle', 'expedition'].includes(rule.scope))
       throw Error('触发次数范围无效');
+    if (rule.scope === 'unlimited' && rule.limit !== undefined)
+      throw Error('无限触发规则不能设置次数上限');
+    const limit =
+      rule.mode === 'event' && rule.scope !== 'unlimited'
+        ? integer(rule.limit, 1, 50, '触发次数')
+        : undefined;
     return {
       id: 'rule-' + index,
       mode: rule.mode,
       ...(rule.mode === 'event'
         ? {
             event: rule.event,
-            limit: integer(rule.limit, 1, 50, '触发次数'),
+            ...(limit !== undefined ? { limit } : {}),
             ...(rule.scope ? { scope: rule.scope } : {}),
+            ...(rule.triggerRevision === 2 ? { triggerRevision: 2 } : {}),
           }
         : {}),
       conditions: checked,
@@ -222,7 +229,8 @@ export function conditionsMet(state, owner, conditions = [], context = {}) {
   return conditions.every(({ type, value, buff, subject }) => {
     const id = subject === 'target' ? context.target : owner;
     const unit = state.units[id];
-    if (!unit || unit.hp <= 0) return false;
+    if (!unit || (unit.hp <= 0 && !(subject === 'target' && context.allowDefeatedTarget === true)))
+      return false;
     const has = (keys) => keys.some((key) => unit.buffs[key] > 0);
     const position = state.formation.indexOf(id);
     if (type === 'front') return position >= 0 && position < 3;
@@ -255,6 +263,10 @@ export function ruleUsageKey(state, owner, rule) {
   return owner + ':' + rule.key + boundary;
 }
 
+export function ruleHasUnlimitedUses(rule) {
+  return rule.mode === 'event' && rule.scope === 'unlimited';
+}
+
 /** Availability is derived from the engine's own conditions and use counters. */
 export function ruleAvailable(state, owner, rule) {
   return (
@@ -264,6 +276,7 @@ export function ruleAvailable(state, owner, rule) {
       (rule.conditions || []).filter((condition) => condition.subject !== 'target'),
     ) &&
     (rule.mode === 'continuous' ||
+      ruleHasUnlimitedUses(rule) ||
       (state.procUses?.[ruleUsageKey(state, owner, rule)] || 0) < rule.limit)
   );
 }
@@ -304,11 +317,20 @@ export function auraValue(state, definitions, id, buff) {
     for (const rule of rulesFor(definition)) {
       if (
         rule.mode !== 'continuous' ||
-        !conditionsMet(state, definition.id, rule.conditions, { target: id }) ||
-        !triggerTargets(state, definition.id, rule.target).includes(id)
+        !conditionsMet(state, definition.id, rule.conditions, { target: id })
       )
         continue;
-      for (const effect of rule.effects) if (effect.buff === buff) value += effect.value;
+      const targets = triggerTargets(state, definition.id, rule.target);
+      for (const effect of rule.effects) {
+        if (effect.buff !== buff) continue;
+        const affected = effect.target
+          ? triggerTargets(state, definition.id, effect.target, { targets })
+          : targets;
+        if (!affected.includes(id)) continue;
+        if (effect.when && !conditionsMet(state, definition.id, [effect.when], { target: id }))
+          continue;
+        value += effect.value + (effect.perMark || 0) * (state.units[definition.id].mark || 0);
+      }
     }
   }
   return value;

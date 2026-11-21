@@ -26,13 +26,14 @@ export const MAINLINE_DUNGEONS = Object.freeze([
 export const BASE_WORLDS = MAINLINE_DUNGEONS;
 export const EMPIRE_TRANSITION_DUNGEONS = Object.freeze([
   'moss-hollow',
+  'graystone-quarry',
   'border-watch',
   'whisper-grove',
   'silver-cistern',
   'ash-foundry',
   'astral-sanctum',
 ]);
-export const CITY_DUNGEONS = Object.freeze(['starbell-undercroft']);
+export const CITY_DUNGEONS = Object.freeze(['starbell-undercroft', 'black-market']);
 export const UNLOCKABLE_DUNGEONS = Object.freeze([
   ...MAINLINE_DUNGEONS,
   ...EMPIRE_TRANSITION_DUNGEONS,
@@ -108,13 +109,19 @@ function validatedEnemyEffectTarget(effect, restoring = false) {
   }
   if (
     effect.type === 'buff' &&
-    (!BUFFS[effect.buff] ||
+    (!Object.hasOwn(BUFFS, effect.buff) ||
       EXCLUSIVE_BUFFS.includes(effect.buff) ||
       (!restoring && effect.buff === 'overload'))
   ) {
     if (restoring) return null;
     throw Error('敌人状态无效');
   }
+  if (
+    !restoring &&
+    (effect.type === 'damage' || (effect.type === 'buff' && !positive)) &&
+    target !== 'opponents'
+  )
+    throw Error('敌人伤害及负面状态必须指向对手目标');
   return target;
 }
 function validatedSlots(move) {

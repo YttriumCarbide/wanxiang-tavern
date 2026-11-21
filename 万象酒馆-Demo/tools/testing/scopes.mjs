@@ -32,6 +32,7 @@ export const allScopes = [
   'workshop',
   'universal-enemies',
   'developer-mode',
+  'developer-tools',
   'status-emblems',
   'arcade',
   'generation-experience',
@@ -58,6 +59,7 @@ export const allScopes = [
   'core',
   'ui',
   'layout',
+  'ui-preview',
   'server',
   'launcher',
   'expedition',
@@ -103,6 +105,10 @@ export function selectScopes(args) {
       )
         scopes.add('core');
       else if (/server\.cjs|tools\/testing\/server\.mjs/.test(file)) scopes.add('server');
+      else if (/(?:^|\/)ui-preview\.mjs$|(?:^|\/)preview-ui\.mjs$/.test(file))
+        scopes.add('ui-preview');
+      else if (/developer-(?:tools|rules|copy|editor)\.(?:js|mjs|css)$/.test(file))
+        scopes.add('developer-tools');
       else if (/\.(cmd|ps1)$/.test(file)) scopes.add('launcher');
       else if (/tests\/browser\/layout|styles\//.test(file)) scopes.add('ui');
       else if (/src\/|tests\/browser\/|\.css$|\.html$|assets\//.test(file)) scopes.add('ui');

@@ -31,6 +31,7 @@ export function creationItems(input) {
       description: item.description,
       value: item.value,
       ...(item.category ? { category: item.category } : {}),
+      ...(item.voucherForged ? { voucherForged: true } : {}),
       level,
       quality,
       map: item.map,

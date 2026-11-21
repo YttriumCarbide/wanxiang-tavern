@@ -129,6 +129,37 @@ export async function sceneVisitorChecks({ browser, baseURL, output }) {
       }
     }
     assert.deepEqual(failures, []);
+    const swap = await page.evaluate(async () => {
+      const THREE = await import('/vendor/build/three.module.js');
+      const { createTavernVisitors } = await import('/src/tavern/visitors.js');
+      const scene = new THREE.Scene();
+      const image = document.createElement('canvas');
+      image.width = image.height = 8;
+      image.getContext('2d').fillRect(0, 0, 8, 8);
+      let failOld;
+      const oldImage = new Promise((_, reject) => {
+        failOld = reject;
+      });
+      const visitors = createTavernVisitors(scene, new THREE.PerspectiveCamera(), null, {
+        maxVisible: 1,
+        assets: { image: (file) => (file === 'old' ? oldImage : Promise.resolve(image)) },
+      });
+      const config = (file) => ({
+        enabled: true,
+        characters: [{ id: 'same', key: 'same', image: file }],
+      });
+      const old = visitors.configure(config('old'));
+      await visitors.configure(config('new'));
+      failOld(Error('old portrait failed'));
+      await old;
+      const keys = visitors.status().characters.map(({ key }) => key);
+      let released = false;
+      visitors.meshes()[0]?.material.map.addEventListener('dispose', () => (released = true));
+      await visitors.configure(config('final'));
+      visitors.dispose();
+      return { keys, released };
+    });
+    assert.deepEqual(swap, { keys: ['same'], released: true });
     return results;
   } finally {
     await page.close();

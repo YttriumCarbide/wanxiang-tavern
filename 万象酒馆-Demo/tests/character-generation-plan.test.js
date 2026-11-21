@@ -169,18 +169,83 @@ test('generated effects cannot heal enemies, harm allies or accumulate marks on 
   );
 });
 
-test('complexity tiers reject unsupported complexity instead of stripping a mechanism', () => {
+test('complexity tiers preserve supported mark mechanisms without stripping metadata', () => {
+  for (const complexity of [1, 2, 3, 4, 5, 6]) {
+    const raw = design();
+    raw.data.mark = { name: raw.setting.attack.name };
+    raw.data.basicAttackMark = true;
+    raw.data.skills[0].effects = [
+      { type: 'damage', power: 'standard', perMark: true, consumeMark: true },
+      { type: 'buff', buff: 'bleed', power: 'low', when: { type: 'hpBelow', value: 50 } },
+    ];
+    raw.data.skills[1].effects = [
+      { type: 'shield', power: 'low', target: 'self', when: { type: 'mark', value: 3 } },
+    ];
+    const baseline = structuredClone(raw);
+    const result = normalizeCharacter(raw, 'character-plan', {
+      complexity,
+      rollId: 'complexity-guidance',
+    });
+    assert.deepEqual(raw, baseline);
+    assert.equal(result.combat.mechanicMark.name, raw.data.mark.name);
+    assert.equal(result.combat.basicAttackMark, 1);
+    assert.equal(result.combat.skills[0].effects.length, 2);
+    assert(result.combat.skills[0].effects[0].perMark);
+    assert.equal(result.combat.skills[0].effects[0].consumeMark, true);
+    assert.deepEqual(
+      result.combat.skills[0].effects[1].when,
+      baseline.data.skills[0].effects[1].when,
+    );
+    assert.deepEqual(
+      result.combat.skills[1].effects[0].when,
+      baseline.data.skills[1].effects[0].when,
+    );
+  }
+});
+
+test('shared reader preserves cross-mark metadata at complexity 5', () => {
   const raw = design();
-  raw.data.skills[0].effects.push({ type: 'buff', buff: 'bleed', power: 'low' });
-  assert.throws(() => normalizeCharacter(raw, 'character-plan', { complexity: 1 }), /效果数量/);
-  raw.data.skills[0].effects.pop();
-  raw.data.skills[0].effects[0].when = { type: 'hpBelow', value: 50 };
-  assert.throws(() => normalizeCharacter(raw, 'character-plan', { complexity: 2 }), /条件强化/);
-  delete raw.data.skills[0].effects[0].when;
-  raw.data.mark = { name: '剑印' };
+  raw.data.mark = { name: raw.setting.attack.name };
   raw.data.basicAttackMark = true;
-  raw.data.skills[0].effects[0].perMark = true;
-  assert.throws(() => normalizeCharacter(raw, 'character-plan', { complexity: 4 }), /专属标记/);
+  raw.data.skills[0].effects = [
+    { type: 'damage', power: 'standard', perMark: true, consumeMark: true },
+  ];
+  raw.data.skills[1].effects = [
+    { type: 'shield', power: 'low', target: 'self', when: { type: 'mark', value: 3 } },
+  ];
+  const original = structuredClone(raw);
+  const result = readGenerationResult('character', JSON.stringify(raw), {
+    complexity: 5,
+    rollId: 'fifth-tier-cross-mark',
+  });
+  assert.equal(result.diagnostic.stage, 'complete');
+  const combat = result.entry.combat;
+  assert.equal(combat.mechanicMark.name, raw.data.mark.name);
+  assert.equal(combat.basicAttackMark, 1);
+  assert(combat.skills[0].effects[0].perMark);
+  assert.equal(combat.skills[0].effects[0].consumeMark, true);
+  assert.deepEqual(combat.skills[1].effects[0].when, { type: 'mark', value: 3 });
+  assert.deepEqual(raw, original);
+});
+
+test('malformed mark mechanisms remain rejected at complexity 1', () => {
+  const missingMark = design();
+  missingMark.data.basicAttackMark = true;
+  assert.throws(
+    () => normalizeCharacter(missingMark, 'character-plan', { complexity: 1 }),
+    /专属标记/,
+  );
+
+  const missingPerMark = design();
+  missingPerMark.data.mark = { name: missingPerMark.setting.attack.name };
+  missingPerMark.data.basicAttackMark = true;
+  missingPerMark.data.skills[0].effects = [
+    { type: 'damage', power: 'standard', consumeMark: true },
+  ];
+  assert.throws(
+    () => normalizeCharacter(missingPerMark, 'character-plan', { complexity: 1 }),
+    /消耗标记/,
+  );
 });
 
 test('event passives compile bounded actual effects and precise activation limits', () => {
@@ -199,7 +264,7 @@ test('event passives compile bounded actual effects and precise activation limit
       },
     ],
   };
-  const result = normalizeCharacter(raw, 'character-passive', { complexity: 4 });
+  const result = normalizeCharacter(raw, 'character-passive', { complexity: 1 });
   const passive = result.combat.skills[1];
   assert(passive.passive);
   assert.equal(passive.rules[0].limit, 1);

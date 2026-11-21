@@ -1966,3 +1966,225 @@ body:has(#party-panel[open]) .api-request-dock {
     grid-template-columns: 1fr;
   }
 }
+
+:root[data-game-layout='mobile'] {
+  #party-panel {
+    width: min(940px, calc(100% - 12px - var(--safe-left) - var(--safe-right)));
+    height: calc(100dvh - 12px - var(--safe-top) - var(--safe-bottom));
+  }
+  .prepare-heading {
+    top: 6px;
+    right: 8px;
+  }
+  #prepare-close {
+    width: auto;
+    min-width: 44px;
+    height: 44px;
+    padding-inline: 8px;
+    opacity: 1;
+    font-size: 13px;
+    color: var(--gold-hi);
+    background: var(--ink);
+    border: 1px solid var(--line);
+  }
+  #prepare-close span {
+    font-size: 22px;
+  }
+  .prepare-body {
+    display: grid;
+    grid-template-columns: minmax(0, 47fr) minmax(0, 53fr);
+    grid-template-rows: minmax(0, 1fr);
+    gap: 8px;
+    padding: 8px;
+    overflow: hidden;
+  }
+  #party-panel.left-expanded .prepare-formation-col {
+    grid-column: 1 / -1;
+  }
+  #party-panel.left-expanded #prepare-detail {
+    display: none;
+  }
+  .prepare-formation-col,
+  #prepare-detail {
+    min-width: 0;
+    min-height: 0;
+    overflow: auto;
+    overscroll-behavior: contain;
+  }
+  .prepare-formation-col {
+    padding: 7px 9px;
+    gap: 5px;
+  }
+  .prepare-enemy-dir {
+    display: none;
+  }
+  .prepare-reserve-col {
+    flex: 0 0 auto;
+    min-height: 0;
+  }
+  #prepare-pool {
+    max-height: 112px;
+  }
+  .prepare-bench-row:has(.prepare-empty) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .prepare-bench-row:has(.prepare-empty) > .formation-row-label {
+    display: none;
+  }
+  .prepare-empty {
+    margin: 0;
+    padding: 4px 0;
+    text-align: start;
+  }
+  .prepare-slot-lv {
+    top: 2px;
+    left: 2px;
+    padding-inline: 3px;
+    font-size: 10px;
+    line-height: 12px;
+  }
+  .pp-tile-name {
+    padding: 6px 4px 3px;
+  }
+  .pp-tile-name strong {
+    font-size: 12px;
+    letter-spacing: 0;
+  }
+  .prepare-team-metrics > div {
+    padding: 3px 5px;
+  }
+  .prepare-team-metrics small {
+    letter-spacing: 0;
+  }
+  #prepare-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .prepare-stage-col {
+    flex: none;
+    min-height: 0;
+    overflow: visible;
+  }
+  .prepare-stage-col :is(.pp-en, .prepare-sigil, .prepare-pos-badge, .prepare-lv-badge) {
+    display: none;
+  }
+  .prepare-portrait {
+    display: grid;
+    grid-template-columns: 52px minmax(0, 1fr);
+    align-items: start;
+    gap: 8px;
+    padding: 5px 8px;
+  }
+  .prepare-portrait > img {
+    height: 66px;
+    object-fit: cover;
+    object-position: center top;
+    mask-image: none;
+  }
+  .prepare-stage-plate {
+    padding: 2px 0;
+    background: none;
+  }
+  .prepare-stage-head {
+    flex-wrap: wrap;
+    padding-right: 84px;
+    gap: 2px 6px;
+  }
+  .prepare-stage-head h2 {
+    font-size: 18px;
+    letter-spacing: 0;
+    overflow-wrap: anywhere;
+  }
+  .prepare-affection,
+  .prepare-protagonist-core {
+    margin-block: 4px;
+  }
+  .prepare-aff-bar {
+    margin-bottom: 3px;
+  }
+  .prepare-portrait-tools summary {
+    width: fit-content;
+    min-height: 32px;
+    padding: 6px 8px;
+    font-size: 12px;
+    letter-spacing: 0;
+  }
+  .prepare-portrait-tools > div {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+  .prepare-inspector-col {
+    flex: 1 0 auto;
+    padding: 6px 8px;
+    overflow: visible;
+  }
+  .prepare-stat-grid div {
+    height: auto;
+    min-height: 33px;
+    padding: 3px 4px;
+  }
+  .prepare-stat-grid dt {
+    letter-spacing: 0;
+    white-space: nowrap;
+  }
+  .prepare-stat-grid dd {
+    font-size: clamp(12px, 2.2vw, 17px);
+    overflow-wrap: anywhere;
+  }
+  .prepare-tabs {
+    flex-wrap: wrap;
+  }
+  .prepare-tabs button {
+    min-height: 38px;
+    min-width: max-content;
+    padding-inline: 5px;
+    letter-spacing: 0;
+    white-space: nowrap;
+    clip-path: none;
+  }
+  .prepare-radar {
+    max-height: 116px;
+  }
+  .prepare-tabpanels {
+    overflow: visible;
+  }
+  #party-panel > footer {
+    position: relative;
+    z-index: 2;
+    display: grid;
+    gap: 5px;
+    flex-shrink: 0;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    padding: 6px 8px;
+    background: var(--ink);
+    border-top: 1px solid var(--line);
+    opacity: 1;
+    pointer-events: auto;
+  }
+  #prepare-pending-actions[hidden] {
+    display: none;
+  }
+  .prepare-xbtns {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) minmax(0, 1.5fr);
+    gap: 6px;
+  }
+  :is(#prepare-done, .prepare-xbtn) {
+    min-height: 44px;
+    padding-inline: 8px;
+    font-size: 13px;
+    letter-spacing: 0;
+  }
+  .prepare-xbtn strong {
+    font-size: 13px;
+    white-space: normal;
+  }
+  #prepare-status {
+    font-size: 10px;
+  }
+  .departure-guidance {
+    padding: 6px 96px 6px 8px;
+  }
+}

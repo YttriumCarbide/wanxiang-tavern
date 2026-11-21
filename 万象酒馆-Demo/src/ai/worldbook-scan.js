@@ -5,21 +5,8 @@ function stableRoll(text) {
   for (const char of text) hash = Math.imul(hash ^ char.charCodeAt(0), 16777619);
   return (hash >>> 0) / 4294967296;
 }
-function matchKey(text, key, entry, settings, warnings) {
-  if (!key.trim()) return false;
-  const regex = key.match(/^\/([\s\S]*)\/([dgimsuvy]*)$/);
-  if (regex) {
-    if (regex[1].length > 500 || /\([^)]*[+*][^)]*\)[+*{]/.test(regex[1])) {
-      warnings.add(`条目${entry.uid}的正则过长或包含高风险嵌套量词，已跳过`);
-      return false;
-    }
-    try {
-      return new RegExp(regex[1], regex[2]).test(text);
-    } catch {
-      warnings.add(`条目${entry.uid}正则关键词无效：${key}`);
-      return false;
-    }
-  }
+function matchKey(text, key, entry, settings) {
+  if (!key.trim() || /^\/[\s\S]+\/[dgimsuvy]*$/u.test(key.trim())) return false;
   const sensitive = entry.caseSensitive ?? settings.caseSensitive;
   const haystack = sensitive ? text : text.toLocaleLowerCase();
   const needle = sensitive ? key.trim() : key.trim().toLocaleLowerCase();
@@ -173,11 +160,11 @@ export function scanWorldbooks({ books, settings: rawSettings, context, state = 
       text = (text + '\n' + recursionText).slice(-160000);
       const idMatches = entry.key.filter((key) => triggerIds.has(expanded(key).trim())).length;
       const matches = entry.key.filter((key) =>
-        matchKey(text, expanded(key), entry, settings, warnings),
+        matchKey(text, expanded(key), entry, settings),
       ).length;
       const matched = idMatches + matches;
       const secondary = entry.keysecondary.map((key) =>
-        matchKey(text, expanded(key), entry, settings, warnings),
+        matchKey(text, expanded(key), entry, settings),
       );
       const selective =
         !entry.selective ||

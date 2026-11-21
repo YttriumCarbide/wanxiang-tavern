@@ -413,7 +413,14 @@ test('summary batching includes entropy overhead and unconfigured probes send no
       (text) => text.length,
       async () => 'summarize',
     ),
-    /超过上下文/,
+    (error) => {
+      assert.equal(error.code, 'AI_SUMMARY_ITEM_TOO_LARGE');
+      assert.equal(error.status, 400);
+      assert.match(error.message, /第 1 条总结记录/);
+      assert(error.cause instanceof Error);
+      assert.match(error.cause.message, /超过上下文/);
+      return true;
+    },
   );
   const settings = createConnectionStore();
   let calls = 0;

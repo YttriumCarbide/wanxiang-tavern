@@ -229,6 +229,7 @@ export function createWorldLoadingOverlay(title = '正在展开世界地图') {
   if (dest) dest.textContent = title;
   const surface = createPopoverSurface(element);
   let rotateTimer = null;
+  let disposed = false;
   const promote = () => {
     surface.hide();
     surface.show();
@@ -247,6 +248,7 @@ export function createWorldLoadingOverlay(title = '正在展开世界地图') {
   return {
     element,
     show(nextTitle = title) {
+      if (disposed) return;
       const titleEl = element.querySelector('[data-wl-dest]');
       if (titleEl) titleEl.textContent = nextTitle;
       if (!element.isConnected) document.body.append(element);
@@ -262,8 +264,14 @@ export function createWorldLoadingOverlay(title = '正在展开世界地图') {
     },
     async transition(
       nextTitle = title,
-      { phaseText = '正在踏入异境入口，展开探索舆图…', durationMs = 420, onCovered = null } = {},
+      {
+        phaseText = '正在踏入异境入口，展开探索舆图…',
+        durationMs = 420,
+        instantCover = true,
+        onCovered = null,
+      } = {},
     ) {
+      if (disposed) return;
       const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
       const fadeInMs = reduced ? 10 : 150;
       const holdMs = reduced ? 20 : Math.max(240, durationMs);
@@ -282,41 +290,50 @@ export function createWorldLoadingOverlay(title = '正在展开世界地图') {
       }
       if (detailsEl) detailsEl.textContent = '10%';
       this.show(nextTitle);
-      await element
-        .animate([{ opacity: 0 }, { opacity: 1 }], {
-          duration: fadeInMs,
-          easing: 'ease',
-          fill: 'forwards',
-        })
-        .finished.catch(() => {});
-      await nextFrame();
-      if (fillEl) {
-        fillEl.style.transition = `width ${holdMs}ms cubic-bezier(.22,1,.36,1)`;
-        fillEl.style.width = '100%';
+      try {
+        if (instantCover) {
+          element.style.opacity = '1';
+        } else {
+          await element
+            .animate([{ opacity: 0 }, { opacity: 1 }], {
+              duration: fadeInMs,
+              easing: 'ease',
+              fill: 'forwards',
+            })
+            .finished.catch(() => {});
+        }
+        await nextFrame();
+        if (disposed) return;
+        if (fillEl) {
+          fillEl.style.transition = `width ${holdMs}ms cubic-bezier(.22,1,.36,1)`;
+          fillEl.style.width = '100%';
+        }
+        if (detailsEl) detailsEl.textContent = '100%';
+        await onCovered?.();
+        if (disposed) return;
+        promote();
+        await nextFrame();
+        await nextFrame();
+        await new Promise((resolve) => setTimeout(resolve, holdMs));
+        if (disposed) return;
+        element.classList.add('complete');
+        await element
+          .animate([{ opacity: 1 }, { opacity: 0 }], {
+            duration: fadeOutMs,
+            easing: 'ease',
+            fill: 'forwards',
+          })
+          .finished.catch(() => {});
+      } finally {
+        this.hide();
+        if (trackEl) trackEl.classList.add('is-indeterminate');
+        if (fillEl) {
+          fillEl.style.transition = '';
+          fillEl.style.width = '';
+        }
+        if (detailsEl) detailsEl.textContent = 'LOADING';
+        if (tagEl) tagEl.textContent = 'WORLD ATLAS';
       }
-      if (detailsEl) detailsEl.textContent = '100%';
-      await onCovered?.();
-      promote();
-      await nextFrame();
-      await nextFrame();
-      await new Promise((resolve) => setTimeout(resolve, holdMs));
-      element.classList.add('complete');
-      await element
-        .animate([{ opacity: 1 }, { opacity: 0 }], {
-          duration: fadeOutMs,
-          easing: 'ease',
-          fill: 'forwards',
-        })
-        .finished.catch(() => {});
-      element.getAnimations().forEach((animation) => animation.cancel());
-      this.hide();
-      if (trackEl) trackEl.classList.add('is-indeterminate');
-      if (fillEl) {
-        fillEl.style.transition = '';
-        fillEl.style.width = '';
-      }
-      if (detailsEl) detailsEl.textContent = 'LOADING';
-      if (tagEl) tagEl.textContent = 'WORLD ATLAS';
     },
     hide() {
       clearInterval(rotateTimer);
@@ -327,9 +344,8 @@ export function createWorldLoadingOverlay(title = '正在展开世界地图') {
       element.hidden = true;
     },
     dispose() {
-      clearInterval(rotateTimer);
-      rotateTimer = null;
-      surface.hide();
+      disposed = true;
+      this.hide();
       element.removeEventListener('click', onClick);
       element.remove();
     },
@@ -431,6 +447,7 @@ export function createSceneLoading(
   }
   async function prepare(files) {
     const catalog = await assets.manifest();
+    if (terminal) return;
     for (const file of new Set(files)) {
       const path = new URL(file, new URL('../../', import.meta.url)).pathname;
       const relative = path.slice(new URL('../../', import.meta.url).pathname.length);
@@ -443,14 +460,17 @@ export function createSceneLoading(
     prepare,
     async gltf(file) {
       const blob = await assets.read(file, (state) => update(file, state));
+      if (terminal) throw new DOMException('资源载入已取消', 'AbortError');
       progress(highWater, '正在解析模型…');
+      const buffer = await blob.arrayBuffer();
+      if (terminal) throw new DOMException('资源载入已取消', 'AbortError');
       try {
         return await new GLTFLoader().parseAsync(
-          await blob.arrayBuffer(),
+          buffer,
           new URL('.', new URL(file, new URL('../../', import.meta.url))).href,
         );
       } catch (error) {
-        await assets.evict(file);
+        if (!terminal) await assets.evict(file);
         throw error;
       }
     },
@@ -461,6 +481,7 @@ export function createSceneLoading(
       return texture;
     },
     async finish(renderer, scene, camera) {
+      if (terminal) return;
       progress(94, '正在准备画面…');
       if (!persistent) {
         renderer.setSize(innerWidth, innerHeight, false);
@@ -469,6 +490,7 @@ export function createSceneLoading(
       }
       if (renderer.compileAsync) await renderer.compileAsync(scene, camera);
       else renderer.compile(scene, camera);
+      if (terminal) return;
       renderer.render(scene, camera);
       await new Promise((resolve) => requestAnimationFrame(resolve));
       if (terminal) return;

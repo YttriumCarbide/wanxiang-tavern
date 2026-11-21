@@ -123,7 +123,7 @@ export function createGuild(context) {
                 item.unlocked
                   ? `<p class="guild-intel-detail"><b>出没魔物：</b>${escapeText(enemyNames)}${item.bossName ? ` ｜ <b>镇守首领：</b>${escapeText(item.bossName)}` : ''}</p>
                      <p class="guild-intel-note">${escapeText(item.hookTitle ? `「${item.hookTitle}」` : '')}${escapeText(item.hookDesc)}</p>`
-                  : `<p class="guild-intel-masked">该区卷宗尚未调阅：解锁后可查阅敌群编制、首领弱点与大地图位置。</p>`
+                  : `<p class="guild-intel-masked">该区卷宗尚未调阅。解锁后可查阅敌群编制、镇守首领与行动线索。</p>`
               }
             </div>
             <div class="guild-intel-actions">
@@ -432,7 +432,7 @@ export function createGuild(context) {
     const mapId = event.target.closest('[data-guild-map]')?.dataset.guildMap;
     if (mapId) {
       dialog.close();
-      context.daily?.openWorldAtlas?.();
+      context.daily?.openAtlas?.();
       return;
     }
     const buyId = event.target.closest('[data-guild-buy]')?.dataset.guildBuy;

@@ -34,12 +34,15 @@ test('content-addressed asset cache deduplicates reads, measures bytes and inval
     },
   };
   let body = 'first-original-bytes';
+  let serveStale = false;
   let calls = 0;
   globalThis.fetch = async (url) => {
-    if (String(url).endsWith('asset-catalog.json'))
-      return Response.json({ files: { 'assets/test.glb': { bytes: body.length, hash: body } } });
+    if (String(url).endsWith('asset-catalog.json')) {
+      const hash = createHash('sha256').update(body).digest('hex');
+      return Response.json({ files: { 'assets/test.glb': { bytes: body.length, hash } } });
+    }
     calls++;
-    return new Response(body);
+    return new Response(serveStale ? body.toUpperCase() : body);
   };
   const create = () => createAssetStore({ base: new URL('https://test.invalid/game/') });
   const store = create();
@@ -63,8 +66,11 @@ test('content-addressed asset cache deduplicates reads, measures bytes and inval
   assert.equal(await (await updated.read('./assets/test.glb')).text(), body);
   assert.equal(calls, 2);
   await updated.evict('./assets/test.glb');
-  await updated.read('./assets/test.glb');
-  assert.equal(calls, 3);
+  serveStale = true;
+  await assert.rejects(updated.read('./assets/test.glb'), /资源校验失败/u);
+  serveStale = false;
+  assert.equal(await (await updated.read('./assets/test.glb')).text(), body);
+  assert.equal(calls, 4, 'invalid bytes were not written to the cache');
   updated.dispose();
   globalThis.caches = {
     async open() {
@@ -109,7 +115,7 @@ test('eight characters share full-body originals with Gal, and every scene has i
   const npcArt = JSON.parse(
     await readFile(new URL('../assets/gal-npc-cast/manifest.json', import.meta.url), 'utf8'),
   );
-  assert.equal(npcArt.assets.length, 10);
+  assert.equal(npcArt.assets.length, 26);
   for (const entry of npcArt.assets) {
     const bytes = await readFile(new URL('../' + entry.file, import.meta.url));
     assert.equal(createHash('sha256').update(bytes).digest('hex'), entry.sha256);
@@ -117,7 +123,7 @@ test('eight characters share full-body originals with Gal, and every scene has i
     assert.equal(bytes.readUInt32BE(20), 1536);
     assert.equal(bytes[25], 6, `${entry.file} retains an RGBA alpha channel`);
   }
-  assert.equal(Object.keys(GAL_NPC_PORTRAITS).length, 10);
+  assert.equal(Object.keys(GAL_NPC_PORTRAITS).length, 26);
 });
 
 test('continuous surrounds and road textures retain their native source pixels', async () => {
@@ -168,7 +174,7 @@ test('the fixed street views retain native paintings and keep all interaction po
   );
   const { STREET_ILLUSTRATED } = await import('../src/content/street-illustrated.js');
   const { STARLAMP_STREET } = await import('../src/content/starlamp-street.js');
-  assert.equal(manifest.assets.length, 8);
+  assert.equal(manifest.assets.length, 5);
   assert(!Array.isArray(STREET_ILLUSTRATED));
   for (const view of [STREET_ILLUSTRATED]) {
     const entry = manifest.assets.find((entry) => './' + entry.file === view.image);

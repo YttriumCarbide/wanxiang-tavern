@@ -1,0 +1,535 @@
+.workshop-editor-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  background: radial-gradient(circle at 50% 0%, #1c362d 0%, #12221d 65%, #0e1a16 100%);
+}
+
+.workshop-editor-page #workshop-editor {
+  height: auto;
+  flex: 1;
+}
+
+.developer-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 24px;
+  border-bottom: 1px solid #b49b6445;
+  background: linear-gradient(105deg, #21382f, #14251f 78%);
+  box-shadow: 0 4px 16px #00000040;
+}
+
+.developer-tabs a {
+  display: inline-flex;
+  align-items: center;
+  height: 34px;
+  margin-left: auto;
+  padding: 0 14px;
+  border: 1px solid #c8a96859;
+  border-radius: 6px;
+  background: #1b3129;
+  color: #efd8a5;
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease;
+}
+
+.developer-tabs a:hover {
+  border-color: #dfbf7d;
+  background: #274439;
+}
+
+.developer-tabs button,
+#game-developer-editor button,
+#game-developer-editor select,
+.developer-battle-panel button,
+.developer-battle-panel select {
+  box-sizing: border-box;
+  min-height: 36px;
+  padding: 6px 12px;
+  border: 1px solid #6c7f7366;
+  border-radius: 6px;
+  background: #152821;
+  color: #efe4cc;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.35;
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.developer-tabs button {
+  min-height: 34px;
+  padding: 0 16px;
+  font-weight: 500;
+}
+
+#game-developer-editor select:not([multiple]),
+#game-developer-editor button,
+.developer-battle-panel select,
+.developer-battle-panel button {
+  height: 36px;
+}
+
+#game-developer-editor button,
+.developer-battle-panel button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  white-space: nowrap;
+  background: linear-gradient(180deg, #213a30, #182c24);
+  border-color: #8fa3934d;
+}
+
+#game-developer-editor button.developer-primary {
+  background: linear-gradient(180deg, #315243, #213a2f);
+  border-color: #c8a96873;
+  color: #f8e8be;
+  font-weight: 500;
+}
+
+#game-developer-editor button.developer-danger {
+  background: linear-gradient(180deg, #432729, #2f1b1d);
+  border-color: #b86b6d73;
+  color: #f7d4d2;
+}
+
+.developer-tabs button:hover:not(:disabled),
+#game-developer-editor button:hover:not(:disabled),
+.developer-battle-panel button:hover:not(:disabled) {
+  border-color: #dfbf7d;
+  background: #2b4a3d;
+  color: #fff3d1;
+}
+
+#game-developer-editor button.developer-danger:hover:not(:disabled) {
+  border-color: #e08b8d;
+  background: #573134;
+  color: #ffe7e5;
+}
+
+#game-developer-editor select:focus-visible,
+#game-developer-editor button:focus-visible,
+.developer-tabs button:focus-visible,
+.developer-battle-panel select:focus-visible,
+.developer-battle-panel button:focus-visible {
+  outline: 2px solid #dfbf7d;
+  outline-offset: -1px;
+}
+
+.developer-tabs button[aria-pressed='true'],
+.developer-actions button[aria-pressed='true'],
+#game-developer-editor button[aria-pressed='true'],
+.developer-battle-panel button[aria-pressed='true'] {
+  border-color: #dfbf7d;
+  background: linear-gradient(180deg, #3c543f, #273b2c);
+  color: #ffe5a8;
+  box-shadow: inset 0 0 0 1px #dfbf7d40;
+}
+
+#game-developer-editor {
+  box-sizing: border-box;
+  width: min(1340px, 100%);
+  margin: 0 auto;
+  padding: 14px 24px 22px;
+  color: #ede3ca;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+#game-developer-editor[hidden],
+#workshop-editor[hidden] {
+  display: none;
+}
+
+.developer-target {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  border: 1px solid #b49b6445;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #1d322a, #162721);
+  box-shadow: 0 8px 24px #00000033;
+}
+
+.developer-target-select {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1 1 320px;
+  min-width: 0;
+  margin: 0;
+}
+
+.developer-target-select > span {
+  flex: none;
+  color: #d7cfb8;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.developer-target-select > select {
+  flex: 1;
+  min-width: 180px;
+  max-width: 420px;
+}
+
+.developer-target-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.developer-target [data-state] {
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+  margin-left: auto;
+  padding: 0 12px;
+  border: 1px solid #c8a96859;
+  border-radius: 999px;
+  background: #11201b;
+  color: #f0d79e;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+}
+
+.developer-target [data-state]:empty {
+  display: none;
+}
+
+#game-developer-editor > [data-notice] {
+  margin: 0;
+  padding: 9px 14px;
+  border: 1px solid #8fa39333;
+  border-left: 3px solid #dfbf7d;
+  border-radius: 8px;
+  background: #12221cd9;
+  color: #d8e0cb;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.developer-sections {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 12px;
+}
+
+.developer-sections fieldset {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  margin: 0;
+  padding: 14px 16px;
+  gap: 10px;
+  border: 1px solid #b49b6442;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #1b2f28 0%, #152520 100%);
+  box-shadow: 0 10px 26px #0000002e;
+}
+
+.developer-sections fieldset:disabled {
+  opacity: 0.72;
+}
+
+.developer-sections legend {
+  float: left;
+  width: 100%;
+  margin: 0;
+  padding: 0 0 8px;
+  border-bottom: 1px solid #b49b6438;
+  color: #f1dcaa;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+
+.developer-sections legend + * {
+  clear: both;
+}
+
+.developer-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.developer-group-divider {
+  padding-top: 10px;
+  border-top: 1px dashed #8fa39333;
+}
+
+.developer-group-footer {
+  margin-top: auto;
+}
+
+.developer-sections label,
+.developer-battle-panel fieldset label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  color: #c2cbb6;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.developer-sections label select,
+.developer-battle-panel fieldset label select {
+  width: 100%;
+}
+
+.developer-sections select[multiple] {
+  height: 86px;
+  padding: 4px 6px;
+  background: #11211b;
+}
+
+.developer-sections select[multiple] option {
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+
+.developer-trio {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 0.85fr) minmax(0, 0.95fr);
+  gap: 8px;
+  align-items: end;
+}
+
+.developer-pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: 8px;
+  align-items: end;
+}
+
+.developer-combo {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: end;
+}
+
+.developer-combo > button {
+  min-width: 104px;
+}
+
+.developer-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.developer-actions > button {
+  width: 100%;
+  min-width: 0;
+  padding-inline: 8px;
+}
+
+.developer-actions > button:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+
+.developer-stack {
+  flex: 1;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.developer-stack > button {
+  width: 100%;
+  flex: 1;
+  min-height: 40px;
+}
+
+.developer-sections label.developer-checkbox {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid #6c7f734d;
+  border-radius: 6px;
+  background: #13231d;
+  color: #e8dec5;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.developer-sections label.developer-checkbox input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: #dfbf7d;
+}
+
+.developer-sections output[data-failure] {
+  display: flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 6px 10px;
+  border: 1px solid #c8a96838;
+  border-radius: 6px;
+  background: #12211b;
+  color: #efd8a5;
+  font-size: 12px;
+}
+
+.developer-sections output[data-failure]:empty::before {
+  content: '当前未设置单次故障注入。';
+  color: #869684;
+}
+
+.developer-errors-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.developer-errors-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.developer-errors-toolbar > span {
+  color: #a8b6a2;
+  font-size: 12px;
+}
+
+.developer-sections pre {
+  flex: 1;
+  min-height: 104px;
+  max-height: 180px;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid #6c7f7345;
+  border-radius: 6px;
+  background: #101e18;
+  color: #d6dfd0;
+  font-family: Consolas, 'Courier New', monospace;
+  font-size: 12px;
+  line-height: 1.45;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.developer-battle-panel {
+  box-sizing: border-box;
+  width: min(460px, 94vw);
+  max-height: 88dvh;
+  overflow: auto;
+  padding: 16px;
+  border: 1px solid #b49b6466;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #1d3129 0%, #15241e 100%);
+  color: #f1e4c9;
+  box-shadow: 0 20px 60px #000000b3;
+}
+
+.developer-battle-panel::backdrop {
+  background: #08120fb8;
+}
+
+.developer-battle-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #b49b6438;
+}
+
+.developer-battle-header [data-dev-info] {
+  margin: 0;
+  color: #f1dcaa;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.developer-battle-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.developer-battle-tools form {
+  margin: 0;
+}
+
+.developer-battle-panel fieldset {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 14px 0 0;
+  padding: 12px;
+  border: 1px solid #8fa39338;
+  border-radius: 8px;
+  background: #13231d;
+}
+
+.developer-battle-panel [role='status'] {
+  margin: 10px 0 0;
+  color: #f3c892;
+  font-size: 12px;
+}
+
+.developer-battle-panel [role='status']:empty {
+  display: none;
+}
+
+.developer-error-badge {
+  position: fixed;
+  z-index: 60;
+  inset: auto 10px 44px auto;
+  padding: 6px 10px;
+  border: 1px solid #bf696c;
+  border-radius: 4px;
+  background: #4a2327;
+  color: #ffd7d2;
+}
+
+@media (max-width: 1080px) {
+  .developer-sections {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  #game-developer-editor {
+    padding: 14px;
+  }
+
+  .developer-sections {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .developer-target-select {
+    flex-basis: 100%;
+  }
+
+  .developer-target [data-state] {
+    margin-left: 0;
+  }
+}

@@ -7,7 +7,7 @@ import {
 import { bossLines } from '../adventure/patches.js';
 import { applyFutureDialogue, dungeonDialogueScenes } from './future-dialogue.js';
 import { rpBackground } from '../content/rp-backgrounds.js';
-import { eventReward, eventRewardText } from '../adventure/rewards.js';
+import { claimedEventRewardText, eventReward, eventRewardText } from '../adventure/rewards.js';
 import { skippingAi } from '../generation-options.js';
 import { escapeText } from '../ui.js';
 import { memoryHash } from '../memory.js';
@@ -18,6 +18,7 @@ import { portraitUrl } from '../portraits.js';
 import {
   DC_DEFAULT_DIFFICULTY,
   computeMapDc,
+  computeProtagonistMapDc,
   dcAttrLabel,
   dcSuccessProbability,
   effectiveDcAttrs,
@@ -49,6 +50,7 @@ export function createAdventure(context) {
   const form = root.querySelector('.rp-form');
   const choiceActorMap = new Map();
   let request = null;
+  let replyPlayback = null;
   let selected = null;
   let introEpoch = 0;
   let draftTimer = null;
@@ -63,10 +65,7 @@ export function createAdventure(context) {
   function partyMembers() {
     const libChars = session.ai.library?.characters || [];
     const ids =
-      trip()?.party?.map((m) => m.id) ||
-      book()?.party?.map((m) => m.id) ||
-      session.ai.library?.party ||
-      [];
+      trip()?.partyIds || book()?.party?.map((m) => m.id) || session.ai.library?.party || [];
     const mapped = ids
       .map((id) => libChars.find((c) => c.id === id) || book()?.party?.find((c) => c.id === id))
       .filter(Boolean);
@@ -164,10 +163,13 @@ export function createAdventure(context) {
     save();
   }
   async function play(text, id) {
+    const epoch = introEpoch;
+    const expedition = trip();
     await context.gal.play(text, {
       owner: 'adventure',
       title: book().title,
       onRead(line) {
+        if (epoch !== introEpoch || expedition !== trip()) return;
         record(line.speaker || '旁白', line.text, 'rp', `${id}:${memoryHash(line.text)}`);
       },
     });
@@ -187,8 +189,7 @@ export function createAdventure(context) {
     find('.rp-options').hidden = !event;
     const receipt = find('.rp-reward-receipt');
     const dcReceipt = event ? state().event.dcReceipt : state().questLastDc;
-    const baseRewardText =
-      event && state().event.rewardClaimed ? eventRewardText(state().event.reward) : '';
+    const baseRewardText = event ? claimedEventRewardText(trip()) : '';
     const dcSummary = dcReceipt ? formatDcEffectSummary(dcReceipt.reward, dcReceipt.penalty) : null;
     const receiptParts = [];
     if (baseRewardText || dcSummary?.gainsText) {
@@ -228,7 +229,12 @@ export function createAdventure(context) {
             choice.dcCheck ||
             (choice.attr ? { attr: choice.attr, dc: choice.dc ?? DC_DEFAULT_DIFFICULTY } : null);
           const attr = rawSpec?.attr || ['str', 'wis', 'dex', 'cha'][index % 4];
-          const dc = computeMapDc(mapOrLevel, index, rawSpec?.dc ?? DC_DEFAULT_DIFFICULTY);
+          const dc = computeProtagonistMapDc(
+            session.ai.library,
+            mapOrLevel,
+            index,
+            rawSpec?.dc ?? DC_DEFAULT_DIFFICULTY,
+          );
           const spec = { ...rawSpec, attr, dc };
           const allowed = allowedActorsForChoice(choice, members, spec);
           const activeActor =
@@ -269,14 +275,15 @@ export function createAdventure(context) {
     find('.rp-locked-choice').hidden = !choice;
     find('.rp-locked-choice').textContent = choice ? `已选：${choice.label}` : '';
     find('[data-rp="send"]').setAttribute('aria-label', event && !resolved ? '确认选择' : '发送');
-    find('[data-rp="send"]').disabled = !!request || (event && !resolved && !selected);
-    find('#rp-input').disabled = !!request;
+    const replyBusy = !!(request || replyPlayback);
+    find('[data-rp="send"]').disabled = replyBusy || (event && !resolved && !selected);
+    find('#rp-input').disabled = replyBusy;
     find('[data-rp="next"]').hidden = event ? !resolved : !adventureReady(definition, state());
-    find('[data-rp="next"]').disabled = !!request;
+    find('[data-rp="next"]').disabled = replyBusy;
     find('[data-rp="next"]').textContent = event ? '继续冒险 →' : '进入Boss战 →';
     find('[data-rp="skip"]').hidden =
       book().recollection === true || !skippingAi(session.ai.generationOptions);
-    find('[data-rp="skip"]').disabled = !!request;
+    find('[data-rp="skip"]').disabled = replyBusy;
   }
   function ready() {
     if (trip()?.index !== 3 || !adventureReady(book().adventure, state()) || state().readyPrompted)
@@ -286,7 +293,7 @@ export function createAdventure(context) {
     save();
   }
   async function send(retry = false, local = false) {
-    if (request || root.hidden) return;
+    if (request || replyPlayback || root.hidden) return;
     const expedition = trip();
     const source = book();
     const adventure = state();
@@ -336,6 +343,9 @@ export function createAdventure(context) {
       return;
     }
     const controller = new AbortController();
+    const isReplyScene = () =>
+      trip() === expedition && book() === source && expedition.index === turn.node && !root.hidden;
+    const isCurrentReply = () => !controller.signal.aborted && isReplyScene();
     request = controller;
     find('[data-rp="retry"]').hidden = true;
     render();
@@ -390,7 +400,7 @@ export function createAdventure(context) {
         );
       }
       controller.signal.throwIfAborted();
-      if (trip() !== expedition || book() !== source || root.hidden) return;
+      if (!isCurrentReply()) return;
       if (result.diagnostic)
         context.generation.recordReview(
           { ...result.diagnostic, readOnly: true },
@@ -460,11 +470,13 @@ export function createAdventure(context) {
       save();
       status(accepted.warnings.join('；'));
       request = null;
+      replyPlayback = controller;
       render();
       const playOptions = {
         owner: 'adventure',
         title: book().title,
         onRead(line) {
+          if (!isCurrentReply()) return;
           record(
             line.speaker || '旁白',
             line.text,
@@ -478,43 +490,34 @@ export function createAdventure(context) {
         turn.mode === 'event' ? turn.choiceCheck?.actorId : result.dcOutcome?.actorId;
       const chosenMember = members.find((m) => m.id === actorRefId) || members[0] || null;
       if ((turn.mode === 'event' || turn.mode === 'quest') && context.dice?.playReply) {
-        const dcReceipt = await context.dice.playReply(result, playOptions, {
+        await context.dice.playReply(result, playOptions, {
           style: turn.mode === 'event' ? 'event' : 'free',
           actionText: turn.choice?.label || turn.playerText || '',
           fixedCheck: turn.mode === 'event' ? turn.choiceCheck || null : null,
           member: chosenMember,
           claimId: turn.responseId,
           expedition,
+          signal: controller.signal,
+          onSettled(dcReceipt) {
+            if (!isCurrentReply()) return;
+            if (turn.mode === 'event') adventure.event.dcReceipt = dcReceipt;
+            else adventure.questLastDc = dcReceipt;
+            const { lossesText, gainsText } = formatDcEffectSummary(
+              dcReceipt.reward,
+              dcReceipt.penalty,
+            );
+            record('检定代价', lossesText, 'dc-penalty', `${turn.responseId}:penalty`);
+            record('检定收获', gainsText, 'dc-reward', `${turn.responseId}:dc-reward`);
+            save();
+            render();
+          },
         });
-        if (dcReceipt) {
-          const effectSummary = formatDcEffectSummary(dcReceipt.reward, dcReceipt.penalty);
-          if (turn.mode === 'event') state().event.dcReceipt = dcReceipt;
-          else state().questLastDc = dcReceipt;
-          if (effectSummary.lossesText) {
-            record(
-              '检定代价',
-              effectSummary.lossesText,
-              'dc-penalty',
-              `${turn.responseId}:penalty`,
-            );
-          }
-          if (effectSummary.gainsText) {
-            record(
-              '检定收获',
-              effectSummary.gainsText,
-              'dc-reward',
-              `${turn.responseId}:dc-reward`,
-            );
-          }
-          save();
-          render();
-        }
       } else {
         await play(result.display || result.content, turn.responseId);
       }
-      if (!root.hidden && trip() === expedition) ready();
+      if (isCurrentReply()) ready();
     } catch (failure) {
-      if (trip() === expedition && !root.hidden) {
+      if (isReplyScene()) {
         if (failure.diagnostic)
           context.generation.recordReview(
             { ...failure.diagnostic, readOnly: true },
@@ -525,13 +528,18 @@ export function createAdventure(context) {
       }
     } finally {
       if (request === controller) request = null;
-      context.gal.settled('adventure');
-      render();
+      if (replyPlayback === controller) replyPlayback = null;
+      if (isReplyScene()) {
+        context.gal.settled('adventure');
+        render();
+      }
     }
   }
   async function enter(resuming = false) {
     const epoch = ++introEpoch;
     context.gal.cancel();
+    const destDlg = document.querySelector('#destination-dialog');
+    if (destDlg?.open) destDlg.close();
     session.runtime.mode = 'event';
     clearTimeout(session.runtime.toastTimer);
     document.querySelector('#toast').classList.remove('visible');
@@ -601,6 +609,8 @@ export function createAdventure(context) {
     introEpoch++;
     request?.abort();
     request = null;
+    replyPlayback?.abort();
+    replyPlayback = null;
     context.gal.cancel('adventure');
     root.hidden = true;
     document.body.classList.remove('in-adventure');

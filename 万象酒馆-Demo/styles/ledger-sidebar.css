@@ -20,6 +20,10 @@ body.street-atlas-open .ledger-corner {
   inset: max(64px, calc(env(safe-area-inset-top) + 56px)) max(10px, env(safe-area-inset-right)) auto
     auto;
 }
+body.ring-cabinet-open :is(.ledger-corner, .ledger-edge-handle) {
+  visibility: hidden;
+  pointer-events: none;
+}
 
 .ledger-corner :is(#saves-open, #audio-toggle, #fullscreen-toggle, #ai-open) {
   position: relative;

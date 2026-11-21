@@ -34,11 +34,6 @@ export function formatRequestPreview(result) {
   }
   if (result.sampling && Object.keys(result.sampling).length)
     lines.push('预设采样参数：' + JSON.stringify(result.sampling));
-  if (result.regex) {
-    lines.push(`正则：${result.regex.scripts}条，发生${result.regex.changes.length}次文本替换`);
-    for (const change of result.regex.changes)
-      lines.push(`· ${change.name}：${change.beforeCharacters}→${change.afterCharacters}字符`);
-  }
   lines.push(...(result.warnings || []));
   for (const [index, message] of result.messages.entries())
     lines.push(

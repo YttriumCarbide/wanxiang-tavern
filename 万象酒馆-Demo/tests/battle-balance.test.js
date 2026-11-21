@@ -18,6 +18,8 @@ import { defaultProtagonist } from '../src/content/qingyuan.js';
 import { newLibrary, compileRoster, restoreLibrary } from '../src/ai/library.js';
 import { prepareBossEmblem } from '../src/emblem-progression.js';
 import { OVERLOAD_EMBLEM_ID } from '../src/emblems.js';
+import { sinkingPlagueFrontDamage, sinkingPlagueRearDamage } from '../src/overlord-mechanics.js';
+import { combatScale } from '../src/combat-scale.js';
 import { applyEncounterGrowth } from '../src/growth.js';
 import { normalizeEquipment, buyEquipment, equip, equippedDefinitions } from '../src/equipment.js';
 import { enemyIntentText } from '../src/enemy-intent-text.js';
@@ -65,7 +67,7 @@ test('rest restores sixty percent of missing resource only, including dying alli
   assert.equal(state.units.aegis.hp, 0);
 });
 
-test('overload reward fills its added hp/sp, stays full charge and survives repeated growth boundaries without losing or doubling bonuses', () => {
+test('overload reward stays full charge without static pre-battle inflation and doubles maxMp on Engage', () => {
   const library = newCampaign(defaultProtagonist());
   const trip = newExpedition('ruinsCliffBeast', compileRoster(library), {
     map: 'ruins',
@@ -80,9 +82,8 @@ test('overload reward fills its added hp/sp, stays full charge and survives repe
   const before = structuredClone(trip.carried.units[actor]);
   assert(prepareBossEmblem(library, trip, () => 0));
   const after = structuredClone(trip.carried.units[actor]);
-  assert(after.maxHp > before.maxHp && after.maxMp > before.maxMp);
-  assert.equal(after.hp - before.hp, after.maxHp - before.maxHp);
-  assert.equal(after.mp - before.mp, after.maxMp - before.maxMp);
+  assert.equal(after.maxHp, before.maxHp);
+  assert.equal(after.maxMp, before.maxMp);
   assert.equal(trip.carried.heroDefinitions[actor].emblemId, OVERLOAD_EMBLEM_ID);
   applyEncounterGrowth(trip, library.characters);
   assert.deepEqual(trip.carried.units[actor], after);
@@ -123,58 +124,54 @@ test('same-name equipment is limited per character across distinct templates and
   assert.equal(restored.equipment.owned.length, 3);
 });
 
-test('lamb sinking plague: front floor scales with plagueAdd, rear turns escalate rapidly, front visit refreshes, corrupted slot yields to slow or swap', () => {
+test('lamb sinking plague: bounded uniform damage, 2-round front lock blocks recovery until rear retreat, Stage 2/3 corrupted slots', () => {
   const heroes = Object.fromEntries(
     HEROES.map((hero) => [hero.id, { ...structuredClone(hero), hp: 200, buffs: {}, skills: [] }]),
   );
   const state = newBattle(['apepLamb'], heroes);
   state.phase = 'plan';
+  state.round = 1;
+  assert.equal(state.sinkingPlague?.corruptedSlot ?? null, null);
+
   state.round = 2;
+  state.units.apepLamb.bossStage = 3;
   const rear = state.formation[3],
     front = state.formation[0],
+    frontMid = state.formation[1],
     idleRear = state.formation[4];
   const before = structuredClone(state);
   const openSlot = enemyTimeline(state).findIndex((id) => !id);
   const result = preview(state, [makeReposition(0, 3, openSlot)]);
   assert(result.valid, JSON.stringify(result.invalid));
-  assert.deepEqual(result.final.sinkingPlague.ages, [1, 2, 2]);
-  // Slot 0 Apep_Plague hits front[0] (18 dmg); swap moves front to rear after -> 0 rear tick
-  assert.equal(result.final.units[front].hp, 182);
-  assert.equal(result.final.sinkingPlague.backfieldTurns[front], 0);
-  // Rear hero swapped to front[0] after Apep_Plague takes only floor tick (2 dmg)
-  assert.equal(result.final.units[rear].hp, 198);
-  // Front slot[1] hero takes Apep_Plague (18) + Apep_Shell (14) + floor tick (2) = 34
-  assert.equal(result.final.units[state.formation[1]].hp, 166);
-  // Hero who stayed in rear all round gets backfieldTurns=1 and 6 rear plague damage
-  assert.equal(result.final.sinkingPlague.backfieldTurns[idleRear], 1);
-  assert.equal(result.final.units[idleRear].hp, 194);
+  assert.deepEqual(result.final.sinkingPlague.ages, [3, 3, 3]);
+  // Retreat avoids the front attack, but still receives the shared perimeter tick.
+  assert.equal(result.final.units[front].hp, 199);
+  assert.equal(result.final.sinkingPlague.frontStreak[front], 0);
+  // Staying in front accumulates frontStreak; the rear receives the same perimeter tick.
+  assert.equal(result.final.sinkingPlague.frontStreak[frontMid], 1);
+  assert.equal(result.final.sinkingPlague.frontStreak[idleRear], 0);
+  assert.equal(result.final.units[idleRear].hp, 199);
   assert(statusIcons(result.final, rear, result.final).includes('data-buff="sinkingPlague"'));
   assert(statusIcons(result.final, idleRear, result.final).includes('data-buff="sinkingPlague"'));
 
-  // Round 3: advance selects an empty corruptedSlot that forbids non-swap actions but allows swap
+  // Round 3: Stage 3 selects an empty corruptedSlot that forbids non-swap actions but allows swap
   const r3 = advance(result);
   const cSlot = r3.sinkingPlague.corruptedSlot;
   assert(Number.isInteger(cSlot) && !enemyTimeline(r3)[cSlot]);
   const illegalSkill = preview(r3, [makeAction(r3, rear, 'attack', 'apepLamb', cSlot)]);
   assert.equal(illegalSkill.valid, false);
-  const legalSwap = preview(r3, [makeReposition(1, 4, cSlot)]);
-  assert(legalSwap.valid, JSON.stringify(legalSwap.invalid));
-  // idleRear touched front (1 <-> 4) so rear turns immediately refreshed to 0!
-  assert.equal(legalSwap.final.sinkingPlague.backfieldTurns[idleRear], 0);
-  // Going to front and returning in the SAME round ALSO refreshes rear turns to 0!
-  const freeSlot = legalSwap.slots.findIndex((s, idx) => !s && idx !== cSlot);
-  if (freeSlot >= 0) {
-    const thereAndBack = preview(r3, [makeReposition(1, 4, cSlot), makeReposition(1, 4, freeSlot)]);
-    assert(thereAndBack.valid, JSON.stringify(thereAndBack.invalid));
-    assert.equal(thereAndBack.final.sinkingPlague.backfieldTurns[idleRear], 0);
-    assert(thereAndBack.final.formation.slice(3).includes(idleRear));
-  }
-  // Doing nothing keeps idleRear in rear -> turns=2 -> 24 damage!
+  // Doing nothing keeps frontMid on the frontline for a 2nd consecutive plague tick -> sealed!
   const neglected = preview(r3, []);
-  assert.equal(neglected.final.sinkingPlague.backfieldTurns[idleRear], 2);
-  assert.equal(result.final.units[idleRear].hp - neglected.final.units[idleRear].hp, 24);
+  assert.equal(neglected.final.sinkingPlague.frontStreak[frontMid], 2);
+  assert.equal(neglected.final.sinkingPlague.sealed[frontMid], true);
+  // Retreating sealed frontMid to the rear row immediately lifts the seal!
+  const r4 = advance(neglected);
+  const retreatSlot = enemyTimeline(r4).findIndex((id) => !id);
+  const retreated = preview(r4, [makeReposition(1, 4, retreatSlot)]);
+  assert(retreated.valid, JSON.stringify(retreated.invalid));
+  assert(!retreated.final.sinkingPlague.sealed[frontMid]);
 
-  // Inflicting slow before corruptedSlot pushes an enemy onto corruptedSlot and lifts the lock!
+  // Swapping clears frontStreak on retreat, corrupted slot yields to slow
   const r3Slow = structuredClone(r3);
   r3Slow.heroDefinitions.morrow = {
     ...HEROES.find((h) => h.id === 'morrow'),
@@ -221,6 +218,21 @@ test('lamb sinking plague: front floor scales with plagueAdd, rear turns escalat
   assert(!campRest(result.final).state.sinkingPlague);
   assert(!newEncounter({ enemyIds: ['hound'] }, result.final).sinkingPlague);
   assert.deepEqual(state, before);
+});
+
+test('level 25 plague damage stops growing when repeated skill applications deepen the field', () => {
+  const state = {
+    units: { apepLamb: { damageScale: combatScale(25) } },
+    sinkingPlague: { source: 'apepLamb', ages: [0, 0, 0] },
+  };
+  const samples = [0, 1, 2, 9, 99].map((age) => {
+    state.sinkingPlague.ages = [age, age, age];
+    const front = sinkingPlagueFrontDamage(state);
+    assert.equal(sinkingPlagueRearDamage(state), front);
+    return front;
+  });
+  assert.deepEqual(samples, [1, 2, 4, 5, 5]);
+  assert.equal(sinkingPlagueFrontDamage({}), 0);
 });
 
 test('enemy archive descriptions derive missing text and percentage heals without undefined values', () => {

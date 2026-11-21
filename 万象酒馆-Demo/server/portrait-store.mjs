@@ -1,7 +1,8 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { imageType } from './portrait-images.mjs';
+import { atomicWrite } from './disk-store.mjs';
 
 /** Original bytes live on disk; saves contain a small, stable character-owned reference. */
 export async function createPortraitStore(directory) {
@@ -25,7 +26,7 @@ export async function createPortraitStore(directory) {
       if (!bytes.length || bytes.length > 6 * 1024 * 1024) throw Error('图片不能超过6MB');
       const mime = imageType(bytes);
       const name = `${createHash('sha256').update(bytes).digest('hex')}.${extensions[mime]}`;
-      await writeFile(path.join(directory, name), bytes, { flag: 'w' });
+      await atomicWrite(path.join(directory, name), bytes);
       return { url: `/api/ai/portraits/${name}` };
     },
     async read(name) {

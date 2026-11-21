@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto';
+import { setTimeout as waitForFile } from 'node:timers/promises';
 import {
   mkdir,
   open,
@@ -17,7 +18,7 @@ const HISTORY = '备份';
 const APP = 'wanxiang-disk-storage';
 const validKey = (key) =>
   typeof key === 'string' &&
-  /^(?:installation|regex|(?:game|world|prompt|helper|portrait)\.[a-zA-Z0-9._-]+)$/.test(key);
+  /^(?:installation|(?:game|world|prompt|helper|portrait)\.[a-zA-Z0-9._-]+)$/.test(key);
 const digest = (value) => createHash('sha256').update(value).digest('hex');
 const imageTypes = {
   'image/png': 'png',
@@ -37,7 +38,20 @@ export async function atomicWrite(file, text) {
     } finally {
       await handle.close();
     }
-    await rename(temporary, file);
+    for (let attempt = 0; ; attempt++) {
+      try {
+        await rename(temporary, file);
+        break;
+      } catch (failure) {
+        if (
+          process.platform !== 'win32' ||
+          !['EPERM', 'EBUSY'].includes(failure.code) ||
+          attempt >= 5
+        )
+          throw failure;
+        await waitForFile(25 * 2 ** attempt);
+      }
+    }
   } finally {
     await unlink(temporary).catch((error) => {
       if (error.code !== 'ENOENT') throw error;
@@ -59,6 +73,7 @@ function parseSnapshot(text) {
     throw Error('磁盘存档格式或校验失败');
   const records = new Map();
   for (const entry of raw.records) {
+    if (Array.isArray(entry) && entry.length === 2 && entry[0] === 'regex') continue;
     if (!Array.isArray(entry) || entry.length !== 2 || !validKey(entry[0]) || records.has(entry[0]))
       throw Error('磁盘存档记录损坏');
     records.set(entry[0], entry[1]);

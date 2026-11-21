@@ -668,6 +668,10 @@ export function createGalPlayer(context) {
       workspace.feedback(owner, text);
     },
     play(content, options = {}) {
+      if (context.developer?.skipScenes()) {
+        options.onComplete?.();
+        return Promise.resolve();
+      }
       return new Promise((resolve) => {
         const capacity = innerHeight < 500 || innerWidth < 900 ? 76 : 155;
         const beats =
@@ -691,6 +695,9 @@ export function createGalPlayer(context) {
         });
         startNext();
       });
+    },
+    skip() {
+      if (current) void finish(true);
     },
     cancel(owner) {
       for (let index = pending.length - 1; index >= 0; index--)

@@ -135,7 +135,7 @@ test('worldbook targets use the six current APIs and map legacy quick-chat to ch
   assert.equal(quickChatScan.entries[0].content, '被聊天提及的怪物设定');
 });
 
-test('keyword, regex, all four secondary logics and field overrides activate correctly', () => {
+test('ordinary keywords, secondary logic and field overrides work while retired patterns stay inactive', () => {
   const result = scan(
     [
       { key: ['遗迹'], keysecondary: ['光明'], selectiveLogic: 0 },
@@ -156,7 +156,7 @@ test('keyword, regex, all four secondary logics and field overrides activate cor
   );
   assert.deepEqual(
     result.entries.map((entry) => entry.uid),
-    [0, 1, 2, 3, 4, 6],
+    [0, 1, 2, 3, 6],
   );
   const words = scan(
     [

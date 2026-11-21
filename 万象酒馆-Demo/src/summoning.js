@@ -63,23 +63,24 @@ export function knownNpcSummonPool(library) {
 }
 
 /** Worldbook prose is editable; official identities and combat definitions stay code-owned. */
-export function officialSummonPool(library, book) {
+export function officialSummonPool(library, book, { developerMode = false } = {}) {
   const owned = new Set(library.characters.map((entry) => entry.id));
-  return [...HEROES.map((hero) => hero.id), 'edith', ...Object.keys(OFFICIAL_VISITORS)].flatMap(
-    (id) => {
-      if (Object.hasOwn(TOWN_GUESTS, id)) return [];
-      const entry = officialCharacter(id);
-      if (owned.has(entry.id)) return [];
-      if (isQuestRecruit(library, entry.setting.name)) return [];
-      const lore = Object.values(book?.entries || {}).find(
-        (item) => item.extensions?.wanxiang?.characterId === entry.id,
-      );
-      if (!lore || typeof lore.content !== 'string' || !lore.content.trim()) return [];
-      entry.setting.worldbook = lore.content.trim();
-      entry.setting.edited = true;
-      return [entry];
-    },
-  );
+  const ids = [...HEROES.map((hero) => hero.id), 'edith', ...Object.keys(OFFICIAL_VISITORS)];
+  if (developerMode) ids.push('pandora');
+  return ids.flatMap((id) => {
+    if (!developerMode && Object.hasOwn(TOWN_GUESTS, id)) return [];
+    const entry = officialCharacter(id);
+    if (owned.has(entry.id)) return [];
+    if (!developerMode && isQuestRecruit(library, entry.setting.name)) return [];
+    const lore = Object.values(book?.entries || {}).find(
+      (item) => item.extensions?.wanxiang?.characterId === entry.id,
+    );
+    if (typeof lore?.content !== 'string' || !lore.content.trim())
+      return developerMode ? [entry] : [];
+    entry.setting.worldbook = lore.content.trim();
+    entry.setting.edited = true;
+    return [entry];
+  });
 }
 
 export function summonSource(mode, roll) {

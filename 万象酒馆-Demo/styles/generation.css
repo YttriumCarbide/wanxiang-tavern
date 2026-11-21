@@ -125,20 +125,84 @@
 .ai-editor label {
   display: grid;
   gap: 5px;
-  margin: 10px 0;
+  margin: 8px 0;
   font-size: 12px;
+  color: #cddcd3;
 }
 .ai-editor input:not([type='checkbox']),
 .ai-editor select,
 .ai-editor textarea {
   width: 100%;
   min-width: 0;
-  padding: 8px;
-  color: #e6e5cc;
-  background: #0f201f;
-  border: 1px solid #6d827169;
-  border-radius: 4px;
+  padding: 9px 11px;
+  color: #f3eee0;
+  background: rgba(8, 17, 17, 0.85);
+  border: 1px solid rgba(154, 186, 170, 0.28);
+  border-radius: 6px;
   font: inherit;
+  transition:
+    border-color 0.16s ease,
+    box-shadow 0.16s ease;
+}
+.ai-editor input:not([type='checkbox']):focus,
+.ai-editor select:focus,
+.ai-editor textarea:focus {
+  outline: none;
+  border-color: rgba(226, 186, 111, 0.72);
+  box-shadow: 0 0 0 2px rgba(226, 186, 111, 0.14);
+}
+[data-ai-page='settings'] {
+  display: grid;
+  gap: 12px;
+}
+.ai-card {
+  position: relative;
+  padding: 13px 15px;
+  border-radius: 10px;
+  border: 1px solid rgba(212, 180, 116, 0.2);
+  background: linear-gradient(180deg, rgba(16, 33, 30, 0.82), rgba(9, 20, 20, 0.92));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 240, 205, 0.06),
+    0 6px 18px rgba(0, 0, 0, 0.22);
+}
+.ai-card-title {
+  margin: 0 0 10px;
+  padding-bottom: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  color: #e4c788;
+  border-bottom: 1px solid rgba(218, 184, 118, 0.16);
+}
+.ai-row-2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.ai-row-2 > label {
+  margin: 0;
+}
+.connection-preset-picker,
+.connection-preset-save {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+.connection-preset-picker > label,
+.connection-preset-save > label {
+  flex: 1;
+}
+.ai-card-advanced details > summary {
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  color: #d6c090;
+}
+@media (max-width: 720px) {
+  .ai-row-2 {
+    grid-template-columns: 1fr;
+  }
 }
 .ai-editor .ai-check {
   display: flex;
@@ -336,181 +400,8 @@
   color: #d7c18f;
   font-size: 12px;
 }
-.prompt-editor-banner {
-  padding: 12px;
-  line-height: 1.8;
-  color: #a9e3cb;
-  background: #27463c;
-  border-left: 3px solid #92cbb5;
-  font-size: 12px;
-}
-#prompt-warnings {
-  color: #e2bc7b;
-  white-space: pre-wrap;
-  font-size: 12px;
-  line-height: 1.8;
-}
-#prompt-source {
-  overflow-wrap: anywhere;
-}
-.prompt-message {
-  display: grid;
-  grid-template-columns: 15px minmax(0, 1fr) 92px 20px repeat(4, 25px);
-  align-items: center;
-  gap: 4px;
-  padding: 5px 4px;
-  margin: 0;
-  background: #242428;
-  border: 0;
-  border-bottom: 1px solid #ffffff16;
-  border-radius: 0;
-}
-.prompt-message-heading {
-  display: contents;
-}
-.prompt-message button {
-  padding: 4px;
-  min-width: 0;
-  background: transparent;
-  border-color: transparent;
-  color: #ddd;
-}
-.prompt-message .prompt-edit-name {
-  text-align: left;
-  white-space: normal;
-  overflow-wrap: anywhere;
-}
-.prompt-message small,
-.prompt-handle {
-  font-size: 10px;
-  color: #aaa;
-}
-.prompt-handle {
-  cursor: grab;
-}
-.prompt-table-heading {
-  display: flex;
-  justify-content: space-between;
-  padding: 7px;
-  color: #aaa;
-  background: #171719;
-  font-size: 11px;
-}
-.prompt-injection {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
-}
-.tavern-editor-dialog {
-  position: fixed;
-  inset: 0;
-  margin: auto;
-  width: min(850px, calc(100vw - 24px));
-  max-width: calc(100vw - 24px);
-  max-height: calc(100dvh - 24px);
-  background: #242427f5;
-  border: 1px solid #ffffff35;
-  border-radius: 10px;
-  color: #ddd;
-  padding: 16px;
-  overflow: auto;
-}
-#prompt-entry-dialog {
-  width: min(680px, calc(100vw - 24px));
-  height: min(620px, calc(100dvh - 24px));
-  max-height: calc(100dvh - 24px);
-}
-#prompt-entry-dialog[open] {
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
-  gap: 8px;
-  overflow: hidden;
-}
-#prompt-entry-fields {
-  overflow-y: auto;
-  min-height: 0;
-  padding-right: 4px;
-}
-#prompt-entry-dialog textarea {
-  height: clamp(120px, 40dvh, 320px);
-}
-.tavern-editor-dialog::backdrop {
-  background: #0009;
-  backdrop-filter: blur(5px);
-}
-.tavern-editor-dialog header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-.tavern-editor-dialog h2 {
-  font-size: 16px;
-}
-.tavern-editor-dialog label {
-  display: grid;
-  gap: 5px;
-  font-size: 12px;
-  margin: 8px 0;
-}
-.tavern-editor-dialog textarea,
-.tavern-editor-dialog input:not([type='checkbox']),
-.tavern-editor-dialog select {
-  min-width: 0;
-  width: 100%;
-  padding: 7px;
-  color: #ddd;
-  background: #151517;
-  border: 1px solid #ffffff30;
-  border-radius: 5px;
-  font:
-    12px/1.6 'Microsoft YaHei',
-    sans-serif;
-}
-.tavern-editor-dialog textarea {
-  resize: vertical;
-}
-.tavern-editor-dialog button {
-  padding: 6px 9px;
-  color: #ddd;
-  background: #ffffff0c;
-  border: 1px solid #ffffff30;
-  border-radius: 5px;
-}
-.tavern-editor-dialog footer {
-  display: flex;
-  justify-content: flex-end;
-}
-.regex-workspace {
-  display: grid;
-  grid-template-columns: 180px minmax(0, 1fr);
-  gap: 16px;
-}
-#regex-list button {
-  display: flex;
-  gap: 8px;
-  width: 100%;
-  margin: 5px 0;
-  text-align: left;
-}
-#regex-list [aria-pressed='true'] {
-  background: #ffffff18;
-}
-.regex-options {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 16px;
-}
-.regex-options label {
-  display: flex;
-  align-items: center;
-}
-#regex-status,
-#regex-test-output {
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  font-size: 12px;
-}
-#prompt-contract {
+
+#prompt-attribution {
   font:
     12px/1.9 'Microsoft YaHei',
     sans-serif;
@@ -521,9 +412,6 @@
   color: #c3ccb8;
 }
 @media (max-height: 600px) {
-  .prompt-message {
-    padding: 8px;
-  }
   .preset-box {
     padding: 8px;
   }
@@ -551,10 +439,6 @@
   grid-template-columns: minmax(400px, 1fr) minmax(0, 0.85fr);
 }
 @media (max-height: 600px) {
-  .tavern-editor-dialog {
-    max-height: calc(100dvh - 12px);
-    padding: 10px;
-  }
   #ai-dialog[data-tab='prompts'] .ai-workspace {
     grid-template-columns: minmax(350px, 1fr) minmax(0, 0.7fr);
   }

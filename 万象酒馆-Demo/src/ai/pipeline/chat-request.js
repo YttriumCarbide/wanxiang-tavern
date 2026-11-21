@@ -59,10 +59,9 @@ export async function chatRequest(
   kind,
   rawInput,
   preset,
-  { profile, worldInfo, regexScripts, countTokens, presetProcessing, advice, runRegexTasks },
+  { profile, worldInfo, countTokens, presetProcessing, advice },
 ) {
   if (kind !== 'chat') advice = null;
-  regexScripts = chatRegexScripts(kind, regexScripts);
   const input = chatInput(kind, rawInput);
   // Legacy world entries enabled for script are also useful to chat, except generation contracts.
   const books = structuredClone(worldInfo.books);
@@ -341,25 +340,15 @@ export async function chatRequest(
           '\n' +
           galInstruction(input, kind),
     });
-    const processed = await runRegexTasks(
-      regexScripts,
-      messages.map((message, index) => ({
-        text: message.content,
-        placement: message.role === 'user' ? 1 : message.role === 'assistant' ? 2 : 5,
-        options: { kind: 'script', isPrompt: true, depth: messages.length - index - 1, variables },
-      })),
-    );
-    // Apply after prompt regexes: an Advice cleanup regex must not erase the input just moved.
     // Only actual retained conversation objects qualify, never assistant examples or world entries.
     const messageIndices = new Map(messages.map((message, index) => [message, index]));
     const retained = transcript
       .map((message) => messageIndices.get(message))
       .filter((index) => index !== undefined);
     const transfer = adviceTranscript(
-      retained.map((index) => ({ ...messages[index], content: processed[index].text })),
+      retained.map((index) => messages[index]),
       effectiveAdvice,
     );
-    messages = messages.map((message, index) => ({ ...message, content: processed[index].text }));
     retained.forEach((index, position) => {
       messages[index] = transfer.messages[position];
     });
@@ -462,12 +451,4 @@ export async function chatRequest(
       }
     }
   }
-}
-
-export function chatRegexScripts(kind, scripts) {
-  return scripts.map((script) => ({
-    ...script,
-    apiTargets:
-      script.apiTargets.includes(kind) || script.apiTargets.includes('script') ? ['script'] : [],
-  }));
 }

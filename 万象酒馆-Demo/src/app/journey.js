@@ -12,6 +12,7 @@ import {
   completeAdventureNode,
 } from '../expedition.js';
 import { createAdventureState, lockBoss } from '../adventure/state.js';
+import { adventureResumeStage } from '../adventure/snapshot.js';
 import { restoreAdventureResources } from '../adventure/restore-resources.js';
 import { eventReward } from '../adventure/rewards.js';
 import { createSceneLoading } from '../shared/scene-loading.js';
@@ -20,14 +21,19 @@ import { REGIONS } from '../content/regions.js';
 import { createBattleView } from '../scene.js';
 import { roundBanner } from '../motion.js';
 import { query as $ } from './dom.js';
-import { encounterMusic } from '../audio/config.js';
+import { encounterMusic, locationMusic } from '../audio/config.js';
 import { claimBattleRewards } from '../rewards.js';
 import { dungeonLoot, settleEther } from '../archives.js';
 import { resetRelationshipGains } from '../relationships.js';
 import { recordSettlement } from '../companion-events.js';
 import { developerOption } from '../generation-options.js';
-import { prepareCorridorRing, prepareBossEmblem } from '../emblem-progression.js';
+import {
+  grantVictoryOverlordEmblem,
+  prepareBossEmblem,
+  prepareCorridorRing,
+} from '../emblem-progression.js';
 import { encounterLevel } from '../enemy-growth.js';
+import { EMBLEMS } from '../emblems.js';
 import { recollectionEther } from '../recollections.js';
 import { worldBattleTransition } from './world-battle-transition.js';
 import { refreshWorldSkirmishes } from '../skirmishes.js';
@@ -37,12 +43,57 @@ import { recordSeenMonsters } from '../archive-enemies.js';
 /** @param {import('./context.js').AppContext} context */
 export function createJourney(context) {
   const { session } = context;
+  let settlingBattle = null;
+  let transition = null;
+
+  function cancelTransition() {
+    transition?.abort();
+    transition = null;
+  }
+
+  async function transitionToBattle(enter) {
+    cancelTransition();
+    const current = new AbortController();
+    transition = current;
+    try {
+      return await worldBattleTransition(enter, current.signal);
+    } finally {
+      if (transition === current) transition = null;
+    }
+  }
+
+  function savePreparedBattle() {
+    session.runtime.adventureCheckpointLoading = true;
+    try {
+      context.generation.save();
+    } finally {
+      session.runtime.adventureCheckpointLoading = false;
+    }
+  }
+  async function startDeveloperBattle(spec) {
+    if (!session.runtime.developerSandbox || session.runtime.mode !== 'inn')
+      throw Error('请先在测试档的酒馆里开始直达战。');
+    const library = session.ai.library;
+    const roster = compileRoster(library);
+    const expedition = newExpedition('bossGate', roster);
+    expedition.index = FINAL_ENCOUNTER;
+    expedition.developerEncounter = structuredClone(spec);
+    session.ai.activeScript = null;
+    session.journey.selectedNode = null;
+    session.journey.expedition = expedition;
+    await transitionToBattle((ready, signal) => enterBattle(true, ready, signal));
+  }
   async function startBattle(continuing = false) {
     if (session.runtime.disposed || session.runtime.mode === 'loading' || session.battle.playing)
       return;
     if (session.runtime.needsStart) return context.onboarding.open();
     if (!continuing && context.daily && !context.daily.allowDungeon()) return;
-    if (!continuing && context.onboarding && !context.onboarding.allowPortal('script')) return;
+    if (
+      !continuing &&
+      context.onboarding &&
+      !context.onboarding.allowPortal('script', { entering: Boolean(session.ai.library.prepared) })
+    )
+      return;
     if (
       session.ai.library.campaign &&
       !continuing &&
@@ -53,10 +104,14 @@ export function createJourney(context) {
       return;
     }
     if (!continuing && session.runtime.mode === 'inn')
-      return worldBattleTransition(() => enterBattle(continuing));
+      return transitionToBattle((ready, signal) => enterBattle(continuing, ready, signal));
+    cancelTransition();
     return enterBattle(continuing);
   }
-  async function enterBattle(continuing) {
+  async function enterBattle(continuing, ready, signal) {
+    const token = session.runtime.token;
+    const current = () =>
+      !session.runtime.disposed && !signal?.aborted && token === session.runtime.token;
     const newTrip = !continuing || !session.journey.expedition;
     context.shop?.close();
     context.dining?.close();
@@ -65,10 +120,10 @@ export function createJourney(context) {
     if (newTrip) {
       try {
         const roster = await context.generation.prepare();
+        if (!current()) return;
         resetRelationshipGains(session.ai.library);
         context.chat?.enteredDungeon();
         if (!session.journey.selectedNode?.replay) context.onboarding?.tripStarted();
-        if (session.runtime.disposed) return;
         session.journey.expedition = newExpedition(
           session.journey.bossChoice,
           roster,
@@ -114,6 +169,7 @@ export function createJourney(context) {
           );
         context.daily?.departed();
       } catch (failure) {
+        if (!current()) return;
         session.runtime.mode = 'inn';
         context.shell.toast('剧本准备失败：' + failure.message);
         void context.generation.open('剧本准备失败：' + failure.message);
@@ -132,12 +188,11 @@ export function createJourney(context) {
       return;
     }
     context.adventure.leave();
+    if ($('#destination-dialog')?.open) $('#destination-dialog').close();
     document.body.classList.add('in-battle');
     if (continuing) applyEncounterGrowth(session.journey.expedition, session.ai.library.characters);
-    if (prepareCorridorRing(session.ai.library, session.journey.expedition))
-      context.generation.save();
-    if (prepareBossEmblem(session.ai.library, session.journey.expedition))
-      context.generation.save();
+    prepareCorridorRing(session.ai.library, session.journey.expedition);
+    prepareBossEmblem(session.ai.library, session.journey.expedition);
     session.battle.state = beginEncounter(session.journey.expedition);
     recordSeenMonsters(session.ai.library, getEnemies(session.battle.state));
     session.battle.state.revealedWeaknesses = mergeRevealedWeaknessMap(
@@ -150,7 +205,6 @@ export function createJourney(context) {
       session.journey.expedition.partyIds,
       false,
     );
-    context.generation.save();
     session.battle.state.items = structuredClone(session.ai.library.inventory.items);
     session.battle.plan = [];
     session.battle.forecast = preview(session.battle.state, session.battle.plan);
@@ -165,7 +219,8 @@ export function createJourney(context) {
     session.selection.selectedCell = -1;
     session.selection.interactionStep = null;
     session.selection.inspectedEnemy = null;
-    await mountEncounter();
+    savePreparedBattle();
+    await mountEncounter(false, ready, signal);
   }
   async function startOverlandBattle(overlandBattle) {
     if (
@@ -174,9 +229,11 @@ export function createJourney(context) {
       session.runtime.needsStart
     )
       return false;
-    return worldBattleTransition(() => enterOverlandBattle(overlandBattle));
+    return transitionToBattle((ready, signal) =>
+      enterOverlandBattle(overlandBattle, ready, signal),
+    );
   }
-  async function enterOverlandBattle(overlandBattle) {
+  async function enterOverlandBattle(overlandBattle, ready, signal) {
     const library = session.ai.library;
     const partyIds = overlandBattle.overland?.partyIds;
     const party = partyIds
@@ -223,10 +280,11 @@ export function createJourney(context) {
     session.selection.selected = session.battle.state.formation.find(Boolean);
     session.selection.target = getEnemies(session.battle.state)[0]?.id;
     session.selection.pending = null;
-    await mountEncounter();
-    return true;
+    return await mountEncounter(false, ready, signal);
   }
-  async function mountEncounter(resuming = false) {
+  async function mountEncounter(resuming = false, ready, signal) {
+    context.planning?.clearAwakening();
+    context.overlordBattle?.cancelReloadBark();
     $('#drag-menu').hidden = true;
     $('#speed').hidden = false;
     $('#inn').hidden = true;
@@ -235,13 +293,15 @@ export function createJourney(context) {
     $('#back-inn').hidden = !developerOption(session.ai.generationOptions, 'allowRetreat');
     context.ledger?.sync();
     const spec = currentEncounterSpec(session.journey.expedition, session.battle.state.encounter);
-    $('#mode-label').textContent = session.journey.expedition.overlandBattle
-      ? `旅途遭遇 · ${spec.name} · Lv.${spec.level}`
-      : session.journey.expedition.adventure
-        ? `${spec.name} · 第 ${session.battle.state.encounter + 1}/${ENCOUNTER_COUNT} 节点 · ${ADVENTURE_NODE_LABELS[session.battle.state.encounter]}`
-        : session.journey.expedition.exploration
-          ? `${REGIONS[spec.map].name} · 第 ${session.battle.state.encounter + 1}/${ENCOUNTER_COUNT} 战 · ${spec.name}`
-          : `第 ${session.battle.state.encounter + 1}/${ENCOUNTER_COUNT} 战 · ${spec.name}`;
+    $('#mode-label').textContent = session.journey.expedition.developerEncounter
+      ? `测试遭遇 · ${spec.name}`
+      : session.journey.expedition.overlandBattle
+        ? `旅途遭遇 · ${spec.name} · Lv.${spec.level}`
+        : session.journey.expedition.adventure
+          ? `${spec.name} · 第 ${session.battle.state.encounter + 1}/${ENCOUNTER_COUNT} 节点 · ${ADVENTURE_NODE_LABELS[session.battle.state.encounter]}`
+          : session.journey.expedition.exploration
+            ? `${REGIONS[spec.map].name} · 第 ${session.battle.state.encounter + 1}/${ENCOUNTER_COUNT} 战 · ${spec.name}`
+            : `第 ${session.battle.state.encounter + 1}/${ENCOUNTER_COUNT} 战 · ${spec.name}`;
     $('#scene-loading').hidden = false;
     const loading = createSceneLoading($('#scene-loading'), `正在进入${spec.name}`, {
       assetStore: context.assets,
@@ -251,6 +311,8 @@ export function createJourney(context) {
     $('#inn-frame').replaceChildren();
     session.runtime.view?.dispose();
     const load = ++session.runtime.token;
+    const current = () =>
+      load === session.runtime.token && !session.runtime.disposed && !signal?.aborted;
     context.renderer.render();
     try {
       const loaded = await createBattleView($('#stage'), context.selection.selectUnit, {
@@ -261,14 +323,20 @@ export function createJourney(context) {
         heroDefinitions: session.battle.state.heroDefinitions,
         enemyDefinitions: session.battle.state.enemyDefinitions,
       });
-      if (load !== session.runtime.token) {
+      if (!current()) {
         loading.dispose();
         loaded.dispose();
-        return;
+        return false;
       }
       session.runtime.view = loaded;
       await loading.finish(loaded.renderer, loaded.scene, loaded.camera);
-      context.audio.setScene(encounterMusic(spec));
+      if (!current()) return false;
+      context.audio.setScene(
+        encounterMusic({
+          ...spec,
+          enemyIds: spec.enemyIds?.length ? spec.enemyIds : session.battle.state.enemyIds,
+        }),
+      );
       $('#scene-loading').hidden = true;
       $('#battle').classList.add('entering');
       context.renderer.render();
@@ -279,9 +347,10 @@ export function createJourney(context) {
         loaded.whenSettled(),
         ...entrance.map((animation) => animation.finished.catch(() => {})),
       ]);
-      if (load !== session.runtime.token || session.runtime.disposed) return;
+      if (!current()) return false;
       $('#battle').classList.remove('entering');
       session.runtime.mode = 'battle';
+      ready?.();
       document.dispatchEvent(new Event('world-battle-ready'));
       consumeDiningForBattle(
         session.ai.library,
@@ -294,23 +363,27 @@ export function createJourney(context) {
       context.battleReading?.render();
       context.overlordBattle?.sync();
       context.generation.refreshReview();
-      if (session.journey.expedition.overlandBattle) {
+      if (
+        session.journey.expedition.overlandBattle ||
+        (session.journey.expedition.developerEncounter && !resuming)
+      ) {
         if (context.overlordBattle?.isOverlordBattle?.()) void context.overlordBattle.entrance();
         else roundBanner('先手准备 · 1 AP');
         context.battleBarks?.roundOneStart();
-        return;
+        return true;
       }
       if (resuming) {
         context.generation.refreshStory();
         context.onboarding?.resumed();
         context.emblems?.check();
         context.overlordBattle?.sync();
-        return;
+        return true;
       }
       await context.generation.showScene(session.battle.state.encounter, 'before');
+      if (!current()) return false;
       context.generation.openStory(true);
       await context.generation.storyClosed();
-      if (load !== session.runtime.token || session.runtime.disposed) return;
+      if (!current()) return false;
       context.onboarding?.battleStarted();
       context.companionEvents?.battleStarted();
       context.emblems?.check();
@@ -320,12 +393,16 @@ export function createJourney(context) {
         roundBanner(spec.boss ? `最终战 · ${spec.name}` : '先手准备 · 1 AP');
         context.battleBarks?.roundOneStart();
       }
+      return current();
     } catch (e) {
+      if (!current()) return false;
       loading.fail(e);
       console.error(e);
+      return false;
     }
   }
   async function resume(snapshot) {
+    cancelTransition();
     session.ai.library = restoreLibrary(snapshot.library);
     restoreAdventureResources(snapshot, session.ai.library);
     session.battle.state = snapshot.state;
@@ -347,14 +424,9 @@ export function createJourney(context) {
     }
     session.ai.storyView = snapshot.storyView;
     session.ai.chat.quick = snapshot.quick || [];
-    if (['event', 'quest'].includes(expeditionNodeType(session.journey.expedition))) {
-      if (session.journey.expedition.pendingResult) {
-        session.runtime.mode = 'loading';
-        document.body.classList.add('in-battle');
-        await mountEncounter(true);
-        await showResult();
-        return;
-      }
+    const trip = session.journey.expedition;
+    const resumeStage = adventureResumeStage(trip, snapshot.state);
+    if (resumeStage === 'event') {
       await context.adventure.enter(true);
       return;
     }
@@ -362,19 +434,33 @@ export function createJourney(context) {
     session.selection.target = getEnemies(snapshot.state)[0]?.id;
     session.runtime.mode = 'loading';
     document.body.classList.add('in-battle');
+    savePreparedBattle();
     await mountEncounter(true);
+    if (session.journey.expedition !== trip || session.runtime.mode !== 'battle') return;
     context.generation.save();
-    if (session.journey.expedition.pendingResult) await showResult();
+    if (resumeStage === 'settlement' || trip.pendingResult) await showResult();
   }
-  function returnInn() {
+  function returnInn({ developerReset = false, skirmishRetreat = null } = {}) {
     if (session.battle.playing) return;
+    const reset = developerReset === true && session.runtime.developerSandbox;
     const settled =
       ['victory', 'defeat'].includes(session.battle.state.phase) &&
       (session.journey.expedition?.status === 'complete' ||
         session.battle.state.phase === 'defeat');
+    const expedition = session.journey.expedition;
+    const retreating =
+      skirmishRetreat &&
+      expedition === skirmishRetreat &&
+      expedition.overlandBattle?.skirmishRun &&
+      session.runtime.mode === 'battle' &&
+      session.battle.state.phase === 'victory' &&
+      expedition.pendingResult?.won === true &&
+      expedition.pendingResult.complete === false;
     if (
       ['battle', 'event'].includes(session.runtime.mode) &&
       !settled &&
+      !retreating &&
+      !reset &&
       !developerOption(session.ai.generationOptions, 'allowRetreat')
     ) {
       context.shell.toast('副本进行中，完成结算后才能返回酒馆。');
@@ -383,6 +469,9 @@ export function createJourney(context) {
     if (
       ['battle', 'event'].includes(session.runtime.mode) &&
       context.onboarding &&
+      !reset &&
+      !retreating &&
+      !session.journey.expedition?.developerEncounter &&
       !context.onboarding.allowReturn()
     )
       return;
@@ -397,7 +486,6 @@ export function createJourney(context) {
         divider: true,
         content: '从《' + session.ai.activeScript.title + '》副本回来。',
       });
-      context.generation.save();
     }
     if (
       !settled &&
@@ -421,8 +509,9 @@ export function createJourney(context) {
         (npc) => npc.sources.length,
       );
       session.ai.library.prepared = null;
-      context.generation.save();
     }
+    cancelTransition();
+    context.planning?.clearAwakening();
     context.backpack?.close();
     context.overlordBattle?.reset();
     context.battleBarks?.clear();
@@ -438,7 +527,11 @@ export function createJourney(context) {
     session.runtime.mode = 'inn';
     session.journey.selectedNode = null;
     context.generation.setSummonVisible(false);
-    context.audio.setScene('inn');
+    const overlandBattle = session.journey.expedition?.overlandBattle;
+    const returnTo = overlandBattle?.returnScene || (session.journey.expedition ? 'gate' : null);
+    context.audio.setScene(
+      returnTo && !['gate', 'tavern'].includes(returnTo) ? locationMusic(returnTo) : 'inn',
+    );
     document.body.classList.remove('in-battle');
     context.daily?.refresh?.();
     $('#speed').hidden = true;
@@ -451,54 +544,80 @@ export function createJourney(context) {
     $('#back-inn').hidden = true;
     $('#mode-label').textContent = '';
     context.ledger?.sync();
-    const overlandBattle = session.journey.expedition?.overlandBattle;
-    context.shell.mountInn(
-      overlandBattle?.returnScene || (session.journey.expedition ? 'gate' : null),
-    );
+    context.shell.mountInn(returnTo);
     context.onboarding?.refresh();
     context.companionEvents?.returned();
     context.daily?.returning();
+    context.generation.save();
     context.workshop?.unlockTutorial();
     if (!session.journey.expedition?.exploration?.quickTestBoss)
       void context.mapExpansion?.extend(session.journey.expedition?.exploration);
     void context.memory?.autoSummarize();
+    return true;
   }
   async function showResult() {
     if (session.journey.expedition.overlandBattle) return context.daily.finishOverlandBattle();
     if (session.journey.expedition.pendingResult)
       return presentResult(session.journey.expedition.pendingResult);
-    if (session.battle.state.phase === 'victory') {
+    const battle = session.battle.state;
+    if (settlingBattle === battle || !['victory', 'defeat'].includes(battle.phase)) return;
+    settlingBattle = battle;
+    try {
+      await settleEncounter(battle, session.journey.expedition);
+    } finally {
+      if (settlingBattle === battle) settlingBattle = null;
+    }
+  }
+
+  async function settleEncounter(battle, trip) {
+    const isCurrentBattle = () =>
+      !session.runtime.disposed &&
+      session.runtime.mode === 'battle' &&
+      session.journey.expedition === trip &&
+      session.battle.state === battle;
+    if (battle.phase === 'victory') {
       try {
         await context.battleBarks?.battleWon();
-        await context.generation.showScene(session.battle.state.encounter, 'after');
-        if (
-          !session.runtime.disposed &&
-          session.runtime.mode === 'battle' &&
-          session.battle.state.encounter === FINAL_ENCOUNTER
-        ) {
+        if (!isCurrentBattle()) return;
+        await context.generation.showScene(battle.encounter, 'after');
+        if (isCurrentBattle() && battle.encounter === FINAL_ENCOUNTER) {
           await context.generation.playEpilogue?.();
         }
       } catch (error) {
+        context.developer?.report(error);
         console.error('Post-victory presentation error:', error);
       }
     }
-    if (session.runtime.disposed || session.runtime.mode !== 'battle') return;
-    const won = session.battle.state.phase === 'victory',
-      spec = currentEncounterSpec(session.journey.expedition, session.battle.state.encounter),
-      next = won ? completeEncounter(session.journey.expedition, session.battle.state) : null,
-      complete = next?.complete;
-    if (next) {
-      claimBattleRewards(session.ai.library, next.rewardId, next.rewards);
-      context.generation.save();
+    if (!isCurrentBattle()) return;
+    const won = battle.phase === 'victory';
+    const spec = currentEncounterSpec(trip, battle.encounter);
+    const explored = trip.exploration;
+    const replay = explored?.replay;
+    const runId = session.ai.activeScript?.runId;
+    if ((battle.encounter === FINAL_ENCOUNTER || !won) && runId) {
+      if (!(await context.lootConflicts.resolve(runId)) || !isCurrentBattle()) return;
     }
-    const explored = session.journey.expedition.exploration;
+    const next = won ? completeEncounter(trip, battle) : null;
+    const complete = next?.complete;
+    if (won) {
+      const unlockedEmblem = grantVictoryOverlordEmblem(
+        session.ai.library,
+        session.battle.state,
+        session.journey.expedition,
+      );
+      if (unlockedEmblem) {
+        const embName = EMBLEMS[unlockedEmblem.id]?.emblem?.name || unlockedEmblem.id;
+        const ringTitle = unlockedEmblem.recipient
+          ? `${embName}（已由${unlockedEmblem.recipient.name}装备）`
+          : embName;
+        context.shell?.toast?.(`击破霸主觉醒纹章戒指：${ringTitle}`);
+      }
+    }
+    if (next) claimBattleRewards(session.ai.library, next.rewardId, next.rewards);
     diningBattleCompleted(
       session.ai.library,
       `${session.journey.expedition.id}:${session.battle.state.encounter}`,
     );
-    context.generation.save();
-    const replay = explored?.replay;
-    const runId = session.ai.activeScript?.runId;
     if (
       complete &&
       !replay &&
@@ -526,7 +645,6 @@ export function createJourney(context) {
         converted: false,
       });
     }
-    if ((complete || !won) && runId && !(await context.lootConflicts.resolve(runId))) return;
     const levelUps = complete
       ? claimCompletionExperience(session.ai.library, session.journey.expedition)
       : [];
@@ -547,14 +665,7 @@ export function createJourney(context) {
         if (record) record.adventureFinal = structuredClone(session.journey.expedition.adventure);
       }
       recordSettlement(session.ai.library, runId || session.journey.expedition.id);
-      context.generation.save();
     }
-    if (won && complete && explored && !replay && !explored.quickTestBoss) {
-      refreshWorldSkirmishes(session.ai.library, runId || Date.now());
-      context.generation.explorationWon(explored, { ether });
-      context.quests?.battleWon(explored);
-    }
-    context.audio.play(won ? 'victory' : 'defeat');
     const result = {
       won,
       complete,
@@ -564,16 +675,23 @@ export function createJourney(context) {
       loot: loot.filter((item) => item.source.encounter === session.battle.state.encounter),
       awards,
     };
-    session.journey.expedition.pendingResult = result;
+    trip.pendingResult = result;
+    if (complete && explored && !replay && !explored.quickTestBoss) {
+      refreshWorldSkirmishes(session.ai.library, runId || Date.now());
+      context.generation.explorationWon(explored, { ether });
+      context.quests?.battleWon(explored);
+    }
     context.generation.save();
-    context.checkpoint.saveNow();
+    context.audio.play(won ? 'victory' : 'defeat');
     return presentResult(result);
   }
   async function presentResult(result) {
+    const trip = session.journey.expedition;
     await context.settlement.show({
       ...result,
       onward() {
-        delete session.journey.expedition.pendingResult;
+        if (session.journey.expedition !== trip || trip.pendingResult !== result) return;
+        delete trip.pendingResult;
         $('#result').close();
         context.generation.showScene(session.battle.state.encounter, 'interlude');
         void startBattle(true);
@@ -609,11 +727,22 @@ export function createJourney(context) {
       }
       completeAdventureNode(expedition, session.ai.activeScript);
       context.adventure.leave();
-      context.generation.save();
       await startBattle(true);
     } catch (failure) {
       context.shell.toast(failure.message);
     }
   }
-  return { startBattle, startOverlandBattle, returnInn, showResult, resume, continueAdventure };
+  return {
+    startBattle,
+    startDeveloperBattle,
+    startOverlandBattle,
+    returnInn,
+    showResult,
+    resume,
+    continueAdventure,
+    dispose() {
+      cancelTransition();
+      context.planning?.clearAwakening();
+    },
+  };
 }

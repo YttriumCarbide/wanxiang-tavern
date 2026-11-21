@@ -1,3 +1,4 @@
+import { createGenerationSettingsView } from './generation-settings-view.js';
 import { explorationSpec } from '../exploration.js';
 import { isQuestRecruit } from '../summoning.js';
 import { needsContinuationWorld } from '../continuation-world.js';
@@ -18,7 +19,7 @@ import {
   generationEnabled,
 } from '../generation-options.js';
 import { defaultProtagonist } from '../content/qingyuan.js';
-import { HEROES } from '../data.js';
+
 import { newBattle, preview } from '../engine.js';
 import { compileRoster, purgeLegacyRuinsProgress, restoreLibrary } from '../ai/library.js';
 import {
@@ -27,8 +28,7 @@ import {
   settingOnly,
   characterWorldbook,
 } from '../ai/contracts.js';
-import { escapeText } from '../ui.js';
-import { html } from '../shared/html.js';
+
 import { query as $ } from './dom.js';
 import { createStoryFeed } from './story.js';
 import { recollectionScript } from '../recollections.js';
@@ -44,14 +44,9 @@ import {
   characterEntryCategory,
   classifyCharacterEntry,
 } from '../ai/worldbook.js';
-import { createRegexEditor } from './regex-editor.js';
 import { characterSheet } from './character-sheet.js';
 import { scriptRepetitionWarnings } from '../ai/script-prose.js';
-import {
-  applyGeneratedReset,
-  hasGeneratedRecovery,
-  restoreGeneratedRecovery,
-} from './generated-reset.js';
+import { applyGeneratedReset, restoreGeneratedRecovery } from './generated-reset.js';
 import { completeExploration } from '../exploration.js';
 import { REGIONS } from '../content/regions.js';
 import { assignParty, firstCompanion } from '../campaign.js';
@@ -60,15 +55,12 @@ import { developerOption } from '../generation-options.js';
 import { prepareSwapLesson } from '../companion-events.js';
 import { rearUnlocked } from '../formation-access.js';
 import { npcSummonStatus } from '../summoning.js';
-import { createDeparture } from './departure.js';
 import { syncGenerationLoadingChrome } from '../shared/scene-loading.js';
+import { GAME_LIBRARY_KEY as libraryKey } from '../storage/checkpoint.js';
 
-const libraryKey = 'wanxiang.worldbooks.v1';
 export function createGeneration(context) {
   const storage = context.storage || localStorage;
-  const { session, events } = context;
-  const departure = createDeparture(context);
-  context.departure = departure;
+  const { session, events, departure } = context;
   let request = null,
     equipmentPreparation = null,
     profiles = null,
@@ -81,34 +73,26 @@ export function createGeneration(context) {
     session.runtime.needsStart = storage.getItem('wanxiang.creation-pending.v1') === 'true';
     if (!context.apiClient.staticMode) applyGeneratedReset(storage);
     session.ai.library = restoreLibrary(JSON.parse(storage.getItem(libraryKey)));
-    if (purgeLegacyRuinsProgress(session.ai.library)) {
+    if (purgeLegacyRuinsProgress(session.ai.library))
       storage.setItem(libraryKey, JSON.stringify(session.ai.library));
-      try {
-        const rawCheckpoint = storage.getItem('wanxiang.battle-checkpoint.v1');
-        const checkpoint = rawCheckpoint ? JSON.parse(rawCheckpoint) : null;
-        if (checkpoint?.adventure?.expedition?.map === 'ruins') {
-          storage.removeItem('wanxiang.battle-checkpoint.v1');
-        }
-      } catch {
-        // Ignore malformed checkpoint entries.
-      }
-    }
   } catch {
     /* Retain the seeded official pool. */
   }
   const library = () => session.ai.library;
-  function renderDeveloperOptions() {
-    document.body.classList.add('gal-mode');
-    $('#developer-options').hidden = !session.ai.generationOptions.developerMode;
-    for (const checkbox of document.querySelectorAll('[data-generation-option]'))
-      checkbox.checked = session.ai.generationOptions[checkbox.dataset.generationOption];
-    if (session.runtime.mode === 'battle')
-      $('#back-inn').hidden = !developerOption(session.ai.generationOptions, 'allowRetreat');
-    context.shell?.syncInnVisitors?.();
-    context.generationAccess?.refresh();
-    context.records?.refreshArchive?.();
-    context.destinations?.refreshQuickTest?.();
-  }
+  const {
+    renderDeveloperOptions,
+    render,
+    setTab,
+    renderTransport,
+    renderCredentialRetention,
+    renderProvider,
+  } = createGenerationSettingsView({
+    context,
+    library,
+    storage,
+    getPendingPortal: () => pendingPortal,
+  });
+
   renderDeveloperOptions();
   function setOption(key, value) {
     const next = restoreGenerationOptions({
@@ -151,7 +135,8 @@ export function createGeneration(context) {
     context.shell.syncInnVisitors();
     try {
       syncSummaryWorldbook(library());
-      storage.setItem(libraryKey, JSON.stringify(library()));
+      if (context.checkpoint) context.checkpoint.saveLibrary();
+      else storage.setItem(libraryKey, JSON.stringify(library()));
       context.saves?.autoSave?.('游戏进度保存');
       return true;
     } catch {
@@ -166,13 +151,25 @@ export function createGeneration(context) {
   }
   installRoster();
   const api = (path, data, signal) => context.apiClient.request(path, data, { signal });
-  async function syncWorldbookCharacters() {
-    try {
+  let worldbookQueue = Promise.resolve();
+  function queueWorldbookTask(task, owner = library()) {
+    const isCurrent = () => !session.runtime.disposed && library() === owner;
+    const result = worldbookQueue.then(() => (isCurrent() ? task(isCurrent) : undefined));
+    // Advance the queue even when the caller must report a failed request.
+    worldbookQueue = result.then(
+      () => undefined,
+      () => undefined,
+    );
+    return result;
+  }
+  function syncWorldbookCharacters() {
+    const owner = library();
+    return queueWorldbookTask(async (isCurrent) => {
       const response = await api('worldbooks/tavern-world');
-      if (!response?.book?.entries) return;
+      if (!isCurrent() || !response?.book?.entries) return;
       const book = response.book;
       const retired = new Set(book.extensions?.wanxiang?.characterCleanup?.removedIds || []);
-      if (cleanLibraryCharacters(library(), retired)) {
+      if (cleanLibraryCharacters(owner, retired)) {
         save();
         if (session.runtime.mode === 'inn') {
           installRoster();
@@ -182,8 +179,8 @@ export function createGeneration(context) {
       }
       let nextUid = Math.max(-1, ...Object.keys(book.entries).map(Number)) + 1;
       let dirty = false;
-      for (const char of library().characters) {
-        if (retired.has(char.id) && char.id !== library().campaign?.protagonistId) continue;
+      for (const char of owner.characters) {
+        if (retired.has(char.id) && char.id !== owner.campaign?.protagonistId) continue;
         const name = char.setting?.name;
         if (!name) continue;
         const entry = Object.values(book.entries).find(
@@ -192,18 +189,14 @@ export function createGeneration(context) {
             item.extensions?.wanxiang?.characterId === char.id,
         );
         if (entry) {
-          const classified = classifyCharacterEntry(entry, char, library().campaign?.protagonistId);
+          const classified = classifyCharacterEntry(entry, char, owner.campaign?.protagonistId);
           if (JSON.stringify(classified) !== JSON.stringify(entry)) {
             Object.assign(entry, classified);
             dirty = true;
           }
         }
         if (!entry) {
-          book.entries[nextUid] = characterWorldEntry(
-            char,
-            nextUid,
-            library().campaign?.protagonistId,
-          );
+          book.entries[nextUid] = characterWorldEntry(char, nextUid, owner.campaign?.protagonistId);
           nextUid++;
           dirty = true;
         } else if (
@@ -216,72 +209,18 @@ export function createGeneration(context) {
           save();
         }
       }
-      if (syncArchivedNpcEntries(book, library().archives?.npcs)) {
+      if (syncArchivedNpcEntries(book, owner.archives?.npcs)) {
         dirty = true;
       }
       if (dirty) {
         await api('worldbooks/save', { id: 'tavern-world', book });
       }
-    } catch {
-      /* Background sync ignore */
-    }
+    }, owner).catch((failure) => {
+      if (!session.runtime.disposed && library() === owner) status(failure.message);
+    });
   }
   void syncWorldbookCharacters();
-  function render() {
-    $('#ai-party').innerHTML = HEROES.slice(0, rearUnlocked(library()) ? 6 : 3)
-      .map(
-        (slot, index) =>
-          html`<label
-            >${index + 1} · ${index < 3 ? '前场' : '后场'}<select data-party-slot="${index}">
-              ${library().campaign ? '<option value="">空位</option>' : ''}
-              ${library()
-                .characters.map(
-                  (entry) =>
-                    html`<option
-                      value="${entry.id}"
-                      ${library().party[index] === entry.id ? 'selected' : ''}
-                    >
-                      ${escapeText(entry.setting.name)}
-                    </option>`,
-                )
-                .join('')}
-            </select></label
-          >`,
-      )
-      .join('');
-    $('#ai-pool').innerHTML = library()
-      .characters.map(
-        (entry) =>
-          html`<article class="ai-entry">
-            <span
-              class="worldbook-light ${library().party.includes(entry.id) ? 'active' : ''}"
-              title="${library().party.includes(entry.id) ? '绿灯：在队' : '暂留酒馆'}"
-            ></span>
-            <div>
-              <b>${escapeText(entry.setting.name)}</b
-              ><small> ${entry.source === 'official' ? '官方' : '来客'}</small>
-            </div>
-            <button data-lore="${entry.id}">阅读设定</button>
-          </article>`,
-      )
-      .join('');
-    $('#ai-books').innerHTML =
-      library()
-        .scripts.map(
-          (book) =>
-            html`<article class="ai-entry">
-              <div>
-                <b>${escapeText(book.title)}</b
-                ><small>第${book.chapter}章 · ${escapeText((book.tags || []).join('、'))}</small>
-              </div>
-              <button data-book="${escapeText(book.id)}">阅读记录</button>
-            </article>`,
-        )
-        .join('') || '<p>尚未启程。在副本门点击“进入剧本”开始本章。</p>';
-    $('#ai-cancel').hidden = !session.ai.busy;
-    $('#generation-reset-undo').hidden = !hasGeneratedRecovery(storage);
-    renderCredentialRetention();
-  }
+
   function showBook(value) {
     if (!value) return;
     $('#ai-lore-editor').hidden = !value.combat;
@@ -300,73 +239,11 @@ export function createGeneration(context) {
       ].join('\n\n');
     }
   }
-  function setTab(tab) {
-    $('#ai-dialog').dataset.tab = tab;
-    $('#ai-dialog').dataset.preview = 'false';
-    $('#ai-lore-editor').hidden = true;
-    $('#ai-preview').hidden = false;
-    $('#ai-token-summary').textContent = '';
-    $('#ai-result-title').textContent = tab === 'prompts' ? '最终发送消息预览' : '世界书正文';
-    document.querySelectorAll('[data-ai-page]').forEach((page) => {
-      page.hidden = page.dataset.aiPage !== tab;
-    });
-    document
-      .querySelectorAll('[data-ai-tab]')
-      .forEach((button) =>
-        button.setAttribute('aria-selected', String(button.dataset.aiTab === tab)),
-      );
-  }
-  function renderTransport() {
-    if (context.apiClient.staticMode) {
-      $('#ai-requestMode').value = 'browser';
-      $('#ai-requestMode').disabled = true;
-      $('#ai-rememberKey').disabled = false;
-      $('#ai-transport-hint').textContent =
-        '所有数据保存在此浏览器，AI由本页直接请求。勾选记住密钥后，刷新和重启仍可使用；普通备份不包含密钥。';
-      return;
-    }
-    const direct = $('#ai-requestMode').value === 'browser';
-    $('#ai-rememberKey').disabled = direct;
-    $('#ai-transport-hint').textContent = direct
-      ? '由本页请求AI，接口需允许跨域。密钥仅在当前页面保留；本阶段预设准备与结果校验仍使用本机服务。'
-      : '由本机服务请求AI，可使用保存在本机的连接密钥。';
-  }
-  function renderCredentialRetention() {
-    const browser = $('#ai-requestMode').value === 'browser';
-    const temporary = browser && (!context.apiClient.staticMode || !$('#ai-rememberKey').checked);
-    $('#ai-key-retention').textContent = browser
-      ? temporary
-        ? '当前仅本次使用：密钥不会写入设备，更新页面或关机后需要重新输入。'
-        : '密钥会保存在此设备，刷新、代码更新及正常关机重启后保留；不会进入普通备份。'
-      : '';
-    $('#ai-remember-and-save').hidden = !context.apiClient.staticMode || !temporary;
-    $('#ai-profile-save').textContent = temporary
-      ? '仅本次使用（关闭后需重填）'
-      : pendingPortal
-        ? `保存并${pendingPortal === 'character' ? '召唤' : '进入剧本'}`
-        : '保存当前连接';
-  }
+
   events.on($('#ai-rememberKey'), 'change', renderCredentialRetention);
   events.on($('#ai-requestMode'), 'change', renderCredentialRetention);
   events.on($('#ai-requestMode'), 'change', renderTransport);
-  function renderProvider() {
-    const base = $('#ai-baseUrl').value;
-    const native =
-      $('#ai-provider').value === 'vertex' ||
-      ($('#ai-provider').value === 'auto' &&
-        /aiplatform\.googleapis\.com/.test(base) &&
-        !base.includes('/endpoints/'));
-    $('#ai-vertex-auth').hidden = !native;
-    $('#ai-provider-hint').hidden = !native;
-    const serviceAccount = native && $('#ai-vertexAuth').value === 'service-account';
-    $('#ai-service-account-fields').hidden = !serviceAccount;
-    $('#ai-key').closest('label').hidden = serviceAccount;
-    $('#ai-provider-hint').textContent = serviceAccount
-      ? '导入或粘贴服务账号 JSON，验证后保存。项目自动识别，地区默认为 global；模型名自行填写。私钥只用于本地签名，访问令牌自动获取，不会进入普通备份。'
-      : $('#ai-vertexAuth').value === 'oauth'
-        ? '标准模式：Base URL 填 https://区域-aiplatform.googleapis.com/v1/projects/项目ID/locations/区域，全球区域用 aiplatform.googleapis.com；密钥栏填有效OAuth访问令牌。令牌过期后需更新，本页不保存服务账号私钥。模型ID手动填写。'
-        : '快捷模式：Base URL 填 https://aiplatform.googleapis.com/v1，密钥栏填Vertex API Key，模型栏填Google控制台中的Gemini模型ID。原生接口无需 /chat/completions，模型ID手动填写。';
-  }
+
   events.on($('#ai-provider'), 'change', () => {
     if (
       $('#ai-provider').value === 'vertex' &&
@@ -450,6 +327,7 @@ export function createGeneration(context) {
   }
   async function open(notice = '', kind) {
     if (!['inn', 'event'].includes(session.runtime.mode)) return;
+    if ($('#destination-dialog')?.open) $('#destination-dialog').close();
     render();
     setTab('settings');
     context.gal?.suspendForModal($('#ai-dialog'));
@@ -655,7 +533,11 @@ export function createGeneration(context) {
   const worldEditor = createWorldbookEditor({
     session,
     events,
-    api,
+    api(path, data) {
+      return path.startsWith('worldbooks/')
+        ? queueWorldbookTask(() => api(path, data))
+        : api(path, data);
+    },
     inputFor,
     savePrivate: save,
     onSaved(book) {
@@ -679,7 +561,6 @@ export function createGeneration(context) {
       }
     },
   });
-  createRegexEditor({ events, api });
   async function accept(kind, generated, input, arrivalDialogue) {
     const entry =
       kind === 'character'
@@ -735,7 +616,10 @@ export function createGeneration(context) {
     }
   }
   async function recruit(entry, arrivalDialogue, npcId) {
-    if (isQuestRecruit(library(), entry.setting.name)) throw Error('此角色通过任务招募');
+    const testingOfficial =
+      entry.source === 'official' && session.ai.generationOptions.developerMode;
+    if (!testingOfficial && isQuestRecruit(library(), entry.setting.name))
+      throw Error('此角色通过任务招募');
     if (library().characters.length >= 100) throw Error('角色池已满（100名）');
     if (library().characters.some((member) => member.id === entry.id))
       throw Error('这个角色已经加入酒馆');
@@ -834,7 +718,7 @@ export function createGeneration(context) {
   async function portal(kind, summonInput = null) {
     if (session.runtime.mode !== 'inn' || session.ai.busy || session.runtime.disposed) return;
     if (session.runtime.needsStart) return context.onboarding.open();
-    if (context.onboarding && !context.onboarding.allowPortal(kind)) return;
+    if (context.onboarding && !context.onboarding.allowPortal(kind, { entering: true })) return;
     if (
       kind === 'script' &&
       generationEnabled(session.ai.generationOptions) &&
@@ -883,11 +767,6 @@ export function createGeneration(context) {
         );
         return;
       }
-      if (!profiles[kind].promptPresetId || profiles[kind].promptPresetId.endsWith('-default')) {
-        await open('请先导入并选择提示词预设。', kind);
-        setTab('prompts');
-        return;
-      }
       if (kind === 'character' && library().characters.length >= 100)
         throw Error('角色池已满（100名）');
       pendingPortal = null;
@@ -918,6 +797,7 @@ export function createGeneration(context) {
       context.shell.toast(message);
       diagnostics.refreshButtons();
       if (failure.diagnostic) {
+        if ($('#destination-dialog')?.open) $('#destination-dialog').close();
         diagnostics.show(kind);
       } else if (failure.name !== 'AbortError') {
         diagnostics.record(
@@ -932,6 +812,7 @@ export function createGeneration(context) {
           kind === 'script' ? scriptInput() : inputFor(kind),
           false,
         );
+        if ($('#destination-dialog')?.open) $('#destination-dialog').close();
         diagnostics.show(kind);
       }
     }
@@ -984,7 +865,6 @@ export function createGeneration(context) {
     captureProfile,
     fillProfile,
     inputFor,
-    setTab,
   });
   const guard = (action) => async () => {
     try {
@@ -1089,16 +969,25 @@ export function createGeneration(context) {
       status(failure.message);
       return;
     }
-    member.setting.worldbook = text;
-    member.setting.tags = tags;
-    member.setting.edited = true;
-    library().prepared = null;
-    save();
-    $('#ai-preview').textContent = text;
-    void (async () => {
-      try {
-        const response = await api('worldbooks/tavern-world');
-        if (!response?.book?.entries) return;
+    const owner = library();
+    void queueWorldbookTask(async (isCurrent) => {
+      const prior = {
+        worldbook: member.setting.worldbook,
+        tags: member.setting.tags,
+        edited: member.setting.edited,
+      };
+      const prepared = owner.prepared;
+      Object.assign(member.setting, { worldbook: text, tags, edited: true });
+      owner.prepared = null;
+      if (!save()) {
+        Object.assign(member.setting, prior);
+        owner.prepared = prepared;
+        return;
+      }
+      if (editedLore === member.id) $('#ai-preview').textContent = text;
+      const response = await api('worldbooks/tavern-world');
+      if (!isCurrent()) return;
+      if (response?.book?.entries) {
         const book = response.book;
         const entry = Object.values(book.entries).find(
           (item) =>
@@ -1109,16 +998,56 @@ export function createGeneration(context) {
           entry.content = text;
           await api('worldbooks/save', { id: 'tavern-world', book });
         }
-      } catch {
-        /* Background sync ignore */
       }
-    })();
-    status('人物世界书已保存，之后生成剧本立即使用；战斗数据保持原样。');
+      if (isCurrent()) status('人物世界书已保存，之后生成剧本立即使用；战斗数据保持原样。');
+    }, owner).catch((failure) => {
+      if (!session.runtime.disposed && library() === owner) status(failure.message);
+    });
   });
+  async function applyQuickConnection(kinds, draft) {
+    if (!profiles) profiles = await api('config');
+    const requestMode = context.apiClient.staticMode ? 'browser' : 'local';
+    for (const kind of kinds) {
+      const existing = profiles?.[kind] || {};
+      const payload = {
+        kind,
+        baseUrl: String(draft.baseUrl || '').trim(),
+        model: String(draft.model || '').trim(),
+        provider: draft.provider || existing.provider || 'auto',
+        vertexAuth: existing.vertexAuth || 'service-account',
+        tokenField: existing.tokenField || 'max_tokens',
+        maxTokens: existing.maxTokens || 32768,
+        promptProcessing: existing.promptProcessing || 'merge_tools',
+        requestMode,
+        jsonMode: existing.jsonMode ?? false,
+        strictJson: existing.strictJson ?? false,
+        rememberKey: true,
+        clearKey: false,
+        apiKey: String(draft.apiKey || '').trim(),
+        temperature: existing.temperature ?? null,
+        ...(kind === 'summary' ? { contextSize: existing.contextSize || 131072 } : {}),
+      };
+      profiles = await api('config', payload);
+    }
+    fillProfile();
+    return profiles;
+  }
+  async function fetchModelsForDraft(kind, draft) {
+    const baseUrl = String(draft?.baseUrl || '').trim();
+    if (!baseUrl) throw Error('请先填写 Base URL');
+    await applyQuickConnection([kind], {
+      ...draft,
+      baseUrl,
+      model: String(draft?.model || '').trim() || profiles?.[kind]?.model || 'model-probe',
+    });
+    const result = await api(`models/${kind}`, {});
+    return [...new Set(result.models || [])].sort((a, b) => a.localeCompare(b));
+  }
   return {
     open,
-    openPrompts: () => presetEditor.open(),
     saveConnection: saveProfile,
+    applyQuickConnection,
+    fetchModelsForDraft,
     async setupStatus() {
       profiles = await api('config');
       return Object.fromEntries(
@@ -1126,7 +1055,6 @@ export function createGeneration(context) {
           kind,
           {
             connection: ready(profile, kind),
-            prompt: !!profile.promptPresetId && !profile.promptPresetId.endsWith('-default'),
           },
         ]),
       );
@@ -1141,11 +1069,6 @@ export function createGeneration(context) {
       if (session.runtime.disposed) return false;
       if (!ready(profiles[kind], kind)) {
         await open(`开始前请先配置${kind === 'character' ? '角色生成' : '剧本'}API。`, kind);
-        return false;
-      }
-      if (!profiles[kind].promptPresetId || profiles[kind].promptPresetId.endsWith('-default')) {
-        await open('请先导入并选择提示词预设，再回到主角创建。', kind);
-        setTab('prompts');
         return false;
       }
       return true;
@@ -1223,7 +1146,7 @@ export function createGeneration(context) {
       return next;
     },
     refreshReview: diagnostics.refreshButtons,
-    openReview: diagnostics.show,
+    openReview: () => diagnostics.show(undefined, context.latestResponse?.show),
     recordReview: diagnostics.record,
     setOption,
     setSummonVisible(visible) {
@@ -1293,7 +1216,6 @@ export function createGeneration(context) {
       return compileRoster(library());
     },
     dispose() {
-      departure.dispose();
       worldEditor.dispose();
       request?.abort();
       story.dispose();

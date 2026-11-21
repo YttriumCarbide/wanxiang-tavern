@@ -3,6 +3,7 @@ import {
   clampEquipmentLevel,
   EQUIPMENT_QUALITIES,
   EQUIPMENT_STATS,
+  equipmentInstanceView,
   resolveEquipmentQuality,
   resolveEquipmentTemplate,
 } from '../equipment.js';
@@ -18,16 +19,7 @@ function buildEntry(option, library, ring, selectedValue, description) {
     !ring && instance ? resolveEquipmentTemplate(library, instance.templateId) : null;
   const item = ring
     ? EMBLEMS[option.value]?.emblem
-    : template && instance
-      ? {
-          ...template,
-          ...instance,
-          id: instance.id,
-          name: template.name,
-          flavor: template.flavor,
-          price: template.price,
-        }
-      : template;
+    : equipmentInstanceView(template, instance, library.equipment?.affixesByTemplate);
   const emblemEntry = ring && option.value ? EMBLEMS[option.value] || null : null;
   const qualityKey = !ring && item ? resolveEquipmentQuality(item.quality, item.price) : '';
   const qualityName = qualityKey ? EQUIPMENT_QUALITIES[qualityKey]?.name || '' : '';

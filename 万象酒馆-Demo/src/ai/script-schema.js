@@ -167,7 +167,13 @@ function scriptV5Schema({ requireTheater = true, allowTags = false } = {}) {
 }
 
 export function scriptOutputSchema() {
-  return scriptV5Schema({ requireTheater: true, allowTags: false });
+  const schema = scriptV5Schema({ requireTheater: true, allowTags: false });
+  for (const variant of schema.properties.data.properties.items.items.anyOf) {
+    if (variant.properties?.description) {
+      variant.properties.description.maxLength = 20;
+    }
+  }
+  return schema;
 }
 
 /** Existing v2/v3/v4/early-v5 responses and saved chapters remain readable during migration. */

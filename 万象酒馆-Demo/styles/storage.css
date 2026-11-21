@@ -29,3 +29,12 @@
   gap: 8px;
   flex-wrap: wrap;
 }
+
+.saves-backup-toggle {
+  gap: 6px;
+}
+
+.saves-backup-toggle input {
+  width: auto;
+  margin: 0;
+}

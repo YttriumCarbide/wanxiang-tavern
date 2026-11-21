@@ -35,6 +35,9 @@ export function extractGenerationEnvelope(kind, rawText) {
     candidateText,
     envelope: { tag: result.tag, ignoredCharacters },
     repairs: [
+      ...(result.repairedBoundary
+        ? [{ message: `兼容读取 <${result.tag}> 的非标准标签边界` }]
+        : []),
       {
         message: `提取 <${result.tag}> 内的JSON；忽略标签外 ${ignoredCharacters} 个字符（原始返回保留）`,
       },

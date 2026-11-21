@@ -12,9 +12,11 @@ const researchHas = (state, costs, logic) =>
   );
 
 export function restoreWorkshop(value, catalog, now = 0) {
+  const sanitizeAt = (at, fallback = 0) =>
+    Number.isFinite(at) && Math.abs(at) <= Number.MAX_SAFE_INTEGER ? Math.max(0, at) : fallback;
   const state = {
     version: 1,
-    at: Number.isFinite(value?.at) ? Math.max(0, Math.min(value.at, now)) : now,
+    at: sanitizeAt(value?.at, sanitizeAt(now)),
     items: {},
     known: [],
     discovered: [],
@@ -197,7 +199,9 @@ export function workshopParallel(state, catalog, station, id) {
         (effect.type === 'item' && effect.id === id)
       )
         bonus += modifierValue(effect.parallel, state.research[tech.id] || 0, base, true);
-  return count((base + bonus) * (state.stations[station.id]?.active || 0), 1e6);
+  const active = state.stations[station.id]?.active || 0;
+  if (!active) return 0;
+  return count(Math.min(1e6, (base + bonus) * active), 1e6);
 }
 
 export function workshopBuildCost(state, station) {

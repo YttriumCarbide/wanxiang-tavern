@@ -497,7 +497,7 @@ export const MILL_BOSSES = [
       attackType: 'special-weapon',
       weaknesses: ['fire', 'brawl', 'axe', 'lightning'],
       toughness: 7,
-      hp: 360,
+      hp: 314,
       speed: 3,
       buffs: { artifact: 1 },
       tactic: { target: 'fixed' },
@@ -505,8 +505,8 @@ export const MILL_BOSSES = [
     [
       move(
         '失衡木杆横扫',
-        '挥动悬吊失衡的笨重长木杆猛击相邻两格各11伤害并附加1层虚弱。',
-        [hit(11), buff('weak', 1)],
+        '挥动悬吊失衡的笨重长木杆猛击相邻两格各9伤害并附加1层虚弱。',
+        [hit(9), buff('weak', 1)],
         {
           slot: 0,
           adjacent: true,
@@ -516,8 +516,8 @@ export const MILL_BOSSES = [
       ),
       move(
         '重力铁钳猛砸',
-        '生锈铁钳借逆重力重锤中位17伤害并附加1层易伤。',
-        [hit(17), buff('vulnerable', 1)],
+        '生锈铁钳借逆重力重锤中位13伤害并附加1层易伤。',
+        [hit(13), buff('vulnerable', 1)],
         {
           slot: 1,
           damageType: 'axe',
@@ -526,8 +526,8 @@ export const MILL_BOSSES = [
       ),
       move(
         '发条错位重整',
-        '背部时钟齿轮狂转上弦、炼金核心闪烁稳固躯壳：获得16护盾、1层力量与1层铁皮。',
-        [selfShieldEffect(16), buff('strength', 1, 'self'), buff('iron', 1, 'self')],
+        '背部时钟齿轮狂转上弦、炼金核心闪烁稳固躯壳：获得14护盾、1层力量与1层铁皮。',
+        [selfShieldEffect(14), buff('strength', 1, 'self'), buff('iron', 1, 'self')],
         { slot: 0, clip: 'Special_Action' },
       ),
     ],
@@ -541,16 +541,16 @@ export const MILL_BOSSES = [
       overlordPhases: Object.freeze([0.66, 0.33]),
       toughnessByPhase: Object.freeze([7, 9, 10]),
       breakLayersByPhase: Object.freeze([2, 2, 3]),
-      phaseShields: Object.freeze([0, 16, 22]),
+      phaseShields: Object.freeze([0, 14, 20]),
       artifactByPhase: Object.freeze([0, 1, 1]),
       chargeMechanic: Object.freeze({
         cadenceRounds: 3,
         chargeMove: Object.freeze({
           id: 'puppet-core-charge',
           name: '炉心逆重蓄能',
-          text: '双钳收拢胸口炉心逆向拧死发条，获得14护盾并积蓄毁灭能量；下回合露出元素破绽，并于时间轴靠前位置释放【湮灭炼金坍缩】。',
+          text: '双钳收拢胸口炉心逆向拧死发条，获得12护盾并积蓄毁灭能量；下回合露出元素破绽，并于时间轴靠前位置释放【湮灭炼金坍缩】。',
           slot: 1,
-          selfShield: 14,
+          selfShield: 12,
           effects: [],
           clip: 'Charge_Up',
           isCharge: true,
@@ -558,8 +558,8 @@ export const MILL_BOSSES = [
         releaseMovesByPhase: Object.freeze([
           move(
             '湮灭炼金坍缩',
-            '失控炉心引爆蓄积的逆重熔流轰击全前排22伤害，并附加1层易伤与1层虚弱。',
-            [hit(22), buff('vulnerable', 1), buff('weak', 1)],
+            '失控炉心引爆蓄积的逆重熔流轰击全前排17伤害，并附加1层易伤与1层虚弱。',
+            [hit(17), buff('vulnerable', 1), buff('weak', 1)],
             {
               slots: [0, 1, 2],
               damageType: 'special-magic',
@@ -569,8 +569,8 @@ export const MILL_BOSSES = [
           ),
           move(
             '湮灭炼金坍缩',
-            '双倍过载的炼金坍缩焰浪轰击全前排26伤害，并附加1层易伤与1层虚弱。',
-            [hit(26), buff('vulnerable', 1), buff('weak', 1)],
+            '双倍过载的炼金坍缩焰浪轰击全前排19伤害，并附加1层易伤与1层虚弱。',
+            [hit(19), buff('vulnerable', 1), buff('weak', 1)],
             {
               slots: [0, 1, 2],
               enraged: true,
@@ -581,8 +581,8 @@ export const MILL_BOSSES = [
           ),
           move(
             '终极炼金坍缩',
-            '彻底失控的炉心洪流吞没全前排造成30伤害，并附加1层易伤与1层虚弱。',
-            [hit(30), buff('vulnerable', 1), buff('weak', 1)],
+            '彻底失控的炉心洪流吞没全前排造成22伤害，并附加1层易伤与1层虚弱。',
+            [hit(22), buff('vulnerable', 1), buff('weak', 1)],
             {
               slots: [0, 1, 2],
               enraged: true,
@@ -606,19 +606,19 @@ export const MILL_BOSSES = [
       enragedIntents: [
         move(
           '逆重齿轮坠击',
-          '反重力核心骤然过载倒悬轰落，横扫全前排12伤害并附加1层易伤。',
-          [hit(12), buff('vulnerable', 1)],
+          '反重力核心骤然过载倒悬轰落，横扫全前排9伤害并附加1层易伤。',
+          [hit(9), buff('vulnerable', 1)],
           { slots: [0, 1, 2], enraged: true, damageType: 'special-weapon', clip: 'Special_Attack' },
         ),
         move(
           '双臂错位连槌',
-          '失衡木杆与铁钳错位狂砸左格造成16伤害并附加4层流血。',
-          [hit(16), buff('bleed', 4)],
+          '失衡木杆与铁钳错位狂砸左格造成11伤害并附加2层流血。',
+          [hit(11), buff('bleed', 2)],
           { slot: 0, enraged: true, damageType: 'axe', clip: 'Normal_Attack' },
         ),
-        move('失控发条超频', '发条暴走震荡全前排10伤害，同时获得18护盾与1层铁皮。', [hit(10)], {
+        move('失控发条超频', '发条暴走震荡全前排7伤害，同时获得16护盾与1层铁皮。', [hit(7)], {
           slots: [0, 1, 2],
-          selfShield: 18,
+          selfShield: 16,
           selfBuff: { iron: 1 },
           enraged: true,
           damageType: 'special-weapon',
@@ -628,24 +628,24 @@ export const MILL_BOSSES = [
       finalPhaseIntents: [
         move(
           '终焉逆重崩落',
-          '临爆核心失重倾坠轰击全前排14伤害并附加1层易伤。',
-          [hit(14), buff('vulnerable', 1)],
+          '临爆核心失重倾坠轰击全前排10伤害并附加1层易伤。',
+          [hit(10), buff('vulnerable', 1)],
           { slots: [0, 1, 2], enraged: true, damageType: 'special-weapon', clip: 'Special_Attack' },
         ),
         move(
           '熔炉铁钳处决',
-          '过载铁钳贯砸中格20伤害并撕裂造成5层流血。',
-          [hit(20), buff('bleed', 5)],
+          '过载铁钳贯砸中格14伤害并撕裂造成3层流血。',
+          [hit(14), buff('bleed', 3)],
           { slot: 1, enraged: true, damageType: 'axe', clip: 'Normal_Attack' },
         ),
         move(
           '过载核心喷涌',
-          '紫绿炼金焰浪席卷相邻两格15伤害并附加1层虚弱，同时获得14护盾。',
-          [hit(15), buff('weak', 1)],
+          '紫绿炼金焰浪席卷相邻两格11伤害并附加1层虚弱，同时获得12护盾。',
+          [hit(11), buff('weak', 1)],
           {
             slot: 1,
             adjacent: true,
-            selfShield: 14,
+            selfShield: 12,
             enraged: true,
             damageType: 'special-magic',
             clip: 'Special_Attack',

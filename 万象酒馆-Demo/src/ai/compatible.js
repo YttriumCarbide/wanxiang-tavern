@@ -1,11 +1,12 @@
 import { generationDiagnostic, redactDiagnostic } from './diagnostic.js';
-import { readCompletionStream } from './completion-stream.js';
+import { normalizeCompletionUsage, readCompletionStream } from './completion-stream.js';
 import { readToolContent } from './tool-content.js';
 import { outputToolRequest } from './preset-output.js';
 import { createPresetOutputProcessor } from './output-processor.js';
 import { opencodeHeaders } from './opencode-headers.js';
 import { upstreamError } from './upstream-error.js';
-import { isVertex, vertexRequest, vertexResponse } from './vertex.js';
+import { readBoundedResponseText } from './response-body.js';
+import { VERTEX_DEFAULT_MODELS, isVertex, vertexRequest, vertexResponse } from './vertex.js';
 import { serviceAccountToken } from './vertex-service-account.js';
 import {
   newRouteAccumulator,
@@ -91,10 +92,7 @@ async function executeRequest(
   const nativeVertex = isVertex(profile);
   const serviceAccount = nativeVertex && profile.vertexAuth === 'service-account';
   if (!serviceAccount) validateApiKey(profile.apiKey || '');
-  if (models && nativeVertex)
-    throw Error(
-      'Vertex 原生接口未提供快捷模式模型列表，请在模型栏填写 Google 控制台显示的 Gemini 模型ID；未发送付费请求。',
-    );
+  if (models && nativeVertex) return { models: [...VERTEX_DEFAULT_MODELS] };
   let url = completionURL(profile.baseUrl);
   if (models) url.pathname = url.pathname.replace(/\/chat\/completions$/, '/models');
   let headers = { 'Content-Type': 'application/json', ...opencodeHeaders(profile) };
@@ -191,6 +189,26 @@ async function executeRequest(
   }
 }
 
+function streamRedaction(secret) {
+  let tail = '';
+  return (text, final) => {
+    if (!secret) return text;
+    const input = tail + text;
+    if (final || secret.length === 1) return redactDiagnostic(input, secret) ?? '';
+    // Keep possible partial matches, but commit each complete non-overlapping match.
+    let end = Math.max(0, input.length - secret.length + 1);
+    let start = 0;
+    for (;;) {
+      const match = input.indexOf(secret, start);
+      if (match < 0) break;
+      start = match + secret.length;
+    }
+    end = Math.max(end, start);
+    tail = input.slice(end);
+    return redactDiagnostic(input.slice(0, end), secret) ?? '';
+  };
+}
+
 async function readResponse(
   response,
   {
@@ -238,9 +256,16 @@ async function readResponse(
       });
       throw failure;
     }
-  const content = redact(await response.text());
-  routeAcc.raw = redact(response.vertexRawText || content).slice(0, 4000);
-  if (content.length > 2000000) throw Error('接口返回内容过大');
+  const redactToken = streamRedaction(vertexToken);
+  const redactKey = streamRedaction(profile.apiKey);
+  const recordRaw = (content) => {
+    routeAcc.raw = redact(response.vertexRawText || content).slice(0, 4000);
+  };
+  const content = await readBoundedResponseText(response, '接口返回内容过大', {
+    transform: (text, final) => redactKey(redactToken(text, final), final),
+    onLimit: recordRaw,
+  });
+  recordRaw(content);
   const rejected = (message, rawText = response.vertexRawText || content, stage = 'transport') => {
     const failure = Error(message);
     failure.status = response.status;
@@ -318,7 +343,7 @@ async function readResponse(
   if (typeof output !== 'string' || !output.trim()) {
     const failure = rejected(
       '模型没有返回正文，请检查模型是否支持Chat Completions',
-      content,
+      redact(response.vertexRawText ?? content),
       'empty',
     );
     failure.retryableEmpty =
@@ -333,9 +358,6 @@ async function readResponse(
   return {
     content: processor.finish(),
     rawContent: output,
-    usage: {
-      input: Number(data.usage?.prompt_tokens || 0),
-      output: Number(data.usage?.completion_tokens || 0),
-    },
+    usage: normalizeCompletionUsage(data.usage),
   };
 }

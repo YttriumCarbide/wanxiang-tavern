@@ -1,3 +1,4 @@
+import { mountTavernPromotion } from './daily-promotion.js';
 import { recordJourneyActivity } from '../memory.js';
 import {
   DAILY_ACTIONS,
@@ -50,6 +51,7 @@ import { REGIONS } from '../content/regions.js';
 import { unlockDungeonMap } from '../exploration.js';
 import { worldRegion } from '../worlds.js';
 import { learning } from '../campaign.js';
+import { locationMusic } from '../audio/config.js';
 
 export function createDaily(context) {
   const { session, events } = context;
@@ -170,6 +172,7 @@ export function createDaily(context) {
         onCovered: () => {
           if (session.runtime.disposed) return;
           if (beforeOpen && beforeOpen() === false) return;
+          closeMapsBehindCurtain();
           visitedDiscovery = dungeonId;
           context.destinations?.openDiscovery?.(dungeonId);
           render();
@@ -262,6 +265,7 @@ export function createDaily(context) {
     recruitPanel.close();
     openSetup();
   });
+  let talkFrame = null;
   function alignSceneTalk() {
     if (talkButton.hidden) {
       talkButton.classList.remove('is-docked');
@@ -288,56 +292,7 @@ export function createDaily(context) {
   }
   events.on(window, 'resize', alignSceneTalk);
 
-  function renderPromotion() {
-    const progress = tavernPromotion(state(), library().workshop);
-    const shiftPct = Math.min(100, Math.round((Math.min(progress.shifts, 2) / 2) * 100));
-    const corePct = Math.min(100, Math.round((Math.min(progress.cores, 10) / 10) * 100));
-    promotion.innerHTML = `<header class="promo-header">
-        <div class="promo-seal" aria-hidden="true"><span>${progress.rank}</span><small>阶</small></div>
-        <div class="promo-title">
-          <small>GUILD CHARTER · 酒馆勋阶</small>
-          <h2>酒馆 · ${progress.rank} 阶</h2>
-        </div>
-        <button type="button" data-promotion-close aria-label="关闭">×</button>
-      </header>
-      ${
-        progress.rank === 0
-          ? `<div class="promo-milestones">
-              <div class="promo-row" data-done="${progress.shifts >= 2}">
-                <div class="promo-row-meta">
-                  <span class="promo-mark">${progress.shifts >= 2 ? '◆' : '◇'}</span>
-                  <span>完成营业</span>
-                  <b>${Math.min(progress.shifts, 2)} / 2</b>
-                </div>
-                <div class="promo-meter"><i style="width:${shiftPct}%"></i></div>
-              </div>
-              <div class="promo-row" data-done="${progress.cores >= 10}">
-                <div class="promo-row-meta">
-                  <span class="promo-mark">${progress.cores >= 10 ? '◆' : '◇'}</span>
-                  <span>持有工坊机芯</span>
-                  <b>${Math.min(progress.cores, 10)} / 10</b>
-                </div>
-                <div class="promo-meter"><i style="width:${corePct}%"></i></div>
-              </div>
-            </div>
-            <footer class="promo-foot">
-              <button type="button" class="daily-confirm promo-confirm" data-promotion-confirm ${progress.ready ? '' : 'disabled'}>${progress.ready ? '授予 1 阶勋印' : '升至 1 阶'}</button>
-            </footer>`
-          : '<p class="promo-max-note">已达当前版本最高勋阶，下一阶目标待开放。</p>'
-      }`;
-  }
-  events.on(promotion, 'click', (event) => {
-    if (event.target.closest('[data-promotion-close]')) promotion.close();
-    if (
-      event.target.closest('[data-promotion-confirm]') &&
-      tavernPromotion(state(), library().workshop).ready
-    ) {
-      state().rank++;
-      recordJourneyActivity(library(), 'promotion', '酒馆升至 ' + state().rank + ' 阶');
-      save();
-      renderPromotion();
-    }
-  });
+  const renderPromotion = mountTavernPromotion({ promotion, events, library, state, save });
   const service = createServiceBoard(context, (shift) => {
     if (active()?.shift !== shift || !shift.finished) return;
     locked = false;
@@ -401,6 +356,17 @@ export function createDaily(context) {
       el.hidden = true;
     }
     mapOpen = false;
+  }
+
+  function closeMapsBehindCurtain() {
+    hideAtlasOverlay();
+    frame()?.contentWindow?.postMessage({ type: 'daily-close-atlas' }, location.origin);
+    atlasFrame()?.contentWindow?.postMessage({ type: 'daily-close-atlas' }, location.origin);
+  }
+
+  function resetAtlasWalker() {
+    frame()?.contentWindow?.postMessage({ type: 'daily-reset-atlas-walker' }, location.origin);
+    atlasFrame()?.contentWindow?.postMessage({ type: 'daily-reset-atlas-walker' }, location.origin);
   }
 
   function postAtlasManaged(target = atlasFrame()?.contentWindow) {
@@ -651,7 +617,12 @@ export function createDaily(context) {
     talkButton.hidden = !dockTalk;
     root.dataset.outdoors = String(dockTalk);
     alignSceneTalk();
-    if (dockTalk) requestAnimationFrame(alignSceneTalk);
+    if (dockTalk && talkFrame === null) {
+      talkFrame = requestAnimationFrame(() => {
+        talkFrame = null;
+        alignSceneTalk();
+      });
+    }
     status.innerHTML = showStatus();
     status.hidden = !status.children.length;
     if (setup.open) showSetup();
@@ -1054,8 +1025,6 @@ export function createDaily(context) {
         return render();
       }
       if (event.data?.type === 'daily-overland-plan') {
-        hideAtlasOverlay();
-        render();
         const destination = state().memory?.tavernExit || 'street';
         return void travel.start(event.data.to, {
           fromTavern: true,
@@ -1126,6 +1095,7 @@ export function createDaily(context) {
     if (event.data?.type !== 'scene-ready') return;
     mapOpen = false;
     scene = event.data.scene === 'starlamp-street' ? 'street' : event.data.scene;
+    if (session.runtime.mode === 'inn') context.audio?.setScene?.(locationMusic(scene));
     if (event.data.title) sceneTitles.set(scene, event.data.title);
     if (scene === 'street') context.onboarding?.streetEntered?.();
     if (scene === 'tavern') context.onboarding?.tavernEntered?.();
@@ -1219,19 +1189,17 @@ export function createDaily(context) {
       render();
     },
     closeDiscoveryWithTransition,
+    closeAtlasOverlay: closeMapsBehindCurtain,
+    cancelAtlasPlan: resetAtlasWalker,
     arriveDiscovery(id) {
-      queueMicrotask(() => {
-        void openDungeonWithTransition(id, '正在踏入异境入口，展开探索舆图…', '正在踏入 · ', () => {
-          if (!returnOuting()) return false;
-          return !context.quests?.arrived(id);
-        });
+      void openDungeonWithTransition(id, '正在踏入异境入口，展开探索舆图…', '正在踏入 · ', () => {
+        if (!returnOuting()) return false;
+        return !context.quests?.arrived(id);
       });
     },
     arriveDungeon(id) {
-      queueMicrotask(() => {
-        if (id === 'mill' || id === 'ruins') context.onboarding?.ruinsReached?.();
-        void openDungeonWithTransition(id, '正在勘测遗迹入口与探索路线…', '正在抵达 · ');
-      });
+      if (id === 'mill' || id === 'ruins') context.onboarding?.ruinsReached?.();
+      void openDungeonWithTransition(id, '正在勘测遗迹入口与探索路线…', '正在抵达 · ');
     },
     overlandRun: travel.run,
     overlandDialogueScenes: travel.dialogueScenes,
@@ -1324,6 +1292,8 @@ export function createDaily(context) {
       }
     },
     dispose() {
+      if (talkFrame !== null) cancelAnimationFrame(talkFrame);
+      talkFrame = null;
       dungeonTransition.dispose();
       atlasLoading.dispose();
       atlasFrame()?.remove();

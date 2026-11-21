@@ -1,16 +1,20 @@
-import { finishSettlement } from './legacy-session.mjs';
+import {
+  finishSettlement,
+  finishGalDialogue,
+  dismissAutomaticJournals,
+} from './legacy-session.mjs';
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import { buildPlan } from '../planner.js';
 import { abilityFor } from '../../src/catalog.js';
-import { dismissAutomaticJournals } from './legacy-session.mjs';
+import { EDITH_LESSONS } from '../../src/content/edith-guide.js';
 
 /** Fresh save → offline Qingyuan → Edith dialogue → guided battle → five-room completion. */
-export async function onboardingChecks({ browser, baseURL, output }) {
+export async function onboardingChecks({ browser, baseURL, output, firstDungeonOnly = false }) {
   const requests = [],
     errors = [];
   const page = await browser.newPage({ viewport: { width: 1440, height: 836 } });
-  await dismissAutomaticJournals(page);
+  await dismissAutomaticJournals(page, { dismissTheaters: false });
   await page.addInitScript(() => {
     if (window.origin === 'null') return;
     localStorage.setItem(
@@ -19,6 +23,15 @@ export async function onboardingChecks({ browser, baseURL, output }) {
     );
   });
   page.on('pageerror', (error) => errors.push(error.stack || error.message));
+  async function guideDialogueOpen() {
+    return page.evaluate(() => {
+      const stage = document.querySelector('#gal-stage');
+      return (
+        document.querySelector('#guide-dialogue').open ||
+        (!stage.hidden && stage.dataset.owner === 'guide-dialogue')
+      );
+    });
+  }
   async function innReady() {
     await page
       .frameLocator('#inn-frame iframe')
@@ -27,12 +40,37 @@ export async function onboardingChecks({ browser, baseURL, output }) {
     return page.frames().find((frame) => frame.url().includes('tavern.html'));
   }
   async function finishDialogue() {
-    if (await page.locator('#guide-dialogue').evaluate((panel) => panel.open))
-      await page.locator('#guide-dialogue').waitFor({ state: 'visible', timeout: 10000 });
-    for (let i = 0; i < 35 && (await page.locator('#guide-dialogue').isVisible()); i++) {
-      await page.locator('#dialogue-next').click();
+    for (let i = 0; i < 40; i++) {
+      const state = await page.evaluate(() => {
+        const stage = document.querySelector('#gal-stage');
+        return {
+          guideOpen: document.querySelector('#guide-dialogue').open,
+          galOpen: !stage.hidden && stage.dataset.owner === 'guide-dialogue',
+        };
+      });
+      if (state.galOpen) {
+        await finishGalDialogue(page, 'guide-dialogue');
+      } else if (state.guideOpen) {
+        await page.locator('#dialogue-next').click();
+      } else {
+        break;
+      }
     }
-    assert.equal(await page.locator('#guide-dialogue').isVisible(), false);
+    assert.equal(await guideDialogueOpen(), false);
+  }
+  async function finishVisibleTheater() {
+    const theater = page.locator('#chapter-theater');
+    for (let index = 0; index < 6; index++) {
+      const isHidden = await theater.evaluate((element) => element.hidden);
+      if (isHidden) return;
+      await page.keyboard.press('Space');
+      await page.waitForTimeout(180);
+      if ((await theater.getAttribute('data-phase')) === 'closing') {
+        await theater.waitFor({ state: 'hidden', timeout: 5000 });
+        return;
+      }
+    }
+    assert.equal(await theater.evaluate((element) => element.hidden), true);
   }
   async function enterActions(plan, state) {
     for (const action of plan) {
@@ -94,7 +132,13 @@ export async function onboardingChecks({ browser, baseURL, output }) {
     assert.equal(library.party.filter(Boolean).length, 2);
     assert.equal(library.characters[1].setting.name, '伊蒂丝');
     assert.equal(library.characters[0].setting.name, '青缘');
-    await page.locator('#guide-dialogue.opening-prose').waitFor({ state: 'visible' });
+    await page.waitForFunction(() => {
+      const stage = document.querySelector('#gal-stage');
+      return (
+        document.querySelector('#guide-dialogue').open ||
+        (!stage.hidden && stage.dataset.owner === 'guide-dialogue')
+      );
+    });
     const arrivalFrame = await innReady();
     const arrival = await arrivalFrame.evaluate(() => {
       const { camera } = window.assetPreview;
@@ -106,8 +150,13 @@ export async function onboardingChecks({ browser, baseURL, output }) {
     assert.deepEqual(arrival.position, [-4.35, 1.6, 1.24]);
     assert(arrival.direction[0] > 0.99, 'The fresh player faces into the room, away from the gate');
     assert.equal(await arrivalFrame.locator('#summon-open').isVisible(), false);
-    await page.locator('#dialogue-next').click();
-    assert((await page.locator('#dialogue-text').textContent()).includes('白光'));
+    const arrivalText = await page.evaluate(() => {
+      const stage = document.querySelector('#gal-stage');
+      return stage.dataset.owner === 'guide-dialogue'
+        ? stage.querySelector('.gal-text').textContent
+        : document.querySelector('#dialogue-text').textContent;
+    });
+    assert(arrivalText.includes('白光'));
     await page.screenshot({ path: path.join(output, 'pandora-arrival.png') });
     await finishDialogue();
     await page.reload();
@@ -121,16 +170,17 @@ export async function onboardingChecks({ browser, baseURL, output }) {
       .locator('#street-open')
       .waitFor({ state: 'visible', timeout: 15000 });
     await page.frameLocator('iframe').locator('#street-open').click();
+    await page.locator('#tavern-exit-picker [data-tavern-exit="street"]').click();
     await page
       .frameLocator('iframe')
       .locator('#street-map-open')
       .waitFor({ state: 'visible', timeout: 15000 });
-    await page.waitForFunction(() => demo.getLibrary().campaign.tutorial === 'map-ruins');
+    await page.waitForFunction(() => demo.getLibrary().campaign.tutorial === 'map-mill');
+    await finishDialogue();
     await page.locator('#tutorial-action').click();
     const streetFrame = page.frameLocator('#inn-frame iframe');
     await streetFrame.locator('#street-map').waitFor({ state: 'visible', timeout: 15000 });
     assert.equal(await streetFrame.locator('[data-travel-to="mill"]').isDisabled(), false);
-    assert.equal(await streetFrame.locator('[data-travel-to="forest"]').isDisabled(), true);
     await streetFrame.locator('[data-travel-to="mill"]').click();
     await page
       .locator('#destination-dialog[data-stage="route"]')
@@ -144,15 +194,27 @@ export async function onboardingChecks({ browser, baseURL, output }) {
       () =>
         demo.getStatus().mode === 'battle' &&
         document.querySelector('#scene-loading').hidden &&
-        document.querySelector('#chapter-theater').hidden &&
-        document.querySelector('#gal-stage').hidden &&
         !document.querySelector('#battle').classList.contains('entering') &&
-        (!demo.getStatus().animating || document.querySelector('#guide-dialogue').open),
+        (!document.querySelector('#chapter-theater').hidden ||
+          !document.querySelector('#gal-stage').hidden ||
+          document.querySelector('#guide-dialogue').open ||
+          document.querySelector('#tutorial-guide').dataset.step === 'extra'),
       null,
       { timeout: 60000 },
     );
+    await finishVisibleTheater();
     assert.equal(requests.length, 0, 'Entering a dungeon must not call the script API');
+    await page.waitForFunction(
+      () =>
+        (document.querySelector('#guide-dialogue').open ||
+          (!document.querySelector('#gal-stage').hidden &&
+            document.querySelector('#gal-stage').dataset.owner === 'guide-dialogue')) &&
+        document.querySelector('#tutorial-guide').dataset.step === 'extra',
+      null,
+      { timeout: 15000 },
+    );
     await finishDialogue();
+    assert.equal((await page.evaluate(() => demo.getState())).phase, 'opening');
     await page.waitForFunction(() => !demo.getStatus().animating);
     await page.locator('#commit').click();
     assert.equal(
@@ -164,21 +226,34 @@ export async function onboardingChecks({ browser, baseURL, output }) {
     assert.equal(await page.locator('[data-rear]').count(), 0);
     await page.locator('#speed').click();
     await page.locator('[data-start="0"]').first().click();
-    await page.locator('#dialogue-next').click();
-    const alignment = await page.locator('#guide-dialogue').evaluate((panel) => {
-      const image = panel.querySelector('img').getBoundingClientRect();
-      const box = panel.getBoundingClientRect();
-      return {
-        square: Math.abs(image.width - image.height),
-        centered: Math.abs(image.y + image.height / 2 - box.y - box.height / 2),
-      };
+    const guideUsesGal = await page.evaluate(() => {
+      const stage = document.querySelector('#gal-stage');
+      return !stage.hidden && stage.dataset.owner === 'guide-dialogue';
     });
-    assert(alignment.square < 1 && alignment.centered < 1);
-    assert(
-      (await page.locator('#guide-dialogue .guide-portrait').getAttribute('src')).includes(
-        'edith.png',
-      ),
-    );
+    if (guideUsesGal) {
+      await page.waitForFunction(() =>
+        document
+          .querySelector('#gal-stage .gal-text')
+          .textContent.includes('现在点一下要上阵的角色卡'),
+      );
+      assert.equal(await page.locator('#gal-stage .gal-speaker > span').textContent(), '伊蒂丝');
+    } else {
+      await page.locator('#dialogue-next').click();
+      const alignment = await page.locator('#guide-dialogue').evaluate((panel) => {
+        const image = panel.querySelector('img').getBoundingClientRect();
+        const box = panel.getBoundingClientRect();
+        return {
+          square: Math.abs(image.width - image.height),
+          centered: Math.abs(image.y + image.height / 2 - box.y - box.height / 2),
+        };
+      });
+      assert(alignment.square < 1 && alignment.centered < 1);
+      assert(
+        (await page.locator('#guide-dialogue .guide-portrait').getAttribute('src')).includes(
+          'edith.png',
+        ),
+      );
+    }
     await page.screenshot({ path: path.join(output, 'guide-dialogue-aligned.png') });
     await page.setViewportSize({ width: 844, height: 390 });
     await page.screenshot({ path: path.join(output, 'guide-dialogue-landscape.png') });
@@ -197,15 +272,22 @@ export async function onboardingChecks({ browser, baseURL, output }) {
     await page.waitForFunction(() => !demo.getStatus().playing);
     await finishDialogue();
     assert.equal(await page.locator('#tutorial-guide').getAttribute('data-step'), 'timeline');
+    if (firstDungeonOnly) {
+      assert.equal((await page.evaluate(() => demo.getState())).phase, 'plan');
+      assert.deepEqual(errors, []);
+      return { firstDungeonEdithLesson: true, firstActionResolved: true, scriptApiCalls: 0 };
+    }
     await page.locator('#timeline .enemy-cell').click();
     await finishDialogue();
     assert.equal(await page.locator('#tutorial-guide').getAttribute('data-step'), 'swap');
     assert.equal((await page.evaluate(() => demo.getLibrary())).campaign.tasks.journal, true);
     assert((await page.locator('#intent-layer .intent-path').count()) > 0);
-    await page.locator('#story-toggle').click();
-    assert.equal(await page.locator('#story-feed').isVisible(), true);
-    await page.locator('#story-close').click();
-    await page.locator('#story-feed').waitFor({ state: 'hidden' });
+    if (await page.locator('#story-toggle').isVisible()) {
+      await page.locator('#story-toggle').click();
+      assert.equal(await page.locator('#story-feed').isVisible(), true);
+      await page.locator('#story-close').click();
+      await page.locator('#story-feed').waitFor({ state: 'hidden' });
+    }
     await page.locator('[data-start="0"]').first().click();
     const actor = await page.locator('[data-unit="aegis"]').boundingBox();
     const target = await page.locator('[data-empty-slot="2"]').boundingBox();
@@ -341,15 +423,26 @@ export async function onboardingChecks({ browser, baseURL, output }) {
       }
       if (room === 4) {
         assert.equal((await page.evaluate(() => demo.getLibrary())).campaign.tutorial, 'boss');
-        assert((await page.evaluate(() => demo.getState())).units.millVoleAlpha.maxHp >= 74);
-        // Spend mana, then recover it through the actual 1 AP item path.
+        const room4State = await page.evaluate(() => demo.getState());
+        assert.deepEqual(room4State.enemyIds, ['millVolePup', 'millVoleAlpha', 'millCanalFrog']);
+        assert(room4State.units.millVoleAlpha.maxHp >= 74);
+        await page
+          .locator('#gal-stage[data-owner="emblem-dialogue"]')
+          .waitFor({ state: 'visible' });
+        await finishGalDialogue(page, 'emblem-dialogue');
+        assert.equal((await page.evaluate(() => demo.getState())).units.aegis.emblemCharge, 6);
+        // Opening 1 AP: engage Tan Hongyu on protagonist and cast Balance on the Boss.
+        await page.locator('[data-unit="aegis"]').click();
+        await page.locator('[data-unit="aegis"]').click();
+        await page.locator('[data-skill="emblem-balance"]').click();
+        await page.locator('[data-unit="millVoleAlpha"]').click();
+        await page.locator('#commit').click();
+        await page.waitForFunction(() => !demo.getStatus().playing);
+        await finishDialogue();
+        // Round 1: spend MP with Edith, then let the Boss demonstrate its armour.
         await page.locator('[data-unit="lyria"]').click();
         await page.locator('[data-skill="tidal-moonlight"]').click();
         await finishDialogue();
-        // Let the Boss demonstrate its opening armour before the planner can burst it
-        // below the phase threshold or bind its first action.
-        await page.locator('#commit').click();
-        await page.waitForFunction(() => !demo.getStatus().playing);
         await page.locator('#commit').click();
         await page.waitForFunction(() => !demo.getStatus().playing);
         armourReminder = (await page.evaluate(() => demo.getLibrary())).campaign.tasks.armour;
@@ -400,14 +493,36 @@ export async function onboardingChecks({ browser, baseURL, output }) {
           await page.locator('#rest-continue').click();
         }
         await page.waitForFunction(
-          (room) =>
+          (currentRoom) => {
+            const ready =
+              demo.getStatus().mode === 'battle' &&
+              demo.getState().encounter === currentRoom + 1 &&
+              demo.getLibrary().campaign.tutorial ===
+                ['vulnerable', 'slow-opening', 'crossfire', 'boss'][currentRoom] &&
+              document.querySelector('#scene-loading').hidden &&
+              !document.querySelector('#battle').classList.contains('entering') &&
+              (!demo.getStatus().animating ||
+                document.querySelector('#guide-dialogue').open ||
+                (!document.querySelector('#gal-stage').hidden &&
+                  document.querySelector('#gal-stage').dataset.owner === 'guide-dialogue'));
+            return ready || !document.querySelector('#chapter-theater').hidden;
+          },
+          room,
+          { timeout: 60000 },
+        );
+        await finishVisibleTheater();
+        await page.waitForFunction(
+          (currentRoom) =>
             demo.getStatus().mode === 'battle' &&
-            demo.getState().encounter === room + 1 &&
+            demo.getState().encounter === currentRoom + 1 &&
             demo.getLibrary().campaign.tutorial ===
-              ['vulnerable', 'slow-opening', 'crossfire', 'boss'][room] &&
+              ['vulnerable', 'slow-opening', 'crossfire', 'boss'][currentRoom] &&
             document.querySelector('#scene-loading').hidden &&
             !document.querySelector('#battle').classList.contains('entering') &&
-            (!demo.getStatus().animating || document.querySelector('#guide-dialogue').open),
+            (!demo.getStatus().animating ||
+              document.querySelector('#guide-dialogue').open ||
+              (!document.querySelector('#gal-stage').hidden &&
+                document.querySelector('#gal-stage').dataset.owner === 'guide-dialogue')),
           room,
           { timeout: 60000 },
         );
@@ -452,12 +567,14 @@ export async function onboardingChecks({ browser, baseURL, output }) {
     assert.equal(requests.length, 0, 'The first contracted companion does not call a model API');
     const bookshelfFrame = await innReady();
     await bookshelfFrame.evaluate(() => window.assetPreview.placeNow('bookshelf'));
-    await bookshelfFrame.locator('#bookshelf-records').click();
+    await bookshelfFrame.locator('#bookshelf-archives').click();
+    await page.locator('#archive-dialog').waitFor({ state: 'visible' });
+    await page.locator('#archive-dialog [data-archive-tab="records"]').click();
     await page.waitForFunction(() => document.querySelectorAll('#records-text h4').length === 5);
     assert.equal(await page.locator('#records-text h4').count(), 5);
     assert((await page.locator('#records-text').textContent()).includes('战斗测试占位剧本'));
     assert(!(await page.locator('#records-text').textContent()).includes('伤害'));
-    await page.locator('#records-close').click();
+    await page.locator('#archive-close').click();
     const frame = await innReady();
     await frame.evaluate(() => window.assetPreview.placeNow('table'));
     await frame.locator('#talk-open').click();
@@ -469,6 +586,11 @@ export async function onboardingChecks({ browser, baseURL, output }) {
     assert.equal(requests.length, 0, 'The developer shortcut never sends a chat request');
     await finishDialogue();
     await page.locator('#chat-close').click();
+    assert.equal(
+      await page.locator('#tutorial-text').textContent(),
+      EDITH_LESSONS.shop.lines.join('\n'),
+      'The supplies tutorial keeps its existing instructions after the dialogue closes',
+    );
     await page.locator('#tutorial-action').click();
     const supplies = page.frameLocator('#inn-frame iframe');
     await supplies.locator('#shop-open').waitFor({ state: 'visible' });
@@ -482,6 +604,11 @@ export async function onboardingChecks({ browser, baseURL, output }) {
     await page.screenshot({ path: path.join(output, 'void-shop.png') });
     await page.locator('#shop-close').click();
     await finishDialogue();
+    assert.equal(
+      await page.locator('#tutorial-text').textContent(),
+      EDITH_LESSONS.condenser.lines.join('\n'),
+      'The condenser tutorial keeps its existing instructions after the dialogue closes',
+    );
     await supplies.locator('#condenser-open').click();
     await page.locator('#ether-forge').waitFor({ state: 'visible' });
     await finishDialogue();

@@ -2,7 +2,70 @@ import { createEventScope } from '../shared/events.js';
 import { exportDatabase, readDatabaseBackup } from './backup.js';
 import { installFolderBackup, supportsFolderBackup } from './folder-backup.js';
 
-export function createLocalDataPanel({ database, storage, apiClient, dispose }) {
+function excludedFromBackup(key) {
+  return key === 'regex' || key.startsWith('prompt.') || key.startsWith('helper.');
+}
+
+export function restoreBackup(database, storage, backup, preferences) {
+  return storage.replace(async () => {
+    const previous = new Map(
+      Object.keys(preferences)
+        .filter((key) => key.startsWith('wanxiang.'))
+        .map((key) => [key, preferences.getItem(key)]),
+    );
+    const next = new Map(Object.entries(backup.preferences));
+    const changedPreferences = new Map();
+    function writePreference(key, value) {
+      if (value === null) preferences.removeItem(key);
+      else preferences.setItem(key, value);
+    }
+    try {
+      // Remove omitted preferences first so a replacement can reuse space.
+      for (const key of previous.keys()) {
+        if (next.has(key)) continue;
+        writePreference(key, null);
+        changedPreferences.set(key, null);
+      }
+      for (const [key, value] of next) {
+        if (value === previous.get(key)) continue;
+        writePreference(key, value);
+        changedPreferences.set(key, value);
+      }
+      const imported = new Set(backup.entries.map(([key]) => key));
+      const deleted = database
+        .entries()
+        .map(([key]) => key)
+        .filter((key) => !excludedFromBackup(key) && !imported.has(key));
+      await database.write(backup.entries, deleted, {
+        guardGame: true,
+        ...(imported.has('api.config') || deleted.includes('api.config')
+          ? { expectedConnection: { value: database.get('api.config') } }
+          : {}),
+      });
+    } catch (failure) {
+      if (failure.requiresReload) throw failure;
+      try {
+        const restorable = [...changedPreferences].filter(
+          ([key, value]) => preferences.getItem(key) === value,
+        );
+        for (const [key] of restorable) preferences.removeItem(key);
+        for (const [key] of restorable) {
+          if (previous.has(key)) writePreference(key, previous.get(key));
+        }
+      } catch (restoreFailure) {
+        const rollbackError = new AggregateError(
+          [failure, restoreFailure],
+          '存档导入失败，部分偏好无法自动恢复。' + restoreFailure.message,
+          { cause: failure },
+        );
+        throw rollbackError;
+      }
+      throw failure;
+    }
+  });
+}
+
+export function createLocalDataPanel({ database, storage, dispose }) {
   const events = createEventScope();
   const panel = document.createElement('section');
   panel.className = 'local-data-panel';
@@ -20,38 +83,141 @@ export function createLocalDataPanel({ database, storage, apiClient, dispose }) 
   importButton.className = 'saves-tool-btn';
   importButton.id = 'saves-import-full';
   importButton.textContent = '导入完整备份';
+  importButton.disabled = true;
   saveToolbar.append(importButton);
+  const enableFullImport = document.createElement('input');
+  enableFullImport.type = 'checkbox';
+  enableFullImport.id = 'saves-enable-full-import';
+  enableFullImport.disabled = true;
+  const enableFullImportLabel = document.createElement('label');
+  enableFullImportLabel.htmlFor = 'saves-enable-full-import';
+  enableFullImportLabel.className = 'saves-tool-btn saves-backup-toggle';
+  enableFullImportLabel.append(enableFullImport, '开启完整备份导入');
+  saveToolbar.append(enableFullImportLabel);
+  const exportFullButton = document.createElement('button');
+  exportFullButton.type = 'button';
+  exportFullButton.className = 'saves-tool-btn';
+  exportFullButton.id = 'saves-export-full';
+  exportFullButton.textContent = '导出完整备份';
+  saveToolbar.append(exportFullButton);
+  const backupFolderButton = document.createElement('button');
+  backupFolderButton.type = 'button';
+  backupFolderButton.className = 'saves-tool-btn';
+  backupFolderButton.id = 'saves-backup-folder';
+  backupFolderButton.textContent = '选择备份文件夹';
+  saveToolbar.append(backupFolderButton);
   const saveStatus = document.createElement('p');
   saveStatus.className = 'muted';
   saveStatus.setAttribute('role', 'status');
   saveStatus.hidden = true;
   document.querySelector('#saves-dialog .saves-header').append(saveStatus);
+  const saveBackupStatus = document.createElement('p');
+  saveBackupStatus.className = 'muted';
+  saveBackupStatus.id = 'saves-backup-status';
+  saveBackupStatus.setAttribute('role', 'status');
+  saveBackupStatus.hidden = true;
+  document.querySelector('#saves-dialog .saves-header').append(saveBackupStatus);
   const folderStatus = panel.querySelector('#data-folder-status');
   const chooseFolder = panel.querySelector('#data-backup-folder');
+  const dataFile = panel.querySelector('#data-file');
+  const savesDialog = document.querySelector('#saves-dialog');
+  const savesOpen = document.querySelector('#saves-open');
   let folderBackup;
   let disposed = false;
+  let importing = false;
+  let importSequence = 0;
+  let folderInstalling = false;
+  let folderReady = false;
+  let folderChoosing = false;
+  function updateFolderButtons() {
+    const disabled = !folderReady || folderInstalling || folderChoosing || importing || disposed;
+    backupFolderButton.disabled = disabled;
+    chooseFolder.disabled = disabled;
+  }
+  function updateImportGate() {
+    const open = Boolean(savesDialog?.open);
+    const slotBusy = savesDialog?.dataset.slotBusy === 'true';
+    const checked = enableFullImport.checked;
+    enableFullImport.disabled = importing || slotBusy || !open;
+    importButton.disabled = importing || slotBusy || !open || !checked;
+    exportFullButton.disabled = importing || slotBusy;
+    panel.querySelector('#data-export').disabled = importing || slotBusy;
+  }
+  function resetImportGate() {
+    enableFullImport.checked = false;
+    enableFullImport.disabled = true;
+    importButton.disabled = true;
+  }
+  const dialogObserver = new MutationObserver(() => {
+    if (savesDialog.open) updateImportGate();
+    else {
+      resetImportGate();
+      importSequence += 1;
+    }
+  });
+  dialogObserver.observe(savesDialog, {
+    attributes: true,
+    attributeFilter: ['open', 'data-slot-busy'],
+  });
+  updateImportGate();
   function backupStatus(text, retry = false) {
-    folderStatus.hidden = saveStatus.hidden = false;
-    folderStatus.textContent = saveStatus.textContent = text;
+    if (disposed) return;
+    folderStatus.hidden = false;
+    folderStatus.textContent = text;
+    saveBackupStatus.hidden = false;
+    saveBackupStatus.textContent = text;
     chooseFolder.hidden = !retry;
   }
   if (!database.directory) {
     if (supportsFolderBackup()) {
+      folderInstalling = true;
+      updateFolderButtons();
       void installFolderBackup({ database, storage, status: backupStatus })
         .then((controller) => {
-          if (disposed) controller.dispose();
-          else folderBackup = controller;
+          folderInstalling = false;
+          if (disposed) {
+            controller.dispose();
+            return;
+          }
+          folderBackup = controller;
+          folderReady = true;
+          updateFolderButtons();
         })
-        .catch((failure) => backupStatus('自动备份暂不可用 · ' + failure.message));
+        .catch((failure) => {
+          folderInstalling = false;
+          updateFolderButtons();
+          backupStatus('自动备份暂不可用 · ' + failure.message);
+        });
     } else {
       backupStatus('此浏览器可通过「导出完整备份」保存文件');
     }
+  } else {
+    backupStatus('已由本机目录备份');
   }
-  events.on(chooseFolder, 'click', () => void folderBackup?.choose());
+  updateFolderButtons();
+  async function chooseBackupFolder() {
+    if (!folderBackup || folderInstalling || folderChoosing || importing || disposed) return;
+    folderChoosing = true;
+    updateFolderButtons();
+    try {
+      await folderBackup.choose();
+    } catch (failure) {
+      backupStatus('备份文件夹选择失败 · ' + failure.message);
+    } finally {
+      folderChoosing = false;
+      updateFolderButtons();
+    }
+  }
+  events.on(chooseFolder, 'click', () => void chooseBackupFolder());
+  events.on(backupFolderButton, 'click', () => void chooseBackupFolder());
   const status = (text) => {
+    if (disposed) return;
     panel.querySelector('#data-status').textContent = text;
+    saveStatus.hidden = false;
+    saveStatus.textContent = text;
   };
-  events.on(panel.querySelector('#data-export'), 'click', async () => {
+  async function exportFullBackup() {
+    if (importing || savesDialog?.dataset.slotBusy === 'true') return;
     try {
       await storage.flush();
       const backup = await exportDatabase(database, localStorage);
@@ -67,40 +233,75 @@ export function createLocalDataPanel({ database, storage, apiClient, dispose }) 
     } catch (failure) {
       status('备份失败：' + failure.message);
     }
+  }
+  events.on(panel.querySelector('#data-export'), 'click', () => void exportFullBackup());
+  events.on(exportFullButton, 'click', () => void exportFullBackup());
+  events.on(panel.querySelector('#data-import'), 'click', () => {
+    if (savesOpen) savesOpen.click();
+    else if (savesDialog && !savesDialog.open) savesDialog.showModal?.();
+    status('请在存档界面勾选「开启完整备份导入」后再导入完整备份。');
   });
-  events.on(panel.querySelector('#data-import'), 'click', () =>
-    panel.querySelector('#data-file').click(),
-  );
-  events.on(importButton, 'click', () => panel.querySelector('#data-file').click());
-  events.on(panel.querySelector('#data-file'), 'change', async (event) => {
+  events.on(enableFullImport, 'change', () => updateImportGate());
+  events.on(importButton, 'click', () => {
+    if (importing || savesDialog?.dataset.slotBusy === 'true') return;
+    if (!savesDialog?.open) return;
+    if (!enableFullImport.checked) return;
+    dataFile.click();
+  });
+  events.on(savesDialog, 'close', () => {
+    resetImportGate();
+    importSequence += 1;
+  });
+  events.on(savesDialog, 'cancel', () => {
+    resetImportGate();
+    importSequence += 1;
+  });
+  events.on(dataFile, 'change', async (event) => {
+    if (
+      importing ||
+      savesDialog?.dataset.slotBusy === 'true' ||
+      !savesDialog?.open ||
+      !enableFullImport.checked
+    ) {
+      event.target.value = '';
+      return;
+    }
+    importing = true;
+    savesDialog.dataset.storageBusy = 'true';
+    updateImportGate();
+    updateFolderButtons();
+    const sequence = ++importSequence;
     try {
       const file = event.target.files[0];
       if (!file) return;
       if (file.size > 512 * 1024 * 1024) throw Error('备份文件超过512MB');
       const backup = readDatabaseBackup(JSON.parse(await file.text()));
-      apiClient.dispose();
-      await storage.flush();
-      const imported = new Set(backup.entries.map(([key]) => key));
-      await database.write(
-        backup.entries,
-        database
-          .entries()
-          .map(([key]) => key)
-          .filter((key) => !imported.has(key)),
+      if (disposed) return;
+      if (sequence !== importSequence) return;
+      if (!savesDialog?.open) return;
+      if (!enableFullImport.checked) return;
+      const confirmed = window.confirm(
+        '导入完整备份将替换当前游戏进度、全部存档栏位及设置，无法自动撤销。建议先导出当前完整备份。是否确认覆盖并导入？',
       );
-      for (const key of Object.keys(localStorage))
-        if (key.startsWith('wanxiang.')) localStorage.removeItem(key);
-      for (const [key, value] of Object.entries(backup.preferences))
-        localStorage.setItem(key, value);
+      if (!confirmed) {
+        status('已取消导入完整备份。');
+        return;
+      }
+      if (disposed) return;
+      if (sequence !== importSequence) return;
+      if (!savesDialog?.open) return;
+      if (!enableFullImport.checked) return;
+      await restoreBackup(database, storage, backup, localStorage);
       dispose();
       location.reload();
     } catch (failure) {
-      const message = '导入失败：' + failure.message;
-      status(message);
-      saveStatus.hidden = false;
-      saveStatus.textContent = message;
+      if (!disposed && sequence === importSequence) status('导入失败：' + failure.message);
     } finally {
+      importing = false;
+      delete savesDialog.dataset.storageBusy;
       event.target.value = '';
+      updateImportGate();
+      updateFolderButtons();
     }
   });
   events.on(panel.querySelector('#data-persist'), 'click', async () => {
@@ -118,10 +319,17 @@ export function createLocalDataPanel({ database, storage, apiClient, dispose }) 
   return {
     dispose: () => {
       disposed = true;
+      importSequence += 1;
       folderBackup?.dispose();
+      dialogObserver.disconnect();
       events.dispose();
       importButton.remove();
+      enableFullImport.remove();
+      enableFullImportLabel.remove();
+      exportFullButton.remove();
+      backupFolderButton.remove();
       saveStatus.remove();
+      saveBackupStatus.remove();
       panel.remove();
     },
   };

@@ -1,6 +1,7 @@
-﻿param([switch]$Stop, [switch]$NoBrowser, [switch]$WorkshopEditor, [ValidateRange(1024,65535)][int]$Port = 4180)
+﻿param([switch]$Stop, [switch]$NoBrowser, [switch]$WorkshopEditor, [switch]$UiPreview, [ValidateRange(1024,65535)][int]$Port = 4180)
 $ErrorActionPreference = 'Stop'
 $projectDirectory = $PSScriptRoot
+if ($UiPreview -and -not $PSBoundParameters.ContainsKey('Port')) { $Port = 4188 }
 $baseUrl = "http://127.0.0.1:$Port"
 $projectVersion = (Get-Content -LiteralPath (Join-Path $projectDirectory 'package.json') -Raw | ConvertFrom-Json).version
 $page = if ($WorkshopEditor) { "/tools/workshop-editor.html" } else { "/" }
@@ -11,6 +12,22 @@ function Test-DemoServer {
         $package = Invoke-RestMethod -Uri "$baseUrl/package.json" -TimeoutSec 2
         return $package.name -eq 'wanxiang-tavern-demo'
     } catch { return $false }
+}
+
+function Get-DemoNode {
+    $nodeCommand = Get-Command node.exe -ErrorAction SilentlyContinue
+    $nodeExecutable = if ($nodeCommand) { $nodeCommand.Source } else { $null }
+    if (-not $nodeExecutable) {
+        $candidates = @(
+            "$env:ProgramFiles\nodejs\node.exe",
+            "${env:ProgramFiles(x86)}\nodejs\node.exe",
+            "$env:USERPROFILE\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe",
+            "$env:USERPROFILE\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\node.exe"
+        )
+        $nodeExecutable = $candidates | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } | Select-Object -First 1
+    }
+    if (-not $nodeExecutable) { throw '找不到 Node.js。请安装 Node.js 后再次双击一键启动。' }
+    return $nodeExecutable
 }
 
 try {
@@ -36,25 +53,24 @@ try {
             if ($connectResult.AsyncWaitHandle.WaitOne(1000)) { $portOccupied = $portClient.Connected }
         } finally { $portClient.Dispose() }
         if ($portOccupied) { throw "端口 $Port 已被其他程序占用，请关闭该程序后再启动。" }
-        $nodeCommand = Get-Command node.exe -ErrorAction SilentlyContinue
-        $nodeExecutable = if ($nodeCommand) { $nodeCommand.Source } else { $null }
-        if (-not $nodeExecutable) {
-            $candidates = @(
-                "$env:ProgramFiles\nodejs\node.exe",
-                "${env:ProgramFiles(x86)}\nodejs\node.exe",
-                "$env:USERPROFILE\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe",
-                "$env:USERPROFILE\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\node.exe"
-            )
-            $nodeExecutable = $candidates | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } | Select-Object -First 1
-        }
-        if (-not $nodeExecutable) { throw '找不到 Node.js。请安装 Node.js 后再次双击一键启动。' }
+        $nodeExecutable = Get-DemoNode
         $runtimeDirectory = Join-Path $projectDirectory '.runtime'
         New-Item -ItemType Directory -Path $runtimeDirectory -Force | Out-Null
         $previousPort = $env:PORT
+        $previousStorage = $env:TAVERN_DISK_STORAGE
+        $previousAiConfig = $env:AI_CONFIG_FILE
         try {
             $env:PORT = [string]$Port
+            if ($UiPreview) {
+                $env:TAVERN_DISK_STORAGE = '0'
+                $env:AI_CONFIG_FILE = $null
+            }
             $serverProcess = Start-Process -FilePath $nodeExecutable -ArgumentList 'server.cjs' -WorkingDirectory $projectDirectory -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $runtimeDirectory "server-$Port.log") -RedirectStandardError (Join-Path $runtimeDirectory "server-$Port.error.log")
-        } finally { $env:PORT = $previousPort }
+        } finally {
+            $env:PORT = $previousPort
+            $env:TAVERN_DISK_STORAGE = $previousStorage
+            $env:AI_CONFIG_FILE = $previousAiConfig
+        }
         Set-Content -LiteralPath (Join-Path $runtimeDirectory "server-$Port.pid") -Value $serverProcess.Id -Encoding ASCII
         $ready = $false
         for ($attempt = 0; $attempt -lt 50; $attempt++) {
@@ -66,6 +82,17 @@ try {
         if (-not $ready) { throw "服务启动失败，请查看 .runtime\server-$Port.error.log。" }
         Write-Host '游戏服务已启动。'
     } else { Write-Host '游戏已在运行，直接打开当前版本。' }
+    if ($UiPreview) {
+        $status = Invoke-RestMethod -Uri "$baseUrl/__demo/status" -TimeoutSec 2
+        if ($status.diskStorage -ne $false) { throw "端口 $Port 正在运行普通游戏服务，请为预览选一个独立端口。" }
+        Write-Host "UI 预览服务：$baseUrl"
+        if (-not $NoBrowser) {
+            $nodeExecutable = Get-DemoNode
+            & $nodeExecutable (Join-Path $projectDirectory 'tools/preview-ui.mjs') $baseUrl
+            exit $LASTEXITCODE
+        }
+        exit 0
+    }
     if (-not $NoBrowser) { Start-Process -FilePath $pageUrl }
     if ($WorkshopEditor) { Write-Host "工坊修改器地址：$pageUrl" } else { Write-Host "游戏地址：$pageUrl" }
     exit 0

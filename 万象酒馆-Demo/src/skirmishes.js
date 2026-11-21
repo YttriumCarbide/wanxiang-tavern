@@ -371,7 +371,7 @@ export function buildSkirmishEncounterPlan(skirmish, fallbackLevel = 1) {
         ];
 
   const gold = (isBoss ? 55 : 35) + level * 4;
-  const ether = (isBoss ? 14 : 8) + Math.floor(level * 1.2);
+  const equipmentVouchers = 1 + (hashSeed(`${seed}:vouchers`) % 3);
   const ingredients = {};
   const ingCount = isBoss ? 3 : 2;
   for (let i = 0; i < ingCount; i++) {
@@ -397,14 +397,15 @@ export function buildSkirmishEncounterPlan(skirmish, fallbackLevel = 1) {
     rewards: {
       summonContracts: 0,
       gold,
-      ether,
+      ether: 0,
+      equipmentVouchers,
       ingredients,
       gems: gem ? [{ gemId: gem.id, instanceId: `gem-${skirmish?.id || seed}` }] : [],
     },
   };
 }
 
-/** Claim 3-wave skirmish rewards (gold, ether, ingredients, optional gem) and clear node. */
+/** Claim 3-wave skirmish rewards (gold, equipment vouchers, ingredients, optional gem) and clear node. */
 export function settleSkirmishVictory(library, plan) {
   if (!library || !plan?.rewards) return { claimed: false };
   const claimId = `skirmish:${plan.id}`;
@@ -412,6 +413,7 @@ export function settleSkirmishVictory(library, plan) {
     summonContracts: plan.rewards.summonContracts || 0,
     gold: plan.rewards.gold || 0,
     ether: plan.rewards.ether || 0,
+    equipmentVouchers: plan.rewards.equipmentVouchers || 0,
     gems: plan.rewards.gems || [],
   });
   if (claimed && plan.rewards.ingredients) {

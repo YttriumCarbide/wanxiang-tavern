@@ -145,6 +145,9 @@ test('resourceBars overlays blue shield directly on HP bar with blue bracketed v
   const htmlWithShield = resourceBars({ hp: 69, maxHp: 72, mp: 10, maxMp: 20, block: 15 });
   assert(htmlWithShield.includes('69/72<span class="bar-shield-text">（15）</span>'));
   assert(htmlWithShield.includes('bar-shield-fill'));
+  const shieldFill = htmlWithShield.match(/bar-shield-fill" style="width:([^%]+)%/);
+  assert(shieldFill);
+  assert.ok(Math.abs(Number(shieldFill[1]) - (15 / 72) * 100) < 1e-9);
   assert(!htmlWithShield.includes('resource-shield'));
 
   const htmlForecast = resourceBars(
@@ -153,6 +156,11 @@ test('resourceBars overlays blue shield directly on HP bar with blue bracketed v
   );
   assert(htmlForecast.includes('50/60<span class="bar-shield-text is-forecast">（+12）</span>'));
   assert(htmlForecast.includes('bar-shield-forecast active'));
+  const forecastFill = htmlForecast.match(
+    /class="bar-shield-forecast active"[\s\S]*?style="width:([^%]+)%"/,
+  );
+  assert(forecastFill);
+  assert.equal(Number(forecastFill[1]), (12 / 60) * 100);
 });
 
 test('conditional Break Window: stratified tiers, major (-2)/minor (-1) open weaknesses, same-round break amplification, and post-move closure', () => {
@@ -262,6 +270,9 @@ test('conditional Break Window: stratified tiers, major (-2)/minor (-1) open wea
   assert(openUi.includes('data-weakness="fire"') && openUi.includes('data-weakness-tier="major"'));
   assert(openUi.includes('is-major') && openUi.includes('-2'));
   assert(openUi.includes('data-weakness="sword"') && openUi.includes('is-minor'));
+  assert(
+    openUi.includes('break-ring') && openUi.includes('break-seg') && !openUi.includes('break-pip'),
+  );
 
   // Non-damage skill leaves breakWindow untouched.
   const supportRes = preview(state, [
@@ -372,7 +383,12 @@ test('conditional Break Window: stratified tiers, major (-2)/minor (-1) open wea
   assert.equal(houndState.units.hound.breakWindow.mode, 'plain');
   assert(houndState.units.hound.breakWindow.max <= 2);
   const houndUi = enemyBreakBar(DEFINITIONS.hound, houndState.units.hound);
-  assert(houndUi.includes('is-plain') && !houndUi.includes('enemy-weakness-pill'));
+  assert(
+    houndUi.includes('is-plain') &&
+      houndUi.includes('break-ring') &&
+      !houndUi.includes('break-pip') &&
+      !houndUi.includes('enemy-weakness-pill'),
+  );
 });
 
 test('character schema, compiler, and library preserve compatibility and discoveredWeaknesses', () => {
@@ -447,6 +463,14 @@ test('archive-enemies places alchemicalPuppet in canonical overlord order when d
   const buckets = buildEnemyArchiveEntries(withPuppet);
   assert.deepEqual(
     buckets.overlord.map((entry) => entry.id),
-    ['apepLamb', 'moonTree', 'ares', 'radiantWyvern', 'alchemicalPuppet'],
+    [
+      'apepLamb',
+      'moonTree',
+      'ares',
+      'radiantWyvern',
+      'alchemicalPuppet',
+      'darkscaleWarlord',
+      'banditSyndicateKing',
+    ],
   );
 });

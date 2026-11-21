@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import path from 'node:path';
-import { legacySession, openShelfPanel } from './legacy-session.mjs';
+import { finishGalDialogue, legacySession, openShelfPanel } from './legacy-session.mjs';
 import { worldFixture } from '../fixtures/multiverse.js';
 import { tavernPresetFixture } from '../fixtures/ai.js';
+import { adventureTestScript } from '../../src/content/generation-mode.js';
 
 export async function worldsEmblemsChecks({ browser, baseURL, output }) {
   const errors = [];
@@ -38,7 +39,7 @@ export async function worldsEmblemsChecks({ browser, baseURL, output }) {
         reply =
           '<wanxiang_json>' +
           JSON.stringify({
-            schemaVersion: 4,
+            schemaVersion: 5,
             story: Array.from(
               { length: 5 },
               (_, index) => '队伍在港口查清第' + (index + 1) + '条线索，守灯人指向了下一座桥。',
@@ -49,6 +50,7 @@ export async function worldsEmblemsChecks({ browser, baseURL, output }) {
               npcs: [],
               items: [],
               nextHook: { setting: '前往旧港议会', phase: '起' },
+              adventure: adventureTestScript().data.adventure,
               encounters: [
                 { enemyIds: ids.slice(0, 2) },
                 ...Array(3).fill({ enemyIds: [ids[0]] }),
@@ -105,7 +107,12 @@ export async function worldsEmblemsChecks({ browser, baseURL, output }) {
     await page.addInitScript(() =>
       localStorage.setItem(
         'wanxiang.generation-options.v1',
-        JSON.stringify({ developerMode: true, allowRetreat: true, skipAiGeneration: false }),
+        JSON.stringify({
+          developerMode: true,
+          allowRetreat: true,
+          skipAiGeneration: false,
+          unlockAllCodex: true,
+        }),
       ),
     );
     await page.goto(baseURL);
@@ -170,6 +177,7 @@ export async function worldsEmblemsChecks({ browser, baseURL, output }) {
     await page.waitForFunction(() => !!window.demo);
     while (await page.locator('#emblem-dialogue').isVisible())
       await page.locator('#emblem-dialogue button').click();
+    await finishGalDialogue(page, 'emblem-dialogue');
     // Rings now come from authored Boss events; this fixture starts with a legitimately owned ring.
     const handle = await page.locator('#ledger-handle').boundingBox();
     await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2);
@@ -193,7 +201,9 @@ export async function worldsEmblemsChecks({ browser, baseURL, output }) {
     await page.locator('[data-region="world-lantern"]').click();
     await page.locator('#destination-region-confirm').click();
     await page.locator('#destination-start').click();
-    await page.waitForFunction(() => demo.getStatus().mode === 'battle', { timeout: 60000 });
+    await page.getByRole('button', { name: '确认编队 · 开始生成', exact: true }).click();
+    await page.getByRole('button', { name: '整备完成 · 出发', exact: true }).click();
+    await page.waitForFunction(() => demo.getStatus().mode === 'battle', null, { timeout: 60000 });
     assert.deepEqual((await page.evaluate(() => demo.getState())).enemyIds, [
       'enemy-lantern-scout',
       'enemy-lantern-guard',
@@ -219,6 +229,7 @@ export async function worldsEmblemsChecks({ browser, baseURL, output }) {
     assert.equal((await page.evaluate(() => demo.getState())).units.aegis.emblemCharge, 6);
     while (await page.locator('#emblem-dialogue').isVisible())
       await page.locator('#emblem-dialogue button').click();
+    await finishGalDialogue(page, 'emblem-dialogue');
     assert.equal(
       (await page.evaluate(() => demo.getLibrary())).progression.emblemLesson,
       'combine',
@@ -277,6 +288,7 @@ export async function worldsEmblemsChecks({ browser, baseURL, output }) {
     assert((await page.evaluate(() => demo.getEmblemStatus()?.active)) >= 1);
     while (await page.locator('#emblem-dialogue').isVisible())
       await page.locator('#emblem-dialogue button').click();
+    await finishGalDialogue(page, 'emblem-dialogue');
     await page.waitForFunction(() => !demo.getStatus().animating);
     await page.locator('[data-unit="aegis"]').click();
     await page.locator('[data-skill="emblem-balance"]').click();
@@ -288,6 +300,7 @@ export async function worldsEmblemsChecks({ browser, baseURL, output }) {
     await page.evaluate(() => demo.returnInn());
     while (await page.locator('#emblem-dialogue').isVisible())
       await page.locator('#emblem-dialogue button').click();
+    await finishGalDialogue(page, 'emblem-dialogue');
     const returned = page.frameLocator('#inn-frame iframe');
     await returned.locator('.spot[data-place="fate"].visible').waitFor({ timeout: 60000 });
     await page.screenshot({ path: path.join(output, 'return-facing-fate-table.png') });

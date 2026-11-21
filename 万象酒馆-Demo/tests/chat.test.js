@@ -207,7 +207,7 @@ test('upstream streaming decodes split UTF-8, usage, sampling and length failure
   assert.equal(payload.reasoning_effort, 'high');
 });
 
-test('chat API assembles world, green-light mentions, prose-only history, regex and exact final TK without touching game data', async () => {
+test('chat API assembles world, green-light mentions, prose-only history and exact final TK without touching game data', async () => {
   const directory = await mkdtemp(path.join(process.cwd(), '.runtime/tests/chat-unit-'));
   const requests = [];
   let responseOverride = null;
@@ -275,7 +275,6 @@ test('chat API assembles world, green-light mentions, prose-only history, regex 
       top_k: 20,
       top_p: 0.8,
       extensions: {
-        regex_scripts: [{ findRegex: '来客', replaceString: '朋友', markdownOnly: true }],
         tavern_helper: { scripts: [{ id: 'sample', content: 'test', enabled: true }] },
       },
     };
@@ -301,7 +300,7 @@ test('chat API assembles world, green-light mentions, prose-only history, regex 
     assert.equal(requests.length, 0);
     const generated = await post('generate/chat', input);
     assert.deepEqual(generated.request.messages, preview.messages);
-    assert(generated.display.includes('朋友'));
+    assert.equal(generated.display, undefined);
     assert(generated.content.includes('来客'));
     const text = preview.messages.map((message) => message.content).join('\n');
     assert(text.includes('甲（id：a）') && text.includes('乙（id：b）'));
@@ -374,7 +373,8 @@ test('chat API assembles world, green-light mentions, prose-only history, regex 
     responseOverride = null;
     await post('prompts/select', { kind: 'chat', id: 'chat-default' });
     const inactive = await post('generate/chat', input);
-    assert(!inactive.display.includes('朋友'));
+    assert.equal(inactive.display, undefined);
+    assert.equal(inactive.content, '你好，来客。');
     assert(
       !JSON.stringify(await (await fetch(base + '/api/ai/config')).json()).includes(
         'PRIVATE_CHAT_KEY',

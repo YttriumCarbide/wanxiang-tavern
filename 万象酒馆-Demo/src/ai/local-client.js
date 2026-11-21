@@ -1,7 +1,11 @@
+import { releaseResponseReader } from './response-body.js';
+
 /** JSON and streaming chat share a final, validated response contract. */
 function responseFailure(result) {
   const failure = Error(result.error || '接口调用失败');
   failure.diagnostic = result.diagnostic;
+  if (typeof result.code === 'string') failure.code = result.code;
+  if (typeof result.status === 'number') failure.status = result.status;
   return failure;
 }
 
@@ -32,10 +36,14 @@ export async function localRequest(path, data, { signal, onDelta, fetchImpl = fe
     if (event.type === 'delta') onDelta?.(event.delta);
     if (event.type === 'complete') result = event.result;
   }
+  let readToEnd = false;
   try {
     for (;;) {
       const { done, value } = await reader.read();
-      if (done) break;
+      if (done) {
+        readToEnd = true;
+        break;
+      }
       buffer += decoder.decode(value, { stream: true });
       let index;
       while ((index = buffer.indexOf('\n\n')) >= 0) {
@@ -48,6 +56,6 @@ export async function localRequest(path, data, { signal, onDelta, fetchImpl = fe
     if (!result) throw Error('流式连接已中断，本次消息未保存，请重试');
     return result;
   } finally {
-    reader.releaseLock();
+    releaseResponseReader(reader, readToEnd);
   }
 }

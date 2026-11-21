@@ -10,12 +10,14 @@ import { escapeText } from '../ui.js';
 import { html } from '../shared/html.js';
 
 /** Keep the just-created batch separate until its result sheet has been dismissed. */
-export function createForgeResults(context, describe, onClose) {
+export function createForgeResults(context, describe, onClose, operations) {
   const dialog = document.createElement('dialog');
   dialog.id = 'forge-results';
   dialog.setAttribute('aria-label', '本次凝聚结果');
   document.body.append(dialog);
   let ids = [];
+  let mutating = false;
+  let disposed = false;
   const library = () => context.session.ai.library;
   function render() {
     dialog.innerHTML = html`<header>
@@ -70,17 +72,22 @@ export function createForgeResults(context, describe, onClose) {
       <p class="forge-result-status" role="status"></p>
       <footer><button data-batch-close>完成查看</button></footer>`;
   }
-  context.events.on(dialog, 'click', (event) => {
+  context.events.on(dialog, 'click', async (event) => {
     if (event.target.closest('[data-batch-close]')) return dialog.close();
     const buy = event.target.closest('[data-batch-buy]');
     const favorite = event.target.closest('[data-batch-favorite]');
     const remove = event.target.closest('[data-batch-delete]');
-    if (!buy && !favorite && !remove) return;
+    if ((!buy && !favorite && !remove) || mutating || disposed) return;
+    const currentLibrary = library();
+    mutating = true;
+    for (const button of dialog.querySelectorAll('nav button')) button.disabled = true;
     try {
-      if (buy) buyEquipment(library(), buy.dataset.batchBuy, crypto.randomUUID());
-      if (favorite) favoriteEquipment(library(), favorite.dataset.batchFavorite);
-      if (remove) deleteEquipmentPlan(library(), remove.dataset.batchDelete);
-      context.generation.save();
+      await operations.commit((draft) => {
+        if (buy) buyEquipment(draft, buy.dataset.batchBuy, crypto.randomUUID());
+        if (favorite) favoriteEquipment(draft, favorite.dataset.batchFavorite);
+        if (remove) deleteEquipmentPlan(draft, remove.dataset.batchDelete);
+      });
+      if (disposed || currentLibrary !== library()) return;
       context.shell.renderParty();
       render();
       dialog.querySelector('[role="status"]').textContent = buy
@@ -88,22 +95,34 @@ export function createForgeResults(context, describe, onClose) {
         : remove
           ? '已删除该方案，已拥有的装备保留。'
           : '收藏已保存。';
+      if (buy) {
+        const current = [...dialog.querySelectorAll('[data-batch-buy]')].find(
+          (button) => button.dataset.batchBuy === buy.dataset.batchBuy,
+        );
+        operations.onCraft?.(current?.closest('article'));
+      }
     } catch (error) {
+      if (disposed || currentLibrary !== library()) return;
+      render();
       dialog.querySelector('[role="status"]').textContent = error.message;
+    } finally {
+      mutating = false;
     }
   });
   context.events.on(dialog, 'close', () => {
     ids = [];
-    onClose();
+    if (!disposed) onClose();
   });
   return {
     contains: (id) => ids.includes(id),
     open(items) {
+      if (disposed) return;
       ids = items.map((item) => item.id);
       render();
       dialog.showModal();
     },
     dispose() {
+      disposed = true;
       dialog.remove();
     },
   };

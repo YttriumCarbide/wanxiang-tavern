@@ -1,10 +1,7 @@
-import { renderSampling, captureSampling } from './sampling-editor.js';
-import { normalizePromptPreset } from '../ai/presets.js';
-import { escapeText } from '../ui.js';
 import { html } from '../shared/html.js';
 import { query as $ } from './dom.js';
 import { tokenSummary, formatRequestPreview } from './request-preview.js';
-import { API_LABELS, CONNECTION_KINDS, PROMPT_KINDS } from './first-run-rules.js';
+import { API_LABELS, CONNECTION_KINDS } from './first-run-rules.js';
 
 /** The editor owns its draft; the platform store keeps presets and credentials on this device. */
 export function createAiPresetEditor({
@@ -16,14 +13,8 @@ export function createAiPresetEditor({
   captureProfile,
   fillProfile,
   inputFor,
-  setTab,
 }) {
-  let apiPresets = [],
-    promptPresets = [],
-    formats = {},
-    draft = null,
-    warnings = [],
-    editing = null;
+  let apiPresets = [];
   const kind = () => $('#prompt-kind').value;
   const guard =
     (action) =>
@@ -50,205 +41,26 @@ export function createAiPresetEditor({
 
     $('#api-preset-name').value =
       apiPresets.find((entry) => entry.id === profile.apiPresetId)?.name || '';
-    $('#prompt-contract').textContent = formats[kind()] || '';
   }
   async function refresh() {
-    const [connections, prompts] = await Promise.all([api('presets'), api('prompts')]);
+    const connections = await api('presets');
     apiPresets = connections.presets;
-    promptPresets = prompts.presets;
-    formats = prompts.formats;
     syncProfile();
   }
-  function renderDraft() {
-    options(
-      $('#prompt-select'),
-      promptPresets.filter((entry) => !entry.invalid),
-      draft?.id,
-      true,
-    );
-    for (const id of [
-      'prompt-name',
-      'prompt-use',
-      'prompt-save',
-      'prompt-copy',
-      'prompt-delete',
-      'prompt-export',
-      'prompt-add',
-      'prompt-preview',
-      'prompt-apply-many',
-    ])
-      $('#' + id).disabled = !draft;
-    renderSampling($('#prompt-sampling'), draft);
-    if (!draft) {
-      $('#prompt-name').value = '';
-      $('#prompt-messages').replaceChildren();
-      $('#prompt-source').textContent = '尚未导入提示词预设。请导入你自己的酒馆预设。';
-      $('#prompt-warnings').textContent = '';
-      return;
-    }
-    $('#prompt-name').value = draft.name;
-    $('#prompt-source').textContent =
-      `导入的预设：${draft.name} · 各 API 的输出与写作规则在世界书顶部的快捷格式按钮中编辑。`;
-    $('#prompt-warnings').textContent = warnings.join('\n');
-    $('#prompt-contract').textContent = formats[kind()] || '';
-    const order = draft.prompt_order[0].order;
-    $('#prompt-messages').innerHTML =
-      html`<div class="prompt-table-heading">
-        <span>提示词</span><span>角色 / 位置</span><span>启用</span>
-      </div>` +
-      order
-        .map((item, index) => {
-          const entry = draft.prompts.find((prompt) => prompt.identifier === item.identifier);
-          return html`<article
-            class="prompt-message"
-            draggable="true"
-            data-prompt-entry="${entry.identifier}"
-          >
-            <span class="prompt-handle" title="拖拽调整顺序">☰</span
-            ><button class="prompt-edit-name" data-prompt-edit>${escapeText(entry.name)}</button>
-            <small
-              >${entry.marker ? '占位层' : entry.role.toUpperCase()}${entry.injection_position === 1 ? ` · 深度${entry.injection_depth}` : ''}</small
-            >
-            <input
-              type="checkbox"
-              data-prompt-enabled
-              ${item.enabled ? 'checked' : ''}
-              aria-label="启用${escapeText(entry.name)}"
-            />
-            <button data-prompt-edit aria-label="编辑${escapeText(entry.name)}">✎</button>
-            <button data-prompt-move="-1" ${index === 0 ? 'disabled' : ''} aria-label="上移此层">
-              ↑
-            </button>
-            <button
-              data-prompt-move="1"
-              ${index === order.length - 1 ? 'disabled' : ''}
-              aria-label="下移此层"
-            >
-              ↓
-            </button>
-            <button data-prompt-remove aria-label="删除此层">×</button>
-          </article>`;
-        })
-        .join('');
-  }
-  function captureEdit() {
-    if (!editing) return;
-    const entry = draft?.prompts.find((item) => item.identifier === editing);
-    if (!entry) {
-      editing = null;
-      return;
-    }
-    for (const field of document.querySelectorAll('#prompt-entry-dialog [data-prompt-field]')) {
-      const key = field.dataset.promptField;
-      entry[key] =
-        key.startsWith('injection_') && key !== 'injection_trigger'
-          ? Number(field.value)
-          : key === 'injection_trigger'
-            ? field.value
-                .split(',')
-                .map((value) => value.trim())
-                .filter(Boolean)
-            : field.value;
-    }
-  }
-  function editEntry(id) {
-    editing = id;
-    const entry = draft.prompts.find((item) => item.identifier === id);
-    $('#prompt-entry-fields').innerHTML = html`<label
-        >名称<input data-prompt-field="name" value="${escapeText(entry.name)}" maxlength="80"
-      /></label>
-      <div class="prompt-injection">
-        <label
-          >角色<select data-prompt-field="role" ${entry.marker ? 'disabled' : ''}>
-            ${['system', 'user', 'assistant'].map((role) => html`<option value="${role}" ${entry.role === role ? 'selected' : ''}>${role.toUpperCase()}</option>`).join('')}
-          </select></label
-        >
-        <label
-          >位置<select data-prompt-field="injection_position">
-            <option value="0" ${entry.injection_position === 0 ? 'selected' : ''}>相对位置</option>
-            <option value="1" ${entry.injection_position === 1 ? 'selected' : ''}>聊天深度</option>
-          </select></label
-        >
-        <label
-          >深度<input
-            data-prompt-field="injection_depth"
-            type="number"
-            min="0"
-            max="100"
-            value="${entry.injection_depth}"
-        /></label>
-        <label
-          >顺序<input
-            data-prompt-field="injection_order"
-            type="number"
-            min="0"
-            max="9999"
-            value="${entry.injection_order}"
-        /></label>
-      </div>
-      <label
-        >提示词<textarea
-          data-prompt-field="content"
-          rows="14"
-          maxlength="${entry.identifier === 'SPresetSettings' ? 512000 : 128000}"
-          ${entry.marker ? 'readonly' : ''}
-        >
-${escapeText(entry.content)}</textarea>
-      </label>
-      <p class="ai-hint">
-        ${entry.marker ? `自动占位：${escapeText(entry.identifier)}` : '支持酒馆变量；内容按预设顺序发送。'}
-      </p>`;
-    const editor = $('#prompt-entry-dialog');
-    document.body.append(editor);
-    if (!editor.open) editor.showModal();
-    editor.querySelector('[data-prompt-field="content"]').focus({ preventScroll: true });
-  }
-  function capture() {
-    if (!draft) throw Error('请先选择提示词预设');
-    captureEdit();
-    captureSampling($('#prompt-sampling'), draft);
-    draft.name = $('#prompt-name').value.trim() || '未命名预设';
-    for (const row of document.querySelectorAll('[data-prompt-entry]')) {
-      draft.prompt_order[0].order.find(
-        (item) => item.identifier === row.dataset.promptEntry,
-      ).enabled = row.querySelector('[data-prompt-enabled]').checked;
-    }
-    return normalizePromptPreset(draft, draft.id).preset;
-  }
-  async function load(id) {
-    if (!id) {
-      draft = null;
-      renderDraft();
-      return;
-    }
-    const result = await api(`prompts/${id}`);
-    draft = result.preset;
-    warnings = result.warnings;
-    renderDraft();
-  }
+  const optionFields = [...document.querySelectorAll('[data-prompt-option]')];
   async function open() {
-    setTab('prompts');
-    const selected = getProfiles()[kind()].promptPresetId;
-    await load(
-      promptPresets.some((entry) => entry.id === selected)
-        ? selected
-        : promptPresets.find((entry) => !entry.invalid)?.id,
-    );
-    $('#ai-result-title').textContent = '最终发送消息预览';
-    $('#ai-preview').textContent =
-      '点击“预览最终请求”。这里只展示messages，不调用模型，也不显示密钥。';
+    const { options, attribution } = await api('prompt-options');
+    optionFields.forEach((field) => {
+      const value = options[field.dataset.promptOption];
+      if (field.type === 'checkbox') field.checked = value;
+      else field.value = value;
+    });
+    $('#prompt-attribution').textContent = attribution;
   }
-  async function select(id) {
-    setProfiles(await api('prompts/select', { kind: kind(), id }));
-    syncProfile();
-    window.dispatchEvent(new CustomEvent('preset-selected', { detail: { kind: kind() } }));
-    status('提示词预设已应用，下一次请求此 API 即生效，无需重新进门。');
-  }
-  async function preview(useDraft = true) {
+  async function preview() {
     const result = await api('prompts/preview', {
       kind: kind(),
       input: inputFor(kind()),
-      ...(useDraft ? { preset: capture() } : {}),
     });
     $('#ai-dialog').dataset.preview = 'true';
     $('#ai-result-title').textContent = '最终发送消息预览 · 未调用模型';
@@ -259,17 +71,6 @@ ${escapeText(entry.content)}</textarea>
     status(
       `共${result.messages.length}条消息，输入约${result.tokens.inputEstimate} TK；输出格式由世界书 @D 条目注入，这次没有调用API模型。`,
     );
-  }
-  async function save(copy = false) {
-    const preset = capture();
-    if (copy) preset.name = preset.name + ' · 副本';
-    const result = await api('prompts/save', { ...(copy ? {} : { id: draft.id }), preset });
-    draft = result.preset;
-    warnings = result.warnings;
-    await refresh();
-    await select(draft.id);
-    renderDraft();
-    status('分层提示词已保存，下一次请求此 API 即使用最新修改。');
   }
   async function connection(action, isNew = false) {
     const selected = $('#api-preset-select').value;
@@ -307,31 +108,6 @@ ${escapeText(entry.content)}</textarea>
         html`<label><input type="checkbox" value="${id}" data-apply-kind />${name}</label>`,
     )
     .join('');
-  $('#prompt-apply-targets').innerHTML = [...PROMPT_KINDS, 'summary']
-    .map(
-      (id) =>
-        html`<label
-          ><input type="checkbox" value="${id}" data-apply-prompt-kind />${API_LABELS[id]}</label
-        >`,
-    )
-    .join('');
-  events.on(
-    $('#prompt-apply-many'),
-    'click',
-    guard(async () => {
-      const targets = [...document.querySelectorAll('[data-apply-prompt-kind]:checked')].map(
-        (input) => input.value,
-      );
-      if (!targets.length) throw Error('请勾选要应用的 API');
-      await save();
-      for (const target of targets) {
-        setProfiles(await api('prompts/select', { kind: target, id: draft.id }));
-        window.dispatchEvent(new CustomEvent('preset-selected', { detail: { kind: target } }));
-      }
-      syncProfile();
-      status(`已将当前预设及调节应用到 ${targets.length} 个 API；各自下一次请求即生效。`);
-    }),
-  );
   events.on(
     $('#api-preset-apply-many'),
     'click',
@@ -388,191 +164,19 @@ ${escapeText(entry.content)}</textarea>
   );
   events.on(document.querySelector('[data-ai-tab="prompts"]'), 'click', guard(open));
   events.on(
-    $('#prompt-kind'),
-    'change',
-    guard(async () => {
-      await open();
-    }),
-  );
-  events.on(
-    $('#prompt-select'),
-    'change',
-    guard(async () => {
-      const id = $('#prompt-select').value;
-      await load(id);
-      if (id) await select(id);
-    }),
-  );
-  events.on(
-    $('#prompt-use'),
-    'click',
-    guard(() => select(draft.id)),
-  );
-  events.on(
-    $('#prompt-save'),
-    'click',
-    guard(() => save()),
-  );
-  events.on(
-    $('#prompt-copy'),
-    'click',
-    guard(() => save(true)),
-  );
-  events.on(
-    $('#prompt-delete'),
+    $('#prompt-options-save'),
     'click',
     guard(async () => {
-      await api('prompts/delete', { id: draft.id });
-      setProfiles(await api('config'));
-      await refresh();
-      await open();
-    }),
-  );
-  events.on(
-    $('#prompt-add'),
-    'click',
-    guard(() => {
-      draft = capture();
-      const identifier = `message-${crypto.randomUUID()}`;
-      draft.prompts.push({
-        identifier,
-        name: '自定义消息',
-        role: 'system',
-        content: '',
-        marker: false,
-        system_prompt: true,
-        injection_position: 0,
-        injection_depth: 0,
-        injection_order: 100,
-      });
-      draft.prompt_order[0].order.push({ identifier, enabled: true });
-      renderDraft();
-      editEntry(identifier);
-      $('#prompt-messages').lastElementChild.scrollIntoView({
-        block: 'nearest',
-        behavior: 'smooth',
-      });
-    }),
-  );
-  events.on(
-    $('#prompt-messages'),
-    'click',
-    guard((event) => {
-      const button = event.target.closest(
-        '[data-prompt-move],[data-prompt-remove],[data-prompt-edit]',
+      const options = Object.fromEntries(
+        optionFields.map((field) => [
+          field.dataset.promptOption,
+          field.type === 'checkbox' ? field.checked : field.value,
+        ]),
       );
-      if (!button) return;
-      draft = capture();
-      const id = button.closest('[data-prompt-entry]').dataset.promptEntry;
-      const order = draft.prompt_order[0].order;
-      const index = order.findIndex((entry) => entry.identifier === id);
-      if (button.hasAttribute('data-prompt-edit')) {
-        editEntry(id);
-        return;
-      }
-      if (button.hasAttribute('data-prompt-remove')) {
-        if (order.length === 1) throw Error('至少保留一条提示词消息');
-        order.splice(index, 1);
-        draft.prompts = draft.prompts.filter((entry) => entry.identifier !== id);
-      } else {
-        const next = index + Number(button.dataset.promptMove);
-        if (next >= 0 && next < order.length)
-          [order[index], order[next]] = [order[next], order[index]];
-      }
-      renderDraft();
+      await api('prompt-options', { options });
+      status('已保存小猫之神的提示词选项。');
     }),
   );
-  const closeEntry = () => {
-    captureEdit();
-    editing = null;
-    $('#prompt-entry-dialog').close();
-    renderDraft();
-  };
-  events.on($('#prompt-entry-save'), 'click', closeEntry);
-  events.on($('#prompt-entry-dialog'), 'cancel', (event) => {
-    event.preventDefault();
-    closeEntry();
-  });
-  events.on($('#prompt-messages'), 'dragstart', (event) => {
-    if (event.target.closest('button,input,textarea,select')) {
-      event.preventDefault();
-      return;
-    }
-    const row = event.target.closest('[data-prompt-entry]');
-    if (row) event.dataTransfer.setData('text/plain', row.dataset.promptEntry);
-  });
-  events.on($('#prompt-messages'), 'dragover', (event) => event.preventDefault());
-  events.on(
-    $('#prompt-messages'),
-    'drop',
-    guard((event) => {
-      event.preventDefault();
-      const source = event.dataTransfer.getData('text/plain');
-      const target = event.target.closest('[data-prompt-entry]')?.dataset.promptEntry;
-      if (!source || !target || source === target) return;
-      draft = capture();
-      const order = draft.prompt_order[0].order;
-      const from = order.findIndex((item) => item.identifier === source);
-      if (from < 0) return;
-      const [item] = order.splice(from, 1);
-      order.splice(
-        order.findIndex((entry) => entry.identifier === target),
-        0,
-        item,
-      );
-      renderDraft();
-    }),
-  );
-  events.on(
-    $('#prompt-preview'),
-    'click',
-    guard(() => preview()),
-  );
-  events.on(
-    $('#ai-preview-request'),
-    'click',
-    guard(() => preview(false)),
-  );
-  events.on($('#prompt-import'), 'click', () => $('#prompt-import-file').click());
-  events.on(
-    $('#prompt-import-file'),
-    'change',
-    guard(async () => {
-      const file = $('#prompt-import-file').files[0];
-      if (!file) return;
-      if (file.size > 8000000) throw Error('预设文件不能超过8MB');
-      const raw = JSON.parse(await file.text());
-      if (!raw.name) raw.name = file.name.replace(/\.json$/i, '');
-      const result = await api('prompts/save', { preset: raw });
-      draft = result.preset;
-      warnings = result.warnings;
-      await refresh();
-      renderDraft();
-      for (const target of PROMPT_KINDS) {
-        setProfiles(await api('prompts/select', { kind: target, id: draft.id }));
-        window.dispatchEvent(new CustomEvent('preset-selected', { detail: { kind: target } }));
-      }
-      syncProfile();
-      $('#prompt-import-file').value = '';
-      status(
-        '已导入并应用到角色、剧本、交流、闲聊、地图和以太 API；记忆总结仍保留默认总结预设，可在上方按需切换。',
-      );
-    }),
-  );
-  events.on(
-    $('#prompt-export'),
-    'click',
-    guard(() => {
-      const preset = capture();
-      const url = URL.createObjectURL(
-        new Blob([JSON.stringify(preset, null, 2)], { type: 'application/json' }),
-      );
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = preset.name + '.json';
-      link.click();
-      URL.revokeObjectURL(url);
-    }),
-  );
-  return { refresh, syncProfile, open };
+  events.on($('#prompt-preview'), 'click', guard(preview));
+  return { refresh, syncProfile };
 }

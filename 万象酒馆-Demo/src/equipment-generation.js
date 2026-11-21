@@ -36,6 +36,11 @@ export function equipmentGenerationPlan(source) {
     maxEffects: q.maxEffects,
     maxConditions: q.maxConditions,
     continuous: q.allowContinuous,
+    triggerScopes: ['unlimited', 'battle', 'expedition'],
+    scopeRestrictions: {
+      unlimitedNonDotBuffs: q.tier >= 4,
+      unlimitedCleanse: q.tier >= 3,
+    },
     targets:
       q.tier >= 4
         ? [
@@ -53,7 +58,7 @@ export function equipmentGenerationPlan(source) {
     events: Object.keys(TRIGGER_EVENTS),
     powers: ['low', 'medium', 'high'],
     instruction:
-      '只从designPlan中选择statFocus、触发时机、条件、目标和定性power档位（low/medium/high）；绝不填写budget、price、具体点数或状态层数。代码会按品质与等级换算范围并生成装备。',
+      '只从designPlan中选择statFocus、触发时机、条件、目标、事件规则的scope（unlimited/battle/expedition）和定性power档位（low/medium/high）；绝不填写budget、price、limit、具体点数或状态层数。scope不填时按expedition兼容处理。代码会按品质、等级和触发范围换算效果数值与次数。',
   };
 }
 
@@ -81,9 +86,11 @@ export function compileEquipmentDesign(raw, source) {
         (key) => key in rule || key === 'event',
       ) ||
       Object.keys(rule).some(
-        (key) => !['mode', 'event', 'target', 'conditions', 'effects'].includes(key),
+        (key) => !['mode', 'event', 'scope', 'target', 'conditions', 'effects'].includes(key),
       ) ||
       !plan.targets.includes(rule.target) ||
+      (rule.scope !== undefined && !plan.triggerScopes.includes(rule.scope)) ||
+      (rule.mode !== 'event' && rule.scope !== undefined) ||
       !Array.isArray(rule.conditions) ||
       rule.conditions.length > plan.maxConditions ||
       rule.conditions.some(
@@ -98,6 +105,20 @@ export function compileEquipmentDesign(raw, source) {
       (rule.mode === 'continuous' && !plan.continuous)
     )
       throw Error('装备事件复杂度超出品质档位');
+    if (
+      rule.scope === 'unlimited' &&
+      !plan.scopeRestrictions.unlimitedNonDotBuffs &&
+      rule.effects.some(
+        (effect) => effect.type === 'buff' && !['poison', 'bleed'].includes(effect.buff),
+      )
+    )
+      throw Error('无限触发的离散增益需要史诗及以上品质');
+    if (
+      rule.scope === 'unlimited' &&
+      !plan.scopeRestrictions.unlimitedCleanse &&
+      rule.effects.some((effect) => effect.type === 'cleanse')
+    )
+      throw Error('无限触发的净化需要稀有及以上品质');
     const hostile = ['lowestEnemy', 'allEnemies'].includes(rule.target);
     const effects = rule.effects.map((effect) => {
       if (
@@ -135,6 +156,7 @@ export function compileEquipmentDesign(raw, source) {
     return {
       mode: rule.mode,
       ...(rule.mode === 'event' ? { event: rule.event } : {}),
+      ...(rule.mode === 'event' ? { scope: rule.scope || 'expedition' } : {}),
       target: rule.target,
       conditions: structuredClone(rule.conditions),
       effects,
@@ -142,6 +164,7 @@ export function compileEquipmentDesign(raw, source) {
   });
 
   const normalizedDesign = {
+    ruleRevision: 2,
     statFocus: [...design.statFocus],
     rules: validatedRules,
   };
@@ -155,14 +178,31 @@ export function compileEquipmentDesign(raw, source) {
     seed,
   });
 
-  const category =
-    normalizeEquipmentCategory(raw.category) || normalizeEquipmentCategory(source?.category);
+  const isVoucherForged = Boolean(source?.voucherForged);
+  const category = isVoucherForged
+    ? normalizeEquipmentCategory(source?.category) || normalizeEquipmentCategory(raw.category)
+    : normalizeEquipmentCategory(raw.category) || normalizeEquipmentCategory(source?.category);
   if (category === 'gem') throw Error('宝石来自预设掉落池，不由造物 API 构筑');
+  if (
+    isVoucherForged &&
+    (!raw.name ||
+      typeof raw.name !== 'string' ||
+      !raw.name.trim() ||
+      /未命名|待命名/.test(raw.name))
+  ) {
+    throw Error('兑换券凝聚装备缺少正式名称');
+  }
 
   return normalizeEquipment(
     {
       ...raw,
       ...(category ? { category } : {}),
+      ...(isVoucherForged
+        ? {
+            sourceName: '装备兑换券凝聚',
+            sourceDescription: `消耗装备兑换券凝聚（Lv.${compiled.level} ${EQUIPMENT_QUALITIES[compiled.quality]?.name || compiled.quality}）`,
+          }
+        : {}),
       flavor: typeof raw.description === 'string' ? raw.description.trim() : '',
       description: compiled.description,
       level: compiled.level,
@@ -173,6 +213,16 @@ export function compileEquipmentDesign(raw, source) {
       statRanges: compiled.statRanges,
       rollPercent: compiled.rollPercent,
     },
-    { ...source, level: compiled.level, quality: compiled.quality },
+    {
+      ...source,
+      ...(isVoucherForged
+        ? {
+            name: '装备兑换券凝聚',
+            description: `消耗装备兑换券凝聚（Lv.${compiled.level} ${EQUIPMENT_QUALITIES[compiled.quality]?.name || compiled.quality}）`,
+          }
+        : {}),
+      level: compiled.level,
+      quality: compiled.quality,
+    },
   );
 }

@@ -30,7 +30,7 @@ export async function credentialPersistenceChecks({ browser, baseURL, output }) 
       calls++;
       assert.equal(route.request().headers().authorization, `Bearer ${secret}`);
       await route.fulfill({
-        status: 429,
+        status: 422,
         headers,
         json: {
           error: {
@@ -52,6 +52,7 @@ export async function credentialPersistenceChecks({ browser, baseURL, output }) 
     await launch();
     const library = newCampaign(defaultProtagonist());
     Object.assign(library.campaign, { completed: true, firstRecruit: true, tutorial: 'done' });
+    library.unlockedDungeons = ['mill'];
     const profiles = createConnectionStore().visible();
     for (const profile of Object.values(profiles))
       Object.assign(profile, {
@@ -111,10 +112,10 @@ export async function credentialPersistenceChecks({ browser, baseURL, output }) 
     await page.locator('#ai-remember-and-save').click();
     await page.locator('#ai-status').filter({ hasText: '已保存到此设备' }).waitFor();
     assert(await page.locator('#ai-rememberKey').isChecked());
-    for (const kind of ['character', 'chat', 'quick-chat', 'summary', 'creation', 'map'])
+    for (const kind of ['character', 'chat', 'summary', 'creation', 'map'])
       await page.locator(`[data-apply-kind][value="${kind}"]`).check();
     await page.locator('#api-preset-apply-many').click();
-    await page.locator('#ai-status').filter({ hasText: '应用到 6 个 API' }).waitFor();
+    await page.locator('#ai-status').filter({ hasText: '应用到 5 个 API' }).waitFor();
     await page.screenshot({ path: path.join(output, 'key-saved-to-device.png') });
     await context.close();
 
@@ -123,9 +124,11 @@ export async function credentialPersistenceChecks({ browser, baseURL, output }) 
     assert.match(await page.locator('#ai-key').getAttribute('placeholder'), /已在此设备记住/);
     await page.locator('#ai-close').click();
     await page.evaluate(() => demo.startBattle());
+    await page.locator('#destination-regions button[data-region="mill"]').click();
     await page.locator('#destination-region-confirm').click();
     const sent = page.waitForRequest('https://persistence-fixture.invalid/**');
     await page.locator('#destination-start').click();
+    await page.getByRole('button', { name: '确认编队 · 开始生成', exact: true }).click();
     await sent;
     await page.waitForFunction(() => !document.querySelector('#party-panel').open, {
       timeout: 30000,

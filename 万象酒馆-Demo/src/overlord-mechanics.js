@@ -47,7 +47,7 @@ export function overlordPhaseProfile(def, stage = 1) {
       bombSeconds,
       shield: def?.phaseShields?.[1] ?? 12,
       strengthBonus: 0,
-      artifactBonus: def?.artifactByPhase?.[1] ?? 1,
+      artifactBonus: def?.artifactByPhase?.[1] ?? 0,
       title: '',
       subtitle: '',
     };
@@ -60,7 +60,7 @@ export function overlordPhaseProfile(def, stage = 1) {
     bombSeconds,
     shield: def?.phaseShields?.[2] ?? 16,
     strengthBonus: 1,
-    artifactBonus: def?.artifactByPhase?.[2] ?? 1,
+    artifactBonus: def?.artifactByPhase?.[2] ?? 0,
     title: '',
     subtitle: '',
   };
@@ -143,15 +143,15 @@ export const OVERLORD_DIALOGUES = (() => {
     breakShatter: '呃啊……！日蚀光环被强行撕开了一道口子……黑水倒灌回喉咙里了……！',
     broken: '嘶……骨节全被光灼僵了……黑潮退了半寸，趁现在……别、别让我把眼睑重新合上……',
     plague:
-      '黑水已经漫上石台。只要你还钉在同一格里发呆，【沉疫】就会一轮比一轮更深地咬住你的脚踝。',
+      '黑水漫过战场四缘。全队前排与后排承受同等【沉疫】侵蚀；但在前场连续两回合承疫者，将被锁死【无法获得护盾、回复生命与法力】，退回后场立刻解除！',
     plagueTick:
-      '又过去一轮了。水底的手顺着后排的裤脚往上爬——谁敢一直缩在后场不往前换，下一脚就会直接踩空！',
+      '边缘黑潮仍在合拢——记住谁已经在前排连吃两轮沉疫，封锁一旦落下，不退回后排就半点护盾和蓝血都拿不到。',
     corruptSlot:
-      '看清楚那个爬满墨纹的回合格。别想在上面塞什么输出招式——要么老实用来【换位】，要么逼我先踩上去替你挡灾！',
+      '看清楚那个爬满墨纹的回合格。别想在上面塞输出招式——要么用来【换位】，要么用【缓慢】逼我先踩上去替你挡灾！',
     slowBreakSlot:
       '啧……居然用【缓慢】硬生生把我的动作拖进了黑格里？好算计……那一格的诅咒被你反扣回我身上了！',
     rearPlagueAlert:
-      '还躲在后排不动吗？沉水专啃不敢换到前场喘息的怯懦者——死在后面，连替身都救不及！',
+      '前排已经有棋子被沉疫彻底锁死了——再不把人换到后排解封，那点残血连护盾和补蓝都吃不进去！',
     pageReload: Object.freeze([
       '按下【刷新网页】就能假装自己没下到坑底么？黑水比浏览器记得更牢——水位甚至没降下半分。',
       '又一次重开页面？真顽固。石缝里的眼睛可从不眨眼，它一直数着你回来几次。',
@@ -261,6 +261,69 @@ export const OVERLORD_DIALOGUES = (() => {
     }),
   });
 
+  const banditSyndicateKing = Object.freeze({
+    rankLabel: '暗巷黑市 · 暗巷匪王',
+    entrance: Object.freeze([
+      '拍卖槌还没落下，外头的杂鱼倒先放进来几个不懂规矩的客人。既然敢掀老子的拍卖桌，那就把命押在台子上吧。',
+      '那枚冷月戒本就是今夜的压轴货——想从我袖口里抢东西？先看清这一回合我抽的是哪一匣暗器再说！',
+    ]),
+    domainLock:
+      '铁栅早落下来了！这间地下拍卖厅只进不出，账簿、退路、外头那些花哨按钮全归黑市收缴——想活命，先接住我的飞刃！',
+    phase2: '啧……居然真让你摸到我衣角了？好啊，那就掀了黑羽大氅，让你见识什么叫一回合四连影！',
+    phase3:
+      '疯子！竟敢在拍卖台上把我逼到这份上——把压箱底的暗器匣全打空，千鸦骤雨之下，谁也别想站着走出暗巷！',
+    broken: '呃……！袖机竟然被硬生生震卡了……动作慢了半拍……别趁现在冲上来——！',
+    weaponSwap: (weaponName) =>
+      `咔哒——弹匣换好了。这一回合招待各位的是【${weaponName}】，每一道划痕都别想躲开！`,
+    pageReload: Object.freeze([
+      '嘿，偷偷按了【刷新网页】想赖掉刚才中了哪几针？地下黑市最讲究账目分明，重开一百回也还是这一局！',
+      '又按【刷新】？真当黑鸦的眼睛看不见屏幕外头？换完匣子我照样先出手！',
+    ]),
+    reenterAfterReload: '哟，溜出暗门透完冷风又摸回拍卖厅了？规矩照旧，把刚欠的那几刀补齐吧。',
+    defeat: '咳……竟然被自己的暗器……反咬得遍体鳞伤……这枚冷月戒……算你真有本事拿走……',
+    sealedButtons: Object.freeze({
+      saves: '别惦记【存档】了，进了暗巷拍卖厅，落子就没有涂账重画的道理！',
+      settings: '把手从【设置】拿开！暗巷的规矩由我的暗器定，轮不到开关插嘴！',
+      ledger: '算什么破【账簿】？今夜台子上只收人头，不收金币！',
+      story: '写不完的【手记】待会儿让后巷的野狗替你收着吧！',
+      retreat: '铁栅焊死了，暗渠闸也放下来了——现在【撤退】只能撞在我的袖箭上！',
+      party: '外头那几个望风的早就清场了，【整备】换人？别做梦了！',
+      review: '翻旧账可挡不住下一轮飞镖——盯着我手里的弹匣看！',
+      default: '少东张西望点棋盘外头的框子，黑鸦的匕首比你的手指更快！',
+    }),
+  });
+
+  const darkscaleWarlord = Object.freeze({
+    rankLabel: '灰岩旧采石场 · 初生暗鳞督军',
+    entrance: Object.freeze([
+      '咔嚓——暗紫晶壳在低沉兽吼中寸寸崩裂！左腕拖着断枷的黑曜巨兽踏碎岩屑，裂隙暗气顺着骨脊倒灌进胸口暗核。',
+      '半载铁枷锁不住裂隙的暴君——督军昂首咆哮，周身游离暗尘应声沸腾，将整座矿底拖入漆黑重压！',
+    ]),
+    domainLock:
+      '矿道顶岩在督军威压下轰然塌封！此刻退路、账簿与界外杂项皆被裂隙暗气压死，唯有一战到底！',
+    phase2: '铿锵——！！左腕残余的粗重铁枷被督军硬生生扯碎崩飞！暗鳞怒张，裂隙重压全面暴走！',
+    broken: '吼呜……！层叠黑曜暗鳞寸寸崩落，胸口暗核剧烈震颤，督军庞大身躯轰然单膝砸地！',
+    rallyDust: '督军发出低沉统御咆哮，渗气岩缝中再度涌出成群游离暗尘列阵合围！',
+    shedScales: '剧烈负面共鸣震裂黑曜硬甲，督军体表数层裂隙暗鳞应声崩碎坠地！',
+    pageReload: Object.freeze([
+      '轰鸣震彻矿坑——即便【刷新网页】，渗气岩缝里的暗鳞督军依旧死死盯着踏入坑底的闯入者。',
+      '再次重开页面也抹不掉崩断的铁枷。暗核仍在搏动，这一战躲不过去。',
+    ]),
+    reenterAfterReload: '矿底暗气尚未散去，拖着断枷的暗鳞督军再度自裂隙阴影中迈步迎上！',
+    defeat:
+      '胸口暗核的光芒骤然熄灭……黑曜巨躯轰然倾倒在岩缝前，崩断的铁枷沉重坠地，矿底半年的躁动终于归于死寂……',
+    sealedButtons: Object.freeze({
+      saves: '裂隙暗气封锁了矿底一切退路——此刻无法借【存档】逃离晶窟！',
+      settings: '矿道深处回响着督军低吼，外界的【设置】参数已被暗压隔绝！',
+      ledger: '碎石与暗晶早已掩埋了行囊【账簿】，眼下唯有直面眼前的断枷暴君！',
+      story: '矿坑残壁刻不下未完的【手记】——先嵌上镇隙封石再提笔不迟！',
+      retreat: '掘进巷道早被震塌堵死，此刻绝无【撤退】可能！',
+      party: '通风井外已被游离暗尘封锁，未随行的同伴无法下探增援！',
+      review: '别回头翻看旧页，督军的紫晶裂刃正蓄势横扫前排！',
+      default: '裂隙深处的威压锁定了整座战阵，请专心应对眼前霸主！',
+    }),
+  });
+
   return Object.freeze({
     alchemicalPuppet,
     apepLamb,
@@ -269,6 +332,8 @@ export const OVERLORD_DIALOGUES = (() => {
     moonRoot: moonEye,
     ares,
     radiantWyvern,
+    banditSyndicateKing,
+    darkscaleWarlord,
   });
 })();
 
@@ -297,8 +362,23 @@ export function overlordReloadBark(overlordId, reloadCount = 1) {
   return pack.domainLock || '棋盘之外的按钮已经锁死了——先把这一战打完。';
 }
 
+export function isPlagueSealed(s, id) {
+  return Boolean(
+    id &&
+    s?.sinkingPlague?.sealed?.[id] &&
+    Array.isArray(s.formation) &&
+    s.formation.slice(0, 3).includes(id),
+  );
+}
+
 export function pickCorruptedTimelineSlot(s, slots) {
-  if (!s?.sinkingPlague || !Array.isArray(slots) || !slots.length) return null;
+  const plague = s?.sinkingPlague;
+  if (!plague || !Array.isArray(slots) || !slots.length) return null;
+  const sourceUnit = s.units?.[plague.source];
+  const stage = sourceUnit?.bossStage || (sourceUnit?.enraged ? 2 : 1);
+  // Stage 1 never spawns corrupted swap slots; Stage 2 spawns every 2 rounds; Stage 3 every round.
+  if (stage < 2) return null;
+  if (stage === 2 && (plague.stage2CorruptTick || 1) % 2 === 0) return null;
   const empty = [];
   for (let i = 0; i < slots.length; i += 1) {
     if (!slots[i]) empty.push(i);
@@ -316,26 +396,26 @@ export function pickCorruptedTimelineSlot(s, slots) {
   return candidates[hash % candidates.length];
 }
 
-export function sinkingPlagueFrontDamage(s, slot, ageOverride = null) {
+export function sinkingPlagueFrontDamage(s, _slot = 0, ageOverride = null) {
   const plague = s?.sinkingPlague;
-  if (!plague || !Number.isInteger(slot) || slot < 0 || slot >= 3) return 0;
-  const age = ageOverride ?? plague.ages?.[slot] ?? 0;
+  if (!plague) return 0;
+  const maxAge = Math.max(0, ...(plague.ages || [0]));
+  const age = ageOverride ?? maxAge;
   const elapsed = age + 1;
   const sourceUnit = s.units?.[plague.source];
   const scale = Math.max(1, sourceUnit?.damageScale || 1);
-  return Math.round(elapsed * 2 * scale);
+  // Skills also deepen the plague, so cap its damage separately from its depth.
+  const baseDamage = Math.min(1.5, elapsed * 0.35);
+  return Math.max(1, Math.round(baseDamage * scale));
 }
 
-export function sinkingPlagueRearDamage(s, rearTurns) {
-  const plague = s?.sinkingPlague;
-  if (!plague || !(rearTurns > 0)) return 0;
-  const sourceUnit = s.units?.[plague.source];
-  const scale = Math.max(1, sourceUnit?.damageScale || 1);
-  return Math.round(rearTurns * rearTurns * 6 * scale);
+export function sinkingPlagueRearDamage(s, ageOverride = null) {
+  return sinkingPlagueFrontDamage(s, 0, ageOverride);
 }
 
 export function overlordPhaseLog(id, def, nextStage, profile, shield) {
-  const statsNote = `获得${profile.artifactBonus || 0}层人工制品与${shield}护盾，震退并打断我方本回合剩余行动`;
+  const artifactNote = profile.artifactBonus > 0 ? `${profile.artifactBonus}层人工制品与` : '';
+  const statsNote = `获得${artifactNote}${shield}护盾，震退并打断我方本回合剩余行动`;
   if (id === 'apepLamb') {
     return nextStage >= 3
       ? `${def.name}头顶的日蚀黑轮彻底吞没天光，深渊赤瞳全开（${statsNote}）`
@@ -350,6 +430,14 @@ export function overlordPhaseLog(id, def, nextStage, profile, shield) {
     return nextStage >= 3
       ? `${def.name}胸口的核心彻底碎裂暴走，滚烫炼金雾席卷全场（${statsNote}）`
       : `${def.name}体内的反重力发条猛然失衡逆转（${statsNote}）`;
+  }
+  if (id === 'banditSyndicateKing') {
+    return nextStage >= 3
+      ? `${def.name}猛然翻开压箱底的暗器匣，化作千道冷影席卷拍卖台（${statsNote}）`
+      : `${def.name}甩开黑羽大氅骤然提速，暗器弹匣疾转蓄势（${statsNote}）`;
+  }
+  if (id === 'darkscaleWarlord') {
+    return `${def.name}硬生生扯碎左腕残枷，裂隙暗核猛烈搏动暴走（${statsNote}）`;
   }
   return `${def.name}显露更深一层的霸主压迫（${statsNote}）`;
 }

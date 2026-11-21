@@ -60,16 +60,17 @@
         ><button id="speed" hidden>演出 ×1</button><button id="back-inn" hidden>返回酒馆</button>
         <button
           id="audio-toggle"
-          aria-label="声音设置"
+          aria-label="BGM 播放与声音设置"
           aria-expanded="false"
           aria-controls="audio-panel"
-          title="声音设置"
+          title="BGM 播放与声音设置"
         >
           <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <path
-              d="M4 9h4l5-4v14l-5-4H4zM16 8c3 2 3 6 0 8M19 5c5 4 5 10 0 14"
+              d="M9 17.5V5.5l10-2v10M9 17.5a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0Zm10-4a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0Z"
               stroke="currentColor"
               stroke-width="1.7"
+              stroke-linecap="round"
               stroke-linejoin="round"
             />
           </svg>
@@ -92,59 +93,114 @@
         </button>
       </nav>
     </header>
-    <dialog id="bookshelf-dialog" aria-labelledby="bookshelf-title">
-      <header>
-        <div>
-          <small>LIBRARY / 旅人藏书</small>
-          <h2 id="bookshelf-title">酒馆书架</h2>
+    <div hidden aria-hidden="true">
+      <button id="archives-open" type="button">归档</button>
+      <button id="records-open" type="button">记录</button>
+      <button id="memory-open" type="button">总结</button>
+    </div>
+    <section id="audio-panel" role="region" aria-label="BGM 播放与声音控制" hidden>
+      <div class="audio-panel-head">
+        <div class="audio-panel-title">
+          <strong>BGM 与声音</strong>
+          <span id="audio-mode-badge" class="audio-mode-badge">随场景自动</span>
         </div>
-        <button id="bookshelf-close" aria-label="关闭书架">×</button>
-      </header>
-      <nav class="bookshelf-actions">
-        <button id="archives-open">归档</button><button id="records-open">记录</button
-        ><button id="memory-open">总结</button>
-      </nav>
-      <div class="bookshelf-layout">
-        <nav id="bookshelf-books"></nav>
-        <article id="bookshelf-text"></article>
+        <button
+          id="audio-close"
+          type="button"
+          class="audio-close-btn"
+          aria-label="关闭声音面板"
+          title="关闭"
+        >
+          ×
+        </button>
       </div>
-    </dialog>
-    <section id="audio-panel" role="region" aria-label="声音设置" hidden>
-      <strong>声音</strong>
-      <div class="audio-row">
-        <label for="audio-music">音乐</label
-        ><output id="audio-music-value" for="audio-music">32%</output
-        ><button id="audio-music-mute" aria-label="音乐开关" aria-pressed="false">已开启</button>
+      <div class="audio-now-card">
+        <div class="audio-now-main">
+          <span class="audio-now-dot" aria-hidden="true">♪</span>
+          <div class="audio-now-text">
+            <strong id="audio-now-title">待启用背景音乐</strong>
+            <small id="audio-state" role="status">点击页面后启用声音</small>
+          </div>
+        </div>
+        <div class="audio-now-actions">
+          <button id="audio-shuffle" type="button" class="audio-chip-btn" hidden>换一首</button>
+          <button id="audio-stop-preview" type="button" class="audio-chip-btn is-accent" hidden>
+            结束试听
+          </button>
+          <button id="audio-auto-scene" type="button" class="audio-chip-btn is-accent" hidden>
+            恢复自动
+          </button>
+        </div>
       </div>
-      <input
-        autocomplete="off"
-        id="audio-music"
-        type="range"
-        min="0"
-        max="100"
-        value="32"
-        aria-label="音乐音量"
-      />
-      <div class="audio-row">
-        <label for="audio-effects">音效</label
-        ><output id="audio-effects-value" for="audio-effects">60%</output
-        ><button id="audio-effects-mute" aria-label="音效开关" aria-pressed="false">已开启</button>
+      <div class="audio-controls">
+        <div class="audio-control-item">
+          <div class="audio-row">
+            <label for="audio-music">音乐</label
+            ><output id="audio-music-value" for="audio-music">32%</output
+            ><button id="audio-music-mute" type="button" aria-label="音乐开关" aria-pressed="false">
+              已开启
+            </button>
+          </div>
+          <input
+            autocomplete="off"
+            id="audio-music"
+            type="range"
+            min="0"
+            max="100"
+            value="32"
+            aria-label="音乐音量"
+          />
+        </div>
+        <div class="audio-control-item">
+          <div class="audio-row">
+            <label for="audio-effects">音效</label
+            ><output id="audio-effects-value" for="audio-effects">60%</output
+            ><button
+              id="audio-effects-mute"
+              type="button"
+              aria-label="音效开关"
+              aria-pressed="false"
+            >
+              已开启
+            </button>
+          </div>
+          <input
+            autocomplete="off"
+            id="audio-effects"
+            type="range"
+            min="0"
+            max="100"
+            value="60"
+            aria-label="音效音量"
+          />
+        </div>
       </div>
-      <input
-        autocomplete="off"
-        id="audio-effects"
-        type="range"
-        min="0"
-        max="100"
-        value="60"
-        aria-label="音效音量"
-      />
-      <small id="audio-state" role="status">点击页面后启用声音</small>
+      <div class="audio-playlist-head">
+        <div class="audio-playlist-title">
+          <span>已收录曲目</span>
+          <small id="audio-playlist-count" class="audio-playlist-count">0/14</small>
+        </div>
+        <div
+          id="audio-categories"
+          class="audio-categories"
+          role="tablist"
+          aria-label="曲目分类"
+        ></div>
+      </div>
+      <ul id="audio-playlist" class="audio-playlist" aria-label="已解锁 BGM 曲目列表"></ul>
+      <p id="audio-playlist-empty" class="audio-playlist-empty" hidden>
+        暂未解锁曲目 · 系统实际播放过的配乐会自动收录于此
+      </p>
     </section>
     <aside id="inn-resources" aria-label="酒馆资源" aria-live="polite">
       <span class="inn-resource"
         ><img src="assets/icons/ether.svg" width="64" height="64" alt="" /><span
           >以太<strong id="ether-count">0</strong></span
+        ></span
+      >
+      <span class="inn-resource"
+        ><img src="./assets/icons/equipment-voucher.svg" width="64" height="64" alt="" /><span
+          >装备兑换券<strong id="voucher-count">0</strong></span
         ></span
       >
       <div>
@@ -214,8 +270,7 @@
         ><button data-ai-tab="game" role="tab">开发者模式</button
         ><button data-ai-tab="anti-route" role="tab">Anti-Route 防护</button
         ><button data-ai-tab="prompts" role="tab">提示词预设</button
-        ><button id="ai-worldbooks" role="tab">世界书</button
-        ><button id="ai-regex" role="tab">正则</button>
+        ><button id="ai-worldbooks" role="tab">世界书</button>
       </nav>
       <div class="ai-workspace">
         <section class="ai-editor">
@@ -224,179 +279,199 @@
               兼容 Chat
               Completions。酒馆交流与快速闲聊共用连接，提示词可分别选择。可使用本机转发或浏览器直连。
             </p>
-            <label class="connection-purpose"
-              >用途<select id="ai-kind">
-                <option value="character">角色生成 API</option>
-                <option value="script">剧本 API</option>
-                <option value="chat">聊天 API（酒馆交流与快速闲聊）</option>
-                <option value="summary">记忆总结 API（内置提示词）</option>
-                <option value="map">地图 API</option>
-                <option value="creation">以太造物 API</option>
-              </select></label
-            >
-            <div class="connection-preset-picker">
-              <label
-                >选择 API 预设<select id="api-preset-select">
-                  <option value="">未选择</option>
-                </select></label
-              ><button
-                id="api-preset-delete"
-                title="删除所选 API 预设"
-                aria-label="删除所选 API 预设"
-              >
-                ⌫
-              </button>
-            </div>
-            <label
-              >连接方式<select id="ai-requestMode">
-                <option value="local">本机服务转发</option>
-                <option value="browser">浏览器直连</option>
-              </select></label
-            >
-            <p id="ai-transport-hint" class="ai-hint"></p>
-            <label class="connection-protocol"
-              >接口协议<select id="ai-provider">
-                <option value="auto">自动识别（OpenAI / Google Vertex）</option>
-                <option value="openai">OpenAI 兼容</option>
-                <option value="vertex">Google Vertex · Gemini 原生</option>
-              </select></label
-            >
-            <label id="ai-vertex-auth" hidden
-              >Vertex 认证<select id="ai-vertexAuth">
-                <option value="service-account">完整版本（Service Account JSON）</option>
-                <option value="api-key">API Key（快捷模式）</option>
-                <option value="oauth">OAuth 访问令牌（标准模式）</option>
-              </select></label
-            >
-            <p id="ai-provider-hint" class="ai-hint" hidden></p>
-            <section id="ai-service-account-fields" hidden>
-              <label
-                >服务账号 JSON 内容<textarea
-                  id="ai-service-account"
-                  rows="5"
-                  spellcheck="false"
-                  autocomplete="off"
-                  placeholder="粘贴完整 JSON；已保存时留空保持"
-                ></textarea>
-              </label>
-              <div class="ai-actions">
-                <button id="ai-service-import" type="button">导入 JSON 文件</button
-                ><input
-                  id="ai-service-file"
-                  type="file"
-                  accept=".json,application/json"
-                  hidden
-                /><button id="ai-service-validate" type="button">验证 JSON</button>
+            <section class="ai-card ai-card-route">
+              <h3 class="ai-card-title">用途与协议</h3>
+              <div class="ai-row-2">
+                <label class="connection-purpose"
+                  >用途<select id="ai-kind">
+                    <option value="character">角色生成 API</option>
+                    <option value="script">剧本 API</option>
+                    <option value="chat">聊天 API（酒馆交流与快速闲聊）</option>
+                    <option value="summary">记忆总结 API（内置提示词）</option>
+                    <option value="map">地图 API</option>
+                    <option value="creation">以太造物 API</option>
+                  </select></label
+                >
+                <label class="connection-protocol"
+                  >接口协议<select id="ai-provider">
+                    <option value="auto">自动识别（OpenAI / Google Vertex）</option>
+                    <option value="openai">OpenAI 兼容</option>
+                    <option value="vertex">Google Vertex · Gemini 原生</option>
+                  </select></label
+                >
               </div>
-              <label>地区<input id="ai-vertexLocation" value="global" autocomplete="off" /></label>
-              <p id="ai-service-status" role="status"></p>
+              <label
+                >连接方式<select id="ai-requestMode">
+                  <option value="local">本机服务转发</option>
+                  <option value="browser">浏览器直连</option>
+                </select></label
+              >
+              <p id="ai-transport-hint" class="ai-hint"></p>
+              <label id="ai-vertex-auth" hidden
+                >Vertex 认证<select id="ai-vertexAuth">
+                  <option value="service-account">完整版本（Service Account JSON）</option>
+                  <option value="api-key">API Key（快捷模式）</option>
+                  <option value="oauth">OAuth 访问令牌（标准模式）</option>
+                </select></label
+              >
+              <p id="ai-provider-hint" class="ai-hint" hidden></p>
+              <section id="ai-service-account-fields" hidden>
+                <label
+                  >服务账号 JSON 内容<textarea
+                    id="ai-service-account"
+                    rows="5"
+                    spellcheck="false"
+                    autocomplete="off"
+                    placeholder="粘贴完整 JSON；已保存时留空保持"
+                  ></textarea>
+                </label>
+                <div class="ai-actions">
+                  <button id="ai-service-import" type="button">导入 JSON 文件</button
+                  ><input
+                    id="ai-service-file"
+                    type="file"
+                    accept=".json,application/json"
+                    hidden
+                  /><button id="ai-service-validate" type="button">验证 JSON</button>
+                </div>
+                <label
+                  >地区<input id="ai-vertexLocation" value="global" autocomplete="off"
+                /></label>
+                <p id="ai-service-status" role="status"></p>
+              </section>
             </section>
-            <label class="connection-primary connection-url"
-              >Base URL<input
-                autocomplete="off"
-                id="ai-baseUrl"
-                type="url"
-                value="https://api.openai.com/v1"
-                placeholder="https://服务地址/v1"
-            /></label>
-            <label class="connection-primary connection-model"
-              >模型<input autocomplete="off" id="ai-model" placeholder="填写服务商的模型ID"
-            /></label>
-            <section id="ai-model-picker" hidden>
-              <label for="ai-model-list">模型列表 · <span id="ai-model-count"></span></label
-              ><select id="ai-model-list" size="6" aria-label="可用模型列表"></select>
-            </section>
-            <label class="connection-primary connection-key"
-              >API Key<input
-                autocomplete="off"
-                id="ai-key"
-                type="password"
-                placeholder="留空保持现有密钥"
-            /></label>
-            <label class="ai-check"
-              ><input
-                autocomplete="off"
-                id="ai-rememberKey"
-                type="checkbox"
-              />在此设备记住密钥（普通备份不包含密钥）</label
-            >
-            <p id="ai-key-retention" class="ai-hint" role="status"></p>
-            <button id="ai-remember-and-save" type="button" hidden>长期保存此连接</button>
-            <label class="ai-check"
-              ><input
-                autocomplete="off"
-                id="ai-clear-key"
-                type="checkbox"
-              />清除当前用途的密钥</label
-            >
-            <details>
-              <summary>兼容选项</summary>
+
+            <section class="ai-card ai-card-core">
+              <h3 class="ai-card-title">核心连接</h3>
+              <label class="connection-primary connection-url"
+                >Base URL<input
+                  autocomplete="off"
+                  id="ai-baseUrl"
+                  type="url"
+                  value="https://api.openai.com/v1"
+                  placeholder="https://服务地址/v1"
+              /></label>
+              <div class="ai-row-2">
+                <label class="connection-primary connection-model"
+                  >模型<input autocomplete="off" id="ai-model" placeholder="填写服务商的模型ID"
+                /></label>
+                <label class="connection-primary connection-key"
+                  >API Key<input
+                    autocomplete="off"
+                    id="ai-key"
+                    type="password"
+                    placeholder="留空保持现有密钥"
+                /></label>
+              </div>
+              <section id="ai-model-picker" hidden>
+                <label for="ai-model-list">模型列表 · <span id="ai-model-count"></span></label
+                ><select id="ai-model-list" size="6" aria-label="可用模型列表"></select>
+              </section>
               <label class="ai-check"
                 ><input
                   autocomplete="off"
-                  id="ai-jsonMode"
+                  id="ai-rememberKey"
                   type="checkbox"
-                />保存JSON模式偏好（标签生成时不发送）</label
+                />在此设备记住密钥（普通备份不包含密钥）</label
               >
+              <p id="ai-key-retention" class="ai-hint" role="status"></p>
+              <button id="ai-remember-and-save" type="button" hidden>长期保存此连接</button>
               <label class="ai-check"
-                ><input autocomplete="off" id="ai-strictJson" type="checkbox" />保存严格JSON
-                Schema偏好（标签生成时不发送）</label
-              >
-              <p class="ai-hint">
-                角色与剧本采用 wanxiang_output
-                标签读取，兼容预设的其他返回文字。上游JSON模式与外层标签冲突，因此生成时不发送
-                response_format；本地始终严格校验字段、数值与规则。
-              </p>
-              <label
-                >输出长度字段<select id="ai-tokenField">
-                  <option value="max_tokens">max_tokens</option>
-                  <option value="max_completion_tokens">max_completion_tokens</option>
-                  <option value="none">不发送长度字段</option>
-                </select></label
-              >
-              <label
-                >输出上限<input
+                ><input
                   autocomplete="off"
-                  id="ai-maxTokens"
-                  type="number"
-                  min="256"
-                  max="131072"
-                  value="32768"
-              /></label>
-              <label id="ai-summary-context" hidden
-                >总结上下文长度<input
-                  autocomplete="off"
-                  id="ai-contextSize"
-                  type="number"
-                  min="1024"
-                  max="2000000"
-                  value="131072"
-              /></label>
-              <label
-                >提示词后处理<select id="ai-promptProcessing">
-                  <option value="strict">严格无工具</option>
-                  <option value="merge_tools" selected>合并含工具</option>
-                </select></label
+                  id="ai-clear-key"
+                  type="checkbox"
+                />清除当前用途的密钥</label
               >
-            </details>
-            <div class="connection-preset-save">
-              <label
-                >预设名称<input
-                  autocomplete="off"
-                  id="api-preset-name"
-                  maxlength="60"
-                  placeholder="例如：DS" /></label
-              ><button id="api-preset-save">保存为 API 预设</button>
-            </div>
-            <fieldset class="connection-apply">
-              <legend>为其他 API 配置相同预设</legend>
-              <div id="api-apply-targets"></div>
-              <button id="api-preset-apply-many" type="button">确定应用到勾选的 API</button>
-            </fieldset>
-            <div class="ai-actions">
-              <button id="ai-profile-save" class="primary">保存当前连接</button
-              ><button id="ai-models">读取模型列表</button>
-            </div>
+              <div class="ai-actions">
+                <button id="ai-profile-save" class="primary">保存当前连接</button
+                ><button id="ai-models">读取模型列表</button>
+              </div>
+            </section>
+
+            <section class="ai-card ai-card-presets">
+              <h3 class="ai-card-title">API 预设与批量应用</h3>
+              <div class="connection-preset-picker">
+                <label
+                  >选择 API 预设<select id="api-preset-select">
+                    <option value="">未选择</option>
+                  </select></label
+                ><button
+                  id="api-preset-delete"
+                  title="删除所选 API 预设"
+                  aria-label="删除所选 API 预设"
+                >
+                  ⌫
+                </button>
+              </div>
+              <div class="connection-preset-save">
+                <label
+                  >预设名称<input
+                    autocomplete="off"
+                    id="api-preset-name"
+                    maxlength="60"
+                    placeholder="例如：DS" /></label
+                ><button id="api-preset-save">保存为 API 预设</button>
+              </div>
+              <fieldset class="connection-apply">
+                <legend>为其他 API 配置相同预设</legend>
+                <div id="api-apply-targets"></div>
+                <button id="api-preset-apply-many" type="button">确定应用到勾选的 API</button>
+              </fieldset>
+            </section>
+
+            <section class="ai-card ai-card-advanced">
+              <details>
+                <summary>兼容选项</summary>
+                <label class="ai-check"
+                  ><input
+                    autocomplete="off"
+                    id="ai-jsonMode"
+                    type="checkbox"
+                  />保存JSON模式偏好（标签生成时不发送）</label
+                >
+                <label class="ai-check"
+                  ><input autocomplete="off" id="ai-strictJson" type="checkbox" />保存严格JSON
+                  Schema偏好（标签生成时不发送）</label
+                >
+                <p class="ai-hint">
+                  角色与剧本采用 wanxiang_output
+                  标签读取，兼容预设的其他返回文字。上游JSON模式与外层标签冲突，因此生成时不发送
+                  response_format；本地始终严格校验字段、数值与规则。
+                </p>
+                <label
+                  >输出长度字段<select id="ai-tokenField">
+                    <option value="max_tokens">max_tokens</option>
+                    <option value="max_completion_tokens">max_completion_tokens</option>
+                    <option value="none">不发送长度字段</option>
+                  </select></label
+                >
+                <label
+                  >输出上限<input
+                    autocomplete="off"
+                    id="ai-maxTokens"
+                    type="number"
+                    min="256"
+                    max="131072"
+                    value="32768"
+                /></label>
+                <label id="ai-summary-context" hidden
+                  >总结上下文长度<input
+                    autocomplete="off"
+                    id="ai-contextSize"
+                    type="number"
+                    min="1024"
+                    max="2000000"
+                    value="131072"
+                /></label>
+                <label
+                  >提示词后处理<select id="ai-promptProcessing">
+                    <option value="strict">严格无工具</option>
+                    <option value="merge_tools" selected>合并含工具</option>
+                  </select></label
+                >
+              </details>
+            </section>
           </div>
           <div data-ai-page="anti-route" hidden></div>
           <div data-ai-page="game" hidden>
@@ -483,12 +558,17 @@
                     data-generation-option="quickTestApep"
                     role="switch"
                 /></label>
+                <label
+                  ><span><strong>跳过界外行纪 API</strong><small>使用离线探索内容。</small></span
+                  ><input type="checkbox" data-generation-option="skipOverlandApi" role="switch"
+                /></label>
+                <button id="developer-tools-open" type="button" hidden>打开游戏修改器</button>
               </div>
             </div>
             <section class="memory-settings">
               <h3>经历与聊天记忆</h3>
               <p>
-                手动总结尚未处理的记录，检查并确认后用于后续上下文。完整原文保留，可在“提示词”和“世界书”自定义总结预设与规则。
+                手动总结尚未处理的记录，检查并确认后用于后续上下文。完整原文保留，总结规则可在世界书中查看。
               </p>
               <p>顶部“总结”按钮可打开记忆整理。</p>
             </section>
@@ -510,9 +590,6 @@
             </div>
           </div>
           <div data-ai-page="prompts" hidden>
-            <p class="prompt-editor-banner">
-              提示词管理器 · 拖拽排序，点击名称或铅笔编辑。预设决定文风，生成要求在世界书中编辑。
-            </p>
             <label
               >当前用途<select id="prompt-kind">
                 <option value="character">角色生成 API</option>
@@ -524,54 +601,97 @@
                 <option value="summary">记忆总结 API</option>
               </select></label
             >
-            <label>提示词预设<select id="prompt-select"></select></label>
-            <label>预设名称<input autocomplete="off" id="prompt-name" maxlength="80" /></label>
-            <div class="ai-actions">
-              <button id="prompt-use">当前接口使用此预设</button
-              ><button id="prompt-save" class="primary">保存修改</button
-              ><button id="prompt-copy">另存为</button><button id="prompt-delete">删除</button>
-            </div>
-            <div class="ai-actions">
-              <button id="prompt-import">导入酒馆预设 JSON</button
-              ><button id="prompt-export">导出预设</button
-              ><button id="helper-open">预设扩展窗口</button
-              ><button id="ai-preview-request">预览当前使用预设 / TK</button
-              ><input
-                autocomplete="off"
-                id="prompt-import-file"
-                type="file"
-                accept=".json,application/json"
-                hidden
-              />
-            </div>
-            <p id="prompt-source" class="ai-hint"></p>
-            <p id="prompt-warnings" role="status"></p>
-            <fieldset class="connection-apply prompt-apply">
-              <legend>把当前预设与调节应用到其他 API</legend>
-              <div id="prompt-apply-targets"></div>
-              <button id="prompt-apply-many" type="button">保存并应用到勾选的 API</button>
+            <fieldset class="preset-box">
+              <legend>小猫之神 · Meowssiah 2.1.7</legend>
+              <div class="route-attribution">
+                <span>原作者：SoliUmbra</span>
+                <a
+                  href="https://discord.com/channels/1134557553011998840/1402584661208858635"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="在 Discord 查看 SoliUmbra 的小猫之神预设发布帖"
+                  title="Discord · 原作发布帖"
+                >
+                  <svg
+                    width="22"
+                    height="22"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M19.7 5.1a18 18 0 0 0-4.4-1.4l-.6 1.2a16.6 16.6 0 0 0-5.4 0l-.6-1.2a18 18 0 0 0-4.4 1.4C1.5 9.2.7 13.2 1.1 17.2a18 18 0 0 0 5.5 2.8l1.1-1.8-1.7-.8.4-.3a13.8 13.8 0 0 0 11.2 0l.4.3-1.7.8 1.1 1.8a18 18 0 0 0 5.5-2.8c.5-4.6-.8-8.6-3.2-12.1ZM8.5 14.8c-1 0-1.7-.9-1.7-2s.7-2 1.7-2 1.7.9 1.7 2-.8 2-1.7 2Zm7 0c-1 0-1.7-.9-1.7-2s.7-2 1.7-2 1.7.9 1.7 2-.7 2-1.7 2Z"
+                    />
+                  </svg>
+                </a>
+              </div>
+              <label
+                >文风<select data-prompt-option="style">
+                  <option value="game">游戏默认</option>
+                  <option value="cinematic">电影运镜</option>
+                  <option value="sensory">五感写实</option>
+                </select></label
+              >
+              <label
+                >篇幅<select data-prompt-option="length">
+                  <option value="short">简短</option>
+                  <option value="standard">标准</option>
+                  <option value="long">展开</option>
+                </select></label
+              >
+              <label
+                >成人文风<select data-prompt-option="adult">
+                  <option value="original">正常</option>
+                  <option value="soft">更舒缓</option>
+                  <option value="intense">更直白</option>
+                  <option value="disabled">关闭</option>
+                </select></label
+              >
+              <label
+                >玩家行动<select data-prompt-option="retelling">
+                  <option value="continue">直接续写</option>
+                  <option value="retell">可转述已提交行动</option>
+                </select></label
+              >
+              <label
+                >剧本视角<select data-prompt-option="perspective">
+                  <option value="character">跟随人物</option>
+                  <option value="adaptive">智能切换</option>
+                  <option value="wide">全局多视角</option>
+                </select></label
+              >
+              <label><input type="checkbox" data-prompt-option="lively" />活人感加强</label>
+              <label><input type="checkbox" data-prompt-option="calm" />平缓情绪</label>
+              <label
+                ><input type="checkbox" data-prompt-option="avoidCliches" />避免公式化开头</label
+              >
+              <label
+                ><input
+                  type="checkbox"
+                  data-prompt-option="secondPerson"
+                />对玩家使用第二人称</label
+              >
+              <label><input type="checkbox" data-prompt-option="adultAsmr" />成人 ASMR</label>
+              <label
+                ><input
+                  type="checkbox"
+                  data-prompt-option="adultOnRequest"
+                />成人场景由玩家引导</label
+              >
+              <label>
+                <input
+                  type="checkbox"
+                  data-prompt-option="toolTransport"
+                />使用正文工具（需接口支持工具调用）
+              </label>
             </fieldset>
-            <div id="prompt-sampling" class="sampling-fields"></div>
-            <div id="prompt-messages"></div>
             <div class="ai-actions">
-              <button id="prompt-add">＋ 添加消息层</button
-              ><button id="prompt-preview" class="primary">预览最终请求（不调用模型）</button>
+              <button id="prompt-options-save" class="primary">保存提示词选项</button>
+              <button id="prompt-preview">预览最终请求 / TK</button>
             </div>
             <details class="preset-box">
-              <summary>变量与酒馆占位层适配</summary>
-              <p class="ai-hint">
-                支持
-                {{input}}、{{brief}}、{{task}}、{{char}}、{{user}}、{{description}}、{{personality}}、{{worldbook}}、{{characters}}、{{scenario}}、{{history}}、{{persona}}、{{wiBefore}}、{{wiAfter}}、{{scriptStyle}}。游戏要求由世界书按位置注入，不再追加默认文风。支持全局
-                prompt_order、开关、排序、按请求尾部深度注入。游戏读取完整人物正文，charPersonality不重复注入。插件、脚本与未适配宏会提示，不执行。
-              </p>
-            </details>
-            <details class="preset-box" id="prompt-fixed">
-              <summary>代码读取约束参考（输出格式在世界书 @D 条目）</summary>
-              <p class="ai-hint">
-                实际生成要求和JSON Schema由世界书的“JSON输出格式
-                @D”条目发送。这里仅供对照代码校验要求，不额外注入消息。字段修改仍需与解析器一致。
-              </p>
-              <pre id="prompt-contract"></pre>
+              <summary>预设作者声明</summary>
+              <pre id="prompt-attribution"></pre>
             </details>
           </div>
           <div data-ai-page="characters" hidden>
@@ -766,63 +886,6 @@
         </div>
         <p id="diagnostic-note" role="status"></p>
       </footer>
-    </dialog>
-    <dialog id="regex-dialog" class="tavern-editor-dialog" aria-labelledby="regex-title">
-      <header>
-        <h2 id="regex-title">正则表达式 · Regex</h2>
-        <button id="regex-close" aria-label="关闭正则">×</button>
-      </header>
-      <div class="ai-actions">
-        <button id="regex-add">＋ 新建</button><button id="regex-import">导入</button
-        ><button id="regex-export">导出</button><button id="regex-up">↑</button
-        ><button id="regex-down">↓</button><button id="regex-delete">删除</button
-        ><button id="regex-save">保存</button
-        ><input
-          autocomplete="off"
-          type="file"
-          id="regex-import-file"
-          accept=".json,application/json"
-          hidden
-        />
-      </div>
-      <label
-        >正则来源<select id="regex-scope">
-          <option value="">全局正则</option>
-        </select></label
-      >
-      <div class="regex-workspace">
-        <nav id="regex-list"></nav>
-        <section id="regex-fields"></section>
-      </div>
-      <details class="preset-box">
-        <summary>测试正则</summary>
-        <div class="regex-options">
-          <select id="regex-test-kind" aria-label="测试API">
-            <option value="script">剧本API</option>
-            <option value="character">角色API</option></select
-          ><select id="regex-test-placement" aria-label="测试位置">
-            <option value="2">AI输出</option>
-            <option value="1">用户输入</option>
-            <option value="5">世界书</option></select
-          ><label><input autocomplete="off" id="regex-test-prompt" type="checkbox" />提示词</label
-          ><label
-            ><input autocomplete="off" id="regex-test-markdown" type="checkbox" />仅显示</label
-          >
-        </div>
-        <textarea autocomplete="off" id="regex-test-input" rows="3" aria-label="测试文本"></textarea
-        ><button id="regex-test">运行测试</button>
-        <pre id="regex-test-output"></pre>
-      </details>
-      <p id="regex-status" role="status"></p>
-    </dialog>
-    <dialog
-      id="prompt-entry-dialog"
-      class="tavern-editor-dialog"
-      aria-labelledby="prompt-entry-title"
-    >
-      <header><h2 id="prompt-entry-title">编辑提示词</h2></header>
-      <div id="prompt-entry-fields"></div>
-      <footer><button id="prompt-entry-save">完成编辑</button></footer>
     </dialog>
     <dialog id="world-dialog" aria-labelledby="world-title">
       <header class="world-book-heading">
@@ -1130,9 +1193,8 @@
     <dialog id="saves-dialog" class="saves-dialog" aria-labelledby="saves-dialog-title">
       <button class="dialog-close" id="saves-close" aria-label="关闭存档面板">×</button>
       <div class="saves-header">
-        <span class="eyebrow">CHRONICLES ARCHIVE</span>
         <h2 id="saves-dialog-title">酒馆秘典 · 历程存档</h2>
-        <p class="muted">包含 1 个自动保存位与 3 个手动存档位，可自由覆盖、载入或导出备份。</p>
+        <p class="muted">共 20 个栏位：1 个自动保存位、19 个手动存档位。</p>
       </div>
       <div class="saves-toolbar">
         <button
@@ -1150,17 +1212,24 @@
           开启新冒险
         </button>
         <button id="saves-export-current" class="saves-tool-btn">导出当前实时进度</button>
-        <label class="saves-tool-btn saves-import-label">
-          <span>从文件导入存档</span>
-          <input
-            autocomplete="off"
-            type="file"
-            id="saves-import-input"
-            accept=".json,application/json"
-            hidden
-          />
-        </label>
+        <button id="saves-import-btn" class="saves-tool-btn" type="button">从文件导入存档</button>
+        <input
+          autocomplete="off"
+          type="file"
+          id="saves-import-input"
+          accept=".json,application/json"
+          hidden
+        />
       </div>
+      <div id="saves-import-selection" class="saves-import-selection" hidden>
+        <p id="saves-import-status" role="status"></p>
+        <button id="saves-import-cancel" class="saves-tool-btn" type="button">取消导入</button>
+      </div>
+      <nav class="saves-pagination" aria-label="存档翻页">
+        <button id="saves-prev-page" class="saves-tool-btn" type="button">上一页</button>
+        <span id="saves-page-status" role="status" aria-live="polite"></span>
+        <button id="saves-next-page" class="saves-tool-btn" type="button">下一页</button>
+      </nav>
       <div id="saves-slots-list" class="saves-slots-grid"></div>
     </dialog>
     <div id="chat-controls" hidden aria-hidden="true">
@@ -1196,34 +1265,7 @@
       </section>
       <small id="chat-status" role="status"></small>
     </div>
-    <dialog id="memory-dialog" aria-labelledby="memory-title">
-      <header>
-        <div>
-          <small>万象酒馆 · 记忆档案</small>
-          <h2 id="memory-title">把经历留在记忆里</h2>
-        </div>
-        <button id="memory-close" aria-label="关闭记忆总结">×</button>
-      </header>
-      <p id="memory-count"></p>
-      <div id="memory-items"></div>
-      <nav class="memory-pages" aria-label="摘要预览分页">
-        <button id="memory-prev">上一页</button><span id="memory-page"></span
-        ><button id="memory-next">下一页</button>
-      </nav>
-      <p id="memory-status" role="status"></p>
-      <footer>
-        <button id="memory-generate">全部总结</button>
-        <button id="memory-cancel" hidden>取消请求</button>
-        <button id="memory-accept" class="primary" disabled>确认使用摘要</button>
-      </footer>
-    </dialog>
-    <dialog id="helper-dialog" aria-label="预设扩展窗口">
-      <header>
-        <span>预设扩展</span><button id="helper-close" aria-label="关闭扩展窗口">×</button>
-      </header>
-      <div id="helper-content"></div>
-      <small id="helper-status" role="status"></small>
-    </dialog>
+    <div hidden aria-hidden="true"></div>
     <section
       id="chapter-theater"
       class="chapter-theater"

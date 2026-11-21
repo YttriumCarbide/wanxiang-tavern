@@ -36,12 +36,24 @@ test('disposing event ownership prevents remounted listeners from accumulating',
   const target = new EventTarget();
   const scope = createEventScope();
   let calls = 0;
-  scope.on(target, 'refresh', () => calls++);
+  scope.on(target, 'refresh', () => calls++, { capture: true });
   target.dispatchEvent(new Event('refresh'));
   scope.dispose();
   scope.dispose();
   target.dispatchEvent(new Event('refresh'));
   assert.equal(calls, 1);
+
+  const remounted = createEventScope();
+  let remountedCalls = 0;
+  remounted.on(target, 'refresh', () => remountedCalls++);
+  scope.dispose();
+  target.dispatchEvent(new Event('refresh'));
+  assert.equal(calls, 1);
+  assert.equal(remountedCalls, 1);
+
+  remounted.dispose();
+  target.dispatchEvent(new Event('refresh'));
+  assert.equal(remountedCalls, 1);
 });
 
 test('GPU ownership is idempotent and disposes late async resources', () => {

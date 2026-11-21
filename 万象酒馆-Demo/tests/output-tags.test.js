@@ -26,7 +26,7 @@ test('tavern and quick replies distinguish planning references from actual body 
   for (const kind of ['chat', 'quick-chat']) {
     const result = await chatResponse(kind, content, [], input);
     assert.equal(result.content, body);
-    assert.equal(result.display, body);
+    assert.equal(result.display, undefined);
     if (kind === 'chat') assert.deepEqual(result.actions, actions);
     else assert(!('actions' in result));
   }
@@ -46,6 +46,25 @@ test('chat accepts the unified body tag and preserves legacy replies without acc
   assert.equal((await chatResponse('chat', current, [], input)).content, body);
   assert.equal((await chatResponse('chat', legacy, [], input)).content, body);
   await assert.rejects(chatResponse('chat', current + legacy, [], input), /唯一一组/u);
+});
+
+test('chat recovers spaced and stuck boundaries without consuming reasoning or actions as prose', async () => {
+  const input = { characters: actions.affection.map(({ id }) => ({ id })) };
+  const thinking = `< Think >${reply}< /think >`;
+  const opening = '＜ WANXIANG _ output\n＞';
+  const closing = '< /\u200Bwanxiang_output >';
+  const sidecar = `<wanxiang_actions >${JSON.stringify(actions)}</ wanxiang_actions>`;
+  const raw = thinking + opening + body + closing + sidecar;
+  const result = await chatResponse('chat', raw, [], input);
+  assert.equal(result.content, body);
+  assert.deepEqual(result.actions, actions);
+  assert.equal(streamingChatText(raw), body);
+  for (let length = 0; length < closing.length; length++) {
+    assert.equal(streamingChatText(thinking + opening + body + closing.slice(0, length)), body);
+  }
+  await assert.rejects(chatResponse('chat', thinking, [], input), /未找到可识别的正文标签/u);
+  await assert.rejects(chatResponse('chat', raw + reply, [], input), /多组/u);
+  await assert.rejects(chatResponse('chat', opening + body + sidecar, [], input), /交叉/u);
 });
 
 test('streaming never displays planning references, including chunks split inside any boundary', () => {

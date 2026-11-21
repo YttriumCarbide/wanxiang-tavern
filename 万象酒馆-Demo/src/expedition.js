@@ -23,6 +23,7 @@ export function newExpedition(boss = 'bossGate', heroDefinitions = {}, explorati
   };
 }
 export function currentEncounterSpec(expedition, index = expedition.index) {
+  if (expedition.developerEncounter) return expedition.developerEncounter;
   if (expedition.overlandBattle) return expedition.overlandBattle.spec;
   const spec = expedition.exploration
     ? explorationSpec(expedition.exploration, index)
@@ -43,6 +44,7 @@ export function beginEncounter(expedition) {
   return newEncounter(
     {
       ...currentEncounterSpec(expedition),
+      initialHeroDebuffs: expedition.nextBattleDebuffs,
       ...(expedition.corridorRing?.actor && expedition.corridorRing.encounter === expedition.index
         ? { initialEmblemCharge: { [expedition.corridorRing.actor]: STORY_RING_CHARGE } }
         : {}),
@@ -79,6 +81,8 @@ export function completeEncounter(expedition, state) {
   if (state.phase !== 'victory') throw Error('Encounter has not been won');
   if (expedition.records.some((r) => r.index === state.encounter))
     throw Error('Encounter already recorded');
+  if (state.encounter !== expedition.index) throw Error('Encounter does not match expedition');
+  delete expedition.nextBattleDebuffs;
   const spec = currentEncounterSpec(expedition, state.encounter);
   expedition.id ||= crypto.randomUUID();
   const rewardId = `${expedition.id}:${state.encounter}`;

@@ -1,4 +1,4 @@
-"""Five purpose-built miniature voxel dioramas for the two-level destination pager."""
+"""Build miniature voxel dioramas for the two-level destination pager."""
 
 import json
 import math
@@ -12,6 +12,7 @@ PALETTES = {
     "frost": ("354b65", "6d9bab", "aecbd0", "a8c9d7", "7ce7ee"),
     "forge": ("373d47", "675b55", "968274", "cf9d62", "ffad56"),
     "tide": ("36556a", "548d98", "97b9ad", "d1c58d", "8be5df"),
+    "mill": ("3d4836", "6d8050", "8b9a5d", "ad9061", "76b7a1"),
 }
 
 
@@ -27,6 +28,8 @@ def base(model, theme, rng):
             model.box(x, 0, z, 0.39, 0.14, 0.39, rng.choice([stone, top, top]), "Terrain")
             if rng.random() < 0.2:
                 model.box(x + 0.08, 0.14, z + 0.09, 0.12, 0.04, 0.08, stone, "Surface_Chips")
+    if theme == "mill":
+        return
     # Raised causeway, stone curbs, recessed luminous edge, and three entrance stairs.
     for ix in range(-2, 3):
         for iz in range(-6, 7):
@@ -251,10 +254,143 @@ def tide(model, rng):
         model.box(x - 0.16, height * 0.7, z, 0.4, 0.07, 0.09, color, "Branching_Coral")
 
 
+def mill_house(model, rng):
+    model.box(-2.18, 0.14, -1.9, 3.2, 0.29, 2.45, "857662", "Mill_Stone_Footing")
+    model.box(-2.04, 0.43, -1.8, 2.91, 1.45, 2.25, "b09c74", "Mill_Plaster")
+    for x in (-2.07, 0.73):
+        model.box(x, 0.37, -1.84, 0.2, 1.62, 2.32, "654c36", "Mill_Timber")
+    for y in (0.45, 1.78):
+        model.box(-2.08, y, 0.43, 2.99, 0.15, 0.13, "675039", "Mill_Timber")
+    model.box(-1.12, 0.42, 0.48, 0.83, 1.12, 0.08, "483c30", "Mill_Doorway")
+    model.box(-1.06, 0.42, 0.55, 0.33, 0.98, 0.035, "735238", "Mill_Doorway")
+    model.box(-1.24, 0.16, 0.53, 1.1, 0.16, 0.35, "b2a081", "Mill_Stone_Footing")
+    for x in (-1.83, 0.12):
+        model.box(x, 1.05, 0.47, 0.42, 0.42, 0.11, "624b37", "Mill_Window_Frames")
+        model.box(x + 0.07, 1.12, 0.59, 0.28, 0.28, 0.035, "38473b", "Mill_Window_Glass")
+        model.box(x + 0.19, 1.1, 0.63, 0.038, 0.34, 0.03, "8c7152", "Mill_Window_Frames")
+    slates = ["4c5350", "545e56", "626759", "6a6c57"]
+    for row in range(9):
+        half = 1.67 - row * 0.175
+        y = 1.87 + row * 0.145
+        model.box(-0.58 - half, y, -1.77, half * 2, 0.15, 2.26, "8d785a", "Mill_Gable")
+        for side in (-1, 1):
+            x = -0.58 + side * half - 0.12
+            for tile in range(9):
+                model.box(
+                    x,
+                    y + 0.035,
+                    -2.02 + tile * 0.315,
+                    0.33,
+                    0.16,
+                    0.308,
+                    rng.choice(slates),
+                    "Mill_Slate_Roof",
+                )
+    model.box(-0.71, 3.18, -2.06, 0.29, 0.12, 2.9, "696b58", "Mill_Slate_Roof")
+    model.box(-0.8, 2.02, 0.5, 0.43, 0.36, 0.09, "514536", "Mill_Attic_Vent")
+    for index in range(3):
+        model.box(-0.76 + index * 0.12, 2.05, 0.6, 0.055, 0.3, 0.04, "a3865b", "Mill_Attic_Vent")
+
+
+def mill_canal(model, rng):
+    for row in range(15):
+        z = -2.63 + row * 0.39
+        model.box(
+            1.08,
+            0.145,
+            z,
+            1.47,
+            0.06,
+            0.39,
+            rng.choice(["3a7a70", "4c8c7c", "5e9b89"]),
+            "Mill_Stream",
+        )
+        model.box(
+            1.2 + rng.random() * 0.8,
+            0.209,
+            z + 0.08,
+            0.26,
+            0.013,
+            0.026,
+            "9dc6a9",
+            "Mill_Stream_Ripples",
+        )
+        for x in (0.91, 2.54):
+            model.box(
+                x, 0.14, z, 0.21, 0.18, 0.37, rng.choice(["657263", "818776"]), "Mill_Canal_Walls"
+            )
+    # The near face of the axle, arms and paddle rim all read from the preview camera.
+    wx, wy, wz = 1.65, 1.13, 0.12
+    model.box(0.75, 0.99, -0.09, 0.93, 0.31, 0.43, "65523d", "Mill_Wheel_Support")
+    model.box(wx - 0.15, wy - 0.15, wz - 0.38, 0.3, 0.3, 0.78, "806144", "Mill_Waterwheel")
+    for i in range(42):
+        angle = i * math.tau / 42
+        x, y = wx + math.cos(angle) * 0.86, wy + math.sin(angle) * 0.86
+        model.box(x - 0.09, y - 0.09, wz - 0.13, 0.18, 0.18, 0.32, "795a3c", "Mill_Waterwheel")
+        if i % 3 == 0 and i not in (6, 9):
+            model.box(x - 0.13, y - 0.095, wz - 0.24, 0.26, 0.19, 0.53, "aa8455", "Mill_Paddles")
+    for i in range(6):
+        angle = i * math.tau / 6
+        for step in range(1, 7):
+            distance = 0.13 * step
+            x, y = wx + math.cos(angle) * distance, wy + math.sin(angle) * distance
+            model.box(
+                x - 0.085, y - 0.085, wz + 0.12, 0.17, 0.17, 0.13, "9b7449", "Mill_Waterwheel"
+            )
+    for index in range(7):
+        model.box(0.77, 0.36, 1.94 + index * 0.12, 2.07, 0.105, 0.113, "9b7650", "Mill_Footbridge")
+
+
+def mill(model, rng):
+    mill_house(model, rng)
+    mill_canal(model, rng)
+    for row in range(7):
+        for column in range(4):
+            x = -1.16 + column * 0.3 + min(row, 4) * 0.16
+            z = 0.77 + row * 0.32
+            model.box(
+                x,
+                0.15,
+                z,
+                0.275,
+                0.055,
+                0.29,
+                rng.choice(["9b8b64", "b1a078", "a09270"]),
+                "Mill_Path",
+            )
+    for index, z in enumerate((0.37, 0.98, 1.61, 2.23)):
+        height = 0.26 if index == 2 else 0.56
+        model.box(-2.63, 0.14, z, 0.13, height, 0.13, "746044", "Mill_Broken_Fence")
+        if index < 2:
+            model.box(-2.59, 0.37, z, 0.095, 0.09, 0.61, "8d7350", "Mill_Broken_Fence")
+    tree(model, -3.0, -1.22, 0.55, rng)
+    for x, z in ((-3.1, 1.65), (-2.08, 2.39), (2.86, 0.78), (2.76, -1.41), (0.18, -2.47)):
+        for side in (-1, 1):
+            for step in range(3):
+                height = 0.21 + step * 0.07
+                model.box(
+                    x + side * (0.16 - step * 0.07),
+                    height,
+                    z,
+                    0.13,
+                    0.1,
+                    0.18,
+                    rng.choice(["576e41", "76904f", "9da45a"]),
+                    "Mill_Ferns",
+                )
+
+
 def main():
     report = []
     for index, (theme, build) in enumerate(
-        [("ruins", ruins), ("forest", forest), ("frost", frost), ("forge", forge), ("tide", tide)]
+        [
+            ("ruins", ruins),
+            ("forest", forest),
+            ("frost", frost),
+            ("forge", forge),
+            ("tide", tide),
+            ("mill", mill),
+        ]
     ):
         rng = random.Random(3471 + index)
         model = Model(f"Destination miniature / {theme}")
@@ -279,6 +415,7 @@ def main():
         )
         + "\n",
         encoding="utf-8",
+        newline="\n",
     )
 
 

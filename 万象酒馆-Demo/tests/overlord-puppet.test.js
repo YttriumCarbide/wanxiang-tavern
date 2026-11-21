@@ -30,7 +30,7 @@ import {
 
 test('alchemicalPuppet supports 3-phase Overlord escalation, break layer ramp, and buff ramp', () => {
   const def = DEFINITIONS.alchemicalPuppet;
-  assert.equal(def.hp, 360);
+  assert.equal(def.hp, 314);
   assert.equal(def.overlord, true);
   assert.equal(def.standOnCard, true);
   assert.deepEqual(def.overlordPhases, [0.66, 0.33]);
@@ -354,7 +354,7 @@ test('alchemicalPuppet charge cycle opens Round 2 Break Window, cancels charged 
 
 test('apepLamb is a solo 3-phase Overlord with charge window, and all Overlords lock UI and expose rewritten dialogue packs', () => {
   const apep = DEFINITIONS.apepLamb;
-  assert.equal(apep.hp, 460);
+  assert.equal(apep.hp, 314);
   assert.equal(apep.overlord, true);
   assert.deepEqual(apep.overlordPhases, [0.66, 0.33]);
   assert.deepEqual(ruinsEncounterSpec(5, 4).enemyIds, ['apepLamb']);
@@ -474,4 +474,155 @@ test('resolveTheaterTheme supplies valid intro and epilogue artwork across all b
       assert(theme.artwork.length > 0, `Missing artwork for ${map}/${mode}`);
     }
   }
+});
+
+test('artifact buff is exclusive to alchemicalPuppet among Overlords', () => {
+  for (const id of ['apepLamb', 'moonCrown', 'moonEye', 'moonRoot', 'ares', 'radiantWyvern']) {
+    let state = newBattle([id]);
+    assert.equal(
+      state.units[id].buffs.artifact || 0,
+      0,
+      `${id} should not start with artifact buff`,
+    );
+    if (Array.isArray(DEFINITIONS[id].overlordPhases)) {
+      state.phase = 'plan';
+      state.units[id].hp = Math.floor(state.units[id].maxHp * 0.65);
+      const p2 = preview(state, []);
+      assert.equal(p2.final.units[id].buffs.artifact || 0, 0);
+      const phaseEv = p2.events.find((e) => e.type === 'bossPhase' && e.actor === id);
+      assert(phaseEv && !phaseEv.logs.some((log) => log.includes('人工制品')));
+      const next = advance(p2);
+      next.units[id].hp = Math.floor(next.units[id].maxHp * 0.3);
+      const p3 = preview(next, []);
+      assert.equal(p3.final.units[id].buffs.artifact || 0, 0);
+    }
+  }
+  assert.equal(overlordPhaseProfile(DEFINITIONS.apepLamb, 2).artifactBonus, 0);
+  assert.equal(overlordPhaseProfile(DEFINITIONS.apepLamb, 3).artifactBonus, 0);
+  assert.equal(overlordPhaseProfile(DEFINITIONS.alchemicalPuppet, 2).artifactBonus, 1);
+  assert.equal(overlordPhaseProfile(DEFINITIONS.alchemicalPuppet, 3).artifactBonus, 1);
+});
+
+test('cang-ming breaker emblem doubles shield damage, strips 1 extra break pip, heals all 6 allies via stripped shield, and drops mid-battle against alchemicalPuppet', async () => {
+  const { BREAKER_EMBLEM_ID, BREAKER_SKILL } = await import('../src/emblems.js');
+  const { grantMidBattlePuppetEmblem } = await import('../src/emblem-progression.js');
+  const { RING_DESIGNS } = await import('../src/emblem-rings.js');
+  const { emblemVisual } = await import('../src/app/emblem-icons.js');
+
+  assert.equal(RING_DESIGNS[BREAKER_EMBLEM_ID].name, '裂匣之鸣');
+  assert.equal(emblemVisual(BREAKER_EMBLEM_ID).color, '#f28b49');
+
+  // 1) Passive: double shield damage + +1 extra break pip + shield break grants +6 shield to front row
+  const state = newBattle(['warden'], {
+    aegis: { ...structuredClone(DEFINITIONS.aegis), emblemId: BREAKER_EMBLEM_ID },
+  });
+  state.phase = 'plan';
+  state.round = 2;
+  const hero = state.formation[0];
+  state.units[hero].combined = 3;
+  state.units.warden.buffs = {};
+  state.units.warden.block = 16;
+  state.units.warden.hp = 100;
+  state.units.warden.maxHp = 100;
+  state.units.warden.breakWindow = {
+    active: true,
+    mode: 'octopath',
+    current: 3,
+    max: 3,
+    majorWeakness: 'fire',
+    minorWeaknesses: [],
+    triggerActionIndex: 0,
+  };
+  state.units.warden.toughness = 3;
+  const heroAtk = state.heroDefinitions[hero].attack; // 8 for aegis
+  const hitRes = preview(state, [makeAction(state, hero, 'attack', 'warden', 0)]);
+  const attackEvent = hitRes.events.find((e) => e.actor === hero && e.skill === 'attack');
+  assert(attackEvent, 'hero basic attack event should exist');
+  assert.equal(attackEvent.after.units.warden.block, Math.max(0, 16 - heroAtk * 2));
+  assert.equal(attackEvent.after.units.warden.toughness, 2);
+  assert(
+    !(attackEvent.after.revealedWeaknesses?.warden || []).includes(
+      state.heroDefinitions[hero].attackType,
+    ),
+    'extra breaker pip must not falsely reveal non-weaknesses',
+  );
+  for (const fid of state.formation.slice(0, 3)) {
+    assert(attackEvent.after.units[fid].block >= 6, 'shield break should fortify all frontliners');
+  }
+
+  // 2) Active skill: strips all enemy shield, heals all 6 alive heroes (front + rear), clamps breakable toughness to 1
+  const lib = newLibrary();
+  const fullState = newBattle(['alchemicalPuppet'], {
+    aegis: { ...structuredClone(DEFINITIONS.aegis), emblemId: BREAKER_EMBLEM_ID },
+  });
+  fullState.phase = 'plan';
+  fullState.round = 2;
+  const actor = fullState.formation[0];
+  fullState.units[actor].combined = 3;
+  fullState.units.alchemicalPuppet.block = 14;
+  fullState.units.alchemicalPuppet.breakWindow = {
+    active: true,
+    mode: 'octopath',
+    current: 7,
+    max: 7,
+    majorWeakness: 'fire',
+    minorWeaknesses: ['brawl', 'axe', 'lightning'],
+    triggerActionIndex: 1,
+  };
+  fullState.units.alchemicalPuppet.toughness = 7;
+  for (const hid of fullState.formation) {
+    fullState.units[hid].hp = Math.max(1, fullState.units[hid].hp - 12);
+  }
+  const beforeHps = Object.fromEntries(
+    fullState.formation.map((hid) => [hid, fullState.units[hid].hp]),
+  );
+  const skillRes = preview(fullState, [
+    makeAction(fullState, actor, BREAKER_SKILL.id, 'alchemicalPuppet', 1),
+  ]);
+  assert(skillRes.valid);
+  const skillEvent = skillRes.events.find((e) => e.actor === actor && e.skill === BREAKER_SKILL.id);
+  assert(skillEvent, 'breaker combine skill event should exist');
+  assert.equal(skillEvent.after.units.alchemicalPuppet.block, 0);
+  assert.equal(skillEvent.after.units.alchemicalPuppet.toughness, 1);
+  assert.equal(skillEvent.after.units.alchemicalPuppet.breakWindow.current, 1);
+  for (const hid of fullState.formation) {
+    assert.equal(
+      skillEvent.after.units[hid].hp,
+      Math.min(fullState.units[hid].maxHp, beforeHps[hid] + 14),
+    );
+  }
+
+  // 3) Mid-battle trigger on alchemicalPuppet opening break window / round 2
+  const exp = newExpedition(
+    'bossGate',
+    {},
+    quickTestMillFrontier(lib.exploration.mill, {
+      developerMode: true,
+      quickTest: true,
+    })[0],
+  );
+  const battle = currentEncounterSpec(exp);
+  const bState = newEncounter(battle);
+  bState.phase = 'plan';
+  bState.round = 2;
+  bState.units.alchemicalPuppet.breakWindow = {
+    active: true,
+    mode: 'octopath',
+    current: 7,
+    max: 7,
+    majorWeakness: 'fire',
+    minorWeaknesses: ['brawl', 'axe', 'lightning'],
+    triggerActionIndex: 1,
+  };
+  bState.units.alchemicalPuppet.toughness = 7;
+  const arrival = grantMidBattlePuppetEmblem(lib, bState, exp, () => 0);
+  assert(arrival && arrival.id === BREAKER_EMBLEM_ID);
+  assert(lib.emblems.includes(BREAKER_EMBLEM_ID));
+  assert(arrival.recipient?.actor);
+  assert.equal(bState.units[arrival.recipient.actor].emblemCharge, 6);
+  assert.equal(bState.heroDefinitions[arrival.recipient.actor].emblemId, BREAKER_EMBLEM_ID);
+  assert.equal(
+    grantMidBattlePuppetEmblem(lib, bState, exp, () => 0),
+    null,
+  );
 });

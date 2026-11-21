@@ -1,10 +1,19 @@
 # 游戏音频
 
-- `tavern.mp3`：《炉边多利安》（Hearthside Dorian），酒馆背景音乐。
-- `xueyuan.mp3`：《雪原》，用户提供，霜晶矿窟的小怪战音乐。
-- `encounter.mp3`：《遭遇战》，用户提供，其他四种场景的小怪战音乐。
-- `battle.m4a`：《界门之战》，原小怪战曲目，现用于界隙遗迹Boss战，保留2分47秒曲目。
-- `boss.m4a`：《首领决战》，其他场景Boss战音乐，保留2分33秒曲目。
+- `tavern.mp3`：《万象酒馆一》，酒馆内部背景音乐（与二、三随机轮播）。
+- `tavern-2.mp3`：《万象酒馆二》，酒馆内部背景音乐（随机轮播）。
+- `tavern-3.mp3`：《万象酒馆三》，酒馆内部背景音乐（随机轮播）。
+- `starbell-town.mp3`：《星钟之地》，星灯镇 / 星钟城及城外漫游背景音乐。
+- `encounter.mp3`：《征途的交锋》，常规区域的小怪遭遇战音乐。
+- `xueyuan.mp3`：《霜原的回响》，霜晶矿窟的小怪战音乐。
+- `forge-encounter.mp3`：《余烬的锻音》，余烬铸坊的小怪战音乐。
+- `battle.m4a`：《激战1》，常规首领战随机曲目之一，保留 2 分 47 秒曲目。
+- `boss.m4a`：《激战2》，常规首领战随机曲目之一，保留 2 分 33 秒曲目。
+- `boss-3.mp3`：《激战3》，常规首领战随机曲目之一。
+- `boss-puppet.mp3`：《倒悬的发条》，霸主「失败的炼金傀偶」专属战斗音乐。
+- `boss-warlord.mp3`：《暗鳞的咆哮》，霸主「初生暗鳞督军」专属战斗音乐。
+- `boss-wyvern.mp3`：《辉光的审判》，霸主「辉光亚龙」专属战斗音乐。
+- `boss-syndicate.mp3`：《星灯的暗影》，黑市霸主「暗巷匪王」专属战斗音乐。
 
-短音效由原创分层WAV采样提供，位于`assets/audio/sfx/`，源脚本为`tools/audio/build_sfx.py`。采样覆盖武器起手／命中、十二类敌人攻击、界面操作、门、回合、治疗、护盾、纹章结合、胜负和Boss死亡等49个事件；`src/audio/sfx.js`登记文件、音量与轻微随机音高，`src/audio/cues.js`保留运行时合成兜底。
-选曲统一由`src/audio/config.js`的`encounterMusic`按实际场景与Boss标志决定。
+短音效由原创分层 WAV 采样提供，位于 `assets/audio/sfx/`，源脚本为 `tools/audio/build_sfx.py`。采样覆盖武器起手／命中、十二类敌人攻击、界面操作、门、回合、治疗、护盾、纹章结合、胜负和 Boss 死亡等 49 个事件；`src/audio/sfx.js` 登记文件、音量与轻微随机音高，`src/audio/cues.js` 保留运行时合成兜底。
+选曲统一由 `src/audio/config.js` 的 `locationMusic` 与 `encounterMusic` 按实际场景、敌人阵容与 Boss 标志决定；除四位拥有专属曲目的霸主外，其余首领战统一从《激战1》《激战2》《激战3》随机抽取。音乐控制面板仅展示并允许试听、切换系统实际播放并解锁收录过的曲目。

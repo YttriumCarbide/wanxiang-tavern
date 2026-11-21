@@ -3,10 +3,13 @@ import { grantGem } from './equipment.js';
 import { findGemById } from './content/gems.js';
 export function restoreInventory(value) {
   const count = value?.summonContracts;
+  const vouchers = value?.equipmentVouchers;
   return {
     bagUnlocked: value?.bagUnlocked === true,
     items: restoreBag(value?.items),
     summonContracts: Number.isSafeInteger(count) && count >= 0 ? Math.min(count, 999999) : 0,
+    equipmentVouchers:
+      Number.isSafeInteger(vouchers) && vouchers >= 0 ? Math.min(vouchers, 999999) : 0,
     gold:
       Number.isSafeInteger(value?.gold) && value.gold >= 0 ? Math.min(value.gold, 999999999) : 0,
     ether:
@@ -23,13 +26,16 @@ export function claimBattleRewards(library, claimId, rewards) {
   const count = rewards.summonContracts;
   const gold = rewards.gold ?? 0;
   const ether = rewards.ether ?? 0;
+  const equipmentVouchers = rewards.equipmentVouchers ?? 0;
   if (
     !Number.isSafeInteger(count) ||
     count < 0 ||
     !Number.isSafeInteger(gold) ||
     gold < 0 ||
     !Number.isSafeInteger(ether) ||
-    ether < 0
+    ether < 0 ||
+    !Number.isSafeInteger(equipmentVouchers) ||
+    equipmentVouchers < 0
   )
     throw Error('奖励数量无效');
   const items = rewards.items ?? {};
@@ -57,6 +63,10 @@ export function claimBattleRewards(library, claimId, rewards) {
   library.inventory.summonContracts = Math.min(999999, library.inventory.summonContracts + count);
   library.inventory.gold = Math.min(999999999, (library.inventory.gold || 0) + gold);
   library.inventory.ether = Math.min(999999999, (library.inventory.ether || 0) + ether);
+  library.inventory.equipmentVouchers = Math.min(
+    999999,
+    (library.inventory.equipmentVouchers || 0) + equipmentVouchers,
+  );
   if (Object.keys(items).length) {
     library.inventory.items = restoreBag(library.inventory.items);
     for (const [id, value] of Object.entries(items))

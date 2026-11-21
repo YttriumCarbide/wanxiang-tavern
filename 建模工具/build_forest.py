@@ -130,38 +130,90 @@ disk(0, 0.08, 0, 0.44, 0.04, "water")
 disk(0, 0.12, 0, 0.24, 0.04, "cyan", 0.2)
 for x, z in [(-0.64, 0), (0.56, 0), (0, -0.64), (0, 0.56)]:
     box(x, 0.08, z, 0.08, 0.04, 0.08, "spore")
-group("07_Trees_and_Exposed_Roots")
-trees = []
-for side in [-1, 1]:
-    for j, z in enumerate(np.arange(-7.32, 7.4, 1.84)):
-        x = side * rng.choice([8.2, 8.56, 8.88, 9.36])
-        h = rng.choice([1.64, 1.84, 2.04])
-        trees.append((x, z, h))
-        disk(x, 0, z, 0.28, h, "bark")
-        disk(x, h - 0.16, z, 0.36, 0.08, "barkLight")
-        for k, (dx, dz) in enumerate([(0.6, 0.16), (-0.6, -0.2), (0.2, 0.6), (-0.16, -0.6)]):
-            line((x - 0.04, 0.28, z - 0.04), (x + dx, 0.04, z + dz), 0.08, "root")
-        for yy in np.arange(0.12, h, 0.32):
-            box(x - 0.28, yy, z - 0.04, 0.08, 0.16, 0.08, "barkLight")
-for x in [-5.56, 5.56]:
-    for z in [-6.92, 6.92]:
-        trees.append((x, z, 1.72))
-        disk(x, 0, z, 0.24, 1.72, "bark")
-        disk(x, 0, z, 0.4, 0.12, "root")
-group("08_Layered_Voxel_Canopies")
-for x, z, h in trees:
-    for yy, r in [
-        (h - 0.24, 1.12),
-        (h - 0.08, 1.28),
-        (h + 0.12, 1.12),
-        (h + 0.28, 0.96),
-        (h + 0.44, 0.64),
-    ]:
-        disk(x, yy, z, r, 0.16, rng.choice(["leaf", "leaf2", "leaf3"]))
-    for _ in range(25):
-        xx = x + rng.randrange(-20, 21) * S
-        zz = z + rng.randrange(-20, 21) * S
-        box(xx, h + 0.16, zz, 0.12, 0.08, 0.12, "leaf3")
+
+
+def build_side_trees():
+    # Crown centres relative to the trunk: sideways, forward, elevation, width.
+    crowns = {
+        "spreading": [
+            (-0.61, 0.1, -0.26, 0.89),
+            (0.08, -0.13, 0.02, 1.03),
+            (0.66, 0.32, -0.14, 0.68),
+        ],
+        "forked": [(-0.46, -0.2, 0.11, 0.8), (0.52, 0.13, -0.12, 0.71)],
+        "leaning": [(0.31, -0.1, 0.05, 0.78), (0.76, 0.32, -0.24, 0.67)],
+        "tapered": [
+            (0.05, 0.0, -0.35, 0.83),
+            (-0.11, -0.08, 0.08, 0.62),
+            (-0.14, -0.17, 0.41, 0.42),
+        ],
+        "sapling": [(-0.12, 0.04, 0.04, 0.55), (0.22, 0.12, -0.17, 0.37)],
+        "snag": [],
+    }
+    # Separate banks intentionally have different ages, gaps and silhouettes.
+    trees = [
+        (-8.9, -6.45, 2.03, "forked", 1.35),
+        (-8.55, -3.65, 2.48, "spreading", 0.52),
+        (-9.45, -0.99, 1.38, "sapling", -1.27),
+        (-8.34, 1.39, 1.98, "leaning", 2.2),
+        (-8.78, 4.54, 2.42, "spreading", -0.85),
+        (-5.38, 7.02, 1.18, "sapling", 1.4),
+        (7.94, -6.13, 1.26, "snag", -0.84),
+        (8.95, -4.34, 2.64, "tapered", 1.05),
+        (8.41, -1.86, 2.03, "forked", 0.86),
+        (9.58, 0.4, 1.46, "sapling", -0.32),
+        (8.62, 2.23, 2.57, "tapered", -0.95),
+        (8.81, 5.28, 2.12, "leaning", 1.06),
+        (5.25, -7.38, 1.37, "sapling", 0.3),
+        (5.62, 7.19, 1.85, "forked", -0.73),
+    ]
+    foliage = []
+    group("07_Trees_and_Exposed_Roots")
+    for x, z, height, form, heading in trees:
+        radius = 0.27 if form == "spreading" else 0.18
+        lean = 0.48 if form == "leaning" else 0.1
+        top_x = x + math.cos(heading) * lean
+        top_z = z + math.sin(heading) * lean
+        for level in range(8):
+            fraction = level / 8
+            disk(
+                x + (top_x - x) * fraction,
+                height * fraction,
+                z + (top_z - z) * fraction,
+                radius * (1 - fraction * 0.45),
+                height / 8 + S,
+                "bark",
+            )
+        for offset in (0, 1.65, 3.4, 4.6):
+            angle = heading + offset
+            reach = rng.uniform(0.48, 0.84)
+            line(
+                (x - 0.04, 0.24, z - 0.04),
+                (x + math.cos(angle) * reach, 0.04, z + math.sin(angle) * reach),
+                0.12,
+                "root",
+            )
+        if form == "snag":
+            disk(top_x, height, top_z, 0.14, 0.08, "barkLight")
+            line((x, 0.65, z), (x + 0.38, 1.12, z - 0.22), 0.12, "barkLight")
+        for dx, dz, dy, width in crowns[form]:
+            cx = x + dx * math.cos(heading) - dz * math.sin(heading)
+            cz = z + dx * math.sin(heading) + dz * math.cos(heading)
+            cy = height + dy
+            line((x - 0.06, height * 0.61, z - 0.06), (cx, cy, cz), 0.16, "barkLight")
+            foliage.append((cx, cy, cz, width, rng.choice(["leaf2", "leaf3"])))
+    group("08_Layered_Voxel_Canopies")
+    for x, y, z, radius, top in foliage:
+        for level, width, color in [
+            (-0.22, 0.7, "leaf"),
+            (-0.06, 1.0, "leaf"),
+            (0.1, 0.85, "leaf2"),
+            (0.26, 0.58, top),
+        ]:
+            disk(x - level * 0.23, y + level, z + level * 0.18, radius * width, 0.16, color)
+
+
+build_side_trees()
 group("09_Lush_Forest_Sidebanks")
 for side in [-1, 1]:
     for z in np.arange(-8.3, 8.3, 0.32):
@@ -304,6 +356,7 @@ shutil.copyfile(OUT / "月痕古林-体素战场.glb", ROOT / "万象酒馆-Demo
 (OUT / "模型说明.md").write_text(
     "# 月痕古林\n\n第二张独立体素战场地图，保留同尺寸的中央战盘与平放卡牌接口。外围为古树、分层树冠、裸露根系、苔藓、倒木、月光蘑菇和石门。4厘米体素。中央保持无遮蔽。GLB 含六张可替换卡面、UV和正交相机；VOX 为森林环境的可编辑体素分组，卡牌复用遗迹战盘独立模型。\n",
     encoding="utf-8",
+    newline="\n",
 )
 (OUT / "模型规格.json").write_text(
     json.dumps(
@@ -320,5 +373,6 @@ shutil.copyfile(OUT / "月痕古林-体素战场.glb", ROOT / "万象酒馆-Demo
         indent=2,
     ),
     encoding="utf-8",
+    newline="\n",
 )
 print("Forest exported:", len(doc["meshes"]), "meshes;", int(np.count_nonzero(WORLD)), "voxels")

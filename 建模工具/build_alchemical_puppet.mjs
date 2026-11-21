@@ -1,32 +1,13 @@
 import { mkdir, writeFile } from "node:fs/promises";
-import { existsSync } from "node:fs";
 import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
+import * as T from "three";
+import { GLTFExporter } from "three/addons/exporters/GLTFExporter.js";
+import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
+import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "..");
-
-function resolveThreeModule(subpath) {
-  const candidates = [
-    path.join(repoRoot, "测试", "node_modules", "three", subpath),
-    path.join("d:\\万界酒馆", "测试", "node_modules", "three", subpath),
-  ];
-  for (const candidate of candidates) {
-    if (existsSync(candidate)) return pathToFileURL(candidate).href;
-  }
-  throw new Error(`Cannot locate three/${subpath} in 测试/node_modules`);
-}
-
-const T = await import(resolveThreeModule("build/three.module.js"));
-const { mergeGeometries } = await import(
-  resolveThreeModule("examples/jsm/utils/BufferGeometryUtils.js")
-);
-const { RoundedBoxGeometry } = await import(
-  resolveThreeModule("examples/jsm/geometries/RoundedBoxGeometry.js")
-);
-const { GLTFExporter } = await import(
-  resolveThreeModule("examples/jsm/exporters/GLTFExporter.js")
-);
 
 class BlobReader {
   result = null;

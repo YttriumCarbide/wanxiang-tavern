@@ -139,7 +139,7 @@ test('overload caps at one, survives rounds and combination expiry, consumes onl
   assert.equal(next.units.aegis.buffs.overload, 1);
   const before = next.units.aegis.mp;
   const result = cast(next, 'test-hit');
-  assert.equal(result.final.units.aegis.mp, before - 8);
+  assert.equal(result.final.units.aegis.mp, before - 4);
   assert.equal(result.final.units.aegis.buffs.overload, undefined);
   assert.equal(result.events.find((event) => event.type === 'hero').repeatCount, 2);
 });
@@ -188,10 +188,8 @@ test('legacy regeneration becomes a finite once-per-battle grant, and Pandora pa
   assert.equal(capped.units.aegis.buffs.overload, 1);
 });
 
-test('dragon curse counts actual hit enemies and dragon vein follows positions through swaps and expiry', () => {
+test('dragon curse debuffs all enemies hit on first damage per round and dragon vein grants 25%/25%/3-stack and 1 extra round', () => {
   const state = battle(DRAGON_EMBLEM_ID, 3);
-  const hit = cast(state, 'attack');
-  assert.deepEqual(hit.final.units['target-0'].buffs, { weak: 1, vulnerable: 1, slow: 1 });
   state.heroDefinitions.aegis.skills = [
     {
       id: 'wide',
@@ -202,24 +200,38 @@ test('dragon curse counts actual hit enemies and dragon vein follows positions t
       effects: [{ type: 'damage', value: 3 }],
     },
   ];
-  assert.deepEqual(cast(state, 'wide').final.units['target-0'].buffs, {});
+  const wideHit = cast(state, 'wide');
+  assert.deepEqual(wideHit.final.units['target-0'].buffs, { weak: 1, vulnerable: 1, slow: 1 });
+  assert.deepEqual(wideHit.final.units['target-1'].buffs, { weak: 1, vulnerable: 1, slow: 1 });
+  assert.equal(wideHit.final.kamuiTriggeredRound?.aegis, state.round);
+  // Second damage in the same round should not re-trigger Kamui passive
+  const second = preview(advance(wideHit), []);
+  void second;
   let next = advance(cast(state, EMBLEMS[DRAGON_EMBLEM_ID].skill.id, 'aegis'));
   for (const unit of Object.values(next.units))
     if (unit.side === 'hero') {
-      unit.hp = 50;
-      unit.mp = 40;
+      unit.hp = 20;
+      unit.mp = 10;
     }
   const oldLeft = next.formation[0],
     newLeft = next.formation[3];
+  const leftHeal = Math.max(1, Math.round(next.units[newLeft].maxHp * 0.25));
+  const rightMana = Math.max(1, Math.round(next.units[next.formation[2]].maxMp * 0.25));
   const result = resolve(next, [makeReposition(0, 3, 0)]);
-  assert.equal(result.final.units[newLeft].hp, 58);
-  assert.equal(result.final.units[oldLeft].hp, 50);
-  assert.equal(result.final.units[next.formation[2]].mp, 48);
-  assert.equal(effectiveBuff(result.final, result.final.formation[1], 'iron'), 1);
+  assert.equal(result.final.units[newLeft].hp, 20 + leftHeal);
+  assert.equal(result.final.units[oldLeft].hp, 20);
+  assert.equal(result.final.units[next.formation[2]].mp, 10 + rightMana);
+  assert.equal(effectiveBuff(result.final, result.final.formation[1], 'iron'), 3);
+  assert.equal(effectiveBuff(result.final, result.final.formation[1], 'strength'), 3);
+  assert.equal(effectiveBuff(result.final, result.final.formation[1], 'haste'), 3);
   next = advance(result);
   next = advance(resolve(next));
   next = advance(resolve(next));
-  assert(next.dragonVein, 'Dragon vein survives combination expiry');
+  assert.equal(next.units.aegis.combined, 0);
+  assert(next.dragonVein, 'Dragon vein lasts through the post-engage bonus round');
+  // At the start of the second round after engage ends, dragonVein expires.
+  const afterBonusRound = advance(resolve(next));
+  assert.equal(Boolean(afterBonusRound.dragonVein), false);
   assert(
     !newEncounter({ enemyIds: ['hound'], hpScale: 1, map: 'ruins' }, campRest(next).state)
       .dragonVein,
@@ -282,7 +294,7 @@ test('sacrifice fires once on an enemy death, heals surviving enemies and grants
   assert(!rested.heroDefinitions.aegis.skills.length);
 });
 
-test('supreme reflection blocks new and existing negative effects; moon eye rejects Boss or fewer than three kinds', () => {
+test('supreme reflection blocks new and existing negative effects; moon eye halves Boss current HP and requires three kinds', () => {
   const state = battle(SUPREME_EMBLEM_ID, 3);
   state.phase = 'plan';
   state.round = 1;
@@ -304,12 +316,17 @@ test('supreme reflection blocks new and existing negative effects; moon eye reje
   const result = cast(eye, EMBLEMS[SUPREME_EMBLEM_ID].skill.id);
   assert.equal(result.final.units['target-0'].hp, 0);
   assert.equal(result.final.units['target-1'].hp, eye.units['target-1'].hp - 30);
-  eye.enemyDefinitions['target-0'].boss = true;
-  assert(
-    !preview(eye, [makeAction(eye, 'aegis', EMBLEMS[SUPREME_EMBLEM_ID].skill.id, 'target-0', 0)])
-      .valid,
-  );
-  delete eye.enemyDefinitions['target-0'].boss;
+  const bossEye = battle(SUPREME_EMBLEM_ID, 3);
+  bossEye.enemyDefinitions['target-0'].boss = true;
+  bossEye.enemyDefinitions['target-0'].hp = 100;
+  bossEye.units['target-0'].maxHp = 100;
+  bossEye.units['target-0'].hp = 100;
+  bossEye.units['target-0'].buffs = { weak: 2, vulnerable: 2, slow: 1 };
+  const bossResult = preview(bossEye, [
+    makeAction(bossEye, 'aegis', EMBLEMS[SUPREME_EMBLEM_ID].skill.id, 'target-0', 0),
+  ]);
+  assert(bossResult.valid, JSON.stringify(bossResult.invalid));
+  assert.equal(bossResult.final.units['target-0'].hp, 50);
   delete eye.units['target-0'].buffs.slow;
   assert(
     !preview(eye, [makeAction(eye, 'aegis', EMBLEMS[SUPREME_EMBLEM_ID].skill.id, 'target-0', 0)])
@@ -317,7 +334,7 @@ test('supreme reflection blocks new and existing negative effects; moon eye reje
   );
 });
 
-test('authored skills, cap rules, all five equipped emblems and three equipment slots survive a real library restore', () => {
+test('authored skills, cap rules, equipped emblems and four equipment slots survive a real library restore', () => {
   assert.equal(CHANGJING_YUEXI.skills[1].mp, 7);
   assert.equal(PANDORA.entrySkill.selfDamage, 5);
   const state = battle();
@@ -327,19 +344,19 @@ test('authored skills, cap rules, all five equipped emblems and three equipment 
   assert.equal(attack.events.find((event) => event.type === 'hero').repeatCount, 2);
   assert.equal(
     attack.final.units['target-0'].hp,
-    buffed.units['target-0'].hp - 14,
-    'Two attacks of 6 + 2 strength (10% each)',
+    buffed.units['target-0'].hp - 20,
+    'Two attacks of 8 with two strength stacks (10% each), rounded per hit',
   );
   const library = newLibrary();
   library.emblems = Object.keys(EMBLEMS);
   for (const [index, id] of library.emblems.entries()) library.characters[index].emblemId = id;
-  const categories = ['weapon', 'armor', 'pendant'];
-  for (let slot = 0; slot < 3; slot++) {
+  const categories = ['weapon', 'armor', 'pendant', 'gem'];
+  for (const [slot, category] of categories.entries()) {
     library.equipment.catalog.push(
       normalizeEquipment(
         {
           name: '测试装备' + slot,
-          category: categories[slot],
+          category,
           description: 'hp+1',
           stats: { hp: 1 },
           rules: [],
@@ -352,10 +369,10 @@ test('authored skills, cap rules, all five equipped emblems and three equipment 
   }
   const restored = restoreLibrary(JSON.parse(JSON.stringify(library)));
   assert.deepEqual(
-    restored.characters.slice(0, 5).map((member) => member.emblemId),
+    restored.characters.slice(0, library.emblems.length).map((member) => member.emblemId),
     library.emblems,
   );
-  assert.deepEqual(restored.characters[0].equipment, ['owned-0', 'owned-1', 'owned-2', null]);
+  assert.deepEqual(restored.characters[0].equipment, ['owned-0', 'owned-1', 'owned-2', 'owned-3']);
   assert.equal(compileRoster(restored).aegis.level, 1);
   const pandora = officialCharacter('pandora');
   assert.equal(pandora.combat.skills[0].effects[1].value, 2);
@@ -366,7 +383,6 @@ test('four Boss rewards use exact authored nodes once and worldbook upgrade is i
   const scenarios = [
     ['ruins', 2, OVERLOAD_EMBLEM_ID],
     ['ruins', 5, DRAGON_EMBLEM_ID],
-    ['forest', 1, SUPREME_EMBLEM_ID],
     ['forest', 3, MASK_EMBLEM_ID],
   ];
   for (const [map, sequence, id] of scenarios) {

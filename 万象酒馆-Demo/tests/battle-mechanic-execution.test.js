@@ -28,17 +28,22 @@ function battle() {
 test('character-specific marks use the status strip with their real name, count and forecast, hiding zero', () => {
   const state = battle();
   const actor = state.formation[0];
-  state.heroDefinitions[actor].mechanicMark = { name: '剑印<星>', max: 3 };
+  state.heroDefinitions[actor].mechanicMark = { name: '剑印<星>', max: 5 };
   state.units[actor].mark = 0;
   assert(!statusIcons(state, actor).includes('data-buff="mark"'));
+  const gain = structuredClone(state);
+  gain.units[actor].mark = 2;
+  const gainMarkup = statusIcons(state, actor, gain);
+  assert(gainMarkup.includes('预计新增 剑印&lt;星&gt; 2'));
+  assert(gainMarkup.includes('结算后共 2/5'));
   state.units[actor].mark = 2;
   const forecast = structuredClone(state);
   forecast.units[actor].mark = 0;
   const markup = statusIcons(state, actor, forecast);
   assert(markup.includes('data-buff="mark"'));
   assert(markup.includes('data-count="2"'));
-  assert(markup.includes('剑印&lt;星&gt; 2/3'));
-  assert(markup.includes('预计结算后 0/3'));
+  assert(markup.includes('剑印&lt;星&gt; 2/5'));
+  assert(markup.includes('预计结算后 0/5'));
   assert(markup.includes('viewBox="0 0 64 64"'));
   assert(!markup.includes('剑印<星>'));
 });
@@ -96,8 +101,8 @@ test('overload granted earlier in the same plan doubles the next skill exactly o
   const burst = makeAction(state, actor, 'burst', enemy, 1);
   const result = preview(state, [combineSkill, burst]);
   assert(result.valid);
-  assert.equal(result.final.units[actor].mp, 22);
-  assert.equal(result.final.units[enemy].hp, state.units[enemy].hp - 24);
+  assert.equal(result.final.units[actor].mp, 26);
+  assert.equal(result.final.units[enemy].hp, state.units[enemy].hp - 30);
   assert.equal(result.final.units[actor].combineSkillUsed, true);
   assert(!result.final.units[actor].buffs.overload);
   const event = result.events.find((item) => item.actionId === burst.id && item.type === 'hero');
@@ -109,13 +114,13 @@ test('overload granted earlier in the same plan doubles the next skill exactly o
   );
   assert.deepEqual(
     casts.map((item) => item.after.units[enemy].hp),
-    [state.units[enemy].hp - 12, state.units[enemy].hp - 24],
+    [state.units[enemy].hp - 10, state.units[enemy].hp - 30],
   );
   assert.equal(
     casts.reduce((sum, item) => sum + item.costs.mp, 0),
-    8,
+    4,
   );
-  assert.deepEqual(event.costs, { mp: 8, hp: 0 });
+  assert.deepEqual(event.costs, { mp: 4, hp: 0 });
   assert.equal(result.events.find((item) => item.actionId === combineSkill.id).repeatCount, 1);
   const next = advance(result);
   const ordinary = preview(next, [makeAction(next, actor, 'burst', enemy, 0)]);
@@ -124,7 +129,7 @@ test('overload granted earlier in the same plan doubles the next skill exactly o
   assert(!preview(next, [makeAction(next, actor, OVERLOAD_SKILL.id, actor, 0)]).valid);
 });
 
-test('insufficient doubled cost leaves overload intact and does not claim that a skill repeated', () => {
+test('single-cast MP covers overload repetition without doubling MP cost', () => {
   const state = battle();
   const actor = state.formation[0];
   state.heroDefinitions[actor].skills = [
@@ -140,10 +145,10 @@ test('insufficient doubled cost leaves overload intact and does not claim that a
   state.units[actor].buffs.overload = 1;
   state.units[actor].mp = 7;
   const result = preview(state, [makeAction(state, actor, 'burst', state.enemyIds[0], 0)]);
-  assert(!result.valid);
-  assert.equal(result.final.units[actor].mp, 7);
-  assert.equal(result.final.units[actor].buffs.overload, 1);
-  assert(!result.events.some((event) => event.repeatCount === 2));
+  assert(result.valid);
+  assert.equal(result.final.units[actor].mp, 3);
+  assert(!result.final.units[actor].buffs.overload);
+  assert(result.events.some((event) => event.repeatCount === 2));
 });
 
 test('bind cancellation metadata follows the actual enemy slot and never marks an attack that already happened', () => {

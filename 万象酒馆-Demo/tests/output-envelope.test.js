@@ -67,6 +67,16 @@ test('missing, incomplete, empty, nested and ambiguous envelopes fail instead of
     );
 });
 
+test('envelope recovery preserves tag-like strings and records the repaired boundary', () => {
+  const value = { story: '原样保留 < / WANXIANG_OUTPUT > 和空格' };
+  const json = JSON.stringify(value);
+  const raw = `<analysis>\`< wanxiang_output >\`只是示例。</analysis><wanxiang_output >${json}＜／ wanxiang_output＞`;
+  const extracted = extractGenerationEnvelope('script', raw);
+  assert.equal(extracted.candidateText, json);
+  assert(extracted.repairs.some(({ message }) => message.includes('非标准标签')));
+  assert.throws(() => extractGenerationEnvelope('script', raw + wrap('{}')), /多组/u);
+});
+
 test('reasoning and inline protocol references do not count as actual result envelopes', () => {
   const json = characterResponse();
   const planning = `<konatan_planning~>\nJSONは\`${OUTPUT_OPEN}\`内に出力。\n${wrap('{"example":true}')}\n</konatan_planning~>`;
@@ -217,18 +227,6 @@ test('both actual generation routes use tagged JSON, local validation and matchi
     assert.equal(copied.body.diagnostic.warnings[0].path, 'output.source');
     assert.equal(copied.body.diagnostic.rawText, output);
     assert.equal(copied.body.entry.setting.name, '灯河');
-    // No regex may convert text outside a missing envelope into accepted game data.
-    await post('regex', {
-      scripts: [
-        {
-          id: 'inject',
-          scriptName: '不能绕过标签',
-          findRegex: '/^[\\s\\S]*$/',
-          replaceString: wrap(characterResponse()),
-          placement: [2],
-        },
-      ],
-    });
     output = characterResponse();
     const failed = await post('generate/character', { brief: '测试缺失标签' });
     assert.equal(failed.status, 400);

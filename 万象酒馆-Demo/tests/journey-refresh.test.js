@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { gainExperience, xpToNext, grownCombat } from '../src/growth.js';
+import { gainExperience, xpToNext, grownCombat, restoreGrowth } from '../src/growth.js';
+import { combatScale } from '../src/combat-scale.js';
 import { newCampaign } from '../src/campaign.js';
 import { defaultProtagonist } from '../src/content/qingyuan.js';
 import { newExpedition, beginEncounter, completeEncounter, chooseRest } from '../src/expedition.js';
@@ -17,30 +18,80 @@ import { normalizeCharacter } from '../src/ai/contracts.js';
 import { characterDocument } from './fixtures/ai.js';
 import { levelLines } from '../src/content/level-dialogue.js';
 
-test('slower growth awards a total of one to three points with reproducible weighted choices', () => {
-  assert(xpToNext(1) >= 240);
-  assert(xpToNext(5) > xpToNext(1) * 3);
-  const counts = { hp: 0, mp: 0, attack: 0, skillDamage: 0, limit: 0, manaCost: 0 };
+test('growth preserves legacy XP progress and reconciles reproducible curve gains', () => {
+  assert.deepEqual([1, 2, 5].map(xpToNext), [180, 225, 360]);
+  const id = defaultProtagonist().id;
+  for (const [level, oldXp, newXp] of [
+    [1, 120, 90],
+    [5, 560, 180],
+  ]) {
+    const legacy = { level, xp: oldXp, revision: 1, seed: 7, rarity: 'common' };
+    const migrated = restoreGrowth(legacy, id);
+    assert.deepEqual([migrated.level, migrated.xp, migrated.revision], [level, newXp, 2]);
+    assert.deepEqual(restoreGrowth(migrated, id), migrated);
+    assert.deepEqual(legacy, { level, xp: oldXp, revision: 1, seed: 7, rarity: 'common' });
+  }
+  const stats = (combat) => ({
+    hp: combat.hp,
+    mp: combat.mp,
+    attack: combat.attack,
+  });
+  const scale = combatScale(2);
   for (let seed = 1; seed < 801; seed++) {
     const member = defaultProtagonist();
-    member.growth = { level: 1, xp: 0, seed, rarity: 'common' };
+    member.growth = { level: 1, xp: 0, revision: 2, seed, rarity: 'common' };
+    const authored = structuredClone(member.combat);
+    const baseline = grownCombat(member);
+    assert.deepEqual(stats(baseline), stats(authored));
     const copy = structuredClone(member);
     const award = gainExperience(member, xpToNext(1));
     assert.deepEqual(award, gainExperience(copy, xpToNext(1)));
     assert.deepEqual(award.before, { level: 1, xp: 0 });
     assert.deepEqual(award.after, { level: 2, xp: 0 });
-    const gains = award.levels[0].gains;
-    const points = Object.values(gains).reduce((a, b) => a + b, 0);
-    assert(points >= 1 && points <= 3);
-    for (const [key, value] of Object.entries(gains)) counts[key] += value;
-    for (const skill of grownCombat(member).skills.filter((skill) => !skill.passive)) {
+    const combat = grownCombat(member);
+    const expected = {
+      hp: Math.round(authored.hp * scale),
+      mp: Math.round(authored.mp * Math.sqrt(scale)),
+      attack: Math.round(authored.attack * scale),
+    };
+    assert.deepEqual(stats(combat), expected);
+    const gains = Object.fromEntries(
+      Object.entries(expected)
+        .map(([key, value]) => [key, value - baseline[key]])
+        .filter(([, delta]) => delta > 0),
+    );
+    assert.deepEqual(award.levels, [{ level: 2, gains }]);
+    assert.deepEqual([member.growth.level, member.growth.xp], [2, 0]);
+    assert.deepEqual(copy, member);
+    assert.deepEqual(grownCombat(copy), combat);
+    for (const skill of combat.skills.filter((skill) => !skill.passive)) {
       assert(!/[{}]|成长/.test(skill.text));
-      for (const effect of skill.effects.filter((effect) => effect.type === 'damage'))
+      for (const effect of skill.effects.filter((effect) => effect.type === 'damage')) {
         assert(skill.text.includes(String(effect.value)));
+      }
     }
+    assert.deepEqual(member.combat, authored);
   }
-  assert(counts.hp > counts.mp && counts.mp > counts.attack);
-  assert(counts.attack > counts.skillDamage && counts.attack > counts.limit);
+  const bulk = defaultProtagonist();
+  bulk.growth = { level: 1, xp: 0, revision: 2, seed: 7, rarity: 'common' };
+  const stepped = structuredClone(bulk);
+  const thresholds = [1, 2, 3].map(xpToNext);
+  const bulkAward = gainExperience(
+    bulk,
+    thresholds.reduce((sum, xp) => sum + xp, 17),
+  );
+  const levelRecords = [];
+  for (const threshold of thresholds) {
+    levelRecords.push(...gainExperience(stepped, threshold).levels);
+  }
+  const remainder = gainExperience(stepped, 17);
+  assert.deepEqual(remainder.levels, []);
+  assert.deepEqual(bulkAward.after, { level: 4, xp: 17 });
+  assert.deepEqual(remainder.after, { level: 4, xp: 17 });
+  assert.deepEqual([bulk.growth.level, bulk.growth.xp], [4, 17]);
+  assert.deepEqual(bulkAward.levels, levelRecords);
+  assert.deepEqual(bulk.growth, stepped.growth);
+  assert.deepEqual(grownCombat(bulk), grownCombat(stepped));
 });
 
 test('ordinary victory preserves resources and the third battle grants exactly one rest choice', () => {
@@ -211,6 +262,7 @@ test('current authored worldbook rules are injected once and legacy growth and a
       },
     },
   };
+  const original = structuredClone(legacy);
   const next = syncBuiltinWorldbook(legacy, builtin);
   assert.equal(
     Object.values(next.entries).some((entry) =>
@@ -221,13 +273,17 @@ test('current authored worldbook rules are injected once and legacy growth and a
     false,
   );
   assert.equal(next.entries[1], undefined);
-  assert(
-    Object.values(next.entries).some(
-      (entry) =>
-        entry.extensions?.wanxiang?.generationRule === 'character-output' &&
-        entry.content.includes('稀有度'),
-    ),
-  );
-  assert(next.entries[2].content.includes('【多元探索规则】'));
+  for (const key of ['character-output', 'script-facts']) {
+    const rules = (book) =>
+      Object.values(book.entries).filter(
+        (entry) => entry.extensions?.wanxiang?.generationRule === key,
+      );
+    assert.deepEqual(
+      rules(next).map(({ content }) => content),
+      [rules(builtin)[0].content],
+    );
+  }
+  assert.equal(next.entries[2].extensions.wanxiang.generationRule, 'script-facts');
   assert.deepEqual(syncBuiltinWorldbook(next, builtin), next);
+  assert.deepEqual(legacy, original);
 });

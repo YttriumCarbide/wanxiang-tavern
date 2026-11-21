@@ -1,15 +1,33 @@
-import { MUSIC, audioPreferences } from './config.js';
+import { MUSIC, SCENE_TRACKS, audioPreferences } from './config.js';
 import { SERVICE_CUES, SOUND_CUES, combatCues } from './cues.js';
 import { SFX, SFX_NAMES } from './sfx.js';
 
 /** One audio context and two buses per application, created only on a trusted gesture. */
-export function createAudioMixer(preferences, onChange = () => {}) {
+export function createAudioMixer(preferences, onChange = () => {}, options = {}) {
+  function pickTrackForScene(scene, exclude = null) {
+    const pool = SCENE_TRACKS[scene];
+    if (!pool?.length) return MUSIC[scene] ? scene : 'inn';
+    if (pool.length === 1) return pool[0];
+    const candidates = exclude ? pool.filter((id) => id !== exclude) : pool;
+    const list = candidates.length ? candidates : pool;
+    return list[Math.floor(Math.random() * list.length)];
+  }
+  const initialTrack = pickTrackForScene('inn');
+  const unlockedTracks = new Set(
+    (Array.isArray(options.unlockedTracks) ? options.unlockedTracks : []).filter((id) =>
+      Boolean(MUSIC[id]),
+    ),
+  );
   let settings = audioPreferences(preferences),
     context = null,
     musicBus,
     effectsBus,
     analyser,
-    wanted = 'inn',
+    wantedScene = 'inn',
+    activeTrack = initialTrack,
+    pinnedTrack = null,
+    previewTrack = null,
+    refreshToken = 0,
     current = null,
     disposed = false,
     unlocked = false,
@@ -21,9 +39,15 @@ export function createAudioMixer(preferences, onChange = () => {}) {
     loading = new Map(),
     sfxBuffers = new Map(),
     sfxLoading = new Map(),
+    lastSceneTracks = new Map([['inn', initialTrack]]),
     tracks = new Set(),
     voices = new Set();
   const abort = new AbortController();
+  function targetTrack() {
+    if (previewTrack && MUSIC[previewTrack]) return previewTrack;
+    if (pinnedTrack && MUSIC[pinnedTrack]) return pinnedTrack;
+    return activeTrack;
+  }
   function updateLevels() {
     if (!context) return;
     for (const [bus, level] of [
@@ -32,29 +56,30 @@ export function createAudioMixer(preferences, onChange = () => {}) {
     ])
       bus.gain.setTargetAtTime(level, context.currentTime, 0.025);
   }
-  async function load(scene) {
-    if (buffers.has(scene)) return buffers.get(scene);
-    if (!loading.has(scene))
+  async function load(trackId) {
+    if (!MUSIC[trackId]) return null;
+    if (buffers.has(trackId)) return buffers.get(trackId);
+    if (!loading.has(trackId))
       loading.set(
-        scene,
+        trackId,
         (async () => {
           try {
-            const response = await fetch(MUSIC[scene].file, { signal: abort.signal });
+            const response = await fetch(MUSIC[trackId].file, { signal: abort.signal });
             if (!response.ok) throw Error('音乐文件载入失败');
             const buffer = await context.decodeAudioData(await response.arrayBuffer());
-            if (!disposed) buffers.set(scene, buffer);
+            if (!disposed) buffers.set(trackId, buffer);
             return buffer;
           } catch (failure) {
             if (!disposed && failure.name !== 'AbortError') {
               error = '音乐载入失败，可再次点击重试';
-              loading.delete(scene);
+              loading.delete(trackId);
               onChange();
             }
             return null;
           }
         })(),
       );
-    return loading.get(scene);
+    return loading.get(trackId);
   }
   function loadSfx(name) {
     if (!context || !SFX[name] || disposed) return Promise.resolve(null);
@@ -91,34 +116,59 @@ export function createAudioMixer(preferences, onChange = () => {}) {
     await Promise.allSettled(SFX_NAMES.map((name) => loadSfx(name)));
     if (!disposed) onChange();
   }
-  async function refreshMusic() {
+  async function refreshMusic({ quick = false } = {}) {
     if (!context || !unlocked || disposed) return;
-    const scene = wanted,
-      buffer = await load(scene);
-    if (!buffer || disposed || wanted !== scene || current?.scene === scene) return;
+    const trackId = targetTrack();
+    if (current?.trackId === trackId) return;
+    const token = ++refreshToken;
+    const buffer = await load(trackId);
+    if (
+      !buffer ||
+      disposed ||
+      token !== refreshToken ||
+      targetTrack() !== trackId ||
+      current?.trackId === trackId
+    )
+      return;
     const now = context.currentTime;
+    const fadeSeconds = quick ? 0.32 : 0.75;
+    const stopSeconds = quick ? 0.36 : 0.8;
     if (current) {
+      current.stopped = true;
       current.gain.gain.cancelScheduledValues(now);
       current.gain.gain.setValueAtTime(current.gain.gain.value, now);
-      current.gain.gain.linearRampToValueAtTime(0, now + 0.75);
-      current.source.stop(now + 0.8);
+      current.gain.gain.linearRampToValueAtTime(0, now + fadeSeconds);
+      current.source.stop(now + stopSeconds);
     }
+    const isPoolAuto =
+      !previewTrack && !pinnedTrack && (SCENE_TRACKS[wantedScene]?.length || 0) > 1;
     const source = context.createBufferSource(),
       gain = context.createGain();
     source.buffer = buffer;
-    source.loop = true;
+    source.loop = !isPoolAuto;
     source.connect(gain).connect(musicBus);
     gain.gain.setValueAtTime(0, now);
-    gain.gain.linearRampToValueAtTime(1, now + 0.8);
-    const track = { scene, source, gain };
+    gain.gain.linearRampToValueAtTime(1, now + stopSeconds);
+    const track = { scene: wantedScene, trackId, source, gain, stopped: false };
     tracks.add(track);
     source.onended = () => {
       tracks.delete(track);
       source.disconnect();
       gain.disconnect();
+      if (!track.stopped && !disposed && unlocked && current === track) {
+        current = null;
+        const pool = SCENE_TRACKS[wantedScene];
+        if (!previewTrack && !pinnedTrack && pool?.length > 1) {
+          activeTrack = pickTrackForScene(wantedScene, track.trackId);
+          lastSceneTracks.set(wantedScene, activeTrack);
+        }
+        void refreshMusic();
+        onChange();
+      }
     };
     source.start(now);
     current = track;
+    unlockedTracks.add(trackId);
     error = '';
     onChange();
   }
@@ -263,10 +313,19 @@ export function createAudioMixer(preferences, onChange = () => {}) {
       analyser.getFloatTimeDomainData(samples);
       rms = Math.sqrt(samples.reduce((sum, sample) => sum + sample * sample, 0) / samples.length);
     }
+    const activeId = pinnedTrack || activeTrack;
+    const targetId = targetTrack();
     return {
-      scene: wanted,
-      track: current?.scene || null,
-      title: MUSIC[wanted].name,
+      scene: wantedScene,
+      track: current?.trackId || null,
+      activeTrack: activeId,
+      pinnedTrack,
+      previewTrack,
+      mode: previewTrack ? 'preview' : pinnedTrack ? 'manual' : 'auto',
+      title: MUSIC[targetId]?.name || '',
+      activeTitle: MUSIC[activeId]?.name || '',
+      previewTitle: previewTrack ? MUSIC[previewTrack]?.name || '' : '',
+      unlockedTracks: Object.keys(MUSIC).filter((id) => unlockedTracks.has(id)),
       state: context?.state || 'locked',
       unlocked,
       settings: { ...settings },
@@ -287,9 +346,66 @@ export function createAudioMixer(preferences, onChange = () => {}) {
     play,
     status,
     setScene(scene) {
-      if (!MUSIC[scene] || disposed) return;
-      wanted = scene;
+      if ((!SCENE_TRACKS[scene] && !MUSIC[scene]) || disposed) return;
+      const pool = SCENE_TRACKS[scene];
+      const alreadyInSamePool =
+        scene === wantedScene && (pool ? pool.includes(activeTrack) : activeTrack === scene);
+      wantedScene = scene;
+      if (!alreadyInSamePool) {
+        activeTrack = pickTrackForScene(scene, lastSceneTracks.get(scene));
+        if (pool?.length > 1) lastSceneTracks.set(scene, activeTrack);
+      }
       void refreshMusic();
+      onChange();
+    },
+    preview(trackId) {
+      if (!MUSIC[trackId] || !unlockedTracks.has(trackId) || disposed) return;
+      previewTrack = previewTrack === trackId ? null : trackId;
+      void refreshMusic({ quick: true });
+      onChange();
+    },
+    stopPreview() {
+      if (!previewTrack || disposed) return;
+      previewTrack = null;
+      void refreshMusic({ quick: true });
+      onChange();
+    },
+    selectTrack(trackId) {
+      if (!MUSIC[trackId] || !unlockedTracks.has(trackId) || disposed) return;
+      previewTrack = null;
+      pinnedTrack = trackId;
+      if (SCENE_TRACKS[wantedScene]?.includes(trackId)) {
+        activeTrack = trackId;
+        lastSceneTracks.set(wantedScene, trackId);
+      }
+      if (current?.trackId === trackId) current.source.loop = true;
+      void refreshMusic({ quick: true });
+      onChange();
+    },
+    clearPinnedTrack() {
+      if (disposed) return;
+      const hadOverride = Boolean(pinnedTrack || previewTrack);
+      pinnedTrack = null;
+      previewTrack = null;
+      if (!hadOverride) return;
+      const isPoolAuto = (SCENE_TRACKS[wantedScene]?.length || 0) > 1;
+      if (current?.trackId === targetTrack()) current.source.loop = !isPoolAuto;
+      void refreshMusic({ quick: true });
+      onChange();
+    },
+    shuffleSceneTrack() {
+      if (disposed) return;
+      const pool = SCENE_TRACKS[wantedScene];
+      if (!pool || pool.length < 2) return;
+      const unlockedPool = pool.filter((id) => unlockedTracks.has(id));
+      if (unlockedPool.length < 2) return;
+      previewTrack = null;
+      pinnedTrack = null;
+      const candidates = unlockedPool.filter((id) => id !== activeTrack);
+      const nextList = candidates.length ? candidates : unlockedPool;
+      activeTrack = nextList[Math.floor(Math.random() * nextList.length)];
+      lastSceneTracks.set(wantedScene, activeTrack);
+      void refreshMusic({ quick: true });
       onChange();
     },
     setPreferences(value) {
@@ -309,6 +425,9 @@ export function createAudioMixer(preferences, onChange = () => {}) {
     dispose() {
       if (disposed) return;
       disposed = true;
+      previewTrack = null;
+      pinnedTrack = null;
+      lastSceneTracks.clear();
       abort.abort();
       for (const voice of voices) {
         voice.onended = null;
@@ -320,6 +439,7 @@ export function createAudioMixer(preferences, onChange = () => {}) {
         voice.disconnect();
       }
       for (const track of tracks) {
+        track.stopped = true;
         track.source.onended = null;
         try {
           track.source.stop();

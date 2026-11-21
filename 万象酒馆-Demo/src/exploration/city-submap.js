@@ -8,7 +8,7 @@ import {
   CITY_MAP_HEIGHT,
   CITY_MAP_WIDTH,
 } from '../content/city-blueprints.js';
-import { OVERLAND_DUNGEON_ARCH_SVG } from '../destination-map.js';
+import { OVERLAND_DUNGEON_ARCH_SVG, MAP_WALKER_SVG, animatePathWalk } from '../destination-map.js';
 
 function normalizeSceneId(sceneId) {
   return sceneId === 'starlamp-street' ? 'street' : sceneId;
@@ -98,6 +98,10 @@ export function createCitySubmap({
   let panY = 0;
   let drag = null;
   let suppressClick = false;
+  let walking = false;
+  let cancelWalk = null;
+  let closeTimer = null;
+  let panFrame = null;
 
   openBtn.hidden = false;
 
@@ -158,31 +162,78 @@ export function createCitySubmap({
       })
       .join('');
 
+    const walkerHtml = currentNode
+      ? `<div class="city-submap-walker" aria-hidden="true" data-facing="right" style="left:${((currentNode.x / data.width) * 100).toFixed(2)}%;top:${((currentNode.y / data.height) * 100).toFixed(2)}%">${MAP_WALKER_SVG}</div>`
+      : '';
     canvas.innerHTML = `<div class="city-submap-stage">${buildBlueprintSvg(data.blueprint)}
-      <div class="city-submap-pins">${pins}</div></div>`;
+      <div class="city-submap-pins">${pins}</div>${walkerHtml}</div>`;
     applyPan();
+  }
+
+  function lanePath(fromId, toId) {
+    const byId = new Map(data.nodes.map((node) => [node.id, node]));
+    const adj = new Map(data.nodes.map((node) => [node.id, []]));
+    for (const edge of data.edges) {
+      adj.get(edge.from)?.push(edge.to);
+      adj.get(edge.to)?.push(edge.from);
+    }
+    const queue = [[fromId]];
+    const seen = new Set([fromId]);
+    let found = null;
+    while (queue.length) {
+      const path = queue.shift();
+      const tail = path.at(-1);
+      if (tail === toId) {
+        found = path;
+        break;
+      }
+      for (const next of adj.get(tail) || []) {
+        if (seen.has(next)) continue;
+        seen.add(next);
+        queue.push([...path, next]);
+      }
+    }
+    const ids = found || [fromId, toId];
+    return ids.map((id) => byId.get(id)).filter(Boolean);
   }
 
   function open() {
     if (dialog.open) return;
+    resetInteraction();
     panX = 0;
     panY = 0;
     drag = null;
     suppressClick = false;
     render();
     dialog.showModal();
-    requestAnimationFrame(applyPan);
+    panFrame = requestAnimationFrame(applyPan);
   }
 
-  function close() {
+  function resetInteraction() {
+    walking = false;
+    cancelWalk?.();
+    cancelWalk = null;
+    clearTimeout(closeTimer);
+    cancelAnimationFrame(panFrame);
     drag = null;
     suppressClick = false;
     canvas.classList.remove('dragging');
+  }
+
+  function close() {
+    resetInteraction();
     if (dialog.open) dialog.close();
   }
 
   events.on(openBtn, 'click', open);
   events.on(closeBtn, 'click', close);
+  events.on(dialog, 'cancel', (event) => {
+    event.preventDefault();
+    close();
+  });
+  events.on(dialog, 'close', () => {
+    if (!dialog.open) resetInteraction();
+  });
   events.on(atlasBtn, 'click', () => {
     close();
     onOpenWorldMap?.();
@@ -235,20 +286,52 @@ export function createCitySubmap({
       return;
     }
     const button = event.target.closest('[data-city-node]');
-    if (!button || button.disabled) return;
+    if (!button || button.disabled || walking) return;
     const action = button.dataset.cityAction;
     const targetId = button.dataset.cityNode;
-    if (action === 'dungeon') {
-      onOpenDungeon?.(button.dataset.cityDungeon || targetId);
-      setTimeout(close, 180);
+    const finishNode = () => {
+      if (!dialog.open || locked) return;
+      if (action === 'dungeon') {
+        onOpenDungeon?.(button.dataset.cityDungeon || targetId);
+        closeTimer = setTimeout(() => {
+          if (dialog.open) close();
+        }, 60);
+        return;
+      }
+      close();
+      if (action === 'guild') {
+        onOpenGuild?.(data.region);
+        return;
+      }
+      if (targetId && targetId !== data.currentId) onNavigate?.(targetId);
+    };
+    const walkerEl = canvas.querySelector('.city-submap-walker');
+    const nodes = lanePath(data.currentId, targetId);
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!walkerEl || nodes.length < 2 || reduced) {
+      finishNode();
       return;
     }
-    close();
-    if (action === 'guild') {
-      onOpenGuild?.(data.region);
-      return;
-    }
-    if (targetId && targetId !== data.currentId) onNavigate?.(targetId);
+    walking = true;
+    walkerEl.classList.add('is-walking');
+    cancelWalk = animatePathWalk({
+      points: nodes.map((n) => [n.x, n.y]),
+      reduced,
+      durationPerUnit: 1.3,
+      minMs: 220,
+      maxMs: 360,
+      onStep(pt, dx) {
+        if (Math.abs(dx) > 0.05) walkerEl.dataset.facing = dx < 0 ? 'left' : 'right';
+        walkerEl.style.left = `${((pt.x / data.width) * 100).toFixed(2)}%`;
+        walkerEl.style.top = `${((pt.y / data.height) * 100).toFixed(2)}%`;
+      },
+      onDone() {
+        cancelWalk = null;
+        walking = false;
+        walkerEl.classList.remove('is-walking');
+        finishNode();
+      },
+    });
   });
 
   render();

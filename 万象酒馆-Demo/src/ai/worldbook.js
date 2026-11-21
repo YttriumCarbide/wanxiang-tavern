@@ -413,6 +413,8 @@ function builtinEntryKey(entry) {
       'monsterId',
       'mainWorld',
       'millLore',
+      'quarryLore',
+      'blackMarketLore',
       'characterId',
     ]) {
       if (marker[field]) return `${field}:${marker[field]}`;

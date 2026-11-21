@@ -1,7 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { MUSIC, encounterMusic, audioPreferences, DEFAULT_AUDIO } from '../src/audio/config.js';
+import {
+  MUSIC,
+  BGM_PLAYLIST,
+  SCENE_TRACKS,
+  encounterMusic,
+  locationMusic,
+  audioPreferences,
+  DEFAULT_AUDIO,
+} from '../src/audio/config.js';
 import { REGIONS } from '../src/content/regions.js';
 import { SOUND_CUES, combatCues, combatSoundStyle } from '../src/audio/cues.js';
 import { SFX, SFX_NAMES } from '../src/audio/sfx.js';
@@ -18,7 +26,22 @@ test('audio preferences clamp invalid input and preserve independent mute switch
 });
 
 test('game music tracks exist, load properly and are valid audio files', async () => {
-  assert.ok(MUSIC.inn && MUSIC.battle && MUSIC.boss);
+  assert.ok(
+    MUSIC.inn &&
+      MUSIC.inn2 &&
+      MUSIC.inn3 &&
+      MUSIC.town &&
+      MUSIC.battle &&
+      MUSIC.ruinsBoss &&
+      MUSIC.boss &&
+      MUSIC.boss3,
+  );
+  assert.equal(BGM_PLAYLIST.length, Object.keys(MUSIC).length);
+  assert.deepEqual(SCENE_TRACKS.inn, ['inn', 'inn2', 'inn3']);
+  assert.deepEqual(SCENE_TRACKS.boss, ['ruinsBoss', 'boss', 'boss3']);
+  assert.equal(MUSIC.ruinsBoss.name, '激战1');
+  assert.equal(MUSIC.boss.name, '激战2');
+  assert.equal(MUSIC.boss3.name, '激战3');
   for (const [scene, track] of Object.entries(MUSIC)) {
     const file = await readFile(new URL('../' + track.file, import.meta.url));
     assert(file.length > 500000, `${scene}: file too small`);
@@ -45,10 +68,10 @@ test('all battle and interface cues have original layered WAV samples', async ()
   }
 });
 
-test('map encounters use their assigned tracks and keep Boss music', () => {
+test('map encounters use their assigned tracks and share the three-track Boss pool', () => {
   for (const map of Object.keys(REGIONS)) {
     const normal = MUSIC[encounterMusic({ map, boss: false })];
-    const boss = MUSIC[encounterMusic({ map, boss: true })];
+    const bossScene = encounterMusic({ map, boss: true });
     assert.equal(
       normal.file,
       map === 'forge'
@@ -57,11 +80,45 @@ test('map encounters use their assigned tracks and keep Boss music', () => {
           ? './assets/audio/xueyuan.mp3'
           : './assets/audio/encounter.mp3',
     );
-    assert.equal(
-      boss.file,
-      map === 'ruins' ? './assets/audio/battle.m4a' : './assets/audio/boss.m4a',
+    assert.equal(bossScene, 'boss');
+    assert.deepEqual(
+      SCENE_TRACKS[bossScene].map((id) => MUSIC[id].file),
+      ['./assets/audio/battle.m4a', './assets/audio/boss.m4a', './assets/audio/boss-3.mp3'],
     );
   }
+});
+
+test('overlord bosses and outdoor town scenes route to their dedicated BGM tracks', () => {
+  assert.equal(locationMusic('tavern'), 'inn');
+  assert.equal(locationMusic('corridor'), 'inn');
+  assert.equal(locationMusic('guest-room'), 'inn');
+  assert.equal(locationMusic('master-bedroom'), 'inn');
+  assert.equal(locationMusic('street'), 'town');
+  assert.equal(locationMusic('city-center'), 'town');
+  assert.equal(
+    encounterMusic({ map: 'mill', boss: true, enemyIds: ['alchemicalPuppet'] }),
+    'puppetBoss',
+  );
+  assert.equal(
+    encounterMusic({ map: 'graystone-quarry', boss: true, enemyIds: ['darkscaleWarlord'] }),
+    'warlordBoss',
+  );
+  assert.equal(
+    encounterMusic({ map: 'tide', boss: true, enemyIds: ['radiantWyvern'] }),
+    'wyvernBoss',
+  );
+  assert.equal(
+    encounterMusic({
+      map: 'black-market',
+      boss: true,
+      enemyIds: ['banditPoacher', 'banditSyndicateKing', 'banditBruiser'],
+    }),
+    'syndicateBoss',
+  );
+  assert.equal(
+    encounterMusic({ map: 'mill', boss: true, enemyIds: ['millVolePup', 'millVoleAlpha'] }),
+    'boss',
+  );
 });
 
 test('every weapon and enemy has startup and impact cues, synchronized with attack speed', () => {

@@ -37,29 +37,30 @@ export async function forestChecks({ browser, baseURL, output }) {
       );
       assert.deepEqual(
         rects.map((r) => r.label),
-        ['归档', '记录', '总结'],
+        ['归档'],
       );
-      for (const [i, r] of rects.entries()) {
+      for (const r of rects) {
         assert(
           r.left >= 0 && r.right <= viewport.width && r.top >= 0 && r.bottom <= viewport.height,
         );
-        if (i)
-          assert(rects[i - 1].bottom + 4 < r.top, 'Separate buttons on the three shelf levels');
       }
       assert.equal(await frame.locator('#bookshelf-open').count(), 0);
       await page.screenshot({
         path: path.join(output, 'bookshelf-three-levels-' + viewport.width + '.png'),
       });
     }
-    for (const [action, dialog] of [
-      ['archives', 'archive-dialog'],
-      ['records', 'journey-records'],
-      ['memory', 'memory-dialog'],
-    ]) {
-      await frame.locator('#bookshelf-' + action).click();
-      await page.locator('#' + dialog).waitFor({ state: 'visible' });
-      await page.locator('#' + dialog).evaluate((node) => node.close());
+    await frame.locator('#bookshelf-archives').click();
+    await page.locator('#archive-dialog').waitFor({ state: 'visible' });
+    for (const tab of ['records', 'memory', 'manual']) {
+      await page.locator(`#archive-dialog [data-archive-tab="${tab}"]`).click();
+      assert.equal(
+        await page
+          .locator(`#archive-dialog [data-archive-tab="${tab}"]`)
+          .getAttribute('aria-pressed'),
+        'true',
+      );
     }
+    await page.locator('#archive-close').click();
     await page.setViewportSize({ width: 1440, height: 836 });
     for (const mode of ['official', 'npc', 'chaos', 'infinite']) {
       await frame.locator('canvas').evaluate(() => window.assetPreview.placeNow('summon'));
@@ -167,7 +168,7 @@ export async function forestChecks({ browser, baseURL, output }) {
     return {
       models: 24,
       chapters: 6,
-      bookshelfLevels: 3,
+      bookshelfLevels: 1,
       animatedSummonMethods: 4,
       motherActionOrder: loaded.order,
     };

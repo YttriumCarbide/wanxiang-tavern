@@ -110,6 +110,9 @@ async function contracts() {
     'nexus',
     'wasteland',
     'relic',
+    'graystone-quarry',
+    'city-market',
+    'black-market',
     'preview-dynasty',
     'preview-xianxia',
     'preview-castle',
@@ -118,6 +121,9 @@ async function contracts() {
     'preview-nexus',
     'preview-wasteland',
     'preview-relic',
+    'preview-graystone-quarry',
+    'preview-city-market',
+    'preview-black-market',
   ])
     await access(path.join(root, 'assets', `${name}.glb`));
   await access(path.join(root, 'launch.ps1'));
@@ -163,19 +169,23 @@ export async function quality() {
     [
       'format',
       () =>
-        command(process.execPath, [
-          'node_modules/prettier/bin/prettier.cjs',
-          '--check',
-          'src',
-          'tests',
-          'tools',
-          'styles',
-          '*.html',
-          '*.cjs',
-          '*.mjs',
-          '*.json',
-          '*.md',
-        ]),
+        command(
+          process.execPath,
+          [
+            'node_modules/prettier/bin/prettier.cjs',
+            '--check',
+            'src',
+            'tests',
+            'tools',
+            'styles',
+            '*.html',
+            '*.cjs',
+            '*.mjs',
+            '*.json',
+            '*.md',
+          ],
+          { timeout: 120000 },
+        ),
     ],
     ['contracts', contracts],
     ['styles', styles],

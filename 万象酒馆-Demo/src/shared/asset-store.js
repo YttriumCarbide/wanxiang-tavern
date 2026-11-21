@@ -1,8 +1,12 @@
+import { sha256 } from '../updates/manifest.js';
+import { createCacheUpdateStore } from '../updates/storage.js';
+
 /** Original bytes are cached by content hash. Each scene/application owns its lifetime. */
 export function createAssetStore({ base = new URL('../../', import.meta.url) } = {}) {
   const controller = new AbortController();
   const pending = new Map();
   const images = new Set();
+  const updates = createCacheUpdateStore({ base });
   let catalog = null;
   let cache = null;
   let disposed = false;
@@ -21,7 +25,10 @@ export function createAssetStore({ base = new URL('../../', import.meta.url) } =
         if (saved) return saved.json();
         throw error;
       }
-    })();
+    })().catch((error) => {
+      catalog = null;
+      throw error;
+    });
     return catalog;
   }
   async function disk() {
@@ -34,6 +41,11 @@ export function createAssetStore({ base = new URL('../../', import.meta.url) } =
     }
     return cache;
   }
+  async function cacheVerified(storage, key, blob, digest) {
+    if (!storage) return;
+    const headers = new Headers({ 'content-type': blob.type, 'x-wanxiang-sha256': digest });
+    await storage.put(key, new Response(blob, { headers })).catch(() => {});
+  }
   async function download(file, update) {
     const url = new URL(file, base);
     const entries = await manifest();
@@ -41,12 +53,28 @@ export function createAssetStore({ base = new URL('../../', import.meta.url) } =
     const relative = url.pathname.slice(new URL(base).pathname.length);
     const info = entries.files[relative];
     const storage = info && (await disk());
-    const saved = storage && (await storage.match(key).catch(() => null));
-    if (saved && info && saved.headers.get('x-wanxiang-hash') === info.hash) {
+    const canVerify = Boolean(globalThis.crypto?.subtle);
+    const saved = storage && canVerify && (await storage.match(key).catch(() => null));
+    const verifiedHash = saved && saved.headers.get('x-wanxiang-sha256');
+    const legacyHash = saved && saved.headers.get('x-wanxiang-hash');
+    if (saved && (verifiedHash === info.hash || (!verifiedHash && legacyHash === info.hash))) {
       const blob = await saved.blob();
       if (blob.size === info.bytes) {
-        update({ loaded: blob.size, total: blob.size, cached: true });
-        return blob;
+        const legacyMatch = !verifiedHash && (await sha256(await blob.arrayBuffer())) === info.hash;
+        if (legacyMatch) await cacheVerified(storage, key, blob, info.hash);
+        if (verifiedHash === info.hash || legacyMatch) {
+          update({ loaded: blob.size, total: blob.size, cached: true });
+          return blob;
+        }
+      }
+    }
+    if (info && url.origin === new URL(base).origin) {
+      const verified = await updates
+        .read('verified', { path: relative, sha256: info.hash })
+        .catch(() => null);
+      if (verified?.size === info.bytes) {
+        update({ loaded: verified.size, total: verified.size, cached: true });
+        return verified;
       }
     }
     const response = await fetch(url, {
@@ -73,9 +101,11 @@ export function createAssetStore({ base = new URL('../../', import.meta.url) } =
     }
     const blob = new Blob(chunks, { type: response.headers.get('content-type') || '' });
     if (info && blob.size !== info.bytes) throw Error('资源文件不完整，请重试');
-    if (storage) {
-      const headers = new Headers({ 'content-type': blob.type, 'x-wanxiang-hash': info.hash });
-      await storage.put(key, new Response(blob, { headers })).catch(() => {});
+    if (info && canVerify) {
+      const digest = await sha256(await blob.arrayBuffer());
+      controller.signal.throwIfAborted();
+      if (digest !== info.hash) throw Error('资源校验失败，请重试');
+      await cacheVerified(storage, key, blob, digest);
     }
     update({ loaded, total: loaded, cached: false });
     return blob;
@@ -95,7 +125,9 @@ export function createAssetStore({ base = new URL('../../', import.meta.url) } =
     job.listeners.add(progress);
     if (job.status) progress(job.status);
     try {
-      return await job.promise;
+      const blob = await job.promise;
+      controller.signal.throwIfAborted();
+      return blob;
     } finally {
       job.listeners.delete(progress);
     }
@@ -111,7 +143,7 @@ export function createAssetStore({ base = new URL('../../', import.meta.url) } =
       controller.signal.throwIfAborted();
       return element;
     } catch (error) {
-      await evict(file);
+      if (!controller.signal.aborted) await evict(file);
       throw error;
     } finally {
       URL.revokeObjectURL(url);

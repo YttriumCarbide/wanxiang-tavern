@@ -1,5 +1,4 @@
 import { normalizePromptPreset } from './presets.js';
-import { normalizeRegexScripts } from './regex.js';
 import {
   normalizeWorldbook,
   normalizeWorldSettings,
@@ -15,6 +14,7 @@ function checkedId(id) {
 
 /** Same store ports as the development service; every record is private to this browser. */
 export async function createBrowserStores(database, readText, builtinBook) {
+  if (database.get('regex') !== undefined) await database.write([], ['regex']);
   const settings = createConnectionStore({
     snapshot: database.get('api.config') || {},
     initial: { requestMode: 'browser' },
@@ -182,20 +182,13 @@ export async function createBrowserStores(database, readText, builtinBook) {
         state: structuredClone(database.get('world.states')?.[kind] || {}),
       };
     },
-    async commit(kind, nextState, expectedStep) {
-      return database.update('world.states', (previous = {}) =>
-        Number(previous[kind]?.step || 0) === expectedStep
+    async commit(kind, nextState, expectedStep, signal) {
+      return database.update('world.states', (previous = {}) => {
+        signal?.throwIfAborted();
+        return Number(previous[kind]?.step || 0) === expectedStep
           ? { ...previous, [kind]: nextState }
-          : undefined,
-      );
-    },
-  };
-  const regexStore = {
-    get: () => normalizeRegexScripts(database.get('regex') || []),
-    async save(raw) {
-      const scripts = normalizeRegexScripts(raw);
-      await database.write([['regex', scripts]]);
-      return { scripts };
+          : undefined;
+      });
     },
   };
   const helperStorage = {
@@ -214,5 +207,5 @@ export async function createBrowserStores(database, readText, builtinBook) {
       return { saved: true };
     },
   };
-  return { settings, prompts, worlds, regexStore, helperStorage };
+  return { settings, prompts, worlds, helperStorage };
 }

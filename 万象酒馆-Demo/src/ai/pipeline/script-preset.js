@@ -22,8 +22,6 @@ export async function buildSubScriptRequest({
   profile,
   worldInfo,
   countTokens,
-  regexScripts = [],
-  runRegexTasks = null,
   presetProcessing = null,
   taskLabel,
   brief,
@@ -46,7 +44,7 @@ export async function buildSubScriptRequest({
     })
     .join('\n\n');
   const intentText = includeIntent ? playerIntentText(input?.playerIntent) : '';
-  const variablesForRegex = {
+  const participantNames = {
     char: party
       .map((entry) => entry.name)
       .filter(Boolean)
@@ -83,19 +81,6 @@ export async function buildSubScriptRequest({
   ) {
     return null;
   }
-  if (runRegexTasks && regexScripts.length) {
-    const processed = await runRegexTasks(
-      regexScripts,
-      scan.entries.map((entry) => ({
-        text: entry.content,
-        placement: 5,
-        options: { kind: 'script', isPrompt: true, variables: variablesForRegex },
-      })),
-    );
-    scan.entries.forEach((entry, index) => {
-      entry.content = processed[index].text;
-    });
-  }
   const wiBefore = scan.entries
     .filter((entry) => entry.position === 0)
     .map((entry) => entry.content)
@@ -109,8 +94,8 @@ export async function buildSubScriptRequest({
     input: inputText,
     brief: String(brief || ''),
     task: taskLabel,
-    char: variablesForRegex.char,
-    user: variablesForRegex.user,
+    char: participantNames.char,
+    user: participantNames.user,
     description: characters,
     personality: characters,
     characters,
@@ -174,22 +159,6 @@ export async function buildSubScriptRequest({
     worldInfo.settings?.authorNote || '',
     { characterText: characters },
   );
-  if (runRegexTasks && regexScripts.length) {
-    const regexResults = await runRegexTasks(
-      regexScripts,
-      messages.map((msg, index) => ({
-        text: msg.content,
-        placement: msg.role === 'assistant' ? 2 : msg.role === 'user' ? 1 : -1,
-        options: {
-          kind: 'script',
-          isPrompt: true,
-          depth: messages.length - index - 1,
-          variables: variablesForRegex,
-        },
-      })),
-    );
-    messages = messages.map((msg, index) => ({ ...msg, content: regexResults[index].text }));
-  }
   if (includeActors && party.length) {
     messages.push({ role: 'system', content: galActorListText(input) });
   }

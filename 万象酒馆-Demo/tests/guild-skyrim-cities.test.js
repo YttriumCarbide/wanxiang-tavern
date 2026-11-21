@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { newLibrary, restoreLibrary } from '../src/ai/library.js';
 import { BASE_WORLDS, EMPIRE_TRANSITION_DUNGEONS } from '../src/worlds.js';
-import { IMPERIAL_EXTRA_DUNGEONS } from '../src/content/imperial-network.js';
+import { IMPERIAL_DUNGEONS, IMPERIAL_EXTRA_DUNGEONS } from '../src/content/imperial-network.js';
 import { REGIONS } from '../src/content/regions.js';
 import { encounterLevel } from '../src/enemy-growth.js';
 import { explorationSpec, unlockDungeonMap } from '../src/exploration.js';
@@ -41,7 +41,8 @@ test('city parchment SVG blueprints render architectural layers and Guild Halls 
 
 test('empire transition dungeons cover low, mid, and high tiers cleanly using existing biomes', () => {
   assert.deepEqual([...BASE_WORLDS], ['mill', 'ruins', 'forest', 'frost', 'forge', 'tide']);
-  assert.equal(EMPIRE_TRANSITION_DUNGEONS.length, 6);
+  assert.equal(EMPIRE_TRANSITION_DUNGEONS.length, 7);
+  assert(EMPIRE_TRANSITION_DUNGEONS.includes('graystone-quarry'));
   const lib = newLibrary();
 
   for (const dungeon of IMPERIAL_EXTRA_DUNGEONS) {
@@ -74,6 +75,8 @@ test('adventurers guild bounties, intel, quartermaster supplies, and sparring tr
   assert.equal(accepted.ok, true);
   assert.equal(accepted.quest.type, 'bounty');
   assert.equal(accepted.quest.status, 'active');
+  assert.match(accepted.quest.objectives[0].label, /首领战/);
+  recordGuildCombatProgress(lib, { kind: 'skirmish' });
   assert.equal(isBountyReadyToClaim(accepted.quest), false);
 
   const progress = recordGuildCombatProgress(lib, {
@@ -90,7 +93,10 @@ test('adventurers guild bounties, intel, quartermaster supplies, and sparring tr
   assert(lib.guild.merit >= firstBounty.merit);
 
   const intelBefore = guildIntelList(lib);
-  assert(intelBefore.length === 12);
+  assert.deepEqual(
+    intelBefore.map(({ id }) => id).sort(),
+    IMPERIAL_DUNGEONS.map(({ id }) => id).sort(),
+  );
   const dossier = unlockGuildIntel(lib, 'moss-hollow');
   assert.equal(dossier.ok, true);
   assert.equal(lib.guild.unlockedIntel.includes('moss-hollow'), true);

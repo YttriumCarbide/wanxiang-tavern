@@ -23,7 +23,6 @@ export function createTavernVisitors(scene, camera, model, options = {}) {
     const j = Math.floor(Math.random() * (i + 1));
     [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
   }
-  const tasks = new Map();
   let enabled = false;
   let disposed = false;
   let revision = '';
@@ -69,6 +68,7 @@ export function createTavernVisitors(scene, camera, model, options = {}) {
     return [...available.slice(rotation), ...available.slice(0, rotation)].slice(0, maxVisible);
   }
   function distribute() {
+    if (disposed) return;
     const selected = visibleDefinitions();
     for (const actor of actors.values()) {
       const index = selected.findIndex((definition) => definition.id === actor.id);
@@ -84,25 +84,44 @@ export function createTavernVisitors(scene, camera, model, options = {}) {
     if (enabled)
       await Promise.all(
         visibleDefinitions().map((definition) => {
-          if (!tasks.has(definition.id)) tasks.set(definition.id, populate(definition));
-          return tasks.get(definition.id);
+          return actors.get(definition.id)?.task ?? createActor(definition);
         }),
       );
     distribute();
   }
-  async function populate(definition) {
+  function createActor(definition) {
     const root = new THREE.Group();
     root.name = definition.name;
     root.visible = false;
     group.add(root);
-    const actor = { id: definition.id, root, mesh: null, alpha: null, spot: null };
+    const actor = {
+      id: definition.id,
+      root,
+      resources: createResourceScope(),
+      mesh: null,
+      alpha: null,
+      spot: null,
+      task: null,
+    };
     actors.set(definition.id, actor);
+    actor.task = populate(definition, actor);
+    return actor.task;
+  }
+  function disposeActor(actor) {
+    actor.root.removeFromParent();
+    actor.resources.dispose();
+  }
+  function clearActors() {
+    for (const actor of actors.values()) disposeActor(actor);
+    actors.clear();
+  }
+  async function populate(definition, actor) {
+    const { root, resources: actorResources } = actor;
     try {
-      const texture = resources.track(
-        new THREE.Texture(await assets.image(standingSprite(definition))),
-      );
+      const image = await assets.image(standingSprite(definition));
+      if (disposed || actors.get(actor.id) !== actor) return;
+      const texture = actorResources.track(new THREE.Texture(image));
       texture.needsUpdate = true;
-      if (disposed) return;
       texture.colorSpace = THREE.SRGBColorSpace;
       texture.anisotropy = 2;
       const { width, height } = texture.image;
@@ -121,10 +140,10 @@ export function createTavernVisitors(scene, camera, model, options = {}) {
         ? standingFrame(actor.alpha.data, actor.alpha.width, actor.alpha.height, height)
         : definition;
       const imageHeight = (definition.height * heightScale * height) / (foot - top);
-      const geometry = resources.track(
+      const geometry = actorResources.track(
         new THREE.PlaneGeometry((imageHeight * width) / height, imageHeight),
       );
-      const material = resources.track(
+      const material = actorResources.track(
         new THREE.MeshBasicMaterial({
           map: texture,
           transparent: true,
@@ -146,13 +165,13 @@ export function createTavernVisitors(scene, camera, model, options = {}) {
         [0.55, 0.28, 0.8, 0],
       ]) {
         const shadow = new THREE.Mesh(
-          resources.track(
+          actorResources.track(
             new THREE.PlaneGeometry(
               width * heightScale,
               depth * heightScale * (options.flat ? 0.16 : 1),
             ),
           ),
-          resources.track(
+          actorResources.track(
             new THREE.MeshBasicMaterial({
               map: shadowMap,
               transparent: true,
@@ -171,8 +190,9 @@ export function createTavernVisitors(scene, camera, model, options = {}) {
       }
       distribute();
     } catch {
-      root.visible = false;
-      actors.delete(definition.id);
+      if (actors.get(actor.id) !== actor) return;
+      actors.delete(actor.id);
+      disposeActor(actor);
     }
   }
   events.on(refresh, 'click', () => {
@@ -201,9 +221,7 @@ export function createTavernVisitors(scene, camera, model, options = {}) {
       if (disposed) return;
       if (signature === revision) return ensureVisible();
       revision = signature;
-      for (const actor of actors.values()) actor.root.removeFromParent();
-      actors.clear();
-      tasks.clear();
+      clearActors();
       enabled = value?.enabled === true;
       collection = (Array.isArray(value?.characters) ? value.characters : []).filter(
         (entry) => !/(?:^|\/)assets\/gal-npc-cast\//u.test(entry.image || ''),
@@ -284,12 +302,13 @@ export function createTavernVisitors(scene, camera, model, options = {}) {
         .map((actor) => actor.mesh);
     },
     dispose() {
+      if (disposed) return;
       disposed = true;
       group.removeFromParent();
       events.dispose();
       refresh.remove();
+      clearActors();
       resources.dispose();
-      actors.clear();
       if (!options.assets) assets.dispose();
     },
   };

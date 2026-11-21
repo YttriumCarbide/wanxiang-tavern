@@ -20,6 +20,27 @@ export async function battleControlChecks({ browser, baseURL, output }) {
       { width: 844, height: 390 },
     ]) {
       await page.setViewportSize(viewport);
+      const openingCell = page.locator('#timeline.opening-timeline .time-cell[data-start="0"]');
+      const alignment = await openingCell.evaluate((cell) => {
+        const bounds = cell.getBoundingClientRect();
+        const diamond = cell.querySelector('.num').getBoundingClientRect();
+        const label = cell.querySelector('.cell-label');
+        const range = document.createRange();
+        range.selectNodeContents(label);
+        const text = range.getBoundingClientRect();
+        const centerX = (rect) => rect.left + rect.width / 2;
+        return {
+          diamondX: centerX(diamond) - centerX(bounds),
+          labelX: centerX(text) - centerX(bounds),
+          contentY:
+            (diamond.top + label.getBoundingClientRect().bottom) / 2 -
+            (bounds.top + bounds.height / 2),
+        };
+      });
+      assert(
+        Object.values(alignment).every((offset) => Math.abs(offset) < 1),
+        `Opening slot must center its diamond and label at ${viewport.width}px: ${JSON.stringify(alignment)}`,
+      );
       const overlays = await page.locator('.unit-hit,.empty-slot').evaluateAll((elements) =>
         elements.map((element) => {
           const style = getComputedStyle(element);
@@ -39,6 +60,25 @@ export async function battleControlChecks({ browser, baseURL, output }) {
     const state = await page.evaluate(() => demo.getState());
     const rear = state.formation[3],
       front = state.formation[0];
+    const opening = page.locator('#timeline.opening-timeline');
+    await page.locator(`[data-unit="${front}"]`).click();
+    await page.locator('#details [data-skill="attack"]').click();
+    if (await page.evaluate(() => demo.getStatus().interactionStep === 'target')) {
+      await page.locator(`[data-unit="${state.enemyIds[0]}"]`).click();
+    }
+    const openingAction = opening.locator('.time-action');
+    await openingAction.waitFor({ state: 'visible' });
+    assert.equal(await openingAction.locator('.action-number').textContent(), '1');
+    assert.equal(await openingAction.locator('.time-action-body small').isVisible(), true);
+    assert.equal(await opening.locator('.time-cell .num, .time-cell .cell-label').count(), 0);
+    await openingAction.evaluate((element) =>
+      Promise.allSettled(element.getAnimations().map((animation) => animation.finished)),
+    );
+    await page.screenshot({ path: path.join(output, 'opening-skill.png') });
+    await openingAction.locator('[data-remove]').click();
+    assert.equal(await opening.locator('.opening-empty .num').textContent(), '◇');
+    assert.equal(await opening.locator('.opening-empty .cell-label').textContent(), '先手');
+
     await page.locator(`[data-rear="${rear}"]`).waitFor({ state: 'visible' });
     await page.locator(`[data-unit="${front}"]`).waitFor({ state: 'visible' });
     const { a, b } = await page.evaluate(

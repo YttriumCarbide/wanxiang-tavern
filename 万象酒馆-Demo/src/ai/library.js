@@ -1,3 +1,7 @@
+import { restoreLibraryRecords } from './library-records.js';
+import { createLibrary, officialCharacter } from './library-roster.js';
+export { compileRoster, newLibrary, officialCharacter } from './library-roster.js';
+export { purgeLegacyRuinsProgress } from './library-ruins-migration.js';
 import { lockUnopenedRear } from '../formation-access.js';
 import { restoreDining } from '../dining.js';
 import { restoreDaily } from '../daily.js';
@@ -6,240 +10,37 @@ import { upgradeLegacyStatuses } from '../status-rules.js';
 import { restoreWorlds, UNLOCKABLE_DUNGEONS } from '../worlds.js';
 import { restoreDiscoveries } from '../atlas-discoveries.js';
 import { restoreTavernQuests } from '../tavern-quests.js';
-import { newGuildState, restoreGuildState } from '../guild.js';
-import { EMBLEMS, applyEmblemStats } from '../emblems.js';
-import { grownCombat, restoreGrowth } from '../growth.js';
+import { restoreGuildState } from '../guild.js';
+import { EMBLEMS } from '../emblems.js';
+import { restoreGrowth } from '../growth.js';
 import {
   restoreEquipment,
-  applyEquipment,
-  equippedDefinitions,
   EQUIPMENT_CATEGORIES,
   EQUIPMENT_SLOT_ORDER,
   resolveEquipmentTemplate,
 } from '../equipment.js';
 import { ENCOUNTER_COUNT } from '../content/journey-rules.js';
 import { REGIONS } from '../content/regions.js';
-import { PANDORA, PANDORA_SETTING } from '../content/pandora.js';
-import { EDITH, EDITH_SETTING } from '../content/edith.js';
 import { OFFICIAL_VISITORS } from '../content/official-visitors.js';
 import { stripRetiredLore } from './retired-abilities.js';
 import { HEROES } from '../data.js';
 import { normalizeCharacter, normalizeScript } from './contracts.js';
-import { OFFICIAL_SETTINGS } from '../content/official-characters.js';
-import { formatCharacterSetting } from './character-setting.js';
 import { loadCustomPortraits, savedPortrait } from '../portraits.js';
-import { newExploration, restoreExploration } from '../exploration.js';
+import { restoreExploration } from '../exploration.js';
 import {
   refreshWorldSkirmishes,
   restoreOverlandExploration,
   restoreSkirmishes,
 } from '../skirmishes.js';
 import { restoreInventory } from '../rewards.js';
-import { restoredSummary, conversationText, restoreInvitationHistory } from '../memory.js';
-import { restoreArchives, hydrateArchiveMaps } from '../archives.js';
+
+import { hydrateArchiveMaps } from '../archives.js';
 import { defaultProtagonist } from '../content/qingyuan.js';
-import { OFFICIAL_DC_ATTRS, normalizeDcAttrs } from '../dc.js';
+import { normalizeDcAttrs } from '../dc.js';
 import { restoreEquippedSkills, restoreLearnedSkills } from '../learnable-skills.js';
 import { mergeRevealedWeaknessMap } from '../octopath.js';
 import { normalizeSeenMonsters } from '../archive-enemies.js';
 
-export function newLibrary() {
-  return createLibrary(loadCustomPortraits());
-}
-
-function createLibrary(customPortraits) {
-  return {
-    version: 1,
-    migrations: { ruinsResetV2: true },
-    workshop: null,
-    dining: restoreDining(),
-    daily: restoreDaily(),
-    statusRevision: 36,
-    enabled: false,
-    chapter: 1,
-    history: [],
-    invitationHistory: [],
-    tavernChat: [],
-    journeyActivities: [],
-    archives: restoreArchives(),
-    summaryWorldbook: null,
-    relationships: {},
-    prepared: null,
-    inventory: restoreInventory(),
-    rewardClaims: [],
-    experienceClaims: [],
-    equipment: restoreEquipment(),
-    worlds: [],
-    unlockedDungeons: [],
-    atlasDiscoveries: [],
-    tavernQuests: [],
-    guild: newGuildState(),
-    emblems: [],
-    learnedSkills: restoreLearnedSkills(),
-    discoveredWeaknesses: {},
-    seenMonsters: [],
-    refinedNpcs: [],
-    progression: {
-      settlements: [],
-      pandoraJoined: false,
-      swapLesson: 'none',
-      entryLesson: 'done',
-      corridorRingAcquired: false,
-      overloadLesson: 'none',
-      emblemLesson: 'none',
-    },
-    exploration: newExploration(Math.floor(Math.random() * 4294967296)),
-    skirmishes: refreshWorldSkirmishes(null, 'init'),
-    overlandExploration: restoreOverlandExploration(),
-    characters: HEROES.map((hero) => {
-      const combat = structuredClone(hero);
-      const portrait = savedPortrait(customPortraits, { id: `official-${hero.id}`, combat });
-      if (portrait) combat.customPortrait = portrait;
-      return {
-        id: `official-${hero.id}`,
-        source: 'official',
-        archetype: hero.id,
-        dcAttrs: normalizeDcAttrs(OFFICIAL_DC_ATTRS[`official-${hero.id}`], {
-          id: `official-${hero.id}`,
-          archetype: hero.id,
-          combat,
-        }),
-        growth: restoreGrowth(null, `official-${hero.id}`),
-        combat,
-        equippedSkills: restoreEquippedSkills(),
-        setting: {
-          name: hero.name,
-          title: hero.title,
-          worldbook: formatCharacterSetting(OFFICIAL_SETTINGS[hero.id]),
-          formatVersion: 3,
-        },
-      };
-    }),
-    party: HEROES.map((hero) => `official-${hero.id}`),
-    scripts: [],
-  };
-}
-export function officialCharacter(id) {
-  if (OFFICIAL_VISITORS[id]) {
-    const visitor = OFFICIAL_VISITORS[id];
-    const combat = structuredClone(visitor.combat);
-    const fullId = 'official-' + id;
-    return {
-      id: fullId,
-      source: 'official',
-      archetype: id === 'luo-gongxu' ? 'aegis' : 'morrow',
-      dcAttrs: normalizeDcAttrs(OFFICIAL_DC_ATTRS[fullId], { id: fullId, combat }),
-      growth: restoreGrowth(null, fullId),
-      combat,
-      setting: {
-        name: visitor.setting.name,
-        title: visitor.combat.title,
-        worldbook: formatCharacterSetting(visitor.setting, {
-          skillCount: visitor.combat.skills.length,
-        }),
-        formatVersion: 3,
-      },
-    };
-  }
-  if (id === 'edith') {
-    const combat = structuredClone(EDITH);
-    return {
-      id: 'official-edith',
-      growth: restoreGrowth(null, 'official-edith'),
-      source: 'official',
-      archetype: 'aegis',
-      dcAttrs: normalizeDcAttrs(OFFICIAL_DC_ATTRS['official-edith'], {
-        id: 'official-edith',
-        combat,
-      }),
-      combat,
-      setting: {
-        name: EDITH.name,
-        title: EDITH.title,
-        worldbook: formatCharacterSetting(EDITH_SETTING),
-        formatVersion: 3,
-      },
-    };
-  }
-  if (id === 'pandora') {
-    const combat = structuredClone(PANDORA);
-    return {
-      id: 'official-pandora',
-      growth: restoreGrowth(null, 'official-pandora'),
-      source: 'official',
-      archetype: 'morrow',
-      dcAttrs: normalizeDcAttrs(OFFICIAL_DC_ATTRS['official-pandora'], {
-        id: 'official-pandora',
-        combat,
-      }),
-      combat,
-      setting: {
-        name: PANDORA.name,
-        title: PANDORA.title,
-        worldbook:
-          formatCharacterSetting(PANDORA_SETTING) +
-          '\n\n叙事提示：服装颜色只在首次出场或确有必要时简短交代，不反复强调裙子是黑白紫相间的。',
-        formatVersion: 3,
-      },
-    };
-  }
-  const entry = newLibrary().characters.find((member) => member.archetype === id);
-  if (!entry) throw Error('官方角色不存在');
-  return entry;
-}
-export function compileRoster(library) {
-  const members = library.party.filter(Boolean);
-  if (
-    library.party.length !== 6 ||
-    new Set(members).size !== members.length ||
-    (!library.campaign && members.length !== 6)
-  )
-    throw Error('队伍需要六名不同角色');
-  if (library.campaign && !members.includes(library.campaign.protagonistId))
-    throw Error('主角必须在队伍中');
-  const customPortraits = loadCustomPortraits();
-  return Object.fromEntries(
-    HEROES.map((slot, index) => {
-      const entry = library.characters.find((character) => character.id === library.party[index]);
-      if (!entry && library.campaign && !library.party[index])
-        return [slot.id, { ...structuredClone(slot), inactive: true }];
-      if (!entry) throw Error('队伍角色不在角色池中');
-      const combat = applyEmblemStats(
-        applyEquipment(grownCombat(entry), equippedDefinitions(library, entry)),
-        entry.emblemId,
-      );
-      const portrait = savedPortrait(customPortraits, entry);
-      if (portrait) combat.customPortrait = portrait;
-      const emblemId = EMBLEMS[entry.emblemId] ? entry.emblemId : null;
-      if (!combat.entrySkill) {
-        if (entry.setting?.entrySkill) {
-          combat.entrySkill = {
-            id: `entry-${entry.id}`,
-            name: entry.setting.entrySkill.name,
-            text: entry.setting.entrySkill.description,
-            target: 'opposite',
-            effects: [{ type: 'damage', value: 8 }],
-          };
-        } else if (entry.setting?.name === '青缘' || entry.id === 'character-qingyuan') {
-          combat.entrySkill = structuredClone(defaultProtagonist().combat.entrySkill);
-        } else {
-          const fallbackHero = HEROES.find((h) => h.id === entry.archetype) || HEROES[0];
-          if (fallbackHero?.entrySkill) {
-            combat.entrySkill = structuredClone(fallbackHero.entrySkill);
-          }
-        }
-      }
-      return [
-        slot.id,
-        {
-          ...combat,
-          id: slot.id,
-          ...(emblemId ? { emblemId } : {}),
-        },
-      ];
-    }),
-  );
-}
 export function restoreLibrary(value) {
   const customPortraits = loadCustomPortraits();
   const library = createLibrary(customPortraits);
@@ -276,79 +77,7 @@ export function restoreLibrary(value) {
           (library.exploration?.[id]?.completed || 0) > 0 ||
           (library.exploration?.[id]?.cleared?.length || 0) > 0,
       );
-  library.archives = restoreArchives(value.archives);
-  library.relationships = structuredClone(value.relationships || {});
-  if (value.summaryWorldbook?.entries)
-    library.summaryWorldbook = structuredClone(value.summaryWorldbook);
-  library.invitationHistory = restoreInvitationHistory(value.invitationHistory);
-  library.journeyActivities = (
-    Array.isArray(value.journeyActivities) ? value.journeyActivities : []
-  )
-    .filter(
-      (entry) =>
-        ['service', 'outing', 'promotion'].includes(entry?.kind) &&
-        typeof entry.title === 'string' &&
-        Number.isFinite(entry.finishedAt),
-    )
-    .slice(-100)
-    .map(({ kind, title, gameTime, finishedAt }) => ({
-      kind,
-      title: title.slice(0, 250),
-      gameTime: String(gameTime || '').slice(0, 60),
-      finishedAt,
-    }));
-  library.tavernChat = (Array.isArray(value.tavernChat) ? value.tavernChat : [])
-    .filter(
-      (message) =>
-        ['user', 'assistant', 'system'].includes(message.role) &&
-        typeof message.content === 'string' &&
-        message.content.length <= 200000,
-    )
-    .map((message, index, messages) => {
-      const {
-        role,
-        content,
-        display,
-        speakerIds,
-        speakerName,
-        summary,
-        turnSummary,
-        id,
-        divider,
-        journeyArchived,
-        outing,
-        gameTime,
-      } = message;
-      const validSummary = restoredSummary(summary, content);
-      const player = messages[index - 1];
-      const validTurn =
-        role === 'assistant' && player?.role === 'user' && !player.divider && !divider
-          ? restoredSummary(turnSummary, conversationText(player, message))
-          : null;
-      return {
-        role,
-        content,
-        ...(typeof id === 'string' ? { id } : {}),
-        ...(divider ? { divider: true } : {}),
-        ...(journeyArchived ? { journeyArchived: true } : {}),
-        ...(outing ? { outing: true } : {}),
-        ...(typeof gameTime === 'string' ? { gameTime: gameTime.slice(0, 60) } : {}),
-        ...(validSummary ? { summary: validSummary } : {}),
-        ...(validTurn ? { turnSummary: validTurn } : {}),
-        ...(typeof display === 'string' && display.length <= 200000 ? { display } : {}),
-        ...(Array.isArray(speakerIds)
-          ? {
-              speakerIds: speakerIds
-                .filter((id) => typeof id === 'string' && id.length <= 100)
-                .slice(0, 100),
-            }
-          : {}),
-        ...(typeof speakerName === 'string' && speakerName.length <= 1000 ? { speakerName } : {}),
-      };
-    });
-  library.experienceClaims = Array.isArray(value.experienceClaims)
-    ? value.experienceClaims.filter((id) => typeof id === 'string').slice(-4000)
-    : [];
+  restoreLibraryRecords(library, value);
   library.inventory = restoreInventory(value.inventory);
   library.equipment = restoreEquipment(value.equipment);
   library.skirmishes = value.skirmishes
@@ -624,103 +353,13 @@ export function restoreLibrary(value) {
       : null;
   library.enabled = value.enabled === true;
   library.chapter = Number.isInteger(value.chapter) && value.chapter > 0 ? value.chapter : 1;
+  library.seenOverlordTutorials = Array.isArray(value.seenOverlordTutorials)
+    ? [...new Set(value.seenOverlordTutorials.filter((id) => typeof id === 'string' && id))]
+    : [];
   // Only code-produced, confirmed history is stored; the request builder bounds context size.
   library.history = Array.isArray(value.history) ? structuredClone(value.history) : [];
   if (value.arcade) library.arcade = restoreTetris(value.arcade);
   hydrateArchiveMaps(library);
   lockUnopenedRear(library);
   return library;
-}
-
-const RUINS_SCRIPT_IDS = new Set([
-  'ruins-tutorial',
-  'ruins-corridor',
-  'ruins-hall',
-  'ruins-sinkhole',
-  'ruins-tomb',
-  'ruins-curse',
-]);
-const RUINS_BOSS_IDS = new Set([
-  'bossGate',
-  'ruinsGate',
-  'chasmBeast',
-  'brassColossus',
-  'cinderPriest',
-  'apepLamb',
-]);
-
-function isRuinsEntry(entry) {
-  if (!entry || typeof entry !== 'object') return false;
-  const map = entry.exploration?.map || entry.map;
-  if (map === 'ruins') return true;
-  if (
-    RUINS_SCRIPT_IDS.has(entry.exploration?.id) ||
-    RUINS_SCRIPT_IDS.has(entry.officialDungeonId)
-  ) {
-    return true;
-  }
-  return RUINS_BOSS_IDS.has(entry.boss);
-}
-
-/** One-time purge of legacy Ruins clears, scripts, and overland unlock state for existing saves. */
-export function purgeLegacyRuinsProgress(library) {
-  if (!library || typeof library !== 'object' || library.migrations?.ruinsResetV2) return false;
-  const seed = library.exploration?.ruins?.seed ?? Math.floor(Math.random() * 4294967296);
-  if (library.exploration && typeof library.exploration === 'object') {
-    library.exploration.ruins = newExploration(seed).ruins;
-  }
-  if (Array.isArray(library.unlockedDungeons)) {
-    library.unlockedDungeons = library.unlockedDungeons.filter((id) => id !== 'ruins');
-  }
-  if (Array.isArray(library.atlasDiscoveries)) {
-    library.atlasDiscoveries = library.atlasDiscoveries.filter((entry) => entry?.id !== 'ruins');
-  }
-  if (library.overlandExploration) {
-    if (Array.isArray(library.overlandExploration.routes)) {
-      library.overlandExploration.routes = library.overlandExploration.routes.filter(
-        (key) => !String(key).split('->').includes('ruins'),
-      );
-    }
-    if (Array.isArray(library.overlandExploration.legs)) {
-      library.overlandExploration.legs = library.overlandExploration.legs.filter(
-        (key) => !String(key).split(':').includes('ruins'),
-      );
-    }
-  }
-  const removedIds = new Set();
-  if (Array.isArray(library.scripts)) {
-    library.scripts = library.scripts.filter((book) => {
-      if (isRuinsEntry(book)) {
-        if (book.id) removedIds.add(book.id);
-        if (book.runId) removedIds.add(book.runId);
-        return false;
-      }
-      return true;
-    });
-  }
-  if (library.prepared && removedIds.has(library.prepared)) {
-    library.prepared = null;
-  }
-  if (Array.isArray(library.history)) {
-    library.history = library.history.filter(
-      (item) => !isRuinsEntry(item) && !removedIds.has(item?.id) && !removedIds.has(item?.runId),
-    );
-  }
-  if (Array.isArray(library.rewardClaims)) {
-    library.rewardClaims = library.rewardClaims.filter(
-      (key) => !String(key).startsWith('ruins:') && !removedIds.has(key),
-    );
-  }
-  if (Array.isArray(library.experienceClaims)) {
-    library.experienceClaims = library.experienceClaims.filter(
-      (key) => !String(key).startsWith('ruins:') && !removedIds.has(key),
-    );
-  }
-  if (Array.isArray(library.tavernQuests)) {
-    library.tavernQuests = library.tavernQuests.filter(
-      (q) => q?.map !== 'ruins' && !String(q?.id || '').startsWith('ruins'),
-    );
-  }
-  library.migrations = { ...(library.migrations || {}), ruinsResetV2: true };
-  return true;
 }

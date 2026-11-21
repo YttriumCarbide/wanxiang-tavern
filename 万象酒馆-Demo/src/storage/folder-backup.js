@@ -10,6 +10,8 @@ const creationPending = 'wanxiang.creation-pending.v1';
 const folderName = '万象酒馆自动备份';
 const filePattern = /^wanxiang-auto-\d{4}-\d\d-\d\dT\d\d-\d\d-\d\d-\d{3}Z-[a-f0-9-]{36}\.json$/;
 const readWrite = { mode: 'readwrite' };
+const choosePrompt =
+  '请先自行决定或创建一个用于存放游戏备份的文件夹。接下来请选择该文件夹；游戏会在其中建立「万象酒馆自动备份」子文件夹，每5分钟保存一次完整备份，最多保留12份，不包含API密钥。是否继续选择文件夹？';
 
 async function fingerprint(content) {
   const bytes = new TextEncoder().encode(content);
@@ -33,10 +35,13 @@ async function writeBackup(folder, content, savedAt) {
   }
 }
 
-async function pruneBackups(folder) {
+export async function pruneBackups(folder) {
   const names = [];
   for await (const [name, file] of folder.entries()) {
-    if (file.kind === 'file' && filePattern.test(name)) names.push(name);
+    if (file.kind !== 'file' || !filePattern.test(name)) continue;
+    const snapshot = await file.getFile().catch(() => null);
+    // A write interrupted before commit can leave an empty file at the final path.
+    if (snapshot?.size > 0) names.push(name);
   }
   names.sort().reverse();
   for (const name of names.slice(retained)) {
@@ -50,14 +55,12 @@ export function supportsFolderBackup() {
   return window.isSecureContext && typeof window.showDirectoryPicker === 'function';
 }
 
-/** One folder selection from a normal game interaction, then periodic portable backups. */
+/** Explicit folder selection from the save menu, then periodic portable backups. */
 export async function installFolderBackup({ database, storage, status }) {
   const metadata = await openDatabase({ name: 'wanxiang-tavern-folder-backup-v1' });
   const events = createEventScope();
-  const seenDocuments = new WeakSet();
   let target = metadata.get(settingsKey);
   let permission = await target?.handle.queryPermission(readWrite).catch(() => 'prompt');
-  let attempted = false;
   let authorizing = false;
   let writing = false;
   let disposed = false;
@@ -106,7 +109,6 @@ export async function installFolderBackup({ database, storage, status }) {
         target = latest;
         if ((await target.handle.queryPermission(readWrite)) !== 'granted') {
           permission = 'prompt';
-          attempted = false;
           report('自动备份需要重新授权文件夹', true);
           return;
         }
@@ -130,14 +132,14 @@ export async function installFolderBackup({ database, storage, status }) {
         const savedAt = Date.now();
         const folder = await target.handle.getDirectoryHandle(folderName, { create: true });
         await writeBackup(folder, content, savedAt);
-        target = { handle: target.handle, savedAt, hash };
-        await metadata.write([[settingsKey, target]]);
         let cleanupFailed = false;
         try {
           await pruneBackups(folder);
         } catch {
           cleanupFailed = true;
         }
+        target = { handle: target.handle, savedAt, hash };
+        await metadata.write([[settingsKey, target]]);
         ready(savedAt, cleanupFailed);
       });
     } catch (failure) {
@@ -150,19 +152,18 @@ export async function installFolderBackup({ database, storage, status }) {
   }
 
   async function authorize({ chooseNew = false } = {}) {
-    if (disposed || authorizing || writing) return;
+    if (disposed || authorizing || writing) return false;
     authorizing = true;
-    attempted = true;
     try {
       if (target && !chooseNew) {
         permission = await target.handle.requestPermission(readWrite);
         if (permission !== 'granted') {
           report('自动备份等待文件夹授权', true);
-          return;
+          return false;
         }
       } else {
         const handle = await window.showDirectoryPicker({ ...readWrite, id: 'wanxiang-backup' });
-        if (disposed) return;
+        if (disposed) return false;
         const selected = { handle, savedAt: 0, hash: '' };
         await locked(() => metadata.write([[settingsKey, selected]]));
         target = selected;
@@ -176,38 +177,16 @@ export async function installFolderBackup({ database, storage, status }) {
           : '备份文件夹暂不可用 · ' + failure.message,
         true,
       );
+      return false;
     } finally {
       authorizing = false;
+      if (permission === 'granted') schedule(interval);
       closeWhenIdle();
     }
     if (permission === 'granted') void backup();
+    return permission === 'granted';
   }
 
-  function firstInteraction(event) {
-    if (!event.isTrusted || attempted || permission === 'granted') return;
-    if (event.target.closest?.('#data-backup-folder')) return;
-    if (document.querySelector('#start-screen[open]') && !event.target.closest('#start-journey'))
-      return;
-    void authorize();
-  }
-
-  function watch(source) {
-    if (!source || seenDocuments.has(source)) return;
-    seenDocuments.add(source);
-    events.on(source, 'click', firstInteraction, true);
-  }
-
-  watch(document);
-  const inn = document.querySelector('#inn-frame');
-  watch(inn.querySelector('iframe')?.contentDocument);
-  events.on(
-    inn,
-    'load',
-    (event) => {
-      if (event.target instanceof HTMLIFrameElement) watch(event.target.contentDocument);
-    },
-    true,
-  );
   events.on(document, 'visibilitychange', () => {
     if (!document.hidden) void backup();
   });
@@ -215,13 +194,15 @@ export async function installFolderBackup({ database, storage, status }) {
     ready(target.savedAt);
     void backup();
   } else {
-    report('自动备份将在首次操作时请求选择文件夹');
-    const note = document.querySelector('#start-screen[open] .start-note');
-    if (note) note.append(' 开启旅程时，浏览器会请求选择存档备份文件夹。');
+    report('文件夹备份未开启，请在存档界面选择备份文件夹', true);
   }
 
   return {
-    choose: () => authorize({ chooseNew: true }),
+    choose() {
+      if (disposed || authorizing || writing) return false;
+      if (!window.confirm(choosePrompt)) return false;
+      return authorize({ chooseNew: true });
+    },
     dispose() {
       disposed = true;
       clearTimeout(timer);

@@ -1,211 +1,109 @@
-import { REQUEST_TIMEOUT_MS } from '../src/ai/request-policy.js';
 import { createAiPipeline } from '../src/ai/pipeline/runtime.js';
 import { importRemotePortrait } from './portrait-images.mjs';
 import { createPortraitStore } from './portrait-store.mjs';
-import { createRegexStore } from './regex-store.mjs';
-import { presetRegexScripts } from '../src/ai/regex.js';
-import { runRegexTasks } from './regex-runtime.mjs';
-import { formatRegexPresentation } from './regex-presentation.mjs';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
-import { randomUUID } from 'node:crypto';
 import { createAntiRouteService } from '../src/ai/anti-route-service.js';
-import { summaryPlan } from './summary-request.mjs';
 import { creationPlan } from './creation-request.mjs';
 import { createHelperStorage } from './helper-storage.mjs';
 import { createCharacterReader, createWorldbookCounter } from './character-reader.mjs';
 import { createWorldbookStore } from './worldbook-store.mjs';
 import { createAiSettings, API_KINDS } from './ai-settings.mjs';
 import { createPromptStore } from './prompt-store.mjs';
+import { createBuiltinPromptSource } from '../src/ai/builtin-prompt.js';
 import { readGenerationResult, redactDiagnostic } from './generation-result.mjs';
+import { RequestBodyError } from './request-json.mjs';
+import {
+  createAiGenerationRoutes,
+  normalizeRequestObject,
+  publicErrorCode,
+  publicErrorStatus,
+  readAiRequest as body,
+} from './ai-generation-routes.mjs';
+import { createRequestScope } from '../src/ai/request-policy.js';
 
 export async function createAiApi({
   root,
   port,
   fetchImpl = fetch,
   settingsFile = process.env.AI_CONFIG_FILE || path.join(root, '.runtime/ai-config.json'),
-  promptsDirectory = process.env.AI_PROMPTS_DIR || path.join(root, 'prompts/presets'),
+  promptsDirectory = process.env.AI_PROMPTS_DIR,
   worldInfoDirectory = process.env.AI_WORLDINFO_DIR ||
     path.join(path.dirname(settingsFile), path.basename(settingsFile, '.json') + '-world-info'),
 }) {
   const settings = await createAiSettings(settingsFile);
   const antiRoute = createAntiRouteService({ settings, fetchImpl });
-  const helperStorage = await createHelperStorage(
-    path.join(path.dirname(settingsFile), 'helper-storage.json'),
-  );
+  const helperStorage = promptsDirectory
+    ? await createHelperStorage(path.join(path.dirname(settingsFile), 'helper-storage.json'))
+    : { get: () => ({}) };
   const portraits = await createPortraitStore(path.join(path.dirname(settingsFile), 'portraits'));
-  const prompts = await createPromptStore(promptsDirectory);
+  const prompts = promptsDirectory ? await createPromptStore(promptsDirectory) : null;
+  const readText = (name) => readFile(new URL('../prompts/' + name, import.meta.url), 'utf8');
+  const promptSource = await createBuiltinPromptSource(readText, settings, prompts?.get);
   const worlds = await createWorldbookStore(worldInfoDirectory);
-  const regexStore = await createRegexStore(path.join(path.dirname(settingsFile), 'regex.json'));
   const countTokens = createWorldbookCounter();
   const readCharacter = createCharacterReader();
-  const { buildRequest, commitWorldState, acceptResult, completionOptions, pendingWorldStates } =
-    createAiPipeline({
-      settings,
-      prompts,
-      worlds,
-      regexStore,
-      helperStorage,
-      countTokens,
-      readCharacter,
-      runRegexTasks,
-      readText: (name) => readFile(new URL('../prompts/' + name, import.meta.url), 'utf8'),
-    });
-  const directRequests = new Map();
-  function expireDirectRequests() {
-    for (const [id, job] of directRequests) {
-      if (Date.now() <= job.expiresAt) continue;
-      directRequests.delete(id);
-      pendingWorldStates.delete(id);
-    }
-  }
-  async function prepareDirect(path, input) {
-    expireDirectRequests();
-    if (active + directRequests.size >= 2) throw Error('已有生成任务在进行，请稍候');
-    const match =
-      /^(generate|models)\/(character|script|chat|quick-chat|summary|creation|map)$/.exec(path);
-    if (!match) throw Error('接口不存在');
-    const kind = match[2],
-      models = match[1] === 'models';
-    const profile = settings.get(kind);
-    if (profile.requestMode !== 'browser') throw Error('当前接口未选择浏览器直连');
-    const source = models ? null : (await prompts.get(profile.promptPresetId)).preset;
-    const prepared = models ? null : await buildRequest(kind, input, source);
-    if (active + directRequests.size >= 2) throw Error('已有生成任务在进行，请稍候');
-    const requestId = randomUUID();
-    const messages = prepared?.messages || [];
-    const requestReport = prepared
-      ? {
-          id: requestId,
-          messages,
-          tokens: prepared.tokens,
-          worldInfo: prepared.worldInfo,
-          warnings: prepared.warnings,
-          sampling: prepared.sampling,
-          transport: prepared.transport,
-          regex: prepared.regex,
-        }
-      : null;
-    if (prepared?.nextWorldState) {
-      if (pendingWorldStates.size >= 20)
-        pendingWorldStates.delete(pendingWorldStates.keys().next().value);
-      pendingWorldStates.set(requestId, {
-        kind,
-        nextState: prepared.nextWorldState,
-        expectedStep: prepared.nextWorldState.step - 1,
-      });
-    }
-    const { apiKey: _secret, ...publicProfile } = profile;
-    // Do not retain a service credential in a browser request ticket.
-    const job = {
-      input,
-      kind,
-      models,
-      profile: { ...publicProfile, apiKey: '' },
-      source,
-      prepared,
-      messages,
-      requestId,
-      requestReport,
-      expiresAt: Date.now() + REQUEST_TIMEOUT_MS,
-    };
-    directRequests.set(requestId, job);
-    return {
-      ticket: requestId,
-      profile: publicProfile,
-      messages,
-      request: requestReport,
-      options: completionOptions(job),
-    };
-  }
-  let active = 0;
-  const send = (res, status, body) => {
+  const pipeline = createAiPipeline({
+    settings,
+    worlds,
+    helperStorage,
+    countTokens,
+    readCharacter,
+    readText,
+    promptSource,
+  });
+  const { buildRequest, commitWorldState } = pipeline;
+  const send = (res, status, body, close = false) => {
+    if (res.destroyed || res.writableEnded) return;
+    const payload = JSON.stringify(body);
     res.writeHead(status, {
       'Content-Type': 'application/json; charset=utf-8',
       'Cache-Control': 'no-store',
+      ...(close ? { Connection: 'close' } : {}),
     });
-    res.end(JSON.stringify(body));
+    res.end(payload);
   };
-  async function body(req) {
-    if (!req.headers['content-type']?.startsWith('application/json'))
-      throw Error('请求需要application/json');
-    let value = '';
-    for await (const chunk of req) {
-      value += chunk;
-      if (Buffer.byteLength(value) > 10000000) throw Error('请求内容过长');
-    }
-    return JSON.parse(value);
-  }
+  const openGenerationIds = new Set();
+  const generation = createAiGenerationRoutes({
+    settings,
+    promptSource,
+    pipeline,
+    antiRoute,
+    fetchImpl,
+    send,
+    openGenerationIds,
+  });
   return async function handle(req, res, url) {
     if (!url.startsWith('/api/ai/')) return false;
-    const origin = req.headers.origin;
-    if (origin && ![`http://127.0.0.1:${port}`, `http://localhost:${port}`].includes(origin)) {
-      send(res, 403, { error: '仅允许当前游戏页面调用' });
+    const { host, origin } = req.headers;
+    const localPort = port || req.socket.localPort;
+    if (
+      ![`127.0.0.1:${localPort}`, `localhost:${localPort}`].includes(host) ||
+      (origin !== undefined && origin !== `http://${host}`)
+    ) {
+      send(res, 403, { error: '仅允许当前游戏页面调用' }, !req.complete);
       return true;
     }
     try {
       if (url === '/api/ai/anti-route') {
-        const controller = new AbortController();
+        const scope = createRequestScope();
         const cancel = () => {
-          if (!res.writableEnded) controller.abort();
+          if (!res.writableFinished) scope.abort();
         };
-        res.on('close', cancel);
+        res.once('close', cancel);
+        if (res.destroyed) cancel();
         try {
-          const input = req.method === 'POST' ? await body(req) : undefined;
-          send(res, 200, await antiRoute.handle(input, controller.signal));
+          const input =
+            req.method === 'POST' ? await body(req, undefined, scope.signal) : undefined;
+          scope.signal.throwIfAborted();
+          send(res, 200, await antiRoute.handle(input, scope.signal));
         } finally {
           res.off('close', cancel);
+          scope.close();
         }
         return true;
       }
-      if (url.startsWith('/api/ai/transport/') && req.method === 'POST') {
-        const input = await body(req);
-        expireDirectRequests();
-        if (url === '/api/ai/transport/prepare')
-          send(res, 200, await prepareDirect(input.path, input.input || {}));
-        else if (url === '/api/ai/transport/cancel') {
-          if (directRequests.delete(input.ticket)) pendingWorldStates.delete(input.ticket);
-          send(res, 200, { cancelled: true });
-        } else if (url === '/api/ai/transport/complete') {
-          const job = directRequests.get(input.ticket);
-          if (!job) throw Error('请求已取消、过期或已接受，请重新生成');
-          directRequests.delete(input.ticket);
-          const result = input.result;
-          if (!result || typeof result !== 'object') throw Error('模型返回格式无效');
-          if (
-            !job.models &&
-            (typeof result.content !== 'string' ||
-              result.content.length > 2000000 ||
-              (result.rawContent !== undefined &&
-                (typeof result.rawContent !== 'string' || result.rawContent.length > 2000000)))
-          )
-            throw Error('模型正文无效或超过容量');
-          if (
-            job.models &&
-            (!Array.isArray(result.models) ||
-              result.models.length > 300 ||
-              result.models.some((model) => typeof model !== 'string' || model.length > 1000))
-          )
-            throw Error('模型列表无效');
-          result.usage = { input: 0, output: 0, ...result.usage };
-          if (
-            !['input', 'output'].every(
-              (key) => Number.isFinite(result.usage[key]) && result.usage[key] >= 0,
-            )
-          )
-            throw Error('模型用量格式无效');
-          try {
-            send(res, 200, await acceptResult(job, result));
-          } catch (failure) {
-            if (failure.diagnostic) {
-              failure.diagnostic.kind = job.kind;
-              failure.diagnostic.request = job.requestReport;
-            }
-            throw failure;
-          }
-        } else throw Error('接口不存在');
-        return true;
-      }
+      if (await generation(req, res, url)) return true;
       if (url === '/api/ai/portrait/save' && req.method === 'POST') {
         send(res, 200, await portraits.save((await body(req)).dataUrl));
         return true;
@@ -249,21 +147,7 @@ export async function createAiApi({
         return true;
       }
       if (url === '/api/ai/summary/plan' && req.method === 'POST') {
-        const profile = { ...settings.get('summary'), antiRoute: settings.routeSettings() };
-        const preset = (await prompts.get(profile.promptPresetId)).preset;
-        const input = await body(req);
-        const worldInfo = await worlds.resolve('summary', input);
-        send(
-          res,
-          200,
-          await summaryPlan(input, profile, countTokens, undefined, {
-            preset,
-            worldInfo,
-            readText: (name) => readFile(new URL('../prompts/' + name, import.meta.url), 'utf8'),
-            runRegexTasks,
-            regexScripts: [...regexStore.get(), ...presetRegexScripts(preset)],
-          }),
-        );
+        send(res, 200, await pipeline.planSummary(await body(req)));
         return true;
       }
       if (url === '/api/ai/creation/plan' && req.method === 'POST') {
@@ -271,7 +155,7 @@ export async function createAiApi({
         return true;
       }
       const helperRoute = url.match(/^\/api\/ai\/helper-storage\/([a-z0-9-]+)$/);
-      if (helperRoute) {
+      if (helperRoute && prompts) {
         if (req.method === 'GET') send(res, 200, { storage: helperStorage.get(helperRoute[1]) });
         else if (req.method === 'POST')
           send(res, 200, await helperStorage.save(helperRoute[1], (await body(req)).storage));
@@ -286,26 +170,6 @@ export async function createAiApi({
         if (req.method === 'GET') send(res, 200, { presets: settings.listPresets() });
         else if (req.method === 'POST') send(res, 200, await settings.preset(await body(req)));
         else send(res, 405, { error: '请求方法无效' });
-        return true;
-      }
-      if (url === '/api/ai/regex') {
-        if (req.method === 'GET') send(res, 200, { scripts: regexStore.get() });
-        else if (req.method === 'POST') send(res, 200, await regexStore.save(await body(req)));
-        else send(res, 405, { error: '请求方法无效' });
-        return true;
-      }
-      if (url === '/api/ai/regex-test' && req.method === 'POST') {
-        const { scripts, text, placement = 2, options = {} } = await body(req);
-        const { normalizeRegexScripts } = await import('../src/ai/regex.js');
-        send(
-          res,
-          200,
-          (
-            await runRegexTasks(normalizeRegexScripts(scripts), [
-              { text: String(text || '').slice(0, 100000), placement, options },
-            ])
-          )[0],
-        );
         return true;
       }
       if (url === '/api/ai/worldbooks' && req.method === 'GET') {
@@ -328,7 +192,15 @@ export async function createAiApi({
         } else send(res, 405, { error: '请求方法无效' });
         return true;
       }
-      if (url === '/api/ai/prompts' && req.method === 'GET') {
+      if (url === '/api/ai/prompt-options') {
+        const options =
+          req.method === 'POST'
+            ? await settings.savePromptOptions((await body(req)).options)
+            : settings.promptOptions();
+        send(res, 200, { options, attribution: promptSource.attribution });
+        return true;
+      }
+      if (prompts && url === '/api/ai/prompts' && req.method === 'GET') {
         const formats = Object.fromEntries(
           await Promise.all(
             ['character', 'script', 'map', 'creation', 'summary'].map(async (kind) => [
@@ -341,13 +213,13 @@ export async function createAiApi({
         return true;
       }
       const promptRoute = url.match(/^\/api\/ai\/prompts\/([a-z0-9-]+)$/);
-      if (promptRoute) {
+      if (promptRoute && (prompts || promptRoute[1] === 'preview')) {
         const action = promptRoute[1];
-        if (req.method === 'GET') send(res, 200, await prompts.get(action));
+        if (req.method === 'GET' && prompts) send(res, 200, await prompts.get(action));
         else if (req.method === 'POST') {
           const input = await body(req);
           if (action === 'save') send(res, 200, await prompts.save(input));
-          else if (action === 'select') {
+          else if (prompts && action === 'select') {
             await prompts.get(input.id);
             send(res, 200, await settings.selectPrompt(input.kind, input.id));
           } else if (action === 'delete') {
@@ -357,11 +229,11 @@ export async function createAiApi({
             await prompts.delete(input.id);
             send(res, 200, { deleted: true });
           } else if (action === 'preview') {
-            const source =
-              input.preset || (await prompts.get(settings.get(input.kind).promptPresetId)).preset;
+            const requestInput = normalizeRequestObject(input.input, 'input');
+            const source = input.preset ?? (await promptSource.get(input.kind));
             const { nextWorldState: _state, ...preview } = await buildRequest(
               input.kind,
-              input.input,
+              requestInput,
               source,
               input.worldInfoOverride,
             );
@@ -372,138 +244,45 @@ export async function createAiApi({
       }
       const validate = url.match(/^\/api\/ai\/validate\/(character|script)$/);
       if (validate && req.method === 'POST') {
-        const { content, input = {}, requestId } = await body(req);
+        const request = await body(req);
+        const { content, requestId } = request;
+        const input = normalizeRequestObject(request.input, 'input');
         if (typeof content !== 'string' || content.length > 1000000)
           throw Error('待校验正文必须是文字且不超过100万字符');
+        if (openGenerationIds.has(requestId)) {
+          throw Object.assign(Error('请求仍在进行，请稍后再校验'), {
+            code: 'AI_REQUEST_ACTIVE',
+            status: 409,
+          });
+        }
         const result = readGenerationResult(validate[1], content, input, readCharacter);
-        const preset = (await prompts.get(settings.get(validate[1]).promptPresetId)).preset;
-        await formatRegexPresentation(result.entry, validate[1], [
-          ...regexStore.get(),
-          ...presetRegexScripts(preset),
-        ]);
         await commitWorldState(requestId, validate[1]);
-        result.diagnostic = redactDiagnostic(result.diagnostic, settings.get(validate[1]).apiKey);
+        for (const kind of API_KINDS) {
+          result.diagnostic = redactDiagnostic(result.diagnostic, settings.get(kind).apiKey);
+        }
         send(res, 200, result);
         return true;
       }
-      const match = url.match(
-        /^\/api\/ai\/(generate|models)\/(character|script|chat|quick-chat|summary|creation|map)$/,
-      );
-      if (!match || req.method !== 'POST') {
-        send(res, 404, { error: '接口不存在' });
+      send(res, 404, { error: '接口不存在' });
+    } catch (caught) {
+      if (res.destroyed || res.writableEnded) return true;
+      if (res.headersSent) {
+        res.destroy();
         return true;
       }
-      expireDirectRequests();
-      if (active + directRequests.size >= 2) {
-        send(res, 429, { error: '已有生成任务在进行，请稍候' });
-        return true;
-      }
-      const input = await body(req),
-        kind = match[2],
-        models = match[1] === 'models';
-      const profile = settings.get(kind);
-      const chatting = ['chat', 'quick-chat'].includes(kind);
-      const source = models ? null : (await prompts.get(profile.promptPresetId)).preset;
-      const prepared = models ? null : await buildRequest(kind, input, source);
-      const messages = prepared?.messages || [];
-      const requestId = randomUUID();
-      const requestReport = prepared
-        ? {
-            id: requestId,
-            messages,
-            tokens: prepared.tokens,
-            worldInfo: prepared.worldInfo,
-            warnings: prepared.warnings,
-            sampling: prepared.sampling,
-            transport: prepared.transport,
-            regex: prepared.regex,
-          }
-        : null;
-      if (prepared?.nextWorldState) {
-        if (pendingWorldStates.size >= 20)
-          pendingWorldStates.delete(pendingWorldStates.keys().next().value);
-        pendingWorldStates.set(requestId, {
-          kind,
-          nextState: prepared.nextWorldState,
-          expectedStep: prepared.nextWorldState.step - 1,
-        });
-      }
-      expireDirectRequests();
-      if (active + directRequests.size >= 2) {
-        send(res, 429, { error: '已有生成任务在进行，请稍候' });
-        return true;
-      }
-      const controller = new AbortController(),
-        timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-      const cancel = () => {
-        if (!res.writableEnded) controller.abort();
+      const failure = caught instanceof Error ? caught : Error('请求未能完成');
+      const status = publicErrorStatus(failure) ?? 400;
+      let report = {
+        error:
+          failure.name === 'AbortError'
+            ? '请求已取消或超过15分钟，请检查服务后重试'
+            : failure.message,
+        code: publicErrorCode(failure, settings),
+        status,
+        diagnostic: failure.diagnostic,
       };
-      res.on('close', cancel);
-      active++;
-      const live =
-        chatting &&
-        !models &&
-        prepared.transport.stream &&
-        req.headers.accept?.includes('text/event-stream');
-      const event = (value) => res.write(`data: ${JSON.stringify(value)}\n\n`);
-      try {
-        if (live) {
-          res.writeHead(200, {
-            'Content-Type': 'text/event-stream; charset=utf-8',
-            'Cache-Control': 'no-store',
-            Connection: 'keep-alive',
-          });
-          event({ type: 'request', request: requestReport });
-        }
-        if (profile.tokenField === 'none') profile.maxTokens = 0;
-        const result = await antiRoute.request(profile, messages, {
-          signal: controller.signal,
-          fetchImpl,
-          ...completionOptions({ kind, models, prepared, input }),
-          onDelta: live ? (delta) => event({ type: 'delta', delta }) : undefined,
-        });
-        const reply = await acceptResult(
-          { input, kind, models, profile, source, prepared, messages, requestId, requestReport },
-          result,
-        );
-        if (live) {
-          event({ type: 'complete', result: reply });
-          res.end();
-        } else send(res, 200, reply);
-      } catch (failure) {
-        if (failure.diagnostic) failure.diagnostic.kind = kind;
-        if (failure.diagnostic && requestReport) failure.diagnostic.request = requestReport;
-        failure.diagnostic = redactDiagnostic(failure.diagnostic, profile.apiKey);
-        if (live) {
-          event({
-            type: 'error',
-            error:
-              failure.name === 'AbortError'
-                ? '请求已取消或超过15分钟，请检查服务后重试'
-                : redactDiagnostic(failure.message, profile.apiKey),
-            diagnostic: failure.diagnostic,
-          });
-          res.end();
-          return true;
-        }
-        throw failure;
-      } finally {
-        active--;
-        clearTimeout(timer);
-        res.off('close', cancel);
-      }
-    } catch (failure) {
-      if (!res.destroyed) {
-        let report = {
-          error:
-            failure.name === 'AbortError'
-              ? '请求已取消或超过15分钟，请检查服务后重试'
-              : failure.message,
-          diagnostic: failure.diagnostic,
-        };
-        for (const kind of API_KINDS) report = redactDiagnostic(report, settings.get(kind).apiKey);
-        send(res, 400, report);
-      }
+      for (const kind of API_KINDS) report = redactDiagnostic(report, settings.get(kind).apiKey);
+      send(res, status, report, !req.complete || (failure instanceof RequestBodyError && status === 413));
     }
     return true;
   };

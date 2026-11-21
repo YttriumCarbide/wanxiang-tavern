@@ -6,13 +6,26 @@ import { BUFFS } from './data.js';
 import { effectiveBuff } from './engine.js';
 import { definition } from './catalog.js';
 import { damageTypeIcon, damageTypeMeta } from './damage-types.js';
-import { sinkingPlagueFrontDamage, sinkingPlagueRearDamage } from './overlord-mechanics.js';
+import { isPlagueSealed, sinkingPlagueFrontDamage } from './overlord-mechanics.js';
 
 export const escapeText = (s) =>
   String(s).replace(
     /[&<>"']/g,
     (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c],
   );
+
+function statusSources(events, target, buff) {
+  const sources = [];
+  for (const event of events) {
+    for (const application of event.statusApplications || []) {
+      if (application.target !== target || application.buff !== buff) continue;
+      const actor = definition(event.after, application.actor)?.name;
+      sources.push(`${actor ? `${actor} · ` : ''}${application.source}（+${application.value}层）`);
+    }
+  }
+  return sources.length ? `\n来源：${sources.join('、')}` : '';
+}
+
 export function statusIcons(s, id, end = s, events = []) {
   let markupString = '';
   const chip = (
@@ -50,45 +63,56 @@ export function statusIcons(s, id, end = s, events = []) {
         k,
         after - now,
         true,
-        `预计新增 ${b.name} ${after - now}\n结算后共 ${after}层\n${b.text}`,
+        `预计新增 ${b.name} ${after - now}\n结算后共 ${after}层${statusSources(events, id, k)}\n${b.text}`,
       );
     // A round-local status can expire before final state, while its queued effect still matters.
     if (k === 'bind' && !now && !after && events.some((event) => event.after.units[id]?.buffs.bind))
       markupString += chip(k, 1, true, `预计禁锢：本回合生效，结束解除\n${b.text}`);
   }
-  const floor = s.formation.indexOf(id);
-  const futureFloor = end.formation.indexOf(id);
-  const plague = floor >= 0 && floor < 3 ? s.sinkingPlague?.ages[floor] : undefined;
-  const futurePlague =
-    futureFloor >= 0 && futureFloor < 3 ? end.sinkingPlague?.ages[futureFloor] : undefined;
-  const rearTurnsNow = s.sinkingPlague?.backfieldTurns?.[id] || 0;
-  const rearTurnsEnd =
-    futureFloor >= 3 ? (end.sinkingPlague?.backfieldTurns?.[id] ?? rearTurnsNow) : 0;
-  if (plague !== undefined || futurePlague !== undefined) {
-    const dmg = sinkingPlagueFrontDamage(
-      plague !== undefined ? s : end,
-      plague !== undefined ? floor : futureFloor,
-      plague ?? futurePlague,
-    );
-    const refreshedHint =
-      rearTurnsNow > 0 && futureFloor < 3 ? '\n已调入前场，后场溺蚀层数刷新清零！' : '';
-    markupString += chip(
-      'sinkingPlague',
-      (plague ?? futurePlague) + 1,
-      plague === undefined,
-      `沉疫 · 前场浸染\n下次回合结束预计受到 ${dmg} 伤害，连蹲后场会触发溺蚀；换入前场可刷新后场层数。${refreshedHint}`,
-      '沉疫',
-    );
-  } else if (rearTurnsNow > 0 || rearTurnsEnd > 0) {
-    const turns = Math.max(rearTurnsEnd, rearTurnsNow);
-    const dmg = sinkingPlagueRearDamage(end.sinkingPlague ? end : s, turns);
-    markupString += chip(
-      'sinkingPlague',
-      turns,
-      rearTurnsEnd > rearTurnsNow,
-      `沉疫 · 后场溺蚀\n已连续滞留后场 ${turns} 轮，本回合不入前场将承受 ${dmg} 伤害！换入前场立即刷新清零。`,
-      '沉疫·后场',
-    );
+  const plagueField = s.sinkingPlague || end.sinkingPlague;
+  const side = s.units[id]?.side;
+  if (side === 'hero' && plagueField) {
+    const floor = s.formation.indexOf(id);
+    const futureFloor = end.formation.indexOf(id);
+    const dmg = sinkingPlagueFrontDamage(end.sinkingPlague ? end : s, 0);
+    const sealedNow = isPlagueSealed(s, id);
+    const sealedEnd = isPlagueSealed(end, id);
+    const streakNow = s.sinkingPlague?.frontStreak?.[id] || 0;
+    const streakEnd = end.sinkingPlague?.frontStreak?.[id] ?? streakNow;
+    const isFuture = !s.sinkingPlague && Boolean(end.sinkingPlague);
+    if (sealedNow || sealedEnd) {
+      const releasedAfter = sealedNow && !sealedEnd;
+      markupString += html`<span
+        class="buff-icon ${sealedNow ? 'current-buff' : 'future-buff'} ${releasedAfter ? 'consuming-buff' : ''} plague-sealed"
+        data-buff="sinkingPlague"
+        data-plague-sealed="1"
+        data-count="封"
+        tabindex="0"
+        data-tooltip="${escapeText(
+          `沉疫封锁（禁盾 · 禁疗 · 禁回蓝）\n已在前场连续承受 2 回合沉疫；回合末全队同等承受 ${dmg} 伤害。\n${releasedAfter ? '预计换入后场后立刻解除封锁！' : '调回后场可立刻解除封锁！'}`,
+        )}"
+        aria-label="沉疫封锁"
+        >${icon('sinkingPlague')}<b>封</b></span
+      >`;
+    } else if ((floor >= 0 && floor < 3) || (futureFloor >= 0 && futureFloor < 3)) {
+      const displayStreak = Math.max(streakNow, streakEnd);
+      const countText = `${displayStreak}/2`;
+      markupString += chip(
+        'sinkingPlague',
+        countText,
+        isFuture,
+        `沉疫 · 前场侵染（连续 ${displayStreak}/2 回合）\n回合末全队前后排同等承受 ${dmg} 伤害；在前场连续承受 2 回合将触发【沉疫封锁】（禁盾/禁疗/禁回蓝，退回后场立刻解除）。`,
+        '沉疫',
+      );
+    } else if (futureFloor >= 3 || floor >= 3) {
+      markupString += chip(
+        'sinkingPlague',
+        dmg,
+        isFuture,
+        `沉疫 · 后场承伤\n回合末前后排同等承受 ${dmg} 伤害；留在后场可清除并免疫【沉疫封锁】。`,
+        '沉疫·后场',
+      );
+    }
   }
   const mark = definition(s, id)?.mechanicMark;
   const modifier = s.expeditionModifiers?.[id] || end.expeditionModifiers?.[id];
@@ -148,8 +172,10 @@ export function resourceBars(u, f = u) {
             ? `\n护盾 ${nowBlock}${nowBlock !== endBlock ? ` -> 预计 ${endBlock}` : ''}`
             : '',
         text = `${label} ${now}/${max}${now !== end ? `\n预计 ${end}/${max}` : ''}${shieldLabel}`;
-      const shieldPct = max ? Math.min(1, nowBlock / max) * 100 : 0;
-      const forecastShieldPct = max ? Math.min(1, endBlock / max) * 100 : 0;
+      const shieldPct = max ? Math.min(100, (nowBlock / max) * 100) : 0;
+      const forecastShieldPct = max ? Math.min(100, (endBlock / max) * 100) : 0;
+      const nowPct = max ? Math.min(100, Math.max(0, (now / max) * 100)) : 0;
+      const endPct = max ? Math.min(100, Math.max(0, (end / max) * 100)) : 0;
       const shieldMarkup =
         k === 'hp'
           ? nowBlock > 0
@@ -167,8 +193,7 @@ export function resourceBars(u, f = u) {
         aria-valuemin="0"
         aria-valuemax="${max || 1}"
         data-tooltip="${text}"
-        ><i style="width:${max ? (now / max) * 100 : 0}%"></i
-        ><em style="width:${max ? (end / max) * 100 : 0}%"></em>${
+        ><i style="width:${nowPct}%"></i><em style="width:${endPct}%"></em>${
           k === 'hp' && (nowBlock > 0 || endBlock > 0)
             ? html`<span class="bar-shield-fill" style="width:${shieldPct}%"></span
                 ><span
@@ -212,13 +237,28 @@ export function enemyBreakBar(d, u, f = u, activeDamageType = null) {
       ? Math.max(0, Math.min(maxT, Number(fBw.current) || 0))
       : nowT;
   const forecastLoss = Math.max(0, nowT - endT);
-  const pipsHtml = Array.from({ length: maxT }, (_, idx) => {
+  const gap = maxT === 1 ? 0 : Math.min(7, 16 / maxT);
+  const arc = Math.max(4, 100 / maxT - gap);
+  const degStep = 360 / maxT;
+  const halfGapDeg = (gap / 100) * 180;
+  const segmentsHtml = Array.from({ length: maxT }, (_, idx) => {
     const filled = idx < nowT;
     const losing = filled && idx >= endT;
-    return html`<i
-      class="break-pip ${filled ? 'is-filled' : 'is-spent'} ${losing ? 'is-forecast-loss' : ''}"
-    ></i>`;
+    const rot = (idx * degStep - 90 + halfGapDeg).toFixed(2);
+    return html`<circle
+      class="break-seg ${filled ? 'is-filled' : 'is-spent'} ${losing ? 'is-forecast-loss' : ''}"
+      cx="20"
+      cy="20"
+      r="15.5"
+      pathLength="100"
+      stroke-dasharray="${arc.toFixed(2)} ${(100 - arc).toFixed(2)}"
+      transform="rotate(${rot} 20 20)"
+    />`;
   }).join('');
+  const ringHtml = html`<span class="break-ring ${willBreak ? 'will-break' : ''}"
+    ><svg viewBox="0 0 40 40" aria-hidden="true">${segmentsHtml}</svg
+    ><b>${willBreak ? '✦' : nowT}</b></span
+  >`;
 
   if (bw.mode === 'plain') {
     const anyMatched = Boolean(
@@ -233,8 +273,7 @@ export function enemyBreakBar(d, u, f = u, activeDamageType = null) {
       data-tooltip="${escapeText(tip)}"
       tabindex="0"
       aria-label="普通破绽 ${nowT}/${maxT}"
-      ><span class="break-mode-tag">破绽</span><span class="break-gauge-track">${pipsHtml}</span
-      ><b class="break-count">${willBreak ? 'BREAK' : `${nowT}/${maxT}`}</b></span
+      >${ringHtml}<span class="break-mode-tag">${willBreak ? 'BREAK' : '破绽'}</span></span
     >`;
   }
 
@@ -248,8 +287,8 @@ export function enemyBreakBar(d, u, f = u, activeDamageType = null) {
         style="--dmg-color:${majorMeta.color};--dmg-glow:${majorMeta.glow}"
         data-weakness="${major}"
         data-weakness-tier="major"
-        title="大弱点：${escapeText(majorMeta.name)}（命中直接削减 2 格破绽）"
-        >${damageTypeIcon(major, { size: 13, tint: false })}<i class="weakness-mult">-2</i></span
+        data-tooltip="大弱点：${escapeText(majorMeta.name)}（命中直接削减 2 格破绽）"
+        >${damageTypeIcon(major, { size: 12, tint: false })}<i class="weakness-mult">-2</i></span
       >`
     : '';
   const minorsHtml = minors
@@ -261,7 +300,7 @@ export function enemyBreakBar(d, u, f = u, activeDamageType = null) {
         style="--dmg-color:${meta.color};--dmg-glow:${meta.glow}"
         data-weakness="${w}"
         data-weakness-tier="minor"
-        title="小弱点：${escapeText(meta.name)}（命中削减 1 格破绽）"
+        data-tooltip="小弱点：${escapeText(meta.name)}（命中削减 1 格破绽）"
         >${damageTypeIcon(w, { size: 11, tint: !matched })}</span
       >`;
     })
@@ -279,9 +318,7 @@ export function enemyBreakBar(d, u, f = u, activeDamageType = null) {
     data-tooltip="${escapeText(tip)}"
     tabindex="0"
     aria-label="特殊破绽 ${nowT}/${maxT}"
-    ><span class="break-gauge-head"
-      ><span class="break-gauge-track">${pipsHtml}</span
-      ><b class="break-count">${willBreak ? 'BREAK' : `${nowT}/${maxT}`}</b></span
+    >${ringHtml}<i class="break-sep" aria-hidden="true"></i
     ><span class="enemy-weakness-row" aria-label="破绽弱点">${majorHtml}${minorsHtml}</span></span
   >`;
 }
@@ -339,13 +376,21 @@ export function mountTooltips() {
   };
   events.on(document, 'pointerover', (e) => {
     const el = e.target.closest('[data-tooltip]');
-    if (el) show(el, e.clientX, e.clientY);
+    if (!el) return;
+    if (el === anchor && !tip.hidden) {
+      place(e.clientX, e.clientY);
+      return;
+    }
+    show(el, e.clientX, e.clientY);
   });
   events.on(document, 'pointermove', (e) => {
     if (anchor && !tip.hidden) place(e.clientX, e.clientY);
   });
   events.on(document, 'pointerout', (e) => {
-    if (anchor && !anchor.contains(e.relatedTarget)) {
+    if (!anchor) return;
+    const next = e.relatedTarget?.closest?.('[data-tooltip]');
+    if (next && next !== anchor) return;
+    if (!anchor.contains(e.relatedTarget)) {
       anchor = null;
       tip.hidden = true;
     }

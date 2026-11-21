@@ -25,6 +25,7 @@ import {
 } from '../src/adventure/state.js';
 import {
   DC_SPLIT_MARKER,
+  normalizeDcTurnOutcome,
   prepareFreeDcContext,
   resolveFixedChoiceCheck,
   buildDcDisplayCheck,
@@ -35,11 +36,74 @@ import { chatRequest } from '../src/ai/pipeline/chat-request.js';
 import { chatResponse } from '../src/ai/pipeline/chat-response.js';
 import { applyRelationshipActions } from '../src/relationships.js';
 import { newLibrary, officialCharacter } from '../src/ai/library.js';
+import { newCampaign } from '../src/campaign.js';
+import {
+  adjustDcForProtagonist,
+  computeProtagonistMapDc,
+  protagonistDcReduction,
+} from '../src/dc.js';
+import { defaultProtagonist } from '../src/content/qingyuan.js';
 import { normalizePromptPreset } from '../src/ai/presets.js';
 import { normalizeWorldSettings, syncBuiltinWorldbook } from '../src/ai/worldbook.js';
 import { tavernPresetFixture } from './fixtures/ai.js';
+import { newBattle } from '../src/engine.js';
 
 const passthroughRegex = async (_scripts, tasks) => tasks.map(({ text }) => ({ text }));
+
+test('protagonist level lowers every map DC consistently at 14, 15, 30 and 31', async () => {
+  const library = newCampaign(defaultProtagonist());
+  const protagonist = library.characters.find(
+    (member) => member.id === library.campaign.protagonistId,
+  );
+  const actors = [{ id: protagonist.id }];
+
+  for (const [level, reduction, expectedDc] of [
+    [14, 2, 4],
+    [15, 1, 5],
+    [30, 1, 5],
+    [31, 0, 6],
+  ]) {
+    protagonist.growth.level = level;
+    assert.equal(protagonistDcReduction(library), reduction);
+    assert.equal(computeProtagonistMapDc(library, 'ruins', 0), expectedDc);
+    assert.equal(
+      resolveFixedChoiceCheck({
+        library,
+        member: protagonist,
+        choice: { id: 'test', dcCheck: { attr: 'str', dc: 6 } },
+        rng: () => 0.5,
+      }).dc,
+      expectedDc,
+    );
+    assert.equal(
+      prepareFreeDcContext(library, [protagonist], () => 0.5, 'ruins').defaultDc,
+      expectedDc,
+    );
+    const freeContext = prepareFreeDcContext(library, [protagonist], () => 0.5);
+    assert.equal(freeContext.baseDefaultDc, 8);
+    assert.equal(freeContext.defaultDc, 8 - reduction);
+    const freeResponse = await chatResponse(
+      'chat',
+      `<wanxiang_output>【旁白】主角开始行动。\\n${DC_SPLIT_MARKER}\\n【旁白】行动有了结果。</wanxiang_output><wanxiang_dc>{"triggered":true,"actorId":"${protagonist.id}","attr":"str","dc":${freeContext.baseDefaultDc},"outcome":"success"}</wanxiang_dc>`,
+      [],
+      { characters: [protagonist], dcContext: { mode: 'free', ...freeContext } },
+      passthroughRegex,
+    );
+    assert.equal(freeResponse.dcOutcome.dc, freeContext.defaultDc);
+    assert.equal(
+      normalizeDcTurnOutcome(
+        { triggered: true, actorId: protagonist.id, attr: 'str', dc: 6, outcome: 'success' },
+        actors,
+        null,
+        { mapOrLevel: 'ruins', dcReduction: reduction },
+      ).dc,
+      expectedDc,
+    );
+  }
+
+  protagonist.growth.level = 14;
+  assert.equal(adjustDcForProtagonist(library, 5), 3);
+});
 
 test('character generation schema & compiler validate dcAttrs while keeping legacy optional', () => {
   const plan = characterGenerationPlan({ rollId: 'dc-char', rarity: 'rare', complexity: 3 });
@@ -430,11 +494,18 @@ test('chatRequest hides fixed-choice numbers, exposes free 2D6 pool, and chatRes
   library.inventory.gold = 20;
   const reward = settleDcReward(library, 'dc-claim-1', { tier: 'medium', kind: 'gold' });
   assert.ok(reward.gold >= 16 && reward.gold <= 28);
-  const pen = applyDcPenalty(library, res.dcOutcome.penalty, qingyuan.id, {
-    carried: { units: { [qingyuan.id]: { side: 'player', hp: 50, mp: 20, buffs: {} } } },
-  });
+  const actorId = qingyuan.id;
+  const id = newBattle(['mossSlime']).formation[library.party.indexOf(actorId)];
+  const expedition = {
+    partyIds: [...library.party],
+    carried: { units: { [id]: { id, side: 'hero', hp: 50, mp: 20, buffs: {} } } },
+  };
+  const pen = applyDcPenalty(library, res.dcOutcome.penalty, actorId, expedition);
   assert.equal(pen.hpLoss, 6);
+  assert.equal(expedition.carried.units[id].hp, 44);
+  assert.equal(expedition.carried.units[id].mp, 20);
   assert.equal(pen.debuff, 'bleed');
+  assert.equal(expedition.nextBattleDebuffs[id].bleed, 2);
   assert.equal(pen.goldLoss, 5);
   assert.equal(library.relationships['official-edith'].affection, 5);
 });

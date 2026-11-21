@@ -158,8 +158,9 @@ export async function staticChecks({ browser, output }) {
       ),
     );
     assert.deepEqual((await request('presets')).presets, []);
-    assert.deepEqual((await request('prompts')).presets, []);
+    assert.equal((await request('prompt-options')).options.style, 'cinematic');
     await page.locator('#start-journey').click();
+    await page.locator('#setup-mode-free').click();
     await page.locator('#ai-model').waitFor({ state: 'visible' });
     await page.waitForFunction(() => !document.querySelector('#ai-model').disabled);
     assert.equal(await page.locator('#new-game').isVisible(), false);
@@ -185,25 +186,6 @@ export async function staticChecks({ browser, output }) {
     await page.locator('#ai-status').filter({ hasText: '应用到 5 个 API' }).waitFor();
     await page.screenshot({ path: path.join(output, 'first-run-connections.png') });
     await page.locator('#setup-next').click();
-    await page.locator('#prompt-import').waitFor({ state: 'visible' });
-    await page.locator('#setup-next').click();
-    await page.locator('#setup-status').filter({ hasText: '请先导入' }).waitFor();
-    await page.locator('#prompt-import-file').setInputFiles({
-      name: 'first-run.json',
-      mimeType: 'application/json',
-      buffer: Buffer.from(
-        JSON.stringify({
-          name: '首次文风',
-          prompts: [
-            { identifier: 'main', role: 'system', content: '自然续写' },
-            { identifier: 'chatHistory', marker: true },
-          ],
-        }),
-      ),
-    });
-    await page.locator('#ai-status').filter({ hasText: '已导入并应用' }).waitFor();
-    await page.screenshot({ path: path.join(output, 'first-run-prompts.png') });
-    await page.locator('#setup-next').click();
     await page.locator('#new-game').waitFor({ state: 'visible' });
     assert.equal(await page.locator('#ai-dialog').isVisible(), false);
     const saved = await page.evaluate(async () => {
@@ -216,13 +198,6 @@ export async function staticChecks({ browser, output }) {
       return saved;
     });
     assert(saved.profiles.script.model === 'fixture-model');
-    assert(
-      new Set(
-        ['character', 'script', 'chat', 'quick-chat'].map(
-          (kind) => saved.profiles[kind].promptPresetId,
-        ),
-      ).size === 1,
-    );
     const book = (await request('worldbooks/tavern-world')).book;
     assert.deepEqual(
       Object.values(book.entries)
@@ -268,32 +243,6 @@ export async function staticChecks({ browser, output }) {
       characters: [{ id: 'official-edith', name: '伊蒂丝', worldbook: '温和活泼的引路人。' }],
       history: [],
     };
-    const preset = (
-      await request('prompts/save', {
-        preset: {
-          name: '静态验证预设',
-          prompts: [
-            { identifier: 'main', role: 'system', content: '自然续写' },
-            { identifier: 'chatHistory', marker: true },
-          ],
-          extensions: {
-            regex_scripts: [{ findRegex: '来客', replaceString: '朋友', markdownOnly: true }],
-            tavern_helper: {
-              scripts: [
-                {
-                  id: 'static-floating',
-                  name: 'floating',
-                  enabled: true,
-                  content:
-                    "document.body.insertAdjacentHTML('beforeend', '<button id=static-floating>预设开关</button>')",
-                },
-              ],
-            },
-          },
-        },
-      })
-    ).preset;
-    await request('prompts/select', { kind: 'chat', id: preset.id });
     const preview = await request('prompts/preview', { kind: 'chat', input: chatInput });
     assert.equal(
       calls.length,
@@ -304,7 +253,7 @@ export async function staticChecks({ browser, output }) {
       '<wanxiang_chat>你好，来客。</wanxiang_chat><wanxiang_actions>{"affection":[{"id":"official-edith","delta":1}],"agreeToAdventure":[]}</wanxiang_actions>';
     const chat = await request('generate/chat', chatInput);
     assert.equal(chat.content, '你好，来客。');
-    assert(chat.display.includes('朋友'));
+    assert.equal(chat.display, undefined);
     assert.deepEqual(chat.request.messages, preview.messages);
     const routeRecords = await request('anti-route');
     assert(routeRecords.records.some((entry) => entry.kind === 'chat'));
@@ -320,7 +269,13 @@ export async function staticChecks({ browser, output }) {
       config: { ...routeDefaults.config, entropy: false },
     });
     assert(chat.request.tokens.contentTokens > 0);
-    await request('prompts/save', { id: preset.id, preset: { ...preset, stream: true } });
+    await request('config', {
+      ...profiles.chat,
+      kind: 'chat',
+      baseUrl: 'https://upstream.invalid/v1',
+      model: 'fixture-model',
+      stream: true,
+    });
     const streamed = await page.evaluate(async (input) => {
       const deltas = [];
       const result = await window.staticApi.request('generate/chat', input, {
@@ -488,11 +443,9 @@ export async function staticChecks({ browser, output }) {
       document.querySelector('#ai-key').placeholder.includes('记住'),
     );
     await page.locator('[data-ai-tab="prompts"]').click();
-    await page.locator('#prompt-kind').selectOption('chat');
-    await page.locator('#helper-open').click();
-    await page.frameLocator('#helper-frame').locator('#static-floating').waitFor();
+    await page.locator('[data-prompt-option=style]').waitFor();
+    assert.equal(await page.locator('#helper-open, #ai-regex, #prompt-import').count(), 0);
     await page.screenshot({ path: path.join(output, 'static-subdirectory-preset.png') });
-    await page.locator('#helper-close').click();
     await page.locator('#ai-close').click();
     await page.evaluate(() => demo.startBattle());
     await page.locator('#destination-region-confirm').click();
@@ -510,9 +463,16 @@ export async function staticChecks({ browser, output }) {
       .filter({ has: page.locator('.resource-number') })
       .first()
       .waitFor();
-    const resources = await page.evaluate(() => demo.getState().units.lyria);
+    const { resources, base } = await page.evaluate(async () => {
+      const { grownCombat } = await import(new URL('./src/growth.js', location.href).href);
+      const edith = demo.getLibrary().characters.find(({ id }) => id === 'official-edith');
+      return { resources: demo.getState().units.lyria, base: grownCombat(edith) };
+    });
     const bars = [`${resources.hp}/${resources.maxHp}`, `${resources.mp}/${resources.maxMp}`];
-    assert(resources.maxHp > 48 && resources.maxMp > 33);
+    assert(
+      resources.maxHp > base.hp && resources.maxMp > base.mp,
+      'the equipped pendant raises Edith’s uncombined HP and SP limits',
+    );
     assert.deepEqual(await edithBars.locator('.resource-number').allTextContents(), bars);
     await page.evaluate(() => demo.flushStorage());
     const unfinished = await page.evaluate(() => demo.getActiveScript());
@@ -550,9 +510,8 @@ export async function staticChecks({ browser, output }) {
       projectSubdirectory: true,
       allSevenApis: true,
       exactTokenizer: true,
-      regexWorker: true,
       stream: true,
-      helperWindow: true,
+      builtinPreset: true,
       portraitsPersisted: true,
       backupExcludesKeys: true,
       chatAndSettingsReloaded: true,

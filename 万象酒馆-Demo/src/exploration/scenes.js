@@ -233,6 +233,7 @@ const dungeonTrailImages = Object.freeze({
   forge: 'road-aqueduct-wide',
   tide: 'road-causeway-wide',
   'moss-hollow': 'road-meadow-wide',
+  'graystone-quarry': 'road-ridge-wide',
   'border-watch': 'road-downs-wide',
   'whisper-grove': 'road-pines-wide',
   'silver-cistern': 'road-orchard-wide',

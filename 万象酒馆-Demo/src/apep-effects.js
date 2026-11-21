@@ -8,7 +8,7 @@ export function createApepEffects({ pixelFx, animate, ring, sparks, reduced }) {
       y: point.y,
       palette: APEP_PALETTE,
       anchorToOrigin: true,
-      light: 0.72,
+      light: 0.48,
       ...options,
     });
   }
@@ -86,8 +86,14 @@ export function createApepEffects({ pixelFx, animate, ring, sparks, reduced }) {
       aperture(Math.max(0, hitAt - 180), move.type === 'eclipse' ? 1320 : 1040);
     }
     if (move.type === 'shell' && source) {
-      spawn('divine-shield', source, { delay: hitAt * 0.65, scale: 1.28, maxDuration: 1150 });
-      ring(source, '#d18782', 'cast-rune', hitAt * 0.75);
+      spawn('curse', source, { delay: hitAt * 0.55, scale: 1.24, light: 0.46, maxDuration: 1120 });
+      spawn('shadow-flames', source, {
+        delay: hitAt * 0.72,
+        scale: 1.08,
+        light: 0.45,
+        maxDuration: 950,
+      });
+      ring(source, '#9e2a50', 'cast-rune', hitAt * 0.75);
     }
     if (move.type === 'gaze') {
       spawn('life-steal', source, { delay: hitAt + 140, scale: 1.18, maxDuration: 1200 });
@@ -109,9 +115,17 @@ export function createApepEffects({ pixelFx, animate, ring, sparks, reduced }) {
 
   function tick(floors, targets, delay = 0) {
     surge('tick', delay, 'apep-border-crush');
-    for (const point of floors) {
+    floors.forEach((point, index) => {
       ring(point, '#c74f68', 'apep-landing-ripple', delay);
-    }
+      if (index % 2 === 0) {
+        spawn('grasping-hands', point, {
+          delay: delay + index * 35,
+          scale: 0.96,
+          light: 0.45,
+          maxDuration: 920,
+        });
+      }
+    });
     for (const point of targets) {
       spawn('shadow-tendrils', point, { delay, scale: 0.94, speedRate: 2.4, maxDuration: 960 });
     }
@@ -120,8 +134,20 @@ export function createApepEffects({ pixelFx, animate, ring, sparks, reduced }) {
   function phase(source) {
     surge('eclipse', 280, 'apep-border-crush');
     aperture(180, 1450);
-    spawn('black-hole', source, { scale: 1.56, speedRate: 2.0, delay: 240, maxDuration: 1350 });
-    spawn('mana-burst', source, { scale: 1.24, delay: 450, maxDuration: 950 });
+    spawn('black-hole', source, {
+      scale: 1.56,
+      light: 0.46,
+      speedRate: 2.0,
+      delay: 240,
+      maxDuration: 1350,
+    });
+    spawn('shadow-flames', source, {
+      scale: 1.24,
+      light: 0.45,
+      delay: 260,
+      maxDuration: 1050,
+    });
+    spawn('eclipse', source, { scale: 1.42, light: 0.45, delay: 380, maxDuration: 1150 });
   }
 
   return { attack, tick, phase };

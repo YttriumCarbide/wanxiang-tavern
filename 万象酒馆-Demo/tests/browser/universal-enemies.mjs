@@ -291,7 +291,7 @@ export async function universalEnemyChecks({ browser, baseURL, output }) {
     assert(bossNames.includes('天梯鸦人'), 'New ladderCrowman should list under 首领');
 
     await page.locator('[data-enemy-tier="overlord"]').click();
-    assert.equal(await page.locator('#archive-list button').count(), 5);
+    assert.equal(await page.locator('#archive-list button').count(), 7);
     assert.equal(await page.locator('#archive-text img').count(), 0);
     await page
       .locator(

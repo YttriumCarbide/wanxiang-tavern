@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { newWorldEntry, normalizeWorldbook } from '../src/ai/worldbook.js';
 import { isMonsterWorldEntry, monsterNarrativeText } from '../src/ai/monster-narrative.js';
 import { COMBAT_ENCYCLOPEDIA_APPEND, MILL_WORLDBOOK_ENTRIES } from '../src/content/mill-lore.js';
+import { QUARRY_WORLDBOOK_ENTRIES } from '../src/content/quarry-lore.js';
 import { MAIN_WORLD_LORE } from '../src/content/main-world-lore.js';
 import { LADDER_ENEMIES, LADDER_BOSSES } from '../src/content/ladder-adversaries.js';
 import { ALL_MONSTER_LORE, monsterWorldbook } from '../src/content/monsters.js';
@@ -44,6 +45,39 @@ function updateCombatEncyclopediaInPlace(raw) {
     COMBAT_ENCYCLOPEDIA_APPEND.trim(),
     `七、【后续开发与维护提示】\n今后若游戏内新增、删改通用 Buff、Debuff 或伤害类型与韧性规则，请直接原地编辑本条目说明；**禁止再另建版本号或“修正/补充”类 \`EX\` 补丁条目**。`,
   ].join('\n\n');
+}
+
+function updateGalNpcNamingRulesInPlace(raw) {
+  for (const entry of Object.values(raw.entries || {})) {
+    const keys = Array.isArray(entry.key) ? entry.key : [];
+    const text = String(entry.content || '');
+    if (keys.includes('script:gal')) {
+      entry.content = text
+        .replace(
+          '- `【对白:npc:姓名|立绘编号】非队伍 NPC 的台词`：例如 `【对白:npc:城门女卫兵|guardWoman】`。',
+          '- `【对白:npc:姓名|立绘编号】非队伍 NPC 的台词`：其中“姓名”必须采用「短身份·真实人名」（例如 `【对白:npc:女守卫·玛莎|guardWoman】`、`【对白:npc:老学者·温特|scholar】`），以配合通用立绘区分不同路人；严禁只写「女性守卫」「城门女卫兵」「商贩」「路人」等无名代号。',
+        )
+        .replace(
+          '- `【登场:角色ID】`、`【登场:npc:姓名|立绘编号】`：角色中途入场时使用；',
+          '- `【登场:角色ID】`、`【登场:npc:姓名|立绘编号】`（同样采用「短身份·真实人名」）：角色中途入场时使用；',
+        );
+    } else if (keys.includes('chat:tavern')) {
+      entry.content = text.replace(
+        '- 路人或临时 NPC 写 `【对白:npc:姓名|立绘编号】`（登场 `【登场:npc:姓名|立绘编号】`、退场 `【退场:npc:姓名】`），同一人保持同编号，绝对别给队友或官方角色贴 `npc:`：',
+        '- 路人或临时 NPC 写 `【对白:npc:姓名|立绘编号】`（登场 `【登场:npc:姓名|立绘编号】`、退场 `【退场:npc:姓名】`），其中“姓名”一律写成「短身份·真实人名」（如 `【对白:npc:女守卫·玛莎|guardWoman】`），严禁只用「女性守卫」「商贩」「路人」等无名代号；同一人保持同编号与真名，绝对别给队友或官方角色贴 `npc:`：',
+      );
+    } else if (keys.includes('script:npc-required')) {
+      entry.content = text
+        .replace(
+          '现场为其赋予具体姓名，',
+          '在人名未指定时现场补全「短身份·真实人名」（如 `女守卫·玛莎`），严禁使用“女性守卫/商贩/路人”等无名代号，',
+        )
+        .replace(
+          '并用规范的 `【对白:npc:姓名|立绘编号】` 演出。',
+          '并用规范的 `【对白:npc:姓名|立绘编号】`（姓名填「短身份·真实人名」）演出。',
+        );
+    }
+  }
 }
 
 function upsertEntry(raw, matchFn, makeEntry, nextUidRef) {
@@ -183,6 +217,34 @@ export async function buildBuiltinWorld() {
       nextUidRef,
     );
   }
+  for (const lore of QUARRY_WORLDBOOK_ENTRIES) {
+    upsertEntry(
+      raw,
+      (entry) => entry.extensions?.wanxiang?.quarryLore === lore.id,
+      (uid) => ({
+        ...newWorldEntry(uid),
+        comment: lore.comment,
+        key: [...lore.key],
+        content: lore.content,
+        constant: false,
+        selective: true,
+        order: lore.order,
+        position: lore.position,
+        matchWholeWords: false,
+        matchScenario: true,
+        excludeRecursion: true,
+        preventRecursion: true,
+        apiTargets: [...lore.apiTargets],
+        extensions: {
+          wanxiang: {
+            quarryLore: lore.id,
+            apiTargets: [...lore.apiTargets],
+          },
+        },
+      }),
+      nextUidRef,
+    );
+  }
   for (const dungeon of MILL_DUNGEONS) {
     upsertEntry(
       raw,
@@ -210,6 +272,7 @@ export async function buildBuiltinWorld() {
       nextUidRef,
     );
   }
+  updateGalNpcNamingRulesInPlace(raw);
   updateCombatEncyclopediaInPlace(raw);
   const { book } = normalizeWorldbook(raw, '万象酒馆世界书');
   await writeFile(assetPath, JSON.stringify(book, null, 2) + '\n');

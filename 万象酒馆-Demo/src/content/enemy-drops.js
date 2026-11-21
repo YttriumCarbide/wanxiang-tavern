@@ -177,5 +177,11 @@ export const DROP_GROUPS = Object.freeze({
     'erosion-rift-tyrant',
     'alchemical-puppet',
   ],
-  'calamity-scroll': ['unmoored-judge', 'ares', 'ares-cannon-left', 'ares-cannon-right'],
+  'calamity-scroll': [
+    'unmoored-judge',
+    'ares',
+    'ares-cannon-left',
+    'ares-cannon-right',
+    'darkscale-warlord',
+  ],
 });

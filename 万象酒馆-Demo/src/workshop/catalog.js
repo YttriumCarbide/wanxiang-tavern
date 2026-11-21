@@ -149,6 +149,7 @@ export function validateWorkshopCatalog(value) {
     station.inputs ??= {};
     quantities(station.inputs);
     number(station.max, 1, 1000);
+    if (!Number.isInteger(station.max)) fail('设施上限必须为整数');
     station.initial ??= 0;
     number(station.initial, 0, station.max);
     if (!Number.isInteger(station.initial)) fail('开局设施数量必须为整数');

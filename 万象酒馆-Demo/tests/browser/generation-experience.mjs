@@ -83,8 +83,10 @@ export async function generationExperienceChecks({ browser, baseURL, output }) {
   async function shelf() {
     const frame = await innReady();
     await frame.locator('canvas').evaluate(() => window.assetPreview.placeNow('bookshelf'));
-    await frame.locator('#bookshelf-memory').click();
-    await page.locator('#memory-dialog').waitFor({ state: 'visible' });
+    await frame.locator('#bookshelf-archives').click();
+    await page.locator('#archive-dialog').waitFor({ state: 'visible' });
+    await page.locator('#archive-dialog [data-archive-tab="memory"]').click();
+    await page.locator('#memory-pane').waitFor({ state: 'visible' });
   }
   try {
     await page.route('**/api/ai/generate/summary', async (route) => {
@@ -230,7 +232,7 @@ export async function generationExperienceChecks({ browser, baseURL, output }) {
       if (from === 'fate')
         await page.screenshot({ path: path.join(output, 'bookshelf-approach-marker.png') });
       await button.click();
-      await frame.locator('#bookshelf-memory').waitFor({ state: 'visible' });
+      await frame.locator('#bookshelf-archives').waitFor({ state: 'visible' });
       assert.equal(
         await frame.locator('canvas').evaluate(() => window.assetPreview.getState().current),
         'bookshelf',

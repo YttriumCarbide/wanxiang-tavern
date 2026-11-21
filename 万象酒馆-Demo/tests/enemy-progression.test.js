@@ -224,26 +224,28 @@ test('browser and service really inject the v40 identity rule into character req
     (file) => readFile(new URL('../prompts/' + file, import.meta.url), 'utf8'),
     book,
   );
+  const countTokens = (text) => Math.ceil(text.length / 3);
+  const identityHeading = '【角色特色与技能差异】';
   for (const worlds of [server, browser.worlds]) {
     const input = { brief: '有明确说话习惯的旅人', rollId: 'identity-live' };
     const request = await generationRequest('character', input, undefined, {
       worldInfo: await worlds.resolve('character', input),
-      countTokens: (text) => Math.ceil(text.length / 3),
+      countTokens,
     });
     const messages = request.messages.map((message) => message.content).join('\n');
-    assert(messages.includes('【角色特色与技能差异】'));
+    assert(messages.includes(identityHeading));
     assert(messages.includes('主动80%、被动20%'));
     assert(messages.includes('preferredSkillKinds'));
-    const script = await worlds.resolve('script', { party: [] });
-    assert(
-      !script.books.some(({ entries }) =>
-        Object.values(entries).some(
-          (entry) =>
-            entry.content.includes('【角色特色与技能差异】') &&
-            entry.apiTargets?.includes('script'),
-        ),
-      ),
-    );
+    const scriptInput = {
+      brief: input.brief,
+      boss: 'bossGate',
+      party: [{ id: 'aegis', name: '艾吉斯', worldbook: '' }],
+    };
+    const script = await generationRequest('script', scriptInput, undefined, {
+      worldInfo: await worlds.resolve('script', scriptInput),
+      countTokens,
+    });
+    assert(!script.messages.some(({ content }) => content.includes(identityHeading)));
   }
 });
 

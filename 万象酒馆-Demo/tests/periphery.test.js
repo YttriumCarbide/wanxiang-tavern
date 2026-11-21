@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import { MAP_IDS } from '../src/content/biomes.js';
 import { planPeriphery } from '../src/content/periphery.js';
 
-test('all thirteen environments tile the full outer field without entering the battle board', () => {
-  assert.equal(MAP_IDS.length, 14);
+test('all environments tile the full outer field without entering the battle board', () => {
+  assert.equal(MAP_IDS.length, 17);
   for (const map of MAP_IDS) {
     const plan = planPeriphery(map);
     assert.equal(plan.patches.length, 518, `${map} must cover both sides and both ends`);
