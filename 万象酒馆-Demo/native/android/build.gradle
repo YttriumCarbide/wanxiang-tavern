@@ -2,7 +2,7 @@ plugins {
     id 'com.android.application' version '8.13.2'
 }
 
-def firstPackDir = file('../../.runtime/native/first-pack')
+def offlinePackDir = file('../../.runtime/native/offline-pack')
 def requiredPackFiles = ['index.html', 'manifest.json', 'chunks.json']
 
 android {
@@ -13,8 +13,8 @@ android {
         applicationId 'app.wanxiang.tavern'
         minSdk 26
         targetSdk 36
-        versionCode providers.gradleProperty('wanxiangVersionCode').getOrElse('1').toInteger()
-        versionName providers.gradleProperty('wanxiangVersion').getOrElse('1.3.0')
+        versionCode providers.gradleProperty('wanxiangVersionCode').getOrElse('20300').toInteger()
+        versionName providers.gradleProperty('wanxiangVersion').getOrElse('2.3.0')
     }
 
     compileOptions {
@@ -23,7 +23,7 @@ android {
     }
 
     sourceSets {
-        main.assets.srcDirs = [firstPackDir]
+        main.assets.srcDirs = [offlinePackDir]
     }
 }
 
@@ -32,12 +32,12 @@ dependencies {
 }
 
 tasks.register('verifyFirstPack') {
-    def packDir = firstPackDir
+    def packDir = offlinePackDir
     def required = requiredPackFiles
     doLast {
         def missing = required.findAll { !new File(packDir, it).isFile() }
         if (missing) {
-            throw new GradleException("First pack at ${packDir} is missing required files: ${missing.join(', ')}")
+            throw new GradleException("Offline pack at ${packDir} is missing required files: ${missing.join(', ')}")
         }
     }
 }

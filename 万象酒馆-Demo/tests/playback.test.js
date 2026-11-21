@@ -34,6 +34,19 @@ test('repeated casts occupy separate visual beats in the same timeline slot', ()
   );
 });
 
+test('hidden weapon lock plays in its own beat before the first attack', () => {
+  const state = advance(preview(newBattle(['banditSyndicateKing']), []));
+  const result = preview(state, []);
+  const lock = result.events.find((event) => event.type === 'hiddenWeaponLock');
+  assert.ok(lock, 'engine emits the lock event');
+  assert.equal(lock.at, 0, 'round-start event belongs to a playable slot');
+  const beats = playbackBeats(result);
+  const lockBeat = beats.findIndex((beat) => beat.events.includes(lock));
+  const attackBeat = beats.findIndex((beat) => beat.events.some((event) => event.type === 'enemy'));
+  assert.ok(lockBeat >= 0 && lockBeat < attackBeat);
+  assert.deepEqual(beats[lockBeat].events, [lock]);
+});
+
 test('actual playback uses identical beat durations when an attack kills, ignoring corpse lifetime', async (t) => {
   const previousDocument = globalThis.document;
   const element = {

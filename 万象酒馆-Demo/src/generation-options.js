@@ -2,6 +2,10 @@ export const GENERATION_OPTIONS_KEY = 'wanxiang.generation-options.v1';
 
 export function restoreGenerationOptions(value) {
   const skipAiGeneration = skippingAi(value);
+  const quickTestOverlords =
+    typeof value?.quickTestOverlords === 'boolean'
+      ? value.quickTestOverlords
+      : value?.quickTest === true || value?.quickTestApep === true;
   return {
     skipAiGeneration,
     protagonistApi: !skipAiGeneration,
@@ -11,8 +15,9 @@ export function restoreGenerationOptions(value) {
     allowRetreat: value?.allowRetreat === true,
     editArchives: value?.editArchives === true,
     unlockAllCodex: value?.unlockAllCodex === true,
-    quickTest: value?.quickTest === true,
-    quickTestApep: value?.quickTestApep === true,
+    quickTestOverlords,
+    quickTest: quickTestOverlords,
+    quickTestApep: quickTestOverlords,
   };
 }
 
@@ -29,3 +34,10 @@ export function generationEnabled(options) {
 
 export const developerOption = (options, key) =>
   options.developerMode === true && options[key] === true;
+
+export function quickTestOverlordsEnabled(options) {
+  if (options?.developerMode !== true) return false;
+  return typeof options.quickTestOverlords === 'boolean'
+    ? options.quickTestOverlords
+    : options.quickTest === true || options.quickTestApep === true;
+}

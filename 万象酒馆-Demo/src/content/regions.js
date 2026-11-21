@@ -1202,6 +1202,7 @@ export const REGIONS = Object.freeze({
       },
       {
         id: 'quarry-mq4',
+        levelOffset: 5,
         title: '双晶崩枷与龙纹苏醒',
         boss: 'darkscaleWarlord',
         bossName: '初生暗鳞督军',

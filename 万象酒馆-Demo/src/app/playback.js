@@ -119,8 +119,11 @@ export function createPlayback(context) {
             event.chargeStarted ||
             event.type === 'bombDetonate' ||
             event.type === 'bombDefuse' ||
+            event.type === 'hiddenWeaponLock' ||
             (event.fixedSlotBroken && event.blockedBy === 'bind') ||
-            event.statusTriggers?.some((st) => st.type === 'break')
+            event.statusTriggers?.some((st) =>
+              ['break', 'eclipsescaleShed', 'warlordRally', 'warlordConsume'].includes(st.type),
+            )
           ) {
             void context.overlordBattle?.onEvent(event);
           }

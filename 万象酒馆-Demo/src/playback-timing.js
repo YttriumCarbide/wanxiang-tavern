@@ -9,6 +9,7 @@ const SEQUENTIAL_SLOT_TYPES = new Set([
   'engage',
   'item',
 ]);
+const PRE_ACTION_TYPES = new Set(['hiddenWeaponLock']);
 
 /** Every slot gets one beat, including the second slot of a 2 AP action. End effects share a beat. */
 export function playbackBeats(result) {
@@ -19,7 +20,9 @@ export function playbackBeats(result) {
     for (const event of result.events.filter((item) => item.at === at)) {
       if (
         beat.events.length &&
-        (['bossPhase', 'bombDetonate', 'bombDefuse'].includes(event.type) ||
+        (PRE_ACTION_TYPES.has(event.type) ||
+          beat.events.some((item) => PRE_ACTION_TYPES.has(item.type)) ||
+          ['bossPhase', 'bombDetonate', 'bombDefuse'].includes(event.type) ||
           event.type === 'counter' ||
           beat.events.some((item) =>
             ['bossPhase', 'bombDetonate', 'bombDefuse'].includes(item.type),

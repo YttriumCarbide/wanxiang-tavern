@@ -1,6 +1,8 @@
 package app.wanxiang.tavern;
 
 import android.app.Activity;
+import android.content.ActivityNotFoundException;
+import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.webkit.WebResourceRequest;
@@ -47,7 +49,9 @@ public final class MainActivity extends Activity {
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-                return request.isForMainFrame() && !isLocalOrigin(request.getUrl());
+                if (isLocalOrigin(request.getUrl())) return false;
+                openExternalLink(request.getUrl());
+                return true;
             }
 
             @Override
@@ -55,6 +59,8 @@ public final class MainActivity extends Activity {
                 return isLocalOrigin(request.getUrl()) ? files.serve(request) : null;
             }
         });
+        webView.setDownloadListener((url, userAgent, contentDisposition, mimeType, contentLength) ->
+                openExternalLink(Uri.parse(url)));
         WebViewCompat.addWebMessageListener(
                 webView, "wanxiangNativeUpdate", Collections.singleton(ORIGIN),
                 (view, message, source, mainFrame, reply) -> {
@@ -76,6 +82,17 @@ public final class MainActivity extends Activity {
     private static boolean isLocalOrigin(Uri uri) {
         return "https".equals(uri.getScheme()) && "appassets.androidplatform.net".equals(uri.getHost())
                 && (uri.getPort() == -1 || uri.getPort() == 443) && uri.getUserInfo() == null;
+    }
+
+    private void openExternalLink(Uri uri) {
+        String scheme = uri.getScheme();
+        if (isLocalOrigin(uri) || uri.getHost() == null
+                || !("https".equalsIgnoreCase(scheme) || "http".equalsIgnoreCase(scheme))) return;
+        try {
+            startActivity(new Intent(Intent.ACTION_VIEW, uri).addCategory(Intent.CATEGORY_BROWSABLE));
+        } catch (ActivityNotFoundException | SecurityException error) {
+            android.util.Log.w("WanxiangTavern", "Cannot open external link", error);
+        }
     }
 
     private void showError(String message) {

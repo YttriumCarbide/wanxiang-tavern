@@ -7,6 +7,7 @@ const MAP_LEVELS = Object.freeze({
   'moss-hollow': 2,
   'graystone-quarry': 5,
   'starbell-undercroft': 6,
+  'black-market': 7,
   'border-watch': 6,
   'whisper-grove': 10,
   forest: 11,

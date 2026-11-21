@@ -284,7 +284,7 @@ export async function staticChecks({ browser, output }) {
       return { result, deltas };
     }, chatInput);
     assert.equal(streamed.result.content, chat.content);
-    assert(streamed.deltas.join('').includes('wanxiang_chat'));
+    assert.equal(streamed.deltas.join(''), reply);
     reply = '<wanxiang_chat>留意脚下。</wanxiang_chat>';
     assert.equal(
       (await request('generate/quick-chat', { ...chatInput, environment: '回廊' })).content,

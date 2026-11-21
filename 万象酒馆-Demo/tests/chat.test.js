@@ -22,6 +22,7 @@ test('normal play always generates; the combined developer switch migrates both 
     allowRetreat: false,
     editArchives: false,
     unlockAllCodex: false,
+    quickTestOverlords: false,
     quickTest: false,
     quickTestApep: false,
     protagonistApi: true,

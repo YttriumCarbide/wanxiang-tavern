@@ -7,6 +7,7 @@ const PLAIN_ORDINARY_LAYERS = Object.freeze({
   greyProwler: 1,
   trailArbalist: 2,
   riftMote: 1,
+  riftDarkDust: 1,
   livingVine: 2,
   bogLeech: 1,
   moonWorker: 2,

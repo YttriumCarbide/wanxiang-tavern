@@ -69,23 +69,13 @@ export async function developerModeChecks({ browser, baseURL, output }) {
     assert.equal(await page.locator('#developer-options').isVisible(), false);
     assert.equal(await page.locator('#creation-generate').isDisabled(), false);
     const repository = 'https://github.com/YttriumCarbide/wanxiang-tavern';
-    await page.route(`${repository}/archive/refs/heads/main.zip`, (route) =>
-      route.fulfill({
-        headers: {
-          'content-type': 'application/zip',
-          'content-disposition': 'attachment; filename="wanxiang-tavern-main.zip"',
-        },
-        body: '',
-      }),
-    );
-    const [download] = await Promise.all([
-      page.waitForEvent('download'),
-      page.getByRole('link', { name: '下载游戏到本地' }).click(),
-    ]);
-    assert.equal(download.suggestedFilename(), 'wanxiang-tavern-main.zip');
     assert.equal(
-      await page.getByRole('link', { name: '打开 GitHub 仓库' }).getAttribute('href'),
-      repository,
+      await page.locator('#settings-download-windows').getAttribute('href'),
+      `${repository}/releases/download/v2.3/wanxiang-tavern-2.3-windows-x64.zip`,
+    );
+    assert.equal(
+      await page.locator('#settings-download-develop').getAttribute('href'),
+      `${repository}/archive/refs/heads/develop.zip`,
     );
     await page.locator('[data-generation-option="developerMode"]').check();
     await checkbox.check();
@@ -143,83 +133,214 @@ export async function developerModeChecks({ browser, baseURL, output }) {
     assert.equal(gate.blocked.length, 7);
     assert.deepEqual(gate.forwarded, []);
 
-    async function openGateAndSelectMill() {
+    async function openGateAndSelectRegion(region) {
       const frame = page.frameLocator('#inn-frame iframe');
       await frame.locator('#status').waitFor({ state: 'detached', timeout: 60000 });
       await frame.locator('canvas').evaluate(() => window.assetPreview.placeNow('gate'));
       await frame.locator('#enter').click();
       await page.locator('#destination-dialog[data-stage="region"]').waitFor({ state: 'visible' });
-      await page.locator('#destination-regions button[data-region="mill"]').click();
+      const button = page.locator(`#destination-regions button[data-region="${region}"]`);
+      for (let pageIndex = 0; pageIndex < 4 && (await button.count()) === 0; pageIndex++) {
+        const next = page.locator('#destination-region-next');
+        if (await next.isDisabled()) break;
+        await next.click();
+      }
+      if ((await button.count()) === 0) return false;
+      await button.click();
       await page.locator('#destination-region-confirm').click();
       await page.locator('#destination-route-screen').waitFor({ state: 'visible' });
+      return true;
     }
 
-    // Return to inn and verify quickTest non-destructively swaps mill Stage 1 <-> Stage 4 & runs Overlord fight
-    await page.evaluate(() => window.demo.returnInn());
-    await page.waitForFunction(() => window.demo.getStatus().mode === 'inn');
-    await openOptions();
-    const quickCheckbox = page.locator('[data-generation-option="quickTest"]');
-    await quickCheckbox.check();
-    await page.locator('#ai-close').click();
+    async function closeRegionPicker() {
+      await page.locator('#destination-close').click();
+      await page.locator('#destination-dialog').waitFor({ state: 'hidden' });
+    }
 
-    await openGateAndSelectMill();
-    const swappedNodeText = await page
-      .locator('#destination-map [data-map-node]')
-      .first()
-      .innerText();
-    assert(swappedNodeText.includes('磨坊阁楼齿轮室'), swappedNodeText);
-    assert(
-      await page
-        .locator('#destination-map [data-map-node]')
-        .first()
-        .evaluate((el) => el.classList.contains('is-overlord')),
-      'Node 1 should show Overlord mark while quickTest is active',
-    );
+    async function closeRoute() {
+      await page.locator('#destination-close').click();
+      await page.locator('#destination-route-screen').waitFor({ state: 'hidden' });
+    }
 
-    // Toggle quickTest OFF -> node 1 restores to regular stage 1
-    await page.locator('#destination-close').click();
-    await openOptions();
-    await quickCheckbox.uncheck();
-    await page.locator('#ai-close').click();
-    await openGateAndSelectMill();
-    const restoredNodeText = await page
-      .locator('#destination-map [data-map-node]')
-      .first()
-      .innerText();
-    assert(restoredNodeText.includes('外围水渠与篱笆'), restoredNodeText);
-    assert(
-      !(await page
-        .locator('#destination-map [data-map-node]')
-        .first()
-        .evaluate((el) => el.classList.contains('is-overlord'))),
-      'Node 1 should restore when quickTest is disabled',
-    );
+    async function readFirstNode() {
+      const node = page.locator('#destination-map [data-map-node]').first();
+      return {
+        text: await node.innerText(),
+        isOverlord: await node.evaluate((el) => el.classList.contains('is-overlord')),
+      };
+    }
 
-    // Enable quickTest again and launch direct Overlord battle
-    await page.locator('#destination-close').click();
-    await openOptions();
-    await quickCheckbox.check();
-    await page.locator('#ai-close').click();
-    await openGateAndSelectMill();
-    await page.locator('#destination-start').click();
-    for (let step = 0; step < 6; step++) {
-      await page.waitForTimeout(180);
-      if (await page.locator('#party-panel').isVisible()) {
-        await page.locator('#prepare-done').click();
+    async function setQuickTestOverlords(enabled) {
+      await openOptions();
+      const toggle = page.locator('[data-generation-option="quickTestOverlords"]');
+      if (enabled) await toggle.check();
+      else await toggle.uncheck();
+      await page.locator('#ai-close').click();
+    }
+
+    async function startFirstEncounter() {
+      await page.locator('#destination-start').click();
+      for (let step = 0; step < 6; step++) {
+        await page.waitForTimeout(180);
+        if (await page.locator('#party-panel').isVisible()) {
+          await page.locator('#prepare-done').click();
+        }
+        if (await page.evaluate(() => window.demo.getStatus().mode === 'battle')) break;
       }
-      if (await page.evaluate(() => window.demo.getStatus().mode === 'battle')) break;
+      await page.waitForFunction(
+        () => window.demo.getStatus().mode === 'battle' && !window.demo.getStatus().animating,
+        null,
+        { timeout: 60000 },
+      );
     }
-    await page.waitForFunction(
-      () => window.demo.getStatus().mode === 'battle' && !window.demo.getStatus().animating,
-      null,
-      { timeout: 60000 },
+
+    async function waitCutsceneClosed() {
+      await page.waitForFunction(
+        () => document.querySelector('#overlord-cutscene-layer')?.hidden !== false,
+        null,
+        { timeout: 15000 },
+      );
+    }
+
+    async function returnToInn() {
+      await page.evaluate(() => window.demo.returnInn());
+      await page.waitForFunction(() => window.demo.getStatus().mode === 'inn');
+    }
+
+    // Return to inn and verify quickTestOverlords non-destructively swaps first node to Overlord for all regions
+    await returnToInn();
+    await openOptions();
+    assert.equal(
+      await page.locator('[data-generation-option="quickTestOverlords"]').count(),
+      1,
+      'Exactly one quickTestOverlords toggle must exist',
     );
-    const directExp = await page.evaluate(() => ({
-      index: window.demo.getExpedition().index,
-      enemies: window.demo.getState().enemyIds,
-    }));
-    assert.equal(directExp.index, 4);
-    assert.deepEqual(directExp.enemies, ['alchemicalPuppet']);
+    assert.equal(
+      await page.locator('[data-generation-option="quickTest"]').count(),
+      0,
+      'Legacy quickTest control must not be visible',
+    );
+    assert.equal(
+      await page.locator('[data-generation-option="quickTestApep"]').count(),
+      0,
+      'Legacy quickTestApep control must not be visible',
+    );
+    await page.locator('#ai-close').click();
+
+    const regions = [
+      { region: 'black-market', boss: 'banditSyndicateKing' },
+      { region: 'graystone-quarry', boss: 'darkscaleWarlord' },
+      { region: 'ruins', boss: 'apepLamb' },
+      { region: 'mill', boss: 'alchemicalPuppet' },
+    ];
+
+    // With toggle OFF, capture authored hubs and verify quick-test-only maps remain hidden.
+    await setQuickTestOverlords(false);
+    const baselines = {};
+    for (const { region } of regions.filter(({ region }) => ['ruins', 'mill'].includes(region))) {
+      assert.equal(await openGateAndSelectRegion(region), true);
+      baselines[region] = await readFirstNode();
+      assert.equal(
+        baselines[region].isOverlord,
+        false,
+        `Region ${region} first node should not be Overlord when toggle is OFF`,
+      );
+      await closeRoute();
+    }
+    for (const { region } of regions.filter(({ region }) =>
+      ['black-market', 'graystone-quarry'].includes(region),
+    )) {
+      assert.equal(await openGateAndSelectRegion(region), false);
+      await closeRegionPicker();
+    }
+
+    // Turn ON and verify first node is Overlord with expected boss display name
+    await setQuickTestOverlords(true);
+    for (const { region, boss } of regions) {
+      await openGateAndSelectRegion(region);
+      const node = await readFirstNode();
+      assert.equal(
+        node.isOverlord,
+        true,
+        `Region ${region} first node should be Overlord when toggle is ON`,
+      );
+      const bossName = await page.evaluate(async (boss) => {
+        const { DEFINITIONS } = await import('/src/data.js');
+        return DEFINITIONS[boss]?.name;
+      }, boss);
+      const destinationBadge = await page
+        .locator('#destination-sites .destination-site-top small')
+        .innerText();
+      assert(
+        destinationBadge.includes('直接开战') &&
+          destinationBadge.includes('霸主') &&
+          destinationBadge.includes(bossName),
+        `Region ${region} first encounter should identify ${bossName} as its Overlord`,
+      );
+      const previews = await page
+        .locator('#destination-sites .destination-enemies img')
+        .evaluateAll((images) => images.map((image) => image.alt));
+      assert.deepEqual(previews, [bossName], `Region ${region} should preview the actual fight`);
+      await closeRoute();
+    }
+
+    // Turn OFF restores existing hub routes and hides the added quick-test-only maps.
+    await setQuickTestOverlords(false);
+    for (const { region } of regions.filter(({ region }) => ['ruins', 'mill'].includes(region))) {
+      assert.equal(await openGateAndSelectRegion(region), true);
+      const node = await readFirstNode();
+      assert.equal(
+        node.text,
+        baselines[region].text,
+        `Region ${region} first node text should restore exactly when toggle is OFF`,
+      );
+      assert.equal(
+        node.isOverlord,
+        baselines[region].isOverlord,
+        `Region ${region} first node is-overlord class should restore exactly when toggle is OFF`,
+      );
+      await closeRoute();
+    }
+    for (const { region } of regions.filter(({ region }) =>
+      ['black-market', 'graystone-quarry'].includes(region),
+    )) {
+      assert.equal(await openGateAndSelectRegion(region), false);
+      await closeRegionPicker();
+    }
+
+    // Turn ON and launch the first encounter of all four regions in order
+    await setQuickTestOverlords(true);
+    await openOptions();
+    await checkbox.uncheck();
+    await page.locator('#ai-close').click();
+    for (let i = 0; i < regions.length; i++) {
+      const { region, boss } = regions[i];
+      await openGateAndSelectRegion(region);
+      await startFirstEncounter();
+      const exp = await page.evaluate(() => ({
+        index: window.demo.getExpedition().index,
+        enemies: window.demo.getState().enemyIds,
+      }));
+      assert.equal(exp.index, 4, `Region ${region} first battle index should be 4`);
+      assert.deepEqual(
+        exp.enemies,
+        [boss],
+        `Region ${region} first battle enemy should be ${boss}`,
+      );
+
+      if (region === 'mill') {
+        // Leave mill battle active so existing detailed puppet checks continue unchanged
+        break;
+      }
+
+      // Speed up cutscenes to x2 cleanly before committing opening
+      if ((await page.locator('#speed').textContent())?.includes('×1')) {
+        await page.locator('#speed').click();
+      }
+      await waitCutsceneClosed();
+      await page.screenshot({ path: path.join(output, `quick-test-${region}.png`) });
+      await returnToInn();
+    }
 
     // Speed up cutscenes to x2 cleanly before committing opening
     if ((await page.locator('#speed').textContent())?.includes('×1')) {
@@ -410,6 +531,7 @@ export async function developerModeChecks({ browser, baseURL, output }) {
       disabledButtons: true,
       localDungeonAvailable: true,
       quickTestDirectOverlord: true,
+      quickTestAllOverlords: true,
       overlordDomainSeal: true,
       alchemicalBombTimer: true,
       reloadFourthWallBark: true,

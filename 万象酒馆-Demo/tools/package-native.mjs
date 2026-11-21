@@ -11,7 +11,7 @@ const dist = path.join(root, 'dist');
 const androidProject = path.join(root, 'native', 'android');
 const pcProject = path.join(root, 'native', 'pc');
 const output = path.join(root, '.runtime', 'native');
-const firstPack = path.join(output, 'first-pack');
+const offlinePack = path.join(output, 'offline-pack');
 const releaseFiles = ['manifest.json', 'chunks.json'];
 
 async function localFetch(url) {
@@ -31,7 +31,7 @@ async function loadDist() {
   });
   const initial = release.index.chunks.find((chunk) => chunk.delivery === 'initial');
   if (!initial.files.some((file) => file.path === 'index.html'))
-    throw Error('Missing first-pack entry');
+    throw Error('Missing offline-pack entry');
   const deferred = release.index.chunks
     .filter((chunk) => chunk.delivery !== 'initial')
     .flatMap((chunk) => chunk.files);
@@ -65,10 +65,11 @@ async function copyTo(directory, relative) {
   return target;
 }
 
-async function stageFirstPack(directory, { initial }) {
-  await checkFiles(initial.files);
+async function stageOfflinePack(directory, release) {
+  const files = [...release.initial.files, ...release.deferred];
+  await checkFiles(files);
   await resetDirectory(directory);
-  for (const relative of [...releaseFiles, ...initial.files.map((file) => file.path)])
+  for (const relative of [...releaseFiles, ...files.map((file) => file.path)])
     await copyTo(directory, relative);
 }
 
@@ -104,10 +105,10 @@ function run(command, args, options) {
 }
 
 async function buildAndroid(release) {
-  const revision = process.env.WANXIANG_ANDROID_VERSION_CODE ?? '1';
+  const revision = process.env.WANXIANG_ANDROID_VERSION_CODE ?? '20300';
   if (!/^[1-9]\d*$/.test(revision) || Number(revision) > 2_100_000_000)
     throw Error('WANXIANG_ANDROID_VERSION_CODE must be a positive Android version code');
-  await stageFirstPack(firstPack, release);
+  await stageOfflinePack(offlinePack, release);
   const args = [
     'assembleDebug',
     '-PwanxiangVersion=' + release.manifest.version,
@@ -120,7 +121,7 @@ async function buildAndroid(release) {
 
 async function buildPc(release) {
   const directory = path.join(output, 'pc-win-x64');
-  await stageFirstPack(path.join(directory, 'www'), release);
+  await stageOfflinePack(path.join(directory, 'www'), release);
   run(
     'go',
     ['build', '-trimpath', '-ldflags=-s -w', '-o', path.join(directory, 'WanxiangTavern.exe'), '.'],
@@ -136,7 +137,10 @@ async function check(release) {
   await checkFiles([...release.initial.files, ...release.deferred]);
   const mib = (bytes) => (bytes / 1024 ** 2).toFixed(1) + ' MiB';
   console.log(
-    'First pack: ' + release.initial.files.length + ' files, ' + mib(release.initial.bytes),
+    'Offline pack total: ' +
+      (release.initial.files.length + release.deferred.length) +
+      ' files, ' +
+      mib(release.initial.bytes + release.deferred.reduce((sum, file) => sum + file.bytes, 0)),
   );
   console.log(
     'Deferred: ' +

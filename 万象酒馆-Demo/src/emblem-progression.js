@@ -18,7 +18,7 @@ export function storyRingReward(route, owned = []) {
     route.map === 'mill'
       ? { 0: EMBLEM_ID }[seq]
       : route.map === 'ruins'
-        ? { 2: OVERLOAD_EMBLEM_ID, 5: DRAGON_EMBLEM_ID }[seq]
+        ? { 2: OVERLOAD_EMBLEM_ID }[seq]
         : route.map === 'forest'
           ? { 3: MASK_EMBLEM_ID }[seq]
           : null;
@@ -92,6 +92,7 @@ export function prepareBossEmblem(library, expedition, random = Math.random) {
 
 export const OVERLORD_EMBLEM_UNLOCKS = Object.freeze({
   alchemicalPuppet: BREAKER_EMBLEM_ID,
+  darkscaleWarlord: DRAGON_EMBLEM_ID,
   banditSyndicateKing: SUPREME_EMBLEM_ID,
 });
 

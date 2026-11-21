@@ -347,25 +347,25 @@ export const COMMON_BOSSES = [
     6,
     '盘踞星钟城暗巷黑市深处的暗器宗师与地下匪首，身披黑羽大氅，出手疾若鬼魅；每回合初按局势更换一匣特制暗器，以高频连袭令敌阵顷刻浸满剧毒、流血与破绽。',
     [
-      move('乌羽疾刺', '瞬步探刺中位造成6伤害，并附带本回合锁定暗器效果。', [hit(6)], {
+      move('乌羽疾刺', '瞬步探刺中位造成7伤害，并附带本回合锁定暗器效果。', [hit(7)], {
         slot: 1,
         damageType: 'special-weapon',
         clip: 'Normal_Attack',
       }),
-      move('暗巷双镖', '甩手双掷暗器掠击两翼各4伤害，并附带本回合锁定暗器效果。', [hit(4)], {
+      move('暗巷双镖', '甩手双掷暗器掠击两翼各5伤害，并附带本回合锁定暗器效果。', [hit(5)], {
         slots: [0, 2],
         damageType: 'special-weapon',
         clip: 'Normal_Attack',
       }),
-      move('黑鸦暗铳', '近身拔出袖底短铳点射中位8伤害，并附带本回合锁定暗器效果。', [hit(8)], {
+      move('黑鸦暗铳', '近身拔出袖底短铳点射中位9伤害，并附带本回合锁定暗器效果。', [hit(9)], {
         slot: 1,
         damageType: 'special-weapon',
         clip: 'Special_Attack',
       }),
       move(
         '影氅换位',
-        '翻卷黑羽大氅斜削左中两格各4伤害并获8护盾，并附带本回合锁定暗器效果。',
-        [hit(4)],
+        '翻卷黑羽大氅斜削左中两格各5伤害并获8护盾，并附带本回合锁定暗器效果。',
+        [hit(5)],
         {
           slots: [0, 1],
           selfShield: 8,
@@ -377,8 +377,8 @@ export const COMMON_BOSSES = [
     [
       move(
         '夜枭扇刃雨',
-        '腾身挥洒扇形暗器雨横扫全前场各4伤害，并附带本回合锁定暗器效果。',
-        [hit(4)],
+        '腾身挥洒扇形暗器雨横扫全前场各5伤害，并附带本回合锁定暗器效果。',
+        [hit(5)],
         {
           slots: [0, 1, 2],
           enraged: true,
@@ -386,19 +386,19 @@ export const COMMON_BOSSES = [
           clip: 'Special_Action',
         },
       ),
-      move('掠影断喉刺', '绕侧闪袭左位要害7伤害，并附带本回合锁定暗器效果。', [hit(7)], {
+      move('掠影断喉刺', '绕侧闪袭左位要害8伤害，并附带本回合锁定暗器效果。', [hit(8)], {
         slot: 0,
         enraged: true,
         damageType: 'sword',
         clip: 'Normal_Attack',
       }),
-      move('双翼追魂镖', '交叉连掷暗器封锁两翼各5伤害，并附带本回合锁定暗器效果。', [hit(5)], {
+      move('双翼追魂镖', '交叉连掷暗器封锁两翼各6伤害，并附带本回合锁定暗器效果。', [hit(6)], {
         slots: [0, 2],
         enraged: true,
         damageType: 'special-weapon',
         clip: 'Normal_Attack',
       }),
-      move('处决匕影', '疾影突刺中位破绽9伤害，并附带本回合锁定暗器效果。', [hit(9)], {
+      move('处决匕影', '疾影突刺中位破绽10伤害，并附带本回合锁定暗器效果。', [hit(10)], {
         slot: 1,
         enraged: true,
         damageType: 'dark',
@@ -419,7 +419,7 @@ export const COMMON_BOSSES = [
       toughness: 7,
       toughnessByPhase: Object.freeze([7, 8, 9]),
       breakLayersByPhase: Object.freeze([2, 3, 3]),
-      phaseShields: Object.freeze([0, 12, 16]),
+      phaseShields: Object.freeze([0, 700, 950]),
       weaknesses: ['sword', 'fire', 'lightning', 'brawl'],
       hiddenWeaponMechanic: Object.freeze({
         mode: 'non-repeating-cycle',
@@ -438,25 +438,25 @@ export const COMMON_BOSSES = [
         ]),
       }),
       finalPhaseIntents: [
-        move('千鸦骤雨', '暴雨般密集暗器覆盖全前场各4伤害，并附带本回合锁定暗器效果。', [hit(4)], {
+        move('千鸦骤雨', '暴雨般密集暗器覆盖全前场各5伤害，并附带本回合锁定暗器效果。', [hit(5)], {
           slots: [0, 1, 2],
           enraged: true,
           damageType: 'special-weapon',
           clip: 'Special_Action',
         }),
-        move('残影左袭', '鬼魅折返疾刺左位6伤害，并附带本回合锁定暗器效果。', [hit(6)], {
+        move('残影左袭', '鬼魅折返疾刺左位7伤害，并附带本回合锁定暗器效果。', [hit(7)], {
           slot: 0,
           enraged: true,
           damageType: 'special-weapon',
           clip: 'Normal_Attack',
         }),
-        move('残影右袭', '瞬间错身疾刺右位6伤害，并附带本回合锁定暗器效果。', [hit(6)], {
+        move('残影右袭', '瞬间错身疾刺右位7伤害，并附带本回合锁定暗器效果。', [hit(7)], {
           slot: 2,
           enraged: true,
           damageType: 'special-weapon',
           clip: 'Normal_Attack',
         }),
-        move('鸦王黑铳连射', '疾退连射两翼各5伤害并获6护盾，并附带本回合锁定暗器效果。', [hit(5)], {
+        move('鸦王黑铳连射', '疾退连射两翼各6伤害并获6护盾，并附带本回合锁定暗器效果。', [hit(6)], {
           slots: [0, 2],
           selfShield: 6,
           enraged: true,
@@ -465,8 +465,8 @@ export const COMMON_BOSSES = [
         }),
         move(
           '绝命冷月斩',
-          '倾尽全速的一记冷月绝斩直取中位10伤害，并附带本回合锁定暗器效果。',
-          [hit(10)],
+          '倾尽全速的一记冷月绝斩直取中位11伤害，并附带本回合锁定暗器效果。',
+          [hit(11)],
           {
             slot: 1,
             enraged: true,

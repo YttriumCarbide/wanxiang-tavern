@@ -2,7 +2,12 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { HEROES, DEFINITIONS } from '../src/data.js';
 import { newBattle, preview, advance, makeAction, makeReposition } from '../src/engine.js';
-import { EMBLEM_ID, OVERLOAD_EMBLEM_ID, SUPREME_EMBLEM_ID } from '../src/emblems.js';
+import {
+  EMBLEM_ID,
+  OVERLOAD_EMBLEM_ID,
+  SUPREME_EMBLEM_ID,
+  DRAGON_EMBLEM_ID,
+} from '../src/emblems.js';
 import { newCampaign } from '../src/campaign.js';
 import { defaultProtagonist } from '../src/content/qingyuan.js';
 import { prepareCorridorRing, prepareBossEmblem } from '../src/emblem-progression.js';
@@ -150,10 +155,10 @@ test('phase bind cancels the second overloaded cast without replaying an attack 
   assert.equal(result.final.units.aegis.mp, state.units.aegis.mp - 2);
 });
 
-test('overlord emblem unlocks award Supreme and Bearer without darkscale duplicate; corridor mill:0 awards Tan Hongyu', async () => {
+test('overlord emblem unlocks bind Dragon and Supreme to their bosses; corridor mill:0 awards Tan Hongyu', async () => {
   const { grantMidBattleOverlordEmblem, OVERLORD_EMBLEM_UNLOCKS } =
     await import('../src/emblem-progression.js');
-  assert.equal(OVERLORD_EMBLEM_UNLOCKS.darkscaleWarlord, undefined);
+  assert.equal(OVERLORD_EMBLEM_UNLOCKS.darkscaleWarlord, DRAGON_EMBLEM_ID);
   assert.equal(OVERLORD_EMBLEM_UNLOCKS.banditSyndicateKing, SUPREME_EMBLEM_ID);
 
   const library = newCampaign(defaultProtagonist());

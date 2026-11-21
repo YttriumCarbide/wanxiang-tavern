@@ -378,11 +378,10 @@ test('authored skills, cap rules, equipped emblems and four equipment slots surv
   assert.equal(pandora.combat.skills[0].effects[1].value, 2);
 });
 
-test('four Boss rewards use exact authored nodes once and worldbook upgrade is idempotent', async () => {
+test('story Boss rewards use exact authored nodes once and worldbook upgrade is idempotent', async () => {
   const library = newLibrary();
   const scenarios = [
     ['ruins', 2, OVERLOAD_EMBLEM_ID],
-    ['ruins', 5, DRAGON_EMBLEM_ID],
     ['forest', 3, MASK_EMBLEM_ID],
   ];
   for (const [map, sequence, id] of scenarios) {

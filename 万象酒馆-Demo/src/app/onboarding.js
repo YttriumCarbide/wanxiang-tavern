@@ -1,5 +1,5 @@
 import { TUTORIAL_TARGETS } from '../content/mill-encounters.js';
-import { developerOption, generationEnabled } from '../generation-options.js';
+import { quickTestOverlordsEnabled, generationEnabled } from '../generation-options.js';
 import { createDialogue } from './dialogue.js';
 import { ARRIVAL_PROSE, EDITH_LESSONS, FIRST_RECRUIT_DIALOGUE } from '../content/edith-guide.js';
 import { newCampaign, learning, guiding } from '../campaign.js';
@@ -700,12 +700,7 @@ export function createOnboarding(context) {
       context.ledger?.sync();
     },
     allowPortal(kind, { entering = false } = {}) {
-      if (
-        kind === 'script' &&
-        (developerOption(session.ai.generationOptions, 'quickTest') ||
-          developerOption(session.ai.generationOptions, 'quickTestApep'))
-      )
-        return true;
+      if (kind === 'script' && quickTestOverlordsEnabled(session.ai.generationOptions)) return true;
       const unlocked = session.ai.library.unlockedDungeons || [];
       const millOrLegacyUnlocked = unlocked.includes('mill') || unlocked.includes('ruins');
       if (
@@ -836,8 +831,7 @@ export function createOnboarding(context) {
     },
     beforeCommit() {
       if (
-        developerOption(session.ai.generationOptions, 'quickTest') ||
-        developerOption(session.ai.generationOptions, 'quickTestApep') ||
+        quickTestOverlordsEnabled(session.ai.generationOptions) ||
         session.journey.expedition?.exploration?.quickTestBoss
       )
         return true;
@@ -973,8 +967,7 @@ export function createOnboarding(context) {
     },
     allowReturn() {
       if (
-        developerOption(session.ai.generationOptions, 'quickTest') ||
-        developerOption(session.ai.generationOptions, 'quickTestApep') ||
+        quickTestOverlordsEnabled(session.ai.generationOptions) ||
         session.journey.expedition?.exploration?.quickTestBoss
       )
         return true;

@@ -17,6 +17,7 @@ import {
   GENERATION_OPTIONS_KEY,
   restoreGenerationOptions,
   generationEnabled,
+  quickTestOverlordsEnabled,
 } from '../generation-options.js';
 import { defaultProtagonist } from '../content/qingyuan.js';
 
@@ -51,7 +52,6 @@ import { completeExploration } from '../exploration.js';
 import { REGIONS } from '../content/regions.js';
 import { assignParty, firstCompanion } from '../campaign.js';
 import { archiveTavernPrelude, gameTime, memoryHistory, tavernPrelude } from '../memory.js';
-import { developerOption } from '../generation-options.js';
 import { prepareSwapLesson } from '../companion-events.js';
 import { rearUnlocked } from '../formation-access.js';
 import { npcSummonStatus } from '../summoning.js';
@@ -95,9 +95,10 @@ export function createGeneration(context) {
 
   renderDeveloperOptions();
   function setOption(key, value) {
+    const optionKey = ['quickTest', 'quickTestApep'].includes(key) ? 'quickTestOverlords' : key;
     const next = restoreGenerationOptions({
       ...session.ai.generationOptions,
-      [key]: Boolean(value),
+      [optionKey]: Boolean(value),
     });
     try {
       storage.setItem(GENERATION_OPTIONS_KEY, JSON.stringify(next));
@@ -719,8 +720,13 @@ export function createGeneration(context) {
     if (session.runtime.mode !== 'inn' || session.ai.busy || session.runtime.disposed) return;
     if (session.runtime.needsStart) return context.onboarding.open();
     if (context.onboarding && !context.onboarding.allowPortal(kind, { entering: true })) return;
+    const quickBattle =
+      kind === 'script' &&
+      session.journey.selectedNode?.quickTestBoss &&
+      quickTestOverlordsEnabled(session.ai.generationOptions);
     if (
       kind === 'script' &&
+      !quickBattle &&
       generationEnabled(session.ai.generationOptions) &&
       needsContinuationWorld(library(), session.journey.selectedNode)
     )
@@ -739,14 +745,13 @@ export function createGeneration(context) {
       if (kind === 'character' && !library().inventory.summonContracts)
         throw Error('召唤需要一份契约，完成副本后可获得。');
       if (kind === 'character') pendingSummon = summonInput;
-      if (
-        kind === 'script' &&
-        !developerOption(session.ai.generationOptions, 'quickTest') &&
-        !developerOption(session.ai.generationOptions, 'quickTestApep')
-      )
+      if (kind === 'script' && !quickTestOverlordsEnabled(session.ai.generationOptions))
         prepareSwapLesson(library());
       if (kind === 'script' && !(await departure.choose())) return;
-      if (kind === 'script' && !generationEnabled(session.ai.generationOptions, 'scriptApi')) {
+      if (
+        kind === 'script' &&
+        (quickBattle || !generationEnabled(session.ai.generationOptions, 'scriptApi'))
+      ) {
         pendingPortal = null;
         $('#ai-dialog').close();
         const input = scriptInput();

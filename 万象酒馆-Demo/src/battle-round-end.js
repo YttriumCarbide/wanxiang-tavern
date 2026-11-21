@@ -12,6 +12,7 @@ export function resolveBattleRoundEnd(
     movedToFront,
     trigger,
     mechanics,
+    overlords,
     record,
     heal,
     lose,
@@ -105,6 +106,7 @@ export function resolveBattleRoundEnd(
       sealedTargets: Object.keys(sealed),
     });
   }
+  overlords?.roundEnd();
   const decay = decayStatuses(work.units);
   for (const change of decay)
     log(

@@ -1,4 +1,5 @@
-/** Pure, zero-import Overlord combat rules, timer profiles, and boss dialogue catalog. */
+/** Pure Overlord combat rules, timer profiles, and boss dialogue catalog. */
+export { createOverlordMechanics, lockHiddenWeapons } from './battle-overlord-mechanics.js';
 
 export function overlordTargetStage(unit, def) {
   if (!unit || !def || !Array.isArray(def.overlordPhases) || def.overlordPhases.length < 2) {

@@ -19,6 +19,8 @@ import { createTownGuestMechanics, blindedTarget } from './town-guest-mechanics.
 import { lockEnemyDecisions } from './enemy-tactics.js';
 import {
   alchemicalBombDamage,
+  createOverlordMechanics,
+  lockHiddenWeapons,
   isPlagueSealed,
   overlordPhaseLog,
   overlordPhaseProfile,
@@ -346,6 +348,7 @@ function simulate(s, plan, slots) {
     const gained = unit.buffs[key] - before;
     if (gained > 0 && NEGATIVE_STATUSES.includes(key) && !negativeImmune(work, id)) {
       currentStatusApplications.push({ actor, target: id, buff: key, value: gained, source });
+      overlords.onNegative(id);
     }
     const hasMovableSlot = slots.some(
       (slotId, slotIndex) =>
@@ -365,6 +368,7 @@ function simulate(s, plan, slots) {
     heal,
     restoreMana,
     buff: applyBuff,
+    statusTrigger: (entry) => currentStatusTriggers.push(entry),
     log: (text) => currentLogs.push(text),
     damage: (actor, target, value) =>
       effects(actor, [target], [{ type: 'damage', value, flat: true }], true),
@@ -411,6 +415,13 @@ function simulate(s, plan, slots) {
       `${definitions[actorId]?.name || actorId} · 破壳共鸣：${reason}，全前排获得6护盾`,
     );
   };
+  const overlords = createOverlordMechanics(work, definitions, {
+    buff: applyBuff,
+    shield: grantShield,
+    log: (text) => currentLogs.push(text),
+    statusTrigger: (entry) => currentStatusTriggers.push(entry),
+    record,
+  });
   function applyBreakImpact(targetId, damageType, actorId) {
     const breakerActive = isBreakerCombined(actorId);
     if (!isDamageType(damageType) && !breakerActive) return;
@@ -438,6 +449,7 @@ function simulate(s, plan, slots) {
       targetUnit.breakWindow = null;
       targetUnit.toughness = 0;
       delete targetUnit.chargingMove;
+      overlords.onBreak(targetId);
       currentStatusTriggers.push({ id: targetId, type: 'break', value: delta });
       currentLogs.push(
         `${definitions[actorId]?.name || ''}击破了${definitions[targetId].name}的破绽！本回合后续行动全部打断，陷入破防失衡（本回合受伤+50%）！`,
@@ -512,6 +524,7 @@ function simulate(s, plan, slots) {
           let n = applyStrengthBonus(value + bonus, strength);
           if (work.units[actor]?.side === 'enemy')
             n = Math.max(1, Math.round(n * (work.enemyDamageScale || 1)));
+          if (!eff.flat) n = overlords.damageBonus(actor, n);
           if (!eff.flat && actor) n = applyWeakReduction(n, effectiveBuff(work, actor, 'weak'));
           if (!eff.flat && actor && n > 0 && effectiveBuff(work, actor, 'balance'))
             n = Math.max(1, Math.floor((n * 85) / 100));
@@ -541,6 +554,7 @@ function simulate(s, plan, slots) {
             damage = n - absorbed;
           }
           const lost = lose(u, damage, '攻击', true);
+          if (!missedByBlind && n > 0) overlords.onAttackHit(actor, id);
           if (breakerActive && hadShield && u.block === 0) {
             grantFrontBreakerShield(actor, '击破护盾');
           }
@@ -720,7 +734,9 @@ function simulate(s, plan, slots) {
     );
     events.push({
       type,
-      at: ['bossPhase', 'bombDetonate', 'bombDefuse'].includes(type) ? Math.max(0, at) : at,
+      at: ['bossPhase', 'bombDetonate', 'bombDefuse', 'hiddenWeaponLock'].includes(type)
+        ? Math.max(0, at)
+        : at,
       actor,
       label,
       targets: targetIds,
@@ -858,6 +874,7 @@ function simulate(s, plan, slots) {
       );
     }
   }
+  overlords.roundStart();
   const beforeTriggers = JSON.stringify(work);
   if (s.phase === 'opening') companions.start();
   for (const id of work.enemyIds) prepareAresRound(id);
@@ -1056,6 +1073,7 @@ function simulate(s, plan, slots) {
           enemyDamageType,
         );
       }
+      overlords.afterMove(enemy, move);
       if (move.sinkingPlague) {
         if (!work.sinkingPlague) {
           work.sinkingPlague = {
@@ -1389,6 +1407,7 @@ function simulate(s, plan, slots) {
       movedToFront,
       trigger,
       mechanics,
+      overlords,
       record,
       heal,
       lose,
@@ -1480,6 +1499,7 @@ export function advance(result) {
     delete s.pendingAlchemicalBomb;
     delete s.activeAlchemicalBomb;
     delete s.overlordUiLocked;
+    delete s.activeHiddenWeapons;
     s.phase = result.outcome;
     return s;
   }
@@ -1516,6 +1536,7 @@ export function advance(result) {
     delete s.dragonVeinMeta;
   }
   syncEnemyBreakWindows(s);
+  lockHiddenWeapons(s, definitionsFor(s));
   lockEnemyDecisions(s, definitionsFor(s));
   if (s.sinkingPlague) {
     delete s.sinkingPlague.slowCleansed;

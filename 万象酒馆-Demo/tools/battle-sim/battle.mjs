@@ -18,7 +18,11 @@ function stateIssues(state) {
   for (const id of enemies) if (state.units[id]?.side !== 'enemy') issues.push(`enemy-index:${id}`);
   for (const [id, unit] of Object.entries(state.units)) {
     const { hp, maxHp, mp, maxMp, block, used, side } = unit;
-    if (unit.id !== id || (side === 'hero' ? !heroes.has(id) : !enemies.has(id))) {
+    const withdrawnEnemy = side === 'enemy' && unit.withdrawn === true && hp === 0;
+    if (
+      unit.id !== id ||
+      (side === 'hero' ? !heroes.has(id) : !enemies.has(id) && !withdrawnEnemy)
+    ) {
       issues.push(`unit-index:${id}`);
     }
     // Overload intentionally keeps the current hero HP when the temporary max expires.
@@ -116,6 +120,7 @@ function resultIssues(before, plan, result, next, repeat, auditEvents) {
         if (
           previous.units[id]?.hp > 0 &&
           event.after.units[id].hp === 0 &&
+          !event.after.units[id].withdrawn &&
           !deathIds.includes(id)
         ) {
           issues.push(`unreported-death:${id}`);

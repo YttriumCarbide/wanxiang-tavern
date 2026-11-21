@@ -74,6 +74,15 @@ export function clearBattleMechanics(state) {
   delete state.kamuiTriggeredRound;
   delete state.sinkingPlague;
   delete state.sacrifices;
+  delete state.activeHiddenWeapons;
+  delete state.warlordSummonSerial;
+  for (const [id, definition] of Object.entries(state.enemyDefinitions || {})) {
+    if (definition?.summoned) delete state.enemyDefinitions[id];
+  }
+  for (const unit of Object.values(state.units || {})) {
+    delete unit.eclipsescaleShedRound;
+    delete unit.lastWarlordRallyRound;
+  }
 }
 
 /** All effects execute inside the sole battle simulation, including preview and death chains. */
@@ -172,6 +181,7 @@ export function createEmblemMechanics(state, definitions, ports) {
         return false;
       const protector = allies().find((unit) => active(unit.id, SUPREME_EMBLEM_ID));
       if (!protector) return false;
+      ports.statusTrigger?.({ id: actor, target, type: 'negativeReflect', buff, value });
       ports.log(`${definitions[actor].name}施加的负面状态被万法归寂返还`);
       ports.buff(protector.id, actor, buff, value, true, '万法归寂返还');
       return true;

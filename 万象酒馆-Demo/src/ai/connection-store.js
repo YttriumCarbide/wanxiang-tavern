@@ -65,6 +65,8 @@ function profileFrom(input, old) {
     throw Error('上下文长度需要是1024～2000000的整数');
   const requestMode = input.requestMode ?? old.requestMode ?? 'local';
   if (!['local', 'browser'].includes(requestMode)) throw Error('连接方式无效');
+  const stream = input.stream ?? old.stream ?? false;
+  if (typeof stream !== 'boolean') throw Error('流式传输必须是开关');
   return {
     provider,
     vertexAuth,
@@ -74,6 +76,7 @@ function profileFrom(input, old) {
     sessionId: old.sessionId || randomUUID(),
     contextSize,
     promptProcessing,
+    stream,
     baseUrl:
       serviceAccount && vertexProject
         ? serviceAccountBase(vertexProject, vertexLocation)

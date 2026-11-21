@@ -1,5 +1,6 @@
 export const allScopes = [
   'apep-vfx',
+  'overlord-vfx',
   'daily',
   'overland',
   'disk-storage',
@@ -107,6 +108,8 @@ export function selectScopes(args) {
       else if (/server\.cjs|tools\/testing\/server\.mjs/.test(file)) scopes.add('server');
       else if (/(?:^|\/)ui-preview\.mjs$|(?:^|\/)preview-ui\.mjs$/.test(file))
         scopes.add('ui-preview');
+      else if (/overlord-(?:vfx\.mjs|effects?\.js|effect-art\.js)$/.test(file))
+        scopes.add('overlord-vfx');
       else if (/developer-(?:tools|rules|copy|editor)\.(?:js|mjs|css)$/.test(file))
         scopes.add('developer-tools');
       else if (/\.(cmd|ps1)$/.test(file)) scopes.add('launcher');

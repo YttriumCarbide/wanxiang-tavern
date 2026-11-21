@@ -26,6 +26,7 @@ import { deviceRenderQuality, createFrameBudget } from './shared/render-budget.j
 import { APEP_ID, APEP_RELEASE, apepAttack, apepPlague } from './apep-presentation.js';
 import { isPlagueSealed } from './overlord-mechanics.js';
 import { createApepPlagueFloor } from './apep-plague-floor.js';
+import { overlordMechanicBadges } from './battle-overlord-badges.js';
 
 function enemyTierBadge(definition) {
   if (definition.overlord) {
@@ -60,6 +61,10 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
     ...HEROES.map((hero) => hero.id),
     ...(options.enemyIds || encounterSpec(0).enemyIds),
   ]);
+  for (const id of activeIds) {
+    const summonId = definitions[id]?.warlordCommand?.summonId;
+    if (summonId && definitions[summonId]) activeIds.add(summonId);
+  }
   const visibleDefinitions = Object.values(definitions).filter((definition) =>
     activeIds.has(definition.id),
   );
@@ -227,13 +232,11 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
         side === 'Friendly' ? 2.345 : -2.345,
       );
       root.position.copy(home);
-      if (side === 'Enemy' && !enemies[i]) {
-        root.visible = false;
-        continue;
-      }
+      if (side === 'Enemy' && !enemies[i]) root.visible = false;
       const el = document.createElement('button');
       el.type = 'button';
       el.className = 'unit-hit';
+      el.hidden = true;
       layer.append(el);
       const r = {
         root,
@@ -320,6 +323,48 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
       new THREE.Vector3(),
     );
   }
+  const retiredAnchors = new Map();
+  function syncEnemyRecords(state, playing) {
+    if (!playing) retiredAnchors.clear();
+    const enemyIds = state.enemyIds || [];
+    const assigned = new Set();
+    for (const r of enemyRecords) {
+      if (r.id && enemyIds.includes(r.id)) assigned.add(r.id);
+      else {
+        if (playing && r.id && state.units[r.id]?.withdrawn) {
+          const rect = r.el.getBoundingClientRect();
+          const bounds = stage.getBoundingClientRect();
+          if (rect.width && rect.height) {
+            retiredAnchors.set(r.id, {
+              x: rect.left + rect.width / 2 - bounds.left,
+              y: rect.top + rect.height / 2 - bounds.top,
+              width: rect.width,
+              height: rect.height,
+            });
+          }
+        }
+        r.id = null;
+        r.root.visible = false;
+        r.el.hidden = true;
+        r.el.replaceChildren();
+        delete r.el.dataset.unit;
+      }
+    }
+    for (const id of enemyIds) {
+      if (assigned.has(id) || !state.units[id]) continue;
+      const r = enemyRecords.find((record) => !record.id);
+      if (!r) continue;
+      const definition = definitions[id];
+      if (!definition) continue;
+      const speciesId = definition.speciesId || state.units[id].speciesKey;
+      textures[id] ||= textures[speciesId];
+      r.id = id;
+      r.previousHp = 0;
+      r.motion = null;
+      r.attack = null;
+      assigned.add(id);
+    }
+  }
   function draw(
     s,
     forecast,
@@ -331,6 +376,8 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
   ) {
     if (disposed) return;
     currentState = s;
+    Object.assign(definitions, s.enemyDefinitions);
+    syncEnemyRecords(s, playing);
     plagueFloor?.sync(s, forecast, playing);
     if (!playing && s.phase === 'plan') deaths.releaseCinematic();
     if (playing) clearHints();
@@ -397,7 +444,7 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
       if (!r.id) continue;
       const { id, side, slot, root, el } = r,
         u = s.units[id],
-        f = forecast.final.units[id],
+        f = forecast.final.units[id] || u,
         d = definitions[id];
       const combined =
         side === 'Friendly' && u.hp > 0 && !!(u.combined || (!playing && f.combined));
@@ -539,7 +586,9 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
         }${side === 'Enemy' ? enemyTierBadge(d) : ''}${side === 'Enemy' ? html`<small class="enemy-level" title="${combatRank(u.level || 1)}">Lv.${u.level || 1}</small>` : ''}${
           side === 'Friendly' ? alchemicalBombBadge(id, s, forecast.final, playing) : ''
         }<span class="unit-info"
-          ><span class="unit-name">${d.name}${u.hp === 0 ? ' ×' : ''}</span></span
+          ><span class="unit-name">${d.name}${u.hp === 0 ? ' ×' : ''}</span>${
+            side === 'Enemy' ? overlordMechanicBadges(s, id, d) : ''
+          }</span
         ><span class="unit-resources"
           >${resourceBars(u, f)}${
             side === 'Enemy' ? enemyBreakBar(d, u, playing ? u : f, activeDamageType) : ''
@@ -717,9 +766,13 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
     if (!el) return null;
     const a = el.getBoundingClientRect(),
       b = stage.getBoundingClientRect();
+    if (a.width <= 0 || a.height <= 0 || b.width <= 0 || b.height <= 0) return null;
+    const x = a.left + a.width / 2 - b.left,
+      y = a.top + a.height / 2 - b.top;
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
     return {
-      x: a.left + a.width / 2 - b.left,
-      y: a.top + a.height / 2 - b.top,
+      x,
+      y,
       width: a.width,
       height: a.height,
     };
@@ -797,7 +850,12 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
         sourceOverride = { x: (point.x * 0.5 + 0.5) * width, y: (-point.y * 0.5 + 0.5) * height };
       }
     }
-    const duration = fx.play(e, before, records, { durationOverride, sourceOverride });
+    const duration = fx.play(e, before, records, {
+      durationOverride,
+      sourceOverride,
+      retiredAnchors,
+    });
+    retiredAnchors.clear();
     if (lambAttack?.type === 'plague' || (e.actor === APEP_ID && e.type === 'sinkingPlague')) {
       plagueFloor?.play(e, lambAttack ? duration * APEP_RELEASE : 0, animationSpeed);
     }
@@ -870,7 +928,8 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
     schedule();
     const deathDelay = ['hero', 'enemy'].includes(e.type) ? duration * 0.7 : 0;
     for (const r of enemyRecords) {
-      if (before.units[r.id]?.hp > 0 && e.after.units[r.id]?.hp === 0) {
+      const unit = e.after.units[r.id];
+      if (before.units[r.id]?.hp > 0 && unit?.hp === 0 && !unit.withdrawn) {
         deaths.play(r, definitions[r.id], deathDelay);
       }
     }
@@ -1088,6 +1147,7 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
       ambience.dispose();
       weather.dispose();
       fx.dispose();
+      retiredAnchors.clear();
       renderer.dispose();
       layer.replaceChildren();
       effects.replaceChildren();

@@ -5,7 +5,7 @@ import { UNIVERSAL_ENEMIES, UNIVERSAL_BOSSES } from './content/universal-adversa
 import { LADDER_ENEMIES, LADDER_BOSSES } from './content/ladder-adversaries.js';
 import { COMMON_ENEMIES, COMMON_BOSSES } from './content/common-adversaries.js';
 import { MILL_ENEMIES, MILL_BOSSES } from './content/mill-adversaries.js';
-import { QUARRY_BOSSES } from './content/quarry-adversaries.js';
+import { QUARRY_ENEMIES, QUARRY_BOSSES } from './content/quarry-adversaries.js';
 
 const OVERLORD_MODEL_OVERRIDES = Object.freeze({
   apepLamb: { model: 'apep-lamb.glb' },
@@ -511,6 +511,7 @@ export const ENEMIES = [
   ...FOREST_ENEMIES,
   ...applyModelOverrides(FROST_ENEMIES),
   ...MILL_ENEMIES,
+  ...QUARRY_ENEMIES,
 ];
 export const BOSSES = [
   {

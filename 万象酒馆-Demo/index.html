@@ -472,6 +472,32 @@
                 >
               </details>
             </section>
+            <section class="game-download">
+              <h3 class="ai-card-title">下载游戏 · 2.3</h3>
+              <div class="ai-actions">
+                <a
+                  id="settings-download-windows"
+                  class="game-download-link"
+                  href="https://github.com/YttriumCarbide/wanxiang-tavern/releases/download/v2.3/wanxiang-tavern-2.3-windows-x64.zip"
+                  >Windows ZIP</a
+                >
+                <a
+                  id="settings-download-android"
+                  class="game-download-link"
+                  href="https://github.com/YttriumCarbide/wanxiang-tavern/releases/download/v2.3/wanxiang-tavern-2.3-android.apk"
+                  >Android APK</a
+                >
+                <a
+                  id="settings-download-develop"
+                  href="https://github.com/YttriumCarbide/wanxiang-tavern/archive/refs/heads/develop.zip"
+                  >开发分支源码</a
+                >
+              </div>
+              <p class="ai-hint">
+                安装包内含完整游戏资源，无需另行下载；AI 功能仍需配置联网接口。Windows ZIP
+                解压后运行 WanxiangTavern.exe。
+              </p>
+            </section>
           </div>
           <div data-ai-page="anti-route" hidden></div>
           <div data-ai-page="game" hidden>
@@ -538,24 +564,12 @@
                   ><span
                     ><strong>快速测试</strong
                     ><small
-                      >将失败的炼金傀偶移至绿蕨磨坊第一关，进入第一关直接开启最终霸主战；关闭后恢复到第四关。</small
+                      >将各副本已配置的霸主关前置到第一道，直接进入最终战；关闭后恢复原路线。</small
                     ></span
                   ><input
                     autocomplete="off"
                     type="checkbox"
-                    data-generation-option="quickTest"
-                    role="switch"
-                /></label>
-                <label
-                  ><span
-                    ><strong>快速测试 · 阿佩普</strong
-                    ><small
-                      >解锁并将阿佩普的羔羊移至界隙遗迹第一关，进入第一关直接开启单人深渊霸主战；关闭后恢复。</small
-                    ></span
-                  ><input
-                    autocomplete="off"
-                    type="checkbox"
-                    data-generation-option="quickTestApep"
+                    data-generation-option="quickTestOverlords"
                     role="switch"
                 /></label>
                 <label
@@ -572,22 +586,6 @@
               </p>
               <p>顶部“总结”按钮可打开记忆整理。</p>
             </section>
-            <div class="game-download">
-              <div class="ai-actions">
-                <a
-                  class="game-download-link"
-                  href="https://github.com/YttriumCarbide/wanxiang-tavern/archive/refs/heads/main.zip"
-                  >下载游戏到本地</a
-                >
-                <a
-                  href="https://github.com/YttriumCarbide/wanxiang-tavern"
-                  target="_blank"
-                  rel="noopener"
-                  >打开 GitHub 仓库</a
-                >
-              </div>
-              <p class="ai-hint">下载 ZIP 并解压后，双击「一键启动.cmd」。</p>
-            </div>
           </div>
           <div data-ai-page="prompts" hidden>
             <label

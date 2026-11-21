@@ -1,15 +1,16 @@
 import { createRawResponse } from './raw-response.js';
-import { developerOption, generationEnabled } from '../generation-options.js';
+import { quickTestOverlordsEnabled, generationEnabled } from '../generation-options.js';
+import { quickTestOverlordMaps } from '../developer-quick-test.js';
 import { needsContinuationWorld, continuationInput } from '../continuation-world.js';
 import { MAINLINE_DUNGEONS, UNLOCKABLE_DUNGEONS, worldRegion, routeKey } from '../worlds.js';
 import { addWorldRoute } from '../exploration.js';
 import { REGIONS } from '../content/regions.js';
+import { FINAL_ENCOUNTER } from '../content/journey-rules.js';
 import {
   explorationSpec,
   availableExplorations,
   explorationPreview,
-  quickTestMillFrontier,
-  quickTestRuinsFrontier,
+  quickTestOverlordFrontier,
 } from '../exploration.js';
 import { DEFINITIONS } from '../data.js';
 import { portraitUrl } from '../catalog.js';
@@ -30,9 +31,7 @@ import { canRecall } from '../recollections.js';
 /** Environment browsing and a persistent, pannable tree of complete journeys. */
 export function createDestinations(context) {
   const { session, events } = context;
-  const isQuickTest = () => developerOption(session.ai.generationOptions, 'quickTest');
-  const isQuickTestApep = () => developerOption(session.ai.generationOptions, 'quickTestApep');
-  const isAnyQuickTest = () => isQuickTest() || isQuickTestApep();
+  const isAnyQuickTest = () => quickTestOverlordsEnabled(session.ai.generationOptions);
   const unlockedBaseWorlds = () => {
     const unlocked = Array.isArray(session.ai.library.unlockedDungeons)
       ? session.ai.library.unlockedDungeons
@@ -41,9 +40,11 @@ export function createDestinations(context) {
     for (const id of UNLOCKABLE_DUNGEONS) {
       if ((session.ai.library.exploration?.[id]?.completed || 0) > 0) effective.add(id);
     }
-    if (isQuickTest()) effective.add('mill');
-    if (isQuickTestApep()) effective.add('ruins');
-    return UNLOCKABLE_DUNGEONS.filter((id) => effective.has(id));
+    if (isAnyQuickTest()) for (const map of quickTestOverlordMaps()) effective.add(map);
+    const availableMaps = isAnyQuickTest()
+      ? [...new Set([...UNLOCKABLE_DUNGEONS, ...quickTestOverlordMaps()])]
+      : UNLOCKABLE_DUNGEONS;
+    return availableMaps.filter((id) => effective.has(id));
   };
   const isStarterTutorialMap = (mapId) =>
     mapId === 'mill' || (mapId === 'ruins' && !unlockedBaseWorlds().includes('mill'));
@@ -69,16 +70,15 @@ export function createDestinations(context) {
   const nodesFor = (map) =>
     map === 'singularity'
       ? []
-      : map === 'mill' && isQuickTest()
-        ? quickTestMillFrontier(session.ai.library.exploration.mill, session.ai.generationOptions)
-        : map === 'ruins' && isQuickTestApep()
-          ? quickTestRuinsFrontier(
-              session.ai.library.exploration.ruins,
-              session.ai.generationOptions,
-            )
-          : learning(session.ai.library) && map === 'mill'
-            ? (session.ai.library.exploration.mill?.frontier || []).slice(0, 1)
-            : availableExplorations(session.ai.library.exploration[map] || { frontier: [] });
+      : isAnyQuickTest() && quickTestOverlordMaps().includes(map)
+        ? quickTestOverlordFrontier(
+            session.ai.library.exploration[map],
+            map,
+            session.ai.generationOptions,
+          )
+        : learning(session.ai.library) && map === 'mill'
+          ? (session.ai.library.exploration.mill?.frontier || []).slice(0, 1)
+          : availableExplorations(session.ai.library.exploration[map] || { frontier: [] });
   const regionFor = (id) =>
     id === 'singularity'
       ? {
@@ -286,7 +286,7 @@ export function createDestinations(context) {
       $('#destination-start').textContent = '本图已完成';
       return;
     }
-    const spec = explorationSpec(node);
+    const spec = explorationSpec(node, node.quickTestBoss ? FINAL_ENCOUNTER : 0);
     const mapKey = routeKey(node);
     const discovered = session.ai.library.atlasDiscoveries?.some(({ id }) => id === mapKey);
     const label = node.label || String((node.sequence || 0) + 1);
@@ -308,7 +308,7 @@ export function createDestinations(context) {
       <div class="destination-site-main">
         <div class="destination-site-top">
           <span class="destination-site-chip">${ordinalText}</span>
-          <small>完整五场${bossBadge}</small>
+          <small>${node.quickTestBoss ? '直接开战' : '完整五场'}${bossBadge}</small>
           <em class="destination-site-lv"
             >${node.replay ? '回忆' : node.continuation ? '承接伏笔' : '可探索'} ·
             Lv.${spec.level}</em
@@ -335,7 +335,8 @@ export function createDestinations(context) {
       !canRecall(session.ai.library, node) && !nodesFor(mapKey).some((item) => item.id === node.id);
     $('#destination-start').textContent = node.replay
       ? '回忆 →'
-      : generationEnabled(session.ai.generationOptions) &&
+      : !node.quickTestBoss &&
+          generationEnabled(session.ai.generationOptions) &&
           needsContinuationWorld(session.ai.library, node)
         ? '构筑继续探索 →'
         : node.world || node.endless
@@ -439,7 +440,11 @@ export function createDestinations(context) {
           const bossDef = bossId ? spec.enemyDefinitions?.[bossId] || DEFINITIONS[bossId] : null;
           const isOverlord = Boolean(entry.overlord || bossDef?.overlord);
           const isBoss = Boolean(bossDef);
-          const siteTitle = (!entry.world && REGIONS[entry.map]?.sites?.[entry.site]) || spec.name;
+          const authoredName = entry.quickTestBoss
+            ? REGIONS[entry.map]?.nodes?.find((node) => node.id === entry.nodeId)?.name
+            : null;
+          const siteTitle =
+            authoredName || (!entry.world && REGIONS[entry.map]?.sites?.[entry.site]) || spec.name;
           const displayTitle = unlocked ? siteTitle : '？？？';
           const displayMeta = unlocked
             ? `Lv.${spec.level}${isOverlord ? ' · ♛ 霸主' : isBoss ? ' · ⚔ 首领' : ''}`
@@ -596,12 +601,7 @@ export function createDestinations(context) {
     if (context.daily && !context.daily.allowDungeon()) return;
     if (context.onboarding && !context.onboarding.allowPortal('script')) return;
     const availableMaps = maps();
-    const tutorialMap =
-      isQuickTestApep() && !isQuickTest() && availableMaps.includes('ruins')
-        ? 'ruins'
-        : availableMaps.includes('mill')
-          ? 'mill'
-          : availableMaps[0];
+    const tutorialMap = availableMaps.includes('mill') ? 'mill' : availableMaps[0];
     if (
       (learning(session.ai.library) && availableMaps.includes(tutorialMap)) ||
       !availableMaps.includes(session.journey.regionMap)
@@ -628,8 +628,7 @@ export function createDestinations(context) {
     const canOpen =
       library.atlasDiscoveries.some((entry) => entry.id === id) ||
       library.unlockedDungeons?.includes(id) ||
-      (id === 'mill' && isQuickTest()) ||
-      (id === 'ruins' && isQuickTestApep());
+      (isAnyQuickTest() && quickTestOverlordMaps().includes(id));
     if (dialog.open || session.runtime.mode !== 'inn' || session.ai.busy || !canOpen) return;
     session.journey.regionMap = id;
     session.journey.selectedNode = structuredClone(recommended(id) || null);
@@ -818,6 +817,7 @@ export function createDestinations(context) {
       return;
     }
     if (
+      !session.journey.selectedNode.quickTestBoss &&
       generationEnabled(session.ai.generationOptions) &&
       needsContinuationWorld(session.ai.library, session.journey.selectedNode)
     ) {
@@ -833,8 +833,8 @@ export function createDestinations(context) {
     openDiscovery,
     refreshQuickTest() {
       if (
-        ['mill', 'ruins'].includes(session.journey.regionMap) &&
-        (dialog.open || ['mill', 'ruins'].includes(session.journey.selectedNode?.map))
+        quickTestOverlordMaps().includes(session.journey.regionMap) &&
+        (dialog.open || quickTestOverlordMaps().includes(session.journey.selectedNode?.map))
       ) {
         session.journey.selectedNode = structuredClone(
           recommended(session.journey.regionMap) || null,

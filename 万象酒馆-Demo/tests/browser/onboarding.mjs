@@ -110,6 +110,26 @@ export async function onboardingChecks({ browser, baseURL, output, firstDungeonO
       });
     });
     await page.goto(baseURL);
+    assert.match(
+      await page.locator('#start-download-android').getAttribute('href'),
+      /releases\/download\/v2\.3\/wanxiang-tavern-2\.3-android\.apk$/,
+    );
+    assert.match(
+      await page.locator('#start-download-windows').getAttribute('href'),
+      /releases\/download\/v2\.3\/wanxiang-tavern-2\.3-windows-x64\.zip$/,
+    );
+    assert.match(
+      await page.locator('#settings-download-android').getAttribute('href'),
+      /releases\/download\/v2\.3\/wanxiang-tavern-2\.3-android\.apk$/,
+    );
+    assert.match(
+      await page.locator('#settings-download-windows').getAttribute('href'),
+      /releases\/download\/v2\.3\/wanxiang-tavern-2\.3-windows-x64\.zip$/,
+    );
+    assert.match(
+      await page.locator('#settings-download-develop').getAttribute('href'),
+      /archive\/refs\/heads\/develop\.zip$/,
+    );
     await page.locator('#start-journey').click();
     await page.locator('#new-game').waitFor({ state: 'visible' });
     assert.equal(await page.locator('#creation-form').isVisible(), false);

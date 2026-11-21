@@ -3,6 +3,7 @@ import { canSoulRevive } from '../companion-mechanics.js';
 import { canCombine } from '../emblems.js';
 import { ITEMS } from '../content/items.js';
 import { preview, getEnemies, intent } from '../engine.js';
+import { overlordMechanicBadges } from '../battle-overlord-badges.js';
 import { query as $ } from './dom.js';
 
 /** @param {import('./context.js').AppContext} context */
@@ -196,6 +197,7 @@ export function createSelection(context) {
     return {
       id,
       name: d.name,
+      mechanicBadges: overlordMechanicBadges(active[0].event.after, id, d),
       at: active[0].event.at,
       move: moves.join(' / '),
       selfHeal,

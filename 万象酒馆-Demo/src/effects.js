@@ -14,6 +14,7 @@ import {
 } from './damage-types.js';
 import { roundBanner } from './motion.js';
 import { createApepEffects } from './apep-effects.js';
+import { createOverlordEffects } from './overlord-effects.js';
 import { APEP_ID, APEP_PALETTE, APEP_RELEASE, apepAttack } from './apep-presentation.js';
 export function createEffects(layer, center, getSpeed, options = {}) {
   const active = new Set();
@@ -23,7 +24,9 @@ export function createEffects(layer, center, getSpeed, options = {}) {
     active.add(el);
     layer.append(el);
     el.animate(
-      reduced ? [{ opacity: 0 }, { opacity: 0.65, offset: 0.2 }, { opacity: 0 }] : frames,
+      reduced && !el.classList.contains('overlord-mechanic-fx')
+        ? [{ opacity: 0 }, { opacity: 0.65, offset: 0.2 }, { opacity: 0 }]
+        : frames,
       {
         duration: duration / getSpeed(),
         delay: delay / getSpeed(),
@@ -99,6 +102,7 @@ export function createEffects(layer, center, getSpeed, options = {}) {
   const statuses = createStatusEffects({ animate, ring, sparks });
   const details = createCombatDetails({ animate });
   const apep = createApepEffects({ pixelFx, animate, ring, sparks, reduced });
+  const overlord = createOverlordEffects({ center, animate, pixelFx, reduced });
   const COMBINE_SKILLS = new Set([
     'emblem-balance',
     'emblem-overload',
@@ -430,6 +434,7 @@ export function createEffects(layer, center, getSpeed, options = {}) {
       impactDelay = isAction
         ? duration * (lambAttack ? APEP_RELEASE : d?.overlord && e.type === 'enemy' ? 0.21 : 0.7)
         : 0;
+    const mechanicEnd = overlord.play(e, impactDelay, playOpts.retiredAnchors);
     spawnPixelFx(e, before, d, source, impactDelay);
     if (e.type === 'bossPhase' && source && !lambPhase) {
       if (e.overlord) {
@@ -618,7 +623,7 @@ export function createEffects(layer, center, getSpeed, options = {}) {
     for (const [id, u] of Object.entries(e.after.units)) {
       const old = before.units[id],
         p = center(id);
-      if (!old || !p) continue;
+      if (!old || !p || u.withdrawn) continue;
       const hp = u.hp - old.hp,
         shield = u.block - old.block,
         mp = u.mp - old.mp;
@@ -667,6 +672,7 @@ export function createEffects(layer, center, getSpeed, options = {}) {
     }
     return Math.max(
       duration,
+      mechanicEnd,
       signals.length || ['bossPhase', 'bombDetonate', 'bombDefuse'].includes(e.type) || e.bombArmed
         ? 850
         : 0,

@@ -1,6 +1,13 @@
 import { html } from '../shared/html.js';
 import { API_LABELS, CONNECTION_KINDS, missingSetup } from './first-run-rules.js';
 
+const DOWNLOADS = Object.freeze({
+  windows:
+    'https://github.com/YttriumCarbide/wanxiang-tavern/releases/download/v2.3/wanxiang-tavern-2.3-windows-x64.zip',
+  android:
+    'https://github.com/YttriumCarbide/wanxiang-tavern/releases/download/v2.3/wanxiang-tavern-2.3-android.apk',
+});
+
 const WIZARD_HEADERS = Object.freeze({
   mode: ['FIRST SETUP · 连接向导', '选择 API 配置方式'],
   'lazy-primary': ['01 / 02 · 懒人配置', '配置基础 AI 接口'],
@@ -25,6 +32,10 @@ export function createFirstRun(context) {
       <button id="start-journey" class="primary">开启旅程 <span>→</span></button>
       <button id="start-load">读取存档</button>
       <p class="start-note">使用自己的 AI 接口，书写属于你的异界故事。</p>
+      <nav class="start-downloads" aria-label="下载游戏">
+        <a id="start-download-windows" href="${DOWNLOADS.windows}">Windows ZIP</a>
+        <a id="start-download-android" href="${DOWNLOADS.android}">Android APK</a>
+      </nav>
     </main>
     <small class="start-footer">星海无垠 · 此处是归途</small>`;
   document.body.append(title);

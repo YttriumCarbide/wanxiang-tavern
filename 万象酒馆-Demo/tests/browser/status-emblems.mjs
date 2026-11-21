@@ -360,7 +360,6 @@ export async function statusEmblemChecks({ browser, baseURL, output }) {
     });
     for (const [map, sequence, name] of [
       ['ruins', 2, '水无月兰'],
-      ['ruins', 5, '神威'],
       ['forest', 3, '风在舞'],
     ]) {
       await page.evaluate(

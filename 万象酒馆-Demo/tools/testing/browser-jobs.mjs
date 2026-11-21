@@ -20,6 +20,7 @@ export function browserJobs(scopes, results, root) {
   simple('ui-preview', 'ui-preview', 'uiPreviewChecks');
   simple('developer-tools', 'developer-tools', 'developerToolChecks');
   simple('apep-vfx', 'apep-vfx', 'apepVfxChecks');
+  simple('overlord-vfx', 'overlord-vfx', 'overlordVfxChecks');
   simple('daily', 'daily', 'dailyChecks');
   simple('overland', 'overland', 'overlandChecks');
   simple('disk-storage', 'disk-storage', 'diskStorageChecks', [], true);

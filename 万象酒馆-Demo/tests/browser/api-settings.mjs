@@ -49,12 +49,13 @@ export async function antiRouteChecks({ browser, baseURL, output }) {
     assert.match(await page.locator('.route-settings > small').innerText(), /V0\.5.*8\.31/);
     assert.equal(await page.locator('#route-entropy').isChecked(), false);
     assert.equal(await page.locator('#route-entropyMode').inputValue(), 'refract');
-    assert.match(await page.locator('.route-attribution').innerText(), /原作者：凯撒王/);
+    const attribution = page.locator('.route-settings .route-attribution');
+    assert.match(await attribution.innerText(), /原作者：凯撒王/);
     assert.equal(
-      await page.locator('.route-attribution a').getAttribute('href'),
+      await attribution.locator('a').getAttribute('href'),
       'https://discord.com/channels/1134557553011998840/1566099901245432009',
     );
-    assert.equal(await page.locator('.route-attribution a svg').count(), 1);
+    assert.equal(await attribution.locator('a svg').count(), 1);
     assert.equal(await page.locator('#route-entropyStrength').inputValue(), 'mid');
     const panelBox = await page.locator('.route-settings').boundingBox();
     const workspaceBox = await page.locator('#ai-dialog .ai-workspace').boundingBox();

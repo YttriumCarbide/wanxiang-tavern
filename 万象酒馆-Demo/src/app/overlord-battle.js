@@ -678,6 +678,32 @@ export function createOverlordBattle(context) {
     if (event.overlordDomainLock) {
       triggerDomainLock(event.actor);
     }
+    if (event.type === 'hiddenWeaponLock' && typeof pack.weaponSwap === 'function') {
+      void showLine(actorName, pack.weaponSwap(event.weapon?.name || ''), {
+        tone: 'boss',
+        holdMs: 2600,
+        interrupt: false,
+      });
+    }
+    const shedScales = event.statusTriggers?.find((signal) => signal.type === 'eclipsescaleShed');
+    const rallyDust = event.statusTriggers?.find((signal) => signal.type === 'warlordRally');
+    const mechanicSignal = shedScales || rallyDust;
+    if (mechanicSignal) {
+      const owner = mechanicSignal.id;
+      const ownerPack = overlordDialoguePack(owner);
+      const line = shedScales ? ownerPack.shedScales : ownerPack.rallyDust;
+      if (line) {
+        const ownerName =
+          context.roster?.get?.(owner)?.name ||
+          event.after?.enemyDefinitions?.[owner]?.name ||
+          actorName;
+        void showLine(ownerName, line, {
+          tone: 'boss',
+          holdMs: 2600,
+          interrupt: false,
+        });
+      }
+    }
     if (event.clearedCorruptedSlot && pack.slowBreakSlot) {
       void showLine(actorName, pack.slowBreakSlot, {
         tone: 'boss',

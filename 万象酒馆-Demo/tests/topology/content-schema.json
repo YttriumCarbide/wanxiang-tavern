@@ -1593,7 +1593,7 @@
   },
   {
     "file": "src/content/quarry-adversaries.js",
-    "exports": ["QUARRY_BOSSES"],
+    "exports": ["QUARRY_BOSSES", "QUARRY_ENEMIES"],
     "fieldKeys": [
       "actions",
       "attackStyle",

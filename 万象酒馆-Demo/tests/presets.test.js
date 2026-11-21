@@ -196,9 +196,11 @@ test('named API presets persist credentials across restart and keep every public
     model: 'test-model',
     apiKey: 'private-key-one',
     tokenField: 'max_tokens',
+    stream: true,
     temperature: null,
     maxTokens: 24000,
   });
+  assert.equal(settings.get('character').stream, true);
   assert(
     !(await readFile(file, 'utf8')).includes('private-key-one'),
     'A session-only profile remains session-only until explicitly saved as a preset',
@@ -208,6 +210,7 @@ test('named API presets persist credentials across restart and keep every public
   assert(!JSON.stringify(result).includes('private-key-one'));
   assert((await readFile(file, 'utf8')).includes('private-key-one'));
   const restarted = await createAiSettings(file);
+  assert.equal(restarted.get('character').stream, true);
   await restarted.preset({ action: 'apply', kind: 'script', id });
   assert.equal(restarted.get('script').apiKey, 'private-key-one');
   assert.equal(restarted.visible().script.hasApiKey, true);

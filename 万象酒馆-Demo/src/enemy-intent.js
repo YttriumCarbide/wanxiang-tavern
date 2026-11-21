@@ -31,17 +31,17 @@ export function enemyIntentBadge(data) {
     )
     .join('<span class="intent-divider" aria-hidden="true">/</span>');
   return html`<span class="enemy-intent-impact">
-    <span class="intent-damage" aria-label="逐目标预计伤害">
-      <svg class="intent-sword" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-        <path d="m15 3 6-1-1 6-9 9-4-4z" fill="#e8d8ad" stroke="#a99566" stroke-width="1.2" />
-        <path
-          d="m6 12 6 6M8 16l-5 5M2 19l3 3"
-          stroke="#c6aa6c"
-          stroke-width="2.5"
-          stroke-linecap="round"
-        /></svg
-      >${damage || '<b>0</b>'}
-    </span>
-    ${data.selfBuffs?.length || data.selfHeal || data.selfMana ? html`<span class="intent-self"><small>自身</small>${statusMarkup(data.selfBuffs || [])}${data.selfHeal ? `<span>生命＋${data.selfHeal}</span>` : ''}${data.selfMana ? `<span>法力＋${data.selfMana}</span>` : ''}</span>` : ''}
-  </span>`;
+      <span class="intent-damage" aria-label="逐目标预计伤害">
+        <svg class="intent-sword" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="m15 3 6-1-1 6-9 9-4-4z" fill="#e8d8ad" stroke="#a99566" stroke-width="1.2" />
+          <path
+            d="m6 12 6 6M8 16l-5 5M2 19l3 3"
+            stroke="#c6aa6c"
+            stroke-width="2.5"
+            stroke-linecap="round"
+          /></svg
+        >${damage || '<b>0</b>'}
+      </span>
+      ${data.selfBuffs?.length || data.selfHeal || data.selfMana ? html`<span class="intent-self"><small>自身</small>${statusMarkup(data.selfBuffs || [])}${data.selfHeal ? `<span>生命＋${data.selfHeal}</span>` : ''}${data.selfMana ? `<span>法力＋${data.selfMana}</span>` : ''}</span>` : ''} </span
+    >${data.mechanicBadges || ''}`;
 }

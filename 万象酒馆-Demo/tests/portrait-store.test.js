@@ -62,6 +62,7 @@ test('AI defaults preserve an existing Qingyuan for explicit developer fallback'
     allowRetreat: false,
     editArchives: false,
     unlockAllCodex: false,
+    quickTestOverlords: false,
     quickTest: false,
     quickTestApep: false,
   });

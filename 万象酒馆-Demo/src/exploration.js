@@ -16,11 +16,16 @@ import { MAP_IDS } from './content/biomes.js';
 import { DEFINITIONS } from './data.js';
 import { tutorialSpec } from './content/tutorial.js';
 import { encounterLevel } from './enemy-growth.js';
-import { developerOption } from './generation-options.js';
+import { quickTestOverlordsEnabled } from './generation-options.js';
+import { quickTestOverlordPreview } from './developer-quick-test.js';
 
 const ALL_ROUTE_MAP_IDS = Object.freeze([
   ...new Set([...MAP_IDS, ...EMPIRE_TRANSITION_DUNGEONS, ...CITY_DUNGEONS]),
 ]);
+
+function authoredBlueprint(map, world = null) {
+  return !world ? REGIONS[map]?.nodes || null : null;
+}
 
 function random(seed) {
   let state = seed >>> 0;
@@ -105,7 +110,7 @@ function makeLinearNode(map, sequence, seed, continuation = null, parentId = nul
 }
 
 function initialRoute(map, seed, world = null) {
-  const blueprint = !world && MAINLINE_DUNGEONS.includes(map) ? REGIONS[map]?.nodes : null;
+  const blueprint = authoredBlueprint(map, world);
   if (blueprint?.length) {
     const root = blueprint.find((item) => !item.parentId) || blueprint[0];
     return {
@@ -195,123 +200,68 @@ function mainlinePreview(route, map) {
   return entries;
 }
 
-function quickTestMainlinePreview(entries, config, options = {}) {
-  if (!developerOption(options, config.option) || !Array.isArray(entries) || entries.length < 5) {
-    return entries;
-  }
-  const nodes = REGIONS[config.map]?.nodes || [];
-  const bp1 = nodes.find((item) => item.id === config.node1);
-  const bp4 = nodes.find((item) => item.id === config.node4);
-  if (!bp1 || !bp4) return entries;
-  const oldRoot = entries.find((item) => item.nodeId === config.node1);
-  const { quickRootId } = config;
-  return entries.map((entry) => {
-    if (entry.nodeId === config.node1) {
-      return {
-        ...entry,
-        id: quickRootId,
-        nodeId: bp4.id,
-        label: '1',
-        branch: false,
-        step: 0,
-        authored: true,
-        sequence: bp4.authoredIndex,
-        site: bp4.authoredIndex,
-        levelOffset: bp4.levelOffset,
-        boss: bp4.boss,
-        overlord: true,
-        quickTestBoss: true,
-        tutorial: false,
-        locked: false,
-        pos: bp1.pos,
-        parentId: null,
-      };
-    }
-    if (entry.nodeId === config.node4) {
-      return {
-        ...entry,
-        nodeId: bp1.id,
-        label: '4',
-        branch: false,
-        step: bp4.step,
-        authored: true,
-        sequence: bp1.authoredIndex,
-        site: bp1.authoredIndex,
-        levelOffset: bp1.levelOffset,
-        boss: bp1.boss,
-        overlord: false,
-        quickTestDisplaced: true,
-        tutorial: false,
-        pos: bp4.pos,
-        parentId: entry.parentId === oldRoot?.id ? quickRootId : entry.parentId,
-      };
-    }
-    return oldRoot && entry.parentId === oldRoot.id ? { ...entry, parentId: quickRootId } : entry;
-  });
+function quickTestDisplacedKey(entry) {
+  if (!entry) return null;
+  if (entry.nodeId) return `node:${entry.nodeId}`;
+  if (Number.isInteger(entry.sequence)) return `seq:${entry.sequence}`;
+  return null;
 }
 
-function quickTestMainlineFrontier(route, config, options = {}) {
+export function quickTestOverlordFrontier(route, map, options = {}) {
   const normal = availableExplorations(route || { frontier: [] });
-  if (!developerOption(options, config.option)) return normal;
-  const previewEntries = quickTestMainlinePreview(
-    explorationPreview(route || { frontier: [] }, config.map),
-    config,
-    options,
+  if (!quickTestOverlordsEnabled(options)) return normal;
+  const transformed = explorationPreview(route || { frontier: [] }, map, options);
+  const quickBoss = transformed.find((entry) => entry.quickTestBoss);
+  if (!quickBoss) return normal;
+  const displacedKeys = new Set(
+    transformed
+      .filter((entry) => entry.quickTestDisplaced)
+      .map((entry) => quickTestDisplacedKey(entry))
+      .filter(Boolean),
   );
-  const bossEntry = previewEntries.find((entry) => entry.quickTestBoss);
-  return bossEntry
-    ? [bossEntry, ...normal.filter((entry) => entry.nodeId !== config.node1)]
-    : normal;
+  const bossKey = quickTestDisplacedKey(quickBoss);
+  return [
+    quickBoss,
+    ...normal.filter((entry) => {
+      if (entry.id === quickBoss.id) return false;
+      const key = quickTestDisplacedKey(entry);
+      if (key && displacedKeys.has(key)) return false;
+      if (!entry.nodeId && bossKey && key === bossKey) return false;
+      return true;
+    }),
+  ];
 }
-
-const QUICK_TEST_MILL = Object.freeze({
-  map: 'mill',
-  option: 'quickTest',
-  node1: 'mill-1-canal',
-  node4: 'mill-4-attic',
-  quickRootId: 'mill-quick-test-alchemical-puppet',
-});
-
-const QUICK_TEST_RUINS = Object.freeze({
-  map: 'ruins',
-  option: 'quickTestApep',
-  node1: 'ruins-1-entrance',
-  node4: 'ruins-4-curse',
-  quickRootId: 'ruins-quick-test-apep-lamb',
-});
 
 export function quickTestMillPreview(entries, options = {}) {
-  return quickTestMainlinePreview(entries, QUICK_TEST_MILL, options);
+  return quickTestOverlordPreview(entries, 'mill', options);
 }
 
 export function quickTestMillFrontier(route, options = {}) {
-  return quickTestMainlineFrontier(route, QUICK_TEST_MILL, options);
+  return quickTestOverlordFrontier(route, 'mill', options);
 }
 
 export function quickTestRuinsPreview(entries, options = {}) {
-  return quickTestMainlinePreview(entries, QUICK_TEST_RUINS, options);
+  return quickTestOverlordPreview(entries, 'ruins', options);
 }
 
 export function quickTestRuinsFrontier(route, options = {}) {
-  return quickTestMainlineFrontier(route, QUICK_TEST_RUINS, options);
+  return quickTestOverlordFrontier(route, 'ruins', options);
 }
 
 export function explorationPreview(route, map, options = {}) {
   if (!route) return [];
-  if (MAINLINE_DUNGEONS.includes(map) && REGIONS[map]?.nodes?.length && !route.frontier[0]?.world) {
-    const entries = mainlinePreview(route, map);
-    if (map === 'mill') return quickTestMillPreview(entries, options);
-    if (map === 'ruins') return quickTestRuinsPreview(entries, options);
-    return entries;
+  if (authoredBlueprint(map)?.length && !route.frontier[0]?.world) {
+    return quickTestOverlordPreview(mainlinePreview(route, map), map, options);
   }
   const combined = [...(route.cleared || []), ...(route.frontier || [])].sort(
     (a, b) => a.sequence - b.sequence,
   );
-  return combined.map((entry, index) => ({
+  const entries = combined.map((entry, index) => ({
     ...entry,
     label: entry.label || String(index + 1),
     parentId: index ? combined[index - 1].id : null,
   }));
+  return quickTestOverlordPreview(entries, map, options);
 }
 
 function migrateLegacyMainlineRoute(route, map, seed, world) {
@@ -410,7 +360,7 @@ export function restoreExploration(value, seed = 17371, worlds = []) {
     const route = value?.[key];
     if (!route || !Array.isArray(route.frontier)) continue;
     try {
-      if (!world && MAINLINE_DUNGEONS.includes(map) && REGIONS[map]?.nodes?.length) {
+      if (authoredBlueprint(map, world)?.length) {
         const hasNodeGraph = [...(route.cleared || []), ...(route.frontier || [])].every(
           (entry) =>
             typeof entry.nodeId === 'string' || entry.endless === true || entry.sequence >= 6,
@@ -490,7 +440,7 @@ export function restoreExploration(value, seed = 17371, worlds = []) {
       const cleared = Array.isArray(route.cleared) ? route.cleared.map(restoreNode) : [];
       const frontier = route.frontier.map(restoreNode);
       if (!frontier.length) {
-        if (!world && MAINLINE_DUNGEONS.includes(map) && REGIONS[map]?.nodes?.length) {
+        if (authoredBlueprint(map, world)?.length) {
           const blueprint = REGIONS[map].nodes;
           const clearedNodeIds = new Set(cleared.map((item) => item.nodeId).filter(Boolean));
           for (const bp of blueprint) {
@@ -581,13 +531,15 @@ export function explorationSpec(entry, index = 0) {
   if (!Number.isInteger(index) || index < 0 || index >= ENCOUNTER_COUNT)
     throw Error('战斗序号无效');
 
+  const hook = regionTaskHookFor(entry);
   const resolvedLevel = encounterLevel(
     entry.world?.baseLevel
       ? { ...entry, level: entry.world.baseLevel + Math.floor(entry.sequence / 2) }
-      : entry,
+      : !entry.world && !isEndless(entry) && Number.isInteger(hook?.levelOffset)
+        ? { ...entry, levelOffset: hook.levelOffset }
+        : entry,
   );
   const endlessEntry = isEndless(entry);
-  const hook = regionTaskHookFor(entry);
   const bp =
     !entry.world && !endlessEntry ? region.nodes?.find((item) => item.id === entry.nodeId) : null;
 
@@ -667,11 +619,17 @@ export function explorationSpec(entry, index = 0) {
     return fallbackPool.slice(0, Math.min(count, fallbackPool.length));
   };
 
-  const chosenBoss = entry.boss || bp?.boss || bossIds[0] || region.boss;
+  const chosenBoss = entry.boss || bp?.boss || hook?.boss || bossIds[0] || region.boss;
   const pickBossGroup = () => {
     if (chosenBoss === 'ares') return ['aresCannonLeft', 'ares', 'aresCannonRight'];
     if (chosenBoss === 'moonEye') return ['moonCrown', 'moonEye', 'moonRoot'];
-    if (chosenBoss === 'radiantWyvern' || chosenBoss === 'alchemicalPuppet') return [chosenBoss];
+    if (
+      chosenBoss === 'radiantWyvern' ||
+      chosenBoss === 'alchemicalPuppet' ||
+      chosenBoss === 'darkscaleWarlord' ||
+      chosenBoss === 'banditSyndicateKing'
+    )
+      return [chosenBoss];
     const aides = shuffle(fallbackPool).filter((id) => id !== chosenBoss);
     return aides.length >= 2 ? [aides[0], chosenBoss, aides[1]] : [chosenBoss];
   };
@@ -738,8 +696,7 @@ export function completeExploration(routes, entry, outcome = {}) {
   const continuation =
     typeof nextHook?.setting === 'string' ? nextHook.setting.slice(0, 2000) : null;
   const current = route.frontier[at];
-  const blueprint =
-    !current.world && MAINLINE_DUNGEONS.includes(current.map) ? REGIONS[current.map]?.nodes : null;
+  const blueprint = authoredBlueprint(current.map, current.world);
   const clearedIds = new Set((route.cleared || []).map((item) => item.nodeId).filter(Boolean));
   const frontierIds = new Set(route.frontier.map((item) => item.nodeId).filter(Boolean));
 
