@@ -35,8 +35,8 @@ test('generated data compiles once into an independent combat snapshot with real
   library.party[0] = entry.id;
   const roster = compileRoster(library),
     state = newBattle(undefined, roster);
-  assert.equal(state.units.aegis.hp, 50);
-  assert.equal(abilityFor(state, 'aegis', 'generated-1').name, '凝灯');
+  assert.equal(state.units.aegis.hp, raw.data.hp);
+  assert.equal(abilityFor(state, 'aegis', 'generated-1').name, '迟滞');
   const result = preview(state, [makeAction(state, 'aegis', 'generated-1', 'mossSlime', 0)]);
   assert(result.valid);
   assert.equal(
@@ -44,10 +44,10 @@ test('generated data compiles once into an independent combat snapshot with real
     state.units.aegis.mp - abilityFor(state, 'aegis', 'generated-1').mp,
   );
   entry.combat.attack = 3;
-  assert.equal(abilityFor(state, 'aegis', 'attack').effects[0].value, 12);
+  assert.equal(abilityFor(state, 'aegis', 'attack').effects[0].value, raw.data.attack);
   assert.deepEqual(HEROES[0], officialHeroSnapshot);
   const next = newEncounter(encounterSpec(1), advance(result), 1);
-  assert.equal(abilityFor(next, 'aegis', 'attack').effects[0].value, 12);
+  assert.equal(abilityFor(next, 'aegis', 'attack').effects[0].value, raw.data.attack);
   assert.equal(next.units.aegis.mp, result.final.units.aegis.mp);
   assert(!('combat' in settingOnly(entry)));
   assert.equal(restoreLibrary(JSON.parse(JSON.stringify(library))).party[0], entry.id);
@@ -185,8 +185,8 @@ test('local API proxies generation, keeps keys private and rejects foreign origi
     assert.equal(saved.status, 200);
     assert(!(await saved.text()).includes('private-test-key'));
     assert(!(await readFile(settingsFile, 'utf8')).includes('private-test-key'));
-    const generated = await post('/api/ai/generate/character', { brief: '生成守灯人' });
-    assert.equal((await generated.json()).entry.setting.name, '灯河');
+    const generated = await post('/api/ai/generate/character', { brief: '时砂' });
+    assert.equal((await generated.json()).entry.setting.name, '时砂');
     assert.equal(calls, 1);
     const rejected = await post(
       '/api/ai/generate/character',
@@ -204,8 +204,8 @@ test('character protocol accepts prose lengths while preserving structure and di
   const read = createCharacterReader();
   const raw = read(characterResponse());
   const entry = normalizeCharacter(raw, 'character-prose');
-  assert(entry.setting.worldbook.includes('二十九岁'));
-  assert(entry.setting.worldbook.includes('攻击方式｜灯火弹'));
+  assert(entry.setting.worldbook.includes(raw.setting.age));
+  assert(entry.setting.worldbook.includes('攻击方式｜砂针'));
   assert(!('attack' in entry.setting));
   assert(!('gender' in entry.setting));
   assert(!JSON.stringify(entry).includes('<game_data>'));
@@ -216,11 +216,11 @@ test('character protocol accepts prose lengths while preserving structure and di
   library.party[0] = entry.id;
   const restored = restoreLibrary(JSON.parse(JSON.stringify(library)));
   assert.equal(restored.characters.at(-1).setting.worldbook, entry.setting.worldbook);
-  assert.equal(compileRoster(restored).aegis.attack, 12);
+  assert.equal(compileRoster(restored).aegis.attack, raw.data.attack);
   const short = characterDocument();
   short.setting.appearance = '短发。';
   short.setting.personality = '谨慎。';
-  short.setting.attack.description = '凝成灯火。';
+  short.setting.attack.description = short.setting.attack.description.slice(0, 8);
   assert.doesNotThrow(() => read(JSON.stringify(short)));
   const long = characterDocument();
   long.setting.appearance = long.setting.appearance.repeat(4);

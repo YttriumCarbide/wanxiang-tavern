@@ -15,7 +15,12 @@ import { createAiApi } from '../server/ai-api.mjs';
 import { createWorldbookStore } from '../server/worldbook-store.mjs';
 import { newLibrary } from '../src/ai/library.js';
 import { settingOnly } from '../src/ai/contracts.js';
-import { characterResponse, scriptFixture, compactCharacterDocument } from './fixtures/ai.js';
+import {
+  characterDocument,
+  characterResponse,
+  scriptFixture,
+  compactCharacterDocument,
+} from './fixtures/ai.js';
 
 const wrap = (json) => `${OUTPUT_OPEN}\n${json}\n${OUTPUT_CLOSE}`;
 
@@ -110,7 +115,7 @@ test('safe JSON repairs still operate inside the envelope without changing strin
     createCharacterReader(),
   );
   assert.equal(result.diagnostic.candidateText, json);
-  assert.equal(result.entry.combat.hp, 50);
+  assert.equal(result.entry.combat.hp, characterDocument().data.hp);
   assert(result.diagnostic.repairs.some((repair) => repair.message.includes('逗号')));
 });
 
@@ -160,7 +165,7 @@ test('both actual generation routes use tagged JSON, local validation and matchi
       );
       const input =
         kind === 'character'
-          ? { brief: '召唤巡灯术士' }
+          ? { brief: '召唤时术师' }
           : { brief: '调查旧渠', boss: 'bossGate', party };
       const preview = await post('prompts/preview', { kind, input });
       assert.equal(preview.status, 200);
@@ -226,7 +231,7 @@ test('both actual generation routes use tagged JSON, local validation and matchi
     assert.equal(copied.body.diagnostic.stage, 'complete');
     assert.equal(copied.body.diagnostic.warnings[0].path, 'output.source');
     assert.equal(copied.body.diagnostic.rawText, output);
-    assert.equal(copied.body.entry.setting.name, '灯河');
+    assert.equal(copied.body.entry.setting.name, '时砂');
     output = characterResponse();
     const failed = await post('generate/character', { brief: '测试缺失标签' });
     assert.equal(failed.status, 400);

@@ -363,17 +363,17 @@ export async function generationChecks({ browser, baseURL, output }) {
     assert((await page.locator('#diagnostic-repairs').textContent()).includes('用户编辑'));
     await page.locator('#diagnostic-close').click();
     const sheet = await page.locator('#summoned-lore').textContent();
-    assert(sheet.includes('二十九岁') && sheet.includes('灯火弹') && sheet.includes('凝灯'));
+    assert(sheet.includes('三十一岁') && sheet.includes('砂针') && sheet.includes('迟滞'));
     assert(!sheet.includes('game_data') && !sheet.includes('schemaVersion'));
     assert.equal(await page.locator('#summoned-dialog > footer button').count(), 2);
-    assert((await page.locator('.identity-stats').textContent()).includes('50'));
+    assert((await page.locator('.identity-stats').textContent()).includes('30'));
     await page.screenshot({ path: path.join(output, 'ai-character-sheet-desktop.png') });
     const activeSkill = page
       .locator('.character-ability')
-      .filter({ has: page.locator('summary strong', { hasText: '凝灯' }) });
+      .filter({ has: page.locator('summary strong', { hasText: '迟滞' }) });
     await activeSkill.locator('summary').click();
-    assert((await activeSkill.locator('.ability-mechanics').textContent()).includes('基础伤害 10'));
-    assert((await activeSkill.locator('.ability-mechanics').textContent()).includes('迟缓 +1层'));
+    assert((await activeSkill.locator('.ability-mechanics').textContent()).includes('虚弱 +1层'));
+    assert((await activeSkill.locator('.ability-mechanics').textContent()).includes('迟缓 +2层'));
     assert((await activeSkill.locator('.ability-motion').textContent()).length > 30);
     await page.screenshot({ path: path.join(output, 'ai-character-skill-open.png') });
     await page.setViewportSize({ width: 844, height: 390 });
@@ -541,7 +541,7 @@ export async function generationChecks({ browser, baseURL, output }) {
       }
       return route.fulfill({
         json: {
-          content: '【对白:灯河】先按线索往前看吧。【旁白】水渠旁暂时没有新的动静。',
+          content: '【对白:时砂】先按线索往前看吧。【旁白】水渠旁暂时没有新的动静。',
           ...(adventure ? { adventure } : {}),
           usage: { input: 20, output: 20 },
           request: { tokens: { inputEstimate: 40 }, warnings: [] },
@@ -627,7 +627,7 @@ export async function generationChecks({ browser, baseURL, output }) {
         room,
       );
       const storyText = await page.locator('#story-lines').textContent();
-      assert(storyText.includes('灯河'));
+      assert(storyText.includes('时砂'));
       assert(!storyText.includes(`第${room + 2}幕`), 'Future scenes are not revealed');
       await page.locator('#battle-reading-toggle').click();
       await page.locator('[data-dungeon-gal="story"]').click();
@@ -663,7 +663,7 @@ export async function generationChecks({ browser, baseURL, output }) {
     };
     const fightCurrentRoom = async (label) => {
       await page.waitForFunction(() => !demo.getStatus().animating);
-      assert.equal(await page.evaluate(() => demo.getState().heroDefinitions.aegis.name), '灯河');
+      assert.equal(await page.evaluate(() => demo.getState().heroDefinitions.aegis.name), '时砂');
       if ((await page.locator('#speed').textContent()).includes('×1'))
         await page.locator('#speed').click();
       let count = 0;
@@ -827,7 +827,7 @@ export async function generationChecks({ browser, baseURL, output }) {
       'Tagged JSON uses local strict validation even with a saved schema preference',
     );
     const scriptContext = requestContext(calls[1].messages);
-    assert(scriptContext.characters.greenLight.some((entry) => entry.name === '灯河'));
+    assert(scriptContext.characters.greenLight.some((entry) => entry.name === '时砂'));
     assert(
       scriptContext.characters.greenLight.every(
         (entry) => !entry.combat && !entry.data && !entry.hp,

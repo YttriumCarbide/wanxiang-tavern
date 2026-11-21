@@ -1,5 +1,4 @@
 export const CHARACTER_CLEANUP_REVISION = '2026-10-19-personas';
-const retained = ['official-edith', 'official-aegis', 'official-pandora'];
 
 /** One requested cleanup; future summons with new IDs are unaffected. */
 export function cleanCharacterEntries(book) {
@@ -7,7 +6,8 @@ export function cleanCharacterEntries(book) {
   for (const [uid, entry] of Object.entries(book.entries)) {
     const id = entry.extensions?.wanxiang?.characterId;
     const persona = id || entry.comment?.startsWith('人物详情：');
-    if (!persona || retained.includes(id) || entry.comment === '人物详情：青缘') continue;
+    const isOfficial = typeof id === 'string' && id.startsWith('official-');
+    if (!persona || isOfficial || entry.comment === '人物详情：青缘') continue;
     removed.push(structuredClone(entry));
     delete book.entries[uid];
   }
@@ -28,8 +28,10 @@ export function cleanCharacterEntries(book) {
 export function cleanLibraryCharacters(library, removedIds) {
   if (!library.campaign) return false;
   const retired = new Set(removedIds);
+  for (const id of retired) {
+    if (typeof id === 'string' && id.startsWith('official-')) retired.delete(id);
+  }
   retired.delete(library.campaign.protagonistId);
-  for (const id of retained) retired.delete(id);
   const changed = library.characters.some((member) => retired.has(member.id));
   if (!changed) return false;
   library.characters = library.characters.filter((member) => !retired.has(member.id));

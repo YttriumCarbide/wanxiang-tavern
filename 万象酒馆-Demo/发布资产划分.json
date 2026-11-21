@@ -33,6 +33,7 @@
     "gates": { "after-tutorial-first-level": [] }
   },
   "staticExcludes": [
+    "(?:^|/)(?:存档|个人角色|AI角色|ai-characters|generated-characters)(?:/|$)",
     "^assets/(?:[^/]+/)*[^/]+\\.md$",
     "^assets/(?:[^/]+/)*manifest\\.json$",
     "^assets/(?:[^/]+/)*prompts\\.json$",
@@ -53,6 +54,10 @@
     "^vendor/sillytavern/chat-layout\\.source\\.html$"
   ],
   "nativeInputExcludes": [
+    "个人角色/",
+    "AI角色/",
+    "ai-characters/",
+    "generated-characters/",
     ".runtime/",
     "backups/",
     "存档/",

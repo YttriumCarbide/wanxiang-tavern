@@ -8,6 +8,7 @@ import { newBattle, preview } from '../engine.js';
 import { discardUnfinishedTrip } from '../abandoned-trip.js';
 import { adventureSnapshot, validAdventureSnapshot } from '../adventure/snapshot.js';
 import { isRuinsAdventureSnapshot } from '../ai/library-ruins-migration.js';
+import { exportJsonFile } from '../storage/export-file.js';
 
 export const SAVES_STORAGE_KEY = 'wanxiang.saves.v1';
 
@@ -158,18 +159,11 @@ export function writeSavesStore(store, storage = getStorage()) {
 
 export async function exportSnapshotToFile(snapshot, fallbackFilename) {
   const json = JSON.stringify(await packagePortraitAssets(snapshot), null, 2);
-  const blob = new Blob([json], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
   const now = new Date();
   const pad = (n) => String(n).padStart(2, '0');
   const dateTag = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}`;
-  a.href = url;
-  a.download = fallbackFilename || `wanxiang-save-${snapshot.slotId || 'backup'}-${dateTag}.json`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  const name = fallbackFilename || `wanxiang-save-${snapshot.slotId || 'backup'}-${dateTag}.json`;
+  return exportJsonFile(json, name);
 }
 
 export async function readSaveFile(file, savePortrait) {
@@ -659,12 +653,12 @@ export function createSaveManager(context) {
 
   function loadSlot(slotId) {
     const locked = mutationLocked();
-    if (locked) return context.shell?.toast?.(locked);
+    if (locked) return reportImportStatus(locked);
     if (!SAVE_SLOT_IDS.includes(slotId)) return false;
     const slotConfig = SAVE_SLOTS.find((s) => s.id === slotId);
     const snapshot = store.slots[slotId];
     if (!snapshot) {
-      context.shell?.toast?.(`[${slotConfig?.label || slotId}] 暂无存档记录`);
+      reportImportStatus(`[${slotConfig?.label || slotId}] 暂无存档记录`);
       return false;
     }
     try {
@@ -673,7 +667,7 @@ export function createSaveManager(context) {
       context.shell?.toast?.(`已成功载入 [${slotConfig?.label || slotId}] 存档！`);
       return true;
     } catch (err) {
-      context.shell?.toast?.(`载入失败: ${err.message}`);
+      reportImportStatus(`载入失败: ${err.message}`);
       return false;
     }
   }
@@ -736,10 +730,12 @@ export function createSaveManager(context) {
       return;
     }
     try {
-      await exportSnapshotToFile(snapshot);
-      reportImportStatus('存档文件导出完成');
+      const { method } = await exportSnapshotToFile(snapshot);
+      reportImportStatus(method === 'native' ? '存档文件导出完成' : '存档导出文件已开始下载');
     } catch (failure) {
-      reportImportStatus(`导出失败: ${failure.message}`);
+      reportImportStatus(
+        failure.code === 'cancelled' ? '已取消导出存档' : `导出失败: ${failure.message}`,
+      );
     }
   }
 
@@ -750,10 +746,14 @@ export function createSaveManager(context) {
     const dateTag = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}`;
     try {
       const snapshot = createSaveSnapshot(session, 'live', '实时进度导出');
-      await exportSnapshotToFile(snapshot, `wanxiang-live-save-${dateTag}.json`);
-      reportImportStatus('实时进度已导出为 JSON 文件');
+      const { method } = await exportSnapshotToFile(snapshot, `wanxiang-live-save-${dateTag}.json`);
+      reportImportStatus(
+        method === 'native' ? '实时进度已导出为 JSON 文件' : '实时进度文件已开始下载',
+      );
     } catch (failure) {
-      reportImportStatus(`导出失败: ${failure.message}`);
+      reportImportStatus(
+        failure.code === 'cancelled' ? '已取消导出存档' : `导出失败: ${failure.message}`,
+      );
     }
   }
 

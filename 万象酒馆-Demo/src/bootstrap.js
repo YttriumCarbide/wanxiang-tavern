@@ -5,6 +5,7 @@ import { openDiskDatabase } from './storage/disk-database.js';
 import { createStaticBackend } from './ai/static-backend.js';
 import { newCampaign } from './campaign.js';
 import { defaultProtagonist } from './content/qingyuan.js';
+import { applyGeneratedDatabaseReset } from './app/generated-reset.js';
 import { createLocalDataPanel } from './storage/panel.js';
 import { createContentUpdates } from './updates/content-updates.js';
 import { loadUpdateRelease, TUTORIAL_GATE } from './updates/manifest.js';
@@ -77,6 +78,7 @@ export async function startGame() {
           notice.textContent = '硬盘进度已保存，浏览器缓存写入失败。';
         })
       : browserDatabase;
+  await applyGeneratedDatabaseReset(database, localStorage);
   if (!database.get('installation')) {
     // User-authorized clean release. Run once on this browser, never on ordinary updates.
     for (const key of Object.keys(localStorage))

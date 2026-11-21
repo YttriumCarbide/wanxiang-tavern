@@ -10,6 +10,7 @@ import { normalizeCharacter } from '../src/ai/contracts.js';
 import { restoreLibrary } from '../src/ai/library.js';
 import { worldReference } from '../src/worlds.js';
 import { portraitUrl } from '../src/portraits.js';
+import { characterDocument } from './fixtures/ai.js';
 
 const profile = {
   provider: 'vertex',
@@ -298,9 +299,7 @@ test('Vertex errors retain diagnostic text, redact credentials, never retry, pro
 });
 
 test('all six companion portraits compile by weapon and gender, survive restores and are excluded from enemy appearances', async () => {
-  const fixture = JSON.parse(
-    await readFile(new URL('./fixtures/silvia-character.json', import.meta.url), 'utf8'),
-  );
+  const fixture = characterDocument();
   for (const template of PORTRAIT_TEMPLATES) {
     const raw = structuredClone(fixture);
     raw.setting.gender = template.gender === 'female' ? '女' : 'male';

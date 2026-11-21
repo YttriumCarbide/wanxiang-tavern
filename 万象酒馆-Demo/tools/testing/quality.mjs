@@ -5,6 +5,7 @@ import postcss from 'postcss';
 import { lexer } from 'css-tree';
 import { parse } from 'espree';
 import { projectRoot as root, command } from './runtime.mjs';
+import { characterPrivacy } from './character-privacy.mjs';
 
 async function scripts(directory) {
   const files = [];
@@ -16,6 +17,7 @@ async function scripts(directory) {
   return files;
 }
 async function contracts() {
+  await characterPrivacy(root, command);
   for (const folder of [root, path.dirname(root)]) {
     const names = ['一键启动.cmd', '一键关闭.cmd'];
     if (folder !== root) names.push('一键启动工坊修改器.cmd');

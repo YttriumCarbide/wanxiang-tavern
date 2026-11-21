@@ -1,19 +1,48 @@
 import { OFFICIAL_SETTINGS } from '../../src/content/official-characters.js';
+import { HEROES } from '../../src/data.js';
 export function characterFixture() {
-  return { schemaVersion: 1, setting: { name: '灯河', title: '巡灯术士', appearance: '旧铜灯与青色披风。', personality: '细心而克制。', background: '渡口守灯人，追寻失踪同伴。', speechStyle: '简短温和。', motivation: '找到归乡的灯火。', tags: ['守灯', '寻人'] }, data: {
-    archetype: 'morrow', hp: 50, mp: 28, attack: 12, attackName: '灯火弹', weapon: 'staff', limit: 1,
-    skills: [ { name: '凝灯', text: '造成10伤害与1迟缓。', ap: 1, mp: 2, target: 'enemy', effects: [{ type: 'damage', value: 10 }, { type: 'buff', buff: 'slow', value: 1 }] }, { name: '灯罩', text: '一名队友获得8护盾。', ap: 1, mp: 2, target: 'ally', effects: [{ type: 'shield', value: 8 }] } ],
-  } };
+  const hero = structuredClone(HEROES.find((item) => item.id === 'morrow'));
+  const setting = structuredClone(OFFICIAL_SETTINGS.morrow);
+  return {
+    schemaVersion: 1,
+    setting: {
+      name: setting.name,
+      title: hero.title,
+      appearance: setting.appearance,
+      personality: setting.personality,
+      background: setting.history,
+      speechStyle: setting.personality,
+      motivation: setting.history,
+      tags: [],
+    },
+    data: {
+      archetype: 'morrow',
+      hp: hero.hp,
+      mp: hero.mp,
+      attack: hero.attack,
+      attackName: hero.attackName,
+      weapon: hero.weapon,
+      limit: hero.limit,
+      skills: hero.skills.map((skill) => {
+        const copy = structuredClone(skill);
+        delete copy.id;
+        return copy;
+      }),
+    },
+  };
 }
 export function characterDocument() {
   const raw = characterFixture();
-  const setting = JSON.parse(JSON.stringify(OFFICIAL_SETTINGS.morrow).replaceAll('时砂', '灯河'));
-  setting.age = '二十九岁';
-  setting.attack.name = raw.data.attackName;
-  setting.skills.forEach((skill, index) => { skill.name = raw.data.skills[index].name; });
-  return { schemaVersion: 3, setting, data: { name: setting.name, title: '', ...raw.data } };
+  const setting = structuredClone(OFFICIAL_SETTINGS.morrow);
+  return {
+    schemaVersion: 3,
+    setting,
+    data: { name: setting.name, title: '', ...raw.data },
+  };
 }
-export function characterResponse() { return JSON.stringify(characterDocument()); }
+export function characterResponse() {
+  return JSON.stringify(characterDocument());
+}
 export function scriptFixture(ids) {
   const facts = [
     ['磨坊的铜灯忽然熄灭，旧水轮也停了。队伍沿干渠查找原因，第一道排水口伏着苔团与迷路小蕈，淤泥上留着往上游延伸的亮痕。', '排水口清出一条窄缝，下面没有积水。渠壁的水线还高过膝盖，说明断流发生在更远处；几块带着铜锈的断木挂在逆流的一边，曾被回涌的水推过来。', '队伍沿着干渠向北走，先前看到的木刺越来越多，潮湿的痕迹转进遗迹，接上磨坊引水图里没有画出的岔口。'],

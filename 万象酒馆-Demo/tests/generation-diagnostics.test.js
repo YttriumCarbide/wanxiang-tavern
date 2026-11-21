@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
-import { mkdtemp, readFile } from 'node:fs/promises';
+import { mkdtemp } from 'node:fs/promises';
 import path from 'node:path';
 import {
   readGenerationResult,
@@ -17,20 +17,22 @@ import { normalizeCharacter, parseCharacterOutput } from '../src/ai/contracts.js
 import { characterInputSchema, characterOutputSchema } from '../src/ai/character-schema.js';
 import { checkOutputSchema } from '../src/ai/schema-check.js';
 
-const silviaResponse = await readFile(
-  new URL('./fixtures/silvia-character.json', import.meta.url),
-  'utf8',
-);
+const officialDocument = characterDocument();
+officialDocument.setting.personality = {
+  name: officialDocument.setting.name,
+  description: officialDocument.setting.personality,
+};
+const officialResponse = JSON.stringify(officialDocument);
 
-test('Silvia personality objects compile losslessly through direct and shared validation', () => {
-  const raw = JSON.parse(silviaResponse);
+test('official personality objects compile losslessly through direct and shared validation', () => {
+  const raw = JSON.parse(officialResponse);
   const personality = `${raw.setting.personality.name}：${raw.setting.personality.description}`;
   checkOutputSchema(raw, characterInputSchema());
   assert.throws(() => checkOutputSchema(raw, characterOutputSchema()));
-  assert.equal(parseCharacterOutput(silviaResponse).setting.personality, personality);
-  const direct = normalizeCharacter(raw, 'silvia-direct');
-  const result = readGenerationResult('character', silviaResponse, {});
-  assert.equal(result.diagnostic.rawText, silviaResponse);
+  assert.equal(parseCharacterOutput(officialResponse).setting.personality, personality);
+  const direct = normalizeCharacter(raw, 'official-direct');
+  const result = readGenerationResult('character', officialResponse, {});
+  assert.equal(result.diagnostic.rawText, officialResponse);
   assert.equal(result.diagnostic.stage, 'complete');
   assert.deepEqual(result.diagnostic.issues, []);
   const repair = result.diagnostic.repairs.find(
@@ -45,12 +47,10 @@ test('Silvia personality objects compile losslessly through direct and shared va
   assert.equal(result.entry.setting.worldbook, direct.setting.worldbook);
   assert(result.entry.setting.worldbook.includes(`性格：${personality}`));
   assert(!result.entry.setting.worldbook.includes('[object Object]'));
-  assert.equal(result.entry.combat.hp, 62);
-  assert.equal(result.entry.combat.mp, 31);
+  assert.equal(result.entry.combat.hp, raw.data.hp);
+  assert.equal(result.entry.combat.mp, raw.data.mp);
   assert.deepEqual(result.entry.combat.skills[0].effects, raw.data.skills[0].effects);
-  assert.deepEqual(result.entry.combat.skills[1].rules, [
-    { id: 'rule-0', ...raw.data.skills[1].rules[0] },
-  ]);
+  assert.deepEqual(result.entry.combat.skills[1].effects, raw.data.skills[1].effects);
   assert.deepEqual(
     readGenerationResult('character', result.diagnostic.candidateText, {}).diagnostic.repairs,
     [],
@@ -69,12 +69,12 @@ test('personality compatibility still rejects missing, unknown, non-text and ove
     { name: '严谨务实', description: '谨慎。', script: 'unknown' },
     { name: '严谨务实', description: '长'.repeat(2400) },
   ]) {
-    const raw = JSON.parse(silviaResponse);
+    const raw = JSON.parse(officialResponse);
     raw.setting.personality = personality;
     assert.throws(() => parseCharacterOutput(JSON.stringify(raw)));
     assert.throws(() => readGenerationResult('character', JSON.stringify(raw), {}));
   }
-  const raw = JSON.parse(silviaResponse);
+  const raw = JSON.parse(officialResponse);
   raw.data.hp = 999;
   raw.data.skills[0].effects[0].type = 'runScript';
   assert.throws(
@@ -94,7 +94,7 @@ test('local format repairs preserve original responses and never alter quoted st
   const result = readGenerationResult('character', raw, {}, read);
   assert.equal(result.diagnostic.rawText, raw);
   assert.equal(result.diagnostic.candidateText, clean);
-  assert.equal(result.entry.combat.hp, 50);
+  assert.equal(result.entry.combat.hp, characterDocument().data.hp);
   assert(
     result.diagnostic.repairs.some((repair) => repair.line && repair.message.includes('逗号')),
   );
@@ -291,17 +291,17 @@ test('failed generation can be corrected and accepted locally without another pr
     assert.equal((await invalid.json()).diagnostic.stage, 'json');
     const accepted = await post('validate/character', { content: characterResponse(), input: {} });
     assert.equal(accepted.status, 200);
-    assert.equal((await accepted.json()).entry.setting.name, '灯河');
+    assert.equal((await accepted.json()).entry.setting.name, characterDocument().setting.name);
     assert.equal(calls, 1);
-    output = `<wanxiang_json>\n${silviaResponse}\n</wanxiang_json>`;
+    output = `<wanxiang_json>\n${officialResponse}\n</wanxiang_json>`;
     const generated = await post('generate/character', { brief: '随机，法师，女性' });
     assert.equal(generated.status, 200);
-    const silvia = await generated.json();
-    assert.equal(silvia.entry.setting.name, '希尔维娅·瓦伦丁');
-    assert.equal(silvia.diagnostic.rawText, output);
-    const local = await post('validate/character', { content: silviaResponse, input: {} });
+    const official = await generated.json();
+    assert.equal(official.entry.setting.name, characterDocument().setting.name);
+    assert.equal(official.diagnostic.rawText, output);
+    const local = await post('validate/character', { content: officialResponse, input: {} });
     assert.equal(local.status, 200);
-    assert.equal((await local.json()).entry.setting.worldbook, silvia.entry.setting.worldbook);
+    assert.equal((await local.json()).entry.setting.worldbook, official.entry.setting.worldbook);
     assert.equal(calls, 2, 'local personality correction must not request the provider');
   } finally {
     server.closeAllConnections();

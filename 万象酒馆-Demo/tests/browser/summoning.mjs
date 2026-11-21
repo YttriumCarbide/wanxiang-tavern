@@ -148,7 +148,7 @@ export async function summoningChecks({ browser, baseURL, output }) {
     await openSummon();
     await page.locator('[data-summon-mode="infinite"]').click();
     await page.locator('#summon-confirm').click();
-    const wish = '蒸汽奇幻世界，使用机械弓的沉静游侠。';
+    const wish = characterDocument().setting.name;
     await page.locator('#summon-wish').fill(wish);
     assert.equal(await page.locator('[data-summon-mode]:visible').count(), 0);
     assert.equal(
@@ -166,14 +166,15 @@ export async function summoningChecks({ browser, baseURL, output }) {
       );
     await page.screenshot({ path: path.join(output, 'summon-methods.png') });
     await page.locator('#summon-confirm').click();
-    await page.locator('#ai-dialog').waitFor({ state: 'visible' });
+    await page.locator('#generation-diagnostics').waitFor({ state: 'visible' });
+    assert.match(await page.locator('#diagnostic-issues').textContent(), /测试生成失败/);
     assert.equal(requests[0].brief, wish);
     assert.equal(
       await page.locator('#contract-count').textContent(),
       '2',
       'Failure must not spend a contract',
     );
-    await page.locator('#ai-close').click();
+    await page.locator('#diagnostic-close').click();
     await openSummon();
     await page.locator('[data-summon-mode="chaos"]').click();
     await page.locator('#summon-confirm').click();

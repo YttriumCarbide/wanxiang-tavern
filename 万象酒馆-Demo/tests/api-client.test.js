@@ -210,7 +210,7 @@ test('local and browser completions share prepared prompts, TK, envelope validat
               party: [{ id: 'a', name: '甲', title: '旅人', worldbook: '甲是谨慎的旅人。' }],
               history: [],
             }
-          : { brief: '灯河' };
+          : { brief: '时砂' };
       const raw =
         kind === 'script'
           ? scriptFixture(request.party.map((entry) => entry.id))
@@ -226,7 +226,7 @@ test('local and browser completions share prepared prompts, TK, envelope validat
   }
 });
 
-test('persona cleanup keeps the player and three canonical companions, retaining history and allowing future summons', () => {
+test('persona cleanup keeps the player and canonical companions, retaining history and allowing future summons', () => {
   const entries = Object.fromEntries(
     ['official-edith', 'official-aegis', 'official-pandora', 'player', 'old', 'official-lyria'].map(
       (id, uid) => [
@@ -242,8 +242,9 @@ test('persona cleanup keeps the player and three canonical companions, retaining
   const book = { entries };
   const before = structuredClone(entries);
   const removed = cleanCharacterEntries(book);
-  assert.equal(removed.length, 2);
-  for (const uid of ['0', '1', '2', '3']) assert.deepEqual(book.entries[uid], before[uid]);
+  assert.equal(removed.length, 1);
+  for (const uid of ['0', '1', '2', '3', '5']) assert.deepEqual(book.entries[uid], before[uid]);
+  assert.equal(book.entries['4'], undefined);
   const library = {
     campaign: { protagonistId: 'player' },
     characters: [
@@ -258,7 +259,7 @@ test('persona cleanup keeps the player and three canonical companions, retaining
   assert(cleanLibraryCharacters(library, book.extensions.wanxiang.characterCleanup.removedIds));
   assert.deepEqual(
     library.characters.map((entry) => entry.id),
-    ['official-edith', 'official-aegis', 'official-pandora', 'player', 'future'],
+    ['official-edith', 'official-aegis', 'official-pandora', 'player', 'official-lyria', 'future'],
   );
   assert.equal(library.party[2], null);
   assert.deepEqual(library.history, ['保留历史']);
@@ -266,4 +267,74 @@ test('persona cleanup keeps the player and three canonical companions, retaining
     cleanLibraryCharacters(library, book.extensions.wanxiang.characterCleanup.removedIds),
     false,
   );
+});
+
+test('persona cleanup refuses to drop official characters when removedIds contains official ids', () => {
+  const entries = Object.fromEntries(
+    ['official-edith', 'official-aegis', 'official-pandora', 'player', 'official-lyria'].map(
+      (id, uid) => [
+        uid,
+        {
+          comment: id === 'player' ? '人物详情：青缘' : '人物详情：' + id,
+          content: id + '原设定',
+          extensions: { wanxiang: { characterId: id } },
+        },
+      ],
+    ),
+  );
+  const library = {
+    campaign: { protagonistId: 'player' },
+    characters: Object.values(entries).map((entry) => ({
+      id: entry.extensions.wanxiang.characterId,
+    })),
+    party: ['player', 'official-edith', 'official-lyria', null, null, null],
+    relationships: { 'official-lyria': 3 },
+    history: ['保留历史'],
+    prepared: 'official-script',
+  };
+  const snapshot = structuredClone(library);
+  const removedIds = ['official-lyria', 'official-edith', 'official-aegis', 'official-pandora'];
+  assert.equal(cleanLibraryCharacters(library, removedIds), false);
+  assert.deepEqual(library, snapshot);
+});
+
+test('persona cleanup removes only legacy personal ids while preserving official party and relationships', () => {
+  const entries = Object.fromEntries(
+    ['official-edith', 'official-aegis', 'official-pandora', 'player', 'old', 'official-lyria'].map(
+      (id, uid) => [
+        uid,
+        {
+          comment: id === 'player' ? '人物详情：青缘' : '人物详情：' + id,
+          content: id + '原设定',
+          extensions: { wanxiang: { characterId: id } },
+        },
+      ],
+    ),
+  );
+  const library = {
+    campaign: { protagonistId: 'player' },
+    characters: Object.values(entries).map((entry) => ({
+      id: entry.extensions.wanxiang.characterId,
+    })),
+    party: ['player', 'official-edith', 'old', 'official-lyria', null, null],
+    relationships: { old: 5, 'official-lyria': 3 },
+    history: ['保留历史'],
+    prepared: 'old-script',
+  };
+  const officialBefore = structuredClone({
+    characters: library.characters.filter((entry) => entry.id.startsWith('official-')),
+  });
+  assert(cleanLibraryCharacters(library, ['old', 'official-lyria']));
+  assert.deepEqual(
+    library.characters.map((entry) => entry.id),
+    ['official-edith', 'official-aegis', 'official-pandora', 'player', 'official-lyria'],
+  );
+  assert.deepEqual(
+    library.characters.filter((entry) => entry.id.startsWith('official-')),
+    officialBefore.characters,
+  );
+  assert.deepEqual(library.party, ['player', 'official-edith', null, 'official-lyria', null, null]);
+  assert.deepEqual(library.relationships, { 'official-lyria': 3 });
+  assert.equal(library.prepared, null);
+  assert.deepEqual(library.history, ['保留历史']);
 });

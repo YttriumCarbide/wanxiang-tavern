@@ -7,6 +7,7 @@ import { buildStatic } from '../../tools/build-static.mjs';
 import { projectRoot } from '../../tools/testing/runtime.mjs';
 import { characterDocument } from '../fixtures/ai.js';
 import { dismissAutomaticJournals, finishGalDialogue } from './legacy-session.mjs';
+import { staticSaveImportChecks } from './save-import.mjs';
 
 /** Only files are served here. There is no API, request preparer, proxy or Node game backend. */
 export async function staticChecks({ browser, output }) {
@@ -144,6 +145,7 @@ export async function staticChecks({ browser, output }) {
     });
   }
   try {
+    const saveImport = await staticSaveImportChecks({ browser, baseURL, output });
     await page.goto(baseURL);
     await page.waitForFunction(() => !!window.demo, { timeout: 60000 });
     await page.locator('#start-screen').waitFor();
@@ -292,9 +294,9 @@ export async function staticChecks({ browser, output }) {
     );
     reply = '<wanxiang_json>' + JSON.stringify(characterDocument()) + '</wanxiang_json>';
     assert.equal(
-      (await request('generate/character', { brief: '灯河', purpose: 'protagonist' })).entry.setting
+      (await request('generate/character', { brief: '时砂', purpose: 'protagonist' })).entry.setting
         .name,
-      '灯河',
+      '时砂',
     );
     reply =
       '<wanxiang_json>' +
@@ -507,6 +509,7 @@ export async function staticChecks({ browser, output }) {
     assert(calls.every((call) => call.headers.authorization === 'Bearer STATIC_FIXTURE_KEY'));
     return {
       staticFilesOnly: true,
+      saveImport,
       projectSubdirectory: true,
       allSevenApis: true,
       exactTokenizer: true,

@@ -84,7 +84,7 @@ test('live requests use visible @D schema once with current IDs and no hidden fo
   for (const kind of ['character', 'script']) {
     const input =
       kind === 'character'
-        ? { brief: '一位巡灯术士' }
+        ? { brief: '一位时术师' }
         : {
             brief: '探索旧渠',
             boss: 'bossGate',

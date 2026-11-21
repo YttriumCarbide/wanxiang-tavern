@@ -30,6 +30,7 @@ import { normalizePromptPreset } from '../src/ai/presets.js';
 import { normalizeWorldSettings, syncBuiltinWorldbook } from '../src/ai/worldbook.js';
 import { tavernPresetFixture } from './fixtures/ai.js';
 import { readGenerationResult } from '../server/generation-result.mjs';
+import { ALL_OFFICIAL_DUNGEONS } from '../src/content/official-dungeons.js';
 import { RP_CHAPTERS, rpChapterDirection } from '../src/content/rp-outlines.js';
 import { readFile } from 'node:fs/promises';
 import { createAiPipeline } from '../src/ai/pipeline/runtime.js';
@@ -509,11 +510,47 @@ test('all thirty official chapter directions leave methods open and overview sur
   const builtin = JSON.parse(
     await readFile(new URL('../assets/builtin-worldbook.json', import.meta.url), 'utf8'),
   );
-  assert.equal(
-    Object.values(builtin.entries).filter((entry) => entry.content.includes('第四节点RP改编'))
-      .length,
+  const officialDungeonIds = ALL_OFFICIAL_DUNGEONS.filter((dungeon) =>
+    /^(ruins|forest|frost)-/.test(dungeon.id),
+  ).map((dungeon) => dungeon.id);
+  assert.strictEqual(
+    officialDungeonIds.length,
     18,
+    'expected 18 source dungeon definitions (3 maps x 6 stages)',
   );
+
+  const entriesByDungeonId = new Map();
+  for (const entry of Object.values(builtin.entries)) {
+    const dungeonId = entry.extensions?.wanxiang?.officialDungeonId;
+    if (!dungeonId) continue;
+    const existing = entriesByDungeonId.get(dungeonId) ?? [];
+    existing.push(entry);
+    entriesByDungeonId.set(dungeonId, existing);
+  }
+  for (const dungeonId of officialDungeonIds) {
+    const matched = entriesByDungeonId.get(dungeonId) ?? [];
+    assert.strictEqual(matched.length, 1, `expected exactly 1 builtin entry for ${dungeonId}`);
+  }
+
+  // These two dungeons were rewritten and intentionally no longer carry the historical marker text.
+  const rewrittenDungeonIds = new Set(['ruins-curse', 'forest-bog']);
+  const expectedMarkerIds = officialDungeonIds
+    .filter((dungeonId) => !rewrittenDungeonIds.has(dungeonId))
+    .sort();
+  const actualMarkerIds = Object.values(builtin.entries)
+    .filter((entry) => entry.content.includes('第四节点RP改编'))
+    .map((entry) => entry.extensions.wanxiang.officialDungeonId)
+    .sort();
+  assert.deepEqual(actualMarkerIds, expectedMarkerIds);
+
+  for (const dungeonId of rewrittenDungeonIds) {
+    const matched = entriesByDungeonId.get(dungeonId) ?? [];
+    assert.strictEqual(matched.length, 1, `expected rewritten dungeon ${dungeonId} to exist`);
+    assert.ok(
+      !matched[0].content.includes('第四节点RP改编'),
+      `rewritten dungeon ${dungeonId} should not contain marker`,
+    );
+  }
 });
 
 test('new tutorial elite retains vulnerable, slow and multiple-intent gates in the same battle', () => {

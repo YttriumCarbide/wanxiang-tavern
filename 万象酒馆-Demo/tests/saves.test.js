@@ -577,6 +577,21 @@ test('importFromFile reports parse and read failures, then stages a valid file',
   assert.equal(storage.getItem(SAVES_STORAGE_KEY), null);
 });
 
+test('loadSlot reports invalid save data through the save status channel', (t) => {
+  const { saves, notices } = installManagerFixture(t);
+  saves.getStore().slots.slot1 = { slotId: 'slot1' };
+  const status = { hidden: true, textContent: '' };
+  const selection = { hidden: true };
+  globalThis.document.querySelector = (selector) =>
+    ({ '#saves-import-status': status, '#saves-import-selection': selection })[selector] || null;
+
+  assert.equal(saves.loadSlot('slot1'), false);
+  assert.match(notices.at(-1), /载入失败.*存档/);
+  assert.equal(status.hidden, false);
+  assert.equal(selection.hidden, false);
+  assert.match(status.textContent, /载入失败.*存档/);
+});
+
 test('importToSlot reports stale runtime, library and battle state without writing', async (t) => {
   const { session, storage, saves, notices } = installManagerFixture(t);
 

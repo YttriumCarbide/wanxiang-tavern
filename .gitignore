@@ -16,3 +16,10 @@
 **/.env
 **/.env.*
 **/*.log
+
+# Personal character data stays on this device, including exports and old fixtures.
+**/个人角色/
+**/AI角色/
+**/ai-characters/
+**/generated-characters/
+**/tests/fixtures/*-character.json

@@ -1,4 +1,3 @@
-import { readFile } from 'node:fs/promises';
 import { readGenerationResult } from '../server/generation-result.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -68,7 +67,7 @@ test('fresh character JSON compiles names from setting and strips both wrappers'
   assert.equal(entry.setting.formatVersion, 3);
   assert(
     entry.setting.worldbook.includes('性别：') &&
-      entry.setting.worldbook.includes('技能动作描写｜凝灯'),
+      entry.setting.worldbook.includes('技能动作描写｜迟滞'),
   );
   assert(!JSON.stringify(entry.setting).includes('"description"'));
   const library = newLibrary();
@@ -195,24 +194,18 @@ test('new script context sends complete setting prose and environment while keep
   assert(context.encounters.every((entry) => entry.environment && !entry.hp && !entry.enemyIds));
 });
 
-test('Xinyi and alternative history wording pass format checks without changing the supplied character', async () => {
-  const document = JSON.parse(
-    await readFile(new URL('./fixtures/xinyi-character.json', import.meta.url), 'utf8'),
-  );
+test('official character and alternative history wording pass format checks without changing the supplied character', async () => {
+  const document = characterDocument();
   const read = createCharacterReader();
-  for (const history of [
-    document.setting.history,
-    '她正在处理伤口，醒来时已来到一扇陌生的门前。',
-    '从医多年。'.repeat(90),
-  ]) {
+  for (const history of [document.setting.history, document.setting.history.repeat(2)]) {
     const raw = structuredClone(document);
     raw.setting.history = history;
     const result = readGenerationResult('character', JSON.stringify(raw), {}, read);
     assert.equal(result.diagnostic.stage, 'complete');
     assert(result.entry.setting.worldbook.includes(history));
-    assert.equal(result.entry.combat.hp, 35);
-    assert.equal(result.entry.combat.mp, 30);
-    assert.equal(result.entry.combat.skills[1].endHeal, 2);
+    assert.equal(result.entry.combat.hp, document.data.hp);
+    assert.equal(result.entry.combat.mp, document.data.mp);
+    assert.deepEqual(result.entry.combat.skills[1].effects, document.data.skills[1].effects);
   }
   for (const edit of [
     (raw) => {

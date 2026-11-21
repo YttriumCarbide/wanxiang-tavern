@@ -36,10 +36,10 @@ test('imported preset metadata and request-local ST macros survive a save/export
   assert.deepEqual(preset.extensions, raw.extensions);
   const messages = composePromptPreset(
     preset,
-    { char: '灯河', scenario: '旧渠', brief: '调查' },
+    { char: '时砂', scenario: '旧渠', brief: '调查' },
     { chatHistory: [{ role: 'user', content: '继续' }] },
   );
-  assert(messages.some((message) => message.content.includes('短句。灯河进入旧渠')));
+  assert(messages.some((message) => message.content.includes('短句。时砂进入旧渠')));
   assert(!messages.some((message) => message.content.includes('{{')));
   assert.deepEqual(
     normalizePromptPreset(JSON.parse(JSON.stringify(preset)), 'imported').preset,

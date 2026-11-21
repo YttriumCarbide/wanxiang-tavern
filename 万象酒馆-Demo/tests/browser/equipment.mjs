@@ -55,8 +55,8 @@ export async function equipmentChecks({ browser, baseURL, output }) {
     });
     library.archives.npcs.push({
       id: 'npc-test',
-      name: '灯河',
-      content: '穿着旧斗篷的巡灯术士。',
+      name: '时砂',
+      content: '穿着旧斗篷的时术师。',
       sources: [
         {
           scriptId: 'test-script',
@@ -72,7 +72,7 @@ export async function equipmentChecks({ browser, baseURL, output }) {
       schemaVersion: 4,
       title: '回廊往事',
       tags: [],
-      story: Array(5).fill('在回廊中遇见灯河，拾起微光晶片。'),
+      story: Array(5).fill('在回廊中遇见时砂，拾起微光晶片。'),
       npcs: [],
       items: [],
       nextHook: { setting: '' },
@@ -104,7 +104,7 @@ export async function equipmentChecks({ browser, baseURL, output }) {
     );
     await page.route('**/api/ai/generate/creation', async (route) => {
       const body = route.request().postDataJSON();
-      assert(body.items[0].script.includes('在回廊中遇见灯河'));
+      assert(body.items[0].script.includes('在回廊中遇见时砂'));
       calls.push('creation');
       await route.fulfill({
         json: {
@@ -213,7 +213,7 @@ export async function equipmentChecks({ browser, baseURL, output }) {
     const recruited = await page.evaluate(() => demo.getLibrary());
     assert.equal(recruited.archives.npcs.length, 0);
     assert.equal(recruited.inventory.summonContracts, 3);
-    assert(recruited.refinedNpcs.includes('灯河'));
+    assert(recruited.refinedNpcs.includes('时砂'));
     await page.locator('#summoned-join').click();
     await readGal(true);
     assert(

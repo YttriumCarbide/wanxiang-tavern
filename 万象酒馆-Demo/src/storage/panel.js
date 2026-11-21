@@ -1,5 +1,6 @@
 import { createEventScope } from '../shared/events.js';
 import { exportDatabase, readDatabaseBackup } from './backup.js';
+import { exportJsonFile } from './export-file.js';
 import { installFolderBackup, supportsFolderBackup } from './folder-backup.js';
 
 function excludedFromBackup(key) {
@@ -221,17 +222,17 @@ export function createLocalDataPanel({ database, storage, dispose }) {
     try {
       await storage.flush();
       const backup = await exportDatabase(database, localStorage);
-      const url = URL.createObjectURL(
-        new Blob([JSON.stringify(backup)], { type: 'application/json' }),
+      const name = `wanxiang-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      const { method } = await exportJsonFile(JSON.stringify(backup), name);
+      status(
+        method === 'native'
+          ? '完整备份已导出，换浏览器或网址时可用它恢复。'
+          : '完整备份文件已开始下载。',
       );
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `wanxiang-backup-${new Date().toISOString().slice(0, 10)}.json`;
-      link.click();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-      status('完整备份已导出，换浏览器或网址时可用它恢复。');
     } catch (failure) {
-      status('备份失败：' + failure.message);
+      status(
+        failure.code === 'cancelled' ? '已取消导出完整备份。' : '备份失败：' + failure.message,
+      );
     }
   }
   events.on(panel.querySelector('#data-export'), 'click', () => void exportFullBackup());

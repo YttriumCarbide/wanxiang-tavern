@@ -17,7 +17,7 @@ export async function characterSheetChecks({ page, output }) {
   await page.screenshot({ path: path.join(output, 'ai-character-sheet-desktop.png') });
   const ability = page
     .locator('#summoned-lore .character-ability')
-    .filter({ has: page.locator('summary strong', { hasText: '凝灯' }) });
+    .filter({ has: page.locator('summary strong', { hasText: '迟滞' }) });
   await ability.locator('summary').click();
   const motion = await ability.locator('.ability-motion').textContent();
   assert.equal(
