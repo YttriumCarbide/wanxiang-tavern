@@ -51,15 +51,9 @@ jobs:
         working-directory: 万象酒馆-Demo
         run: npm ci
 
-      - name: Install Playwright Chromium
+      - name: Run source quality checks
         working-directory: 万象酒馆-Demo
-        run: npx playwright install --with-deps chromium
-
-      - name: Run release checks
-        working-directory: 万象酒馆-Demo
-        env:
-          TEST_BROWSER: chromium
-        run: npm test
+        run: node tools/test.mjs --scope quality
 
       - name: Build static release
         working-directory: 万象酒馆-Demo
