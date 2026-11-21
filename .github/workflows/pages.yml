@@ -6,6 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
+  actions: read
   contents: read
   pages: write
   id-token: write
@@ -18,6 +19,8 @@ jobs:
   deploy:
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
+    env:
+      PAGES_ARTIFACT_NAME: github-pages-${{ github.run_id }}-${{ github.run_attempt }}
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -36,7 +39,25 @@ jobs:
         run: npm run build
         working-directory: 万象酒馆-Demo
       - uses: actions/upload-pages-artifact@v3
+        id: pages-artifact
         with:
+          name: ${{ env.PAGES_ARTIFACT_NAME }}
           path: 万象酒馆-Demo/dist
+      - name: Wait for Pages artifact metadata
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PAGES_ARTIFACT_ID: ${{ steps.pages-artifact.outputs.artifact_id }}
+        run: |
+          for attempt in 1 2 3 4 5 6; do
+            artifact_id="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/artifacts?name=${PAGES_ARTIFACT_NAME}" --jq '.artifacts[].id')"
+            if [ "$artifact_id" = "$PAGES_ARTIFACT_ID" ]; then
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "::error::Uploaded Pages artifact ${PAGES_ARTIFACT_ID} is not visible in run metadata."
+          exit 1
       - uses: actions/deploy-pages@v5
         id: deployment
+        with:
+          artifact_name: ${{ env.PAGES_ARTIFACT_NAME }}
