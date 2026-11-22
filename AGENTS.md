@@ -57,3 +57,8 @@
        prompt = "提炼以下测试失败堆栈的核心原因与涉及文件行号：..."
      } | ConvertTo-Json -Compress | node "C:\Users\Lenovo\.gemini\config\mcp\deepseek-worker.mjs" --cli ds_ask --stdin
      ```
+
+4. **仓库内通用 AI 调用工具**
+   - 从仓库根目录运行 `node 万象酒馆-Demo/tools/ai-worker.mjs --cli ai_ask --stdin`，通过标准输入传入 `{"prompt":"…"}`。
+   - 文件任务使用 `--cli ai_file_worker --stdin`，沿用 `instruction`、`input_files`、`output_file` 和 `json_mode`。仅传入任务所需且可发送到配置接口的文件。
+   - 使用环境变量选择 Chat Completions 接口和模型。配置和调用示例见[开发规范](万象酒馆-Demo/开发规范.md#开发用-ai-调用工具)。需要由 DeepSeek Flash 处理的任务，使用此命令时仍须配置指定的 DeepSeek Flash 模型。
