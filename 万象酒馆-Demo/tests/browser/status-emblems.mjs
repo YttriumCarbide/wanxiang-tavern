@@ -13,11 +13,28 @@ import { LEARNABLE_SKILLS } from '../../src/content/learnable-skills.js';
 export async function statusEmblemChecks({ browser, baseURL, output }) {
   const page = await browser.newPage({ viewport: { width: 1440, height: 836 } });
   const errors = [];
+  const startupErrors = [];
+  page.on('console', (message) => {
+    if (message.type() === 'error' && startupErrors.length < 12) startupErrors.push(message.text());
+  });
+  page.on('response', (response) => {
+    if (!response.ok() && response.request().resourceType() === 'script')
+      startupErrors.push(`${response.status()} ${response.url()}`);
+  });
   page.on('pageerror', (error) => errors.push(error.message));
   await legacySession(page);
   try {
     await page.goto(baseURL);
-    await page.waitForFunction(() => !!window.demo);
+    await page.waitForFunction(
+      () =>
+        !!window.demo ||
+        document.querySelector('.storage-notice')?.textContent.startsWith('游戏启动失败'),
+    );
+    const startupFailure = await page.locator('.storage-notice').allTextContents();
+    assert(
+      !startupFailure.some((text) => text.startsWith('游戏启动失败')),
+      startupFailure.join('\n'),
+    );
     const library = newCampaign(defaultProtagonist());
     Object.assign(library.campaign, {
       completed: true,
@@ -140,6 +157,20 @@ export async function statusEmblemChecks({ browser, baseURL, output }) {
       steps: 6,
     });
     await page.mouse.up();
+    await page.locator('#ledger-drawer-host.is-open').waitFor();
+    await page.locator('#ledger-shop-open').click();
+    const addedSupplies = { artifact: 2, confusion: 2, blind: 2, cleanse: 1, flying: 1 };
+    for (const [category, count] of Object.entries(addedSupplies)) {
+      await page.locator(`[data-shop-category="${category}"]`).click();
+      assert.equal(await page.locator('[data-shop-item]').count(), count);
+    }
+    const beforePurchase = await page.evaluate(() => window.demo.getLibrary().inventory);
+    await page.locator('[data-buy="flying-scroll"]').click();
+    const purchased = await page.evaluate(() => window.demo.getLibrary().inventory);
+    assert.equal(purchased.items['flying-scroll'], beforePurchase.items['flying-scroll'] + 1);
+    assert.equal(purchased.gold, beforePurchase.gold - ITEMS['flying-scroll'].price);
+    await page.locator('#shop-close').click();
+    await page.locator('#ledger-handle').press('Enter');
     await page.locator('#ledger-drawer-host.is-open').waitFor();
     await page.locator('#party-toggle').click();
     await page.locator('[data-prepare-slot="0"]').click();
@@ -394,6 +425,8 @@ export async function statusEmblemChecks({ browser, baseURL, output }) {
     };
   } catch (failure) {
     await page.screenshot({ path: path.join(output, 'failure.png') });
+    const diagnostics = [...errors, ...startupErrors];
+    if (diagnostics.length) throw new Error(diagnostics.join('\n'), { cause: failure });
     throw failure;
   } finally {
     await page.close();

@@ -15,7 +15,7 @@ import { enemyEffectSide } from './enemy-targets.js';
 import { withoutDiningBonus } from './dining.js';
 import { aresDecision, nextBossStage } from './ares.js';
 import { createCompanionMechanics } from './companion-mechanics.js';
-import { createTownGuestMechanics, blindedTarget } from './town-guest-mechanics.js';
+import { createTownGuestMechanics } from './town-guest-mechanics.js';
 import { lockEnemyDecisions } from './enemy-tactics.js';
 import {
   alchemicalBombDamage,
@@ -43,6 +43,8 @@ import {
 import {
   statusStacks,
   NEGATIVE_STATUSES,
+  blindedTarget,
+  pickAttackTarget,
   applyStrengthBonus,
   applyWeakReduction,
   applyVulnerableBonus,
@@ -216,8 +218,7 @@ function simulate(s, plan, slots) {
     currentProcs = [],
     procSource = null,
     attackHits = null,
-    attackInjuries = null,
-    blindMiss = null;
+    attackInjuries = null;
   work.procUses ||= {};
   work.cooperationHits = {};
   work.cooperations = [];
@@ -363,6 +364,50 @@ function simulate(s, plan, slots) {
       });
     }
   }
+  function cleanse(id, buffs = NEGATIVE_STATUSES) {
+    const unit = work.units[id];
+    const removed = buffs.filter((key) => unit.buffs[key] > 0);
+    for (const key of removed) delete unit.buffs[key];
+    if (removed.length)
+      currentLogs.push(
+        `${definitions[id].name} · 净化：移除${removed.map((key) => BUFFS[key].name).join('、')}`,
+      );
+  }
+  function confusionFor(actor, actionIndex = 0) {
+    if (!effectiveBuff(work, actor, 'confusion')) return {};
+    const hero = work.units[actor].side === 'hero';
+    const team = hero ? heroes.map((member) => member.id) : work.enemyIds;
+    const living = team.filter((id) => id !== actor && work.units[id]?.hp > 0);
+    // Player targeting uses the round-start roster so editing plans cannot reroll a living target.
+    const initial = hero
+      ? pickAttackTarget(
+          s,
+          actor,
+          team.filter((id) => id !== actor && s.units[id]?.hp > 0),
+        )
+      : null;
+    const target = living.includes(initial)
+      ? initial
+      : pickAttackTarget(work, actor, living, actionIndex);
+    return target ? { confusionTarget: target } : { confusionReduction: true };
+  }
+  function reportConfusion(actor, { confusionTarget, confusionReduction }) {
+    if (!confusionTarget && !confusionReduction) return;
+    const text = confusionTarget
+      ? `转而攻击${definitions[confusionTarget].name}`
+      : '没有存活队友，攻击伤害降低15%';
+    currentLogs.push(`${definitions[actor].name} · 混乱：${text}`);
+    currentStatusTriggers.push({ id: actor, type: 'confusion', value: 1 });
+  }
+  function heroAttackStatus(actor, targets, list, echo = false) {
+    if (!list.some((effect) => effect.type === 'damage')) return {};
+    const status = confusionFor(actor);
+    if (status.confusionTarget || !effectiveBuff(work, actor, 'blind')) return status;
+    const damageTargets = list
+      .filter((effect) => effect.type === 'damage')
+      .flatMap((effect) => (effect.target === 'allEnemies' || echo ? work.enemyIds : targets));
+    return { ...status, blindTarget: blindedTarget(work, actor, damageTargets) };
+  }
   const mechanics = createEmblemMechanics(work, definitions, {
     lose,
     heal,
@@ -467,6 +512,7 @@ function simulate(s, plan, slots) {
     bonus = 0,
     markSnapshot = work.units[actor]?.mark || 0,
     damageType = null,
+    attackStatus = {},
   ) {
     let consumedMark = false;
     const allowed = (effect, id) =>
@@ -505,14 +551,19 @@ function simulate(s, plan, slots) {
         }
         continue;
       }
-      const selected =
-        actor && ['self', 'target', 'lowestAlly', 'allAllies', 'allEnemies'].includes(eff.target)
+      const redirected =
+        attackStatus.confusionTarget &&
+        (eff.type === 'damage' || (eff.type === 'buff' && NEGATIVE_STATUSES.includes(eff.buff))) &&
+        !['self', 'allAllies', 'lowestAlly'].includes(eff.target);
+      const selected = redirected
+        ? [attackStatus.confusionTarget]
+        : actor && ['self', 'target', 'lowestAlly', 'allAllies', 'allEnemies'].includes(eff.target)
           ? triggerTargets(work, actor, eff.target, { targets })
           : targets;
       const affected =
-        eff.type === 'damage' && echo
+        eff.type === 'damage' && echo && !redirected
           ? [...new Set([...selected, ...work.enemyIds])]
-          : eff.type === 'damage' && split
+          : eff.type === 'damage' && split && !redirected
             ? front(work).filter(Boolean)
             : selected;
       for (const id of affected) {
@@ -528,16 +579,17 @@ function simulate(s, plan, slots) {
           if (!eff.flat && actor) n = applyWeakReduction(n, effectiveBuff(work, actor, 'weak'));
           if (!eff.flat && actor && n > 0 && effectiveBuff(work, actor, 'balance'))
             n = Math.max(1, Math.floor((n * 85) / 100));
+          if (attackStatus.confusionReduction) n = Math.floor((n * 85) / 100);
           if (!eff.flat) n = applyVulnerableBonus(n, effectiveBuff(work, id, 'vulnerable'));
           if (!eff.flat && u.broken) n = Math.round(n * 1.5);
-          if (split) {
+          if (split && !redirected) {
             const total = n * split;
             const position = front(work).indexOf(id);
             n = Math.floor(total / 3) + (position < total % 3 ? 1 : 0);
           }
           if (effectiveBuff(work, id, 'flying')) n = Math.floor(n / 2);
           n = applyIronReduction(n, effectiveBuff(work, id, 'iron'));
-          const missedByBlind = blindMiss?.actor === actor && blindMiss.target === id;
+          const missedByBlind = attackStatus.blindTarget === id;
           if (missedByBlind) n = 0;
           if (!generated && !missedByBlind && attackHits && u.side === 'enemy') attackHits.add(id);
           const breakerActive = !generated && u.side === 'enemy' && isBreakerCombined(actor);
@@ -554,7 +606,7 @@ function simulate(s, plan, slots) {
             damage = n - absorbed;
           }
           const lost = lose(u, damage, '攻击', true);
-          if (!missedByBlind && n > 0) overlords.onAttackHit(actor, id);
+          if (!missedByBlind && n > 0) overlords.onAttackHit(actor, id, Boolean(redirected));
           if (breakerActive && hadShield && u.block === 0) {
             grantFrontBreakerShield(actor, '击破护盾');
           }
@@ -583,7 +635,7 @@ function simulate(s, plan, slots) {
           const recovery = eff.maxMpPercent ? Math.round(u.maxMp * eff.maxMpPercent) : value;
           restoreMana(id, recovery, generated);
         }
-        if (eff.type === 'cleanse') for (const buff of eff.buffs) delete u.buffs[buff];
+        if (eff.type === 'cleanse') cleanse(id, eff.buffs);
         if (eff.type === 'buff') applyBuff(actor, id, eff.buff, value, generated);
       }
       if (applied && eff.consumeMark) consumedMark = true;
@@ -654,6 +706,7 @@ function simulate(s, plan, slots) {
     }
     const effectsList = Array.isArray(es.effects) ? es.effects : [{ type: 'damage', value: 5 }];
     const entryDamageType = inferDamageType({ ...es, effects: effectsList }, inDef);
+    const attackStatus = heroAttackStatus(id, esTargets, effectsList);
     if (es.selfDamage) lose(unit, es.selfDamage, '入场技 · 自身伤害');
     if (unit.hp > 0 && !guests.entry(id, es, outgoing)) {
       if (es.mechanic === 'luo-entry') {
@@ -664,6 +717,7 @@ function simulate(s, plan, slots) {
         }
         unit.nextBasicDouble = true;
       } else {
+        reportConfusion(id, attackStatus);
         effects(
           id,
           esTargets,
@@ -674,15 +728,25 @@ function simulate(s, plan, slots) {
           0,
           work.units[id]?.mark || 0,
           entryDamageType,
+          attackStatus,
         );
       }
     }
     currentLogs.push(
       `${inDef.name}入场触发【${es.name}】${es.target === 'opposite' && !esTargets.length ? '，对位无存活敌人' : ''}`,
     );
-    record('entrySkill', id, es.name, esTargets, actionId, es.id, {
-      ...(entryDamageType ? { damageType: entryDamageType } : {}),
-    });
+    record(
+      'entrySkill',
+      id,
+      es.name,
+      attackStatus.confusionTarget ? [attackStatus.confusionTarget] : esTargets,
+      actionId,
+      es.id,
+      {
+        ...(entryDamageType ? { damageType: entryDamageType } : {}),
+        ...attackStatus,
+      },
+    );
   }
   function counterAttack(actor, target) {
     const unit = work.units[actor];
@@ -696,29 +760,35 @@ function simulate(s, plan, slots) {
         value: effect.value * (unit.nextBasicDouble ? 2 : 1),
       }));
       unit.nextBasicDouble = false;
-      trigger('beforeAttack', actor, { targets: [target] });
-      if (unit.hp <= 0 || work.units[target].hp <= 0) break;
+      const echo = !!unit.combined && definitions[actor].emblemId === 'tan-hongyu';
+      const attackStatus = heroAttackStatus(actor, [target], list, echo);
+      const hit = attackStatus.confusionTarget || target;
+      reportConfusion(actor, attackStatus);
+      trigger('beforeAttack', actor, { targets: [hit] });
+      if (unit.hp <= 0 || work.units[hit].hp <= 0) break;
       attackHits = new Set();
-      const before = work.units[target].hp;
+      const before = work.units[hit].hp;
       effects(
         actor,
         [target],
         list,
         false,
-        !!unit.combined && definitions[actor].emblemId === 'tan-hongyu',
+        echo,
         false,
         0,
         work.units[actor]?.mark || 0,
         basicDamageType,
+        attackStatus,
       );
-      damage += Math.max(0, before - work.units[target].hp);
+      damage += Math.max(0, before - work.units[hit].hp);
       mechanics.attack(actor, attackHits);
       attackHits = null;
-      trigger('afterAttack', actor, { targets: [target] });
-      record('counter', actor, '毅明 · ' + skill.name, [target], null, 'attack', {
+      trigger('afterAttack', actor, { targets: [hit] });
+      record('counter', actor, '毅明 · ' + skill.name, [hit], null, 'attack', {
         repeatIndex: cast + 1,
         repeatCount: repeats,
         damageType: basicDamageType,
+        ...attackStatus,
       });
     }
     return damage;
@@ -999,7 +1069,7 @@ function simulate(s, plan, slots) {
       }
       if (move.selfShield) effects(enemy, [enemy], [{ type: 'shield', value: move.selfShield }]);
       if (move.selfHeal) heal(enemy, move.selfHeal);
-      if (move.selfCleanse) for (const key of NEGATIVE_STATUSES) delete u.buffs[key];
+      if (move.selfCleanse) cleanse(enemy);
       if (move.selfBuff)
         effects(
           enemy,
@@ -1037,18 +1107,29 @@ function simulate(s, plan, slots) {
                     : targets;
         resolvedEffects.push({ effect, ownTargets, effectTarget });
       }
-      const missed = blindedTarget(
-        work,
-        enemy,
-        resolvedEffects.flatMap(({ effect, ownTargets, effectTarget }) =>
-          effect.type !== 'damage' || effectTarget !== 'opponents'
-            ? []
-            : u.buffs.balance
-              ? front(work).filter(Boolean)
-              : ownTargets,
-        ),
+      const attacks = resolvedEffects.filter(
+        ({ effect, effectTarget }) => effect.type === 'damage' && effectTarget === 'opponents',
       );
-      blindMiss = missed ? { actor: enemy, target: missed } : null;
+      const attackStatus = attacks.length ? confusionFor(enemy, actionIdx) : {};
+      const redirected = attackStatus.confusionTarget;
+      const damageSlots = [
+        ...new Set(
+          attacks.flatMap(({ effect }) => effect.targetSlots || move.slots || [move.slot]),
+        ),
+      ];
+      const hitSlot = redirected ? pickAttackTarget(work, enemy, damageSlots, actionIdx + 1) : null;
+      reportConfusion(enemy, attackStatus);
+      const missed =
+        !redirected && effectiveBuff(work, enemy, 'blind')
+          ? blindedTarget(
+              work,
+              enemy,
+              attacks.flatMap(({ ownTargets }) =>
+                u.buffs.balance ? front(work).filter(Boolean) : ownTargets,
+              ),
+            )
+          : null;
+      attackStatus.blindTarget = missed;
       if (missed) {
         currentLogs.push(
           `${definitions[enemy].name} · 致盲：对${definitions[missed].name}的伤害变为0`,
@@ -1059,18 +1140,25 @@ function simulate(s, plan, slots) {
         ? inferDamageType(move, definitions[enemy]) || resolveBasicAttackType(definitions[enemy])
         : null;
       for (const { effect, ownTargets, effectTarget } of resolvedEffects) {
+        const opposing = effectTarget === 'opponents';
+        if (
+          redirected &&
+          opposing &&
+          effect.type === 'damage' &&
+          !(effect.targetSlots || move.slots || [move.slot]).includes(hitSlot)
+        )
+          continue;
         effects(
           enemy,
           ownTargets,
           [effect],
           false,
           false,
-          effectTarget === 'opponents' && u.buffs.balance
-            ? (move.slots || [move.slot]).length
-            : false,
+          opposing && u.buffs.balance ? (move.slots || [move.slot]).length : false,
           0,
           work.units[enemy]?.mark || 0,
           enemyDamageType,
+          opposing ? attackStatus : undefined,
         );
       }
       overlords.afterMove(enemy, move);
@@ -1124,11 +1212,16 @@ function simulate(s, plan, slots) {
         enemy,
         (isOverlord ? '' : u.bossStage >= 3 ? '【第三阶段】' : move.enraged ? '【第二阶段】' : '') +
           move.name,
-        u.buffs.balance ? [...new Set([...targets, ...front(work).filter(Boolean)])] : targets,
+        redirected
+          ? [redirected]
+          : u.buffs.balance
+            ? [...new Set([...targets, ...front(work).filter(Boolean)])]
+            : targets,
         null,
         null,
         {
           blindTarget: missed,
+          ...(redirected ? { confusionTarget: redirected, confusionSlot: hitSlot } : {}),
           actionIndex: actionIdx,
           enraged: Boolean(u.enraged || move.enraged),
           bossStage: u.bossStage || 1,
@@ -1140,9 +1233,8 @@ function simulate(s, plan, slots) {
           ...(enemyDamageType ? { damageType: enemyDamageType } : {}),
         },
       );
-      blindMiss = null;
       if (move.effects.some((effect) => effect.type === 'damage'))
-        companions.afterEnemyAttack(enemy, targets);
+        companions.afterEnemyAttack(enemy, redirected ? [redirected] : targets);
     } else if (a) {
       const participants =
         a.kind === 'reposition'
@@ -1281,8 +1373,7 @@ function simulate(s, plan, slots) {
       }
       u.used++;
       const attack = skill.effects.some((effect) => effect.type === 'damage');
-      const attackedEnemy =
-        attack && targets.some((id) => work.units[id]?.side === 'enemy' && work.units[id].hp > 0);
+      let attackedEnemy = false;
       const repeats = 1 + (isOverloaded ? 1 : 0) + (a.skill === 'attack' && u.buffs.meteor ? 1 : 0);
       for (let cast = 0; cast < repeats && u.hp > 0; cast++) {
         if (cast && u.buffs.bind) {
@@ -1298,15 +1389,23 @@ function simulate(s, plan, slots) {
           currentLogs.push(
             `${def.name} · ${isOverloaded ? '超限负荷：行动额外生效一次' : '流星剑姿：普通攻击额外攻击一次'}`,
           );
-        if (attack) trigger('beforeAttack', a.actor, { targets });
-        if (u.hp <= 0) break;
-        attackHits = new Set();
-        attackInjuries = new Set();
         const echo =
           !!u.combined &&
           attack &&
           skill.target === 'enemy' &&
           (!def.emblemId || def.emblemId === 'tan-hongyu');
+        const attackStatus = heroAttackStatus(a.actor, targets, skill.effects, echo);
+        const redirected = attackStatus.confusionTarget;
+        const actualTargets = redirected ? [redirected] : targets;
+        if (cast === 0)
+          attackedEnemy =
+            attack &&
+            actualTargets.some((id) => work.units[id]?.side === 'enemy' && work.units[id].hp > 0);
+        reportConfusion(a.actor, attackStatus);
+        if (attack) trigger('beforeAttack', a.actor, { targets: actualTargets });
+        if (u.hp <= 0) break;
+        attackHits = new Set();
+        attackInjuries = new Set();
         const bonus =
           isOverloaded && attack
             ? u.overloadEngage
@@ -1327,8 +1426,9 @@ function simulate(s, plan, slots) {
               bonus,
               undefined,
               heroDamageType,
+              attackStatus,
             );
-          companions.cast(a.actor, skill, a.target);
+          companions.cast(a.actor, skill, redirected || a.target);
         } else if (skill.mechanic) mechanics.cast(a.actor, skill, a.target);
         else {
           const list =
@@ -1338,27 +1438,39 @@ function simulate(s, plan, slots) {
                 )
               : skill.effects;
           if (a.skill === 'attack') u.nextBasicDouble = false;
-          effects(a.actor, targets, list, false, echo, false, bonus, undefined, heroDamageType);
+          effects(
+            a.actor,
+            targets,
+            list,
+            false,
+            echo,
+            false,
+            bonus,
+            undefined,
+            heroDamageType,
+            attackStatus,
+          );
         }
         mechanics.attack(a.actor, attackHits);
         if (a.skill === 'attack') guests.afterBasicAttack(a.actor, attackInjuries);
         guests.afterCast(a.actor, skill);
         attackHits = null;
         attackInjuries = null;
-        if (a.skill !== 'attack') trigger('skillCast', a.actor, { targets });
+        if (a.skill !== 'attack') trigger('skillCast', a.actor, { targets: actualTargets });
         if (cast === 0 && a.skill === 'attack' && attackedEnemy && def.basicAttackMark && u.hp > 0)
           u.mark = Math.min(def.mechanicMark?.max || 3, (u.mark || 0) + def.basicAttackMark);
-        if (attack) trigger('afterAttack', a.actor, { targets });
+        if (attack) trigger('afterAttack', a.actor, { targets: actualTargets });
         if (EMBLEMS[def.emblemId]?.skill?.id === a.skill) u.combineSkillUsed = true;
         if (cast === repeats - 1) {
           if (attackedEnemy && def.emblemId && !u.combined)
             u.emblemCharge = Math.min(6, (u.emblemCharge || 0) + 1);
         }
-        record('hero', a.actor, skill.name, targets, a.id, a.skill, {
+        record('hero', a.actor, skill.name, actualTargets, a.id, a.skill, {
           repeatCount: repeats,
           repeatIndex: cast + 1,
           costs: { mp: cast ? 0 : mpCost, hp: cast ? 0 : hpCost },
           ...(heroDamageType ? { damageType: heroDamageType } : {}),
+          ...attackStatus,
         });
         if (
           cast === repeats - 1 &&

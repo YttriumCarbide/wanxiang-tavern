@@ -31,7 +31,7 @@ export const TRIGGER_TARGETS = Object.freeze({
   allEnemies: '全体存活敌人',
   lowestEnemy: '生命最低敌人',
 });
-export const EXCLUSIVE_BUFFS = Object.freeze(['meteor', 'balance', 'sacrifice', 'artifact']);
+export const EXCLUSIVE_BUFFS = Object.freeze(['meteor', 'balance', 'sacrifice']);
 export const POSITIVE_BUFFS = Object.freeze([
   'flying',
   'haste',
@@ -45,6 +45,7 @@ export const POSITIVE_BUFFS = Object.freeze([
 ]);
 export const NEGATIVE_BUFFS = Object.freeze([
   'blind',
+  'confusion',
   'bind',
   'weak',
   'vulnerable',
@@ -119,6 +120,7 @@ export function normalizeRules(value) {
       if (!['damage', 'heal', 'mana', 'shield', 'buff', 'cleanse', 'mark'].includes(effect.type))
         throw Error('触发效果无效');
       if (effect.type === 'cleanse') {
+        if (effect.buffs === undefined) return { type: 'cleanse', ...effectMetadata(effect) };
         if (
           !Array.isArray(effect.buffs) ||
           !effect.buffs.length ||

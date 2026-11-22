@@ -76,6 +76,25 @@ function availableSlot(state, reserved = []) {
   return slot;
 }
 
+test('confusion redirects the syndicate king’s hidden weapon debuff with the hit', () => {
+  const boss = 'banditSyndicateKing';
+  const state = newBattle([boss, 'pebble']);
+  state.phase = 'plan';
+  state.round = 1;
+  state.units[boss].buffs.confusion = 1;
+  state.units.pebble.hp = state.units.pebble.maxHp = 500;
+  const result = resolve(state);
+  const lock = result.events.find((event) => event.type === 'hiddenWeaponLock');
+  const hit = enemyEvents(result, boss).find((event) => event.confusionTarget);
+  assert(lock && hit);
+  assert.deepEqual(hit.targets, ['pebble']);
+  assert(
+    hit.statusApplications.some(
+      ({ target, buff }) => target === 'pebble' && buff === lock.weapon.buff,
+    ),
+  );
+});
+
 test('hidden weapons cycle deterministically through a 4-weapon permutation without rerolling on preview', () => {
   const bossId = 'banditSyndicateKing';
   const state = fixture(bossId, {

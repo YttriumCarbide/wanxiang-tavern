@@ -13,6 +13,9 @@ const artwork = {
     <path fill="#e2c485" d="M29 26h6v12h-6z" />
     <path fill="#f0a294" d="m10 10 44 44-5 5L5 15z" />
     <path fill="#542f49" d="m16 11 40 40-4 4-40-40z" />`,
+  confusion: html`<path fill="#342348" d="M6 6h52v52H6z" />
+    <path fill="#d9afea" d="M12 18h12l19 24v-8l10 9-10 10v-6H40L21 23h-9z" />
+    <path fill="#f5c77c" d="M12 43h9l6-8 4 5-7 8H12zm23-19 5-6h3v-7l10 10-10 9v-7l-4 5z" />`,
   melody: html`<path fill="#203c35" d="M6 6h52v52H6z" />
     <path fill="#85b49a" d="M12 19h40v3H12zM12 29h40v3H12zM12 39h40v3H12z" />
     <path fill="#f0d798" d="m26 14 24-6v34h-6V20l-12 3v25h-6z" />

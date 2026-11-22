@@ -161,6 +161,7 @@ export function createTimeline(context) {
           (event) => event.actionId === a.id && event.type === 'hero',
         ),
         repeated = casts.length > 1,
+        redirected = casts.find((event) => event.confusionTarget)?.confusionTarget,
         repeatTotal = casts.reduce(
           (max, event) => Math.max(max, Number(event.repeatCount) || 1),
           1,
@@ -190,6 +191,7 @@ export function createTimeline(context) {
         bad?.message ||
           skip?.message ||
           bound?.label ||
+          (redirected && `混乱 · 实际攻击目标：${context.roster.get(redirected).name}`) ||
           `${context.planning.actionLabel(a)} · ${a.ap} AP\n拖动调整顺序`,
       );
       const actionDmgChip = (dt) => damageTypeChip(dt, { size: 13, className: 'action-dmg-type' });

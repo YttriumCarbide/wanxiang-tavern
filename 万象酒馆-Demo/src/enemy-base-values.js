@@ -38,6 +38,9 @@ export const ENEMY_TIER_TABLES = Object.freeze({
   statusStacks: Object.freeze({
     bind: Object.freeze({ low: 1, medium: 1, high: 1 }),
     flying: Object.freeze({ low: 1, medium: 1, high: 2 }),
+    artifact: Object.freeze({ low: 1, medium: 1, high: 2 }),
+    blind: Object.freeze({ low: 1, medium: 1, high: 2 }),
+    confusion: Object.freeze({ low: 1, medium: 1, high: 2 }),
     haste: Object.freeze({ low: 1, medium: 1, high: 2 }),
     weak: Object.freeze({ low: 1, medium: 2, high: 3 }),
     vulnerable: Object.freeze({ low: 1, medium: 2, high: 3 }),
@@ -82,6 +85,7 @@ function compileEnemyMove(enemyId, move, moveKey, boss) {
     ENEMY_TIER_TABLES.multiHitDamageModifiers[Math.min(5, Math.max(1, damageCount))];
   const multiSupportMod = supportCount > 1 ? Math.max(0.55, 1 / Math.sqrt(supportCount)) : 1;
   const compiledEffects = list.map((effect, index) => {
+    if (effect.type === 'cleanse') return { type: 'cleanse', target: effect.target };
     const seedKey = `${enemyId}:${moveKey}:${effect.type}:${effect.buff || ''}:${index}`;
     let value;
     if (effect.type === 'damage') {

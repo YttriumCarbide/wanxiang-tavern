@@ -602,7 +602,7 @@ export function createEffects(layer, center, getSpeed, options = {}) {
         u = e.after.units[id],
         old = before.units[id];
       if (!p || !u || !old) continue;
-      const friendly = before.units[e.actor]?.side === u.side;
+      const friendly = !e.confusionTarget && before.units[e.actor]?.side === u.side;
       if (isAction && friendly) {
         ring(p, u.hp > old.hp ? '#b7e9a1' : '#c7d9ad', 'healing-ring', impactDelay);
         sparks(p, '#b2e0a1', 5, impactDelay);

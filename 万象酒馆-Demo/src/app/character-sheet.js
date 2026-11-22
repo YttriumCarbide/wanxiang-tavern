@@ -21,7 +21,9 @@ const targets = {
 function effectText(effect) {
   if (effect.type === 'buff') return `${BUFFS[effect.buff].name} +${effect.value}层`;
   if (effect.type === 'cleanse')
-    return `净化：${effect.buffs.map((key) => BUFFS[key].name).join('、')}`;
+    return effect.buffs
+      ? `净化：${effect.buffs.map((key) => BUFFS[key].name).join('、')}`
+      : '净化所有负面状态';
   if (effect.type === 'mark') return `标记 +${effect.value}层`;
   return `${{ damage: '基础伤害', heal: '治疗', shield: '护盾', selfHeal: '自身治疗', selfMana: '自身回复法力' }[effect.type]} ${effect.value}`;
 }

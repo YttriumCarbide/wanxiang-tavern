@@ -11,16 +11,6 @@ export function adjacentAllies(state, actor, includeSelf = false) {
   );
 }
 
-/** Chosen in the deterministic preview, never during animation playback. */
-export function blindedTarget(state, actor, targets) {
-  if (!state.units[actor]?.buffs.blind) return null;
-  const living = [...new Set(targets)].filter((id) => state.units[id]?.hp > 0);
-  if (living.length < 2) return null;
-  let seed = (state.seed + state.round * 101) >>> 0;
-  for (const letter of actor) seed = Math.imul(seed ^ letter.charCodeAt(0), 16777619) >>> 0;
-  return living[seed % living.length];
-}
-
 export function createTownGuestMechanics(state, definitions, ports) {
   function allies() {
     return state.formation.filter((id) => state.units[id]?.hp > 0);

@@ -575,7 +575,7 @@ test('equipment generation advertises and rejects unlimited discrete effects by 
     equipmentGenerationPlan({ quality: 'epic' }).scopeRestrictions.unlimitedNonDotBuffs,
     true,
   );
-  const create = (quality, effect) =>
+  const create = (quality, effect, target = 'self') =>
     compileEquipmentDesign(
       {
         name: '示例',
@@ -587,7 +587,7 @@ test('equipment generation advertises and rejects unlimited discrete effects by 
               mode: 'event',
               event: 'afterAttack',
               scope: 'unlimited',
-              target: 'self',
+              target,
               conditions: [],
               effects: [effect],
             },
@@ -608,4 +608,12 @@ test('equipment generation advertises and rejects unlimited discrete effects by 
     create('epic', { type: 'buff', buff: 'strength', power: 'low' }).rules[0].scope,
     'unlimited',
   );
+  assert.deepEqual(create('epic', { type: 'cleanse', power: 'low' }).rules[0].effects, [
+    { type: 'cleanse' },
+  ]);
+  for (const buff of ['artifact', 'flying', 'confusion', 'blind']) {
+    const target = ['confusion', 'blind'].includes(buff) ? 'lowestEnemy' : 'self';
+    const item = create('epic', { type: 'buff', buff, power: 'low' }, target);
+    assert.equal(item.rules[0].effects[0].buff, buff);
+  }
 });

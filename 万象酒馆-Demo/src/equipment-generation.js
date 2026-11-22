@@ -131,10 +131,13 @@ export function compileEquipmentDesign(raw, source) {
         (effect.type === 'damage' && !hostile) ||
         (['heal', 'mana', 'shield', 'cleanse'].includes(effect.type) && hostile) ||
         (effect.type === 'buff' &&
-          !(hostile ? NEGATIVE_BUFFS : GENERATED_POSITIVE_BUFFS).includes(effect.buff))
+          (!(hostile ? NEGATIVE_BUFFS : GENERATED_POSITIVE_BUFFS).includes(effect.buff) ||
+            (rule.mode === 'continuous' && effect.buff === 'artifact')))
       )
         throw Error('装备效果目标阵营无效');
       if (effect.type === 'cleanse') {
+        const power = effect.power === 'standard' ? 'medium' : effect.power;
+        if (effect.buffs === undefined) return { type: 'cleanse', power };
         if (
           !Array.isArray(effect.buffs) ||
           !effect.buffs.length ||
@@ -143,7 +146,7 @@ export function compileEquipmentDesign(raw, source) {
           throw Error('装备净化状态无效');
         return {
           type: 'cleanse',
-          power: effect.power === 'standard' ? 'medium' : effect.power,
+          power,
           buffs: [...new Set(effect.buffs)].slice(0, plan.tier >= 4 ? 2 : 1),
         };
       }

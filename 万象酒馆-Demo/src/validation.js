@@ -61,7 +61,10 @@ export function validateGameData(
       }
       check(effectTypes.has(effect.type), `${location}: unknown effect ${effect.type}`);
       if (effect.type === 'cleanse') {
-        check(Array.isArray(effect.buffs), `${location}: cleanse needs buff IDs`);
+        check(
+          effect.buffs === undefined || Array.isArray(effect.buffs),
+          `${location}: invalid cleanse buff IDs`,
+        );
         for (const key of Array.isArray(effect.buffs) ? effect.buffs : []) buff(key, location);
       } else {
         check(integer(effect.value), `${location}: effect value must be a nonnegative integer`);

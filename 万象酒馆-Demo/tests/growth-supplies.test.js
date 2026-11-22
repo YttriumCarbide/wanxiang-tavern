@@ -51,11 +51,11 @@ test('growth reduces the resource actually paid, keeps zero costs and determinis
   assert.deepEqual(grownSkillCosts({ id: 'free', hp: 0, mp: 0 }, 99, 'x'), { hp: 0, mp: 0 });
 });
 
-test('twelve supplies have real 64px icons and purchases persist atomically without spending ether', async () => {
+test('all supplies have real 64px icons and purchases persist atomically without spending ether', async () => {
   const library = newCampaign(defaultProtagonist());
   library.inventory.gold = 1000;
   library.inventory.ether = 100;
-  assert.equal(Object.keys(ITEMS).length, 12);
+  assert.equal(Object.keys(ITEMS).length, 20);
   for (const item of Object.values(ITEMS)) {
     assert.match(
       await readFile(new URL('../' + item.icon, import.meta.url), 'utf8'),
@@ -130,6 +130,17 @@ test('normal and fine supply effects use the exact same event preview as playbac
         );
     }
   }
+});
+
+test('cleanse scroll removes all debuffs and preserves charges and flight', () => {
+  const state = newBattle(['warden']);
+  state.items['cleanse-scroll'] = 1;
+  state.units.aegis.buffs = { confusion: 2, blind: 2, slow: 1, balance: 1, flying: 1, artifact: 2 };
+  const result = preview(state, [makeItem('cleanse-scroll', 'aegis', 0)]);
+  assert(result.valid);
+  const event = result.events.find((entry) => entry.type === 'item');
+  assert.deepEqual(event.after.units.aegis.buffs, { flying: 1, artifact: 2 });
+  assert.equal(result.final.items['cleanse-scroll'], 0);
 });
 
 test('growth claims experience once and applies shared growth at the next encounter boundary', () => {

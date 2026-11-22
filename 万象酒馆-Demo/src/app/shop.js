@@ -33,6 +33,11 @@ export function createShop(context) {
     strength: '力量',
     recovery: '恢复',
     calamity: '灾星',
+    artifact: '人工制品',
+    confusion: '混乱',
+    blind: '致盲',
+    cleanse: '净化',
+    flying: '飞行',
   };
   const group = (id) => id.replace(/^fine-/, '').replace(/-potion$|-scroll$/g, '');
   let category = 'slow';

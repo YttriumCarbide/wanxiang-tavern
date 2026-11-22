@@ -1,9 +1,9 @@
 /** Directions are relative to the acting enemy; shared by validation and simulation. */
 export function isPositiveEnemyEffect(effect) {
   return (
-    ['heal', 'shield', 'mana'].includes(effect.type) ||
+    ['heal', 'shield', 'mana', 'cleanse'].includes(effect.type) ||
     (effect.type === 'buff' &&
-      ['strength', 'guard', 'iron', 'regen', 'haste', 'flying'].includes(effect.buff))
+      ['strength', 'guard', 'iron', 'regen', 'haste', 'flying', 'artifact'].includes(effect.buff))
   );
 }
 export function enemyEffectSide(effect) {
