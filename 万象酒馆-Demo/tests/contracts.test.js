@@ -69,6 +69,37 @@ test('GPU ownership is idempotent and disposes late async resources', () => {
   assert.equal(releases, 2);
 });
 
+test('owned texture variants release their shared bitmap after the textures', () => {
+  const releases = [];
+  class Bitmap {
+    close() {
+      releases.push('bitmap');
+    }
+  }
+  const previous = Object.getOwnPropertyDescriptor(globalThis, 'ImageBitmap');
+  Object.defineProperty(globalThis, 'ImageBitmap', { configurable: true, value: Bitmap });
+  try {
+    const bitmap = new Bitmap();
+    const lateBitmap = new Bitmap();
+    const texture = (image) => ({
+      isTexture: true,
+      image,
+      dispose: () => releases.push('texture'),
+    });
+    const scope = createResourceScope();
+    scope.material({ map: texture(bitmap), normalMap: texture(bitmap) });
+    assert.deepEqual(releases, []);
+    scope.dispose();
+    scope.track(texture(lateBitmap));
+    scope.track(texture(lateBitmap));
+    scope.dispose();
+    assert.deepEqual(releases, ['texture', 'texture', 'bitmap', 'texture', 'bitmap', 'texture']);
+  } finally {
+    if (previous) Object.defineProperty(globalThis, 'ImageBitmap', previous);
+    else delete globalThis.ImageBitmap;
+  }
+});
+
 test('malformed external drags are rejected before they can arm a skill', () => {
   assert.equal(parseTimelineDrop('{bad json'), null);
   assert.equal(

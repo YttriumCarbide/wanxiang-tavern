@@ -54,15 +54,26 @@ const DESCRIPTIONS = {
     '暗渠石拱下挂满绿焰炼金灯与暗红帷幔，赃物铁笼、走私货栈与地下拍卖台藏于潮湿影中。',
 };
 
-async function creatureView(stage, id) {
-  const renderer = new THREE.WebGLRenderer({
-    canvas: stage.querySelector('canvas'),
-    antialias: true,
-    preserveDrawingBuffer: true,
-  });
+async function creatureView(stage, id, isCurrent) {
+  const resources = createResourceScope();
+  const model = resources.object((await new GLTFLoader().loadAsync(`./assets/${id}.glb`)).scene);
+  if (!isCurrent()) {
+    resources.dispose();
+    return null;
+  }
+  let renderer;
+  try {
+    renderer = new THREE.WebGLRenderer({
+      canvas: stage.querySelector('canvas'),
+      antialias: true,
+      preserveDrawingBuffer: true,
+    });
+  } catch (error) {
+    resources.dispose();
+    throw error;
+  }
   renderer.setPixelRatio(Math.min(devicePixelRatio, 1.7));
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  const resources = createResourceScope();
   const scene = new THREE.Scene();
   scene.background = new THREE.Color('#1c303b');
   scene.add(new THREE.HemisphereLight('#e0eee4', '#283b51', 2.5));
@@ -72,7 +83,6 @@ async function creatureView(stage, id) {
   const fill = new THREE.DirectionalLight('#79d1de', 1.6);
   fill.position.set(-5, 3, -4);
   scene.add(fill);
-  const model = (await new GLTFLoader().loadAsync(`./assets/${id}.glb`)).scene;
   scene.add(model);
   const plinth = new THREE.Mesh(
     new THREE.CylinderGeometry(2.25, 2.55, 0.18, 12),
@@ -219,6 +229,7 @@ async function main() {
     if (!creature) currentScene = id;
     weatherPicker.disabled = creature;
     const current = ++token;
+    const isCurrent = () => !disposed && current === token;
     statusTimers.forEach(clearTimeout);
     statusTimers.clear();
     loading = true;
@@ -253,20 +264,21 @@ async function main() {
               : ['mossSlime', 'sprout'],
       );
       const next = creature
-        ? await creatureView(stage, id)
+        ? await creatureView(stage, id, isCurrent)
         : await createBattleView(stage, () => {}, {
             map: id,
             enemyIds: state.enemyIds,
             weather: currentWeather,
           });
-      if (disposed || current !== token) {
-        next.dispose();
+      if (!isCurrent()) {
+        next?.dispose();
         return;
       }
       view = next;
       if (!creature) view.draw(state, preview(state, []), null, null);
       document.querySelector('#atlas-loading').hidden = true;
     } catch (error) {
+      if (!isCurrent()) return;
       document.querySelector('#atlas-loading').textContent = '图册暂时无法翻开：' + error.message;
       throw error;
     } finally {

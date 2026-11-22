@@ -109,6 +109,35 @@ export async function sceneLoadingChecks({ browser, baseURL, output }) {
       }
     });
     assert.deepEqual(guards, { renders: 0, hidden: true, error: 'transition callback' });
+    await page.goto(baseURL + '/artbook.html?scene=frost');
+    await page.locator('#atlas-loading').waitFor({ state: 'hidden' });
+    const creatureModel = '**/assets/crystal-beetle.glb';
+    await page.route(creatureModel, (route) => route.fulfill({ status: 404 }));
+    const failedCreature = await page.locator('canvas').evaluate(async (canvas) => {
+      const addListener = canvas.addEventListener;
+      let rendererStarts = 0;
+      let rejections = 0;
+      canvas.addEventListener = function (type, ...args) {
+        if (type === 'webglcontextlost') rendererStarts++;
+        return addListener.call(this, type, ...args);
+      };
+      try {
+        for (let attempt = 0; attempt < 2; attempt++) {
+          try {
+            await window.artbook.select('crystal-beetle', true);
+          } catch {
+            rejections++;
+          }
+        }
+      } finally {
+        delete canvas.addEventListener;
+      }
+      return { rendererStarts, rejections };
+    });
+    assert.deepEqual(failedCreature, { rendererStarts: 0, rejections: 2 });
+    await page.unroute(creatureModel);
+    await page.evaluate(() => window.artbook.select('crystal-beetle', true));
+    await page.locator('#atlas-loading').waitFor({ state: 'hidden' });
     assert.deepEqual(errors, [], 'scene navigation has no initialization errors');
     return {
       modelCacheReused: true,
@@ -116,6 +145,7 @@ export async function sceneLoadingChecks({ browser, baseURL, output }) {
       imageGate: true,
       mobile: true,
       outdoorReturn: true,
+      artbookRecoversAfterMissingModel: true,
     };
   } finally {
     releaseModel();

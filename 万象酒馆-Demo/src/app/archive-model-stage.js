@@ -227,7 +227,11 @@ export function createArchiveModelStage() {
     try {
       const filesToLoad = sharedComposite ? uniqueModels : item.models;
       loadedGltfs = await Promise.all(
-        filesToLoad.map((file) => loader.loadAsync(`./assets/${file}`)),
+        filesToLoad.map(async (file) => {
+          const gltf = await loader.loadAsync(`./assets/${file}`);
+          resources.object(gltf.scene);
+          return gltf;
+        }),
       );
     } catch {
       cleanup();
@@ -237,7 +241,6 @@ export function createArchiveModelStage() {
     }
 
     if (token !== mountSeq || disposed || !container.isConnected) {
-      for (const gltf of loadedGltfs) resources.object(gltf.scene);
       cleanup();
       if (activeCleanup === cleanup) activeCleanup = null;
       return;
