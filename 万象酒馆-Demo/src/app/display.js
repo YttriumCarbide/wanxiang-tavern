@@ -50,6 +50,7 @@ function isHandheld() {
 /** The requested layout and the device's landscape host are independent. */
 export function configureGameLayout() {
   const preference = new URLSearchParams(location.search).get('layout');
+  if (globalThis.wanxiangNativeUpdate) document.documentElement.dataset.androidWebView = '';
   document.documentElement.dataset.gameLayout =
     preference === 'mobile' || preference === 'desktop'
       ? preference
@@ -60,7 +61,11 @@ export function configureGameLayout() {
 
 /** The same game entry runs once inside a landscape viewport; no duplicate game or save owner. */
 export function mountLandscapeHost() {
-  if (new URLSearchParams(location.search).get('display') === 'landscape' || !isHandheld())
+  if (
+    globalThis.wanxiangNativeUpdate ||
+    new URLSearchParams(location.search).get('display') === 'landscape' ||
+    !isHandheld()
+  )
     return false;
   const frame = document.createElement('iframe');
   frame.id = 'landscape-frame';

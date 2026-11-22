@@ -97,6 +97,7 @@
         "^assets/asset-catalog\\.json$",
         "^assets/builtin-worldbook\\.json$",
         "^assets/title-tavern\\.png$",
+        "^assets/title-nightfall\\.webp$",
         "^assets/exploration-parchment\\.png$",
         "^assets/parchment-theater\\.jpg$",
         "^assets/inn\\.glb$",
