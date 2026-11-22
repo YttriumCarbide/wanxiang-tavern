@@ -172,6 +172,17 @@ export async function ringGalleryChecks({ browser, baseURL, output }) {
       ),
     );
     await page.screenshot({ path: path.join(output, 'ring-mobile.png') });
+    const collectionBeforeReplay = await page.evaluate(() => demo.getLibrary().emblems);
+    await frame.locator('[data-ring-replay]').click();
+    await page.locator('.ring-acquisition').waitFor({ state: 'visible' });
+    assert.equal(
+      await page.locator('.ring-acquisition').getAttribute('data-emblem-id'),
+      'tan-hongyu',
+    );
+    await page.locator('.ring-acquisition-skip').click();
+    await page.locator('.ring-acquisition-continue').click();
+    assert.deepEqual(await page.evaluate(() => demo.getLibrary().emblems), collectionBeforeReplay);
+    assert.equal(await frame.locator('.ring-gallery').isVisible(), true);
     await frame.locator('[data-ring-id="wind-dance"]').click();
     await frame.locator('[data-ring-close]').click();
     await page.waitForFunction(() => !document.body.classList.contains('ring-cabinet-open'));

@@ -24,6 +24,7 @@ export const allScopes = [
   'skill-menus',
   'adventure',
   'ring-gallery',
+  'ring-acquisition',
   'gal',
   'frost',
   'equipment',
@@ -113,6 +114,12 @@ export function selectScopes(args) {
       else if (/developer-(?:tools|rules|copy|editor)\.(?:js|mjs|css)$/.test(file))
         scopes.add('developer-tools');
       else if (/\.(cmd|ps1)$/.test(file)) scopes.add('launcher');
+      else if (
+        /(?:^|\/)(?:tests\/browser\/ring-acquisition\.mjs|src\/app\/ring-acquisition(?:-stage)?\.js|styles\/ring-acquisition\.css)$/.test(
+          file,
+        )
+      )
+        scopes.add('ring-acquisition');
       else if (/tests\/browser\/layout|styles\//.test(file)) scopes.add('ui');
       else if (/src\/|tests\/browser\/|\.css$|\.html$|assets\//.test(file)) scopes.add('ui');
       else if (/tools\/(test\.mjs|testing\/runtime\.mjs)/.test(file)) {

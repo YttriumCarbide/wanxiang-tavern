@@ -26,6 +26,37 @@ import {
   recordSeenMonsters,
 } from '../src/archive-enemies.js';
 import { developerOption, restoreGenerationOptions } from '../src/generation-options.js';
+import { ARENA_ARCHIVE_DEFINITIONS } from '../src/content/arena-adversaries.js';
+import { worldReference } from '../src/worlds.js';
+
+test('arena folios preserve unlocks and keep draft actions out of combat generation', () => {
+  const buckets = buildEnemyArchiveEntries({ ...DEFINITIONS, ...ARENA_ARCHIVE_DEFINITIONS });
+  const ids = new Set(Object.keys(ARENA_ARCHIVE_DEFINITIONS));
+  const entries = Object.values(buckets)
+    .flat()
+    .filter((entry) => ids.has(entry.id));
+  assert.equal(entries.length, 7);
+  assert.deepEqual(
+    ['minion', 'elite', 'overlord'].map(
+      (tier) => buckets[tier].filter((entry) => ids.has(entry.id)).length,
+    ),
+    [4, 2, 1],
+  );
+  assert(entries.every((entry) => entry.sources === '首都内部竞技场'));
+  for (const entry of entries) assert.equal(DEFINITIONS[entry.id], undefined);
+  assert(worldReference().enemies.every((entry) => !ids.has(entry.id)));
+  const hidden = filterEnemyArchiveBuckets(buckets);
+  assert(
+    Object.values(hidden.visibleBuckets)
+      .flat()
+      .every((entry) => !ids.has(entry.id)),
+  );
+  const seen = filterEnemyArchiveBuckets(buckets, { seenMonsters: [...ids] });
+  assert.equal(seen.unlockedCount, 7);
+  const champion = entries.find((entry) => entry.id === 'arenaGrandChampion');
+  assert.equal(champion.entry.hp, undefined);
+  assert.deepEqual(champion.entry.intents, [{ name: '行动待定', text: '行动文本待定。' }]);
+});
 
 const document = () => ({
   schemaVersion: 4,

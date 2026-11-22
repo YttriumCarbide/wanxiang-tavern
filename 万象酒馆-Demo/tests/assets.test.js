@@ -303,3 +303,41 @@ test('all capital and route backgrounds are native continuous 3:1 PNGs', async (
     assert.equal(png.readUInt32BE(16), png.readUInt32BE(20) * 3, image);
   }
 });
+
+test('the capital arena retains seven authored models with current cache identities', async () => {
+  const manifest = JSON.parse(
+    await readFile(
+      new URL('../../万象异境-体素模型/首都内部竞技场/manifest.json', import.meta.url),
+      'utf8',
+    ),
+  );
+  const catalog = JSON.parse(
+    await readFile(new URL('../assets/asset-catalog.json', import.meta.url), 'utf8'),
+  );
+  assert.equal(manifest.location, 'eternal-arena');
+  assert.equal(manifest.assets.length, 7);
+  for (const [tier, count] of [
+    ['normal', 4],
+    ['elite', 2],
+    ['overlord', 1],
+  ])
+    assert.equal(manifest.assets.filter((asset) => asset.tier === tier).length, count);
+  assert.equal(new Set(manifest.assets.map((asset) => asset.id)).size, 7);
+  for (const asset of manifest.assets) {
+    for (const file of [asset.model, asset.portrait]) {
+      const bytes = await readFile(new URL('../assets/' + file, import.meta.url));
+      assert.deepEqual(catalog.files['assets/' + file], {
+        bytes: bytes.length,
+        hash: createHash('sha256').update(bytes).digest('hex'),
+      });
+      if (file.endsWith('.glb')) {
+        assert.equal(bytes.toString('ascii', 0, 4), 'glTF');
+        assert.equal(bytes.readUInt32LE(4), 2);
+        assert.equal(bytes.readUInt32LE(8), bytes.length);
+        const gltf = JSON.parse(bytes.subarray(20, 20 + bytes.readUInt32LE(12)));
+        assert.equal(gltf.extras.enemyId, asset.id);
+        assert.equal(gltf.extras.tier, asset.tier);
+      } else assert.match(bytes.toString('utf8'), /<svg\b/);
+    }
+  }
+});

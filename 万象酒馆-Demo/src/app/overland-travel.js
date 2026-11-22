@@ -868,8 +868,23 @@ export function createOverlandTravel(
         loot,
       };
       context.audio.play(won ? 'victory' : 'defeat');
+      const ringArrival = won
+        ? [expedition.emblemArrival, session.battle.state.midBattleEmblemArrival].find(
+            (arrival) => arrival && !arrival.shown,
+          )
+        : null;
+      if (ringArrival) ringArrival.shown = true;
       save();
       context.checkpoint.saveNow();
+      if (ringArrival) {
+        await context.emblems?.playAcquisition(ringArrival.id);
+        if (
+          session.runtime.disposed ||
+          session.runtime.mode !== 'battle' ||
+          session.journey.expedition !== expedition
+        )
+          return;
+      }
     }
     if (
       won &&

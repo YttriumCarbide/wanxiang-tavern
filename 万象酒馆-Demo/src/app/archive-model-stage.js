@@ -10,6 +10,7 @@ const COMPOSITE_SLOTS = Object.freeze([
 
 const ANIMATION_LABELS = Object.freeze({
   Idle: '待机',
+  Charge_Up: '蓄力',
   Normal_Attack: '普通攻击',
   Special_Attack: '特殊攻击',
   Special_Action: '特殊行动',
@@ -391,10 +392,10 @@ export function createArchiveModelStage() {
       nav.className = 'archive-stage-anims';
       nav.setAttribute('aria-label', '动作预览');
       nav.innerHTML = animClips
-        .map(
-          (clip) =>
-            `<button type="button" data-stage-anim="${escapeText(clip)}" aria-pressed="${String(clip === 'Idle')}">${escapeText(ANIMATION_LABELS[clip])}</button>`,
-        )
+        .map((clip) => {
+          const label = item.entry?.archiveAnimationLabels?.[clip] || ANIMATION_LABELS[clip];
+          return `<button type="button" data-stage-anim="${escapeText(clip)}" aria-pressed="${String(clip === 'Idle')}">${escapeText(label)}</button>`;
+        })
         .join('');
       container.append(nav);
       events.on(nav, 'click', (event) => {

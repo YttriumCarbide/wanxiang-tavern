@@ -2,6 +2,120 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { UNIVERSAL_ENEMIES, UNIVERSAL_BOSSES } from '../../src/content/universal-adversaries.js';
+import { ARENA_QUALIFIER_ARCHIVE_DEFINITIONS } from '../../src/content/arena-qualifier-adversaries.js';
+import {
+  SILVER_CROWN_SYNDICATE_ARCHON,
+  SILVER_CROWN_SYNDICATE_ENEMIES,
+} from '../../src/content/silver-crown-syndicate-adversaries.js';
+
+async function checkSilverCrownArchive(page, output) {
+  const entries = page.locator('#archive-list button');
+  const detail = page.locator('#archive-text');
+  const intents = detail.locator('.skyrim-archive-intent');
+  for (const enemy of SILVER_CROWN_SYNDICATE_ENEMIES) {
+    const tier = enemy.elite ? 'elite' : 'minion';
+    await page.locator(`[data-enemy-tier="${tier}"]`).click();
+    await entries.filter({ hasText: enemy.name }).click();
+    const portrait = detail.getByRole('img', { name: enemy.name });
+    await portrait.waitFor();
+    await page.waitForFunction((name) => {
+      const img = document.querySelector('#archive-text .skyrim-enemy-portrait');
+      return img?.alt === name && img.complete && img.naturalWidth > 0;
+    }, enemy.name);
+    assert.equal(await portrait.getAttribute('src'), `./assets/portraits/${enemy.portrait}.svg`);
+    assert.deepEqual(
+      await intents.locator('span:last-child').allTextContents(),
+      enemy.intents.map(({ name, text }) => `${name}：${text}`),
+    );
+  }
+  await page.locator('[data-enemy-tier="overlord"]').click();
+  await entries.filter({ hasText: SILVER_CROWN_SYNDICATE_ARCHON.name }).click();
+  const stage = detail.locator(
+    '[data-overlord-id="silverCrownSyndicateArchon"][data-stage-ready="ready"][data-loaded-models="1"]',
+  );
+  await stage.waitFor({ timeout: 30000 });
+  assert.match(await intents.innerText(), /行动文本待定。/);
+  assert(!/undefined|NaN/.test(await page.locator('#archive-dialog').innerText()));
+  const actions = stage.locator('[data-stage-anim]');
+  assert.deepEqual(
+    (await actions.evaluateAll((buttons) => buttons.map((btn) => btn.dataset.stageAnim))).sort(),
+    [
+      'Break_Stagger',
+      'Charge_Up',
+      'Idle',
+      'Normal_Attack',
+      'Special_Action',
+      'Special_Attack',
+      'Talon_Rend',
+    ],
+  );
+  const charge = stage.locator('[data-stage-anim="Charge_Up"]');
+  await charge.click();
+  assert.equal(await charge.getAttribute('aria-pressed'), 'true');
+  await stage.locator('[data-stage-anim="Idle"][aria-pressed="true"]').waitFor();
+  await page.screenshot({ path: path.join(output, 'archive-overlord-silver-crown.png') });
+}
+
+async function checkArenaQualifierArchive(page, output) {
+  const entries = page.locator('#archive-list button');
+  const detail = page.locator('#archive-text');
+  const intents = detail.locator('.skyrim-archive-intent');
+  for (const [tier, name] of [
+    ['minion', '木棍新手'],
+    ['minion', '训练山羊'],
+    ['elite', '双斧搏斗手'],
+    ['elite', '披甲斗猪'],
+    ['boss', '木塔盾队长'],
+    ['boss', '猎犬领队'],
+  ]) {
+    await page.locator(`[data-enemy-tier="${tier}"]`).click();
+    await entries.filter({ hasText: name }).click();
+    assert.equal(await detail.locator('.skyrim-folio-title').innerText(), name);
+    await page.waitForFunction((name) => {
+      const image = document.querySelector('#archive-text .skyrim-enemy-portrait');
+      return image?.alt === name && image.complete && image.naturalWidth > 0;
+    }, name);
+    const definition = Object.values(ARENA_QUALIFIER_ARCHIVE_DEFINITIONS).find(
+      (entry) => entry.name === name,
+    );
+    assert.equal(
+      await detail.getByRole('img', { name }).getAttribute('src'),
+      `./assets/portraits/${definition.portrait}.svg`,
+    );
+    assert.equal(await intents.count(), 2, `${name}: two action intents`);
+    assert.deepEqual(
+      await intents.locator('strong').allTextContents(),
+      definition.intents.map((move) => `${move.name}：`),
+    );
+  }
+  await page.locator('[data-enemy-tier="overlord"]').click();
+  await entries.filter({ hasText: '海选擂主·铁臂教头' }).click();
+  const stage = detail.locator(
+    '[data-overlord-id="arenaQualifierIronCoach"][data-stage-ready="ready"][data-loaded-models="1"]',
+  );
+  await stage.waitFor({ timeout: 30000 });
+  assert.deepEqual(
+    (
+      await stage
+        .locator('[data-stage-anim]')
+        .evaluateAll((buttons) => buttons.map((button) => button.dataset.stageAnim))
+    ).sort(),
+    [
+      'Break_Stagger',
+      'Charge_Up',
+      'Idle',
+      'Normal_Attack',
+      'Special_Action',
+      'Special_Attack',
+      'Talon_Rend',
+    ],
+  );
+  assert.deepEqual(await intents.locator('span:last-child').allTextContents(), [
+    '行动待定：行动文本待定。',
+  ]);
+  assert(!/undefined|NaN/.test(await detail.innerText()));
+  await page.screenshot({ path: path.join(output, 'archive-qualifier-coach.png') });
+}
 
 export async function universalEnemyChecks({ browser, baseURL, output }) {
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
@@ -290,8 +404,40 @@ export async function universalEnemyChecks({ browser, baseURL, output }) {
     assert(bossNames.includes('天梯魔蛛'), 'Upgraded ladderWebSpider should list under 首领');
     assert(bossNames.includes('天梯鸦人'), 'New ladderCrowman should list under 首领');
 
+    const archiveEntries = page.locator('#archive-list button');
+    const archiveIntents = page.locator('#archive-text .skyrim-archive-intent');
+    for (const [tier, name, moves] of [
+      ['minion', '沙场网斗士', ['三叉戟刺击', '投网']],
+      ['minion', '发条金鬃狮', ['扑咬', '炉心吐息']],
+      ['minion', '铁笼驯兽官', ['金属鞭击', '震兽号角']],
+      ['minion', '银星重盾卫', ['短矛突刺', '塔盾防御']],
+      ['elite', '重装战轮破阵者', ['双斧横扫', '战轮冲撞']],
+      ['elite', '万圣裁决卫队长', ['重剑斩击', '裁决光环']],
+    ]) {
+      await page.locator(`[data-enemy-tier="${tier}"]`).click();
+      await archiveEntries.filter({ hasText: name }).click();
+      assert.equal(await page.locator('#archive-text .skyrim-folio-title').innerText(), name);
+      assert.deepEqual(
+        await archiveIntents.locator('strong').allTextContents(),
+        moves.map((move) => `${move}：`),
+        `${name}: archive action intents`,
+      );
+    }
+
     await page.locator('[data-enemy-tier="overlord"]').click();
-    assert.equal(await page.locator('#archive-list button').count(), 7);
+    const overlordNames = await archiveEntries.locator('strong').allTextContents();
+    for (const name of [
+      '阿佩普的羔羊',
+      '母树',
+      '战斗机兵·阿瑞斯',
+      '辉光亚龙',
+      '失败的炼金傀偶',
+      '初生暗鳞督军',
+      '暗巷匪王·黑鸦',
+      '帝都大冠军·奥勒留',
+    ]) {
+      assert(overlordNames.includes(name), `${name}: missing from the overlord archive`);
+    }
     assert.equal(await page.locator('#archive-text img').count(), 0);
     await page
       .locator(
@@ -332,6 +478,43 @@ export async function universalEnemyChecks({ browser, baseURL, output }) {
     }
     await page.waitForTimeout(300);
     await page.screenshot({ path: path.join(output, 'archive-overlord-moontree.png') });
+
+    await archiveEntries.filter({ hasText: '帝都大冠军·奥勒留' }).click();
+    const championStage = page.locator(
+      '#archive-dialog .archive-overlord-stage[data-stage-ready="ready"][data-loaded-models="1"]',
+    );
+    await championStage.waitFor({ timeout: 30000 });
+    const championActions = championStage.locator('.archive-stage-anims [data-stage-anim]');
+    assert.deepEqual(
+      (
+        await championActions.evaluateAll((buttons) => buttons.map((btn) => btn.dataset.stageAnim))
+      ).sort(),
+      [
+        'Break_Stagger',
+        'Charge_Up',
+        'Idle',
+        'Normal_Attack',
+        'Special_Action',
+        'Special_Attack',
+        'Talon_Rend',
+      ],
+    );
+    const finishingMove = championStage.locator('[data-stage-anim="Talon_Rend"]');
+    await finishingMove.click();
+    assert.equal(await finishingMove.getAttribute('aria-pressed'), 'true');
+    assert.deepEqual(
+      await archiveIntents.evaluateAll((rows) =>
+        rows.map((row) =>
+          row.lastElementChild.textContent
+            .replace(row.querySelector('strong').textContent, '')
+            .trim(),
+        ),
+      ),
+      ['行动文本待定。'],
+    );
+
+    await checkSilverCrownArchive(page, output);
+    await checkArenaQualifierArchive(page, output);
 
     // Turning off unlockAllCodex reverts immediately back to the save's real seen count (3 / total)
     await page.evaluate(() =>

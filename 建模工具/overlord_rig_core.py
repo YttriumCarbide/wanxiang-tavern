@@ -1313,7 +1313,13 @@ class RiggedSculptor:
             if spec.alpha < 0.99:
                 mat_def["alphaMode"] = "BLEND"
             if spec.emissive:
-                mat_def["emissiveFactor"] = spec.emissive
+                strength = max(1.0, *spec.emissive)
+                mat_def["emissiveFactor"] = [value / strength for value in spec.emissive]
+                if strength > 1.0:
+                    extension = "KHR_materials_emissive_strength"
+                    mat_def["extensions"] = {extension: {"emissiveStrength": strength}}
+                    if extension not in doc.setdefault("extensionsUsed", []):
+                        doc["extensionsUsed"].append(extension)
             if spec.pbr_kind:
                 kind = spec.pbr_kind
                 if kind not in tex_cache:

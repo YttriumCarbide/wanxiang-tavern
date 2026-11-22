@@ -83,7 +83,7 @@ export function createRingDisplay(renderer, room, roomCamera) {
     '<div class="ring-gallery-caption"><h1></h1><span class="ring-gallery-owner"></span></div>' +
     '<div class="ring-gallery-viewport" data-ring-viewport aria-label="拖动旋转戒指，滚轮缩放"></div>' +
     '<aside class="ring-gallery-effects" aria-label="纹章效果" aria-live="polite"><section><h2>结合被动</h2><p data-ring-passive></p></section><section><h2 data-ring-skill-name></h2><small data-ring-skill-cost></small><p data-ring-skill-effect></p></section></aside>' +
-    '<div class="ring-gallery-tools"><button type="button" data-ring-zoom="-1" aria-label="缩小戒指">−</button><button type="button" data-ring-turn aria-pressed="true">暂停旋转</button><button type="button" data-ring-zoom="1" aria-label="放大戒指">＋</button><button type="button" data-ring-equip>整备</button></div>' +
+    '<div class="ring-gallery-tools"><button type="button" data-ring-zoom="-1" aria-label="缩小戒指">−</button><button type="button" data-ring-turn aria-pressed="true">暂停旋转</button><button type="button" data-ring-zoom="1" aria-label="放大戒指">＋</button><button type="button" data-ring-replay>获取演出</button><button type="button" data-ring-equip>整备</button></div>' +
     '<nav aria-label="选择纹章戒指"></nav>';
   document.body.append(panel);
   const nav = panel.querySelector('nav');
@@ -214,6 +214,9 @@ export function createRingDisplay(renderer, room, roomCamera) {
     }
     if (button.dataset.ringZoom)
       zoom = THREE.MathUtils.clamp(zoom + Number(button.dataset.ringZoom) * 0.12, 0.7, 1.45);
+    if (button.hasAttribute('data-ring-replay')) {
+      parent.postMessage({ type: 'tavern-emblem-replay', id: selected }, location.origin);
+    }
     if (button.hasAttribute('data-ring-equip')) {
       close();
       parent.postMessage({ type: 'tavern-emblem-equip' }, location.origin);

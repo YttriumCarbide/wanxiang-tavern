@@ -556,13 +556,15 @@ export function createJourney(context) {
     return true;
   }
   async function showResult() {
-    if (session.journey.expedition.overlandBattle) return context.daily.finishOverlandBattle();
-    if (session.journey.expedition.pendingResult)
-      return presentResult(session.journey.expedition.pendingResult);
     const battle = session.battle.state;
-    if (settlingBattle === battle || !['victory', 'defeat'].includes(battle.phase)) return;
+    if (settlingBattle === battle) return;
     settlingBattle = battle;
     try {
+      if (session.journey.expedition.overlandBattle)
+        return await context.daily.finishOverlandBattle();
+      if (session.journey.expedition.pendingResult)
+        return await presentResult(session.journey.expedition.pendingResult);
+      if (!['victory', 'defeat'].includes(battle.phase)) return;
       await settleEncounter(battle, session.journey.expedition);
     } finally {
       if (settlingBattle === battle) settlingBattle = null;
@@ -681,7 +683,17 @@ export function createJourney(context) {
       context.generation.explorationWon(explored, { ether });
       context.quests?.battleWon(explored);
     }
+    const ringArrival = won
+      ? [trip.emblemArrival, battle.midBattleEmblemArrival].find(
+          (arrival) => arrival && !arrival.shown,
+        )
+      : null;
+    if (ringArrival) ringArrival.shown = true;
     context.generation.save();
+    if (ringArrival) {
+      await context.emblems?.playAcquisition(ringArrival.id);
+      if (!isCurrentBattle()) return;
+    }
     context.audio.play(won ? 'victory' : 'defeat');
     return presentResult(result);
   }

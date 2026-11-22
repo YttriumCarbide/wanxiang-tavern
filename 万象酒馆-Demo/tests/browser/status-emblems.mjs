@@ -371,6 +371,10 @@ export async function statusEmblemChecks({ browser, baseURL, output }) {
         },
         { map, sequence },
       );
+      const acquisition = page.locator('dialog.ring-acquisition[open]');
+      await acquisition.waitFor({ state: 'visible' });
+      await acquisition.locator('.ring-acquisition-skip').click();
+      await acquisition.locator('.ring-acquisition-continue').click();
       await page.locator('#emblem-dialogue').waitFor({ state: 'visible' });
       await page.locator('#emblem-dialogue button').click();
       assert((await page.locator('#emblem-dialogue').textContent()).includes(name));

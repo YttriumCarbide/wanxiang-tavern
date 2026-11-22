@@ -2,6 +2,9 @@ import { DEFINITIONS } from '../data.js';
 import { portraitUrl } from '../portraits.js';
 import { mergedArchiveItems } from '../archives.js';
 import { REGIONS } from '../content/regions.js';
+import { ARENA_ARCHIVE_DEFINITIONS } from '../content/arena-adversaries.js';
+import { ARENA_QUALIFIER_ARCHIVE_DEFINITIONS } from '../content/arena-qualifier-adversaries.js';
+import { SILVER_CROWN_SYNDICATE_ARCHIVE_DEFINITIONS } from '../content/silver-crown-syndicate-adversaries.js';
 import {
   ENEMY_ARCHIVE_TIERS,
   buildEnemyArchiveEntries,
@@ -303,7 +306,7 @@ export function createRecords(context) {
         }
         area.append(partsWrap);
       } else {
-        area.append(buildStatStrip(item.entry));
+        if (item.entry.speed) area.append(buildStatStrip(item.entry));
         appendUnitMoves(area, item.entry);
       }
 
@@ -697,7 +700,15 @@ export function createRecords(context) {
 
     if (tab === 'enemies') {
       const unlockAll = developerOption(context.session.ai.generationOptions, 'unlockAllCodex');
-      const rawBuckets = buildEnemyArchiveEntries(DEFINITIONS, library().worlds || []);
+      const rawBuckets = buildEnemyArchiveEntries(
+        {
+          ...DEFINITIONS,
+          ...ARENA_ARCHIVE_DEFINITIONS,
+          ...ARENA_QUALIFIER_ARCHIVE_DEFINITIONS,
+          ...SILVER_CROWN_SYNDICATE_ARCHIVE_DEFINITIONS,
+        },
+        library().worlds || [],
+      );
       const { visibleBuckets, totalCount, unlockedCount, tierStats } = filterEnemyArchiveBuckets(
         rawBuckets,
         {
@@ -725,7 +736,9 @@ export function createRecords(context) {
             titleText: item.name,
             metaText: item.isComposite
               ? '三位一体 · 3 部位'
-              : `生命 ${item.entry.hp} · 速 ${item.entry.speed}`,
+              : item.entry.speed
+                ? `生命 ${item.entry.hp} · 速 ${item.entry.speed}`
+                : '行动情报待补充',
             dataset: { archiveIndex: itemIndex },
           }),
         ),

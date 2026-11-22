@@ -17,6 +17,142 @@
       "bytes": 5099452,
       "hash": "956d296d54101080fe7c4acb041c250cb94cc7602958e312843e483d6550179f"
     },
+    "assets/arena-beastmaster.glb": {
+      "bytes": 281468,
+      "hash": "4107535e43f0a0c641549264b6eca936f7c9f8b5fc35dbd78e4e07765b3697d9"
+    },
+    "assets/arena-chariot-juggernaut.glb": {
+      "bytes": 558732,
+      "hash": "44f3289b417408ed89bcb4e7d8c257ccfa4a3a0ad2c61bfed46da2a65ea4f76b"
+    },
+    "assets/arena-clockwork-lion.glb": {
+      "bytes": 199548,
+      "hash": "ebcd7ad10c40122a7fc7f6d8a25499a3dac148eead17038e5d345a8bb34c1881"
+    },
+    "assets/arena-grand-champion.glb": {
+      "bytes": 2706384,
+      "hash": "2cd3a68d42fb2ade83fa9911450e1f465c9ad520ff10f4d292973f7265be5ef8"
+    },
+    "assets/arena-hoplite.glb": {
+      "bytes": 215816,
+      "hash": "fc140cb5eaa4a62b0eaf3486f9cdeb219806e19b80bbd228e1b06f81f5dd1c71"
+    },
+    "assets/arena-inquisitor-captain.glb": {
+      "bytes": 339976,
+      "hash": "19f37763adadfae52f3a4bb7a2f9487f85a5397c6f436cda21b3ecb0a336c9cf"
+    },
+    "assets/arena-q-axes.glb": {
+      "bytes": 91760,
+      "hash": "0f2f4199ef33f15d2fb4efd7ce117b189677907e82567acb2a5e4beedb4f256f"
+    },
+    "assets/arena-q-blade-captain.glb": {
+      "bytes": 142440,
+      "hash": "aead51cbaa6be232cf6d9c4eb22b9a73e045f43021eea756b1d15320329337a9"
+    },
+    "assets/arena-q-boar.glb": {
+      "bytes": 76284,
+      "hash": "7978e2fff91a97a0b070484b51d5981eafe1d4f7fc089a1c2b54e64e8000b846"
+    },
+    "assets/arena-q-boxer.glb": {
+      "bytes": 93872,
+      "hash": "b94e90cbcc40b880dff92128f277fc2dad0e45ff8742cfb7fb00ce0e28ed2bb2"
+    },
+    "assets/arena-q-crossbow.glb": {
+      "bytes": 89840,
+      "hash": "dc25a29c4b7660f78bf381651f0e847d7c865d962defc9cf275c60561b61ee7c"
+    },
+    "assets/arena-q-flail.glb": {
+      "bytes": 91756,
+      "hash": "57aaad0093e8706a43221b15b8a9bca85425d752fa83ed233a74ec2a42ac5142"
+    },
+    "assets/arena-q-hound-captain.glb": {
+      "bytes": 168196,
+      "hash": "6dddf93864ee423c7ed67e0c66464f3858a4c478f16cc9805e392e80acdcbd11"
+    },
+    "assets/arena-q-hound.glb": {
+      "bytes": 32588,
+      "hash": "5a6ea878b5fae2d22040343ae311ef61ca48afd08f0964ebf8b930670e268d82"
+    },
+    "assets/arena-q-iron-coach.glb": {
+      "bytes": 650504,
+      "hash": "8fa393c8276b1142fb88236e6c9109528bd8ffe7f2cae9b91175f358a170d43f"
+    },
+    "assets/arena-q-iron-shield.glb": {
+      "bytes": 96904,
+      "hash": "8002adf1e75743a1c085dcf01a505b36cf933597e9a36269c0d5b9d09e53974a"
+    },
+    "assets/arena-q-knives.glb": {
+      "bytes": 41792,
+      "hash": "af87bf65e35668bff8bfac45fed749fc9022c7d5fefb04d9b3762f5dbff82227"
+    },
+    "assets/arena-q-maul.glb": {
+      "bytes": 138480,
+      "hash": "3cc8d828419b2b34a49493e7cdf081953c3441b3539d4acc3b8b6df31b634edb"
+    },
+    "assets/arena-q-net.glb": {
+      "bytes": 43776,
+      "hash": "7aa08039524c6c7726467e99ff1c2e7047e45a880ecd493f292dcc72e8902399"
+    },
+    "assets/arena-q-pike-captain.glb": {
+      "bytes": 138424,
+      "hash": "ab885b25ace9eb47575a9b969f19bd93c1126090651db4e39f3416f386bb3d38"
+    },
+    "assets/arena-q-pitchfork.glb": {
+      "bytes": 38756,
+      "hash": "c8cd391b71f0826c77971b1f834788f7096d72b95ee2a303af3344d90d3ed7a1"
+    },
+    "assets/arena-q-pole-master.glb": {
+      "bytes": 84704,
+      "hash": "11efafc87d28907c128b087f1b36191370f1bef70c1b8210df015bf962d42503"
+    },
+    "assets/arena-q-ram.glb": {
+      "bytes": 43800,
+      "hash": "76b1f8a70916182fb85f7a1e6ee36c0602b65acf0539799295f1043c35d9c686"
+    },
+    "assets/arena-q-slinger.glb": {
+      "bytes": 43792,
+      "hash": "f5c92b7d7cadacbe1e9152be7b331d9323ca0c7e1bd762f2ce5458712eff359b"
+    },
+    "assets/arena-q-smith.glb": {
+      "bytes": 35708,
+      "hash": "80be3a70bce2d9e0a0ba9556af74be7a77fb0c4488069a1fd50a68997a22d45b"
+    },
+    "assets/arena-q-spear.glb": {
+      "bytes": 85708,
+      "hash": "e8b2c5d291e794abb970e4631d6292dfd68a881e51538796ce0c17c7035c25a6"
+    },
+    "assets/arena-q-staff.glb": {
+      "bytes": 33612,
+      "hash": "58ec04b27d588b78da2c423871189dd9815a47ae834db46c127dcdde17ea551d"
+    },
+    "assets/arena-q-stick.glb": {
+      "bytes": 33616,
+      "hash": "a17a202e3beee8a84d9dee963d2f03bbffd01f05b42adc3d9cb1834a48acafaa"
+    },
+    "assets/arena-q-swordsman.glb": {
+      "bytes": 85732,
+      "hash": "a2df30f298fc4fdd888d0754b781260f8cdd6f72174156d028887567db74eb6d"
+    },
+    "assets/arena-q-tower-captain.glb": {
+      "bytes": 159680,
+      "hash": "2ab78579fc7996a26e57876ccfe4c6a1316f764b0f72835e56f8725d8a0d7d57"
+    },
+    "assets/arena-q-trapper.glb": {
+      "bytes": 93852,
+      "hash": "5259d9b33f695ab067e7c57e48706e4f615f34daf0404c1b75ac96620b933f9e"
+    },
+    "assets/arena-q-veteran.glb": {
+      "bytes": 163796,
+      "hash": "b56853468b22e2151017cdbe9b09a44706be1ebf68c5c10ff22f38b62ac2c4f8"
+    },
+    "assets/arena-q-wood-shield.glb": {
+      "bytes": 41788,
+      "hash": "95dc022ebb974bcb3120ea84a0b816734d263e188f83c0998d50ce3e5ee334c8"
+    },
+    "assets/arena-retiarius.glb": {
+      "bytes": 863100,
+      "hash": "a1badbc1c177ba5beed1c7e9b58200db81a82cfb857d4dab8fc334accb7e2c34"
+    },
     "assets/ares-cannon-left.glb": {
       "bytes": 159616,
       "hash": "80830e417d8c6677607d9c2b0a5bcc4ed39d416370c71823730dcb9ae8ac9b1d"
@@ -1541,6 +1677,142 @@
       "bytes": 664685,
       "hash": "8cfda475d13b3990ff4a1e2aa18c5e3f883b7d5e76d13d97b798fa03505b0cb1"
     },
+    "assets/portraits/arena-beastmaster.svg": {
+      "bytes": 82343,
+      "hash": "8e731bca9eca98dc8cad2d3b880db4fef3d52d6dcc5b7bc71a345967073246a2"
+    },
+    "assets/portraits/arena-chariot-juggernaut.svg": {
+      "bytes": 223023,
+      "hash": "406efafe05cf8da6e6987290b4d66e5d40f9bd9940b7339d775484c48c77f2d0"
+    },
+    "assets/portraits/arena-clockwork-lion.svg": {
+      "bytes": 75663,
+      "hash": "fe798a9b7eef497d80560d584020e1b2a4481cd40a1e4f80fe4e490e7da8620f"
+    },
+    "assets/portraits/arena-grand-champion.svg": {
+      "bytes": 488645,
+      "hash": "5faca0a567482a331ebb81a46e978901b3d6cad0ee5d3dd272ec2947cc865149"
+    },
+    "assets/portraits/arena-hoplite.svg": {
+      "bytes": 82303,
+      "hash": "7c5675e1bcec6e89967132ff177eef41cf4e792bbdf0042a0142defb18ed3b0d"
+    },
+    "assets/portraits/arena-inquisitor-captain.svg": {
+      "bytes": 132325,
+      "hash": "1ac57dec566576239389c6a82194d674e31b5b47eaef8a9af1c39d85e4c3d48b"
+    },
+    "assets/portraits/arena-q-axes.svg": {
+      "bytes": 31230,
+      "hash": "3db3e29fa6e645bd8f9d0b2775a5780864e87b7da93d58c184bd8b97eba1e2ea"
+    },
+    "assets/portraits/arena-q-blade-captain.svg": {
+      "bytes": 50827,
+      "hash": "182be2bcc0004220cf41c84726b911728634a41408903b14bf9bcb8cd8f2bd99"
+    },
+    "assets/portraits/arena-q-boar.svg": {
+      "bytes": 26195,
+      "hash": "83a61a4dd14274246898c90daed7bb60df6cbec46c71ce100ec2bdd86f83478b"
+    },
+    "assets/portraits/arena-q-boxer.svg": {
+      "bytes": 31681,
+      "hash": "7489a64b7624908a8377810783bc6aaabed56e68e167e67b402e5c5aae9bf7f7"
+    },
+    "assets/portraits/arena-q-crossbow.svg": {
+      "bytes": 29785,
+      "hash": "4b83a265bfbd91378d88ab7440c8843ac14a6a29d067e35920a16ec6223b8afb"
+    },
+    "assets/portraits/arena-q-flail.svg": {
+      "bytes": 31415,
+      "hash": "5c36b35ecb4ca51f0ba196230fcf4125de4ce0fced1e6276326dfb2fab110c65"
+    },
+    "assets/portraits/arena-q-hound-captain.svg": {
+      "bytes": 58389,
+      "hash": "63c9f71c30b3b166aa52985ebccf01e1cbfd2a8da301a7aa70278496632aa62e"
+    },
+    "assets/portraits/arena-q-hound.svg": {
+      "bytes": 10044,
+      "hash": "224d4b7adb1829acbcde598f4bc7fe21b41a9b2173b1ffec2cc202b59b5c95d8"
+    },
+    "assets/portraits/arena-q-iron-coach.svg": {
+      "bytes": 104136,
+      "hash": "588759005734b2e1add2816e8d28c85db423761a0c16b4a2f2ffadf973fd87b8"
+    },
+    "assets/portraits/arena-q-iron-shield.svg": {
+      "bytes": 32872,
+      "hash": "f2d40514980ccbb7b3a0f62556e9d6d95a8cfdf4f94f6c073a60df0d0c43fa91"
+    },
+    "assets/portraits/arena-q-knives.svg": {
+      "bytes": 13318,
+      "hash": "f46c6fa2a9c31b7d12afcabf64a2a43ab6f74e064eb5c7d38a06f94dfc7beb3c"
+    },
+    "assets/portraits/arena-q-maul.svg": {
+      "bytes": 48869,
+      "hash": "f13d08b01cc3b121ec0509ef59d2b82e8318bcd2a2f7f6a0a54f0be79073a288"
+    },
+    "assets/portraits/arena-q-net.svg": {
+      "bytes": 14164,
+      "hash": "7a4f34b0a748c1b0b5eddfb201997bd42ae3b492b585ff1d435e65474d9f3294"
+    },
+    "assets/portraits/arena-q-pike-captain.svg": {
+      "bytes": 49132,
+      "hash": "5698e55e3f1a59851c6e1145ac169a0eaf52c215418fd1967c7c13d75bb6c215"
+    },
+    "assets/portraits/arena-q-pitchfork.svg": {
+      "bytes": 11853,
+      "hash": "549e21edbe5b2ecb763fd646c04defb73c4901975ce754ae2a8b05e2075c747a"
+    },
+    "assets/portraits/arena-q-pole-master.svg": {
+      "bytes": 28299,
+      "hash": "782118357829450cc758da39d62e44982284a553d91348c63eb989f958a285b7"
+    },
+    "assets/portraits/arena-q-ram.svg": {
+      "bytes": 13784,
+      "hash": "7160b9e8c33e9c9153ef32329cf91fed88c9bff502e729e3014dbe704fe2da18"
+    },
+    "assets/portraits/arena-q-slinger.svg": {
+      "bytes": 14131,
+      "hash": "0a68aa4a9a92ef83af1e0b6ae0d5213b73f0658dcb1ba927b27e1f7458665c79"
+    },
+    "assets/portraits/arena-q-smith.svg": {
+      "bytes": 10916,
+      "hash": "5679647b1aff42b2dffad2c01c657df0a1ecaa905d3caca8b426224b7c778860"
+    },
+    "assets/portraits/arena-q-spear.svg": {
+      "bytes": 28737,
+      "hash": "db345d1882aa3b866b441bb6144e800cb507c12a438f32a11e24c08ad8006e7d"
+    },
+    "assets/portraits/arena-q-staff.svg": {
+      "bytes": 10507,
+      "hash": "299680d472892a157e2361899228ef48298ceeea8daf582c1ff5679eca875ceb"
+    },
+    "assets/portraits/arena-q-stick.svg": {
+      "bytes": 10466,
+      "hash": "42ea454a576aad0f478c7bdf656503c8e3da268b383d8accc6825ce134d8fb9d"
+    },
+    "assets/portraits/arena-q-swordsman.svg": {
+      "bytes": 28802,
+      "hash": "b6656739ed1745feebb9b5d9c09750cb5c20eac20a31f5ea62c3a2b53fa9cfa5"
+    },
+    "assets/portraits/arena-q-tower-captain.svg": {
+      "bytes": 57436,
+      "hash": "fea0d4fedff77fce04655a478ab2058c39c5e99ab1ab4b7e6c192367f4b7724f"
+    },
+    "assets/portraits/arena-q-trapper.svg": {
+      "bytes": 31690,
+      "hash": "c42510ec95801495ada421c454daa48054d2941efbfde58ee55f859ef7337e85"
+    },
+    "assets/portraits/arena-q-veteran.svg": {
+      "bytes": 58688,
+      "hash": "dc2c37de74bb460348eb1c12aae03d72f3593e11844765f6c8bc119eca00069f"
+    },
+    "assets/portraits/arena-q-wood-shield.svg": {
+      "bytes": 13370,
+      "hash": "056fec1e012daf06f40e231659a320791134e4f47e1985c697d320afc8e1ff9c"
+    },
+    "assets/portraits/arena-retiarius.svg": {
+      "bytes": 152347,
+      "hash": "9a08ee03f10b12525e725ecce902ced10bea9842e2f8ea5d5b9079e74a68f101"
+    },
     "assets/portraits/ares-cannon-left.svg": {
       "bytes": 158726,
       "hash": "5a9b2f69f5f81b65d94a45f7b819d26fb9d5740648b005b8082510ccd4e49f1f"
@@ -2006,8 +2278,8 @@
       "hash": "3fce125e6fdb2f5f73e0ac31fce883d19f1513cae8546308d0089e4716013b00"
     },
     "assets/portraits/moss-slime.svg": {
-      "bytes": 1119,
-      "hash": "24a0253b616bc0f2a57acf674fee9a05cebaa4bc9c2a51130e0f55081e4a74b4"
+      "bytes": 1128,
+      "hash": "2cbb37aa2a586654614e408ba718cb52bc11292229475e4dcd98749f19252875"
     },
     "assets/portraits/oathless-duelist.svg": {
       "bytes": 15967,
@@ -2038,8 +2310,8 @@
       "hash": "eb61605dd28f862f5c0bb02f8ffe4007684e9502736cb2f42a145436c4e1c3f3"
     },
     "assets/portraits/pebble.svg": {
-      "bytes": 1194,
-      "hash": "e225b841a65da3c78aad65bf258435764d5ff9d65502cd6e77d8f4d8d55011b9"
+      "bytes": 1203,
+      "hash": "a3b7feb20685d731152eb74ccd89a423ee18d3047cb4ad22bd81aad1676c55a5"
     },
     "assets/portraits/pure-creation-elemental.svg": {
       "bytes": 12733,
@@ -2157,9 +2429,13 @@
       "bytes": 3134491,
       "hash": "a338225cf5bb0e6607311396ca95bae068db878c29a105df4ce78168e611d315"
     },
+    "assets/portraits/silver-crown-syndicate-archon.svg": {
+      "bytes": 768478,
+      "hash": "050e0383d8487b9231ba29f1e714788d4ab929e28ee45de4425ed27ffa40119f"
+    },
     "assets/portraits/sprout.svg": {
-      "bytes": 1138,
-      "hash": "5d706aed76f2128be3bd7a38cff03a49b7bdcc652c37c2348b911fadb07c5472"
+      "bytes": 1147,
+      "hash": "fe25b4caad156083cf0a1d9dba2c48d38fb503b586810afb437d01cb1a063704"
     },
     "assets/portraits/stone-ballista.svg": {
       "bytes": 2273,
@@ -2176,6 +2452,30 @@
     "assets/portraits/swordswoman.svg": {
       "bytes": 1293,
       "hash": "aaca1ee491d5ab92bf243e7741e43ef29dd7a50ee0773902f18c0ea54abedd58"
+    },
+    "assets/portraits/syndicate-blood-croupier.svg": {
+      "bytes": 41922,
+      "hash": "108f5770a983fcf00aeb6895ae4b61a33588834a057e6fd5bf07d54148982e00"
+    },
+    "assets/portraits/syndicate-gilded-automaton.svg": {
+      "bytes": 39355,
+      "hash": "06b48cd929ca714f1a6b639c5d863112fbfa68d02daad0f110ca61ff35a27979"
+    },
+    "assets/portraits/syndicate-mint-chemist.svg": {
+      "bytes": 33733,
+      "hash": "b37275c4261852effa069a488639b1c41bac3c9d8b0ee75f0b974e141bdaad35"
+    },
+    "assets/portraits/syndicate-repeating-arbalest.svg": {
+      "bytes": 30839,
+      "hash": "cc58e7fa4e7e2e2ae422b5a0ae2080b2d0a72c5b67c0aab7889ba3ab41697e2b"
+    },
+    "assets/portraits/syndicate-vault-enforcer.svg": {
+      "bytes": 35949,
+      "hash": "e06955a2f339b02e2ec39973111aa0ba827d8f5ea773013f20e34499f5d8a0f9"
+    },
+    "assets/portraits/syndicate-velvet-blade.svg": {
+      "bytes": 29036,
+      "hash": "85f0bcf15056df063d298f416405cc51053871a08bfbf9eba80e21495fada9ee"
     },
     "assets/portraits/template-bow-female.webp": {
       "bytes": 377518,
@@ -2408,6 +2708,34 @@
     "assets/shell-gatherer.glb": {
       "bytes": 48644,
       "hash": "ad7c22b63466c9d0ce9d3b44368e6ba67530d43ac26737a2e38c1bd88c9255a7"
+    },
+    "assets/silver-crown-syndicate-archon.glb": {
+      "bytes": 4049180,
+      "hash": "9174e0816f8bad601695c1a81e629779f67f65d6e165320bbda38dac8b77ed6d"
+    },
+    "assets/syndicate-blood-croupier.glb": {
+      "bytes": 199456,
+      "hash": "a91a80b488c47240aa161b95a55aa7d2bebed1cc761aaa5a1865ab1dfc403ccc"
+    },
+    "assets/syndicate-gilded-automaton.glb": {
+      "bytes": 179604,
+      "hash": "93bef9f87758ff3f4412f5a7a12fea7a1f6a4ba7b0faff09b3bbfa9b901d08a2"
+    },
+    "assets/syndicate-mint-chemist.glb": {
+      "bytes": 166244,
+      "hash": "3174d76c4749678b3abbe2f9c908921e81fd1abefe430060c89e5b4e49f6bee2"
+    },
+    "assets/syndicate-repeating-arbalest.glb": {
+      "bytes": 156552,
+      "hash": "2f40ace23536dd1aae02b2662459241fda67ef0305d128e1259096da1f9a76c6"
+    },
+    "assets/syndicate-vault-enforcer.glb": {
+      "bytes": 174152,
+      "hash": "31a6d802013cbd503ac9be18697877c0f8232c6cea79d6c1cc38ee1eb4dee907"
+    },
+    "assets/syndicate-velvet-blade.glb": {
+      "bytes": 140352,
+      "hash": "705c0fad50b57dde137b504b1e5c63dbea7bf2e87348ac32bb5116046af9b43c"
     },
     "assets/tavern-machines.glb": {
       "bytes": 438336,

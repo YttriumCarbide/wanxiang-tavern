@@ -40,6 +40,7 @@ export function browserJobs(scopes, results, root) {
   simple('skill-menus', 'skill-menus', 'skillMenuChecks');
   simple('rp-layout', 'rp-layout', 'rpLayoutChecks');
   simple('ring-gallery', 'ring-gallery', 'ringGalleryChecks');
+  simple('ring-acquisition', 'ring-acquisition', 'ringAcquisitionChecks', [], true);
   simple('gal', 'gal', 'galChecks');
   simple('dining', 'dining', 'diningChecks');
   simple('customization', 'customization', 'customizationChecks');

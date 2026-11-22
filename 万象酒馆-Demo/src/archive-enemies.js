@@ -17,6 +17,7 @@ const OVERLORD_CANONICAL_ORDER = [
   'alchemicalPuppet',
   'darkscaleWarlord',
   'banditSyndicateKing',
+  'silverCrownSyndicateArchon',
 ];
 
 export function classifyEnemyArchiveTier(entry, isOfficial = false) {
@@ -106,13 +107,18 @@ export function buildEnemyArchiveEntries(officialDefinitions, worlds = []) {
   const merged = Object.values({
     ...officialDefinitions,
     ...Object.assign({}, ...(worlds || []).map((world) => world.enemyDefinitions)),
-  }).filter((entry) => entry && entry.speed);
+  });
 
   const buckets = { minion: [], elite: [], boss: [], overlord: [] };
   const moonParts = [];
 
   for (const entry of merged) {
-    const tier = classifyEnemyArchiveTier(entry, officialIds.has(entry.id));
+    if (!entry) continue;
+    const isOfficial = officialIds.has(entry.id);
+    const archiveSource = isOfficial ? officialDefinitions[entry.id]?.archiveSource : '';
+    if (!entry.speed && !archiveSource) continue;
+    const tier = classifyEnemyArchiveTier(entry, isOfficial);
+    const sources = archiveSource || worldSourcesFor([entry.id], worlds);
     if (tier === 'overlord') {
       if (isMoonTreePart(entry)) {
         moonParts.push(entry);
@@ -130,7 +136,7 @@ export function buildEnemyArchiveEntries(officialDefinitions, worlds = []) {
           entry,
           parts: [entry],
           models: entry.model ? [entry.model] : [],
-          sources: worldSourcesFor([entry.id], worlds),
+          sources,
         });
       }
       continue;
@@ -148,7 +154,7 @@ export function buildEnemyArchiveEntries(officialDefinitions, worlds = []) {
       entry,
       parts: [entry],
       models: entry.model ? [entry.model] : [],
-      sources: worldSourcesFor([entry.id], worlds),
+      sources,
     });
   }
 
