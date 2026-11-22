@@ -91,7 +91,7 @@ const text = (value, min, max, label) => {
   return value.trim();
 };
 function validatedEnemyEffectTarget(effect, restoring = false) {
-  if (!['damage', 'buff', 'heal', 'shield', 'mana'].includes(effect.type))
+  if (!['damage', 'buff', 'heal', 'shield', 'mana', 'cleanse'].includes(effect.type))
     throw Error('敌人效果类型无效');
   const positive = isPositiveEnemyEffect(effect);
   const target = effect.target || (positive ? 'self' : 'opponents');
@@ -102,10 +102,6 @@ function validatedEnemyEffectTarget(effect, restoring = false) {
   if (effect.type === 'buff' && effect.buff === 'slow' && target === 'opponents') {
     if (restoring) return null;
     throw Error('禁止给玩家队友施加迟缓；迟缓只影响敌人的行动速度');
-  }
-  if (effect.type === 'buff' && effect.buff === 'blind') {
-    if (restoring) return null;
-    throw Error('生成敌人不能施加致盲');
   }
   if (
     effect.type === 'buff' &&
@@ -143,6 +139,7 @@ function effects(list, restoring = false, boss = false) {
   return list.flatMap((effect) => {
     const target = validatedEnemyEffectTarget(effect, restoring);
     if (!target) return [];
+    if (effect.type === 'cleanse') return [{ type: 'cleanse', target }];
     let maximum = ENEMY_DESIGN_LIMITS.support[1];
     if (effect.type === 'damage') maximum = ENEMY_DESIGN_LIMITS[tier].damage[1];
     if (effect.type === 'buff') {

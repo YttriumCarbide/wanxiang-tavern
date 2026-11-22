@@ -225,7 +225,7 @@ export function equipmentBudget(sourceOrValue, qualityOverride = null) {
 }
 
 function effectLv1Cost(effect, levelScale, mpScale) {
-  if (effect.type === 'cleanse') return effect.buffs.length * 3;
+  if (effect.type === 'cleanse') return (effect.buffs?.length ?? 3) * 3;
   if (effect.type === 'buff') {
     if (DOT_BUFFS.has(effect.buff)) return (effect.value / levelScale) * 0.9;
     return effect.value * 4.5;

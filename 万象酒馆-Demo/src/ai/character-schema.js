@@ -23,6 +23,7 @@ function legacyCharacterSchema({ acceptLegacyNames = false, buffs = Object.keys(
         object({ type: { const: type, type: 'string' }, value: integer(1, 40) }),
       ),
       object({ type: { const: 'buff', type: 'string' }, buff, value: integer(1, 6) }),
+      object({ type: { const: 'cleanse', type: 'string' } }),
       object({ type: { const: 'cleanse', type: 'string' }, buffs: array(buff, 1, 9) }),
     ],
   };
@@ -169,6 +170,7 @@ export function triggerRuleSchema({ buffs = Object.keys(BUFFS) } = {}) {
         object({ type: { const: type }, value: integer(1, 20) }),
       ),
       object({ type: { const: 'buff' }, buff: choice(buffs), value: integer(1, 3) }),
+      object({ type: { const: 'cleanse' } }),
       object({ type: { const: 'cleanse' }, buffs: array(choice(buffs), 1, 11) }),
     ],
   };

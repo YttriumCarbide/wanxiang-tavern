@@ -97,7 +97,7 @@ export function createOverlordMechanics(state, definitions, ports) {
     }
   }
 
-  function onAttackHit(actor, target) {
+  function onAttackHit(actor, target, redirected = false) {
     if (!isAlive(state, actor) || !isAlive(state, target)) return;
     const def = definitions?.[actor];
     if (!def) return;
@@ -106,8 +106,12 @@ export function createOverlordMechanics(state, definitions, ports) {
     const actorUnit = state.units?.[actor];
     const targetUnit = state.units?.[target];
     if (!actorUnit || !targetUnit) return;
-    if (actorUnit.side !== 'enemy' || targetUnit.side !== 'hero') return;
-    if (!state.formation.slice(0, 3).includes(target)) return;
+    if (actorUnit.side !== 'enemy') return;
+    if (
+      !redirected &&
+      (targetUnit.side !== 'hero' || !state.formation.slice(0, 3).includes(target))
+    )
+      return;
     const active = state.activeHiddenWeapons?.[actor];
     if (!active || active.round !== state.round) return;
     const stacks = mechanic.stacksPerHit || 1;

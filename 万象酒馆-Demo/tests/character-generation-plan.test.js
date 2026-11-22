@@ -59,6 +59,26 @@ test('character requests expose only four authored base references and stable pr
   assert(plan.complexity >= 1 && plan.complexity <= 6);
 });
 
+test('v4 compiles confusion and full cleanse alongside existing flight and artifact', () => {
+  const raw = design();
+  raw.data.skills[0].ap = 2;
+  raw.data.skills[1].ap = 1;
+  raw.data.skills[0].effects = [{ type: 'buff', buff: 'confusion', power: 'standard' }];
+  raw.data.skills[1].target = 'ally';
+  raw.data.skills[1].effects = [{ type: 'cleanse', power: 'standard' }];
+  raw.data.entrySkill.target = 'self';
+  for (const buff of ['flying', 'artifact']) {
+    raw.data.entrySkill.effects = [{ type: 'buff', buff, power: 'low' }];
+    const { entry } = readGenerationResult('character', JSON.stringify(raw), {
+      purpose: 'protagonist',
+      complexity: 2,
+    });
+    assert.equal(entry.combat.skills[0].effects[0].buff, 'confusion');
+    assert.deepEqual(entry.combat.skills[1].effects, [{ type: 'cleanse' }]);
+    assert.equal(entry.combat.entrySkill.effects[0].buff, buff);
+  }
+});
+
 test('v4 forbids model-written base values and compiles repeatable stronger 2AP skills', () => {
   const raw = design();
   checkOutputSchema(raw, characterOutputSchema());

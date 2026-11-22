@@ -1,5 +1,3 @@
-import { NEGATIVE_STATUSES } from '../status-rules.js';
-
 /** Authored text is retained verbatim; only skill motion and missing resource costs are added. */
 export const TOWN_GUESTS = {
   libet: {
@@ -38,11 +36,8 @@ export const TOWN_GUESTS = {
           damageType: null,
           adjacentAllies: true,
           includeSelf: true,
-          text: '自身与同排左右紧邻的存活队友各获得9护盾，并清除负面效果。',
-          effects: [
-            { type: 'shield', value: 9 },
-            { type: 'cleanse', buffs: [...NEGATIVE_STATUSES] },
-          ],
+          text: '自身与同排左右紧邻的存活队友各获得9护盾，并获得净化（移除所有负面状态）。',
+          effects: [{ type: 'shield', value: 9 }, { type: 'cleanse' }],
         },
       ],
       entrySkill: {

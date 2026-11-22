@@ -89,6 +89,7 @@ function effects(list, path = 'effects') {
       '效果类型',
     );
     if (type === 'cleanse') {
+      if (effect.buffs === undefined) return { type, ...effectMetadata(effect) };
       if (!Array.isArray(effect.buffs) || !effect.buffs.length || effect.buffs.length > 9)
         fail('净化状态列表');
       return {

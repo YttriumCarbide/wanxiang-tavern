@@ -71,7 +71,7 @@ export function characterGameReference(plan = null) {
       selfHeal: '施术者回复hp，选择power档位',
       selfMana: '施术者回复sp，选择power档位',
       buff: '选择buff与power，层数由程序决定；禁锢、敏捷、超限每次1层',
-      cleanse: 'buffs数组列出需移除的状态ID',
+      cleanse: '移除目标身上的所有负面状态；只写type和power，不填写buffs',
     },
     statuses: GENERATED_BUFFS.map((id) => ({
       id,

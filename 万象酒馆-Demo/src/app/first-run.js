@@ -23,21 +23,18 @@ export function createFirstRun(context) {
   const title = document.createElement('dialog');
   title.id = 'start-screen';
   title.setAttribute('aria-labelledby', 'start-title');
-  title.innerHTML = html`<div class="start-ornament" aria-hidden="true">✧</div>
-    <main class="start-copy">
-      <small>WANXIANG TAVERN</small>
-      <h1 id="start-title">万象酒馆</h1>
-      <p class="start-subtitle">群星之间，一盏为你留着的灯。</p>
-      <span class="start-divider" aria-hidden="true">◇ ───── ✧ ───── ◇</span>
-      <button id="start-journey" class="primary">开启旅程 <span>→</span></button>
-      <button id="start-load">读取存档</button>
-      <p class="start-note">使用自己的 AI 接口，书写属于你的异界故事。</p>
-      <nav class="start-downloads" aria-label="下载游戏">
-        <a id="start-download-windows" href="${DOWNLOADS.windows}">Windows ZIP</a>
-        <a id="start-download-android" href="${DOWNLOADS.android}">Android APK</a>
-      </nav>
-    </main>
-    <small class="start-footer">星海无垠 · 此处是归途</small>`;
+  title.innerHTML = html`<main class="start-copy">
+    <small>WANXIANG TAVERN</small>
+    <h1 id="start-title">万象酒馆</h1>
+    <p class="start-subtitle">群星之间，一盏为你留着的灯。</p>
+    <button id="start-journey" class="primary">开启旅程 <span>→</span></button>
+    <button id="start-load">读取存档</button>
+    <p class="start-note">使用自己的 AI 接口，书写属于你的异界故事。</p>
+    <nav class="start-downloads" aria-label="下载游戏">
+      <a id="start-download-windows" href="${DOWNLOADS.windows}">Windows ZIP</a>
+      <a id="start-download-android" href="${DOWNLOADS.android}">Android APK</a>
+    </nav>
+  </main>`;
   document.body.append(title);
 
   const wizard = document.createElement('dialog');

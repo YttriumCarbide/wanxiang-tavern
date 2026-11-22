@@ -44,6 +44,7 @@ export function combatCues(event, before, speed = 1, visualDuration = 0) {
   }
   if (!['hero', 'enemy', 'counter', 'entrySkill'].includes(event.type)) return deathCues;
   const friendly =
+    !event.confusionTarget &&
     event.targets.length > 0 &&
     event.targets.every((id) => before.units[id]?.side === before.units[event.actor]?.side);
   const def = definition(event.after, event.actor);

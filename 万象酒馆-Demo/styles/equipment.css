@@ -1741,6 +1741,7 @@
   .forge-layout {
     position: relative;
     grid-template-columns: minmax(0, 1fr);
+    overflow: clip;
   }
   #forge-list,
   #forge-catalog {

@@ -1,5 +1,5 @@
 /** Code-owned consumables; archive loot remains a separate ether settlement. */
-function potion(id, name, color, price, effects, text, target = 'ally') {
+function potion(id, name, color, price, effects, text, target = 'ally', art = id) {
   return Object.freeze({
     id,
     name,
@@ -9,9 +9,10 @@ function potion(id, name, color, price, effects, text, target = 'ally') {
     text,
     target,
     ap: 1,
-    icon: './assets/items/' + id + '.svg',
+    icon: './assets/items/' + art + '.svg',
   });
 }
+
 export const ITEMS = Object.freeze(
   Object.fromEntries(
     [
@@ -126,6 +127,86 @@ export const ITEMS = Object.freeze(
         ],
         '施加4层虚弱和4层易伤。',
         'enemy',
+      ),
+      potion(
+        'artifact-potion',
+        '人工制品',
+        '#edbd75',
+        30,
+        [{ type: 'buff', buff: 'artifact', value: 1 }],
+        '获得1层人工制品。',
+        'ally',
+        'strength-potion',
+      ),
+      potion(
+        'fine-artifact-potion',
+        '优质人工制品',
+        '#ef954a',
+        60,
+        [{ type: 'buff', buff: 'artifact', value: 2 }],
+        '获得2层人工制品。',
+        'ally',
+        'fine-strength-potion',
+      ),
+      potion(
+        'confusion-potion',
+        '混乱药水',
+        '#b7a4e9',
+        40,
+        [{ type: 'buff', buff: 'confusion', value: 1 }],
+        '施加1层混乱。',
+        'enemy',
+        'slow-potion',
+      ),
+      potion(
+        'fine-confusion-potion',
+        '优质混乱药水',
+        '#9a74ed',
+        80,
+        [{ type: 'buff', buff: 'confusion', value: 2 }],
+        '施加2层混乱。',
+        'enemy',
+        'fine-slow-potion',
+      ),
+      potion(
+        'blind-scroll',
+        '致盲卷轴',
+        '#c2a7e0',
+        25,
+        [{ type: 'buff', buff: 'blind', value: 1 }],
+        '施加1层致盲。',
+        'enemy',
+        'calamity-scroll',
+      ),
+      potion(
+        'fine-blind-scroll',
+        '优质致盲卷轴',
+        '#d497e8',
+        50,
+        [{ type: 'buff', buff: 'blind', value: 2 }],
+        '施加2层致盲。',
+        'enemy',
+        'fine-calamity-scroll',
+      ),
+      potion(
+        'cleanse-scroll',
+        '净化卷轴',
+        '#c2a7e0',
+        35,
+        [{ type: 'cleanse' }],
+        '净化目标身上的所有负面状态。',
+        'ally',
+        'calamity-scroll',
+      ),
+      potion(
+        'flying-scroll',
+        '飞行卷轴',
+        '#c2a7e0',
+        45,
+        [{ type: 'buff', buff: 'flying', value: 1 }],
+        '获得1层飞行。',
+        'ally',
+        'calamity-scroll',
       ),
     ].map((item) => [item.id, item]),
   ),

@@ -80,6 +80,10 @@ function compileRulesForQuality(
     const effects = [];
     for (const effect of (rule.effects || []).slice(0, maxEff)) {
       if (effect.type === 'cleanse') {
+        if (effect.buffs === undefined) {
+          effects.push({ type: 'cleanse' });
+          continue;
+        }
         effects.push({
           type: 'cleanse',
           buffs: [...new Set(effect.buffs || [])]

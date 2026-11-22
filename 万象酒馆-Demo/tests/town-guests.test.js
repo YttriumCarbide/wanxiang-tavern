@@ -116,11 +116,19 @@ test('Libet heals both immediate neighbors from the center, not herself, empty s
 
 test('guardian wings shield and cleanse only self and adjacent same-row allies', () => {
   const state = battle({ lyria: 'libet' });
-  for (const id of state.formation) state.units[id].buffs = { poison: 4, blind: 2, strength: 2 };
+  for (const id of state.formation)
+    state.units[id].buffs = {
+      poison: 4,
+      blind: 2,
+      confusion: 2,
+      balance: 1,
+      strength: 2,
+      flying: 1,
+    };
   const { event } = cast(state, 'lyria', 'guardian-wings');
   for (const id of ['aegis', 'lyria', 'morrow']) {
     assert.equal(event.after.units[id].block, 9);
-    assert.deepEqual(event.after.units[id].buffs, { strength: 2 });
+    assert.deepEqual(event.after.units[id].buffs, { strength: 2, flying: 1 });
   }
   assert.equal(event.after.units.serin.block, 0);
   assert.equal(event.after.units.serin.buffs.poison, 4);
@@ -269,23 +277,91 @@ test('Yuto entry counts surviving allies, shields front only and supports more t
   assert.match(statusIcons(entry, 'serin'), /悠扬 5层/);
 });
 
-test('new statuses and melody have distinct artwork; enemy creation rejects blind', () => {
-  const art = ['flying', 'blind', 'melody'].map(icon);
-  assert.equal(new Set(art).size, 3);
+test('new statuses have artwork and tiered enemy creation supports their effects', () => {
+  const art = ['flying', 'blind', 'confusion', 'melody'].map(icon);
+  assert.equal(new Set(art).size, 4);
   for (const svg of art) assert.match(svg, /<path/);
   const enemy = {
     ...structuredClone(DEFINITIONS.mossSlime),
     id: 'enemy-blind-test',
+    hp: undefined,
+    tier: 'medium',
     intents: [
       {
         name: '致盲',
         text: '施加致盲',
         slots: [0],
-        effects: [{ type: 'buff', buff: 'blind', value: 1 }],
+        effects: [
+          { type: 'buff', buff: 'blind', power: 'medium', target: 'opponents' },
+          { type: 'buff', buff: 'confusion', power: 'high', target: 'opponents' },
+          { type: 'buff', buff: 'flying', power: 'low', target: 'self' },
+          { type: 'buff', buff: 'artifact', power: 'high', target: 'self' },
+          { type: 'cleanse', power: 'medium', target: 'allAllies' },
+        ],
       },
     ],
   };
-  assert.throws(() => normalizeEnemy(enemy), /不能施加致盲/);
+  const compiled = normalizeEnemy(enemy);
+  assert.deepEqual(compiled.intents[0].effects, [
+    { type: 'buff', buff: 'blind', value: 1, target: 'opponents' },
+    { type: 'buff', buff: 'confusion', value: 2, target: 'opponents' },
+    { type: 'buff', buff: 'flying', value: 1, target: 'self' },
+    { type: 'buff', buff: 'artifact', value: 2, target: 'self' },
+    { type: 'cleanse', target: 'allAllies' },
+  ]);
+  assert.deepEqual(normalizeEnemy(compiled, { restoring: true }).intents, compiled.intents);
+});
+
+test('confused enemy AoE transfers just one slot of damage and its debuff to an ally', () => {
+  const move = {
+    name: '三连扫',
+    slots: [0, 1, 2],
+    effects: [
+      { type: 'damage', value: 20, targetSlots: [0, 2] },
+      { type: 'damage', value: 40, targetSlots: [1] },
+      { type: 'buff', buff: 'weak', value: 2 },
+    ],
+  };
+  const state = battle({}, 2, move);
+  state.units.mossSlime.buffs = { confusion: 2, balance: 1, blind: 1 };
+  state.units.pebble.buffs.bind = 1;
+  const result = resolve(state);
+  assert.deepEqual(resolve(state), result);
+  const event = result.events.find((entry) => entry.type === 'enemy');
+  assert.deepEqual(event.targets, ['pebble']);
+  assert.equal(event.blindTarget, null);
+  assert.equal(event.after.units.pebble.hp, 100 - (event.confusionSlot === 1 ? 34 : 17));
+  assert.equal(event.after.units.pebble.buffs.weak, 2);
+  assert(state.formation.every((id) => event.after.units[id].hp === state.units[id].hp));
+  assert.equal(result.final.units.mossSlime.buffs.confusion, 1);
+  assert.deepEqual(advance(result).units.pebble, result.final.units.pebble);
+});
+
+test('solo confusion multiplies with weak and balance, and expires at round end', () => {
+  const state = battle({}, 1, {
+    name: '三连扫',
+    slots: [0, 1, 2],
+    effects: [{ type: 'damage', value: 100 }],
+  });
+  state.units.mossSlime.buffs = { confusion: 1, weak: 1, balance: 1 };
+  const result = resolve(state);
+  const event = result.events.find((entry) => entry.type === 'enemy');
+  for (const id of state.formation.slice(0, 3)) assert.equal(event.after.units[id].hp, 47);
+  assert.equal(result.final.units.mossSlime.buffs.confusion, undefined);
+});
+
+test('changing a confused hero’s selected enemy never rerolls their teammate', () => {
+  const state = battle({}, 2);
+  state.units.aegis.buffs = { confusion: 2 };
+  const first = cast(state, 'aegis', 'attack', 'mossSlime').event;
+  const second = cast(state, 'aegis', 'attack', 'pebble').event;
+  assert(first.confusionTarget);
+  assert.notEqual(first.confusionTarget, 'aegis');
+  assert.deepEqual(first.targets, [first.confusionTarget]);
+  assert.deepEqual(second.targets, first.targets);
+  assert.equal(first.after.units[first.confusionTarget].side, 'hero');
+  assert(first.after.units[first.confusionTarget].hp < state.units[first.confusionTarget].hp);
+  for (const id of state.enemyIds) assert.equal(first.after.units[id].hp, state.units[id].hp);
 });
 
 test('town residents appear without recruitment, and details separate all skill motion including entry', () => {

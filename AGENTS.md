@@ -7,6 +7,7 @@
 
 - 当前运行项目是 `万象酒馆-Demo`。三个体素源模型目录和 `建模工具` 是有效开发资产，不按旧版处理。
 - 修改前先读 `万象酒馆-Demo/开发规范.md`；当前开发基线验收见 `万象酒馆-Demo/代码审查.md`。
+- **新增 Buff／Debuff 或地图时，开发 AI 必须主动询问用户要开放哪些生成入口。** 按需列出地图 API、角色、剧本、以太造物等入口，允许多选。已明确的范围直接执行，涉及共享登记表时先核对自动接入路径；生成池按用户选定的范围更新。详见[新增内容接入流程](万象酒馆-Demo/开发规范.md#新-buff-与新地图的接入流程)。
 - 不重新创建 `.previous`、旧版查看器、重复启动实现、临时 QA 脚本或无要求的压缩包。
 - 新代码使用可读的多行函数。改动历史长函数时整理实际改动的代码块；禁止为了排版扩大功能改动。
 - 规则写入纯数据引擎，界面和动画只能消费预演事件。禁止分别计算预演伤害和结算伤害。
@@ -57,3 +58,8 @@
        prompt = "提炼以下测试失败堆栈的核心原因与涉及文件行号：..."
      } | ConvertTo-Json -Compress | node "C:\Users\Lenovo\.gemini\config\mcp\deepseek-worker.mjs" --cli ds_ask --stdin
      ```
+
+4. **仓库内通用 AI 调用工具**
+   - 从仓库根目录运行 `node 万象酒馆-Demo/tools/ai-worker.mjs --cli ai_ask --stdin`，通过标准输入传入 `{"prompt":"…"}`。
+   - 文件任务使用 `--cli ai_file_worker --stdin`，沿用 `instruction`、`input_files`、`output_file` 和 `json_mode`。仅传入任务所需且可发送到配置接口的文件。
+   - 使用环境变量选择 Chat Completions 接口和模型。配置和调用示例见[开发规范](万象酒馆-Demo/开发规范.md#开发用-ai-调用工具)。需要由 DeepSeek Flash 处理的任务，使用此命令时仍须配置指定的 DeepSeek Flash 模型。

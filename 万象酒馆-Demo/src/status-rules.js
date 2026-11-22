@@ -7,6 +7,7 @@ export const DECAYING_STATUSES = Object.freeze([
   'regen',
   'flying',
   'blind',
+  'confusion',
 ]);
 export const NEGATIVE_STATUSES = Object.freeze([
   'bind',
@@ -16,12 +17,27 @@ export const NEGATIVE_STATUSES = Object.freeze([
   'slow',
   'bleed',
   'blind',
+  'confusion',
+  'balance',
 ]);
 
 export function statusStacks(key, value) {
   const maximum =
     key === 'haste' ? 2 : ['bind', 'overload', 'meteor', 'sacrifice'].includes(key) ? 1 : Infinity;
   return Math.max(0, Math.min(maximum, Math.floor(value || 0)));
+}
+
+/** The round and actor seed targeting during simulation, before events are played. */
+export function pickAttackTarget(state, actor, options, offset = 0) {
+  if (!options.length) return null;
+  let seed = (state.seed + state.round * 101 + offset) >>> 0;
+  for (const letter of actor) seed = Math.imul(seed ^ letter.charCodeAt(0), 16777619) >>> 0;
+  return options[seed % options.length];
+}
+
+export function blindedTarget(state, actor, targets) {
+  const living = [...new Set(targets)].filter((id) => state.units[id]?.hp > 0);
+  return living.length >= 2 ? pickAttackTarget(state, actor, living) : null;
 }
 
 export const STRENGTH_STEP = 0.1;

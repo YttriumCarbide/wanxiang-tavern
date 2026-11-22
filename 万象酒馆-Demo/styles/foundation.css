@@ -282,7 +282,7 @@ textarea {
 }
 
 @media (max-height: 600px) and (orientation: landscape) {
-  dialog:not(#party-panel):not(#prepare-character-dialog) {
+  dialog:not(#party-panel):not(#prepare-character-dialog):not(:where(#start-screen)) {
     max-height: calc(100dvh - 12px);
     max-width: calc(100vw - 16px - var(--safe-left) - var(--safe-right));
   }
@@ -295,7 +295,10 @@ textarea {
 }
 
 @media (max-width: 900px), (max-height: 500px) {
-  body dialog:not(#party-panel):not(#prepare-character-dialog):not(:has(> #gal-stage)) {
+  body
+    dialog:not(#party-panel):not(#prepare-character-dialog):not(:has(> #gal-stage)):not(
+      :where(#start-screen)
+    ) {
     max-width: calc(100vw - 16px - var(--safe-left) - var(--safe-right)) !important;
     max-height: calc(
       100dvh - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom)
@@ -317,7 +320,10 @@ textarea {
     :is(pre, p, label, small) {
     overflow-wrap: anywhere;
   }
-  dialog:not(#party-panel):not(#prepare-character-dialog):not(:has(> #gal-stage)) button {
+  dialog:not(#party-panel):not(#prepare-character-dialog):not(:has(> #gal-stage)):not(
+      :where(#start-screen)
+    )
+    button {
     padding: 6px 10px;
     font-size: 12px;
   }

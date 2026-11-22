@@ -246,7 +246,7 @@ export function compileCharacterDesign(raw, input = {}) {
       assertDesign(effect.buff, '状态效果缺少buff');
       assertDesign(!EXCLUSIVE_BUFFS.includes(effect.buff), '不能生成角色或纹章专属状态');
     }
-    if (effect.type === 'cleanse') {
+    if (effect.type === 'cleanse' && effect.buffs !== undefined) {
       assertDesign(effect.buffs?.length, '净化效果缺少buffs');
       assertDesign(
         !effect.buffs.some((key) => EXCLUSIVE_BUFFS.includes(key)),
@@ -300,7 +300,7 @@ export function compileCharacterDesign(raw, input = {}) {
     const markDamage = effect.perMark ? Math.max(1, Math.floor(value / 7)) : 0;
     const result =
       effect.type === 'cleanse'
-        ? { type: 'cleanse', buffs: [...new Set(effect.buffs)] }
+        ? { type: 'cleanse', ...(effect.buffs && { buffs: [...new Set(effect.buffs)] }) }
         : {
             type: effect.type,
             value:

@@ -1,5 +1,16 @@
 {
-  "browserConcurrency": 2,
-  "scopes": ["quality", "core", "ring-acquisition", "ring-gallery", "status-emblems"],
-  "coreFiles": ["tests/worlds-emblems.test.js", "tests/logic-audit-emblems.test.js"]
+  "browserConcurrency": 1,
+  "scopes": ["quality", "core", "status-emblems"],
+  "coreFiles": [
+    "tests/audio.test.js",
+    "tests/combat-control.test.js",
+    "tests/combat-overhaul.test.js",
+    "tests/growth-supplies.test.js",
+    "tests/official-visitors.test.js",
+    "tests/overlord-puppet.test.js",
+    "tests/overlord-state-machines.test.js",
+    "tests/status-emblems.test.js",
+    "tests/status-sources.test.js",
+    "tests/town-guests.test.js"
+  ]
 }

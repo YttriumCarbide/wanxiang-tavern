@@ -265,6 +265,7 @@ export async function createOverlordModels({
       const url = `./assets/${def.model}`;
       try {
         const gltf = loading ? await loading.gltf(url) : await new GLTFLoader().loadAsync(url);
+        resources.object(gltf.scene);
         const hasProceduralNode = Boolean(
           gltf.scene?.children?.some(
             (child) =>

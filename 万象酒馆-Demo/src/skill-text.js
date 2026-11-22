@@ -5,6 +5,7 @@ import { TRIGGER_EVENTS, TRIGGER_TARGETS } from './triggers.js';
 
 const NEGATIVE_BUFF_KEYS = new Set([
   'blind',
+  'confusion',
   'bind',
   'weak',
   'vulnerable',
@@ -98,7 +99,7 @@ function effectText(effect, target = '目标', markName = '标记', natural = fa
       description = `${target}获得${effect.value}层${buffName}`;
     }
   } else if (effect.type === 'cleanse')
-    description = `净化${target}的${effect.buffs.map((key) => BUFFS[key]?.name || key).join('、')}`;
+    description = `净化${target}的${effect.buffs?.map((key) => BUFFS[key]?.name || key).join('、') || '所有负面状态'}`;
   else if (effect.type === 'mark')
     description = `${target}获得${effect.value}层${markName}，最多3层`;
   if (effect.perMark)

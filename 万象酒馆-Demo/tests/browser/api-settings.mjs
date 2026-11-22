@@ -147,8 +147,22 @@ export async function antiRouteChecks({ browser, baseURL, output }) {
 export async function firstRunApplyChecks({ browser, baseURL, output }) {
   const page = await browser.newPage({ viewport: { width: 667, height: 375 }, hasTouch: true });
   try {
-    await page.goto(baseURL + '/?display=landscape');
+    await page.addInitScript(() => {
+      window.wanxiangNativeUpdate = { postMessage() {} };
+    });
+    await page.goto(baseURL);
     await page.waitForFunction(() => !!window.demo);
+    assert.equal(await page.locator('#landscape-frame').count(), 0);
+    assert.equal(await page.locator('html').getAttribute('data-game-layout'), 'mobile');
+    await page.locator('#start-load').waitFor({ state: 'visible' });
+    await page.locator('.start-downloads').waitFor({ state: 'hidden' });
+    assert.deepEqual(await page.locator('#start-screen').boundingBox(), {
+      x: 0,
+      y: 0,
+      width: 667,
+      height: 375,
+    });
+    await page.screenshot({ path: path.join(output, 'start-screen-android.png') });
     await page.locator('#start-journey').click();
     await page.locator('#setup-wizard[data-step="mode"]').waitFor({ state: 'visible' });
     await page.locator('#setup-mode-free').click();
@@ -191,7 +205,22 @@ export async function firstRunApplyChecks({ browser, baseURL, output }) {
     await confirm.click();
     await page.locator('#ai-status').filter({ hasText: '已将所选连接预设应用到 5' }).waitFor();
     await page.locator('#setup-next').click();
-    await page.locator('#new-game[open]').waitFor({ state: 'visible' });
+    const creation = page.locator('#new-game[open]');
+    await creation.waitFor({ state: 'visible' });
+    assert.deepEqual(
+      await creation.evaluate((dialog) => [
+        getComputedStyle(dialog).animationName,
+        getComputedStyle(dialog).backdropFilter,
+        getComputedStyle(dialog, '::backdrop').backdropFilter,
+      ]),
+      ['none', 'none', 'none'],
+    );
+    const name = creation.locator('input[name="name"]');
+    await name.fill('青缘');
+    await page.setViewportSize({ width: 375, height: 667 });
+    await name.click();
+    assert.equal(await name.inputValue(), '青缘');
+    await page.screenshot({ path: path.join(output, 'native-creation-portrait.png') });
   } finally {
     await page.close();
   }
@@ -204,6 +233,8 @@ export async function firstRunApplyChecks({ browser, baseURL, output }) {
     );
     await lazyPage.goto(baseURL);
     await lazyPage.waitForFunction(() => !!window.demo);
+    await lazyPage.locator('.start-downloads').waitFor({ state: 'visible' });
+    await lazyPage.screenshot({ path: path.join(output, 'start-screen-desktop.png') });
     await lazyPage.evaluate(() => localStorage.removeItem('wanxiang.setup.completed.v1'));
     await lazyPage.locator('#start-journey').click();
     await lazyPage.locator('#setup-wizard[data-step="mode"]').waitFor({ state: 'visible' });
@@ -254,6 +285,7 @@ export async function firstRunApplyChecks({ browser, baseURL, output }) {
     await lazyPage.screenshot({ path: path.join(output, 'lazy-setup-and-creation.png') });
     return {
       mobileConfirmation: true,
+      nativeCreation: true,
       appliesSelectedProfiles: true,
       lazySplitSetup: true,
       creationChipsAndStyles: true,
