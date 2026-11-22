@@ -885,7 +885,7 @@ export async function createTavernView() {
         }
       }
     } else if (travel) {
-      travel.elapsed += dt;
+      travel.elapsed += frameDelta;
       const a = Math.min(1, travel.elapsed / travel.duration),
         e = a * a * a * (a * (a * 6 - 15) + 10);
       camera.position.lerpVectors(travel.start, travel.end, e);

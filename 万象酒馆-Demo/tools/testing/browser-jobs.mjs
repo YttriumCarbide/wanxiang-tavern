@@ -48,6 +48,7 @@ export function browserJobs(scopes, results, root) {
   simple('equipment', 'equipment', 'equipmentChecks');
   simple('enemy-progression', 'enemy-progression', 'enemyProgressionChecks');
   simple('mobile', 'mobile', 'mobileChecks');
+  simple('android-ui', 'mobile', 'androidWindowResizeChecks');
   simple('forest', 'forest', 'forestChecks');
   simple('frost', 'frost', 'frostChecks');
   simple('workshop', 'workshop', 'workshopChecks', [], true);
@@ -111,6 +112,8 @@ export function browserJobs(scopes, results, root) {
       refresh: await journeyRefreshChecks(options),
     };
   });
+  if (!scopes.has('preparation'))
+    simple('journey-refresh', 'journey-refresh', 'journeyRefreshChecks');
   const environment = ['environment', 'artbook', 'rooms'].find((name) => scopes.has(name));
   if (environment)
     add(environment, async (options) => {

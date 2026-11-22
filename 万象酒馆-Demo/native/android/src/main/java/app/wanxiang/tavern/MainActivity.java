@@ -1,5 +1,6 @@
 package app.wanxiang.tavern;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
@@ -7,9 +8,15 @@ import android.content.ActivityNotFoundException;
 import android.content.ClipData;
 import android.content.Intent;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.view.View;
+import android.view.WindowInsets;
+import android.view.WindowInsetsController;
+import android.view.WindowManager;
 import android.webkit.JsPromptResult;
 import android.webkit.JsResult;
+import android.webkit.MimeTypeMap;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
@@ -17,6 +24,7 @@ import android.webkit.WebResourceResponse;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.EditText;
+import android.widget.FrameLayout;
 import android.widget.TextView;
 import androidx.webkit.WebMessageCompat;
 import androidx.webkit.WebViewCompat;
@@ -25,6 +33,8 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -35,12 +45,16 @@ public final class MainActivity extends Activity {
     private final ExecutorService writes = Executors.newSingleThreadExecutor();
     private final Set<Dialog> jsDialogs = new HashSet<>();
     private WebView webView;
+    private FrameLayout content;
+    private WebChromeClient.CustomViewCallback fullscreenCallback;
     private WebExports exports;
     private ValueCallback<Uri[]> pendingFileSelection;
+    private boolean backPending;
 
     @Override
     protected void onCreate(Bundle state) {
         super.onCreate(state);
+        getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
         if (!WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)
                 || !WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_ARRAY_BUFFER)) {
             showError("请更新 Android System WebView 后重新打开游戏。");
@@ -61,6 +75,7 @@ public final class MainActivity extends Activity {
         webView.getSettings().setDomStorageEnabled(true);
         webView.getSettings().setAllowFileAccess(false);
         webView.getSettings().setAllowContentAccess(false);
+        exports = new WebExports(this, () -> pendingFileSelection != null);
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
@@ -78,7 +93,7 @@ public final class MainActivity extends Activity {
             @Override
             public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> callback,
                     FileChooserParams params) {
-                if (pendingFileSelection != null) {
+                if (pendingFileSelection != null || exports.isChoosing()) {
                     callback.onReceiveValue(null);
                     return true;
                 }
@@ -89,9 +104,7 @@ public final class MainActivity extends Activity {
                 }
                 pendingFileSelection = callback;
                 try {
-                    Intent intent = params.createIntent();
-                    intent.addCategory(Intent.CATEGORY_OPENABLE);
-                    startActivityForResult(intent, FILE_CHOOSER_REQUEST);
+                    launchFileChooser(params);
                 } catch (ActivityNotFoundException | SecurityException error) {
                     android.util.Log.w("WanxiangTavern", "Cannot open file chooser", error);
                     clearFileSelection(null);
@@ -99,6 +112,29 @@ public final class MainActivity extends Activity {
                             "系统无法打开文件选择器", android.widget.Toast.LENGTH_SHORT).show();
                 }
                 return true;
+            }
+
+            @Override
+            public void onShowCustomView(View view, CustomViewCallback callback) {
+                if (fullscreenCallback != null) {
+                    callback.onCustomViewHidden();
+                    return;
+                }
+                fullscreenCallback = callback;
+                content.addView(view, new FrameLayout.LayoutParams(-1, -1));
+                webView.setVisibility(View.INVISIBLE);
+                setFullscreen(true);
+            }
+
+            @Override
+            public void onHideCustomView() {
+                if (fullscreenCallback == null) return;
+                CustomViewCallback callback = fullscreenCallback;
+                fullscreenCallback = null;
+                content.removeViewAt(1);
+                webView.setVisibility(View.VISIBLE);
+                setFullscreen(false);
+                callback.onCustomViewHidden();
             }
 
             @Override
@@ -157,7 +193,6 @@ public final class MainActivity extends Activity {
                         });
                     });
                 });
-        exports = new WebExports(this);
         WebViewCompat.addWebMessageListener(
                 webView, "wanxiangNativeExport", Collections.singleton(ORIGIN),
                 (view, message, source, mainFrame, reply) -> {
@@ -166,8 +201,105 @@ public final class MainActivity extends Activity {
                         exports.receive(message.getArrayBuffer(), reply);
                     }
                 });
-        setContentView(webView);
+        content = new FrameLayout(this);
+        content.addView(webView, new FrameLayout.LayoutParams(-1, -1));
+        if (Build.VERSION.SDK_INT >= 35) {
+            content.setOnApplyWindowInsetsListener((view, insets) -> {
+                var safe = insets.getInsets(WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout());
+                var keyboard = insets.getInsets(WindowInsets.Type.ime());
+                view.setPadding(safe.left, safe.top, safe.right, Math.max(safe.bottom, keyboard.bottom));
+                return WindowInsets.CONSUMED;
+            });
+        }
+        setContentView(content);
         webView.loadUrl(ORIGIN + "/");
+        if (Build.VERSION.SDK_INT >= 33) {
+            getOnBackInvokedDispatcher().registerOnBackInvokedCallback(
+                    android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT, this::handleBack);
+        }
+    }
+
+    private void setFullscreen(boolean fullscreen) {
+        if (Build.VERSION.SDK_INT >= 30) {
+            var controller = getWindow().getInsetsController();
+            if (controller == null) return;
+            if (fullscreen) {
+                controller.setSystemBarsBehavior(WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+                controller.hide(WindowInsets.Type.systemBars());
+            } else {
+                controller.show(WindowInsets.Type.systemBars());
+            }
+        } else {
+            int flags = View.SYSTEM_UI_FLAG_FULLSCREEN | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                    | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY;
+            getWindow().getDecorView().setSystemUiVisibility(fullscreen ? flags : 0);
+        }
+    }
+
+    @Override
+    @SuppressLint("GestureBackNavigation") // Android 13+ registers an OnBackInvokedCallback above.
+    public void onBackPressed() {
+        handleBack();
+    }
+
+    private void handleBack() {
+        if (backPending || isFinishing()) return;
+        if (webView == null) {
+            super.onBackPressed();
+            return;
+        }
+        if (fullscreenCallback != null) {
+            webView.getWebChromeClient().onHideCustomView();
+            return;
+        }
+        WebView view = webView;
+        backPending = true;
+        view.evaluateJavascript("""
+                (() => {
+                    const dialogs = [...document.querySelectorAll('dialog:modal')];
+                    const dialog = dialogs.reverse().find((node) => node.contains(document.activeElement))
+                        || dialogs[0];
+                    if (!dialog || dialog.id === 'start-screen') return false;
+                    if (dialog.requestClose) dialog.requestClose();
+                    else if (dialog.dispatchEvent(new Event('cancel', { cancelable: true }))) dialog.close();
+                    return true;
+                })()
+                """, handled -> {
+            backPending = false;
+            if (webView != view || isFinishing() || "true".equals(handled)) return;
+            if (view.canGoBack()) view.goBack();
+            else super.onBackPressed();
+        });
+    }
+
+    private void launchFileChooser(WebChromeClient.FileChooserParams params) {
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE);
+        Set<String> types = new LinkedHashSet<>();
+        boolean json = false;
+        String[] accepted = params.getAcceptTypes();
+        for (String raw : accepted == null ? new String[0] : accepted) {
+            for (String part : raw.split(",")) {
+                String type = part.trim().toLowerCase(Locale.ROOT);
+                if (".json".equals(type) || "application/json".equals(type)) json = true;
+                if (type.startsWith(".")) {
+                    type = MimeTypeMap.getSingleton().getMimeTypeFromExtension(type.substring(1));
+                }
+                if (type != null && type.contains("/")) types.add(type);
+            }
+        }
+        // File providers may label portable JSON exports as text or binary.
+        intent.setType(!json && types.size() == 1 ? types.iterator().next() : "*/*");
+        if (!json && types.size() > 1 && !types.contains("*/*")) {
+            intent.putExtra(Intent.EXTRA_MIME_TYPES, types.toArray(new String[0]));
+        }
+        intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE,
+                params.getMode() == WebChromeClient.FileChooserParams.MODE_OPEN_MULTIPLE);
+        try {
+            startActivityForResult(intent, FILE_CHOOSER_REQUEST);
+        } catch (ActivityNotFoundException | SecurityException unavailable) {
+            intent.setAction(Intent.ACTION_GET_CONTENT);
+            startActivityForResult(intent, FILE_CHOOSER_REQUEST);
+        }
     }
 
     private static boolean isLocalOrigin(Uri uri) {
@@ -176,13 +308,6 @@ public final class MainActivity extends Activity {
     }
 
     private void showJsDialog(AlertDialog dialog, JsResult result) {
-        dialog.setOnCancelListener(d -> result.cancel());
-        dialog.setOnDismissListener(d -> jsDialogs.remove(dialog));
-        jsDialogs.add(dialog);
-        dialog.show();
-    }
-
-    private void showJsDialog(AlertDialog dialog, JsPromptResult result) {
         dialog.setOnCancelListener(d -> result.cancel());
         dialog.setOnDismissListener(d -> jsDialogs.remove(dialog));
         jsDialogs.add(dialog);
@@ -212,10 +337,14 @@ public final class MainActivity extends Activity {
         if (exports != null && exports.onActivityResult(requestCode, resultCode, data)) return;
         if (requestCode != FILE_CHOOSER_REQUEST) return;
         if (pendingFileSelection == null) return;
+        if (resultCode != RESULT_OK || data == null) {
+            clearFileSelection(null);
+            return;
+        }
         Uri[] parsed;
         try {
-            ClipData clips = data == null ? null : data.getClipData();
-            if (resultCode == RESULT_OK && clips != null) {
+            ClipData clips = data.getClipData();
+            if (clips != null && clips.getItemCount() > 0) {
                 parsed = new Uri[clips.getItemCount()];
                 for (int index = 0; index < clips.getItemCount(); index++) {
                     parsed[index] = clips.getItemAt(index).getUri();
@@ -263,6 +392,7 @@ public final class MainActivity extends Activity {
         clearFileSelection(null);
         writes.shutdownNow();
         if (webView != null) {
+            if (fullscreenCallback != null) webView.getWebChromeClient().onHideCustomView();
             setContentView(new android.widget.FrameLayout(this));
             webView.destroy();
             webView = null;

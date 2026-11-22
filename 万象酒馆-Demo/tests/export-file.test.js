@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { exportJsonFile } from '../src/storage/export-file.js';
+import { exportJsonFile, nativeBackupTarget } from '../src/storage/export-file.js';
 
 const ORIGIN = 'https://appassets.androidplatform.net';
 const json = JSON.stringify({ note: '测试'.repeat(26000) });
@@ -90,6 +90,25 @@ test('native export streams full UTF8 body across 64KiB chunks and resolves on f
   channel.reply({ id: finish.header.id, ok: true, done: true });
 
   assert.deepEqual(await resultPromise, { method: 'native' });
+});
+
+test('native folder selection returns a target used by subsequent automatic backups', async () => {
+  const { channel, frames } = makeChannel();
+  const environment = makeEnvironment(channel);
+  const selection = nativeBackupTarget(true, environment);
+  const choose = await waitForFrame(frames, (frame) => frame.header.op === 'chooseFolder');
+  const target = 'selected-directory';
+  channel.reply({ id: choose.header.id, ok: true, target });
+  const name = 'wanxiang-auto-2026-11-22T18-00-00-000Z-00000000-0000-0000-0000-000000000000.json';
+  const backup = exportJsonFile('{}', name, { environment, folder: await selection });
+  const begin = await waitForFrame(frames, (frame) => frame.header.op === 'begin');
+  assert.equal(begin.header.folder, target);
+  channel.reply({ id: begin.header.id, ok: true, offset: 0 });
+  const chunk = await waitForFrame(frames, (frame) => frame.header.op === 'chunk');
+  channel.reply({ id: chunk.header.id, ok: true, offset: chunk.body.length });
+  const finish = await waitForFrame(frames, (frame) => frame.header.op === 'finish');
+  channel.reply({ id: finish.header.id, ok: true, done: true, cleanupFailed: true });
+  assert.deepEqual(await backup, { method: 'native', cleanupFailed: true });
 });
 
 test('ignores other ids and rejects a finish response without completion', async () => {

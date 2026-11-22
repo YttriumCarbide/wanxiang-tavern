@@ -1,7 +1,17 @@
 import js from '@eslint/js';
 import globals from 'globals';
 export default [
-  { ignores: ['vendor/**', 'dist/**', 'node_modules/**', 'assets/**', '.runtime/**', '验证/**'] },
+  {
+    ignores: [
+      'vendor/**',
+      'dist/**',
+      'node_modules/**',
+      'assets/**',
+      '.runtime/**',
+      'native/android/build/**',
+      '验证/**',
+    ],
+  },
   js.configs.recommended,
   {
     files: ['**/*.{js,mjs,cjs}'],

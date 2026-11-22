@@ -38,8 +38,11 @@ function downloadBlob(environment, blob, filename) {
   return { method: 'download' };
 }
 
-function createNativeExporter(environment, blob, filename, size, timeoutMs, chooserTimeoutMs) {
+function createNativeTransfer(environment) {
   const channel = environment.wanxiangNativeExport;
+  if (typeof channel?.postMessage !== 'function') {
+    throw new Error('请更新安卓安装包后再导出');
+  }
   const id = environment.crypto.randomUUID();
   const encoder = new environment.TextEncoder();
   let pending = null;
@@ -126,39 +129,15 @@ function createNativeExporter(environment, blob, filename, size, timeoutMs, choo
     postCancel();
   };
 
-  const run = async () => {
+  const run = async (operation, cancelOnFailure = false) => {
     channel.addEventListener('message', onReply);
     environment.addEventListener('pagehide', onPagehide);
     try {
-      const beginAck = await request(
-        { id, op: 'begin', name: filename, size },
-        new Uint8Array(0),
-        timeoutMs,
+      return await operation((header, waitMs, body = new Uint8Array(0)) =>
+        request({ id, ...header }, body, waitMs),
       );
-      if (beginAck.offset !== 0) {
-        throw new Error('原生导出协议错误');
-      }
-      let offset = 0;
-      while (offset < size) {
-        const end = Math.min(offset + CHUNK_SIZE, size);
-        const buffer = await blob.slice(offset, end).arrayBuffer();
-        if (aborted) {
-          throw new Error('导出已取消');
-        }
-        const body = new Uint8Array(buffer);
-        const chunkAck = await request({ id, op: 'chunk', offset }, body, timeoutMs);
-        if (chunkAck.offset !== offset + body.byteLength) {
-          throw new Error('原生导出协议错误');
-        }
-        offset = end;
-      }
-      const finishAck = await request({ id, op: 'finish' }, new Uint8Array(0), chooserTimeoutMs);
-      if (finishAck.done !== true) {
-        throw new Error('保存未完成');
-      }
-      return { method: 'native' };
     } catch (error) {
-      if (!aborted && error?.code !== 'cancelled' && error?.code !== 'busy') {
+      if (cancelOnFailure && !aborted && error?.code !== 'cancelled' && error?.code !== 'busy') {
         postCancel();
       }
       throw error;
@@ -169,13 +148,28 @@ function createNativeExporter(environment, blob, filename, size, timeoutMs, choo
     }
   };
 
-  return { run };
+  return run;
+}
+
+export function supportsNativeBackupFolder(environment = globalThis) {
+  return (
+    isNativeEnvironment(environment) &&
+    typeof environment.wanxiangNativeExport?.postMessage === 'function'
+  );
+}
+
+export async function nativeBackupTarget(choose = false, environment = globalThis) {
+  const run = createNativeTransfer(environment);
+  const reply = await run((request) =>
+    request({ op: choose ? 'chooseFolder' : 'folderStatus' }, choose ? 300000 : 60000),
+  );
+  return reply.target;
 }
 
 export async function exportJsonFile(
   json,
   filename,
-  { environment = globalThis, timeoutMs = 60000, chooserTimeoutMs = 300000 } = {},
+  { environment = globalThis, timeoutMs = 60000, chooserTimeoutMs = 300000, folder } = {},
 ) {
   assertJson(json);
   const native = isNativeEnvironment(environment);
@@ -184,21 +178,24 @@ export async function exportJsonFile(
   }
   const blob = new environment.Blob([json], { type: 'application/json' });
   assertSize(blob.size);
-  if (native) {
-    if (
-      !environment.wanxiangNativeExport ||
-      typeof environment.wanxiangNativeExport.postMessage !== 'function'
-    ) {
-      throw new Error('请更新安卓安装包后再导出');
+  if (!native) return downloadBlob(environment, blob, filename);
+  const run = createNativeTransfer(environment);
+  return run(async (request) => {
+    const size = blob.size;
+    const beginAck = await request({ op: 'begin', name: filename, size, folder }, timeoutMs);
+    if (beginAck.offset !== 0) throw new Error('原生导出协议错误');
+    let offset = 0;
+    while (offset < size) {
+      const end = Math.min(offset + CHUNK_SIZE, size);
+      const body = new Uint8Array(await blob.slice(offset, end).arrayBuffer());
+      const chunkAck = await request({ op: 'chunk', offset }, timeoutMs, body);
+      if (chunkAck.offset !== end) throw new Error('原生导出协议错误');
+      offset = end;
     }
-    return createNativeExporter(
-      environment,
-      blob,
-      filename,
-      blob.size,
-      timeoutMs,
-      chooserTimeoutMs,
-    ).run();
-  }
-  return downloadBlob(environment, blob, filename);
+    const finishAck = await request({ op: 'finish' }, chooserTimeoutMs);
+    if (finishAck.done !== true) throw new Error('保存未完成');
+    return folder
+      ? { method: 'native', cleanupFailed: finishAck.cleanupFailed === true }
+      : { method: 'native' };
+  }, true);
 }

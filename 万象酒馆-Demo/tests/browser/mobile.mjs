@@ -598,3 +598,26 @@ export async function mobileChecks({ browser, baseURL, output }) {
     centeredTimeline: { height: 46, phases: ['opening', 'plan'], alignedActions: true },
   };
 }
+
+export async function androidWindowResizeChecks({ browser, baseURL }) {
+  const tablet = { width: 1200, height: 900 };
+  const page = await browser.newPage({ viewport: tablet, hasTouch: true });
+  try {
+    await legacySession(page);
+    await page.addInitScript(() => {
+      window.wanxiangNativeUpdate = {};
+    });
+    await page.goto(baseURL);
+    await page.waitForFunction(() => !!window.demo);
+    const root = page.locator('html');
+    assert.equal(await root.getAttribute('data-android-web-view'), '');
+    assert.equal(await root.getAttribute('data-game-layout'), 'desktop');
+    await page.setViewportSize({ width: 667, height: 375 });
+    await page.waitForFunction(() => document.documentElement.dataset.gameLayout === 'mobile');
+    await page.setViewportSize(tablet);
+    await page.waitForFunction(() => document.documentElement.dataset.gameLayout === 'desktop');
+    return { switchesLayoutOnResize: true };
+  } finally {
+    await page.close();
+  }
+}
