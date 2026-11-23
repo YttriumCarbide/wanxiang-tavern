@@ -576,7 +576,8 @@
                   ><span><strong>跳过界外行纪 API</strong><small>使用离线探索内容。</small></span
                   ><input type="checkbox" data-generation-option="skipOverlandApi" role="switch"
                 /></label>
-                <button id="developer-tools-open" type="button" hidden>打开游戏修改器</button>
+                <button id="game-modifier-open" type="button">打开游戏修改器</button>
+                <button id="developer-tools-open" type="button" hidden>打开调试工作台</button>
               </div>
             </div>
             <section class="memory-settings">
@@ -1271,5 +1272,65 @@
       aria-label="章节序幕与尾声"
     ></section>
     <script type="module" src="./src/app.js"></script>
+    <dialog id="game-modifier" class="game-modifier" aria-labelledby="game-modifier-title">
+      <header class="game-modifier-header">
+        <h2 id="game-modifier-title" class="game-modifier-title">游戏修改器</h2>
+        <button
+          type="button"
+          class="game-modifier-close"
+          data-modifier-close
+          aria-label="关闭游戏修改器"
+        >
+          关闭
+        </button>
+      </header>
+
+      <div class="game-modifier-tabs" role="group" aria-label="修改页签">
+        <button
+          type="button"
+          class="game-modifier-tab"
+          data-modifier-tab="resources"
+          aria-pressed="true"
+          aria-controls="game-modifier-panel-resources"
+          id="game-modifier-tab-resources"
+        >
+          资源
+        </button>
+        <button
+          type="button"
+          class="game-modifier-tab"
+          data-modifier-tab="characters"
+          aria-pressed="false"
+          aria-controls="game-modifier-panel-characters"
+          id="game-modifier-tab-characters"
+        >
+          角色
+        </button>
+      </div>
+
+      <div class="game-modifier-body">
+        <section
+          id="game-modifier-panel-resources"
+          class="game-modifier-panel"
+          data-modifier-panel="resources"
+          aria-labelledby="game-modifier-tab-resources"
+        >
+          <div data-modifier-content></div>
+        </section>
+        <section
+          id="game-modifier-panel-characters"
+          class="game-modifier-panel"
+          data-modifier-panel="characters"
+          aria-labelledby="game-modifier-tab-characters"
+          hidden
+        >
+          <div data-modifier-content></div>
+        </section>
+      </div>
+
+      <footer class="game-modifier-footer">
+        <p class="game-modifier-status" role="status" data-modifier-status></p>
+      </footer>
+    </dialog>
   </body>
 </html>

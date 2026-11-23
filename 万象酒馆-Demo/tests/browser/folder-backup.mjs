@@ -63,11 +63,19 @@ async function importBackup(page, contents, { dismiss = false } = {}) {
   assert.equal(await importButton.isDisabled(), true, 'full import button defaults disabled');
   await enable.check();
   assert.equal(await importButton.isDisabled(), false, 'full import button enabled after toggle');
+  const chooserPromise = page.waitForEvent('filechooser');
+  await importButton.click();
+  const chooser = await chooserPromise;
+  assert.equal(
+    await chooser.element().evaluate((input) => input.closest('dialog')?.id),
+    'saves-dialog',
+    'the full-backup picker must be launched from the active save dialog',
+  );
   const reloaded = dismiss ? null : page.waitForEvent('load');
   await handleDialog(
     page,
     () =>
-      page.locator('#data-file').setInputFiles({
+      chooser.setFiles({
         name: 'wanxiang-auto-backup.json',
         mimeType: 'application/json',
         buffer: Buffer.from(contents),

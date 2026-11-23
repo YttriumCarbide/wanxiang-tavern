@@ -1,0 +1,101 @@
+{
+  "version": 1,
+  "location": "eternal-arena",
+  "generators": [
+    "建模工具/build_arena_enemies.py",
+    "建模工具/build_arena_champion.py"
+  ],
+  "assets": [
+    {
+      "id": "arenaRetiarius",
+      "name": "沙场网斗士",
+      "tier": "normal",
+      "model": "arena-retiarius.glb",
+      "portrait": "portraits/arena-retiarius.svg",
+      "sourceModel": "万象异境-体素模型/首都内部竞技场/arena-retiarius.glb",
+      "displayPlinth": false,
+      "standOnCard": false,
+      "overlord": false,
+      "boss": false,
+      "nonVoxel": false
+    },
+    {
+      "id": "arenaClockworkLion",
+      "name": "发条金鬃狮",
+      "tier": "normal",
+      "model": "arena-clockwork-lion.glb",
+      "portrait": "portraits/arena-clockwork-lion.svg",
+      "sourceModel": "万象异境-体素模型/首都内部竞技场/arena-clockwork-lion.glb",
+      "displayPlinth": false,
+      "standOnCard": false,
+      "overlord": false,
+      "boss": false,
+      "nonVoxel": false
+    },
+    {
+      "id": "arenaBeastmaster",
+      "name": "铁笼驯兽官",
+      "tier": "normal",
+      "model": "arena-beastmaster.glb",
+      "portrait": "portraits/arena-beastmaster.svg",
+      "sourceModel": "万象异境-体素模型/首都内部竞技场/arena-beastmaster.glb",
+      "displayPlinth": false,
+      "standOnCard": false,
+      "overlord": false,
+      "boss": false,
+      "nonVoxel": false
+    },
+    {
+      "id": "arenaHoplite",
+      "name": "银星重盾卫",
+      "tier": "normal",
+      "model": "arena-hoplite.glb",
+      "portrait": "portraits/arena-hoplite.svg",
+      "sourceModel": "万象异境-体素模型/首都内部竞技场/arena-hoplite.glb",
+      "displayPlinth": false,
+      "standOnCard": false,
+      "overlord": false,
+      "boss": false,
+      "nonVoxel": false
+    },
+    {
+      "id": "arenaChariotJuggernaut",
+      "name": "重装战轮破阵者",
+      "tier": "elite",
+      "model": "arena-chariot-juggernaut.glb",
+      "portrait": "portraits/arena-chariot-juggernaut.svg",
+      "sourceModel": "万象异境-体素模型/首都内部竞技场/arena-chariot-juggernaut.glb",
+      "displayPlinth": false,
+      "standOnCard": true,
+      "overlord": false,
+      "boss": false,
+      "nonVoxel": false
+    },
+    {
+      "id": "arenaInquisitorCaptain",
+      "name": "万圣裁决卫队长",
+      "tier": "elite",
+      "model": "arena-inquisitor-captain.glb",
+      "portrait": "portraits/arena-inquisitor-captain.svg",
+      "sourceModel": "万象异境-体素模型/首都内部竞技场/arena-inquisitor-captain.glb",
+      "displayPlinth": false,
+      "standOnCard": true,
+      "overlord": false,
+      "boss": false,
+      "nonVoxel": false
+    },
+    {
+      "id": "arenaGrandChampion",
+      "name": "帝都大冠军·奥勒留",
+      "tier": "overlord",
+      "model": "arena-grand-champion.glb",
+      "portrait": "portraits/arena-grand-champion.svg",
+      "sourceModel": "万象异境-体素模型/霸主非体素模型/arena-grand-champion.glb",
+      "displayPlinth": false,
+      "standOnCard": true,
+      "overlord": true,
+      "boss": true,
+      "nonVoxel": true
+    }
+  ]
+}

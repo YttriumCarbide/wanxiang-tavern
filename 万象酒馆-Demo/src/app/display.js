@@ -82,6 +82,9 @@ export function mountLandscapeHost() {
 export function mountDisplay(context) {
   guardMouseGestures(context.events);
   mountRotatedScrolling(context.events);
+  if (globalThis.wanxiangNativeUpdate) {
+    context.events.on(window, 'resize', configureGameLayout);
+  }
   const button = document.querySelector('#fullscreen-toggle');
   const host = window.top.document;
   const label = document.createElement('span');

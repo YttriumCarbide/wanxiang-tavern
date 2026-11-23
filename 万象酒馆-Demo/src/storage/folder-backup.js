@@ -1,6 +1,7 @@
 import { exportDatabase } from './backup.js';
 import { openDatabase } from './database.js';
 import { createEventScope } from '../shared/events.js';
+import { exportJsonFile, nativeBackupTarget, supportsNativeBackupFolder } from './export-file.js';
 
 const interval = 5 * 60 * 1000;
 const firstProgressCheck = 5000;
@@ -19,9 +20,7 @@ async function fingerprint(content) {
   return Array.from(digest, (byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
-async function writeBackup(folder, content, savedAt) {
-  const stamp = new Date(savedAt).toISOString().replace(/[:.]/g, '-');
-  const name = 'wanxiang-auto-' + stamp + '-' + crypto.randomUUID() + '.json';
+async function writeBackup(folder, content, name) {
   const file = await folder.getFileHandle(name, { create: true });
   let writer;
   try {
@@ -52,7 +51,32 @@ export async function pruneBackups(folder) {
 }
 
 export function supportsFolderBackup() {
-  return window.isSecureContext && typeof window.showDirectoryPicker === 'function';
+  return (
+    supportsNativeBackupFolder() ||
+    (window.isSecureContext && typeof window.showDirectoryPicker === 'function')
+  );
+}
+
+async function saveToFolder(handle, content, savedAt) {
+  const stamp = new Date(savedAt).toISOString().replace(/[:.]/g, '-');
+  const name = 'wanxiang-auto-' + stamp + '-' + crypto.randomUUID() + '.json';
+  if (typeof handle === 'string') {
+    const result = await exportJsonFile(content, name, { folder: handle });
+    return result.cleanupFailed;
+  }
+  const folder = await handle.getDirectoryHandle(folderName, { create: true });
+  await writeBackup(folder, content, name);
+  try {
+    await pruneBackups(folder);
+    return false;
+  } catch {
+    return true;
+  }
+}
+
+async function hasFolderPermission(handle) {
+  if (typeof handle === 'string') return handle === (await nativeBackupTarget());
+  return (await handle.queryPermission(readWrite)) === 'granted';
 }
 
 /** Explicit folder selection from the save menu, then periodic portable backups. */
@@ -60,7 +84,7 @@ export async function installFolderBackup({ database, storage, status }) {
   const metadata = await openDatabase({ name: 'wanxiang-tavern-folder-backup-v1' });
   const events = createEventScope();
   let target = metadata.get(settingsKey);
-  let permission = await target?.handle.queryPermission(readWrite).catch(() => 'prompt');
+  let allowed = target && (await hasFolderPermission(target.handle).catch(() => false));
   let authorizing = false;
   let writing = false;
   let disposed = false;
@@ -84,7 +108,7 @@ export async function installFolderBackup({ database, storage, status }) {
 
   function schedule(delay) {
     clearTimeout(timer);
-    if (!disposed && permission === 'granted') timer = setTimeout(backup, delay);
+    if (!disposed && allowed) timer = setTimeout(backup, delay);
   }
 
   function closeWhenIdle() {
@@ -92,7 +116,7 @@ export async function installFolderBackup({ database, storage, status }) {
   }
 
   async function backup() {
-    if (disposed || writing || authorizing || !target || permission !== 'granted') return;
+    if (disposed || writing || authorizing || !target || !allowed) return;
     clearTimeout(timer);
     if (storage.getItem(creationPending) === 'true') {
       report('已选备份文件夹，创建角色后自动备份');
@@ -107,8 +131,8 @@ export async function installFolderBackup({ database, storage, status }) {
         const latest = new Map(await metadata.readEntries()).get(settingsKey);
         if (!latest) return;
         target = latest;
-        if ((await target.handle.queryPermission(readWrite)) !== 'granted') {
-          permission = 'prompt';
+        if (!(await hasFolderPermission(target.handle))) {
+          allowed = false;
           report('自动备份需要重新授权文件夹', true);
           return;
         }
@@ -130,14 +154,7 @@ export async function installFolderBackup({ database, storage, status }) {
         const hash = await fingerprint(content);
         if (hash === target.hash || disposed) return;
         const savedAt = Date.now();
-        const folder = await target.handle.getDirectoryHandle(folderName, { create: true });
-        await writeBackup(folder, content, savedAt);
-        let cleanupFailed = false;
-        try {
-          await pruneBackups(folder);
-        } catch {
-          cleanupFailed = true;
-        }
+        const cleanupFailed = await saveToFolder(target.handle, content, savedAt);
         target = { handle: target.handle, savedAt, hash };
         await metadata.write([[settingsKey, target]]);
         ready(savedAt, cleanupFailed);
@@ -151,28 +168,22 @@ export async function installFolderBackup({ database, storage, status }) {
     }
   }
 
-  async function authorize({ chooseNew = false } = {}) {
+  async function authorize() {
     if (disposed || authorizing || writing) return false;
     authorizing = true;
     try {
-      if (target && !chooseNew) {
-        permission = await target.handle.requestPermission(readWrite);
-        if (permission !== 'granted') {
-          report('自动备份等待文件夹授权', true);
-          return false;
-        }
-      } else {
-        const handle = await window.showDirectoryPicker({ ...readWrite, id: 'wanxiang-backup' });
-        if (disposed) return false;
-        const selected = { handle, savedAt: 0, hash: '' };
-        await locked(() => metadata.write([[settingsKey, selected]]));
-        target = selected;
-        permission = 'granted';
-      }
+      const handle = supportsNativeBackupFolder()
+        ? await nativeBackupTarget(true)
+        : await window.showDirectoryPicker({ ...readWrite, id: 'wanxiang-backup' });
+      if (disposed) return false;
+      const selected = { handle, savedAt: 0, hash: '' };
+      await locked(() => metadata.write([[settingsKey, selected]]));
+      target = selected;
+      allowed = true;
       ready(target.savedAt);
     } catch (failure) {
       report(
-        failure.name === 'AbortError'
+        failure.name === 'AbortError' || failure.code === 'cancelled'
           ? '自动备份等待选择文件夹'
           : '备份文件夹暂不可用 · ' + failure.message,
         true,
@@ -180,17 +191,17 @@ export async function installFolderBackup({ database, storage, status }) {
       return false;
     } finally {
       authorizing = false;
-      if (permission === 'granted') schedule(interval);
+      if (allowed) schedule(interval);
       closeWhenIdle();
     }
-    if (permission === 'granted') void backup();
-    return permission === 'granted';
+    if (allowed) void backup();
+    return allowed;
   }
 
   events.on(document, 'visibilitychange', () => {
     if (!document.hidden) void backup();
   });
-  if (permission === 'granted') {
+  if (allowed) {
     ready(target.savedAt);
     void backup();
   } else {
@@ -201,7 +212,7 @@ export async function installFolderBackup({ database, storage, status }) {
     choose() {
       if (disposed || authorizing || writing) return false;
       if (!window.confirm(choosePrompt)) return false;
-      return authorize({ chooseNew: true });
+      return authorize();
     },
     dispose() {
       disposed = true;

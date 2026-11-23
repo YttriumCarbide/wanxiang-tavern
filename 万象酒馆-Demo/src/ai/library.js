@@ -40,6 +40,7 @@ import { normalizeDcAttrs } from '../dc.js';
 import { restoreEquippedSkills, restoreLearnedSkills } from '../learnable-skills.js';
 import { mergeRevealedWeaknessMap } from '../octopath.js';
 import { normalizeSeenMonsters } from '../archive-enemies.js';
+import { restoreCharacterModifier, restoreModifierHistory } from '../game-modifier.js';
 
 export function restoreLibrary(value) {
   const customPortraits = loadCustomPortraits();
@@ -79,6 +80,7 @@ export function restoreLibrary(value) {
       );
   restoreLibraryRecords(library, value);
   library.inventory = restoreInventory(value.inventory);
+  library.modifierResourceHistory = restoreModifierHistory(value.modifierResourceHistory);
   library.equipment = restoreEquipment(value.equipment);
   library.skirmishes = value.skirmishes
     ? restoreSkirmishes(value.skirmishes)
@@ -217,6 +219,10 @@ export function restoreLibrary(value) {
   }
   for (const member of library.characters) {
     const previous = value.characters?.find((entry) => entry.id === member.id);
+    if (previous?.modifierValues) {
+      const values = restoreCharacterModifier(member, previous.modifierValues);
+      if (Object.keys(values).length) member.modifierValues = values;
+    }
     const standing = customPortraits[member.id + ':standing'] || previous?.combat?.customStanding;
     if (
       typeof standing === 'string' &&

@@ -20,6 +20,7 @@ export function createGenerationSettingsView({ context, library, storage, getPen
     context.records?.refreshArchive?.();
     context.destinations?.refreshQuickTest?.();
     context.developer?.sync();
+    context.gameModifier?.sync();
   }
 
   function render() {

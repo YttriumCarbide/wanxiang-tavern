@@ -71,7 +71,7 @@ export function createLocalDataPanel({ database, storage, dispose }) {
   const panel = document.createElement('section');
   panel.className = 'local-data-panel';
   panel.innerHTML =
-    '<h3>本地存档与设置</h3><p>存档、预设、世界书、聊天与立绘保存在此浏览器。完整备份不包含API密钥。</p><div><button id="data-export">导出完整备份</button><button id="data-import">导入完整备份</button><button id="data-persist">保护本地数据</button><button id="data-backup-folder" hidden>重新选择备份文件夹</button></div><input id="data-file" type="file" accept="application/json,.json" hidden><p id="data-folder-status" role="status" hidden></p><p id="data-status" role="status"></p>';
+    '<h3>本地存档与设置</h3><p>存档、预设、世界书、聊天与立绘保存在当前设备。完整备份不包含API密钥。</p><div><button id="data-export">导出完整备份</button><button id="data-import">导入完整备份</button><button id="data-persist">保护本地数据</button><button id="data-backup-folder" hidden>重新选择备份文件夹</button></div><p id="data-folder-status" role="status" hidden></p><p id="data-status" role="status"></p>';
   if (database.directory) {
     panel.querySelector('p').textContent =
       '进度、预设、世界书、聊天和立绘自动保存到 ' + database.directory + '，并保留历史备份。';
@@ -120,12 +120,18 @@ export function createLocalDataPanel({ database, storage, dispose }) {
   document.querySelector('#saves-dialog .saves-header').append(saveBackupStatus);
   const folderStatus = panel.querySelector('#data-folder-status');
   const chooseFolder = panel.querySelector('#data-backup-folder');
-  const dataFile = panel.querySelector('#data-file');
+  const dataFile = document.createElement('input');
+  dataFile.id = 'data-file';
+  dataFile.type = 'file';
+  dataFile.accept = '.json,application/json';
+  dataFile.hidden = true;
+  saveToolbar.append(dataFile);
   const savesDialog = document.querySelector('#saves-dialog');
   const savesOpen = document.querySelector('#saves-open');
   let folderBackup;
   let disposed = false;
   let importing = false;
+  let exporting = false;
   let importSequence = 0;
   let folderInstalling = false;
   let folderReady = false;
@@ -141,8 +147,8 @@ export function createLocalDataPanel({ database, storage, dispose }) {
     const checked = enableFullImport.checked;
     enableFullImport.disabled = importing || slotBusy || !open;
     importButton.disabled = importing || slotBusy || !open || !checked;
-    exportFullButton.disabled = importing || slotBusy;
-    panel.querySelector('#data-export').disabled = importing || slotBusy;
+    exportFullButton.disabled = exporting || importing || slotBusy;
+    panel.querySelector('#data-export').disabled = exportFullButton.disabled;
   }
   function resetImportGate() {
     enableFullImport.checked = false;
@@ -218,7 +224,10 @@ export function createLocalDataPanel({ database, storage, dispose }) {
     saveStatus.textContent = text;
   };
   async function exportFullBackup() {
-    if (importing || savesDialog?.dataset.slotBusy === 'true') return;
+    if (exporting || importing || savesDialog?.dataset.slotBusy === 'true') return;
+    exporting = true;
+    updateImportGate();
+    status('正在准备完整备份…');
     try {
       await storage.flush();
       const backup = await exportDatabase(database, localStorage);
@@ -233,6 +242,9 @@ export function createLocalDataPanel({ database, storage, dispose }) {
       status(
         failure.code === 'cancelled' ? '已取消导出完整备份。' : '备份失败：' + failure.message,
       );
+    } finally {
+      exporting = false;
+      if (!disposed) updateImportGate();
     }
   }
   events.on(panel.querySelector('#data-export'), 'click', () => void exportFullBackup());
@@ -325,6 +337,7 @@ export function createLocalDataPanel({ database, storage, dispose }) {
       dialogObserver.disconnect();
       events.dispose();
       importButton.remove();
+      dataFile.remove();
       enableFullImport.remove();
       enableFullImportLabel.remove();
       exportFullButton.remove();

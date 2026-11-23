@@ -1,16 +1,18 @@
 {
-  "browserConcurrency": 1,
-  "scopes": ["quality", "core", "status-emblems"],
+  "browserConcurrency": 2,
+  "scopes": [
+    "quality",
+    "core",
+    "static",
+    "folder-backup",
+    "mobile",
+    "android-ui",
+    "first-run",
+    "preparation"
+  ],
   "coreFiles": [
-    "tests/audio.test.js",
-    "tests/combat-control.test.js",
-    "tests/combat-overhaul.test.js",
-    "tests/growth-supplies.test.js",
-    "tests/official-visitors.test.js",
-    "tests/overlord-puppet.test.js",
-    "tests/overlord-state-machines.test.js",
-    "tests/status-emblems.test.js",
-    "tests/status-sources.test.js",
-    "tests/town-guests.test.js"
+    "tests/export-file.test.js",
+    "tests/logic-audit-storage.test.js",
+    "tests/saves.test.js"
   ]
 }

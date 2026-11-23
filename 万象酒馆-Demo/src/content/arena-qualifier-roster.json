@@ -1,0 +1,245 @@
+[
+  {
+    "id": "arenaQualifierStick",
+    "name": "木棍新手",
+    "slug": "arena-q-stick",
+    "tier": "minion",
+    "archetype": "human",
+    "variant": "club",
+    "color": "#b78b51"
+  },
+  {
+    "id": "arenaQualifierWoodShield",
+    "name": "木盾短剑手",
+    "slug": "arena-q-wood-shield",
+    "tier": "minion",
+    "archetype": "human",
+    "variant": "sword-shield",
+    "color": "#6d8b69"
+  },
+  {
+    "id": "arenaQualifierSlinger",
+    "name": "皮兜投石手",
+    "slug": "arena-q-slinger",
+    "tier": "minion",
+    "archetype": "human",
+    "variant": "sling",
+    "color": "#bd8667"
+  },
+  {
+    "id": "arenaQualifierStaff",
+    "name": "练习长棍手",
+    "slug": "arena-q-staff",
+    "tier": "minion",
+    "archetype": "human",
+    "variant": "staff",
+    "color": "#81939c"
+  },
+  {
+    "id": "arenaQualifierKnives",
+    "name": "双木刀学徒",
+    "slug": "arena-q-knives",
+    "tier": "minion",
+    "archetype": "human",
+    "variant": "dual-knives",
+    "color": "#a66b56"
+  },
+  {
+    "id": "arenaQualifierPitchfork",
+    "name": "草叉参赛者",
+    "slug": "arena-q-pitchfork",
+    "tier": "minion",
+    "archetype": "human",
+    "variant": "pitchfork",
+    "color": "#b7a775"
+  },
+  {
+    "id": "arenaQualifierNet",
+    "name": "粗网捕手",
+    "slug": "arena-q-net",
+    "tier": "minion",
+    "archetype": "human",
+    "variant": "net",
+    "color": "#749798"
+  },
+  {
+    "id": "arenaQualifierSmith",
+    "name": "铁匠学徒",
+    "slug": "arena-q-smith",
+    "tier": "minion",
+    "archetype": "human",
+    "variant": "hammer",
+    "color": "#a58162"
+  },
+  {
+    "id": "arenaQualifierHound",
+    "name": "驯养猎犬",
+    "slug": "arena-q-hound",
+    "tier": "minion",
+    "archetype": "beast",
+    "variant": "hound",
+    "color": "#b38358"
+  },
+  {
+    "id": "arenaQualifierRam",
+    "name": "训练山羊",
+    "slug": "arena-q-ram",
+    "tier": "minion",
+    "archetype": "beast",
+    "variant": "ram",
+    "color": "#b2b3a5"
+  },
+  {
+    "id": "arenaQualifierSpear",
+    "name": "老练短矛手",
+    "slug": "arena-q-spear",
+    "tier": "elite",
+    "archetype": "human",
+    "variant": "spear",
+    "color": "#8b9ba3"
+  },
+  {
+    "id": "arenaQualifierAxes",
+    "name": "双斧搏斗手",
+    "slug": "arena-q-axes",
+    "tier": "elite",
+    "archetype": "human",
+    "variant": "dual-axes",
+    "color": "#b57962"
+  },
+  {
+    "id": "arenaQualifierIronShield",
+    "name": "铁沿盾斗士",
+    "slug": "arena-q-iron-shield",
+    "tier": "elite",
+    "archetype": "human",
+    "variant": "iron-shield",
+    "color": "#7f969a"
+  },
+  {
+    "id": "arenaQualifierCrossbow",
+    "name": "轻弩射手",
+    "slug": "arena-q-crossbow",
+    "tier": "elite",
+    "archetype": "human",
+    "variant": "crossbow",
+    "color": "#81906b"
+  },
+  {
+    "id": "arenaQualifierBoxer",
+    "name": "缠手拳斗士",
+    "slug": "arena-q-boxer",
+    "tier": "elite",
+    "archetype": "human",
+    "variant": "boxing",
+    "color": "#b58b69"
+  },
+  {
+    "id": "arenaQualifierPoleMaster",
+    "name": "短袍棍师",
+    "slug": "arena-q-pole-master",
+    "tier": "elite",
+    "archetype": "human",
+    "variant": "polearm",
+    "color": "#927eaa"
+  },
+  {
+    "id": "arenaQualifierFlail",
+    "name": "链锤角斗士",
+    "slug": "arena-q-flail",
+    "tier": "elite",
+    "archetype": "human",
+    "variant": "flail",
+    "color": "#b29b6a"
+  },
+  {
+    "id": "arenaQualifierTrapper",
+    "name": "捕兽老手",
+    "slug": "arena-q-trapper",
+    "tier": "elite",
+    "archetype": "human",
+    "variant": "trapper",
+    "color": "#7f986e"
+  },
+  {
+    "id": "arenaQualifierBoar",
+    "name": "披甲斗猪",
+    "slug": "arena-q-boar",
+    "tier": "elite",
+    "archetype": "beast",
+    "variant": "boar",
+    "color": "#9a8271"
+  },
+  {
+    "id": "arenaQualifierSwordsman",
+    "name": "护具剑士",
+    "slug": "arena-q-swordsman",
+    "tier": "elite",
+    "archetype": "human",
+    "variant": "sword",
+    "color": "#8b92b1"
+  },
+  {
+    "id": "arenaQualifierTowerCaptain",
+    "name": "木塔盾队长",
+    "slug": "arena-q-tower-captain",
+    "tier": "boss",
+    "archetype": "human",
+    "variant": "tower-shield",
+    "color": "#729193"
+  },
+  {
+    "id": "arenaQualifierPikeCaptain",
+    "name": "长枪队长",
+    "slug": "arena-q-pike-captain",
+    "tier": "boss",
+    "archetype": "human",
+    "variant": "pike",
+    "color": "#969aa6"
+  },
+  {
+    "id": "arenaQualifierMaul",
+    "name": "石锤壮汉",
+    "slug": "arena-q-maul",
+    "tier": "boss",
+    "archetype": "human",
+    "variant": "maul",
+    "color": "#a9826c"
+  },
+  {
+    "id": "arenaQualifierBladeCaptain",
+    "name": "双刀领队",
+    "slug": "arena-q-blade-captain",
+    "tier": "boss",
+    "archetype": "human",
+    "variant": "dual-blades",
+    "color": "#a46f68"
+  },
+  {
+    "id": "arenaQualifierHoundCaptain",
+    "name": "猎犬领队",
+    "slug": "arena-q-hound-captain",
+    "tier": "boss",
+    "archetype": "human",
+    "variant": "hound-pair",
+    "color": "#8b9d72"
+  },
+  {
+    "id": "arenaQualifierVeteran",
+    "name": "补甲老兵",
+    "slug": "arena-q-veteran",
+    "tier": "boss",
+    "archetype": "human",
+    "variant": "patchwork",
+    "color": "#8d8c9e"
+  },
+  {
+    "id": "arenaQualifierIronCoach",
+    "name": "海选擂主·铁臂教头",
+    "slug": "arena-q-iron-coach",
+    "tier": "overlord",
+    "archetype": "human",
+    "variant": "coach",
+    "color": "#b58d63"
+  }
+]
