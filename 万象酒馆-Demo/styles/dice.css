@@ -244,7 +244,7 @@ body:has(#dc-stage:not([hidden]))
   display: grid;
   grid-template: repeat(3, 1fr) / repeat(3, 1fr);
   padding: 15%;
-  border-radius: 14%;
+  backface-visibility: hidden;
 }
 .die-face.f1 {
   transform: translateZ(calc(var(--s) / 2));
@@ -290,8 +290,8 @@ body:has(#dc-stage:not([hidden]))
   background: linear-gradient(135deg, #232a72, #0b0d2c);
   border: 2px solid #f0d58e;
   box-shadow:
-    inset 0 0 24px rgba(120, 150, 255, 0.55),
-    0 0 16px rgba(240, 213, 142, 0.55);
+    inset 0 0 20px rgba(120, 150, 255, 0.55),
+    inset 0 0 4px rgba(240, 213, 142, 0.5);
   transition:
     background 320ms,
     box-shadow 320ms;
@@ -307,9 +307,7 @@ body:has(#dc-stage:not([hidden]))
 }
 .skin-arcane.wire .die-face {
   background: rgba(120, 150, 255, 0.06);
-  box-shadow:
-    0 0 18px rgba(240, 213, 142, 0.8),
-    inset 0 0 14px rgba(240, 213, 142, 0.35);
+  box-shadow: inset 0 0 14px rgba(240, 213, 142, 0.35);
 }
 .skin-arcane.wire .pip {
   opacity: 0;

@@ -182,6 +182,32 @@ async function verifyResult(page, output, name) {
     }),
     'The continue button has an independent, tappable row',
   );
+  const renderedDice = await ready.locator('.die-wrap').evaluateAll((dice) =>
+    dice.map((die) => {
+      const cube = die.querySelector('.die-cube');
+      const faces = [...cube.querySelectorAll('.die-face')];
+      const roll = new DOMMatrix(getComputedStyle(cube).transform);
+      const front = faces.find((face) => {
+        const side = new DOMMatrix(getComputedStyle(face).transform);
+        return roll.multiply(side).transformPoint(new DOMPoint(0, 0, 1, 0)).z > 0.99;
+      });
+      return {
+        expected: Number(die.getAttribute('aria-label').match(/\d+/)[0]),
+        visible: front?.querySelectorAll('.pip').length,
+        sealed:
+          faces.length === 6 &&
+          faces.every(
+            (face) =>
+              getComputedStyle(face).backfaceVisibility === 'hidden' &&
+              getComputedStyle(face).borderRadius === '0px',
+          ),
+      };
+    }),
+  );
+  for (const { expected, visible, sealed } of renderedDice) {
+    assert.equal(visible, expected, 'The final outward face matches the displayed roll');
+    assert(sealed, 'Cube faces meet at the edges and hide their reverse sides');
+  }
   await ready.screenshot({ path: path.join(output, `${name}.png`) });
   await proceed.tap();
   await page.locator('#dc-stage').waitFor({ state: 'hidden' });
