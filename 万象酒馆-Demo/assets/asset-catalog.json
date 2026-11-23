@@ -517,6 +517,18 @@
       "bytes": 3017076,
       "hash": "3001eac0c1a10534f34ce89558e44dba83856530a22105f08ca6d5e541c1ab9d"
     },
+    "assets/exploration/city-backgrounds/eternal-city.png": {
+      "bytes": 3350382,
+      "hash": "7f11dbe9ae0de18c6e772b959a279da44431d742e3c108b5d1f7ba87d57b2677"
+    },
+    "assets/exploration/city-backgrounds/silver-crown.png": {
+      "bytes": 3569633,
+      "hash": "3e4e22ff65231f37b23e7a3e247723c357d008790659fbbbdd4d0e65d218b02a"
+    },
+    "assets/exploration/city-backgrounds/starbell.png": {
+      "bytes": 3305049,
+      "hash": "1d61218f5ae3f7962c1511731df9e5ee01dd619708dc9f6c88a92d405c3e7641"
+    },
     "assets/exploration/city-center-back-v1.png": {
       "bytes": 3504549,
       "hash": "3403eccf9a2b83d2a10cd18ca2b72a5ab3ee516627d1befc542edcba6a0ddc44"
