@@ -749,9 +749,16 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
     if (disposed) return;
     width = stage.clientWidth;
     height = stage.clientHeight;
-    const aspect = width / height,
-      h = Math.max(minOrthoHeight, 6.7 / aspect);
-    Object.assign(camera, { left: -h * aspect, right: h * aspect, top: h, bottom: -h });
+    const aspect = width / height;
+    const halfHeight = Math.max(minOrthoHeight, 6.7 / aspect);
+    const headroom = theme.battleHeadroom || 0;
+    const halfWidth = (halfHeight + headroom / 2) * aspect;
+    Object.assign(camera, {
+      left: -halfWidth,
+      right: halfWidth,
+      top: halfHeight + headroom,
+      bottom: -halfHeight,
+    });
     camera.updateProjectionMatrix();
     camera.updateMatrixWorld();
     renderer.setSize(width, height, false);

@@ -321,6 +321,10 @@
       "bytes": 46704,
       "hash": "0cb791015eec2951190c5e2075d953c4def3dbaefa4f7cc2bcdead696c715196"
     },
+    "assets/duel-arena.glb": {
+      "bytes": 2257452,
+      "hash": "644c897aeafd897575e65d983dbf1e5d08698e56a542f833ab624cf3037ef069"
+    },
     "assets/dust-hexer.glb": {
       "bytes": 126288,
       "hash": "162ac4e31aa877290e527c8ad9b1a98684cc4456d34e5bd0c9d576f700a3b263"
@@ -2613,6 +2617,10 @@
       "bytes": 905320,
       "hash": "f21bee4775406e5e45c81ccd87bed3e8c36cbf25afd899413a0bb5b0cf671ba8"
     },
+    "assets/preview-duel-arena.glb": {
+      "bytes": 2006132,
+      "hash": "b6b3d1fe503f8f0e3a786bb07411f65f7938f73c8d7f9d457235ef65a6b5077c"
+    },
     "assets/preview-dynasty.glb": {
       "bytes": 1953548,
       "hash": "fe3afcf49d5d6a5dc75b2d57975dd125a39e682762c169bf3ea67d665c746149"
@@ -2652,6 +2660,10 @@
     "assets/preview-ruins.glb": {
       "bytes": 974448,
       "hash": "18dac010399bf843eb2ec62b79e5aa68eef02c6ea62a9842d50b18815aff066d"
+    },
+    "assets/preview-silver-shield-exhibition.glb": {
+      "bytes": 1430996,
+      "hash": "66c082b9b2eaa11c342c4cd167f4067d4ad3c096d7d8f89d9cdd49f63ff2316c"
     },
     "assets/preview-tide.glb": {
       "bytes": 1028544,
@@ -2756,6 +2768,10 @@
     "assets/silver-crown-syndicate-archon.glb": {
       "bytes": 4049180,
       "hash": "9174e0816f8bad601695c1a81e629779f67f65d6e165320bbda38dac8b77ed6d"
+    },
+    "assets/silver-shield-exhibition.glb": {
+      "bytes": 1682340,
+      "hash": "a9851788f49cb9a4f313009b094a871976630b3b4b7e0f8375ca0f449f6ffcc3"
     },
     "assets/syndicate-blood-croupier.glb": {
       "bytes": 199456,

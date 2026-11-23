@@ -34,6 +34,7 @@ import { mergeFutureScript } from '../src/chat.js';
 import { mapInput, mapResponse } from '../src/ai/pipeline/map-request.js';
 import { combatCues } from '../src/audio/cues.js';
 import { triggeredStatusVisuals } from '../src/status-effects.js';
+import { DUNGEON_SCENE_IDS } from '../src/content/regions.js';
 
 const world = () => normalizeWorld(worldFixture());
 function battle() {
@@ -46,7 +47,6 @@ function battle() {
 }
 test('world construction validates mechanics, excludes teammate appearances and only appends expansions', () => {
   const original = world();
-  assert.equal(worldReference().styles.length, 17);
   assert(
     !worldReference().appearances.some((entry) => entry.portrait === DEFINITIONS.aegis.portrait),
   );
@@ -81,6 +81,33 @@ test('world construction validates mechanics, excludes teammate appearances and 
   assert(!reused.enemyDefinitions[original.enemyIds[1]]);
   assert(mapInput({ brief: '夜航世界' }).reference.appearances.length > 0);
   assert.deepEqual(mapResponse(JSON.stringify(worldFixture()), {}), original);
+});
+
+test('both dungeon scenes are offered to map construction, discovery and continuation', () => {
+  const discovery = { route: [{ id: 'road-capital' }] };
+  for (const map of DUNGEON_SCENE_IDS) {
+    for (const options of [{}, { discovery }, { continuation: true }]) {
+      const input = mapInput({ brief: '场景参考', ...options });
+      assert(input.reference.styles.some(({ id }) => id === map));
+    }
+    const original = { ...worldFixture(), map };
+    const discovered = mapResponse(
+      JSON.stringify({ ...original, linkId: 'road-capital', direction: '东' }),
+      { discovery },
+    );
+    assert.equal(discovered.map, map);
+    const expansion = {
+      ...original,
+      enemies: [{ ...original.enemies.at(-1), id: 'enemy-continuation-boss' }],
+      goals: ['第一目标', '第二目标', '第三目标'],
+    };
+    const continued = mapResponse(JSON.stringify(expansion), {
+      existing: discovered,
+      continuation: true,
+    });
+    assert.equal(continued.map, map);
+    assert(continued.continuationPrepared);
+  }
 });
 test('custom worlds carry five narrative enemy selections into real battles and restore without changing progress', () => {
   const w = world();

@@ -248,7 +248,9 @@ export function createGalPlayer(context) {
     const job = current;
     current = null;
     finishing = true;
-    const exited = completed ? await animateExit() : true;
+    const epoch = transitionEpoch;
+    if (completed && job.beforeExit) await job.beforeExit();
+    const exited = epoch === transitionEpoch && (!completed || (await animateExit()));
     if (exited) {
       if (closeWorkspace) workspace.close();
       if (workspace.active) {

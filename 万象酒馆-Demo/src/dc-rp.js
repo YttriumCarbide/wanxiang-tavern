@@ -23,19 +23,66 @@ import { claimBattleRewards } from './rewards.js';
 
 export const DC_SPLIT_MARKER = '[[DC_CHECK]]';
 
+const DC_REWARD_KINDS = Object.freeze([
+  'none',
+  'gold',
+  'ether',
+  'item',
+  'gem',
+  'mixed',
+  'tactical',
+  'protection',
+  'voucher',
+  'contract',
+]);
+
+const DC_SUPPLIES = Object.freeze({
+  tactical: [
+    'slow-potion',
+    'strength-potion',
+    'blind-scroll',
+    'confusion-potion',
+    'calamity-scroll',
+  ],
+  protection: ['artifact-potion', 'cleanse-scroll', 'flying-scroll'],
+});
+
 export const DC_REWARD_TIERS = Object.freeze({
   none: Object.freeze({ gold: [0, 0], ether: [0, 0], items: null, gemChance: 0 }),
-  small: Object.freeze({ gold: [8, 15], ether: [4, 7], items: null, gemChance: 0.04 }),
+  small: Object.freeze({
+    gold: [8, 15],
+    ether: [4, 7],
+    items: ['health-potion', 'mana-potion', 'slow-potion', 'strength-potion'],
+    gemChance: 0.04,
+  }),
   medium: Object.freeze({
     gold: [16, 28],
     ether: [8, 13],
-    items: Object.freeze(['health-potion', 'mana-potion']),
+    items: Object.freeze([
+      'health-potion',
+      'mana-potion',
+      'recovery-potion',
+      ...DC_SUPPLIES.tactical,
+      ...DC_SUPPLIES.protection,
+    ]),
     gemChance: 0.08,
   }),
   high: Object.freeze({
     gold: [30, 48],
     ether: [14, 20],
-    items: Object.freeze(['fine-health-potion', 'fine-mana-potion', 'recovery-potion']),
+    items: Object.freeze([
+      'fine-health-potion',
+      'fine-mana-potion',
+      'fine-recovery-potion',
+      'fine-strength-potion',
+      'fine-slow-potion',
+      'fine-artifact-potion',
+      'fine-confusion-potion',
+      'fine-blind-scroll',
+      'calamity-scroll',
+      'cleanse-scroll',
+      'flying-scroll',
+    ]),
     gemChance: 0.16,
   }),
 });
@@ -63,6 +110,7 @@ export function formatDcEffectSummary(reward, penalty) {
   if (reward) {
     if (reward.gold) gains.push(`${reward.gold} 金币`);
     if (reward.ether) gains.push(`${reward.ether} 以太`);
+    if (reward.equipmentVouchers) gains.push(`装备兑换券 ×${reward.equipmentVouchers}`);
     if (reward.summonContracts) gains.push(`召唤契约 ×${reward.summonContracts}`);
     for (const [itemId, count] of Object.entries(reward.items || {})) {
       if (count > 0) gains.push(`${ITEMS[itemId]?.name || itemId} ×${count}`);
@@ -103,11 +151,12 @@ export const DC_RP_SYSTEM_RULES = `【2D6属性检定与剧场衔接规范】
    - 自由输入时你会收到代码预抽的 2D6 与各角色总值：请根据玩家本轮实际行动内容挑选最契合的角色与属性（勿总是套用同一属性），直接对比该总值决定成败（双6必大成功，双1必大失败）。
    - 固定选项事件中代码只告诉你是「大成功/成功/失败/大失败」结果文字，按该结果演出即可，绝不暴露具体骰点或数值！
 5. Fail Forward 失败推进与奖惩同步（极重要）：
-   - 成功/大成功时：若剧情涉及搜刮、收获或达成条件，在 reward 中填写与当前剧本和选择契合的档位与类型（small/medium/high，gold/ether/item/gem/mixed）。
+   - 成功/大成功时：若剧情涉及搜刮、收获或达成条件，在 reward 中填写与当前剧本和选择契合的档位与类型（small/medium/high）。场景明确限制奖惩时严格遵守：例如只允许好感变化时，照原协议填写好感变化，reward 用 none，禁止额外物资或货币。
+   - 奖励不受限制时，根据行动与场景轮换奖励方向，参考最近的实际奖励；不要反复默认金币、以太、毛毛腿、生命或法力药水。可用 tactical（干扰、破阵或进攻类药水卷轴）、protection（人工制品、净化、飞行等防护补给）、item（通用补给）、gem（宝石发现）、voucher（装备兑换券，medium/high）、contract（召唤契约，仅 high 且与剧情相符）及 mixed。金币、以太用于确有关联的奖励。
    - 失败/大失败时：绝不能“无事发生”或隐瞒损失！必须在 penalty 中给出实在代价（掉血/耗蓝/负面状态/失落金币）并**务必填写具体清晰的 summary（写明失落了什么物品/金币或遭受了什么具体创伤代价）**；大失败或鲁莽惊动强敌时可将 ambush 设为 true 引来遭遇战。
    - **【DC成败与自由任务完成相互独立】**：在自由探索任务中，DC 检定失败只意味着过程受挫、需要付出代价或出现波折，**绝不代表任务就此完不成**！任务目标是否标为 completed 仅取决于剧情上玩家是否通过后续努力或承受代价后最终达成了目的。
 6. 奖惩标签 <wanxiang_dc>：若本轮发生了检定或奖惩变化，请在 <wanxiang_output> 之外额外输出唯一一组 <wanxiang_dc>{...}</wanxiang_dc> JSON：
-   - 格式：{"triggered":true,"actorId":"角色ID","attr":"str|dex|con|int|wis|cha","dc":8,"outcome":"crit|success|fail|fumble","reward":{"tier":"none|small|medium|high","kind":"none|gold|ether|item|gem|mixed"},"penalty":{"hpLoss":0,"mpLoss":0,"debuff":"none|weak|vulnerable|bleed|poison|slow","goldLoss":0,"affection":[{"id":"角色ID","delta":0}],"ambush":false,"summary":"明确写出失败失落/代价"}}
+   - 格式：{"triggered":true,"actorId":"角色ID","attr":"str|dex|con|int|wis|cha","dc":8,"outcome":"crit|success|fail|fumble","reward":{"tier":"none|small|medium|high","kind":"none|gold|ether|item|gem|mixed|tactical|protection|voucher|contract"},"penalty":{"hpLoss":0,"mpLoss":0,"debuff":"none|weak|vulnerable|bleed|poison|slow","goldLoss":0,"affection":[{"id":"角色ID","delta":0}],"ambush":false,"summary":"明确写出失败失落/代价"}}
    - reward 只填档位与方向，禁止自编具体数量；hpLoss上限25，mpLoss上限12，goldLoss上限30，好感delta范围 -5~5。未触发检定且无奖惩时无需输出 <wanxiang_dc>。`;
 
 function hashSeed(input) {
@@ -302,7 +351,7 @@ export function normalizeDcTurnOutcome(
 
   const rawReward = raw.reward && typeof raw.reward === 'object' ? raw.reward : {};
   const tier = Object.hasOwn(DC_REWARD_TIERS, rawReward.tier) ? rawReward.tier : 'none';
-  const kind = ['none', 'gold', 'ether', 'item', 'gem', 'mixed'].includes(rawReward.kind)
+  const kind = DC_REWARD_KINDS.includes(rawReward.kind)
     ? rawReward.kind
     : tier === 'none'
       ? 'none'
@@ -410,21 +459,37 @@ export function settleDcReward(library, claimId, rewardSpec, seed = claimId) {
   const kind = rewardSpec.kind;
   const wantGold = ['gold', 'mixed'].includes(kind);
   const wantEther = ['ether', 'mixed'].includes(kind);
-  const wantItem = ['item', 'mixed'].includes(kind);
+  if (
+    (kind === 'contract' && rewardSpec.tier !== 'high') ||
+    (kind === 'voucher' && rewardSpec.tier === 'small')
+  )
+    return null;
+  const supplyPool = Object.hasOwn(DC_SUPPLIES, kind)
+    ? DC_SUPPLIES[kind]
+    : ['item', 'mixed'].includes(kind)
+      ? spec.items
+      : null;
   const wantGem = kind === 'gem' || (kind === 'mixed' && rewardSpec.tier === 'high');
 
   const gold = wantGold ? seededRange(`${seed}:gold`, spec.gold[0], spec.gold[1]) : 0;
   const ether = wantEther ? seededRange(`${seed}:ether`, spec.ether[0], spec.ether[1]) : 0;
   const items = {};
-  if (wantItem && spec.items?.length) {
-    const id = spec.items[hashSeed(`${seed}:item`) % spec.items.length];
+  if (supplyPool?.length) {
+    const id = supplyPool[hashSeed(`${seed}:item`) % supplyPool.length];
     items[id] = 1;
   }
   const gemChance = wantGem ? Math.max(0.25, spec.gemChance) : spec.gemChance;
-  const gem = rollGemDrop(`${seed}:gem`, gemChance);
+  const gem = wantGem ? rollGemDrop(`${seed}:gem`, gemChance) : null;
   const gems = gem ? [{ gemId: gem.id, instanceId: `gem-${claimId}` }] : [];
 
-  const rewards = { summonContracts: 0, gold, ether, items, gems };
+  const rewards = {
+    summonContracts: Number(kind === 'contract'),
+    ...(kind === 'voucher' ? { equipmentVouchers: 1 } : {}),
+    gold,
+    ether,
+    items,
+    gems,
+  };
   const granted = claimBattleRewards(library, claimId, rewards);
   return granted ? { ...rewards, gem } : null;
 }

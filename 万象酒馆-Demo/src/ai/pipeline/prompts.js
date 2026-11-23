@@ -17,7 +17,12 @@ import { requestTokenReport } from './request-tokens.js';
 import { auditPromptPreset } from './prompt-audit.js';
 import { encounterEnemies, enemiesForSpec } from './encounter-reference.js';
 import { explorationSpec } from '../../exploration.js';
-import { REGIONS, localNpcPoolFor, regionTaskHookFor } from '../../content/regions.js';
+import {
+  DUNGEON_SCENE_IDS,
+  REGIONS,
+  localNpcPoolFor,
+  regionTaskHookFor,
+} from '../../content/regions.js';
 import { presetOutputTransport, outputToolRequest } from '../preset-output.js';
 import { requireNpcInteraction } from '../../npc-interaction.js';
 import { galInstruction, galActorListText } from '../gal-prompt.js';
@@ -162,6 +167,11 @@ export function generationInput(kind, input) {
       chapter: input.chapter || 1,
       ...(typeof input.visitId === 'string' ? { visitId: input.visitId.slice(0, 80) } : {}),
       location: selected?.name || REGIONS[input.map || 'ruins']?.name || '副本',
+      optionalLocationReferences: DUNGEON_SCENE_IDS.map((id) => ({
+        id,
+        name: REGIONS[id].name,
+        architecture: REGIONS[id].description,
+      })),
       previousStories: (Array.isArray(input.previousStories) ? input.previousStories : [])
         .slice(-3)
         .map((book) => ({

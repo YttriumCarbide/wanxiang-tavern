@@ -2,13 +2,46 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { BIOMES } from '../src/content/biomes.js';
-import { REGIONS } from '../src/content/regions.js';
+import { DUNGEON_SCENE_IDS, REGIONS } from '../src/content/regions.js';
 import { ENEMIES, BOSSES } from '../src/data.js';
 import { newBattle, preview, advance, makeAction } from '../src/engine.js';
 import { triggeredStatusVisuals } from '../src/status-effects.js';
 import { generationInput } from '../server/prompts.mjs';
 import { newLibrary } from '../src/ai/library.js';
 import { settingOnly } from '../src/ai/contracts.js';
+
+test('dungeon battle models keep the six card anchors and miniatures have their own plinths', async () => {
+  const anchors = /^Placeholder_(Friendly|Enemy)_\d+$/;
+  const landmarks = ['Champion_Gate', 'Silver_Shield'];
+  for (const [index, id] of DUNGEON_SCENE_IDS.entries()) {
+    for (const miniature of [false, true]) {
+      const filename = (miniature ? 'preview-' : '') + id + '.glb';
+      const file = await readFile(new URL('../assets/' + filename, import.meta.url));
+      const source = await readFile(
+        new URL('../../万象异境-体素模型/' + filename, import.meta.url),
+      );
+      assert(file.equals(source));
+      assert.equal(file.readUInt32LE(0), 0x46546c67);
+      assert.equal(file.readUInt32LE(8), file.length);
+      const gltf = JSON.parse(file.subarray(20, 20 + file.readUInt32LE(12)).toString());
+      const names = gltf.nodes.map(({ name }) => name);
+      assert.equal(gltf.extras.biome, id);
+      assert.equal(names.filter((name) => anchors.test(name)).length, miniature ? 0 : 6);
+      assert.equal(names.includes('Miniature_Plinth'), miniature);
+      assert(names.includes(landmarks[index]));
+    }
+  }
+  const library = newLibrary();
+  const script = generationInput('script', {
+    party: library.characters.map(settingOnly),
+    boss: 'bossGate',
+    brief: '场景参考',
+  });
+  assert.deepEqual(
+    script.request.optionalLocationReferences.map(({ id, name }) => [id, name]),
+    DUNGEON_SCENE_IDS.map((id) => [id, REGIONS[id].name]),
+  );
+});
 
 test('three authored arenas retain six full-size cards, moving machinery and valid packed geometry', async () => {
   for (const id of ['frost', 'forge', 'tide']) {

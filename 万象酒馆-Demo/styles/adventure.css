@@ -4,11 +4,19 @@
   z-index: 12;
   color: #f5e9d8;
   background-color: #17151c;
-  background-position: center;
-  background-size: cover;
   overflow: hidden;
   isolation: isolate;
   animation: rp-arrive 600ms ease both;
+}
+.rp-background {
+  position: absolute;
+  inset: -12px;
+  z-index: -2;
+  background-position: center;
+  background-size: cover;
+  transform: translate3d(var(--rp-x, 0px), var(--rp-y, 0px), 0);
+  transition: transform 240ms ease-out;
+  pointer-events: none;
 }
 .rp-vignette {
   position: absolute;
@@ -819,6 +827,11 @@ body.in-adventure #mode-label {
   }
 }
 @media (prefers-reduced-motion: reduce) {
+  .rp-background {
+    transform: none;
+    transition: none;
+  }
+
   #rp-scene,
   .rp-boss-ready,
   #rp-scene[data-intro='false'] :is(.rp-content, .rp-left-dock) {

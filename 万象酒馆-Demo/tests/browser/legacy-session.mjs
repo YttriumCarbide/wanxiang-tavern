@@ -1,6 +1,7 @@
 import { newLibrary } from '../../src/ai/library.js';
 import { applyGeneratedReset } from '../../src/app/generated-reset.js';
 import { BASE_WORLDS } from '../../src/worlds.js';
+import { addWorldRoute } from '../../src/exploration.js';
 
 export async function openShelfPanel(page, action) {
   const frame = page.frameLocator('#inn-frame iframe');
@@ -15,7 +16,7 @@ export async function openShelfPanel(page, action) {
 }
 
 /** These suites exercise existing six-member saves; fresh creation has its own real API suite. */
-export async function legacySession(page, { dismissJournals = true } = {}) {
+export async function legacySession(page, { dismissJournals = true, worlds = [] } = {}) {
   if (dismissJournals) await dismissAutomaticJournals(page);
   const values = new Map();
   applyGeneratedReset({
@@ -24,6 +25,8 @@ export async function legacySession(page, { dismissJournals = true } = {}) {
   });
   const legacy = newLibrary();
   legacy.unlockedDungeons = [...BASE_WORLDS];
+  legacy.worlds = worlds;
+  for (const world of worlds) addWorldRoute(legacy.exploration, world, 17371);
   values.set('wanxiang.worldbooks.v1', JSON.stringify(legacy));
   await page.addInitScript(
     (entries) => {

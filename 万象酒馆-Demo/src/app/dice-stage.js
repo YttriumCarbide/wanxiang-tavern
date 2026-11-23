@@ -6,6 +6,7 @@ import {
   settleDcReward,
 } from '../dc-rp.js';
 import { escapeText } from '../ui.js';
+import { activeModal, createPopoverSurface } from '../shared/top-layer.js';
 
 const PIPS = Object.freeze({
   1: [4],
@@ -85,19 +86,27 @@ const frPt = (r, deg) => {
 const frPoly = (r, start, n) =>
   Array.from({ length: n }, (_, i) => frPt(r, start + (i * 360) / n).join(',')).join(' ');
 
+const FREE_GLYPH_DURATION = 1750;
+const FREE_GLYPH_STAGGER = 45;
+const FREE_CIRCLE_LEAD = 220;
+
+function freeGlyphChars(actionText) {
+  return [...String(actionText || '命运检定')].slice(0, 22);
+}
+
 function freeCircleMarkup(actionText, attrIndex = 0) {
-  const chars = [...String(actionText || '命运检定').slice(0, 22)];
+  const chars = freeGlyphChars(actionText);
   const glyphs = chars
     .map((ch, idx) => {
       const spreadX = ((idx - (chars.length - 1) / 2) * 14).toFixed(1);
       const sx = Number(spreadX);
-      const sy = 155 + (idx % 3) * 14;
+      const sy = (idx % 3) * 10;
       const angle = ((idx * 360) / Math.max(1, chars.length)) * (Math.PI / 180);
       const mx = (Math.cos(angle + 0.9) * 62).toFixed(1);
       const my = (Math.sin(angle + 0.9) * 38).toFixed(1);
       const ex = (Math.cos(angle) * 12).toFixed(1);
       const ey = (Math.sin(angle) * 12).toFixed(1);
-      return `<span class="fr-glyph" style="--sx:${sx}px;--sy:${sy}px;--mx:${mx}px;--my:${my}px;--ex:${ex}px;--ey:${ey}px;--dl:${idx * 45}ms"><i>${escapeText(ch)}</i></span>`;
+      return `<span class="fr-glyph" style="--sx:${sx}px;--sy:calc(var(--dc-glyph-origin, 140px) + ${sy}px);--mx:${mx}px;--my:${my}px;--ex:${ex}px;--ey:${ey}px;--dl:${FREE_CIRCLE_LEAD + idx * FREE_GLYPH_STAGGER}ms;--flight:${FREE_GLYPH_DURATION}ms"><i>${escapeText(ch)}</i></span>`;
     })
     .join('');
   const [bx, by] = frPt(160, attrIndex * 60);
@@ -283,6 +292,7 @@ export function createDiceStage(context) {
   const { session, events } = context;
   const overlay = document.createElement('div');
   overlay.id = 'dc-stage';
+  const surface = createPopoverSurface(overlay);
   overlay.hidden = true;
   document.body.append(overlay);
 
@@ -298,11 +308,14 @@ export function createDiceStage(context) {
   function closeStage() {
     for (const id of timers) clearTimeout(id);
     timers = [];
+    surface.hide();
     overlay.hidden = true;
     overlay.removeAttribute('data-style');
     overlay.removeAttribute('data-phase');
+    overlay.style.removeProperty('--dc-glyph-origin');
     overlay.dataset.ready = 'false';
     overlay.replaceChildren();
+    document.body.append(overlay);
     const resolve = activeResolver;
     activeResolver = null;
     resolve?.();
@@ -334,11 +347,14 @@ export function createDiceStage(context) {
     reward = null,
     penalty = null,
     signal,
+    onInscribed,
+    waitForDialogueExit,
   }) {
     if (!displayCheck || signal?.aborted) return Promise.resolve();
     if (session.ai.generationOptions?.galMode === false) {
       return Promise.resolve();
     }
+    if (activeResolver) closeStage();
     return new Promise((resolve) => {
       activeResolver = () => {
         signal?.removeEventListener('abort', closeStage);
@@ -392,7 +408,24 @@ export function createDiceStage(context) {
           </div>
         </div>
         <div class="dc-bar bottom"></div>`;
+      (activeModal(document) || document.body).append(overlay);
       overlay.hidden = false;
+      surface.show();
+      if (style === 'free') {
+        const circle = overlay.querySelector('.fr-stage')?.getBoundingClientRect();
+        const dialogue = document
+          .querySelector('#gal-stage:not([hidden]) .gal-text')
+          ?.getBoundingClientRect();
+        if (circle) {
+          const center = circle.top + circle.height / 2;
+          const limit = Math.max(36, innerHeight - center - 42);
+          const origin = dialogue ? dialogue.top + dialogue.height / 2 - center : limit;
+          overlay.style.setProperty(
+            '--dc-glyph-origin',
+            `${Math.min(limit, Math.max(36, origin))}px`,
+          );
+        }
+      }
 
       const revealEquation = () => {
         const reveal = overlay.querySelector('.dc-reveal');
@@ -418,7 +451,11 @@ export function createDiceStage(context) {
           passiveTag,
         });
         const continueButton = verdictSlot.querySelector('[data-dc-continue]');
-        if (continueButton && document.documentElement.dataset.gameLayout === 'mobile') {
+        if (
+          continueButton &&
+          (document.documentElement.dataset.gameLayout === 'mobile' ||
+            matchMedia('(max-height: 500px)').matches)
+        ) {
           overlay.append(continueButton);
         }
         overlay.dataset.phase = 'result';
@@ -451,69 +488,96 @@ export function createDiceStage(context) {
           fxEl.append(node);
         };
 
-        let t = reduced ? 20 : 1350;
-        schedule(t, () => {
+        const resolver = activeResolver;
+        const flightTime =
+          FREE_CIRCLE_LEAD +
+          (freeGlyphChars(actionText).length - 1) * FREE_GLYPH_STAGGER +
+          FREE_GLYPH_DURATION;
+        schedule(reduced ? 20 : flightTime, async () => {
+          const glyphs = overlay.querySelector('.fr-glyphs');
+          const flights = reduced
+            ? []
+            : (glyphs?.getAnimations?.({ subtree: true }) || []).filter(
+                (animation) =>
+                  animation.playState === 'running' &&
+                  Number.isFinite(animation.effect?.getComputedTiming().endTime),
+              );
+          if (flights.length)
+            await Promise.race([
+              Promise.allSettled(flights.map((animation) => animation.finished)),
+              new Promise((finish) => schedule(360, finish)),
+            ]);
+          if (activeResolver !== resolver || signal?.aborted) return;
+          overlay.dataset.phase = 'withdraw';
+          onInscribed?.();
+          await waitForDialogueExit?.();
+          if (activeResolver !== resolver || signal?.aborted) return;
+          startDraw();
+        });
+
+        function startDraw() {
+          let t = 0;
           overlay.dataset.phase = 'judge';
           stageEl?.classList.add('active');
           if (kickerEl) kickerEl.textContent = '命运裁定中';
           spawnFx('fr-flash');
-        });
-        const steps = reduced ? 1 : 10 + attrIdx;
-        for (let k = 0; k <= steps; k++) {
-          t += reduced ? 10 : 65 + k * 9;
-          const idx = k % 6;
+          const steps = reduced ? 1 : 10 + attrIdx;
+          for (let k = 0; k <= steps; k++) {
+            t += reduced ? 10 : 65 + k * 9;
+            const idx = k % 6;
+            schedule(t, () => {
+              setHot(idx);
+              if (verdictEl) verdictEl.textContent = `${DC_ATTR_NODES[idx].name}？`;
+            });
+          }
+          t += reduced ? 10 : 260;
           schedule(t, () => {
-            setHot(idx);
-            if (verdictEl) verdictEl.textContent = `${DC_ATTR_NODES[idx].name}？`;
+            setHot(attrIdx);
+            if (kickerEl) kickerEl.textContent = '既定裁决';
+            if (verdictEl) {
+              verdictEl.textContent = `${DC_ATTR_NODES[attrIdx].name}检定 · 难度 ${displayCheck.dc}`;
+              verdictEl.classList.add('lock');
+            }
+            const hdrAttr = overlay.querySelector('[data-dc-hdr-attr]');
+            const hdrMeta = overlay.querySelector('[data-dc-hdr-meta]');
+            if (hdrAttr) {
+              hdrAttr.textContent = `${DC_ATTR_NODES[attrIdx].name}检定`;
+              hdrAttr.classList.remove('is-popped');
+              void hdrAttr.offsetWidth;
+              hdrAttr.classList.add('is-popped');
+            }
+            if (hdrMeta) {
+              hdrMeta.textContent = `${actionText ? `「${actionText}」 ` : ''}2D6 ${modText} 对抗 难度 ${displayCheck.dc}`;
+              hdrMeta.classList.remove('is-popped');
+              void hdrMeta.offsetWidth;
+              hdrMeta.classList.add('is-popped');
+            }
+            if (beamEl) beamEl.hidden = false;
+            spawnFx('fr-flash');
+          });
+          t += reduced ? 10 : 600;
+          schedule(t, () => {
+            overlay.dataset.phase = 'summon';
+            if (diceBox) diceBox.hidden = false;
+          });
+          schedule(t + (reduced ? 10 : 1280), () => {
+            overlay.dataset.phase = 'solid';
+            spawnFx('fr-pillar');
+            spawnFx('fr-flash');
+            for (const cube of overlay.querySelectorAll('.skin-arcane.wire')) {
+              cube.classList.remove('wire');
+            }
+            triggerShake(false);
+          });
+          schedule(t + (reduced ? 20 : 2150), () => {
+            overlay.dataset.phase = 'sum';
+            revealEquation();
+          });
+          schedule(t + (reduced ? 30 : 3250), () => {
+            revealVerdict();
+            triggerShake(true);
           });
         }
-        t += reduced ? 10 : 260;
-        schedule(t, () => {
-          setHot(attrIdx);
-          if (kickerEl) kickerEl.textContent = '既定裁决';
-          if (verdictEl) {
-            verdictEl.textContent = `${DC_ATTR_NODES[attrIdx].name}检定 · 难度 ${displayCheck.dc}`;
-            verdictEl.classList.add('lock');
-          }
-          const hdrAttr = overlay.querySelector('[data-dc-hdr-attr]');
-          const hdrMeta = overlay.querySelector('[data-dc-hdr-meta]');
-          if (hdrAttr) {
-            hdrAttr.textContent = `${DC_ATTR_NODES[attrIdx].name}检定`;
-            hdrAttr.classList.remove('is-popped');
-            void hdrAttr.offsetWidth;
-            hdrAttr.classList.add('is-popped');
-          }
-          if (hdrMeta) {
-            hdrMeta.textContent = `${actionText ? `「${actionText}」 ` : ''}2D6 ${modText} 对抗 难度 ${displayCheck.dc}`;
-            hdrMeta.classList.remove('is-popped');
-            void hdrMeta.offsetWidth;
-            hdrMeta.classList.add('is-popped');
-          }
-          if (beamEl) beamEl.hidden = false;
-          spawnFx('fr-flash');
-        });
-        t += reduced ? 10 : 600;
-        schedule(t, () => {
-          overlay.dataset.phase = 'summon';
-          if (diceBox) diceBox.hidden = false;
-        });
-        schedule(t + (reduced ? 10 : 1280), () => {
-          overlay.dataset.phase = 'solid';
-          spawnFx('fr-pillar');
-          spawnFx('fr-flash');
-          for (const cube of overlay.querySelectorAll('.skin-arcane.wire')) {
-            cube.classList.remove('wire');
-          }
-          triggerShake(false);
-        });
-        schedule(t + (reduced ? 20 : 2150), () => {
-          overlay.dataset.phase = 'sum';
-          revealEquation();
-        });
-        schedule(t + (reduced ? 30 : 3250), () => {
-          revealVerdict();
-          triggerShake(true);
-        });
         return;
       }
 
@@ -595,11 +659,6 @@ export function createDiceStage(context) {
       library.characters[0];
 
     if (split?.beforeText && outcome?.triggered) {
-      await context.gal.play(split.displayBeforeText || split.beforeText, {
-        ...playOptions,
-        onComplete: undefined,
-      });
-      if (signal?.aborted) return null;
       const displayCheck = buildDcDisplayCheck({
         library,
         member: actorMember,
@@ -608,14 +667,34 @@ export function createDiceStage(context) {
         fixedCheck,
         seed: claimId,
       });
-      await playCheck({
+      const checkOptions = {
         style,
         displayCheck,
         actionText,
         reward: settledReward,
         penalty: settledPenalty,
         signal,
+      };
+      let dicePlayback;
+      const dialogue = context.gal.play(split.displayBeforeText || split.beforeText, {
+        ...playOptions,
+        onComplete: undefined,
+        beforeExit:
+          style === 'free'
+            ? () =>
+                new Promise((resolve) => {
+                  dicePlayback = playCheck({
+                    ...checkOptions,
+                    onInscribed: resolve,
+                    waitForDialogueExit: () => dialogue,
+                  });
+                  dicePlayback.then(resolve);
+                })
+            : undefined,
       });
+      await dialogue;
+      if (signal?.aborted) return null;
+      await (dicePlayback || playCheck(checkOptions));
       if (signal?.aborted) return null;
       if (split.afterText) {
         await context.gal.play(split.displayAfterText || split.afterText, playOptions);

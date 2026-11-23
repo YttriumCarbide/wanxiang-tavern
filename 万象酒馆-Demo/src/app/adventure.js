@@ -35,7 +35,7 @@ export function createAdventure(context) {
   root.setAttribute('aria-label', '副本事件');
   const tool = (id, icon, label) =>
     `<button data-rp="${id}" title="${label}" aria-label="${label}">${galIconMarkup(icon, label)}<span>${label}</span></button>`;
-  root.innerHTML = `<div class="rp-vignette"></div><div class="rp-rays" aria-hidden="true"></div><div class="rp-tilt top" aria-hidden="true"></div><div class="rp-tilt bottom" aria-hidden="true"></div><header class="rp-header"><span data-rp="chapter"></span></header>
+  root.innerHTML = `<div class="rp-background" aria-hidden="true"></div><div class="rp-vignette"></div><div class="rp-rays" aria-hidden="true"></div><div class="rp-tilt top" aria-hidden="true"></div><div class="rp-tilt bottom" aria-hidden="true"></div><header class="rp-header"><span data-rp="chapter"></span></header>
     <main class="rp-content"><div class="rp-kicker"></div><h1></h1><p class="rp-description"></p><div class="rp-options"></div><div class="rp-goals"></div><section class="rp-environment"><h2>周围</h2><dl></dl></section>
     <form class="rp-form" hidden><label for="rp-input">说些什么，或描述你的行动</label><p class="rp-locked-choice" aria-label="已选行动，不可编辑" hidden></p><div><textarea id="rp-input" rows="2" maxlength="10000" placeholder="输入你想说的话，或想做的事……"></textarea><button type="submit" data-rp="send">确认选择</button></div></form>
     <p class="rp-status" role="status"></p></main>
@@ -46,6 +46,27 @@ export function createAdventure(context) {
     </div>
     <nav class="rp-bottom-pill-bar" aria-label="事件操作">${tool('compose', 'compose', '发言')}${tool('replay', 'replay', '重读开场')}</nav>`;
   document.body.append(root);
+  const background = root.querySelector('.rp-background');
+  const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
+  function centerBackground() {
+    background.style.removeProperty('--rp-x');
+    background.style.removeProperty('--rp-y');
+  }
+  events.on(
+    window,
+    'pointermove',
+    (event) => {
+      if (root.hidden || event.pointerType !== 'mouse' || reduceMotion.matches) return;
+      const { left, top, width, height } = root.getBoundingClientRect();
+      if (!width || !height) return;
+      const offset = (value, size) => Math.max(-1, Math.min(1, (value / size) * 2 - 1));
+      background.style.setProperty('--rp-x', `${offset(event.clientX - left, width) * -9}px`);
+      background.style.setProperty('--rp-y', `${offset(event.clientY - top, height) * -6}px`);
+    },
+    { passive: true },
+  );
+  events.on(document.documentElement, 'pointerleave', centerBackground);
+  events.on(window, 'blur', centerBackground);
   const content = root.querySelector('.rp-content');
   const form = root.querySelector('.rp-form');
   const choiceActorMap = new Map();
@@ -557,7 +578,8 @@ export function createAdventure(context) {
     document.querySelector('#mode-label').textContent =
       `${book().title} · 第${trip().index + 1}/5节点`;
     document.querySelector('#ai-open').hidden = false;
-    root.style.backgroundImage = `url("${rpBackground(trip().exploration?.map || 'ruins', trip().index)}")`;
+    centerBackground();
+    background.style.backgroundImage = `url("${rpBackground(trip().exploration?.map || 'ruins', trip().index)}")`;
     selected = state().event.choiceId;
     if (state().event.choiceId && state().event.choiceCheck?.actorId) {
       choiceActorMap.set(state().event.choiceId, state().event.choiceCheck.actorId);

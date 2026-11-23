@@ -603,3 +603,23 @@ test('choice events always synthesize DC outcome/split while free events suppres
   assert.equal(questRes.dcSplit, undefined);
   assert.ok(!questRes.content.includes(DC_SPLIT_MARKER));
 });
+
+test('DC reward directions grant bounded supplies or vouchers and preserve no-reward turns', () => {
+  const library = newLibrary();
+  const tactical = settleDcReward(library, 'tactics', { tier: 'medium', kind: 'tactical' });
+  const protection = settleDcReward(library, 'ward', { tier: 'medium', kind: 'protection' });
+  assert.equal(Object.values(tactical.items)[0], 1);
+  assert(
+    ['artifact-potion', 'cleanse-scroll', 'flying-scroll'].includes(
+      Object.keys(protection.items)[0],
+    ),
+  );
+  assert.equal(protection.gold + protection.ether, 0);
+  assert.equal(
+    settleDcReward(library, 'voucher', { tier: 'high', kind: 'voucher' }).equipmentVouchers,
+    1,
+  );
+  assert.equal(settleDcReward(library, 'summon', { tier: 'medium', kind: 'contract' }), null);
+  assert.equal(settleDcReward(library, 'affection-only', { tier: 'none', kind: 'none' }), null);
+  assert.equal(settleDcReward(library, 'tactics', { tier: 'medium', kind: 'tactical' }), null);
+});

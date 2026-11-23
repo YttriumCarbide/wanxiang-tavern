@@ -1,0 +1,188 @@
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
+
+export async function dcMotionChecks({ browser, baseURL, output }) {
+  const page = await browser.newPage({ viewport: { width: 844, height: 390 }, hasTouch: true });
+  const html = (await readFile(new URL('../../index.html', import.meta.url), 'utf8')).replace(
+    '<script type="module" src="./src/app.js"></script>',
+    '',
+  );
+  const errors = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  await page.route('**/__dc-motion', (route) =>
+    route.fulfill({ contentType: 'text/html', body: html }),
+  );
+  try {
+    await page.goto(new URL('__dc-motion', baseURL).href);
+    await page.evaluate(async () => {
+      document.documentElement.dataset.gameLayout = 'mobile';
+      const { createDiceStage } = await import('/src/app/dice-stage.js');
+      const { createGalPlayer } = await import('/src/app/gal.js');
+      const { createEventScope } = await import('/src/shared/events.js');
+      const { createAssetStore } = await import('/src/shared/asset-store.js');
+      const { newLibrary, officialCharacter } = await import('/src/ai/library.js');
+      const library = newLibrary();
+      const member = officialCharacter('edith');
+      library.characters = [member];
+      const context = {
+        session: { ai: { library, generationOptions: { galMode: true } }, runtime: {} },
+        events: createEventScope(),
+        assets: createAssetStore(),
+      };
+      context.gal = createGalPlayer(context);
+      window.dcFixture = { context, dice: createDiceStage(context), member };
+    });
+
+    const dice = page.locator('#dc-stage');
+    const gal = page.locator('#gal-stage');
+    const freeOptions = { owner: 'dc-fixture' };
+    await page.evaluate((playOptions) => {
+      const { dice, context, member } = window.dcFixture;
+      window.dcFixture.finished = false;
+      window.dcFixture.phases = [];
+      const overlay = document.querySelector('#dc-stage');
+      const observer = new MutationObserver(() => {
+        const phase = overlay.dataset.phase;
+        if (!phase || window.dcFixture.phases.at(-1)?.phase === phase) return;
+        const gal = document.querySelector('#gal-stage');
+        window.dcFixture.phases.push({
+          phase,
+          dialogueVisible: !gal.hidden && getComputedStyle(gal).visibility === 'visible',
+        });
+      });
+      observer.observe(overlay, { attributes: true, attributeFilter: ['data-phase'] });
+      const actionText = '尝试沿着墙边悄悄走过石桥并查看门后留下的刻痕';
+      void dice
+        .playReply(
+          {
+            dcOutcome: {
+              triggered: true,
+              success: true,
+              outcome: 'success',
+              attr: 'dex',
+              dc: 8,
+              reward: { tier: 'medium', kind: 'protection' },
+            },
+            dcSplit: { beforeText: '【对白:伊蒂丝】准备好了。' },
+          },
+          playOptions,
+          { style: 'free', actionText, member },
+        )
+        .then(() => {
+          window.dcFixture.finished = true;
+          observer.disconnect();
+        });
+      context.gal.skip();
+    }, freeOptions);
+    await page.locator('#dc-stage[data-phase="inscribe"] .fr-circle').waitFor();
+    await page.locator('.fr-glyph').last().waitFor();
+    assert(await gal.locator('.gal-reading').isVisible());
+    assert(await dice.locator('.fr-dice').isHidden());
+    assert.equal(await dice.locator('[data-dc-continue]').count(), 0);
+    await page.keyboard.press('Enter');
+    await page.waitForFunction(() =>
+      window.dcFixture.phases.some(({ phase }) => phase === 'judge'),
+    );
+    const phases = await page.evaluate(() => window.dcFixture.phases.slice(0, 3));
+    assert.deepEqual(phases, [
+      { phase: 'inscribe', dialogueVisible: true },
+      { phase: 'withdraw', dialogueVisible: true },
+      { phase: 'judge', dialogueVisible: false },
+    ]);
+    assert(await gal.isHidden());
+    await dice.locator('.fr-dice .die-wrap').first().waitFor();
+    await verifyResult(page, output, 'free-844');
+    await page.waitForFunction(() => window.dcFixture.finished);
+
+    for (const [style, viewport, reduced] of [
+      ['event', { width: 667, height: 375 }, 'no-preference'],
+      ['gal', { width: 390, height: 844 }, 'no-preference'],
+      ['free', { width: 667, height: 375 }, 'reduce'],
+    ]) {
+      await page.setViewportSize(viewport);
+      await page.emulateMedia({ reducedMotion: reduced });
+      if (style === 'gal')
+        await page.locator('#ai-dialog').evaluate((dialog) => dialog.showModal());
+      await page.evaluate((mode) => {
+        void window.dcFixture.dice.playCheck({
+          style: mode,
+          actionText: '长'.repeat(500),
+          displayCheck: {
+            actorName: '伊蒂丝',
+            attr: 'dex',
+            attrLabel: '敏捷',
+            dice: [3, 4],
+            mod: 2,
+            dc: 8,
+            total: 9,
+            outcome: 'success',
+          },
+        });
+      }, style);
+      if (style === 'event') {
+        const moving = page.locator('#dc-stage .ev-fall');
+        await moving.first().waitFor();
+        assert(
+          await moving.evaluateAll(async (nodes) => {
+            for (let sample = 0; sample < 7; sample++) {
+              await new Promise((resolve) => setTimeout(resolve, 170));
+              if (
+                nodes.some((node) => {
+                  const box = node.getBoundingClientRect();
+                  return (
+                    box.top < 0 ||
+                    box.left < 0 ||
+                    box.right > innerWidth ||
+                    box.bottom > innerHeight
+                  );
+                })
+              )
+                return false;
+            }
+            return true;
+          }),
+          'The full throw remains inside the mobile viewport',
+        );
+      }
+      await verifyResult(page, output, `${style}-${viewport.width}-${reduced}`);
+      if (style === 'gal') await page.locator('#ai-dialog').evaluate((dialog) => dialog.close());
+    }
+    assert.deepEqual(errors, []);
+    return { freeSequence: true, eventThrow: true, galCutIn: true, reducedMotion: true };
+  } catch (error) {
+    const phases = await page.evaluate(() => window.dcFixture?.phases).catch(() => []);
+    await page.screenshot({ path: path.join(output, 'failure.png') }).catch(() => {});
+    throw new Error(
+      `${error.message}\nDC phases: ${JSON.stringify(phases)}\n${errors.join('\n')}`,
+      { cause: error },
+    );
+  } finally {
+    await page.close();
+  }
+}
+
+async function verifyResult(page, output, name) {
+  const ready = page.locator('#dc-stage[data-ready="true"]');
+  const proceed = ready.locator('> .dc-continue');
+  await proceed.waitFor();
+  assert(
+    await proceed.evaluate((button) => {
+      const box = button.getBoundingClientRect();
+      const frame = button.parentElement.querySelector('.dc-frame').getBoundingClientRect();
+      const reveal = button.parentElement.querySelector('.dc-reveal').getBoundingClientRect();
+      return (
+        box.height >= 44 &&
+        box.bottom <= innerHeight &&
+        box.right <= innerWidth &&
+        frame.bottom <= box.top &&
+        reveal.bottom <= frame.bottom + 1 &&
+        document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2) === button
+      );
+    }),
+    'The continue button has an independent, tappable row',
+  );
+  await ready.screenshot({ path: path.join(output, `${name}.png`) });
+  await proceed.tap();
+  await page.locator('#dc-stage').waitFor({ state: 'hidden' });
+}

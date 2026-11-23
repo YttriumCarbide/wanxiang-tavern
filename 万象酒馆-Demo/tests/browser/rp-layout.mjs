@@ -79,6 +79,17 @@ export async function rpLayoutChecks({ browser, baseURL, output }) {
       await page.goto(baseURL + '/?display=landscape');
       await page.waitForFunction(() => window.demo?.getStatus().mode === 'event');
       await page.locator('#gal-stage[data-workspace="adventure"]').waitFor();
+      const background = page.locator('.rp-background');
+      await page.mouse.move(75, 100);
+      const offset = await background.evaluate((element) =>
+        element.style.getPropertyValue('--rp-x'),
+      );
+      await page.mouse.move(1100, 600);
+      assert(
+        offset &&
+          offset !==
+            (await background.evaluate((element) => element.style.getPropertyValue('--rp-x'))),
+      );
       assert(
         await page.locator('#rp-scene > .rp-content').count(),
         'the narrative remains in its original scene container',

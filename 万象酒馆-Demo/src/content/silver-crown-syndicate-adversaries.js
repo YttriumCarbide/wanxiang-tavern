@@ -231,7 +231,7 @@ export const SILVER_CROWN_SYNDICATE_ARCHIVE_DEFINITIONS = Object.freeze(
   Object.fromEntries(
     [...SILVER_CROWN_SYNDICATE_ENEMIES, SILVER_CROWN_SYNDICATE_ARCHON].map((entry) => [
       entry.id,
-      { ...entry, archiveSource: '银冠城 · 银渠地下暗拍行' },
+      { ...entry, archiveSource: '银盾镇展览馆' },
     ]),
   ),
 );

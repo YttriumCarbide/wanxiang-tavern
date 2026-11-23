@@ -1,6 +1,8 @@
 import { MILL_ROUTES, MILL_ENEMY_IDS } from './mill-encounters.js';
 import { RUINS_ROUTES, RUINS_ENEMY_IDS } from './ruins-encounters.js';
 import { FOREST_ROUTES } from './forest-encounters.js';
+export const DUNGEON_SCENE_IDS = Object.freeze(['duel-arena', 'silver-shield-exhibition']);
+
 /** Existing art themes, fixed environment rules and mainline/regional exploration graphs. */
 export const REGIONS = Object.freeze({
   mill: {
@@ -942,6 +944,24 @@ export const REGIONS = Object.freeze({
     atmosphere: '沙粒覆着浮雕，方尖碑的影子在烈日下缓慢移动。',
     sites: ['神殿阶前', '方碑列道', '断柱回廊', '沙埋祭坛', '太阳门', '地宫入口'],
     enemies: ['pebble', 'warden', 'sprout', 'crystalBeetle'],
+    boss: 'bossGate',
+  },
+  'duel-arena': {
+    name: '决斗场',
+    biome: 'duel-arena',
+    description: '沙色铺石、八角地纹、阶梯石看台、红旗、铁闸、火盆',
+    atmosphere: '沙色铺石、阶梯石看台',
+    sites: ['沙色铺石', '八角地纹', '阶梯石看台'],
+    enemies: ['warden', 'hound', 'pebble'],
+    boss: 'bossGate',
+  },
+  'silver-shield-exhibition': {
+    name: '银盾镇展览馆',
+    biome: 'silver-shield-exhibition',
+    description: '象牙白石地、青色地毯、彩窗、铜框展柜、银盾展台',
+    atmosphere: '象牙白石地、青色地毯',
+    sites: ['象牙白石地', '铜框展柜', '银盾展台'],
+    enemies: ['warden', 'crystalBeetle', 'hexer'],
     boss: 'bossGate',
   },
   'city-market': {

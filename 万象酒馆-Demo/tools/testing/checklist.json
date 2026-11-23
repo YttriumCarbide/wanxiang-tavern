@@ -1,18 +1,13 @@
 {
-  "browserConcurrency": 2,
-  "scopes": [
-    "quality",
-    "core",
-    "static",
-    "folder-backup",
-    "mobile",
-    "android-ui",
-    "first-run",
-    "preparation"
-  ],
+  "browserConcurrency": 1,
+  "scopes": ["quality", "models", "core", "dungeon-art", "dc-motion", "rp-layout"],
   "coreFiles": [
-    "tests/export-file.test.js",
-    "tests/logic-audit-storage.test.js",
-    "tests/saves.test.js"
+    "tests/art-assets.test.js",
+    "tests/assets.test.js",
+    "tests/periphery.test.js",
+    "tests/script-references.test.js",
+    "tests/silver-crown-syndicate.test.js",
+    "tests/worlds-emblems.test.js",
+    "tests/phase-b-dc-pipeline.test.js"
   ]
 }

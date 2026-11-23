@@ -106,7 +106,7 @@ dialog:has(> #gal-stage:not([hidden]))::backdrop {
   background: transparent;
   backdrop-filter: none;
 }
-dialog:has(> #gal-stage:not([hidden])) > :not(.gal-stage) {
+dialog:has(> #gal-stage:not([hidden])) > :not(.gal-stage, #dc-stage) {
   visibility: hidden;
 }
 .gal-stage[hidden] {

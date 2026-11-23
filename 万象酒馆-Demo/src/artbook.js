@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { BIOMES } from './content/biomes.js';
+import { REGIONS } from './content/regions.js';
 import { createBattleView } from './scene.js';
 import { newBattle, preview, advance } from './engine.js';
 import { createEventScope } from './shared/events.js';
@@ -250,7 +251,7 @@ async function main() {
     document.querySelector('#atlas-kind').textContent = creature ? '造物 / STUDY' : '境域 / ATLAS';
     document.querySelector('#atlas-description').textContent = creature
       ? item.description
-      : DESCRIPTIONS[id];
+      : DESCRIPTIONS[id] || REGIONS[id]?.description || '';
     document.querySelector('#atlas-attack').disabled = creature;
     document.querySelector('#atlas-status').disabled = creature;
     try {

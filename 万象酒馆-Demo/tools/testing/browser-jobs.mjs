@@ -35,10 +35,12 @@ export function browserJobs(scopes, results, root) {
   simple('exploration-grounding', 'exploration-grounding', 'explorationGroundingChecks');
   simple('starbell', 'starbell', 'starbellChecks');
   simple('scene-loading', 'scene-loading', 'sceneLoadingChecks');
+  simple('dungeon-art', 'dungeon-art', 'dungeonArtChecks');
   simple('scene-visitors', 'scene-visitors', 'sceneVisitorChecks');
   simple('city-center', 'city-center', 'cityCenterChecks');
   simple('skill-menus', 'skill-menus', 'skillMenuChecks');
   simple('rp-layout', 'rp-layout', 'rpLayoutChecks');
+  simple('dc-motion', 'dc-motion', 'dcMotionChecks');
   simple('ring-gallery', 'ring-gallery', 'ringGalleryChecks');
   simple('ring-acquisition', 'ring-acquisition', 'ringAcquisitionChecks', [], true);
   simple('gal', 'gal', 'galChecks');
