@@ -28,6 +28,7 @@ export const allScopes = [
   'gal',
   'frost',
   'equipment',
+  'shop-workspace',
   'enemy-progression',
   'mobile',
   'android-ui',

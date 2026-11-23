@@ -1469,13 +1469,41 @@
       "bytes": 35616,
       "hash": "e62609c19622bd6a163564232d2cd8c3059a8e90cc9e60f22b0445718e869119"
     },
+    "assets/items/artifact-potion.svg": {
+      "bytes": 660,
+      "hash": "279d7f4cc65ccd17b72cd95c2c3ac98bc6780f287058417d0d889d47fabb19f7"
+    },
+    "assets/items/blind-scroll.svg": {
+      "bytes": 585,
+      "hash": "89eee77fe3ddda3d4205f19118ca2494067753f134949c79486e19d6ee2d1b26"
+    },
     "assets/items/calamity-scroll.svg": {
       "bytes": 461,
       "hash": "540a212f09afb21cbf5c723a68d6f3d7df7cb13dcca91287cd247ea861f306c9"
     },
+    "assets/items/cleanse-scroll.svg": {
+      "bytes": 592,
+      "hash": "02046e85836fccf87f74be0d3ab32aa21ce55a2bdd25914142735f1ef874436d"
+    },
+    "assets/items/confusion-potion.svg": {
+      "bytes": 640,
+      "hash": "eaa7cc04598f6eabe3946d5e36f6f938e47047ff97a7dc0ba073475ac0504d54"
+    },
+    "assets/items/fine-artifact-potion.svg": {
+      "bytes": 779,
+      "hash": "3946444253a66ba771fec9c46000f61cd99436a65bd310d4ed0bcc48e3da7d13"
+    },
+    "assets/items/fine-blind-scroll.svg": {
+      "bytes": 704,
+      "hash": "fb260d4357fac111ce18da2d14dc53d41974bd33dd18ad68dd032d4a8b528087"
+    },
     "assets/items/fine-calamity-scroll.svg": {
       "bytes": 522,
       "hash": "5a1ee57e6ed9e723ee343ef991d35f550488c417737ad5f526a30e1d50bf6c05"
+    },
+    "assets/items/fine-confusion-potion.svg": {
+      "bytes": 759,
+      "hash": "aecbb4f88540913e128206e12edf6cbefb9aa15099dd9d84d0b1b4b9c5ba9eb8"
     },
     "assets/items/fine-health-potion.svg": {
       "bytes": 610,
@@ -1496,6 +1524,10 @@
     "assets/items/fine-strength-potion.svg": {
       "bytes": 610,
       "hash": "bfbbebd7eff4b220fd02700ec041347e6cfef526d2203e780496824774656a56"
+    },
+    "assets/items/flying-scroll.svg": {
+      "bytes": 591,
+      "hash": "0c554a39d6ce78a8ac47219d61235d060185ffaa294957f67c75011898c9bf98"
     },
     "assets/items/health-potion.svg": {
       "bytes": 549,

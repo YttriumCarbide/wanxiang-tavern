@@ -629,7 +629,7 @@ function reviewedRules() {
   add('src/content/forest-adversaries.js', 'content', [['/fn:creature', "portrait + '.glb'"]]);
   add('src/content/frost-adversaries.js', 'content', [['/fn:enemy', "appearance + '.glb'"]]);
   add('src/content/items.js', 'content', [
-    ['/fn:potion', "'./assets/items/' + art + '.svg'", "'./assets/items/' + art"],
+    ['/fn:potion', "'./assets/items/' + id + '.svg'", "'./assets/items/' + id"],
   ]);
   add('src/content/ladder-adversaries.js', 'content', [
     ['/fn:ladderMob', '`${art}.glb`'],

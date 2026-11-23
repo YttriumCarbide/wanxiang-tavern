@@ -7,6 +7,7 @@ import {
   resolveEquipmentQuality,
 } from '../equipment.js';
 import { escapeText } from '../ui.js';
+import { equipmentArt } from './equipment-art.js';
 import { html } from '../shared/html.js';
 
 /** Keep the just-created batch separate until its result sheet has been dismissed. */
@@ -38,7 +39,7 @@ export function createForgeResults(context, describe, onClose, operations) {
             const quality = EQUIPMENT_QUALITIES[qualityKey];
             const level = clampEquipmentLevel(item.level || 1);
             return html`<article data-quality="${qualityKey}">
-              <span class="equipment-emblem">✧</span>
+              <span class="equipment-emblem">${equipmentArt(item, qualityKey)}</span>
               <div class="forge-badges">
                 <span class="quality-pill" data-quality="${qualityKey}"
                   >${escapeText(quality.name)}</span

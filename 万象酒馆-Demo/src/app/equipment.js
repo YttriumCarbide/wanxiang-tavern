@@ -1,6 +1,7 @@
 import { resourceText } from '../resource-text.js';
 import { foodBonusText } from '../content/dining.js';
 import { equipmentDescription } from '../skill-text.js';
+import { equipmentArt } from './equipment-art.js';
 import { createEquipmentPicker } from './equipment-picker.js';
 import { createRawResponse } from './raw-response.js';
 import { createForgeResults } from './forge-results.js';
@@ -53,12 +54,38 @@ function resolveInstanceView(template, instance, library) {
   return equipmentInstanceView(template, instance, library?.equipment?.affixesByTemplate);
 }
 
+const forgeIcons = {
+  settings:
+    '<path d="M10 2h4l.7 2.6 2 .9 2.4-1 2 3.5-1.8 1.8v2.4l1.8 1.8-2 3.5-2.4-1-2 .9L14 20h-4l-.7-2.6-2-.9-2.4 1-2-3.5 1.8-1.8V9.8L2.9 8l2-3.5 2.4 1 2-.9z"/><circle cx="12" cy="11" r="3"/>',
+  favorite: '<path d="m12 3 2.8 5.8 6.4.9-4.6 4.5 1.1 6.3-5.7-3-5.7 3 1.1-6.3-4.6-4.5 6.4-.9z"/>',
+  delete: '<path d="M4 6h16M9 6V3h6v3M6 6l1 14h10l1-14M10 10v6m4-6v6"/>',
+};
+
+function forgeIcon(name) {
+  return html`<svg
+    viewBox="0 0 24 24"
+    width="18"
+    height="18"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="1.5"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    aria-hidden="true"
+  >
+    ${forgeIcons[name]}
+  </svg>`;
+}
+
+function affixName(affix) {
+  return EQUIPMENT_AFFIX_REGISTRY[affix.id]?.label || affix.id;
+}
+
 function affixSummary(item) {
   const affix = item?.affixes?.[0];
   if (!affix) return '未赋词';
-  const family = EQUIPMENT_AFFIX_REGISTRY[affix.id];
   const quality = EQUIPMENT_QUALITIES[affix.quality]?.name || affix.quality;
-  return `${quality} ${family?.label || affix.id}`;
+  return `${quality} ${affixName(affix)}`;
 }
 
 function badgesHtml({ qualityKey, qualityName, level, rollPercent, levelLabel = 'Lv.' }) {
@@ -94,36 +121,37 @@ function statRangeBarsHtml(stats = {}, statRanges = {}) {
   </ul>`;
 }
 
-function affixCardsHtml(template, library) {
-  const affix = library.equipment.affixesByTemplate?.[template.id];
-  if (!affix) return '<div class="forge-affix-empty">未赋词 · 新生成装备默认不带词条</div>';
+function forgeAffixHtml(template, affix, expanded) {
+  if (!affix) return '';
   const definition = EQUIPMENT_AFFIX_REGISTRY[affix.id];
   const quality = EQUIPMENT_AFFIX_QUALITIES[affix.quality] || EQUIPMENT_AFFIX_QUALITIES.common;
   const bonus = equipmentAffixStatBonus({ ...template, affixes: [affix] });
-  return html`<div class="forge-affix-list">
-    <article class="forge-affix-card" data-quality="${affix.quality}">
-      <div class="forge-affix-card-head">
-        <strong>${escapeText(definition?.label || definition?.id || affix.id)}</strong>
-        <span class="quality-pill" data-quality="${affix.quality}"
-          >${escapeText(EQUIPMENT_QUALITIES[affix.quality]?.name || affix.quality)}</span
-        >
-      </div>
-      <p>
-        设计 Lv.${clampEquipmentLevel(template.level || 1)}
-        参考：${escapeText(equipmentDescription({ stats: bonus, rules: [] }))}
-      </p>
-      <small>同款全部装备共享此词条，品质贡献 ${quality.points} 点</small>
+  const effect = equipmentDescription({ stats: bonus, rules: [] });
+  return html`<details
+    class="forge-affix-card"
+    data-quality="${affix.quality}"
+    ${expanded ? 'open' : ''}
+  >
+    <summary class="forge-affix-card-head">
+      <strong>${escapeText(affixName(affix))}</strong>
+      <span class="forge-affix-effect">${escapeText(effect)}</span>
+    </summary>
+    <div class="forge-affix-details">
+      <small
+        >${escapeText(EQUIPMENT_QUALITIES[affix.quality]?.name || affix.quality)} ·
+        Lv.${clampEquipmentLevel(template.level || 1)} 参考 · 同族贡献 ${quality.points} 点</small
+      >
       ${(definition?.passives || [])
         .map(
           (passive) =>
-            html`<details class="forge-affix-passive">
-              <summary>同角色同族 ${passive.required} 点 · 专属被动</summary>
-              <p>${escapeText(equipmentDescription({ stats: {}, rules: passive.rules }))}</p>
-            </details>`,
+            html`<p>
+              <strong>同角色同族 ${passive.required} 点 · 专属被动</strong>
+              ${escapeText(equipmentDescription({ stats: {}, rules: passive.rules }))}
+            </p>`,
         )
         .join('')}
-    </article>
-  </div>`;
+    </div>
+  </details>`;
 }
 
 function pendingPreviewHtml(item, compiled = false, ownedCount = 0) {
@@ -145,21 +173,30 @@ function pendingPreviewHtml(item, compiled = false, ownedCount = 0) {
   </div>`;
 }
 
-function forgeWorkshopHtml(template, library, busy) {
+function forgeItemActions(item, library, busy) {
+  const ether = library.inventory.ether;
+  const affix = library.equipment.affixesByTemplate?.[item.id];
+  const cost = equipmentAffixCost(item);
+  const id = escapeText(item.id);
+  return html`<section class="forge-detail-actions" aria-label="兑换与词条">
+    <div class="forge-detail-controls">
+      ${item.category === 'gem' ? '' : html`<button type="button" class="primary" data-buy-equipment="${id}" ${busy || ether < item.price ? 'disabled' : ''}>打造 · ${item.price} 以太</button>`}
+      <button
+        type="button"
+        data-${affix ? 'refresh' : 'add'}-affix="${id}"
+        ${busy || ether < cost ? 'disabled' : ''}
+      >
+        ${affix ? '洗词' : '赋词'} · ${cost} 以太
+      </button>
+    </div>
+  </section>`;
+}
+
+function forgeWorkshopHtml(template, library, busy, expandedInstances) {
   const maxLevel = maxUnlockedEquipmentLevel(library);
   const ether = library.inventory.ether || 0;
   const instances = library.equipment.owned.filter((item) => item.templateId === template.id);
-  if (!instances.length) {
-    return html`<section class="forge-workshop" aria-label="拥有实例工坊">
-      <div class="forge-workshop-head">
-        <strong>工坊淬炼</strong>
-        <small>当前解锁上限 Lv.${maxLevel}</small>
-      </div>
-      <div class="forge-workshop-empty">
-        尚未打造此装备；打造后可重铸基础属性、淬炼至 Lv.${maxLevel}、升阶品质或分解回收以太。
-      </div>
-    </section>`;
-  }
+  if (!instances.length) return '';
   return html`<section class="forge-workshop" aria-label="拥有实例工坊">
     <div class="forge-workshop-head">
       <strong>已拥有装备 (${instances.length})</strong>
@@ -180,12 +217,14 @@ function forgeWorkshopHtml(template, library, busy) {
           const canTemper = lv < maxLevel;
           const canAscend = Boolean(qMeta.ascendTo);
           const isGem = template.category === 'gem';
-          return html`<div
+          return html`<details
             class="forge-instance-card"
             data-quality="${qKey}"
             data-forge-instance="${escapeText(owned.id)}"
+            ${expandedInstances.has(owned.id) ? 'open' : ''}
           >
-            <div class="forge-instance-top">
+            <summary class="forge-instance-top">
+              ${equipmentArt(resolved, qKey)}
               <span class="forge-instance-index">#${index + 1}</span>
               ${badgesHtml({
                 qualityKey: qKey,
@@ -196,51 +235,52 @@ function forgeWorkshopHtml(template, library, busy) {
               <span class="forge-wearer-tag" data-equipped="${Boolean(wearer)}"
                 >${wearer ? escapeText(wearer.setting.name) + '穿戴中' : '背包中'}</span
               >
+            </summary>
+            <div class="forge-instance-body">
+              <div class="forge-instance-desc">${escapeText(equipmentDescription(resolved))}</div>
+              ${statRangeBarsHtml(owned.stats, owned.statRanges)}
+              <div class="forge-instance-actions">
+                ${
+                  !isGem
+                    ? html`
+                        <button
+                          type="button"
+                          data-reforge-instance="${owned.id}"
+                          ${busy || ether < rCost ? 'disabled' : ''}
+                        >
+                          重铸 · ${rCost} 以太
+                        </button>
+                        <button
+                          type="button"
+                          data-temper-instance="${owned.id}"
+                          ${busy || !canTemper || ether < tCost ? 'disabled' : ''}
+                        >
+                          ${canTemper ? `淬炼→Lv.${lv + 1} · ${tCost} 以太` : `已满 Lv.${maxLevel}`}
+                        </button>
+                        <button
+                          type="button"
+                          data-ascend-instance="${owned.id}"
+                          ${busy || !canAscend || ether < aCost ? 'disabled' : ''}
+                        >
+                          ${
+                            canAscend
+                              ? `升阶→${EQUIPMENT_QUALITIES[qMeta.ascendTo].name} · ${aCost} 以太`
+                              : '已达传说'
+                          }
+                        </button>
+                      `
+                    : ''
+                }
+                <button
+                  type="button"
+                  data-dismantle-instance="${owned.id}"
+                  ${busy || wearer ? 'disabled' : ''}
+                >
+                  ${wearer ? '穿戴中' : `分解 +${refund} 以太`}
+                </button>
+              </div>
             </div>
-            <div class="forge-instance-desc">${escapeText(equipmentDescription(resolved))}</div>
-            <small>${escapeText(affixSummary(resolved))}</small>
-            ${statRangeBarsHtml(owned.stats, owned.statRanges)}
-            <div class="forge-instance-actions">
-              ${
-                !isGem
-                  ? html`
-                      <button
-                        type="button"
-                        data-reforge-instance="${owned.id}"
-                        ${busy || ether < rCost ? 'disabled' : ''}
-                      >
-                        重铸 · ${rCost} 以太
-                      </button>
-                      <button
-                        type="button"
-                        data-temper-instance="${owned.id}"
-                        ${busy || !canTemper || ether < tCost ? 'disabled' : ''}
-                      >
-                        ${canTemper ? `淬炼→Lv.${lv + 1} · ${tCost} 以太` : `已满 Lv.${maxLevel}`}
-                      </button>
-                      <button
-                        type="button"
-                        data-ascend-instance="${owned.id}"
-                        ${busy || !canAscend || ether < aCost ? 'disabled' : ''}
-                      >
-                        ${
-                          canAscend
-                            ? `升阶→${EQUIPMENT_QUALITIES[qMeta.ascendTo].name} · ${aCost} 以太`
-                            : '已达传说'
-                        }
-                      </button>
-                    `
-                  : ''
-              }
-              <button
-                type="button"
-                data-dismantle-instance="${owned.id}"
-                ${busy || wearer ? 'disabled' : ''}
-              >
-                ${wearer ? '穿戴中' : `分解 +${refund} 以太`}
-              </button>
-            </div>
-          </div>`;
+          </details>`;
         })
         .join('')}
     </div>
@@ -309,7 +349,9 @@ export function preparationEquipment(library, member) {
           data-category="${categoryKey}"
           data-tooltip="${escapeText(resolved ? equipmentDescription(resolved) : `点击选择${category.label}`)}"
         >
-          <span class="prepare-gear-icon">${category.icon}</span>
+          <span class="prepare-gear-icon"
+            >${resolved ? equipmentArt(resolved, qualityKey) : category.icon}</span
+          >
           <span class="prepare-gear-copy">
             <small>槽位 ${slot + 1} · ${category.label}</small>
             <strong>${escapeText(resolved ? resolved.name : `— 未装备${category.label} —`)}</strong>
@@ -399,7 +441,18 @@ export function createEquipment(context) {
   const panel = document.createElement('dialog');
   panel.id = 'ether-forge';
   panel.innerHTML = html`<header>
-      <h2>以太凝聚器</h2>
+      <div class="forge-heading">
+        <h2>以太凝聚器</h2>
+        <button
+          type="button"
+          id="forge-config"
+          class="forge-icon-button"
+          aria-label="造物 API 设置"
+          title="造物 API 设置"
+        >
+          ${forgeIcon('settings')}
+        </button>
+      </div>
       <nav aria-label="凝聚器页面">
         <button data-forge-page="construct" aria-pressed="true">凝聚</button>
         <button data-forge-page="exchange">兑换</button>
@@ -411,7 +464,6 @@ export function createEquipment(context) {
     </header>
     <div class="forge-toolbar">
       <button data-forge-drawer="list" aria-expanded="false">装备清单</button>
-      <button id="forge-config">造物 API</button>
       <button id="forge-refine" class="primary">构筑未构筑道具</button>
       <button id="forge-voucher-btn">兑换券凝聚装备</button>
       <button id="forge-cancel" hidden>取消</button>
@@ -432,7 +484,6 @@ export function createEquipment(context) {
       </section>
       <aside id="forge-catalog" hidden aria-label="装备详情"></aside>
     </div>
-    <div id="forge-operation-dock" class="forge-operation-dock"></div>
     <p id="forge-status" role="status"></p>`;
   document.body.append(panel);
   const feedback = createEquipmentFeedback(panel, events);
@@ -544,6 +595,7 @@ export function createEquipment(context) {
         String(control.dataset.forgeDrawer === panel.dataset.drawer),
       );
     });
+    panel.querySelector('.forge-toolbar').hidden = page === 'exchange' && !request;
     panel.querySelector('#forge-config').disabled = exchangeOnly || session.ai.busy;
     panel.querySelector('[data-forge-page="construct"]').disabled = exchangeOnly;
     const vouchers = library().inventory.equipmentVouchers || 0;
@@ -556,7 +608,7 @@ export function createEquipment(context) {
       exchangeOnly || session.ai.busy || !!request || !pendingItems().length;
     panel.querySelector('#forge-cancel').hidden = !request;
     panel.dataset.busy = String(!!request);
-    panel.querySelector('#forge-animation').hidden = false;
+    panel.querySelector('#forge-workspace').hidden = page === 'exchange';
     panel.querySelector('#forge-catalog').hidden = page !== 'exchange';
     panel.querySelector('#forge-refine').hidden = page !== 'construct';
     panel.querySelector('#forge-animation-label').textContent = request
@@ -599,9 +651,11 @@ export function createEquipment(context) {
             data-quality="${qualityKey}"
             aria-pressed="${item.id === selected}"
           >
-            <span>${library().equipment.favorites?.includes(item.id) ? '★' : '✧'}</span>
+            ${equipmentArt(item, qualityKey)}
             <div class="forge-list-meta">
-              <strong>${escapeText(item.name)}</strong>
+              <strong
+                >${library().equipment.favorites?.includes(item.id) ? '★ ' : ''}${escapeText(item.name)}</strong
+              >
               <small
                 >${categoryLabel ? `${categoryLabel} · ` : ''}Lv.${level} ·
                 ${escapeText(qualityName)}</small
@@ -622,7 +676,20 @@ export function createEquipment(context) {
     const itemQualityKey = item ? resolveEquipmentQuality(item.quality, item.price) : 'common';
     const itemQuality = EQUIPMENT_QUALITIES[itemQualityKey];
     const itemLevel = item ? clampEquipmentLevel(item.level || 1) : 1;
-    panel.querySelector('#forge-catalog').innerHTML = item
+    const catalog = panel.querySelector('#forge-catalog');
+    const sameItem = Boolean(item && catalog.dataset.template === item.id);
+    const expandedAffix = sameItem && Boolean(catalog.querySelector('.forge-affix-card[open]'));
+    const expandedInstances = new Set(
+      sameItem
+        ? [...catalog.querySelectorAll('[data-forge-instance][open]')].map(
+            (node) => node.dataset.forgeInstance,
+          )
+        : [],
+    );
+    catalog.dataset.template = item?.id || '';
+    const affix = item && library().equipment.affixesByTemplate?.[item.id];
+    const favorite = item && library().equipment.favorites?.includes(item.id);
+    catalog.innerHTML = item
       ? html`${
             item.legacyCategorized
               ? '<p class="forge-migration-note">提示：旧存档未区分武器/护甲/挂坠，已自动随机分配分类；若想重新整理，可使用右侧「删除此方案」。</p>'
@@ -630,12 +697,10 @@ export function createEquipment(context) {
           }
           <article class="forge-item" data-quality="${itemQualityKey}">
             <div class="forge-item-head">
-              <span class="equipment-emblem"
-                >${EQUIPMENT_CATEGORIES[item.category]?.icon || '✧'}</span
-              >
+              <span class="equipment-emblem">${equipmentArt(item, itemQualityKey)}</span>
               <div class="forge-item-title">
                 <h3>
-                  ${escapeText(item.name)}
+                  ${escapeText(item.name)}${affix ? `·${escapeText(affixName(affix))}` : ''}
                   ${
                     EQUIPMENT_CATEGORIES[item.category]
                       ? html`<small class="forge-cat-tag"
@@ -652,56 +717,47 @@ export function createEquipment(context) {
                   levelLabel: '设计 Lv.',
                 })}
               </div>
+              ${
+                item.category === 'gem'
+                  ? ''
+                  : html`<div class="forge-item-actions">
+                      <button
+                        type="button"
+                        class="forge-icon-button"
+                        data-forge-favorite="${escapeText(item.id)}"
+                        aria-pressed="${Boolean(favorite)}"
+                        aria-label="${favorite ? '取消收藏' : '收藏'}"
+                        title="${favorite ? '取消收藏' : '收藏'}"
+                        ${request ? 'disabled' : ''}
+                      >
+                        ${forgeIcon('favorite')}
+                      </button>
+                      <button
+                        type="button"
+                        class="forge-icon-button"
+                        data-forge-delete="${escapeText(item.id)}"
+                        aria-label="删除此方案"
+                        title="删除此方案"
+                        ${request ? 'disabled' : ''}
+                      >
+                        ${forgeIcon('delete')}
+                      </button>
+                    </div>`
+              }
             </div>
+            ${page === 'exchange' ? forgeItemActions(item, library(), Boolean(request)) : ''}
             ${item.flavor ? `<blockquote class="forge-flavor">${escapeText(item.flavor)}</blockquote>` : ''}
             <div class="forge-effects">${escapeText(equipmentDescription(item))}</div>
-            ${
-              item.category !== 'gem'
-                ? html`<div class="forge-primary-row">
-                    <div class="forge-item-actions">
-                      <button
-                        data-forge-favorite="${item.id}"
-                        aria-pressed="${!!library().equipment.favorites?.includes(item.id)}"
-                      >
-                        ${library().equipment.favorites?.includes(item.id) ? '★ 已收藏' : '☆ 收藏'}</button
-                      ><button data-forge-delete="${item.id}">删除此方案</button>
-                    </div>
-                  </div>`
-                : ''
-            }
             ${statRangeBarsHtml(item.stats, item.statRanges)}
             <div class="forge-source-line">
               来源：${escapeText(item.sourceName || item.name)}${
                 item.sourceDescription ? ` · ${escapeText(item.sourceDescription)}` : ''
               }
             </div>
-            ${affixCardsHtml(item, library())}
-            ${forgeWorkshopHtml(item, library(), Boolean(request))}
+            ${forgeAffixHtml(item, affix, expandedAffix)}
+            ${forgeWorkshopHtml(item, library(), Boolean(request), expandedInstances)}
           </article>`
       : '<p class="forge-empty">构筑道具后，可在这里兑换装备。</p>';
-    const affix = item && library().equipment.affixesByTemplate?.[item.id];
-    const affixCost = item ? equipmentAffixCost(item) : 0;
-    panel.querySelector('#forge-operation-dock').innerHTML =
-      page === 'exchange' && item
-        ? html`${
-              item.category !== 'gem'
-                ? html`<button
-                    class="primary"
-                    data-buy-equipment="${escapeText(item.id)}"
-                    ${request || library().inventory.ether < item.price ? 'disabled' : ''}
-                  >
-                    打造 · ${item.price} 以太
-                  </button>`
-                : ''
-            }
-            <button
-              data-${affix ? 'refresh' : 'add'}-affix="${escapeText(item.id)}"
-              ${request || library().inventory.ether < affixCost ? 'disabled' : ''}
-            >
-              ${affix ? '洗词' : '赋词'} · ${affixCost} 以太
-            </button>
-            <span>${affix ? '替换同款全部装备的共享词条' : '为同款全部装备赋予共享词条'}</span>`
-        : '';
     bag.querySelector('div').innerHTML =
       Object.values(ITEMS)
         .filter((entry) => library().inventory.items[entry.id] > 0)
@@ -728,8 +784,8 @@ export function createEquipment(context) {
             data-quality="${qKey}"
             data-tooltip="${escapeText(view ? equipmentDescription(view) : '')}"
           >
-            ✧ [Lv.${lv} ${escapeText(qName)}] ${escapeText(entry?.name || '装备')} ·
-            ${escapeText(affixSummary(view))} ·
+            ${equipmentArt(view || entry, qKey)} [Lv.${lv} ${escapeText(qName)}]
+            ${escapeText(entry?.name || '装备')} · ${escapeText(affixSummary(view))} ·
             ${wearer ? escapeText(wearer.setting.name) + '装备中' : '未装备'}
           </p>`;
         })

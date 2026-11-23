@@ -47,6 +47,7 @@ export function browserJobs(scopes, results, root) {
   simple('staircase', 'staircase', 'staircaseChecks');
   simple('adventure', 'adventure', 'adventureChecks');
   simple('equipment', 'equipment', 'equipmentChecks');
+  simple('shop-workspace', 'shop-workspace', 'shopWorkspaceChecks', [], true);
   simple('enemy-progression', 'enemy-progression', 'enemyProgressionChecks');
   simple('mobile', 'mobile', 'mobileChecks');
   simple('android-ui', 'mobile', 'androidWindowResizeChecks');

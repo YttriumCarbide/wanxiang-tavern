@@ -468,6 +468,7 @@ async function forgeAffixWorkspaceChecks({ browser, baseURL, output }) {
       3,
     );
 
+    await page.locator('.forge-instance-card > summary').first().click();
     await page.locator('[data-temper-instance]').first().click();
     await page.waitForFunction(
       (kind) => document.querySelector('.forge-operation-feedback')?.dataset.kind === kind,
@@ -575,7 +576,6 @@ async function forgeAffixWorkspaceChecks({ browser, baseURL, output }) {
     await page.locator('[data-forge-page="exchange"]').click();
     await page.locator('[data-forge-select="ui-eq-1"]').click();
     await page.setViewportSize({ width: 844, height: 390 });
-    await page.locator('[data-forge-drawer="details"]').click();
     const catalogue = page.locator('#forge-catalog');
     await catalogue.waitFor({ state: 'visible' });
     await page.waitForFunction(() => {

@@ -19,10 +19,12 @@ export function createShop(context) {
       <button data-shop-department="items" aria-pressed="true">购买道具</button
       ><button data-shop-department="ingredients" aria-pressed="false">购买食材</button>
     </nav>
-    <nav id="shop-categories" aria-label="补给种类"></nav>
     <div class="shop-layout">
-      <nav id="shop-items" aria-label="补给目录"></nav>
-      <section id="shop-detail"></section>
+      <nav id="shop-categories" aria-label="补给种类"></nav>
+      <div class="shop-workspace">
+        <nav id="shop-items" aria-label="补给目录"></nav>
+        <section id="shop-detail" aria-label="商品详情"></section>
+      </div>
     </div>
     <p id="shop-status" role="status"></p>`;
   document.body.append(panel);
@@ -45,6 +47,16 @@ export function createShop(context) {
   let fromPreparation = false;
   let department = 'items';
   let ingredient = null;
+  const categoryRail = panel.querySelector('#shop-categories');
+  categoryRail.innerHTML = Object.entries(categories)
+    .map(([id, name]) => {
+      const item = Object.values(ITEMS).find((item) => group(item.id) === id);
+      return html`<button type="button" data-shop-category="${id}" aria-pressed="false">
+        <img src="${item.icon}" alt="" /><span>${name}</span>
+      </button>`;
+    })
+    .join('');
+
   function render() {
     const inventory = context.session.ai.library.inventory;
     panel.querySelector('#shop-gold').innerHTML = html`<img
@@ -56,7 +68,9 @@ export function createShop(context) {
       .forEach((button) =>
         button.setAttribute('aria-pressed', String(button.dataset.shopDepartment === department)),
       );
-    panel.querySelector('#shop-categories').hidden = department === 'ingredients';
+    categoryRail.hidden = department === 'ingredients';
+    for (const button of categoryRail.querySelectorAll('button'))
+      button.setAttribute('aria-pressed', String(button.dataset.shopCategory === category));
     if (department === 'ingredients') {
       const state = diningState(context.session.ai.library);
       if (!state.stock.some(({ id }) => id === ingredient)) ingredient = state.stock[0]?.id;
@@ -103,12 +117,6 @@ export function createShop(context) {
         state.tutorial === 'buy' ? '购买乡村面包与奶酪。' : '';
       return;
     }
-    panel.querySelector('#shop-categories').innerHTML = Object.entries(categories)
-      .map(
-        ([id, name]) =>
-          `<button data-shop-category="${id}" aria-pressed="${id === category}">${name}</button>`,
-      )
-      .join('');
     panel.querySelector('#shop-items').innerHTML = Object.values(ITEMS)
       .filter((item) => group(item.id) === category)
       .map(

@@ -1,3 +1,4 @@
+import { equipmentArt } from './equipment-art.js';
 import { EMBLEMS } from '../emblems.js';
 import {
   clampEquipmentLevel,
@@ -73,7 +74,7 @@ function previewMarkup(entry) {
       </footer>`;
   }
   const colorStyle = entry.ring ? `style="--emblem-c:${emblemVisual(entry.value).color}"` : '';
-  const icon = entry.ring ? emblemIconSvg(entry.value) : '✧';
+  const icon = entry.ring ? emblemIconSvg(entry.value) : equipmentArt(entry.item, entry.qualityKey);
   const stats = !entry.ring
     ? Object.entries(entry.item.stats || {})
         .filter(([, value]) => Number(value) !== 0)
@@ -144,7 +145,7 @@ export function createEquipmentPicker(context, description) {
         const isFocused = entry.value === focusedValue;
         const colorStyle =
           entry.ring && entry.value ? `style="--emblem-c:${emblemVisual(entry.value).color}"` : '';
-        return `<button type="button" data-picker-value="${escapeText(entry.value)}" data-quality="${entry.qualityKey || 'none'}" ${colorStyle} aria-pressed="${isFocused}"><span class="picker-seal">${entry.value ? (entry.ring ? emblemIconSvg(entry.value) : '✧') : '－'}</span><span class="px-card-copy"><strong>${escapeText(entry.item?.name || entry.label || '卸下')}</strong><small>${escapeText(entry.note)}</small>${entry.summaryText ? `<p>${escapeText(entry.summaryText)}</p>` : ''}</span><b>${entry.selected ? '已装备' : entry.wearer ? '转移' : '›'}</b></button>`;
+        return `<button type="button" data-picker-value="${escapeText(entry.value)}" data-quality="${entry.qualityKey || 'none'}" ${colorStyle} aria-pressed="${isFocused}"><span class="picker-seal">${entry.value ? (entry.ring ? emblemIconSvg(entry.value) : equipmentArt(entry.item, entry.qualityKey)) : '－'}</span><span class="px-card-copy"><strong>${escapeText(entry.item?.name || entry.label || '卸下')}</strong><small>${escapeText(entry.note)}</small>${entry.summaryText ? `<p>${escapeText(entry.summaryText)}</p>` : ''}</span><b>${entry.selected ? '已装备' : entry.wearer ? '转移' : '›'}</b></button>`;
       })
       .join('');
     const currentEntry = entries.find((entry) => entry.value === focusedValue) || entries[0];
