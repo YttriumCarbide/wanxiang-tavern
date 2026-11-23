@@ -9,6 +9,11 @@ import { TUTORIAL_GATE } from '../src/updates/manifest.js';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const destination = path.join(root, 'dist');
+const goatCounterScript = `    <script
+      data-goatcounter="https://yttriumcarbide.goatcounter.com/count"
+      async
+      src="https://gc.zgo.at/count.js"
+    ></script>`;
 
 function releasePath(file) {
   return path.relative(root, file).replaceAll('\\', '/');
@@ -81,13 +86,17 @@ export async function buildStatic() {
   const indexFile = path.join(destination, 'index.html');
   const indexPage = await readFile(indexFile, 'utf8');
   const gate = plan.updates.gates[TUTORIAL_GATE]?.length ? 'required' : 'empty';
+  const releasePage = indexPage.replace(
+    /(<meta charset="utf-8" \/>)/,
+    '$1\n    <meta name="wanxiang-update-manifest" content="./manifest.json"' +
+      ` data-version="${version}" data-tutorial-gate="${gate}" />`,
+  );
+  const publicBuild = process.env.WANXIANG_ENABLE_GOATCOUNTER === 'true';
   await writeFile(
     indexFile,
-    indexPage.replace(
-      /(<meta charset="utf-8" \/>)/,
-      '$1\n    <meta name="wanxiang-update-manifest" content="./manifest.json"' +
-        ` data-version="${version}" data-tutorial-gate="${gate}" />`,
-    ),
+    publicBuild
+      ? releasePage.replace('  </head>', `${goatCounterScript}\n  </head>`)
+      : releasePage,
   );
   await writeFile(path.join(destination, '.nojekyll'), '');
   const files = [];

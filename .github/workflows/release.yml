@@ -85,6 +85,8 @@ jobs:
       - name: Build static release
         working-directory: 万象酒馆-Demo
         run: npm run build
+        env:
+          WANXIANG_ENABLE_GOATCOUNTER: 'true'
 
       - name: Check native artifacts
         working-directory: 万象酒馆-Demo
