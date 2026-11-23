@@ -46,7 +46,7 @@
 /* ---- full-screen visual base ---- */
 
 .ring-acquisition::before {
-  content: "";
+  content: '';
   position: absolute;
   inset: 0;
   z-index: 0;
@@ -75,7 +75,7 @@
 /* ---- reveal burst flash (non-white, screen blend, above canvas) ---- */
 
 .ring-acquisition::after {
-  content: "";
+  content: '';
   position: absolute;
   inset: 0;
   z-index: 3;
@@ -91,7 +91,7 @@
   );
 }
 
-.ring-acquisition[data-phase="reveal"]::after {
+.ring-acquisition[data-phase='reveal']::after {
   animation: ring-acquisition-flash 0.95s ease-out both;
 }
 
@@ -157,7 +157,7 @@
   width: max-content;
   max-width: 88vw;
   text-align: center;
-  font-family: "Songti SC", "STSong", "SimSun", "Noto Serif CJK SC", serif;
+  font-family: 'Songti SC', 'STSong', 'SimSun', 'Noto Serif CJK SC', serif;
   font-size: clamp(26px, 3vw, 40px);
   font-weight: 500;
   line-height: 1.2;
@@ -172,7 +172,7 @@
 }
 
 .ring-acquisition-caption::before {
-  content: "";
+  content: '';
   position: absolute;
   left: 50%;
   bottom: calc(100% + 18px);
@@ -192,7 +192,7 @@
 }
 
 .ring-acquisition-caption::after {
-  content: "";
+  content: '';
   position: absolute;
   left: 50%;
   bottom: calc(100% + 14px);
@@ -206,15 +206,15 @@
   opacity: 0;
 }
 
-.ring-acquisition[data-phase="ready"] .ring-acquisition-caption {
+.ring-acquisition[data-phase='ready'] .ring-acquisition-caption {
   animation: ring-acquisition-caption-in 900ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
 }
 
-.ring-acquisition[data-phase="ready"] .ring-acquisition-caption::before {
+.ring-acquisition[data-phase='ready'] .ring-acquisition-caption::before {
   animation: ring-acquisition-line-in 900ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
 }
 
-.ring-acquisition[data-phase="ready"] .ring-acquisition-caption::after {
+.ring-acquisition[data-phase='ready'] .ring-acquisition-caption::after {
   animation: ring-acquisition-gem-in 900ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
 }
 
@@ -282,7 +282,7 @@
     opacity 260ms ease;
 }
 
-.ring-acquisition[data-phase="ready"] .ring-acquisition-continue {
+.ring-acquisition[data-phase='ready'] .ring-acquisition-continue {
   opacity: 1;
   pointer-events: auto;
 }
@@ -323,7 +323,9 @@
   font-size: 13px;
   letter-spacing: 0.14em;
   cursor: pointer;
-  transition: color 200ms ease, background-color 200ms ease;
+  transition:
+    color 200ms ease,
+    background-color 200ms ease;
 }
 
 .ring-acquisition-skip:hover {
@@ -373,42 +375,42 @@
 
 /* ---- paused ---- */
 
-.ring-acquisition[data-paused="true"] *,
-.ring-acquisition[data-paused="true"] *::before,
-.ring-acquisition[data-paused="true"] *::after {
+.ring-acquisition[data-paused='true'] *,
+.ring-acquisition[data-paused='true'] *::before,
+.ring-acquisition[data-paused='true'] *::after {
   animation-play-state: paused !important;
 }
 
 /* ---- reduced motion: terminal state, no flash ---- */
 
-.ring-acquisition[data-reduced="true"]::after {
+.ring-acquisition[data-reduced='true']::after {
   animation: none;
   opacity: 0;
 }
 
-.ring-acquisition[data-reduced="true"] .ring-acquisition-caption,
-.ring-acquisition[data-reduced="true"] .ring-acquisition-caption::before,
-.ring-acquisition[data-reduced="true"] .ring-acquisition-caption::after {
+.ring-acquisition[data-reduced='true'] .ring-acquisition-caption,
+.ring-acquisition[data-reduced='true'] .ring-acquisition-caption::before,
+.ring-acquisition[data-reduced='true'] .ring-acquisition-caption::after {
   animation: none;
   filter: none;
 }
 
-.ring-acquisition[data-reduced="true"][data-phase="ready"] .ring-acquisition-caption {
+.ring-acquisition[data-reduced='true'][data-phase='ready'] .ring-acquisition-caption {
   opacity: 1;
   transform: translateX(-50%);
 }
 
-.ring-acquisition[data-reduced="true"][data-phase="ready"] .ring-acquisition-caption::before {
+.ring-acquisition[data-reduced='true'][data-phase='ready'] .ring-acquisition-caption::before {
   opacity: 1;
   transform: translateX(-50%) scaleX(1);
 }
 
-.ring-acquisition[data-reduced="true"][data-phase="ready"] .ring-acquisition-caption::after {
+.ring-acquisition[data-reduced='true'][data-phase='ready'] .ring-acquisition-caption::after {
   opacity: 1;
   transform: translateX(-50%) rotate(45deg) scale(1);
 }
 
-.ring-acquisition[data-reduced="true"][data-phase="ready"] .ring-acquisition-continue {
+.ring-acquisition[data-reduced='true'][data-phase='ready'] .ring-acquisition-continue {
   opacity: 1;
   pointer-events: auto;
 }
@@ -426,22 +428,22 @@
     filter: none;
   }
 
-  .ring-acquisition[data-phase="ready"] .ring-acquisition-caption {
+  .ring-acquisition[data-phase='ready'] .ring-acquisition-caption {
     opacity: 1;
     transform: translateX(-50%);
   }
 
-  .ring-acquisition[data-phase="ready"] .ring-acquisition-caption::before {
+  .ring-acquisition[data-phase='ready'] .ring-acquisition-caption::before {
     opacity: 1;
     transform: translateX(-50%) scaleX(1);
   }
 
-  .ring-acquisition[data-phase="ready"] .ring-acquisition-caption::after {
+  .ring-acquisition[data-phase='ready'] .ring-acquisition-caption::after {
     opacity: 1;
     transform: translateX(-50%) rotate(45deg) scale(1);
   }
 
-  .ring-acquisition[data-phase="ready"] .ring-acquisition-continue {
+  .ring-acquisition[data-phase='ready'] .ring-acquisition-continue {
     opacity: 1;
     pointer-events: auto;
   }

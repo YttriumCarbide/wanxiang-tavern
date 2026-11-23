@@ -32,7 +32,8 @@ export function createEmblemSkillCinematic() {
 
   function open(emblem) {
     const skill = emblem.skill;
-    const theme = EMBLEM_CINEMATIC_THEMES[emblem.id] || EMBLEM_CINEMATIC_THEMES.default || { color: '#c9a86a' };
+    const theme = EMBLEM_CINEMATIC_THEMES[emblem.id] ||
+      EMBLEM_CINEMATIC_THEMES.default || { color: '#c9a86a' };
     const scope = createEventScope();
     const quality = deviceRenderQuality();
     const budget = createFrameBudget(quality.fps);
@@ -68,7 +69,9 @@ export function createEmblemSkillCinematic() {
     let reduced = reducedQuery.matches;
     let finished = false;
     let resolvePromise;
-    const promise = new Promise((resolve) => { resolvePromise = resolve; });
+    const promise = new Promise((resolve) => {
+      resolvePromise = resolve;
+    });
 
     function setPhase(phase) {
       if (root.dataset.phase !== phase) root.dataset.phase = phase;
@@ -83,7 +86,11 @@ export function createEmblemSkillCinematic() {
 
     function fallback() {
       if (stage) {
-        try { stage.dispose(); } catch { /* stage boundary */ }
+        try {
+          stage.dispose();
+        } catch {
+          /* stage boundary */
+        }
         stage = null;
       }
       canvas.hidden = true;
@@ -112,12 +119,24 @@ export function createEmblemSkillCinematic() {
       stopRaf();
       scope.dispose();
       if (stage) {
-        try { stage.forceContextLoss(); } catch { /* stage boundary */ }
-        try { stage.dispose(); } catch { /* stage boundary */ }
+        try {
+          stage.forceContextLoss();
+        } catch {
+          /* stage boundary */
+        }
+        try {
+          stage.dispose();
+        } catch {
+          /* stage boundary */
+        }
         stage = null;
       }
       if (root.open) {
-        try { root.close(); } catch { /* DOM boundary */ }
+        try {
+          root.close();
+        } catch {
+          /* DOM boundary */
+        }
       }
       root.remove();
       resolvePromise(result);

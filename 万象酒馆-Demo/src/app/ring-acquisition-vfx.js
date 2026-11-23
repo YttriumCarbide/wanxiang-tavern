@@ -85,7 +85,7 @@ function createSigilTexture(resources, size) {
   // two interleaved triangles (hexagram)
   ctx.lineWidth = 2.0 * s;
   for (let tri = 0; tri < 2; tri++) {
-    const base = tri * Math.PI / 3;
+    const base = (tri * Math.PI) / 3;
     ctx.beginPath();
     for (let k = 0; k < 3; k++) {
       const a = base + (k / 3) * TAU - Math.PI / 2;
@@ -501,10 +501,10 @@ export function createRingAcquisitionVfx(scene, resources, accent, mobile = fals
       const s2 = seeds[i * 4 + 2];
       const s3 = seeds[i * 4 + 3];
       const idx = i * 3;
-      let x = 0;
-      let y = 0;
-      let z = 0;
-      let alpha = 0;
+      let x;
+      let y;
+      let z;
+      let alpha;
 
       if (reduced) {
         const ang = s0 * TAU + time * 0.15;
@@ -536,7 +536,7 @@ export function createRingAcquisitionVfx(scene, resources, accent, mobile = fals
         const dirTheta = s0 * TAU;
         const dirPhi = (s1 - 0.5) * Math.PI * 0.9;
         const speed = 2.5 + s2 * 3.5;
-        const dist = speed * (1 - Math.exp(-dt * 1.6)) / 1.6;
+        const dist = (speed * (1 - Math.exp(-dt * 1.6))) / 1.6;
         const planar = s3 > 0.5;
         const cosPhi = Math.cos(dirPhi);
         x = Math.cos(dirTheta) * cosPhi * dist;
@@ -565,8 +565,8 @@ export function createRingAcquisitionVfx(scene, resources, accent, mobile = fals
   function updateRibbon(ribbon, time, reduced) {
     const { positions, colors, segments, phase } = ribbon;
     const burstT = 1.8;
-    let alpha = 0;
-    let radiusScale = 1;
+    let alpha;
+    let radiusScale;
     if (reduced) {
       alpha = 0.5;
       radiusScale = 1;

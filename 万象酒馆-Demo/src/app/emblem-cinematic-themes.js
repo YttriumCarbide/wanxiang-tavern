@@ -6,17 +6,17 @@ function freezeTheme(theme) {
   return Object.freeze({
     color: theme.color,
     secondary: theme.secondary,
-    kind: theme.kind
+    kind: theme.kind,
   });
 }
 
 export const EMBLEM_CINEMATIC_THEMES = Object.freeze({
   'tan-hongyu': freezeTheme({ color: '#f3cd76', secondary: '#f6efdc', kind: 'balance' }),
   'mizunatsuki-ran': freezeTheme({ color: '#9f9bff', secondary: '#84ddff', kind: 'lightning' }),
-  'kamui': freezeTheme({ color: '#6ce6b0', secondary: '#e2e5a5', kind: 'dragon' }),
+  kamui: freezeTheme({ color: '#6ce6b0', secondary: '#e2e5a5', kind: 'dragon' }),
   'wind-dance': freezeTheme({ color: '#ee5b96', secondary: '#f0e1e8', kind: 'mask' }),
   'jiu-qi': freezeTheme({ color: '#8eaefa', secondary: '#e8f2ff', kind: 'moon' }),
-  'cang-ming': freezeTheme({ color: '#ff9c49', secondary: '#ffd67c', kind: 'shatter' })
+  'cang-ming': freezeTheme({ color: '#ff9c49', secondary: '#ffd67c', kind: 'shatter' }),
 });
 
 function drawPath(ctx, points, close) {
@@ -73,9 +73,21 @@ function drawBalance(ctx, theme) {
   ctx.stroke();
 
   glowStroke(ctx, gold, 5, 7);
-  strokePoly(ctx, [[512, 150], [560, 210], [512, 270], [464, 210]], true);
+  strokePoly(
+    ctx,
+    [
+      [512, 150],
+      [560, 210],
+      [512, 270],
+      [464, 210],
+    ],
+    true,
+  );
 
-  const pans = [[300, 330], [724, 330]];
+  const pans = [
+    [300, 330],
+    [724, 330],
+  ];
   for (let p = 0; p < pans.length; p += 1) {
     const px = pans[p][0];
     const py = pans[p][1];
@@ -317,7 +329,16 @@ function drawMask(ctx, theme) {
     const r = 300 + (i % 3) * 40;
     const cx = 512 + Math.cos(a) * r;
     const cy = 512 + Math.sin(a) * r;
-    strokePoly(ctx, [[cx, cy - 22], [cx + 16, cy], [cx, cy + 22], [cx - 16, cy]], true);
+    strokePoly(
+      ctx,
+      [
+        [cx, cy - 22],
+        [cx + 16, cy],
+        [cx, cy + 22],
+        [cx - 16, cy],
+      ],
+      true,
+    );
   }
 
   glowStroke(ctx, white, 4, 4);
@@ -400,14 +421,54 @@ function drawShatter(ctx, theme) {
   ctx.lineCap = 'round';
 
   const plates = [
-    [[512, 300], [600, 340], [580, 430], [500, 420]],
-    [[600, 340], [700, 380], [660, 470], [580, 430]],
-    [[580, 430], [660, 470], [620, 560], [540, 520]],
-    [[500, 420], [580, 430], [540, 520], [460, 500]],
-    [[460, 500], [540, 520], [500, 620], [420, 580]],
-    [[420, 580], [500, 620], [460, 700], [380, 660]],
-    [[380, 660], [460, 700], [420, 760], [340, 720]],
-    [[540, 520], [620, 560], [580, 660], [500, 620]]
+    [
+      [512, 300],
+      [600, 340],
+      [580, 430],
+      [500, 420],
+    ],
+    [
+      [600, 340],
+      [700, 380],
+      [660, 470],
+      [580, 430],
+    ],
+    [
+      [580, 430],
+      [660, 470],
+      [620, 560],
+      [540, 520],
+    ],
+    [
+      [500, 420],
+      [580, 430],
+      [540, 520],
+      [460, 500],
+    ],
+    [
+      [460, 500],
+      [540, 520],
+      [500, 620],
+      [420, 580],
+    ],
+    [
+      [420, 580],
+      [500, 620],
+      [460, 700],
+      [380, 660],
+    ],
+    [
+      [380, 660],
+      [460, 700],
+      [420, 760],
+      [340, 720],
+    ],
+    [
+      [540, 520],
+      [620, 560],
+      [580, 660],
+      [500, 620],
+    ],
   ];
 
   for (let i = 0; i < plates.length; i += 1) {
@@ -427,7 +488,15 @@ function drawShatter(ctx, theme) {
     const y1 = 512 + Math.sin(a) * 360;
     const nx = Math.cos(a + Math.PI / 2) * 26;
     const ny = Math.sin(a + Math.PI / 2) * 26;
-    strokePoly(ctx, [[x0 + nx, y0 + ny], [x1, y1], [x0 - nx, y0 - ny]], false);
+    strokePoly(
+      ctx,
+      [
+        [x0 + nx, y0 + ny],
+        [x1, y1],
+        [x0 - nx, y0 - ny],
+      ],
+      false,
+    );
   }
 
   glowStroke(ctx, gold, 5, 6);
@@ -449,7 +518,7 @@ const DRAWERS = Object.freeze({
   dragon: drawDragon,
   mask: drawMask,
   moon: drawMoon,
-  shatter: drawShatter
+  shatter: drawShatter,
 });
 
 export function createEmblemMotif(resources, id, mobile = false) {
