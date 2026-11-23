@@ -136,7 +136,7 @@ export function characterSheet(entry, equipment = [], options = {}) {
         <h2>${escapeText(model.name)}</h2>
         <div class="identity-rank-line">
           <span class="identity-level-badge"
-            ><small>LV.</small><strong>${growth.level}</strong></span
+            ><small>LV.</small><strong>${combat.level}</strong></span
           >
           <span class="identity-rarity-tag rarity-${growth.rarity}"
             >${RARITIES[growth.rarity].name}</span

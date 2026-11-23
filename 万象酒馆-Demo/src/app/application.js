@@ -59,6 +59,7 @@ import { createTavernQuests } from './tavern-quests.js';
 import { createGuild } from './guild.js';
 import { createLedgerSidebar } from './ledger-sidebar.js';
 import { createDeveloperTools } from './developer-tools.js';
+import { createGameModifier } from './game-modifier.js';
 
 /** Composition root: wiring only, with one explicit application lifetime. */
 export function createApplication({
@@ -144,6 +145,7 @@ export function createApplication({
   const disposeTooltips = mountTooltips();
   context.checkpoint = createCheckpoint(context);
   context.developer = createDeveloperTools(context);
+  context.gameModifier = createGameModifier(context);
   const checkpoint = context.checkpoint.pending();
   if (checkpoint) void context.journey.resume(checkpoint);
   else {
@@ -179,6 +181,7 @@ export function createApplication({
     context.generationAccess.dispose();
     context.checkpoint.dispose();
     context.developer.dispose();
+    context.gameModifier.dispose();
     context.apiClient.dispose();
     context.audio.dispose();
     context.generation.dispose();

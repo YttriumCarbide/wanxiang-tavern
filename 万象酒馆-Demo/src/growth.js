@@ -5,6 +5,7 @@ import { applyEmblemStats } from './emblems.js';
 import { applyCompanionModifiers } from './companion-mechanics.js';
 import { combatScale, scaleLevelEffects } from './combat-scale.js';
 import { equippedUniversalSkills } from './learnable-skills.js';
+import { applyCharacterModifier } from './game-modifier.js';
 /** Persistent growth is separate from authored combat definitions and battle snapshots. */
 export const RARITIES = Object.freeze({
   common: {
@@ -85,8 +86,9 @@ export function grownSkillCosts(skill, reductions, memberId) {
 export function grownCombat(member) {
   const growth = restoreGrowth(member.growth, member.id);
   const combat = structuredClone(member.combat);
-  combat.level = growth.level;
-  const scale = combatScale(growth.level);
+  applyCharacterModifier(member, combat);
+  combat.level = member.modifierValues?.level ?? growth.level;
+  const scale = combatScale(combat.level);
   combat.hp = Math.round(combat.hp * scale);
   combat.mp = Math.round(combat.mp * Math.sqrt(scale));
   combat.attack = Math.round(combat.attack * scale);

@@ -54,6 +54,7 @@ export function browserJobs(scopes, results, root) {
   simple('workshop', 'workshop', 'workshopChecks', [], true);
   simple('universal-enemies', 'universal-enemies', 'universalEnemyChecks');
   simple('developer-mode', 'developer-mode', 'developerModeChecks');
+  simple('game-modifier', 'game-modifier', 'gameModifierChecks');
   simple('status-emblems', 'status-emblems', 'statusEmblemChecks', [], true);
   simple('arcade', 'arcade', 'arcadeChecks');
   simple('generation-experience', 'generation-experience', 'generationExperienceChecks');

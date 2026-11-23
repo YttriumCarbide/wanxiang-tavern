@@ -34,6 +34,7 @@ export const allScopes = [
   'workshop',
   'universal-enemies',
   'developer-mode',
+  'game-modifier',
   'developer-tools',
   'status-emblems',
   'arcade',

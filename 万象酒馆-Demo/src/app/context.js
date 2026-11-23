@@ -20,6 +20,7 @@
  * @property {ReturnType<typeof import('./audio.js').createAudio>} audio
  * @property {ReturnType<typeof import('./roster.js').createRoster>} roster
  * @property {ReturnType<typeof import('./generation.js').createGeneration>} generation
+ * @property {ReturnType<typeof import('./game-modifier.js').createGameModifier>} [gameModifier]
  * @property {ReturnType<typeof import('./departure.js').createDeparture>} [departure]
  * @property {ReturnType<typeof import('./destinations.js').createDestinations>} destinations
  * @property {ReturnType<typeof import('./shell.js').createShell>} shell

@@ -41,6 +41,7 @@ export function createLibrary(customPortraits) {
     relationships: {},
     prepared: null,
     inventory: restoreInventory(),
+    modifierResourceHistory: [],
     rewardClaims: [],
     experienceClaims: [],
     equipment: restoreEquipment(),
