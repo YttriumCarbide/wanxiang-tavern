@@ -142,6 +142,44 @@
 .forge-toolbar [data-forge-drawer] {
   display: none;
 }
+.forge-category-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(218, 180, 112, 0.16);
+  flex-shrink: 0;
+}
+.forge-category-tabs[hidden] {
+  display: none;
+}
+.forge-category-tabs button {
+  padding: 5px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(218, 180, 112, 0.24);
+  background: rgba(255, 255, 255, 0.025);
+  box-shadow: none;
+  color: #b7a88e;
+  font-size: 12px;
+  letter-spacing: 0.6px;
+  transition:
+    color 160ms,
+    border-color 160ms,
+    background 160ms;
+}
+.forge-category-tabs button:hover {
+  border-color: rgba(235, 198, 126, 0.56);
+  background: rgba(222, 182, 108, 0.08);
+  color: #f4e6c7;
+  box-shadow: none;
+  transform: none;
+}
+.forge-category-tabs button[aria-pressed='true'] {
+  border-color: rgba(235, 198, 126, 0.72);
+  background: linear-gradient(180deg, rgba(164, 118, 52, 0.34), rgba(74, 52, 22, 0.68));
+  color: #fff0cc;
+}
 #forge-vouchers,
 #forge-ether {
   padding: 2px 10px;
@@ -1167,8 +1205,7 @@
   fill: currentColor;
 }
 #ether-forge .forge-icon-button:focus-visible,
-.forge-affix-card > summary:focus-visible,
-.forge-instance-card > summary:focus-visible {
+.forge-affix-card > summary:focus-visible {
   outline: 2px solid #8fd2ca;
   outline-offset: -2px;
 }
@@ -1464,89 +1501,6 @@
   line-height: 1.5;
 }
 
-.forge-workshop {
-  display: grid;
-  gap: 6px;
-  padding-top: 8px;
-  border-top: 1px solid rgba(218, 180, 112, 0.2);
-}
-.forge-workshop-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-.forge-workshop-head strong {
-  font-size: 13px;
-  font-weight: 400;
-  letter-spacing: 1px;
-  color: #ebdcb9;
-}
-.forge-workshop-head small {
-  font-size: 12px;
-  color: #a39783;
-  line-height: 1.5;
-}
-.forge-instance-list {
-  display: grid;
-  gap: 6px;
-}
-.forge-instance-card {
-  border-bottom: 1px solid rgba(218, 180, 112, 0.14);
-  border-left: 2px solid var(--q-border, rgba(218, 180, 112, 0.35));
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0.03), transparent 72%);
-}
-.forge-instance-top {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  min-height: 38px;
-  padding: 4px 8px;
-  cursor: pointer;
-  list-style: none;
-}
-.forge-instance-top .equipment-art {
-  width: 24px;
-  height: 24px;
-}
-.forge-instance-body {
-  display: grid;
-  gap: 6px;
-  padding: 4px 10px 10px;
-}
-.forge-instance-index {
-  color: #ad9f86;
-  font-size: 12px;
-}
-.forge-wearer-tag {
-  margin-left: auto;
-  font-size: 11px;
-  padding: 2px 8px;
-  border-radius: 2px;
-  color: #bcb09a;
-  background: rgba(255, 255, 255, 0.05);
-}
-.forge-wearer-tag[data-equipped='true'] {
-  color: #f6dc90;
-  background: rgba(165, 128, 46, 0.26);
-}
-.forge-instance-desc {
-  font-size: 13px;
-  color: #e6dfd0;
-  line-height: 1.6;
-}
-.forge-instance-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-.forge-instance-actions button {
-  padding: 5px 10px;
-  border-radius: 2px;
-  font-size: 12px;
-}
-
 #forge-results article[data-quality] {
   border-left-color: var(--q-color, #d4be87);
   background:
@@ -1596,12 +1550,10 @@
   cursor: pointer;
   list-style: none;
 }
-.forge-affix-card-head::-webkit-details-marker,
-.forge-instance-top::-webkit-details-marker {
+.forge-affix-card-head::-webkit-details-marker {
   display: none;
 }
-.forge-affix-card-head::after,
-.forge-instance-top::after {
+.forge-affix-card-head::after {
   content: '';
   width: 6px;
   height: 6px;
@@ -1612,8 +1564,7 @@
   border-block-end: 1px solid #d5b87e;
   transform: rotate(45deg);
 }
-.forge-affix-card[open] > summary::after,
-.forge-instance-card[open] > summary::after {
+.forge-affix-card[open] > summary::after {
   transform: rotate(225deg);
 }
 .forge-affix-card-head strong {
@@ -1666,6 +1617,20 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
+}
+.forge-dismantle {
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+  min-width: 0;
+  max-width: 100%;
+}
+.forge-dismantle select {
+  min-width: 0;
+  color: #dfd2b8;
+  background: #231e26;
+  border: 1px solid #dac48455;
+  border-radius: 2px;
 }
 .forge-detail-actions button {
   min-height: 40px;
@@ -1908,6 +1873,7 @@
   #forge-list,
   #forge-catalog,
   .forge-toolbar button,
+  .forge-category-tabs button,
   #forge-list button,
   .forge-detail-actions button {
     transition: none;

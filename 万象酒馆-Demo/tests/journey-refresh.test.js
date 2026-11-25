@@ -27,7 +27,8 @@ test('growth preserves legacy XP progress and reconciles reproducible curve gain
   ]) {
     const legacy = { level, xp: oldXp, revision: 1, seed: 7, rarity: 'common' };
     const migrated = restoreGrowth(legacy, id);
-    assert.deepEqual([migrated.level, migrated.xp, migrated.revision], [level, newXp, 2]);
+    assert.deepEqual([migrated.level, migrated.xp, migrated.revision], [level, newXp, 8]);
+    assert.equal(migrated.rolls.length, level - 1);
     assert.deepEqual(restoreGrowth(migrated, id), migrated);
     assert.deepEqual(legacy, { level, xp: oldXp, revision: 1, seed: 7, rarity: 'common' });
   }
@@ -52,14 +53,26 @@ test('growth preserves legacy XP progress and reconciles reproducible curve gain
     const expected = {
       hp: Math.round(authored.hp * scale),
       mp: Math.round(authored.mp * Math.sqrt(scale)),
-      attack: Math.round(authored.attack * scale),
+      attack: Math.round(authored.attack * (1 + (member.growth.rolls[0]?.attack || 0) / 100)),
     };
     assert.deepEqual(stats(combat), expected);
+    const roll = member.growth.rolls[0];
     const gains = Object.fromEntries(
-      Object.entries(expected)
-        .map(([key, value]) => [key, value - baseline[key]])
+      ['hp', 'mp']
+        .map((key) => [key, expected[key] - baseline[key]])
         .filter(([, delta]) => delta > 0),
     );
+    if (roll.attack) gains.attack = roll.attack;
+    const power = (skill) => JSON.stringify([skill.effects, skill.rules, skill.endHeal]);
+    for (const [target, oldSkill, newSkill] of [
+      ['entrySkill', baseline.entrySkill, combat.entrySkill],
+      ['skill1', baseline.skills[0], combat.skills[0]],
+      ['skill2', baseline.skills[1], combat.skills[1]],
+    ]) {
+      if (roll[target] && power(oldSkill) !== power(newSkill)) gains[target] = roll[target];
+      if (roll[`${target}Sp`] && oldSkill.mp > newSkill.mp)
+        gains[`${target}Sp`] = oldSkill.mp - newSkill.mp;
+    }
     assert.deepEqual(award.levels, [{ level: 2, gains }]);
     assert.deepEqual([member.growth.level, member.growth.xp], [2, 0]);
     assert.deepEqual(copy, member);

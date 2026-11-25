@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import { legacySession } from './legacy-session.mjs';
+import { armDialogExitProbe, assertDialogExited } from './dialog-motion.mjs';
 
 export async function antiRouteChecks({ browser, baseURL, output }) {
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
@@ -204,9 +205,12 @@ export async function firstRunApplyChecks({ browser, baseURL, output }) {
       await page.locator(`[data-apply-kind][value="${id}"]`).check();
     await confirm.click();
     await page.locator('#ai-status').filter({ hasText: '已将所选连接预设应用到 5' }).waitFor();
+    const settings = page.locator('#ai-dialog');
+    const settingsExit = await armDialogExitProbe(settings);
     await page.locator('#setup-next').click();
     const creation = page.locator('#new-game[open]');
     await creation.waitFor({ state: 'visible' });
+    await assertDialogExited(settings, '#ai-dialog', { animated: settingsExit });
     assert.deepEqual(
       await creation.evaluate((dialog) => [
         getComputedStyle(dialog).animationName,

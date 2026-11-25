@@ -54,13 +54,17 @@ export async function stopServer(port) {
 
 export async function withTestServer(operation, { browserOnly = false, diskStorage = false } = {}) {
   const port = await freePort();
+  const reportDirectory = path.resolve(
+    projectRoot,
+    process.env.DEMO_TEST_REPORT_DIR || '.runtime/tests',
+  );
   const child = spawn(process.execPath, ['server.cjs'], {
     cwd: projectRoot,
     env: {
       ...process.env,
       PORT: String(port),
       TAVERN_DISK_STORAGE: diskStorage ? '1' : '0',
-      TAVERN_SAVES_DIR: path.join(projectRoot, '.runtime/tests/disk-saves-' + randomUUID()),
+      TAVERN_SAVES_DIR: path.join(reportDirectory, 'disk-saves-' + randomUUID()),
       AI_CONFIG_FILE: browserOnly
         ? ''
         : path.join(projectRoot, `.runtime/tests/ai-config-${port}.json`),

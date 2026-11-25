@@ -6,6 +6,12 @@ import { EXCLUSIVE_BUFFS } from './triggers.js';
 import { ENEMY_ATTACKS } from './combat-art.js';
 import { HUMANOID_ENEMY_TEMPLATES, restoredEnemyPortrait } from './content/enemy-templates.js';
 import {
+  ENEMY_ARCHIVE_CATEGORIES,
+  enemyCategoryForSpecies,
+  enemyTaxonomy,
+  isEnemyCategory,
+} from './enemy-taxonomy.js';
+import {
   ENEMY_BASE_REVISION,
   ENEMY_DESIGN_LIMITS,
   ENEMY_TIERS,
@@ -74,6 +80,10 @@ export function worldReference() {
     enemies: Object.values(DEFINITIONS)
       .filter((entry) => entry.speed)
       .map((entry) => structuredClone(entry)),
+    enemyTaxonomy: {
+      categories: structuredClone(ENEMY_ARCHIVE_CATEGORIES),
+      namingPattern: '[2字词缀]+[基础种]',
+    },
     appearances: [
       ...Object.values(DEFINITIONS).filter((entry) => entry.speed),
       ...HUMANOID_ENEMY_TEMPLATES,
@@ -193,6 +203,30 @@ function moves(list, restoring = false, boss = false) {
     ...(move.selfShield ? { selfShield: number(move.selfShield, 1, 30, '护盾') } : {}),
   }));
 }
+function normalizeEnemyTaxonomy(enemy, restoring) {
+  const { category, baseSpecies } = enemy;
+  if (!restoring) {
+    if (category === undefined) throw Error('敌人分类必须填写');
+    if (!isEnemyCategory(category)) throw Error('敌人分类无效');
+    const ordinaryBaseSpecies =
+      !enemy.boss && enemy.elite !== true && category !== 'other'
+        ? ENEMY_ARCHIVE_CATEGORIES.flatMap(({ species }) => species).find(
+            (species) => typeof enemy.name === 'string' && enemy.name.endsWith(species),
+          )
+        : undefined;
+    if (ordinaryBaseSpecies && baseSpecies === undefined)
+      throw Error('非「其他」分类的敌人必须填写基础种');
+    if (baseSpecies !== undefined) {
+      const speciesCategory = enemyCategoryForSpecies(baseSpecies);
+      if (!speciesCategory) throw Error('敌人基础种无效');
+      if (category !== speciesCategory) throw Error('敌人分类与基础种不匹配');
+      if (ordinaryBaseSpecies && baseSpecies !== ordinaryBaseSpecies)
+        throw Error('敌人基础种与名称后缀不匹配');
+    }
+  }
+  return enemyTaxonomy(enemy);
+}
+
 function hasTieredEffects(enemy) {
   return [...(enemy.intents || []), ...(enemy.enragedIntents || [])].some((move) =>
     (move?.effects || []).some((effect) => effect?.power !== undefined),
@@ -202,6 +236,7 @@ export function normalizeEnemy(enemy, { restoring = false } = {}) {
   if (!enemy || !/^enemy-[a-z0-9-]{1,70}$/.test(enemy.id) || DEFINITIONS[enemy.id])
     throw Error('新敌人ID无效');
   if (restoring) enemy = restoreEnemyBaseValues(enemy);
+  const taxonomy = normalizeEnemyTaxonomy(enemy, restoring);
   const appearances = new Set(worldReference().appearances.map((entry) => entry.portrait));
   const portrait = restoring ? restoredEnemyPortrait(enemy.portrait) : enemy.portrait;
   if (!appearances.has(portrait) || !ENEMY_ATTACKS.includes(enemy.attackStyle))
@@ -224,6 +259,7 @@ export function normalizeEnemy(enemy, { restoring = false } = {}) {
       name: text(enemy.name, 1, 40, '敌人名称'),
       portrait,
       color: /^#[0-9a-f]{6}$/i.test(enemy.color) ? enemy.color : '#b3a996',
+      ...taxonomy,
       baseRevision: ENEMY_BASE_REVISION,
       hp: compiled.hp,
       mp: 0,
@@ -245,6 +281,7 @@ export function normalizeEnemy(enemy, { restoring = false } = {}) {
     name: text(enemy.name, 1, 40, '敌人名称'),
     portrait,
     color: /^#[0-9a-f]{6}$/i.test(enemy.color) ? enemy.color : '#b3a996',
+    ...taxonomy,
     baseRevision: ENEMY_BASE_REVISION,
     hp: number(enemy.hp, ...ENEMY_DESIGN_LIMITS[boss ? 'boss' : 'ordinary'].hp, '生命'),
     mp: 0,

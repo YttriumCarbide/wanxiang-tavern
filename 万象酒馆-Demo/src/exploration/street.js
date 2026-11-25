@@ -9,7 +9,9 @@ import { createIllustratedStreet, illustratedImage } from './illustrated-street.
 import { createSceneVisitors } from '../tavern/visitor-scene.js';
 import { GUEST_RECRUITMENT } from '../recruitment.js';
 import { createWorldMap } from './world-map.js';
-import { createCitySubmap } from './city-submap.js';
+import { createCityDirectory } from './city-directory.js';
+import { cityForScene } from '../city-directory.js';
+import { createSceneEnvironment } from '../app/scene-environment.js';
 import { SILVER_CROWN_TAVERN } from '../content/silver-crown-scenes.js';
 
 export async function createStreetView() {
@@ -17,6 +19,7 @@ export async function createStreetView() {
   const atlasOnly = query.get('atlas-only') === '1';
   const definition = { ...explorationScene(query.get('scene')) };
   const illustrated = !!definition.illustration;
+  const pureBackdrop = Boolean(definition.illustration?.pureBackdrop);
   const fixed = definition.illustration?.fixed === true;
   const enteredFrom = query.get('from');
   let timeOfDay = query.get('time') === 'night' ? 'night' : 'day';
@@ -42,8 +45,9 @@ export async function createStreetView() {
   const returnButton = document.getElementById('street-return');
   returnButton.hidden = !definition.returnDestination;
   if (definition.returnDestination) {
-    returnButton.setAttribute('aria-label', '返回' + definition.returnLabel);
-    returnButton.lastChild.textContent = ' ' + definition.returnLabel;
+    const label = definition.returnLabel || '返回酒馆';
+    returnButton.setAttribute('aria-label', label.startsWith('返回') ? label : '返回' + label);
+    returnButton.textContent = label;
   }
   const events = createEventScope();
   const mapDialog = document.getElementById('street-map');
@@ -62,18 +66,19 @@ export async function createStreetView() {
   function postMapState(open) {
     parent.postMessage({ type: 'street-map-state', open, choice: mapChoice }, location.origin);
   }
-  function openAtlas(preview = false) {
+  function openAtlas(preview = false, questTarget = null) {
     mapChoice = '';
     stepOut.hidden = preview !== true;
     companions.hidden = stepOut.hidden;
-    worldMap.open();
+    worldMap.open(questTarget);
     postMapState(true);
   }
   events.on(document.getElementById('street-map-open'), 'click', openAtlas);
   events.on(window, 'message', (event) => {
     if (event.origin !== location.origin || event.source !== parent) return;
-    if (event.data?.type === 'daily-open-atlas') openAtlas(event.data.preview === true);
-    else if (event.data?.type === 'daily-close-atlas') {
+    if (event.data?.type === 'daily-open-atlas') {
+      openAtlas(event.data.preview === true, event.data.questTarget);
+    } else if (event.data?.type === 'daily-close-atlas') {
       mapChoice = 'route';
       if (mapDialog.open) mapDialog.close();
     } else if (event.data?.type === 'daily-reset-atlas-walker') {
@@ -97,19 +102,6 @@ export async function createStreetView() {
     if (parent !== window) document.documentElement.dataset.embedded = 'true';
     events.on(window, 'message', (event) => {
       if (event.origin !== location.origin || event.source !== parent) return;
-      if (event.data?.type === 'daily-open-atlas') {
-        openAtlas(event.data.preview !== false);
-        return;
-      }
-      if (event.data?.type === 'daily-close-atlas') {
-        mapChoice = 'route';
-        if (mapDialog.open) mapDialog.close();
-        return;
-      }
-      if (event.data?.type === 'daily-reset-atlas-walker') {
-        worldMap.resetWalker?.();
-        return;
-      }
       if (event.data?.type !== 'daily-managed') return;
       worldMap.updateTravel(event.data.outing);
       worldMap.updateDiscoveries(event.data.discoveries);
@@ -161,17 +153,45 @@ export async function createStreetView() {
   if (illustrated) {
     document.body.dataset.illustrated = 'true';
   }
+  if (pureBackdrop) {
+    document.body.dataset.pureBackdrop = 'true';
+    const pointsLayer = document.getElementById('street-points');
+    if (pointsLayer) pointsLayer.hidden = true;
+  }
+  const ambienceLayer = document.getElementById('street-ambience');
+  if (ambienceLayer && !atlasOnly) {
+    const moteCount = pureBackdrop ? 16 : 9;
+    ambienceLayer.replaceChildren(
+      ...Array.from({ length: moteCount }, (_, index) => {
+        const mote = document.createElement('span');
+        mote.className = 'street-ambience-mote';
+        const size = 4 + ((index * 5) % 8);
+        mote.style.width = `${size}px`;
+        mote.style.height = `${size}px`;
+        mote.style.left = `${(index * 17 + 7) % 94}%`;
+        mote.style.top = `${(index * 23 + 11) % 88}%`;
+        mote.style.setProperty('--dur', `${10 + (index % 6) * 2.5}s`);
+        mote.style.setProperty('--delay', `${-((index * 1.9) % 10)}s`);
+        mote.style.setProperty('--dx', `${((index % 5) - 2) * 12}px`);
+        mote.style.setProperty('--dy', `${-18 - (index % 4) * 9}px`);
+        return mote;
+      }),
+    );
+  }
   if (parent !== window) document.documentElement.dataset.embedded = 'true';
-  const citySubmap = createCitySubmap({
+  const citySubmapId = cityForScene(definition.id);
+  const environment = createSceneEnvironment(document.body);
+  const citySubmap = createCityDirectory({
     events,
     definition,
     onNavigate: (targetId) => leave(targetId),
     onOpenWorldMap: () => openAtlas(false),
-    onOpenGuild: (region) => {
-      parent.postMessage({ type: 'daily-open-guild', region }, location.origin);
-    },
-    onOpenDungeon: (dungeonId) => {
-      parent.postMessage({ type: 'daily-open-dungeon', dungeonId }, location.origin);
+    onAction: (action) => {
+      if (!leaving && !disposed && window.modelReady === true)
+        parent.postMessage(
+          { ...action, cityId: citySubmapId, scene: definition.id },
+          location.origin,
+        );
     },
   });
   const inspector = document.getElementById('street-inspector');
@@ -189,6 +209,7 @@ export async function createStreetView() {
     frames = 0,
     needsRender = true;
   let exitTimer = null;
+  let inspectionExit = null;
   let visitors = null;
   let invitationLocked = false;
   let travelLocked = false;
@@ -203,11 +224,18 @@ export async function createStreetView() {
     }
   }
   events.on(window, 'message', (event) => {
-    if (
-      event.origin === location.origin &&
-      event.source === parent &&
-      event.data?.type === 'daily-managed'
-    ) {
+    if (event.origin !== location.origin || event.source !== parent) return;
+    if (event.data?.type === 'daily-open-city-directory') {
+      if (
+        !leaving &&
+        !disposed &&
+        window.modelReady === true &&
+        !document.querySelector('dialog[open]')
+      )
+        citySubmap.open();
+      return;
+    }
+    if (event.data?.type === 'daily-managed') {
       invitationLocked = event.data.invitation === true;
       travelLocked = event.data.outing?.locked === true;
       document.body.classList.toggle('street-daily-outing', Boolean(event.data.outing));
@@ -220,9 +248,14 @@ export async function createStreetView() {
         unlockedDungeons: event.data.unlockedDungeons,
       });
       citySubmap.update({
+        discoveries: event.data.discoveries,
         skirmishes: event.data.skirmishes,
         locked: travelLocked || invitationLocked,
       });
+      const lead = event.data.environment;
+      environment.show(
+        event.data.invitation === true && lead?.cityId === citySubmapId ? lead : null,
+      );
       void updateTime(event.data.timeOfDay);
     }
   });
@@ -257,16 +290,62 @@ export async function createStreetView() {
     visitorActions.hidden = true;
   });
 
-  function closeInspection() {
+  function cancelInspectionExit() {
+    const animation = inspectionExit;
+    inspectionExit = null;
+    inspector.removeAttribute('inert');
+    inspector.style.removeProperty('--inspection-from-opacity');
+    inspector.style.removeProperty('--inspection-from-transform');
+    animation?.cancel();
+  }
+  function hideInspection() {
     inspector.hidden = true;
+    cancelInspectionExit();
+  }
+  function clearInspectionSelection() {
+    const opener = buttons.get(active);
     active = null;
-    for (const button of buttons.values()) button.setAttribute('aria-expanded', 'false');
+    opener?.setAttribute('aria-expanded', 'false');
+    return opener;
+  }
+  function closeInspection() {
+    if (active === null) return;
+    const opener = clearInspectionSelection();
+    if (inspector.contains(document.activeElement))
+      (opener && !opener.hidden ? opener : canvas).focus({ preventScroll: true });
     if (parent !== window)
       parent.postMessage({ type: 'street-inspector-state', open: false }, location.origin);
+    if (
+      matchMedia('(prefers-reduced-motion: reduce)').matches ||
+      !('inert' in inspector) ||
+      typeof inspector.getAnimations !== 'function'
+    ) {
+      hideInspection();
+      return;
+    }
+
+    // Start from the painted frame, even if the entrance is still in progress.
+    const { opacity, transform } = getComputedStyle(inspector);
+    inspector.style.setProperty('--inspection-from-opacity', opacity);
+    inspector.style.setProperty('--inspection-from-transform', transform);
+    inspector.inert = true;
+    const animation = inspector
+      .getAnimations()
+      .find((entry) => entry.animationName === 'inspection-out');
+    if (!animation) {
+      hideInspection();
+      return;
+    }
+    inspectionExit = animation;
+    const finish = () => {
+      if (inspectionExit === animation) hideInspection();
+    };
+    void animation.finished.then(finish, finish);
   }
   function inspect(id) {
     const point = definition.points.find((entry) => entry.id === id);
     if (!point || disposed || leaving) return;
+    if (inspectionExit) cancelInspectionExit();
     active = id;
     document.getElementById('inspection-kind').textContent = point.kind;
     document.getElementById('inspection-name').textContent = point.name;
@@ -294,33 +373,38 @@ export async function createStreetView() {
     const href = explorationHref(destination, timeOfDay, definition.id);
     leaving = true;
     document.body.classList.add('leaving');
+    if (parent !== window)
+      parent.postMessage({ type: 'street-leaving', leaving: true }, location.origin);
     exitTimer = setTimeout(() => {
       location.href = href;
     }, 340);
   }
-  for (const point of definition.points) {
-    const button = document.createElement('button');
-    button.className = 'street-point';
-    button.dataset.hotspot = point.id;
-    button.dataset.kind = point.kind;
-    button.setAttribute('aria-expanded', 'false');
-    const symbol = document.createElement('span');
-    symbol.className = 'point-symbol';
-    symbol.setAttribute('aria-hidden', 'true');
-    symbol.textContent = '◇';
-    button.setAttribute('aria-label', point.name);
-    const label = document.createElement('span');
-    label.className = 'point-label';
-    label.textContent = point.name;
-    button.append(symbol, label);
-    button.hidden = true;
-    events.on(button, 'click', () =>
-      point.destination && point.immediate ? leave(point.destination) : inspect(point.id),
-    );
-    buttons.set(point.id, button);
-    document.getElementById('street-points').append(button);
+  if (!pureBackdrop) {
+    for (const point of definition.points) {
+      const button = document.createElement('button');
+      button.className = 'street-point';
+      button.dataset.hotspot = point.id;
+      button.dataset.kind = point.kind;
+      button.setAttribute('aria-expanded', 'false');
+      const symbol = document.createElement('span');
+      symbol.className = 'point-symbol';
+      symbol.setAttribute('aria-hidden', 'true');
+      symbol.textContent = '◇';
+      button.setAttribute('aria-label', point.name);
+      const label = document.createElement('span');
+      label.className = 'point-label';
+      label.textContent = point.name;
+      button.append(symbol, label);
+      button.hidden = true;
+      events.on(button, 'click', () =>
+        point.destination && point.immediate ? leave(point.destination) : inspect(point.id),
+      );
+      buttons.set(point.id, button);
+      document.getElementById('street-points').append(button);
+    }
   }
   function updatePoints() {
+    if (pureBackdrop) return;
     camera.updateMatrixWorld();
     const occupied = [];
     for (const point of definition.points) {
@@ -413,9 +497,23 @@ export async function createStreetView() {
     };
     canvas.setPointerCapture(event.pointerId);
   });
+  events.on(window, 'pointermove', (event) => {
+    if (
+      drag ||
+      !illustrated ||
+      leaving ||
+      disposed ||
+      event.pointerType === 'touch' ||
+      mapDialog.open ||
+      citySubmap?.isOpen() ||
+      matchMedia('(prefers-reduced-motion: reduce)').matches
+    )
+      return;
+    model?.hover?.((event.clientX / innerWidth - 0.5) * 2, (event.clientY / innerHeight - 0.5) * 2);
+    needsRender = true;
+  });
   events.on(canvas, 'pointermove', (event) => {
-    if (!drag) return;
-    if (event.pointerId !== drag.id) return;
+    if (!drag || event.pointerId !== drag.id) return;
     if (Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY) > 7) drag.moved = true;
     if (fixed && !illustrated) return;
     if (illustrated) {
@@ -496,10 +594,13 @@ export async function createStreetView() {
   function dispose() {
     if (disposed) return;
     disposed = true;
+    clearInspectionSelection();
+    hideInspection();
     loading.dispose();
     visitors?.dispose();
     worldMap.dispose();
     citySubmap.close();
+    environment.dispose();
     clearTimeout(exitTimer);
     renderer.setAnimationLoop(null);
     events.dispose();
@@ -515,7 +616,7 @@ export async function createStreetView() {
   resize();
   apply();
   renderer.setAnimationLoop((now) => {
-    let covered = document.hidden || mapDialog.open;
+    let covered = document.hidden || mapDialog.open || citySubmap?.isOpen();
     try {
       covered ||= !!parent.document.querySelector('dialog[open], .gal-stage:not([hidden])');
     } catch {
@@ -537,13 +638,15 @@ export async function createStreetView() {
           ? Object.values(definition.spatial.art)
           : [definition.panorama, ...(definition.panoramaBand ? [definition.panoramaBand] : [])]),
       ...(!illustrated && definition.ground ? [definition.ground.image] : []),
-      ...definition.cutouts
-        .filter((spec) =>
-          illustrated
-            ? spec.kind === 'npc' && Boolean(definition.illustration.people?.[spec.id])
-            : spec.kind !== 'character' && spec.kind !== 'npc',
-        )
-        .map((spec) => spec.image),
+      ...(pureBackdrop
+        ? []
+        : definition.cutouts
+            .filter((spec) =>
+              illustrated
+                ? spec.kind === 'npc' && Boolean(definition.illustration.people?.[spec.id])
+                : spec.kind !== 'character' && spec.kind !== 'npc',
+            )
+            .map((spec) => spec.image)),
     ];
     await loading.prepare(files);
     if (disposed) return { dispose };
@@ -554,7 +657,7 @@ export async function createStreetView() {
     await model.setTime?.(timeOfDay);
     if (disposed) return { dispose };
     resize();
-    if (definition.visitors !== false) {
+    if (!pureBackdrop && definition.visitors !== false) {
       visitors = await createSceneVisitors({
         scene,
         camera,

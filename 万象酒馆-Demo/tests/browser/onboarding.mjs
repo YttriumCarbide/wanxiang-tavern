@@ -5,9 +5,20 @@ import {
 } from './legacy-session.mjs';
 import assert from 'node:assert/strict';
 import path from 'node:path';
+import { armDialogExitProbe, assertDialogExited } from './dialog-motion.mjs';
 import { buildPlan } from '../planner.js';
 import { abilityFor } from '../../src/catalog.js';
 import { EDITH_LESSONS } from '../../src/content/edith-guide.js';
+
+const RELEASE_DOWNLOAD =
+  /^https:\/\/github\.com\/YttriumCarbide\/wanxiang-tavern\/releases\/download\/v(\d+\.\d+(?:\.\d+)?)\/wanxiang-tavern-\1-(android\.apk|windows-x64\.zip)$/;
+
+function releaseVersionFor(href, artifact) {
+  const match = RELEASE_DOWNLOAD.exec(href ?? '');
+  assert(match, `Expected an official GitHub release URL for ${artifact}, received ${href}`);
+  assert.equal(match[2], artifact);
+  return match[1];
+}
 
 /** Fresh save → offline Qingyuan → Edith dialogue → guided battle → five-room completion. */
 export async function onboardingChecks({ browser, baseURL, output, firstDungeonOnly = false }) {
@@ -110,22 +121,18 @@ export async function onboardingChecks({ browser, baseURL, output, firstDungeonO
       });
     });
     await page.goto(baseURL);
-    assert.match(
-      await page.locator('#start-download-android').getAttribute('href'),
-      /releases\/download\/v2\.3\/wanxiang-tavern-2\.3-android\.apk$/,
+    const releaseLinks = [
+      ['#start-download-android', 'android.apk'],
+      ['#start-download-windows', 'windows-x64.zip'],
+      ['#settings-download-android', 'android.apk'],
+      ['#settings-download-windows', 'windows-x64.zip'],
+    ];
+    const releaseVersions = await Promise.all(
+      releaseLinks.map(async ([selector, artifact]) =>
+        releaseVersionFor(await page.locator(selector).getAttribute('href'), artifact),
+      ),
     );
-    assert.match(
-      await page.locator('#start-download-windows').getAttribute('href'),
-      /releases\/download\/v2\.3\/wanxiang-tavern-2\.3-windows-x64\.zip$/,
-    );
-    assert.match(
-      await page.locator('#settings-download-android').getAttribute('href'),
-      /releases\/download\/v2\.3\/wanxiang-tavern-2\.3-android\.apk$/,
-    );
-    assert.match(
-      await page.locator('#settings-download-windows').getAttribute('href'),
-      /releases\/download\/v2\.3\/wanxiang-tavern-2\.3-windows-x64\.zip$/,
-    );
+    assert.equal(new Set(releaseVersions).size, 1, 'All download links use one release version');
     assert.match(
       await page.locator('#settings-download-develop').getAttribute('href'),
       /archive\/refs\/heads\/develop\.zip$/,
@@ -145,8 +152,11 @@ export async function onboardingChecks({ browser, baseURL, output, firstDungeonO
     );
     await page.screenshot({ path: path.join(output, 'new-game-landscape.png') });
     await page.setViewportSize({ width: 1440, height: 836 });
+    const creation = page.locator('#new-game');
+    const creationExit = await armDialogExitProbe(creation);
     await page.locator('#creation-start').click();
-    await page.locator('#new-game').waitFor({ state: 'hidden' });
+    await creation.waitFor({ state: 'hidden' });
+    await assertDialogExited(creation, '#new-game', { animated: creationExit });
     let library = await page.evaluate(() => demo.getLibrary());
     assert.equal(library.characters.length, 2);
     assert.equal(library.party.filter(Boolean).length, 2);
@@ -190,7 +200,7 @@ export async function onboardingChecks({ browser, baseURL, output, firstDungeonO
       .locator('#street-open')
       .waitFor({ state: 'visible', timeout: 15000 });
     await page.frameLocator('iframe').locator('#street-open').click();
-    await page.locator('#tavern-exit-picker [data-tavern-exit="street"]').click();
+    await page.locator('#tavern-exit-picker [data-tavern-exit="city-center"]').click();
     await page
       .frameLocator('iframe')
       .locator('#street-map-open')
@@ -608,17 +618,17 @@ export async function onboardingChecks({ browser, baseURL, output, firstDungeonO
     await page.locator('#chat-close').click();
     assert.equal(
       await page.locator('#tutorial-text').textContent(),
-      EDITH_LESSONS.shop.lines.join('\n'),
-      'The supplies tutorial keeps its existing instructions after the dialogue closes',
+      '用金币购买一瓶药水。',
+      'The tutorial points directly to the potion dispenser',
     );
     await page.locator('#tutorial-action').click();
     const supplies = page.frameLocator('#inn-frame iframe');
-    await supplies.locator('#shop-open').waitFor({ state: 'visible' });
-    await supplies.locator('#shop-open').click();
+    await page.locator('#void-shop[open][data-shop-mode="vending"]').waitFor();
     const gold = (await page.evaluate(() => demo.getLibrary())).inventory.gold;
     await page.locator('[data-shop-category=mana]').click();
     await page.locator('[data-shop-item=mana-potion]').click();
     await page.locator('[data-buy=mana-potion]').click();
+    await page.locator('#shop-status').filter({ hasText: '+1' }).waitFor();
     assert.equal((await page.evaluate(() => demo.getLibrary())).inventory.gold, gold - 20);
     assert.equal((await page.evaluate(() => demo.getLibrary())).campaign.tutorial, 'condenser');
     await page.screenshot({ path: path.join(output, 'void-shop.png') });
@@ -626,9 +636,10 @@ export async function onboardingChecks({ browser, baseURL, output, firstDungeonO
     await finishDialogue();
     assert.equal(
       await page.locator('#tutorial-text').textContent(),
-      EDITH_LESSONS.condenser.lines.join('\n'),
-      'The condenser tutorial keeps its existing instructions after the dialogue closes',
+      EDITH_LESSONS.condenser.lines.slice(1).join('\n'),
+      'The condenser tutorial points to the remaining machine',
     );
+    await page.locator('#tutorial-action').click();
     await supplies.locator('#condenser-open').click();
     await page.locator('#ether-forge').waitFor({ state: 'visible' });
     await finishDialogue();

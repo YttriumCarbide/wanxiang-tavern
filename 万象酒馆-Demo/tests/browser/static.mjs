@@ -14,7 +14,8 @@ export async function staticChecks({ browser, output }) {
   const manifest = await buildStatic();
   assert(
     manifest.files.every(
-      (file) => !/(?:^|\/)(?:\.runtime|node_modules|server|tests|presets)(?:\/|$)/.test(file.path),
+      (file) =>
+        !/(?:^|\/)(?:\.runtime|node_modules|server|tests|presets|skyui)(?:\/|$)/.test(file.path),
     ),
   );
   const allowedFiles = new Set([...manifest.files.map((file) => file.path), 'release.json']);
@@ -189,7 +190,9 @@ export async function staticChecks({ browser, output }) {
     await page.screenshot({ path: path.join(output, 'first-run-connections.png') });
     await page.locator('#setup-next').click();
     await page.locator('#new-game').waitFor({ state: 'visible' });
-    assert.equal(await page.locator('#ai-dialog').isVisible(), false);
+    const settingsDialog = page.locator('#ai-dialog');
+    await settingsDialog.waitFor({ state: 'hidden' });
+    assert.equal(await settingsDialog.isVisible(), false);
     const saved = await page.evaluate(async () => {
       const { openDatabase } = await import(
         new URL('./src/storage/database.js', location.href).href
@@ -399,6 +402,9 @@ export async function staticChecks({ browser, output }) {
       );
       const { OVERLOAD_EMBLEM_ID } = await import(new URL('./src/emblems.js', location.href).href);
       const library = newCampaign(defaultProtagonist());
+      const protagonist = library.characters[0];
+      protagonist.growth = { ...protagonist.growth, level: 2, rolls: [{ attack: 28 }] };
+      protagonist.equippedSkills = ['uni-serrated-cut', null];
       library.campaign.completed = true;
       library.unlockedDungeons = ['mill'];
       library.inventory.summonContracts = 1;
@@ -478,21 +484,41 @@ export async function staticChecks({ browser, output }) {
     assert.deepEqual(await edithBars.locator('.resource-number').allTextContents(), bars);
     await page.evaluate(() => demo.flushStorage());
     const unfinished = await page.evaluate(() => demo.getActiveScript());
-    await page.evaluate(async () => {
+    const legacyTechnique = await page.evaluate(async () => {
       const key = 'game.wanxiang.battle-checkpoint.v1';
+      const libraryKey = 'game.wanxiang.worldbooks.v1';
       const { openDatabase } = await import(
         new URL('./src/storage/database.js', location.href).href
       );
       const db = await openDatabase();
       const snapshot = JSON.parse(db.get(key));
+      const { LEARNABLE_SKILL_MAP } = await import(
+        new URL('./src/learnable-skills.js', location.href).href
+      );
+      const { finalSkillText } = await import(new URL('./src/skill-text.js', location.href).href);
+      const { id, effects } = LEARNABLE_SKILL_MAP['uni-serrated-cut'];
+      const current = snapshot.state.heroDefinitions.aegis.skills.find((skill) => skill.id === id);
+      snapshot.library.characters.find(
+        (member) => member.id === snapshot.library.party[0],
+      ).growth.revision = 7;
+      const compiledDamage = current.effects[0].value;
       Object.assign(snapshot.state.units.lyria, { hp: null, mp: null, maxHp: null, maxMp: null });
       for (const roster of [
         snapshot.state.heroDefinitions,
         snapshot.journey.expedition.heroDefinitions,
-      ])
+      ]) {
         Object.assign(roster.lyria, { hp: null, mp: null, maxHp: null, maxMp: null });
-      await db.write([[key, JSON.stringify(snapshot)]]);
+        roster.aegis.growthRevision = 7;
+        const skill = roster.aegis.skills.find((candidate) => candidate.id === id);
+        skill.effects = structuredClone(effects);
+        skill.text = finalSkillText(skill, roster.aegis.mechanicMark?.name);
+      }
+      await db.write([
+        [libraryKey, JSON.stringify(snapshot.library)],
+        [key, JSON.stringify(snapshot)],
+      ]);
       db.close();
+      return { id, compiledDamage, frozenDamage: effects[0].value };
     });
     await page.reload();
     await page.waitForFunction(() => !!window.demo && demo.getStatus().mode === 'battle', {
@@ -501,6 +527,38 @@ export async function staticChecks({ browser, output }) {
     assert.equal((await page.evaluate(() => demo.getActiveScript())).id, unfinished.id);
     assert.deepEqual(await edithBars.locator('.resource-number').allTextContents(), bars);
     const returned = await page.evaluate(() => demo.getLibrary());
+    assert.deepEqual(
+      returned.characters.find((member) => member.id === returned.party[0]).growth.rolls,
+      [{ attack: 28 }],
+    );
+    assert.equal(
+      returned.characters.find((member) => member.id === returned.party[0]).growth.revision,
+      8,
+    );
+    assert.notEqual(legacyTechnique.compiledDamage, legacyTechnique.frozenDamage);
+    const resumed = await page.evaluate(() => demo.getState().heroDefinitions.aegis);
+    assert.equal(resumed.growthRevision, 7);
+    assert.equal(
+      resumed.skills.find((skill) => skill.id === legacyTechnique.id).effects[0].value,
+      legacyTechnique.frozenDamage,
+      'the current encounter keeps its archived technique damage after a real reload',
+    );
+    await page.evaluate(() => demo.flushStorage());
+    const persisted = await page.evaluate(async () => {
+      const { openDatabase } = await import(
+        new URL('./src/storage/database.js', location.href).href
+      );
+      const db = await openDatabase();
+      const snapshot = JSON.parse(db.get('game.wanxiang.battle-checkpoint.v1'));
+      db.close();
+      return snapshot;
+    });
+    assert.equal(
+      persisted.library.characters.find((member) => member.id === persisted.library.party[0]).growth
+        .revision,
+      8,
+    );
+    assert.equal(persisted.state.heroDefinitions.aegis.growthRevision, 7);
     assert(returned.scripts.some((entry) => entry.id === unfinished.id));
     assert(returned.history.some((entry) => entry.runId === unfinished.runId));
     await page.screenshot({ path: path.join(output, 'static-returned-to-hall.png') });
@@ -519,6 +577,7 @@ export async function staticChecks({ browser, output }) {
       backupExcludesKeys: true,
       chatAndSettingsReloaded: true,
       reloadResumesAdventure: true,
+      reloadKeepsFrozenGrowth: true,
       apiRequests: 0,
       files: manifest.files.length,
     };

@@ -1,11 +1,61 @@
 import assert from 'node:assert/strict';
 import path from 'node:path';
+import { openCityFacility } from './city-facility.mjs';
+import { travelTownScene } from './town-navigation.mjs';
 import { legacySession, openShelfPanel } from './legacy-session.mjs';
 import { newCampaign, firstCompanion } from '../../src/campaign.js';
 import { defaultProtagonist } from '../../src/content/qingyuan.js';
-import { completeExploration } from '../../src/exploration.js';
 import { normalizeCharacter } from '../../src/ai/contracts.js';
 import { characterDocument, tavernPresetFixture } from '../fixtures/ai.js';
+
+async function assertEquipmentVoucherIconCentered(page) {
+  const icon = page.locator('#ledger-drawer #inn-resources img[src$="equipment-voucher.svg"]');
+  await icon.waitFor({ state: 'visible' });
+  await icon.evaluate((image) => image.decode());
+
+  const geometry = await page.evaluate(async () => {
+    const image = document.querySelector(
+      '#ledger-drawer #inn-resources img[src$="equipment-voucher.svg"]',
+    );
+    const response = await fetch(image.currentSrc);
+    if (!response.ok) throw Error(`Voucher SVG request failed: ${response.status}`);
+
+    const source = await response.text();
+    const documentSvg = new DOMParser().parseFromString(source, 'image/svg+xml');
+    if (documentSvg.querySelector('parsererror')) throw Error('Voucher SVG is not valid XML');
+
+    const svg = document.importNode(documentSvg.documentElement, true);
+    const ticket = svg.querySelector('path');
+    const crest = svg.querySelector('polygon');
+    if (!ticket || !crest) throw Error('Voucher SVG ticket outline or crest is missing');
+
+    svg.style.cssText = 'position:fixed;left:-10000px;top:0;visibility:hidden;pointer-events:none';
+    document.body.append(svg);
+    try {
+      const ticketBox = ticket.getBBox();
+      const crestBox = crest.getBBox();
+      const iconBox = image.getBoundingClientRect();
+      return {
+        artworkCenterOffsetX: crestBox.x + crestBox.width / 2 - (ticketBox.x + ticketBox.width / 2),
+        artworkCenterOffsetY:
+          crestBox.y + crestBox.height / 2 - (ticketBox.y + ticketBox.height / 2),
+        iconWidth: iconBox.width,
+        iconHeight: iconBox.height,
+        sourceWidth: image.naturalWidth,
+        sourceHeight: image.naturalHeight,
+      };
+    } finally {
+      svg.remove();
+    }
+  });
+
+  assert.equal(geometry.artworkCenterOffsetX, 0, 'Voucher crest is horizontally centered');
+  assert.equal(geometry.artworkCenterOffsetY, 0, 'Voucher crest is vertically centered');
+  assert(geometry.iconWidth > 0, 'Voucher icon has a rendered width');
+  assert.equal(geometry.iconWidth, geometry.iconHeight, 'Voucher icon keeps a square viewport');
+  assert(geometry.sourceWidth > 0 && geometry.sourceHeight > 0, 'Voucher SVG is loaded');
+  assert.equal(geometry.sourceWidth, geometry.sourceHeight, 'Voucher SVG has a square viewBox');
+}
 
 export async function equipmentChecks({ browser, baseURL, output }) {
   const page = await browser.newPage({ viewport: { width: 1440, height: 836 } });
@@ -33,9 +83,8 @@ export async function equipmentChecks({ browser, baseURL, output }) {
     firstCompanion(library);
     library.campaign.tutorial = 'complete';
     library.unlockedDungeons = ['ruins', 'forest'];
-    // This suite exercises successful refinement, after the main world's sixth site.
-    for (let site = 0; site < 6; site++)
-      completeExploration(library.exploration, library.exploration.ruins.frontier[0]);
+    // Mark the mainline route complete using the persisted field checked by gameplay.
+    library.exploration.ruins.completed = 6;
     library.inventory.ether = 40;
     library.inventory.items['health-potion'] = 2;
     library.archives.items.push({
@@ -169,6 +218,8 @@ export async function equipmentChecks({ browser, baseURL, output }) {
     assert.equal((await page.evaluate(() => demo.getLibrary())).characters[0].equipment[2], id);
     await page.screenshot({ path: path.join(output, 'preparation-equipment.png') });
     await page.locator('#prepare-done').click();
+    await page.locator('#ledger-drawer-host.is-open #ledger-close').click();
+    await page.locator('#ledger-drawer-host').waitFor({ state: 'hidden' });
     await page.route('**/api/ai/config', async (route) => {
       if (route.request().method() !== 'GET') return route.continue();
       const response = await route.fetch();
@@ -203,6 +254,13 @@ export async function equipmentChecks({ browser, baseURL, output }) {
     });
     await innMessage('tavern-summon');
     if (!(await page.locator('#summon-choice').isVisible())) {
+      const ledger = page.locator('#ledger-drawer-host.is-open');
+      if (await ledger.isVisible()) {
+        await ledger.locator('.ledger-backdrop').click({
+          position: { x: 8, y: Math.round((page.viewportSize()?.height || 836) / 2) },
+        });
+        await page.locator('#ledger-drawer-host').waitFor({ state: 'hidden' });
+      }
       const frame = page.frameLocator('#inn-frame iframe');
       await frame.locator('canvas').evaluate(() => window.assetPreview.placeNow('summon'));
       await frame.locator('#summon-open').click();
@@ -394,6 +452,7 @@ async function forgeAffixWorkspaceChecks({ browser, baseURL, output }) {
     firstCompanion(library);
     library.campaign.tutorial = 'complete';
     library.inventory.ether = 20000;
+    library.inventory.gold = 1000;
     library.characters[0].growth.level = 25;
 
     const templates = [
@@ -468,32 +527,54 @@ async function forgeAffixWorkspaceChecks({ browser, baseURL, output }) {
       3,
     );
 
-    await page.locator('.forge-instance-card > summary').first().click();
-    await page.locator('[data-temper-instance]').first().click();
+    await page.locator('[data-dismantle-choice]').selectOption('ui-owned-2');
+    await page.locator('[data-dismantle-instance]').click();
+    const confirm = page.locator('.equipment-feedback-dialog[open]');
+    await confirm.locator('.equipment-feedback-confirm').click();
     await page.waitForFunction(
-      (kind) => document.querySelector('.forge-operation-feedback')?.dataset.kind === kind,
-      'temper',
+      () => !demo.getLibrary().equipment.owned.some((entry) => entry.id === 'ui-owned-2'),
     );
-    assert.equal(
-      (await page.evaluate(() => demo.getLibrary())).equipment.owned.find(
-        (item) => item.templateId === 'ui-eq-1',
-      ).level,
-      2,
-    );
+    await page.locator('[data-forge-close]').click();
 
-    await page.locator('[data-reforge-instance]').first().click();
-    await page.locator('.equipment-feedback-dialog').waitFor({ state: 'visible' });
-    await page.locator('.equipment-feedback-confirm').click();
-    await page.waitForFunction(
-      (kind) => document.querySelector('.forge-operation-feedback')?.dataset.kind === kind,
-      'reforge',
+    await openCityFacility(page, 'blacksmith');
+    const smith = page.locator('#city-blacksmith[open]');
+    await smith.locator('[data-smith-pick="ui-owned-armor"]').click();
+    assert.equal(await smith.locator('[data-smith-service="sell"]').isDisabled(), true);
+    await smith.locator('[data-smith-pick="ui-owned-1"]').click();
+    const wallet = await page.evaluate(() => demo.getLibrary().inventory);
+    const item = () =>
+      page.evaluate(() => demo.getLibrary().equipment.owned.find(({ id }) => id === 'ui-owned-1'));
+    const service = async (name) => {
+      await smith.locator(`[data-smith-service="${name}"]`).click();
+      assert((await confirm.locator('.equipment-feedback-cost').textContent()).includes('金币'));
+      await confirm.locator('.equipment-feedback-confirm').click();
+      await smith
+        .locator(`.forge-operation-feedback[data-kind="${name}"]`)
+        .waitFor({ state: 'visible' });
+    };
+    await service('temper');
+    assert.equal((await item()).level, 2);
+    await service('reforge');
+    await service('ascend');
+    assert.equal((await item()).quality, 'uncommon');
+    assert.equal(await page.evaluate(() => demo.getLibrary().inventory.ether), wallet.ether);
+    assert((await page.evaluate(() => demo.getLibrary().inventory.gold)) < wallet.gold);
+    const goldBeforeSale = await page.evaluate(() => demo.getLibrary().inventory.gold);
+    await smith.locator('[data-smith-service="sell"]').click();
+    await confirm.locator('.equipment-feedback-confirm').click();
+    await page.waitForFunction(() =>
+      document.querySelector('#city-blacksmith [role="status"]')?.textContent.includes('已出售'),
     );
-
-    await page.locator('[data-ascend-instance]').first().click();
-    await page.waitForFunction(
-      (kind) => document.querySelector('.forge-operation-feedback')?.dataset.kind === kind,
-      'ascend',
-    );
+    assert.equal(await item(), undefined);
+    assert.equal(await page.evaluate(() => demo.getLibrary().inventory.gold), goldBeforeSale + 6);
+    await page.screenshot({ path: path.join(output, 'blacksmith-desktop.png') });
+    await smith.getByRole('button', { name: '离开铁匠铺' }).click();
+    await smith.waitFor({ state: 'hidden' });
+    await travelTownScene(page, 'tavern');
+    await frame.locator('canvas').evaluate(() => window.assetPreview.placeNow('supplies'));
+    await frame.locator('#condenser-open').click();
+    await page.locator('[data-forge-page="exchange"]').click();
+    await page.locator('[data-forge-select="ui-eq-1"]').click();
 
     await page.locator('[data-add-affix="ui-eq-1"]').click();
     await page.waitForFunction(
@@ -507,7 +588,7 @@ async function forgeAffixWorkspaceChecks({ browser, baseURL, output }) {
         .equipment.owned.filter((item) => item.templateId === 'ui-eq-1')
         .map((item) => Object.prototype.hasOwnProperty.call(item, 'affixes')),
     );
-    assert.deepEqual(ownAffixes, [false, false, false]);
+    assert.deepEqual(ownAffixes, [false]);
 
     await page.locator('[data-refresh-affix="ui-eq-1"]').click();
     const before = await page.evaluate(() => {
@@ -517,7 +598,7 @@ async function forgeAffixWorkspaceChecks({ browser, baseURL, output }) {
         affix: library.equipment.affixesByTemplate['ui-eq-1'],
       };
     });
-    await page.locator('.equipment-feedback-cancel').click();
+    await confirm.locator('.equipment-feedback-cancel').click();
     const afterCancel = await page.evaluate(() => {
       const library = demo.getLibrary();
       return {
@@ -528,7 +609,7 @@ async function forgeAffixWorkspaceChecks({ browser, baseURL, output }) {
     assert.deepEqual(afterCancel, before);
 
     await page.locator('[data-refresh-affix="ui-eq-1"]').click();
-    await page.locator('.equipment-feedback-confirm').click();
+    await confirm.locator('.equipment-feedback-confirm').click();
     await page.waitForFunction(
       (kind) => document.querySelector('.forge-operation-feedback')?.dataset.kind === kind,
       'reroll',
@@ -559,6 +640,7 @@ async function forgeAffixWorkspaceChecks({ browser, baseURL, output }) {
     });
     await page.mouse.up();
     await page.locator('#ledger-drawer-host.is-open').waitFor();
+    await assertEquipmentVoucherIconCentered(page);
     await page.locator('#party-toggle').click();
     await page.locator('[data-prepare-slot="0"]').click();
     const progress = page.locator('.prepare-affix-progress');
@@ -585,7 +667,14 @@ async function forgeAffixWorkspaceChecks({ browser, baseURL, output }) {
     const catalogueBox = await catalogue.boundingBox();
     assert(catalogueBox.x >= 0 && catalogueBox.x + catalogueBox.width <= 844);
     assert(catalogueBox.y >= 0 && catalogueBox.y + catalogueBox.height <= 390);
-    assert(await page.locator('[data-buy-equipment]').first().isVisible());
+    assert.equal(await page.locator('#forge-category-tabs [data-forge-category]').count(), 5);
+    await page.locator('[data-forge-category="weapon"]').click();
+    assert.equal(
+      await page.locator('[data-forge-category="weapon"]').getAttribute('aria-pressed'),
+      'true',
+    );
+    await page.locator('[data-forge-category="all"]').click();
+    assert.equal(await page.locator('[data-buy-equipment]').first().isVisible(), true);
     await page.screenshot({ path: path.join(output, 'forge-affixes-844.png') });
     const fits = await page.evaluate(() => {
       const panel = document.querySelector('#ether-forge');
@@ -601,9 +690,10 @@ async function forgeAffixWorkspaceChecks({ browser, baseURL, output }) {
     return {
       sharedAffixes: true,
       confirmCancel: true,
-      sixAnimations: true,
+      blacksmithGoldServices: true,
       gemAffixes: true,
       passiveProgress: true,
+      voucherIconCentered: true,
       responsiveForge: true,
     };
   } finally {

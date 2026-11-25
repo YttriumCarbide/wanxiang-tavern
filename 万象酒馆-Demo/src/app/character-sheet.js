@@ -1,12 +1,13 @@
 import { resourceText } from '../resource-text.js';
-import { grownCombat, restoreGrowth, RARITIES, xpToNext } from '../growth.js';
+import { compileCharacterCombat, restoreGrowth, RARITIES, xpToNext } from '../growth.js';
 import { BUFFS } from '../data.js';
 import { characterPresentation } from '../ai/character-presentation.js';
 import { escapeText } from '../ui.js';
 import { html } from '../shared/html.js';
 import { portraitUrl } from '../catalog.js';
 import { ability } from '../data.js';
-import { applyEquipment } from '../equipment.js';
+import { battleResourceLimits } from '../engine.js';
+import { isUniversalSkill } from '../learnable-skills.js';
 import { finalPassiveText, finalSkillText } from '../skill-text.js';
 import { damageTypeChip, inferDamageType, resolveBasicAttackType } from '../damage-types.js';
 import { DC_ATTRIBUTES, attrMod, formatMod, normalizeDcAttrs } from '../dc.js';
@@ -17,6 +18,9 @@ const targets = {
   self: '自身',
   allAllies: '全体队友',
   allEnemies: '全体敌人',
+  opposite: '正对位敌人',
+  lowestEnemy: '生命最低的敌人',
+  lowestAlly: '生命比例最低的队友',
 };
 function effectText(effect) {
   if (effect.type === 'buff') return `${BUFFS[effect.buff].name} +${effect.value}层`;
@@ -40,11 +44,11 @@ function abilitySheet(skill, design, label, markName, actorDef = null) {
         skill.adjacentAllies ||
         skill.consumeMarkCount ||
         skill.basicAttackInjuredMark ||
-        skill.effects.some(
+        skill.effects?.some(
           (effect) => effect.when || effect.perMark || effect.consumeMark || effect.type === 'mark',
         )
       ? [finalSkillText(skill, markName)]
-      : skill.effects.map(effectText);
+      : (skill.effects || []).map(effectText);
   const motion = escapeText(
     resourceText(design?.description || '这位来客的旧设定尚未记载具体动作。'),
   );
@@ -63,8 +67,7 @@ function abilitySheet(skill, design, label, markName, actorDef = null) {
     </summary>
     <div class="ability-content">
       <div class="ability-mechanics">
-        <span
-          >${skill.passive ? escapeText(skill.location) : escapeText(targets[skill.target])}</span
+        <span>${escapeText(skill.passive ? skill.location : targets[skill.target] || '')}</span
         >${effects.map((text) => html`<b>${escapeText(resourceText(text))}</b>`).join('')}
       </div>
       ${skill.passive ? '' : html`<p class="ability-motion">${motion}</p>`}
@@ -79,7 +82,8 @@ export function characterSheet(entry, equipment = [], options = {}) {
         ? { ...entry, setting: { ...entry.setting, worldbook: entry.display.worldbook } }
         : entry,
     ),
-    combat = applyEquipment(grownCombat(entry), equipment);
+    combat = compileCharacterCombat(entry, equipment);
+  const limits = battleResourceLimits(combat);
   const dcAttrs = normalizeDcAttrs(entry.dcAttrs, entry);
   const growth = restoreGrowth(entry.growth, entry.id);
   const isPrep = options.mode === 'preparation';
@@ -90,7 +94,13 @@ export function characterSheet(entry, equipment = [], options = {}) {
 
   const abilities = html`<section class="character-abilities">
     <h3>战斗方式 <small>${isPrep ? '战技数值、目标与消耗' : '展开查看数值与动作'}</small></h3>
-    ${abilitySheet(attack, model.attack, '普攻', null, combat)}${combat.skills.map((skill, index) => abilitySheet(skill, model.skills[index], skill.passive ? '被动' : '技能', combat.mechanicMark?.name, combat)).join('')}
+    ${abilitySheet(attack, model.attack, '普攻', combat.mechanicMark?.name, combat)}
+    ${combat.skills
+      .map((skill, index) => {
+        const label = isUniversalSkill(skill) ? '特技' : skill.passive ? '被动' : '技能';
+        return abilitySheet(skill, model.skills[index], label, combat.mechanicMark?.name, combat);
+      })
+      .join('')}
     ${combat.entrySkill ? abilitySheet(combat.entrySkill, model.entrySkill, '入场技', combat.mechanicMark?.name, combat) : ''}
   </section>`;
 
@@ -158,11 +168,11 @@ export function characterSheet(entry, equipment = [], options = {}) {
         <dl class="identity-stats">
           <div>
             <dt>生命</dt>
-            <dd>${combat.hp}</dd>
+            <dd>${limits.hp}</dd>
           </div>
           <div>
             <dt>蓝量</dt>
-            <dd>${combat.mp}</dd>
+            <dd>${limits.mp}</dd>
           </div>
           <div>
             <dt>普攻</dt>

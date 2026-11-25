@@ -1,5 +1,6 @@
 """Build the upstairs corridor shared by the two guest rooms and the master bedroom."""
 
+import argparse
 import json
 import math
 import random
@@ -397,9 +398,8 @@ def vending_machine():
             box(xx, yy, -4.0, 0.025, 0.025, 0.02, "brassLight")
 
 
-def void_machines():
-    vending_machine()
-    # Right half: dormant containment rings, a faceted ether core and pipework.
+def ether_condenser():
+    # Dormant containment rings, a faceted ether core and pipework.
     x = 0.16
     box(x, 0.04, -4.72, 1.4, 0.16, 0.68, "iron")
     box(x + 0.08, 0.2, -4.66, 1.24, 0.38, 0.56, "walnutDark")
@@ -458,7 +458,7 @@ def void_machines():
             box(0.84 + side * 0.59, 0.68 + row * 0.14, -4.16, 0.03, 0.025, 0.14, "brassDark")
 
 
-def detailed_machine_meshes():
+def detailed_machine_meshes(include_vending=False):
     global VOL, S, ORIGIN, SHAPE
     original = (VOL, S, ORIGIN, SHAPE)
     try:
@@ -466,7 +466,9 @@ def detailed_machine_meshes():
         ORIGIN = np.array([-1.7, 0, -4.8])
         SHAPE = (680, 500, 220)
         VOL = np.zeros(SHAPE, dtype=np.uint8)
-        void_machines()
+        if include_vending:
+            vending_machine()
+        ether_condenser()
         return meshes()[2]
     finally:
         VOL, S, ORIGIN, SHAPE = original
@@ -689,6 +691,17 @@ def write_glb(path, faces, title="万象酒馆 · 二层走廊", voxel_edge=S):
     return triangles, len(output)
 
 
+def write_machine_glb(path, title, include_vending=False):
+    details = detailed_machine_meshes(include_vending)
+    for data in details.values():
+        data["p"] = [(x, y, z + 4.4) for x, y, z in data["p"]]
+    write_glb(path, details, title, 0.005)
+
+
+def build_tavern_condenser():
+    write_machine_glb(ASSETS / "tavern-machines.glb", "万象酒馆 · 以太凝聚器")
+
+
 def build():
     started = time.time()
     shell_and_floor()
@@ -730,13 +743,19 @@ def build():
         json.dumps(spec, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n"
     )
     # Preserve the original five-millimetre machine geometry as a reusable source asset.
-    details = detailed_machine_meshes()
-    for data in details.values():
-        data["p"] = [(x, y, z + 4.4) for x, y, z in data["p"]]
-    machines = TAVERN_OUT / "万象酒馆-补给装置.glb"
-    write_glb(machines, details, "万象酒馆 · 补给与以太构筑", 0.005)
-    (ASSETS / "tavern-machines.glb").write_bytes(machines.read_bytes())
+    write_machine_glb(
+        TAVERN_OUT / "万象酒馆-补给装置.glb",
+        "万象酒馆 · 补给与以太构筑",
+        include_vending=True,
+    )
+    build_tavern_condenser()
     print(json.dumps(spec, ensure_ascii=False))
 
 
-build()
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--condenser-only", action="store_true")
+    if parser.parse_args().condenser_only:
+        build_tavern_condenser()
+    else:
+        build()

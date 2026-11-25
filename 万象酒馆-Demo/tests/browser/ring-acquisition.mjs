@@ -1,935 +1,776 @@
 import assert from 'node:assert/strict';
 import path from 'node:path';
-import { readFile } from 'node:fs/promises';
+import { newCampaign, firstCompanion } from '../../src/campaign.js';
+import { defaultProtagonist } from '../../src/content/qingyuan.js';
+import { compileRoster } from '../../src/ai/library.js';
+import { newExpedition, beginEncounter } from '../../src/expedition.js';
+import { DRAGON_EMBLEM_ID, EMBLEMS } from '../../src/emblems.js';
+import { DEVELOPER_COPY_KEY } from '../../src/developer-rules.js';
+import { developerCopySeed } from '../../src/storage/developer-copy.js';
+import { finishGalDialogue } from './legacy-session.mjs';
 
-const APP_SCRIPT = '<script type="module" src="./src/app.js"></script>';
-const ROUTE = '**/__ring-acquisition';
-const DESKTOP = { width: 1365, height: 768 };
-const MOBILE = { width: 844, height: 390 };
-const READY_MIN = 2000;
-const READY_MAX = 12000;
-const LATE_WAIT = 3100;
-const DIALOG = 'dialog.ring-acquisition';
+const RING_SELECTOR = '#battle .ring-feedback[data-actor]';
+const ACTOR_SELECTOR = '#stage [data-unit], #battle .rear-card[data-rear]';
+const NARROW_VIEWPORT = { width: 844, height: 390 };
+const CHARGE_LAYERS = ['meter', 'trail'];
+const AWARD_LAYERS = ['focus', 'meter', 'trail'];
 
-export async function ringAcquisitionChecks({ browser, baseURL, output }) {
-  const page = await browser.newPage({ viewport: DESKTOP, reducedMotion: 'no-preference' });
-  page.setDefaultTimeout(READY_MAX);
-  const errors = [];
-  page.on('pageerror', (e) => errors.push({ kind: 'pageerror', text: e.message, url: page.url() }));
-  page.on('console', (m) => {
-    if (m.type() === 'error')
-      errors.push({ kind: 'console.error', text: m.text(), url: page.url() });
-  });
-  try {
-    await installProbe(page);
-    const markup = (await readFile(new URL('../../index.html', import.meta.url), 'utf8')).replace(
-      APP_SCRIPT,
-      '',
-    );
-    await page.route(ROUTE, (route) => route.fulfill({ contentType: 'text/html', body: markup }));
-    await page.goto(new URL('__ring-acquisition', baseURL).href);
-    await page.waitForFunction(() => !!window.__ringProbe);
-
-    const catalog = await page.evaluate(async () => {
-      const [{ createRingAcquisition }, { EMBLEMS }, { RING_DESIGNS }] = await Promise.all([
-        import('/src/app/ring-acquisition.js'),
-        import('/src/emblems.js'),
-        import('/src/emblem-rings.js'),
-      ]);
-      const ids = Object.keys(EMBLEMS);
-      const rings = ids.map((id) => ({
-        id,
-        name: EMBLEMS[id].emblem.name,
-        color: RING_DESIGNS[id].color,
-      }));
-      const trigger = document.createElement('button');
-      trigger.type = 'button';
-      trigger.id = 'ring-test-trigger';
-      trigger.textContent = '背景按钮';
-      trigger.style.position = 'fixed';
-      trigger.style.left = '16px';
-      trigger.style.top = '16px';
-      trigger.style.zIndex = '2147483647';
-      let clicks = 0;
-      trigger.addEventListener('click', () => (clicks += 1));
-      document.body.append(trigger);
-      const controller = createRingAcquisition();
-      const results = new Map();
-      window.__ringFixture = {
-        controller,
-        trigger,
-        clicks: () => clicks,
-        start(id, key) {
-          const promise = window.__ringFixture.controller.play(id);
-          results.set(key, { settled: false });
-          promise.then((value) => results.set(key, { settled: true, value }));
-        },
-        result: (key) => results.get(key) || { settled: false },
-      };
-      return { ids, designIds: Object.keys(RING_DESIGNS), rings };
-    });
-    assert.equal(catalog.ids.length, 6, 'six emblem ids');
-    assert.deepEqual([...catalog.ids].sort(), [...catalog.designIds].sort(), 'catalogs share ids');
-    for (const ring of catalog.rings) {
-      assert(ring.name && ring.name.length > 0, `real name for ${ring.id}`);
-      assert(ring.color && ring.color.length > 0, `real color for ${ring.id}`);
-    }
-
-    // ---- First emblem: natural play, reveal/ready screenshots, focus trap ----
-    const first = catalog.rings[0];
-    const firstPhase = await page.evaluate(
-      ({ id }) => {
-        window.__ringFixture.trigger.focus();
-        window.__ringStart = performance.now();
-        window.__ringFixture.start(id, 'first');
-        return document.querySelector('dialog.ring-acquisition')?.dataset.phase;
-      },
-      { id: first.id },
-    );
-    assert.equal(firstPhase, 'gather', 'first phase gather synchronously');
-    await waitPhase(page, 'gather');
-    assert.equal(await pending(page, 'first'), true, 'pending during gather');
-    await waitPhase(page, 'reveal');
-    assert.equal(await pending(page, 'first'), true, 'pending during reveal');
-    await waitDraws(page, 1);
-    const revealSnap = await snapshot(page);
-    assert.equal(revealSnap.phase, 'reveal', 'still reveal at screenshot');
-    assert.equal(revealSnap.emblemId, first.id, 'first emblem id');
-    assert.equal(revealSnap.name, first.name, 'first emblem name');
-    assert.equal(normalizeColor(revealSnap.accent), normalizeColor(first.color), 'first accent');
-    assert.equal(revealSnap.dialogs, 1, 'single dialog');
-    assert.equal(revealSnap.canvases, 1, 'single canvas');
-    assert.equal(revealSnap.fallback, false, 'no fallback');
-    assert.equal(revealSnap.isModal, true, 'native modal');
-    assert.equal(revealSnap.isHtmlDialog, true, 'HTMLDialogElement');
-    assert(revealSnap.coversViewport, 'covers viewport');
-    assert(revealSnap.canvasVisible, 'canvas visible');
-    const gl = await readGl(page);
-    assert(gl.context, 'real WebGL context');
-    assert.equal(gl.lost, false, 'context not lost');
-    assert(gl.width > 0 && gl.height > 0, 'drawing buffer sized');
-    assert(gl.draws > 0, 'real triangle draws');
-    await page.screenshot({ path: path.join(output, 'ring-desktop-reveal.png') });
-    assert.equal((await snapshot(page)).phase, 'reveal', 'still reveal after screenshot');
-    await waitPhase(page, 'ready');
-    const readyAt = await page.evaluate(() => performance.now() - window.__ringStart);
-    assert(readyAt >= READY_MIN && readyAt <= READY_MAX, `natural ready ${Math.round(readyAt)}ms`);
-    await page.screenshot({ path: path.join(output, 'ring-desktop-ready.png') });
-    assert.equal((await snapshot(page)).phase, 'ready', 'ready at screenshot');
-
-    // focus trap at ready
-    await page.evaluate(() => window.__ringFixture.trigger.focus());
-    assert.equal(
-      await page.evaluate(() =>
-        document.querySelector('dialog.ring-acquisition').contains(document.activeElement),
-      ),
-      true,
-      'background focus cannot steal dialog focus',
-    );
-    for (const key of ['Tab', 'Tab', 'Shift+Tab', 'Shift+Tab']) {
-      await page.keyboard.press(key);
-      assert.equal(
-        await page.evaluate(() =>
-          document.querySelector('dialog.ring-acquisition').contains(document.activeElement),
-        ),
-        true,
-        `focus trapped after ${key}`,
-      );
-    }
-    const clicksBefore = await page.evaluate(() => window.__ringFixture.clicks());
-    await page.locator(`${DIALOG} .ring-acquisition-continue`).click();
-    await settle(page, 'first');
-    assert.equal(await resultValue(page, 'first'), true, 'continue true');
-    assert.equal(await isOpen(page), false, 'closed after continue');
-    assert.equal(
-      await page.evaluate(() => document.activeElement === window.__ringFixture.trigger),
-      true,
-      'focus restored',
-    );
-    await page.locator('#ring-test-trigger').click();
-    assert(
-      (await page.evaluate(() => window.__ringFixture.clicks())) > clicksBefore,
-      'background clickable',
-    );
-    assert.equal(await dialogCount(page), 0, 'no dialog remains');
-
-    // ---- Remaining five: verify catalog + WebGL, mixed skip/continue ----
-    const rest = catalog.rings.slice(1);
-    for (let i = 0; i < rest.length; i += 1) {
-      const ring = rest[i];
-      const key = `ring-${i}`;
-      await page.evaluate(({ id, key }) => window.__ringFixture.start(id, key), {
-        id: ring.id,
-        key,
-      });
-      await page.waitForFunction(
-        (id) => document.querySelector('dialog.ring-acquisition')?.dataset.emblemId === id,
-        ring.id,
-      );
-      const snap = await snapshot(page);
-      assert.equal(snap.dialogs, 1, `one dialog ${ring.id}`);
-      assert.equal(snap.canvases, 1, `one canvas ${ring.id}`);
-      assert.equal(snap.name, ring.name, `name ${ring.id}`);
-      assert.equal(normalizeColor(snap.accent), normalizeColor(ring.color), `accent ${ring.id}`);
-      assert.equal(snap.fallback, false, `no fallback ${ring.id}`);
-      await waitDraws(page, 1);
-      assert((await readGl(page)).draws > 0, `draws ${ring.id}`);
-      if (i === 0) {
-        await page.locator(`${DIALOG} .ring-acquisition-skip`).focus();
-        await page.keyboard.press('Enter');
-      } else {
-        await page.locator(`${DIALOG} .ring-acquisition-skip`).click();
+/** Install before navigation so transient ring effects are never missed. */
+export async function installRingObserver(page) {
+  await page.addInitScript(
+    ({ ringSelector, actorSelector }) => {
+      const log = [];
+      window.__ringLog = log;
+      const seen = new WeakMap();
+      const readAnimations = Element.prototype.getAnimations;
+      const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+      function layerNames(root) {
+        const prefix = 'ring-feedback__';
+        return Array.from(root.querySelectorAll('.ring-feedback__piece'), (layer) =>
+          [...layer.classList]
+            .find((name) => name !== 'ring-feedback__piece' && name.startsWith(prefix))
+            ?.slice(prefix.length),
+        ).sort();
       }
-      await waitPhase(page, 'ready');
-      if (i === 0) {
-        await page.locator(`${DIALOG} .ring-acquisition-continue`).focus();
-        await page.keyboard.press('Space');
-      } else {
-        await page.locator(`${DIALOG} .ring-acquisition-continue`).click();
+      function hasPaintedBox(node, style) {
+        const bounds = node.getBoundingClientRect();
+        return (
+          bounds.width > 0 &&
+          bounds.height > 0 &&
+          style.visibility === 'visible' &&
+          Number(style.opacity) > 0.08
+        );
       }
-      await settle(page, key);
-      assert.equal(await resultValue(page, key), true, `continue true ${ring.id}`);
-      assert.equal(await isOpen(page), false, `closed ${ring.id}`);
-      assert.equal(await dialogCount(page), 0, `no dialog ${ring.id}`);
-    }
-
-    // ---- Escape: first Esc -> ready + pending, second Esc -> true ----
-    await page.evaluate((id) => window.__ringFixture.start(id, 'escape'), catalog.rings[2].id);
-    await waitPhase(page, 'gather');
-    await page.keyboard.press('Escape');
-    await waitPhase(page, 'ready');
-    assert.equal(await pending(page, 'escape'), true, 'pending after first Esc');
-    await page.keyboard.press('Escape');
-    await settle(page, 'escape');
-    assert.equal(await resultValue(page, 'escape'), true, 'Esc at ready true');
-    assert.equal(await isOpen(page), false, 'Esc closed');
-
-    // ---- Reduced motion: immediate ready, static frame, mobile continue ----
-    await page.emulateMedia({ reducedMotion: 'reduce' });
-    const reducedPhase = await page.evaluate((id) => {
-      window.__ringFixture.start(id, 'reduced');
-      return document.querySelector('dialog.ring-acquisition')?.dataset.phase;
-    }, catalog.rings[3].id);
-    assert.equal(reducedPhase, 'ready', 'reduced motion ready synchronously');
-    await waitPhase(page, 'ready');
-    assert.equal(await page.locator(`${DIALOG} .ring-acquisition-skip`).count(), 1, 'skip exists');
-    assert.equal(
-      await page.locator(`${DIALOG} .ring-acquisition-skip`).isVisible(),
-      false,
-      'skip hidden under reduced motion',
-    );
-    await waitDraws(page, 1);
-    const drawsA = (await readGl(page)).draws;
-    await page.waitForTimeout(300);
-    assert.equal((await readGl(page)).draws, drawsA, 'reduced motion draws stable');
-    await page.setViewportSize(MOBILE);
-    await page.screenshot({ path: path.join(output, 'ring-mobile-ready.png') });
-    const box = await page.locator(`${DIALOG} .ring-acquisition-continue`).boundingBox();
-    assert(box, 'continue visible on mobile');
-    assert(box.x >= 0 && box.x + box.width <= MOBILE.width, 'continue within width');
-    assert(box.y >= 0 && box.y + box.height <= MOBILE.height, 'continue within height');
-    await page.locator(`${DIALOG} .ring-acquisition-continue`).click();
-    await settle(page, 'reduced');
-    assert.equal(await resultValue(page, 'reduced'), true, 'reduced continue true');
-    await page.setViewportSize(DESKTOP);
-    await page.emulateMedia({ reducedMotion: 'no-preference' });
-
-    // ---- Replace + invalid ids ----
-    const replace = await page.evaluate(
-      async ({ first, second }) => {
-        const fixture = window.__ringFixture;
-        fixture.start(first, 'replace-old');
-        fixture.start(second, 'replace-new');
-        const dialog = document.querySelector('dialog.ring-acquisition');
-        const canvas = dialog?.querySelector('canvas');
-        const beforeId = dialog?.dataset.emblemId;
-        const invalid = await Promise.all([
-          fixture.controller.play('__invalid__'),
-          fixture.controller.play(null),
-        ]);
-        const after = document.querySelector('dialog.ring-acquisition');
-        const afterCanvas = after?.querySelector('canvas');
+      function samplePresentation(root, phase) {
+        const meter = root.querySelector('.ring-feedback__meter');
+        const rim = root.querySelector('.ring-feedback__rim');
+        const gem = root.querySelector('.ring-feedback__core');
+        const sweep = root.querySelector('.ring-feedback__sweep');
+        const meterStyle = getComputedStyle(meter);
+        const bounds = meter.getBoundingClientRect();
+        const rimStyle = rim && getComputedStyle(rim);
+        const gemStyle = gem && getComputedStyle(gem);
+        const haloStyle = phase === 'full' && getComputedStyle(meter, '::after');
+        const trail = root.querySelector('.ring-feedback__trail');
+        const trailStyle = trail && getComputedStyle(trail);
+        const focus = root.querySelector('.ring-feedback__focus');
+        const focusStyle = focus && getComputedStyle(focus);
+        const visible =
+          bounds.width > 0 && meterStyle.visibility === 'visible' && Number(meterStyle.opacity) > 0;
+        const settling =
+          phase === 'settle'
+            ? readAnimations
+                ?.call(meter)
+                .find((effect) => effect.animationName === meterStyle.animationName)
+            : null;
+        const end = settling?.effect.getKeyframes().at(-1);
+        const endScale = /(?:scale|matrix)\(([\d.]+)/.exec(end?.transform ?? '')?.[1];
         return {
-          oldSettled: fixture.result('replace-old').settled,
-          oldValue: fixture.result('replace-old').value,
-          newPending: !fixture.result('replace-new').settled,
-          invalid,
-          domStable:
-            beforeId === after?.dataset.emblemId && dialog === after && canvas === afterCanvas,
-          dialogs: document.querySelectorAll('dialog.ring-acquisition').length,
-          canvases: document.querySelectorAll('dialog.ring-acquisition canvas').length,
-          emblemId: after?.dataset.emblemId,
-        };
-      },
-      { first: catalog.rings[0].id, second: catalog.rings[1].id },
-    );
-    assert.equal(replace.oldValue, false, 'replaced play false');
-    assert.equal(replace.newPending, true, 'new play pending');
-    assert.deepEqual(replace.invalid, [false, false], 'invalid ids false');
-    assert.equal(replace.domStable, true, 'invalid ids keep DOM');
-    assert.equal(replace.dialogs, 1, 'one dialog after replace');
-    assert.equal(replace.canvases, 1, 'one canvas after replace');
-    assert.equal(replace.emblemId, catalog.rings[1].id, 'new emblem shown');
-    await page.locator(`${DIALOG} .ring-acquisition-skip`).click();
-    await waitPhase(page, 'ready');
-    await page.locator(`${DIALOG} .ring-acquisition-continue`).click();
-    await settle(page, 'replace-new');
-    assert.equal(await resultValue(page, 'replace-new'), true, 'replacement continue true');
-
-    // ---- cancel / dispose / pagehide ----
-    for (const mode of ['cancel', 'dispose', 'pagehide']) {
-      await page.evaluate(({ id, mode }) => window.__ringFixture.start(id, mode), {
-        id: catalog.rings[0].id,
-        mode,
-      });
-      await page.waitForFunction(() => !!document.querySelector('dialog.ring-acquisition'));
-      await page.evaluate((mode) => {
-        const fixture = window.__ringFixture;
-        if (mode === 'cancel') fixture.controller.cancel();
-        else if (mode === 'dispose') fixture.controller.dispose();
-        else window.dispatchEvent(new Event('pagehide'));
-      }, mode);
-      await settle(page, mode);
-      assert.equal(await resultValue(page, mode), false, `${mode} false`);
-      assert.equal(await isOpen(page), false, `${mode} closed`);
-      assert.equal(await dialogCount(page), 0, `${mode} cleans DOM`);
-      if (mode === 'dispose') {
-        await page.evaluate(async () => {
-          const { createRingAcquisition } = await import('/src/app/ring-acquisition.js');
-          window.__ringFixture.controller = createRingAcquisition();
-        });
-      }
-    }
-    await page.evaluate(() => window.__ringFixture.controller.dispose());
-
-    // ---- Emblem integration: real ruins reward, save-before-animation ----
-    const integration = await page.evaluate(async () => {
-      const [{ createEmblems }, { createEventScope }, { prepareBossEmblem }, { EMBLEMS }] =
-        await Promise.all([
-          import('/src/app/emblems.js'),
-          import('/src/shared/events.js'),
-          import('/src/emblem-progression.js'),
-          import('/src/emblems.js'),
-        ]);
-      const events = createEventScope();
-      const saves = [];
-      const session = {
-        ai: { library: { progression: { emblemLesson: 'done' }, emblems: [] } },
-        runtime: { mode: 'battle' },
-        battle: { playing: false, state: { phase: 'opening' } },
-        journey: {},
-      };
-      const controller = createEmblems({
-        session,
-        events,
-        generation: {
-          save() {
-            saves.push({
-              shown: session.journey.expedition?.emblemArrival?.shown === true,
-              dialogOpen: !!document.querySelector('dialog.ring-acquisition'),
-              expedition: JSON.stringify(session.journey.expedition),
-              library: JSON.stringify(session.ai.library),
-            });
+          visible,
+          ringVisible:
+            visible &&
+            Boolean(
+              rimStyle?.backgroundImage.includes('conic-gradient') &&
+              rim.getBoundingClientRect().width > 0,
+            ),
+          gemVisible:
+            visible &&
+            Boolean(
+              gemStyle?.clipPath.startsWith('polygon(') &&
+              gem.getBoundingClientRect().width > 0 &&
+              Number(gemStyle.opacity) > 0,
+            ),
+          meterBounds: {
+            left: bounds.left,
+            right: bounds.right,
+            top: bounds.top,
+            bottom: bounds.bottom,
+            width: bounds.width,
           },
-        },
-        audio: { play() {} },
-        shell: { toast() {} },
-      });
-      session.journey.expedition = { index: 4, exploration: { map: 'ruins', sequence: 2 } };
-      prepareBossEmblem(session.ai.library, session.journey.expedition);
-      const arrivalId = session.journey.expedition.emblemArrival.id;
-      controller.check();
-      const dialog = document.querySelector('dialog.ring-acquisition');
-      const dialogue = document.querySelector('#emblem-dialogue');
-      window.__emblemFixture = { session, controller, events, saves, arrivalId };
-      return {
-        saveCount: saves.length,
-        shown: saves[0]?.shown === true,
-        dialogAtSave: saves[0]?.dialogOpen === true,
-        savedArrivalShown: JSON.parse(saves[0]?.expedition || '{}').emblemArrival?.shown === true,
-        savedLibraryHasReward: (JSON.parse(saves[0]?.library || '{}').emblems || []).includes(
-          arrivalId,
-        ),
-        dialogAfterCheck: !!dialog,
-        dialogueHidden: !dialogue || !dialogue.open,
-        arrivalName: EMBLEMS[arrivalId].emblem.name,
-      };
-    });
-    assert.equal(integration.saveCount, 1, 'check saves once');
-    assert.equal(integration.shown, true, 'save snapshot shown=true');
-    assert.equal(integration.savedArrivalShown, true, 'saved expedition arrival.shown true');
-    assert.equal(integration.savedLibraryHasReward, true, 'saved library has reward id');
-    assert.equal(integration.dialogAtSave, false, 'dialog not open at save');
-    assert.equal(integration.dialogAfterCheck, true, 'dialog opens after check');
-    assert.equal(integration.dialogueHidden, true, 'dialogue hidden during acquisition');
-    const secondCheck = await page.evaluate(() => {
-      const { controller, saves } = window.__emblemFixture;
-      const before = saves.length;
-      const node = document.querySelector('dialog.ring-acquisition');
-      controller.check();
-      controller.check();
-      return {
-        extraSaves: saves.length - before,
-        dialogs: document.querySelectorAll('dialog.ring-acquisition').length,
-        sameNode: node === document.querySelector('dialog.ring-acquisition'),
-      };
-    });
-    assert.equal(secondCheck.extraSaves, 0, 'duplicate check no save');
-    assert.equal(secondCheck.dialogs, 1, 'duplicate check keeps dialog');
-    assert.equal(secondCheck.sameNode, true, 'duplicate check same DOM node');
-    await page.locator(`${DIALOG} .ring-acquisition-skip`).click();
-    await waitPhase(page, 'ready');
-    await page.locator(`${DIALOG} .ring-acquisition-continue`).click();
-    await page.locator('#emblem-dialogue').waitFor({ state: 'visible' });
-    await page.locator('#emblem-dialogue button').click();
-    assert.equal(
-      await page.evaluate(
-        (name) => document.querySelector('#emblem-dialogue').textContent.includes(name),
-        integration.arrivalName,
-      ),
-      true,
-      'dialogue shows real emblem name',
-    );
-    await page.locator('#emblem-dialogue button').click();
-    await page.locator('#emblem-dialogue').waitFor({ state: 'hidden' });
-    const afterDialogue = await page.evaluate(() => {
-      const { controller, saves } = window.__emblemFixture;
-      const before = saves.length;
-      controller.check();
-      return {
-        replay: !!document.querySelector('dialog.ring-acquisition'),
-        extraSaves: saves.length - before,
-      };
-    });
-    assert.equal(afterDialogue.replay, false, 'no replay after dialogue');
-    assert.equal(afterDialogue.extraSaves, 0, 'no extra save after dialogue');
-    await page.evaluate(() => {
-      window.__emblemFixture.controller.dispose();
-      window.__emblemFixture.events.dispose();
-    });
-
-    // ---- Fallback: context loss -> data-fallback, ready, dialogue completes ----
-    await page.evaluate(async () => {
-      const [{ createEmblems }, { createEventScope }, { prepareBossEmblem }] = await Promise.all([
-        import('/src/app/emblems.js'),
-        import('/src/shared/events.js'),
-        import('/src/emblem-progression.js'),
-      ]);
-      const events = createEventScope();
-      const session = {
-        ai: { library: { progression: { emblemLesson: 'done' }, emblems: [] } },
-        runtime: { mode: 'battle' },
-        battle: { playing: false, state: { phase: 'opening' } },
-        journey: {},
-      };
-      const controller = createEmblems({
-        session,
-        events,
-        generation: { save() {} },
-        audio: { play() {} },
-        shell: { toast() {} },
-      });
-      session.journey.expedition = { index: 4, exploration: { map: 'forest', sequence: 3 } };
-      prepareBossEmblem(session.ai.library, session.journey.expedition);
-      controller.check();
-      window.__fallbackFixture = { controller, events };
-    });
-    await page.waitForFunction(() => !!document.querySelector('dialog.ring-acquisition canvas'));
-    await page.evaluate(() => {
-      document
-        .querySelector('dialog.ring-acquisition canvas')
-        .dispatchEvent(new Event('webglcontextlost', { cancelable: true }));
-    });
-    await page.waitForFunction(
-      () => document.querySelector('dialog.ring-acquisition')?.dataset.fallback === 'true',
-    );
-    await waitPhase(page, 'ready');
-    assert.equal(
-      await page.evaluate(
-        () => document.querySelector('dialog.ring-acquisition')?.dataset.fallback === 'true',
-      ),
-      true,
-      'fallback flag set',
-    );
-    assert.equal(
-      await page.evaluate(() => {
-        const b = document.querySelector('dialog.ring-acquisition .ring-acquisition-continue');
-        return !!b && !b.hidden && !b.disabled;
-      }),
-      true,
-      'fallback continue usable',
-    );
-    await page.locator(`${DIALOG} .ring-acquisition-continue`).click();
-    await page.locator('#emblem-dialogue').waitFor({ state: 'visible' });
-    await page.locator('#emblem-dialogue button').click();
-    await page.locator('#emblem-dialogue button').click();
-    await page.locator('#emblem-dialogue').waitFor({ state: 'hidden' });
-    await page.evaluate(() => {
-      window.__fallbackFixture.controller.dispose();
-      window.__fallbackFixture.events.dispose();
-    });
-
-    // ---- Late callbacks: leave / dispose / pagehide ----
-    for (const mode of ['leave', 'dispose', 'pagehide']) {
-      await page.evaluate(async (mode) => {
-        const [{ createEmblems }, { createEventScope }, { prepareBossEmblem }] = await Promise.all([
-          import('/src/app/emblems.js'),
-          import('/src/shared/events.js'),
-          import('/src/emblem-progression.js'),
-        ]);
-        const events = createEventScope();
-        const session = {
-          ai: { library: { progression: { emblemLesson: 'done' }, emblems: [] } },
-          runtime: { mode: 'battle' },
-          battle: { playing: false, state: { phase: 'opening' } },
-          journey: {},
+          trailVisible: Boolean(
+            trailStyle?.backgroundImage.includes('radial-gradient') &&
+            hasPaintedBox(trail, trailStyle),
+          ),
+          focusVisible: Boolean(
+            focusStyle?.borderTopStyle === 'solid' &&
+            parseFloat(focusStyle.borderTopWidth) > 0 &&
+            hasPaintedBox(focus, focusStyle),
+          ),
+          focusAnimationName: focusStyle?.animationName ?? null,
+          meterAnimationName: meterStyle.animationName,
+          sweepAnimationName: sweep ? getComputedStyle(sweep).animationName : null,
+          settleEnd: endScale ? { scale: Number(endScale), opacity: Number(end.opacity) } : null,
+          haloVisible: visible && Number(haloStyle?.opacity) > 0,
+          haloAnimationName: haloStyle?.animationName ?? null,
         };
-        const controller = createEmblems({
-          session,
-          events,
-          generation: { save() {} },
-          audio: { play() {} },
-          shell: { toast() {} },
-        });
-        session.journey.expedition = { index: 4, exploration: { map: 'ruins', sequence: 2 } };
-        prepareBossEmblem(session.ai.library, session.journey.expedition);
-        controller.check();
-        if (!document.querySelector('dialog.ring-acquisition'))
-          throw new Error('acquisition not open');
-        if (mode === 'leave') controller.leave();
-        else if (mode === 'dispose') controller.dispose();
-        else window.dispatchEvent(new Event('pagehide'));
-        window.__lateFixture = { controller, events, mode };
-      }, mode);
-      await page.waitForTimeout(LATE_WAIT);
-      const late = await page.evaluate(() => {
-        const { controller, events, mode } = window.__lateFixture;
-        const dialog = !!document.querySelector('dialog.ring-acquisition');
-        const dialogue = document.querySelector('#emblem-dialogue');
-        const dialogueOpen = !!dialogue && dialogue.open;
-        let replay = false;
-        if (mode !== 'dispose') {
-          controller.check();
-          replay = !!document.querySelector('dialog.ring-acquisition');
+      }
+      function record(root) {
+        const actor = root.dataset.actor;
+        const anchor = actor
+          ? [...document.querySelectorAll(actorSelector)].find(
+              (candidate) => candidate.dataset.unit === actor || candidate.dataset.rear === actor,
+            ) || null
+          : null;
+        const rect = anchor?.getBoundingClientRect();
+        const origin = root.getBoundingClientRect();
+        const board = root.parentElement?.getBoundingClientRect();
+        const phase = root.dataset.phase || null;
+        const charge = root.dataset.charge ?? null;
+        const lit = root.querySelectorAll('.ring-feedback__cell.is-lit').length;
+        const signature = `${phase}:${charge}:${lit}:${root.className}`;
+        if (seen.get(root) === signature) return;
+        seen.set(root, signature);
+        if (!phase) return;
+        const snapshot = {
+          at: performance.now(),
+          actor,
+          emblem: root.dataset.emblem ?? null,
+          phase,
+          lit,
+          cells: root.querySelectorAll('.ring-feedback__cell').length,
+          layers: layerNames(root),
+          hasOverlay: Boolean(root.querySelector('svg, canvas, dialog')),
+          accessible:
+            root.getAttribute('aria-hidden') === 'true' &&
+            getComputedStyle(root).pointerEvents === 'none',
+          anchor: rect
+            ? { left: rect.left, top: rect.top, width: rect.width, height: rect.height }
+            : null,
+          feedbackOrigin: { left: origin.left, top: origin.top },
+          board: board
+            ? { left: board.left, top: board.top, width: board.width, height: board.height }
+            : null,
+          ...samplePresentation(root, phase),
+        };
+        log.push(snapshot);
+        // A phase mutation can precede the first visible frame of its CSS effects.
+        const flight = phase === 'flight' && !reducedMotion.matches;
+        const burst =
+          phase === 'full' && root.classList.contains('is-award') && !reducedMotion.matches;
+        const deadline = performance.now() + 300;
+        function sampleFrame() {
+          requestAnimationFrame(() => {
+            if (!root.isConnected || seen.get(root) !== signature) return;
+            const frame = samplePresentation(root, phase);
+            snapshot.frame = frame;
+            if (
+              performance.now() < deadline &&
+              (flight ? !frame.trailVisible : !frame.visible || (burst && !frame.haloVisible))
+            ) {
+              sampleFrame();
+            }
+          });
         }
-        controller.dispose();
-        events.dispose();
-        return { dialog, dialogueOpen, replay };
-      });
-      assert.equal(late.dialog, false, `${mode} prevents late dialog`);
-      assert.equal(late.dialogueOpen, false, `${mode} prevents late dialogue`);
-      if (mode !== 'dispose') assert.equal(late.replay, false, `${mode} no replay`);
-    }
-
-    // ---- Corridor ring: real prepareCorridorRing, save-before-animation, cancel no replay ----
-    const corridor = await page.evaluate(async () => {
-      const [
-        { createEmblems },
-        { createEventScope },
-        { prepareCorridorRing },
-        { EMBLEM_ID, EMBLEMS },
-      ] = await Promise.all([
-        import('/src/app/emblems.js'),
-        import('/src/shared/events.js'),
-        import('/src/emblem-progression.js'),
-        import('/src/emblems.js'),
-      ]);
-      const events = createEventScope();
-      const saves = [];
-      const session = {
-        ai: {
-          library: {
-            progression: { emblemLesson: 'done' },
-            emblems: [],
-            characters: [],
-            party: [],
-          },
-        },
-        runtime: { mode: 'battle' },
-        battle: { playing: false, state: { phase: 'opening', formation: [] } },
-        journey: {},
-      };
-      const controller = createEmblems({
-        session,
-        events,
-        generation: {
-          save() {
-            saves.push({
-              shown: session.journey.expedition?.corridorRing?.shown === true,
-              dialogOpen: !!document.querySelector('dialog.ring-acquisition'),
-              expedition: JSON.stringify(session.journey.expedition),
-              library: JSON.stringify(session.ai.library),
-            });
-          },
-        },
-        audio: { play() {} },
-        shell: { toast() {} },
-      });
-      session.journey.expedition = { index: 4, exploration: { map: 'mill', sequence: 0 } };
-      const granted = prepareCorridorRing(session.ai.library, session.journey.expedition, () => 0);
-      const corridorRing = session.journey.expedition.corridorRing;
-      const libraryHasRing = session.ai.library.emblems.includes(EMBLEM_ID);
-      const lesson = session.ai.library.progression.emblemLesson;
-      controller.check();
-      const dialog = document.querySelector('dialog.ring-acquisition');
-      window.__corridorFixture = { session, controller, events, saves, EMBLEM_ID, EMBLEMS };
-      return {
-        EMBLEM_ID,
-        granted,
-        libraryHasRing,
-        actorAbsent: !corridorRing?.actor,
-        lesson,
-        saveCount: saves.length,
-        savedShown: saves[0]?.shown === true,
-        savedArrivalShown: JSON.parse(saves[0]?.expedition || '{}').corridorRing?.shown === true,
-        savedLibraryHasRing: (JSON.parse(saves[0]?.library || '{}').emblems || []).includes(
-          EMBLEM_ID,
-        ),
-        dialogAtSave: saves[0]?.dialogOpen === true,
-        dialogAfterCheck: !!dialog,
-        animationId: dialog?.dataset.emblemId,
-        emblemName: EMBLEMS[EMBLEM_ID].emblem.name,
-      };
-    });
-    assert.equal(corridor.granted, true, 'prepareCorridorRing grants');
-    assert.equal(corridor.libraryHasRing, true, 'library has corridor ring');
-    assert.equal(corridor.actorAbsent, true, 'corridorRing.actor absent');
-    assert.equal(corridor.lesson, 'corridor-intro', 'lesson corridor-intro');
-    assert.equal(corridor.saveCount, 1, 'corridor check saves once');
-    assert.equal(corridor.savedShown, true, 'corridor save snapshot shown=true');
-    assert.equal(corridor.savedArrivalShown, true, 'saved corridorRing.shown true');
-    assert.equal(corridor.savedLibraryHasRing, true, 'saved library has corridor ring');
-    assert.equal(corridor.dialogAtSave, false, 'corridor dialog not open at save');
-    assert.equal(corridor.dialogAfterCheck, true, 'corridor dialog opens after check');
-    assert.equal(corridor.animationId, corridor.EMBLEM_ID, 'corridor animation id');
-    const corridorDup = await page.evaluate(() => {
-      const { controller, saves } = window.__corridorFixture;
-      const before = saves.length;
-      const node = document.querySelector('dialog.ring-acquisition');
-      controller.check();
-      controller.check();
-      return {
-        extraSaves: saves.length - before,
-        dialogs: document.querySelectorAll('dialog.ring-acquisition').length,
-        sameNode: node === document.querySelector('dialog.ring-acquisition'),
-      };
-    });
-    assert.equal(corridorDup.extraSaves, 0, 'corridor duplicate check no save');
-    assert.equal(corridorDup.dialogs, 1, 'corridor duplicate check keeps dialog');
-    assert.equal(corridorDup.sameNode, true, 'corridor duplicate check same DOM node');
-    await page.evaluate(() => window.__corridorFixture.controller.leave());
-    await page.evaluate(
-      () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
-    );
-    const corridorAfterLeave = await page.evaluate(() => {
-      const { session } = window.__corridorFixture;
-      const dialogue = document.querySelector('#emblem-dialogue');
-      return {
-        dialogs: document.querySelectorAll('dialog.ring-acquisition').length,
-        dialogueOpen: !!dialogue && dialogue.open,
-        shown: session.journey.expedition.corridorRing.shown === true,
-      };
-    });
-    assert.equal(corridorAfterLeave.dialogs, 0, 'corridor leave removes dialog');
-    assert.equal(corridorAfterLeave.dialogueOpen, false, 'corridor leave no dialogue');
-    assert.equal(corridorAfterLeave.shown, true, 'corridor shown stays true after leave');
-    const corridorRecheck = await page.evaluate(() => {
-      const { controller, session, saves } = window.__corridorFixture;
-      const before = saves.length;
-      const emblemsBefore = JSON.stringify(session.ai.library.emblems);
-      controller.check();
-      const dialogue = document.querySelector('#emblem-dialogue');
-      return {
-        replay: !!document.querySelector('dialog.ring-acquisition'),
-        extraSaves: saves.length - before,
-        dialogueOpen: !!dialogue && dialogue.open,
-        lesson: session.ai.library.progression.emblemLesson,
-        emblemsUnchanged: JSON.stringify(session.ai.library.emblems) === emblemsBefore,
-      };
-    });
-    assert.equal(corridorRecheck.replay, false, 'corridor recheck no animation');
-    assert.equal(corridorRecheck.dialogueOpen, false, 'corridor recheck no dialogue');
-    assert.equal(corridorRecheck.lesson, 'charge', 'corridor recheck lesson charge');
-    assert.equal(corridorRecheck.extraSaves, 1, 'corridor recheck saves lesson transition');
-    assert.equal(corridorRecheck.emblemsUnchanged, true, 'corridor recheck emblems unchanged');
-    await page.evaluate(() => {
-      window.__corridorFixture.controller.dispose();
-      window.__corridorFixture.events.dispose();
-    });
-
-    // ---- Preview: playAcquisition + same-origin replay message, no save/library change ----
-    const preview = await page.evaluate(async () => {
-      const [{ createEmblems }, { createEventScope }] = await Promise.all([
-        import('/src/app/emblems.js'),
-        import('/src/shared/events.js'),
-      ]);
-      const events = createEventScope();
-      let saveCount = 0;
-      const session = {
-        ai: { library: { progression: { emblemLesson: 'done' }, emblems: [] } },
-        runtime: { mode: 'inn' },
-        battle: { playing: false, state: { phase: 'opening' } },
-        journey: {},
-      };
-      const controller = createEmblems({
-        session,
-        events,
-        generation: {
-          save() {
-            saveCount += 1;
-          },
-        },
-        audio: { play() {} },
-        shell: { toast() {} },
-      });
-      window.__previewFixture = { session, controller, events, saveCount: () => saveCount };
-      return { library: JSON.stringify(session.ai.library), saves: saveCount };
-    });
-    await page.evaluate(async () => {
-      const { controller } = window.__previewFixture;
-      const { EMBLEMS } = await import('/src/emblems.js');
-      window.__previewResult = controller.playAcquisition(Object.keys(EMBLEMS)[0]);
-    });
-    await page.waitForFunction(() => !!document.querySelector('dialog.ring-acquisition'));
-    await page.locator(`${DIALOG} .ring-acquisition-skip`).click();
-    await waitPhase(page, 'ready');
-    await page.locator(`${DIALOG} .ring-acquisition-continue`).click();
-    await page.waitForFunction(() => !document.querySelector('dialog.ring-acquisition'));
-    assert.equal(
-      await page.evaluate(() => window.__previewResult),
-      true,
-      'preview playAcquisition true',
-    );
-    const afterPreview = await page.evaluate(() => {
-      const { session, saveCount } = window.__previewFixture;
-      const dialogue = document.querySelector('#emblem-dialogue');
-      return {
-        library: JSON.stringify(session.ai.library),
-        saves: saveCount(),
-        dialogueOpen: !!dialogue && dialogue.open,
-      };
-    });
-    assert.equal(afterPreview.saves, preview.saves, 'preview does not save');
-    assert.equal(afterPreview.library, preview.library, 'preview library unchanged');
-    assert.equal(afterPreview.dialogueOpen, false, 'preview no dialogue');
-
-    // same-origin replay message via real iframe inside existing #inn-frame container
-    await page.evaluate(async () => {
-      const { EMBLEMS } = await import('/src/emblems.js');
-      const id = Object.keys(EMBLEMS)[1];
-      let container = document.querySelector('#inn-frame');
-      if (!container) {
-        container = document.createElement('div');
-        container.id = 'inn-frame';
-        document.body.append(container);
+        sampleFrame();
       }
-      const frame = document.createElement('iframe');
-      frame.srcdoc = '<!doctype html><html><body></body></html>';
-      container.append(frame);
-      window.__previewReplayId = id;
-    });
-    const frame = page.frameLocator('#inn-frame iframe');
-    await frame.locator('body').evaluate(() => {
-      parent.postMessage(
-        { type: 'tavern-emblem-replay', id: window.parent.__previewReplayId },
-        parent.location.origin,
-      );
-    });
-    await page.waitForFunction(
-      (id) => document.querySelector('dialog.ring-acquisition')?.dataset.emblemId === id,
-      await page.evaluate(() => window.__previewReplayId),
-    );
-    await page.locator(`${DIALOG} .ring-acquisition-skip`).click();
-    await waitPhase(page, 'ready');
-    await page.locator(`${DIALOG} .ring-acquisition-continue`).click();
-    await page.waitForFunction(() => !document.querySelector('dialog.ring-acquisition'));
-    const afterReplay = await page.evaluate(() => {
-      const { session, saveCount } = window.__previewFixture;
-      return { library: JSON.stringify(session.ai.library), saves: saveCount() };
-    });
-    assert.equal(afterReplay.saves, preview.saves, 'replay does not save');
-    assert.equal(afterReplay.library, preview.library, 'replay library unchanged');
-    await page.evaluate(() => {
-      window.__previewFixture.controller.dispose();
-      window.__previewFixture.events.dispose();
-      document.querySelector('#inn-frame iframe')?.remove();
-    });
-
-    assert.deepEqual(errors, [], 'no page errors or console errors');
-    return {
-      catalog: catalog.rings.length,
-      naturalReady: Math.round(readyAt),
-      webglDraws: gl.draws,
-      escape: true,
-      reducedMotion: true,
-      mobile: true,
-      replace: true,
-      cancelDispose: true,
-      pagehide: true,
-      integration: true,
-      fallback: true,
-      lateCallbacks: true,
-      corridor: true,
-      preview: true,
-    };
-  } catch (failure) {
-    try {
-      await page.screenshot({ path: path.join(output, 'failure.png') });
-    } catch {
-      /* ignore screenshot failure */
-    }
-    throw failure;
-  } finally {
-    await page.close();
-  }
-}
-
-async function installProbe(page) {
-  await page.addInitScript(() => {
-    const contexts = new WeakMap();
-    const draws = new WeakMap();
-    const original = HTMLCanvasElement.prototype.getContext;
-    HTMLCanvasElement.prototype.getContext = function getContext(type, ...rest) {
-      const ctx = original.call(this, type, ...rest);
-      if (ctx && (type === 'webgl' || type === 'webgl2')) {
-        contexts.set(this, ctx);
-        if (!draws.has(this)) draws.set(this, 0);
+      function scan() {
+        for (const root of document.querySelectorAll(ringSelector)) record(root);
       }
-      return ctx;
-    };
-    const count = (canvas, amount) => {
-      if (canvas && amount > 0) draws.set(canvas, (draws.get(canvas) || 0) + 1);
-    };
-    const wrap = (proto, name, countOf) => {
-      if (!proto || typeof proto[name] !== 'function') return;
-      const fn = proto[name];
-      proto[name] = function wrapped(...args) {
-        const result = fn.apply(this, args);
-        const mode = args[0];
-        const triangles =
-          mode === this.TRIANGLES || mode === this.TRIANGLE_STRIP || mode === this.TRIANGLE_FAN;
-        if (triangles) count(this.canvas, countOf(args));
-        return result;
-      };
-    };
-    for (const proto of [
-      window.WebGLRenderingContext?.prototype,
-      window.WebGL2RenderingContext?.prototype,
-    ]) {
-      if (!proto) continue;
-      wrap(proto, 'drawElements', (args) => args[1]);
-      wrap(proto, 'drawArrays', (args) => args[2]);
-      wrap(proto, 'drawElementsInstanced', (args) => (args[4] > 0 ? args[1] : 0));
-      wrap(proto, 'drawArraysInstanced', (args) => (args[3] > 0 ? args[2] : 0));
-    }
-    window.__ringProbe = {
-      contextOf: (canvas) => contexts.get(canvas) || null,
-      drawsOf: (canvas) => draws.get(canvas) || 0,
-    };
-  });
-}
-
-async function waitPhase(page, phase) {
-  await page.waitForFunction(
-    (phase) => document.querySelector('dialog.ring-acquisition')?.dataset.phase === phase,
-    phase,
-    { timeout: READY_MAX },
-  );
-}
-
-async function waitDraws(page, minimum) {
-  await page.waitForFunction(
-    (minimum) => {
-      const canvas = document.querySelector('dialog.ring-acquisition canvas');
-      return !!canvas && window.__ringProbe.drawsOf(canvas) >= minimum;
+      new MutationObserver(scan).observe(document, {
+        subtree: true,
+        childList: true,
+        attributes: true,
+        attributeFilter: ['data-phase', 'data-charge', 'class'],
+      });
+      scan();
     },
-    minimum,
-    { timeout: READY_MAX },
+    {
+      ringSelector: RING_SELECTOR,
+      actorSelector: ACTOR_SELECTOR,
+    },
   );
 }
 
-async function readGl(page) {
-  return page.evaluate(() => {
-    const canvas = document.querySelector('dialog.ring-acquisition canvas');
-    if (!canvas) return { context: false, lost: true, width: 0, height: 0, draws: 0 };
-    const ctx = window.__ringProbe.contextOf(canvas);
-    const isGl =
-      !!ctx &&
-      ((typeof WebGLRenderingContext !== 'undefined' && ctx instanceof WebGLRenderingContext) ||
-        (typeof WebGL2RenderingContext !== 'undefined' && ctx instanceof WebGL2RenderingContext));
-    return {
-      context: isGl,
-      lost: isGl ? ctx.isContextLost() : true,
-      width: isGl ? ctx.drawingBufferWidth : 0,
-      height: isGl ? ctx.drawingBufferHeight : 0,
-      draws: window.__ringProbe.drawsOf(canvas),
-    };
-  });
+function buildSnapshot() {
+  const library = newCampaign(defaultProtagonist());
+  library.campaign.completed = true;
+  library.campaign.tutorial = 'complete';
+  library.inventory.summonContracts = 1;
+  firstCompanion(library);
+  library.campaign.tutorial = 'complete';
+  library.seenOverlordTutorials = ['darkscaleWarlord'];
+  const expedition = newExpedition('darkscaleWarlord', compileRoster(library));
+  expedition.partyIds = [...library.party];
+  expedition.developerEncounter = {
+    name: 'darkscaleWarlord',
+    boss: true,
+    enemyIds: ['darkscaleWarlord'],
+  };
+  const state = beginEncounter(expedition);
+  return {
+    version: 1,
+    library,
+    state,
+    plan: [],
+    history: [],
+    journey: { bossChoice: 'darkscaleWarlord', regionMap: 'forest', expedition },
+    activeScript: null,
+    storyView: { page: 0, latest: 0, pages: Array.from({ length: 5 }, () => []) },
+    quick: [],
+  };
 }
 
-async function snapshot(page) {
-  return page.evaluate(() => {
-    const dialog = document.querySelector('dialog.ring-acquisition');
-    const canvas = dialog?.querySelector('canvas');
-    const rect = dialog?.getBoundingClientRect();
-    const canvasRect = canvas?.getBoundingClientRect();
-    return {
-      phase: dialog?.dataset.phase,
-      emblemId: dialog?.dataset.emblemId,
-      name: dialog?.querySelector('.ring-acquisition-name')?.textContent,
-      accent: dialog?.style.getPropertyValue('--ring-accent'),
-      fallback: dialog?.dataset.fallback === 'true',
-      dialogs: document.querySelectorAll('dialog.ring-acquisition').length,
-      canvases: document.querySelectorAll('dialog.ring-acquisition canvas').length,
-      isModal: dialog?.matches(':modal') ?? false,
-      isHtmlDialog: dialog instanceof HTMLDialogElement,
-      coversViewport:
-        !!rect &&
-        rect.left <= 1 &&
-        rect.top <= 1 &&
-        rect.right >= window.innerWidth - 1 &&
-        rect.bottom >= window.innerHeight - 1,
-      canvasVisible: !!canvasRect && canvasRect.width > 0 && canvasRect.height > 0,
-    };
-  });
+async function seedCopy(page, snapshot) {
+  const entries = developerCopySeed(
+    { ai: { library: snapshot.library, generationOptions: {} } },
+    snapshot,
+  );
+  await page.addInitScript(
+    ({ key, rows }) => {
+      if (sessionStorage.getItem(key)) return;
+      sessionStorage.setItem(key, JSON.stringify(rows));
+    },
+    { key: DEVELOPER_COPY_KEY, rows: entries },
+  );
 }
 
-async function pending(page, key) {
-  return page.evaluate((key) => !window.__ringFixture.result(key).settled, key);
+async function openBattle(page, baseURL) {
+  await page.goto(`${baseURL}/?developerSandbox`);
+  await page.waitForFunction(() => window.demo?.getStatus().mode === 'battle');
+  await page.waitForFunction(() => !window.demo.getStatus().animating);
 }
 
-async function settle(page, key) {
-  await page.waitForFunction((key) => window.__ringFixture.result(key).settled, key, {
-    timeout: READY_MAX,
-  });
+async function commitRound(page) {
+  await page.locator('#commit').click();
+  await page.waitForFunction(() => window.demo.getStatus().playing);
+  await page.waitForFunction(() => !window.demo.getStatus().playing);
+  await page.waitForFunction(() => !window.demo.getStatus().animating);
 }
 
-async function resultValue(page, key) {
-  return page.evaluate((key) => window.__ringFixture.result(key).value, key);
+async function triggerChargeFeedback(page, actor, previousCharge) {
+  return page.evaluate(
+    async ({ actor, previousCharge }) => {
+      const { createRingFeedback } = await import('/src/app/ring-feedback.js');
+      const state = demo.getState();
+      const before = structuredClone(state);
+      const after = structuredClone(state);
+      before.units[actor].emblemCharge = previousCharge;
+      after.units[actor].emblemCharge = 6;
+      const cues = [];
+      const feedback = createRingFeedback({
+        session: { runtime: { mode: 'battle', disposed: false }, battle: { state: after } },
+        audio: { play: (cue) => cues.push(cue) },
+      });
+      try {
+        return { played: await feedback.event({ after }, before), cues };
+      } finally {
+        feedback.dispose();
+      }
+    },
+    { actor, previousCharge },
+  );
 }
 
-async function isOpen(page) {
-  return page.evaluate(() => window.__ringFixture.controller.isOpen());
+async function interruptAcquisition(page, actor, method, timedFallback) {
+  return page.evaluate(
+    async ({ actor, method, timedFallback, ringSelector }) => {
+      const { createRingFeedback } = await import('/src/app/ring-feedback.js');
+      const state = demo.getState();
+      const emblemId = state.heroDefinitions[actor].emblemId;
+      const cues = [];
+      const feedback = createRingFeedback({
+        session: { runtime: { mode: 'battle', disposed: false }, battle: { state } },
+        audio: { play: (cue) => cues.push(cue) },
+      });
+      const { getAnimations } = Element.prototype;
+      try {
+        if (timedFallback) Element.prototype.getAnimations = undefined;
+        const pending = feedback.acquired(emblemId, actor);
+        const root = document.querySelector(ringSelector);
+        feedback[method]();
+        const removed = root?.isConnected === false;
+        const result = await Promise.race([
+          pending,
+          new Promise((resolve) => window.setTimeout(() => resolve('pending'), 0)),
+        ]);
+        const restarted = method === 'dispose' ? await feedback.acquired(emblemId, actor) : null;
+        return { removed, result, phase: root?.dataset.phase, restarted, cues };
+      } finally {
+        if (timedFallback) Element.prototype.getAnimations = getAnimations;
+        feedback.dispose();
+      }
+    },
+    { actor, method, timedFallback, ringSelector: RING_SELECTOR },
+  );
+}
+async function rejectAcquisitionDuringEntry(page, actor) {
+  return page.evaluate(async (actor) => {
+    const { createRingFeedback } = await import('/src/app/ring-feedback.js');
+    const battle = document.querySelector('#battle');
+    const state = demo.getState();
+    const cues = [];
+    const feedback = createRingFeedback({
+      session: { runtime: { mode: 'battle', disposed: false }, battle: { state } },
+      audio: { play: (cue) => cues.push(cue) },
+    });
+    battle.classList.add('entering');
+    try {
+      const played = await feedback.acquired(state.heroDefinitions[actor].emblemId, actor);
+      return { played, cues, effects: battle.querySelectorAll('.ring-feedback').length };
+    } finally {
+      battle.classList.remove('entering');
+      feedback.dispose();
+    }
+  }, actor);
+}
+async function playAcquisitionFeedback(page, actor, disableWebAnimations = false) {
+  return page.evaluate(
+    async ({ actor, ringSelector, disableWebAnimations }) => {
+      const { createRingFeedback } = await import('/src/app/ring-feedback.js');
+      const state = demo.getState();
+      const cues = [];
+      const feedback = createRingFeedback({
+        session: { runtime: { mode: 'battle', disposed: false }, battle: { state } },
+        audio: {
+          play: (cue) =>
+            cues.push({ cue, phase: document.querySelector(ringSelector)?.dataset.phase }),
+        },
+      });
+      const { getAnimations } = Element.prototype;
+      try {
+        // Only disable animation inspection. CSS must still run on the fallback clock.
+        if (disableWebAnimations) Element.prototype.getAnimations = undefined;
+        const start = window.__ringLog.length;
+        const pending = feedback.acquired(state.heroDefinitions[actor].emblemId, actor);
+        const root = document.querySelector(ringSelector);
+        const meter = root?.querySelector('.ring-feedback__meter');
+        const flight = meter
+          ? {
+              animationName: getComputedStyle(meter).animationName,
+              animationDuration: getComputedStyle(meter).animationDuration,
+            }
+          : null;
+        const result = await pending;
+        const log = window.__ringLog.slice(start);
+        return {
+          result,
+          removed: root?.isConnected === false,
+          flight,
+          cues,
+          phases: [...new Set(log.map((entry) => entry.phase))],
+          full: log.find((entry) => entry.phase === 'full') || null,
+          settle: log.find((entry) => entry.phase === 'settle') || null,
+        };
+      } finally {
+        if (disableWebAnimations) Element.prototype.getAnimations = getAnimations;
+        feedback.dispose();
+      }
+    },
+    { actor, ringSelector: RING_SELECTOR, disableWebAnimations },
+  );
 }
 
-async function dialogCount(page) {
-  return page.evaluate(() => document.querySelectorAll('dialog.ring-acquisition').length);
+async function waitForRing(page, phase, actor = null) {
+  await page.waitForFunction(
+    ({ phase, actor }) =>
+      window.__ringLog.some((entry) => entry.phase === phase && (!actor || entry.actor === actor)),
+    { phase, actor },
+    { timeout: 15000 },
+  );
 }
-
-function normalizeColor(value) {
-  if (!value) return '';
-  const trimmed = value.trim().toLowerCase();
-  if (trimmed.startsWith('#')) {
-    const hex = trimmed.slice(1);
-    if (hex.length === 3)
-      return (
-        '#' +
-        hex
-          .split('')
-          .map((c) => c + c)
-          .join('')
-      );
-    return '#' + hex;
+async function captureAwardFrames(page, output) {
+  for (const phase of ['flight', 'charging', 'full', 'settle']) {
+    const frame = await page.waitForFunction(
+      ({ selector, phase }) => {
+        const root = document.querySelector(selector);
+        if (!root?.classList.contains('is-award') || root.dataset.phase !== phase) return false;
+        const visible = (part) => Number(getComputedStyle(root.querySelector(part)).opacity) > 0.15;
+        // Only the star is in flight; the dial becomes visible on contact with the wearer.
+        if (!visible(phase === 'flight' ? '.ring-feedback__trail' : '.ring-feedback__meter'))
+          return false;
+        if (phase === 'charging' && Number(root.dataset.charge) < 3) return false;
+        if (
+          phase === 'full' &&
+          Number(getComputedStyle(root.querySelector('.ring-feedback__meter'), '::after').opacity) <
+            0.3
+        )
+          return false;
+        const running = root
+          .getAnimations({ subtree: true })
+          .filter((ani) => ani.playState === 'running');
+        for (const ani of running) ani.pause();
+        return running;
+      },
+      { selector: RING_SELECTOR, phase },
+      { timeout: 15000 },
+    );
+    try {
+      await page.screenshot({ path: path.join(output, 'ring-award-' + phase + '.png') });
+    } finally {
+      await frame.evaluate((animations) => {
+        for (const ani of animations) if (ani.playState === 'paused') ani.play();
+      });
+      await frame.dispose();
+    }
   }
-  return trimmed;
+}
+export async function ringAcquisitionChecks({ browser, baseURL, output }) {
+  const results = {};
+
+  // --- Award path: real mid-battle DRAGON_EMBLEM_ID grant ---
+  {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 836 } });
+    const errors = [];
+    page.on('pageerror', (error) => errors.push(error.message));
+    await installRingObserver(page);
+    const snapshot = buildSnapshot();
+    await seedCopy(page, snapshot);
+    try {
+      await openBattle(page, baseURL);
+      const before = await page.evaluate(() => demo.getLibrary());
+      assert.equal(before.emblems?.includes(DRAGON_EMBLEM_ID), false);
+      const party = before.party.filter(Boolean);
+      const fullBefore = await page.evaluate(
+        (ids) => ids.map((id) => demo.getState().units[id]?.emblemCharge ?? 0),
+        party,
+      );
+      assert(
+        fullBefore.every((charge) => charge === 0),
+        'rings start empty',
+      );
+
+      // The real reward predicate requires crossing the encounter's round-two threshold.
+      await commitRound(page);
+      await Promise.all([captureAwardFrames(page, output), commitRound(page)]);
+      await waitForRing(page, 'full');
+
+      const after = await page.evaluate(() => demo.getLibrary());
+      assert(after.emblems.includes(DRAGON_EMBLEM_ID), 'dragon emblem granted');
+      const wearer = after.characters.find((member) => member.emblemId === DRAGON_EMBLEM_ID);
+      assert(wearer, 'a real member wears the ring');
+      const state = await page.evaluate(() => demo.getState());
+      const actor = Object.keys(state.heroDefinitions || {}).find(
+        (id) => state.heroDefinitions[id].emblemId === DRAGON_EMBLEM_ID,
+      );
+      assert(actor, 'battle hero definition carries emblem');
+      assert.equal(state.units[actor].emblemCharge, 6, 'wearer starts full');
+
+      await waitForRing(page, 'settle', actor);
+      const log = await page.evaluate(() => window.__ringLog);
+      const actorLog = log.filter((entry) => entry.actor === actor);
+      const phases = actorLog.map((entry) => entry.phase);
+      const arrival = actorLog.find((entry) => entry.phase === 'flight');
+      assert(arrival?.anchor && arrival.board, 'award resolves the actual wearer card');
+      const expectedLeft = Math.max(
+        51.2,
+        Math.min(
+          arrival.board.width - 51.2,
+          arrival.anchor.left - arrival.board.left + arrival.anchor.width / 2,
+        ),
+      );
+      const expectedTop = Math.max(
+        51.2,
+        Math.min(
+          arrival.board.height - 51.2,
+          arrival.anchor.top - arrival.board.top + arrival.anchor.height * 0.48,
+        ),
+      );
+      assert(Math.abs(arrival.feedbackOrigin.left - (arrival.board.left + expectedLeft)) < 1.5);
+      assert(Math.abs(arrival.feedbackOrigin.top - (arrival.board.top + expectedTop)) < 1.5);
+      assert.deepEqual(
+        arrival.layers,
+        AWARD_LAYERS,
+        'one star travels to the localized award dial',
+      );
+      assert(arrival.frame?.trailVisible, 'the arrival trail is visible during flight');
+      assert(phases.includes('flight'), 'flight phase observed');
+      assert(phases.includes('charging'), 'charging phase observed');
+      assert(phases.includes('full'), 'full phase observed');
+      assert(phases.includes('settle'), 'ring visibly contracts before cleanup');
+      const charging = actorLog.filter((entry) => entry.phase === 'charging');
+      const litSteps = [...new Set(charging.map((entry) => entry.lit))];
+      assert.deepEqual(litSteps, [1, 2, 3, 4, 5, 6], 'charging reveals each of six cells in order');
+      const fallback = charging.find((entry) => entry.frame?.visible);
+      assert(fallback, 'CSS feedback stays visible while charging');
+      assert.equal(fallback.visible, true, 'the CSS ring remains visible while charging');
+      assert.deepEqual(fallback.layers, AWARD_LAYERS, 'charging stays on the wearer');
+      assert.equal(fallback.frame.focusVisible, true, 'the wearer is framed during charging');
+      assert.equal(fallback.frame.trailVisible, false, 'the trail is limited to arrival');
+      assert.equal(
+        fallback.hasOverlay,
+        false,
+        'the CSS presentation adds no SVG or canvas overlay',
+      );
+      assert.equal(
+        fallback.accessible,
+        true,
+        'feedback stays decorative and cannot intercept input',
+      );
+      const full = log.find((entry) => entry.actor === actor && entry.phase === 'full');
+      const settle = log.find((entry) => entry.actor === actor && entry.phase === 'settle');
+      const chargeMs = Math.round(full.at - charging[0].at);
+      assert(chargeMs >= 1400, 'the six award beats are readable before the burst');
+      assert.equal(full.lit, 6, 'six cells lit at full');
+      assert.equal(full.cells, 6, 'six cells rendered');
+      assert.deepEqual(
+        full.layers,
+        AWARD_LAYERS,
+        'full charge does not open a separate effect stage',
+      );
+      assert(full.frame?.focusVisible, 'the wearer remains framed at full charge');
+      assert(full.frame.haloVisible, 'the full award releases a visible halo on the wearer');
+      assert.equal(full.frame.haloAnimationName, 'ring-feedback-burst');
+      assert.equal(full.frame.trailVisible, false, 'the full award does not replay the trail');
+      assert.equal(full.ringVisible, true, 'a metallic ring is legible at full charge');
+      assert.equal(full.gemVisible, true, 'the ring retains its central jewel');
+      assert.equal(full.sweepAnimationName, 'ring-feedback-sweep');
+      assert(settle?.settleEnd, 'settling animation exposes its terminal keyframe');
+      assert(
+        Math.abs(settle.settleEnd.scale - 0.32) < 0.01,
+        'ring contracts at its terminal scale',
+      );
+      assert.equal(settle.settleEnd.opacity, 0, 'settled ring fades before cleanup');
+      assert(full.anchor && full.anchor.width > 0, 'real anchor had size');
+
+      await page.waitForFunction(
+        () => document.querySelectorAll('#battle .ring-feedback').length === 0,
+      );
+      assert.equal(
+        await page.evaluate(() => document.querySelectorAll('#battle .ring-feedback').length),
+        0,
+        'feedback cleaned up',
+      );
+
+      // Complete the real award narration before exercising subsequent battle events.
+      // Gal deliberately hides the battle feedback layer until the narration closes.
+      await page.locator('#gal-stage[data-owner="emblem-dialogue"]').waitFor({ state: 'visible' });
+      await finishGalDialogue(page, 'emblem-dialogue');
+      await page.waitForFunction(() => !document.body.classList.contains('gal-playing'));
+
+      await page.setViewportSize(NARROW_VIEWPORT);
+      const narrowAward = await playAcquisitionFeedback(page, actor);
+      assert.equal(narrowAward.result, true, 'ring acquisition completes in a narrow viewport');
+      assert(narrowAward.full?.ringVisible, 'narrow layout keeps the ring legible');
+      assert(narrowAward.full?.gemVisible, 'narrow layout keeps the jewel legible');
+      const narrowBounds = narrowAward.full?.meterBounds;
+      assert(narrowBounds && narrowBounds.width > 0 && narrowBounds.width < 56);
+      assert(narrowBounds.left >= 0 && narrowBounds.right <= NARROW_VIEWPORT.width);
+      assert(narrowBounds.top >= 0 && narrowBounds.bottom <= NARROW_VIEWPORT.height);
+      await page.setViewportSize({ width: 1440, height: 836 });
+
+      const entering = await rejectAcquisitionDuringEntry(page, actor);
+      assert.equal(entering.played, false, 'award effects stay out of the battle entrance');
+      assert.deepEqual(entering.cues, []);
+      assert.equal(entering.effects, 0);
+
+      // Redraw must not duplicate.
+      await page.evaluate(() => window.dispatchEvent(new Event('resize')));
+      await page.waitForFunction(() => !window.demo.getStatus().animating);
+      assert.equal(
+        await page.evaluate(() => document.querySelectorAll('#battle .ring-feedback').length),
+        0,
+        'no duplicate on redraw',
+      );
+
+      const chargeStart = await page.evaluate(() => window.__ringLog.length);
+      const chargeFeedback = await triggerChargeFeedback(page, actor, 4);
+      assert.equal(chargeFeedback.played, true, 'charge-to-full feedback is presented');
+      assert.deepEqual(chargeFeedback.cues, ['ring-charge-full']);
+      const chargeEntries = (
+        await page.evaluate((start) => window.__ringLog.slice(start), chargeStart)
+      ).filter((entry) => entry.actor === actor);
+      const chargeFull = chargeEntries.find((entry) => entry.phase === 'full');
+      assert(chargeFull?.frame?.ringVisible, 'ordinary full charge keeps the ring visible');
+      for (const entry of chargeEntries) {
+        assert.deepEqual(
+          entry.layers,
+          CHARGE_LAYERS,
+          'ordinary charging has no award frame or shards',
+        );
+        assert.equal(entry.trailVisible, false, 'ordinary charging does not show an arrival trail');
+      }
+      assert.deepEqual(
+        chargeEntries.map((entry) => entry.phase),
+        ['full'],
+        'combat goes straight to its completion flash',
+      );
+      assert.equal(chargeFull.lit, 6);
+      assert.deepEqual(
+        await triggerChargeFeedback(page, actor, 6),
+        { played: false, cues: [] },
+        'remaining full does not replay the cue',
+      );
+
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      const reducedFeedback = await triggerChargeFeedback(page, actor, 5);
+      assert.equal(reducedFeedback.played, true);
+      const reducedFull = (await page.evaluate(() => window.__ringLog))
+        .filter((entry) => entry.actor === actor && entry.phase === 'full')
+        .at(-1);
+      assert(reducedFull, 'reduced motion reaches the full phase');
+      assert.equal(reducedFull.lit, 6);
+      assert.deepEqual(
+        reducedFull.layers,
+        CHARGE_LAYERS,
+        'reduced ordinary charging has no award layers',
+      );
+      const frame = reducedFull.frame;
+      assert(
+        frame,
+        `reduced motion cue was not sampled on a frame: ${JSON.stringify(reducedFull)}`,
+      );
+      assert.equal(
+        frame.visible,
+        true,
+        `reduced motion keeps the ordinary ring visible: ${JSON.stringify(reducedFull)}`,
+      );
+      assert.equal(frame.ringVisible, true, 'reduced motion keeps the ring legible');
+      assert.equal(frame.gemVisible, true, 'reduced motion keeps the ring jewel visible');
+      assert.equal(frame.haloVisible, true, 'reduced motion retains a static completion halo');
+      assert.equal(frame.sweepAnimationName, 'none', 'reduced motion disables the metal sweep');
+      assert.equal(frame.haloAnimationName, 'none', 'reduced motion keeps the halo static');
+      assert.equal(frame.meterAnimationName, 'none', 'reduced motion disables award choreography');
+
+      const reducedAward = await playAcquisitionFeedback(page, actor);
+      assert.equal(reducedAward.result, true, 'reduced-motion acquisition completes');
+      assert.equal(reducedAward.removed, true, 'reduced-motion acquisition removes its feedback');
+      assert.deepEqual(
+        reducedAward.phases,
+        ['charging', 'full'],
+        'reduced motion skips flight and contraction',
+      );
+      assert(reducedAward.full, 'reduced-motion acquisition reaches a full ring');
+      assert.deepEqual(
+        reducedAward.full.layers,
+        AWARD_LAYERS,
+        'reduced motion retains the award structure',
+      );
+      assert.equal(reducedAward.full.lit, 6);
+      const awardFrame = reducedAward.full.frame;
+      assert(awardFrame?.ringVisible, 'reduced motion retains the metal ring');
+      assert.equal(awardFrame.gemVisible, true, 'reduced motion retains the jewel');
+      assert.equal(awardFrame.haloVisible, true, 'reduced motion retains the completion halo');
+      assert.equal(awardFrame.focusVisible, true, 'reduced motion retains wearer focus');
+      assert.equal(awardFrame.meterAnimationName, 'none');
+      assert.equal(awardFrame.focusAnimationName, 'none');
+      assert.equal(awardFrame.sweepAnimationName, 'none');
+      assert.equal(awardFrame.haloAnimationName, 'none');
+      assert.equal(awardFrame.trailVisible, false);
+      assert.deepEqual(reducedAward.cues, [
+        { cue: 'ring-arrival', phase: 'charging' },
+        { cue: 'ring-charge-full', phase: 'full' },
+      ]);
+      await page.emulateMedia({ reducedMotion: 'no-preference' });
+
+      const fallbackSuccess = await playAcquisitionFeedback(page, actor, true);
+      assert.equal(fallbackSuccess.result, true, 'fallback acquisition completes successfully');
+      assert.equal(fallbackSuccess.removed, true, 'successful fallback removes its feedback');
+      assert.equal(fallbackSuccess.flight.animationName, 'ring-feedback-award-flight');
+      assert.equal(fallbackSuccess.flight.animationDuration, '0.48s');
+      assert(
+        fallbackSuccess.phases.includes('settle'),
+        'CSS-timed fallback completes the contraction',
+      );
+      assert(Math.abs(fallbackSuccess.settle.settleEnd.scale - 0.32) < 0.01);
+      assert.equal(fallbackSuccess.full?.lit, 6, 'CSS-timed fallback reaches all six charge cuts');
+      assert.deepEqual(fallbackSuccess.cues, [
+        { cue: 'ring-arrival', phase: 'flight' },
+        { cue: 'ring-charge-full', phase: 'full' },
+      ]);
+
+      for (const method of ['cancel', 'dispose']) {
+        const interrupted = await interruptAcquisition(page, actor, method, true);
+        assert.equal(interrupted.removed, true, method + ' detaches the award immediately');
+        assert.equal(interrupted.result, false, method + ' cancels the pending animation');
+        assert.equal(interrupted.phase, 'flight', method + ' stops during the award flight');
+        assert.deepEqual(interrupted.cues, ['ring-arrival'], method + ' suppresses the full cue');
+      }
+
+      // Real reload: no reseed, no duplicate feedback.
+      await page.evaluate(() => demo.flushStorage());
+      await page.reload();
+      await page.waitForFunction(() => window.demo?.getStatus().mode === 'battle');
+      await page.waitForFunction(() => !window.demo.getStatus().animating);
+      const reloaded = await page.evaluate(() => demo.getLibrary());
+      assert(reloaded.emblems.includes(DRAGON_EMBLEM_ID), 'emblem persisted');
+      assert.equal(
+        await page.evaluate(() => document.querySelectorAll('#battle .ring-feedback').length),
+        0,
+        'no feedback on reload',
+      );
+      assert.deepEqual(errors, []);
+      results.award = { actor, wearer: wearer.id, chargeMs, phases };
+    } catch (failure) {
+      await page.screenshot({ path: path.join(output, 'ring-award-failure.png') }).catch(() => {});
+      throw failure;
+    } finally {
+      await page.close();
+    }
+  }
+
+  // --- No-wearer path: all members pre-equipped with distinct non-dragon rings ---
+  {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 836 } });
+    const errors = [];
+    page.on('pageerror', (error) => errors.push(error.message));
+    await installRingObserver(page);
+    const snapshot = buildSnapshot();
+    const nonDragon = Object.keys(EMBLEMS).filter((id) => id !== DRAGON_EMBLEM_ID);
+    const members = snapshot.library.characters.filter((member) =>
+      snapshot.library.party.includes(member.id),
+    );
+    members.forEach((member, index) => {
+      member.emblemId = nonDragon[index % nonDragon.length];
+    });
+    snapshot.library.emblems = [...new Set(members.map((member) => member.emblemId))];
+    await seedCopy(page, snapshot);
+    try {
+      await openBattle(page, baseURL);
+      // Exercise the same real mid-battle reward threshold without inventing a grant.
+      await commitRound(page);
+      await commitRound(page);
+      await page.waitForFunction(() => !window.demo.getStatus().animating);
+      const after = await page.evaluate(() => demo.getLibrary());
+      assert(after.emblems.includes(DRAGON_EMBLEM_ID), 'dragon emblem collected');
+      const wearer = after.characters.find((member) => member.emblemId === DRAGON_EMBLEM_ID);
+      assert.equal(wearer, undefined, 'no member wears dragon ring');
+      const log = await page.evaluate(() => window.__ringLog);
+      assert.equal(log.length, 0, 'no feedback when no wearer');
+      assert.deepEqual(errors, []);
+      results.noWearer = { collected: true, feedback: 0 };
+    } catch (failure) {
+      await page
+        .screenshot({ path: path.join(output, 'ring-nowearer-failure.png') })
+        .catch(() => {});
+      throw failure;
+    } finally {
+      await page.close();
+    }
+  }
+
+  // --- Restore path: persisted arrival shown:false must narrate on reload, no queue ---
+  {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 836 } });
+    const errors = [];
+    page.on('pageerror', (error) => errors.push(error.message));
+    await installRingObserver(page);
+    const snapshot = buildSnapshot();
+    snapshot.library.emblems = [DRAGON_EMBLEM_ID];
+    snapshot.journey.expedition.emblemArrival = {
+      id: DRAGON_EMBLEM_ID,
+      shown: false,
+      recipient: null,
+      midBattle: true,
+    };
+    await seedCopy(page, snapshot);
+    try {
+      await openBattle(page, baseURL);
+      await page.waitForFunction(() => !window.demo.getStatus().animating);
+      const log = await page.evaluate(() => window.__ringLog);
+      assert.equal(log.length, 0, 'no feedback on restore');
+      const arrival = await page.evaluate(() => demo.getExpedition()?.emblemArrival);
+      assert(arrival, 'arrival still tracked');
+      assert.deepEqual(errors, []);
+      results.restore = { feedback: 0, arrivalShown: arrival.shown };
+    } catch (failure) {
+      await page
+        .screenshot({ path: path.join(output, 'ring-restore-failure.png') })
+        .catch(() => {});
+      throw failure;
+    } finally {
+      await page.close();
+    }
+  }
+
+  return results;
 }

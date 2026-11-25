@@ -1,3 +1,5 @@
+import { applyEnemyTaxonomy } from '../enemy-taxonomy.js';
+
 const SILVER_CROWN_SYNDICATE_TITLE = '乌羽财团';
 
 function makeSyndicateEnemy(config) {
@@ -21,14 +23,14 @@ function makeSyndicateEnemy(config) {
   if (config.elite) {
     enemy.elite = true;
   }
-  return enemy;
+  return applyEnemyTaxonomy(enemy);
 }
 
 export const SILVER_CROWN_SYNDICATE_ENEMIES = [
   makeSyndicateEnemy({
     id: 'syndicateVelvetBlade',
     slug: 'syndicate-velvet-blade',
-    name: '银渠暗桩刺客',
+    name: '银渠剑士',
     attackStyle: 'shadow-strike',
     color: '#4f72a8',
     hp: 66,
@@ -60,7 +62,7 @@ export const SILVER_CROWN_SYNDICATE_ENEMIES = [
   makeSyndicateEnemy({
     id: 'syndicateRepeatingArbalest',
     slug: 'syndicate-repeating-arbalest',
-    name: '乌羽连弩暗哨',
+    name: '乌羽弓手',
     attackStyle: 'ballista-bolt',
     color: '#be4b86',
     hp: 62,
@@ -216,6 +218,7 @@ export const SILVER_CROWN_SYNDICATE_ENEMIES = [
 export const SILVER_CROWN_SYNDICATE_ARCHON = {
   id: 'silverCrownSyndicateArchon',
   name: '银冠鬼拍主·白鸦公爵',
+  category: 'other',
   title: SILVER_CROWN_SYNDICATE_TITLE,
   portrait: 'silver-crown-syndicate-archon',
   model: 'silver-crown-syndicate-archon.glb',

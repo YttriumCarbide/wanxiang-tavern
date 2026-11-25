@@ -28,6 +28,8 @@ import {
 } from '../destination-map.js';
 import { canRecall } from '../recollections.js';
 
+const SUMMARY_LIMIT = 78;
+
 /** Environment browsing and a persistent, pannable tree of complete journeys. */
 export function createDestinations(context) {
   const { session, events } = context;
@@ -120,13 +122,21 @@ export function createDestinations(context) {
   document.body.append(form);
   const lore = document.createElement('dialog');
   lore.id = 'destination-lore';
+  lore.setAttribute('aria-labelledby', 'destination-lore-title');
   lore.innerHTML =
-    '<header><h2></h2><button aria-label="关闭世界背景">×</button></header><article></article>';
+    '<header><h2 id="destination-lore-title"></h2><button aria-label="关闭世界背景">×</button></header><article></article>';
   document.body.append(lore);
   const more = document.createElement('button');
   more.id = 'destination-description';
+  more.type = 'button';
   more.textContent = '展开世界背景';
-  $('#destination-summary').after(more);
+  more.hidden = true;
+  more.setAttribute('aria-haspopup', 'dialog');
+  more.setAttribute('aria-controls', lore.id);
+  const actions = document.createElement('div');
+  actions.className = 'destination-footer-actions';
+  actions.append(more, $('#destination-region-confirm'), $('#destination-start'));
+  dialog.querySelector('footer').prepend(actions);
   events.on(lore.querySelector('button'), 'click', () => lore.close());
   events.on(more, 'click', () => {
     const region = regionFor(session.journey.regionMap);
@@ -495,9 +505,10 @@ export function createDestinations(context) {
       `${String(index + 1).padStart(2, '0')} / ${String(availableMaps.length).padStart(2, '0')}`;
     for (const id of ['destination-region-prev', 'destination-region-next'])
       $('#' + id).disabled = availableMaps.length === 1;
+    const description = region.description;
     $('#destination-summary').textContent =
-      region.description.length > 78 ? region.description.slice(0, 78) + '…' : region.description;
-    more.hidden = region.description.length <= 78;
+      description.length > SUMMARY_LIMIT ? description.slice(0, SUMMARY_LIMIT) + '…' : description;
+    more.hidden = description.length <= SUMMARY_LIMIT;
     $('#destination-effect').hidden = true;
     $('#destination-status').textContent =
       map === 'singularity'
@@ -543,6 +554,7 @@ export function createDestinations(context) {
     stage = next;
     dialog.dataset.stage = next;
     const route = next === 'route';
+    const region = regionFor(session.journey.regionMap);
     $('#destination-origin').hidden = !route;
     $('#destination-world-screen').hidden = route;
     $('#destination-route-screen').hidden = !route;
@@ -552,9 +564,7 @@ export function createDestinations(context) {
     $('#destination-start').hidden = !route;
     $('#destination-back').hidden = !route;
     $('#destination-step').textContent = route ? '02 / 沿地图探索' : '01 / 选择异境';
-    $('#destination-title').textContent = route
-      ? `${regionFor(session.journey.regionMap).name} · 探索地图`
-      : '选择去往的地方';
+    $('#destination-title').textContent = route ? `${region.name} · 探索地图` : '选择去往的地方';
     if (!reduced.matches && animateStage) {
       const target = route ? $('#destination-route-screen') : $('#destination-world-screen');
       target.getAnimations().forEach((animation) => animation.cancel());
@@ -567,6 +577,7 @@ export function createDestinations(context) {
       );
     }
     if (route) {
+      more.hidden = region.description.length <= SUMMARY_LIMIT;
       preview?.pause();
       renderMap();
       renderSite();

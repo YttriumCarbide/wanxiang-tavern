@@ -380,7 +380,44 @@ export async function universalEnemyChecks({ browser, baseURL, output }) {
     assert.equal(await page.locator('#archive-text img').count(), 1);
     await page.locator('[data-enemy-tier="overlord"]').click();
     assert.equal(await page.locator('#archive-list button').count(), 0);
-    assert((await page.locator('#archive-text').innerText()).includes('尚未解锁'));
+    assert.equal(
+      await page.locator('#archive-text .records-empty h3').innerText(),
+      '当前筛选下暂无已解锁魔物',
+    );
+    assert(
+      (await page.locator('#archive-text .records-empty p').innerText()).includes(
+        '遭遇符合筛选条件的新敌人后将自动收录于此。',
+      ),
+    );
+
+    const exportButton = page.locator('#archive-enemy-export');
+    assert.equal(await exportButton.isVisible(), true);
+    const seenExportPromise = page.waitForEvent('download');
+    await exportButton.click();
+    const seenDownload = await seenExportPromise;
+    assert.equal(seenDownload.suggestedFilename(), 'wanxiang-enemy-codex.json');
+    const seenExport = JSON.parse(await readFile(await seenDownload.path(), 'utf8'));
+    assert.deepEqual(
+      seenExport.categories.map(({ id }) => id),
+      ['beast', 'insect', 'construct', 'humanoid', 'spirit', 'other'],
+      'the export always contains all six stable categories',
+    );
+    const seenEntries = seenExport.categories.flatMap(({ enemies }) => enemies);
+    assert.deepEqual(
+      seenEntries.map(({ id }) => id).sort(),
+      ['chaosBadlandFalcon', 'ladderCrowman', 'mossSlime'].sort(),
+      'ordinary export contains exactly the three encountered enemies, even with the Overlord filter selected',
+    );
+    assert(seenExport.categories.some(({ enemies }) => enemies.length === 0));
+    assert.equal(
+      await page.locator('[data-enemy-tier="overlord"]').getAttribute('aria-pressed'),
+      'true',
+    );
+    assert.equal(
+      await page.locator('[data-enemy-category="all"]').getAttribute('aria-pressed'),
+      'true',
+    );
+    assert.equal(await page.evaluate(() => document.activeElement?.id), 'archive-enemy-export');
 
     // Turning on unlockAllCodex without developerMode master switch must stay locked
     await page.evaluate(() =>
@@ -391,6 +428,16 @@ export async function universalEnemyChecks({ browser, baseURL, output }) {
       `3 / ${totalMonsters}`,
     );
 
+    const gatedExportPromise = page.waitForEvent('download');
+    await exportButton.click();
+    const gatedDownload = await gatedExportPromise;
+    const gatedExport = JSON.parse(await readFile(await gatedDownload.path(), 'utf8'));
+    assert.deepEqual(
+      gatedExport.categories.flatMap(({ enemies }) => enemies.map(({ id }) => id)).sort(),
+      ['chaosBadlandFalcon', 'ladderCrowman', 'mossSlime'].sort(),
+      'unlockAllCodex cannot bypass the developer-mode master switch in exports',
+    );
+
     // Enable both developerMode + unlockAllCodex -> shows all monsters
     await page.evaluate(() =>
       window.archiveTestHost.setOptions({ developerMode: true, unlockAllCodex: true }),
@@ -399,6 +446,45 @@ export async function universalEnemyChecks({ browser, baseURL, output }) {
       (await page.locator('.archive-codex-count').textContent()).trim(),
       `${totalMonsters} / ${totalMonsters}`,
     );
+    const developerExportPromise = page.waitForEvent('download');
+    await exportButton.click();
+    const developerDownload = await developerExportPromise;
+    const developerExport = JSON.parse(await readFile(await developerDownload.path(), 'utf8'));
+    assert.equal(
+      developerExport.categories.reduce((sum, category) => sum + category.enemies.length, 0),
+      Number(totalMonsters),
+      'developer-mode export matches every codex entry shown as unlocked',
+    );
+
+    await page.locator('[data-archive-tab="enemies"]').click();
+    assert.equal(await page.locator('[data-enemy-category]').count(), 7);
+    await page.locator('[data-enemy-tier="minion"]').click();
+    for (const [category, label] of [
+      ['beast', '野兽/魔兽'],
+      ['insect', '虫甲/奇异'],
+      ['construct', '构装/机械'],
+      ['humanoid', '人形阵营'],
+      ['spirit', '灵体/能量'],
+      ['other', '其他'],
+    ]) {
+      await page.locator(`[data-enemy-category="${category}"]`).click();
+      const categoryRows = page.locator('#archive-list button small');
+      const rowCategories = await categoryRows.allTextContents();
+      assert(rowCategories.length > 0, `${category} displays its unlocked entries`);
+      assert(
+        rowCategories.every((text) => text.includes(label)),
+        `${category} contains only ${label}`,
+      );
+    }
+    await page.locator('[data-enemy-category="insect"]').click();
+    await page.locator('#archive-list button').filter({ hasText: '苔藓史莱姆' }).click();
+    assert.equal(await page.locator('#archive-text .skyrim-folio-title').innerText(), '苔藓史莱姆');
+    const monsterBadges = await page
+      .locator('#archive-text .skyrim-folio-badges span')
+      .allTextContents();
+    assert(monsterBadges.includes('虫甲/奇异'));
+    assert(monsterBadges.includes('史莱姆'));
+    await page.locator('[data-enemy-category="all"]').click();
     await page.locator('[data-enemy-tier="boss"]').click();
     const bossNames = await page.locator('#archive-list button strong').allTextContents();
     assert(bossNames.includes('天梯魔蛛'), 'Upgraded ladderWebSpider should list under 首领');
@@ -408,7 +494,7 @@ export async function universalEnemyChecks({ browser, baseURL, output }) {
     const archiveIntents = page.locator('#archive-text .skyrim-archive-intent');
     for (const [tier, name, moves] of [
       ['minion', '沙场网斗士', ['三叉戟刺击', '投网']],
-      ['minion', '发条金鬃狮', ['扑咬', '炉心吐息']],
+      ['minion', '发条机兵', ['扑咬', '炉心吐息']],
       ['minion', '铁笼驯兽官', ['金属鞭击', '震兽号角']],
       ['minion', '银星重盾卫', ['短矛突刺', '塔盾防御']],
       ['elite', '重装战轮破阵者', ['双斧横扫', '战轮冲撞']],

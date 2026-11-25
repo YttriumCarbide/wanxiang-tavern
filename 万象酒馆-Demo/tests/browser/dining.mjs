@@ -23,6 +23,7 @@ export async function diningChecks({ browser, baseURL, output }) {
         events: createEventScope(),
         assets: createAssetStore(),
         generation: { save() {} },
+        storage: { async flush() {} },
         shell: { renderParty() {}, toast() {} },
         audio: { play() {} },
         onboarding: { refresh() {} },
@@ -116,7 +117,21 @@ export async function diningChecks({ browser, baseURL, output }) {
       false,
     );
     await page.locator('[data-gal="close"]').click();
+    await page.locator('#gal-stage').waitFor({ state: 'hidden' });
+    // Wait for the dialog's queued close event before reopening it; its handler invalidates pending meal work.
+    await page.evaluate(() => {
+      const dialog = document.querySelector('#dining-dialog');
+      window.diningCloseObserved = false;
+      dialog.addEventListener(
+        'close',
+        () => {
+          window.diningCloseObserved = true;
+        },
+        { once: true },
+      );
+    });
     await page.locator('[data-meal-leave]').click();
+    await page.waitForFunction(() => window.diningCloseObserved);
     await page.setViewportSize({ width: 844, height: 390 });
     await page.evaluate(() => {
       window.diningFixture.library.dining.eatenCycle = -1;

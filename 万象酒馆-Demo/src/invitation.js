@@ -3,6 +3,7 @@ import { OVERLAND_STOPS, overlandPlan } from './overland-travel.js';
 import { normalizeDcSpec } from './dc.js';
 import { parseGalText, stripGalTags } from './gal.js';
 import { applyDialoguePatches, galSceneLines, linesProse } from './adventure/patches.js';
+import { normalizeInvitationEnvironment } from './invitation-location.js';
 
 export const INVITATION_SCENES = Object.freeze({
   tavern: '酒馆',
@@ -31,13 +32,18 @@ export function invitationExcerpt(source, limit = 150) {
   return text.length > limit ? text.slice(0, limit - 1) + '…' : text;
 }
 
-function invitationScene(raw) {
-  if (!Object.hasOwn(INVITATION_SCENES, raw?.scene)) throw Error('约见地点不可达');
-  return {
+function invitationScene(raw, allowedScenes, requireEnvironment) {
+  if (typeof raw?.scene !== 'string' || !Object.hasOwn(allowedScenes, raw.scene))
+    throw Error('约见地点不可达');
+  const scene = {
     title: boundedText(raw.title, 65, '幕名'),
     scene: raw.scene,
     intro: boundedText(raw.intro, Infinity, '本幕演出正文'),
+    ...(raw.environment == null ? {} : { environment: raw.environment }),
   };
+  return requireEnvironment || scene.environment != null
+    ? normalizeInvitationEnvironment(scene, allowedScenes[raw.scene])
+    : scene;
 }
 
 function distinctTexts(values, count, limit, field) {
@@ -78,9 +84,13 @@ function normalizeInvitationChoices(rawChoices, field = '本幕选项') {
   };
 }
 
-export function normalizeInvitationPlan(raw, { requireChoices = false } = {}) {
+export function normalizeInvitationPlan(
+  raw,
+  { requireChoices = false, allowedScenes = INVITATION_SCENES, startScene } = {},
+) {
   if (!Array.isArray(raw?.stages) || raw.stages.length < 3 || raw.stages.length > 5)
     throw Error('约见需要 3～5 幕互动和一幕收尾');
+  if (startScene && raw.stages[0]?.scene !== startScene) throw Error('约见开场地点与选择不符');
   return {
     title: boundedText(raw.title, 70, '约见标题'),
     ...(typeof raw?.prologue === 'string' && raw.prologue.trim()
@@ -88,7 +98,7 @@ export function normalizeInvitationPlan(raw, { requireChoices = false } = {}) {
       : {}),
     premise: boundedText(raw.premise, Infinity, '事件缘由'),
     stages: raw.stages.map((stage, index) => {
-      const scene = invitationScene(stage);
+      const scene = invitationScene(stage, allowedScenes, Boolean(startScene));
       if (!Array.isArray(stage.tasks) || !stage.tasks.length || stage.tasks.length > 3)
         throw Error('每幕需要1～3项任务');
       const normalizedChoices =
@@ -110,7 +120,7 @@ export function normalizeInvitationPlan(raw, { requireChoices = false } = {}) {
         })),
       };
     }),
-    finale: invitationScene(raw.finale),
+    finale: invitationScene(raw.finale, allowedScenes, Boolean(startScene)),
   };
 }
 

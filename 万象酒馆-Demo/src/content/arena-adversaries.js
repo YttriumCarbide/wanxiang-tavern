@@ -1,4 +1,5 @@
 import { compileEnemyDesign } from '../enemy-base-values.js';
+import { applyEnemyTaxonomy } from '../enemy-taxonomy.js';
 
 function buildArenaEnemy(config) {
   const {
@@ -89,7 +90,7 @@ const arenaEnemies = [
   }),
   buildArenaEnemy({
     id: 'arenaClockworkLion',
-    name: '发条金鬃狮',
+    name: '发条机兵',
     slug: 'arena-clockwork-lion',
     title: '首都内部竞技场 / 炼金战兽',
     color: '#ffe37d',
@@ -252,7 +253,7 @@ export const ARENA_ARCHIVE_DEFINITIONS = Object.freeze(
   Object.fromEntries(
     [...arenaEnemies, arenaChampion].map((entry) => [
       entry.id,
-      { ...entry, archiveSource: '首都内部竞技场' },
+      applyEnemyTaxonomy({ ...entry, archiveSource: '首都内部竞技场' }),
     ]),
   ),
 );

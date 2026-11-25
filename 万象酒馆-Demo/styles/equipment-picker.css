@@ -41,6 +41,30 @@
     0 28px 68px rgba(0, 0, 0, 0.72),
     inset 0 1px 0 rgba(255, 241, 196, 0.14);
   color: #f3ead6;
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  #equipment-picker .px-dialog {
+    opacity: 0;
+    transform: translateY(10px) scale(0.97);
+    transition:
+      opacity 200ms ease,
+      transform 200ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  #equipment-picker[open] .px-dialog {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  @starting-style {
+    #equipment-picker[open] .px-dialog {
+      opacity: 0;
+      transform: translateY(10px) scale(0.97);
+    }
+  }
 }
 
 #equipment-picker .px-head {

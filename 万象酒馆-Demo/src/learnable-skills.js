@@ -7,6 +7,11 @@ export const LEARNABLE_SKILL_MAP = Object.freeze(
   Object.fromEntries(LEARNABLE_SKILLS.map((skill) => [skill.id, skill])),
 );
 
+/** Match both catalogue IDs and the flag stored in older battle definitions. */
+export function isUniversalSkill(skill) {
+  return skill?.universal === true || Object.hasOwn(LEARNABLE_SKILL_MAP, skill?.id);
+}
+
 export function restoreLearnedSkills(list = []) {
   const valid = Array.isArray(list)
     ? list.filter((id) => typeof id === 'string' && !!LEARNABLE_SKILL_MAP[id])
@@ -39,14 +44,14 @@ export function learnUniversalSkill(library, skillId) {
 export function equipUniversalSkill(library, memberId, slotIndex, skillId) {
   const index = Number(slotIndex);
   if (!Number.isInteger(index) || index < 0 || index >= UNIVERSAL_SKILL_SLOTS) {
-    throw Error('通用战技槽位无效');
+    throw Error('特技槽位无效');
   }
   const member = library?.characters?.find((entry) => entry.id === memberId);
   if (!member) throw Error('角色不存在');
   const learnedSet = new Set(restoreLearnedSkills(library.learnedSkills));
   const cleanId = skillId ? String(skillId) : null;
-  if (cleanId && !LEARNABLE_SKILL_MAP[cleanId]) throw Error('未知的通用战技');
-  if (cleanId && !learnedSet.has(cleanId)) throw Error('尚未研习该通用战技');
+  if (cleanId && !LEARNABLE_SKILL_MAP[cleanId]) throw Error('未知的特技');
+  if (cleanId && !learnedSet.has(cleanId)) throw Error('尚未研习该特技');
   const slots = restoreEquippedSkills(member.equippedSkills, learnedSet);
   if (cleanId) {
     for (let i = 0; i < slots.length; i++) {

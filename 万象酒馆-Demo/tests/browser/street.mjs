@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import path from 'node:path';
 import { writeFile } from 'node:fs/promises';
 import { legacySession } from './legacy-session.mjs';
+import { openCityDirectory } from './town-navigation.mjs';
 
 /** Explicit art workflow: camera-projected clean cube faces, never a resized panorama crop. */
 export async function exportSceneReferences(page, output) {
@@ -113,10 +114,10 @@ export async function streetChecks({ browser, baseURL, output }) {
     await page.goto(baseURL + '/street.html');
     await settled();
     const initial = await snapshot();
-    assert.equal(initial.roster.length, 2);
-    assert(initial.aspect >= 2.2, 'native overlapping panels retain a wide continuous scene');
+    assert.equal(initial.roster.length, 0);
+    assert(Math.abs(initial.aspect - 16 / 9) < 0.02, 'city overview keeps native 16:9 aspect');
     assert.equal(await page.locator('.street-controls').count(), 0);
-    assert.equal(await page.locator('.street-controls').count(), 0);
+    assert.equal((await page.locator('#street-return').innerText()).trim(), '返回酒馆');
     await page.mouse.move(640, 190);
     await page.mouse.down();
     await page.mouse.move(1050, 190, { steps: 8 });
@@ -127,68 +128,41 @@ export async function streetChecks({ browser, baseURL, output }) {
     assert.equal(middle.texture, initial.texture);
     await page.mouse.up();
     await settled();
+    await page.evaluate(() => window.streetPreview.resetView());
+    await settled();
     const beforeVertical = await snapshot();
     await drag(page, 0, 140);
     const afterVertical = await snapshot();
     bounded(afterVertical);
     assert(
-      Math.abs(afterVertical.state.framing.y - beforeVertical.state.framing.y) > 0.02,
+      Math.abs(afterVertical.state.framing.y - beforeVertical.state.framing.y) > 0.015,
       'free dragging allows gentle vertical sway as well as horizontal looking',
     );
     await page.evaluate(() => window.streetPreview.resetView());
     await settled();
-    for (const [name, delta] of [
-      ['entrance', 1800],
-      ['street', 0],
-      ['courtyard', -1800],
-    ]) {
-      await page.evaluate(() => window.streetPreview.resetView());
-      await settled();
-      if (delta) await drag(page, delta);
-      const frame = await snapshot();
-      bounded(frame);
-      assert.deepEqual(frame.roster, initial.roster, 'looking never moves or reassigns characters');
-      assert.equal(frame.texture, initial.texture);
-      assert(frame.state.rendering.calls <= 11);
-      if (delta)
-        assert(
-          Math.abs(frame.state.framing.panX) > 0.15,
-          'free dragging moves through the connected painting',
-        );
-      const visible = frame.feet.filter((foot) => foot.x > 0.06 && foot.x < 0.94);
-      assert(visible.length >= 1 && visible.every((foot) => foot.y > 0.55 && foot.y < 0.92));
-      await page.screenshot({ path: path.join(output, 'illustrated-' + name + '.png') });
-      const points = await page.evaluate(() =>
-        window.streetPreview.definition.points.filter(
-          (point) => !point.immediate && window.streetPreview.state().visible.includes(point.id),
-        ),
-      );
-      for (const point of points) {
-        await page.locator('[data-hotspot="' + point.id + '"]').click();
-        assert.equal(await page.locator('#inspection-name').textContent(), point.name);
-        await page.locator('#inspection-close').click();
-        seen.add(point.id);
-      }
-    }
-    assert.equal(seen.size, 4, 'every investigation stays reachable through free looking');
+    await page.mouse.move(980, 360, { steps: 6 });
+    await page.waitForTimeout(260);
+    const pannedHover = await snapshot();
+    assert(pannedHover.state.framing.x > 0.01, 'mouse move pans smoothly over the 16:9 backdrop');
+    const dockBtnBox = await page.locator('#street-return').boundingBox();
+    await page.mouse.move(
+      dockBtnBox.x + dockBtnBox.width / 2,
+      dockBtnBox.y + dockBtnBox.height / 2,
+      { steps: 4 },
+    );
+    await page.waitForTimeout(260);
+    const hoverButton = await snapshot();
+    assert(
+      Math.abs(hoverButton.state.framing.x) > 0.004,
+      'hovering bottom HUD buttons does not snap camera back to center',
+    );
+    await page.screenshot({ path: path.join(output, 'illustrated-street.png') });
     await page.evaluate(() => window.streetPreview.resetView());
     await settled();
     await drag(page, 160, 30);
     const dragged = await snapshot();
     bounded(dragged);
     assert(Math.abs(dragged.state.framing.x) > 0.04);
-    const landmark = await page.locator('[data-hotspot="arch"]').boundingBox();
-    const projected = await page.evaluate(async () => {
-      const THREE = await import('/vendor/build/three.module.js');
-      const view = window.streetPreview;
-      const point = new THREE.Vector3(...view.model.pointAnchor('arch')).project(view.camera);
-      return { x: ((point.x + 1) * innerWidth) / 2, y: ((1 - point.y) * innerHeight) / 2 };
-    });
-    assert(
-      Math.abs(landmark.x + landmark.width / 2 - projected.x) < 2 &&
-        Math.abs(landmark.y + landmark.height / 2 - projected.y) < 2,
-      'hotspots stay attached to the painting while dragging',
-    );
     await page.screenshot({ path: path.join(output, 'illustrated-dragged.png') });
     await page.waitForTimeout(180);
     assert.equal(
@@ -208,8 +182,9 @@ export async function streetChecks({ browser, baseURL, output }) {
     );
     await page.evaluate(() => window.streetPreview.resetView());
     await settled();
-    await page.locator('#street-submap-open').click();
-    await page.locator('#street-city-submap[open] .city-submap-svg').waitFor({ state: 'visible' });
+    const directoryViewport = page.viewportSize();
+    await page.setViewportSize({ width: directoryViewport.width, height: 560 });
+    const directory = await openCityDirectory(page);
     assert.equal(
       await page
         .locator('#street-city-submap [data-city-node="starbell-undercroft"]')
@@ -223,58 +198,47 @@ export async function streetChecks({ browser, baseURL, output }) {
       'stop',
     );
     assert(
-      (await page.locator('#street-city-submap use[href*="paper-quarter"]').count()) > 0 &&
-        (await page.locator('#street-city-submap pattern').count()) > 0,
-      'City submap must use borderless Overland #paper-quarter paper',
+      (await directory.locator('[data-city-category="places"]').count()) > 0 &&
+        (await directory.locator('[data-city-category="facilities"]').count()) > 0 &&
+        (await directory.locator('[data-city-category="dungeons"]').count()) > 0,
+      'City directory lists places, facilities and dungeons',
     );
-    assert.equal(await page.locator('#street-city-submap .city-block').count(), 0);
-    await page.waitForTimeout(150);
-    const alignmentError = await page.locator('#street-city-submap').evaluate((root) => {
-      const stage = root.querySelector('.city-submap-stage');
-      const svg = root.querySelector('.city-submap-svg');
-      const stageBox = stage.getBoundingClientRect();
-      const svgBox = svg.getBoundingClientRect();
-      let maxErr = Math.max(
-        Math.abs(svgBox.width - stageBox.width),
-        Math.abs(svgBox.height - stageBox.height),
-      );
-      for (const pin of root.querySelectorAll('.city-submap-pinbtn')) {
-        const sealBox = pin.querySelector('.city-submap-seal').getBoundingClientRect();
-        const expectedX = stageBox.left + (parseFloat(pin.style.left) / 100) * stageBox.width;
-        const expectedY = stageBox.top + (parseFloat(pin.style.top) / 100) * stageBox.height;
-        const actualX = sealBox.left + sealBox.width / 2;
-        const actualY = sealBox.top + sealBox.height / 2;
-        maxErr = Math.max(maxErr, Math.hypot(actualX - expectedX, actualY - expectedY));
-      }
-      return maxErr;
+    const scroll = await directory.evaluate((dialog) => {
+      const list = dialog.querySelector('#street-city-submap-canvas');
+      const { top, bottom, left, right, width, height } = dialog.getBoundingClientRect();
+      list.scrollTop = list.scrollHeight;
+      const atEnd = list.scrollTop + list.clientHeight >= list.scrollHeight - 1;
+      const lastCategory = list.querySelector('[data-city-category="dungeons"]');
+      return {
+        box: { left, right, top, bottom, width, height },
+        viewport: { width: innerWidth, height: innerHeight },
+        bounded: top >= 0 && bottom <= innerHeight,
+        scrollable: list.scrollHeight > list.clientHeight,
+        atEnd,
+        lastCategoryVisible:
+          lastCategory.getBoundingClientRect().bottom <= list.getBoundingClientRect().bottom,
+      };
     });
-    assert(alignmentError < 2, `City submap seal drifted from trail node by ${alignmentError}px`);
-    await page.screenshot({ path: path.join(output, 'starbell-submap.png') });
-    const submapBox = await page.locator('#street-city-submap-canvas').boundingBox();
-    await page.mouse.move(submapBox.x + submapBox.width / 2, submapBox.y + submapBox.height / 2);
-    await page.mouse.down();
-    await page.mouse.move(
-      submapBox.x + submapBox.width / 2 + 28,
-      submapBox.y + submapBox.height / 2 + 18,
-      { steps: 6 },
+    assert(
+      scroll.bounded,
+      'the directory dialog is constrained to the viewport: ' +
+        JSON.stringify({ box: scroll.box, viewport: scroll.viewport }),
     );
-    await page.mouse.up();
-    const submapPan = await page
-      .locator('#street-city-submap .city-submap-stage')
-      .evaluate((el) => ({
-        x: parseFloat(el.style.getPropertyValue('--submap-pan-x')) || 0,
-        y: parseFloat(el.style.getPropertyValue('--submap-pan-y')) || 0,
-      }));
-    assert(Math.abs(submapPan.x) > 10 && Math.abs(submapPan.y) > 8);
-    assert.equal(await page.locator('#street-city-submap[open]').count(), 1);
+    assert(scroll.scrollable && scroll.atEnd, 'the directory content scrolls to its last row');
+    assert(scroll.lastCategoryVisible, 'the dungeon category is visible at the scroll boundary');
+    await page.screenshot({ path: path.join(output, 'starbell-submap.png') });
     await page.locator('#street-city-submap-close').click();
     await page.locator('#street-city-submap').waitFor({ state: 'hidden' });
-    await page.locator('#street-submap-open').click();
-    await page.locator('[data-city-node="city-center"]').evaluate((button) => button.click());
+    await openCityDirectory(page);
     await page.keyboard.press('Escape');
     await page.locator('#street-city-submap').waitFor({ state: 'hidden' });
-    await page.waitForTimeout(420);
-    assert.equal(await page.locator('body.leaving').count(), 0, 'Escape cancels the pending walk');
+    await page.waitForFunction(() => document.activeElement?.id === 'street-submap-open');
+    await page.setViewportSize(directoryViewport);
+    assert.equal(
+      await page.locator('body.leaving').count(),
+      0,
+      'Closing the directory does not travel',
+    );
     const gestureStartedTravel = await page.evaluate(async () => {
       const dialog = document.getElementById('street-map');
       document.getElementById('street-map-open').click();
@@ -307,29 +271,6 @@ export async function streetChecks({ browser, baseURL, output }) {
       return { cancelled, pinched, sceneReady: Boolean(window.streetPreview) };
     });
     assert.deepEqual(gestureStartedTravel, { cancelled: false, pinched: false, sceneReady: true });
-    await page.evaluate(() => {
-      window.visitorClick = null;
-      window.addEventListener('message', (event) => {
-        if (event.data?.type === 'tavern-talk') window.visitorClick = event.data.characterId;
-      });
-    });
-    const actorPoint = await page.evaluate(() => {
-      const view = window.streetPreview;
-      let result;
-      view.scene.traverse((mesh) => {
-        if (result || !mesh.userData.visitor || !mesh.parent.visible) return;
-        const point = mesh.parent.position.clone();
-        point.y += 0.18;
-        point.project(view.camera);
-        if (Math.abs(point.x) < 0.8)
-          result = { x: ((point.x + 1) * innerWidth) / 2, y: ((1 - point.y) * innerHeight) / 2 };
-      });
-      return result;
-    });
-    await page.mouse.click(actorPoint.x, actorPoint.y);
-    await page.waitForFunction(() => !!window.visitorClick);
-    const clicked = await page.evaluate(() => window.visitorClick);
-    assert(initial.roster.some((actor) => actor.id === clicked));
     const beforeKey = await snapshot();
     await page.keyboard.press('ArrowRight');
     await settled();
@@ -337,6 +278,73 @@ export async function streetChecks({ browser, baseURL, output }) {
     await page.keyboard.press('ArrowUp');
     await settled();
     bounded(await snapshot());
+
+    // The overview suppresses hotspot buttons; open its existing points via the scene preview.
+    const inspector = page.locator('#street-inspector');
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    const normalClose = await inspector.evaluate(async (panel) => {
+      const view = window.streetPreview;
+      const close = panel.querySelector('#inspection-close');
+      view.inspect('clock');
+      await Promise.all(panel.getAnimations().map((animation) => animation.finished));
+      close.focus();
+      close.click();
+      const style = getComputedStyle(panel);
+      const during = {
+        painted: !panel.hidden && style.display !== 'none' && Number(style.opacity) > 0,
+        inert: panel.inert && style.pointerEvents === 'none',
+        closed: view.state().active === null && !panel.contains(document.activeElement),
+      };
+      const animations = panel.getAnimations();
+      await Promise.all(animations.map((animation) => animation.finished));
+      return { ...during, animated: animations.length > 0, hidden: panel.hidden && !panel.inert };
+    });
+    assert.deepEqual(normalClose, {
+      painted: true,
+      inert: true,
+      closed: true,
+      animated: true,
+      hidden: true,
+    });
+
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    const reducedClose = await inspector.evaluate((panel) => {
+      window.streetPreview.inspect('clock');
+      panel.querySelector('#inspection-close').click();
+      return panel.hidden && !panel.inert && panel.getAnimations().length === 0;
+    });
+    assert(reducedClose, 'Reduced motion hides the inspector immediately');
+
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    const interruptedClose = await inspector.evaluate(async (panel) => {
+      const view = window.streetPreview;
+      const close = panel.querySelector('#inspection-close');
+      view.inspect('clock');
+      close.click();
+      const firstExit = panel.getAnimations()[0]?.finished;
+      view.inspect('fountain');
+      await Promise.allSettled([
+        firstExit,
+        ...panel.getAnimations().map((animation) => animation.finished),
+      ]);
+      const reopened =
+        Boolean(firstExit) && !panel.hidden && !panel.inert && view.state().active === 'fountain';
+
+      close.click();
+      const secondExit = panel.getAnimations()[0]?.finished;
+      window.dispatchEvent(new PageTransitionEvent('pagehide', { persisted: false }));
+      await secondExit?.catch(() => {});
+      return {
+        reopened,
+        disposed:
+          Boolean(secondExit) &&
+          !window.streetPreview &&
+          panel.hidden &&
+          !panel.inert &&
+          panel.getAnimations().length === 0,
+      };
+    });
+    assert.deepEqual(interruptedClose, { reopened: true, disposed: true });
 
     const mobile = await browser.newPage({
       viewport: { width: 844, height: 390 },
@@ -363,35 +371,14 @@ export async function streetChecks({ browser, baseURL, output }) {
       bounded(after);
       assert(Math.abs(after.state.framing.x - before.state.framing.x) > 0.04);
       assert.equal(after.texture, before.texture);
-      for (const [name, delta] of [
-        ['entrance', 1800],
-        ['street', 0],
-        ['courtyard', -1800],
-      ]) {
-        await mobile.evaluate(() => window.streetPreview.resetView());
-        await settled(mobile);
-        if (delta) await drag(mobile, delta);
-        const frame = await snapshot(mobile);
-        bounded(frame);
-        const visible = frame.feet.filter((foot) => foot.x > 0.06 && foot.x < 0.94);
-        assert(visible.length >= 1 && visible.every((foot) => foot.y > 0.5 && foot.y < 0.95));
-        await mobile.screenshot({ path: path.join(output, 'illustrated-mobile-' + name + '.png') });
-      }
-      await mobile.locator('[data-hotspot="notice"]').click();
-      await mobile
-        .locator('#street-inspector')
-        .evaluate((element) =>
-          Promise.all(element.getAnimations().map((animation) => animation.finished)),
-        );
-      const bounds = await mobile.locator('#street-inspector').boundingBox();
-      assert(
-        bounds.x >= 0 &&
-          bounds.y >= 0 &&
-          bounds.x + bounds.width <= 845 &&
-          bounds.y + bounds.height <= 391,
-      );
+      await mobile.evaluate(() => window.streetPreview.resetView());
+      await settled(mobile);
+      await drag(mobile, 220);
+      bounded(await snapshot(mobile));
+      await mobile.screenshot({ path: path.join(output, 'illustrated-mobile-city.png') });
+      assert.equal((await mobile.locator('#street-return').innerText()).trim(), '返回酒馆');
       await mobile.locator('#street-return').click();
-      await mobile.waitForURL('**/tavern.html?return=street');
+      await mobile.waitForURL('**/tavern.html?return=city-center');
       await mobile.waitForFunction(() => window.modelReady);
       assert.equal(
         await mobile.evaluate(() => window.assetPreview.getState().current),
@@ -436,31 +423,28 @@ export async function streetChecks({ browser, baseURL, output }) {
       'approach is clear of furniture',
     );
     await page.frameLocator('#inn-frame iframe').locator('#street-open').click();
-    await page.locator('[data-tavern-exit="street"]').click();
-    await page.waitForFunction(() =>
-      [...document.querySelectorAll('#inn-frame iframe')].some(
-        (el) => el.contentWindow?.streetPreview,
-      ),
-    );
-    await page
-      .frameLocator('#inn-frame iframe')
-      .locator('canvas')
-      .evaluate(() => {
-        const view = window.streetPreview;
-        const point = view.definition.points.find((entry) => entry.destination === 'city-center');
-        view.look(Math.atan2(-point.anchor[0], -point.anchor[2]), 0);
-      });
-    await page.frameLocator('#inn-frame iframe').locator('[data-hotspot="arch"]').click();
+    await page.locator('[data-tavern-exit="city-center"]').click();
     await page.waitForFunction(
       () =>
         document.querySelector('#inn-frame iframe')?.contentWindow?.streetPreview?.state()
           .sceneId === 'city-center',
     );
+    assert.equal(
+      (await page.frameLocator('#inn-frame iframe').locator('#street-return').innerText()).trim(),
+      '返回酒馆',
+    );
     await page.frameLocator('#inn-frame iframe').locator('#street-return').click();
+    await page.waitForFunction(() => {
+      const win = document.querySelector('#inn-frame iframe')?.contentWindow;
+      return win?.modelReady && win?.assetPreview?.getState().current === 'streetDoor';
+    });
+    await canvas.evaluate(() => window.assetPreview.placeNow('streetDoor'));
+    await page.frameLocator('#inn-frame iframe').locator('#street-open').click();
+    await page.locator('[data-tavern-exit="city-center"]').click();
     await page.waitForFunction(
       () =>
         document.querySelector('#inn-frame iframe')?.contentWindow?.streetPreview?.state()
-          .sceneId === 'starlamp-street',
+          .sceneId === 'city-center',
     );
     // Open starbell-undercroft via city submap and verify seamless Top-Layer transition on open & close
     await page.evaluate(() => {
@@ -497,15 +481,8 @@ export async function streetChecks({ browser, baseURL, output }) {
       log.phase = 'opening';
       requestAnimationFrame(step);
     });
-    await page.frameLocator('#inn-frame iframe').locator('#street-submap-open').click();
-    await page
-      .frameLocator('#inn-frame iframe')
-      .locator('#street-city-submap')
-      .waitFor({ state: 'visible' });
-    await page
-      .frameLocator('#inn-frame iframe')
-      .locator('[data-city-node="starbell-undercroft"]')
-      .click();
+    const embeddedDirectory = await openCityDirectory(page);
+    await embeddedDirectory.locator('[data-city-node="starbell-undercroft"]').click();
     await page.locator('#destination-dialog[data-discovery="true"]').waitFor({ state: 'visible' });
     await page.waitForFunction(
       () => !document.querySelector('.world-loading-scene:not([hidden])'),

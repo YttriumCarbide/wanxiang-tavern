@@ -11,7 +11,11 @@ import { DEFINITIONS } from '../data.js';
 import { routeKey } from '../worlds.js';
 import { nextArcPhase } from '../story-arc.js';
 import { adventureTestScript } from '../content/generation-mode.js';
-import { cleanLibraryCharacters } from '../ai/character-cleanup.js';
+import {
+  RETIRED_OFFICIAL_DRAFT_IDS,
+  cleanLibraryCharacters,
+  isRetiredCampaignCharacter,
+} from '../ai/character-cleanup.js';
 import { relevantArchives } from '../archives.js';
 import {
   GENERATION_OPTIONS_KEY,
@@ -72,8 +76,13 @@ export function createGeneration(context) {
     if (!storage.getItem(libraryKey)) storage.setItem('wanxiang.creation-pending.v1', 'true');
     session.runtime.needsStart = storage.getItem('wanxiang.creation-pending.v1') === 'true';
     if (!context.apiClient.staticMode) applyGeneratedReset(storage);
-    session.ai.library = restoreLibrary(JSON.parse(storage.getItem(libraryKey)));
-    if (purgeLegacyRuinsProgress(session.ai.library))
+    const rawSaved = JSON.parse(storage.getItem(libraryKey));
+    session.ai.library = restoreLibrary(rawSaved);
+    const strippedRetired =
+      Boolean(rawSaved?.campaign) &&
+      Array.isArray(rawSaved?.characters) &&
+      rawSaved.characters.length !== session.ai.library.characters.length;
+    if (purgeLegacyRuinsProgress(session.ai.library) || strippedRetired)
       storage.setItem(libraryKey, JSON.stringify(session.ai.library));
   } catch {
     /* Retain the seeded official pool. */
@@ -131,9 +140,12 @@ export function createGeneration(context) {
   function status(text) {
     $('#ai-status').textContent = text;
   }
-  function save() {
-    context.summoning?.refresh();
-    context.shell.syncInnVisitors();
+  /** @param {{ refresh?: boolean }} [options] */
+  function save(options) {
+    if (options?.refresh !== false) {
+      context.summoning?.refresh();
+      context.shell.syncInnVisitors();
+    }
     try {
       syncSummaryWorldbook(library());
       if (context.checkpoint) context.checkpoint.saveLibrary();
@@ -170,7 +182,22 @@ export function createGeneration(context) {
       if (!isCurrent() || !response?.book?.entries) return;
       const book = response.book;
       const retired = new Set(book.extensions?.wanxiang?.characterCleanup?.removedIds || []);
-      if (cleanLibraryCharacters(owner, retired)) {
+      let campaignPurged = false;
+      if (owner.campaign) {
+        const dropped = new Set(
+          owner.characters
+            .filter((char) => isRetiredCampaignCharacter(char, owner.campaign.protagonistId))
+            .map((char) => char.id),
+        );
+        if (dropped.size) {
+          owner.characters = owner.characters.filter((char) => !dropped.has(char.id));
+          owner.party = owner.party.map((id) => (dropped.has(id) ? null : id));
+          for (const id of dropped) delete owner.relationships[id];
+          owner.prepared = null;
+          campaignPurged = true;
+        }
+      }
+      if (cleanLibraryCharacters(owner, retired) || campaignPurged) {
         save();
         if (session.runtime.mode === 'inn') {
           installRoster();
@@ -180,6 +207,30 @@ export function createGeneration(context) {
       }
       let nextUid = Math.max(-1, ...Object.keys(book.entries).map(Number)) + 1;
       let dirty = false;
+      const draftSet = new Set(RETIRED_OFFICIAL_DRAFT_IDS);
+      if (owner.campaign) {
+        for (const [uid, entry] of Object.entries(book.entries)) {
+          const cid = entry?.extensions?.wanxiang?.characterId;
+          if (cid && draftSet.has(cid)) {
+            delete book.entries[uid];
+            dirty = true;
+          }
+        }
+        const existingRemoved = book.extensions?.wanxiang?.characterCleanup?.removedIds || [];
+        if (RETIRED_OFFICIAL_DRAFT_IDS.some((id) => !existingRemoved.includes(id))) {
+          book.extensions = {
+            ...book.extensions,
+            wanxiang: {
+              ...book.extensions?.wanxiang,
+              characterCleanup: {
+                ...book.extensions?.wanxiang?.characterCleanup,
+                removedIds: [...new Set([...existingRemoved, ...RETIRED_OFFICIAL_DRAFT_IDS])],
+              },
+            },
+          };
+          dirty = true;
+        }
+      }
       for (const char of owner.characters) {
         if (retired.has(char.id) && char.id !== owner.campaign?.protagonistId) continue;
         const name = char.setting?.name;
@@ -918,9 +969,6 @@ export function createGeneration(context) {
   events.on($('#generation-progress-cancel'), 'click', () => request?.abort());
   events.on($('#prepare-cancel-generation'), 'click', () => request?.abort());
   events.on($('#prepare-open-workshop'), 'click', () => void context.workshop?.open?.());
-  events.on($('#party-panel'), 'cancel', (event) => {
-    if (session.ai.departureParty) event.preventDefault();
-  });
   events.on($('#summoned-close'), 'click', () => $('#summoned-dialog').close());
   events.on($('#summoned-join'), 'click', () => {
     if (!summoned) return;

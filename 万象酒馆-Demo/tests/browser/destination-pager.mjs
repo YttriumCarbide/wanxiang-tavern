@@ -10,11 +10,12 @@ export async function destinationPagerChecks({ browser, baseURL, output }) {
   const errors = [];
   let generations = 0;
   let entrance;
-  let millPreviewLoaded = false;
-  const millPreviewUrl = new URL('assets/preview-mill.glb', baseURL).href;
+  const loadedPreviews = new Set();
+  const previewUrl = (id) => new URL(`assets/preview-${id}.glb`, baseURL).href;
   page.on('pageerror', (error) => errors.push(error.message));
   page.on('response', (response) => {
-    if (response.url() === millPreviewUrl && response.ok()) millPreviewLoaded = true;
+    if (response.ok() && /\/assets\/preview-[^/]+\.glb$/.test(response.url()))
+      loadedPreviews.add(response.url());
   });
   await page.route('**/api/ai/generate/*', async (route) => {
     generations++;
@@ -32,12 +33,27 @@ export async function destinationPagerChecks({ browser, baseURL, output }) {
     await page.waitForTimeout(650);
   }
   async function centeredWindow() {
-    const box = await page.locator('#destination-dialog').boundingBox();
+    const selector = '#destination-dialog[open]';
+    // Playwright can see the window while its entry transition still translates it.
+    // Only wait for motion on the dialog itself, not the animated world preview.
+    await page.waitForFunction(
+      (selector) => {
+        const dialog = document.querySelector(selector);
+        return dialog
+          ?.getAnimations()
+          .every((motion) => !motion.pending && motion.playState !== 'running');
+      },
+      selector,
+      { timeout: 5000 },
+    );
+    const box = await page.locator(selector).boundingBox();
     const viewport = page.viewportSize();
+    assert(box && viewport, 'The open destination dialog must have a viewport box');
     assert(box.x >= 8 && box.y >= 8, 'Keep the tavern visible around the window');
     assert(box.width < viewport.width && box.height < viewport.height);
-    assert(Math.abs(box.x * 2 + box.width - viewport.width) < 2);
-    assert(Math.abs(box.y * 2 + box.height - viewport.height) < 2);
+    const measured = JSON.stringify({ box, viewport });
+    assert(Math.abs(box.x * 2 + box.width - viewport.width) < 2, 'Horizontal center: ' + measured);
+    assert(Math.abs(box.y * 2 + box.height - viewport.height) < 2, 'Vertical center: ' + measured);
   }
   async function expandMap() {
     const regionId = await page.locator('#destination-dialog').getAttribute('data-region');
@@ -98,12 +114,66 @@ export async function destinationPagerChecks({ browser, baseURL, output }) {
       assert(box.width >= 32 && box.height >= 32);
     }
   }
+  async function leftFooterActions(primarySelector, { withBackground = false } = {}) {
+    const selectors = withBackground
+      ? ['#destination-description', primarySelector]
+      : [primarySelector];
+    await reachable(selectors);
+    const footer = page.locator('#destination-dialog footer');
+    const visibleIds = await footer
+      .locator(
+        'button:is(#destination-description, #destination-region-confirm, #destination-start):visible',
+      )
+      .evaluateAll((buttons) => buttons.map((button) => button.id));
+    assert.deepEqual(
+      visibleIds,
+      selectors.map((selector) => selector.slice(1)),
+    );
+    const [bar, ...buttons] = await Promise.all([
+      footer.boundingBox(),
+      ...selectors.map((selector) => footer.locator(selector).boundingBox()),
+    ]);
+    assert(bar && buttons.every(Boolean), 'The actions must be visible in the footer');
+    for (const box of buttons) {
+      assert(box.x >= bar.x && box.x + box.width <= bar.x + bar.width);
+      assert(box.y >= bar.y && box.y + box.height <= bar.y + bar.height);
+    }
+    const [first, primary] = buttons;
+    assert(first.x - bar.x <= 16, 'The action group anchors to the lower-left');
+    if (withBackground) {
+      const gap = primary.x - (first.x + first.width);
+      assert(gap >= 0 && gap <= 16, 'The primary action stays beside the background on the left');
+      assert(
+        Math.abs(first.y + first.height / 2 - (primary.y + primary.height / 2)) < 4,
+        'World background and primary action stay on one row',
+      );
+    }
+  }
+  async function readBlackMarketBackground() {
+    const lore = page.locator('#destination-lore');
+    await page.locator('#destination-description').click();
+    await lore.waitFor({ state: 'visible' });
+    assert.equal(await lore.locator('article').textContent(), REGIONS['black-market'].description);
+    await lore.getByRole('button', { name: '关闭世界背景' }).click();
+    await lore.waitFor({ state: 'hidden' });
+  }
+  const routeNodes = () =>
+    page
+      .locator('[data-map-node]')
+      .evaluateAll((nodes) =>
+        nodes.map((node) => [node.dataset.mapNode, node.getAttribute('aria-pressed')]),
+      );
   try {
     await legacySession(page);
     await page.goto(baseURL);
     await page.waitForFunction(() => !!window.demo);
     await openGate();
     await centeredWindow();
+    assert(
+      !(await page.locator('#destination-description').isVisible()),
+      'Short lore stays hidden',
+    );
+    await leftFooterActions('#destination-region-confirm');
     const before = await page.evaluate(() => demo.getExploration());
     await expandMap();
     assert.equal(await page.locator('[data-map-node] em').first().textContent(), '1');
@@ -176,7 +246,7 @@ export async function destinationPagerChecks({ browser, baseURL, output }) {
     }
     await page.locator('#destination-region-next').click();
     await ready('mill');
-    assert(millPreviewLoaded, 'Mill must load its dedicated miniature GLB');
+    assert(loadedPreviews.has(previewUrl('mill')), 'Mill must load its dedicated miniature GLB');
     await page.screenshot({ path: path.join(output, 'destination-mill-miniature.png') });
     await page.locator('#destination-region-next').click({ clickCount: 4, delay: 30 });
     await ready('forge');
@@ -378,10 +448,11 @@ export async function destinationPagerChecks({ browser, baseURL, output }) {
     assert.equal(generations, 0);
     await page.locator('#destination-close').click();
     await page.evaluate(async () => {
-      const { completeExploration } = await import('/src/exploration.js');
+      const { completeExploration, unlockDungeonMap } = await import('/src/exploration.js');
       const library = demo.getLibrary();
       const route = library.exploration.tide;
       while (route.completed < 6) completeExploration(library.exploration, route.frontier[0]);
+      unlockDungeonMap(library, 'black-market');
       localStorage.setItem('wanxiang.worldbooks.v1', JSON.stringify(library));
     });
     await page.setViewportSize({ width: 1440, height: 836 });
@@ -428,6 +499,46 @@ export async function destinationPagerChecks({ browser, baseURL, output }) {
     await page.waitForTimeout(150);
     await page.screenshot({ path: path.join(output, 'ruins-node-map.png') });
 
+    const expectedBlackMarketLabels = REGIONS['black-market'].nodes.map(({ label }) => label);
+    const confirm = '#destination-region-confirm';
+    await page.locator('#destination-back').click();
+    await page.locator('.destination-strip > button').last().click();
+    await page.locator('#destination-regions [data-region="black-market"]').click();
+    await ready('black-market');
+    assert(
+      loadedPreviews.has(previewUrl('black-market')),
+      'Black market must load its own miniature',
+    );
+    await page.screenshot({ path: path.join(output, 'destination-black-market-miniature.png') });
+
+    for (const viewport of [
+      { width: 1440, height: 836 },
+      { width: 667, height: 375 },
+      { width: 390, height: 844 },
+    ]) {
+      await page.setViewportSize(viewport);
+      await centeredWindow();
+      await leftFooterActions(confirm, { withBackground: true });
+      await readBlackMarketBackground();
+      await page.locator(confirm).click();
+      await page.locator('#destination-dialog[data-stage="route"]').waitFor();
+      await leftFooterActions('#destination-start', { withBackground: true });
+      assert.deepEqual(
+        await page.locator('.destination-node-mark em').allTextContents(),
+        expectedBlackMarketLabels,
+      );
+      const nodes = await routeNodes();
+      assert.equal(nodes.filter(([, pressed]) => pressed === 'true').length, 1);
+      await readBlackMarketBackground();
+      assert.deepEqual(
+        await routeNodes(),
+        nodes,
+        'Opening lore must not change the route or selection',
+      );
+      await page.locator('#destination-back').click();
+    }
+
+    assert.equal(generations, 0);
     assert.deepEqual(errors, []);
     return {
       centeredSteps: 2,
@@ -436,7 +547,7 @@ export async function destinationPagerChecks({ browser, baseURL, output }) {
       dragWithoutSelection: true,
       models: Object.keys(REGIONS).length,
       keyboardAndTouch: true,
-      mobile: ['844x390', '667x375'],
+      mobile: ['844x390', '667x375', '390x844'],
       noGenerationOnBrowse: true,
     };
   } catch (error) {

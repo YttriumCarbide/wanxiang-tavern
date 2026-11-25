@@ -1,6 +1,7 @@
 import { journeyContinuityMessage } from '../../memory.js';
 import { galInstruction } from '../gal-prompt.js';
 import { TOWN_SIDE_PLACES } from '../../content/town-side-places.js';
+import { CITIES } from '../../city-directory.js';
 import { presetSampling } from '../presets.js';
 import {
   INVITATION_SCENES,
@@ -20,6 +21,41 @@ const sideLocations = Object.entries(TOWN_SIDE_PLACES).map(([id, { parent, envir
   parent,
   environment,
 }));
+
+/** City appointments use only the validated venue snapshot supplied by daily-invitation. */
+function invitationCityBoundary(invite) {
+  const hasBoundary = ['city', 'startScene', 'allowedScenes'].some((key) =>
+    Object.hasOwn(invite || {}, key),
+  );
+  if (!hasBoundary) return null;
+  if (!Object.hasOwn(CITIES, invite?.city)) throw Error('约见城市无效');
+  const raw = invite?.allowedScenes;
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw Error('约见城区名单无效');
+  const entries = Object.entries(raw);
+  if (entries.length < 1 || entries.length > 256) throw Error('约见城区名单无效');
+  const allowedScenes = Object.fromEntries(
+    entries.map(([id, label]) => {
+      if (
+        !/^[a-z0-9][a-z0-9-]{0,95}$/u.test(id) ||
+        typeof label !== 'string' ||
+        !label.trim() ||
+        label.length > 100 ||
+        /[<>【】]/u.test(label) ||
+        label.includes(String.fromCharCode(10)) ||
+        label.includes(String.fromCharCode(13))
+      )
+        throw Error('约见城区名单无效');
+      return [id, label.trim()];
+    }),
+  );
+  if (typeof invite.startScene !== 'string' || !Object.hasOwn(allowedScenes, invite.startScene))
+    throw Error('约见开场地点不在本次城区名单中');
+  return { city: invite.city, startScene: invite.startScene, allowedScenes };
+}
+
+function invitationPlaceContext(boundary) {
+  return boundary || { allowedScenes: INVITATION_SCENES, sideLocations };
+}
 
 function invitationActs(stageCount) {
   const count = Number(stageCount);
@@ -43,6 +79,7 @@ function invitationActs(stageCount) {
 
 export async function buildInvitationRequest(input, preset, profile, countTokens, options = {}) {
   const invite = input.invitation;
+  const boundary = invitationCityBoundary(invite);
   if (
     !invitationActivityName(invite?.activity) ||
     !Array.isArray(input.party) ||
@@ -64,8 +101,7 @@ export async function buildInvitationRequest(input, preset, profile, countTokens
       ...invite,
       activityName: invitationActivityName(invite.activity),
       acts: invitationActs(invite.stageCount),
-      allowedScenes: INVITATION_SCENES,
-      sideLocations,
+      ...invitationPlaceContext(boundary),
       characters: input.party,
     },
     samplingAdjust: (base) => ({
@@ -84,6 +120,10 @@ export function invitationRequest(input, preset, profile, countTokens, worldInfo
     input.party.length > 2
   )
     throw Error('约见请求缺少人物或活动');
+  const boundary = invitationCityBoundary(invite);
+  const placeRule = boundary
+    ? `城内约见地点边界（city、startScene 与 allowedScenes 均为本次有效城区）：${JSON.stringify(boundary)}。只能在此白名单内选址，首幕必须使用 startScene；不得切换到酒馆、城外路线或其他城市。每幕 stages[].intro 和 finale.intro 均必须以“【环境】...【环境结束】”开头：标记之间只写对应 scene 的纯文本环境描写，结束标记后再写 Gal 正文；即使连续两幕在同一地点，也要为新一幕提供场景开头。`
+    : `地点白名单：${JSON.stringify(INVITATION_SCENES)}。小地点从parent对应的街区进入：${JSON.stringify(sideLocations)}。`;
   const instructions = `【约见剧本创作与JSON结构要求】
 1. 整体结构：一次写完一件从头到尾成立的 Gal 事件，含 3～5 幕互动（stages）和单独一幕收尾（finale）。「${invitationActivityName(invite.activity)}」只是两人见面的由头，不能只靠吃饭、走路、闲聊撑满整个事件；topic 存在时以它为本次事件主题。
 2. 事件优先：先想清楚当天出了什么具体的事、为什么得处理、最初以为是什么而后来发现了什么、玩家在哪个选择上能改变局面、最后什么有了可见变化；再用约见对象的经验、顾虑和说话方式改写他的反应与收尾。personal 为真时，在事件中安排一次能体现该角色真实在意什么的选择。
@@ -106,7 +146,7 @@ export function invitationRequest(input, preset, profile, countTokens, worldInfo
         ...journeyContinuityMessage(input),
         {
           role: 'system',
-          content: `你负责酒馆约见剧情。地点白名单：${JSON.stringify(INVITATION_SCENES)}。小地点从parent对应的街区进入：${JSON.stringify(sideLocations)}。露天描写遵循timeOfDay指定的白天或夜晚；无窗室内用室内灯光。人物的invitationMemory是此人与玩家亲历的过去约见。protagonistId是玩家操控的人，不能把他写成第三个在场人物，也不能替他说话或行动。不写副本、不战斗，不凭空改变好感度。\n${galInstruction(input, 'script')}\n${instructions}\n只输出一组<wanxiang_output>与</wanxiang_output>标签，JSON置于标签内。`,
+          content: `你负责酒馆约见剧情。${placeRule}露天描写遵循timeOfDay指定的白天或夜晚；无窗室内用室内灯光。人物的invitationMemory是此人与玩家亲历的过去约见。protagonistId是玩家操控的人，不能把他写成第三个在场人物，也不能替他说话或行动。不写副本、不战斗，不凭空改变好感度。\n${galInstruction(input, 'script')}\n${instructions}\n只输出一组<wanxiang_output>与</wanxiang_output>标签，JSON置于标签内。`,
         },
         ...scanScenarioWorldbooks({ ...input, brief: invite.topic }, countTokens, worldInfo),
         { role: 'user', content: JSON.stringify({ ...invite, characters: input.party }) },
@@ -122,9 +162,13 @@ export function invitationRequest(input, preset, profile, countTokens, worldInfo
   );
 }
 
-export function invitationResponse(raw) {
+export function invitationResponse(raw, invite) {
   const value = JSON.parse(extractGenerationEnvelope('script', raw).candidateText);
-  return normalizeInvitationPlan(value, { requireChoices: true });
+  const boundary = invitationCityBoundary(invite);
+  return normalizeInvitationPlan(value, {
+    requireChoices: true,
+    ...(boundary ? { allowedScenes: boundary.allowedScenes, startScene: boundary.startScene } : {}),
+  });
 }
 
 export async function buildInvitationTopicsRequest(
@@ -183,7 +227,7 @@ export function invitationTopicsResponse(raw) {
 export function invitationChatInstruction(turn) {
   if (!turn) return '';
   const next = turn.nextScene;
-  const destination = next && INVITATION_SCENES[next.scene];
+  const destination = next?.name || (next && INVITATION_SCENES[next.scene]);
   const travel =
     destination && destination !== turn.scene
       ? `下一幕在「${destination}」。若本轮完成本幕剩余任务，或已达到本幕最后一轮，在对白中自然提出要去那里，以及为什么；此轮的正文仍留在当前地点，实际赶路由玩家完成。不要写已经抵达。`
@@ -199,7 +243,7 @@ ${editing}
 export function invitationTurnContext(turn) {
   if (!turn) return '';
   const next = turn.nextScene;
-  const destination = next && INVITATION_SCENES[next.scene];
+  const destination = next?.name || (next && INVITATION_SCENES[next.scene]);
   const template = next?.id
     ? {
         stageId: turn.stageId,

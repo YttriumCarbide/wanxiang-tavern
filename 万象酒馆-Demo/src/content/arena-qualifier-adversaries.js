@@ -1,4 +1,5 @@
 import { compileEnemyDesign } from '../enemy-base-values.js';
+import { applyEnemyTaxonomy } from '../enemy-taxonomy.js';
 
 const ARCHIVE_SOURCE = '首都内部竞技场 · 海选赛';
 
@@ -51,7 +52,7 @@ function buildQualifier(config) {
     definition.phaseMode = 'cycle';
   }
 
-  return definition;
+  return applyEnemyTaxonomy(definition);
 }
 
 const ARENA_QUALIFIER_ARCHIVE_DEFINITIONS = Object.freeze(
@@ -87,7 +88,7 @@ const ARENA_QUALIFIER_ARCHIVE_DEFINITIONS = Object.freeze(
       'arenaQualifierWoodShield',
       buildQualifier({
         id: 'arenaQualifierWoodShield',
-        name: '木盾短剑手',
+        name: '木盾剑士',
         slug: 'arena-q-wood-shield',
         color: '#6d8b69',
         tier: 'minion',
@@ -168,7 +169,7 @@ const ARENA_QUALIFIER_ARCHIVE_DEFINITIONS = Object.freeze(
       'arenaQualifierKnives',
       buildQualifier({
         id: 'arenaQualifierKnives',
-        name: '双木刀学徒',
+        name: '双刃剑士',
         slug: 'arena-q-knives',
         color: '#a66b56',
         tier: 'minion',
@@ -763,6 +764,7 @@ const ARENA_QUALIFIER_ARCHIVE_DEFINITIONS = Object.freeze(
       {
         id: 'arenaQualifierIronCoach',
         name: '海选擂主·铁臂教头',
+        category: 'other',
         color: '#b58d63',
         portrait: 'arena-q-iron-coach',
         model: 'arena-q-iron-coach.glb',

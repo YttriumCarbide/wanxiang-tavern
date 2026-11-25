@@ -84,7 +84,7 @@ export async function createTavernView() {
       anchor: [3.84, 0.95, 3.88],
     },
     supplies: {
-      name: '补给角 · 售货机与以太凝聚器',
+      name: '以太凝聚器',
       button: '走向补给角',
       p: [-3.65, 1.5, 1.25],
       focus: [-3.75, 1.3, 4.45],
@@ -241,7 +241,7 @@ export async function createTavernView() {
     leaving = true;
     document.body.classList.add('leaving');
     setTimeout(() => {
-      location.href = explorationHref('street', query.get('time'));
+      location.href = explorationHref('city-center', query.get('time'));
     }, 380);
   }
   if (query.get('arrival') === '1') {
@@ -263,7 +263,7 @@ export async function createTavernView() {
     current = 'stairs';
     walkStairs(true);
     updateWhere('二楼平台 · 回到酒馆');
-  } else if (query.get('return') === 'street') {
+  } else if (query.get('return') === 'street' || query.get('return') === 'city-center') {
     placeNow('streetDoor');
     camera.lookAt(1.4, 1.4, -2);
     syncAngles();
@@ -545,23 +545,25 @@ export async function createTavernView() {
     )
       ringDisplay?.setCollection(event.data.collection);
   });
-  const supplyButtons = {};
-  for (const [id, label] of Object.entries({ shop: '虚空售货机', condenser: '以太凝聚器' })) {
-    const button = document.createElement('button');
-    button.id = `${id}-open`;
-    button.className = 'supply-open';
-    button.textContent = label;
-    button.hidden = true;
-    button.onclick = () => {
-      if (!button.hidden && !travel)
-        parent.postMessage(
-          { type: id === 'shop' ? 'tavern-shop' : 'tavern-condenser' },
-          location.origin,
-        );
-    };
-    document.getElementById('talk-open').before(button);
-    supplyButtons[id] = button;
-  }
+  const condenser = document.createElement('button');
+  condenser.id = 'condenser-open';
+  condenser.className = 'supply-open';
+  condenser.textContent = '以太凝聚器';
+  condenser.hidden = true;
+  condenser.onclick = () => {
+    if (!condenser.hidden && !travel)
+      parent.postMessage({ type: 'tavern-condenser' }, location.origin);
+  };
+  document.getElementById('talk-open').before(condenser);
+  const vending = document.createElement('button');
+  vending.id = 'vending-open';
+  vending.className = 'supply-open';
+  vending.textContent = '药剂售货机';
+  vending.hidden = true;
+  vending.onclick = () => {
+    if (!vending.hidden && !travel) parent.postMessage({ type: 'tavern-vending' }, location.origin);
+  };
+  condenser.after(vending);
   const talk = document.getElementById('talk-open');
   shelfButtons.push(
     ...[{ action: 'archives', label: '归档', height: 1.24 }].map((shelf) => {
@@ -696,8 +698,8 @@ export async function createTavernView() {
       }
     }
     projectAction(emblem, 'fate', ringButtonAnchor);
-    projectAction(supplyButtons.shop, 'supplies', [-2.9, 1.44, 4.13]);
-    projectAction(supplyButtons.condenser, 'supplies', [-4.59, 1.48, 4.17]);
+    projectAction(condenser, 'supplies', [-4.59, 1.48, 4.17]);
+    projectAction(vending, 'supplies', [-2.9, 1.48, 4.17]);
     talk.hidden = !loaded || !!travel || !['bar', 'bar2', 'table', 'table2'].includes(current);
     dine.hidden = talk.hidden;
     camera.getWorldDirection(direction);
@@ -779,7 +781,16 @@ export async function createTavernView() {
         'px,0) translate(-50%,-50%)';
     }
     const placed = [];
-    const buttons = [enter, summon, corridorDoor, streetDoor, ...Object.values(spotElements)];
+    const buttons = [
+      enter,
+      summon,
+      corridorDoor,
+      streetDoor,
+      emblem,
+      condenser,
+      vending,
+      ...Object.values(spotElements),
+    ];
     for (const button of buttons) {
       button.style.translate = '';
       if (button.hidden || button.disabled) continue;
@@ -832,6 +843,7 @@ export async function createTavernView() {
     const frameDelta = Math.min(clock.getDelta(), 0.15);
     const dt = Math.min(frameDelta, 0.05);
     if (ringDisplay?.render(dt)) {
+      if (covered) coveredFrame = true;
       renderedFrames++;
       return;
     }

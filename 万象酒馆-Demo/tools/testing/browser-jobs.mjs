@@ -41,6 +41,7 @@ export function browserJobs(scopes, results, root) {
   simple('skill-menus', 'skill-menus', 'skillMenuChecks');
   simple('rp-layout', 'rp-layout', 'rpLayoutChecks');
   simple('dc-motion', 'dc-motion', 'dcMotionChecks');
+  simple('dialog-motion', 'dialog-motion', 'dialogMotionChecks');
   simple('ring-gallery', 'ring-gallery', 'ringGalleryChecks');
   simple('ring-acquisition', 'ring-acquisition', 'ringAcquisitionChecks', [], true);
   simple('gal', 'gal', 'galChecks');

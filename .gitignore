@@ -23,3 +23,6 @@
 **/ai-characters/
 **/generated-characters/
 **/tests/fixtures/*-character.json
+
+# Local-only UI reference; not a game dependency.
+/skyui/

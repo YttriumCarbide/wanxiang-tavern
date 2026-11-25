@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
+import { armDialogExitProbe, assertDialogExited } from './dialog-motion.mjs';
 
 /**
  * Real engine Overlord moves drive the actual battle view / playback / overlord
@@ -274,6 +275,18 @@ export async function overlordVfxChecks({ browser, baseURL, output }) {
           return { id, round: state.round };
         },
         start,
+        openTutorialAfterObservedEvent() {
+          const event = seen.find(
+            (entry) => entry.type === 'enemy' && entry.actor === 'banditSyndicateKing',
+          );
+          if (!event) throw Error('The real boss playback has not produced a tutorial trigger');
+          session.journey.expedition.id = 'dialog-motion-fixture';
+          session.ai.library.seenOverlordTutorials = [];
+          return ctx.overlordBattle.checkMechanicTutorial(
+            { events: [event] },
+            session.battle.state,
+          );
+        },
         dispose() {
           if (view) {
             ctx.overlordBattle.reset();
@@ -353,6 +366,31 @@ export async function overlordVfxChecks({ browser, baseURL, output }) {
     assert(firstAttack >= 0, 'The real Black Crow round must contain a boss attack');
     assert(lockIndex < firstAttack, 'hiddenWeaponLock must precede the first bandit attack');
     assert(banditSeen.some((entry) => entry.type === 'hiddenWeaponLock'));
+
+    checking = 'overlord tutorial exit and reduced motion';
+    assert.equal(
+      await page.evaluate(() => window.overlordVfxFixture.openTutorialAfterObservedEvent()),
+      true,
+    );
+    const tutorial = page.locator('#overlord-tutorial-dialog');
+    await tutorial.waitFor({ state: 'visible' });
+    assert((await tutorial.locator('#overlord-tutorial-title').innerText()).length > 0);
+    const tutorialExit = await armDialogExitProbe(tutorial);
+    await page.locator('#overlord-tutorial-close').click();
+    await assertDialogExited(tutorial, '#overlord-tutorial-dialog', { animated: tutorialExit });
+
+    assert.equal(
+      await page.evaluate(() => window.overlordVfxFixture.openTutorialAfterObservedEvent()),
+      true,
+    );
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    assert.equal(
+      await tutorial.evaluate((element) => getComputedStyle(element).animationName),
+      'none',
+    );
+    await page.keyboard.press('Escape');
+    await assertDialogExited(tutorial, '#overlord-tutorial-dialog');
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
 
     // ---------------------------------------------------------------------
     // 2. Darkscale Warlord — graystone-quarry tactical rounds

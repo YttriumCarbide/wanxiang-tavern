@@ -30,7 +30,7 @@ export function createStoryFeed(session, save, gal = null, chapterTheater = null
     pages: Array.from({ length: ENCOUNTER_COUNT }, () => []),
   };
   const view = () => session.ai.storyView;
-  let closing = null;
+  let disposed = false;
   const waiters = new Set();
   let galCompletion = null;
   let theaterPlaying = false;
@@ -88,30 +88,17 @@ export function createStoryFeed(session, save, gal = null, chapterTheater = null
     $('#story-prev').disabled = view().page === 0;
     $('#story-next').disabled = view().page === FINAL_ENCOUNTER;
   }
+  function releaseDialog() {
+    toggle.setAttribute('aria-expanded', 'false');
+    for (const resolve of waiters) resolve();
+    waiters.clear();
+  }
   function close(immediate = false) {
     gal?.cancel('script');
-    if (dialog.open && !closing && !immediate) {
-      closing = dialog.animate(
-        [
-          { opacity: 1, transform: 'translateY(0) scale(1)' },
-          { opacity: 0, transform: 'translateY(8px) scale(.985)' },
-        ],
-        { duration: 160, easing: 'ease-in' },
-      );
-      const animation = closing;
-      animation.finished
-        .catch(() => {})
-        .then(() => {
-          if (closing !== animation) return;
-          closing = null;
-          if (dialog.open) dialog.close();
-        });
-    } else if (immediate && dialog.open) {
-      closing?.cancel();
-      closing = null;
-      dialog.close();
-    }
-    toggle.setAttribute('aria-expanded', 'false');
+    if (immediate) dialog.dataset.storyInstant = 'true';
+    // Native close restores input and focus now; the shared transition only keeps the paint.
+    if (dialog.open) dialog.close();
+    releaseDialog();
     window.getSelection()?.removeAllRanges();
   }
   function append(speaker, text, stage, encounter) {
@@ -223,6 +210,7 @@ export function createStoryFeed(session, save, gal = null, chapterTheater = null
     render();
   }
   function openStory(automatic = false) {
+    if (disposed || session.runtime.disposed) return;
     if (gal?.enabled && !session.ai.activeScript?.recollection) {
       if (!session.ai.activeScript || gal.owner === 'script' || theaterPlaying) return;
       gal.cancel();
@@ -261,7 +249,7 @@ export function createStoryFeed(session, save, gal = null, chapterTheater = null
             theaterPlaying = false;
           }
         }
-        if (session.runtime.disposed || session.ai.activeScript !== book) return;
+        if (disposed || session.runtime.disposed || session.ai.activeScript !== book) return;
         await gal.play(
           view().pages[view().page].map((line) => ({
             speaker: line.speaker,
@@ -304,17 +292,13 @@ export function createStoryFeed(session, save, gal = null, chapterTheater = null
       return;
     }
     if (!session.ai.activeScript || dialog.open) return;
+    // A native close from another controller may still have a queued close event.
+    releaseDialog();
     render();
+    delete dialog.dataset.storyInstant;
     dialog.dataset.automatic = String(automatic === true);
     dialog.showModal();
     $('#story-lines').scrollTop = 0;
-    dialog.animate(
-      [
-        { opacity: 0, transform: 'translateY(10px) scale(.98)' },
-        { opacity: 1, transform: 'translateY(0) scale(1)' },
-      ],
-      { duration: 240, easing: 'cubic-bezier(.16,1,.3,1)' },
-    );
     toggle.setAttribute('aria-expanded', 'true');
   }
   events.on(document, 'gal-open-script', () => openStory());
@@ -328,9 +312,7 @@ export function createStoryFeed(session, save, gal = null, chapterTheater = null
     close();
   });
   events.on(dialog, 'close', () => {
-    toggle.setAttribute('aria-expanded', 'false');
-    for (const resolve of waiters) resolve();
-    waiters.clear();
+    if (!dialog.open) releaseDialog();
   });
   events.on(dialog, 'click', (event) => {
     if (event.target !== dialog) return;
@@ -413,6 +395,8 @@ export function createStoryFeed(session, save, gal = null, chapterTheater = null
       document.body.classList.remove('has-story', 'is-recollection');
     },
     dispose() {
+      if (disposed) return;
+      disposed = true;
       chapterTheater?.cancel();
       close(true);
       events.dispose();

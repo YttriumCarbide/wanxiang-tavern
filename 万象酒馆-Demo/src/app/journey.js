@@ -33,7 +33,7 @@ import {
   prepareCorridorRing,
 } from '../emblem-progression.js';
 import { encounterLevel } from '../enemy-growth.js';
-import { EMBLEMS } from '../emblems.js';
+import { EMBLEM_ID, EMBLEMS } from '../emblems.js';
 import { recollectionEther } from '../recollections.js';
 import { worldBattleTransition } from './world-battle-transition.js';
 import { refreshWorldSkirmishes } from '../skirmishes.js';
@@ -190,10 +190,18 @@ export function createJourney(context) {
     context.adventure.leave();
     if ($('#destination-dialog')?.open) $('#destination-dialog').close();
     document.body.classList.add('in-battle');
-    if (continuing) applyEncounterGrowth(session.journey.expedition, session.ai.library.characters);
-    prepareCorridorRing(session.ai.library, session.journey.expedition);
-    prepareBossEmblem(session.ai.library, session.journey.expedition);
-    session.battle.state = beginEncounter(session.journey.expedition);
+    const trip = session.journey.expedition;
+    if (continuing) applyEncounterGrowth(trip, session.ai.library.characters);
+    const corridorRingGranted = prepareCorridorRing(session.ai.library, trip);
+    const bossEmblemGranted = prepareBossEmblem(session.ai.library, trip);
+    session.battle.state = beginEncounter(trip);
+    if (corridorRingGranted) {
+      context.emblems?.queueRingAward(EMBLEM_ID, trip.corridorRing.actor);
+    }
+    if (bossEmblemGranted) {
+      const { id, recipient } = trip.emblemArrival;
+      context.emblems?.queueRingAward(id, recipient?.actor);
+    }
     recordSeenMonsters(session.ai.library, getEnemies(session.battle.state));
     session.battle.state.revealedWeaknesses = mergeRevealedWeaknessMap(
       session.ai.library.discoveredWeaknesses,
@@ -283,7 +291,7 @@ export function createJourney(context) {
     return await mountEncounter(false, ready, signal);
   }
   async function mountEncounter(resuming = false, ready, signal) {
-    context.planning?.clearAwakening();
+    context.emblems?.cancelRingFeedback();
     context.overlordBattle?.cancelReloadBark();
     $('#drag-menu').hidden = true;
     $('#speed').hidden = false;
@@ -511,7 +519,6 @@ export function createJourney(context) {
       session.ai.library.prepared = null;
     }
     cancelTransition();
-    context.planning?.clearAwakening();
     context.backpack?.close();
     context.overlordBattle?.reset();
     context.battleBarks?.clear();
@@ -608,6 +615,7 @@ export function createJourney(context) {
         session.journey.expedition,
       );
       if (unlockedEmblem) {
+        context.emblems?.queueRingAward(unlockedEmblem.id, unlockedEmblem.recipient?.actor, battle);
         const embName = EMBLEMS[unlockedEmblem.id]?.emblem?.name || unlockedEmblem.id;
         const ringTitle = unlockedEmblem.recipient
           ? `${embName}（已由${unlockedEmblem.recipient.name}装备）`
@@ -691,7 +699,7 @@ export function createJourney(context) {
     if (ringArrival) ringArrival.shown = true;
     context.generation.save();
     if (ringArrival) {
-      await context.emblems?.playAcquisition(ringArrival.id);
+      await context.emblems?.presentRingAward(ringArrival.id);
       if (!isCurrentBattle()) return;
     }
     context.audio.play(won ? 'victory' : 'defeat');
@@ -754,7 +762,6 @@ export function createJourney(context) {
     continueAdventure,
     dispose() {
       cancelTransition();
-      context.planning?.clearAwakening();
     },
   };
 }

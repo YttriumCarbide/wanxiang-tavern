@@ -95,7 +95,7 @@ export const FOREST_ENEMIES = [
   ),
   creature(
     'fogSpore',
-    '蓝瘴囊菇',
+    '蓝瘴魔菇',
     64,
     2,
     'mushroom',
@@ -135,7 +135,7 @@ export const FOREST_ENEMIES = [
   },
   creature(
     'moonWorker',
-    '搬月工蜂',
+    '搬月巨蜂',
     68,
     4,
     'bee',
@@ -218,7 +218,7 @@ export const FOREST_ENEMIES = [
   },
   creature(
     'scaleWarrior',
-    '月瞳蜥蜴刃兵',
+    '月瞳剑士',
     92,
     3,
     'lizard',
@@ -232,7 +232,7 @@ export const FOREST_ENEMIES = [
   ),
   creature(
     'scaleArcher',
-    '月瞳蜥蜴弓手',
+    '月瞳弓手',
     76,
     4,
     'lizard',
@@ -291,7 +291,7 @@ export const FOREST_ENEMIES = [
   },
   creature(
     'barkAcolyte',
-    '木面护林侍徒',
+    '木面术士',
     82,
     3,
     'cultist',

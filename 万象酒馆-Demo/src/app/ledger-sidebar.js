@@ -6,7 +6,7 @@ import { escapeText } from '../ui.js';
 import { query as $ } from './dom.js';
 
 const LOCKED_CLOSE_SELECTOR = [
-  '#party-toggle',
+  // Keep the preparation opener rendered for focus restoration after its modal closes.
   '#inn-backpack-open',
   '#workshop-open',
   '#generation-review',
@@ -14,7 +14,6 @@ const LOCKED_CLOSE_SELECTOR = [
   '#records-open',
   '#memory-open',
   '#ledger-bookshelf-open',
-  '#ledger-shop-open',
   '#ledger-condenser-open',
   '#ledger-emblem-open',
   '#ledger-atlas-open',
@@ -38,27 +37,25 @@ function moveWithAnchor(node, target) {
   if (node.parentNode !== target) target.append(node);
 }
 
-/** Build a fixed-slot parchment action tile hosting a real button plus its availability note. */
-function makeActionTile(grid, button, subtitle = '', { wide = false } = {}) {
+/** Move the original button into a fixed-size action tile. */
+function makeActionTile(grid, button) {
   const tile = document.createElement('div');
-  tile.className = wide ? 'ledger-tile ledger-tile-wide' : 'ledger-tile';
-  const note = document.createElement('small');
-  note.className = 'ledger-tile-note';
-  note.textContent = subtitle;
+  tile.className = 'ledger-tile';
   if (button) moveWithAnchor(button, tile);
-  tile.append(note);
   grid.append(tile);
-  return { tile, button, note };
+  return { tile, button };
 }
 
-/** Apply enabled/disabled state and lock caption cleanly without collapsing or hiding tiles. */
+/** Retain lock feedback without allocating a second line under the button. */
 function setTileAvailability(entry, disabled, reason = '') {
   if (!entry?.button) return;
   entry.button.hidden = false;
   entry.button.disabled = Boolean(disabled);
   entry.tile.dataset.locked = String(Boolean(disabled));
-  entry.note.textContent = reason;
-  entry.note.hidden = !reason;
+  entry.tile.title = reason;
+  entry.button.title = reason;
+  if (reason) entry.button.setAttribute('aria-description', reason);
+  else entry.button.removeAttribute('aria-description');
 }
 
 /** Ensure corner utility buttons render crisp line icons without visible text labels. */
@@ -83,6 +80,14 @@ export function createLedgerSidebar(context) {
   let cornerShown = false;
   let handleShown = false;
   let closeTimer = null;
+  let restoreHandle = false;
+  let preparationPortal = false;
+  let reopenAfterPreparation = false;
+  let cityDirectoryShown = false;
+  let taskShown = false;
+  let cityDirectoryWasOpen = false;
+  const dailyEls = context.daily?.elements?.() || {};
+  const preparation = $('#party-panel');
 
   const corner = document.createElement('div');
   corner.id = 'ledger-corner';
@@ -131,6 +136,32 @@ export function createLedgerSidebar(context) {
   document.body.append(handle);
   const handleSurface = createPopoverSurface(handle);
 
+  const cityDirectoryButton = document.createElement('button');
+  cityDirectoryButton.id = 'ledger-city-directory-open';
+  cityDirectoryButton.type = 'button';
+  cityDirectoryButton.className = 'ledger-edge-handle ledger-city-directory-handle';
+  cityDirectoryButton.setAttribute('aria-label', '打开城区图');
+  cityDirectoryButton.setAttribute('aria-controls', 'street-city-submap');
+  cityDirectoryButton.innerHTML =
+    '<span aria-hidden="true">◇</span><span class="ledger-handle-text">城区图</span>';
+  cityDirectoryButton.hidden = true;
+  document.body.append(cityDirectoryButton);
+  const directorySurface = createPopoverSurface(cityDirectoryButton);
+
+  const taskButton = dailyEls.clockActions?.querySelector('[data-daily="quests"]') || null;
+  if (taskButton) {
+    taskButton.id = 'ledger-quests-open';
+    taskButton.className = 'ledger-edge-handle ledger-quests-handle';
+    taskButton.setAttribute('aria-label', '打开任务手记');
+    taskButton.setAttribute('aria-controls', 'tavern-quests');
+    taskButton.innerHTML =
+      '<span aria-hidden="true">◆</span><span class="ledger-handle-text">任务</span>';
+    taskButton.hidden = true;
+    document.body.append(taskButton);
+  }
+
+  const taskSurface = taskButton ? createPopoverSurface(taskButton) : null;
+
   const host = document.createElement('div');
   host.id = 'ledger-drawer-host';
   host.className = 'ledger-drawer-host';
@@ -141,13 +172,8 @@ export function createLedgerSidebar(context) {
         <div class="ledger-eyebrow-row">
           <small>WANXIANG TAVERN · LEDGER</small>
           <span class="ledger-mode-tag" data-ledger-mode>酒馆大厅</span>
-          <button
-            id="ledger-close"
-            class="ledger-return-btn"
-            type="button"
-            aria-label="返回收起账簿"
-          >
-            <span>返回</span>
+          <button id="ledger-close" class="ledger-return-btn" type="button" aria-label="关闭账簿">
+            <span>关闭</span>
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <path
                 d="m9 6 6 6-6 6"
@@ -164,7 +190,6 @@ export function createLedgerSidebar(context) {
           <div class="ledger-date-meta">
             <span data-ledger-date>1463年8月24日 · 上午</span>
             <em class="ledger-rank-chip" data-ledger-rank>0 阶</em>
-            <span class="ledger-promo-slot" data-ledger-promo-slot></span>
           </div>
         </div>
         <div class="ledger-wallet" data-ledger-wallet-slot></div>
@@ -201,19 +226,14 @@ export function createLedgerSidebar(context) {
   const drawer = host.querySelector('#ledger-drawer');
   const backdrop = host.querySelector('.ledger-backdrop');
 
-  const dailyEls = context.daily?.elements?.() || {};
   const walletSlot = host.querySelector('[data-ledger-wallet-slot]');
   const resources = $('#inn-resources');
   if (resources) walletSlot.append(resources);
 
-  const promoSlot = host.querySelector('[data-ledger-promo-slot]');
   const serviceBtn = dailyEls.clockActions?.querySelector('[data-daily="service"]') || null;
   const promoBtn = dailyEls.clockActions?.querySelector('[data-daily="promotion"]') || null;
-  const questsBtn = dailyEls.clockActions?.querySelector('[data-daily="quests"]') || null;
-  if (promoBtn) promoSlot.append(promoBtn);
-  const promoNote = document.createElement('small');
-  promoNote.className = 'ledger-inline-note';
-  promoSlot.append(promoNote);
+  const questsBtn = taskButton;
+  const mealBtn = dailyEls.dock?.querySelector('[data-daily="meal"]') || null;
 
   const liveSlot = host.querySelector('[data-ledger-live-slot]');
   const fgApiBanner = host.querySelector('[data-ledger-fg-api]');
@@ -227,11 +247,12 @@ export function createLedgerSidebar(context) {
 
   const mainGrid = host.querySelector('[data-ledger-main-grid]');
   const mainTiles = {
-    service: makeActionTile(mainGrid, serviceBtn, '排班开店'),
-    quests: makeActionTile(mainGrid, questsBtn, '委托与线索'),
-    party: makeActionTile(mainGrid, $('#party-toggle'), '战阵与角色'),
-    bag: makeActionTile(mainGrid, $('#inn-backpack-open'), '道具与食材'),
-    workshop: makeActionTile(mainGrid, $('#workshop-open'), '产线与炉心', { wide: true }),
+    service: makeActionTile(mainGrid, serviceBtn),
+    dining: makeActionTile(mainGrid, mealBtn),
+    party: makeActionTile(mainGrid, $('#party-toggle')),
+    bag: makeActionTile(mainGrid, $('#inn-backpack-open')),
+    workshop: makeActionTile(mainGrid, $('#workshop-open')),
+    promotion: makeActionTile(mainGrid, promoBtn),
   };
 
   const bookshelfBtn = document.createElement('button');
@@ -241,7 +262,7 @@ export function createLedgerSidebar(context) {
   const shopBtn = document.createElement('button');
   shopBtn.id = 'ledger-shop-open';
   shopBtn.type = 'button';
-  shopBtn.textContent = '虚空售货';
+  shopBtn.textContent = '药剂售货机';
   const condenserBtn = document.createElement('button');
   condenserBtn.id = 'ledger-condenser-open';
   condenserBtn.type = 'button';
@@ -268,7 +289,7 @@ export function createLedgerSidebar(context) {
   }
   host.append(hiddenActions);
   const archiveTiles = {
-    archives: makeActionTile(archiveGrid, $('#archives-open'), '图鉴·记录·总结·手册'),
+    archives: makeActionTile(archiveGrid, $('#archives-open')),
     shop: makeActionTile(archiveGrid, shopBtn),
     condenser: makeActionTile(archiveGrid, condenserBtn),
     emblem: makeActionTile(archiveGrid, emblemBtn),
@@ -339,6 +360,13 @@ export function createLedgerSidebar(context) {
       context.memory?.setNoticeHost?.(document.body, () => sync());
     }
     syncTopLayer();
+    if (restoreHandle && handleShown) {
+      const focused = document.activeElement;
+      if (focused === document.body || host.contains(focused)) {
+        handle.focus({ preventScroll: true });
+      }
+    }
+    restoreHandle = false;
   }
 
   function syncSurfaceVisibility(element, surface, currentlyShown, shouldShow, forcePromote) {
@@ -356,6 +384,35 @@ export function createLedgerSidebar(context) {
     return currentlyShown;
   }
 
+  // A modal makes everything outside its subtree inert, including manual popovers.
+  // Move the ledger into preparation only while that modal owns input.
+  function syncPreparationPortal(inside) {
+    if (preparationPortal === inside) return;
+    clearTimeout(closeTimer);
+    closeTimer = null;
+    restoreHandle = false;
+    drawerSurface.hide();
+    handleSurface.hide();
+    handleShown = false;
+    if (inside) reopenAfterPreparation = isOpen;
+    isOpen = !inside && reopenAfterPreparation;
+    isClosing = false;
+    preparationPortal = inside;
+    if (!inside) reopenAfterPreparation = false;
+    handle.setAttribute('aria-expanded', String(isOpen));
+    document.body.classList.toggle('ledger-open', isOpen);
+    host.classList.remove('is-closing', 'is-dragging');
+    host.classList.toggle('is-open', isOpen);
+    drawer.style.transform = '';
+    backdrop.style.opacity = '';
+    (inside ? preparation : document.body).append(handle, host);
+    if (isOpen) {
+      queueMicrotask(() => {
+        if (isOpen && !activeModal(document)) $('#party-toggle')?.focus({ preventScroll: true });
+      });
+    }
+  }
+
   function syncTopLayer(forcePromote = false) {
     if (disposed) return;
     const modal = activeModal(document);
@@ -371,11 +428,45 @@ export function createLedgerSidebar(context) {
     const theaterVisible = Boolean(document.querySelector('#chapter-theater:not([hidden])'));
     const loadingVisible = Boolean(document.querySelector('.world-loading-scene:not([hidden])'));
     const baseVisible = !session.runtime.needsStart && !modal && !theaterVisible && !loadingVisible;
+    const cityMapOpen = context.daily?.cityDirectoryOpen?.() === true;
+    syncPreparationPortal(Boolean(preparation?.open));
+    const edgeBase =
+      (baseVisible || modal === preparation) && !cityMapOpen && !isOpen && !isClosing;
+    cityDirectoryShown = syncSurfaceVisibility(
+      cityDirectoryButton,
+      directorySurface,
+      cityDirectoryShown,
+      edgeBase &&
+        !document.body.classList.contains('gal-playing') &&
+        modal !== preparation &&
+        context.daily?.cityDirectoryAvailable?.() === true,
+      forcePromote,
+    );
+    if (taskButton) {
+      taskShown = syncSurfaceVisibility(
+        taskButton,
+        taskSurface,
+        taskShown,
+        edgeBase &&
+          !document.body.classList.contains('gal-playing') &&
+          session.runtime.mode === 'inn',
+        forcePromote,
+      );
+    }
+    if (
+      cityDirectoryWasOpen &&
+      !cityMapOpen &&
+      cityDirectoryShown &&
+      document.activeElement?.tagName === 'IFRAME'
+    ) {
+      cityDirectoryButton.focus({ preventScroll: true });
+    }
+    cityDirectoryWasOpen = cityMapOpen;
     cornerShown = syncSurfaceVisibility(
       corner,
       cornerSurface,
       cornerShown,
-      baseVisible && !isOpen,
+      baseVisible && !cityMapOpen && !isOpen,
       forcePromote,
     );
 
@@ -385,9 +476,10 @@ export function createLedgerSidebar(context) {
     }
 
     if (isOpen || isClosing) {
-      host.hidden = false;
-      if (forcePromote || isClosing) drawerSurface.hide();
-      drawerSurface.show();
+      const interactive = !modal || modal === preparation;
+      host.hidden = !interactive;
+      if (forcePromote || isClosing || !interactive) drawerSurface.hide();
+      if (interactive) drawerSurface.show();
       handleShown = syncSurfaceVisibility(handle, handleSurface, handleShown, false, false);
       return;
     }
@@ -398,7 +490,7 @@ export function createLedgerSidebar(context) {
       handle,
       handleSurface,
       handleShown,
-      baseVisible,
+      (baseVisible && !cityMapOpen) || modal === preparation,
       forcePromote,
     );
   }
@@ -412,26 +504,19 @@ export function createLedgerSidebar(context) {
     host.querySelector('[data-ledger-mode]').textContent = modeTagText(state);
     host.querySelector('[data-ledger-date]').textContent = dateText;
     host.querySelector('[data-ledger-rank]').textContent = `${rankInfo?.rank ?? 0} 阶`;
-    if (promoBtn) {
-      const lockPromo =
-        state.inBattle || state.inEvent || state.foregroundApiBusy || state.dailyLocked;
-      promoBtn.disabled = lockPromo;
-      promoNote.textContent = state.inBattle
-        ? '战斗中不可进阶'
-        : state.foregroundApiBusy
-          ? '请求中'
-          : rankInfo?.ready
-            ? '可进阶！'
-            : '';
-      promoNote.hidden = !promoNote.textContent;
-    }
-
     const battleOrEventReason = state.inBattle
       ? '战斗中暂不可改'
       : state.inEvent
         ? '副本事件中暂不可用'
         : '';
     const apiReason = state.foregroundApiBusy ? 'AI 请求进行中' : '';
+    const promoReason =
+      battleOrEventReason || apiReason || (state.dailyLocked ? '行动中暂不可用' : '');
+    setTileAvailability(
+      mainTiles.promotion,
+      Boolean(promoReason),
+      promoReason || (rankInfo?.ready ? '可进阶' : ''),
+    );
 
     const serviceReason =
       battleOrEventReason ||
@@ -443,28 +528,25 @@ export function createLedgerSidebar(context) {
           : state.dailyLocked || state.dailyActive
             ? '结束当前日程后可用'
             : '');
-    setTileAvailability(mainTiles.service, Boolean(serviceReason), serviceReason || '排班开店');
+    setTileAvailability(mainTiles.service, Boolean(serviceReason), serviceReason);
 
     const questsReason = battleOrEventReason || apiReason || (state.dailyBusy ? '外出移动中' : '');
-    setTileAvailability(mainTiles.quests, Boolean(questsReason), questsReason || '委托与线索');
+    if (questsBtn) {
+      questsBtn.disabled = Boolean(questsReason);
+      questsBtn.title = questsReason || '查看当前、可接与已完成任务';
+    }
+    const mealReason =
+      battleOrEventReason || apiReason || (state.dailyLocked ? '行动中暂不可用' : '');
+    setTileAvailability(mainTiles.dining, Boolean(mealReason), mealReason);
 
     const partyReason =
       battleOrEventReason ||
       (state.foregroundApiBusy && !session.ai.departureParty ? '生成中暂缓整备' : '');
-    setTileAvailability(mainTiles.party, Boolean(partyReason), partyReason || '战阵与角色');
+    setTileAvailability(mainTiles.party, Boolean(partyReason), partyReason);
 
-    setTileAvailability(
-      mainTiles.bag,
-      false,
-      state.inBattle ? '查看库存（战斗中只读）' : '道具与食材',
-    );
+    setTileAvailability(mainTiles.bag, false, state.inBattle ? '战斗中只读' : '');
 
-    const workshopBusy = (context.apiClient?.activeCount?.() || 0) > 0;
-    setTileAvailability(
-      mainTiles.workshop,
-      state.needsStart,
-      workshopBusy ? '请求中可照常生产' : '产线与炉心',
-    );
+    setTileAvailability(mainTiles.workshop, state.needsStart);
 
     if (savesBtn) {
       const saveLocked = state.playingBattle || state.foregroundApiBusy;
@@ -476,8 +558,7 @@ export function createLedgerSidebar(context) {
           : '打开存档管理';
     }
 
-    setTileAvailability(archiveTiles.archives, false, '图鉴·记录·总结·手册');
-
+    setTileAvailability(archiveTiles.archives, false);
     const shopReason = battleOrEventReason || apiReason || (state.dailyBusy ? '外出移动中' : '');
     setTileAvailability(archiveTiles.shop, Boolean(shopReason), shopReason);
 
@@ -568,6 +649,11 @@ export function createLedgerSidebar(context) {
       visitorRefresh.hidden = !devMode || !available || state.inBattle || inGal;
     }
 
+    cityDirectoryButton.setAttribute(
+      'aria-expanded',
+      String(context.daily?.cityDirectoryOpen?.() === true),
+    );
+    taskButton?.setAttribute('aria-expanded', String(Boolean(context.quests?.isOpen?.())));
     syncTopLayer(forcePromote);
   }
 
@@ -575,6 +661,7 @@ export function createLedgerSidebar(context) {
     if (disposed || session.runtime.needsStart) return;
     clearTimeout(closeTimer);
     closeTimer = null;
+    restoreHandle = false;
     isClosing = false;
     isOpen = true;
     handle.setAttribute('aria-expanded', 'true');
@@ -595,7 +682,10 @@ export function createLedgerSidebar(context) {
   }
 
   function close() {
-    if ((!isOpen && !isClosing) || disposed) return;
+    if (!isOpen || disposed) return;
+    if (preparationPortal) reopenAfterPreparation = false;
+    restoreHandle =
+      document.activeElement === document.body || host.contains(document.activeElement);
     clearTimeout(closeTimer);
     isOpen = false;
     isClosing = true;
@@ -606,7 +696,8 @@ export function createLedgerSidebar(context) {
     drawer.style.transform = '';
     backdrop.style.opacity = '';
     syncTopLayer();
-    closeTimer = setTimeout(finishClose, CLOSE_ANIMATION_MS);
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) finishClose();
+    else closeTimer = setTimeout(finishClose, CLOSE_ANIMATION_MS);
   }
 
   events.on(drawer, 'transitionend', (event) => {
@@ -656,12 +747,11 @@ export function createLedgerSidebar(context) {
     backdrop.style.opacity = String(ratio);
   });
 
-  let lastPointerInteraction = 0;
+  let lastOpenDragEnd = -Infinity;
   function finishOpenDrag(event) {
     if (!dragOpenSession || event.pointerId !== dragOpenSession.pointerId) return;
     const drag = dragOpenSession;
     dragOpenSession = null;
-    lastPointerInteraction = performance.now();
     try {
       if (handle.hasPointerCapture?.(event.pointerId)) {
         handle.releasePointerCapture(event.pointerId);
@@ -669,15 +759,16 @@ export function createLedgerSidebar(context) {
     } catch {
       /* Ignore release on detached handle. */
     }
-    const elapsed = Math.max(1, performance.now() - drag.startTime);
+    // Let the native click open on a tap. Opening on pointerup hides the handle
+    // before touch browsers dispatch click, which can retarget it to the backdrop.
+    if (!drag.dragging) return;
+    lastOpenDragEnd = performance.now();
+    const elapsed = Math.max(1, lastOpenDragEnd - drag.startTime);
     const velocity = drag.pull / elapsed;
-    const isTap = !drag.dragging && drag.pull < 10;
     if (
-      isTap ||
-      drag.pull >= OPEN_DRAG_THRESHOLD ||
-      (drag.pull >= 18 && velocity > FLICK_VELOCITY)
+      event.type === 'pointerup' &&
+      (drag.pull >= OPEN_DRAG_THRESHOLD || (drag.pull >= 18 && velocity > FLICK_VELOCITY))
     ) {
-      if (drag.dragging) void drawer.offsetWidth;
       open();
       return;
     }
@@ -694,9 +785,9 @@ export function createLedgerSidebar(context) {
 
   events.on(handle, 'pointerup', finishOpenDrag);
   events.on(handle, 'pointercancel', finishOpenDrag);
-  events.on(handle, 'click', () => {
+  events.on(handle, 'click', (event) => {
     if (disposed || session.runtime.needsStart || isOpen) return;
-    if (performance.now() - lastPointerInteraction < 120) return;
+    if (event.detail > 0 && performance.now() - lastOpenDragEnd < 120) return;
     open();
   });
 
@@ -781,6 +872,11 @@ export function createLedgerSidebar(context) {
   events.on(drawer, 'pointerup', finishCloseDrag);
   events.on(drawer, 'pointercancel', finishCloseDrag);
 
+  events.on(backdrop, 'pointerdown', (event) => {
+    // Keep the focused drawer control until dismissal can restore the edge handle.
+    if (event.pointerType === 'mouse' && event.button === 0) event.preventDefault();
+  });
+
   let closingTrigger = null;
   events.on(
     host,
@@ -804,14 +900,17 @@ export function createLedgerSidebar(context) {
     closingTrigger = null;
   });
 
-  events.on(bookshelfBtn, 'click', () => {
-    close();
-    context.bookshelf?.open();
+  events.on(cityDirectoryButton, 'click', () => {
+    context.daily?.openCityDirectory?.();
   });
   events.on(shopBtn, 'click', () => {
     if (shopBtn.disabled) return;
     close();
-    context.shop?.open();
+    context.shop?.open({ vendingMachine: true });
+  });
+  events.on(bookshelfBtn, 'click', () => {
+    close();
+    context.bookshelf?.open();
   });
   events.on(condenserBtn, 'click', () => {
     if (condenserBtn.disabled) return;
@@ -853,7 +952,8 @@ export function createLedgerSidebar(context) {
     window,
     'keydown',
     (event) => {
-      if (isOpen && event.key === 'Escape') {
+      const modal = activeModal(document);
+      if (isOpen && event.key === 'Escape' && (!modal || modal === preparation)) {
         event.preventDefault();
         event.stopImmediatePropagation();
         close();
@@ -899,6 +999,10 @@ export function createLedgerSidebar(context) {
       modalObserver.disconnect();
       events.dispose();
       document.body.classList.remove('ledger-open');
+      directorySurface.hide();
+      taskSurface?.hide();
+      cityDirectoryButton.remove();
+      taskButton?.remove();
       cornerSurface.hide();
       handleSurface.hide();
       drawerSurface.hide();

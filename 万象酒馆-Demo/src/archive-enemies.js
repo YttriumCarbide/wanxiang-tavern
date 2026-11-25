@@ -1,4 +1,5 @@
 import { speciesKeyOf } from './octopath.js';
+import { ENEMY_ARCHIVE_CATEGORIES, applyEnemyTaxonomy } from './enemy-taxonomy.js';
 
 /** Classify enemies into archive tiers and combine multi-part Overlords cleanly. */
 export const ENEMY_ARCHIVE_TIERS = Object.freeze([
@@ -39,7 +40,7 @@ function worldSourcesFor(ids, worlds) {
   return matched.length ? matched.join('、') : '官方敌人';
 }
 
-function speciesIdsForEntry(entry) {
+function codexUnlockIdsForEntry(entry) {
   if (entry.id === 'ares') return ['ares', 'aresCannonLeft', 'aresCannonRight'];
   return [entry.id];
 }
@@ -77,29 +78,70 @@ export function recordSeenMonsters(library, unitsOrIds = []) {
 }
 
 /** Filter enemy archive tiers to only seen monsters unless developer full-codex is active. */
-export function filterEnemyArchiveBuckets(buckets, { seenMonsters = [], unlockAll = false } = {}) {
+export function filterEnemyArchiveBuckets(
+  buckets,
+  { seenMonsters = [], unlockAll = false, category = 'all' } = {},
+) {
   const seenSet = new Set(normalizeSeenMonsters(seenMonsters));
   const visibleBuckets = {};
   const tierStats = {};
+  const categoryStats = Object.fromEntries(
+    ENEMY_ARCHIVE_CATEGORIES.map(({ id }) => [id, { unlocked: 0, total: 0 }]),
+  );
   let totalCount = 0;
   let unlockedCount = 0;
 
   for (const { id } of ENEMY_ARCHIVE_TIERS) {
     const entries = Array.isArray(buckets?.[id]) ? buckets[id] : [];
-    const seenEntries = entries.filter((item) => {
-      const ids =
-        Array.isArray(item.speciesIds) && item.speciesIds.length ? item.speciesIds : [item.id];
-      return ids.some((speciesId) => seenSet.has(speciesId));
-    });
-    const tierTotal = entries.length;
-    const tierUnlocked = unlockAll ? tierTotal : seenEntries.length;
-    totalCount += tierTotal;
-    unlockedCount += tierUnlocked;
-    tierStats[id] = { unlocked: tierUnlocked, total: tierTotal };
-    visibleBuckets[id] = unlockAll ? [...entries] : seenEntries;
+    const tier = { unlocked: 0, total: 0 };
+    const visible = [];
+    for (const item of entries) {
+      const itemCategory = Object.hasOwn(categoryStats, item.category) ? item.category : 'other';
+      const ids = item.unlockIds?.length
+        ? item.unlockIds
+        : item.speciesIds?.length
+          ? item.speciesIds
+          : [item.id];
+      const unlocked = unlockAll || ids.some((speciesId) => seenSet.has(speciesId));
+      categoryStats[itemCategory].total += 1;
+      totalCount += 1;
+      if (unlocked) {
+        categoryStats[itemCategory].unlocked += 1;
+        unlockedCount += 1;
+      }
+      if (category !== 'all' && category !== itemCategory) continue;
+      tier.total += 1;
+      if (unlocked) {
+        tier.unlocked += 1;
+        visible.push(item);
+      }
+    }
+    tierStats[id] = tier;
+    visibleBuckets[id] = visible;
   }
 
-  return { visibleBuckets, totalCount, unlockedCount, tierStats };
+  categoryStats.all = { unlocked: unlockedCount, total: totalCount };
+  return { visibleBuckets, totalCount, unlockedCount, tierStats, categoryStats };
+}
+
+/** Export the codex's unlocked entries, independent of the current view filters. */
+export function buildEnemyArchiveExport(buckets, { seenMonsters, unlockAll } = {}) {
+  const { visibleBuckets } = filterEnemyArchiveBuckets(buckets, { seenMonsters, unlockAll });
+  const categories = ENEMY_ARCHIVE_CATEGORIES.map(({ id, label }) => ({ id, label, enemies: [] }));
+  const groups = new Map(categories.map((category) => [category.id, category]));
+  for (const { id: tier } of ENEMY_ARCHIVE_TIERS) {
+    for (const item of visibleBuckets[tier]) {
+      const group = groups.get(item.category) ?? groups.get('other');
+      group.enemies.push({
+        id: item.id,
+        name: item.name,
+        tier,
+        ...(item.baseSpecies ? { baseSpecies: item.baseSpecies } : {}),
+        ...(item.isComposite ? { partIds: item.parts.map(({ id }) => id) } : {}),
+      });
+    }
+  }
+  return { schemaVersion: 1, categories };
 }
 
 export function buildEnemyArchiveEntries(officialDefinitions, worlds = []) {
@@ -112,8 +154,9 @@ export function buildEnemyArchiveEntries(officialDefinitions, worlds = []) {
   const buckets = { minion: [], elite: [], boss: [], overlord: [] };
   const moonParts = [];
 
-  for (const entry of merged) {
-    if (!entry) continue;
+  for (const rawEntry of merged) {
+    if (!rawEntry) continue;
+    const entry = applyEnemyTaxonomy(rawEntry);
     const isOfficial = officialIds.has(entry.id);
     const archiveSource = isOfficial ? officialDefinitions[entry.id]?.archiveSource : '';
     if (!entry.speed && !archiveSource) continue;
@@ -125,8 +168,11 @@ export function buildEnemyArchiveEntries(officialDefinitions, worlds = []) {
       } else {
         buckets.overlord.push({
           id: entry.id,
-          speciesIds: speciesIdsForEntry(entry),
+          speciesIds: [entry.id],
+          unlockIds: codexUnlockIdsForEntry(entry),
           name: entry.name,
+          category: entry.category || 'other',
+          ...(entry.baseSpecies ? { baseSpecies: entry.baseSpecies } : {}),
           subtitle: entry.title || '灾厄霸主',
           tier: 'overlord',
           overlord: true,
@@ -143,8 +189,11 @@ export function buildEnemyArchiveEntries(officialDefinitions, worlds = []) {
     }
     buckets[tier].push({
       id: entry.id,
-      speciesIds: speciesIdsForEntry(entry),
+      speciesIds: [entry.id],
+      unlockIds: codexUnlockIdsForEntry(entry),
       name: entry.name,
+      category: entry.category || 'other',
+      ...(entry.baseSpecies ? { baseSpecies: entry.baseSpecies } : {}),
       subtitle: entry.title || ENEMY_ARCHIVE_TIERS.find((t) => t.id === tier)?.badge || '',
       tier,
       overlord: false,
@@ -164,8 +213,10 @@ export function buildEnemyArchiveEntries(officialDefinitions, worlds = []) {
     );
     buckets.overlord.push({
       id: 'moonTree',
-      speciesIds: ['moonTree', ...orderedParts.map((part) => part.id)],
+      speciesIds: orderedParts.map((part) => part.id),
+      unlockIds: ['moonTree', ...orderedParts.map((part) => part.id)],
       name: '母树',
+      category: 'other',
       subtitle: orderedParts.map((part) => part.name).join(' · '),
       tier: 'overlord',
       overlord: true,

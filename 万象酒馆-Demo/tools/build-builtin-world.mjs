@@ -1,4 +1,5 @@
-import { readFile, writeFile } from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
+import { atomicWrite } from '../server/disk-store.mjs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { newWorldEntry, normalizeWorldbook } from '../src/ai/worldbook.js';
@@ -10,6 +11,11 @@ import { LADDER_ENEMIES, LADDER_BOSSES } from '../src/content/ladder-adversaries
 import { ALL_MONSTER_LORE, monsterWorldbook } from '../src/content/monsters.js';
 import { MILL_DUNGEONS } from '../src/content/official-dungeons.js';
 import { DEFINITIONS } from '../src/data.js';
+import { overlordDialoguePack } from '../src/overlord-mechanics.js';
+import {
+  ENEMY_DISPLAY_NAME_OVERRIDES,
+  ENEMY_LEGACY_DISPLAY_NAME_OVERRIDES,
+} from '../src/enemy-taxonomy.js';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const LADDER_MONSTER_IDS = new Set([...LADDER_ENEMIES, ...LADDER_BOSSES].map((enemy) => enemy.id));
@@ -103,6 +109,50 @@ function upsertEntry(raw, matchFn, makeEntry, nextUidRef) {
   raw.entries[uid] = makeEntry(uid);
 }
 
+/** Migrate old official monster labels without discarding custom trigger keys or lore. */
+export function reconcileLegacyMonsterNames(raw) {
+  for (const entry of Object.values(raw.entries || {})) {
+    const id = entry.extensions?.wanxiang?.monsterId;
+    const name = ENEMY_DISPLAY_NAME_OVERRIDES[id];
+    const legacyName = ENEMY_LEGACY_DISPLAY_NAME_OVERRIDES[id];
+    if (!name || !legacyName) continue;
+    const retainedKeys = (Array.isArray(entry.key) ? entry.key : []).filter(
+      (key) => key !== id && key !== name && key !== legacyName,
+    );
+    entry.key = [id, name, legacyName, ...retainedKeys];
+    entry.comment = '怪物图鉴：' + name;
+    const content = String(entry.content || '');
+    entry.content = /^名称：[\s\S]*?(?=\r?\n|$)/u.test(content)
+      ? content.replace(/^名称：[\s\S]*?(?=\r?\n|$)/u, '名称：' + name)
+      : '名称：' + name + '\n' + content;
+  }
+}
+
+/** Ensure the quarry boss can regenerate its summoned monster entry from an older worldbook. */
+export function ensureQuarrySummonEntry(raw, nextUidRef) {
+  const { id, name } = DEFINITIONS.riftDarkDust;
+  upsertEntry(
+    raw,
+    (entry) => entry.extensions?.wanxiang?.monsterId === id,
+    (uid) => ({
+      ...newWorldEntry(uid),
+      comment: '怪物图鉴：' + name,
+      key: [id, name, '裂隙游离暗尘'],
+      content: `名称：${name}\n行动方式：${overlordDialoguePack('darkscaleWarlord').rallyDust}`,
+      constant: false,
+      selective: true,
+      order: 180,
+      position: 1,
+      matchScenario: true,
+      excludeRecursion: true,
+      preventRecursion: true,
+      apiTargets: ['script', 'chat'],
+      extensions: { wanxiang: { monsterId: id, apiTargets: ['script', 'chat'] } },
+    }),
+    nextUidRef,
+  );
+}
+
 /** Normalizes and supplements monster lore, mill worldbook data, and the combat encyclopedia. */
 export async function buildBuiltinWorld() {
   const assetPath = path.join(root, 'assets/builtin-worldbook.json');
@@ -116,6 +166,7 @@ export async function buildBuiltinWorld() {
       }
     }
   }
+  reconcileLegacyMonsterNames(raw);
   const existingMonsterIds = new Set(
     Object.values(raw.entries || {})
       .map((entry) => entry.extensions?.wanxiang?.monsterId)
@@ -128,13 +179,14 @@ export async function buildBuiltinWorld() {
     const def = DEFINITIONS[id];
     if (!def) continue;
     if (existingMonsterIds.has(id) && !LADDER_MONSTER_IDS.has(id)) continue;
+    const legacyName = ENEMY_LEGACY_DISPLAY_NAME_OVERRIDES[id];
     upsertEntry(
       raw,
       (entry) => entry.extensions?.wanxiang?.monsterId === id,
       (uid) => ({
         ...newWorldEntry(uid),
         comment: `怪物图鉴：${def.name}`,
-        key: [id, def.name],
+        key: [id, def.name, ...(legacyName ? [legacyName] : [])],
         content: monsterNarrativeText(monsterWorldbook(id, def.name)),
         constant: false,
         selective: true,
@@ -154,6 +206,7 @@ export async function buildBuiltinWorld() {
       nextUidRef,
     );
   }
+  ensureQuarrySummonEntry(raw, nextUidRef);
   for (const lore of MAIN_WORLD_LORE) {
     upsertEntry(
       raw,
@@ -275,7 +328,7 @@ export async function buildBuiltinWorld() {
   updateGalNpcNamingRulesInPlace(raw);
   updateCombatEncyclopediaInPlace(raw);
   const { book } = normalizeWorldbook(raw, '万象酒馆世界书');
-  await writeFile(assetPath, JSON.stringify(book, null, 2) + '\n');
+  await atomicWrite(assetPath, JSON.stringify(book, null, 2) + '\n');
   return book;
 }
 

@@ -23,6 +23,7 @@
     inset 0 0 0 4px rgba(226, 192, 120, 0.16),
     0 24px 90px rgba(0, 0, 0, 0.88);
   overflow: hidden;
+  flex-direction: column;
 }
 #party-panel::before {
   content: '';
@@ -35,7 +36,6 @@
 }
 #party-panel[open] {
   display: flex;
-  flex-direction: column;
   animation: preparation-enter 220ms ease-out;
 }
 #party-panel::backdrop {
@@ -55,24 +55,24 @@
 #prepare-close {
   display: grid;
   place-items: center;
-  width: 22px;
-  height: 22px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--gold-dim);
-  opacity: 0.02;
+  min-width: 24px;
+  min-height: 32px;
+  padding: 0 6px;
+  border: 1px solid var(--line);
+  background: var(--ink);
+  color: var(--gold-hi);
   pointer-events: auto;
-  font-size: 16px;
+  font-size: 12px;
   line-height: 1;
+  white-space: nowrap;
 }
 #prepare-close:hover,
 #prepare-close:focus-visible {
-  opacity: 1;
-  color: var(--gold-hi);
+  border-color: var(--gold);
 }
 #prepare-close span {
   display: block;
+  font-size: 16px;
 }
 .prepare-body {
   position: relative;
@@ -1977,15 +1977,10 @@ body:has(#party-panel[open]) .api-request-dock {
     right: 8px;
   }
   #prepare-close {
-    width: auto;
     min-width: 44px;
     height: 44px;
     padding-inline: 8px;
-    opacity: 1;
     font-size: 13px;
-    color: var(--gold-hi);
-    background: var(--ink);
-    border: 1px solid var(--line);
   }
   #prepare-close span {
     font-size: 22px;

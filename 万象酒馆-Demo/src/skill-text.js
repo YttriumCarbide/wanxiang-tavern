@@ -186,9 +186,17 @@ export function equipmentDescription(equipment = {}) {
 
 /** Display the actual compiled effects, including growth, without explanatory growth suffixes. */
 export function finalSkillText(skill, markName = '标记') {
-  if (['libet-entry', 'melody-entry'].includes(skill.mechanic)) return resourceText(skill.text);
-  if (skill.id === 'amber-song')
-    return `为所有存活队友回复等同于自身${markName}层数的hp，并给予${skill.effects.find((effect) => effect.type === 'buff')?.value || 0}层力量；不消耗${markName}。`;
+  const valueOf = (type) => skill.effects?.find((effect) => effect.type === type)?.value ?? 0;
+  if (skill.mechanic === 'luo-entry')
+    return `获得${valueOf('shield')}点护盾，下次普通攻击伤害翻倍；毅明反击也会消耗此效果。`;
+  if (skill.mechanic === 'libet-entry')
+    return `为被换到后场的队友回复${valueOf('heal')}hp，为场上所有存活队友各施加${valueOf('shield')}护盾。`;
+  if (skill.mechanic === 'melody-entry')
+    return `自身获得等同于存活友方角色人数的悠扬，并为所有存活前场队友各施加${valueOf('shield')}护盾。`;
+  if (skill.id === 'amber-song') {
+    const perMark = skill.effects?.find((effect) => effect.type === 'heal')?.perMark ?? 0;
+    return `为所有存活队友回复hp，自身每层${markName}回复${perMark}点，并给予${valueOf('buff')}层力量；不消耗${markName}。`;
+  }
   if (skill.mechanic === 'junlue')
     return `造成${skill.effects.find((effect) => effect.type === 'damage')?.value || 0}伤害，目标下次攻击只能指向自己；目标下次获得正面状态或护盾时，自己也获得同等增益。`;
   if (['soul-revive', 'soul-banquet'].includes(skill.mechanic))

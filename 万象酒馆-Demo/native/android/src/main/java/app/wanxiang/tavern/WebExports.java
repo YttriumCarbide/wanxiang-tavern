@@ -23,46 +23,50 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BooleanSupplier;
+import java.util.function.IntSupplier;
 
 /**
  * 导出协议：临时文件 + 提交状态机。
- * UI 线程独占 active/closed/session.phase/session.written/session.finishReply；
- * temp 与 FileOutputStream 仅由单线程执行器访问；cancelled 为 volatile。
+ * UI 线程持有会话和选择器状态；单线程执行器独占文件与流。
+ * CommitGate 是取消与提交之间唯一的跨线程仲裁点。
  */
 final class WebExports implements AutoCloseable {
 
     private static final String TAG = "WebExports";
-    private static final int REQUEST_CODE = 1002;
-    private static final int FOLDER_REQUEST_CODE = 1003;
+    private static final int NO_CHOOSER = -1;
     private static final int MAX_HEADER = 8192;
     private static final int MAX_CHUNK = 65536;
     private static final long MAX_TOTAL = 512L * 1024L * 1024L;
     private static final int MAX_MESSAGE = 4 + MAX_HEADER + MAX_CHUNK;
 
     private enum Phase { PREPARING, RECEIVING, WRITING, FLUSHING, CHOOSING, COPYING }
+    private enum CommitState { OPEN, CANCELLED, COMMITTING }
 
     private final Activity activity;
     private final BackupFolders folders;
     private final BooleanSupplier openingFile;
+    private final IntSupplier nextRequestCode;
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
 
     private boolean closed;
     private Session active;
-    private boolean choosingFolder;
-    private String folderRequest;
-    private JavaScriptReplyProxy folderReply;
+    private int chooserRequestCode = NO_CHOOSER;
+    private FolderSelection folderSelection;
 
-    WebExports(Activity activity, BooleanSupplier openingFile) {
+    WebExports(Activity activity, BooleanSupplier openingFile, IntSupplier nextRequestCode) {
         this.activity = activity;
         this.openingFile = openingFile;
+        this.nextRequestCode = nextRequestCode;
         folders = new BackupFolders(activity);
     }
 
     boolean isChoosing() {
-        return choosingFolder || (active != null && active.phase == Phase.CHOOSING);
+        return chooserRequestCode != NO_CHOOSER;
     }
 
     // ---------- 入口（UI 线程） ----------
@@ -82,13 +86,13 @@ final class WebExports implements AutoCloseable {
                 if (p.bodyLength == 0) cancel(p.id);
             }
             case "chooseFolder" -> chooseFolder(p, reply);
-            case "folderStatus" -> runFolderTask(p.id, reply, folders::selectedTarget);
+            case "folderStatus" -> executor.execute(() -> send(reply, folderResponse(p.id, folders::selectedTarget)));
             default -> send(reply, errorJson(p.id, "无效消息", "invalid"));
         }
     }
 
     private void begin(Packet p, JavaScriptReplyProxy reply) {
-        if (active != null || choosingFolder) {
+        if (active != null || folderSelection != null) {
             send(reply, errorJson(p.id, "已有导出进行中", "busy"));
             return;
         }
@@ -164,25 +168,7 @@ final class WebExports implements AutoCloseable {
                 launchChooser(s);
             } else {
                 s.phase = Phase.COPYING;
-                submit(s, () -> {
-                    if (s.cancelled) return;
-                    var document = folders.createBackup(s.folder, s.name);
-                    Uri uri = document.uri();
-                    copyToTarget(s, uri);
-                    if (s.cancelled) {
-                        deleteDocumentQuietly(uri);
-                        return;
-                    }
-                    if (document.needsRename()) {
-                        try {
-                            folders.finishBackup(uri, s.name);
-                        } catch (IOException | RuntimeException failure) {
-                            deleteDocumentQuietly(uri);
-                            throw failure;
-                        }
-                    }
-                    s.cleanupFailed = !folders.prune(s.folder);
-                }, () -> {
+                submit(s, () -> writeBackup(s), () -> {
                     release(s);
                     send(reply, okJson(s.id, "done", true, "cleanupFailed", s.cleanupFailed));
                 }, reply);
@@ -204,132 +190,225 @@ final class WebExports implements AutoCloseable {
     }
 
     private void cancel(String id) {
-        Session s = active;
-        if (s == null || s.cancelled || !s.id.equals(id)) return;
-        s.cancelled = true;
-        if (s.phase == Phase.CHOOSING) {
-            s.finishReply = null;
-            executor.execute(() -> deleteTemp(s));
-            activity.finishActivity(REQUEST_CODE);
+        FolderSelection selection = folderSelection;
+        if (selection != null && selection.id().equals(id) && selection.gate().cancel()) {
+            folderSelection = null;
+            dismissTreeChooser();
             return;
         }
+        Session s = active;
+        if (s == null || !s.id.equals(id) || !s.gate.cancel()) return;
         release(s);
+        s.finishReply = null;
+        if (s.phase == Phase.CHOOSING) dismissTreeChooser();
         executor.execute(() -> cleanup(s));
     }
 
     // ---------- 选择器（UI 线程） ----------
+
+    private void openTreeChooser() {
+        // A directory result only grants access; it never creates the destination file.
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION | Intent.FLAG_GRANT_PREFIX_URI_PERMISSION);
+        int requestCode = nextRequestCode.getAsInt();
+        activity.startActivityForResult(intent, requestCode);
+        chooserRequestCode = requestCode;
+    }
+
+    private void dismissTreeChooser() {
+        int requestCode = chooserRequestCode;
+        chooserRequestCode = NO_CHOOSER;
+        if (requestCode == NO_CHOOSER) return;
+        try {
+            activity.finishActivity(requestCode);
+        } catch (RuntimeException error) {
+            Log.w(TAG, "chooser cancellation failed", error);
+        }
+    }
 
     private void launchChooser(Session s) {
         if (openingFile.getAsBoolean()) {
             fail(s, s.finishReply, "请先完成当前的文件选择", "busy");
             return;
         }
-        Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
-        intent.addCategory(Intent.CATEGORY_OPENABLE);
-        intent.setType("application/json");
-        intent.putExtra(Intent.EXTRA_TITLE, s.name);
         try {
-            activity.startActivityForResult(intent, REQUEST_CODE);
-        } catch (ActivityNotFoundException | SecurityException e) {
-            Log.w(TAG, "chooser launch failed");
-            fail(s, s.finishReply, "无法打开保存界面", "chooser");
+            openTreeChooser();
+        } catch (ActivityNotFoundException | SecurityException error) {
+            fail(s, s.finishReply, "无法打开保存文件夹选择器", "chooser");
         }
     }
 
     private void chooseFolder(Packet p, JavaScriptReplyProxy reply) {
-        if (active != null || choosingFolder || openingFile.getAsBoolean()) {
+        if (active != null || folderSelection != null || openingFile.getAsBoolean()) {
             send(reply, errorJson(p.id, "请先完成当前的文件操作", "busy"));
             return;
         }
-        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
-        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-                | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION | Intent.FLAG_GRANT_PREFIX_URI_PERMISSION);
         try {
-            activity.startActivityForResult(intent, FOLDER_REQUEST_CODE);
-            choosingFolder = true;
-            folderRequest = p.id;
-            folderReply = reply;
-        } catch (ActivityNotFoundException | SecurityException e) {
+            openTreeChooser();
+            folderSelection = new FolderSelection(p.id, reply, new CommitGate());
+        } catch (ActivityNotFoundException | SecurityException error) {
             send(reply, errorJson(p.id, "系统无法打开备份文件夹选择器", "chooser"));
         }
     }
 
-    private boolean onFolderResult(int resultCode, Intent data) {
-        if (closed || !choosingFolder) return true;
-        String id = folderRequest;
-        JavaScriptReplyProxy reply = folderReply;
-        choosingFolder = false;
-        folderRequest = null;
-        folderReply = null;
-        if (resultCode == Activity.RESULT_OK) {
-            runFolderTask(id, reply, () -> folders.select(data));
-        } else {
-            send(reply, errorJson(id, "已取消", "cancelled"));
+    private void onFolderResult(FolderSelection selection, int resultCode, Intent data) {
+        if (resultCode != Activity.RESULT_OK) {
+            folderSelection = null;
+            send(selection.reply(), errorJson(selection.id(), "已取消", "cancelled"));
+            return;
         }
-        return true;
+        executor.execute(() -> {
+            if (selection.gate().isCancelled()) return;
+            String response = folderResponse(selection.id(), () -> folders.select(data, selection.gate()::beginCommit));
+            activity.runOnUiThread(() -> {
+                if (closed || folderSelection != selection) return;
+                folderSelection = null;
+                send(selection.reply(), response);
+            });
+        });
     }
 
     private interface FolderTask { String run() throws IOException; }
 
-    private void runFolderTask(String id, JavaScriptReplyProxy reply, FolderTask task) {
-        executor.execute(() -> {
-            try {
-                send(reply, okJson(id, "target", task.run()));
-            } catch (IOException | RuntimeException error) {
-                Log.w(TAG, "Backup folder unavailable", error);
-                send(reply, errorJson(id, "无法访问备份文件夹，请重新选择", "folder"));
-            }
-        });
+    private String folderResponse(String id, FolderTask task) {
+        try {
+            return okJson(id, "target", task.run());
+        } catch (IOException | RuntimeException error) {
+            Log.w(TAG, "Backup folder unavailable", error);
+            String message = error instanceof BackupFolders.FolderProbeException
+                    ? error.getMessage() : "无法访问或保存备份文件夹，请重新选择";
+            return errorJson(id, message, "folder");
+        }
     }
 
     boolean onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (requestCode == FOLDER_REQUEST_CODE) return onFolderResult(resultCode, data);
-        if (requestCode != REQUEST_CODE) return false;
-        if (closed) return true;
+        if (closed || chooserRequestCode == NO_CHOOSER || requestCode != chooserRequestCode) return false;
+        chooserRequestCode = NO_CHOOSER;
+        if (folderSelection != null) {
+            onFolderResult(folderSelection, resultCode, data);
+            return true;
+        }
         Session s = active;
-        if (s == null || s.phase != Phase.CHOOSING) return true;
+        if (s == null || s.phase != Phase.CHOOSING || s.gate.isCancelled()) return true;
         JavaScriptReplyProxy reply = s.finishReply;
         s.finishReply = null;
-        if (s.cancelled) {
-            Uri uri = data != null && resultCode == Activity.RESULT_OK ? data.getData() : null;
-            release(s);
-            executor.execute(() -> {
-                if (uri != null && isWritableDocument(uri)) deleteDocumentQuietly(uri);
-                cleanup(s);
-            });
-            return true;
-        }
         if (resultCode != Activity.RESULT_OK) {
-            release(s);
-            executor.execute(() -> cleanup(s));
-            send(reply, errorJson(s.id, "已取消", "cancelled"));
+            fail(s, reply, "已取消", "cancelled");
             return true;
         }
-        Uri uri = data == null ? null : data.getData();
-        if (!isWritableDocument(uri)) {
-            fail(s, reply, "保存位置无效", "invalid_uri");
+        Uri tree = data == null ? null : data.getData();
+        if (!isWritableTree(tree)) {
+            fail(s, reply, "保存文件夹无效或不可写", "invalid_uri");
             return true;
         }
         s.phase = Phase.COPYING;
-        submit(s, () -> copyToTarget(s, uri), () -> {
+        submit(s, () -> writeExport(s, tree), () -> {
             release(s);
             send(reply, okJson(s.id, "done", true));
         }, reply);
         return true;
     }
 
-    private boolean isWritableDocument(Uri uri) {
-        if (uri == null || !"content".equals(uri.getScheme())) return false;
-        if (!DocumentsContract.isDocumentUri(activity, uri)) return false;
-        return activity.checkUriPermission(uri, Process.myPid(), Process.myUid(),
-                Intent.FLAG_GRANT_WRITE_URI_PERMISSION) == PackageManager.PERMISSION_GRANTED;
+    private boolean isWritableTree(Uri tree) {
+        if (tree == null || !"content".equals(tree.getScheme()) || !DocumentsContract.isTreeUri(tree)) return false;
+        int permissions = Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION;
+        return activity.checkUriPermission(tree, Process.myPid(), Process.myUid(), permissions)
+                == PackageManager.PERMISSION_GRANTED;
     }
 
-    private void copyToTarget(Session s, Uri uri) throws IOException {
-        if (s.cancelled) {
-            deleteDocumentQuietly(uri);
-            return;
+    private ExportDestination createExportDocument(Uri tree, String name) throws IOException {
+        Uri parent = DocumentsContract.buildDocumentUriUsingTree(tree, DocumentsContract.getTreeDocumentId(tree));
+        String temporaryName = "wanxiang-export-" + UUID.randomUUID() + ".partial";
+        try {
+            folders.requireUnusedName(parent, name);
+            folders.requireUnusedName(parent, temporaryName);
+        } catch (IOException failure) {
+            throw new ManualExportException("目标名称已被占用或无法确认未被占用，未覆盖任何文件。", failure);
         }
+        Uri document = DocumentsContract.createDocument(activity.getContentResolver(), parent,
+                "application/json", temporaryName);
+        if (document == null) throw new ManualExportException("无法在所选文件夹创建临时导出文档。");
+        try {
+            if (!folders.supportsSafeStaging(document)) {
+                throw new ManualExportException("该文件夹不支持安全导出（需支持写入、重命名和删除）；尚未写入内容，请改选文件夹。");
+            }
+        } catch (IOException | RuntimeException failure) {
+            boolean removed = deleteDocumentQuietly(document);
+            String message = "该文件夹无法验证安全导出能力（需支持写入、重命名和删除）；尚未写入导出内容，请改选文件夹。";
+            if (!removed) message += "新建的空临时文档“" + temporaryName + "”未能清理，请检查文件夹。";
+            throw new ManualExportException(message, failure);
+        }
+        return new ExportDestination(parent, document, temporaryName);
+    }
+
+    private void writeExport(Session s, Uri tree) throws IOException {
+        if (s.gate.isCancelled()) return;
+        ExportDestination destination = createExportDocument(tree, s.name);
+        boolean published = false;
+        boolean renameAttempted = false;
+        Throwable pendingFailure = null;
+        try {
+            if (!copyToTarget(s, destination.document())) return;
+            try {
+                folders.requireUnusedName(destination.parent(), s.name);
+            } catch (IOException failure) {
+                throw new ManualExportException("导出目标已存在或无法确认未被占用，未覆盖任何文件。", failure);
+            }
+            if (!s.gate.beginCommit()) return;
+            renameAttempted = true;
+            Uri renamed;
+            try {
+                renamed = DocumentsContract.renameDocument(activity.getContentResolver(), destination.document(), s.name);
+            } catch (IOException | RuntimeException failure) {
+                throw new ManualExportException("导出已进入发布阶段但结果无法确认；请检查“" + s.name + "”和临时文档“"
+                        + destination.temporaryName() + "”，确认后再重试。", failure);
+            }
+            if (renamed == null) {
+                throw new ManualExportException("导出已进入发布阶段但结果无法确认；请检查“" + s.name + "”和临时文档“"
+                        + destination.temporaryName() + "”，确认后再重试。");
+            }
+            published = true;
+        } catch (IOException | RuntimeException failure) {
+            pendingFailure = failure;
+            throw failure;
+        } finally {
+            boolean cleanupFailed = false;
+            if (!published && !renameAttempted) cleanupFailed = !deleteDocumentQuietly(destination.document());
+            deleteTemp(s);
+            if (cleanupFailed && !s.gate.isCancelled()) {
+                throw new ManualExportException("导出未完成；临时文档“" + destination.temporaryName()
+                        + "”未能清理，请检查所选文件夹。", pendingFailure);
+            }
+            if (cleanupFailed) Log.w(TAG, "Cancelled export temporary document could not be removed: "
+                    + destination.temporaryName());
+        }
+    }
+
+    private void writeBackup(Session s) throws IOException {
+        if (s.gate.isCancelled()) return;
+        BackupFolders.Destination destination = folders.createBackup(s.folder, s.name);
+        boolean published = false;
+        try {
+            if (copyToTarget(s, destination.temporary())) {
+                published = folders.finishBackup(destination, s.name, s.gate::beginCommit);
+            }
+        } finally {
+            boolean cleanupFailed = !published && !destination.renameAttempted()
+                    && !deleteDocumentQuietly(destination.temporary());
+            deleteTemp(s);
+            if (cleanupFailed && !s.gate.isCancelled()) {
+                throw new BackupFolders.FolderProbeException("备份未完成；临时文档“" + destination.temporaryName()
+                        + "”未能清理，请检查所选文件夹。", null);
+            }
+            if (cleanupFailed) Log.w(TAG, "Cancelled backup temporary document could not be removed: "
+                    + destination.temporaryName());
+        }
+        if (published) s.cleanupFailed = !folders.prune(s.folder, destination.folder());
+    }
+
+    private boolean copyToTarget(Session s, Uri uri) throws IOException {
+        if (s.gate.isCancelled()) return false;
         ContentResolver resolver = activity.getContentResolver();
         try (InputStream in = new FileInputStream(s.temp);
              OutputStream out = resolver.openOutputStream(uri, "wt")) {
@@ -338,17 +417,14 @@ final class WebExports implements AutoCloseable {
             long copied = 0;
             int n;
             while ((n = in.read(buf)) != -1) {
-                if (s.cancelled) throw new IOException("cancelled");
+                if (s.gate.isCancelled()) return false;
                 out.write(buf, 0, n);
                 copied += n;
             }
-            if (s.cancelled || copied != s.size) throw new IOException("export interrupted");
+            if (copied != s.size) throw new IOException("export interrupted");
             out.flush();
-        } catch (IOException | RuntimeException failure) {
-            deleteDocumentQuietly(uri);
-            throw failure;
         }
-        s.temp.delete();
+        return !s.gate.isCancelled();
     }
 
     // ---------- 后台任务与清理 ----------
@@ -360,9 +436,15 @@ final class WebExports implements AutoCloseable {
             try {
                 task.run();
             } catch (IOException | RuntimeException e) {
-                Log.w(TAG, "io failed");
+                if (s.gate.isCancelled()) return;
+                Log.w(TAG, "io failed", e);
+                String message = e instanceof ManualExportException manual ? manual.getMessage()
+                        : e instanceof BackupFolders.PublicationException publication ? publication.getMessage()
+                        : e instanceof BackupFolders.FolderProbeException probe ? probe.getMessage()
+                        : s.folder.isEmpty() ? "写入失败"
+                        : "备份未完成，请选择可写且支持重命名的文件夹，或手动导出";
                 activity.runOnUiThread(() -> {
-                    if (isCurrent(s)) fail(s, reply, "写入失败", "io");
+                    if (isCurrent(s)) fail(s, reply, message, "io");
                 });
                 return;
             }
@@ -373,11 +455,11 @@ final class WebExports implements AutoCloseable {
     }
 
     private boolean isCurrent(Session s) {
-        return !closed && active == s && !s.cancelled;
+        return !closed && active == s && !s.gate.isCancelled();
     }
 
     private void fail(Session s, JavaScriptReplyProxy reply, String message, String code) {
-        s.cancelled = true;
+        s.gate.cancel();
         s.finishReply = null;
         release(s);
         executor.execute(() -> cleanup(s));
@@ -398,11 +480,16 @@ final class WebExports implements AutoCloseable {
         if (s.temp != null && s.temp.exists()) s.temp.delete();
     }
 
-    private void deleteDocumentQuietly(Uri uri) {
+    private boolean deleteDocumentQuietly(Uri uri) {
         try {
-            DocumentsContract.deleteDocument(activity.getContentResolver(), uri);
+            if (!DocumentsContract.deleteDocument(activity.getContentResolver(), uri)) {
+                Log.w(TAG, "delete document failed");
+                return false;
+            }
+            return true;
         } catch (Exception e) {
-            Log.w(TAG, "delete document failed");
+            Log.w(TAG, "delete document failed", e);
+            return false;
         }
     }
 
@@ -418,14 +505,18 @@ final class WebExports implements AutoCloseable {
     public void close() {
         if (closed) return;
         closed = true;
-        folderReply = null;
+        if (folderSelection != null) {
+            folderSelection.gate().cancel();
+            folderSelection = null;
+        }
         Session s = active;
         active = null;
         if (s != null) {
-            s.cancelled = true;
+            s.gate.cancel();
             s.finishReply = null;
             executor.execute(() -> cleanup(s));
         }
+        dismissTreeChooser();
         executor.shutdown();
     }
 
@@ -509,18 +600,49 @@ final class WebExports implements AutoCloseable {
 
     private record Packet(String id, String op, JSONObject json, byte[] bytes, int bodyOffset, int bodyLength) {}
 
+    private record ExportDestination(Uri parent, Uri document, String temporaryName) {}
+
+    private static final class ManualExportException extends IOException {
+        ManualExportException(String message) {
+            super(message);
+        }
+
+        ManualExportException(String message, Throwable cause) {
+            super(message, cause);
+        }
+    }
+
+    private record FolderSelection(String id, JavaScriptReplyProxy reply, CommitGate gate) {}
+
+    private static final class CommitGate {
+        private final AtomicReference<CommitState> state = new AtomicReference<>(CommitState.OPEN);
+
+        boolean cancel() {
+            return state.compareAndSet(CommitState.OPEN, CommitState.CANCELLED);
+        }
+
+        boolean beginCommit() {
+            // After commit starts, cancellation cannot roll it back.
+            return state.compareAndSet(CommitState.OPEN, CommitState.COMMITTING);
+        }
+
+        boolean isCancelled() {
+            return state.get() == CommitState.CANCELLED;
+        }
+    }
+
     private static final class Session {
         final String id;
         final String name;
         final long size;
         final String folder;
+        final CommitGate gate = new CommitGate();
         File temp;
         FileOutputStream out;
         long written;
         JavaScriptReplyProxy finishReply;
         Phase phase;
         boolean cleanupFailed;
-        volatile boolean cancelled;
 
         Session(String id, String name, long size, String folder) {
             this.id = id;

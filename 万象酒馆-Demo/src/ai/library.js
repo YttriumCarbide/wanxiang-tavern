@@ -23,6 +23,7 @@ import { ENCOUNTER_COUNT } from '../content/journey-rules.js';
 import { REGIONS } from '../content/regions.js';
 import { OFFICIAL_VISITORS } from '../content/official-visitors.js';
 import { stripRetiredLore } from './retired-abilities.js';
+import { RETIRED_OFFICIAL_DRAFT_IDS, isRetiredCampaignCharacter } from './character-cleanup.js';
 import { HEROES } from '../data.js';
 import { normalizeCharacter, normalizeScript } from './contracts.js';
 import { loadCustomPortraits, savedPortrait } from '../portraits.js';
@@ -133,6 +134,7 @@ export function restoreLibrary(value) {
       ].slice(-2000)
     : [];
   for (const entry of Array.isArray(value.characters) ? value.characters.slice(0, 100) : []) {
+    if (campaign && isRetiredCampaignCharacter(entry, value.campaign?.protagonistId)) continue;
     if (entry.source === 'official') {
       const official = [
         'official-pandora',
@@ -237,15 +239,25 @@ export function restoreLibrary(value) {
     const portrait = savedPortrait(customPortraits, member);
     if (portrait) member.combat.customPortrait = portrait;
   }
-  if (
-    Array.isArray(value.party) &&
-    value.party.length === 6 &&
-    new Set(value.party.filter(Boolean)).size === value.party.filter(Boolean).length &&
-    value.party.every(
-      (id) => (campaign && id === null) || library.characters.some((entry) => entry.id === id),
-    )
-  )
-    library.party = value.party;
+  if (Array.isArray(value.party) && value.party.length === 6) {
+    const cleanedParty = value.party.map((id) =>
+      id && library.characters.some((entry) => entry.id === id) ? id : null,
+    );
+    const activeIds = cleanedParty.filter(Boolean);
+    if (new Set(activeIds).size === activeIds.length && (campaign || activeIds.length === 6))
+      library.party = cleanedParty;
+  }
+  if (campaign) {
+    const retiredSet = new Set(RETIRED_OFFICIAL_DRAFT_IDS);
+    for (const id of RETIRED_OFFICIAL_DRAFT_IDS) delete library.relationships[id];
+    const activeEntry = library.daily?.active;
+    if (Array.isArray(activeEntry?.companions)) {
+      activeEntry.companions = activeEntry.companions.filter((id) => !retiredSet.has(id));
+    }
+    if (activeEntry?.kind === 'invitation' && retiredSet.has(activeEntry.run?.member)) {
+      library.daily.active = null;
+    }
+  }
   if (campaign) {
     const protagonist = library.characters.find(
       (entry) => entry.id === value.campaign.protagonistId,

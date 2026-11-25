@@ -104,7 +104,7 @@ test('learnable skill catalog defines 18 valid skills across 4 categories with v
   }
 });
 
-test('Guild skill shop, 2-slot character equipping, persistence, and level scaling work cleanly', () => {
+test('Guild skill shop, equipping, and persistence keep special techniques level-independent', () => {
   const library = newLibrary();
   assert.deepEqual(restoreLearnedSkills(library.learnedSkills), STARTER_LEARNED_SKILL_IDS);
 
@@ -136,14 +136,19 @@ test('Guild skill shop, 2-slot character equipping, persistence, and level scali
   equipUniversalSkill(library, hero.id, 1, 'uni-feint-retreat');
   assert.deepEqual(hero.equippedSkills, [null, 'uni-feint-retreat']);
 
-  // Core saved skills stay intact while grownCombat compiles scaled universal skills.
+  // Core saved skills stay intact; special techniques compile without level growth.
   assert.equal(hero.combat.skills.length, 2);
+  const compiledBeforeGrowth = grownCombat(hero);
+  const universalBefore = compiledBeforeGrowth.skills.find(
+    (skill) => skill.id === 'uni-feint-retreat',
+  );
   gainExperience(hero, 1200);
   const compiled = grownCombat(hero);
   assert.equal(compiled.skills.length, 3);
   const universalCompiled = compiled.skills.find((s) => s.id === 'uni-feint-retreat');
   assert.equal(universalCompiled.universal, true);
-  assert(universalCompiled.effects[0].value > LEARNABLE_SKILLS[0].effects[0].value);
+  assert.deepEqual(universalCompiled.effects, universalBefore.effects);
+  assert.equal(universalCompiled.mp, universalBefore.mp);
   assert(universalCompiled.text.includes('后场'));
 
   // Round-trip save restore preserves learnedSkills and equippedSkills.

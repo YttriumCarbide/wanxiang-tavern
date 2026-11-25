@@ -13,7 +13,6 @@ import {
   restoreGrowth,
   xpToNext,
   applyEncounterGrowth,
-  grownSkillCosts,
 } from '../src/growth.js';
 import {
   relevantArchives,
@@ -34,21 +33,31 @@ import { applyEquipment } from '../src/equipment.js';
 import { beginEncounter, newExpedition } from '../src/expedition.js';
 import { restoreAdventureResources } from '../src/adventure/restore-resources.js';
 
-test('growth reduces the resource actually paid, keeps zero costs and deterministically splits dual costs', () => {
+test('SP discounts follow only their matching skill and never replace HP or zero-SP costs', () => {
   const edith = officialCharacter('edith');
-  assert.equal(grownCombat(edith).skills[1].mp, 0);
-  edith.growth = restoreGrowth({ bonus: { manaCost: 99 } }, edith.id);
-  assert.deepEqual([grownCombat(edith).skills[1].hp, grownCombat(edith).skills[1].mp], [3, 0]);
-  const dual = { id: 'dual', hp: 7, mp: 8 };
-  let previous = { hp: 7, mp: 8 };
-  for (let points = 1; points <= 12; points++) {
-    const next = grownSkillCosts(dual, points, 'example');
-    assert(next.hp >= 3 && next.mp >= 3);
-    assert.equal(previous.hp + previous.mp - next.hp - next.mp, points <= 9 ? 1 : 0);
-    assert.deepEqual(next, grownSkillCosts(dual, points, 'example'));
-    previous = next;
-  }
-  assert.deepEqual(grownSkillCosts({ id: 'free', hp: 0, mp: 0 }, 99, 'x'), { hp: 0, mp: 0 });
+  const hpSkill = edith.combat.skills.find((skill) => skill.id === 'cinnabar-eclipse');
+  const member = {
+    ...edith,
+    growth: restoreGrowth(
+      { revision: 6, level: 2, seed: 23, rarity: 'rare', rolls: [{ skill2: 20, skill2Sp: 1 }] },
+      edith.id,
+    ),
+  };
+  const trained = grownCombat(member).skills.find((skill) => skill.id === hpSkill.id);
+  assert.equal(hpSkill.mp, 0);
+  assert.equal(trained.mp, 0);
+  assert.equal(trained.hp, hpSkill.hp);
+
+  const pandora = officialCharacter('pandora');
+  pandora.combat.skills[0].mp = 8;
+  pandora.combat.skills[1].mp = 8;
+  pandora.growth = restoreGrowth(
+    { revision: 6, level: 2, seed: 23, rarity: 'rare', rolls: [{ skill1: 20, skill1Sp: 1 }] },
+    pandora.id,
+  );
+  const compiled = grownCombat(pandora);
+  assert.equal(compiled.skills[0].mp, 7);
+  assert.equal(compiled.skills[1].mp, 8);
 });
 
 test('all supplies have real 64px icons and purchases persist atomically without spending ether', async () => {

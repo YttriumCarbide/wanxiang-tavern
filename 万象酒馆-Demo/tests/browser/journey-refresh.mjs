@@ -62,13 +62,13 @@ export async function journeyRefreshChecks({ browser, baseURL, output }) {
       beforeGesture,
     );
 
-    await frame
-      .locator('canvas')
-      .evaluate(() => parent.postMessage({ type: 'tavern-shop' }, location.origin));
+    await frame.locator('canvas').evaluate(() => window.assetPreview.placeNow('supplies'));
+    await frame.locator('#vending-open').click();
     await page.locator('#void-shop').waitFor({ state: 'visible' });
     await page.locator('[data-shop-category=mana]').click();
     await page.locator('[data-shop-item="mana-potion"]').click();
     await page.locator('[data-buy="mana-potion"]').click();
+    await page.locator('#shop-status').filter({ hasText: '+1' }).waitFor();
     assert.equal((await page.evaluate(() => demo.getLibrary())).inventory.gold, 180);
     assert((await page.locator('#shop-status').innerText()).includes('+1'));
     await page.screenshot({ path: path.join(output, 'shop-refreshed.png') });
@@ -78,10 +78,10 @@ export async function journeyRefreshChecks({ browser, baseURL, output }) {
     await page.setViewportSize({ width: 1904, height: 900 });
     const start = await page.evaluate(() => window.assetPreview.camera.position.toArray());
     await page.evaluate(() => window.assetPreview.moveTo('supplies'));
-    await page.locator('#shop-open').waitFor({ state: 'visible' });
+    await page.locator('#condenser-open').waitFor({ state: 'visible' });
+    await page.locator('#vending-open').waitFor({ state: 'visible' });
     const end = await page.evaluate(() => window.assetPreview.camera.position.toArray());
     assert.notDeepEqual(end, start);
-    await page.locator('#condenser-open').waitFor({ state: 'visible' });
     assert(
       await page.evaluate(
         () => !!window.assetPreview.model.getObjectByName('Tavern_Supply_Corner'),
@@ -124,10 +124,8 @@ export async function journeyRefreshChecks({ browser, baseURL, output }) {
     assert(
       geometry.projected.every(([x, y, z]) => Math.abs(x) < 0.95 && Math.abs(y) < 0.95 && z < 1),
     );
-    const shopButton = await page.locator('#shop-open').boundingBox();
     const forgeButton = await page.locator('#condenser-open').boundingBox();
-    assert(shopButton.x + shopButton.width + 8 <= forgeButton.x);
-    assert(shopButton.y + shopButton.height <= 900 && forgeButton.y + forgeButton.height <= 900);
+    assert(forgeButton.y + forgeButton.height <= 900);
     await page.screenshot({ path: path.join(output, 'tavern-machines-refreshed.png') });
     await page.evaluate(() => {
       const { camera } = window.assetPreview;

@@ -151,11 +151,11 @@
     0 28px 90px rgba(0, 0, 0, 0.86),
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(16px);
+  flex-direction: column;
+  gap: 14px;
 }
 #setup-wizard[open] {
   display: flex;
-  flex-direction: column;
-  gap: 14px;
   animation: start-fade-up 0.25s ease-out;
 }
 #setup-wizard::backdrop {
@@ -545,6 +545,7 @@
     inset 0 0 0 4px rgba(226, 192, 120, 0.16),
     0 28px 96px rgba(0, 0, 0, 0.88);
   overflow: hidden;
+  flex-direction: column;
 }
 #new-game::before {
   content: '';
@@ -557,8 +558,13 @@
 }
 #new-game[open] {
   display: flex;
-  flex-direction: column;
   animation: start-fade-up 0.24s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  #setup-wizard[open],
+  #new-game[open] {
+    animation: none;
+  }
 }
 #new-game::backdrop {
   background: rgba(4, 5, 14, 0.8);

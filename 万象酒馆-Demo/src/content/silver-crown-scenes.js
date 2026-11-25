@@ -8,7 +8,6 @@ export const SILVER_CROWN_PLACES = Object.freeze({
     wide: true,
     night: true,
     exits: {
-      'road-capital': [0.16, 0.67],
       'crown-promenade': [0.59, 0.62],
       'crown-canal': [0.8, 0.72],
       'crown-ledger': [0.25, 0.64],
@@ -118,6 +117,6 @@ export const SILVER_CROWN_PLACES = Object.freeze({
 });
 
 export const TAVERN_EXITS = Object.freeze({
-  street: '星钟城',
+  'city-center': '星钟城',
   [SILVER_CROWN_TAVERN]: '银冠城',
 });

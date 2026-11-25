@@ -32,7 +32,10 @@ export function applyEquipment(combat, equipment = []) {
       (result.manaCostReduction || 0) + (item.stats.manaCost || 0),
     );
   }
-  const scale = combat.attack ? result.attack / combat.attack : 1;
+  // Gear scales skill damage against the authored attack, independently of basic-attack growth.
+  const baseAttack = combat.attackBeforeGrowth ?? combat.attack;
+  const attackFromGear = result.attack - combat.attack;
+  const scale = baseAttack ? (baseAttack + attackFromGear) / baseAttack : 1;
   result.skills = (result.skills || []).map((skill) => {
     const next = { ...skill };
     if (Array.isArray(next.effects)) {

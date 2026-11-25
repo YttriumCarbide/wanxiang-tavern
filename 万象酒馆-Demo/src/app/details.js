@@ -4,7 +4,8 @@ import { effectiveBuff } from '../engine.js';
 import { resourceBars, statusIcons, escapeText } from '../ui.js';
 import { query as $ } from './dom.js';
 import { portraitUrl } from '../catalog.js';
-import { finalPassiveText } from '../skill-text.js';
+import { finalPassiveText, finalSkillText } from '../skill-text.js';
+import { isUniversalSkill } from '../learnable-skills.js';
 import { rulesFor, ruleAvailable } from '../triggers.js';
 import { equipmentDescription } from './equipment.js';
 import { damageTypeChip, inferDamageType, resolveBasicAttackType } from '../damage-types.js';
@@ -57,7 +58,7 @@ export function createDetails(context) {
       const selected =
         session.selection.pending?.actor === id && session.selection.pending?.skill === skill.id;
       const text =
-        (skill.text || '造成' + d.attack + '基础伤害') +
+        (skill.text || finalSkillText(skill, d.mechanicMark?.name)) +
         (combine
           ? '\n' + (!combined ? '需要结合后使用' : combineUsed ? '本次结合已使用' : '结合中可使用')
           : '');
@@ -89,8 +90,8 @@ export function createDetails(context) {
         '</strong>' +
         (skill.borrowedFrom
           ? '<span class="borrowed-skill-source">借自 ' + e(skill.borrowedFrom) + '</span>'
-          : skill.universal
-            ? '<span class="borrowed-skill-source universal-skill-source">通用战技</span>'
+          : isUniversalSkill(skill)
+            ? '<span class="borrowed-skill-source universal-skill-source">特技</span>'
             : '') +
         '</span><small>' +
         skill.ap +

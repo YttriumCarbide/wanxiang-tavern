@@ -249,7 +249,7 @@ test('browser and service really inject the v40 identity rule into character req
   }
 });
 
-test('level growth scales DoTs, mana, passives and non-damage enemy intents while keeping bonus damage-only', () => {
+test('level growth scales hero health and mana pools independently of enemy intent growth', () => {
   const level = 15;
   const scale = combatScale(level);
   const member = {
@@ -307,14 +307,8 @@ test('level growth scales DoTs, mana, passives and non-damage enemy intents whil
     },
   };
   const grown = grownCombat(member);
-  assert.equal(grown.skills[0].effects[0].value, Math.round(4 * scale));
-  assert.equal(grown.skills[0].effects[1].value, Math.round(3 * scale));
-  assert.equal(grown.skills[0].effects[2].value, 2);
-  assert.equal(grown.skills[0].effects[3].value, Math.round(4 * Math.sqrt(scale)));
-  assert.equal(grown.skills[1].endHeal, Math.round(3 * scale));
-  assert.match(grown.skills[1].text, new RegExp(`回复${Math.round(3 * scale)}hp`));
-  assert.equal(grown.skills[2].rules[0].effects[0].value, Math.round(4 * scale));
-  assert.equal(grown.skills[2].rules[0].effects[1].value, Math.round(2 * scale));
+  assert.equal(grown.hp, Math.round(member.combat.hp * scale));
+  assert.equal(grown.mp, Math.round(member.combat.mp * Math.sqrt(scale)));
 
   const supportMove = {
     name: '毒雾护壳',

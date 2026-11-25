@@ -206,8 +206,8 @@
       "hash": "f2a8f24b232cd53ec646cb048abfd0da66fe66f671704d3cc3b20cccd7aba71e"
     },
     "assets/black-market.glb": {
-      "bytes": 2405748,
-      "hash": "9a167278d7313e11e3b33d326c039988a1484fd9cd219dea14d41e087d17d59a"
+      "bytes": 3594912,
+      "hash": "b90ee4da7598fac49017c7591e77d59f3ea81c3e6fb1c0c7b3ba618cc9461f55"
     },
     "assets/bog-drifter.glb": {
       "bytes": 33196,
@@ -1451,7 +1451,7 @@
     },
     "assets/icons/equipment-voucher.svg": {
       "bytes": 2017,
-      "hash": "494a07d6f8b9159d2513afb0466b65fc303b6127fc64d827cb7b7717bf8f1ace"
+      "hash": "359399955b78d87109ec13ee9110184fbdd77727e7e3f8caccacf86c306b8da1"
     },
     "assets/icons/ether.svg": {
       "bytes": 388,
@@ -1882,24 +1882,24 @@
       "hash": "9568371dba90f70817ace9500d83044f841f5e8178960013dc221560d3d6c628"
     },
     "assets/portraits/bandit-cutthroat.svg": {
-      "bytes": 12490,
-      "hash": "f0509e764cf1c704898dd26bf577c1e60d744e5fa0df55ab9d67a15570adbea3"
+      "bytes": 12487,
+      "hash": "651f123a5c1fba129b0cfae0ff0a117fe68b8f4ac5bb9e773405d749b6f02b06"
     },
     "assets/portraits/bandit-executioner.svg": {
       "bytes": 27684,
       "hash": "6da570699b04c42bab30c09f065e11a51a7cce3577808cdfd2e64764f4178e6b"
     },
     "assets/portraits/bandit-poacher.svg": {
-      "bytes": 12740,
-      "hash": "64eb6c3a1f8d5b5796debfd9082904065a417090b8942201cd06716f2460f177"
+      "bytes": 12734,
+      "hash": "a1bac8f4f435fdb0c89cea15f46777a3df2ddf24472ac7206a55c1bb4d1fa536"
     },
     "assets/portraits/bandit-syndicate-king.svg": {
       "bytes": 744583,
       "hash": "b6e7a8cc06d3b079c04e6965055312b740855cd1b00a9e2702357ec6b3f4778d"
     },
     "assets/portraits/bark-acolyte.svg": {
-      "bytes": 24939,
-      "hash": "c94546d5f44b9922e37c3fbd49089b8896986c456595ed8a9fdc5788abd875e0"
+      "bytes": 24933,
+      "hash": "794e080efd899a2a27988b24568c390e86bd9d61b899c3e709afd9a36e9df6f0"
     },
     "assets/portraits/bicolor-scale-python.svg": {
       "bytes": 27210,
@@ -1910,8 +1910,8 @@
       "hash": "ba11152e0329209117e8fd8ab0e56c0083bf834c42817f4d9135db8287d7d211"
     },
     "assets/portraits/black-ooze.svg": {
-      "bytes": 9715,
-      "hash": "82e14820b3981babf4acb797321a5080c1d6925dcce6c53e6bcb5df70768a3e1"
+      "bytes": 9718,
+      "hash": "7d1e1f16469d316ab706fb55a4c3358c1d306873540e3c4b70171245a100dd9a"
     },
     "assets/portraits/bog-drifter.svg": {
       "bytes": 6986,
@@ -1942,8 +1942,8 @@
       "hash": "208474746b9c6c826698de267581f39cdd086b3b626f2cfc4441e0e036e2ae9e"
     },
     "assets/portraits/brass-seeker.svg": {
-      "bytes": 2517,
-      "hash": "bccfb23c8091bf741efaab11c78dda7005d596a7e1aac979a3e6281faab40e49"
+      "bytes": 2514,
+      "hash": "18b789d420d7b64fd60e55497109458fb5eb2d90bd89d2fefc663d445a0ae332"
     },
     "assets/portraits/cargo-crawler.svg": {
       "bytes": 6727,
@@ -1967,7 +1967,7 @@
     },
     "assets/portraits/cinder-imp.svg": {
       "bytes": 4510,
-      "hash": "70073d70e339ac1f2628e3e167fa02b66ba2b952c1cd4ed918453eab332ea6ce"
+      "hash": "cf2f0026c9ee233ead5b2bbdc0e5b40fffd1f15ad71b43020f8e69fa8bbbe2b4"
     },
     "assets/portraits/cinder-priest.svg": {
       "bytes": 5007,
@@ -1979,7 +1979,7 @@
     },
     "assets/portraits/conduit-wisp.svg": {
       "bytes": 4755,
-      "hash": "66b659807b242531f804367efe0494bcc759e80dada86a9c0492cd7d3501c2f0"
+      "hash": "f193341b1ebc351af74ee88666cfd23bd918454f846a21b253c6ab5720ce36f8"
     },
     "assets/portraits/corridor-guard.svg": {
       "bytes": 4511,
@@ -1998,8 +1998,8 @@
       "hash": "e2dcd6d27e815aeea3f01a159283eb99dea696c561308c10caa0c818c0c2b711"
     },
     "assets/portraits/cultist-specter.svg": {
-      "bytes": 4763,
-      "hash": "b6ffffb1fdae1aa65e629bebeadaad4bed75b8e4c9a8fb5a7e9244b98e3216ea"
+      "bytes": 4757,
+      "hash": "ef48cf7797fa170f24ceac9929e8fa431ebaf77a27fd8c745d0787724576555f"
     },
     "assets/portraits/cultist.svg": {
       "bytes": 1040,
@@ -2014,24 +2014,24 @@
       "hash": "8a843ab8760674af53f676433c29ab2e9c7a979cbf68f1062d0140230237bbab"
     },
     "assets/portraits/drake-badland-falcon.svg": {
-      "bytes": 13443,
-      "hash": "34464199973fe7e5036472f16ffeeae2405111956e99c019cba3be1f7cdb1ea0"
+      "bytes": 13431,
+      "hash": "e717f2448fb5251061ee7ed0a71cd61a2a3144b82df2f7eaba96b8f0b6eb4ffe"
     },
     "assets/portraits/drake-badland-scorpion.svg": {
       "bytes": 14745,
       "hash": "5d81c55dbb709752ed0282cf0b50d8f7943f4854e60cc2831a30f43fa9a5815e"
     },
     "assets/portraits/drake-badland-slime.svg": {
-      "bytes": 12407,
-      "hash": "36d120bdde53f05d3cdd43b7e5a703276d8754b858d1bab73dee8a187ab01032"
+      "bytes": 12395,
+      "hash": "78eef088fd932c3534d2f52866d94f39c9b8b71c57ac54dc365feaf1e995beb3"
     },
     "assets/portraits/drake-crystal-beetle.svg": {
-      "bytes": 12490,
-      "hash": "45897fc1204ee9341d8662afa56abfb2063fdf8e1f6075bdd50ff8387c3c7cdc"
+      "bytes": 12487,
+      "hash": "1af4cbc17ac92b241794e3367fd23116335bdf2fcac5c1c24a1ca76f0d1c130d"
     },
     "assets/portraits/drake-rattlesnake.svg": {
-      "bytes": 12752,
-      "hash": "f93662f0bae58eb56c36b985fd5fd283d94ccb57e4fa12687088141ce2b5956a"
+      "bytes": 12737,
+      "hash": "85cf9232171a6b7c8534533f428335f119bf667969545e017dc04d15ffb5b975"
     },
     "assets/portraits/drill-matriarch.svg": {
       "bytes": 10973,
@@ -2090,8 +2090,8 @@
       "hash": "ade0779a23a6b7d5dbecb4436478fdbc879b1c330049cfac5ad4dafd3616c41f"
     },
     "assets/portraits/erosion-hound.svg": {
-      "bytes": 12708,
-      "hash": "1f797240c2dd546de82c8159a1a2d00fe69fb990f0aa2f66d174740bda74f06b"
+      "bytes": 12702,
+      "hash": "94f83e4928866f26669c215fd4939ba45d89e85a5a3732ab3f92dc77b2f78f88"
     },
     "assets/portraits/erosion-juggernaut.svg": {
       "bytes": 27678,
@@ -2115,7 +2115,7 @@
     },
     "assets/portraits/fog-spore.svg": {
       "bytes": 21405,
-      "hash": "b91611e94793808114d7a9290f980bfabee3d0b3b2883d9f48ee730c4555cfc3"
+      "hash": "3d22501c19566cbddbbd7399949ad42f203f518db363bb7ece9bb5e2832136bd"
     },
     "assets/portraits/frost-borer.svg": {
       "bytes": 9488,
@@ -2138,8 +2138,8 @@
       "hash": "3a9286898a5e967eb770c7fb2bb9272ea262425d3767f213a4b9314751cfaf52"
     },
     "assets/portraits/goblin-shaman.svg": {
-      "bytes": 12493,
-      "hash": "da159e87c59249ce1173cc89bcf3f5dc69a6884d530ca7950e5da7f1f6da1c35"
+      "bytes": 12484,
+      "hash": "ccf957767b39958ed37b0bd9d3759006f5a38b86626d0bbac79ba8392742bca3"
     },
     "assets/portraits/goblin-slinger.svg": {
       "bytes": 12491,
@@ -2159,7 +2159,7 @@
     },
     "assets/portraits/grey-stinger.svg": {
       "bytes": 7930,
-      "hash": "599c938de30b6f6810d21fb0ab6817a1e960f29a9d7599bf5a76479392f39cbd"
+      "hash": "c4e184555c4662febdf2aa4d905ac1701eb96ef7bc28e3c8822a4af1811cec93"
     },
     "assets/portraits/guardian.svg": {
       "bytes": 1284,
@@ -2215,7 +2215,7 @@
     },
     "assets/portraits/lost-welder.svg": {
       "bytes": 6974,
-      "hash": "299db06e74bb91a98676fdc11b1cc5ef6ff3d34a637331bd2b682127fb07527e"
+      "hash": "13e9836f2cbdfce112c583136e0e88fc294ec91482e63b23da056a49973b4104"
     },
     "assets/portraits/lumi-v1.png": {
       "bytes": 2844446,
@@ -2258,8 +2258,8 @@
       "hash": "d5cf8ff92846b970add0293e528565118fb414d3079a5e9a3af8376af5648198"
     },
     "assets/portraits/mill-moss-bug.svg": {
-      "bytes": 14970,
-      "hash": "487570d349770b2ef104f09acadfb41a23244f0684d98932cf622ee707d3450c"
+      "bytes": 14973,
+      "hash": "7813c4a03eb7c0356650b7818cbf67cf5c2941224b8afea296c3c11de7d90ae2"
     },
     "assets/portraits/mill-nettle.svg": {
       "bytes": 15470,
@@ -2319,7 +2319,7 @@
     },
     "assets/portraits/moon-worker.svg": {
       "bytes": 8427,
-      "hash": "64b83eb84ee7d32ed192fcd3142fed32f5d6f65a0cb148c06ec6603c5d77f6f1"
+      "hash": "e980c618dadfda782e27e7a8d1f43db78c23ed40cce64941664a797f7c35f352"
     },
     "assets/portraits/moss-gulon.svg": {
       "bytes": 12722,
@@ -2350,8 +2350,8 @@
       "hash": "3bb2923a3bd10556f56e5e92f4c30d0f50250da1eefadbba64baa282a2899d61"
     },
     "assets/portraits/parts-carrier.svg": {
-      "bytes": 6724,
-      "hash": "e617bf48d7be6a3148549c9edb32a59f12f51e5e1a8f3c2a9be56fd3c71de7d7"
+      "bytes": 6721,
+      "hash": "d1702fd89bbd96b9a101c4b841090afeb69ac91dc11cebacc88e3b91e44a0964"
     },
     "assets/portraits/patrol-hound.svg": {
       "bytes": 4964,
@@ -2362,12 +2362,12 @@
       "hash": "a3b7feb20685d731152eb74ccd89a423ee18d3047cb4ad22bd81aad1676c55a5"
     },
     "assets/portraits/pure-creation-elemental.svg": {
-      "bytes": 12733,
-      "hash": "7c9f5b5ecfc7ac89c9db295946010be9e6c996940eb1edfbb20e68bed8a74566"
+      "bytes": 12727,
+      "hash": "bd99ec0f4b611a0ce02c5f373ad2a28a4ab0b88dcbd1bd46efb21d93c3966a6e"
     },
     "assets/portraits/pure-destruction-elemental.svg": {
-      "bytes": 12502,
-      "hash": "474c794ad2bc0903597d723ff42c7eef4669897e74916c1fce29caba2a5984d0"
+      "bytes": 12496,
+      "hash": "60d9166d88e17de0f4bd3002bdaf40b2032f21da6b80dddb626ab7decafcdfad"
     },
     "assets/portraits/radiant-wyvern.svg": {
       "bytes": 229160,
@@ -2375,15 +2375,15 @@
     },
     "assets/portraits/rail-spider.svg": {
       "bytes": 8204,
-      "hash": "2731d496c713ac11bb2f8a3c8d60248c51914457892ba688c7bee52d0d64b817"
+      "hash": "8ed93947c8b0b466d57f8098fbf7778200ea5b09d7ea59c3f731d4f66323d7f1"
     },
     "assets/portraits/ranger.svg": {
       "bytes": 1311,
       "hash": "dc366e8faba4a29b998fd27ea30e497a088671ac230d968dc3503b1113a3e3fa"
     },
     "assets/portraits/raptor-storm.svg": {
-      "bytes": 5461,
-      "hash": "e07daa503da5099c8c30469152cbf3f9a14e36ff805ba8c5cf269290c9b76cdb"
+      "bytes": 5455,
+      "hash": "1e712fc4c01b8e221b7f7864057ffba61a38750c7858d801b317dba43de25b46"
     },
     "assets/portraits/relic-hermit-crab.svg": {
       "bytes": 27394,
@@ -2399,7 +2399,7 @@
     },
     "assets/portraits/rift-mote.svg": {
       "bytes": 10170,
-      "hash": "c6f01b222cd54304d92c1ef1ea2048eeaa62d541a117992f0621592c7b44aa8b"
+      "hash": "2064d9a1a7dd946a60dca0c4a513f2fb1ceaaa823fec455f10d9dbf9f9fbec6c"
     },
     "assets/portraits/rogue-arm.svg": {
       "bytes": 7482,
@@ -2422,12 +2422,12 @@
       "hash": "a05d92268fd213fc382b9f075127707bb8bb710d3c8905cad144aae66098e57c"
     },
     "assets/portraits/rust-miner.svg": {
-      "bytes": 6727,
-      "hash": "9eb35ac7fd9a6044de45a654ea95510140a152f1cab55ed246d0e216c294d911"
+      "bytes": 6724,
+      "hash": "9db42fc7aba2a67176ab53d49d1c44d93ac766b9f5e2fc48db2e78c4294b2a9f"
     },
     "assets/portraits/scale-archer.svg": {
-      "bytes": 52053,
-      "hash": "9b0e83386b2745e2c8a399c0c076237555ee0f6c983d3f79a799aadb6271cf34"
+      "bytes": 52047,
+      "hash": "a5c904409417ddb7aa47ec723b4f0da1607d3f662a8658d150f639c0ec8031da"
     },
     "assets/portraits/scale-captain.svg": {
       "bytes": 27894,
@@ -2438,16 +2438,16 @@
       "hash": "8b587c15baee89266c2e0e109c979726a5c8d13b723d778490f0927b33e74d48"
     },
     "assets/portraits/scale-warrior.svg": {
-      "bytes": 15946,
-      "hash": "fc17a9a4bb70c767429edabb2dd257b3e439320f4f247d2c22235c9ff15ba659"
+      "bytes": 15940,
+      "hash": "9663ef0b8efba04a4905d67d277f042e2cc0d519a56858b7581886e09e44ba88"
     },
     "assets/portraits/scrap-hound.svg": {
-      "bytes": 5252,
-      "hash": "00686b9f7258e0d0eaa1b02d19731a708041ee598038dde720456d47c9e54dd4"
+      "bytes": 5249,
+      "hash": "fcf58dd1fa3b9e587505ce934a9b49a7736fdf9d4e24db8389616e9b251e7e66"
     },
     "assets/portraits/sentry-drone.svg": {
-      "bytes": 2519,
-      "hash": "6c9885931c7a38d4b1b45d560562a32c6c1ac7ff37dd24db49df5ac377ba86c7"
+      "bytes": 2516,
+      "hash": "fccf3adf26d6460e3baef253b9253255ba7b0de9b4651bf007d56ec4c1d97fbc"
     },
     "assets/portraits/settlement-leader.svg": {
       "bytes": 7726,
@@ -2459,7 +2459,7 @@
     },
     "assets/portraits/shard-sprite.svg": {
       "bytes": 4755,
-      "hash": "9187e753797038bacb88649ea2491523ce21f7d4358fe06683f0273f41e989b8"
+      "hash": "1c09bd077e8e5d491bedd559813271427f264952268b26c547bdfea6d7867121"
     },
     "assets/portraits/shell-gatherer.svg": {
       "bytes": 9940,
@@ -2490,8 +2490,8 @@
       "hash": "2bb753c44133ca2559aec20ac3ee5e93471f70ec94bfcde4272af6e5e65233d8"
     },
     "assets/portraits/stone-beetle.svg": {
-      "bytes": 6700,
-      "hash": "50152cb864a6e42d6c85db29b8f7f90a59f2c8a7f74c386a4c6f8a50dffe72d4"
+      "bytes": 6697,
+      "hash": "74d8d95bd0912fe8c35477a742c0c40129407f56fefcb2cc1fe08d8939f51e87"
     },
     "assets/portraits/sunflower-angel-v1.png": {
       "bytes": 2446395,
@@ -2554,8 +2554,8 @@
       "hash": "a7289a15623f2b1472436625dc6b0e5439d03ba29185b5feea0ce85018642395"
     },
     "assets/portraits/tomb-beetle.svg": {
-      "bytes": 6699,
-      "hash": "c16c65ef9e5d4a6c83e50b7fc6c6ad8734dfe527f43799388f18292e3628b26f"
+      "bytes": 6696,
+      "hash": "ff662d31018ae271f5f3d1788ea2d4668a65121584770bca2c95541462b1bc27"
     },
     "assets/portraits/tomb-warden.svg": {
       "bytes": 4763,
@@ -2563,7 +2563,7 @@
     },
     "assets/portraits/trail-arbalist.svg": {
       "bytes": 15971,
-      "hash": "2248daf600677b3d992102f6242d61a1e984a1e27b1f490b32faeeff4e7aa20e"
+      "hash": "468f1f93ab6819ce1bbeacb1156ddf9e87e4baad4c995d7f68952d60d268988c"
     },
     "assets/portraits/twisted-sapling.svg": {
       "bytes": 51390,
@@ -2582,12 +2582,12 @@
       "hash": "b085f964cfbd9ec2abe5166911362406b359608c332715f290e04e03964872b5"
     },
     "assets/portraits/veil-mender.svg": {
-      "bytes": 20450,
-      "hash": "6489b3ee92ae98cafbf330752738950ecf0897a0f31a9cb22f5f37840406843e"
+      "bytes": 20447,
+      "hash": "79766197180f1b1f1026cee59707e8d6054e6cf5ec91d94c2eeb4f610a322178"
     },
     "assets/portraits/viper-shadow.svg": {
-      "bytes": 5232,
-      "hash": "06ecb0eac099c1bc78bfae64b98e0c9d37e3c02d18c62d591f343c323f11510e"
+      "bytes": 5229,
+      "hash": "f99c6946b79080fe045fdc1d9c65166729d987449b563d27a10c0458dde40105"
     },
     "assets/portraits/void-parasite.svg": {
       "bytes": 7697,
@@ -2606,8 +2606,8 @@
       "hash": "fd9485cacffde3a77f3bf0d7b5d1bd74731fbb424f861173136f0716e67be2ba"
     },
     "assets/preview-black-market.glb": {
-      "bytes": 859704,
-      "hash": "6dc3a8aca228cc4d6920ab050eb1589efd877c8d8f6152d4a46999a4bfbd743a"
+      "bytes": 1410600,
+      "hash": "b00fd6fc7ec9070f20ae7d72b0f90f0cd86e6ed8de8af1f37658502f1815187a"
     },
     "assets/preview-castle.glb": {
       "bytes": 2715272,
@@ -2798,8 +2798,8 @@
       "hash": "705c0fad50b57dde137b504b1e5c63dbea7bf2e87348ac32bb5116046af9b43c"
     },
     "assets/tavern-machines.glb": {
-      "bytes": 438336,
-      "hash": "61f6537a3780cf742726e210b0dcabc305495ea5684bbc09d07350242a529673"
+      "bytes": 271488,
+      "hash": "37edac5792619ba4be77d1788cb63081958d3b527ed2c6c4b5c443ef649174ec"
     },
     "assets/tavern-visitors/edith-full-v1.png": {
       "bytes": 2008524,

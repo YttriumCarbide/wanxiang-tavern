@@ -53,7 +53,9 @@ export async function createIllustratedStreet(
   background.position.z = -4;
   background.name = 'Illustrated_Connected_Background';
   root.add(background);
-  const characters = await createIllustratedPeople(scene, resources, definition, loading, aspect);
+  const characters = source.pureBackdrop
+    ? []
+    : await createIllustratedPeople(scene, resources, definition, loading, aspect);
   for (const polygon of source.foreground) {
     const shape = new THREE.Shape();
     polygon.forEach(([x, y], index) => {
@@ -79,6 +81,8 @@ export async function createIllustratedStreet(
   let centerY = null;
   let panX = 0;
   let panY = 0;
+  let hoverX = 0;
+  let hoverY = 0;
   let lastTime = 0;
   let moving = false;
   let arrivalPending = Boolean(arrivalSide);
@@ -111,9 +115,16 @@ export async function createIllustratedStreet(
   }
   function destination() {
     const { limitX, bottom, top, baseY } = limits();
+    const rangeY = Math.max(0, Math.min(top - baseY, baseY - bottom));
+    const hx = source.fixed
+      ? hoverX * limitX * 0.88
+      : hoverX * Math.min(limitX * 0.25, width * 0.075);
+    const hy = source.fixed
+      ? -hoverY * Math.max(0, (top - bottom) / 2) * 0.88
+      : -hoverY * Math.min(rangeY * 0.5, height * 0.035);
     return {
-      x: THREE.MathUtils.clamp(panX, -limitX, limitX),
-      y: THREE.MathUtils.clamp(baseY + panY, bottom, top),
+      x: THREE.MathUtils.clamp(panX + hx, -limitX, limitX),
+      y: THREE.MathUtils.clamp(baseY + panY + hy, bottom, top),
     };
   }
   function project(camera) {
@@ -191,7 +202,12 @@ export async function createIllustratedStreet(
       moving = true;
     },
     reset() {
-      panX = panY = 0;
+      panX = panY = hoverX = hoverY = 0;
+      moving = true;
+    },
+    hover(nx, ny) {
+      hoverX = THREE.MathUtils.clamp(nx, -1, 1);
+      hoverY = THREE.MathUtils.clamp(ny, -1, 1);
       moving = true;
     },
     drag(dx, dy) {

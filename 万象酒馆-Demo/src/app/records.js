@@ -8,8 +8,10 @@ import { SILVER_CROWN_SYNDICATE_ARCHIVE_DEFINITIONS } from '../content/silver-cr
 import {
   ENEMY_ARCHIVE_TIERS,
   buildEnemyArchiveEntries,
+  buildEnemyArchiveExport,
   filterEnemyArchiveBuckets,
 } from '../archive-enemies.js';
+import { ENEMY_ARCHIVE_CATEGORIES } from '../enemy-taxonomy.js';
 import { createArchiveModelStage } from './archive-model-stage.js';
 import { TAVERN_MANUAL_SECTIONS } from './bookshelf.js';
 import { query as $ } from './dom.js';
@@ -18,6 +20,7 @@ import { enemyIntentText } from '../enemy-intent-text.js';
 import { dungeonMemoryText, restoredSummary } from '../memory.js';
 import { ADVENTURE_NODE_LABELS } from '../adventure/definition.js';
 import { escapeText } from '../ui.js';
+import { exportJsonFile } from '../storage/export-file.js';
 
 const SKYRIM_DIVIDER_SVG =
   '<svg class="skyrim-divider-svg" viewBox="0 0 360 22" aria-hidden="true"><path d="M12 11H158M202 11H348" stroke="currentColor" stroke-width="1" stroke-opacity=".55"/><path d="M180 2L192 11L180 20L168 11Z" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M180 6L185 11L180 16L175 11Z" fill="currentColor" fill-opacity=".8"/><circle cx="158" cy="11" r="2" fill="currentColor"/><circle cx="202" cy="11" r="2" fill="currentColor"/></svg>';
@@ -34,6 +37,7 @@ export function createRecords(context) {
   let editingRecord = false;
   let tab = 'npcs';
   let enemyTier = 'minion';
+  let enemyCategory = 'all';
   let archiveEditing = false;
   let selectedIndex = 0;
 
@@ -62,7 +66,12 @@ export function createRecords(context) {
     `<div class="archive-index-col">` +
     `<div class="archive-codex-progress" hidden></div>` +
     `<nav class="archive-enemy-tiers" aria-label="敌人阶级" hidden></nav>` +
+    `<nav class="archive-enemy-categories" aria-label="敌人类别" hidden></nav>` +
     `<nav id="archive-list"></nav>` +
+    `<div class="archive-enemy-export" hidden>` +
+    `<button type="button" id="archive-enemy-export" title="导出六类已解锁敌人，不受当前筛选限制">导出图鉴 JSON</button>` +
+    `<p role="status"></p>` +
+    `</div>` +
     `<nav id="records-list" hidden></nav>` +
     `<nav id="memory-index" hidden></nav>` +
     `<nav class="memory-pages" aria-label="摘要预览分页" hidden>` +
@@ -94,6 +103,9 @@ export function createRecords(context) {
   document.body.append(archive);
 
   const modelStage = createArchiveModelStage();
+  const enemyExport = archive.querySelector('.archive-enemy-export');
+  const enemyExportButton = enemyExport.querySelector('button');
+  const enemyExportStatus = enemyExport.querySelector('[role="status"]');
 
   function field(label, value, multiline = false) {
     const wrapper = document.createElement('label');
@@ -181,6 +193,7 @@ export function createRecords(context) {
     archiveArticle.hidden = isRecords || isMemory;
     recordsArticle.hidden = !isRecords;
     memoryPane.hidden = !isMemory;
+    enemyExport.hidden = tab !== 'enemies';
   }
 
   function buildIntentSection(titleText, moves) {
@@ -253,6 +266,8 @@ export function createRecords(context) {
       header.append(
         buildBadgeRow([
           tierInfo?.badge || '灾厄霸主',
+          ENEMY_ARCHIVE_CATEGORIES.find(({ id }) => id === item.category)?.label || '其他',
+          item.baseSpecies,
           item.isComposite ? '三位一体 · 同台建模' : '高精度非体素雕塑',
           item.sources,
         ]),
@@ -317,7 +332,14 @@ export function createRecords(context) {
     const entry = item.entry;
     const header = document.createElement('div');
     header.className = 'skyrim-folio-head';
-    header.append(buildBadgeRow([tierInfo?.badge || '敌人情报', item.sources]));
+    header.append(
+      buildBadgeRow([
+        tierInfo?.badge || '敌人情报',
+        ENEMY_ARCHIVE_CATEGORIES.find(({ id }) => id === item.category)?.label || '其他',
+        item.baseSpecies,
+        item.sources,
+      ]),
+    );
     const heading = document.createElement('h3');
     heading.className = 'skyrim-folio-title';
     heading.textContent = entry.name;
@@ -356,8 +378,10 @@ export function createRecords(context) {
 
   function renderManual(index = 0) {
     const tierBar = archive.querySelector('.archive-enemy-tiers');
+    const categoryBar = archive.querySelector('.archive-enemy-categories');
     const progressBar = archive.querySelector('.archive-codex-progress');
     tierBar.hidden = true;
+    categoryBar.hidden = true;
     progressBar.hidden = false;
     progressBar.innerHTML = `<span class="archive-codex-label">酒馆手册 · 机制百科</span><strong class="archive-codex-count">${TAVERN_MANUAL_SECTIONS.length} 卷</strong>`;
     archive.classList.remove('is-empty');
@@ -493,8 +517,10 @@ export function createRecords(context) {
     renderRecordsList();
 
     const tierBar = archive.querySelector('.archive-enemy-tiers');
+    const categoryBar = archive.querySelector('.archive-enemy-categories');
     const progressBar = archive.querySelector('.archive-codex-progress');
     tierBar.hidden = true;
+    categoryBar.hidden = true;
     progressBar.hidden = !history.length;
     progressBar.innerHTML = `<span class="archive-codex-label">旅途记录 · 篇章</span><strong class="archive-codex-count">${history.length} 篇</strong>`;
 
@@ -669,6 +695,46 @@ export function createRecords(context) {
     selectRecord(Math.min(selectedRecord, library().history.length - 1));
   }
 
+  function enemyArchiveState() {
+    const { worlds, seenMonsters } = library();
+    return {
+      buckets: buildEnemyArchiveEntries(
+        {
+          ...DEFINITIONS,
+          ...ARENA_ARCHIVE_DEFINITIONS,
+          ...ARENA_QUALIFIER_ARCHIVE_DEFINITIONS,
+          ...SILVER_CROWN_SYNDICATE_ARCHIVE_DEFINITIONS,
+        },
+        worlds,
+      ),
+      access: {
+        seenMonsters,
+        unlockAll: developerOption(context.session.ai.generationOptions, 'unlockAllCodex'),
+      },
+    };
+  }
+
+  async function exportEnemyArchive() {
+    if (!archive.open || tab !== 'enemies' || enemyExportButton.hasAttribute('aria-disabled'))
+      return;
+    enemyExportButton.setAttribute('aria-disabled', 'true');
+    enemyExportStatus.textContent = '正在导出…';
+    try {
+      const { buckets, access } = enemyArchiveState();
+      const data = buildEnemyArchiveExport(buckets, access);
+      const { method } = await exportJsonFile(
+        JSON.stringify(data, null, 2),
+        'wanxiang-enemy-codex.json',
+      );
+      enemyExportStatus.textContent = method === 'native' ? '图鉴已导出' : '已开始下载';
+    } catch (failure) {
+      enemyExportStatus.textContent =
+        failure.code === 'cancelled' ? '已取消导出' : `导出失败：${failure.message}`;
+    } finally {
+      enemyExportButton.removeAttribute('aria-disabled');
+    }
+  }
+
   function renderArchive(index = 0) {
     modelStage.unmount();
     syncModePanes();
@@ -684,7 +750,9 @@ export function createRecords(context) {
 
     if (tab === 'memory') {
       const tierBar = archive.querySelector('.archive-enemy-tiers');
+      const categoryBar = archive.querySelector('.archive-enemy-categories');
       tierBar.hidden = true;
+      categoryBar.hidden = true;
       archive.classList.remove('is-empty');
       void context.memory?.syncPanel?.();
       return;
@@ -696,26 +764,14 @@ export function createRecords(context) {
     }
 
     const tierBar = archive.querySelector('.archive-enemy-tiers');
+    const categoryBar = archive.querySelector('.archive-enemy-categories');
     const progressBar = archive.querySelector('.archive-codex-progress');
 
     if (tab === 'enemies') {
-      const unlockAll = developerOption(context.session.ai.generationOptions, 'unlockAllCodex');
-      const rawBuckets = buildEnemyArchiveEntries(
-        {
-          ...DEFINITIONS,
-          ...ARENA_ARCHIVE_DEFINITIONS,
-          ...ARENA_QUALIFIER_ARCHIVE_DEFINITIONS,
-          ...SILVER_CROWN_SYNDICATE_ARCHIVE_DEFINITIONS,
-        },
-        library().worlds || [],
-      );
-      const { visibleBuckets, totalCount, unlockedCount, tierStats } = filterEnemyArchiveBuckets(
-        rawBuckets,
-        {
-          seenMonsters: library().seenMonsters,
-          unlockAll,
-        },
-      );
+      const { buckets, access } = enemyArchiveState();
+      const { unlockAll } = access;
+      const { visibleBuckets, totalCount, unlockedCount, tierStats, categoryStats } =
+        filterEnemyArchiveBuckets(buckets, { ...access, category: enemyCategory });
       const listEntries = visibleBuckets[enemyTier] || [];
       const activeIndex = listEntries.length
         ? Math.max(0, Math.min(index, listEntries.length - 1))
@@ -729,6 +785,20 @@ export function createRecords(context) {
         ({ id, label }) =>
           `<button type="button" data-enemy-tier="${id}" aria-pressed="${String(id === enemyTier)}">${escapeText(label)}<span>${tierStats[id].unlocked}/${tierStats[id].total}</span></button>`,
       ).join('');
+      categoryBar.hidden = false;
+      categoryBar.innerHTML = [
+        { id: 'all', label: '全部', stats: categoryStats.all },
+        ...ENEMY_ARCHIVE_CATEGORIES.map(({ id, label }) => ({
+          id,
+          label,
+          stats: categoryStats[id],
+        })),
+      ]
+        .map(
+          ({ id, label, stats }) =>
+            `<button type="button" data-enemy-category="${id}" aria-pressed="${String(id === enemyCategory)}">${escapeText(label)}<span>${stats.unlocked}/${stats.total}</span></button>`,
+        )
+        .join('');
       $('#archive-list').replaceChildren(
         ...listEntries.map((item, itemIndex) =>
           buildListItemButton({
@@ -736,9 +806,12 @@ export function createRecords(context) {
             titleText: item.name,
             metaText: item.isComposite
               ? '三位一体 · 3 部位'
-              : item.entry.speed
-                ? `生命 ${item.entry.hp} · 速 ${item.entry.speed}`
-                : '行动情报待补充',
+              : [
+                  ENEMY_ARCHIVE_CATEGORIES.find(({ id }) => id === item.category)?.label || '其他',
+                  item.baseSpecies,
+                ]
+                  .filter(Boolean)
+                  .join(' · '),
             dataset: { archiveIndex: itemIndex },
           }),
         ),
@@ -749,8 +822,8 @@ export function createRecords(context) {
       if (!selectedItem) {
         emptyState(
           area,
-          '尚未解锁此阶级魔物',
-          `当前已解锁 ${unlockedCount} / ${totalCount} 种魔物，遭遇新敌人后将自动收录于此。`,
+          '当前筛选下暂无已解锁魔物',
+          `当前已解锁 ${unlockedCount} / ${totalCount} 种魔物；遭遇符合筛选条件的新敌人后将自动收录于此。`,
         );
         return;
       }
@@ -761,6 +834,7 @@ export function createRecords(context) {
 
     progressBar.hidden = true;
     tierBar.hidden = true;
+    categoryBar.hidden = true;
     const entries =
       tab === 'items' ? mergedArchiveItems(library().archives.items) : library().archives[tab];
     const activeIndex = entries.length ? Math.max(0, Math.min(index, entries.length - 1)) : -1;
@@ -901,11 +975,15 @@ export function createRecords(context) {
   const recordsBtn = $('#records-open');
   if (recordsBtn) context.events.on(recordsBtn, 'click', () => openTab('records'));
 
+  context.events.on(enemyExportButton, 'click', () => void exportEnemyArchive());
   context.events.on($('#archive-close'), 'click', () => {
     modelStage.unmount();
     archive.close();
   });
-  context.events.on(archive, 'close', () => modelStage.unmount());
+  context.events.on(archive, 'close', () => {
+    // A queued close event can arrive after a rapid reopen has mounted a new model.
+    if (!archive.open) modelStage.unmount();
+  });
   context.events.on(archive, 'click', (event) => {
     if (event.target.closest('#records-edit')) return startEditingRecord();
     if (event.target.closest('#records-delete')) return deleteSelectedRecord();
@@ -915,6 +993,7 @@ export function createRecords(context) {
     if (recBtn) return selectRecord(Number(recBtn.dataset.record));
     const type = event.target.closest('[data-archive-tab]');
     const tierButton = event.target.closest('[data-enemy-tier]');
+    const categoryButton = event.target.closest('[data-enemy-category]');
     const item = event.target.closest('[data-archive-index]');
     if (type) {
       tab = type.dataset.archiveTab;
@@ -922,6 +1001,9 @@ export function createRecords(context) {
       renderArchive(0);
     } else if (tierButton) {
       enemyTier = tierButton.dataset.enemyTier;
+      renderArchive(0);
+    } else if (categoryButton) {
+      enemyCategory = categoryButton.dataset.enemyCategory;
       renderArchive(0);
     } else if (item) {
       renderArchive(Number(item.dataset.archiveIndex));

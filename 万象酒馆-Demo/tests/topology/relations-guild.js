@@ -1,6 +1,5 @@
-import { GUILD_RANKS, GUILD_BOUNTIES, GUILD_SUPPLIES, GUILD_TRIALS } from '../../src/guild.js';
+import { GUILD_RANKS, GUILD_BOUNTIES, GUILD_TRIALS } from '../../src/guild.js';
 import { ENEMIES, BOSSES } from '../../src/data.js';
-import { ITEMS } from '../../src/content/items.js';
 import { REGIONS } from '../../src/content/regions.js';
 import { IMPERIAL_DUNGEONS } from '../../src/content/imperial-network.js';
 
@@ -35,17 +34,14 @@ export function auditGuildData(overrides = {}) {
   const {
     GUILD_RANKS: ranks = GUILD_RANKS,
     GUILD_BOUNTIES: bounties = GUILD_BOUNTIES,
-    GUILD_SUPPLIES: supplies = GUILD_SUPPLIES,
     GUILD_TRIALS: trials = GUILD_TRIALS,
     ENEMIES: enemies = ENEMIES,
     BOSSES: bosses = BOSSES,
-    ITEMS: items = ITEMS,
     REGIONS: regions = REGIONS,
     IMPERIAL_DUNGEONS: imperialDungeons = IMPERIAL_DUNGEONS,
   } = overrides;
 
   const issues = [];
-  const itemIds = new Set(catalogKeys(items));
   const enemyIds = new Set([...catalogKeys(enemies), ...catalogKeys(bosses)]);
   const mapIds = new Set(catalogKeys(regions));
   if (Array.isArray(imperialDungeons)) {
@@ -189,20 +185,6 @@ export function auditGuildData(overrides = {}) {
     auditRewards(row, ['gold', 'ether', 'merit'], location);
   });
 
-  auditRows(supplies, 'GUILD_SUPPLIES', 'id', (row, location) => {
-    if (row.kind === 'item') {
-      auditReference(row.itemId, itemIds, 'item', `${location}.itemId`);
-    } else if (row.kind !== 'ether') {
-      report('invalid-kind', `${location}.kind`, 'kind must be item or ether.');
-    }
-    if (!Number.isSafeInteger(row.qty) || row.qty <= 0) {
-      report('invalid-quantity', `${location}.qty`, 'qty must be a positive safe integer.');
-    }
-    if (!Number.isSafeInteger(row.price) || row.price < 0) {
-      report('invalid-number', `${location}.price`, 'price must be a nonnegative safe integer.');
-    }
-  });
-
   auditRows(trials, 'GUILD_TRIALS', 'id', (row, location) => {
     const fieldLocation = `${location}.enemyIds`;
     if (!Array.isArray(row.enemyIds) || row.enemyIds.length === 0) {
@@ -222,7 +204,6 @@ export function auditGuildData(overrides = {}) {
     stats: {
       rankCount: Array.isArray(ranks) ? ranks.length : 0,
       bountyCount: Array.isArray(bounties) ? bounties.length : 0,
-      supplyCount: Array.isArray(supplies) ? supplies.length : 0,
       trialCount: Array.isArray(trials) ? trials.length : 0,
       issueCount: issues.length,
     },

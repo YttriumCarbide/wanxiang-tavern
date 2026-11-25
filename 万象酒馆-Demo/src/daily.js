@@ -204,6 +204,8 @@ export function restoreDaily(raw) {
     serviceGrowth: restoreServiceGrowth(raw?.serviceGrowth),
     unlocks: structuredClone(raw?.unlocks || {}),
   };
+  if (state.memory.tavernExit === 'street' || state.memory.tavernExit === 'starlamp-street')
+    state.memory.tavernExit = 'city-center';
   if (typeof raw?.report === 'string') {
     state.report = raw.report.slice(0, 600);
     const details = raw.reportDetails;
@@ -227,6 +229,8 @@ export function restoreDaily(raw) {
     const entry = structuredClone(raw.active);
     if (entry.preview) return state;
     if (entry.kind === 'outing') {
+      if (entry.scene === 'street' || entry.scene === 'starlamp-street')
+        entry.scene = 'city-center';
       entry.turns = Number.isSafeInteger(entry.turns) ? Math.max(0, entry.turns) : 0;
     }
     entry.ap = DAILY_ACTIONS[entry.kind].ap;

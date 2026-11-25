@@ -94,9 +94,7 @@ export async function buildStatic() {
   const publicBuild = process.env.WANXIANG_ENABLE_GOATCOUNTER === 'true';
   await writeFile(
     indexFile,
-    publicBuild
-      ? releasePage.replace('  </head>', `${goatCounterScript}\n  </head>`)
-      : releasePage,
+    publicBuild ? releasePage.replace('  </head>', `${goatCounterScript}\n  </head>`) : releasePage,
   );
   await writeFile(path.join(destination, '.nojekyll'), '');
   const files = [];

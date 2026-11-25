@@ -4,16 +4,119 @@ import { mkdtemp } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import path from 'node:path';
 import { CHAT_PLACES, tavernActivities, mergeFutureScript, scriptProse } from '../src/chat.js';
-import { normalizeScript } from '../src/ai/contracts.js';
-import { combatTestScript } from '../src/content/generation-mode.js';
-import { newLibrary, restoreLibrary } from '../src/ai/library.js';
+import { normalizeScript, settingOnly } from '../src/ai/contracts.js';
+import { normalizeQuestLead, restoreTavernQuests } from '../src/tavern-quests.js';
+import { adventureTestScript, combatTestScript } from '../src/content/generation-mode.js';
+import { newLibrary, officialCharacter, restoreLibrary } from '../src/ai/library.js';
 import { createAiApi } from '../server/ai-api.mjs';
 import { compatibleRequest } from '../server/compatible.mjs';
+import { chatResponse } from '../src/ai/pipeline/chat-response.js';
+import { createAiPipeline } from '../src/ai/pipeline/runtime.js';
+import { invitationRequest, invitationResponse } from '../src/ai/pipeline/invitation-request.js';
 import { processPrompt } from '../server/prompt-processing.mjs';
 import { requestTokenReport } from '../server/request-tokens.mjs';
+import { normalizePromptPreset } from '../src/ai/presets.js';
 import { samplingFromPreset } from '../src/ai/sampling.js';
 import { presetHelperScripts } from '../src/ai/helper-scripts.js';
 import { restoreGenerationOptions } from '../src/generation-options.js';
+
+test('chat keeps legacy quest hooks, but only saved state can carry quest progress', async () => {
+  const fixture = adventureTestScript();
+  const fields = {
+    title: fixture.data.adventure.quest.title,
+    description: fixture.data.adventure.quest.description,
+    type: 'social',
+    level: 3,
+  };
+  const legacy = { ...fields, hook: fields.description };
+  const reply = await chatResponse(
+    'chat',
+    `<wanxiang_output>${fixture.story[0]}</wanxiang_output>` +
+      `<wanxiang_quest>${JSON.stringify({
+        ...legacy,
+        status: 'completed',
+        objectives: [{ current: 1, target: 1 }],
+        rewards: { gold: 100 },
+      })}</wanxiang_quest>`,
+    { place: 'bar', questOffer: true },
+  );
+  assert.deepEqual(reply.quest, legacy);
+
+  const savedLegacy = {
+    ...legacy,
+    id: 'legacy-lead',
+    status: 'completed',
+    hook: `  ${legacy.hook}\n`,
+  };
+  const savedWithoutHook = { ...fields, id: 'journal-only', status: 'offered' };
+  assert.deepEqual(restoreTavernQuests([savedLegacy, savedWithoutHook]), [
+    savedLegacy,
+    { ...savedWithoutHook, hook: '' },
+  ]);
+});
+
+test('the chat quest appendix accepts journal lead types but cannot create guild bounties', async () => {
+  const fixture = adventureTestScript();
+  const { title, description } = fixture.data.adventure.quest;
+  const dialogue = `<wanxiang_output>${fixture.story[0]}</wanxiang_output>`;
+  for (const type of ['social', 'character', 'battle', 'bounty', ['social']]) {
+    const lead = { title, description, type, level: 3 };
+    const footer = `<wanxiang_quest>${JSON.stringify(lead)}</wanxiang_quest>`;
+    const reply = await chatResponse('chat', dialogue + footer, { place: 'bar', questOffer: true });
+    assert.deepEqual(
+      reply.quest,
+      typeof type === 'string' && type !== 'bounty' ? { ...lead, hook: '' } : undefined,
+    );
+    assert.equal(reply.content, fixture.story[0]);
+  }
+});
+
+test('the live pipeline preserves ensemble and optional quest guidance without a worldbook', async () => {
+  const party = ['edith', 'pandora', 'lumi', 'aegis'].map((id) =>
+    settingOnly(officialCharacter(id)),
+  );
+  const { title, description } = adventureTestScript().data.adventure.quest;
+  const pipeline = createAiPipeline({
+    settings: { get: () => ({ contextSize: 400000, promptProcessing: 'none' }) },
+    worlds: { resolve: async () => ({ books: [], settings: {} }) },
+    helperStorage: { get: () => ({}) },
+    countTokens: (text) => text.length,
+  });
+  const preset = normalizePromptPreset({
+    prompts: [{ identifier: 'taskContext', marker: true }],
+  }).preset;
+  const socialQuest = { hook: description };
+  const script = await pipeline.buildRequest(
+    'script',
+    { brief: title, socialQuest, party },
+    preset,
+  );
+  assert.equal(script.transport.format, 'tagged-json');
+  assert.deepEqual(script.messages.at(-1), { role: 'user', content: JSON.stringify(socialQuest) });
+  const focus = script.messages.filter(({ content }) =>
+    content.includes('【多人队伍聚焦与反端水】'),
+  );
+  assert.equal(focus.length, 1);
+  assert.equal(focus[0].role, 'system');
+  assert.match(focus[0].content, /每个 story\[i\] 是一幕/);
+  const roster = party.map(({ id, name }) => ({ id, name }));
+  assert(focus[0].content.includes(`可用人物ID与姓名：${JSON.stringify(roster)}。`));
+
+  const quick = await pipeline.buildRequest(
+    'quick-chat',
+    {
+      place: 'bar',
+      text: title,
+      characters: party,
+      selected: party.map(({ id }) => id),
+      questOffer: true,
+    },
+    preset,
+  );
+  const quickPrompt = quick.messages.map(({ content }) => content).join('\n');
+  assert.match(quickPrompt, /除本轮明确启用的附录外，不返回JSON/);
+  assert.match(quickPrompt, /【任务日志线索】这是一份独立的可选日志附录/);
+});
 
 test('normal play always generates; the combined developer switch migrates both old options', () => {
   const defaults = {
@@ -208,6 +311,118 @@ test('upstream streaming decodes split UTF-8, usage, sampling and length failure
   assert.equal(payload.reasoning_effort, 'high');
 });
 
+test('city chat separates one valid opening environment block and preserves dialogue and actions', async () => {
+  const edith = settingOnly(officialCharacter('edith'));
+  const input = { place: 'city-square', characters: [edith] };
+  const prose = `【对白:${edith.id}|nod】A。`;
+  const output = (body) => `<wanxiang_output>${body}</wanxiang_output>`;
+  const lead = '【环境】环境测试。\n第二行。【环境结束】';
+  const actions = { affection: [{ id: edith.id, delta: 1 }], agreeToAdventure: [] };
+  assert.deepEqual(
+    await chatResponse(
+      'chat',
+      `${output(`${lead}\n${prose}`)}<wanxiang_actions>${JSON.stringify(actions)}</wanxiang_actions>`,
+      input,
+    ),
+    {
+      content: prose,
+      actions,
+      environment: {
+        placeId: 'city-center',
+        title: CHAT_PLACES['city-square'].name,
+        text: '环境测试。\n第二行。',
+      },
+    },
+  );
+  const unclosed = '【环境】环境测试。';
+  const oversized = '测'.repeat(801);
+  for (const [kind, place, body, expectedText] of [
+    ['chat', 'city-square', prose, prose],
+    ['chat', 'city-square', unclosed + prose, '环境测试。' + prose],
+    ['chat', 'city-square', `【环境】${oversized}【环境结束】${prose}`, oversized + prose],
+    ['chat', 'city-square', prose + lead, prose + '环境测试。\n第二行。'],
+    ['chat', 'bar', lead + prose, '环境测试。\n第二行。' + prose],
+    ['quick-chat', 'city-square', lead + prose, '环境测试。\n第二行。' + prose],
+  ]) {
+    const result = await chatResponse(kind, output(body), { ...input, place });
+    assert.equal(result.environment, undefined);
+    assert.equal(result.content, expectedText);
+  }
+});
+test('city appointment prompts and response normalization stay inside the current venue snapshot', () => {
+  const member = officialCharacter('edith');
+  const allowedScenes = { 'city-center': 'P', market: 'M' };
+  const invitation = {
+    activity: 'walk',
+    member: member.id,
+    topic: 'A',
+    city: 'starbell',
+    startScene: 'city-center',
+    allowedScenes,
+    stageCount: 3,
+  };
+  const profile = { tokenField: 'none', contextSize: 32000, promptProcessing: 'none' };
+  const preset = normalizePromptPreset({ prompts: [{ content: 'P' }] }).preset;
+  const request = invitationRequest(
+    { invitation, party: [{ id: member.id, name: member.setting.name }] },
+    preset,
+    profile,
+    (value) => value.length,
+  );
+  const boundaryPrompt = request.messages.find((message) =>
+    message.content.includes('城内约见地点边界'),
+  );
+  assert(boundaryPrompt);
+  assert(
+    boundaryPrompt.content.includes(
+      JSON.stringify({ city: 'starbell', startScene: 'city-center', allowedScenes }),
+    ),
+  );
+  assert(!boundaryPrompt.content.includes('road-bridge'));
+  assert.match(
+    boundaryPrompt.content,
+    /每幕 stages\[\]\.intro 和 finale\.intro 均必须以“【环境】\.\.\.【环境结束】”开头/,
+  );
+  const makeScene = (scene, name) => ({
+    title: name,
+    scene,
+    intro: '【环境】A。【环境结束】' + String.fromCharCode(10) + '【对白:official-edith|hop】A。',
+    tasks: ['A'],
+    choices: ['A', 'B'],
+  });
+  const rawPlan = {
+    title: '支援断章｜T',
+    premise: 'A',
+    stages: [makeScene('city-center', 'S1'), makeScene('market', 'S2'), makeScene('market', 'S3')],
+    finale: makeScene('market', 'F'),
+  };
+  const tagged = (plan) => `<wanxiang_output>${JSON.stringify(plan)}</wanxiang_output>`;
+  const result = invitationResponse(tagged(rawPlan), invitation);
+  assert.equal(result.stages[0].scene, invitation.startScene);
+  assert.equal(result.stages[0].environment, 'A。');
+  assert.equal(result.stages[0].intro, '【对白:official-edith|hop】A。');
+  const missingLead = {
+    ...rawPlan,
+    stages: [
+      { ...makeScene('city-center', 'S1'), intro: '【对白:official-edith】我们走进广场。' },
+      ...rawPlan.stages.slice(1),
+    ],
+  };
+  assert.throws(() => invitationResponse(tagged(missingLead), invitation), /缺少环境描写/);
+  for (const invalid of [
+    { ...rawPlan, stages: [makeScene('road-bridge', 'S1'), ...rawPlan.stages.slice(1)] },
+    { ...rawPlan, stages: [makeScene('market', 'S1'), ...rawPlan.stages.slice(1)] },
+  ])
+    assert.throws(() => invitationResponse(tagged(invalid), invitation), /地点/);
+  assert.throws(
+    () => invitationResponse(tagged(rawPlan), { ...invitation, allowedScenes: { market: 'M' } }),
+    /开场地点/,
+  );
+  assert.throws(
+    () => invitationResponse(tagged(rawPlan), { ...invitation, city: 'unknown' }),
+    /城市/,
+  );
+});
 test('chat API assembles world, green-light mentions, prose-only history and exact final TK without touching game data', async () => {
   const directory = await mkdtemp(path.join(process.cwd(), '.runtime/tests/chat-unit-'));
   const requests = [];
@@ -243,7 +458,7 @@ test('chat API assembles world, green-light mentions, prose-only history and exa
   });
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   const base = `http://127.0.0.1:${server.address().port}`;
-  async function post(route, body) {
+  async function post(route, body, expectedStatus = 200) {
     const response = await fetch(base + '/api/ai/' + route, {
       signal: AbortSignal.timeout(10000),
       method: 'POST',
@@ -251,7 +466,7 @@ test('chat API assembles world, green-light mentions, prose-only history and exa
       body: JSON.stringify(body),
     });
     const result = await response.json();
-    assert.equal(response.status, 200, result.error);
+    assert.equal(response.status, expectedStatus, result.error);
     return result;
   }
   try {
@@ -372,10 +587,118 @@ test('chat API assembles world, green-light mentions, prose-only history and exa
     assert.equal(events.at(-1).result.content, '你好，来客。');
     assert.deepEqual(events.at(-1).result.actions.affection, [{ id: 'a', delta: 1 }]);
     responseOverride = null;
+    // The 4096-TK override only belongs to the history-trimming case above.
+    await post('prompts/save', { id: saved.preset.id, preset: saved.preset });
+    const edith = settingOnly(officialCharacter('edith'));
+    const cityInput = {
+      text: '测试输入',
+      place: 'city-square',
+      timeOfDay: 'night',
+      selected: [edith.id],
+      characters: [edith],
+    };
+    for (const presetId of ['chat-default', saved.preset.id]) {
+      await post('prompts/select', { kind: 'chat', id: presetId });
+      const cityPreview = await post('prompts/preview', { kind: 'chat', input: cityInput });
+      const cityRule = cityPreview.messages.filter((message) =>
+        message.content.includes('【城内交流环境开头】'),
+      );
+      assert.equal(cityRule.length, 1);
+      const { content } = cityRule[0];
+      assert(content.includes('星钟广场（夜晚）'));
+      assert(content.includes('紧接开标签必须先写一组 【环境】纯文本环境描写【环境结束】'));
+      assert(content.includes('不在标记内填写地点名、ID 或其他参数'));
+      assert(content.includes('闭合环境块后另起一行接本轮 Gal 对白或旁白'));
+      const tavernPreview = await post('prompts/preview', {
+        kind: 'chat',
+        input: { ...cityInput, place: 'table' },
+      });
+      assert(
+        !tavernPreview.messages.some((message) => message.content.includes('【城内交流环境开头】')),
+      );
+    }
+    const quickPreview = await post('prompts/preview', { kind: 'quick-chat', input: cityInput });
+    assert(
+      !quickPreview.messages.some((message) => message.content.includes('【城内交流环境开头】')),
+    );
+    const invalidPreview = await post(
+      'prompts/preview',
+      { kind: 'chat', input: { ...cityInput, place: 'unknown-city-place' } },
+      400,
+    );
+    assert.equal(invalidPreview.error, '请先选择交流地点');
     await post('prompts/select', { kind: 'chat', id: 'chat-default' });
     const inactive = await post('generate/chat', input);
     assert.equal(inactive.display, undefined);
     assert.equal(inactive.content, '你好，来客。');
+    const questParty = [
+      edith,
+      settingOnly(officialCharacter('pandora')),
+      settingOnly(officialCharacter('lumi')),
+      settingOnly(officialCharacter('aegis')),
+    ];
+    const questFixture = adventureTestScript();
+    const questInput = {
+      text: questFixture.data.adventure.quest.description,
+      place: 'bar',
+      selected: questParty.map(({ id }) => id),
+      characters: questParty,
+      questOffer: true,
+    };
+    const callsBeforeQuestPreview = requests.length;
+    const questPreview = await post('prompts/preview', { kind: 'chat', input: questInput });
+    assert.equal(requests.length, callsBeforeQuestPreview, 'Preview never calls the provider');
+    const questPrompt = questPreview.messages.map(({ content }) => content).join('\n');
+    const example = questPrompt.match(/<wanxiang_quest>(\{[^}]+\})<\/wanxiang_quest>/u);
+    assert(example, 'Chat adds a quest footer in the actual output protocol');
+    assert.deepEqual(Object.keys(JSON.parse(example[1])), [
+      'title',
+      'description',
+      'type',
+      'level',
+    ]);
+    assert.match(questPrompt, /标题和简介可借鉴《上古卷轴》任务日志/);
+    assert.match(questPrompt, /任务目标、完成条件、进度、结算和奖励由游戏掌控/);
+    assert.match(questPrompt, /title 用凝练的委托标题，最多 50 个字符/);
+    assert.match(questPrompt, /description 用简短纪事.*最多 400 个字符/u);
+    assert.match(questPrompt, /文风仅供写作参考，不作为程序拒收条件/);
+    assert.equal(questPrompt.split('【多人队伍聚焦与反端水】').length - 1, 1);
+    const questPartyRoster = questParty.map(({ id, name }) => ({ id, name }));
+    assert(questPrompt.includes(`可用人物ID与姓名：${JSON.stringify(questPartyRoster)}。`));
+    assert.match(questPrompt, /人数、文风和对白节奏是写作指引，不是代码硬校验/);
+    assert.match(
+      questPrompt,
+      /单幕也只选最契合局势的 2～3 名同伴或现场 NPC 开口，同屏最多 2～3 人/,
+    );
+    assert.match(questPrompt, /非焦点队友不参与本幕对白，也不要在开场新登场/);
+    assert.match(questPrompt, /只用一句【旁白】交代外围分工，不加【登场:角色ID】/);
+    assert.match(questPrompt, /交代后用【退场:角色ID】切出/);
+    assert.match(questPrompt, /跨幕轮换焦点，让不同队友各有独立高光/);
+    assert.match(questPrompt, /围绕一件事深谈 3～5 个来回/);
+    assert.match(questPrompt, /同一角色连写 2～3 条/);
+
+    const fixtureDialogue = questFixture.story[0];
+    const lead = {
+      title: questFixture.data.adventure.quest.title,
+      description: questFixture.data.adventure.quest.description,
+      type: 'social',
+      level: 3,
+    };
+    responseOverride =
+      `<wanxiang_output>${fixtureDialogue}</wanxiang_output>` +
+      '<wanxiang_actions>{"affection":[],"agreeToAdventure":[]}</wanxiang_actions>' +
+      `<wanxiang_quest>${JSON.stringify(lead)}</wanxiang_quest>`;
+    const questReply = await post('generate/chat', questInput);
+    assert.deepEqual(questReply.request.messages, questPreview.messages);
+    const sentQuestPrompt = requests
+      .at(-1)
+      .messages.map(({ content }) => content)
+      .join('\n');
+    assert(sentQuestPrompt.includes(example[0]));
+    assert.equal(sentQuestPrompt.split('【多人队伍聚焦与反端水】').length - 1, 1);
+    assert.equal(questReply.content, fixtureDialogue);
+    assert.deepEqual(questReply.quest, { ...lead, hook: '' });
+    assert.deepEqual(normalizeQuestLead(questReply.quest), questReply.quest);
     assert(
       !JSON.stringify(await (await fetch(base + '/api/ai/config')).json()).includes(
         'PRIVATE_CHAT_KEY',

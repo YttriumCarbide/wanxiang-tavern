@@ -53,7 +53,7 @@
           </svg>
           <span class="corner-icon-label">设置</span>
         </button>
-        <button id="party-toggle">准备</button
+        <button id="party-toggle">整备</button
         ><button id="generation-review" data-generation-review="context" hidden>查看原始回复</button
         ><button class="hud-toggle" id="turn-toggle">回合</button
         ><button class="hud-toggle" id="details-toggle">角色</button
@@ -984,12 +984,12 @@
       <div id="inn-frame"></div>
       <dialog id="party-panel" aria-labelledby="prepare-title">
         <header class="prepare-heading">
-          <button id="prepare-close" aria-label="关闭准备"><span>×</span></button>
+          <button id="prepare-close" aria-label="关闭整备"><span>×</span></button>
         </header>
         <div class="prepare-body">
           <section class="prepare-formation-col">
             <div class="prepare-col-head">
-              <h2 id="prepare-title">战阵整备</h2>
+              <h2 id="prepare-title">整备</h2>
               <small id="prepare-deployed-count"></small>
             </div>
             <div class="prepare-enemy-dir" aria-hidden="true">▲ 敌方方向 ▲</div>
@@ -1012,7 +1012,7 @@
               </button>
               <button type="button" class="prepare-xbtn" data-prepare-buy>
                 <span class="prepare-xbtn-ico" aria-hidden="true">⚖</span>
-                <span><strong>虚空售货机</strong><small id="prepare-gold-amt"></small></span>
+                <span><strong>市场</strong><small id="prepare-gold-amt"></small></span>
               </button>
               <button id="prepare-done" class="primary">返回</button>
             </div>
@@ -1129,7 +1129,7 @@
       <div id="battle-bark-banner" class="battle-bark-banner" hidden aria-live="polite"></div>
       <div id="round-start" hidden aria-live="polite"><small></small><strong>回合开始</strong></div>
     </main>
-    <div id="emblem-screen" aria-hidden="true"></div>
+
     <div id="landscape-hint">↻ 请将手机横向使用</div>
     <div id="toast" role="status"></div>
     <dialog id="rules">
@@ -1237,7 +1237,9 @@
           <small>此刻相伴</small>
           <label class="chat-location-label"
             >所在位置<select id="chat-place-select" aria-label="所在位置"></select
+            ><span class="chat-location-value" hidden></span
           ></label>
+          <p id="chat-focus-guidance" class="chat-focus-guidance" hidden></p>
           <div id="chat-participants"></div>
           <p id="chat-scene"></p>
           <button id="chat-memory-open">总结记忆</button>

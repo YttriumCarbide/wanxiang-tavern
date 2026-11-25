@@ -359,12 +359,26 @@ export function createOnboarding(context) {
         context.shell.toast(
           generationEnabled(session.ai.generationOptions)
             ? '长景月汐已加入队伍，到圆桌坐下，邀请她一起出发。'
-            : '长景月汐已加入队伍，已跳过AI交流教学，去补给角买一件补给吧。',
+            : '长景月汐已加入队伍。请在药剂售货机购买药水。',
         );
       });
       return;
     }
-    const content = EDITH_LESSONS[step];
+    const content =
+      step === 'shop'
+        ? {
+            title: '药剂售货机',
+            lines: ['用金币购买一瓶药水。'],
+            action: '打开药剂售货机',
+            focus: '#tutorial-action',
+          }
+        : step === 'condenser'
+          ? {
+              ...EDITH_LESSONS.condenser,
+              title: '以太凝聚器',
+              lines: EDITH_LESSONS.condenser.lines.slice(1),
+            }
+          : EDITH_LESSONS[step];
     if (!content) return;
     guide.dataset.step = step;
     $('#tutorial-count').textContent = '伊蒂丝的小提醒';
@@ -412,6 +426,10 @@ export function createOnboarding(context) {
       return;
     }
     shown = step;
+    if (step === 'shop') {
+      readyForAction();
+      return;
+    }
     const lines =
       context.gal?.enabled && step === 'intent'
         ? [
@@ -617,12 +635,12 @@ export function createOnboarding(context) {
   events.on($('#tutorial-action'), 'click', () => {
     if (guide.dataset.step === 'ether') return advance('reward');
     if (guide.dataset.step === 'shop') {
-      $('#inn-frame iframe')?.contentWindow?.assetPreview?.moveTo('supplies');
+      context.shop.open({ vendingMachine: true });
       return;
     }
     if (guide.dataset.step === 'condenser') {
       $('#inn-frame iframe')?.contentWindow?.assetPreview?.moveTo('supplies');
-      context.shell.toast('点击售货机旁的以太凝聚器，认识凝聚与兑换页面。');
+      context.shell.toast('点击补给角的以太凝聚器，打开凝聚与兑换。');
       return;
     }
     if (['table', 'invite'].includes(guide.dataset.step)) {
@@ -724,9 +742,9 @@ export function createOnboarding(context) {
           ['table', 'invite'].includes(state().tutorial)
             ? '先到圆桌与长景月汐交流，完成至少一次交流，再一起出发。'
             : state().tutorial === 'condenser'
-              ? '先点开售货机旁的以太凝聚器，了解以太和装备的用途。'
+              ? '先点开补给角的以太凝聚器，了解以太和装备的用途。'
               : state().tutorial === 'shop'
-                ? '先前往酒馆补给角的虚空售货机，购买一件补给。'
+                ? '先在药剂售货机购买一瓶药水。'
                 : '先完成以太结算和首次召唤教学。',
         );
         return false;

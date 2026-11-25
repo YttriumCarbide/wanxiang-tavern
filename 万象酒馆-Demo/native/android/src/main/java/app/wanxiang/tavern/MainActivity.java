@@ -10,6 +10,7 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.view.Gravity;
 import android.view.View;
 import android.view.WindowInsets;
 import android.view.WindowInsetsController;
@@ -17,12 +18,14 @@ import android.view.WindowManager;
 import android.webkit.JsPromptResult;
 import android.webkit.JsResult;
 import android.webkit.MimeTypeMap;
+import android.webkit.RenderProcessGoneDetail;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.TextView;
@@ -41,19 +44,24 @@ import java.util.concurrent.Executors;
 
 public final class MainActivity extends Activity {
     private static final String ORIGIN = "https://appassets.androidplatform.net";
-    private static final int FILE_CHOOSER_REQUEST = 1001;
+    private static final String NEXT_TREE_REQUEST = "nextTreeRequest";
+    private static final int FIRST_TREE_REQUEST = 1004;
     private final ExecutorService writes = Executors.newSingleThreadExecutor();
     private final Set<Dialog> jsDialogs = new HashSet<>();
     private WebView webView;
     private FrameLayout content;
     private WebChromeClient.CustomViewCallback fullscreenCallback;
     private WebExports exports;
-    private ValueCallback<Uri[]> pendingFileSelection;
+    private PendingFileSelection pendingFileSelection;
     private boolean backPending;
+    private int nextTreeRequest = FIRST_TREE_REQUEST;
+
+    private record PendingFileSelection(int requestCode, ValueCallback<Uri[]> callback) {}
 
     @Override
     protected void onCreate(Bundle state) {
         super.onCreate(state);
+        if (state != null) nextTreeRequest = state.getInt(NEXT_TREE_REQUEST, FIRST_TREE_REQUEST);
         getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
         if (!WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)
                 || !WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_ARRAY_BUFFER)) {
@@ -75,7 +83,7 @@ public final class MainActivity extends Activity {
         webView.getSettings().setDomStorageEnabled(true);
         webView.getSettings().setAllowFileAccess(false);
         webView.getSettings().setAllowContentAccess(false);
-        exports = new WebExports(this, () -> pendingFileSelection != null);
+        exports = new WebExports(this, () -> pendingFileSelection != null, () -> nextTreeRequest++);
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
@@ -88,11 +96,18 @@ public final class MainActivity extends Activity {
             public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
                 return isLocalOrigin(request.getUrl()) ? files.serve(request) : null;
             }
+
+            @Override
+            public boolean onRenderProcessGone(WebView view, RenderProcessGoneDetail detail) {
+                if (view == webView) recoverRenderer(view);
+                return true;
+            }
         });
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
             public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> callback,
                     FileChooserParams params) {
+                if (view != webView || exports == null) return true;
                 if (pendingFileSelection != null || exports.isChoosing()) {
                     callback.onReceiveValue(null);
                     return true;
@@ -102,12 +117,11 @@ public final class MainActivity extends Activity {
                     callback.onReceiveValue(null);
                     return true;
                 }
-                pendingFileSelection = callback;
                 try {
-                    launchFileChooser(params);
+                    launchFileChooser(params, callback);
                 } catch (ActivityNotFoundException | SecurityException error) {
                     android.util.Log.w("WanxiangTavern", "Cannot open file chooser", error);
-                    clearFileSelection(null);
+                    clearFileSelection(callback, null);
                     android.widget.Toast.makeText(MainActivity.this,
                             "系统无法打开文件选择器", android.widget.Toast.LENGTH_SHORT).show();
                 }
@@ -183,8 +197,8 @@ public final class MainActivity extends Activity {
                 webView, "wanxiangNativeUpdate", Collections.singleton(ORIGIN),
                 (view, message, source, mainFrame, reply) -> {
                     // The game may run in its same-origin landscape frame.
-                    if (!isLocalOrigin(source) || message.getType() != WebMessageCompat.TYPE_ARRAY_BUFFER)
-                        return;
+                    if (webView != view || !isLocalOrigin(source)
+                            || message.getType() != WebMessageCompat.TYPE_ARRAY_BUFFER) return;
                     byte[] bytes = message.getArrayBuffer();
                     writes.execute(() -> {
                         String result = files.change(bytes);
@@ -272,7 +286,13 @@ public final class MainActivity extends Activity {
         });
     }
 
-    private void launchFileChooser(WebChromeClient.FileChooserParams params) {
+    private void startFileChooser(Intent intent, ValueCallback<Uri[]> callback) {
+        int requestCode = nextTreeRequest++;
+        pendingFileSelection = new PendingFileSelection(requestCode, callback);
+        startActivityForResult(intent, requestCode);
+    }
+
+    private void launchFileChooser(WebChromeClient.FileChooserParams params, ValueCallback<Uri[]> callback) {
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE);
         Set<String> types = new LinkedHashSet<>();
         boolean json = false;
@@ -295,10 +315,10 @@ public final class MainActivity extends Activity {
         intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE,
                 params.getMode() == WebChromeClient.FileChooserParams.MODE_OPEN_MULTIPLE);
         try {
-            startActivityForResult(intent, FILE_CHOOSER_REQUEST);
+            startFileChooser(intent, callback);
         } catch (ActivityNotFoundException | SecurityException unavailable) {
             intent.setAction(Intent.ACTION_GET_CONTENT);
-            startActivityForResult(intent, FILE_CHOOSER_REQUEST);
+            startFileChooser(intent, callback);
         }
     }
 
@@ -325,20 +345,36 @@ public final class MainActivity extends Activity {
         }
     }
 
-    private void clearFileSelection(Uri[] selection) {
-        ValueCallback<Uri[]> callback = pendingFileSelection;
+    private void clearFileSelection(PendingFileSelection expected, Uri[] selection) {
+        if (expected == null || pendingFileSelection != expected) return;
         pendingFileSelection = null;
-        if (callback != null) callback.onReceiveValue(selection);
+        expected.callback().onReceiveValue(selection);
+    }
+
+    private void clearFileSelection(ValueCallback<Uri[]> callback, Uri[] selection) {
+        PendingFileSelection current = pendingFileSelection;
+        if (current != null && current.callback() == callback) clearFileSelection(current, selection);
+    }
+
+    private void clearFileSelection(Uri[] selection) {
+        clearFileSelection(pendingFileSelection, selection);
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle state) {
+        super.onSaveInstanceState(state);
+        // Keep all picker request codes unique across Activity recreation.
+        state.putInt(NEXT_TREE_REQUEST, nextTreeRequest);
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (exports != null && exports.onActivityResult(requestCode, resultCode, data)) return;
-        if (requestCode != FILE_CHOOSER_REQUEST) return;
-        if (pendingFileSelection == null) return;
+        PendingFileSelection pending = pendingFileSelection;
+        if (pending == null || requestCode != pending.requestCode()) return;
         if (resultCode != RESULT_OK || data == null) {
-            clearFileSelection(null);
+            clearFileSelection(pending, null);
             return;
         }
         Uri[] parsed;
@@ -354,7 +390,7 @@ public final class MainActivity extends Activity {
             }
         } catch (Exception error) {
             android.util.Log.w("WanxiangTavern", "Cannot parse file chooser result", error);
-            clearFileSelection(null);
+            clearFileSelection(pending, null);
             return;
         }
         ArrayList<Uri> accepted = new ArrayList<>();
@@ -367,10 +403,37 @@ public final class MainActivity extends Activity {
             }
         }
         if (accepted.isEmpty()) {
-            clearFileSelection(null);
+            clearFileSelection(pending, null);
         } else {
-            clearFileSelection(accepted.toArray(new Uri[0]));
+            clearFileSelection(pending, accepted.toArray(new Uri[0]));
         }
+    }
+
+    private void recoverRenderer(WebView failedView) {
+        // The old renderer cannot receive chooser, dialog, or fullscreen callbacks.
+        webView = null;
+        backPending = false;
+        pendingFileSelection = null;
+        fullscreenCallback = null;
+        setFullscreen(false);
+        if (exports != null) {
+            exports.close();
+            exports = null;
+        }
+        for (Dialog dialog : new ArrayList<>(jsDialogs)) {
+            dialog.dismiss();
+        }
+        jsDialogs.clear();
+        content.removeAllViews();
+        failedView.destroy();
+
+        Button reload = new Button(this);
+        reload.setText("游戏画面已中断，点此重新载入");
+        reload.setOnClickListener(button -> {
+            button.setEnabled(false);
+            recreate();
+        });
+        content.addView(reload, new FrameLayout.LayoutParams(-2, -2, Gravity.CENTER));
     }
 
     private void showError(String message) {

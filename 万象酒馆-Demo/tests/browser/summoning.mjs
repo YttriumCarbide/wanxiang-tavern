@@ -93,8 +93,12 @@ export async function summoningChecks({ browser, baseURL, output }) {
       const response = await route.fetch();
       const result = await response.json();
       const cleanup = result.book.extensions?.wanxiang?.characterCleanup;
-      if (cleanup) cleanup.removedIds = cleanup.removedIds.filter((id) => id !== 'official-lyria');
-      result.book.entries['summon-fixture'] = characterWorldEntry(officialCharacter('lyria'), 9000);
+      if (cleanup)
+        cleanup.removedIds = cleanup.removedIds.filter((id) => id !== 'official-luo-gongxu');
+      result.book.entries['summon-fixture'] = characterWorldEntry(
+        officialCharacter('luo-gongxu'),
+        9000,
+      );
       await route.fulfill({ json: result });
     });
     await openSummon();

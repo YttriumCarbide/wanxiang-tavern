@@ -1,6 +1,8 @@
 import { applyFutureDialogue, dialogueTargets, dungeonDialogueScenes } from './future-dialogue.js';
 import { skippingAi } from '../generation-options.js';
 import { CHAT_PLACES, tavernActivities } from '../chat.js';
+import { cityChatPlace } from '../chat-places.js';
+import { normalizeSceneEnvironment } from '../scene-environment.js';
 import { settingOnly } from '../ai/contracts.js';
 import { createChatPresentation } from './chat-presentation.js';
 import { query as $ } from './dom.js';
@@ -8,18 +10,15 @@ import { relevantArchives } from '../archives.js';
 import { applyRelationshipActions } from '../relationships.js';
 import { streamingChatText } from '../ai/output-tags.js';
 import { gameTime, memoryChat, memoryText } from '../memory.js';
+import { tavernTime } from '../daily.js';
+import { resolveGalBackdrop } from './gal-backdrop.js';
+
+const HALL_CHAT_PLACES = Object.freeze(['bar', 'bar2', 'table', 'table2']);
 
 export function createChat(context) {
   const api = context.apiClient.request;
   const { session, events } = context;
-  $('#chat-place-select').replaceChildren(
-    ...Object.entries(CHAT_PLACES).map(([id, location]) => {
-      const option = document.createElement('option');
-      option.value = id;
-      option.textContent = location.name;
-      return option;
-    }),
-  );
+  const placeSelect = $('#chat-place-select');
   const localCharacters = () => context.daily?.chatCharacters() || [];
   const conversationCharacters = () => [
     ...localCharacters(),
@@ -36,8 +35,32 @@ export function createChat(context) {
   const library = () => session.ai.library;
   const characters = () =>
     conversationCharacters().filter((member) => member.id !== library().campaign?.protagonistId);
+  function interrupt() {
+    revision++;
+    request?.abort();
+  }
+  function selectPlace(next) {
+    if (place === next) return;
+    interrupt();
+    context.gal.setEnvironment('chat', null);
+    place = next;
+  }
   function renderHistory(kind = 'chat') {
     presentation.history(kind);
+  }
+  function canChangePlace() {
+    return HALL_CHAT_PLACES.includes(place) && context.daily?.chatPlaceLocked?.() !== true;
+  }
+  function renderConversation() {
+    const editable = canChangePlace();
+    const locations = editable ? HALL_CHAT_PLACES : [place];
+    if (
+      placeSelect.options.length !== locations.length ||
+      locations.some((id, index) => placeSelect.options[index].value !== id)
+    ) {
+      placeSelect.replaceChildren(...locations.map((id) => new Option(CHAT_PLACES[id].name, id)));
+    }
+    presentation.conversation(place, { locationLocked: !editable });
   }
   function playReply(kind, reply, after, rawResult = null, actionText = '') {
     if (!reply) return context.shell.toast('还没有可重播的对话');
@@ -71,9 +94,22 @@ export function createChat(context) {
     if (quick && session.ai.activeScript?.recollection) return;
     if ($('#story-feed').open) $('#story-feed').close();
     presentation.history(kind);
+    const cityConversation = !quick && cityChatPlace(place);
+    const backdrop =
+      quick || cityConversation
+        ? null
+        : resolveGalBackdrop({
+            placeId: place,
+            timeOfDay: tavernTime(library().daily),
+            invitationMode: false,
+          });
     context.gal.workspace({
       owner: kind,
       title: quick ? '旅途 · 同行闲谈' : CHAT_PLACES[place].name,
+      backdrop,
+      shutter: Boolean(backdrop),
+      kicker: '漫 步',
+      shutterTitle: backdrop?.placeName || CHAT_PLACES[place].name,
       actors: quick
         ? library().party.filter((id) => id && id !== library().campaign?.protagonistId)
         : state().selected,
@@ -88,15 +124,15 @@ export function createChat(context) {
             (message) => message.role === 'assistant',
           ),
         ),
-      onClose() {
-        request?.abort();
-      },
+      onClosing: interrupt,
+      onClose: interrupt,
     });
   }
   function open(location, actorId = null, activity = false) {
-    if (session.runtime.mode !== 'inn' || !CHAT_PLACES[location]) return;
+    if (session.runtime.mode !== 'inn' || !Object.hasOwn(CHAT_PLACES, location)) return;
     if (context.daily?.allowTalk() === false || context.daily?.onInvitation()) return;
-    place = location;
+    const current = context.daily?.chatPlace();
+    selectPlace(cityChatPlace(current) ? current : location);
     if (actorId && characters().some((member) => member.id === actorId)) {
       state().selected = [actorId];
       state().selectionInitialized = true;
@@ -130,7 +166,7 @@ export function createChat(context) {
       state().lastLocation = marker;
       context.generation.save();
     }
-    presentation.conversation(place, activities);
+    renderConversation();
     renderHistory();
     $('#chat-status').textContent = '';
     openGal('chat');
@@ -173,6 +209,7 @@ export function createChat(context) {
         quick ? session.battle.state.map : null,
       ),
       place,
+      ...(!quick && cityChatPlace(place) ? { timeOfDay: tavernTime(library().daily) } : {}),
       selected: quick ? members.map((member) => member.id) : state().selected,
       characters: members.map(settingOnly),
       activities: activities
@@ -223,9 +260,17 @@ export function createChat(context) {
       retryId && history[retryIndex + 1]?.role === 'assistant' ? history[retryIndex + 1] : null;
     const text = retryId ? history[retryIndex].content : field.value.trim();
     if (!text) return;
-    const epoch = revision,
-      token = session.runtime.token;
+    const { mode, token } = session.runtime;
+    const epoch = revision;
+    const scene = context.daily?.scene();
     const payload = input(kind, text);
+    const cityPlace = kind === 'chat' ? cityChatPlace(payload.place) : null;
+    const sameTurn = () =>
+      epoch === revision &&
+      !session.runtime.disposed &&
+      session.runtime.mode === mode &&
+      session.runtime.token === token &&
+      (kind !== 'chat' || (payload.place === place && scene === context.daily?.scene()));
     if (retryId) {
       payload.history = memoryChat(
         history.slice(0, retryIndex).filter((message) => !message.journeyArchived),
@@ -287,8 +332,9 @@ export function createChat(context) {
     let stream = '';
     try {
       const result = await api(`generate/${kind}`, payload, {
-        signal: request.signal,
+        signal,
         onDelta(delta) {
+          if (signal.aborted || !sameTurn()) return;
           stream += delta;
           const body = streamingChatText(stream);
           if (body !== null) pending.querySelector('.mes_text').textContent = body;
@@ -296,12 +342,8 @@ export function createChat(context) {
           else log.scrollTop = log.scrollHeight;
         },
       });
-      if (
-        epoch !== revision ||
-        session.runtime.disposed ||
-        (kind === 'quick-chat' && token !== session.runtime.token)
-      )
-        return;
+      if (!sameTurn()) return;
+      signal.throwIfAborted();
       const reply = {
         id: originalReply?.id || crypto.randomUUID(),
         role: 'assistant',
@@ -362,7 +404,7 @@ export function createChat(context) {
             .filter((member) => member.source === 'town' && selected.includes(member.id))
             .map((member) => member.id),
         );
-        presentation.conversation(place, activities);
+        renderConversation();
         context.generation.save();
         context.onboarding?.chatFinished(place);
       }
@@ -372,28 +414,32 @@ export function createChat(context) {
           .find((element) => element.dataset.messageId === reply.id)
           ?.scrollIntoView({ block: 'nearest' });
       } else presentation.append(log, reply);
-      {
-        await new Promise((resolve) => {
-          const timeout = setTimeout(resolve, Math.max(0, 2000 - (performance.now() - started)));
-          signal.addEventListener(
-            'abort',
-            () => {
-              clearTimeout(timeout);
-              resolve();
-            },
-            { once: true },
-          );
-        });
-        if (!signal.aborted && epoch === revision && !session.runtime.disposed)
-          playReply(
-            kind,
-            reply,
-            outOfActions ? () => context.daily.returnOuting() : null,
-            result,
-            text,
-          );
-        else if (outOfActions) context.daily.returnOuting();
+      await new Promise((resolve) => {
+        if (signal.aborted) return resolve();
+        const timeout = setTimeout(done, Math.max(0, 2000 - (performance.now() - started)));
+        function done() {
+          clearTimeout(timeout);
+          signal.removeEventListener('abort', done);
+          resolve();
+        }
+        signal.addEventListener('abort', done, { once: true });
+      });
+      if (!sameTurn()) return;
+      if (signal.aborted) {
+        if (outOfActions) context.daily.returnOuting();
+        return;
       }
+      if (cityPlace?.placeId && result.environment?.placeId === cityPlace.placeId) {
+        const lead = normalizeSceneEnvironment({ ...cityPlace, text: result.environment.text });
+        if (lead) context.gal.setEnvironment('chat', lead);
+      }
+      playReply(
+        kind,
+        reply,
+        outOfActions ? () => context.daily.returnOuting() : null,
+        result,
+        text,
+      );
       state().lastRequest = result.request;
       status(
         kind,
@@ -401,7 +447,7 @@ export function createChat(context) {
         { technical: true },
       );
     } catch (failure) {
-      if (epoch === revision && !session.runtime.disposed) {
+      if (sameTurn()) {
         if (typeof failure.diagnostic?.rawText === 'string' && failure.diagnostic.rawText) {
           const failedReply = {
             role: 'assistant',
@@ -427,11 +473,10 @@ export function createChat(context) {
     }
   }
   function leave() {
+    interrupt();
     context.daily?.trackChat(false);
     context.gal?.cancel('chat');
     context.gal?.cancel('quick-chat');
-    revision++;
-    request?.abort();
     for (const message of state().quick)
       if (state().responseErrors) delete state().responseErrors[message.id];
     state().quick = [];
@@ -477,14 +522,30 @@ export function createChat(context) {
         .filter(Boolean)
         .join(''),
     });
-    presentation.conversation(place, activities);
+    renderConversation();
     renderHistory();
     context.generation.save();
   });
-  events.on($('#chat-place-select'), 'change', () => {
-    place = $('#chat-place-select').value;
+  events.on(placeSelect, 'change', () => {
+    const next = placeSelect.value;
+    if (!canChangePlace() || !HALL_CHAT_PLACES.includes(next)) {
+      placeSelect.value = place;
+      return;
+    }
+    if (place === next) return;
+    selectPlace(next);
     activities = tavernActivities(characters(), place);
-    presentation.conversation(place, activities);
+    renderConversation();
+    const nextBackdrop = resolveGalBackdrop({
+      placeId: place,
+      timeOfDay: tavernTime(library().daily),
+      invitationMode: false,
+    });
+    context.gal.setBackdrop(nextBackdrop, {
+      shutter: Boolean(nextBackdrop),
+      kicker: '换 景',
+      title: nextBackdrop?.placeName || CHAT_PLACES[place].name,
+    });
     const marker = `${
       state()
         .selected.map(

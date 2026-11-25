@@ -5,7 +5,7 @@ import { createHash } from 'node:crypto';
 import { createAssetStore } from '../src/shared/asset-store.js';
 import { GAL_NPC_PORTRAITS } from '../src/content/gal-npc-portraits.js';
 import { OVERLAND_ROAD } from '../src/content/overland-road.js';
-import { SILVER_CROWN_GATE, SILVER_CROWN_PLACES } from '../src/content/silver-crown-scenes.js';
+import { SILVER_CROWN_PLACES } from '../src/content/silver-crown-scenes.js';
 import { ETERNAL_CITY_PLACES, ETERNAL_CITY_STOPS } from '../src/content/eternal-city-scenes.js';
 import {
   TAVERN_VISITORS,
@@ -190,23 +190,17 @@ test('the fixed street views retain native paintings and keep all interaction po
     assert(STREET_ILLUSTRATED.points[point.id], point.id + ' remains reachable');
 });
 
-test('four repainted scenes keep original native art, chapter landmarks and all standing identities', async () => {
-  const manifest = JSON.parse(
-    await readFile(
-      new URL('../assets/exploration/free-scenes-hd-v2/manifest.json', import.meta.url),
-      'utf8',
-    ),
-  );
+test('four Starbell district scenes share the 16:9 city overview while keeping landmarks and spots', async () => {
   const { explorationScene } = await import('../src/exploration/scenes.js');
-  assert.equal(manifest.assets.length, 4);
-  for (const entry of manifest.assets) {
-    const bytes = await readFile(new URL('../' + entry.file, import.meta.url));
-    assert.equal(createHash('sha256').update(bytes).digest('hex'), entry.sha256);
-    assert.equal(bytes.readUInt32BE(16), entry.width);
-    assert.equal(bytes.readUInt32BE(20), entry.height);
-    assert(entry.width >= 3700 && entry.height >= 1254 && entry.width / entry.height > 2.9);
-    const scene = explorationScene(entry.id);
-    assert.equal(scene.illustration.image, './' + entry.file);
+  const starbell = await readFile(
+    new URL('../assets/exploration/city-backgrounds/starbell.png', import.meta.url),
+  );
+  assert.equal(starbell.subarray(1, 4).toString(), 'PNG');
+  assert(Math.abs(starbell.readUInt32BE(16) / starbell.readUInt32BE(20) - 16 / 9) < 0.01);
+  for (const id of ['city-center', 'market', 'rampart', 'outskirts']) {
+    const scene = explorationScene(id);
+    assert.equal(scene.illustration.image, './assets/exploration/city-backgrounds/starbell.png');
+    assert(Math.abs(scene.illustration.aspect - 16 / 9) < 0.01);
     for (const point of scene.points)
       assert(scene.illustration.points[point.id], point.id + ' remains reachable');
     const people = scene.cutouts.filter((person) => person.kind === 'npc');
@@ -233,7 +227,8 @@ test('town night and side paintings have matching proportions and wired exits', 
     const parent = explorationScene(place.parent);
     parents.add(parent.id);
     assert.equal(TOWN_SCENES[id], CHAT_PLACES[id].name);
-    assert.equal(scene.returnDestination, parent.id);
+    assert.equal(scene.returnDestination, 'tavern');
+    assert.equal(scene.returnLabel, '返回酒馆');
     assert(parent.points.some((point) => point.destination === id));
     assert.deepEqual(parent.illustration.points[id], place.entrance);
     assert(scene.illustration.fixed && SCENE_VISITOR_SPOTS[id].length === 1);
@@ -244,9 +239,8 @@ test('town night and side paintings have matching proportions and wired exits', 
     else assert.equal(scene.illustration.nightImage, undefined);
   }
   assert.equal(parents.size, 4);
-  parents.add('street');
-  for (const id of parents)
-    assert(Math.abs((await aspect(explorationScene(id).illustration.nightImage)) - 3) < 0.02);
+  assert.equal(explorationScene('street').id, 'city-center');
+  assert(Math.abs((await aspect(explorationScene('street').illustration.image)) - 16 / 9) < 0.01);
 });
 
 test('overland backgrounds retain their original files while travel uses the atlas', async () => {
@@ -259,16 +253,23 @@ test('overland backgrounds retain their original files while travel uses the atl
   for (const { id, name } of OVERLAND_ROAD) {
     const scene = explorationScene(id);
     assert.equal(OUTING_SCENES[id], name);
-    assert.equal(scene.returnDestination, null);
-    assert.deepEqual(
-      scene.points.map((point) => point.destination),
-      id === 'road-capital' ? [SILVER_CROWN_GATE] : [],
-    );
     assert.equal(SCENE_VISITOR_SPOTS[id], undefined);
     const png = await readFile(new URL('../' + scene.illustration.image.slice(2), import.meta.url));
     assert.equal(png.subarray(1, 4).toString(), 'PNG');
     const width = png.readUInt32BE(16);
     const height = png.readUInt32BE(20);
+    if (id === 'road-capital') {
+      assert.equal(scene.returnDestination, 'tavern');
+      assert.equal(scene.returnLabel, '返回酒馆');
+      assert.equal(
+        scene.illustration.image,
+        './assets/exploration/city-backgrounds/silver-crown.png',
+      );
+      assert(Math.abs(width / height - 16 / 9) < 0.01);
+      continue;
+    }
+    assert.equal(scene.returnDestination, null);
+    assert.deepEqual(scene.points, []);
     assert.equal(width, height * 3);
     assert(width >= 2100);
     if (id === 'road-bridge' || id === 'road-reeds') {
@@ -280,23 +281,33 @@ test('overland backgrounds retain their original files while travel uses the atl
   }
 });
 
-test('Silver Crown outdoor night scenes use the exact dimensions of their day backgrounds', async () => {
+test('Silver Crown scenes share the single 16:9 city overview image', async () => {
   const { explorationScene } = await import('../src/exploration/scenes.js');
-  for (const [id, place] of Object.entries(SILVER_CROWN_PLACES)) {
+  const imageBytes = await readFile(
+    new URL('../assets/exploration/city-backgrounds/silver-crown.png', import.meta.url),
+  );
+  assert.equal(imageBytes.subarray(1, 4).toString(), 'PNG');
+  assert(Math.abs(imageBytes.readUInt32BE(16) / imageBytes.readUInt32BE(20) - 16 / 9) < 0.01);
+  for (const id of Object.keys(SILVER_CROWN_PLACES)) {
     const art = explorationScene(id).illustration;
-    const day = await readFile(new URL('../' + art.image.slice(2), import.meta.url));
-    const aspect = day.readUInt32BE(16) / day.readUInt32BE(20);
-    assert(Math.abs(aspect - (place.wide ? 3 : 16 / 9)) < 0.01);
-    if (place.night) {
-      const night = await readFile(new URL('../' + art.nightImage.slice(2), import.meta.url));
-      assert.deepEqual(night.subarray(16, 24), day.subarray(16, 24));
-    }
+    assert.equal(art.image, './assets/exploration/city-backgrounds/silver-crown.png');
+    assert(Math.abs(art.aspect - 16 / 9) < 0.01);
   }
 });
 
-test('all capital and route backgrounds are native continuous 3:1 PNGs', async () => {
+test('Eternal City scenes share the 16:9 city overview while route stops keep 3:1 PNGs', async () => {
   const { explorationScene } = await import('../src/exploration/scenes.js');
-  for (const id of [...Object.keys(ETERNAL_CITY_PLACES), ...Object.keys(ETERNAL_CITY_STOPS)]) {
+  const cityBytes = await readFile(
+    new URL('../assets/exploration/city-backgrounds/eternal-city.png', import.meta.url),
+  );
+  assert.equal(cityBytes.subarray(1, 4).toString(), 'PNG');
+  assert(Math.abs(cityBytes.readUInt32BE(16) / cityBytes.readUInt32BE(20) - 16 / 9) < 0.01);
+  for (const id of Object.keys(ETERNAL_CITY_PLACES)) {
+    const art = explorationScene(id).illustration;
+    assert.equal(art.image, './assets/exploration/city-backgrounds/eternal-city.png');
+    assert(Math.abs(art.aspect - 16 / 9) < 0.01);
+  }
+  for (const id of Object.keys(ETERNAL_CITY_STOPS)) {
     const { image } = explorationScene(id).illustration;
     const png = await readFile(new URL('../' + image.slice(2), import.meta.url));
     assert.equal(png.subarray(1, 4).toString(), 'PNG', image);

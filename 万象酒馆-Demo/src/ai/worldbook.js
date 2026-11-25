@@ -1,4 +1,8 @@
 import { isMonsterWorldEntry } from './monster-narrative.js';
+import {
+  ENEMY_DISPLAY_NAME_OVERRIDES,
+  ENEMY_LEGACY_DISPLAY_NAME_OVERRIDES,
+} from '../enemy-taxonomy.js';
 
 /** SillyTavern World Info wire format. Unknown extension data survives import/export. */
 export const WORLD_ENTRY_DEFAULTS = Object.freeze({
@@ -425,9 +429,33 @@ function builtinEntryKey(entry) {
   return '';
 }
 
+function applyBuiltinMonsterDisplayName(entry) {
+  const monsterId = entry.extensions?.wanxiang?.monsterId;
+  if (!Object.hasOwn(ENEMY_DISPLAY_NAME_OVERRIDES, monsterId)) return entry;
+  const name = ENEMY_DISPLAY_NAME_OVERRIDES[monsterId];
+  return {
+    ...entry,
+    key: [
+      monsterId,
+      name,
+      ...new Set(entry.key.filter((key) => key && key !== monsterId && key !== name)),
+    ],
+    comment: entry.comment.startsWith('怪物图鉴：') ? '怪物图鉴：' + name : entry.comment,
+    content: entry.content.replace(/^名称：[^\r\n]*/, '名称：' + name),
+  };
+}
+
 /** Sync a stored worldbook directly against the latest builtin worldbook while preserving user edits and custom entries. */
 export function syncBuiltinWorldbook(existing, builtin) {
   const normalizedBuiltin = normalizeWorldbook(builtin, '万象酒馆世界书').book;
+  const preRenameHashes = new Map();
+  for (const [uid, entry] of Object.entries(normalizedBuiltin.entries)) {
+    const renamed = applyBuiltinMonsterDisplayName(entry);
+    if (renamed !== entry && entryFingerprint(renamed) !== entryFingerprint(entry)) {
+      preRenameHashes.set(builtinEntryKey(entry), entryFingerprint(entry));
+      normalizedBuiltin.entries[uid] = renamed;
+    }
+  }
   const builtinEntries = Object.values(normalizedBuiltin.entries);
   const templateHashes = new Map();
   const builtinKeys = new Set();
@@ -518,9 +546,20 @@ export function syncBuiltinWorldbook(existing, builtin) {
           (match.comment !== template.comment ||
             match.content.includes('过期') ||
             match.content.includes('格雷'));
+        // The taxonomy migration changes display text only, not the player's saved lore.
+        const preRenameHash = preRenameHashes.get(key);
+        const legacyName = ENEMY_LEGACY_DISPLAY_NAME_OVERRIDES[wxTemplate.monsterId];
+        const legacyDisplayName =
+          legacyName &&
+          (match.key?.[1] === legacyName ||
+            match.comment === `怪物图鉴：${legacyName}` ||
+            match.content.startsWith(`名称：${legacyName}\n`));
+        const renameOnly =
+          (preRenameHash && (!prevHash || prevHash === preRenameHash)) || legacyDisplayName;
         if (!isOfficialChar || prevHash || isLegacyChar) {
-          match.comment = template.comment;
-          match.content = template.content;
+          const textSource = renameOnly ? applyBuiltinMonsterDisplayName(match) : template;
+          match.comment = textSource.comment;
+          match.content = textSource.content;
         }
         const existingKeys = Array.isArray(match.key) ? match.key.filter(Boolean) : [];
         const isSystemKeyed = Boolean(
@@ -539,7 +578,15 @@ export function syncBuiltinWorldbook(existing, builtin) {
           if (!template.constant && match.constant && (isSystemKeyed || !existingKeys.length)) {
             match.constant = false;
           }
-          match.key = [...new Set([...existingKeys, ...template.key])];
+          match.key = renameOnly
+            ? [
+                template.key[0],
+                ...new Set([
+                  ...template.key.slice(1),
+                  ...existingKeys.filter((value) => value !== template.key[0]),
+                ]),
+              ]
+            : [...new Set([...existingKeys, ...template.key])];
         }
       }
       if (wxTemplate.monsterId && !template.constant && !wxMatch.monsterKeywordFixed) {

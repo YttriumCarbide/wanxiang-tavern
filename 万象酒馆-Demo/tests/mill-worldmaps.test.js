@@ -12,8 +12,7 @@ import { MILL_MONSTER_LORE, ALL_MONSTER_LORE } from '../src/content/monsters.js'
 import { MILL_DUNGEONS } from '../src/content/official-dungeons.js';
 import { DEFINITIONS } from '../src/data.js';
 import { REGIONS } from '../src/content/regions.js';
-import { CITY_BLUEPRINTS, buildBlueprintSvg } from '../src/content/city-blueprints.js';
-import { buildCitySubmapData } from '../src/exploration/city-submap.js';
+import { cityDungeons } from '../src/city-directory.js';
 import { IMPERIAL_DUNGEONS } from '../src/content/imperial-network.js';
 import {
   newExploration,
@@ -113,7 +112,7 @@ test('builtin worldbook holds mill lore, 15 mill monsters, 5 outlines, and singl
   }
 });
 
-test('mill starts Lv.1-5 near Starbell, ruins moves east to Lv.20-25, and starbell-undercroft enters parchment city map', () => {
+test('mill starts Lv.1-5 near Starbell, ruins moves east to Lv.20-25, and Starbell lists its undercroft', () => {
   const millAtlas = IMPERIAL_DUNGEONS.find((entry) => entry.id === 'mill');
   const ruinsAtlas = IMPERIAL_DUNGEONS.find((entry) => entry.id === 'ruins');
   assert.equal(millAtlas.level, 1);
@@ -127,18 +126,8 @@ test('mill starts Lv.1-5 near Starbell, ruins moves east to Lv.20-25, and starbe
   );
 
   assert(CITY_DUNGEONS.includes('starbell-undercroft'));
-  const submap = buildCitySubmapData('street');
-  const undercroft = submap.nodes.find((node) => node.id === 'starbell-undercroft');
-  assert(
-    undercroft && undercroft.action === 'dungeon' && undercroft.dungeonId === 'starbell-undercroft',
-  );
-  const svg = buildBlueprintSvg(CITY_BLUEPRINTS.starbell);
-  assert(
-    !svg.includes('city-block') && !svg.includes('stroke-width="10.5"'),
-    'Overland city map should use borderless paper and single-stroke trails without walls or pipes',
-  );
-  assert(svg.includes('fansheng-atlas.svg#paper-quarter'));
-  assert(svg.includes('city-submap-trail'));
+  const undercroft = cityDungeons('starbell').find(({ id }) => id === 'starbell-undercroft');
+  assert.equal(undercroft?.streetScene, 'city-center');
 });
 
 test('all 6 mainline dungeons use 4-step branching graph with side branches and overlord endless continuation', () => {

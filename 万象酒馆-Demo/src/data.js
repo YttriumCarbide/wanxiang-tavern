@@ -6,6 +6,13 @@ import { LADDER_ENEMIES, LADDER_BOSSES } from './content/ladder-adversaries.js';
 import { COMMON_ENEMIES, COMMON_BOSSES } from './content/common-adversaries.js';
 import { MILL_ENEMIES, MILL_BOSSES } from './content/mill-adversaries.js';
 import { QUARRY_ENEMIES, QUARRY_BOSSES } from './content/quarry-adversaries.js';
+import { applyEnemyTaxonomy } from './enemy-taxonomy.js';
+import {
+  EXTRA_ENEMIES,
+  EXTRA_BOSSES,
+  RUINS_ADVERSARIES,
+  RUINS_BOSSES,
+} from './content/new-adversaries.js';
 
 const OVERLORD_MODEL_OVERRIDES = Object.freeze({
   apepLamb: { model: 'apep-lamb.glb' },
@@ -21,18 +28,10 @@ const OVERLORD_MODEL_OVERRIDES = Object.freeze({
   banditSyndicateKing: { model: 'bandit-syndicate-king.glb' },
 });
 
-const applyModelOverrides = (list) =>
-  list.map((entry) =>
-    Object.hasOwn(OVERLORD_MODEL_OVERRIDES, entry.id)
-      ? { ...entry, ...OVERLORD_MODEL_OVERRIDES[entry.id] }
-      : entry,
-  );
-import {
-  EXTRA_ENEMIES,
-  EXTRA_BOSSES,
-  RUINS_ADVERSARIES,
-  RUINS_BOSSES,
-} from './content/new-adversaries.js';
+function prepareEnemyDefinition(entry) {
+  const modelOverride = OVERLORD_MODEL_OVERRIDES[entry.id];
+  return applyEnemyTaxonomy(modelOverride ? { ...entry, ...modelOverride } : entry);
+}
 export const BUFFS = {
   flying: {
     name: '飞行',
@@ -347,7 +346,7 @@ export const ENEMIES = [
   {
     id: 'mossSlime',
     attackStyle: 'slime-bounce',
-    name: '苔团',
+    name: '苔藓史莱姆',
     title: '弱怪 / 简单攻击',
     color: '#91bb78',
     portrait: 'moss-slime',
@@ -368,7 +367,7 @@ export const ENEMIES = [
   {
     id: 'sprout',
     attackStyle: 'mushroom-bonk',
-    name: '迷路小蕈',
+    name: '腐木魔菇',
     title: '弱怪 / 缓慢攻击',
     color: '#d1a776',
     portrait: 'sprout',
@@ -389,7 +388,7 @@ export const ENEMIES = [
   {
     id: 'pebble',
     attackStyle: 'pebble-shards',
-    name: '碎石幼灵',
+    name: '碎石魔灵',
     title: '弱怪 / 薄盾',
     color: '#a9b3b6',
     portrait: 'pebble',
@@ -514,10 +513,10 @@ export const ENEMIES = [
   ...EXTRA_ENEMIES,
   ...UNIVERSAL_ENEMIES,
   ...FOREST_ENEMIES,
-  ...applyModelOverrides(FROST_ENEMIES),
+  ...FROST_ENEMIES,
   ...MILL_ENEMIES,
   ...QUARRY_ENEMIES,
-];
+].map(prepareEnemyDefinition);
 export const BOSSES = [
   {
     id: 'bossGate',
@@ -646,23 +645,21 @@ export const BOSSES = [
   },
   ...EXTRA_BOSSES,
   ...UNIVERSAL_BOSSES,
-  ...applyModelOverrides(FOREST_BOSSES),
-  ...applyModelOverrides(FROST_BOSSES),
+  ...FOREST_BOSSES,
+  ...FROST_BOSSES,
   ...MILL_BOSSES,
-  ...applyModelOverrides(QUARRY_BOSSES),
-];
+  ...QUARRY_BOSSES,
+].map(prepareEnemyDefinition);
+const additionalEnemies = [
+  ...RUINS_ADVERSARIES,
+  ...RUINS_BOSSES,
+  ...LADDER_ENEMIES,
+  ...LADDER_BOSSES,
+  ...COMMON_ENEMIES,
+  ...COMMON_BOSSES,
+].map(prepareEnemyDefinition);
 export const DEFINITIONS = Object.fromEntries(
-  applyModelOverrides([
-    ...HEROES,
-    ...ENEMIES,
-    ...BOSSES,
-    ...RUINS_ADVERSARIES,
-    ...RUINS_BOSSES,
-    ...LADDER_ENEMIES,
-    ...LADDER_BOSSES,
-    ...COMMON_ENEMIES,
-    ...COMMON_BOSSES,
-  ]).map((d) => [d.id, d]),
+  [...HEROES, ...ENEMIES, ...BOSSES, ...additionalEnemies].map((d) => [d.id, d]),
 );
 export const ENCOUNTERS = [
   {
@@ -677,14 +674,14 @@ export const ENCOUNTERS = [
     map: 'frost',
     enemyIds: ['pebble', 'sprout'],
     hpScale: 1,
-    description: '碎石幼灵和小蕈守着回廊。石灵会给自己加盾，试试连续行动。',
+    description: '碎石魔灵和腐木魔菇守着回廊。魔灵会给自己加盾，试试连续行动。',
   },
   {
     name: '余烬铸坊',
     map: 'forge',
     enemyIds: ['cinderImp', 'pebble'],
     hpScale: 0.8,
-    description: '灰炉小偶在锻台间弹射火星，与碎石幼灵一同守住铸坊。',
+    description: '灰炉机兵在锻台间弹射火星，与碎石魔灵一同守住铸坊。',
   },
   {
     name: '潮汐星殿',

@@ -583,12 +583,6 @@ function reviewedRules() {
     ['/var:sideScenes', '`${art}.png`', '`${art}-night.png`'],
     ['/var:roadScenes/var:art', '`./assets/exploration/overland-road/${id}-wide`'],
     ['/var:roadScenes', '`${art}.png`', '`${art}-night.png`'],
-    [
-      '/var:capitalScenes',
-      '`./assets/exploration/silver-crown/${id}.png`',
-      '`./assets/exploration/silver-crown/${id}-night.png`',
-    ],
-    ['/var:eternalCityScenes', '`./assets/exploration/eternal-city/${place.art || id}.png`'],
     ['/var:eternalRoadScenes', '`./assets/exploration/eternal-city/${id}.png`'],
     ['/var:crossroadArtScenes', '`./assets/exploration/overland-road/${imageId}-wide.png`'],
     ['/var:imperialLandmarkScenes', '`./assets/exploration/overland-road/${artName}.png`'],

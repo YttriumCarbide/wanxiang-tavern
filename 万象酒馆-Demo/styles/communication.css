@@ -44,22 +44,30 @@
   outline: 0;
 }
 #scene-talk[hidden],
+#scene-talk:not(.is-docked),
 body:has(#battle:not([hidden])) #scene-talk,
+body:has(dialog[open]) #scene-talk,
+body:has(.world-loading-scene:not([hidden])) #scene-talk,
+body:has(.scene-loading:not(.complete):not([hidden])) #scene-talk,
+body:has(#chapter-theater:not([hidden])) #scene-talk,
 body.gal-playing #scene-talk {
-  display: none;
+  display: none !important;
 }
 #scene-talk {
-  z-index: 35;
+  z-index: 25;
   bottom: max(16px, env(safe-area-inset-bottom));
   width: 118px;
-  height: 46px;
+  height: 38px;
   min-width: 118px;
-  padding: 8px 18px;
+  padding: 7px 14px;
 }
 #scene-talk.is-docked {
   bottom: auto;
-  width: 98px;
-  min-width: 98px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 118px;
+  min-width: 118px;
   height: 38px;
   padding: 7px 14px;
   border-color: transparent;
@@ -67,10 +75,13 @@ body.gal-playing #scene-talk {
   box-shadow: none;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
-  color: #c2b49b;
-  font-size: 13px;
-  font-weight: 600;
+  color: #b5a690;
+  font:
+    600 13px/1.2 'Microsoft YaHei',
+    system-ui,
+    sans-serif;
   letter-spacing: 0.08em;
+  white-space: nowrap;
 }
 #scene-talk.is-docked:hover,
 #scene-talk.is-docked:focus-visible {
@@ -83,16 +94,134 @@ body.gal-playing #scene-talk {
 @media (max-height: 520px), (max-width: 900px) {
   #scene-talk {
     bottom: max(12px, env(safe-area-inset-bottom));
-    width: 102px;
-    height: 40px;
-    min-width: 102px;
-    padding: 7px 14px;
+    width: 80px;
+    height: 34px;
+    min-width: 80px;
+    padding: 5px 10px;
     font-size: 12px;
   }
   #scene-talk.is-docked {
-    width: 84px;
-    min-width: 84px;
+    width: 80px;
+    min-width: 80px;
     height: 34px;
     padding: 5px 10px;
+    font-size: 12px;
+    letter-spacing: 0.03em;
+  }
+}
+
+/* A generated scene lead shares the location's UI even when the reader is Gal. */
+.scene-environment {
+  position: absolute;
+  z-index: 8;
+  top: 40%;
+  right: 50%;
+  translate: 50% -50%;
+  box-sizing: border-box;
+  width: min(38rem, calc(100% - 2rem));
+  overflow: hidden;
+  border: 1px solid #ba9d66a6;
+  border-radius: 4px;
+  background: linear-gradient(145deg, #2c251b, #181712 72%);
+  box-shadow: 0 8px 30px #0009;
+  color: #f4ecdb;
+  transition:
+    top 460ms cubic-bezier(0.22, 1, 0.36, 1),
+    right 460ms cubic-bezier(0.22, 1, 0.36, 1),
+    translate 460ms cubic-bezier(0.22, 1, 0.36, 1),
+    width 460ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.scene-environment[hidden],
+.gal-ui-hidden .scene-environment {
+  display: none;
+}
+.scene-environment:is([data-state='docked'], [data-state='expanded']) {
+  top: max(48px, calc(env(safe-area-inset-top) + 28px));
+  right: max(14px, env(safe-area-inset-right));
+  translate: 0 0;
+  width: min(19rem, calc(100% - 2rem));
+}
+.scene-environment[data-state='intro'] {
+  animation: scene-environment-appear 240ms ease-out;
+}
+.scene-environment-toggle {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  padding: 7px 14px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #ead4a5;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+.scene-environment-toggle:hover {
+  background: #a6875126;
+}
+.scene-environment-toggle:focus-visible,
+.scene-environment-text:focus-visible {
+  outline: 2px solid #ead4a5;
+  outline-offset: -3px;
+}
+.scene-environment-title {
+  font-weight: 650;
+}
+.scene-environment-mark {
+  grid-column: 2;
+  grid-row: 1;
+}
+.scene-environment-preview {
+  display: block;
+  grid-column: 1 / -1;
+  overflow: hidden;
+  color: #e3d5bc;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.scene-environment-preview[hidden],
+.scene-environment-text[hidden] {
+  display: none;
+}
+.scene-environment-text {
+  max-height: min(11rem, 27dvh);
+  margin: 0;
+  padding: 2px 14px 12px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  font-family: Georgia, 'Noto Serif SC', 'Songti SC', serif;
+  font-size: 15px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+@keyframes scene-environment-appear {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@media (max-height: 500px), (max-width: 900px) {
+  .scene-environment:is([data-state='docked'], [data-state='expanded']) {
+    top: max(38px, calc(env(safe-area-inset-top) + 26px));
+    width: min(15rem, 48vw);
+  }
+  .scene-environment-text {
+    font-size: 13px;
+    line-height: 1.5;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .scene-environment {
+    transition: none;
+  }
+  .scene-environment[data-state='intro'] {
+    animation: none;
   }
 }

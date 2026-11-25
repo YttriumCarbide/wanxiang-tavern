@@ -30,8 +30,10 @@
   display: none !important;
 }
 
-.scene-loading.complete {
+.scene-loading.complete,
+.world-loading-scene.complete {
   opacity: 0;
+  pointer-events: none;
 }
 
 .wl-bg {

@@ -464,10 +464,23 @@ export function createAtlasTravel({ dialog, events, scene, onTravel }) {
   }
 
   function reset() {
+    setQuestTarget();
     resetWalker();
     hovered = null;
     focused = null;
     preview();
+  }
+
+  function setQuestTarget(id) {
+    let target = null;
+    for (const pin of [...pins, ...discoveryPins]) {
+      const known =
+        pin.button.dataset.kind !== 'dungeon' || pin.linkId || unlockedDungeons.has(pin.id);
+      const selected = available && known && pin.id === id;
+      pin.button.toggleAttribute('data-quest-target', selected);
+      if (selected) target = pin.anchor;
+    }
+    return target;
   }
 
   function setHovered(id) {
@@ -520,6 +533,7 @@ export function createAtlasTravel({ dialog, events, scene, onTravel }) {
     updateDiscoveries,
     updateWorldState,
     setHovered,
+    setQuestTarget,
     isAvailable,
     walkTo,
     resetWalker,

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { installRingObserver } from './ring-acquisition.mjs';
 import { createServer } from 'node:http';
 import path from 'node:path';
 import { finishGalDialogue, legacySession, openShelfPanel } from './legacy-session.mjs';
@@ -104,6 +105,7 @@ export async function worldsEmblemsChecks({ browser, baseURL, output }) {
     for (const kind of ['script', 'map'])
       await post('prompts/select', { kind, id: preset.preset.id });
     await legacySession(page);
+    await installRingObserver(page);
     await page.addInitScript(() =>
       localStorage.setItem(
         'wanxiang.generation-options.v1',
@@ -196,6 +198,10 @@ export async function worldsEmblemsChecks({ browser, baseURL, output }) {
       'tan-hongyu',
     );
     await page.locator('#prepare-close').click();
+    await page.locator('#party-panel[open]').waitFor({ state: 'detached' });
+    const openLedger = page.locator('#ledger-drawer-host.is-open');
+    await openLedger.locator('#ledger-close').click();
+    await page.locator('#ledger-drawer-host').waitFor({ state: 'hidden' });
     await openGate();
     await page.getByRole('button', { name: '下一页地图', exact: true }).click();
     await page.locator('[data-region="world-lantern"]').click();
@@ -213,6 +219,12 @@ export async function worldsEmblemsChecks({ browser, baseURL, output }) {
     assert.equal(await page.locator('[data-emblem-passive].emblem-passive-inactive').count(), 1);
     if ((await page.locator('#speed').textContent()).includes('×1'))
       await page.locator('#speed').click();
+    const fullSignals = () =>
+      page.evaluate(
+        () =>
+          window.__ringLog.filter((entry) => entry.actor === 'aegis' && entry.phase === 'full')
+            .length,
+      );
     for (let turn = 0; turn < 7; turn++) {
       await page.waitForFunction(() => !demo.getStatus().animating);
       const state = await page.evaluate(() => demo.getState());
@@ -223,10 +235,16 @@ export async function worldsEmblemsChecks({ browser, baseURL, output }) {
         if ((await page.evaluate(() => demo.getStatus())).interactionStep === 'target')
           await page.locator('[data-unit="enemy-lantern-scout"]').click();
       }
+      assert.equal(await fullSignals(), 0, 'planning a charge does not announce it');
       await page.locator('#commit').click();
       await page.waitForFunction(() => !demo.getStatus().playing, { timeout: 30000 });
     }
     assert.equal((await page.evaluate(() => demo.getState())).units.aegis.emblemCharge, 6);
+    assert.equal(
+      await fullSignals(),
+      1,
+      'the committed crossing announces full charge once on its wearer',
+    );
     while (await page.locator('#emblem-dialogue').isVisible())
       await page.locator('#emblem-dialogue button').click();
     await finishGalDialogue(page, 'emblem-dialogue');
@@ -242,15 +260,14 @@ export async function worldsEmblemsChecks({ browser, baseURL, output }) {
     await page.locator('[data-skill="attack"]').click();
     await page.locator('[data-unit="enemy-lantern-scout"]').click();
     assert((await page.evaluate(() => demo.getPlan()))[0].followUp);
-    assert(
+    assert.equal(
       await page
-        .locator('#battle')
-        .evaluate((element) => element.classList.contains('emblem-active')),
-    );
-    assert(
-      await page
-        .locator('#emblem-screen')
-        .evaluate((element) => element.classList.contains('active')),
+        .locator(
+          '#battle.emblem-active, #emblem-screen.active, dialog.emblem-skill-cinematic[open]',
+        )
+        .count(),
+      0,
+      'combined status stays local without a full-screen overlay',
     );
     assert.equal(await page.locator('.unit-hit.combined-unit').count(), 1);
     assert.equal(await page.locator('.unit-hit.combined-selected').count(), 1);
@@ -264,10 +281,14 @@ export async function worldsEmblemsChecks({ browser, baseURL, output }) {
     );
     await page.screenshot({ path: path.join(output, 'emblem-combine-preview.png') });
     await page.locator('[data-side="Friendly"]:not([data-unit="aegis"])').first().click();
-    assert(
-      !(await page
-        .locator('#emblem-screen')
-        .evaluate((element) => element.classList.contains('active'))),
+    assert.equal(
+      await page
+        .locator(
+          '#battle.emblem-active, #emblem-screen.active, dialog.emblem-skill-cinematic[open]',
+        )
+        .count(),
+      0,
+      'combined status stays local without a full-screen overlay',
     );
     assert.equal(await page.locator('.unit-hit.combined-unit').count(), 1);
     assert.equal(await page.locator('.unit-hit.combined-selected').count(), 0);
@@ -295,6 +316,12 @@ export async function worldsEmblemsChecks({ browser, baseURL, output }) {
     await page.locator('[data-unit="enemy-lantern-scout"]').click();
     await page.locator('#commit').click();
     await page.waitForFunction(() => !demo.getStatus().playing, { timeout: 30000 });
+    assert.equal(
+      await page.locator('#emblem-screen.active, dialog.emblem-skill-cinematic[open]').count(),
+      0,
+      'the real combine round stays local without a cinematic dialog',
+    );
+    assert.equal(await page.evaluate(() => document.fullscreenElement), null);
     assert((await page.evaluate(() => demo.getState())).units['enemy-lantern-scout'].buffs.balance);
     assert.equal((await page.evaluate(() => demo.getLibrary())).progression.emblemLesson, 'done');
     await page.evaluate(() => demo.returnInn());

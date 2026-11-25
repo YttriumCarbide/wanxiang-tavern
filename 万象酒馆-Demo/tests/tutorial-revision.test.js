@@ -7,7 +7,7 @@ import { prepareCorridorRing, prepareBossEmblem } from '../src/emblem-progressio
 import { newExpedition, beginEncounter, completeEncounter, chooseRest } from '../src/expedition.js';
 import { preview, advance, makeEngage, intent } from '../src/engine.js';
 import { readFile } from 'node:fs/promises';
-import { COMBINE_SKILL, EMBLEM_ID, OVERLOAD_EMBLEM_ID } from '../src/emblems.js';
+import { COMBINE_SKILL, DRAGON_EMBLEM_ID, EMBLEM_ID, OVERLOAD_EMBLEM_ID } from '../src/emblems.js';
 import { syncBuiltinWorldbook } from '../src/ai/worldbook.js';
 
 test('new Edith begins with 48 hp while saved level growth is retained', () => {
@@ -15,10 +15,17 @@ test('new Edith begins with 48 hp while saved level growth is retained', () => {
   const edith = library.characters.find((member) => member.id === 'official-edith');
   assert.equal(edith.combat.hp, 48);
   edith.growth = { level: 3, xp: 20, rarity: 'rare', seed: 12, bonus: { hp: 4 } };
-  const restored = restoreLibrary(library).characters.find((member) => member.id === edith.id);
+  const restoredLibrary = restoreLibrary(library);
+  const restored = restoredLibrary.characters.find((member) => member.id === edith.id);
   assert.equal(restored.combat.hp, 48);
   assert.equal(restored.growth.level, 3);
-  assert.equal(restored.growth.bonus.hp, 4);
+  assert.equal(restored.growth.revision, 8);
+  assert.equal(restored.growth.rolls.length, 2);
+  assert.equal(Object.hasOwn(restored.growth, 'bonus'), false);
+  const reloaded = restoreLibrary(structuredClone(restoredLibrary)).characters.find(
+    (member) => member.id === edith.id,
+  );
+  assert.deepEqual(reloaded.growth, restored.growth);
 });
 
 export function corridorFixture() {
@@ -46,14 +53,15 @@ test('a new adventure resets borrowed protagonist growth while loading a save pr
   const library = newCampaign(saved);
   assert.equal(library.characters[0].growth.level, 1);
   assert.equal(library.characters[0].growth.xp, 0);
-  assert.equal(library.characters[0].growth.bonus.hp, 0);
+  assert.equal(library.characters[0].growth.revision, 8);
+  assert.deepEqual(library.characters[0].growth.rolls, []);
   assert.equal(library.characters[0].growth.rarity, 'epic');
   assert.equal(saved.growth.level, 8);
   library.characters[0].growth = structuredClone(saved.growth);
   assert.equal(restoreLibrary(library).characters[0].growth.level, 8);
 });
 
-test('mill:0 boss awakens heirloom Tan Hongyu on protagonist while darkscaleWarlord no longer duplicates it', async () => {
+test('mill:0 awakens Tan Hongyu; darkscaleWarlord awards Kamui once instead', async () => {
   const { grantMidBattleOverlordEmblem } = await import('../src/emblem-progression.js');
   const { library: ruinsLib, expedition: ruinsExp } = corridorFixture();
   assert.equal(
@@ -71,6 +79,9 @@ test('mill:0 boss awakens heirloom Tan Hongyu on protagonist while darkscaleWarl
   delete ruinsState.units.ruinsGate;
   ruinsState.phase = 'plan';
   ruinsState.round = 2;
+  const darkscaleReward = grantMidBattleOverlordEmblem(ruinsLib, ruinsState, ruinsExp, () => 0);
+  assert.equal(darkscaleReward?.id, DRAGON_EMBLEM_ID);
+  assert.deepEqual(ruinsLib.emblems, [DRAGON_EMBLEM_ID]);
   assert.equal(
     grantMidBattleOverlordEmblem(ruinsLib, ruinsState, ruinsExp, () => 0),
     null,

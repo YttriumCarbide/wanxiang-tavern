@@ -58,7 +58,7 @@ async function scopesForRun() {
   if (plan.explicit) for (const scope of plan.scopes) scopes.add(scope);
   return scopes;
 }
-async function browserChecks(scopes) {
+async function browserChecks(scopes, staticSettled) {
   const jobs = browserJobs(scopes, results, root);
   if (!jobs.length && !scopes.has('static')) return;
   let browser;
@@ -69,7 +69,7 @@ async function browserChecks(scopes) {
       headless: true,
       args: ['--enable-webgl', '--ignore-gpu-blocklist'],
     });
-    // Building static assets writes shared build inputs, so finish it before other browser jobs.
+    // The static build regenerates shared assets that core and browser checks read.
     if (scopes.has('static'))
       await run('static', async () => {
         const { staticChecks } = await import('../tests/browser/static.mjs');
@@ -77,6 +77,7 @@ async function browserChecks(scopes) {
         await mkdir(directory, { recursive: true });
         return staticChecks({ browser, output: directory });
       });
+    staticSettled();
     await runBatch(jobs, plan.browserConcurrency, (job) =>
       run(job.name, async () => {
         const directory = path.join(output, job.name);
@@ -133,9 +134,13 @@ async function main() {
       name: 'provider-live',
       operation: async () => (await import('../tests/provider-live.mjs')).providerLiveChecks(),
     });
+  const staticGate = Promise.withResolvers();
+  const browser = browserChecks(scopes, staticGate.resolve).finally(staticGate.resolve);
+  // Allow independent suites to proceed only when the browser build stops writing their inputs.
+  if (scopes.has('static')) await staticGate.promise;
   await Promise.all([
     runBatch(local, 2, (job) => run(job.name, job.operation)),
-    browserChecks(scopes),
+    browser,
     scopes.has('server')
       ? run('server', () => withTestServer(serverChecks, { diskStorage: true }))
       : null,
@@ -155,6 +160,11 @@ async function main() {
         }),
       ),
     );
+  if (scopes.has('android-apk'))
+    await run('android-apk', async () => {
+      const { androidApkChecks } = await import('./testing/android-apk.mjs');
+      return androidApkChecks({ outputDir: path.join(output, 'android-apk') });
+    });
   if (scopes.has('launcher')) await run('launcher', launchers);
 }
 

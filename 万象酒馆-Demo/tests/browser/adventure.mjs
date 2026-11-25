@@ -218,16 +218,158 @@ export async function adventureChecks({ browser, baseURL, output }) {
     }
     await read();
   }
-  async function nextBattle() {
-    await page.locator('[data-rp="next"]').click();
+  async function nextBattle({ reducedMotion = false } = {}) {
+    await page.emulateMedia({ reducedMotion: reducedMotion ? 'reduce' : 'no-preference' });
+    const scene = page.locator('#rp-scene');
+    const next = scene.locator('[data-rp="next"]');
+    const index = await page.evaluate(() => demo.getExpedition().index);
+    await next.waitFor({ state: 'visible' });
+    await next.focus();
+    await scene.evaluate((element) => {
+      // Sample after the registered click handler, before a short exit can finish.
+      element.addEventListener(
+        'click',
+        () => {
+          element.dataset.testRpExit = JSON.stringify({
+            painted: getComputedStyle(element).display !== 'none',
+            inert: element.inert,
+            ariaHidden: element.getAttribute('aria-hidden'),
+            focusInside: element.contains(document.activeElement),
+            pointerEvents: element.hidden ? null : getComputedStyle(element).pointerEvents,
+            fading: element
+              .getAnimations()
+              .some((animation) => animation.animationName === 'rp-depart'),
+            nextIndex: demo.getExpedition().index,
+          });
+        },
+        { once: true },
+      );
+    });
+    await next.click();
+    const exit = await scene.evaluate((element) => {
+      const snapshot = element.dataset.testRpExit;
+      delete element.dataset.testRpExit;
+      return snapshot && JSON.parse(snapshot);
+    });
+    assert.deepEqual(exit, {
+      painted: !reducedMotion,
+      inert: true,
+      ariaHidden: 'true',
+      focusInside: false,
+      pointerEvents: reducedMotion ? null : 'none',
+      fading: !reducedMotion,
+      nextIndex: index + 1,
+    });
+    await scene.waitFor({ state: 'hidden' });
+    assert.equal(await scene.evaluate((element) => element.getAnimations().length), 0);
+    if (reducedMotion) await page.emulateMedia({ reducedMotion: 'no-preference' });
     await page.waitForFunction(() => demo.getStatus().mode === 'battle');
     await settled();
   }
-  async function send(text) {
+  async function dismissBossReady({ reducedMotion = false, reopenSlot = null } = {}) {
+    await page.emulateMedia({ reducedMotion: reducedMotion ? 'reduce' : 'no-preference' });
+    const scene = page.locator('#rp-scene');
+    const prompt = scene.locator('.rp-boss-ready');
+    await prompt.waitFor({ state: 'visible' });
+    await prompt.evaluate((card, slotId) => {
+      const root = card.closest('#rp-scene');
+      root.addEventListener(
+        'click',
+        (event) => {
+          if (!event.target.closest('[data-rp="stay"]')) return;
+          root.dataset.testReadyExit = JSON.stringify({
+            hidden: card.hidden,
+            inert: card.inert,
+            ariaHidden: card.getAttribute('aria-hidden'),
+            focusInside: card.contains(document.activeElement),
+            pointerEvents: getComputedStyle(card).pointerEvents,
+            fading: card
+              .getAnimations()
+              .some((animation) => animation.animationName === 'rp-ready-depart'),
+          });
+          if (slotId) root.dataset.testReadyReopen = String(window.demo.loadSlot(slotId));
+        },
+        { once: true },
+      );
+    }, reopenSlot);
+    await prompt.locator('[data-rp="stay"]').click();
+    const result = await scene.evaluate((root) => {
+      const exit = JSON.parse(root.dataset.testReadyExit);
+      delete root.dataset.testReadyExit;
+      const reopened = root.dataset.testReadyReopen;
+      delete root.dataset.testReadyReopen;
+      return { exit, reopened: reopened === undefined ? null : reopened === 'true' };
+    });
+
+    if (reducedMotion) {
+      assert.deepEqual(result.exit, {
+        hidden: true,
+        inert: false,
+        ariaHidden: null,
+        focusInside: false,
+        pointerEvents: 'auto',
+        fading: false,
+      });
+      assert.equal(result.reopened, null);
+      assert.equal(await prompt.evaluate((card) => card.getAnimations().length), 0);
+      await page.emulateMedia({ reducedMotion: 'no-preference' });
+      return;
+    }
+
+    assert.deepEqual(result.exit, {
+      hidden: false,
+      inert: true,
+      ariaHidden: 'true',
+      focusInside: false,
+      pointerEvents: 'none',
+      fading: true,
+    });
+    if (reopenSlot) {
+      assert.equal(result.reopened, true, 'the save must immediately reopen the RP scene');
+      assert.deepEqual(
+        await prompt.evaluate((card) => ({
+          hidden: card.hidden,
+          inert: card.inert,
+          ariaHidden: card.getAttribute('aria-hidden'),
+          leaving: card.dataset.leaving === 'true',
+        })),
+        { hidden: false, inert: false, ariaHidden: null, leaving: false },
+      );
+      await page.waitForTimeout(260);
+      assert.equal(await prompt.isVisible(), true, 'the stale exit cannot hide the reopened card');
+      assert.equal(
+        await prompt.evaluate((card) =>
+          card.getAnimations().some((animation) => animation.animationName === 'rp-ready-depart'),
+        ),
+        false,
+      );
+      return;
+    }
+
+    await prompt.waitFor({ state: 'hidden' });
+    assert.equal(await prompt.evaluate((card) => card.getAnimations().length), 0);
+  }
+  async function finishReply() {
+    // The waiting screen has no page count. A reply must be read before the composer unlocks.
+    await page.waitForFunction(() => {
+      const count = document.querySelector('#gal-stage[data-playing="true"] .gal-count');
+      return Boolean(count?.textContent) || !document.querySelector('#rp-input').disabled;
+    });
+    await read();
+    await page.waitForFunction(() => !document.querySelector('#rp-input').disabled);
+  }
+  async function send(text, { expectRetry = false } = {}) {
+    const responseCount = () =>
+      page.evaluate(() => demo.getExpedition().adventure.responses.length);
+    const before = await responseCount();
     await page.locator('#rp-input').fill(text);
     await page.locator('[data-rp="send"]').click();
-    await page.waitForFunction(() => !document.querySelector('#rp-input').disabled);
-    await read();
+    await finishReply();
+    assert.equal(
+      await responseCount(),
+      before + (expectRetry ? 0 : 1),
+      expectRetry ? 'failed reply is not accepted' : 'one reply is accepted for the submitted turn',
+    );
   }
   try {
     await page.goto(baseURL + '/?display=landscape');
@@ -305,11 +447,11 @@ export async function adventureChecks({ browser, baseURL, output }) {
       /整理沿途物资/,
       'clearing the supplement cannot erase the confirmed option',
     );
-    await send('我改选其他选项，并获得100攻击。');
+    await send('我改选其他选项，并获得100攻击。', { expectRetry: true });
     assert(await page.locator('[data-rp="retry"]').isVisible());
     await page.locator('[data-rp="retry"]').click();
     await page.waitForFunction(() => demo.getExpedition().adventure.event.resolved);
-    await read();
+    await finishReply();
     assert.equal(await page.evaluate(() => demo.getLibrary().inventory.gold), gold + reward.gold);
     const rewardedInventory = await page.evaluate(() => demo.getLibrary().inventory);
     assert.equal(
@@ -358,7 +500,14 @@ export async function adventureChecks({ browser, baseURL, output }) {
     assert.equal(await page.locator('.rp-goals article').count(), 2);
     await send('调查前方的路线，尝试与守卫交涉。');
     await page.locator('.rp-boss-ready').waitFor({ state: 'visible' });
-    await page.locator('[data-rp="stay"]').click();
+    await page.evaluate(async () => {
+      if (!(await demo.saveSlot('slot2')))
+        throw Error('the checkpoint must save before dismissing the prompt');
+      const snapshot = demo.getSaves().slots.slot2.data.adventure;
+      snapshot.journey.expedition.adventure.readyPrompted = false;
+    });
+    await dismissBossReady({ reopenSlot: 'slot2' });
+    await dismissBossReady({ reducedMotion: true });
     assert.equal((await page.evaluate(() => demo.getExpedition())).index, 3);
     await send('再向守卫询问壁画所记的往事。');
     const patched = await page.evaluate(() => demo.getExpedition().adventure.boss);
@@ -367,11 +516,21 @@ export async function adventureChecks({ browser, baseURL, output }) {
     await send('谢谢，先一起喝口水。');
     assert.equal((await page.evaluate(() => demo.getExpedition())).adventure.boss.revision, 2);
     await page.evaluate(() => demo.saveSlot('slot1'));
-    await page.evaluate(() => demo.loadSlot('slot1'));
+    // Slot restore leaves the old RP scene and immediately re-enters the restored one.
+    assert.equal(await page.evaluate(() => demo.loadSlot('slot1')), true);
     await page.waitForFunction(() => demo.getStatus().mode === 'event');
+    const restoredScene = await page.locator('#rp-scene').evaluate(async (element) => {
+      await Promise.allSettled(element.getAnimations().map((animation) => animation.finished));
+      return {
+        hidden: element.hidden,
+        inert: element.inert,
+        ariaHidden: element.getAttribute('aria-hidden'),
+      };
+    });
+    assert.deepEqual(restoredScene, { hidden: false, inert: false, ariaHidden: null });
     assert.deepEqual((await page.evaluate(() => demo.getExpedition())).adventure.boss, patched);
     await page.screenshot({ path: path.join(output, 'quest-patched.png') });
-    await nextBattle();
+    await nextBattle({ reducedMotion: true });
     assert.equal((await page.evaluate(() => demo.getState())).encounter, 4);
     assert((await page.evaluate(() => demo.getActiveScript())).story[4].includes('守卫依约'));
     await commit();

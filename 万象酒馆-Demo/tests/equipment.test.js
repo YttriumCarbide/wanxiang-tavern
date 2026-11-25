@@ -18,8 +18,11 @@ import {
   equippedDefinitions,
   applyEquipment,
   reforgeEquipment,
+  reforgeCost,
   temperEquipment,
+  temperCost,
   ascendEquipment,
+  ascendCost,
   dismantleEquipment,
   maxUnlockedEquipmentLevel,
   restoreEquipment,
@@ -325,22 +328,33 @@ test('equipment quality tiers, Lv.1..99 scaling, reforge, temper, ascend, disman
 
   library.equipment.catalog.push(template);
   library.inventory.ether = 2000;
+  library.inventory.gold = 1000;
   library.characters[0].growth = { ...(library.characters[0].growth || {}), level: 12 };
   const bought = buyEquipment(library, template.id, 'inst-1', { seed: 11 });
   assert.equal(bought.level, 8);
   assert.equal(bought.quality, 'rare');
   assert.equal(maxUnlockedEquipmentLevel(library) >= 12, true);
 
+  const afterBuyEther = library.inventory.ether;
+  const invested = bought.investedEther;
+  let remainingGold = library.inventory.gold - reforgeCost(template, bought);
   const reforged = reforgeEquipment(library, 'inst-1', 77);
+  assert.equal(library.inventory.gold, remainingGold);
   assert(reforged.rollPercent >= 0 && reforged.rollPercent <= 100);
+  remainingGold -= temperCost(template, reforged, 12);
   const tempered = temperEquipment(library, 'inst-1', 12);
+  assert.equal(library.inventory.gold, remainingGold);
   assert.equal(tempered.level, 12);
   assert.throws(
     () => temperEquipment(library, 'inst-1', maxUnlockedEquipmentLevel(library) + 1),
     /解锁/,
   );
 
+  remainingGold -= ascendCost(template, tempered);
   const ascended = ascendEquipment(library, 'inst-1', 5);
+  assert.equal(library.inventory.gold, remainingGold);
+  assert.equal(library.inventory.ether, afterBuyEther);
+  assert.equal(ascended.investedEther, invested);
   assert.equal(ascended.quality, 'epic');
 
   const restoredEq = restoreEquipment(JSON.parse(JSON.stringify(library.equipment)));

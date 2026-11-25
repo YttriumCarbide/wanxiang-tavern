@@ -10,7 +10,7 @@ import { WEATHERS } from './weather.js';
 
 const CREATURES = [
   { id: 'crystal-beetle', name: '晶背甲虫', description: '结晶覆甲，六足缓行。矿轨旁的拾晶者。' },
-  { id: 'cinder-imp', name: '灰炉小偶', description: '旧炉砖与废铁之间，还有一点没熄灭的火。' },
+  { id: 'cinder-imp', name: '灰炉机兵', description: '旧炉砖与废铁之间，还有一点没熄灭的火。' },
   { id: 'tide-jelly', name: '潮灯水母', description: '灯心沉在伞盖之中，触须跟着水声摆动。' },
   { id: 'boss-tide', name: '星潮司灯者', description: '星环记录潮汐，青铜长臂守住最后一盏灯。' },
   {

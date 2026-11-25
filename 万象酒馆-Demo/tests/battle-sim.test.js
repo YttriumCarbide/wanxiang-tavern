@@ -6,6 +6,27 @@ import { simulateCampaign } from '../tools/battle-sim/campaign.mjs';
 import { runStressMatrixSerial } from '../tools/battle-sim/stress.mjs';
 import { runCampaignMatrix } from '../tools/battle-sim/matrix.mjs';
 import { runParallelMatrix } from '../tools/battle-sim/parallel.mjs';
+import { officialCharacter } from '../src/ai/library-roster.js';
+import { defaultProtagonist } from '../src/content/qingyuan.js';
+import { HEROES } from '../src/data.js';
+
+function assertDirectDamageSkillForActor(action) {
+  const combatants = [
+    defaultProtagonist().combat,
+    ...['edith', 'aegis', 'pandora', 'morrow', 'vesper'].map((id) => officialCharacter(id).combat),
+  ];
+  const actorIndex = HEROES.findIndex((candidate) => candidate.id === action.actor);
+  const combatant = combatants[actorIndex];
+  const skill =
+    action.skill === 'attack'
+      ? combatant?.attack && { effects: [{ type: 'damage' }] }
+      : combatant?.skills?.find((candidate) => candidate.id === action.skill);
+
+  assert(
+    skill?.effects?.some((effect) => effect.type === 'damage'),
+    `${action.actor} must use one of their available direct-damage skills`,
+  );
+}
 
 test('node statistics retain the sample denominators, including a zero-round outcome', () => {
   const before = { hp: 60, maxHp: 60, mp: 20, maxMp: 20, alive: 2, supplies: 1 };
@@ -50,8 +71,10 @@ test('high-loadout emblem scouting never elevates a supply item above an availab
   const firstBattle = run.expeditions[0].nodes[0];
   assert.equal(firstBattle.outcome, 'victory');
   assert(firstBattle.battle.trace.length > 0);
-  assert.equal(firstBattle.battle.trace[0].plan[0].kind, 'skill');
-  assert.equal(firstBattle.battle.trace[0].plan[0].skill, 'generated-2');
+  assert(firstBattle.start.supplies > 0);
+  const selectedAction = firstBattle.battle.trace[0].plan[0];
+  assert.equal(selectedAction.kind, 'skill');
+  assertDirectDamageSkillForActor(selectedAction);
   assert.equal(firstBattle.battle.violations.length, 0);
 });
 
@@ -66,8 +89,10 @@ test('high-loadout ruins opener keeps the available emblem attack ahead of suppl
     keepTrace: true,
   });
   const firstBattle = run.expeditions[0].nodes[0];
-  assert.equal(firstBattle.battle.trace[0].plan[0].kind, 'skill');
-  assert.equal(firstBattle.battle.trace[0].plan[0].skill, 'generated-2');
+  assert(firstBattle.start.supplies > 0);
+  const selectedAction = firstBattle.battle.trace[0].plan[0];
+  assert.equal(selectedAction.kind, 'skill');
+  assertDirectDamageSkillForActor(selectedAction);
   assert.equal(firstBattle.battle.violations.length, 0);
 });
 

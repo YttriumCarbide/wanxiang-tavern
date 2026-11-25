@@ -1,31 +1,32 @@
-import { ITEMS, buyItem } from '../content/items.js';
+import { ITEMS } from '../content/items.js';
 import { html } from '../shared/html.js';
 import { escapeText } from '../ui.js';
 import { INGREDIENTS } from '../content/dining.js';
-import { diningState, buyIngredient } from '../dining.js';
+import { diningState, ingredientSalePrice } from '../dining.js';
 import { foodArt } from './food-art.js';
+import { cityServiceArt } from './city-service-art.js';
+import { commitCityTrade } from './city-trade.js';
 
 export function createShop(context) {
   const panel = document.createElement('dialog');
   panel.id = 'void-shop';
+  panel.className = 'city-service-dialog';
+  panel.setAttribute('aria-labelledby', 'market-title');
   panel.innerHTML = html`<header>
-      <div>
-        <small>THE VOID / PROVISIONS</small>
-        <h2>虚空售货机</h2>
-      </div>
-      <span id="shop-gold"></span><button id="shop-close" aria-label="关闭商店">×</button>
+      <h2 id="market-title">市场</h2>
+      <span id="shop-gold"></span><button id="shop-close" aria-label="关闭市场">×</button>
     </header>
-    <nav class="shop-departments" aria-label="商店部门">
-      <button data-shop-department="items" aria-pressed="true">购买道具</button
-      ><button data-shop-department="ingredients" aria-pressed="false">购买食材</button>
-    </nav>
-    <div class="shop-layout">
+    <section id="market-surface" class="market-surface" aria-label="食材市场">
+      <nav id="market-items" class="market-stalls" aria-label="食材货架"></nav>
+      <section id="market-counter" class="market-counter" aria-label="市场柜台"></section>
+    </section>
+    <section id="supply-surface" class="supply-surface">
       <nav id="shop-categories" aria-label="补给种类"></nav>
-      <div class="shop-workspace">
-        <nav id="shop-items" aria-label="补给目录"></nav>
-        <section id="shop-detail" aria-label="商品详情"></section>
+      <div class="shop-machine">
+        <nav id="shop-items" aria-label="药剂货道"></nav>
+        <section id="shop-detail" aria-label="药剂取货区"></section>
       </div>
-    </div>
+    </section>
     <p id="shop-status" role="status"></p>`;
   document.body.append(panel);
   const categories = {
@@ -41,21 +42,23 @@ export function createShop(context) {
     cleanse: '净化',
     flying: '飞行',
   };
+  const isPotion = (id) => id?.endsWith('-potion') === true;
+  const itemsForMode = () =>
+    Object.values(ITEMS).filter((item) => mode === 'preparation' || isPotion(item.id));
   const group = (id) => id.replace(/^fine-/, '').replace(/-potion$|-scroll$/g, '');
   let category = 'slow';
   let selected = Object.keys(ITEMS)[0];
-  let fromPreparation = false;
-  let department = 'items';
+  let mode = 'vending';
+  let returnToKitchen = false;
+  let view = 0;
   let ingredient = null;
   const categoryRail = panel.querySelector('#shop-categories');
-  categoryRail.innerHTML = Object.entries(categories)
-    .map(([id, name]) => {
-      const item = Object.values(ITEMS).find((item) => group(item.id) === id);
-      return html`<button type="button" data-shop-category="${id}" aria-pressed="false">
-        <img src="${item.icon}" alt="" /><span>${name}</span>
-      </button>`;
-    })
-    .join('');
+  const marketSurface = panel.querySelector('#market-surface');
+  const marketItemsNode = panel.querySelector('#market-items');
+  const marketCounter = panel.querySelector('#market-counter');
+  const supplySurface = panel.querySelector('#supply-surface');
+  const supplyItems = panel.querySelector('#shop-items');
+  const supplyDetail = panel.querySelector('#shop-detail');
 
   function render() {
     const inventory = context.session.ai.library.inventory;
@@ -63,61 +66,106 @@ export function createShop(context) {
         src="./assets/icons/gold.svg"
         alt="金币"
       /><b>${inventory.gold}</b>`;
-    panel
-      .querySelectorAll('[data-shop-department]')
-      .forEach((button) =>
-        button.setAttribute('aria-pressed', String(button.dataset.shopDepartment === department)),
-      );
-    categoryRail.hidden = department === 'ingredients';
-    for (const button of categoryRail.querySelectorAll('button'))
-      button.setAttribute('aria-pressed', String(button.dataset.shopCategory === category));
-    if (department === 'ingredients') {
+    if (mode === 'market') {
       const state = diningState(context.session.ai.library);
-      if (!state.stock.some(({ id }) => id === ingredient)) ingredient = state.stock[0]?.id;
-      panel.querySelector('#shop-items').innerHTML = state.stock
-        .map(({ id, left }) => {
-          const food = INGREDIENTS[id];
-          return html`<button data-food-select="${id}" aria-pressed="${id === ingredient}">
-            <span class="shop-row-art">${foodArt(food)}</span>
-            <span class="shop-row-info">
-              <strong>${food.name}</strong>
-              <span class="shop-row-sub">限购剩余 ${left}</span>
-            </span>
-            <small>${food.price}<img src="./assets/icons/gold.svg" alt="金币" /></small>
-          </button>`;
-        })
-        .join('');
+      const marketItems = [
+        ...state.stock
+          .filter((stock) => Object.hasOwn(INGREDIENTS, stock.id))
+          .map((stock) => ({ ...stock, carried: false })),
+        ...Object.values(INGREDIENTS)
+          .filter(
+            (food) =>
+              state.inventory[food.id] > 0 && !state.stock.some((stock) => stock.id === food.id),
+          )
+          .map((food) => ({ id: food.id, left: 0, carried: true })),
+      ];
+      if (!marketItems.some(({ id }) => id === ingredient)) ingredient = marketItems[0]?.id;
+      marketItemsNode.innerHTML = marketItems.length
+        ? marketItems
+            .map(({ id, left, carried }) => {
+              const food = INGREDIENTS[id];
+              return html`<button
+                type="button"
+                class="market-stall"
+                data-food-select="${id}"
+                aria-pressed="${id === ingredient}"
+              >
+                <span class="market-stall-art">${foodArt(food)}</span>
+                <span class="market-stall-info">
+                  <strong>${food.name}</strong>
+                  <small>${carried ? '行囊持有 ' + state.inventory[id] : '今日余量 ' + left}</small>
+                </span>
+                <span class="market-stall-price"
+                  >${food.price}<img src="./assets/icons/gold.svg" alt="金币"
+                /></span>
+              </button>`;
+            })
+            .join('')
+        : '<p class="market-empty">当前暂无食材。</p>';
       const food = INGREDIENTS[ingredient];
       const left = state.stock.find(({ id }) => id === ingredient)?.left || 0;
-      panel.querySelector('#shop-detail').innerHTML = food
-        ? html`
-            <div class="shop-art"><span class="shop-orbit"></span>${foodArt(food)}</div>
-            <h3>${food.name}</h3>
-            <p>${escapeText(food.note || '可带回后厨烹制本日膳食的严选食材。')}</p>
-            <small class="shop-stock"
-              >行囊 ${state.inventory[food.id] || 0} · 今日余量 ${left}</small
-            >
-            <div class="shop-detail-actions">
+      const salePrice = ingredientSalePrice(food?.id);
+      const carried = food ? state.inventory[food.id] || 0 : 0;
+      marketCounter.hidden = !food;
+      marketCounter.innerHTML = food
+        ? html`<div class="market-counter-item">
+              <span class="market-counter-art">${foodArt(food)}</span>
+              <div class="market-counter-info">
+                <h3>${food.name}</h3>
+                <p>${escapeText(food.note || '可带回后厨烹制本日膳食的严选食材。')}</p>
+                <small class="shop-stock"
+                  >行囊 ${state.inventory[food.id] || 0} · 今日余量 ${left}</small
+                >
+              </div>
+            </div>
+            <div class="market-counter-actions">
               <button
                 class="primary"
                 data-food-buy="${food.id}"
-                ${left && inventory.gold >= food.price ? '' : 'disabled'}
+                ${left && inventory.gold >= food.price && !context.session.runtime.cityTrade ? '' : 'disabled'}
               >
                 购买 <b>${food.price}</b><img src="./assets/icons/gold.svg" alt="金币" />
               </button>
               ${
-                ['buy', 'cook'].includes(state.tutorial)
+                carried > 0
+                  ? html`<button
+                      data-food-sell="${food.id}"
+                      ${context.session.runtime.cityTrade ? 'disabled' : ''}
+                    >
+                      出售 <b>${salePrice}</b><img src="./assets/icons/gold.svg" alt="金币" />
+                    </button>`
+                  : ''
+              }
+              ${
+                returnToKitchen && ['buy', 'cook'].includes(state.tutorial)
                   ? '<button data-food-dine>准备饭菜</button>'
                   : ''
               }
-            </div>
-          `
-        : '<p class="shop-empty">当前暂无食材。</p>';
+            </div>`
+        : '';
       panel.querySelector('#shop-status').textContent =
         state.tutorial === 'buy' ? '购买乡村面包与奶酪。' : '';
       return;
     }
-    panel.querySelector('#shop-items').innerHTML = Object.values(ITEMS)
+    const itemsForSale = itemsForMode();
+    if (!itemsForSale.some((item) => group(item.id) === category))
+      category = group(itemsForSale[0].id);
+    if (!itemsForSale.some((item) => item.id === selected && group(item.id) === category))
+      selected = itemsForSale.find((item) => group(item.id) === category).id;
+    categoryRail.innerHTML = Object.entries(categories)
+      .filter(([id]) => itemsForSale.some((item) => group(item.id) === id))
+      .map(([id, name]) => {
+        const item = itemsForSale.find((entry) => group(entry.id) === id);
+        return html`<button
+          type="button"
+          data-shop-category="${id}"
+          aria-pressed="${id === category}"
+        >
+          <img src="${item.icon}" alt="" /><span>${name}</span>
+        </button>`;
+      })
+      .join('');
+    supplyItems.innerHTML = itemsForSale
       .filter((item) => group(item.id) === category)
       .map(
         (item) =>
@@ -132,7 +180,7 @@ export function createShop(context) {
       )
       .join('');
     const item = ITEMS[selected];
-    panel.querySelector('#shop-detail').innerHTML = html`<div class="shop-art">
+    supplyDetail.innerHTML = html`<div class="shop-art">
         <span class="shop-orbit"></span><img src="${item.icon}" alt="${item.name}" />
       </div>
       <h3>${item.name}</h3>
@@ -142,22 +190,56 @@ export function createShop(context) {
         <button
           class="primary"
           data-buy="${item.id}"
-          ${inventory.gold < item.price ? 'disabled' : ''}
+          ${inventory.gold < item.price || context.session.runtime.cityTrade ? 'disabled' : ''}
         >
           购买 <b>${item.price}</b><img src="./assets/icons/gold.svg" alt="金币" />
         </button>
       </div>`;
   }
-  function open({ preparation = false, ingredients = false } = {}) {
+  function open({ preparation = false, ingredients = false, cityId, vendingMachine = false } = {}) {
     if (
       context.session.runtime.mode !== 'inn' &&
       !(preparation && document.querySelector('#party-panel').open)
     )
       return;
-    fromPreparation = preparation;
-    department = ingredients ? 'ingredients' : 'items';
+    const city = cityServiceArt(cityId, context.daily?.scene?.());
+    mode = vendingMachine
+      ? 'vending'
+      : cityId || ingredients
+        ? 'market'
+        : preparation
+          ? 'preparation'
+          : 'vending';
+    returnToKitchen = mode === 'market' && ingredients && !cityId;
+    panel.dataset.shopMode = mode;
+    const title =
+      mode === 'market'
+        ? `${city.name} · 市场`
+        : mode === 'preparation'
+          ? '战前补给'
+          : '药剂售货机';
+    panel.querySelector('#market-title').textContent = title;
+    const isMarket = mode === 'market';
+    marketSurface.hidden = !isMarket;
+    supplySurface.hidden = isMarket;
+    categoryRail.hidden = isMarket;
+    if (isMarket) {
+      categoryRail.replaceChildren();
+      supplyItems.replaceChildren();
+      supplyDetail.replaceChildren();
+    } else {
+      marketItemsNode.replaceChildren();
+      marketCounter.replaceChildren();
+      const isPreparation = mode === 'preparation';
+      supplyItems.setAttribute('aria-label', isPreparation ? '战前补给' : '药剂货道');
+      supplyDetail.setAttribute('aria-label', isPreparation ? '补给详情' : '药剂取货区');
+    }
+    panel.querySelector('#shop-close').setAttribute('aria-label', `关闭${title}`);
+    panel.style.setProperty('--market-scene', `url("${new URL(city.market, document.baseURI)}")`);
+    ++view;
+    panel.querySelector('#shop-status').textContent = '';
+    if (mode === 'vending') category = 'slow';
     render();
-    if (department !== 'ingredients') panel.querySelector('#shop-status').textContent = '';
     if (!panel.open) panel.showModal();
   }
   context.events.on(panel.querySelector('#shop-close'), 'click', () => panel.close());
@@ -167,73 +249,123 @@ export function createShop(context) {
     context.shell.renderParty();
     context.dining?.refresh();
   });
-  context.events.on(panel, 'click', (event) => {
-    const section = event.target.closest('[data-shop-department]');
-    if (section) {
-      department = section.dataset.shopDepartment;
-      render();
-      return;
-    }
-    if (event.target.closest('[data-food-dine]')) {
+  context.events.on(panel, 'click', async (event) => {
+    const at = view;
+    const current = () => panel.open && at === view;
+    if (returnToKitchen && event.target.closest('[data-food-dine]')) {
       panel.close();
       context.dining.open();
       return;
     }
     const selectedFood = event.target.closest('[data-food-select]');
-    if (selectedFood) {
+    if (selectedFood && mode === 'market') {
       ingredient = selectedFood.dataset.foodSelect;
-      return render();
+      render();
+      panel
+        .querySelector('[data-food-select][aria-pressed="true"]')
+        ?.focus({ preventScroll: true });
+      return;
     }
     const food = event.target.closest('[data-food-buy]');
     if (food) {
+      if (mode !== 'market' || food.disabled || context.session.runtime.mode !== 'inn') return;
+      food.disabled = true;
       try {
-        buyIngredient(context.session.ai.library, food.dataset.foodBuy);
-        context.generation.save();
+        await commitCityTrade(context, 'ingredient', food.dataset.foodBuy);
+        if (!current()) return;
         context.audio.play('exchange');
         render();
         panel.querySelector('#shop-status').textContent =
           `${INGREDIENTS[food.dataset.foodBuy].name} +1 · 已放入背包`;
       } catch (failure) {
+        if (!current()) return;
+        render();
         panel.querySelector('#shop-status').textContent = failure.message;
+      }
+      if (current() && ingredient === food.dataset.foodBuy)
+        panel.querySelector('[data-food-buy]')?.focus({ preventScroll: true });
+      return;
+    }
+    const sale = event.target.closest('[data-food-sell]');
+    if (sale && mode === 'market' && !sale.disabled && context.session.runtime.mode === 'inn') {
+      const id = sale.dataset.foodSell;
+      sale.disabled = true;
+      try {
+        const result = await commitCityTrade(context, 'ingredientSale', id);
+        if (!current()) return;
+        render();
+        context.audio.play('exchange');
+        panel.querySelector('#shop-status').textContent =
+          `${result.item.name} −1 · 金币 +${result.gold}`;
+      } catch (failure) {
+        if (!current()) return;
+        render();
+        panel.querySelector('#shop-status').textContent = failure.message;
+        context.audio.play('error');
+      }
+      if (ingredient === id) {
+        const sellAgain = panel.querySelector('[data-food-sell]:enabled');
+        const selectedRow = panel.querySelector('[data-food-select][aria-pressed="true"]');
+        (sellAgain || selectedRow)?.focus({ preventScroll: true });
+      } else if (!panel.contains(document.activeElement)) {
+        panel
+          .querySelector('[data-food-select][aria-pressed="true"]')
+          ?.focus({ preventScroll: true });
       }
       return;
     }
     const tab = event.target.closest('[data-shop-category]');
-    if (tab) {
+    if (tab && mode !== 'market') {
       category = tab.dataset.shopCategory;
-      selected = Object.keys(ITEMS).find((id) => group(id) === category);
+      selected =
+        Object.keys(ITEMS).find(
+          (id) => group(id) === category && (mode === 'preparation' || isPotion(id)),
+        ) || selected;
       render();
+      categoryRail.querySelector('[aria-pressed="true"]')?.focus({ preventScroll: true });
       context.audio.play('select');
       return;
     }
     const pick = event.target.closest('[data-shop-item]');
-    if (pick) {
+    if (pick && mode !== 'market') {
       selected = pick.dataset.shopItem;
       render();
+      panel.querySelector('[data-shop-item][aria-pressed="true"]')?.focus({ preventScroll: true });
       context.audio.play('select');
       return;
     }
     const button = event.target.closest('[data-buy]');
     if (
       !button ||
+      button.disabled ||
+      mode === 'market' ||
+      (mode === 'vending' && !isPotion(button.dataset.buy)) ||
       (context.session.runtime.mode !== 'inn' &&
-        !(fromPreparation && document.querySelector('#party-panel').open))
+        !(mode === 'preparation' && document.querySelector('#party-panel').open))
     )
       return;
-    const result = buyItem(context.session.ai.library, button.dataset.buy);
-    if (!result.ok) {
-      panel.querySelector('#shop-status').textContent = result.message;
-      context.audio.play('error');
+    button.disabled = true;
+    let result;
+    try {
+      result = await commitCityTrade(context, 'item', button.dataset.buy);
+    } catch (failure) {
+      if (current()) {
+        render();
+        panel.querySelector('#shop-status').textContent = failure.message;
+        context.audio.play('error');
+      }
       return;
     }
-    context.generation.save();
-    context.summoning.refresh();
-    context.onboarding.purchased();
+    if (isPotion(result.item.id)) context.onboarding.purchased();
+    if (!current()) return;
     render();
+    if (selected === result.item.id)
+      panel.querySelector('[data-buy]')?.focus({ preventScroll: true });
     context.audio.play('exchange');
     const feedback = panel.querySelector('#shop-status');
     feedback.innerHTML = html`<img src="${result.item.icon}" alt="" /> ${result.item.name}
       <b>+1</b>`;
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     feedback.animate(
       [
         { opacity: 0, translate: '0 12px' },
@@ -256,14 +388,6 @@ export function createShop(context) {
       ],
       { duration: 650 },
     );
-  });
-  context.events.on(window, 'message', (event) => {
-    if (
-      event.origin === location.origin &&
-      event.source === document.querySelector('#inn-frame iframe')?.contentWindow &&
-      event.data?.type === 'tavern-shop'
-    )
-      open();
   });
   return {
     open,

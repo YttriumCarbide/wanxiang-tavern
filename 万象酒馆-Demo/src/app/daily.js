@@ -28,7 +28,7 @@ import {
   upgradeLiveFacility,
 } from '../service-live.js';
 import { returnServiceSpecialStock } from '../service-specials.js';
-import { INVITATION_SCENES, invitationExcerpt } from '../invitation.js';
+import { invitationExcerpt } from '../invitation.js';
 import { affectionLabel, relationship } from '../relationships.js';
 import { recruitmentStatus, RECRUITMENT_DIFFICULTY } from '../recruitment.js';
 import { escapeText } from '../ui.js';
@@ -43,6 +43,14 @@ import {
   TAVERN_EXITS,
 } from '../content/silver-crown-scenes.js';
 import { townResidents } from '../town-residents.js';
+import { CITIES, cityDungeons, cityFacility, cityForScene } from '../city-directory.js';
+import { chatPlaceForScene } from '../chat-places.js';
+import {
+  availableInvitationCities,
+  invitationCityVenues,
+  sameCityStreet,
+} from '../invitation-location.js';
+import { invitationSetupView } from './invitation-setup-view.js';
 
 import { createPlayerIntentPrompt } from './player-intent.js';
 import { createWorldLoadingOverlay } from '../shared/scene-loading.js';
@@ -55,6 +63,7 @@ import { locationMusic } from '../audio/config.js';
 
 export function createDaily(context) {
   const { session, events } = context;
+  const SCENE_NAVIGATION_TIMEOUT_MS = 30_000;
   const library = () => session.ai.library;
   const state = () => library().daily;
   const active = () => state().active;
@@ -110,6 +119,7 @@ export function createDaily(context) {
   const serviceButton = clockActions.querySelector('[data-daily="service"]');
   const promoButton = clockActions.querySelector('[data-daily="promotion"]');
   const questsButton = clockActions.querySelector('[data-daily="quests"]');
+  const mealButton = dock.querySelector('[data-daily="meal"]');
   const status = root.querySelector('.daily-status');
   const record = root.querySelector('.daily-invitation-record');
   const galStage = document.querySelector('#gal-stage');
@@ -121,6 +131,14 @@ export function createDaily(context) {
   });
   const sceneTitles = new Map(Object.entries(PLACE_TITLES));
   let scene = 'tavern';
+  let readyStreet = null;
+  let navigationToken = 0;
+  let pendingScene = null;
+  function clearPendingScene(attempt) {
+    if (!attempt) return;
+    clearTimeout(attempt.timeout);
+    if (pendingScene === attempt) pendingScene = null;
+  }
   let visitedDiscovery = null;
   function activeScene() {
     try {
@@ -139,7 +157,8 @@ export function createDaily(context) {
               : win?.location?.pathname?.endsWith('/guest-room.html')
                 ? 'guest-room'
                 : '');
-      if (detected) return detected === 'starlamp-street' ? 'street' : detected;
+      if (detected)
+        return detected === 'street' || detected === 'starlamp-street' ? 'city-center' : detected;
     } catch {
       /* Fallback to tracked scene before iframe is same-origin ready. */
     }
@@ -156,6 +175,10 @@ export function createDaily(context) {
   let intro = false;
   let mapOpen = false;
   let enteringDungeon = false;
+  let atlasOpening = false;
+  let queuedAtlasTarget = null;
+  let atlasExitAnimation = null;
+  let atlasReturnFocus = null;
 
   async function openDungeonWithTransition(
     dungeonId,
@@ -224,15 +247,9 @@ export function createDaily(context) {
   talkButton.hidden = true;
   document.body.append(talkButton);
   events.on(talkButton, 'click', () => {
-    const current = activeScene();
-    if (
-      locked ||
-      session.runtime.mode !== 'inn' ||
-      current === 'tavern' ||
-      current.startsWith('road-')
-    )
-      return;
-    context.chat.open(current === 'city-center' ? 'city-square' : current);
+    const place = chatPlaceForScene(activeScene());
+    if (!place || locked || session.runtime.mode !== 'inn' || hasBlockingSceneOverlay()) return;
+    context.chat.open(place);
   });
   let recruitId = null;
 
@@ -266,28 +283,100 @@ export function createDaily(context) {
     openSetup();
   });
   let talkFrame = null;
-  function alignSceneTalk() {
-    if (talkButton.hidden) {
-      talkButton.classList.remove('is-docked');
-      talkButton.style.left = '';
-      talkButton.style.top = '';
-      return;
+  let dockTalkWanted = false;
+  function hasBlockingSceneOverlay() {
+    if (mapOpen || document.body.classList.contains('gal-playing')) return true;
+    if (
+      document.querySelector(
+        'dialog[open], .world-loading-scene:not([hidden]), .scene-loading:not(.complete):not([hidden]), #chapter-theater:not([hidden])',
+      )
+    )
+      return true;
+    const doc = frame()?.contentDocument;
+    if (!doc || doc.readyState !== 'complete') return true;
+    if (doc.defaultView?.modelReady !== true) return true;
+    if (doc.body?.classList?.contains('leaving')) return true;
+    const statusEl = doc.querySelector('#street-status');
+    if (statusEl && !statusEl.classList.contains('complete') && !statusEl.hidden) return true;
+    if (doc.querySelector('dialog[open]')) return true;
+    return false;
+  }
+  function readyCity() {
+    const doc = frame()?.contentDocument;
+    if (doc !== readyStreet || normalizeCityScene(doc?.body?.dataset.scene) !== scene) return null;
+    if (session.runtime.mode !== 'inn' || session.runtime.needsStart || session.runtime.disposed)
+      return null;
+    if (
+      locked ||
+      enteringDungeon ||
+      travel.busy() ||
+      (active() && active().kind !== 'outing') ||
+      hasBlockingSceneOverlay()
+    )
+      return null;
+    return cityForScene(scene);
+  }
+
+  function cityDirectoryOpen() {
+    return Boolean(readyStreet?.querySelector('#street-city-submap[open]'));
+  }
+
+  function cityDirectoryAvailable() {
+    return Boolean(readyCity());
+  }
+
+  function openCityDirectory() {
+    if (!cityDirectoryAvailable()) return false;
+    frame()?.contentWindow?.postMessage({ type: 'daily-open-city-directory' }, location.origin);
+    return true;
+  }
+
+  function openCityFacility(data) {
+    const cityId = readyCity();
+    const legacyGuild = data.type === 'daily-open-guild';
+    const facility = legacyGuild ? 'guild' : data.facility;
+    const requestedCity = legacyGuild ? (data.cityId ?? data.region) : data.cityId;
+    if (!cityId || !cityFacility(cityId, facility)) return;
+    if (!legacyGuild && normalizeCityScene(data.scene) !== scene) return;
+    if (legacyGuild && data.scene != null && normalizeCityScene(data.scene) !== scene) return;
+    if (!(legacyGuild && requestedCity == null)) {
+      const requested = legacyGuild && requestedCity === 'eternal-city' ? 'eternal' : requestedCity;
+      if (requested !== cityId) return;
     }
+    if (facility === 'blacksmith') return context.equipment?.openBlacksmith?.(cityId);
+    if (facility === 'market') return context.shop?.open({ cityId });
+    return context.guild?.open('bounties', { cityId });
+  }
+
+  function resetSceneTalk() {
+    talkButton.hidden = true;
+    talkButton.classList.remove('is-docked');
+    talkButton.style.left = '';
+    talkButton.style.top = '';
+  }
+  function alignSceneTalk() {
+    if (!dockTalkWanted || hasBlockingSceneOverlay()) return resetSceneTalk();
     const doc = frame()?.contentDocument;
     const bar = doc?.querySelector('.street-actions');
     const mapBtn = doc?.querySelector('#street-map-open');
     const barRect = bar?.getBoundingClientRect();
     const mapRect = mapBtn?.getBoundingClientRect();
-    if (!barRect || !mapRect || mapRect.left - barRect.left < 60) {
-      talkButton.classList.remove('is-docked');
-      talkButton.style.left = '';
-      talkButton.style.top = '';
-      return;
-    }
+    if (
+      !barRect ||
+      !mapRect ||
+      mapRect.width < 1 ||
+      barRect.height < 1 ||
+      mapRect.left - barRect.left < 50
+    )
+      return resetSceneTalk();
+    talkButton.hidden = false;
     talkButton.classList.add('is-docked');
-    const slotWidth = Math.max(40, mapRect.left - barRect.left - 8);
-    const talkHeight = talkButton.offsetHeight || Math.max(30, barRect.height - 10);
-    talkButton.style.left = `${barRect.left + 4 + slotWidth / 2}px`;
+    const compact = window.matchMedia('(max-height: 520px), (max-width: 900px)').matches;
+    const padLeft = compact ? 4 : 5;
+    const padGap = compact ? 0 : 2;
+    const slotWidth = Math.max(40, mapRect.left - barRect.left - padLeft - padGap);
+    const talkHeight = talkButton.offsetHeight || Math.max(30, barRect.height - padLeft * 2);
+    talkButton.style.left = `${barRect.left + padLeft + slotWidth / 2}px`;
     talkButton.style.top = `${barRect.top + (barRect.height - talkHeight) / 2}px`;
   }
   events.on(window, 'resize', alignSceneTalk);
@@ -333,7 +422,8 @@ export function createDaily(context) {
     );
   });
   const invitation = createDailyInvitation(context, {
-    getScene: () => scene,
+    getScene: activeScene,
+    sceneReady: readyForInvitation,
     navigate,
     complete,
     refresh: render,
@@ -348,14 +438,79 @@ export function createDaily(context) {
     spendTurns: (turns) => advanceOuting(state(), turns),
   });
 
-  function hideAtlasOverlay() {
+  function atlasOpen(el = atlasFrame()) {
+    return Boolean(el && !el.hidden && !el.inert);
+  }
+
+  function cancelAtlasExit(el) {
+    const animation = atlasExitAnimation;
+    atlasExitAnimation = null;
+    animation?.cancel();
+    if (el) delete el.dataset.closing;
+  }
+
+  function hideAtlasFrame(el) {
+    el.hidden = true;
+    cancelAtlasExit(el);
+  }
+
+  function restoreAtlasFocus(el, opener) {
+    const focused = document.activeElement;
+    if (
+      focused &&
+      focused !== el &&
+      focused !== document.body &&
+      focused !== document.documentElement
+    )
+      return;
+    for (const target of [opener, document.getElementById('ledger-handle')]) {
+      if (
+        !(target instanceof HTMLElement) ||
+        target === el ||
+        target === document.body ||
+        target === document.documentElement ||
+        !target.isConnected ||
+        target.matches(':disabled') ||
+        target.closest('[hidden], [inert], #ledger-drawer-host:not(.is-open)') ||
+        !target.getClientRects().length
+      )
+        continue;
+      target.focus({ preventScroll: true });
+      if (document.activeElement === target) return;
+    }
+  }
+
+  function hideAtlasOverlay({ animate = false } = {}) {
+    mapOpen = false;
+    atlasOpening = false;
+    queuedAtlasTarget = null;
+    atlasReturnFocus = null;
     atlasLoading.hide();
     const el = atlasFrame();
-    if (el) {
-      delete el.dataset.loading;
-      el.hidden = true;
+    if (!el) return;
+    const canFade =
+      animate &&
+      atlasOpen(el) &&
+      el.dataset.loading !== 'true' &&
+      !matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (document.activeElement === el) {
+      el.contentDocument?.activeElement?.blur?.();
+      el.blur();
     }
-    mapOpen = false;
+    el.inert = true;
+    el.setAttribute('aria-hidden', 'true');
+    if (!canFade) return hideAtlasFrame(el);
+
+    el.dataset.closing = 'true';
+    const animation = el
+      .getAnimations?.()
+      .find((candidate) => candidate.transitionProperty === 'opacity');
+    if (!animation) return hideAtlasFrame(el);
+    atlasExitAnimation = animation;
+    const finish = () => {
+      if (atlasExitAnimation === animation) hideAtlasFrame(el);
+    };
+    void animation.finished.then(finish, finish);
   }
 
   function closeMapsBehindCurtain() {
@@ -367,6 +522,12 @@ export function createDaily(context) {
   function resetAtlasWalker() {
     frame()?.contentWindow?.postMessage({ type: 'daily-reset-atlas-walker' }, location.origin);
     atlasFrame()?.contentWindow?.postMessage({ type: 'daily-reset-atlas-walker' }, location.origin);
+  }
+
+  function openAtlasMap(target, { preview = false, questTarget = null } = {}) {
+    if (!target) return false;
+    target.postMessage({ type: 'daily-open-atlas', preview, questTarget }, location.origin);
+    return true;
   }
 
   function postAtlasManaged(target = atlasFrame()?.contentWindow) {
@@ -392,10 +553,16 @@ export function createDaily(context) {
     );
   }
 
-  function createOutingActivity(destination = state().memory?.tavernExit || 'street') {
+  function normalizeCityScene(value) {
+    return value === 'street' || value === 'starlamp-street' ? 'city-center' : value;
+  }
+
+  function createOutingActivity(
+    destination = normalizeCityScene(state().memory?.tavernExit) || 'city-center',
+  ) {
     const entry = startTavernActivity(state(), 'outing');
     if (!entry) return null;
-    entry.scene = destination;
+    entry.scene = normalizeCityScene(destination);
     entry.stage = 'roaming';
     entry.companions = state().memory.outing?.companions || [];
     save();
@@ -415,12 +582,51 @@ export function createDaily(context) {
     if (!opened && active()) openSetup();
   }
 
+  function readyForInvitation(destination) {
+    const doc = frame()?.contentDocument;
+    return Boolean(
+      doc &&
+      doc === readyStreet &&
+      doc.defaultView?.modelReady === true &&
+      !doc.body.classList.contains('leaving') &&
+      sameCityStreet(doc.body.dataset.scene, destination),
+    );
+  }
+
   function navigate(destination) {
+    const target = normalizeCityScene(destination);
     visitedDiscovery = null;
-    if (scene === destination && frame()?.contentDocument?.readyState === 'complete') return;
-    scene = destination;
+    const doc = frame()?.contentDocument;
+    if (
+      (pendingScene?.target === target &&
+        pendingScene.token === navigationToken &&
+        pendingScene.frame === frame()) ||
+      (scene === target &&
+        activeScene() === target &&
+        doc?.defaultView?.modelReady === true &&
+        !doc.body.classList.contains('leaving'))
+    )
+      return;
+    clearPendingScene(pendingScene);
+    const attempt = { target, token: ++navigationToken, frame: null, timeout: null };
+    pendingScene = attempt;
+    readyStreet = null;
+    scene = target;
     context.chat?.leave();
-    context.shell.mountInn(destination);
+    context.shell.mountInn(target);
+    attempt.frame = frame();
+    attempt.timeout = setTimeout(() => {
+      if (
+        navigationToken !== attempt.token ||
+        pendingScene !== attempt ||
+        frame() !== attempt.frame
+      )
+        return;
+      clearPendingScene(attempt);
+      const entry = active();
+      if (entry?.kind === 'invitation' && entry.run?.arriving) invitation.restoreLocation();
+      render();
+    }, SCENE_NAVIGATION_TIMEOUT_MS);
     render();
   }
 
@@ -472,10 +678,17 @@ export function createDaily(context) {
     if (!entry && atDungeon) {
       return `${dungeonBtn}<button type="button" data-daily="go-tavern">返回酒馆</button>`;
     }
-    if (entry?.kind === 'invitation' && invitation.traveling())
-      return '<button type="button" data-daily="invite-end">结束约见</button>';
-    if (entry?.kind === 'invitation' && entry.run?.plan)
+    if (entry?.kind === 'invitation' && invitation.traveling()) {
+      const { destination, arriving } = entry.run;
+      const name = invitation.placeName(destination);
+      const route = invitation.constrained()
+        ? `<span>${escapeText(name)}</span><button type="button" data-daily="invite-go" ${arriving ? 'disabled' : ''}>${arriving ? '前往中…' : '前往 ›'}</button>`
+        : '';
+      return route + '<button type="button" data-daily="invite-end">结束约见</button>';
+    }
+    if (entry?.kind === 'invitation' && entry.run?.plan && !invitation.presenting()) {
       return '<button type="button" data-daily="resume">继续约见</button>';
+    }
     return travel.status() || dungeonBtn;
   }
 
@@ -489,7 +702,7 @@ export function createDaily(context) {
       : visible && invitation.brief();
     const destination = visible && active()?.run?.destination;
     const travel = destination
-      ? `<section><b>行程</b><p>${escapeText(OUTING_SCENES[scene] || INVITATION_SCENES[scene] || '酒馆')} → ${escapeText(INVITATION_SCENES[destination])}</p></section>`
+      ? `<section><b>行程</b><p>${escapeText(invitation.placeName(active().run.scene) || OUTING_SCENES[scene] || '酒馆')} → ${escapeText(invitation.placeName(destination))}</p></section>`
       : '';
     const fallbackHost = context.ledger?.invitationHost?.() || root;
     const host = entry && invitation.presenting() ? galStage : fallbackHost;
@@ -533,14 +746,17 @@ export function createDaily(context) {
     }
     const current = activeScene();
     const visible = session.runtime.mode === 'inn' && !session.runtime.needsStart;
+    const overlay = atlasFrame();
     if (
       (!visible || (active()?.kind && active().kind !== 'outing')) &&
-      atlasFrame() &&
-      !atlasFrame().hidden
+      overlay &&
+      !overlay.hidden
     ) {
       hideAtlasOverlay();
     }
-    root.hidden = !visible || mapOpen;
+    const destination = frame()?.contentDocument;
+    const cityDirectoryOpen = Boolean(destination?.querySelector('#street-city-submap[open]'));
+    root.hidden = !visible || mapOpen || cityDirectoryOpen;
     const home = current === 'tavern';
     const upstairs = ['corridor', 'guest-room', 'master-bedroom'].includes(current);
     const progress = tavernPromotion(state(), library().workshop);
@@ -562,29 +778,32 @@ export function createDaily(context) {
           ? '已满足升阶条件，点击升至 1 阶'
           : `营业 ${Math.min(progress.shifts, 2)}/2 · 工坊机芯 ${Math.min(progress.cores, 10)}/10`
         : `当前酒馆 ${progress.rank} 阶`;
-    const destination = frame()?.contentDocument;
     const entry = active();
     const dockTalk =
       visible &&
       !home &&
       !upstairs &&
-      !current.startsWith('road-') &&
+      chatPlaceForScene(current) &&
       !locked &&
       !(entry?.kind === 'invitation' && entry.stage === 'running');
+    const dockTalkAllowed = dockTalk && !hasBlockingSceneOverlay();
     destination?.body?.classList.toggle('daily-parent-dock', visible && home);
-    destination?.body?.classList.toggle('street-has-talk', dockTalk);
+    destination?.body?.classList.toggle('street-has-talk', dockTalkAllowed);
     frame()?.contentWindow?.postMessage(
       {
         type: 'daily-managed',
         enabled: visible,
-        talkVisible: dockTalk,
+        talkVisible: dockTalkAllowed,
         timeOfDay: visible ? tavernTime(state()) : null,
         discoveries: library().atlasDiscoveries,
         exploration: library().overlandExploration,
         skirmishes: library().skirmishes,
         unlockedDungeons: library().unlockedDungeons,
         invitation:
-          entry?.kind === 'invitation' && entry.stage === 'running' && !invitation.traveling(),
+          entry?.kind === 'invitation' &&
+          entry.stage === 'running' &&
+          (invitation.constrained() || !invitation.traveling()),
+        environment: visible ? invitation.streetEnvironment(current) : null,
         outing:
           visible && entry?.kind === 'outing' && entry.stage === 'roaming'
             ? {
@@ -604,26 +823,30 @@ export function createDaily(context) {
       },
       location.origin,
     );
-    if (atlasFrame() && !atlasFrame().hidden) postAtlasManaged();
+    if (atlasOpen(overlay)) postAtlasManaged(overlay.contentWindow);
     renderInvitationRecord(visible);
     if (!visible) {
-      talkButton.hidden = true;
+      dockTalkWanted = false;
       alignSceneTalk();
       root.dataset.outdoors = 'false';
       context.ledger?.sync();
       return;
     }
     dock.hidden = !home || locked || !!entry;
-    talkButton.hidden = !dockTalk;
-    root.dataset.outdoors = String(dockTalk);
+    dockTalkWanted = dockTalkAllowed;
+    root.dataset.outdoors = String(dockTalkAllowed);
     alignSceneTalk();
-    if (dockTalk && talkFrame === null) {
+    if (dockTalkAllowed && talkFrame === null) {
       talkFrame = requestAnimationFrame(() => {
         talkFrame = null;
         alignSceneTalk();
       });
     }
-    status.innerHTML = showStatus();
+    const statusMarkup = showStatus();
+    if (status.renderedStatus !== statusMarkup) {
+      status.renderedStatus = statusMarkup;
+      status.innerHTML = statusMarkup;
+    }
     status.hidden = !status.children.length;
     if (setup.open) showSetup();
     if (promotion.open) renderPromotion();
@@ -676,25 +899,54 @@ export function createDaily(context) {
     } else {
       const member = candidate.find((item) => item.id === local.member);
       const topics = invitation.topics(member?.id);
-      body = `<div class="daily-invite-slot"><small>约见对象</small><strong>${escapeText(member?.setting.name || '选一位角色')}</strong>
+      const cities = availableInvitationCities(library(), activeScene()).map((id) => {
+        const venues = invitationCityVenues(library(), id);
+        return {
+          id,
+          name: CITIES[id].name,
+          venues: {
+            places: venues.filter((place) => place.category === 'places'),
+            facilities: venues.filter((place) => place.category === 'facilities'),
+            dungeons: venues.filter((place) => place.category === 'dungeons'),
+          },
+        };
+      });
+      if (!cities.some(({ id }) => id === local.city)) local.city = cities[0]?.id || '';
+      const selectedCity = cities.find(({ id }) => id === local.city);
+      const venues = selectedCity
+        ? [
+            ...selectedCity.venues.places,
+            ...selectedCity.venues.facilities,
+            ...selectedCity.venues.dungeons,
+          ]
+        : [];
+      if (!venues.some(({ id }) => id === local.startScene)) local.startScene = venues[0]?.id || '';
+      const memberMarkup = `<div class="daily-invite-slot"><small>约见对象</small><strong>${escapeText(member?.setting.name || '选一位角色')}</strong>
         ${member ? `<span>${affectionLabel(relationship(library(), member.id).affection)}</span>` : ''}</div>
-        <div class="daily-people">${candidate.map((person) => chooseMember(person, person.id === local.member)).join('')}</div>
-        <div class="daily-options">${Object.entries(INVITATION_ACTIVITIES)
-          .map(
-            ([id, title]) =>
-              `<button type="button" data-daily-activity="${id}" aria-pressed="${id === local.activity && !local.topic}">${title}</button>`,
-          )
-          .join('')}</div>
-        ${
-          topics.length
-            ? `<h3>可约见的主题</h3><div class="daily-options daily-topics">${topics
-                .map(
-                  (topic, index) =>
-                    `<button type="button" data-daily-topic="${index}" aria-pressed="${topic === local.topic}">${escapeText(topic)}</button>`,
-                )
-                .join('')}</div>`
-            : ''
-        }`;
+        <div class="daily-people">${candidate.map((person) => chooseMember(person, person.id === local.member)).join('')}</div>`;
+      const activityMarkup = `<div class="daily-options">${Object.entries(INVITATION_ACTIVITIES)
+        .map(
+          ([id, title]) =>
+            `<button type="button" data-daily-activity="${id}" aria-pressed="${id === local.activity && !local.topic}">${title}</button>`,
+        )
+        .join('')}</div>`;
+      const topicMarkup = topics.length
+        ? `<div class="daily-options daily-topics" aria-label="可约见主题">${topics
+            .map(
+              (topic, index) =>
+                `<button type="button" data-daily-topic="${index}" aria-pressed="${topic === local.topic}">${escapeText(topic)}</button>`,
+            )
+            .join('')}</div>`
+        : '';
+      body = invitationSetupView({
+        cities,
+        city: local.city,
+        place: local.startScene,
+        memberMarkup,
+        activityMarkup,
+        topicMarkup,
+        intent: local.playerIntent,
+      });
     }
     setup.innerHTML = `<header><div><small>${dailyDateTimeText(state())}</small><h2 id="daily-setup-title">${DAILY_ACTIONS[kind].name}整备</h2></div>
       <button type="button" data-daily-close ${invitation.busy() ? 'disabled' : ''}>收起</button></header>
@@ -745,9 +997,16 @@ export function createDaily(context) {
         ),
       };
     } else if (entry.kind === 'invitation') {
+      const currentCity = cityForScene(activeScene());
+      const availableCities = availableInvitationCities(library(), activeScene());
+      const city =
+        currentCity || (availableCities.includes(memory.city) ? memory.city : availableCities[0]);
       local = {
         member: entry.recruitment || memory.member || '',
         activity: memory.activity || 'talk',
+        city,
+        startScene: memory.city === city ? memory.startScene || '' : '',
+        playerIntent: '',
       };
     }
     message = '';
@@ -766,7 +1025,7 @@ export function createDaily(context) {
     if (entry.kind === 'invitation' && entry.run?.plan) return invitation.resume();
     if (entry.kind === 'outing' && entry.stage === 'roaming') {
       if (travel.resume()) return;
-      navigate(entry.scene || 'street');
+      navigate(entry.scene || 'city-center');
       return;
     }
     if (['service', 'invitation'].includes(entry.kind) || entry.stage === 'setup') openSetup();
@@ -802,11 +1061,22 @@ export function createDaily(context) {
       const member = entry.recruitment || local.member;
       if (!invitationCandidates(library()).some((candidate) => candidate.id === member))
         throw Error('先选择一位约见对象');
-      const { activity, topic } = local;
-      const playerIntent = await intent.ask('约见准备', topic || INVITATION_ACTIVITIES[activity]);
-      if (playerIntent === null || active() !== entry) return;
-      state().memory.invitation = { member, activity };
-      const task = invitation.start({ member, activity, topic, playerIntent }, () => setup.close());
+      const { activity, topic, city, startScene } = local;
+      const currentCity = cityForScene(activeScene());
+      if (
+        !availableInvitationCities(library(), activeScene()).includes(city) ||
+        (currentCity && currentCity !== city) ||
+        !invitationCityVenues(library(), city).some((place) => place.id === startScene)
+      )
+        throw Error('请选择当前可约见城市中的有效地点');
+      const playerIntent = String(local.playerIntent || '')
+        .trim()
+        .slice(0, 2000);
+      state().memory.invitation = { member, activity, city, startScene };
+      const task = invitation.start(
+        { member, activity, topic, playerIntent, city, startScene },
+        () => setup.close(),
+      );
       showSetup();
       await task;
       if (entry.run?.plan) setup.close();
@@ -832,7 +1102,7 @@ export function createDaily(context) {
     );
   }
 
-  function beginOuting(openMap = false, destination = 'street') {
+  function beginOuting(openMap = false, destination = 'city-center') {
     if (active()) return;
     const entry = createOutingActivity(destination);
     if (!entry) return;
@@ -847,9 +1117,9 @@ export function createDaily(context) {
     exitPicker.innerHTML = `<header><h2>从哪里出门</h2><form method="dialog"><button aria-label="关闭">×</button></form></header>
       <div class="tavern-exit-options">${Object.entries(TAVERN_EXITS)
         .map(([id, name]) => {
-          const unlocked = id === 'street' || state().unlocks.silverCrownTavern === true;
+          const unlocked = id === 'city-center' || state().unlocks.silverCrownTavern === true;
           return `<button type="button" data-tavern-exit="${id}" ${unlocked ? '' : 'disabled'}><b>${name}</b>
-          <span>${id === 'street' ? '酒馆街角' : unlocked ? '黄铜星门庭' : '从黄铜星门庭进入酒馆后开启'}</span></button>`;
+          <span>${id === 'city-center' ? '星钟广场' : unlocked ? '黄铜星门庭' : '从黄铜星门庭进入酒馆后开启'}</span></button>`;
         })
         .join('')}</div>`;
     exitPicker.showModal();
@@ -902,6 +1172,7 @@ export function createDaily(context) {
     if (id === 'companions' && active()?.kind === 'outing' && !travel.busy()) {
       editOutingCompanions();
     }
+    if (id === 'invite-go') invitation.goToDestination();
     if (id === 'invite-end') invitation.endTravel();
     if (id === 'home') returnOuting();
     if (id === 'dismiss') {
@@ -919,6 +1190,9 @@ export function createDaily(context) {
       const button = event.target.closest('[data-daily]');
       if (button && !button.disabled) action(button.dataset.daily);
     });
+  events.on(mealButton, 'click', () => {
+    if (!mealButton.disabled) action('meal');
+  });
   events.on(record, 'click', (event) => event.stopPropagation());
   events.on(setup, 'close', () => {
     const entry = active();
@@ -971,6 +1245,8 @@ export function createDaily(context) {
       }
       if (event.target.closest('[data-daily-start]')) return await confirmSetup();
       if (active()?.kind === 'service') return editServiceSetup(event.target.closest('button'));
+      if (event.target.closest('[data-daily-city], [data-daily-place], [data-daily-intent]'))
+        return;
       const person = event.target.closest('[data-daily-person]');
       if (person) {
         const { dailyPerson: id } = person.dataset;
@@ -998,34 +1274,66 @@ export function createDaily(context) {
       if (setup.open) showSetup();
     }
   });
+  events.on(setup, 'change', (event) => {
+    if (active()?.kind !== 'invitation') return;
+    if (event.target.matches('[data-daily-city]')) {
+      local.city = event.target.value;
+      local.startScene = '';
+      message = '';
+      showSetup();
+    } else if (event.target.matches('[data-daily-place]')) {
+      local.startScene = event.target.value;
+      message = '';
+      showSetup();
+    }
+  });
+  events.on(setup, 'input', (event) => {
+    if (active()?.kind === 'invitation' && event.target.matches('[data-daily-intent]'))
+      local.playerIntent = event.target.value.slice(0, 2000);
+  });
   events.on(setup, 'cancel', (event) => {
     if (invitation.busy()) event.preventDefault();
   });
   events.on(window, 'message', (event) => {
     if (event.origin !== location.origin) return;
-    const fromAtlas = Boolean(
-      atlasFrame()?.contentWindow && event.source === atlasFrame().contentWindow,
-    );
-    if (fromAtlas) {
+    const overlay = atlasFrame();
+    if (overlay?.contentWindow && event.source === overlay.contentWindow) {
       if (event.data?.type === 'atlas-only-ready') {
-        const el = atlasFrame();
-        if (el) delete el.dataset.loading;
+        delete overlay.dataset.loading;
+        if (!atlasOpen(overlay)) return;
         atlasLoading.hide();
-        return postAtlasManaged(event.source);
-      }
-      if (event.data?.type === 'daily-outing-companions') return editOutingCompanions();
-      if (event.data?.type === 'street-map-state') {
-        mapOpen = event.data.open === true;
-        if (!mapOpen) {
-          hideAtlasOverlay();
-          if (event.data.choice === 'walk') {
-            beginOuting(false, state().memory?.tavernExit || 'street');
-          }
+        context.ledger?.syncTopLayer?.();
+        postAtlasManaged(event.source);
+        if (queuedAtlasTarget) {
+          openAtlasMap(event.source, { preview: true, questTarget: queuedAtlasTarget });
+          queuedAtlasTarget = null;
         }
+        return;
+      }
+      if (!atlasOpen(overlay)) return;
+      if (event.data?.type === 'daily-outing-companions') return editOutingCompanions();
+      if (event.data?.type === 'street-leaving' || event.data?.type === 'street-dialog-state')
         return render();
+      if (event.data?.type === 'street-map-state') {
+        if (event.data.open === true) {
+          atlasOpening = false;
+          mapOpen = true;
+          return render();
+        }
+        // A close from the previous opening may arrive while a reopen is in flight.
+        if (atlasOpening || overlay.contentDocument?.getElementById('street-map')?.open) return;
+        const dismissal = event.data.choice === '';
+        const opener = atlasReturnFocus;
+        hideAtlasOverlay({ animate: dismissal });
+        if (event.data.choice === 'walk') {
+          beginOuting(false, normalizeCityScene(state().memory?.tavernExit) || 'city-center');
+        }
+        render();
+        if (dismissal) restoreAtlasFocus(overlay, opener);
+        return;
       }
       if (event.data?.type === 'daily-overland-plan') {
-        const destination = state().memory?.tavernExit || 'street';
+        const destination = normalizeCityScene(state().memory?.tavernExit) || 'city-center';
         return void travel.start(event.data.to, {
           fromTavern: true,
           destination,
@@ -1036,9 +1344,13 @@ export function createDaily(context) {
       return;
     }
     if (event.source !== frame()?.contentWindow) return;
-    if (event.data?.type === 'daily-open-guild') return context.guild?.open?.();
+    if (['daily-open-city-facility', 'daily-open-guild'].includes(event.data?.type))
+      return openCityFacility(event.data);
     if (event.data?.type === 'daily-open-dungeon' && typeof event.data.dungeonId === 'string') {
-      const dungeonId = event.data.dungeonId;
+      const { dungeonId, cityId } = event.data;
+      if (readyCity() !== cityId || normalizeCityScene(event.data.scene) !== scene) return;
+      if (!cityDungeons(cityId, library().atlasDiscoveries).some(({ id }) => id === dungeonId))
+        return;
       unlockDungeonMap(library(), dungeonId);
       save();
       void openDungeonWithTransition(
@@ -1050,9 +1362,12 @@ export function createDaily(context) {
     }
     if (event.data?.type === 'tavern-recruit') return showRecruitment(event.data.characterId);
     if (event.data?.type === 'daily-outing-companions' && active()?.preview) return openSetup();
+    if (event.data?.type === 'street-leaving' || event.data?.type === 'street-dialog-state')
+      return render();
     if (event.data?.type === 'street-map-state') {
-      mapOpen = event.data.open === true;
-      if (!mapOpen && active()?.preview && event.data.choice !== 'route') {
+      const streetMapOpen = event.data.open === true;
+      mapOpen = streetMapOpen || atlasOpen(overlay);
+      if (!streetMapOpen && active()?.preview && event.data.choice !== 'route') {
         if (event.data.choice === 'walk') {
           delete active().preview;
           save();
@@ -1070,7 +1385,7 @@ export function createDaily(context) {
     }
     if (event.data?.type === 'daily-outing-door') {
       if (session.runtime.mode !== 'inn') return;
-      if (invitation.traveling()) return navigate('street');
+      if (invitation.traveling()) return navigate('city-center');
       return openExitPicker();
     }
     if (event.data?.type === 'silver-crown-tavern-enter') {
@@ -1089,15 +1404,34 @@ export function createDaily(context) {
       return;
     }
     if (event.data?.type === 'daily-invitation-leave') {
-      context.shell.toast('先完成眼下这段对话，换地方时手记会提示。');
+      context.shell.toast('约见期间只能前往本幕指定地点。');
       return;
     }
     if (event.data?.type !== 'scene-ready') return;
-    mapOpen = false;
-    scene = event.data.scene === 'starlamp-street' ? 'street' : event.data.scene;
+    const currentFrame = frame();
+    const readyScene = normalizeCityScene(event.data.scene);
+    if (pendingScene) {
+      if (pendingScene.token !== navigationToken || pendingScene.frame !== currentFrame) {
+        clearPendingScene(pendingScene);
+      } else if (pendingScene.target !== readyScene) {
+        return;
+      } else {
+        clearPendingScene(pendingScene);
+      }
+    }
+    const sourceDoc = currentFrame?.contentDocument;
+    // The map can already be open when its scene finishes loading.
+    mapOpen = Boolean(sourceDoc?.querySelector('#street-map[open]')) || atlasOpen(overlay);
+    scene = readyScene;
+    readyStreet =
+      sourceDoc?.documentElement.dataset.embedded === 'true' &&
+      sourceDoc.querySelector('#street-city-submap') &&
+      normalizeCityScene(sourceDoc.body?.dataset.scene) === scene
+        ? sourceDoc
+        : null;
     if (session.runtime.mode === 'inn') context.audio?.setScene?.(locationMusic(scene));
     if (event.data.title) sceneTitles.set(scene, event.data.title);
-    if (scene === 'street') context.onboarding?.streetEntered?.();
+    if (scene === 'city-center') context.onboarding?.streetEntered?.();
     if (scene === 'tavern') context.onboarding?.tavernEntered?.();
     if (pendingAtlas && scene === active()?.scene) {
       pendingAtlas = false;
@@ -1136,6 +1470,7 @@ export function createDaily(context) {
     promotionStatus: () => tavernPromotion(state(), library().workshop),
     elements: () => ({
       clockActions,
+      dock,
       questHud,
       invitationRecord: record,
     }),
@@ -1152,9 +1487,17 @@ export function createDaily(context) {
         return;
       }
       const entry = active();
-      if (entry?.kind === 'invitation' && Object.hasOwn(OUTING_SCENES, entry.run?.scene))
+      const restoredCityInvitation =
+        session.runtime.mode === 'inn' &&
+        !session.journey.expedition &&
+        entry?.kind === 'invitation' &&
+        entry.run?.city &&
+        entry.run?.plan;
+      if (restoredCityInvitation) {
+        invitation.restoreLocation();
+      } else if (entry?.kind === 'invitation' && Object.hasOwn(OUTING_SCENES, entry.run?.scene)) {
         navigate(entry.run.scene);
-      else if (entry && entry.kind !== 'invitation') queueMicrotask(launch);
+      } else if (entry && entry.kind !== 'invitation') queueMicrotask(launch);
       render();
     },
     departed() {
@@ -1189,6 +1532,11 @@ export function createDaily(context) {
       render();
     },
     closeDiscoveryWithTransition,
+    cityDirectoryAvailable,
+    cityDirectoryOpen,
+    openCityDirectory,
+    chatPlace: () => chatPlaceForScene(activeScene()),
+    chatPlaceLocked: () => activeScene() !== 'tavern',
     closeAtlasOverlay: closeMapsBehindCurtain,
     cancelAtlasPlan: resetAtlasWalker,
     arriveDiscovery(id) {
@@ -1213,51 +1561,57 @@ export function createDaily(context) {
     },
     chatEnvironment: () => {
       const current = activeScene();
-      return Object.hasOwn(SILVER_CROWN_PLACES, current)
-        ? '银冠城的地图自由探索。只回应眼前的交谈，不改变任务、战斗、装备或奖励。'
-        : current !== 'tavern' && Object.hasOwn(TOWN_SCENES, current)
-          ? '星钟城的地图自由探索。只回应眼前的交谈，不改变任务、战斗、装备或奖励。'
-          : '';
+      const cityId = cityForScene(current);
+      if (cityId === 'silver-crown')
+        return '银冠城的地图自由探索。只回应眼前的交谈，不改变任务、战斗、装备或奖励。';
+      if (cityId === 'eternal')
+        return '艾尔鲁斯的地图自由探索。只回应眼前的交谈，不改变任务、战斗、装备或奖励。';
+      return cityId === 'starbell' && current !== 'tavern'
+        ? '星钟城的地图自由探索。只回应眼前的交谈，不改变任务、战斗、装备或奖励。'
+        : '';
     },
     goHome: () => navigate('tavern'),
-    openAtlas() {
+    openAtlas(questTarget = null) {
+      if (session.runtime.disposed) return false;
       const entry = active();
       if (entry?.kind === 'outing' && entry.stage === 'roaming') {
-        frame()?.contentWindow?.postMessage({ type: 'daily-open-atlas' }, location.origin);
-        return true;
+        return openAtlasMap(frame()?.contentWindow, { questTarget });
       }
       if (!entry && !travel.busy()) {
-        const originScene = state().memory?.tavernExit || 'street';
-        const href =
-          originScene === 'street'
-            ? './street.html?atlas-only=1'
-            : `./street.html?scene=${encodeURIComponent(originScene)}&atlas-only=1`;
+        const originScene = normalizeCityScene(state().memory?.tavernExit) || 'city-center';
+        const href = `./street.html?scene=${encodeURIComponent(originScene)}&atlas-only=1`;
         let el = atlasFrame();
         const host = document.querySelector('#inn') || document.body;
         if (!el) {
           el = document.createElement('iframe');
           el.id = 'daily-atlas-frame';
           el.title = '世界地图';
+          el.hidden = true;
           el.setAttribute('allowtransparency', 'true');
           host.append(el);
         } else if (el.parentElement !== host) {
           host.append(el);
         }
+        if (!atlasOpen(el)) atlasReturnFocus = document.activeElement;
+        cancelAtlasExit(el);
+        el.inert = false;
+        el.removeAttribute('aria-hidden');
         el.hidden = false;
         mapOpen = true;
         if (el.dataset.scene !== originScene) {
           el.dataset.loading = 'true';
-          atlasLoading.show('正在展开泛生界大地图');
           el.dataset.scene = originScene;
           el.src = href;
+        }
+        const loading = el.dataset.loading === 'true';
+        atlasOpening = loading || !el.contentDocument?.getElementById('street-map')?.open;
+        if (loading) {
+          queuedAtlasTarget = questTarget;
+          atlasLoading.show('正在展开泛生界大地图');
         } else {
-          delete el.dataset.loading;
           atlasLoading.hide();
           postAtlasManaged(el.contentWindow);
-          el.contentWindow?.postMessage(
-            { type: 'daily-open-atlas', preview: true },
-            location.origin,
-          );
+          openAtlasMap(el.contentWindow, { preview: true, questTarget });
         }
         render();
         return true;
@@ -1292,6 +1646,9 @@ export function createDaily(context) {
       }
     },
     dispose() {
+      hideAtlasOverlay();
+      navigationToken++;
+      clearPendingScene(pendingScene);
       if (talkFrame !== null) cancelAnimationFrame(talkFrame);
       talkFrame = null;
       dungeonTransition.dispose();

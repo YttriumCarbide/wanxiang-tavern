@@ -1,0 +1,81 @@
+/* Native close releases modality and focus immediately; only the exit paint remains. */
+/* This selector intentionally targets native dialogs only, never #battle or .ring-feedback. */
+@supports (overlay: auto) and (transition-behavior: allow-discrete) and (interactivity: inert) {
+  @media (prefers-reduced-motion: no-preference) {
+    #setup-wizard,
+    #new-game {
+      --dialog-motion-travel: 18px;
+    }
+
+    #overlord-tutorial-dialog {
+      --dialog-motion-travel: 12px;
+      --dialog-motion-scale: 0.97;
+    }
+
+    :is(dialog:not(#new-game), :root:not([data-android-web-view]) #new-game) {
+      opacity: 0;
+      translate: 0 var(--dialog-motion-travel, 9px);
+      scale: var(--dialog-motion-scale, 1);
+      transition:
+        opacity 170ms ease-in,
+        translate 170ms ease-in,
+        scale 170ms ease-in,
+        display 170ms allow-discrete,
+        overlay 170ms allow-discrete;
+    }
+
+    :is(dialog:not(#new-game), :root:not([data-android-web-view]) #new-game)[open] {
+      animation: none;
+      opacity: 1;
+      translate: 0 0;
+      scale: 1;
+      transition-duration: 220ms;
+      transition-timing-function: ease-out;
+    }
+
+    @starting-style {
+      :is(dialog:not(#new-game), :root:not([data-android-web-view]) #new-game)[open] {
+        opacity: 0;
+        translate: 0 var(--dialog-motion-travel, 9px);
+        scale: var(--dialog-motion-scale, 1);
+      }
+    }
+
+    :is(dialog:not(#new-game), :root:not([data-android-web-view]) #new-game)::backdrop {
+      opacity: 0;
+      transition:
+        opacity 170ms ease,
+        display 170ms allow-discrete,
+        overlay 170ms allow-discrete;
+    }
+
+    :is(dialog:not(#new-game), :root:not([data-android-web-view]) #new-game)[open]::backdrop {
+      opacity: 1;
+    }
+
+    @starting-style {
+      :is(dialog:not(#new-game), :root:not([data-android-web-view]) #new-game)[open]::backdrop {
+        opacity: 0;
+      }
+    }
+
+    :is(dialog:not(#new-game), :root:not([data-android-web-view]) #new-game):not([open]) {
+      /* A painted exit must not receive keyboard focus, even via its descendants. */
+      interactivity: inert;
+      pointer-events: none !important;
+    }
+
+    :is(dialog:not(#new-game), :root:not([data-android-web-view]) #new-game):not([open]) *,
+    :is(dialog:not(#new-game), :root:not([data-android-web-view]) #new-game):not([open])::backdrop {
+      pointer-events: none !important;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  dialog,
+  dialog::backdrop {
+    animation: none !important;
+    transition: none !important;
+  }
+}

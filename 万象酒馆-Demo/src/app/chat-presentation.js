@@ -66,8 +66,18 @@ export function createChatPresentation(session, characters = () => session.ai.li
     if (retry) retry.disabled = session.ai.chat.sending === true;
     return article;
   }
-  function conversation(place) {
+  function conversation(place, { locationLocked = false } = {}) {
     $('#chat-place-select').value = place;
+    const locationLabel = $('.chat-location-label');
+    const select = $('#chat-place-select');
+    const readonly = locationLabel.querySelector('.chat-location-value');
+    readonly.textContent = CHAT_PLACES[place].name;
+    readonly.hidden = !locationLocked;
+    select.hidden = locationLocked;
+    locationLabel.classList.toggle('is-readonly', locationLocked);
+    const guidance = $('#chat-focus-guidance');
+    guidance.hidden = !locationLocked;
+    guidance.textContent = '建议选择不超过两位同行者，让这段交谈更集中。';
     $('#chat-participants').innerHTML = characters()
       .filter((member) => member.id !== library().campaign?.protagonistId)
       .sort(

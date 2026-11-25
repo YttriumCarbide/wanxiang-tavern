@@ -51,15 +51,15 @@ function validInteger(value, min, max) {
 export function normalizeQuestLead(raw) {
   const title = text(raw?.title, 50);
   const description = text(raw?.description, 400);
-  const hook = text(raw?.hook, 600);
   if (
     !title ||
     !description ||
-    !hook ||
     !Object.hasOwn(QUEST_TYPES, raw.type) ||
     !validInteger(raw.level, 1, 99)
   )
     return null;
+  // Preserve legacy context. New leads need no extra text: the script also receives the title and description.
+  const hook = text(raw?.hook, 600);
   return { title, description, hook, type: raw.type, level: raw.level };
 }
 
@@ -137,6 +137,8 @@ export function restoreTavernQuests(value) {
     .slice(-100)
     .map((entry) => {
       const copy = structuredClone(entry);
+      // Older saves keep their original hook; the script handoff expects a string for new leads too.
+      if (typeof copy.hook !== 'string') copy.hook = '';
       if (copy.type === 'bounty') {
         copy.objectives = Array.isArray(copy.objectives)
           ? copy.objectives.map((obj, idx) => ({

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import path from 'node:path';
-import { readFile } from 'node:fs/promises';
+import { travelTownScene } from './town-navigation.mjs';
 import { legacySession } from './legacy-session.mjs';
 import { newCampaign } from '../../src/campaign.js';
 import { officialCharacter } from '../../src/ai/library.js';
@@ -9,6 +9,7 @@ import { DRAGON_EMBLEM_ID, EMBLEMS, OVERLOAD_EMBLEM_ID } from '../../src/emblems
 import { ITEMS } from '../../src/content/items.js';
 import { normalizeEquipment } from '../../src/equipment.js';
 import { LEARNABLE_SKILLS } from '../../src/content/learnable-skills.js';
+import { openCityDirectory } from './town-navigation.mjs';
 
 export async function statusEmblemChecks({ browser, baseURL, output }) {
   const page = await browser.newPage({ viewport: { width: 1440, height: 836 } });
@@ -18,7 +19,7 @@ export async function statusEmblemChecks({ browser, baseURL, output }) {
     if (message.type() === 'error' && startupErrors.length < 12) startupErrors.push(message.text());
   });
   page.on('response', (response) => {
-    if (!response.ok() && response.request().resourceType() === 'script')
+    if (response.status() >= 400 && startupErrors.length < 24)
       startupErrors.push(`${response.status()} ${response.url()}`);
   });
   page.on('pageerror', (error) => errors.push(error.message));
@@ -114,15 +115,14 @@ export async function statusEmblemChecks({ browser, baseURL, output }) {
     );
     await frame.locator('canvas').evaluate(() => window.assetPreview.placeNow('streetDoor'));
     await frame.locator('#street-open').click();
-    await page.locator('[data-tavern-exit="street"]').click();
+    await page.locator('[data-tavern-exit="city-center"]').click();
     await page.waitForFunction(() =>
       [...document.querySelectorAll('#inn-frame iframe')].some(
         (el) => el.contentWindow?.streetPreview,
       ),
     );
-    await frame.locator('#street-submap-open').click();
-    await frame.locator('#street-city-submap[open] .city-submap-svg').waitFor();
-    await frame.locator('#street-city-submap [data-city-node="guild-hall"]').click();
+    const directory = await openCityDirectory(page);
+    await directory.locator('[data-city-facility="guild"]').click();
     await page.locator('#guild-dialog[open]').waitFor();
     await page.locator('#guild-dialog [data-guild-tab="skills"]').click();
     assert.equal(await page.locator('#guild-dialog .guild-card').count(), 18);
@@ -137,7 +137,28 @@ export async function statusEmblemChecks({ browser, baseURL, output }) {
     const atlas = frame.locator('#street-map');
     await atlas.waitFor({ state: 'visible' });
     await atlas.getByRole('button', { name: '关闭地图', exact: true }).click();
-    await frame.locator('#street-return').click();
+    await page.locator('#ledger-handle').press('Enter');
+    await page.locator('#ledger-drawer-host.is-open #party-toggle').click();
+    await page.locator('#party-panel[open] [data-prepare-buy]').click();
+    await page.locator('#void-shop[open][data-shop-mode="preparation"]').waitFor();
+    const addedSupplies = { artifact: 2, confusion: 2, blind: 2, cleanse: 1, flying: 1 };
+    for (const [category, count] of Object.entries(addedSupplies)) {
+      await page.locator(`[data-shop-category="${category}"]`).click();
+      assert.equal(await page.locator('[data-shop-item]').count(), count);
+    }
+    const beforePurchase = await page.evaluate(() => window.demo.getLibrary().inventory);
+    await page.locator('[data-buy="flying-scroll"]').click();
+    await page.locator('#shop-status').filter({ hasText: '+1' }).waitFor();
+    const purchased = await page.evaluate(() => window.demo.getLibrary().inventory);
+    assert.equal(purchased.items['flying-scroll'], beforePurchase.items['flying-scroll'] + 1);
+    assert.equal(purchased.gold, beforePurchase.gold - ITEMS['flying-scroll'].price);
+    await page.locator('#shop-close').click();
+    await page.locator('#party-panel #prepare-close').click();
+    await page.locator('#party-panel[open]').waitFor({ state: 'detached' });
+    const openLedger = page.locator('#ledger-drawer-host.is-open');
+    if (await openLedger.count()) await openLedger.locator('#ledger-close').click();
+    await page.locator('#ledger-drawer-host').waitFor({ state: 'hidden' });
+    await travelTownScene(page, 'tavern');
     await page.waitForFunction(
       () =>
         document.querySelector('#inn-frame iframe')?.contentWindow?.assetPreview &&
@@ -158,20 +179,6 @@ export async function statusEmblemChecks({ browser, baseURL, output }) {
     });
     await page.mouse.up();
     await page.locator('#ledger-drawer-host.is-open').waitFor();
-    await page.locator('#ledger-shop-open').click();
-    const addedSupplies = { artifact: 2, confusion: 2, blind: 2, cleanse: 1, flying: 1 };
-    for (const [category, count] of Object.entries(addedSupplies)) {
-      await page.locator(`[data-shop-category="${category}"]`).click();
-      assert.equal(await page.locator('[data-shop-item]').count(), count);
-    }
-    const beforePurchase = await page.evaluate(() => window.demo.getLibrary().inventory);
-    await page.locator('[data-buy="flying-scroll"]').click();
-    const purchased = await page.evaluate(() => window.demo.getLibrary().inventory);
-    assert.equal(purchased.items['flying-scroll'], beforePurchase.items['flying-scroll'] + 1);
-    assert.equal(purchased.gold, beforePurchase.gold - ITEMS['flying-scroll'].price);
-    await page.locator('#shop-close').click();
-    await page.locator('#ledger-handle').press('Enter');
-    await page.locator('#ledger-drawer-host.is-open').waitFor();
     await page.locator('#party-toggle').click();
     await page.locator('[data-prepare-slot="0"]').click();
     for (let slot = 0; slot < 3; slot++)
@@ -185,7 +192,7 @@ export async function statusEmblemChecks({ browser, baseURL, output }) {
     );
     await page.locator('[data-universal-skill-slot="0"]').selectOption('uni-feint-retreat');
     await page.locator('[data-universal-skill-slot="1"]').selectOption('uni-serrated-cut');
-    assert((await page.locator('.prepare-skills-grid').innerText()).includes('通用战技'));
+    assert((await page.locator('.prepare-skills-grid').innerText()).includes('特技'));
     await page.screenshot({ path: path.join(output, 'stage3-prep-skills.png') });
     await page.setViewportSize({ width: 390, height: 844 });
     const mobileBox = await page.locator('#party-panel').boundingBox();
@@ -231,6 +238,9 @@ export async function statusEmblemChecks({ browser, baseURL, output }) {
     assert.equal(await page.locator('[data-emblem-character]').inputValue(), OVERLOAD_EMBLEM_ID);
     await page.screenshot({ path: path.join(output, 'equipment-after-static-reload.png') });
     await page.locator('#prepare-close').click();
+    await page.locator('#party-panel[open]').waitFor({ state: 'detached' });
+    await openLedger.locator('#ledger-close').click();
+    await page.locator('#ledger-drawer-host').waitFor({ state: 'hidden' });
     await page.evaluate(() => window.demo.startBattle());
     await page.locator('#destination-regions button[data-region="ruins"]').click();
     await page.locator('#destination-region-confirm').click();
@@ -293,7 +303,7 @@ export async function statusEmblemChecks({ browser, baseURL, output }) {
       (
         await page.locator('[data-skill="uni-smoke-veil"] .universal-skill-source').textContent()
       )?.trim(),
-      '通用战技',
+      '特技',
     );
     await page.locator('[data-skill="uni-smoke-veil"]').click();
     if ((await page.evaluate(() => window.demo.getStatus())).interactionStep === 'target') {
@@ -317,14 +327,21 @@ export async function statusEmblemChecks({ browser, baseURL, output }) {
     );
     await page.locator(`[data-unit="${pandoraId}"]`).click();
     await page.locator(`[data-unit="${pandoraId}"]`).click();
-    assert(
-      await page
-        .locator('#emblem-screen')
-        .evaluate(
-          (element) =>
-            element.classList.contains('active') && element.classList.contains('emblem-kamui'),
-        ),
+    assert.equal(
+      await page.locator(`.unit-hit[data-unit="${pandoraId}"] .emblem-ring`).count(),
+      1,
+      'Kamui ring remains on the local battle card',
     );
+    assert.equal(
+      await page
+        .locator(
+          '#battle.emblem-active, #emblem-screen.active, dialog.emblem-skill-cinematic[open]',
+        )
+        .count(),
+      0,
+      'combined status stays local with no full-screen cinematic',
+    );
+    assert.equal(await page.evaluate(() => document.fullscreenElement), null);
     await page.waitForFunction(() => window.demo.getEmblemStatus()?.active >= 1, null, {
       timeout: 5000,
     });
@@ -359,78 +376,25 @@ export async function statusEmblemChecks({ browser, baseURL, output }) {
       'Casting emblem-dragon-vein triggers wave-crash PixelFX',
     );
     await page.screenshot({ path: path.join(output, 'stage3-dragon-vein-battle.png') });
-    const markup = (await readFile(new URL('../../index.html', import.meta.url), 'utf8')).replace(
-      '<script type="module" src="./src/app.js"></script>',
-      '',
-    );
-    await page.route('**/__emblem-rewards', (route) =>
-      route.fulfill({ contentType: 'text/html', body: markup }),
-    );
-    await page.goto(new URL('__emblem-rewards', baseURL).href);
-    await page.evaluate(async () => {
-      const [{ createEmblems }, { createEventScope }, { prepareBossEmblem }] = await Promise.all([
-        import('/src/app/emblems.js'),
-        import('/src/shared/events.js'),
-        import('/src/emblem-progression.js'),
-      ]);
-      const events = createEventScope();
-      const session = {
-        ai: { library: { progression: { emblemLesson: 'done' }, emblems: [] } },
-        runtime: { mode: 'battle' },
-        battle: { playing: false, state: { phase: 'opening' } },
-        journey: {},
-      };
-      const controller = createEmblems({
-        session,
-        events,
-        generation: { save() {} },
-        audio: { play() {} },
-        shell: { toast() {} },
-      });
-      window.rewardFixture = { session, controller, events, prepareBossEmblem };
-    });
-    for (const [map, sequence, name] of [
-      ['ruins', 2, '水无月兰'],
-      ['forest', 3, '风在舞'],
-    ]) {
-      await page.evaluate(
-        ({ map, sequence }) => {
-          const { session, controller, prepareBossEmblem } = window.rewardFixture;
-          session.journey.expedition = { index: 4, exploration: { map, sequence } };
-          prepareBossEmblem(session.ai.library, session.journey.expedition);
-          controller.check();
-        },
-        { map, sequence },
-      );
-      const acquisition = page.locator('dialog.ring-acquisition[open]');
-      await acquisition.waitFor({ state: 'visible' });
-      await acquisition.locator('.ring-acquisition-skip').click();
-      await acquisition.locator('.ring-acquisition-continue').click();
-      await page.locator('#emblem-dialogue').waitFor({ state: 'visible' });
-      await page.locator('#emblem-dialogue button').click();
-      assert((await page.locator('#emblem-dialogue').textContent()).includes(name));
-      await page.locator('#emblem-dialogue button').click();
-      await page.locator('#emblem-dialogue').waitFor({ state: 'hidden' });
-      await page.evaluate(() => window.rewardFixture.controller.check());
-      assert.equal(await page.locator('#emblem-dialogue').isVisible(), false);
-    }
-    await page.evaluate(() => {
-      window.rewardFixture.controller.dispose();
-      window.rewardFixture.events.dispose();
-    });
+
     assert.deepEqual(errors, []);
+    // The real Overlord award and Gal dialogue are exercised in tests/browser/ring-acquisition.mjs.
+    // This status-only flow does not claim boss reward dialogue coverage.
     return {
       staticEquipmentReload: true,
       allEmblemsRetained: true,
       currentLevel: true,
       symmetricBag: true,
       outsideDismiss: true,
-      bossRewardDialogues: true,
     };
   } catch (failure) {
     await page.screenshot({ path: path.join(output, 'failure.png') });
     const diagnostics = [...errors, ...startupErrors];
-    if (diagnostics.length) throw new Error(diagnostics.join('\n'), { cause: failure });
+    if (diagnostics.length)
+      throw new Error(
+        `${failure.stack || failure}\nBrowser diagnostics:\n${diagnostics.join('\n')}`,
+        { cause: failure },
+      );
     throw failure;
   } finally {
     await page.close();

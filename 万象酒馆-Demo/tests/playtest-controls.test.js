@@ -55,13 +55,11 @@ test('cooperation affection requires protagonist and is claimed once per encount
   assert.equal(claimCooperationAffection(library, expedition, result), null);
 });
 
-test('growth stops choosing action and mana reduction at the requested caps', () => {
+test('character growth preserves action limits and prevents discounts below the SP floor', () => {
   const member = officialCharacter('pandora');
   member.combat.skills.forEach((skill) => {
     skill.mp = 3;
   });
-  member.growth.bonus.limit = 12;
-  member.growth.bonus.manaCost = 12;
   const awards = gainExperience(member, xpToNext(1) + xpToNext(2) + xpToNext(3));
   assert(awards.levels.every((level) => !level.gains.limit && !level.gains.manaCost));
   const combat = grownCombat(member);

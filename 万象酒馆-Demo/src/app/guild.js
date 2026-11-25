@@ -1,21 +1,15 @@
 import {
-  GUILD_BOUNTIES,
   GUILD_RANKS,
-  GUILD_SUPPLIES,
   GUILD_TRIALS,
-  acceptGuildBounty,
-  buyGuildSkillManual,
-  buyGuildSupply,
-  claimGuildBountyReward,
   guildIntelList,
+  guildBountyBoard,
   guildRankInfo,
   guildSkillCatalog,
   isBountyReadyToClaim,
-  supplyCostForLibrary,
-  unlockGuildIntel,
 } from '../guild.js';
 import { finalSkillText } from '../skill-text.js';
 import { DEFINITIONS } from '../data.js';
+import { REGIONS } from '../content/regions.js';
 import { escapeText } from '../ui.js';
 import { LEARNABLE_SKILL_CATEGORIES } from '../content/learnable-skills.js';
 import {
@@ -26,21 +20,23 @@ import {
   damageTypeIcon,
   inferDamageType,
 } from '../damage-types.js';
+import { cityServiceArt } from './city-service-art.js';
+import { commitCityTrade } from './city-trade.js';
 
 const TABS = Object.freeze([
-  { id: 'bounties', label: '悬赏委托板', sub: 'BOUNTIES' },
-  { id: 'intel', label: '区域情报台', sub: 'INTEL' },
-  { id: 'supplies', label: '公会军需坊', sub: 'SUPPLIES' },
-  { id: 'skills', label: '战技研习台', sub: 'GRIMOIRE' },
-  { id: 'trials', label: '试炼切磋场', sub: 'TRIALS' },
+  { id: 'bounties', label: '悬赏板' },
+  { id: 'intel', label: '查情报' },
+  { id: 'skills', label: '学特技' },
+  { id: 'trials', label: '切磋' },
 ]);
 
-/** Adventurer's Guild dialog: Bounties (tied to Skyrim Quests), Regional Intel, Supplies & AI-free Sparring. */
+/** Adventurer's Guild dialog: Bounties, regional intel, specialty manuals and AI-free sparring. */
 export function createGuild(context) {
   const { session, events } = context;
   const dialog = document.createElement('dialog');
   dialog.id = 'guild-dialog';
   dialog.className = 'guild-dialog';
+  dialog.classList.add('city-service-dialog');
   dialog.setAttribute('aria-label', '冒险者公会');
   document.body.append(dialog);
 
@@ -48,28 +44,41 @@ export function createGuild(context) {
   let activeSkillCategory = 'all';
   let activeSkillType = 'all';
   let launching = false;
+  let city = cityServiceArt();
 
   const library = () => session.ai.library;
+
+  async function transact(action, id, onSuccess) {
+    try {
+      const result = await commitCityTrade(context, action, id);
+      onSuccess?.(result);
+    } catch (failure) {
+      context.shell.toast(failure.message);
+    }
+    render();
+  }
 
   function renderBounties() {
     const lib = library();
     const rank = guildRankInfo(lib.guild?.merit || 0).current;
     const scale = 1 + (rank.bonusPct || 0) / 100;
     const quests = lib.tavernQuests || [];
-    return `<div class="guild-cards">
-      ${GUILD_BOUNTIES.map((bounty) => {
-        const existing = quests.find((q) => q.bountyId === bounty.id);
-        const isActive = existing?.status === 'active';
-        const isReady = existing && isBountyReadyToClaim(existing);
-        const progress = existing?.objectives?.[0];
-        const gold = Math.round(bounty.gold * scale);
-        const ether = Math.round(bounty.ether * scale);
-        return `<article class="guild-card ${isReady ? 'is-ready' : isActive ? 'is-active' : ''}">
+    return `<div class="guild-cards guild-notice-board" aria-label="每日悬赏告示">
+      ${guildBountyBoard(lib)
+        .map((bounty) => {
+          const existing = quests.find((q) => q.bountyId === bounty.id);
+          const isActive = existing?.status === 'active';
+          const isReady = existing && isBountyReadyToClaim(existing);
+          const targets = bounty.targetMaps.map((id) => REGIONS[id]?.name).filter(Boolean);
+          if (bounty.targetKind === 'any-road') targets.unshift('大地图游荡敌群');
+          const current = isActive ? existing.objectives?.[0]?.current || 0 : 0;
+          const gold = Math.round(bounty.gold * scale);
+          const ether = Math.round(bounty.ether * scale);
+          return `<article data-bounty-id="${escapeText(bounty.id)}" class="guild-card guild-notice ${isReady ? 'is-ready' : isActive ? 'is-active' : ''}">
           <div class="guild-card-top">
             <span class="guild-rank-seal">${escapeText(bounty.rank)}</span>
             <div class="guild-card-meta">
               <small>${escapeText(bounty.tier)} · 推荐 Lv.${bounty.level}</small>
-              <h3>${escapeText(bounty.title)}</h3>
             </div>
             ${
               isReady
@@ -81,10 +90,7 @@ export function createGuild(context) {
                     : ''
             }
           </div>
-          <p class="guild-card-desc">${escapeText(bounty.description)}</p>
-          <p class="guild-card-obj">◆ ${escapeText(bounty.objectiveLabel)}${
-            isActive && progress ? `（<b>${progress.current}/${progress.target}</b>）` : ''
-          }</p>
+          <p class="guild-card-obj">◆ ${escapeText(targets.join(' / '))} <b>${current}/${bounty.targetCount}</b></p>
           <footer class="guild-card-foot">
             <span class="guild-reward-text">金币 ${gold} · 以太 ${ether} · 功勋 +${bounty.merit}</span>
             <div class="guild-card-btns">
@@ -98,7 +104,8 @@ export function createGuild(context) {
             </div>
           </footer>
         </article>`;
-      }).join('')}
+        })
+        .join('')}
     </div>`;
   }
 
@@ -139,32 +146,6 @@ export function createGuild(context) {
     </div>`;
   }
 
-  function renderSupplies() {
-    const lib = library();
-    const bag = lib.inventory?.items || {};
-    return `<div class="guild-cards">
-      ${GUILD_SUPPLIES.map((item) => {
-        const cost = supplyCostForLibrary(lib, item);
-        const owned = item.kind === 'item' ? bag[item.itemId] || 0 : lib.inventory?.ether || 0;
-        const ownedLabel = item.kind === 'item' ? `背包持有 ${owned}` : `当前以太 ${owned}`;
-        return `<article class="guild-card">
-          <div class="guild-card-top">
-            <span class="guild-supply-icon" aria-hidden="true">${item.kind === 'ether' ? '✦' : '⚗'}</span>
-            <div class="guild-card-meta">
-              <small>${ownedLabel}</small>
-              <h3>${escapeText(item.name)}</h3>
-            </div>
-          </div>
-          <p class="guild-card-desc">${escapeText(item.desc)}</p>
-          <footer class="guild-card-foot">
-            <span class="guild-reward-text">${cost < item.price ? `<s>${item.price}</s> ` : ''}${cost} 金币</span>
-            <button type="button" class="guild-btn-gold" data-guild-buy="${escapeText(item.id)}">购入补给</button>
-          </footer>
-        </article>`;
-      }).join('')}
-    </div>`;
-  }
-
   function renderSkills() {
     const catalog = guildSkillCatalog(library());
     const filtered = catalog.filter((item) => {
@@ -195,7 +176,7 @@ export function createGuild(context) {
           .map((item) => {
             const effectDesc = finalSkillText(item);
             const costLine = item.learned
-              ? '已在全队战技库解锁'
+              ? '已在全队特技库解锁'
               : item.discountedCost < item.price
                 ? `<s>${item.price}</s> ${item.discountedCost} 金币`
                 : `${item.discountedCost} 金币`;
@@ -223,7 +204,7 @@ export function createGuild(context) {
             <div class="guild-card-btns">
               ${
                 item.learned
-                  ? '<button type="button" disabled>已收录至战技库</button>'
+                  ? '<button type="button" disabled>已收录至特技库</button>'
                   : `<button type="button" class="guild-btn-gold" data-guild-learn="${escapeText(item.id)}" ${item.unlockedByMerit ? '' : 'disabled'}>研习秘籍</button>`
               }
             </div>
@@ -231,8 +212,8 @@ export function createGuild(context) {
         </article>`;
           })
           .join('')
-      : '<div class="guild-empty-note">当前筛选条件下暂无对应通用战技</div>';
-    return `<div class="guild-skill-filters" role="region" aria-label="战技筛选">
+      : '<div class="guild-empty-note">当前筛选条件下没有特技</div>';
+    return `<div class="guild-skill-filters" role="region" aria-label="特技筛选">
         <div class="guild-filter-row">${catFilters}</div>
         <div class="guild-filter-row is-types">${typeFilters}</div>
       </div>
@@ -278,20 +259,16 @@ export function createGuild(context) {
         ? renderBounties()
         : activeTab === 'intel'
           ? renderIntel()
-          : activeTab === 'supplies'
-            ? renderSupplies()
-            : activeTab === 'skills'
-              ? renderSkills()
-              : renderTrials();
+          : activeTab === 'skills'
+            ? renderSkills()
+            : renderTrials();
 
     dialog.innerHTML = `<header class="guild-head">
         <div class="guild-crest-badge" aria-hidden="true">
           <span>${escapeText(info.current.rank)}</span>
-          <small>RANK</small>
         </div>
         <div class="guild-head-info">
-          <small>ADVENTURER'S GUILD · 艾尔德兰冒险者公会</small>
-          <h2>公会大厅 · ${escapeText(info.current.rank)} 级「${escapeText(info.current.title)}」</h2>
+          <h2>${city.name} · 冒险者公会</h2>
           <div class="guild-merit-row">
             <div class="guild-merit-bar"><i style="width:${info.pct}%"></i></div>
             <span>功勋 ${info.currentMerit}${info.next ? ` / ${info.next.minMerit} (${info.next.rank})` : ' · 最高阶'}</span>
@@ -300,7 +277,7 @@ export function createGuild(context) {
         </div>
         <div class="guild-head-right">
           <div class="guild-wallet">金币 <b>${gold}</b> · 以太 <b>${ether}</b></div>
-          <div class="guild-perks">悬赏 +${info.current.bonusPct}% · 补给 -${Math.round(info.current.discount * 100)}%</div>
+          <div class="guild-perks">悬赏 +${info.current.bonusPct}% · 秘籍 −${Math.round(info.current.discount * 100)}%</div>
         </div>
         <form method="dialog"><button class="guild-close" aria-label="关闭冒险者公会">×</button></form>
       </header>
@@ -308,15 +285,18 @@ export function createGuild(context) {
         ${TABS.map(
           (tab) =>
             `<button type="button" role="tab" aria-selected="${tab.id === activeTab}" data-guild-tab="${tab.id}">
-              <span>${tab.label}</span><small>${tab.sub}</small>
+              ${tab.label}
             </button>`,
         ).join('')}
       </nav>
       <div class="guild-body">${content}</div>`;
   }
 
-  function open(tab = '') {
-    if (TABS.some((t) => t.id === tab)) activeTab = tab;
+  function open(tab = 'bounties', { cityId } = {}) {
+    if (session.runtime.mode !== 'inn' || session.ai.busy) return;
+    city = cityServiceArt(cityId, context.daily?.scene?.());
+    dialog.style.setProperty('--guild-scene', `url("${new URL(city.guild, document.baseURI)}")`);
+    activeTab = TABS.some((t) => t.id === tab) ? tab : 'bounties';
     render();
     if (!dialog.open) dialog.showModal();
   }
@@ -357,7 +337,7 @@ export function createGuild(context) {
     }
   }
 
-  events.on(dialog, 'click', (event) => {
+  events.on(dialog, 'click', async (event) => {
     const tabBtn = event.target.closest('[data-guild-tab]');
     if (tabBtn) {
       activeTab = tabBtn.dataset.guildTab;
@@ -378,37 +358,27 @@ export function createGuild(context) {
     }
     const acceptId = event.target.closest('[data-guild-accept]')?.dataset.guildAccept;
     if (acceptId) {
-      const outcome = acceptGuildBounty(library(), acceptId);
-      if (!outcome.ok) {
-        context.shell.toast(outcome.reason);
-        return;
-      }
-      context.quests?.focusQuest?.(outcome.quest.id);
-      context.generation.save();
-      context.daily?.refresh?.();
-      context.quests?.showBanner?.('BOUNTY ACCEPTED · 悬赏已接取', outcome.quest.title);
-      context.shell.toast(`已接取公会悬赏：${outcome.quest.title}`);
-      render();
+      await transact('accept', acceptId, (outcome) => {
+        context.quests?.focusQuest?.(outcome.quest.id);
+        context.daily?.refresh?.();
+        context.quests?.showBanner?.('BOUNTY ACCEPTED · 悬赏已接取', outcome.quest.title);
+        context.shell.toast(`已接取公会悬赏：${outcome.quest.title}`);
+      });
       return;
     }
     const claimId = event.target.closest('[data-guild-claim]')?.dataset.guildClaim;
     if (claimId) {
-      const outcome = claimGuildBountyReward(library(), claimId);
-      if (!outcome.ok) {
-        context.shell.toast(outcome.reason);
-        return;
-      }
-      context.generation.save();
-      context.daily?.refresh?.();
-      context.quests?.showBanner?.(
-        'BOUNTY COMPLETED · 悬赏完成',
-        outcome.quest.title,
-        `+${outcome.rewards.gold} 金币 · +${outcome.rewards.ether} 以太 · +${outcome.rewards.merit} 功勋`,
-      );
-      context.shell.toast(
-        `领奖成功：金币 +${outcome.rewards.gold}，功勋 +${outcome.rewards.merit}`,
-      );
-      render();
+      await transact('claim', claimId, (outcome) => {
+        context.daily?.refresh?.();
+        context.quests?.showBanner?.(
+          'BOUNTY COMPLETED · 悬赏完成',
+          outcome.quest.title,
+          `+${outcome.rewards.gold} 金币 · +${outcome.rewards.ether} 以太 · +${outcome.rewards.merit} 功勋`,
+        );
+        context.shell.toast(
+          `领奖成功：金币 +${outcome.rewards.gold}，功勋 +${outcome.rewards.merit}`,
+        );
+      });
       return;
     }
     const trackId = event.target.closest('[data-guild-track]')?.dataset.guildTrack;
@@ -419,14 +389,9 @@ export function createGuild(context) {
     }
     const intelId = event.target.closest('[data-guild-intel]')?.dataset.guildIntel;
     if (intelId) {
-      const outcome = unlockGuildIntel(library(), intelId);
-      if (!outcome.ok) {
-        context.shell.toast(outcome.reason);
-        return;
-      }
-      context.generation.save();
-      context.shell.toast(`已调阅「${outcome.item.name}」探索卷宗`);
-      render();
+      await transact('intel', intelId, (outcome) => {
+        context.shell.toast(`已调阅「${outcome.item.name}」探索卷宗`);
+      });
       return;
     }
     const mapId = event.target.closest('[data-guild-map]')?.dataset.guildMap;
@@ -435,28 +400,11 @@ export function createGuild(context) {
       context.daily?.openAtlas?.();
       return;
     }
-    const buyId = event.target.closest('[data-guild-buy]')?.dataset.guildBuy;
-    if (buyId) {
-      const outcome = buyGuildSupply(library(), buyId);
-      if (!outcome.ok) {
-        context.shell.toast(outcome.reason);
-        return;
-      }
-      context.generation.save();
-      context.shell.toast(`已购入 ${outcome.supply.name}（-${outcome.cost} 金币）`);
-      render();
-      return;
-    }
     const learnId = event.target.closest('[data-guild-learn]')?.dataset.guildLearn;
     if (learnId) {
-      const outcome = buyGuildSkillManual(library(), learnId);
-      if (!outcome.ok) {
-        context.shell.toast(outcome.reason);
-        return;
-      }
-      context.generation.save();
-      context.shell.toast(`已研习通用战技「${outcome.skill.name}」（-${outcome.cost} 金币）`);
-      render();
+      await transact('learn', learnId, (outcome) => {
+        context.shell.toast(`已研习特技「${outcome.skill.name}」（-${outcome.cost} 金币）`);
+      });
       return;
     }
     const trialId = event.target.closest('[data-guild-trial]')?.dataset.guildTrial;

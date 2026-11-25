@@ -24,6 +24,8 @@
   animation: story-invitation 2.4s ease-in-out infinite;
 }
 #story-feed {
+  --dialog-motion-travel: 10px;
+  --dialog-motion-scale: 0.98;
   width: min(1100px, 90vw);
   height: 88dvh;
   max-width: calc(100vw - 36px);
@@ -47,6 +49,11 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+/* Programmatic reset/dispose skips the paint-only exit. */
+#story-feed[data-story-instant],
+#story-feed[data-story-instant]::backdrop {
+  transition: none !important;
 }
 #story-feed::backdrop {
   background: rgba(4, 10, 12, 0.75);
@@ -236,6 +243,7 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
+  #story-toggle span,
   .story-line {
     animation: none;
   }
@@ -282,10 +290,13 @@
     0 26px 84px rgba(0, 0, 0, 0.88),
     inset 0 1px 0 rgba(255, 228, 173, 0.14);
 }
+#journey-records,
+#archive-dialog {
+  flex-direction: column;
+}
 #journey-records[open],
 #archive-dialog[open] {
   display: flex;
-  flex-direction: column;
   animation: records-enter 200ms ease-out;
 }
 #journey-records::backdrop {
@@ -445,10 +456,21 @@
   border-bottom: 1px solid rgba(216, 178, 110, 0.2);
   background: rgba(16, 15, 19, 0.85);
 }
-.archive-enemy-tiers[hidden] {
+.archive-enemy-categories {
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(216, 178, 110, 0.16);
+  background: rgba(16, 15, 19, 0.72);
+}
+.archive-enemy-tiers[hidden],
+.archive-enemy-categories[hidden] {
   display: none;
 }
-.archive-enemy-tiers button {
+.archive-enemy-tiers button,
+.archive-enemy-categories button {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -462,17 +484,58 @@
   font-size: 12px;
   cursor: pointer;
 }
-.archive-enemy-tiers button span {
+.archive-enemy-categories button {
+  flex-direction: column;
+  gap: 1px;
+}
+.archive-enemy-tiers button span,
+.archive-enemy-categories button span {
   color: #9e8a66;
   font-size: 10px;
 }
-.archive-enemy-tiers button[aria-pressed='true'] {
+.archive-enemy-tiers button[aria-pressed='true'],
+.archive-enemy-categories button[aria-pressed='true'] {
   border-color: rgba(235, 198, 126, 0.6);
   background: rgba(216, 178, 110, 0.18);
   color: #fae8be;
 }
-.archive-enemy-tiers button[aria-pressed='true'] span {
+.archive-enemy-tiers button[aria-pressed='true'] span,
+.archive-enemy-categories button[aria-pressed='true'] span {
   color: #f0cf88;
+}
+.archive-enemy-export {
+  flex: 0 0 auto;
+  padding: 6px 10px;
+  border-top: 1px solid rgba(216, 178, 110, 0.2);
+}
+.archive-enemy-export button {
+  width: 100%;
+  min-height: 34px;
+  padding: 4px 8px;
+  border: 1px solid rgba(216, 178, 110, 0.34);
+  border-radius: 3px;
+  background: rgba(216, 178, 110, 0.08);
+  color: #e9d7b5;
+  font-size: 12px;
+  cursor: pointer;
+}
+.archive-enemy-export button[aria-disabled='true'] {
+  opacity: 0.65;
+  cursor: wait;
+}
+.archive-enemy-export p {
+  margin: 0;
+  color: #cab899;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+.archive-enemy-export p:not(:empty) {
+  margin-top: 4px;
+}
+@media (pointer: coarse) {
+  .archive-enemy-export button {
+    min-height: 44px;
+  }
 }
 #archive-list,
 #records-list,
@@ -1074,7 +1137,12 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
     padding: 8px 6px;
   }
-  .archive-enemy-tiers button {
+  .archive-enemy-categories {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 6px;
+  }
+  .archive-enemy-tiers button,
+  .archive-enemy-categories button {
     font-size: 11px;
     padding: 3px 4px;
   }
@@ -1106,6 +1174,36 @@
   #archive-dialog .records-title h2 {
     margin: 0;
     font-size: 20px;
+  }
+  /* The extra taxonomy filters must not compress the touch list into a sliver. */
+  .archive-codex-progress {
+    padding-block: 4px;
+  }
+  .archive-enemy-tiers {
+    gap: 3px;
+    padding: 4px 6px;
+  }
+  .archive-enemy-categories:not([hidden]) {
+    display: flex;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    padding: 2px 8px;
+    touch-action: pan-x;
+  }
+  .archive-enemy-categories button {
+    flex: 0 0 auto;
+    min-width: 72px;
+    min-height: 44px;
+    white-space: nowrap;
+  }
+  .archive-enemy-export {
+    padding: 2px 6px;
+  }
+  #archive-list {
+    flex: 1 1 96px;
+    min-height: 96px;
+    overscroll-behavior-y: contain;
+    touch-action: pan-y;
   }
   .archive-overlord-stage {
     height: 190px;

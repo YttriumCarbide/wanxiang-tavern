@@ -1,4 +1,4 @@
-import { parseGalText } from '../gal.js';
+import { galEmotionTag, parseGalText } from '../gal.js';
 
 export function bossLines(prose) {
   return parseGalText(prose)
@@ -7,13 +7,20 @@ export function bossLines(prose) {
       id: `boss-${String(index + 1).padStart(3, '0')}`,
       speaker: beat.speaker || '旁白',
       text: beat.text,
+      ...(beat.emotion ? { emotion: beat.emotion } : {}),
     }));
 }
 
 export function galSceneLines(prose, sceneId) {
   return parseGalText(prose).map((beat, index) => {
     const id = `${sceneId}-${String(index + 1).padStart(3, '0')}`;
-    if (beat.text) return { id, speaker: beat.speaker || '旁白', text: beat.text };
+    if (beat.text)
+      return {
+        id,
+        speaker: beat.speaker || '旁白',
+        text: beat.text,
+        ...(beat.emotion ? { emotion: beat.emotion } : {}),
+      };
     return { id, speaker: beat.speaker, cue: beat.type };
   });
 }
@@ -23,7 +30,9 @@ export function linesProse(lines) {
     .map((line) => {
       if (line.cue === 'clear') return '【清场】';
       if (line.cue) return `【${line.cue === 'enter' ? '登场' : '退场'}:${line.speaker}】`;
-      return `${line.speaker === '旁白' ? '【旁白】' : `【对白:${line.speaker}】`}${line.text}`;
+      if (line.speaker === '旁白') return `【旁白】${line.text}`;
+      const emotion = galEmotionTag(line.emotion);
+      return `【对白:${line.speaker}${emotion ? `|${emotion}` : ''}】${line.text}`;
     })
     .join('\n\n');
 }
@@ -76,7 +85,9 @@ export function applyDialoguePatches(
         warnings.push('忽略未知台词ID');
         continue;
       }
-      target.speaker = patch.speaker.trim();
+      const speaker = patch.speaker.trim();
+      if (speaker !== target.speaker) delete target.emotion;
+      target.speaker = speaker;
       target.text = patch.text.trim();
     } else {
       const after = lines.findIndex((line) => line.id === patch.after);

@@ -1,13 +1,16 @@
 import assert from 'node:assert/strict';
 import path from 'node:path';
+import { expect } from 'playwright/test';
 import { newCampaign, firstCompanion } from '../../src/campaign.js';
 import { defaultProtagonist } from '../../src/content/qingyuan.js';
 import { joinPandora } from '../../src/companion-events.js';
+import { GUILD_BOUNTIES } from '../../src/guild.js';
 import { normalizeInvitationPlan } from '../../src/invitation.js';
 import { memoryHash } from '../../src/memory.js';
 import { fullInvitation } from '../fixtures/invitation.js';
 import { legacySession } from './legacy-session.mjs';
-import { travelTownScene } from './town-navigation.mjs';
+import { openCityDirectory, travelTownScene } from './town-navigation.mjs';
+import { chatResponse } from '../../server/chat-response.mjs';
 
 export async function dailyChecks({ browser, baseURL, output }) {
   const page = await browser.newPage({ viewport: { width: 1120, height: 700 } });
@@ -21,6 +24,7 @@ export async function dailyChecks({ browser, baseURL, output }) {
   library.progression.settlements = ['settled-a', 'settled-b'];
   joinPandora(library);
   library.daily.tutorial = 'planning';
+  library.unlockedDungeons.push('mill');
   Object.assign(library.dining.inventory, { 'frost-oyster': 2, milk: 3 });
   library.relationships['official-libet'] = { affection: 25, gains: 0, agreed: false };
   const nextTopics = [
@@ -59,19 +63,54 @@ export async function dailyChecks({ browser, baseURL, output }) {
     );
     sessionStorage.setItem('daily-seeded', 'true');
   }, library);
-  const outline = { ...fullInvitation, finale: { ...fullInvitation.finale, scene: 'market' } };
-  const plan = normalizeInvitationPlan(outline);
-  const rawOutline = `<wanxiang_json>${JSON.stringify(outline)}</wanxiang_json>`;
+  let rawOutline;
+  function mockPlan({ city, startScene, allowedScenes }) {
+    assert.equal(city, 'starbell');
+    assert.equal(startScene, 'starbell-guild');
+    assert.ok(Object.hasOwn(allowedScenes, 'market'));
+    assert.ok(Object.hasOwn(allowedScenes, 'starbell-market'));
+    assert.ok(!Object.hasOwn(allowedScenes, 'tavern'));
+    const outline = {
+      ...fullInvitation,
+      stages: fullInvitation.stages.map((stage, index) => ({
+        ...stage,
+        scene: index === 0 || index === 1 ? startScene : index === 2 ? 'market' : stage.scene,
+        environment: stage.description,
+      })),
+      finale: {
+        ...fullInvitation.finale,
+        scene: 'starbell-market',
+        environment: fullInvitation.finale.title,
+      },
+    };
+    outline.stages[0] = {
+      ...outline.stages[0],
+      environment: outline.stages[0].description.repeat(22),
+    };
+    const plan = normalizeInvitationPlan(outline, {
+      allowedScenes,
+      startScene,
+      requireChoices: true,
+    });
+    rawOutline = `<wanxiang_json>${JSON.stringify(outline)}</wanxiang_json>`;
+    return plan;
+  }
   const calls = [];
   const summaries = [];
   let firstRevision;
   const errors = [];
   page.on('pageerror', (error) => errors.push(error.message));
-  await page.route('**/api/ai/generate/chat', (route) => {
+  const cityLead = fullInvitation.stages[0].description;
+  const cityReply = '【旁白】广场的钟声响了。';
+  let cityChatInput;
+  await page.route('**/api/ai/generate/chat', async (route) => {
+    const input = route.request().postDataJSON();
+    if (input.place === 'market') cityChatInput = input;
+    const output =
+      input.place === 'market' ? `【环境】${cityLead}【环境结束】${cityReply}` : cityReply;
     return route.fulfill({
       json: {
-        content: '【旁白】广场的钟声响了。',
-        actions: { affection: [], agreeToAdventure: [] },
+        ...(await chatResponse('chat', `<wanxiang_output>${output}</wanxiang_output>`, [], input)),
         request: { tokens: { inputEstimate: 20 }, warnings: [] },
         usage: { input: 20, output: 7 },
       },
@@ -88,6 +127,9 @@ export async function dailyChecks({ browser, baseURL, output }) {
       json: { items: items.map((item) => ({ id: item.id, summary: `回忆：${item.label}。` })) },
     });
   });
+  const longIntent = '我们可以沿着城市街道慢慢走，聊聊接下来想去的地点与沿途见闻。'
+    .repeat(120)
+    .slice(0, 1900);
   await page.route('**/api/ai/generate/script', async (route) => {
     const { invitation, invitationTopics, party, playerIntent } = route.request().postDataJSON();
     if (invitationTopics) {
@@ -96,12 +138,13 @@ export async function dailyChecks({ browser, baseURL, output }) {
       return route.fulfill({ json: { topics: nextTopics } });
     }
     calls.push('script');
-    assert.equal(playerIntent, '我想问问她最近在忙什么。');
+    assert.equal(playerIntent, longIntent);
     assert.equal(invitation.member, 'official-libet');
     assert.match(
       party.find((person) => person.id === invitation.member).invitationMemory,
       /餐车挡住了路/,
     );
+    const plan = mockPlan(invitation);
     await route.fulfill({
       json: {
         diagnostic: { rawText: rawOutline },
@@ -171,6 +214,41 @@ export async function dailyChecks({ browser, baseURL, output }) {
     throw Error('Gal 未到达预期停顿');
   }
   const status = () => page.locator('.daily-status').textContent();
+  const questHandle = page.locator('#ledger-quests-open');
+  const journal = page.locator('#tavern-quests');
+  async function settleJournal() {
+    await expect(journal.locator('.skyrim-journal-grid')).toBeVisible();
+    await journal.evaluate((dialog) =>
+      Promise.all(dialog.getAnimations().map((animation) => animation.finished.catch(() => {}))),
+    );
+    const bounds = await journal.evaluate((dialog) => {
+      const rect = dialog.getBoundingClientRect();
+      const backdrop = getComputedStyle(dialog, '::backdrop').backgroundColor;
+      const alpha = Number(backdrop.match(/rgba?\([^)]*[,/]\s*([\d.]+)\s*\)$/)?.[1] ?? 1);
+      return {
+        left: rect.left,
+        top: rect.top,
+        right: rect.right,
+        bottom: rect.bottom,
+        centerX: rect.left + rect.width / 2,
+        centerY: rect.top + rect.height / 2,
+        viewportWidth: innerWidth,
+        viewportHeight: innerHeight,
+        alpha,
+      };
+    });
+    assert(
+      Math.abs(bounds.centerX - bounds.viewportWidth / 2) <= 1 &&
+        Math.abs(bounds.centerY - bounds.viewportHeight / 2) <= 1,
+      `task journal stays centered: ${JSON.stringify(bounds)}`,
+    );
+    assert(bounds.left >= 0 && bounds.top >= 0, 'task journal stays within the viewport');
+    assert(
+      bounds.right <= bounds.viewportWidth && bounds.bottom <= bounds.viewportHeight,
+      'task journal does not extend outside the viewport',
+    );
+    assert(bounds.alpha > 0 && bounds.alpha < 1, 'task journal keeps its backdrop translucent');
+  }
   async function checkInvitationComposer(suffix) {
     await page
       .locator('.gal-composer')
@@ -180,11 +258,22 @@ export async function dailyChecks({ browser, baseURL, output }) {
     const layout = await page.locator('#daily-invitation').evaluate((form) => {
       const box = (selector) => document.querySelector(selector).getBoundingClientRect();
       const input = box('#invite-input');
+      const replyRow = form.querySelector('.invite-reply');
+      const reply = replyRow.getBoundingClientRect();
       const meta = box('.invite-meta');
       const end = box('[data-invite-end]');
       const send = box('#invite-send');
+      const gap = Number.parseFloat(getComputedStyle(replyRow).columnGap) || 0;
       return {
-        fieldShare: input.width / form.getBoundingClientRect().width,
+        widths: {
+          viewport: document.documentElement.clientWidth,
+          row: reply.width,
+          input: input.width,
+          send: send.width,
+          gap,
+          available: reply.width - send.width - gap,
+        },
+        sendWithinReply: input.left >= reply.left - 1 && send.right <= reply.right + 1,
         fieldHeight: input.height,
         metaAbove: meta.bottom <= input.top && end.bottom <= input.top,
         sendBesideField: send.left >= input.right && Math.abs(send.bottom - input.bottom) < 2,
@@ -193,7 +282,16 @@ export async function dailyChecks({ browser, baseURL, output }) {
         sendIcon: Boolean(form.querySelector('#invite-send svg')),
       };
     });
-    assert(layout.fieldShare >= 0.9, suffix + ' input takes the width of the Gal composer');
+    const { viewport, row, input, available } = layout.widths;
+    const widths = JSON.stringify(layout.widths);
+    if (suffix === 'portrait') {
+      assert(row >= viewport * 0.75, `portrait reply row uses at least 75% of viewport: ${widths}`);
+    }
+    assert(
+      available > 0 && input / available >= 0.9,
+      `${suffix} input fills the width available beside the send control: ${widths}`,
+    );
+    assert(layout.sendWithinReply, suffix + ' input and send control stay within their row');
     assert(layout.fieldHeight >= 100, suffix + ' input stays multiline');
     assert(layout.metaAbove, suffix + ' progress and end action stay above the input');
     assert(layout.sendBesideField && layout.sendIcon, suffix + ' uses the Gal send icon');
@@ -221,22 +319,66 @@ export async function dailyChecks({ browser, baseURL, output }) {
     await page.goto(baseURL + '/?display=landscape');
     const frame = page.frameLocator('#inn-frame iframe');
     const actions = page.locator('.daily-dock button');
-    assert.deepEqual(await actions.allTextContents(), ['闲聊', '用餐', '约见', '冒险', '外出']);
+    assert.deepEqual(await actions.allTextContents(), ['闲聊', '约见', '冒险', '外出']);
+    const actionDock = await page.locator('.daily-dock').evaluate((dock) => {
+      const buttons = [...dock.querySelectorAll('button')];
+      const widths = buttons.map((button) => button.getBoundingClientRect().width);
+      return {
+        width: dock.getBoundingClientRect().width,
+        height: dock.getBoundingClientRect().height,
+        equalWidths: widths.every((width) => Math.abs(width - widths[0]) < 1),
+      };
+    });
+    assert(actionDock.width >= 848 && actionDock.width <= 850);
+    assert(actionDock.height >= 60 && actionDock.height <= 64);
+    assert(actionDock.equalWidths, 'the four bottom actions share equal button widths');
     assert.match(await page.locator('[data-tavern-clock]').textContent(), /1463年8月24日 · 上午/);
     await pullOpenLedger();
     assert.match(await page.locator('[data-ledger-date]').textContent(), /1463年8月24日 · 上午/);
+    await expect(questHandle).toBeHidden();
+    const mealTile = page.locator('.ledger-tile [data-daily="meal"]');
+    await mealTile.waitFor({ state: 'visible' });
+    assert.equal(await mealTile.textContent(), '用餐');
     await page.locator('[data-daily="promotion"]').click();
     await page.locator('#tavern-promotion[open]').waitFor();
     await page.clock.fastForward(350);
     assert(await page.locator('[data-promotion-confirm]').isDisabled());
     await page.screenshot({ path: path.join(output, 'promotion-panel.png') });
     await page.locator('[data-promotion-close]').click();
-    await pullOpenLedger();
-    await page.locator('[data-daily="quests"]').click();
-    await page.locator('#tavern-quests[open]').waitFor();
-    await page.clock.fastForward(350);
+    await page.locator('#tavern-promotion').waitFor({ state: 'hidden' });
+    const openLedger = page.locator('#ledger-drawer-host.is-open');
+    assert.equal(await page.locator('.ledger-tile [data-daily="quests"]').count(), 0);
+    if (await openLedger.count()) await openLedger.locator('#ledger-close').click();
+    // Restore the separate quest entry after the ledger has fully closed.
+    await expect(page.locator('#ledger-drawer-host')).toBeHidden();
+    await expect(questHandle).toBeVisible();
+    const taskPlacement = await questHandle.evaluate((button) => {
+      const bounds = button.getBoundingClientRect();
+      const drawer = document.querySelector('#ledger-drawer');
+      return {
+        right: innerWidth - bounds.right,
+        centerY: bounds.top + bounds.height / 2,
+        viewportCenterY: innerHeight / 2,
+        parentTag: button.parentElement?.tagName,
+        inDrawer: drawer?.contains(button) ?? false,
+      };
+    });
+    assert(
+      Math.abs(taskPlacement.right) <= 1 &&
+        Math.abs(taskPlacement.centerY - taskPlacement.viewportCenterY - 128) <= 1,
+      `task entry sits on the lower right edge: ${JSON.stringify(taskPlacement)}`,
+    );
+    assert.equal(taskPlacement.parentTag, 'BODY');
+    assert.equal(taskPlacement.inDrawer, false);
+    await questHandle.click();
+    await expect(journal.getByRole('heading', { name: '任务日志' })).toBeVisible();
+    await settleJournal();
+    await expect(journal.locator('.skyrim-quest-empty')).toHaveText('暂无任务记录');
+    assert.equal(await journal.locator('.skyrim-quest-tab').count(), 0);
+    assert.equal(await journal.locator('[data-quest-focus="accept"]').count(), 0);
     await page.screenshot({ path: path.join(output, 'quests-panel.png') });
-    await page.locator('#tavern-quests .quests-close').click();
+    await journal.getByRole('button', { name: '关闭任务日志' }).click();
+    await expect(journal).toBeHidden();
     await pullOpenLedger();
     await page.locator('#inn-backpack-open').click();
     await page.locator('#inn-backpack[open]').waitFor();
@@ -288,13 +430,17 @@ export async function dailyChecks({ browser, baseURL, output }) {
     assert.match(await page.locator('[data-tavern-clock]').textContent(), /中午/);
     await page.locator('[data-daily="outing"]').click();
     await page.locator('#tavern-exit-picker[open]').waitFor();
-    await page.locator('[data-tavern-exit="street"]').click();
+    await page.locator('[data-tavern-exit="city-center"]').click();
     await page.waitForFunction(
       () =>
         document.querySelector('#inn-frame iframe')?.contentWindow?.streetPreview?.definition
-          ?.id === 'starlamp-street',
+          ?.id === 'city-center',
       null,
       { timeout: 60000 },
+    );
+    assert.equal(
+      await page.frameLocator('#inn-frame iframe').locator('#street-return').innerText(),
+      '返回酒馆',
     );
     assert.equal(await frame.locator('#street-map[open]').count(), 0);
     await frame.locator('#street-map-open').click();
@@ -303,20 +449,36 @@ export async function dailyChecks({ browser, baseURL, output }) {
     await page.locator('[data-ws-close]').click();
     await frame.locator('#street-map .street-map-close [type="submit"]').click();
     await page.locator('[data-daily="companions"]').click();
-    await page.locator('#party-panel[open]').waitFor();
+    const partyPanel = page.locator('#party-panel');
+    await expect(partyPanel).toHaveAttribute('open', '');
+    const ledgerHost = page.locator('#ledger-drawer-host');
+    await partyPanel.locator('#ledger-handle').click();
+    await expect(ledgerHost).toHaveClass(/is-open/);
+    const speedToggle = page.locator('#ledger-speed-toggle');
+    await speedToggle.click();
+    assert.match(await speedToggle.textContent(), /×2/);
+    await expect(ledgerHost).toHaveClass(/is-open/);
+    await speedToggle.click();
+    assert.match(await speedToggle.textContent(), /×1/);
+    await expect(ledgerHost).toHaveClass(/is-open/);
+    await page.locator('.ledger-backdrop').click({ position: { x: 8, y: 8 } });
+    await expect(partyPanel).toHaveAttribute('open', '');
+    await page.clock.fastForward(350);
+    await expect(ledgerHost).toBeHidden();
     if (await page.locator('#prepare-pool [data-prepare-hero="official-edith"]').count()) {
       await page
         .locator('#prepare-pool [data-prepare-hero="official-edith"]')
         .dragTo(page.locator('.prepare-slot:not([data-prepare-hero])').first());
     }
     await page.locator('#prepare-done').click();
+    await expect(ledgerHost).toBeHidden();
     assert(
       (await page.evaluate(() => demo.getLibrary().daily.active.companions)).includes(
         'official-edith',
       ),
     );
     assert.match(await status(), /已行 0 回合/);
-    await travelTownScene(page, 'city-center');
+    await travelTownScene(page, 'market');
     assert.match(await status(), /已行 1 回合/);
     await page.locator('#scene-talk.is-docked').waitFor();
     const streetGeometry = await page.evaluate(() => {
@@ -334,11 +496,42 @@ export async function dailyChecks({ browser, baseURL, output }) {
       const dock = toScreen(fd.querySelector('.street-actions').getBoundingClientRect());
       const talk = document.querySelector('#scene-talk').getBoundingClientRect();
       const mapBtn = toScreen(fd.querySelector('#street-map-open').getBoundingClientRect());
+      const cityDirectory = document
+        .querySelector('#ledger-city-directory-open')
+        .getBoundingClientRect();
       const retBtn = toScreen(fd.querySelector('#street-return').getBoundingClientRect());
       const hud = document.querySelector('#hud-plaque').getBoundingClientRect();
       const daily = document.querySelector('.daily-status').getBoundingClientRect();
-      return { dock, talk, mapBtn, retBtn, hud, daily, vh: window.innerHeight };
+      const dockIcons = fd.querySelectorAll('.street-actions svg').length;
+      const returnText = fd.querySelector('#street-return').textContent.trim();
+      const hotspotCount = fd.querySelectorAll('#street-points .street-point').length;
+      const visitorsCount = iframe.contentWindow.streetPreview.visitors().characters.length;
+      return {
+        dock,
+        talk,
+        mapBtn,
+        cityDirectory,
+        retBtn,
+        hud,
+        daily,
+        dockIcons,
+        returnText,
+        hotspotCount,
+        visitorsCount,
+        vh: window.innerHeight,
+      };
     });
+    assert.equal(streetGeometry.dockIcons, 0);
+    assert.equal(streetGeometry.returnText.includes('↶'), false);
+    assert.equal(streetGeometry.hotspotCount, 0);
+    assert.equal(streetGeometry.visitorsCount, 0);
+    assert(
+      Math.abs(streetGeometry.talk.width - streetGeometry.mapBtn.width) < 2 &&
+        Math.abs(streetGeometry.mapBtn.width - streetGeometry.retBtn.width) < 2 &&
+        Math.abs(streetGeometry.talk.height - streetGeometry.mapBtn.height) < 2 &&
+        streetGeometry.cityDirectory.width > 0,
+      `Dock buttons match unified proportions: ${JSON.stringify(streetGeometry)}`,
+    );
     assert(
       streetGeometry.dock.top > streetGeometry.vh - 90 &&
         streetGeometry.talk.left >= streetGeometry.dock.left - 2 &&
@@ -347,6 +540,56 @@ export async function dailyChecks({ browser, baseURL, output }) {
         Math.abs(streetGeometry.mapBtn.top - streetGeometry.retBtn.top) < 4,
       `Outdoor dock buttons align at bottom center: ${JSON.stringify(streetGeometry)}`,
     );
+    const outingStatus = page.locator('#daily-hud .daily-status');
+    await expect(outingStatus).toBeVisible();
+    const outingBeforeDirectory = await page.evaluate(() => ({
+      scene: demo.getLibrary().daily.active.scene,
+      turns: demo.getLibrary().daily.active.turns,
+    }));
+    const cityDirectory = await openCityDirectory(page);
+    await expect(page.locator('#ledger-city-directory-open')).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    );
+    await expect(outingStatus).toBeHidden();
+    assert.equal(await page.locator('#scene-talk').isVisible(), false);
+    const directoryList = cityDirectory.locator('#street-city-submap-canvas');
+    const directoryScroll = await directoryList.evaluate((list) => {
+      const bounds = list.closest('dialog').getBoundingClientRect();
+      return {
+        bounded: bounds.top >= 0 && bounds.bottom <= innerHeight,
+        distance: list.scrollHeight - list.clientHeight,
+        categories: [...list.querySelectorAll('[data-city-category]')].map(
+          (category) => category.dataset.cityCategory,
+        ),
+      };
+    });
+    assert(directoryScroll.bounded, 'the city directory stays within the viewport');
+    assert(directoryScroll.distance > 0, 'the city directory uses its own bounded scroll region');
+    assert.deepEqual(directoryScroll.categories, ['places', 'facilities', 'dungeons']);
+    await page.screenshot({ path: path.join(output, 'city-directory.png') });
+    await directoryList.hover();
+    await page.mouse.wheel(0, directoryScroll.distance + 80);
+    await expect
+      .poll(() =>
+        directoryList.evaluate((list) => list.scrollHeight - list.clientHeight - list.scrollTop),
+      )
+      .toBeLessThanOrEqual(1);
+    await frame.locator('#street-city-submap-close').click();
+    await expect(page.locator('#ledger-city-directory-open')).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    );
+    assert.deepEqual(
+      await page.evaluate(() => ({
+        scene: demo.getLibrary().daily.active.scene,
+        turns: demo.getLibrary().daily.active.turns,
+      })),
+      outingBeforeDirectory,
+      'opening and closing the city directory does not advance the outing',
+    );
+    await page.locator('#scene-talk.is-docked').waitFor();
+    await expect(outingStatus).toBeVisible();
     assert(
       streetGeometry.daily.top >= streetGeometry.hud.bottom - 1 &&
         Math.abs(streetGeometry.daily.left - streetGeometry.hud.left) <= 2 &&
@@ -355,19 +598,128 @@ export async function dailyChecks({ browser, baseURL, output }) {
       `Outing status ribbon sits cleanly at top-left below placard: ${JSON.stringify(streetGeometry)}`,
     );
     await page.screenshot({ path: path.join(output, 'street-dock.png') });
+    await page.locator('#scene-talk').click();
+    const cityGal = page.locator('#gal-stage[data-workspace="chat"]');
+    const cityEnvironment = cityGal.locator('.scene-environment');
+    await expect(cityGal).toBeVisible();
+    await expect(cityEnvironment).toBeHidden();
+    await expect(cityGal.locator('.gal-bg[src]')).toHaveCount(0);
+    await cityGal.locator('[data-workspace="people"]').click();
+    await expect(cityGal.locator('.chat-location-value')).toBeVisible();
+    await expect(cityGal.locator('.chat-location-value')).toHaveText('星钟商业街');
+    await expect(cityGal.locator('#chat-place-select')).toBeHidden();
+    await expect(cityGal.locator('#chat-place-select')).toHaveValue('market');
+    await cityGal.locator('#chat-place-select').evaluate((select) => {
+      select.value = 'table';
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    await expect(cityGal.locator('#chat-place-select')).toHaveValue('market');
+    await cityGal.locator('.gal-side [data-workspace="compose"]').click();
+    await cityGal.locator('#chat-input').fill('想在这儿聊一会儿。');
+    await cityGal.locator('#chat-send').click();
+    await expect(cityEnvironment).toHaveAttribute('data-place', 'market');
+    await expect(cityEnvironment.locator('.scene-environment-text')).toHaveText(cityLead);
+    await page.clock.fastForward(2500);
+    await expect(cityEnvironment).toHaveAttribute('data-state', 'docked');
+    await expect(cityEnvironment.locator('img')).toHaveCount(0);
+    await expect(cityGal.locator('.gal-bg[src]')).toHaveCount(0);
+    assert.equal(cityChatInput.place, 'market');
+    assert.ok(cityChatInput.timeOfDay);
+    await expect(cityEnvironment).toHaveAttribute('data-state', 'docked');
+    await page.screenshot({ path: path.join(output, 'city-chat-environment.png') });
+    await clearGal(() => cityGal.locator('#chat-input').isVisible());
+    assert.equal(await page.evaluate(() => demo.getLibrary().tavernChat.at(-1).content), cityReply);
+    await cityGal.locator('[data-gal="close"]').click();
+    await expect(cityGal).toBeHidden();
+    assert.match(await status(), /已行 2 回合/);
     await travelTownScene(page, 'outskirts');
-    assert.match(await status(), /已行 3 回合/);
+    assert.match(await status(), /已行 4 回合/);
     assert.equal(await frame.locator('[data-hotspot="road-meadow"]').count(), 0);
     await page.locator('[data-daily="home"]').click();
     await page.locator('[data-daily="invitation"]').click();
     await page.locator('[data-daily-person="official-libet"]').click();
     await page.locator('[data-daily-activity="walk"]').click();
     assert.equal(summaries.length, 0, 'two completed dungeons alone do not start a batch');
-    await page.locator('[data-daily-start]').click();
-    await page.locator('#player-intent textarea').fill('我想问问她最近在忙什么。');
-    await page.locator('#player-intent button[value="continue"]').click();
+    const invitationSetup = page.locator('#daily-setup[data-kind="invitation"]');
+    const openingPlace = invitationSetup.locator('[data-daily-place]');
+    assert.notEqual(await openingPlace.inputValue(), 'starbell-guild');
+    await openingPlace.selectOption('starbell-guild');
+    assert.equal(await openingPlace.inputValue(), 'starbell-guild');
+    const invitationIntent = invitationSetup.locator('[data-daily-intent]');
+    const invitationStart = invitationSetup.locator('[data-daily-start]');
+    await page.setViewportSize({ width: 390, height: 844 });
+    await invitationIntent.fill(longIntent);
+    assert.equal(await invitationIntent.inputValue(), longIntent);
+    assert.deepEqual(
+      await invitationIntent.evaluate((node) => {
+        node.scrollTop = node.scrollHeight;
+        return {
+          scrolls: node.scrollHeight > node.clientHeight,
+          reachesEnd: node.scrollTop + node.clientHeight >= node.scrollHeight - 1,
+        };
+      }),
+      { scrolls: true, reachesEnd: true },
+      'long appointment intent remains scrollable to its final line',
+    );
+    await invitationSetup.locator('[data-daily-close]').focus();
+    await page.keyboard.press('Tab');
+    await expect(invitationSetup.locator('[data-daily-city]')).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(invitationSetup.locator('[data-daily-place]')).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(invitationSetup.locator('[data-daily-person]').first()).toBeFocused();
+    let sawActivity = false;
+    let sawTopic = false;
+    for (
+      let step = 0;
+      step < 40 && !(await invitationStart.evaluate((node) => node === document.activeElement));
+      step++
+    ) {
+      await page.keyboard.press('Tab');
+      const focused = await invitationSetup.evaluate((dialog) => {
+        const active = dialog.ownerDocument.activeElement;
+        const body = dialog.querySelector('.daily-setup-body');
+        const bounds = active.getBoundingClientRect();
+        const bodyBounds = body.getBoundingClientRect();
+        return {
+          inDialog: dialog.contains(active),
+          inBody: body.contains(active),
+          activeVisible: bounds.top >= bodyBounds.top && bounds.bottom <= bodyBounds.bottom,
+          activity: active.matches('[data-daily-activity]'),
+          topic: active.matches('[data-daily-topic]'),
+          start: active.matches('[data-daily-start]'),
+          horizontalOverflow: body.scrollWidth > body.clientWidth,
+        };
+      });
+      assert(focused.inDialog, 'keyboard focus remains inside the modal');
+      if (focused.inBody)
+        assert(focused.activeVisible, 'focused control stays within the scroll viewport');
+      assert.equal(focused.horizontalOverflow, false, 'long intent text does not widen the setup');
+      sawActivity ||= focused.activity;
+      sawTopic ||= focused.topic;
+      if (focused.start) break;
+    }
+    assert(sawActivity, 'Tab reaches appointment activities');
+    assert(sawTopic, 'Tab reaches available topics');
+    await expect(invitationStart).toBeFocused();
+    await expect(invitationStart).toBeInViewport({ ratio: 1 });
+    await page.screenshot({ path: path.join(output, 'invitation-setup-phone.png') });
+    await invitationStart.press('Enter');
     const compose = page.locator('#daily-invitation textarea');
-    const ready = () => compose.isVisible();
+    const ready = () =>
+      compose.evaluate((field) => {
+        const composer = field.closest('.gal-composer');
+        const stage = field.closest('#gal-stage');
+        return (
+          !field.disabled &&
+          !composer?.hidden &&
+          !composer?.inert &&
+          !composer?.hasAttribute('data-workspace-exiting') &&
+          !stage?.hidden &&
+          stage?.dataset.playing === 'false' &&
+          stage?.dataset.leaving !== 'true'
+        );
+      });
     const record = page.locator('.daily-invitation-record');
     await page.locator('#gal-stage > .daily-invitation-record').waitFor();
     assert.match(await record.textContent(), /眼下.*拿出一张没写完的琴谱/s);
@@ -375,6 +727,11 @@ export async function dailyChecks({ browser, baseURL, output }) {
     await page.waitForFunction(() =>
       document.querySelector('.gal-text')?.textContent.startsWith('莉贝特'),
     );
+    assert.equal(
+      await frame.locator('.scene-environment-text').textContent(),
+      fullInvitation.stages[0].description.repeat(22),
+    );
+    assert.equal(await frame.locator('.scene-environment img').count(), 0);
     await clearGal(ready);
     assert.match(await record.textContent(), /来意.*莉贝特想请你.*眼下.*听听这首曲子差在哪儿/s);
     assert.equal(await record.locator('section p').first().innerText(), fullInvitation.premise);
@@ -396,17 +753,43 @@ export async function dailyChecks({ browser, baseURL, output }) {
     const rawDialog = page.locator('#latest-api-response');
     assert.equal(await rawDialog.locator('textarea').inputValue(), rawOutline);
     await rawDialog.getByRole('button', { name: '关闭原始回复' }).click();
-    await checkInvitationComposer('desktop');
+    await checkInvitationComposer('portrait');
     const choices = page.locator('[data-invite-choice]');
     assert.deepEqual(await choices.allTextContents(), fullInvitation.stages[0].choices);
+    const environmentCard = frame.locator('.scene-environment');
+    await expect(environmentCard).toHaveAttribute('data-state', 'docked');
+    await environmentCard.evaluate((node) => {
+      const states = [];
+      const observer = new MutationObserver((records) => {
+        states.push(...records.map((record) => record.oldValue));
+      });
+      observer.observe(node, {
+        attributes: true,
+        attributeFilter: ['data-state'],
+        attributeOldValue: true,
+      });
+      window.finishEnvironmentProbe = () => {
+        observer.disconnect();
+        delete window.finishEnvironmentProbe;
+        return states;
+      };
+    });
     await choices.first().click();
     await clearGal(async () => (await ready()) && (await record.locator('li small').count()) === 1);
+    assert.deepEqual(
+      await environmentCard.evaluate(() => window.finishEnvironmentProbe()),
+      [],
+      'a reply at the same venue must not replay the environment introduction',
+    );
     assert.match(await record.locator('li').first().textContent(), /听莉贝特试奏一遍.*已完成/);
     await historyButton.click();
     const playerLine = transcript.locator('li').filter({ hasText: '我们一起走到广场吧。' });
     assert.equal(await playerLine.locator('strong').textContent(), '青缘');
     assert.equal(await transcript.locator('li strong').last().textContent(), '莉贝特');
     await transcript.getByRole('button', { name: '返回演出' }).click();
+    await expect(transcript).toBeHidden();
+    await clearGal(ready);
+    await expect(compose).toBeEditable();
     await compose.fill('刚才第七小节有个停顿。');
     await page.locator('#daily-invitation [type="submit"]').click();
     await clearGal(
@@ -435,21 +818,76 @@ export async function dailyChecks({ browser, baseURL, output }) {
     await compose.fill('我想听你在这里弹一小段。');
     await page.locator('#daily-invitation [type="submit"]').click();
     await clearGal(async () => (await status()).includes('结束约见') && (await compose.isHidden()));
-    assert.match(await record.textContent(), /酒馆 → 星钟广场/);
-    assert(await frame.locator('#street-open').count(), 'the tavern is still the loaded scene');
-    await travelTownScene(page, 'street');
-    assert.match(await record.textContent(), /酒馆街角 → 星钟广场/);
-    assert(await compose.isHidden(), 'an intermediate scene does not start the next act');
-    await page.reload();
+    const inviteGo = page.locator('[data-daily="invite-go"]');
+    await expect(inviteGo).toBeEnabled();
+    const invitationRunLocation = () =>
+      page.evaluate(() => {
+        const { scene, destination, arriving } = demo.getLibrary().daily.active.run;
+        return { scene, destination, arriving: Boolean(arriving) };
+      });
+    assert.deepEqual(await invitationRunLocation(), {
+      scene: 'starbell-guild',
+      destination: 'market',
+      arriving: false,
+    });
+    let failedMarketNavigation = false;
+    const streetRoute = /\/street\.html(?:\?.*)?$/;
+    await page.route(streetRoute, async (route) => {
+      const url = new URL(route.request().url());
+      if (!failedMarketNavigation && url.searchParams.get('scene') === 'market') {
+        failedMarketNavigation = true;
+        await route.abort();
+        return;
+      }
+      await route.continue();
+    });
+    const failedMarketRequest = page.waitForEvent('requestfailed', (request) => {
+      const url = new URL(request.url());
+      return url.pathname.endsWith('/street.html') && url.searchParams.get('scene') === 'market';
+    });
+    await inviteGo.click();
+    await failedMarketRequest;
+    assert.equal(failedMarketNavigation, true);
+    await expect(inviteGo).toBeDisabled();
+    assert.deepEqual(await invitationRunLocation(), {
+      scene: 'starbell-guild',
+      destination: 'market',
+      arriving: true,
+    });
+    await page.clock.fastForward(30_001);
+    await expect(inviteGo).toBeEnabled();
+    assert.deepEqual(await invitationRunLocation(), {
+      scene: 'starbell-guild',
+      destination: 'market',
+      arriving: false,
+    });
     await page.waitForFunction(
-      () =>
-        document.querySelector('#inn-frame iframe')?.contentWindow.streetPreview?.definition.id ===
-        'starlamp-street',
+      () => {
+        const win = document.querySelector('#inn-frame iframe')?.contentWindow;
+        return win?.modelReady === true && win.streetPreview?.definition?.id === 'city-center';
+      },
       null,
       { timeout: 60000 },
     );
-    assert.match(await record.textContent(), /酒馆街角 → 星钟广场/);
-    await travelTownScene(page, 'city-center');
+    await inviteGo.click();
+    await page.waitForFunction(
+      () => {
+        const win = document.querySelector('#inn-frame iframe')?.contentWindow;
+        return win?.modelReady === true && win.streetPreview?.definition?.id === 'market';
+      },
+      null,
+      { timeout: 60000 },
+    );
+    await page.waitForFunction(() => {
+      const run = demo.getLibrary().daily.active.run;
+      return run.scene === 'market' && !run.destination && !run.arriving;
+    });
+    assert.deepEqual(await invitationRunLocation(), {
+      scene: 'market',
+      destination: undefined,
+      arriving: false,
+    });
+    await page.unroute(streetRoute);
     await clearGal(
       async () =>
         (await ready()) &&
@@ -462,16 +900,53 @@ export async function dailyChecks({ browser, baseURL, output }) {
       null,
       { timeout: 60000 },
     );
+    await expect(frame.locator('.scene-environment-text')).toHaveText(
+      fullInvitation.stages[2].description,
+    );
     await compose.fill('这段旋律可以先保留，怎么结尾由你决定。');
     await page.locator('#daily-invitation [type="submit"]').click();
     await clearGal(async () => (await status()).includes('结束约见') && (await compose.isHidden()));
-    assert.match(await record.textContent(), /星钟广场 → 商业街/);
-    await travelTownScene(page, 'market');
+    assert.equal(await page.evaluate(() => demo.saveSlot('slot1')), true);
+    const savedRun = (await page.evaluate(() => demo.getLibrary())).daily.active.run;
+    const savedState = {
+      index: savedRun.index,
+      scene: savedRun.scene,
+      destination: savedRun.destination,
+      unread: JSON.parse(JSON.stringify(savedRun.unread)),
+      played: JSON.parse(JSON.stringify(savedRun.played)),
+      turns: JSON.parse(JSON.stringify(savedRun.turns)),
+      history: JSON.parse(JSON.stringify(savedRun.history)),
+    };
+    const callsBeforeRestore = calls.length;
+    assert.equal(await page.evaluate(() => demo.loadSlot('slot1')), true);
+    const restoredRun = (await page.evaluate(() => demo.getLibrary())).daily.active.run;
+    assert.equal(restoredRun.index, savedState.index);
+    assert.equal(restoredRun.scene, savedState.scene);
+    assert.equal(restoredRun.destination, savedState.destination);
+    assert.deepEqual(restoredRun.unread, savedState.unread);
+    assert.deepEqual(restoredRun.played, savedState.played);
+    assert.deepEqual(restoredRun.turns, savedState.turns);
+    assert.deepEqual(restoredRun.history, savedState.history);
+    await page.waitForFunction(
+      () => document.querySelector('#inn-frame iframe')?.contentWindow?.modelReady === true,
+    );
+    await expect(frame.locator('.scene-environment-text')).toHaveText(
+      fullInvitation.stages[2].description,
+    );
+    await expect(frame.locator('.scene-environment img')).toHaveCount(0);
+    await expect(page.locator('#gal-stage')).toBeHidden();
+    await expect(compose).toBeHidden();
+    assert.equal(calls.length, callsBeforeRestore);
+    const finaleGo = page.locator('[data-daily="invite-go"]');
+    await expect(finaleGo).toBeEnabled();
+    await finaleGo.click();
     await clearGal(
       async () =>
         (await page.locator('#gal-stage .gal-chapter').textContent()) ===
         fullInvitation.finale.title,
     );
+    await expect(frame.locator('.scene-environment-text')).toHaveText(fullInvitation.finale.title);
+    await expect(frame.locator('.scene-environment img')).toHaveCount(0);
     assert.doesNotMatch(await status(), /事件结束/);
     assert.equal(await record.locator('li').count(), 0);
     await clearGal(async () => (await status()).includes('事件结束'));
@@ -518,6 +993,129 @@ export async function dailyChecks({ browser, baseURL, output }) {
       false,
     );
     await travelTownScene(page, 'tavern');
+
+    // Populate the log after the daily event through a real posted guild bounty.
+    await expect(page.locator('#gal-stage')).toBeHidden();
+    await expect(page.locator('#ledger-drawer-host')).toBeHidden();
+    await expect(questHandle).toBeVisible();
+    await questHandle.click();
+    await journal.getByRole('button', { name: '冒险者公会', exact: true }).click();
+    const guild = page.locator('#guild-dialog[open]');
+    const bounty = GUILD_BOUNTIES.find(({ id }) => id === 'bounty-moss-clear');
+    assert(bounty);
+    const otherBountyId = 'bounty-mill-vermin';
+    await guild.locator(`[data-guild-accept="${otherBountyId}"]`).click();
+    const questId = `guild-${bounty.id}`;
+    await guild.locator(`[data-guild-accept="${bounty.id}"]`).click();
+    await expect(guild.locator(`[data-guild-track="${questId}"]`)).toBeVisible();
+    await guild.getByRole('button', { name: '关闭冒险者公会' }).click();
+    await expect(questHandle).toBeVisible();
+    await questHandle.click();
+    const bountyRow = journal.locator(`[data-quest-select="${questId}"]`);
+    await expect(bountyRow).toHaveText(bounty.title);
+    await expect(bountyRow).toHaveAttribute('aria-current', 'true');
+    const detail = journal.locator(`[data-quest-detail="${questId}"]`);
+    await expect(detail.locator('.skyrim-folio-desc')).toHaveText(bounty.description);
+    const wings = detail.locator('.ow-quest-wing');
+    await expect(wings).toHaveCount(2);
+    for (const wing of await wings.all()) {
+      await expect(wing.locator('path').first()).toHaveCSS('stroke', 'rgb(227, 224, 218)');
+      await expect(wing.locator('polygon').first()).toHaveCSS('fill', 'rgb(234, 233, 229)');
+    }
+    const objectives = detail.locator('.ow-quest-objectives');
+    await expect(objectives).toContainText(bounty.objectiveLabel);
+    await expect(objectives).toContainText(`0 / ${bounty.targetCount}`);
+    await expect(detail.locator('.ow-quest-reward')).toContainText(`金币 ${bounty.gold}`);
+    await expect(journal.locator('[data-quest-claim], [data-quest-pick]')).toHaveCount(0);
+    await settleJournal();
+    await page.screenshot({ path: path.join(output, 'quests-after-daily-event.png') });
+    const otherQuestId = `guild-${otherBountyId}`;
+    const otherRow = journal.locator(`[data-quest-select="${otherQuestId}"]`);
+    const marker = (id) => journal.locator(`.ow-quest-mark-button[data-quest-track="${id}"]`);
+    await expect(marker(questId)).toHaveAttribute('aria-pressed', 'true');
+    await expect(bountyRow).toBeFocused();
+    await bountyRow.press('ArrowDown');
+    await expect(otherRow).toBeFocused();
+    await expect(otherRow).toHaveAttribute('aria-current', 'true');
+    await expect(marker(questId)).toHaveAttribute('aria-pressed', 'true');
+    await otherRow.press('Enter');
+    await expect(marker(otherQuestId)).toHaveAttribute('aria-pressed', 'true');
+    await expect(marker(questId)).toHaveAttribute('aria-pressed', 'false');
+    await expect(journal.locator('[data-quest-focus="track"]')).toBeFocused();
+    await otherRow.click();
+    await expect(marker(otherQuestId)).toHaveAttribute('aria-pressed', 'false');
+    await marker(questId).click();
+    await expect(marker(questId)).toHaveAttribute('aria-pressed', 'true');
+    await expect(bountyRow).toBeFocused();
+    await bountyRow.press('Escape');
+    await expect(journal).toBeHidden();
+    await expect(questHandle).toBeFocused();
+
+    // The selected task must drive the marker; another task remains tracked.
+    const atlasFrame = page.frameLocator('#daily-atlas-frame');
+    const atlas = atlasFrame.locator('#street-map');
+    const questTarget = atlas.locator('[data-quest-target]');
+    const beforeAtlas = await page.evaluate(() => {
+      const { daily, unlockedDungeons, tavernQuests } = demo.getLibrary();
+      return { daily, unlockedDungeons, tavernQuests };
+    });
+    await questHandle.click();
+    await otherRow.click();
+    await expect(marker(questId)).toHaveAttribute('aria-pressed', 'true');
+    await otherRow.press('m');
+    await expect(atlas).toBeVisible();
+    await expect(journal).toBeHidden();
+    await expect(questTarget).toBeVisible();
+    await expect(questTarget).toHaveAttribute('data-travel-to', 'mill');
+    const centered = await questTarget.evaluate((pin) => {
+      const bounds = pin.getBoundingClientRect();
+      return (
+        Math.abs(bounds.left + bounds.width / 2 - innerWidth / 2) < 2 &&
+        Math.abs(bounds.top + bounds.height / 2 - innerHeight / 2) < 2
+      );
+    });
+    assert(centered, 'the atlas centers the known pin within its own viewport');
+    await atlas.locator('.street-map-close [type="submit"]').click();
+    await expect(page.locator('#daily-atlas-frame')).toBeHidden();
+
+    // Reopening the same iframe for a locked target must not retain the old marker.
+    await questHandle.click();
+    await bountyRow.click();
+    await journal.locator('[data-quest-open-atlas]').click();
+    await expect(atlas).toBeVisible();
+    await expect(atlas.locator('[data-travel-to="moss-hollow"]')).toHaveAttribute(
+      'data-unlocked',
+      'false',
+    );
+    await expect(questTarget).toHaveCount(0);
+    await atlas.locator('.street-map-close [type="submit"]').click();
+    await expect(page.locator('#daily-atlas-frame')).toBeHidden();
+    assert.deepEqual(
+      await page.evaluate(() => {
+        const { daily, unlockedDungeons, tavernQuests } = demo.getLibrary();
+        return { daily, unlockedDungeons, tavernQuests };
+      }),
+      beforeAtlas,
+      'atlas lookup must not travel, spend an action, unlock a dungeon, or change tracking',
+    );
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await questHandle.click();
+    await settleJournal();
+    assert.equal(
+      await journal.evaluate((dialog) =>
+        [...dialog.querySelectorAll('.ow-quest-list, .skyrim-folio-col, .skyrim-keybar')].some(
+          (region) => region.scrollWidth > region.clientWidth,
+        ),
+      ),
+      false,
+      'portrait journal content and controls do not require horizontal scrolling',
+    );
+    await page.screenshot({ path: path.join(output, 'quests-portrait.png') });
+    await journal.getByRole('button', { name: '关闭任务日志' }).click();
+    await expect(journal).toBeHidden();
+    await page.setViewportSize({ width: 1120, height: 700 });
+
     await page.evaluate(() => demo.flushStorage());
     await page.evaluate(() => {
       const key = 'wanxiang.worldbooks.v1';
@@ -527,6 +1125,21 @@ export async function dailyChecks({ browser, baseURL, output }) {
     });
     await page.reload();
     await page.waitForFunction(() => window.demo?.getLibrary().daily.period === 3);
+    const persistedBounty = await page.evaluate((id) => {
+      const quest = demo.getLibrary().tavernQuests.find((entry) => entry.id === id);
+      return {
+        status: quest?.status,
+        claimed: quest?.claimed,
+        progress: quest?.objectives[0]?.current,
+        tracked: quest?.tracked,
+      };
+    }, questId);
+    assert.deepEqual(persistedBounty, {
+      status: 'active',
+      claimed: false,
+      progress: 0,
+      tracked: true,
+    });
     await pullOpenLedger();
     await page.locator('[data-daily="service"]').click();
     const setup = page.locator('#daily-setup[open]');
@@ -598,6 +1211,7 @@ export async function dailyChecks({ browser, baseURL, output }) {
     await service.locator('[data-live="end"]').click();
     await service.locator('[data-live="settle-done"]').click();
     assert.equal(await page.evaluate(() => demo.getLibrary().daily.serviceGrowth.shifts), 2);
+
     assert.deepEqual(errors, []);
     return {
       fourRoles: true,
@@ -606,8 +1220,13 @@ export async function dailyChecks({ browser, baseURL, output }) {
       shiftReceipt: true,
       cumulativeOuting: true,
       invitationStages: true,
+      questJournalAfterEvent: true,
+      questJournalKeyboardAndPortrait: true,
+      invitationSetupKeyboardAndNarrowLayout: true,
+      cityChatEnvironmentWithoutImage: true,
       recruitmentSeparateFromInvitation: true,
       persisted: true,
+      questJournalEmptyState: true,
     };
   } catch (failure) {
     await page.screenshot({ path: path.join(output, 'daily-failure.png') }).catch(() => {});

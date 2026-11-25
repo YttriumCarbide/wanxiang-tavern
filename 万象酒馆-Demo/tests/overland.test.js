@@ -29,7 +29,7 @@ import {
 import { chatResponse } from '../src/ai/pipeline/chat-response.js';
 import { createMapExpansion } from '../src/app/map-expansion.js';
 import { restoreGenerationOptions } from '../src/generation-options.js';
-import { buildCitySubmapData, cityRegionForScene } from '../src/exploration/city-submap.js';
+import { CITIES, cityForScene, cityPlaceId } from '../src/city-directory.js';
 import { destinationMap, destinationRegionTerrain } from '../src/destination-map.js';
 import { explorationPreview } from '../src/exploration.js';
 import { newLibrary } from '../src/ai/library.js';
@@ -169,7 +169,7 @@ test('all ten capital panoramas are reachable from the gate and have reciprocal 
     visited.add(id);
     assert.equal(overlandOrigin(id), ETERNAL_CITY_GATE);
     const scene = explorationScene(id);
-    assert.equal(scene.illustration.aspect, 3);
+    assert(Math.abs(scene.illustration.aspect - 16 / 9) < 0.01);
     for (const { destination } of scene.points) {
       assert(explorationScene(destination).points.some((point) => point.destination === id));
       if (!visited.has(destination)) pending.add(destination);
@@ -396,23 +396,20 @@ test('mill sits one turn directly southwest of Starbell outskirts while ruins li
   assert.equal(ruinsPlan.legs.at(-1).to.id, 'ruins');
 });
 
-test('skipOverlandApi option restores without developerMode and city/dungeon submaps populate cleanly', () => {
+test('skipOverlandApi option restores without developerMode and city directories and dungeon maps resolve', () => {
   const opts = restoreGenerationOptions({ developerMode: false, skipOverlandApi: true });
   assert.equal(opts.skipOverlandApi, true);
   assert.equal(opts.scriptApi, true);
 
-  assert.equal(cityRegionForScene('street'), 'starbell');
-  assert.equal(cityRegionForScene('starlamp-street'), 'starbell');
-  assert.equal(cityRegionForScene('road-capital'), 'silver-crown');
-  assert.equal(cityRegionForScene('eternal-city'), 'eternal-city');
-  assert.equal(cityRegionForScene('road-bridge'), null);
-  assert.equal(cityRegionForScene('eternal-road-mill'), null);
-
-  for (const sceneId of ['street', 'road-capital', 'eternal-city']) {
-    const submap = buildCitySubmapData(sceneId);
-    assert(submap && submap.nodes.length >= 6);
-    assert(submap.nodes.some((n) => n.current));
-    assert(submap.edges.length >= 4);
+  assert.equal(cityForScene('street'), 'starbell');
+  assert.equal(cityForScene('starlamp-street'), 'starbell');
+  assert.equal(cityForScene('road-capital'), 'silver-crown');
+  assert.equal(cityPlaceId('road-capital'), 'crown-gateward');
+  assert.equal(cityForScene('eternal-city'), 'eternal');
+  assert.equal(cityForScene('road-bridge'), null);
+  assert.equal(cityForScene('eternal-road-mill'), null);
+  for (const [id, city] of Object.entries(CITIES)) {
+    assert.equal(cityForScene(city.entry), id);
   }
 
   const lib = newLibrary();

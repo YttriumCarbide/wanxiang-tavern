@@ -1,6 +1,8 @@
+import { applyEnemyTaxonomy } from '../enemy-taxonomy.js';
+
 /** Unaffiliated creatures and constructs; their origin is deliberately left to each world. */
 function creature(id, name, color, hp, speed, attackStyle, tactic, description, intents) {
-  return {
+  return applyEnemyTaxonomy({
     id,
     name,
     title: '通用 / ' + tactic.role,
@@ -16,7 +18,7 @@ function creature(id, name, color, hp, speed, attackStyle, tactic, description, 
     buffs: {},
     tactic,
     intents,
-  };
+  });
 }
 
 const damage = (value) => ({ type: 'damage', value });
@@ -81,7 +83,7 @@ export const UNIVERSAL_ENEMIES = [
   },
   creature(
     'veilMender',
-    '蒙面疗愈者',
+    '蒙面祭司',
     '#b8b093',
     64,
     3,
@@ -117,7 +119,7 @@ export const UNIVERSAL_ENEMIES = [
   ),
   creature(
     'greyStinger',
-    '灰翼针蜂',
+    '灰翼巨蜂',
     '#c0b279',
     58,
     5,
@@ -134,7 +136,7 @@ export const UNIVERSAL_ENEMIES = [
   ),
   creature(
     'trailArbalist',
-    '逐迹弩手',
+    '逐迹弓手',
     '#9c977f',
     72,
     2,
@@ -170,7 +172,7 @@ export const UNIVERSAL_ENEMIES = [
   ),
   creature(
     'riftMote',
-    '游隙浮灵',
+    '游隙魔灵',
     '#99abc9',
     62,
     4,

@@ -7,6 +7,11 @@ import { overlandPlan } from '../../src/overland-travel.js';
 import { legacySession } from './legacy-session.mjs';
 import { worldFixture } from '../fixtures/multiverse.js';
 import { mapResponse } from '../../src/ai/pipeline/map-request.js';
+import {
+  verifyCityFacilityDistribution,
+  verifyTavernInteriorChatPlaces,
+} from './city-facility.mjs';
+import { openCityDirectory } from './town-navigation.mjs';
 
 export async function overlandChecks({ browser, baseURL, output }) {
   const page = await browser.newPage({ viewport: { width: 1280, height: 768 } });
@@ -27,6 +32,7 @@ export async function overlandChecks({ browser, baseURL, output }) {
   joinPandora(library);
   library.characters[0].growth.level = 50;
   library.daily.tutorial = 'done';
+  library.unlockedDungeons.push('moss-hollow');
   library.tavernQuests.push({
     id: 'test-social',
     type: 'social',
@@ -36,16 +42,6 @@ export async function overlandChecks({ browser, baseURL, output }) {
     description: '寻回一份从未公开的曲谱。',
     hook: '琴师想找回师傅留的手稿。',
   });
-  library.daily.active = {
-    kind: 'outing',
-    at: 0,
-    ap: 1,
-    direct: true,
-    stage: 'roaming',
-    turns: 0,
-    scene: 'outskirts',
-    companions: [],
-  };
   await page.addInitScript((value) => {
     if (window.top !== window || sessionStorage.getItem('overland-seed')) return;
     localStorage.setItem('wanxiang.worldbooks.v1', JSON.stringify(value));
@@ -142,6 +138,18 @@ export async function overlandChecks({ browser, baseURL, output }) {
     }, id);
   }
   async function walk(id) {
+    const pureBackdrop = await frame
+      .locator('canvas')
+      .evaluate(() => Boolean(window.streetPreview?.definition?.illustration?.pureBackdrop));
+    if (pureBackdrop) {
+      if (id === 'tavern') await frame.locator('#street-return').click();
+      else {
+        const directory = await openCityDirectory(page);
+        await directory.locator(`[data-city-node="${id}"]`).click();
+      }
+      if (id !== 'tavern') await waitForStreet(id);
+      return;
+    }
     await frame.locator('canvas').evaluate((canvas, id) => {
       const view = canvas.ownerDocument.defaultView.streetPreview;
       if (view.definition.illustration.fixed) return;
@@ -182,10 +190,45 @@ export async function overlandChecks({ browser, baseURL, output }) {
     }));
     throw Error(`未到达 ${selector} · ${JSON.stringify({ requests, errors, state })}`);
   }
+  async function openLedger() {
+    if (await page.locator('#ledger-drawer-host.is-open').count()) return;
+    await page.locator('#ledger-handle').waitFor({ state: 'visible' });
+    if (await page.locator('#ledger-drawer-host.is-open').count()) return;
+    const handle = await page.locator('#ledger-handle').boundingBox();
+    assert(handle, 'the ledger handle is available to open the atlas');
+    await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(Math.max(10, handle.x - 140), handle.y + handle.height / 2, {
+      steps: 6,
+    });
+    await page.mouse.up();
+    await page.locator('#ledger-drawer-host.is-open').waitFor();
+  }
+  async function openAtlas() {
+    await openLedger();
+    const opener = page.locator('#ledger-atlas-open');
+    await opener.waitFor({ state: 'visible' });
+    await opener.click();
+    const embeddedStreet = await page.evaluate(() => {
+      const active = demo.getLibrary().daily.active;
+      return active?.kind === 'outing' && active.stage === 'roaming';
+    });
+    const mapFrame = page.frameLocator(embeddedStreet ? '#inn-frame iframe' : '#daily-atlas-frame');
+    await mapFrame.locator('#street-map[open]').waitFor({ state: 'visible' });
+    await page.locator('#ledger-drawer-host').waitFor({ state: 'hidden' });
+    await page.locator('#ledger-handle').waitFor({ state: 'visible' });
+    return mapFrame;
+  }
   try {
     await page.goto(baseURL);
-    await frame.locator('#street-map-open').click();
-    const atlas = frame.getByRole('dialog', { name: '泛生界大地图' });
+    await page.waitForFunction(() => Boolean(window.demo));
+    await page.locator('[data-daily="outing"]').click();
+    await page.locator('#tavern-exit-picker[open]').waitFor();
+    await chooseExit('city-center').click();
+    await waitForStreet('city-center');
+    const mapFrame = await openAtlas();
+    const atlas = mapFrame.getByRole('dialog', { name: '泛生界大地图' });
+    await atlas.waitFor({ state: 'visible' });
     const pin = (id) => atlas.locator(`[data-travel-to="${id}"]`);
     const bridge = pin('road-bridge');
     const reeds = pin('road-reeds');
@@ -225,7 +268,7 @@ export async function overlandChecks({ browser, baseURL, output }) {
     await atlas.waitFor({ state: 'hidden' });
     await page.locator('#hud-plaque').waitFor({ state: 'visible' });
     await page.setViewportSize({ width: 390, height: 700 });
-    await frame.locator('#street-map-open').click();
+    await openAtlas();
     await capital.waitFor();
     await page.locator('#hud-plaque').waitFor({ state: 'hidden' });
     assert.equal(await page.locator('#ledger-handle').isVisible(), true);
@@ -274,9 +317,11 @@ export async function overlandChecks({ browser, baseURL, output }) {
     await page.waitForFunction(() => !demo.getStatus().animating);
     await page.locator('[data-start="0"]').click();
     await page.locator('[data-unit="aegis"]').click();
-    await page.locator('[data-skill="attack"]').click();
+    // The route fixture tests the victory transition, not whether a basic attack one-shots a level 3 enemy.
+    await page.locator('[data-skill="generated-2"]').click();
     if (await page.evaluate(() => demo.getStatus().interactionStep === 'target'))
       await page.locator('[data-unit="patrolHound"]').click();
+    assert.equal(await page.evaluate(() => demo.getForecast().outcome), 'victory');
     await page.locator('#commit').click();
     await page.getByRole('button', { name: '继续行程', exact: true }).click();
     await readUntil('#overland-rp [data-overland-continue]:enabled');
@@ -292,7 +337,7 @@ export async function overlandChecks({ browser, baseURL, output }) {
     assert.equal(await page.evaluate(() => demo.getLibrary().daily.active.scene), 'road-capital');
     assert.equal(await page.evaluate(() => demo.getLibrary().daily.active.turns), 10);
     await page.waitForFunction(() => !document.querySelector('#toast.visible'));
-    await frame.locator('#street-map-open').click();
+    await openAtlas();
     await capital.waitFor();
     await page.mouse.move(640, 365);
     await page.mouse.wheel(0, 700);
@@ -322,23 +367,17 @@ export async function overlandChecks({ browser, baseURL, output }) {
     assert.equal(await capital.getAttribute('aria-current'), 'location');
     await atlas.getByRole('button', { name: '关闭地图' }).click();
     await waitForStreet('road-capital');
+    assert(
+      (await frame.locator('canvas').evaluate(() => window.streetPreview.state().image)).endsWith(
+        '/city-backgrounds/silver-crown.png',
+      ),
+    );
     assert.equal(
       await page.evaluate(() => demo.getLibrary().daily.unlocks.silverCrownTavern),
       undefined,
     );
-    for (const scene of [
-      'crown-gateward',
-      'crown-promenade',
-      'crown-arcade',
-      'crown-tavern-door',
-    ]) {
+    for (const scene of ['crown-promenade', 'crown-arcade', 'crown-tavern-door']) {
       await walk(scene);
-      assert(
-        await frame.locator('canvas').evaluate(() => {
-          const visitors = window.streetPreview.visitors();
-          return visitors.spots > 0 && visitors.characters.length > 0;
-        }),
-      );
     }
     await page.screenshot({ path: path.join(output, 'silver-crown-tavern-door.png') });
     await walk('tavern');
@@ -347,20 +386,44 @@ export async function overlandChecks({ browser, baseURL, output }) {
     await page.reload();
     await openTavernDoor();
     assert(await chooseExit('crown-tavern-door').isEnabled());
-    await chooseExit('street').click();
-    await waitForStreet('starlamp-street');
+    await chooseExit('city-center').click();
+    await waitForStreet('city-center');
+    await verifyCityFacilityDistribution(page, 'starbell');
     await page.locator('[data-daily="home"]').click();
+    await verifyTavernInteriorChatPlaces(page);
     await openTavernDoor();
     await chooseExit('crown-tavern-door').click();
     await waitForStreet('crown-tavern-door');
+    await walk('crown-arcade');
+    await page.waitForFunction(() => {
+      const outing = demo.getLibrary().daily.active;
+      return (
+        outing?.kind === 'outing' && outing.stage === 'roaming' && outing.scene === 'crown-arcade'
+      );
+    });
+    await page
+      .getByRole('button', { name: '交流', exact: true })
+      .and(page.locator('#scene-talk.is-docked'))
+      .waitFor({ state: 'visible' });
+    // The Silver Crown helper checks the People panel and locked place in one open/close cycle.
+    await verifyCityFacilityDistribution(page, 'silver-crown');
     await page.setViewportSize({ width: 390, height: 700 });
-    assert(await frame.locator('[data-hotspot="tavern"]').isVisible());
-    assert(await frame.locator('[data-hotspot="crown-arcade"]').isVisible());
+    assert(await frame.locator('#street-return').isVisible());
+    assert(await frame.locator('#street-submap-open').isHidden());
+    const cityHandle = page.locator('#ledger-city-directory-open');
+    await cityHandle.waitFor({ state: 'visible' });
+    const cityHandleBox = await cityHandle.boundingBox();
+    const ledgerHandleBox = await page.locator('#ledger-handle').boundingBox();
+    assert(cityHandleBox && ledgerHandleBox && cityHandleBox.y < ledgerHandleBox.y);
+    const mobileDirectory = await openCityDirectory(page);
+    assert.equal(await mobileDirectory.getAttribute('data-city'), 'silver-crown');
+    await mobileDirectory.locator('#street-city-submap-close').click();
+    await mobileDirectory.waitFor({ state: 'hidden' });
     await page.locator('[data-daily="home"]').click();
     await openTavernDoor();
-    await chooseExit('street').click();
-    await waitForStreet('starlamp-street');
-    await frame.locator('#street-map-open').click();
+    await chooseExit('city-center').click();
+    await waitForStreet('city-center');
+    await openAtlas();
     const capitalStops = [
       'eternal-road-orchard',
       'eternal-road-mill',
@@ -400,6 +463,7 @@ export async function overlandChecks({ browser, baseURL, output }) {
     await page.locator('#overland-rp [data-overland-continue]').click();
     await readUntil('[data-daily="home"]');
     await waitForStreet('eternal-city');
+    await verifyCityFacilityDistribution(page, 'eternal');
     assert.equal(await page.evaluate(() => demo.getLibrary().daily.active.turns), 13);
     await walk('eternal-avenue');
     await page.screenshot({ path: path.join(output, 'eternal-city-avenue.png') });
@@ -420,15 +484,158 @@ export async function overlandChecks({ browser, baseURL, output }) {
       await walk(id);
     }
     await page.screenshot({ path: path.join(output, 'eternal-city-temple.png') });
-    await frame.locator('#street-submap-open').click();
-    await frame.locator('#street-city-submap[open] .city-submap-svg').waitFor();
+    const eternalDirectory = await openCityDirectory(page);
+    assert.deepEqual(
+      await eternalDirectory.locator('[data-city-category] > h3').allTextContents(),
+      ['普通地点', '功能地点', '副本'],
+    );
+    assert.equal(
+      await eternalDirectory.locator('[data-city-dungeon="starbell-undercroft"]').count(),
+      0,
+      'the capital directory does not list Starbell dungeons',
+    );
     await page.screenshot({ path: path.join(output, 'eternal-city-blueprint.png') });
-    await frame.locator('#street-city-submap [data-city-node="guild-hall"]').click();
+    await frame.locator('#street-city-submap [data-city-facility="guild"]').click();
     await page.locator('#guild-dialog[open]').waitFor();
     await page.screenshot({ path: path.join(output, 'guild-hall.png') });
     await page.locator('#guild-dialog [data-guild-accept="bounty-moss-clear"]').click();
+    const acceptedBanner = page.locator('#skyrim-quest-banner');
+    await acceptedBanner.waitFor({ state: 'visible' });
+    const bannerPresentation = await acceptedBanner.evaluate((banner) => ({
+      title: banner.querySelector('.skyrim-banner-title')?.textContent,
+      pointerEvents: getComputedStyle(banner).pointerEvents,
+      horizontalOverflow: banner.scrollWidth > innerWidth,
+      visible: banner.dataset.show === 'true' && !banner.hidden,
+    }));
+    assert.equal(bannerPresentation.title, '翠苔浅谷 · 兽害清剿');
+    assert.equal(bannerPresentation.pointerEvents, 'none');
+    assert.equal(bannerPresentation.horizontalOverflow, false);
+    assert.equal(bannerPresentation.visible, true);
+    await page.screenshot({ path: path.join(output, 'quest-accepted-banner.png') });
     await page.locator('#guild-dialog .guild-close').click();
     await page.waitForFunction(() => demo.getLibrary().atlasDiscoveries.length === 2);
+    const acceptedBounty = await page.evaluate(() =>
+      demo
+        .getLibrary()
+        .tavernQuests.find(
+          ({ bountyId, status }) => bountyId === 'bounty-moss-clear' && status === 'active',
+        ),
+    );
+    assert(acceptedBounty, 'The posted guild bounty is persisted to the separate quest log');
+    const questHandle = page.locator('#ledger-quests-open');
+    await questHandle.waitFor({ state: 'visible' });
+    await questHandle.click();
+    const journal = page.locator('#tavern-quests[open]');
+    await journal.locator('.skyrim-journal-grid').waitFor();
+    const bountyTab = journal.locator(
+      '.skyrim-quest-tab[data-quest-select="' + acceptedBounty.id + '"]',
+    );
+    await bountyTab.waitFor();
+    assert.equal(await bountyTab.textContent(), acceptedBounty.title);
+    assert.equal(await bountyTab.locator('..').getAttribute('data-status'), 'active');
+    await bountyTab.click();
+    assert.match(await journal.locator('.ow-quest-meta').innerText(), /公会悬赏/);
+    const desktopJournal = await journal.evaluate((dialog) => {
+      const grid = dialog.querySelector('.skyrim-journal-grid');
+      const columns = getComputedStyle(grid).gridTemplateColumns.split(' ').length;
+      return {
+        columns,
+        hasObjective: Boolean(dialog.querySelector('.ow-quest-objectives')),
+        hasReward: Boolean(dialog.querySelector('.ow-quest-reward')),
+        hasUnacceptedRow:
+          dialog.querySelector('[data-quest-select="test-social"]')?.closest('.skyrim-quest-item')
+            ?.dataset.status === 'offered',
+        horizontalOverflow: dialog.scrollWidth > dialog.clientWidth,
+      };
+    });
+    assert.deepEqual(desktopJournal, {
+      columns: 2,
+      hasObjective: true,
+      hasReward: true,
+      hasUnacceptedRow: true,
+      horizontalOverflow: false,
+    });
+    await bountyTab.focus();
+    await bountyTab.press('End');
+    const offeredTab = journal.locator('.skyrim-quest-tab[data-quest-select="test-social"]');
+    assert.equal(await offeredTab.getAttribute('aria-current'), 'true');
+    await offeredTab.press('Home');
+    assert.equal(await bountyTab.getAttribute('aria-current'), 'true');
+    await page.setViewportSize({ width: 390, height: 844 });
+    const mobileJournal = await journal.evaluate((dialog) => {
+      const grid = dialog.querySelector('.skyrim-journal-grid');
+      const bounds = dialog.getBoundingClientRect();
+      return {
+        columns: getComputedStyle(grid).gridTemplateColumns.split(' ').length,
+        rows: getComputedStyle(grid).gridTemplateRows.split(' ').length,
+        horizontalOverflow: dialog.scrollWidth > dialog.clientWidth,
+        withinViewport: bounds.left >= 0 && bounds.right <= innerWidth,
+        selectedQuestVisible: dialog.querySelector('.skyrim-folio')?.getClientRects().length > 0,
+      };
+    });
+    assert.deepEqual(mobileJournal, {
+      columns: 1,
+      rows: 2,
+      horizontalOverflow: false,
+      withinViewport: true,
+      selectedQuestVisible: true,
+    });
+    await page.screenshot({ path: path.join(output, 'quest-journal-mobile.png') });
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    const reducedMotion = await journal.evaluate((dialog) => ({
+      folioAnimation: getComputedStyle(dialog.querySelector('.skyrim-folio')).animationName,
+      bannerAnimation: getComputedStyle(document.querySelector('#skyrim-quest-banner'))
+        .animationName,
+      bannerTransition: getComputedStyle(document.querySelector('#skyrim-quest-banner'))
+        .transitionDuration,
+    }));
+    assert.deepEqual(reducedMotion, {
+      folioAnimation: 'none',
+      bannerAnimation: 'none',
+      bannerTransition: '0s',
+    });
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    await page.setViewportSize({ width: 744, height: 900 });
+    const nearBreakpoint = await journal.evaluate((dialog) => {
+      const grid = dialog.querySelector('.skyrim-journal-grid');
+      return {
+        columns: getComputedStyle(grid).gridTemplateColumns.split(' ').length,
+        horizontalOverflow: dialog.scrollWidth > dialog.clientWidth,
+      };
+    });
+    assert.deepEqual(nearBreakpoint, { columns: 1, horizontalOverflow: false });
+    await page.setViewportSize({ width: 768, height: 900 });
+    const atBreakpoint = await journal.evaluate((dialog) => {
+      const grid = dialog.querySelector('.skyrim-journal-grid');
+      const row = dialog.querySelector('.skyrim-quest-tab');
+      return {
+        columns: getComputedStyle(grid).gridTemplateColumns.split(' ').length,
+        horizontalOverflow: dialog.scrollWidth > dialog.clientWidth,
+        rowHeight: Math.round(row.getBoundingClientRect().height),
+      };
+    });
+    assert.deepEqual(atBreakpoint, { columns: 2, horizontalOverflow: false, rowHeight: 42 });
+    await page.setViewportSize({ width: 1280, height: 768 });
+    await page.screenshot({ path: path.join(output, 'quest-journal-desktop.png') });
+    const track = journal.locator(
+      '[data-quest-track="' + acceptedBounty.id + '"][data-quest-focus="track"]',
+    );
+    if ((await track.getAttribute('aria-pressed')) === 'true') {
+      await track.click();
+      await track.filter({ visible: true }).waitFor();
+      assert.equal(await track.getAttribute('aria-pressed'), 'false');
+    }
+    await track.click();
+    await page.waitForFunction(
+      (id) =>
+        document
+          .querySelector('[data-quest-track="' + CSS.escape(id) + '"][data-quest-focus="track"]')
+          ?.getAttribute('aria-pressed') === 'true',
+      acceptedBounty.id,
+    );
+    assert((await journal.locator('.skyrim-folio-desc').innerText()).length > 0);
+    await journal.getByRole('button', { name: '关闭任务日志' }).click();
+    await journal.waitFor({ state: 'hidden' });
     assert.deepEqual(
       discoveries[0].route.map(({ id }) => id),
       ['outskirts', 'road-bridge', 'road-reeds', 'road-capital'],
@@ -440,9 +647,9 @@ export async function overlandChecks({ browser, baseURL, output }) {
     await page.reload();
     await page.waitForFunction(() => demo.getLibrary().atlasDiscoveries.length === 2);
     await openTavernDoor();
-    await chooseExit('street').click();
-    await waitForStreet('starlamp-street');
-    await frame.locator('#street-map-open').click();
+    await chooseExit('city-center').click();
+    await waitForStreet('city-center');
+    await openAtlas();
     await pin('world-road-discovery-1').click();
     await page.locator('#player-intent[open]').waitFor();
     await page.screenshot({ path: path.join(output, 'player-intent.png') });
@@ -453,26 +660,32 @@ export async function overlandChecks({ browser, baseURL, output }) {
     assert.match(await page.locator('#destination-title').textContent(), /路旁遗址 1/);
     assert(await page.locator('#destination-start').isEnabled());
     await page.locator('#destination-close').click();
-    const openLedger = async () => {
-      if (await page.locator('#ledger-drawer-host.is-open').count()) return;
-      await page.locator('#ledger-handle').waitFor({ state: 'visible' });
-      if (await page.locator('#ledger-drawer-host.is-open').count()) return;
-      const handle = await page.locator('#ledger-handle').boundingBox();
-      await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2);
-      await page.mouse.down();
-      await page.mouse.move(Math.max(10, handle.x - 140), handle.y + handle.height / 2, {
-        steps: 6,
-      });
-      await page.mouse.up();
-      await page.locator('#ledger-drawer-host.is-open').waitFor();
-    };
-    await openLedger();
-    await page.locator('[data-daily="quests"]').click();
+
+    await questHandle.click();
     await page.locator('#tavern-quests[open] .skyrim-journal-grid').waitFor();
     await page.locator('#ledger-drawer-host').waitFor({ state: 'hidden' });
     await page.screenshot({ path: path.join(output, 'skyrim-quests.png') });
-    await page.locator('[data-quest-pick="test-social"]').click();
+    await page.locator('[data-quest-select="test-social"]').click();
+    await page.locator('[data-quest-folio-pick="test-social"]').click();
     const questStep = page.locator('[data-daily="quest-step"]');
+    await questHandle.waitFor({ state: 'visible' });
+    const mapLookupSnapshot = () => {
+      const { daily, tavernQuests, unlockedDungeons } = demo.getLibrary();
+      return { dailyActive: daily.active, tavernQuests, unlockedDungeons };
+    };
+    const beforeMapLookup = await page.evaluate(mapLookupSnapshot);
+    await questHandle.click();
+    await bountyTab.click();
+    await journal.locator('[data-quest-open-atlas]').click();
+    const atlasOverlay = page.locator('#daily-atlas-frame');
+    await atlasOverlay.waitFor({ state: 'visible' });
+    const streetMap = page.frameLocator('#daily-atlas-frame').locator('#street-map[open]');
+    const highlight = streetMap.locator('[data-quest-target]');
+    await highlight.and(streetMap.locator('[data-travel-to="moss-hollow"]')).waitFor();
+    assert.equal(await highlight.count(), 1, 'only the known bounty target is highlighted');
+    await streetMap.getByRole('button', { name: '关闭地图' }).click();
+    await atlasOverlay.waitFor({ state: 'hidden' });
+    assert.deepEqual(await page.evaluate(mapLookupSnapshot), beforeMapLookup);
     for (let index = 1; index <= 5; index++) {
       await openLedger();
       await questStep.filter({ hasText: '第 ' + index + ' 幕' }).waitFor();

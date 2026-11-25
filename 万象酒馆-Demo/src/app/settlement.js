@@ -1,7 +1,7 @@
 import { html } from '../shared/html.js';
 import { escapeText } from '../ui.js';
 import { portraitUrl } from '../portraits.js';
-import { GROWTH_LABELS, restoreGrowth, xpToNext } from '../growth.js';
+import { growthGainText, restoreGrowth, xpToNext } from '../growth.js';
 import { levelLines } from '../content/level-dialogue.js';
 import { chooseRest, currentEncounterSpec } from '../expedition.js';
 import { createDialogue } from './dialogue.js';
@@ -55,8 +55,8 @@ export function createSettlement(context) {
                 speaker: `${member.setting.name} · Lv.${level.level}`,
                 portrait: portraitUrl(member.combat),
                 text: lines[Math.floor(Math.random() * lines.length)],
-                bonuses: Object.entries(level.gains).map(
-                  ([key, value]) => `${GROWTH_LABELS[key]} +${value}`,
+                bonuses: Object.entries(level.gains).map(([key, value]) =>
+                  growthGainText(key, value),
                 ),
               },
             ],

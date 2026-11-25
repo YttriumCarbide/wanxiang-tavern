@@ -83,6 +83,83 @@ test('world construction validates mechanics, excludes teammate appearances and 
   assert.deepEqual(mapResponse(JSON.stringify(worldFixture()), {}), original);
 });
 
+test('new map enemies require categories and validate optional base species by ordinary name suffix', () => {
+  const unnamedSpecies = worldFixture();
+  unnamedSpecies.enemies[0].name = '暮色猎手';
+  unnamedSpecies.enemies[0].category = 'beast';
+  const optionalBase = mapResponse(JSON.stringify(unnamedSpecies), {});
+  assert.equal(optionalBase.enemyDefinitions['enemy-lantern-scout'].category, 'beast');
+  assert(!Object.hasOwn(optionalBase.enemyDefinitions['enemy-lantern-scout'], 'baseSpecies'));
+
+  const ordinaryTemplate = worldFixture();
+  Object.assign(ordinaryTemplate.enemies[0], {
+    name: '苔藓史莱姆',
+    category: 'insect',
+    baseSpecies: '史莱姆',
+  });
+  const normalized = mapResponse(JSON.stringify(ordinaryTemplate), {});
+  assert.equal(normalized.enemyDefinitions['enemy-lantern-scout'].baseSpecies, '史莱姆');
+
+  const missingBaseSpecies = structuredClone(ordinaryTemplate);
+  delete missingBaseSpecies.enemies[0].baseSpecies;
+  assert.throws(() => mapResponse(JSON.stringify(missingBaseSpecies), {}), /必须填写基础种/);
+
+  const mismatchedCategory = structuredClone(ordinaryTemplate);
+  mismatchedCategory.enemies[0].category = 'beast';
+  assert.throws(() => mapResponse(JSON.stringify(mismatchedCategory), {}), /分类与基础种不匹配/);
+
+  const mismatchedSuffix = structuredClone(ordinaryTemplate);
+  mismatchedSuffix.enemies[0].baseSpecies = '甲虫';
+  assert.throws(() => mapResponse(JSON.stringify(mismatchedSuffix), {}), /名称后缀不匹配/);
+  const invalidSpecies = structuredClone(ordinaryTemplate);
+  invalidSpecies.enemies[0].baseSpecies = '未知基础种';
+  assert.throws(() => mapResponse(JSON.stringify(invalidSpecies), {}), /基础种无效/);
+
+  const invalidCategory = structuredClone(unnamedSpecies);
+  invalidCategory.enemies[0].category = 'unknown';
+  assert.throws(() => mapResponse(JSON.stringify(invalidCategory), {}), /分类无效/);
+
+  const missingCategory = structuredClone(unnamedSpecies);
+  delete missingCategory.enemies[0].category;
+  assert.throws(() => mapResponse(JSON.stringify(missingCategory), {}), /分类必须填写/);
+
+  const boss = worldFixture();
+  boss.enemies[2].name = '余烬大祭司';
+  boss.enemies[2].category = 'humanoid';
+  const preservedBoss = mapResponse(JSON.stringify(boss), {});
+  assert.equal(preservedBoss.enemyDefinitions['enemy-lantern-warden'].name, '余烬大祭司');
+  assert.equal(preservedBoss.enemyDefinitions['enemy-lantern-warden'].category, 'humanoid');
+  assert(!Object.hasOwn(preservedBoss.enemyDefinitions['enemy-lantern-warden'], 'baseSpecies'));
+
+  const elite = worldFixture();
+  Object.assign(elite.enemies[0], { name: '蚀鳞先锋魔灵', category: 'spirit', elite: true });
+  const preservedElite = mapResponse(JSON.stringify(elite), {});
+  assert.equal(preservedElite.enemyDefinitions['enemy-lantern-scout'].category, 'spirit');
+  assert(!Object.hasOwn(preservedElite.enemyDefinitions['enemy-lantern-scout'], 'baseSpecies'));
+
+  const other = worldFixture();
+  Object.assign(other.enemies[0], { name: '异形寄生魔灵', category: 'other' });
+  const preservedOther = mapResponse(JSON.stringify(other), {});
+  assert.equal(preservedOther.enemyDefinitions['enemy-lantern-scout'].category, 'other');
+  assert(!Object.hasOwn(preservedOther.enemyDefinitions['enemy-lantern-scout'], 'baseSpecies'));
+
+  const legacy = worldFixture();
+  const legacyIds = legacy.enemies.map(({ id }) => id);
+  const compiledLegacy = normalizeWorld(legacy);
+  for (const enemy of Object.values(compiledLegacy.enemyDefinitions)) {
+    delete enemy.category;
+    delete enemy.baseSpecies;
+  }
+  const [restored] = restoreWorlds([compiledLegacy]);
+  assert(restored, 'legacy map data without taxonomy remains readable');
+  assert.deepEqual(restored.enemyIds, legacyIds);
+  for (const { id, name } of legacy.enemies) assert.equal(restored.enemyDefinitions[id].name, name);
+  for (const enemy of Object.values(restored.enemyDefinitions)) {
+    assert.equal(enemy.category, 'other');
+    assert(!Object.hasOwn(enemy, 'baseSpecies'));
+  }
+});
+
 test('both dungeon scenes are offered to map construction, discovery and continuation', () => {
   const discovery = { route: [{ id: 'road-capital' }] };
   for (const map of DUNGEON_SCENE_IDS) {

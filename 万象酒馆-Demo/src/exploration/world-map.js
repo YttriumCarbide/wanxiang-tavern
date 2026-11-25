@@ -74,7 +74,7 @@ export function createWorldMap({ dialog, events, scene, onTravel }) {
     const localScale = Math.min(viewWidth / LOCAL_VIEW_WIDTH, viewHeight / LOCAL_VIEW_HEIGHT);
     camera.minimum = Math.min(viewWidth / ATLAS_WIDTH, viewHeight / ATLAS_HEIGHT) * FULL_SHEET_FIT;
     camera.maximum = localScale * 2.5;
-    if (reset || !previousWidth || wasLocal) {
+    if (reset || !previousWidth) {
       camera.scale = localScale;
       camera.x = viewWidth / 2 - ATLAS_OVERLAND_CENTER.x * camera.scale;
       camera.y = viewHeight / 2 - ATLAS_OVERLAND_CENTER.y * camera.scale;
@@ -82,7 +82,7 @@ export function createWorldMap({ dialog, events, scene, onTravel }) {
       const scaleFactor = Math.min(viewWidth / previousWidth, viewHeight / previousHeight);
       camera.scale = wasFitted
         ? camera.minimum
-        : clamp(camera.scale * scaleFactor, camera.minimum, camera.maximum);
+        : clamp(wasLocal ? localScale : camera.scale * scaleFactor, camera.minimum, camera.maximum);
       camera.x = viewWidth / 2 - centerX * camera.scale;
       camera.y = viewHeight / 2 - centerY * camera.scale;
     }
@@ -265,10 +265,19 @@ export function createWorldMap({ dialog, events, scene, onTravel }) {
     render();
   }
 
-  function open() {
-    if (dialog.open) return;
-    dialog.showModal();
-    resize(true);
+  function open(questTarget) {
+    if (!dialog.open) {
+      dialog.showModal();
+      resize(true);
+    }
+    const anchor = travel.setQuestTarget(questTarget);
+    if (!anchor) return;
+    // Use the local zoom so the marker cannot disappear into the world overview.
+    camera.scale = Math.min(viewWidth / LOCAL_VIEW_WIDTH, viewHeight / LOCAL_VIEW_HEIGHT);
+    camera.x = viewWidth / 2 - anchor.x * camera.scale;
+    camera.y = viewHeight / 2 - anchor.y * camera.scale;
+    clampCamera();
+    render();
   }
 
   events.on(sheet, 'pointerdown', pointerDown);

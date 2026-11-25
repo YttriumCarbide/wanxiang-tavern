@@ -89,10 +89,8 @@ export function tuneDeveloperLibrary(library, action, data = {}) {
     case 'level':
       if (![1, 10, 15, 20].includes(data.level)) throw Error('请选择预设等级。');
       for (const member of next.characters.filter((item) => next.party.includes(item.id))) {
-        member.growth = restoreGrowth(
-          { ...member.growth, level: data.level, xp: 0, revision: 2 },
-          member.id,
-        );
+        const growth = restoreGrowth(member.growth, member.id);
+        member.growth = restoreGrowth({ ...growth, level: data.level, xp: 0 }, member.id);
       }
       next.prepared = null;
       break;

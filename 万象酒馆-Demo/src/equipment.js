@@ -122,13 +122,21 @@ export function ascendCost(template, instance) {
   const level = clampEquipmentLevel(instance?.level || template?.level || 1);
   return Math.max(
     10,
-    Math.ceil(quality.ascendEtherBase + level * 1.2 + (template?.price || 10) * 0.25),
+    Math.ceil(quality.ascendGoldBase + level * 1.2 + (template?.price || 10) * 0.25),
   );
 }
 
 export function dismantleEther(template, instance) {
   const invested = Math.max(0, Math.trunc(Number(instance?.investedEther) || 0));
   return Math.floor(invested * 0.4);
+}
+
+export function blacksmithSaleGold(template) {
+  return Math.max(1, Math.floor((Number(template?.price) || 1) * 0.6));
+}
+
+export function blacksmithSaleFits(library, template) {
+  return (library.inventory.gold || 0) + blacksmithSaleGold(template) <= 999999999;
 }
 
 export function buyEquipment(library, templateId, instanceId, options = {}) {
@@ -279,7 +287,7 @@ export function reforgeEquipment(library, instanceId, seed = null) {
   const { instance, template } = ownedWithTemplate(library, instanceId);
   if (template.category === 'gem') throw Error('宝石专注于 DC 检定加成，无需重铸');
   const cost = reforgeCost(template, instance);
-  if ((library.inventory.ether || 0) < cost) throw Error('以太不足以重铸属性');
+  if ((library.inventory.gold || 0) < cost) throw Error('金币不足以重铸属性');
   const nextSeed =
     seed !== null && seed !== undefined
       ? Number(seed) >>> 0
@@ -292,8 +300,7 @@ export function reforgeEquipment(library, instanceId, seed = null) {
     quality: instance.quality || template.quality || qualityFromValue(template.price),
     seed: nextSeed,
   });
-  library.inventory.ether -= cost;
-  instance.investedEther = Math.max(0, Number(instance.investedEther) || 0) + cost;
+  library.inventory.gold -= cost;
   Object.assign(instance, rolled);
   return instance;
 }
@@ -307,7 +314,7 @@ export function temperEquipment(library, instanceId, targetLevel = null) {
   if (desired <= currentLevel) throw Error('目标等级必须高于当前等级');
   if (desired > maxUnlocked) throw Error(`当前最高只解锁到 Lv.${maxUnlocked}`);
   const cost = temperCost(template, instance, desired);
-  if ((library.inventory.ether || 0) < cost) throw Error('以太不足以淬炼升级');
+  if ((library.inventory.gold || 0) < cost) throw Error('金币不足以淬炼升级');
   const rolled = materializeEquipment({
     design: template.design,
     stats: instance.stats || template.stats,
@@ -316,8 +323,7 @@ export function temperEquipment(library, instanceId, targetLevel = null) {
     quality: instance.quality || template.quality || qualityFromValue(template.price),
     seed: instance.seed ?? hashSeed(`${instance.id}:${template.id}`),
   });
-  library.inventory.ether -= cost;
-  instance.investedEther = Math.max(0, Number(instance.investedEther) || 0) + cost;
+  library.inventory.gold -= cost;
   Object.assign(instance, rolled);
   return instance;
 }
@@ -332,7 +338,7 @@ export function ascendEquipment(library, instanceId, seed = null) {
   const meta = EQUIPMENT_QUALITIES[currentQuality];
   if (!meta.ascendTo) throw Error('该装备已达最高传说品质');
   const cost = ascendCost(template, instance);
-  if ((library.inventory.ether || 0) < cost) throw Error('以太不足以品质升阶');
+  if ((library.inventory.gold || 0) < cost) throw Error('金币不足以品质升阶');
   const nextSeed =
     seed !== null && seed !== undefined
       ? Number(seed) >>> 0
@@ -345,19 +351,32 @@ export function ascendEquipment(library, instanceId, seed = null) {
     quality: meta.ascendTo,
     seed: nextSeed,
   });
-  library.inventory.ether -= cost;
-  instance.investedEther = Math.max(0, Number(instance.investedEther) || 0) + cost;
+  library.inventory.gold -= cost;
   Object.assign(instance, rolled);
   return instance;
 }
 
-export function dismantleEquipment(library, instanceId) {
+function removeUnequippedGear(library, instanceId, action) {
   const { instance, template } = ownedWithTemplate(library, instanceId);
   if (library.characters?.some((member) => member.equipment?.includes(instanceId))) {
-    throw Error('该装备正在穿戴中，请先卸下再分解');
+    throw Error(`该装备正在穿戴中，请先卸下再${action}`);
   }
-  const refund = dismantleEther(template, instance);
   library.equipment.owned = library.equipment.owned.filter((item) => item.id !== instanceId);
+  return { instance, template };
+}
+
+export function sellEquipmentToBlacksmith(library, instanceId) {
+  const { template } = ownedWithTemplate(library, instanceId);
+  if (!blacksmithSaleFits(library, template)) throw Error('金币将超过持有上限');
+  removeUnequippedGear(library, instanceId, '出售');
+  const payment = blacksmithSaleGold(template);
+  library.inventory.gold = (library.inventory.gold || 0) + payment;
+  return payment;
+}
+
+export function dismantleEquipment(library, instanceId) {
+  const { instance, template } = removeUnequippedGear(library, instanceId, '分解');
+  const refund = dismantleEther(template, instance);
   library.inventory.ether = Math.min(999999999, (library.inventory.ether || 0) + refund);
   return refund;
 }

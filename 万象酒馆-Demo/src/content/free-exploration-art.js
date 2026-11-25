@@ -1,14 +1,16 @@
-const directory = './assets/exploration/free-scenes-hd-v2/';
+const starbellImage = './assets/exploration/city-backgrounds/starbell.png';
+const starbellView = {
+  image: starbellImage,
+  aspect: 16 / 9,
+  fixed: true,
+  fitWidth: true,
+  pureBackdrop: true,
+};
 
-/** All coordinates refer to a complete continuous painting, never separate camera panels. */
+/** All coordinates refer to a complete city overview painting. */
 export const FREE_EXPLORATION_ART = Object.freeze({
   'city-center': {
-    image: directory + 'city-center/connected.png',
-    nightImage: './assets/exploration/town-night/city-center.png',
-    aspect: 3,
-    viewHeight: 0.86,
-    viewWidth: 2.05,
-    allowLookUp: true,
+    ...starbellView,
     spots: {
       'square-center': { foot: [0.43, 0.85], height: 0.28 },
       'square-east': { foot: [0.64, 0.79], height: 0.23 },
@@ -25,12 +27,7 @@ export const FREE_EXPLORATION_ART = Object.freeze({
     foreground: [],
   },
   market: {
-    image: directory + 'market/connected.png',
-    nightImage: './assets/exploration/town-night/market.png',
-    aspect: 3,
-    viewHeight: 0.86,
-    viewWidth: 2.05,
-    allowLookUp: true,
+    ...starbellView,
     spots: {},
     people: {
       novi: { foot: [0.32, 0.84], height: 0.31 },
@@ -46,12 +43,7 @@ export const FREE_EXPLORATION_ART = Object.freeze({
     foreground: [],
   },
   rampart: {
-    image: directory + 'rampart/connected.png',
-    nightImage: './assets/exploration/town-night/rampart.png',
-    aspect: 3,
-    viewHeight: 0.86,
-    viewWidth: 2.05,
-    allowLookUp: true,
+    ...starbellView,
     spots: { 'gate-paving': { foot: [0.4, 0.86], height: 0.33 } },
     people: { eirin: { foot: [0.62, 0.83], height: 0.29 } },
     points: {
@@ -65,12 +57,7 @@ export const FREE_EXPLORATION_ART = Object.freeze({
     foreground: [],
   },
   outskirts: {
-    image: directory + 'outskirts/connected.png',
-    nightImage: './assets/exploration/town-night/outskirts.png',
-    aspect: 3,
-    viewHeight: 0.86,
-    viewWidth: 2.05,
-    allowLookUp: true,
+    ...starbellView,
     spots: {
       'road-left-near': { foot: [0.42, 0.86], height: 0.33 },
       'road-right-far': { foot: [0.64, 0.79], height: 0.26 },

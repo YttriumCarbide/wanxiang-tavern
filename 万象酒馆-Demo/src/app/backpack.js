@@ -63,7 +63,7 @@ export function createBackpack(context) {
           </div>`,
       )
       .join('');
-    return rows || '<p class="inn-bag-empty">行囊里暂未存放战斗药水，可在虚空售货机购置。</p>';
+    return rows || '<p class="inn-bag-empty">行囊里暂未存放战斗药水，可在药剂售货机购置。</p>';
   }
 
   function renderInnIngredients() {

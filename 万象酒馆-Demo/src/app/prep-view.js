@@ -1,7 +1,10 @@
 import { html } from '../shared/html.js';
 import { escapeText } from '../ui.js';
 import { portraitUrl } from '../portraits.js';
-import { grownCombat } from '../growth.js';
+import { compileCharacterCombat } from '../growth.js';
+import { ability } from '../data.js';
+import { battleResourceLimits } from '../engine.js';
+import { equippedDefinitions } from '../equipment.js';
 import { affectionLabel, affectionRank, relationship } from '../relationships.js';
 import { preparationEquipment } from './equipment.js';
 import { finalPassiveText, finalSkillText } from '../skill-text.js';
@@ -9,6 +12,7 @@ import { EMBLEMS } from '../emblems.js';
 import {
   LEARNABLE_SKILLS,
   LEARNABLE_SKILL_MAP,
+  isUniversalSkill,
   restoreEquippedSkills,
   restoreLearnedSkills,
 } from '../learnable-skills.js';
@@ -90,7 +94,7 @@ const SKILL_PALETTE = Object.freeze({
   普攻: ['#d6d2e2', '#6a6f90', '⚔'],
   入场: ['#9fe0a8', '#3f8a5a', '⚑'],
   主动: ['#8fb8ff', '#3f5fd0', '✦'],
-  通用战技: ['#6cecd6', '#218a7b', '✧'],
+  特技: ['#6cecd6', '#218a7b', '✧'],
   被动: ['#fff1c4', '#c99b4a', '◈'],
   纹章主动: ['#ffb08a', '#d0503a', '⚡'],
   纹章被动: ['#ffd9a8', '#b87630', '♛'],
@@ -99,7 +103,6 @@ const SKILL_PALETTE = Object.freeze({
 function skillColor(kind) {
   if (kind.startsWith('纹章主动')) return SKILL_PALETTE.纹章主动;
   if (kind.startsWith('纹章被动')) return SKILL_PALETTE.纹章被动;
-  if (kind === '通用战技') return SKILL_PALETTE.通用战技;
   if (kind.startsWith('被动')) return SKILL_PALETTE.被动;
   if (kind.startsWith('主动')) return SKILL_PALETTE.主动;
   return SKILL_PALETTE[kind] || SKILL_PALETTE.主动;
@@ -111,12 +114,14 @@ function skillsMarkup(stats, member, library) {
   const equippedSlots = restoreEquippedSkills(member.equippedSkills, learnedSet);
   const cards = [];
   const markName = stats.mechanicMark?.name || '标记';
+  const combatId = stats.id || member.id;
+  const attack = ability(combatId, 'attack', { [combatId]: stats });
   cards.push({
     kind: '普攻',
     name: member.setting?.attack?.name || '基础攻击',
     cost: '1 行动',
     damageType: resolveBasicAttackType(stats),
-    text: stats.attackText || `对前方敌人造成 ${stats.attack} 点伤害。`,
+    text: finalSkillText(attack, markName),
   });
   if (stats.entrySkill) {
     cards.push({
@@ -130,8 +135,8 @@ function skillsMarkup(stats, member, library) {
   (stats.skills || []).forEach((skill, idx) => {
     const isPassive = Boolean(skill.passive);
     cards.push({
-      kind: skill.universal
-        ? '通用战技'
+      kind: isUniversalSkill(skill)
+        ? '特技'
         : isPassive
           ? `被动 · 技能${idx + 1}`
           : `主动 · 技能${idx + 1}`,
@@ -166,9 +171,9 @@ function skillsMarkup(stats, member, library) {
   }
   const slotBar = html`<div class="prepare-universal-bar">
     <div class="prepare-universal-head">
-      <strong>通用战技配装 · 每人至多 2 槽</strong>
+      <strong>特技配装 · 每人至多 2 槽</strong>
       <small
-        >公会「战技研习台」可解锁更多通用战技（已掌握
+        >公会「战技研习台」可解锁更多特技（已掌握
         ${learnedIds.length}/${LEARNABLE_SKILLS.length}）</small
       >
     </div>
@@ -177,13 +182,13 @@ function skillsMarkup(stats, member, library) {
         .map((slot) => {
           const currentId = equippedSlots[slot] || '';
           return `<label class="prepare-universal-slot">
-            <span>通用槽位 ${slot + 1}</span>
+            <span>特技槽 ${slot + 1}</span>
             <select
               data-universal-skill-character="${escapeText(member.id)}"
               data-universal-skill-slot="${slot}"
-              aria-label="通用战技槽 ${slot + 1}"
+              aria-label="特技槽 ${slot + 1}"
             >
-              <option value="">— 未配装通用战技 —</option>
+              <option value="">— 未配装特技 —</option>
               ${learnedIds
                 .map((id) => {
                   const blueprint = LEARNABLE_SKILL_MAP[id];
@@ -306,7 +311,8 @@ export function ensureLeftExpandControl() {
 export function prepDetailMarkup(library, inspected, activeTab = 'status') {
   ensureLeftExpandControl();
   const tab = TABS.some(([key]) => key === activeTab) ? activeTab : 'status';
-  const stats = grownCombat(inspected);
+  const stats = compileCharacterCombat(inspected, equippedDefinitions(library, inspected));
+  const limits = battleResourceLimits(stats);
   const dcStats = effectiveDcAttrs(library, inspected);
   const rel = relationship(library, inspected.id);
   const rank = affectionRank(rel.affection);
@@ -378,9 +384,9 @@ export function prepDetailMarkup(library, inspected, activeTab = 'status') {
       <dl class="prepare-stat-grid">
         ${[
           ['等级', stats.level, '', '♛'],
-          ['生命', stats.hp, 'hp', '♥'],
-          ['法力', stats.mp, 'mp', '💧'],
-          ['普攻', stats.attack, '', '⚔'],
+          ['生命', limits.hp, 'hp', '♥'],
+          ['法力', limits.mp, 'mp', '💧'],
+          ['攻击力', stats.attack, '', '⚔'],
           ['行动', stats.limit, '', '⚡'],
         ]
           .map(

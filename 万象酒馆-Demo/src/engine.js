@@ -711,7 +711,11 @@ function simulate(s, plan, slots) {
     if (unit.hp > 0 && !guests.entry(id, es, outgoing)) {
       if (es.mechanic === 'luo-entry') {
         if (!isPlagueSealed(work, id)) {
-          unit.block += definitions[id].attack;
+          // In-progress legacy battles still use the old attack-based shield.
+          const shield = inDef.growthRevision
+            ? effectsList.find((effect) => effect.type === 'shield')?.value
+            : undefined;
+          unit.block += shield ?? inDef.attack;
         } else {
           currentLogs.push(`${definitions[id].name}受【沉疫封锁】影响，无法获得护盾`);
         }

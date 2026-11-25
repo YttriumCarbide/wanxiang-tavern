@@ -1,13 +1,13 @@
 {
   "browserConcurrency": 1,
-  "scopes": ["quality", "models", "core", "dungeon-art", "dc-motion", "rp-layout"],
+  "scopes": ["quality", "core", "gal", "equipment", "chat"],
   "coreFiles": [
-    "tests/art-assets.test.js",
-    "tests/assets.test.js",
-    "tests/periphery.test.js",
-    "tests/script-references.test.js",
-    "tests/silver-crown-syndicate.test.js",
-    "tests/worlds-emblems.test.js",
-    "tests/phase-b-dc-pipeline.test.js"
+    "tests/character-growth.test.js",
+    "tests/chat.test.js",
+    "tests/guild-skyrim-cities.test.js",
+    "tests/invitation-location.test.js",
+    "tests/overland.test.js",
+    "tests/shop-guild-transactions.test.js",
+    "tests/worldbook.test.js"
   ]
 }

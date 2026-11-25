@@ -16,6 +16,7 @@ export async function storyFeedChecks({ browser, baseURL, output }) {
       route.fulfill({ contentType: 'text/html', body: document }),
     );
     await page.goto(new URL('__story-feed-fixture', baseURL).href);
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
     await page.evaluate(async () => {
       const [
         { createStoryFeed },
@@ -131,9 +132,65 @@ export async function storyFeedChecks({ browser, baseURL, output }) {
       await page.evaluate(() => !getSelection().isCollapsed),
       'Journal prose remains copyable',
     );
-    await page.locator('#story-close').click();
-    await page.locator('#story-feed').waitFor({ state: 'hidden' });
-    assert(await page.evaluate(() => getSelection().isCollapsed));
+    const journal = page.locator('#story-feed');
+    const dismissal = await journal.evaluate(async (dialog) => {
+      const { feed } = window.storyFixture;
+      const opener = document.querySelector('#story-toggle');
+      const close = dialog.querySelector('#story-close');
+      const motionSupported =
+        CSS.supports('overlay: auto') &&
+        CSS.supports('transition-behavior: allow-discrete') &&
+        CSS.supports('interactivity: inert');
+      await Promise.all(dialog.getAnimations().map((animation) => animation.finished));
+      const firstDismissal = feed.storyClosed();
+      close.click();
+      const style = getComputedStyle(dialog);
+      const { x, y, width, height } = opener.getBoundingClientRect();
+      const hit = document.elementFromPoint(x + width / 2, y + height / 2);
+      const released =
+        !dialog.open &&
+        !dialog.matches(':modal') &&
+        document.activeElement === opener &&
+        opener.contains(hit) &&
+        getSelection().isCollapsed;
+      const painted =
+        style.display === 'flex' &&
+        style.pointerEvents === 'none' &&
+        getComputedStyle(dialog, '::backdrop').pointerEvents === 'none' &&
+        dialog.getAnimations().some((animation) => animation.transitionProperty === 'opacity');
+      opener.click();
+      let reopenedWaiterResolved = false;
+      void feed.storyClosed().then(() => {
+        reopenedWaiterResolved = true;
+      });
+      await firstDismissal;
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      const reopened =
+        dialog.open && opener.getAttribute('aria-expanded') === 'true' && !reopenedWaiterResolved;
+      return { released, painted, motionSupported, reopened };
+    });
+    assert(dismissal.released, 'Close releases modality, hit testing and focus in the same turn');
+    assert.equal(dismissal.painted, dismissal.motionSupported, 'Only the exit paint may linger');
+    assert(dismissal.reopened, 'An earlier close event does not settle a reopened journal');
+    await page.keyboard.press('Escape');
+    await journal.waitFor({ state: 'hidden' });
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.locator('#story-toggle').click();
+    const reduced = await journal.evaluate((dialog) => {
+      const entryIsStatic =
+        dialog.open &&
+        dialog.getAnimations({ subtree: true }).length === 0 &&
+        document.querySelector('#story-toggle span').getAnimations().length === 0;
+      dialog.querySelector('#story-close').click();
+      return (
+        entryIsStatic &&
+        !dialog.open &&
+        getComputedStyle(dialog).display === 'none' &&
+        dialog.getAnimations({ subtree: true }).length === 0
+      );
+    });
+    assert(reduced, 'Reduced motion opens and closes the journal without a transition');
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
     const toggle = await page.locator('#story-toggle').boundingBox();
     const round = await page.locator('#round-label').boundingBox();
     assert(round.x + round.width <= toggle.x, 'Round display sits at the left, beside the journal');
@@ -198,6 +255,21 @@ export async function storyFeedChecks({ browser, baseURL, output }) {
     await page.locator('#story-close').click();
     await page.locator('#story-feed').waitFor({ state: 'hidden' });
     await page.setViewportSize({ width: 1440, height: 836 });
+    const disposed = await journal.evaluate(async (dialog) => {
+      const { feed } = window.storyFixture;
+      feed.openStory();
+      await Promise.all(dialog.getAnimations().map((animation) => animation.finished));
+      dialog.querySelector('#story-close').click();
+      const leaving = dialog.getAnimations();
+      feed.dispose();
+      feed.openStory();
+      const clean =
+        !dialog.open &&
+        getComputedStyle(dialog).display === 'none' &&
+        dialog.getAnimations({ subtree: true }).length === 0;
+      return clean && leaving.every((animation) => animation.playState === 'idle');
+    });
+    assert(disposed, 'Disposal clears a painted exit and prevents reopening');
     // This component fixture invokes the same hidden bridge as the physical shelf.
     await page.locator('#archives-open').evaluate((button) => button.click());
     assert.equal(await page.locator('#archive-list button').count(), 1);
@@ -239,7 +311,6 @@ export async function storyFeedChecks({ browser, baseURL, output }) {
     );
     await page.locator('#archive-close').click();
     await page.evaluate(() => {
-      window.storyFixture.feed.dispose();
       window.storyFixture.records.dispose();
       window.storyFixture.view.dispose();
       window.storyFixture.events.dispose();

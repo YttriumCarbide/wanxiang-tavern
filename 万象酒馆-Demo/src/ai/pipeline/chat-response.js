@@ -1,8 +1,10 @@
 import { readOutputTags } from '../output-tags.js';
 import { validateTaskReply } from '../../adventure/state.js';
 import { normalizeInvitationTurn } from '../../invitation.js';
-import { BODY_TAGS, OUTPUT_TAG } from '../output-protocol.js';
+import { BODY_TAGS, OUTPUT_TAG, QUEST_LEAD_TYPES } from '../output-protocol.js';
 import { normalizeQuestLead } from '../../tavern-quests.js';
+import { cityChatPlace } from '../../chat-places.js';
+import { splitSceneEnvironment } from '../../scene-environment.js';
 import {
   DC_SPLIT_MARKER,
   normalizeDcTurnOutcome,
@@ -48,6 +50,7 @@ export async function chatResponse(kind, content, scriptsOrInput = {}, legacyInp
   let quest;
   let questNegotiation;
   let dcOutcome;
+  let environment;
   const invalidAdventure = [];
   const fixedCheck =
     input.dcContext?.choiceCheck ||
@@ -79,12 +82,20 @@ export async function chatResponse(kind, content, scriptsOrInput = {}, legacyInp
     if (bodies.length > 1) throw Error(`回复正文需要唯一一组${OUTPUT_TAG}标签`);
     const body = bodies[0];
     if (!body.content.trim()) throw Error(`${OUTPUT_TAG}标签内的正文不能为空`);
-    text = body.content.trim();
+    const lead = splitSceneEnvironment(
+      body.content.trim(),
+      kind === 'chat' ? cityChatPlace(input.place) : null,
+    );
+    text = lead.content;
+    environment = lead.environment;
     if (input.questOffer) {
       try {
         const leads = readOutputTags(content, [{ tag: 'wanxiang_quest', json: true }]);
-        if (leads.length === 1 && leads[0].start >= body.end)
-          quest = normalizeQuestLead(JSON.parse(leads[0].content));
+        if (leads.length === 1 && leads[0].start >= body.end) {
+          const candidate = JSON.parse(leads[0].content);
+          // Guild bounties belong to saved journal state, not the model appendix.
+          if (QUEST_LEAD_TYPES.includes(candidate?.type)) quest = normalizeQuestLead(candidate);
+        }
       } catch {
         // A malformed optional lead does not discard the dialogue.
       }
@@ -216,6 +227,7 @@ export async function chatResponse(kind, content, scriptsOrInput = {}, legacyInp
   return {
     content: finalContent,
     ...(kind === 'chat' ? { actions } : {}),
+    ...(environment ? { environment } : {}),
     ...(adventure ? { adventure } : {}),
     ...(invitation ? { invitation } : {}),
     ...(dialogue ? { dialogue } : {}),

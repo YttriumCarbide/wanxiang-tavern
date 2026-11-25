@@ -67,9 +67,9 @@ const sections = [
   },
   {
     id: 'road-capital',
-    name: '银冠城外门',
-    mapLabel: '银冠城外门',
-    mapShort: '外门',
+    name: '银冠城',
+    mapLabel: '银冠城',
+    mapShort: '银冠城',
     back: [0.33, 0.729],
   },
 ];

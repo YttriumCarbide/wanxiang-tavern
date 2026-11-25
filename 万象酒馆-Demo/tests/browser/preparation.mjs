@@ -7,6 +7,7 @@ import { completeExploration } from '../../src/exploration.js';
 import { normalizeCharacter } from '../../src/ai/contracts.js';
 import { characterDocument } from '../fixtures/ai.js';
 import { normalizeEquipment, buyEquipment } from '../../src/equipment.js';
+import { armDialogExitProbe, assertDialogExited } from './dialog-motion.mjs';
 
 async function drag(page, source, target) {
   await page.locator(source).dragTo(page.locator(target));
@@ -90,12 +91,55 @@ export async function preparationChecks({ browser, baseURL, output }) {
     );
     await page.mouse.up();
     await page.locator('#ledger-drawer-host.is-open').waitFor();
-    await page.locator('#party-toggle').click();
     const panel = page.locator('#party-panel');
-    await page.waitForTimeout(280);
+    const prepare = page.getByRole('button', { name: '整备', exact: true });
+    const close = panel.getByRole('button', { name: '关闭整备', exact: true });
+    await prepare.click();
+    await page.getByRole('dialog', { name: '整备', exact: true }).waitFor();
+    const closeBounds = await close.boundingBox();
+    assert(closeBounds && closeBounds.width >= 24 && closeBounds.height >= 24);
+    assert.equal(await close.evaluate((button) => getComputedStyle(button).opacity), '1');
+    const partyExit = await armDialogExitProbe(panel);
+    await close.click();
+    await assertDialogExited(panel, '#party-panel', {
+      animated: partyExit,
+      focusId: 'party-toggle',
+    });
+    await prepare.click();
+    await panel.evaluate((dialog) =>
+      Promise.allSettled(dialog.getAnimations().map((animation) => animation.finished)),
+    );
     const bounds = await panel.boundingBox();
     inside(bounds, { width: 1440, height: 836 });
     assert(bounds.width <= 1340 && bounds.height <= 760);
+
+    const handle = panel.locator('#ledger-handle');
+    const ledger = panel.locator('#ledger-drawer-host');
+    await handle.click();
+    const ledgerClose = ledger.locator('#ledger-close');
+    assert.equal(await ledgerClose.getAttribute('aria-label'), '关闭账簿');
+    const speedToggle = ledger.locator('#ledger-speed-toggle');
+    const speedBefore = await speedToggle.textContent();
+    await speedToggle.click();
+    assert.notEqual(await speedToggle.textContent(), speedBefore);
+    await speedToggle.click();
+    assert.equal(await speedToggle.textContent(), speedBefore);
+    await ledgerClose.click();
+    await ledger.waitFor({ state: 'hidden' });
+    assert(await panel.evaluate((dialog) => dialog.open), 'Returning closes only the ledger');
+    await handle.click();
+    await ledger.locator('.ledger-backdrop').click({
+      position: { x: bounds.x + 24, y: bounds.y + bounds.height / 2 },
+    });
+    await ledger.waitFor({ state: 'hidden' });
+    assert(await panel.evaluate((dialog) => dialog.open), 'The backdrop closes only the ledger');
+    assert.equal(await handle.getAttribute('aria-expanded'), 'false');
+    assert(await handle.evaluate((button) => document.activeElement === button));
+    await handle.press('Enter');
+    await ledger.locator('#ledger-drawer').press('Escape');
+    await ledger.waitFor({ state: 'hidden' });
+    assert(await panel.evaluate((dialog) => dialog.open), 'Escape closes only the ledger');
+    assert(await handle.evaluate((button) => document.activeElement === button));
     const formation = await page.locator('.prepare-formation-col').boundingBox();
     const stage = await page.locator('.prepare-stage-col').boundingBox();
     const inspector = await page.locator('.prepare-inspector-col').boundingBox();
@@ -175,12 +219,15 @@ export async function preparationChecks({ browser, baseURL, output }) {
     await page.waitForTimeout(250);
     inside(await panel.boundingBox(), { width: 390, height: 844 });
     // Real touch input exercises the rotated coordinate conversion and suppresses accidental opening.
-    const handle = await page
+    const dragHandle = await page
       .locator(`[data-prepare-view="${reserveId}"] .prepare-drag-handle`)
       .boundingBox();
     const target = await page.locator('[data-prepare-slot="3"]').boundingBox();
     const cdp = await page.context().newCDPSession(page);
-    const from = { x: handle.x + handle.width / 2, y: handle.y + handle.height / 2 };
+    const from = {
+      x: dragHandle.x + dragHandle.width / 2,
+      y: dragHandle.y + dragHandle.height / 2,
+    };
     const to = { x: target.x + target.width / 2, y: target.y + target.height / 2 };
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [from] });
     for (let step = 1; step <= 8; step++)
@@ -202,7 +249,10 @@ export async function preparationChecks({ browser, baseURL, output }) {
     inside(await panel.boundingBox(), { width: 844, height: 390 });
     await page.screenshot({ path: path.join(output, 'preparation-landscape.png') });
     await page.locator('#prepare-done').click();
+    await panel.waitFor({ state: 'hidden' });
     await page.setViewportSize({ width: 1440, height: 836 });
+    await page.locator('#ledger-handle').waitFor();
+    assert(!(await page.locator('#ledger-drawer-host').isVisible()), 'The ledger stays closed');
     await openShelfPanel(page, 'archives');
     assert.equal(await page.locator('#archive-dialog .records-empty').count(), 1);
     const tabs = await page.locator('.archive-tabs').boundingBox();
@@ -222,7 +272,10 @@ export async function preparationChecks({ browser, baseURL, output }) {
     assert((await page.locator('#archive-text').innerText()).includes('以太'));
     assert.equal(await page.locator('#archive-list button').count(), 1);
     await page.screenshot({ path: path.join(output, 'archive-items.png') });
+    const archiveDialog = page.locator('#archive-dialog');
+    const archiveExit = await armDialogExitProbe(archiveDialog);
     await page.locator('#archive-close').click();
+    await assertDialogExited(archiveDialog, '#archive-dialog', { animated: archiveExit });
     await openShelfPanel(page, 'records');
     assert((await page.locator('#records-text').innerText()).includes('沿着壁画走向石门'));
     await page
@@ -258,6 +311,12 @@ export async function preparationChecks({ browser, baseURL, output }) {
     assert.equal(await panel.isVisible(), true, 'Canceling the warning keeps formation open');
     assert.equal(warningMessages.length, 1);
     assert.match(warningMessages[0], /难度极高.*未满六人.*推荐满编再来/);
+    await panel.getByRole('button', { name: '取消出发', exact: true }).click();
+    await panel.waitFor({ state: 'hidden' });
+    await page.waitForFunction(
+      () => document.querySelector('#prepare-title').textContent === '整备',
+    );
+    assert.equal(await panel.locator('#prepare-close').getAttribute('aria-label'), '关闭整备');
     assert.deepEqual(errors, []);
     return {
       compactPanel: true,
@@ -267,6 +326,7 @@ export async function preparationChecks({ browser, baseURL, output }) {
       desktopAndTouchDrag: true,
       equipmentAndPortraitEditor: true,
       horizontalMobile: true,
+      ledgerDismissalKeepsPreparationOpen: true,
       recordsAndArchives: true,
       millOverlordRosterWarning: true,
     };

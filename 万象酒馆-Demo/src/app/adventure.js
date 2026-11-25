@@ -47,7 +47,9 @@ export function createAdventure(context) {
     <nav class="rp-bottom-pill-bar" aria-label="事件操作">${tool('compose', 'compose', '发言')}${tool('replay', 'replay', '重读开场')}</nav>`;
   document.body.append(root);
   const background = root.querySelector('.rp-background');
+  const bossReady = root.querySelector('.rp-boss-ready');
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
+  const sceneActive = () => !root.hidden && !root.inert && !session.runtime.disposed;
   function centerBackground() {
     background.style.removeProperty('--rp-x');
     background.style.removeProperty('--rp-y');
@@ -56,7 +58,7 @@ export function createAdventure(context) {
     window,
     'pointermove',
     (event) => {
-      if (root.hidden || event.pointerType !== 'mouse' || reduceMotion.matches) return;
+      if (!sceneActive() || event.pointerType !== 'mouse' || reduceMotion.matches) return;
       const { left, top, width, height } = root.getBoundingClientRect();
       if (!width || !height) return;
       const offset = (value, size) => Math.max(-1, Math.min(1, (value / size) * 2 - 1));
@@ -74,6 +76,8 @@ export function createAdventure(context) {
   let replyPlayback = null;
   let selected = null;
   let introEpoch = 0;
+  let exitAnimation = null;
+  let bossReadyExitAnimation = null;
   let draftTimer = null;
   let workspaceOpen = false;
   const find = (selector) =>
@@ -141,7 +145,7 @@ export function createAdventure(context) {
     context.gal.feedback('adventure', text);
   }
   function compose() {
-    if (root.hidden || book().recollection) return;
+    if (!sceneActive() || book().recollection) return;
     if (workspaceOpen) {
       context.gal.collapseComposer(false);
       return;
@@ -154,6 +158,7 @@ export function createAdventure(context) {
       persistent: true,
       composer: [form],
       onLayout({ height, collapsed }) {
+        if (!sceneActive()) return;
         root.dataset.composer = collapsed ? 'collapsed' : 'open';
         root.style.setProperty('--rp-panel-bottom', collapsed ? '74px' : `${height + 16}px`);
         root.style.setProperty('--rp-pill-bottom', 'max(14px, env(safe-area-inset-bottom))');
@@ -196,7 +201,7 @@ export function createAdventure(context) {
     });
   }
   function render() {
-    if (root.hidden || !state()) return;
+    if (!sceneActive() || !state()) return;
     const event = trip().index === 1;
     const definition = book().adventure;
     const scene = event ? definition.event : definition.quest;
@@ -310,11 +315,49 @@ export function createAdventure(context) {
     if (trip()?.index !== 3 || !adventureReady(book().adventure, state()) || state().readyPrompted)
       return;
     state().readyPrompted = true;
-    find('.rp-boss-ready').hidden = false;
+    cancelBossReadyExitAnimation();
+    bossReady.inert = false;
+    bossReady.removeAttribute('aria-hidden');
+    bossReady.hidden = false;
     save();
   }
+  function cancelBossReadyExitAnimation() {
+    const animation = bossReadyExitAnimation;
+    bossReadyExitAnimation = null;
+    animation?.cancel();
+    delete bossReady.dataset.leaving;
+    bossReady.style.removeProperty('--rp-ready-depart-opacity');
+  }
+  function hideBossReady() {
+    cancelBossReadyExitAnimation();
+    bossReady.hidden = true;
+    bossReady.inert = false;
+    bossReady.removeAttribute('aria-hidden');
+  }
+  function dismissBossReady() {
+    if (bossReady.hidden || bossReadyExitAnimation) return;
+
+    bossReady.inert = true;
+    if (bossReady.contains(document.activeElement)) document.activeElement.blur?.();
+    bossReady.setAttribute('aria-hidden', 'true');
+    if (reduceMotion.matches) return hideBossReady();
+
+    bossReady.style.setProperty('--rp-ready-depart-opacity', getComputedStyle(bossReady).opacity);
+    bossReady.dataset.leaving = 'true';
+    const animation = bossReady
+      .getAnimations?.()
+      .find((candidate) => candidate.animationName === 'rp-ready-depart');
+    if (!animation) return hideBossReady();
+
+    bossReadyExitAnimation = animation;
+    const finish = () => {
+      if (bossReadyExitAnimation === animation) hideBossReady();
+    };
+    void animation.finished.then(finish, finish);
+  }
   async function send(retry = false, local = false) {
-    if (request || replyPlayback || root.hidden) return;
+    if (request || replyPlayback || !sceneActive()) return;
+    const epoch = introEpoch;
     const expedition = trip();
     const source = book();
     const adventure = state();
@@ -365,7 +408,11 @@ export function createAdventure(context) {
     }
     const controller = new AbortController();
     const isReplyScene = () =>
-      trip() === expedition && book() === source && expedition.index === turn.node && !root.hidden;
+      epoch === introEpoch &&
+      trip() === expedition &&
+      book() === source &&
+      expedition.index === turn.node &&
+      sceneActive();
     const isCurrentReply = () => !controller.signal.aborted && isReplyScene();
     request = controller;
     find('[data-rp="retry"]').hidden = true;
@@ -556,8 +603,34 @@ export function createAdventure(context) {
       }
     }
   }
+  function cancelExitAnimation() {
+    const animation = exitAnimation;
+    exitAnimation = null;
+    animation?.cancel();
+    delete root.dataset.leaving;
+    root.style.removeProperty('--rp-depart-opacity');
+  }
+  function hideScene() {
+    root.hidden = true;
+    cancelExitAnimation();
+  }
+  function animateExit() {
+    root.style.setProperty('--rp-depart-opacity', getComputedStyle(root).opacity);
+    root.dataset.leaving = 'true';
+    const animation = root
+      .getAnimations?.()
+      .find((candidate) => candidate.animationName === 'rp-depart');
+    if (!animation) return hideScene();
+    exitAnimation = animation;
+    const finish = () => {
+      if (exitAnimation === animation) hideScene();
+    };
+    void animation.finished.then(finish, finish);
+  }
   async function enter(resuming = false) {
     const epoch = ++introEpoch;
+    cancelExitAnimation();
+    hideBossReady();
     context.gal.cancel();
     const destDlg = document.querySelector('#destination-dialog');
     if (destDlg?.open) destDlg.close();
@@ -589,9 +662,10 @@ export function createAdventure(context) {
     root.dataset.composer = 'closed';
     root.style.removeProperty('--rp-panel-bottom');
     root.style.removeProperty('--rp-pill-bottom');
+    root.inert = false;
+    root.removeAttribute('aria-hidden');
     root.hidden = false;
     root.dataset.intro = 'true';
-    find('.rp-boss-ready').hidden = true;
     find('#rp-input').value =
       state().drafts?.[trip().index] ||
       (trip().index === 1 && !state().event.resolved ? state().event.supplement : '') ||
@@ -606,8 +680,9 @@ export function createAdventure(context) {
     save();
     if (!resuming) {
       await context.generation.showScene(trip().index, 'before');
+      if (epoch !== introEpoch || !sceneActive()) return;
       await play(book().story[trip().index], `intro-${trip().index}`);
-      if (epoch !== introEpoch || root.hidden) return;
+      if (epoch !== introEpoch || !sceneActive()) return;
       if (context.chapterTheater?.playOpening) {
         const isEventNode = trip().index === 1;
         const nodeData = isEventNode ? book().adventure?.event : book().adventure?.quest;
@@ -620,25 +695,35 @@ export function createAdventure(context) {
         });
       }
     }
-    if (epoch === introEpoch && !root.hidden) {
+    if (epoch === introEpoch && sceneActive()) {
       root.dataset.intro = 'false';
       if (!book().recollection) compose();
       ready();
     }
   }
-  function leave() {
-    clearTimeout(draftTimer);
+  function leave({ immediate = false } = {}) {
+    // The journey can call leave again as it mounts the battle. Only the paint lingers.
+    if (exitAnimation && !immediate) return;
     introEpoch++;
+    clearTimeout(draftTimer);
+    draftTimer = null;
+    const focused = document.activeElement;
+    cancelBossReadyExitAnimation();
+    root.inert = true;
+    if (root.contains(focused) || form.contains(focused)) focused.blur?.();
+    root.setAttribute('aria-hidden', 'true');
     request?.abort();
     request = null;
     replyPlayback?.abort();
     replyPlayback = null;
     context.gal.cancel('adventure');
-    root.hidden = true;
     document.body.classList.remove('in-adventure');
+    if (immediate || root.hidden || reduceMotion.matches) hideScene();
+    else animateExit();
     context.ledger?.sync();
   }
   function click(event) {
+    if (!sceneActive()) return;
     const actor = event.target.closest('[data-rp-actor]');
     if (actor && !state().event.choiceId && !state().event.resolved && !request) {
       event.stopPropagation();
@@ -669,13 +754,11 @@ export function createAdventure(context) {
       void send(false, true);
     }
     if (action === 'next' || action === 'boss') void context.journey.continueAdventure();
-    if (action === 'stay') find('.rp-boss-ready').hidden = true;
+    if (action === 'stay') dismissBossReady();
     if (action === 'replay') void play(book().story[trip().index], `intro-${trip().index}`);
   }
   events.on(root, 'click', click);
-  events.on(document.querySelector('#ai-dialog'), 'close', () => {
-    if (!root.hidden) render();
-  });
+  events.on(document.querySelector('#ai-dialog'), 'close', render);
   events.on(content, 'click', (event) => {
     event.stopPropagation();
     click(event);
@@ -685,12 +768,12 @@ export function createAdventure(context) {
     void send();
   });
   events.on(find('#rp-input'), 'input', () => {
-    if (root.hidden || !state()) return;
+    if (!sceneActive() || !state()) return;
     (state().drafts ||= {})[trip().index] = find('#rp-input').value;
     clearTimeout(draftTimer);
     context.checkpoint.schedule();
     draftTimer = setTimeout(() => {
-      if (root.hidden || session.runtime.disposed) return;
+      if (!sceneActive()) return;
       try {
         save();
       } catch (failure) {
@@ -699,7 +782,7 @@ export function createAdventure(context) {
     }, 280);
   });
   events.on(find('#rp-input'), 'keydown', (event) => {
-    if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
+    if (sceneActive() && event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
       event.preventDefault();
       void send();
     }
@@ -709,7 +792,7 @@ export function createAdventure(context) {
     leave,
     render,
     dispose() {
-      leave();
+      leave({ immediate: true });
       root.remove();
     },
   };

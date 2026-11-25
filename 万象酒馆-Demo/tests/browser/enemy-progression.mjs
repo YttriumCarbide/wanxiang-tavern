@@ -2,19 +2,24 @@ import assert from 'node:assert/strict';
 import path from 'node:path';
 import { legacySession } from './legacy-session.mjs';
 import { newLibrary } from '../../src/ai/library.js';
-import { explorationSpec, completeExploration } from '../../src/exploration.js';
+import { newExploration, explorationSpec, completeExploration } from '../../src/exploration.js';
 
 /** Re-enter a cleared map through the real gate with no configured AI connection. */
 export async function enemyProgressionChecks({ browser, baseURL, output }) {
   const page = await browser.newPage({ viewport: { width: 1440, height: 836 } });
   const errors = [],
     requests = [];
+  const loadErrors = [];
   page.on('pageerror', (error) => errors.push(error.message));
+  page.on('console', (message) => {
+    if (message.type() === 'error') loadErrors.push(message.text());
+  });
   page.on('request', (request) => {
     if (/\/api\/ai\/(generate|prepare)/.test(request.url())) requests.push(request.url());
   });
-  await legacySession(page);
+  await legacySession(page, { dismissJournals: false });
   const library = newLibrary();
+  library.exploration = newExploration(17371);
   const entry = library.exploration.ruins.frontier[0];
   const encounters = Array.from({ length: 5 }, (_, index) => explorationSpec(entry, index));
   completeExploration(library.exploration, entry, {
@@ -55,7 +60,17 @@ export async function enemyProgressionChecks({ browser, baseURL, output }) {
     await old.click();
     assert.match(await page.locator('#destination-start').textContent(), /回忆/);
     await page.locator('#destination-start').click();
-    await page.waitForFunction(() => demo.getStatus().mode === 'battle');
+    await page
+      .waitForFunction(() => demo.getStatus().mode === 'battle')
+      .catch((cause) => {
+        // Do not issue another renderer command if the renderer itself timed out.
+        throw new Error(
+          `Recollection did not enter battle: ${cause.message}\n` +
+            JSON.stringify({ errors, loadErrors }),
+          { cause },
+        );
+      });
+    await page.locator('.world-battle-transition').waitFor({ state: 'detached' });
     const battle = await page.evaluate(() => demo.getState());
     assert.deepEqual(battle.enemyIds, encounters[0].enemyIds);
     for (const id of battle.enemyIds) {
@@ -65,16 +80,29 @@ export async function enemyProgressionChecks({ browser, baseURL, output }) {
         /^Lv\.\d+$/,
       );
     }
-    await page.locator('#story-toggle').click();
-    await page.locator('#story-feed').waitFor({ state: 'visible' });
+    const journal = page.locator('#story-feed');
+    await journal.waitFor({ state: 'visible' });
+    assert.equal(await journal.getAttribute('data-automatic'), 'true');
     assert.match(await page.locator('#story-lines').textContent(), /第一次经过石门的正文/);
     assert(await page.locator('#quick-chat-form').isHidden());
     await page.screenshot({ path: path.join(output, 'recollection-original.png') });
     await page.locator('#story-close').click();
-    await page.locator('#story-feed').waitFor({ state: 'hidden' });
+    await journal.waitFor({ state: 'hidden' });
+    await page.locator('#story-toggle').click();
+    await journal.waitFor({ state: 'visible' });
+    assert.match(await page.locator('#story-lines').textContent(), /第一次经过石门的正文/);
+    await page.locator('#story-close').click();
+    await journal.waitFor({ state: 'hidden' });
     await page.waitForFunction(() => !demo.getStatus().animating);
     await page.screenshot({ path: path.join(output, 'enemy-levels.png') });
     await page.evaluate(() => demo.returnInn());
+    await page.waitForFunction(() => demo.getStatus().mode === 'inn');
+    await page.locator('#battle').waitFor({ state: 'hidden' });
+    assert.equal(await page.locator('#stage .unit-layer [data-unit]').count(), 0);
+    assert.equal(await page.evaluate(() => demo.getArtStatus()), null);
+    await page.evaluate(() => demo.flushStorage());
+    await page.reload();
+    await page.waitForFunction(() => window.demo?.getStatus().mode === 'inn');
     assert.deepEqual(
       await page.evaluate(() => ({
         routes: demo.getExploration(),
@@ -88,7 +116,8 @@ export async function enemyProgressionChecks({ browser, baseURL, output }) {
       recallWithoutApi: true,
       sameEnemyIds: true,
       levelsVisible: true,
-      historyPreserved: true,
+      historyPreservedAfterReload: true,
+      battleViewReleased: true,
     };
   } finally {
     await page.close();

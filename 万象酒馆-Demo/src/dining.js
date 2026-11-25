@@ -89,6 +89,27 @@ export function buyIngredient(library, id) {
   if (state.tutorial === 'buy' && state.inventory.bread && state.inventory.cheese)
     state.tutorial = 'cook';
 }
+
+/** Market resale follows the established 60% blacksmith purchase-back rate. */
+export function ingredientSalePrice(id) {
+  if (!Object.hasOwn(INGREDIENTS, id)) return 0;
+  const item = INGREDIENTS[id];
+  return Math.max(1, Math.floor(item.price * 0.6));
+}
+
+export function sellIngredient(library, id) {
+  if (!Object.hasOwn(INGREDIENTS, id)) return { ok: false, reason: '食材不存在' };
+  const state = diningState(library);
+  const item = INGREDIENTS[id];
+  if ((state.inventory[id] || 0) < 1) return { ok: false, reason: '行囊中没有这份食材' };
+  const gold = ingredientSalePrice(id);
+  if ((library.inventory.gold || 0) + gold > 999999999)
+    return { ok: false, reason: '金币将超过持有上限' };
+  state.inventory[id]--;
+  library.inventory.gold = (library.inventory.gold || 0) + gold;
+  return { ok: true, item, gold };
+}
+
 const officialPreferences = {
   aegis: { like: ['甜味', '果香'], hate: ['辛辣'] },
   edith: { like: ['清淡', '蛋奶'], hate: ['酒香'] },

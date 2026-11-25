@@ -1,18 +1,11 @@
 import assert from 'node:assert/strict';
 import path from 'node:path';
+import { openCityDirectory } from './town-navigation.mjs';
 
 async function ready(page) {
   await page.waitForFunction(
     () => window.modelReady && window.streetPreview && !window.streetPreview.state().moving,
   );
-}
-async function focus(page, id) {
-  await page.evaluate((id) => {
-    const view = window.streetPreview;
-    const anchor = view.model.pointAnchor(id);
-    view.look(-anchor[0] / (view.state().framing.width * 0.35), 0);
-  }, id);
-  await ready(page);
 }
 async function drag(page, dx) {
   const size = page.viewportSize();
@@ -23,59 +16,35 @@ async function drag(page, dx) {
   await ready(page);
 }
 async function presentation(page) {
-  return page.evaluate(async () => {
-    const THREE = await import('/vendor/build/three.module.js');
-    const { standingFrame } = await import('/src/tavern/standing-frame.js');
+  return page.evaluate(() => {
     const view = window.streetPreview;
-    view.scene.updateMatrixWorld(true);
-    const people = [];
+    let standing = 0;
     view.scene.traverse((mesh) => {
-      const id = mesh.userData.staticNpc || mesh.userData.visitor;
-      if (!id || !mesh.parent.visible) return;
-      const foot = mesh.parent.position.clone().project(view.camera);
-      mesh.geometry.computeBoundingBox();
-      const box = mesh.geometry.boundingBox;
-      const sample = document.createElement('canvas');
-      sample.width = 96;
-      sample.height = 144;
-      const paint = sample.getContext('2d', { willReadFrequently: true });
-      paint.drawImage(mesh.material.map.image, 0, 0, 96, 144);
-      const body = standingFrame(paint.getImageData(0, 0, 96, 144).data, 96, 144, 1);
-      const height = box.max.y - box.min.y;
-      const top = new THREE.Vector3(0, box.max.y - body.top * height, 0)
-        .applyMatrix4(mesh.matrixWorld)
-        .project(view.camera);
-      const bottom = new THREE.Vector3(0, box.max.y - body.foot * height, 0)
-        .applyMatrix4(mesh.matrixWorld)
-        .project(view.camera);
-      people.push({
-        id,
-        npc: !!mesh.userData.staticNpc,
-        position: mesh.parent.position.toArray(),
-        x: (foot.x + 1) / 2,
-        y: (1 - foot.y) / 2,
-        height: Math.abs(top.y - bottom.y) / 2,
-      });
+      if (mesh.userData.staticNpc || mesh.userData.visitor) standing++;
     });
     const image = view.model.panorama.material.map.image;
     return {
-      people,
+      hotspots: document.querySelectorAll('[data-hotspot]').length,
+      backdrop: view.definition.illustration.pureBackdrop === true,
+      aspect: view.definition.illustration.aspect,
+      standing,
       framing: view.state().framing,
       calls: view.renderer.info.render.calls,
       image: [image.naturalWidth, image.naturalHeight],
       texture: view.model.panorama.material.map.uuid,
+      source: view.state().image,
     };
   });
 }
 function framing(frame) {
-  const aspect = frame.image[0] / frame.image[1];
+  const aspect = frame.aspect;
   const { x, y, width, height } = frame.framing;
   assert(x - width / 2 >= -aspect / 2 && x + width / 2 <= aspect / 2);
   assert(y - height / 2 >= -0.5 && y + height / 2 <= 0.5);
-  assert(frame.calls <= 11, 'background and people remain within a small drawing budget');
+  assert(frame.calls <= 11, 'background remains within a small drawing budget');
 }
 
-/** Real rendered landmarks, chapter NPCs and touch framing for the four repainted places. */
+/** Verify the shared Starbell painting, bounded input and real city directory navigation. */
 export async function paintedSceneChecks({ browser, baseURL, output }, ids) {
   const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
   const mobile = await browser.newPage({
@@ -87,10 +56,20 @@ export async function paintedSceneChecks({ browser, baseURL, output }, ids) {
   const requests = [];
   for (const target of [page, mobile]) {
     target.on('pageerror', (error) => errors.push(error.message));
+    target.on('response', (response) => {
+      if (response.status() >= 400 && response.url().includes('/city-backgrounds/'))
+        errors.push(`${response.status()} ${response.url()}`);
+    });
     target.on('request', (request) => {
       if (request.url().includes('/api/ai/generate')) requests.push(request.url());
     });
   }
+  const routes = {
+    'city-center': 'market',
+    market: 'rampart',
+    rampart: 'outskirts',
+    outskirts: 'rampart',
+  };
   const results = [];
   try {
     for (const id of ids) {
@@ -98,121 +77,98 @@ export async function paintedSceneChecks({ browser, baseURL, output }, ids) {
       await ready(page);
       const initial = await presentation(page);
       framing(initial);
-      assert(initial.image[0] >= 3700 && initial.image[1] >= 1254);
-      assert.equal(
-        initial.people.length,
-        2,
-        id + ': two grounded people, without duplicate decorative figures',
-      );
-      assert(
-        initial.people.every(
-          (person) =>
-            person.y > 0.62 && person.y < 0.951 && person.height > 0.18 && person.height < 0.43,
-        ),
-      );
-      const heights = initial.people.map((person) => person.height);
-      assert(
-        Math.max(...heights) / Math.min(...heights) > 1.1,
-        'near and far standing areas use distinct scales',
-      );
+      assert.deepEqual(initial.image, [1672, 941]);
+      assert(initial.source.endsWith('/city-backgrounds/starbell.png'));
+      assert.equal(initial.backdrop, true);
+      assert.equal(initial.aspect, 16 / 9);
+      assert.equal(initial.hotspots, 0, id + ': pure backdrop has no hotspots');
+      assert.equal(initial.standing, 0, id + ': pure backdrop has no standing meshes');
       await page.screenshot({ path: path.join(output, id + '-center.png') });
       for (const [direction, offset] of [
-        ['left', 1800],
-        ['right', -1800],
+        ['left', 260],
+        ['right', -260],
       ]) {
         await page.evaluate(() => window.streetPreview.resetView());
         await ready(page);
+        const start = (await presentation(page)).framing;
         await drag(page, offset);
         const frame = await presentation(page);
         framing(frame);
         assert.equal(frame.texture, initial.texture);
-        assert.deepEqual(
-          frame.people.map(({ id, position }) => ({ id, position })),
-          initial.people.map(({ id, position }) => ({ id, position })),
+        assert.equal(frame.source, initial.source);
+        const delta = frame.framing.x - start.x;
+        assert(
+          direction === 'left' ? delta < -0.01 : delta > 0.01,
+          id + ': drag pans ' + direction,
         );
         await page.screenshot({ path: path.join(output, id + '-' + direction + '.png') });
-      }
-      const points = await page.evaluate(() => window.streetPreview.definition.points);
-      const visited = [];
-      for (const point of points) {
-        await focus(page, point.id);
-        const button = page.locator('[data-hotspot="' + point.id + '"]');
-        await button.waitFor({ state: 'visible' });
-        if (point.immediate) continue;
-        await button.click();
-        assert.equal(await page.locator('#inspection-name').textContent(), point.name);
-        await page.locator('#inspection-close').click();
-        visited.push(point.id);
-      }
-      for (const person of initial.people.filter((person) => person.npc)) {
-        await focus(page, person.id);
-        const body = await page.evaluate((id) => {
-          const view = window.streetPreview;
-          const mesh = view.model.characters.find((mesh) => mesh.userData.staticNpc === id);
-          const point = mesh.parent.position.clone();
-          point.y += 0.16;
-          point.project(view.camera);
-          return { x: ((point.x + 1) * innerWidth) / 2, y: ((1 - point.y) * innerHeight) / 2 };
-        }, person.id);
-        await page.mouse.click(body.x, body.y);
-        await page.locator('#street-inspector').waitFor({ state: 'visible' });
-        assert.equal(
-          await page.locator('#inspection-name').textContent(),
-          points.find((point) => point.id === person.id).name,
-        );
-        await page.locator('#inspection-close').click();
-        await page.screenshot({ path: path.join(output, id + '-' + person.id + '-standing.png') });
       }
       await mobile.goto(baseURL + '/street.html?scene=' + id);
       await ready(mobile);
       const before = await presentation(mobile);
       framing(before);
-      assert(
-        before.people.every((person) => person.y > 0.5 && person.y < 0.9),
-        'phone framing keeps standing feet inside the painting',
-      );
       const cdp = await mobile.context().newCDPSession(mobile);
-      await cdp.send('Input.dispatchTouchEvent', {
-        type: 'touchStart',
-        touchPoints: [{ x: 580, y: 120 }],
-      });
-      await cdp.send('Input.dispatchTouchEvent', {
-        type: 'touchMove',
-        touchPoints: [{ x: 420, y: 138 }],
-      });
-      await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+      try {
+        await cdp.send('Input.dispatchTouchEvent', {
+          type: 'touchStart',
+          touchPoints: [{ x: 580, y: 120 }],
+        });
+        await cdp.send('Input.dispatchTouchEvent', {
+          type: 'touchMove',
+          touchPoints: [{ x: 420, y: 138 }],
+        });
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+      } finally {
+        await cdp.detach();
+      }
       await ready(mobile);
       const after = await presentation(mobile);
       framing(after);
-      assert(Math.abs(after.framing.x - before.framing.x) > 0.04, 'touch can pan the full scene');
+      assert(
+        Math.abs(after.framing.x - before.framing.x) > 0.04,
+        'touch can pan the shared painting',
+      );
+      assert.equal(after.texture, before.texture);
       await mobile.evaluate(() => window.streetPreview.resetView());
       await ready(mobile);
       await mobile.screenshot({ path: path.join(output, id + '-mobile.png') });
-      const inspect = points.find((point) => !point.immediate);
-      await focus(mobile, inspect.id);
-      await mobile.locator('[data-hotspot="' + inspect.id + '"]').click();
-      await mobile
-        .locator('#street-inspector')
-        .evaluate((element) =>
-          Promise.all(element.getAnimations().map((animation) => animation.finished)),
-        );
-      const box = await mobile.locator('#street-inspector').boundingBox();
-      assert(box.x >= 0 && box.y >= 0 && box.x + box.width <= 845 && box.y + box.height <= 391);
-      const exit = points.find((point) => point.immediate);
-      await focus(page, exit.id);
-      await page.locator('[data-hotspot="' + exit.id + '"]').click();
-      const destination = exit.destination === 'street' ? 'starlamp-street' : exit.destination;
+      const destination = routes[id];
+      await page.locator('#street-submap-open').click();
+      await page
+        .locator(`#street-city-submap[open] button[data-city-scene="${destination}"]`)
+        .click();
       await page.waitForFunction((id) => window.streetPreview?.definition.id === id, destination);
       await ready(page);
-      assert.equal(
-        await page.evaluate(() => window.streetPreview.definition.id),
-        destination,
-        'the original route still opens the intended scene',
-      );
+      if (id === ids[0]) {
+        await mobile.locator('#street-submap-open').tap();
+        const directory = mobile.locator('#street-city-submap[open]');
+        // The tap must open the dialog before the helper can fall back to a click.
+        await directory.waitFor({ state: 'visible' });
+        await openCityDirectory(mobile);
+        const current = directory.locator('button[aria-current="location"]');
+        assert.equal(await current.getAttribute('data-city-scene'), id);
+        assert(await current.isDisabled());
+        const box = await directory.boundingBox();
+        const viewport = mobile.viewportSize();
+        const dimensions = JSON.stringify({ box, viewport });
+        assert(
+          box &&
+            box.x >= 0 &&
+            box.y >= 0 &&
+            box.x + box.width <= viewport.width &&
+            box.y + box.height <= viewport.height,
+          `${id}: mobile directory must fit inside the viewport: ${dimensions}`,
+        );
+        await directory.locator(`button[data-city-scene="${destination}"]`).tap();
+        await mobile.waitForFunction(
+          (id) => window.streetPreview?.definition.id === id,
+          destination,
+        );
+        await ready(mobile);
+      }
       results.push({
         id,
-        visited,
-        npcs: initial.people.filter((person) => person.npc).map((person) => person.id),
+        destination,
         image: initial.image,
         calls: initial.calls,
       });

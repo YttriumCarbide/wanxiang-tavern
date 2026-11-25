@@ -63,14 +63,27 @@ export function knownNpcSummonPool(library) {
 }
 
 /** Worldbook prose is editable; official identities and combat definitions stay code-owned. */
+const RETIRED_SUMMON_IDS = new Set(['lyria', 'morrow', 'serin', 'vesper', 'rook']);
+
+function hasIllustrationPortrait(entry) {
+  const portrait = String(entry?.combat?.portrait || entry?.portrait || '').trim();
+  return /\.(png|jpe?g|webp|avif)(?:$|\?)/i.test(portrait);
+}
+
 export function officialSummonPool(library, book, { developerMode = false } = {}) {
   const owned = new Set(library.characters.map((entry) => entry.id));
-  const ids = [...HEROES.map((hero) => hero.id), 'edith', ...Object.keys(OFFICIAL_VISITORS)];
+  const removed = new Set(book?.extensions?.wanxiang?.characterCleanup?.removedIds || []);
+  const ids = [
+    ...HEROES.map((hero) => hero.id).filter((id) => !RETIRED_SUMMON_IDS.has(id)),
+    'edith',
+    ...Object.keys(OFFICIAL_VISITORS),
+  ];
   if (developerMode) ids.push('pandora');
   return ids.flatMap((id) => {
+    if (RETIRED_SUMMON_IDS.has(id) || removed.has(id) || removed.has(`official-${id}`)) return [];
     if (!developerMode && Object.hasOwn(TOWN_GUESTS, id)) return [];
     const entry = officialCharacter(id);
-    if (owned.has(entry.id)) return [];
+    if (owned.has(entry.id) || removed.has(entry.id) || !hasIllustrationPortrait(entry)) return [];
     if (!developerMode && isQuestRecruit(library, entry.setting.name)) return [];
     const lore = Object.values(book?.entries || {}).find(
       (item) => item.extensions?.wanxiang?.characterId === entry.id,

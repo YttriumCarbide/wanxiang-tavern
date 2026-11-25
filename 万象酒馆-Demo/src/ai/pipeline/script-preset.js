@@ -8,7 +8,7 @@ import { OUTPUT_TAG } from './output-envelope.js';
 import { requestTokenReport } from './request-tokens.js';
 import { finalizeRequest } from './prompt-processing.js';
 import { playerIntentMessages, playerIntentText } from './player-intent.js';
-import { galActorListText } from '../gal-prompt.js';
+import { galSceneCastInstruction } from '../gal-prompt.js';
 
 /**
  * Composes preset + ID/keyword-triggered worldbook requests for script sub-modes.
@@ -160,7 +160,10 @@ export async function buildSubScriptRequest({
     { characterText: characters },
   );
   if (includeActors && party.length) {
-    messages.push({ role: 'system', content: galActorListText(input) });
+    messages.push({
+      role: 'system',
+      content: galSceneCastInstruction(input, 'script'),
+    });
   }
   if (input.socialQuest) messages.push({ role: 'system', content: brief });
   if (intentText) {

@@ -8,6 +8,9 @@ export function createDeparture(context) {
   const done = document.querySelector('#prepare-done');
   const close = document.querySelector('#prepare-close');
   const title = document.querySelector('#prepare-title');
+  const defaultTitle = title.textContent;
+  const defaultCloseMarkup = close.innerHTML;
+  const defaultCloseLabel = close.getAttribute('aria-label');
   const cancel = document.querySelector('#prepare-cancel-generation');
   const pendingRow = document.querySelector('#prepare-pending-actions');
   if (document.documentElement.dataset.gameLayout === 'mobile') {
@@ -62,8 +65,8 @@ export function createDeparture(context) {
     if (pendingRow) pendingRow.hidden = !pending;
     panel.dataset.pendingGeneration = pending ? 'true' : 'false';
     if (!selection && !pending) triggerReadyEffects();
-    const oldClose = close.innerHTML;
     close.textContent = '取消出发';
+    close.setAttribute('aria-label', close.textContent);
     panel.showModal();
     if (!selection) context.onboarding?.preparationOpened();
     let resolve;
@@ -108,13 +111,14 @@ export function createDeparture(context) {
         resetLeftExpand(panel);
         session.ai.formationLocked = false;
         guidance.hidden = true;
-        title.textContent = '战阵整备';
+        title.textContent = defaultTitle;
         done.textContent = '返回';
         done.disabled = false;
         cancel.hidden = true;
         if (pendingRow) pendingRow.hidden = true;
         panel.dataset.pendingGeneration = 'false';
-        close.innerHTML = oldClose;
+        close.innerHTML = defaultCloseMarkup;
+        close.setAttribute('aria-label', defaultCloseLabel);
         done.removeEventListener('click', confirm, { capture: true });
         active = null;
         if (pending) onCancel?.();
@@ -156,7 +160,7 @@ export function createDeparture(context) {
       context.shell.renderParty();
       ensureLeftExpandControl();
       resetLeftExpand(panelEl);
-      title.textContent = '外出战阵整备';
+      title.textContent = '外出整备';
       done.textContent = '确认同行';
       done.disabled = false;
       cancel.hidden = true;
@@ -168,7 +172,7 @@ export function createDeparture(context) {
         () => {
           clearReadyEffects();
           resetLeftExpand(panelEl);
-          title.textContent = '战阵整备';
+          title.textContent = defaultTitle;
           done.textContent = '返回';
           onDone?.();
         },

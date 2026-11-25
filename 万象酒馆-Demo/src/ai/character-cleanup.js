@@ -1,5 +1,31 @@
 export const CHARACTER_CLEANUP_REVISION = '2026-10-19-personas';
 
+export const RETIRED_OFFICIAL_DRAFT_IDS = Object.freeze([
+  'official-lyria',
+  'official-morrow',
+  'official-serin',
+  'official-vesper',
+  'official-rook',
+]);
+
+const RETIRED_OFFICIAL_DRAFT_SET = new Set(RETIRED_OFFICIAL_DRAFT_IDS);
+
+export function hasCampaignCharacterPortrait(entry) {
+  if (entry?.combat?.customPortrait || entry?.combat?.customStanding) return true;
+  const portrait = String(entry?.combat?.portrait || entry?.portrait || '').trim();
+  return /\.(png|jpe?g|webp|avif)(?:$|\?)/i.test(portrait);
+}
+
+export function isRetiredCampaignCharacter(entry, protagonistId = null) {
+  if (!entry || typeof entry.id !== 'string') return false;
+  if (entry.id === protagonistId) return false;
+  if (RETIRED_OFFICIAL_DRAFT_SET.has(entry.id)) return true;
+  if (entry.questRecruit === true || entry.source === 'official') return false;
+  const hasLore =
+    typeof entry.setting?.worldbook === 'string' && entry.setting.worldbook.trim().length > 0;
+  return !hasCampaignCharacterPortrait(entry) && !hasLore;
+}
+
 /** One requested cleanup; future summons with new IDs are unaffected. */
 export function cleanCharacterEntries(book) {
   const removed = [];

@@ -26,20 +26,20 @@
 - 新依赖必须更新npm锁文件；Python工具依赖位于其独立venv和冻结requirements中。
 
 
-## 多模型职能分工与 DeepSeek Flash 子 API 强制分流规范（GPT & Gemini 通用）
+## 多模型职能分工与渠道化 DeepSeek Flash 分流规范
 
-本项目由 **Gemini**、**GPT (Codex)** 与后台 **DeepSeek Flash (`deepseek-v4-1-flash-1017`)** 协同开发。所有主模型在每轮执行前**必须主动做分流检查，无需等待用户提醒，严禁因为“防御性编程”而由主模型硬抗机械苦力活**：
+本项目由 **Gemini / AGY**、**OpenAI 官方 Codex** 与后台 **DeepSeek Flash (`deepseek-v4-1-flash-1017`)** 协同开发。每轮先根据当前真实执行渠道判断分工，不依据仓库标题或模型自称推测。**仅 OpenAI 官方 Codex 与 AGY 渠道可调用 DeepSeek Flash；用户明确禁止、工具未授权或资料不宜外发时仍不得调用。其他模型渠道禁止使用 DeepSeek Flash；在工具与权限允许时，优先将可并行工作拆给写集互斥的子代理（总并发不超过 5，独立测试项目同时不超过 2），不为凑数量创建无效任务。**
 
 1. **主模型职责边界（严禁越界）**
    - **文案与世界观创作**（酒馆剧情、角色台词、卡牌／遗物 `flavorText` 风味文案）：**仅限 Gemini 主模型亲自撰写**。GPT 主模型与 DeepSeek 严禁创作或篡改正式风味文案（GPT 遇到需新增文案时，仅填结构字段或占位符，并提示交由 Gemini 撰写）。
    - **UI 视觉与动画审美**（`styles/` 样式排版、配色光影、动效表现）：优先由 **Gemini (`4h`／`4neon`)** 负责；**GPT (`6.2 sol`／`astar`)** 专注于 `engine/` 纯数据战斗引擎、状态机算法与 `tools/` 测试工具链。
 
-2. **DeepSeek Flash 强制主动触发阈值（命中任一条件时，第一步必须直接调用子工具，禁止主模型手写或硬读）**
+2. **DeepSeek Flash 合格渠道内的主动分流阈值（仅在上文允许且未被用户禁止的渠道使用；命中任一条件时优先直接调用子工具）**
    - **批量数据／配置落盘（≥ 40 行）**：凡是将文案草稿／策划规则转为 JSON／JS 配置表、批量补全卡牌／遗物／波次字段、生成单测 Mock 数据或重复样板代码预计达 40 行以上，**必须委托 DeepSeek Flash 直接生成并落盘**，主模型仅负责校验结果。
    - **长日志与大文件初筛（≥ 80 行）**：凡是 `node tools/test.mjs` 报错堆栈、构建日志或待排查数据文件超过 80 行，**必须先调 DeepSeek Flash 提炼故障摘要与行号**。
    - **机械性批处理**：批量补全 JSDoc 注释、机械字段重命名映射、格式标准化。
 
-3. **DeepSeek Flash 调用方式（按优先级自动选用，无需向用户请示）**
+3. **DeepSeek Flash 调用方式（仅限允许渠道；用户否决时停止，不重试）**
    - **方式 A（已挂载 MCP 工具时直调）**：
      - AGY (Gemini)：直接调用 `deepseek-worker` 的 `ds_file_worker`（文件到文件直写，最省 Token）或 `ds_ask`。
      - Codex (GPT)：直接调用已挂载的 DeepSeek Flash MCP 工具（或直接使用下方方式 B）。
@@ -59,7 +59,10 @@
      } | ConvertTo-Json -Compress | node "C:\Users\Lenovo\.gemini\config\mcp\deepseek-worker.mjs" --cli ds_ask --stdin
      ```
 
-4. **仓库内通用 AI 调用工具**
+4. **调用记录与用量**
+   - 交付时如实列出 DeepSeek 执行了什么、实际写入了哪些文件，以及工具返回的输入／输出 Token。工具没有提供 usage 时明确说明“未报告”；实际用量与节省估算分开，未估算就不报估算。不得将失败调用描述为完成。
+
+5. **仓库内通用 AI 调用工具**
    - 从仓库根目录运行 `node 万象酒馆-Demo/tools/ai-worker.mjs --cli ai_ask --stdin`，通过标准输入传入 `{"prompt":"…"}`。
    - 文件任务使用 `--cli ai_file_worker --stdin`，沿用 `instruction`、`input_files`、`output_file` 和 `json_mode`。仅传入任务所需且可发送到配置接口的文件。
    - 使用环境变量选择 Chat Completions 接口和模型。配置和调用示例见[开发规范](万象酒馆-Demo/开发规范.md#开发用-ai-调用工具)。需要由 DeepSeek Flash 处理的任务，使用此命令时仍须配置指定的 DeepSeek Flash 模型。

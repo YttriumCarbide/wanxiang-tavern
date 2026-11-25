@@ -8,6 +8,10 @@
   isolation: isolate;
   animation: rp-arrive 600ms ease both;
 }
+#rp-scene[data-leaving='true'] {
+  pointer-events: none;
+  animation: rp-depart 240ms ease-in both;
+}
 .rp-background {
   position: absolute;
   inset: -12px;
@@ -640,6 +644,10 @@ body.in-adventure.gal-playing :is(#ai-dialog, #generation-diagnostics)[open] {
   backdrop-filter: blur(8px);
   animation: rp-arrive 300ms ease both;
 }
+.rp-boss-ready[data-leaving='true'] {
+  pointer-events: none;
+  animation: rp-ready-depart 200ms ease-in both;
+}
 body.in-adventure:has(#gal-stage[data-workspace='adventure'][data-playing='true']) .rp-boss-ready {
   visibility: hidden;
 }
@@ -734,6 +742,22 @@ body.in-adventure #mode-label {
   }
   to {
     opacity: 1;
+  }
+}
+@keyframes rp-depart {
+  from {
+    opacity: var(--rp-depart-opacity, 1);
+  }
+  to {
+    opacity: 0;
+  }
+}
+@keyframes rp-ready-depart {
+  from {
+    opacity: var(--rp-ready-depart-opacity, 1);
+  }
+  to {
+    opacity: 0;
   }
 }
 @media (max-height: 500px), (pointer: coarse) and (max-width: 1100px) {
@@ -833,6 +857,7 @@ body.in-adventure #mode-label {
   }
 
   #rp-scene,
+  #rp-scene[data-leaving='true'],
   .rp-boss-ready,
   #rp-scene[data-intro='false'] :is(.rp-content, .rp-left-dock) {
     animation: none;

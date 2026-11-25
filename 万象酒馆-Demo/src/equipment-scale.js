@@ -2,7 +2,7 @@ import { combatScale } from './combat-scale.js';
 export const EQUIPMENT_STATS = Object.freeze({
   hp: '生命',
   mp: '法力',
-  attack: '普攻',
+  attack: '攻击力',
   skillDamage: '技能伤害',
   limit: '行动次数',
   manaCost: '耗蓝降低',
@@ -33,7 +33,7 @@ export const EQUIPMENT_QUALITIES = Object.freeze({
     allowLimit: false,
     powerScale: 0.85,
     ascendTo: 'uncommon',
-    ascendEtherBase: 12,
+    ascendGoldBase: 12,
   }),
   uncommon: Object.freeze({
     id: 'uncommon',
@@ -51,7 +51,7 @@ export const EQUIPMENT_QUALITIES = Object.freeze({
     allowLimit: false,
     powerScale: 1.0,
     ascendTo: 'rare',
-    ascendEtherBase: 28,
+    ascendGoldBase: 28,
   }),
   rare: Object.freeze({
     id: 'rare',
@@ -69,7 +69,7 @@ export const EQUIPMENT_QUALITIES = Object.freeze({
     allowLimit: false,
     powerScale: 1.2,
     ascendTo: 'epic',
-    ascendEtherBase: 60,
+    ascendGoldBase: 60,
   }),
   epic: Object.freeze({
     id: 'epic',
@@ -87,7 +87,7 @@ export const EQUIPMENT_QUALITIES = Object.freeze({
     allowLimit: true,
     powerScale: 1.45,
     ascendTo: 'legendary',
-    ascendEtherBase: 120,
+    ascendGoldBase: 120,
   }),
   legendary: Object.freeze({
     id: 'legendary',
@@ -105,7 +105,7 @@ export const EQUIPMENT_QUALITIES = Object.freeze({
     allowLimit: true,
     powerScale: 1.75,
     ascendTo: null,
-    ascendEtherBase: 0,
+    ascendGoldBase: 0,
   }),
 });
 

@@ -1,10 +1,16 @@
-import { CHAT_PLACES } from '../../chat.js';
+import { CHAT_PLACES, cityChatPlace } from '../../chat-places.js';
+import {
+  SCENE_ENVIRONMENT_END,
+  SCENE_ENVIRONMENT_START,
+  SCENE_ENVIRONMENT_TEXT_LIMIT,
+} from '../../scene-environment.js';
 import { composePromptPreset, presetSampling } from '../presets.js';
 import { scanWorldbooks, injectWorldbookMessages } from '../worldbook-scan.js';
 import { finalizeRequest } from './prompt-processing.js';
 import { presetOutputTransport, presetOutputWarnings } from '../preset-output.js';
+import { QUEST_LEAD_TYPES } from '../output-protocol.js';
 import { adviceTranscript } from '../advice.js';
-import { galInstruction, galActorListText } from '../gal-prompt.js';
+import { galInstruction, galSceneCastInstruction } from '../gal-prompt.js';
 import {
   adventureChatRules,
   adventureOutputBoundary,
@@ -22,7 +28,7 @@ export function chatInput(kind, input) {
   if (!['chat', 'quick-chat'].includes(kind)) throw Error('聊天接口类型无效');
   if (typeof input.text !== 'string' || !input.text.trim() || input.text.length > 10000)
     throw Error('发言需要1～10000字');
-  if (kind === 'chat' && !CHAT_PLACES[input.place]) throw Error('请先选择酒馆座位');
+  if (kind === 'chat' && !Object.hasOwn(CHAT_PLACES, input.place)) throw Error('请先选择交流地点');
   if (!Array.isArray(input.characters) || input.characters.length > 100)
     throw Error('角色列表无效');
   const history = Array.isArray(input.history) ? input.history : [];
@@ -63,6 +69,7 @@ export async function chatRequest(
 ) {
   if (kind !== 'chat') advice = null;
   const input = chatInput(kind, rawInput);
+  const cityPlace = kind === 'chat' ? cityChatPlace(input.place) : null;
   // Legacy world entries enabled for script are also useful to chat, except generation contracts.
   const books = structuredClone(worldInfo.books);
   const hasDiningEntry = books.some((book) =>
@@ -164,22 +171,22 @@ export async function chatRequest(
         : null;
   const rules =
     kind === 'chat'
-      ? '直接续写当前酒馆内的人物言语、行动与环境正文，沿用预设文风，可以使用HTML，不说明“正在聊天”、不解释界面、不写聊天总结。正文只放在唯一一组<wanxiang_output>与</wanxiang_output>内。随后在唯一一组<wanxiang_actions>与</wanxiang_actions>内输出JSON：{"affection":[{"id":"队友ID","delta":1}],"agreeToAdventure":[]}。affection中的id与agreeToAdventure中的每一项，都必须原样使用人物资料标明的内部id，不能填写角色姓名、昵称、站位或编造ID；正文仍自然称呼角色姓名，不展示内部id。根据本轮实际互动给出-5～5的好感增量（冒犯或伤害关系可扣分，没有变化时affection为空）。只有角色在正文中明确同意与玩家一起进入副本，才把其ID放入agreeToAdventure。指令只针对在场或本轮提及的已知角色，不含主角，不凭空替玩家作决定。'
+      ? '直接续写当前地点的人物言语、行动与环境正文，沿用预设文风，可以使用HTML，不说明“正在聊天”、不解释界面、不写聊天总结。正文只放在唯一一组<wanxiang_output>与</wanxiang_output>内。随后在唯一一组<wanxiang_actions>与</wanxiang_actions>内输出JSON：{"affection":[{"id":"队友ID","delta":1}],"agreeToAdventure":[]}。affection中的id与agreeToAdventure中的每一项，都必须原样使用人物资料标明的内部id，不能填写角色姓名、昵称、站位或编造ID；正文仍自然称呼角色姓名，不展示内部id。根据本轮实际互动给出-5～5的好感增量（冒犯或伤害关系可扣分，没有变化时affection为空）。只有角色在正文中明确同意与玩家一起进入副本，才把其ID放入agreeToAdventure。指令只针对在场或本轮提及的已知角色，不含主角，不凭空替玩家作决定。'
       : input.dialogueContext
         ? fixedCheck
           ? '这是外出旅途中的固定抉择事件。顺着玩家所选方案与系统既定判定结果直接演对手戏，在行动爆发处单独另起一行插入 [[DC_CHECK]] 并外附唯一一组 <wanxiang_dc>JSON</wanxiang_dc>，正文放在唯一一组<wanxiang_output>正文</wanxiang_output>标签内。'
           : input.dcContext?.mode === 'free'
             ? '这是外出旅途中的奇遇自由互动。顺着玩家本轮的言行与当前旅途遭遇，直接演对手戏并推进眼前的事件。仅当行动面临明显阻力或风险时，才自主决定发起 2D6 DC 检定（插入 [[DC_CHECK]] 并外附 <wanxiang_dc>）；日常互动可免检。正文放在唯一一组<wanxiang_output>正文</wanxiang_output>标签内。'
             : '这是外出旅途中的奇遇自由互动。顺着玩家本轮的言行与当前旅途遭遇，直接演对手戏并推进眼前的事件，不替玩家做后续决定，不擅自发放战斗数值奖励，也不进行DC检定（禁止输出 [[DC_CHECK]] 与 <wanxiang_dc>）。只回复唯一一组<wanxiang_output>正文</wanxiang_output>标签。'
-        : '这是当前战斗/剧情间隙的简短闲聊，不是后续剧本。只回复一组<wanxiang_output>正文</wanxiang_output>标签，不返回JSON。不得推进剧情或改变战斗。';
+        : '这是当前战斗/剧情间隙的简短闲聊，不是后续剧本。正文只放在唯一一组<wanxiang_output>与</wanxiang_output>内；除本轮明确启用的附录外，不返回JSON。不得推进剧情或改变战斗。';
   const leanTaskRule =
     kind === 'chat'
-      ? `【本轮模式：chat】\n${galActorListText(input)}`
+      ? '【本轮模式：chat】'
       : input.invitation
-        ? `【本轮模式：quick-chat / invitation】\n${galActorListText(input)}`
+        ? '【本轮模式：quick-chat / invitation】'
         : input.dialogueContext
-          ? `【本轮模式：quick-chat / overland】\n${galActorListText(input)}`
-          : `【本轮模式：quick-chat / quick】\n${galActorListText(input)}`;
+          ? '【本轮模式：quick-chat / overland】'
+          : '【本轮模式：quick-chat / quick】';
   const previousScript = String(input.previousScript || '').slice(0, 500000);
   const base = [
     {
@@ -332,14 +339,25 @@ export async function chatRequest(
       role: 'system',
       content: hasWorldbookChatTeaching
         ? kind === 'quick-chat' && input.adventure
-          ? `${adventureTurnTask(input.adventure, !!input.dialogueScenes?.length)}\n${galActorListText(input)}`
-          : leanTaskRule
+          ? `${adventureTurnTask(input.adventure, !!input.dialogueScenes?.length)}\n${galSceneCastInstruction(input, kind)}`
+          : `${leanTaskRule}\n${galSceneCastInstruction(input, kind)}`
         : (kind === 'quick-chat' && input.adventure
             ? adventureChatRules(input.adventure, !!input.dialogueScenes?.length)
             : rules) +
           '\n' +
           galInstruction(input, kind),
     });
+    if (cityPlace) {
+      const time = input.timeOfDay === 'day' ? '白天' : input.timeOfDay === 'night' ? '夜晚' : '';
+      messages.push({
+        role: 'system',
+        content:
+          `【城内交流环境开头】当前地点：${cityPlace.title}${time ? '（' + time + '）' : ''}。` +
+          `在唯一的 <wanxiang_output> 正文内，紧接开标签必须先写一组 ${SCENE_ENVIRONMENT_START}纯文本环境描写${SCENE_ENVIRONMENT_END}；两个环境标记原样输出，不在标记内填写地点名、ID 或其他参数。` +
+          `环境用两到四句具体的当下感官描写，不超过 ${SCENE_ENVIRONMENT_TEXT_LIMIT} 字，不放 Gal、HTML、图片或检定标记，不替玩家行动，不切换地点。` +
+          '闭合环境块后另起一行接本轮 Gal 对白或旁白，后续不再使用环境标记。原有 <wanxiang_actions> 仍在正文标签之外。',
+      });
+    }
     // Only actual retained conversation objects qualify, never assistant examples or world entries.
     const messageIndices = new Map(messages.map((message, index) => [message, index]));
     const retained = transcript
@@ -361,7 +379,12 @@ export async function chatRequest(
       messages.push({
         role: 'system',
         content:
-          '只有当本轮正文自然提到值得玩家亲自追查的特殊事件、地点或人物，并且已有具体可行动线索时，正文后可附至多一组<wanxiang_quest>{"title":"任务名","description":"给玩家看的具体介绍","hook":"本轮正文中的线索与后续悬念","type":"social|character|battle 三选一","level":1}</wanxiang_quest>。level 为1至99，按真实内容判断；普通寒暄、重复线索、无实质后果的跑腿一律省略。',
+          '【任务日志线索】这是一份独立的可选日志附录，既有动作、检定和冒险状态附录照各自规则输出。只有当本轮正文自然出现值得玩家亲自追查的事件，且已交代可行动的线索时，才在正文关闭标签之后附至多一组：\n' +
+          '<wanxiang_quest>{"title":"任务名","description":"任务日志简介","type":"social","level":1}</wanxiang_quest>\n' +
+          '只填任务日志面板展示的四个字段。title 用凝练的委托标题，最多 50 个字符；description 用简短纪事交代本轮已出现的人物、地点、缘由和可追查线索，最多 400 个字符，避免保存时截断；如果剧情已点明下一步，可以简述其方向，不替玩家作决定。\n' +
+          '标题和简介可借鉴《上古卷轴》任务日志克制、具体的口吻，不套用原作文案，不写宣传语，不用 Markdown 或 Gal 标记。文风仅供写作参考，不作为程序拒收条件。\n' +
+          `type 填 ${QUEST_LEAD_TYPES.join('、')}（依次为社交、人物、战斗）；level 填 1 至 99 的整数，按实际风险推荐。\n` +
+          '任务目标、完成条件、进度、结算和奖励由游戏掌控；不要另填这些字段，也不要在简介里宣布任务已完成。普通寒暄、重复线索或无实质后果的跑腿不附任务。',
       });
     if (input.questNegotiation)
       messages.push({

@@ -7,10 +7,13 @@ export const RUINS_ROUTES = Object.freeze([
     name: '界隙遗迹初探',
     boss: 'bossGate',
     battles: [
-      { enemyIds: ['mossSlime'], reason: '残垣石缝中的苔团，用于先手、行动次数和换位躲避教学。' },
+      {
+        enemyIds: ['mossSlime'],
+        reason: '残垣石缝中的苔藓史莱姆，用于先手、行动次数和换位躲避教学。',
+      },
       {
         enemyIds: ['pebble', 'patrolHound'],
-        reason: '外围石灵与巡游猎犬；石灵护甲有破绽，用于易伤增伤教学。',
+        reason: '外围魔灵与巡游猎犬；魔灵护甲有破绽，用于易伤增伤教学。',
       },
       {
         enemyIds: ['warden'],
@@ -18,7 +21,7 @@ export const RUINS_ROUTES = Object.freeze([
       },
       {
         enemyIds: ['patrolHound', 'pebble'],
-        reason: '壁画附近的猎犬与石灵伏击，教学同时查看两名敌人的意图。',
+        reason: '壁画附近的猎犬与魔灵伏击，教学同时查看两名敌人的意图。',
       },
       {
         enemyIds: ['bossGate'],
@@ -88,7 +91,7 @@ export const RUINS_ROUTES = Object.freeze([
     battles: [
       {
         enemyIds: ['stoneBeetle', 'brassSeeker'],
-        reason: '击碎空心地板进入地下后，先遭遇甲虫与黄铜巡察机。',
+        reason: '击碎空心地板进入地下后，先遭遇甲虫与黄铜机兵。',
       },
       {
         enemyIds: ['stoneBeetle', 'pebble'],

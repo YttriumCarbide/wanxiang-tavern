@@ -100,7 +100,7 @@ export async function smoke({ browser, baseURL, output, settingsChecked, environ
     assert(clickedSkills.includes('attack'));
     assert.equal(await page.evaluate(() => demo.getPlan().length), 0);
     await page.locator('[data-unit="sprout"]').click();
-    assert((await page.locator('#drag-menu > span').textContent()).includes('迷路小蕈'));
+    assert((await page.locator('#drag-menu > span').textContent()).includes('腐木魔菇'));
     await page.locator('#drag-menu [data-drop-skill="attack"]').click();
     assert.deepEqual(
       await page.evaluate(() => demo.getPlan().map(({ actor, target }) => ({ actor, target }))),

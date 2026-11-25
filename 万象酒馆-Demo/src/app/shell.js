@@ -140,6 +140,7 @@ export function createShell(context) {
     if (event.origin !== location.origin || (event.source !== innWin && event.source !== atlasWin))
       return;
     if (event.data?.type === 'tavern-workshop') void context.workshop.open();
+    if (event.data?.type === 'tavern-vending') context.shop.open({ vendingMachine: true });
     if (['street-map-state', 'scene-ready'].includes(event.data?.type)) {
       const innOpen = Boolean(
         $('#inn-frame iframe')?.contentDocument?.getElementById('street-map')?.open,

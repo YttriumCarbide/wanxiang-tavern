@@ -91,7 +91,7 @@ export const COMMON_ENEMIES = [
   // ---- 盗贼（Bandits）----
   commonMob(
     'banditCutthroat',
-    '荒路截道贼',
+    '截道剑士',
     '盗贼团',
     'shadow-strike',
     '#9e6b56',
@@ -105,7 +105,7 @@ export const COMMON_ENEMIES = [
   ),
   commonMob(
     'banditPoacher',
-    '黑林偷猎弓手',
+    '偷猎弓手',
     '盗贼团',
     'ballista-bolt',
     '#728a5c',
@@ -203,7 +203,7 @@ export const COMMON_ENEMIES = [
   ),
   commonMob(
     'goblinShaman',
-    '哥布林骨杖祭司',
+    '骨杖祭司',
     '哥布林',
     'specter-wail',
     '#629c78',
@@ -288,7 +288,7 @@ export const COMMON_ENEMIES = [
   ),
   commonMob(
     'erosionHound',
-    '裂隙蚀鳞猎犬',
+    '蚀鳞猎犬',
     '蚀鳞裂隙',
     'patrol-pounce',
     '#8c4862',

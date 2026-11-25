@@ -44,7 +44,7 @@ export async function diskStorageChecks({ browser, baseURL, output }) {
     await first.waitForFunction(() => window.demo?.getLibrary().inventory.gold === 326);
     assert.equal(await first.locator('meta[name="wanxiang-disk-storage"]').count(), 1);
     await first.locator('[data-daily="outing"]').click();
-    await first.locator('[data-tavern-exit="street"]').click();
+    await first.locator('[data-tavern-exit="city-center"]').click();
     const saved = first.waitForResponse((response) => {
       if (response.url() !== baseURL + '/__demo/storage' || response.request().method() !== 'POST')
         return false;
@@ -66,7 +66,9 @@ export async function diskStorageChecks({ browser, baseURL, output }) {
   const state = await response.json();
   assert(!state.entries.some(([key]) => key === 'api.config'), 'browser API settings stay private');
   const file = path.join(state.directory, '当前存档.json');
-  assert.equal(path.dirname(state.directory), path.resolve(output, '..'));
+  const isolatedReportDirectory = path.resolve(output, '..');
+  assert.equal(path.dirname(path.resolve(state.directory)), isolatedReportDirectory);
+  assert(path.basename(state.directory).startsWith('disk-saves-'));
   const snapshot = JSON.parse(await readFile(file, 'utf8'));
   assert(
     JSON.parse(new Map(snapshot.records).get(libraryKey)).journeyActivities.some(

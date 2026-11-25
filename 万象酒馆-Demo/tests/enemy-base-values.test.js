@@ -69,6 +69,7 @@ test('new map API values remain exact in references, saves and combat, with grow
   const tiered = normalizeEnemy({
     id: 'enemy-tier-sample',
     name: '档位样本魔偶',
+    category: 'other',
     portrait: validPortrait,
     attackStyle: 'stone-slam',
     tier: 'high',
@@ -113,6 +114,7 @@ test('new map API values remain exact in references, saves and combat, with grow
       normalizeEnemy({
         id: 'enemy-tier-bad-hp',
         name: '偷填血量',
+        category: 'other',
         portrait: validPortrait,
         attackStyle: 'stone-slam',
         tier: 'medium',
@@ -127,6 +129,7 @@ test('new map API values remain exact in references, saves and combat, with grow
       normalizeEnemy({
         id: 'enemy-tier-bad-val',
         name: '偷填伤害',
+        category: 'other',
         portrait: validPortrait,
         attackStyle: 'stone-slam',
         tier: 'medium',
@@ -142,6 +145,7 @@ test('new map API values remain exact in references, saves and combat, with grow
       normalizeEnemy({
         id: 'enemy-tier-overload',
         name: '偷带超限',
+        category: 'other',
         portrait: validPortrait,
         attackStyle: 'stone-slam',
         tier: 'medium',

@@ -552,13 +552,23 @@ export async function generationChecks({ browser, baseURL, output }) {
       const theater = page.locator('#chapter-theater');
       await theater.waitFor({ state: 'visible', timeout: 15000 });
       if (expectedText) assert((await theater.textContent()).includes(expectedText));
-      const button = theater.locator('#chapter-theater-continue');
-      for (let click = 0; click < 3; click++) {
+      const hitTargetInsideTheater = await page.evaluate(() => {
+        const th = document.querySelector('#chapter-theater');
+        const el = document.elementFromPoint(innerWidth / 2, innerHeight / 2);
+        return Boolean(th && el && th.contains(el));
+      });
+      assert.equal(
+        hitTargetInsideTheater,
+        true,
+        'center screen click during chapter theater must not be blocked by loading veil',
+      );
+      const viewport = theater.locator('.chapter-theater-viewport');
+      for (let click = 0; click < 8; click++) {
         const closed = await theater.evaluate(
           (el) => el.hidden || el.classList.contains('is-closing'),
         );
         if (closed) break;
-        await button.click();
+        await viewport.click({ force: false });
         await page.waitForTimeout(80);
       }
       await theater.waitFor({ state: 'hidden', timeout: 5000 });

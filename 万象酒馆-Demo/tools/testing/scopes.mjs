@@ -23,6 +23,7 @@ export const allScopes = [
   'tavern-visitors',
   'rp-layout',
   'dc-motion',
+  'dialog-motion',
   'skill-menus',
   'adventure',
   'ring-gallery',
@@ -34,6 +35,7 @@ export const allScopes = [
   'enemy-progression',
   'mobile',
   'android-ui',
+  'android-apk',
   'forest',
   'workshop',
   'universal-enemies',
@@ -121,7 +123,7 @@ export function selectScopes(args) {
         scopes.add('developer-tools');
       else if (/\.(cmd|ps1)$/.test(file)) scopes.add('launcher');
       else if (
-        /(?:^|\/)(?:tests\/browser\/ring-acquisition\.mjs|src\/app\/ring-acquisition(?:-stage)?\.js|styles\/ring-acquisition\.css)$/.test(
+        /(?:^|\/)(?:tests\/browser\/ring-acquisition\.mjs|src\/app\/(?:ring-feedback|emblems|playback)\.js|styles\/ring-feedback\.css)$/.test(
           file,
         )
       )

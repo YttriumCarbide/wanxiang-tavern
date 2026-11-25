@@ -149,6 +149,20 @@ export function mountInput(context) {
 
   let editingHeroId = null;
 
+  function restorePreparationOpenerFocus() {
+    const opener = $('#party-toggle');
+    if (!opener?.isConnected || opener.disabled || opener.hidden || !opener.getClientRects().length)
+      return;
+    opener.focus({ preventScroll: true });
+  }
+
+  function closePreparation() {
+    const panel = $('#party-panel');
+    if (!panel.open) return;
+    panel.close();
+    restorePreparationOpenerFocus();
+  }
+
   context.events.on($('#party-toggle'), 'click', () => {
     if (session.runtime.mode !== 'inn' || (session.ai.busy && !session.ai.departureParty)) {
       context.shell.toast(
@@ -159,7 +173,7 @@ export function mountInput(context) {
       return;
     }
     context.shell.renderParty();
-    if ($('#party-panel').open) $('#party-panel').close();
+    if ($('#party-panel').open) closePreparation();
     else $('#party-panel').showModal();
   });
 
@@ -214,7 +228,12 @@ export function mountInput(context) {
   });
 
   for (const id of ['prepare-close', 'prepare-done'])
-    context.events.on($('#' + id), 'click', () => $('#party-panel').close());
+    context.events.on($('#' + id), 'click', closePreparation);
+  context.events.on($('#party-panel'), 'cancel', (event) => {
+    event.preventDefault();
+    if (event.currentTarget.dataset.pendingGeneration === 'true') return;
+    closePreparation();
+  });
   context.events.on($('#party-panel'), 'keydown', (e) => {
     if (e.key === 'Enter' || e.key === ' ') {
       const editWrap = e.target.closest('[data-edit-portrait]');

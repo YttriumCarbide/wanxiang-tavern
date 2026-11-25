@@ -28,7 +28,7 @@ export const EXTRA_ENEMIES = [
   {
     id: 'cinderImp',
     attackStyle: 'cinder-spark',
-    name: '灰炉小偶',
+    name: '灰炉机兵',
     title: '铸坊 / 余烬',
     color: '#e4b078',
     portrait: 'cinder-imp',
@@ -174,7 +174,7 @@ export const RUINS_ADVERSARIES = [
   {
     id: 'viperShadow',
     attackStyle: 'viper-fang',
-    name: '蛇印噬灵蛇',
+    name: '噬灵巨蛇',
     title: '断崖 / 幽绿剧毒',
     color: '#599c73',
     portrait: 'viper-shadow',
@@ -207,7 +207,7 @@ export const RUINS_ADVERSARIES = [
   {
     id: 'raptorStorm',
     attackStyle: 'storm-dive',
-    name: '鸟印裂风怪鸟',
+    name: '裂风怪鸟',
     title: '断崖 / 疾风俯冲',
     color: '#6c9bb5',
     portrait: 'raptor-storm',
@@ -280,7 +280,7 @@ export const RUINS_ADVERSARIES = [
   {
     id: 'stoneBeetle',
     attackStyle: 'beetle-burrow',
-    name: '坑道石甲虫',
+    name: '坑道甲虫',
     title: '沉坑 / 坚甲震地',
     color: '#739466',
     portrait: 'stone-beetle',
@@ -308,7 +308,7 @@ export const RUINS_ADVERSARIES = [
   {
     id: 'brassSeeker',
     attackStyle: 'seeker-pulse',
-    name: '黄铜巡察机',
+    name: '黄铜机兵',
     title: '沉坑 / 激光充能',
     color: '#c79848',
     portrait: 'brass-seeker',
@@ -382,7 +382,7 @@ export const RUINS_ADVERSARIES = [
   {
     id: 'tombBeetle',
     attackStyle: 'tomb-flare',
-    name: '墓室金甲虫',
+    name: '墓室甲虫',
     title: '墓室 / 炽烈金芒',
     color: '#b8923d',
     portrait: 'tomb-beetle',
@@ -449,7 +449,7 @@ export const RUINS_ADVERSARIES = [
   {
     id: 'cultistSpecter',
     attackStyle: 'specter-wail',
-    name: '祭坛侍僧残魂',
+    name: '祭魂魔灵',
     title: '墓室 / 晦暗咒文',
     color: '#9a61b3',
     portrait: 'cultist-specter',
@@ -479,7 +479,7 @@ export const RUINS_ADVERSARIES = [
   {
     id: 'blackOoze',
     attackStyle: 'ooze-splash',
-    name: '黑液幼体',
+    name: '黑液史莱姆',
     title: '诅咒 / 腐蚀滴落',
     color: '#6c4b8a',
     portrait: 'black-ooze',

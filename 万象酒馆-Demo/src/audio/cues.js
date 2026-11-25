@@ -271,6 +271,15 @@ export const SOUND_CUES = {
 
 /** Small procedural cues for the tavern shift and chapter theater. They do not replace combat samples. */
 export const SERVICE_CUES = {
+  'ring-arrival': [
+    ['sine', 720, 1680, 0.33, 0.065],
+    ['triangle', 1110, 1660, 0.28, 0.045, 0.035],
+  ],
+  'ring-charge-full': [
+    ['sine', 523, 1047, 0.4, 0.07],
+    ['triangle', 784, 1568, 0.34, 0.04, 0.05],
+    ['sine', 1318, 1318, 0.34, 0.035, 0.1],
+  ],
   'theater-seal': [
     ['sine', 130, 58, 0.28, 0.14],
     ['noise', 0, 0, 0.12, 0.09, 0, 520],

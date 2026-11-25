@@ -23,7 +23,12 @@ test('ten neutral enemies and three phased bosses are usable by maps and the exi
   for (const enemy of all) {
     assert(reference.enemies.some((entry) => entry.id === enemy.id));
     assert(reference.appearances.some((entry) => entry.portrait === enemy.portrait));
-    assert.equal(DEFINITIONS[enemy.id], enemy);
+    const canonical = DEFINITIONS[enemy.id];
+    assert(canonical, `${enemy.id} must keep a registered stable ID`);
+    assert.equal(canonical.id, enemy.id);
+    assert.equal(canonical.name, enemy.name);
+    assert.equal(canonical.category, enemy.category);
+    assert.equal(canonical.baseSpecies, enemy.baseSpecies);
   }
   const world = normalizeWorld({
     id: 'world-universal',

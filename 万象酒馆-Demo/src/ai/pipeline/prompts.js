@@ -25,7 +25,7 @@ import {
 } from '../../content/regions.js';
 import { presetOutputTransport, outputToolRequest } from '../preset-output.js';
 import { requireNpcInteraction } from '../../npc-interaction.js';
-import { galInstruction, galActorListText } from '../gal-prompt.js';
+import { galInstruction, galSceneCastInstruction } from '../gal-prompt.js';
 import { currentEncounterSpec } from '../../expedition.js';
 import { ADVENTURE_NODE_TYPES } from '../../adventure/definition.js';
 import { storyRingReward } from '../../emblem-progression.js';
@@ -470,7 +470,7 @@ export async function generationRequest(kind, input, source, options = {}) {
       ) &&
       scan?.entries.some((entry) => entry.extensions?.wanxiang?.generationRule === 'script-plot');
     const baseText = hasWorldbookScriptTeaching
-      ? galActorListText(input)
+      ? galSceneCastInstruction(input, kind)
       : galInstruction(input, kind) +
         (intentText ? '\n把玩家补充的意图用作可以尝试的行动或对话，保留玩家选择和实际结果。' : '');
     messages.splice(boundary < 0 ? messages.length : boundary, 0, {

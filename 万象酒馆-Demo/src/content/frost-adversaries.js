@@ -52,7 +52,7 @@ function boss(
 export const FROST_ENEMIES = [
   enemy(
     'rustMiner',
-    '锈蚀采矿机',
+    '锈蚀机兵',
     84,
     2,
     'brass-seeker',
@@ -75,7 +75,7 @@ export const FROST_ENEMIES = [
   ),
   enemy(
     'railSpider',
-    '轨行蜘蛛',
+    '轨行机兵',
     76,
     4,
     'facet-skitter',
@@ -153,7 +153,7 @@ export const FROST_ENEMIES = [
   ),
   enemy(
     'shardSprite',
-    '游离晶簇',
+    '晶簇魔灵',
     78,
     2,
     'rift-mote',
@@ -189,7 +189,7 @@ export const FROST_ENEMIES = [
   },
   enemy(
     'partsCarrier',
-    '偏航搬运机',
+    '偏航机兵',
     92,
     2,
     'root-hauler',
@@ -204,7 +204,7 @@ export const FROST_ENEMIES = [
   ),
   enemy(
     'lostWelder',
-    '无主焊工',
+    '无主机兵',
     84,
     3,
     'hollow-sentry',
@@ -262,7 +262,7 @@ export const FROST_ENEMIES = [
   },
   enemy(
     'scrapHound',
-    '废铁巡猎机',
+    '废铁机兵',
     80,
     4,
     'patrol-hound',
@@ -272,7 +272,7 @@ export const FROST_ENEMIES = [
   ),
   enemy(
     'sentryDrone',
-    '裂镜侦察机',
+    '裂镜机兵',
     68,
     4,
     'moon-eye',
@@ -282,7 +282,7 @@ export const FROST_ENEMIES = [
   ),
   enemy(
     'conduitWisp',
-    '导管晶灵',
+    '导管魔灵',
     74,
     3,
     'returning-core',

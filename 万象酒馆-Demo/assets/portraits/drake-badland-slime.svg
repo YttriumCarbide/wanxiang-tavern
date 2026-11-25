@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="600" height="900" viewBox="0 0 256 384" data-art-style="isometric-voxel-v3"><title>荒地史莱姆（龙化）</title>
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="900" viewBox="0 0 256 384" data-art-style="isometric-voxel-v3"><title>龙化史莱姆</title>
 <defs><radialGradient id="chamber" cx="50%" cy="54%" r="68%"><stop stop-color="#836d3c"/><stop offset="1" stop-color="#142428"/></radialGradient></defs>
 <path fill="url(#chamber)" d="M0 0h256v384H0z"/>
 <ellipse cx="128" cy="313.1" rx="94.1" ry="10" fill="#09171b" opacity=".5"/>

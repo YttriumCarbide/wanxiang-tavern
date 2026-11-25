@@ -42,6 +42,7 @@ import {
 } from './overland-request.js';
 import { requestMemoryBooks, scanScenarioWorldbooks } from '../journey-memory-worldbook.js';
 import { buildSubScriptRequest } from './script-preset.js';
+import { galSceneCastInstruction } from '../gal-prompt.js';
 import { journeyContinuityMessage } from '../../memory.js';
 
 function selectScriptMode(kind, input) {
@@ -128,6 +129,7 @@ export function createAiPipeline({
             ...journeyContinuityMessage(input),
             ...scanScenarioWorldbooks(input, countTokens, worldInfo),
             { role: 'system', content: input.brief },
+            { role: 'system', content: galSceneCastInstruction(input, kind) },
             { role: 'user', content: JSON.stringify(input.socialQuest) },
           ],
           transport: { format: 'tagged-json', tag: 'wanxiang_output' },
@@ -276,7 +278,7 @@ export function createAiPipeline({
       const raw = result.rawContent || result.content;
       let invitation;
       try {
-        invitation = invitationResponse(result.content);
+        invitation = invitationResponse(result.content, input.invitation);
       } catch (failure) {
         failure.diagnostic ||= generationDiagnostic(
           kind,

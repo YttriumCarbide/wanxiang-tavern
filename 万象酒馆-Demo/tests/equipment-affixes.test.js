@@ -14,6 +14,8 @@ import {
   reforgeEquipment,
   temperEquipment,
   ascendEquipment,
+  blacksmithSaleGold,
+  sellEquipmentToBlacksmith,
   dismantleEquipment,
   dismantleEther,
   restoreEquipment,
@@ -197,8 +199,9 @@ test('dismantling cannot mint ether by repeating purchase and investment is part
   assert.equal(pure, 40, 'tracked investment includes purchase and upgrade payments');
 });
 
-test('failed materialization never consumes reforge, temper or ascend ether', () => {
+test('failed materialization never consumes reforge, temper or ascend gold', () => {
   const library = prepared();
+  library.inventory.gold = 1000;
   library.characters[0].growth = { ...library.characters[0].growth, level: 10 };
 
   const blueprint = library.equipment.catalog.find((item) => item.id === 't-weapon');
@@ -224,12 +227,32 @@ test('failed materialization never consumes reforge, temper or ascend ether', ()
     () => ascendEquipment(library, 'owned-w', 1),
   ];
   for (const operation of operations) {
-    const etherBefore = library.inventory.ether;
+    const inventoryBefore = structuredClone(library.inventory);
     const ownedBefore = JSON.stringify(owned);
-    assert.throws(operation);
-    assert.equal(library.inventory.ether, etherBefore);
+    assert.throws(operation, /条件/);
+    assert.deepEqual(library.inventory, inventoryBefore);
     assert.equal(JSON.stringify(owned), ownedBefore);
   }
+});
+
+test('blacksmith sales settle once and preserve items when payment cannot fit', () => {
+  const library = prepared();
+  const weapon = library.equipment.catalog[0];
+  const member = library.characters[0];
+  const ether = library.inventory.ether;
+  const price = blacksmithSaleGold(weapon);
+  assert.equal(price, Math.floor(weapon.price * 0.6));
+  equip(library, member.id, 0, 'owned-w');
+  assert.throws(() => sellEquipmentToBlacksmith(library, 'owned-w'), /穿戴/);
+  equip(library, member.id, 0, '');
+  library.inventory.gold = 999999999 - price + 1;
+  assert.throws(() => sellEquipmentToBlacksmith(library, 'owned-w'), /上限/);
+  assert(library.equipment.owned.some((item) => item.id === 'owned-w'));
+  library.inventory.gold--;
+  assert.equal(sellEquipmentToBlacksmith(library, 'owned-w'), price);
+  assert.equal(library.inventory.gold, 999999999);
+  assert.equal(library.inventory.ether, ether);
+  assert.throws(() => sellEquipmentToBlacksmith(library, 'owned-w'), /未持有/);
 });
 
 test('single-item views include shared affix stats and gem text without duplicating threshold passives', () => {

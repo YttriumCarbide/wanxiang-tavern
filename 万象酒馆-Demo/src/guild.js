@@ -1,6 +1,6 @@
 import { IMPERIAL_DUNGEONS } from './content/imperial-network.js';
 import { REGIONS } from './content/regions.js';
-import { ITEMS, restoreBag } from './content/items.js';
+import { createRng } from './equipment-scale.js';
 import { createBountyQuest } from './tavern-quests.js';
 import { LEARNABLE_SKILLS, LEARNABLE_SKILL_CATEGORIES } from './content/learnable-skills.js';
 import { learnUniversalSkill, restoreLearnedSkills } from './learnable-skills.js';
@@ -122,53 +122,6 @@ export const GUILD_BOUNTIES = Object.freeze([
   }),
 ]);
 
-export const GUILD_SUPPLIES = Object.freeze([
-  Object.freeze({
-    id: 'supply-hp',
-    kind: 'item',
-    itemId: 'health-potion',
-    qty: 1,
-    price: 20,
-    name: ITEMS['health-potion'].name,
-    desc: ITEMS['health-potion'].text,
-  }),
-  Object.freeze({
-    id: 'supply-mp',
-    kind: 'item',
-    itemId: 'mana-potion',
-    qty: 1,
-    price: 20,
-    name: ITEMS['mana-potion'].name,
-    desc: ITEMS['mana-potion'].text,
-  }),
-  Object.freeze({
-    id: 'supply-fine-hp',
-    kind: 'item',
-    itemId: 'fine-health-potion',
-    qty: 1,
-    price: 40,
-    name: ITEMS['fine-health-potion'].name,
-    desc: ITEMS['fine-health-potion'].text,
-  }),
-  Object.freeze({
-    id: 'supply-str',
-    kind: 'item',
-    itemId: 'strength-potion',
-    qty: 1,
-    price: 30,
-    name: ITEMS['strength-potion'].name,
-    desc: ITEMS['strength-potion'].text,
-  }),
-  Object.freeze({
-    id: 'supply-ether',
-    kind: 'ether',
-    qty: 20,
-    price: 85,
-    name: '封存以太晶瓶',
-    desc: '立即补充 20 点以太储备，用于酒馆工坊或角色突破。',
-  }),
-]);
-
 export const GUILD_TRIALS = Object.freeze([
   Object.freeze({
     id: 'trial-novice',
@@ -248,32 +201,6 @@ export function guildRankInfo(merit = 0) {
   return { current, next, currentMerit, pct };
 }
 
-export function supplyCostForLibrary(library, supply) {
-  const rank = guildRankInfo(library?.guild?.merit || 0).current;
-  return Math.max(10, Math.round(supply.price * (1 - rank.discount)));
-}
-
-export function buyGuildSupply(library, supplyId) {
-  if (!library) return { ok: false, reason: '存档未就绪' };
-  const supply = GUILD_SUPPLIES.find((entry) => entry.id === supplyId);
-  if (!supply) return { ok: false, reason: '补给品不存在' };
-  const cost = supplyCostForLibrary(library, supply);
-  const gold = library.inventory?.gold || 0;
-  if (gold < cost) return { ok: false, reason: `金币不足（需要 ${cost} 金币）` };
-  library.inventory.gold -= cost;
-  if (supply.kind === 'item') {
-    library.inventory.items = restoreBag(library.inventory.items);
-    library.inventory.items[supply.itemId] = Math.min(
-      9999,
-      (library.inventory.items[supply.itemId] || 0) + supply.qty,
-    );
-    library.inventory.bagUnlocked = true;
-  } else if (supply.kind === 'ether') {
-    library.inventory.ether = Math.min(999999999, (library.inventory.ether || 0) + supply.qty);
-  }
-  return { ok: true, cost, supply };
-}
-
 export function guildIntelList(library) {
   const unlocked = new Set(library?.guild?.unlockedIntel || []);
   const visited = new Set(library?.unlockedDungeons || []);
@@ -316,14 +243,16 @@ export function unlockGuildIntel(library, dungeonId) {
 
 export function acceptGuildBounty(library, bountyId) {
   if (!library) return { ok: false, reason: '存档未就绪' };
-  const spec = GUILD_BOUNTIES.find((entry) => entry.id === bountyId);
-  if (!spec) return { ok: false, reason: '悬赏令不存在' };
+  const spec = guildBountyBoard(library).find((entry) => entry.id === bountyId);
+  if (!spec) return { ok: false, reason: '这张悬赏未张贴在当前告示板上' };
   const quests = (library.tavernQuests ||= []);
   const existing = quests.find((entry) => entry.bountyId === spec.id);
   if (existing && existing.status === 'active') {
     return { ok: false, reason: '该悬赏已在委托名录中' };
   }
   const quest = createBountyQuest(spec);
+  for (const entry of quests) entry.tracked = false;
+  quest.tracked = true;
   if (existing && existing.status === 'completed') {
     const idx = quests.indexOf(existing);
     quests[idx] = quest;
@@ -331,6 +260,34 @@ export function acceptGuildBounty(library, bountyId) {
     quests.push(quest);
   }
   return { ok: true, quest };
+}
+
+/** Read-only daily snapshot; only accepting a posted notice enqueues a bounty in the journal. */
+export function guildBountyBoard(library) {
+  const day = Math.max(1, Math.trunc(Number(library?.daily?.day) || 1));
+  const current = new Set(
+    (library?.tavernQuests || [])
+      .filter((quest) => quest.status === 'active')
+      .map((quest) => quest.bountyId),
+  );
+  const regular = GUILD_BOUNTIES.filter((bounty) => bounty.rank === 'E');
+  const rotating = GUILD_BOUNTIES.filter((bounty) => bounty.rank !== 'E');
+  const random = createRng(`guild-board:${day}`);
+  const shuffle = (bounties) =>
+    bounties
+      .map((bounty) => ({ bounty, order: random() }))
+      .sort((a, b) => a.order - b.order)
+      .map(({ bounty }) => bounty);
+  // Use the same game-day seed at render and accept time; leave room for next day’s notices.
+  const count = Math.min(
+    rotating.length,
+    1 + Math.floor(random() * Math.max(1, rotating.length - 1)),
+  );
+  const posted = [...regular, ...shuffle(rotating).slice(0, count)];
+  const active = GUILD_BOUNTIES.filter(
+    (bounty) => current.has(bounty.id) && !posted.includes(bounty),
+  );
+  return shuffle([...posted, ...active]);
 }
 
 export function isBountyReadyToClaim(quest) {
@@ -439,7 +396,7 @@ export function buyGuildSkillManual(library, skillId) {
   library.learnedSkills = restoreLearnedSkills(library.learnedSkills);
   const item = guildSkillCatalog(library).find((entry) => entry.id === skillId);
   if (!item) return { ok: false, reason: '未知的战技秘籍' };
-  if (item.learned) return { ok: false, reason: '已研习该通用战技' };
+  if (item.learned) return { ok: false, reason: '已研习该特技' };
   if (!item.unlockedByMerit) {
     return { ok: false, reason: `需要公会功勋达到 ${item.meritReq} 后方可研习` };
   }

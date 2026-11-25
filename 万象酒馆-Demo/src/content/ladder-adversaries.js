@@ -89,7 +89,7 @@ function ladderBoss(
 export const LADDER_ENEMIES = [
   ladderMob(
     'drakeBadlandSlime',
-    '荒地史莱姆（龙化）',
+    '龙化史莱姆',
     '天梯外围',
     'slime-bounce',
     '#c9a85c',
@@ -120,7 +120,7 @@ export const LADDER_ENEMIES = [
   ),
   ladderMob(
     'drakeRattlesnake',
-    '荒地响尾蛇（龙化）',
+    '龙铃巨蛇',
     '天梯外围',
     'viper-fang',
     '#b59a5b',
@@ -138,7 +138,7 @@ export const LADDER_ENEMIES = [
   ),
   ladderMob(
     'drakeBadlandFalcon',
-    '荒地猎鹰（龙化）',
+    '龙翎怪鸟',
     '天梯外围',
     'storm-dive',
     '#7aa2c4',
@@ -182,7 +182,7 @@ export const LADDER_ENEMIES = [
   ),
   ladderMob(
     'drakeCrystalBeetle',
-    '龙晶背甲虫',
+    '龙晶甲虫',
     '攀升通道',
     'crystal-ram',
     '#8ec8d8',
@@ -197,7 +197,7 @@ export const LADDER_ENEMIES = [
   ),
   ladderMob(
     'pureCreationElemental',
-    '纯净创生元素',
+    '创生魔灵',
     '攀升通道',
     'seeker-pulse',
     '#e8dcb5',
@@ -214,7 +214,7 @@ export const LADDER_ENEMIES = [
   ),
   ladderMob(
     'pureDestructionElemental',
-    '纯净毁灭元素',
+    '毁灭魔灵',
     '攀升通道',
     'ember-bolt',
     '#8f56a8',

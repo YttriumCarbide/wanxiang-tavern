@@ -10,7 +10,7 @@ export const MILL_VOXEL_ENEMIES = Object.freeze([
   // 7 Mobs (52..80 boxes)
   {
     id: 'millMossBug',
-    name: '苔背虫',
+    name: '苔背甲虫',
     portrait: 'mill-moss-bug',
     model: 'mill-moss-bug.glb',
     color: '#6b9456',

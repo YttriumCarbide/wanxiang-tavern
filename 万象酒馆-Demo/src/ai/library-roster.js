@@ -3,21 +3,20 @@ import { restoreDining } from '../dining.js';
 import { restoreDaily } from '../daily.js';
 import { restoreArchives } from '../archives.js';
 import { restoreInventory } from '../rewards.js';
-import { restoreEquipment, applyEquipment, equippedDefinitions } from '../equipment.js';
+import { restoreEquipment, equippedDefinitions } from '../equipment.js';
 import { newGuildState } from '../guild.js';
 import { restoreLearnedSkills, restoreEquippedSkills } from '../learnable-skills.js';
 import { newExploration } from '../exploration.js';
 import { refreshWorldSkirmishes, restoreOverlandExploration } from '../skirmishes.js';
 import { HEROES } from '../data.js';
 import { normalizeDcAttrs, OFFICIAL_DC_ATTRS } from '../dc.js';
-import { restoreGrowth, grownCombat } from '../growth.js';
+import { restoreGrowth, compileCharacterCombat } from '../growth.js';
 import { formatCharacterSetting } from './character-setting.js';
 import { OFFICIAL_SETTINGS } from '../content/official-characters.js';
 import { OFFICIAL_VISITORS } from '../content/official-visitors.js';
 import { EDITH, EDITH_SETTING } from '../content/edith.js';
 import { PANDORA, PANDORA_SETTING } from '../content/pandora.js';
-import { applyEmblemStats, EMBLEMS } from '../emblems.js';
-import { defaultProtagonist } from '../content/qingyuan.js';
+import { EMBLEMS } from '../emblems.js';
 export function newLibrary() {
   return createLibrary(loadCustomPortraits());
 }
@@ -181,31 +180,10 @@ export function compileRoster(library) {
       if (!entry && library.campaign && !library.party[index])
         return [slot.id, { ...structuredClone(slot), inactive: true }];
       if (!entry) throw Error('队伍角色不在角色池中');
-      const combat = applyEmblemStats(
-        applyEquipment(grownCombat(entry), equippedDefinitions(library, entry)),
-        entry.emblemId,
-      );
+      const combat = compileCharacterCombat(entry, equippedDefinitions(library, entry));
       const portrait = savedPortrait(customPortraits, entry);
       if (portrait) combat.customPortrait = portrait;
       const emblemId = EMBLEMS[entry.emblemId] ? entry.emblemId : null;
-      if (!combat.entrySkill) {
-        if (entry.setting?.entrySkill) {
-          combat.entrySkill = {
-            id: `entry-${entry.id}`,
-            name: entry.setting.entrySkill.name,
-            text: entry.setting.entrySkill.description,
-            target: 'opposite',
-            effects: [{ type: 'damage', value: 8 }],
-          };
-        } else if (entry.setting?.name === '青缘' || entry.id === 'character-qingyuan') {
-          combat.entrySkill = structuredClone(defaultProtagonist().combat.entrySkill);
-        } else {
-          const fallbackHero = HEROES.find((h) => h.id === entry.archetype) || HEROES[0];
-          if (fallbackHero?.entrySkill) {
-            combat.entrySkill = structuredClone(fallbackHero.entrySkill);
-          }
-        }
-      }
       return [
         slot.id,
         {

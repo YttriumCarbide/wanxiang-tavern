@@ -19,7 +19,7 @@ export const SILVER_ROAD_STOPS = Object.freeze([
   { id: 'outskirts', name: '星钟城 · 旧哨塔' },
   { id: 'road-bridge', name: '双拱石桥' },
   { id: 'road-reeds', name: '芦苇浅滩' },
-  { id: 'road-capital', name: '银冠城外门' },
+  { id: 'road-capital', name: '银冠城' },
 ]);
 
 export const SILVER_ROAD_LEGS = Object.freeze([

@@ -31,6 +31,55 @@ canvas:active {
 canvas.clue-hovered {
   cursor: pointer;
 }
+.street-night-wash,
+.street-ambience {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: hidden;
+}
+.street-night-wash {
+  z-index: 1;
+  background: radial-gradient(circle at 50% 35%, rgba(28, 48, 86, 0.2), rgba(10, 14, 28, 0.46));
+  opacity: 0;
+  transition: opacity 0.6s ease;
+}
+body[data-pure-backdrop='true'][data-time-of-day='night'] .street-night-wash {
+  opacity: 1;
+}
+body[data-pure-backdrop='true'][data-time-of-day='night'] canvas {
+  filter: brightness(0.68) contrast(1.07) saturate(0.88) hue-rotate(-8deg);
+  transition: filter 0.6s ease;
+}
+.street-ambience {
+  z-index: 2;
+  --mote-rgb: 246, 206, 130;
+}
+body[data-time-of-day='night'] .street-ambience {
+  --mote-rgb: 210, 232, 255;
+}
+.street-ambience-mote {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(var(--mote-rgb), 0.72), rgba(var(--mote-rgb), 0) 70%);
+  animation: street-mote-float var(--dur, 12s) ease-in-out var(--delay, 0s) infinite alternate;
+  will-change: transform, opacity;
+}
+@keyframes street-mote-float {
+  0% {
+    transform: translate3d(0, 14px, 0) scale(0.82);
+    opacity: 0.16;
+  }
+  50% {
+    opacity: 0.62;
+  }
+  100% {
+    transform: translate3d(var(--dx, 18px), var(--dy, -26px), 0) scale(1.14);
+    opacity: 0.24;
+  }
+}
 .investigation-target {
   position: fixed;
   z-index: 12;
@@ -187,35 +236,34 @@ html[data-embedded] .street-actions {
   -webkit-backdrop-filter: blur(15px);
 }
 html[data-embedded] body.street-has-talk .street-actions {
-  padding-left: 112px;
+  padding-left: 125px;
 }
 html[data-embedded] #street-map-open,
 html[data-embedded] #street-submap-open,
 html[data-embedded] #street-return {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  width: 118px;
+  min-width: 118px;
+  height: 38px;
   min-height: 38px;
   padding: 7px 14px;
   border: 1px solid transparent;
   border-radius: 999px;
   background: transparent;
-  color: #c2b49b;
+  color: #b5a690;
   font:
-    600 13px Georgia,
-    'Songti SC',
-    'Microsoft YaHei',
-    serif;
+    600 13px/1.2 'Microsoft YaHei',
+    system-ui,
+    sans-serif;
   letter-spacing: 0.08em;
   box-shadow: none;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
   transform: none;
-}
-html[data-embedded] :is(#street-map-open, #street-submap-open) svg {
-  width: 15px;
-  height: 15px;
-}
-html[data-embedded] #street-return span {
-  font-size: 14px;
-  margin-right: 3px;
+  white-space: nowrap;
 }
 html[data-embedded] #street-map-open:hover,
 html[data-embedded] #street-map-open:focus-visible,
@@ -287,6 +335,10 @@ html[data-embedded] #street-inspector {
   font-weight: 700;
   white-space: nowrap;
   box-shadow: 0 4px 15px #11151c60;
+}
+html #street-submap-open[hidden],
+html[data-embedded] #street-submap-open[hidden] {
+  display: none;
 }
 #street-map-open:hover,
 #street-submap-open:hover {
@@ -624,6 +676,23 @@ html[data-embedded] #street-inspector {
   box-shadow:
     0 0 0 2px rgba(126, 227, 245, 0.72),
     0 0 14px rgba(72, 188, 224, 0.45);
+}
+.street-atlas-pin[data-quest-target] .street-atlas-pin-mark {
+  position: relative;
+}
+.street-atlas-pin[data-quest-target] .street-atlas-pin-mark::after {
+  content: '';
+  position: absolute;
+  inset: -5px;
+  border: 2px solid #fff1b4;
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 1px #3f2817,
+    0 0 12px #f5cb71;
+  pointer-events: none;
+}
+.street-atlas-pin[data-quest-target] strong {
+  color: #fff1b4;
 }
 .street-atlas-pin[data-tutorial-target='true'] .street-atlas-pin-mark {
   box-shadow:
@@ -1322,6 +1391,7 @@ html[data-embedded] #street-inspector {
   background: linear-gradient(90deg, transparent, #e6ca91, transparent);
 }
 #street-inspector {
+  --inspection-shift: 14px;
   position: fixed;
   right: 28px;
   bottom: 79px;
@@ -1343,6 +1413,10 @@ html[data-embedded] #street-inspector {
   -webkit-backdrop-filter: blur(14px);
   animation: inspection-in 240ms ease both;
   scrollbar-gutter: stable;
+}
+#street-inspector[inert] {
+  pointer-events: none;
+  animation: inspection-out 180ms ease-in both;
 }
 #street-inspector::before {
   content: '';
@@ -1458,11 +1532,21 @@ body[data-illustrated] .street-bearing {
 @keyframes inspection-in {
   from {
     opacity: 0;
-    transform: translateY(14px);
+    transform: translateY(var(--inspection-shift));
   }
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+@keyframes inspection-out {
+  from {
+    opacity: var(--inspection-from-opacity, 1);
+    transform: var(--inspection-from-transform, none);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(var(--inspection-shift));
   }
 }
 @media (max-height: 540px), (max-width: 800px) {
@@ -1481,17 +1565,22 @@ body[data-illustrated] .street-bearing {
   }
   html[data-embedded] .street-actions {
     inset: auto auto max(12px, env(safe-area-inset-bottom)) 50%;
+    gap: 0;
     padding: 4px;
   }
   html[data-embedded] body.street-has-talk .street-actions {
-    padding-left: 96px;
+    padding-left: 84px;
   }
   html[data-embedded] #street-map-open,
+  html[data-embedded] #street-submap-open,
   html[data-embedded] #street-return {
+    width: 80px;
+    min-width: 80px;
+    height: 34px;
     min-height: 34px;
-    padding: 5px 12px;
+    padding: 5px 10px;
     font-size: 12px;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.03em;
   }
   html[data-embedded] #street-inspector {
     top: 48px;
@@ -1571,6 +1660,8 @@ html[data-atlas-only='true'] body {
 html[data-atlas-only='true']
   :is(
     canvas,
+    .street-night-wash,
+    .street-ambience,
     .street-vignette,
     .street-header,
     .street-actions,
@@ -1595,251 +1686,162 @@ html[data-atlas-only='true']
 
 .street-city-submap {
   position: fixed;
-  inset: 0;
-  width: min(880px, calc(100vw - 24px));
+  inset: 8px 8px 8px auto;
+  width: min(402px, calc(100vw - 16px));
+  height: calc(100dvh - 16px);
   max-width: none;
-  max-height: calc(100dvh - 28px);
-  margin: auto;
+  max-height: none;
+  margin: 0;
   padding: 0;
-  border: 1px solid rgba(152, 108, 59, 0.56);
-  border-radius: 14px;
+  border: 1px solid #b78552;
+  border-radius: 10px;
   overflow: hidden;
-  color: #3b2718;
-  background: #d9bf92;
-  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.72);
+  color: #382522;
+  background:
+    repeating-linear-gradient(0deg, transparent 0 25px, #8b4b300d 26px, transparent 27px),
+    radial-gradient(ellipse at 50% 0, #fff4dc, #ecd1ab 88%);
+  box-shadow:
+    0 22px 64px #0c07059e,
+    inset 0 0 0 4px #b1814f29;
 }
 .street-city-submap::backdrop {
-  background: rgba(8, 10, 14, 0.72);
-  backdrop-filter: blur(5px);
+  background: #080a0d66;
+  backdrop-filter: blur(3px);
 }
 .street-city-submap[open] {
   display: grid;
-  grid-template-rows: auto minmax(260px, 1fr) auto;
+  grid-template-rows: auto minmax(0, 1fr);
 }
 .street-city-submap-head {
   display: flex;
-  align-items: center;
+  align-items: end;
   justify-content: space-between;
-  gap: 12px;
-  padding: 14px 18px;
-  border-bottom: 1px solid rgba(121, 82, 58, 0.24);
-  background: rgba(232, 208, 163, 0.92);
-}
-.street-city-submap-head small {
-  display: block;
-  color: #845934;
-  font-size: 10px;
-  letter-spacing: 0.18em;
+  gap: 8px;
+  min-height: 76px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #b7855252;
+  background:
+    linear-gradient(0deg, #30261ce8, #30261c33),
+    var(--city-panorama, none) center 52% / cover;
 }
 .street-city-submap-head h2 {
-  margin: 3px 0 0;
-  font-family: Georgia, 'Songti SC', serif;
-  font-size: 20px;
-  font-weight: 600;
-  color: #3d2412;
+  margin: 0;
+  color: #fff0c8;
+  font:
+    650 clamp(19px, 4vw, 27px) Georgia,
+    'Songti SC',
+    serif;
+  text-shadow: 0 1px 6px #000;
 }
 .street-city-submap-actions {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 .street-city-submap-actions button {
-  min-height: 32px;
-  padding: 0 12px;
-  border: 1px solid rgba(124, 83, 43, 0.38);
-  border-radius: 999px;
-  color: #462b16;
-  background: rgba(255, 247, 230, 0.72);
-  font-size: 12px;
-  font-weight: 600;
+  min-height: 44px;
+  white-space: nowrap;
+  padding: 0 10px;
+  border: 1px solid #a7834f;
+  border-radius: 4px;
+  color: #ffedc4;
+  background: #261f16eb;
 }
-.street-city-submap-actions button:hover {
-  background: #fff8e7;
+#street-city-submap-close {
+  min-width: 44px;
+  font-size: 20px;
 }
 .street-city-submap-canvas {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 820 / 470;
-  max-height: min(68dvh, 490px);
-  overflow: hidden;
-  background: #d9bf92;
-  cursor: grab;
-  touch-action: none;
-  user-select: none;
-}
-.street-city-submap-canvas.dragging {
-  cursor: grabbing;
-}
-.city-submap-stage {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: max(112%, calc(100% + 80px));
-  aspect-ratio: 820 / 470;
-  transform: translate(
-    calc(-50% + var(--submap-pan-x, 0px)),
-    calc(-50% + var(--submap-pan-y, 0px))
-  );
-  will-change: transform;
-}
-.city-submap-svg {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  display: block;
-  pointer-events: none;
-}
-.city-submap-pins {
-  position: absolute;
-  inset: 0;
-}
-.city-submap-pinbtn {
-  position: absolute;
-  width: 30px;
-  height: 30px;
-  padding: 0;
   display: grid;
-  place-items: center;
-  transform: translate(-50%, -50%);
-  border: none;
-  background: transparent;
-  color: #562e1f;
-  cursor: pointer;
-  z-index: 2;
-  transition: transform 140ms ease;
+  align-content: start;
+  gap: 14px;
+  min-height: 0;
+  padding: 12px 16px 18px;
+  overflow: auto;
+  overscroll-behavior: contain;
 }
-.city-submap-pinbtn:not(:disabled):hover {
-  transform: translate(-50%, -50%) scale(1.1);
-  z-index: 5;
+.street-city-submap-canvas h3 {
+  margin: 0 0 7px;
+  color: #dab77c;
+  font:
+    650 15px Georgia,
+    'Songti SC',
+    serif;
 }
-.city-submap-seal {
-  display: grid;
-  place-items: center;
-  width: 15px;
-  height: 15px;
-  transform: rotate(45deg);
-  border-radius: 2px;
-  border: 2px solid #6d3f28;
-  background: #f8e6b8;
-  box-shadow: 0 0 0 2px #f1d9a5;
-  transition:
-    transform 0.16s ease,
-    background 0.16s ease,
-    border-color 0.16s ease;
-}
-.city-submap-pinbtn:not(:disabled):hover .city-submap-seal {
-  background: #8a3a29;
-  border-color: #fff2cc;
-  box-shadow: 0 0 0 2px rgba(255, 224, 152, 0.7);
-}
-.city-submap-pinbtn[data-kind='guild'] .city-submap-seal {
-  width: 17px;
-  height: 17px;
-  background: #f5cf76;
-  border-color: #6d3f28;
-  box-shadow: 0 0 0 2px #f1d9a5;
-}
-.city-submap-pinbtn[aria-current='location'] .city-submap-seal {
-  background: #355c4f;
-  border-color: #f8e6b8;
-  box-shadow: 0 0 0 2px #355c4f;
-}
-.city-submap-pinbtn[data-kind='dungeon'] .city-submap-seal {
-  width: 24px;
-  height: 24px;
-  transform: none;
-  border-radius: 6px;
-  border: 2px solid #d6ad67;
-  background: linear-gradient(155deg, #43232c, #241219);
-  color: #ffdf9a;
-  box-shadow:
-    0 0 0 2px rgba(241, 217, 165, 0.72),
-    0 3px 10px rgba(36, 18, 25, 0.48);
-}
-.city-submap-pinbtn[data-kind='dungeon'] .city-submap-seal svg {
-  width: 16px;
-  height: 16px;
-  display: block;
-}
-.city-submap-pinbtn[data-kind='dungeon']:not(:disabled):hover .city-submap-seal {
-  background: linear-gradient(155deg, #5c2732, #2e151d);
-  border-color: #ffe8a8;
-  box-shadow:
-    0 0 0 2px rgba(255, 224, 152, 0.8),
-    0 4px 12px rgba(36, 18, 25, 0.56);
-}
-.city-dungeon-lv {
-  position: absolute;
-  bottom: calc(100% + 1px);
-  left: 50%;
-  transform: translateX(-50%);
-  padding: 1px 6px;
-  border-radius: 999px;
-  border: 1px solid #d6ad67;
-  background: rgba(36, 18, 25, 0.92);
-  color: #ffe3a8;
-  font-family: Georgia, serif;
-  font-size: 9.5px;
-  font-style: normal;
-  font-weight: 700;
-  line-height: 1.3;
-  white-space: nowrap;
-  pointer-events: none;
-}
-.city-submap-label {
-  position: absolute;
-  top: calc(100% - 2px);
-  left: 50%;
-  transform: translateX(-50%);
-  padding: 0;
-  border: none;
-  background: transparent;
-  color: #562e1f;
-  font-family: 'KaiTi', 'Kaiti SC', 'STKaiti', 'Songti SC', serif;
+.street-city-submap-canvas p {
+  margin: 0;
+  color: #c4b698;
   font-size: 13px;
-  font-weight: 700;
-  line-height: 1.25;
-  white-space: nowrap;
-  pointer-events: none;
-  text-shadow:
-    0 0 3px #ffedc3,
-    0 0 5px #ffedc3,
-    0 1px #ffedc3;
 }
-.city-submap-pinbtn[data-kind='dungeon'] .city-submap-label {
-  color: #4f1d1d;
-}
-.city-submap-pinbtn[aria-current='location'] .city-submap-label {
-  color: #214136;
-}
-.city-node-skirmish {
-  position: absolute;
-  top: -8px;
-  right: -4px;
+.city-directory-grid {
   display: grid;
-  place-items: center;
-  width: 17px;
-  height: 17px;
-  border: 1.5px solid #f7d996;
-  border-radius: 50%;
-  background: #8e2318;
-  color: #fff3df;
-  font-size: 9.5px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.42);
+  grid-template-columns: minmax(0, 1fr);
+  gap: 6px;
 }
-.street-city-submap-foot {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 9px 18px;
-  border-top: 1px solid rgba(121, 82, 58, 0.22);
-  color: #5b3b20;
-  background: rgba(232, 208, 163, 0.92);
+.city-directory-entry {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr);
+  align-items: center;
+  gap: 2px 7px;
+  min-height: 48px;
+  padding: 6px 9px;
+  border: 1px solid #a8764e70;
+  border-radius: 4px;
+  background: #fff8e8bd;
+  color: #382522;
+  text-align: left;
+}
+.city-directory-entry[data-city-facility] {
+  background: #e8dcc0;
+}
+.city-directory-entry[data-city-dungeon] {
+  background: #e7d0c5;
+}
+.city-directory-entry strong {
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.city-directory-entry small {
+  grid-column: 2;
+  color: #6e5243;
   font-size: 11px;
 }
-.street-atlas-walker,
-.city-submap-walker {
+.city-directory-seal {
+  grid-row: 1 / span 2;
+  color: #d9b775;
+  font-size: 16px;
+  text-align: center;
+}
+.city-directory-entry[aria-current='location'] {
+  border-color: #55776b;
+  background: #d7e2d7;
+}
+.city-directory-entry:disabled:not([aria-current]) {
+  opacity: 0.6;
+}
+.street-city-submap-actions button:hover,
+.city-directory-entry:enabled:hover {
+  border-color: #8c382c;
+  background: #fffdf2;
+}
+.street-city-submap button:focus-visible {
+  outline: 2px solid #f6da9b;
+  outline-offset: 1px;
+}
+@media (max-height: 465px) {
+  .street-city-submap {
+    inset: 4px 4px 4px auto;
+    width: min(402px, calc(100vw - 8px));
+    height: calc(100dvh - 8px);
+  }
+  .street-city-submap-head {
+    min-height: 0;
+    padding-block: 6px;
+  }
+  .street-city-submap-canvas {
+    gap: 10px;
+  }
+}
+.street-atlas-walker {
   position: absolute;
   z-index: 6;
   width: 34px;
@@ -1848,16 +1850,14 @@ html[data-atlas-only='true']
   pointer-events: none;
   filter: drop-shadow(0 3px 4px rgba(34, 18, 10, 0.45));
 }
-.street-atlas-walker svg,
-.city-submap-walker svg {
+.street-atlas-walker svg {
   width: 100%;
   height: 100%;
   display: block;
   overflow: visible;
   transition: transform 0.14s ease;
 }
-.street-atlas-walker[data-facing='left'] svg,
-.city-submap-walker[data-facing='left'] svg {
+.street-atlas-walker[data-facing='left'] svg {
   transform: scaleX(-1);
 }
 .walker-shadow {
@@ -1905,22 +1905,22 @@ html[data-atlas-only='true']
 .walker-leg-b {
   opacity: 0.78;
 }
-:is(.street-atlas-walker, .city-submap-walker).is-walking .walker-body {
+.street-atlas-walker.is-walking .walker-body {
   animation: walkerBob 0.28s ease-in-out infinite alternate;
 }
-:is(.street-atlas-walker, .city-submap-walker).is-walking .walker-cloak {
+.street-atlas-walker.is-walking .walker-cloak {
   animation: walkerCloak 0.28s ease-in-out infinite alternate;
 }
-:is(.street-atlas-walker, .city-submap-walker).is-walking .walker-leg-a {
+.street-atlas-walker.is-walking .walker-leg-a {
   animation: walkerLegA 0.28s ease-in-out infinite alternate;
 }
-:is(.street-atlas-walker, .city-submap-walker).is-walking .walker-leg-b {
+.street-atlas-walker.is-walking .walker-leg-b {
   animation: walkerLegB 0.28s ease-in-out infinite alternate;
 }
-:is(.street-atlas-walker, .city-submap-walker).is-walking .walker-arm-a {
+.street-atlas-walker.is-walking .walker-arm-a {
   animation: walkerLegB 0.28s ease-in-out infinite alternate;
 }
-:is(.street-atlas-walker, .city-submap-walker).is-walking .walker-arm-b {
+.street-atlas-walker.is-walking .walker-arm-b {
   animation: walkerLegA 0.28s ease-in-out infinite alternate;
 }
 @keyframes walkerBob {

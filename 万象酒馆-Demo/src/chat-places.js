@@ -1,6 +1,7 @@
 import { TOWN_SIDE_PLACES } from './content/town-side-places.js';
 import { SILVER_CROWN_PLACES } from './content/silver-crown-scenes.js';
 import { ETERNAL_CITY_PLACES } from './content/eternal-city-scenes.js';
+import { cityForScene, cityPlaceId } from './city-directory.js';
 
 const HALL_PLACES = Object.freeze({
   market: {
@@ -196,3 +197,18 @@ export const CHAT_PLACES = Object.freeze({
     ),
   ),
 });
+
+/** Resolve a street scene to an ID accepted by the chat controller. */
+export function chatPlaceForScene(scene) {
+  const place = cityPlaceId(scene);
+  const chatId = place === 'city-center' ? 'city-square' : place;
+  return Object.hasOwn(CHAT_PLACES, chatId) ? chatId : null;
+}
+
+/** Map a communication location back to the city directory's stable scene ID. */
+export function cityChatPlace(place) {
+  const placeId = cityPlaceId(place === 'city-square' ? 'city-center' : place);
+  if (!cityForScene(placeId)) return null;
+  const chatId = Object.hasOwn(CHAT_PLACES, place) ? place : chatPlaceForScene(placeId);
+  return chatId ? { placeId, title: CHAT_PLACES[chatId].name } : null;
+}

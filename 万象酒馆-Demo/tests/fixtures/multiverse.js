@@ -9,7 +9,7 @@ export function worldFixture() {
     enemyIds: [],
     enemies: ['scout', 'guard', 'warden'].map((name, index) => ({
       id: 'enemy-lantern-' + name, name: ['潮灯斥候', '灯塔卫兵', '夜港执政官'][index],
-      portrait: base.portrait, color: '#78afbc', hp: index === 2 ? 200 : 120, speed: 1,
+      category: 'other', portrait: base.portrait, color: '#78afbc', hp: index === 2 ? 200 : 120, speed: 1,
       attackStyle: ENEMY_ATTACKS[0], boss: index === 2,
       intents: [{ name: '巡灯', text: '对左位造成1伤害', slots: [0], effects: [{ type: 'damage', value: 1 }] }],
     })),

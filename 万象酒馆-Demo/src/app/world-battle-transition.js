@@ -70,6 +70,7 @@ export async function worldBattleTransition(enter, signal = new AbortController(
         fill: 'forwards',
       })
       .finished.catch(() => {});
+    if (!signal.aborted) overlay.dispose();
     return await Promise.race([entering, aborted]);
   } finally {
     signal.removeEventListener('abort', abort);

@@ -22,6 +22,14 @@ import {
 import { relationship } from '../relationships.js';
 import { recruitmentPassed, recruitmentStatus } from '../recruitment.js';
 import { prepareFreeDcContext } from '../dc-rp.js';
+import { resolveGalBackdrop } from './gal-backdrop.js';
+import {
+  availableInvitationCities,
+  invitationCityVenues,
+  invitationVenue,
+  sameCityStreet,
+  validateCityInvitationPlan,
+} from '../invitation-location.js';
 
 function invitationDialogueScenes(run) {
   return [...run.plan.stages.slice(run.index + 1), run.plan.finale].map((scene) => ({
@@ -37,7 +45,7 @@ function invitationDialogueScenes(run) {
 export function invitationCandidates(library) {
   return [
     ...library.characters.filter((member) => member.id !== library.campaign?.protagonistId),
-    ...townResidents(library, 'street'),
+    ...townResidents(library, 'city-center'),
   ];
 }
 
@@ -45,7 +53,10 @@ export function canRecruitInvitation(library, id) {
   return recruitmentStatus(library, id)?.ready === true;
 }
 
-export function createDailyInvitation(context, { getScene, navigate, complete, refresh }) {
+export function createDailyInvitation(
+  context,
+  { getScene, sceneReady, navigate, complete, refresh },
+) {
   const library = () => context.session.ai.library;
   const active = () => library().daily.active;
   const current = () => (active()?.kind === 'invitation' ? active().run : null);
@@ -73,6 +84,35 @@ export function createDailyInvitation(context, { getScene, navigate, complete, r
   let request = null;
   let workspace = false;
   let reading = false;
+  let lastBackdropKey = '';
+  let resumeOnArrival = false;
+
+  function placeName(run, id) {
+    return run?.allowedScenes?.[id] || INVITATION_SCENES[id] || '';
+  }
+
+  function venue(run, id) {
+    if (!run?.city || !Object.hasOwn(run.allowedScenes || {}, id)) return null;
+    return invitationVenue(library(), run.city, id);
+  }
+
+  function activeAct(run) {
+    return run.unread?.type === 'finale' ? run.plan.finale : run.plan.stages[run.index];
+  }
+
+  function invitationBackdrop(run, act) {
+    const place = venue(run, run.scene);
+    const backdrop = resolveGalBackdrop({
+      sceneId: place?.streetScene || run.scene,
+      timeOfDay: dailySceneTime(active()) || 'day',
+      stageTitle: act?.title,
+      invitationMode: true,
+    });
+    if (!backdrop) return null;
+    if (place?.image) backdrop.image = place.image;
+
+    return backdrop;
+  }
 
   function target(id) {
     return invitationCandidates(library()).find((member) => member.id === id) || null;
@@ -93,7 +133,7 @@ export function createDailyInvitation(context, { getScene, navigate, complete, r
     const stage = run.plan.stages[run.index];
     const turns = run.turns.filter((turn) => turn.stageId === stage.id);
     form.querySelector('.invite-progress').textContent =
-      `第 ${run.index + 1}/${run.plan.stages.length} 幕 · ${INVITATION_SCENES[run.scene]} · 已交流 ${turns.length} 轮${stage.title ? ' · ' + stage.title : ''}`;
+      `第 ${run.index + 1}/${run.plan.stages.length} 幕 · ${placeName(run, run.scene)} · 已交流 ${turns.length} 轮${stage.title ? ' · ' + stage.title : ''}`;
     field.disabled =
       !!request || reading || !!run.unread || !!run.destination || invitationAdvance(run);
     form.querySelector('[type="submit"]').disabled = field.disabled;
@@ -129,11 +169,26 @@ export function createDailyInvitation(context, { getScene, navigate, complete, r
     workspace = true;
     form.hidden = false;
     field.value = run.draft || '';
+    const stage = activeAct(run);
+    const backdrop = invitationBackdrop(run, stage);
+    const prologuePending = Boolean(
+      run.index === 0 &&
+      run.unread?.type === 'intro' &&
+      run.plan.prologue &&
+      !run.prologueShown &&
+      context.chapterTheater,
+    );
+    const shouldShutter = Boolean(backdrop && !prologuePending && lastBackdropKey !== backdrop.key);
+    if (shouldShutter) lastBackdropKey = backdrop.key;
     context.gal.workspace({
       owner,
       title: run.plan.title,
       actors: [run.member],
       followSpeakers: true,
+      backdrop,
+      shutter: shouldShutter,
+      kicker: run.index === 0 ? '约 见' : '转 场',
+      shutterTitle: stage?.title || placeName(run, run.scene) || '',
       composer: [form],
       onLayout({ height }) {
         stagePanel.style.setProperty('--daily-invite-composer', `${height}px`);
@@ -142,6 +197,7 @@ export function createDailyInvitation(context, { getScene, navigate, complete, r
       onClose() {
         stagePanel.style.removeProperty('--daily-invite-composer');
         workspace = false;
+        lastBackdropKey = '';
         form.hidden = true;
         request?.abort();
         refresh();
@@ -217,8 +273,8 @@ export function createDailyInvitation(context, { getScene, navigate, complete, r
           title: record.title,
           text,
           finishedAt: Date.now(),
-          gameTime: run.gameTime || gameTime(library.daily),
-          place: INVITATION_SCENES[run.plan.stages[0]?.scene] || INVITATION_SCENES[run.scene],
+          gameTime: run.gameTime || gameTime(library().daily),
+          place: placeName(run, run.plan.stages[0]?.scene) || placeName(run, run.scene),
           person: member?.setting.name,
           recap: [record.premise, ...record.stages.map((stage) => stage.summary)]
             .filter(Boolean)
@@ -275,16 +331,27 @@ export function createDailyInvitation(context, { getScene, navigate, complete, r
         buttonLabel: '走近搭话 ›',
         mode: 'invitation',
         map: 'tavern',
-        place: INVITATION_SCENES[run.plan.stages[0]?.scene] || INVITATION_SCENES[run.scene] || '',
+        place: placeName(run, run.plan.stages[0]?.scene) || placeName(run, run.scene) || '',
       });
       if (current() !== run || context.session.runtime?.disposed) {
         reading = false;
         return;
       }
     }
+    const isFinale = unread.type === 'finale';
+    const nextBackdrop = invitationBackdrop(run, isFinale ? run.plan.finale : stage);
+    if (nextBackdrop && lastBackdropKey !== nextBackdrop.key) {
+      lastBackdropKey = nextBackdrop.key;
+      context.gal.setBackdrop(nextBackdrop, {
+        shutter: true,
+        kicker: isFinale ? '终 幕' : run.index === 0 ? '约 见' : '转 场',
+        title: nextBackdrop.placeName || '',
+      });
+    }
     const galOptions = {
       owner,
-      title: unread.type === 'finale' ? run.plan.finale.title : run.plan.title,
+      title: isFinale ? run.plan.finale.title : run.plan.title,
+      backdrop: nextBackdrop,
       mandatory: true,
       onComplete: () => {
         readToEnd = true;
@@ -354,8 +421,9 @@ export function createDailyInvitation(context, { getScene, navigate, complete, r
     const next = run.plan.stages[run.index + 1];
     const scene = next || run.plan.finale;
     if (!scene) return finish(run, true);
+    if (run.city && !venue(run, scene.scene)) return stopInvalidTravel();
     if (next) run.index++;
-    queueScene(run, scene, next ? 'intro' : 'finale', legacyScene);
+    queueScene(run, scene, next ? 'intro' : 'finale', run.city ? scene.scene : legacyScene);
     save();
     return presentScene(run);
   }
@@ -375,13 +443,48 @@ export function createDailyInvitation(context, { getScene, navigate, complete, r
     return read(run);
   }
 
+  function stopInvalidTravel() {
+    context.shell.toast('该约见地点已不可用。可以结束约见。');
+    refresh();
+  }
+
+  function goToDestination() {
+    const run = current();
+    if (!run?.city || !run.destination || !run.plan) return;
+    const place = venue(run, run.destination);
+    if (!place || activeAct(run)?.scene !== run.destination) return stopInvalidTravel();
+    if (!run.arriving) {
+      run.arriving = true;
+      save();
+    }
+    if (sceneReady(place.streetScene)) arrive(getScene());
+    else navigate(place.streetScene);
+  }
+
   function arrive(scene) {
     const run = current();
-    if (!run?.destination) return;
-    run.scene = scene;
-    if (scene !== run.destination) {
-      save();
-      return;
+    if (!run?.plan) return;
+    if (run.city) {
+      if (!run.destination) {
+        const place = venue(run, run.scene);
+        if (resumeOnArrival && place && sameCityStreet(scene, place.streetScene)) {
+          resumeOnArrival = false;
+          void presentScene(run);
+        }
+        return;
+      }
+      if (!run.arriving || activeAct(run)?.scene !== run.destination) return;
+      const place = venue(run, run.destination);
+      if (!place || !sceneReady(scene) || !sameCityStreet(scene, place.streetScene)) return;
+      run.scene = run.destination;
+      delete run.arriving;
+    } else {
+      if (!run.destination) return;
+      run.scene = scene;
+      if (scene !== run.destination) {
+        save();
+        return;
+      }
     }
     delete run.destination;
     save();
@@ -427,12 +530,15 @@ export function createDailyInvitation(context, { getScene, navigate, complete, r
           description: stage.description,
           opening: invitationSceneProse(run, stage),
           protagonistId,
-          scene: INVITATION_SCENES[run.scene],
+          scene: placeName(run, run.scene),
           timeOfDay: dailySceneTime(active()),
           goals: stage.goals,
           previous: run.turns.filter((turn) => turn.stageId === stage.id),
           turnLimit: stage.maxTurns,
-          nextScene: { scene: (run.plan.stages[run.index + 1] || run.plan.finale).scene },
+          nextScene: {
+            scene: (run.plan.stages[run.index + 1] || run.plan.finale).scene,
+            name: placeName(run, (run.plan.stages[run.index + 1] || run.plan.finale).scene),
+          },
         },
       },
       (result) => {
@@ -449,7 +555,7 @@ export function createDailyInvitation(context, { getScene, navigate, complete, r
         context.quests?.collect(
           result.quest,
           `${(run.id ||= crypto.randomUUID())}:${run.turns.length}`,
-          run.scene,
+          venue(run, run.scene)?.streetScene || run.scene,
         );
         run.history.push(
           { role: 'user', content: text },
@@ -490,7 +596,33 @@ export function createDailyInvitation(context, { getScene, navigate, complete, r
     busy: () => !!request,
     presenting: () => workspace,
     traveling: () => !!current()?.destination,
+    constrained: () => Boolean(current()?.city && current()?.plan),
+    placeName: (id) => placeName(current(), id),
+    goToDestination,
     arrive,
+    restoreLocation() {
+      const run = current();
+      if (!run?.city || !run.plan) return;
+      if (run.arriving) {
+        delete run.arriving;
+        save();
+      }
+      const place = venue(run, run.scene);
+      if (place) navigate(place.streetScene);
+    },
+    streetEnvironment(scene) {
+      const run = current();
+      const place = venue(run, run?.scene);
+      if (!place || !sameCityStreet(scene, place.streetScene)) return null;
+      const act = run.destination
+        ? run.unread?.type === 'finale'
+          ? run.plan.stages[run.index]
+          : run.plan.stages[run.index - 1]
+        : activeAct(run);
+      return act?.environment
+        ? { cityId: run.city, placeId: place.id, title: place.name, text: act.environment }
+        : null;
+    },
     endTravel() {
       const run = current();
       if (run?.destination) finish(run, false);
@@ -499,11 +631,17 @@ export function createDailyInvitation(context, { getScene, navigate, complete, r
       const run = current();
       return run?.plan ? invitationBrief(run) : null;
     },
-    async start({ member, activity, topic, playerIntent }, onReady) {
+    async start({ member, activity, topic, playerIntent, city, startScene }, onReady) {
       if (request || !target(member)) return;
       const entry = active();
       if (entry?.kind !== 'invitation') return;
       if (entry.run?.plan) return this.resume();
+      if (!availableInvitationCities(library(), getScene()).includes(city))
+        throw Error('当前无法在这座城市约见');
+      const allowedScenes = Object.fromEntries(
+        invitationCityVenues(library(), city).map(({ id, name }) => [id, name]),
+      );
+      if (!Object.hasOwn(allowedScenes, startScene)) throw Error('请选择可用的约见地点');
       const personal =
         Object.hasOwn(TOWN_GUESTS, member.replace(/^official-/, '')) &&
         relationship(library(), member).affection >= PERSONAL_EVENT_TRUST &&
@@ -517,6 +655,8 @@ export function createDailyInvitation(context, { getScene, navigate, complete, r
         personal,
         index: 0,
         scene: getScene(),
+        city,
+        allowedScenes,
         history: [],
         turns: [],
         played: [],
@@ -533,6 +673,9 @@ export function createDailyInvitation(context, { getScene, navigate, complete, r
               activity,
               topic,
               member,
+              city,
+              startScene,
+              allowedScenes,
               stageCount: 3 + Math.floor(Math.random() * 3),
               timeOfDay: dailySceneTime(entry),
               protagonistId: library().campaign?.protagonistId,
@@ -543,28 +686,44 @@ export function createDailyInvitation(context, { getScene, navigate, complete, r
           library(),
         ),
         ({ invitation }) => {
-          if (!invitation?.stages?.length || !invitation.finale) throw Error('约见缺少完整剧本');
-          run.plan = invitation;
-          queueScene(run, invitation.stages[0], 'intro');
+          if (!venue(run, startScene)) throw Error('开场地点已不可用');
+          run.plan = validateCityInvitationPlan(invitation, { startScene, allowedScenes });
+          queueScene(run, run.plan.stages[0], 'intro', startScene);
+          run.destination = startScene;
+          run.arriving = true;
           entry.stage = 'running';
         },
       );
       if (ok) {
         onReady?.();
-        await presentScene(run);
+        goToDestination();
+      } else if (entry.run === run && entry.stage !== 'running') {
+        delete entry.run;
+        save();
       }
     },
     resume() {
       const run = current();
       if (!run?.plan || reading) return;
-      if (run.scene !== getScene()) navigate(run.scene);
-      if (run.destination) return;
+      if (run.city) {
+        if (run.destination) return goToDestination();
+        const place = venue(run, run.scene);
+        if (!place) return stopInvalidTravel();
+        if (!sceneReady(place.streetScene)) {
+          resumeOnArrival = true;
+          return navigate(place.streetScene);
+        }
+      } else {
+        if (run.scene !== getScene()) navigate(run.scene);
+        if (run.destination) return;
+      }
       openWorkspace(run);
       if (run.unread) void read(run);
       else if (invitationAdvance(run)) void advance(run);
     },
     recruit,
     close() {
+      resumeOnArrival = false;
       request?.abort();
       context.gal.cancel(owner);
     },

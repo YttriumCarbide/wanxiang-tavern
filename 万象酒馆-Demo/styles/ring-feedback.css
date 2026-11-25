@@ -1,0 +1,520 @@
+/* Focus the award on the earned ring, with its six charge cuts—not a star field. */
+.ring-feedback {
+  --ring-meter-size: 64px;
+  --ring-edge: calc(var(--ring-meter-size) * 0.8);
+  --ring-origin-x: clamp(
+    var(--ring-edge),
+    var(--ring-anchor-x),
+    calc(var(--ring-board-width) - var(--ring-edge))
+  );
+  --ring-origin-y: clamp(
+    var(--ring-edge),
+    var(--ring-anchor-y),
+    calc(var(--ring-board-height) - var(--ring-edge))
+  );
+  position: absolute;
+  z-index: 18;
+  left: var(--ring-origin-x);
+  top: var(--ring-origin-y);
+  width: 0;
+  height: 0;
+  color: #fff5ce;
+  pointer-events: none;
+}
+.ring-feedback [hidden] {
+  display: none !important;
+}
+.ring-feedback__piece {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: block;
+  pointer-events: none;
+}
+/* Track the actual wearer even if the ring itself is clamped at a viewport edge. */
+.ring-feedback__focus {
+  --focus-edge: color-mix(in srgb, var(--ring-light, #fff7d6) 80%, transparent);
+  left: calc(var(--ring-anchor-x) - var(--ring-origin-x));
+  top: calc(var(--ring-anchor-y) - var(--ring-origin-y) + var(--ring-card-height) * 0.02);
+  width: var(--ring-card-width);
+  height: var(--ring-card-height);
+  border: 1px solid var(--focus-edge);
+  border-radius: 5px;
+  box-shadow:
+    0 0 0 2px #071218a6,
+    0 0 16px var(--ring-glow, #fff0ae),
+    inset 0 0 12px color-mix(in srgb, var(--ring-jewel, #fff0ae) 25%, transparent);
+  opacity: 0;
+  transform: translate(-50%, -50%);
+}
+.ring-feedback__focus::before,
+.ring-feedback__focus::after {
+  position: absolute;
+  width: 13px;
+  height: 13px;
+  border: 0 solid var(--ring-light, #fff7d6);
+  content: '';
+}
+.ring-feedback__focus::before {
+  top: -3px;
+  left: -3px;
+  border-width: 2px 0 0 2px;
+  border-top-left-radius: 5px;
+}
+.ring-feedback__focus::after {
+  right: -3px;
+  bottom: -3px;
+  border-width: 0 2px 2px 0;
+  border-bottom-right-radius: 5px;
+}
+.ring-feedback__meter {
+  width: var(--ring-meter-size);
+  height: var(--ring-meter-size);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background:
+    radial-gradient(
+      circle,
+      color-mix(in srgb, var(--ring-shadow, #17333e) 68%, transparent) 0 25%,
+      transparent 72%
+    ),
+    radial-gradient(circle, #071218c9 0 48%, #172128e8 72%, #66583b 88%, transparent 100%);
+  box-shadow:
+    0 0 17px color-mix(in srgb, var(--ring-glow, #fff0ae) 65%, transparent),
+    inset 0 0 11px color-mix(in srgb, var(--ring-shadow, #5c3c08) 72%, transparent);
+}
+.ring-feedback__rim {
+  position: absolute;
+  inset: 6px;
+  border: 3px solid transparent;
+  border-radius: 50%;
+  background:
+    linear-gradient(#10151bd9, #10151bd9) padding-box,
+    conic-gradient(
+        from 18deg,
+        #5e471e,
+        #fff0ba 12%,
+        #a88748 23%,
+        #fffbe0 38%,
+        #705527 52%,
+        #f7e2a1 68%,
+        #826633 84%,
+        #fff2c6
+      )
+      border-box;
+  box-shadow:
+    0 0 0 1px #050b12,
+    0 0 0 2px color-mix(in srgb, var(--ring-jewel, #fff7d6) 48%, #15252d),
+    0 0 8px color-mix(in srgb, var(--ring-glow, #ffe7a0) 84%, transparent),
+    inset 0 0 6px color-mix(in srgb, var(--ring-jewel, #fff7d6) 62%, transparent);
+  transform: rotate(-10deg);
+}
+.ring-feedback__rim::before {
+  position: absolute;
+  inset: 2px;
+  border: 1px solid color-mix(in srgb, var(--ring-shadow, #5c3c08) 70%, #24170c);
+  border-radius: inherit;
+  box-shadow:
+    inset 0 0 0 1px #f7e9b34d,
+    0 1px 3px #0009;
+  content: '';
+}
+.ring-feedback[data-phase='charging'] .ring-feedback__rim {
+  animation: ring-feedback-rim-charge var(--ring-charge-duration, 1.2s)
+    cubic-bezier(0.28, 0.6, 0.34, 1) both;
+}
+.ring-feedback[data-phase='charging'] .ring-feedback__core {
+  animation: ring-feedback-core-charge 260ms ease-out both;
+}
+.ring-feedback__rim::after {
+  position: absolute;
+  inset: 3px;
+  border: 1px solid color-mix(in srgb, var(--ring-light, #fff7d6) 38%, transparent);
+  border-radius: inherit;
+  content: '';
+}
+.ring-feedback__sweep {
+  position: absolute;
+  inset: -3px;
+  border: 1px solid transparent;
+  border-top-width: 2px;
+  border-right-width: 2px;
+  border-top-color: var(--ring-light, #fff7d6);
+  border-right-color: color-mix(in srgb, var(--ring-jewel, #fff7d6) 76%, transparent);
+  border-radius: inherit;
+  filter: drop-shadow(0 0 3px var(--ring-light, #fff7d6));
+  opacity: 0;
+}
+.ring-feedback .ring-feedback__core {
+  position: absolute;
+  z-index: 1;
+  left: 50%;
+  top: 50%;
+  width: 26%;
+  height: 33%;
+  border: 1px solid color-mix(in srgb, var(--ring-light, #fff7d6) 88%, white);
+  background:
+    linear-gradient(117deg, #fff9 0 24%, transparent 24% 66%, #0004 66%),
+    conic-gradient(
+      from 25deg,
+      var(--ring-light, #fff7d6),
+      var(--ring-jewel, #3fd4c6) 21%,
+      var(--ring-shadow, #0a3342) 21% 42%,
+      var(--ring-jewel, #3fd4c6) 42% 61%,
+      var(--ring-shadow, #0a3342) 61% 77%,
+      var(--ring-light, #fff7d6) 77%
+    );
+  box-shadow:
+    inset 0 0 3px white,
+    0 0 9px var(--ring-glow, #fff7d6);
+  clip-path: polygon(50% 0, 94% 28%, 83% 78%, 50% 100%, 17% 78%, 6% 28%);
+  filter: drop-shadow(0 0 4px var(--ring-glow, #fff7d6));
+  transform: translate(-50%, -50%);
+}
+.ring-feedback__cell {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 4px;
+  height: 4px;
+  border: 1px solid #d5c397;
+  border-radius: 50%;
+  background: #514c42;
+  box-shadow: 0 0 3px #c7a96a;
+  transform: translate(-50%, -50%) rotate(calc(var(--index) * 60deg))
+    translateY(calc(var(--ring-meter-size) * -0.37));
+  transition:
+    background-color 180ms ease-out,
+    box-shadow 180ms ease-out,
+    transform 180ms ease-out;
+}
+.ring-feedback__cell.is-lit {
+  animation: ring-feedback-cell-arrive 200ms cubic-bezier(0.18, 0.9, 0.26, 1.15) both;
+}
+.ring-feedback__cell:nth-of-type(1) {
+  --index: 0;
+}
+.ring-feedback__cell:nth-of-type(2) {
+  --index: 1;
+}
+.ring-feedback__cell:nth-of-type(3) {
+  --index: 2;
+}
+.ring-feedback__cell:nth-of-type(4) {
+  --index: 3;
+}
+.ring-feedback__cell:nth-of-type(5) {
+  --index: 4;
+}
+.ring-feedback__cell:nth-of-type(6) {
+  --index: 5;
+}
+.ring-feedback__cell.is-lit {
+  border-color: #fff9dc;
+  background: var(--ring-light, #fff4be);
+  box-shadow:
+    0 0 5px 2px var(--ring-jewel, #ffe998),
+    0 0 11px var(--ring-glow, #ffc55d);
+  transform: translate(-50%, -50%) rotate(calc(var(--index) * 60deg))
+    translateY(calc(var(--ring-meter-size) * -0.37)) scale(1.45);
+}
+.ring-feedback__piece.ring-feedback__trail {
+  width: clamp(28px, 7vw, 74px);
+  height: 9px;
+  background:
+    radial-gradient(ellipse at 20% 50%, var(--ring-light, white), transparent 68%),
+    radial-gradient(ellipse at 52% 50%, var(--ring-jewel, #ffe8a8), transparent 72%);
+  filter: drop-shadow(0 0 4px var(--ring-glow, #fff0ae));
+  opacity: 0;
+  transform-origin: 0 50%;
+}
+.ring-feedback[data-phase='flight'] .ring-feedback__trail::before {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 22px;
+  height: 22px;
+  content: '';
+  transform: translate(-50%, -50%);
+  background:
+    radial-gradient(circle closest-side, #fff 8%, var(--ring-light) 26%, transparent 72%),
+    radial-gradient(ellipse 52% 11%, #fff9e6 18%, transparent 100%),
+    radial-gradient(ellipse 11% 52%, #fff9e6 18%, transparent 100%);
+}
+.ring-feedback[data-phase='flight'] .ring-feedback__meter {
+  animation: ring-feedback-award-flight var(--ring-phase-duration, 480ms)
+    cubic-bezier(0.2, 0.72, 0.2, 1) both;
+}
+.ring-feedback[data-phase='flight'] .ring-feedback__trail {
+  animation: ring-feedback-trail-flight var(--ring-phase-duration, 480ms) ease-out both;
+}
+
+.ring-feedback.is-award[data-phase='flight'] .ring-feedback__focus {
+  animation: ring-feedback-focus-in var(--ring-phase-duration) ease-out both;
+}
+.ring-feedback.is-award[data-phase='charging'] .ring-feedback__focus {
+  opacity: 0.66;
+}
+.ring-feedback.is-award[data-phase='full'] .ring-feedback__focus {
+  animation: ring-feedback-focus-full var(--ring-phase-duration) ease-out both;
+}
+.ring-feedback.is-award[data-phase='settle'] .ring-feedback__focus {
+  animation: ring-feedback-focus-out var(--ring-phase-duration) ease-in both;
+}
+.ring-feedback[data-phase='full'] .ring-feedback__meter {
+  animation: ring-feedback-award-full var(--ring-phase-duration, 670ms)
+    cubic-bezier(0.16, 0.8, 0.24, 1) both;
+}
+.ring-feedback[data-phase='full'] .ring-feedback__sweep {
+  animation: ring-feedback-sweep var(--ring-phase-duration, 670ms) ease-out both;
+}
+.ring-feedback[data-phase='settle'] .ring-feedback__meter {
+  animation: ring-feedback-award-settle var(--ring-phase-duration, 255ms) ease-in both;
+}
+.ring-feedback__meter::after {
+  position: absolute;
+  inset: -8px;
+  border: 1px solid color-mix(in srgb, var(--ring-light, #fff7d6) 92%, transparent);
+  border-radius: 50%;
+  box-shadow:
+    0 0 12px var(--ring-glow, #fff0ae),
+    inset 0 0 9px var(--ring-jewel, #ffc75d);
+  content: '';
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.88);
+}
+.ring-feedback:is([data-phase='full'], [data-phase='settle']) .ring-feedback__meter::after {
+  opacity: 0.68;
+  transform: none;
+}
+.ring-feedback.is-bursting .ring-feedback__meter::after {
+  animation: ring-feedback-burst var(--ring-phase-duration, 620ms) cubic-bezier(0.16, 0.76, 0.24, 1)
+    both;
+}
+/* Only the point of light travels. The charge dial opens where the star lands. */
+@keyframes ring-feedback-award-flight {
+  0%,
+  60% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.58);
+  }
+  84% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.08);
+    filter: brightness(1.55);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+    filter: brightness(1);
+  }
+}
+@keyframes ring-feedback-trail-flight {
+  from {
+    opacity: 0.94;
+    transform: translate(var(--flight-x), calc(var(--flight-y) - 50%)) rotate(var(--trail-angle))
+      scale(0.78, 1);
+  }
+  42% {
+    opacity: 1;
+    transform: translate(var(--flight-mid-x), calc(var(--flight-mid-y) - 50%))
+      rotate(var(--trail-angle)) scale(1, 0.92);
+  }
+  78% {
+    opacity: 0.94;
+    transform: translateY(-50%) rotate(var(--trail-angle)) scale(0.58, 1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-50%) rotate(var(--trail-angle)) scale(0.16, 0.42);
+  }
+}
+@keyframes ring-feedback-focus-in {
+  from {
+    opacity: 0;
+  }
+  62% {
+    opacity: 0.82;
+  }
+  to {
+    opacity: 0.66;
+  }
+}
+@keyframes ring-feedback-focus-full {
+  from {
+    opacity: 0.66;
+  }
+  32% {
+    opacity: 0.92;
+  }
+  to {
+    opacity: 0.55;
+  }
+}
+@keyframes ring-feedback-focus-out {
+  from {
+    opacity: 0.55;
+  }
+  to {
+    opacity: 0;
+  }
+}
+@keyframes ring-feedback-award-full {
+  0% {
+    transform: translate(-50%, -50%) scale(0.86);
+    filter: brightness(1);
+  }
+  34% {
+    transform: translate(-50%, -50%) scale(1.18);
+    filter: brightness(1.8);
+  }
+  72% {
+    transform: translate(-50%, -50%) scale(0.98);
+    filter: brightness(1.26);
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    filter: brightness(1);
+  }
+}
+@keyframes ring-feedback-rim-charge {
+  0% {
+    transform: rotate(-10deg) scale(0.94);
+    filter: brightness(0.86);
+  }
+  68% {
+    transform: rotate(278deg) scale(1.04);
+    filter: brightness(1.35);
+  }
+  100% {
+    transform: rotate(350deg) scale(1);
+    filter: brightness(1);
+  }
+}
+@keyframes ring-feedback-core-charge {
+  0% {
+    filter: brightness(0.8) drop-shadow(0 0 2px var(--ring-glow, #fff7d6));
+    transform: translate(-50%, -50%) scale(0.76);
+  }
+  62% {
+    filter: brightness(1.8) drop-shadow(0 0 9px var(--ring-light, #fff7d6));
+    transform: translate(-50%, -50%) scale(1.18);
+  }
+  100% {
+    filter: brightness(1) drop-shadow(0 0 4px var(--ring-glow, #fff7d6));
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+@keyframes ring-feedback-cell-arrive {
+  0% {
+    filter: brightness(0.8);
+    transform: translate(-50%, -50%) rotate(calc(var(--index) * 60deg))
+      translateY(calc(var(--ring-meter-size) * -0.37)) scale(0.65);
+  }
+  64% {
+    filter: brightness(1.8);
+    transform: translate(-50%, -50%) rotate(calc(var(--index) * 60deg))
+      translateY(calc(var(--ring-meter-size) * -0.37)) scale(1.7);
+  }
+  100% {
+    filter: brightness(1);
+    transform: translate(-50%, -50%) rotate(calc(var(--index) * 60deg))
+      translateY(calc(var(--ring-meter-size) * -0.37)) scale(1.45);
+  }
+}
+@keyframes ring-feedback-sweep {
+  from {
+    opacity: 0.2;
+    transform: rotate(-45deg);
+  }
+  30% {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+    transform: rotate(315deg);
+  }
+}
+@keyframes ring-feedback-award-settle {
+  from {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.32);
+  }
+}
+@keyframes ring-feedback-burst {
+  18% {
+    opacity: 0.86;
+    transform: scale(0.96);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.42);
+  }
+}
+@media (max-width: 600px), (max-height: 450px) {
+  .ring-feedback {
+    --ring-meter-size: 48px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ring-feedback[data-phase]
+    :is(
+      .ring-feedback__meter,
+      .ring-feedback__trail,
+      .ring-feedback__sweep,
+      .ring-feedback__rim,
+      .ring-feedback__core,
+      .ring-feedback__cell
+    ),
+  .ring-feedback.is-bursting .ring-feedback__meter::after,
+  .ring-feedback.is-award[data-phase] .ring-feedback__focus {
+    animation: none;
+  }
+  .ring-feedback.is-award:is([data-phase='charging'], [data-phase='full']) .ring-feedback__focus {
+    opacity: 0.66;
+  }
+  .ring-feedback.is-bursting .ring-feedback__meter::after {
+    opacity: 0.72;
+    transform: scale(0.96);
+  }
+  .ring-feedback__cell {
+    transition: none;
+  }
+}
+@media (forced-colors: active) {
+  .ring-feedback__focus,
+  .ring-feedback__focus::before,
+  .ring-feedback__focus::after {
+    border-color: Highlight;
+    box-shadow: none;
+  }
+  .ring-feedback__rim {
+    border-color: CanvasText;
+    background: Canvas;
+    box-shadow: none;
+  }
+  .ring-feedback__rim::after,
+  .ring-feedback__meter::after {
+    border-color: Highlight;
+    box-shadow: none;
+  }
+  .ring-feedback .ring-feedback__core {
+    background: Highlight;
+    filter: none;
+  }
+  .ring-feedback__cell {
+    border-color: CanvasText;
+    background: Canvas;
+    box-shadow: none;
+  }
+  .ring-feedback__cell.is-lit {
+    background: Highlight;
+    outline: 1px solid Highlight;
+    box-shadow: none;
+  }
+}

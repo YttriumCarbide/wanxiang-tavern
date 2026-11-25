@@ -258,13 +258,11 @@ test('asset references extract HTML src paths relative to the document', () => {
   assert.ok(paths.includes('assets/a.png'), `expected assets/a.png, got ${JSON.stringify(paths)}`);
 });
 
-test('guild audit reports unknown item references in supplies', () => {
+test('guild audit still detects invalid trial enemies after supplies are retired', () => {
   const result = auditGuildData({
-    GUILD_SUPPLIES: [{ id: 's', kind: 'item', itemId: 'missing', qty: 1, price: 1 }],
+    GUILD_TRIALS: [{ id: 'bad-trial', enemyIds: ['missing-enemy'] }],
   });
-  const codes = result.issues.map((issue) => issue.code);
-
-  assert.ok(codes.includes('unknown-item'), `expected unknown-item, got ${JSON.stringify(codes)}`);
+  assert.ok(result.issues.some(({ code }) => code === 'unknown-enemy'));
 });
 
 test('event reward consumer reports unsupported fields and empty reward', () => {

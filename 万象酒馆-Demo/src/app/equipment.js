@@ -6,6 +6,7 @@ import { createEquipmentPicker } from './equipment-picker.js';
 import { createRawResponse } from './raw-response.js';
 import { createForgeResults } from './forge-results.js';
 import { createEquipmentFeedback } from './equipment-feedback.js';
+import { createBlacksmith } from './blacksmith.js';
 import { EMBLEMS, equipEmblem } from '../emblems.js';
 import { equipUniversalSkill } from '../learnable-skills.js';
 import { emblemIconSvg, emblemVisual } from './emblem-icons.js';
@@ -16,8 +17,6 @@ import {
   EQUIPMENT_QUALITIES,
   EQUIPMENT_SLOT_ORDER,
   EQUIPMENT_STATS,
-  ascendCost,
-  ascendEquipment,
   buyEquipment,
   clampEquipmentLevel,
   deleteEquipmentPlan,
@@ -33,16 +32,11 @@ import {
   favoriteEquipment,
   grantEquipment,
   hasLegacyCategorizedEquipment,
-  maxUnlockedEquipmentLevel,
   normalizeEquipment,
-  reforgeCost,
-  reforgeEquipment,
   refreshEquipmentAffixes,
   resolveEquipmentQuality,
   resolveEquipmentTemplate,
   rollVoucherEquipmentSpec,
-  temperCost,
-  temperEquipment,
 } from '../equipment.js';
 import { ITEMS } from '../content/items.js';
 import { html } from '../shared/html.js';
@@ -188,104 +182,37 @@ function forgeItemActions(item, library, busy) {
       >
         ${affix ? '洗词' : '赋词'} · ${cost} 以太
       </button>
+      ${forgeDismantleActions(item, library, busy)}
     </div>
   </section>`;
 }
 
-function forgeWorkshopHtml(template, library, busy, expandedInstances) {
-  const maxLevel = maxUnlockedEquipmentLevel(library);
-  const ether = library.inventory.ether || 0;
+function forgeDismantleActions(template, library, busy) {
+  const equipped = new Set(library.characters.flatMap((member) => member.equipment || []));
   const instances = library.equipment.owned.filter((item) => item.templateId === template.id);
   if (!instances.length) return '';
-  return html`<section class="forge-workshop" aria-label="拥有实例工坊">
-    <div class="forge-workshop-head">
-      <strong>已拥有装备 (${instances.length})</strong>
-      <small>当前淬炼上限 Lv.${maxLevel}</small>
-    </div>
-    <div class="forge-instance-list">
-      ${instances
-        .map((owned, index) => {
-          const resolved = resolveInstanceView(template, owned, library);
-          const qKey = resolveEquipmentQuality(resolved.quality, template.price);
-          const qMeta = EQUIPMENT_QUALITIES[qKey];
-          const lv = clampEquipmentLevel(resolved.level || 1);
-          const wearer = library.characters.find((member) => member.equipment?.includes(owned.id));
-          const rCost = reforgeCost(template, owned);
-          const tCost = temperCost(template, owned);
-          const aCost = ascendCost(template, owned);
-          const refund = dismantleEther(template, owned);
-          const canTemper = lv < maxLevel;
-          const canAscend = Boolean(qMeta.ascendTo);
-          const isGem = template.category === 'gem';
-          return html`<details
-            class="forge-instance-card"
-            data-quality="${qKey}"
-            data-forge-instance="${escapeText(owned.id)}"
-            ${expandedInstances.has(owned.id) ? 'open' : ''}
-          >
-            <summary class="forge-instance-top">
-              ${equipmentArt(resolved, qKey)}
-              <span class="forge-instance-index">#${index + 1}</span>
-              ${badgesHtml({
-                qualityKey: qKey,
-                qualityName: qMeta.name,
-                level: lv,
-                rollPercent: owned.rollPercent,
-              })}
-              <span class="forge-wearer-tag" data-equipped="${Boolean(wearer)}"
-                >${wearer ? escapeText(wearer.setting.name) + '穿戴中' : '背包中'}</span
-              >
-            </summary>
-            <div class="forge-instance-body">
-              <div class="forge-instance-desc">${escapeText(equipmentDescription(resolved))}</div>
-              ${statRangeBarsHtml(owned.stats, owned.statRanges)}
-              <div class="forge-instance-actions">
-                ${
-                  !isGem
-                    ? html`
-                        <button
-                          type="button"
-                          data-reforge-instance="${owned.id}"
-                          ${busy || ether < rCost ? 'disabled' : ''}
-                        >
-                          重铸 · ${rCost} 以太
-                        </button>
-                        <button
-                          type="button"
-                          data-temper-instance="${owned.id}"
-                          ${busy || !canTemper || ether < tCost ? 'disabled' : ''}
-                        >
-                          ${canTemper ? `淬炼→Lv.${lv + 1} · ${tCost} 以太` : `已满 Lv.${maxLevel}`}
-                        </button>
-                        <button
-                          type="button"
-                          data-ascend-instance="${owned.id}"
-                          ${busy || !canAscend || ether < aCost ? 'disabled' : ''}
-                        >
-                          ${
-                            canAscend
-                              ? `升阶→${EQUIPMENT_QUALITIES[qMeta.ascendTo].name} · ${aCost} 以太`
-                              : '已达传说'
-                          }
-                        </button>
-                      `
-                    : ''
-                }
-                <button
-                  type="button"
-                  data-dismantle-instance="${owned.id}"
-                  ${busy || wearer ? 'disabled' : ''}
-                >
-                  ${wearer ? '穿戴中' : `分解 +${refund} 以太`}
-                </button>
-              </div>
-            </div>
-          </details>`;
-        })
-        .join('')}
-    </div>
-  </section>`;
+  const available = instances.filter((item) => !equipped.has(item.id));
+  const options = available.map((item) => {
+    const quality = resolveEquipmentQuality(item.quality, template.price);
+    return html`<option value="${escapeText(item.id)}">
+      #${instances.indexOf(item) + 1} · Lv.${item.level} ${EQUIPMENT_QUALITIES[quality].name} ·
+      ${item.rollPercent ?? 100}%
+    </option>`;
+  });
+  return html`<div class="forge-dismantle">
+    <select
+      data-dismantle-choice
+      aria-label="分解哪一件装备"
+      ${busy || !options.length ? 'disabled' : ''}
+    >
+      ${options.join('') || '<option value="">均在穿戴</option>'}
+    </select>
+    <button type="button" data-dismantle-instance ${busy || !options.length ? 'disabled' : ''}>
+      分解
+    </button>
+  </div>`;
 }
+
 export function preparationEquipment(library, member) {
   const currentEmblem = EMBLEMS[member.emblemId]?.emblem;
   return html`<section class="equipment-slots">
@@ -469,6 +396,15 @@ export function createEquipment(context) {
       <button id="forge-cancel" hidden>取消</button>
       <button data-forge-drawer="details" aria-expanded="false">装备详情</button>
     </div>
+    <nav id="forge-category-tabs" class="forge-category-tabs" aria-label="装备分类" hidden>
+      <button type="button" data-forge-category="all" aria-pressed="true">全部</button>
+      ${EQUIPMENT_SLOT_ORDER.map((categoryKey) => {
+        const category = EQUIPMENT_CATEGORIES[categoryKey];
+        return html`<button type="button" data-forge-category="${categoryKey}" aria-pressed="false">
+          ${escapeText(category.label)}
+        </button>`;
+      }).join('')}
+    </nav>
     <div class="forge-layout">
       <nav id="forge-list" aria-label="装备清单"></nav>
       <section id="forge-workspace">
@@ -487,6 +423,7 @@ export function createEquipment(context) {
     <p id="forge-status" role="status"></p>`;
   document.body.append(panel);
   const feedback = createEquipmentFeedback(panel, events);
+  const blacksmith = createBlacksmith(context, commitEquipment, refresh);
   const lesson = document.createElement('section');
   lesson.id = 'forge-lesson';
   lesson.hidden = true;
@@ -501,6 +438,7 @@ export function createEquipment(context) {
   document.querySelector('#party-panel > footer').prepend(bag);
   let request = null;
   let page = 'construct';
+  let exchangeCategory = 'all';
   let selected = null;
   let teaching = false;
   let exchangeOnly = false;
@@ -596,6 +534,14 @@ export function createEquipment(context) {
       );
     });
     panel.querySelector('.forge-toolbar').hidden = page === 'exchange' && !request;
+    const categoryTabs = panel.querySelector('#forge-category-tabs');
+    categoryTabs.hidden = page !== 'exchange';
+    categoryTabs.querySelectorAll('[data-forge-category]').forEach((button) => {
+      button.setAttribute(
+        'aria-pressed',
+        String(button.dataset.forgeCategory === exchangeCategory),
+      );
+    });
     panel.querySelector('#forge-config').disabled = exchangeOnly || session.ai.busy;
     panel.querySelector('[data-forge-page="construct"]').disabled = exchangeOnly;
     const vouchers = library().inventory.equipmentVouchers || 0;
@@ -615,7 +561,7 @@ export function createEquipment(context) {
       ? '正在构筑…'
       : page === 'construct'
         ? '等待构筑'
-        : '选择装备进行打造与养成';
+        : '选择装备方案';
     panel
       .querySelectorAll('[data-forge-page]')
       .forEach((button) =>
@@ -625,19 +571,21 @@ export function createEquipment(context) {
     const ownedGems = [...new Set(library().equipment.owned.map((entry) => entry.templateId))]
       .map((id) => resolveEquipmentTemplate(library(), id))
       .filter((entry) => entry?.category === 'gem');
+    const exchangePool = [...library().equipment.catalog, ...ownedGems]
+      .filter(
+        (item) => !library().equipment.hidden?.includes(item.id) && !batchResults.contains(item.id),
+      )
+      .sort(
+        (a, b) =>
+          Number(library().equipment.favorites?.includes(b.id)) -
+          Number(library().equipment.favorites?.includes(a.id)),
+      );
     const entries =
       page === 'construct'
         ? pendingItems()
-        : [...library().equipment.catalog, ...ownedGems]
-            .filter(
-              (item) =>
-                !library().equipment.hidden?.includes(item.id) && !batchResults.contains(item.id),
-            )
-            .sort(
-              (a, b) =>
-                Number(library().equipment.favorites?.includes(b.id)) -
-                Number(library().equipment.favorites?.includes(a.id)),
-            );
+        : exchangeCategory === 'all'
+          ? exchangePool
+          : exchangePool.filter((item) => item.category === exchangeCategory);
     if (!entries.some((item) => item.id === selected)) selected = entries[0]?.id || null;
     panel.querySelector('#forge-list').innerHTML =
       entries
@@ -679,13 +627,6 @@ export function createEquipment(context) {
     const catalog = panel.querySelector('#forge-catalog');
     const sameItem = Boolean(item && catalog.dataset.template === item.id);
     const expandedAffix = sameItem && Boolean(catalog.querySelector('.forge-affix-card[open]'));
-    const expandedInstances = new Set(
-      sameItem
-        ? [...catalog.querySelectorAll('[data-forge-instance][open]')].map(
-            (node) => node.dataset.forgeInstance,
-          )
-        : [],
-    );
     catalog.dataset.template = item?.id || '';
     const affix = item && library().equipment.affixesByTemplate?.[item.id];
     const favorite = item && library().equipment.favorites?.includes(item.id);
@@ -755,9 +696,12 @@ export function createEquipment(context) {
               }
             </div>
             ${forgeAffixHtml(item, affix, expandedAffix)}
-            ${forgeWorkshopHtml(item, library(), Boolean(request), expandedInstances)}
           </article>`
-      : '<p class="forge-empty">构筑道具后，可在这里兑换装备。</p>';
+      : page === 'exchange' && exchangeCategory !== 'all' && exchangePool.length
+        ? html`<p class="forge-empty">
+            当前分类「${escapeText(EQUIPMENT_CATEGORIES[exchangeCategory]?.label || exchangeCategory)}」暂无可兑换装备。
+          </p>`
+        : '<p class="forge-empty">构筑道具后，可在这里兑换装备。</p>';
     bag.querySelector('div').innerHTML =
       Object.values(ITEMS)
         .filter((entry) => library().inventory.items[entry.id] > 0)
@@ -997,6 +941,13 @@ export function createEquipment(context) {
       refresh();
       return;
     }
+    const categoryTab = event.target.closest('[data-forge-category]');
+    if (categoryTab) {
+      exchangeCategory = categoryTab.dataset.forgeCategory || 'all';
+      refresh();
+      context.audio.play('select');
+      return;
+    }
     const pick = event.target.closest('[data-forge-select]');
     if (pick) {
       selected = pick.dataset.forgeSelect;
@@ -1006,14 +957,11 @@ export function createEquipment(context) {
       return;
     }
     const button = event.target.closest('[data-buy-equipment]');
-    const reforge = event.target.closest('[data-reforge-instance]');
-    const temper = event.target.closest('[data-temper-instance]');
-    const ascend = event.target.closest('[data-ascend-instance]');
     const dismantle = event.target.closest('[data-dismantle-instance]');
+    const dismantleId = dismantle?.parentElement.querySelector('[data-dismantle-choice]').value;
     const addAffix = event.target.closest('[data-add-affix]');
     const refreshAffix = event.target.closest('[data-refresh-affix]');
-    if (!button && !reforge && !temper && !ascend && !dismantle && !addAffix && !refreshAffix)
-      return;
+    if (!button && !dismantle && !addAffix && !refreshAffix) return;
     if (
       request ||
       confirming ||
@@ -1025,43 +973,24 @@ export function createEquipment(context) {
     let message = '';
     const originalLibrary = library();
     try {
-      if (reforge || refreshAffix || dismantle) {
-        const instanceId =
-          reforge?.dataset.reforgeInstance ||
-          ascend?.dataset.ascendInstance ||
-          dismantle?.dataset.dismantleInstance;
-        const instance = library().equipment.owned.find((entry) => entry.id === instanceId);
-        const templateId =
-          addAffix?.dataset.addAffix || refreshAffix?.dataset.refreshAffix || instance?.templateId;
-        const template = resolveEquipmentTemplate(library(), templateId);
-        const label = reforge
-          ? '重铸'
-          : ascend
-            ? '升阶'
-            : addAffix
-              ? '赋词'
-              : refreshAffix
-                ? '洗词'
-                : '分解';
-        const cost = reforge
-          ? reforgeCost(template, instance)
-          : ascend
-            ? ascendCost(template, instance)
-            : dismantle
-              ? dismantleEther(template, instance)
-              : equipmentAffixCost(template);
+      if (refreshAffix || dismantle) {
+        const instance = library().equipment.owned.find((entry) => entry.id === dismantleId);
+        const template = resolveEquipmentTemplate(
+          library(),
+          refreshAffix?.dataset.refreshAffix || instance?.templateId,
+        );
+        if (!template) throw Error('装备蓝图不存在');
+        const label = dismantle ? '分解' : '洗词';
+        const quote = dismantle
+          ? `回收 ${dismantleEther(template, instance)} 以太`
+          : `消耗 ${equipmentAffixCost(template)} 以太`;
         confirming = true;
         const approved = await feedback.confirm({
           title: `${label} · ${template.name}`,
-          cost: dismantle ? `回收 ${cost} 以太` : `消耗 ${cost} 以太`,
-          description:
-            addAffix || refreshAffix
-              ? `${refreshAffix ? '随机替换当前词条。' : '随机获得一个词条。'}同款全部装备共同生效，已有与后续打造的装备都受影响。`
-              : reforge
-                ? '重新随机基础属性数值，结果可能提高或降低。'
-                : ascend
-                  ? '提升此件装备品质并重新计算基础属性。'
-                  : '分解后此件装备会被消耗。',
+          cost: quote,
+          description: dismantle
+            ? '分解后此件装备会被消耗。'
+            : '随机替换当前词条。同款全部装备共同生效。',
         });
         confirming = false;
         if (!approved || originalLibrary !== library() || session.runtime.disposed) return;
@@ -1074,28 +1003,8 @@ export function createEquipment(context) {
         );
         message = `已打造 Lv.${owned.level} ${EQUIPMENT_QUALITIES[owned.quality].name}装备（极品度 ${owned.rollPercent ?? 100}%），已加入背包。`;
         animation = 'forge';
-      } else if (reforge) {
-        const owned = await commitEquipment((draft) =>
-          reforgeEquipment(draft, reforge.dataset.reforgeInstance),
-        );
-        message = `属性重铸完成，当前极品度 ${owned.rollPercent ?? 100}%。`;
-        animation = 'reforge';
-      } else if (temper) {
-        const owned = await commitEquipment((draft) =>
-          temperEquipment(draft, temper.dataset.temperInstance),
-        );
-        message = `淬炼成功，已强化至 Lv.${owned.level}。`;
-        animation = 'temper';
-      } else if (ascend) {
-        const owned = await commitEquipment((draft) =>
-          ascendEquipment(draft, ascend.dataset.ascendInstance),
-        );
-        message = `升阶成功，品质晋升为 ${EQUIPMENT_QUALITIES[owned.quality].name}。`;
-        animation = 'ascend';
       } else if (dismantle) {
-        const refund = await commitEquipment((draft) =>
-          dismantleEquipment(draft, dismantle.dataset.dismantleInstance),
-        );
+        const refund = await commitEquipment((draft) => dismantleEquipment(draft, dismantleId));
         message = `已分解装备，回收 ${refund} 点以太。`;
       } else if (addAffix) {
         await commitEquipment((draft) => addEquipmentAffix(draft, addAffix.dataset.addAffix));
@@ -1143,7 +1052,7 @@ export function createEquipment(context) {
     const skillSelect = event.target.closest('[data-universal-skill-character]');
     if (skillSelect) {
       try {
-        if (session.runtime.mode === 'battle') throw Error('战斗中不能更换通用战技');
+        if (session.runtime.mode === 'battle') throw Error('战斗中不能更换特技');
         equipUniversalSkill(
           library(),
           skillSelect.dataset.universalSkillCharacter,
@@ -1205,10 +1114,15 @@ export function createEquipment(context) {
   });
   return {
     openCondenser,
+    openBlacksmith(cityId) {
+      if (session.runtime.mode !== 'inn' || session.ai.busy) return;
+      blacksmith.open(cityId);
+    },
     openExchange() {
       if (!document.querySelector('#party-panel').open) return;
       exchangeOnly = true;
       page = 'exchange';
+      exchangeCategory = 'all';
       selected = null;
       teaching = false;
       refresh();
@@ -1223,6 +1137,7 @@ export function createEquipment(context) {
       bag.remove();
       picker.dispose();
       feedback.dispose();
+      blacksmith.dispose();
     },
   };
 }

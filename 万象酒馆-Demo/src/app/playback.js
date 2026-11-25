@@ -78,7 +78,7 @@ export function createPlayback(context) {
         for (const event of beat.events) {
           if (event.type === 'item') await context.backpack.playItem(event);
           if (!current()) return;
-          if (event.type === 'engage') context.planning.playAwakening?.();
+
           const before = session.battle.display || session.battle.state;
           session.battle.display = event.after;
           session.battle.history.push(
@@ -104,6 +104,7 @@ export function createPlayback(context) {
             beatWaitMs = Math.max(beatWaitMs, eventMs + 150);
           }
           context.audio.combat(event, before, session.battle.speed, eventMs);
+          void context.emblems?.onBattleEvent(event, before);
           if (event.type === 'bossPhase' && (event.overlord || event.actor === APEP_ID)) {
             await context.overlordBattle?.onEvent(event);
           } else if (event.type === 'bossPhase') {
@@ -179,11 +180,12 @@ export function createPlayback(context) {
       context.emblems?.accepted(result);
       session.battle.state = advance(result);
       if (!['victory', 'defeat'].includes(session.battle.state.phase)) {
-        grantMidBattleOverlordEmblem(
+        const award = grantMidBattleOverlordEmblem(
           session.ai.library,
           session.battle.state,
           session.journey.expedition,
         );
+        if (award) context.emblems?.queueRingAward(award.id, award.recipient?.actor);
       }
       session.ai.library.discoveredWeaknesses = mergeRevealedWeaknessMap(
         session.ai.library.discoveredWeaknesses,

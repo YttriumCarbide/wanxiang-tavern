@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
 import path from 'node:path';
+import { openCityFacility } from './city-facility.mjs';
+import { travelTownScene } from './town-navigation.mjs';
 import { legacySession } from './legacy-session.mjs';
 import { newLibrary } from '../../src/ai/library.js';
 import { ITEMS } from '../../src/content/items.js';
@@ -14,10 +16,17 @@ export async function swipeScroll(page, panel, { rotated = false } = {}) {
   });
   assert(metrics.overflow > 20, 'The real panel contains enough content to scroll');
   const box = await panel.boundingBox();
+  // Keep the original 18px margins unless a short scrollport needs more swipe travel.
+  const verticalInset = Math.min(18, Math.max(2, (box.height - 24) / 2));
+  const verticalTravel = box.height - verticalInset * 2;
+  const swipeDistance = rotated ? box.width - 120 : verticalTravel;
+  assert(swipeDistance > 12, 'The panel fits a meaningful in-bounds finger swipe');
   const from = rotated
     ? { x: box.x + 60, y: box.y + box.height / 2 }
-    : { x: box.x + box.width / 2, y: box.y + box.height - 18 };
-  const to = rotated ? { x: box.x + box.width - 60, y: from.y } : { x: from.x, y: box.y + 18 };
+    : { x: box.x + box.width / 2, y: box.y + box.height / 2 + verticalTravel / 2 };
+  const to = rotated
+    ? { x: box.x + box.width - 60, y: from.y }
+    : { x: from.x, y: box.y + box.height / 2 - verticalTravel / 2 };
   const input = await page.context().newCDPSession(page);
   try {
     await input.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [from] });
@@ -98,6 +107,29 @@ async function checkTimeline(page, viewport) {
   }
 }
 
+async function visibleBox(locator) {
+  await locator.waitFor({ state: 'visible' });
+  const box = await locator.boundingBox();
+  assert(box && box.width > 0 && box.height > 0, 'Visible geometry for ' + locator);
+  return box;
+}
+
+async function openLedgerByDrag(page, box) {
+  const center = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  const reachable = await page
+    .locator('#ledger-handle')
+    .evaluate((node, { x, y }) => node.contains(document.elementFromPoint(x, y)), center);
+  assert(reachable, 'The ledger handle is reachable at its center');
+  await page.mouse.move(center.x, center.y);
+  await page.mouse.down();
+  try {
+    await page.mouse.move(Math.max(10, box.x - 140), center.y, { steps: 6 });
+  } finally {
+    await page.mouse.up();
+  }
+  await page.locator('#ledger-drawer-host.is-open').waitFor();
+}
+
 async function checkDiceContinue(page, output) {
   await page.evaluate(async () => {
     const { createDiceStage } = await import('/src/app/dice-stage.js');
@@ -151,6 +183,7 @@ export async function mobileChecks({ browser, baseURL, output }) {
     .map((entry) => entry.id);
   library.inventory.ether = 450;
   library.inventory.gold = 500;
+  library.inventory.equipmentVouchers = 3;
   library.inventory.bagUnlocked = true;
   library.dining = {
     ...(library.dining || {}),
@@ -180,8 +213,8 @@ export async function mobileChecks({ browser, baseURL, output }) {
     content: '这是一条用于验证手机手指滑动的酒馆聊天记录。'.repeat(3),
   }));
   for (const viewport of [
-    { width: 667, height: 375 },
     { width: 844, height: 390 },
+    { width: 667, height: 375 },
   ]) {
     const page = await browser.newPage({ viewport, hasTouch: true, deviceScaleFactor: 3 });
     page.on('pageerror', (error) => errors.push(error.stack || error.message));
@@ -280,14 +313,74 @@ export async function mobileChecks({ browser, baseURL, output }) {
         'Covered tavern stops rendering',
       );
       await page.locator('#ai-close').click();
-      const handleBox = await page.locator('#ledger-handle').boundingBox();
-      await page.mouse.move(handleBox.x + handleBox.width / 2, handleBox.y + handleBox.height / 2);
-      await page.mouse.down();
-      await page.mouse.move(Math.max(10, handleBox.x - 140), handleBox.y + handleBox.height / 2, {
-        steps: 6,
+      const handleBox = await visibleBox(page.locator('#ledger-handle'));
+      await openLedgerByDrag(page, handleBox);
+      const wallet = page.locator('#ledger-drawer #inn-resources');
+      const voucherIcon = wallet.locator('.inn-resource:has(#voucher-count) > img');
+      await voucherIcon.waitFor();
+      const voucher = await voucherIcon.evaluate(async (icon) => {
+        await icon.decode();
+        const { top, width, height } = icon.getBoundingClientRect();
+        const chip = icon.parentElement.getBoundingClientRect();
+        return {
+          asset: new URL(icon.currentSrc).pathname.split('/').at(-1),
+          square: width > 0 && Math.abs(width - height) < 1,
+          centered: Math.abs(top + height / 2 - (chip.top + chip.height / 2)) < 1,
+        };
       });
-      await page.mouse.up();
-      await page.locator('#ledger-drawer-host.is-open').waitFor();
+      assert.deepEqual(voucher, { asset: 'equipment-voucher.svg', square: true, centered: true });
+      assert.equal(await wallet.locator('#voucher-count').textContent(), '3');
+      const actionGrids = page.locator(
+        '#ledger-drawer :is([data-ledger-main-grid], [data-ledger-archive-grid])',
+      );
+      const buttons = await actionGrids
+        .locator(':scope > .ledger-tile > button')
+        .evaluateAll((nodes) =>
+          nodes.map((button) => {
+            const { x, y, width, height } = button.getBoundingClientRect();
+            return {
+              main: Boolean(button.closest('[data-ledger-main-grid]')),
+              workshop: button.id === 'workshop-open',
+              daily: button.dataset.daily,
+              x,
+              y,
+              width,
+              height,
+            };
+          }),
+        );
+      assert.equal(buttons.filter((button) => button.main).length, 6);
+      assert(
+        buttons.some((button) => !button.main),
+        'Archive actions are also checked',
+      );
+      assert(
+        await actionGrids
+          .locator(':scope > .ledger-tile')
+          .evaluateAll((tiles) =>
+            tiles.every(
+              (tile) => tile.children.length === 1 && tile.firstElementChild.matches('button'),
+            ),
+          ),
+        'Ledger action buttons have no subtitle rows',
+      );
+      assert(
+        buttons.every(
+          ({ width, height }) =>
+            width > 0 &&
+            height > 0 &&
+            Math.abs(width - buttons[0].width) < 1 &&
+            Math.abs(height - buttons[0].height) < 1,
+        ),
+        'Ledger actions in both sections have one consistent size',
+      );
+      const workshop = buttons.find((button) => button.workshop);
+      const promotion = buttons.find((button) => button.daily === 'promotion');
+      assert(
+        workshop && promotion && Math.abs(workshop.y - promotion.y) < 1 && workshop.x < promotion.x,
+        'The workshop and tavern promotion are on the same row',
+      );
+      assert.doesNotMatch((await actionGrids.allTextContents()).join(''), /接班开始/);
       assert.deepEqual(
         await page
           .locator('#ledger-drawer .ledger-foot button:visible')
@@ -322,6 +415,9 @@ export async function mobileChecks({ browser, baseURL, output }) {
       await page.locator('[data-prepare-slot="0"]').click();
       await page.locator('#prepare-detail .prepare-inspector-col').waitFor({ state: 'visible' });
       await page.locator('#prepare-close').click();
+      await page.locator('#party-panel').waitFor({ state: 'hidden' });
+      await page.locator('#ledger-close').click();
+      await page.locator('#ledger-drawer-host').waitFor({ state: 'hidden' });
       if (viewport.width === 667) await checkDiceContinue(page, output);
       await frame.locator('canvas').evaluate(() => window.assetPreview.placeNow('supplies'));
       await frame.locator('#condenser-open').click();
@@ -340,11 +436,47 @@ export async function mobileChecks({ browser, baseURL, output }) {
       assert(description.includes('技能伤害'));
       assert(!description.includes('skillDamage'));
       await page.locator('[data-forge-close]').click();
-      await frame.locator('#shop-open').click();
+      await openCityFacility(page, 'market');
       await measure('#void-shop', 'shop');
       await page.locator('#shop-close').click();
+      await travelTownScene(page, 'tavern');
       await frame.locator('canvas').evaluate(() => window.assetPreview.placeNow('table'));
-      await page.locator('[data-daily="chat"]').click();
+      const tavernDock = page.locator('#daily-hud .daily-dock');
+      await tavernDock.waitFor({ state: 'visible' });
+      const dockLayout = await tavernDock.evaluate((node) => {
+        const { left, right } = node.getBoundingClientRect();
+        const style = getComputedStyle(node);
+        const actions = [...node.querySelectorAll(':scope > button[data-daily]')]
+          .filter((button) => button.checkVisibility({ visibilityProperty: true }))
+          .map((button) => {
+            const { x, y, width } = button.getBoundingClientRect();
+            return { id: button.dataset.daily, x, y, width };
+          });
+        return {
+          start: left + parseFloat(style.borderLeftWidth) + parseFloat(style.paddingLeft),
+          end: right - parseFloat(style.borderRightWidth) - parseFloat(style.paddingRight),
+          gap: parseFloat(style.columnGap),
+          actions,
+        };
+      });
+      const { start, end, gap, actions } = dockLayout;
+      assert.deepEqual(
+        actions.map(({ id }) => id),
+        ['chat', 'invitation', 'dungeon', 'outing'],
+        'The tavern dock shows only its four actions in order',
+      );
+      const actionWidth = (end - start - gap * (actions.length - 1)) / actions.length;
+      assert(
+        actions.every(
+          ({ x, y, width }, index) =>
+            Math.abs(x - (start + index * (actionWidth + gap))) < 1 &&
+            Math.abs(y - actions[0].y) < 1 &&
+            Math.abs(width - actionWidth) < 1,
+        ),
+        'The visible tavern actions evenly fill one row: ' +
+          JSON.stringify({ viewport, dockLayout }),
+      );
+      await tavernDock.locator('[data-daily="chat"]').tap();
       await measure('#gal-stage', 'chat');
       await page.locator('[data-gal="history"]').click();
       await swipeScroll(page, page.locator('.gal-archive'));
@@ -355,7 +487,99 @@ export async function mobileChecks({ browser, baseURL, output }) {
       await measure('#archive-dialog', 'archives');
       for (const tab of ['enemies', 'records', 'memory', 'manual']) {
         await page.locator(`#archive-dialog [data-archive-tab="${tab}"]`).click();
-        if (tab === 'enemies') await swipeScroll(page, page.locator('#archive-list'));
+        if (tab === 'enemies') {
+          const index = page.locator('#archive-list');
+          const taxonomyLayout = await page.evaluate(() => {
+            const inspect = (selector) => {
+              const node = document.querySelector(selector);
+              if (!node) return null;
+              const rect = node.getBoundingClientRect();
+              const style = getComputedStyle(node);
+              const round = (value) => Math.round(value * 100) / 100;
+              return {
+                hidden: node.hidden,
+                text: (node.innerText || '').slice(0, 100),
+                rect: {
+                  x: round(rect.x),
+                  y: round(rect.y),
+                  width: round(rect.width),
+                  height: round(rect.height),
+                  bottom: round(rect.bottom),
+                },
+                clientHeight: node.clientHeight,
+                scrollHeight: node.scrollHeight,
+                clientWidth: node.clientWidth,
+                scrollWidth: node.scrollWidth,
+                css: {
+                  display: style.display,
+                  flex: style.flex,
+                  flexBasis: style.flexBasis,
+                  minHeight: style.minHeight,
+                  maxHeight: style.maxHeight,
+                  padding: style.padding,
+                  overflowX: style.overflowX,
+                  overflowY: style.overflowY,
+                  touchAction: style.touchAction,
+                  gridTemplateColumns: style.gridTemplateColumns,
+                },
+              };
+            };
+            const categories = document.querySelector('.archive-enemy-categories');
+            const list = document.querySelector('#archive-list');
+            const viewport = window.visualViewport;
+            return {
+              viewport: {
+                width: innerWidth,
+                height: innerHeight,
+                devicePixelRatio,
+                visualWidth: viewport?.width ?? null,
+                visualHeight: viewport?.height ?? null,
+                visualScale: viewport?.scale ?? null,
+              },
+              regions: Object.fromEntries(
+                [
+                  '#archive-dialog',
+                  '#archive-dialog > header',
+                  '#archive-dialog .records-body',
+                  '.archive-index-col',
+                  '.archive-codex-progress',
+                  '.archive-enemy-tiers',
+                  '.archive-enemy-categories',
+                  '#archive-list',
+                  '.archive-enemy-export',
+                ].map((selector) => [selector, inspect(selector)]),
+              ),
+              categoryOverflow: getComputedStyle(categories).overflowX,
+              categoryTouchAction: getComputedStyle(categories).touchAction,
+              categoriesScrollable: categories.scrollWidth > categories.clientWidth,
+              categoryButtons: [...categories.querySelectorAll('button')].map((button) => {
+                const rect = button.getBoundingClientRect();
+                return {
+                  id: button.dataset.enemyCategory,
+                  width: Math.round(rect.width * 100) / 100,
+                  height: Math.round(rect.height * 100) / 100,
+                  minHeight: getComputedStyle(button).minHeight,
+                };
+              }),
+              listHeight: list.getBoundingClientRect().height,
+              listTouchAction: getComputedStyle(list).touchAction,
+              listItems: list.children.length,
+            };
+          });
+          assert(
+            taxonomyLayout.listHeight >= 96,
+            'The taxonomy filters leave room to browse the enemy list by touch: ' +
+              JSON.stringify(taxonomyLayout),
+          );
+          assert.equal(taxonomyLayout.categoryOverflow, 'auto');
+          assert.equal(taxonomyLayout.categoryTouchAction, 'pan-x');
+          assert(
+            taxonomyLayout.categoriesScrollable,
+            'Taxonomy filters fit a horizontal touch strip',
+          );
+          assert.equal(taxonomyLayout.listTouchAction, 'pan-y');
+          await swipeScroll(page, index);
+        }
         await measure('#archive-dialog', tab);
       }
       await page.locator('#archive-close').click();
@@ -407,35 +631,41 @@ export async function mobileChecks({ browser, baseURL, output }) {
         () => demo.getStatus().mode === 'battle' && !demo.getStatus().animating,
       );
       await page.locator('#round-start').waitFor({ state: 'hidden' });
+      // The real ledger entry stays hidden until the chapter curtain has fully exited.
+      await page.locator('#chapter-theater').waitFor({ state: 'hidden' });
+      await page.locator('#scene-loading').waitFor({ state: 'hidden' });
+      await page.locator('#generation-progress').waitFor({ state: 'hidden' });
       await measure('#battle', 'battle');
       await measure('.command-controls', 'battle-controls');
       await checkTimeline(page, viewport);
-      const intersects = await page.evaluate(() => {
-        const corner = document.querySelector('#ledger-corner').getBoundingClientRect();
-        const handle = document.querySelector('#ledger-handle').getBoundingClientRect();
-        const round = document.querySelector('.round-indicator').getBoundingClientRect();
-        const overlaps = (a, b) =>
-          a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
-        return overlaps(corner, round) || overlaps(handle, round);
-      });
-      assert.equal(intersects, false, 'Corner bar and edge handle do not overlap round indicator');
-      const battleHandle = await page.locator('#ledger-handle').boundingBox();
-      await page.mouse.move(
-        battleHandle.x + battleHandle.width / 2,
-        battleHandle.y + battleHandle.height / 2,
+      const cornerBox = await visibleBox(page.locator('#ledger-corner'));
+      const battleHandle = await visibleBox(page.locator('#ledger-handle'));
+      const roundBox = await visibleBox(page.locator('#round-label'));
+      const overlaps = (a, b) =>
+        a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y;
+      assert.equal(
+        overlaps(cornerBox, roundBox) || overlaps(battleHandle, roundBox),
+        false,
+        'Corner bar and edge handle do not overlap round indicator',
       );
-      await page.mouse.down();
-      await page.mouse.move(
-        Math.max(10, battleHandle.x - 140),
-        battleHandle.y + battleHandle.height / 2,
-        { steps: 6 },
+      assert(
+        battleHandle.x >= 0 &&
+          battleHandle.y >= 0 &&
+          battleHandle.x + battleHandle.width <= viewport.width + 1 &&
+          battleHandle.y + battleHandle.height <= viewport.height + 1 &&
+          battleHandle.width >= 24 &&
+          battleHandle.height >= 44,
+        'Ledger handle remains inside the mobile viewport with a usable touch target',
       );
-      await page.mouse.up();
+      await page.locator('#ledger-handle').tap();
       await page.locator('#ledger-drawer-host.is-open').waitFor();
+      await page.locator('#ledger-close').tap();
+      await page.locator('#ledger-drawer').waitFor({ state: 'hidden' });
+      await openLedgerByDrag(page, battleHandle);
       await measure('#ledger-drawer', 'battle-ledger');
       assert.equal(await page.locator('#ledger-drawer [data-daily="service"]').isDisabled(), true);
       assert.equal(await page.locator('#ledger-drawer #party-toggle').isDisabled(), true);
-      await page.locator('#ledger-close').click();
+      await page.locator('.ledger-backdrop').tap({ position: { x: 6, y: viewport.height / 2 } });
       await page.locator('#ledger-drawer').waitFor({ state: 'hidden' });
       await page.locator('#backpack-open').click();
       await page.locator('#backpack-dialog.expanded').waitFor();

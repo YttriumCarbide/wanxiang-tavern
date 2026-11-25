@@ -37,27 +37,53 @@ export async function townPlaceChecks({ browser, baseURL, output }) {
     await page.evaluate((timeOfDay) => {
       window.postMessage({ type: 'daily-managed', timeOfDay }, location.origin);
     }, timeOfDay);
-    await page.waitForFunction((file) => window.streetPreview?.state().image.endsWith(file), file);
+    await page.waitForFunction(
+      ([timeOfDay, file]) => {
+        const state = window.streetPreview?.state();
+        if (state?.timeOfDay !== timeOfDay || !state.image.endsWith(file)) return false;
+        if (document.body.dataset.pureBackdrop !== 'true') return true;
+        const filter = getComputedStyle(document.querySelector('body > canvas')).filter;
+        return timeOfDay === 'night' ? filter.startsWith('brightness(0.68)') : filter === 'none';
+      },
+      [timeOfDay, file],
+    );
   }
 
+  async function travelByDirectory(id) {
+    await page.locator('#street-submap-open').click();
+    const button = page.locator(`#street-city-submap[open] button[data-city-scene="${id}"]`);
+    await button.waitFor({ state: 'visible' });
+    await button.click();
+    await ready(id);
+  }
+
+  const starbellImage = '/city-backgrounds/starbell.png';
+  const silverCrownImage = '/city-backgrounds/silver-crown.png';
   const traversed = [];
   try {
-    await page.goto(baseURL + '/tavern.html?return=street&time=night');
+    await page.goto(baseURL + '/tavern.html?return=city-center&time=night');
     await page.locator('#status').waitFor({ state: 'detached', timeout: 60000 });
     await page.evaluate(() => window.assetPreview.placeNow('streetDoor'));
     await page.locator('#street-open').click();
-    await ready('starlamp-street');
+    await ready('city-center');
     const street = await state();
     assert.equal(street.timeOfDay, 'night');
-    assert(street.image.endsWith('/town-night/street.png'));
-    await light('day', '/street-hd-v4/connected.png');
+    assert(street.image.endsWith(starbellImage));
+    await light('day', starbellImage);
     assert.deepEqual((await state()).framing, street.framing);
-    await light('night', '/town-night/street.png');
+    await light('night', starbellImage);
     await page.screenshot({ path: path.join(output, 'street-night.png') });
     const mapButton = page.getByRole('button', { name: '大地图', exact: true });
     const worldMap = page.getByRole('dialog', { name: '泛生界大地图' });
-    await mapButton.click();
-    await worldMap.waitFor();
+    async function openWorldMap() {
+      await mapButton.click();
+      await worldMap.waitFor();
+      // A visible dialog can still be offset by its entry transition.
+      await worldMap.evaluate((dialog) =>
+        Promise.allSettled(dialog.getAnimations().map((animation) => animation.finished)),
+      );
+    }
+    await openWorldMap();
     await page.waitForFunction(() => {
       const sheet = document.querySelector('#street-map-sheet');
       return (
@@ -75,6 +101,10 @@ export async function townPlaceChecks({ browser, baseURL, output }) {
       const hit = (x, y) => document.elementFromPoint(x, y)?.closest('#street-map') === dialog;
       return {
         cityDistance,
+        cityBounds: [firstCity, secondCity].map((city) => {
+          const { x, y, width, height } = city.getBBox();
+          return { left: x, right: x + width, top: y, bottom: y + height };
+        }),
         worldWidth: sheet.querySelector('.street-map-world-rim').getBBox().width,
         coversCorners: [
           hit(1, 1),
@@ -91,9 +121,16 @@ export async function townPlaceChecks({ browser, baseURL, output }) {
         return { x, y, width, height };
       });
     }
+    function includesBothCities({ x, y, width, height }) {
+      return atlas.cityBounds.every(
+        ({ left, right, top, bottom }) =>
+          left >= x && right <= x + width && top >= y && bottom <= y + height,
+      );
+    }
     const initialView = await atlasView();
     assert.deepEqual(atlas.cityLabels, ['星钟城', '银冠城']);
-    assert.equal(initialView.width / atlas.cityDistance, 1.5);
+    assert.equal(await page.locator('#street-map-sheet').getAttribute('data-detail'), 'local');
+    assert(includesBothCities(initialView), 'the initial viewport keeps both city labels visible');
     assert(atlas.worldWidth / atlas.cityDistance > 50);
     assert(atlas.coversCorners.every(Boolean), 'the map must cover the whole viewport');
     const sheet = page.locator('#street-map-sheet');
@@ -351,43 +388,66 @@ export async function townPlaceChecks({ browser, baseURL, output }) {
     await worldMap.getByRole('button', { name: '关闭地图' }).click();
     await worldMap.waitFor({ state: 'hidden' });
     assert.equal(await mapButton.evaluate((button) => button === document.activeElement), true);
-    assert.deepEqual((await state()).framing, street.framing);
+    const streetAfterMap = (await state()).framing;
+    // Moving the mouse to the atlas button changes transient hover parallax only.
+    for (const key of ['panX', 'panY', 'width', 'height']) {
+      assert.equal(
+        streetAfterMap[key],
+        street.framing[key],
+        `Atlas preserves street framing ${key}`,
+      );
+    }
     await page.locator('#street-return').click();
-    await page.waitForURL('**/tavern.html?return=street&time=night');
+    await page.waitForURL('**/tavern.html?return=city-center&time=night');
 
     for (const parent of new Set(Object.values(TOWN_SIDE_PLACES).map((place) => place.parent))) {
       await page.goto(baseURL + `/street.html?scene=${parent}&time=night`);
       await ready(parent);
       const initial = await state();
-      assert(initial.image.endsWith(`/town-night/${parent}.png`));
-      await light('day', `/free-scenes-hd-v2/${parent}/connected.png`);
+      assert.equal(initial.timeOfDay, 'night');
+      assert(initial.image.endsWith(starbellImage));
+      await light('day', starbellImage);
       assert.deepEqual((await state()).framing, initial.framing);
-      await light('night', `/town-night/${parent}.png`);
+      await light('night', starbellImage);
       await page.screenshot({ path: path.join(output, `${parent}-night.png`) });
 
       for (const [id, place] of Object.entries(TOWN_SIDE_PLACES)) {
         if (place.parent !== parent) continue;
-        await focusExit(id);
+        await travelByDirectory(id);
         const scene = await state();
         assert.equal(scene.timeOfDay, 'night');
         assert(scene.image.endsWith(`/${id}${place.openAir ? '-night' : ''}.png`));
         assert.equal(scene.visitors, 1);
-        assert.equal(await page.locator('body').getAttribute('data-fixed-view'), 'true');
+        const fixed = await page.evaluate(() => window.streetPreview.definition.illustration.fixed);
+        assert.equal(fixed, true);
+        const before = scene.framing;
         await page.mouse.move(630, 470);
         await page.mouse.down();
         await page.mouse.move(1000, 220, { steps: 4 });
         await page.mouse.up();
         await page.keyboard.press('ArrowRight');
-        assert.deepEqual((await state()).framing, scene.framing);
+        await ready(id);
+        const moved = (await state()).framing;
+        assert(Math.abs(moved.x - before.x) > 0.015, `${id}: bounded parallax should move`);
+        const epsilon = 1e-6;
+        const aspect = 16 / 9;
+        assert(moved.x - moved.width / 2 >= -aspect / 2 - epsilon);
+        assert(moved.x + moved.width / 2 <= aspect / 2 + epsilon);
+        assert(moved.y - moved.height / 2 >= -0.5 - epsilon);
+        assert(moved.y + moved.height / 2 <= 0.5 + epsilon);
         await page.screenshot({ path: path.join(output, `${id}.png`) });
         if (id === 'clock-roof') {
           await light('day', '/clock-roof.png');
+          const day = (await state()).framing;
+          assert.deepEqual(day, moved);
           await page.screenshot({ path: path.join(output, 'clock-roof-day.png') });
           await light('night', '/clock-roof-night.png');
+          assert.deepEqual((await state()).framing, moved);
         }
-        await page.locator('#street-return').click();
-        await ready(parent);
-        assert((await state()).image.endsWith(`/town-night/${parent}.png`));
+        await focusExit(parent);
+        const returned = await state();
+        assert.equal(returned.timeOfDay, 'night');
+        assert(returned.image.endsWith(starbellImage));
         traversed.push(id);
       }
     }
@@ -419,16 +479,23 @@ export async function townPlaceChecks({ browser, baseURL, output }) {
     await page.goto(baseURL + '/street.html?scene=road-capital');
     await ready('road-capital');
     await page.setViewportSize({ width: 844, height: 390 });
-    await mapButton.click();
-    await worldMap.waitFor();
+    await openWorldMap();
     await page.locator('#street-map-sheet').waitFor({ state: 'visible' });
     const mapBounds = await worldMap.boundingBox();
-    assert(mapBounds.x <= 0 && mapBounds.y <= 0);
+    assert(
+      mapBounds.x <= 0 && mapBounds.y <= 0,
+      `full-screen map starts at viewport origin: ${JSON.stringify(mapBounds)}`,
+    );
     assert(mapBounds.width >= 844 && mapBounds.height >= 390);
     const mobileAtlas = await atlasView();
-    assert.equal(mobileAtlas.width, initialView.width);
-    assert.equal(mobileAtlas.x, initialView.x);
-    assert(mobileAtlas.height < initialView.height);
+    assert.equal(await sheet.getAttribute('data-detail'), 'local');
+    assert(includesBothCities(mobileAtlas), 'landscape must keep both city labels visible');
+    assert(mobileAtlas.width > initialView.width, 'the wider aspect reveals more to either side');
+    assert(
+      Math.abs(mobileAtlas.x + mobileAtlas.width / 2 - initialView.x - initialView.width / 2) <
+        0.001,
+      'the initial map center stays consistent across viewport sizes',
+    );
     await page.screenshot({ path: path.join(output, 'world-map-mobile.png') });
     const touch = await page.context().newCDPSession(page);
     const separated = [
@@ -486,15 +553,19 @@ export async function townPlaceChecks({ browser, baseURL, output }) {
     await page.keyboard.press('Escape');
     await worldMap.waitFor({ state: 'hidden' });
     await page.setViewportSize({ width: 1280, height: 720 });
-    await focusExit('crown-gateward');
-    await focusExit('crown-canal');
-    await light('night', '/silver-crown/crown-canal-night.png');
+    await travelByDirectory('crown-canal');
+    const canal = await state();
+    assert(canal.image.endsWith(silverCrownImage));
+    await light('night', silverCrownImage);
+    assert.deepEqual((await state()).framing, canal.framing);
     await page.screenshot({ path: path.join(output, 'silver-crown-canal-night.png') });
-    await focusExit('crown-floodgate');
-    assert((await state()).image.endsWith('/silver-crown/crown-floodgate-night.png'));
+    await travelByDirectory('crown-floodgate');
+    const floodgate = await state();
+    assert.equal(floodgate.timeOfDay, 'night');
+    assert(floodgate.image.endsWith(silverCrownImage));
     assert(await page.locator('#street-return').isVisible());
-    await page.locator('#street-return').click();
-    await ready('crown-canal');
+    await travelByDirectory('crown-canal');
+    assert.equal((await state()).timeOfDay, 'night');
     assert.deepEqual(errors, []);
     return {
       traversed,

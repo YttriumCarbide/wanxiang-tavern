@@ -26,15 +26,17 @@ export async function ringGalleryChecks({ browser, baseURL, output }) {
     const waitForSwitch = () =>
       scene.waitForFunction(() => !window.assetPreview.rings().transitioning);
     await frame.locator('canvas').evaluate(() => window.assetPreview.placeNow('supplies'));
-    await frame.locator('#shop-open').waitFor({ state: 'visible' });
     await frame.locator('#condenser-open').waitFor({ state: 'visible' });
-    const supply = await frame.locator('#shop-open').boundingBox();
-    const ether = await frame.locator('#condenser-open').boundingBox();
-    assert(supply.x + supply.width < ether.x || ether.x + ether.width < supply.x);
+    const vending = frame.locator('#vending-open');
+    await vending.click();
+    await page.locator('#void-shop[open][data-shop-mode="vending"]').waitFor();
+    assert.equal(await page.locator('#market-title').textContent(), '药剂售货机');
+    await page.locator('#shop-close').click();
+    await page.locator('#void-shop').waitFor({ state: 'hidden' });
     await page.screenshot({ path: path.join(output, 'supplies-actions.png') });
     await frame.locator('canvas').evaluate(() => window.assetPreview.placeNow('fate'));
-    await frame.locator('#shop-open').waitFor({ state: 'hidden' });
     await frame.locator('#condenser-open').waitFor({ state: 'hidden' });
+    await vending.waitFor({ state: 'hidden' });
     await frame.locator('#emblem-open').waitFor({ state: 'visible' });
     const table = await frame.locator('canvas').evaluate(() => {
       const objects = [];
@@ -54,6 +56,22 @@ export async function ringGalleryChecks({ browser, baseURL, output }) {
     await frame.locator('#emblem-open').click();
     await frame.locator('.ring-gallery-owner').filter({ hasText: '已契约' }).waitFor();
     await scene.waitForFunction(() => window.assetPreview.rings().background === true);
+    const gallery = frame.locator('.ring-gallery');
+    assert.equal(await gallery.getAttribute('role'), 'dialog');
+    assert.equal(await gallery.getAttribute('aria-modal'), 'true');
+    assert.equal(await gallery.getAttribute('aria-label'), '命运桌 · 纹章戒指');
+    assert.equal(
+      await frame.locator('[data-ring-close]').getAttribute('aria-label'),
+      '关闭戒指陈列',
+    );
+    assert.equal(
+      await frame.locator('[data-ring-zoom="-1"]').getAttribute('aria-label'),
+      '缩小戒指',
+    );
+    assert.equal(
+      await frame.locator('[data-ring-zoom="1"]').getAttribute('aria-label'),
+      '放大戒指',
+    );
     const wearer = await page.evaluate(
       () =>
         demo.getLibrary().characters.find((member) => member.emblemId === 'tan-hongyu').setting
@@ -75,6 +93,7 @@ export async function ringGalleryChecks({ browser, baseURL, output }) {
     const alpha = glass.color.match(/rgba\([^,]+,[^,]+,[^,]+,\s*([\d.]+)\)/);
     assert(alpha && Number(alpha[1]) < 1, 'The gallery surface must remain translucent');
     await frame.locator('[data-ring-turn]').click();
+    assert.equal(await frame.locator('[data-ring-turn]').getAttribute('aria-pressed'), 'false');
     for (const [index, id] of ids.entries()) {
       await frame.locator('[data-ring-id="' + id + '"]').click();
       if (index > 0) {
@@ -172,17 +191,28 @@ export async function ringGalleryChecks({ browser, baseURL, output }) {
       ),
     );
     await page.screenshot({ path: path.join(output, 'ring-mobile.png') });
-    const collectionBeforeReplay = await page.evaluate(() => demo.getLibrary().emblems);
-    await frame.locator('[data-ring-replay]').click();
-    await page.locator('.ring-acquisition').waitFor({ state: 'visible' });
-    assert.equal(
-      await page.locator('.ring-acquisition').getAttribute('data-emblem-id'),
-      'tan-hongyu',
-    );
-    await page.locator('.ring-acquisition-skip').click();
-    await page.locator('.ring-acquisition-continue').click();
-    assert.deepEqual(await page.evaluate(() => demo.getLibrary().emblems), collectionBeforeReplay);
-    assert.equal(await frame.locator('.ring-gallery').isVisible(), true);
+    assert.equal(await frame.locator('[data-ring-replay]').count(), 0, 'replay button removed');
+    assert.equal(await frame.locator('dialog.ring-acquisition').count(), 0, 'no preview dialog');
+    assert.equal(await frame.locator('[data-ring-zoom]').count(), 2);
+    assert.equal(await frame.locator('[data-ring-turn]').count(), 1);
+    assert.equal(await frame.locator('[data-ring-equip]').count(), 1);
+    const readCollection = () =>
+      page.evaluate(() => {
+        const { emblems, characters } = demo.getLibrary();
+        return { emblems, equipped: characters.map(({ id, emblemId }) => [id, emblemId]) };
+      });
+    const collectionBefore = await readCollection();
+    for (const id of ids) {
+      const ring = frame.locator(`[data-ring-id="${id}"]`);
+      await ring.click();
+      await waitForSwitch();
+      assert.equal(await ring.getAttribute('aria-pressed'), 'true', `${id}: selection changed`);
+      assert.equal(
+        await frame.locator('canvas').evaluate(() => window.assetPreview.rings().selected),
+        id,
+      );
+      assert.deepEqual(await readCollection(), collectionBefore, `${id}: collection changed`);
+    }
     await frame.locator('[data-ring-id="wind-dance"]').click();
     await frame.locator('[data-ring-close]').click();
     await page.waitForFunction(() => !document.body.classList.contains('ring-cabinet-open'));

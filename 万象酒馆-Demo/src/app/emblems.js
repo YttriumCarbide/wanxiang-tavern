@@ -12,18 +12,19 @@ import {
 } from '../emblems.js';
 import { definition } from '../catalog.js';
 import { createDialogue } from './dialogue.js';
-import { createRingAcquisition } from './ring-acquisition.js';
+import { createRingFeedback } from './ring-feedback.js';
 
 export function createEmblems(context) {
   const { session, events } = context;
   const dialogue = createDialogue(events, 'emblem-dialogue', context.gal);
-  const acquisition = createRingAcquisition();
+  const ringFeedback = createRingFeedback(context);
   const hint = document.createElement('aside');
   hint.id = 'emblem-lesson';
   hint.hidden = true;
   document.body.append(hint);
   let showing = false;
   let presentation = 0;
+  const pendingAwards = new Map();
   const progress = () => session.ai.library.progression;
   function speak(text, done, narrator = false) {
     if (showing) return;
@@ -187,21 +188,27 @@ export function createEmblems(context) {
     );
     return;
   }
-  function playAcquisition(id) {
-    if (!EMBLEMS[id]) return Promise.resolve(false);
-    context.audio.play('summon');
-    return acquisition.play(id);
+  function queueRingAward(id, actor, battle = session.battle.state) {
+    if (!id || !actor || !battle || session.runtime.disposed) return false;
+    pendingAwards.set(id, { actor, battle });
+    return true;
+  }
+  async function presentRingAward(id) {
+    const award = pendingAwards.get(id);
+    if (!award) return false;
+    pendingAwards.delete(id);
+    if (award.battle !== session.battle.state || session.runtime.mode !== 'battle') return false;
+    return await ringFeedback.acquired(id, award.actor);
   }
   function acquireThen(id, done) {
     const battle = session.battle.state;
     const expedition = session.journey.expedition;
     const token = ++presentation;
     showing = true;
-    playAcquisition(id).then((completed) => {
+    void presentRingAward(id).then(() => {
       if (token !== presentation) return;
       showing = false;
       if (
-        completed &&
         !session.runtime.disposed &&
         session.runtime.mode === 'battle' &&
         session.battle.state === battle &&
@@ -215,7 +222,6 @@ export function createEmblems(context) {
     if (
       !state ||
       showing ||
-      acquisition.isOpen() ||
       session.runtime.mode !== 'battle' ||
       session.battle.playing ||
       context.overlordBattle?.isTutorialOpen?.() ||
@@ -284,7 +290,7 @@ export function createEmblems(context) {
     }
   }
   function beforeCommit() {
-    if (acquisition.isOpen()) return false;
+    if (showing) return false;
     if (!['combine', 'skill'].includes(progress()?.emblemLesson)) return true;
     const result = session.battle.forecast;
     const corridorTarget = session.journey.expedition?.corridorRing?.bossId || 'millVoleAlpha';
@@ -402,15 +408,7 @@ export function createEmblems(context) {
       context.ledger?.sync();
       return;
     }
-    if (
-      event.data?.type === 'tavern-emblem-replay' &&
-      session.runtime.mode === 'inn' &&
-      !session.ai.busy &&
-      EMBLEMS[event.data.id]
-    ) {
-      void playAcquisition(event.data.id);
-      return;
-    }
+
     if (
       !['tavern-emblem', 'tavern-emblem-equip'].includes(event.data?.type) ||
       session.runtime.mode !== 'inn' ||
@@ -431,10 +429,23 @@ export function createEmblems(context) {
     check,
     accepted,
     beforeCommit,
-    playAcquisition,
+    queueRingAward,
+    presentRingAward,
+    cancelRingFeedback() {
+      ++presentation;
+      ringFeedback.cancel();
+      showing = false;
+      for (const [id, award] of pendingAwards) {
+        if (award.battle !== session.battle.state) pendingAwards.delete(id);
+      }
+    },
+    onBattleEvent(event, before) {
+      return ringFeedback.event(event, before);
+    },
     leave() {
       ++presentation;
-      acquisition.cancel();
+      pendingAwards.clear();
+      ringFeedback.cancel();
       document.body.classList.remove('ring-cabinet-open');
       hint.hidden = true;
       dialogue.close();
@@ -442,7 +453,8 @@ export function createEmblems(context) {
     },
     dispose() {
       ++presentation;
-      acquisition.dispose();
+      pendingAwards.clear();
+      ringFeedback.dispose();
       showing = false;
       document.body.classList.remove('ring-cabinet-open');
       dialogue.dispose();

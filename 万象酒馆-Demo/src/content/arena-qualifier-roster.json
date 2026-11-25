@@ -10,7 +10,7 @@
   },
   {
     "id": "arenaQualifierWoodShield",
-    "name": "木盾短剑手",
+    "name": "木盾剑士",
     "slug": "arena-q-wood-shield",
     "tier": "minion",
     "archetype": "human",
@@ -37,7 +37,7 @@
   },
   {
     "id": "arenaQualifierKnives",
-    "name": "双木刀学徒",
+    "name": "双刃剑士",
     "slug": "arena-q-knives",
     "tier": "minion",
     "archetype": "human",

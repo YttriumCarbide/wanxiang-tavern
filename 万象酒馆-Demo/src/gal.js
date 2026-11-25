@@ -1,5 +1,29 @@
 import { GAL_NPC_PORTRAITS } from './content/gal-npc-portraits.js';
 
+// Public dialogue suffixes and their reading pace. No model-supplied animation values are used.
+const GAL_EMOTIONS = Object.freeze({
+  hop: 11,
+  'hop:alert': 11,
+  'hop:note': 11,
+  shake: 11,
+  sweat: 36,
+  lean: 20,
+  back: 20,
+  nod: 20,
+  sway: 36,
+  question: 36,
+});
+
+export function galEmotionTag(value) {
+  return typeof value === 'string' && Object.hasOwn(GAL_EMOTIONS, value) ? value : '';
+}
+
+export function galTypingDelay(emotion, character = '', next = '') {
+  const delay = GAL_EMOTIONS[galEmotionTag(emotion)] ?? 20;
+  const pause = /[，,、—–]/u;
+  return delay === 36 && pause.test(character) && !pause.test(next) ? delay + 300 : delay;
+}
+
 /** Lightweight prose markers; the stored story remains complete, readable text. */
 export function galRequestInput(kind, input) {
   if (!['script', 'chat', 'quick-chat'].includes(kind)) return input;
@@ -24,34 +48,54 @@ export function stripGalTags(source) {
     .trim();
 }
 
+function galSpeakerParts(value, allowEmotion) {
+  const [identity, ...suffixes] = String(value || '')
+    .split(/[|｜]/u)
+    .map((part) => part.trim());
+  const portrait = /^npc[:：]/u.test(identity) && Object.hasOwn(GAL_NPC_PORTRAITS, suffixes[0]);
+  const emotionSlot = portrait ? 1 : 0;
+  const emotion =
+    allowEmotion && suffixes.length === emotionSlot + 1 ? galEmotionTag(suffixes[emotionSlot]) : '';
+  return {
+    speaker: portrait ? `${identity}|${suffixes[0]}` : identity,
+    ...(emotion ? { emotion } : {}),
+  };
+}
+
 export function parseGalText(source, defaultSpeaker = '') {
   const text = cleanGalMarkup(source);
   const pattern = new RegExp(GAL_STAGE_TAG.source, 'gu');
   const beats = [];
   let cursor = 0;
   let kind = defaultSpeaker ? 'dialogue' : 'narration';
-  let speaker = defaultSpeaker;
+  let identity = galSpeakerParts(defaultSpeaker, Boolean(defaultSpeaker));
   function append(end) {
     const content = text.slice(cursor, end).trim();
-    if (content) beats.push({ type: kind, speaker, text: content });
+    if (!content) return;
+    beats.push({ type: kind, ...identity, text: content });
+    // Stage cues can interrupt a line, but only its first text beat owns the reaction.
+    if (identity.emotion) identity = { speaker: identity.speaker };
   }
   for (const match of text.matchAll(pattern)) {
     append(match.index);
-    const [label, ...identity] = match[1].split(/[:：]/u);
-    const id = identity.join(':').trim();
+    const delimiter = match[1].search(/[:：]/u);
+    const label = delimiter < 0 ? match[1] : match[1].slice(0, delimiter);
+    const id = delimiter < 0 ? '' : match[1].slice(delimiter + 1);
     cursor = match.index + match[0].length;
     if (label === '旁白') {
       kind = 'narration';
-      speaker = '';
+      identity = { speaker: '' };
     } else if (label === '对白') {
-      kind = 'dialogue';
-      speaker = id;
-    } else
+      identity = galSpeakerParts(id, true);
+      kind = identity.speaker ? 'dialogue' : 'narration';
+    } else {
+      const cue = galSpeakerParts(id, false);
       beats.push({
         type: label === '清场' ? 'clear' : label === '登场' ? 'enter' : 'exit',
-        speaker: id,
+        ...cue,
         text: '',
       });
+    }
   }
   append(text.length);
   return beats;
@@ -152,10 +196,10 @@ export function readableGalText(source, actors = [], protagonistId) {
 
 export function resolveGalActor(speaker, actors, protagonistId) {
   const identity = String(speaker || '')
+    .split(/[|｜]/u)[0]
+    .trim()
     .replace(/\s*·\s*Lv\.\d+$/u, '')
-    .replace(/^npc[:：]/u, '')
-    .split('|')[0]
-    .trim();
+    .replace(/^npc[:：]/u, '');
   if (!identity || ['旁白', 'narrator'].includes(identity)) return null;
   if (['user', 'player', '<user>', '主角', '玩家', '你'].includes(identity))
     return (

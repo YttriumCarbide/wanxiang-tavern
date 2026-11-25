@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import { BIOMES } from '../src/content/biomes.js';
 import { DUNGEON_SCENE_IDS, REGIONS } from '../src/content/regions.js';
 import { ENEMIES, BOSSES } from '../src/data.js';
@@ -9,6 +10,36 @@ import { triggeredStatusVisuals } from '../src/status-effects.js';
 import { generationInput } from '../server/prompts.mjs';
 import { newLibrary } from '../src/ai/library.js';
 import { settingOnly } from '../src/ai/contracts.js';
+
+test('equipment voucher emblem remains centered in the ticket face', async () => {
+  const svg = await readFile(
+    new URL('../assets/icons/equipment-voucher.svg', import.meta.url),
+    'utf8',
+  );
+  const viewBox = svg
+    .match(/\bviewBox="([^"]+)"/)?.[1]
+    .trim()
+    .split(/[\s,]+/)
+    .map(Number);
+  const [crest, inlay] = svg.matchAll(/<polygon\b[^>]*\bpoints="([^"]+)"/g);
+  assert.equal(viewBox?.length, 4, 'The voucher SVG must declare a four-value viewBox');
+  assert(crest && inlay, 'The voucher must include the crest and its inlay');
+
+  const [left, top, width, height] = viewBox;
+  for (const [, points] of [crest, inlay]) {
+    const coordinates = points
+      .trim()
+      .split(/[\s,]+/)
+      .map(Number);
+    const xs = coordinates.filter((_, index) => index % 2 === 0);
+    const ys = coordinates.filter((_, index) => index % 2 === 1);
+    assert.deepEqual(
+      [(Math.min(...xs) + Math.max(...xs)) / 2, (Math.min(...ys) + Math.max(...ys)) / 2],
+      [left + width / 2, top + height / 2],
+      'The crest and inlay must each be centered within the SVG viewBox',
+    );
+  }
+});
 
 test('dungeon battle models keep the six card anchors and miniatures have their own plinths', async () => {
   const anchors = /^Placeholder_(Friendly|Enemy)_\d+$/;
@@ -282,7 +313,7 @@ test('city market and black market arenas and miniature previews keep six cards,
       id: 'city-market',
       landmark: 'Landmark_Market_Archway',
       motions: ['Motion_Market_Signboard', 'Motion_Market_Weathervane'],
-      centralPrefixes: new Set([
+      centralGroups: new Set([
         '00_Deep_City_Bedrock',
         '01_City_Street_Base',
         '02_Central_Market_Cobbles',
@@ -298,12 +329,13 @@ test('city market and black market arenas and miniature previews keep six cards,
       id: 'black-market',
       landmark: 'Landmark_BlackMarket_Auction',
       motions: ['Motion_BlackMarket_Cage', 'Motion_BlackMarket_Pulley'],
-      centralPrefixes: new Set([
-        '00_Deep_Undercroft_Bedrock',
-        '01_Undercroft_Floor_Base',
-        '02_Central_Vault_Stones',
-        '03_Enemy_Auction_Floor',
-        '04_Center_Drain_Grate',
+      centralGroups: new Set([
+        '00_Harbor_Basin_Bedrock',
+        '01_Harbor_Basin_Water',
+        '02_Central_Wharf_Deck',
+        '03_Enemy_Cargo_Wharf',
+        '04_Tidal_Slip_Water',
+        '05_Wharf_Crossings',
         'Six_Grounded_Foundations',
         'Revealed_Dais_Engraving',
         'Dais_Corner_Inlay',
@@ -312,13 +344,15 @@ test('city market and black market arenas and miniature previews keep six cards,
     },
   ];
 
+  const cardAnchors = (gltf) =>
+    gltf.nodes.filter(({ name }) => /^Placeholder_(Friendly|Enemy)_\d+$/.test(name));
+
   for (const spec of specs) {
-    const { file, jsonLen, gltf } = await readGlb(`${spec.id}.glb`);
+    const blackMarket = spec.id === 'black-market';
+    const filename = `${spec.id}.glb`;
+    const { file, jsonLen, gltf } = await readGlb(filename);
     assert(gltf.extras.voxelBoxes >= 1500, `${spec.id}: expected >= 1500 voxel boxes`);
-    assert.equal(
-      gltf.nodes.filter((node) => /^Placeholder_(Friendly|Enemy)_\d+$/.test(node.name)).length,
-      6,
-    );
+    assert.equal(cardAnchors(gltf).length, 6);
     const names = gltf.nodes.map((node) => node.name);
     assert(
       names.includes('Six_Grounded_Foundations'),
@@ -327,6 +361,46 @@ test('city market and black market arenas and miniature previews keep six cards,
     assert(names.includes(spec.landmark), `${spec.id}: missing ${spec.landmark}`);
     for (const motion of spec.motions)
       assert(names.includes(motion), `${spec.id}: missing ${motion}`);
+    if (blackMarket) {
+      assert.equal(gltf.extras.biome, 'black-market');
+      assert.deepEqual(gltf.extras.motionNodes, spec.motions);
+      assert(gltf.extras.peripheryLayout.zones.includes('south-timber-wharf'));
+      assert(gltf.extras.peripheryLayout.zones.includes('tidal-cargo-berth'));
+      for (const group of [
+        'Landmark_BlackMarket_Harbor',
+        'Landmark_BlackMarket_Harbor_Skiff',
+        'South_Timber_Quay',
+        'East_Tidal_Inlet_Water',
+      ])
+        assert(names.includes(group), `black-market: missing ${group}`);
+      assert(!names.some((name) => /quarry|minecart/i.test(name)));
+
+      function bounds(name) {
+        const node = gltf.nodes.find((entry) => entry.name === name);
+        assert(node && Number.isInteger(node.mesh), `black-market: missing mesh ${name}`);
+        const index = gltf.meshes[node.mesh].primitives[0].attributes.POSITION;
+        return gltf.accessors[index];
+      }
+      const tidalSlip = bounds('04_Tidal_Slip_Water');
+      const friendlyDeck = bounds('02_Central_Wharf_Deck');
+      const enemyDeck = bounds('03_Enemy_Cargo_Wharf');
+      assert(
+        friendlyDeck.min[2] >= 0.5 && enemyDeck.max[2] <= -0.5,
+        'Opposing wharves leave a channel',
+      );
+      assert(tidalSlip.min[2] < -0.5 && tidalSlip.max[2] > 0.5, 'Water fills the channel');
+      assert(tidalSlip.max[1] < 0, 'The water stays below the battle decks');
+
+      const { gltf: template } = await readGlb('battle.glb');
+      const transforms = (model) =>
+        cardAnchors(model).map(({ name, translation, rotation, scale }) => ({
+          name,
+          translation,
+          rotation,
+          scale,
+        }));
+      assert.deepEqual(transforms(gltf), transforms(template), 'Card transforms must not move');
+    }
     assert.equal(gltf.extras.peripheryLayout.mode, 'authored-large');
     assert.equal(gltf.extras.peripheryLayout.mirroredRight, false);
     assert(gltf.extras.peripheryLayout.zones.length >= 5);
@@ -335,7 +409,7 @@ test('city market and black market arenas and miniature previews keep six cards,
 
     for (const node of gltf.nodes.filter(
       (entry) =>
-        Object.hasOwn(gltf.extras.components, entry.name) && !spec.centralPrefixes.has(entry.name),
+        Object.hasOwn(gltf.extras.components, entry.name) && !spec.centralGroups.has(entry.name),
     )) {
       const primitive = gltf.meshes[node.mesh].primitives[0];
       const accessor = gltf.accessors[primitive.attributes.POSITION];
@@ -360,10 +434,33 @@ test('city market and black market arenas and miniature previews keep six cards,
       }
     }
 
-    const { gltf: previewGltf } = await readGlb(`preview-${spec.id}.glb`);
-    assert(previewGltf.extras.voxelBoxes >= 600, `preview-${spec.id}: expected >= 600 voxel boxes`);
+    const previewFilename = `preview-${filename}`;
+    const { file: previewFile, gltf: previewGltf } = await readGlb(previewFilename);
+    assert(previewGltf.extras.voxelBoxes >= 600, `${previewFilename}: expected >= 600 voxel boxes`);
     const previewNames = previewGltf.nodes.map((node) => node.name);
-    assert(previewNames.includes('Minecart'), `preview-${spec.id}: missing Minecart`);
+    if (blackMarket) {
+      for (const group of ['Preview_Harbor_Water', 'Preview_Harbor_Skiff', 'Preview_Harbor_Pier'])
+        assert(previewNames.includes(group), `${previewFilename}: missing ${group}`);
+      assert(!previewNames.some((name) => /quarry|minecart/i.test(name)));
+      assert.equal(cardAnchors(previewGltf).length, 0);
+
+      const catalog = JSON.parse(
+        await readFile(new URL('../assets/asset-catalog.json', import.meta.url), 'utf8'),
+      );
+      for (const [asset, bytes] of [
+        [filename, file],
+        [previewFilename, previewFile],
+      ]) {
+        const source = await readFile(new URL(`../../万象异境-体素模型/${asset}`, import.meta.url));
+        assert(bytes.equals(source), `${asset}: source and runtime copies differ`);
+        assert.deepEqual(catalog.files[`assets/${asset}`], {
+          bytes: bytes.length,
+          hash: createHash('sha256').update(bytes).digest('hex'),
+        });
+      }
+    } else {
+      assert(previewNames.includes('Minecart'), `${previewFilename}: missing Minecart`);
+    }
     assert(previewNames.includes('Flame'), `preview-${spec.id}: missing Flame`);
     assert.equal(BIOMES[spec.id].asset, spec.id);
     assert.equal(REGIONS[spec.id].biome ?? spec.id, spec.id);

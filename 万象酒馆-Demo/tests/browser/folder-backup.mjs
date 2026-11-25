@@ -511,7 +511,7 @@ export async function folderBackupChecks({ browser, baseURL, output }) {
       db.close();
     });
     await page.locator('[data-daily="outing"]').click();
-    await page.locator('[data-tavern-exit="street"]').click();
+    await page.locator('[data-tavern-exit="city-center"]').click();
     await page.locator('[data-daily="home"]').click();
     await page.evaluate(() => demo.flushStorage());
     const previousStatus = await page.locator('#data-folder-status').textContent();

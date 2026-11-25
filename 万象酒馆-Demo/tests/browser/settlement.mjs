@@ -100,8 +100,10 @@ export async function settlementChecks({ browser, baseURL, output }) {
     );
     assert((await page.locator('#level-dialogue .dialogue-bonuses').textContent()).includes('+'));
     await page.screenshot({ path: path.join(output, 'level-up-dialogue.png') });
-    while (await page.locator('#level-dialogue').isVisible())
-      await page.locator('#level-dialogue button').click();
+    const levelDialogue = page.locator('#level-dialogue');
+    while (await levelDialogue.evaluate((dialog) => dialog.open))
+      await levelDialogue.locator('button').click();
+    await levelDialogue.waitFor({ state: 'hidden' });
     await page.locator('#result').waitFor({ state: 'visible' });
     assert.equal(await page.locator('.experience-row').count(), 2);
     assert.equal(await page.locator('.reward-token img').count(), 1);

@@ -149,6 +149,42 @@ body.gal-playing .ledger-corner :is(#scene-return-tavern, #scene-visitors-refres
 .ledger-edge-handle[hidden] {
   display: none;
 }
+.ledger-city-directory-handle,
+.ledger-quests-handle {
+  z-index: 2049;
+}
+.ledger-city-directory-handle {
+  margin-top: -128px;
+}
+.ledger-quests-handle {
+  margin-top: 128px;
+}
+.ledger-city-directory-handle {
+  color: #f3e4c3;
+  background: linear-gradient(180deg, #364943, #192a2a);
+  border-color: #b0a076;
+  box-shadow:
+    inset 3px 0 0 #55776b,
+    -4px 6px 20px #0008;
+}
+.ledger-quests-handle {
+  color: #f6e9d8;
+  background: linear-gradient(180deg, #6a392e, #42201d);
+  border-color: #c49663;
+  box-shadow:
+    inset 3px 0 0 #a55540,
+    -4px 6px 20px #0008;
+}
+.ledger-edge-handle.ledger-city-directory-handle:is(:hover, :focus-visible, :active) {
+  color: #fff4db;
+  background: linear-gradient(180deg, #456459, #263d37);
+  border-color: #ead3a0;
+}
+.ledger-edge-handle.ledger-quests-handle:is(:hover, :focus-visible, :active) {
+  color: #fff4db;
+  background: linear-gradient(180deg, #82463a, #572723);
+  border-color: #e4bd88;
+}
 .ledger-edge-handle:hover,
 .ledger-edge-handle:focus-visible,
 .ledger-edge-handle:active {
@@ -172,6 +208,9 @@ body.gal-playing .ledger-corner :is(#scene-return-tavern, #scene-visitors-refres
     serif;
   letter-spacing: 2px;
   color: #3a2016;
+}
+.ledger-edge-handle:is(.ledger-city-directory-handle, .ledger-quests-handle) .ledger-handle-text {
+  color: inherit;
 }
 .ledger-edge-handle svg {
   width: 14px;
@@ -260,6 +299,9 @@ body.gal-playing .ledger-corner :is(#scene-return-tavern, #scene-visitors-refres
 }
 .ledger-drawer-host.is-open .ledger-drawer {
   transform: translateX(0);
+}
+.ledger-drawer-host.is-closing {
+  pointer-events: none;
 }
 .ledger-drawer-host.is-closing .ledger-backdrop {
   opacity: 0;
@@ -362,35 +404,6 @@ body.gal-playing .ledger-corner :is(#scene-return-tavern, #scene-visitors-refres
   background: rgba(208, 161, 93, 0.28);
   border: 1px solid rgba(173, 125, 66, 0.42);
 }
-.ledger-promo-slot {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-}
-.ledger-promo-slot [data-daily='promotion'] {
-  min-height: 24px;
-  padding: 2px 9px;
-  border-radius: 999px;
-  border: 1px solid rgba(154, 108, 68, 0.45);
-  background: rgba(255, 247, 228, 0.85);
-  color: var(--ledger-ink);
-  font-size: 11px;
-  cursor: pointer;
-}
-.ledger-promo-slot [data-daily='promotion'][data-promotion-ready='true']:enabled {
-  border-color: var(--ledger-teal);
-  background: var(--ledger-teal);
-  color: #f8f2e4;
-}
-.ledger-promo-slot [data-daily='promotion']:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
-.ledger-inline-note {
-  font-size: 10px;
-  color: var(--ledger-seal);
-}
-
 .ledger-wallet {
   margin-top: 9px;
 }
@@ -552,15 +565,11 @@ body.gal-playing .ledger-corner :is(#scene-return-tavern, #scene-visitors-refres
   background: rgba(255, 244, 219, 0.92);
 }
 
-.ledger-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-}
+.ledger-grid,
 .ledger-grid-compact {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 7px;
+  gap: 8px;
 }
 .ledger-tile {
   display: grid;
@@ -570,16 +579,13 @@ body.gal-playing .ledger-corner :is(#scene-return-tavern, #scene-visitors-refres
   border-radius: 7px;
   background: rgba(255, 249, 236, 0.72);
 }
-.ledger-tile-wide {
-  grid-column: 1 / -1;
-}
 .ledger-tile[data-locked='true'] {
   background: rgba(235, 213, 182, 0.46);
   border-style: dashed;
 }
 .ledger-tile button {
   width: 100%;
-  min-height: 32px;
+  block-size: 42px;
   padding: 5px 8px;
   border: 1px solid rgba(156, 106, 60, 0.48);
   border-radius: 5px;
@@ -603,14 +609,10 @@ body.gal-playing .ledger-corner :is(#scene-return-tavern, #scene-visitors-refres
   cursor: not-allowed;
   background: rgba(234, 216, 189, 0.75);
 }
-.ledger-tile-note {
-  padding-inline: 2px;
-  font-size: 10px;
-  line-height: 1.3;
-  color: var(--ledger-muted);
-}
-.ledger-tile[data-locked='true'] .ledger-tile-note {
-  color: var(--ledger-seal);
+.ledger-tile [data-promotion-ready='true']:enabled {
+  border-color: var(--ledger-teal);
+  background: var(--ledger-teal);
+  color: #f8f2e4;
 }
 
 .ledger-foot {
@@ -669,6 +671,12 @@ body.gal-playing .ledger-corner :is(#scene-return-tavern, #scene-visitors-refres
     width: 26px;
     height: 92px;
   }
+  .ledger-city-directory-handle {
+    margin-top: -108px;
+  }
+  .ledger-quests-handle {
+    margin-top: 108px;
+  }
   .ledger-handle-text {
     font-size: 11px;
   }
@@ -694,6 +702,8 @@ body.gal-playing .ledger-corner :is(#scene-return-tavern, #scene-visitors-refres
   .ledger-backdrop,
   .ledger-drawer,
   .ledger-edge-handle,
+  .ledger-city-directory-handle,
+  .ledger-quests-handle,
   .ledger-return-btn {
     transition: none;
   }

@@ -71,7 +71,7 @@ function leftAside({ library, growth, staff, day, pantryCount }) {
         <div class="tv-hot-tags">${weather.hotTags.map((t) => `<span class="tv-tag hot">${escapeText(t)}↑</span>`).join('')}</div>
       </div>
       <p class="tv-day-desc">${escapeText(weather.desc)}</p>
-      <p class="tv-pantry-hint">魔物食材（库存 ${pantryCount}）：由野外遭遇战、副本探索与虚空售货机获得</p>
+      <p class="tv-pantry-hint">魔物食材（库存 ${pantryCount}）：由野外遭遇战、副本探索与市场获得</p>
     </div>
 
     <div class="tv-wallet-card">

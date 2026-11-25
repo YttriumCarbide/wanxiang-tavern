@@ -5,6 +5,7 @@ import path from 'node:path';
 import {
   galRequestInput,
   parseGalText,
+  galTypingDelay,
   paginateGalBeat,
   resolveGalActor,
   nextGalStage,
@@ -21,6 +22,18 @@ import { normalizePromptPreset } from '../src/ai/presets.js';
 import { galNpcPortrait, GAL_NPC_PORTRAITS } from '../src/content/gal-npc-portraits.js';
 import { generationInput } from '../src/ai/pipeline/prompts.js';
 import { storyRingReward } from '../src/emblem-progression.js';
+import { officialCharacter } from '../src/ai/library.js';
+import { galSceneLines, linesProse } from '../src/adventure/patches.js';
+import { resolveGalBackdrop } from '../src/app/gal-backdrop.js';
+
+test('city chat waits for returned environment text and has no city image backdrop', () => {
+  for (const sceneId of ['city-center', 'crown-gateward', 'eternal-city']) {
+    assert.equal(resolveGalBackdrop({ sceneId }), null);
+    const invitation = resolveGalBackdrop({ sceneId, invitationMode: true });
+    assert.ok(invitation?.image);
+    assert.equal(invitation.environment, null);
+  }
+});
 
 test('Gal NPCs use matching western-fantasy stand-ins and gendered anonymous shadows', () => {
   assert.equal(
@@ -76,17 +89,49 @@ test('NPC markers bind real assets and stable identities without changing offici
   );
 });
 
+test('Gal reaction suffixes keep the speaker, NPC portrait and readable text independent', () => {
+  const { id, setting } = officialCharacter('edith');
+  const actors = [{ id, name: setting.name }];
+  const beat = { type: 'dialogue', speaker: id, text: 'A。' };
+  const tagged = `【对白:${id}|hop:alert】A。`;
+  assert.deepEqual(parseGalText(tagged), [{ ...beat, emotion: 'hop:alert' }]);
+  for (const suffix of ['', '|unknown', '|constructor', '|hop|shake', '|unknown|hop'])
+    assert.deepEqual(parseGalText(`【对白:${id}${suffix}】A。`), [beat]);
+  assert.equal(readableGalText(tagged, actors), `${setting.name}：A。`);
+  assert.deepEqual(parseGalText('A。'), [{ type: 'narration', speaker: '', text: 'A。' }]);
+  const npc = `npc:${setting.name}|guardWoman`;
+  assert.deepEqual(parseGalText(`【登场:${npc}|hop】【对白:${npc}|sweat】A。`), [
+    { type: 'enter', speaker: npc, text: '' },
+    { ...beat, speaker: npc, emotion: 'sweat' },
+  ]);
+  assert.deepEqual(parseGalText(`【对白:${npc}|unknown】A。`), [{ ...beat, speaker: npc }]);
+  assert.equal(linesProse(galSceneLines(tagged, 'fixture')), tagged);
+});
+
+test('Gal cadence accelerates energetic cues and pauses after hesitation punctuation', () => {
+  const normal = galTypingDelay(undefined, '，', 'A');
+  const slow = galTypingDelay('sweat', 'A', '。');
+  assert.equal(normal, 20);
+  assert.equal(galTypingDelay('unknown', '，', 'A'), normal);
+  assert(galTypingDelay('hop', '，', 'A') < normal);
+  assert(slow > normal);
+  assert.equal(galTypingDelay('sweat', '，', 'A'), slow + 300);
+  assert.equal(galTypingDelay('sweat', '—', '—'), slow);
+  assert.equal(galTypingDelay('sweat', '—', 'A'), slow + 300);
+});
 test('script requests bind ring scenes to the same fifth-node schedule as actual rewards', async () => {
-  for (const [map, sequence] of [
-    ['ruins', 2],
-    ['ruins', 5],
-    ['forest', 3],
+  const edith = officialCharacter('edith');
+  const party = [{ id: edith.id, name: edith.setting.name }];
+  for (const [map, sequence, boss] of [
+    ['mill', 0, 'millVoleAlpha'],
+    ['ruins', 2, 'bossGate'],
+    ['forest', 3, 'moonEye'],
   ]) {
     const route = { map, sequence, seed: 1 };
     const input = generationInput('script', {
       brief: '沿官方大纲继续',
-      boss: 'bossGate',
-      party: [{ id: 'hero', name: '旅人' }],
+      boss,
+      party,
       exploration: route,
     });
     assert.deepEqual(input.request.storyRingReward, storyRingReward(route));
@@ -96,14 +141,15 @@ test('script requests bind ring scenes to the same fifth-node schedule as actual
     assert(
       buildTriggerIds('script', {
         brief: '沿官方大纲继续',
-        boss: 'bossGate',
-        party: [{ id: 'hero', name: '旅人' }],
+        boss,
+        party,
         exploration: route,
       }).includes('script:story-ring'),
     );
   }
   assert.equal(storyRingReward({ map: 'ruins', sequence: 0 }), null);
   assert.equal(storyRingReward({ map: 'ruins', sequence: 1 }), null);
+  assert.equal(storyRingReward({ map: 'ruins', sequence: 5 }), null);
   assert.equal(storyRingReward({ map: 'forest', sequence: 1 }), null);
   assert.equal(storyRingReward({ map: 'ruins', sequence: 2, world: {} }), null);
   const route = { map: 'ruins', sequence: 2, seed: 1 };
@@ -111,7 +157,7 @@ test('script requests bind ring scenes to the same fifth-node schedule as actual
   const request = generationInput('script', {
     brief: '再次探索回廊',
     boss: 'bossGate',
-    party: [{ id: 'hero', name: '旅人' }],
+    party,
     exploration: route,
     ownedEmblems: [reward.id],
   });
@@ -284,6 +330,7 @@ test('actual shared pipeline opts script and chat into Gal without changing the 
     };
     const instruction = galInstruction({ ...input, presentationMode: 'gal' }, kind);
     assert(instruction.includes('不增加第二套JSON'));
+    assert(instruction.includes('普通交谈和连续接话沿用无后缀写法'));
     assert(instruction.includes('【Gal共同写作要求】'));
     assert(instruction.includes(headings[kind]));
     for (const [otherKind, heading] of Object.entries(headings)) {
@@ -294,6 +341,12 @@ test('actual shared pipeline opts script and chat into Gal without changing the 
       const finalText = request.messages.map((message) => message.content).join('\n');
       assert(finalText.includes('【对白:npc:姓名|立绘编号】'));
       assert(finalText.includes('女守卫·玛莎'));
+      assert.equal(finalText.split('【Gal对白反应】').length - 1, 1);
+      assert.equal(finalText.split('【多人队伍聚焦与反端水】').length - 1, 1);
+      assert.match(finalText, /单幕也只选最契合局势的 2～3 名/);
+      assert.match(finalText, /非焦点队友不参与本幕对白，也不要在开场新登场/);
+      assert.match(finalText, /一件事深谈 3～5 个来回/);
+      assert(finalText.includes('【对白:npc:姓名|立绘编号|hop】'));
       assert(!finalText.includes('【对白:npc:城门女卫兵|guardWoman】'));
       assert(finalText.includes('老年男性学者'));
       assert(finalText.includes('不在剧本或聊天正文写戒指的具体游戏效果'));

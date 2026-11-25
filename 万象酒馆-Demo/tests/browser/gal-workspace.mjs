@@ -155,6 +155,19 @@ export async function galWorkspaceChecks({ browser, baseURL, output }) {
       selector,
     );
   }
+  async function checkPeopleEdge({ compact = false } = {}) {
+    const launcher = page.getByRole('button', { name: '选择交谈人物与任务' });
+    const box = await launcher.boundingBox();
+    assert(box && box.x <= 1, 'people launcher sits on the left edge');
+    assert(
+      Math.abs(box.y + box.height / 2 - page.viewportSize().height / 2) <= 1,
+      'the left launcher mirrors the ledger midpoint',
+    );
+    assert(box.height > box.width && box.width >= (compact ? 44 : 24));
+    assert.equal(await launcher.getAttribute('aria-controls'), 'gal-people-drawer');
+    assert.equal(await launcher.getAttribute('aria-expanded'), 'false');
+    return launcher;
+  }
   try {
     await page.goto(baseURL);
     await page.waitForFunction(() => !!window.demo);
@@ -166,9 +179,62 @@ export async function galWorkspaceChecks({ browser, baseURL, output }) {
     assert.equal(await page.locator('#chat-dialog').isVisible(), false);
     assert.equal(await page.locator('.gal-side').isVisible(), false);
     assert.equal(await page.locator('.gal-reading').isVisible(), false);
-    await page.locator('[data-workspace="people"]').first().click();
-    assert.equal(await page.locator('.gal-side').isVisible(), true);
-    assert.equal(await page.locator('.gal-composer').isVisible(), false);
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    const sidePanel = page.locator('.gal-side');
+    const peopleLauncher = await checkPeopleEdge();
+    await peopleLauncher.press('Enter');
+    assert.equal(await sidePanel.isVisible(), true);
+    assert.equal(await peopleLauncher.getAttribute('aria-expanded'), 'true');
+    assert(await sidePanel.evaluate((node) => node.contains(document.activeElement)));
+    await sidePanel.locator('[data-workspace="compose"]').click();
+    assert.deepEqual(
+      await sidePanel.evaluate((node) => ({
+        hidden: node.hidden,
+        inert: node.inert,
+        exiting: node.dataset.workspaceExiting,
+      })),
+      { hidden: false, inert: true, exiting: 'true' },
+      'normal motion keeps the closing drawer rendered but inert',
+    );
+    assert.equal(await peopleLauncher.getAttribute('aria-expanded'), 'false');
+    assert.equal(
+      await page.evaluate(() => Boolean(document.activeElement.closest('.gal-composer'))),
+      true,
+      'focus moves into the incoming composer before the drawer exits',
+    );
+    await peopleLauncher.click();
+    assert.deepEqual(
+      await sidePanel.evaluate((node) => ({
+        hidden: node.hidden,
+        inert: node.inert,
+        exiting: node.dataset.workspaceExiting,
+      })),
+      { hidden: false, inert: false, exiting: undefined },
+      'reopening cancels the in-flight drawer exit',
+    );
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await sidePanel.locator('[data-workspace="compose"]').click();
+    assert.deepEqual(
+      await sidePanel.evaluate((node) => ({
+        hidden: node.hidden,
+        exiting: node.dataset.workspaceExiting,
+      })),
+      { hidden: true, exiting: undefined },
+      'reduced motion closes the drawer immediately',
+    );
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    await peopleLauncher.click();
+    await sidePanel.waitFor({ state: 'visible' });
+    await sidePanel.locator('[data-workspace="compose"]').click();
+    await sidePanel.waitFor({ state: 'hidden' });
+    assert.equal(await sidePanel.evaluate((node) => node.dataset.workspaceExiting), undefined);
+    assert.equal(
+      await page.evaluate(() => Boolean(document.activeElement.closest('.gal-composer'))),
+      true,
+      'focus remains in the incoming composer after the drawer exit completes',
+    );
+    await peopleLauncher.click();
+    await sidePanel.waitFor({ state: 'visible' });
     const person = await page.locator('.gal-side .chat-person').first().boundingBox();
     assert(person.height <= 64, 'participants use compact rows instead of large cards');
     const originallyChecked = await page
@@ -276,12 +342,21 @@ export async function galWorkspaceChecks({ browser, baseURL, output }) {
     );
     await finishPages();
     await page.locator('[data-gal="close"]').click();
+    const partyPanel = page.locator('#party-panel');
+    await page.locator('#ledger-handle').click();
+    await page.locator('#party-toggle').click();
+    await partyPanel.locator('#prepare-close').press('Escape');
+    await partyPanel.waitFor({ state: 'hidden' });
+    assert.equal(await page.evaluate(() => document.activeElement.id), 'party-toggle');
+    await page.locator('#ledger-close').click();
     await page.locator('[data-daily="dungeon"]').click();
     await page.locator('#destination-dialog[open]').waitFor();
     await page.locator('#destination-regions [data-region="mill"]').click();
     await page.locator('#destination-region-confirm').click();
     await page.locator('#destination-start').click();
     await page.locator('#party-panel').waitFor({ state: 'visible' });
+    const cancelDeparture = partyPanel.getByRole('button', { name: '取消出发', exact: true });
+    assert.equal(await cancelDeparture.textContent(), '取消出发');
     assert.equal(await page.locator('#departure-party').count(), 0);
     assert.equal(calls.filter((call) => call.kind === 'script').length, 0);
     const reserveId = await page
@@ -298,17 +373,146 @@ export async function galWorkspaceChecks({ browser, baseURL, output }) {
     await page.locator('#prepare-done').click();
     await page.locator('#party-panel.formation-locked').waitFor({ state: 'visible' });
     await scriptStarted;
+    await partyPanel.locator('#prepare-cancel-generation').press('Escape');
+    assert.equal(
+      await partyPanel.evaluate((panel) => panel.open),
+      true,
+      'Escape must not dismiss preparation while the script request is pending',
+    );
     assert.equal(await page.locator('#prepare-done').isDisabled(), true);
     assert.equal(await page.locator('#generation-progress').isVisible(), false);
     await page.locator('[data-prepare-slot="0"]').click();
-    await page.locator('.prepare-gear-row').nth(2).click();
-    await page.locator('[data-picker-value="gal-owned"]').click();
-    await page.locator('[data-picker-confirm]').click();
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    const picker = page.locator('#equipment-picker');
+    const gearRow = page.locator('.prepare-gear-row').nth(2);
+    const gearFocusKey = await gearRow
+      .locator('select[data-equipment-character]')
+      .evaluate((select) => ({
+        character: select.dataset.equipmentCharacter,
+        slot: select.dataset.equipmentSlot,
+      }));
+    await gearRow.click();
+    await picker.waitFor({ state: 'visible' });
+    const pickerCycle = await page.evaluate(() => {
+      const panel = document.querySelector('#equipment-picker');
+      const opener = document.querySelectorAll('#party-panel .prepare-gear-row')[2];
+      const motionSupported =
+        CSS.supports('overlay: auto') &&
+        CSS.supports('transition-behavior: allow-discrete') &&
+        CSS.supports('interactivity: inert');
+      document.querySelector('#equipment-picker [data-picker-close]').click();
+      const exit = {
+        open: panel.open,
+        modal: panel.matches(':modal'),
+        inert: panel.inert,
+        display: getComputedStyle(panel).display,
+        pointerEvents: getComputedStyle(panel).pointerEvents,
+        backdropPointerEvents: getComputedStyle(panel, '::backdrop').pointerEvents,
+        focusReturned: document.activeElement.matches('.prepare-gear-row'),
+        opacityTransition: panel
+          .getAnimations()
+          .some((animation) => animation.transitionProperty === 'opacity'),
+        motionSupported,
+      };
+      opener.click();
+      return {
+        exit,
+        reopened: {
+          open: panel.open,
+          modal: panel.matches(':modal'),
+          inert: panel.inert,
+        },
+      };
+    });
+    assert.equal(
+      pickerCycle.exit.open,
+      false,
+      'closing releases the native open state immediately',
+    );
+    assert.equal(
+      pickerCycle.exit.modal,
+      false,
+      'closing releases modality before the exit paint ends',
+    );
+    assert.equal(pickerCycle.exit.inert, true, 'the exiting picker cannot receive keyboard focus');
+    assert.equal(
+      pickerCycle.exit.focusReturned,
+      true,
+      'closing returns focus to its equipment row',
+    );
+    if (pickerCycle.exit.motionSupported) {
+      assert.notEqual(
+        pickerCycle.exit.display,
+        'none',
+        'the exit remains painted without modality',
+      );
+      assert.equal(pickerCycle.exit.pointerEvents, 'none');
+      assert.equal(pickerCycle.exit.backdropPointerEvents, 'none');
+      assert.equal(
+        pickerCycle.exit.opacityTransition,
+        true,
+        'the dedicated dialog exit is running',
+      );
+    }
+    assert.deepEqual(
+      pickerCycle.reopened,
+      { open: true, modal: true, inert: false },
+      'reopening during exit restores the native modal and focusable state',
+    );
+    await picker.evaluate((panel) =>
+      Promise.all(
+        panel
+          .getAnimations({ subtree: true })
+          .map((animation) => animation.finished.catch(() => {})),
+      ),
+    );
+    await page.waitForFunction(() => {
+      const panel = document.querySelector('#equipment-picker');
+      return (
+        panel?.open &&
+        getComputedStyle(panel).opacity === '1' &&
+        getComputedStyle(panel.querySelector('.px-dialog')).opacity === '1'
+      );
+    });
+
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await picker.getByRole('button', { name: '关闭窗口' }).click();
+    const reducedExit = await picker.evaluate((panel) => ({
+      open: panel.open,
+      modal: panel.matches(':modal'),
+      inert: panel.inert,
+      focusReturned: document.activeElement.matches('.prepare-gear-row'),
+      transitionDuration: getComputedStyle(panel).transitionDuration,
+      activeAnimations: panel
+        .getAnimations({ subtree: true })
+        .filter((animation) => ['running', 'pending'].includes(animation.playState)).length,
+    }));
+    assert.equal(reducedExit.open, false);
+    assert.equal(reducedExit.modal, false);
+    assert.equal(reducedExit.inert, true);
+    assert.equal(reducedExit.focusReturned, true);
+    assert.equal(reducedExit.transitionDuration, '0s');
+    assert.equal(reducedExit.activeAnimations, 0);
+
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    await gearRow.click();
+    await picker.waitFor({ state: 'visible' });
+    await picker.locator('[data-picker-value="gal-owned"]').click();
+    await picker.locator('[data-picker-confirm]').click();
     assert(
       (await page.evaluate(() => demo.getLibrary())).characters
         .find((member) => member.id === reserveId)
         .equipment.includes('gal-owned'),
     );
+    await page.waitForFunction((key) => {
+      const row = document.activeElement;
+      const select = row?.querySelector('select[data-equipment-character]');
+      return (
+        row?.matches('.prepare-gear-row') &&
+        select?.dataset.equipmentCharacter === key.character &&
+        select.dataset.equipmentSlot === key.slot
+      );
+    }, gearFocusKey);
     await page.screenshot({ path: path.join(output, 'equipment-while-generating.png') });
     await page.locator('[data-prepare-buy]').click();
     await page.locator('#void-shop').waitFor({ state: 'visible' });
@@ -328,11 +532,41 @@ export async function galWorkspaceChecks({ browser, baseURL, output }) {
     assert.equal(await page.evaluate(() => demo.getLibrary().equipment.owned.length), 2);
     await page.locator('[data-forge-close]').click();
     await page.locator('[data-prepare-slot="0"]').click();
-    await page.locator('.prepare-emblem-row').click();
+    const ringRow = page.locator('.prepare-emblem-row');
+    const ringCharacter = await ringRow
+      .locator('select[data-emblem-character]')
+      .getAttribute('data-emblem-character');
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await ringRow.click();
+    await picker.waitFor({ state: 'visible' });
+    await page.keyboard.press('Escape');
+    const ringEscape = await picker.evaluate((panel) => ({
+      open: panel.open,
+      modal: panel.matches(':modal'),
+      inert: panel.inert,
+      focusReturned: document.activeElement.matches('.prepare-emblem-row'),
+    }));
+    assert.deepEqual(ringEscape, {
+      open: false,
+      modal: false,
+      inert: true,
+      focusReturned: true,
+    });
+
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    await ringRow.click();
+    await picker.waitFor({ state: 'visible' });
     const ringChoice = page.locator('[data-picker-value="' + initial.emblems[0] + '"]');
     assert((await ringChoice.textContent()).includes('转移'));
     await ringChoice.click();
     await page.locator('[data-picker-confirm]').click();
+    await page.waitForFunction((character) => {
+      const row = document.activeElement;
+      return (
+        row?.matches('.prepare-emblem-row') &&
+        row.querySelector('select[data-emblem-character]')?.dataset.emblemCharacter === character
+      );
+    }, ringCharacter);
     assert.equal(
       await page.evaluate(
         (id) => demo.getLibrary().characters.find((member) => member.id === id).emblemId,
@@ -412,10 +646,29 @@ export async function galWorkspaceChecks({ browser, baseURL, output }) {
       'the speech field is the main part of the panel',
     );
     assert.equal(await page.locator('#quick-chat-send svg').count(), 1);
-    await page.locator('.gal-actionbar [data-workspace="tools"]').click();
+    const toolsLauncher = page.locator('.gal-actionbar [data-workspace="tools"]');
+    await toolsLauncher.click();
     assert.equal(await page.locator('#quick-chat-status').isVisible(), true);
     assert.equal(await page.locator('#quick-chat-input').isVisible(), true);
-    await page.locator('.gal-actionbar [data-workspace="tools"]').click();
+    const toolsPanel = page.locator('.gal-tools');
+    await toolsPanel.locator('header [data-workspace="tools"]').click();
+    assert.deepEqual(
+      await toolsPanel.evaluate((node) => ({
+        hidden: node.hidden,
+        inert: node.inert,
+        exiting: node.dataset.workspaceExiting,
+      })),
+      { hidden: false, inert: true, exiting: 'true' },
+      'a closing tools drawer stays visible but inert until its exit animation finishes',
+    );
+    assert.equal(await toolsLauncher.getAttribute('aria-expanded'), 'false');
+    assert.equal(
+      await toolsLauncher.evaluate((node) => document.activeElement === node),
+      true,
+      'closing tools restores focus to its launcher',
+    );
+    await toolsPanel.waitFor({ state: 'hidden' });
+    assert.equal(await toolsPanel.evaluate((node) => node.dataset.workspaceExiting), undefined);
     await page
       .locator('.gal-composer')
       .evaluate((element) =>
@@ -448,7 +701,9 @@ export async function galWorkspaceChecks({ browser, baseURL, output }) {
     );
     await frame.locator('canvas').evaluate(() => window.assetPreview.placeNow('table'));
     await page.locator('[data-daily="chat"]').click();
-    await page.locator('[data-workspace="people"]').first().click();
+    const touchLauncher = await checkPeopleEdge({ compact: true });
+    await touchLauncher.tap();
+    assert.equal(await touchLauncher.getAttribute('aria-expanded'), 'true');
     const refreshedSelection = await page
       .locator('#chat-participants input:checked')
       .evaluateAll((inputs) => inputs.map((input) => input.value));
@@ -468,6 +723,7 @@ export async function galWorkspaceChecks({ browser, baseURL, output }) {
     const side = await page.locator('.gal-side').boundingBox();
     const actor = await page.locator('.gal-cast img').first().boundingBox();
     assert(actor.x >= side.x + side.width, 'participant drawer does not cover the portrait');
+    await page.locator('.gal-composer').waitFor({ state: 'hidden' });
     assert.equal(await page.locator('.gal-composer').isVisible(), false);
     await page.screenshot({ path: path.join(output, 'mobile-gal-participants.png') });
     await page.locator('.gal-side [data-workspace="compose"]').click();
@@ -506,11 +762,51 @@ export async function galWorkspaceChecks({ browser, baseURL, output }) {
       await page.screenshot({ path: path.join(output, `api-setup-${viewport.width}.png`) });
       await page.locator('#ai-close').click();
     }
+    await page.setViewportSize({ width: 1440, height: 836 });
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    await page.locator('[data-daily="chat"]').click();
+    await page.locator('[data-workspace="people"]').first().click();
+    const exitingPanel = await page.locator('.gal-side').elementHandle();
+    const exitAnimation = await page.evaluateHandle(() => {
+      const panel = document.querySelector('.gal-side');
+      panel.querySelector('[data-workspace="compose"]').click();
+      return (
+        panel
+          .getAnimations()
+          .find((animation) => animation.animationName === 'gal-workspace-exit') ?? null
+      );
+    });
+    assert.equal(
+      await exitAnimation.evaluate((animation) => animation?.animationName),
+      'gal-workspace-exit',
+    );
+    await page.evaluate(() => window.demo.dispose());
+    assert.deepEqual(
+      await exitingPanel.evaluate((node) => ({
+        connected: node.isConnected,
+        hidden: node.hidden,
+        inert: node.inert,
+        exiting: node.dataset.workspaceExiting,
+      })),
+      { connected: false, hidden: true, inert: false, exiting: undefined },
+      'unmount cancels an in-flight exit and removes its drawer in a clean state',
+    );
+    assert.equal(await exitAnimation.evaluate((animation) => animation.playState), 'idle');
     assert.deepEqual(errors, []);
     return {
       replayWithoutApi: true,
       chatAndQuickCompose: true,
+      workspaceDrawerExit: true,
+      workspaceDrawerReopen: true,
+      workspaceDrawerReducedMotion: true,
+      workspaceFocusRecovery: true,
+      workspaceExitCleanup: true,
       partyBeforeRequest: true,
+      escapeRespectsPendingPreparation: true,
+      equipmentPickerExit: true,
+      equipmentPickerRapidReopen: true,
+      equipmentPickerReducedMotion: true,
+      equipmentPickerFocusRecovery: true,
       equipmentOnly: true,
       responsiveSetup: true,
     };

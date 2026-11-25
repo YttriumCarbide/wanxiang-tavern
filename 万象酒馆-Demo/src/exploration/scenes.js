@@ -1,4 +1,3 @@
-import { STARLAMP_STREET } from '../content/starlamp-street.js';
 import { CITY_CENTER } from '../content/city-center.js';
 import { STARBELL_SCENES } from '../content/starbell-scenes.js';
 import { TOWN_SIDE_PLACES } from '../content/town-side-places.js';
@@ -44,8 +43,8 @@ const sideScenes = Object.fromEntries(
         id,
         name: `星钟城 · ${place.name}`,
         title: place.name,
-        returnDestination: place.parent,
-        returnLabel: place.back,
+        returnDestination: 'tavern',
+        returnLabel: '返回酒馆',
         cutouts: [],
         points: [exit(place.parent, `返回${place.back}`)],
         illustration: {
@@ -62,9 +61,59 @@ const sideScenes = Object.fromEntries(
   }),
 );
 
+const capitalScenes = Object.fromEntries(
+  Object.entries(SILVER_CROWN_PLACES).map(([id, place]) => {
+    const points = Object.keys(place.exits).map((destination) =>
+      exit(
+        destination,
+        destination === 'tavern'
+          ? '推门进入万象酒馆'
+          : `前往${SILVER_CROWN_PLACES[destination].name}`,
+      ),
+    );
+    const returnDestination = 'tavern';
+    return [
+      id,
+      {
+        id,
+        name: `银冠城 · ${place.name}`,
+        title: place.name,
+        returnDestination,
+        returnLabel: '返回酒馆',
+        cutouts: [],
+        points,
+        illustration: {
+          image: './assets/exploration/city-backgrounds/silver-crown.png',
+          aspect: 16 / 9,
+          fixed: true,
+          fitWidth: true,
+          pureBackdrop: true,
+          spots: Object.fromEntries(
+            place.spots.map((foot, index) => [`crown-spot-${index}`, { foot, height: 0.38 }]),
+          ),
+          points: place.exits,
+          foreground: [],
+        },
+      },
+    ];
+  }),
+);
+
 const roadScenes = Object.fromEntries(
   OVERLAND_ROAD.map(({ id, name }) => {
-    const capital = id === 'road-capital';
+    if (id === 'road-capital') {
+      return [
+        id,
+        {
+          ...capitalScenes[SILVER_CROWN_GATE],
+          id,
+          name: `银冠城 · ${SILVER_CROWN_PLACES[SILVER_CROWN_GATE].name}`,
+          title: SILVER_CROWN_PLACES[SILVER_CROWN_GATE].name,
+          returnDestination: 'tavern',
+          returnLabel: '返回酒馆',
+        },
+      ];
+    }
     const night = ['road-bridge', 'road-reeds'].includes(id);
     const art = `./assets/exploration/overland-road/${id}-wide`;
     return [
@@ -76,7 +125,7 @@ const roadScenes = Object.fromEntries(
         returnDestination: null,
         visitors: false,
         cutouts: [],
-        points: capital ? [exit(SILVER_CROWN_GATE, '进入银冠城')] : [],
+        points: [],
         illustration: {
           image: `${art}.png`,
           ...(night ? { nightImage: `${art}-night.png` } : {}),
@@ -86,52 +135,7 @@ const roadScenes = Object.fromEntries(
           fullVerticalPan: true,
           arrivalPan: true,
           spots: {},
-          points: capital ? { [SILVER_CROWN_GATE]: [0.634, 0.59] } : {},
-          foreground: [],
-        },
-      },
-    ];
-  }),
-);
-
-const capitalScenes = Object.fromEntries(
-  Object.entries(SILVER_CROWN_PLACES).map(([id, place]) => {
-    const points = Object.keys(place.exits).map((destination) =>
-      exit(
-        destination,
-        destination === 'tavern'
-          ? '推门进入万象酒馆'
-          : destination === 'road-capital'
-            ? '返回银冠城外门'
-            : `前往${SILVER_CROWN_PLACES[destination].name}`,
-      ),
-    );
-    const returnDestination = Object.keys(place.exits)[0];
-    return [
-      id,
-      {
-        id,
-        name: `银冠城 · ${place.name}`,
-        title: place.name,
-        returnDestination,
-        returnLabel: SILVER_CROWN_PLACES[returnDestination]?.name || '城外门',
-        cutouts: [],
-        points,
-        illustration: {
-          image: `./assets/exploration/silver-crown/${id}.png`,
-          ...(place.night
-            ? { nightImage: `./assets/exploration/silver-crown/${id}-night.png` }
-            : {}),
-          ...(place.wide
-            ? { viewHeight: 0.9, viewWidth: 2.2, arrivalPan: true }
-            : { fixed: true, fitWidth: true }),
-          spots: Object.fromEntries(
-            place.spots.map((foot, index) => [
-              `crown-spot-${index}`,
-              { foot, height: place.wide ? 0.34 : 0.42 },
-            ]),
-          ),
-          points: place.exits,
+          points: {},
           foreground: [],
         },
       },
@@ -150,17 +154,18 @@ const eternalCityScenes = Object.fromEntries(
       id,
       name: `艾尔鲁斯 · ${place.name}`,
       title: place.name,
-      returnDestination: null,
+      returnDestination: 'tavern',
+      returnLabel: '返回酒馆',
       cutouts: [],
       points: Object.keys(place.exits).map((destination) =>
         exit(destination, `前往${ETERNAL_CITY_PLACES[destination].name}`),
       ),
       illustration: {
-        image: `./assets/exploration/eternal-city/${place.art || id}.png`,
-        aspect: 3,
-        viewHeight: 0.9,
-        viewWidth: 2.1,
-        arrivalPan: true,
+        image: './assets/exploration/city-backgrounds/eternal-city.png',
+        aspect: 16 / 9,
+        fixed: true,
+        fitWidth: true,
+        pureBackdrop: true,
         points: place.exits,
         spots: Object.fromEntries(
           ETERNAL_CITY_VISITOR_SPOTS.map((spot, index) => [
@@ -271,12 +276,15 @@ const imperialLandmarkScenes = Object.fromEntries(
   }),
 );
 
+const cityCenterScene = withExtraExits(CITY_CENTER);
+
 const SCENES = Object.freeze({
-  street: STARLAMP_STREET,
+  street: cityCenterScene,
+  'starlamp-street': cityCenterScene,
   ...Object.fromEntries(
     [CITY_CENTER, ...Object.values(STARBELL_SCENES)].map((scene) => [
       scene.id,
-      withExtraExits(scene),
+      scene.id === 'city-center' ? cityCenterScene : withExtraExits(scene),
     ]),
   ),
   ...sideScenes,
@@ -289,20 +297,20 @@ const SCENES = Object.freeze({
 });
 
 export function explorationScene(id) {
-  return Object.hasOwn(SCENES, id) ? SCENES[id] : STARLAMP_STREET;
+  if (id === 'street' || id === 'starlamp-street') return SCENES['city-center'];
+  return Object.hasOwn(SCENES, id) ? SCENES[id] : SCENES['city-center'];
 }
 
 export function explorationHref(id, timeOfDay, from) {
   if (!Object.hasOwn(SCENES, id) && id !== 'tavern') throw Error('未知探索地点');
+  const resolved = id === 'street' || id === 'starlamp-street' ? 'city-center' : id;
   const path =
-    id === 'tavern'
-      ? './tavern.html?return=street'
-      : id === 'street'
-        ? './street.html'
-        : './street.html?scene=' + encodeURIComponent(id);
+    resolved === 'tavern'
+      ? './tavern.html?return=city-center'
+      : './street.html?scene=' + encodeURIComponent(resolved);
   const params = new URLSearchParams();
   if (timeOfDay === 'night') params.set('time', 'night');
-  const art = SCENES[id]?.illustration;
+  const art = SCENES[resolved]?.illustration;
   if (art?.arrivalPan && Object.hasOwn(art.points, from)) params.set('from', from);
   return params.size ? path + (path.includes('?') ? '&' : '?') + params : path;
 }

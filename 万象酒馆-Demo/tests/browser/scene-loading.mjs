@@ -37,7 +37,7 @@ export async function sceneLoadingChecks({ browser, baseURL, output }) {
     const imageGate = new Promise((resolve) => {
       releaseImage = resolve;
     });
-    await page.route('**/assets/exploration/street-hd-v4/connected.png', async (route) => {
+    await page.route('**/assets/exploration/city-backgrounds/starbell.png', async (route) => {
       await imageGate;
       await route.continue();
     });
@@ -70,7 +70,7 @@ export async function sceneLoadingChecks({ browser, baseURL, output }) {
     });
     assert(loaded, 'the shared continuous painting is decoded before entering');
     await page.locator('#street-return').click();
-    await page.waitForURL('**/tavern.html?return=street');
+    await page.waitForURL('**/tavern.html?return=city-center');
     await page.waitForFunction(() => window.modelReady === true, null, { timeout: 60000 });
     assert.equal(await page.locator('#status').count(), 0, 'return finishes scene loading');
     assert.equal(await page.evaluate(() => window.assetPreview.getState().current), 'streetDoor');
@@ -103,12 +103,50 @@ export async function sceneLoadingChecks({ browser, baseURL, output }) {
           },
         });
       } catch (error) {
-        const result = { renders, hidden: overlay.element.hidden, error: error.message };
+        const { worldBattleTransition } = await import('/src/app/world-battle-transition.js');
+        let releaseStory;
+        const storyGate = new Promise((resolve) => {
+          releaseStory = resolve;
+        });
+        const entering = worldBattleTransition(async (ready) => {
+          ready();
+          await storyGate;
+          return true;
+        });
+        await new Promise((resolve) => setTimeout(resolve, 450));
+        const activeVeil = document.querySelector('.world-battle-transition');
+        const completeProbe = document.createElement('div');
+        completeProbe.className = 'scene-loading world-loading-scene complete';
+        document.body.append(completeProbe);
+        const completePointerEvents = getComputedStyle(completeProbe).pointerEvents;
+        completeProbe.remove();
+        const transitionLeak = {
+          veilStillMounted: Boolean(activeVeil),
+          completePointerEvents,
+        };
+        releaseStory();
+        const entered = await entering;
+        const result = {
+          renders,
+          hidden: overlay.element.hidden,
+          error: error.message,
+          entered,
+          transitionLeak,
+        };
         overlay.dispose();
         return result;
       }
     });
-    assert.deepEqual(guards, { renders: 0, hidden: true, error: 'transition callback' });
+    assert.deepEqual(guards, {
+      renders: 0,
+      hidden: true,
+      error: 'transition callback',
+      entered: true,
+      transitionLeak: {
+        veilStillMounted: false,
+        completePointerEvents: 'none',
+      },
+    });
     await page.goto(baseURL + '/artbook.html?scene=frost');
     await page.locator('#atlas-loading').waitFor({ state: 'hidden' });
     const creatureModel = '**/assets/crystal-beetle.glb';

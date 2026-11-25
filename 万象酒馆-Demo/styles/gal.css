@@ -112,55 +112,293 @@ dialog:has(> #gal-stage:not([hidden])) > :not(.gal-stage, #dc-stage) {
 .gal-stage[hidden] {
   display: none;
 }
+.gal-stage[data-leaving='true'] {
+  pointer-events: none;
+}
+.gal-stage.has-backdrop {
+  background: #070b0d;
+}
+.gal-bg-mover {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  animation: galKenBurns 18s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+@keyframes galKenBurns {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.07);
+  }
+}
+.gal-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform-origin: center center;
+  transition:
+    transform 0.65s ease,
+    filter 0.65s ease;
+  pointer-events: none;
+}
+.gal-fx-canvas,
+.gal-mood-wash {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  pointer-events: none;
+}
+.gal-mood-wash {
+  transition: background 0.6s ease;
+}
+.gal-mood-wash.warm {
+  background: radial-gradient(
+    circle at 65% 35%,
+    rgba(232, 168, 86, 0.14),
+    rgba(14, 11, 9, 0.48) 74%
+  );
+}
+.gal-mood-wash.dusk {
+  background: radial-gradient(
+    circle at 35% 30%,
+    rgba(74, 118, 178, 0.16),
+    rgba(9, 12, 20, 0.54) 74%
+  );
+}
+.gal-mood-wash.candle {
+  background: radial-gradient(
+    circle at 55% 42%,
+    rgba(240, 176, 88, 0.18),
+    rgba(12, 9, 8, 0.62) 72%
+  );
+}
+.gal-mood-wash.star {
+  background: radial-gradient(
+    circle at 50% 25%,
+    rgba(164, 212, 240, 0.15),
+    rgba(10, 12, 22, 0.58) 74%
+  );
+}
+.gal-mood-wash.alley {
+  background: radial-gradient(circle at 50% 45%, rgba(64, 96, 108, 0.14), rgba(6, 8, 12, 0.66) 74%);
+}
+.gal-cinema-bars {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+}
+.gal-cinema-bars.active {
+  opacity: 1;
+}
+.gal-cinema-bars::before,
+.gal-cinema-bars::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 18px;
+  background: rgba(8, 7, 6, 0.88);
+}
+.gal-cinema-bars::before {
+  top: 0;
+  border-bottom: 1px solid rgba(216, 178, 110, 0.24);
+}
+.gal-cinema-bars::after {
+  bottom: 0;
+  border-top: 1px solid rgba(216, 178, 110, 0.24);
+}
 .gal-vignette {
   position: absolute;
   inset: 0;
+  z-index: 2;
   background: linear-gradient(180deg, #07151d22, transparent 22%, transparent 80%, #07151d22);
   pointer-events: none;
+}
+.gal-stage.has-backdrop .gal-vignette {
+  background:
+    radial-gradient(ellipse at center, transparent 48%, rgba(7, 8, 10, 0.65) 100%),
+    linear-gradient(180deg, #07151d26, transparent 22%, transparent 80%, #07151d26);
+}
+.shutter-stage {
+  position: fixed;
+  inset: 0;
+  z-index: 2350;
+  pointer-events: none;
+  overflow: hidden;
+}
+.shutter-door {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 50.4%;
+  background:
+    repeating-linear-gradient(90deg, rgba(216, 178, 110, 0.025) 0 2px, transparent 2px 34px),
+    linear-gradient(180deg, #1a1410 0%, #110d0b 52%, #0a0807 100%);
+  transition: transform 260ms cubic-bezier(0.2, 0.9, 0.3, 1);
+  box-shadow: 0 0 40px rgba(0, 0, 0, 0.85);
+}
+.shutter-door.left {
+  left: 0;
+  transform: translateX(-102%);
+  border-right: 2px solid #9f7b3a;
+}
+.shutter-door.right {
+  right: 0;
+  transform: translateX(102%);
+  border-left: 2px solid #9f7b3a;
+}
+.shutter-door::after {
+  content: '';
+  position: absolute;
+  top: 22px;
+  bottom: 22px;
+  width: calc(100% - 28px);
+  border: 1px solid rgba(216, 178, 110, 0.18);
+}
+.shutter-door.left::after {
+  left: 14px;
+  border-right: 0;
+}
+.shutter-door.right::after {
+  right: 14px;
+  border-left: 0;
+}
+.shutter-stage.closed .shutter-door.left,
+.shutter-stage.closed .shutter-door.right {
+  transform: translateX(0);
+}
+.shutter-stage.opening .shutter-door {
+  transition: transform 340ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+.shutter-crest {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 88px;
+  height: 88px;
+  transform: translate(-50%, -50%) scale(0.86);
+  opacity: 0;
+  transition:
+    opacity 200ms ease,
+    transform 220ms ease;
+  color: rgba(242, 204, 128, 0.42);
+}
+.shutter-stage.closed .shutter-crest {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+.shutter-caption {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  opacity: 0;
+  transition: opacity 220ms ease;
+  padding: 14px 30px;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(12, 9, 7, 0.9) 0%,
+    rgba(12, 9, 7, 0.58) 62%,
+    transparent 100%
+  );
+}
+.shutter-stage.show-text .shutter-caption {
+  opacity: 1;
+}
+.shutter-kicker {
+  font-size: 12px;
+  letter-spacing: 0.28em;
+  color: #d8b26e;
+}
+.shutter-title {
+  margin: 6px 0 0;
+  font-family: Georgia, 'Noto Serif SC', 'Songti SC', serif;
+  font-size: clamp(20px, 2.8vw, 28px);
+  letter-spacing: 0.16em;
+  color: #fbf0da;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.9);
 }
 .gal-cast {
   position: absolute;
   inset: 0;
+  z-index: 3;
   pointer-events: none;
 }
-.gal-cast img {
+.gal-portrait-slot {
   position: absolute;
   bottom: 0;
-  width: auto;
-  max-width: 48vw;
+  width: min(42vw, 84dvh);
   height: 84dvh;
+  translate: -50% 0;
+  transition: left 500ms ease;
+}
+.gal-portrait-slot[data-position='left'] {
+  left: 28%;
+}
+.gal-portrait-slot[data-position='right'] {
+  left: 72%;
+}
+.gal-portrait-slot[data-position='center'] {
+  left: 50%;
+}
+.gal-portrait-reaction {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-origin: 50% 23%;
+}
+.gal-cast img {
+  display: block;
+  width: 100%;
+  height: 100%;
   object-fit: contain;
   object-position: center bottom;
   filter: brightness(0.6) saturate(0.72);
   opacity: 0.88;
   transition:
     filter 380ms ease,
-    opacity 380ms ease,
-    left 500ms ease,
-    translate 500ms ease;
+    opacity 380ms ease;
   animation: gal-arrive 420ms ease both;
 }
-.gal-cast img[data-position='left'] {
-  left: 28%;
-  translate: -50% 0;
-}
 .gal-cast img[data-full='true'] {
-  width: min(42vw, 84dvh);
-  height: 84dvh;
   object-fit: cover;
   object-position: center top;
-}
-.gal-cast img[data-position='right'] {
-  left: 72%;
-  translate: -50% 0;
-}
-.gal-cast img[data-position='center'] {
-  left: 50%;
-  translate: -50% 0;
 }
 .gal-cast img.speaking {
   filter: brightness(1) saturate(1);
   opacity: 1;
+}
+.gal-portrait-slot[data-emote='sway'] img.speaking {
+  filter: brightness(0.75) saturate(0.86);
+}
+.gal-emote {
+  position: absolute;
+  top: clamp(5px, 4dvh, 30px);
+  left: clamp(58%, calc(50% + 32px), 73%);
+  display: grid;
+  place-items: center;
+  width: clamp(28px, 5dvh, 42px);
+  aspect-ratio: 1;
+  border: 1px solid #debb82ad;
+  border-radius: 50% 50% 50% 16%;
+  background: #202823ed;
+  box-shadow: 0 2px 8px #111a;
+  color: #fff0cf;
+  font-size: clamp(16px, 2.8dvh, 24px);
+  line-height: 1;
+}
+.gal-emote[hidden] {
+  display: none;
 }
 .gal-controls {
   position: absolute;
@@ -170,7 +408,7 @@ dialog:has(> #gal-stage:not([hidden])) > :not(.gal-stage, #dc-stage) {
   justify-content: flex-end;
   align-items: center;
   gap: 8px;
-  z-index: 3;
+  z-index: 5;
 }
 .gal-controls #generation-review {
   padding: 6px 12px;
@@ -203,6 +441,7 @@ dialog:has(> #gal-stage:not([hidden])) > :not(.gal-stage, #dc-stage) {
 .gal-reading {
   position: absolute;
   inset: auto 0 0;
+  z-index: 5;
   max-width: none;
   margin-inline: auto;
   padding: 20px max(14vw, env(safe-area-inset-left)) max(44px, env(safe-area-inset-bottom));
@@ -416,16 +655,6 @@ dialog:has(> #gal-stage:not([hidden])) > :not(.gal-stage, #dc-stage) {
     font-size: 15px;
     line-height: 1.6;
   }
-  .gal-cast img {
-    height: 84dvh;
-    bottom: 0;
-  }
-  .gal-cast img[data-position='left'] {
-    left: 28%;
-  }
-  .gal-cast img[data-position='right'] {
-    left: 72%;
-  }
   .gal-footer {
     font-size: 9px;
   }
@@ -439,7 +668,8 @@ dialog:has(> #gal-stage:not([hidden])) > :not(.gal-stage, #dc-stage) {
 }
 @media (prefers-reduced-motion: reduce) {
   .gal-stage *,
-  .gal-stage *::after {
+  .gal-stage *::after,
+  .shutter-stage * {
     animation: none;
     transition: none;
   }

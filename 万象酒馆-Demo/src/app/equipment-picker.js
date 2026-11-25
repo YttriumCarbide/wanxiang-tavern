@@ -137,7 +137,73 @@ export function createEquipmentPicker(context, description) {
   let source = null;
   let focusedValue = '';
   let entries = [];
-  let animation = null;
+  let focusRestoreCleanup = null;
+
+  function clearFocusRestoreWatch() {
+    focusRestoreCleanup?.();
+    focusRestoreCleanup = null;
+  }
+
+  function focusSource(select) {
+    const row = select?.closest('.prepare-gear-row,.prepare-emblem-row');
+    if (!row?.isConnected) return false;
+    row.focus({ preventScroll: true });
+    return document.activeElement === row;
+  }
+
+  function focusSourceKey(select) {
+    if (select && 'emblemCharacter' in select.dataset)
+      return { kind: 'emblem', character: select.dataset.emblemCharacter };
+    if (select && 'equipmentCharacter' in select.dataset)
+      return {
+        kind: 'equipment',
+        character: select.dataset.equipmentCharacter,
+        slot: select.dataset.equipmentSlot,
+      };
+    return null;
+  }
+
+  function findFocusSource(key) {
+    if (!key) return null;
+    const selector =
+      key.kind === 'emblem' ? '[data-emblem-character]' : '[data-equipment-character]';
+    return (
+      [...document.querySelectorAll(selector)].find(
+        (select) =>
+          select.dataset[key.kind === 'emblem' ? 'emblemCharacter' : 'equipmentCharacter'] ===
+            key.character &&
+          (key.kind === 'emblem' || select.dataset.equipmentSlot === key.slot),
+      ) || null
+    );
+  }
+
+  function createFocusRestorer(select, watchRender = false) {
+    const key = focusSourceKey(select);
+    if (watchRender && key) {
+      clearFocusRestoreWatch();
+      const host = document.querySelector('#prepare-detail');
+      if (host) {
+        let timeoutId;
+        const observer = new MutationObserver(() => {
+          if (panel.open) return finish();
+          const replacement = findFocusSource(key);
+          if (replacement && replacement !== select) {
+            finish();
+            focusSource(replacement);
+          }
+        });
+        const finish = () => {
+          observer.disconnect();
+          window.clearTimeout(timeoutId);
+          if (focusRestoreCleanup === finish) focusRestoreCleanup = null;
+        };
+        observer.observe(host, { childList: true, subtree: true });
+        timeoutId = window.setTimeout(finish, 5000);
+        focusRestoreCleanup = finish;
+      }
+    }
+    return () => focusSource(findFocusSource(key) || select);
+  }
 
   function renderEntries() {
     panel.querySelector('.equipment-picker-list').innerHTML = entries
@@ -152,38 +218,32 @@ export function createEquipmentPicker(context, description) {
     panel.querySelector('.px-preview').innerHTML = previewMarkup(currentEntry);
   }
 
-  function collapse() {
+  function collapse(restoreFocus = null) {
     if (!panel.open) return;
-    animation?.cancel();
-    const dialog = panel.querySelector('.px-dialog');
-    const closing = dialog?.animate?.(
-      [
-        { opacity: 1, transform: 'translateY(0) scale(1)' },
-        { opacity: 0, transform: 'translateY(8px) scale(0.98)' },
-      ],
-      { duration: 150, easing: 'ease-out', fill: 'forwards' },
-    );
-    animation = closing || null;
-    const done = () => {
-      if (animation !== closing && closing) return;
-      if (panel.open) panel.close();
-      source = null;
-      entries = [];
-    };
-    if (closing) closing.onfinish = closing.oncancel = done;
-    else done();
+    panel.close();
+    panel.inert = true;
+    source = null;
+    entries = [];
+    restoreFocus?.();
+  }
+
+  function dismiss() {
+    if (!panel.open) return;
+    collapse(createFocusRestorer(source));
   }
 
   function commitSelection(value = focusedValue) {
-    if (!source) return collapse();
-    source.value = value;
-    source.dispatchEvent(new Event('change', { bubbles: true }));
-    collapse();
+    if (!source) return dismiss();
+    const selectedSource = source;
+    const restoreFocus = createFocusRestorer(selectedSource, true);
+    selectedSource.value = value;
+    selectedSource.dispatchEvent(new Event('change', { bubbles: true }));
+    collapse(restoreFocus);
   }
 
   function open(select) {
-    if (source === select && panel.open) return collapse();
-    animation?.cancel();
+    if (source === select && panel.open) return dismiss();
+    clearFocusRestoreWatch();
     source = select;
     const ring = Boolean(select.dataset.emblemCharacter);
     const library = session.ai.library;
@@ -196,22 +256,11 @@ export function createEquipmentPicker(context, description) {
     );
     focusedValue = select.value;
     if (!panel.isConnected) document.body.append(panel);
-    if (!panel.open) panel.showModal();
-    renderEntries();
-    const dialog = panel.querySelector('.px-dialog');
-    animation =
-      dialog?.animate?.(
-        [
-          { opacity: 0, transform: 'translateY(10px) scale(0.97)' },
-          { opacity: 1, transform: 'translateY(0) scale(1)' },
-        ],
-        { duration: 200, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' },
-      ) || null;
-    if (animation) {
-      animation.onfinish = animation.oncancel = () => {
-        animation = null;
-      };
+    if (!panel.open) {
+      panel.inert = false;
+      panel.showModal();
     }
+    renderEntries();
   }
 
   events.on(document.querySelector('#party-panel'), 'click', (event) => {
@@ -233,7 +282,7 @@ export function createEquipmentPicker(context, description) {
 
   events.on(panel, 'click', (event) => {
     if (event.target === panel || event.target.closest('[data-picker-close]')) {
-      collapse();
+      dismiss();
       return;
     }
     if (event.target.closest('[data-picker-confirm]')) {
@@ -254,16 +303,17 @@ export function createEquipmentPicker(context, description) {
 
   events.on(panel, 'cancel', (event) => {
     event.preventDefault();
-    collapse();
+    dismiss();
   });
 
   events.on(window, 'keydown', (event) => {
-    if (event.key === 'Escape' && panel.open) collapse();
+    if (event.key === 'Escape' && panel.open) dismiss();
   });
 
   return {
     dispose() {
-      animation?.cancel();
+      clearFocusRestoreWatch();
+      if (panel.open) panel.close();
       panel.remove();
     },
   };

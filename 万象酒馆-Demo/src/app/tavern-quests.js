@@ -5,13 +5,9 @@ import {
   QUEST_TYPES,
   questRecruitmentReady,
 } from '../tavern-quests.js';
-import {
-  claimGuildBountyReward,
-  GUILD_BOUNTIES,
-  isBountyReadyToClaim,
-  recordGuildCombatProgress,
-} from '../guild.js';
+import { GUILD_BOUNTIES, isBountyReadyToClaim, recordGuildCombatProgress } from '../guild.js';
 import { OUTING_SCENES } from '../daily.js';
+import { cityForScene } from '../city-directory.js';
 import { overlandOrigin, OVERLAND_STOPS } from '../overland-travel.js';
 import { ATLAS_PLACES } from '../content/atlas-geography.js';
 import { REGIONS } from '../content/regions.js';
@@ -21,8 +17,11 @@ import { grantEquipment } from '../equipment.js';
 import { gameTime } from '../memory.js';
 import { restoreGrowth } from '../growth.js';
 import { UNKNOWN_CARD, UNKNOWN_STANDING } from '../portraits.js';
+import { activeModal, createPopoverSurface } from '../shared/top-layer.js';
 import { escapeText } from '../ui.js';
+import { cityTradePending, commitCityTrade } from './city-trade.js';
 import { createPlayerIntentPrompt } from './player-intent.js';
+import { renderQuestJournal } from './tavern-quest-view.js';
 
 const SCENES = Object.freeze(
   Object.fromEntries([
@@ -39,10 +38,14 @@ const SKYRIM_DIVIDER_SVG =
 export function createTavernQuests(context) {
   const { session, events } = context;
   const library = () => session.ai.library;
+  const sessionRuntime = session.runtime;
+  let disposed = false;
+  const sessionIsAlive = () =>
+    !disposed && session.runtime === sessionRuntime && !sessionRuntime.disposed;
   const dialog = document.createElement('dialog');
   dialog.id = 'tavern-quests';
   dialog.className = 'skyrim-quests-dialog';
-  dialog.setAttribute('aria-label', '任务日志');
+  dialog.setAttribute('aria-labelledby', 'tavern-quests-title');
   document.body.append(dialog);
 
   const banner = document.createElement('div');
@@ -51,15 +54,18 @@ export function createTavernQuests(context) {
   banner.setAttribute('role', 'status');
   banner.hidden = true;
   document.body.append(banner);
+  const bannerSurface = createPopoverSurface(banner);
   let bannerTimer = null;
 
   const intent = createPlayerIntentPrompt(events, 'quest-intent');
   let pending = null;
+  let pendingClaim = null;
+  let bannerExitTimer = null;
   let reading = false;
-  let focused = '';
   let inspected = '';
+  let returnFocusElement = null;
 
-  const active = () => library().tavernQuests.filter(({ status }) => status === 'active');
+  const active = () => journalQuests().filter(({ status }) => status === 'active');
   const scene = () => context.daily?.scene() || 'tavern';
   const availableScenes = () => ({
     ...SCENES,
@@ -68,7 +74,9 @@ export function createTavernQuests(context) {
   });
 
   function showBanner(kicker, title, detail = '') {
+    if (!sessionIsAlive()) return;
     clearTimeout(bannerTimer);
+    clearTimeout(bannerExitTimer);
     banner.innerHTML = `<div class="skyrim-banner-inner">
       <span class="skyrim-banner-kicker">${escapeText(kicker)}</span>
       <strong class="skyrim-banner-title">${escapeText(title)}</strong>
@@ -76,10 +84,18 @@ export function createTavernQuests(context) {
       ${SKYRIM_DIVIDER_SVG}
     </div>`;
     banner.hidden = false;
+    bannerSurface.show();
+    banner.dataset.show = 'false';
+    void banner.offsetWidth;
     banner.dataset.show = 'true';
     bannerTimer = setTimeout(() => {
+      if (!sessionIsAlive()) return;
       banner.dataset.show = 'false';
-      banner.hidden = true;
+      bannerExitTimer = setTimeout(() => {
+        if (!sessionIsAlive()) return;
+        bannerSurface.hide();
+        banner.hidden = true;
+      }, 200);
     }, 3200);
   }
 
@@ -89,8 +105,68 @@ export function createTavernQuests(context) {
     return null;
   }
 
-  function current() {
-    return active().find(({ id }) => id === focused) || active()[0];
+  function journalQuests() {
+    const owner = library();
+    const quests = owner.tavernQuests;
+    if (!pendingClaim?.quest || pendingClaim.owner !== owner) return quests;
+    // The transaction stages a completed copy before its save is confirmed.
+    const { quest: before } = pendingClaim;
+    return quests.map((quest) => (quest.id === before.id ? before : quest));
+  }
+
+  function current(entries = journalQuests()) {
+    const activeQuests = entries.filter(({ status }) => status === 'active');
+    const tracked = activeQuests.find((quest) => quest.tracked === true);
+    const optedOut =
+      entries.some((quest) => quest.tracked === false) &&
+      !entries.some((quest) => quest.tracked === true);
+    return tracked || (optedOut ? undefined : activeQuests[0]);
+  }
+
+  function setTrackedQuest(questId, persist = false) {
+    const quests = library().tavernQuests;
+    const target = quests.find(({ id, status }) => id === questId && status === 'active');
+    if (questId && !target) return false;
+    if (persist && (cityTradePending(context) || sessionRuntime.cityTrade === 'blocked')) {
+      throw Error('存档状态未就绪，暂时无法更改任务追踪。');
+    }
+    const changes = quests.filter((quest) => quest.tracked !== (quest === target));
+    if (!changes.length) return true;
+    const previous = changes.map((quest) => ({
+      quest,
+      tracked: quest.tracked,
+      hadTracked: Object.hasOwn(quest, 'tracked'),
+    }));
+    changes.forEach((quest) => {
+      quest.tracked = quest === target;
+    });
+    if (!persist) return true;
+    try {
+      if (!context.generation.save({ refresh: false })) throw Error('任务追踪状态保存失败。');
+    } catch (failure) {
+      for (const { quest, tracked, hadTracked } of previous) {
+        if (hadTracked) quest.tracked = tracked;
+        else delete quest.tracked;
+      }
+      throw failure;
+    }
+    context.daily?.refresh();
+    return true;
+  }
+
+  function trackQuest(questId, focusKey) {
+    try {
+      setTrackedQuest(questId, true);
+    } catch (failure) {
+      context.shell.toast(failure?.message || '任务追踪状态保存失败。');
+    }
+    if (dialog.open) render(focusKey);
+  }
+
+  function focusQuest(id) {
+    if (!sessionIsAlive()) return;
+    inspected = id;
+    if (id) trackQuest(id);
   }
 
   function questLocation(quest) {
@@ -110,7 +186,7 @@ export function createTavernQuests(context) {
 
   function arrived(id) {
     const quest = active().find((entry) => step(entry)?.scene === id);
-    if (quest) focused = quest.id;
+    if (quest) focusQuest(quest.id);
     return Boolean(quest);
   }
 
@@ -120,13 +196,35 @@ export function createTavernQuests(context) {
     if (dialog.open) render();
   }
 
-  function claimBounty(questId) {
-    const outcome = claimGuildBountyReward(library(), questId);
-    if (!outcome.ok) {
-      context.shell.toast(outcome.reason);
+  async function claimBounty(questId) {
+    if (pendingClaim || !sessionIsAlive()) return;
+    const owner = library();
+    const quest = owner.tavernQuests.find(({ id }) => id === questId);
+    if (!isBountyReadyToClaim(quest)) return;
+    inspected = questId;
+    pendingClaim = { owner, quest };
+    const canUpdate = () => sessionIsAlive() && library() === owner;
+
+    let outcome;
+    try {
+      if (dialog.open) render();
+      outcome = await commitCityTrade(context, 'claim', questId);
+    } catch (failure) {
+      if (canUpdate()) {
+        context.shell.toast(failure?.message || '悬赏领取失败，请确认存档状态后重试。');
+      }
       return;
+    } finally {
+      pendingClaim = null;
+      if (canUpdate() && dialog.open) render();
     }
-    save();
+
+    if (!canUpdate()) return;
+    try {
+      context.daily?.refresh();
+    } catch {
+      // A confirmed trade stays successful even if its HUD refresh fails.
+    }
     showBanner(
       'BOUNTY COMPLETED · 悬赏交付',
       outcome.quest.title,
@@ -139,217 +237,133 @@ export function createTavernQuests(context) {
     );
   }
 
-  function renderObjectives(quest) {
+  function questObjectives(quest) {
+    if (!quest) return [];
     if (quest.type === 'bounty') {
       const label = GUILD_BOUNTIES.find((bounty) => bounty.id === quest.bountyId)?.objectiveLabel;
-      return (quest.objectives || [])
-        .map((obj) => {
-          const done = (obj.current || 0) >= (obj.target || 1);
-          return `<li class="skyrim-obj ${done ? 'is-done' : ''}">
-            <span class="skyrim-obj-diamond" aria-hidden="true">${done ? '◆' : '◇'}</span>
-            <span>${escapeText(obj.id === 'bounty-main' ? label || obj.label : obj.label)}</span>
-            <em>${obj.current || 0} / ${obj.target || 1}</em>
-          </li>`;
-        })
-        .join('');
+      return (quest.objectives || []).map((objective) => {
+        const current = objective.current || 0;
+        const target = objective.target || 1;
+        return {
+          label: objective.id === 'bounty-main' ? label || objective.label : objective.label,
+          done: current >= target,
+          detail: `${current} / ${target}`,
+        };
+      });
     }
     if (quest.type === 'social') {
-      if (quest.status === 'offered') {
-        return `<li class="skyrim-obj"><span class="skyrim-obj-diamond">◇</span><span>接取委托以生成五幕连贯故事线索</span></li>`;
-      }
-      const total = quest.plan?.acts?.length || 5;
-      return (quest.plan?.acts || [])
-        .map((act, index) => {
-          const done = quest.status === 'completed' || index < (quest.index || 0);
-          const cur = quest.status === 'active' && index === (quest.index || 0);
-          const place = availableScenes()[act.scene] || act.scene;
-          return `<li class="skyrim-obj ${done ? 'is-done' : cur ? 'is-current' : ''}">
-            <span class="skyrim-obj-diamond">${done ? '◆' : '◇'}</span>
-            <span>第 ${index + 1}/${total} 幕 · ${escapeText(act.title)}（${escapeText(place)}）</span>
-            <em>${done ? '已完成' : cur ? '当前目标' : '未至'}</em>
-          </li>`;
-        })
-        .join('');
+      if (quest.status === 'offered') return [{ label: '接取委托以生成五幕故事线索' }];
+      const acts = quest.plan?.acts || [];
+      const scenes = availableScenes();
+      return acts.map((act, index) => {
+        const done = quest.status === 'completed' || index < (quest.index || 0);
+        const current = quest.status === 'active' && index === (quest.index || 0);
+        return {
+          label: `第 ${index + 1}/${acts.length} 幕 · ${act.title}（${scenes[act.scene] || act.scene}）`,
+          done,
+          detail: current ? '当前目标' : done ? '已完成' : '未至',
+        };
+      });
     }
     if (quest.type === 'character') {
       const place = questLocation(quest) || '酒馆外';
-      const metDone = Boolean(quest.met || quest.status === 'completed');
+      const done = Boolean(quest.met || quest.status === 'completed');
       const req = quest.plan?.requirements;
-      return `<li class="skyrim-obj ${quest.status !== 'offered' ? 'is-done' : ''}">
-          <span class="skyrim-obj-diamond">${quest.status !== 'offered' ? '◆' : '◇'}</span>
-          <span>整理人物传闻与去向</span>
-        </li>
-        <li class="skyrim-obj ${metDone ? 'is-done' : quest.status === 'active' ? 'is-current' : ''}">
-          <span class="skyrim-obj-diamond">${metDone ? '◆' : '◇'}</span>
-          <span>前往 ${escapeText(place)} 会面${req ? `（需求：酒馆 ${req.tavern} 阶 · 好感 ${req.affection} 级 · 队伍 Lv.${req.partyLevel}）` : ''}</span>
-        </li>`;
+      const requirements = req
+        ? `（需求：酒馆 ${req.tavern} 阶 · 好感 ${req.affection} 级 · 队伍 Lv.${req.partyLevel}）`
+        : '';
+      return [
+        { label: '整理人物传闻与去向', done: quest.status !== 'offered' },
+        { label: `前往 ${place} 会面${requirements}`, done },
+      ];
     }
-    const targetName = questLocation(quest) || '未知秘境';
-    const done = quest.status === 'completed';
-    return `<li class="skyrim-obj ${done ? 'is-done' : 'is-current'}">
-      <span class="skyrim-obj-diamond">${done ? '◆' : '◇'}</span>
-      <span>前往泛生界大地图抵达「${escapeText(targetName)}」并完成探索</span>
-    </li>`;
+    return [
+      {
+        label: `前往泛生界大地图抵达「${questLocation(quest) || '未知秘境'}」并完成探索`,
+        done: quest.status === 'completed',
+      },
+    ];
   }
 
-  function renderRewards(quest) {
-    if (quest.type === 'bounty' && quest.rewards) {
-      return `<div class="skyrim-reward-box">
-        <small>GUILD REWARD · 悬赏报酬</small>
-        <p>金币 ${quest.rewards.gold} · 以太 ${quest.rewards.ether} · 公会功勋 +${quest.rewards.merit}</p>
-      </div>`;
-    }
-    if (quest.type === 'social' && quest.plan?.reward) {
-      return `<div class="skyrim-reward-box">
-        <small>UNIQUE RELIC · 完结赠礼</small>
-        <p>${escapeText(quest.plan.reward.name)} — ${escapeText(quest.plan.reward.description)}</p>
-      </div>`;
-    }
-    return '';
+  function selectedRow() {
+    return dialog.querySelector('.skyrim-quest-tab[aria-current="true"]');
   }
 
-  function renderRow(quest, selectedId) {
-    const isSelected = quest.id === selectedId;
-    const isTracked = quest.status === 'active' && quest.id === current()?.id;
-    const readyClaim = isBountyReadyToClaim(quest);
-    const pickLabel =
-      quest.status === 'offered'
-        ? '接取'
-        : readyClaim
-          ? '领奖'
-          : quest.status === 'active'
-            ? '追踪'
-            : quest.type === 'social'
-              ? '续章'
-              : '';
-    const icon = isTracked ? '◆' : readyClaim ? '★' : quest.status === 'completed' ? '✓' : '◇';
-    return `<div class="skyrim-quest-item ${isSelected ? 'is-selected' : ''} ${readyClaim ? 'is-ready' : ''}" data-status="${escapeText(quest.status)}" data-quest-select="${escapeText(quest.id)}">
-      <button type="button" class="skyrim-quest-tab" data-quest-select="${escapeText(quest.id)}">
-        <span class="skyrim-pointer" aria-hidden="true">${icon}</span>
-        <span class="skyrim-item-copy">
-          <strong>${escapeText(quest.title)}</strong>
-          <small>${escapeText(QUEST_TYPES[quest.type] || '委托')} · Lv.${quest.level || 1}${readyClaim ? ' · 可交付' : ''}</small>
-        </span>
-      </button>
-      ${
-        pickLabel
-          ? `<button type="button" class="skyrim-quick-pick" data-quest-pick="${escapeText(quest.id)}" ${pending ? 'disabled' : ''}>${pickLabel}</button>`
-          : ''
-      }
-    </div>`;
+  function keepRowVisible(list, row) {
+    if (!list || typeof row?.closest !== 'function') return;
+    const item = row.closest('.skyrim-quest-item');
+    if (!item) return;
+    const viewport = list.getBoundingClientRect();
+    const bounds = item.getBoundingClientRect();
+    if (bounds.top < viewport.top) list.scrollTop -= viewport.top - bounds.top;
+    else if (bounds.bottom > viewport.bottom) list.scrollTop += bounds.bottom - viewport.bottom;
   }
 
-  function render() {
-    const entries = [...library().tavernQuests].reverse();
-    const activeList = entries.filter((q) => q.status === 'active');
-    const offeredList = entries.filter((q) => q.status === 'offered');
-    const completedList = entries.filter((q) => q.status === 'completed');
-    const ordered = [...offeredList, ...activeList, ...completedList];
-    const selected =
-      ordered.find((q) => q.id === inspected) ||
-      offeredList[0] ||
-      activeList.find((q) => q.id === focused) ||
-      activeList[0] ||
-      completedList[0] ||
-      null;
+  function focusJournal(key) {
+    const targets = [...dialog.querySelectorAll('[data-quest-focus]')];
+    const previous = targets.find((target) => target.dataset.questFocus === key);
+    const target =
+      previous && !previous.disabled && previous.getClientRects().length
+        ? previous
+        : selectedRow() || dialog.querySelector('.quests-close');
+    target?.focus({ preventScroll: true });
+  }
+
+  function selectQuest(id) {
+    inspected = id;
+    render(`row:${id}`);
+  }
+
+  function render(focusKey = document.activeElement?.dataset.questFocus) {
+    if (!sessionIsAlive()) return;
+    const selectionBefore = dialog.querySelector('.skyrim-folio')?.dataset.questDetail;
+    const listTop = dialog.querySelector('.ow-quest-list')?.scrollTop || 0;
+    const detailTop = dialog.querySelector('.skyrim-folio-col')?.scrollTop || 0;
+    const quests = journalQuests();
+    const entries = [...quests].reverse();
+    const tracked = current(quests);
+    const groups = [
+      { label: '进行中', entries: entries.filter(({ status }) => status === 'active') },
+      { label: '待接取', entries: entries.filter(({ status }) => status === 'offered') },
+      {
+        label: '已完成',
+        archived: true,
+        entries: entries.filter(({ status }) => status === 'completed'),
+      },
+    ];
+    const ordered = groups.flatMap((group) => group.entries);
+    const selected = ordered.find(({ id }) => id === inspected) || tracked || ordered[0];
     inspected = selected?.id || '';
-
-    const location = selected ? questLocation(selected) : '';
-    const readyClaim = selected ? isBountyReadyToClaim(selected) : false;
-    const statusText = selected
-      ? { offered: '待接取', active: readyClaim ? '目标已达成' : '进行中', completed: '已完成' }[
-          selected.status
-        ]
-      : '';
-
-    dialog.innerHTML = `<header class="skyrim-head">
-        <div class="skyrim-head-title">
-          <small>JOURNAL OF ELDLAND · 任务日志</small>
-          <h2>冒险与委托手记</h2>
-        </div>
-        <div class="skyrim-head-meta">
-          <span class="skyrim-count-pill">进行中 ${activeList.length} · 可接 ${offeredList.length} · 已完结 ${completedList.length}</span>
-          <button type="button" class="skyrim-guild-jump" data-quest-open-guild>⚜ 冒险者公会</button>
-          <form method="dialog"><button class="quests-close" aria-label="关闭">×</button></form>
-        </div>
-      </header>
-      <div class="skyrim-journal-grid">
-        <aside class="skyrim-index-col" aria-label="任务目录">
-          ${
-            offeredList.length
-              ? `<div class="skyrim-group"><h3 class="skyrim-group-label">新线索 · 可接取 (${offeredList.length})</h3>${offeredList
-                  .map((q) => renderRow(q, inspected))
-                  .join('')}</div>`
-              : ''
-          }
-          ${
-            activeList.length
-              ? `<div class="skyrim-group"><h3 class="skyrim-group-label">当前目标 · 进行中 (${activeList.length})</h3>${activeList
-                  .map((q) => renderRow(q, inspected))
-                  .join('')}</div>`
-              : ''
-          }
-          ${
-            completedList.length
-              ? `<div class="skyrim-group is-completed-group"><h3 class="skyrim-group-label">归档记录 · 已完成 (${completedList.length})</h3>${completedList
-                  .map((q) => renderRow(q, inspected))
-                  .join('')}</div>`
-              : ''
-          }
-          ${!ordered.length ? '<p class="quests-empty">眼前暂无委托记录。可在「冒险者公会」接取帝国悬赏，或在闲聊中打听传闻。</p>' : ''}
-        </aside>
-        <section class="skyrim-folio-col" aria-label="任务详情">
-          ${
-            selected
-              ? `<article class="skyrim-folio">
-                  <div class="skyrim-folio-badges">
-                    <span>${escapeText(QUEST_TYPES[selected.type] || '委托')}</span>
-                    ${selected.rank ? `<span>${escapeText(selected.rank)} 级悬赏</span>` : ''}
-                    <span>建议 Lv.${selected.level || 1}</span>
-                    <em>${escapeText(statusText)}</em>
-                  </div>
-                  <h3 class="skyrim-folio-title">${escapeText(selected.title)}</h3>
-                  ${SKYRIM_DIVIDER_SVG}
-                  <p class="skyrim-folio-desc">${escapeText(selected.description)}</p>
-                  ${location ? `<p class="skyrim-folio-where"><strong>目标地点：</strong>${escapeText(location)}</p>` : ''}
-                  <h4 class="skyrim-obj-heading">行动目标</h4>
-                  <ul class="skyrim-obj-list">${renderObjectives(selected)}</ul>
-                  ${renderRewards(selected)}
-                  <footer class="skyrim-folio-actions">
-                    ${
-                      readyClaim
-                        ? `<button type="button" class="skyrim-primary-btn" data-quest-claim="${escapeText(selected.id)}">交付并领取悬赏奖励</button>`
-                        : selected.status === 'offered'
-                          ? `<button type="button" class="skyrim-primary-btn" data-quest-folio-pick="${escapeText(selected.id)}" ${pending ? 'disabled' : ''}>接取该委托</button>`
-                          : selected.status === 'active'
-                            ? `<button type="button" class="skyrim-secondary-btn" data-quest-folio-pick="${escapeText(selected.id)}">设为屏幕追踪</button>`
-                            : selected.type === 'social'
-                              ? `<button type="button" class="skyrim-primary-btn" data-quest-folio-pick="${escapeText(selected.id)}" ${pending ? 'disabled' : ''}>继续后续章节</button>`
-                              : ''
-                    }
-                    ${
-                      selected.status !== 'completed'
-                        ? '<button type="button" class="skyrim-secondary-btn" data-quest-open-atlas>在大地图查看</button>'
-                        : ''
-                    }
-                  </footer>
-                </article>`
-              : `<div class="skyrim-folio-empty">
-                  <p>左侧目录中选择一条委托，或前往冒险者公会接取契约。</p>
-                  <button type="button" class="skyrim-primary-btn" data-quest-open-guild>前往冒险者公会</button>
-                </div>`
-          }
-        </section>
-      </div>`;
+    dialog.innerHTML = renderQuestJournal({
+      groups,
+      selected,
+      trackedId: tracked?.id,
+      location: selected ? questLocation(selected) : '',
+      objectives: questObjectives(selected),
+      acceptDisabled: Boolean(pending || reading || sessionRuntime.mode !== 'inn'),
+      accepting: Boolean(pending),
+      claimingId: pendingClaim?.owner === library() ? pendingClaim.quest.id : '',
+    });
+    if (!dialog.open) return;
+    const list = dialog.querySelector('.ow-quest-list');
+    list.scrollTop = listTop;
+    if (selectionBefore === inspected)
+      dialog.querySelector('.skyrim-folio-col').scrollTop = detailTop;
+    if (selectionBefore !== inspected || focusKey?.startsWith('row:')) {
+      keepRowVisible(list, selectedRow());
+    }
+    if (focusKey) focusJournal(focusKey);
   }
 
   function open(focusQuestId = '') {
+    if (!sessionIsAlive()) return;
+    if (!dialog.open) returnFocusElement = document.activeElement;
     if (focusQuestId) inspected = focusQuestId;
+    render(focusQuestId ? `row:${focusQuestId}` : undefined);
     if (!dialog.open) {
-      render();
       dialog.showModal();
-    } else {
-      render();
+      keepRowVisible(dialog.querySelector('.ow-quest-list'), selectedRow());
+      focusJournal();
     }
   }
 
@@ -410,17 +424,9 @@ export function createTavernQuests(context) {
 
   async function accept(quest) {
     if (pending || reading || session.runtime.mode !== 'inn') return;
-    if (isBountyReadyToClaim(quest)) {
-      claimBounty(quest.id);
-      return;
-    }
-    const continuing = quest.status === 'completed';
-    if (quest.status === 'active') {
-      focused = quest.id;
-      inspected = quest.id;
-      dialog.close();
-      return save();
-    }
+    if (isBountyReadyToClaim(quest)) return claimBounty(quest.id);
+    const continuing = quest.status === 'completed' && quest.type === 'social';
+    if (quest.status !== 'offered' && !continuing) return;
     dialog.close();
     const owner = library();
     const control = new AbortController();
@@ -510,21 +516,29 @@ export function createTavernQuests(context) {
       }
       quest.status = 'active';
       quest.gameTime = gameTime(owner.daily);
-      focused = quest.id;
+      setTrackedQuest(quest.id);
       inspected = quest.id;
       save();
       showBanner('QUEST STARTED · 任务开始', quest.title, questLocation(quest));
     } catch (failure) {
       if (failure.name !== 'AbortError') context.shell.toast(failure.message);
     } finally {
-      if (pending === control) pending = null;
+      if (pending === control) {
+        pending = null;
+        if (dialog.open && owner === library()) render();
+      }
     }
   }
 
   async function advance() {
+    if (!sessionIsAlive() || reading) return;
     const quest = current();
-    const act = quest && step(quest);
-    if (!quest || reading || act?.scene !== scene()) return;
+    if (!quest) return;
+    if (session.runtime.mode === 'inn' && isBountyReadyToClaim(quest)) {
+      return claimBounty(quest.id);
+    }
+    const act = step(quest);
+    if (act?.scene !== scene()) return;
     const owner = library();
     reading = true;
     try {
@@ -680,49 +694,128 @@ export function createTavernQuests(context) {
     save();
   }
 
+  function questAtlasTarget(quest) {
+    if (quest?.status !== 'active') return null;
+    if (quest.type === 'bounty') {
+      if (quest.targetKind !== 'dungeon' || isBountyReadyToClaim(quest)) return null;
+      const maps = quest.targetMaps;
+      return Array.isArray(maps) &&
+        maps.length === 1 &&
+        library().unlockedDungeons.includes(maps[0])
+        ? maps[0]
+        : null;
+    }
+    const id = step(quest)?.scene || quest.discovery;
+    if (typeof id !== 'string') return null;
+    if (
+      Object.hasOwn(ATLAS_PLACES, id) ||
+      library().atlasDiscoveries.some((entry) => entry.id === id)
+    ) {
+      return id;
+    }
+    // Interior venues share their registered city's world-map pin, not a guessed road point.
+    return cityForScene(id) ? overlandOrigin(id) : null;
+  }
+
+  function openAtlas() {
+    const quest = journalQuests().find(({ id }) => id === inspected);
+    if (context.daily?.openAtlas?.(questAtlasTarget(quest))) dialog.close();
+    else context.shell.toast('当前无法打开大地图。');
+  }
+
+  events.on(dialog, 'close', () => {
+    if (dialog.open) return;
+    const target = returnFocusElement;
+    returnFocusElement = null;
+    // The edge button can be hidden while modal; restore after the ledger resynchronizes.
+    queueMicrotask(() => {
+      if (!sessionIsAlive() || dialog.open || activeModal(document)) return;
+      const focused = document.activeElement;
+      if (focused !== document.body && !dialog.contains(focused)) return;
+      if (target?.isConnected && !target.disabled && target.getClientRects().length) {
+        target.focus({ preventScroll: true });
+      }
+    });
+  });
+
+  events.on(dialog, 'keydown', (event) => {
+    if (!sessionIsAlive() || !dialog.open || event.defaultPrevented || event.isComposing) return;
+    if (event.ctrlKey || event.altKey || event.metaKey) return;
+    const key = event.key.toLowerCase();
+    if (key === 'm' && dialog.querySelector('[data-quest-open-atlas]')) {
+      event.preventDefault();
+      if (!event.repeat) openAtlas();
+      return;
+    }
+    if (!event.target.matches('.skyrim-quest-tab')) return;
+    const rows = [...dialog.querySelectorAll('.skyrim-quest-tab[data-quest-select]')];
+    const index = rows.indexOf(event.target);
+    let next;
+    if (key === 'arrowdown' || key === 's') next = (index + 1) % rows.length;
+    else if (key === 'arrowup' || key === 'w') next = (index + rows.length - 1) % rows.length;
+    else if (key === 'home') next = 0;
+    else if (key === 'end') next = rows.length - 1;
+    else if (key === 'enter' || key === ' ') {
+      event.preventDefault();
+      if (!event.repeat) dialog.querySelector('[data-quest-focus="track"]')?.click();
+      return;
+    } else return;
+    event.preventDefault();
+    if (rows[next]) selectQuest(rows[next].dataset.questSelect);
+  });
+
   events.on(dialog, 'click', (event) => {
-    const claimId = event.target.closest('[data-quest-claim]')?.dataset.questClaim;
-    if (claimId) {
-      claimBounty(claimId);
+    if (!sessionIsAlive()) return;
+    const button = event.target.closest('button');
+    if (!button || button.disabled) return;
+    if (button.dataset.questFocus === 'close') {
+      event.preventDefault();
+      dialog.close();
       return;
     }
-    const pickId =
-      event.target.closest('[data-quest-pick]')?.dataset.questPick ||
-      event.target.closest('[data-quest-folio-pick]')?.dataset.questFolioPick;
-    if (pickId) {
-      const quest = library().tavernQuests.find((entry) => entry.id === pickId);
-      if (quest) void accept(quest);
+    const { questTrack, questClaim, questPick, questFolioPick, questSelect, questScroll } =
+      button.dataset;
+    if (questTrack) {
+      inspected = questTrack;
+      const focusKey = button.dataset.questFocus || `row:${questTrack}`;
+      trackQuest(current()?.id === questTrack ? '' : questTrack, focusKey);
       return;
     }
-    const selectId = event.target.closest('[data-quest-select]')?.dataset.questSelect;
-    if (selectId) {
-      inspected = selectId;
-      render();
+    if (questClaim || questPick) return claimBounty(questClaim || questPick);
+    if (questFolioPick) {
+      const quest = journalQuests().find(({ id }) => id === questFolioPick);
+      if (quest) return accept(quest);
       return;
     }
-    if (event.target.closest('[data-quest-open-guild]')) {
+    if (questSelect) {
+      const selected = inspected === questSelect && button.closest('[data-status="active"]');
+      if (selected) trackQuest(current()?.id === questSelect ? '' : questSelect);
+      else selectQuest(questSelect);
+      return;
+    }
+    if (questScroll) {
+      const list = dialog.querySelector('.ow-quest-list');
+      list.scrollBy(0, (questScroll === 'up' ? -1 : 1) * Math.max(44, list.clientHeight * 0.66));
+      return;
+    }
+    if (button.hasAttribute('data-quest-open-guild')) {
       dialog.close();
       context.guild?.open('bounties');
       return;
     }
-    if (event.target.closest('[data-quest-open-atlas]')) {
-      dialog.close();
-      context.daily?.openAtlas?.();
-    }
+    if (button.hasAttribute('data-quest-open-atlas')) openAtlas();
   });
 
   return {
     open,
+    isOpen: () => dialog.open,
     arrived,
     collect,
     advance,
     battleWon,
     skirmishWon,
     showBanner,
-    focusQuest(id) {
-      focused = id;
-      inspected = id;
-    },
+    focusQuest,
     actors: () =>
       active()
         .filter((quest) => quest.type === 'character' && quest.plan.scene === scene())
@@ -765,7 +858,10 @@ export function createTavernQuests(context) {
       };
     },
     dispose() {
+      disposed = true;
       clearTimeout(bannerTimer);
+      clearTimeout(bannerExitTimer);
+      bannerSurface.hide();
       pending?.abort();
       dialog.remove();
       banner.remove();

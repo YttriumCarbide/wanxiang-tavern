@@ -182,7 +182,7 @@ export function createOverlandTravel(
     )
       return;
     let entry = outing();
-    const originScene = entry ? scene() : options.destination || 'street';
+    const originScene = entry ? scene() : options.destination || 'city-center';
     let control;
     try {
       const discovery = library.atlasDiscoveries?.find(({ id }) => id === to);
@@ -831,19 +831,27 @@ export function createOverlandTravel(
       return;
     }
     const current = run();
-    const won = session.battle.state.phase === 'victory';
+    const battle = session.battle.state;
+    const isCurrentBattle = () =>
+      !session.runtime.disposed &&
+      session.runtime.mode === 'battle' &&
+      session.journey.expedition === expedition &&
+      session.battle.state === battle;
+    const won = battle.phase === 'victory';
     if (!expedition.pendingResult) {
       if (won) {
-        const unlockedEmblem = grantVictoryOverlordEmblem(
-          session.ai.library,
-          session.battle.state,
-          expedition,
-        );
+        const unlockedEmblem = grantVictoryOverlordEmblem(session.ai.library, battle, expedition);
         if (unlockedEmblem) {
+          context.emblems?.queueRingAward(
+            unlockedEmblem.id,
+            unlockedEmblem.recipient?.actor,
+            battle,
+          );
           const embName = EMBLEMS[unlockedEmblem.id]?.emblem?.name || unlockedEmblem.id;
           context.shell?.toast?.(`已获得纹章士戒指「${embName}」`);
         }
         await context.battleBarks?.battleWon();
+        if (!isCurrentBattle()) return;
       }
       const leg = current ? stage(current) : null;
       const runId = current && leg ? `overland:${current.id}:${leg.id}` : null;
@@ -854,7 +862,7 @@ export function createOverlandTravel(
           leg,
           items: current.items,
         });
-        if (!(await context.lootConflicts.resolve(runId))) return;
+        if (!(await context.lootConflicts.resolve(runId)) || !isCurrentBattle()) return;
       }
       const loot = won && runId ? dungeonLoot(session.ai.library, runId) : [];
       const ether = won && runId ? settleEther(session.ai.library, runId) : 0;
@@ -869,7 +877,7 @@ export function createOverlandTravel(
       };
       context.audio.play(won ? 'victory' : 'defeat');
       const ringArrival = won
-        ? [expedition.emblemArrival, session.battle.state.midBattleEmblemArrival].find(
+        ? [expedition.emblemArrival, battle.midBattleEmblemArrival].find(
             (arrival) => arrival && !arrival.shown,
           )
         : null;
@@ -877,13 +885,8 @@ export function createOverlandTravel(
       save();
       context.checkpoint.saveNow();
       if (ringArrival) {
-        await context.emblems?.playAcquisition(ringArrival.id);
-        if (
-          session.runtime.disposed ||
-          session.runtime.mode !== 'battle' ||
-          session.journey.expedition !== expedition
-        )
-          return;
+        await context.emblems?.presentRingAward(ringArrival.id);
+        if (!isCurrentBattle()) return;
       }
     }
     if (

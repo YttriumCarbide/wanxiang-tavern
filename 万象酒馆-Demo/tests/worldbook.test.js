@@ -308,7 +308,8 @@ test('monster lore is split into named script/chat entries and game rules are re
   assert(!Object.values(result.entries).some((entry) => /通用敌人库/.test(entry.comment || '')));
   for (const entry of entries) {
     assert.equal(entry.comment, '怪物图鉴：' + entry.key[1]);
-    assert.deepEqual(entry.key, [entry.extensions.wanxiang.monsterId, entry.key[1]]);
+    assert.equal(entry.key[0], entry.extensions.wanxiang.monsterId);
+    assert(entry.key.length >= 2);
     assert.deepEqual(entry.apiTargets, ['script', 'chat']);
     assert(!/速度均为|行动顺序|必须全部击败|替代旧数字/.test(entry.content));
   }

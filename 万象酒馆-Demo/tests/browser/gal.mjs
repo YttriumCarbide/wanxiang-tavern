@@ -4,6 +4,121 @@ import { readFile } from 'node:fs/promises';
 import { dismissAutomaticJournals } from './legacy-session.mjs';
 import { galWorkspaceChecks } from './gal-workspace.mjs';
 
+async function checkGalReactions(page) {
+  const stage = page.locator('#gal-stage');
+  const prose = stage.locator('.gal-text');
+  const portraits = stage.locator('.gal-cast img');
+  const advance = () =>
+    stage.evaluate((element) => {
+      const button = element.querySelector('.gal-page');
+      if (element.dataset.typing === 'true') button.click();
+      button.click();
+    });
+  async function assertReaction(actor, symbol, moving = false, nudging = false) {
+    const state = await stage.evaluate((element) => ({
+      cues: [...element.querySelectorAll('.gal-emote:not([hidden])')].map((bubble) => ({
+        actor: bubble.closest('.gal-portrait-slot').dataset.actor,
+        symbol: bubble.textContent,
+        moving: bubble.getAnimations().length > 0,
+      })),
+      gestures: [...element.querySelectorAll('.gal-portrait-slot')]
+        .filter((slot) => slot.querySelector('.gal-portrait-reaction').getAnimations().length > 0)
+        .map((slot) => slot.dataset.actor),
+      nudging: element.querySelector('.gal-reading').getAnimations().length > 0,
+    }));
+    assert.deepEqual(state, {
+      cues: actor ? [{ actor, symbol, moving }] : [],
+      gestures: moving ? [actor] : [],
+      nudging,
+    });
+  }
+
+  const line = '甲，乙——丙丁。';
+  const scene = [
+    '【登场:伊蒂丝】【登场:official-aegis】【旁白】A。',
+    '【对白:伊蒂丝|hop:alert】' + 'B'.repeat(90),
+    '【登场:official-aegis】',
+    '【对白:official-aegis|shake】' + line,
+    '【对白:official-aegis】C。', // A later untagged line must not inherit the reaction.
+    '【对白:伊蒂丝|question】' + line,
+    '【对白:伊蒂丝】F。',
+    '【对白:official-aegis】' + line,
+    '【对白:official-aegis|sweat】' + line,
+  ].join('');
+  const clockStart = Date.UTC(2026, 0, 1);
+  await page.clock.install({ time: clockStart });
+  await page.evaluate((scene) => {
+    void window.galFixture.gal.play(scene, { owner: 'dialogue-reactions' });
+  }, scene);
+  await page.waitForFunction(() => {
+    const images = [...document.querySelectorAll('#gal-stage .gal-cast img')];
+    return images.length === 2 && images.every((image) => image.complete && image.naturalWidth);
+  });
+  await portraits.evaluateAll((images) => Promise.all(images.map((image) => image.decode())));
+  const [edith, yuexi] = await portraits.evaluateAll((images) =>
+    images.map((image) => image.dataset.actor),
+  );
+  await page.clock.pauseAt(clockStart + 60_000);
+  try {
+    await advance();
+    await assertReaction(edith, '❗', true, true);
+    await advance();
+    await assertReaction(); // Later pages of one tagged beat do not replay its emote.
+    await advance();
+    await assertReaction(yuexi, '💢', true, true);
+    assert.deepEqual(
+      await portraits.evaluateAll((images) => images.map((image) => image.dataset.actor)),
+      [edith, yuexi],
+    );
+    assert.equal(await stage.locator('img.speaking').getAttribute('data-actor'), yuexi);
+    await page.clock.runFor(16);
+    assert.equal(await prose.textContent(), '甲，', 'the energetic line reaches the comma first');
+
+    await page.evaluate(() => {
+      window.galFixture.motionPreferenceChanged = new Promise((resolve) => {
+        matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', resolve, {
+          once: true,
+        });
+      });
+    });
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.evaluate(async () => {
+      await window.galFixture.motionPreferenceChanged;
+      delete window.galFixture.motionPreferenceChanged;
+    });
+    await assertReaction(yuexi, '💢');
+    assert.equal(await prose.textContent(), line);
+    await advance();
+    await assertReaction(); // An untagged line after the reaction starts clean.
+    assert.equal(await prose.textContent(), 'C。');
+    await advance();
+    await assertReaction(edith, '❓');
+    assert.equal(await prose.textContent(), line);
+    await advance();
+    await assertReaction();
+    assert.equal(await prose.textContent(), 'F。');
+
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    await advance();
+    await page.clock.runFor(16);
+    assert.equal(await prose.textContent(), '甲', 'the same untagged text keeps its normal pace');
+    await assertReaction();
+    await advance();
+    await assertReaction(yuexi, '💧', true);
+    await page.clock.runFor(350);
+    assert.equal(await prose.textContent(), '甲，', 'hesitation pauses after the comma');
+    await page.clock.runFor(170);
+    assert.equal(await prose.textContent(), '甲，乙——', 'the paired dash gets one pause');
+    await page.clock.runFor(650);
+    assert.equal(await prose.textContent(), line);
+    await assertReaction();
+  } finally {
+    await page.clock.resume();
+  }
+  await stage.locator('[data-gal="close"]').click();
+  await stage.waitFor({ state: 'hidden' });
+}
+
 export async function galChecks({ browser, baseURL, output }) {
   const errors = [];
   const page = await browser.newPage({ viewport: { width: 1440, height: 836 } });
@@ -276,8 +391,41 @@ export async function galChecks({ browser, baseURL, output }) {
     });
     await checkComposition();
     await page.screenshot({ path: path.join(output, 'two-character-stage.png') });
+    await page.evaluate(() => {
+      const target = document.createElement('button');
+      target.id = 'gal-exit-target';
+      target.textContent = '下一屏';
+      target.style.cssText = 'position:fixed;top:8px;left:8px;z-index:2147483647';
+      target.addEventListener('click', () => {
+        target.dataset.clicked = 'true';
+      });
+      document.querySelector('#ai-dialog').append(target);
+    });
     await page.locator('[data-gal="close"]').click();
+    await page.waitForFunction(
+      () => document.querySelector('#gal-stage')?.dataset.leaving === 'true',
+    );
+    const exitState = await page.locator('#gal-stage').evaluate((element) => ({
+      inert: element.inert,
+      ariaHidden: element.getAttribute('aria-hidden'),
+      pointerEvents: getComputedStyle(element).pointerEvents,
+      parentIsBody: element.parentElement === document.body,
+      galPlaying: document.body.classList.contains('gal-playing'),
+      targetAtPoint: (() => {
+        const rect = document.querySelector('#gal-exit-target').getBoundingClientRect();
+        return document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2)?.id;
+      })(),
+    }));
+    assert.equal(exitState.inert, true);
+    assert.equal(exitState.ariaHidden, 'true');
+    assert.equal(exitState.pointerEvents, 'none');
+    assert.equal(exitState.parentIsBody, true);
+    assert.equal(exitState.galPlaying, false);
+    assert.equal(exitState.targetAtPoint, 'gal-exit-target');
+    await page.locator('#gal-exit-target').click();
+    assert.equal(await page.locator('#gal-exit-target').getAttribute('data-clicked'), 'true');
     await page.locator('#gal-stage').waitFor({ state: 'hidden' });
+    await page.locator('#gal-exit-target').evaluate((element) => element.remove());
     const requestModes = await page.evaluate(async () => {
       const { createRequestControls } = await import('/src/app/request-controls.js');
       const received = [];
@@ -424,17 +572,79 @@ export async function galChecks({ browser, baseURL, output }) {
       return results;
     });
     assert(alpha.every((entry) => entry.corner === 0 && entry.center > 180));
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.evaluate(() => {
+      void window.galFixture.gal.play('【旁白】减少动态退场检查。', {
+        owner: 'reduced-motion-exit',
+      });
+    });
+    await page.locator('#gal-stage').waitFor({ state: 'visible' });
+    await page.locator('[data-gal="close"]').click();
+    await page.locator('#gal-stage').waitFor({ state: 'hidden' });
+    assert.equal(await page.locator('#gal-stage').getAttribute('data-leaving'), null);
+    assert.equal(
+      await page.locator('body').evaluate((body) => body.classList.contains('gal-playing')),
+      false,
+    );
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+
+    await page.evaluate(() => {
+      void window.galFixture.gal.play('【旁白】退场重开检查。', { owner: 'exit-reopen' });
+    });
+    await page.locator('#gal-stage').waitFor({ state: 'visible' });
+    await page.locator('[data-gal="close"]').click();
+    await page.waitForFunction(
+      () => document.querySelector('#gal-stage')?.dataset.leaving === 'true',
+    );
+    await page.evaluate(() => {
+      window.galFixture.gal.workspace({
+        owner: 'reopened-workspace',
+        title: '重新打开',
+        actors: [],
+        selection: [],
+        composer: [],
+        auxiliary: [],
+        history: [],
+      });
+    });
+    const reopenedState = await page.locator('#gal-stage').evaluate((element) => ({
+      leaving: element.dataset.leaving,
+      inert: element.inert,
+      ariaHidden: element.getAttribute('aria-hidden'),
+      galPlaying: document.body.classList.contains('gal-playing'),
+    }));
+    assert.equal(reopenedState.leaving, undefined);
+    assert.equal(reopenedState.inert, false);
+    assert.equal(reopenedState.ariaHidden, 'false');
+    assert.equal(reopenedState.galPlaying, true);
+    await page.locator('[data-gal="close"]').click();
+    await page.locator('#gal-stage').waitFor({ state: 'hidden' });
+
+    await checkGalReactions(page);
     await page.evaluate(() => {
       window.galFixture.feed.dispose();
       window.galFixture.dialogue.dispose();
-      window.galFixture.gal.dispose();
+      void window.galFixture.gal.play('【旁白】退场销毁检查。', { owner: 'dispose-during-exit' });
     });
+    await page.locator('#gal-stage').waitFor({ state: 'visible' });
+    await page.locator('[data-gal="close"]').click();
+    await page.waitForFunction(
+      () => document.querySelector('#gal-stage')?.dataset.leaving === 'true',
+    );
+    await page.evaluate(() => window.galFixture.gal.dispose());
+    assert.equal(await page.locator('#gal-stage').count(), 0);
+    await page.waitForTimeout(400);
     assert.equal(await page.locator('#gal-stage').count(), 0);
     assert.deepEqual(errors, []);
     const workspace = await galWorkspaceChecks({ browser, baseURL, output });
     return {
       originalTutorial: true,
       ordinaryPlayDefaultsToGal: true,
+      normalExitPassThrough: true,
+      reducedMotionExit: true,
+      dialogueReactionsAndCadence: true,
+      exitReopen: true,
+      disposeDuringExit: true,
       retiredToggleRemoved: true,
       mobileLandscape: true,
       narrationAndUser: true,

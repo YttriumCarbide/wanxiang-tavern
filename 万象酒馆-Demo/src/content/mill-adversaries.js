@@ -32,7 +32,7 @@ function adversary(id, name, config, intents, extra = {}) {
 export const MILL_ENEMIES = [
   adversary(
     'millMossBug',
-    '苔背虫',
+    '苔背甲虫',
     {
       title: '磨坊外围 / 腐叶软甲虫',
       color: '#7ea16b',
