@@ -186,3 +186,94 @@ dialog.city-service-dialog[open] {
     align-content: start;
   }
 }
+
+/* The wood and paper are the surface; notices do not share the guild's card grid. */
+.guild-notice-board.guild-board-wall {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  align-items: flex-start;
+  max-inline-size: 842px;
+  min-block-size: min(322px, 56dvh);
+  margin-inline: auto;
+  padding: clamp(16px, 3vw, 32px);
+  border: 7px ridge #845134;
+  background:
+    radial-gradient(ellipse at 26% 0%, #d0925666, transparent 68%),
+    repeating-linear-gradient(177deg, #65402a 0 48px, #3d2419 49px 51px, #845437 52px 54px);
+  box-shadow:
+    inset 0 2px 18px #2d1713,
+    0 8px 18px #110905a6;
+}
+.guild-board-wall > .guild-notice {
+  display: grid;
+  flex: 0 1 var(--paper-width, 226px);
+  min-inline-size: 0;
+  max-inline-size: calc(100% - 14px);
+  padding-block: 18px 11px;
+  overflow-wrap: anywhere;
+}
+.guild-board-wall > .guild-notice:nth-child(4n + 2) {
+  --paper-width: 312px;
+  --pin-left: 68%;
+  margin-block-start: 13px;
+  padding-inline: 18px;
+}
+.guild-board-wall > .guild-notice:nth-child(4n + 3) {
+  --paper-width: 211px;
+  --pin-left: 39%;
+  margin-block-start: 4px;
+  padding-block-start: 23px;
+}
+.guild-board-wall > .guild-notice:nth-child(4n) {
+  --paper-width: 272px;
+  --pin-left: 44%;
+  margin-block-start: 8px;
+  margin-inline-start: 10px;
+}
+.guild-board-wall > .guild-notice::before {
+  inset-inline-start: var(--pin-left, 51%);
+  translate: -50% 0;
+}
+.guild-board-wall > .guild-notice::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0 auto;
+  width: 12px;
+  height: 12px;
+  clip-path: polygon(0 0, 100% 0, 100% 100%);
+  background: linear-gradient(45deg, #c49358, #eaca93 60%);
+  pointer-events: none;
+}
+.guild-board-wall .guild-rank-seal {
+  border-color: #93704a;
+  border-radius: 3px;
+  background: #5a3c27;
+  color: #ffedb9;
+}
+.guild-board-wall .guild-badge {
+  background: #58402e;
+  color: #fff2ce;
+}
+.guild-board-wall .guild-badge.is-ready {
+  background: #305241;
+}
+.guild-board-wall .guild-card-foot {
+  border-color: #8d572e52;
+}
+.guild-board-wall .guild-card-btns button {
+  min-block-size: 44px;
+  border-color: #78512d;
+}
+.guild-board-wall > .guild-notice:nth-child(n) {
+  flex-basis: var(--notice-width, 226px);
+  margin-block-start: var(--notice-drop, 0px);
+  margin-inline-start: var(--notice-shift, 0px);
+  rotate: var(--notice-tilt, 0deg);
+}
+.guild-board-wall > .guild-notice:focus-within {
+  rotate: 0deg;
+}
+.guild-board-wall > .guild-notice::before {
+  inset-inline-start: var(--pin-position, 51%);
+}

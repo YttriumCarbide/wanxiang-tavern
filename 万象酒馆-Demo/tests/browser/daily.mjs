@@ -480,7 +480,8 @@ export async function dailyChecks({ browser, baseURL, output }) {
     assert.match(await status(), /已行 0 回合/);
     await travelTownScene(page, 'market');
     assert.match(await status(), /已行 1 回合/);
-    await page.locator('#scene-talk.is-docked').waitFor();
+    const streetTalk = frame.locator('#scene-talk');
+    await streetTalk.waitFor({ state: 'visible' });
     const streetGeometry = await page.evaluate(() => {
       const iframe = document.querySelector('#inn-frame iframe');
       const ir = iframe.getBoundingClientRect();
@@ -494,7 +495,7 @@ export async function dailyChecks({ browser, baseURL, output }) {
         height: r.height,
       });
       const dock = toScreen(fd.querySelector('.street-actions').getBoundingClientRect());
-      const talk = document.querySelector('#scene-talk').getBoundingClientRect();
+      const talk = toScreen(fd.querySelector('#scene-talk').getBoundingClientRect());
       const mapBtn = toScreen(fd.querySelector('#street-map-open').getBoundingClientRect());
       const cityDirectory = document
         .querySelector('#ledger-city-directory-open')
@@ -552,7 +553,7 @@ export async function dailyChecks({ browser, baseURL, output }) {
       'true',
     );
     await expect(outingStatus).toBeHidden();
-    assert.equal(await page.locator('#scene-talk').isVisible(), false);
+    assert.equal(await streetTalk.isVisible(), false);
     const directoryList = cityDirectory.locator('#street-city-submap-canvas');
     const directoryScroll = await directoryList.evaluate((list) => {
       const bounds = list.closest('dialog').getBoundingClientRect();
@@ -588,7 +589,7 @@ export async function dailyChecks({ browser, baseURL, output }) {
       outingBeforeDirectory,
       'opening and closing the city directory does not advance the outing',
     );
-    await page.locator('#scene-talk.is-docked').waitFor();
+    await streetTalk.waitFor({ state: 'visible' });
     await expect(outingStatus).toBeVisible();
     assert(
       streetGeometry.daily.top >= streetGeometry.hud.bottom - 1 &&
@@ -598,7 +599,7 @@ export async function dailyChecks({ browser, baseURL, output }) {
       `Outing status ribbon sits cleanly at top-left below placard: ${JSON.stringify(streetGeometry)}`,
     );
     await page.screenshot({ path: path.join(output, 'street-dock.png') });
-    await page.locator('#scene-talk').click();
+    await streetTalk.click();
     const cityGal = page.locator('#gal-stage[data-workspace="chat"]');
     const cityEnvironment = cityGal.locator('.scene-environment');
     await expect(cityGal).toBeVisible();
@@ -641,6 +642,9 @@ export async function dailyChecks({ browser, baseURL, output }) {
     await page.locator('[data-daily-activity="walk"]').click();
     assert.equal(summaries.length, 0, 'two completed dungeons alone do not start a batch');
     const invitationSetup = page.locator('#daily-setup[data-kind="invitation"]');
+    await expect(invitationSetup.locator('.daily-invite-destination img')).toBeVisible();
+    await expect(invitationSetup.locator('[data-daily-person="official-libet"] img')).toBeVisible();
+    await expect(invitationSetup.locator('[data-daily-activity="walk"]')).toBeFocused();
     const openingPlace = invitationSetup.locator('[data-daily-place]');
     assert.notEqual(await openingPlace.inputValue(), 'starbell-guild');
     await openingPlace.selectOption('starbell-guild');

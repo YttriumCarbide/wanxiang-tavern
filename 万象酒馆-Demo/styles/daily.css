@@ -43,9 +43,7 @@ body.ring-cabinet-open #daily-hud {
 }
 #daily-hud[hidden],
 body.in-battle #daily-hud,
-body.in-battle #scene-talk,
-body.in-adventure #daily-hud,
-body.in-adventure #scene-talk {
+body.in-adventure #daily-hud {
   display: none !important;
 }
 .daily-invitation-record {
@@ -1708,8 +1706,7 @@ body.in-adventure #scene-talk {
   opacity: 0.78;
 }
 #daily-hud .daily-slot small,
-.daily-roles small,
-.daily-invite-slot small {
+.daily-roles small {
   color: var(--daily-muted);
   font-size: 10px;
   letter-spacing: 0.1em;
@@ -2276,31 +2273,6 @@ body.in-adventure #scene-talk {
   font: 700 10px/1 var(--daily-serif);
   box-shadow: 0 2px 7px rgba(0, 0, 0, 0.44);
 }
-.daily-invite-slot {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  gap: 10px;
-  align-items: center;
-  margin-bottom: 10px;
-  padding: 11px 14px;
-  border: 1px solid rgba(226, 186, 111, 0.18);
-  border-left: 2px solid var(--daily-hot);
-  border-radius: 7px;
-  background:
-    linear-gradient(90deg, rgba(226, 186, 111, 0.085), transparent 60%), rgba(255, 255, 255, 0.018);
-}
-.daily-invite-slot strong {
-  color: #f3dfba;
-  font-family: var(--daily-serif);
-  font-size: 17px;
-  font-weight: 400;
-  letter-spacing: 0.06em;
-}
-.daily-invite-slot span {
-  color: var(--daily-hot);
-  font-size: 11px;
-  letter-spacing: 0.04em;
-}
 #daily-setup footer p {
   flex: 1;
   margin: 0;
@@ -2373,12 +2345,6 @@ body.in-adventure #scene-talk {
   .daily-roles button {
     padding: 7px 8px;
     font-size: 11px;
-  }
-  .daily-invite-slot {
-    grid-template-columns: 1fr auto;
-  }
-  .daily-invite-slot small {
-    grid-column: 1 / -1;
   }
   #daily-setup > footer {
     flex-wrap: wrap;
@@ -3319,17 +3285,103 @@ body.in-adventure #scene-talk {
   border-radius: 8px;
 }
 
+#daily-setup[data-kind='invitation'] {
+  width: min(920px, calc(100vw - 20px));
+}
+
+.daily-invite-layout {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.82fr) minmax(185px, 1fr) minmax(190px, 1.08fr);
+  gap: 12px;
+  min-height: 280px;
+}
+
+.daily-invite-destination {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid rgba(216, 178, 110, 0.2);
+  border-radius: 9px;
+  background: linear-gradient(165deg, rgba(226, 186, 111, 0.065), rgba(255, 255, 255, 0.018));
+}
+
+.daily-invite-destination > img {
+  width: 100%;
+  height: 116px;
+  object-fit: cover;
+  object-position: center;
+  border: 1px solid rgba(216, 178, 110, 0.28);
+  border-radius: 6px;
+  filter: brightness(0.84) saturate(0.8);
+}
+
+.daily-invite-roster {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-content: start;
+  gap: 6px;
+  max-height: 356px;
+  padding: 3px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.daily-invite-roster .daily-person {
+  grid-template-columns: 37px minmax(0, 1fr);
+  justify-items: start;
+  align-items: center;
+  gap: 7px;
+  min-height: 52px;
+  padding: 4px;
+  text-align: left;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+.daily-invite-roster .daily-person img {
+  width: 34px;
+  height: 42px;
+  object-position: center 18%;
+}
+
+.daily-invite-roster .daily-person span {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.daily-invite-roster .daily-person small {
+  color: var(--daily-hot);
+  font-size: 10px;
+}
+
+.daily-invite-roster > p {
+  grid-column: 1 / -1;
+  margin: 12px 4px;
+  color: var(--daily-muted);
+  font-size: 12px;
+}
+
+.daily-invite-route {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  min-width: 0;
+}
+
+.daily-invite-route .daily-options {
+  margin: 0;
+}
+
 /* Appointment locations stay in the same planning space as the companion and intent. */
 #daily-setup[data-kind='invitation'] .daily-setup-body {
   display: grid;
   gap: 14px;
-}
-.daily-invite-destination {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-  padding-bottom: 13px;
-  border-bottom: 1px solid rgba(216, 178, 110, 0.2);
 }
 .daily-invite-destination label,
 .daily-invite-intent {
@@ -3365,8 +3417,44 @@ body.in-adventure #scene-talk {
 .daily-invite-intent textarea::placeholder {
   color: #948875;
 }
-@media (max-width: 560px) {
+@media (max-width: 700px) {
+  #daily-setup[data-kind='invitation'] {
+    width: min(540px, calc(100vw - 20px));
+  }
+  .daily-invite-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+  }
   .daily-invite-destination {
+    grid-row: span 2;
+  }
+  .daily-invite-roster {
+    max-height: 220px;
+  }
+  .daily-invite-destination > img {
+    height: 88px;
+  }
+}
+@media (max-width: 480px) {
+  .daily-invite-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .daily-invite-destination {
+    grid-row: auto;
+  }
+  .daily-invite-destination > img {
+    height: 100px;
+  }
+  .daily-invite-roster {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    max-height: 180px;
+  }
+  .daily-invite-roster .daily-person {
     grid-template-columns: 1fr;
+    justify-items: center;
+    text-align: center;
+  }
+  .daily-invite-roster .daily-person img {
+    width: 38px;
+    height: 48px;
   }
 }

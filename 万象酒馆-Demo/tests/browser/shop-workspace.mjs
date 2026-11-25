@@ -170,6 +170,11 @@ export async function shopWorkspaceChecks({ browser, baseURL, output }) {
     assert.equal(await cheese.getAttribute('aria-pressed'), 'true');
     assert(await shop.locator('[data-food-buy="cheese"]').isDisabled());
     const expectedProceeds = Math.floor(INGREDIENTS.cheese.price * 0.6);
+    assert.match(
+      await cheese.locator('.market-stall-price').innerText(),
+      new RegExp('回收\\s*' + expectedProceeds + '\\b'),
+      'the carried-food stall shows its resale value, not the purchase price',
+    );
     await shop.locator('[data-food-sell="cheese"]').click();
     await shop
       .locator('#shop-status')

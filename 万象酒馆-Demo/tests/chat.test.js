@@ -657,11 +657,13 @@ test('chat API assembles world, green-light mentions, prose-only history and exa
       'type',
       'level',
     ]);
-    assert.match(questPrompt, /标题和简介可借鉴《上古卷轴》任务日志/);
+    assert.match(questPrompt, /标题与简介采用《上古卷轴》式任务日志口吻/);
     assert.match(questPrompt, /任务目标、完成条件、进度、结算和奖励由游戏掌控/);
     assert.match(questPrompt, /title 用凝练的委托标题，最多 50 个字符/);
     assert.match(questPrompt, /description 用简短纪事.*最多 400 个字符/u);
-    assert.match(questPrompt, /文风仅供写作参考，不作为程序拒收条件/);
+    assert.match(questPrompt, /先记已知事实，再记仍可追查的线索/);
+    assert.match(questPrompt, /不得虚构本轮未出现的人物或目标/);
+    assert.match(questPrompt, /文风不是程序拒收条件/);
     assert.equal(questPrompt.split('【多人队伍聚焦与反端水】').length - 1, 1);
     const questPartyRoster = questParty.map(({ id, name }) => ({ id, name }));
     assert(questPrompt.includes(`可用人物ID与姓名：${JSON.stringify(questPartyRoster)}。`));

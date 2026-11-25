@@ -12,6 +12,7 @@ function actorAnchor(battle, actor) {
 export function createRingFeedback({ session, audio }) {
   const active = new Map();
   const pendingWaits = new WeakMap();
+  const skipControls = new WeakMap();
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
   let disposed = false;
 
@@ -21,6 +22,34 @@ export function createRingFeedback({ session, audio }) {
     pendingWaits.delete(root);
     stop?.();
     root.remove();
+    const clearSkip = skipControls.get(root);
+    skipControls.delete(root);
+    clearSkip?.();
+  }
+
+  function offerSkip(root) {
+    // Keep the effect aria-hidden and pointer-transparent; only this sibling takes input.
+    const previousFocus = document.activeElement;
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'ring-feedback-skip';
+    button.textContent = '跳过演出';
+    button.addEventListener('click', () => remove(root), { once: true });
+    skipControls.set(root, () => {
+      const restoreFocus = document.activeElement === button;
+      button.remove();
+      if (
+        restoreFocus &&
+        !disposed &&
+        !session.runtime.disposed &&
+        previousFocus?.isConnected &&
+        !previousFocus.disabled &&
+        previousFocus.getClientRects().length
+      ) {
+        previousFocus.focus({ preventScroll: true });
+      }
+    });
+    root.after(button);
   }
 
   function place(root, battle = root.parentElement) {
@@ -191,6 +220,7 @@ export function createRingFeedback({ session, audio }) {
     try {
       root = create(actor, emblemId, { award: true });
       if (!root) return false;
+      offerSkip(root);
       const meter = root.querySelector('.ring-feedback__meter');
       if (!reduced.matches) {
         fill(root, 0);

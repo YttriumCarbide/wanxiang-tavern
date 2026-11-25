@@ -21,6 +21,49 @@
   color: #fff5ce;
   pointer-events: none;
 }
+.ring-feedback.is-award {
+  --ring-meter-size: clamp(74px, min(8vw, calc(var(--ring-card-width) * 0.5)), 108px);
+}
+.ring-feedback.is-award .ring-feedback__meter {
+  box-shadow:
+    0 0 22px color-mix(in srgb, var(--ring-glow, #fff0ae) 76%, transparent),
+    0 0 48px color-mix(in srgb, var(--ring-jewel, #fff0ae) 32%, transparent),
+    inset 0 0 14px color-mix(in srgb, var(--ring-shadow, #5c3c08) 82%, transparent),
+    inset 0 0 29px color-mix(in srgb, var(--ring-jewel, #fff0ae) 24%, transparent);
+}
+.ring-feedback.is-award .ring-feedback__core {
+  width: 30%;
+  height: 38%;
+}
+.ring-feedback.is-award .ring-feedback__cell {
+  width: 5px;
+  height: 5px;
+  border-radius: 1.5px;
+  box-shadow: 0 0 4px #c7a96a, inset 0 0 2px #fff8d9;
+}
+.ring-feedback-skip {
+  position: absolute;
+  z-index: 19;
+  inset: max(52px, calc(env(safe-area-inset-top) + 44px)) auto auto 50%;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid #dac6988c;
+  border-radius: 5px;
+  background: #10191bea;
+  color: #fff5dc;
+  font-size: 13px;
+  white-space: nowrap;
+  transform: translateX(-50%);
+  cursor: pointer;
+}
+.ring-feedback-skip:is(:hover, :focus-visible) {
+  background: #293436;
+  border-color: #fff0c4;
+}
+.ring-feedback-skip:focus-visible {
+  outline: 2px solid #fff0c4;
+  outline-offset: 3px;
+}
 .ring-feedback [hidden] {
   display: none !important;
 }
@@ -40,18 +83,24 @@
   height: var(--ring-card-height);
   border: 1px solid var(--focus-edge);
   border-radius: 5px;
+  outline: 1px solid color-mix(in srgb, var(--ring-jewel, #fff0ae) 55%, transparent);
+  outline-offset: 4px;
+  background:
+    radial-gradient(ellipse at 50% 48%, color-mix(in srgb, var(--ring-glow) 13%, transparent), transparent 72%),
+    linear-gradient(90deg, transparent 49.7%, color-mix(in srgb, var(--ring-light) 14%, transparent) 50%, transparent 50.3%);
   box-shadow:
     0 0 0 2px #071218a6,
-    0 0 16px var(--ring-glow, #fff0ae),
-    inset 0 0 12px color-mix(in srgb, var(--ring-jewel, #fff0ae) 25%, transparent);
+    0 0 20px color-mix(in srgb, var(--ring-glow, #fff0ae) 80%, transparent),
+    0 0 44px color-mix(in srgb, var(--ring-jewel, #fff0ae) 28%, transparent),
+    inset 0 0 15px color-mix(in srgb, var(--ring-jewel, #fff0ae) 32%, transparent);
   opacity: 0;
   transform: translate(-50%, -50%);
 }
 .ring-feedback__focus::before,
 .ring-feedback__focus::after {
   position: absolute;
-  width: 13px;
-  height: 13px;
+  width: 24px;
+  height: 24px;
   border: 0 solid var(--ring-light, #fff7d6);
   content: '';
 }
@@ -59,13 +108,15 @@
   top: -3px;
   left: -3px;
   border-width: 2px 0 0 2px;
-  border-top-left-radius: 5px;
+  border-top-left-radius: 8px;
+  filter: drop-shadow(0 0 5px var(--ring-glow, #fff0ae));
 }
 .ring-feedback__focus::after {
   right: -3px;
   bottom: -3px;
   border-width: 0 2px 2px 0;
-  border-bottom-right-radius: 5px;
+  border-bottom-right-radius: 8px;
+  filter: drop-shadow(0 0 5px var(--ring-glow, #fff0ae));
 }
 .ring-feedback__meter {
   width: var(--ring-meter-size);
@@ -228,6 +279,18 @@
   opacity: 0;
   transform-origin: 0 50%;
 }
+.ring-feedback[data-phase='flight'] .ring-feedback__trail::after {
+  position: absolute;
+  left: 25%;
+  top: -5px;
+  width: 62%;
+  height: 16px;
+  border-top: 1px solid color-mix(in srgb, var(--ring-light) 82%, transparent);
+  border-radius: 50%;
+  content: '';
+  filter: drop-shadow(0 0 4px var(--ring-glow, #fff0ae));
+  transform: rotate(-9deg);
+}
 .ring-feedback[data-phase='flight'] .ring-feedback__trail::before {
   position: absolute;
   left: 0;
@@ -253,6 +316,7 @@
   animation: ring-feedback-focus-in var(--ring-phase-duration) ease-out both;
 }
 .ring-feedback.is-award[data-phase='charging'] .ring-feedback__focus {
+  animation: ring-feedback-focus-charge 620ms ease-in-out infinite alternate;
   opacity: 0.66;
 }
 .ring-feedback.is-award[data-phase='full'] .ring-feedback__focus {
@@ -270,6 +334,34 @@
 }
 .ring-feedback[data-phase='settle'] .ring-feedback__meter {
   animation: ring-feedback-award-settle var(--ring-phase-duration, 255ms) ease-in both;
+}
+/* Reflected light gathers with the six cuts and releases as two continuous wavefronts. */
+.ring-feedback.is-award .ring-feedback__meter::before {
+  position: absolute;
+  z-index: -1;
+  inset: -70%;
+  background: radial-gradient(
+    circle closest-side,
+    transparent 27%,
+    color-mix(in srgb, var(--ring-glow) 57%, transparent) 43%,
+    transparent 57%,
+    color-mix(in srgb, var(--ring-light) 82%, transparent) 59%,
+    color-mix(in srgb, var(--ring-glow) 27%, transparent) 62%,
+    transparent 66%,
+    transparent 73%,
+    color-mix(in srgb, var(--ring-jewel) 61%, transparent) 74%,
+    transparent 77%
+  );
+  content: '';
+  opacity: 0;
+  transform: scale(0.64);
+}
+.ring-feedback.is-award[data-phase='charging'] .ring-feedback__meter::before {
+  opacity: calc(var(--ring-charge-fraction, 0) * 0.62);
+  transition: opacity 180ms ease-out;
+}
+.ring-feedback.is-award[data-phase='full'] .ring-feedback__meter::before {
+  animation: ring-feedback-award-wave var(--ring-phase-duration, 580ms) ease-out both;
 }
 .ring-feedback__meter::after {
   position: absolute;
@@ -339,6 +431,25 @@
   }
   to {
     opacity: 0.66;
+  }
+}
+@keyframes ring-feedback-focus-charge {
+  from {
+    opacity: 0.45;
+    outline-offset: 2px;
+    box-shadow:
+      0 0 0 2px #071218a6,
+      0 0 12px color-mix(in srgb, var(--ring-glow) 68%, transparent),
+      inset 0 0 11px color-mix(in srgb, var(--ring-jewel) 22%, transparent);
+  }
+  to {
+    opacity: 0.86;
+    outline-offset: 6px;
+    box-shadow:
+      0 0 0 2px #071218a6,
+      0 0 25px color-mix(in srgb, var(--ring-glow) 90%, transparent),
+      0 0 46px color-mix(in srgb, var(--ring-jewel) 34%, transparent),
+      inset 0 0 17px color-mix(in srgb, var(--ring-jewel) 36%, transparent);
   }
 }
 @keyframes ring-feedback-focus-full {
@@ -446,6 +557,20 @@
     transform: translate(-50%, -50%) scale(0.32);
   }
 }
+@keyframes ring-feedback-award-wave {
+  from {
+    opacity: 0.62;
+    transform: scale(0.64);
+  }
+  34% {
+    opacity: 0.94;
+    transform: scale(1.14);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.48);
+  }
+}
 @keyframes ring-feedback-burst {
   18% {
     opacity: 0.86;
@@ -459,6 +584,9 @@
 @media (max-width: 600px), (max-height: 450px) {
   .ring-feedback {
     --ring-meter-size: 48px;
+  }
+  .ring-feedback.is-award {
+    --ring-meter-size: clamp(58px, calc(var(--ring-card-width) * 0.48), 78px);
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -475,6 +603,11 @@
   .ring-feedback.is-award[data-phase] .ring-feedback__focus {
     animation: none;
   }
+  .ring-feedback.is-award[data-phase] .ring-feedback__meter::before {
+    animation: none;
+    opacity: 0;
+    transition: none;
+  }
   .ring-feedback.is-award:is([data-phase='charging'], [data-phase='full']) .ring-feedback__focus {
     opacity: 0.66;
   }
@@ -487,6 +620,9 @@
   }
 }
 @media (forced-colors: active) {
+  .ring-feedback.is-award .ring-feedback__meter::before {
+    display: none;
+  }
   .ring-feedback__focus,
   .ring-feedback__focus::before,
   .ring-feedback__focus::after {

@@ -1,12 +1,24 @@
 {
   "browserConcurrency": 1,
-  "scopes": ["quality", "core", "gal", "equipment", "chat"],
+  "scopes": [
+    "quality",
+    "core",
+    "daily",
+    "overland",
+    "chat",
+    "ring-acquisition",
+    "equipment",
+    "shop-workspace",
+    "town-guests",
+    "mobile",
+    "preparation",
+    "dialog-motion"
+  ],
   "coreFiles": [
     "tests/character-growth.test.js",
     "tests/chat.test.js",
     "tests/guild-skyrim-cities.test.js",
     "tests/invitation-location.test.js",
-    "tests/overland.test.js",
     "tests/shop-guild-transactions.test.js",
     "tests/worldbook.test.js"
   ]

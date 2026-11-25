@@ -76,12 +76,15 @@ export function createChatPresentation(session, characters = () => session.ai.li
     select.hidden = locationLocked;
     locationLabel.classList.toggle('is-readonly', locationLocked);
     const guidance = $('#chat-focus-guidance');
-    guidance.hidden = !locationLocked;
+    guidance.hidden = false;
     guidance.textContent = '建议选择不超过两位同行者，让这段交谈更集中。';
-    $('#chat-participants').innerHTML = characters()
+    const roster = $('#chat-participants');
+    const focus = roster.contains(document.activeElement) ? document.activeElement.value : null;
+    const scrollTop = roster.scrollTop;
+    roster.innerHTML = characters()
       .filter((member) => member.id !== library().campaign?.protagonistId)
       .sort(
-        (a, b) => Number(library().party.includes(a.id)) - Number(library().party.includes(b.id)),
+        (a, b) => Number(library().party.includes(b.id)) - Number(library().party.includes(a.id)),
       )
       .map(
         (member) =>
@@ -99,6 +102,11 @@ export function createChatPresentation(session, characters = () => session.ai.li
           >`,
       )
       .join('');
+    const focusedActor = [...roster.querySelectorAll('input')].find(
+      (input) => input.value === focus,
+    );
+    focusedActor?.focus({ preventScroll: true });
+    roster.scrollTop = scrollTop;
     $('#chat-scene').textContent = CHAT_PLACES[place].environment;
     const player = protagonist();
     $('#chat-player').innerHTML = player

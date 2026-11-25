@@ -1,4 +1,3 @@
-/* Reserve the forge stage for its icon, confirmation, and bounded operation feedback. */
 .blacksmith-heading {
   display: flex;
   align-items: center;
@@ -6,11 +5,9 @@
   min-inline-size: 0;
   margin-inline-end: auto;
 }
-
 .blacksmith-heading h2 {
   margin-inline-end: 0;
 }
-
 .blacksmith-mark {
   flex: 0 0 30px;
   width: 30px;
@@ -23,123 +20,171 @@
   filter: drop-shadow(0 1px 5px #e9a35a70);
 }
 
-.blacksmith-stage::before {
-  content: '';
-  position: absolute;
-  width: min(176px, 76%);
-  aspect-ratio: 1;
-  border: 1px solid #f0c77826;
-  border-radius: 50%;
-  box-shadow:
-    inset 0 0 20px #d8863020,
-    0 0 28px #d8863016;
-  pointer-events: none;
-}
-
-.blacksmith-stage .forge-operation-feedback {
-  z-index: 0;
-  background:
-    radial-gradient(circle at 50% 45%, #ffe4a0ad 0 2px, transparent 3px),
-    radial-gradient(circle at 34% 36%, #e9a35a 0 1.5px, transparent 2.5px),
-    radial-gradient(circle at 67% 58%, #fff0ca 0 1px, transparent 2px),
-    radial-gradient(ellipse 86px min(58px, 68%) at center, #e9a35a70, transparent);
-}
-
-.blacksmith-stage .forge-operation-feedback::before,
-.blacksmith-stage .forge-operation-feedback::after {
-  content: '';
-  position: absolute;
-  left: 50%;
-  top: 44%;
-  width: clamp(54px, 14vw, 92px);
-  aspect-ratio: 1;
-  border: 1px solid #ffe3a477;
-  border-radius: 50%;
-  opacity: 0;
-  transform: translate(-50%, -50%) scale(0.56);
-}
-
-.blacksmith-stage .forge-operation-feedback::after {
-  width: clamp(34px, 9vw, 62px);
-  border-color: #fff0c5a3;
-  border-style: dashed;
-}
-
-.blacksmith-stage .forge-operation-feedback[data-kind]::before {
-  animation: blacksmith-ring 680ms cubic-bezier(0.16, 0.78, 0.23, 1) both;
-}
-
-.blacksmith-stage .forge-operation-feedback[data-kind]::after {
-  animation: blacksmith-ring 500ms cubic-bezier(0.16, 0.78, 0.23, 1) 90ms both;
-}
-
-@keyframes blacksmith-ring {
-  15% {
-    opacity: 0.88;
-  }
-  100% {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(1.68) rotate(36deg);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .blacksmith-stage .forge-operation-feedback::before,
-  .blacksmith-stage .forge-operation-feedback::after {
-    animation: none;
-  }
-}
-
-/* Keep the forge backdrop and temporary feedback separate from scrollable item controls. */
+/* The anvil and its animation stay in the reserved stage, above the scrollable service controls. */
 .blacksmith-workbench {
   display: flex;
   flex-direction: column;
   min-inline-size: 0;
   min-block-size: 0;
 }
-
 .blacksmith-stage {
   position: relative;
   isolation: isolate;
   display: grid;
   place-items: center;
-  flex: 1 0 108px;
+  flex: 1 0 128px;
   overflow: hidden;
+  background:
+    radial-gradient(ellipse 46% 70% at 50% 63%, #e8a35438, transparent 78%),
+    linear-gradient(180deg, transparent, #27150de8);
 }
-
+.blacksmith-stage::before {
+  content: '';
+  position: absolute;
+  inset: 62% auto auto 50%;
+  width: clamp(98px, 31%, 176px);
+  height: clamp(15px, 27%, 50px);
+  translate: -50% 0;
+  clip-path: polygon(
+    0 16%,
+    20% 25%,
+    22% 7%,
+    87% 7%,
+    100% 16%,
+    95% 37%,
+    75% 42%,
+    65% 65%,
+    70% 86%,
+    84% 91%,
+    86% 100%,
+    15% 100%,
+    17% 90%,
+    32% 86%,
+    38% 66%,
+    28% 43%,
+    12% 37%
+  );
+  background: linear-gradient(180deg, #bda58a 0 12%, #655448 14% 32%, #322921 34% 81%, #5b4635);
+  pointer-events: none;
+}
 .blacksmith-workpiece {
   z-index: 1;
+  translate: 0 -10%;
 }
-
 .blacksmith-workpiece .equipment-art {
   display: block;
   width: 66px;
   height: 66px;
   filter: drop-shadow(0 3px 8px #160b06);
 }
-
 .blacksmith-workbench .blacksmith-anvil {
   min-block-size: 0;
   align-content: start;
 }
-
 .blacksmith-stage .forge-operation-feedback-label:empty {
   display: none;
 }
-
 #city-blacksmith:not([data-smith-state='forged']) .forge-operation-feedback {
   visibility: hidden;
 }
-
 #city-blacksmith[data-smith-state='error'] .city-service-status {
   color: #ffb8a6;
 }
 
+.blacksmith-stage .forge-operation-feedback::before {
+  /* Hammer head and handle, with the swing pivot at the grip. */
+  content: '';
+  position: absolute;
+  inset: auto auto 40% calc(50% - 12px);
+  width: clamp(34px, 10dvh, 64px);
+  aspect-ratio: 1;
+  opacity: 0;
+  transform-origin: 88% 87%;
+  clip-path: polygon(
+    2% 19%,
+    9% 9%,
+    54% 9%,
+    61% 17%,
+    61% 39%,
+    97% 86%,
+    86% 98%,
+    47% 49%,
+    9% 49%,
+    2% 41%
+  );
+  background: linear-gradient(173deg, #ffe6b9 8%, #beb19d 19%, #735b47 40%, #62412c 58%, #bf895c);
+}
+.blacksmith-stage .forge-operation-feedback::after {
+  /* Short contact flare inside the stage, never a full-screen flash. */
+  content: '';
+  position: absolute;
+  inset: 48% auto auto 50%;
+  width: clamp(88px, 46%, 204px);
+  height: clamp(38px, 78%, 104px);
+  translate: -50% -50%;
+  opacity: 0.85;
+  background:
+    radial-gradient(ellipse 2px 5px at 23% 29%, #ffd68d 35%, transparent 100%),
+    radial-gradient(ellipse 4px 1px at 14% 55%, #f7a14e 35%, transparent 100%),
+    radial-gradient(ellipse 2px 3px at 37% 18%, #fff0ba 40%, transparent 100%),
+    radial-gradient(ellipse 2px 5px at 69% 22%, #ffc16a 30%, transparent 100%),
+    radial-gradient(ellipse 5px 2px at 81% 43%, #ffe2a6 30%, transparent 100%),
+    radial-gradient(ellipse 3px 2px at 75% 67%, #ffb765 40%, transparent 100%),
+    radial-gradient(ellipse at 50% 53%, #fff3bd 0, #ffbe6f9e 12%, #e3672752 33%, transparent 66%);
+}
+@media (prefers-reduced-motion: no-preference) {
+  #city-blacksmith[data-smith-state='forged'] .forge-operation-feedback::before {
+    animation: blacksmith-strike 820ms ease-in-out both;
+  }
+  #city-blacksmith[data-smith-state='forged'] .forge-operation-feedback::after {
+    animation: blacksmith-impact 820ms ease-out both;
+  }
+}
+@keyframes blacksmith-strike {
+  0% {
+    opacity: 0;
+    transform: translate(36%, -26%) rotate(42deg);
+  }
+  19% {
+    opacity: 1;
+    transform: translate(31%, -20%) rotate(51deg);
+  }
+  40% {
+    opacity: 1;
+    transform: translate(-15%, 11%) rotate(-18deg);
+  }
+  60% {
+    opacity: 0.9;
+    transform: translate(14%, -3%) rotate(14deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(31%, -18%) rotate(30deg);
+  }
+}
+@keyframes blacksmith-impact {
+  0%,
+  39% {
+    opacity: 0;
+    scale: 0.3;
+  }
+  43% {
+    opacity: 1;
+    scale: 0.65;
+  }
+  65% {
+    opacity: 0.85;
+    scale: 0.96;
+  }
+  100% {
+    opacity: 0;
+    scale: 1.35;
+  }
+}
 @media (max-width: 540px), (max-height: 440px) {
   .blacksmith-stage {
-    flex-basis: 42px;
+    flex-basis: 58px;
   }
-
   .blacksmith-workpiece .equipment-art {
     width: 32px;
     height: 32px;

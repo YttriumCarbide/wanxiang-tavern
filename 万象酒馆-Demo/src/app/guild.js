@@ -20,6 +20,7 @@ import {
   damageTypeIcon,
   inferDamageType,
 } from '../damage-types.js';
+import { createRng } from '../equipment-scale.js';
 import { cityServiceArt } from './city-service-art.js';
 import { commitCityTrade } from './city-trade.js';
 
@@ -29,6 +30,16 @@ const TABS = Object.freeze([
   { id: 'skills', label: '学特技' },
   { id: 'trials', label: '切磋' },
 ]);
+
+function noticePlacement(id, day) {
+  const random = createRng(`guild-notice:${day}:${id}`);
+  const tilt = Math.round((random() * 3.8 - 1.9) * 10) / 10;
+  const width = Math.round(200 + random() * 112);
+  const drop = Math.round(random() * 15);
+  const shift = Math.round(random() * 10);
+  const pin = Math.round(34 + random() * 34);
+  return `style="--notice-tilt:${tilt}deg;--notice-width:${width}px;--notice-drop:${drop}px;--notice-shift:${shift}px;--pin-position:${pin}%"`;
+}
 
 /** Adventurer's Guild dialog: Bounties, regional intel, specialty manuals and AI-free sparring. */
 export function createGuild(context) {
@@ -63,7 +74,8 @@ export function createGuild(context) {
     const rank = guildRankInfo(lib.guild?.merit || 0).current;
     const scale = 1 + (rank.bonusPct || 0) / 100;
     const quests = lib.tavernQuests || [];
-    return `<div class="guild-cards guild-notice-board" aria-label="每日悬赏告示">
+    const day = Math.max(1, Math.trunc(Number(lib.daily?.day) || 1));
+    return `<section class="guild-notice-board guild-board-wall" aria-label="每日悬赏告示">
       ${guildBountyBoard(lib)
         .map((bounty) => {
           const existing = quests.find((q) => q.bountyId === bounty.id);
@@ -74,7 +86,7 @@ export function createGuild(context) {
           const current = isActive ? existing.objectives?.[0]?.current || 0 : 0;
           const gold = Math.round(bounty.gold * scale);
           const ether = Math.round(bounty.ether * scale);
-          return `<article data-bounty-id="${escapeText(bounty.id)}" class="guild-card guild-notice ${isReady ? 'is-ready' : isActive ? 'is-active' : ''}">
+          return `<article data-bounty-id="${escapeText(bounty.id)}" ${noticePlacement(bounty.id, day)} class="guild-card guild-notice ${isReady ? 'is-ready' : isActive ? 'is-active' : ''}">
           <div class="guild-card-top">
             <span class="guild-rank-seal">${escapeText(bounty.rank)}</span>
             <div class="guild-card-meta">
@@ -106,7 +118,7 @@ export function createGuild(context) {
         </article>`;
         })
         .join('')}
-    </div>`;
+    </section>`;
   }
 
   function renderIntel() {
@@ -245,6 +257,13 @@ export function createGuild(context) {
   }
 
   function render() {
+    const board =
+      dialog.open && activeTab === 'bounties' && dialog.querySelector('.guild-board-wall');
+    const scrollTop = board ? dialog.querySelector('.guild-body').scrollTop : 0;
+    const focusedNotice =
+      board && board.contains(document.activeElement)
+        ? document.activeElement.closest('[data-bounty-id]')?.dataset.bountyId
+        : '';
     const lib = library();
     const info = guildRankInfo(lib.guild?.merit || 0);
     const gold = lib.inventory?.gold || 0;
@@ -290,6 +309,13 @@ export function createGuild(context) {
         ).join('')}
       </nav>
       <div class="guild-body">${content}</div>`;
+
+    if (board) dialog.querySelector('.guild-body').scrollTop = scrollTop;
+    if (focusedNotice) {
+      dialog
+        .querySelector(`[data-bounty-id="${CSS.escape(focusedNotice)}"] button`)
+        ?.focus({ preventScroll: true });
+    }
   }
 
   function open(tab = 'bounties', { cityId } = {}) {

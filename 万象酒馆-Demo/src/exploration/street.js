@@ -213,6 +213,11 @@ export async function createStreetView() {
   let visitors = null;
   let invitationLocked = false;
   let travelLocked = false;
+  const talkButton = document.getElementById('scene-talk');
+  events.on(talkButton, 'click', () => {
+    if (talkButton.hidden || leaving || disposed || invitationLocked || travelLocked) return;
+    parent.postMessage({ type: 'daily-street-talk', scene: definition.id }, location.origin);
+  });
   async function updateTime(value) {
     if (!['day', 'night'].includes(value) || value === timeOfDay) return;
     timeOfDay = value;
@@ -239,7 +244,7 @@ export async function createStreetView() {
       invitationLocked = event.data.invitation === true;
       travelLocked = event.data.outing?.locked === true;
       document.body.classList.toggle('street-daily-outing', Boolean(event.data.outing));
-      document.body.classList.toggle('street-has-talk', event.data.talkVisible === true);
+      talkButton.hidden = event.data.talkVisible !== true;
       worldMap.updateTravel(event.data.outing);
       worldMap.updateDiscoveries(event.data.discoveries);
       worldMap.updateWorldState({

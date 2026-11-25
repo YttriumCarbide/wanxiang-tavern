@@ -313,9 +313,9 @@ async function rejectAcquisitionDuringEntry(page, actor) {
     }
   }, actor);
 }
-async function playAcquisitionFeedback(page, actor, disableWebAnimations = false) {
+async function playAcquisitionFeedback(page, actor, disableWebAnimations = false, skip = false) {
   return page.evaluate(
-    async ({ actor, ringSelector, disableWebAnimations }) => {
+    async ({ actor, ringSelector, disableWebAnimations, skip }) => {
       const { createRingFeedback } = await import('/src/app/ring-feedback.js');
       const state = demo.getState();
       const cues = [];
@@ -333,6 +333,12 @@ async function playAcquisitionFeedback(page, actor, disableWebAnimations = false
         const start = window.__ringLog.length;
         const pending = feedback.acquired(state.heroDefinitions[actor].emblemId, actor);
         const root = document.querySelector(ringSelector);
+        const skipButton = document.querySelector('.ring-feedback-skip');
+        const skipLabel = skipButton?.textContent || null;
+        if (skip) {
+          await new Promise((resolve) => requestAnimationFrame(resolve));
+          skipButton?.click();
+        }
         const meter = root?.querySelector('.ring-feedback__meter');
         const flight = meter
           ? {
@@ -347,6 +353,7 @@ async function playAcquisitionFeedback(page, actor, disableWebAnimations = false
           removed: root?.isConnected === false,
           flight,
           cues,
+          skipLabel,
           phases: [...new Set(log.map((entry) => entry.phase))],
           full: log.find((entry) => entry.phase === 'full') || null,
           settle: log.find((entry) => entry.phase === 'settle') || null,
@@ -356,7 +363,7 @@ async function playAcquisitionFeedback(page, actor, disableWebAnimations = false
         feedback.dispose();
       }
     },
-    { actor, ringSelector: RING_SELECTOR, disableWebAnimations },
+    { actor, ringSelector: RING_SELECTOR, disableWebAnimations, skip },
   );
 }
 
@@ -667,6 +674,13 @@ export async function ringAcquisitionChecks({ browser, baseURL, output }) {
         { cue: 'ring-arrival', phase: 'flight' },
         { cue: 'ring-charge-full', phase: 'full' },
       ]);
+
+      const skippedAward = await playAcquisitionFeedback(page, actor, false, true);
+      assert.equal(skippedAward.skipLabel, '跳过演出', 'the award provides a visible skip control');
+      assert.equal(skippedAward.result, false, 'skipping cancels only the visual award wait');
+      assert.equal(skippedAward.removed, true, 'skipping removes the ring and its control');
+      assert.deepEqual(skippedAward.phases, ['flight'], 'skipping stops before later phases');
+      assert.deepEqual(skippedAward.cues, [{ cue: 'ring-arrival', phase: 'flight' }]);
 
       for (const method of ['cancel', 'dispose']) {
         const interrupted = await interruptAcquisition(page, actor, method, true);

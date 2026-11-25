@@ -11,8 +11,12 @@ export async function townGuestChecks({ browser, baseURL, output }) {
   try {
     await page.goto(baseURL);
     await page.waitForFunction(() => Boolean(window.demo));
-    await page.evaluate(() => {
-      document.querySelector('#inn-frame iframe').src = './street.html?scene=city-center';
+    await page.locator('[data-daily="outing"]').click();
+    await page.locator('#tavern-exit-picker[open]').waitFor();
+    await page.locator('[data-tavern-exit="city-center"]').click();
+    await page.waitForFunction(() => {
+      const frame = document.querySelector('#inn-frame iframe')?.contentWindow;
+      return frame?.modelReady && frame.streetPreview?.definition?.id === 'city-center';
     });
     const frame = page.frameLocator('#inn-frame iframe');
     await frame.locator('canvas').waitFor();
@@ -48,7 +52,7 @@ export async function townGuestChecks({ browser, baseURL, output }) {
       ),
     );
     await page.screenshot({ path: path.join(output, 'unrecruited-town-guests.png') });
-    await page.locator('#scene-talk').click();
+    await frame.locator('#scene-talk').click();
     await page.locator('.gal-people-launcher').click();
     for (const id of ['libet', 'lumi', 'yuto-nakashi'])
       assert.equal(

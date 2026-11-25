@@ -235,9 +235,12 @@ html[data-embedded] .street-actions {
   backdrop-filter: blur(15px);
   -webkit-backdrop-filter: blur(15px);
 }
-html[data-embedded] body.street-has-talk .street-actions {
-  padding-left: 125px;
+#scene-talk[hidden],
+body:has(dialog[open]) #scene-talk,
+body:is(.gal-covered, .leaving) #scene-talk {
+  display: none !important;
 }
+html[data-embedded] #scene-talk,
 html[data-embedded] #street-map-open,
 html[data-embedded] #street-submap-open,
 html[data-embedded] #street-return {
@@ -265,6 +268,8 @@ html[data-embedded] #street-return {
   transform: none;
   white-space: nowrap;
 }
+html[data-embedded] #scene-talk:hover,
+html[data-embedded] #scene-talk:focus-visible,
 html[data-embedded] #street-map-open:hover,
 html[data-embedded] #street-map-open:focus-visible,
 html[data-embedded] #street-submap-open:hover,
@@ -1568,14 +1573,12 @@ body[data-illustrated] .street-bearing {
     gap: 0;
     padding: 4px;
   }
-  html[data-embedded] body.street-has-talk .street-actions {
-    padding-left: 84px;
-  }
+  html[data-embedded] #scene-talk,
   html[data-embedded] #street-map-open,
   html[data-embedded] #street-submap-open,
   html[data-embedded] #street-return {
-    width: 80px;
-    min-width: 80px;
+    width: min(80px, 22vw);
+    min-width: min(80px, 22vw);
     height: 34px;
     min-height: 34px;
     padding: 5px 10px;

@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { newLibrary } from '../src/ai/library.js';
 import { invitationCityVenues } from '../src/invitation-location.js';
+import { invitationCandidates } from '../src/app/daily-invitation.js';
 import { DEFINITIONS } from '../src/data.js';
 
 const BOSS = 'bossTide';
@@ -38,6 +39,20 @@ function setup(id, snapshot, cleared) {
   lib.exploration[id] = { cleared };
   return lib;
 }
+
+test('non-Starbell appointments do not add Starbell residents to their roster', () => {
+  const lib = newLibrary();
+  const starbell = invitationCandidates(lib, 'starbell');
+  const silverCrown = invitationCandidates(lib, 'silver-crown');
+  assert(
+    starbell.some(({ source }) => source === 'town'),
+    'Starbell retains local residents',
+  );
+  assert(
+    silverCrown.every(({ source }) => source !== 'town'),
+    'a different city offers the roster, not unrequested Starbell town residents',
+  );
+});
 
 function venueIds(lib) {
   return invitationCityVenues(lib, 'starbell')

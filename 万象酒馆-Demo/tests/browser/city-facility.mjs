@@ -35,6 +35,19 @@ async function verifyBlacksmithStage(smith) {
   const stage = smith.locator('.blacksmith-stage[data-forge-reserve="true"]');
   await stage.waitFor();
   assert.equal(await stage.locator('.forge-operation-feedback').count(), 1);
+  const forgeShapes = await stage.evaluate((element) => ({
+    anvil: getComputedStyle(element, '::before').clipPath,
+    hammer: getComputedStyle(element.querySelector('.forge-operation-feedback'), '::before')
+      .clipPath,
+    impact: getComputedStyle(element.querySelector('.forge-operation-feedback'), '::after')
+      .backgroundImage,
+  }));
+  assert.notEqual(forgeShapes.anvil, 'none', 'the selected item sits over a visible anvil');
+  assert.notEqual(forgeShapes.hammer, 'none', 'the forge cue has a hammer silhouette');
+  assert(
+    forgeShapes.impact.includes('radial-gradient'),
+    'the impact cue uses a local hot-metal flash',
+  );
   assert.equal(await smith.locator('[role="status"][aria-live="polite"]').count(), 1);
 }
 
@@ -83,9 +96,18 @@ async function verifyGuildNoticeBoard(guild, cityId) {
     cityId + ' on day ' + day + ': the board must show the posted bounties and their targets',
   );
   const boardStyle = await notices.evaluateAll((cards) =>
-    cards.map((card) => getComputedStyle(card).rotate),
+    cards.map((card) => ({
+      tilt: card.style.getPropertyValue('--notice-tilt'),
+      width: card.style.getPropertyValue('--notice-width'),
+      drop: card.style.getPropertyValue('--notice-drop'),
+    })),
   );
-  assert(new Set(boardStyle).size > 1, 'posted slips must not align as identical cards');
+  assert(
+    new Set(boardStyle.map(({ tilt }) => tilt)).size > 1 &&
+      new Set(boardStyle.map(({ width }) => width)).size > 1 &&
+      new Set(boardStyle.map(({ drop }) => drop)).size > 1,
+    'posted slips use distinct seeded angles, widths and heights instead of a regular task-card grid',
+  );
 }
 
 async function verifyBlacksmithWorkspace(page) {
@@ -238,9 +260,7 @@ export async function verifyTavernInteriorChatPlaces(page) {
   await workspace.waitFor({ state: 'hidden' });
 }
 
-async function verifySilverCrownTalkPlace(page) {
-  const placeId = 'crown-arcade';
-  const title = '银冠城 · 银工连廊';
+async function verifyCityTalkPlace(page, placeId, title) {
   const outing = () =>
     page.evaluate(() => {
       const { scene, turns } = demo.getLibrary().daily.active || {};
@@ -248,7 +268,7 @@ async function verifySilverCrownTalkPlace(page) {
     });
   const before = await outing();
 
-  const talk = page.locator('#scene-talk');
+  const talk = page.frameLocator('#inn-frame iframe').locator('#scene-talk');
   await talk.waitFor({ state: 'visible' });
   await talk.click();
 
@@ -267,6 +287,19 @@ async function verifySilverCrownTalkPlace(page) {
   const guidance = people.locator('#chat-focus-guidance');
   await guidance.waitFor();
   assert.match(await guidance.innerText(), /建议选择不超过两位/);
+  const participants = people.locator('#chat-participants input[type="checkbox"]');
+  assert((await participants.count()) >= 3, 'chat focus guidance does not hide available companions');
+  assert.equal(await participants.locator(':disabled').count(), 0);
+  for (const participant of await participants.all()) {
+    if (await participant.isChecked()) await participant.uncheck();
+  }
+  for (const participant of await participants.all().then((items) => items.slice(0, 3)))
+    await participant.check();
+  assert.equal(
+    await participants.evaluateAll((items) => items.filter(({ checked }) => checked).length),
+    3,
+    'two companions are recommended but never enforced as a hard cap',
+  );
   const location = people.locator('.chat-location-label .chat-location-value');
   await location.waitFor({ state: 'visible' });
   assert.equal(await location.innerText(), title);
@@ -339,9 +372,14 @@ export async function verifyCityFacilityDistribution(page, cityId) {
   const sceneId = await page.evaluate(
     () => document.querySelector('#inn-frame iframe')?.contentWindow?.streetPreview?.definition?.id,
   );
-  if (cityId === 'silver-crown') {
-    assert.equal(sceneId, 'crown-arcade', 'run the Silver Crown chat check in a real city street');
-    await verifySilverCrownTalkPlace(page);
+  const chatPlaces = {
+    'silver-crown': { id: 'crown-arcade', title: '银冠城 · 银工连廊' },
+    eternal: { id: 'eternal-city', title: '艾尔鲁斯 · 帝都南门' },
+  };
+  const cityChat = chatPlaces[cityId];
+  if (cityChat) {
+    assert.equal(sceneId, cityChat.id, 'test city chat from its real street scene');
+    await verifyCityTalkPlace(page, cityChat.id, cityChat.title);
   }
 
   const submap = await openCityDirectory(page);

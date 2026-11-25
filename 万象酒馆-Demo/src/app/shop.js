@@ -84,6 +84,7 @@ export function createShop(context) {
         ? marketItems
             .map(({ id, left, carried }) => {
               const food = INGREDIENTS[id];
+              const price = carried ? ingredientSalePrice(id) : food.price;
               return html`<button
                 type="button"
                 class="market-stall"
@@ -96,7 +97,7 @@ export function createShop(context) {
                   <small>${carried ? '行囊持有 ' + state.inventory[id] : '今日余量 ' + left}</small>
                 </span>
                 <span class="market-stall-price"
-                  >${food.price}<img src="./assets/icons/gold.svg" alt="金币"
+                  >${carried ? '回收 ' : ''}${price}<img src="./assets/icons/gold.svg" alt="金币"
                 /></span>
               </button>`;
             })

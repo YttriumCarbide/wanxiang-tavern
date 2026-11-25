@@ -239,18 +239,6 @@ export function createDaily(context) {
   const recruitPanel = document.createElement('dialog');
   recruitPanel.id = 'tavern-recruitment';
   document.body.append(recruitPanel);
-  const talkButton = document.createElement('button');
-  talkButton.id = 'scene-talk';
-  talkButton.className = 'talk-open';
-  talkButton.type = 'button';
-  talkButton.textContent = '交流';
-  talkButton.hidden = true;
-  document.body.append(talkButton);
-  events.on(talkButton, 'click', () => {
-    const place = chatPlaceForScene(activeScene());
-    if (!place || locked || session.runtime.mode !== 'inn' || hasBlockingSceneOverlay()) return;
-    context.chat.open(place);
-  });
   let recruitId = null;
 
   function showRecruitment(id) {
@@ -282,8 +270,6 @@ export function createDaily(context) {
     recruitPanel.close();
     openSetup();
   });
-  let talkFrame = null;
-  let dockTalkWanted = false;
   function hasBlockingSceneOverlay() {
     if (mapOpen || document.body.classList.contains('gal-playing')) return true;
     if (
@@ -348,38 +334,23 @@ export function createDaily(context) {
     return context.guild?.open('bounties', { cityId });
   }
 
-  function resetSceneTalk() {
-    talkButton.hidden = true;
-    talkButton.classList.remove('is-docked');
-    talkButton.style.left = '';
-    talkButton.style.top = '';
-  }
-  function alignSceneTalk() {
-    if (!dockTalkWanted || hasBlockingSceneOverlay()) return resetSceneTalk();
-    const doc = frame()?.contentDocument;
-    const bar = doc?.querySelector('.street-actions');
-    const mapBtn = doc?.querySelector('#street-map-open');
-    const barRect = bar?.getBoundingClientRect();
-    const mapRect = mapBtn?.getBoundingClientRect();
+  function streetTalkPlace() {
+    const entry = active();
     if (
-      !barRect ||
-      !mapRect ||
-      mapRect.width < 1 ||
-      barRect.height < 1 ||
-      mapRect.left - barRect.left < 50
+      session.runtime.mode !== 'inn' ||
+      session.runtime.needsStart ||
+      session.runtime.disposed ||
+      locked ||
+      enteringDungeon ||
+      travel.busy() ||
+      !readyStreet ||
+      frame()?.contentDocument !== readyStreet ||
+      readyStreet.defaultView?.modelReady !== true ||
+      (entry?.kind === 'invitation' && entry.stage === 'running')
     )
-      return resetSceneTalk();
-    talkButton.hidden = false;
-    talkButton.classList.add('is-docked');
-    const compact = window.matchMedia('(max-height: 520px), (max-width: 900px)').matches;
-    const padLeft = compact ? 4 : 5;
-    const padGap = compact ? 0 : 2;
-    const slotWidth = Math.max(40, mapRect.left - barRect.left - padLeft - padGap);
-    const talkHeight = talkButton.offsetHeight || Math.max(30, barRect.height - padLeft * 2);
-    talkButton.style.left = `${barRect.left + padLeft + slotWidth / 2}px`;
-    talkButton.style.top = `${barRect.top + (barRect.height - talkHeight) / 2}px`;
+      return null;
+    return chatPlaceForScene(activeScene());
   }
-  events.on(window, 'resize', alignSceneTalk);
 
   const renderPromotion = mountTavernPromotion({ promotion, events, library, state, save });
   const service = createServiceBoard(context, (shift) => {
@@ -779,21 +750,13 @@ export function createDaily(context) {
           : `营业 ${Math.min(progress.shifts, 2)}/2 · 工坊机芯 ${Math.min(progress.cores, 10)}/10`
         : `当前酒馆 ${progress.rank} 阶`;
     const entry = active();
-    const dockTalk =
-      visible &&
-      !home &&
-      !upstairs &&
-      chatPlaceForScene(current) &&
-      !locked &&
-      !(entry?.kind === 'invitation' && entry.stage === 'running');
-    const dockTalkAllowed = dockTalk && !hasBlockingSceneOverlay();
+    const dockTalk = !mapOpen && Boolean(streetTalkPlace());
     destination?.body?.classList.toggle('daily-parent-dock', visible && home);
-    destination?.body?.classList.toggle('street-has-talk', dockTalkAllowed);
     frame()?.contentWindow?.postMessage(
       {
         type: 'daily-managed',
         enabled: visible,
-        talkVisible: dockTalkAllowed,
+        talkVisible: dockTalk,
         timeOfDay: visible ? tavernTime(state()) : null,
         discoveries: library().atlasDiscoveries,
         exploration: library().overlandExploration,
@@ -826,22 +789,12 @@ export function createDaily(context) {
     if (atlasOpen(overlay)) postAtlasManaged(overlay.contentWindow);
     renderInvitationRecord(visible);
     if (!visible) {
-      dockTalkWanted = false;
-      alignSceneTalk();
       root.dataset.outdoors = 'false';
       context.ledger?.sync();
       return;
     }
     dock.hidden = !home || locked || !!entry;
-    dockTalkWanted = dockTalkAllowed;
-    root.dataset.outdoors = String(dockTalkAllowed);
-    alignSceneTalk();
-    if (dockTalkAllowed && talkFrame === null) {
-      talkFrame = requestAnimationFrame(() => {
-        talkFrame = null;
-        alignSceneTalk();
-      });
-    }
+    root.dataset.outdoors = String(dockTalk);
     const statusMarkup = showStatus();
     if (status.renderedStatus !== statusMarkup) {
       status.renderedStatus = statusMarkup;
@@ -864,15 +817,19 @@ export function createDaily(context) {
     if (!entry) return;
     const kind = entry.kind;
     setup.dataset.kind = kind;
-    const candidate =
-      kind === 'invitation'
-        ? invitationCandidates(library()).filter(
-            (member) => !entry.recruitment || member.id === entry.recruitment,
-          )
-        : members();
     const staffed = kind === 'service' ? Object.values(local).filter(Boolean).length : 0;
-    const scrollTop =
-      kind === 'service' && setup.open ? setup.querySelector('.daily-setup-body')?.scrollTop : 0;
+    const scrollTop = setup.open ? setup.querySelector('.daily-setup-body')?.scrollTop : 0;
+    const invitationRoster = setup.querySelector('.daily-invite-roster');
+    const rosterScroll = invitationRoster?.scrollTop || 0;
+    const focus =
+      setup.open && setup.contains(document.activeElement) ? document.activeElement : null;
+    const focusAttribute =
+      kind === 'invitation' && focus
+        ? [...focus.attributes].find(({ name }) => name.startsWith('data-daily-'))
+        : null;
+    const focusKey = focusAttribute
+      ? { name: focusAttribute.name, value: focusAttribute.value }
+      : null;
     let statusLine = message;
     let body;
     if (kind === 'service') {
@@ -880,7 +837,7 @@ export function createDaily(context) {
       body = serviceSetupView({
         library: library(),
         growth: state().serviceGrowth,
-        members: candidate,
+        members: members(),
         staff: local,
         slot,
         selection: serviceSelection,
@@ -892,18 +849,17 @@ export function createDaily(context) {
           : `四岗就绪 · 挂牌特色菜 ${menus.sigMenu.length} 道 · 基础菜 ${menus.regMenu.length} 道`;
     } else if (kind === 'outing') {
       body = `<p>选最多两位同行者，也可以独自出门。</p>
-        <div class="daily-people">${candidate
+        <div class="daily-people">${members()
           .filter((member) => member.id !== library().campaign?.protagonistId)
           .map((member) => chooseMember(member, local.companions.includes(member.id)))
           .join('')}</div>`;
     } else {
-      const member = candidate.find((item) => item.id === local.member);
-      const topics = invitation.topics(member?.id);
       const cities = availableInvitationCities(library(), activeScene()).map((id) => {
         const venues = invitationCityVenues(library(), id);
         return {
           id,
           name: CITIES[id].name,
+          image: CITIES[id].image,
           venues: {
             places: venues.filter((place) => place.category === 'places'),
             facilities: venues.filter((place) => place.category === 'facilities'),
@@ -921,9 +877,13 @@ export function createDaily(context) {
           ]
         : [];
       if (!venues.some(({ id }) => id === local.startScene)) local.startScene = venues[0]?.id || '';
-      const memberMarkup = `<div class="daily-invite-slot"><small>约见对象</small><strong>${escapeText(member?.setting.name || '选一位角色')}</strong>
-        ${member ? `<span>${affectionLabel(relationship(library(), member.id).affection)}</span>` : ''}</div>
-        <div class="daily-people">${candidate.map((person) => chooseMember(person, person.id === local.member)).join('')}</div>`;
+      const candidates = invitationCandidates(library(), local.city).filter(
+        ({ id }) => !entry.recruitment || id === entry.recruitment,
+      );
+      const member = candidates.find(({ id }) => id === (entry.recruitment || local.member));
+      local.member = member?.id || '';
+      if (!member) local.topic = '';
+      const topics = invitation.topics(member?.id);
       const activityMarkup = `<div class="daily-options">${Object.entries(INVITATION_ACTIVITIES)
         .map(
           ([id, title]) =>
@@ -942,7 +902,9 @@ export function createDaily(context) {
         cities,
         city: local.city,
         place: local.startScene,
-        memberMarkup,
+        candidates,
+        selected: local.member,
+        affection: member ? affectionLabel(relationship(library(), member.id).affection) : '',
         activityMarkup,
         topicMarkup,
         intent: local.playerIntent,
@@ -951,10 +913,22 @@ export function createDaily(context) {
     setup.innerHTML = `<header><div><small>${dailyDateTimeText(state())}</small><h2 id="daily-setup-title">${DAILY_ACTIONS[kind].name}整备</h2></div>
       <button type="button" data-daily-close ${invitation.busy() ? 'disabled' : ''}>收起</button></header>
       <div class="daily-setup-body">${body}</div><footer><p role="status">${escapeText(statusLine)}</p>
-        <button type="button" class="daily-confirm" data-daily-start ${invitation.busy() || (kind === 'service' && staffed < 4) ? 'disabled' : ''}>
+        <button type="button" class="daily-confirm" data-daily-start ${invitation.busy() || (kind === 'service' && staffed < 4) || (kind === 'invitation' && !local.member) ? 'disabled' : ''}>
           ${invitation.busy() ? '正在生成约见…' : kind === 'service' ? '开班营业' : kind === 'outing' ? '保存同行' : '开始约见'}
         </button></footer>`;
+    if (focusKey) {
+      const replacement = [...setup.querySelectorAll(`[${focusKey.name}]`)].find(
+        (node) => node.getAttribute(focusKey.name) === focusKey.value,
+      );
+      (replacement?.disabled ? setup.querySelector('[data-daily-close]') : replacement)?.focus({
+        preventScroll: true,
+      });
+    }
     if (scrollTop) setup.querySelector('.daily-setup-body').scrollTop = scrollTop;
+    if (rosterScroll) {
+      const newRoster = setup.querySelector('.daily-invite-roster');
+      if (newRoster) newRoster.scrollTop = rosterScroll;
+    }
   }
 
   function openSetup() {
@@ -1005,7 +979,11 @@ export function createDaily(context) {
         member: entry.recruitment || memory.member || '',
         activity: memory.activity || 'talk',
         city,
-        startScene: memory.city === city ? memory.startScene || '' : '',
+        startScene: currentCity
+          ? activeScene()
+          : memory.city === city
+            ? memory.startScene || ''
+            : '',
         playerIntent: '',
       };
     }
@@ -1059,9 +1037,9 @@ export function createDaily(context) {
       render();
     } else {
       const member = entry.recruitment || local.member;
-      if (!invitationCandidates(library()).some((candidate) => candidate.id === member))
-        throw Error('先选择一位约见对象');
       const { activity, topic, city, startScene } = local;
+      if (!invitationCandidates(library(), city).some((candidate) => candidate.id === member))
+        throw Error('先选择一位约见对象');
       const currentCity = cityForScene(activeScene());
       if (
         !availableInvitationCities(library(), activeScene()).includes(city) ||
@@ -1267,6 +1245,7 @@ export function createDaily(context) {
       }
       const topic = event.target.closest('[data-daily-topic]');
       if (topic) local.topic = invitation.topics(local.member)[Number(topic.dataset.dailyTopic)];
+      if (!person && !activity && !topic) return;
       message = '';
       showSetup();
     } catch (failure) {
@@ -1344,6 +1323,13 @@ export function createDaily(context) {
       return;
     }
     if (event.source !== frame()?.contentWindow) return;
+    if (event.data?.type === 'daily-street-talk') {
+      if (normalizeCityScene(event.data.scene) !== activeScene() || hasBlockingSceneOverlay())
+        return;
+      const place = streetTalkPlace();
+      if (place) context.chat.open(place);
+      return;
+    }
     if (['daily-open-city-facility', 'daily-open-guild'].includes(event.data?.type))
       return openCityFacility(event.data);
     if (event.data?.type === 'daily-open-dungeon' && typeof event.data.dungeonId === 'string') {
@@ -1649,8 +1635,6 @@ export function createDaily(context) {
       hideAtlasOverlay();
       navigationToken++;
       clearPendingScene(pendingScene);
-      if (talkFrame !== null) cancelAnimationFrame(talkFrame);
-      talkFrame = null;
       dungeonTransition.dispose();
       atlasLoading.dispose();
       atlasFrame()?.remove();
@@ -1659,7 +1643,6 @@ export function createDaily(context) {
       promotion.remove();
       exitPicker.remove();
       recruitPanel.remove();
-      talkButton.remove();
       service.dispose();
       invitation.dispose();
       record.remove();

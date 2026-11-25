@@ -42,10 +42,10 @@ function invitationDialogueScenes(run) {
   }));
 }
 
-export function invitationCandidates(library) {
+export function invitationCandidates(library, city = 'starbell') {
   return [
     ...library.characters.filter((member) => member.id !== library.campaign?.protagonistId),
-    ...townResidents(library, 'city-center'),
+    ...(city === 'starbell' ? townResidents(library, 'city-center') : []),
   ];
 }
 
@@ -632,7 +632,7 @@ export function createDailyInvitation(
       return run?.plan ? invitationBrief(run) : null;
     },
     async start({ member, activity, topic, playerIntent, city, startScene }, onReady) {
-      if (request || !target(member)) return;
+      if (request || !invitationCandidates(library(), city).some(({ id }) => id === member)) return;
       const entry = active();
       if (entry?.kind !== 'invitation') return;
       if (entry.run?.plan) return this.resume();

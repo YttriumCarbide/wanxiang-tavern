@@ -401,10 +401,7 @@ export async function overlandChecks({ browser, baseURL, output }) {
         outing?.kind === 'outing' && outing.stage === 'roaming' && outing.scene === 'crown-arcade'
       );
     });
-    await page
-      .getByRole('button', { name: '交流', exact: true })
-      .and(page.locator('#scene-talk.is-docked'))
-      .waitFor({ state: 'visible' });
+    await frame.getByRole('button', { name: '交流', exact: true }).waitFor({ state: 'visible' });
     // The Silver Crown helper checks the People panel and locked place in one open/close cycle.
     await verifyCityFacilityDistribution(page, 'silver-crown');
     await page.setViewportSize({ width: 390, height: 700 });

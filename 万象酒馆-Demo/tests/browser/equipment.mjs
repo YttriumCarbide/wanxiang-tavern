@@ -548,9 +548,13 @@ async function forgeAffixWorkspaceChecks({ browser, baseURL, output }) {
       await smith.locator(`[data-smith-service="${name}"]`).click();
       assert((await confirm.locator('.equipment-feedback-cost').textContent()).includes('金币'));
       await confirm.locator('.equipment-feedback-confirm').click();
-      await smith
-        .locator(`.forge-operation-feedback[data-kind="${name}"]`)
-        .waitFor({ state: 'visible' });
+      const effect = smith.locator(`.forge-operation-feedback[data-kind="${name}"]`);
+      await effect.waitFor({ state: 'visible' });
+      assert.equal(
+        await effect.evaluate((overlay) => getComputedStyle(overlay, '::before').animationName),
+        'blacksmith-strike',
+        'each confirmed gold service visibly triggers the forge strike',
+      );
     };
     await service('temper');
     assert.equal((await item()).level, 2);
