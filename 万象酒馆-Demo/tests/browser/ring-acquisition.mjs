@@ -45,6 +45,7 @@ export async function installRingObserver(page) {
         const meter = root.querySelector('.ring-feedback__meter');
         const rim = root.querySelector('.ring-feedback__rim');
         const gem = root.querySelector('.ring-feedback__core');
+        const artifact = root.querySelector('.ring-feedback__artifact');
         const sweep = root.querySelector('.ring-feedback__sweep');
         const meterStyle = getComputedStyle(meter);
         const bounds = meter.getBoundingClientRect();
@@ -60,6 +61,10 @@ export async function installRingObserver(page) {
         const focusStyle = focus && getComputedStyle(focus);
         const visible =
           bounds.width > 0 && meterStyle.visibility === 'visible' && Number(meterStyle.opacity) > 0;
+        const artifactStyle = artifact && getComputedStyle(artifact);
+        const jewelryVisible = visible && (!artifact || hasPaintedBox(artifact, artifactStyle));
+        const commit = document.querySelector('#commit');
+        const command = commit?.getBoundingClientRect();
         const settling =
           phase === 'settle'
             ? readAnimations
@@ -71,19 +76,33 @@ export async function installRingObserver(page) {
         return {
           visible,
           ringVisible:
-            visible &&
+            jewelryVisible &&
             Boolean(
               rimStyle?.backgroundImage.includes('conic-gradient') &&
               rim.getBoundingClientRect().width > 0,
             ),
           gemVisible:
-            visible &&
+            jewelryVisible &&
             Boolean(
               gemStyle?.clipPath.startsWith('polygon(') &&
               gem.getBoundingClientRect().width > 0 &&
               Number(gemStyle.opacity) > 0,
             ),
           meterSize: Number.parseFloat(meterStyle.width),
+          artifactAnimationName: artifactStyle?.animationName ?? null,
+          artifactAnimationDuration:
+            artifact && readAnimations?.call(artifact).at(0)?.effect.getTiming().duration,
+          commitReachable: Boolean(
+            command?.width &&
+            command.height &&
+            !commit.disabled &&
+            commit.contains(
+              document.elementFromPoint(
+                command.left + command.width / 2,
+                command.top + command.height / 2,
+              ),
+            ),
+          ),
           meterBounds: {
             left: bounds.left,
             right: bounds.right,
@@ -152,6 +171,7 @@ export async function installRingObserver(page) {
         log.push(snapshot);
         // A phase mutation can precede the first visible frame of its CSS effects.
         const flight = phase === 'flight' && !reducedMotion.matches;
+        const land = phase === 'land';
         const burst =
           phase === 'full' && root.classList.contains('is-award') && !reducedMotion.matches;
         const deadline = performance.now() + 300;
@@ -160,12 +180,12 @@ export async function installRingObserver(page) {
             if (!root.isConnected || seen.get(root) !== signature) return;
             const frame = samplePresentation(root, phase);
             snapshot.frame = frame;
-            if (
-              performance.now() < deadline &&
-              (flight ? !frame.trailVisible : !frame.visible || (burst && !frame.haloVisible))
-            ) {
-              sampleFrame();
-            }
+            const ready = flight
+              ? frame.trailVisible
+              : frame.visible &&
+                (!land || (frame.ringVisible && frame.gemVisible)) &&
+                (!burst || (frame.haloVisible && frame.radianceVisible));
+            if (!ready && performance.now() < deadline) sampleFrame();
           });
         }
         sampleFrame();
@@ -393,13 +413,6 @@ async function playAcquisitionFeedback(page, actor, disableWebAnimations = false
         const startedAt = performance.now();
         const pending = feedback.acquired(state.heroDefinitions[actor].emblemId, actor);
         const root = document.querySelector(ringSelector);
-        const meter = root?.querySelector('.ring-feedback__meter');
-        const flight = meter
-          ? {
-              animationName: getComputedStyle(meter).animationName,
-              animationDuration: getComputedStyle(meter).animationDuration,
-            }
-          : null;
         const result = await pending;
         const log = window.__ringLog.slice(start);
         return {
@@ -407,9 +420,9 @@ async function playAcquisitionFeedback(page, actor, disableWebAnimations = false
           removed: root?.isConnected === false,
           elapsedMs: performance.now() - startedAt,
           phaseStarts: Object.fromEntries([...log].reverse().map(({ phase, at }) => [phase, at])),
-          flight,
           cues,
           phases: [...new Set(log.map((entry) => entry.phase))],
+          charging: log.find((entry) => entry.phase === 'charging') || null,
           full: log.find((entry) => entry.phase === 'full') || null,
           settle: log.find((entry) => entry.phase === 'settle') || null,
         };
@@ -430,41 +443,14 @@ async function waitForRing(page, phase, actor = null) {
     { timeout: 15000 },
   );
 }
-async function captureAwardFrames(page, output) {
-  for (const phase of ['flight', 'charging', 'full', 'settle']) {
-    const frame = await page.waitForFunction(
-      ({ selector, phase }) => {
-        const root = document.querySelector(selector);
-        if (!root?.classList.contains('is-award') || root.dataset.phase !== phase) return false;
-        const visible = (part) => Number(getComputedStyle(root.querySelector(part)).opacity) > 0.15;
-        // Only the star is in flight; the dial becomes visible on contact with the wearer.
-        if (!visible(phase === 'flight' ? '.ring-feedback__trail' : '.ring-feedback__meter'))
-          return false;
-        if (phase === 'charging' && Number(root.dataset.charge) < 3) return false;
-        if (
-          phase === 'full' &&
-          Number(getComputedStyle(root.querySelector('.ring-feedback__meter'), '::after').opacity) <
-            0.3
-        )
-          return false;
-        const running = root
-          .getAnimations({ subtree: true })
-          .filter((ani) => ani.playState === 'running');
-        for (const ani of running) ani.pause();
-        return running;
-      },
-      { selector: RING_SELECTOR, phase },
-      { timeout: 15000 },
-    );
-    try {
-      await page.screenshot({ path: path.join(output, 'ring-award-' + phase + '.png') });
-    } finally {
-      await frame.evaluate((animations) => {
-        for (const ani of animations) if (ani.playState === 'paused') ani.play();
-      });
-      await frame.dispose();
-    }
-  }
+async function captureRelease(page, output) {
+  // Don't pause the live CSS clock: it must never hold the real award or its narration.
+  await page.waitForFunction(
+    () => window.__ringLog.some((entry) => entry.frame?.radianceVisible && entry.phase === 'full'),
+    null,
+    { timeout: 15000 },
+  );
+  await page.screenshot({ path: path.join(output, 'ring-award-full.png') });
 }
 export async function ringAcquisitionChecks({ browser, baseURL, output }) {
   const results = {};
@@ -493,7 +479,7 @@ export async function ringAcquisitionChecks({ browser, baseURL, output }) {
 
       // The real reward predicate requires crossing the encounter's round-two threshold.
       await commitRound(page);
-      await Promise.all([captureAwardFrames(page, output), commitRound(page)]);
+      await Promise.all([captureRelease(page, output), commitRound(page)]);
       await waitForRing(page, 'full');
 
       const after = await page.evaluate(() => demo.getLibrary());
@@ -513,17 +499,18 @@ export async function ringAcquisitionChecks({ browser, baseURL, output }) {
       const phases = actorLog.map((entry) => entry.phase);
       const arrival = actorLog.find((entry) => entry.phase === 'flight');
       assert(arrival?.anchor && arrival.board, 'award resolves the actual wearer card');
+      const edge = arrival.meterSize * 0.8;
       const expectedLeft = Math.max(
-        51.2,
+        edge,
         Math.min(
-          arrival.board.width - 51.2,
+          arrival.board.width - edge,
           arrival.anchor.left - arrival.board.left + arrival.anchor.width / 2,
         ),
       );
       const expectedTop = Math.max(
-        51.2,
+        edge,
         Math.min(
-          arrival.board.height - 51.2,
+          arrival.board.height - edge,
           arrival.anchor.top - arrival.board.top + arrival.anchor.height * 0.48,
         ),
       );
@@ -535,10 +522,17 @@ export async function ringAcquisitionChecks({ browser, baseURL, output }) {
         'one light trail and one shared light field accompany the award dial',
       );
       assert(arrival.frame?.trailVisible, 'the arrival trail is visible during flight');
-      assert(phases.includes('flight'), 'flight phase observed');
-      assert(phases.includes('charging'), 'charging phase observed');
-      assert(phases.includes('full'), 'full phase observed');
-      assert(phases.includes('settle'), 'ring visibly contracts before cleanup');
+      assert.equal(
+        arrival.frame.ringVisible,
+        false,
+        'the ring assembles on contact, not in flight',
+      );
+      assert.deepEqual([...new Set(phases)], ['flight', 'land', 'charging', 'full', 'settle']);
+      const land = actorLog.find((entry) => entry.phase === 'land');
+      assert(land.frame?.ringVisible && land.frame.gemVisible, 'metal and jewel seat visibly');
+      assert.equal(land.frame.artifactAnimationName, 'ring-feedback-ring-seat');
+      assert.equal(land.lit, 0, 'the jewel seats before the six cuts begin to light');
+      assert.equal(land.frame.trailVisible, false, 'the single trail ends at contact');
       const charging = actorLog.filter((entry) => entry.phase === 'charging');
       const litSteps = [...new Set(charging.map((entry) => entry.lit))];
       assert.deepEqual(litSteps, [1, 2, 3, 4, 5, 6], 'charging reveals each of six cells in order');
@@ -568,6 +562,7 @@ export async function ringAcquisitionChecks({ browser, baseURL, output }) {
         'full charge does not open a separate effect stage',
       );
       assert(full.frame?.focusVisible, 'the wearer remains framed at full charge');
+      assert(full.frame.commitReachable, 'the award does not cover the battle command hit target');
       assert(full.frame?.meterSize >= 90, 'award ring reads at full display size');
       assert(full.frame.haloVisible, 'the full award releases a visible halo on the wearer');
       assert(full.frame.apertureVisible, 'battlefield exposure frames the wearer');
@@ -597,41 +592,48 @@ export async function ringAcquisitionChecks({ browser, baseURL, output }) {
 
       // Complete the real award narration before exercising subsequent battle events.
       // Gal deliberately hides the battle feedback layer until the narration closes.
-      await page.locator('#gal-stage[data-owner="emblem-dialogue"]').waitFor({ state: 'visible' });
+      await page
+        .locator('#gal-stage[data-owner="emblem-dialogue"]')
+        .waitFor({ state: 'visible', timeout: 2600 });
       await finishGalDialogue(page, 'emblem-dialogue');
       await page.waitForFunction(() => !document.body.classList.contains('gal-playing'));
+      await page.locator('#commit').click({ trial: true, timeout: 1800 });
 
       await page.setViewportSize(NARROW_VIEWPORT);
       const narrowAward = await playAcquisitionFeedback(page, actor);
       assert.equal(narrowAward.result, true, 'ring acquisition completes in a narrow viewport');
-      // Frame capture pauses the real award. Measure the same playback without capture.
       const {
         flight,
+        land: landAt,
         charging: chargeStartAt,
         full: fullAt,
         settle: settleAt,
       } = narrowAward.phaseStarts;
-      const flightMs = Math.round(chargeStartAt - flight);
+      assert.equal(
+        narrowAward.charging?.artifactAnimationDuration,
+        575,
+        'jewel pulse spans the full six-cut charging phase',
+      );
+      const flightMs = Math.round(landAt - flight);
+      const landMs = Math.round(chargeStartAt - landAt);
       const chargeMs = Math.round(fullAt - chargeStartAt);
       const releaseMs = Math.round(settleAt - fullAt);
       const awardDurationMs = Math.round(narrowAward.elapsedMs);
-      assert(flightMs >= 560 && flightMs < 800, `expected ~620ms flight, observed ${flightMs}ms`);
+      assert(flightMs >= 400 && flightMs < 630, `expected ~470ms flight, observed ${flightMs}ms`);
+      assert(landMs >= 150 && landMs < 350, `expected ~210ms seating, observed ${landMs}ms`);
+      assert(chargeMs >= 500 && chargeMs < 740, `expected ~575ms charge, observed ${chargeMs}ms`);
       assert(
-        chargeMs >= 1000 && chargeMs < 1200,
-        `expected ~1020ms charge, observed ${chargeMs}ms`,
+        releaseMs >= 430 && releaseMs < 660,
+        `expected ~500ms release, observed ${releaseMs}ms`,
       );
       assert(
-        releaseMs >= 780 && releaseMs < 1000,
-        `expected ~820ms release, observed ${releaseMs}ms`,
-      );
-      assert(
-        awardDurationMs >= 2700 && awardDurationMs < 3500,
-        `expected ~2790ms award, observed ${awardDurationMs}ms`,
+        awardDurationMs >= 1850 && awardDurationMs < 2350,
+        `expected ~1985ms award, observed ${awardDurationMs}ms`,
       );
       assert(narrowAward.full?.ringVisible, 'narrow layout keeps the ring legible');
       assert(narrowAward.full?.gemVisible, 'narrow layout keeps the jewel legible');
-      const narrowBounds = narrowAward.full?.meterBounds;
-      assert(narrowBounds && narrowBounds.width > 0 && narrowBounds.width < 56);
+      const narrowBounds = narrowAward.full?.frame?.meterBounds;
+      assert(narrowBounds && narrowBounds.width > 0 && narrowBounds.width < 96);
       assert(narrowBounds.left >= 0 && narrowBounds.right <= NARROW_VIEWPORT.width);
       assert(narrowBounds.top >= 0 && narrowBounds.bottom <= NARROW_VIEWPORT.height);
       await page.setViewportSize({ width: 1440, height: 836 });
@@ -713,13 +715,13 @@ export async function ringAcquisitionChecks({ browser, baseURL, output }) {
       assert.equal(reducedAward.result, true, 'reduced-motion acquisition completes');
       assert.equal(reducedAward.removed, true, 'reduced-motion acquisition removes its feedback');
       assert(
-        reducedAward.elapsedMs < 100,
+        reducedAward.elapsedMs < 180,
         'reduced-motion acquisition resolves without staged waits',
       );
       assert.deepEqual(
         reducedAward.phases,
-        ['charging', 'full'],
-        'reduced motion skips flight and contraction',
+        ['full'],
+        'reduced motion shows just the static full ring',
       );
       assert(reducedAward.full, 'reduced-motion acquisition reaches a full ring');
       assert.equal(reducedAward.full.apertureVisible, false);
@@ -736,12 +738,13 @@ export async function ringAcquisitionChecks({ browser, baseURL, output }) {
       assert.equal(awardFrame.haloVisible, true, 'reduced motion retains the completion halo');
       assert.equal(awardFrame.focusVisible, true, 'reduced motion retains wearer focus');
       assert.equal(awardFrame.meterAnimationName, 'none');
+      assert.equal(awardFrame.artifactAnimationName, 'none');
       assert.equal(awardFrame.focusAnimationName, 'none');
       assert.equal(awardFrame.sweepAnimationName, 'none');
       assert.equal(awardFrame.haloAnimationName, 'none');
       assert.equal(awardFrame.trailVisible, false);
       assert.deepEqual(reducedAward.cues, [
-        { cue: 'ring-arrival', phase: 'charging' },
+        { cue: 'ring-arrival', phase: 'full' },
         { cue: 'ring-charge-full', phase: 'full' },
       ]);
       await page.emulateMedia({ reducedMotion: 'no-preference' });
@@ -749,12 +752,7 @@ export async function ringAcquisitionChecks({ browser, baseURL, output }) {
       const fallbackSuccess = await playAcquisitionFeedback(page, actor, true);
       assert.equal(fallbackSuccess.result, true, 'fallback acquisition completes successfully');
       assert.equal(fallbackSuccess.removed, true, 'successful fallback removes its feedback');
-      assert.equal(fallbackSuccess.flight.animationName, 'ring-feedback-award-flight');
-      assert.equal(fallbackSuccess.flight.animationDuration, '0.62s');
-      assert(
-        fallbackSuccess.phases.includes('settle'),
-        'CSS-timed fallback completes the contraction',
-      );
+      assert.deepEqual(fallbackSuccess.phases, ['flight', 'land', 'charging', 'full', 'settle']);
       assert(Math.abs(fallbackSuccess.settle.settleEnd.scale - 0.32) < 0.01);
       assert.equal(fallbackSuccess.full?.lit, 6, 'CSS-timed fallback reaches all six charge cuts');
       assert.deepEqual(fallbackSuccess.cues, [
@@ -800,6 +798,7 @@ export async function ringAcquisitionChecks({ browser, baseURL, output }) {
         actor,
         wearer: wearer.id,
         flightMs,
+        landMs,
         chargeMs,
         releaseMs,
         awardDurationMs: Math.round(awardDurationMs),

@@ -18,11 +18,22 @@ async function checkGalReactions(page) {
     stage.evaluate((element) => {
       if (element.dataset.typing === 'true') element.querySelector('.gal-page').click();
     });
-  async function assertReaction(actor, symbol, moving = false, nudging = false, transform = '') {
+  async function assertReaction(
+    actor,
+    symbol,
+    moving = false,
+    nudging = false,
+    transform = '',
+    expectedCast = [edith, yuexi],
+  ) {
     const state = await stage.evaluate((element) => ({
       cast: [...element.querySelectorAll('.gal-cast img')]
+        .filter((image) => !image.closest('.gal-portrait-slot').dataset.leaving)
         .map((image) => image.dataset.actor)
         .sort(),
+      emoting: [...element.querySelectorAll('.gal-portrait-slot[data-emote]')].map(
+        (slot) => slot.dataset.actor,
+      ),
       cues: [...element.querySelectorAll('.gal-emote:not([hidden])')].map((bubble) => ({
         actor: bubble.closest('.gal-portrait-slot').dataset.actor,
         symbol: bubble.textContent,
@@ -44,7 +55,8 @@ async function checkGalReactions(page) {
       speaking: element.querySelector('.gal-cast img.speaking')?.dataset.actor || '',
       nudging: element.querySelector('.gal-reading').getAnimations().length > 0,
     }));
-    assert.deepEqual(state.cast, [edith, yuexi].sort(), 'both portraits stay on stage');
+    assert.deepEqual(state.cast, [...expectedCast].sort(), 'only stage portraits remain active');
+    assert.deepEqual(state.emoting, moving ? [actor] : [], 'only an active reaction owns an emote state');
     assert.deepEqual(state.cues, actor && symbol ? [{ actor, symbol, moving }] : []);
     assert.deepEqual(
       state.gestures.map((gesture) => gesture.actor),
@@ -80,6 +92,12 @@ async function checkGalReactions(page) {
     dialogue('official-aegis', 'sway'),
     dialogue('official-aegis', 'question'),
     dialogue('official-aegis', '', 'G。'),
+    dialogue('伊蒂丝', 'hop', 'H。'),
+    '【退场:伊蒂丝】',
+    dialogue('official-aegis', '', 'I。'),
+    dialogue('伊蒂丝', 'question', 'J。'),
+    '【清场】',
+    dialogue('official-aegis', '', 'K。'),
   ].join('');
   const clockStart = Date.UTC(2026, 0, 1);
   await page.clock.install({ time: clockStart });
@@ -156,6 +174,14 @@ async function checkGalReactions(page) {
     await assertReaction(edith, null, true, false, 'translateY(6px)');
     await advance();
     await assertReaction(yuexi, '…', true, false, 'translateX(-6px)');
+    const swayFilters = await stage
+      .locator('[data-emote="sway"] .gal-portrait-reaction')
+      .evaluate((portrait) =>
+        portrait
+          .getAnimations()
+          .flatMap((animation) => animation.effect.getKeyframes().map(({ filter }) => filter)),
+      );
+    assert(swayFilters.includes('brightness(0.75)'), 'silence briefly dims only its portrait');
     await advance();
     await assertReaction(yuexi, '❓', true, false, 'rotate(3deg)');
     await reveal();
@@ -164,6 +190,17 @@ async function checkGalReactions(page) {
     await reveal();
     await assertReaction();
     assert.equal(await prose.textContent(), 'G。');
+
+    await advance();
+    await assertReaction(edith, '✨', true, false, 'translateY(-20px)');
+    await advance();
+    await assertReaction(null, null, false, false, '', [yuexi]); // Exit clears the former speaker's reaction.
+    await advance();
+    await assertReaction(yuexi, '❓', true, false, 'rotate(3deg)');
+    await advance();
+    await assertReaction(null, null, false, false, '', [yuexi]); // Scene clear cancels the prior reaction.
+    await reveal();
+    assert.equal(await prose.textContent(), 'K。');
   } finally {
     await page.clock.resume();
   }
@@ -676,13 +713,23 @@ export async function galChecks({ browser, baseURL, output }) {
     await page.evaluate(() => {
       window.galFixture.feed.dispose();
       window.galFixture.dialogue.dispose();
-      void window.galFixture.gal.play('【旁白】退场销毁检查。', { owner: 'dispose-during-exit' });
+      void window.galFixture.gal.play('【对白:伊蒂丝|hop】X。', { owner: 'dispose-during-exit' });
     });
     await page.locator('#gal-stage').waitFor({ state: 'visible' });
+    await page.waitForFunction(() => document.querySelector('#gal-stage [data-emote="hop"]'));
     await page.locator('[data-gal="close"]').click();
     await page.waitForFunction(
       () => document.querySelector('#gal-stage')?.dataset.leaving === 'true',
     );
+    const exitReaction = await page.locator('#gal-stage').evaluate((element) => ({
+      taggedSlots: element.querySelectorAll('.gal-portrait-slot[data-emote]').length,
+      visibleSymbols: element.querySelectorAll('.gal-emote:not([hidden])').length,
+      reactionAnimations: [...element.querySelectorAll('.gal-portrait-reaction')].reduce(
+        (count, portrait) => count + portrait.getAnimations().length,
+        0,
+      ),
+    }));
+    assert.deepEqual(exitReaction, { taggedSlots: 0, visibleSymbols: 0, reactionAnimations: 0 });
     await page.evaluate(() => window.galFixture.gal.dispose());
     assert.equal(await page.locator('#gal-stage').count(), 0);
     await page.waitForTimeout(400);

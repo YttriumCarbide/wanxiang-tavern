@@ -666,6 +666,12 @@ export async function overlandChecks({ browser, baseURL, output }) {
     await page.locator('[data-quest-folio-pick="test-social"]').click();
     const questStep = page.locator('[data-daily="quest-step"]');
     await questHandle.waitFor({ state: 'visible' });
+    // Compare only after asynchronous acceptance has committed the quest and tracking switch.
+    await page.waitForFunction(() =>
+      demo.getLibrary().tavernQuests.some(
+        (quest) => quest.id === 'test-social' && quest.status === 'active' && quest.tracked,
+      ),
+    );
     const mapLookupSnapshot = () => {
       const { daily, tavernQuests, unlockedDungeons } = demo.getLibrary();
       return { dailyActive: daily.active, tavernQuests, unlockedDungeons };

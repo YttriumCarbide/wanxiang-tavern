@@ -42,7 +42,13 @@ const REACTIONS = Object.freeze({
     duration: 480,
   },
   sway: {
-    frames: [STILL, 'translateX(-6px)', 'translateX(6px)', 'translateX(-4px)', STILL],
+    frames: [
+      { transform: STILL, filter: 'brightness(1)' },
+      { transform: 'translateX(-6px)', filter: 'brightness(0.75)' },
+      { transform: 'translateX(6px)', filter: 'brightness(0.75)' },
+      { transform: 'translateX(-4px)', filter: 'brightness(0.75)' },
+      { transform: STILL, filter: 'brightness(1)' },
+    ],
     duration: 840,
     symbol: '…',
   },

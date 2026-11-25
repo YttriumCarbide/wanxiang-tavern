@@ -45,7 +45,7 @@ export const UNIVERSAL_ENEMIES = [
   ),
   creature(
     'facetSkitter',
-    '棱壳游虫',
+    '棱壳甲虫',
     '#83b6b4',
     76,
     2,

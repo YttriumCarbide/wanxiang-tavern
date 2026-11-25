@@ -1,7 +1,9 @@
 import { emblemVisualFor } from '../emblems.js';
 
 const CHARGE_STEPS = 6;
-const AWARD_CHARGE_BEATS = [245, 205, 175, 150, 130, 115];
+const AWARD_PHASE_MS = { flight: 470, land: 210, full: 500, settle: 230 };
+const AWARD_CHARGE_BEATS = [115, 105, 100, 95, 85, 75];
+const STATIC_AWARD_MS = 72;
 
 function actorAnchor(battle, actor) {
   const id = CSS.escape(actor);
@@ -64,6 +66,7 @@ export function createRingFeedback({ session, audio }) {
     root.style.setProperty('--ring-board-width', `${board.width}px`);
     root.style.setProperty('--ring-board-height', `${board.height}px`);
     if (root.classList.contains('is-award')) {
+      root.classList.toggle('is-rear', anchor.classList.contains('rear-card'));
       root.style.setProperty('--ring-card-width', `${rect.width}px`);
       root.style.setProperty('--ring-card-height', `${rect.height}px`);
     }
@@ -91,14 +94,17 @@ export function createRingFeedback({ session, audio }) {
     root.style.setProperty('--ring-glow', visual.glow);
     root.style.setProperty('--ring-light', visual.core);
     root.style.setProperty('--ring-shadow', visual.deep);
+    const jewelry =
+      '<span class="ring-feedback__rim"><span class="ring-feedback__sweep"></span></span>' +
+      '<span class="ring-feedback__core"></span>';
     root.innerHTML =
       '<span class="ring-feedback__piece ring-feedback__trail"></span>' +
       '<span class="ring-feedback__piece ring-feedback__meter" hidden>' +
-      '<span class="ring-feedback__rim"><span class="ring-feedback__sweep"></span></span>' +
-      '<span class="ring-feedback__core"></span>' +
+      (award ? `<span class="ring-feedback__artifact">${jewelry}</span>` : jewelry) +
       '<i class="ring-feedback__cell"></i>'.repeat(CHARGE_STEPS) +
       '</span>';
     if (award) {
+      root.style.setProperty('--ring-reflection', visual.secondary);
       root.insertAdjacentHTML(
         'afterbegin',
         '<span class="ring-feedback__piece ring-feedback__aperture"></span>' +
@@ -124,11 +130,6 @@ export function createRingFeedback({ session, audio }) {
     );
   }
 
-  function waitForAnimation(root, animation) {
-    pendingWaits.set(root, () => animation.cancel());
-    return animation.finished.catch(() => {}).finally(() => pendingWaits.delete(root));
-  }
-
   function wait(root, duration) {
     // Each root awaits at most one timed stage at a time.
     return new Promise((resolve) => {
@@ -151,16 +152,12 @@ export function createRingFeedback({ session, audio }) {
     }
   }
 
-  function playPhase(root, meter, phase, duration, cue) {
+  function showPhase(root, phase, duration = 0, cue) {
     root.style.setProperty('--ring-phase-duration', `${duration}ms`);
+    if (phase === 'charging') root.style.setProperty('--ring-charge-duration', `${duration}ms`);
     root.classList.toggle('is-bursting', phase === 'full');
     root.dataset.phase = phase;
-    // Await the visual beat when supported; old WebViews use the same timed CSS.
-    const animation = meter
-      .getAnimations?.()
-      .find((effect) => effect.animationName === `ring-feedback-award-${phase}`);
     if (cue) playCue(cue);
-    return animation ? waitForAnimation(root, animation) : wait(root, duration);
   }
 
   function fill(root, amount) {
@@ -178,26 +175,28 @@ export function createRingFeedback({ session, audio }) {
     if (!current(root)) return false;
     // Combat has already resolved: announce this crossing now, not six beats later.
     fill(root, CHARGE_STEPS);
-    await playPhase(
-      root,
-      root.querySelector('.ring-feedback__meter'),
-      'full',
-      reduced.matches ? 300 : 620,
-      'ring-charge-full',
-    );
+    const duration = reduced.matches ? 300 : 620;
+    showPhase(root, 'full', duration, 'ring-charge-full');
+    await wait(root, duration);
     return current(root);
   }
 
-  function stageFlight(root, meter) {
+  function stageFlight(root) {
     const { width, height } = root.parentElement.getBoundingClientRect();
-    const dx = Math.min(width * 0.27, 236) * (root.offsetLeft > width / 2 ? -1 : 1);
-    const overhead = Math.max(0, root.offsetTop - meter.offsetWidth * 0.76);
-    const dy = -Math.min(height * 0.22, 148, overhead);
+    const y = root.offsetTop;
+    const dx = Math.min(width * 0.24, 224) * (root.offsetLeft > width / 2 ? -1 : 1);
+    const fromAbove = y > height * 0.38;
+    const room = fromAbove ? y : height - y;
+    const rise = Math.min(height * 0.24, 132, Math.max(0, room - 32));
+    const dy = fromAbove ? -rise : rise;
+    const midX = dx * 0.54;
+    const midY = dy * 0.31;
     root.style.setProperty('--flight-x', `${dx}px`);
     root.style.setProperty('--flight-y', `${dy}px`);
-    root.style.setProperty('--flight-mid-x', `${dx * 0.54}px`);
-    root.style.setProperty('--flight-mid-y', `${-Math.min(overhead, -dy * 0.68 + 12)}px`);
-    root.style.setProperty('--trail-angle', `${Math.atan2(dy, dx)}rad`);
+    root.style.setProperty('--flight-mid-x', `${midX}px`);
+    root.style.setProperty('--flight-mid-y', `${midY}px`);
+    root.style.setProperty('--trail-start-angle', `${Math.atan2(dy - midY, dx - midX)}rad`);
+    root.style.setProperty('--trail-catch-angle', `${Math.atan2(midY, midX)}rad`);
   }
 
   function hasRecipient(state, actor, emblemId) {
@@ -214,47 +213,55 @@ export function createRingFeedback({ session, audio }) {
     const state = session.battle.state;
     if (!hasRecipient(state, actor, emblemId)) return false;
     let root;
+    let deadline;
     function currentAward() {
       return (
         session.battle.state === state && hasRecipient(state, actor, emblemId) && current(root)
       );
     }
+    function waitBeat(duration) {
+      deadline += duration;
+      return wait(root, Math.max(0, deadline - performance.now()));
+    }
+    async function holdPhase(phase, cue) {
+      const duration = AWARD_PHASE_MS[phase];
+      showPhase(root, phase, duration, cue);
+      await waitBeat(duration);
+      return currentAward();
+    }
     try {
       root = create(actor, emblemId, { award: true });
       if (!root) return false;
-      offerSkip(root);
-      const meter = root.querySelector('.ring-feedback__meter');
       if (!reduced.matches) {
+        offerSkip(root);
         fill(root, 0);
-        stageFlight(root, meter);
-        await playPhase(root, meter, 'flight', 620, 'ring-arrival');
-        if (!currentAward()) return false;
+        stageFlight(root);
+        // The presentation has a fixed budget even if a frame or CSS animation is late.
+        deadline = performance.now();
+        if (!(await holdPhase('flight', 'ring-arrival'))) return false;
+        if (!reduced.matches && !(await holdPhase('land'))) return false;
       }
-      if (reduced.matches) {
-        fill(root, 0);
-        root.dataset.phase = 'charging';
-        playCue('ring-arrival');
-        // Yield once so observers can record arrival without holding a rendered frame.
-        await Promise.resolve();
-        if (!currentAward()) return false;
-      }
-      if (!reduced.matches) {
+      if (!reduced.matches && deadline !== undefined) {
         const chargeTime = AWARD_CHARGE_BEATS.reduce((sum, beat) => sum + beat, 0);
-        root.style.setProperty('--ring-charge-duration', `${chargeTime}ms`);
-        root.dataset.phase = 'charging';
+        showPhase(root, 'charging', chargeTime);
         for (const [index, beat] of AWARD_CHARGE_BEATS.entries()) {
           if (reduced.matches) break;
           if (!currentAward()) return false;
           fill(root, index + 1);
-          await wait(root, beat);
+          await waitBeat(beat);
+          if (!currentAward()) return false;
         }
       }
-      if (!currentAward()) return false;
       fill(root, CHARGE_STEPS);
-      await playPhase(root, meter, 'full', reduced.matches ? 0 : 820, 'ring-charge-full');
-      if (!currentAward()) return false;
-      if (!reduced.matches) await playPhase(root, meter, 'settle', 330);
-      return currentAward();
+      if (reduced.matches || deadline === undefined) {
+        showPhase(root, 'full');
+        if (deadline === undefined) playCue('ring-arrival');
+        playCue('ring-charge-full');
+        await wait(root, STATIC_AWARD_MS);
+        return currentAward();
+      }
+      if (!(await holdPhase('full', 'ring-charge-full'))) return false;
+      return await holdPhase('settle');
     } catch (error) {
       console.warn('Ring award presentation failed:', error);
       return false;

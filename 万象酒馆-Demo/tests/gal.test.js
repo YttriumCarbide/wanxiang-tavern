@@ -127,6 +127,27 @@ test('Gal reaction suffixes keep the speaker, NPC portrait and readable text ind
   const tagged = `【对白:${id}|hop:alert】A。`;
   assert.equal(linesProse(galSceneLines(tagged, 'fixture')), tagged);
 });
+test('script and chat worldbooks describe conditional reactions in the existing Gal marker protocol', async () => {
+  const book = JSON.parse(
+    await readFile(new URL('../assets/builtin-worldbook.json', import.meta.url), 'utf8'),
+  );
+  for (const [uid, target] of [
+    [3, 'script'],
+    [178, 'chat'],
+  ]) {
+    const entry = book.entries[String(uid)];
+    assert.ok(entry.extensions.wanxiang.apiTargets.includes(target));
+    assert(entry.content.includes('`【对白:角色ID】`'));
+    assert(entry.content.includes('`【对白:npc:姓名|立绘编号】`'));
+    const rule = entry.content.split('\n').find((line) => line.startsWith('- 可选立绘反应后缀'));
+    assert.ok(rule, `worldbook entry ${uid} defines its optional reaction suffix`);
+    assert(rule.includes('按情绪条件使用，不强制每句触发'));
+    assert(rule.includes('`【对白:角色ID|hop】`'));
+    assert(rule.includes('`【对白:npc:姓名|立绘编号|hop】`'));
+    for (const tag of GAL_REACTION_TAGS) assert(rule.includes('`' + tag + '`'), tag);
+    assert(rule.includes('旁白、玩家对白、登退场/清场标记或 JSON 元数据'));
+  }
+});
 test('Gal cadence accelerates energetic cues and pauses after hesitation punctuation', () => {
   const normal = galTypingDelay(undefined, '，', 'A');
   const slow = galTypingDelay('sweat', 'A', '。');
@@ -325,7 +346,10 @@ function assertGalReactionInstruction(request, kind) {
     GAL_REACTION_TAGS,
     `the actual ${kind} request has exactly the supported reaction tags`,
   );
+  assert(sections[0].includes('按情绪条件使用，不强制每句触发'));
   assert(sections[0].includes('普通交谈和连续接话沿用无后缀写法'));
+  assert(sections[0].includes('【对白:角色ID|hop】'));
+  assert(sections[0].includes('【对白:npc:姓名|立绘编号|hop】'));
 }
 
 test('actual shared pipeline opts script and chat into Gal without changing the JSON or metadata contracts', async () => {

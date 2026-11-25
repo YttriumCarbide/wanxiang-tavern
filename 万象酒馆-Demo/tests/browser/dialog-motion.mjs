@@ -2,6 +2,11 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { legacySession } from './legacy-session.mjs';
+import { newCampaign, firstCompanion } from '../../src/campaign.js';
+import { defaultProtagonist } from '../../src/content/qingyuan.js';
+import { joinPandora } from '../../src/companion-events.js';
+import { normalizeInvitationPlan } from '../../src/invitation.js';
+import { fullInvitation } from '../fixtures/invitation.js';
 
 const PROBE_ATTRIBUTE = 'data-test-dialog-exit-properties';
 const ENTRY_PROBE_ATTRIBUTE = 'data-test-dialog-entry-opacity';
@@ -10,6 +15,102 @@ const DIALOG_SELECTOR = '#party-panel';
 const OPENER_ID = 'party-toggle';
 const SCROLL_PROBE_ID = 'dialog-motion-scroll-probe';
 const VIEWPORT = { width: 844, height: 390 };
+
+async function seedInvitationWorkspace(page) {
+  const library = newCampaign(defaultProtagonist());
+  library.campaign.completed = true;
+  library.inventory.summonContracts = 1;
+  library.progression.settlements = ['settled-a', 'settled-b'];
+  firstCompanion(library);
+  joinPandora(library);
+  library.campaign.tutorial = 'complete';
+  library.daily.tutorial = 'planning';
+
+  const scheduled = { kind: 'invitation', at: library.daily.period, ap: 1 };
+  library.daily.plan = [scheduled];
+  library.daily.running = true;
+  library.daily.cursor = 0;
+  library.daily.active = {
+    ...scheduled,
+    stage: 'running',
+    run: {
+      id: 'dialog-motion-invitation',
+      member: 'official-edith',
+      activity: 'talk',
+      index: 0,
+      scene: 'tavern',
+      city: null,
+      history: [],
+      turns: [],
+      played: [],
+      plan: normalizeInvitationPlan(fullInvitation),
+    },
+  };
+  await page.addInitScript((value) => {
+    if (origin !== 'null') localStorage.setItem('wanxiang.worldbooks.v1', JSON.stringify(value));
+  }, library);
+}
+
+async function exerciseInvitationWorkspaceExit(page) {
+  const stage = page.locator('#gal-stage');
+  await page.locator('.daily-status [data-daily="resume"]').click();
+  const end = page.locator('#daily-invitation [data-invite-end]');
+  await end.waitFor({ state: 'visible' });
+  await page.evaluate(() => {
+    const stage = document.querySelector('#gal-stage');
+    window.invitationExitProbe = null;
+    const observer = new MutationObserver(() => {
+      if (stage.dataset.leaving !== 'true') return;
+      observer.disconnect();
+      window.invitationExitProbe = {
+        painted: getComputedStyle(stage).display !== 'none',
+        inert: stage.inert,
+        ariaHidden: stage.getAttribute('aria-hidden'),
+        pointerEvents: getComputedStyle(stage).pointerEvents,
+        playing: document.body.classList.contains('gal-playing'),
+        activeCleared: demo.getLibrary().daily.active === null,
+        opacityExit: stage
+          .getAnimations()
+          .some(
+            (animation) =>
+              animation.effect?.target === stage && animation.effect.getTiming().duration === 360,
+          ),
+      };
+    });
+    observer.observe(stage, { attributes: true, attributeFilter: ['data-leaving'] });
+  });
+  await end.click();
+  await page.waitForFunction(() => window.invitationExitProbe !== null);
+  const started = await page.evaluate(() => window.invitationExitProbe);
+  assert.deepEqual(
+    started,
+    {
+      painted: true,
+      inert: true,
+      ariaHidden: 'true',
+      pointerEvents: 'none',
+      playing: false,
+      activeCleared: true,
+      opacityExit: true,
+    },
+    'Ending an invitation from its Gal composer keeps the normal non-modal exit animation',
+  );
+
+  await stage.waitFor({ state: 'hidden' });
+  const closed = await page.evaluate(() => ({
+    active: demo.getLibrary().daily.active,
+    report: demo.getLibrary().daily.report,
+    formHidden: document.querySelector('#daily-invitation').hidden,
+    focusInsideStage: document.querySelector('#gal-stage').contains(document.activeElement),
+    animations: document.querySelector('#gal-stage').getAnimations({ subtree: true }).length,
+  }));
+  assert.equal(closed.active, null, 'Ending the invitation still completes its daily action');
+  assert.match(closed.report, /约见提前结束/, 'The early-end result is preserved');
+  assert.equal(closed.formHidden, true, 'The invitation composer is hidden after exit');
+  assert.equal(closed.focusInsideStage, false, 'Focus is not left inside the hidden Gal workspace');
+  assert.equal(closed.animations, 0, 'The completed Gal exit leaves no animations behind');
+  return { animatedExit: true, focusReleased: true };
+}
 
 function supportsDialogMotion() {
   return (
@@ -422,8 +523,10 @@ export async function dialogMotionChecks({ browser, baseURL, output }) {
   try {
     await page.emulateMedia({ reducedMotion: 'no-preference' });
     await legacySession(page);
+    await seedInvitationWorkspace(page);
     await page.goto(baseURL);
     await page.waitForFunction(() => !!window.demo);
+    const invitationExit = await exerciseInvitationWorkspaceExit(page);
     const atlasExit = await exerciseLedgerAtlasExit(page);
 
     const dialog = page.locator(DIALOG_SELECTOR);
@@ -588,6 +691,7 @@ export async function dialogMotionChecks({ browser, baseURL, output }) {
       reduced,
       cycles,
       atlasExit,
+      invitationExit,
       closedLedgerFocus: true,
       competingModalFocusPreserved: true,
       dialog: DIALOG_SELECTOR,

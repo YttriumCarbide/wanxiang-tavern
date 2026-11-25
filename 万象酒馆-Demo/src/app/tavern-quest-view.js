@@ -2,7 +2,7 @@ import { isBountyReadyToClaim } from '../guild.js';
 import { QUEST_TYPES } from '../tavern-quests.js';
 import { escapeText } from '../ui.js';
 
-// The game has no Skyrim faction key, so use the source journal's side-quest ornament.
+// Use the side-quest braid for Demo quests, which do not use the reference factions.
 const QUEST_WING = `<path d="M10 24 C25 24, 35 14.5, 52 14.5 C69 14.5, 76 33.5, 93 33.5 C109 33.5, 118 19.5, 131 24" stroke="var(--quest-wing-stroke)" stroke-width="1.3" fill="none" />
   <path d="M10 24 C25 24, 35 33.5, 52 33.5 C69 33.5, 76 14.5, 93 14.5 C109 14.5, 118 28.5, 131 24" stroke="var(--quest-wing-stroke)" stroke-width="1.3" fill="none" />
   <path d="M74 13.5 C90 5.5, 109 6.5, 124 17" stroke="var(--quest-wing-subtle)" stroke-width="1" fill="none" />
@@ -26,7 +26,8 @@ function questRule(kind) {
 
 function scrollCap(direction) {
   const label = direction === 'up' ? '向上滚动任务列表' : '向下滚动任务列表';
-  return `<button class="ow-quest-scroll" type="button" tabindex="-1" data-quest-scroll="${direction}"
+  return `<button class="ow-quest-scroll" type="button" data-quest-scroll="${direction}"
+    data-quest-focus="scroll:${direction}"
     aria-label="${label}" aria-controls="tavern-quest-list">${SCROLL_ARROW}</button>`;
 }
 
@@ -83,7 +84,9 @@ function questRow(quest, selectedId, trackedId, claimingId) {
     }
     <button class="skyrim-quest-tab" type="button" data-quest-select="${id}"
       data-quest-focus="row:${id}" tabindex="${selected ? '0' : '-1'}"
-      aria-current="${selected}" aria-controls="tavern-quest-detail" title="${title}">${title}</button>
+      aria-current="${selected}" aria-controls="tavern-quest-detail" title="${title}">
+      <span>${title}</span>
+    </button>
     ${quest.status === 'offered' ? '<small class="ow-quest-row-state">待接取</small>' : ''}
     ${
       isBountyReadyToClaim(quest)
@@ -106,45 +109,54 @@ function questRewards(quest) {
   return '';
 }
 
-function questDetail(quest, location, objectives) {
-  if (!quest) return '';
-  const completed = quest.status === 'completed';
-  const ordered = [
-    ...objectives.filter(({ done }) => !done),
-    ...objectives.filter(({ done }) => done),
-  ];
+function questHeading(quest) {
   const type = QUEST_TYPES[quest.type] || '委托';
-  const offered = quest.status === 'offered';
-  return `<article class="skyrim-folio${completed ? ' is-completed' : ''}" data-quest-detail="${escapeText(quest.id)}">
-    <p class="ow-quest-meta" aria-label="委托类型与等级">
-      <span>${escapeText(type)}</span>
-      ${quest.rank ? `<span>${escapeText(quest.rank)} 级</span>` : ''}
-      <span>建议 Lv.${escapeText(quest.level || 1)}</span>
-      ${offered ? '<span class="is-pending">待接取</span>' : ''}
-    </p>
+  return `<header class="ow-quest-folio-head">
     <div class="ow-quest-crest">
-      <span class="ow-quest-header-wash" aria-hidden="true"></span>
       ${crestWing()}
       <h3 class="skyrim-folio-title">${escapeText(quest.title)}</h3>
       ${crestWing(true)}
     </div>
     ${questRule('title')}
-    ${completed ? '<p class="ow-quest-seal"><i aria-hidden="true"></i>已完成<i aria-hidden="true"></i></p>' : ''}
+    <p class="ow-quest-meta" aria-label="委托类型与等级">
+      <span>${escapeText(type)}</span>
+      ${quest.rank ? `<span>${escapeText(quest.rank)} 级</span>` : ''}
+      <span>建议 Lv.${escapeText(quest.level || 1)}</span>
+      ${quest.status === 'offered' ? '<span class="is-pending">待接取</span>' : ''}
+    </p>
+  </header>`;
+}
+
+function questObjectiveList(objectives) {
+  if (!objectives.length) return '';
+  const ordered = [
+    ...objectives.filter(({ done }) => !done),
+    ...objectives.filter(({ done }) => done),
+  ];
+  const rows = ordered
+    .map(
+      ({ label, done, detail }) => `<li${done ? ' class="is-done"' : ''}>
+        ${objectiveMark(done)}
+        <span>${escapeText(label)}</span>
+        ${detail || done ? `<small>${escapeText(detail || '已完成')}</small>` : ''}
+      </li>`,
+    )
+    .join('');
+  return `${questRule('objectives')}
+    <ul class="ow-quest-objectives" aria-label="任务目标">${rows}</ul>`;
+}
+
+function questDetail(quest, location, objectives) {
+  const completed = quest.status === 'completed';
+  const seal = completed
+    ? '<p class="ow-quest-seal"><i aria-hidden="true"></i>已完成<i aria-hidden="true"></i></p>'
+    : '';
+  return `<article class="skyrim-folio${completed ? ' is-completed' : ''}" data-quest-detail="${escapeText(quest.id)}">
+    ${questHeading(quest)}
+    ${seal}
     <p class="skyrim-folio-desc">${escapeText(quest.description)}</p>
     ${location ? `<p class="ow-quest-location">目标地点：${escapeText(location)}</p>` : ''}
-    ${
-      ordered.length
-        ? `${questRule('objectives')}<ul class="ow-quest-objectives" aria-label="任务目标">${ordered
-            .map(
-              ({ label, done, detail }) => `<li${done ? ' class="is-done"' : ''}>
-                ${objectiveMark(done)}
-                <span>${escapeText(label)}</span>
-                ${detail || done ? `<small>${escapeText(detail || '已完成')}</small>` : ''}
-              </li>`,
-            )
-            .join('')}</ul>`
-        : ''
-    }
+    ${questObjectiveList(objectives)}
     ${questRewards(quest)}
   </article>`;
 }
@@ -167,94 +179,19 @@ function journalCommands(quest, trackedId, { claimingId, accepting, acceptDisabl
   }
   const track = active
     ? `<button type="button" data-quest-track="${id}" data-quest-focus="track" aria-label="追踪任务" aria-pressed="${tracked}">
-        <kbd aria-hidden="true">Enter</kbd>${tracked ? '取消追踪' : '追踪任务'}
+        <kbd aria-hidden="true">Enter</kbd>
+        <span>${tracked ? '取消追踪' : '追踪任务'}</span>
       </button>`
     : '';
   const map =
     quest.status !== 'completed'
       ? `<button type="button" data-quest-open-atlas data-quest-focus="atlas" aria-keyshortcuts="M">
-        <kbd aria-hidden="true">M</kbd>打开大地图
+        <kbd aria-hidden="true">M</kbd>
+        <span>打开大地图</span>
       </button>`
       : '';
   return `${primary}${track}${map}`;
 }
-
-const QUEST_JOURNAL_STYLE = `<style data-quest-journal-style>
-  #tavern-quests {
-    width: min(1600px, calc(100vw - 28px));
-    height: min(940px, calc(100dvh - 28px));
-    background-image:
-      repeating-linear-gradient(115deg, rgba(255, 253, 245, 0.012) 0 1px, rgba(0, 0, 0, 0.014) 1px 3px),
-      linear-gradient(180deg, rgba(18, 17, 15, 0.36), rgba(12, 11, 10, 0.42));
-  }
-
-  #tavern-quests .skyrim-head {
-    background-image:
-      repeating-linear-gradient(115deg, rgba(255, 253, 245, 0.016) 0 1px, rgba(0, 0, 0, 0.018) 1px 3px),
-      radial-gradient(ellipse 42% 120% at 50% -18%, rgba(232, 214, 176, 0.085), transparent 72%),
-      linear-gradient(180deg, rgba(9, 8, 7, 0.86), rgba(15, 14, 12, 0.62) 68%, rgba(17, 16, 13, 0.3));
-  }
-
-  #tavern-quests .skyrim-index-col {
-    background-image:
-      repeating-linear-gradient(115deg, rgba(255, 253, 245, 0.012) 0 1px, rgba(0, 0, 0, 0.016) 1px 3px),
-      linear-gradient(90deg, rgba(11, 10, 8, 0.74), rgba(12, 11, 9, 0.62) 78%, rgba(13, 12, 10, 0.46));
-  }
-
-  #tavern-quests .skyrim-folio-col {
-    background-image:
-      repeating-linear-gradient(115deg, rgba(255, 253, 245, 0.009) 0 1px, rgba(0, 0, 0, 0.012) 1px 3px),
-      radial-gradient(ellipse at 50% 0%, rgba(223, 221, 213, 0.045), transparent 68%);
-  }
-
-  #tavern-quests .ow-quest-meta {
-    gap: 4px 14px;
-    color: rgba(205, 203, 196, 0.76);
-    letter-spacing: 0.075em;
-  }
-
-  #tavern-quests .ow-quest-meta > span {
-    position: relative;
-    padding: 2px 0;
-    border: 0;
-    background: transparent;
-    color: inherit;
-  }
-
-  #tavern-quests .ow-quest-meta > span + span::before {
-    position: absolute;
-    inset-inline-start: -8px;
-    top: 50%;
-    width: 3px;
-    height: 3px;
-    background: rgba(212, 210, 203, 0.52);
-    content: '';
-    transform: translateY(-50%) rotate(45deg);
-  }
-
-  #tavern-quests .ow-quest-meta > .is-pending {
-    color: #b8b5ad;
-  }
-
-  #tavern-quests .ow-quest-primary {
-    border-color: rgba(212, 210, 200, 0.48);
-    background: linear-gradient(180deg, rgba(211, 207, 196, 0.12), rgba(38, 36, 32, 0.24));
-    color: #e4e1d8;
-  }
-
-  #tavern-quests .ow-quest-primary:hover:enabled {
-    border-color: rgba(236, 233, 224, 0.8);
-    background: linear-gradient(180deg, rgba(226, 222, 210, 0.2), rgba(58, 54, 47, 0.34));
-    color: #fff;
-  }
-
-  @media (max-width: 767px) {
-    #tavern-quests {
-      width: calc(100vw - 12px);
-      height: calc(100dvh - 12px);
-    }
-  }
-</style>`;
 
 export function renderQuestJournal({
   groups,
@@ -275,9 +212,15 @@ export function renderQuestJournal({
           .join('')}</ul>`,
     )
     .join('');
-  return `${QUEST_JOURNAL_STYLE}<header class="skyrim-head">
+  const detail = selected
+    ? questDetail(selected, location, objectives)
+    : '<p class="skyrim-quest-empty" role="status">暂无任务记录</p>';
+  return `<header class="skyrim-head">
       <h2 id="tavern-quests-title">任务日志</h2>
-      <button type="button" class="quests-close" data-quest-focus="close" aria-label="关闭任务日志">×</button>
+      <span class="ow-quest-header-needle" aria-hidden="true"><i></i></span>
+      <button type="button" class="quests-close" data-quest-focus="close" aria-label="关闭任务日志">
+        <span aria-hidden="true">×</span>
+      </button>
     </header>
     <div class="skyrim-journal-grid">
       <aside class="skyrim-index-col" aria-label="任务目录">
@@ -286,7 +229,9 @@ export function renderQuestJournal({
         ${rows ? scrollCap('down') : ''}
       </aside>
       <section id="tavern-quest-detail" class="skyrim-folio-col" aria-label="任务详情"
-        ${selected ? 'tabindex="0" data-quest-focus="detail"' : ''}>${selected ? questDetail(selected, location, objectives) : '<p class="skyrim-quest-empty" role="status">暂无任务记录</p>'}</section>
+        ${selected ? 'tabindex="0" data-quest-focus="detail"' : ''}>
+        ${detail}
+      </section>
     </div>
     <footer class="skyrim-keybar">
       <button type="button" data-quest-open-guild data-quest-focus="guild">冒险者公会</button>

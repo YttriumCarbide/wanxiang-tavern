@@ -21,11 +21,12 @@ async function assertQuestFolioLayout(detail) {
     const objectives = bounds('.ow-quest-objectives');
     const reward = bounds('.ow-quest-reward');
     const crest = bounds('.ow-quest-crest');
-    const wash = bounds('.ow-quest-header-wash');
+    const title = bounds('.skyrim-folio-title');
     const headerRule = bounds('.ow-quest-rule.is-title');
     const meta = bounds('.ow-quest-meta');
     return {
-      metaBeforeCrest: meta.bottom <= crest.top,
+      titleCenterError: Math.abs(crest.left + crest.width / 2 - (title.left + title.width / 2)),
+      metaAfterRule: meta.top >= headerRule.bottom - 1,
       metaLayout: getComputedStyle(folio.querySelector('.ow-quest-meta')).display,
       columnEdgeError: Math.max(
         ...[location, divider, objectives, reward].flatMap((rect) => [
@@ -33,16 +34,14 @@ async function assertQuestFolioLayout(detail) {
           Math.abs(rect.right - description.right),
         ]),
       ),
-      crestCenterError: Math.abs(crest.top + crest.height / 2 - (wash.top + wash.height / 2)),
-      headerGap: headerRule.top - crest.bottom,
       objectiveGap: Math.min(divider.top - location.bottom, objectives.top - divider.bottom),
     };
   });
-  assert(layout.metaBeforeCrest, 'quest type and level precede the title crest');
-  assert.equal(layout.metaLayout, 'flex', 'quest metadata stays grouped into compact badges');
+  assert(layout.metaAfterRule, 'quest type and level sit below the title ornament');
+  assert.equal(layout.metaLayout, 'flex', 'quest metadata stays grouped into compact text');
   assert(layout.columnEdgeError <= 1, 'briefing, location, objectives and reward share one column');
-  assert(layout.crestCenterError <= 1, 'the wash stays centered on the crest');
-  assert(layout.objectiveGap > layout.headerGap + 1, 'the objectives have a distinct visual break');
+  assert(layout.titleCenterError <= 1, 'the title remains centered between its symmetric wings');
+  assert(layout.objectiveGap > 0, 'the objectives have a distinct visual break');
 }
 
 export async function dailyChecks({ browser, baseURL, output }) {
@@ -410,6 +409,10 @@ export async function dailyChecks({ browser, baseURL, output }) {
     assert.equal(taskPlacement.inDrawer, false);
     await questHandle.click();
     await expect(journal.getByRole('heading', { name: '任务日志' })).toBeVisible();
+    const journalNeedle = journal.locator('.ow-quest-header-needle');
+    await expect(journalNeedle).toBeVisible();
+    await expect(journalNeedle).toHaveAttribute('aria-hidden', 'true');
+    await expect(journalNeedle).toHaveCSS('pointer-events', 'none');
     await settleJournal();
     await expect(journal.locator('.skyrim-quest-empty')).toHaveText('暂无任务记录');
     assert.equal(await journal.locator('.skyrim-quest-tab').count(), 0);
@@ -1080,15 +1083,15 @@ export async function dailyChecks({ browser, baseURL, output }) {
     });
     assert(indexWidthError < 1, 'the desktop quest index occupies 35% of the journal body');
     assert.deepEqual(
-      await detail.locator('.ow-quest-header-wash').evaluate((wash) => {
-        const style = getComputedStyle(wash);
+      await detail.locator('.ow-quest-folio-head').evaluate((header) => {
+        const style = getComputedStyle(header, '::before');
         return {
-          hidden: wash.getAttribute('aria-hidden'),
+          decorative: style.content === '""',
           pointerEvents: style.pointerEvents,
           hasGradient: style.backgroundImage.startsWith('radial-gradient('),
         };
       }),
-      { hidden: 'true', pointerEvents: 'none', hasGradient: true },
+      { decorative: true, pointerEvents: 'none', hasGradient: true },
       'the crest wash renders without intercepting input or entering the accessibility tree',
     );
     const wings = detail.locator('.ow-quest-wing');
@@ -1182,22 +1185,27 @@ export async function dailyChecks({ browser, baseURL, output }) {
       'atlas lookup must not travel, spend an action, unlock a dungeon, or change tracking',
     );
 
-    await page.setViewportSize({ width: 390, height: 844 });
-    await questHandle.click();
-    await settleJournal();
-    assert.equal(
-      await journal.evaluate((dialog) =>
-        [...dialog.querySelectorAll('.ow-quest-list, .skyrim-folio-col, .skyrim-keybar')].some(
-          (region) => region.scrollWidth > region.clientWidth,
+    for (const [name, width, height] of [
+      ['portrait', 390, 844],
+      ['landscape', 844, 390],
+    ]) {
+      await page.setViewportSize({ width, height });
+      await questHandle.click();
+      await settleJournal();
+      assert.equal(
+        await journal.evaluate((dialog) =>
+          [...dialog.querySelectorAll('.ow-quest-list, .skyrim-folio-col, .skyrim-keybar')].some(
+            (region) => region.scrollWidth > region.clientWidth + 1,
+          ),
         ),
-      ),
-      false,
-      'portrait journal content and controls do not require horizontal scrolling',
-    );
-    await assertQuestFolioLayout(detail);
-    await page.screenshot({ path: path.join(output, 'quests-portrait.png') });
-    await journal.getByRole('button', { name: '关闭任务日志' }).click();
-    await expect(journal).toBeHidden();
+        false,
+        name + ' journal content and controls do not require horizontal scrolling',
+      );
+      await assertQuestFolioLayout(detail);
+      await page.screenshot({ path: path.join(output, 'quests-' + name + '.png') });
+      await journal.getByRole('button', { name: '关闭任务日志' }).click();
+      await expect(journal).toBeHidden();
+    }
     await page.setViewportSize({ width: 1120, height: 700 });
 
     await page.evaluate(() => demo.flushStorage());

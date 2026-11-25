@@ -62,19 +62,27 @@ test('the official enemy pools use 14 standard species and six categories, with 
     assert(Object.hasOwn(counts, enemy.category), `${id} category`);
     if (enemy.baseSpecies) {
       assert.equal(enemyTaxonomy({ baseSpecies: enemy.baseSpecies }).category, enemy.category, id);
+      if (!enemy.boss && !enemy.overlord && !enemy.elite) {
+        assert(enemy.name.endsWith(enemy.baseSpecies), `${id} species suffix`);
+        assert.equal(
+          [...enemy.name].length,
+          [...enemy.baseSpecies].length + 2,
+          `${id} prefix length`,
+        );
+      }
       speciesCount += 1;
     }
     counts[enemy.category] += 1;
   }
   assert.deepEqual(counts, {
     beast: 12,
-    insect: 15,
+    insect: 16,
     construct: 19,
     humanoid: 19,
     spirit: 9,
-    other: 116,
+    other: 115,
   });
-  assert.equal(speciesCount, 74);
+  assert.equal(speciesCount, 75);
 
   const archivedMinionNames = {
     arenaClockworkLion: '发条机兵',
@@ -103,8 +111,10 @@ test('the official enemy pools use 14 standard species and six categories, with 
     assert.equal(roster[id].name, name);
     assert.equal(roster[id].elite, true, id + ' retains its elite tier');
   }
+  assert.equal(roster.facetSkitter.baseSpecies, '甲虫');
+  assert.equal(roster.facetSkitter.category, 'insect');
   const renamed = Object.entries(ENEMY_DISPLAY_NAME_OVERRIDES);
-  assert.equal(renamed.length, 43);
+  assert.equal(renamed.length, 44);
   for (const [id, name] of renamed) {
     const enemy = roster[id];
     assert.equal(enemy.name, name, `${id} display name`);
@@ -336,6 +346,7 @@ test('builtin UID 28 documents taxonomy and fresh and saved monster entries keep
     for (const name of species) assert(mapEntry.content.includes(name), `UID 28 species ${name}`);
   }
   assert(mapEntry.content.includes('[2字词缀]+[基础种]'));
+  assert(mapEntry.content.includes('普通小怪优先从下列十四种基础种中选择原型'));
   for (const name of [
     '苔藓史莱姆',
     '黑液史莱姆',

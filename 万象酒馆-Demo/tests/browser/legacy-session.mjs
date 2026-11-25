@@ -18,7 +18,7 @@ export async function openShelfPanel(page, action) {
 /** These suites exercise existing six-member saves; fresh creation has its own real API suite. */
 export async function legacySession(
   page,
-  { dismissJournals = true, worlds = [], unlockSilverCrownTavern = false } = {},
+  { dismissJournals = true, worlds = [], unlockSilverCrownTavern = false, enableAi = false } = {},
 ) {
   if (dismissJournals) await dismissAutomaticJournals(page);
   const values = new Map();
@@ -33,7 +33,7 @@ export async function legacySession(
   for (const world of worlds) addWorldRoute(legacy.exploration, world, 17371);
   values.set('wanxiang.worldbooks.v1', JSON.stringify(legacy));
   await page.addInitScript(
-    (entries) => {
+    ({ entries, enableAi }) => {
       if (window.origin === 'null') return;
       if (localStorage.getItem('wanxiang.worldbooks.v1')) return;
       localStorage.setItem(
@@ -41,13 +41,12 @@ export async function legacySession(
         JSON.stringify({
           developerMode: true,
           allowRetreat: true,
-          protagonistApi: false,
-          scriptApi: false,
+          skipAiGeneration: !enableAi,
         }),
       );
       for (const [key, value] of entries) localStorage.setItem(key, value);
     },
-    [...values],
+    { entries: [...values], enableAi },
   );
 }
 

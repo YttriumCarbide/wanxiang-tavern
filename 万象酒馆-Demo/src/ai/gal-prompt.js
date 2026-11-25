@@ -9,7 +9,7 @@ export function galActorListText(input) {
 
 /** Companion rule for preset and fallback prompts, including older or customized worldbooks. */
 function galReactionInstruction() {
-  return `【Gal对白反应】只在角色当下确有明显情绪转折时，给该条对白末尾加一个可选后缀：【对白:角色ID|hop】或【对白:npc:姓名|立绘编号|hop】。普通交谈和连续接话沿用无后缀写法。白名单：hop（开心轻跳与闪光）、hop:alert（轻微受惊或警觉）、hop:note（愉快轻跳与音符）、shake（恼怒或惊惧急抖）、sweat（尴尬下沉）、lean（认真前倾）、back（警惕后退）、nod（点头）、sway（无奈摇头或短暂沉默）、question（困惑歪头）。情绪靠正文也能读懂；不要叠加或连续复用后缀，不在旁白、玩家台词、登退场、补丁字段或JSON ID里加后缀。`;
+  return `【Gal对白反应】按情绪条件使用，不强制每句触发；只在角色当下确有明显情绪转折时，给该条对白末尾加一个可选后缀：【对白:角色ID|hop】或【对白:npc:姓名|立绘编号|hop】。普通交谈和连续接话沿用无后缀写法。白名单：hop（开心轻跳与闪光）、hop:alert（轻微受惊或警觉）、hop:note（愉快轻跳与音符）、shake（恼怒或惊惧急抖）、sweat（尴尬下沉）、lean（认真前倾）、back（警惕后退）、nod（点头）、sway（无奈摇头或短暂沉默）、question（困惑歪头）。情绪靠正文也能读懂；不要叠加或连续复用后缀，不在旁白、玩家台词、登退场、补丁字段或JSON ID里加后缀。`;
 }
 
 function galEnsembleInstruction(kind) {

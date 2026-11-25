@@ -219,36 +219,54 @@ body.in-adventure #daily-hud {
   --quest-bright: #faf9f4;
   --quest-muted: #b8b5ad;
   --quest-dim: #8b8880;
-  --quest-line: rgba(215, 213, 205, 0.32);
   --quest-line-soft: rgba(215, 213, 205, 0.15);
-  width: min(1240px, calc(100vw - 36px));
-  height: min(820px, calc(100dvh - 44px));
+  --quest-serif: 'Noto Serif SC', 'Songti SC', 'STSong', SimSun, serif;
+  --quest-ui: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
+  --quest-text-shadow: 0 1px 3px rgba(12, 12, 11, 0.92), 0 0 12px rgba(12, 12, 11, 0.55);
+  --quest-grain: repeating-linear-gradient(
+    115deg,
+    rgba(255, 253, 245, 0.014) 0 1px,
+    rgba(0, 0, 0, 0.018) 1px 3px
+  );
+  width: min(1600px, calc(100vw - 28px));
+  height: min(940px, calc(100dvh - 28px));
   max-width: calc(100vw - 24px);
   max-height: calc(100dvh - 24px);
   margin: auto;
   padding: 0;
   overflow: hidden;
-  color: var(--quest-text);
-  background: rgba(15, 14, 12, 0.4);
-  border: 1px solid rgba(215, 213, 205, 0.42);
+  border: 0;
   border-radius: 0;
-  box-shadow:
-    inset 0 0 0 1px rgba(215, 213, 205, 0.11),
-    0 28px 88px rgba(0, 0, 0, 0.88);
-  font-family: Georgia, 'Songti SC', 'STSong', 'Microsoft YaHei', serif;
+  color: var(--quest-text);
+  background: var(--quest-grain), rgba(15, 14, 12, 0.28);
+  box-shadow: none;
+  backdrop-filter: none;
+  font-family: var(--quest-ui);
 }
 #tavern-quests[open] {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
 }
+/* Keep the actual game scene behind the journal instead of supplying new scenery. */
 #tavern-quests::backdrop {
-  background: rgba(14, 13, 11, 0.56);
-  backdrop-filter: blur(2px);
+  background:
+    radial-gradient(ellipse 46% 40% at 6% 96%, rgba(206, 168, 110, 0.075), transparent 74%),
+    radial-gradient(ellipse 78% 72% at 58% 48%, rgba(8, 10, 13, 0.52), rgba(6, 8, 10, 0.78));
+  -webkit-backdrop-filter: blur(3px) saturate(0.46) brightness(0.8);
+  backdrop-filter: blur(3px) saturate(0.46) brightness(0.8);
 }
 #guild-dialog::backdrop,
 :is(#tavern-promotion, #tavern-recruitment, #tavern-exit-picker)::backdrop {
   background: rgba(6, 5, 4, 0.8);
   backdrop-filter: blur(6px);
+}
+#tavern-quests button {
+  border-radius: 0;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  transform: none;
+  transition: color 140ms ease;
 }
 #tavern-quests :is(button, a, [tabindex]):focus-visible {
   outline: 2px solid rgba(238, 236, 228, 0.92);
@@ -261,10 +279,21 @@ body.in-adventure #daily-hud {
   grid-template-columns: minmax(44px, 1fr) auto minmax(44px, 1fr);
   align-items: center;
   gap: 10px 20px;
-  min-height: 68px;
-  padding: 10px 24px;
-  border-bottom: 1px solid var(--quest-line);
+  min-height: 72px;
+  padding: 8px clamp(10px, 3vw, 40px);
   background:
+    linear-gradient(
+        90deg,
+        transparent,
+        rgba(210, 208, 202, 0.36) 14%,
+        rgba(226, 225, 222, 0.56) 50%,
+        rgba(210, 208, 202, 0.36) 86%,
+        transparent
+      )
+      center bottom 3px / 100% 1px no-repeat,
+    linear-gradient(90deg, transparent, rgba(222, 221, 218, 0.18) 50%, transparent) center bottom /
+      100% 1px no-repeat,
+    var(--quest-grain),
     radial-gradient(ellipse 42% 120% at 50% -18%, rgba(232, 214, 176, 0.085), transparent 72%),
     linear-gradient(180deg, rgba(9, 8, 7, 0.86), rgba(15, 14, 12, 0.62) 68%, rgba(17, 16, 13, 0.3));
 }
@@ -272,13 +301,39 @@ body.in-adventure #daily-hud {
   grid-column: 2;
   margin: 0;
   color: var(--quest-bright);
-  font:
-    500 20px/1.2 Georgia,
-    'Songti SC',
-    'STSong',
-    serif;
-  letter-spacing: 0.12em;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
+  font: 600 19px/1.2 var(--quest-serif);
+  letter-spacing: 0.22em;
+  text-shadow:
+    0 1px 3px rgba(12, 12, 11, 0.95),
+    0 0 14px rgba(241, 239, 236, 0.34);
+}
+#tavern-quests .ow-quest-header-needle {
+  position: absolute;
+  inset-block-end: 1px;
+  inset-inline-start: 50%;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  width: 86px;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+#tavern-quests .ow-quest-header-needle::before,
+#tavern-quests .ow-quest-header-needle::after {
+  flex: 1 1 auto;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(241, 240, 237, 0.75));
+  content: '';
+}
+#tavern-quests .ow-quest-header-needle::after {
+  transform: scaleX(-1);
+}
+#tavern-quests .ow-quest-header-needle i {
+  width: 6px;
+  height: 6px;
+  background: #f3f2ed;
+  box-shadow: 0 0 6px rgba(246, 242, 232, 0.7);
+  transform: rotate(45deg);
 }
 #tavern-quests .quests-close {
   justify-self: end;
@@ -287,14 +342,15 @@ body.in-adventure #daily-hud {
   width: 44px;
   height: 44px;
   padding: 0;
-  border: 1px solid var(--quest-line);
-  border-radius: 0;
+  border: 0;
   background: transparent;
-  color: var(--quest-text);
+  color: var(--quest-muted);
+  cursor: pointer;
+}
+#tavern-quests .quests-close > span {
   font:
     300 24px/1 system-ui,
     sans-serif;
-  cursor: pointer;
 }
 #tavern-quests .quests-close:hover {
   background: rgba(229, 227, 220, 0.1);
@@ -324,7 +380,14 @@ body.in-adventure #daily-hud {
   position: absolute;
   inset: 8px 0 8px auto;
   width: 1px;
-  background: linear-gradient(180deg, transparent, rgba(212, 210, 204, 0.48) 50%, transparent);
+  background: linear-gradient(
+    180deg,
+    transparent,
+    rgba(212, 210, 204, 0.44) 9%,
+    rgba(212, 210, 204, 0.48) 50%,
+    rgba(212, 210, 204, 0.44) 91%,
+    transparent
+  );
   content: '';
   pointer-events: none;
 }
@@ -384,13 +447,23 @@ body.in-adventure #daily-hud {
   padding: 0;
   border: 0;
   background: transparent;
-  color: rgba(214, 212, 205, 0.6);
+  color: rgba(166, 163, 156, 0.55);
   cursor: pointer;
 }
-#tavern-quests .ow-quest-scroll[data-quest-scroll='down'] svg {
-  transform: rotate(180deg);
+#tavern-quests .ow-quest-scroll svg {
+  flex: none;
 }
-#tavern-quests .ow-quest-scroll:hover {
+#tavern-quests .ow-quest-scroll[data-quest-scroll='up'] {
+  margin-block-start: 4px;
+}
+#tavern-quests .ow-quest-scroll[data-quest-scroll='down'] {
+  margin-block-end: 4px;
+}
+#tavern-quests .ow-quest-scroll[data-quest-scroll='down'] svg {
+  transform: scaleY(-1);
+}
+#tavern-quests .ow-quest-scroll:hover,
+#tavern-quests .ow-quest-scroll:focus-visible {
   color: #fff;
 }
 #tavern-quests .ow-quest-group {
@@ -403,32 +476,21 @@ body.in-adventure #daily-hud {
 }
 #tavern-quests .ow-quest-group.is-archive {
   position: relative;
-  margin-top: 15px;
-  padding-top: 11px;
+  margin-top: 16px;
+  padding-top: 16px;
 }
 #tavern-quests .ow-quest-group.is-archive::before {
   position: absolute;
-  inset: 0 12px auto 26px;
+  inset: 0 16px auto 28px;
   height: 1px;
   background: linear-gradient(
     90deg,
-    transparent,
-    var(--quest-line-soft) 14%,
-    var(--quest-line-soft) 86%,
+    rgba(212, 210, 205, 0.04),
+    rgba(218, 216, 210, 0.42) 32%,
+    rgba(218, 216, 210, 0.42) 72%,
     transparent
   );
   content: '';
-}
-#tavern-quests .ow-quest-group-label {
-  margin: 0;
-  padding: 4px 8px 7px;
-  border-bottom: 1px solid var(--quest-line-soft);
-  color: #c0bdb5;
-  font:
-    500 10px/1.4 system-ui,
-    'Microsoft YaHei',
-    sans-serif;
-  letter-spacing: 0.13em;
 }
 #tavern-quests .skyrim-quest-item {
   position: relative;
@@ -444,7 +506,6 @@ body.in-adventure #daily-hud {
 }
 #tavern-quests .skyrim-quest-item[data-status='completed'] {
   padding-inline: 12px;
-  border-bottom-color: rgba(219, 216, 207, 0.045);
 }
 #tavern-quests .skyrim-quest-item[data-status='completed']:not(.is-selected):hover {
   background: rgba(255, 255, 255, 0.025);
@@ -487,12 +548,6 @@ body.in-adventure #daily-hud {
   box-shadow: 0 0 6px rgba(246, 240, 224, 0.5);
   pointer-events: none;
 }
-#tavern-quests :is(.skyrim-quest-tab, .ow-quest-mark-button) {
-  border-radius: 0;
-  box-shadow: none;
-  backdrop-filter: none;
-  transform: none;
-}
 #tavern-quests .skyrim-quest-tab:focus-visible {
   outline: 1px solid rgba(234, 233, 229, 0.65);
   outline-offset: -1px;
@@ -506,17 +561,19 @@ body.in-adventure #daily-hud {
   border: 0;
   background: transparent;
   color: #b7b4ae;
-  font:
-    400 15px/1.35 'Noto Serif SC',
-    'Songti SC',
-    'Noto Sans SC',
-    serif;
+  font-family: var(--quest-serif);
+  font-weight: 400;
   letter-spacing: 0.05em;
   text-align: left;
+  cursor: pointer;
+}
+#tavern-quests .skyrim-quest-tab > span {
+  display: block;
+  overflow: hidden;
+  font-size: 15px;
+  line-height: 1.35;
   text-overflow: ellipsis;
   white-space: nowrap;
-  overflow: hidden;
-  cursor: pointer;
 }
 #tavern-quests :where(.skyrim-quest-item:hover) .skyrim-quest-tab {
   color: #e3e2de;
@@ -537,12 +594,12 @@ body.in-adventure #daily-hud {
     0 0 18px rgba(237, 235, 231, 0.22);
 }
 #tavern-quests .skyrim-quest-item[data-status='completed'] .skyrim-quest-tab {
-  color: #7b7871;
-  font-size: 14.5px;
+  color: var(--quest-dim);
   letter-spacing: 0.06em;
-  text-shadow:
-    0 1px 3px rgba(12, 12, 11, 0.92),
-    0 0 12px rgba(12, 12, 11, 0.55);
+  text-shadow: var(--quest-text-shadow);
+}
+#tavern-quests [data-status='completed'] .skyrim-quest-tab > span {
+  font-size: 14.5px;
 }
 #tavern-quests .skyrim-quest-item[data-status='completed']:hover .skyrim-quest-tab {
   color: #b5b2aa;
@@ -552,21 +609,30 @@ body.in-adventure #daily-hud {
 }
 #tavern-quests .ow-quest-mark-slot,
 #tavern-quests .ow-quest-mark-button {
-  display: grid;
+  display: flex;
   flex: 0 0 24px;
-  place-items: center;
   align-self: center;
+  align-items: center;
+  justify-content: center;
   width: 24px;
   height: 24px;
-  margin-inline-start: 0;
 }
 #tavern-quests .ow-quest-mark-button {
+  align-self: stretch;
+  height: auto;
   padding: 0;
   border: 0;
   background: transparent;
   cursor: pointer;
 }
+@media (pointer: coarse) {
+  #tavern-quests .ow-quest-mark-slot,
+  #tavern-quests .ow-quest-mark-button {
+    flex-basis: 36px;
+  }
+}
 #tavern-quests .ow-quest-marker {
+  flex: none;
   width: 18px;
   height: 18px;
   opacity: 0;
@@ -620,9 +686,9 @@ body.in-adventure #daily-hud {
   justify-content: center;
   min-height: 40px;
   padding: 6px 13px;
-  border: 1px solid rgba(202, 177, 126, 0.58);
-  background: linear-gradient(180deg, rgba(176, 140, 82, 0.16), rgba(43, 34, 22, 0.24));
-  color: #f0dfbc;
+  border: 1px solid rgba(212, 210, 200, 0.48);
+  background: linear-gradient(180deg, rgba(211, 207, 196, 0.12), rgba(38, 36, 32, 0.24));
+  color: #e4e1d8;
   font: inherit;
   line-height: 1.5;
   text-align: center;
@@ -633,9 +699,9 @@ body.in-adventure #daily-hud {
     color 140ms ease;
 }
 #tavern-quests .ow-quest-primary:hover:enabled {
-  border-color: rgba(231, 209, 164, 0.88);
-  background: linear-gradient(180deg, rgba(196, 159, 98, 0.24), rgba(72, 53, 30, 0.34));
-  color: #fff8e8;
+  border-color: rgba(236, 233, 224, 0.8);
+  background: linear-gradient(180deg, rgba(226, 222, 210, 0.2), rgba(58, 54, 47, 0.34));
+  color: #fff;
 }
 #tavern-quests .skyrim-quick-pick:disabled,
 #tavern-quests .ow-quest-primary:disabled {
@@ -657,34 +723,46 @@ body.in-adventure #daily-hud {
   min-height: 0;
   overflow: auto;
   overscroll-behavior: contain;
-  padding: 22px clamp(20px, 5vw, 68px);
-  background: radial-gradient(ellipse at 50% 0%, rgba(223, 221, 213, 0.045), transparent 68%);
+  padding: 28px 24px;
+  background:
+    repeating-linear-gradient(
+      115deg,
+      rgba(255, 253, 245, 0.009) 0 1px,
+      rgba(0, 0, 0, 0.012) 1px 3px
+    ),
+    radial-gradient(ellipse at 50% 0%, rgba(223, 221, 213, 0.045), transparent 68%);
 }
 #tavern-quests .skyrim-folio {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   align-content: start;
   gap: 16px;
   width: min(100%, 680px);
   min-height: 100%;
   margin-inline: auto;
-  padding-block: clamp(12px, 4vh, 40px);
   animation: quest-folio-settle 180ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
-#tavern-quests .ow-quest-header-wash {
+#tavern-quests .ow-quest-folio-head {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: clamp(8px, 1.5vw, 12px);
+}
+#tavern-quests .ow-quest-folio-head::before {
   position: absolute;
   z-index: -1;
   inset: -32px 0;
-  pointer-events: none;
   background: radial-gradient(
     ellipse 46% 66% at center,
     rgba(238, 226, 196, 0.11) 0%,
     rgba(224, 210, 176, 0.05) 42%,
-    rgba(216, 200, 164, 0) 74%
+    transparent 74%
   );
+  content: '';
+  pointer-events: none;
 }
 #tavern-quests .ow-quest-crest {
-  position: relative;
-  isolation: isolate;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -698,9 +776,9 @@ body.in-adventure #daily-hud {
   --quest-wing-subtle: rgba(227, 224, 218, 0.62);
   --quest-wing-fill: #eae9e5;
   flex: 0 1 auto;
-  width: clamp(54px, 10vw, 138px);
+  width: clamp(34px, 10vw, 68px);
   min-width: 32px;
-  height: clamp(20px, 3.8vw, 46px);
+  height: clamp(12px, 3.5vw, 24px);
   overflow: visible;
   filter: drop-shadow(0 1px 3px rgba(12, 12, 11, 0.95))
     drop-shadow(0 0 7px rgba(236, 234, 230, 0.16));
@@ -771,9 +849,9 @@ body.in-adventure #daily-hud {
   flex-wrap: wrap;
   align-items: center;
   justify-content: center;
-  gap: 5px 7px;
+  gap: 4px 14px;
   margin: 0;
-  color: #b8b5ad;
+  color: rgba(205, 203, 196, 0.76);
   font:
     400 11px/1.45 system-ui,
     'Microsoft YaHei',
@@ -782,15 +860,19 @@ body.in-adventure #daily-hud {
   text-align: center;
 }
 #tavern-quests .ow-quest-meta > span {
-  padding: 2px 8px;
-  border: 1px solid rgba(202, 177, 126, 0.38);
-  background: rgba(40, 32, 21, 0.25);
-  color: #d5c39e;
+  position: relative;
+  padding-block: 2px;
   white-space: nowrap;
 }
-#tavern-quests .ow-quest-meta > .is-pending {
-  border-color: rgba(117, 156, 122, 0.35);
-  color: #a9c8ae;
+#tavern-quests .ow-quest-meta > span + span::before {
+  position: absolute;
+  inset-inline-start: -8px;
+  top: 50%;
+  width: 3px;
+  height: 3px;
+  background: rgba(212, 210, 203, 0.52);
+  content: '';
+  transform: translateY(-50%) rotate(45deg);
 }
 #tavern-quests .ow-quest-seal {
   display: flex;
@@ -916,8 +998,8 @@ body.in-adventure #daily-hud {
   align-items: center;
   gap: 18px;
   min-width: 0;
-  min-height: 50px;
-  padding: 5px 18px max(5px, env(safe-area-inset-bottom));
+  min-height: 46px;
+  padding: 0 36px env(safe-area-inset-bottom);
   overflow-x: auto;
   background:
     linear-gradient(
@@ -977,19 +1059,19 @@ body.in-adventure #daily-hud {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 26px;
-  min-height: 24px;
+  min-width: 22px;
+  min-height: 20px;
   padding: 0 5px;
-  border: 1px solid rgba(215, 213, 205, 0.42);
-  background: rgba(26, 26, 24, 0.86);
-  color: #e7e5de;
+  border: 1px solid rgba(202, 200, 194, 0.56);
+  background: linear-gradient(180deg, rgba(52, 50, 44, 0.85), rgba(23, 22, 18, 0.92));
+  box-shadow:
+    inset 0 1px 0 rgba(241, 240, 240, 0.16),
+    0 1px 2px rgba(12, 12, 11, 0.8);
+  color: #ebeae6;
   font:
     500 10px/1 system-ui,
     'Microsoft YaHei',
     sans-serif;
-}
-#tavern-quests .ow-quest-notice {
-  color: #ddd8cb;
 }
 #skyrim-quest-banner {
   position: fixed;
@@ -1101,6 +1183,9 @@ body.in-adventure #daily-hud {
   }
 }
 @media (min-width: 640px) {
+  #tavern-quests .skyrim-folio-col {
+    padding-inline: 48px;
+  }
   #tavern-quests .ow-quest-list {
     padding-inline-start: 28px;
   }
@@ -1110,22 +1195,44 @@ body.in-adventure #daily-hud {
   #tavern-quests .skyrim-quest-item[data-status='completed'] {
     padding-inline: 16px;
   }
-  #tavern-quests .skyrim-quest-tab {
+  #tavern-quests .skyrim-quest-tab > span {
     font-size: 16px;
   }
-  #tavern-quests .skyrim-quest-item[data-status='completed'] .skyrim-quest-tab {
+  #tavern-quests [data-status='completed'] .skyrim-quest-tab > span {
     font-size: 15.5px;
   }
   #tavern-quests .skyrim-folio-title {
     font-size: 26px;
   }
 }
+@media (min-width: 768px) {
+  #tavern-quests .skyrim-folio-col {
+    padding-block: 48px;
+  }
+  #tavern-quests .ow-quest-wing {
+    width: 112px;
+    height: 40px;
+  }
+}
 @media (min-width: 1024px) {
+  #tavern-quests .skyrim-folio-col {
+    padding-block: clamp(48px, 9vh, 96px);
+    padding-inline: 64px;
+  }
+  #tavern-quests .ow-quest-wing {
+    width: 138px;
+    height: 46px;
+  }
   #tavern-quests .ow-quest-list {
     padding-inline-start: 40px;
   }
   #tavern-quests .skyrim-folio-title {
     font-size: 31px;
+  }
+}
+@media (min-width: 1280px) {
+  #tavern-quests .skyrim-folio-col {
+    padding-inline: 96px;
   }
 }
 @media (max-width: 767px) {
@@ -1144,11 +1251,7 @@ body.in-adventure #daily-hud {
     font-size: 18px;
   }
   #tavern-quests .ow-quest-meta {
-    gap: 4px 5px;
     font-size: 10px;
-  }
-  #tavern-quests .ow-quest-meta > span {
-    padding: 2px 6px;
   }
   #tavern-quests .skyrim-journal-grid {
     grid-template-columns: minmax(0, 1fr);
@@ -1175,10 +1278,6 @@ body.in-adventure #daily-hud {
   #tavern-quests .skyrim-folio {
     gap: 11px;
     padding-block: 4px 14px;
-  }
-  #tavern-quests .ow-quest-wing {
-    width: clamp(34px, 10vw, 68px);
-    height: 30px;
   }
   #tavern-quests .ow-quest-rule.is-objectives {
     margin-block: 3px;

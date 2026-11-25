@@ -243,7 +243,7 @@ export function createDailyInvitation(
     }
   }
 
-  function finish(run, ended) {
+  function finish(run, ended, { animateWorkspaceExit = false } = {}) {
     if (current() !== run) return;
     const member = target(run.member);
     const state = (library().relationships[run.member] ||= {
@@ -282,13 +282,14 @@ export function createDailyInvitation(
         });
     }
     const joined = run.recruitment && ended && recruit(run.member, run);
-    if (!ended && workspace) void context.gal.dismissWorkspace(owner);
-    else context.gal.cancel(owner);
+    const dismissAfterFinish = !ended && animateWorkspaceExit && workspace;
+    if (!dismissAfterFinish) context.gal.cancel(owner);
     complete(
       'invitation',
       `${ended ? '事件结束' : '约见提前结束'} · ${member?.setting.name || '同伴'} · 好感 +${gain}${bonus ? ' · 个人事件完成' : ''}${run.recruitment ? (joined ? ' · 招募成功' : ' · 交涉未通过') : ''}`,
       record,
     );
+    if (dismissAfterFinish) void context.gal.dismissWorkspace(owner);
     if (text) void context.memory.autoSummarize();
     if (ended && text) void prepareTopics(run, member, text);
   }
@@ -583,7 +584,8 @@ export function createDailyInvitation(
   context.events.on(form, 'click', (event) => {
     const run = current();
     if (!run || request || reading) return;
-    if (event.target.closest('[data-invite-end]')) finish(run, false);
+    if (event.target.closest('[data-invite-end]'))
+      finish(run, false, { animateWorkspaceExit: true });
     const choice = event.target.closest('[data-invite-choice]');
     if (choice && !field.disabled) {
       field.value = choice.textContent;

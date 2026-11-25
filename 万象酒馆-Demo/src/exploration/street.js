@@ -180,6 +180,9 @@ export async function createStreetView() {
   }
   if (parent !== window) document.documentElement.dataset.embedded = 'true';
   const citySubmapId = cityForScene(definition.id);
+  const cityVisitorBackdrop =
+    Object.hasOwn(CITIES[citySubmapId]?.places ?? {}, definition.id) &&
+    Object.keys(definition.illustration?.spots ?? {}).length > 0;
   const environment = createSceneEnvironment(document.body);
   const citySubmap = createCityDirectory({
     events,
@@ -498,6 +501,7 @@ export async function createStreetView() {
       y: event.clientY,
       startX: event.clientX,
       startY: event.clientY,
+      visitor: visitors?.pick(event.clientX, event.clientY),
       moved: false,
     };
     canvas.setPointerCapture(event.pointerId);
@@ -506,6 +510,7 @@ export async function createStreetView() {
     if (
       drag ||
       !illustrated ||
+      !visitorActions.hidden ||
       leaving ||
       disposed ||
       event.pointerType === 'touch' ||
@@ -514,12 +519,16 @@ export async function createStreetView() {
       matchMedia('(prefers-reduced-motion: reduce)').matches
     )
       return;
+    // Hold the hover framing over a guest, not over the whole painted street.
+    if (cityVisitorBackdrop && visitors?.pick(event.clientX, event.clientY)) return;
     model?.hover?.((event.clientX / innerWidth - 0.5) * 2, (event.clientY / innerHeight - 0.5) * 2);
     needsRender = true;
   });
   events.on(canvas, 'pointermove', (event) => {
     if (!drag || event.pointerId !== drag.id) return;
-    if (Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY) > 7) drag.moved = true;
+    if (!drag.moved && Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY) <= 7)
+      return;
+    drag.moved = true;
     if (fixed && !illustrated) return;
     if (illustrated) {
       model?.drag((event.clientX - drag.x) / innerWidth, (event.clientY - drag.y) / innerHeight);
@@ -535,10 +544,11 @@ export async function createStreetView() {
     apply();
   });
   events.on(canvas, 'pointerup', (event) => {
-    const tap = drag && drag.id === event.pointerId && !drag.moved;
+    if (!drag || drag.id !== event.pointerId) return;
+    const { moved, visitor: pressedVisitor } = drag;
     drag = null;
-    if (tap) {
-      const visitor = visitors?.pick(event.clientX, event.clientY);
+    if (!moved) {
+      const visitor = pressedVisitor || visitors?.pick(event.clientX, event.clientY);
       if (visitor) {
         if (!Object.hasOwn(GUEST_RECRUITMENT, visitor.id)) return contactVisitor(visitor.id);
         visitorId = visitor.id;
@@ -548,7 +558,7 @@ export async function createStreetView() {
         return;
       }
     }
-    if (!tap || !model) return;
+    if (moved || !model) return;
     ray.setFromCamera(
       new THREE.Vector2(
         (event.clientX / innerWidth) * 2 - 1,
@@ -663,9 +673,6 @@ export async function createStreetView() {
     if (disposed) return { dispose };
     resize();
     // City overviews hide scenery cutouts, not the independently placed visitors.
-    const cityVisitorBackdrop =
-      Object.hasOwn(CITIES[citySubmapId]?.places ?? {}, definition.id) &&
-      Object.keys(definition.illustration?.spots ?? {}).length > 0;
     if (definition.visitors !== false && (!pureBackdrop || cityVisitorBackdrop)) {
       visitors = await createSceneVisitors({
         scene,
@@ -701,6 +708,7 @@ export async function createStreetView() {
       renderer,
       model,
       visitors: () => visitors?.status() ?? { enabled: false, spots: 0, characters: [] },
+      pickVisitor: (x, y) => visitors?.pick(x, y) ?? null,
       definition,
       inspect,
       resetView: () => adjustView('reset'),

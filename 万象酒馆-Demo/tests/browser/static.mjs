@@ -533,7 +533,7 @@ export async function staticChecks({ browser, output }) {
     );
     assert.equal(
       returned.characters.find((member) => member.id === returned.party[0]).growth.revision,
-      8,
+      9,
     );
     assert.notEqual(legacyTechnique.compiledDamage, legacyTechnique.frozenDamage);
     const resumed = await page.evaluate(() => demo.getState().heroDefinitions.aegis);
@@ -556,7 +556,7 @@ export async function staticChecks({ browser, output }) {
     assert.equal(
       persisted.library.characters.find((member) => member.id === persisted.library.party[0]).growth
         .revision,
-      8,
+      9,
     );
     assert.equal(persisted.state.heroDefinitions.aegis.growthRevision, 7);
     assert(returned.scripts.some((entry) => entry.id === unfinished.id));

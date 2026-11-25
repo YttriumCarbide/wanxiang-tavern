@@ -25,6 +25,8 @@
   --ring-meter-size: clamp(92px, min(9vw, calc(var(--ring-card-width) * 0.64)), 126px);
 }
 .ring-feedback.is-award .ring-feedback__meter {
+  isolation: isolate;
+  perspective: 520px;
   box-shadow:
     0 0 22px color-mix(in srgb, var(--ring-glow, #fff0ae) 76%, transparent),
     0 0 48px color-mix(in srgb, var(--ring-jewel, #fff0ae) 32%, transparent),
@@ -34,6 +36,53 @@
 .ring-feedback.is-award .ring-feedback__core {
   width: 30%;
   height: 38%;
+}
+.ring-feedback__artifact {
+  position: absolute;
+  inset: 0;
+  display: block;
+  transform-style: preserve-3d;
+}
+.ring-feedback__artifact::before {
+  position: absolute;
+  inset: 13%;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  background:
+    linear-gradient(#171b1bdd, #171b1bdd) padding-box,
+    conic-gradient(
+        from 206deg,
+        #503b1c,
+        #e2c37e 15%,
+        #79602d 28%,
+        #fff0bf 46%,
+        #685027 63%,
+        #d1ad68 82%,
+        #503b1c
+      )
+      border-box;
+  box-shadow:
+    inset 0 0 0 1px #fff0be66,
+    0 2px 7px #000b,
+    0 0 10px color-mix(in srgb, var(--ring-glow) 58%, transparent);
+  content: '';
+  opacity: 0.84;
+  transform: translateZ(-5px) rotateZ(-13deg) scale(0.94);
+}
+.ring-feedback.is-award[data-phase='flight'] .ring-feedback__artifact {
+  opacity: 0;
+}
+.ring-feedback.is-award[data-phase='land'] .ring-feedback__artifact {
+  animation: ring-feedback-ring-seat var(--ring-phase-duration) cubic-bezier(0.16, 0.82, 0.24, 1)
+    both;
+}
+.ring-feedback.is-award[data-phase='land'] .ring-feedback__meter {
+  animation: ring-feedback-award-land var(--ring-phase-duration) cubic-bezier(0.16, 0.82, 0.24, 1)
+    both;
+}
+.ring-feedback.is-award[data-phase='land'] .ring-feedback__core {
+  animation: ring-feedback-gem-seat var(--ring-phase-duration) cubic-bezier(0.16, 0.82, 0.24, 1)
+    both;
 }
 .ring-feedback.is-award .ring-feedback__cell {
   width: 5px;
@@ -92,13 +141,18 @@
   opacity: 0;
   transition: opacity 290ms ease-out;
 }
-.ring-feedback.is-award:is([data-phase='flight'], [data-phase='charging'], [data-phase='full'])
+.ring-feedback.is-award:is(
+    [data-phase='flight'],
+    [data-phase='land'],
+    [data-phase='charging'],
+    [data-phase='full']
+  )
   .ring-feedback__aperture {
-  opacity: 0.58;
+  opacity: 0.36;
 }
 .ring-feedback__radiance {
-  width: min(82vw, calc(var(--ring-meter-size) * 7));
-  height: min(90vh, calc(var(--ring-meter-size) * 5.6));
+  width: min(72vw, calc(var(--ring-meter-size) * 5.2));
+  height: min(72vh, calc(var(--ring-meter-size) * 4.4));
   background:
     radial-gradient(
       ellipse 15% 19%,
@@ -106,7 +160,7 @@
       transparent 100%
     ),
     radial-gradient(ellipse 45% 3%, var(--ring-light) 3%, transparent 100%),
-    radial-gradient(ellipse 12% 43%, var(--ring-jewel), transparent 100%),
+    radial-gradient(ellipse 12% 43%, var(--ring-reflection, var(--ring-jewel)), transparent 100%),
     radial-gradient(
       ellipse 44% 38%,
       color-mix(in srgb, var(--ring-glow) 64%, transparent),
@@ -137,6 +191,10 @@
 }
 .ring-feedback.is-award[data-phase='flight'] .ring-feedback__radiance {
   animation: ring-feedback-radiance-arrival var(--ring-phase-duration) ease-out both;
+}
+.ring-feedback.is-award[data-phase='land'] .ring-feedback__radiance {
+  opacity: 0.27;
+  transform: translate(-50%, -50%) scale(0.88);
 }
 .ring-feedback.is-award[data-phase='charging'] .ring-feedback__radiance {
   opacity: calc(0.18 + var(--ring-charge-fraction, 0) * 0.43);
@@ -259,7 +317,7 @@
     cubic-bezier(0.28, 0.6, 0.34, 1) both;
 }
 .ring-feedback[data-phase='charging'] .ring-feedback__core {
-  animation: ring-feedback-core-charge 260ms ease-out both;
+  animation: ring-feedback-core-charge var(--ring-charge-duration, 575ms) ease-out both;
 }
 .ring-feedback__rim::after {
   position: absolute;
@@ -401,6 +459,10 @@
 .ring-feedback.is-award[data-phase='flight'] .ring-feedback__focus {
   animation: ring-feedback-focus-in var(--ring-phase-duration) ease-out both;
 }
+.ring-feedback.is-award[data-phase='land'] .ring-feedback__focus {
+  opacity: 0.66;
+  transform: translate(-50%, -50%) scale(0.985);
+}
 .ring-feedback.is-award[data-phase='charging'] .ring-feedback__focus {
   animation: ring-feedback-focus-charge 620ms ease-in-out infinite alternate;
   opacity: 0.66;
@@ -445,6 +507,10 @@
 .ring-feedback.is-award[data-phase='charging'] .ring-feedback__meter::before {
   opacity: calc(var(--ring-charge-fraction, 0) * 0.62);
   transition: opacity 180ms ease-out;
+}
+.ring-feedback.is-award[data-phase='charging'] .ring-feedback__artifact {
+  animation: ring-feedback-artifact-charge var(--ring-charge-duration, 575ms)
+    cubic-bezier(0.2, 0.68, 0.25, 1) both;
 }
 .ring-feedback.is-award[data-phase='full'] .ring-feedback__meter::before {
   animation: ring-feedback-award-wave var(--ring-phase-duration, 580ms) ease-out both;
@@ -491,21 +557,21 @@
 @keyframes ring-feedback-trail-flight {
   from {
     opacity: 0.94;
-    transform: translate(var(--flight-x), calc(var(--flight-y) - 50%)) rotate(var(--trail-angle))
-      scale(0.78, 1);
+    transform: translate(var(--flight-x), calc(var(--flight-y) - 50%))
+      rotate(var(--trail-start-angle, 0rad)) scale(0.78, 1);
   }
   42% {
     opacity: 1;
     transform: translate(var(--flight-mid-x), calc(var(--flight-mid-y) - 50%))
-      rotate(var(--trail-angle)) scale(1, 0.92);
+      rotate(var(--trail-catch-angle, 0rad)) scale(1, 0.92);
   }
   78% {
     opacity: 0.94;
-    transform: translateY(-50%) rotate(var(--trail-angle)) scale(0.58, 1);
+    transform: translateY(-50%) rotate(var(--trail-catch-angle, 0rad)) scale(0.58, 1);
   }
   to {
     opacity: 0;
-    transform: translateY(-50%) rotate(var(--trail-angle)) scale(0.16, 0.42);
+    transform: translateY(-50%) rotate(var(--trail-catch-angle, 0rad)) scale(0.16, 0.42);
   }
 }
 @keyframes ring-feedback-radiance-arrival {
@@ -521,6 +587,71 @@
   100% {
     opacity: 0.26;
     transform: translate(-50%, -50%);
+  }
+}
+@keyframes ring-feedback-ring-seat {
+  0% {
+    opacity: 0.08;
+    transform: rotateX(72deg) rotateY(-24deg) rotateZ(-58deg) scale(0.62);
+  }
+  56% {
+    opacity: 1;
+    transform: rotateX(-12deg) rotateY(9deg) rotateZ(9deg) scale(1.12);
+  }
+  78% {
+    opacity: 1;
+    transform: rotateX(5deg) rotateY(-4deg) rotateZ(-3deg) scale(0.97);
+  }
+  100% {
+    opacity: 1;
+    transform: rotateX(0) rotateY(0) rotateZ(0) scale(1);
+  }
+}
+@keyframes ring-feedback-award-land {
+  from {
+    opacity: 0.54;
+    transform: translate(-50%, -50%) scale(0.92);
+  }
+  58% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.08);
+    filter: brightness(1.42);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+    filter: brightness(1);
+  }
+}
+@keyframes ring-feedback-gem-seat {
+  0% {
+    opacity: 0.12;
+    filter: brightness(0.8) drop-shadow(0 0 1px var(--ring-glow));
+    transform: translate(-50%, -50%) rotateX(72deg) scale(0.28);
+  }
+  62% {
+    opacity: 1;
+    filter: brightness(1.85) drop-shadow(0 0 10px var(--ring-light));
+    transform: translate(-50%, -50%) rotateX(-9deg) scale(1.22);
+  }
+  to {
+    opacity: 1;
+    filter: brightness(1) drop-shadow(0 0 4px var(--ring-glow));
+    transform: translate(-50%, -50%) rotateX(0) scale(1);
+  }
+}
+@keyframes ring-feedback-artifact-charge {
+  0% {
+    transform: scale(0.97);
+    filter: brightness(0.86);
+  }
+  72% {
+    transform: scale(1.035);
+    filter: brightness(1.18);
+  }
+  to {
+    transform: scale(1);
+    filter: brightness(1);
   }
 }
 @keyframes ring-feedback-radiance-release {
@@ -718,6 +849,7 @@
   .ring-feedback[data-phase]
     :is(
       .ring-feedback__meter,
+      .ring-feedback__artifact,
       .ring-feedback__trail,
       .ring-feedback__sweep,
       .ring-feedback__rim,

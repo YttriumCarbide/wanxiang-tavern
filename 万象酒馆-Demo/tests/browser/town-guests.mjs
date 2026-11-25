@@ -9,8 +9,13 @@ export async function townGuestChecks({ browser, baseURL, output }) {
   const page = await browser.newPage({ viewport: { width: 1440, height: 836 } });
   const errors = [];
   page.on('pageerror', (error) => errors.push(error.message));
-  await legacySession(page, { unlockSilverCrownTavern: true });
-  await page.route('**/api/ai/generate/chat', async (route) => {
+  await legacySession(page, { unlockSilverCrownTavern: true, enableAi: true });
+  await page.route('**/api/ai/generate/*', async (route) => {
+    const endpoint = new URL(route.request().url()).pathname;
+    if (endpoint !== '/api/ai/generate/chat') {
+      errors.push('Unexpected AI request: ' + endpoint);
+      return route.abort();
+    }
     const input = route.request().postDataJSON();
     const reply =
       '【环境】本轮交流的地点开头来自银工连廊。【环境结束】【对白:露弥】我们就在这条廊道上聊聊吧。';
@@ -162,7 +167,11 @@ export async function townGuestChecks({ browser, baseURL, output }) {
     }
     await page.screenshot({ path: path.join(output, 'unrecruited-town-guests.png') });
 
-    const guestPoint = await frame.locator('canvas').evaluate(async (canvas, key) => {
+    await page.waitForFunction(() => {
+      const view = document.querySelector('#inn-frame iframe')?.contentWindow?.streetPreview;
+      return view && !view.state().moving;
+    });
+    const guestTarget = await frame.locator('canvas').evaluate(async (canvas, key) => {
       const THREE = await import('/vendor/build/three.module.js');
       const view = window.streetPreview;
       let mesh = null;
@@ -195,17 +204,42 @@ export async function townGuestChecks({ browser, baseURL, output }) {
             .applyMatrix4(mesh.matrixWorld)
             .project(view.camera);
           if (point.z < -1 || point.z > 1) continue;
-          const localX = ((point.x + 1) / 2) * rect.width - rect.left;
-          const localY = ((1 - point.y) / 2) * rect.height - rect.top;
-          if (localX >= 0 && localX < rect.width && localY >= 0 && localY < rect.height)
-            return { x: localX, y: localY };
+          const localX = ((point.x + 1) / 2) * rect.width;
+          const localY = ((1 - point.y) / 2) * rect.height;
+          if (localX < 0 || localX >= rect.width || localY < 0 || localY >= rect.height) continue;
+          const hit = view.pickVisitor(localX + rect.left, localY + rect.top);
+          if (hit?.key === key) return { point: { x: localX, y: localY }, hit: hit.key };
         }
       }
       throw Error(`Could not find a visible click point on ${key}`);
     }, townGuest.key);
-    await frame.locator('canvas').click({ position: guestPoint, timeout: 5000 });
-    await frame.locator('[data-visitor-talk]').waitFor({ state: 'visible', timeout: 5000 });
-    await frame.locator('[data-visitor-talk]').click();
+    assert.equal(
+      guestTarget.hit,
+      townGuest.key,
+      'the click target is confirmed by the street visitors canvas hit-test',
+    );
+    const backdropBeforeGuestHover = await frame
+      .locator('canvas')
+      .evaluate(() => window.streetPreview.state().framing);
+    await frame.locator('canvas').hover({ position: guestTarget.point, timeout: 5000 });
+    await page.waitForTimeout(180);
+    const backdropAfterGuestHover = await frame
+      .locator('canvas')
+      .evaluate(() => window.streetPreview.state().framing);
+    assert(
+      Math.abs(backdropAfterGuestHover.x - backdropBeforeGuestHover.x) < 0.003 &&
+        Math.abs(backdropAfterGuestHover.y - backdropBeforeGuestHover.y) < 0.003,
+      'hovering a visible visitor keeps the city illustration anchored for interaction',
+    );
+    await frame.locator('canvas').click({ position: guestTarget.point, timeout: 5000 });
+    const visitorTalk = frame.locator('[data-visitor-talk]');
+    await visitorTalk.waitFor({ state: 'visible', timeout: 5000 });
+    assert.equal(
+      await visitorTalk.isVisible(),
+      true,
+      'clicking a visible Silver Crown street guest shows the exchange action',
+    );
+    await visitorTalk.click();
 
     const chat = page.locator('#gal-stage[data-workspace="chat"]');
     await chat.waitFor({ state: 'visible', timeout: 10000 });
@@ -238,9 +272,8 @@ export async function townGuestChecks({ browser, baseURL, output }) {
         Promise.all(node.getAnimations().map((animation) => animation.finished.catch(() => {}))),
       );
     const chatSend = chat.locator('#chat-send');
-    assert.equal(await chatSend.isEnabled(), true, 'the city chat composer is ready');
     await chat.locator('#chat-input').fill('看看眼前的长廊');
-    await chat.locator('#chat-send').click();
+    await chatSend.click();
     const environment = chat.locator('.scene-environment');
     await page.waitForFunction(
       () => {

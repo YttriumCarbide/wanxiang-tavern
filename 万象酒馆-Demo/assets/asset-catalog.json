@@ -1983,7 +1983,7 @@
     },
     "assets/portraits/corridor-guard.svg": {
       "bytes": 4511,
-      "hash": "e40ed2e5d3507857358236b27fa99e064db6b6e9dd64ba92826855b6769aa12c"
+      "hash": "884c601afb0d2e9a13382509a4239ac87ea9e0fbd591d165c89517bc4253196c"
     },
     "assets/portraits/crystal-beetle.svg": {
       "bytes": 20271,
@@ -2111,7 +2111,7 @@
     },
     "assets/portraits/facet-skitter.svg": {
       "bytes": 9195,
-      "hash": "4c104d1476cade22e06068cc5571b91e19cb68b3c7708582227e2e55cc9bbbd9"
+      "hash": "509c01afa8a874e3208b3740993c27e72ddf26fae663ae1cb75473392b147dd1"
     },
     "assets/portraits/fog-spore.svg": {
       "bytes": 21405,
@@ -2175,7 +2175,7 @@
     },
     "assets/portraits/hollow-sentry.svg": {
       "bytes": 10240,
-      "hash": "9d5b4b31f91133cfa26c822c313ae55eb9770c50517770c9bc6330c265c87a35"
+      "hash": "413de6dbc91b6b3a236952de6fbd980931d425fd168a085d473a047ce78193d5"
     },
     "assets/portraits/honey-larva.svg": {
       "bytes": 8970,
@@ -2331,7 +2331,7 @@
     },
     "assets/portraits/oathless-duelist.svg": {
       "bytes": 15967,
-      "hash": "06a37e8e6baf2af545d864ff7c19e30d891187e8bd0bda55786764cbb165f9e1"
+      "hash": "7ef9edf1831c0aa4205e89034699ae6d9dddb610cba58665fbe44bb4594fb052"
     },
     "assets/portraits/ore-mite.svg": {
       "bytes": 9482,
@@ -2418,8 +2418,8 @@
       "hash": "d4176660e010f3874b95dacd576247be24be8b3e0fa3ac3998f31dd0bb258cd3"
     },
     "assets/portraits/ruins-mud-golem.svg": {
-      "bytes": 4760,
-      "hash": "a05d92268fd213fc382b9f075127707bb8bb710d3c8905cad144aae66098e57c"
+      "bytes": 4757,
+      "hash": "843aa1181fbeebc4af3806fd34bc4e9124b9961423b8f9a10c1066e69d4e6fb8"
     },
     "assets/portraits/rust-miner.svg": {
       "bytes": 6724,
