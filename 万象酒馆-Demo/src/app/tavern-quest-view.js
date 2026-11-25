@@ -179,6 +179,83 @@ function journalCommands(quest, trackedId, { claimingId, accepting, acceptDisabl
   return `${primary}${track}${map}`;
 }
 
+const QUEST_JOURNAL_STYLE = `<style data-quest-journal-style>
+  #tavern-quests {
+    width: min(1600px, calc(100vw - 28px));
+    height: min(940px, calc(100dvh - 28px));
+    background-image:
+      repeating-linear-gradient(115deg, rgba(255, 253, 245, 0.012) 0 1px, rgba(0, 0, 0, 0.014) 1px 3px),
+      linear-gradient(180deg, rgba(18, 17, 15, 0.36), rgba(12, 11, 10, 0.42));
+  }
+
+  #tavern-quests .skyrim-head {
+    background-image:
+      repeating-linear-gradient(115deg, rgba(255, 253, 245, 0.016) 0 1px, rgba(0, 0, 0, 0.018) 1px 3px),
+      radial-gradient(ellipse 42% 120% at 50% -18%, rgba(232, 214, 176, 0.085), transparent 72%),
+      linear-gradient(180deg, rgba(9, 8, 7, 0.86), rgba(15, 14, 12, 0.62) 68%, rgba(17, 16, 13, 0.3));
+  }
+
+  #tavern-quests .skyrim-index-col {
+    background-image:
+      repeating-linear-gradient(115deg, rgba(255, 253, 245, 0.012) 0 1px, rgba(0, 0, 0, 0.016) 1px 3px),
+      linear-gradient(90deg, rgba(11, 10, 8, 0.74), rgba(12, 11, 9, 0.62) 78%, rgba(13, 12, 10, 0.46));
+  }
+
+  #tavern-quests .skyrim-folio-col {
+    background-image:
+      repeating-linear-gradient(115deg, rgba(255, 253, 245, 0.009) 0 1px, rgba(0, 0, 0, 0.012) 1px 3px),
+      radial-gradient(ellipse at 50% 0%, rgba(223, 221, 213, 0.045), transparent 68%);
+  }
+
+  #tavern-quests .ow-quest-meta {
+    gap: 4px 14px;
+    color: rgba(205, 203, 196, 0.76);
+    letter-spacing: 0.075em;
+  }
+
+  #tavern-quests .ow-quest-meta > span {
+    position: relative;
+    padding: 2px 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+  }
+
+  #tavern-quests .ow-quest-meta > span + span::before {
+    position: absolute;
+    inset-inline-start: -8px;
+    top: 50%;
+    width: 3px;
+    height: 3px;
+    background: rgba(212, 210, 203, 0.52);
+    content: '';
+    transform: translateY(-50%) rotate(45deg);
+  }
+
+  #tavern-quests .ow-quest-meta > .is-pending {
+    color: #b8b5ad;
+  }
+
+  #tavern-quests .ow-quest-primary {
+    border-color: rgba(212, 210, 200, 0.48);
+    background: linear-gradient(180deg, rgba(211, 207, 196, 0.12), rgba(38, 36, 32, 0.24));
+    color: #e4e1d8;
+  }
+
+  #tavern-quests .ow-quest-primary:hover:enabled {
+    border-color: rgba(236, 233, 224, 0.8);
+    background: linear-gradient(180deg, rgba(226, 222, 210, 0.2), rgba(58, 54, 47, 0.34));
+    color: #fff;
+  }
+
+  @media (max-width: 767px) {
+    #tavern-quests {
+      width: calc(100vw - 12px);
+      height: calc(100dvh - 12px);
+    }
+  }
+</style>`;
+
 export function renderQuestJournal({
   groups,
   selected,
@@ -198,7 +275,7 @@ export function renderQuestJournal({
           .join('')}</ul>`,
     )
     .join('');
-  return `<header class="skyrim-head">
+  return `${QUEST_JOURNAL_STYLE}<header class="skyrim-head">
       <h2 id="tavern-quests-title">任务日志</h2>
       <button type="button" class="quests-close" data-quest-focus="close" aria-label="关闭任务日志">×</button>
     </header>
