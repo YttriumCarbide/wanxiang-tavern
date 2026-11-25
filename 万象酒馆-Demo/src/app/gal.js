@@ -401,6 +401,13 @@ export function createGalPlayer(context) {
     stage = [];
     return true;
   }
+  async function dismissWorkspace(owner) {
+    const closing = workspace.active;
+    if (current || (owner && closing?.owner !== owner) || panel.dataset.leaving === 'true') return;
+    if (!(await animateExit()) || workspace.active !== closing) return;
+    workspace.close();
+    hide();
+  }
   async function finish(completed = true, closeWorkspace = false) {
     if (!current) return;
     const job = current;
@@ -711,13 +718,7 @@ export function createGalPlayer(context) {
         if (current) void finish(true).then(() => workspace.collapse(true));
         else workspace.collapse(true);
       } else if (current) void finish(true, true);
-      else if (panel.dataset.leaving !== 'true')
-        void animateExit().then((exited) => {
-          if (exited) {
-            workspace.close();
-            hide();
-          }
-        });
+      else void dismissWorkspace();
     }
     if (action === 'back' && current) {
       auto = skip = false;
@@ -901,6 +902,7 @@ export function createGalPlayer(context) {
       stage = selectedGalStage(ids, cast, context.session.ai.library.campaign?.protagonistId);
       renderCast(null);
     },
+    dismissWorkspace,
     collapseComposer(value) {
       workspace.collapse(value);
     },

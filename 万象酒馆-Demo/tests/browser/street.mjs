@@ -114,7 +114,7 @@ export async function streetChecks({ browser, baseURL, output }) {
     await page.goto(baseURL + '/street.html');
     await settled();
     const initial = await snapshot();
-    assert.equal(initial.roster.length, 0);
+    assert.equal(initial.roster.length, 2, 'the city-center panorama has two placed visitors');
     assert(Math.abs(initial.aspect - 16 / 9) < 0.02, 'city overview keeps native 16:9 aspect');
     assert.equal(await page.locator('.street-controls').count(), 0);
     assert.equal((await page.locator('#street-return').innerText()).trim(), '返回酒馆');

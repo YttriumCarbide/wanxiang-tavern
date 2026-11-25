@@ -288,7 +288,10 @@ async function verifyCityTalkPlace(page, placeId, title) {
   await guidance.waitFor();
   assert.match(await guidance.innerText(), /建议选择不超过两位/);
   const participants = people.locator('#chat-participants input[type="checkbox"]');
-  assert((await participants.count()) >= 3, 'chat focus guidance does not hide available companions');
+  assert(
+    (await participants.count()) >= 3,
+    'chat focus guidance does not hide available companions',
+  );
   assert.equal(await participants.locator(':disabled').count(), 0);
   for (const participant of await participants.all()) {
     if (await participant.isChecked()) await participant.uncheck();

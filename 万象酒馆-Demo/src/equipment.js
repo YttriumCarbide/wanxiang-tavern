@@ -50,6 +50,7 @@ export {
   EQUIPMENT_AFFIX_QUALITY_ORDER,
   addEquipmentAffix,
   refreshEquipmentAffixes,
+  smithEquipmentAffix,
   equipmentAffixCost,
   equipmentAffixStatBonus,
   equipmentInstanceView,

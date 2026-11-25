@@ -210,5 +210,6 @@ export function cityChatPlace(place) {
   const placeId = cityPlaceId(place === 'city-square' ? 'city-center' : place);
   if (!cityForScene(placeId)) return null;
   const chatId = Object.hasOwn(CHAT_PLACES, place) ? place : chatPlaceForScene(placeId);
-  return chatId ? { placeId, title: CHAT_PLACES[chatId].name } : null;
+  const location = chatId && CHAT_PLACES[chatId];
+  return location ? { placeId, title: location.name, text: location.environment } : null;
 }

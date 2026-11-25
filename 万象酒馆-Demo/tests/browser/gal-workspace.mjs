@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import { legacySession } from './legacy-session.mjs';
+import { armDialogExitProbe } from './dialog-motion.mjs';
 import { combatTestScript } from '../../src/content/generation-mode.js';
 import { tavernPresetFixture } from '../fixtures/ai.js';
 import { newLibrary, officialCharacter } from '../../src/ai/library.js';
@@ -393,71 +394,48 @@ export async function galWorkspaceChecks({ browser, baseURL, output }) {
       }));
     await gearRow.click();
     await picker.waitFor({ state: 'visible' });
-    const pickerCycle = await page.evaluate(() => {
-      const panel = document.querySelector('#equipment-picker');
-      const opener = document.querySelectorAll('#party-panel .prepare-gear-row')[2];
-      const motionSupported =
-        CSS.supports('overlay: auto') &&
-        CSS.supports('transition-behavior: allow-discrete') &&
-        CSS.supports('interactivity: inert');
-      document.querySelector('#equipment-picker [data-picker-close]').click();
-      const exit = {
-        open: panel.open,
-        modal: panel.matches(':modal'),
-        inert: panel.inert,
-        display: getComputedStyle(panel).display,
-        pointerEvents: getComputedStyle(panel).pointerEvents,
-        backdropPointerEvents: getComputedStyle(panel, '::backdrop').pointerEvents,
-        focusReturned: document.activeElement.matches('.prepare-gear-row'),
-        opacityTransition: panel
-          .getAnimations()
-          .some((animation) => animation.transitionProperty === 'opacity'),
-        motionSupported,
-      };
-      opener.click();
-      return {
-        exit,
-        reopened: {
-          open: panel.open,
-          modal: panel.matches(':modal'),
-          inert: panel.inert,
-        },
-      };
+    await page.waitForFunction(() => {
+      const picker = document.querySelector('#equipment-picker[open]');
+      return picker && getComputedStyle(picker).opacity === '1';
     });
-    assert.equal(
-      pickerCycle.exit.open,
-      false,
-      'closing releases the native open state immediately',
-    );
-    assert.equal(
-      pickerCycle.exit.modal,
-      false,
-      'closing releases modality before the exit paint ends',
-    );
-    assert.equal(pickerCycle.exit.inert, true, 'the exiting picker cannot receive keyboard focus');
-    assert.equal(
-      pickerCycle.exit.focusReturned,
-      true,
-      'closing returns focus to its equipment row',
-    );
-    if (pickerCycle.exit.motionSupported) {
-      assert.notEqual(
-        pickerCycle.exit.display,
-        'none',
-        'the exit remains painted without modality',
+    const motionSupported = await armDialogExitProbe(picker);
+    await picker.getByRole('button', { name: '关闭窗口' }).click();
+    const pickerExit = await picker.evaluate((panel) => ({
+      open: panel.open,
+      modal: panel.matches(':modal'),
+      inert: panel.inert,
+      display: getComputedStyle(panel).display,
+      pointerEvents: getComputedStyle(panel).pointerEvents,
+      backdropPointerEvents: getComputedStyle(panel, '::backdrop').pointerEvents,
+      focusReturned: document.activeElement.matches('.prepare-gear-row'),
+    }));
+    assert.equal(pickerExit.open, false, 'closing releases the native open state immediately');
+    assert.equal(pickerExit.modal, false, 'closing releases modality before the exit paint ends');
+    assert.equal(pickerExit.inert, true, 'the exiting picker cannot receive keyboard focus');
+    assert.equal(pickerExit.focusReturned, true, 'closing returns focus to its equipment row');
+    if (motionSupported) {
+      assert.notEqual(pickerExit.display, 'none', 'the exit remains painted without modality');
+      assert.equal(pickerExit.pointerEvents, 'none');
+      assert.equal(pickerExit.backdropPointerEvents, 'none');
+      await page.waitForFunction(() =>
+        document
+          .querySelector('#equipment-picker')
+          ?.getAttribute('data-test-dialog-exit-properties')
+          ?.split(' ')
+          .includes('opacity'),
       );
-      assert.equal(pickerCycle.exit.pointerEvents, 'none');
-      assert.equal(pickerCycle.exit.backdropPointerEvents, 'none');
-      assert.equal(
-        pickerCycle.exit.opacityTransition,
-        true,
-        'the dedicated dialog exit is running',
-      );
+      await picker.evaluate((panel) => panel.removeAttribute('data-test-dialog-exit-properties'));
     }
+    await gearRow.click();
+    const pickerReopened = await picker.evaluate((panel) => ({
+      open: panel.open,
+      modal: panel.matches(':modal'),
+      inert: panel.inert,
+    }));
     assert.deepEqual(
-      pickerCycle.reopened,
+      pickerReopened,
       { open: true, modal: true, inert: false },
-      'reopening during exit restores the native modal and focusable state',
+      'reopening restores the native modal and focusable state after the exit',
     );
     await picker.evaluate((panel) =>
       Promise.all(
@@ -528,7 +506,7 @@ export async function galWorkspaceChecks({ browser, baseURL, output }) {
     await page.locator('[data-prepare-exchange]').click();
     assert(await page.locator('#forge-refine').isDisabled());
     assert(await page.locator('#forge-config').isDisabled());
-    await page.locator('[data-buy-equipment]').click();
+    await page.locator('#forge-redeem').click();
     assert.equal(await page.evaluate(() => demo.getLibrary().equipment.owned.length), 2);
     await page.locator('[data-forge-close]').click();
     await page.locator('[data-prepare-slot="0"]').click();

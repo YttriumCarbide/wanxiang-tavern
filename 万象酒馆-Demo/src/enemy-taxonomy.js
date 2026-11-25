@@ -93,6 +93,10 @@ const OFFICIAL_BASE_SPECIES = Object.freeze({
 });
 
 export const ENEMY_DISPLAY_NAME_OVERRIDES = Object.freeze({
+  corridorGuard: '回廊魔像',
+  ruinsMudGolem: '泥石魔像',
+  hollowSentry: '空壳魔像',
+  oathlessDuelist: '无誓剑士',
   mossSlime: '苔藓史莱姆',
   blackOoze: '黑液史莱姆',
   sprout: '腐木魔菇',
@@ -135,6 +139,10 @@ export const ENEMY_DISPLAY_NAME_OVERRIDES = Object.freeze({
 });
 
 export const ENEMY_LEGACY_DISPLAY_NAME_OVERRIDES = Object.freeze({
+  corridorGuard: '回廊石卫',
+  ruinsMudGolem: '灰石泥傀儡',
+  hollowSentry: '空壳哨兵',
+  oathlessDuelist: '无誓行者',
   mossSlime: '苔团',
   blackOoze: '黑液幼体',
   sprout: '迷路小蕈',

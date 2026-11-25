@@ -45,7 +45,7 @@ export const RUINS_ROUTES = Object.freeze([
       },
       {
         enemyIds: ['corridorGuard', 'stoneBallista'],
-        reason: '精英回廊石卫亲率机关弩阵死守内门前庭，压迫感显著提升。',
+        reason: '精英回廊魔像亲率机关弩阵死守内门前庭，压迫感显著提升。',
       },
       {
         enemyIds: ['stoneBallista', 'pebble'],

@@ -391,6 +391,22 @@ test('city market and black market arenas and miniature previews keep six cards,
       assert(tidalSlip.min[2] < -0.5 && tidalSlip.max[2] > 0.5, 'Water fills the channel');
       assert(tidalSlip.max[1] < 0, 'The water stays below the battle decks');
 
+      const quarry = await readGlb('graystone-quarry.glb');
+      const quarryTrackNode = quarry.gltf.nodes.find(
+        ({ name }) => name === '04_Center_Track_And_Ring',
+      );
+      assert(quarryTrackNode, 'graystone-quarry: missing center track geometry');
+      const quarryTrack =
+        quarry.gltf.accessors[
+          quarry.gltf.meshes[quarryTrackNode.mesh].primitives[0].attributes.POSITION
+        ];
+      assert(
+        quarryTrack.min[2] < 0 &&
+          quarryTrack.max[2] > 0 &&
+          tidalSlip.max[1] < quarryTrack.min[1] - 0.12,
+        'Black Market has a recessed channel; Graystone Quarry has raised center rails',
+      );
+
       const { gltf: template } = await readGlb('battle.glb');
       const transforms = (model) =>
         cardAnchors(model).map(({ name, translation, rotation, scale }) => ({

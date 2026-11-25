@@ -4,7 +4,7 @@ import { normalizeInvitationTurn } from '../../invitation.js';
 import { BODY_TAGS, OUTPUT_TAG, QUEST_LEAD_TYPES } from '../output-protocol.js';
 import { normalizeQuestLead } from '../../tavern-quests.js';
 import { cityChatPlace } from '../../chat-places.js';
-import { splitSceneEnvironment } from '../../scene-environment.js';
+import { normalizeSceneEnvironment, splitSceneEnvironment } from '../../scene-environment.js';
 import {
   DC_SPLIT_MARKER,
   normalizeDcTurnOutcome,
@@ -82,12 +82,11 @@ export async function chatResponse(kind, content, scriptsOrInput = {}, legacyInp
     if (bodies.length > 1) throw Error(`回复正文需要唯一一组${OUTPUT_TAG}标签`);
     const body = bodies[0];
     if (!body.content.trim()) throw Error(`${OUTPUT_TAG}标签内的正文不能为空`);
-    const lead = splitSceneEnvironment(
-      body.content.trim(),
-      kind === 'chat' ? cityChatPlace(input.place) : null,
-    );
+    const cityPlace = kind === 'chat' ? cityChatPlace(input.place) : null;
+    const lead = splitSceneEnvironment(body.content.trim(), cityPlace);
     text = lead.content;
-    environment = lead.environment;
+    // Preserve valid dialogue if the model omitted the lead; use the current place's existing description.
+    environment = lead.environment ?? normalizeSceneEnvironment(cityPlace);
     if (input.questOffer) {
       try {
         const leads = readOutputTags(content, [{ tag: 'wanxiang_quest', json: true }]);

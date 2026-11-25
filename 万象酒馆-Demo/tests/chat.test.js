@@ -345,7 +345,16 @@ test('city chat separates one valid opening environment block and preserves dial
     ['quick-chat', 'city-square', lead + prose, '环境测试。\n第二行。' + prose],
   ]) {
     const result = await chatResponse(kind, output(body), { ...input, place });
-    assert.equal(result.environment, undefined);
+    assert.deepEqual(
+      result.environment,
+      kind === 'chat' && place === 'city-square'
+        ? {
+            placeId: 'city-center',
+            title: CHAT_PLACES[place].name,
+            text: CHAT_PLACES[place].environment,
+          }
+        : undefined,
+    );
     assert.equal(result.content, expectedText);
   }
 });

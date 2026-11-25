@@ -114,16 +114,22 @@ function questDetail(quest, location, objectives) {
     ...objectives.filter(({ done }) => done),
   ];
   const type = QUEST_TYPES[quest.type] || '委托';
-  const status = completed ? '' : quest.status === 'offered' ? ' · 待接取' : '';
+  const offered = quest.status === 'offered';
   return `<article class="skyrim-folio${completed ? ' is-completed' : ''}" data-quest-detail="${escapeText(quest.id)}">
+    <p class="ow-quest-meta" aria-label="委托类型与等级">
+      <span>${escapeText(type)}</span>
+      ${quest.rank ? `<span>${escapeText(quest.rank)} 级</span>` : ''}
+      <span>建议 Lv.${escapeText(quest.level || 1)}</span>
+      ${offered ? '<span class="is-pending">待接取</span>' : ''}
+    </p>
     <div class="ow-quest-crest">
+      <span class="ow-quest-header-wash" aria-hidden="true"></span>
       ${crestWing()}
       <h3 class="skyrim-folio-title">${escapeText(quest.title)}</h3>
       ${crestWing(true)}
     </div>
     ${questRule('title')}
     ${completed ? '<p class="ow-quest-seal"><i aria-hidden="true"></i>已完成<i aria-hidden="true"></i></p>' : ''}
-    <p class="ow-quest-meta">${escapeText(type)}${quest.rank ? ` · ${escapeText(quest.rank)} 级` : ''} · 建议 Lv.${escapeText(quest.level || 1)}${status}</p>
     <p class="skyrim-folio-desc">${escapeText(quest.description)}</p>
     ${location ? `<p class="ow-quest-location">目标地点：${escapeText(location)}</p>` : ''}
     ${
@@ -207,8 +213,9 @@ export function renderQuestJournal({
     </div>
     <footer class="skyrim-keybar">
       <button type="button" data-quest-open-guild data-quest-focus="guild">冒险者公会</button>
-
-      ${selected ? '<span class="ow-quest-keyhint" aria-hidden="true"><kbd>↑/↓ · W/S</kbd> 选择</span>' : ''}
-      <div class="ow-quest-commands">${journalCommands(selected, trackedId, { claimingId, accepting, acceptDisabled })}</div>
+      <div class="ow-quest-commands">
+        ${journalCommands(selected, trackedId, { claimingId, accepting, acceptDisabled })}
+        ${selected ? '<span class="ow-quest-keyhint" aria-hidden="true"><kbd>↑/↓ · W/S</kbd> 选择</span>' : ''}
+      </div>
     </footer>`;
 }

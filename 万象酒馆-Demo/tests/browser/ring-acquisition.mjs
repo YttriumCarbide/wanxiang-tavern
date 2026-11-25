@@ -13,7 +13,7 @@ const RING_SELECTOR = '#battle .ring-feedback[data-actor]';
 const ACTOR_SELECTOR = '#stage [data-unit], #battle .rear-card[data-rear]';
 const NARROW_VIEWPORT = { width: 844, height: 390 };
 const CHARGE_LAYERS = ['meter', 'trail'];
-const AWARD_LAYERS = ['focus', 'meter', 'trail'];
+const AWARD_LAYERS = ['aperture', 'focus', 'meter', 'radiance', 'trail'];
 
 /** Install before navigation so transient ring effects are never missed. */
 export async function installRingObserver(page) {
@@ -54,6 +54,9 @@ export async function installRingObserver(page) {
         const trail = root.querySelector('.ring-feedback__trail');
         const trailStyle = trail && getComputedStyle(trail);
         const focus = root.querySelector('.ring-feedback__focus');
+        const aperture = root.querySelector('.ring-feedback__aperture');
+        const radiance = root.querySelector('.ring-feedback__radiance');
+        const radianceStyle = radiance && getComputedStyle(radiance);
         const focusStyle = focus && getComputedStyle(focus);
         const visible =
           bounds.width > 0 && meterStyle.visibility === 'visible' && Number(meterStyle.opacity) > 0;
@@ -80,6 +83,7 @@ export async function installRingObserver(page) {
               gem.getBoundingClientRect().width > 0 &&
               Number(gemStyle.opacity) > 0,
             ),
+          meterSize: Number.parseFloat(meterStyle.width),
           meterBounds: {
             left: bounds.left,
             right: bounds.right,
@@ -96,6 +100,9 @@ export async function installRingObserver(page) {
             parseFloat(focusStyle.borderTopWidth) > 0 &&
             hasPaintedBox(focus, focusStyle),
           ),
+          apertureVisible: Boolean(aperture && hasPaintedBox(aperture, getComputedStyle(aperture))),
+          radianceVisible: Boolean(radiance && hasPaintedBox(radiance, radianceStyle)),
+          radianceAnimationName: radianceStyle?.animationName ?? null,
           focusAnimationName: focusStyle?.animationName ?? null,
           meterAnimationName: meterStyle.animationName,
           sweepAnimationName: sweep ? getComputedStyle(sweep).animationName : null,
@@ -313,9 +320,61 @@ async function rejectAcquisitionDuringEntry(page, actor) {
     }
   }, actor);
 }
-async function playAcquisitionFeedback(page, actor, disableWebAnimations = false, skip = false) {
+async function skipAcquisitionWithUserInput(page, actor) {
+  const initial = await page.evaluate(
+    async ({ actor, ringSelector }) => {
+      const { createRingFeedback } = await import('/src/app/ring-feedback.js');
+      const state = demo.getState();
+      const cues = [];
+      const feedback = createRingFeedback({
+        session: { runtime: { mode: 'battle', disposed: false }, battle: { state } },
+        audio: { play: (cue) => cues.push(cue) },
+      });
+      window.__ringSkipFeedback = feedback;
+      window.__ringSkipCues = cues;
+      window.__ringSkipLogStart = window.__ringLog.length;
+      window.__ringSkipPending = feedback.acquired(state.heroDefinitions[actor].emblemId, actor);
+      const root = document.querySelector(ringSelector);
+      const button = document.querySelector('.ring-feedback-skip');
+      return {
+        label: button?.textContent ?? null,
+        accessible: button?.type === 'button' && button.getClientRects().length > 0,
+        decorativeInput:
+          root?.getAttribute('aria-hidden') === 'true' &&
+          getComputedStyle(root).pointerEvents === 'none',
+      };
+    },
+    { actor, ringSelector: RING_SELECTOR },
+  );
+  try {
+    await page.locator('.ring-feedback-skip').click();
+    const outcome = await page.evaluate(async () => {
+      const result = await window.__ringSkipPending;
+      const root = document.querySelector('#battle .ring-feedback[data-actor]');
+      return {
+        result,
+        removed: !root,
+        phases: [
+          ...new Set(window.__ringLog.slice(window.__ringSkipLogStart).map((entry) => entry.phase)),
+        ],
+        cues: window.__ringSkipCues,
+      };
+    });
+    return { ...initial, ...outcome };
+  } finally {
+    await page.evaluate(() => {
+      window.__ringSkipFeedback?.dispose();
+      delete window.__ringSkipFeedback;
+      delete window.__ringSkipPending;
+      delete window.__ringSkipCues;
+      delete window.__ringSkipLogStart;
+    });
+  }
+}
+
+async function playAcquisitionFeedback(page, actor, disableWebAnimations = false) {
   return page.evaluate(
-    async ({ actor, ringSelector, disableWebAnimations, skip }) => {
+    async ({ actor, ringSelector, disableWebAnimations }) => {
       const { createRingFeedback } = await import('/src/app/ring-feedback.js');
       const state = demo.getState();
       const cues = [];
@@ -331,14 +390,9 @@ async function playAcquisitionFeedback(page, actor, disableWebAnimations = false
         // Only disable animation inspection. CSS must still run on the fallback clock.
         if (disableWebAnimations) Element.prototype.getAnimations = undefined;
         const start = window.__ringLog.length;
+        const startedAt = performance.now();
         const pending = feedback.acquired(state.heroDefinitions[actor].emblemId, actor);
         const root = document.querySelector(ringSelector);
-        const skipButton = document.querySelector('.ring-feedback-skip');
-        const skipLabel = skipButton?.textContent || null;
-        if (skip) {
-          await new Promise((resolve) => requestAnimationFrame(resolve));
-          skipButton?.click();
-        }
         const meter = root?.querySelector('.ring-feedback__meter');
         const flight = meter
           ? {
@@ -351,9 +405,10 @@ async function playAcquisitionFeedback(page, actor, disableWebAnimations = false
         return {
           result,
           removed: root?.isConnected === false,
+          elapsedMs: performance.now() - startedAt,
+          phaseStarts: Object.fromEntries([...log].reverse().map(({ phase, at }) => [phase, at])),
           flight,
           cues,
-          skipLabel,
           phases: [...new Set(log.map((entry) => entry.phase))],
           full: log.find((entry) => entry.phase === 'full') || null,
           settle: log.find((entry) => entry.phase === 'settle') || null,
@@ -363,7 +418,7 @@ async function playAcquisitionFeedback(page, actor, disableWebAnimations = false
         feedback.dispose();
       }
     },
-    { actor, ringSelector: RING_SELECTOR, disableWebAnimations, skip },
+    { actor, ringSelector: RING_SELECTOR, disableWebAnimations },
   );
 }
 
@@ -477,7 +532,7 @@ export async function ringAcquisitionChecks({ browser, baseURL, output }) {
       assert.deepEqual(
         arrival.layers,
         AWARD_LAYERS,
-        'one star travels to the localized award dial',
+        'one light trail and one shared light field accompany the award dial',
       );
       assert(arrival.frame?.trailVisible, 'the arrival trail is visible during flight');
       assert(phases.includes('flight'), 'flight phase observed');
@@ -505,8 +560,6 @@ export async function ringAcquisitionChecks({ browser, baseURL, output }) {
       );
       const full = log.find((entry) => entry.actor === actor && entry.phase === 'full');
       const settle = log.find((entry) => entry.actor === actor && entry.phase === 'settle');
-      const chargeMs = Math.round(full.at - charging[0].at);
-      assert(chargeMs >= 1400, 'the six award beats are readable before the burst');
       assert.equal(full.lit, 6, 'six cells lit at full');
       assert.equal(full.cells, 6, 'six cells rendered');
       assert.deepEqual(
@@ -515,7 +568,11 @@ export async function ringAcquisitionChecks({ browser, baseURL, output }) {
         'full charge does not open a separate effect stage',
       );
       assert(full.frame?.focusVisible, 'the wearer remains framed at full charge');
+      assert(full.frame?.meterSize >= 90, 'award ring reads at full display size');
       assert(full.frame.haloVisible, 'the full award releases a visible halo on the wearer');
+      assert(full.frame.apertureVisible, 'battlefield exposure frames the wearer');
+      assert(full.frame.radianceVisible, 'the full award projects a separate light field');
+      assert.equal(full.frame.radianceAnimationName, 'ring-feedback-radiance-release');
       assert.equal(full.frame.haloAnimationName, 'ring-feedback-burst');
       assert.equal(full.frame.trailVisible, false, 'the full award does not replay the trail');
       assert.equal(full.ringVisible, true, 'a metallic ring is legible at full charge');
@@ -547,6 +604,30 @@ export async function ringAcquisitionChecks({ browser, baseURL, output }) {
       await page.setViewportSize(NARROW_VIEWPORT);
       const narrowAward = await playAcquisitionFeedback(page, actor);
       assert.equal(narrowAward.result, true, 'ring acquisition completes in a narrow viewport');
+      // Frame capture pauses the real award. Measure the same playback without capture.
+      const {
+        flight,
+        charging: chargeStartAt,
+        full: fullAt,
+        settle: settleAt,
+      } = narrowAward.phaseStarts;
+      const flightMs = Math.round(chargeStartAt - flight);
+      const chargeMs = Math.round(fullAt - chargeStartAt);
+      const releaseMs = Math.round(settleAt - fullAt);
+      const awardDurationMs = Math.round(narrowAward.elapsedMs);
+      assert(flightMs >= 560 && flightMs < 800, `expected ~620ms flight, observed ${flightMs}ms`);
+      assert(
+        chargeMs >= 1000 && chargeMs < 1200,
+        `expected ~1020ms charge, observed ${chargeMs}ms`,
+      );
+      assert(
+        releaseMs >= 780 && releaseMs < 1000,
+        `expected ~820ms release, observed ${releaseMs}ms`,
+      );
+      assert(
+        awardDurationMs >= 2700 && awardDurationMs < 3500,
+        `expected ~2790ms award, observed ${awardDurationMs}ms`,
+      );
       assert(narrowAward.full?.ringVisible, 'narrow layout keeps the ring legible');
       assert(narrowAward.full?.gemVisible, 'narrow layout keeps the jewel legible');
       const narrowBounds = narrowAward.full?.meterBounds;
@@ -631,12 +712,18 @@ export async function ringAcquisitionChecks({ browser, baseURL, output }) {
       const reducedAward = await playAcquisitionFeedback(page, actor);
       assert.equal(reducedAward.result, true, 'reduced-motion acquisition completes');
       assert.equal(reducedAward.removed, true, 'reduced-motion acquisition removes its feedback');
+      assert(
+        reducedAward.elapsedMs < 100,
+        'reduced-motion acquisition resolves without staged waits',
+      );
       assert.deepEqual(
         reducedAward.phases,
         ['charging', 'full'],
         'reduced motion skips flight and contraction',
       );
       assert(reducedAward.full, 'reduced-motion acquisition reaches a full ring');
+      assert.equal(reducedAward.full.apertureVisible, false);
+      assert.equal(reducedAward.full.radianceVisible, false);
       assert.deepEqual(
         reducedAward.full.layers,
         AWARD_LAYERS,
@@ -663,7 +750,7 @@ export async function ringAcquisitionChecks({ browser, baseURL, output }) {
       assert.equal(fallbackSuccess.result, true, 'fallback acquisition completes successfully');
       assert.equal(fallbackSuccess.removed, true, 'successful fallback removes its feedback');
       assert.equal(fallbackSuccess.flight.animationName, 'ring-feedback-award-flight');
-      assert.equal(fallbackSuccess.flight.animationDuration, '0.48s');
+      assert.equal(fallbackSuccess.flight.animationDuration, '0.62s');
       assert(
         fallbackSuccess.phases.includes('settle'),
         'CSS-timed fallback completes the contraction',
@@ -675,12 +762,18 @@ export async function ringAcquisitionChecks({ browser, baseURL, output }) {
         { cue: 'ring-charge-full', phase: 'full' },
       ]);
 
-      const skippedAward = await playAcquisitionFeedback(page, actor, false, true);
-      assert.equal(skippedAward.skipLabel, '跳过演出', 'the award provides a visible skip control');
-      assert.equal(skippedAward.result, false, 'skipping cancels only the visual award wait');
+      const skippedAward = await skipAcquisitionWithUserInput(page, actor);
+      assert.equal(skippedAward.label, '跳过演出', 'the award provides a visible skip control');
+      assert.equal(skippedAward.accessible, true, 'the skip is a visible native button');
+      assert.equal(skippedAward.decorativeInput, true, 'the effect cannot intercept battle input');
+      assert.equal(
+        skippedAward.result,
+        false,
+        'a real pointer click cancels only visual narration',
+      );
       assert.equal(skippedAward.removed, true, 'skipping removes the ring and its control');
       assert.deepEqual(skippedAward.phases, ['flight'], 'skipping stops before later phases');
-      assert.deepEqual(skippedAward.cues, [{ cue: 'ring-arrival', phase: 'flight' }]);
+      assert.deepEqual(skippedAward.cues, ['ring-arrival']);
 
       for (const method of ['cancel', 'dispose']) {
         const interrupted = await interruptAcquisition(page, actor, method, true);
@@ -703,7 +796,15 @@ export async function ringAcquisitionChecks({ browser, baseURL, output }) {
         'no feedback on reload',
       );
       assert.deepEqual(errors, []);
-      results.award = { actor, wearer: wearer.id, chargeMs, phases };
+      results.award = {
+        actor,
+        wearer: wearer.id,
+        flightMs,
+        chargeMs,
+        releaseMs,
+        awardDurationMs: Math.round(awardDurationMs),
+        phases,
+      };
     } catch (failure) {
       await page.screenshot({ path: path.join(output, 'ring-award-failure.png') }).catch(() => {});
       throw failure;

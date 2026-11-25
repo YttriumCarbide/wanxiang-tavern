@@ -98,7 +98,7 @@ export function createDaily(context) {
       <button type="button" data-daily="quests">任务</button>
     </div>
     <aside class="daily-quest" hidden aria-live="polite"></aside>
-    <nav class="daily-dock" aria-label="酒馆行动">
+    <nav class="daily-dock" hidden aria-label="酒馆行动">
       <button type="button" data-daily="chat">闲聊</button>
       <button type="button" data-daily="meal">用餐</button>
       <button type="button" data-daily="invitation">约见</button>
@@ -111,6 +111,59 @@ export function createDaily(context) {
   setup.setAttribute('aria-labelledby', 'daily-setup-title');
   document.body.append(setup);
   const dock = root.querySelector('.daily-dock');
+  let dockExitAnimation = null;
+
+  function cancelDockExit() {
+    const animation = dockExitAnimation;
+    dockExitAnimation = null;
+    animation?.cancel();
+  }
+
+  function hideDock() {
+    dock.hidden = true;
+    cancelDockExit();
+  }
+
+  function setDockVisibility(visible) {
+    if (visible) {
+      cancelDockExit();
+      dock.inert = false;
+      dock.hidden = false;
+      return;
+    }
+    if (dock.hidden) return;
+    if (
+      root.hidden ||
+      matchMedia('(prefers-reduced-motion: reduce)').matches ||
+      !('inert' in dock) ||
+      typeof dock.animate !== 'function' ||
+      !dock.getClientRects().length
+    ) {
+      hideDock();
+      return;
+    }
+    if (dockExitAnimation) return;
+
+    const { opacity, translate, visibility } = getComputedStyle(dock);
+    if (visibility !== 'visible' || opacity === '0') return hideDock();
+
+    // Only the paint lingers; the controls stop receiving input immediately.
+    const animation = dock.animate(
+      [
+        { opacity, translate },
+        { opacity: 0, translate: '0 20px' },
+      ],
+      { duration: 170, easing: 'ease-in', fill: 'forwards' },
+    );
+    dockExitAnimation = animation;
+    const finish = () => {
+      if (dockExitAnimation === animation) hideDock();
+    };
+    void animation.finished.then(finish, finish);
+    dock.inert = true;
+    const focused = document.activeElement;
+    if (dock.contains(focused)) focused.blur?.();
+  }
   const placeChip = root.querySelector('[data-tavern-place]');
   const clock = root.querySelector('[data-tavern-clock]');
   const clockActions = root.querySelector('.daily-clock');
@@ -788,12 +841,12 @@ export function createDaily(context) {
     );
     if (atlasOpen(overlay)) postAtlasManaged(overlay.contentWindow);
     renderInvitationRecord(visible);
+    setDockVisibility(!root.hidden && home && !locked && !entry);
     if (!visible) {
       root.dataset.outdoors = 'false';
       context.ledger?.sync();
       return;
     }
-    dock.hidden = !home || locked || !!entry;
     root.dataset.outdoors = String(dockTalk);
     const statusMarkup = showStatus();
     if (status.renderedStatus !== statusMarkup) {
@@ -1632,6 +1685,7 @@ export function createDaily(context) {
       }
     },
     dispose() {
+      hideDock();
       hideAtlasOverlay();
       navigationToken++;
       clearPendingScene(pendingScene);

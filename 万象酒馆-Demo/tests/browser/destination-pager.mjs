@@ -149,6 +149,24 @@ export async function destinationPagerChecks({ browser, baseURL, output }) {
       );
     }
   }
+  async function selectRegionFromStrip(regionId) {
+    const selector = `#destination-regions [data-region="${regionId}"]`;
+    for (let pageNumber = 0; pageNumber < 8; pageNumber++) {
+      const region = page.locator(selector);
+      if (await region.count()) {
+        await region.click();
+        return;
+      }
+      const nextPage = page.locator('.destination-strip > button[aria-label="下一页地图"]');
+      assert.equal(
+        await nextPage.isDisabled(),
+        false,
+        `${regionId} must be present in the destination map pages`,
+      );
+      await nextPage.click();
+    }
+    throw new Error(`Cannot find ${regionId} in the destination map strip`);
+  }
   async function readBlackMarketBackground() {
     const lore = page.locator('#destination-lore');
     await page.locator('#destination-description').click();
@@ -452,6 +470,7 @@ export async function destinationPagerChecks({ browser, baseURL, output }) {
       const library = demo.getLibrary();
       const route = library.exploration.tide;
       while (route.completed < 6) completeExploration(library.exploration, route.frontier[0]);
+      unlockDungeonMap(library, 'graystone-quarry');
       unlockDungeonMap(library, 'black-market');
       localStorage.setItem('wanxiang.worldbooks.v1', JSON.stringify(library));
     });
@@ -503,7 +522,11 @@ export async function destinationPagerChecks({ browser, baseURL, output }) {
     const confirm = '#destination-region-confirm';
     await page.locator('#destination-back').click();
     await page.locator('.destination-strip > button').last().click();
-    await page.locator('#destination-regions [data-region="black-market"]').click();
+    await selectRegionFromStrip('graystone-quarry');
+    await ready('graystone-quarry');
+    assert(loadedPreviews.has(previewUrl('graystone-quarry')), 'Quarry loads its own miniature');
+    await page.screenshot({ path: path.join(output, 'destination-quarry-miniature.png') });
+    await selectRegionFromStrip('black-market');
     await ready('black-market');
     assert(
       loadedPreviews.has(previewUrl('black-market')),

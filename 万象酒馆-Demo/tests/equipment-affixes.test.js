@@ -8,6 +8,7 @@ import {
   equippedDefinitions,
   addEquipmentAffix,
   refreshEquipmentAffixes,
+  smithEquipmentAffix,
   equipmentAffixCost,
   equipmentAffixProgress,
   equipmentInstanceView,
@@ -172,6 +173,37 @@ test('affix refresh rejects missing affix or insufficient ether without mutation
   const entry = refreshEquipmentAffixes(library, 'owned-w', 17);
   assert.ok(entry && entry.id);
   assert.deepEqual(library.equipment.affixesByTemplate['t-weapon'], entry);
+});
+
+test('blacksmith affixes a selected equipment instance with gold while sharing its blueprint effect', () => {
+  const library = prepared();
+  library.inventory.gold = 1000;
+  buyEquipment(library, 't-weapon', 'owned-w-copy', { seed: 2 });
+  const cost = equipmentAffixCost(library.equipment.catalog.find((item) => item.id === 't-weapon'));
+  const ether = library.inventory.ether;
+
+  smithEquipmentAffix(library, 'owned-w', { seed: 5 });
+  assert.ok(library.equipment.affixesByTemplate['t-weapon']);
+  assert.deepEqual(
+    equipmentInstanceView(
+      library.equipment.catalog.find((item) => item.id === 't-weapon'),
+      library.equipment.owned.find((item) => item.id === 'owned-w-copy'),
+      library.equipment.affixesByTemplate,
+    ).affixes,
+    [library.equipment.affixesByTemplate['t-weapon']],
+  );
+  assert.equal(library.inventory.gold, 1000 - cost);
+  assert.equal(library.inventory.ether, ether, 'the forge currency is untouched');
+
+  const previous = library.equipment.affixesByTemplate['t-weapon'];
+  smithEquipmentAffix(library, 'owned-w-copy', { refresh: true, seed: 9 });
+  assert.notDeepEqual(library.equipment.affixesByTemplate['t-weapon'], previous);
+  assert.equal(library.inventory.gold, 1000 - cost * 2);
+  assert.throws(() => smithEquipmentAffix(library, 'missing-gear'), /未持有/);
+  library.inventory.gold = 0;
+  const withoutGold = JSON.stringify(library);
+  assert.throws(() => smithEquipmentAffix(library, 'owned-w', { refresh: true }), /金币不足/);
+  assert.equal(JSON.stringify(library), withoutGold, 'an unaffordable refresh has no side effects');
 });
 
 test('dismantling cannot mint ether by repeating purchase and investment is partially recovered', () => {

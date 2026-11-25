@@ -66,7 +66,7 @@ export const UNIVERSAL_ENEMIES = [
   {
     ...creature(
       'hollowSentry',
-      '空壳哨兵',
+      '空壳魔像',
       '#83909c',
       98,
       2,
@@ -79,7 +79,7 @@ export const UNIVERSAL_ENEMIES = [
       ],
     ),
     elite: true,
-    title: '精英 / 空壳哨兵',
+    title: '精英 / 空壳魔像',
   },
   creature(
     'veilMender',
@@ -192,7 +192,7 @@ export const UNIVERSAL_ENEMIES = [
   {
     ...creature(
       'oathlessDuelist',
-      '无誓行者',
+      '无誓剑士',
       '#9d9aaf',
       95,
       4,
@@ -210,7 +210,7 @@ export const UNIVERSAL_ENEMIES = [
       ],
     ),
     elite: true,
-    title: '精英 / 无誓行者',
+    title: '精英 / 无誓剑士',
   },
 ];
 

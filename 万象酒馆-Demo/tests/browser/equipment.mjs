@@ -192,7 +192,7 @@ export async function equipmentChecks({ browser, baseURL, output }) {
     await page.screenshot({ path: path.join(output, 'new-batch-results.png') });
     await page.locator('#forge-results [data-batch-close]').first().click();
     await page.locator('[data-forge-page="exchange"]').click();
-    await page.locator('[data-buy-equipment]').waitFor();
+    await page.locator('#forge-redeem').waitFor();
     assert.equal(
       await page.locator('.forge-item > p').count(),
       0,
@@ -515,7 +515,10 @@ async function forgeAffixWorkspaceChecks({ browser, baseURL, output }) {
       undefined,
     );
 
-    await page.locator('[data-buy-equipment]').first().click();
+    assert.equal(await page.locator('#forge-catalog #forge-redeem').count(), 0);
+    const dismantle = page.locator('#forge-catalog [data-dismantle-instance]');
+    assert(await dismantle.evaluate((button) => button.closest('.forge-source-line') !== null));
+    await page.locator('#forge-redeem').click();
     await page.waitForFunction(
       (kind) => document.querySelector('.forge-operation-feedback')?.dataset.kind === kind,
       'forge',
@@ -563,6 +566,36 @@ async function forgeAffixWorkspaceChecks({ browser, baseURL, output }) {
     assert.equal((await item()).quality, 'uncommon');
     assert.equal(await page.evaluate(() => demo.getLibrary().inventory.ether), wallet.ether);
     assert((await page.evaluate(() => demo.getLibrary().inventory.gold)) < wallet.gold);
+    await service('affix');
+    const readAffixState = () =>
+      page.evaluate(() => {
+        const { inventory, equipment } = demo.getLibrary();
+        return {
+          gold: inventory.gold,
+          ether: inventory.ether,
+          affix: equipment.affixesByTemplate['ui-eq-1'],
+        };
+      });
+    const beforeReroll = await readAffixState();
+    assert(beforeReroll.affix);
+    await smith.locator('[data-smith-service="reroll"]').click();
+    await confirm.locator('.equipment-feedback-cancel').click();
+    await confirm.waitFor({ state: 'hidden' });
+    assert.deepEqual(await readAffixState(), beforeReroll);
+    await service('reroll');
+    const afterReroll = await readAffixState();
+    assert(afterReroll.gold < beforeReroll.gold);
+    assert.equal(afterReroll.ether, beforeReroll.ether);
+    await smith.locator('[data-smith-pick="ui-gem"]').click();
+    assert(await smith.locator('[data-smith-service="reforge"]').isDisabled());
+    await service('affix');
+    assert(
+      await page.evaluate(
+        (id) => demo.getLibrary().equipment.affixesByTemplate[id],
+        GEM_POOL[0].id,
+      ),
+    );
+    await smith.locator('[data-smith-pick="ui-owned-1"]').click();
     const goldBeforeSale = await page.evaluate(() => demo.getLibrary().inventory.gold);
     await smith.locator('[data-smith-service="sell"]').click();
     await confirm.locator('.equipment-feedback-confirm').click();
@@ -580,59 +613,19 @@ async function forgeAffixWorkspaceChecks({ browser, baseURL, output }) {
     await page.locator('[data-forge-page="exchange"]').click();
     await page.locator('[data-forge-select="ui-eq-1"]').click();
 
-    await page.locator('[data-add-affix="ui-eq-1"]').click();
-    await page.waitForFunction(
-      (kind) => document.querySelector('.forge-operation-feedback')?.dataset.kind === kind,
-      'affix',
+    const obsoleteAffixActions = page.locator(
+      '#forge-catalog [data-add-affix], #forge-catalog [data-refresh-affix]',
     );
-    assert((await page.evaluate(() => demo.getLibrary())).equipment.affixesByTemplate['ui-eq-1']);
-    const ownAffixes = await page.evaluate(() =>
-      demo
-        .getLibrary()
-        .equipment.owned.filter((item) => item.templateId === 'ui-eq-1')
-        .map((item) => Object.prototype.hasOwnProperty.call(item, 'affixes')),
-    );
-    assert.deepEqual(ownAffixes, [false]);
-
-    await page.locator('[data-refresh-affix="ui-eq-1"]').click();
-    const before = await page.evaluate(() => {
-      const library = demo.getLibrary();
-      return {
-        ether: library.inventory.ether,
-        affix: library.equipment.affixesByTemplate['ui-eq-1'],
-      };
-    });
-    await confirm.locator('.equipment-feedback-cancel').click();
-    const afterCancel = await page.evaluate(() => {
-      const library = demo.getLibrary();
-      return {
-        ether: library.inventory.ether,
-        affix: library.equipment.affixesByTemplate['ui-eq-1'],
-      };
-    });
-    assert.deepEqual(afterCancel, before);
-
-    await page.locator('[data-refresh-affix="ui-eq-1"]').click();
-    await confirm.locator('.equipment-feedback-confirm').click();
-    await page.waitForFunction(
-      (kind) => document.querySelector('.forge-operation-feedback')?.dataset.kind === kind,
-      'reroll',
-    );
-    const afterReroll = await page.evaluate(() => demo.getLibrary().inventory.ether);
-    assert(afterReroll < before.ether);
-
-    await page.locator(`[data-forge-select="${GEM_POOL[0].id}"]`).click();
-    assert.equal(await page.locator('[data-buy-equipment]').count(), 0);
-    assert(await page.locator('[data-add-affix]').first().isVisible());
-    await page.locator('[data-add-affix]').first().click();
-    await page.waitForFunction(
-      (kind) => document.querySelector('.forge-operation-feedback')?.dataset.kind === kind,
-      'affix',
-    );
+    assert.equal(await obsoleteAffixActions.count(), 0);
     assert(
-      (await page.evaluate(() => demo.getLibrary())).equipment.affixesByTemplate[GEM_POOL[0].id],
+      await page.locator('.forge-affix-card').isVisible(),
+      'the affix is still readable in the condenser',
     );
-
+    await page.locator(`[data-forge-select="${GEM_POOL[0].id}"]`).click();
+    assert(
+      await page.locator('#forge-redeem').isHidden(),
+      'gems cannot be manufactured from blueprints',
+    );
     await page.screenshot({ path: path.join(output, 'forge-affixes-desktop.png') });
     await page.locator('[data-forge-close]').click();
 
@@ -678,7 +671,7 @@ async function forgeAffixWorkspaceChecks({ browser, baseURL, output }) {
       'true',
     );
     await page.locator('[data-forge-category="all"]').click();
-    assert.equal(await page.locator('[data-buy-equipment]').first().isVisible(), true);
+    assert.equal(await page.locator('#forge-redeem').first().isVisible(), true);
     await page.screenshot({ path: path.join(output, 'forge-affixes-844.png') });
     const fits = await page.evaluate(() => {
       const panel = document.querySelector('#ether-forge');

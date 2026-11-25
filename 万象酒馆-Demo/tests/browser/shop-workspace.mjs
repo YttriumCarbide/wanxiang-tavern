@@ -27,6 +27,7 @@ function artworkFixture() {
       { id, name, category, quality, value: 20 },
     ),
   );
+  library.equipment.affixesByTemplate['test-rare-sword'] = { id: 'affix-offense', quality: 'rare' };
   grantGem(library, 'gem-valor-shard', 'test-gem-1');
   grantGem(library, 'gem-wind-agate', 'test-gem-2');
   library.dining.stock = [{ id: 'bread', left: 2 }];
@@ -288,22 +289,20 @@ export async function shopWorkspaceChecks({ browser, baseURL, output }) {
       .evaluateAll((icons) => icons.map((icon) => icon.innerHTML));
     assert.equal(new Set(artwork).size, 6);
     const forge = page.locator('#ether-forge');
-    const actions = page.locator('#forge-catalog .forge-detail-actions');
-    await actions.locator('[data-buy-equipment]').click();
+    assert.equal(await forge.locator('#forge-catalog #forge-redeem').count(), 0);
+    await forge.locator('#forge-redeem').click();
     await page.waitForFunction(() =>
       demo.getLibrary().equipment.owned.some((entry) => entry.templateId === 'test-rare-sword'),
     );
-    await actions.locator('[data-add-affix]').click();
-    await actions.locator('[data-refresh-affix]').waitFor();
     const affix = page.locator('.forge-affix-card');
     const affixName = await affix.locator('summary strong').textContent();
     assert(
       (await page.locator('.forge-item-title h3').textContent()).includes(`精铸长剑·${affixName}`),
     );
     assert(await affix.locator('.forge-affix-details').isHidden());
-    const dismantle = actions.locator('[data-dismantle-instance]');
+    const dismantle = forge.locator('.forge-source-line [data-dismantle-instance]');
     assert(await dismantle.isVisible());
-    assert.equal(await actions.locator('[data-reforge-instance]').count(), 0);
+    assert.equal(await forge.locator('#forge-catalog [data-reforge-instance]').count(), 0);
     assert(await page.getByRole('button', { name: '删除此方案' }).isVisible());
     const favorite = page.locator('[data-forge-favorite="test-rare-sword"]');
     await favorite.click();
@@ -327,8 +326,6 @@ export async function shopWorkspaceChecks({ browser, baseURL, output }) {
     );
     assert(await dismantle.isVisible());
     await forge.screenshot({ path: path.join(output, 'equipment-expanded.png') });
-    await actions.locator('[data-refresh-affix]').click();
-    await page.locator('.equipment-feedback-dialog[open] .equipment-feedback-cancel').click();
 
     await page.setViewportSize({ width: 844, height: 390 });
     await assertPaneOrder(page, '#forge-list', '#forge-catalog');
@@ -337,8 +334,8 @@ export async function shopWorkspaceChecks({ browser, baseURL, output }) {
     assert(await affix.locator('.forge-affix-details').isHidden());
     await forge.screenshot({ path: path.join(output, 'equipment-mobile.png') });
     await page.locator('[data-forge-select="gem-wind-agate"]').click();
-    assert.equal(await actions.locator('[data-buy-equipment]').count(), 0);
-    assert(await actions.locator('[data-add-affix]').isVisible());
+    assert(await forge.locator('#forge-redeem').isHidden());
+    assert(await dismantle.isVisible());
     assert.deepEqual(errors, []);
     return {
       scrollingCategories: true,

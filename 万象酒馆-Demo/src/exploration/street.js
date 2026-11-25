@@ -10,7 +10,7 @@ import { createSceneVisitors } from '../tavern/visitor-scene.js';
 import { GUEST_RECRUITMENT } from '../recruitment.js';
 import { createWorldMap } from './world-map.js';
 import { createCityDirectory } from './city-directory.js';
-import { cityForScene } from '../city-directory.js';
+import { CITIES, cityForScene } from '../city-directory.js';
 import { createSceneEnvironment } from '../app/scene-environment.js';
 import { SILVER_CROWN_TAVERN } from '../content/silver-crown-scenes.js';
 
@@ -662,7 +662,11 @@ export async function createStreetView() {
     await model.setTime?.(timeOfDay);
     if (disposed) return { dispose };
     resize();
-    if (!pureBackdrop && definition.visitors !== false) {
+    // City overviews hide scenery cutouts, not the independently placed visitors.
+    const cityVisitorBackdrop =
+      Object.hasOwn(CITIES[citySubmapId]?.places ?? {}, definition.id) &&
+      Object.keys(definition.illustration?.spots ?? {}).length > 0;
+    if (definition.visitors !== false && (!pureBackdrop || cityVisitorBackdrop)) {
       visitors = await createSceneVisitors({
         scene,
         camera,

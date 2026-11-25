@@ -1690,11 +1690,12 @@
       ],
       "key": [
         "corridorGuard",
+        "回廊魔像",
         "回廊石卫"
       ],
       "keysecondary": [],
-      "comment": "怪物图鉴：回廊石卫",
-      "content": "名称：回廊石卫\n外形：披着斑驳石甲的高大古代石卫，左手持残破重石盾，右手握着沉重石锤。\n行动方式：将石盾重重砸向地面架起掩体，顺势抡起石锤砸击正面敌人。",
+      "comment": "怪物图鉴：回廊魔像",
+      "content": "名称：回廊魔像\n外形：披着斑驳石甲的高大古代石卫，左手持残破重石盾，右手握着沉重石锤。\n行动方式：将石盾重重砸向地面架起掩体，顺势抡起石锤砸击正面敌人。",
       "constant": false,
       "vectorized": false,
       "selective": true,
@@ -2107,11 +2108,12 @@
       ],
       "key": [
         "ruinsMudGolem",
+        "泥石魔像",
         "灰石泥傀儡"
       ],
       "keysecondary": [],
-      "comment": "怪物图鉴：灰石泥傀儡",
-      "content": "名称：灰石泥傀儡\n外形：由迷宫渗水与灰石泥土聚合而成的笨重泥魔偶，体表不断有黏液滑落。\n行动方式：粗笨的泥石巨臂高高举起，像打桩机般砸向地面，泥浆四处飞溅。",
+      "comment": "怪物图鉴：泥石魔像",
+      "content": "名称：泥石魔像\n外形：由迷宫渗水与灰石泥土聚合而成的笨重泥魔偶，体表不断有黏液滑落。\n行动方式：粗笨的泥石巨臂高高举起，像打桩机般砸向地面，泥浆四处飞溅。",
       "constant": false,
       "vectorized": false,
       "selective": true,
@@ -2582,11 +2584,12 @@
       ],
       "key": [
         "hollowSentry",
+        "空壳魔像",
         "空壳哨兵"
       ],
       "keysecondary": [],
-      "comment": "怪物图鉴：空壳哨兵",
-      "content": "名称：空壳哨兵\n设定：由坚硬外壳与微光核心驱动的无主守卫。",
+      "comment": "怪物图鉴：空壳魔像",
+      "content": "名称：空壳魔像\n设定：由坚硬外壳与微光核心驱动的无主守卫。",
       "constant": false,
       "vectorized": false,
       "selective": true,
@@ -2999,11 +3002,12 @@
       ],
       "key": [
         "oathlessDuelist",
+        "无誓剑士",
         "无誓行者"
       ],
       "keysecondary": [],
-      "comment": "怪物图鉴：无誓行者",
-      "content": "名称：无誓行者\n设定：没有徽记与誓言的蒙甲旅人。",
+      "comment": "怪物图鉴：无誓剑士",
+      "content": "名称：无誓剑士\n设定：没有徽记与誓言的蒙甲旅人。",
       "constant": false,
       "vectorized": false,
       "selective": true,

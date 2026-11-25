@@ -202,7 +202,7 @@ function templateFor(library, targetId) {
   return template;
 }
 
-function writeAffix(library, targetId, seed, affixId, adding) {
+function writeAffix(library, targetId, seed, affixId, adding, currency = 'ether') {
   const template = templateFor(library, targetId);
   const map = library.equipment.affixesByTemplate;
   const current =
@@ -210,7 +210,9 @@ function writeAffix(library, targetId, seed, affixId, adding) {
   if (adding && current) throw Error('该装备已有词条，请使用刷新');
   if (!adding && !current) throw Error('该装备尚无词条，请先添加');
   const cost = equipmentAffixCost(template);
-  if ((library.inventory?.ether || 0) < cost) throw Error('以太不足以调整装备词条');
+  if ((library.inventory?.[currency] || 0) < cost) {
+    throw Error(currency === 'gold' ? '金币不足以调整装备词条' : '以太不足以调整装备词条');
+  }
   const nextSeed =
     seed === null || seed === undefined
       ? hashSeed(`${template.id}:affix:${Date.now()}:${Math.random()}`)
@@ -223,7 +225,7 @@ function writeAffix(library, targetId, seed, affixId, adding) {
     configurable: true,
     writable: true,
   });
-  library.inventory.ether -= cost;
+  library.inventory[currency] -= cost;
   return next;
 }
 
@@ -233,4 +235,12 @@ export function addEquipmentAffix(library, targetId, affixId = null, seed = null
 
 export function refreshEquipmentAffixes(library, targetId, seed = null) {
   return writeAffix(library, targetId, seed, null, false);
+}
+
+/** Pay gold at the blacksmith; all copies still share the blueprint's affix. */
+export function smithEquipmentAffix(library, instanceId, { refresh = false, seed = null } = {}) {
+  if (!library.equipment.owned.some((item) => item.id === instanceId)) {
+    throw Error('未持有该装备实例');
+  }
+  return writeAffix(library, instanceId, seed, null, !refresh, 'gold');
 }

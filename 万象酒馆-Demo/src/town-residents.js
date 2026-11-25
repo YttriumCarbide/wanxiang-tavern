@@ -2,11 +2,15 @@ import { TOWN_GUESTS } from './content/town-guests.js';
 import { TAVERN_VISITORS, standingSprite } from './content/tavern-visitors.js';
 import { formatCharacterSetting } from './ai/character-setting.js';
 import { TOWN_SIDE_PLACES } from './content/town-side-places.js';
+import { SILVER_CROWN_PLACES } from './content/silver-crown-scenes.js';
+import { ETERNAL_CITY_PLACES } from './content/eternal-city-scenes.js';
 
 /** Unrecruited residents can appear and talk in town without being granted to the roster. */
 export function townResidents(library, scene) {
   if (
     !Object.hasOwn(TOWN_SIDE_PLACES, scene) &&
+    !Object.hasOwn(SILVER_CROWN_PLACES, scene) &&
+    !Object.hasOwn(ETERNAL_CITY_PLACES, scene) &&
     !['street', 'starlamp-street', 'city-center', 'market', 'rampart', 'outskirts'].includes(scene)
   )
     return [];

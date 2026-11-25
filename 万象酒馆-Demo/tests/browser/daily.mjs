@@ -12,6 +12,39 @@ import { legacySession } from './legacy-session.mjs';
 import { openCityDirectory, travelTownScene } from './town-navigation.mjs';
 import { chatResponse } from '../../server/chat-response.mjs';
 
+async function assertQuestFolioLayout(detail) {
+  const layout = await detail.evaluate((folio) => {
+    const bounds = (selector) => folio.querySelector(selector).getBoundingClientRect();
+    const description = bounds('.skyrim-folio-desc');
+    const location = bounds('.ow-quest-location');
+    const divider = bounds('.ow-quest-rule.is-objectives');
+    const objectives = bounds('.ow-quest-objectives');
+    const reward = bounds('.ow-quest-reward');
+    const crest = bounds('.ow-quest-crest');
+    const wash = bounds('.ow-quest-header-wash');
+    const headerRule = bounds('.ow-quest-rule.is-title');
+    const meta = bounds('.ow-quest-meta');
+    return {
+      metaBeforeCrest: meta.bottom <= crest.top,
+      metaLayout: getComputedStyle(folio.querySelector('.ow-quest-meta')).display,
+      columnEdgeError: Math.max(
+        ...[location, divider, objectives, reward].flatMap((rect) => [
+          Math.abs(rect.left - description.left),
+          Math.abs(rect.right - description.right),
+        ]),
+      ),
+      crestCenterError: Math.abs(crest.top + crest.height / 2 - (wash.top + wash.height / 2)),
+      headerGap: headerRule.top - crest.bottom,
+      objectiveGap: Math.min(divider.top - location.bottom, objectives.top - divider.bottom),
+    };
+  });
+  assert(layout.metaBeforeCrest, 'quest type and level precede the title crest');
+  assert.equal(layout.metaLayout, 'flex', 'quest metadata stays grouped into compact badges');
+  assert(layout.columnEdgeError <= 1, 'briefing, location, objectives and reward share one column');
+  assert(layout.crestCenterError <= 1, 'the wash stays centered on the crest');
+  assert(layout.objectiveGap > layout.headerGap + 1, 'the objectives have a distinct visual break');
+}
+
 export async function dailyChecks({ browser, baseURL, output }) {
   const page = await browser.newPage({ viewport: { width: 1120, height: 700 } });
   page.setDefaultTimeout(12000);
@@ -219,7 +252,12 @@ export async function dailyChecks({ browser, baseURL, output }) {
   async function settleJournal() {
     await expect(journal.locator('.skyrim-journal-grid')).toBeVisible();
     await journal.evaluate((dialog) =>
-      Promise.all(dialog.getAnimations().map((animation) => animation.finished.catch(() => {}))),
+      Promise.all(
+        dialog
+          .getAnimations({ subtree: true })
+          .filter(({ effect }) => Number.isFinite(effect?.getComputedTiming().endTime))
+          .map((animation) => animation.finished.catch(() => {})),
+      ),
     );
     const bounds = await journal.evaluate((dialog) => {
       const rect = dialog.getBoundingClientRect();
@@ -431,6 +469,15 @@ export async function dailyChecks({ browser, baseURL, output }) {
     await page.locator('[data-daily="outing"]').click();
     await page.locator('#tavern-exit-picker[open]').waitFor();
     await page.locator('[data-tavern-exit="city-center"]').click();
+    const actionDockElement = page.locator('.daily-dock');
+    const exitingDock = await actionDockElement.evaluate((dock) => ({
+      hidden: dock.hidden,
+      inert: dock.inert,
+      running: dock.getAnimations().some((animation) => animation.playState === 'running'),
+    }));
+    assert.deepEqual(exitingDock, { hidden: false, inert: true, running: true });
+    await page.clock.fastForward(170);
+    await expect(actionDockElement).toBeHidden();
     await page.waitForFunction(
       () =>
         document.querySelector('#inn-frame iframe')?.contentWindow?.streetPreview?.definition
@@ -637,6 +684,12 @@ export async function dailyChecks({ browser, baseURL, output }) {
     assert.match(await status(), /已行 4 回合/);
     assert.equal(await frame.locator('[data-hotspot="road-meadow"]').count(), 0);
     await page.locator('[data-daily="home"]').click();
+    const reopenedDock = await page.locator('.daily-dock').evaluate((dock) => ({
+      hidden: dock.hidden,
+      inert: dock.inert,
+      exiting: dock.getAnimations().some((animation) => !animation.animationName),
+    }));
+    assert.deepEqual(reopenedDock, { hidden: false, inert: false, exiting: false });
     await page.locator('[data-daily="invitation"]').click();
     await page.locator('[data-daily-person="official-libet"]').click();
     await page.locator('[data-daily-activity="walk"]').click();
@@ -794,6 +847,7 @@ export async function dailyChecks({ browser, baseURL, output }) {
     await expect(transcript).toBeHidden();
     await clearGal(ready);
     await expect(compose).toBeEditable();
+    assert.equal(await page.evaluate(() => demo.saveSlot('slot2')), true);
     await compose.fill('刚才第七小节有个停顿。');
     await page.locator('#daily-invitation [type="submit"]').click();
     await clearGal(
@@ -1020,6 +1074,23 @@ export async function dailyChecks({ browser, baseURL, output }) {
     await expect(bountyRow).toHaveAttribute('aria-current', 'true');
     const detail = journal.locator(`[data-quest-detail="${questId}"]`);
     await expect(detail.locator('.skyrim-folio-desc')).toHaveText(bounty.description);
+    const indexWidthError = await journal.locator('.skyrim-journal-grid').evaluate((grid) => {
+      const indexWidth = grid.querySelector('.skyrim-index-col').getBoundingClientRect().width;
+      return Math.abs(indexWidth - grid.getBoundingClientRect().width * 0.35);
+    });
+    assert(indexWidthError < 1, 'the desktop quest index occupies 35% of the journal body');
+    assert.deepEqual(
+      await detail.locator('.ow-quest-header-wash').evaluate((wash) => {
+        const style = getComputedStyle(wash);
+        return {
+          hidden: wash.getAttribute('aria-hidden'),
+          pointerEvents: style.pointerEvents,
+          hasGradient: style.backgroundImage.startsWith('radial-gradient('),
+        };
+      }),
+      { hidden: 'true', pointerEvents: 'none', hasGradient: true },
+      'the crest wash renders without intercepting input or entering the accessibility tree',
+    );
     const wings = detail.locator('.ow-quest-wing');
     await expect(wings).toHaveCount(2);
     for (const wing of await wings.all()) {
@@ -1032,6 +1103,7 @@ export async function dailyChecks({ browser, baseURL, output }) {
     await expect(detail.locator('.ow-quest-reward')).toContainText(`金币 ${bounty.gold}`);
     await expect(journal.locator('[data-quest-claim], [data-quest-pick]')).toHaveCount(0);
     await settleJournal();
+    await assertQuestFolioLayout(detail);
     await page.screenshot({ path: path.join(output, 'quests-after-daily-event.png') });
     const otherQuestId = `guild-${otherBountyId}`;
     const otherRow = journal.locator(`[data-quest-select="${otherQuestId}"]`);
@@ -1046,7 +1118,8 @@ export async function dailyChecks({ browser, baseURL, output }) {
     await expect(marker(otherQuestId)).toHaveAttribute('aria-pressed', 'true');
     await expect(marker(questId)).toHaveAttribute('aria-pressed', 'false');
     await expect(journal.locator('[data-quest-focus="track"]')).toBeFocused();
-    await otherRow.click();
+    // The reference journal toggles tracking from the entire selected row.
+    await otherRow.locator('..').click({ position: { x: 6, y: 12 } });
     await expect(marker(otherQuestId)).toHaveAttribute('aria-pressed', 'false');
     await marker(questId).click();
     await expect(marker(questId)).toHaveAttribute('aria-pressed', 'true');
@@ -1073,12 +1146,18 @@ export async function dailyChecks({ browser, baseURL, output }) {
     await expect(questTarget).toHaveAttribute('data-travel-to', 'mill');
     const centered = await questTarget.evaluate((pin) => {
       const bounds = pin.getBoundingClientRect();
-      return (
-        Math.abs(bounds.left + bounds.width / 2 - innerWidth / 2) < 2 &&
-        Math.abs(bounds.top + bounds.height / 2 - innerHeight / 2) < 2
-      );
+      return {
+        x: bounds.left + bounds.width / 2,
+        y: bounds.top + bounds.height / 2,
+        width: innerWidth,
+        height: innerHeight,
+      };
     });
-    assert(centered, 'the atlas centers the known pin within its own viewport');
+    assert(
+      Math.abs(centered.x - centered.width / 2) < 2 &&
+        Math.abs(centered.y - centered.height / 2) < 2,
+      'the atlas centers the known pin within its own viewport: ' + JSON.stringify(centered),
+    );
     await atlas.locator('.street-map-close [type="submit"]').click();
     await expect(page.locator('#daily-atlas-frame')).toBeHidden();
 
@@ -1115,6 +1194,7 @@ export async function dailyChecks({ browser, baseURL, output }) {
       false,
       'portrait journal content and controls do not require horizontal scrolling',
     );
+    await assertQuestFolioLayout(detail);
     await page.screenshot({ path: path.join(output, 'quests-portrait.png') });
     await journal.getByRole('button', { name: '关闭任务日志' }).click();
     await expect(journal).toBeHidden();
@@ -1216,6 +1296,21 @@ export async function dailyChecks({ browser, baseURL, output }) {
     await service.locator('[data-live="settle-done"]').click();
     assert.equal(await page.evaluate(() => demo.getLibrary().daily.serviceGrowth.shifts), 2);
 
+    // Branch the existing invitation at an editable turn; use the actual End Invitation action.
+    assert.equal(await page.evaluate(() => demo.loadSlot('slot2')), true);
+    await page.locator('.daily-status [data-daily="resume"]').click();
+    await expect(compose).toBeEditable();
+    const endInvitation = page.locator('#daily-invitation [data-invite-end]');
+    await expect(endInvitation).toBeEnabled();
+    const stage = page.locator('#gal-stage');
+    await endInvitation.click();
+    await expect(stage).toHaveAttribute('data-leaving', 'true');
+    await expect(stage).toHaveJSProperty('inert', true);
+    await expect(stage).toBeVisible();
+    await expect(stage).toBeHidden();
+    await expect(page.locator('.daily-status')).toContainText('约见提前结束');
+    assert.equal(await page.evaluate(() => demo.getLibrary().daily.active), null);
+
     assert.deepEqual(errors, []);
     return {
       fourRoles: true,
@@ -1224,6 +1319,7 @@ export async function dailyChecks({ browser, baseURL, output }) {
       shiftReceipt: true,
       cumulativeOuting: true,
       invitationStages: true,
+      earlyInvitationExit: true,
       questJournalAfterEvent: true,
       questJournalKeyboardAndPortrait: true,
       invitationSetupKeyboardAndNarrowLayout: true,

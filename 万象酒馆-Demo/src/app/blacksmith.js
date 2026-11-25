@@ -1,9 +1,11 @@
 import {
+  EQUIPMENT_AFFIX_REGISTRY,
   EQUIPMENT_QUALITIES,
   ascendCost,
   ascendEquipment,
   blacksmithSaleFits,
   blacksmithSaleGold,
+  equipmentAffixCost,
   equipmentInstanceView,
   maxUnlockedEquipmentLevel,
   reforgeCost,
@@ -11,6 +13,7 @@ import {
   resolveEquipmentQuality,
   resolveEquipmentTemplate,
   sellEquipmentToBlacksmith,
+  smithEquipmentAffix,
   temperCost,
   temperEquipment,
 } from '../equipment.js';
@@ -44,6 +47,20 @@ const SERVICES = Object.freeze([
     apply: ascendEquipment,
   },
   {
+    id: 'affix',
+    label: '赋词',
+    description: '随机添加首条词条，同款装备共同生效。',
+    cost: (template) => equipmentAffixCost(template),
+    apply: smithEquipmentAffix,
+  },
+  {
+    id: 'reroll',
+    label: '洗词',
+    description: '随机替换当前词条，同款装备共同生效。',
+    cost: (template) => equipmentAffixCost(template),
+    apply: (library, instanceId) => smithEquipmentAffix(library, instanceId, { refresh: true }),
+  },
+  {
     id: 'sell',
     label: '出售',
     description: '交出此件装备并收到金币。',
@@ -52,12 +69,16 @@ const SERVICES = Object.freeze([
   },
 ]);
 
-function smithQuote(service, { instance, template, wearer }, library) {
+function smithQuote(service, { instance, template, view, wearer }, library) {
   const price = service.cost(template, instance);
   let unavailable = '';
   if (service.id === 'sell') {
     if (wearer) unavailable = '请先卸下装备';
     else if (!blacksmithSaleFits(library, template)) unavailable = '金币将超过持有上限';
+  } else if (service.id === 'affix' || service.id === 'reroll') {
+    const hasAffix = Boolean(view.affixes?.length);
+    if (service.id === 'affix' && hasAffix) unavailable = '该装备已有词条';
+    else if (service.id === 'reroll' && !hasAffix) unavailable = '该装备尚无词条';
   } else if (template.category === 'gem') unavailable = '宝石不可强化';
   else if (service.id === 'temper') {
     const limit = maxUnlockedEquipmentLevel(library);
@@ -164,30 +185,33 @@ export function createBlacksmith(context, commitEquipment, refreshEquipment) {
       return;
     }
     const quality = resolveEquipmentQuality(row.view.quality, row.template.price);
+    const affix = row.view.affixes?.[0];
     workpiece.innerHTML = equipmentArt(row.view, quality);
     anvil.innerHTML = html`<div class="blacksmith-item">
         <div>
           <h3>${escapeText(row.template.name)}</h3>
           <span
             >Lv.${row.instance.level} · ${EQUIPMENT_QUALITIES[quality].name} · 极品度
-            ${row.instance.rollPercent ?? 100}%</span
+            ${row.instance.rollPercent ?? 100}%${affix ? ` · ${escapeText(EQUIPMENT_AFFIX_REGISTRY[affix.id].label)}` : ''}</span
           >
         </div>
       </div>
       <p>${escapeText(equipmentDescription(row.view))}</p>
       ${row.wearer ? html`<p>${escapeText(row.wearer)}穿戴中</p>` : ''}
       <div class="blacksmith-tools">
-        ${SERVICES.map((service) => {
-          const { price, unavailable } = smithQuote(service, row, library);
-          const amount = `${service.id === 'sell' ? '+' : ''}${price} 金币`;
-          return html`<button
-            type="button"
-            data-smith-service="${service.id}"
-            ${busy || unavailable ? 'disabled' : ''}
-          >
-            ${service.label} <small>${escapeText(unavailable || amount)}</small>
-          </button>`;
-        }).join('')}
+        ${SERVICES.filter((service) => service.id !== (affix ? 'affix' : 'reroll'))
+          .map((service) => {
+            const { price, unavailable } = smithQuote(service, row, library);
+            const amount = `${service.id === 'sell' ? '+' : ''}${price} 金币`;
+            return html`<button
+              type="button"
+              data-smith-service="${service.id}"
+              ${busy || unavailable ? 'disabled' : ''}
+            >
+              ${service.label} <small>${escapeText(unavailable || amount)}</small>
+            </button>`;
+          })
+          .join('')}
       </div>`;
   }
 
@@ -245,7 +269,8 @@ export function createBlacksmith(context, commitEquipment, refreshEquipment) {
         const hadActionFocus = document.activeElement === action;
         render();
         if (hadActionFocus) {
-          const nextAction = dialog.querySelector(`[data-smith-service="${id}"]:enabled`);
+          const nextService = receipt && id === 'affix' ? 'reroll' : id;
+          const nextAction = dialog.querySelector(`[data-smith-service="${nextService}"]:enabled`);
           (
             nextAction ||
             rack.querySelector('[aria-pressed="true"]') ||

@@ -1,22 +1,24 @@
 {
-  "browserConcurrency": 1,
+  "browserConcurrency": 2,
   "scopes": [
     "quality",
     "core",
     "daily",
     "overland",
-    "chat",
-    "ring-acquisition",
-    "equipment",
-    "shop-workspace",
     "town-guests",
+    "ring-acquisition",
+    "chat",
+    "gal",
     "mobile",
-    "preparation",
-    "dialog-motion"
+    "universal-enemies"
   ],
   "coreFiles": [
-    "tests/character-growth.test.js",
+    "tests/art-assets.test.js",
     "tests/chat.test.js",
+    "tests/enemy-taxonomy.test.js",
+    "tests/equipment-affixes.test.js",
+    "tests/equipment.test.js",
+    "tests/gal.test.js",
     "tests/guild-skyrim-cities.test.js",
     "tests/invitation-location.test.js",
     "tests/shop-guild-transactions.test.js",

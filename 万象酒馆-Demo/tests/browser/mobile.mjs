@@ -427,8 +427,8 @@ export async function mobileChecks({ browser, baseURL, output }) {
       const list = page.locator('#forge-list');
       await swipeScroll(page, list);
       await list.locator('[data-forge-select="mobile-equipment"]').tap();
-      const buy = await page.locator('[data-buy-equipment]').boundingBox();
-      const dock = await page.locator('#forge-catalog .forge-detail-actions').boundingBox();
+      const buy = await page.locator('#forge-redeem').boundingBox();
+      const dock = await page.locator('#forge-category-tabs').boundingBox();
       if (!buy || !dock || buy.y < dock.y || buy.y + buy.height > dock.y + dock.height + 1)
         problems.push({ label: 'forge-buy', viewport, buy, dock });
       await measure('#forge-catalog', 'forge-details');

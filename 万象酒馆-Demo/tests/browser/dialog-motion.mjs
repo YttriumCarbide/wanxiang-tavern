@@ -101,8 +101,18 @@ export async function assertDialogExited(
   selector,
   { animated = false, focusId, scrollState } = {},
 ) {
-  const state = await dialog.evaluate((element) => {
+  const state = await dialog.evaluate((element, targetId) => {
     const style = getComputedStyle(element);
+    const target = targetId ? document.getElementById(targetId) : null;
+    const targetStyle = target ? getComputedStyle(target) : null;
+    const targetInteractive = Boolean(
+      target?.isConnected &&
+      !target.matches(':disabled, [aria-disabled="true"]') &&
+      !target.closest('[hidden], [inert], dialog:not([open])') &&
+      target.getClientRects().length > 0 &&
+      targetStyle?.visibility === 'visible' &&
+      targetStyle.pointerEvents !== 'none',
+    );
     return {
       open: element.open,
       modal: element.matches(':modal'),
@@ -111,6 +121,7 @@ export async function assertDialogExited(
       pointerEvents: style.pointerEvents,
       backdropPointerEvents: getComputedStyle(element, '::backdrop').pointerEvents,
       focusedId: document.activeElement?.id || '',
+      targetInteractive,
       scrollState: {
         rootOverflow: getComputedStyle(document.documentElement).overflow,
         rootInlineOverflow: document.documentElement.style.overflow,
@@ -118,11 +129,14 @@ export async function assertDialogExited(
         bodyInlineOverflow: document.body.style.overflow,
       },
     };
-  });
+  }, focusId || '');
 
   assert.equal(state.open, false, 'The native open state must end immediately');
   assert.equal(state.modal, false, 'The modal top layer must be released immediately');
-  if (focusId) assert.equal(state.focusedId, focusId, 'Focus must return to the dialog opener');
+  if (focusId) {
+    assert.equal(state.focusedId, focusId, 'Focus must return to the interactive trigger');
+    assert.equal(state.targetInteractive, true, 'The focus target must remain interactive');
+  }
   if (scrollState)
     assert.deepEqual(state.scrollState, scrollState, 'Document scroll styles must be restored');
 
@@ -462,7 +476,13 @@ export async function dialogMotionChecks({ browser, baseURL, output }) {
     await page.keyboard.press('Escape');
     await embeddedHandle.waitFor({ state: 'visible' });
     assert(await dialog.isVisible(), 'Escape closes only the inner ledger');
-    await closeDialog(page, dialog, close, { focusId: OPENER_ID, scrollState });
+    await closeDialog(page, dialog, close, { focusId: 'ledger-handle', scrollState });
+    await assertFocusNotTrapped(page, 'ledger-handle');
+
+    // The drawer stayed closed; reopen it before using its preparation trigger again.
+    await page.locator('#ledger-handle').click();
+    await page.locator('#ledger-drawer-host.is-open').waitFor({ state: 'visible' });
+    await opener.waitFor({ state: 'visible' });
 
     // Repeated normal cycles catch stale top-layer state and forgotten transitions.
     const cycles = 6;
@@ -516,12 +536,49 @@ export async function dialogMotionChecks({ browser, baseURL, output }) {
     await fs.mkdir(output, { recursive: true });
     await page.screenshot({ path: path.join(output, 'dialog-motion-mobile.png') });
 
+    // Close the inner ledger first, then close preparation to a visible trigger.
+    const reducedHandle = dialog.locator('#ledger-handle');
+    await reducedHandle.click();
+    await page.locator('#ledger-drawer-host.is-open').waitFor({ state: 'visible' });
+    await page.keyboard.press('Escape');
+    await reducedHandle.waitFor({ state: 'visible' });
+    await page.waitForFunction(() => document.activeElement?.id === 'ledger-handle');
+
     const reducedExit = await closeDialog(page, dialog, close, {
-      focusId: OPENER_ID,
+      focusId: 'ledger-handle',
       scrollState,
     });
     assert.equal(reducedExit.animated, false, 'Reduced motion must not wait for exit transitions');
-    await assertFocusNotTrapped(page, OPENER_ID);
+    await assertFocusNotTrapped(page, 'ledger-handle');
+
+    // If another modal takes focus while preparation closes, keep focus there.
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    await page.locator('#ledger-handle').click();
+    await page.locator('#ledger-drawer-host.is-open').waitFor({ state: 'visible' });
+    await openDialog(page, dialog, opener, { motionSupported });
+    await page.evaluate(() => {
+      const settings = document.querySelector('#ai-dialog');
+      settings.showModal();
+      document.querySelector('#ai-close').focus();
+      document.querySelector('#party-panel').close();
+    });
+    await page.waitForFunction(() => {
+      const preparation = document.querySelector('#party-panel');
+      const settings = document.querySelector('#ai-dialog');
+      return (
+        !preparation.open &&
+        settings.open &&
+        document.activeElement?.id === 'ai-close' &&
+        !preparation.contains(document.querySelector('#ledger-handle'))
+      );
+    });
+    assert.equal(
+      await page.evaluate(() => document.activeElement?.id),
+      'ai-close',
+      'Closing preparation must not steal focus from another open modal',
+    );
+    await page.locator('#ai-close').click();
+    await page.locator('#ai-dialog').waitFor({ state: 'hidden' });
 
     assert.deepEqual(pageErrors, [], `Page errors: ${pageErrors.join('\n')}`);
     return {
@@ -531,6 +588,8 @@ export async function dialogMotionChecks({ browser, baseURL, output }) {
       reduced,
       cycles,
       atlasExit,
+      closedLedgerFocus: true,
+      competingModalFocusPreserved: true,
       dialog: DIALOG_SELECTOR,
     };
   } finally {

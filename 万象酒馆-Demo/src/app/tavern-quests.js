@@ -766,7 +766,9 @@ export function createTavernQuests(context) {
 
   events.on(dialog, 'click', (event) => {
     if (!sessionIsAlive()) return;
-    const button = event.target.closest('button');
+    const button =
+      event.target.closest('button') ||
+      event.target.closest('.skyrim-quest-item')?.querySelector('[data-quest-select]');
     if (!button || button.disabled) return;
     if (button.dataset.questFocus === 'close') {
       event.preventDefault();

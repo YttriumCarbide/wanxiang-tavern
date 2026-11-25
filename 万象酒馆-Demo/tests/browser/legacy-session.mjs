@@ -16,7 +16,10 @@ export async function openShelfPanel(page, action) {
 }
 
 /** These suites exercise existing six-member saves; fresh creation has its own real API suite. */
-export async function legacySession(page, { dismissJournals = true, worlds = [] } = {}) {
+export async function legacySession(
+  page,
+  { dismissJournals = true, worlds = [], unlockSilverCrownTavern = false } = {},
+) {
   if (dismissJournals) await dismissAutomaticJournals(page);
   const values = new Map();
   applyGeneratedReset({
@@ -26,6 +29,7 @@ export async function legacySession(page, { dismissJournals = true, worlds = [] 
   const legacy = newLibrary();
   legacy.unlockedDungeons = [...BASE_WORLDS];
   legacy.worlds = worlds;
+  if (unlockSilverCrownTavern) legacy.daily.unlocks.silverCrownTavern = true;
   for (const world of worlds) addWorldRoute(legacy.exploration, world, 17371);
   values.set('wanxiang.worldbooks.v1', JSON.stringify(legacy));
   await page.addInitScript(

@@ -102,7 +102,7 @@ export const RUINS_ADVERSARIES = [
   {
     id: 'corridorGuard',
     attackStyle: 'corridor-cleave',
-    name: '回廊石卫',
+    name: '回廊魔像',
     title: '精英 / 镇廊石像鬼',
     elite: true,
     color: '#7b9cb0',
@@ -339,7 +339,7 @@ export const RUINS_ADVERSARIES = [
   {
     id: 'ruinsMudGolem',
     attackStyle: 'mud-slam',
-    name: '灰石泥傀儡',
+    name: '泥石魔像',
     title: '精英 / 灰岩巨傀',
     elite: true,
     color: '#8a7660',

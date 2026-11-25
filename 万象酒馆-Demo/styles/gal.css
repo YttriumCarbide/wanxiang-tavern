@@ -112,6 +112,12 @@ dialog:has(> #gal-stage:not([hidden])) > :not(.gal-stage, #dc-stage) {
 .gal-stage[hidden] {
   display: none;
 }
+@media (prefers-reduced-motion: no-preference) {
+  /* Persistent inputs fold by transition; only a workspace exit uses the shared keyframes. */
+  .gal-stage[data-persistent='true'] .gal-composer[data-workspace-exiting='true'] {
+    animation: gal-workspace-exit 160ms ease-in both;
+  }
+}
 .gal-stage[data-leaving='true'] {
   pointer-events: none;
 }

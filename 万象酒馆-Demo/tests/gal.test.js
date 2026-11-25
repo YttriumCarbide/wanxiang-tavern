@@ -26,6 +26,18 @@ import { officialCharacter } from '../src/ai/library.js';
 import { galSceneLines, linesProse } from '../src/adventure/patches.js';
 import { resolveGalBackdrop } from '../src/app/gal-backdrop.js';
 
+const GAL_REACTION_TAGS = Object.freeze([
+  'hop',
+  'hop:alert',
+  'hop:note',
+  'shake',
+  'sweat',
+  'lean',
+  'back',
+  'nod',
+  'sway',
+  'question',
+]);
 test('city chat waits for returned environment text and has no city image backdrop', () => {
   for (const sceneId of ['city-center', 'crown-gateward', 'eternal-city']) {
     assert.equal(resolveGalBackdrop({ sceneId }), null);
@@ -93,21 +105,28 @@ test('Gal reaction suffixes keep the speaker, NPC portrait and readable text ind
   const { id, setting } = officialCharacter('edith');
   const actors = [{ id, name: setting.name }];
   const beat = { type: 'dialogue', speaker: id, text: 'A。' };
-  const tagged = `【对白:${id}|hop:alert】A。`;
-  assert.deepEqual(parseGalText(tagged), [{ ...beat, emotion: 'hop:alert' }]);
+  const npc = `npc:${setting.name}|guardWoman`;
+  for (const emotion of GAL_REACTION_TAGS) {
+    const tagged = `【对白:${id}|${emotion}】A。`;
+    assert.deepEqual(parseGalText(tagged), [{ ...beat, emotion }], emotion);
+    assert.equal(readableGalText(tagged, actors), `${setting.name}：A。`, emotion);
+    assert.deepEqual(
+      parseGalText(`【对白:${npc}|${emotion}】A。`),
+      [{ ...beat, speaker: npc, emotion }],
+      `NPC portrait suffix stays separate from ${emotion}`,
+    );
+  }
   for (const suffix of ['', '|unknown', '|constructor', '|hop|shake', '|unknown|hop'])
     assert.deepEqual(parseGalText(`【对白:${id}${suffix}】A。`), [beat]);
-  assert.equal(readableGalText(tagged, actors), `${setting.name}：A。`);
   assert.deepEqual(parseGalText('A。'), [{ type: 'narration', speaker: '', text: 'A。' }]);
-  const npc = `npc:${setting.name}|guardWoman`;
   assert.deepEqual(parseGalText(`【登场:${npc}|hop】【对白:${npc}|sweat】A。`), [
     { type: 'enter', speaker: npc, text: '' },
     { ...beat, speaker: npc, emotion: 'sweat' },
   ]);
   assert.deepEqual(parseGalText(`【对白:${npc}|unknown】A。`), [{ ...beat, speaker: npc }]);
+  const tagged = `【对白:${id}|hop:alert】A。`;
   assert.equal(linesProse(galSceneLines(tagged, 'fixture')), tagged);
 });
-
 test('Gal cadence accelerates energetic cues and pauses after hesitation punctuation', () => {
   const normal = galTypingDelay(undefined, '，', 'A');
   const slow = galTypingDelay('sweat', 'A', '。');
@@ -295,6 +314,20 @@ test('stage retains actors during narration, handles explicit exit and has safe 
   assert.deepEqual(nextGalStage(stage, { type: 'dialogue' }, actors[2]), ['edith', 'pandora']);
 });
 
+function assertGalReactionInstruction(request, kind) {
+  const finalText = request.messages.map((message) => message.content).join('\n');
+  const sections = finalText.match(/【Gal对白反应】[^\n]*/gu) || [];
+  assert.equal(sections.length, 1, `the actual ${kind} request has one Gal reaction section`);
+  const whitelist = sections[0].match(/白名单：(.+?)。/u)?.[1];
+  assert.ok(whitelist, `the actual ${kind} request spells out its reaction whitelist`);
+  assert.deepEqual(
+    whitelist.split('、').map((entry) => entry.split('（', 1)[0]),
+    GAL_REACTION_TAGS,
+    `the actual ${kind} request has exactly the supported reaction tags`,
+  );
+  assert(sections[0].includes('普通交谈和连续接话沿用无后缀写法'));
+}
+
 test('actual shared pipeline opts script and chat into Gal without changing the JSON or metadata contracts', async () => {
   const directory = await mkdtemp(path.join(process.cwd(), '.runtime/tests/gal-pipeline-'));
   const worlds = await createWorldbookStore(directory);
@@ -311,12 +344,13 @@ test('actual shared pipeline opts script and chat into Gal without changing the 
   const source = normalizePromptPreset({
     prompts: [{ identifier: 'taskContext', marker: true }],
   }).preset;
-  const party = [{ id: 'hero', name: '旅人', worldbook: '谨慎的旅人' }];
+  const edith = officialCharacter('edith');
+  const party = [{ id: edith.id, name: edith.setting.name, worldbook: edith.setting.worldbook }];
   for (const kind of ['script', 'chat', 'quick-chat']) {
     const input =
       kind === 'script'
         ? { brief: '探索遗迹', party, boss: 'bossGate' }
-        : { text: '喝茶', place: 'bar', characters: party, selected: ['hero'], history: [] };
+        : { text: '喝茶', place: 'bar', characters: party, selected: [edith.id], history: [] };
     const off = await pipeline.buildRequest(kind, input, source);
     const on = await pipeline.buildRequest(kind, { ...input, presentationMode: 'gal' }, source);
     assert(off.messages.some((message) => message.content.includes('【Gal叙事格式')));
@@ -328,14 +362,6 @@ test('actual shared pipeline opts script and chat into Gal without changing the 
       chat: '【Gal酒馆聊天文风】',
       'quick-chat': '【Gal局内闲聊文风】',
     };
-    const instruction = galInstruction({ ...input, presentationMode: 'gal' }, kind);
-    assert(instruction.includes('不增加第二套JSON'));
-    assert(instruction.includes('普通交谈和连续接话沿用无后缀写法'));
-    assert(instruction.includes('【Gal共同写作要求】'));
-    assert(instruction.includes(headings[kind]));
-    for (const [otherKind, heading] of Object.entries(headings)) {
-      if (otherKind !== kind) assert(!instruction.includes(heading));
-    }
     assert(on.messages.some((message) => message.content.includes(headings[kind])));
     for (const request of [off, on]) {
       const finalText = request.messages.map((message) => message.content).join('\n');
@@ -346,10 +372,45 @@ test('actual shared pipeline opts script and chat into Gal without changing the 
       assert.match(finalText, /单幕也只选最契合局势的 2～3 名/);
       assert.match(finalText, /非焦点队友不参与本幕对白，也不要在开场新登场/);
       assert.match(finalText, /一件事深谈 3～5 个来回/);
+      assertGalReactionInstruction(request, kind);
       assert(finalText.includes('【对白:npc:姓名|立绘编号|hop】'));
       assert(!finalText.includes('【对白:npc:城门女卫兵|guardWoman】'));
       assert(finalText.includes('老年男性学者'));
       assert(finalText.includes('不在剧本或聊天正文写戒指的具体游戏效果'));
     }
+  }
+
+  await worlds.configure({ globalSelect: [] });
+  for (const kind of ['script', 'chat', 'quick-chat']) {
+    const input =
+      kind === 'script'
+        ? { brief: '探索遗迹', party, boss: 'bossGate' }
+        : { text: '喝茶', place: 'bar', characters: party, selected: [edith.id], history: [] };
+    const request = await pipeline.buildRequest(
+      kind,
+      { ...input, presentationMode: 'gal' },
+      source,
+    );
+    const headings = {
+      script: '【Gal剧本文风】',
+      chat: '【Gal酒馆聊天文风】',
+      'quick-chat': '【Gal局内闲聊文风】',
+    };
+    const instruction = galInstruction({ ...input, presentationMode: 'gal' }, kind);
+    assert(
+      request.messages.some(
+        (message) => message.role === 'system' && message.content.includes(instruction),
+      ),
+      `the actual ${kind} fallback request includes the complete Gal instruction`,
+    );
+    assertGalReactionInstruction(request, kind);
+    assert(instruction.includes('不增加第二套JSON'));
+    assert(instruction.includes('普通交谈和连续接话沿用无后缀写法'));
+    assert(instruction.includes('【Gal共同写作要求】'));
+    assert(instruction.includes(headings[kind]));
+    for (const [otherKind, heading] of Object.entries(headings)) {
+      if (otherKind !== kind) assert(!instruction.includes(heading));
+    }
+    assert(request.messages.some((message) => message.content.includes(headings[kind])));
   }
 });

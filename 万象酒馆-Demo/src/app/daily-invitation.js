@@ -282,7 +282,8 @@ export function createDailyInvitation(
         });
     }
     const joined = run.recruitment && ended && recruit(run.member, run);
-    context.gal.cancel(owner);
+    if (!ended && workspace) void context.gal.dismissWorkspace(owner);
+    else context.gal.cancel(owner);
     complete(
       'invitation',
       `${ended ? '事件结束' : '约见提前结束'} · ${member?.setting.name || '同伴'} · 好感 +${gain}${bonus ? ' · 个人事件完成' : ''}${run.recruitment ? (joined ? ' · 招募成功' : ' · 交涉未通过') : ''}`,

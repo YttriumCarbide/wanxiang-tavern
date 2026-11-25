@@ -14,36 +14,72 @@ async function checkGalReactions(page) {
       if (element.dataset.typing === 'true') button.click();
       button.click();
     });
-  async function assertReaction(actor, symbol, moving = false, nudging = false) {
+  const reveal = () =>
+    stage.evaluate((element) => {
+      if (element.dataset.typing === 'true') element.querySelector('.gal-page').click();
+    });
+  async function assertReaction(actor, symbol, moving = false, nudging = false, transform = '') {
     const state = await stage.evaluate((element) => ({
+      cast: [...element.querySelectorAll('.gal-cast img')]
+        .map((image) => image.dataset.actor)
+        .sort(),
       cues: [...element.querySelectorAll('.gal-emote:not([hidden])')].map((bubble) => ({
         actor: bubble.closest('.gal-portrait-slot').dataset.actor,
         symbol: bubble.textContent,
         moving: bubble.getAnimations().length > 0,
       })),
       gestures: [...element.querySelectorAll('.gal-portrait-slot')]
-        .filter((slot) => slot.querySelector('.gal-portrait-reaction').getAnimations().length > 0)
-        .map((slot) => slot.dataset.actor),
+        .map((slot) => {
+          const animations = slot.querySelector('.gal-portrait-reaction').getAnimations();
+          return {
+            actor: slot.dataset.actor,
+            transforms: animations
+              .flatMap((animation) => animation.effect?.getKeyframes() || [])
+              .map((frame) => frame.transform)
+              .filter(Boolean),
+            animated: animations.length > 0,
+          };
+        })
+        .filter((gesture) => gesture.animated),
+      speaking: element.querySelector('.gal-cast img.speaking')?.dataset.actor || '',
       nudging: element.querySelector('.gal-reading').getAnimations().length > 0,
     }));
-    assert.deepEqual(state, {
-      cues: actor ? [{ actor, symbol, moving }] : [],
-      gestures: moving ? [actor] : [],
-      nudging,
-    });
+    assert.deepEqual(state.cast, [edith, yuexi].sort(), 'both portraits stay on stage');
+    assert.deepEqual(state.cues, actor && symbol ? [{ actor, symbol, moving }] : []);
+    assert.deepEqual(
+      state.gestures.map((gesture) => gesture.actor),
+      moving ? [actor] : [],
+      'only the tagged speaker receives a portrait Web Animation',
+    );
+    assert.equal(state.nudging, nudging, 'only alert and shake nudge the dialogue band');
+    if (actor) assert.equal(state.speaking, actor, 'the active speaker owns the reaction');
+    if (moving && transform)
+      assert(
+        state.gestures[0].transforms.some((frame) => frame.includes(transform)),
+        `the ${actor} reaction animates ${transform}`,
+      );
   }
 
   const line = '甲，乙——丙丁。';
+  const dialogue = (speaker, emotion, text = line) =>
+    `【对白:${speaker}${emotion ? `|${emotion}` : ''}】${text}`;
   const scene = [
     '【登场:伊蒂丝】【登场:official-aegis】【旁白】A。',
-    '【对白:伊蒂丝|hop:alert】' + 'B'.repeat(90),
-    '【登场:official-aegis】',
-    '【对白:official-aegis|shake】' + line,
-    '【对白:official-aegis】C。', // A later untagged line must not inherit the reaction.
-    '【对白:伊蒂丝|question】' + line,
-    '【对白:伊蒂丝】F。',
-    '【对白:official-aegis】' + line,
-    '【对白:official-aegis|sweat】' + line,
+    dialogue('伊蒂丝', 'hop', 'B'.repeat(90)),
+    dialogue('official-aegis', 'hop:alert'),
+    dialogue('伊蒂丝', 'shake'),
+    dialogue('伊蒂丝', '', 'C。'),
+    dialogue('official-aegis', 'question'),
+    dialogue('official-aegis', '', 'F。'),
+    dialogue('official-aegis', '', line),
+    dialogue('伊蒂丝', 'hop:note'),
+    dialogue('official-aegis', 'sweat'),
+    dialogue('伊蒂丝', 'lean'),
+    dialogue('official-aegis', 'back'),
+    dialogue('伊蒂丝', 'nod'),
+    dialogue('official-aegis', 'sway'),
+    dialogue('official-aegis', 'question'),
+    dialogue('official-aegis', '', 'G。'),
   ].join('');
   const clockStart = Date.UTC(2026, 0, 1);
   await page.clock.install({ time: clockStart });
@@ -61,19 +97,13 @@ async function checkGalReactions(page) {
   await page.clock.pauseAt(clockStart + 60_000);
   try {
     await advance();
-    await assertReaction(edith, '❗', true, true);
+    await assertReaction(edith, '✨', true, false, 'translateY(-20px)');
     await advance();
-    await assertReaction(); // Later pages of one tagged beat do not replay its emote.
+    await assertReaction(); // A later page of one tagged beat must not replay its reaction.
     await advance();
-    await assertReaction(yuexi, '💢', true, true);
-    assert.deepEqual(
-      await portraits.evaluateAll((images) => images.map((image) => image.dataset.actor)),
-      [edith, yuexi],
-    );
-    assert.equal(await stage.locator('img.speaking').getAttribute('data-actor'), yuexi);
-    await page.clock.runFor(16);
-    assert.equal(await prose.textContent(), '甲，', 'the energetic line reaches the comma first');
-
+    await assertReaction(yuexi, '❗', true, true, 'translateY(-20px)');
+    await advance();
+    await assertReaction(edith, '💢', true, true, 'translateX(-6px)');
     await page.evaluate(() => {
       window.galFixture.motionPreferenceChanged = new Promise((resolve) => {
         matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', resolve, {
@@ -86,25 +116,31 @@ async function checkGalReactions(page) {
       await window.galFixture.motionPreferenceChanged;
       delete window.galFixture.motionPreferenceChanged;
     });
-    await assertReaction(yuexi, '💢');
-    assert.equal(await prose.textContent(), line);
+    await assertReaction(edith, '💢'); // The symbol remains but all reaction motion stops.
     await advance();
-    await assertReaction(); // An untagged line after the reaction starts clean.
+    await reveal();
+    await assertReaction(); // Untagged dialogue never auto-triggers in reduced-motion mode.
     assert.equal(await prose.textContent(), 'C。');
     await advance();
-    await assertReaction(edith, '❓');
+    await reveal();
+    await assertReaction(yuexi, '❓'); // Reduced motion keeps the question symbol static.
     assert.equal(await prose.textContent(), line);
     await advance();
-    await assertReaction();
+    await reveal();
+    await assertReaction(); // A following untagged page stays reaction-free.
     assert.equal(await prose.textContent(), 'F。');
 
     await page.emulateMedia({ reducedMotion: 'no-preference' });
     await advance();
     await page.clock.runFor(16);
-    assert.equal(await prose.textContent(), '甲', 'the same untagged text keeps its normal pace');
+    assert.equal(await prose.textContent(), '甲', 'untagged text keeps the normal pace');
     await assertReaction();
     await advance();
-    await assertReaction(yuexi, '💧', true);
+    await assertReaction(edith, '🎵', true, false, 'translateY(-20px)');
+    await page.clock.runFor(16);
+    assert.equal(await prose.textContent(), '甲，', 'the energetic line reaches the comma first');
+    await advance();
+    await assertReaction(yuexi, '💧', true, false, 'translateY(18px)');
     await page.clock.runFor(350);
     assert.equal(await prose.textContent(), '甲，', 'hesitation pauses after the comma');
     await page.clock.runFor(170);
@@ -112,6 +148,22 @@ async function checkGalReactions(page) {
     await page.clock.runFor(650);
     assert.equal(await prose.textContent(), line);
     await assertReaction();
+    await advance();
+    await assertReaction(edith, null, true, false, 'scale(1.08)');
+    await advance();
+    await assertReaction(yuexi, null, true, false, 'scale(0.95)');
+    await advance();
+    await assertReaction(edith, null, true, false, 'translateY(6px)');
+    await advance();
+    await assertReaction(yuexi, '…', true, false, 'translateX(-6px)');
+    await advance();
+    await assertReaction(yuexi, '❓', true, false, 'rotate(3deg)');
+    await reveal();
+    assert.equal(await prose.textContent(), line);
+    await advance();
+    await reveal();
+    await assertReaction();
+    assert.equal(await prose.textContent(), 'G。');
   } finally {
     await page.clock.resume();
   }

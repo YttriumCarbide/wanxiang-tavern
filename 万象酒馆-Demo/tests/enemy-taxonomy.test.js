@@ -92,23 +92,33 @@ test('the official enemy pools use 14 standard species and six categories, with 
     assert(!enemy.boss && !enemy.overlord && !enemy.elite, id + ' remains an ordinary minion');
   }
 
+  // The brief explicitly names these four non-Boss enemies even where they serve as elites.
+  const namedElites = {
+    corridorGuard: '回廊魔像',
+    ruinsMudGolem: '泥石魔像',
+    hollowSentry: '空壳魔像',
+    oathlessDuelist: '无誓剑士',
+  };
+  for (const [id, name] of Object.entries(namedElites)) {
+    assert.equal(roster[id].name, name);
+    assert.equal(roster[id].elite, true, id + ' retains its elite tier');
+  }
   const renamed = Object.entries(ENEMY_DISPLAY_NAME_OVERRIDES);
-  assert.equal(renamed.length, 39);
+  assert.equal(renamed.length, 43);
   for (const [id, name] of renamed) {
     const enemy = roster[id];
     assert.equal(enemy.name, name, `${id} display name`);
     assert(name.endsWith(enemy.baseSpecies), `${id} species suffix`);
     assert.equal([...name].length - [...enemy.baseSpecies].length, 2, `${id} prefix length`);
     assert(
-      !enemy.boss && !enemy.overlord && !enemy.elite && !enemy.archiveSource,
-      `${id} display-name overrides must not rename bosses, elites or protected arena entries`,
+      !enemy.boss &&
+        !enemy.overlord &&
+        !enemy.archiveSource &&
+        (!enemy.elite || Object.hasOwn(namedElites, id)),
+      `${id} display-name overrides must not rename protected identities`,
     );
   }
   for (const [id, name] of Object.entries({
-    corridorGuard: '回廊石卫',
-    ruinsMudGolem: '灰石泥傀儡',
-    hollowSentry: '空壳哨兵',
-    oathlessDuelist: '无誓行者',
     mossGulon: '苔背巨蛙·咕隆',
     bossGate: '缚界巨像',
     bossBloom: '夜蕈母体',

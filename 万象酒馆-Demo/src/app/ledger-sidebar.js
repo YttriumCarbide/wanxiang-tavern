@@ -29,6 +29,25 @@ const CLOSE_DRAG_THRESHOLD = 56;
 const FLICK_VELOCITY = 0.25;
 const CLOSE_ANIMATION_MS = 290;
 
+function focusLedgerTrigger(trigger) {
+  if (
+    !(trigger instanceof HTMLElement) ||
+    !trigger.isConnected ||
+    trigger.matches(':disabled, [aria-disabled="true"]') ||
+    trigger.closest('[hidden], [inert], dialog:not([open])') ||
+    !trigger.getClientRects().length
+  )
+    return;
+
+  const style = getComputedStyle(trigger);
+  if (style.visibility !== 'visible' || style.pointerEvents === 'none') return;
+  trigger.focus({ preventScroll: true });
+}
+
+function focusedModal() {
+  return document.activeElement?.closest?.('dialog[open]') || activeModal(document);
+}
+
 /** Relocate a node together with its preceding DOM Comment anchor if present (e.g. latest-response). */
 function moveWithAnchor(node, target) {
   if (!node || !target) return;
@@ -80,6 +99,7 @@ export function createLedgerSidebar(context) {
   let cornerShown = false;
   let handleShown = false;
   let closeTimer = null;
+  let preparationFocusEpoch = 0;
   let restoreHandle = false;
   let preparationPortal = false;
   let reopenAfterPreparation = false;
@@ -388,6 +408,7 @@ export function createLedgerSidebar(context) {
   // Move the ledger into preparation only while that modal owns input.
   function syncPreparationPortal(inside) {
     if (preparationPortal === inside) return;
+    const focusEpoch = ++preparationFocusEpoch;
     clearTimeout(closeTimer);
     closeTimer = null;
     restoreHandle = false;
@@ -406,9 +427,24 @@ export function createLedgerSidebar(context) {
     drawer.style.transform = '';
     backdrop.style.opacity = '';
     (inside ? preparation : document.body).append(handle, host);
-    if (isOpen) {
+    if (!inside) {
+      const trigger = isOpen ? $('#party-toggle') : handle;
       queueMicrotask(() => {
-        if (isOpen && !activeModal(document)) $('#party-toggle')?.focus({ preventScroll: true });
+        const focused = document.activeElement;
+        const focusStillBelongsToPreparation =
+          focused === document.body ||
+          focused === document.documentElement ||
+          preparation.contains(focused) ||
+          host.contains(focused);
+        if (
+          disposed ||
+          focusEpoch !== preparationFocusEpoch ||
+          preparation.open ||
+          focusedModal() ||
+          !focusStillBelongsToPreparation
+        )
+          return;
+        focusLedgerTrigger(trigger);
       });
     }
   }
@@ -659,6 +695,7 @@ export function createLedgerSidebar(context) {
 
   function open(focusTarget = null) {
     if (disposed || session.runtime.needsStart) return;
+    ++preparationFocusEpoch;
     clearTimeout(closeTimer);
     closeTimer = null;
     restoreHandle = false;
