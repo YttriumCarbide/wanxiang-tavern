@@ -194,6 +194,7 @@ function journalCommands(quest, trackedId, { claimingId, accepting, acceptDisabl
 }
 
 export function renderQuestJournal({
+  currentDate,
   groups,
   selected,
   trackedId,
@@ -218,9 +219,17 @@ export function renderQuestJournal({
   return `<header class="skyrim-head">
       <h2 id="tavern-quests-title">任务日志</h2>
       <span class="ow-quest-header-needle" aria-hidden="true"><i></i></span>
-      <button type="button" class="quests-close" data-quest-focus="close" aria-label="关闭任务日志">
-        <span aria-hidden="true">×</span>
-      </button>
+      <div class="skyrim-head-actions">
+        <span class="skyrim-head-date">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width=".9" aria-hidden="true">
+            <circle cx="8" cy="8" r="6.4"/><path d="M8 4.2V8l2.6 1.7" stroke-linecap="round"/>
+          </svg>
+          <span data-quest-date>${escapeText(currentDate)}</span>
+        </span>
+        <button type="button" class="quests-close" data-quest-focus="close" aria-label="关闭任务日志">
+          <span aria-hidden="true">×</span>
+        </button>
+      </div>
     </header>
     <div class="skyrim-journal-grid">
       <aside class="skyrim-index-col" aria-label="任务目录">
