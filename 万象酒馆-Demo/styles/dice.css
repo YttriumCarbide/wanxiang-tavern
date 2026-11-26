@@ -1,6 +1,7 @@
 /* 3D 2D6 dice stage, ck/EventScene throw, FreeScene magic circle, GalScene diagonal cut-in. */
-body:has(#dc-stage:not([hidden]):not([data-phase='inscribe'], [data-phase='withdraw'])) #gal-stage,
-body:has(#dc-stage:not([hidden]))
+body:has(#dc-stage:not([hidden], [data-exiting], [data-phase='inscribe'], [data-phase='withdraw']))
+  #gal-stage,
+body:has(#dc-stage:not([hidden], [data-exiting]))
   :is(
     #rp-scene .rp-header,
     #rp-scene .rp-content,
@@ -38,6 +39,9 @@ body:has(#dc-stage:not([hidden]))
 }
 #dc-stage[hidden] {
   display: none;
+}
+#dc-stage[data-exiting='true'] {
+  pointer-events: none;
 }
 .dc-backdrop {
   position: absolute;

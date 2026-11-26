@@ -298,6 +298,7 @@ export function createDiceStage(context) {
 
   let activeResolver = null;
   let timers = [];
+  let stageExitAnimation = null;
 
   function schedule(delay, fn) {
     const id = setTimeout(fn, delay);
@@ -305,19 +306,69 @@ export function createDiceStage(context) {
     return id;
   }
 
-  function closeStage() {
-    for (const id of timers) clearTimeout(id);
-    timers = [];
+  function cancelStageExit() {
+    const animation = stageExitAnimation;
+    stageExitAnimation = null;
+    animation?.cancel();
+    delete overlay.dataset.exiting;
+    overlay.inert = false;
+    overlay.removeAttribute('aria-hidden');
+  }
+
+  function finishStageExit(animation) {
+    if (animation && stageExitAnimation !== animation) return;
+    stageExitAnimation = null;
     surface.hide();
     overlay.hidden = true;
+    animation?.cancel();
+    overlay.inert = false;
+    overlay.removeAttribute('aria-hidden');
+    overlay.removeAttribute('data-exiting');
     overlay.removeAttribute('data-style');
     overlay.removeAttribute('data-phase');
     overlay.style.removeProperty('--dc-glyph-origin');
     overlay.dataset.ready = 'false';
     overlay.replaceChildren();
     document.body.append(overlay);
+  }
+
+  function closeStage(animate = true) {
+    cancelStageExit();
+    for (const id of timers) clearTimeout(id);
+    timers = [];
+    overlay.dataset.ready = 'false';
     const resolve = activeResolver;
     activeResolver = null;
+
+    const focused = document.activeElement;
+    if (overlay.contains(focused)) focused.blur?.();
+    overlay.inert = true;
+    overlay.setAttribute('aria-hidden', 'true');
+    overlay.dataset.exiting = 'true';
+
+    if (
+      !animate ||
+      overlay.hidden ||
+      !overlay.isConnected ||
+      !overlay.getClientRects().length ||
+      matchMedia('(prefers-reduced-motion: reduce)').matches ||
+      typeof overlay.animate !== 'function'
+    ) {
+      finishStageExit(null);
+    } else {
+      const animation = overlay.animate(
+        [
+          { opacity: getComputedStyle(overlay).opacity, transform: 'scale(1)' },
+          { opacity: 0, transform: 'scale(0.985)' },
+        ],
+        { duration: 180, easing: 'ease-in', fill: 'forwards' },
+      );
+      animation.id = 'dc-stage-exit';
+      stageExitAnimation = animation;
+      const finish = () => finishStageExit(animation);
+      void animation.finished.then(finish, finish);
+    }
+
     resolve?.();
   }
 
@@ -328,7 +379,7 @@ export function createDiceStage(context) {
     }
   });
   events.on(window, 'keydown', (event) => {
-    if (overlay.hidden) return;
+    if (overlay.hidden || overlay.dataset.exiting) return;
     if (overlay.dataset.ready !== 'true') {
       if (['Escape', ' ', 'Enter'].includes(event.key)) event.preventDefault();
       return;
@@ -354,13 +405,14 @@ export function createDiceStage(context) {
     if (session.ai.generationOptions?.galMode === false) {
       return Promise.resolve();
     }
-    if (activeResolver) closeStage();
+    if (activeResolver || stageExitAnimation) closeStage(false);
     return new Promise((resolve) => {
+      const abort = () => closeStage(false);
       activeResolver = () => {
-        signal?.removeEventListener('abort', closeStage);
+        signal?.removeEventListener('abort', abort);
         resolve();
       };
-      signal?.addEventListener('abort', closeStage, { once: true });
+      signal?.addEventListener('abort', abort, { once: true });
       overlay.dataset.ready = 'false';
       overlay.dataset.style = style;
       overlay.dataset.phase = style === 'free' ? 'inscribe' : 'focus';
@@ -712,7 +764,7 @@ export function createDiceStage(context) {
     playCheck,
     playReply,
     dispose() {
-      closeStage();
+      closeStage(false);
       overlay.remove();
     },
   };

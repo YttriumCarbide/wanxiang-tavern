@@ -56,7 +56,11 @@ async function checkGalReactions(page) {
       nudging: element.querySelector('.gal-reading').getAnimations().length > 0,
     }));
     assert.deepEqual(state.cast, [...expectedCast].sort(), 'only stage portraits remain active');
-    assert.deepEqual(state.emoting, moving ? [actor] : [], 'only an active reaction owns an emote state');
+    assert.deepEqual(
+      state.emoting,
+      moving ? [actor] : [],
+      'only an active reaction owns an emote state',
+    );
     assert.deepEqual(state.cues, actor && symbol ? [{ actor, symbol, moving }] : []);
     assert.deepEqual(
       state.gestures.map((gesture) => gesture.actor),
@@ -196,7 +200,7 @@ async function checkGalReactions(page) {
     await advance();
     await assertReaction(null, null, false, false, '', [yuexi]); // Exit clears the former speaker's reaction.
     await advance();
-    await assertReaction(yuexi, '❓', true, false, 'rotate(3deg)');
+    await assertReaction(edith, '❓', true, false, 'rotate(3deg)'); // Her next line brings her back.
     await advance();
     await assertReaction(null, null, false, false, '', [yuexi]); // Scene clear cancels the prior reaction.
     await reveal();
@@ -332,8 +336,13 @@ export async function galChecks({ browser, baseURL, output }) {
       await nextPage();
     await revealPage();
     assert((await page.locator('.gal-speaker').textContent()).includes('伊蒂丝'));
-    await page.locator('.gal-cast img').evaluate(async (image) => {
-      await image.decode();
+    // The asset store assigns a blob URL asynchronously, after creating the portrait node.
+    const portrait = '.gal-cast img.speaking';
+    await page.waitForFunction((selector) => {
+      const image = document.querySelector(selector);
+      return image?.complete && image.naturalWidth > 0;
+    }, portrait);
+    await page.locator(portrait).evaluate(async (image) => {
       await Promise.all(
         image.getAnimations().map((animation) => animation.finished.catch(() => {})),
       );

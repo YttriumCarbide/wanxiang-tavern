@@ -22,7 +22,7 @@
   pointer-events: none;
 }
 .ring-feedback.is-award {
-  --ring-meter-size: clamp(92px, min(9vw, calc(var(--ring-card-width) * 0.64)), 126px);
+  --ring-meter-size: clamp(96px, min(10vw, calc(var(--ring-card-width) * 0.78)), 138px);
 }
 .ring-feedback.is-award .ring-feedback__meter {
   isolation: isolate;
@@ -34,8 +34,9 @@
     inset 0 0 29px color-mix(in srgb, var(--ring-jewel, #fff0ae) 24%, transparent);
 }
 .ring-feedback.is-award .ring-feedback__core {
-  width: 30%;
-  height: 38%;
+  width: 34%;
+  height: 43%;
+  top: 43%;
 }
 .ring-feedback__artifact {
   position: absolute;
@@ -45,11 +46,11 @@
 }
 .ring-feedback__artifact::before {
   position: absolute;
-  inset: 13%;
-  border: 2px solid transparent;
+  inset: 28% 19% 10%;
+  border: 4px solid transparent;
   border-radius: 50%;
   background:
-    linear-gradient(#171b1bdd, #171b1bdd) padding-box,
+    linear-gradient(#07191c, #15232c 70%, #3f3430) padding-box,
     conic-gradient(
         from 206deg,
         #503b1c,
@@ -66,8 +67,7 @@
     0 2px 7px #000b,
     0 0 10px color-mix(in srgb, var(--ring-glow) 58%, transparent);
   content: '';
-  opacity: 0.84;
-  transform: translateZ(-5px) rotateZ(-13deg) scale(0.94);
+  transform: translateZ(-5px) rotateX(24deg) rotateZ(-13deg);
 }
 .ring-feedback.is-award[data-phase='flight'] .ring-feedback__artifact {
   opacity: 0;
@@ -132,11 +132,11 @@
   width: var(--ring-board-width);
   height: var(--ring-board-height);
   background: radial-gradient(
-    ellipse min(42vw, 570px) min(52vh, 460px) at var(--ring-origin-x) var(--ring-origin-y),
-    transparent 4%,
-    #08121824 35%,
-    #050b1555 65%,
-    #03070f99 100%
+    ellipse min(32vw, 430px) min(56vh, 450px) at var(--ring-origin-x) var(--ring-origin-y),
+    transparent 9%,
+    #08121836 28%,
+    #050b158c 67%,
+    #03070fc9 100%
   );
   opacity: 0;
   transition: opacity 290ms ease-out;
@@ -148,7 +148,7 @@
     [data-phase='full']
   )
   .ring-feedback__aperture {
-  opacity: 0.36;
+  opacity: 0.69;
 }
 .ring-feedback__radiance {
   width: min(72vw, calc(var(--ring-meter-size) * 5.2));
@@ -176,16 +176,18 @@
   content: '';
 }
 .ring-feedback__radiance::before {
-  inset: 36% 18%;
-  border: 1px solid var(--ring-light);
-  border-inline-color: transparent;
-  box-shadow: inset 0 0 16px var(--ring-jewel);
+  inset: 33% 9%;
+  border: 2px solid transparent;
+  border-block-color: var(--ring-light);
+  box-shadow:
+    inset 0 0 14px var(--ring-jewel),
+    0 0 8px var(--ring-glow);
   transform: rotate(-18deg);
 }
 .ring-feedback__radiance::after {
-  inset: 43% 9%;
-  border: 1px solid var(--ring-light);
-  border-block-color: transparent;
+  inset: 40% 8%;
+  border: 1px solid transparent;
+  border-inline-color: var(--ring-light);
   box-shadow: 0 0 18px var(--ring-glow);
   transform: rotate(21deg);
 }
@@ -302,6 +304,22 @@
     inset 0 0 6px color-mix(in srgb, var(--ring-jewel, #fff7d6) 62%, transparent);
   transform: rotate(-10deg);
 }
+.ring-feedback.is-award .ring-feedback__rim {
+  background:
+    radial-gradient(circle, transparent 39%, #18212680 54%, #10151bd9 76%) padding-box,
+    conic-gradient(
+        from 18deg,
+        #604627,
+        #fff0ba 12%,
+        #a88748 25%,
+        #fffbe0 36%,
+        #705527 54%,
+        #f7e2a1 68%,
+        #826633 83%,
+        #604627
+      )
+      border-box;
+}
 .ring-feedback__rim::before {
   position: absolute;
   inset: 2px;
@@ -382,7 +400,8 @@
     transform 180ms ease-out;
 }
 .ring-feedback__cell.is-lit {
-  animation: ring-feedback-cell-arrive 200ms cubic-bezier(0.18, 0.9, 0.26, 1.15) both;
+  animation: ring-feedback-cell-arrive var(--ring-cell-ignite, 200ms)
+    cubic-bezier(0.18, 0.9, 0.26, 1.15) both;
 }
 .ring-feedback__cell:nth-of-type(1) {
   --index: 0;
@@ -660,8 +679,8 @@
     transform: translate(-50%, -50%) scale(0.67);
   }
   18% {
-    opacity: 0.94;
-    transform: translate(-50%, -50%) scale(1.02, 0.9);
+    opacity: 0.98;
+    transform: translate(-50%, -50%) scale(1.14, 0.93);
   }
   57% {
     opacity: 0.48;
@@ -886,7 +905,8 @@
     border-color: Highlight;
     box-shadow: none;
   }
-  .ring-feedback__rim {
+  .ring-feedback__rim,
+  .ring-feedback.is-award .ring-feedback__rim {
     border-color: CanvasText;
     background: Canvas;
     box-shadow: none;

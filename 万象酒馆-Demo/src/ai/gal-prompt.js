@@ -13,10 +13,7 @@ function galReactionInstruction() {
 }
 
 function galEnsembleInstruction(kind) {
-  const unit =
-    kind === 'script'
-      ? '按场景分幕，每个 story[i] 是一幕'
-      : '本轮场景为一幕';
+  const unit = kind === 'script' ? '按场景分幕，每个 story[i] 是一幕' : '本轮场景为一幕';
   return [
     `【多人队伍聚焦与反端水】${unit}。仅写作指导，不作硬校验。`,
     '满编也只让最契合局势的 2～3 名同伴或现场 NPC 开口，同屏最多 2～3 人；不为凑数加人。',

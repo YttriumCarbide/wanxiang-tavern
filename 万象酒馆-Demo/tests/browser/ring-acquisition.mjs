@@ -126,6 +126,7 @@ export async function installRingObserver(page) {
           meterAnimationName: meterStyle.animationName,
           sweepAnimationName: sweep ? getComputedStyle(sweep).animationName : null,
           settleEnd: endScale ? { scale: Number(endScale), opacity: Number(end.opacity) } : null,
+          settleDuration: settling?.effect.getTiming().duration,
           haloVisible: visible && Number(haloStyle?.opacity) > 0,
           haloAnimationName: haloStyle?.animationName ?? null,
         };
@@ -142,7 +143,8 @@ export async function installRingObserver(page) {
         const board = root.parentElement?.getBoundingClientRect();
         const phase = root.dataset.phase || null;
         const charge = root.dataset.charge ?? null;
-        const lit = root.querySelectorAll('.ring-feedback__cell.is-lit').length;
+        const litCells = root.querySelectorAll('.ring-feedback__cell.is-lit');
+        const lit = litCells.length;
         const signature = `${phase}:${charge}:${lit}:${root.className}`;
         if (seen.get(root) === signature) return;
         seen.set(root, signature);
@@ -153,6 +155,10 @@ export async function installRingObserver(page) {
           emblem: root.dataset.emblem ?? null,
           phase,
           lit,
+          cellIgniteMs:
+            phase === 'charging' && lit
+              ? parseFloat(getComputedStyle(litCells[lit - 1]).animationDuration) * 1000
+              : null,
           cells: root.querySelectorAll('.ring-feedback__cell').length,
           layers: layerNames(root),
           hasOverlay: Boolean(root.querySelector('svg, canvas, dialog')),
@@ -392,9 +398,13 @@ async function skipAcquisitionWithUserInput(page, actor) {
   }
 }
 
-async function playAcquisitionFeedback(page, actor, disableWebAnimations = false) {
+async function playAcquisitionFeedback(
+  page,
+  actor,
+  { disableWebAnimations = false, cancelAt = null } = {},
+) {
   return page.evaluate(
-    async ({ actor, ringSelector, disableWebAnimations }) => {
+    async ({ actor, ringSelector, disableWebAnimations, cancelAt }) => {
       const { createRingFeedback } = await import('/src/app/ring-feedback.js');
       const state = demo.getState();
       const cues = [];
@@ -406,6 +416,7 @@ async function playAcquisitionFeedback(page, actor, disableWebAnimations = false
         },
       });
       const { getAnimations } = Element.prototype;
+      let cancellationObserver;
       try {
         // Only disable animation inspection. CSS must still run on the fallback clock.
         if (disableWebAnimations) Element.prototype.getAnimations = undefined;
@@ -413,6 +424,12 @@ async function playAcquisitionFeedback(page, actor, disableWebAnimations = false
         const startedAt = performance.now();
         const pending = feedback.acquired(state.heroDefinitions[actor].emblemId, actor);
         const root = document.querySelector(ringSelector);
+        if (cancelAt && root) {
+          cancellationObserver = new MutationObserver(() => {
+            if (root.dataset.phase === cancelAt) feedback.cancel();
+          });
+          cancellationObserver.observe(root, { attributes: true, attributeFilter: ['data-phase'] });
+        }
         const result = await pending;
         const log = window.__ringLog.slice(start);
         return {
@@ -423,15 +440,17 @@ async function playAcquisitionFeedback(page, actor, disableWebAnimations = false
           cues,
           phases: [...new Set(log.map((entry) => entry.phase))],
           charging: log.find((entry) => entry.phase === 'charging') || null,
+          lastCut: log.find((entry) => entry.phase === 'charging' && entry.lit === 6) || null,
           full: log.find((entry) => entry.phase === 'full') || null,
           settle: log.find((entry) => entry.phase === 'settle') || null,
         };
       } finally {
+        cancellationObserver?.disconnect();
         if (disableWebAnimations) Element.prototype.getAnimations = getAnimations;
         feedback.dispose();
       }
     },
-    { actor, ringSelector: RING_SELECTOR, disableWebAnimations },
+    { actor, ringSelector: RING_SELECTOR, disableWebAnimations, cancelAt },
   );
 }
 
@@ -617,15 +636,17 @@ export async function ringAcquisitionChecks({ browser, baseURL, output }) {
       const flightMs = Math.round(landAt - flight);
       const landMs = Math.round(chargeStartAt - landAt);
       const chargeMs = Math.round(fullAt - chargeStartAt);
-      const releaseMs = Math.round(settleAt - fullAt);
+      const fullMs = Math.round(settleAt - fullAt);
+      assert.equal(narrowAward.settle?.settleDuration, 230, 'settling uses its own 230ms phase');
+      assert(
+        narrowAward.lastCut?.cellIgniteMs > 0 && narrowAward.lastCut.cellIgniteMs < 75,
+        'the sixth glow lands before the 75ms final beat expires',
+      );
       const awardDurationMs = Math.round(narrowAward.elapsedMs);
       assert(flightMs >= 400 && flightMs < 630, `expected ~470ms flight, observed ${flightMs}ms`);
       assert(landMs >= 150 && landMs < 350, `expected ~210ms seating, observed ${landMs}ms`);
       assert(chargeMs >= 500 && chargeMs < 740, `expected ~575ms charge, observed ${chargeMs}ms`);
-      assert(
-        releaseMs >= 430 && releaseMs < 660,
-        `expected ~500ms release, observed ${releaseMs}ms`,
-      );
+      assert(fullMs >= 430 && fullMs < 660, `expected ~500ms full phase, observed ${fullMs}ms`);
       assert(
         awardDurationMs >= 1850 && awardDurationMs < 2350,
         `expected ~1985ms award, observed ${awardDurationMs}ms`,
@@ -637,6 +658,14 @@ export async function ringAcquisitionChecks({ browser, baseURL, output }) {
       assert(narrowBounds.left >= 0 && narrowBounds.right <= NARROW_VIEWPORT.width);
       assert(narrowBounds.top >= 0 && narrowBounds.bottom <= NARROW_VIEWPORT.height);
       await page.setViewportSize({ width: 1440, height: 836 });
+
+      for (const phase of ['charging', 'full']) {
+        const cancelled = await playAcquisitionFeedback(page, actor, { cancelAt: phase });
+        assert.equal(cancelled.result, false, `award stops during ${phase}`);
+        assert.equal(cancelled.removed, true, 'cancel removes the effect immediately');
+        assert.equal(cancelled.phases.at(-1), phase, 'cancel never advances the animation');
+        assert.equal(await page.locator('.ring-feedback-skip').count(), 0);
+      }
 
       const entering = await rejectAcquisitionDuringEntry(page, actor);
       assert.equal(entering.played, false, 'award effects stay out of the battle entrance');
@@ -749,7 +778,9 @@ export async function ringAcquisitionChecks({ browser, baseURL, output }) {
       ]);
       await page.emulateMedia({ reducedMotion: 'no-preference' });
 
-      const fallbackSuccess = await playAcquisitionFeedback(page, actor, true);
+      const fallbackSuccess = await playAcquisitionFeedback(page, actor, {
+        disableWebAnimations: true,
+      });
       assert.equal(fallbackSuccess.result, true, 'fallback acquisition completes successfully');
       assert.equal(fallbackSuccess.removed, true, 'successful fallback removes its feedback');
       assert.deepEqual(fallbackSuccess.phases, ['flight', 'land', 'charging', 'full', 'settle']);
@@ -800,7 +831,8 @@ export async function ringAcquisitionChecks({ browser, baseURL, output }) {
         flightMs,
         landMs,
         chargeMs,
-        releaseMs,
+        fullMs,
+        settleMs: Math.round(narrowAward.settle?.settleDuration ?? 0),
         awardDurationMs: Math.round(awardDurationMs),
         phases,
       };

@@ -105,6 +105,11 @@ export function createRingFeedback({ session, audio }) {
       '</span>';
     if (award) {
       root.style.setProperty('--ring-reflection', visual.secondary);
+      root.querySelectorAll('.ring-feedback__cell').forEach((cell, index) => {
+        // Reserve a frame for the new charge value to paint before the next beat.
+        const igniteTime = AWARD_CHARGE_BEATS[index] - 16;
+        cell.style.setProperty('--ring-cell-ignite', `${igniteTime}ms`);
+      });
       root.insertAdjacentHTML(
         'afterbegin',
         '<span class="ring-feedback__piece ring-feedback__aperture"></span>' +
