@@ -481,6 +481,21 @@ export async function overlandChecks({ browser, baseURL, output }) {
       await walk(id);
     }
     await page.screenshot({ path: path.join(output, 'eternal-city-temple.png') });
+    await frame.locator('#scene-talk').click();
+    const cityChat = page.locator('#gal-stage[data-workspace="chat"]');
+    await cityChat.waitFor({ state: 'visible' });
+    const people = cityChat.locator('.gal-people-launcher');
+    assert(await people.evaluate((node) => node.getBoundingClientRect().left < innerWidth / 4));
+    await people.click();
+    const cityLocation = cityChat.locator('.chat-location-value');
+    await cityLocation.waitFor({ state: 'visible' });
+    assert.match(await cityLocation.innerText(), /^艾尔鲁斯/);
+    assert.equal(await cityChat.locator('#chat-place-select').isHidden(), true);
+    assert.equal(await cityChat.locator('#chat-place-select').inputValue(), 'eternal-temple');
+    assert.equal(await cityChat.locator('.gal-bg').isHidden(), true);
+    assert.equal(await cityChat.locator('.scene-environment').isHidden(), true);
+    await cityChat.locator('[data-gal="close"]').click();
+    await cityChat.waitFor({ state: 'hidden' });
     const eternalDirectory = await openCityDirectory(page);
     assert.deepEqual(
       await eternalDirectory.locator('[data-city-category] > h3').allTextContents(),
@@ -528,7 +543,7 @@ export async function overlandChecks({ browser, baseURL, output }) {
       '.skyrim-quest-tab[data-quest-select="' + acceptedBounty.id + '"]',
     );
     await bountyTab.waitFor();
-    assert.equal(await bountyTab.textContent(), acceptedBounty.title);
+    assert.equal(await bountyTab.innerText(), acceptedBounty.title);
     assert.equal(await bountyTab.locator('..').getAttribute('data-status'), 'active');
     await bountyTab.click();
     assert.match(await journal.locator('.ow-quest-meta').innerText(), /公会悬赏/);
@@ -668,9 +683,11 @@ export async function overlandChecks({ browser, baseURL, output }) {
     await questHandle.waitFor({ state: 'visible' });
     // Compare only after asynchronous acceptance has committed the quest and tracking switch.
     await page.waitForFunction(() =>
-      demo.getLibrary().tavernQuests.some(
-        (quest) => quest.id === 'test-social' && quest.status === 'active' && quest.tracked,
-      ),
+      demo
+        .getLibrary()
+        .tavernQuests.some(
+          (quest) => quest.id === 'test-social' && quest.status === 'active' && quest.tracked,
+        ),
     );
     const mapLookupSnapshot = () => {
       const { daily, tavernQuests, unlockedDungeons } = demo.getLibrary();

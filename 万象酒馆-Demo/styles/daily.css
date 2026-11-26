@@ -805,6 +805,7 @@ body.in-adventure #daily-hud {
   letter-spacing: 0.1em;
   text-align: center;
   overflow-wrap: anywhere;
+  text-wrap: balance;
   text-shadow:
     0 1px 4px rgba(0, 0, 0, 0.9),
     0 0 16px rgba(236, 234, 225, 0.13);
@@ -1220,14 +1221,14 @@ body.in-adventure #daily-hud {
     padding-inline: 64px;
   }
   #tavern-quests .ow-quest-wing {
-    width: 138px;
+    width: min(21%, 138px);
     height: 46px;
   }
   #tavern-quests .ow-quest-list {
     padding-inline-start: 40px;
   }
   #tavern-quests .skyrim-folio-title {
-    font-size: 31px;
+    font-size: clamp(26px, 2.35vw, 31px);
   }
 }
 @media (min-width: 1280px) {

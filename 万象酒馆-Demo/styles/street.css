@@ -1715,6 +1715,19 @@ html[data-atlas-only='true']
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
 }
+/* The city directory uses the dialog transition, but travels from the right edge. */
+@supports (overlay: auto) and (transition-behavior: allow-discrete) and (interactivity: inert) {
+  @media (prefers-reduced-motion: no-preference) {
+    :root dialog#street-city-submap.street-city-submap:not([open]) {
+      translate: calc(100% + 8px) 0;
+    }
+    @starting-style {
+      :root dialog#street-city-submap.street-city-submap[open] {
+        translate: calc(100% + 8px) 0;
+      }
+    }
+  }
+}
 .street-city-submap-head {
   display: flex;
   align-items: end;

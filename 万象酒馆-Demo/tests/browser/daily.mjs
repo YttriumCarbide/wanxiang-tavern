@@ -12,7 +12,7 @@ import { legacySession } from './legacy-session.mjs';
 import { openCityDirectory, travelTownScene } from './town-navigation.mjs';
 import { chatResponse } from '../../server/chat-response.mjs';
 
-async function assertQuestFolioLayout(detail) {
+async function assertQuestFolioLayout(detail, { singleLineTitle = false } = {}) {
   const layout = await detail.evaluate((folio) => {
     const bounds = (selector) => folio.querySelector(selector).getBoundingClientRect();
     const description = bounds('.skyrim-folio-desc');
@@ -21,11 +21,14 @@ async function assertQuestFolioLayout(detail) {
     const objectives = bounds('.ow-quest-objectives');
     const reward = bounds('.ow-quest-reward');
     const crest = bounds('.ow-quest-crest');
-    const title = bounds('.skyrim-folio-title');
+    const titleElement = folio.querySelector('.skyrim-folio-title');
+    const title = titleElement.getBoundingClientRect();
     const headerRule = bounds('.ow-quest-rule.is-title');
     const meta = bounds('.ow-quest-meta');
     return {
       titleCenterError: Math.abs(crest.left + crest.width / 2 - (title.left + title.width / 2)),
+      titleHeight: title.height,
+      titleLineHeight: Number.parseFloat(getComputedStyle(titleElement).lineHeight),
       metaAfterRule: meta.top >= headerRule.bottom - 1,
       metaLayout: getComputedStyle(folio.querySelector('.ow-quest-meta')).display,
       columnEdgeError: Math.max(
@@ -41,6 +44,12 @@ async function assertQuestFolioLayout(detail) {
   assert.equal(layout.metaLayout, 'flex', 'quest metadata stays grouped into compact text');
   assert(layout.columnEdgeError <= 1, 'briefing, location, objectives and reward share one column');
   assert(layout.titleCenterError <= 1, 'the title remains centered between its symmetric wings');
+  if (singleLineTitle) {
+    assert(
+      layout.titleHeight <= layout.titleLineHeight + 1,
+      'the representative desktop bounty title fits on one line between its ornaments',
+    );
+  }
   assert(layout.objectiveGap > 0, 'the objectives have a distinct visual break');
 }
 
@@ -260,8 +269,10 @@ export async function dailyChecks({ browser, baseURL, output }) {
     );
     const bounds = await journal.evaluate((dialog) => {
       const rect = dialog.getBoundingClientRect();
-      const backdrop = getComputedStyle(dialog, '::backdrop').backgroundColor;
-      const alpha = Number(backdrop.match(/rgba?\([^)]*[,/]\s*([\d.]+)\s*\)$/)?.[1] ?? 1);
+      const surface = getComputedStyle(dialog).backgroundColor;
+      const backdrop = getComputedStyle(dialog, '::backdrop').backgroundImage;
+      const alpha = (color) => Number(color.match(/rgba\([^)]*,\s*([\d.]+)\s*\)$/)?.[1] ?? 1);
+      const gradientAlphas = (backdrop.match(/rgba?\([^)]*\)/g) || []).map(alpha);
       return {
         left: rect.left,
         top: rect.top,
@@ -271,7 +282,8 @@ export async function dailyChecks({ browser, baseURL, output }) {
         centerY: rect.top + rect.height / 2,
         viewportWidth: innerWidth,
         viewportHeight: innerHeight,
-        alpha,
+        surfaceAlpha: alpha(surface),
+        gradientAlphas,
       };
     });
     assert(
@@ -284,7 +296,12 @@ export async function dailyChecks({ browser, baseURL, output }) {
       bounds.right <= bounds.viewportWidth && bounds.bottom <= bounds.viewportHeight,
       'task journal does not extend outside the viewport',
     );
-    assert(bounds.alpha > 0 && bounds.alpha < 1, 'task journal keeps its backdrop translucent');
+    assert(bounds.surfaceAlpha > 0 && bounds.surfaceAlpha < 1, 'journal surface is translucent');
+    assert(
+      bounds.gradientAlphas.some((alpha) => alpha > 0) &&
+        bounds.gradientAlphas.every((alpha) => alpha < 1),
+      'backdrop is tinted without painting an opaque layer',
+    );
   }
   async function checkInvitationComposer(suffix) {
     await page
@@ -1106,7 +1123,7 @@ export async function dailyChecks({ browser, baseURL, output }) {
     await expect(detail.locator('.ow-quest-reward')).toContainText(`金币 ${bounty.gold}`);
     await expect(journal.locator('[data-quest-claim], [data-quest-pick]')).toHaveCount(0);
     await settleJournal();
-    await assertQuestFolioLayout(detail);
+    await assertQuestFolioLayout(detail, { singleLineTitle: true });
     await page.screenshot({ path: path.join(output, 'quests-after-daily-event.png') });
     const otherQuestId = `guild-${otherBountyId}`;
     const otherRow = journal.locator(`[data-quest-select="${otherQuestId}"]`);
@@ -1147,20 +1164,20 @@ export async function dailyChecks({ browser, baseURL, output }) {
     await expect(journal).toBeHidden();
     await expect(questTarget).toBeVisible();
     await expect(questTarget).toHaveAttribute('data-travel-to', 'mill');
-    const centered = await questTarget.evaluate((pin) => {
-      const bounds = pin.getBoundingClientRect();
-      return {
-        x: bounds.left + bounds.width / 2,
-        y: bounds.top + bounds.height / 2,
-        width: innerWidth,
-        height: innerHeight,
-      };
-    });
-    assert(
-      Math.abs(centered.x - centered.width / 2) < 2 &&
-        Math.abs(centered.y - centered.height / 2) < 2,
-      'the atlas centers the known pin within its own viewport: ' + JSON.stringify(centered),
-    );
+    // The atlas dialog translates while opening; measure the final camera target, not an entry frame.
+    await expect
+      .poll(
+        () =>
+          questTarget.evaluate((pin) => {
+            const bounds = pin.getBoundingClientRect();
+            return Math.max(
+              Math.abs(bounds.left + bounds.width / 2 - innerWidth / 2),
+              Math.abs(bounds.top + bounds.height / 2 - innerHeight / 2),
+            );
+          }),
+        { message: 'the atlas centers the selected quest pin after opening' },
+      )
+      .toBeLessThan(2);
     await atlas.locator('.street-map-close [type="submit"]').click();
     await expect(page.locator('#daily-atlas-frame')).toBeHidden();
 
