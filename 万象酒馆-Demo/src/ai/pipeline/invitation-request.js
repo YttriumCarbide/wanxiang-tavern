@@ -1,5 +1,5 @@
 import { journeyContinuityMessage } from '../../memory.js';
-import { galInstruction, hasGalReactionGuidance } from '../gal-prompt.js';
+import { galInstruction, hasGalEnsembleGuidance, hasGalReactionGuidance } from '../gal-prompt.js';
 import { TOWN_SIDE_PLACES } from '../../content/town-side-places.js';
 import { CITIES } from '../../city-directory.js';
 import { presetSampling } from '../presets.js';
@@ -144,6 +144,7 @@ export function invitationRequest(input, preset, profile, countTokens, worldInfo
     worldInfo,
   );
   const reactionInWorldbook = hasGalReactionGuidance(worldbookMessages);
+  const ensembleInWorldbook = hasGalEnsembleGuidance(worldbookMessages);
   const sampling = presetSampling(preset);
   sampling.maxTokens = Math.max(8000, sampling.maxTokens ?? profile.maxTokens ?? 0);
   return finalizeRequest(
@@ -152,7 +153,7 @@ export function invitationRequest(input, preset, profile, countTokens, worldInfo
         ...journeyContinuityMessage(input),
         {
           role: 'system',
-          content: `你负责酒馆约见剧情。${placeRule}露天描写遵循timeOfDay指定的白天或夜晚；无窗室内用室内灯光。人物的invitationMemory是此人与玩家亲历的过去约见。protagonistId是玩家操控的人，不能把他写成第三个在场人物，也不能替他说话或行动。不写副本、不战斗，不凭空改变好感度。\n${galInstruction(input, 'script', { reactionInWorldbook })}\n${instructions}\n只输出一组<wanxiang_output>与</wanxiang_output>标签，JSON置于标签内。`,
+          content: `你负责酒馆约见剧情。${placeRule}露天描写遵循timeOfDay指定的白天或夜晚；无窗室内用室内灯光。人物的invitationMemory是此人与玩家亲历的过去约见。protagonistId是玩家操控的人，不能把他写成第三个在场人物，也不能替他说话或行动。不写副本、不战斗，不凭空改变好感度。\n${galInstruction(input, 'script', { reactionInWorldbook, ensembleInWorldbook })}\n${instructions}\n只输出一组<wanxiang_output>与</wanxiang_output>标签，JSON置于标签内。`,
         },
         ...worldbookMessages,
         { role: 'user', content: JSON.stringify({ ...invite, characters: input.party }) },
@@ -211,7 +212,7 @@ export function invitationTopicsRequest(input, profile, countTokens) {
         {
           role: 'system',
           content:
-            '根据这次已结束的约见，为同一角色想四个下一次约见可以选的事件主题。每项写一句给玩家看的具体新事件。unrelated与本次无关；weak恰好两项，各自从不同的旁支、场所或人物发散；strong直接承接本次的主要事件，写出接下来可能发生的新情况。四项互不重复，不预设玩家会怎么做。只在<wanxiang_output>标签内输出JSON，字段为{"unrelated":"主题","weak":["主题","主题"],"strong":"主题"}。',
+            '根据这次已结束的约见，为同一角色想四个下一次约见可以选的事件主题。每条严格控制在8～18个中文字的精炼行动或去向短句，干脆利落（禁止写成长段落，不预设玩家怎么应对）。unrelated与本次无关；weak恰好两项，各自从不同的旁支、场所或人物发散；strong直接承接本次的主要事件，点出接下来的新动静。四项互不重复。只在<wanxiang_output>标签内输出JSON，字段为{"unrelated":"主题","weak":["主题","主题"],"strong":"主题"}。',
         },
         { role: 'user', content: JSON.stringify({ person, title, premise, transcript }) },
       ],

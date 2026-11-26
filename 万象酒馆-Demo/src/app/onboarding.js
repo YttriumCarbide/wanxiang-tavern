@@ -5,6 +5,7 @@ import { ARRIVAL_PROSE, EDITH_LESSONS, FIRST_RECRUIT_DIALOGUE } from '../content
 import { newCampaign, learning, guiding } from '../campaign.js';
 import { EQUIPMENT_CATEGORIES, EQUIPMENT_SLOT_ORDER } from '../equipment.js';
 import { html } from '../shared/html.js';
+import { createDialogExit } from '../shared/dialog-exit.js';
 import { characterSheet } from './character-sheet.js';
 import { query as $ } from './dom.js';
 import { tutorialTasks, tutorialCommitIssue, recordTutorialResult } from '../tutorial-progress.js';
@@ -136,6 +137,9 @@ export function createOnboarding(context) {
   </div>`;
   const dialog = document.createElement('dialog');
   dialog.id = 'new-game';
+  const creationMotion = createDialogExit(dialog, {
+    skip: () => document.documentElement.hasAttribute('data-android-web-view'),
+  });
   dialog.setAttribute('aria-labelledby', 'new-game-title');
   dialog.innerHTML = html`<header class="creation-heading">
       <div class="creation-heading-copy">
@@ -445,7 +449,7 @@ export function createOnboarding(context) {
     if (session.runtime.mode === 'battle') context.journey.returnInn();
     $('#creation-close').hidden = !!session.runtime.needsStart;
     generationModeChanged();
-    if (!dialog.open) dialog.showModal();
+    creationMotion.show();
     refresh();
   }
   function generationModeChanged() {
@@ -611,7 +615,7 @@ export function createOnboarding(context) {
       campaign.workshop = session.ai.library.workshop;
       campaign.arcade = session.ai.library.arcade;
       context.generation.replaceLibrary(campaign);
-      dialog.close();
+      creationMotion.close();
       context.journey.returnInn();
       context.saves.createNewSave();
       refresh();
@@ -626,10 +630,11 @@ export function createOnboarding(context) {
   events.on($('#creation-cancel'), 'click', () => context.generation.cancel());
   events.on($('#creation-load'), 'click', () => context.saves.open());
   events.on($('#creation-close'), 'click', () => {
-    if (!pending) dialog.close();
+    if (!pending) creationMotion.close();
   });
   events.on(dialog, 'cancel', (event) => {
-    if (session.runtime.needsStart || pending) event.preventDefault();
+    event.preventDefault();
+    if (!session.runtime.needsStart && !pending) creationMotion.close();
   });
   events.on(dialog, 'close', refresh);
   events.on($('#tutorial-action'), 'click', () => {
@@ -713,6 +718,7 @@ export function createOnboarding(context) {
       context.firstRun?.resumed();
       session.runtime.needsStart = false;
       storage.removeItem('wanxiang.creation-pending.v1');
+      creationMotion.clear();
       dialog.close();
       refresh();
       context.ledger?.sync();
@@ -999,6 +1005,7 @@ export function createOnboarding(context) {
       return !!dialogue.open;
     },
     dispose() {
+      creationMotion.clear();
       highlight(null);
       dialog.remove();
       guide.remove();

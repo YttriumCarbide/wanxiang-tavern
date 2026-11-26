@@ -276,26 +276,23 @@ export async function dailyChecks({ browser, baseURL, output }) {
       return {
         left: rect.left,
         top: rect.top,
-        right: rect.right,
-        bottom: rect.bottom,
-        centerX: rect.left + rect.width / 2,
-        centerY: rect.top + rect.height / 2,
-        viewportWidth: innerWidth,
-        viewportHeight: innerHeight,
+        width: rect.width,
+        height: rect.height,
+        date: dialog.querySelector('[data-quest-date]').textContent,
+        viewportWidth: document.documentElement.clientWidth,
+        viewportHeight: document.documentElement.clientHeight,
         surfaceAlpha: alpha(surface),
         gradientAlphas,
       };
     });
     assert(
-      Math.abs(bounds.centerX - bounds.viewportWidth / 2) <= 1 &&
-        Math.abs(bounds.centerY - bounds.viewportHeight / 2) <= 1,
-      `task journal stays centered: ${JSON.stringify(bounds)}`,
+      Math.abs(bounds.left) <= 1 &&
+        Math.abs(bounds.top) <= 1 &&
+        Math.abs(bounds.width - bounds.viewportWidth) <= 1 &&
+        Math.abs(bounds.height - bounds.viewportHeight) <= 1,
+      `task journal fills the viewport like the reference: ${JSON.stringify(bounds)}`,
     );
-    assert(bounds.left >= 0 && bounds.top >= 0, 'task journal stays within the viewport');
-    assert(
-      bounds.right <= bounds.viewportWidth && bounds.bottom <= bounds.viewportHeight,
-      'task journal does not extend outside the viewport',
-    );
+    assert.match(bounds.date, /^\d{4}年\d{1,2}月\d{1,2}日 · (上午|中午|下午|夜晚)$/);
     assert(bounds.surfaceAlpha > 0 && bounds.surfaceAlpha < 1, 'journal surface is translucent');
     assert(
       bounds.gradientAlphas.some((alpha) => alpha > 0) &&
@@ -377,15 +374,22 @@ export async function dailyChecks({ browser, baseURL, output }) {
     const actionDock = await page.locator('.daily-dock').evaluate((dock) => {
       const buttons = [...dock.querySelectorAll('button')];
       const widths = buttons.map((button) => button.getBoundingClientRect().width);
+      const heights = buttons.map((button) => button.getBoundingClientRect().height);
       return {
         width: dock.getBoundingClientRect().width,
         height: dock.getBoundingClientRect().height,
+        buttonWidths: widths,
+        buttonHeights: heights,
         equalWidths: widths.every((width) => Math.abs(width - widths[0]) < 1),
       };
     });
-    assert(actionDock.width >= 848 && actionDock.width <= 850);
-    assert(actionDock.height >= 60 && actionDock.height <= 64);
     assert(actionDock.equalWidths, 'the four bottom actions share equal button widths');
+    assert(
+      actionDock.buttonWidths.every((width) => Math.abs(width - 118) < 2) &&
+        actionDock.buttonHeights.every((height) => Math.abs(height - 38) < 2),
+      `bottom actions match the unified 118x38 street bar: ${JSON.stringify(actionDock)}`,
+    );
+    assert(actionDock.height <= 54, 'the bottom action dock stays slim');
     assert.match(await page.locator('[data-tavern-clock]').textContent(), /1463年8月24日 · 上午/);
     await pullOpenLedger();
     assert.match(await page.locator('[data-ledger-date]').textContent(), /1463年8月24日 · 上午/);
@@ -424,8 +428,11 @@ export async function dailyChecks({ browser, baseURL, output }) {
     );
     assert.equal(taskPlacement.parentTag, 'BODY');
     assert.equal(taskPlacement.inDrawer, false);
+    const journalDate = (await page.locator('[data-tavern-clock]').textContent()).trim();
     await questHandle.click();
     await expect(journal.getByRole('heading', { name: '任务日志' })).toBeVisible();
+    await expect(journal.locator('[data-quest-date]')).toBeVisible();
+    await expect(journal.locator('[data-quest-date]')).toHaveText(journalDate);
     const journalNeedle = journal.locator('.ow-quest-header-needle');
     await expect(journalNeedle).toBeVisible();
     await expect(journalNeedle).toHaveAttribute('aria-hidden', 'true');

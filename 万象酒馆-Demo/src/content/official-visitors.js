@@ -6,7 +6,6 @@ export const OFFICIAL_VISITORS = {
     combat: {
       id: 'luo-gongxu',
       name: '骆公绪',
-      title: '持节将军',
       hp: 60,
       mp: 23,
       attack: 9,
@@ -81,7 +80,6 @@ export const OFFICIAL_VISITORS = {
     combat: {
       id: 'silica-laps',
       name: '西莉卡·梵·拉普斯',
-      title: '灵核收割者／美食家',
       hp: 44,
       mp: 26,
       attack: 6,

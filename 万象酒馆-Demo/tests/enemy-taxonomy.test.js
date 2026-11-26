@@ -18,6 +18,7 @@ import {
 import {
   buildEnemyArchiveEntries,
   buildEnemyArchiveExport,
+  enemyArchiveIntentText,
   filterEnemyArchiveBuckets,
 } from '../src/archive-enemies.js';
 import { mapInput, mapResponse } from '../src/ai/pipeline/map-request.js';
@@ -46,7 +47,7 @@ function monsterEntriesById(book) {
 test('the official enemy pools use 14 standard species and six categories, with protected names unchanged', () => {
   assert.deepEqual(
     officialEnemyPools.map((pool) => Object.keys(pool).length),
-    [149, 7, 27, 7],
+    [183, 7, 27, 7],
   );
   assert.equal(new Set(officialEnemyPools.flatMap((pool) => Object.keys(pool))).size, 190);
   assert.deepEqual(
@@ -75,12 +76,12 @@ test('the official enemy pools use 14 standard species and six categories, with 
     counts[enemy.category] += 1;
   }
   assert.deepEqual(counts, {
-    beast: 12,
-    insect: 16,
-    construct: 19,
-    humanoid: 19,
-    spirit: 9,
-    other: 115,
+    beast: 26,
+    insect: 25,
+    construct: 22,
+    humanoid: 35,
+    spirit: 11,
+    other: 71,
   });
   assert.equal(speciesCount, 75);
 
@@ -153,6 +154,10 @@ test('archive categories narrow each tier without bypassing seen IDs or splittin
   );
   const knownCategories = new Set(ENEMY_ARCHIVE_CATEGORIES.map(({ id }) => id));
   assert(entries.every((item) => knownCategories.has(item.category)));
+  assert(
+    buckets.minion.every((item) => item.category !== 'other'),
+    'all official minions with a recognizable family are assigned a concrete category',
+  );
 
   const discovered = filterEnemyArchiveBuckets(buckets, { seenMonsters: ['mossSlime', 'moonEye'] });
   assert.deepEqual(
@@ -188,25 +193,27 @@ test('archive categories narrow each tier without bypassing seen IDs or splittin
     category: 'insect',
   });
   assert.deepEqual(
-    Object.values(filtered.visibleBuckets)
-      .flat()
-      .map(({ id }) => id),
+    filtered.visibleBuckets.minion.map(({ id }) => id),
     ['mossSlime'],
+  );
+  assert.deepEqual(
+    filtered.visibleBuckets.overlord.map(({ id }) => id),
+    ['moonTree'],
   );
   assert.equal(filtered.tierStats.minion.unlocked, 1);
   assert.equal(filtered.categoryStats.insect.unlocked, 1);
-  assert.equal(filtered.categoryStats.all.total, entries.length);
+  assert.equal(filtered.categoryStats.all.total, buckets.minion.length);
   assert.equal(filtered.unlockedCount, 2);
 
   const locked = filterEnemyArchiveBuckets(buckets, { category: 'spirit' });
   assert.equal(locked.categoryStats.spirit.unlocked, 0);
   assert(Object.values(locked.visibleBuckets).every((tier) => tier.length === 0));
   const full = filterEnemyArchiveBuckets(buckets, { category: 'construct', unlockAll: true });
-  const constructs = Object.values(full.visibleBuckets).flat();
-  assert(constructs.some(({ id }) => id === 'corridorGuard'));
-  assert(constructs.every((item) => item.category === 'construct'));
-  assert.deepEqual(full.categoryStats.construct, { unlocked: 19, total: 19 });
+  const constructs = full.visibleBuckets.minion.filter((item) => item.category === 'construct');
+  assert(constructs.some(({ id }) => id === 'scrapHound'));
+  assert.deepEqual(full.categoryStats.construct, { unlocked: 12, total: 12 });
   assert.equal(constructs.length, full.categoryStats.construct.total);
+  assert(full.visibleBuckets.elite.length > 0, 'non-minion tiers ignore category filtering');
 });
 
 test('enemy archive export contains only unlocked, whitelisted entries grouped in every stable category', () => {
@@ -260,6 +267,27 @@ test('enemy archive export contains only unlocked, whitelisted entries grouped i
   );
 });
 
+test('codex hides fixed damage, poison, and bleed values while retaining weak, vulnerable, regen, and shield details', () => {
+  const text = enemyArchiveIntentText({
+    text: '造成12点伤害并施加2层流血、3层中毒、2层虚弱与1层易伤，敌方自身获得6护盾与4层再生。',
+  });
+  assert(!/\d+\s*点?\s*伤害/u.test(text));
+  assert(!/\d+\s*层?\s*(?:中毒|流血)/u.test(text));
+  assert(text.includes('流血'));
+  assert(text.includes('中毒'));
+  assert(text.includes('2层虚弱'));
+  assert(text.includes('1层易伤'));
+  assert(text.includes('4层再生'));
+  assert(text.includes('6护盾'));
+
+  const slashText = enemyArchiveIntentText({
+    text: '清除全部负面状态，获得10护盾和5再生；从左向右3/6/9伤害、3/2/1流血。',
+  });
+  assert(!/\d/.test(slashText.replace('10护盾', '').replace('5再生', '')));
+  assert(slashText.includes('10护盾'));
+  assert(slashText.includes('5再生'));
+});
+
 test('new map metadata survives both compilation paths and old saves default to other', () => {
   const raw = worldFixture();
   const [tiered, numeric] = raw.enemies;
@@ -279,6 +307,14 @@ test('new map metadata survives both compilation paths and old saves default to 
   });
   Object.assign(numeric, { name: DEFINITIONS.hound.name, category: 'beast', baseSpecies: '猎犬' });
   Object.assign(raw.enemies[2], { name: '夜港执政祭司', category: 'other' });
+  const categoryOnly = structuredClone(tiered);
+  Object.assign(categoryOnly, {
+    id: 'enemy-lantern-shadow-moth',
+    name: '潮灯影虫',
+    category: 'insect',
+  });
+  delete categoryOnly.baseSpecies;
+  raw.enemies.push(categoryOnly);
   const world = mapResponse(JSON.stringify(raw), {});
   const boss = world.enemyDefinitions[raw.enemies[2].id];
   assert.equal(boss.name, raw.enemies[2].name);
@@ -286,9 +322,23 @@ test('new map metadata survives both compilation paths and old saves default to 
   assert(!Object.hasOwn(boss, 'baseSpecies'), 'a named boss is not classified by its title suffix');
   const request = mapInput({ brief: world.name, knownEnemies: world.enemyDefinitions });
   assert.equal(request.reference.enemyTaxonomy.namingPattern, '[2字词缀]+[基础种]');
+  assert.equal(request.reference.enemyTaxonomy.categoryRequired, true);
+  assert.equal(request.reference.enemyTaxonomy.baseSpeciesOptionalForCustomSpecies, true);
   assert.deepEqual(request.reference.enemyTaxonomy.categories, ENEMY_ARCHIVE_CATEGORIES);
+  const archivedCategoryOnly = buildEnemyArchiveEntries(world.enemyDefinitions).minion.find(
+    ({ id }) => id === categoryOnly.id,
+  );
+  assert.equal(archivedCategoryOnly.category, 'insect');
+  assert(!Object.hasOwn(archivedCategoryOnly, 'baseSpecies'));
   const [restored] = restoreWorlds([world]);
   assert(restored, 'compiled world can be reloaded');
+  const restoredCategoryOnly = restored.enemyDefinitions[categoryOnly.id];
+  assert.equal(restoredCategoryOnly.category, 'insect');
+  assert(!Object.hasOwn(restoredCategoryOnly, 'baseSpecies'));
+  assert.equal(
+    request.reference.enemies.find(({ id }) => id === categoryOnly.id).category,
+    'insect',
+  );
   for (const { id, category, baseSpecies } of [tiered, numeric]) {
     for (const enemy of [
       world.enemyDefinitions[id],
@@ -347,6 +397,7 @@ test('builtin UID 28 documents taxonomy and fresh and saved monster entries keep
   }
   assert(mapEntry.content.includes('[2字词缀]+[基础种]'));
   assert(mapEntry.content.includes('普通小怪优先从下列十四种基础种中选择原型'));
+  assert(mapEntry.content.includes('自定义种类可省略 baseSpecies'));
   for (const name of [
     '苔藓史莱姆',
     '黑液史莱姆',
@@ -371,6 +422,8 @@ test('builtin UID 28 documents taxonomy and fresh and saved monster entries keep
     'utf8',
   );
   assert(mapSystemPrompt.includes('"category":"insect","baseSpecies":"史莱姆"'));
+  assert(mapSystemPrompt.includes('其他非标准基础种仍须按实际种族填写category'));
+  assert(!mapSystemPrompt.includes('敌人数值填写1级基础值'));
   assert(
     mapSystemPrompt.includes(
       'category必须且只能是beast/insect/construct/humanoid/spirit/other之一',

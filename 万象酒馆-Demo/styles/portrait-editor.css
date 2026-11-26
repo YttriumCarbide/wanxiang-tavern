@@ -12,18 +12,16 @@
   width: min(660px, calc(100vw - 32px));
   max-height: calc(100dvh - 24px);
   padding: 24px 28px;
-  border: 1px solid rgba(226, 186, 111, 0.45);
-  border-radius: 16px;
-  background: radial-gradient(ellipse at 50% 0%, rgba(36, 68, 60, 0.7), transparent 75%), #0c1a18;
-  color: #f2eee3;
-  box-shadow:
-    0 24px 80px rgba(0, 0, 0, 0.85),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(226, 192, 120, 0.5);
+  border-radius: 4px;
+  background: var(--astral-hatch), var(--astral-panel-bg);
+  color: var(--astral-text);
+  box-shadow: var(--astral-frame-shadow);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
 }
 #portrait-dialog::backdrop {
-  background: rgba(4, 9, 11, 0.8);
+  background: rgba(4, 5, 14, 0.82);
   backdrop-filter: blur(8px);
 }
 #portrait-dialog header {
@@ -32,11 +30,15 @@
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 18px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--astral-line);
 }
 #portrait-dialog h2 {
   margin: 0;
   font-size: 18px;
   font-weight: 400;
+  color: var(--astral-gold-hi);
+  letter-spacing: 0.08em;
 }
 .portrait-url-body {
   display: grid;
@@ -48,26 +50,28 @@
   width: 120px;
   height: 180px;
   object-fit: cover;
-  border-radius: 5px;
+  border: 1px solid rgba(226, 192, 120, 0.34);
+  border-radius: 3px;
 }
 .portrait-url-body label {
   display: grid;
   gap: 9px;
   font-size: 11px;
-  color: #b8c8b3;
+  color: var(--astral-sub);
 }
 #portrait-url {
   width: 100%;
   min-height: 38px;
-  padding: 8px;
-  border: 1px solid #819b7560;
-  background: #091917a8;
-  color: #e2dfce;
+  padding: 8px 10px;
+  border: 1px solid rgba(226, 192, 120, 0.36);
+  border-radius: 3px;
+  background: rgba(8, 11, 28, 0.88);
+  color: var(--astral-text);
 }
 #portrait-url-status {
   font-size: 11px;
   line-height: 1.8;
-  color: #afc1ac;
+  color: var(--astral-sub);
   min-height: 3.6em;
   overflow-wrap: anywhere;
 }
@@ -96,7 +100,7 @@
   margin: 8px 0 18px;
 }
 .portrait-kind [aria-pressed='true'] {
-  color: #f5dfac;
-  border-color: #d4b16a;
-  background: #d4b16a20;
+  color: var(--astral-gold-hi);
+  border-color: var(--astral-gold-hi);
+  background: rgba(226, 192, 120, 0.16);
 }

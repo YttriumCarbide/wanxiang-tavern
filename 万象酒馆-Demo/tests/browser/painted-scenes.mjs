@@ -19,8 +19,10 @@ async function presentation(page) {
   return page.evaluate(() => {
     const view = window.streetPreview;
     let standing = 0;
+    let visitors = 0;
     view.scene.traverse((mesh) => {
-      if (mesh.userData.staticNpc || mesh.userData.visitor) standing++;
+      if (mesh.userData.staticNpc) standing++;
+      if (mesh.userData.visitor) visitors++;
     });
     const image = view.model.panorama.material.map.image;
     return {
@@ -28,6 +30,7 @@ async function presentation(page) {
       backdrop: view.definition.illustration.pureBackdrop === true,
       aspect: view.definition.illustration.aspect,
       standing,
+      visitors,
       framing: view.state().framing,
       calls: view.renderer.info.render.calls,
       image: [image.naturalWidth, image.naturalHeight],
@@ -82,7 +85,8 @@ export async function paintedSceneChecks({ browser, baseURL, output }, ids) {
       assert.equal(initial.backdrop, true);
       assert.equal(initial.aspect, 16 / 9);
       assert.equal(initial.hotspots, 0, id + ': pure backdrop has no hotspots');
-      assert.equal(initial.standing, 0, id + ': pure backdrop has no standing meshes');
+      assert.equal(initial.visitors, 0, id + ': pure backdrop does not spawn visitor characters');
+      assert.equal(initial.standing, 0, id + ': pure backdrop has no authored NPC cutouts');
       await page.screenshot({ path: path.join(output, id + '-center.png') });
       for (const [direction, offset] of [
         ['left', 260],

@@ -1,9 +1,9 @@
 import { CITIES, cityForScene } from '../city-directory.js';
 
 const MARKET_SCENES = Object.freeze({
-  starbell: './assets/exploration/town-side-places/market-alley.png',
-  'silver-crown': './assets/exploration/silver-crown/crown-arcade.png',
-  eternal: './assets/exploration/eternal-city/eternal-quay.png',
+  starbell: './assets/exploration/town-side-places/market-alley.webp',
+  'silver-crown': './assets/exploration/silver-crown/crown-arcade.webp',
+  eternal: './assets/exploration/eternal-city/eternal-quay.webp',
 });
 
 export function cityServiceArt(cityId, scene) {

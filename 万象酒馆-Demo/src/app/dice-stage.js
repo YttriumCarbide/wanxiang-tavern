@@ -86,29 +86,44 @@ const frPt = (r, deg) => {
 const frPoly = (r, start, n) =>
   Array.from({ length: n }, (_, i) => frPt(r, start + (i * 360) / n).join(',')).join(' ');
 
-const FREE_GLYPH_DURATION = 1750;
-const FREE_GLYPH_STAGGER = 45;
+const FREE_GLYPH_DURATION = 1450;
+const FREE_GLYPH_STAGGER = 42;
 const FREE_CIRCLE_LEAD = 220;
+const MAX_FLYING_GLYPHS = 64;
 
 function freeGlyphChars(actionText) {
   return [...String(actionText || '命运检定')].slice(0, 22);
 }
 
+function buildGlyphMarkup(items, duration) {
+  return items
+    .map(
+      ({ ch, sx, sy, mx, my, ex, ey, delay }) =>
+        `<span class="fr-glyph" style="--sx:${sx}px;--sy:${sy};--mx:${mx}px;--my:${my}px;--ex:${ex}px;--ey:${ey}px;--dl:${delay}ms;--flight:${duration}ms"><i>${escapeText(ch)}</i></span>`,
+    )
+    .join('');
+}
+
 function freeCircleMarkup(actionText, attrIndex = 0) {
   const chars = freeGlyphChars(actionText);
-  const glyphs = chars
-    .map((ch, idx) => {
-      const spreadX = ((idx - (chars.length - 1) / 2) * 14).toFixed(1);
-      const sx = Number(spreadX);
+  const glyphs = buildGlyphMarkup(
+    chars.map((ch, idx) => {
+      const sx = +((idx - (chars.length - 1) / 2) * 14).toFixed(1);
       const sy = (idx % 3) * 10;
       const angle = ((idx * 360) / Math.max(1, chars.length)) * (Math.PI / 180);
-      const mx = (Math.cos(angle + 0.9) * 62).toFixed(1);
-      const my = (Math.sin(angle + 0.9) * 38).toFixed(1);
-      const ex = (Math.cos(angle) * 12).toFixed(1);
-      const ey = (Math.sin(angle) * 12).toFixed(1);
-      return `<span class="fr-glyph" style="--sx:${sx}px;--sy:calc(var(--dc-glyph-origin, 140px) + ${sy}px);--mx:${mx}px;--my:${my}px;--ex:${ex}px;--ey:${ey}px;--dl:${FREE_CIRCLE_LEAD + idx * FREE_GLYPH_STAGGER}ms;--flight:${FREE_GLYPH_DURATION}ms"><i>${escapeText(ch)}</i></span>`;
-    })
-    .join('');
+      return {
+        ch,
+        sx,
+        sy: `calc(var(--dc-glyph-origin, 140px) + ${sy}px)`,
+        mx: (Math.cos(angle + 0.9) * 62).toFixed(1),
+        my: (Math.sin(angle + 0.9) * 38).toFixed(1),
+        ex: (Math.cos(angle) * 12).toFixed(1),
+        ey: (Math.sin(angle) * 12).toFixed(1),
+        delay: FREE_CIRCLE_LEAD + idx * FREE_GLYPH_STAGGER,
+      };
+    }),
+    FREE_GLYPH_DURATION,
+  );
   const [bx, by] = frPt(160, attrIndex * 60);
   const nodesMarkup = DC_ATTR_NODES.map((node, i) => {
     const [x, y] = frPt(190, i * 60);
@@ -187,8 +202,8 @@ function freeStageMarkup(displayCheck, actionText) {
       ${freeCircleMarkup(actionText, attrIdx)}
       <div class="fr-fx" aria-hidden="true"></div>
       <div class="fr-dice" hidden>
-        <div class="fr-die-pos"><div>${dieMarkup(d0, 'arcane', 0, [1620, -1080, -720], 'wire', 1950)}</div></div>
-        <div class="fr-die-pos"><div>${dieMarkup(d1, 'arcane', 80, [-1440, 1260, 720], 'wire', 1950)}</div></div>
+        <div class="fr-die-pos"><div>${dieMarkup(d0, 'arcane', 0, [720, -540, -360], 'wire', 1950)}</div></div>
+        <div class="fr-die-pos"><div>${dieMarkup(d1, 'arcane', 80, [-720, 540, 360], 'wire', 1950)}</div></div>
       </div>
     </div>`;
 }
@@ -315,10 +330,16 @@ export function createDiceStage(context) {
     overlay.removeAttribute('aria-hidden');
   }
 
+  function clearDialogueInscribe() {
+    const galStage = document.querySelector('#gal-stage');
+    if (galStage) delete galStage.dataset.dcInscribing;
+  }
+
   function finishStageExit(animation) {
     if (animation && stageExitAnimation !== animation) return;
     stageExitAnimation = null;
     surface.hide();
+    clearDialogueInscribe();
     overlay.hidden = true;
     animation?.cancel();
     overlay.inert = false;
@@ -463,13 +484,80 @@ export function createDiceStage(context) {
       (activeModal(document) || document.body).append(overlay);
       overlay.hidden = false;
       surface.show();
+      let freeFlightTime =
+        FREE_CIRCLE_LEAD +
+        (freeGlyphChars(actionText).length - 1) * FREE_GLYPH_STAGGER +
+        FREE_GLYPH_DURATION;
       if (style === 'free') {
-        const circle = overlay.querySelector('.fr-stage')?.getBoundingClientRect();
-        const dialogue = document
-          .querySelector('#gal-stage:not([hidden]) .gal-text')
-          ?.getBoundingClientRect();
-        if (circle) {
-          const center = circle.top + circle.height / 2;
+        const stageEl = overlay.querySelector('.fr-stage');
+        const circleRect = stageEl?.getBoundingClientRect();
+        const galStage = document.querySelector('#gal-stage:not([hidden])');
+        const galText = galStage?.querySelector('.gal-text');
+        const rawText = galText?.textContent || '';
+        const glyphsBox = overlay.querySelector('.fr-glyphs');
+
+        if (circleRect && galStage && galText && rawText.trim() && !reduced && glyphsBox) {
+          const targetX = circleRect.left + circleRect.width / 2;
+          const targetY = circleRect.top + circleRect.height / 2;
+          const fragment = document.createDocumentFragment();
+          const charSpans = [];
+          for (const ch of [...rawText]) {
+            if (/\s/u.test(ch)) {
+              fragment.append(document.createTextNode(ch));
+            } else {
+              const span = document.createElement('span');
+              span.className = 'gal-fly-char';
+              span.textContent = ch;
+              charSpans.push(span);
+              fragment.append(span);
+            }
+          }
+          if (charSpans.length > 0) {
+            galText.replaceChildren(fragment);
+            galStage.dataset.dcInscribing = 'true';
+            const stagger = Math.min(
+              FREE_GLYPH_STAGGER,
+              Math.max(14, Math.round(780 / Math.max(1, charSpans.length))),
+            );
+            const rects = charSpans.map((span) => span.getBoundingClientRect());
+            charSpans.forEach((span, idx) => {
+              span.style.setProperty('--dl', `${FREE_CIRCLE_LEAD + idx * stagger}ms`);
+              span.classList.add('is-flying-out');
+            });
+
+            const sampleCount = Math.min(MAX_FLYING_GLYPHS, charSpans.length);
+            const items = [];
+            for (let s = 0; s < sampleCount; s += 1) {
+              const idx =
+                sampleCount === charSpans.length
+                  ? s
+                  : Math.round((s * (charSpans.length - 1)) / Math.max(1, sampleCount - 1));
+              const rect = rects[idx];
+              const sx = +(rect.left + rect.width / 2 - targetX).toFixed(1);
+              const sy = +(rect.top + rect.height / 2 - targetY).toFixed(1);
+              const angle = ((s * 360) / Math.max(1, sampleCount)) * (Math.PI / 180);
+              const mx = +(sx * 0.28 + Math.cos(angle + 0.85) * 46).toFixed(1);
+              const my = +(sy * 0.22 + Math.sin(angle + 0.85) * 32 - 18).toFixed(1);
+              const ex = +(Math.cos(angle) * 10).toFixed(1);
+              const ey = +(Math.sin(angle) * 10).toFixed(1);
+              items.push({
+                ch: charSpans[idx].textContent,
+                sx,
+                sy: `${sy}px`,
+                mx,
+                my,
+                ex,
+                ey,
+                delay: FREE_CIRCLE_LEAD + idx * stagger,
+              });
+            }
+            glyphsBox.innerHTML = buildGlyphMarkup(items, FREE_GLYPH_DURATION);
+            freeFlightTime =
+              FREE_CIRCLE_LEAD + (charSpans.length - 1) * stagger + FREE_GLYPH_DURATION;
+          }
+        } else if (circleRect) {
+          const dialogue = galText?.getBoundingClientRect();
+          const center = circleRect.top + circleRect.height / 2;
           const limit = Math.max(36, innerHeight - center - 42);
           const origin = dialogue ? dialogue.top + dialogue.height / 2 - center : limit;
           overlay.style.setProperty(
@@ -541,11 +629,7 @@ export function createDiceStage(context) {
         };
 
         const resolver = activeResolver;
-        const flightTime =
-          FREE_CIRCLE_LEAD +
-          (freeGlyphChars(actionText).length - 1) * FREE_GLYPH_STAGGER +
-          FREE_GLYPH_DURATION;
-        schedule(reduced ? 20 : flightTime, async () => {
+        schedule(reduced ? 20 : freeFlightTime, async () => {
           const glyphs = overlay.querySelector('.fr-glyphs');
           const flights = reduced
             ? []
@@ -560,6 +644,7 @@ export function createDiceStage(context) {
               new Promise((finish) => schedule(360, finish)),
             ]);
           if (activeResolver !== resolver || signal?.aborted) return;
+          clearDialogueInscribe();
           overlay.dataset.phase = 'withdraw';
           onInscribed?.();
           await waitForDialogueExit?.();
@@ -572,7 +657,6 @@ export function createDiceStage(context) {
           overlay.dataset.phase = 'judge';
           stageEl?.classList.add('active');
           if (kickerEl) kickerEl.textContent = '命运裁定中';
-          spawnFx('fr-flash');
           const steps = reduced ? 1 : 10 + attrIdx;
           for (let k = 0; k <= steps; k++) {
             t += reduced ? 10 : 65 + k * 9;
@@ -605,7 +689,6 @@ export function createDiceStage(context) {
               hdrMeta.classList.add('is-popped');
             }
             if (beamEl) beamEl.hidden = false;
-            spawnFx('fr-flash');
           });
           t += reduced ? 10 : 600;
           schedule(t, () => {
@@ -619,7 +702,6 @@ export function createDiceStage(context) {
             for (const cube of overlay.querySelectorAll('.skin-arcane.wire')) {
               cube.classList.remove('wire');
             }
-            triggerShake(false);
           });
           schedule(t + (reduced ? 20 : 2150), () => {
             overlay.dataset.phase = 'sum';

@@ -7,7 +7,6 @@ export function characterFixture() {
     schemaVersion: 1,
     setting: {
       name: setting.name,
-      title: hero.title,
       appearance: setting.appearance,
       personality: setting.personality,
       background: setting.history,

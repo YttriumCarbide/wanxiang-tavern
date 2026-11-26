@@ -3,9 +3,10 @@ import { query as $ } from './dom.js';
 import { createEventScope } from '../shared/events.js';
 import { archiveMilestone } from '../archives.js';
 import { readableGalText } from '../gal.js';
-import { archiveTavernPrelude, gameTime } from '../memory.js';
+import { archiveTavernPrelude, gameTime, isTestScriptRecord } from '../memory.js';
 
 function completeStoryRecord(library, book, record) {
+  if (!record || isTestScriptRecord(book)) return;
   record.complete = true;
   record.finishedAt ||= Date.now();
   record.gameTime ||= gameTime(library.daily);
@@ -144,7 +145,7 @@ export function createStoryFeed(session, save, gal = null, chapterTheater = null
         return;
       }
       append('', book.display?.story?.[part] ?? book.story[part], stage, index);
-      if (!book.adventure)
+      if (!book.adventure && !isTestScriptRecord(book))
         record.lines.push({ speaker: '旁白', text: book.story[part], encounter: index, stage });
     }
     if (book.schemaVersion === 2 && stage === 'before') {
@@ -190,7 +191,12 @@ export function createStoryFeed(session, save, gal = null, chapterTheater = null
     save();
   }
   function recordRound(result, state) {
-    if (!session.ai.activeScript || session.ai.activeScript.recollection) return;
+    if (
+      !session.ai.activeScript ||
+      session.ai.activeScript.recollection ||
+      isTestScriptRecord(session.ai.activeScript)
+    )
+      return;
     const logs = result.events.flatMap((event) => event.logs || []).filter(Boolean);
     if (!logs.length) return;
     const title = state.phase === 'opening' ? '先手准备结束' : `第${state.round}回合`;
@@ -260,7 +266,7 @@ export function createStoryFeed(session, save, gal = null, chapterTheater = null
             title: book.title || '路途手记',
             automatic,
             onRead(line) {
-              if (!book?.adventure || book.recollection) return;
+              if (!book?.adventure || book.recollection || isTestScriptRecord(book)) return;
               const currentRecord = session.ai.library.history.find(
                 (item) => item.runId === book.runId,
               );

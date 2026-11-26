@@ -25,7 +25,6 @@ export function townResidents(library, scene) {
         combat: { ...structuredClone(guest.combat), customStanding: standingSprite(sprite) },
         setting: {
           name: guest.setting.name,
-          title: guest.combat.title,
           worldbook: formatCharacterSetting(guest.setting),
           formatVersion: 3,
         },

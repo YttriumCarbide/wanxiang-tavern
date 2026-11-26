@@ -1,4 +1,4 @@
-const starbellImage = './assets/exploration/city-backgrounds/starbell.png';
+const starbellImage = './assets/exploration/city-backgrounds/starbell.webp';
 const starbellView = {
   image: starbellImage,
   aspect: 16 / 9,

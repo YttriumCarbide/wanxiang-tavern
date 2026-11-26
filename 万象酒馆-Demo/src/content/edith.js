@@ -2,7 +2,6 @@
 export const EDITH = {
   id: 'edith',
   name: '伊蒂丝',
-  title: '星月重装战士',
   weapon: 'sword',
   attackType: 'sword',
   portrait: 'edith.png',

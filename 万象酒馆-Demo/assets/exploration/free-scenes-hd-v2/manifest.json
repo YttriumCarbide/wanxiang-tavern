@@ -4,7 +4,7 @@
   "assets": [
     {
       "id": "city-center",
-      "file": "assets/exploration/free-scenes-hd-v2/city-center/connected.png",
+      "file": "assets/exploration/free-scenes-hd-v2/city-center/connected.webp",
       "source": "assets/exploration/free-scenes-hd-v2/city-center/manifest.json",
       "prompt": "Native overlapping crops, approved clean style, original framing and standing coordinates. Full actual prompt in assets/exploration/free-scenes-hd-v2/prompts.md.",
       "width": 3762,
@@ -13,7 +13,7 @@
     },
     {
       "id": "market",
-      "file": "assets/exploration/free-scenes-hd-v2/market/connected.png",
+      "file": "assets/exploration/free-scenes-hd-v2/market/connected.webp",
       "source": "assets/exploration/free-scenes-hd-v2/market/manifest.json",
       "prompt": "Native overlapping crops, approved clean style, original framing and standing coordinates. Full actual prompt in assets/exploration/free-scenes-hd-v2/prompts.md.",
       "width": 3762,
@@ -22,7 +22,7 @@
     },
     {
       "id": "rampart",
-      "file": "assets/exploration/free-scenes-hd-v2/rampart/connected.png",
+      "file": "assets/exploration/free-scenes-hd-v2/rampart/connected.webp",
       "source": "assets/exploration/free-scenes-hd-v2/rampart/manifest.json",
       "prompt": "Native overlapping crops, approved clean style, original framing and standing coordinates. Full actual prompt in assets/exploration/free-scenes-hd-v2/prompts.md.",
       "width": 3760,
@@ -31,7 +31,7 @@
     },
     {
       "id": "outskirts",
-      "file": "assets/exploration/free-scenes-hd-v2/outskirts/connected.png",
+      "file": "assets/exploration/free-scenes-hd-v2/outskirts/connected.webp",
       "source": "assets/exploration/free-scenes-hd-v2/outskirts/manifest.json",
       "prompt": "Native overlapping crops, approved clean style, original framing and standing coordinates. Full actual prompt in assets/exploration/free-scenes-hd-v2/prompts.md.",
       "width": 3762,

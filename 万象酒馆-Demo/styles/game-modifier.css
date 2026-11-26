@@ -1,14 +1,14 @@
 .game-modifier {
-  --ink: #f3ecdd;
-  --ink-sub: #b9b3d0;
-  --copper: #d8a86b;
-  --copper-strong: #edc38b;
-  --indigo: #1d1e3a;
-  --indigo-deep: #14152b;
-  --violet: #2a2350;
-  --border: rgba(158, 148, 210, 0.28);
-  --border-strong: rgba(216, 168, 107, 0.5);
-  --paper: #fbf6ec;
+  --ink: var(--astral-text);
+  --ink-sub: var(--astral-sub);
+  --copper: var(--astral-gold);
+  --copper-strong: var(--astral-gold-hi);
+  --indigo: #181f4a;
+  --indigo-deep: #0b0d1f;
+  --violet: #242b5e;
+  --border: var(--astral-line);
+  --border-strong: rgba(226, 192, 120, 0.52);
+  --paper: var(--astral-gold-hi);
   box-sizing: border-box;
   display: none;
   flex-direction: column;
@@ -17,10 +17,8 @@
   padding: 0;
   overflow: hidden;
   border: 1px solid var(--border-strong);
-  border-radius: 14px;
-  background:
-    radial-gradient(120% 90% at 50% -10%, rgba(78, 64, 132, 0.55) 0%, transparent 62%),
-    linear-gradient(180deg, var(--indigo) 0%, var(--indigo-deep) 100%);
+  border-radius: 4px;
+  background: var(--astral-hatch), var(--astral-panel-bg);
   color: var(--ink);
   font:
     13px/1.5 -apple-system,
@@ -30,16 +28,15 @@
     'Segoe UI',
     'Microsoft YaHei',
     sans-serif;
-  box-shadow:
-    0 24px 64px rgba(4, 4, 14, 0.72),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  box-shadow: var(--astral-frame-shadow);
 }
 
 .game-modifier[open] {
   display: flex;
 }
 .game-modifier::backdrop {
-  background: rgba(6, 6, 16, 0.72);
+  background: rgba(4, 5, 14, 0.8);
+  backdrop-filter: blur(6px);
 }
 
 .game-modifier-header,
@@ -73,7 +70,7 @@
   gap: 6px;
   padding: 10px 16px 0;
   border-bottom: 1px solid var(--border);
-  background: rgba(20, 21, 43, 0.5);
+  background: rgba(11, 14, 34, 0.72);
 }
 
 .game-modifier .game-modifier-tab,
@@ -88,8 +85,8 @@
   min-height: 36px;
   padding: 0 14px;
   border: 1px solid var(--border);
-  border-radius: 8px;
-  background: rgba(34, 30, 66, 0.85);
+  border-radius: 3px;
+  background: var(--astral-card-bg);
   color: var(--ink);
   font: inherit;
   font-size: 13px;
@@ -105,13 +102,13 @@
 
 .game-modifier .game-modifier-tab {
   border-bottom: none;
-  border-radius: 8px 8px 0 0;
+  border-radius: 3px 3px 0 0;
   background: transparent;
   color: var(--ink-sub);
 }
 .game-modifier .game-modifier-tab[aria-pressed='true'] {
   border-color: var(--border-strong);
-  background: linear-gradient(180deg, rgba(78, 64, 132, 0.6), rgba(42, 35, 80, 0.9));
+  background: linear-gradient(180deg, rgba(226, 192, 120, 0.22), rgba(226, 192, 120, 0.08));
   color: var(--copper-strong);
 }
 
@@ -121,7 +118,7 @@
 .game-modifier .modifier-skill button:hover:not(:disabled),
 .game-modifier .modifier-confirm button:hover:not(:disabled) {
   border-color: var(--copper);
-  background: rgba(58, 49, 104, 0.9);
+  background: rgba(226, 192, 120, 0.16);
   color: var(--paper);
 }
 

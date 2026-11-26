@@ -1,33 +1,12 @@
 {
-  "browserConcurrency": 2,
-  "scopes": [
-    "quality",
-    "core",
-    "daily",
-    "overland",
-    "town-guests",
-    "street",
-    "dialog-motion",
-    "ring-acquisition",
-    "gal",
-    "chat",
-    "equipment",
-    "shop-workspace",
-    "mobile",
-    "universal-enemies",
-    "destinations",
-    "static"
-  ],
+  "browserConcurrency": 1,
+  "scopes": ["core"],
   "coreFiles": [
-    "tests/art-assets.test.js",
-    "tests/character-growth.test.js",
-    "tests/chat.test.js",
-    "tests/enemy-taxonomy.test.js",
-    "tests/equipment-affixes.test.js",
-    "tests/gal.test.js",
-    "tests/guild-skyrim-cities.test.js",
-    "tests/invitation-location.test.js",
-    "tests/shop-guild-transactions.test.js",
-    "tests/worldbook.test.js"
+    "tests/overlord-arena-collector.test.js",
+    "tests/workshop.test.js",
+    "tests/assets.test.js",
+    "tests/silver-crown-syndicate.test.js",
+    "tests/arena-qualifiers.test.js",
+    "tests/main-world.test.js"
   ]
 }

@@ -43,8 +43,7 @@ export function createShop(context) {
     flying: '飞行',
   };
   const isPotion = (id) => id?.endsWith('-potion') === true;
-  const itemsForMode = () =>
-    Object.values(ITEMS).filter((item) => mode === 'preparation' || isPotion(item.id));
+  const itemsForMode = () => Object.values(ITEMS);
   const group = (id) => id.replace(/^fine-/, '').replace(/-potion$|-scroll$/g, '');
   let category = 'slow';
   let selected = Object.keys(ITEMS)[0];
@@ -153,6 +152,8 @@ export function createShop(context) {
       category = group(itemsForSale[0].id);
     if (!itemsForSale.some((item) => item.id === selected && group(item.id) === category))
       selected = itemsForSale.find((item) => group(item.id) === category).id;
+    const categoryScroll = categoryRail.scrollTop;
+    const itemScroll = supplyItems.scrollTop;
     categoryRail.innerHTML = Object.entries(categories)
       .filter(([id]) => itemsForSale.some((item) => group(item.id) === id))
       .map(([id, name]) => {
@@ -166,6 +167,7 @@ export function createShop(context) {
         </button>`;
       })
       .join('');
+    categoryRail.scrollTop = categoryScroll;
     supplyItems.innerHTML = itemsForSale
       .filter((item) => group(item.id) === category)
       .map(
@@ -180,6 +182,7 @@ export function createShop(context) {
           </button>`,
       )
       .join('');
+    supplyItems.scrollTop = itemScroll;
     const item = ITEMS[selected];
     supplyDetail.innerHTML = html`<div class="shop-art">
         <span class="shop-orbit"></span><img src="${item.icon}" alt="${item.name}" />
@@ -241,6 +244,8 @@ export function createShop(context) {
     panel.querySelector('#shop-status').textContent = '';
     if (mode === 'vending') category = 'slow';
     render();
+    categoryRail.scrollTop = 0;
+    supplyItems.scrollTop = 0;
     if (!panel.open) panel.showModal();
   }
   context.events.on(panel.querySelector('#shop-close'), 'click', () => panel.close());
@@ -318,11 +323,9 @@ export function createShop(context) {
     const tab = event.target.closest('[data-shop-category]');
     if (tab && mode !== 'market') {
       category = tab.dataset.shopCategory;
-      selected =
-        Object.keys(ITEMS).find(
-          (id) => group(id) === category && (mode === 'preparation' || isPotion(id)),
-        ) || selected;
+      selected = Object.keys(ITEMS).find((id) => group(id) === category) || selected;
       render();
+      supplyItems.scrollTop = 0;
       categoryRail.querySelector('[aria-pressed="true"]')?.focus({ preventScroll: true });
       context.audio.play('select');
       return;
@@ -340,7 +343,6 @@ export function createShop(context) {
       !button ||
       button.disabled ||
       mode === 'market' ||
-      (mode === 'vending' && !isPotion(button.dataset.buy)) ||
       (context.session.runtime.mode !== 'inn' &&
         !(mode === 'preparation' && document.querySelector('#party-panel').open))
     )
@@ -357,7 +359,7 @@ export function createShop(context) {
       }
       return;
     }
-    if (isPotion(result.item.id)) context.onboarding.purchased();
+    if (mode === 'vending' || isPotion(result.item.id)) context.onboarding.purchased();
     if (!current()) return;
     render();
     if (selected === result.item.id)

@@ -23,6 +23,7 @@ import { escapeText } from '../ui.js';
 import { cityServiceArt } from './city-service-art.js';
 import { equipmentArt } from './equipment-art.js';
 import { createEquipmentFeedback } from './equipment-feedback.js';
+import { createBlacksmithFx } from './blacksmith-fx.js';
 
 const SERVICES = Object.freeze([
   {
@@ -117,6 +118,11 @@ export function createBlacksmith(context, commitEquipment, refreshEquipment) {
       <div class="blacksmith-workbench">
         <div class="blacksmith-stage" data-forge-reserve="true" aria-hidden="true">
           <div class="blacksmith-workpiece"></div>
+          <div class="blacksmith-vfx">
+            <span class="blacksmith-vfx-heat"></span>
+            <span class="blacksmith-vfx-sheen"></span>
+            <span class="blacksmith-vfx-badge"></span>
+          </div>
         </div>
         <section class="blacksmith-anvil" aria-label="待加工装备"></section>
       </div>
@@ -128,11 +134,39 @@ export function createBlacksmith(context, commitEquipment, refreshEquipment) {
   const status = dialog.querySelector('[role="status"]');
   const stage = dialog.querySelector('.blacksmith-stage');
   const workpiece = stage.querySelector('.blacksmith-workpiece');
+  const vfxBadge = stage.querySelector('.blacksmith-vfx-badge');
   const feedback = createEquipmentFeedback(stage, events);
+  const fx = createBlacksmithFx(stage);
   const getLibrary = () => session.ai.library;
   let selected = '';
   let busy = false;
   let visit = 0;
+  let fxTimer = null;
+
+  function clearForgeVfx() {
+    clearTimeout(fxTimer);
+    fxTimer = null;
+    delete stage.dataset.forgeFx;
+    if (vfxBadge) vfxBadge.textContent = '';
+  }
+
+  function playForgeVfx(serviceId, level) {
+    clearForgeVfx();
+    const badges = {
+      temper: `淬炼完成 · Lv.${level || 1}`,
+      reforge: '重铸完成',
+      ascend: '品质升阶',
+      affix: '铭刻词条',
+      reroll: '词条重塑',
+    };
+    if (vfxBadge) vfxBadge.textContent = badges[serviceId] || '锻造完成';
+    void stage.offsetWidth;
+    stage.dataset.forgeFx = serviceId;
+    fx.trigger(serviceId);
+    fxTimer = setTimeout(() => {
+      if (!session.runtime.disposed) clearForgeVfx();
+    }, 1650);
+  }
 
   function setStatus(state = '', message = '') {
     dialog.dataset.smithState = state;
@@ -279,7 +313,11 @@ export function createBlacksmith(context, commitEquipment, refreshEquipment) {
         }
         if (receipt && canShowResult()) {
           setStatus(id === 'sell' ? 'sold' : 'forged', receipt);
-          if (id !== 'sell') feedback.play(id, '', workpiece.querySelector('.equipment-art'));
+          if (id !== 'sell') {
+            const updatedRow = inventoryRows().find(({ instance }) => instance.id === selected);
+            playForgeVfx(id, updatedRow?.instance.level);
+            feedback.play(id, '', workpiece.querySelector('.equipment-art'));
+          }
           context.audio.play('exchange');
         }
       }
@@ -290,6 +328,11 @@ export function createBlacksmith(context, commitEquipment, refreshEquipment) {
     }
   });
 
+  events.on(dialog, 'close', () => {
+    fx.setActive(false);
+    clearForgeVfx();
+  });
+
   return {
     open(cityId) {
       const { name } = cityServiceArt(cityId, context.daily?.scene?.());
@@ -297,11 +340,17 @@ export function createBlacksmith(context, commitEquipment, refreshEquipment) {
       if (!dialog.open) {
         visit += 1;
         setStatus();
+        clearForgeVfx();
       }
       render();
-      if (!dialog.open) dialog.showModal();
+      if (!dialog.open) {
+        dialog.showModal();
+        fx.setActive(true);
+      }
     },
     dispose() {
+      clearForgeVfx();
+      fx.dispose();
       feedback.dispose();
       dialog.remove();
       stylesheet.remove();

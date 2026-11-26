@@ -39,7 +39,11 @@ export const EMPIRE_TRANSITION_DUNGEONS = Object.freeze([
   'ash-foundry',
   'astral-sanctum',
 ]);
-export const CITY_DUNGEONS = Object.freeze(['starbell-undercroft', 'black-market']);
+export const CITY_DUNGEONS = Object.freeze([
+  'black-market',
+  'silver-shield-exhibition',
+  'duel-arena',
+]);
 export const UNLOCKABLE_DUNGEONS = Object.freeze([
   ...MAINLINE_DUNGEONS,
   ...EMPIRE_TRANSITION_DUNGEONS,
@@ -83,6 +87,8 @@ export function worldReference() {
     enemyTaxonomy: {
       categories: structuredClone(ENEMY_ARCHIVE_CATEGORIES),
       namingPattern: '[2字词缀]+[基础种]',
+      categoryRequired: true,
+      baseSpeciesOptionalForCustomSpecies: true,
     },
     appearances: [
       ...Object.values(DEFINITIONS).filter((entry) => entry.speed),
@@ -305,7 +311,7 @@ export function normalizeWorld(
 ) {
   if (!raw || typeof raw !== 'object') throw Error('地图数据无效');
   const id = existing?.id || text(raw.id, 1, 80, '地图ID');
-  if (!/^(?:world-[a-z0-9-]+|mill|ruins|forest|frost|forge|tide|starbell-undercroft)$/.test(id))
+  if (!/^(?:world-[a-z0-9-]+|mill|ruins|forest|frost|forge|tide)$/.test(id))
     throw Error('地图ID无效');
   if (!MAP_IDS.includes(raw.map)) throw Error('地图背景无效');
   if (existing && raw.map !== existing.map) throw Error('扩充不能更换已有地图背景');

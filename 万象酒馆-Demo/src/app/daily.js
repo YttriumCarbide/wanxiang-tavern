@@ -43,7 +43,13 @@ import {
   TAVERN_EXITS,
 } from '../content/silver-crown-scenes.js';
 import { townResidents } from '../town-residents.js';
-import { CITIES, cityDungeons, cityFacility, cityForScene } from '../city-directory.js';
+import {
+  CITIES,
+  cityDungeons,
+  cityFacility,
+  cityForScene,
+  clearedCityDungeonIds,
+} from '../city-directory.js';
 import { chatPlaceForScene } from '../chat-places.js';
 import {
   availableInvitationCities,
@@ -53,12 +59,13 @@ import {
 import { invitationSetupView } from './invitation-setup-view.js';
 
 import { createPlayerIntentPrompt } from './player-intent.js';
-import { createWorldLoadingOverlay } from '../shared/scene-loading.js';
+import { createWorldLoadingOverlay, hasActiveLoadingOverlay } from '../shared/scene-loading.js';
 import { IMPERIAL_DUNGEONS } from '../content/imperial-network.js';
 import { REGIONS } from '../content/regions.js';
 import { unlockDungeonMap } from '../exploration.js';
 import { worldRegion } from '../worlds.js';
 import { learning } from '../campaign.js';
+import { quickTestOverlordsEnabled } from '../generation-options.js';
 import { locationMusic } from '../audio/config.js';
 
 export function createDaily(context) {
@@ -121,6 +128,7 @@ export function createDaily(context) {
 
   function hideDock() {
     dock.hidden = true;
+    dock.inert = false;
     cancelDockExit();
   }
 
@@ -131,7 +139,6 @@ export function createDaily(context) {
       dock.hidden = false;
       return;
     }
-    if (dock.hidden) return;
     if (
       root.hidden ||
       matchMedia('(prefers-reduced-motion: reduce)').matches ||
@@ -142,7 +149,7 @@ export function createDaily(context) {
       hideDock();
       return;
     }
-    if (dockExitAnimation) return;
+    if (dock.hidden || dockExitAnimation) return;
 
     const { opacity, translate, visibility } = getComputedStyle(dock);
     if (visibility !== 'visible' || opacity === '0') return hideDock();
@@ -193,9 +200,25 @@ export function createDaily(context) {
     if (pendingScene === attempt) pendingScene = null;
   }
   let visitedDiscovery = null;
+  function sceneFromHref(rawUrl) {
+    if (!rawUrl) return '';
+    try {
+      const url = new URL(rawUrl, location.href);
+      const paramScene = url.searchParams.get('scene');
+      if (paramScene) return normalizeCityScene(paramScene);
+      if (url.pathname.endsWith('/tavern.html')) return 'tavern';
+      if (url.pathname.endsWith('/corridor.html')) return 'corridor';
+      if (url.pathname.endsWith('/master-bedroom.html')) return 'master-bedroom';
+      if (url.pathname.endsWith('/guest-room.html')) return 'guest-room';
+    } catch {
+      /* Ignore malformed URLs. */
+    }
+    return '';
+  }
   function activeScene() {
     try {
-      const win = frame()?.contentWindow;
+      const el = frame();
+      const win = el?.contentWindow;
       const bodyScene = win?.document?.body?.dataset?.scene;
       const paramScene = win ? new URLSearchParams(win.location.search).get('scene') : null;
       const detected =
@@ -212,6 +235,8 @@ export function createDaily(context) {
                 : '');
       if (detected)
         return detected === 'street' || detected === 'starlamp-street' ? 'city-center' : detected;
+      const srcScene = sceneFromHref(el?.getAttribute('src'));
+      if (srcScene) return srcScene;
     } catch {
       /* Fallback to tracked scene before iframe is same-origin ready. */
     }
@@ -256,6 +281,7 @@ export function createDaily(context) {
       });
     } finally {
       enteringDungeon = false;
+      render();
     }
   }
   async function closeDiscoveryWithTransition(performClose) {
@@ -279,6 +305,7 @@ export function createDaily(context) {
       });
     } finally {
       enteringDungeon = false;
+      render();
     }
   }
   const intent = createPlayerIntentPrompt(events);
@@ -326,9 +353,8 @@ export function createDaily(context) {
   function hasBlockingSceneOverlay() {
     if (mapOpen || document.body.classList.contains('gal-playing')) return true;
     if (
-      document.querySelector(
-        'dialog[open], .world-loading-scene:not([hidden]), .scene-loading:not(.complete):not([hidden]), #chapter-theater:not([hidden])',
-      )
+      hasActiveLoadingOverlay(document) ||
+      document.querySelector('dialog[open], #chapter-theater:not([hidden])')
     )
       return true;
     const doc = frame()?.contentDocument;
@@ -340,9 +366,27 @@ export function createDaily(context) {
     if (doc.querySelector('dialog[open]')) return true;
     return false;
   }
-  function readyCity() {
+  function liveStreetDoc() {
+    if (pendingScene) return null;
     const doc = frame()?.contentDocument;
-    if (doc !== readyStreet || normalizeCityScene(doc?.body?.dataset.scene) !== scene) return null;
+    if (!doc || doc.body?.classList?.contains('leaving')) return null;
+    if (readyStreet && doc === readyStreet && doc.defaultView?.modelReady === true) return doc;
+    const docScene = normalizeCityScene(doc.body?.dataset?.scene);
+    if (
+      docScene &&
+      docScene === scene &&
+      doc.documentElement?.dataset.embedded === 'true' &&
+      doc.querySelector('#street-city-submap') &&
+      doc.defaultView?.modelReady === true
+    ) {
+      readyStreet = doc;
+      return doc;
+    }
+    return null;
+  }
+  function readyCity() {
+    const doc = liveStreetDoc();
+    if (!doc || normalizeCityScene(doc.body?.dataset.scene) !== scene) return null;
     if (session.runtime.mode !== 'inn' || session.runtime.needsStart || session.runtime.disposed)
       return null;
     if (
@@ -357,11 +401,25 @@ export function createDaily(context) {
   }
 
   function cityDirectoryOpen() {
-    return Boolean(readyStreet?.querySelector('#street-city-submap[open]'));
+    return Boolean((liveStreetDoc() || readyStreet)?.querySelector('#street-city-submap[open]'));
   }
 
   function cityDirectoryAvailable() {
-    return Boolean(readyCity());
+    if (readyCity()) return true;
+    const doc = liveStreetDoc();
+    return Boolean(
+      doc &&
+      normalizeCityScene(doc.body?.dataset.scene) === scene &&
+      ['outskirts', 'riverbank'].includes(scene) &&
+      session.runtime.mode === 'inn' &&
+      !session.runtime.needsStart &&
+      !session.runtime.disposed &&
+      !locked &&
+      !enteringDungeon &&
+      !travel.busy() &&
+      (!active() || active().kind === 'outing') &&
+      !hasBlockingSceneOverlay(),
+    );
   }
 
   function openCityDirectory() {
@@ -396,9 +454,7 @@ export function createDaily(context) {
       locked ||
       enteringDungeon ||
       travel.busy() ||
-      !readyStreet ||
-      frame()?.contentDocument !== readyStreet ||
-      readyStreet.defaultView?.modelReady !== true ||
+      !liveStreetDoc() ||
       (entry?.kind === 'invitation' && entry.stage === 'running')
     )
       return null;
@@ -566,6 +622,8 @@ export function createDaily(context) {
         exploration: library().overlandExploration,
         skirmishes: library().skirmishes,
         unlockedDungeons: library().unlockedDungeons,
+        clearedDungeons: clearedCityDungeonIds(library()),
+        includeLockedDungeons: quickTestOverlordsEnabled(session.ai.generationOptions),
         invitation: false,
         outing: {
           turns: entry?.turns || 0,
@@ -749,7 +807,14 @@ export function createDaily(context) {
 
   function render() {
     const running = active();
-    if (running && !running.direct) {
+    if (
+      running?.direct &&
+      ['ready', 'setup'].includes(running.stage) &&
+      !setup.open &&
+      !invitation.busy()
+    ) {
+      state().active = null;
+    } else if (running && !running.direct) {
       state().running = false;
       state().draft = [];
       state().plan = [];
@@ -779,9 +844,41 @@ export function createDaily(context) {
       hideAtlasOverlay();
     }
     const destination = frame()?.contentDocument;
+    if (
+      mapOpen &&
+      !atlasOpening &&
+      !atlasOpen(overlay) &&
+      !destination?.querySelector('#street-map[open]')
+    ) {
+      mapOpen = false;
+    }
     const cityDirectoryOpen = Boolean(destination?.querySelector('#street-city-submap[open]'));
     root.hidden = !visible || mapOpen || cityDirectoryOpen;
     const home = current === 'tavern';
+    if (
+      home &&
+      !pendingScene &&
+      !travel.busy() &&
+      !session.journey.expedition &&
+      frame()?.contentWindow?.location?.pathname?.endsWith('/tavern.html')
+    ) {
+      if (active()?.kind === 'outing' && active().stage === 'roaming') {
+        delete active().overland;
+        finishDaily(state(), 'outing', `外出结束 · 已行 ${active().turns || 0} 回合`);
+        save();
+      } else if (active()?.kind === 'dungeon') {
+        finishDaily(state(), 'dungeon', '副本远行结束 · 已返回酒馆');
+        save();
+      } else if (
+        active()?.kind === 'service' &&
+        !locked &&
+        !setup.open &&
+        (!active().shift || active().shift.finished)
+      ) {
+        state().active = null;
+        save();
+      }
+    }
     const upstairs = ['corridor', 'guest-room', 'master-bedroom'].includes(current);
     const progress = tavernPromotion(state(), library().workshop);
     placeChip.textContent = sceneTitles.get(current) || OUTING_SCENES[current] || '万象酒馆';
@@ -815,6 +912,8 @@ export function createDaily(context) {
         exploration: library().overlandExploration,
         skirmishes: library().skirmishes,
         unlockedDungeons: library().unlockedDungeons,
+        clearedDungeons: clearedCityDungeonIds(library()),
+        includeLockedDungeons: quickTestOverlordsEnabled(session.ai.generationOptions),
         invitation:
           entry?.kind === 'invitation' &&
           entry.stage === 'running' &&
@@ -827,7 +926,12 @@ export function createDaily(context) {
                 locked: travel.busy(),
                 preview: entry.preview === true,
               }
-            : visible && !home && !upstairs && !entry && learning(library())
+            : visible &&
+                !home &&
+                !upstairs &&
+                !entry &&
+                learning(library()) &&
+                !quickTestOverlordsEnabled(session.ai.generationOptions)
               ? {
                   turns: 0,
                   locked: travel.busy(),
@@ -1144,7 +1248,25 @@ export function createDaily(context) {
   }
 
   function openExitPicker() {
-    if (active() || exitPicker.open) return;
+    if (exitPicker.open) return;
+    if (
+      active() &&
+      ['ready', 'setup'].includes(active().stage) &&
+      !setup.open &&
+      !invitation.busy()
+    ) {
+      state().active = null;
+      save();
+      render();
+    }
+    if (active()) {
+      context.shell.toast(
+        active()?.kind === 'invitation'
+          ? '请先在约见中推进或结束本次同行。'
+          : '请先结束当前酒馆事务后再出门。',
+      );
+      return;
+    }
     exitPicker.innerHTML = `<header><h2>从哪里出门</h2><form method="dialog"><button aria-label="关闭">×</button></form></header>
       <div class="tavern-exit-options">${Object.entries(TAVERN_EXITS)
         .map(([id, name]) => {
@@ -1388,7 +1510,12 @@ export function createDaily(context) {
     if (event.data?.type === 'daily-open-dungeon' && typeof event.data.dungeonId === 'string') {
       const { dungeonId, cityId } = event.data;
       if (readyCity() !== cityId || normalizeCityScene(event.data.scene) !== scene) return;
-      if (!cityDungeons(cityId, library().atlasDiscoveries).some(({ id }) => id === dungeonId))
+      if (
+        !cityDungeons(cityId, library().atlasDiscoveries, {
+          clearedDungeons: clearedCityDungeonIds(library()),
+          includeLocked: quickTestOverlordsEnabled(session.ai.generationOptions),
+        }).some(({ id }) => id === dungeonId)
+      )
         return;
       unlockDungeonMap(library(), dungeonId);
       save();
@@ -1401,8 +1528,14 @@ export function createDaily(context) {
     }
     if (event.data?.type === 'tavern-recruit') return showRecruitment(event.data.characterId);
     if (event.data?.type === 'daily-outing-companions' && active()?.preview) return openSetup();
-    if (event.data?.type === 'street-leaving' || event.data?.type === 'street-dialog-state')
+    if (event.data?.type === 'street-leaving') {
+      if (event.data.leaving === true) {
+        readyStreet = null;
+        mapOpen = false;
+      }
       return render();
+    }
+    if (event.data?.type === 'street-dialog-state') return render();
     if (event.data?.type === 'street-map-state') {
       const streetMapOpen = event.data.open === true;
       mapOpen = streetMapOpen || atlasOpen(overlay);
@@ -1450,9 +1583,10 @@ export function createDaily(context) {
     const currentFrame = frame();
     const readyScene = normalizeCityScene(event.data.scene);
     if (pendingScene) {
+      const actualDocScene = activeScene();
       if (pendingScene.token !== navigationToken || pendingScene.frame !== currentFrame) {
         clearPendingScene(pendingScene);
-      } else if (pendingScene.target !== readyScene) {
+      } else if (pendingScene.target !== readyScene && actualDocScene !== readyScene) {
         return;
       } else {
         clearPendingScene(pendingScene);
@@ -1482,15 +1616,16 @@ export function createDaily(context) {
     }
     if (scene === 'tavern' || Object.hasOwn(OUTING_SCENES, scene)) invitation.arrive(scene);
     if (active()?.kind === 'outing' && active().stage === 'roaming') {
-      if (scene === 'tavern') returnOuting();
-      else {
-        if (Object.hasOwn(OUTING_SCENES, scene) && scene !== active().scene) {
-          active().scene = scene;
-          advanceOuting(state());
-          save();
-        }
-        travel.checkSkirmish?.(scene);
+      if (scene === 'tavern') {
+        complete('outing', `外出结束 · 已行 ${active().turns || 0} 回合`);
+        return;
       }
+      if (Object.hasOwn(OUTING_SCENES, scene) && scene !== active().scene) {
+        active().scene = scene;
+        advanceOuting(state());
+        save();
+      }
+      travel.checkSkirmish?.(scene);
     }
     render();
   });
@@ -1515,12 +1650,22 @@ export function createDaily(context) {
     }),
     returning() {
       visitedDiscovery = null;
+      clearPendingScene(pendingScene);
+      readyStreet = null;
       hideAtlasOverlay();
       service.close();
       invitation.close();
       setup.close();
       locked = false;
-      scene = 'tavern';
+      scene = sceneFromHref(frame()?.getAttribute('src')) || activeScene() || 'tavern';
+      if (
+        scene === 'tavern' &&
+        active()?.kind === 'outing' &&
+        active().stage === 'roaming' &&
+        !active().overland
+      ) {
+        finishDaily(state(), 'outing', `外出结束 · 已行 ${active().turns || 0} 回合`);
+      }
       if (active()?.kind === 'dungeon' && active().stage === 'departed') {
         complete('dungeon', '副本远行结束 · 已结算两个时段');
         return;

@@ -9,7 +9,7 @@ import {
 } from '../gal.js';
 import { portraitUrl, UNKNOWN_STANDING } from '../portraits.js';
 import { TAVERN_VISITORS, standingSprite } from '../content/tavern-visitors.js';
-import { galNpcPortrait } from '../content/gal-npc-portraits.js';
+import { GAL_NPC_PORTRAITS, galNpcPortrait } from '../content/gal-npc-portraits.js';
 import { createEventScope } from '../shared/events.js';
 import { createParticleFx } from '../shared/scene-fx.js';
 import { createGalWorkspace } from './gal-workspace.js';
@@ -17,6 +17,7 @@ import { decorateGalButtons } from './gal-icons.js';
 import { createGalReactions } from './gal-reactions.js';
 import { createSceneEnvironment } from './scene-environment.js';
 import { activeModal, createPopoverSurface } from '../shared/top-layer.js';
+import { renderLevelUpPanel } from './level-up-view.js';
 
 /** One application-owned visual-novel stage, shared by dialogue, story and both chat readers. */
 export function createGalPlayer(context) {
@@ -32,6 +33,7 @@ export function createGalPlayer(context) {
   panel.setAttribute('aria-hidden', 'true');
   panel.innerHTML = `<div class="gal-bg-mover" aria-hidden="true"><img class="gal-bg" alt="" hidden/></div><canvas class="gal-fx-canvas" aria-hidden="true"></canvas><div class="gal-mood-wash" aria-hidden="true" hidden></div><div class="gal-cinema-bars" aria-hidden="true"></div><div class="gal-vignette"></div><div class="gal-cast" aria-hidden="true"></div>
     <nav class="gal-controls" aria-label="演出控制"><span class="gal-chapter"></span></nav>
+    <aside class="gal-levelup-popup" aria-live="polite" hidden></aside>
     <section class="gal-reading"><div class="gal-speaker"><img hidden alt=""/><span></span><small></small></div><div class="gal-bonuses"></div><button class="gal-page" type="button" aria-label="展开全文或继续"><span class="gal-text"></span><span class="gal-cursor" aria-hidden="true">◇</span></button><div class="gal-footer"><small class="gal-count"></small><span class="gal-hint">点击展开 · 再点继续</span></div></section>
     <div class="gal-actionbar"><nav class="gal-quick-menu" aria-label="阅读控制"><button data-gal="back">‹ 回退</button><button data-gal="next">继续 ›</button><button data-gal="skip" aria-pressed="false">快进</button><button data-gal="auto" aria-pressed="false">自动</button><button data-gal="history">本次对话</button><button data-gal="hide">隐藏</button><button data-gal="journal">剧情</button><button data-gal="compose">交流</button><button data-gal="close">退出</button></nav></div>
     <section class="gal-history" hidden aria-label="本次对话"><header><h2>本次对话</h2><button data-gal="history-close">返回演出</button></header><ol class="gal-dialogue-list" tabindex="0"></ol><p class="gal-dialogue-empty" hidden>还没有可以回看的对话。</p></section>`;
@@ -257,6 +259,15 @@ export function createGalPlayer(context) {
           sprite: standingSprite(TAVERN_VISITORS.find((entry) => entry.id === key)),
           fullSprite: true,
         });
+    if (!members.some((actor) => actor.name === '罗德里斯'))
+      members.push({
+        id: 'king-rodris',
+        name: '罗德里斯',
+        aliases: ['罗德里斯陛下', '罗德里斯·迪亚戈·德·维瓦尔', '国王', '国王陛下'],
+        npc: true,
+        sprite: GAL_NPC_PORTRAITS.kingRodris,
+        fullSprite: true,
+      });
     for (const npc of context.session.ai.activeScript?.npcs || [])
       if (!members.some((actor) => actor.id === npc.id || actor.name === npc.name))
         members.push({
@@ -309,7 +320,8 @@ export function createGalPlayer(context) {
     enterAnimation = null;
     resetShutter();
     clearReaction();
-    presentEnvironment(null);
+    activeEnvironment = null;
+    environment.clear({ immediate: true });
     for (const animation of exitAnimations) animation.cancel();
     exitAnimations = [];
     delete panel.dataset.leaving;
@@ -410,6 +422,7 @@ export function createGalPlayer(context) {
   }
   async function finish(completed = true, closeWorkspace = false) {
     if (!current) return;
+    if (completed && current.beforeExit && typing) reveal();
     const job = current;
     stop();
     clearReaction();
@@ -639,13 +652,20 @@ export function createGalPlayer(context) {
     avatar.hidden = narration || !actor?.avatar || Boolean(actor?.sprite) || actor?.user;
     if (!avatar.hidden) avatar.src = actor.avatar;
     else avatar.removeAttribute('src');
-    part('.gal-bonuses').replaceChildren(
-      ...(beat.bonuses || []).map((bonus) => {
-        const badge = document.createElement('span');
-        badge.textContent = bonus;
-        return badge;
-      }),
-    );
+    const levelPopup = part('.gal-levelup-popup');
+    const galBonuses = part('.gal-bonuses');
+    if (beat.levelUp) {
+      galBonuses.classList.remove('fe-level-host');
+      galBonuses.replaceChildren();
+      renderLevelUpPanel(levelPopup, beat.levelUp, []);
+      levelPopup.hidden = false;
+    } else {
+      levelPopup.hidden = true;
+      levelPopup.classList.remove('fe-level-host');
+      levelPopup.replaceChildren();
+      renderLevelUpPanel(galBonuses, null, beat.bonuses);
+    }
+    panel.classList.toggle('is-level-up', Boolean(beat.levelUp));
     part('.gal-count').textContent = `${pageIndex + 1} / ${current.pages.length}`;
     part('.gal-text').textContent = '';
     part('.gal-hint').textContent = '点击展开 · 再点继续';
@@ -918,7 +938,12 @@ export function createGalPlayer(context) {
       part('.gal-speaker small').textContent = 'WAIT';
       part('.gal-speaker img').hidden = true;
       part('.gal-speaker img').removeAttribute('src');
+      part('.gal-bonuses').classList.remove('fe-level-host');
       part('.gal-bonuses').replaceChildren();
+      part('.gal-levelup-popup').hidden = true;
+      part('.gal-levelup-popup').classList.remove('fe-level-host');
+      part('.gal-levelup-popup').replaceChildren();
+      panel.classList.remove('is-level-up');
       part('.gal-cast')
         .querySelectorAll('.speaking')
         .forEach((actor) => actor.classList.remove('speaking'));
@@ -949,7 +974,11 @@ export function createGalPlayer(context) {
                 return parseGalText(
                   line.text,
                   ['旁白', 'narrator'].includes(line.speaker) ? '' : line.speaker || '',
-                ).map((beat) => ({ ...beat, bonuses: line.bonuses }));
+                ).map((beat) => ({
+                  ...beat,
+                  bonuses: line.bonuses,
+                  ...(line.levelUp ? { levelUp: line.levelUp } : {}),
+                }));
               });
         pending.push({
           ...options,

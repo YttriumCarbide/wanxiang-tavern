@@ -8,7 +8,11 @@ import { OUTPUT_TAG } from './output-envelope.js';
 import { requestTokenReport } from './request-tokens.js';
 import { finalizeRequest } from './prompt-processing.js';
 import { playerIntentMessages, playerIntentText } from './player-intent.js';
-import { galSceneCastInstruction, hasGalReactionGuidance } from '../gal-prompt.js';
+import {
+  galSceneCastInstruction,
+  hasGalEnsembleGuidance,
+  hasGalReactionGuidance,
+} from '../gal-prompt.js';
 
 /**
  * Composes preset + ID/keyword-triggered worldbook requests for script sub-modes.
@@ -164,6 +168,7 @@ export async function buildSubScriptRequest({
       role: 'system',
       content: galSceneCastInstruction(input, 'script', {
         reactionInWorldbook: hasGalReactionGuidance(messages),
+        ensembleInWorldbook: hasGalEnsembleGuidance(messages),
       }),
     });
   }

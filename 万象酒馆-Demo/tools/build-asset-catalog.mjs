@@ -34,6 +34,8 @@ export async function buildAssetCatalog() {
       ),
       './assets/portraits/edith.png',
       './assets/portraits/pandora.png',
+      './assets/portraits/rodris-de-vivar-v3.png',
+      './assets/gal-npc-cast/rodris-king.png',
       ...Object.keys(files)
         .filter((file) => file.startsWith('assets/portraits/template-'))
         .map((file) => './' + file),

@@ -1,6 +1,7 @@
 import { DEFINITIONS } from '../data.js';
 import { currentEncounterSpec } from '../expedition.js';
 import { portraitUrl } from '../portraits.js';
+import { shortCharacterName } from '../ui.js';
 import { query as $, sleep } from './dom.js';
 
 /** Non-blocking battle barks shown in #battle-bark-banner at key combat beats. */
@@ -111,14 +112,27 @@ export function createBattleBarks(context) {
   }
 
   function bossDef(actorId) {
-    const defs = session.battle.state?.enemyDefinitions || DEFINITIONS;
+    const defs = { ...DEFINITIONS, ...(session.battle.state?.enemyDefinitions || {}) };
     if (actorId && defs[actorId]) return defs[actorId];
-    const bossId = (session.battle.state?.enemyIds || []).find((id) => defs[id]?.boss);
+    const enemyIds = session.battle.state?.enemyIds || [];
+    const bossId =
+      enemyIds.find((id) => defs[id]?.boss || defs[id]?.overlord) ||
+      (typeof currentEncounterSpec(session.journey.expedition, session.battle.state?.encounter ?? 0)
+        ?.boss === 'string'
+        ? currentEncounterSpec(session.journey.expedition, session.battle.state?.encounter ?? 0)
+            .boss
+        : null) ||
+      enemyIds[0];
     return (bossId && defs[bossId]) || null;
   }
 
   function bossName(actorId) {
-    return bossDef(actorId)?.name || '首领';
+    return (
+      bossDef(actorId)?.name ||
+      currentEncounterSpec(session.journey.expedition, session.battle.state?.encounter ?? 0)
+        ?.name ||
+      '强敌'
+    );
   }
 
   function bossPortrait(actorId) {
@@ -127,15 +141,22 @@ export function createBattleBarks(context) {
   }
 
   function leaderDef() {
-    const id =
-      session.ai.library.campaign?.protagonistId ||
-      session.journey.expedition?.partyIds?.find(Boolean);
+    const expedition = session.journey.expedition;
+    const id = session.ai.library.campaign?.protagonistId || expedition?.partyIds?.find(Boolean);
     const defs = session.battle.state?.heroDefinitions || {};
-    return (id && defs[id]) || Object.values(defs)[0] || null;
+    if (id && defs[id]) return defs[id];
+    const member = id && session.ai.library?.characters?.find((item) => item.id === id);
+    if (member) {
+      return {
+        ...member.combat,
+        name: member.setting?.name || member.combat?.name,
+      };
+    }
+    return Object.values(defs)[0] || null;
   }
 
   function leaderName() {
-    return leaderDef()?.name || '同行者';
+    return shortCharacterName(leaderDef()?.name || '同行者');
   }
 
   function leaderPortrait() {
@@ -153,7 +174,7 @@ export function createBattleBarks(context) {
       shownBattleKey = key;
       void runSequence([
         {
-          speaker: spec.name || '遭遇敌军',
+          speaker: bossName(),
           text: expedition.overlandBattle.battleLines.intro,
           tone: 'boss',
         },
@@ -163,46 +184,51 @@ export function createBattleBarks(context) {
     const lines = session.ai.activeScript?.battleLines;
     if (!spec?.boss || !lines) return;
     shownBattleKey = key;
+    const vsBossName = bossName();
     const versus = {
       bossPortrait: bossPortrait(),
       partyPortrait: leaderPortrait(),
-      bossName: bossName(),
+      bossName: vsBossName,
       partyName: leaderName(),
     };
-    void runSequence(
-      [
-        ...(lines.bossIntro
-          ? [
-              {
-                speaker: bossName(),
-                text: lines.bossIntro,
-                tone: 'boss',
-                stepLabel: 'I · 威压降临',
-                versus,
-              },
-            ]
-          : []),
-        ...(lines.partyReply
-          ? [
-              {
-                speaker: leaderName(),
-                text: lines.partyReply,
-                tone: 'party',
-                stepLabel: 'II · 锋芒相迎',
-                versus,
-              },
-            ]
-          : []),
-        {
-          speaker: bossName(),
-          text: lines.bossDeclaration || '既然踏入此地，便用你们的性命来见证终局！',
-          tone: 'enraged',
-          stepLabel: 'III · 宿命交锋',
-          versus,
-        },
-      ],
-      2700,
-    );
+    const introText =
+      lines.bossIntro || (!lines.bossDeclaration ? '到此为止了，先过我这一关。' : '');
+    const sequence = [
+      ...(introText
+        ? [
+            {
+              speaker: vsBossName,
+              text: introText,
+              tone: 'boss',
+              stepLabel: 'I · 现身',
+              versus,
+            },
+          ]
+        : []),
+      ...(lines.partyReply
+        ? [
+            {
+              speaker: leaderName(),
+              text: lines.partyReply,
+              tone: 'party',
+              stepLabel: 'II · 迎击',
+              versus,
+            },
+          ]
+        : []),
+      ...(lines.bossDeclaration
+        ? [
+            {
+              speaker: vsBossName,
+              text: lines.bossDeclaration,
+              tone: 'enraged',
+              stepLabel: 'III · 交锋',
+              versus,
+            },
+          ]
+        : []),
+    ];
+    void runSequence(sequence, 2700);
   }
 
   function bossEnraged(actorId) {

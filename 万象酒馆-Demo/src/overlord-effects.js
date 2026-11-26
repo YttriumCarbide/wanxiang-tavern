@@ -245,6 +245,46 @@ export function createOverlordEffects({ center, animate, pixelFx, reduced }) {
     }
 
     if (event.type === 'hiddenWeaponLock') playLock(event);
+    if (event.type === 'counter' && event.isOverlordCounter) {
+      const reject = event.overlordCounterReason === 'collected-reject';
+      const casterColor = reject ? '#f0c368' : '#d98b4e';
+      const art = reject ? 'collect' : 'counter';
+      mark({ type: 'overlordCounter' }, event.actor, art, casterColor, {
+        delay: 40,
+        duration: 460,
+        motion: 'lock',
+        role: 'origin',
+        scale: 0.72,
+      });
+      for (const tid of event.targets || []) {
+        transfer(
+          { type: 'overlordCounter' },
+          event.actor,
+          tid,
+          casterColor,
+          impactDelay * 0.45,
+          260,
+          -0.7,
+        );
+        mark({ type: 'overlordCounter' }, tid, 'counter', reject ? '#d97bf5' : '#f29e61', {
+          delay: impactDelay * 0.72,
+          duration: 360,
+          motion: 'fracture',
+          role: 'target',
+          scale: 0.64,
+          pixels: reject ? 'arcane-beam' : 'heavy-cleave',
+        });
+      }
+    }
+    if (event.type === 'enemy' && event.clip === 'Talon_Rend' && !event.fixedFirstSlot) {
+      mark({ type: 'overlordSlam' }, event.actor, 'counter', '#f0c368', {
+        delay: impactDelay * 0.4,
+        duration: 520,
+        motion: 'fracture',
+        scale: 1.04,
+        pixels: event.actor === 'silverCrownSyndicateArchon' ? 'holy-slash' : 'ground-slam',
+      });
+    }
     const signals = event.statusTriggers || [];
     const reflectSeen = new Map();
     const armorBroken = new Set(

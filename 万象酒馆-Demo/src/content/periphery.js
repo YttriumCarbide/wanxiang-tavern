@@ -17,6 +17,8 @@ const COLORS = Object.freeze({
   'graystone-quarry': ['#4d5259', '#6d747b', '#5e4631', '#9b6bff'],
   'city-market': ['#6e737b', '#9e4b3a', '#694c33', '#f5c878'],
   'black-market': ['#272a34', '#4d4446', '#6e1d28', '#5ad1a4'],
+  'duel-arena': ['#8c765a', '#b69c78', '#8e3530', '#e8b460'],
+  'silver-shield-exhibition': ['#d4d2c8', '#3c6e72', '#a88c4a', '#7bc4be'],
 });
 
 function woodlandGrowth(box, random, variant, colors, mill) {
@@ -281,6 +283,42 @@ export function planPeriphery(map, occupied = () => false) {
           box(-0.2, 0.17, -0.1, 0.56, 0.4, 0.56, color(1));
           box(0.25, 0.17, 0.22, 0.46, 0.26, 0.46, '#214e54');
           rocks(color(0), 0.22);
+        }
+        break;
+      case 'duel-arena':
+        box(0, 0.09, 0, 1.48, 0.08, 1.48, color(0));
+        if (variant === 0 || variant === 1) {
+          for (let row = 0; row < 3; row++) {
+            box(0, 0.13 + row * 0.22, -0.4 + row * 0.14, 1.38, 0.2, 0.38, color(1));
+          }
+          if (variant === 0) {
+            box(-0.46, 0.57, -0.36, 0.12, 0.72, 0.12, '#473426');
+            box(-0.46, 1.05, -0.32, 0.34, 0.44, 0.08, color(2));
+          }
+        } else if (variant === 2) {
+          box(0, 0.17, 0, 0.34, 0.36, 0.34, '#473426');
+          box(0, 0.53, 0, 0.24, 0.2, 0.24, color(3), true);
+          rocks(color(1), 0.2);
+        } else {
+          rocks(color(0), 0.24);
+          box(-0.26, 0.17, -0.1, 0.42, 0.32, 0.42, color(1));
+        }
+        break;
+      case 'silver-shield-exhibition':
+        box(0, 0.09, 0, 1.48, 0.08, 1.48, color(0));
+        if (variant === 0) {
+          box(-0.36, 0.17, -0.16, 0.44, 0.62, 0.44, color(0));
+          box(-0.36, 0.79, -0.16, 0.32, 0.22, 0.32, color(3), true);
+          box(0.28, 0.17, 0.16, 0.38, 0.38, 0.38, color(2));
+        } else if (variant === 1) {
+          box(0, 0.14, 0, 1.24, 0.04, 0.68, color(1));
+          box(-0.34, 0.18, -0.22, 0.28, 0.56, 0.28, color(2));
+        } else if (variant === 2) {
+          box(0, 0.17, 0, 0.34, 0.52, 0.34, color(2));
+          box(0, 0.69, 0, 0.22, 0.24, 0.22, color(3), true);
+        } else {
+          box(-0.22, 0.17, -0.14, 0.48, 0.42, 0.48, color(0));
+          box(0.26, 0.17, 0.22, 0.42, 0.28, 0.42, color(1));
         }
         break;
       case 'castle':

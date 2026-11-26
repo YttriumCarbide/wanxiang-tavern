@@ -339,6 +339,19 @@
       "transparentBackground": true,
       "sha256": "85ee1b7c4b8063d76a1e3b0dc88269b9545922e1ff0dc6a5cc2b39c19cfa86e8",
       "promptReference": "assets/gal-npc-cast/prompts.md"
+    },
+    {
+      "id": "rodris-king",
+      "role": "艾尔德兰帝国国王罗德里斯·迪亚戈·德·维瓦尔",
+      "file": "assets/gal-npc-cast/rodris-king.png",
+      "source": "罗德里斯-角色美术/rodris-de-vivar-full-v3.png",
+      "generator": "built-in imagegen",
+      "width": 1024,
+      "height": 1536,
+      "format": "PNG RGBA",
+      "transparentBackground": true,
+      "sha256": "2355b35d042be3b2ce9696bd744d1dc0c33739a8f86bac2046f29bc1fded1fd9",
+      "promptReference": "assets/gal-npc-cast/prompts.md"
     }
   ]
 }

@@ -92,7 +92,10 @@ export function createPlayback(context) {
               event.after?.enemyDefinitions?.[event.actor] ||
               event.after?.heroDefinitions?.[event.actor]
             : null;
-          if (event.type === 'enemy' && (actorDef?.boss || actorDef?.overlord)) {
+          if (
+            (event.type === 'enemy' || (event.type === 'counter' && event.isOverlordCounter)) &&
+            (actorDef?.boss || actorDef?.overlord)
+          ) {
             beatWaitMs = Math.max(beatWaitMs, eventMs + 140);
           } else if (
             ['enemy', 'entrySkill', 'counter'].includes(event.type) &&
@@ -121,6 +124,7 @@ export function createPlayback(context) {
             event.type === 'bombDetonate' ||
             event.type === 'bombDefuse' ||
             event.type === 'hiddenWeaponLock' ||
+            (event.type === 'counter' && event.isOverlordCounter) ||
             (event.fixedSlotBroken && event.blockedBy === 'bind') ||
             event.statusTriggers?.some((st) =>
               ['break', 'eclipsescaleShed', 'warlordRally', 'warlordConsume'].includes(st.type),

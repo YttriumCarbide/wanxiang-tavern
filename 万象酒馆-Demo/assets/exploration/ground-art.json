@@ -6,7 +6,7 @@
     "dirt": "Use case: stylized-concept. Game asset: seamless square top-down packed earth and sparse flat worn limestone road material for an illustrated JRPG countryside outside a walled town. Match attached existing countryside background: thin dark brown drawn outlines, hand-painted warm ocher earth, subtle taupe clay patches, muted gray limestone fragments, clean soft cel-shaded facets. This is ONLY a flat overhead material, not a scene. Mostly compact dusty sandy soil with small embedded flat pebbles and a few irregular worn paving stones, NO grass tufts, NO bushes, NO large rocks, NO buildings, NO wheel tracks or directional paths, NO objects, NO shadows cast across the tile, no horizon. An evenly lit restrained warm surface, no bright glowing color. All four edges tile seamlessly, no obvious central feature. Native full resolution square PNG. Reference is painting/color style only."
   },
   "files": [
-    "ground-cobble-v1.png",
-    "ground-earth-v1.png"
+    "ground-cobble-v1.webp",
+    "ground-earth-v1.webp"
   ]
 }

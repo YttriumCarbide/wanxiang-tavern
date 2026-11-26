@@ -1664,3 +1664,61 @@
     transition: none;
   }
 }
+
+.enemy-break-rail.is-collector,
+.enemy-break-rail.is-collector-archive {
+  border-color: rgba(234, 179, 8, 0.55);
+}
+
+.enemy-break-rail.is-collector.is-rejected-hover {
+  border-color: rgba(242, 92, 114, 0.85);
+  box-shadow: 0 0 10px rgba(242, 92, 114, 0.36);
+}
+
+.enemy-weakness-pill.is-crossed {
+  position: relative;
+  width: 21px;
+  height: 21px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, rgba(28, 34, 46, 0.94), rgba(10, 14, 22, 0.98));
+  border: 1px solid color-mix(in srgb, var(--dmg-color, #9a8f7c) 72%, #fff 14%);
+  box-shadow:
+    0 1px 4px var(--dmg-glow, rgba(0, 0, 0, 0.6)),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  overflow: visible;
+}
+
+.enemy-weakness-pill.is-crossed.is-rejected {
+  border-color: rgba(242, 112, 130, 0.72);
+  background: radial-gradient(circle at 35% 30%, rgba(42, 22, 32, 0.94), rgba(16, 10, 18, 0.98));
+}
+
+.enemy-weakness-pill.is-crossed.is-used-round {
+  opacity: 0.78;
+  filter: saturate(0.65);
+}
+
+.weakness-cross {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  z-index: 2;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(24, 10, 14, 0.92);
+  border: 1px solid rgba(235, 112, 128, 0.78);
+  color: #f6b2bc;
+  font-style: normal;
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 8px;
+  text-align: center;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.65);
+  pointer-events: none;
+}
+
+.enemy-weakness-pill.is-used-round .weakness-cross {
+  border-color: rgba(186, 178, 168, 0.55);
+  color: #cfc8be;
+}

@@ -6,7 +6,7 @@ import {
   SILVER_CROWN_SYNDICATE_ARCHON,
   SILVER_CROWN_SYNDICATE_ENEMIES,
 } from '../src/content/silver-crown-syndicate-adversaries.js';
-import { BOSSES, BUFFS, DEFINITIONS, ENCOUNTERS, ENEMIES, HEROES } from '../src/data.js';
+import { DEFINITIONS, HEROES } from '../src/data.js';
 import { advance, newBattle, preview } from '../src/engine.js';
 import { validateGameData } from '../src/validation.js';
 
@@ -15,20 +15,11 @@ const forecastParty = Object.fromEntries(
 );
 
 test('Silver Crown entries belong to the archive while the six prepared enemies validate', () => {
-  assert.deepEqual(
-    validateGameData({
-      heroes: HEROES,
-      enemies: [...ENEMIES, ...SILVER_CROWN_SYNDICATE_ENEMIES],
-      bosses: BOSSES,
-      buffs: BUFFS,
-      encounters: ENCOUNTERS,
-    }),
-    [],
-  );
+  assert.deepEqual(validateGameData(), []);
 
   const archived = Object.keys(SILVER_CROWN_SYNDICATE_ARCHIVE_DEFINITIONS);
   assert.equal(archived.length, 7);
-  assert(archived.every((id) => !Object.hasOwn(DEFINITIONS, id)));
+  assert(archived.every((id) => Object.hasOwn(DEFINITIONS, id)));
   const tiers = buildEnemyArchiveEntries(SILVER_CROWN_SYNDICATE_ARCHIVE_DEFINITIONS);
   assert.equal(tiers.minion.length, 4);
   assert.equal(tiers.elite.length, 2);
@@ -37,10 +28,13 @@ test('Silver Crown entries belong to the archive while the six prepared enemies 
 
   const archon = tiers.overlord[0];
   assert.equal(archon.id, SILVER_CROWN_SYNDICATE_ARCHON.id);
+  assert.equal(archon.name, '秘藏馆主·白鸦');
+  assert.equal(archon.subtitle, '乌羽秘会');
+  assert.equal(archon.sources, '银冠城-白鸦展览馆');
   assert.deepEqual(archon.models, ['silver-crown-syndicate-archon.glb']);
-  assert.deepEqual(archon.entry.intents, [{ name: '行动待定', text: '行动文本待定。' }]);
-  assert.equal(archon.entry.hp, undefined);
-  assert.equal(archon.entry.speed, undefined);
+  assert.equal(archon.entry.intents.length, 3);
+  assert.equal(archon.entry.hp, 250);
+  assert.equal(archon.entry.speed, 6);
 
   const unseen = filterEnemyArchiveBuckets(tiers);
   assert.equal(unseen.totalCount, 7);

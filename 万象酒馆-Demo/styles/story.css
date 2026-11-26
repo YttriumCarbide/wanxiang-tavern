@@ -9,14 +9,20 @@
   padding: 8px 20px 16px;
   border: 0;
   border-radius: 0;
-  background: linear-gradient(to bottom, #102625e8, #102625a0 42%, #10262500);
-  color: #f4e6bf;
+  background: linear-gradient(
+    to bottom,
+    rgba(11, 13, 31, 0.92),
+    rgba(19, 24, 54, 0.65) 45%,
+    transparent
+  );
+  color: var(--astral-gold-hi);
   font-size: 15px;
   letter-spacing: 4px;
-  text-shadow: 0 2px 6px #000;
+  text-shadow: 0 2px 8px #000;
+  box-shadow: none;
 }
 #story-toggle span {
-  color: #e0d5a6;
+  color: var(--astral-gold);
   display: block;
   margin-top: 2px;
   font-size: 26px;
@@ -31,19 +37,35 @@
   max-width: calc(100vw - 36px);
   max-height: calc(100dvh - 36px);
   margin: auto;
-  padding: 22px 28px 16px;
-  border: 1px solid rgba(226, 186, 111, 0.4);
-  border-radius: 16px;
-  background: radial-gradient(ellipse at 50% 0%, rgba(32, 56, 48, 0.7), transparent 75%), #0e1c1a;
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  box-shadow:
-    0 24px 80px rgba(0, 0, 0, 0.8),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
-  color: #f2eee3;
+  padding: 20px 26px 16px;
+  border: 1px solid rgba(226, 192, 120, 0.48);
+  border-radius: 4px;
+  background: var(--astral-hatch), var(--astral-panel-bg);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: var(--astral-frame-shadow);
+  color: var(--astral-text);
   overflow: hidden;
   user-select: text;
   -webkit-user-select: text;
+}
+#story-feed::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  --c: var(--astral-corner-mark);
+  background:
+    var(--c) top left / 20px 2px,
+    var(--c) top left / 2px 20px,
+    var(--c) top right / 20px 2px,
+    var(--c) top right / 2px 20px,
+    var(--c) bottom left / 20px 2px,
+    var(--c) bottom left / 2px 20px,
+    var(--c) bottom right / 20px 2px,
+    var(--c) bottom right / 2px 20px;
+  background-repeat: no-repeat;
 }
 #story-feed[open] {
   display: flex;
@@ -56,10 +78,12 @@
   transition: none !important;
 }
 #story-feed::backdrop {
-  background: rgba(4, 10, 12, 0.75);
+  background: rgba(4, 5, 14, 0.78);
   backdrop-filter: blur(6px);
 }
 #story-feed header {
+  position: relative;
+  z-index: 1;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -67,100 +91,137 @@
   flex-shrink: 0;
 }
 #story-feed header small {
-  color: #9ab9a7;
+  color: var(--astral-gold);
   font-size: 10px;
   letter-spacing: 5px;
 }
 #story-title {
-  margin: 7px 0 0;
+  margin: 6px 0 0;
+  font-family: var(--display-serif);
   font-size: 23px;
   font-weight: 400;
-  color: #e5d1a2;
-  letter-spacing: 3px;
+  color: var(--astral-gold-hi);
+  letter-spacing: 0.14em;
 }
 #story-close {
-  width: 38px;
-  height: 38px;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
   padding: 0;
+  border: 1px solid rgba(226, 192, 120, 0.45);
+  border-radius: 3px;
+  background: linear-gradient(180deg, rgba(40, 50, 110, 0.92), rgba(16, 20, 48, 0.96));
+  color: var(--astral-gold-hi);
+  font-size: 18px;
+  line-height: 1;
+  box-shadow: var(--astral-btn-shadow);
+}
+#story-close:hover,
+#story-close:focus-visible {
+  border-color: var(--astral-gold-hi);
+  color: #fff;
 }
 #story-pages {
+  position: relative;
+  z-index: 1;
   display: flex;
-  gap: 8px;
+  gap: 6px;
   flex-shrink: 0;
-  border-bottom: 1px solid #93ac8b38;
-  padding-bottom: 12px;
+  border-bottom: 1px solid var(--astral-line);
+  padding-bottom: 10px;
 }
 #story-pages button {
   flex: 1;
-  padding: 9px 5px;
+  padding: 8px 6px;
   min-height: 34px;
-  font-size: 11px;
-  border-color: transparent;
-  background: #98b49c08;
-  color: #91a597;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: rgba(255, 255, 255, 0.05);
+  clip-path: polygon(9px 0, 100% 0, calc(100% - 9px) 100%, 0 100%);
+  color: var(--astral-sub);
+  transform: none;
+  transition:
+    color 160ms ease,
+    background 160ms ease;
+}
+#story-pages button:hover {
+  color: var(--astral-gold-hi);
+  background: rgba(226, 192, 120, 0.16);
+  box-shadow: none;
+  transform: none;
 }
 #story-pages button.recorded {
-  color: #d7d8ba;
+  color: var(--astral-text);
 }
 #story-pages button[aria-pressed='true'] {
-  background: #a8b48d20;
-  border-color: #bdbb876b;
-  color: #e9d8ad;
+  background: linear-gradient(180deg, #fff1c4, #c99b4a);
+  color: #1c1406;
+  font-weight: 700;
 }
 #story-lines {
+  position: relative;
+  z-index: 1;
   flex: 1;
   min-height: 0;
   overflow: auto;
-  padding: 3px 12px 15px;
+  padding: 4px 12px 15px;
   scrollbar-width: thin;
-  scrollbar-color: #718d77 transparent;
+  scrollbar-color: rgba(226, 192, 120, 0.35) transparent;
   outline-offset: -2px;
 }
 .story-line {
   padding: 6px 0 14px;
-  animation: story-arrive 300ms ease-out;
+  animation: story-arrive 260ms ease-out both;
 }
 .story-line strong {
-  color: #a4cfbc;
+  color: var(--astral-cyan);
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
 }
 .story-line p {
   margin: 8px 0 0;
   font-size: 16px;
-  line-height: 2.1;
+  line-height: 2.05;
+  color: var(--astral-text);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
 .story-line[data-stage='combat'] p {
-  color: #9fb4a4;
+  color: var(--astral-sub);
   font-size: 12px;
 }
 .story-empty {
-  color: #8fa596;
+  color: var(--astral-muted);
   margin: 36px 0;
   text-align: center;
   font-size: 13px;
   line-height: 1.8;
 }
 #story-feed footer {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
   flex-shrink: 0;
   padding-top: 12px;
-  border-top: 1px solid #93ac8b38;
+  border-top: 1px solid var(--astral-line);
 }
 #story-feed footer button {
   min-height: 34px;
   padding: 6px 14px;
-  font-size: 11px;
+  font-size: 11.5px;
 }
 #story-page-count {
   font-size: 11px;
   letter-spacing: 4px;
-  color: #a7baa7;
+  color: var(--astral-gold);
+  font-variant-numeric: tabular-nums;
 }
 #story-feed button {
   user-select: none;
@@ -244,8 +305,11 @@
 }
 @media (prefers-reduced-motion: reduce) {
   #story-toggle span,
+  #story-feed,
+  #story-feed *,
   .story-line {
-    animation: none;
+    animation: none !important;
+    transition: none !important;
   }
 }
 
@@ -267,28 +331,24 @@
   width: min(960px, calc(100vw - 60px));
   height: min(640px, calc(100dvh - 60px));
   padding: 0;
-  color: #e3dec9;
-  background: radial-gradient(ellipse at top left, #25483c66, transparent 65%), #10221efc;
-  border: 1px solid #bca16b77;
-  border-radius: 14px;
+  color: var(--astral-text);
+  background: var(--astral-hatch), var(--astral-panel-bg);
+  border: 1px solid rgba(226, 192, 120, 0.5);
+  border-radius: 4px;
   overflow: hidden;
-  box-shadow: 0 24px 80px #0009;
+  box-shadow: var(--astral-frame-shadow);
 }
 #archive-dialog {
   width: min(1120px, calc(100vw - 32px));
   height: min(700px, calc(100dvh - 44px));
   padding: 0;
-  color: #ebe0c8;
+  color: var(--astral-text);
   font-family: 'Noto Serif SC', 'Source Han Serif SC', 'Songti SC', Georgia, serif;
-  background:
-    radial-gradient(ellipse at 18% 0%, rgba(216, 178, 110, 0.11), transparent 55%),
-    linear-gradient(180deg, rgba(24, 22, 23, 0.97), rgba(14, 15, 18, 0.98));
-  border: 1px solid rgba(216, 178, 110, 0.45);
+  background: var(--astral-hatch), var(--astral-panel-bg);
+  border: 1px solid rgba(226, 192, 120, 0.5);
   border-radius: 4px;
   overflow: hidden;
-  box-shadow:
-    0 26px 84px rgba(0, 0, 0, 0.88),
-    inset 0 1px 0 rgba(255, 228, 173, 0.14);
+  box-shadow: var(--astral-frame-shadow);
 }
 #journey-records,
 #archive-dialog {
@@ -300,11 +360,11 @@
   animation: records-enter 200ms ease-out;
 }
 #journey-records::backdrop {
-  background: #020b09b3;
+  background: rgba(4, 5, 14, 0.82);
   backdrop-filter: blur(6px);
 }
 #archive-dialog::backdrop {
-  background: rgba(6, 5, 4, 0.8);
+  background: rgba(4, 5, 14, 0.82);
   backdrop-filter: blur(6px);
 }
 #journey-records > header {
@@ -313,7 +373,8 @@
   justify-content: space-between;
   padding: 20px 24px;
   gap: 16px;
-  border-bottom: 1px solid #bca16b33;
+  border-bottom: 1px solid var(--astral-line);
+  background: linear-gradient(180deg, rgba(28, 36, 82, 0.96), rgba(14, 18, 44, 0.94));
 }
 #archive-dialog > header {
   display: flex;
@@ -321,17 +382,17 @@
   justify-content: space-between;
   padding: 16px 22px;
   gap: 14px;
-  border-bottom: 1px solid rgba(216, 178, 110, 0.28);
-  background: linear-gradient(180deg, rgba(31, 27, 23, 0.96), rgba(18, 17, 20, 0.92));
+  border-bottom: 1px solid var(--astral-line);
+  background: linear-gradient(180deg, rgba(28, 36, 82, 0.96), rgba(14, 18, 44, 0.94));
 }
 .records-title small {
-  color: #89a995;
+  color: var(--astral-gold);
   font-size: 9px;
   letter-spacing: 2px;
 }
 #archive-dialog .records-title small {
   display: block;
-  color: #b79c71;
+  color: var(--astral-gold);
   font-size: 10px;
   letter-spacing: 0.16em;
 }
@@ -340,10 +401,10 @@
   font-weight: 400;
   letter-spacing: 2px;
   margin: 5px 0 0;
-  color: #eddbac;
+  color: var(--astral-gold-hi);
 }
 #archive-dialog .records-title h2 {
-  color: #f6e4b8;
+  color: var(--astral-gold-hi);
   font-size: 22px;
   font-weight: 600;
   letter-spacing: 0.12em;
@@ -364,14 +425,14 @@
   flex-wrap: wrap;
   gap: 3px;
   padding: 3px;
-  border: 1px solid rgba(216, 178, 110, 0.34);
-  border-radius: 4px;
-  background: rgba(10, 11, 14, 0.72);
+  border: 1px solid rgba(226, 192, 120, 0.34);
+  border-radius: 3px;
+  background: rgba(8, 11, 28, 0.78);
 }
 .archive-tabs button {
   border: 1px solid transparent;
   background: transparent;
-  color: #cab899;
+  color: var(--astral-sub);
   min-width: auto;
   padding: 5px 10px;
   white-space: nowrap;
@@ -379,9 +440,10 @@
   cursor: pointer;
 }
 .archive-tabs button[aria-pressed='true'] {
-  border-color: rgba(235, 198, 126, 0.5);
-  background: rgba(216, 178, 110, 0.2);
-  color: #fae8be;
+  border-color: rgba(255, 241, 196, 0.55);
+  background: linear-gradient(180deg, #fff1c4, #dab262 60%, #b4863a);
+  color: #1c1406;
+  font-weight: 700;
 }
 #archive-close {
   display: grid;
@@ -390,10 +452,10 @@
   height: 32px;
   min-height: 32px;
   padding: 0;
-  border: 1px solid rgba(216, 178, 110, 0.36);
-  border-radius: 50%;
-  background: rgba(20, 18, 16, 0.88);
-  color: #e9d7b5;
+  border: 1px solid rgba(226, 192, 120, 0.44);
+  border-radius: 3px;
+  background: var(--astral-card-bg);
+  color: var(--astral-gold-hi);
   font-size: 18px;
   cursor: pointer;
 }
@@ -408,15 +470,15 @@
 }
 #records-list {
   padding: 16px 12px;
-  border-right: 1px solid #bca16b22;
-  background: #08171344;
+  border-right: 1px solid var(--astral-line);
+  background: rgba(8, 11, 28, 0.62);
 }
 .archive-index-col {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  border-right: 1px solid rgba(216, 178, 110, 0.22);
-  background: rgba(8, 9, 12, 0.62);
+  border-right: 1px solid var(--astral-line);
+  background: rgba(8, 11, 28, 0.68);
 }
 .archive-codex-progress {
   flex: 0 0 auto;
@@ -424,9 +486,9 @@
   align-items: center;
   gap: 8px;
   padding: 9px 12px 7px;
-  border-bottom: 1px solid rgba(216, 178, 110, 0.16);
-  background: rgba(20, 18, 22, 0.92);
-  color: #cab899;
+  border-bottom: 1px solid var(--astral-line);
+  background: rgba(14, 18, 44, 0.88);
+  color: var(--astral-sub);
   font-size: 12px;
 }
 .archive-codex-progress[hidden] {
@@ -434,17 +496,17 @@
 }
 .archive-codex-count {
   margin-left: auto;
-  color: #f4dfb0;
+  color: var(--astral-gold-hi);
   font-weight: 600;
   letter-spacing: 0.04em;
 }
 .archive-codex-dev {
   font-style: normal;
   padding: 1px 6px;
-  border: 1px solid rgba(216, 178, 110, 0.42);
+  border: 1px solid rgba(226, 192, 120, 0.42);
   border-radius: 3px;
-  background: rgba(216, 178, 110, 0.16);
-  color: #f7dfaa;
+  background: rgba(226, 192, 120, 0.16);
+  color: var(--astral-gold-hi);
   font-size: 10px;
 }
 .archive-enemy-tiers {
@@ -453,8 +515,25 @@
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 4px;
   padding: 10px 10px 8px;
-  border-bottom: 1px solid rgba(216, 178, 110, 0.2);
-  background: rgba(16, 15, 19, 0.85);
+  border-bottom: 1px solid var(--astral-line);
+  background: rgba(14, 18, 44, 0.88);
+}
+.archive-enemy-category-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: 0 0 auto;
+  min-height: 32px;
+  padding: 5px 12px;
+  border: 0;
+  border-bottom: 1px solid var(--astral-line);
+  background: rgba(12, 16, 40, 0.78);
+  color: var(--astral-gold);
+  font-size: 12px;
+  cursor: pointer;
+}
+.archive-enemy-category-toggle[hidden] {
+  display: none;
 }
 .archive-enemy-categories {
   flex: 0 0 auto;
@@ -462,8 +541,8 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 4px;
   padding: 8px 10px;
-  border-bottom: 1px solid rgba(216, 178, 110, 0.16);
-  background: rgba(16, 15, 19, 0.72);
+  border-bottom: 1px solid var(--astral-line);
+  background: rgba(12, 16, 40, 0.78);
 }
 .archive-enemy-tiers[hidden],
 .archive-enemy-categories[hidden] {
@@ -477,10 +556,10 @@
   gap: 4px;
   min-height: 30px;
   padding: 4px 6px;
-  border: 1px solid rgba(216, 178, 110, 0.24);
+  border: 1px solid rgba(226, 192, 120, 0.28);
   border-radius: 3px;
-  background: rgba(255, 255, 255, 0.03);
-  color: #c2b08d;
+  background: var(--astral-card-bg);
+  color: var(--astral-sub);
   font-size: 12px;
   cursor: pointer;
 }
@@ -490,32 +569,32 @@
 }
 .archive-enemy-tiers button span,
 .archive-enemy-categories button span {
-  color: #9e8a66;
+  color: var(--astral-muted);
   font-size: 10px;
 }
 .archive-enemy-tiers button[aria-pressed='true'],
 .archive-enemy-categories button[aria-pressed='true'] {
-  border-color: rgba(235, 198, 126, 0.6);
-  background: rgba(216, 178, 110, 0.18);
-  color: #fae8be;
+  border-color: var(--astral-gold-hi);
+  background: linear-gradient(135deg, rgba(72, 86, 166, 0.72), rgba(24, 30, 70, 0.94));
+  color: var(--astral-gold-hi);
 }
 .archive-enemy-tiers button[aria-pressed='true'] span,
 .archive-enemy-categories button[aria-pressed='true'] span {
-  color: #f0cf88;
+  color: var(--astral-gold);
 }
 .archive-enemy-export {
   flex: 0 0 auto;
   padding: 6px 10px;
-  border-top: 1px solid rgba(216, 178, 110, 0.2);
+  border-top: 1px solid var(--astral-line);
 }
 .archive-enemy-export button {
   width: 100%;
   min-height: 34px;
   padding: 4px 8px;
-  border: 1px solid rgba(216, 178, 110, 0.34);
+  border: 1px solid rgba(226, 192, 120, 0.36);
   border-radius: 3px;
-  background: rgba(216, 178, 110, 0.08);
-  color: #e9d7b5;
+  background: var(--astral-card-bg);
+  color: var(--astral-gold-hi);
   font-size: 12px;
   cursor: pointer;
 }
@@ -557,7 +636,7 @@
   display: grid;
   min-height: 0;
   overflow: hidden;
-  background: radial-gradient(ellipse at 50% 0%, rgba(216, 178, 110, 0.06), transparent 65%);
+  background: radial-gradient(ellipse at 50% 0%, rgba(226, 192, 120, 0.08), transparent 65%);
 }
 .archive-content-col > [hidden],
 .archive-index-col > [hidden] {
@@ -573,28 +652,29 @@
   margin-bottom: 5px;
   padding: 9px 10px;
   border: 1px solid transparent;
-  border-radius: 4px;
+  border-radius: 3px;
   background: transparent;
-  color: #d6c8ad;
+  color: var(--astral-sub);
   text-align: left;
   cursor: pointer;
 }
 #archive-list .skyrim-archive-item:hover,
 #records-list .skyrim-archive-item:hover,
 #memory-index .skyrim-archive-item:hover {
-  background: rgba(216, 178, 110, 0.08);
+  background: rgba(226, 192, 120, 0.1);
+  color: var(--astral-text);
 }
 #archive-list .skyrim-archive-item[aria-pressed='true'],
 #records-list .skyrim-archive-item[aria-pressed='true'],
 #memory-index .skyrim-archive-item[aria-pressed='true'] {
-  border-color: rgba(216, 178, 110, 0.45);
-  background: linear-gradient(90deg, rgba(216, 178, 110, 0.17), rgba(216, 178, 110, 0.03));
-  color: #fae8be;
+  border-color: var(--astral-gold-hi);
+  background: linear-gradient(90deg, rgba(72, 86, 166, 0.56), rgba(226, 192, 120, 0.08));
+  color: var(--astral-gold-hi);
 }
 #archive-dialog .skyrim-pointer {
   flex: 0 0 auto;
   margin-top: 2px;
-  color: #d6b26e;
+  color: var(--astral-gold);
   font-size: 12px;
 }
 .skyrim-archive-item-copy {
@@ -611,7 +691,7 @@
   text-overflow: ellipsis;
 }
 .skyrim-archive-item-copy small {
-  color: #ab987a;
+  color: var(--astral-muted);
   font-size: 11px;
 }
 #records-text,
@@ -633,9 +713,9 @@
   gap: 8px;
   padding: 8px 12px;
   margin-bottom: 14px;
-  border: 1px solid rgba(216, 178, 110, 0.22);
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid var(--astral-line);
+  border-radius: 3px;
+  background: var(--astral-card-bg);
 }
 .records-folio-toolbar .records-memory-status {
   margin: 0 auto 0 0;
@@ -643,15 +723,16 @@
 .records-folio-toolbar button {
   min-height: 30px;
   padding: 4px 12px;
-  border: 1px solid rgba(216, 178, 110, 0.34);
+  border: 1px solid rgba(226, 192, 120, 0.42);
   border-radius: 3px;
-  background: rgba(216, 178, 110, 0.08);
-  color: #f3dfb0;
+  background: var(--astral-card-bg);
+  color: var(--astral-gold-hi);
   font-size: 12px;
   cursor: pointer;
 }
 .records-folio-toolbar button:hover {
-  background: rgba(216, 178, 110, 0.2);
+  border-color: var(--astral-gold-hi);
+  background: linear-gradient(180deg, rgba(56, 70, 146, 0.85), rgba(20, 26, 62, 0.94));
 }
 .memory-pane-footer {
   display: flex;
@@ -659,7 +740,7 @@
   justify-content: flex-end;
   gap: 10px;
   padding-top: 12px;
-  border-top: 1px solid rgba(216, 178, 110, 0.24);
+  border-top: 1px solid var(--astral-line);
   flex-shrink: 0;
 }
 .manual-folio-summary {
@@ -678,7 +759,7 @@
 .manual-rule-copy p {
   margin: 0;
   white-space: pre-wrap;
-  color: #cfc5b4;
+  color: var(--astral-sub);
   font-size: 13px;
   line-height: 1.75;
 }
@@ -697,15 +778,15 @@
 }
 #archive-dialog .skyrim-folio-badges span {
   padding: 2px 9px;
-  border: 1px solid rgba(216, 178, 110, 0.3);
-  border-radius: 2px;
-  color: #dec392;
-  background: rgba(216, 178, 110, 0.08);
+  border: 1px solid rgba(226, 192, 120, 0.34);
+  border-radius: 3px;
+  color: var(--astral-gold-hi);
+  background: var(--astral-card-bg);
 }
 #archive-dialog .skyrim-folio-title {
   margin: 0;
   text-align: center;
-  color: #fae8be;
+  color: var(--astral-gold-hi);
   font-size: 24px;
   font-weight: 600;
   line-height: 1.25;
@@ -714,7 +795,7 @@
 .skyrim-overlord-subtitle {
   margin: 0;
   text-align: center;
-  color: #c8ad7c;
+  color: var(--astral-gold);
   font-size: 12px;
   letter-spacing: 0.1em;
 }
@@ -726,7 +807,7 @@
   display: block;
   width: min(340px, 100%);
   height: 20px;
-  color: #c7a05d;
+  color: var(--astral-gold);
 }
 .skyrim-enemy-showcase {
   display: grid;
@@ -737,9 +818,9 @@
 }
 .skyrim-enemy-portrait-frame {
   padding: 6px;
-  border: 1px solid rgba(216, 178, 110, 0.38);
-  border-radius: 4px;
-  background: linear-gradient(180deg, rgba(31, 27, 23, 0.9), rgba(14, 15, 18, 0.96));
+  border: 1px solid rgba(226, 192, 120, 0.42);
+  border-radius: 3px;
+  background: var(--astral-card-bg);
   box-shadow: 0 10px 26px rgba(0, 0, 0, 0.55);
 }
 .skyrim-enemy-portrait {
@@ -757,13 +838,13 @@
 }
 .skyrim-enemy-moniker {
   margin: 0;
-  color: #d6b26e;
+  color: var(--astral-gold);
   font-size: 12px;
   letter-spacing: 0.08em;
 }
 #archive-dialog .skyrim-folio-desc {
   margin: 0;
-  color: #d6cbb8;
+  color: var(--astral-text);
   font-size: 13.5px;
   line-height: 1.75;
 }
@@ -775,20 +856,20 @@
 .skyrim-stat-chip {
   min-width: 82px;
   padding: 6px 10px;
-  border: 1px solid rgba(216, 178, 110, 0.24);
+  border: 1px solid rgba(226, 192, 120, 0.3);
   border-radius: 3px;
-  background: rgba(216, 178, 110, 0.05);
+  background: var(--astral-card-bg);
 }
 .skyrim-stat-chip small {
   display: block;
-  color: #a99573;
+  color: var(--astral-sub);
   font-size: 10px;
   letter-spacing: 0.08em;
 }
 .skyrim-stat-chip strong {
   display: block;
   margin-top: 2px;
-  color: #f6e1b2;
+  color: var(--astral-gold-hi);
   font-size: 14px;
 }
 .archive-overlord-stage {
@@ -796,9 +877,9 @@
   width: 100%;
   height: 300px;
   margin: 4px 0 16px;
-  border: 1px solid rgba(216, 178, 110, 0.36);
-  border-radius: 4px;
-  background: #101116;
+  border: 1px solid rgba(226, 192, 120, 0.4);
+  border-radius: 3px;
+  background: radial-gradient(circle at 50% 45%, rgba(28, 36, 82, 0.65), rgba(8, 11, 28, 0.96));
   overflow: hidden;
   box-shadow: inset 0 0 28px rgba(0, 0, 0, 0.72);
 }
@@ -989,26 +1070,26 @@
 }
 .records-reading-tabs button {
   padding: 7px 18px;
-  color: #c9c6b8;
-  background: #ffffff06;
-  border: 1px solid #cbb77b33;
-  border-radius: 18px;
+  color: var(--astral-sub);
+  background: var(--astral-card-bg);
+  border: 1px solid var(--astral-line);
+  border-radius: 3px;
 }
 .records-reading-tabs button[aria-pressed='true'] {
-  color: #f1dfad;
-  background: #c5a96619;
-  border-color: #d5ba7766;
+  color: var(--astral-gold-hi);
+  background: linear-gradient(180deg, rgba(226, 192, 120, 0.22), rgba(226, 192, 120, 0.08));
+  border-color: var(--astral-gold);
 }
 #records-text .records-memory-status {
   margin: 10px 0;
-  color: #bdb9a9;
+  color: var(--astral-sub);
   font-size: 12px;
   line-height: 1.7;
 }
 .archive-field {
   display: block;
   margin: 0 0 18px;
-  color: #b79c71;
+  color: var(--astral-gold);
   font-size: 12px;
 }
 .archive-field input,
@@ -1018,10 +1099,10 @@
   box-sizing: border-box;
   margin-top: 7px;
   padding: 10px;
-  color: #eee4cd;
-  background: rgba(10, 11, 14, 0.72);
-  border: 1px solid rgba(216, 178, 110, 0.28);
-  border-radius: 4px;
+  color: var(--astral-text);
+  background: rgba(8, 11, 28, 0.88);
+  border: 1px solid var(--astral-line);
+  border-radius: 3px;
 }
 .archive-field input[readonly],
 .archive-field textarea[readonly] {
@@ -1077,13 +1158,13 @@
   margin-bottom: 18px;
 }
 .records-empty h3 {
-  color: #cfccaf;
+  color: var(--astral-gold-hi);
   font-size: 18px;
   font-weight: 400;
 }
 .records-empty p {
   font-size: 12px;
-  color: #8eaa9b;
+  color: var(--astral-sub);
   line-height: 1.8;
 }
 @keyframes records-enter {
@@ -1217,9 +1298,9 @@
 }
 .ether-reward {
   padding: 10px;
-  background: #367a9b20;
-  border: 1px solid #8bb9cb66;
-  border-radius: 8px;
+  background: rgba(26, 42, 92, 0.45);
+  border: 1px solid rgba(120, 180, 255, 0.48);
+  border-radius: 3px;
 }
 @media (orientation: landscape) and (max-height: 600px) and (max-width: 1100px) {
   #story-toggle {

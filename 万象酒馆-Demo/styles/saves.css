@@ -1,4 +1,4 @@
-/* saves.css - 存档系统样式 */
+/* saves.css - Astral Indigo & Champagne Gold save management */
 .header-left {
   display: flex;
   align-items: center;
@@ -26,43 +26,59 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  border-radius: 4px;
-  background: rgba(220, 185, 120, 0.12);
-  border: 1px solid rgba(220, 185, 120, 0.35);
-  color: #e5cb9b;
+  border-radius: 3px;
+  background: var(--astral-card-bg);
+  border: 1px solid rgba(226, 192, 120, 0.42);
+  color: var(--astral-gold-hi);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.16s ease;
 }
 
 .saves-trigger:hover {
-  background: rgba(220, 185, 120, 0.22);
-  border-color: rgba(220, 185, 120, 0.65);
+  background: linear-gradient(180deg, rgba(56, 70, 146, 0.88), rgba(24, 30, 70, 0.94));
+  border-color: var(--astral-gold-hi);
   color: #fff;
-  box-shadow: 0 0 10px rgba(220, 185, 120, 0.25);
+  box-shadow: 0 0 12px rgba(226, 192, 120, 0.3);
 }
 
 .saves-trigger svg {
   flex-shrink: 0;
 }
 
-/* 存档对话框 */
+/* Save dialog */
 #saves-dialog {
   max-width: 860px;
   width: 92vw;
-  background: radial-gradient(ellipse at 50% 0%, rgba(32, 58, 52, 0.65), transparent 75%), #0e1a18;
-  border: 1px solid rgba(226, 186, 111, 0.45);
-  border-radius: 16px;
+  background: var(--astral-hatch), var(--astral-panel-bg);
+  border: 1px solid rgba(226, 192, 120, 0.48);
+  border-radius: 4px;
   padding: 26px 30px 30px;
-  color: #f2ede3;
-  box-shadow:
-    0 28px 90px rgba(0, 0, 0, 0.85),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  color: var(--astral-text);
+  box-shadow: var(--astral-frame-shadow);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
 }
 
+#saves-dialog::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  --c: var(--astral-corner-mark);
+  background:
+    var(--c) top left / 18px 2px,
+    var(--c) top left / 2px 18px,
+    var(--c) top right / 18px 2px,
+    var(--c) top right / 2px 18px,
+    var(--c) bottom left / 18px 2px,
+    var(--c) bottom left / 2px 18px,
+    var(--c) bottom right / 18px 2px,
+    var(--c) bottom right / 2px 18px;
+  background-repeat: no-repeat;
+}
+
 #saves-dialog::backdrop {
-  background: rgba(4, 9, 11, 0.8);
+  background: rgba(4, 5, 14, 0.82);
   backdrop-filter: blur(8px);
 }
 
@@ -71,24 +87,21 @@
 }
 
 .saves-header h2 {
-  font:
-    24px Georgia,
-    'Microsoft YaHei',
-    serif;
-  letter-spacing: 2px;
+  font: 23px var(--display-serif);
+  letter-spacing: 2.5px;
   margin: 6px 0 8px;
-  color: #f7edcf;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
+  color: var(--astral-gold-hi);
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.65);
 }
 
 .saves-toolbar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   margin-bottom: 20px;
   padding-bottom: 14px;
-  border-bottom: 1px solid rgba(226, 186, 111, 0.2);
+  border-bottom: 1px solid var(--astral-line);
 }
 
 .saves-tool-btn,
@@ -98,38 +111,45 @@
   justify-content: center;
   padding: 7px 15px;
   font-size: 12px;
-  border-radius: 6px;
-  background: rgba(22, 38, 35, 0.7);
-  border: 1px solid rgba(162, 186, 172, 0.25);
-  color: #d1ded8;
+  border-radius: 3px;
+  background: var(--astral-card-bg);
+  border: 1px solid rgba(226, 192, 120, 0.36);
+  color: var(--astral-text);
+  box-shadow: var(--astral-btn-shadow);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.16s ease;
 }
 
 .saves-tool-btn:hover,
 .saves-import-label:hover {
-  background: rgba(35, 62, 55, 0.9);
-  border-color: rgba(226, 186, 111, 0.6);
+  background: linear-gradient(180deg, rgba(56, 70, 146, 0.88), rgba(24, 30, 70, 0.94));
+  border-color: var(--astral-gold-hi);
   color: #fff;
   transform: translateY(-1px);
 }
 
 .saves-primary-btn {
-  background: linear-gradient(135deg, rgba(226, 186, 111, 0.35), rgba(180, 140, 75, 0.25));
-  border-color: rgba(226, 186, 111, 0.65);
-  color: #f7edcf;
-  font-weight: 600;
-  box-shadow: 0 2px 10px rgba(226, 186, 111, 0.2);
+  background: linear-gradient(180deg, #fff1c4, #dab262 60%, #b4863a);
+  border-color: #fff6d8;
+  color: #1c1406;
+  font-weight: 700;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    0 3px 0 #5b4114,
+    0 4px 16px rgba(226, 192, 120, 0.25);
 }
 
 .saves-primary-btn:hover {
-  background: linear-gradient(135deg, rgba(226, 186, 111, 0.55), rgba(200, 155, 85, 0.4));
-  border-color: rgba(255, 230, 175, 0.9);
-  color: #fff;
-  box-shadow: 0 4px 16px rgba(226, 186, 111, 0.4);
+  background: linear-gradient(180deg, #fff8dc, #e8c273 60%, #c69643);
+  border-color: #ffffff;
+  color: #1c1406;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    0 3px 0 #5b4114,
+    0 6px 20px rgba(255, 241, 196, 0.42);
 }
 
-/* 槽位卡片网格 */
+/* Slot cards grid */
 .saves-slots-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -143,34 +163,59 @@
 }
 
 .save-slot-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   min-height: 185px;
-  background: rgba(15, 27, 26, 0.78);
-  border: 1px solid rgba(162, 186, 172, 0.22);
-  border-radius: 10px;
+  background: var(--astral-card-bg);
+  border: 1px solid rgba(226, 192, 120, 0.3);
+  border-radius: 4px;
   padding: 16px 18px;
-  transition: all 0.22s ease;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+  transition: all 0.2s ease;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04),
+    0 6px 20px rgba(0, 0, 0, 0.48);
+}
+
+.save-slot-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: linear-gradient(
+    90deg,
+    rgba(226, 192, 120, 0.2),
+    var(--astral-gold-hi),
+    rgba(226, 192, 120, 0.2)
+  );
 }
 
 .save-slot-card:hover {
-  border-color: rgba(226, 186, 111, 0.55);
-  background: rgba(24, 44, 40, 0.88);
+  border-color: var(--astral-gold-hi);
   box-shadow:
-    0 8px 24px rgba(0, 0, 0, 0.55),
-    0 0 14px rgba(226, 186, 111, 0.2);
+    0 10px 26px rgba(0, 0, 0, 0.6),
+    0 0 16px rgba(226, 192, 120, 0.24);
   transform: translateY(-2px);
 }
 
 .save-slot-card.slot-auto {
-  border-color: rgba(100, 170, 220, 0.3);
-  background: linear-gradient(135deg, rgba(20, 38, 50, 0.5) 0%, rgba(25, 30, 35, 0.7) 100%);
+  border-color: rgba(143, 214, 240, 0.36);
+  background: linear-gradient(180deg, rgba(26, 46, 88, 0.78), rgba(11, 16, 40, 0.94));
+}
+
+.save-slot-card.slot-auto::before {
+  background: linear-gradient(
+    90deg,
+    rgba(143, 214, 240, 0.2),
+    var(--astral-cyan),
+    rgba(143, 214, 240, 0.2)
+  );
 }
 
 .save-slot-card.slot-auto:hover {
-  border-color: rgba(100, 180, 240, 0.6);
+  border-color: var(--astral-cyan);
 }
 
 .slot-card-header {
@@ -193,21 +238,21 @@
   font-weight: 700;
   letter-spacing: 1px;
   padding: 2px 6px;
-  border-radius: 3px;
-  background: rgba(220, 185, 120, 0.15);
-  color: #dfc38c;
-  border: 1px solid rgba(220, 185, 120, 0.3);
+  border-radius: 2px;
+  background: rgba(226, 192, 120, 0.16);
+  color: var(--astral-gold-hi);
+  border: 1px solid rgba(226, 192, 120, 0.4);
 }
 
 .slot-auto .slot-tag {
-  background: rgba(90, 160, 220, 0.15);
-  color: #8ac0ec;
-  border-color: rgba(90, 160, 220, 0.3);
+  background: rgba(143, 214, 240, 0.15);
+  color: var(--astral-cyan);
+  border-color: rgba(143, 214, 240, 0.42);
 }
 
 .slot-title {
   font-size: 14px;
-  color: #f3f4f6;
+  color: var(--astral-text);
   font-weight: 600;
   overflow-wrap: anywhere;
 }
@@ -215,15 +260,15 @@
 .slot-status-badge {
   font-size: 11px;
   padding: 2px 8px;
-  border-radius: 10px;
+  border-radius: 2px;
   background: rgba(255, 255, 255, 0.06);
-  color: #9ca3af;
+  color: var(--astral-muted);
 }
 
 .save-slot-card.is-filled .slot-status-badge {
-  background: rgba(72, 187, 120, 0.15);
-  color: #6ee7b7;
-  border: 1px solid rgba(72, 187, 120, 0.3);
+  background: rgba(143, 214, 240, 0.14);
+  color: var(--astral-cyan);
+  border: 1px solid rgba(143, 214, 240, 0.34);
 }
 
 .slot-card-body {
@@ -239,7 +284,7 @@
   justify-content: center;
   align-items: center;
   min-height: 80px;
-  color: #6b7280;
+  color: var(--astral-muted);
   text-align: center;
 }
 
@@ -256,11 +301,11 @@
 
 .slot-time {
   font-size: 12px;
-  color: #d1d5db;
+  color: var(--astral-sub);
 }
 
 .slot-time strong {
-  color: #f3f4f6;
+  color: var(--astral-gold-hi);
   font-weight: 500;
 }
 
@@ -274,14 +319,15 @@
 .slot-meta-pill {
   font-size: 10px;
   padding: 1px 7px;
-  border-radius: 3px;
-  background: rgba(255, 255, 255, 0.08);
-  color: #cbd5e1;
+  border-radius: 2px;
+  background: rgba(10, 14, 34, 0.72);
+  border: 1px solid rgba(226, 192, 120, 0.22);
+  color: var(--astral-sub);
 }
 
 .slot-party-preview {
   font-size: 11px;
-  color: #94a3b8;
+  color: var(--astral-muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -293,7 +339,7 @@
   flex-wrap: wrap;
   gap: 6px;
   padding-top: 8px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid var(--astral-line);
 }
 
 .save-btn {
@@ -301,14 +347,16 @@
   padding: 5px 10px;
   border-radius: 3px;
   cursor: pointer;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  color: #e5e7eb;
+  background: rgba(18, 24, 56, 0.84);
+  border: 1px solid rgba(226, 192, 120, 0.28);
+  color: var(--astral-text);
+  box-shadow: none;
   transition: all 0.15s ease;
 }
 
 .save-btn:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.14);
+  background: rgba(42, 54, 114, 0.9);
+  border-color: var(--astral-gold-hi);
   color: #fff;
 }
 
@@ -318,52 +366,56 @@
 }
 
 .save-btn-write {
-  background: rgba(220, 185, 120, 0.14);
-  border-color: rgba(220, 185, 120, 0.35);
-  color: #f0d5a3;
+  background: rgba(226, 192, 120, 0.14);
+  border-color: rgba(226, 192, 120, 0.42);
+  color: var(--astral-gold-hi);
 }
 
 .save-btn-write:hover:not(:disabled) {
-  background: rgba(220, 185, 120, 0.28);
-  border-color: rgba(220, 185, 120, 0.6);
+  background: rgba(226, 192, 120, 0.28);
+  border-color: var(--astral-gold-hi);
   color: #fff;
 }
 
 .save-btn-load {
-  background: rgba(56, 178, 172, 0.14);
-  border-color: rgba(56, 178, 172, 0.35);
-  color: #81e6d9;
+  background: rgba(44, 108, 152, 0.24);
+  border-color: rgba(143, 214, 240, 0.45);
+  color: var(--astral-cyan);
 }
 
 .save-btn-load:hover:not(:disabled) {
-  background: rgba(56, 178, 172, 0.28);
-  border-color: rgba(56, 178, 172, 0.6);
+  background: rgba(54, 128, 178, 0.42);
+  border-color: var(--astral-cyan);
   color: #fff;
 }
 
 .save-btn-create {
-  background: rgba(220, 185, 120, 0.22);
-  border-color: rgba(220, 185, 120, 0.55);
-  color: #fff2d1;
-  font-weight: 600;
+  background: linear-gradient(180deg, #fff1c4, #dab262 60%, #b4863a);
+  border-color: #fff6d8;
+  color: #1c1406;
+  font-weight: 700;
 }
 
 .save-btn-create:hover:not(:disabled) {
-  background: rgba(220, 185, 120, 0.4);
-  border-color: rgba(220, 185, 120, 0.85);
-  color: #fff;
-  box-shadow: 0 0 8px rgba(220, 185, 120, 0.35);
+  background: linear-gradient(180deg, #fff8dc, #e8c273 60%, #c69643);
+  border-color: #ffffff;
+  color: #1c1406;
+  box-shadow: 0 0 10px rgba(226, 192, 120, 0.4);
 }
 
 .save-slot-card.is-empty {
   border-style: dashed;
-  border-color: rgba(255, 255, 255, 0.16);
-  background: rgba(18, 22, 26, 0.5);
+  border-color: rgba(226, 192, 120, 0.24);
+  background: rgba(12, 15, 36, 0.62);
+}
+
+.save-slot-card.is-empty::before {
+  opacity: 0.35;
 }
 
 .save-slot-card.is-empty:hover {
-  border-color: rgba(220, 185, 120, 0.55);
-  background: rgba(26, 32, 38, 0.7);
+  border-color: var(--astral-gold);
+  background: rgba(20, 26, 62, 0.78);
 }
 
 .slot-empty-body {
@@ -371,20 +423,20 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 4px;
+  border-radius: 3px;
   padding: 8px;
   transition: all 0.2s ease;
 }
 
 .slot-empty-body:hover {
-  background: rgba(220, 185, 120, 0.08);
+  background: rgba(226, 192, 120, 0.08);
 }
 
 .slot-add-icon {
   display: inline-block;
   font-size: 26px;
   line-height: 1;
-  color: #dfc38c;
+  color: var(--astral-gold-hi);
   margin-bottom: 4px;
   transition: transform 0.2s ease;
 }
@@ -394,32 +446,32 @@
   color: #fff;
 }
 
-.save-slot-card.slot-highlight {
-  animation: slotPulse 0.9s ease infinite;
+#saves-dialog[open] .save-slot-card.slot-highlight {
+  animation: slotPulse 0.9s ease 2;
 }
 
 @keyframes slotPulse {
   0%,
   100% {
-    border-color: rgba(220, 185, 120, 0.3);
-    box-shadow: 0 0 0 rgba(220, 185, 120, 0);
+    border-color: rgba(226, 192, 120, 0.35);
+    box-shadow: 0 0 0 rgba(226, 192, 120, 0);
   }
   50% {
-    border-color: rgba(220, 185, 120, 0.9);
-    box-shadow: 0 0 16px rgba(220, 185, 120, 0.45);
+    border-color: var(--astral-gold-hi);
+    box-shadow: 0 0 18px rgba(226, 192, 120, 0.5);
   }
 }
 
 .save-btn-clear {
   margin-left: auto;
-  color: #f87171;
-  border-color: rgba(248, 113, 113, 0.25);
-  background: rgba(248, 113, 113, 0.08);
+  color: #ff9ca6;
+  border-color: rgba(255, 94, 110, 0.35);
+  background: rgba(255, 94, 110, 0.1);
 }
 
 .save-btn-clear:hover:not(:disabled) {
-  background: rgba(248, 113, 113, 0.2);
-  border-color: rgba(248, 113, 113, 0.5);
+  background: rgba(255, 94, 110, 0.24);
+  border-color: rgba(255, 130, 145, 0.65);
   color: #fff;
 }
 
@@ -442,4 +494,17 @@
 .saves-tool-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #saves-dialog[open] .save-slot-card.slot-highlight {
+    animation: none;
+  }
+  .save-slot-card,
+  .saves-tool-btn,
+  .saves-import-label,
+  .save-btn,
+  .slot-add-icon {
+    transition: none;
+  }
 }

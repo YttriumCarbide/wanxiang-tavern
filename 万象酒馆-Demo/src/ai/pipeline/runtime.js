@@ -42,7 +42,11 @@ import {
 } from './overland-request.js';
 import { requestMemoryBooks, scanScenarioWorldbooks } from '../journey-memory-worldbook.js';
 import { buildSubScriptRequest } from './script-preset.js';
-import { galSceneCastInstruction, hasGalReactionGuidance } from '../gal-prompt.js';
+import {
+  galSceneCastInstruction,
+  hasGalEnsembleGuidance,
+  hasGalReactionGuidance,
+} from '../gal-prompt.js';
 import { journeyContinuityMessage } from '../../memory.js';
 
 function selectScriptMode(kind, input) {
@@ -134,6 +138,7 @@ export function createAiPipeline({
               role: 'system',
               content: galSceneCastInstruction(input, kind, {
                 reactionInWorldbook: hasGalReactionGuidance(worldbookMessages),
+                ensembleInWorldbook: hasGalEnsembleGuidance(worldbookMessages),
               }),
             },
             { role: 'user', content: JSON.stringify(input.socialQuest) },

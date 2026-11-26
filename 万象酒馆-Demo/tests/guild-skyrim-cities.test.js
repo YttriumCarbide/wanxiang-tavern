@@ -485,3 +485,64 @@ test('quest claim awaiting flush suppresses stale UI after disposal or library r
     assert.equal(fx.quest.status, 'active', `${stale}: quest stays active`);
   }
 });
+
+test('skyrim journal renders faction crests and tracks individual misc sub-objectives', (t) => {
+  const fx = createQuestUiFixture(t);
+  fx.lib.tavernQuests.push(
+    {
+      id: 'social-1',
+      type: 'social',
+      title: '酒馆奇谈',
+      description: '酒馆里的风闻。',
+      hook: '',
+      level: 2,
+      status: 'active',
+    },
+    {
+      id: 'misc-1',
+      type: 'misc',
+      isMisc: true,
+      title: '炉边零碎委托',
+      description: '零碎委托。',
+      hook: '',
+      level: 1,
+      status: 'active',
+      tracked: false,
+      objectives: [
+        {
+          id: 'obj-a',
+          label: '向钟楼守望打听旧铃',
+          location: '星钟城',
+          done: false,
+          tracked: false,
+        },
+        { id: 'obj-b', label: '送回遗落的铜钥匙', location: '酒馆', done: true, tracked: false },
+      ],
+    },
+  );
+  fx.component.open(fx.quest.id);
+  assert.match(fx.dialog.innerHTML, /data-quest-crest="companions"/);
+  fx.click('[data-quest-select]', { questSelect: 'social-1' });
+  assert.match(fx.dialog.innerHTML, /data-quest-crest="side"/);
+
+  fx.click('[data-quest-select]', { questSelect: '__misc__' });
+  assert.match(fx.dialog.innerHTML, /data-quest-crest="misc"/);
+  assert.match(fx.dialog.innerHTML, /向钟楼守望打听旧铃/);
+  assert.match(fx.dialog.innerHTML, /送回遗落的铜钥匙/);
+
+  fx.click('[data-quest-misc-quest]', {
+    questMiscQuest: 'misc-1',
+    questMiscObj: 'obj-a',
+    questFocus: 'misc:misc-1:obj-a',
+  });
+  const misc = fx.lib.tavernQuests.find((q) => q.id === 'misc-1');
+  assert.equal(misc.objectives[0].tracked, true);
+  assert.equal(misc.tracked, true);
+
+  const restored = restoreLibrary(JSON.parse(JSON.stringify(fx.lib)));
+  const restoredMisc = restored.tavernQuests.find((q) => q.id === 'misc-1');
+  assert.equal(restoredMisc.type, 'misc');
+  assert.equal(restoredMisc.isMisc, true);
+  assert.equal(restoredMisc.objectives[0].tracked, true);
+  assert.equal(restoredMisc.objectives[0].location, '星钟城');
+});

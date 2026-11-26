@@ -14,8 +14,10 @@ import {
   workshopBuildCost,
   workshopRate,
   workshopParallel,
+  workshopItemConsumers,
   modifyWorkshop,
 } from '../src/workshop/engine.js';
+import { workshopInspector, workshopInventory } from '../src/app/workshop-view.js';
 import { restoreLibrary, newLibrary } from '../src/ai/library.js';
 import { resourceFields } from '../tools/import-workshop-reference.mjs';
 import {
@@ -169,26 +171,37 @@ test('manual work survives reload, pays only once and never automatically repeat
   assert.match(failed.error, /不足/);
   assert.equal(failed.state, poor);
 });
-test('delivery pays gold that can fund the first collector', () => {
-  let state = start();
-  for (let n = 1; n <= 8; n++) {
-    state = act(state, { type: 'craft', id: 'stardust' });
-    state = advanceWorkshop(state, catalog, n * 3000).state;
-  }
-  const sale = workshopAction(state, catalog, { type: 'sell', id: 'stardust', amount: 3 });
-  const build = workshopAction(
-    sale.state,
+test('sell action is removed and item details report active automatic production consumers', () => {
+  let state = funded();
+  const blocked = workshopAction(
+    state,
     catalog,
-    { type: 'build', id: 'collector' },
-    sale.wallet,
+    { type: 'sell', id: 'stardust', amount: 3 },
+    { gold: 10, ether: 0 },
   );
-  assert.equal(build.wallet.gold, 0);
-  state = build.state;
-  assert.equal(state.items.stardust, 0);
-  assert.equal(state.stations.collector.active, 1);
-  state = advanceWorkshop(state, catalog, 27000).state;
-  assert.equal(state.items.stardust, 1);
-  assert.equal('inventory' in state, false);
+  assert.match(blocked.error, /未知工坊操作/);
+  assert.equal(blocked.wallet.gold, 10);
+  assert.equal(blocked.state.items.stardust, state.items.stardust);
+
+  state = act(state, { type: 'build', id: 'malthouse' });
+  const activeConsumers = workshopItemConsumers(state, catalog, 'barley');
+  assert(activeConsumers.some((entry) => entry.outputs.some((out) => out.id === 'malt-extract')));
+  const inspectorHtml = workshopInspector(state, catalog, 'item', 'barley', {
+    gold: 100,
+    ether: 10,
+  });
+  assert(inspectorHtml.includes('自动生产消耗'));
+  assert(inspectorHtml.includes('malt-extract'));
+  assert(!inspectorHtml.includes('交付给酒馆'));
+  assert(!inspectorHtml.includes('data-ws-action="sell"'));
+  assert(!workshopInventory(state, catalog).includes('金币 / 份'));
+
+  state = act(state, { type: 'active', id: 'malthouse', amount: 0 });
+  const pausedConsumers = workshopItemConsumers(state, catalog, 'barley');
+  assert.equal(
+    pausedConsumers.some((entry) => entry.outputs.some((out) => out.id === 'malt-extract')),
+    false,
+  );
 });
 test('active zero pauses, retains progress and restores without free production', () => {
   let state = act(funded(), { type: 'build', id: 'collector' });

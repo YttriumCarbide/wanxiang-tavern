@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { UNIVERSAL_ENEMIES, UNIVERSAL_BOSSES } from '../../src/content/universal-adversaries.js';
+import { enemyArchiveIntentText } from '../../src/archive-enemies.js';
 import { ARENA_QUALIFIER_ARCHIVE_DEFINITIONS } from '../../src/content/arena-qualifier-adversaries.js';
 import {
   SILVER_CROWN_SYNDICATE_ARCHON,
@@ -25,16 +26,27 @@ async function checkSilverCrownArchive(page, output) {
     assert.equal(await portrait.getAttribute('src'), `./assets/portraits/${enemy.portrait}.svg`);
     assert.deepEqual(
       await intents.locator('span:last-child').allTextContents(),
-      enemy.intents.map(({ name, text }) => `${name}：${text}`),
+      enemy.intents.map((move) => `${move.name}：${enemyArchiveIntentText(move)}`),
     );
+    const intentText = (await intents.allInnerTexts()).join('\n');
+    assert(!/\d+\s*点?\s*伤害/u.test(intentText));
+    assert(!/\d+\s*层?\s*(?:中毒|流血)/u.test(intentText));
   }
   await page.locator('[data-enemy-tier="overlord"]').click();
   await entries.filter({ hasText: SILVER_CROWN_SYNDICATE_ARCHON.name }).click();
+  assert((await detail.innerText()).includes('银冠城-白鸦展览馆'));
+  assert((await detail.innerText()).includes('乌羽秘会'));
   const stage = detail.locator(
     '[data-overlord-id="silverCrownSyndicateArchon"][data-stage-ready="ready"][data-loaded-models="1"]',
   );
   await stage.waitFor({ timeout: 30000 });
-  assert.match(await intents.innerText(), /行动文本待定。/);
+  assert.deepEqual(
+    await intents.locator('span:last-child').allTextContents(),
+    [
+      ...SILVER_CROWN_SYNDICATE_ARCHON.intents,
+      ...(SILVER_CROWN_SYNDICATE_ARCHON.enragedIntents || []),
+    ].map((move) => `${move.name}：${enemyArchiveIntentText(move)}`),
+  );
   assert(!/undefined|NaN/.test(await page.locator('#archive-dialog').innerText()));
   const actions = stage.locator('[data-stage-anim]');
   assert.deepEqual(
@@ -110,9 +122,13 @@ async function checkArenaQualifierArchive(page, output) {
       'Talon_Rend',
     ],
   );
-  assert.deepEqual(await intents.locator('span:last-child').allTextContents(), [
-    '行动待定：行动文本待定。',
-  ]);
+  assert.deepEqual(
+    await intents.locator('span:last-child').allTextContents(),
+    [
+      ...ARENA_QUALIFIER_ARCHIVE_DEFINITIONS.arenaQualifierIronCoach.intents,
+      ...(ARENA_QUALIFIER_ARCHIVE_DEFINITIONS.arenaQualifierIronCoach.enragedIntents || []),
+    ].map((move) => `${move.name}：${enemyArchiveIntentText(move)}`),
+  );
   assert(!/undefined|NaN/.test(await detail.innerText()));
   await page.screenshot({ path: path.join(output, 'archive-qualifier-coach.png') });
 }
@@ -363,12 +379,19 @@ export async function universalEnemyChecks({ browser, baseURL, output }) {
     assert((await page.locator('#archive-text').innerText()).includes('以太'));
     await page.locator('[data-archive-tab="enemies"]').click();
     assert.equal(await page.locator('[data-enemy-tier]').count(), 4);
+    assert.equal(await page.locator('.archive-enemy-category-toggle').isVisible(), false);
+    assert.equal(await page.locator('.archive-enemy-categories').isVisible(), false);
+    await page.locator('[data-enemy-tier="minion"]').click();
+    assert.equal(await page.locator('.archive-enemy-category-toggle').isVisible(), true);
+    assert.equal(await page.locator('.archive-enemy-categories').isVisible(), true);
     const defaultProgress = await page.locator('.archive-codex-count').textContent();
     const [, totalMonsters] = defaultProgress.match(/3\s*\/\s*(\d+)/) || [];
     assert(Number(totalMonsters) > 50, `Expected seen count 3 / >50, got ${defaultProgress}`);
     assert.equal(await page.locator('#archive-list button').count(), 1);
     assert.equal(await page.locator('#archive-text img').count(), 1);
     await page.locator('[data-enemy-tier="elite"]').click();
+    assert.equal(await page.locator('.archive-enemy-category-toggle').isVisible(), false);
+    assert.equal(await page.locator('.archive-enemy-categories').isVisible(), false);
     assert.equal(await page.locator('#archive-list button').count(), 1);
     assert.equal(await page.locator('#archive-text img').count(), 1);
     await page.locator('[data-enemy-tier="boss"]').click();
@@ -459,13 +482,32 @@ export async function universalEnemyChecks({ browser, baseURL, output }) {
     await page.locator('[data-archive-tab="enemies"]').click();
     assert.equal(await page.locator('[data-enemy-category]').count(), 7);
     await page.locator('[data-enemy-tier="minion"]').click();
+    assert.equal(await page.locator('.archive-enemy-category-toggle').isVisible(), true);
+    await page.locator('[data-enemy-category-toggle]').click();
+    assert.equal(await page.locator('.archive-enemy-categories').isVisible(), false);
+    assert.equal(
+      await page.evaluate(() =>
+        localStorage.getItem('wanxiang.codex.enemy-categories-expanded.v1'),
+      ),
+      'false',
+    );
+    await page.locator('[data-enemy-tier="elite"]').click();
+    await page.locator('[data-enemy-tier="minion"]').click();
+    assert.equal(await page.locator('.archive-enemy-categories').isVisible(), false);
+    await page.locator('[data-enemy-category-toggle]').click();
+    assert.equal(await page.locator('.archive-enemy-categories').isVisible(), true);
+    assert.equal(
+      await page.evaluate(() =>
+        localStorage.getItem('wanxiang.codex.enemy-categories-expanded.v1'),
+      ),
+      'true',
+    );
     for (const [category, label] of [
       ['beast', '野兽/魔兽'],
       ['insect', '虫甲/奇异'],
       ['construct', '构装/机械'],
       ['humanoid', '人形阵营'],
       ['spirit', '灵体/能量'],
-      ['other', '其他'],
     ]) {
       await page.locator(`[data-enemy-category="${category}"]`).click();
       const categoryRows = page.locator('#archive-list button small');
@@ -476,6 +518,16 @@ export async function universalEnemyChecks({ browser, baseURL, output }) {
         `${category} contains only ${label}`,
       );
     }
+    await page.locator('[data-enemy-category="other"]').click();
+    assert.equal(
+      await page.locator('#archive-list button').count(),
+      0,
+      'cleaned official minions leave other empty',
+    );
+    assert(
+      (await page.locator('#archive-text').innerText()).includes('当前筛选下暂无已解锁魔物'),
+      'empty other category shows empty codex state',
+    );
     await page.locator('[data-enemy-category="insect"]').click();
     await page.locator('#archive-list button').filter({ hasText: '苔藓史莱姆' }).click();
     assert.equal(await page.locator('#archive-text .skyrim-folio-title').innerText(), '苔藓史莱姆');
@@ -484,6 +536,13 @@ export async function universalEnemyChecks({ browser, baseURL, output }) {
       .allTextContents();
     assert(monsterBadges.includes('虫甲/奇异'));
     assert(monsterBadges.includes('史莱姆'));
+    const codexDetail = await page.locator('#archive-text').innerText();
+    assert(!codexDetail.includes('基础生命'));
+    assert(!/\d+\s*点?\s*伤害/u.test(codexDetail), 'codex detail omits fixed level-one damage');
+    assert(
+      !/\d+\s*层?\s*(?:中毒|流血)/u.test(codexDetail),
+      'codex detail omits fixed poison/bleed stacks',
+    );
     await page.locator('[data-enemy-category="all"]').click();
     await page.locator('[data-enemy-tier="boss"]').click();
     const bossNames = await page.locator('#archive-list button strong').allTextContents();

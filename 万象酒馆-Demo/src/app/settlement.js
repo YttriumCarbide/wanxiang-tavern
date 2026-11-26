@@ -1,5 +1,5 @@
 import { html } from '../shared/html.js';
-import { escapeText } from '../ui.js';
+import { escapeText, shortCharacterName } from '../ui.js';
 import { portraitUrl } from '../portraits.js';
 import { growthGainText, restoreGrowth, xpToNext } from '../growth.js';
 import { levelLines } from '../content/level-dialogue.js';
@@ -47,6 +47,7 @@ export function createSettlement(context) {
       for (const level of award.levels) {
         if (disposed) return;
         const lines = levelLines(member);
+        context.audio.play('shield');
         await new Promise((resolve) => {
           release = resolve;
           dialogue.show(
@@ -58,6 +59,15 @@ export function createSettlement(context) {
                 bonuses: Object.entries(level.gains).map(([key, value]) =>
                   growthGainText(key, value),
                 ),
+                levelUp: {
+                  name: member.setting.name,
+                  level: level.level,
+                  previousLevel: level.previousLevel ?? level.level - 1,
+                  rank: level.rank || '',
+                  promoted: Boolean(level.promoted),
+                  rows: level.rows || [],
+                  hitCount: Object.keys(level.gains || {}).length,
+                },
               },
             ],
             resolve,
@@ -131,8 +141,8 @@ export function createSettlement(context) {
           <img src="${portraitUrl(member.combat)}" alt="${escapeText(member.setting.name)}" />
           <div>
             <header>
-              <strong>${escapeText(member.setting.name)}</strong><b data-level>Lv.${growth.level}</b
-              ><small>+${award?.amount || 0} EXP</small>
+              <strong>${escapeText(shortCharacterName(member.setting.name))}</strong
+              ><b data-level>Lv.${growth.level}</b><small>+${award?.amount || 0} EXP</small>
             </header>
             <div class="experience-track">
               <i style="width:${(growth.xp / xpToNext(growth.level)) * 100}%"></i>
@@ -179,7 +189,7 @@ export function createSettlement(context) {
             html`<article class="recovery-row ${button.dataset.rest}">
               <img src="${portraitUrl(member.combat)}" alt="${escapeText(member.setting.name)}" />
               <div>
-                <strong>${escapeText(member.setting.name)}</strong
+                <strong>${escapeText(shortCharacterName(member.setting.name))}</strong
                 ><span><i style="width:${(before / Math.max(1, max)) * 100}%"></i></span
                 ><small>${before} → ${after} / ${max}</small>
               </div>

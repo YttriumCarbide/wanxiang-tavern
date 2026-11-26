@@ -2,7 +2,6 @@
 export const CHANGJING_YUEXI = {
   id: 'aegis',
   name: '长景月汐',
-  title: '星月剑士',
   weapon: 'sword',
   attackType: 'sword',
   portrait: 'changjing-yuexi.png',

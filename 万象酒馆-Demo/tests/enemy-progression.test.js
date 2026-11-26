@@ -333,3 +333,51 @@ test('level growth scales hero health and mana pools independently of enemy inte
   assert.equal(scaledEnemy.selfBuff.poison, Math.round(2 * scale));
   assert.match(scaledEnemy.text, new RegExp(`${Math.round(6 * scale)}护盾`));
 });
+
+test('enemy level growth scales starting poison/bleed stacks and keeps regen, weak, and vulnerable unscaled', () => {
+  const spec = {
+    name: '腐蚀巢穴',
+    map: 'ruins',
+    level: 15,
+    growthEntry: { map: 'ruins', sequence: 6, level: 15, seed: 42 },
+    enemyIds: ['scaleDotTestEnemy'],
+    enemyDefinitions: {
+      scaleDotTestEnemy: {
+        id: 'scaleDotTestEnemy',
+        name: '蚀毒测试体',
+        hp: 40,
+        speed: 3,
+        elite: true,
+        buffs: { poison: 2, bleed: 3, regen: 2, weak: 1, vulnerable: 1 },
+        intents: [
+          {
+            name: '混合腐毒',
+            slots: [0],
+            effects: [
+              { type: 'buff', target: 'opponents', buff: 'poison', value: 3 },
+              { type: 'buff', target: 'opponents', buff: 'bleed', value: 2 },
+              { type: 'buff', target: 'opponents', buff: 'weak', value: 2 },
+              { type: 'buff', target: 'opponents', buff: 'vulnerable', value: 1 },
+              { type: 'buff', target: 'self', buff: 'regen', value: 3 },
+            ],
+          },
+        ],
+      },
+    },
+  };
+  const state = newEncounter(spec);
+  const unit = state.units.scaleDotTestEnemy;
+  const scale = combatScale(15);
+  assert.equal(unit.buffs.poison, Math.round(2 * scale));
+  assert.equal(unit.buffs.bleed, Math.round(3 * scale));
+  assert.equal(unit.buffs.regen, 2);
+  assert.equal(unit.buffs.weak, 1);
+  assert.equal(unit.buffs.vulnerable, 1);
+
+  const grown = intent(state, 'scaleDotTestEnemy');
+  assert.equal(grown.effects[0].value, Math.round(3 * scale));
+  assert.equal(grown.effects[1].value, Math.round(2 * scale));
+  assert.equal(grown.effects[2].value, 2);
+  assert.equal(grown.effects[3].value, 1);
+  assert.equal(grown.effects[4].value, 3);
+});

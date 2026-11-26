@@ -419,6 +419,7 @@ function builtinEntryKey(entry) {
       'millLore',
       'quarryLore',
       'blackMarketLore',
+      'cityFactionLore',
       'characterId',
     ]) {
       if (marker[field]) return `${field}:${marker[field]}`;
@@ -497,6 +498,7 @@ export function syncBuiltinWorldbook(existing, builtin) {
       (w?.generationRule && !builtinKeys.has(`generationRule:${w.generationRule}`)) ||
       (w?.currencyRule && !builtinKeys.has(`currencyRule:${w.currencyRule}`)) ||
       (w?.mainWorld && !builtinKeys.has(`mainWorld:${w.mainWorld}`)) ||
+      (w?.cityFactionLore && !builtinKeys.has(`cityFactionLore:${w.cityFactionLore}`)) ||
       (key && seenKeys.has(key))
     ) {
       delete book.entries[uid];

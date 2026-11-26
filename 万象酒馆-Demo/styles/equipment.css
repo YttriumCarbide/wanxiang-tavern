@@ -3,18 +3,12 @@
   height: min(760px, calc(100dvh - 28px));
   max-width: none;
   max-height: calc(100dvh - 20px);
-  color: #f2ead8;
-  border: 1px solid rgba(218, 180, 112, 0.44);
+  color: var(--astral-text);
+  border: 1px solid rgba(226, 192, 120, 0.5);
   padding: 16px 20px 12px;
   border-radius: 4px;
-  background:
-    radial-gradient(ellipse at 68% 20%, rgba(122, 146, 206, 0.14), transparent 58%),
-    radial-gradient(ellipse at 18% 86%, rgba(206, 162, 86, 0.08), transparent 52%),
-    linear-gradient(172deg, rgba(21, 22, 30, 0.98), rgba(12, 12, 17, 0.99));
-  box-shadow:
-    0 28px 92px rgba(0, 0, 0, 0.9),
-    inset 0 0 0 1px rgba(218, 180, 112, 0.14),
-    inset 0 1px 0 rgba(255, 244, 214, 0.1);
+  background: var(--astral-hatch), var(--astral-panel-bg);
+  box-shadow: var(--astral-frame-shadow);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
   overflow: hidden;
@@ -25,7 +19,7 @@
   gap: 12px;
 }
 #ether-forge::backdrop {
-  background: rgba(7, 8, 12, 0.8);
+  background: rgba(4, 5, 14, 0.82);
   backdrop-filter: blur(7px);
 }
 #ether-forge header,
@@ -45,23 +39,24 @@
 }
 #ether-forge header small {
   display: block;
-  color: #b79f72;
+  color: var(--astral-gold);
   font-size: 9px;
   letter-spacing: 2.8px;
 }
 #ether-forge h2 {
   margin: 4px 0 0;
+  font-family: Georgia, 'Songti SC', 'Microsoft YaHei', serif;
   font-size: 22px;
   font-weight: 400;
   letter-spacing: 3px;
-  color: #f5ebd5;
+  color: var(--astral-gold-hi);
 }
 #ether-forge header nav {
   margin-left: auto;
   display: flex;
   align-items: center;
   gap: 4px;
-  border-bottom: 1px solid rgba(218, 180, 112, 0.2);
+  border-bottom: 1px solid var(--astral-line);
 }
 #ether-forge header nav button {
   border: 0;
@@ -73,22 +68,22 @@
   padding: 8px 20px;
   font-size: 13px;
   letter-spacing: 2px;
-  color: #9e917b;
+  color: var(--astral-sub);
   transition:
     color 160ms,
     background 160ms,
     box-shadow 160ms;
 }
 #ether-forge header nav button:hover {
-  background: rgba(222, 182, 108, 0.06);
-  color: #e6d7b9;
+  background: rgba(226, 192, 120, 0.1);
+  color: #fff;
   box-shadow: none;
   transform: none;
 }
 #ether-forge header nav [aria-pressed='true'] {
-  background: linear-gradient(180deg, transparent, rgba(222, 182, 108, 0.13));
-  color: #fae1ae;
-  box-shadow: inset 0 -2px 0 #e7c278;
+  background: linear-gradient(180deg, transparent, rgba(226, 192, 120, 0.16));
+  color: var(--astral-gold-hi);
+  box-shadow: inset 0 -2px 0 var(--astral-gold-hi);
 }
 .forge-wallet {
   margin-left: auto;
@@ -101,43 +96,44 @@
   width: 32px;
   height: 32px;
   padding: 0;
-  border-radius: 2px;
-  border: 1px solid rgba(218, 180, 112, 0.24);
-  background: transparent;
-  box-shadow: none;
-  color: #cbb894;
+  border-radius: 3px;
+  border: 1px solid rgba(226, 192, 120, 0.44);
+  background: var(--astral-card-bg);
+  box-shadow: var(--astral-btn-shadow);
+  color: var(--astral-gold-hi);
   font-size: 18px;
   line-height: 1;
 }
 [data-forge-close]:hover {
-  border-color: rgba(235, 198, 126, 0.65);
-  background: rgba(226, 184, 108, 0.1);
-  color: #fff2d4;
+  border-color: var(--astral-gold-hi);
+  background: linear-gradient(180deg, rgba(56, 70, 146, 0.88), rgba(24, 30, 70, 0.94));
+  color: #fff;
   box-shadow: none;
   transform: none;
 }
 .forge-toolbar {
-  border-block: 1px solid rgba(218, 180, 112, 0.18);
+  border-block: 1px solid var(--astral-line);
   padding: 9px 0;
   flex-shrink: 0;
 }
 .forge-toolbar button {
   padding: 6px 13px;
-  border-radius: 2px;
-  border: 1px solid rgba(218, 180, 112, 0.3);
-  background: rgba(255, 255, 255, 0.025);
-  color: #dfd2b8;
+  border-radius: 3px;
+  border: 1px solid rgba(226, 192, 120, 0.34);
+  background: var(--astral-card-bg);
+  color: var(--astral-text);
   font-size: 12px;
   letter-spacing: 0.6px;
 }
 .forge-toolbar button:hover:not(:disabled) {
-  border-color: rgba(235, 198, 126, 0.62);
-  color: #faeccd;
+  border-color: var(--astral-gold-hi);
+  color: var(--astral-gold-hi);
 }
 .forge-toolbar button.primary {
-  border-color: rgba(228, 188, 114, 0.68);
-  background: linear-gradient(180deg, rgba(164, 118, 52, 0.36), rgba(74, 52, 22, 0.72));
-  color: #faeccd;
+  border-color: #fff2c4;
+  background: linear-gradient(180deg, #fff1c4, #dab262 60%, #b4863a);
+  color: #1c1406;
+  font-weight: 700;
 }
 .forge-toolbar [data-forge-drawer] {
   display: none;
@@ -148,7 +144,7 @@
   align-items: center;
   gap: 6px;
   padding: 8px 0;
-  border-bottom: 1px solid rgba(218, 180, 112, 0.16);
+  border-bottom: 1px solid var(--astral-line);
   flex-shrink: 0;
 }
 .forge-category-tabs[hidden] {
@@ -156,11 +152,11 @@
 }
 .forge-category-tabs button {
   padding: 5px 14px;
-  border-radius: 999px;
-  border: 1px solid rgba(218, 180, 112, 0.24);
-  background: rgba(255, 255, 255, 0.025);
+  border-radius: 3px;
+  border: 1px solid rgba(226, 192, 120, 0.28);
+  background: var(--astral-card-bg);
   box-shadow: none;
-  color: #b7a88e;
+  color: var(--astral-sub);
   font-size: 12px;
   letter-spacing: 0.6px;
   transition:
@@ -169,22 +165,23 @@
     background 160ms;
 }
 .forge-category-tabs button:hover {
-  border-color: rgba(235, 198, 126, 0.56);
-  background: rgba(222, 182, 108, 0.08);
-  color: #f4e6c7;
+  border-color: var(--astral-gold-hi);
+  background: rgba(56, 70, 146, 0.55);
+  color: #fff;
   box-shadow: none;
   transform: none;
 }
 .forge-category-tabs button[aria-pressed='true'] {
-  border-color: rgba(235, 198, 126, 0.72);
-  background: linear-gradient(180deg, rgba(164, 118, 52, 0.34), rgba(74, 52, 22, 0.68));
-  color: #fff0cc;
+  border-color: var(--astral-gold-hi);
+  background: linear-gradient(135deg, rgba(72, 86, 166, 0.72), rgba(24, 30, 70, 0.94));
+  color: var(--astral-gold-hi);
 }
 #forge-redeem {
   margin-inline-start: auto;
-  border-color: rgba(228, 188, 114, 0.68);
-  background: linear-gradient(180deg, rgba(164, 118, 52, 0.38), rgba(74, 52, 22, 0.72));
-  color: #faeccd;
+  border-color: #fff2c4;
+  background: linear-gradient(180deg, #fff1c4, #dab262 60%, #b4863a);
+  color: #1c1406;
+  font-weight: 700;
 }
 #forge-vouchers,
 #forge-ether {
@@ -237,7 +234,7 @@
 #forge-list {
   overflow: auto;
   min-width: 0;
-  border-right: 1px solid rgba(218, 180, 112, 0.16);
+  border-right: 1px solid var(--astral-line);
   padding-right: 12px;
 }
 #forge-list button {
@@ -249,7 +246,7 @@
   margin: 0;
   border: none;
   border-left: 2px solid var(--q-border, transparent);
-  border-bottom: 1px solid rgba(218, 180, 112, 0.11);
+  border-bottom: 1px solid rgba(226, 192, 120, 0.14);
   border-radius: 0;
   background: transparent;
   box-shadow: none;
@@ -262,24 +259,24 @@
     border-color 160ms;
 }
 #forge-list button:hover {
-  background: linear-gradient(90deg, rgba(222, 182, 108, 0.08), transparent 85%);
+  background: linear-gradient(90deg, rgba(226, 192, 120, 0.12), transparent 85%);
   box-shadow: none;
   transform: none;
 }
 #forge-list button strong {
   font-weight: 400;
-  color: #efe4cc;
+  color: var(--astral-text);
 }
 #forge-list button span {
-  color: #d8c083;
+  color: var(--astral-gold);
   font-size: 19px;
 }
 #forge-list [aria-pressed='true'] {
-  border-left: 3px solid var(--q-color, #e7c278);
+  border-left: 3px solid var(--q-color, var(--astral-gold-hi));
   background: linear-gradient(
     90deg,
-    rgba(226, 184, 108, 0.16),
-    rgba(226, 184, 108, 0.03) 82%,
+    rgba(72, 86, 166, 0.45),
+    rgba(226, 192, 120, 0.06) 82%,
     transparent
   );
 }
@@ -296,7 +293,7 @@
   overflow: auto;
   min-width: 0;
   padding-left: 18px;
-  border-left: 1px solid rgba(218, 180, 112, 0.16);
+  border-left: 1px solid var(--astral-line);
 }
 .condenser-stage {
   position: relative;
@@ -498,10 +495,10 @@
   max-height: 230px;
   overflow: auto;
   padding: 12px;
-  background: #10221e;
-  border: 1px solid #bca16b77;
-  border-radius: 10px;
-  box-shadow: 0 12px 35px #0009;
+  background: var(--astral-hatch), var(--astral-panel-bg);
+  border: 1px solid rgba(226, 192, 120, 0.44);
+  border-radius: 4px;
+  box-shadow: var(--astral-frame-shadow);
   z-index: 2;
 }
 #prepare-bag p {
@@ -522,10 +519,11 @@
   transform: translateX(-50%);
   max-width: min(560px, 70vw);
   padding: 15px 22px;
-  border: 1px solid #ccb278;
-  border-radius: 8px;
-  color: #eadfbe;
-  background: #172f2ef5;
+  border: 1px solid rgba(226, 192, 120, 0.54);
+  border-radius: 4px;
+  color: var(--astral-text);
+  background: linear-gradient(180deg, rgba(24, 31, 74, 0.96), rgba(11, 14, 34, 0.98));
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.65);
   font-size: 13px;
   line-height: 1.8;
   pointer-events: none;
@@ -558,10 +556,10 @@
   margin: 0 24px 18px;
   padding: 16px 20px;
   border: none;
-  border-left: 3px solid #e7c278;
-  border-block: 1px solid rgba(218, 180, 112, 0.24);
-  border-radius: 2px;
-  background: linear-gradient(90deg, rgba(28, 25, 22, 0.94), rgba(16, 15, 18, 0.9));
+  border-left: 3px solid var(--astral-gold);
+  border-block: 1px solid var(--astral-line);
+  border-radius: 3px;
+  background: var(--astral-card-bg);
 }
 #forge-lesson small,
 #forge-lesson strong {

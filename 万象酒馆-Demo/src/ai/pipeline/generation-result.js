@@ -144,7 +144,20 @@ export function readGenerationResult(kind, rawText, input, readCharacter = parse
         : normalizeScript(raw, id, ids);
     if (kind === 'character') {
       const seed = restoreGrowth(null, input.rollId || input.brief || entry.setting.name).seed;
-      entry.growth = restoreGrowth({ rarity: generationNumbers(input).rarity, seed }, entry.id);
+      const requestedLevel = Number(
+        raw.level ?? raw.data?.level ?? input.level ?? input.npc?.level,
+      );
+      const initialLevel =
+        input.purpose === 'protagonist'
+          ? 1
+          : Number.isInteger(requestedLevel) && requestedLevel >= 1 && requestedLevel <= 99
+            ? requestedLevel
+            : 1;
+      entry.growth = restoreGrowth(
+        { level: initialLevel, rarity: generationNumbers(input).rarity, seed },
+        entry.id,
+        entry.combat,
+      );
       if (input.purpose === 'protagonist') entry.combat.limit = 2;
     }
     if (kind === 'script') {

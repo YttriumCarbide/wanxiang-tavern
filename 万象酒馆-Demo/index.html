@@ -94,7 +94,7 @@
       </nav>
     </header>
     <div hidden aria-hidden="true">
-      <button id="archives-open" type="button">归档</button>
+      <button id="archives-open" type="button">图鉴</button>
       <button id="records-open" type="button">记录</button>
       <button id="memory-open" type="button">总结</button>
     </div>
@@ -509,7 +509,7 @@
                 ><span
                   ><strong>开发者模式</strong
                   ><small
-                    >普通模式必须调用AI；开启后可跳过AI生成、允许中途返回、编辑归档及解锁全部图鉴。</small
+                    >普通模式必须调用AI；开启后可跳过AI生成、允许中途返回、编辑图鉴及解锁全部敌人图鉴。</small
                   ></span
                 ><input
                   autocomplete="off"
@@ -541,7 +541,7 @@
                 /></label>
                 <label
                   ><span
-                    ><strong>调整设定</strong><small>允许手动编辑归档 NPC 和物品设定。</small></span
+                    ><strong>调整设定</strong><small>允许手动编辑图鉴 NPC 和物品设定。</small></span
                   ><input
                     autocomplete="off"
                     type="checkbox"
@@ -552,7 +552,7 @@
                   ><span
                     ><strong>解锁全部图鉴</strong
                     ><small
-                      >在旅途归档中显示全部未遭遇的魔物图鉴；关闭后恢复正常存档已解锁数量。</small
+                      >在图鉴中显示全部未遭遇的魔物条目；关闭后恢复正常存档已解锁数量。</small
                     ></span
                   ><input
                     autocomplete="off"
@@ -808,6 +808,9 @@
         hidden
       >
         <div id="destination-map" tabindex="0" role="region" aria-label="可拖动的探索地图"></div>
+        <div id="destination-route-preview" aria-label="当前副本体素微缩预览" hidden>
+          <span class="destination-preview-status">正在搭建微缩世界…</span>
+        </div>
         <div class="destination-map-heading">
           <small>沿舆图路线深入 · 可择支线探索 · 拖动查看</small
           ><button id="destination-center" aria-label="定位所选地点">定位</button>
@@ -1089,7 +1092,7 @@
         <div class="unit-layer"></div>
         <div class="battle-effects" aria-hidden="true"></div>
         <div id="intent-layer" aria-label="敌人预计行动"></div>
-        <div id="scene-loading">正在进入遗迹…</div>
+        <div id="scene-loading" hidden>正在进入遗迹…</div>
       </section>
       <aside class="turn-column glass">
         <div class="stage-caption">

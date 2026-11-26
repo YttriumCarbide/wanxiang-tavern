@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict';
 import path from 'node:path';
+import { legacySession } from './legacy-session.mjs';
 
 /** Delayed real assets prove readiness gates; reload proves persistent cache reuse. */
 export async function sceneLoadingChecks({ browser, baseURL, output }) {
   const page = await browser.newPage({ viewport: { width: 1024, height: 640 } });
+  let mainPage = null;
   const errors = [];
   page.on('pageerror', (error) => errors.push(error.message));
   let releaseModel;
@@ -37,7 +39,7 @@ export async function sceneLoadingChecks({ browser, baseURL, output }) {
     const imageGate = new Promise((resolve) => {
       releaseImage = resolve;
     });
-    await page.route('**/assets/exploration/city-backgrounds/starbell.png', async (route) => {
+    await page.route('**/assets/exploration/city-backgrounds/starbell.webp', async (route) => {
       await imageGate;
       await route.continue();
     });
@@ -176,6 +178,86 @@ export async function sceneLoadingChecks({ browser, baseURL, output }) {
     await page.unroute(creatureModel);
     await page.evaluate(() => window.artbook.select('crystal-beetle', true));
     await page.locator('#atlas-loading').waitFor({ state: 'hidden' });
+
+    mainPage = await browser.newPage({ viewport: { width: 1440, height: 836 } });
+    mainPage.on('pageerror', (error) => errors.push(error.message));
+    await legacySession(mainPage);
+    await mainPage.goto(baseURL);
+    await mainPage.waitForFunction(() => !!window.demo);
+    await mainPage
+      .frameLocator('#inn-frame iframe')
+      .locator('canvas')
+      .evaluate(
+        () =>
+          new Promise((resolve) => {
+            const check = () => (window.modelReady ? resolve() : requestAnimationFrame(check));
+            check();
+          }),
+      );
+    await mainPage.waitForFunction(
+      () =>
+        !document.body.classList.contains('inn-scene-loading') &&
+        !document.body.classList.contains('is-loading-overlay'),
+    );
+    const mainUiState = await mainPage.evaluate(async () => {
+      const { createWorldLoadingOverlay } = await import('/src/shared/scene-loading.js');
+      const notice = document.querySelector('.storage-notice');
+      const corner = document.querySelector('.ledger-corner');
+      const handle = document.querySelector('.ledger-edge-handle');
+      const dailyHud = document.querySelector('#daily-hud');
+      const isVisible = (el) =>
+        Boolean(el && !el.hidden && getComputedStyle(el).visibility === 'visible');
+      const initial = {
+        sceneLoadingHidden: document.querySelector('#scene-loading')?.hidden === true,
+        isLoadingOverlay: document.body.classList.contains('is-loading-overlay'),
+        innSceneLoading: document.body.classList.contains('inn-scene-loading'),
+        noticeHidden: Boolean(!notice || notice.hidden),
+        noticeText: notice?.textContent || '',
+        cornerVisible: isVisible(corner),
+        handleVisible: isVisible(handle),
+        dailyHudVisible: isVisible(dailyHud),
+      };
+      const overlay = createWorldLoadingOverlay('测试加载');
+      overlay.show('测试加载');
+      const during = {
+        isLoadingOverlay: document.body.classList.contains('is-loading-overlay'),
+        cornerVisibility: getComputedStyle(corner).visibility,
+        handleVisibility: getComputedStyle(handle).visibility,
+        dailyHudVisibility: getComputedStyle(dailyHud).visibility,
+      };
+      overlay.dispose();
+      const after = {
+        isLoadingOverlay: document.body.classList.contains('is-loading-overlay'),
+        cornerVisible: isVisible(corner),
+        handleVisible: isVisible(handle),
+        dailyHudVisible: isVisible(dailyHud),
+      };
+      return { initial, during, after };
+    });
+    assert.deepEqual(mainUiState, {
+      initial: {
+        sceneLoadingHidden: true,
+        isLoadingOverlay: false,
+        innSceneLoading: false,
+        noticeHidden: true,
+        noticeText: '',
+        cornerVisible: true,
+        handleVisible: true,
+        dailyHudVisible: true,
+      },
+      during: {
+        isLoadingOverlay: true,
+        cornerVisibility: 'hidden',
+        handleVisibility: 'hidden',
+        dailyHudVisibility: 'hidden',
+      },
+      after: {
+        isLoadingOverlay: false,
+        cornerVisible: true,
+        handleVisible: true,
+        dailyHudVisible: true,
+      },
+    });
     assert.deepEqual(errors, [], 'scene navigation has no initialization errors');
     return {
       modelCacheReused: true,
@@ -184,9 +266,11 @@ export async function sceneLoadingChecks({ browser, baseURL, output }) {
       mobile: true,
       outdoorReturn: true,
       artbookRecoversAfterMissingModel: true,
+      mainUiOverlayGuard: true,
     };
   } finally {
     releaseModel();
+    await mainPage?.close();
     await page.close();
   }
 }

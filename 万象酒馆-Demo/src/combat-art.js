@@ -75,6 +75,9 @@ export function attackStyle(event) {
     event.after?.heroDefinitions?.[event.actor] ||
     event.after?.enemyDefinitions?.[event.actor] ||
     DEFINITIONS[event.actor];
+  if (event.type === 'counter' && event.isOverlordCounter) {
+    return def?.attackStyle || 'stone-slam';
+  }
   return ['hero', 'entrySkill', 'counter'].includes(event.type)
     ? def?.weapon || 'sword'
     : event.type === 'enemy'

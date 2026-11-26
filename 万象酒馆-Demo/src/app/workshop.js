@@ -347,7 +347,7 @@ export function createWorkshop(context) {
     detail = { kind, id };
     inspector.innerHTML =
       kind === 'help'
-        ? '<h2>工坊操作</h2><p>点图标开始手作、建造或研修。点名称查看配方、费用和生产设置。</p><p>拖动查看产线，用滚轮或左侧按钮缩放。可在物资簿交付库存，换取金币。</p>'
+        ? '<h2>工坊操作</h2><p>点图标开始手作、建造或研修。点名称查看配方、费用和生产设置。</p><p>拖动查看产线，用滚轮或左侧按钮缩放。可在物资簿查看当前全部库存。</p>'
         : workshopInspector(state, catalog, kind, id, wallet());
     detailDialog.querySelector('[data-ws-detail-message]').textContent = '';
     detailDialog.showModal();
@@ -377,17 +377,12 @@ export function createWorkshop(context) {
     if (button.dataset.wsAction) {
       settle();
       const type = button.dataset.wsAction;
-      const amount =
-        type === 'sell-all'
-          ? state.items[button.dataset.id]
-          : Number(inspector.querySelector('[data-ws-sell-count]')?.value || 1);
       const result = workshopAction(
         state,
         catalog,
         {
-          type: type === 'sell-all' ? 'sell' : type,
+          type,
           id: button.dataset.id,
-          amount,
         },
         wallet(),
       );
@@ -400,8 +395,6 @@ export function createWorkshop(context) {
             build: '新设施开始运转。',
             research: '研修完成，新工艺已生效。',
             core: '炉心升级，所有产线更加高效。',
-            sell: '物资已交付，金币到账。',
-            'sell-all': '物资已全部交付。',
           }[type] ||
           '已保存。',
       );
@@ -426,6 +419,7 @@ export function createWorkshop(context) {
   });
   events.on(map, 'pointerdown', (event) => {
     if (event.target.closest('button,input') || event.button !== 0) return;
+    event.preventDefault();
     dragging = { x: event.clientX, y: event.clientY, pan: { ...pan } };
     map.setPointerCapture(event.pointerId);
     map.classList.add('dragging');

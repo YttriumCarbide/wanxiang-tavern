@@ -4,7 +4,6 @@ export const TOWN_GUESTS = {
     combat: {
       id: 'libet',
       name: '莉贝特',
-      title: '失忆的天使',
       hp: 32,
       mp: 34,
       attack: 8,
@@ -90,7 +89,6 @@ export const TOWN_GUESTS = {
     combat: {
       id: 'lumi',
       name: '露弥',
-      title: '夜游的旅人',
       hp: 44,
       mp: 24,
       attack: 7,
@@ -171,7 +169,6 @@ export const TOWN_GUESTS = {
     combat: {
       id: 'yuto-nakashi',
       name: '悠托-纳卡希',
-      title: '旅行的吟游诗人',
       hp: 39,
       mp: 34,
       attack: 2,

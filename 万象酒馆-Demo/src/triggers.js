@@ -1,4 +1,4 @@
-import { BUFFS } from './data.js';
+import { BUFFS } from './buffs.js';
 
 export const TRIGGER_EVENTS = Object.freeze({
   battleStart: '每场战斗开始',

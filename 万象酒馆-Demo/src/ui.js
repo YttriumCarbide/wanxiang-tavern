@@ -14,6 +14,17 @@ export const escapeText = (s) =>
     (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c],
   );
 
+/** Return a compact display name (e.g. '西莉卡·梵·拉普斯' -> '西莉卡') for tight UI slots. */
+export function shortCharacterName(name) {
+  const text = String(name || '').trim();
+  if (!text) return '';
+  if (text.includes('·')) {
+    const first = text.split('·')[0].trim();
+    if (first) return first;
+  }
+  return text;
+}
+
 function statusSources(events, target, buff) {
   const sources = [];
   for (const event of events) {
@@ -226,7 +237,42 @@ export function enemyBreakBar(d, u, f = u, activeDamageType = null) {
     >`;
   }
   const bw = u.breakWindow;
-  if (!bw?.active || !(bw.max > 0)) return '';
+  const archivedTypes = Array.isArray(u.collectorArchivedTypes) ? u.collectorArchivedTypes : [];
+  if (!bw?.active || !(bw.max > 0)) {
+    if (d?.collectorMechanic && archivedTypes.length > 0) {
+      const excluded = archivedTypes.slice(0, 4);
+      const pillsHtml = excluded
+        .map((w) => {
+          const meta = damageTypeMeta(w);
+          const hitRejected = Boolean(activeDamageType && activeDamageType === w);
+          return html`<span
+            class="enemy-weakness-pill is-crossed is-rejected ${hitRejected ? 'is-matched' : ''}"
+            style="--dmg-color:${meta.color};--dmg-glow:${meta.glow}"
+            data-weakness="${w}"
+            data-weakness-tier="collected"
+            data-tooltip="已收录拒收：${escapeText(meta.name)}（伤害-40%、0削韧且触发以太铳反击）"
+            >${damageTypeIcon(w, { size: 14, tint: false })}<i
+              class="weakness-cross"
+              aria-hidden="true"
+              >×</i
+            ></span
+          >`;
+        })
+        .join('');
+      const names = excluded.map((w) => damageTypeMeta(w).name).join(' / ');
+      const tip = `馆藏拒收（常规回合）：以下打叉属性（${names}）命中伤害-40%并触发以太铳反击；其余属性正常造成伤害。`;
+      return html`<span
+        class="enemy-break-rail is-collector-archive"
+        data-break-mode="collector-archive"
+        data-tooltip="${escapeText(tip)}"
+        tabindex="0"
+        aria-label="馆藏拒收属性"
+        ><span class="break-mode-tag">拒收</span><i class="break-sep" aria-hidden="true"></i
+        ><span class="enemy-weakness-row" aria-label="已收录拒收属性">${pillsHtml}</span></span
+      >`;
+    }
+    return '';
+  }
   const maxT = Math.max(1, Number(bw.max) || 1);
   const nowT = Math.max(0, Math.min(maxT, Number(bw.current) || 0));
   const fBw = f?.breakWindow;
@@ -274,6 +320,61 @@ export function enemyBreakBar(d, u, f = u, activeDamageType = null) {
       tabindex="0"
       aria-label="普通破绽 ${nowT}/${maxT}"
       >${ringHtml}<span class="break-mode-tag">${willBreak ? 'BREAK' : '破绽'}</span></span
+    >`;
+  }
+
+  if (bw.mode === 'collector') {
+    const collected = Array.isArray(bw.collectedTypes) ? bw.collectedTypes : [];
+    const used = Array.isArray(bw.usedTypes) ? bw.usedTypes : [];
+    const excluded = [...new Set([...collected, ...used])].slice(0, 4);
+    const activeValid = Boolean(
+      activeDamageType && activeDamageType !== 'support' && activeDamageType !== 'unknown',
+    );
+    const isRejected = activeValid && collected.includes(activeDamageType);
+    const isUsedRound = activeValid && !isRejected && used.includes(activeDamageType);
+    const anyMatched = activeValid && !isRejected && !isUsedRound;
+    const excludedPills = excluded
+      .map((w) => {
+        const meta = damageTypeMeta(w);
+        const rejectedFlag = collected.includes(w);
+        const rejectedHit = Boolean(activeDamageType && activeDamageType === w);
+        return html`<span
+          class="enemy-weakness-pill is-crossed ${rejectedFlag ? 'is-rejected' : 'is-used-round'} ${rejectedHit ? 'is-matched' : ''}"
+          style="--dmg-color:${meta.color};--dmg-glow:${meta.glow}"
+          data-weakness="${w}"
+          data-weakness-tier="${rejectedFlag ? 'collected' : 'used'}"
+          data-tooltip="${
+            rejectedFlag
+              ? `已收录拒收：${escapeText(meta.name)}（伤害-40%、0削韧且触发以太铳反击）`
+              : `本回合已削韧：${escapeText(meta.name)}（同一属性每回合仅限削韧 1 次）`
+          }"
+          >${damageTypeIcon(w, { size: 14, tint: false })}<i
+            class="weakness-cross"
+            aria-hidden="true"
+            >×</i
+          ></span
+        >`;
+      })
+      .join('');
+    const collectedNames = collected.length
+      ? collected.map((w) => damageTypeMeta(w).name).join(' / ')
+      : '暂无';
+    const usedNames = used.length ? used.map((w) => damageTypeMeta(w).name).join(' / ') : '暂无';
+    const tip = `馆藏破绽（${nowT}/${maxT}）· 除去打叉属性外，其余任意属性均视为有效破绽！\n有效新属性：伤害 +35% 且双倍削韧（-2 格，同属性每回合限 1 次）\n已收录拒收（-40%伤+反击）：${collectedNames}\n本回合已触发过削韧：${usedNames}${
+      forecastLoss > 0 ? `\n预计本轮削减 ${forecastLoss} 格${willBreak ? ' → 破防失衡！' : ''}` : ''
+    }`;
+    return html`<span
+      class="enemy-break-rail is-collector ${willBreak ? 'will-break' : ''} ${forecastLoss > 0 ? 'has-forecast' : ''} ${anyMatched ? 'is-matched' : ''} ${isRejected ? 'is-rejected-hover' : ''}"
+      data-break-mode="collector"
+      data-tooltip="${escapeText(tip)}"
+      tabindex="0"
+      aria-label="馆藏破绽 ${nowT}/${maxT}"
+      >${ringHtml}<span class="break-mode-tag">${willBreak ? 'BREAK' : '非×-2'}</span
+      >${excludedPills ? '<i class="break-sep" aria-hidden="true"></i>' : ''}<span
+        class="enemy-weakness-row"
+        aria-label="除外属性"
+        >${excludedPills}</span
+      ></span
     >`;
   }
 

@@ -1,4 +1,5 @@
 import { speciesKeyOf } from './octopath.js';
+import { enemyIntentText } from './enemy-intent-text.js';
 import { ENEMY_ARCHIVE_CATEGORIES, applyEnemyTaxonomy } from './enemy-taxonomy.js';
 
 /** Classify enemies into archive tiers and combine multi-part Overlords cleanly. */
@@ -8,6 +9,19 @@ export const ENEMY_ARCHIVE_TIERS = Object.freeze([
   { id: 'boss', label: '首领', badge: '区域首领' },
   { id: 'overlord', label: '霸主', badge: '灾厄霸主' },
 ]);
+
+/** Hide fixed level-one damage and fixed poison/bleed figures in the codex while keeping weak/vulnerable/regen and shield values. */
+export function enemyArchiveIntentText(move) {
+  return enemyIntentText(move)
+    .replace(
+      /(?<![\d.])\d+(?:,\d{3})*(?:\.\d+)?(?:\/\d+(?:\.\d+)?)*\s*(?:点\s*)?(?=(?:(?:爆发|穿透|直击|直接)\s*)?伤害)/gu,
+      '',
+    )
+    .replace(
+      /(?<![\d.])\d+(?:,\d{3})*(?:\.\d+)?(?:\/\d+(?:\.\d+)?)*\s*(?:层\s*)?(?=中毒|流血)/gu,
+      '',
+    );
+}
 
 const MOON_TREE_PART_ORDER = ['moonCrown', 'moonEye', 'moonRoot'];
 const OVERLORD_CANONICAL_ORDER = [
@@ -103,13 +117,13 @@ export function filterEnemyArchiveBuckets(
           ? item.speciesIds
           : [item.id];
       const unlocked = unlockAll || ids.some((speciesId) => seenSet.has(speciesId));
-      categoryStats[itemCategory].total += 1;
-      totalCount += 1;
-      if (unlocked) {
-        categoryStats[itemCategory].unlocked += 1;
-        unlockedCount += 1;
+      if (id === 'minion') {
+        categoryStats[itemCategory].total += 1;
+        if (unlocked) categoryStats[itemCategory].unlocked += 1;
       }
-      if (category !== 'all' && category !== itemCategory) continue;
+      totalCount += 1;
+      if (unlocked) unlockedCount += 1;
+      if (id === 'minion' && category !== 'all' && category !== itemCategory) continue;
       tier.total += 1;
       if (unlocked) {
         tier.unlocked += 1;
@@ -120,7 +134,10 @@ export function filterEnemyArchiveBuckets(
     visibleBuckets[id] = visible;
   }
 
-  categoryStats.all = { unlocked: unlockedCount, total: totalCount };
+  categoryStats.all = {
+    unlocked: Object.values(categoryStats).reduce((sum, stats) => sum + stats.unlocked, 0),
+    total: Object.values(categoryStats).reduce((sum, stats) => sum + stats.total, 0),
+  };
   return { visibleBuckets, totalCount, unlockedCount, tierStats, categoryStats };
 }
 

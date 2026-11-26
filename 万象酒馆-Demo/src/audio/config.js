@@ -97,6 +97,20 @@ export const MUSIC = Object.freeze({
     badge: '霸主',
     sceneLabel: '黑市霸主',
   }),
+  arenaBoss: Object.freeze({
+    file: './assets/audio/boss-arena.mp3',
+    name: '凯旋的战鼓',
+    category: 'boss',
+    badge: '霸主',
+    sceneLabel: '海选擂主·铁臂教头',
+  }),
+  collectorBoss: Object.freeze({
+    file: './assets/audio/boss-collector.mp3',
+    name: '孤品的裁定',
+    category: 'boss',
+    badge: '霸主',
+    sceneLabel: '秘藏馆主·白鸦',
+  }),
 });
 
 export const BGM_CATEGORIES = Object.freeze([
@@ -135,6 +149,8 @@ export const OVERLORD_MUSIC = Object.freeze({
   alchemicalPuppet: 'puppetBoss',
   darkscaleWarlord: 'warlordBoss',
   radiantWyvern: 'wyvernBoss',
+  arenaQualifierIronCoach: 'arenaBoss',
+  silverCrownSyndicateArchon: 'collectorBoss',
 });
 
 /** Select music from the encounter's actual map, including repeated Boss definitions. */

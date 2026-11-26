@@ -19,16 +19,16 @@ export const CITY_CENTER = Object.freeze({
   returnDestination: 'tavern',
   returnLabel: '返回酒馆',
   bearings: ['市政钟楼', '旅人公会', '返回酒馆', '石柱拱廊'],
-  panorama: './assets/exploration/city-center-panorama-v1.png',
-  panoramaBand: './assets/exploration/city-center-band-v1.png',
+  panorama: './assets/exploration/city-center-panorama-v1.webp',
+  panoramaBand: './assets/exploration/city-center-band-v1.webp',
   faceImages: ['front', 'right', 'back', 'left'].map(
-    (direction) => `./assets/exploration/city-center-${direction}-v1.png`,
+    (direction) => `./assets/exploration/city-center-${direction}-v1.webp`,
   ),
   cutouts: [
     {
       id: 'sign',
       kind: 'prop',
-      image: './assets/exploration/city-center-sign-v1.png',
+      image: './assets/exploration/city-center-sign-v1.webp',
       position: [-1.4, -2.9],
       height: 1.4,
     },

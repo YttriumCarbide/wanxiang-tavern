@@ -21,7 +21,7 @@ export function mapInput(input) {
             linkId: '从给定路线中选择一个连接点，优先使用抽中的点',
             direction: Object.keys(DISCOVERY_DIRECTIONS),
             world:
-              '仍按地图API格式返回。顶层另加 linkId、direction。地点应吻合触发的地区地理、气候和文化，写一个有明确吸引力的奇观或事件。选择贴合环境的现有战斗背景。敌人数值填写1级基础值，地点等级由代码决定。',
+              '仍按地图API格式返回。顶层另加 linkId、direction。地点应吻合触发的地区地理、气候和文化，写一个有明确吸引力的奇观或事件。选择贴合环境的现有战斗背景。敌人使用tier与power定性档位；category必须填写，采用十四种标准基础种时填写匹配的baseSpecies，自定义种类可省略baseSpecies。地点等级由代码决定。',
           },
         }
       : {}),

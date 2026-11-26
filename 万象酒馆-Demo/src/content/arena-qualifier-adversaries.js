@@ -769,16 +769,300 @@ const ARENA_QUALIFIER_ARCHIVE_DEFINITIONS = Object.freeze(
         portrait: 'arena-q-iron-coach',
         model: 'arena-q-iron-coach.glb',
         archiveSource: ARCHIVE_SOURCE,
+        description:
+          '大骑士竞技场海选擂台守关教头，常年稳坐两动节奏：先以正常速度试探攻防，每回合末必于速度1蓄力挥出重棍轰台。',
         boss: true,
         overlord: true,
         standOnCard: true,
         nonVoxel: true,
         displayPlinth: false,
-        archiveAnimationLabels: { Talon_Rend: '重棍下砸' },
-        intents: [{ name: '行动待定', text: '行动文本待定。' }],
+        mp: 0,
+        hp: 260,
+        speed: 6,
+        limit: 1,
+        actions: 2,
+        enragedActions: 2,
+        finalPhaseActions: 3,
+        overlordPhases: Object.freeze([0.68, 0.34]),
+        breakLayersByPhase: Object.freeze([2, 2, 3]),
+        phaseShields: Object.freeze([0, 18, 26]),
+        artifactByPhase: Object.freeze([0, 1, 2]),
+        buffs: {},
+        tactic: { target: 'fixed' },
+        attackStyle: 'stone-slam',
+        attackType: 'brawl',
+        phaseMode: 'threshold',
+        phaseThreshold: 0.68,
+        weaknesses: ['spear', 'fire', 'lightning', 'light'],
+        toughness: 2,
+        archiveAnimationLabels: {
+          Normal_Attack: '重棍抢攻 / 非弱点截击',
+          Special_Attack: '铁臂蓄势横扫',
+          Special_Action: '稳桩架势 / 阶段气魄',
+          Talon_Rend: '速度1蓄力重击',
+          Charge_Up: '擂台沉腰蓄势',
+          Break_Stagger: '擂台破防失衡',
+        },
+        ironCoachMechanic: Object.freeze({
+          normalPoolByPhase: Object.freeze([
+            Object.freeze({
+              attacks: Object.freeze([
+                Object.freeze({
+                  name: '重棍直击',
+                  text: '以标准速度猛击中位造成16点伤害，并施加1层虚弱。',
+                  slot: 1,
+                  slots: [1],
+                  damageType: 'brawl',
+                  clip: 'Normal_Attack',
+                  effects: [
+                    { type: 'damage', target: 'opponents', value: 16 },
+                    { type: 'buff', buff: 'weak', value: 1, target: 'opponents' },
+                  ],
+                }),
+                Object.freeze({
+                  name: '铁臂扫台',
+                  text: '横扫左、右位各造成11点伤害。',
+                  slots: [0, 2],
+                  damageType: 'brawl',
+                  clip: 'Normal_Attack',
+                  effects: [{ type: 'damage', target: 'opponents', value: 11 }],
+                }),
+              ]),
+              defenses: Object.freeze([
+                Object.freeze({
+                  name: '稳桩守势',
+                  text: '沉腰摆出守擂架势，自身获得18点护盾与1层铁皮。',
+                  slot: 1,
+                  slots: [1],
+                  clip: 'Special_Action',
+                  effects: [
+                    { type: 'shield', target: 'self', value: 18 },
+                    { type: 'buff', buff: 'iron', value: 1, target: 'self' },
+                  ],
+                }),
+              ]),
+            }),
+            Object.freeze({
+              attacks: Object.freeze([
+                Object.freeze({
+                  name: '碎盾横扫',
+                  text: '横扫左、右位各造成14点伤害并施加1层易伤。',
+                  slots: [0, 2],
+                  damageType: 'brawl',
+                  clip: 'Special_Attack',
+                  enraged: true,
+                  effects: [
+                    { type: 'damage', target: 'opponents', value: 14 },
+                    { type: 'buff', buff: 'vulnerable', value: 1, target: 'opponents' },
+                  ],
+                }),
+                Object.freeze({
+                  name: '压迫连打',
+                  text: '沉棍重敲中位造成19点伤害并施加2层流血。',
+                  slot: 1,
+                  slots: [1],
+                  damageType: 'brawl',
+                  clip: 'Normal_Attack',
+                  enraged: true,
+                  effects: [
+                    { type: 'damage', target: 'opponents', value: 19 },
+                    { type: 'buff', buff: 'bleed', value: 2, target: 'opponents' },
+                  ],
+                }),
+              ]),
+              defenses: Object.freeze([
+                Object.freeze({
+                  name: '铁壁聚气',
+                  text: '立棍固防，自身获得22点护盾并提升1层力量。',
+                  slot: 1,
+                  slots: [1],
+                  clip: 'Special_Action',
+                  enraged: true,
+                  effects: [
+                    { type: 'shield', target: 'self', value: 22 },
+                    { type: 'buff', buff: 'strength', value: 1, target: 'self' },
+                  ],
+                }),
+              ]),
+            }),
+            Object.freeze({
+              attacks: Object.freeze([
+                Object.freeze({
+                  name: '撼地狂扫',
+                  text: '狂扫全前场各造成14点伤害并施加1层易伤。',
+                  slots: [0, 1, 2],
+                  damageType: 'brawl',
+                  clip: 'Special_Attack',
+                  enraged: true,
+                  effects: [
+                    { type: 'damage', target: 'opponents', value: 14 },
+                    { type: 'buff', buff: 'vulnerable', value: 1, target: 'opponents' },
+                  ],
+                }),
+                Object.freeze({
+                  name: '霸王铁肘',
+                  text: '贴身撞击中位造成22点伤害并施加3层流血。',
+                  slot: 1,
+                  slots: [1],
+                  damageType: 'brawl',
+                  clip: 'Normal_Attack',
+                  enraged: true,
+                  effects: [
+                    { type: 'damage', target: 'opponents', value: 22 },
+                    { type: 'buff', buff: 'bleed', value: 3, target: 'opponents' },
+                  ],
+                }),
+              ]),
+              defenses: Object.freeze([
+                Object.freeze({
+                  name: '不屈护台势',
+                  text: '铁臂交叠死守中门，自身获得26点护盾与2层铁皮。',
+                  slot: 1,
+                  slots: [1],
+                  clip: 'Special_Action',
+                  enraged: true,
+                  effects: [
+                    { type: 'shield', target: 'self', value: 26 },
+                    { type: 'buff', buff: 'iron', value: 2, target: 'self' },
+                  ],
+                }),
+              ]),
+            }),
+          ]),
+          chargeSlamsByPhase: Object.freeze([
+            Object.freeze({
+              name: '速度1蓄力 · 重棍崩台',
+              text: '固定速度1在回合末抡棍下砸中位造成24点伤害并施加1层易伤；破防可将其彻底打断。',
+              slot: 1,
+              slots: [1],
+              damageType: 'brawl',
+              clip: 'Talon_Rend',
+              fixedSpeed: 1,
+              isCoachChargeSlam: true,
+              effects: [
+                { type: 'damage', target: 'opponents', value: 24 },
+                { type: 'buff', buff: 'vulnerable', value: 1, target: 'opponents' },
+              ],
+            }),
+            Object.freeze({
+              name: '速度1蓄力 · 震台崩拳',
+              text: '固定速度1砸击左、右位各造成18点伤害并施加2层易伤；非弱点攻击会触发教头截击反击。',
+              slots: [0, 2],
+              damageType: 'brawl',
+              clip: 'Talon_Rend',
+              fixedSpeed: 1,
+              isCoachChargeSlam: true,
+              enraged: true,
+              effects: [
+                { type: 'damage', target: 'opponents', value: 18 },
+                { type: 'buff', buff: 'vulnerable', value: 2, target: 'opponents' },
+              ],
+            }),
+            Object.freeze({
+              name: '速度1蓄力 · 终结轰台',
+              text: '固定速度1全力轰击全前场各造成19点伤害并施加2层虚弱与2层易伤。',
+              slots: [0, 1, 2],
+              damageType: 'brawl',
+              clip: 'Talon_Rend',
+              fixedSpeed: 1,
+              isCoachChargeSlam: true,
+              enraged: true,
+              effects: [
+                { type: 'damage', target: 'opponents', value: 19 },
+                { type: 'buff', buff: 'weak', value: 2, target: 'opponents' },
+                { type: 'buff', buff: 'vulnerable', value: 2, target: 'opponents' },
+              ],
+            }),
+          ]),
+          counterDamageByPhase: Object.freeze([0, 10, 13]),
+          counterClip: 'Normal_Attack',
+          counterDamageType: 'brawl',
+          counterName: '教头截击',
+        }),
+        intents: [
+          {
+            name: '重棍直击',
+            text: '猛击中位造成16点伤害，并施加1层虚弱。',
+            slots: [1],
+            damageType: 'brawl',
+            clip: 'Normal_Attack',
+            effects: [
+              { type: 'damage', target: 'opponents', value: 16 },
+              { type: 'buff', buff: 'weak', value: 1, target: 'opponents' },
+            ],
+          },
+          {
+            name: '稳桩守势',
+            text: '自身获得18点护盾与1层铁皮。',
+            slots: [1],
+            clip: 'Special_Action',
+            effects: [
+              { type: 'shield', target: 'self', value: 18 },
+              { type: 'buff', buff: 'iron', value: 1, target: 'self' },
+            ],
+          },
+        ],
+        enragedIntents: [
+          {
+            name: '碎盾横扫',
+            text: '横扫左、右位各造成14点伤害并施加1层易伤。',
+            slots: [0, 2],
+            damageType: 'brawl',
+            clip: 'Special_Attack',
+            enraged: true,
+            effects: [
+              { type: 'damage', target: 'opponents', value: 14 },
+              { type: 'buff', buff: 'vulnerable', value: 1, target: 'opponents' },
+            ],
+          },
+          {
+            name: '铁壁聚气',
+            text: '自身获得22点护盾并提升1层力量。',
+            slots: [1],
+            clip: 'Special_Action',
+            enraged: true,
+            effects: [
+              { type: 'shield', target: 'self', value: 22 },
+              { type: 'buff', buff: 'strength', value: 1, target: 'self' },
+            ],
+          },
+        ],
+        finalPhaseIntents: [
+          {
+            name: '撼地狂扫',
+            text: '狂扫全前场各造成14点伤害并施加1层易伤。',
+            slots: [0, 1, 2],
+            damageType: 'brawl',
+            clip: 'Special_Attack',
+            enraged: true,
+            effects: [
+              { type: 'damage', target: 'opponents', value: 14 },
+              { type: 'buff', buff: 'vulnerable', value: 1, target: 'opponents' },
+            ],
+          },
+          {
+            name: '不屈护台势',
+            text: '自身获得26点护盾与2层铁皮。',
+            slots: [1],
+            clip: 'Special_Action',
+            enraged: true,
+            effects: [
+              { type: 'shield', target: 'self', value: 26 },
+              { type: 'buff', buff: 'iron', value: 2, target: 'self' },
+            ],
+          },
+        ],
       },
     ],
   ]),
+);
+
+const ARENA_QUALIFIER_LIST = Object.values(ARENA_QUALIFIER_ARCHIVE_DEFINITIONS);
+export const ARENA_QUALIFIER_ENEMIES = Object.freeze(
+  ARENA_QUALIFIER_LIST.filter((entry) => !entry.boss),
+);
+export const ARENA_QUALIFIER_BOSSES = Object.freeze(
+  ARENA_QUALIFIER_LIST.filter((entry) => entry.boss),
 );
 
 export { ARENA_QUALIFIER_ARCHIVE_DEFINITIONS };

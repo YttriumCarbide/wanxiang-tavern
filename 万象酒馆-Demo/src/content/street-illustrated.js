@@ -1,4 +1,4 @@
-const image = './assets/exploration/street-hd-v4/connected.png';
+const image = './assets/exploration/street-hd-v4/connected.webp';
 const spots = Object.freeze({
   'cobble-west': { foot: [0.4, 0.85], height: 0.35 },
   'cobble-center': { foot: [0.625, 0.8], height: 0.29 },
@@ -15,7 +15,7 @@ const foreground = Object.freeze([]);
 /** One freely framed painting shares all standing and investigation coordinates. */
 export const STREET_ILLUSTRATED = Object.freeze({
   image,
-  nightImage: './assets/exploration/town-night/street.png',
+  nightImage: './assets/exploration/town-night/street.webp',
   aspect: 3,
   spots,
   points,

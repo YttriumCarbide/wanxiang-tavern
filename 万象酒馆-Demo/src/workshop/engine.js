@@ -204,6 +204,65 @@ export function workshopParallel(state, catalog, station, id) {
   return count(Math.min(1e6, (base + bonus) * active), 1e6);
 }
 
+export function workshopItemConsumers(state, catalog, itemId) {
+  if (!state || !catalog || !itemId) return [];
+  const consumers = [];
+  for (const station of catalog.stations) {
+    const record = state.stations?.[station.id];
+    if (!record?.active || !workshopUnlocked(state, catalog, 'station', station)) continue;
+    const outputIds = Object.keys(station.outputs || {}).filter((outId) => {
+      const outItem = catalog.items.find((entry) => entry.id === outId);
+      return outItem && workshopUnlocked(state, catalog, 'item', outItem);
+    });
+    if (!outputIds.length) continue;
+    if (station.cycle > 0) {
+      const required = station.inputs?.[itemId] || 0;
+      if (required <= 0) continue;
+      const rate = workshopRate(state, catalog, '', station.id);
+      const seconds = station.cycle / rate;
+      const perCycle = required * record.active;
+      consumers.push({
+        stationId: station.id,
+        stationName: station.name,
+        active: record.active,
+        count: record.count,
+        outputs: outputIds.map((outId) => ({
+          id: outId,
+          name: catalog.items.find((entry) => entry.id === outId)?.name || outId,
+        })),
+        perCycle,
+        seconds,
+        perMinute: (perCycle * 60) / seconds,
+      });
+      continue;
+    }
+    for (const outId of outputIds) {
+      const outItem = catalog.items.find((entry) => entry.id === outId);
+      const inputs = Object.keys(outItem.inputs || {}).length
+        ? outItem.inputs
+        : station.inputs || {};
+      const required = inputs[itemId] || 0;
+      if (required <= 0) continue;
+      const parallel = workshopParallel(state, catalog, station, outId);
+      if (parallel <= 0) continue;
+      const rate = workshopRate(state, catalog, outId, station.id);
+      const seconds = (station.period || outItem.seconds) / rate;
+      const perCycle = required * parallel;
+      consumers.push({
+        stationId: station.id,
+        stationName: station.name,
+        active: record.active,
+        count: record.count,
+        outputs: [{ id: outId, name: outItem.name }],
+        perCycle,
+        seconds,
+        perMinute: (perCycle * 60) / seconds,
+      });
+    }
+  }
+  return consumers;
+}
+
 export function workshopBuildCost(state, station) {
   const n = state.stations[station.id]?.count || 0;
   const repeat = n > 0 ? station.repeat : null;
@@ -385,12 +444,6 @@ export function workshopAction(input, catalog, action, funds = {}) {
   } else if (action.type === 'active') {
     if (!station || !state.stations[station.id]) return reject('尚未建造');
     state.stations[station.id].active = count(action.amount, state.stations[station.id].count);
-  } else if (action.type === 'sell') {
-    const amount = count(action.amount, state.items[action.id] || 0);
-    if (!item || !amount) return reject('没有可交付的物资');
-    state.items[item.id] -= amount;
-    wallet.gold = count(wallet.gold + amount * item.value, 999999999);
-    state.delivered = count(state.delivered + amount);
   } else if (action.type === 'research') {
     const tech = catalog.research.find((entry) => entry.id === action.id);
     const level = state.research[action.id] || 0;

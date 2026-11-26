@@ -31,19 +31,26 @@ dialog.city-service-dialog[open] {
   min-height: min(400px, calc(100dvh - 24px));
   padding: 0;
   overflow: hidden;
-  border: 3px double #9b774f;
-  color: #f5ead9;
+  border: 1px solid rgba(226, 192, 120, 0.48);
+  border-radius: 4px;
+  color: var(--astral-text);
   background:
-    linear-gradient(100deg, #180f0af0 9%, #28150aba 55%, #24171069),
-    url('../assets/events/forge-event.png') center 42% / cover #281d16;
-  box-shadow: 0 26px 76px #080501d9;
+    linear-gradient(
+      100deg,
+      rgba(11, 13, 31, 0.94) 9%,
+      rgba(19, 24, 54, 0.78) 55%,
+      rgba(14, 18, 42, 0.56)
+    ),
+    url('../assets/events/forge-event.webp') center 42% / cover #0b0d1f;
+  box-shadow: var(--astral-frame-shadow);
 }
 #city-blacksmith[open] {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
 }
 #city-blacksmith::backdrop {
-  background: #0c0706cc;
+  background: rgba(4, 5, 14, 0.82);
+  backdrop-filter: blur(6px);
 }
 .city-service-head {
   display: flex;
@@ -51,16 +58,17 @@ dialog.city-service-dialog[open] {
   gap: 16px;
   min-width: 0;
   padding: 10px 16px;
-  background: #20130fe8;
-  border-bottom: 1px solid #9b774f;
+  background: linear-gradient(180deg, rgba(24, 30, 74, 0.95), rgba(11, 14, 34, 0.97));
+  border-bottom: 1px solid var(--astral-line);
 }
 .city-service-head h2 {
   margin: 0;
   margin-inline-end: auto;
-  font: 600 clamp(15px, 3vw, 23px) / 1.3 var(--daily-serif, serif);
+  color: var(--astral-gold-hi);
+  font: 600 clamp(15px, 3vw, 23px) / 1.3 var(--display-serif);
 }
 .city-service-head [data-smith-wallet] {
-  color: #ffda8e;
+  color: var(--astral-gold-hi);
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
@@ -68,8 +76,8 @@ dialog.city-service-dialog[open] {
   margin: 0;
 }
 .city-service-head button {
-  min-width: 42px;
-  min-height: 42px;
+  min-width: 38px;
+  min-height: 38px;
   padding: 0;
 }
 .blacksmith-floor {
@@ -81,8 +89,8 @@ dialog.city-service-dialog[open] {
   overflow: auto;
   overscroll-behavior: contain;
   padding: 10px;
-  border-right: 1px solid #9b774f91;
-  background: repeating-linear-gradient(180deg, #271914d1 0 49px, #4a2f21eb 49px 52px);
+  border-right: 1px solid var(--astral-line);
+  background: linear-gradient(180deg, rgba(13, 17, 42, 0.9), rgba(8, 10, 26, 0.94));
 }
 .blacksmith-rack > button {
   display: flex;
@@ -91,14 +99,17 @@ dialog.city-service-dialog[open] {
   width: 100%;
   min-height: 46px;
   margin-block-end: 5px;
-  padding: 4px 7px;
-  border-radius: 2px;
+  padding: 5px 8px;
+  border-radius: 3px;
+  border: 1px solid rgba(226, 192, 120, 0.22);
+  background: rgba(18, 24, 56, 0.72);
   text-align: left;
+  box-shadow: none;
 }
 .blacksmith-rack > button[aria-pressed='true'] {
-  border-color: #f4bd71;
-  box-shadow: inset 3px 0 #f4bd71;
-  background: #512c20eb;
+  border-color: var(--astral-gold-hi);
+  box-shadow: inset 3px 0 var(--astral-gold-hi);
+  background: linear-gradient(90deg, rgba(226, 192, 120, 0.16), rgba(24, 32, 72, 0.92));
 }
 .blacksmith-rack > button > span:last-child {
   display: grid;
@@ -113,7 +124,7 @@ dialog.city-service-dialog[open] {
 .blacksmith-rack small,
 .blacksmith-item span {
   font-size: 12px;
-  color: #eed0a9;
+  color: var(--astral-sub);
 }
 .blacksmith-anvil {
   display: grid;
@@ -122,7 +133,12 @@ dialog.city-service-dialog[open] {
   overflow: auto;
   overscroll-behavior: contain;
   padding: 14px clamp(10px, 3vw, 28px);
-  background: linear-gradient(0deg, #20140ff5, #24150d9c 54%, transparent);
+  background: linear-gradient(
+    0deg,
+    rgba(11, 13, 31, 0.96),
+    rgba(14, 18, 44, 0.72) 56%,
+    transparent
+  );
 }
 .blacksmith-anvil h3,
 .blacksmith-anvil p {
@@ -149,20 +165,23 @@ dialog.city-service-dialog[open] {
   justify-items: center;
   min-block-size: 44px;
   padding: 5px;
-  border-radius: 2px;
-  background: linear-gradient(180deg, #5c4230, #302019);
-  color: #fff0d1;
+  border-radius: 3px;
+  border: 1px solid rgba(226, 192, 120, 0.38);
+  background: var(--astral-card-bg);
+  color: var(--astral-text);
+  box-shadow: var(--astral-btn-shadow);
 }
 .blacksmith-tools button small {
-  color: #ffe0a2;
+  color: var(--astral-gold-hi);
   font-size: 11px;
 }
 .city-service-status {
   margin: 0;
   padding: 6px 16px;
   min-block-size: 29px;
-  background: #20130f;
-  color: #ffdf9f;
+  background: rgba(9, 11, 28, 0.96);
+  border-top: 1px solid var(--astral-line);
+  color: var(--astral-gold-hi);
   font-size: 12px;
 }
 @media (max-width: 540px) {
@@ -197,13 +216,18 @@ dialog.city-service-dialog[open] {
   min-block-size: min(322px, 56dvh);
   margin-inline: auto;
   padding: clamp(16px, 3vw, 32px);
-  border: 7px ridge #845134;
+  border: 2px solid rgba(226, 192, 120, 0.36);
   background:
-    radial-gradient(ellipse at 26% 0%, #d0925666, transparent 68%),
-    repeating-linear-gradient(177deg, #65402a 0 48px, #3d2419 49px 51px, #845437 52px 54px);
+    radial-gradient(ellipse at 26% 0%, rgba(44, 58, 128, 0.36), transparent 68%),
+    repeating-linear-gradient(
+      177deg,
+      rgba(16, 20, 48, 0.94) 0 48px,
+      rgba(11, 13, 31, 0.96) 49px 51px,
+      rgba(22, 28, 66, 0.94) 52px 54px
+    );
   box-shadow:
-    inset 0 2px 18px #2d1713,
-    0 8px 18px #110905a6;
+    inset 0 2px 18px rgba(4, 6, 18, 0.85),
+    0 8px 18px rgba(0, 0, 0, 0.45);
 }
 .guild-board-wall > .guild-notice {
   display: grid;

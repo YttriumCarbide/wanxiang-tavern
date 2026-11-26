@@ -1,3 +1,4 @@
+import { BUFFS } from './buffs.js';
 import { CHANGJING_YUEXI } from './content/changjing-yuexi.js';
 import { FOREST_ENEMIES, FOREST_BOSSES } from './content/forest-adversaries.js';
 import { FROST_ENEMIES, FROST_BOSSES } from './content/frost-adversaries.js';
@@ -6,6 +7,14 @@ import { LADDER_ENEMIES, LADDER_BOSSES } from './content/ladder-adversaries.js';
 import { COMMON_ENEMIES, COMMON_BOSSES } from './content/common-adversaries.js';
 import { MILL_ENEMIES, MILL_BOSSES } from './content/mill-adversaries.js';
 import { QUARRY_ENEMIES, QUARRY_BOSSES } from './content/quarry-adversaries.js';
+import {
+  ARENA_QUALIFIER_ENEMIES,
+  ARENA_QUALIFIER_BOSSES,
+} from './content/arena-qualifier-adversaries.js';
+import {
+  SILVER_CROWN_SYNDICATE_ENEMIES,
+  SILVER_CROWN_SYNDICATE_BOSSES,
+} from './content/silver-crown-syndicate-adversaries.js';
 import { applyEnemyTaxonomy } from './enemy-taxonomy.js';
 import {
   EXTRA_ENEMIES,
@@ -26,100 +35,21 @@ const OVERLORD_MODEL_OVERRIDES = Object.freeze({
   alchemicalPuppet: { model: 'alchemical-puppet.glb' },
   darkscaleWarlord: { model: 'darkscale-warlord.glb' },
   banditSyndicateKing: { model: 'bandit-syndicate-king.glb' },
+  arenaQualifierIronCoach: { model: 'arena-q-iron-coach.glb' },
+  silverCrownSyndicateArchon: { model: 'silver-crown-syndicate-archon.glb' },
 });
 
 function prepareEnemyDefinition(entry) {
   const modelOverride = OVERLORD_MODEL_OVERRIDES[entry.id];
   return applyEnemyTaxonomy(modelOverride ? { ...entry, ...modelOverride } : entry);
 }
-export const BUFFS = {
-  flying: {
-    name: '飞行',
-    icon: '飞',
-    text: '受到的伤害减半（向下取整，攻击先减伤再扣护盾）；正常回合结束减少1层。',
-  },
-  blind: {
-    name: '致盲',
-    icon: '盲',
-    text: '攻击若伤害两个及以上目标，其中一个随机目标的伤害变为0；正常回合结束减少1层。',
-  },
-  confusion: {
-    name: '混乱',
-    icon: '乱',
-    text: '攻击改为命中一名随机存活队友，并转移附带的负面状态；范围攻击只结算一个随机位置。角色本回合锁定同一名队友。没有存活队友时伤害降低15%，可与虚弱、平衡叠乘。正常回合结束减少1层。',
-  },
-  balance: {
-    name: '平衡',
-    icon: '衡',
-    text: '攻击伤害降低15%（可与其他减伤叠乘），并均分至三个前场位置，原有状态目标不变。空位不承受伤害。混乱转向队友时，减伤仍生效。',
-  },
-  haste: {
-    name: '敏捷',
-    icon: '捷',
-    text: '每层增加1次每回合行动上限，最多增加2次；仍消耗正常AP。',
-  },
-  bind: {
-    name: '禁锢',
-    icon: '禁',
-    text: '跳过目标本回合尚未执行的主动行动，回合结束解除；层数不延长持续时间。',
-  },
-  strength: { name: '力量', icon: '力', text: '每层使直接伤害增加10%' },
-  guard: { name: '守势', icon: '守', text: '获得护盾时每层使护盾获得量增加20%' },
-  weak: {
-    name: '虚弱',
-    icon: '弱',
-    text: '攻击伤害减少25%（不随层数叠加），正常回合结束减少1层',
-  },
-  vulnerable: {
-    name: '易伤',
-    icon: '伤',
-    text: '受到的直接伤害增加50%（不随层数叠加），正常回合结束减少1层',
-  },
-  regen: {
-    name: '再生',
-    icon: '生',
-    text: '回合末先按最大hp的3%/层回复（单回合最高30%），再减少1层；濒死单位无法回复',
-  },
-  poison: { name: '中毒', icon: '毒', text: '回合末再生后失去层数对应hp，然后减少1层' },
-  slow: {
-    name: '迟缓',
-    icon: '缓',
-    text: '减少敌人速度，实时后移敌方行动；2层及以上正常回合末减1层，最低保留1层',
-  },
-  bleed: {
-    name: '流血',
-    icon: '血',
-    text: '每次行动前失去层数对应hp，流血致死则取消行动；正常回合结束减少1层',
-  },
-  iron: {
-    name: '铁皮',
-    icon: '铁',
-    text: '每次受到攻击时每层使该次伤害减少10%（最高70%，最低保留1点）',
-  },
-  overload: {
-    name: '超限',
-    icon: '载',
-    text: '上限1层，使下一次行动重复生效一次（×2）；若为攻击技能，每次攻击额外造成结合期间已增加的最大sp与最大hp之和的伤害。用后移除，跨回合保留。',
-  },
-  meteor: { name: '流星剑姿', icon: '星', text: '本场普通攻击额外攻击一次，不叠加攻击次数' },
-  sacrifice: {
-    name: '欺之牺',
-    icon: '牺',
-    text: '下次敌人死亡时献祭此单位，由施术者吸收部分属性和一个技能；本场有效',
-  },
-  artifact: {
-    name: '人工制品',
-    icon: '械',
-    text: '免疫一次负面状态施加（单次施加多层同一负面状态也仅消耗1层人工制品完全抵消；连续多次施加则逐次消耗）；跨回合保留。',
-  },
-};
+export { BUFFS };
 export const HEROES = [
   CHANGJING_YUEXI,
   {
     id: 'lyria',
     weapon: 'sword',
     name: '绯璃',
-    title: '剑姬',
     color: '#d48c98',
     portrait: 'swordswoman',
     hp: 36,
@@ -165,7 +95,6 @@ export const HEROES = [
     id: 'morrow',
     weapon: 'staff',
     name: '时砂',
-    title: '时术师',
     color: '#89c6cd',
     portrait: 'chronomancer',
     hp: 30,
@@ -211,7 +140,6 @@ export const HEROES = [
     id: 'serin',
     weapon: 'staff',
     name: '塞琳',
-    title: '祈愈师',
     color: '#b7cb98',
     portrait: 'healer',
     hp: 32,
@@ -256,7 +184,6 @@ export const HEROES = [
     id: 'vesper',
     weapon: 'staff',
     name: '鸦隐',
-    title: '咒术师',
     color: '#b39acb',
     portrait: 'warlock',
     hp: 30,
@@ -303,7 +230,6 @@ export const HEROES = [
     id: 'rook',
     weapon: 'bow',
     name: '游隼',
-    title: '游侠',
     color: '#cfb782',
     portrait: 'ranger',
     hp: 34,
@@ -350,6 +276,7 @@ export const ENEMIES = [
     title: '弱怪 / 简单攻击',
     color: '#91bb78',
     portrait: 'moss-slime',
+    model: 'moss-slime.glb',
     hp: 26,
     mp: 0,
     speed: 3,
@@ -371,6 +298,7 @@ export const ENEMIES = [
     title: '弱怪 / 缓慢攻击',
     color: '#d1a776',
     portrait: 'sprout',
+    model: 'sprout.glb',
     hp: 24,
     mp: 0,
     speed: 1,
@@ -392,6 +320,7 @@ export const ENEMIES = [
     title: '弱怪 / 薄盾',
     color: '#a9b3b6',
     portrait: 'pebble',
+    model: 'pebble.glb',
     hp: 34,
     mp: 0,
     speed: 2,
@@ -414,6 +343,7 @@ export const ENEMIES = [
     title: '快速 / 流血',
     color: '#b46e57',
     portrait: 'hound',
+    model: 'hound.glb',
     hp: 64,
     mp: 0,
     speed: 5,
@@ -445,6 +375,7 @@ export const ENEMIES = [
     elite: true,
     color: '#8d9fa6',
     portrait: 'golem',
+    model: 'warden.glb',
     hp: 118,
     mp: 0,
     speed: 3,
@@ -484,6 +415,7 @@ export const ENEMIES = [
     title: '法术 / 中毒',
     color: '#b097c6',
     portrait: 'cultist',
+    model: 'hexer.glb',
     hp: 62,
     mp: 0,
     speed: 1,
@@ -516,6 +448,8 @@ export const ENEMIES = [
   ...FROST_ENEMIES,
   ...MILL_ENEMIES,
   ...QUARRY_ENEMIES,
+  ...ARENA_QUALIFIER_ENEMIES,
+  ...SILVER_CROWN_SYNDICATE_ENEMIES,
 ].map(prepareEnemyDefinition);
 export const BOSSES = [
   {
@@ -529,6 +463,7 @@ export const BOSSES = [
     splitActions: true,
     color: '#dfb46d',
     portrait: 'boss-gate',
+    model: 'boss-gate.glb',
     hp: 158,
     mp: 0,
     speed: 3,
@@ -585,6 +520,7 @@ export const BOSSES = [
     phaseMode: 'threshold',
     color: '#bdaaed',
     portrait: 'boss-bloom',
+    model: 'boss-bloom.glb',
     hp: 132,
     mp: 0,
     speed: 4,
@@ -649,6 +585,8 @@ export const BOSSES = [
   ...FROST_BOSSES,
   ...MILL_BOSSES,
   ...QUARRY_BOSSES,
+  ...ARENA_QUALIFIER_BOSSES,
+  ...SILVER_CROWN_SYNDICATE_BOSSES,
 ].map(prepareEnemyDefinition);
 const additionalEnemies = [
   ...RUINS_ADVERSARIES,
@@ -713,6 +651,14 @@ const BOSS_MAP_OVERRIDES = Object.freeze({
   radiantWyvern: 'relic',
   darkscaleWarlord: 'graystone-quarry',
   banditSyndicateKing: 'black-market',
+  arenaQualifierTowerCaptain: 'duel-arena',
+  arenaQualifierPikeCaptain: 'duel-arena',
+  arenaQualifierMaul: 'duel-arena',
+  arenaQualifierBladeCaptain: 'duel-arena',
+  arenaQualifierHoundCaptain: 'duel-arena',
+  arenaQualifierVeteran: 'duel-arena',
+  arenaQualifierIronCoach: 'duel-arena',
+  silverCrownSyndicateArchon: 'silver-shield-exhibition',
 });
 
 const bossSquadFor = (boss) => {
@@ -739,6 +685,14 @@ const bossSquadFor = (boss) => {
     ladderWebSpider: ['ladderCliffLizard', boss, 'ladderCarrionBat'],
     ladderCrowman: ['ladderCarrionBat', boss, 'drakeBadlandFalcon'],
     banditSyndicateKing: [boss],
+    arenaQualifierTowerCaptain: ['arenaQualifierWoodShield', boss, 'arenaQualifierSlinger'],
+    arenaQualifierPikeCaptain: ['arenaQualifierStaff', boss, 'arenaQualifierPitchfork'],
+    arenaQualifierMaul: ['arenaQualifierSmith', boss, 'arenaQualifierStick'],
+    arenaQualifierBladeCaptain: ['arenaQualifierKnives', boss, 'arenaQualifierNet'],
+    arenaQualifierHoundCaptain: ['arenaQualifierHound', boss, 'arenaQualifierRam'],
+    arenaQualifierVeteran: ['arenaQualifierWoodShield', boss, 'arenaQualifierSmith'],
+    arenaQualifierIronCoach: [boss],
+    silverCrownSyndicateArchon: [boss],
     goblinKingGorg: ['goblinShaman', boss, 'goblinSapper'],
     erosionRiftTyrant: ['erosionSpitter', boss, 'erosionWing'],
   };

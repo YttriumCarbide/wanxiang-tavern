@@ -511,6 +511,73 @@ test('new enemies have original voxel studies, portraits, lore-ready IDs and a u
   assert(context.encounters[4].enemies.some((enemy) => enemy.id === 'bossTide'));
 });
 
+test('early enemy cards and models resolve to their voxel sources and catalog entries', async () => {
+  const newModels = new Set([
+    'mossSlime',
+    'sprout',
+    'pebble',
+    'hound',
+    'warden',
+    'hexer',
+    'bossGate',
+    'bossBloom',
+  ]);
+  const ids = [...newModels, 'crystalBeetle', 'cinderImp', 'tideJelly', 'bossTide'];
+  const definitions = new Map([...ENEMIES, ...BOSSES].map((enemy) => [enemy.id, enemy]));
+  const catalog = JSON.parse(
+    await readFile(new URL('../assets/asset-catalog.json', import.meta.url), 'utf8'),
+  );
+
+  for (const id of ids) {
+    const enemy = definitions.get(id);
+    assert(enemy, `Missing formal enemy definition: ${id}`);
+    assert.match(enemy.model || '', /\.glb$/u, `Missing GLB binding: ${id}`);
+    const modelBytes = await readFile(new URL(`../assets/${enemy.model}`, import.meta.url));
+    assert.equal(modelBytes.readUInt32LE(0), 0x46546c67, `Invalid GLB: ${enemy.model}`);
+    assert.equal(modelBytes.readUInt32LE(4), 2);
+    assert.equal(modelBytes.readUInt32LE(8), modelBytes.length);
+    const jsonLength = modelBytes.readUInt32LE(12);
+    const gltf = JSON.parse(modelBytes.subarray(20, 20 + jsonLength).toString('utf8'));
+    assert(gltf.extras.voxelBoxes > 0, `Empty voxel model: ${enemy.model}`);
+    for (const view of gltf.bufferViews)
+      assert((view.byteOffset || 0) + view.byteLength <= gltf.buffers[0].byteLength);
+    assert.deepEqual(catalog.files[`assets/${enemy.model}`], {
+      bytes: modelBytes.length,
+      hash: createHash('sha256').update(modelBytes).digest('hex'),
+    });
+
+    const portrait = await readFile(
+      new URL(`../assets/portraits/${enemy.portrait}.svg`, import.meta.url),
+      'utf8',
+    );
+    assert.match(portrait, /<svg\b/u);
+    assert.match(portrait, /<polygon points=/u);
+    assert.deepEqual(catalog.files[`assets/portraits/${enemy.portrait}.svg`], {
+      bytes: Buffer.byteLength(portrait),
+      hash: createHash('sha256').update(portrait).digest('hex'),
+    });
+
+    if (newModels.has(id)) {
+      assert.equal(gltf.extras.enemyId, id);
+      const slug = enemy.model.replace(/\.glb$/u, '');
+      const sourceModel = await readFile(
+        new URL(`../../万象异境-体素模型/早期敌人/${enemy.model}`, import.meta.url),
+      );
+      assert(modelBytes.equals(sourceModel), `Source/runtime GLBs differ: ${enemy.model}`);
+      const source = JSON.parse(
+        await readFile(
+          new URL(`../../万象异境-体素模型/早期敌人/${slug}.json`, import.meta.url),
+          'utf8',
+        ),
+      );
+      assert.equal(source.id, id);
+      assert(source.blocks.length >= 12, `Voxel source is too sparse: ${id}`);
+      assert.match(portrait, /data-art-style="isometric-voxel-v3"/u);
+      assert(portrait.includes(`data-enemy-model="${id}"`));
+    }
+  }
+});
+
 test('bleeding, poison and regeneration visuals are driven by actual ordered resolution events', () => {
   const state = advance(preview(newBattle(['pebble']), []));
   state.units.lyria.buffs.bleed = 2;

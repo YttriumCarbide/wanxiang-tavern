@@ -27,6 +27,7 @@ const portraits = Object.freeze({
   nobleMan: 'noble-official-man.png',
   rangerWoman: 'ranger-scout-woman.png',
   serverWoman: 'tavern-server-woman.png',
+  kingRodris: 'rodris-king.png',
 });
 
 function genderOf(text) {
@@ -45,7 +46,9 @@ export function galNpcPortrait(npc = {}) {
   const gender = genderOf(description);
   let file = '';
 
-  if (/(?:小孩|孩子|幼童|男童|女孩|男孩|女童|小女孩|小男孩)/u.test(description))
+  if (/(?:罗德里斯|维瓦尔|艾尔德兰.*(?:国王|君主|陛下)|(?:国王|君主)陛下)/u.test(description))
+    file = portraits.kingRodris;
+  else if (/(?:小孩|孩子|幼童|男童|女孩|男孩|女童|小女孩|小男孩)/u.test(description))
     file = gender === 'woman' ? portraits.girl : portraits.boy;
   else if (/(?:哥布林|地精)/u.test(description)) file = portraits.goblinTinker;
   else if (/(?:龙裔|龙人)/u.test(description)) file = portraits.dragonkinMan;
@@ -117,4 +120,5 @@ export const GAL_NPC_PORTRAIT_NAMES = Object.freeze({
   nobleMan: '成年男性贵族、官员或执政官',
   rangerWoman: '成年女性游侠、斥候或猎人',
   serverWoman: '成年女性酒馆侍应、店员或招待',
+  kingRodris: '艾尔德兰帝国国王罗德里斯·迪亚戈·德·维瓦尔陛下（仅在国王亲自露面或开幕式致辞时使用）',
 });

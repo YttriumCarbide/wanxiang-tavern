@@ -1,7 +1,7 @@
 import { rearUnlocked } from '../formation-access.js';
 import { html } from '../shared/html.js';
 import { HEROES, BOSSES } from '../data.js';
-import { escapeText } from '../ui.js';
+import { escapeText, shortCharacterName } from '../ui.js';
 import { query as $ } from './dom.js';
 import { portraitUrl, saveCustomPortrait, UNKNOWN_STANDING } from '../portraits.js';
 import { prepDetailMarkup } from './prep-view.js';
@@ -36,6 +36,20 @@ export function createShell(context) {
       ?.contentWindow?.postMessage({ type: 'tavern-visitors-refresh' }, location.origin);
   });
   const { session } = context;
+  let innLoadingTimer = null;
+  function setInnSceneLoading(active) {
+    clearTimeout(innLoadingTimer);
+    innLoadingTimer = null;
+    const shouldHide = Boolean(active && !session.runtime.needsStart);
+    document.body.classList.toggle('inn-scene-loading', shouldHide);
+    if (shouldHide) {
+      innLoadingTimer = setTimeout(() => {
+        document.body.classList.remove('inn-scene-loading');
+        context.ledger?.sync?.();
+      }, 6000);
+    }
+    context.ledger?.sync?.();
+  }
   function showRoute() {
     const container = $('#boss-options');
     container.innerHTML = BOSSES.map(
@@ -71,6 +85,9 @@ export function createShell(context) {
   }
   function mountInn(returnTo = null) {
     document.body.classList.remove('street-atlas-open');
+    const innFrame = $('#inn-frame');
+    const hadFrame = Boolean(innFrame?.firstElementChild);
+    setInnSceneLoading(hadFrame);
     const frame = document.createElement('iframe');
     frame.src =
       returnTo && !['gate', 'tavern'].includes(returnTo)
@@ -83,7 +100,8 @@ export function createShell(context) {
     frame.title = '第一人称万象酒馆';
     context.audio.attachFrame(frame);
     context.events.on(frame, 'load', syncInnVisitors);
-    $('#inn-frame').replaceChildren(frame);
+    context.events.on(frame, 'error', () => setInnSceneLoading(false));
+    innFrame.replaceChildren(frame);
     $('#party-panel').close();
   }
   function canShowVisitorRefresh() {
@@ -155,6 +173,7 @@ export function createShell(context) {
     if (event.source !== innWin) return;
     if (event.data?.type === 'tavern-visitors-request') syncInnVisitors();
     if (event.data?.type === 'scene-ready') {
+      setInnSceneLoading(false);
       const upstairs = ['corridor', 'guest-room', 'master-bedroom'].includes(event.data.scene);
       returnTavern.textContent = upstairs ? '回到大厅' : '返回酒馆';
       returnTavern.hidden =
@@ -288,7 +307,15 @@ export function createShell(context) {
             aria-pressed="${slot === index}"
             aria-label="${index < 3 ? '前场' : '后场'}${(index % 3) + 1}：${escapeText(entry?.setting.name || '空位')}"
           >
-            ${entry ? html`<span class="prepare-drag-handle" aria-label="拖拽角色">⠿</span><span class="prepare-slot-lv">Lv.${grownCombat(entry).level}</span><img src="${portraitUrl(entry.combat)}" alt="" /><span class="pp-tile-name"><strong>${escapeText(entry.setting.name)}</strong>${entry.setting?.title ? `<small>${escapeText(entry.setting.title)}</small>` : ''}</span>${entry.id === library.campaign?.protagonistId ? '<span class="member-crown" title="主角">主</span>' : ''}` : '<span class="slot-plus"><i>＋</i><small>空位</small></span>'}
+            ${
+              entry
+                ? html`<span class="prepare-drag-handle" aria-label="拖拽角色">⠿</span
+                    ><span class="prepare-slot-lv">Lv.${grownCombat(entry).level}</span
+                    ><img src="${portraitUrl(entry.combat)}" alt="" /><span class="pp-tile-name"
+                      ><strong>${escapeText(shortCharacterName(entry.setting.name))}</strong></span
+                    >${entry.id === library.campaign?.protagonistId ? '<span class="member-crown" title="主角">主</span>' : ''}`
+                : '<span class="slot-plus"><i>＋</i><small>空位</small></span>'
+            }
           </button>`
         );
       })
@@ -303,13 +330,16 @@ export function createShell(context) {
             class="prepare-member ${session.ai.preparationCharacter === entry.id ? 'selected' : ''}"
             data-prepare-view="${entry.id}"
             data-prepare-hero="${entry.id}"
+            aria-label="${escapeText(entry.setting.name)}"
             style="--c:${escapeText(tone)}"
             draggable="true"
           >
             <span class="prepare-drag-handle" aria-label="拖拽角色">⠿</span>
             <span class="prepare-slot-lv">Lv.${grownCombat(entry).level}</span>
             <img src="${portraitUrl(entry.combat)}" alt="" />
-            <span class="pp-tile-name"><strong>${escapeText(entry.setting.name)}</strong></span>
+            <span class="pp-tile-name"
+              ><strong>${escapeText(shortCharacterName(entry.setting.name))}</strong></span
+            >
           </button>`;
         })
         .join('') || '<p class="prepare-empty">所有成员都已加入阵容</p>';

@@ -71,9 +71,17 @@ test('live settlement adds affection above level one once per distinct staff mem
     agreed: true,
   });
   assert.deepEqual(affectionRank(library.relationships[memberId].affection), {
-    level: 1,
-    progress: 52,
+    level: 4,
+    progress: 12,
+    required: 60,
   });
+  assert.deepEqual(affectionRank(0), { level: 0, progress: 0, required: 20 });
+  assert.deepEqual(affectionRank(20), { level: 1, progress: 0, required: 30 });
+  assert.deepEqual(affectionRank(50), { level: 2, progress: 0, required: 40 });
+  assert.deepEqual(affectionRank(540), { level: 9, progress: 0, required: 100 });
+  assert.deepEqual(affectionRank(640), { level: 10, progress: 0, required: 100 });
+  assert.equal(affectionRank(Number.MAX_SAFE_INTEGER).required, 100);
+  assert.deepEqual(affectionRank(Infinity), { level: 0, progress: 0, required: 20 });
 });
 
 test('settling a restored settled shift leaves all library rewards and progression unchanged', () => {

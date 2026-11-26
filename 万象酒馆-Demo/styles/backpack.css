@@ -144,22 +144,35 @@
   padding: 12px 4px;
 }
 
-/* Out-of-battle traveller satchel dialog: dark walnut ledger rows (no boxed grid). */
+/* Out-of-battle traveller satchel dialog: Astral Indigo & Champagne Gold ledger rows. */
 #inn-backpack {
-  width: min(620px, calc(100vw - 24px));
-  max-height: min(620px, calc(100dvh - 32px));
-  padding: 22px 26px 24px;
-  color: #f3e7cf;
-  background:
-    radial-gradient(ellipse at 50% -15%, rgba(216, 178, 110, 0.14), transparent 58%),
-    linear-gradient(175deg, #1b1613, #100d0c);
-  border: 1px solid rgba(216, 178, 110, 0.48);
-  border-radius: 6px;
-  box-shadow:
-    inset 0 0 0 1px rgba(216, 178, 110, 0.14),
-    inset 0 0 36px rgba(0, 0, 0, 0.48),
-    0 26px 80px rgba(0, 0, 0, 0.86);
+  width: min(640px, calc(100vw - 24px));
+  max-height: min(640px, calc(100dvh - 32px));
+  padding: 20px 24px 22px;
+  color: var(--astral-text);
+  background: var(--astral-hatch), var(--astral-panel-bg);
+  border: 1px solid rgba(226, 192, 120, 0.48);
+  border-radius: 4px;
+  box-shadow: var(--astral-frame-shadow);
   overflow: hidden;
+}
+#inn-backpack::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  --c: var(--astral-corner-mark);
+  background:
+    var(--c) top left / 18px 2px,
+    var(--c) top left / 2px 18px,
+    var(--c) top right / 18px 2px,
+    var(--c) top right / 2px 18px,
+    var(--c) bottom left / 18px 2px,
+    var(--c) bottom left / 2px 18px,
+    var(--c) bottom right / 18px 2px,
+    var(--c) bottom right / 2px 18px;
+  background-repeat: no-repeat;
 }
 #inn-backpack[open] {
   display: flex;
@@ -167,114 +180,133 @@
   gap: 12px;
 }
 #inn-backpack::backdrop {
-  background: rgba(6, 5, 4, 0.76);
-  backdrop-filter: blur(4px);
+  background: rgba(4, 5, 14, 0.78);
+  backdrop-filter: blur(5px);
 }
 .bag-folio-head {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 12px 16px;
+  gap: 12px 14px;
   padding-bottom: 12px;
-  border-bottom: 1px solid rgba(216, 178, 110, 0.3);
+  border-bottom: 1px solid var(--astral-line);
 }
 .bag-folio-title {
   margin-right: auto;
 }
 .bag-folio-title small {
   display: block;
-  color: #b79c71;
+  color: var(--astral-gold);
   font-size: 9px;
   letter-spacing: 0.22em;
 }
 .bag-folio-title h2 {
   margin: 4px 0 0;
-  font:
-    600 22px/1.2 Georgia,
-    'Songti SC',
-    'Microsoft YaHei',
-    serif;
-  color: #f5dfb0;
-  letter-spacing: 0.1em;
+  font: 400 22px/1.2 var(--display-serif);
+  color: var(--astral-gold-hi);
+  letter-spacing: 0.14em;
 }
 .bag-tabs {
   display: flex;
-  gap: 4px;
+  gap: 5px;
 }
 .bag-tabs button {
   min-height: 32px;
-  padding: 6px 14px;
+  padding: 5px 16px;
   border: 0;
-  border-bottom: 2px solid transparent;
   border-radius: 0;
-  background: transparent;
+  background: rgba(255, 255, 255, 0.06);
   box-shadow: none;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
-  color: #ab9a82;
+  clip-path: polygon(9px 0, 100% 0, calc(100% - 9px) 100%, 0 100%);
+  color: var(--astral-sub);
   font-size: 13px;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   transform: none;
+  transition:
+    color 160ms ease,
+    background 160ms ease;
 }
 .bag-tabs button:hover {
-  color: #f5e2ba;
-  background: rgba(216, 178, 110, 0.08);
+  color: var(--astral-gold-hi);
+  background: rgba(226, 192, 120, 0.16);
   box-shadow: none;
   transform: none;
 }
 .bag-tabs button[aria-pressed='true'] {
-  border-bottom-color: #ebc57c;
-  color: #f8e4b6;
-  font-weight: 600;
+  background: linear-gradient(180deg, #fff1c4, #c99b4a);
+  color: #1c1406;
+  font-weight: 700;
 }
 .bag-close {
   display: grid;
   place-items: center;
-  width: 30px;
-  height: 30px;
+  width: 34px;
+  height: 34px;
   padding: 0;
-  border: 1px solid rgba(216, 178, 110, 0.34);
-  border-radius: 50%;
-  background: rgba(25, 20, 17, 0.8);
-  color: #e9d7b5;
+  border: 1px solid rgba(226, 192, 120, 0.45);
+  border-radius: 3px;
+  background: linear-gradient(180deg, rgba(40, 50, 110, 0.92), rgba(16, 20, 48, 0.96));
+  color: var(--astral-gold-hi);
   font-size: 18px;
+  line-height: 1;
+  box-shadow: var(--astral-btn-shadow);
+}
+.bag-close:hover,
+.bag-close:focus-visible {
+  border-color: var(--astral-gold-hi);
+  color: #fff;
 }
 .inn-bag-content {
+  position: relative;
+  z-index: 1;
   overflow-y: auto;
   display: grid;
   align-content: start;
+  gap: 6px;
   min-height: 180px;
   padding-right: 4px;
 }
 .bag-ledger-row {
   display: grid;
-  grid-template-columns: 44px minmax(0, 1fr) auto;
+  grid-template-columns: 46px minmax(0, 1fr) auto;
   align-items: center;
   gap: 12px;
-  padding: 10px 8px;
-  border-bottom: 1px solid rgba(216, 178, 110, 0.14);
-  transition: background 150ms ease;
-}
-.bag-ledger-row:last-child {
-  border-bottom: 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(226, 192, 120, 0.22);
+  border-left: 2px solid rgba(226, 192, 120, 0.56);
+  border-radius: 3px;
+  background: var(--astral-card-bg);
+  transition:
+    border-color 150ms ease,
+    transform 150ms ease,
+    box-shadow 150ms ease;
 }
 .bag-ledger-row:hover {
-  background: linear-gradient(90deg, rgba(216, 178, 110, 0.1), transparent 86%);
+  border-color: rgba(255, 241, 196, 0.65);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.42);
 }
 .bag-ledger-icon {
   display: grid;
   place-items: center;
-  width: 44px;
-  height: 44px;
+  width: 46px;
+  height: 46px;
+  border: 1px solid rgba(226, 192, 120, 0.28);
+  border-radius: 3px;
+  background: rgba(8, 10, 26, 0.72);
 }
 .bag-ledger-icon img,
 .bag-ledger-icon .food-art {
-  width: 38px;
-  height: 38px;
-  max-width: 40px;
-  max-height: 40px;
+  width: 36px;
+  height: 36px;
+  max-width: 38px;
+  max-height: 38px;
   object-fit: contain;
-  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.45));
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.5));
 }
 .bag-ledger-meta {
   display: grid;
@@ -284,18 +316,19 @@
 .bag-ledger-meta strong {
   font-size: 14px;
   font-weight: 600;
-  color: #f5e6ca;
+  color: var(--astral-gold-hi);
 }
 .bag-ledger-meta small {
   font-size: 12px;
-  color: #b4a48d;
+  color: var(--astral-sub);
   line-height: 1.45;
 }
 .bag-ledger-qty {
   padding: 3px 10px;
-  border-radius: 999px;
-  background: rgba(216, 178, 110, 0.12);
-  color: #f3d28b;
+  border: 1px solid rgba(226, 192, 120, 0.4);
+  border-radius: 3px;
+  background: rgba(10, 12, 30, 0.85);
+  color: var(--astral-gold-hi);
   font:
     700 13px Georgia,
     serif;
@@ -304,7 +337,7 @@
 .inn-bag-empty {
   margin: 34px 0;
   text-align: center;
-  color: #a99880;
+  color: var(--astral-muted);
   font-size: 13px;
 }
 

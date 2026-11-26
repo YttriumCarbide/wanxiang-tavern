@@ -241,7 +241,6 @@ function loreMarkup(member) {
   return html`<article class="prepare-lore-card">
     <header>
       <strong>${escapeText(member.setting?.name || '')}</strong>
-      ${member.setting?.title ? `<small>${escapeText(member.setting.title)}</small>` : ''}
     </header>
     <div class="prepare-lore-body">
       ${paragraphs.map((p) => `<p>${escapeText(p)}</p>`).join('')}
@@ -361,13 +360,12 @@ export function prepDetailMarkup(library, inspected, activeTab = 'status') {
         <div class="prepare-stage-plate">
           <div class="prepare-stage-head">
             <h2 id="prepare-character-title">${escapeText(inspected.setting.name)}</h2>
-            ${inspected.setting.title ? `<span>${escapeText(inspected.setting.title)}</span>` : ''}
           </div>
           ${
             inspected.id === library.campaign?.protagonistId
               ? `<p class="prepare-protagonist-core">★ 万象酒馆之主 · 契约核心</p>`
               : `<p class="prepare-affection">♥ ${escapeText(affectionLabel(rel.affection))}</p>
-          <div class="prepare-aff-bar"><i style="width:${rank.progress}%"></i></div>`
+          <div class="prepare-aff-bar"><i style="width:${Math.min(100, Math.round((rank.progress / (rank.required || 100)) * 100))}%"></i></div>`
           }
           <details class="prepare-portrait-tools">
             <summary>更换立绘</summary>

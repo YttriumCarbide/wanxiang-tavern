@@ -125,9 +125,18 @@ test('mill starts Lv.1-5 near Starbell, ruins moves east to Lv.20-25, and Starbe
       JSON.stringify(EDITH_LESSONS).includes('田鼠'),
   );
 
-  assert(CITY_DUNGEONS.includes('starbell-undercroft'));
-  const undercroft = cityDungeons('starbell').find(({ id }) => id === 'starbell-undercroft');
-  assert.equal(undercroft?.streetScene, 'city-center');
+  assert(CITY_DUNGEONS.includes('black-market'));
+  assert(CITY_DUNGEONS.includes('silver-shield-exhibition'));
+  assert(CITY_DUNGEONS.includes('duel-arena'));
+  assert(!CITY_DUNGEONS.includes('starbell-undercroft'));
+  const blackMarket = cityDungeons('starbell').find(({ id }) => id === 'black-market');
+  assert.equal(blackMarket?.streetScene, 'market-alley');
+  assert.equal(cityDungeons('silver-crown', [], { clearedDungeons: [] }).length, 0);
+  assert.equal(
+    cityDungeons('silver-crown', [], { clearedDungeons: ['black-market'] })[0]?.id,
+    'silver-shield-exhibition',
+  );
+  assert.equal(cityDungeons('eternal')[0]?.id, 'duel-arena');
 });
 
 test('all 6 mainline dungeons use 4-step branching graph with side branches and overlord endless continuation', () => {
@@ -157,8 +166,8 @@ test('all 6 mainline dungeons use 4-step branching graph with side branches and 
   assert.deepEqual(open.map((node) => node.label).sort(), ['3', 'a']);
   assert.equal(explorationSpec(open.find((node) => node.label === 'a')).level, 3);
 
-  const nonMainline = routes['starbell-undercroft'];
-  assert.equal(explorationPreview(nonMainline, 'starbell-undercroft').length, 1);
+  const nonMainline = routes['moss-hollow'];
+  assert.equal(explorationPreview(nonMainline, 'moss-hollow').length, 1);
   completeExploration(routes, nonMainline.frontier[0]);
-  assert.equal(explorationPreview(nonMainline, 'starbell-undercroft').length, 2);
+  assert.equal(explorationPreview(nonMainline, 'moss-hollow').length, 2);
 });

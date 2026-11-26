@@ -9,6 +9,7 @@ import {
   ENEMY_ARCHIVE_TIERS,
   buildEnemyArchiveEntries,
   buildEnemyArchiveExport,
+  enemyArchiveIntentText,
   filterEnemyArchiveBuckets,
 } from '../archive-enemies.js';
 import { ENEMY_ARCHIVE_CATEGORIES } from '../enemy-taxonomy.js';
@@ -16,7 +17,11 @@ import { createArchiveModelStage } from './archive-model-stage.js';
 import { TAVERN_MANUAL_SECTIONS } from './bookshelf.js';
 import { query as $ } from './dom.js';
 import { developerOption } from '../generation-options.js';
-import { enemyIntentText } from '../enemy-intent-text.js';
+import { enemyDropTable } from '../enemy-drops.js';
+import { DAMAGE_TYPES } from '../damage-types.js';
+import { resolveEnemyBreakProfile } from '../octopath.js';
+import { INGREDIENTS } from '../content/dining.js';
+import { ITEMS } from '../content/items.js';
 import { dungeonMemoryText, restoredSummary } from '../memory.js';
 import { ADVENTURE_NODE_LABELS } from '../adventure/definition.js';
 import { escapeText } from '../ui.js';
@@ -38,6 +43,17 @@ export function createRecords(context) {
   let tab = 'npcs';
   let enemyTier = 'minion';
   let enemyCategory = 'all';
+  const categoryPreferenceKey = 'wanxiang.codex.enemy-categories-expanded.v1';
+  const preferenceStorage = context.storage || globalThis.localStorage;
+  let enemyCategoriesExpanded = true;
+  let enemyCategoriesActivated = false;
+  try {
+    const savedCategoryPreference = preferenceStorage?.getItem(categoryPreferenceKey) ?? null;
+    enemyCategoriesExpanded = savedCategoryPreference !== 'false';
+    enemyCategoriesActivated = savedCategoryPreference !== null;
+  } catch {
+    // Ignore storage access errors in restricted contexts and fall back to defaults.
+  }
   let archiveEditing = false;
   let selectedIndex = 0;
 
@@ -46,10 +62,10 @@ export function createRecords(context) {
   const archive = document.createElement('dialog');
   archive.id = 'archive-dialog';
   archive.className = 'skyrim-archive-dialog';
-  archive.setAttribute('aria-label', '旅途归档');
+  archive.setAttribute('aria-label', '图鉴');
   archive.innerHTML =
     `<header>` +
-    `<div class="records-title"><small>CODEX / ARCHIVES · 典藏卷宗</small><h2>旅途归档</h2></div>` +
+    `<div class="records-title"><small>CODEX / ARCHIVES · 典藏卷宗</small><h2>图鉴</h2></div>` +
     `<nav class="records-actions">` +
     `<div class="archive-tabs">` +
     `<button type="button" data-archive-tab="npcs">NPC</button>` +
@@ -59,14 +75,16 @@ export function createRecords(context) {
     `<button type="button" data-archive-tab="memory">总结</button>` +
     `<button type="button" data-archive-tab="manual">酒馆手册</button>` +
     `</div>` +
-    `<button type="button" id="archive-close" aria-label="关闭归档">×</button>` +
+    `<button type="button" id="archive-close" aria-label="关闭图鉴">×</button>` +
     `</nav>` +
     `</header>` +
     `<div class="records-body">` +
     `<div class="archive-index-col">` +
     `<div class="archive-codex-progress" hidden></div>` +
     `<nav class="archive-enemy-tiers" aria-label="敌人阶级" hidden></nav>` +
-    `<nav class="archive-enemy-categories" aria-label="敌人类别" hidden></nav>` +
+    `<button type="button" class="archive-enemy-category-toggle" data-enemy-category-toggle aria-controls="archive-enemy-categories" aria-expanded="true" hidden>` +
+    `<span>小怪种类筛选</span><span data-category-toggle-label aria-hidden="true">收起⌃</span></button>` +
+    `<nav id="archive-enemy-categories" class="archive-enemy-categories" aria-label="敌人类别" hidden></nav>` +
     `<nav id="archive-list"></nav>` +
     `<div class="archive-enemy-export" hidden>` +
     `<button type="button" id="archive-enemy-export" title="导出六类已解锁敌人，不受当前筛选限制">导出图鉴 JSON</button>` +
@@ -215,7 +233,7 @@ export function createRecords(context) {
       const body = document.createElement('span');
       const strong = document.createElement('strong');
       strong.textContent = `${move.name}：`;
-      body.append(strong, enemyIntentText(move));
+      body.append(strong, enemyArchiveIntentText(move));
       item.append(diamond, body);
       listEl.append(item);
     }
@@ -226,9 +244,15 @@ export function createRecords(context) {
   function buildStatStrip(entry) {
     const strip = document.createElement('div');
     strip.className = 'skyrim-archive-stats';
+    const breakProfile = resolveEnemyBreakProfile(entry, 1);
+    const weaknesses = entry.weaknesses?.length ? entry.weaknesses : breakProfile.weaknesses;
+    const weaknessNames = weaknesses.map((type) => DAMAGE_TYPES[type]?.name || type).join('、');
     const stats = [
-      ['基础生命', String(entry.hp)],
       ['行动速度', String(entry.speed)],
+      ...(weaknessNames ? [['弱点属性', weaknessNames]] : []),
+      ...(breakProfile.hasBreak
+        ? [['破绽韧性', `${breakProfile.maxToughness} 层（限时窗口）`]]
+        : []),
       ...(entry.phaseThreshold ? [['狂暴阈值', `${Math.round(entry.phaseThreshold * 100)}%`]] : []),
       ...(entry.actions ? [['每回合行动', `${entry.actions} 次`]] : []),
     ];
@@ -243,6 +267,15 @@ export function createRecords(context) {
       strip.append(box);
     }
     return strip;
+  }
+
+  function enemyDropSummary(entry) {
+    const table = enemyDropTable(entry);
+    const dropName = (id) => ITEMS[id]?.name || INGREDIENTS[id]?.name || id;
+    const summary = document.createElement('p');
+    summary.className = 'archive-sources archive-enemy-drops';
+    summary.textContent = `可能掉落：${dropName(table.primary)}（${Math.round(table.primaryChance * 100)}%）、${dropName(table.extra)}（${Math.round(table.extraChance * 100)}%）及随机宝石。`;
+    return summary;
   }
 
   function appendUnitMoves(container, entry, regularTitle = '行动意图') {
@@ -307,7 +340,7 @@ export function createRecords(context) {
           const name = document.createElement('h4');
           name.textContent = part.name;
           const meta = document.createElement('span');
-          meta.textContent = `生命 ${part.hp} · 速度 ${part.speed}`;
+          meta.textContent = `速度 ${part.speed}`;
           partHead.append(role, name, meta);
           card.append(partHead);
           if (part.description) {
@@ -316,12 +349,14 @@ export function createRecords(context) {
             partDesc.textContent = part.description;
             card.append(partDesc);
           }
+          card.append(enemyDropSummary(part));
           appendUnitMoves(card, part, '部位行动');
           partsWrap.append(card);
         }
         area.append(partsWrap);
       } else {
         if (item.entry.speed) area.append(buildStatStrip(item.entry));
+        area.append(enemyDropSummary(item.entry));
         appendUnitMoves(area, item.entry);
       }
 
@@ -378,9 +413,11 @@ export function createRecords(context) {
 
   function renderManual(index = 0) {
     const tierBar = archive.querySelector('.archive-enemy-tiers');
+    const categoryToggle = archive.querySelector('[data-enemy-category-toggle]');
     const categoryBar = archive.querySelector('.archive-enemy-categories');
     const progressBar = archive.querySelector('.archive-codex-progress');
     tierBar.hidden = true;
+    categoryToggle.hidden = true;
     categoryBar.hidden = true;
     progressBar.hidden = false;
     progressBar.innerHTML = `<span class="archive-codex-label">酒馆手册 · 机制百科</span><strong class="archive-codex-count">${TAVERN_MANUAL_SECTIONS.length} 卷</strong>`;
@@ -517,9 +554,11 @@ export function createRecords(context) {
     renderRecordsList();
 
     const tierBar = archive.querySelector('.archive-enemy-tiers');
+    const categoryToggle = archive.querySelector('[data-enemy-category-toggle]');
     const categoryBar = archive.querySelector('.archive-enemy-categories');
     const progressBar = archive.querySelector('.archive-codex-progress');
     tierBar.hidden = true;
+    categoryToggle.hidden = true;
     categoryBar.hidden = true;
     progressBar.hidden = !history.length;
     progressBar.innerHTML = `<span class="archive-codex-label">旅途记录 · 篇章</span><strong class="archive-codex-count">${history.length} 篇</strong>`;
@@ -750,8 +789,10 @@ export function createRecords(context) {
 
     if (tab === 'memory') {
       const tierBar = archive.querySelector('.archive-enemy-tiers');
+      const categoryToggle = archive.querySelector('[data-enemy-category-toggle]');
       const categoryBar = archive.querySelector('.archive-enemy-categories');
       tierBar.hidden = true;
+      categoryToggle.hidden = true;
       categoryBar.hidden = true;
       archive.classList.remove('is-empty');
       void context.memory?.syncPanel?.();
@@ -764,6 +805,7 @@ export function createRecords(context) {
     }
 
     const tierBar = archive.querySelector('.archive-enemy-tiers');
+    const categoryToggle = archive.querySelector('[data-enemy-category-toggle]');
     const categoryBar = archive.querySelector('.archive-enemy-categories');
     const progressBar = archive.querySelector('.archive-codex-progress');
 
@@ -785,7 +827,12 @@ export function createRecords(context) {
         ({ id, label }) =>
           `<button type="button" data-enemy-tier="${id}" aria-pressed="${String(id === enemyTier)}">${escapeText(label)}<span>${tierStats[id].unlocked}/${tierStats[id].total}</span></button>`,
       ).join('');
-      categoryBar.hidden = false;
+      const showCategories = enemyTier === 'minion' && enemyCategoriesActivated;
+      categoryToggle.hidden = !showCategories;
+      categoryToggle.setAttribute('aria-expanded', String(enemyCategoriesExpanded));
+      categoryToggle.querySelector('[data-category-toggle-label]').textContent =
+        enemyCategoriesExpanded ? '收起⌃' : '展开⌄';
+      categoryBar.hidden = !showCategories || !enemyCategoriesExpanded;
       categoryBar.innerHTML = [
         { id: 'all', label: '全部', stats: categoryStats.all },
         ...ENEMY_ARCHIVE_CATEGORIES.map(({ id, label }) => ({
@@ -834,6 +881,7 @@ export function createRecords(context) {
 
     progressBar.hidden = true;
     tierBar.hidden = true;
+    categoryToggle.hidden = true;
     categoryBar.hidden = true;
     const entries =
       tab === 'items' ? mergedArchiveItems(library().archives.items) : library().archives[tab];
@@ -993,14 +1041,26 @@ export function createRecords(context) {
     if (recBtn) return selectRecord(Number(recBtn.dataset.record));
     const type = event.target.closest('[data-archive-tab]');
     const tierButton = event.target.closest('[data-enemy-tier]');
+    const categoryToggle = event.target.closest('[data-enemy-category-toggle]');
     const categoryButton = event.target.closest('[data-enemy-category]');
     const item = event.target.closest('[data-archive-index]');
-    if (type) {
+    if (categoryToggle) {
+      enemyCategoriesActivated = true;
+      enemyCategoriesExpanded = !enemyCategoriesExpanded;
+      try {
+        preferenceStorage?.setItem(categoryPreferenceKey, String(enemyCategoriesExpanded));
+      } catch {
+        // Ignore storage write errors when persisting UI preferences.
+      }
+      renderArchive(selectedIndex);
+    } else if (type) {
       tab = type.dataset.archiveTab;
       if (tab === 'records') selectedRecord = library().history.length - 1;
       renderArchive(0);
     } else if (tierButton) {
       enemyTier = tierButton.dataset.enemyTier;
+      if (enemyTier === 'minion') enemyCategoriesActivated = true;
+      else enemyCategory = 'all';
       renderArchive(0);
     } else if (categoryButton) {
       enemyCategory = categoryButton.dataset.enemyCategory;

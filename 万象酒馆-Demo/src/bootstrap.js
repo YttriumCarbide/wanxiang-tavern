@@ -11,6 +11,7 @@ import { createContentUpdates } from './updates/content-updates.js';
 import { loadUpdateRelease, TUTORIAL_GATE } from './updates/manifest.js';
 import { createCacheUpdateStore } from './updates/storage.js';
 import { createNativeUpdateStore } from './updates/native-storage.js';
+import { createWorldLoadingOverlay } from './shared/scene-loading.js';
 import {
   isDeveloperCopy,
   openDeveloperCopyDatabase,
@@ -64,76 +65,90 @@ export async function startGame() {
   }
   const notice = document.createElement('p');
   notice.className = 'storage-notice';
-  notice.textContent = '正在读取本地存档…';
+  notice.hidden = true;
   notice.setAttribute('role', 'status');
   document.body.append(notice);
-  const browserDatabase = await openDatabase();
-  const diskEndpoint = document.querySelector('meta[name="wanxiang-disk-storage"]')?.content;
-  let cacheWarning = false;
-  const database =
-    diskEndpoint === '/__demo/storage'
-      ? await openDiskDatabase(diskEndpoint, browserDatabase, () => {
-          cacheWarning = true;
-          notice.hidden = false;
-          notice.textContent = '硬盘进度已保存，浏览器缓存写入失败。';
-        })
-      : browserDatabase;
-  await applyGeneratedDatabaseReset(database, localStorage);
-  if (!database.get('installation')) {
-    // User-authorized clean release. Run once on this browser, never on ordinary updates.
-    for (const key of Object.keys(localStorage))
-      if (key.startsWith('wanxiang.')) localStorage.removeItem(key);
-    await database.write([
-      ['installation', { version: 1 }],
-      ['game.wanxiang.worldbooks.v1', JSON.stringify(newCampaign(defaultProtagonist()))],
-      ['game.wanxiang.creation-pending.v1', 'true'],
-    ]);
+  const bootLoading = createWorldLoadingOverlay('正在推开万象酒馆之门');
+  const bootPhase = bootLoading.element.querySelector('.scene-loading-phase');
+  if (bootPhase) bootPhase.textContent = '正在唤醒酒馆与旅途档案…';
+  bootLoading.show('正在推开万象酒馆之门');
+  try {
+    const browserDatabase = await openDatabase();
+    const diskEndpoint = document.querySelector('meta[name="wanxiang-disk-storage"]')?.content;
+    let cacheWarning = false;
+    const database =
+      diskEndpoint === '/__demo/storage'
+        ? await openDiskDatabase(diskEndpoint, browserDatabase, () => {
+            cacheWarning = true;
+            notice.hidden = false;
+            notice.textContent = '硬盘进度已保存，浏览器缓存写入失败。';
+          })
+        : browserDatabase;
+    await applyGeneratedDatabaseReset(database, localStorage);
+    if (!database.get('installation')) {
+      // User-authorized clean release. Run once on this browser, never on ordinary updates.
+      for (const key of Object.keys(localStorage))
+        if (key.startsWith('wanxiang.')) localStorage.removeItem(key);
+      await database.write([
+        ['installation', { version: 1 }],
+        ['game.wanxiang.worldbooks.v1', JSON.stringify(newCampaign(defaultProtagonist()))],
+        ['game.wanxiang.creation-pending.v1', 'true'],
+      ]);
+    }
+    const storage = createGameStorage(database, (failure) => {
+      notice.hidden = false;
+      notice.textContent = diskEndpoint
+        ? '硬盘保存失败：' + failure.message
+        : '本地保存失败，请检查设备空间并导出备份。';
+    });
+    const base = new URL('../', import.meta.url);
+    const nativeStore = createNativeUpdateStore({ base });
+    const apiClient = await createStaticBackend(database, {
+      virtualImages:
+        !globalThis.wanxiangNativeUpdate &&
+        database.cacheAvailable !== false &&
+        (await enablePortraitWorker()),
+    });
+    const updateMeta = document.querySelector('meta[name="wanxiang-update-manifest"]');
+    const manifestUrl = updateMeta?.content && new URL(updateMeta.content, base);
+    const contentUpdates =
+      manifestUrl?.origin === base.origin
+        ? createContentUpdates({
+            load: (signal) =>
+              loadUpdateRelease(manifestUrl, {
+                signal,
+                expectedVersion: updateMeta.dataset.version,
+              }),
+            store: nativeStore ?? createCacheUpdateStore({ base }),
+            emptyGates: updateMeta.dataset.tutorialGate === 'empty' ? [TUTORIAL_GATE] : [],
+          })
+        : undefined;
+    const application = createApplication({ storage, apiClient, contentUpdates });
+    const panel = createLocalDataPanel({
+      database,
+      storage,
+      apiClient,
+      dispose: application.dispose,
+    });
+    window.demo = { ...application.api, contentUpdates, dispose: application.dispose };
+    bootLoading.dispose();
+    function disposePanel(event) {
+      if (event.persisted) return;
+      window.removeEventListener('pagehide', disposePanel);
+      panel.dispose();
+    }
+    window.addEventListener('pagehide', disposePanel);
+    notice.hidden = !cacheWarning;
+  } catch (failure) {
+    bootLoading.dispose();
+    throw failure;
   }
-  const storage = createGameStorage(database, (failure) => {
-    notice.hidden = false;
-    notice.textContent = diskEndpoint
-      ? '硬盘保存失败：' + failure.message
-      : '本地保存失败，请检查设备空间并导出备份。';
-  });
-  const base = new URL('../', import.meta.url);
-  const nativeStore = createNativeUpdateStore({ base });
-  const apiClient = await createStaticBackend(database, {
-    virtualImages:
-      !globalThis.wanxiangNativeUpdate &&
-      database.cacheAvailable !== false &&
-      (await enablePortraitWorker()),
-  });
-  const updateMeta = document.querySelector('meta[name="wanxiang-update-manifest"]');
-  const manifestUrl = updateMeta?.content && new URL(updateMeta.content, base);
-  const contentUpdates =
-    manifestUrl?.origin === base.origin
-      ? createContentUpdates({
-          load: (signal) =>
-            loadUpdateRelease(manifestUrl, { signal, expectedVersion: updateMeta.dataset.version }),
-          store: nativeStore ?? createCacheUpdateStore({ base }),
-          emptyGates: updateMeta.dataset.tutorialGate === 'empty' ? [TUTORIAL_GATE] : [],
-        })
-      : undefined;
-  const application = createApplication({ storage, apiClient, contentUpdates });
-  const panel = createLocalDataPanel({
-    database,
-    storage,
-    apiClient,
-    dispose: application.dispose,
-  });
-  window.demo = { ...application.api, contentUpdates, dispose: application.dispose };
-  function disposePanel(event) {
-    if (event.persisted) return;
-    window.removeEventListener('pagehide', disposePanel);
-    panel.dispose();
-  }
-  window.addEventListener('pagehide', disposePanel);
-  notice.hidden = !cacheWarning;
 }
 
 startGame().catch((failure) => {
   const notice = document.querySelector('.storage-notice') || document.createElement('p');
   notice.className = 'storage-notice';
+  notice.hidden = false;
   notice.textContent = '游戏启动失败：' + failure.message;
   document.body.append(notice);
 });

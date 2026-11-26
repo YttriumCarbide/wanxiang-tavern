@@ -4,8 +4,13 @@ import { readFile } from 'node:fs/promises';
 import { MAIN_WORLD_LORE } from '../src/content/main-world-lore.js';
 import { QUARRY_WORLDBOOK_ENTRIES } from '../src/content/quarry-lore.js';
 import { BLACK_MARKET_WORLDBOOK_ENTRIES } from '../src/content/black-market-lore.js';
+import { CITY_AND_FACTION_WORLDBOOK_ENTRIES } from '../src/content/city-and-faction-lore.js';
+import { ARENA_QUALIFIER_ARCHIVE_DEFINITIONS } from '../src/content/arena-qualifier-adversaries.js';
+import { SILVER_CROWN_SYNDICATE_ARCHIVE_DEFINITIONS } from '../src/content/silver-crown-syndicate-adversaries.js';
 import { REGIONS } from '../src/content/regions.js';
+import { cityDungeons, clearedCityDungeonIds } from '../src/city-directory.js';
 import { DEFINITIONS } from '../src/data.js';
+import { encounterLevel } from '../src/enemy-growth.js';
 import { tavernCanonText } from '../src/content/world.js';
 import { scanWorldbooks } from '../src/ai/worldbook-scan.js';
 import { newWorldEntry, syncBuiltinWorldbook } from '../src/ai/worldbook.js';
@@ -222,7 +227,7 @@ test('graystone-quarry script overhaul keeps darkscaleWarlord intact, reflects m
   assert.deepEqual(syncBuiltinWorldbook(migrated, builtin), migrated);
 });
 
-test('black-market worldbook entries and multi-node graph stay synced while starbell-undercroft avoids banditSyndicateKing', async () => {
+test('black-market worldbook entries and multi-node graph stay synced while starbell-undercroft is removed', async () => {
   const builtin = await loadBuiltin();
   const byBlackMarketLore = new Map(
     Object.values(builtin.entries || {})
@@ -243,6 +248,105 @@ test('black-market worldbook entries and multi-node graph stay synced while star
   for (const hook of blackMarket.taskHooks) {
     assert(DEFINITIONS[hook.boss], `Missing enemy definition for hook ${hook.id}: ${hook.boss}`);
   }
-  assert.notEqual(REGIONS['starbell-undercroft'].boss, 'banditSyndicateKing');
-  assert.equal(REGIONS['starbell-undercroft'].taskHooks[0].boss, 'banditExecutioner');
+  assert.equal(REGIONS['starbell-undercroft'], undefined);
+
+  const duelArena = REGIONS['duel-arena'];
+  assert.equal(duelArena.nodes.length, 6);
+  assert.equal(duelArena.taskHooks.length, 6);
+  assert.equal(encounterLevel({ map: 'duel-arena', levelOffset: 0 }), 11);
+  assert.equal(encounterLevel({ map: 'duel-arena', levelOffset: 7 }), 18);
+  for (const hook of duelArena.taskHooks) {
+    assert(DEFINITIONS[hook.boss], `Missing arena boss definition ${hook.boss}`);
+  }
+
+  const exhibition = REGIONS['silver-shield-exhibition'];
+  assert.equal(exhibition.nodes.length, 4);
+  assert.equal(exhibition.taskHooks.length, 4);
+  assert(
+    exhibition.nodes.every((node) => node.kind === 'mainline'),
+    'silver-shield-exhibition must stay single-line with no branches',
+  );
+  assert.equal(encounterLevel({ map: 'silver-shield-exhibition', levelOffset: 0 }), 8);
+  assert.equal(encounterLevel({ map: 'silver-shield-exhibition', levelOffset: 4 }), 12);
+  for (const hook of exhibition.taskHooks) {
+    assert(DEFINITIONS[hook.boss], `Missing exhibition boss definition ${hook.boss}`);
+  }
+
+  assert.equal(
+    cityDungeons('silver-crown', [], { clearedDungeons: [] }).some(
+      ({ id }) => id === 'silver-shield-exhibition',
+    ),
+    false,
+  );
+  assert.equal(
+    cityDungeons('silver-crown', [], { clearedDungeons: [], includeLocked: true }).some(
+      ({ id }) => id === 'silver-shield-exhibition',
+    ),
+    true,
+  );
+  assert.equal(
+    cityDungeons('silver-crown', [], {
+      clearedDungeons: clearedCityDungeonIds({
+        exploration: { 'black-market': { cleared: [{ nodeId: 'black-market-4-auction' }] } },
+      }),
+    }).some(({ id }) => id === 'silver-shield-exhibition'),
+    true,
+  );
+});
+
+test('split nations, three city profiles/details, lv11-18 arena qualifier, and seven factions stay synced', async () => {
+  const builtin = await loadBuiltin();
+  const entries = Object.values(builtin.entries || {});
+  const byMainWorld = new Map(
+    entries
+      .filter((entry) => entry.extensions?.wanxiang?.mainWorld)
+      .map((entry) => [entry.extensions.wanxiang.mainWorld, entry]),
+  );
+  assert(!byMainWorld.has('nations'), 'legacy combined nations entry is removed');
+  for (const id of ['nation-aeldran', 'nation-tianqi', 'nation-rose', 'nation-others']) {
+    assert(byMainWorld.has(id), `Missing split nation entry: ${id}`);
+  }
+  const aeldran = byMainWorld.get('nation-aeldran');
+  const tianqi = byMainWorld.get('nation-tianqi');
+  const rose = byMainWorld.get('nation-rose');
+  assert(aeldran.content.includes('82级'));
+  assert(tianqi.content.includes('43级') && tianqi.content.includes('83级'));
+  assert(rose.content.includes('67级') && rose.content.includes('73级'));
+  assert.equal(byMainWorld.get('starbell-culture').comment, '地点简介：星钟城');
+
+  const byCityFaction = new Map(
+    entries
+      .filter((entry) => entry.extensions?.wanxiang?.cityFactionLore)
+      .map((entry) => [entry.extensions.wanxiang.cityFactionLore, entry]),
+  );
+  for (const lore of CITY_AND_FACTION_WORLDBOOK_ENTRIES) {
+    const builtinEntry = byCityFaction.get(lore.id);
+    assert(builtinEntry, `Missing builtin cityFactionLore entry: ${lore.id}`);
+    assert.equal(builtinEntry.content, lore.content);
+    assert.deepEqual(builtinEntry.key, lore.key);
+    assert.equal(builtinEntry.comment, lore.comment);
+  }
+
+  const arenaSetting = byCityFaction.get('arena-qualifier-setting');
+  const arenaDetail = byCityFaction.get('arena-qualifier-detail');
+  assert(arenaSetting.content.includes('lv11~13') && arenaSetting.content.includes('lv17~18'));
+  assert(!arenaSetting.content.includes('奥勒留'));
+  assert(!arenaDetail.content.includes('维克托'));
+  for (const enemy of Object.values(ARENA_QUALIFIER_ARCHIVE_DEFINITIONS)) {
+    assert(arenaDetail.content.includes(enemy.name), `Missing qualifier enemy ${enemy.name}`);
+  }
+
+  const exhibitionDetail = byCityFaction.get('silver-crown-exhibition-detail');
+  for (const enemy of Object.values(SILVER_CROWN_SYNDICATE_ARCHIVE_DEFINITIONS)) {
+    assert(exhibitionDetail.content.includes(enemy.name), `Missing exhibition enemy ${enemy.name}`);
+  }
+  assert(
+    !entries.some(
+      (entry) => entry.comment?.includes('银盾镇展览馆') || entry.content?.includes('银盾镇展览馆'),
+    ),
+  );
+
+  const factionEntries = entries.filter((entry) => entry.comment?.startsWith('势力详情：'));
+  assert.equal(factionEntries.length, 7);
+  assert(factionEntries.some((entry) => entry.comment === '势力详情：乌羽秘会'));
 });

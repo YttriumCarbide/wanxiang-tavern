@@ -2,7 +2,6 @@
 export const PANDORA = {
   id: 'pandora',
   name: '潘多拉',
-  title: '星钟引路人',
   weapon: 'staff',
   attackType: 'special-magic',
   portrait: 'pandora.png',

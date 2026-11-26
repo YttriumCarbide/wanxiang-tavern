@@ -583,9 +583,9 @@ function reviewedRules() {
     ['/var:sideScenes', '`${art}.png`', '`${art}-night.png`'],
     ['/var:roadScenes/var:art', '`./assets/exploration/overland-road/${id}-wide`'],
     ['/var:roadScenes', '`${art}.png`', '`${art}-night.png`'],
-    ['/var:eternalRoadScenes', '`./assets/exploration/eternal-city/${id}.png`'],
-    ['/var:crossroadArtScenes', '`./assets/exploration/overland-road/${imageId}-wide.png`'],
-    ['/var:imperialLandmarkScenes', '`./assets/exploration/overland-road/${artName}.png`'],
+    ['/var:eternalRoadScenes', '`./assets/exploration/eternal-city/${id}.webp`'],
+    ['/var:crossroadArtScenes', '`./assets/exploration/overland-road/${imageId}-wide.webp`'],
+    ['/var:imperialLandmarkScenes', '`./assets/exploration/overland-road/${artName}.webp`'],
   ]);
   add('src/portraits.js', 'portraits', [
     [
@@ -594,7 +594,7 @@ function reviewedRules() {
     ],
   ]);
   add('src/content/rp-backgrounds.js', 'events', [
-    ['/fn:rpBackground', "`./assets/events/${region}-${node === 1 ? 'event' : 'quest'}.png`"],
+    ['/fn:rpBackground', "`./assets/events/${region}-${node === 1 ? 'event' : 'quest'}.webp`"],
   ]);
   add('src/content/gal-npc-portraits.js', 'gal', [
     ['/fn:galNpcPortrait', 'directory + portraits[npc.galPortrait]', 'directory + file'],
@@ -611,7 +611,7 @@ function reviewedRules() {
   ]);
   add('src/audio/sfx.js', 'sfx', [['/var:SFX', '`./assets/audio/sfx/${name}.wav`']]);
   add('src/content/city-center.js', 'content', [
-    ['/var:CITY_CENTER', '`./assets/exploration/city-center-${direction}-v1.png`'],
+    ['/var:CITY_CENTER', '`./assets/exploration/city-center-${direction}-v1.webp`'],
   ]);
   add('src/content/common-adversaries.js', 'content', [
     ['/fn:commonMob', '`${art}.glb`'],
@@ -635,15 +635,15 @@ function reviewedRules() {
   add('src/content/starbell-scenes.js', 'content', [
     [
       '/var:art',
-      '`./assets/exploration/${id}-panorama-v2.png`',
-      '`./assets/exploration/${id}-band-v1.png`',
-      '`./assets/exploration/${id}-${direction}-v2.png`',
+      '`./assets/exploration/${id}-panorama-v2.webp`',
+      '`./assets/exploration/${id}-band-v1.webp`',
+      '`./assets/exploration/${id}-${direction}-v2.webp`',
     ],
   ]);
   add('src/content/starlamp-street.js', 'content', [
     [
       '/var:STARLAMP_STREET',
-      "`./assets/exploration/starlamp-corner-${direction}-${{ front: 'v5', left: 'v4' }[direction] || 'v3'}.png`",
+      "`./assets/exploration/starlamp-corner-${direction}-${{ front: 'v5', left: 'v4' }[direction] || 'v3'}.webp`",
     ],
   ]);
   add('src/content/universal-adversaries.js', 'content', [

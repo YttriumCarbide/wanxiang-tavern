@@ -3,276 +3,276 @@
   "purpose": "各主题地图第2节点事件、第4节点自由RP及剧场报幕背景",
   "assets": [
     {
-      "file": "ruins-event.png",
+      "file": "ruins-event.webp",
       "node": 2,
       "prompt": "Ancient fractured stone ruin resting alcove; expedition table, satchel and cups; warm amber lanterns and cool slate; premium painterly fantasy 16:9 environment, no people, no text, no UI.",
       "style": "Premium hand-painted fantasy card RPG environment, landscape16:9, full bleed, no UI, characters, text or logos.",
       "sourceSha256": "ee4627eb2ea3b9b0a2ea370c10c5846d9f7cee6a16d45dae0d1429eaec743c01",
-      "sourceImage": "exec-d790ab0c-23db-473a-b745-13d99ba859bd.png"
+      "sourceImage": "exec-d790ab0c-23db-473a-b745-13d99ba859bd.webp"
     },
     {
-      "file": "ruins-quest.png",
+      "file": "ruins-quest.webp",
       "node": 4,
       "prompt": "A vaulted stone observatory at the heart of weathered ruins, a broken bronze armillary sphere and several walkable archways, a stone writing desk with scattered blank parchment, amber braziers, cold shafts of light. A place for investigation, negotiation, and finding multiple routes onward.",
       "style": "Premium hand-painted fantasy card RPG environment, landscape16:9, full bleed, no UI, characters, text or logos.",
       "sourceSha256": "f65c746c95d5ba5d9197302beac6c61e2c11f5653dd23b551cd2e7b871823b25",
-      "sourceImage": "exec-b1d2f9e7-01ac-46d1-ad96-2cb419fa92cd.png"
+      "sourceImage": "exec-b1d2f9e7-01ac-46d1-ad96-2cb419fa92cd.webp"
     },
     {
-      "file": "forest-event.png",
+      "file": "forest-event.webp",
       "node": 2,
       "prompt": "An inviting sheltered clearing under immense ancient trees, a little abandoned herbalist's rest stop with wicker baskets and unlabelled medicine bottles on a mossy log, tiny blue moon-motes in humid air, pale violet flowers, restrained warm lanterns. Atmospheric mysterious forest, not ominous horror.",
       "style": "Premium hand-painted fantasy card RPG environment, landscape16:9, full bleed, no UI, characters, text or logos.",
       "sourceSha256": "c1404720969356ae51396b5096e0836438235480e60ed6bdb896b32ef0815c1f",
-      "sourceImage": "exec-afcdfb68-660d-4135-9b90-143cc0e17490.png"
+      "sourceImage": "exec-afcdfb68-660d-4135-9b90-143cc0e17490.webp"
     },
     {
-      "file": "forest-quest.png",
+      "file": "forest-quest.webp",
       "node": 4,
       "prompt": "A vast moonlit forest hollow with enormous breathing-looking roots around a weathered stone causeway, distant suspended honeycomb-like natural structures and luminous blue flecks, branching routes, scattered old stone reliefs. A place to discover clues and find different ways through the forest.",
       "style": "Premium hand-painted fantasy card RPG environment, landscape16:9, full bleed, no UI, characters, text or logos.",
       "sourceSha256": "b1a249a740c2f375f9bfbabea8be5bed7059ca7d5cb5dd46e8601e83502d0019",
-      "sourceImage": "exec-783926a6-9737-4b2e-ae71-9bf067f176c4.png"
+      "sourceImage": "exec-783926a6-9737-4b2e-ae71-9bf067f176c4.webp"
     },
     {
-      "file": "frost-event.png",
+      "file": "frost-event.webp",
       "node": 2,
       "prompt": "A quiet abandoned railway shelter inside a huge icy crystal mine, old mine cart, bundled work gloves and a thermos on a wooden workbench, warm amber hanging lamp, pale blue crystal clusters and dense frost, dignified weathered industrial details.",
       "style": "Premium hand-painted fantasy card RPG environment, landscape16:9, full bleed, no UI, characters, text or logos.",
       "sourceSha256": "579f41e4a41119bb1fbd03a643e1d8e643e9af733fe051a1a81fe72d3d29d21f",
-      "sourceImage": "exec-18d5535a-9b02-4401-b260-499ccf2b364d.png"
+      "sourceImage": "exec-18d5535a-9b02-4401-b260-499ccf2b364d.webp"
     },
     {
-      "file": "frost-quest.png",
+      "file": "frost-quest.webp",
       "node": 4,
       "prompt": "An underground frosted mine junction, diverging rails, an old mechanical switching console with blank gauges, a closed industrial door and a side ladder, crystalline ice walls illuminated in blue-white with restrained orange emergency lamps. Layered exploratory space with several plausible routes.",
       "style": "Premium hand-painted fantasy card RPG environment, landscape16:9, full bleed, no UI, characters, text or logos.",
       "sourceSha256": "3717da0548e44b02b93944798c6d04531637a1959ec03cca7fa4ee0b403b4837",
-      "sourceImage": "exec-bcc8e348-a445-4809-a0e7-caf3124a7716.png"
+      "sourceImage": "exec-bcc8e348-a445-4809-a0e7-caf3124a7716.webp"
     },
     {
-      "file": "forge-event.png",
+      "file": "forge-event.webp",
       "node": 2,
       "prompt": "A cooling workshop alcove beside a colossal abandoned foundry, a metal worktable, plain cups, tongs and repaired tools, leather apron hanging from a hook, banked furnace warmth reflected on dark iron and copper. Human-scale rest stop amid monumental industrial surroundings.",
       "style": "Premium hand-painted fantasy card RPG environment, landscape16:9, full bleed, no UI, characters, text or logos.",
       "sourceSha256": "103c4d5911825e9dec19c8977623d0f1f46accd0dbbe3c1a3565fef51afe4523",
-      "sourceImage": "exec-5583406c-0b99-4440-a648-f5ca2d72d712.png"
+      "sourceImage": "exec-5583406c-0b99-4440-a648-f5ca2d72d712.webp"
     },
     {
-      "file": "forge-quest.png",
+      "file": "forge-quest.webp",
       "node": 4,
       "prompt": "A great ruined forge hall of soot-black iron, overhead chains, winding catwalks, stopped mechanical hammers and multiple walkways around a low glowing molten channel. Visible valve wheels and an old gate offer environmental clues, orange embers and cool charcoal shadows.",
       "style": "Premium hand-painted fantasy card RPG environment, landscape16:9, full bleed, no UI, characters, text or logos.",
       "sourceSha256": "77651685a2c8b9285b1d424275154ad10068eee5790f45addfed5e0c1cd245b7",
-      "sourceImage": "exec-b92657a3-c882-45bb-b157-fbdd65c66b2d.png"
+      "sourceImage": "exec-b92657a3-c882-45bb-b157-fbdd65c66b2d.webp"
     },
     {
-      "file": "tide-event.png",
+      "file": "tide-event.webp",
       "node": 2,
       "prompt": "A peaceful sheltered terrace in an ancient tidal star temple, pearly limestone, shallow water and subtle coral, a small stone table with an unmarked shell bowl, warm coral lamps, distant misty ocean and a broken astronomical dome. Soft sea-blue, old gold and rose pearl.",
       "style": "Premium hand-painted fantasy card RPG environment, landscape16:9, full bleed, no UI, characters, text or logos.",
       "sourceSha256": "0018307b45fb0959d7d47fbfd4a322d6aa5bba1ba92f9a5d46d6311393b9ba73",
-      "sourceImage": "exec-c5a5461c-1f84-4ca8-8ae3-fbcbc2d2408b.png"
+      "sourceImage": "exec-c5a5461c-1f84-4ca8-8ae3-fbcbc2d2408b.webp"
     },
     {
-      "file": "tide-quest.png",
+      "file": "tide-quest.webp",
       "node": 4,
       "prompt": "A majestic partly flooded astronomical temple chamber, stone bridges crossing reflective shallow water, a tilted bronze star disc, coral-framed doorways and three accessible passages. Shafts of moonlight and hanging tide lamps, quiet mystery, deep indigo with silver and pale coral accents.",
       "style": "Premium hand-painted fantasy card RPG environment, landscape16:9, full bleed, no UI, characters, text or logos.",
       "sourceSha256": "d7e140b6554ef68c8947756b3cea2d0c161debce58340a26f566da53126aa610",
-      "sourceImage": "exec-e13c2e16-3001-4a5a-b49c-a3635381e3b8.png"
+      "sourceImage": "exec-e13c2e16-3001-4a5a-b49c-a3635381e3b8.webp"
     },
     {
-      "file": "arcane-event.png",
+      "file": "arcane-event.webp",
       "node": 2,
       "prompt": "A quiet arcane study alcove in a floating mage tower, drifting rune-lit shelves, a small round table with an unmarked crystal decanter and stacked tomes, soft violet and teal arcane glow, faint constellations through a tall arched window. Calm scholarly mystery, no people, no text, no UI.",
       "style": "Premium hand-painted fantasy card RPG environment, landscape16:9, full bleed, no UI, characters, text or logos.",
       "sourceSha256": "ced9ace37cfd9573a85d8d7ef7d73dde08a0ff64bc5abeb85d993b2df6304f9f",
-      "sourceImage": "新增美术素材-2026-11-20/arcane-event.png"
+      "sourceImage": "新增美术素材-2026-11-20/arcane-event.webp"
     },
     {
-      "file": "arcane-quest.png",
+      "file": "arcane-quest.webp",
       "node": 4,
       "prompt": "A vast arcane sanctum of floating stone platforms and suspended spell circles, a central rune dais with branching walkways, drifting motes of violet and gold light, tall shelves and broken arcane machinery. Layered exploratory space with several routes, no people, no text, no UI.",
       "style": "Premium hand-painted fantasy card RPG environment, landscape16:9, full bleed, no UI, characters, text or logos.",
       "sourceSha256": "9affa93f7f9d7c2fa134df8d7060eff3eabdf8b9795a623f9a6dafce6638d5ef",
-      "sourceImage": "新增美术素材-2026-11-20/arcane-quest.png"
+      "sourceImage": "新增美术素材-2026-11-20/arcane-quest.webp"
     },
     {
-      "file": "black-market-event.png",
+      "file": "black-market-event.webp",
       "node": 2,
       "prompt": "A shadowed back-alley rest nook of a clandestine night market, crates and a small folding table with unmarked goods, hanging paper lanterns in muted red and amber, damp cobblestones and narrow side passages. Secretive but inviting atmosphere, no people, no text, no UI.",
       "style": "Premium hand-painted fantasy card RPG environment, landscape16:9, full bleed, no UI, characters, text or logos.",
       "sourceSha256": "a0b6935cd20b5981cf2645d7270cb92429c4f41b162bb83a75e66165aa17ec24",
-      "sourceImage": "新增美术素材-2026-11-20/black-market-event.png"
+      "sourceImage": "新增美术素材-2026-11-20/black-market-event.webp"
     },
     {
-      "file": "black-market-quest.png",
+      "file": "black-market-quest.webp",
       "node": 4,
       "prompt": "A sprawling hidden bazaar beneath a vaulted stone undercity, winding stalls, curtained alcoves and multiple alley exits, dim lantern light and drifting smoke, stacked crates and unmarked wares. A place for negotiation and secret routes, no people, no text, no UI.",
       "style": "Premium hand-painted fantasy card RPG environment, landscape16:9, full bleed, no UI, characters, text or logos.",
       "sourceSha256": "273924b1d8496ac2761bab5c449922318dec7b95aba95275cff457458c564ec4",
-      "sourceImage": "新增美术素材-2026-11-20/black-market-quest.png"
+      "sourceImage": "新增美术素材-2026-11-20/black-market-quest.webp"
     },
     {
-      "file": "castle-event.png",
+      "file": "castle-event.webp",
       "node": 2,
       "prompt": "A quiet stone antechamber in a grand medieval castle, a small table with an unmarked goblet and folded cloth, banners and tapestries, warm torchlight on grey stone, a tall window overlooking misty battlements. Noble and calm, no people, no text, no UI.",
       "style": "Premium hand-painted fantasy card RPG environment, landscape16:9, full bleed, no UI, characters, text or logos.",
       "sourceSha256": "985828756e6cc384db4b450c90ff59bdeb2698034aff84dcd1a9b543e926aff3",
-      "sourceImage": "新增美术素材-2026-11-20/castle-event.png"
+      "sourceImage": "新增美术素材-2026-11-20/castle-event.webp"
     },
     {
-      "file": "castle-quest.png",
+      "file": "castle-quest.webp",
       "node": 4,
       "prompt": "A grand castle great hall with a long empty table, towering pillars, arched galleries and several doorways, banners hanging in shadow, shafts of light through tall stained windows. A place for courtly intrigue and multiple routes, no people, no text, no UI.",
       "style": "Premium hand-painted fantasy card RPG environment, landscape16:9, full bleed, no UI, characters, text or logos.",
       "sourceSha256": "c31c3f88da9e9c1f67ef1cf641de4a16d0746113082c078678336c96f81da515",
-      "sourceImage": "新增美术素材-2026-11-20/castle-quest.png"
+      "sourceImage": "新增美术素材-2026-11-20/castle-quest.webp"
     },
     {
-      "file": "city-market-event.png",
+      "file": "city-market-event.webp",
       "node": 2,
       "prompt": "A cozy corner stall in a bustling medieval city market, wooden counter with unmarked baskets and produce, striped awnings, warm afternoon light on cobblestones, quiet side street beyond. Lively but restful, no people, no text, no UI.",
       "style": "Premium hand-painted fantasy card RPG environment, landscape16:9, full bleed, no UI, characters, text or logos.",
       "sourceSha256": "ce97a345d50aaf88e63d032ff7b0941713ee034e43d35cd8b218e02f2dd4f435",
-      "sourceImage": "新增美术素材-2026-11-20/city-market-event.png"
+      "sourceImage": "新增美术素材-2026-11-20/city-market-event.webp"
     },
     {
-      "file": "city-market-quest.png",
+      "file": "city-market-quest.webp",
       "node": 4,
       "prompt": "A wide city market square with winding lanes, clustered stalls and awnings, a central fountain and several branching streets, warm daylight and drifting banners. A place to gather rumors and choose a path, no people, no text, no UI.",
       "style": "Premium hand-painted fantasy card RPG environment, landscape16:9, full bleed, no UI, characters, text or logos.",
       "sourceSha256": "68c9aaa2f60f075067c86692d33a20f19ea0c72c033ff77bdcb1a689bb461d16",
-      "sourceImage": "新增美术素材-2026-11-20/city-market-quest.png"
+      "sourceImage": "新增美术素材-2026-11-20/city-market-quest.webp"
     },
     {
-      "file": "dynasty-event.png",
+      "file": "dynasty-event.webp",
       "node": 2,
       "prompt": "A serene pavilion rest stop in an ancient eastern dynasty garden, carved wooden table with an unmarked tea set, red pillars and lattice screens, misty pond and stone lanterns, soft dawn light. Elegant and tranquil, no people, no text, no UI.",
       "style": "Premium hand-painted fantasy card RPG environment, landscape16:9, full bleed, no UI, characters, text or logos.",
       "sourceSha256": "7f56f143f11369f73fa9bb12a585d4101c06a90a9e723f3749df2adfe477bf78",
-      "sourceImage": "新增美术素材-2026-11-20/dynasty-event.png"
+      "sourceImage": "新增美术素材-2026-11-20/dynasty-event.webp"
     },
     {
-      "file": "dynasty-quest.png",
+      "file": "dynasty-quest.webp",
       "node": 4,
       "prompt": "A grand dynasty palace courtyard with layered tiled roofs, stone pathways branching between gates and corridors, a central ceremonial platform, drifting mist and warm lantern light. A place for diplomacy and multiple routes, no people, no text, no UI.",
       "style": "Premium hand-painted fantasy card RPG environment, landscape16:9, full bleed, no UI, characters, text or logos.",
       "sourceSha256": "0e69d3d658eccb2e63fc85e60c6d7ad32fc0115e19e2bd39b8e6279204f82073",
-      "sourceImage": "新增美术素材-2026-11-20/dynasty-quest.png"
+      "sourceImage": "新增美术素材-2026-11-20/dynasty-quest.webp"
     },
     {
-      "file": "graystone-quarry-event.png",
+      "file": "graystone-quarry-event.webp",
       "node": 2,
       "prompt": "A sheltered rest nook in a vast grey stone quarry, a rough wooden bench and unmarked crates, stacked cut stone blocks, dusty warm light and cool shadowed cliffs. Weathered industrial calm, no people, no text, no UI.",
       "style": "Premium hand-painted fantasy card RPG environment, landscape16:9, full bleed, no UI, characters, text or logos.",
       "sourceSha256": "b161ccddbc0e6cfca0829f2adec3ef20395570ed124bc493f047963542b114c6",
-      "sourceImage": "新增美术素材-2026-11-20/graystone-quarry-event.png"
+      "sourceImage": "新增美术素材-2026-11-20/graystone-quarry-event.webp"
     },
     {
-      "file": "graystone-quarry-quest.png",
+      "file": "graystone-quarry-quest.webp",
       "node": 4,
       "prompt": "A deep quarry junction with terraced stone walls, winding cart tracks and several tunnel entrances, abandoned mining gear and a central stone platform, dusty shafts of light. Layered exploratory space, no people, no text, no UI.",
       "style": "Premium hand-painted fantasy card RPG environment, landscape16:9, full bleed, no UI, characters, text or logos.",
       "sourceSha256": "0ec074a8541ed078cada12f475a64e20f85f101249a495a30aa04959f4f0fee1",
-      "sourceImage": "新增美术素材-2026-11-20/graystone-quarry-quest.png"
+      "sourceImage": "新增美术素材-2026-11-20/graystone-quarry-quest.webp"
     },
     {
-      "file": "metropolis-event.png",
+      "file": "metropolis-event.webp",
       "node": 2,
       "prompt": "A quiet elevated rest terrace in a sprawling fantasy metropolis, a small table with an unmarked cup, iron railings, glowing street lamps and distant towers in soft dusk haze. Urban calm with gentle neon warmth, no people, no text, no UI.",
       "style": "Premium hand-painted fantasy card RPG environment, landscape16:9, full bleed, no UI, characters, text or logos.",
       "sourceSha256": "430f109abd72810139867fce0bf2db76e923c8a7720dab0179015e6f7c69f7de",
-      "sourceImage": "新增美术素材-2026-11-20/metropolis-event.png"
+      "sourceImage": "新增美术素材-2026-11-20/metropolis-event.webp"
     },
     {
-      "file": "metropolis-quest.png",
+      "file": "metropolis-quest.webp",
       "node": 4,
       "prompt": "A vast metropolis plaza with layered walkways, bridges and branching streets, glowing lamps and towering facades fading into mist, a central open square. A place to navigate intrigue and multiple routes, no people, no text, no UI.",
       "style": "Premium hand-painted fantasy card RPG environment, landscape16:9, full bleed, no UI, characters, text or logos.",
       "sourceSha256": "bbad848ce8e1667c2258c44b4976f5d4a45330996bb4f8d9f9d73da2d9a4c765",
-      "sourceImage": "新增美术素材-2026-11-20/metropolis-quest.png"
+      "sourceImage": "新增美术素材-2026-11-20/metropolis-quest.webp"
     },
     {
-      "file": "mill-event.png",
+      "file": "mill-event.webp",
       "node": 2,
       "prompt": "A cozy rest corner inside an old water mill, wooden table with an unmarked cup and flour sacks, turning wheel visible through a window, warm dusty light and cool shadowed beams. Rustic and peaceful, no people, no text, no UI.",
       "style": "Premium hand-painted fantasy card RPG environment, landscape16:9, full bleed, no UI, characters, text or logos.",
       "sourceSha256": "246988fc5962ac0b6948443b90afb896988e3b4173216ebb25bfea491c29bb75",
-      "sourceImage": "新增美术素材-2026-11-20/mill-event.png"
+      "sourceImage": "新增美术素材-2026-11-20/mill-event.webp"
     },
     {
-      "file": "mill-quest.png",
+      "file": "mill-quest.webp",
       "node": 4,
       "prompt": "A sprawling mill interior with wooden catwalks, turning gears and a central water channel, several doorways and ladders leading onward, warm lantern light and drifting dust. Layered exploratory space, no people, no text, no UI.",
       "style": "Premium hand-painted fantasy card RPG environment, landscape16:9, full bleed, no UI, characters, text or logos.",
       "sourceSha256": "1d5a3af9b7c6af624a095ee8067aa2fb02166c2156988b8f7e7735121c7d1787",
-      "sourceImage": "新增美术素材-2026-11-20/mill-quest.png"
+      "sourceImage": "新增美术素材-2026-11-20/mill-quest.webp"
     },
     {
-      "file": "nexus-event.png",
+      "file": "nexus-event.webp",
       "node": 2,
       "prompt": "A quiet rest alcove at a crossroads nexus of floating stone platforms, a small table with an unmarked vessel, drifting motes of multicolored light, faint portals shimmering in the distance. Calm and mysterious, no people, no text, no UI.",
       "style": "Premium hand-painted fantasy card RPG environment, landscape16:9, full bleed, no UI, characters, text or logos.",
       "sourceSha256": "359afd4f897840a6f81a68fbcf3632380e7d269c9c9d7109b0cc219e113b5f25",
-      "sourceImage": "新增美术素材-2026-11-20/nexus-event.png"
+      "sourceImage": "新增美术素材-2026-11-20/nexus-event.webp"
     },
     {
-      "file": "nexus-quest.png",
+      "file": "nexus-quest.webp",
       "node": 4,
       "prompt": "A vast nexus chamber of intersecting stone bridges and glowing portals, a central dais with branching paths, swirling multicolored energy and drifting light. A place to choose among many routes, no people, no text, no UI.",
       "style": "Premium hand-painted fantasy card RPG environment, landscape16:9, full bleed, no UI, characters, text or logos.",
       "sourceSha256": "68e17162033098b5080e5136969e3179fc1614e7f81890577635b289a6ca014a",
-      "sourceImage": "新增美术素材-2026-11-20/nexus-quest.png"
+      "sourceImage": "新增美术素材-2026-11-20/nexus-quest.webp"
     },
     {
-      "file": "relic-event.png",
+      "file": "relic-event.webp",
       "node": 2,
       "prompt": "A quiet study alcove in an ancient relic vault, a stone table with an unmarked artifact and dusty tomes, shelves of sealed cases, warm amber light and cool shadowed stone. Scholarly and calm, no people, no text, no UI.",
       "style": "Premium hand-painted fantasy card RPG environment, landscape16:9, full bleed, no UI, characters, text or logos.",
       "sourceSha256": "e3b870071bdc9f57eac25aa7719c75fb7bdf77e175f42e8236ad31ec2e21afa6",
-      "sourceImage": "新增美术素材-2026-11-20/relic-event.png"
+      "sourceImage": "新增美术素材-2026-11-20/relic-event.webp"
     },
     {
-      "file": "relic-quest.png",
+      "file": "relic-quest.webp",
       "node": 4,
       "prompt": "A vast relic vault chamber with towering shelves, sealed cases and a central pedestal, several archways and stairways branching outward, shafts of light through high windows. A place for investigation and multiple routes, no people, no text, no UI.",
       "style": "Premium hand-painted fantasy card RPG environment, landscape16:9, full bleed, no UI, characters, text or logos.",
       "sourceSha256": "1780f4b2c8dc816ee5164bd11a45b3e275708b25b4e12e041059f8d169debb97",
-      "sourceImage": "新增美术素材-2026-11-20/relic-quest.png"
+      "sourceImage": "新增美术素材-2026-11-20/relic-quest.webp"
     },
     {
-      "file": "wasteland-event.png",
+      "file": "wasteland-event.webp",
       "node": 2,
       "prompt": "A sheltered rest nook among weathered wasteland rocks, a rough table with an unmarked canteen, tattered cloth awning, dusty warm light and pale sky. Harsh but calm refuge, no people, no text, no UI.",
       "style": "Premium hand-painted fantasy card RPG environment, landscape16:9, full bleed, no UI, characters, text or logos.",
       "sourceSha256": "ff1b3db8295e379cd3856e48902caa7ac083ed887eca57e7037f3769be738dff",
-      "sourceImage": "新增美术素材-2026-11-20/wasteland-event.png"
+      "sourceImage": "新增美术素材-2026-11-20/wasteland-event.webp"
     },
     {
-      "file": "wasteland-quest.png",
+      "file": "wasteland-quest.webp",
       "node": 4,
       "prompt": "A sprawling wasteland crossroads with cracked earth, scattered ruins and several winding paths, a central rocky rise and distant dust haze. A place to scout and choose a route, no people, no text, no UI.",
       "style": "Premium hand-painted fantasy card RPG environment, landscape16:9, full bleed, no UI, characters, text or logos.",
       "sourceSha256": "99f45a904cfb38aad6a581163441f8b1fbb7aa4813dd8f96e79012de36f1b87d",
-      "sourceImage": "新增美术素材-2026-11-20/wasteland-quest.png"
+      "sourceImage": "新增美术素材-2026-11-20/wasteland-quest.webp"
     },
     {
-      "file": "xianxia-event.png",
+      "file": "xianxia-event.webp",
       "node": 2,
       "prompt": "A serene rest pavilion on a misty immortal mountain, carved stone table with an unmarked tea set, drifting clouds and pine branches, soft jade and gold light. Tranquil cultivation atmosphere, no people, no text, no UI.",
       "style": "Premium hand-painted fantasy card RPG environment, landscape16:9, full bleed, no UI, characters, text or logos.",
       "sourceSha256": "2d2c202794e66a2a9c6fd55326232ca9f214819a244c5029d5d1f331145be3ce",
-      "sourceImage": "新增美术素材-2026-11-20/xianxia-event.png"
+      "sourceImage": "新增美术素材-2026-11-20/xianxia-event.webp"
     },
     {
-      "file": "xianxia-quest.png",
+      "file": "xianxia-quest.webp",
       "node": 4,
       "prompt": "A vast immortal mountain terrace with floating stone platforms, winding stairways and several cloud-wreathed paths, a central altar and drifting mist. A place for cultivation trials and multiple routes, no people, no text, no UI.",
       "style": "Premium hand-painted fantasy card RPG environment, landscape16:9, full bleed, no UI, characters, text or logos.",
       "sourceSha256": "3001eac0c1a10534f34ce89558e44dba83856530a22105f08ca6d5e541c1ab9d",
-      "sourceImage": "新增美术素材-2026-11-20/xianxia-quest.png"
+      "sourceImage": "新增美术素材-2026-11-20/xianxia-quest.webp"
     }
   ]
 }

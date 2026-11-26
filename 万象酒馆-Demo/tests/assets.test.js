@@ -13,6 +13,46 @@ import {
   SCENE_VISITOR_SPOTS,
 } from '../src/content/tavern-visitors.js';
 
+function readImageMeta(bytes) {
+  if (bytes.subarray(1, 4).toString() === 'PNG') {
+    return {
+      format: 'PNG',
+      width: bytes.readUInt32BE(16),
+      height: bytes.readUInt32BE(20),
+      hasAlpha: bytes[25] === 6,
+    };
+  }
+  if (bytes.subarray(0, 4).toString() === 'RIFF' && bytes.subarray(8, 12).toString() === 'WEBP') {
+    const chunk = bytes.subarray(12, 16).toString();
+    if (chunk === 'VP8X') {
+      return {
+        format: 'WEBP',
+        width: 1 + bytes.readUIntLE(24, 3),
+        height: 1 + bytes.readUIntLE(27, 3),
+        hasAlpha: (bytes[20] & 0x10) !== 0,
+      };
+    }
+    if (chunk === 'VP8L') {
+      const bits = bytes.readUInt32LE(21);
+      return {
+        format: 'WEBP',
+        width: (bits & 0x3fff) + 1,
+        height: ((bits >> 14) & 0x3fff) + 1,
+        hasAlpha: ((bits >> 28) & 1) !== 0,
+      };
+    }
+    if (chunk === 'VP8 ') {
+      return {
+        format: 'WEBP',
+        width: bytes.readUInt16LE(26) & 0x3fff,
+        height: bytes.readUInt16LE(28) & 0x3fff,
+        hasAlpha: false,
+      };
+    }
+  }
+  throw new Error('Unsupported image format');
+}
+
 test('content-addressed asset cache deduplicates reads, measures bytes and invalidates changed files', async (t) => {
   const previous = { fetch: globalThis.fetch, caches: globalThis.caches };
   t.after(() => Object.assign(globalThis, previous));
@@ -115,7 +155,7 @@ test('eight characters share full-body originals with Gal, and every scene has i
   const npcArt = JSON.parse(
     await readFile(new URL('../assets/gal-npc-cast/manifest.json', import.meta.url), 'utf8'),
   );
-  assert.equal(npcArt.assets.length, 26);
+  assert.equal(npcArt.assets.length, 27);
   for (const entry of npcArt.assets) {
     const bytes = await readFile(new URL('../' + entry.file, import.meta.url));
     assert.equal(createHash('sha256').update(bytes).digest('hex'), entry.sha256);
@@ -123,7 +163,7 @@ test('eight characters share full-body originals with Gal, and every scene has i
     assert.equal(bytes.readUInt32BE(20), 1536);
     assert.equal(bytes[25], 6, `${entry.file} retains an RGBA alpha channel`);
   }
-  assert.equal(Object.keys(GAL_NPC_PORTRAITS).length, 26);
+  assert.equal(Object.keys(GAL_NPC_PORTRAITS).length, 27);
 });
 
 test('continuous surrounds and road textures retain their native source pixels', async () => {
@@ -138,9 +178,10 @@ test('continuous surrounds and road textures retain their native source pixels',
   }
   for (const entry of manifest.assets) {
     const bytes = await readFile(new URL('../' + entry.file, import.meta.url));
+    const meta = readImageMeta(bytes);
     assert.equal(createHash('sha256').update(bytes).digest('hex'), entry.sha256);
-    assert.equal(bytes.readUInt32BE(16), entry.width);
-    assert.equal(bytes.readUInt32BE(20), entry.height);
+    assert.equal(meta.width, entry.width);
+    assert.equal(meta.height, entry.height);
     if (entry.id) assert(entry.width >= 2000 && entry.width / entry.height === 3);
   }
 });
@@ -158,10 +199,11 @@ test('the spatial street keeps every generated painting at its native dimensions
   for (const file of files) assert(manifest.assets.some((entry) => './' + entry.file === file));
   for (const entry of manifest.assets) {
     const bytes = await readFile(new URL('../' + entry.file, import.meta.url));
+    const meta = readImageMeta(bytes);
     assert.equal(createHash('sha256').update(bytes).digest('hex'), entry.sha256);
-    assert.equal(bytes.readUInt32BE(16), entry.width);
-    assert.equal(bytes.readUInt32BE(20), entry.height);
-    if (entry.transparent) assert.equal(bytes[25], 6);
+    assert.equal(meta.width, entry.width);
+    assert.equal(meta.height, entry.height);
+    if (entry.transparent) assert.equal(meta.hasAlpha, true);
   }
 });
 
@@ -180,9 +222,10 @@ test('the fixed street views retain native paintings and keep all interaction po
     const entry = manifest.assets.find((entry) => './' + entry.file === view.image);
     assert(entry);
     const bytes = await readFile(new URL('../' + entry.file, import.meta.url));
+    const meta = readImageMeta(bytes);
     assert.equal(createHash('sha256').update(bytes).digest('hex'), entry.sha256);
-    assert.equal(bytes.readUInt32BE(16), entry.width);
-    assert.equal(bytes.readUInt32BE(20), entry.height);
+    assert.equal(meta.width, entry.width);
+    assert.equal(meta.height, entry.height);
     assert(entry.width >= 1600 && entry.width / entry.height > 1.7);
     assert.equal(Object.keys(view.spots).length, 2);
   }
@@ -193,13 +236,14 @@ test('the fixed street views retain native paintings and keep all interaction po
 test('four Starbell district scenes share the 16:9 city overview while keeping landmarks and spots', async () => {
   const { explorationScene } = await import('../src/exploration/scenes.js');
   const starbell = await readFile(
-    new URL('../assets/exploration/city-backgrounds/starbell.png', import.meta.url),
+    new URL('../assets/exploration/city-backgrounds/starbell.webp', import.meta.url),
   );
-  assert.equal(starbell.subarray(1, 4).toString(), 'PNG');
-  assert(Math.abs(starbell.readUInt32BE(16) / starbell.readUInt32BE(20) - 16 / 9) < 0.01);
+  const starbellMeta = readImageMeta(starbell);
+  assert.equal(starbellMeta.format, 'WEBP');
+  assert(Math.abs(starbellMeta.width / starbellMeta.height - 16 / 9) < 0.01);
   for (const id of ['city-center', 'market', 'rampart', 'outskirts']) {
     const scene = explorationScene(id);
-    assert.equal(scene.illustration.image, './assets/exploration/city-backgrounds/starbell.png');
+    assert.equal(scene.illustration.image, './assets/exploration/city-backgrounds/starbell.webp');
     assert(Math.abs(scene.illustration.aspect - 16 / 9) < 0.01);
     for (const point of scene.points)
       assert(scene.illustration.points[point.id], point.id + ' remains reachable');
@@ -216,10 +260,11 @@ test('town night and side paintings have matching proportions and wired exits', 
   const { TOWN_SCENES } = await import('../src/daily.js');
   const { CHAT_PLACES } = await import('../src/chat-places.js');
   async function aspect(file) {
-    const png = await readFile(new URL('../' + file.replace(/^\.\//, ''), import.meta.url));
-    assert.equal(png.subarray(1, 4).toString(), 'PNG');
-    assert(png.readUInt32BE(16) >= 1600);
-    return png.readUInt32BE(16) / png.readUInt32BE(20);
+    const bytes = await readFile(new URL('../' + file.replace(/^\.\//, ''), import.meta.url));
+    const meta = readImageMeta(bytes);
+    assert.equal(meta.format, 'WEBP');
+    assert(meta.width >= 1600);
+    return meta.width / meta.height;
   }
   const parents = new Set();
   for (const [id, place] of Object.entries(TOWN_SIDE_PLACES)) {
@@ -254,16 +299,18 @@ test('overland backgrounds retain their original files while travel uses the atl
     const scene = explorationScene(id);
     assert.equal(OUTING_SCENES[id], name);
     assert.equal(SCENE_VISITOR_SPOTS[id], undefined);
-    const png = await readFile(new URL('../' + scene.illustration.image.slice(2), import.meta.url));
-    assert.equal(png.subarray(1, 4).toString(), 'PNG');
-    const width = png.readUInt32BE(16);
-    const height = png.readUInt32BE(20);
+    const bytes = await readFile(
+      new URL('../' + scene.illustration.image.slice(2), import.meta.url),
+    );
+    const meta = readImageMeta(bytes);
+    assert.equal(meta.format, 'WEBP');
+    const { width, height } = meta;
     if (id === 'road-capital') {
       assert.equal(scene.returnDestination, 'tavern');
       assert.equal(scene.returnLabel, '返回酒馆');
       assert.equal(
         scene.illustration.image,
-        './assets/exploration/city-backgrounds/silver-crown.png',
+        './assets/exploration/city-backgrounds/silver-crown.webp',
       );
       assert(Math.abs(width / height - 16 / 9) < 0.01);
       continue;
@@ -276,7 +323,9 @@ test('overland backgrounds retain their original files while travel uses the atl
       const night = await readFile(
         new URL('../' + scene.illustration.nightImage.slice(2), import.meta.url),
       );
-      assert.deepEqual(night.subarray(16, 24), png.subarray(16, 24));
+      const nightMeta = readImageMeta(night);
+      assert.equal(nightMeta.width, width);
+      assert.equal(nightMeta.height, height);
     }
   }
 });
@@ -284,13 +333,14 @@ test('overland backgrounds retain their original files while travel uses the atl
 test('Silver Crown scenes share the single 16:9 city overview image', async () => {
   const { explorationScene } = await import('../src/exploration/scenes.js');
   const imageBytes = await readFile(
-    new URL('../assets/exploration/city-backgrounds/silver-crown.png', import.meta.url),
+    new URL('../assets/exploration/city-backgrounds/silver-crown.webp', import.meta.url),
   );
-  assert.equal(imageBytes.subarray(1, 4).toString(), 'PNG');
-  assert(Math.abs(imageBytes.readUInt32BE(16) / imageBytes.readUInt32BE(20) - 16 / 9) < 0.01);
+  const meta = readImageMeta(imageBytes);
+  assert.equal(meta.format, 'WEBP');
+  assert(Math.abs(meta.width / meta.height - 16 / 9) < 0.01);
   for (const id of Object.keys(SILVER_CROWN_PLACES)) {
     const art = explorationScene(id).illustration;
-    assert.equal(art.image, './assets/exploration/city-backgrounds/silver-crown.png');
+    assert.equal(art.image, './assets/exploration/city-backgrounds/silver-crown.webp');
     assert(Math.abs(art.aspect - 16 / 9) < 0.01);
   }
 });
@@ -298,20 +348,22 @@ test('Silver Crown scenes share the single 16:9 city overview image', async () =
 test('Eternal City scenes share the 16:9 city overview while route stops keep 3:1 PNGs', async () => {
   const { explorationScene } = await import('../src/exploration/scenes.js');
   const cityBytes = await readFile(
-    new URL('../assets/exploration/city-backgrounds/eternal-city.png', import.meta.url),
+    new URL('../assets/exploration/city-backgrounds/eternal-city.webp', import.meta.url),
   );
-  assert.equal(cityBytes.subarray(1, 4).toString(), 'PNG');
-  assert(Math.abs(cityBytes.readUInt32BE(16) / cityBytes.readUInt32BE(20) - 16 / 9) < 0.01);
+  const cityMeta = readImageMeta(cityBytes);
+  assert.equal(cityMeta.format, 'WEBP');
+  assert(Math.abs(cityMeta.width / cityMeta.height - 16 / 9) < 0.01);
   for (const id of Object.keys(ETERNAL_CITY_PLACES)) {
     const art = explorationScene(id).illustration;
-    assert.equal(art.image, './assets/exploration/city-backgrounds/eternal-city.png');
+    assert.equal(art.image, './assets/exploration/city-backgrounds/eternal-city.webp');
     assert(Math.abs(art.aspect - 16 / 9) < 0.01);
   }
   for (const id of Object.keys(ETERNAL_CITY_STOPS)) {
     const { image } = explorationScene(id).illustration;
-    const png = await readFile(new URL('../' + image.slice(2), import.meta.url));
-    assert.equal(png.subarray(1, 4).toString(), 'PNG', image);
-    assert.equal(png.readUInt32BE(16), png.readUInt32BE(20) * 3, image);
+    const bytes = await readFile(new URL('../' + image.slice(2), import.meta.url));
+    const meta = readImageMeta(bytes);
+    assert.equal(meta.format, 'WEBP', image);
+    assert.equal(meta.width, meta.height * 3, image);
   }
 });
 

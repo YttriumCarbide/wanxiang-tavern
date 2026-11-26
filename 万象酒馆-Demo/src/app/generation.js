@@ -55,12 +55,19 @@ import { applyGeneratedReset, restoreGeneratedRecovery } from './generated-reset
 import { completeExploration } from '../exploration.js';
 import { REGIONS } from '../content/regions.js';
 import { assignParty, firstCompanion } from '../campaign.js';
-import { archiveTavernPrelude, gameTime, memoryHistory, tavernPrelude } from '../memory.js';
+import {
+  archiveTavernPrelude,
+  gameTime,
+  isTestScriptRecord,
+  memoryHistory,
+  tavernPrelude,
+} from '../memory.js';
 import { prepareSwapLesson } from '../companion-events.js';
 import { rearUnlocked } from '../formation-access.js';
 import { npcSummonStatus } from '../summoning.js';
-import { syncGenerationLoadingChrome } from '../shared/scene-loading.js';
+import { setGenerationLoadingVisible } from '../shared/scene-loading.js';
 import { GAME_LIBRARY_KEY as libraryKey } from '../storage/checkpoint.js';
+import { GROWTH_REVISION, restoreGrowth } from '../growth.js';
 
 export function createGeneration(context) {
   const storage = context.storage || localStorage;
@@ -82,7 +89,10 @@ export function createGeneration(context) {
       Boolean(rawSaved?.campaign) &&
       Array.isArray(rawSaved?.characters) &&
       rawSaved.characters.length !== session.ai.library.characters.length;
-    if (purgeLegacyRuinsProgress(session.ai.library) || strippedRetired)
+    const migratedGrowth =
+      Array.isArray(rawSaved?.characters) &&
+      rawSaved.characters.some((entry) => entry?.growth?.revision !== GROWTH_REVISION);
+    if (purgeLegacyRuinsProgress(session.ai.library) || strippedRetired || migratedGrowth)
       storage.setItem(libraryKey, JSON.stringify(session.ai.library));
   } catch {
     /* Retain the seeded official pool. */
@@ -569,7 +579,6 @@ export function createGeneration(context) {
           rollId: (session.ai.characterRollId ||= crypto.randomUUID()),
           existing: library().characters.map((entry) => ({
             name: entry.setting.name,
-            title: entry.setting.title,
           })),
         }
       : scriptInput();
@@ -640,6 +649,9 @@ export function createGeneration(context) {
             ...(input.exploration ? { exploration: structuredClone(input.exploration) } : {}),
           };
     if (generated.growth) entry.growth = structuredClone(generated.growth);
+    if (kind === 'character') {
+      entry.growth = restoreGrowth(entry.growth, entry.id, entry.combat);
+    }
     if (generated.display) entry.display = generated.display;
     if (kind === 'character' && input.purpose === 'protagonist') {
       entry.combat.limit = 2;
@@ -711,10 +723,11 @@ export function createGeneration(context) {
       kind === 'character'
         ? '青色门扉泛起涟漪，一段新的来历正在浮现…'
         : '同行者跨越界门前，旅程的第一章正在展开…';
-    $('#generation-progress').hidden = kind === 'script';
-    if (kind !== 'script') {
-      syncGenerationLoadingChrome($('#generation-progress'), $('#generation-title').textContent);
-    }
+    setGenerationLoadingVisible(
+      $('#generation-progress'),
+      kind !== 'script',
+      $('#generation-title').textContent,
+    );
     if (kind === 'script') {
       session.ai.departureParty = library().party.filter(Boolean);
       context.shell.renderParty();
@@ -746,7 +759,7 @@ export function createGeneration(context) {
       session.ai.departureParty = null;
       request = null;
       if (!session.runtime.disposed) {
-        $('#generation-progress').hidden = true;
+        setGenerationLoadingVisible($('#generation-progress'), false);
         render();
         context.ledger?.sync();
       }
@@ -808,7 +821,11 @@ export function createGeneration(context) {
         const input = scriptInput();
         await accept(
           'script',
-          { ...adventureTestScript(input.exploration?.map), id: 'script-' + crypto.randomUUID() },
+          {
+            ...adventureTestScript(input.exploration?.map),
+            testScript: true,
+            id: 'script-' + crypto.randomUUID(),
+          },
           input,
         );
         return;
@@ -1222,6 +1239,7 @@ export function createGeneration(context) {
             adventureTestScript(input.exploration?.map),
             'script-' + crypto.randomUUID(),
           ),
+          testScript: true,
           generationInput: structuredClone(input),
           party: input.party,
           boss: input.boss,
@@ -1243,26 +1261,34 @@ export function createGeneration(context) {
         : null;
       if (book) {
         library().prepared = null;
-        const prelude = archiveTavernPrelude(library(), book.generationInput?.tavernPrelude, false);
-        library().history.push({
-          runId: session.ai.activeScript.runId,
-          scriptId: book.id,
-          title: book.title,
-          tags: [...(book.tags || [])],
-          gameTime: gameTime(library().daily),
-          setting: book.setting,
-          lines: prelude,
-          place: book.exploration ? explorationSpec(book.exploration).name : REGIONS.ruins.name,
-          people: (book.party || [])
-            .filter((member) => member.id !== library().campaign?.protagonistId)
-            .map((member) => member.name),
-          played: [],
-          complete: false,
-          nextHook: null,
-          ...(book.exploration
-            ? { map: routeKey(book.exploration), nodeId: book.exploration.id }
-            : {}),
-        });
+        if (isTestScriptRecord(book)) {
+          library().scripts = library().scripts.filter((entry) => entry.id !== book.id);
+        } else {
+          const prelude = archiveTavernPrelude(
+            library(),
+            book.generationInput?.tavernPrelude,
+            false,
+          );
+          library().history.push({
+            runId: session.ai.activeScript.runId,
+            scriptId: book.id,
+            title: book.title,
+            tags: [...(book.tags || [])],
+            gameTime: gameTime(library().daily),
+            setting: book.setting,
+            lines: prelude,
+            place: book.exploration ? explorationSpec(book.exploration).name : REGIONS.ruins.name,
+            people: (book.party || [])
+              .filter((member) => member.id !== library().campaign?.protagonistId)
+              .map((member) => member.name),
+            played: [],
+            complete: false,
+            nextHook: null,
+            ...(book.exploration
+              ? { map: routeKey(book.exploration), nodeId: book.exploration.id }
+              : {}),
+          });
+        }
         save();
       }
       story.reset();

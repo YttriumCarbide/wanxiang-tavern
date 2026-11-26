@@ -26,7 +26,7 @@ test('new output generates each name once while legacy duplicates remain optiona
     createCharacterReader(),
   ).entry;
   assert.equal(entry.combat.name, raw.setting.name);
-  assert.equal(entry.combat.title, '');
+  assert.equal(entry.combat.title, undefined);
   assert.equal(entry.combat.attackName, raw.setting.attack.name);
   assert.equal(entry.combat.skills[1].name, raw.setting.skills[1].name);
   assert(!entry.combat.ultimate);
@@ -76,7 +76,7 @@ test('official character through legacy and compact responses retain executable 
     assert.equal(JSON.stringify(document), before);
     assert.equal(result.diagnostic.candidateText, before);
     assert.equal(entry.combat.name, original.setting.name);
-    assert.equal(entry.combat.title, '');
+    assert.equal(entry.combat.title, undefined);
     assert.equal(entry.combat.attackName, original.setting.attack.name);
     assert(entry.setting.worldbook.includes(original.setting.history));
     const library = newLibrary();

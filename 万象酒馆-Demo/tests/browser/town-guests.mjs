@@ -10,6 +10,7 @@ export async function townGuestChecks({ browser, baseURL, output }) {
   const errors = [];
   page.on('pageerror', (error) => errors.push(error.message));
   await legacySession(page, { unlockSilverCrownTavern: true, enableAi: true });
+  const cityReply = Promise.withResolvers();
   await page.route('**/api/ai/generate/*', async (route) => {
     const endpoint = new URL(route.request().url()).pathname;
     if (endpoint !== '/api/ai/generate/chat') {
@@ -25,6 +26,7 @@ export async function townGuestChecks({ browser, baseURL, output }) {
       [],
       input,
     );
+    await cityReply.promise;
     return route.fulfill({
       json: {
         ...result,
@@ -271,14 +273,31 @@ export async function townGuestChecks({ browser, baseURL, output }) {
       .evaluate((node) =>
         Promise.all(node.getAnimations().map((animation) => animation.finished.catch(() => {}))),
       );
+    const environment = chat.locator('.scene-environment');
     const chatSend = chat.locator('#chat-send');
     await chat.locator('#chat-input').fill('看看眼前的长廊');
-    await chatSend.click();
-    const environment = chat.locator('.scene-environment');
+    try {
+      const [request] = await Promise.all([
+        page.waitForRequest((item) => new URL(item.url()).pathname === '/api/ai/generate/chat', {
+          timeout: 10000,
+        }),
+        chatSend.click(),
+      ]);
+      const input = request.postDataJSON();
+      assert.equal(input.place, 'crown-arcade', 'the actual request uses the locked street');
+      assert.deepEqual(input.selected, [`official-${townGuest.key}`]);
+      assert.equal(
+        await environment.isHidden(),
+        true,
+        'the street environment stays hidden while the response is pending',
+      );
+    } finally {
+      cityReply.resolve();
+    }
     await page.waitForFunction(
       () => {
         const environment = document.querySelector('#gal-stage .scene-environment');
-        return !environment?.hidden && environment.dataset.place === 'crown-arcade';
+        return environment && !environment.hidden && environment.dataset.place === 'crown-arcade';
       },
       null,
       { timeout: 10000 },
@@ -291,6 +310,7 @@ export async function townGuestChecks({ browser, baseURL, output }) {
       await environment.locator('.scene-environment-text').innerText(),
       /本轮交流的地点开头来自银工连廊/,
     );
+    assert.equal(await environment.locator('img').count(), 0, 'the environment has no image');
     assert.equal(
       await chat.locator('.gal-bg').isVisible(),
       false,
@@ -498,9 +518,35 @@ export async function townGuestChecks({ browser, baseURL, output }) {
     await page.screenshot({ path: path.join(output, 'three-character-details.png') });
     await page.setViewportSize({ width: 844, height: 390 });
     await page.screenshot({ path: path.join(output, 'three-character-details-mobile.png') });
+    const cueExit = await page.evaluate(async () => {
+      const { createSceneEnvironment } = await import(
+        new URL('src/app/scene-environment.js', document.baseURI).href
+      );
+      const host = document.body.appendChild(document.createElement('div'));
+      const cue = createSceneEnvironment(host);
+      try {
+        cue.show(
+          { placeId: 'crown-arcade', title: '银工连廊', text: '环境回归' },
+          { intro: false },
+        );
+        const root = host.firstElementChild;
+        cue.clear();
+        const [fade] = root.getAnimations();
+        const fading = !root.hidden && root.inert && root.dataset.place === 'crown-arcade';
+        fade?.finish();
+        await fade?.finished;
+        return { fading, cleared: root.hidden && !root.dataset.place };
+      } finally {
+        cue.dispose();
+        host.remove();
+      }
+    });
+    assert.deepEqual(cueExit, { fading: true, cleared: true });
     assert.deepEqual(errors, []);
     return {
       townResidents: 3,
+      cityChatLockedRequestAndTextOnlyReply: true,
+      sceneEnvironmentExit: true,
       nativePortraits: checks.portraits.length,
       menuTargets: true,
       statuses: 3,

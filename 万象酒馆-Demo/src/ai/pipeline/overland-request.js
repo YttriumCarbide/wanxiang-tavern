@@ -6,7 +6,7 @@ import {
   normalizeOverlandTheater,
   overlandPlan,
 } from '../../overland-travel.js';
-import { galInstruction, hasGalReactionGuidance } from '../gal-prompt.js';
+import { galInstruction, hasGalEnsembleGuidance, hasGalReactionGuidance } from '../gal-prompt.js';
 import { extractGenerationEnvelope } from './output-envelope.js';
 import { finalizeRequest } from './prompt-processing.js';
 import { scanScenarioWorldbooks } from '../journey-memory-worldbook.js';
@@ -77,7 +77,10 @@ export function overlandRequest(input, profile, countTokens, worldInfo) {
     countTokens,
     worldInfo,
   );
-  const galOptions = { reactionInWorldbook: hasGalReactionGuidance(worldbookMessages) };
+  const galOptions = {
+    reactionInWorldbook: hasGalReactionGuidance(worldbookMessages),
+    ensembleInWorldbook: hasGalEnsembleGuidance(worldbookMessages),
+  };
   return finalizeRequest(
     {
       messages: [

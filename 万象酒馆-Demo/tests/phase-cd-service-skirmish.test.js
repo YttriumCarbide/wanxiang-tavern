@@ -33,6 +33,9 @@ import {
   refreshWorldSkirmishes,
   settleSkirmishVictory,
 } from '../src/skirmishes.js';
+import { beginEncounter, carrySkirmishWave, newExpedition } from '../src/expedition.js';
+import { DEFINITIONS } from '../src/data.js';
+import { EMBLEM_ID } from '../src/emblems.js';
 import { SERVICE_PATCHES } from '../src/service-gestures.js';
 
 function testLibrary() {
@@ -207,4 +210,48 @@ test('Phase D.2: Wild 3-wave skirmishes claim Gold, Ether, valid INGREDIENTS & m
   assert.equal(isOverlandRouteKnown(lib, 'outskirts', 'road-capital'), false);
   markOverlandRouteExplored(lib, { from: 'outskirts', to: 'road-capital', legs: [] });
   assert.equal(isOverlandRouteKnown(lib, 'outskirts', 'road-capital'), true);
+});
+
+test('Wild 3-wave skirmishes inherit hero HP, MP, emblemCharge, and formation across waves', () => {
+  const lib = testLibrary();
+  const state = refreshWorldSkirmishes(lib, 'seed-carry');
+  const node = state.nodes[Object.keys(state.nodes)[0]];
+  const plan = buildSkirmishEncounterPlan(node);
+  const defs = structuredClone(DEFINITIONS);
+  defs.aegis.emblemId = EMBLEM_ID;
+
+  const expedition = newExpedition('bossGate', defs);
+  expedition.overlandBattle = {
+    skirmishRun: { nodeId: plan.nodeId, plan, waveIndex: 0 },
+    spec: {
+      name: `${plan.label} · 第 1/3 波`,
+      map: 'forest',
+      enemyIds: plan.encounters[0].enemies,
+      level: plan.encounters[0].level,
+    },
+  };
+
+  const wave1 = beginEncounter(expedition);
+  wave1.units.aegis.hp = Math.max(1, wave1.units.aegis.hp - 12);
+  wave1.units.aegis.mp = Math.max(0, wave1.units.aegis.mp - 3);
+  wave1.units.aegis.emblemCharge = 4;
+  wave1.units.aegis.block = 9;
+  wave1.units.aegis.buffs.shield = 2;
+
+  carrySkirmishWave(expedition, wave1);
+  expedition.index = 1;
+  expedition.overlandBattle.skirmishRun.waveIndex = 1;
+  expedition.overlandBattle.spec = {
+    name: `${plan.label} · 第 2/3 波`,
+    map: 'forest',
+    enemyIds: plan.encounters[1].enemies,
+    level: plan.encounters[1].level,
+  };
+
+  const wave2 = beginEncounter(expedition);
+  assert.equal(wave2.encounter, 1);
+  assert.equal(wave2.units.aegis.hp, wave1.units.aegis.hp);
+  assert.equal(wave2.units.aegis.mp, wave1.units.aegis.mp);
+  assert.equal(wave2.units.aegis.emblemCharge, 4);
+  assert.equal(wave2.units.aegis.buffs.shield || 0, 0);
 });

@@ -32,18 +32,11 @@
   max-height: none;
   padding: 20px 26px;
   overflow: hidden;
-  color: #f5ead8;
-  border: 1px solid rgba(226, 186, 111, 0.48);
-  border-radius: 18px;
-  background:
-    radial-gradient(ellipse at 50% -12%, rgba(211, 151, 75, 0.2), transparent 46%),
-    radial-gradient(ellipse at 50% 110%, rgba(7, 18, 15, 0.74), transparent 58%),
-    linear-gradient(145deg, #1b1712, #0b1210 58%, #11150f);
-  box-shadow:
-    0 30px 100px rgba(0, 0, 0, 0.84),
-    inset 0 0 0 1px rgba(255, 238, 201, 0.055),
-    inset 0 0 0 6px rgba(226, 186, 111, 0.026),
-    inset 0 1px 0 rgba(255, 255, 255, 0.09);
+  color: var(--astral-text);
+  border: 1px solid rgba(226, 192, 120, 0.48);
+  border-radius: 4px;
+  background: var(--astral-hatch), var(--astral-panel-bg);
+  box-shadow: var(--astral-frame-shadow);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
 }
@@ -112,40 +105,40 @@
   height: 34px;
   min-height: 34px;
   padding: 0;
-  border: 1px solid rgba(226, 186, 111, 0.24);
-  border-radius: 50%;
-  color: #d8c8ad;
-  background: rgba(5, 15, 12, 0.34);
+  border: 1px solid rgba(226, 192, 120, 0.45);
+  border-radius: 3px;
+  color: var(--astral-gold-hi);
+  background: linear-gradient(180deg, rgba(40, 50, 110, 0.92), rgba(16, 20, 48, 0.96));
   font:
-    300 21px/1 Georgia,
+    300 20px/1 Georgia,
     serif;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  box-shadow: var(--astral-btn-shadow);
 }
 [data-meal-close]:enabled:hover {
-  border-color: rgba(240, 212, 159, 0.62);
-  color: #fff2d3;
-  background: rgba(226, 186, 111, 0.09);
-  box-shadow: 0 0 14px rgba(226, 186, 111, 0.12);
+  border-color: var(--astral-gold-hi);
+  color: #fff;
+  background: linear-gradient(180deg, rgba(56, 70, 146, 0.94), rgba(22, 28, 68, 0.96));
+  box-shadow: 0 0 14px rgba(226, 192, 120, 0.28);
 }
 #dining-dialog h3 {
   display: flex;
   align-items: baseline;
   gap: 10px;
   margin: 0 0 10px;
-  color: #f2dfb9;
-  font-family: Georgia, 'Songti SC', 'STSong', 'Microsoft YaHei', serif;
+  color: var(--astral-gold-hi);
+  font-family: var(--display-serif);
   font-size: 17px;
   font-weight: 400;
   letter-spacing: 0.09em;
 }
 #dining-dialog small {
   display: block;
-  color: #b5a68f;
+  color: var(--astral-sub);
   font-size: 12px;
   letter-spacing: 0.02em;
 }
 #dining-dialog h3 small {
-  color: #988d7c;
+  color: var(--astral-muted);
   font-size: 10px;
   font-weight: 400;
   letter-spacing: 0.03em;
@@ -165,13 +158,12 @@
 .meal-company,
 .meal-menu {
   padding: 13px 14px 12px;
-  border: 1px solid rgba(226, 186, 111, 0.13);
-  border-radius: 11px;
-  background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.035), transparent 36%), rgba(4, 15, 12, 0.22);
+  border: 1px solid var(--astral-line);
+  border-radius: 4px;
+  background: rgba(11, 14, 34, 0.68);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.035),
-    0 8px 24px rgba(0, 0, 0, 0.12);
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 8px 24px rgba(0, 0, 0, 0.24);
 }
 .meal-company {
   position: relative;
@@ -186,10 +178,10 @@
   right: 13px;
   min-height: 31px;
   padding: 4px 11px;
-  border-color: rgba(226, 186, 111, 0.2);
-  border-radius: 999px;
-  color: #d9c5a4;
-  background: rgba(5, 15, 12, 0.24);
+  border-color: rgba(226, 192, 120, 0.36);
+  border-radius: 3px;
+  color: var(--astral-gold-hi);
+  background: var(--astral-card-bg);
   font-size: 11px;
   box-shadow: none;
 }
@@ -207,29 +199,26 @@
   padding: 8px;
   align-items: stretch;
   justify-content: flex-start;
-  border-color: rgba(226, 186, 111, 0.12);
-  border-radius: 9px;
-  color: #eadcc4;
-  background:
-    linear-gradient(140deg, rgba(255, 255, 255, 0.035), transparent 48%), rgba(0, 0, 0, 0.16);
+  border-color: rgba(226, 192, 120, 0.24);
+  border-radius: 4px;
+  color: var(--astral-text);
+  background: rgba(16, 20, 48, 0.72);
   text-align: left;
   box-shadow: none;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
 }
 [data-meal-members] button:enabled:hover {
-  border-color: rgba(240, 210, 150, 0.35);
-  background:
-    linear-gradient(140deg, rgba(226, 186, 111, 0.08), transparent 55%), rgba(0, 0, 0, 0.18);
-  box-shadow: 0 0 16px rgba(226, 186, 111, 0.06);
+  border-color: rgba(255, 241, 196, 0.56);
+  background: linear-gradient(140deg, rgba(226, 192, 120, 0.12), rgba(22, 28, 66, 0.88));
+  box-shadow: 0 0 16px rgba(226, 192, 120, 0.14);
 }
 [data-meal-members] button[aria-pressed='true'] {
-  border-color: rgba(234, 199, 132, 0.62);
-  background:
-    linear-gradient(140deg, rgba(226, 186, 111, 0.105), transparent 58%), rgba(0, 0, 0, 0.16);
+  border-color: var(--astral-gold-hi);
+  background: linear-gradient(140deg, rgba(226, 192, 120, 0.18), rgba(28, 36, 82, 0.92));
   box-shadow:
-    inset 0 0 22px rgba(226, 186, 111, 0.05),
-    0 0 17px rgba(226, 186, 111, 0.06);
+    inset 0 0 20px rgba(226, 192, 120, 0.08),
+    0 0 16px rgba(226, 192, 120, 0.16);
 }
 .meal-portrait {
   width: 66px;
@@ -326,21 +315,19 @@
   gap: 11px;
   padding: 11px;
   text-align: left;
-  border: 1px solid rgba(226, 186, 111, 0.105);
-  border-radius: 9px;
-  background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.03), transparent 48%), rgba(5, 15, 12, 0.2);
+  border: 1px solid rgba(226, 192, 120, 0.22);
+  border-radius: 4px;
+  background: rgba(16, 20, 48, 0.72);
   box-shadow: none;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
 }
 [data-meal-foods] button:enabled:hover {
-  border-color: rgba(238, 205, 142, 0.36);
-  background:
-    linear-gradient(145deg, rgba(226, 186, 111, 0.08), transparent 52%), rgba(5, 15, 12, 0.24);
+  border-color: rgba(255, 241, 196, 0.56);
+  background: linear-gradient(145deg, rgba(226, 192, 120, 0.12), rgba(22, 28, 66, 0.88));
   box-shadow:
-    0 8px 22px rgba(0, 0, 0, 0.2),
-    0 0 14px rgba(226, 186, 111, 0.055);
+    0 8px 22px rgba(0, 0, 0, 0.28),
+    0 0 14px rgba(226, 192, 120, 0.14);
   transform: translateY(-1px);
 }
 .meal-food-copy {
@@ -351,32 +338,31 @@
 }
 .meal-food-copy strong {
   display: block;
-  color: #f0dfc1;
-  font-family: Georgia, 'Songti SC', 'STSong', 'Microsoft YaHei', serif;
+  color: var(--astral-gold-hi);
+  font-family: var(--display-serif);
   font-size: 15px;
   font-weight: 400;
   letter-spacing: 0.05em;
 }
 .meal-food-copy small {
   margin-top: 1px;
-  color: #9f9381;
+  color: var(--astral-sub);
   font-size: 10px;
   line-height: 1.55;
 }
 .meal-availability {
   display: block;
   margin-top: 5px;
-  color: #b9caa9;
+  color: var(--astral-cyan);
   font-size: 11px;
   letter-spacing: 0.03em;
 }
 #dining-dialog [aria-pressed='true'] {
-  border-color: rgba(238, 204, 140, 0.58);
-  background:
-    linear-gradient(145deg, rgba(226, 186, 111, 0.11), transparent 55%), rgba(5, 15, 12, 0.24);
+  border-color: var(--astral-gold-hi);
+  background: linear-gradient(145deg, rgba(226, 192, 120, 0.18), rgba(28, 36, 82, 0.92));
   box-shadow:
-    inset 0 0 20px rgba(226, 186, 111, 0.05),
-    0 0 15px rgba(226, 186, 111, 0.045);
+    inset 0 0 20px rgba(226, 192, 120, 0.08),
+    0 0 15px rgba(226, 192, 120, 0.14);
 }
 .meal-order {
   display: grid;
@@ -385,11 +371,10 @@
   align-items: center;
   flex: 0 0 auto;
   padding: 11px 13px;
-  border: 1px solid rgba(226, 186, 111, 0.14);
-  border-radius: 10px;
-  background:
-    linear-gradient(90deg, rgba(226, 186, 111, 0.055), transparent 64%), rgba(4, 13, 11, 0.28);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--astral-line);
+  border-radius: 4px;
+  background: linear-gradient(90deg, rgba(226, 192, 120, 0.08), rgba(11, 14, 34, 0.84) 64%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 .meal-order small {
   margin: 0;
@@ -452,23 +437,25 @@
 #dining-dialog .primary {
   min-height: 42px;
   padding: 10px 19px;
-  border: 1px solid #f1d89f;
-  border-radius: 8px;
-  color: #25190b;
-  background: linear-gradient(135deg, #f0d9a1, #c89a54);
+  border: 1px solid #fff6d8;
+  border-radius: 3px;
+  color: #1c1406;
+  background: linear-gradient(180deg, #fff1c4, #dab262 60%, #b4863a);
   font-weight: 700;
   letter-spacing: 0.06em;
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.26);
   box-shadow:
-    0 4px 18px rgba(213, 166, 88, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.55);
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    0 3px 0 #5b4114,
+    0 4px 16px rgba(226, 192, 120, 0.22);
 }
 #dining-dialog .primary:enabled:hover {
-  border-color: #fff0c6;
-  background: linear-gradient(135deg, #ffe9b7, #d9a95f);
+  border-color: #ffffff;
+  background: linear-gradient(180deg, #fff8dc, #e8c273 60%, #c69643);
   box-shadow:
-    0 7px 24px rgba(226, 186, 111, 0.32),
-    0 0 18px rgba(226, 186, 111, 0.16);
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    0 3px 0 #5b4114,
+    0 6px 22px rgba(255, 241, 196, 0.42);
 }
 .meal-kitchen,
 .meal-result {
@@ -613,18 +600,18 @@
 }
 .meal-request-actions button {
   padding: 8px 15px;
-  border-color: rgba(226, 186, 111, 0.17);
-  border-radius: 7px;
-  color: #ddccb0;
-  background: rgba(5, 15, 12, 0.24);
+  border-color: rgba(226, 192, 120, 0.32);
+  border-radius: 3px;
+  color: var(--astral-text);
+  background: var(--astral-card-bg);
   font-size: 12px;
   box-shadow: none;
 }
 .meal-request-actions button:enabled:hover {
-  border-color: rgba(238, 205, 142, 0.42);
-  color: #fff0d2;
-  background: rgba(226, 186, 111, 0.08);
-  box-shadow: 0 0 14px rgba(226, 186, 111, 0.07);
+  border-color: var(--astral-gold-hi);
+  color: #fff;
+  background: linear-gradient(180deg, rgba(56, 70, 146, 0.88), rgba(24, 30, 70, 0.94));
+  box-shadow: 0 0 14px rgba(226, 192, 120, 0.18);
 }
 @keyframes meal-steam {
   50% {
@@ -637,7 +624,7 @@
     width: calc(100vw - 16px);
     height: calc(100dvh - 16px);
     padding: 9px 13px;
-    border-radius: 11px;
+    border-radius: 4px;
   }
   #dining-dialog[open],
   .dining-body {

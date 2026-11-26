@@ -3,9 +3,11 @@ import { ENCOUNTER_COUNT } from './journey-rules.js';
 export function combatTestScript(map = 'ruins') {
   return {
     schemaVersion: 3,
+    testScript: true,
     story: Array(ENCOUNTER_COUNT).fill('◇ ── □ ── ◇\n［战斗测试占位剧本］'),
     data: {
       title: '战斗测试',
+      testScript: true,
       synopsis: '本地占位文本，不请求剧本 API。',
       setting: '战斗测试期间，剧本暂用相同的占位符。',
       tags: [],
@@ -19,6 +21,7 @@ export function combatTestScript(map = 'ruins') {
 export function adventureTestScript(map = 'ruins') {
   return {
     schemaVersion: 5,
+    testScript: true,
     story: [
       '【旁白】石阶一路向下延伸，潮冷的风顺着砖缝往外渗。【对白:伊蒂丝】前面看着有点不对劲，先小心摸过去看看；真要动起手来，我顶在前面。',
       '【旁白】绕过塌了一半的拱门，墙根处意外留着块干爽落脚地。【对白:伊蒂丝】前面通道黑灯瞎火的，正好歇口气清点一下手头的补给。',
@@ -28,6 +31,7 @@ export function adventureTestScript(map = 'ruins') {
     ],
     data: {
       title: '旅途测试',
+      testScript: true,
       tags: [],
       npcs: [],
       items: [],
@@ -35,7 +39,7 @@ export function adventureTestScript(map = 'ruins') {
       prologue:
         '黎明尚沉在云层之外，界隙外的残垣还凝着昨夜未散的寒霜。风沿着崩塌百年的石阶幽幽穿行，将旧碑文磨成半截模糊的刻痕。\n\n门扉在微光中无声敞开，幽深回廊尽头隐约震落一缕沉铁余响。披风掠过石槛的刹那，新的战局已然拉开序幕。',
       battleLines: {
-        bossIntro: '擅闯禁忌回廊者，就此化作石尘吧！',
+        bossIntro: '擅闯回廊的来客，先过我这一关。',
         partyReply: '小心它的重击，盯紧破绽一起压过去！',
         bossEnraged: '残存的魔力正在暴走——全员注意防御！',
         bossDefeat: '石壁崩裂的回响归于死寂……终于结束了。',

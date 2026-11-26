@@ -1,5 +1,10 @@
 /** Pure Overlord combat rules, timer profiles, and boss dialogue catalog. */
-export { createOverlordMechanics, lockHiddenWeapons } from './battle-overlord-mechanics.js';
+export {
+  createOverlordMechanics,
+  lockHiddenWeapons,
+  refreshIronCoachFrontWeakness,
+  syncCollectorArchive,
+} from './battle-overlord-mechanics.js';
 
 export function overlordTargetStage(unit, def) {
   if (!unit || !def || !Array.isArray(def.overlordPhases) || def.overlordPhases.length < 2) {
@@ -325,6 +330,75 @@ export const OVERLORD_DIALOGUES = (() => {
     }),
   });
 
+  const arenaQualifierIronCoach = Object.freeze({
+    rankLabel: '大骑士竞技场 · 海选擂主',
+    entrance: Object.freeze([
+      '木棍在黄沙上划出一道沉稳白线。连海选守擂这一关都过不了的话，凯旋大道那座内场门槛你们还是趁早别迈了。',
+      '规矩很简单：我不抢你们的节奏，可每回合最后那一棍必然压在速度 1 落下——接不住，就退场。',
+    ]),
+    domainLock:
+      '海选石闸落下了！擂台四角的炼金结界只认胜负，场外的【存档】、【撤退】与【整备】全替你们锁在沙门外边！',
+    phase2:
+      '力道够格热身了。接下来我只认前排手头摸得到的【破绽弱点】——敢拿无关的招式乱捅，当场吃我一记截击！',
+    phase3:
+      '六人全员都给我看紧了！三动连压加上六角色池轮换大弱点——三层硬壳敲不碎的话，速度 1 那记轰台直接请各位退赛！',
+    chargeStart: '沉腰握棍——回合末那记固定【速度 1】的重棍就要砸下来了，拿得住破绽就趁现在打断！',
+    breakShatter: '唔——？！步法竟然被硬生生砸乱了，这回合蓄着的那一棍挥不出去了！',
+    broken: '咳……稳了十年的下盘居然晃了一瞬……好苗子，趁我喘气赶紧抢攻吧……',
+    counterNonWeakness: '架势没看准就乱递刀？这种不挨边的招式，挨我一记【教头截击】长长记性！',
+    pageReload: Object.freeze([
+      '点【刷新网页】就能把海选擂台的胜负抹掉吗？沙盘与结界可把刚才的回合记牢了！',
+      '又按一次【刷新】？大骑士竞技场可不发重赛木牌，接稳我的重棍吧。',
+    ]),
+    reenterAfterReload: '离开擂台歇了口气又踏回黄沙上了？规矩照旧，速度 1 的重棍还在回合末等着。',
+    defeat: '痛快……！这记力道配得上凯旋大道的鼓声……去吧，海选出线牌归你们了！',
+    sealedButtons: Object.freeze({
+      saves: '擂台裁决途中禁止翻动【存档】木牌，赢下这场再来存档！',
+      settings: '竞技场结界不受场外【设置】影响，稳住阵脚接招！',
+      ledger: '赔率【账簿】在外环茶棚呢，先保住场上的资格再说！',
+      story: '写战报的【手记】等下台了再填，眼前棍影已经压过来了！',
+      retreat: '海选铃响过三声就没得【撤退】了，除非自己认输交牌！',
+      party: '铁闸之外才是候场区，场外人马此刻进不来这方黄沙台！',
+      review: '少翻旧账本，先看看这一轮我的大弱点落在前场哪一位身上！',
+      default: '既登了大骑士竞技场擂台，便专心应对眼前这一仗！',
+    }),
+  });
+
+  const silverCrownSyndicateArchon = Object.freeze({
+    rankLabel: '银冠城奇珍展览馆 · 秘藏馆主',
+    entrance: Object.freeze([
+      '欢迎光临寒舍。不过诸位身上这套招式品相还待检验——先试试看，你们哪一宗手艺够资格录入本馆的【名录】吧。',
+      '陈列柜里最忌讳千篇一律的赝品。同样的把戏在本馆面前递出第二次，三管以太铳可不会客气。',
+    ]),
+    domainLock:
+      '白石展厅的黄铜闸门已然合拢！今夜这间奇珍馆只收录真正罕见的【孤品】，馆外一切按键一概封存！',
+    phase2:
+      '哦？竟真有点罕见成色！那便替展柜加码一宗随机【馆藏名录】，再瞧瞧你们还有几门换手的新花样！',
+    phase3:
+      '精彩，太精彩了！全馆展柜轮盘同启——三宗属性一并拒收，拿不出够多孤品来叩碎六层封壳，诸位便留作镇馆标本吧！',
+    chargeStart:
+      '鎏金天平已落印蓄势！展台高韧封壳只在【蓄力】期间开启——换用未收录的新属性，双倍削韧敲碎它！',
+    breakShatter: '叮啷——？！整座鎏金展柜竟被孤品连击震得粉碎……珍稀得过头了啊！',
+    broken: '唔……天平的准星全被敲歪了……展品品鉴……暂时中止……',
+    counterReject: '陈腐不堪的复刻品，本馆名录已收过一次——尝尝【以太点射】的拒收礼！',
+    pageReload: Object.freeze([
+      '按下【刷新网页】就能把已录入馆藏名录的编号抹消么？天平铭牌刻在黄铜上，永远少不了一道！',
+      '再怎么【刷新】，本馆依旧认得你们刚才递过哪一宗最高伤害的俗套路数。',
+    ]),
+    reenterAfterReload: '从偏门绕回展厅了？陈列灯正亮着，请继续呈上未收录的新品吧。',
+    defeat: '咔哒……金槌……裂成两截了……原来真正配得上压轴陈列的孤品，是你们这支六人小队……',
+    sealedButtons: Object.freeze({
+      saves: '珍品既已入柜编号，馆主最忌讳在【存档】里偷换标签！',
+      settings: '展览馆的照明与以太压强皆由天平裁定，容不得外头的【设置】插手！',
+      ledger: '价目【账簿】早已随铜牌封进内库，此刻只按品相论高低！',
+      story: '鉴宝【手记】等打赢馆主再去补写品评吧！',
+      retreat: '白石拱门全由铜栓锁死，展品品鉴结束前恕不开放【撤退】！',
+      party: '馆外闲杂人等已请出前厅，眼下只能凭阵中这六位周旋换手！',
+      review: '盯着名录上已收录的属性标牌看——别再拿同一种属性往枪口上撞！',
+      default: '请保持展览礼仪：把手指从无关界面移开，专心呈上新意！',
+    }),
+  });
+
   return Object.freeze({
     alchemicalPuppet,
     apepLamb,
@@ -335,6 +409,8 @@ export const OVERLORD_DIALOGUES = (() => {
     radiantWyvern,
     banditSyndicateKing,
     darkscaleWarlord,
+    arenaQualifierIronCoach,
+    silverCrownSyndicateArchon,
   });
 })();
 
@@ -439,6 +515,16 @@ export function overlordPhaseLog(id, def, nextStage, profile, shield) {
   }
   if (id === 'darkscaleWarlord') {
     return `${def.name}硬生生扯碎左腕残枷，裂隙暗核猛烈搏动暴走（${statsNote}）`;
+  }
+  if (id === 'arenaQualifierIronCoach') {
+    return nextStage >= 3
+      ? `${def.name}踩碎黄沙重整拳架，三动连压与六人全阵大弱点锁定全开（${statsNote}）`
+      : `${def.name}沉肩扬棍进入实战截击架势，紧盯前场弱点破绽（${statsNote}）`;
+  }
+  if (id === 'silverCrownSyndicateArchon') {
+    return nextStage >= 3
+      ? `${def.name}开启全部鎏金展柜轮盘，全馆孤品品鉴升至最高警戒（${statsNote}）`
+      : `${def.name}拨转背后展柜轮盘，额外锁定随机孤品属性（${statsNote}）`;
   }
   return `${def.name}显露更深一层的霸主压迫（${statsNote}）`;
 }

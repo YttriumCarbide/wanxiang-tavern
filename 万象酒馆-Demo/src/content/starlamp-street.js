@@ -17,17 +17,17 @@ export const STARLAMP_STREET = Object.freeze({
   ground: STREET_SPATIAL.road,
   spatial: STREET_SPATIAL,
   illustration: STREET_ILLUSTRATED,
-  panorama: './assets/exploration/starlamp-corner-panorama-v3.png',
-  panoramaBand: './assets/exploration/starlamp-band-v1.png',
+  panorama: './assets/exploration/starlamp-corner-panorama-v3.webp',
+  panoramaBand: './assets/exploration/starlamp-band-v1.webp',
   faceImages: ['front', 'right', 'back', 'left'].map(
     (direction) =>
-      `./assets/exploration/starlamp-corner-${direction}-${{ front: 'v5', left: 'v4' }[direction] || 'v3'}.png`,
+      `./assets/exploration/starlamp-corner-${direction}-${{ front: 'v5', left: 'v4' }[direction] || 'v3'}.webp`,
   ),
   cutouts: [
     {
       id: 'courtyard',
       kind: 'prop',
-      image: './assets/exploration/street-spatial/courtyard-fountain.png',
+      image: './assets/exploration/street-spatial/courtyard-fountain.webp',
       position: [-9.7, 0],
       height: 1.6,
       top: 64,
@@ -36,7 +36,7 @@ export const STARLAMP_STREET = Object.freeze({
     {
       id: 'notice',
       kind: 'prop',
-      image: './assets/exploration/starlamp-notice-v2.png',
+      image: './assets/exploration/starlamp-notice-v2.webp',
       position: [4, -3.2],
       height: 1.45,
     },

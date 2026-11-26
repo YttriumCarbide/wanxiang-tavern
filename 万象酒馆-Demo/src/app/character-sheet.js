@@ -85,7 +85,7 @@ export function characterSheet(entry, equipment = [], options = {}) {
     combat = compileCharacterCombat(entry, equipment);
   const limits = battleResourceLimits(combat);
   const dcAttrs = normalizeDcAttrs(entry.dcAttrs, entry);
-  const growth = restoreGrowth(entry.growth, entry.id);
+  const growth = restoreGrowth(entry.growth, entry.id, entry.combat);
   const isPrep = options.mode === 'preparation';
   const attack = ability(combat.id, 'attack', { [combat.id]: combat });
 
@@ -175,7 +175,11 @@ export function characterSheet(entry, equipment = [], options = {}) {
             <dd>${limits.mp}</dd>
           </div>
           <div>
-            <dt>普攻</dt>
+            <dt>开场护盾</dt>
+            <dd>${combat.startingShield || 0}</dd>
+          </div>
+          <div>
+            <dt>攻击力</dt>
             <dd>${combat.attack}</dd>
           </div>
           <div>

@@ -52,8 +52,33 @@ export function intent(s, id, actionIndex = 0) {
   const hasFixedFirst = s.phase !== 'opening' && Boolean(authored.fixedFirstSlot);
   if (hasFixedFirst && actionIndex === 0) return fixedFirstIntent(s, id, authored);
   const regIndex = hasFixedFirst ? Math.max(0, actionIndex - 1) : actionIndex;
+  if (s.phase !== 'opening' && authored.ironCoachMechanic) {
+    const coach = authored.ironCoachMechanic;
+    const unit = s.units[id];
+    const bossStage = Math.max(unit?.bossStage || 1, overlordTargetStage(unit, authored));
+    const totalReg = enemyActionsCount(s, id) - (hasFixedFirst ? 1 : 0);
+    if (regIndex >= totalReg - 1) {
+      const slam = coach.chargeSlamsByPhase?.[bossStage - 1] || coach.chargeSlamsByPhase?.[0];
+      if (slam) return scaleIntent({ ...slam, fixedSpeed: 1, enraged: bossStage >= 2 });
+    }
+    const phasePool = coach.normalPoolByPhase?.[bossStage - 1] || coach.normalPoolByPhase?.[0];
+    const attacks = phasePool?.attacks || authored.intents || [];
+    const defenses = phasePool?.defenses || authored.intents || [];
+    const hash = Math.abs(
+      Math.imul(
+        (Number(s.seed) || 37) + s.round * 97 + regIndex * 31 + bossStage * 13,
+        2654435761,
+      ) | 0,
+    );
+    const useDefense = defenses.length > 0 && hash % 3 === 0;
+    const bucket = useDefense ? defenses : attacks;
+    const picked = bucket[(hash >>> 2) % bucket.length] || authored.intents[0];
+    return scaleIntent({ ...picked, enraged: bossStage >= 2 });
+  }
   const chargeSpec = authored.chargeMechanic;
-  if (s.phase !== 'opening' && chargeSpec && regIndex === 0) {
+  const totalRegCount = Math.max(1, enemyActionsCount(s, id) - (hasFixedFirst ? 1 : 0));
+  const chargeSlotIndex = authored.collectorMechanic ? totalRegCount - 1 : 0;
+  if (s.phase !== 'opening' && chargeSpec && regIndex === chargeSlotIndex) {
     const unit = s.units[id];
     const bossStage = Array.isArray(authored.overlordPhases)
       ? Math.max(unit?.bossStage || 1, overlordTargetStage(unit, authored))
@@ -238,7 +263,68 @@ export function enemyTimeline(s, extraSlow = {}) {
     const regularCount = Math.max(0, entry.count - (entry.fixedFirst ? 1 : 0));
     if (!regularCount) continue;
     const speed = entry.speed === 999 ? length + 1 : entry.speed;
-    if (regularCount === 1 || entry.def.splitActions === false) {
+    if (entry.def.ironCoachMechanic) {
+      const normalCount = Math.max(0, regularCount - 1);
+      const normalFirst = Math.max(
+        minSlot,
+        Math.min(length - 3, length - 1 - speed - Math.max(0, normalCount - 1)),
+      );
+      for (let actionIndex = 0; actionIndex < normalCount; actionIndex++) {
+        const desired =
+          normalCount === 1
+            ? Math.max(minSlot, Math.min(length - 2, length - speed))
+            : Math.min(length - 2, normalFirst + actionIndex * 2);
+        actions.push({
+          id: entry.id,
+          speed,
+          tie: entry.tie,
+          actionIndex: actionIndex + (entry.fixedFirst ? 1 : 0),
+          desired,
+        });
+      }
+      actions.push({
+        id: entry.id,
+        speed: 1,
+        tie: entry.tie,
+        actionIndex: regularCount - 1 + (entry.fixedFirst ? 1 : 0),
+        desired: Math.max(minSlot, length - 1),
+      });
+    } else if (entry.def.collectorMechanic) {
+      const isCharging = Boolean(s.units[entry.id]?.chargingMove);
+      const normalCount = Math.max(0, regularCount - 1);
+      const normalFirst = Math.max(
+        minSlot,
+        Math.min(length - 2, length - 1 - speed - Math.max(0, normalCount - 1)),
+      );
+      const normalSpan = Math.max(0, length - 2 - normalFirst);
+      for (let actionIndex = 0; actionIndex < normalCount; actionIndex++) {
+        const desired =
+          normalCount === 1
+            ? Math.max(minSlot, Math.min(length - 2, length - speed))
+            : Math.min(
+                length - 2,
+                normalFirst + Math.round((actionIndex * normalSpan) / Math.max(1, normalCount - 1)),
+              );
+        actions.push({
+          id: entry.id,
+          speed,
+          tie: entry.tie,
+          actionIndex: actionIndex + (entry.fixedFirst ? 1 : 0),
+          desired,
+        });
+      }
+      const tailSpeed = isCharging ? 1 : Math.min(speed, 4);
+      actions.push({
+        id: entry.id,
+        speed: tailSpeed,
+        tie: entry.tie,
+        actionIndex: regularCount - 1 + (entry.fixedFirst ? 1 : 0),
+        desired: Math.max(
+          minSlot,
+          isCharging ? length - 1 : Math.min(length - 1, length - tailSpeed),
+        ),
+      });
+    } else if (regularCount === 1 || entry.def.splitActions === false) {
       const desired = Math.max(minSlot, Math.min(length - 1, length - speed));
       for (let actionIndex = 0; actionIndex < regularCount; actionIndex++) {
         actions.push({

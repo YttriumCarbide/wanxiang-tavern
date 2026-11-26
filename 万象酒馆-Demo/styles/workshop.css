@@ -1,19 +1,32 @@
 #workshop-dialog,
 #workshop-editor {
-  --ws-ink: #eee4cf;
-  --ws-muted: #afbcab;
-  --ws-brass: #dfbf7d;
-  --ws-line: #b49b6461;
+  --ws-ink: var(--astral-text);
+  --ws-muted: var(--astral-sub);
+  --ws-brass: var(--astral-gold-hi);
+  --ws-line: var(--astral-line);
   color: var(--ws-ink);
   max-width: none;
   max-height: none;
   padding: 0;
   margin: auto;
-  border: 1px solid var(--ws-line);
-  border-radius: 12px;
-  background: #142622;
-  box-shadow: 0 24px 80px #000b;
+  border: 1px solid rgba(226, 192, 120, 0.48);
+  border-radius: 4px;
+  background: var(--astral-hatch), var(--astral-panel-bg);
+  box-shadow: var(--astral-frame-shadow);
   overflow: hidden;
+}
+#workshop-dialog,
+.ws-inspector,
+#workshop-completion,
+.ws-tutorial {
+  user-select: none;
+  -webkit-user-select: none;
+}
+#workshop-dialog input[type='text'],
+#workshop-dialog input[type='number'],
+#workshop-dialog textarea {
+  user-select: text;
+  -webkit-user-select: text;
 }
 #workshop-dialog {
   width: min(1500px, calc(100vw - 20px));
@@ -29,7 +42,8 @@
 #workshop-dialog::backdrop,
 #workshop-completion::backdrop,
 .ws-inspector::backdrop {
-  background: #091512d9;
+  background: rgba(4, 5, 14, 0.82);
+  backdrop-filter: blur(6px);
 }
 .ws-header,
 .ws-toolbar,
@@ -44,11 +58,11 @@
 .ws-header {
   min-height: 54px;
   border-bottom: 1px solid var(--ws-line);
-  background: linear-gradient(105deg, #2e463b, #172b25 76%);
+  background: linear-gradient(180deg, rgba(24, 30, 74, 0.96), rgba(11, 14, 34, 0.98));
 }
 .ws-brand h1 {
   margin: 0;
-  color: #f1dcaa;
+  color: var(--astral-gold-hi);
   font:
     600 clamp(18px, 3vw, 26px) 'Songti SC',
     SimSun,
@@ -70,11 +84,12 @@
 #workshop-editor .ws-header-actions button,
 #workshop-editor .ws-footer button {
   color: var(--ws-ink);
-  background: #213a30;
-  border: 1px solid var(--ws-line);
-  border-radius: 5px;
+  background: var(--astral-card-bg);
+  border: 1px solid rgba(226, 192, 120, 0.36);
+  border-radius: 3px;
   padding: 7px 10px;
   font-size: 13px;
+  box-shadow: none;
 }
 #workshop-dialog button:focus-visible,
 #workshop-editor button:focus-visible,
@@ -85,11 +100,12 @@
 #workshop-dialog button:hover:not(:disabled),
 #workshop-editor .ws-header-actions button:hover:not(:disabled) {
   border-color: var(--ws-brass);
+  color: #fff;
 }
 .ws-toolbar {
   padding-block: 6px;
   border-bottom: 1px solid var(--ws-line);
-  background: #1a332b;
+  background: rgba(14, 18, 44, 0.92);
   font-size: 13px;
 }
 .ws-wallet {
@@ -109,8 +125,8 @@
   position: relative;
   isolation: isolate;
   background:
-    radial-gradient(ellipse at 60% 35%, #6d8060 0%, transparent 70%),
-    linear-gradient(155deg, #456456, #273f37 85%);
+    radial-gradient(ellipse at 60% 35%, rgba(54, 70, 142, 0.45) 0%, transparent 70%),
+    linear-gradient(155deg, #161d46, #0b0d1f 85%);
 }
 .ws-loading {
   display: none;
@@ -135,8 +151,8 @@
   cursor: grab;
   touch-action: none;
   background-image:
-    linear-gradient(to right, #a1b39430 1px, transparent 1px),
-    linear-gradient(to bottom, #a1b39430 1px, transparent 1px);
+    linear-gradient(to right, rgba(226, 192, 120, 0.12) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(226, 192, 120, 0.12) 1px, transparent 1px);
 }
 .ws-map.dragging {
   cursor: grabbing;
@@ -158,7 +174,7 @@
   min-width: 40px;
   min-height: 35px;
   padding-inline: 5px;
-  background: #1d342bf0;
+  background: rgba(14, 18, 44, 0.94);
 }
 .ws-zoom[hidden],
 .ws-map[hidden],
@@ -195,16 +211,17 @@
   flex: none;
   display: grid;
   place-items: center;
-  border-color: #d3b671a6;
+  border-color: rgba(226, 192, 120, 0.52);
   background:
-    radial-gradient(circle, #76895380, transparent 66%), linear-gradient(145deg, #284a3c, #142c26);
-  box-shadow: inset 0 0 0 3px #152d27a6;
+    radial-gradient(circle, rgba(226, 192, 120, 0.18), transparent 66%),
+    linear-gradient(145deg, #242e64, #111536);
+  box-shadow: inset 0 0 0 2px rgba(11, 13, 31, 0.72);
 }
 #workshop-dialog .ws-node[data-kind='station'] .ws-node-action {
-  background: radial-gradient(circle, #a276428a, transparent 72%), #3e3828;
+  background: radial-gradient(circle, rgba(226, 192, 120, 0.28), transparent 72%), #28223d;
 }
 #workshop-dialog .ws-node[data-kind='research'] .ws-node-action {
-  background: radial-gradient(circle, #5c7c8799, transparent 72%), #294746;
+  background: radial-gradient(circle, rgba(143, 214, 240, 0.28), transparent 72%), #162a4e;
 }
 .ws-node-symbol {
   display: grid;
@@ -217,8 +234,8 @@
   display: grid;
   place-content: center;
   gap: 1px;
-  background: #e3ddae;
-  color: #17362b;
+  background: linear-gradient(180deg, #fff1c4, #dab262);
+  color: #1c1406;
   line-height: 1.2;
 }
 .ws-node-select strong {
@@ -258,7 +275,7 @@
 }
 .ws-footer {
   border-top: 1px solid var(--ws-line);
-  background: #172d25;
+  background: linear-gradient(180deg, rgba(20, 26, 62, 0.94), rgba(10, 13, 32, 0.98));
 }
 .ws-footer nav {
   overflow: auto;
@@ -268,8 +285,10 @@
   white-space: nowrap;
 }
 #workshop-dialog .ws-footer nav button[aria-pressed='true'] {
-  color: #152820;
-  background: #dfbf7d;
+  color: #1c1406;
+  background: linear-gradient(180deg, #fff1c4, #dab262);
+  border-color: #fff6d8;
+  font-weight: 700;
 }
 .ws-footer p,
 .ws-footer > span {
@@ -279,12 +298,12 @@
 }
 [data-ws-message],
 [data-ws-detail-message] {
-  color: #f3dfad;
-  background: #1b2d23ed;
+  color: var(--astral-gold-hi);
+  background: rgba(16, 20, 48, 0.94);
   margin: 0;
   padding: 8px 12px;
   border: 1px solid var(--ws-line);
-  border-radius: 5px;
+  border-radius: 3px;
   font-size: 12px;
 }
 [data-ws-message] {
@@ -305,12 +324,13 @@
 }
 .ws-inspector {
   color: var(--ws-ink);
-  background: #1c352c;
+  background: var(--astral-hatch), var(--astral-panel-bg);
   width: min(540px, calc(100vw - 30px));
   max-height: calc(100dvh - 30px);
   margin: auto;
-  border: 1px solid var(--ws-brass);
-  border-radius: 9px;
+  border: 1px solid rgba(226, 192, 120, 0.48);
+  border-radius: 4px;
+  box-shadow: var(--astral-frame-shadow);
   padding: 0;
   overflow: hidden;
 }
@@ -329,7 +349,7 @@
   padding: 0 18px 18px;
 }
 .ws-detail-content h2 {
-  color: #ecd5a0;
+  color: var(--astral-gold-hi);
   margin: 0 0 12px;
   font:
     600 22px 'Songti SC',
@@ -355,7 +375,7 @@
 }
 .ws-inventory-wrap {
   overflow: auto;
-  background: #243e33;
+  background: rgba(11, 14, 34, 0.94);
 }
 .ws-inventory {
   max-width: 720px;
@@ -426,46 +446,60 @@
   font-weight: 400;
 }
 button.ws-primary {
-  border: 1px solid #e0c686;
-  border-radius: 6px;
-  background: linear-gradient(110deg, #c9ae74, #a99564);
-  color: #1e2a20;
-  font-weight: 600;
+  border: 1px solid #fff6d8;
+  border-radius: 3px;
+  background: linear-gradient(180deg, #fff1c4, #dab262 60%, #b4863a);
+  color: #1c1406;
+  font-weight: 700;
   padding: 10px 16px;
 }
 .ws-detail-content > button.ws-primary {
   width: 100%;
   margin-top: 8px;
 }
-.ws-delivery {
-  padding-bottom: 22px;
-  margin-bottom: 16px;
-  border-bottom: 1px solid var(--ws-line);
+.ws-consumers {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
 }
-.ws-delivery > div {
-  display: flex;
-  gap: 5px;
-}
-.ws-delivery input {
-  width: 68px;
-  min-width: 0;
+.ws-consumer-row {
+  padding: 10px 12px;
   border: 1px solid var(--ws-line);
   border-radius: 4px;
-  padding: 7px;
-  color: var(--ws-ink);
-  background: #14241f;
+  background: rgba(16, 20, 48, 0.65);
 }
-.ws-delivery button {
-  flex: 1;
-  padding: 6px;
+.ws-consumer-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+#workshop-dialog .ws-consumer-target {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  font-size: 12px;
+}
+.ws-consumer-target .ws-icon {
+  font-size: 18px;
+}
+.ws-consumer-sep {
+  color: var(--ws-muted);
   font-size: 11px;
+}
+.ws-consumer-meta,
+.ws-consumer-empty {
+  margin: 6px 0 0;
+  font-size: 11px;
+  color: var(--ws-muted);
 }
 .ws-facility {
   padding: 15px 12px;
   margin: 12px 0;
-  border: 1px solid #a9b08b33;
-  border-radius: 6px;
-  background: #0e1f193d;
+  border: 1px solid var(--ws-line);
+  border-radius: 4px;
+  background: rgba(16, 20, 48, 0.65);
 }
 .ws-facility > strong {
   font-size: 13px;
@@ -474,7 +508,7 @@ button.ws-primary {
 .ws-facility > span {
   display: block;
   font-size: 10px;
-  color: #93a38f;
+  color: var(--ws-muted);
   margin-top: 5px;
 }
 .ws-facility > button {
@@ -488,13 +522,13 @@ button.ws-primary {
   gap: 8px;
   margin-top: 15px;
   font-size: 10px;
-  color: #bac7ad;
+  color: var(--astral-sub);
 }
 .ws-active input {
   grid-column: 1 / -1;
   grid-row: 2;
   width: 100%;
-  accent-color: #c5b77b;
+  accent-color: var(--astral-gold);
 }
 .ws-active output {
   grid-row: 1;
@@ -514,7 +548,7 @@ button.ws-primary {
 }
 .ws-inventory-row b {
   font-weight: 400;
-  color: #e0c792;
+  color: var(--astral-gold-hi);
 }
 .ws-inventory-row span {
   font-size: 11px;
@@ -524,8 +558,8 @@ button.ws-primary {
 .ws-core-dial {
   width: 165px;
   height: 165px;
-  border: 1px solid #c4b27966;
-  outline: 1px dashed #c4b27944;
+  border: 1px solid rgba(226, 192, 120, 0.45);
+  outline: 1px dashed rgba(226, 192, 120, 0.28);
   outline-offset: -12px;
   border-radius: 50%;
   display: flex;
@@ -533,7 +567,7 @@ button.ws-primary {
   align-items: center;
   justify-content: center;
   margin: 25px auto;
-  background: radial-gradient(#c5a77322, transparent 70%);
+  background: radial-gradient(rgba(226, 192, 120, 0.14), transparent 70%);
 }
 .ws-core-dial b {
   font:
@@ -549,20 +583,21 @@ button.ws-primary {
   width: min(440px, calc(100vw - 40px));
   padding: 30px;
   margin: auto;
-  border: 1px solid #ba9e65;
-  border-radius: 12px;
-  color: #e8dfc8;
-  background: #1e3329;
-  box-shadow: 0 15px 80px #0009;
+  border: 1px solid rgba(226, 192, 120, 0.48);
+  border-radius: 4px;
+  color: var(--astral-text);
+  background: var(--astral-hatch), var(--astral-panel-bg);
+  box-shadow: var(--astral-frame-shadow);
 }
 #workshop-completion h2 {
+  color: var(--astral-gold-hi);
   font:
-    27px 'Songti SC',
+    26px 'Songti SC',
     'SimSun',
     serif;
 }
 #workshop-completion p {
-  color: #b9c2ac;
+  color: var(--astral-sub);
   font-size: 12px;
   line-height: 2;
 }
@@ -573,13 +608,13 @@ button.ws-primary {
   margin-top: 25px;
 }
 #workshop-completion button:not(.ws-primary) {
-  background: #13281f;
-  border: 1px solid #a5b38a55;
+  background: var(--astral-card-bg);
+  border: 1px solid rgba(226, 192, 120, 0.36);
 }
 .api-request-control [data-workshop-wait] {
-  border-color: #c0aa6a88;
-  color: #dec795;
-  background: #2b3b2d;
+  border-color: rgba(226, 192, 120, 0.48);
+  color: var(--astral-gold-hi);
+  background: rgba(20, 26, 62, 0.88);
 }
 
 /* 工坊图标：形状来自 src/content/workshop-icons，颜色由 --ws-l / --ws-m / --ws-d 三个色调变量决定。 */
@@ -677,10 +712,11 @@ button.ws-primary {
 .ws-tutorial {
   max-width: min(460px, 90vw);
   padding: 20px;
-  color: #f3e4c9;
-  background: #10221c;
-  border: 1px solid #a28355;
-  border-radius: 10px;
+  color: var(--astral-text);
+  background: var(--astral-hatch), var(--astral-panel-bg);
+  border: 1px solid rgba(226, 192, 120, 0.45);
+  border-radius: 4px;
+  box-shadow: var(--astral-frame-shadow);
 }
 .ws-tutorial li + li {
   margin-top: 10px;

@@ -80,12 +80,11 @@ export function createLibrary(customPortraits) {
           archetype: hero.id,
           combat,
         }),
-        growth: restoreGrowth(null, `official-${hero.id}`),
+        growth: restoreGrowth(null, `official-${hero.id}`, combat),
         combat,
         equippedSkills: restoreEquippedSkills(),
         setting: {
           name: hero.name,
-          title: hero.title,
           worldbook: formatCharacterSetting(OFFICIAL_SETTINGS[hero.id]),
           formatVersion: 3,
         },
@@ -95,7 +94,8 @@ export function createLibrary(customPortraits) {
     scripts: [],
   };
 }
-export function officialCharacter(id) {
+export function officialCharacter(id, { level = 1 } = {}) {
+  const safeLevel = Number.isInteger(level) && level > 1 ? Math.min(99, level) : 1;
   if (OFFICIAL_VISITORS[id]) {
     const visitor = OFFICIAL_VISITORS[id];
     const combat = structuredClone(visitor.combat);
@@ -105,11 +105,10 @@ export function officialCharacter(id) {
       source: 'official',
       archetype: id === 'luo-gongxu' ? 'aegis' : 'morrow',
       dcAttrs: normalizeDcAttrs(OFFICIAL_DC_ATTRS[fullId], { id: fullId, combat }),
-      growth: restoreGrowth(null, fullId),
+      growth: restoreGrowth({ level: safeLevel }, fullId, combat),
       combat,
       setting: {
         name: visitor.setting.name,
-        title: visitor.combat.title,
         worldbook: formatCharacterSetting(visitor.setting, {
           skillCount: visitor.combat.skills.length,
         }),
@@ -121,7 +120,7 @@ export function officialCharacter(id) {
     const combat = structuredClone(EDITH);
     return {
       id: 'official-edith',
-      growth: restoreGrowth(null, 'official-edith'),
+      growth: restoreGrowth({ level: safeLevel }, 'official-edith', combat),
       source: 'official',
       archetype: 'aegis',
       dcAttrs: normalizeDcAttrs(OFFICIAL_DC_ATTRS['official-edith'], {
@@ -131,7 +130,6 @@ export function officialCharacter(id) {
       combat,
       setting: {
         name: EDITH.name,
-        title: EDITH.title,
         worldbook: formatCharacterSetting(EDITH_SETTING),
         formatVersion: 3,
       },
@@ -141,7 +139,7 @@ export function officialCharacter(id) {
     const combat = structuredClone(PANDORA);
     return {
       id: 'official-pandora',
-      growth: restoreGrowth(null, 'official-pandora'),
+      growth: restoreGrowth({ level: safeLevel }, 'official-pandora', combat),
       source: 'official',
       archetype: 'morrow',
       dcAttrs: normalizeDcAttrs(OFFICIAL_DC_ATTRS['official-pandora'], {
@@ -151,7 +149,6 @@ export function officialCharacter(id) {
       combat,
       setting: {
         name: PANDORA.name,
-        title: PANDORA.title,
         worldbook:
           formatCharacterSetting(PANDORA_SETTING) +
           '\n\n叙事提示：服装颜色只在首次出场或确有必要时简短交代，不反复强调裙子是黑白紫相间的。',
@@ -161,6 +158,12 @@ export function officialCharacter(id) {
   }
   const entry = newLibrary().characters.find((member) => member.archetype === id);
   if (!entry) throw Error('官方角色不存在');
+  if (safeLevel > 1)
+    entry.growth = restoreGrowth(
+      { ...(entry.growth || {}), level: safeLevel },
+      entry.id,
+      entry.combat,
+    );
   return entry;
 }
 export function compileRoster(library) {

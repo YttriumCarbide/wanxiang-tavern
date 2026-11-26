@@ -37,7 +37,7 @@ export async function forestChecks({ browser, baseURL, output }) {
       );
       assert.deepEqual(
         rects.map((r) => r.label),
-        ['归档'],
+        ['图鉴'],
       );
       for (const r of rects) {
         assert(

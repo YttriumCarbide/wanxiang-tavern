@@ -3,6 +3,7 @@ import { STARBELL_SCENES } from './content/starbell-scenes.js';
 import { TOWN_SIDE_PLACES } from './content/town-side-places.js';
 import { SILVER_CROWN_GATE, SILVER_CROWN_PLACES } from './content/silver-crown-scenes.js';
 import { ETERNAL_CITY_GATE, ETERNAL_CITY_PLACES } from './content/eternal-city-scenes.js';
+import { REGIONS } from './content/regions.js';
 
 const starbellPlace = (scene, point) => ({
   name: scene.title,
@@ -16,7 +17,7 @@ const starbellSidePlaces = Object.fromEntries(
 export const CITIES = Object.freeze({
   starbell: {
     name: '星钟城',
-    image: './assets/exploration/city-backgrounds/starbell.png',
+    image: './assets/exploration/city-backgrounds/starbell.webp',
     entry: 'city-center',
     places: {
       'city-center': starbellPlace(CITY_CENTER, 'fountain'),
@@ -28,14 +29,14 @@ export const CITIES = Object.freeze({
   },
   'silver-crown': {
     name: '银冠城',
-    image: './assets/exploration/city-backgrounds/silver-crown.png',
+    image: './assets/exploration/city-backgrounds/silver-crown.webp',
     entry: SILVER_CROWN_GATE,
     places: SILVER_CROWN_PLACES,
     facilities: { blacksmith: 'crown-mint', market: 'crown-arcade', guild: 'crown-ledger' },
   },
   eternal: {
     name: '艾尔鲁斯',
-    image: './assets/exploration/city-backgrounds/eternal-city.png',
+    image: './assets/exploration/city-backgrounds/eternal-city.webp',
     entry: ETERNAL_CITY_GATE,
     places: ETERNAL_CITY_PLACES,
     facilities: { blacksmith: 'eternal-garrison', market: 'eternal-quay', guild: 'eternal-plaza' },
@@ -83,14 +84,52 @@ export function cityStreetPlace(scene) {
   return city ? CITIES[city].places[cityPlaceId(scene)] : null;
 }
 
-const STARBELL_DUNGEONS = Object.freeze([
-  { id: 'starbell-undercroft', name: '星钟地下暗渠', level: 6, streetScene: 'city-center' },
-  { id: 'black-market', name: '暗巷黑市', level: 7, streetScene: 'market-alley' },
-]);
+const CITY_FIXED_DUNGEONS = Object.freeze({
+  starbell: Object.freeze([
+    { id: 'black-market', name: '暗巷黑市', level: 7, streetScene: 'market-alley' },
+  ]),
+  'silver-crown': Object.freeze([
+    {
+      id: 'silver-shield-exhibition',
+      name: '银冠城-白鸦展览馆',
+      level: 8,
+      streetScene: 'crown-arcade',
+      requiresCleared: 'black-market',
+    },
+  ]),
+  eternal: Object.freeze([
+    { id: 'duel-arena', name: '大骑士竞技场（海选）', level: 11, streetScene: 'eternal-arena' },
+  ]),
+});
 
-export function cityDungeons(cityId, discoveries) {
+export function clearedCityDungeonIds(library) {
+  const clearedIds = [];
+  for (const list of Object.values(CITY_FIXED_DUNGEONS)) {
+    for (const { id } of list) {
+      const route = library?.exploration?.[id];
+      const cleared = route?.cleared;
+      if (!Array.isArray(cleared) || !cleared.length) continue;
+      const overlord = REGIONS[id]?.nodes?.find((node) => node.overlord);
+      const isCleared = overlord
+        ? cleared.some((entry) => entry?.nodeId === overlord.id)
+        : (route?.completed || 0) > 0;
+      if (isCleared) clearedIds.push(id);
+    }
+  }
+  return clearedIds;
+}
+
+export function cityDungeons(cityId, discoveries, { clearedDungeons, includeLocked = false } = {}) {
   if (!Object.hasOwn(CITIES, cityId)) return [];
-  const dungeons = cityId === 'starbell' ? [...STARBELL_DUNGEONS] : [];
+  const clearedSet =
+    clearedDungeons instanceof Set
+      ? clearedDungeons
+      : new Set(Array.isArray(clearedDungeons) ? clearedDungeons : []);
+  const dungeons = (CITY_FIXED_DUNGEONS[cityId] || [])
+    .filter(
+      (entry) => includeLocked || !entry.requiresCleared || clearedSet.has(entry.requiresCleared),
+    )
+    .map(({ requiresCleared: _req, ...entry }) => entry);
   for (const entry of Array.isArray(discoveries) ? discoveries : []) {
     if (
       cityForScene(entry?.linkId) !== cityId ||

@@ -16,15 +16,15 @@ function wall(id, art, from, to, height, options = {}) {
 /** A crooked street corner, side courtyard and dogleg alley use flat paintings. */
 export const STREET_SPATIAL = Object.freeze({
   art: {
-    tavern: directory + 'tavern.png',
-    pharmacy: directory + 'pharmacy.png',
-    houses: directory + 'houses.png',
-    arch: directory + 'arch.png',
-    distance: directory + 'distance.png',
-    street: directory + 'far-street.png',
+    tavern: directory + 'tavern.webp',
+    pharmacy: directory + 'pharmacy.webp',
+    houses: directory + 'houses.webp',
+    arch: directory + 'arch.webp',
+    distance: directory + 'distance.webp',
+    street: directory + 'far-street.webp',
   },
   road: {
-    image: directory + 'floor.png',
+    image: directory + 'floor.webp',
     tileSize: 2.8,
     boundary: [
       [-6.5, -7.5],

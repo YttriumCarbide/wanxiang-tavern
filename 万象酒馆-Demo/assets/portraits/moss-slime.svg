@@ -1,9 +1,53 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="600" height="900" viewBox="0 0 120 180" shape-rendering="crispEdges">
-  <defs><radialGradient id="glow"><stop stop-color="#91bb78" stop-opacity=".32"/><stop offset="1" stop-color="#253f36"/></radialGradient></defs>
-  <rect width="120" height="180" fill="#253f36"/>
-  <rect x="5" y="5" width="110" height="170" fill="url(#glow)"/>
-  <path d="M14 163V69Q14 18 60 14Q106 18 106 69V163" fill="none" stroke="#91bb78" stroke-opacity=".4" stroke-width=".6"/>
-  <circle cx="60" cy="68" r="34" fill="none" stroke="#91bb78" stroke-opacity=".2" stroke-width=".5"/>
-  <path d="M18 123v-25h9V81h13V69h40v12h13v17h9v25z" fill="#548455"/><path d="M27 112V94h13V81h33v9h13v22z" fill="#7fae6c"/><path d="M38 79v-9h10v-9h8v17zm22-7v-12h8v-8h9v13h-8v9z" fill="#a8c88b"/><path d="M38 97h6v8h-6zm34 0h6v8h-6z" fill="#1e3831"/><path d="M52 110h12v4H52z" fill="#d8dea5"/><path d="M20 126h82v5H20z" fill="#152d28"/><path d="M32 91h9v5h-9zm9-6h8v5h-8z" fill="#b4cf89"/>
-  <path d="M16 163h88m-84 4h80M60 12l2 4-2 4-2-4z" fill="none" stroke="#91bb78" stroke-opacity=".6" stroke-width=".5"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="900" viewBox="0 0 256 384" data-art-style="isometric-voxel-v3"><title>苔藓史莱姆</title>
+<defs><radialGradient id="chamber" cx="50%" cy="54%" r="68%"><stop stop-color="#5e7a4e"/><stop offset="1" stop-color="#142428"/></radialGradient></defs>
+<path fill="url(#chamber)" d="M0 0h256v384H0z"/>
+<ellipse cx="128" cy="298.4" rx="94.1" ry="10" fill="#09171b" opacity=".5"/>
+<g data-enemy-model="mossSlime" transform="translate(-242.439 -557.185) scale(2.89406)"><polygon points="123.0,253.6 121.0,254.4 121.0,251.8 123.0,250.9" fill="#899a6f"/>
+<polygon points="121.0,254.4 119.0,253.6 119.0,250.9 121.0,251.8" fill="#bcd398"/>
+<polygon points="121.0,250.1 123.0,250.9 121.0,251.8 119.0,250.9" fill="#f6ffc7"/>
+<polygon points="126.4,264.3 123.3,265.6 123.3,262.0 126.4,260.7" fill="#857c64"/>
+<polygon points="123.3,265.6 119.5,264.0 119.5,260.4 123.3,262.0" fill="#b7ab89"/>
+<polygon points="122.6,259.1 126.4,260.7 123.3,262.0 119.5,260.4" fill="#efdfb3"/>
+<polygon points="132.2,236.9 128.4,238.5 128.4,235.2 132.2,233.6" fill="#3d6338"/>
+<polygon points="128.4,238.5 122.0,235.8 122.0,232.4 128.4,235.2" fill="#54884d"/>
+<polygon points="125.8,230.8 132.2,233.6 128.4,235.2 122.0,232.4" fill="#6db165"/>
+<polygon points="119.8,240.7 116.6,242.0 116.6,239.2 119.8,237.8" fill="#4d6f38"/>
+<polygon points="116.6,242.0 112.3,240.2 112.3,237.3 116.6,239.2" fill="#6a984d"/>
+<polygon points="115.5,236.0 119.8,237.8 116.6,239.2 112.3,237.3" fill="#8bc764"/>
+<polygon points="131.1,239.3 126.7,241.1 126.7,237.5 131.1,235.7" fill="#4d6f38"/>
+<polygon points="126.7,241.1 121.9,239.1 121.9,235.5 126.7,237.5" fill="#6a984d"/>
+<polygon points="126.2,233.6 131.1,235.7 126.7,237.5 121.9,235.5" fill="#8bc764"/>
+<polygon points="159.9,277.6 130.3,290.1 130.3,275.1 159.9,262.6" fill="#527640"/>
+<polygon points="130.3,290.1 94.3,274.9 94.3,259.9 130.3,275.1" fill="#71a258"/>
+<polygon points="124.0,247.4 159.9,262.6 130.3,275.1 94.3,259.9" fill="#93d473"/>
+<polygon points="117.2,266.6 113.4,268.3 113.4,263.7 117.2,262.1" fill="#716b59"/>
+<polygon points="113.4,268.3 108.7,266.3 108.7,261.7 113.4,263.7" fill="#9c937a"/>
+<polygon points="112.6,260.1 117.2,262.1 113.4,263.7 108.7,261.7" fill="#ccc0a0"/>
+<polygon points="166.7,281.9 132.5,296.3 132.5,293.0 166.7,278.5" fill="#405a38"/>
+<polygon points="132.5,296.3 89.3,278.1 89.3,274.7 132.5,293.0" fill="#587c4d"/>
+<polygon points="123.5,260.3 166.7,278.5 132.5,293.0 89.3,274.7" fill="#73a265"/>
+<polygon points="150.5,255.1 131.2,263.3 131.2,253.5 150.5,245.3" fill="#768f5d"/>
+<polygon points="131.2,263.3 109.1,254.0 109.1,244.2 131.2,253.5" fill="#a3c480"/>
+<polygon points="128.4,236.0 150.5,245.3 131.2,253.5 109.1,244.2" fill="#d5ffa7"/>
+<polygon points="156.3,266.5 131.6,277.0 131.6,262.8 156.3,252.4" fill="#63864d"/>
+<polygon points="131.6,277.0 102.3,264.6 102.3,250.5 131.6,262.8" fill="#88b86a"/>
+<polygon points="127.1,240.0 156.3,252.4 131.6,262.8 102.3,250.5" fill="#b2f08b"/>
+<polygon points="145.6,247.2 135.2,251.6 135.2,246.6 145.6,242.2" fill="#86956a"/>
+<polygon points="135.2,251.6 124.0,246.9 124.0,241.8 135.2,246.6" fill="#b9cd92"/>
+<polygon points="134.3,237.4 145.6,242.2 135.2,246.6 124.0,241.8" fill="#f1ffbf"/>
+<polygon points="148.3,262.2 145.8,263.2 145.8,258.2 148.3,257.1" fill="#9e9872"/>
+<polygon points="145.8,263.2 143.7,262.3 143.7,257.3 145.8,258.2" fill="#d9d19d"/>
+<polygon points="146.2,256.2 148.3,257.1 145.8,258.2 143.7,257.3" fill="#ffffcd"/>
+<polygon points="148.4,262.0 147.2,262.6 147.2,259.8 148.4,259.3" fill="#334a31"/>
+<polygon points="147.2,262.6 146.1,262.1 146.1,259.3 147.2,259.8" fill="#466644"/>
+<polygon points="147.3,258.8 148.4,259.3 147.2,259.8 146.1,259.3" fill="#5b8559"/>
+<polygon points="126.0,254.6 124.4,255.3 124.4,253.2 126.0,252.5" fill="#899a6f"/>
+<polygon points="124.4,255.3 122.8,254.6 122.8,252.5 124.4,253.2" fill="#bcd398"/>
+<polygon points="124.4,251.8 126.0,252.5 124.4,253.2 122.8,252.5" fill="#f6ffc7"/>
+<polygon points="137.2,266.9 134.7,267.9 134.7,262.9 137.2,261.8" fill="#9e9872"/>
+<polygon points="134.7,267.9 132.5,267.0 132.5,262.0 134.7,262.9" fill="#d9d19d"/>
+<polygon points="135.0,260.9 137.2,261.8 134.7,262.9 132.5,262.0" fill="#ffffcd"/>
+<polygon points="137.3,266.7 136.0,267.3 136.0,264.5 137.3,264.0" fill="#334a31"/>
+<polygon points="136.0,267.3 134.9,266.8 134.9,264.1 136.0,264.5" fill="#466644"/>
+<polygon points="136.2,263.5 137.3,264.0 136.0,264.5 134.9,264.1" fill="#5b8559"/></g>
 </svg>

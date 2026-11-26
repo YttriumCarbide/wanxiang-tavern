@@ -6,6 +6,8 @@ import { newWorldEntry, normalizeWorldbook } from '../src/ai/worldbook.js';
 import { isMonsterWorldEntry, monsterNarrativeText } from '../src/ai/monster-narrative.js';
 import { COMBAT_ENCYCLOPEDIA_APPEND, MILL_WORLDBOOK_ENTRIES } from '../src/content/mill-lore.js';
 import { QUARRY_WORLDBOOK_ENTRIES } from '../src/content/quarry-lore.js';
+import { BLACK_MARKET_WORLDBOOK_ENTRIES } from '../src/content/black-market-lore.js';
+import { CITY_AND_FACTION_WORLDBOOK_ENTRIES } from '../src/content/city-and-faction-lore.js';
 import { MAIN_WORLD_LORE } from '../src/content/main-world-lore.js';
 import { LADDER_ENEMIES, LADDER_BOSSES } from '../src/content/ladder-adversaries.js';
 import { ALL_MONSTER_LORE, monsterWorldbook } from '../src/content/monsters.js';
@@ -207,6 +209,11 @@ export async function buildBuiltinWorld() {
     );
   }
   ensureQuarrySummonEntry(raw, nextUidRef);
+  const validMainWorldIds = new Set(MAIN_WORLD_LORE.map((lore) => lore.id));
+  for (const [uid, entry] of Object.entries(raw.entries || {})) {
+    const mainWorldId = entry.extensions?.wanxiang?.mainWorld;
+    if (mainWorldId && !validMainWorldIds.has(mainWorldId)) delete raw.entries[uid];
+  }
   for (const lore of MAIN_WORLD_LORE) {
     upsertEntry(
       raw,
@@ -297,6 +304,39 @@ export async function buildBuiltinWorld() {
       }),
       nextUidRef,
     );
+  }
+  for (const [entries, field] of [
+    [BLACK_MARKET_WORLDBOOK_ENTRIES, 'blackMarketLore'],
+    [CITY_AND_FACTION_WORLDBOOK_ENTRIES, 'cityFactionLore'],
+  ]) {
+    for (const lore of entries) {
+      upsertEntry(
+        raw,
+        (entry) => entry.extensions?.wanxiang?.[field] === lore.id,
+        (uid) => ({
+          ...newWorldEntry(uid),
+          comment: lore.comment,
+          key: [...lore.key],
+          content: lore.content,
+          constant: false,
+          selective: true,
+          order: lore.order,
+          position: lore.position,
+          matchWholeWords: false,
+          matchScenario: true,
+          excludeRecursion: true,
+          preventRecursion: true,
+          apiTargets: [...lore.apiTargets],
+          extensions: {
+            wanxiang: {
+              [field]: lore.id,
+              apiTargets: [...lore.apiTargets],
+            },
+          },
+        }),
+        nextUidRef,
+      );
+    }
   }
   for (const dungeon of MILL_DUNGEONS) {
     upsertEntry(

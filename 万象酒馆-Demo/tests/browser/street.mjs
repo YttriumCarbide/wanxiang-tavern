@@ -114,7 +114,11 @@ export async function streetChecks({ browser, baseURL, output }) {
     await page.goto(baseURL + '/street.html');
     await settled();
     const initial = await snapshot();
-    assert.equal(initial.roster.length, 2, 'the city-center panorama has two placed visitors');
+    assert.equal(
+      initial.roster.length,
+      0,
+      'the pure-backdrop city-center overview stays scenic without visitors',
+    );
     assert(Math.abs(initial.aspect - 16 / 9) < 0.02, 'city overview keeps native 16:9 aspect');
     assert.equal(await page.locator('.street-controls').count(), 0);
     assert.equal((await page.locator('#street-return').innerText()).trim(), '返回酒馆');
@@ -187,7 +191,7 @@ export async function streetChecks({ browser, baseURL, output }) {
     const directory = await openCityDirectory(page);
     assert.equal(
       await page
-        .locator('#street-city-submap [data-city-node="starbell-undercroft"]')
+        .locator('#street-city-submap [data-city-node="black-market"]')
         .getAttribute('data-kind'),
       'dungeon',
     );
@@ -446,7 +450,7 @@ export async function streetChecks({ browser, baseURL, output }) {
         document.querySelector('#inn-frame iframe')?.contentWindow?.streetPreview?.state()
           .sceneId === 'city-center',
     );
-    // Open starbell-undercroft via city submap and verify seamless Top-Layer transition on open & close
+    // Open black-market via city submap and verify seamless Top-Layer transition on open & close
     await page.evaluate(() => {
       const log = (window.__cutsceneTrack = {
         active: true,
@@ -482,7 +486,7 @@ export async function streetChecks({ browser, baseURL, output }) {
       requestAnimationFrame(step);
     });
     const embeddedDirectory = await openCityDirectory(page);
-    await embeddedDirectory.locator('[data-city-node="starbell-undercroft"]').click();
+    await embeddedDirectory.locator('[data-city-node="black-market"]').click();
     await page.locator('#destination-dialog[data-discovery="true"]').waitFor({ state: 'visible' });
     await page.waitForFunction(
       () => !document.querySelector('.world-loading-scene:not([hidden])'),

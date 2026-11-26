@@ -1,5 +1,5 @@
 #destination-dialog {
-  --region-accent: #cab67e;
+  --region-accent: var(--astral-gold);
   position: fixed;
   inset: 0;
   box-sizing: border-box;
@@ -10,11 +10,11 @@
   margin: auto;
   padding: 24px 32px;
   overflow: hidden;
-  background: radial-gradient(ellipse at 50% 45%, #294039, transparent 65%), #101e20;
-  border: 1px solid #8a856360;
-  border-radius: 16px;
-  color: #e3ddc9;
-  box-shadow: 0 28px 100px #0008;
+  background: var(--astral-hatch), var(--astral-panel-bg);
+  border: 1px solid rgba(226, 192, 120, 0.5);
+  border-radius: 4px;
+  color: var(--astral-text);
+  box-shadow: var(--astral-frame-shadow);
 }
 #destination-dialog[open] {
   display: flex;
@@ -33,11 +33,11 @@
   animation: none;
 }
 #destination-dialog[data-discovery='true']::backdrop {
-  background: #0b1517;
+  background: #080a1a;
   backdrop-filter: none;
 }
 #destination-dialog::backdrop {
-  background: #04110ed4;
+  background: rgba(4, 5, 14, 0.84);
   backdrop-filter: blur(8px);
 }
 #destination-dialog[data-region='forest'] {
@@ -65,15 +65,17 @@
   pointer-events: auto;
 }
 #destination-dialog header small {
-  color: #91a99f;
+  color: var(--astral-gold);
   letter-spacing: 3px;
   font-size: 10px;
 }
 #destination-dialog header h2 {
   margin: 5px 0 0;
+  font-family: Georgia, 'Songti SC', 'Microsoft YaHei', serif;
   font-weight: 400;
   font-size: 23px;
   letter-spacing: 3px;
+  color: var(--astral-gold-hi);
 }
 .destination-header-actions {
   display: flex;
@@ -84,6 +86,10 @@
   width: 42px;
   height: 42px;
   padding: 0;
+  border: 1px solid rgba(226, 192, 120, 0.44);
+  border-radius: 3px;
+  background: var(--astral-card-bg);
+  color: var(--astral-gold-hi);
 }
 #destination-back {
   min-height: 42px;
@@ -113,7 +119,7 @@
   pointer-events: none;
 }
 #destination-region-count {
-  color: #a6b4a1;
+  color: var(--astral-sub);
   font-size: 11px;
   letter-spacing: 5px;
 }
@@ -128,7 +134,7 @@
   position: absolute;
   inset: 75px 0 85px;
   touch-action: pan-y;
-  background: radial-gradient(ellipse at 50% 65%, #a6cfab12, transparent 65%);
+  background: radial-gradient(ellipse at 50% 65%, rgba(226, 192, 120, 0.1), transparent 65%);
 }
 #destination-preview canvas {
   position: absolute;
@@ -144,14 +150,37 @@
   right: 5%;
   top: 48%;
   text-align: center;
-  color: #adbcaa;
+  color: var(--astral-sub);
   font-size: 11px;
   pointer-events: none;
   display: none;
 }
 #destination-preview[data-loading='true'] .destination-preview-status,
-#destination-preview[data-error='true'] .destination-preview-error {
+#destination-preview[data-error='true'] .destination-preview-error,
+#destination-route-preview[data-loading='true'] .destination-preview-status {
   display: block;
+}
+#destination-route-preview {
+  position: absolute;
+  right: 18px;
+  bottom: 16px;
+  width: clamp(168px, 19vw, 232px);
+  height: clamp(114px, 16vh, 162px);
+  z-index: 2;
+  pointer-events: none;
+  border-radius: 10px;
+  border: 1px solid rgba(226, 192, 120, 0.34);
+  background: radial-gradient(circle at 50% 62%, rgba(28, 36, 48, 0.78), rgba(14, 18, 26, 0.88));
+  box-shadow: 0 10px 28px rgba(4, 7, 12, 0.52);
+  overflow: hidden;
+}
+#destination-route-preview[hidden] {
+  display: none;
+}
+#destination-route-preview canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 .destination-world-arrow {
   z-index: 1;
@@ -161,9 +190,9 @@
   padding: 0;
   font-size: 42px;
   color: var(--region-accent);
-  background: #b2c4a908;
-  border: 1px solid #c8d4a52b;
-  border-radius: 9px;
+  background: var(--astral-card-bg);
+  border: 1px solid rgba(226, 192, 120, 0.36);
+  border-radius: 3px;
 }
 .destination-world-copy {
   position: absolute;
@@ -184,7 +213,7 @@
   margin: 0;
   font-size: 13px;
   line-height: 1.8;
-  color: #adbfaf;
+  color: var(--astral-sub);
 }
 .destination-intro strong {
   font-size: 12px;
@@ -199,17 +228,17 @@
   min-width: 72px;
   height: 34px;
   padding: 4px 12px;
-  color: #a5b2a3;
-  background: #bac9ac08;
-  border: 1px solid #8c9e854a;
-  border-radius: 6px;
+  color: var(--astral-sub);
+  background: var(--astral-card-bg);
+  border: 1px solid rgba(226, 192, 120, 0.34);
+  border-radius: 3px;
   font-size: 11px;
 }
 #destination-regions button[aria-pressed='true'] {
-  color: #14251e;
+  color: #1c1406;
   border-color: var(--region-accent);
   background: var(--region-accent);
-  box-shadow: 0 0 0 3px #c8d4a51a;
+  box-shadow: 0 0 0 3px rgba(226, 192, 120, 0.18);
   font-weight: 700;
 }
 #destination-regions button[aria-pressed='true']::before {
@@ -235,11 +264,11 @@
   gap: 10px;
   align-items: center;
   padding: 4px 5px 4px 12px;
-  border: 1px solid rgba(202, 182, 126, 0.36);
+  border: 1px solid rgba(226, 192, 120, 0.44);
   border-radius: 999px;
-  background: rgba(15, 29, 31, 0.84);
-  color: #dcd4bc;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.32);
+  background: rgba(16, 20, 48, 0.9);
+  color: var(--astral-text);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.38);
   backdrop-filter: blur(6px);
 }
 .destination-map-heading small {
@@ -516,7 +545,7 @@
 #destination-sites {
   flex: 1;
   min-width: 0;
-  color: #e6ddc5;
+  color: var(--astral-text);
 }
 #destination-sites[hidden] {
   display: none;
@@ -540,14 +569,14 @@
   flex-wrap: wrap;
   gap: 8px;
   font-size: 11px;
-  color: #a9b8ad;
+  color: var(--astral-sub);
 }
 .destination-site-chip {
   padding: 1px 7px;
-  border: 1px solid rgba(202, 182, 126, 0.45);
-  border-radius: 999px;
-  background: rgba(202, 182, 126, 0.14);
-  color: #e7cfa0;
+  border: 1px solid rgba(226, 192, 120, 0.45);
+  border-radius: 3px;
+  background: rgba(226, 192, 120, 0.14);
+  color: var(--astral-gold-hi);
   font-size: 10.5px;
   font-weight: 700;
   white-space: nowrap;
@@ -561,7 +590,7 @@
 .destination-site-lv {
   margin-left: auto;
   font-style: normal;
-  color: #d6bc84;
+  color: var(--astral-gold);
   font-weight: 700;
   white-space: nowrap;
 }
@@ -570,7 +599,7 @@
   font-size: 17px;
   font-weight: 600;
   letter-spacing: 1.5px;
-  color: #f4ebd2;
+  color: var(--astral-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -578,7 +607,7 @@
 .destination-site p {
   margin: 0;
   font-size: 11px;
-  color: #9cb0a3;
+  color: var(--astral-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -606,7 +635,7 @@
   position: relative;
   z-index: 3;
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 16px;
   flex-shrink: 0;
@@ -618,7 +647,6 @@
 }
 .destination-footer-actions {
   display: flex;
-  flex-direction: row-reverse;
   align-items: center;
   gap: 8px;
   min-width: 0;
@@ -628,13 +656,13 @@
   min-height: 46px;
   padding: 5px 14px;
   font-size: 12px;
-  color: #d6c18f;
-  border-color: #a99b6955;
+  color: var(--astral-gold-hi);
+  border-color: var(--astral-line);
   white-space: nowrap;
 }
 #destination-status {
   min-width: 0;
-  color: #91a997;
+  color: var(--astral-sub);
   font-size: 11px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -647,6 +675,10 @@
   font-size: 14px;
   letter-spacing: 2px;
   overflow-wrap: anywhere;
+  color: #1c1406;
+  background: linear-gradient(180deg, #fff1c4, #dab262 60%, #b4863a);
+  border: 1px solid var(--astral-gold-hi);
+  border-radius: 3px;
 }
 #destination-dialog button {
   touch-action: manipulation;
@@ -674,38 +706,39 @@
   outline: 0;
 }
 #destination-dialog[data-stage='route'] {
-  --region-accent: #d8ba7c;
-  background: radial-gradient(ellipse at 50% 45%, #233832, transparent 68%), #0f1c1e;
-  color: #e3ddc9;
+  --region-accent: #e2c078;
+  background: var(--astral-hatch), var(--astral-panel-bg);
+  color: var(--astral-text);
   justify-content: space-between;
 }
 #destination-dialog[data-stage='route'] header h2 {
-  color: #f3ebd3;
+  color: var(--astral-gold-hi);
 }
 #destination-dialog[data-stage='route'] header small {
-  color: #97aea2;
+  color: var(--astral-sub);
 }
 #destination-dialog[data-stage='route'] footer {
   padding: 8px 14px;
-  border: 1px solid rgba(202, 182, 126, 0.3);
-  border-radius: 10px;
-  background: rgba(11, 22, 24, 0.88);
+  border: 1px solid var(--astral-line);
+  border-radius: 3px;
+  background: rgba(11, 14, 34, 0.92);
   pointer-events: auto;
 }
 #destination-dialog[data-stage='route'] #destination-origin,
 #destination-dialog[data-stage='route'] #destination-close,
 #destination-back,
 #destination-center {
-  color: #e8dec6;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(202, 182, 126, 0.38);
+  color: var(--astral-text);
+  background: var(--astral-card-bg);
+  border: 1px solid var(--astral-line);
+  border-radius: 3px;
 }
 #destination-dialog[data-stage='route'] #destination-origin:hover,
 #destination-dialog[data-stage='route'] #destination-close:hover,
 #destination-back:hover,
 #destination-center:hover {
-  background: rgba(202, 182, 126, 0.18);
-  border-color: rgba(232, 208, 152, 0.72);
+  background: rgba(226, 192, 120, 0.18);
+  border-color: var(--astral-gold-hi);
 }
 @media (max-height: 600px) and (orientation: landscape) {
   #destination-dialog {
@@ -863,6 +896,7 @@
   }
   .destination-footer-actions {
     grid-row: 2;
+    justify-content: flex-end;
   }
   #destination-sites,
   #destination-status {
@@ -1071,10 +1105,10 @@
   width: min(760px, calc(100vw - 60px));
   max-height: 80dvh;
   padding: 24px;
-  background: #102421;
-  color: #e3ddc9;
-  border: 1px solid #bda57077;
-  border-radius: 12px;
+  background: var(--astral-hatch), var(--astral-panel-bg);
+  color: var(--astral-text);
+  border: 1px solid var(--astral-line);
+  border-radius: 4px;
 }
 #destination-lore header,
 .raw-response header {
@@ -1100,7 +1134,7 @@
 .destination-discovery-description {
   margin: 0;
   font-size: 11px;
-  color: #9cb0a3;
+  color: var(--astral-sub);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

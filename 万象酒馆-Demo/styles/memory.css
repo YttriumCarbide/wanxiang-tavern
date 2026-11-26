@@ -4,23 +4,23 @@
   align-items: center;
   gap: 10px;
   padding: 10px;
-  border-top: 1px solid rgba(216, 178, 110, 0.18);
+  border-top: 1px solid var(--astral-line);
   flex-shrink: 0;
   font-size: 12px;
-  color: #cab899;
+  color: var(--astral-sub);
 }
 .memory-pages button {
-  padding: 4px 10px;
+  padding: 5px 12px;
   font-size: 12px;
-  border: 1px solid rgba(216, 178, 110, 0.3);
+  border: 1px solid rgba(226, 192, 120, 0.38);
   border-radius: 3px;
-  background: rgba(216, 178, 110, 0.08);
-  color: #fae8be;
+  background: var(--astral-card-bg);
+  color: var(--astral-gold-hi);
 }
 #memory-count,
 #memory-status {
   margin: 0;
-  color: #cec2ae;
+  color: var(--astral-sub);
   font-size: 13px;
   line-height: 1.6;
   flex-shrink: 0;
@@ -34,24 +34,24 @@
 #memory-items article {
   padding: 14px 16px;
   margin-bottom: 12px;
-  border: 1px solid rgba(216, 178, 110, 0.24);
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(226, 192, 120, 0.28);
+  border-radius: 3px;
+  background: var(--astral-card-bg);
 }
 #memory-items h3 {
   margin: 0 0 8px;
-  color: #fae8be;
+  color: var(--astral-gold-hi);
   font-size: 15px;
   font-weight: 600;
 }
 #memory-items article > small {
   display: block;
-  color: #b79c71;
+  color: var(--astral-gold);
   letter-spacing: 0.04em;
   margin-bottom: 10px;
 }
 #memory-items details {
-  color: #c8bca7;
+  color: var(--astral-sub);
   font-size: 13px;
   margin-bottom: 12px;
 }
@@ -64,27 +64,27 @@
 #memory-items label {
   display: grid;
   gap: 8px;
-  color: #dec392;
+  color: var(--astral-gold-hi);
   font-size: 12px;
 }
 #memory-items textarea {
   width: 100%;
   min-height: 84px;
   resize: vertical;
-  border: 1px solid rgba(216, 178, 110, 0.3);
-  border-radius: 4px;
+  border: 1px solid rgba(226, 192, 120, 0.34);
+  border-radius: 3px;
   padding: 10px 12px;
-  background: rgba(10, 11, 14, 0.72);
-  color: #f0e6d0;
+  background: rgba(8, 11, 28, 0.86);
+  color: var(--astral-text);
   line-height: 1.65;
 }
 .memory-settings {
   margin-top: 20px;
   padding-top: 18px;
-  border-top: 1px solid rgba(216, 178, 110, 0.25);
+  border-top: 1px solid var(--astral-line);
 }
 .memory-settings p {
-  color: #c2b6a1;
+  color: var(--astral-sub);
   font-size: 13px;
   line-height: 1.7;
 }

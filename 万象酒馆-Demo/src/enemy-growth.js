@@ -6,8 +6,9 @@ const MAP_LEVELS = Object.freeze({
   mill: 1,
   'moss-hollow': 2,
   'graystone-quarry': 5,
-  'starbell-undercroft': 6,
   'black-market': 7,
+  'silver-shield-exhibition': 8,
+  'duel-arena': 11,
   'border-watch': 6,
   'whisper-grove': 10,
   forest: 11,
@@ -35,10 +36,7 @@ export function encounterLevel(entry) {
   if (Number.isInteger(entry.levelOffset) && !entry.endless) {
     return Math.max(1, Math.min(99, base + entry.levelOffset));
   }
-  const official =
-    BASE_WORLDS.includes(id) ||
-    EMPIRE_TRANSITION_DUNGEONS.includes(id) ||
-    id === 'starbell-undercroft';
+  const official = BASE_WORLDS.includes(id) || EMPIRE_TRANSITION_DUNGEONS.includes(id);
   const sequence = Number.isInteger(entry.sequence) && entry.sequence >= 0 ? entry.sequence : 0;
   if (official && sequence < 6) return base + MAIN_OFFSETS[sequence];
   const tier = Math.floor(sequence / 6) + (official ? 0 : 1);

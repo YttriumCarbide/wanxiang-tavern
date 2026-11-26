@@ -146,7 +146,7 @@ export async function equipmentChecks({ browser, baseURL, output }) {
     );
     await page.locator('#archive-close').click();
     const header = await page.locator('.app-header nav > button').allTextContents();
-    assert(!header.includes('总结') && !header.includes('归档'));
+    assert(!header.includes('总结') && !header.includes('图鉴'));
     assert.equal(
       await page.frameLocator('#inn-frame iframe').locator('[data-shelf-action]').count(),
       1,
@@ -298,9 +298,9 @@ export async function equipmentChecks({ browser, baseURL, output }) {
     await page.locator('#destination-start').click();
     await page.locator('#prepare-done').click();
     await page
-      .locator('#prepare-title')
-      .filter({ hasText: '正在生成剧本' })
+      .locator('#party-panel[data-pending-generation="true"]')
       .waitFor({ state: 'attached' });
+    assert.equal(await page.locator('#prepare-title').textContent(), '整备');
     await readGal(true);
     await page.locator('#prepare-title').waitFor({ state: 'visible' });
     assert.equal(

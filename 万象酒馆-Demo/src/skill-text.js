@@ -1,4 +1,4 @@
-import { BUFFS } from './data.js';
+import { BUFFS } from './buffs.js';
 import { gemBonusText } from './content/gems.js';
 import { resourceText } from './resource-text.js';
 import { TRIGGER_EVENTS, TRIGGER_TARGETS } from './triggers.js';

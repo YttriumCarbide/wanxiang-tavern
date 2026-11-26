@@ -42,7 +42,10 @@ export function createDestinations(context) {
     for (const id of UNLOCKABLE_DUNGEONS) {
       if ((session.ai.library.exploration?.[id]?.completed || 0) > 0) effective.add(id);
     }
-    if (isAnyQuickTest()) for (const map of quickTestOverlordMaps()) effective.add(map);
+    if (isAnyQuickTest()) {
+      for (const map of UNLOCKABLE_DUNGEONS) effective.add(map);
+      for (const map of quickTestOverlordMaps()) effective.add(map);
+    }
     const availableMaps = isAnyQuickTest()
       ? [...new Set([...UNLOCKABLE_DUNGEONS, ...quickTestOverlordMaps()])]
       : UNLOCKABLE_DUNGEONS;
@@ -93,6 +96,7 @@ export function createDestinations(context) {
   const dialog = $('#destination-dialog');
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
   let preview = null;
+  let routePreview = null;
   let touch = null;
   let drag = null;
   let suppressClick = false;
@@ -136,7 +140,7 @@ export function createDestinations(context) {
   const actions = document.createElement('div');
   actions.className = 'destination-footer-actions';
   actions.append(more, $('#destination-region-confirm'), $('#destination-start'));
-  dialog.querySelector('footer').prepend(actions);
+  dialog.querySelector('footer').append(actions);
   events.on(lore.querySelector('button'), 'click', () => lore.close());
   events.on(more, 'click', () => {
     const region = regionFor(session.journey.regionMap);
@@ -491,7 +495,11 @@ export function createDestinations(context) {
     const region = regionFor(map);
     const availableMaps = maps();
     const index = availableMaps.indexOf(map);
-    const route = session.ai.library.exploration[map];
+    const route = session.ai.library.exploration[map] || {
+      completed: 0,
+      frontier: [],
+      cleared: [],
+    };
     const isMainlineMap = MAINLINE_DUNGEONS.includes(map) && !region.id;
     const endlessReady = isMainlineMap
       ? (route?.cleared || []).some((entry) => entry.authored && entry.step >= 3 && !entry.branch)
@@ -579,10 +587,26 @@ export function createDestinations(context) {
     if (route) {
       more.hidden = region.description.length <= SUMMARY_LIMIT;
       preview?.pause();
+      const routeHost = $('#destination-route-preview');
+      if (routeHost && session.journey.regionMap !== 'singularity') {
+        routeHost.hidden = false;
+        try {
+          routePreview ||= createDestinationPreview(routeHost);
+          void routePreview.show(region.biome || region.map || session.journey.regionMap, 1);
+        } catch {
+          routeHost.dataset.error = 'true';
+        }
+      } else if (routeHost) {
+        routeHost.hidden = true;
+        routePreview?.pause();
+      }
       renderMap();
       renderSite();
       $('#destination-map').focus({ preventScroll: true });
     } else {
+      routePreview?.pause();
+      const routeHost = $('#destination-route-preview');
+      if (routeHost) routeHost.hidden = true;
       render();
       $('#destination-region-confirm').focus({ preventScroll: true });
     }
@@ -639,7 +663,8 @@ export function createDestinations(context) {
     const canOpen =
       library.atlasDiscoveries.some((entry) => entry.id === id) ||
       library.unlockedDungeons?.includes(id) ||
-      (isAnyQuickTest() && quickTestOverlordMaps().includes(id));
+      (isAnyQuickTest() &&
+        (UNLOCKABLE_DUNGEONS.includes(id) || quickTestOverlordMaps().includes(id)));
     if (dialog.open || session.runtime.mode !== 'inn' || session.ai.busy || !canOpen) return;
     session.journey.regionMap = id;
     session.journey.selectedNode = structuredClone(recommended(id) || null);
@@ -816,6 +841,7 @@ export function createDestinations(context) {
     drag = null;
     suppressClick = false;
     preview?.pause();
+    routePreview?.pause();
     dialog
       .querySelectorAll('*')
       .forEach((element) => element.getAnimations().forEach((animation) => animation.cancel()));
@@ -843,9 +869,10 @@ export function createDestinations(context) {
     open,
     openDiscovery,
     refreshQuickTest() {
+      const quickMaps = [...new Set([...UNLOCKABLE_DUNGEONS, ...quickTestOverlordMaps()])];
       if (
-        quickTestOverlordMaps().includes(session.journey.regionMap) &&
-        (dialog.open || quickTestOverlordMaps().includes(session.journey.selectedNode?.map))
+        quickMaps.includes(session.journey.regionMap) &&
+        (dialog.open || quickMaps.includes(session.journey.selectedNode?.map))
       ) {
         session.journey.selectedNode = structuredClone(
           recommended(session.journey.regionMap) || null,
@@ -873,6 +900,7 @@ export function createDestinations(context) {
       lore.remove();
       rawResponse.dispose();
       preview?.dispose();
+      routePreview?.dispose();
     },
   };
 }

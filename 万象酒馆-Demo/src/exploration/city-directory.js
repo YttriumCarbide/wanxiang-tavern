@@ -25,9 +25,11 @@ export function createCityDirectory({ events, definition, onNavigate, onOpenWorl
   let locked = false;
   let danger = null;
   let discoveries = [];
+  let clearedDungeons = [];
+  let includeLockedDungeons = false;
   openButton.setAttribute('aria-expanded', 'false');
-  // Border scenes retain their control; embedded cities use the ledger-side handle.
-  openButton.hidden = embedded && !atBorder;
+  // Embedded scenes use the unified right-edge ledger handle; standalone preserves the local opener.
+  openButton.hidden = embedded;
   dialog.dataset.city = cityId;
   dialog.querySelector('h2').textContent = city.name;
   const panorama = new URL(city.image, document.baseURI);
@@ -107,7 +109,10 @@ export function createCityDirectory({ events, definition, onNavigate, onOpenWorl
         section(
           'dungeons',
           '副本',
-          cityDungeons(cityId, discoveries).map(({ id, name, level }) =>
+          cityDungeons(cityId, discoveries, {
+            clearedDungeons,
+            includeLocked: includeLockedDungeons,
+          }).map(({ id, name, level }) =>
             card(id, name, { kind: 'dungeon', icon: '⛨', note: level ? 'Lv.' + level : '' }),
           ),
         ),
@@ -176,9 +181,17 @@ export function createCityDirectory({ events, definition, onNavigate, onOpenWorl
     isOpen: () => dialog.open,
     open,
     close,
-    update({ skirmishes, locked: blocked, discoveries: nextDiscoveries }) {
+    update({
+      skirmishes,
+      locked: blocked,
+      discoveries: nextDiscoveries,
+      clearedDungeons: nextClearedDungeons,
+      includeLockedDungeons: nextIncludeLocked = false,
+    }) {
       const nextDanger = skirmishes?.pending?.stop || skirmishes?.active?.stop || null;
       const entries = Array.isArray(nextDiscoveries) ? nextDiscoveries : [];
+      const cleared = Array.isArray(nextClearedDungeons) ? nextClearedDungeons : [];
+      const includeLocked = nextIncludeLocked === true;
       const sameDungeons =
         entries.length === discoveries.length &&
         entries.every(
@@ -186,11 +199,16 @@ export function createCityDirectory({ events, definition, onNavigate, onOpenWorl
             entry?.id === discoveries[index]?.id &&
             entry?.linkId === discoveries[index]?.linkId &&
             entry?.name === discoveries[index]?.name,
-        );
+        ) &&
+        cleared.length === clearedDungeons.length &&
+        cleared.every((id, index) => id === clearedDungeons[index]) &&
+        includeLocked === includeLockedDungeons;
       if (danger === nextDanger && locked === blocked && sameDungeons) return;
       danger = nextDanger;
       locked = blocked;
       discoveries = entries;
+      clearedDungeons = cleared;
+      includeLockedDungeons = includeLocked;
       if (dialog.open) render();
     },
   };

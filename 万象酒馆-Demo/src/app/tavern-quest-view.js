@@ -1,16 +1,7 @@
 import { isBountyReadyToClaim } from '../guild.js';
 import { QUEST_TYPES } from '../tavern-quests.js';
 import { escapeText } from '../ui.js';
-
-// Use the side-quest braid for Demo quests, which do not use the reference factions.
-const QUEST_WING = `<path d="M10 24 C25 24, 35 14.5, 52 14.5 C69 14.5, 76 33.5, 93 33.5 C109 33.5, 118 19.5, 131 24" stroke="var(--quest-wing-stroke)" stroke-width="1.3" fill="none" />
-  <path d="M10 24 C25 24, 35 33.5, 52 33.5 C69 33.5, 76 14.5, 93 14.5 C109 14.5, 118 28.5, 131 24" stroke="var(--quest-wing-stroke)" stroke-width="1.3" fill="none" />
-  <path d="M74 13.5 C90 5.5, 109 6.5, 124 17" stroke="var(--quest-wing-subtle)" stroke-width="1" fill="none" />
-  <path d="M74 34.5 C90 42.5, 109 41.5, 124 31" stroke="var(--quest-wing-subtle)" stroke-width="1" fill="none" />
-  <polygon points="52,20 56.5,24 52,28 47.5,24" fill="var(--quest-wing-fill)" opacity="0.86" />
-  <polygon points="93,19.5 98,24 93,28.5 88,24" fill="var(--quest-wing-fill)" />
-  <polygon points="127,24 131.5,21.2 135.5,24 131.5,26.8" fill="var(--quest-wing-fill)" />
-  <polygon points="2,24 11,21.2 13,24 11,26.8" fill="var(--quest-wing-fill)" opacity="0.82" />`;
+import { questFactionFor, questWingMarkup } from './tavern-quest-crests.js';
 
 const SCROLL_ARROW = `<svg width="10" height="6" viewBox="0 0 10 6" aria-hidden="true">
   <path d="M5 .6L9.4 5.4H.6Z" fill="currentColor"/>
@@ -31,13 +22,9 @@ function scrollCap(direction) {
     aria-label="${label}" aria-controls="tavern-quest-list">${SCROLL_ARROW}</button>`;
 }
 
-function crestWing(mirrored = false) {
-  return `<svg class="ow-quest-wing${mirrored ? ' is-mirrored' : ''}" viewBox="0 0 138 48"
-    fill="none" aria-hidden="true">${QUEST_WING}</svg>`;
-}
-
-function trackingMark(tracked) {
-  return `<svg class="ow-quest-marker" viewBox="0 0 28 24" aria-hidden="true" fill="none">
+function trackingMark(tracked, extraClass = '') {
+  const cls = extraClass ? `ow-quest-marker ${extraClass}` : 'ow-quest-marker';
+  return `<svg class="${cls}" viewBox="0 0 28 24" aria-hidden="true" fill="none">
     ${
       tracked
         ? `<polygon points="1.8,12 8.2,8.4 6.7,12 8.2,15.6" fill="#eae8e3"/>
@@ -53,7 +40,7 @@ function trackingMark(tracked) {
   </svg>`;
 }
 
-function objectiveMark(done) {
+function objectiveMark(done, tracked = false) {
   return `<svg class="ow-quest-objective-mark" viewBox="0 0 26 22" aria-hidden="true" fill="none">
     ${
       done
@@ -61,18 +48,58 @@ function objectiveMark(done) {
           <polygon points="13,3.2 19.2,11 13,18.8 6.8,11" fill="#aaa8a2" fill-opacity=".56" stroke="#c8c6c0" stroke-opacity=".72" stroke-width="1"/>
           <polygon points="13,6.6 16.3,11 13,15.4 9.7,11" fill="#deddda" fill-opacity=".42"/>
         </g>`
-        : `<polygon points="13,3 19.4,11 13,19 6.6,11" fill="#f2f1ee" fill-opacity=".03" stroke="#edebe7" stroke-width="1.25"/>
-           <polygon points="13,6.6 16.4,11 13,15.4 9.6,11" stroke="#edebe7" stroke-opacity=".34" stroke-width=".7"/>`
+        : tracked
+          ? `<g>
+            <polygon points="1.6,11 7.2,8.1 5.9,11 7.2,13.9" fill="#ebe9e5"/>
+            <polygon points="24.4,11 18.8,8.1 20.1,11 18.8,13.9" fill="#ebe9e5"/>
+            <polygon points="13,2.4 17.8,11 13,19.6 8.2,11" fill="#f5f4f2" stroke="#f1f0f0" stroke-width=".55"/>
+            <polygon points="13,6.2 15.4,11 13,15.8 10.6,11" fill="#f1f0f0" fill-opacity=".28"/>
+          </g>`
+          : `<polygon points="13,3 19.4,11 13,19 6.6,11" fill="#f2f1ee" fill-opacity=".03" stroke="#edebe7" stroke-width="1.25"/>
+             <polygon points="13,6.6 16.4,11 13,15.4 9.6,11" stroke="#edebe7" stroke-opacity=".34" stroke-width=".7"/>`
     }
   </svg>`;
+}
+
+function miscBranchMarkup(quest) {
+  const items = quest.subObjectives || [];
+  if (!items.length) return '';
+  const rows = items
+    .map((obj) => {
+      const qid = escapeText(obj.questId);
+      const oid = escapeText(obj.objId);
+      const done = Boolean(obj.done);
+      const tracked = Boolean(obj.tracked) && !done;
+      const focusKey = `misc:${qid}:${oid}`;
+      return `<button type="button"
+        class="ow-quest-misc-sub${done ? ' is-done' : tracked ? ' is-tracked' : ''}"
+        data-quest-misc-quest="${qid}"
+        data-quest-misc-obj="${oid}"
+        data-quest-focus="${focusKey}"
+        aria-pressed="${tracked}"
+        ${done ? 'disabled' : ''}
+        title="${done ? '此杂项目标已完成' : tracked ? '点击取消追踪此杂项目标' : '点击追踪此杂项目标'}">
+        ${trackingMark(tracked, 'ow-quest-misc-marker')}
+        <span class="ow-quest-misc-text">${escapeText(obj.label)}</span>
+        ${obj.location ? `<span class="ow-quest-misc-loc">${escapeText(obj.location)}</span>` : ''}
+      </button>`;
+    })
+    .join('');
+  return `<li class="ow-quest-misc-branch-item">
+    <div class="ow-quest-misc-branch" role="group" aria-label="杂项子目标">
+      <span class="ow-quest-misc-chain" aria-hidden="true"></span>
+      <div class="ow-quest-misc-list">${rows}</div>
+    </div>
+  </li>`;
 }
 
 function questRow(quest, selectedId, trackedId, claimingId) {
   const id = escapeText(quest.id);
   const title = escapeText(quest.title);
   const selected = quest.id === selectedId;
-  const tracked = quest.id === trackedId;
-  return `<li class="skyrim-quest-item${selected ? ' is-selected' : ''}" data-status="${quest.status}">
+  const tracked = quest.isMiscAggregate ? Boolean(quest.tracked) : quest.id === trackedId;
+  const showBranch = quest.isMiscAggregate && selected;
+  const row = `<li class="skyrim-quest-item${selected ? ' is-selected' : ''}${quest.isMiscAggregate ? ' is-misc' : ''}" data-status="${quest.status}">
     ${selected ? '<span class="skyrim-focus-tick" aria-hidden="true"></span>' : ''}
     ${
       quest.status === 'active'
@@ -95,6 +122,7 @@ function questRow(quest, selectedId, trackedId, claimingId) {
         : ''
     }
   </li>`;
+  return showBranch ? row + miscBranchMarkup(quest) : row;
 }
 
 function questRewards(quest) {
@@ -111,36 +139,59 @@ function questRewards(quest) {
 
 function questHeading(quest) {
   const type = QUEST_TYPES[quest.type] || '委托';
+  const faction = questFactionFor(quest);
   return `<header class="ow-quest-folio-head">
-    <div class="ow-quest-crest">
-      ${crestWing()}
+    <div class="ow-quest-crest" data-quest-crest="${escapeText(faction)}">
+      ${questWingMarkup(faction)}
       <h3 class="skyrim-folio-title">${escapeText(quest.title)}</h3>
-      ${crestWing(true)}
+      ${questWingMarkup(faction, true)}
     </div>
     ${questRule('title')}
     <p class="ow-quest-meta" aria-label="委托类型与等级">
       <span>${escapeText(type)}</span>
       ${quest.rank ? `<span>${escapeText(quest.rank)} 级</span>` : ''}
-      <span>建议 Lv.${escapeText(quest.level || 1)}</span>
+      ${quest.isMiscAggregate ? `<span>共 ${escapeText((quest.subObjectives || []).length)} 项</span>` : `<span>建议 Lv.${escapeText(quest.level || 1)}</span>`}
       ${quest.status === 'offered' ? '<span class="is-pending">待接取</span>' : ''}
     </p>
   </header>`;
 }
 
-function questObjectiveList(objectives) {
+function questObjectiveList(objectives, quest) {
   if (!objectives.length) return '';
   const ordered = [
     ...objectives.filter(({ done }) => !done),
     ...objectives.filter(({ done }) => done),
   ];
+  const isMisc = Boolean(quest?.isMiscAggregate);
   const rows = ordered
-    .map(
-      ({ label, done, detail }) => `<li${done ? ' class="is-done"' : ''}>
+    .map((obj) => {
+      const { label, done, detail, tracked, questId, objId, location } = obj;
+      if (isMisc && questId && objId) {
+        const qid = escapeText(questId);
+        const oid = escapeText(objId);
+        const isTracked = Boolean(tracked) && !done;
+        const focusKey = `detail-misc:${qid}:${oid}`;
+        const note = detail || (done ? '已完成' : location || '');
+        return `<li${done ? ' class="is-done"' : ''}>
+          <button type="button" class="ow-quest-objective-btn"
+            data-quest-misc-quest="${qid}"
+            data-quest-misc-obj="${oid}"
+            data-quest-focus="${focusKey}"
+            aria-pressed="${isTracked}"
+            ${done ? 'disabled' : ''}
+            title="${done ? '此杂项目标已完成' : isTracked ? '点击取消追踪此杂项目标' : '点击追踪此杂项目标'}">
+            ${objectiveMark(done, isTracked)}
+            <span>${escapeText(label)}</span>
+            ${note ? `<small>${escapeText(note)}</small>` : ''}
+          </button>
+        </li>`;
+      }
+      return `<li${done ? ' class="is-done"' : ''}>
         ${objectiveMark(done)}
         <span>${escapeText(label)}</span>
         ${detail || done ? `<small>${escapeText(detail || '已完成')}</small>` : ''}
-      </li>`,
-    )
+      </li>`;
+    })
     .join('');
   return `${questRule('objectives')}
     <ul class="ow-quest-objectives" aria-label="任务目标">${rows}</ul>`;
@@ -156,7 +207,7 @@ function questDetail(quest, location, objectives) {
     ${seal}
     <p class="skyrim-folio-desc">${escapeText(quest.description)}</p>
     ${location ? `<p class="ow-quest-location">目标地点：${escapeText(location)}</p>` : ''}
-    ${questObjectiveList(objectives)}
+    ${questObjectiveList(objectives, quest)}
     ${questRewards(quest)}
   </article>`;
 }

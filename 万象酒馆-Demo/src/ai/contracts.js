@@ -73,7 +73,7 @@ export function parseCharacterOutput(content) {
 export function characterWorldbook(entry) {
   return (
     stripRetiredLore(entry.setting.worldbook) ||
-    ['name', 'title', 'appearance', 'personality', 'background', 'speechStyle', 'motivation']
+    ['name', 'appearance', 'personality', 'background', 'speechStyle', 'motivation']
       .map((key) => entry.setting[key])
       .filter(Boolean)
       .join('\n\n')
@@ -183,31 +183,20 @@ export function normalizeCharacter(raw, id, input = {}) {
     raw.schemaVersion === 3
       ? {
           name: setting.name,
-          title: '',
           worldbook: formatCharacterSetting(setting),
           formatVersion: 3,
         }
       : raw.schemaVersion === 2
         ? {
             name: text(setting.name, '姓名', 30),
-            title: typeof setting.title === 'string' ? setting.title.slice(0, 30) : '',
             worldbook: stripRetiredLore(text(setting.worldbook, '人物世界书正文', 24000)),
             ...(setting.entrySkill ? { entrySkill: setting.entrySkill } : {}),
             ...(setting.formatVersion === 3 ? { formatVersion: 3 } : {}),
           }
         : Object.fromEntries(
-            [
-              'name',
-              'title',
-              'appearance',
-              'personality',
-              'background',
-              'speechStyle',
-              'motivation',
-            ].map((key) => [
-              key,
-              text(setting[key], key, key === 'name' || key === 'title' ? 30 : 2000),
-            ]),
+            ['name', 'appearance', 'personality', 'background', 'speechStyle', 'motivation'].map(
+              (key) => [key, text(setting[key], key, key === 'name' ? 30 : 2000)],
+            ),
           );
   if (raw.schemaVersion === 1) lore.tags = tags(setting.tags);
   if (!Array.isArray(data.skills) || data.skills.length !== 2) fail('角色需要两个技能槽');
@@ -216,7 +205,6 @@ export function normalizeCharacter(raw, id, input = {}) {
     : resolveBasicAttackType({
         id,
         name: lore.name,
-        title: lore.title,
         weapon: data.weapon,
         attackName: data.attackName,
         bio: characterWorldbook({ setting: lore }),
@@ -224,14 +212,12 @@ export function normalizeCharacter(raw, id, input = {}) {
   const actorDefForInfer = {
     id,
     name: lore.name,
-    title: lore.title,
     weapon: data.weapon,
     attackType: resolvedAttackType,
   };
   const combat = {
     id,
     name: display(lore.name),
-    title: display(lore.title),
     color: base.color,
     portrait: defaultCharacterPortrait(
       data.weapon,
@@ -513,7 +499,6 @@ export function settingOnly(entry) {
   return {
     id: entry.id,
     name: entry.setting.name,
-    title: entry.setting.title,
     worldbook: characterWorldbook(entry),
     ...(Array.isArray(entry.setting.tags) ? { tags: entry.setting.tags } : {}),
   };

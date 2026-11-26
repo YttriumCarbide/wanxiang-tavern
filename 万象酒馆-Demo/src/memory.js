@@ -1,6 +1,31 @@
 import { scriptProse } from './chat.js';
 import { dailyDateTimeText } from './daily.js';
 
+export function isTestScriptRecord(entry) {
+  return Boolean(
+    entry &&
+    (entry.testScript === true ||
+      entry.title === '旅途测试' ||
+      entry.title === '战斗测试' ||
+      entry.exploration?.quickTestBoss === true),
+  );
+}
+
+export function purgeScriptFromLibrary(library, book) {
+  if (!library || !book) return;
+  if (Array.isArray(library.history)) {
+    library.history = library.history.filter(
+      (record) => record.runId !== book.runId && (!book.id || record.scriptId !== book.id),
+    );
+  }
+  if (Array.isArray(library.scripts) && book.id) {
+    library.scripts = library.scripts.filter((entry) => entry.id !== book.id);
+  }
+  if (book.id && library.prepared === book.id) {
+    library.prepared = null;
+  }
+}
+
 export function gameTime(daily) {
   return dailyDateTimeText(daily);
 }
@@ -186,6 +211,7 @@ function memorySources(library, quick = []) {
     });
   }
   for (const [recordIndex, record] of (library.history || []).entries()) {
+    if (isTestScriptRecord(record) || record.failed === true) continue;
     sources.push({
       id: `${['overland', 'quest'].includes(record.kind) ? record.kind : 'dungeon'}:${record.runId || recordIndex}`,
       kind: ['overland', 'quest'].includes(record.kind) ? record.kind : 'dungeon',
@@ -220,7 +246,8 @@ export function pendingMemories(library, quick = []) {
       (item) =>
         item.kind !== 'invitation' &&
         !['overland', 'quest'].includes(item.kind) &&
-        (item.kind !== 'dungeon' || item.target.adventureVersion !== 1),
+        (item.kind !== 'dungeon' ||
+          (item.target.adventureVersion !== 1 && item.target.complete === true)),
     )
     .filter((item) => !restoredSummary(item.target[item.summaryKey], item.text))
     .map(({ target: _target, summaryKey: _key, ...item }) => item);

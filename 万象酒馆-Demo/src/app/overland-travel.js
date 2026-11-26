@@ -25,6 +25,7 @@ import { unlockDungeonMap } from '../exploration.js';
 import { grantVictoryOverlordEmblem } from '../emblem-progression.js';
 import { EMBLEMS } from '../emblems.js';
 import { learning } from '../campaign.js';
+import { carrySkirmishWave } from '../expedition.js';
 import { recordGuildSparringWin } from '../guild.js';
 
 export function createOverlandTravel(
@@ -674,7 +675,7 @@ export function createOverlandTravel(
     }
   }
 
-  async function launchSkirmishWave(plan, waveIndex, returnScene) {
+  async function launchSkirmishWave(plan, waveIndex, returnScene, continuing = false) {
     if (fighting) return;
     const wave = plan.encounters?.[waveIndex];
     if (!wave) return;
@@ -682,6 +683,7 @@ export function createOverlandTravel(
     try {
       await context.journey.startOverlandBattle({
         skirmishRun: { nodeId: plan.nodeId, plan, waveIndex },
+        continuing: Boolean(continuing && waveIndex > 0),
         forceTransition: waveIndex > 0,
         returnScene,
         spec: {
@@ -788,6 +790,8 @@ export function createOverlandTravel(
           settleSkirmishVictory(session.ai.library, skirmishRun.plan);
           context.quests?.skirmishWon?.(skirmishRun.plan.nodeId);
           settled = true;
+        } else if (won) {
+          carrySkirmishWave(expedition, session.battle.state);
         }
         expedition.status = !won || isFinalWave ? (won ? 'complete' : 'failed') : 'in-progress';
         expedition.pendingResult = {
@@ -814,6 +818,7 @@ export function createOverlandTravel(
                   skirmishRun.plan,
                   skirmishRun.waveIndex + 1,
                   expedition.overlandBattle.returnScene,
+                  true,
                 );
               }
             : undefined,

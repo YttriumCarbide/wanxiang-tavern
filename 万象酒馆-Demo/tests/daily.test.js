@@ -1140,3 +1140,18 @@ test('tavern calendar starts at 1463-08-24 and carries across month boundaries c
   assert.equal(dailyDateTimeText({ day: 27, period: 2 }), '1463年9月19日 · 下午');
   assert.equal(dailyDateTimeText(null), '');
 });
+
+test('restoreDaily drops orphaned direct setup or ready activities', () => {
+  const ready = restoreDaily({
+    active: { direct: true, kind: 'invitation', at: 0, ap: 1, stage: 'ready' },
+  });
+  assert.equal(ready.active, null);
+  const setup = restoreDaily({
+    active: { direct: true, kind: 'service', at: 0, ap: 1, stage: 'setup' },
+  });
+  assert.equal(setup.active, null);
+  const running = restoreDaily({
+    active: { direct: true, kind: 'outing', at: 0, ap: 1, stage: 'roaming', turns: 2 },
+  });
+  assert.equal(running.active?.kind, 'outing');
+});

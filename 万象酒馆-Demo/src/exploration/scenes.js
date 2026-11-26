@@ -48,8 +48,8 @@ const sideScenes = Object.fromEntries(
         cutouts: [],
         points: [exit(place.parent, `返回${place.back}`)],
         illustration: {
-          image: `${art}.png`,
-          ...(place.openAir ? { nightImage: `${art}-night.png` } : {}),
+          image: `${art}.webp`,
+          ...(place.openAir ? { nightImage: `${art}-night.webp` } : {}),
           aspect: 16 / 9,
           fixed: true,
           spots: { center: { foot: [0.52, 0.87], height: 0.42 } },
@@ -83,7 +83,7 @@ const capitalScenes = Object.fromEntries(
         cutouts: [],
         points,
         illustration: {
-          image: './assets/exploration/city-backgrounds/silver-crown.png',
+          image: './assets/exploration/city-backgrounds/silver-crown.webp',
           aspect: 16 / 9,
           fixed: true,
           fitWidth: true,
@@ -127,8 +127,8 @@ const roadScenes = Object.fromEntries(
         cutouts: [],
         points: [],
         illustration: {
-          image: `${art}.png`,
-          ...(night ? { nightImage: `${art}-night.png` } : {}),
+          image: `${art}.webp`,
+          ...(night ? { nightImage: `${art}-night.webp` } : {}),
           aspect: 3,
           viewHeight: 0.86,
           viewWidth: 2.05,
@@ -161,7 +161,7 @@ const eternalCityScenes = Object.fromEntries(
         exit(destination, `前往${ETERNAL_CITY_PLACES[destination].name}`),
       ),
       illustration: {
-        image: './assets/exploration/city-backgrounds/eternal-city.png',
+        image: './assets/exploration/city-backgrounds/eternal-city.webp',
         aspect: 16 / 9,
         fixed: true,
         fitWidth: true,
@@ -191,7 +191,7 @@ const eternalRoadScenes = Object.fromEntries(
       cutouts: [],
       points: [],
       illustration: {
-        image: `./assets/exploration/eternal-city/${id}.png`,
+        image: `./assets/exploration/eternal-city/${id}.webp`,
         aspect: 3,
         viewHeight: 0.86,
         viewWidth: 2.05,
@@ -216,7 +216,7 @@ const crossroadArtScenes = Object.fromEntries(
       cutouts: [],
       points: [],
       illustration: {
-        image: `./assets/exploration/overland-road/${imageId}-wide.png`,
+        image: `./assets/exploration/overland-road/${imageId}-wide.webp`,
         aspect: 3,
         viewHeight: 0.86,
         viewWidth: 2.05,
@@ -244,7 +244,6 @@ const dungeonTrailImages = Object.freeze({
   'silver-cistern': 'road-orchard-wide',
   'ash-foundry': 'road-aqueduct-wide',
   'astral-sanctum': 'road-causeway-wide',
-  'starbell-undercroft': 'road-downs-wide',
 });
 
 const imperialLandmarkScenes = Object.fromEntries(
@@ -261,7 +260,7 @@ const imperialLandmarkScenes = Object.fromEntries(
         cutouts: [],
         points: [],
         illustration: {
-          image: `./assets/exploration/overland-road/${artName}.png`,
+          image: `./assets/exploration/overland-road/${artName}.webp`,
           aspect: 3,
           viewHeight: 0.86,
           viewWidth: 2.05,

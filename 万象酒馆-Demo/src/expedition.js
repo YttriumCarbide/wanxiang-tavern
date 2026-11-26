@@ -125,6 +125,13 @@ export function completeEncounter(expedition, state) {
   };
 }
 
+/** Save post-battle hero HP, MP, ring charges, and expedition state before the next skirmish wave. */
+export function carrySkirmishWave(expedition, state) {
+  const rest = campRest(withoutDiningBonus(state));
+  expedition.carried = rest.state;
+  return rest;
+}
+
 /** A single choice after battle three; the returned engine changes drive every recovery animation. */
 export function chooseRest(expedition, choice) {
   if (!expedition.restPending || !expedition.carried || expedition.index !== 3)

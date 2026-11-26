@@ -579,7 +579,11 @@ export function createEffects(layer, center, getSpeed, options = {}) {
       }
     }
     if (attack && isAction && !lambAttack) {
-      const overlordLeap = Boolean(d?.overlord && e.type === 'enemy' && e.damageType);
+      const overlordLeap = Boolean(
+        d?.overlord &&
+        (e.type === 'enemy' || (e.type === 'counter' && e.isOverlordCounter)) &&
+        e.damageType,
+      );
       attack.attack = overlordLeap
         ? {
             start: performance.now(),

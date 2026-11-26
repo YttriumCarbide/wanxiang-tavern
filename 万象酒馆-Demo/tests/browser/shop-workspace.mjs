@@ -91,17 +91,22 @@ async function assertVendingSurface(page) {
     return {
       surface: getComputedStyle(surface).display,
       machine: getComputedStyle(machine).display,
-      categoryAboveMachine:
-        category.getBoundingClientRect().bottom <= machine.getBoundingClientRect().top + 1,
+      categoryDirection: getComputedStyle(category).flexDirection,
+      categoryLeftOfMachine:
+        category.getBoundingClientRect().right <= machine.getBoundingClientRect().left + 1,
       slotsSeparate:
         innerWidth <= 680
           ? slots.getBoundingClientRect().bottom <= pickup.getBoundingClientRect().top + 1
           : slots.getBoundingClientRect().right <= pickup.getBoundingClientRect().left + 1,
     };
   });
-  assert.equal(layout.surface, 'flex');
+  assert.equal(layout.surface, 'grid');
   assert.equal(layout.machine, 'grid');
-  assert(layout.categoryAboveMachine, 'Machine categories remain outside the vending cabinet');
+  assert.equal(layout.categoryDirection, 'column');
+  assert(
+    layout.categoryLeftOfMachine,
+    'Machine categories form a vertical rail beside the cabinet',
+  );
   assert(layout.slotsSeparate, 'Vending slots and pickup tray have distinct positions');
 }
 
@@ -214,11 +219,35 @@ export async function shopWorkspaceChecks({ browser, baseURL, output }) {
     assert.equal(
       await shop
         .locator(
-          '[data-shop-category="flying"], [data-shop-category="blind"], [data-shop-category="cleanse"]',
+          '[data-shop-category="calamity"], [data-shop-category="blind"], [data-shop-category="cleanse"], [data-shop-category="flying"]',
         )
         .count(),
-      0,
+      4,
+      'Vending must include all scroll categories',
     );
+    assert(
+      await rail.evaluate((node) => node.scrollHeight > node.clientHeight),
+      'Desktop category rail must scroll vertically',
+    );
+    await rail.evaluate((node) => (node.scrollTop = node.scrollHeight));
+    await page.waitForFunction(() => document.querySelector('#shop-categories').scrollTop > 0);
+    await selectPotionCategory(rail, 'flying');
+    const flyingScroll = shop.locator('[data-shop-item="flying-scroll"]');
+    assert(await flyingScroll.isVisible(), 'Flying category must show its scroll');
+    const buyFlying = shop.locator('[data-buy="flying-scroll"]:enabled');
+    assert(await buyFlying.isVisible(), 'Flying scroll must be purchasable in vending mode');
+    const scrollState = () =>
+      page.evaluate(() => {
+        const { gold, items } = demo.getLibrary().inventory;
+        return { gold, quantity: items['flying-scroll'] || 0 };
+      });
+    const beforeScroll = await scrollState();
+    await buyFlying.click();
+    await shop.locator('#shop-status').filter({ hasText: '+1' }).waitFor();
+    assert.deepEqual(await scrollState(), {
+      gold: beforeScroll.gold - ITEMS['flying-scroll'].price,
+      quantity: beforeScroll.quantity + 1,
+    });
     await selectPotionCategory(rail, 'confusion');
     const fineConfusion = shop.locator('[data-shop-item="fine-confusion-potion"]');
     assert(await fineConfusion.isVisible(), 'Confusion category must show its fine potion');
@@ -237,9 +266,9 @@ export async function shopWorkspaceChecks({ browser, baseURL, output }) {
     await page.setViewportSize({ width: 390, height: 844 });
     await assertVendingSurface(page);
     const mobileCategoryRail = page.locator('#shop-categories');
-    assert(await mobileCategoryRail.evaluate((node) => node.scrollWidth > node.clientWidth));
-    await mobileCategoryRail.evaluate((node) => (node.scrollLeft = node.scrollWidth));
-    await page.waitForFunction(() => document.querySelector('#shop-categories').scrollLeft > 0);
+    assert(await mobileCategoryRail.evaluate((node) => node.scrollHeight > node.clientHeight));
+    await mobileCategoryRail.evaluate((node) => (node.scrollTop = node.scrollHeight));
+    await page.waitForFunction(() => document.querySelector('#shop-categories').scrollTop > 0);
     await selectPotionCategory(rail, 'mana');
     const manaSlot = shop.locator('[data-shop-item="mana-potion"]');
     await manaSlot.press('Enter');
@@ -250,8 +279,8 @@ export async function shopWorkspaceChecks({ browser, baseURL, output }) {
       .evaluateAll((rows) => rows.map((row) => row.dataset.shopItem));
     assert(potionIds.includes('mana-potion'), 'Mana category must show its regular potion');
     assert(
-      potionIds.every((id) => id.endsWith('-potion')),
-      'Vending must only show potions',
+      potionIds.every((id) => id.endsWith('-potion') || id.endsWith('-scroll')),
+      'Vending must show potions and scrolls',
     );
     const buyMana = shop.locator('[data-buy="mana-potion"]:enabled');
     assert(await buyMana.isVisible(), 'The selected mana potion must be available to buy');

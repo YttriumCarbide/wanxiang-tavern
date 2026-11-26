@@ -98,7 +98,6 @@ export function characterDataFromSetting(setting, data) {
   return {
     ...data,
     name: setting.name,
-    title: '',
     attackName: setting.attack.name,
     skills: Array.isArray(data.skills)
       ? data.skills.map((skill, index) => ({ ...skill, name: setting.skills[index]?.name }))

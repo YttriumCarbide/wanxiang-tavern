@@ -25,7 +25,12 @@ import {
 } from '../../content/regions.js';
 import { presetOutputTransport, outputToolRequest } from '../preset-output.js';
 import { requireNpcInteraction } from '../../npc-interaction.js';
-import { galInstruction, galSceneCastInstruction, hasGalReactionGuidance } from '../gal-prompt.js';
+import {
+  galInstruction,
+  galSceneCastInstruction,
+  hasGalEnsembleGuidance,
+  hasGalReactionGuidance,
+} from '../gal-prompt.js';
 import { currentEncounterSpec } from '../../expedition.js';
 import { ADVENTURE_NODE_TYPES } from '../../adventure/definition.js';
 import { storyRingReward } from '../../emblem-progression.js';
@@ -69,7 +74,6 @@ export function generationInput(kind, input) {
         ...(input.questCharacter ? { questCharacter: input.questCharacter } : {}),
         existingCharacters: (input.existing || []).slice(0, 12).map((item) => ({
           name: String(item.name || '').slice(0, 30),
-          title: String(item.title || '').slice(0, 30),
         })),
       },
     };
@@ -85,7 +89,6 @@ export function generationInput(kind, input) {
   const party = input.party.map((item) => ({
     id: String(item.id).slice(0, 80),
     name: String(item.name || '').slice(0, 30),
-    title: String(item.title || '').slice(0, 30),
     worldbook: String(item.worldbook || '').slice(0, 24000),
     ...(typeof item.invitationMemory === 'string' && item.invitationMemory
       ? { invitationMemory: item.invitationMemory.slice(0, INVITATION_CONTEXT_LIMIT) }
@@ -469,7 +472,10 @@ export async function generationRequest(kind, input, source, options = {}) {
         (entry) => entry.extensions?.wanxiang?.generationRule === 'script-definition',
       ) &&
       scan?.entries.some((entry) => entry.extensions?.wanxiang?.generationRule === 'script-plot');
-    const galOptions = { reactionInWorldbook: hasGalReactionGuidance(messages) };
+    const galOptions = {
+      reactionInWorldbook: hasGalReactionGuidance(messages),
+      ensembleInWorldbook: hasGalEnsembleGuidance(messages),
+    };
     const baseText = hasWorldbookScriptTeaching
       ? galSceneCastInstruction(input, kind, galOptions)
       : galInstruction(input, kind, galOptions) +

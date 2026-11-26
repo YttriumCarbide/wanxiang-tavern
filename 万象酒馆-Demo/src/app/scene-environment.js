@@ -25,7 +25,9 @@ export function createSceneEnvironment(host) {
   const text = root.querySelector('.scene-environment-text');
   text.id = `scene-environment-${crypto.randomUUID()}`;
   toggle.setAttribute('aria-controls', text.id);
+  const reducedMotion = document.defaultView.matchMedia('(prefers-reduced-motion: reduce)');
   let dockTimer = null;
+  let exitAnimation = null;
 
   function setState(state) {
     root.dataset.state = state;
@@ -41,12 +43,46 @@ export function createSceneEnvironment(host) {
     dockTimer = null;
   }
 
-  function clear() {
-    stopDocking();
+  function cancelExit() {
+    exitAnimation?.cancel();
+    exitAnimation = null;
+  }
+
+  function hide() {
+    cancelExit();
     root.hidden = true;
     delete root.dataset.place;
     delete root.dataset.state;
     title.textContent = preview.textContent = text.textContent = '';
+  }
+
+  function clear({ immediate = false } = {}) {
+    stopDocking();
+    if (
+      immediate ||
+      root.hidden ||
+      reducedMotion.matches ||
+      typeof root.animate !== 'function' ||
+      !root.getClientRects().length
+    ) {
+      hide();
+      return;
+    }
+    if (exitAnimation) return;
+    root.inert = true;
+    const opacity = document.defaultView.getComputedStyle(root).opacity;
+    const animation = root.animate([{ opacity }, { opacity: 0 }], {
+      duration: 180,
+      easing: 'ease-in',
+      fill: 'forwards',
+    });
+    exitAnimation = animation;
+    void animation.finished.then(
+      () => {
+        if (exitAnimation === animation) hide();
+      },
+      () => {},
+    );
   }
 
   events.on(toggle, 'click', () => {
@@ -62,7 +98,12 @@ export function createSceneEnvironment(host) {
     toggle.focus({ preventScroll: true });
   });
   events.on(root, 'focusout', (event) => {
-    if (!root.contains(event.relatedTarget) && root.dataset.state === 'intro' && dockTimer === null)
+    if (
+      !root.inert &&
+      !root.contains(event.relatedTarget) &&
+      root.dataset.state === 'intro' &&
+      dockTimer === null
+    )
       setState('docked');
   });
 
@@ -70,8 +111,10 @@ export function createSceneEnvironment(host) {
     show(value, { intro = true } = {}) {
       const lead = normalizeSceneEnvironment(value);
       if (!lead) return clear();
-      const samePlace = !root.hidden && root.dataset.place === lead.placeId;
+      const samePlace = !exitAnimation && !root.hidden && root.dataset.place === lead.placeId;
       if (samePlace && title.textContent === lead.title && text.textContent === lead.text) return;
+      cancelExit();
+      root.inert = false;
       root.dataset.place = lead.placeId;
       title.textContent = lead.title;
       preview.textContent = text.textContent = lead.text;
@@ -90,7 +133,7 @@ export function createSceneEnvironment(host) {
     },
     clear,
     dispose() {
-      clear();
+      clear({ immediate: true });
       events.dispose();
       root.remove();
     },

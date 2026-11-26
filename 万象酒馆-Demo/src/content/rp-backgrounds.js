@@ -16,9 +16,11 @@ const EVENT_REGIONS = new Set([
   'graystone-quarry',
   'city-market',
   'black-market',
+  'duel-arena',
+  'silver-shield-exhibition',
 ]);
 
 export function rpBackground(map, node) {
   const region = EVENT_REGIONS.has(map) ? map : 'ruins';
-  return `./assets/events/${region}-${node === 1 ? 'event' : 'quest'}.png`;
+  return `./assets/events/${region}-${node === 1 ? 'event' : 'quest'}.webp`;
 }

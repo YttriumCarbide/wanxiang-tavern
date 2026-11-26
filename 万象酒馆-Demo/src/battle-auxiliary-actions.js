@@ -13,6 +13,7 @@ export function createAuxiliaryActions({
   clearRearPlagueSeals,
   triggerEntrySkill,
   rear,
+  onFormationChanged,
 }) {
   function item(a) {
     const item = ITEMS[a.item];
@@ -45,6 +46,7 @@ export function createAuxiliaryActions({
     }
     [work.formation[a.a], work.formation[a.b]] = [second, first];
     clearRearPlagueSeals();
+    onFormationChanged?.();
     if (a.a < 3 !== a.b < 3) {
       for (const [id, destination] of [
         [first, a.b],
@@ -79,6 +81,7 @@ export function createAuxiliaryActions({
     const back = work.formation.indexOf(a.incoming);
     [work.formation[a.slot], work.formation[back]] = [a.incoming, outgoing];
     clearRearPlagueSeals();
+    onFormationChanged?.();
     movedToFront.add(a.incoming);
     trigger('enterFront', a.incoming, { targets: [a.incoming] });
     if (outgoing) trigger('enterRear', outgoing, { targets: [outgoing] });

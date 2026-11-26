@@ -2,44 +2,65 @@
 
 :root {
   color-scheme: dark;
-  --bg: #0c1417;
-  --bg-deep: #070c0e;
-  --ink: #f2eee3;
-  --ink-sub: #b2c2bd;
-  --teal: #36c5b5;
-  --teal-glow: rgba(54, 197, 181, 0.35);
-  --gold: #e2ba6f;
-  --gold-glow: rgba(226, 186, 111, 0.32);
+  --astral-ink: #0b0d1f;
+  --astral-navy: #131836;
+  --astral-panel-bg: radial-gradient(ellipse 80% 60% at 50% 0%, #2a3478, #0b0d1f 74%);
+  --astral-card-bg: linear-gradient(180deg, rgba(36, 44, 98, 0.72), rgba(13, 17, 42, 0.92));
+  --astral-hatch:
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.022) 0 2px, transparent 2px 26px),
+    repeating-linear-gradient(-45deg, rgba(255, 255, 255, 0.022) 0 2px, transparent 2px 26px);
+  --astral-corner-mark: linear-gradient(var(--astral-gold), var(--astral-gold));
+  --astral-gold: #e2c078;
+  --astral-gold-hi: #fff1c4;
+  --astral-gold-dim: #8f7440;
+  --astral-line: rgba(226, 192, 120, 0.34);
+  --astral-text: #efe6cf;
+  --astral-sub: #cabfa4;
+  --astral-muted: #9b927f;
+  --astral-cyan: #8fd6f0;
+  --astral-frame-shadow:
+    inset 0 0 0 3px rgba(9, 11, 28, 0.9), inset 0 0 0 4px rgba(226, 192, 120, 0.16),
+    0 24px 90px rgba(0, 0, 0, 0.88);
+  --astral-btn-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 3px 0 #080a1c, 0 6px 14px rgba(0, 0, 0, 0.45);
+  --bg: #0b0d1f;
+  --bg-deep: #060814;
+  --ink: #f0e7d2;
+  --ink-sub: #c9bfaa;
+  --teal: #5ec8e8;
+  --teal-glow: rgba(94, 200, 232, 0.32);
+  --gold: #e2c078;
+  --gold-glow: rgba(226, 192, 120, 0.32);
   --gold-dark: #9f7b3a;
   --red: #ff5e6e;
   --red-glow: rgba(255, 94, 110, 0.35);
   --purple: #b37ef8;
-  --panel: rgba(13, 23, 25, 0.84);
-  --panel-card: rgba(18, 33, 35, 0.88);
-  --panel-glass: rgba(10, 18, 20, 0.72);
-  --border: rgba(162, 186, 172, 0.28);
-  --border-gold: rgba(226, 186, 111, 0.42);
-  --border-glow: rgba(54, 197, 181, 0.4);
-  --muted: #a6b8b0;
+  --panel: rgba(16, 20, 48, 0.94);
+  --panel-card: rgba(20, 25, 62, 0.88);
+  --panel-glass: rgba(11, 13, 31, 0.78);
+  --border: rgba(226, 192, 120, 0.28);
+  --border-gold: rgba(226, 192, 120, 0.45);
+  --border-glow: rgba(143, 214, 240, 0.4);
+  --muted: #9b927f;
   --safe-left: env(safe-area-inset-left, 0px);
   --safe-right: env(safe-area-inset-right, 0px);
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 16px;
+  --radius-sm: 3px;
+  --radius-md: 4px;
+  --radius-lg: 4px;
   --radius-pill: 9999px;
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.55);
-  --shadow-modal: 0 24px 68px rgba(0, 0, 0, 0.78), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.45);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.58);
+  --shadow-modal: var(--astral-frame-shadow);
   --transition-fast: 0.15s cubic-bezier(0.2, 0, 0, 1);
   --transition-normal: 0.22s cubic-bezier(0.2, 0, 0, 1);
-  --night-ink: #07110f;
-  --night-panel: #0e1e1a;
-  --night-surface: #142721;
-  --brass: #e2be7d;
-  --brass-deep: #a98046;
-  --brass-muted: #b9a382;
-  --parchment: #f4ead7;
-  --parchment-muted: #b9af9d;
+  --night-ink: #070917;
+  --night-panel: #0e122c;
+  --night-surface: #161c42;
+  --brass: #e2c078;
+  --brass-deep: #9f7b3a;
+  --brass-muted: #cabfa4;
+  --parchment: #f0e7d2;
+  --parchment-muted: #b8ae99;
   --display-serif: Georgia, 'Songti SC', 'STSong', 'Microsoft YaHei', serif;
 }
 
@@ -93,14 +114,14 @@ body {
 button {
   font: inherit;
   color: inherit;
-  border: 1px solid var(--border);
+  border: 1px solid var(--astral-line);
   cursor: pointer;
   border-radius: var(--radius-sm);
   padding: 7px 13px;
-  background: rgba(23, 38, 35, 0.65);
+  background: var(--astral-card-bg);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--astral-btn-shadow);
   transition:
     background var(--transition-fast),
     border-color var(--transition-fast),
@@ -109,9 +130,12 @@ button {
 }
 
 button:hover {
-  background: rgba(38, 64, 56, 0.85);
-  border-color: var(--teal);
-  box-shadow: 0 0 12px var(--teal-glow);
+  background: linear-gradient(180deg, rgba(56, 70, 146, 0.88), rgba(24, 30, 70, 0.94));
+  border-color: var(--astral-gold-hi);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.24),
+    0 3px 0 #080a1c,
+    0 0 14px var(--gold-glow);
   transform: translateY(-1px);
 }
 
@@ -133,25 +157,31 @@ button:disabled {
 }
 
 button.primary {
-  background: linear-gradient(135deg, #d8bc7f, #eed59e);
-  border-color: #f7e6bd;
-  color: #121f1d;
-  font-weight: 600;
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.2);
-  box-shadow: 0 2px 14px var(--gold-glow);
+  background: linear-gradient(180deg, #fff1c4, #dab262 60%, #b4863a);
+  border-color: #fff6d8;
+  color: #1c1406;
+  font-weight: 700;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.25);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    0 3px 0 #5b4114,
+    0 4px 16px var(--gold-glow);
 }
 
 button.primary:hover {
-  background: linear-gradient(135deg, #eed59e, #fff0cb);
+  background: linear-gradient(180deg, #fff8dc, #e8c273 60%, #c69643);
   border-color: #ffffff;
-  box-shadow: 0 4px 20px rgba(238, 213, 158, 0.55);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    0 3px 0 #5b4114,
+    0 6px 22px rgba(255, 241, 196, 0.45);
 }
 
 select {
   font: inherit;
   color: var(--ink);
-  background: rgba(14, 25, 27, 0.88);
-  border: 1px solid var(--border);
+  background: rgba(11, 14, 34, 0.92);
+  border: 1px solid var(--astral-line);
   border-radius: var(--radius-sm);
   padding: 6px 10px;
   outline: none;
@@ -163,7 +193,7 @@ select {
 select:focus-visible,
 input:focus-visible,
 textarea:focus-visible {
-  border-color: var(--gold);
+  border-color: var(--astral-gold-hi);
   outline: none;
   box-shadow: 0 0 10px var(--gold-glow);
 }
@@ -171,8 +201,8 @@ textarea:focus-visible {
 input:not([type='checkbox']):not([type='radio']),
 textarea {
   color: var(--ink);
-  background: rgba(12, 22, 24, 0.85);
-  border: 1px solid var(--border);
+  background: rgba(8, 10, 26, 0.9);
+  border: 1px solid var(--astral-line);
   border-radius: var(--radius-sm);
   padding: 7px 10px;
   transition:
@@ -232,20 +262,55 @@ textarea {
 }
 
 :where(dialog) {
-  border: 1px solid var(--border-gold);
+  border: 1px solid rgba(226, 192, 120, 0.45);
   border-radius: var(--radius-lg);
   padding: 24px;
-  color: var(--ink);
+  color: var(--astral-text);
   max-width: min(840px, 94vw);
-  background:
-    radial-gradient(ellipse at 50% 0%, rgba(28, 54, 48, 0.65), transparent 75%), var(--panel);
-  box-shadow: var(--shadow-modal);
+  background: var(--astral-hatch), var(--astral-panel-bg);
+  box-shadow: var(--astral-frame-shadow);
 }
 
 :where(dialog)::backdrop {
-  background: rgba(4, 9, 11, 0.78);
+  background: rgba(4, 5, 14, 0.78);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
+}
+
+dialog:not([open]):not([data-dialog-exiting]),
+dialog:not([open]):not([data-dialog-exiting]) * {
+  animation: none !important;
+}
+
+@keyframes astral-panel-reveal {
+  from {
+    opacity: 0;
+    transform: scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes astral-pop {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  button,
+  select,
+  input:not([type='checkbox']):not([type='radio']),
+  textarea {
+    transition: none;
+  }
 }
 
 @media (pointer: coarse) {
@@ -282,23 +347,25 @@ textarea {
 }
 
 @media (max-height: 600px) and (orientation: landscape) {
-  dialog:not(#party-panel):not(#prepare-character-dialog):not(:where(#start-screen)) {
+  dialog:not(#party-panel):not(#prepare-character-dialog):not(#tavern-quests):not(
+      :where(#start-screen)
+    ) {
     max-height: calc(100dvh - 12px);
     max-width: calc(100vw - 16px - var(--safe-left) - var(--safe-right));
   }
-  dialog:not(#party-panel):not(#prepare-character-dialog) input,
-  dialog:not(#party-panel):not(#prepare-character-dialog) textarea,
-  dialog:not(#party-panel):not(#prepare-character-dialog) pre,
-  dialog:not(#party-panel):not(#prepare-character-dialog) p {
+  dialog:not(#party-panel):not(#prepare-character-dialog):not(#tavern-quests) input,
+  dialog:not(#party-panel):not(#prepare-character-dialog):not(#tavern-quests) textarea,
+  dialog:not(#party-panel):not(#prepare-character-dialog):not(#tavern-quests) pre,
+  dialog:not(#party-panel):not(#prepare-character-dialog):not(#tavern-quests) p {
     overflow-wrap: anywhere;
   }
 }
 
 @media (max-width: 900px), (max-height: 500px) {
   body
-    dialog:not(#party-panel):not(#prepare-character-dialog):not(:has(> #gal-stage)):not(
-      :where(#start-screen)
-    ) {
+    dialog:not(#party-panel):not(#prepare-character-dialog):not(#tavern-quests):not(
+      :has(> #gal-stage)
+    ):not(:where(#start-screen)) {
     max-width: calc(100vw - 16px - var(--safe-left) - var(--safe-right)) !important;
     max-height: calc(
       100dvh - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom)
@@ -307,22 +374,32 @@ textarea {
     overscroll-behavior: contain;
     touch-action: pan-x pan-y;
   }
-  dialog:not(#party-panel):not(#prepare-character-dialog):not(:has(> #gal-stage)) > header,
-  dialog:not(#party-panel):not(#prepare-character-dialog):not(:has(> #gal-stage)) > footer {
+  dialog:not(#party-panel):not(#prepare-character-dialog):not(#tavern-quests):not(
+      :has(> #gal-stage)
+    )
+    > header,
+  dialog:not(#party-panel):not(#prepare-character-dialog):not(#tavern-quests):not(
+      :has(> #gal-stage)
+    )
+    > footer {
     flex-shrink: 0;
   }
-  dialog:not(#party-panel):not(#prepare-character-dialog):not(:has(> #gal-stage))
+  dialog:not(#party-panel):not(#prepare-character-dialog):not(#tavern-quests):not(
+      :has(> #gal-stage)
+    )
     :is(input, textarea, select) {
     max-width: 100%;
     min-width: 0;
   }
-  dialog:not(#party-panel):not(#prepare-character-dialog):not(:has(> #gal-stage))
+  dialog:not(#party-panel):not(#prepare-character-dialog):not(#tavern-quests):not(
+      :has(> #gal-stage)
+    )
     :is(pre, p, label, small) {
     overflow-wrap: anywhere;
   }
-  dialog:not(#party-panel):not(#prepare-character-dialog):not(:has(> #gal-stage)):not(
-      :where(#start-screen)
-    )
+  dialog:not(#party-panel):not(#prepare-character-dialog):not(#tavern-quests):not(
+      :has(> #gal-stage)
+    ):not(:where(#start-screen))
     button {
     padding: 6px 10px;
     font-size: 12px;

@@ -15,7 +15,7 @@ import { createAdventureState, lockBoss } from '../adventure/state.js';
 import { adventureResumeStage } from '../adventure/snapshot.js';
 import { restoreAdventureResources } from '../adventure/restore-resources.js';
 import { eventReward } from '../adventure/rewards.js';
-import { createSceneLoading } from '../shared/scene-loading.js';
+import { createSceneLoading, syncLoadingOverlayState } from '../shared/scene-loading.js';
 import { ADVENTURE_NODE_LABELS } from '../adventure/definition.js';
 import { REGIONS } from '../content/regions.js';
 import { createBattleView } from '../scene.js';
@@ -39,6 +39,7 @@ import { worldBattleTransition } from './world-battle-transition.js';
 import { refreshWorldSkirmishes } from '../skirmishes.js';
 import { mergeRevealedWeaknessMap } from '../octopath.js';
 import { recordSeenMonsters } from '../archive-enemies.js';
+import { isTestScriptRecord, purgeScriptFromLibrary } from '../memory.js';
 
 /** @param {import('./context.js').AppContext} context */
 export function createJourney(context) {
@@ -259,12 +260,24 @@ export function createJourney(context) {
     session.ai.activeScript = null;
     session.ai.chat.quick = [];
     session.journey.selectedNode = null;
-    session.journey.expedition = newExpedition(
-      overlandBattle.spec.boss ? overlandBattle.spec.enemyIds[0] : 'bossGate',
-      roster,
-    );
-    session.journey.expedition.overlandBattle = structuredClone(overlandBattle);
-    session.journey.expedition.partyIds = [...party];
+    const continuing = Boolean(overlandBattle.continuing && session.journey.expedition?.carried);
+    const expedition = continuing
+      ? session.journey.expedition
+      : newExpedition(
+          overlandBattle.spec.boss ? overlandBattle.spec.enemyIds[0] : 'bossGate',
+          roster,
+        );
+    if (continuing) {
+      delete expedition.pendingResult;
+      expedition.status = 'active';
+      expedition.index = overlandBattle.skirmishRun?.waveIndex ?? expedition.index + 1;
+      expedition.boss = overlandBattle.spec.boss ? overlandBattle.spec.enemyIds[0] : 'bossGate';
+      applyEncounterGrowth(expedition, library.characters);
+    } else {
+      expedition.partyIds = [...party];
+    }
+    expedition.overlandBattle = structuredClone(overlandBattle);
+    session.journey.expedition = expedition;
     session.runtime.mode = 'loading';
     document.body.classList.add('in-battle');
     session.battle.state = beginEncounter(session.journey.expedition);
@@ -334,11 +347,17 @@ export function createJourney(context) {
       if (!current()) {
         loading.dispose();
         loaded.dispose();
+        $('#scene-loading').hidden = true;
+        syncLoadingOverlayState();
         return false;
       }
       session.runtime.view = loaded;
       await loading.finish(loaded.renderer, loaded.scene, loaded.camera);
-      if (!current()) return false;
+      if (!current()) {
+        $('#scene-loading').hidden = true;
+        syncLoadingOverlayState();
+        return false;
+      }
       context.audio.setScene(
         encounterMusic({
           ...spec,
@@ -346,6 +365,7 @@ export function createJourney(context) {
         }),
       );
       $('#scene-loading').hidden = true;
+      syncLoadingOverlayState();
       $('#battle').classList.add('entering');
       context.renderer.render();
       const entrance = $('#battle')
@@ -483,10 +503,16 @@ export function createJourney(context) {
       !context.onboarding.allowReturn()
     )
       return;
+    const testRun = isTestScriptRecord(session.ai.activeScript);
+    const defeatedRun =
+      session.battle.state?.phase === 'defeat' || expedition?.pendingResult?.won === false;
     if (
       ['battle', 'event'].includes(session.runtime.mode) &&
       session.ai.activeScript &&
-      !session.ai.activeScript.recollection
+      !session.ai.activeScript.recollection &&
+      !testRun &&
+      !defeatedRun &&
+      settled
     ) {
       session.ai.library.tavernChat.push({
         id: crypto.randomUUID(),
@@ -496,18 +522,13 @@ export function createJourney(context) {
       });
     }
     if (
-      !settled &&
       ['battle', 'event'].includes(session.runtime.mode) &&
       session.ai.activeScript &&
-      !session.ai.activeScript.recollection
+      !session.ai.activeScript.recollection &&
+      (!settled || defeatedRun || testRun)
     ) {
       const book = session.ai.activeScript;
-      session.ai.library.history = session.ai.library.history.filter(
-        (record) => record.runId !== book.runId,
-      );
-      session.ai.library.scripts = session.ai.library.scripts.filter(
-        (entry) => entry.id !== book.id,
-      );
+      purgeScriptFromLibrary(session.ai.library, book);
       session.ai.library.archives.items = session.ai.library.archives.items.filter(
         (item) => item.source?.runId !== book.runId,
       );
@@ -539,7 +560,9 @@ export function createJourney(context) {
     context.audio.setScene(
       returnTo && !['gate', 'tavern'].includes(returnTo) ? locationMusic(returnTo) : 'inn',
     );
-    document.body.classList.remove('in-battle');
+    document.body.classList.remove('in-battle', 'ring-cabinet-open', 'inn-scene-loading');
+    $('#scene-loading').hidden = true;
+    syncLoadingOverlayState();
     context.daily?.refresh?.();
     $('#speed').hidden = true;
     $('#drag-menu').hidden = true;
@@ -599,6 +622,10 @@ export function createJourney(context) {
     }
     if (!isCurrentBattle()) return;
     const won = battle.phase === 'victory';
+    const testRun = isTestScriptRecord(session.ai.activeScript);
+    if (!won || testRun) {
+      purgeScriptFromLibrary(session.ai.library, session.ai.activeScript);
+    }
     const spec = currentEncounterSpec(trip, battle.encounter);
     const explored = trip.exploration;
     const replay = explored?.replay;

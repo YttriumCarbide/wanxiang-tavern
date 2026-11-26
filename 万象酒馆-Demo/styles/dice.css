@@ -49,6 +49,7 @@ body:has(#dc-stage:not([hidden], [data-exiting]))
   background: radial-gradient(ellipse at 50% 44%, rgba(16, 20, 44, 0.72), rgba(5, 6, 14, 0.94));
   backdrop-filter: blur(5px);
   -webkit-backdrop-filter: blur(5px);
+  transition: background 280ms ease-out;
 }
 #dc-stage:is([data-phase='inscribe'], [data-phase='withdraw']) .dc-backdrop {
   background: radial-gradient(ellipse at 50% 35%, rgba(16, 20, 44, 0.36), transparent 72%);
@@ -228,6 +229,7 @@ body:has(#dc-stage:not([hidden], [data-exiting]))
   height: 100%;
   transform-style: preserve-3d;
   transform: rotateX(var(--rx)) rotateY(var(--ry)) rotateZ(0deg);
+  will-change: transform;
 }
 .die-cube.tumble {
   animation: die-tumble var(--dur, 1150ms) var(--ease, cubic-bezier(0.14, 0.72, 0.24, 1))
@@ -245,6 +247,7 @@ body:has(#dc-stage:not([hidden], [data-exiting]))
 .die-face {
   position: absolute;
   inset: 0;
+  box-sizing: border-box;
   display: grid;
   grid-template: repeat(3, 1fr) / repeat(3, 1fr);
   padding: 15%;
@@ -297,8 +300,9 @@ body:has(#dc-stage:not([hidden], [data-exiting]))
     inset 0 0 20px rgba(120, 150, 255, 0.55),
     inset 0 0 4px rgba(240, 213, 142, 0.5);
   transition:
-    background 320ms,
-    box-shadow 320ms;
+    background 420ms ease-out,
+    border-color 420ms ease-out,
+    box-shadow 420ms ease-out;
 }
 .skin-arcane .pip {
   background: #fff0b8;
@@ -306,16 +310,17 @@ body:has(#dc-stage:not([hidden], [data-exiting]))
     0 0 10px #ffd870,
     0 0 20px #ff9d3c;
   transition:
-    opacity 300ms,
-    transform 360ms cubic-bezier(0.3, 2.2, 0.5, 1);
+    opacity 320ms ease-out,
+    transform 380ms cubic-bezier(0.3, 1.7, 0.5, 1);
 }
 .skin-arcane.wire .die-face {
-  background: rgba(120, 150, 255, 0.06);
-  box-shadow: inset 0 0 14px rgba(240, 213, 142, 0.35);
+  background: rgba(24, 32, 86, 0.28);
+  border-color: rgba(240, 213, 142, 0.65);
+  box-shadow: inset 0 0 12px rgba(240, 213, 142, 0.24);
 }
 .skin-arcane.wire .pip {
   opacity: 0;
-  transform: scale(0.1);
+  transform: scale(0.2);
 }
 
 /* ─── Style 1: ck/EventScene 3-Bounce Throw, Shockwaves & Equation ─── */
@@ -684,21 +689,24 @@ body:has(#dc-stage:not([hidden], [data-exiting]))
   position: absolute;
   inset: -6%;
   border-radius: 50%;
-  border: 4px solid #fff0b8;
+  border: 2px solid rgba(240, 213, 142, 0.55);
   box-shadow:
-    0 0 40px #ffd870,
-    inset 0 0 40px #ffd870;
+    0 0 18px rgba(226, 192, 120, 0.35),
+    inset 0 0 18px rgba(226, 192, 120, 0.28);
   opacity: 0;
   pointer-events: none;
-  animation: fr-shock 900ms ease-out both;
+  animation: fr-shock 760ms ease-out both;
 }
 @keyframes fr-shock {
-  from {
-    transform: scale(0.1);
-    opacity: 1;
+  0% {
+    transform: scale(0.35);
+    opacity: 0;
   }
-  to {
-    transform: scale(1.42);
+  22% {
+    opacity: 0.45;
+  }
+  100% {
+    transform: scale(1.32);
     opacity: 0;
   }
 }
@@ -712,28 +720,27 @@ body:has(#dc-stage:not([hidden], [data-exiting]))
   background: linear-gradient(
     90deg,
     transparent,
-    rgba(255, 240, 184, 0.72) 40%,
-    #fff 50%,
-    rgba(255, 240, 184, 0.72) 60%,
+    rgba(226, 192, 120, 0.16) 35%,
+    rgba(255, 241, 196, 0.36) 50%,
+    rgba(226, 192, 120, 0.16) 65%,
     transparent
   );
-  mix-blend-mode: screen;
   opacity: 0;
   pointer-events: none;
-  animation: fr-pillar 900ms ease-out both;
+  animation: fr-pillar 820ms ease-out both;
 }
 @keyframes fr-pillar {
   0% {
     opacity: 0;
-    transform: scaleX(0.1);
+    transform: scaleX(0.25);
   }
-  20% {
-    opacity: 1;
+  25% {
+    opacity: 0.55;
     transform: scaleX(1);
   }
   100% {
     opacity: 0;
-    transform: scaleX(0.02);
+    transform: scaleX(0.1);
   }
 }
 .fr-circle {
@@ -764,17 +771,11 @@ body:has(#dc-stage:not([hidden], [data-exiting]))
 }
 .fr-rot {
   transform-origin: 290px 290px;
-  animation: spin 46s linear infinite;
+  animation: spin 24s linear infinite;
 }
 .fr-rot.rev {
   transform-origin: 290px 290px;
-  animation: spin-rev 30s linear infinite;
-}
-.fr-stage.active .fr-rot {
-  animation-duration: 14s;
-}
-.fr-stage.active .fr-rot.rev {
-  animation-duration: 9s;
+  animation: spin-rev 16s linear infinite;
 }
 .fr-node circle {
   fill: #0d1030;
@@ -823,31 +824,36 @@ body:has(#dc-stage:not([hidden], [data-exiting]))
   position: absolute;
   left: 50%;
   top: 50%;
-  font-size: 16px;
+  font-size: clamp(15px, 1.3vw, 19px);
   color: #fff2c4;
-  text-shadow: 0 0 10px #ffd870;
-  animation: fr-gx var(--flight, 1750ms) cubic-bezier(0.25, 0.7, 0.35, 1) var(--dl, 0ms) both;
+  text-shadow:
+    0 0 10px #ffd870,
+    0 0 18px rgba(143, 160, 255, 0.7);
+  will-change: transform, opacity;
+  animation: fr-gx var(--flight, 1450ms) cubic-bezier(0.22, 0.68, 0.32, 1) var(--dl, 0ms) both;
 }
 .fr-glyph > i {
   display: block;
   font-style: normal;
-  animation: fr-gy var(--flight, 1750ms) ease-in-out var(--dl, 0ms) both;
+  will-change: transform;
+  animation: fr-gy var(--flight, 1450ms) ease-in-out var(--dl, 0ms) both;
 }
 @keyframes fr-gx {
   0% {
     opacity: 0;
-    transform: translateX(var(--sx, 0px)) scale(1.25);
+    transform: translate(-50%, -50%) translateX(var(--sx, 0px)) scale(1.05);
   }
-  20% {
+  9% {
     opacity: 1;
+    transform: translate(-50%, -50%) translateX(var(--sx, 0px)) scale(1.18);
   }
   62% {
-    opacity: 0.92;
-    transform: translateX(var(--mx, 28px)) scale(0.92);
+    opacity: 0.94;
+    transform: translate(-50%, -50%) translateX(var(--mx, 28px)) scale(0.92);
   }
   100% {
     opacity: 0;
-    transform: translateX(var(--ex, 0px)) scale(0.32);
+    transform: translate(-50%, -50%) translateX(var(--ex, 0px)) scale(0.28);
   }
 }
 @keyframes fr-gy {
@@ -861,6 +867,46 @@ body:has(#dc-stage:not([hidden], [data-exiting]))
     transform: translateY(var(--ey, 0px));
   }
 }
+#gal-stage[data-dc-inscribing='true'] .gal-reading {
+  border-color: rgba(240, 213, 142, 0.56);
+  box-shadow: 0 0 26px rgba(255, 216, 112, 0.18);
+  transition:
+    border-color 260ms,
+    box-shadow 260ms;
+}
+#gal-stage[data-dc-inscribing='true'] :is(.gal-cursor, .gal-hint) {
+  opacity: 0;
+  transition: opacity 180ms;
+}
+#gal-stage[data-dc-inscribing='true'] .gal-fly-char {
+  position: relative;
+}
+#gal-stage[data-dc-inscribing='true'] .gal-fly-char.is-flying-out {
+  animation: gal-char-lift 340ms ease-out var(--dl, 0ms) both;
+}
+@keyframes gal-char-lift {
+  0% {
+    opacity: 1;
+    top: 0;
+    color: inherit;
+    text-shadow: none;
+    filter: blur(0);
+  }
+  30% {
+    opacity: 1;
+    top: -4px;
+    color: #fff3c8;
+    text-shadow: 0 0 12px #ffd870;
+    filter: blur(0);
+  }
+  100% {
+    opacity: 0;
+    top: -14px;
+    color: #fff3c8;
+    text-shadow: 0 0 16px #ffd870;
+    filter: blur(2px);
+  }
+}
 .fr-dice {
   --s: clamp(66px, 9.5vw, 90px);
   position: absolute;
@@ -869,6 +915,7 @@ body:has(#dc-stage:not([hidden], [data-exiting]))
   width: 0;
   height: 0;
   z-index: 7;
+  will-change: transform, opacity;
   animation: fr-orbit 1950ms cubic-bezier(0.25, 0.7, 0.2, 1) both;
 }
 .fr-dice[hidden] {
@@ -879,17 +926,19 @@ body:has(#dc-stage:not([hidden], [data-exiting]))
 }
 @keyframes fr-orbit {
   0% {
-    transform: rotate(-620deg) scale(0.05);
+    transform: rotate(-180deg) scale(0.45);
     opacity: 0;
   }
-  18% {
+  20% {
     opacity: 1;
   }
-  55% {
-    transform: rotate(-60deg) scale(1.38);
+  60% {
+    transform: rotate(-18deg) scale(1.06);
+    opacity: 1;
   }
   100% {
     transform: rotate(0deg) scale(1);
+    opacity: 1;
   }
 }
 .fr-die-pos {
@@ -1372,6 +1421,7 @@ body:has(#dc-stage:not([hidden], [data-exiting]))
   .fr-rot,
   .fr-glyph,
   .fr-glyph > i,
+  .gal-fly-char.is-flying-out,
   .fr-die-pos,
   .fr-beam,
   .gl-band,

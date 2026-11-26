@@ -10,7 +10,12 @@ import { finalizeRequest } from './prompt-processing.js';
 import { presetOutputTransport, presetOutputWarnings } from '../preset-output.js';
 import { QUEST_LEAD_TYPES } from '../output-protocol.js';
 import { adviceTranscript } from '../advice.js';
-import { galInstruction, galSceneCastInstruction, hasGalReactionGuidance } from '../gal-prompt.js';
+import {
+  galInstruction,
+  galSceneCastInstruction,
+  hasGalEnsembleGuidance,
+  hasGalReactionGuidance,
+} from '../gal-prompt.js';
 import {
   adventureChatRules,
   adventureOutputBoundary,
@@ -335,7 +340,10 @@ export async function chatRequest(
       worldInfo.settings.authorNote,
       { characterText: characters },
     );
-    const galOptions = { reactionInWorldbook: hasGalReactionGuidance(messages) };
+    const galOptions = {
+      reactionInWorldbook: hasGalReactionGuidance(messages),
+      ensembleInWorldbook: hasGalEnsembleGuidance(messages),
+    };
     messages.push({
       role: 'system',
       content: hasWorldbookChatTeaching

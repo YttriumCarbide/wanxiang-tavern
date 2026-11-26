@@ -9,10 +9,10 @@
 .we-toolbar select,
 .we-toolbar button,
 .we-toolbar input {
-  background: #12271f;
+  background: rgba(16, 20, 48, 0.92);
   border: 1px solid var(--ws-line);
-  border-radius: 5px;
-  color: #d3d6ba;
+  border-radius: 3px;
+  color: #efe6cf;
   padding: 8px 10px;
   font-size: 11px;
 }
@@ -73,19 +73,19 @@
 .we-list small {
   display: block;
   margin-top: 3px;
-  color: #91a18c;
+  color: #9b927f;
   font-size: 9px;
   overflow-wrap: anywhere;
 }
 .we-list p {
-  color: #9fab95;
+  color: #cabfa4;
   line-height: 1.8;
   font-size: 11px;
 }
 .we-map {
   position: relative;
   overflow: clip;
-  background: #132720;
+  background: #0b0d1f;
   cursor: grab;
   touch-action: none;
 }
@@ -100,10 +100,10 @@
 .we-sheet {
   position: relative;
   background-image:
-    linear-gradient(to right, #9ab29636 1px, transparent 1px),
-    linear-gradient(to bottom, #9ab29636 1px, transparent 1px),
-    linear-gradient(to right, #b1bc8159 1px, transparent 1px),
-    linear-gradient(to bottom, #b1bc8159 1px, transparent 1px);
+    linear-gradient(to right, rgba(226, 192, 120, 0.1) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(226, 192, 120, 0.1) 1px, transparent 1px),
+    linear-gradient(to right, rgba(226, 192, 120, 0.24) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(226, 192, 120, 0.24) 1px, transparent 1px);
   background-position: var(--grid-x) var(--grid-y);
   background-size:
     var(--cell-w) var(--cell-h),
@@ -115,8 +115,9 @@
   position: absolute;
   inset: auto 12px 10px auto;
   padding: 5px 8px;
-  color: #c1cbb3;
-  background: #12241de8;
+  color: #cabfa4;
+  background: rgba(11, 13, 31, 0.92);
+  border: 1px solid rgba(226, 192, 120, 0.28);
   font-size: 11px;
   pointer-events: none;
 }
@@ -126,8 +127,8 @@
 .we-ruler {
   position: absolute;
   pointer-events: none;
-  color: #cad0b8;
-  background: #1b3027de;
+  color: #cabfa4;
+  background: rgba(16, 20, 48, 0.9);
   font:
     10px/1.3 'Microsoft YaHei',
     sans-serif;
@@ -138,12 +139,12 @@
 .we-ruler-columns {
   inset: 0 0 auto;
   height: 19px;
-  border-bottom: 1px solid #a7b99055;
+  border-bottom: 1px solid rgba(226, 192, 120, 0.3);
 }
 .we-ruler-rows {
   inset: 19px auto 0 0;
   width: 22px;
-  border-right: 1px solid #a7b99055;
+  border-right: 1px solid rgba(226, 192, 120, 0.3);
 }
 .we-ruler span {
   position: absolute;
@@ -177,9 +178,9 @@
   gap: 2px;
   padding: 6px;
   text-align: left;
-  border: 1px solid #8b9a7299;
-  border-radius: 5px;
-  background: linear-gradient(130deg, #2d4237, #1b2c22);
+  border: 1px solid rgba(226, 192, 120, 0.45);
+  border-radius: 3px;
+  background: linear-gradient(130deg, #242e64, #111536);
   cursor: move;
   touch-action: none;
   user-select: none;
@@ -191,11 +192,11 @@
   margin-bottom: 1px;
 }
 .we-node.selected {
-  border-color: #dec185;
-  box-shadow: inset 0 0 0 2px #cfaf723b;
+  border-color: #fff1c4;
+  box-shadow: inset 0 0 0 2px rgba(226, 192, 120, 0.35);
 }
 .we-node[data-we-kind='stations'] {
-  background: linear-gradient(140deg, #303c35, #1a2b29);
+  background: linear-gradient(140deg, #2c2444, #161430);
 }
 .we-node.invalid-cell {
   z-index: 2;
@@ -223,7 +224,7 @@
 }
 .we-node small {
   font-size: 8px;
-  color: #b6b98e;
+  color: #e2c078;
 }
 .we-node strong {
   font-size: 12px;
@@ -231,17 +232,18 @@
 }
 .we-node span {
   font-size: 10px;
-  color: #a5b69b;
+  color: #cabfa4;
 }
 .we-fields {
   min-width: 0;
   overflow: auto;
   padding: 20px;
   border-left: 1px solid var(--ws-line);
-  background: #20352a;
+  background: rgba(14, 18, 44, 0.96);
   scrollbar-width: thin;
 }
 .we-fields h2 {
+  color: #fff1c4;
   font:
     24px 'Songti SC',
     'SimSun',
@@ -251,7 +253,7 @@
 .we-fields label {
   display: block;
   margin: 15px 0;
-  color: #b7c3a8;
+  color: #cabfa4;
   font-size: 11px;
   line-height: 1.8;
 }
@@ -261,10 +263,10 @@
   display: block;
   width: 100%;
   margin-top: 6px;
-  border: 1px solid #a3b28444;
-  border-radius: 4px;
-  background: #11271f;
-  color: #e1e2c8;
+  border: 1px solid rgba(226, 192, 120, 0.34);
+  border-radius: 3px;
+  background: rgba(8, 10, 26, 0.9);
+  color: #efe6cf;
   padding: 8px;
   font:
     11px / 1.7 'Segoe UI',
@@ -289,9 +291,9 @@
   tab-size: 2;
 }
 .we-fields button {
-  border: 1px solid #b6aa6f55;
-  background: #11281f;
-  border-radius: 4px;
+  border: 1px solid rgba(226, 192, 120, 0.38);
+  background: rgba(20, 26, 62, 0.85);
+  border-radius: 3px;
   font-size: 11px;
   padding: 7px 10px;
 }
@@ -300,8 +302,8 @@
   margin-top: 10px;
 }
 .we-fields fieldset {
-  border: 1px solid #8b9f723d;
-  border-radius: 5px;
+  border: 1px solid rgba(226, 192, 120, 0.28);
+  border-radius: 3px;
   padding: 10px;
   margin: 18px 0;
   min-width: 0;
@@ -309,7 +311,7 @@
 .we-fields legend {
   font-size: 11px;
   padding: 0 5px;
-  color: #c9c69e;
+  color: #e2c078;
 }
 .we-pair {
   display: grid;
@@ -320,13 +322,13 @@
 .we-rule-panel {
   margin: 12px 0;
   padding: 8px 10px;
-  border: 1px solid #8b9f7259;
-  border-radius: 5px;
+  border: 1px solid rgba(226, 192, 120, 0.34);
+  border-radius: 3px;
 }
 .we-icon-picker summary,
 .we-rule-panel summary {
   cursor: pointer;
-  color: #e1d3a6;
+  color: #fff1c4;
   font-size: 12px;
   padding: 4px 0;
 }
@@ -337,8 +339,8 @@
 .we-rule-row {
   margin: 8px 0;
   padding: 8px;
-  border: 1px solid #8b9f7244;
-  border-radius: 5px;
+  border: 1px solid rgba(226, 192, 120, 0.26);
+  border-radius: 3px;
 }
 .we-rule-row + button,
 .we-rule-row > button {
@@ -351,10 +353,10 @@
 .we-preview {
   width: min(800px, calc(100vw - 28px));
   height: min(680px, calc(100dvh - 28px));
-  color: #f1e4c7;
-  background: #182b24;
-  border: 1px solid #ad9869;
-  border-radius: 8px;
+  color: #efe6cf;
+  background: radial-gradient(ellipse 80% 60% at 50% 0%, #2a3478, #0b0d1f 74%);
+  border: 1px solid rgba(226, 192, 120, 0.48);
+  border-radius: 4px;
 }
 .we-preview[open] {
   display: grid;
@@ -362,7 +364,7 @@
   gap: 12px;
 }
 .we-preview::backdrop {
-  background: #0b1513bd;
+  background: rgba(4, 5, 14, 0.8);
 }
 .we-preview header {
   display: flex;
@@ -372,13 +374,14 @@
 .we-preview h2 {
   margin: 0;
   font-size: 17px;
+  color: #fff1c4;
 }
 .we-preview textarea {
   width: 100%;
   padding: 12px;
-  border: 1px solid #ad98696b;
-  background: #10211b;
-  color: #e7dbc1;
+  border: 1px solid rgba(226, 192, 120, 0.42);
+  background: rgba(8, 10, 26, 0.9);
+  color: #efe6cf;
   resize: none;
 }
 .we-icon-current {
@@ -388,30 +391,30 @@
   gap: 10px;
   padding: 8px;
   margin-bottom: 10px;
-  border: 1px solid #a3b28433;
-  border-radius: 6px;
-  background: #142820;
+  border: 1px solid rgba(226, 192, 120, 0.28);
+  border-radius: 3px;
+  background: rgba(16, 20, 48, 0.85);
 }
 .we-icon-preview {
   display: grid;
   place-items: center;
   width: 52px;
   height: 52px;
-  border: 1px solid #d3b67166;
-  border-radius: 6px;
-  background: radial-gradient(circle, #76895355, transparent 70%), #1c352b;
+  border: 1px solid rgba(226, 192, 120, 0.45);
+  border-radius: 3px;
+  background: radial-gradient(circle, rgba(226, 192, 120, 0.24), transparent 70%), #131836;
   font-size: 40px;
 }
 .we-icon-current strong {
   display: block;
   font-size: 12px;
-  color: #efe4b8;
+  color: #fff1c4;
 }
 .we-icon-current small {
   display: block;
   margin-top: 3px;
   font-size: 10px;
-  color: #96a892;
+  color: #cabfa4;
 }
 .we-tint-bar {
   display: grid;
@@ -459,9 +462,9 @@
   max-height: 270px;
   overflow: auto;
   padding: 4px;
-  border: 1px solid #8b9f722e;
-  border-radius: 5px;
-  background: #12241d;
+  border: 1px solid rgba(226, 192, 120, 0.24);
+  border-radius: 3px;
+  background: rgba(11, 13, 31, 0.9);
   scrollbar-width: thin;
 }
 .we-fields .we-icon-cell {
@@ -471,7 +474,7 @@
   gap: 4px;
   padding: 6px 4px;
   border-color: transparent;
-  background: #1a3128;
+  background: rgba(20, 26, 62, 0.8);
   text-align: center;
 }
 .we-icon-cell .ws-icon {
@@ -480,13 +483,13 @@
 .we-icon-cell span {
   font-size: 10px;
   line-height: 1.2;
-  color: #cfd6bd;
+  color: #efe6cf;
   overflow-wrap: anywhere;
 }
 .we-fields .we-icon-cell.selected {
-  border-color: #f0d38c;
-  background: #334e3d;
-  box-shadow: 0 0 0 1px #f0d38c55;
+  border-color: #fff1c4;
+  background: rgba(56, 70, 146, 0.65);
+  box-shadow: 0 0 0 1px rgba(255, 241, 196, 0.35);
 }
 .we-icon-empty {
   grid-column: 1 / -1;
@@ -574,7 +577,7 @@
 }
 .workshop-editor-page {
   margin: 0;
-  background: #142622;
+  background: #0b0d1f;
   color-scheme: dark;
   font-family: 'Microsoft YaHei', sans-serif;
 }

@@ -1,4 +1,5 @@
 import { writeFile } from 'node:fs/promises';
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import {
   EXTRA_ENEMIES,
@@ -8,9 +9,35 @@ import {
 } from '../src/content/new-adversaries.js';
 
 import { shade, renderVoxelEnemyPortrait } from './voxel-enemy-art.mjs';
+import { ENEMIES, BOSSES } from '../src/data.js';
+
+const EARLY_MODEL_SOURCES = [
+  ['mossSlime', 'moss-slime'],
+  ['sprout', 'sprout'],
+  ['pebble', 'pebble'],
+  ['hound', 'hound'],
+  ['warden', 'warden'],
+  ['hexer', 'hexer'],
+  ['bossGate', 'boss-gate'],
+  ['bossBloom', 'boss-bloom'],
+];
+const EARLY_ENEMY_BLOCKS = new Map(
+  EARLY_MODEL_SOURCES.map(([id, slug]) => {
+    const source = JSON.parse(
+      readFileSync(
+        new URL(`../../万象异境-体素模型/早期敌人/${slug}.json`, import.meta.url),
+        'utf8',
+      ),
+    );
+    if (source.id !== id) throw Error(`Mismatched voxel source ID: ${slug}`);
+    return [id, source.blocks];
+  }),
+);
 
 /** Reproducible orthographic block models, matching the existing crystal-beetle portrait. */
 export function enemyBlocks(enemy) {
+  const authoredBlocks = EARLY_ENEMY_BLOCKS.get(enemy.id);
+  if (authoredBlocks) return authoredBlocks;
   const blocks = [];
   const base = enemy.color;
   const stone = '#788781',
@@ -277,11 +304,14 @@ export function enemyPortrait(enemy) {
 }
 
 export async function buildEnemyPortraits() {
+  const earlyIds = new Set(EARLY_MODEL_SOURCES.map(([id]) => id));
+  const earlyEnemies = [...ENEMIES, ...BOSSES].filter((enemy) => earlyIds.has(enemy.id));
   const enemies = [
     ...EXTRA_ENEMIES.filter((enemy) => enemy.id !== 'crystalBeetle'),
     ...RUINS_ADVERSARIES,
     ...EXTRA_BOSSES,
     ...RUINS_BOSSES,
+    ...earlyEnemies,
   ];
   for (const enemy of enemies) {
     if (enemy.overlord || enemy.standOnCard) continue;

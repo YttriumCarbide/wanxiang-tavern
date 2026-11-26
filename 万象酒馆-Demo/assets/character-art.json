@@ -144,6 +144,34 @@
       "sha256": "6b5d6c4bd52550ed99c82358c63f14be457c7dd0b45eb567a7f2f970434454e2",
       "processing": "原始PNG逐字节复制；未缩小、未压缩。",
       "date": "2026-11-02"
+    },
+    {
+      "id": "rodris-de-vivar",
+      "name": "罗德里斯·迪亚戈·德·维瓦尔",
+      "kind": "card",
+      "file": "assets/portraits/rodris-de-vivar-v3.png",
+      "source": "罗德里斯-角色美术/rodris-de-vivar-card-v3.png",
+      "prompt": "艾尔德兰帝国国王罗德里斯卡面原图（随包保留，暂未用于战斗卡）。",
+      "generator": "built-in imagegen",
+      "transparent": false,
+      "width": 1024,
+      "height": 1536,
+      "sha256": "688898d963dc0c1ada71cd15d7ac5383f7f901054f8be3953b055dc8dcacf226",
+      "processing": "原始PNG逐字节复制；未缩小、未压缩。"
+    },
+    {
+      "id": "rodris-de-vivar",
+      "name": "罗德里斯·迪亚戈·德·维瓦尔",
+      "kind": "full",
+      "file": "assets/gal-npc-cast/rodris-king.png",
+      "source": "罗德里斯-角色美术/rodris-de-vivar-full-v3.png",
+      "prompt": "艾尔德兰帝国国王罗德里斯透明全身立绘（用于开幕式及国王讲话等 Gal 演出）。",
+      "generator": "built-in imagegen",
+      "transparent": true,
+      "width": 1024,
+      "height": 1536,
+      "sha256": "2355b35d042be3b2ce9696bd744d1dc0c33739a8f86bac2046f29bc1fded1fd9",
+      "processing": "原始PNG逐字节复制；未缩小、未压缩，保留生成的透明通道。"
     }
   ]
 }

@@ -8,10 +8,10 @@ const art = (id) => ({
   fov: 75,
   initialPitch: -0.09,
   ground: EXPLORATION_GROUND[id],
-  panorama: `./assets/exploration/${id}-panorama-v2.png`,
-  panoramaBand: `./assets/exploration/${id}-band-v1.png`,
+  panorama: `./assets/exploration/${id}-panorama-v2.webp`,
+  panoramaBand: `./assets/exploration/${id}-band-v1.webp`,
   faceImages: ['front', 'right', 'back', 'left'].map(
-    (direction) => `./assets/exploration/${id}-${direction}-v2.png`,
+    (direction) => `./assets/exploration/${id}-${direction}-v2.webp`,
   ),
 });
 const exit = (id, name, anchor) => ({
@@ -138,7 +138,7 @@ export const STARBELL_SCENES = {
     returnLabel: '返回酒馆',
     bearings: ['旧哨塔', '倾倒的货车', '返回城门', '林边兽径'],
     ...art('outskirts'),
-    panoramaBand: './assets/exploration/outskirts-band-v2.png',
+    panoramaBand: './assets/exploration/outskirts-band-v2.webp',
     cutouts: [],
     points: [
       {

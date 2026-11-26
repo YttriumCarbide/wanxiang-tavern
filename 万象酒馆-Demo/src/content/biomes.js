@@ -151,7 +151,7 @@ export const BIOMES = Object.freeze({
     accent: '#9b7ed9',
   },
   'duel-arena': {
-    name: '决斗场',
+    name: '大骑士竞技场（海选）',
     asset: 'duel-arena',
     sky: '#40373c',
     light: '#ffe0b2',
@@ -159,10 +159,9 @@ export const BIOMES = Object.freeze({
     mote: '#ead1a0',
     mood: 'dust',
     accent: '#ce9c63',
-    battleHeadroom: 2.35,
   },
   'silver-shield-exhibition': {
-    name: '银盾镇展览馆',
+    name: '银冠城-白鸦展览馆',
     asset: 'silver-shield-exhibition',
     sky: '#23373f',
     light: '#e9f1df',
@@ -170,7 +169,6 @@ export const BIOMES = Object.freeze({
     mote: '#a9d8cc',
     mood: 'dust',
     accent: '#8ac6c1',
-    battleHeadroom: 2.1,
   },
   'city-market': {
     name: '灯影商街',

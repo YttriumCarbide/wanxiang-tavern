@@ -8,17 +8,17 @@
   #tavern-recruitment,
   #tavern-exit-picker
 ) {
-  --daily-ink: #0f0c0a;
-  --daily-surface: #171311;
-  --daily-panel: #100d0b;
-  --daily-line: rgba(216, 178, 110, 0.3);
-  --daily-line-strong: rgba(239, 204, 138, 0.62);
-  --daily-text: #f3e9d6;
-  --daily-muted: #b5a690;
-  --daily-hot: #ebc57c;
-  --daily-hot-deep: #b0823c;
-  --daily-blue: #96d1c6;
-  --daily-danger: #ec927e;
+  --daily-ink: #0b0d1f;
+  --daily-surface: #131836;
+  --daily-panel: #0b0d1f;
+  --daily-line: rgba(226, 192, 120, 0.34);
+  --daily-line-strong: rgba(255, 241, 196, 0.65);
+  --daily-text: #f0e7d2;
+  --daily-muted: #a9b2d6;
+  --daily-hot: #fff1c4;
+  --daily-hot-deep: #c99b4a;
+  --daily-blue: #78b4ff;
+  --daily-danger: #ef8686;
   --daily-serif: Georgia, 'Songti SC', 'STSong', 'Microsoft YaHei', serif;
   color: var(--daily-text);
   font-family: 'Microsoft YaHei', system-ui, sans-serif;
@@ -56,12 +56,13 @@ body.in-adventure #daily-hud {
   max-height: var(--daily-record-limit);
   overflow: auto;
   padding: 13px 15px 12px;
-  border: 1px solid #a28355;
-  border-left: 3px solid #cc9e5f;
-  border-radius: 2px 8px 8px 2px;
-  color: #f4e4c9;
-  background: linear-gradient(145deg, #30231d, #19161b 72%);
-  box-shadow: 0 9px 26px #110a0bb5;
+  border: 1px solid rgba(226, 192, 120, 0.42);
+  border-left: 3px solid var(--astral-gold);
+  border-radius: 3px;
+  color: var(--astral-text);
+  background:
+    var(--astral-hatch), linear-gradient(160deg, rgba(24, 31, 74, 0.94), rgba(10, 13, 32, 0.96));
+  box-shadow: 0 12px 30px rgba(4, 6, 18, 0.72);
   font-size: 12px;
   line-height: 1.55;
   pointer-events: auto;
@@ -127,18 +128,20 @@ body.in-adventure #daily-hud {
   align-items: stretch;
   gap: 0;
   max-width: min(460px, calc(100vw - 240px));
-  border-radius: 999px;
-  border: 1px solid rgba(216, 178, 110, 0.44);
-  background: linear-gradient(135deg, rgba(24, 20, 17, 0.92), rgba(12, 10, 9, 0.94));
-  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.48);
+  border-radius: 4px;
+  border: 1px solid rgba(226, 192, 120, 0.48);
+  background: linear-gradient(180deg, rgba(28, 36, 82, 0.94), rgba(11, 14, 34, 0.96));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 241, 196, 0.14),
+    0 10px 28px rgba(0, 0, 0, 0.58);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  color: #f4e6c7;
+  color: var(--astral-text);
   overflow: hidden;
   pointer-events: auto;
 }
 .daily-top-hud:has(.daily-status:not([hidden])) {
-  border-radius: 14px;
+  border-radius: 4px;
 }
 .daily-plaque {
   display: flex;
@@ -148,22 +151,22 @@ body.in-adventure #daily-hud {
   gap: 8px;
   width: 100%;
   padding: 5px 10px 5px 12px;
-  color: #f4e6c7;
+  color: var(--astral-text);
   pointer-events: none;
 }
 .daily-place-chip {
   font: 600 13px/1.3 var(--daily-serif);
   letter-spacing: 0.08em;
-  color: #f7e4bc;
+  color: var(--astral-gold-hi);
 }
 .daily-plaque .daily-clock-pill {
   padding: 2px 8px;
-  background: rgba(10, 20, 16, 0.65);
-  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(9, 12, 30, 0.78);
+  border-color: rgba(226, 192, 120, 0.24);
 }
 .daily-plaque [data-tavern-clock] {
   font-size: 12px;
-  color: #ebdbb8;
+  color: var(--astral-sub);
 }
 .daily-clock,
 .daily-quest {
@@ -201,17 +204,18 @@ body.in-adventure #daily-hud {
   gap: 5px;
   max-width: min(280px, 58vw);
   padding: 8px 12px;
-  color: #f4dfb8;
-  background: #10221cee;
-  border: 1px solid #bda06166;
-  border-radius: 7px;
+  color: var(--astral-text);
+  background: var(--astral-hatch), var(--astral-panel-bg);
+  border: 1px solid rgba(226, 192, 120, 0.42);
+  border-radius: 4px;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.48);
   pointer-events: auto;
 }
 .daily-quest[hidden] {
   display: none;
 }
 .daily-quest span {
-  color: #b8ae9b;
+  color: var(--astral-sub);
   font-size: 12px;
 }
 #tavern-quests {
@@ -219,7 +223,7 @@ body.in-adventure #daily-hud {
   --quest-bright: #faf9f4;
   --quest-muted: #b8b5ad;
   --quest-dim: #8b8880;
-  --quest-line-soft: rgba(215, 213, 205, 0.15);
+  --quest-line-soft: rgba(226, 192, 120, 0.18);
   --quest-serif: 'Noto Serif SC', 'Songti SC', 'STSong', SimSun, serif;
   --quest-ui: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
   --quest-text-shadow: 0 1px 3px rgba(12, 12, 11, 0.92), 0 0 12px rgba(12, 12, 11, 0.55);
@@ -240,7 +244,7 @@ body.in-adventure #daily-hud {
   border: 0;
   border-radius: 0;
   color: var(--quest-text);
-  background: var(--quest-grain), rgba(15, 14, 12, 0.28);
+  background: var(--quest-grain), rgba(9, 12, 26, 0.34);
   box-shadow: none;
   backdrop-filter: none;
   font-family: var(--quest-ui);
@@ -252,14 +256,18 @@ body.in-adventure #daily-hud {
 /* Keep the actual game scene behind the journal instead of supplying new scenery. */
 #tavern-quests::backdrop {
   background:
-    radial-gradient(ellipse 46% 40% at 6% 96%, rgba(206, 168, 110, 0.075), transparent 74%),
-    radial-gradient(ellipse 78% 72% at 58% 48%, rgba(8, 10, 13, 0.52), rgba(6, 8, 10, 0.78));
+    radial-gradient(ellipse 46% 40% at 6% 96%, rgba(226, 192, 120, 0.08), transparent 74%),
+    radial-gradient(ellipse 78% 72% at 58% 48%, rgba(8, 11, 26, 0.54), rgba(4, 6, 16, 0.8));
   -webkit-backdrop-filter: blur(3px) saturate(0.46) brightness(0.8);
   backdrop-filter: blur(3px) saturate(0.46) brightness(0.8);
 }
-#guild-dialog::backdrop,
-:is(#tavern-promotion, #tavern-recruitment, #tavern-exit-picker)::backdrop {
+#guild-dialog::backdrop {
   background: rgba(6, 5, 4, 0.8);
+  backdrop-filter: blur(6px);
+}
+:is(#tavern-promotion, #tavern-recruitment, #tavern-exit-picker)::backdrop {
+  background: rgba(4, 5, 14, 0.8);
+  -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);
 }
 #tavern-quests button {
@@ -290,17 +298,22 @@ body.in-adventure #daily-hud {
     linear-gradient(
         90deg,
         transparent,
-        rgba(210, 208, 202, 0.36) 14%,
-        rgba(226, 225, 222, 0.56) 50%,
-        rgba(210, 208, 202, 0.36) 86%,
+        rgba(226, 192, 120, 0.42) 14%,
+        rgba(255, 241, 196, 0.62) 50%,
+        rgba(226, 192, 120, 0.42) 86%,
         transparent
       )
       center bottom 3px / 100% 1px no-repeat,
-    linear-gradient(90deg, transparent, rgba(222, 221, 218, 0.18) 50%, transparent) center bottom /
+    linear-gradient(90deg, transparent, rgba(226, 192, 120, 0.22) 50%, transparent) center bottom /
       100% 1px no-repeat,
     var(--quest-grain),
-    radial-gradient(ellipse 42% 120% at 50% -18%, rgba(232, 214, 176, 0.085), transparent 72%),
-    linear-gradient(180deg, rgba(9, 8, 7, 0.86), rgba(15, 14, 12, 0.62) 68%, rgba(17, 16, 13, 0.3));
+    radial-gradient(ellipse 42% 120% at 50% -18%, rgba(54, 72, 160, 0.28), transparent 72%),
+    linear-gradient(
+      180deg,
+      rgba(11, 13, 31, 0.9),
+      rgba(16, 20, 48, 0.68) 68%,
+      rgba(16, 20, 48, 0.36)
+    );
 }
 #tavern-quests .skyrim-head > h2 {
   grid-column: 2;
@@ -397,9 +410,9 @@ body.in-adventure #daily-hud {
   overflow: hidden;
   background: linear-gradient(
     90deg,
-    rgba(11, 10, 8, 0.74),
-    rgba(12, 11, 9, 0.62) 78%,
-    rgba(13, 12, 10, 0.46)
+    rgba(11, 13, 31, 0.82),
+    rgba(14, 18, 44, 0.68) 78%,
+    rgba(16, 20, 48, 0.5)
   );
 }
 #tavern-quests .skyrim-index-col::after {
@@ -409,9 +422,9 @@ body.in-adventure #daily-hud {
   background: linear-gradient(
     180deg,
     transparent,
-    rgba(212, 210, 204, 0.44) 9%,
-    rgba(212, 210, 204, 0.48) 50%,
-    rgba(212, 210, 204, 0.44) 91%,
+    rgba(226, 192, 120, 0.44) 9%,
+    rgba(226, 192, 120, 0.48) 50%,
+    rgba(226, 192, 120, 0.44) 91%,
     transparent
   );
   content: '';
@@ -539,10 +552,10 @@ body.in-adventure #daily-hud {
 #tavern-quests .skyrim-quest-item.is-selected {
   background: linear-gradient(
     90deg,
-    rgba(236, 235, 232, 0),
-    rgba(236, 235, 232, 0.085) 18%,
-    rgba(236, 235, 232, 0.11) 55%,
-    rgba(236, 235, 232, 0.02)
+    rgba(226, 192, 120, 0),
+    rgba(226, 192, 120, 0.14) 18%,
+    rgba(226, 192, 120, 0.18) 55%,
+    rgba(226, 192, 120, 0.03)
   );
 }
 #tavern-quests .skyrim-quest-item.is-selected::before,
@@ -553,8 +566,8 @@ body.in-adventure #daily-hud {
   background: linear-gradient(
     90deg,
     transparent,
-    rgba(234, 233, 229, 0.28) 28%,
-    rgba(234, 233, 229, 0.22) 72%,
+    rgba(255, 241, 196, 0.42) 28%,
+    rgba(226, 192, 120, 0.34) 72%,
     transparent
   );
   content: '';
@@ -570,8 +583,8 @@ body.in-adventure #daily-hud {
   position: absolute;
   inset: 12% auto 12% 0;
   width: 2px;
-  background: linear-gradient(180deg, transparent, rgba(248, 244, 232, 0.9), transparent);
-  box-shadow: 0 0 6px rgba(246, 240, 224, 0.5);
+  background: linear-gradient(180deg, transparent, rgba(255, 241, 196, 0.95), transparent);
+  box-shadow: 0 0 8px rgba(226, 192, 120, 0.65);
   pointer-events: none;
 }
 #tavern-quests .skyrim-quest-tab:focus-visible {
@@ -1035,14 +1048,14 @@ body.in-adventure #daily-hud {
     linear-gradient(
         90deg,
         transparent,
-        rgba(210, 208, 202, 0.29) 14%,
-        rgba(226, 225, 222, 0.45) 50%,
-        rgba(210, 208, 202, 0.29) 86%,
+        rgba(226, 192, 120, 0.34) 14%,
+        rgba(255, 241, 196, 0.5) 50%,
+        rgba(226, 192, 120, 0.34) 86%,
         transparent
       )
       top / 100% 1px no-repeat,
-    linear-gradient(180deg, rgba(9, 8, 7, 0.26), rgba(8, 7, 6, 0.66));
-  color: #cbc9c2;
+    linear-gradient(180deg, rgba(12, 15, 36, 0.42), rgba(8, 10, 28, 0.78));
+  color: var(--astral-sub);
   font:
     400 11px/1.4 system-ui,
     'Microsoft YaHei',
@@ -1142,18 +1155,18 @@ body.in-adventure #daily-hud {
   box-sizing: border-box;
   width: 100%;
   padding: 11px clamp(14px, 4vw, 30px) 9px;
-  border-block: 1px solid rgba(220, 218, 210, 0.29);
+  border-block: 1px solid rgba(226, 192, 120, 0.42);
   background: linear-gradient(
     90deg,
     transparent,
-    rgba(8, 8, 7, 0.92) 12%,
-    rgba(12, 11, 9, 0.94) 50%,
-    rgba(8, 8, 7, 0.92) 88%,
+    rgba(11, 13, 31, 0.94) 12%,
+    rgba(22, 28, 66, 0.96) 50%,
+    rgba(11, 13, 31, 0.94) 88%,
     transparent
   );
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.52);
   text-align: center;
-  backdrop-filter: blur(5px);
+  backdrop-filter: blur(6px);
 }
 #skyrim-quest-banner .skyrim-banner-kicker {
   color: #c7c5bd;
@@ -1396,21 +1409,21 @@ body.in-adventure #daily-hud {
   align-items: center;
   gap: 8px;
   padding: 3px 10px 3px 4px;
-  border-radius: 999px;
-  background: #0a1410b8;
-  border: 1px solid #ffffff14;
+  border-radius: 3px;
+  background: rgba(8, 10, 28, 0.78);
+  border: 1px solid rgba(226, 192, 120, 0.24);
   white-space: nowrap;
 }
 .daily-rank-chip {
   font-style: normal;
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.5px;
   padding: 2px 8px;
-  border-radius: 999px;
-  color: #f9dc94;
-  background: linear-gradient(135deg, #6e532488, #3d2e1499);
-  border: 1px solid #d4af6466;
+  border-radius: 2px;
+  color: #1c1406;
+  background: linear-gradient(180deg, #fff1c4, #c99b4a);
+  border: 1px solid #fff6d8;
 }
 .daily-clock [data-tavern-clock] {
   font-size: 12px;
@@ -1478,29 +1491,42 @@ body.in-adventure #daily-hud {
   }
 }
 #daily-hud .daily-dock:not([hidden]) {
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: minmax(0, 1fr);
-  width: min(850px, calc(100vw - 32px));
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 #daily-hud .daily-dock button {
-  width: 100%;
-  min-width: 0;
+  width: 118px;
+  min-width: 118px;
+  height: 38px;
+  min-height: 38px;
   white-space: nowrap;
 }
 :is(#tavern-promotion, #tavern-recruitment, #tavern-exit-picker) {
-  width: min(460px, calc(100vw - 24px));
+  width: min(480px, calc(100vw - 24px));
   padding: 22px 24px;
-  color: #f5e9d2;
-  border: 1px solid rgba(216, 178, 110, 0.52);
-  border-radius: 6px;
+  color: var(--astral-text);
+  border: 1px solid rgba(226, 192, 120, 0.48);
+  border-radius: 4px;
+  background: var(--astral-hatch), var(--astral-panel-bg);
+  box-shadow: var(--astral-frame-shadow);
+}
+:is(#tavern-promotion, #tavern-recruitment, #tavern-exit-picker)::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  --c: var(--astral-corner-mark);
   background:
-    radial-gradient(ellipse at 50% -10%, rgba(216, 178, 110, 0.16), transparent 62%),
-    linear-gradient(175deg, #1b1613, #100d0c);
-  box-shadow:
-    inset 0 0 0 1px rgba(216, 178, 110, 0.14),
-    inset 0 0 32px rgba(0, 0, 0, 0.5),
-    0 26px 80px rgba(0, 0, 0, 0.86);
+    var(--c) top left / 18px 2px,
+    var(--c) top left / 2px 18px,
+    var(--c) top right / 18px 2px,
+    var(--c) top right / 2px 18px,
+    var(--c) bottom left / 18px 2px,
+    var(--c) bottom left / 2px 18px,
+    var(--c) bottom right / 18px 2px,
+    var(--c) bottom right / 2px 18px;
+  background-repeat: no-repeat;
 }
 #tavern-exit-picker header {
   display: flex;
@@ -1508,44 +1534,45 @@ body.in-adventure #daily-hud {
   align-items: center;
   padding-bottom: 12px;
   margin-bottom: 12px;
-  border-bottom: 1px solid rgba(216, 178, 110, 0.28);
+  border-bottom: 1px solid var(--astral-line);
 }
 #tavern-exit-picker h2 {
   margin: 0;
-  font: 600 19px/1.2 var(--daily-serif);
-  color: #f4deb1;
-  letter-spacing: 0.08em;
+  font: 400 20px/1.2 var(--daily-serif);
+  color: var(--astral-gold-hi);
+  letter-spacing: 0.1em;
 }
 .tavern-exit-options {
   display: grid;
-  gap: 2px;
+  gap: 6px;
 }
 .tavern-exit-options button {
   display: grid;
   justify-items: start;
   gap: 3px;
-  padding: 12px 14px;
-  border: 0;
-  border-left: 2px solid transparent;
-  border-bottom: 1px solid rgba(216, 178, 110, 0.16);
-  border-radius: 0;
-  background: transparent;
-  color: #f4e6ca;
+  padding: 11px 14px;
+  border: 1px solid rgba(226, 192, 120, 0.24);
+  border-left: 2px solid rgba(226, 192, 120, 0.56);
+  border-radius: 3px;
+  background: var(--astral-card-bg);
+  color: var(--astral-text);
+  box-shadow: none;
 }
 .tavern-exit-options button:enabled:hover {
-  border-left-color: #ebc57c;
-  background: linear-gradient(90deg, rgba(216, 178, 110, 0.14), transparent 85%);
+  border-color: var(--astral-gold-hi);
+  background: linear-gradient(180deg, rgba(44, 56, 120, 0.94), rgba(18, 24, 58, 0.96));
+  color: #fff;
 }
 .tavern-exit-options span {
   font-size: 12px;
-  color: #b7a68d;
+  color: var(--astral-sub);
 }
 .promo-header {
   display: flex;
   align-items: center;
   gap: 14px;
   padding-bottom: 16px;
-  border-bottom: 1px solid rgba(216, 178, 110, 0.3);
+  border-bottom: 1px solid var(--astral-line);
 }
 .promo-seal {
   display: grid;
@@ -1553,25 +1580,32 @@ body.in-adventure #daily-hud {
   align-content: center;
   width: 50px;
   height: 50px;
-  border-radius: 50%;
-  border: 2px solid #d4a65a;
-  background: radial-gradient(circle at 35% 30%, #6d2f24, #331410 75%);
+  border-radius: 4px;
+  transform: rotate(45deg);
+  margin: 4px;
+  border: 1px solid #fff6d8;
+  background: linear-gradient(135deg, #fff1c4, #c99b4a);
   box-shadow:
-    inset 0 1px 0 rgba(255, 224, 168, 0.35),
-    0 4px 14px rgba(0, 0, 0, 0.5);
-  color: #fae3ae;
+    0 0 0 3px #0b0d1f,
+    0 0 0 4px var(--astral-gold),
+    0 6px 18px rgba(0, 0, 0, 0.5);
+  color: #1c1406;
   font-family: var(--daily-serif);
   flex-shrink: 0;
 }
+.promo-seal > span,
+.promo-seal > small {
+  transform: rotate(-45deg);
+}
 .promo-seal span {
   font-size: 19px;
-  font-weight: 700;
+  font-weight: 900;
   line-height: 1;
 }
 .promo-seal small {
-  font-size: 9px;
+  font-size: 8.5px;
+  font-weight: 700;
   letter-spacing: 0.1em;
-  opacity: 0.85;
 }
 .promo-title {
   margin-right: auto;
@@ -1579,25 +1613,30 @@ body.in-adventure #daily-hud {
 .promo-title small {
   display: block;
   font-size: 9px;
-  letter-spacing: 0.2em;
-  color: #b89c71;
+  letter-spacing: 0.22em;
+  color: var(--astral-gold);
 }
 .promo-title h2 {
   margin: 3px 0 0;
-  font: 600 20px/1.2 var(--daily-serif);
-  color: #f5dfb0;
-  letter-spacing: 0.08em;
+  font: 400 20px/1.2 var(--daily-serif);
+  color: var(--astral-gold-hi);
+  letter-spacing: 0.1em;
 }
 [data-promotion-close],
-[data-recruit-close] {
-  width: 30px;
-  height: 30px;
+[data-recruit-close],
+#tavern-exit-picker header button {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
   padding: 0;
-  border: 1px solid rgba(216, 178, 110, 0.34);
-  border-radius: 50%;
-  background: rgba(25, 20, 17, 0.8);
-  color: #e9d7b5;
+  border: 1px solid rgba(226, 192, 120, 0.45);
+  border-radius: 3px;
+  background: linear-gradient(180deg, rgba(40, 50, 110, 0.92), rgba(16, 20, 48, 0.96));
+  color: var(--astral-gold-hi);
   font-size: 18px;
+  line-height: 1;
+  box-shadow: var(--astral-btn-shadow);
 }
 .promo-milestones {
   display: grid;
@@ -1606,8 +1645,8 @@ body.in-adventure #daily-hud {
 .promo-row {
   display: grid;
   gap: 8px;
-  padding: 14px 4px;
-  border-bottom: 1px solid rgba(216, 178, 110, 0.16);
+  padding: 13px 4px;
+  border-bottom: 1px solid rgba(226, 192, 120, 0.18);
 }
 .promo-row:last-child {
   border-bottom: 0;
@@ -1617,34 +1656,35 @@ body.in-adventure #daily-hud {
   align-items: center;
   gap: 8px;
   font-size: 13px;
-  color: #e8dac0;
+  color: var(--astral-text);
 }
 .promo-mark {
-  color: #b59a72;
+  color: var(--astral-muted);
   font-size: 11px;
 }
 .promo-row[data-done='true'] .promo-mark {
-  color: #efc46d;
+  color: var(--astral-gold-hi);
 }
 .promo-row-meta b {
   margin-left: auto;
   font:
     700 14px/1 Georgia,
     serif;
-  color: #f3d596;
+  color: var(--astral-gold-hi);
   font-variant-numeric: tabular-nums;
 }
 .promo-meter {
-  height: 5px;
+  height: 6px;
   overflow: hidden;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+  border: 1px solid rgba(226, 192, 120, 0.22);
+  background: #070917;
 }
 .promo-meter i {
   display: block;
   height: 100%;
-  border-radius: 999px;
-  background: linear-gradient(90deg, #b8843f, #f0cf88);
+  border-radius: 2px;
+  background: linear-gradient(90deg, #b4863a, #fff1c4);
   transition: width 240ms ease;
 }
 .promo-foot {
@@ -1683,22 +1723,20 @@ body.in-adventure #daily-hud {
   min-height: 40px;
   padding: 8px 14px;
   border: 1px solid var(--daily-line);
-  border-radius: 7px;
+  border-radius: 3px;
   color: var(--daily-text);
-  background: linear-gradient(180deg, rgba(37, 58, 49, 0.78), rgba(10, 22, 18, 0.88));
+  background: linear-gradient(180deg, rgba(36, 46, 102, 0.9), rgba(14, 18, 44, 0.96));
   font: inherit;
-  box-shadow:
-    0 2px 8px rgba(0, 0, 0, 0.28),
-    inset 0 1px 0 rgba(255, 255, 255, 0.055);
+  box-shadow: var(--astral-btn-shadow);
   backdrop-filter: blur(7px);
   -webkit-backdrop-filter: blur(7px);
   transform: none;
   transition:
-    border-color 160ms ease,
-    background 160ms ease,
-    color 160ms ease,
-    box-shadow 160ms ease,
-    transform 160ms ease;
+    border-color 150ms ease,
+    background 150ms ease,
+    color 150ms ease,
+    box-shadow 150ms ease,
+    transform 150ms ease;
 }
 :is(#daily-hud, #daily-setup) button:focus-visible {
   outline: 2px solid var(--daily-hot);
@@ -1706,81 +1744,86 @@ body.in-adventure #daily-hud {
 }
 :is(#daily-hud, #daily-setup) button:enabled:hover {
   border-color: var(--daily-line-strong);
-  color: #fff7e5;
-  background: linear-gradient(180deg, rgba(58, 81, 66, 0.92), rgba(19, 35, 28, 0.95));
+  color: #fff;
+  background: linear-gradient(180deg, rgba(52, 66, 136, 0.95), rgba(22, 28, 66, 0.98));
   box-shadow:
-    0 5px 18px rgba(0, 0, 0, 0.35),
-    0 0 14px rgba(226, 190, 126, 0.1);
+    inset 0 1px 0 rgba(255, 255, 255, 0.24),
+    0 3px 0 #080a1c,
+    0 0 14px rgba(226, 192, 120, 0.24);
   transform: translateY(-1px);
 }
 :is(#daily-hud, #daily-setup) button:active {
-  transform: translateY(0);
+  transform: translateY(1px);
 }
 :is(#daily-hud, #daily-setup) button[aria-pressed='true'] {
   border-color: var(--daily-line-strong);
   color: var(--daily-hot);
-  background: linear-gradient(180deg, rgba(78, 63, 38, 0.64), rgba(28, 29, 21, 0.82));
+  background: linear-gradient(180deg, rgba(54, 68, 136, 0.94), rgba(24, 30, 72, 0.96));
 }
 :is(#daily-hud, #daily-setup) .daily-confirm {
-  border-color: #f0d79d;
-  color: #23180b;
-  background: linear-gradient(135deg, #f2dca5, #c99b55);
+  border-color: #fff6d8;
+  color: #1c1406;
+  background: linear-gradient(180deg, #fff1c4, #dab262 60%, #b4863a);
   font-weight: 700;
-  letter-spacing: 0.06em;
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.24);
+  letter-spacing: 0.08em;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.28);
   box-shadow:
-    0 4px 18px rgba(208, 163, 87, 0.22),
-    inset 0 1px 0 rgba(255, 255, 255, 0.55);
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    0 3px 0 #5b4114,
+    0 6px 18px rgba(226, 192, 120, 0.26);
 }
 :is(#daily-hud, #daily-setup) .daily-confirm:enabled:hover {
-  border-color: #fff0c7;
-  color: #1d1308;
-  background: linear-gradient(135deg, #ffe9b8, #d8aa61);
+  border-color: #ffffff;
+  color: #1c1406;
+  background: linear-gradient(180deg, #fff8dc, #e8c273 60%, #c69643);
   box-shadow:
-    0 6px 22px rgba(226, 186, 111, 0.34),
-    0 0 18px rgba(226, 186, 111, 0.18);
+    inset 0 1px 0 rgba(255, 255, 255, 0.62),
+    0 3px 0 #5b4114,
+    0 6px 22px rgba(255, 241, 196, 0.42);
 }
 
-/* Bottom dock: a slim brass rail rather than three unrelated blocks. */
+/* Bottom dock: slim Astral Indigo & Champagne Gold rail preserving exact 118x38 button geometry. */
 .daily-dock {
   display: flex;
   align-items: center;
   gap: 2px;
-  padding: 6px;
-  border: 1px solid rgba(216, 178, 110, 0.34);
-  border-radius: 999px;
+  padding: 5px;
+  border: 1px solid rgba(226, 192, 120, 0.44);
+  border-radius: 4px;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.045), transparent 45%),
-    linear-gradient(180deg, rgba(22, 19, 17, 0.94), rgba(10, 9, 8, 0.97));
+    linear-gradient(180deg, rgba(255, 241, 196, 0.06), transparent 45%),
+    linear-gradient(180deg, rgba(28, 36, 82, 0.94), rgba(10, 13, 32, 0.97));
   box-shadow:
-    0 14px 40px rgba(0, 0, 0, 0.58),
-    0 0 0 4px rgba(10, 8, 7, 0.28),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(15px);
-  -webkit-backdrop-filter: blur(15px);
+    0 14px 40px rgba(0, 0, 0, 0.64),
+    0 0 0 3px rgba(8, 10, 28, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   animation: daily-reveal 220ms ease-out;
 }
 #daily-hud .daily-dock[hidden] {
   display: none;
 }
 #daily-hud .daily-dock button {
-  min-height: 48px;
-  padding: 9px 17px;
+  min-height: 38px;
+  padding: 7px 14px;
   border-color: transparent;
-  border-radius: 999px;
-  color: var(--daily-muted);
+  border-radius: 3px;
+  color: var(--astral-sub);
   background: transparent;
   box-shadow: none;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
-  font-size: 15px;
+  font-size: 13px;
+  font-weight: 600;
   letter-spacing: 0.08em;
+  line-height: 1.2;
 }
 #daily-hud .daily-dock button:enabled:hover {
-  border-color: rgba(226, 190, 126, 0.18);
-  color: var(--daily-hot);
-  background: rgba(226, 190, 126, 0.075);
-  box-shadow: none;
+  border-color: rgba(226, 192, 120, 0.36);
+  color: var(--astral-gold-hi);
+  background: linear-gradient(180deg, rgba(52, 66, 136, 0.55), rgba(24, 30, 72, 0.72));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
   transform: none;
 }
 #daily-hud .daily-open {
@@ -1822,9 +1865,9 @@ body.in-adventure #daily-hud {
   width: 100%;
   min-height: 30px;
   padding: 5px 10px 5px 12px;
-  border-top: 1px solid rgba(216, 178, 110, 0.24);
-  color: #cabaa2;
-  background: rgba(216, 178, 110, 0.06);
+  border-top: 1px solid var(--astral-line);
+  color: var(--astral-text);
+  background: rgba(226, 192, 120, 0.07);
   font-size: 12px;
   line-height: 1.45;
   text-align: left;
@@ -1835,53 +1878,48 @@ body.in-adventure #daily-hud {
 .daily-status::before {
   content: '◆';
   flex: 0 0 auto;
-  color: var(--daily-hot);
+  color: var(--astral-gold-hi);
   font-size: 7px;
 }
 .daily-status b {
   margin-inline: 3px;
-  color: var(--daily-hot);
+  color: var(--astral-gold-hi);
   font-variant-numeric: tabular-nums;
 }
 .daily-status button {
   min-height: 25px !important;
   padding: 2px 10px !important;
-  border: 1px solid rgba(216, 178, 110, 0.34) !important;
-  border-radius: 999px !important;
-  background: rgba(34, 28, 23, 0.85) !important;
-  color: #f0dfbe !important;
+  border: 1px solid rgba(226, 192, 120, 0.38) !important;
+  border-radius: 3px !important;
+  background: var(--astral-card-bg) !important;
+  color: var(--astral-gold-hi) !important;
   font-size: 11px !important;
 }
 .daily-status button:enabled:hover {
-  border-color: #f2cf84 !important;
-  background: rgba(216, 178, 110, 0.2) !important;
+  border-color: var(--astral-gold-hi) !important;
+  background: linear-gradient(180deg, rgba(64, 84, 168, 0.56), rgba(38, 52, 126, 0.64)) !important;
 }
 
-/* Schedule rail: a closed ledger with a thin engraved frame. */
+/* Schedule rail: Astral Indigo & Champagne Gold frame. */
 .daily-rail {
   position: relative;
   width: min(690px, calc(100vw - 24px));
   max-height: calc(100dvh - 28px);
   overflow: auto;
   padding: 14px 16px 13px;
-  border: 1px solid var(--daily-line);
-  border-radius: 14px;
-  background:
-    radial-gradient(ellipse at 50% -30%, rgba(226, 186, 111, 0.14), transparent 58%),
-    linear-gradient(132deg, rgba(255, 255, 255, 0.035), transparent 28%),
-    linear-gradient(180deg, rgba(16, 32, 26, 0.97), rgba(6, 15, 12, 0.98));
-  box-shadow:
-    0 22px 58px rgba(0, 0, 0, 0.62),
-    inset 0 1px 0 rgba(255, 255, 255, 0.07);
-  animation: daily-reveal 220ms ease-out;
+  border: 1px solid rgba(226, 192, 120, 0.45);
+  border-radius: 4px;
+  background: var(--astral-hatch), var(--astral-panel-bg);
+  box-shadow: var(--astral-frame-shadow);
+  animation: daily-reveal 220ms cubic-bezier(0.22, 1, 0.36, 1);
   scrollbar-gutter: stable;
 }
 .daily-rail::before {
   content: '';
   position: absolute;
   inset: 5px;
-  border: 1px solid rgba(226, 186, 111, 0.075);
-  border-radius: 10px;
+  border: 1px solid rgba(226, 192, 120, 0.14);
+  border-radius: 2px;
   pointer-events: none;
 }
 .daily-rail::after {
@@ -1891,7 +1929,7 @@ body.in-adventure #daily-hud {
   left: 20%;
   right: 20%;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(247, 220, 165, 0.48), transparent);
+  background: linear-gradient(90deg, transparent, rgba(255, 241, 196, 0.56), transparent);
   pointer-events: none;
 }
 .daily-rail > * {
@@ -1900,12 +1938,17 @@ body.in-adventure #daily-hud {
 }
 @keyframes daily-reveal {
   from {
-    translate: 0 20px;
+    translate: 0 14px;
     opacity: 0;
   }
   to {
     translate: 0 0;
     opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .daily-rail {
+    animation: none;
   }
 }
 .daily-rail header,
@@ -1971,13 +2014,12 @@ body.in-adventure #daily-hud {
   min-height: 70px;
   overflow: hidden;
   padding: 10px 11px 9px 14px;
-  border: 1px solid rgba(226, 186, 111, 0.13);
-  border-radius: 8px;
-  color: var(--daily-text);
-  background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.04), transparent 55%), rgba(9, 23, 19, 0.66);
+  border: 1px solid var(--astral-line);
+  border-radius: 4px;
+  color: var(--astral-text);
+  background: var(--astral-card-bg);
   text-align: left;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 #daily-hud .daily-slot::before {
   content: '';
@@ -2028,12 +2070,11 @@ body.in-adventure #daily-hud {
   color: #e7c7f2;
 }
 #daily-hud .daily-slot[data-current='true'] {
-  border-color: var(--daily-line-strong);
-  background:
-    linear-gradient(145deg, rgba(226, 186, 111, 0.13), transparent 62%), rgba(25, 31, 22, 0.8);
+  border-color: rgba(255, 241, 196, 0.72);
+  background: linear-gradient(145deg, rgba(226, 192, 120, 0.16), rgba(20, 26, 62, 0.88));
   box-shadow:
-    inset 0 0 26px rgba(226, 186, 111, 0.055),
-    0 0 15px rgba(226, 186, 111, 0.055);
+    inset 0 0 24px rgba(226, 192, 120, 0.08),
+    0 0 16px rgba(226, 192, 120, 0.12);
   opacity: 1;
 }
 #daily-hud .daily-slot[data-current='true']::after {
@@ -2041,7 +2082,7 @@ body.in-adventure #daily-hud {
   position: absolute;
   top: 7px;
   right: 8px;
-  color: var(--daily-hot);
+  color: var(--astral-gold-hi);
   font-size: 9px;
   letter-spacing: 0.08em;
 }
@@ -2055,16 +2096,16 @@ body.in-adventure #daily-hud {
   gap: 6px;
   margin-block: 0 10px;
   padding: 9px;
-  border: 1px solid rgba(226, 186, 111, 0.12);
-  border-radius: 9px;
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.2), transparent), rgba(255, 255, 255, 0.018);
+  border: 1px solid var(--astral-line);
+  border-radius: 4px;
+  background: rgba(8, 11, 28, 0.56);
 }
 .daily-options button {
   min-height: 42px !important;
   padding: 6px 8px !important;
-  border-color: rgba(226, 186, 111, 0.12) !important;
-  border-radius: 6px !important;
-  background: rgba(255, 255, 255, 0.022) !important;
+  border-color: rgba(226, 192, 120, 0.28) !important;
+  border-radius: 3px !important;
+  background: rgba(18, 23, 52, 0.74) !important;
   font-size: 12px !important;
 }
 .daily-options i {
@@ -2078,56 +2119,46 @@ body.in-adventure #daily-hud {
   font-size: 10px;
 }
 
-/* Setup dialog: engraved night panel, portraits as small framed cards. */
+/* Setup dialog: Astral Indigo & Champagne Gold frame. */
 #daily-setup {
   position: fixed;
-  width: min(720px, calc(100vw - 20px));
+  width: min(740px, calc(100vw - 20px));
   max-width: none;
   max-height: calc(100dvh - 20px);
   margin: auto;
   padding: 0;
   overflow: auto;
-  border: 1px solid var(--daily-line-strong);
-  border-radius: 16px;
-  color: var(--daily-text);
-  background:
-    radial-gradient(ellipse at 50% -8%, rgba(226, 186, 111, 0.13), transparent 46%),
-    linear-gradient(150deg, rgba(21, 40, 33, 0.98), rgba(6, 14, 11, 0.99));
-  box-shadow:
-    0 30px 100px rgba(0, 0, 0, 0.78),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    inset 0 0 0 5px rgba(226, 186, 111, 0.025);
+  border: 1px solid rgba(226, 192, 120, 0.48);
+  border-radius: 4px;
+  color: var(--astral-text);
+  background: var(--astral-hatch), var(--astral-panel-bg);
+  box-shadow: var(--astral-frame-shadow);
   scrollbar-gutter: stable;
 }
 #daily-setup::backdrop {
-  background: rgba(3, 8, 7, 0.78);
-  backdrop-filter: blur(7px);
-  -webkit-backdrop-filter: blur(7px);
+  background: rgba(4, 5, 14, 0.8);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
 }
 .player-intent {
   position: fixed;
-  width: min(520px, calc(100vw - 28px));
+  width: min(540px, calc(100vw - 28px));
   max-width: none;
   max-height: calc(100dvh - 28px);
   margin: auto;
   padding: 24px 26px 22px;
   overflow: auto;
-  border: 1px solid rgba(226, 186, 111, 0.36);
-  border-radius: 16px;
-  color: #f4ebd8;
-  background:
-    radial-gradient(ellipse at 50% -12%, rgba(232, 189, 108, 0.18), transparent 56%),
-    linear-gradient(155deg, rgba(16, 20, 34, 0.98), rgba(8, 11, 20, 0.99));
-  box-shadow:
-    0 28px 90px rgba(0, 0, 0, 0.88),
-    inset 0 1px 0 rgba(255, 244, 214, 0.14),
-    inset 0 0 0 1px rgba(226, 186, 111, 0.08);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(226, 192, 120, 0.48);
+  border-radius: 4px;
+  color: var(--astral-text);
+  background: var(--astral-hatch), var(--astral-panel-bg);
+  box-shadow: var(--astral-frame-shadow);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   scrollbar-gutter: stable;
 }
 .player-intent::backdrop {
-  background: rgba(4, 7, 14, 0.8);
+  background: rgba(4, 5, 14, 0.8);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
 }
@@ -2164,21 +2195,21 @@ body.in-adventure #daily-hud {
   align-items: center;
   gap: 10px;
   padding: 10px 14px;
-  border: 1px solid rgba(226, 186, 111, 0.24);
-  border-radius: 11px;
-  background: linear-gradient(135deg, rgba(226, 186, 111, 0.09), rgba(20, 26, 44, 0.56));
+  border: 1px solid var(--astral-line);
+  border-radius: 4px;
+  background: linear-gradient(135deg, rgba(226, 192, 120, 0.1), rgba(18, 24, 56, 0.76));
 }
 .player-intent-stop {
   display: grid;
   gap: 2px;
 }
 .player-intent-stop small {
-  color: rgba(226, 196, 134, 0.66);
+  color: var(--astral-sub);
   font-size: 10px;
   letter-spacing: 0.08em;
 }
 .player-intent-stop strong {
-  color: #f8ecd0;
+  color: var(--astral-gold-hi);
   font-size: 13px;
   font-weight: 600;
   white-space: nowrap;
@@ -2198,9 +2229,9 @@ body.in-adventure #daily-hud {
   height: 2px;
   background: linear-gradient(
     90deg,
-    rgba(226, 186, 111, 0.25),
-    rgba(241, 206, 132, 0.85),
-    rgba(226, 186, 111, 0.25)
+    rgba(226, 192, 120, 0.25),
+    rgba(255, 241, 196, 0.85),
+    rgba(226, 192, 120, 0.25)
   );
 }
 .player-intent-track-line::before {
@@ -2210,13 +2241,13 @@ body.in-adventure #daily-hud {
   top: 50%;
   transform: translate(-50%, -52%);
   padding: 0 5px;
-  color: #f2cb79;
-  background: #131827;
+  color: var(--astral-gold-hi);
+  background: #141935;
   font-size: 10px;
   line-height: 1;
 }
 .player-intent-track span {
-  color: #edd095;
+  color: var(--astral-gold);
   font-size: 11px;
   font-weight: 600;
   white-space: nowrap;
@@ -2225,10 +2256,10 @@ body.in-adventure #daily-hud {
   justify-self: start;
   margin: 0;
   padding: 6px 12px;
-  border: 1px solid rgba(226, 186, 111, 0.26);
-  border-radius: 999px;
-  color: #edd095;
-  background: rgba(226, 186, 111, 0.09);
+  border: 1px solid var(--astral-line);
+  border-radius: 3px;
+  color: var(--astral-gold-hi);
+  background: rgba(226, 192, 120, 0.09);
   font-size: 12px;
   letter-spacing: 0.03em;
 }
@@ -2243,21 +2274,21 @@ body.in-adventure #daily-hud {
   align-items: center;
   gap: 12px;
   padding: 12px 14px;
-  border: 1px solid rgba(226, 186, 111, 0.22);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.028);
+  border: 1px solid var(--astral-line);
+  border-radius: 4px;
+  background: rgba(16, 21, 48, 0.65);
   cursor: pointer;
   transition:
     border-color 160ms ease,
     background 160ms ease;
 }
 .player-intent-skip:hover {
-  border-color: rgba(226, 186, 111, 0.44);
-  background: rgba(226, 186, 111, 0.07);
+  border-color: rgba(226, 192, 120, 0.48);
+  background: rgba(226, 192, 120, 0.08);
 }
 .player-intent[data-skip-api='true'] .player-intent-skip {
-  border-color: rgba(234, 194, 112, 0.62);
-  background: linear-gradient(135deg, rgba(226, 186, 111, 0.16), rgba(226, 186, 111, 0.05));
+  border-color: rgba(255, 241, 196, 0.62);
+  background: linear-gradient(135deg, rgba(226, 192, 120, 0.16), rgba(226, 192, 120, 0.05));
 }
 .player-intent-skip input {
   position: absolute;
@@ -2271,12 +2302,12 @@ body.in-adventure #daily-hud {
   gap: 3px;
 }
 .player-intent-skip-copy strong {
-  color: #f6e7c7;
+  color: var(--astral-gold-hi);
   font-size: 13px;
   font-weight: 600;
 }
 .player-intent-skip-copy small {
-  color: rgba(217, 212, 198, 0.68);
+  color: var(--astral-sub);
   font-size: 11px;
   line-height: 1.45;
 }
@@ -2284,9 +2315,9 @@ body.in-adventure #daily-hud {
   position: relative;
   width: 42px;
   height: 24px;
-  border: 1px solid rgba(226, 186, 111, 0.34);
+  border: 1px solid rgba(226, 192, 120, 0.36);
   border-radius: 999px;
-  background: rgba(7, 10, 18, 0.85);
+  background: rgba(7, 9, 22, 0.9);
   transition:
     background 160ms ease,
     border-color 160ms ease;
@@ -2306,8 +2337,8 @@ body.in-adventure #daily-hud {
     background 160ms ease;
 }
 .player-intent-skip input:checked ~ .player-intent-switch-pill {
-  border-color: #f0ca7d;
-  background: linear-gradient(135deg, #c99742, #e5be70);
+  border-color: var(--astral-gold-hi);
+  background: linear-gradient(135deg, #c99742, #f1cf84);
 }
 .player-intent-skip input:checked ~ .player-intent-switch-pill::after {
   transform: translateX(18px);
@@ -2326,21 +2357,21 @@ body.in-adventure #daily-hud {
   align-items: baseline;
   justify-content: space-between;
   gap: 8px;
-  color: #e7dbc0;
+  color: var(--astral-text);
   font-size: 13px;
 }
 .player-intent-note > span small {
-  color: rgba(217, 212, 198, 0.56);
+  color: var(--astral-muted);
   font-size: 11px;
 }
 .player-intent textarea {
   width: 100%;
   min-height: 82px;
   padding: 11px 13px;
-  border: 1px solid rgba(226, 186, 111, 0.24);
-  border-radius: 10px;
-  color: #f7eed9;
-  background: rgba(7, 10, 17, 0.78);
+  border: 1px solid rgba(226, 192, 120, 0.28);
+  border-radius: 4px;
+  color: var(--astral-text);
+  background: rgba(7, 9, 22, 0.86);
   font: inherit;
   font-size: 13px;
   line-height: 1.55;
@@ -2351,8 +2382,8 @@ body.in-adventure #daily-hud {
     box-shadow 160ms ease;
 }
 .player-intent textarea:focus {
-  border-color: rgba(236, 196, 116, 0.72);
-  box-shadow: 0 0 0 3px rgba(226, 186, 111, 0.14);
+  border-color: rgba(255, 241, 196, 0.72);
+  box-shadow: 0 0 0 3px rgba(226, 192, 120, 0.14);
 }
 .player-intent footer {
   display: flex;
@@ -2364,10 +2395,10 @@ body.in-adventure #daily-hud {
 .player-intent footer button {
   min-height: 36px;
   padding: 0 15px;
-  border: 1px solid rgba(226, 186, 111, 0.24);
-  border-radius: 999px;
-  color: #e5dbc3;
-  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(226, 192, 120, 0.36);
+  border-radius: 3px;
+  color: var(--astral-text);
+  background: var(--astral-card-bg);
   font-size: 13px;
   cursor: pointer;
   transition:
@@ -2376,17 +2407,17 @@ body.in-adventure #daily-hud {
     color 160ms ease;
 }
 .player-intent footer button:hover {
-  border-color: rgba(226, 186, 111, 0.52);
-  background: rgba(226, 186, 111, 0.1);
+  border-color: var(--astral-gold-hi);
+  background: linear-gradient(180deg, rgba(64, 84, 168, 0.52), rgba(38, 52, 126, 0.6));
 }
 .player-intent footer button[data-intent-fast] {
-  border-color: rgba(130, 198, 166, 0.34);
-  color: #b7ebd4;
-  background: rgba(45, 112, 86, 0.18);
+  border-color: rgba(143, 214, 240, 0.38);
+  color: var(--astral-cyan);
+  background: rgba(34, 62, 92, 0.42);
 }
 .player-intent footer button.primary {
-  border-color: rgba(242, 204, 128, 0.65);
-  color: #1c1306;
+  border-color: rgba(255, 241, 196, 0.75);
+  color: #191306;
   background: linear-gradient(135deg, #d7a64e, #f1cf84);
   font-weight: 600;
 }
@@ -2398,48 +2429,65 @@ body.in-adventure #daily-hud {
   color: var(--daily-hot);
   font-size: 14px;
 }
+.daily-options.daily-topics {
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
 .daily-topics button {
+  width: 100%;
+  min-height: 40px !important;
+  padding: 9px 16px !important;
   white-space: normal;
-  text-align: left;
+  text-align: center;
+  line-height: 1.4;
+}
+#daily-setup .daily-topics button[aria-pressed='true'] {
+  border-color: #fff1c4 !important;
+  color: #211805 !important;
+  background: linear-gradient(135deg, #fff1c4, #dab262 60%, #b4863a) !important;
+  font-weight: 700;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.62),
+    0 0 0 1px rgba(255, 241, 196, 0.22),
+    0 0 16px rgba(226, 192, 120, 0.38);
 }
 #daily-setup > :is(header, footer) {
   position: sticky;
   z-index: 3;
-  padding: 16px 22px;
-  background:
-    linear-gradient(180deg, rgba(226, 186, 111, 0.055), transparent), rgba(10, 23, 18, 0.97);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  padding: 15px 22px;
+  background: linear-gradient(180deg, rgba(24, 30, 74, 0.96), rgba(11, 14, 34, 0.98));
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 #daily-setup > header {
   top: 0;
-  border-bottom: 1px solid rgba(226, 186, 111, 0.18);
+  border-bottom: 1px solid var(--astral-line);
 }
 #daily-setup > footer {
   bottom: 0;
-  border-top: 1px solid rgba(226, 186, 111, 0.18);
+  border-top: 1px solid var(--astral-line);
 }
 #daily-setup h2 {
   margin: 3px 0 0;
-  color: #f7e8c8;
+  color: var(--astral-gold-hi);
   font-family: var(--daily-serif);
-  font-size: clamp(22px, 3vw, 30px);
+  font-size: clamp(22px, 3vw, 28px);
   font-weight: 400;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.14em;
   line-height: 1.25;
-  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.5);
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.6);
 }
 #daily-setup header small {
-  color: var(--daily-hot);
+  color: var(--astral-gold);
   font-size: 10px;
   letter-spacing: 0.2em;
 }
 #daily-setup header button {
   min-height: 32px !important;
-  padding: 4px 11px !important;
-  border-radius: 999px !important;
-  color: var(--daily-muted);
-  font-size: 11px !important;
+  padding: 4px 12px !important;
+  border-radius: 3px !important;
+  color: var(--astral-gold-hi);
+  font-size: 11.5px !important;
 }
 .daily-setup-body {
   padding: 15px 22px 18px;
@@ -2463,28 +2511,29 @@ body.in-adventure #daily-hud {
   gap: 4px;
   min-height: 58px;
   padding: 9px 10px;
-  border-color: rgba(226, 186, 111, 0.11);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.018);
+  border-color: rgba(226, 192, 120, 0.24);
+  border-radius: 3px;
+  background: var(--astral-card-bg);
   text-align: left;
 }
 .daily-roles button small {
-  color: var(--daily-hot);
+  color: var(--astral-gold);
   font-size: 9px;
   letter-spacing: 0.14em;
 }
 .daily-roles button[aria-pressed='true'] {
-  border-color: var(--daily-line-strong);
-  background:
-    linear-gradient(135deg, rgba(226, 186, 111, 0.12), transparent 66%), rgba(255, 255, 255, 0.025);
-  box-shadow: inset 0 0 20px rgba(226, 186, 111, 0.045);
+  border-color: var(--astral-gold-hi);
+  background: linear-gradient(180deg, rgba(46, 58, 124, 0.94), rgba(18, 24, 58, 0.96));
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 241, 196, 0.26),
+    0 0 14px rgba(226, 192, 120, 0.28);
 }
 .daily-roles button[aria-pressed='true']::after {
   content: '●';
   position: absolute;
   top: 9px;
   right: 9px;
-  color: var(--daily-hot);
+  color: var(--astral-gold-hi);
   font-size: 7px;
 }
 .daily-people {
@@ -2504,16 +2553,17 @@ body.in-adventure #daily-hud {
   justify-items: center;
   gap: 6px;
   padding: 7px 5px 8px;
-  border: 1px solid transparent;
-  border-radius: 9px;
-  color: var(--daily-muted);
-  background: rgba(255, 255, 255, 0.018);
+  border: 1px solid rgba(226, 192, 120, 0.22);
+  border-radius: 3px;
+  color: var(--astral-sub);
+  background: var(--astral-card-bg);
   font-size: 12px;
   text-align: center;
 }
 #daily-setup .daily-person:enabled:hover {
-  border-color: rgba(226, 186, 111, 0.25);
-  background: rgba(255, 255, 255, 0.035);
+  border-color: var(--astral-gold-hi);
+  color: #fff;
+  background: linear-gradient(180deg, rgba(44, 56, 120, 0.94), rgba(18, 24, 58, 0.96));
 }
 .daily-service-skill {
   display: block;
@@ -2526,21 +2576,22 @@ body.in-adventure #daily-hud {
   display: block;
   width: 56px;
   height: 76px;
-  border: 1px solid rgba(226, 186, 111, 0.38);
-  border-radius: 6px;
+  border: 1px solid rgba(226, 192, 120, 0.42);
+  border-radius: 3px;
   object-fit: cover;
   object-position: center 18%;
-  filter: saturate(0.92) contrast(1.02);
+  filter: saturate(0.94) contrast(1.02);
   box-shadow:
-    0 5px 13px rgba(0, 0, 0, 0.38),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    0 5px 13px rgba(0, 0, 0, 0.48),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 #daily-setup .daily-person[aria-pressed='true'] {
-  border-color: var(--daily-line-strong);
-  color: var(--daily-hot);
-  background:
-    linear-gradient(145deg, rgba(226, 186, 111, 0.1), transparent 60%), rgba(255, 255, 255, 0.026);
-  box-shadow: inset 0 0 20px rgba(226, 186, 111, 0.05);
+  border-color: var(--astral-gold-hi);
+  color: var(--astral-gold-hi);
+  background: linear-gradient(180deg, rgba(48, 60, 128, 0.95), rgba(20, 26, 62, 0.97));
+  box-shadow:
+    0 0 0 1px var(--astral-gold),
+    0 0 16px rgba(226, 192, 120, 0.35);
 }
 #daily-setup .daily-person[aria-pressed='true']::after {
   content: '✓';
@@ -2551,12 +2602,12 @@ body.in-adventure #daily-hud {
   place-items: center;
   width: 18px;
   height: 18px;
-  border: 1px solid #f7e4b4;
-  border-radius: 50%;
-  color: #24180b;
-  background: linear-gradient(135deg, #f3daa1, #c99b55);
+  border: 1px solid #fff6d8;
+  border-radius: 2px;
+  color: #1c1406;
+  background: linear-gradient(180deg, #fff1c4, #c99b4a);
   font: 700 10px/1 var(--daily-serif);
-  box-shadow: 0 2px 7px rgba(0, 0, 0, 0.44);
+  box-shadow: 0 2px 7px rgba(0, 0, 0, 0.48);
 }
 #daily-setup footer p {
   flex: 1;
@@ -2611,6 +2662,8 @@ body.in-adventure #daily-hud {
     padding: 4px;
   }
   #daily-hud .daily-dock button {
+    width: auto;
+    min-width: 0;
     padding-inline: 10px;
     font-size: 12px;
     letter-spacing: 0.03em;
@@ -3163,13 +3216,13 @@ body.in-adventure #daily-hud {
   max-height: calc(100dvh - 24px);
   padding: 0;
   overflow: hidden;
-  border: 3px double #aa8757;
-  border-radius: 2px;
-  color: #efe5cf;
+  border: 1px solid rgba(226, 192, 120, 0.5);
+  border-radius: 4px;
+  color: var(--astral-text);
   background:
-    linear-gradient(165deg, #1b1a22c7, #130e0bed 67%),
-    var(--guild-scene, none) center 45% / cover #231b15;
-  box-shadow: 0 30px 96px rgba(0, 0, 0, 0.9);
+    linear-gradient(165deg, rgba(16, 20, 48, 0.9), rgba(11, 13, 31, 0.96) 68%),
+    var(--guild-scene, none) center 45% / cover #0b0d1f;
+  box-shadow: var(--astral-frame-shadow);
 }
 #guild-dialog[open] {
   display: grid;
@@ -3181,18 +3234,18 @@ body.in-adventure #daily-hud {
   align-items: center;
   gap: 14px;
   padding: 16px 22px;
-  border-bottom: 1px solid rgba(216, 178, 110, 0.24);
-  background: linear-gradient(90deg, #16151af2, #21160fb3);
+  border-bottom: 1px solid var(--astral-line);
+  background: linear-gradient(180deg, rgba(24, 30, 74, 0.95), rgba(11, 14, 34, 0.96));
 }
 .guild-crest-badge {
   display: grid;
   place-items: center;
   width: 52px;
   height: 52px;
-  border: 2px solid #e6bf72;
-  border-radius: 10px;
-  background: radial-gradient(circle at 35% 28%, #5e4422, #23180b);
-  color: #ffefc2;
+  border: 1.5px solid var(--astral-gold-hi);
+  border-radius: 4px;
+  background: radial-gradient(circle at 35% 28%, rgba(226, 192, 120, 0.34), rgba(19, 24, 54, 0.95));
+  color: var(--astral-gold-hi);
   line-height: 1;
 }
 .guild-crest-badge span {
@@ -3206,7 +3259,7 @@ body.in-adventure #daily-hud {
 }
 .guild-head-info h2 {
   margin: 0;
-  color: #fae6b9;
+  color: var(--astral-gold-hi);
   font: 600 20px/1.2 var(--daily-serif);
 }
 .guild-merit-row {
@@ -3215,19 +3268,19 @@ body.in-adventure #daily-hud {
   align-items: center;
   gap: 8px;
   font-size: 11px;
-  color: #cbb897;
+  color: var(--astral-sub);
 }
 .guild-merit-bar {
   width: 110px;
   height: 5px;
-  border-radius: 999px;
+  border-radius: 2px;
   background: rgba(255, 255, 255, 0.1);
   overflow: hidden;
 }
 .guild-merit-bar i {
   display: block;
   height: 100%;
-  background: linear-gradient(90deg, #b88433, #f3ce7b);
+  background: linear-gradient(90deg, #b4863a, #fff1c4);
 }
 .guild-rank-pips {
   display: inline-flex;
@@ -3236,14 +3289,14 @@ body.in-adventure #daily-hud {
 .guild-tier-pip {
   padding: 1px 5px;
   border-radius: 2px;
-  border: 1px solid rgba(216, 178, 110, 0.22);
-  color: #8f8473;
+  border: 1px solid rgba(226, 192, 120, 0.28);
+  color: var(--astral-muted);
   font-size: 10px;
 }
 .guild-tier-pip.is-current {
-  border-color: #f0ca7d;
-  background: rgba(216, 178, 110, 0.2);
-  color: #fff2ce;
+  border-color: var(--astral-gold-hi);
+  background: rgba(226, 192, 120, 0.22);
+  color: var(--astral-gold-hi);
   font-weight: 700;
 }
 .guild-head-right {
@@ -3251,10 +3304,10 @@ body.in-adventure #daily-hud {
   font-size: 12px;
 }
 .guild-wallet b {
-  color: #f5d182;
+  color: var(--astral-gold-hi);
 }
 .guild-perks {
-  color: #95d3ab;
+  color: var(--astral-cyan);
   font-size: 11px;
   margin-top: 2px;
 }
@@ -3263,25 +3316,25 @@ body.in-adventure #daily-hud {
   flex-wrap: wrap;
   gap: 6px;
   padding: 10px 22px;
-  border-bottom: 1px solid rgba(216, 178, 110, 0.18);
-  background: rgba(12, 13, 20, 0.88);
+  border-bottom: 1px solid var(--astral-line);
+  background: rgba(11, 14, 34, 0.9);
 }
 .guild-tabs button {
   display: grid;
   justify-items: start;
   gap: 1px;
   padding: 7px 14px;
-  border: 1px solid rgba(216, 178, 110, 0.24);
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.03);
-  color: #cbbca0;
+  border: 1px solid rgba(226, 192, 120, 0.3);
+  border-radius: 3px;
+  background: var(--astral-card-bg);
+  color: var(--astral-sub);
   font-size: 12.5px;
   cursor: pointer;
 }
 .guild-tabs button[aria-selected='true'] {
-  border-color: #ebc67c;
-  background: linear-gradient(135deg, rgba(216, 178, 110, 0.22), rgba(216, 178, 110, 0.06));
-  color: #fff0cb;
+  border-color: var(--astral-gold-hi);
+  background: linear-gradient(135deg, rgba(226, 192, 120, 0.24), rgba(32, 42, 92, 0.88));
+  color: var(--astral-gold-hi);
 }
 .guild-body {
   min-height: 0;
@@ -3359,13 +3412,13 @@ body.in-adventure #daily-hud {
   gap: 9px;
   align-content: start;
   padding: 14px;
-  border: 1px solid rgba(216, 178, 110, 0.22);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--astral-line);
+  border-radius: 4px;
+  background: var(--astral-card-bg);
 }
 .guild-card.is-ready {
-  border-color: rgba(242, 204, 128, 0.65);
-  background: rgba(216, 178, 110, 0.08);
+  border-color: var(--astral-gold-hi);
+  background: linear-gradient(145deg, rgba(226, 192, 120, 0.14), rgba(24, 30, 74, 0.88));
 }
 .guild-card-top {
   display: flex;
@@ -3378,50 +3431,50 @@ body.in-adventure #daily-hud {
   place-items: center;
   width: 34px;
   height: 34px;
-  border: 1px solid rgba(216, 178, 110, 0.45);
-  border-radius: 6px;
-  background: rgba(216, 178, 110, 0.12);
-  color: #f6d58b;
+  border: 1px solid rgba(226, 192, 120, 0.45);
+  border-radius: 3px;
+  background: rgba(226, 192, 120, 0.14);
+  color: var(--astral-gold-hi);
   font: 700 15px/1 var(--daily-serif);
 }
 .guild-card-meta small {
   display: block;
-  color: #b79c71;
+  color: var(--astral-sub);
   font-size: 11px;
 }
 .guild-card-meta h3 {
   margin: 2px 0 0;
-  color: #f7e6bf;
+  color: var(--astral-gold-hi);
   font: 600 15px/1.25 var(--daily-serif);
 }
 .guild-badge {
   margin-left: auto;
   padding: 2px 7px;
-  border-radius: 999px;
+  border-radius: 2px;
   font-style: normal;
   font-size: 10px;
 }
 .guild-badge.is-ready {
-  background: rgba(240, 198, 108, 0.22);
-  color: #ffe39a;
+  background: rgba(226, 192, 120, 0.24);
+  color: var(--astral-gold-hi);
 }
 .guild-badge.is-active {
-  background: rgba(114, 184, 146, 0.18);
-  color: #9de2b8;
+  background: rgba(143, 214, 240, 0.16);
+  color: var(--astral-cyan);
 }
 .guild-badge.is-done {
   background: rgba(255, 255, 255, 0.08);
-  color: #a99d88;
+  color: var(--astral-muted);
 }
 .guild-card-desc,
 .guild-card-obj {
   margin: 0;
-  color: #ccc0ab;
+  color: var(--astral-sub);
   font-size: 12.5px;
   line-height: 1.55;
 }
 .guild-card-obj {
-  color: #ead3a4;
+  color: var(--astral-text);
 }
 .guild-card-foot {
   display: flex;
@@ -3431,28 +3484,29 @@ body.in-adventure #daily-hud {
   gap: 8px;
   margin-top: auto;
   padding-top: 8px;
-  border-top: 1px solid rgba(216, 178, 110, 0.14);
+  border-top: 1px solid var(--astral-line);
 }
 .guild-reward-text {
-  color: #e4c586;
+  color: var(--astral-gold-hi);
   font-size: 11.5px;
 }
 .guild-card-btns button,
 .guild-intel-actions button {
   min-height: 30px;
   padding: 0 12px;
-  border: 1px solid rgba(216, 178, 110, 0.34);
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.05);
-  color: #efe2c8;
+  border: 1px solid rgba(226, 192, 120, 0.36);
+  border-radius: 3px;
+  background: var(--astral-card-bg);
+  color: var(--astral-text);
   font-size: 12px;
   cursor: pointer;
 }
 .guild-card-btns button.guild-btn-gold,
 .guild-intel-actions button.guild-btn-gold {
-  border-color: rgba(242, 204, 128, 0.68);
-  color: #191105;
-  background: linear-gradient(135deg, #b88433, #e6be6c);
+  border-color: #fff6d8;
+  color: #1c1406;
+  background: linear-gradient(180deg, #fff1c4, #dab262 60%, #b4863a);
+  font-weight: 700;
 }
 .guild-intel-list {
   display: grid;
@@ -3465,12 +3519,12 @@ body.in-adventure #daily-hud {
   justify-content: space-between;
   gap: 12px;
   padding: 12px 14px;
-  border: 1px solid rgba(216, 178, 110, 0.2);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid var(--astral-line);
+  border-radius: 4px;
+  background: rgba(16, 20, 48, 0.72);
 }
 .guild-intel-row.is-open {
-  border-color: rgba(216, 178, 110, 0.36);
+  border-color: rgba(226, 192, 120, 0.48);
 }
 .guild-intel-title {
   display: flex;
@@ -3480,51 +3534,51 @@ body.in-adventure #daily-hud {
 }
 .guild-tier-tag {
   padding: 1px 7px;
-  border-radius: 3px;
+  border-radius: 2px;
   font-size: 10px;
   font-weight: 700;
-  background: rgba(128, 186, 146, 0.2);
-  color: #a4e3ba;
+  background: rgba(143, 214, 240, 0.18);
+  color: var(--astral-cyan);
 }
 .guild-tier-tag[data-tier='中阶'] {
-  background: rgba(216, 178, 110, 0.22);
-  color: #f3d082;
+  background: rgba(226, 192, 120, 0.22);
+  color: var(--astral-gold-hi);
 }
 .guild-tier-tag[data-tier='高阶'] {
-  background: rgba(220, 96, 86, 0.24);
-  color: #f6b2ab;
+  background: rgba(255, 94, 110, 0.22);
+  color: #ffb0b8;
 }
 .guild-gate-chip {
   padding: 1px 6px;
-  border-radius: 3px;
+  border-radius: 2px;
   font-style: normal;
   font-size: 10px;
-  background: rgba(114, 184, 146, 0.16);
-  color: #9ce0b5;
+  background: rgba(143, 214, 240, 0.16);
+  color: var(--astral-cyan);
 }
 .guild-gate-chip.is-unvisited {
   background: rgba(255, 255, 255, 0.07);
-  color: #9e9482;
+  color: var(--astral-muted);
 }
 .guild-intel-detail,
 .guild-intel-note,
 .guild-intel-masked {
   margin: 5px 0 0;
-  color: #c5ba9e;
+  color: var(--astral-sub);
   font-size: 12px;
   line-height: 1.5;
 }
 .guild-intel-masked {
-  color: #8f8678;
+  color: var(--astral-muted);
 }
 .guild-skill-filters {
   display: grid;
   gap: 8px;
   margin-bottom: 12px;
   padding: 10px 12px;
-  border: 1px solid rgba(216, 178, 110, 0.22);
-  border-radius: 8px;
-  background: rgba(14, 24, 23, 0.72);
+  border: 1px solid var(--astral-line);
+  border-radius: 4px;
+  background: rgba(11, 14, 34, 0.78);
 }
 .guild-filter-row {
   display: flex;
@@ -3536,10 +3590,10 @@ body.in-adventure #daily-hud {
   align-items: center;
   gap: 4px;
   padding: 4px 10px;
-  border-radius: 999px;
-  border: 1px solid rgba(216, 178, 110, 0.26);
-  background: rgba(255, 255, 255, 0.04);
-  color: #d7ccb2;
+  border-radius: 3px;
+  border: 1px solid rgba(226, 192, 120, 0.3);
+  background: rgba(18, 24, 56, 0.72);
+  color: var(--astral-sub);
   font-size: 11px;
   cursor: pointer;
   transition:
@@ -3551,9 +3605,9 @@ body.in-adventure #daily-hud {
   color: var(--dmg-color, #d7ccb2);
 }
 .guild-filter-btn.is-selected {
-  border-color: #f0ca75;
-  background: rgba(235, 189, 98, 0.2);
-  color: #fff2cc;
+  border-color: var(--astral-gold-hi);
+  background: rgba(226, 192, 120, 0.22);
+  color: var(--astral-gold-hi);
 }
 .guild-skill-heading {
   display: flex;
@@ -3565,9 +3619,9 @@ body.in-adventure #daily-hud {
   grid-column: 1 / -1;
   padding: 24px 16px;
   text-align: center;
-  color: #a99f8d;
-  border: 1px dashed rgba(216, 178, 110, 0.24);
-  border-radius: 8px;
+  color: var(--astral-muted);
+  border: 1px dashed rgba(226, 192, 120, 0.28);
+  border-radius: 4px;
 }
 
 #daily-setup[data-kind='invitation'] {
@@ -3680,27 +3734,27 @@ body.in-adventure #daily-hud {
   width: 100%;
   min-height: 42px;
   padding: 9px 11px;
-  border: 1px solid rgba(216, 178, 110, 0.3);
-  border-radius: 7px;
-  color: var(--daily-text);
-  background: rgba(7, 13, 12, 0.86);
+  border: 1px solid rgba(226, 192, 120, 0.36);
+  border-radius: 4px;
+  color: var(--astral-text);
+  background: rgba(7, 9, 22, 0.88);
   font: inherit;
 }
 .daily-invite-destination select:focus-visible,
 .daily-invite-intent textarea:focus-visible {
-  border-color: var(--daily-line-strong);
-  outline: 2px solid rgba(239, 204, 138, 0.4);
+  border-color: var(--astral-gold-hi);
+  outline: 2px solid rgba(255, 241, 196, 0.45);
   outline-offset: 2px;
 }
 .daily-invite-intent textarea {
   min-height: 84px;
   resize: vertical;
-  color: var(--daily-text);
+  color: var(--astral-text);
   font-size: 13px;
   line-height: 1.55;
 }
 .daily-invite-intent textarea::placeholder {
-  color: #948875;
+  color: var(--astral-muted);
 }
 @media (max-width: 700px) {
   #daily-setup[data-kind='invitation'] {

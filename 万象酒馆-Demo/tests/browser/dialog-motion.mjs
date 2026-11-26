@@ -515,6 +515,146 @@ async function closeDialog(page, dialog, close, { focusId, scrollState, scrollPr
   return { animated, state };
 }
 
+async function exerciseLegacyDialogExit(page) {
+  const fallbackCss = await page.evaluate(async () => {
+    const response = await fetch('/styles/dialog-motion.css');
+    if (!response.ok) throw Error('Unable to load dialog motion stylesheet');
+    const stylesheet = await response.text();
+    const marker =
+      '/* Legacy engines release the backdrop immediately; only the panel itself fades. */';
+    const start = stylesheet.indexOf(marker);
+    const end = stylesheet.indexOf('@media (prefers-reduced-motion: reduce)', start);
+    if (start < 0 || end < start) throw Error('Legacy dialog fallback rules were not found');
+    return stylesheet.slice(start, end);
+  });
+
+  await page.evaluate(async (fallbackStyles) => {
+    const { createDialogExit } = await import('/src/shared/dialog-exit.js');
+    const iframe = document.createElement('iframe');
+    iframe.id = 'dialog-exit-fallback-frame';
+    iframe.style.cssText =
+      'position:fixed;inset:0;width:100vw;height:100vh;z-index:2147483647;border:0;';
+    iframe.srcdoc = `<!doctype html><html><head><style>
+      html,body{width:100%;height:100%;margin:0}
+      #dialog-exit-underlay{position:fixed;z-index:21999;inset:40% 35%}
+      #dialog-exit-fallback-probe{width:100vw;height:100vh;max-width:none;max-height:none;padding:0;border:0}
+      ${fallbackStyles}
+    </style></head><body><button id="dialog-exit-underlay" type="button">underlay</button><dialog id="dialog-exit-fallback-probe"><button type="button">close</button></dialog></body></html>`;
+    const loaded = new Promise((resolve) =>
+      iframe.addEventListener('load', resolve, { once: true }),
+    );
+    document.body.append(iframe);
+    await loaded;
+
+    const child = iframe.contentWindow;
+    const childDoc = child.document;
+    const opener = childDoc.getElementById('dialog-exit-underlay');
+    const dialog = childDoc.getElementById('dialog-exit-fallback-probe');
+    opener.dataset.clicks = '0';
+    opener.addEventListener('click', () => {
+      opener.dataset.clicks = String(Number(opener.dataset.clicks) + 1);
+    });
+    opener.focus();
+    const motion = createDialogExit(dialog, { supportsNativeMotion: () => false });
+    motion.show();
+    motion.close();
+    window.dialogExitFallbackProbe = { iframe, child, opener, dialog, motion };
+  }, fallbackCss);
+
+  const frame = page.frameLocator('#dialog-exit-fallback-frame');
+  const initial = await frame.locator('#dialog-exit-fallback-probe').evaluate((dialog) => ({
+    open: dialog.open,
+    modal: dialog.matches(':modal'),
+    inert: dialog.inert,
+    exiting: dialog.hasAttribute('data-dialog-exiting'),
+    pointerEvents: getComputedStyle(dialog).pointerEvents,
+    animation: dialog.getAnimations().some((item) => item.animationName === 'dialog-fallback-exit'),
+    focus: dialog.ownerDocument.activeElement?.id,
+  }));
+  assert.deepEqual(
+    initial,
+    {
+      open: false,
+      modal: false,
+      inert: true,
+      exiting: true,
+      pointerEvents: 'none',
+      animation: true,
+      focus: 'dialog-exit-underlay',
+    },
+    'Fallback CSS alone paints an inert exit after releasing the native modal',
+  );
+  await frame.locator('#dialog-exit-underlay').click();
+  assert.equal(
+    await frame.locator('#dialog-exit-underlay').getAttribute('data-clicks'),
+    '1',
+    'Underlying controls remain clickable while the fallback exit paints',
+  );
+
+  const reopened = await page.evaluate(() => {
+    const { dialog, motion } = window.dialogExitFallbackProbe;
+    motion.show();
+    return {
+      open: dialog.open,
+      modal: dialog.matches(':modal'),
+      inert: dialog.inert,
+      exiting: dialog.hasAttribute('data-dialog-exiting'),
+      activeExitAnimations: dialog
+        .getAnimations()
+        .filter(
+          (item) =>
+            item.animationName === 'dialog-fallback-exit' &&
+            ['running', 'pending'].includes(item.playState),
+        ).length,
+    };
+  });
+  assert.deepEqual(
+    reopened,
+    {
+      open: true,
+      modal: true,
+      inert: false,
+      exiting: false,
+      activeExitAnimations: 0,
+    },
+    'Rapid reopen cancels the stale exit and restores modality',
+  );
+
+  await page.evaluate(() => window.dialogExitFallbackProbe.motion.close());
+  await frame
+    .locator('#dialog-exit-fallback-probe[data-dialog-exiting]')
+    .waitFor({ state: 'hidden' });
+  const settled = await frame.locator('#dialog-exit-fallback-probe').evaluate((dialog) => ({
+    open: dialog.open,
+    inert: dialog.inert,
+    exiting: dialog.hasAttribute('data-dialog-exiting'),
+    animation: dialog.getAnimations().some((item) => item.animationName === 'dialog-fallback-exit'),
+  }));
+  assert.deepEqual(settled, { open: false, inert: false, exiting: false, animation: false });
+
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  const reduced = await page.evaluate(() => {
+    const { dialog, motion } = window.dialogExitFallbackProbe;
+    motion.show();
+    motion.close();
+    return {
+      open: dialog.open,
+      exiting: dialog.hasAttribute('data-dialog-exiting'),
+      animation: dialog
+        .getAnimations()
+        .some((item) => item.animationName === 'dialog-fallback-exit'),
+    };
+  });
+  assert.deepEqual(reduced, { open: false, exiting: false, animation: false });
+  await page.evaluate(() => {
+    const { iframe, motion } = window.dialogExitFallbackProbe;
+    motion.clear();
+    iframe.remove();
+    delete window.dialogExitFallbackProbe;
+  });
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  return { fallbackCssOnly: true, inputPassThrough: true, rapidReopen: true, reducedMotion: true };
+}
 export async function dialogMotionChecks({ browser, baseURL, output }) {
   const page = await browser.newPage({ viewport: VIEWPORT });
   const pageErrors = [];
@@ -682,7 +822,12 @@ export async function dialogMotionChecks({ browser, baseURL, output }) {
     );
     await page.locator('#ai-close').click();
     await page.locator('#ai-dialog').waitFor({ state: 'hidden' });
+    if (await page.locator('#ledger-drawer-host.is-open').count()) {
+      await page.locator('#ledger-close').click();
+      await page.locator('#ledger-drawer-host').waitFor({ state: 'hidden' });
+    }
 
+    const legacyExit = await exerciseLegacyDialogExit(page);
     assert.deepEqual(pageErrors, [], `Page errors: ${pageErrors.join('\n')}`);
     return {
       viewport: VIEWPORT,
@@ -694,6 +839,7 @@ export async function dialogMotionChecks({ browser, baseURL, output }) {
       invitationExit,
       closedLedgerFocus: true,
       competingModalFocusPreserved: true,
+      legacyExit,
       dialog: DIALOG_SELECTOR,
     };
   } finally {

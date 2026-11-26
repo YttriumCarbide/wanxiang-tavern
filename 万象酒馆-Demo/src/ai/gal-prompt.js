@@ -16,11 +16,10 @@ function galEnsembleInstruction(kind) {
   const unit = kind === 'script' ? '按场景分幕，每个 story[i] 是一幕' : '本轮场景为一幕';
   return [
     `【多人队伍聚焦与反端水】${unit}。仅写作指导，不作硬校验。`,
-    '满编也只让最契合局势的 2～3 名同伴或现场 NPC 开口，同屏最多 2～3 人；不为凑数加人。',
-    '非焦点不开口、不新登场：一句【旁白】交代分工，已在场则用【退场:角色ID】切出。跨幕轮换焦点，各有高光。',
-    '突发状况不写三人以上逐一惊叹、附和或表态；集体动作合成一条【旁白】。',
-    '两人交涉、争论或试探时，围绕一件事深谈 3～5 个来回，无关者不插话。短聊分轮推进，不替玩家发言。',
-    '发言有转折或多层意思时，同一角色连写 2～3 条【对白:同一ID】，不让全员轮流点名。',
+    '- 单幕焦点制（每幕限 2～3 人开口）：满编也只让最契合局势的 2～3 名同伴或现场 NPC 开口，同屏最多 2～3 人。',
+    '- 舞台同屏人数控制：同屏最多 2～3 人；非焦点不开口、不新登场，用一句【旁白】交代分工，已在场则用【退场:角色ID】切出，跨幕轮换焦点，各有高光。',
+    '- 严禁“全员反应接龙”：突发状况不写三人以上逐一惊叹或附和，群体动作合并成一条【旁白】。',
+    '- 双人深度推拉与连块发言：两人交涉围绕一件事深谈 3～5 个来回，无关者不插话，短聊分轮推进不替玩家发言；多层意思同一角色连写 2～3 条【对白:同一ID】。',
   ].join('\n');
 }
 
@@ -36,10 +35,23 @@ export function hasGalReactionGuidance(messages) {
   });
 }
 
-export function galSceneCastInstruction(input, kind, { reactionInWorldbook = false } = {}) {
+export function hasGalEnsembleGuidance(messages) {
+  return messages.some(
+    ({ role, content }) =>
+      role === 'system' &&
+      typeof content === 'string' &&
+      content.includes('【多人队伍聚焦与反端水】'),
+  );
+}
+
+export function galSceneCastInstruction(
+  input,
+  kind,
+  { reactionInWorldbook = false, ensembleInWorldbook = false } = {},
+) {
   const rules = [galActorListText(input)];
   if (!reactionInWorldbook) rules.push(galReactionInstruction());
-  rules.push(galEnsembleInstruction(kind));
+  if (!ensembleInWorldbook) rules.push(galEnsembleInstruction(kind));
   return rules.join('\n');
 }
 

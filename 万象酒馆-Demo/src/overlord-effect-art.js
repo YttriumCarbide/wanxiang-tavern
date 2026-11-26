@@ -102,4 +102,22 @@ export const OVERLORD_FX_ART = Object.freeze({
       <path class="fx-fragment" d="M84 76 L74 70 L80 62 Z" stroke-width="2"/>
     </g>
   </svg>`,
+  counter: `<svg viewBox="0 0 96 96" aria-hidden="true" focusable="false">
+    <g stroke="currentColor" fill="none" stroke-linejoin="miter" stroke-linecap="square">
+      <path class="fx-track" d="M16 74 L48 18 L80 74 Z" stroke-width="2" opacity="0.45"/>
+      <path class="fx-core" d="M22 68 L48 22 L74 68" stroke-width="3.2"/>
+      <path class="fx-glint" d="M48 16 L48 76 M22 48 L74 48" stroke-width="2" opacity="0.9"/>
+      <path class="fx-fragment" d="M12 30 L24 38 L14 46 Z" stroke-width="2"/>
+      <path class="fx-fragment" d="M84 30 L72 38 L82 46 Z" stroke-width="2"/>
+    </g>
+  </svg>`,
+  collect: `<svg viewBox="0 0 96 96" aria-hidden="true" focusable="false">
+    <g stroke="currentColor" fill="none" stroke-linejoin="miter" stroke-linecap="square">
+      <rect class="fx-track" x="18" y="18" width="60" height="60" rx="4" stroke-width="2" opacity="0.5"/>
+      <rect class="fx-core" x="24" y="24" width="48" height="48" rx="3" stroke-width="3"/>
+      <path class="fx-glint" d="M48 12 L56 48 L48 84 L40 48 Z" stroke-width="1.8" opacity="0.9"/>
+      <path class="fx-fragment" d="M12 48 L22 42 L22 54 Z" stroke-width="2"/>
+      <path class="fx-fragment" d="M84 48 L74 42 L74 54 Z" stroke-width="2"/>
+    </g>
+  </svg>`,
 });

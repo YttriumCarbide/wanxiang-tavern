@@ -31,14 +31,23 @@ const TABS = Object.freeze([
   { id: 'trials', label: '切磋' },
 ]);
 
-function noticePlacement(id, day) {
+const PAPER_STYLES = ['vellum', 'aged', 'flax', 'weathered'];
+const PIN_STYLES = ['brass', 'wax', 'iron'];
+
+function noticePlacement(id, day, index = 0, cols = 3) {
   const random = createRng(`guild-notice:${day}:${id}`);
-  const tilt = Math.round((random() * 3.8 - 1.9) * 10) / 10;
-  const width = Math.round(200 + random() * 112);
-  const drop = Math.round(random() * 15);
-  const shift = Math.round(random() * 10);
-  const pin = Math.round(34 + random() * 34);
-  return `style="--notice-tilt:${tilt}deg;--notice-width:${width}px;--notice-drop:${drop}px;--notice-shift:${shift}px;--pin-position:${pin}%"`;
+  const tiltMag = 1.1 + random() * 3.1;
+  const tiltSign = (index + (random() > 0.35 ? 0 : 1)) % 2 === 0 ? -1 : 1;
+  const tilt = Math.round(tiltSign * tiltMag * 10) / 10;
+  const width = Math.round(218 + random() * 52);
+  const col = cols > 1 ? index % cols : 0;
+  const colOffset = col === 1 ? 18 : col === 2 ? 7 : 2;
+  const drop = Math.round(colOffset + random() * 20);
+  const shift = Math.round((random() - 0.5) * 18);
+  const pin = Math.round(22 + random() * 56);
+  const paper = PAPER_STYLES[Math.floor(random() * PAPER_STYLES.length)];
+  const fastener = PIN_STYLES[Math.floor(random() * PIN_STYLES.length)];
+  return `data-notice-paper="${paper}" data-notice-pin="${fastener}" style="--notice-tilt:${tilt}deg;--notice-width:${width}px;--notice-drop:${drop}px;--notice-shift:${shift}px;--pin-position:${pin}%"`;
 }
 
 /** Adventurer's Guild dialog: Bounties, regional intel, specialty manuals and AI-free sparring. */
@@ -75,9 +84,11 @@ export function createGuild(context) {
     const scale = 1 + (rank.bonusPct || 0) / 100;
     const quests = lib.tavernQuests || [];
     const day = Math.max(1, Math.trunc(Number(lib.daily?.day) || 1));
-    return `<section class="guild-notice-board guild-board-wall" aria-label="每日悬赏告示">
-      ${guildBountyBoard(lib)
-        .map((bounty) => {
+    const bounties = guildBountyBoard(lib);
+    const cols = bounties.length <= 2 ? Math.max(1, bounties.length) : 3;
+    return `<section class="guild-notice-board guild-board-wall" style="--board-cols:${cols}" aria-label="每日悬赏告示">
+      ${bounties
+        .map((bounty, index) => {
           const existing = quests.find((q) => q.bountyId === bounty.id);
           const isActive = existing?.status === 'active';
           const isReady = existing && isBountyReadyToClaim(existing);
@@ -86,7 +97,7 @@ export function createGuild(context) {
           const current = isActive ? existing.objectives?.[0]?.current || 0 : 0;
           const gold = Math.round(bounty.gold * scale);
           const ether = Math.round(bounty.ether * scale);
-          return `<article data-bounty-id="${escapeText(bounty.id)}" ${noticePlacement(bounty.id, day)} class="guild-card guild-notice ${isReady ? 'is-ready' : isActive ? 'is-active' : ''}">
+          return `<article data-bounty-id="${escapeText(bounty.id)}" ${noticePlacement(bounty.id, day, index, cols)} class="guild-card guild-notice ${isReady ? 'is-ready' : isActive ? 'is-active' : ''}">
           <div class="guild-card-top">
             <span class="guild-rank-seal">${escapeText(bounty.rank)}</span>
             <div class="guild-card-meta">

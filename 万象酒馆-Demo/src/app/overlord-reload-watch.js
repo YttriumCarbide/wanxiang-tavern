@@ -2,7 +2,13 @@ import { OVERLORD_DIALOGUES, overlordReloadBark } from '../overlord-mechanics.js
 
 const RELOAD_WATCH_KEY = 'wanxiang.overlord-reload-watch.v1';
 
-export function createOverlordReloadWatch({ context, currentOverlordDef, showLine, isDisposed }) {
+export function createOverlordReloadWatch({
+  context,
+  currentOverlordDef,
+  showLine,
+  isDisposed,
+  isTestSession = null,
+}) {
   const { session } = context;
   let markedUnloadThisPage = false;
   let reloadBarkTimer = null;
@@ -47,6 +53,10 @@ export function createOverlordReloadWatch({ context, currentOverlordDef, showLin
 
   function armReloadWatch(activeBoss) {
     if (!activeBoss || isDisposed()) return;
+    if (isTestSession?.()) {
+      clearReloadWatch();
+      return;
+    }
     const prev = readReloadWatch();
     const pack = OVERLORD_DIALOGUES[activeBoss.id] || OVERLORD_DIALOGUES.alchemicalPuppet;
     writeReloadWatch({
@@ -61,7 +71,7 @@ export function createOverlordReloadWatch({ context, currentOverlordDef, showLin
   }
 
   function markReloadOnUnload() {
-    if (isDisposed()) return;
+    if (isDisposed() || isTestSession?.()) return;
     const state = session.battle.state;
     const activeBoss = currentOverlordDef();
     if (

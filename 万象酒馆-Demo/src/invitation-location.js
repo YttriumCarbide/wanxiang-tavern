@@ -4,6 +4,7 @@ import {
   cityFacilities,
   cityForScene,
   cityPlaceId,
+  clearedCityDungeonIds,
 } from './city-directory.js';
 import { FINAL_ENCOUNTER } from './content/journey-rules.js';
 import { DEFINITIONS } from './data.js';
@@ -81,7 +82,9 @@ export function invitationCityVenues(library, cityId) {
       category: 'places',
     })),
     ...cityFacilities(cityId).map((place) => ({ ...place, category: 'facilities' })),
-    ...cityDungeons(cityId, library.atlasDiscoveries)
+    ...cityDungeons(cityId, library.atlasDiscoveries, {
+      clearedDungeons: clearedCityDungeonIds(library),
+    })
       .filter(({ id }) => clearedForInvitation(library, id))
       .map((place) => {
         const world = library.worlds?.find((entry) => entry.id === place.id);

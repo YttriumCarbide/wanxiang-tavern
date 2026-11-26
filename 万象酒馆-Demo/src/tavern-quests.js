@@ -6,6 +6,7 @@ export const QUEST_TYPES = Object.freeze({
   character: '角色',
   battle: '战斗',
   bounty: '公会悬赏',
+  misc: '杂项',
 });
 
 export function createBountyQuest(spec) {
@@ -139,7 +140,28 @@ export function restoreTavernQuests(value) {
       const copy = structuredClone(entry);
       // Older saves keep their original hook; the script handoff expects a string for new leads too.
       if (typeof copy.hook !== 'string') copy.hook = '';
-      if (copy.type === 'bounty') {
+      if (typeof entry.faction === 'string' && entry.faction.length < 40) {
+        copy.faction = entry.faction;
+      }
+      if (copy.type === 'misc' || entry.isMisc === true) {
+        copy.isMisc = true;
+        copy.objectives = Array.isArray(entry.objectives)
+          ? entry.objectives
+              .filter(
+                (obj) => obj && (typeof obj.label === 'string' || typeof obj.text === 'string'),
+              )
+              .map((obj, idx) => ({
+                id: typeof obj.id === 'string' && obj.id ? obj.id : `misc-obj-${idx + 1}`,
+                label: text(obj.label ?? obj.text, 120),
+                ...(typeof obj.location === 'string' && obj.location.trim()
+                  ? { location: text(obj.location, 60) }
+                  : {}),
+                done: Boolean(obj.done ?? obj.completed),
+                tracked: Boolean(obj.tracked) && !(obj.done ?? obj.completed),
+              }))
+              .filter((obj) => obj.label)
+          : [];
+      } else if (copy.type === 'bounty') {
         copy.objectives = Array.isArray(copy.objectives)
           ? copy.objectives.map((obj, idx) => ({
               id: typeof obj?.id === 'string' ? obj.id : `obj-${idx + 1}`,

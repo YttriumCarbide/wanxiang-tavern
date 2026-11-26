@@ -11,7 +11,10 @@ import { attachTavernSupplies, TAVERN_MODEL_FILES } from './hall-model.js';
 import { explorationHref } from '../exploration/scenes.js';
 
 export async function createTavernView() {
-  if (parent !== window) document.documentElement.dataset.embedded = 'true';
+  if (parent !== window) {
+    document.documentElement.dataset.embedded = 'true';
+    document.body.classList.add('daily-parent-dock');
+  }
   const loading = createSceneLoading(document.getElementById('status'), '正在打开酒馆');
   const quality = deviceRenderQuality();
   const frameBudget = createFrameBudget(quality.fps);
@@ -84,7 +87,7 @@ export async function createTavernView() {
       anchor: [3.84, 0.95, 3.88],
     },
     supplies: {
-      name: '以太凝聚器',
+      name: '补给角 · 售货机与以太凝聚器',
       button: '走向补给角',
       p: [-3.65, 1.5, 1.25],
       focus: [-3.75, 1.3, 4.45],
@@ -566,7 +569,7 @@ export async function createTavernView() {
   condenser.after(vending);
   const talk = document.getElementById('talk-open');
   shelfButtons.push(
-    ...[{ action: 'archives', label: '归档', height: 1.24 }].map((shelf) => {
+    ...[{ action: 'archives', label: '图鉴', height: 1.24 }].map((shelf) => {
       const button = document.createElement('button');
       button.id = 'bookshelf-' + shelf.action;
       button.className = 'talk-open bookshelf-shelf';

@@ -11,80 +11,88 @@ const ROMAN_ACTS = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X']
 
 const VERIFIED_ARTWORK = {
   mill: {
-    intro: './assets/events/mill-event.png',
-    epilogue: './assets/events/mill-quest.png',
+    intro: './assets/events/mill-event.webp',
+    epilogue: './assets/events/mill-quest.webp',
   },
   ruins: {
-    intro: './assets/events/ruins-event.png',
-    epilogue: './assets/events/ruins-quest.png',
+    intro: './assets/events/ruins-event.webp',
+    epilogue: './assets/events/ruins-quest.webp',
   },
   forest: {
-    intro: './assets/events/forest-event.png',
-    epilogue: './assets/events/forest-quest.png',
+    intro: './assets/events/forest-event.webp',
+    epilogue: './assets/events/forest-quest.webp',
   },
   frost: {
-    intro: './assets/events/frost-event.png',
-    epilogue: './assets/events/frost-quest.png',
+    intro: './assets/events/frost-event.webp',
+    epilogue: './assets/events/frost-quest.webp',
   },
   forge: {
-    intro: './assets/events/forge-event.png',
-    epilogue: './assets/events/forge-quest.png',
+    intro: './assets/events/forge-event.webp',
+    epilogue: './assets/events/forge-quest.webp',
   },
   tide: {
-    intro: './assets/events/tide-event.png',
-    epilogue: './assets/events/tide-quest.png',
+    intro: './assets/events/tide-event.webp',
+    epilogue: './assets/events/tide-quest.webp',
   },
   dynasty: {
-    intro: './assets/events/dynasty-event.png',
-    epilogue: './assets/events/dynasty-quest.png',
+    intro: './assets/events/dynasty-event.webp',
+    epilogue: './assets/events/dynasty-quest.webp',
   },
   xianxia: {
-    intro: './assets/events/xianxia-event.png',
-    epilogue: './assets/events/xianxia-quest.png',
+    intro: './assets/events/xianxia-event.webp',
+    epilogue: './assets/events/xianxia-quest.webp',
   },
   castle: {
-    intro: './assets/events/castle-event.png',
-    epilogue: './assets/events/castle-quest.png',
+    intro: './assets/events/castle-event.webp',
+    epilogue: './assets/events/castle-quest.webp',
   },
   arcane: {
-    intro: './assets/events/arcane-event.png',
-    epilogue: './assets/events/arcane-quest.png',
+    intro: './assets/events/arcane-event.webp',
+    epilogue: './assets/events/arcane-quest.webp',
   },
   metropolis: {
-    intro: './assets/events/metropolis-event.png',
-    epilogue: './assets/events/metropolis-quest.png',
+    intro: './assets/events/metropolis-event.webp',
+    epilogue: './assets/events/metropolis-quest.webp',
   },
   nexus: {
-    intro: './assets/events/nexus-event.png',
-    epilogue: './assets/events/nexus-quest.png',
+    intro: './assets/events/nexus-event.webp',
+    epilogue: './assets/events/nexus-quest.webp',
   },
   wasteland: {
-    intro: './assets/events/wasteland-event.png',
-    epilogue: './assets/events/wasteland-quest.png',
+    intro: './assets/events/wasteland-event.webp',
+    epilogue: './assets/events/wasteland-quest.webp',
   },
   relic: {
-    intro: './assets/events/relic-event.png',
-    epilogue: './assets/events/relic-quest.png',
+    intro: './assets/events/relic-event.webp',
+    epilogue: './assets/events/relic-quest.webp',
   },
   'graystone-quarry': {
-    intro: './assets/events/graystone-quarry-event.png',
-    epilogue: './assets/events/graystone-quarry-quest.png',
+    intro: './assets/events/graystone-quarry-event.webp',
+    epilogue: './assets/events/graystone-quarry-quest.webp',
   },
   'city-market': {
-    intro: './assets/events/city-market-event.png',
-    epilogue: './assets/events/city-market-quest.png',
+    intro: './assets/events/city-market-event.webp',
+    epilogue: './assets/events/city-market-quest.webp',
   },
   'black-market': {
-    intro: './assets/events/black-market-event.png',
-    epilogue: './assets/events/black-market-quest.png',
+    intro: './assets/events/black-market-event.webp',
+    epilogue: './assets/events/black-market-quest.webp',
+  },
+  'duel-arena': {
+    intro: './assets/events/duel-arena-event.webp',
+    epilogue: './assets/events/duel-arena-quest.webp',
+  },
+  'silver-shield-exhibition': {
+    intro: './assets/events/silver-shield-exhibition-event.webp',
+    epilogue: './assets/events/silver-shield-exhibition-quest.webp',
   },
   tavern: {
     intro: './assets/title-tavern.png',
     epilogue: './assets/title-tavern.png',
   },
   overland: {
-    intro: './assets/exploration/overland-road/road-ridge-wide.png',
-    epilogue: './assets/exploration/overland-road/road-bridge-wide-night.png',
+    intro: './assets/exploration/overland-road/road-ridge-wide.webp',
+    epilogue: './assets/exploration/overland-road/road-bridge-wide-night.webp',
   },
 };
 
@@ -258,6 +266,26 @@ const BIOME_PROFILE = {
     subtitle: '暗巷黑市 · 纪行',
     beams: 'soft',
     glow: 'radial-gradient(ellipse at 50% 50%, rgba(56, 168, 128, 0.22) 0%, rgba(168, 46, 62, 0.1) 42%, transparent 74%)',
+  },
+  'duel-arena': {
+    seal: '武',
+    sealColor: '#9b5c34',
+    moteTone: 'gold',
+    petalVariant: 'dawn',
+    cueGroup: 'castle',
+    subtitle: '大骑士竞技场 · 海选',
+    beams: 'bright',
+    glow: 'radial-gradient(ellipse at 52% 45%, rgba(214, 154, 78, 0.24) 0%, rgba(164, 96, 68, 0.1) 42%, transparent 74%)',
+  },
+  'silver-shield-exhibition': {
+    seal: '鸦',
+    sealColor: '#2d6a6e',
+    moteTone: 'gold',
+    petalVariant: 'emerald',
+    cueGroup: 'arcane',
+    subtitle: '白鸦展览馆 · 秘藏',
+    beams: 'soft',
+    glow: 'radial-gradient(ellipse at 50% 48%, rgba(86, 174, 168, 0.22) 0%, rgba(212, 180, 96, 0.1) 42%, transparent 74%)',
   },
 };
 

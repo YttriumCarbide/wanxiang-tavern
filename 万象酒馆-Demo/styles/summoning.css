@@ -6,12 +6,12 @@
   display: flex;
   gap: 14px;
   padding: 6px 14px 6px 10px;
-  border: 1px solid rgba(226, 186, 111, 0.42);
-  border-radius: 10px;
-  background: rgba(12, 25, 24, 0.88);
+  border: 1px solid rgba(226, 192, 120, 0.44);
+  border-radius: 4px;
+  background: linear-gradient(180deg, rgba(24, 31, 74, 0.92), rgba(10, 13, 32, 0.95));
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  color: #f2eee3;
+  color: var(--astral-text);
   box-shadow:
     0 8px 28px rgba(0, 0, 0, 0.65),
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
@@ -30,14 +30,14 @@
 }
 #inn-resources span {
   font-size: 9px;
-  color: #c0cebe;
+  color: var(--astral-sub);
 }
 #inn-resources strong {
   display: block;
   font:
     15px Georgia,
     serif;
-  color: #fce7ba;
+  color: var(--astral-gold-hi);
   margin-top: 2px;
 }
 .in-battle #inn-resources {
@@ -51,7 +51,7 @@
   margin: 0;
   padding: 0;
   background: transparent;
-  color: #ecdfbd;
+  color: var(--astral-gold-hi);
 }
 #summon-choice[hidden] {
   display: none;
@@ -65,8 +65,9 @@
   right: 30px;
   top: 80px;
   font-size: 20px;
-  background: #10231eaa;
-  border-color: #bca16b66;
+  background: var(--astral-card-bg);
+  border-color: rgba(226, 192, 120, 0.45);
+  color: var(--astral-gold-hi);
 }
 .summon-methods button {
   position: absolute;
@@ -80,8 +81,8 @@
   gap: 6px;
   padding: 6px 12px;
   border: 1px solid var(--summon-color, #8cd7b9);
-  border-radius: 12px;
-  background: rgba(14, 28, 25, 0.9);
+  border-radius: 4px;
+  background: rgba(16, 21, 52, 0.92);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   color: var(--summon-color, #8cd7b9);

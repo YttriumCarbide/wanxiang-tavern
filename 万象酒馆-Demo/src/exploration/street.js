@@ -10,7 +10,7 @@ import { createSceneVisitors } from '../tavern/visitor-scene.js';
 import { GUEST_RECRUITMENT } from '../recruitment.js';
 import { createWorldMap } from './world-map.js';
 import { createCityDirectory } from './city-directory.js';
-import { CITIES, cityForScene } from '../city-directory.js';
+import { cityForScene } from '../city-directory.js';
 import { createSceneEnvironment } from '../app/scene-environment.js';
 import { SILVER_CROWN_TAVERN } from '../content/silver-crown-scenes.js';
 
@@ -180,9 +180,6 @@ export async function createStreetView() {
   }
   if (parent !== window) document.documentElement.dataset.embedded = 'true';
   const citySubmapId = cityForScene(definition.id);
-  const cityVisitorBackdrop =
-    Object.hasOwn(CITIES[citySubmapId]?.places ?? {}, definition.id) &&
-    Object.keys(definition.illustration?.spots ?? {}).length > 0;
   const environment = createSceneEnvironment(document.body);
   const citySubmap = createCityDirectory({
     events,
@@ -247,7 +244,12 @@ export async function createStreetView() {
       invitationLocked = event.data.invitation === true;
       travelLocked = event.data.outing?.locked === true;
       document.body.classList.toggle('street-daily-outing', Boolean(event.data.outing));
-      talkButton.hidden = event.data.talkVisible !== true;
+      if (event.data.talkVisible === true && !leaving) {
+        document.body.classList.remove('leaving');
+        talkButton.hidden = false;
+      } else {
+        talkButton.hidden = true;
+      }
       worldMap.updateTravel(event.data.outing);
       worldMap.updateDiscoveries(event.data.discoveries);
       worldMap.updateWorldState({
@@ -257,6 +259,8 @@ export async function createStreetView() {
       });
       citySubmap.update({
         discoveries: event.data.discoveries,
+        clearedDungeons: event.data.clearedDungeons,
+        includeLockedDungeons: event.data.includeLockedDungeons === true,
         skirmishes: event.data.skirmishes,
         locked: travelLocked || invitationLocked,
       });
@@ -520,7 +524,7 @@ export async function createStreetView() {
     )
       return;
     // Hold the hover framing over a guest, not over the whole painted street.
-    if (cityVisitorBackdrop && visitors?.pick(event.clientX, event.clientY)) return;
+    if (visitors?.pick(event.clientX, event.clientY)) return;
     model?.hover?.((event.clientX / innerWidth - 0.5) * 2, (event.clientY / innerHeight - 0.5) * 2);
     needsRender = true;
   });
@@ -672,8 +676,8 @@ export async function createStreetView() {
     await model.setTime?.(timeOfDay);
     if (disposed) return { dispose };
     resize();
-    // City overviews hide scenery cutouts, not the independently placed visitors.
-    if (definition.visitors !== false && (!pureBackdrop || cityVisitorBackdrop)) {
+    // Pure-backdrop overviews stay scenic and do not spawn visitor portraits.
+    if (definition.visitors !== false && !pureBackdrop) {
       visitors = await createSceneVisitors({
         scene,
         camera,

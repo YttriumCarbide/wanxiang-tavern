@@ -45,7 +45,6 @@ export function characterGameReference(plan = null) {
     },
     appearanceTemplates: HEROES.map((hero) => ({
       id: hero.id,
-      title: hero.title,
       weapon: hero.weapon,
       note: '只提供战斗职业与色板参考；默认立绘按weapon与setting.gender选择，不绑定官设身份',
     })),

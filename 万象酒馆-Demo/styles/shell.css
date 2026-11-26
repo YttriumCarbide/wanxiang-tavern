@@ -103,10 +103,12 @@ iframe {
   left: 50%;
   transform: translate(-50%, 15px);
   opacity: 0;
-  border: 1px solid #c3a876;
-  color: #f0e3c7;
+  border: 1px solid rgba(226, 192, 120, 0.54);
+  background: linear-gradient(180deg, rgba(28, 36, 82, 0.95), rgba(11, 14, 34, 0.97));
+  color: var(--astral-gold-hi);
   padding: 12px 22px;
-  border-radius: 5px;
+  border-radius: 4px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.64);
   z-index: 40;
   transition:
     opacity 0.18s,
@@ -117,15 +119,17 @@ iframe {
   transform: translate(-50%, 0);
 }
 dialog {
-  border: 1px solid #929078;
-  border-radius: 7px;
+  border: 1px solid rgba(226, 192, 120, 0.48);
+  border-radius: 4px;
   padding: 32px;
-  color: var(--ink);
+  background: var(--astral-hatch), var(--astral-panel-bg);
+  color: var(--astral-text);
   max-width: min(780px, 92vw);
-  box-shadow: 0 20px 90px #0009;
+  box-shadow: var(--astral-frame-shadow);
 }
 dialog::backdrop {
-  backdrop-filter: blur(4px);
+  background: rgba(4, 5, 14, 0.78);
+  backdrop-filter: blur(6px);
 }
 dialog h2 {
   font:
@@ -134,6 +138,7 @@ dialog h2 {
     serif;
   margin: 12px 0 20px;
   letter-spacing: 2px;
+  color: var(--astral-gold-hi);
 }
 .dialog-close {
   position: absolute;
@@ -141,6 +146,7 @@ dialog h2 {
   top: 10px;
   background: transparent;
   border: 0;
+  color: var(--astral-gold-hi);
   font-size: 24px;
   padding: 0 7px;
 }
@@ -151,11 +157,11 @@ dialog h2 {
 }
 .rules-grid p {
   font-size: 12px;
-  color: #b2c2b6;
+  color: var(--astral-sub);
   line-height: 1.8;
 }
 .rules-grid b {
-  color: #dcc99d;
+  color: var(--astral-gold-hi);
   font-weight: 500;
 }
 @media (max-width: 1100px) {
@@ -408,7 +414,7 @@ dialog::backdrop {
   display: grid;
   gap: 5px;
   font-size: 11px;
-  color: #c9d5c1;
+  color: var(--astral-sub);
   margin: 15px 0;
 }
 #boss-options {
@@ -422,26 +428,32 @@ dialog::backdrop {
   gap: 12px;
   text-align: left;
   padding: 15px;
-  background: #27433488;
+  border: 1px solid rgba(226, 192, 120, 0.3);
+  border-radius: 3px;
+  background: var(--astral-card-bg);
+  color: var(--astral-text);
 }
 .boss-option.selected {
-  border-color: #e4c590;
-  background: #667a4544;
+  border-color: var(--astral-gold-hi);
+  background: linear-gradient(135deg, rgba(56, 70, 148, 0.82), rgba(20, 26, 62, 0.94));
+  box-shadow: inset 3px 0 var(--astral-gold-hi);
 }
 .boss-option img {
   width: 70px;
   height: 105px;
   object-fit: cover;
+  border-radius: 2px;
 }
 .boss-option strong {
   font-size: 17px;
   display: block;
   margin: 7px 0 10px;
+  color: var(--astral-gold-hi);
 }
 .boss-option small {
   font-size: 10px;
   line-height: 1.9;
-  color: #c6d7bf;
+  color: var(--astral-sub);
 }
 #encounter-label {
   font-size: 11px;

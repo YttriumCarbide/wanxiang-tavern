@@ -114,7 +114,7 @@ export async function destinationPagerChecks({ browser, baseURL, output }) {
       assert(box.width >= 32 && box.height >= 32);
     }
   }
-  async function leftFooterActions(primarySelector, { withBackground = false } = {}) {
+  async function rightFooterActions(primarySelector, { withBackground = false } = {}) {
     const selectors = withBackground
       ? ['#destination-description', primarySelector]
       : [primarySelector];
@@ -138,13 +138,17 @@ export async function destinationPagerChecks({ browser, baseURL, output }) {
       assert(box.x >= bar.x && box.x + box.width <= bar.x + bar.width);
       assert(box.y >= bar.y && box.y + box.height <= bar.y + bar.height);
     }
-    const [first, primary] = buttons;
-    assert(first.x - bar.x <= 16, 'The action group anchors to the lower-left');
+    const primary = buttons[buttons.length - 1];
+    assert(
+      bar.x + bar.width - (primary.x + primary.width) <= 16,
+      'The primary action anchors to the lower-right',
+    );
     if (withBackground) {
-      const gap = primary.x - (first.x + first.width);
-      assert(gap >= 0 && gap <= 16, 'The primary action stays beside the background on the left');
+      const background = buttons[0];
+      const gap = primary.x - (background.x + background.width);
+      assert(gap >= 0 && gap <= 16, 'The world background button precedes the primary action');
       assert(
-        Math.abs(first.y + first.height / 2 - (primary.y + primary.height / 2)) < 4,
+        Math.abs(primary.y + primary.height / 2 - (background.y + background.height / 2)) < 4,
         'World background and primary action stay on one row',
       );
     }
@@ -191,7 +195,7 @@ export async function destinationPagerChecks({ browser, baseURL, output }) {
       !(await page.locator('#destination-description').isVisible()),
       'Short lore stays hidden',
     );
-    await leftFooterActions('#destination-region-confirm');
+    await rightFooterActions('#destination-region-confirm');
     const before = await page.evaluate(() => demo.getExploration());
     await expandMap();
     assert.equal(await page.locator('[data-map-node] em').first().textContent(), '1');
@@ -541,11 +545,11 @@ export async function destinationPagerChecks({ browser, baseURL, output }) {
     ]) {
       await page.setViewportSize(viewport);
       await centeredWindow();
-      await leftFooterActions(confirm, { withBackground: true });
+      await rightFooterActions(confirm, { withBackground: true });
       await readBlackMarketBackground();
       await page.locator(confirm).click();
       await page.locator('#destination-dialog[data-stage="route"]').waitFor();
-      await leftFooterActions('#destination-start', { withBackground: true });
+      await rightFooterActions('#destination-start', { withBackground: true });
       assert.deepEqual(
         await page.locator('.destination-node-mark em').allTextContents(),
         expectedBlackMarketLabels,

@@ -93,6 +93,54 @@ const OFFICIAL_BASE_SPECIES = Object.freeze({
   chaosBadlandFalcon: '怪鸟',
 });
 
+// Reviewed official minions with a clear family but no matching standard base-species suffix.
+const OFFICIAL_CATEGORY_OVERRIDES = Object.freeze({
+  tideJelly: 'beast',
+  livingVine: 'beast',
+  twistedSapling: 'beast',
+  moonTendril: 'spirit',
+  millNettle: 'beast',
+  voidParasite: 'insect',
+  shellGatherer: 'insect',
+  moonMoth: 'insect',
+  bogLeech: 'insect',
+  honeyLarva: 'insect',
+  drillWorm: 'insect',
+  clingLarva: 'insect',
+  oreMite: 'insect',
+  drakeBadlandScorpion: 'insect',
+  aresCannonLeft: 'construct',
+  aresCannonRight: 'construct',
+  stoneBallista: 'construct',
+  millCanalFrog: 'beast',
+  millVolePup: 'beast',
+  millStrayCat: 'beast',
+  millDustBat: 'beast',
+  riftDarkDust: 'spirit',
+  ladderCarrionBat: 'beast',
+  ladderCliffLizard: 'beast',
+  banditBruiser: 'humanoid',
+  banditAlchemist: 'humanoid',
+  goblinScavenger: 'humanoid',
+  goblinSlinger: 'humanoid',
+  goblinSapper: 'humanoid',
+  erosionCrawler: 'beast',
+  erosionSpitter: 'beast',
+  erosionWing: 'beast',
+  arenaRetiarius: 'humanoid',
+  arenaBeastmaster: 'humanoid',
+  arenaHoplite: 'humanoid',
+  arenaQualifierStick: 'humanoid',
+  arenaQualifierSlinger: 'humanoid',
+  arenaQualifierStaff: 'humanoid',
+  arenaQualifierPitchfork: 'humanoid',
+  arenaQualifierNet: 'humanoid',
+  arenaQualifierSmith: 'humanoid',
+  arenaQualifierRam: 'beast',
+  syndicateMintChemist: 'humanoid',
+  syndicateVaultEnforcer: 'humanoid',
+});
+
 export const ENEMY_DISPLAY_NAME_OVERRIDES = Object.freeze({
   corridorGuard: '回廊魔像',
   ruinsMudGolem: '泥石魔像',
@@ -201,7 +249,14 @@ export function enemyTaxonomy({ id, baseSpecies, category }) {
     : baseSpecies;
   const speciesCategory = enemyCategoryForSpecies(species);
   if (speciesCategory) return { category: speciesCategory, baseSpecies: species };
-  return { category: isEnemyCategory(category) ? category : 'other' };
+  const officialCategory = OFFICIAL_CATEGORY_OVERRIDES[id];
+  return {
+    category: isEnemyCategory(officialCategory)
+      ? officialCategory
+      : isEnemyCategory(category)
+        ? category
+        : 'other',
+  };
 }
 
 export function applyEnemyTaxonomy(entry) {

@@ -6,6 +6,7 @@
 - `build_battlefield.py`：遗迹战场源模型，复用酒馆导出函数。
 - `build_forest.py`：古林源模型，复用酒馆导出函数和遗迹卡牌。
 - `build_realms.py`：霜晶矿窟、余烬铸坊、潮汐星殿、三只小怪与星潮Boss。
+- `build_early_enemies.py`：生成早期六只普通敌人及两只早期首领的体素源JSON与GLB，模型同时导出到 `万象异境-体素模型/早期敌人/`、模型根目录和Demo的 `assets/`；随后在Demo目录运行 `node tools/build-enemy-portraits.mjs`生成统一等距体素卡面。
 - `build_humanoid_enemies.py`：复用异境模型导出器，将人形敌人的共享体素数据导出为六套真实GLB。统一重建入口为在Demo目录执行 `node tools/build-humanoid-enemies.mjs`，此命令同时生成卡面、保留JSON源并调用该Python导出器，无需重建地图。
 - `build_arena_qualifiers.py`：海选赛独立入口，新增10小怪、10精英、6首领和铁臂教头霸主。用 `.venv\Scripts\python.exe build_arena_qualifiers.py` 重建；`--verify-only` 检查现有产物，`--only <slug>` 限定单个模型。方块源和GLB保存在 `万象异境-体素模型/首都内部竞技场/海选赛/`，霸主另存 `霸主非体素模型/`。小怪22–58块、精英60–110块、首领112–210块；霸主是朴素低面数关节模型，动作沿用七段标准命名。名册由 `src/content/arena-qualifier-roster.json` 提供，图鉴独立登记，不写入战斗遭遇。
 - `build_silver_crown_syndicate.py`：银冠黑市续集的独立入口。用 `.venv\Scripts\python.exe build_silver_crown_syndicate.py` 重建四只体素小怪、两只体素精英、白鸦公爵骨骼模型与七张 SVG 卡面。体素方块源保存在 `万象异境-体素模型/银冠黑市模型/`，霸主源模型保存在 `万象异境-体素模型/霸主非体素模型/`。`--verify-only` 校验现有导出，`--only <slug>` 限定为一只。

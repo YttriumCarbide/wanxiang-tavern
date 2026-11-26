@@ -1,4 +1,5 @@
 import { html } from '../shared/html.js';
+import { createDialogExit } from '../shared/dialog-exit.js';
 import { API_LABELS, CONNECTION_KINDS, missingSetup } from './first-run-rules.js';
 
 const DOWNLOADS = Object.freeze({
@@ -39,6 +40,8 @@ export function createFirstRun(context) {
 
   const wizard = document.createElement('dialog');
   wizard.id = 'setup-wizard';
+  const titleMotion = createDialogExit(title);
+  const wizardMotion = createDialogExit(wizard);
   wizard.setAttribute('aria-labelledby', 'wizard-title');
   wizard.innerHTML = html`<header class="wizard-head">
       <div>
@@ -260,16 +263,16 @@ export function createFirstRun(context) {
     describe();
     if (wizard.open) {
       switching = true;
-      wizard.close();
+      wizardMotion.close();
     }
     if (settings.open) settings.close();
     context.onboarding.open();
   }
   function open() {
-    if (!title.open) title.showModal();
+    titleMotion.show();
   }
   async function start() {
-    title.close();
+    titleMotion.close();
     if (
       session.ai.generationOptions.developerMode &&
       !session.ai.generationOptions.protagonistApi
@@ -286,7 +289,7 @@ export function createFirstRun(context) {
     }
     setWizardStep('mode');
     switching = false;
-    if (!wizard.open) wizard.showModal();
+    wizardMotion.show();
   }
   events.on(element('start-journey'), 'click', () => {
     void start().catch((failure) => {
@@ -306,7 +309,7 @@ export function createFirstRun(context) {
 
   function dismissWizard() {
     switching = false;
-    if (wizard.open) wizard.close();
+    wizardMotion.close();
     open();
   }
   events.on(element('wizard-close'), 'click', dismissWizard);
@@ -327,7 +330,7 @@ export function createFirstRun(context) {
     describe();
     if (wizard.open) {
       switching = true;
-      wizard.close();
+      wizardMotion.close();
     }
     await context.generation.open('', 'character');
   });
@@ -482,6 +485,8 @@ export function createFirstRun(context) {
       return completed;
     },
     resumed() {
+      titleMotion.clear();
+      wizardMotion.clear();
       stage = null;
       describe();
       if (wizard.open) {
@@ -493,6 +498,8 @@ export function createFirstRun(context) {
       title.close();
     },
     dispose() {
+      titleMotion.clear();
+      wizardMotion.clear();
       title.remove();
       wizard.remove();
       intro.remove();

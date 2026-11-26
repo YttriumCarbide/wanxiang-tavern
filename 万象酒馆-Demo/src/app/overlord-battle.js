@@ -2,6 +2,7 @@ import { createOverlordReloadWatch } from './overlord-reload-watch.js';
 import { createEventScope } from '../shared/events.js';
 import { html } from '../shared/html.js';
 import { createPopoverSurface } from '../shared/top-layer.js';
+import { createDialogExit } from '../shared/dialog-exit.js';
 import { escapeText } from '../ui.js';
 import { APEP_ID, apepAttack, apepPlague } from '../apep-presentation.js';
 import {
@@ -14,6 +15,7 @@ import {
   OVERLORD_TUTORIALS,
   detectOverlordTutorialTrigger,
 } from '../content/overlord-tutorials.js';
+import { isTestScriptRecord } from '../memory.js';
 import { query as $, sleep } from './dom.js';
 
 const SEALED_TARGETS = Object.freeze([
@@ -54,6 +56,7 @@ export function createOverlordBattle(context) {
   let bombTriggered = false;
   let bombPausedAt = 0;
   let lastCriticalTickSec = -1;
+  let lastCounterBarkKey = '';
   const {
     readReloadWatch,
     writeReloadWatch,
@@ -67,13 +70,28 @@ export function createOverlordBattle(context) {
     currentOverlordDef,
     showLine,
     isDisposed: () => disposed,
+    isTestSession: isTestOverlordSession,
   });
+
+  function isTestOverlordSession() {
+    const exp = session.journey?.expedition;
+    return Boolean(
+      exp?.exploration?.quickTestBoss ||
+      ['apep-vfx-test', 'animation-fixture'].includes(exp?.id) ||
+      isTestScriptRecord(session.ai?.activeScript),
+    );
+  }
 
   const tutorialDialog = document.createElement('dialog');
   tutorialDialog.id = 'overlord-tutorial-dialog';
   tutorialDialog.className = 'overlord-tutorial-dialog';
   tutorialDialog.setAttribute('aria-labelledby', 'overlord-tutorial-title');
   document.body.append(tutorialDialog);
+  const tutorialMotion = createDialogExit(tutorialDialog);
+  events.on(tutorialDialog, 'cancel', (event) => {
+    event.preventDefault();
+    tutorialMotion.close();
+  });
   events.on(tutorialDialog, 'close', () => {
     if (!disposed) context.emblems?.check?.();
   });
@@ -611,7 +629,13 @@ export function createOverlordBattle(context) {
 
     const activeBoss = currentOverlordDef();
     if (active && activeBoss) {
-      armReloadWatch(activeBoss);
+      if (isTestOverlordSession()) {
+        clearReloadWatch();
+      } else {
+        armReloadWatch(activeBoss);
+      }
+    } else if (!active && session.runtime.mode !== 'battle') {
+      clearReloadWatch();
     } else if (state && ['victory', 'defeat'].includes(state.phase) && activeBoss) {
       clearReloadWatch();
     }
@@ -762,6 +786,22 @@ export function createOverlordBattle(context) {
         holdMs: 3200,
         interrupt: false,
       });
+    } else if (event.type === 'counter' && event.isOverlordCounter) {
+      const roundKey = `${battleKey()}:${event.actor}:${event.overlordCounterReason}`;
+      if (lastCounterBarkKey !== roundKey) {
+        lastCounterBarkKey = roundKey;
+        const counterLine =
+          event.overlordCounterReason === 'collected-reject'
+            ? pack.counterReject
+            : pack.counterNonWeakness;
+        if (counterLine) {
+          void showLine(actorName, counterLine, {
+            tone: 'enraged',
+            holdMs: 2500,
+            interrupt: false,
+          });
+        }
+      }
     } else if (bossBroken && pack.breakShatter) {
       void showLine(activeBoss.def.name, pack.breakShatter, {
         tone: 'party',
@@ -880,22 +920,21 @@ export function createOverlordBattle(context) {
         </button>
       </footer>
     </div>`;
-    const dismiss = () => {
-      if (tutorialDialog.open) tutorialDialog.close();
-    };
-    tutorialDialog.querySelector('#overlord-tutorial-close').onclick = dismiss;
-    tutorialDialog.querySelector('#overlord-tutorial-x').onclick = dismiss;
-    if (!tutorialDialog.open) tutorialDialog.showModal();
+    tutorialDialog.querySelector('#overlord-tutorial-close').onclick = tutorialMotion.close;
+    tutorialDialog.querySelector('#overlord-tutorial-x').onclick = tutorialMotion.close;
+    tutorialMotion.show();
     return true;
   }
 
-  function reset() {
+  function reset({ keepReloadWatch = false } = {}) {
     cancelReloadBark();
+    if (!keepReloadWatch) clearReloadWatch();
     cutsceneToken++;
     introPlayedKey = '';
     domainLockedRound = -1;
     lastCorruptBarkKey = '';
     bombPausedAt = 0;
+    tutorialMotion.clear();
     if (tutorialDialog.open) tutorialDialog.close();
     clearDialogue();
     disarmBombTimer({ resetKey: true });
@@ -940,7 +979,7 @@ export function createOverlordBattle(context) {
     dispose() {
       disposed = true;
       events.dispose();
-      reset();
+      reset({ keepReloadWatch: true });
       tutorialDialog.remove();
       cutsceneLayer.remove();
       dialogueBar.remove();

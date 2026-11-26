@@ -1,6 +1,12 @@
 import { NEGATIVE_STATUSES, statusStacks } from './status-rules.js';
 import { combatScale } from './combat-scale.js';
-import { createBreakWindow, resolveEnemyBreakProfile } from './octopath.js';
+import { DAMAGE_TYPE_IDS, damageTypeMeta, isDamageType } from './damage-types.js';
+import {
+  createBreakWindow,
+  partyAvailableDamageTypes,
+  pickIronCoachWeaknesses,
+  resolveEnemyBreakProfile,
+} from './octopath.js';
 
 function fnv1a(str) {
   let h = 2166136261;
@@ -87,6 +93,100 @@ export function lockHiddenWeapons(state, definitions) {
   return locked;
 }
 
+/** Sync White Crow's Collector Archive: top-1 damage type + Stage 2/3 random party attributes. */
+export function syncCollectorArchive(state, definitions) {
+  if (!state || state.phase === 'opening' || !(state.round >= 1) || state.phase !== 'plan') {
+    return [];
+  }
+  const round = state.round;
+  state.activeCollectorArchive ||= {};
+  state.collectorDamageByType ||= {};
+  const updated = [];
+  for (const id of state.enemyIds || []) {
+    if (!isAlive(state, id)) continue;
+    const def = definitions?.[id];
+    const mechanic = def?.collectorMechanic;
+    if (!mechanic) continue;
+    const existing = state.activeCollectorArchive[id];
+    if (existing && existing.round === round) {
+      updated.push({ actor: id, archive: structuredClone(existing) });
+      continue;
+    }
+    const unit = state.units[id];
+    const stage = unit.bossStage || (unit.enraged ? 2 : 1);
+    const dmgMap = state.collectorDamageByType[id] || {};
+    let topType = null;
+    let topDmg = 0;
+    for (const [dtype, amount] of Object.entries(dmgMap)) {
+      if (!isDamageType(dtype) || !(amount > 0)) continue;
+      if (amount > topDmg || (amount === topDmg && topType && dtype < topType)) {
+        topDmg = amount;
+        topType = dtype;
+      }
+    }
+    const extraRandomCount = stage === 2 ? 1 : stage >= 3 ? 2 : 0;
+    const collected = [];
+    if (topType) collected.push(topType);
+    const randomTypes = [];
+    if (extraRandomCount > 0) {
+      const candidates = DAMAGE_TYPE_IDS.filter((t) => !collected.includes(t));
+      const shuffled = deterministicShuffle(
+        candidates,
+        fnv1a(`${state.seed ?? 37}:${round}:${stage}:${id}:collector`),
+      );
+      for (const pick of shuffled) {
+        if (randomTypes.length >= extraRandomCount || collected.length >= 3) break;
+        collected.push(pick);
+        randomTypes.push(pick);
+      }
+    }
+    const stored = { round, topType, randomTypes, collected };
+    state.activeCollectorArchive[id] = stored;
+    state.collectorDamageByType[id] = {};
+    unit.collectorArchivedTypes = [...collected];
+    if (unit.breakWindow?.mode === 'collector') {
+      unit.breakWindow.collectedTypes = [...collected];
+    }
+    updated.push({ actor: id, archive: structuredClone(stored) });
+  }
+  return updated;
+}
+
+/** Keep Iron Coach Stage 2 majorWeakness reachable by living front-row heroes after formation swaps. */
+export function refreshIronCoachFrontWeakness(state, definitions, log = null) {
+  if (!state || state.phase === 'opening') return;
+  for (const id of state.enemyIds || []) {
+    if (!isAlive(state, id)) continue;
+    const def = definitions?.[id];
+    const unit = state.units[id];
+    if (!def?.ironCoachMechanic || !unit || unit.broken || !unit.breakWindow?.active) continue;
+    const stage = unit.bossStage || (unit.enraged ? 2 : 1);
+    if (stage !== 2) continue;
+    const frontTypes = partyAvailableDamageTypes(state, definitions, { frontOnly: true });
+    if (frontTypes.includes(unit.breakWindow.majorWeakness)) continue;
+    const picked = pickIronCoachWeaknesses(
+      state,
+      definitions,
+      def,
+      2,
+      `:${(state.formation || []).slice(0, 3).join(',')}`,
+      unit.coachUsedMajorWeaknesses || [],
+    );
+    unit.coachUsedMajorWeaknesses ||= [];
+    if (picked.majorWeakness && !unit.coachUsedMajorWeaknesses.includes(picked.majorWeakness)) {
+      unit.coachUsedMajorWeaknesses.push(picked.majorWeakness);
+    }
+    unit.breakWindow.majorWeakness = picked.majorWeakness;
+    unit.breakWindow.minorWeaknesses = [...picked.minorWeaknesses];
+    unit.weaknesses = [...picked.weaknesses];
+    if (log) {
+      log(
+        `${def.name || id}盯紧前场站位变动，大弱点切换为【${damageTypeMeta(picked.majorWeakness).name}】`,
+      );
+    }
+  }
+}
+
 export function createOverlordMechanics(state, definitions, ports) {
   function roundStart() {
     const locked = lockHiddenWeapons(state, definitions);
@@ -95,6 +195,7 @@ export function createOverlordMechanics(state, definitions, ports) {
         weapon: entry.weapon,
       });
     }
+    syncCollectorArchive(state, definitions);
   }
 
   function onAttackHit(actor, target, redirected = false) {
@@ -345,10 +446,108 @@ export function createOverlordMechanics(state, definitions, ports) {
     ports.log(`${def.name || actor} 召唤 ${template.name || summonId} ×${count}`);
   }
 
+  function incomingDamageModifier(targetId, damageType, damage, options = {}) {
+    if (
+      !isAlive(state, targetId) ||
+      options.generated ||
+      options.flat ||
+      !isDamageType(damageType)
+    ) {
+      return damage;
+    }
+    const def = definitions?.[targetId];
+    const unit = state.units?.[targetId];
+    if (!def?.collectorMechanic || !unit) return damage;
+    const collected =
+      state.activeCollectorArchive?.[targetId]?.collected || unit.breakWindow?.collectedTypes || [];
+    if (collected.includes(damageType)) {
+      const mult = def.collectorMechanic.rejectMultiplier ?? 0.6;
+      return Math.max(1, Math.round(damage * mult));
+    }
+    if (unit.breakWindow?.active && unit.breakWindow.mode === 'collector') {
+      const mult = def.collectorMechanic.appraiseMultiplier ?? 1.35;
+      return Math.max(damage + 1, Math.round(damage * mult));
+    }
+    return damage;
+  }
+
+  function recordIncomingDamage(targetId, damageType, amount) {
+    if (!isAlive(state, targetId) || !isDamageType(damageType) || !(amount > 0)) return;
+    const def = definitions?.[targetId];
+    if (!def?.collectorMechanic) return;
+    state.collectorDamageByType ||= {};
+    state.collectorDamageByType[targetId] ||= {};
+    state.collectorDamageByType[targetId][damageType] =
+      (state.collectorDamageByType[targetId][damageType] || 0) + amount;
+  }
+
+  function checkCounterOnHit(
+    actorId,
+    targetId,
+    damageType,
+    { generated = false, missed = false } = {},
+  ) {
+    if (generated || missed || !actorId || !targetId) return null;
+    if (!isAlive(state, actorId) || !isAlive(state, targetId)) return null;
+    const actorUnit = state.units?.[actorId];
+    const targetUnit = state.units?.[targetId];
+    if (!actorUnit || !targetUnit || actorUnit.side !== 'hero' || targetUnit.side !== 'enemy') {
+      return null;
+    }
+    if (targetUnit.broken || targetUnit.buffs?.bind || !isDamageType(damageType)) return null;
+    const def = definitions?.[targetId];
+    if (!def) return null;
+    const stage = targetUnit.bossStage || (targetUnit.enraged ? 2 : 1);
+
+    if (def.ironCoachMechanic && stage >= 2) {
+      const coach = def.ironCoachMechanic;
+      const weaknesses = targetUnit.breakWindow?.active
+        ? [
+            targetUnit.breakWindow.majorWeakness,
+            ...(targetUnit.breakWindow.minorWeaknesses || []),
+          ].filter(Boolean)
+        : targetUnit.weaknesses || [];
+      if (!weaknesses.includes(damageType)) {
+        return {
+          actor: targetId,
+          target: actorId,
+          name: coach.counterName || '教头截击',
+          damage: coach.counterDamageByPhase?.[stage - 1] ?? 10,
+          damageType: coach.counterDamageType || 'brawl',
+          clip: coach.counterClip || 'Normal_Attack',
+          reason: 'non-weakness',
+        };
+      }
+    }
+
+    if (def.collectorMechanic) {
+      const col = def.collectorMechanic;
+      const collected =
+        state.activeCollectorArchive?.[targetId]?.collected ||
+        targetUnit.breakWindow?.collectedTypes ||
+        [];
+      if (collected.includes(damageType)) {
+        return {
+          actor: targetId,
+          target: actorId,
+          name: col.counterName || '赝品拒收 · 以太点射',
+          damage: col.counterDamageByPhase?.[stage - 1] ?? 10,
+          damageType: col.counterDamageType || 'special-weapon',
+          clip: col.counterClip || 'Special_Attack',
+          reason: 'collected-reject',
+        };
+      }
+    }
+    return null;
+  }
+
   return {
     roundStart,
     onAttackHit,
     damageBonus,
+    incomingDamageModifier,
+    recordIncomingDamage,
+    checkCounterOnHit,
     onNegative,
     onBreak,
     roundEnd,

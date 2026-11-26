@@ -156,6 +156,31 @@ function worldLoadingChromeHtml(uid, initialIdx = 0) {
   `;
 }
 
+const generationSurfaces = new WeakMap();
+
+/** True only when a loading overlay is actually visible (not hidden or inside a hidden ancestor). */
+export function hasActiveLoadingOverlay(doc = document) {
+  if (!doc?.querySelectorAll) return false;
+  for (const el of doc.querySelectorAll(
+    '.world-loading-scene:not([hidden]):not(.complete), .scene-loading:not([hidden]):not(.complete)',
+  )) {
+    if (!el.closest('[hidden]')) return true;
+  }
+  return false;
+}
+
+/** Sync body.is-loading-overlay with live active loading screens and notify UI observers. */
+export function syncLoadingOverlayState(doc = document) {
+  if (!doc?.body) return false;
+  const active = hasActiveLoadingOverlay(doc);
+  const prev = doc.body.classList.contains('is-loading-overlay');
+  doc.body.classList.toggle('is-loading-overlay', active);
+  if (prev !== active) {
+    doc.dispatchEvent(new CustomEvent('wanxiang-loading-change', { detail: { active } }));
+  }
+  return active;
+}
+
 /** Populate a WorldLoadingScene chrome shell (reused by #generation-progress). */
 export function mountGenerationLoadingChrome(root) {
   if (!root || root.dataset.wlMounted === 'true') return;
@@ -197,6 +222,28 @@ export function syncGenerationLoadingChrome(root, titleText) {
   const destEl = root?.querySelector('[data-wl-dest]');
   if (destEl && titleText) destEl.textContent = titleText;
   if (root) applyLoreIndex(root, (Number(root.dataset.loreIdx) || 0) + 1);
+}
+
+/** Show or hide #generation-progress while keeping it in the browser top layer above overlays. */
+export function setGenerationLoadingVisible(root, visible, titleText) {
+  if (!root) return;
+  let surface = generationSurfaces.get(root);
+  if (!surface) {
+    surface = createPopoverSurface(root);
+    generationSurfaces.set(root, surface);
+  }
+  if (visible) {
+    root.hidden = false;
+    syncGenerationLoadingChrome(root, titleText);
+    if (root.isConnected && !root.closest('[hidden]')) {
+      surface.hide();
+      surface.show();
+    }
+  } else {
+    surface.hide();
+    root.hidden = true;
+  }
+  syncLoadingOverlayState(root.ownerDocument || document);
 }
 
 /** Lightweight WorldLoadingScene overlay for non-WebGL transitions (e.g. world atlas iframe boot). */
@@ -257,6 +304,7 @@ export function createWorldLoadingOverlay(title = '正在展开世界地图') {
       element.classList.remove('complete');
       element.hidden = false;
       promote();
+      syncLoadingOverlayState(element.ownerDocument || document);
       clearInterval(rotateTimer);
       rotateTimer = setInterval(() => {
         if (!element.hidden) applyLoreIndex(element, (Number(element.dataset.loreIdx) || 0) + 1);
@@ -317,6 +365,7 @@ export function createWorldLoadingOverlay(title = '正在展开世界地图') {
         await new Promise((resolve) => setTimeout(resolve, holdMs));
         if (disposed) return;
         element.classList.add('complete');
+        syncLoadingOverlayState(element.ownerDocument || document);
         await element
           .animate([{ opacity: 1 }, { opacity: 0 }], {
             duration: fadeOutMs,
@@ -342,12 +391,14 @@ export function createWorldLoadingOverlay(title = '正在展开世界地图') {
       element.style.opacity = '';
       surface.hide();
       element.hidden = true;
+      syncLoadingOverlayState(element.ownerDocument || document);
     },
     dispose() {
       disposed = true;
       this.hide();
       element.removeEventListener('click', onClick);
       element.remove();
+      syncLoadingOverlayState(document);
     },
   };
 }
@@ -389,6 +440,9 @@ export function createSceneLoading(
 
   const dest = element.querySelector('[data-wl-dest]');
   if (dest) dest.textContent = title;
+  const surface = createPopoverSurface(element);
+  if (element.isConnected && !element.hidden && !element.closest('[hidden]')) surface.show();
+  syncLoadingOverlayState(element.ownerDocument || document);
   if (onReturn)
     element.querySelector('nav a:last-child').onclick = (event) => {
       event.preventDefault();
@@ -421,7 +475,9 @@ export function createSceneLoading(
 
   function cleanup() {
     clearInterval(rotateTimer);
+    surface.hide();
     element.removeEventListener('click', onLoreClick);
+    syncLoadingOverlayState(element.ownerDocument || document);
   }
 
   function progress(value, text) {
@@ -496,8 +552,10 @@ export function createSceneLoading(
       if (terminal) return;
       progress(100, '准备完成');
       element.classList.add('complete');
+      syncLoadingOverlayState(element.ownerDocument || document);
       await new Promise((resolve) => setTimeout(resolve, 180));
       if (!terminal) {
+        surface.hide();
         if (persistent) {
           element.hidden = true;
           element.classList.remove('complete');
@@ -505,6 +563,7 @@ export function createSceneLoading(
           cleanup();
           element.remove();
         }
+        syncLoadingOverlayState(element.ownerDocument || document);
       }
     },
     fail(error) {

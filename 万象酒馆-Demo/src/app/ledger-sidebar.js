@@ -1,6 +1,7 @@
 import { createEventScope } from '../shared/events.js';
 import { html } from '../shared/html.js';
 import { activeModal, createPopoverSurface } from '../shared/top-layer.js';
+import { hasActiveLoadingOverlay } from '../shared/scene-loading.js';
 import { developerOption } from '../generation-options.js';
 import { escapeText } from '../ui.js';
 import { query as $ } from './dom.js';
@@ -57,9 +58,10 @@ function moveWithAnchor(node, target) {
 }
 
 /** Move the original button into a fixed-size action tile. */
-function makeActionTile(grid, button) {
+function makeActionTile(grid, button, key = '') {
   const tile = document.createElement('div');
   tile.className = 'ledger-tile';
+  if (key) tile.dataset.tileKey = key;
   if (button) moveWithAnchor(button, tile);
   grid.append(tile);
   return { tile, button };
@@ -121,14 +123,12 @@ export function createLedgerSidebar(context) {
   const aiOpenBtn = $('#ai-open');
   installCornerIcons({ savesBtn, audioBtn, fullscreenBtn, aiBtn: aiOpenBtn });
 
-  for (const btn of [
-    returnTavern,
-    visitorRefresh,
-    savesBtn,
-    audioBtn,
-    fullscreenBtn,
-    aiOpenBtn,
-  ].filter(Boolean)) {
+  for (const btn of [returnTavern, visitorRefresh].filter(Boolean)) {
+    btn.dataset.cornerGroup = 'scene';
+    moveWithAnchor(btn, corner);
+  }
+  for (const btn of [savesBtn, audioBtn, fullscreenBtn, aiOpenBtn].filter(Boolean)) {
+    btn.dataset.cornerGroup = 'system';
     moveWithAnchor(btn, corner);
   }
   document.body.append(corner);
@@ -193,16 +193,7 @@ export function createLedgerSidebar(context) {
           <small>WANXIANG TAVERN · LEDGER</small>
           <span class="ledger-mode-tag" data-ledger-mode>酒馆大厅</span>
           <button id="ledger-close" class="ledger-return-btn" type="button" aria-label="关闭账簿">
-            <span>关闭</span>
-            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path
-                d="m9 6 6 6-6 6"
-                stroke="currentColor"
-                stroke-width="1.9"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-            </svg>
+            ×
           </button>
         </div>
         <div class="ledger-title-row">
@@ -225,13 +216,13 @@ export function createLedgerSidebar(context) {
           <p class="ledger-empty-note" data-ledger-live-empty>眼下暂无紧急待办或后台请求。</p>
         </section>
 
-        <section class="ledger-section" aria-label="经营与整备">
-          <h3 class="ledger-section-title">经营与整备</h3>
+        <section class="ledger-section" aria-label="队伍与经营">
+          <h3 class="ledger-section-title">队伍与经营</h3>
           <div class="ledger-grid" data-ledger-main-grid></div>
         </section>
 
-        <section class="ledger-section" aria-label="藏书与据点">
-          <h3 class="ledger-section-title">藏书与据点</h3>
+        <section class="ledger-section" aria-label="造物、贸易与世界">
+          <h3 class="ledger-section-title">造物、贸易与世界</h3>
           <div class="ledger-grid-compact" data-ledger-archive-grid></div>
         </section>
       </div>
@@ -267,12 +258,12 @@ export function createLedgerSidebar(context) {
 
   const mainGrid = host.querySelector('[data-ledger-main-grid]');
   const mainTiles = {
-    service: makeActionTile(mainGrid, serviceBtn),
-    dining: makeActionTile(mainGrid, mealBtn),
-    party: makeActionTile(mainGrid, $('#party-toggle')),
-    bag: makeActionTile(mainGrid, $('#inn-backpack-open')),
-    workshop: makeActionTile(mainGrid, $('#workshop-open')),
-    promotion: makeActionTile(mainGrid, promoBtn),
+    party: makeActionTile(mainGrid, $('#party-toggle'), 'party'),
+    bag: makeActionTile(mainGrid, $('#inn-backpack-open'), 'bag'),
+    service: makeActionTile(mainGrid, serviceBtn, 'service'),
+    dining: makeActionTile(mainGrid, mealBtn, 'dining'),
+    workshop: makeActionTile(mainGrid, $('#workshop-open'), 'workshop'),
+    promotion: makeActionTile(mainGrid, promoBtn, 'promotion'),
   };
 
   const bookshelfBtn = document.createElement('button');
@@ -309,12 +300,12 @@ export function createLedgerSidebar(context) {
   }
   host.append(hiddenActions);
   const archiveTiles = {
-    archives: makeActionTile(archiveGrid, $('#archives-open')),
-    shop: makeActionTile(archiveGrid, shopBtn),
-    condenser: makeActionTile(archiveGrid, condenserBtn),
-    emblem: makeActionTile(archiveGrid, emblemBtn),
-    atlas: makeActionTile(archiveGrid, atlasBtn),
-    guild: makeActionTile(archiveGrid, guildBtn),
+    condenser: makeActionTile(archiveGrid, condenserBtn, 'condenser'),
+    emblem: makeActionTile(archiveGrid, emblemBtn, 'emblem'),
+    shop: makeActionTile(archiveGrid, shopBtn, 'shop'),
+    guild: makeActionTile(archiveGrid, guildBtn, 'guild'),
+    atlas: makeActionTile(archiveGrid, atlasBtn, 'atlas'),
+    archives: makeActionTile(archiveGrid, $('#archives-open'), 'archives'),
   };
 
   const foot = host.querySelector('[data-ledger-foot]');
@@ -462,7 +453,8 @@ export function createLedgerSidebar(context) {
     }
 
     const theaterVisible = Boolean(document.querySelector('#chapter-theater:not([hidden])'));
-    const loadingVisible = Boolean(document.querySelector('.world-loading-scene:not([hidden])'));
+    const loadingVisible =
+      hasActiveLoadingOverlay(document) || document.body.classList.contains('inn-scene-loading');
     const baseVisible = !session.runtime.needsStart && !modal && !theaterVisible && !loadingVisible;
     const cityMapOpen = context.daily?.cityDirectoryOpen?.() === true;
     syncPreparationPortal(Boolean(preparation?.open));
@@ -999,6 +991,10 @@ export function createLedgerSidebar(context) {
     { capture: true },
   );
 
+  const isObservedLoadingNode = (node) =>
+    node instanceof Element &&
+    (node.classList?.contains('world-loading-scene') || node.classList?.contains('scene-loading'));
+
   const modalObserver = new MutationObserver((mutations) => {
     if (disposed) return;
     const relevant = mutations.some(
@@ -1006,9 +1002,9 @@ export function createLedgerSidebar(context) {
         (mutation.type === 'attributes' &&
           (mutation.target.nodeName === 'DIALOG' ||
             mutation.target.id === 'chapter-theater' ||
-            mutation.target.classList?.contains('world-loading-scene'))) ||
+            isObservedLoadingNode(mutation.target))) ||
         [...mutation.addedNodes, ...mutation.removedNodes].some(
-          (node) => node.nodeName === 'DIALOG',
+          (node) => node.nodeName === 'DIALOG' || isObservedLoadingNode(node),
         ),
     );
     if (relevant) sync();
@@ -1017,9 +1013,10 @@ export function createLedgerSidebar(context) {
     subtree: true,
     childList: true,
     attributes: true,
-    attributeFilter: ['open', 'hidden'],
+    attributeFilter: ['open', 'hidden', 'class'],
   });
   events.on(document, 'close', () => sync(), { capture: true });
+  events.on(document, 'wanxiang-loading-change', () => sync());
 
   sync(true);
 

@@ -35,8 +35,8 @@
   flex: 1 0 128px;
   overflow: hidden;
   background:
-    radial-gradient(ellipse 46% 70% at 50% 63%, #e8a35438, transparent 78%),
-    linear-gradient(180deg, transparent, #27150de8);
+    radial-gradient(ellipse 46% 70% at 50% 63%, rgba(226, 192, 120, 0.2), transparent 78%),
+    linear-gradient(180deg, transparent, rgba(11, 13, 31, 0.88));
 }
 .blacksmith-stage::before {
   content: '';

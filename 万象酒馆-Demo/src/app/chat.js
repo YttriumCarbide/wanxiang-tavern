@@ -20,19 +20,32 @@ export function createChat(context) {
   const { session, events } = context;
   const placeSelect = $('#chat-place-select');
   const localCharacters = () => context.daily?.chatCharacters() || [];
-  const conversationCharacters = () => [
-    ...localCharacters(),
-    ...library().characters.filter(
-      (member) => !localCharacters().some((npc) => npc.id === member.id),
-    ),
-  ];
-  const presentation = createChatPresentation(session, conversationCharacters);
   let place = 'table',
     activities = [],
     request = null,
     revision = 0;
   const state = () => session.ai.chat;
   const library = () => session.ai.library;
+  const rememberedParticipants = new Map();
+  function availableCharacters() {
+    const local = localCharacters();
+    return [
+      ...local,
+      ...library().characters.filter((member) => !local.some((npc) => npc.id === member.id)),
+    ];
+  }
+  const conversationCharacters = () => {
+    const available = availableCharacters();
+    const selected = new Set(state().selected || []);
+    for (const member of available)
+      if (selected.has(member.id)) rememberedParticipants.set(member.id, member);
+    const currentIds = new Set(available.map((member) => member.id));
+    const remembered = [...selected]
+      .map((id) => rememberedParticipants.get(id))
+      .filter((member) => member && !currentIds.has(member.id));
+    return [...available, ...remembered];
+  };
+  const presentation = createChatPresentation(session, conversationCharacters);
   const characters = () =>
     conversationCharacters().filter((member) => member.id !== library().campaign?.protagonistId);
   function interrupt() {
@@ -133,8 +146,10 @@ export function createChat(context) {
     if (context.daily?.allowTalk() === false || context.daily?.onInvitation()) return;
     const current = context.daily?.chatPlace();
     selectPlace(cityChatPlace(current) ? current : location);
-    if (actorId && characters().some((member) => member.id === actorId)) {
-      state().selected = [actorId];
+    const actor = actorId && characters().find((member) => member.id === actorId);
+    if (actor) {
+      rememberedParticipants.set(actor.id, actor);
+      state().selected = [...new Set([...(state().selected || []), actor.id])];
       state().selectionInitialized = true;
     }
     const available = new Set(characters().map((member) => member.id));
@@ -494,6 +509,10 @@ export function createChat(context) {
       ...state().selected.filter((id) => checked.includes(id)),
       ...checked.filter((id) => !previous.has(id)),
     ];
+    for (const id of previous)
+      if (!state().selected.includes(id)) rememberedParticipants.delete(id);
+    for (const member of availableCharacters())
+      if (state().selected.includes(member.id)) rememberedParticipants.set(member.id, member);
     context.gal.selection(state().selected);
     const removed = [...previous]
       .filter((id) => !state().selected.includes(id))
@@ -657,6 +676,7 @@ export function createChat(context) {
     state().selected = [];
     state().selectionInitialized = false;
     state().lastLocation = null;
+    rememberedParticipants.clear();
   }
   return {
     open,

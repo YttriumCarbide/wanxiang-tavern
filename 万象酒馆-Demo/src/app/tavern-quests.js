@@ -6,7 +6,7 @@ import {
   questRecruitmentReady,
 } from '../tavern-quests.js';
 import { GUILD_BOUNTIES, isBountyReadyToClaim, recordGuildCombatProgress } from '../guild.js';
-import { OUTING_SCENES } from '../daily.js';
+import { dailyDateTimeText, OUTING_SCENES } from '../daily.js';
 import { cityForScene } from '../city-directory.js';
 import { overlandOrigin, OVERLAND_STOPS } from '../overland-travel.js';
 import { ATLAS_PLACES } from '../content/atlas-geography.js';
@@ -15,7 +15,7 @@ import { archiveOverlandLoot } from '../archives.js';
 import { compileEquipmentDesign } from '../equipment-generation.js';
 import { grantEquipment } from '../equipment.js';
 import { gameTime } from '../memory.js';
-import { restoreGrowth } from '../growth.js';
+import { GROWTH_REVISION, restoreGrowth } from '../growth.js';
 import { UNKNOWN_CARD, UNKNOWN_STANDING } from '../portraits.js';
 import { activeModal, createPopoverSurface } from '../shared/top-layer.js';
 import { escapeText } from '../ui.js';
@@ -65,7 +65,9 @@ export function createTavernQuests(context) {
   let inspected = '';
   let returnFocusElement = null;
 
-  const active = () => journalQuests().filter(({ status }) => status === 'active');
+  const isMiscQuest = (quest) => quest?.type === 'misc' || quest?.isMisc === true;
+  const active = () =>
+    journalQuests().filter((quest) => !isMiscQuest(quest) && quest.status === 'active');
   const scene = () => context.daily?.scene() || 'tavern';
   const availableScenes = () => ({
     ...SCENES,
@@ -115,12 +117,57 @@ export function createTavernQuests(context) {
   }
 
   function current(entries = journalQuests()) {
-    const activeQuests = entries.filter(({ status }) => status === 'active');
+    const activeQuests = entries.filter(
+      (quest) => !isMiscQuest(quest) && quest.status === 'active',
+    );
     const tracked = activeQuests.find((quest) => quest.tracked === true);
     const optedOut =
-      entries.some((quest) => quest.tracked === false) &&
-      !entries.some((quest) => quest.tracked === true);
+      entries.some((quest) => !isMiscQuest(quest) && quest.tracked === false) &&
+      !entries.some((quest) => !isMiscQuest(quest) && quest.tracked === true);
     return tracked || (optedOut ? undefined : activeQuests[0]);
+  }
+
+  function buildMiscAggregate(entries = journalQuests()) {
+    const miscQuests = entries.filter(isMiscQuest);
+    if (!miscQuests.length) return null;
+    const subObjectives = miscQuests.flatMap((quest) => {
+      const items =
+        Array.isArray(quest.objectives) && quest.objectives.length
+          ? quest.objectives
+          : [
+              {
+                id: 'main',
+                label: quest.title,
+                location: questLocation(quest),
+                done: quest.status === 'completed',
+                tracked: Boolean(quest.tracked),
+              },
+            ];
+      return items.map((obj, index) => {
+        const done = Boolean(obj.done || obj.completed || quest.status === 'completed');
+        return {
+          questId: quest.id,
+          objId: obj.id || `misc-obj-${index + 1}`,
+          label: obj.label || obj.text || quest.title,
+          location: obj.location || questLocation(quest) || '',
+          done,
+          tracked: Boolean(obj.tracked) && !done,
+        };
+      });
+    });
+    const hasOpen = subObjectives.some((obj) => !obj.done);
+    const anyTracked = subObjectives.some((obj) => !obj.done && obj.tracked);
+    return {
+      id: '__misc__',
+      type: 'misc',
+      faction: 'misc',
+      isMiscAggregate: true,
+      title: '杂项',
+      description: '旅途中顺手记下的零散传闻、委托与待查小事。可单独勾选任意一条目标进行追踪。',
+      status: hasOpen ? 'active' : 'completed',
+      tracked: anyTracked,
+      subObjectives,
+    };
   }
 
   function setTrackedQuest(questId, persist = false) {
@@ -152,6 +199,88 @@ export function createTavernQuests(context) {
     }
     context.daily?.refresh();
     return true;
+  }
+
+  function toggleMiscObjective(questId, objId, focusKey) {
+    if (cityTradePending(context) || sessionRuntime.cityTrade === 'blocked') {
+      context.shell.toast('存档状态未就绪，暂时无法更改任务追踪。');
+      return;
+    }
+    const quests = library().tavernQuests;
+    const quest = quests.find(({ id }) => id === questId);
+    if (!quest || !isMiscQuest(quest) || quest.status === 'completed') return;
+    const hasObjectives = Array.isArray(quest.objectives) && quest.objectives.length > 0;
+    const snapshot = structuredClone(quest);
+    if (hasObjectives) {
+      const target = quest.objectives.find(
+        (obj, index) => (obj.id || `misc-obj-${index + 1}`) === objId,
+      );
+      if (!target || target.done || target.completed) return;
+      target.tracked = !target.tracked;
+      quest.tracked = quest.objectives.some((obj) => !obj.done && !obj.completed && obj.tracked);
+    } else if (objId === 'main') {
+      quest.tracked = !quest.tracked;
+    } else {
+      return;
+    }
+    try {
+      if (!context.generation.save({ refresh: false })) throw Error('任务追踪状态保存失败。');
+      context.daily?.refresh();
+    } catch (failure) {
+      Object.assign(quest, snapshot);
+      context.shell.toast(failure?.message || '任务追踪状态保存失败。');
+    }
+    if (dialog.open) render(focusKey);
+  }
+
+  function toggleMiscMaster(focusKey) {
+    if (cityTradePending(context) || sessionRuntime.cityTrade === 'blocked') {
+      context.shell.toast('存档状态未就绪，暂时无法更改任务追踪。');
+      return;
+    }
+    const quests = library().tavernQuests.filter(isMiscQuest);
+    if (!quests.length) return;
+    const snapshots = quests.map((quest) => [quest, structuredClone(quest)]);
+    const anyTracked = quests.some((quest) =>
+      Array.isArray(quest.objectives) && quest.objectives.length
+        ? quest.objectives.some((obj) => !obj.done && !obj.completed && obj.tracked)
+        : quest.status !== 'completed' && quest.tracked,
+    );
+    if (anyTracked) {
+      for (const quest of quests) {
+        quest.tracked = false;
+        if (Array.isArray(quest.objectives)) {
+          for (const obj of quest.objectives) obj.tracked = false;
+        }
+      }
+    } else {
+      let enabled = false;
+      for (const quest of quests) {
+        if (quest.status === 'completed') continue;
+        if (Array.isArray(quest.objectives) && quest.objectives.length) {
+          const openObj = quest.objectives.find((obj) => !obj.done && !obj.completed);
+          if (openObj) {
+            openObj.tracked = true;
+            quest.tracked = true;
+            enabled = true;
+            break;
+          }
+        } else {
+          quest.tracked = true;
+          enabled = true;
+          break;
+        }
+      }
+      if (!enabled) return;
+    }
+    try {
+      if (!context.generation.save({ refresh: false })) throw Error('任务追踪状态保存失败。');
+      context.daily?.refresh();
+    } catch (failure) {
+      for (const [quest, before] of snapshots) Object.assign(quest, before);
+      context.shell.toast(failure?.message || '任务追踪状态保存失败。');
+    }
+    if (dialog.open) render(focusKey);
   }
 
   function trackQuest(questId, focusKey) {
@@ -239,6 +368,7 @@ export function createTavernQuests(context) {
 
   function questObjectives(quest) {
     if (!quest) return [];
+    if (quest.isMiscAggregate) return quest.subObjectives || [];
     if (quest.type === 'bounty') {
       const label = GUILD_BOUNTIES.find((bounty) => bounty.id === quest.bountyId)?.objectiveLabel;
       return (quest.objectives || []).map((objective) => {
@@ -320,11 +450,14 @@ export function createTavernQuests(context) {
     const listTop = dialog.querySelector('.ow-quest-list')?.scrollTop || 0;
     const detailTop = dialog.querySelector('.skyrim-folio-col')?.scrollTop || 0;
     const quests = journalQuests();
-    const entries = [...quests].reverse();
+    const regularQuests = quests.filter((quest) => !isMiscQuest(quest));
+    const entries = [...regularQuests].reverse();
+    const miscEntry = buildMiscAggregate(quests);
     const tracked = current(quests);
     const groups = [
       { label: '进行中', entries: entries.filter(({ status }) => status === 'active') },
       { label: '待接取', entries: entries.filter(({ status }) => status === 'offered') },
+      ...(miscEntry ? [{ label: '杂项', isMisc: true, entries: [miscEntry] }] : []),
       {
         label: '已完成',
         archived: true,
@@ -335,10 +468,11 @@ export function createTavernQuests(context) {
     const selected = ordered.find(({ id }) => id === inspected) || tracked || ordered[0];
     inspected = selected?.id || '';
     dialog.innerHTML = renderQuestJournal({
+      currentDate: dailyDateTimeText(library().daily),
       groups,
       selected,
-      trackedId: tracked?.id,
-      location: selected ? questLocation(selected) : '',
+      trackedId: tracked?.id || (miscEntry?.tracked ? '__misc__' : ''),
+      location: selected && !selected.isMiscAggregate ? questLocation(selected) : '',
       objectives: questObjectives(selected),
       acceptDisabled: Boolean(pending || reading || sessionRuntime.mode !== 'inn'),
       accepting: Boolean(pending),
@@ -497,7 +631,11 @@ export function createTavernQuests(context) {
           member: {
             id: `quest-${quest.id}`,
             source: 'quest',
-            growth: restoreGrowth(null, `quest-${quest.id}`),
+            growth: restoreGrowth(
+              { level: normalized.level, xp: 0 },
+              `quest-${quest.id}`,
+              member.combat,
+            ),
             combat: { ...member.combat, id: `quest-${quest.id}`, emblemId: undefined },
             setting: member.setting,
           },
@@ -588,6 +726,21 @@ export function createTavernQuests(context) {
         if (questRecruitmentReady(owner, quest)) {
           if (owner.characters.length >= 100) throw Error('角色池已满');
           const member = quest.plan.member;
+          const targetLevel = Math.max(
+            member.growth?.level || 1,
+            quest.plan.level || quest.level || 1,
+          );
+          if (
+            !member.growth ||
+            member.growth.revision !== GROWTH_REVISION ||
+            member.growth.level !== targetLevel
+          ) {
+            member.growth = restoreGrowth(
+              { ...(member.growth || {}), level: targetLevel },
+              member.id,
+              member.combat,
+            );
+          }
           if (!owner.characters.some(({ id }) => id === member.id)) owner.characters.push(member);
           (owner.relationships ||= {})[member.id] = {
             affection: quest.affection || 0,
@@ -775,12 +928,29 @@ export function createTavernQuests(context) {
       dialog.close();
       return;
     }
-    const { questTrack, questClaim, questPick, questFolioPick, questSelect, questScroll } =
-      button.dataset;
+    const {
+      questTrack,
+      questClaim,
+      questPick,
+      questFolioPick,
+      questSelect,
+      questScroll,
+      questMiscQuest,
+      questMiscObj,
+    } = button.dataset;
+    if (questMiscQuest && questMiscObj) {
+      inspected = '__misc__';
+      toggleMiscObjective(questMiscQuest, questMiscObj, button.dataset.questFocus);
+      return;
+    }
     if (questTrack) {
       inspected = questTrack;
       const focusKey = button.dataset.questFocus || `row:${questTrack}`;
-      trackQuest(current()?.id === questTrack ? '' : questTrack, focusKey);
+      if (questTrack === '__misc__') {
+        toggleMiscMaster(focusKey);
+      } else {
+        trackQuest(current()?.id === questTrack ? '' : questTrack, focusKey);
+      }
       return;
     }
     if (questClaim || questPick) return claimBounty(questClaim || questPick);
@@ -790,6 +960,11 @@ export function createTavernQuests(context) {
       return;
     }
     if (questSelect) {
+      if (questSelect === '__misc__') {
+        if (inspected === '__misc__') toggleMiscMaster('row:__misc__');
+        else selectQuest('__misc__');
+        return;
+      }
       const selected = inspected === questSelect && button.closest('[data-status="active"]');
       if (selected) trackQuest(current()?.id === questSelect ? '' : questSelect);
       else selectQuest(questSelect);

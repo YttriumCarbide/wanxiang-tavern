@@ -99,6 +99,10 @@ test('NPC markers bind real assets and stable identities without changing offici
     galNpcPortrait({ galPortrait: 'girl', appearance: '男守卫' }),
     GAL_NPC_PORTRAITS.girl,
   );
+  assert.equal(
+    galNpcPortrait({ name: '罗德里斯陛下', title: '艾尔德兰国王' }),
+    GAL_NPC_PORTRAITS.kingRodris,
+  );
 });
 
 test('Gal reaction suffixes keep the speaker, NPC portrait and readable text independent', () => {
@@ -146,6 +150,11 @@ test('script and chat worldbooks describe conditional reactions in the existing 
     assert(rule.includes('`【对白:npc:姓名|立绘编号|hop】`'));
     for (const tag of GAL_REACTION_TAGS) assert(rule.includes('`' + tag + '`'), tag);
     assert(rule.includes('旁白、玩家对白、登退场/清场标记或 JSON 元数据'));
+    assert(entry.content.includes('【多人队伍聚焦与反端水】'));
+    assert.match(entry.content, /单幕焦点制（每幕限 2～3 人开口）/);
+    assert.match(entry.content, /舞台同屏人数控制：同屏最多 2～3 人/);
+    assert.match(entry.content, /严禁“全员反应接龙”/);
+    assert.match(entry.content, /双人深度推拉与连块发言/);
   }
 });
 test('Gal cadence accelerates energetic cues and pauses after hesitation punctuation', () => {

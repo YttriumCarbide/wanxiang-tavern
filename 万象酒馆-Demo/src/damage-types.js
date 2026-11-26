@@ -303,6 +303,8 @@ export const OFFICIAL_ACTOR_ATTACK_TYPES = Object.freeze({
   settlementLeader: 'brawl',
   ares: 'special-weapon',
   alchemicalPuppet: 'brawl',
+  arenaQualifierIronCoach: 'brawl',
+  silverCrownSyndicateArchon: 'sword',
 });
 
 export const OFFICIAL_SKILL_DAMAGE_TYPES = Object.freeze({

@@ -234,6 +234,8 @@ export function restoreLibrary(value) {
     )
       member.combat.customStanding = standing;
     delete member.setting.profession;
+    delete member.setting.title;
+    delete member.combat?.title;
     if (member.setting.worldbook)
       member.setting.worldbook = stripRetiredLore(member.setting.worldbook);
     const portrait = savedPortrait(customPortraits, member);
@@ -325,7 +327,7 @@ export function restoreLibrary(value) {
   const learnedSet = new Set(library.learnedSkills);
   for (const member of library.characters) {
     const saved = value.characters?.find((entry) => entry.id === member.id);
-    member.growth = restoreGrowth(saved?.growth, member.id);
+    member.growth = restoreGrowth(saved?.growth, member.id, member.combat);
     member.dcAttrs = normalizeDcAttrs(saved?.dcAttrs ?? member.dcAttrs, member);
     member.equippedSkills = restoreEquippedSkills(saved?.equippedSkills, learnedSet);
     if (Array.isArray(saved?.equipment))

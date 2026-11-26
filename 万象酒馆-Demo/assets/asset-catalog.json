@@ -206,8 +206,8 @@
       "hash": "f2a8f24b232cd53ec646cb048abfd0da66fe66f671704d3cc3b20cccd7aba71e"
     },
     "assets/black-market.glb": {
-      "bytes": 3594912,
-      "hash": "b90ee4da7598fac49017c7591e77d59f3ea81c3e6fb1c0c7b3ba618cc9461f55"
+      "bytes": 3578792,
+      "hash": "3590f7f1d77efadebf56e7176a179d5b0416d9a837aee57b463118ce6c74ad14"
     },
     "assets/bog-drifter.glb": {
       "bytes": 33196,
@@ -220,6 +220,14 @@
     "assets/bog-leech.glb": {
       "bytes": 35308,
       "hash": "acffef0b9ce82358d28b2afb199b4a4f41be4399b8345233d3861d058372eee1"
+    },
+    "assets/boss-bloom.glb": {
+      "bytes": 37844,
+      "hash": "8465993cc26c5007d7aa1dab678780252653f324d8bb706f45e547f4cdea168c"
+    },
+    "assets/boss-gate.glb": {
+      "bytes": 74740,
+      "hash": "a06bad568c2c9984f146c17a6209947222720782c356db8fbe432610754b43f1"
     },
     "assets/boss-tide.glb": {
       "bytes": 153364,
@@ -385,233 +393,249 @@
       "bytes": 66816,
       "hash": "fafb584100d87a2f7f8d014a6d152dccf12b8afba3e7a3a5a2abd7efee87cabc"
     },
-    "assets/events/arcane-event.png": {
-      "bytes": 2641555,
-      "hash": "ced9ace37cfd9573a85d8d7ef7d73dde08a0ff64bc5abeb85d993b2df6304f9f"
+    "assets/events/arcane-event.webp": {
+      "bytes": 240560,
+      "hash": "e649daa15adca070515ae980f2d0b649c0d83d4bb35986b1fc8ee6025350cd83"
     },
-    "assets/events/arcane-quest.png": {
-      "bytes": 2543787,
-      "hash": "9affa93f7f9d7c2fa134df8d7060eff3eabdf8b9795a623f9a6dafce6638d5ef"
+    "assets/events/arcane-quest.webp": {
+      "bytes": 230722,
+      "hash": "f4c2e6003d390b1b47e67e14758886d011ff54f04432113dd8dd66120d36f4bb"
     },
-    "assets/events/black-market-event.png": {
-      "bytes": 2655204,
-      "hash": "a0b6935cd20b5981cf2645d7270cb92429c4f41b162bb83a75e66165aa17ec24"
+    "assets/events/black-market-event.webp": {
+      "bytes": 269004,
+      "hash": "76238ae7c392be050a5623f538da5f343e52d6b06062182e4c0ac100fc22d0d9"
     },
-    "assets/events/black-market-quest.png": {
-      "bytes": 2924811,
-      "hash": "273924b1d8496ac2761bab5c449922318dec7b95aba95275cff457458c564ec4"
+    "assets/events/black-market-quest.webp": {
+      "bytes": 358676,
+      "hash": "10a4f24170c0a890b957a782a3468a985e5718dc86249b0f133a98e985f1d3b0"
     },
-    "assets/events/castle-event.png": {
-      "bytes": 2643376,
-      "hash": "985828756e6cc384db4b450c90ff59bdeb2698034aff84dcd1a9b543e926aff3"
+    "assets/events/castle-event.webp": {
+      "bytes": 239016,
+      "hash": "92e1e7b969c4923a75b38a9f9da2d67103e042c55531d7f4cb2601608085fb37"
     },
-    "assets/events/castle-quest.png": {
-      "bytes": 2833961,
-      "hash": "c31c3f88da9e9c1f67ef1cf641de4a16d0746113082c078678336c96f81da515"
+    "assets/events/castle-quest.webp": {
+      "bytes": 288616,
+      "hash": "445a11713f7dabc8431e6f346b366f9224573bf90bcb3d42004409b6ff753697"
     },
-    "assets/events/city-market-event.png": {
-      "bytes": 2470682,
-      "hash": "ce97a345d50aaf88e63d032ff7b0941713ee034e43d35cd8b218e02f2dd4f435"
+    "assets/events/city-market-event.webp": {
+      "bytes": 223134,
+      "hash": "8d1e229ffb344870995ce5952e9c4f7d15721426b134a0333af8775ac58be9a1"
     },
-    "assets/events/city-market-quest.png": {
-      "bytes": 2821211,
-      "hash": "68c9aaa2f60f075067c86692d33a20f19ea0c72c033ff77bdcb1a689bb461d16"
+    "assets/events/city-market-quest.webp": {
+      "bytes": 315744,
+      "hash": "cffe73f8a95a3cbc4d3b601fb26feeab77e57ca8253092de887ea38a2a479c9d"
     },
-    "assets/events/dynasty-event.png": {
-      "bytes": 2337238,
-      "hash": "7f56f143f11369f73fa9bb12a585d4101c06a90a9e723f3749df2adfe477bf78"
+    "assets/events/duel-arena-event.webp": {
+      "bytes": 174266,
+      "hash": "cf9927a226ea0933720224b7d4f14f47d22a0243a3f5f3cf478b517b80e04eb0"
     },
-    "assets/events/dynasty-quest.png": {
-      "bytes": 2759823,
-      "hash": "0e69d3d658eccb2e63fc85e60c6d7ad32fc0115e19e2bd39b8e6279204f82073"
+    "assets/events/duel-arena-quest.webp": {
+      "bytes": 251348,
+      "hash": "d671b247a59a84d548c694cb1768bb3eefdf85b0f3514daeb6b50a0781ce39f5"
     },
-    "assets/events/forest-event.png": {
-      "bytes": 3182025,
-      "hash": "c1404720969356ae51396b5096e0836438235480e60ed6bdb896b32ef0815c1f"
+    "assets/events/dynasty-event.webp": {
+      "bytes": 185190,
+      "hash": "78751cc31ecbf88455ec26d7c9d8a0b810761db7a3443729ad4f2b48323a0afc"
     },
-    "assets/events/forest-quest.png": {
-      "bytes": 3448689,
-      "hash": "b1a249a740c2f375f9bfbabea8be5bed7059ca7d5cb5dd46e8601e83502d0019"
+    "assets/events/dynasty-quest.webp": {
+      "bytes": 292372,
+      "hash": "13b137c2cb55c88557cc63d12a7ad880c81db9f9cb5360c3c2a21b5f56cf3adc"
     },
-    "assets/events/forge-event.png": {
-      "bytes": 2443933,
-      "hash": "103c4d5911825e9dec19c8977623d0f1f46accd0dbbe3c1a3565fef51afe4523"
+    "assets/events/forest-event.webp": {
+      "bytes": 379934,
+      "hash": "5e5cd43c6c7028d90f7db4d29c4842b87e292a1ed8ede40e9b8f021ebf73d52a"
     },
-    "assets/events/forge-quest.png": {
-      "bytes": 2649207,
-      "hash": "77651685a2c8b9285b1d424275154ad10068eee5790f45addfed5e0c1cd245b7"
+    "assets/events/forest-quest.webp": {
+      "bytes": 447442,
+      "hash": "14c16ccf8b2255be5c8023a526dafa85604a47c601663506bf7d07f0447a13ea"
     },
-    "assets/events/frost-event.png": {
-      "bytes": 2985891,
-      "hash": "579f41e4a41119bb1fbd03a643e1d8e643e9af733fe051a1a81fe72d3d29d21f"
+    "assets/events/forge-event.webp": {
+      "bytes": 239466,
+      "hash": "d2e793fe0765ecb3d8ff97fa84b53c5ab2da62f2d1f63e980a77adcf81098e20"
     },
-    "assets/events/frost-quest.png": {
-      "bytes": 3177796,
-      "hash": "3717da0548e44b02b93944798c6d04531637a1959ec03cca7fa4ee0b403b4837"
+    "assets/events/forge-quest.webp": {
+      "bytes": 289934,
+      "hash": "a7346a188f39150f5df91c6d8528a374e6ab0c78335cfc358ed472ad08d2423d"
     },
-    "assets/events/graystone-quarry-event.png": {
-      "bytes": 3234346,
-      "hash": "b161ccddbc0e6cfca0829f2adec3ef20395570ed124bc493f047963542b114c6"
+    "assets/events/frost-event.webp": {
+      "bytes": 331158,
+      "hash": "ea24b7bcb745c3ce350074bf6c39a3950a3e4b6a7be794773f1b14f05c33a1d1"
     },
-    "assets/events/graystone-quarry-quest.png": {
-      "bytes": 2828024,
-      "hash": "0ec074a8541ed078cada12f475a64e20f85f101249a495a30aa04959f4f0fee1"
+    "assets/events/frost-quest.webp": {
+      "bytes": 394704,
+      "hash": "b9f56c99d48526dea45e22c2169766a80c27fa0ae3204aaed22bfb7986dc9698"
     },
-    "assets/events/metropolis-event.png": {
-      "bytes": 2617264,
-      "hash": "430f109abd72810139867fce0bf2db76e923c8a7720dab0179015e6f7c69f7de"
+    "assets/events/graystone-quarry-event.webp": {
+      "bytes": 397712,
+      "hash": "de739fe2f52c17fea3e0a30a8838c4be60d03dc6614f042c8dc80e825060c1b6"
     },
-    "assets/events/metropolis-quest.png": {
-      "bytes": 2876183,
-      "hash": "bbad848ce8e1667c2258c44b4976f5d4a45330996bb4f8d9f9d73da2d9a4c765"
+    "assets/events/graystone-quarry-quest.webp": {
+      "bytes": 273728,
+      "hash": "0350a9f88dd9a842952719ac90fa1f2510ab936ce7081df156537307efeb4f5b"
     },
-    "assets/events/mill-event.png": {
-      "bytes": 3520228,
-      "hash": "246988fc5962ac0b6948443b90afb896988e3b4173216ebb25bfea491c29bb75"
+    "assets/events/metropolis-event.webp": {
+      "bytes": 249990,
+      "hash": "23e7a31404d5fd6ae87e05f8a60a2b07d69cc2217b6929a7b17d94b159922931"
     },
-    "assets/events/mill-quest.png": {
-      "bytes": 3179489,
-      "hash": "1d5a3af9b7c6af624a095ee8067aa2fb02166c2156988b8f7e7735121c7d1787"
+    "assets/events/metropolis-quest.webp": {
+      "bytes": 317208,
+      "hash": "da92a0f4bbccde0092712b9672aecbf55259d0a5d3af13f1ffe503c6c94919a2"
     },
-    "assets/events/nexus-event.png": {
-      "bytes": 2440932,
-      "hash": "359afd4f897840a6f81a68fbcf3632380e7d269c9c9d7109b0cc219e113b5f25"
+    "assets/events/mill-event.webp": {
+      "bytes": 463990,
+      "hash": "cc486752c98fb9bd0fa1ee5ff41f5b2a2e28180c5d39fd842f72977c8b61e9de"
     },
-    "assets/events/nexus-quest.png": {
-      "bytes": 2445102,
-      "hash": "68e17162033098b5080e5136969e3179fc1614e7f81890577635b289a6ca014a"
+    "assets/events/mill-quest.webp": {
+      "bytes": 386422,
+      "hash": "32952ce587955d14e861f683ae219849c43dc3537a07571202aaa6869ffc2651"
     },
-    "assets/events/relic-event.png": {
-      "bytes": 2643165,
-      "hash": "e3b870071bdc9f57eac25aa7719c75fb7bdf77e175f42e8236ad31ec2e21afa6"
+    "assets/events/nexus-event.webp": {
+      "bytes": 187692,
+      "hash": "8243d2fb1395760a97903f64e2638c80f61260762bfe8892a1aef8796b85be54"
     },
-    "assets/events/relic-quest.png": {
-      "bytes": 2611740,
-      "hash": "1780f4b2c8dc816ee5164bd11a45b3e275708b25b4e12e041059f8d169debb97"
+    "assets/events/nexus-quest.webp": {
+      "bytes": 213902,
+      "hash": "da7ff454d9c5e24388d81192753c958ff1ce0a163a48ea07cfc1c4132fa2039f"
     },
-    "assets/events/ruins-event.png": {
-      "bytes": 2377122,
-      "hash": "ee4627eb2ea3b9b0a2ea370c10c5846d9f7cee6a16d45dae0d1429eaec743c01"
+    "assets/events/relic-event.webp": {
+      "bytes": 227562,
+      "hash": "15b8aa28de663ea6f750bf04c53b330ebe78f43688237452479c095f1645e6aa"
     },
-    "assets/events/ruins-quest.png": {
-      "bytes": 3011719,
-      "hash": "f65c746c95d5ba5d9197302beac6c61e2c11f5653dd23b551cd2e7b871823b25"
+    "assets/events/relic-quest.webp": {
+      "bytes": 237542,
+      "hash": "9c0daf2432c1a91a45ae11c872562e83aca586391762ba8c10ad5ea3013569d7"
     },
-    "assets/events/tide-event.png": {
-      "bytes": 2893611,
-      "hash": "0018307b45fb0959d7d47fbfd4a322d6aa5bba1ba92f9a5d46d6311393b9ba73"
+    "assets/events/ruins-event.webp": {
+      "bytes": 214774,
+      "hash": "f3c8e745ffbb6f73ba6274495a5694427f839799bfc7ed71f41a57fa86a74287"
     },
-    "assets/events/tide-quest.png": {
-      "bytes": 2968934,
-      "hash": "d7e140b6554ef68c8947756b3cea2d0c161debce58340a26f566da53126aa610"
+    "assets/events/ruins-quest.webp": {
+      "bytes": 338824,
+      "hash": "f83805262e9eab46031c07ba49e82ac7448acc2be0c7f3f1959f2e479fd55274"
     },
-    "assets/events/wasteland-event.png": {
-      "bytes": 2673814,
-      "hash": "ff1b3db8295e379cd3856e48902caa7ac083ed887eca57e7037f3769be738dff"
+    "assets/events/silver-shield-exhibition-event.webp": {
+      "bytes": 212238,
+      "hash": "4698ff5f605a93b170330b70f3f3df81b53df95901b62f601e90ec1baf0fc41f"
     },
-    "assets/events/wasteland-quest.png": {
-      "bytes": 2866895,
-      "hash": "99f45a904cfb38aad6a581163441f8b1fbb7aa4813dd8f96e79012de36f1b87d"
+    "assets/events/silver-shield-exhibition-quest.webp": {
+      "bytes": 316898,
+      "hash": "30bba56934e4a98bd19d2b44fcab06c717cbdfe0201e08ac975404f18c5972c9"
     },
-    "assets/events/xianxia-event.png": {
-      "bytes": 2964214,
-      "hash": "2d2c202794e66a2a9c6fd55326232ca9f214819a244c5029d5d1f331145be3ce"
+    "assets/events/tide-event.webp": {
+      "bytes": 317062,
+      "hash": "8b66030c9f450317308157228b5ffb5b14be0314c36e787e84608a6b7f85c558"
     },
-    "assets/events/xianxia-quest.png": {
-      "bytes": 3017076,
-      "hash": "3001eac0c1a10534f34ce89558e44dba83856530a22105f08ca6d5e541c1ab9d"
+    "assets/events/tide-quest.webp": {
+      "bytes": 322784,
+      "hash": "b9b3a6820008e3412f600a9370379a5b3746b543cde5628747e6a9e69c2fcfbc"
     },
-    "assets/exploration/city-backgrounds/eternal-city.png": {
-      "bytes": 3350382,
-      "hash": "7f11dbe9ae0de18c6e772b959a279da44431d742e3c108b5d1f7ba87d57b2677"
+    "assets/events/wasteland-event.webp": {
+      "bytes": 243808,
+      "hash": "328b524b291862025ac28bf32449905f664e9dd1584d2991a86308614aa5d921"
     },
-    "assets/exploration/city-backgrounds/silver-crown.png": {
-      "bytes": 3569633,
-      "hash": "3e4e22ff65231f37b23e7a3e247723c357d008790659fbbbdd4d0e65d218b02a"
+    "assets/events/wasteland-quest.webp": {
+      "bytes": 300644,
+      "hash": "936e05ea797749b7f2111be8431fab6c67a9ee137b666ca5fc475ce0ffd52ec0"
     },
-    "assets/exploration/city-backgrounds/starbell.png": {
-      "bytes": 3305049,
-      "hash": "1d61218f5ae3f7962c1511731df9e5ee01dd619708dc9f6c88a92d405c3e7641"
+    "assets/events/xianxia-event.webp": {
+      "bytes": 311338,
+      "hash": "a6266e3a58e4eed857e25827737710e89824d4a8d8099aabd7d57504b20646c7"
     },
-    "assets/exploration/city-center-back-v1.png": {
-      "bytes": 3504549,
-      "hash": "3403eccf9a2b83d2a10cd18ca2b72a5ab3ee516627d1befc542edcba6a0ddc44"
+    "assets/events/xianxia-quest.webp": {
+      "bytes": 333686,
+      "hash": "45691c5943f3f9d16b01e9d92bc3e1a8e88f9098609c96791e28a67d9dc5aa29"
     },
-    "assets/exploration/city-center-band-v1.png": {
-      "bytes": 3217588,
-      "hash": "3c35b494ca1b966ca08bc2d2fc60e61c983798267ae17fa25c05597d1c563b25"
+    "assets/exploration/city-backgrounds/eternal-city.webp": {
+      "bytes": 581750,
+      "hash": "5c7c67e3b01e8e73e113debb13cdfb085ddc5776664778bf53afe1c05f9d712f"
     },
-    "assets/exploration/city-center-front-v1.png": {
-      "bytes": 3201824,
-      "hash": "85f7f6f72e1463f2b4ea50e0275f32c9dfc7c880520dc901bd24a6ad8362e497"
+    "assets/exploration/city-backgrounds/silver-crown.webp": {
+      "bytes": 621942,
+      "hash": "e5974172ebe18429c33c95eab410e14d3d2314eb5c6e0b63067e779863a93896"
     },
-    "assets/exploration/city-center-left-v1.png": {
-      "bytes": 3259452,
-      "hash": "a6e06ff3485a53b01e8edbf2486585074ae925386808fe3c47fb47317abfe9ed"
+    "assets/exploration/city-backgrounds/starbell.webp": {
+      "bytes": 543892,
+      "hash": "fb62d40c7d908d877ee9fb994cc7bdcd6f7cce4c04532a0ef0190f52f3985d67"
     },
-    "assets/exploration/city-center-panorama-v1.png": {
-      "bytes": 3025962,
-      "hash": "8adc521a7083fdeea1befdd2a4ffa46a3104b1bd4c8f12ba2f0f0c1f96c31b27"
+    "assets/exploration/city-center-back-v1.webp": {
+      "bytes": 601032,
+      "hash": "943a803ea974d521182480707304dd9237dd44de379bbe14a4455fef1312a3a8"
     },
-    "assets/exploration/city-center-right-v1.png": {
-      "bytes": 3337068,
-      "hash": "041b033cf600523ada4edd66aa9efc816218eb3357948d4c92aa25bfad1a71d2"
+    "assets/exploration/city-center-band-v1.webp": {
+      "bytes": 557512,
+      "hash": "21fd5a0e733ad34d44cc84969a027d74ff876ae977f1395a310597a61cc36ba4"
     },
-    "assets/exploration/city-center-sign-v1.png": {
-      "bytes": 1661965,
-      "hash": "94a6c0afad2fff874f49238a809f60cb6156e032942649efe19a69123da144af"
+    "assets/exploration/city-center-front-v1.webp": {
+      "bytes": 515722,
+      "hash": "8b14d0b04872810cc4aa10cfcb8f099ae5d54d7164ad97b9f7621acfcc9103c9"
     },
-    "assets/exploration/eternal-city/eternal-academy.png": {
-      "bytes": 2493622,
-      "hash": "14cce8db81c4a8598cdfc5d6d02b535cef6c293dabda3b6fcd85cd18fb0108a7"
+    "assets/exploration/city-center-left-v1.webp": {
+      "bytes": 525392,
+      "hash": "eeb0fd59b2d28f68a5f120d89206a35856c7dc74ba357f8698cadbd682e0a1b8"
     },
-    "assets/exploration/eternal-city/eternal-archive.png": {
-      "bytes": 2268665,
-      "hash": "66b66c87ec3256b860e7ca0eb9543d4523c0160c9d836b22eff4d2c6b29f54bf"
+    "assets/exploration/city-center-panorama-v1.webp": {
+      "bytes": 483558,
+      "hash": "2dd43ac2e9886e6bdf67b7f4275ace6b68ed2a235a54989574cd3a1f7a7b50e9"
     },
-    "assets/exploration/eternal-city/eternal-arena.png": {
-      "bytes": 2371263,
-      "hash": "f04c59b857970da17ef84010b427d61734c343dc0c6b0bc2060ebaa4ef443dc2"
+    "assets/exploration/city-center-right-v1.webp": {
+      "bytes": 561514,
+      "hash": "cd9f9048549ba172900e29ca7c1c15355dd123eaf4704f3857f3cdcddbaff361"
     },
-    "assets/exploration/eternal-city/eternal-avenue-v2.png": {
-      "bytes": 2497051,
-      "hash": "b164fe8b9a489dd9d43c9dd4eb2c6b97d41b3d477ce8ab890fc4ef602ec74c0f"
+    "assets/exploration/city-center-sign-v1.webp": {
+      "bytes": 191566,
+      "hash": "5025174ff56fc1a8fc14949c8f5d627d3ac487cd0e90656ef35c62e5157b4e74"
     },
-    "assets/exploration/eternal-city/eternal-garden.png": {
-      "bytes": 2233474,
-      "hash": "1fba330347d52c02374ae22ebdb997a73f3ccb11d7cd681e276e7e8428261b02"
+    "assets/exploration/eternal-city/eternal-academy.webp": {
+      "bytes": 326464,
+      "hash": "23883dcea92f0ba48bed62a45d29018a8af3752c789f2fa3537d9b3c5047360c"
     },
-    "assets/exploration/eternal-city/eternal-garrison.png": {
-      "bytes": 2235648,
-      "hash": "00ee62dbe9db276883572943d698ecbe8ef94b48af82dcd81e483a3b91c2eeea"
+    "assets/exploration/eternal-city/eternal-archive.webp": {
+      "bytes": 298910,
+      "hash": "56f2e8b1da18edca9d79cd7684d767c0115d827fe546a724aae19128849ed41a"
     },
-    "assets/exploration/eternal-city/eternal-gate.png": {
-      "bytes": 2052323,
-      "hash": "16758cf8bd7f32a56deba8b68f6872ebbc1d11558b4260a82869c0387f92ae01"
+    "assets/exploration/eternal-city/eternal-arena.webp": {
+      "bytes": 310780,
+      "hash": "e033b894d66006a7b1e902360933685c8a3ed7e8c18499acac69422111f834a5"
     },
-    "assets/exploration/eternal-city/eternal-plaza.png": {
-      "bytes": 2286223,
-      "hash": "9f71e577de1546dd6f9cf976b8747c9085892b3d42c3acfc9623d5d8229a5bb3"
+    "assets/exploration/eternal-city/eternal-avenue-v2.webp": {
+      "bytes": 361752,
+      "hash": "a76340e95eefaee398a29c2cefee2d7dadefdd25c946ff3f935cd8d72a51c45e"
     },
-    "assets/exploration/eternal-city/eternal-quay.png": {
-      "bytes": 2490551,
-      "hash": "7ab6e667391248385edd80eb2e6c75efd1305769138cb9fac5c3b0ca46913131"
+    "assets/exploration/eternal-city/eternal-garden.webp": {
+      "bytes": 280156,
+      "hash": "7fb42bf76b9d65ff6900c0797775aa354511bfd7547b4b18706a36afe81119da"
     },
-    "assets/exploration/eternal-city/eternal-road-checkpoint.png": {
-      "bytes": 2128763,
-      "hash": "21e830888de251c1586be7cd9ce4d7d97674367cfc81ababf7156ad32b5d2c52"
+    "assets/exploration/eternal-city/eternal-garrison.webp": {
+      "bytes": 280380,
+      "hash": "d8ee261477184b760ccb1769bdb137ebcf505466b9ee44bf63c9d20099262a64"
     },
-    "assets/exploration/eternal-city/eternal-road-mill.png": {
-      "bytes": 2294495,
-      "hash": "d80d8afb6b0df3fe98dde8370366a7f22e07b3f02a4cfc574544efdc5f0d4196"
+    "assets/exploration/eternal-city/eternal-gate.webp": {
+      "bytes": 219384,
+      "hash": "5b299ddb0486155ac4d3d3ce1c7feb8266ccc897d3fd60d320ddafbd50cf39e1"
     },
-    "assets/exploration/eternal-city/eternal-road-orchard.png": {
-      "bytes": 2221143,
-      "hash": "5e5cd7d8798e493014a6b02a4061c06dcd31decf37190e0e86715ae54baae868"
+    "assets/exploration/eternal-city/eternal-plaza.webp": {
+      "bytes": 307914,
+      "hash": "5ff2ade5506003545dda9423edf3dc9a9519397564f62b6dd1c355471bdf29f9"
     },
-    "assets/exploration/eternal-city/eternal-temple.png": {
-      "bytes": 2263115,
-      "hash": "52394c4be55a2ecc941ac9168bdb2a36a5d052d19a041a6cda441131895ab662"
+    "assets/exploration/eternal-city/eternal-quay.webp": {
+      "bytes": 335048,
+      "hash": "d935ebb99bda89870d442476c637e154db54c69225e4a35f696e44573b049e29"
+    },
+    "assets/exploration/eternal-city/eternal-road-checkpoint.webp": {
+      "bytes": 236150,
+      "hash": "842f79a0282e31c760233537f0fab5e8774bd5b9af1c556ad22f208c547d5ffd"
+    },
+    "assets/exploration/eternal-city/eternal-road-mill.webp": {
+      "bytes": 296888,
+      "hash": "ad751f01b9dddd73f833420d8189f348695265f24ec78cb662ff23518ecec140"
+    },
+    "assets/exploration/eternal-city/eternal-road-orchard.webp": {
+      "bytes": 288234,
+      "hash": "5c25a694b081521ed03d27af3d92399caf3246bada943a096a5c3a061367fa76"
+    },
+    "assets/exploration/eternal-city/eternal-temple.webp": {
+      "bytes": 274274,
+      "hash": "480ad99122c0a7fc6e2b1d90b0d4b1ff30c88b15c7295bb5a7f25698aa675e91"
     },
     "assets/exploration/fansheng-atlas-wear.svg": {
       "bytes": 4829,
@@ -633,597 +657,597 @@
       "bytes": 570442,
       "hash": "e345e20f36c5cbba8236030f25c1255bbc90de7a6566284197d3916c2f647a7f"
     },
-    "assets/exploration/free-scenes-hd-v2/city-center/connected.png": {
-      "bytes": 12544727,
-      "hash": "542b5c6b493e39104b9c4b074ad55b77af36126b996e8d0fcde5817915ae2fdd"
-    },
-    "assets/exploration/free-scenes-hd-v2/city-center/reference-0.png": {
-      "bytes": 1452911,
-      "hash": "c92cd6d03367decb0bf9f09e87a33e8eb5ca76ae3cd360c87a61bbe0b8051715"
-    },
-    "assets/exploration/free-scenes-hd-v2/city-center/reference-1.png": {
-      "bytes": 1414596,
-      "hash": "014bd526039778f4de133ad937bf71bdd96a37ccffda50836d7ab528a88c9792"
-    },
-    "assets/exploration/free-scenes-hd-v2/city-center/reference-2.png": {
-      "bytes": 1421850,
-      "hash": "053347d66a02697d3a929a39c34328d13c2866f06a7602ba34ad9e97e585fc31"
-    },
-    "assets/exploration/free-scenes-hd-v2/city-center/reference-3.png": {
-      "bytes": 1479314,
-      "hash": "1240b2890c14b70e90fa108285d8b2f57a75cf408c28adbc09fc48b807a6d892"
-    },
-    "assets/exploration/free-scenes-hd-v2/city-center/tile-0.png": {
-      "bytes": 2407792,
-      "hash": "0f4a68ac7470c6a639a3e45006bf3b74b8a1c39837ba5c9937a3b1a78641d026"
-    },
-    "assets/exploration/free-scenes-hd-v2/city-center/tile-1.png": {
-      "bytes": 2250834,
-      "hash": "ac1c06e3fc9b429efc1d3a060815eb9c60540b97a906b71ec207818d648d8dc3"
-    },
-    "assets/exploration/free-scenes-hd-v2/city-center/tile-2.png": {
-      "bytes": 2316599,
-      "hash": "b1145baf55988a9f8eefba3078f5cc818e0621521cc962598688a0d44d836051"
-    },
-    "assets/exploration/free-scenes-hd-v2/city-center/tile-3.png": {
-      "bytes": 2325424,
-      "hash": "c5200304b5981207046343d602d39733061ceae62909cf544e7481dbfd26ad61"
-    },
-    "assets/exploration/free-scenes-hd-v2/market/connected.png": {
-      "bytes": 12988310,
-      "hash": "e40012a4b28534716d5da01556b80880870fca9f5ab91fd293abbe48e1da51e2"
-    },
-    "assets/exploration/free-scenes-hd-v2/market/reference-0.png": {
-      "bytes": 1493989,
-      "hash": "0c28b7c4bb55039381ad1eac01fbf8ecbfad5bdae98971ba2b864e03b43f514b"
-    },
-    "assets/exploration/free-scenes-hd-v2/market/reference-1.png": {
-      "bytes": 1493338,
-      "hash": "311e76d81c9b7d33f7916c61257077098f5b7491d5b71494fdef10c769060696"
-    },
-    "assets/exploration/free-scenes-hd-v2/market/reference-2.png": {
-      "bytes": 1502380,
-      "hash": "5bad82b5efa8af4ead263495a7d4d011c7f51c3412b2489347a50deee68bcc12"
-    },
-    "assets/exploration/free-scenes-hd-v2/market/reference-3.png": {
-      "bytes": 1519223,
-      "hash": "e886c1d3a6b226b239c1e499bb1d3257c0c344c4377060f31169da243ab2b8a4"
-    },
-    "assets/exploration/free-scenes-hd-v2/market/tile-0.png": {
-      "bytes": 2456418,
-      "hash": "f3f63007035b77c33a0db420190f184a88d8dbdf1d799a2799f796cbbeafd0a0"
-    },
-    "assets/exploration/free-scenes-hd-v2/market/tile-1.png": {
-      "bytes": 2456300,
-      "hash": "e690bc0071fe0c1e73c7aa3da6fce7d009c1b125885f872e87acc5123b9aaead"
-    },
-    "assets/exploration/free-scenes-hd-v2/market/tile-2.png": {
-      "bytes": 2433413,
-      "hash": "6889bd228f626454afa7ce473a94ec71ba1a04bcfd3b1bbccd7350b1c824a037"
-    },
-    "assets/exploration/free-scenes-hd-v2/market/tile-3.png": {
-      "bytes": 2416262,
-      "hash": "dda459263a765dbda6cd7f78d005886444d15c1feef7bcd59abec84a2a9cb154"
-    },
-    "assets/exploration/free-scenes-hd-v2/outskirts/connected.png": {
-      "bytes": 12997171,
-      "hash": "342cd959188ee6e6b97700ed13421c7c41796d9465099386519a5405b7cbcf17"
-    },
-    "assets/exploration/free-scenes-hd-v2/outskirts/reference-0.png": {
-      "bytes": 1446051,
-      "hash": "446a752c74ad69e91f79e882cf21de90c0e87fec34eece31d086af857f9cbd85"
-    },
-    "assets/exploration/free-scenes-hd-v2/outskirts/reference-1.png": {
-      "bytes": 1433838,
-      "hash": "0733d464e70b2b3cff789ced88bb09d254cb2720f3c0cd2ff6e5de003e9c45bf"
-    },
-    "assets/exploration/free-scenes-hd-v2/outskirts/reference-2.png": {
-      "bytes": 1403540,
-      "hash": "7a280b4b64a77396b99fea3d87de5e74c777e79b7a752dcc9125925aeb3ec33c"
-    },
-    "assets/exploration/free-scenes-hd-v2/outskirts/reference-3.png": {
-      "bytes": 1462708,
-      "hash": "4639060584e1e1ea1cb93eb0d51e9fa199d8167e342e3cb7dbafa1ed4241ec3b"
-    },
-    "assets/exploration/free-scenes-hd-v2/outskirts/tile-0.png": {
-      "bytes": 2539229,
-      "hash": "80e03f38971b5103d9cd3bdaa4aaaaf43dc1e216171bf6e1f92b0b7d04ab26a2"
-    },
-    "assets/exploration/free-scenes-hd-v2/outskirts/tile-1.png": {
-      "bytes": 2423789,
-      "hash": "00e1b68cdf8fa0520eda43ec4f309b09c4d85e900bf45df052ddeca378d1009f"
-    },
-    "assets/exploration/free-scenes-hd-v2/outskirts/tile-2.png": {
-      "bytes": 2389622,
-      "hash": "c55b33cb74cd43455c11d2aa8386ce930cada7b8ddc2200831a3ca60695a81a8"
-    },
-    "assets/exploration/free-scenes-hd-v2/outskirts/tile-3.png": {
-      "bytes": 2737807,
-      "hash": "87fffd45dba8b2278ecaf66097b56673372f74cdaee7e06f9254d742b8c7e4cb"
-    },
-    "assets/exploration/free-scenes-hd-v2/rampart/connected.png": {
-      "bytes": 12543020,
-      "hash": "09e0f840ddf229e59955da8a46b187270948cddccdac670b862bc68306d11584"
-    },
-    "assets/exploration/free-scenes-hd-v2/rampart/reference-0.png": {
-      "bytes": 1489724,
-      "hash": "6d464f443dbf605bc18fb8134d5fa776dbf261b201faa28a5987752444351196"
-    },
-    "assets/exploration/free-scenes-hd-v2/rampart/reference-1.png": {
-      "bytes": 1488384,
-      "hash": "f9a478c332a5f56c5ef67988bc8241098159ed2b8ed77952e7039afb07f14ffc"
-    },
-    "assets/exploration/free-scenes-hd-v2/rampart/reference-2.png": {
-      "bytes": 1476452,
-      "hash": "ece9840101378dd0f7601c0b71920d98e08360e1e80c80b0949219292b086dfb"
-    },
-    "assets/exploration/free-scenes-hd-v2/rampart/reference-3.png": {
-      "bytes": 1459866,
-      "hash": "dfe4da5a49afa739c22cb67c17cf077d39f45bd47e0862f3a6b305711cc665e5"
-    },
-    "assets/exploration/free-scenes-hd-v2/rampart/tile-0.png": {
-      "bytes": 2362652,
-      "hash": "0a41f22fa1ae597bf0611a955d99b731fe76fd05fc8e7beb7b187cb8be8e9fb9"
-    },
-    "assets/exploration/free-scenes-hd-v2/rampart/tile-1.png": {
-      "bytes": 2347864,
-      "hash": "9a7624cfdac634ae2feb45789863ecad970543fd348e455ce3631c22b68909c5"
-    },
-    "assets/exploration/free-scenes-hd-v2/rampart/tile-2.png": {
-      "bytes": 2315512,
-      "hash": "6e3d78bae531891fd0b74b5fbce78cbcdadc2e1961b80136b329579f7e6146ee"
-    },
-    "assets/exploration/free-scenes-hd-v2/rampart/tile-3.png": {
-      "bytes": 2283235,
-      "hash": "ed720948bc82950889f1fd0fb34ed0c0d3df6d60b625bb5b202c8c962bcabe97"
-    },
-    "assets/exploration/free-scenes-v1/city-center.png": {
-      "bytes": 3131456,
-      "hash": "29a4ade74887fd9e0e08beaffbcd43cee58e9df944de03d1e7097a386bb09b08"
-    },
-    "assets/exploration/free-scenes-v1/market.png": {
-      "bytes": 3610435,
-      "hash": "61f30f6d537ee91758a4dbf261d1815353a7fa3a950926ee473bdd1e0853be62"
-    },
-    "assets/exploration/free-scenes-v1/outskirts.png": {
-      "bytes": 3467766,
-      "hash": "765cefa7a7dc264afd4be4f180957636a6b6114f2094ae89eeb4617a14422c4d"
-    },
-    "assets/exploration/free-scenes-v1/rampart.png": {
-      "bytes": 3475648,
-      "hash": "fd6699553e4f8d4039f4a7565050a72b5886df9279f31d7b4cd67d9c351de984"
-    },
-    "assets/exploration/ground-cobble-v1.png": {
-      "bytes": 2810580,
-      "hash": "678b68e56731187cffc437290fbadedf3cc30cad72a89f547ecd2e4552df3e76"
-    },
-    "assets/exploration/ground-earth-v1.png": {
-      "bytes": 3042956,
-      "hash": "d4975c5fa85c69fa950fa4699663170c1e2eea744c07e06a789efb0c640c9123"
-    },
-    "assets/exploration/market-back-v2.png": {
-      "bytes": 2861386,
-      "hash": "df3983134e17220cff01bea8c6046edc3f36f1c786e6bdf406603dc084991507"
-    },
-    "assets/exploration/market-band-v1.png": {
-      "bytes": 3278419,
-      "hash": "a7c8ab97b6cf3d91020489a5e0a10d209800d9a9dc6b6fc3c237ea39ef4101dc"
-    },
-    "assets/exploration/market-front-v2.png": {
-      "bytes": 2790637,
-      "hash": "00cdd423716a16dbe6d8c0380b4a719df43de7d74615f493070d09a66e9df4e4"
-    },
-    "assets/exploration/market-left-v2.png": {
-      "bytes": 2921155,
-      "hash": "0acd1886d4bdde2d0a94aa39bf9bdbb28d0c73715426d19d54503f323f5713ad"
-    },
-    "assets/exploration/market-panorama-v2.png": {
-      "bytes": 3113121,
-      "hash": "0b76870b1a293c3102ef1f87767ebceae17728e31cb54e35a605a474d4d0a646"
-    },
-    "assets/exploration/market-right-v2.png": {
-      "bytes": 2925219,
-      "hash": "82c9211f20802058db29ce6d08cd5b50fff01788c5da5915ccb52aa773feeb82"
-    },
-    "assets/exploration/outskirts-back-v2.png": {
-      "bytes": 2906204,
-      "hash": "e212f80d14b47b01a556659e2e89c59c8252c0e35a29343693e37acb1821d65a"
-    },
-    "assets/exploration/outskirts-band-v1.png": {
-      "bytes": 3321007,
-      "hash": "04061c0bad8abd336847cf0c3fc70698be993d5c65dd033842dee76c2ae2d4af"
-    },
-    "assets/exploration/outskirts-band-v2.png": {
-      "bytes": 3151312,
-      "hash": "ee11b7a9b9cc0841033f495603392a014eef94ae5ba00b0ba1c382924b58bab6"
-    },
-    "assets/exploration/outskirts-front-v2.png": {
-      "bytes": 2761737,
-      "hash": "ca555a6ca50ce6d368019aabf184f70fb9774dba06b9f7bea318f435449b524f"
-    },
-    "assets/exploration/outskirts-left-v2.png": {
-      "bytes": 2887030,
-      "hash": "90802f243405ce734e61e059a1a6e061ceacacbfef10067f99c115dbd0db719c"
-    },
-    "assets/exploration/outskirts-panorama-v2.png": {
-      "bytes": 3042388,
-      "hash": "a6f8bb336f8682c2e1b6029f86122622be3fd9442c6952a574855ba077a82b5d"
-    },
-    "assets/exploration/outskirts-right-v2.png": {
-      "bytes": 2893648,
-      "hash": "40dbf92ae4d55b4d6ce70734126eeb65021675a7362a9aa989278dc58c4e0059"
-    },
-    "assets/exploration/overland-road/road-aqueduct-wide.png": {
-      "bytes": 3130187,
-      "hash": "212657ec729455f2d645bfcc8bc982b40a7d3ac8c3a783ee7a81be7ff0a76c20"
-    },
-    "assets/exploration/overland-road/road-aqueduct.png": {
-      "bytes": 3274790,
-      "hash": "bc48e8d81182e0b75ea388cfaa65e7917bfeee71f7ac4745855b74155515250d"
-    },
-    "assets/exploration/overland-road/road-bridge-two-way.png": {
-      "bytes": 3407434,
-      "hash": "d23304ce31fcbffd1a6942925ad1526cd0aa5996ba65a9c5f1cc560d2a3729ec"
-    },
-    "assets/exploration/overland-road/road-bridge-wide-night.png": {
-      "bytes": 2644594,
-      "hash": "8fe07b62968d7483ae8292e8f26c6aab288e97bef12f16a3edff1dac02964d69"
-    },
-    "assets/exploration/overland-road/road-bridge-wide.png": {
-      "bytes": 2824860,
-      "hash": "ee4f8110013057bc6f5e4320bcf11d915aca31a9170f4082415b328a9827103f"
-    },
-    "assets/exploration/overland-road/road-bridge.png": {
-      "bytes": 3247682,
-      "hash": "09e3ac080eefc251c1ba0d2088c0ada4043942ba3ef95b3d9efb9c390f1f87f6"
-    },
-    "assets/exploration/overland-road/road-capital-wide.png": {
-      "bytes": 3125074,
-      "hash": "6da0fbb14ad99b66ebb6b1e0bdd9e83bb7b921ede5d6e9948eedf2477877be74"
-    },
-    "assets/exploration/overland-road/road-capital.png": {
-      "bytes": 3040223,
-      "hash": "9b136c5244320796b249f0a8e90c7144fc9f2084f98ac56e9adfe72e83668607"
-    },
-    "assets/exploration/overland-road/road-causeway-wide.png": {
-      "bytes": 3283040,
-      "hash": "04d7bda1ef261ab6e042f24bb897632a12d931efaf5532bcbaf8569a94fb43c5"
-    },
-    "assets/exploration/overland-road/road-causeway.png": {
-      "bytes": 2780479,
-      "hash": "720cf271916c21df90cf6b26685113bef71840de18ceb2f2473ea2ef5c7aed98"
-    },
-    "assets/exploration/overland-road/road-downs-wide.png": {
-      "bytes": 3131838,
-      "hash": "8b57d1ab72003b93a67657c70891383672e5db415681e877d512c43ea0adc8f9"
-    },
-    "assets/exploration/overland-road/road-downs.png": {
-      "bytes": 3268414,
-      "hash": "aba68b82fda19af7498f48bfa0b8b5f258cb1db18e6eaa7ecd5c262a8e30e833"
-    },
-    "assets/exploration/overland-road/road-meadow-wide.png": {
-      "bytes": 3230197,
-      "hash": "470c36e1e3c04279579bccc1c081592398120b7f036eedb0704adefc1825b549"
-    },
-    "assets/exploration/overland-road/road-meadow.png": {
-      "bytes": 3106861,
-      "hash": "3f60b0349d1dcb4e9490f92cad935aac0c07f5034605742311b9de126c0a8688"
-    },
-    "assets/exploration/overland-road/road-orchard-two-way.png": {
-      "bytes": 3522715,
-      "hash": "b26fbd8d95804630c758438b7bf810f8effcbcb28e58157005ad82856f4653b3"
-    },
-    "assets/exploration/overland-road/road-orchard-wide.png": {
-      "bytes": 3025575,
-      "hash": "b2b0dcc5fb186af17bd6a6504bd76ec6e8634cf374aa74276f25ac6a23ac4197"
-    },
-    "assets/exploration/overland-road/road-orchard.png": {
-      "bytes": 3609650,
-      "hash": "714eb6530144ef21902c408eb6f0811d0a46edabb077acf2cef8e168acb7f60f"
-    },
-    "assets/exploration/overland-road/road-pines-wide.png": {
-      "bytes": 3505135,
-      "hash": "fa4ae6f5dee0b551fac2fdb2f9f89816e8547adf9f2dc83f646085b74bb2893d"
-    },
-    "assets/exploration/overland-road/road-pines.png": {
-      "bytes": 3595943,
-      "hash": "26fe0a492dfceb2fc4f0712337be64fd11594f7528217b7adb92b1dc60cf56d6"
-    },
-    "assets/exploration/overland-road/road-reeds-two-way.png": {
-      "bytes": 3293040,
-      "hash": "1f2185df6ff187280cafac752239ace63826230df723bb2bd36a4289596059c7"
-    },
-    "assets/exploration/overland-road/road-reeds-wide-night.png": {
-      "bytes": 2663265,
-      "hash": "becc29968148f87cefc5428c9d84f665a0e0c20d27314a4c8fd07b74abbca62c"
-    },
-    "assets/exploration/overland-road/road-reeds-wide.png": {
-      "bytes": 2826601,
-      "hash": "1a15452a5eacca1e880bf71036dab962bf9263e7714a61c2ad451cbbffe88c63"
-    },
-    "assets/exploration/overland-road/road-reeds.png": {
-      "bytes": 3267725,
-      "hash": "8d38fd9601ce79e2de2b69adec300c9f037a233922f763a6f9afc872b1192dce"
-    },
-    "assets/exploration/overland-road/road-ridge-wide.png": {
-      "bytes": 3377049,
-      "hash": "36da4aa9e4ef4e2aec11c26f31c53306d3a526a85233a75e2f31c9427f1f356a"
-    },
-    "assets/exploration/overland-road/road-ridge.png": {
-      "bytes": 3429514,
-      "hash": "53345b21b1ccf2576045ba9b23ef9e0101be11c3b7f27b5afb6ab10afbc4d946"
-    },
-    "assets/exploration/rampart-back-v2.png": {
-      "bytes": 3055611,
-      "hash": "24d69d903ac08122b7d8dbd60afc78b847e355f547ac9564940dc95ca6b5c7c1"
-    },
-    "assets/exploration/rampart-band-v1.png": {
-      "bytes": 3145860,
-      "hash": "3301e38428114477e41fb247c68c9b360c250e115cfe73acb550bf5cc1e449cd"
-    },
-    "assets/exploration/rampart-front-v2.png": {
-      "bytes": 2936714,
-      "hash": "064e7a754ca8de6ef34582d8a3b466decd8384b747f2ce635efd2811fddd0dcf"
-    },
-    "assets/exploration/rampart-left-v2.png": {
-      "bytes": 2907610,
-      "hash": "ce91655a734532ab2e76a8b7a6c85fe81fd93fdd2dd5c62bb9be55efa7677c96"
-    },
-    "assets/exploration/rampart-panorama-v2.png": {
-      "bytes": 3000837,
-      "hash": "0b06c79f6acf75f68b28afce3041cb0b13f7d1e39aab3477ff1159d2444ac2f0"
-    },
-    "assets/exploration/rampart-right-v2.png": {
-      "bytes": 2871196,
-      "hash": "a08b0456d800c1d0e9549ecd67150d8747972a2bb28632376e9eadc283c559d4"
-    },
-    "assets/exploration/silver-crown/crown-arcade-night.png": {
-      "bytes": 3209516,
-      "hash": "dfb70fa468ee75be3f54008431e475c6d43896c3a64a9bf4b7642690f056e4b9"
-    },
-    "assets/exploration/silver-crown/crown-arcade.png": {
-      "bytes": 3542263,
-      "hash": "b23643543a12b1e6d99447f694c5fad4411a5a7acfc2f351aa299b1cbd9da945"
-    },
-    "assets/exploration/silver-crown/crown-belvedere-night.png": {
-      "bytes": 3042348,
-      "hash": "3ffa953eaf2945bc259dca8cb98dcc7369a6de3e4580201d662126972bd03138"
-    },
-    "assets/exploration/silver-crown/crown-belvedere.png": {
-      "bytes": 3325046,
-      "hash": "4ce92a7e442edd6cf00c5982047624d6160b62747e05c65bcc6d981c4e7edd6c"
-    },
-    "assets/exploration/silver-crown/crown-canal-night.png": {
-      "bytes": 3035524,
-      "hash": "49885620cf2f50772de15008a3636834394c46b08d9efaa384ecf0614187e58b"
-    },
-    "assets/exploration/silver-crown/crown-canal.png": {
-      "bytes": 3390734,
-      "hash": "00d027fb5a19f2b7c9ab6f0a99d8a645239eb67ca6bed1b263d735ff946b83de"
-    },
-    "assets/exploration/silver-crown/crown-floodgate-night.png": {
-      "bytes": 2875813,
-      "hash": "2517d14fe1969419279358d4bf89488707d931bf19b55c484b924ac0e09818da"
-    },
-    "assets/exploration/silver-crown/crown-floodgate.png": {
-      "bytes": 3215094,
-      "hash": "e12f329409b59afbe3874f99b851f73c8b4d343626b9bdfdf73ca3a6882e7d09"
-    },
-    "assets/exploration/silver-crown/crown-gateward-night.png": {
-      "bytes": 2961823,
-      "hash": "24d39773b9ff264f7e29b3cfaa940d1d84fb3969f074ae078a24d0ff1be2950e"
-    },
-    "assets/exploration/silver-crown/crown-gateward.png": {
-      "bytes": 3435370,
-      "hash": "76281f964aa3cd560a86d5f4db60be9f792b257dc52b36fb34010dd0c3b07bda"
-    },
-    "assets/exploration/silver-crown/crown-ledger.png": {
-      "bytes": 2959424,
-      "hash": "0e6604d4a124b9e8066940751299851f83ba41ee3472e901f8dcf2c2ae7dcadb"
-    },
-    "assets/exploration/silver-crown/crown-map-room.png": {
-      "bytes": 3140216,
-      "hash": "f83487ea8473af2948fc2914c317c546f08f86896be9c09ec4d8116aecec1a8f"
-    },
-    "assets/exploration/silver-crown/crown-mint.png": {
-      "bytes": 3071410,
-      "hash": "52d56e135dc191243ba80c40c31ce0b86421c13defdf369f9fbc8f2ae2f09deb"
-    },
-    "assets/exploration/silver-crown/crown-promenade-night.png": {
-      "bytes": 2927240,
-      "hash": "8f4a184a3f2e0c58937980c2d91f86ad1f647fb94e7fd48cb503ed57a72119ce"
-    },
-    "assets/exploration/silver-crown/crown-promenade.png": {
-      "bytes": 3218469,
-      "hash": "ae75c65d719ae03b87b30ef08a29a770505bdbdb1b20b22cad78273ac0cc422f"
-    },
-    "assets/exploration/silver-crown/crown-tavern-door-night.png": {
-      "bytes": 2954824,
-      "hash": "3c28b0c186b5495a94e7d961641a82f32703b32c91e8cd74f11a0e45668c1a20"
-    },
-    "assets/exploration/silver-crown/crown-tavern-door.png": {
-      "bytes": 3341922,
-      "hash": "2ac02036b5eb54bc954f86e70a8a9e25afefe6e7fdec1d40ee44176341ca0743"
-    },
-    "assets/exploration/silver-crown/crown-terrace-night.png": {
-      "bytes": 2708012,
-      "hash": "670534d42923b6a0eb46ca9c8759cf2ce03415649466228e0788aa96c0a5e92c"
-    },
-    "assets/exploration/silver-crown/crown-terrace.png": {
-      "bytes": 3241736,
-      "hash": "817c327dfaee9de1c5bd7559cfdb3a91b332dc7570f132ef0f1929a4273a1c4f"
-    },
-    "assets/exploration/starlamp-band-v1.png": {
-      "bytes": 3209274,
-      "hash": "fab137724d1052141c3c64c12be58d17cfadb94f16c80affe8143243ba2b4dce"
-    },
-    "assets/exploration/starlamp-corner-back-v3.png": {
-      "bytes": 2468622,
-      "hash": "fc4fbce98b8345588f0404078b9d54402fea148efa0385ca1b3e746181c1fb4c"
-    },
-    "assets/exploration/starlamp-corner-front-v3.png": {
-      "bytes": 3281484,
-      "hash": "e32b034d6952a7ff91bf6384af35fa3a6b15896fc9c6bdcb9945e6c5ce649dc7"
-    },
-    "assets/exploration/starlamp-corner-front-v4.png": {
-      "bytes": 3109350,
-      "hash": "b9869c2f86ce8ab21779010528d2bce7379aa80fd8deb2faebaa5faf68e231ed"
-    },
-    "assets/exploration/starlamp-corner-front-v5.png": {
-      "bytes": 2955388,
-      "hash": "d8ec2af6623815e82c3a0c1b4666885d72b8869ba522d2d4ec1261097ac3f633"
-    },
-    "assets/exploration/starlamp-corner-left-v3.png": {
-      "bytes": 3408627,
-      "hash": "be510b58f2cbf4dd1e850c862889c880fba2799d3d0a1dbe62709dbe9de7c9b0"
-    },
-    "assets/exploration/starlamp-corner-left-v4.png": {
-      "bytes": 3150484,
-      "hash": "1122ce7582982d642580388b4f4c5df7133db1e4d2152e2dbacf3dd12ce13efe"
-    },
-    "assets/exploration/starlamp-corner-panorama-v2.png": {
-      "bytes": 2955651,
-      "hash": "9fb3060a127b3b761e7f209c241296611ee470d537af8c6479d967fa92f76a8f"
-    },
-    "assets/exploration/starlamp-corner-panorama-v3.png": {
-      "bytes": 2739089,
-      "hash": "5caad9592f1db64954c7249996195b88a31b5df4708c095a697e5c4328798152"
-    },
-    "assets/exploration/starlamp-corner-right-v3.png": {
-      "bytes": 3267728,
-      "hash": "a730e01e00ce9650b6a0f47f0a4b0bb2456be9bddab61db9ab406b8f870a1aa3"
-    },
-    "assets/exploration/starlamp-facades-v1.png": {
-      "bytes": 3354401,
-      "hash": "2bd9d7c8f6cb18080fce6977a415556dd3f4d7afee6580ede7b600607d369cdb"
-    },
-    "assets/exploration/starlamp-notice-v2.png": {
-      "bytes": 2298451,
-      "hash": "9db1ff218d71fc2ab8a89aa12438f445f7a15935e649777a5d8219919f5b91a8"
-    },
-    "assets/exploration/street-hd-v4/connected.png": {
-      "bytes": 12955123,
-      "hash": "a6e4e11ae707d15ef81970ad23eefb8230a44bd0702ae34c48225ed8af9f94f3"
-    },
-    "assets/exploration/street-hd-v4/tile-0.png": {
-      "bytes": 2453149,
-      "hash": "aebcba33d906703b6b7d8b2a1db6b571e9de63e60dcb4c3b94d0cb4b72b9deb4"
-    },
-    "assets/exploration/street-hd-v4/tile-1.png": {
-      "bytes": 2392634,
-      "hash": "ba1ef68656b3cc28cd9cc08b28d7117681ac9cf2172b668a9256abac1524718d"
-    },
-    "assets/exploration/street-hd-v4/tile-2.png": {
-      "bytes": 2322285,
-      "hash": "f909de6ad394809893c0897ef044ece07784d20dbc354af07254a110041a3d67"
-    },
-    "assets/exploration/street-hd-v4/tile-3.png": {
-      "bytes": 2420264,
-      "hash": "83b0303ddf48d3ac9c9c3eeaadfa2644c26bdc4611797010b646abd9354670d9"
-    },
-    "assets/exploration/street-illustrated/connected-v1.png": {
-      "bytes": 3572908,
-      "hash": "f4a42483e9b02a9da8ad9ddffc58fc2394b57056a8fdce7d6b96fd496caf1e71"
-    },
-    "assets/exploration/street-illustrated/courtyard.png": {
-      "bytes": 3334515,
-      "hash": "6875bae5a97aad70712f0a874fa320eb892a490ca85c1f6acea28a588675292d"
-    },
-    "assets/exploration/street-illustrated/entrance.png": {
-      "bytes": 3182262,
-      "hash": "d8bfe483333315122f08a63021e1e3bafe78897af8c8bedc91b02481aeab6fa6"
-    },
-    "assets/exploration/street-illustrated/street.png": {
-      "bytes": 3204889,
-      "hash": "baf4135ecf65d43b29f67c9be521688019053578efe0f77cdb491bed2e0bf8d8"
-    },
-    "assets/exploration/street-spatial/arch.png": {
-      "bytes": 2422025,
-      "hash": "1a28a11eea65f158db2783e9323bb5d05a26016d52e0e76991fcd0e86eacc050"
-    },
-    "assets/exploration/street-spatial/courtyard-fountain.png": {
-      "bytes": 2147924,
-      "hash": "4a0e74eb39042cafaa017ec0fe18c26609101c2e4d47507f749cfeb84cb67205"
-    },
-    "assets/exploration/street-spatial/distance.png": {
-      "bytes": 2844681,
-      "hash": "65a92593756a66432765c2c6e9a60dfd9ec2e0672913976eafb8994b3010f2ea"
-    },
-    "assets/exploration/street-spatial/far-street.png": {
-      "bytes": 3065502,
-      "hash": "2be50564764863ba5349837a0665ac58ae5a307998e61388822afde2152d64e9"
-    },
-    "assets/exploration/street-spatial/floor.png": {
-      "bytes": 2878518,
-      "hash": "ce581ffba0a1b5ebc2dc3ac90a69394627905adfbf8aabab0e80a3b958e1b63f"
-    },
-    "assets/exploration/street-spatial/houses.png": {
-      "bytes": 3064164,
-      "hash": "8675cde8b086d4b0edd947913866b3a0abc358beadda08bbd6ac454fb879a400"
-    },
-    "assets/exploration/street-spatial/pharmacy.png": {
-      "bytes": 2777994,
-      "hash": "f44bfbfbd733d3d8a30b709257fd08c041af081d5aa770a40720399732add4f0"
-    },
-    "assets/exploration/street-spatial/tavern.png": {
-      "bytes": 3091105,
-      "hash": "e3b80d74f29c5797ea0d93f6e472b33e4851b57ffeb296db32f5e658800de69a"
-    },
-    "assets/exploration/town-night/city-center.png": {
-      "bytes": 2660444,
-      "hash": "2998191d5079fb28d0f833eae2bc7e75b453f4a229db4c3ee5c8fb7b42cb19db"
-    },
-    "assets/exploration/town-night/market.png": {
-      "bytes": 2840620,
-      "hash": "ec9c448a18f1917597f856e0c5e2172cb0624382c7cfccecd504099fc7d67bc8"
-    },
-    "assets/exploration/town-night/outskirts.png": {
-      "bytes": 2766102,
-      "hash": "47bfa312f791914d10288a4503a60d1177453f1275e38e57e82a19784a33c525"
-    },
-    "assets/exploration/town-night/rampart.png": {
-      "bytes": 2536041,
-      "hash": "4212fd0f3a504b99e359fc590e7b40d2370846da5fb193c041077a16a7f763a9"
-    },
-    "assets/exploration/town-night/street.png": {
-      "bytes": 2756195,
-      "hash": "9811e294a04f8171a663a7c18f92c3e073afa724ed1cb1ddcdd6508aa9e39dc0"
-    },
-    "assets/exploration/town-side-places/clock-archive.png": {
-      "bytes": 2698292,
-      "hash": "d0e339b917fa087966c654afa39a212eb8e0f190c3234140a7ca4bc345636c21"
-    },
-    "assets/exploration/town-side-places/clock-roof-night.png": {
-      "bytes": 2918042,
-      "hash": "a87f1096253376dca8163acf43617a7b9d6caff22a7c7b5d3f4d0fc9108aa9ac"
-    },
-    "assets/exploration/town-side-places/clock-roof.png": {
-      "bytes": 3051015,
-      "hash": "54a28cf80c4a162e5d9407d9f52db6c886c455de84af8c9bfd5e34420432e94d"
-    },
-    "assets/exploration/town-side-places/guard-room.png": {
-      "bytes": 2465689,
-      "hash": "55eda7e4dd5059ff3fca28628606f6a44d81e93d33941daed788009df7385f68"
-    },
-    "assets/exploration/town-side-places/lantern-workshop.png": {
-      "bytes": 2481902,
-      "hash": "cc2573cc6141cef9700d054989ee28572ca0e7c9a747ce1e6a1e27d2dc1b0492"
-    },
-    "assets/exploration/town-side-places/market-alley-night.png": {
-      "bytes": 2825130,
-      "hash": "9c6f95f70dbe28abbdd3ab290249d0caf91fbea326a561fbb96b2ea018260a40"
-    },
-    "assets/exploration/town-side-places/market-alley.png": {
-      "bytes": 2852144,
-      "hash": "719e93b21186775d6fb9fc7cb258a60a72ad41fe76c63f9ee7735427025fc26d"
-    },
-    "assets/exploration/town-side-places/riverbank-night.png": {
-      "bytes": 3346384,
-      "hash": "0503c27d6407b64d1339fb9f6094520f6c05dee954354329b129d068f3413743"
-    },
-    "assets/exploration/town-side-places/riverbank.png": {
-      "bytes": 3290547,
-      "hash": "0ef61a5c1654c91e0a28b92322af2f3d31a631506492e551243338f0f5a3fdc8"
+    "assets/exploration/free-scenes-hd-v2/city-center/connected.webp": {
+      "bytes": 900660,
+      "hash": "90e7eb9d5690a362a0fe5e84ff4c6c2fae1ad844eb91f06d02f02042a080e1a4"
+    },
+    "assets/exploration/free-scenes-hd-v2/city-center/reference-0.webp": {
+      "bytes": 176662,
+      "hash": "1d6af33f7c1971cba49fcfdae1bbca2aed9d4b71af117cad88e6281802fe23a9"
+    },
+    "assets/exploration/free-scenes-hd-v2/city-center/reference-1.webp": {
+      "bytes": 170762,
+      "hash": "0d678a7e5427638eb1e00d8d92bdacfafc3b6bda48dca5933a3717c8fe54b30c"
+    },
+    "assets/exploration/free-scenes-hd-v2/city-center/reference-2.webp": {
+      "bytes": 173390,
+      "hash": "96aeec2cb744f76af83655ab2da5f3424c26c063936922e258141d9dd029f88d"
+    },
+    "assets/exploration/free-scenes-hd-v2/city-center/reference-3.webp": {
+      "bytes": 198850,
+      "hash": "42e865fe15c1c0da9031db3e8b3da98c1d94862af9d65dfb108b6a22e732e109"
+    },
+    "assets/exploration/free-scenes-hd-v2/city-center/tile-0.webp": {
+      "bytes": 315494,
+      "hash": "a309b671f7f6a7a20ed7dbd8a39141cca096b6691c1efcf74f19c5a0878a1dc5"
+    },
+    "assets/exploration/free-scenes-hd-v2/city-center/tile-1.webp": {
+      "bytes": 280788,
+      "hash": "1163636466e4a68c4129ca576c7b45c76508b07a45565a6f071be1e53cc30a7f"
+    },
+    "assets/exploration/free-scenes-hd-v2/city-center/tile-2.webp": {
+      "bytes": 296584,
+      "hash": "4c148c0059a66179f9410533d8b15ea7fd6e10bce1b3810a79791a0c4fb11c32"
+    },
+    "assets/exploration/free-scenes-hd-v2/city-center/tile-3.webp": {
+      "bytes": 304380,
+      "hash": "6c4f855f8fbfea9c5b637b119d1d81c8dd7c751e03efdb7a3bfcbfa60d86c774"
+    },
+    "assets/exploration/free-scenes-hd-v2/market/connected.webp": {
+      "bytes": 951732,
+      "hash": "fcc5054bdc09e4c62f5a4bf3a5e5ccaa54e9080701597c79d7ffc8d750538692"
+    },
+    "assets/exploration/free-scenes-hd-v2/market/reference-0.webp": {
+      "bytes": 235880,
+      "hash": "2e6acaf11418dcf7f3a10c924ed57bdd8de6a1b2d0d01df2c94b0bc5be0698c0"
+    },
+    "assets/exploration/free-scenes-hd-v2/market/reference-1.webp": {
+      "bytes": 228424,
+      "hash": "c31fb418b692656878e930d0366d83cdac9330c5dff8870fc71a3a5fc3ca4efe"
+    },
+    "assets/exploration/free-scenes-hd-v2/market/reference-2.webp": {
+      "bytes": 238492,
+      "hash": "7c6d7a0d42b502a86c5dff0fcb240befabd28e637ddb2273e7b15e452f8d72e2"
+    },
+    "assets/exploration/free-scenes-hd-v2/market/reference-3.webp": {
+      "bytes": 246122,
+      "hash": "8370b5c2c33ecff3b5c85f916db1bdba196acb0e855f2fa15fbd5dff7d6fd264"
+    },
+    "assets/exploration/free-scenes-hd-v2/market/tile-0.webp": {
+      "bytes": 317824,
+      "hash": "b3cc63dc75596233673a4ab455ecd9708445abb75825b1e1c7b1a2d9c770dad2"
+    },
+    "assets/exploration/free-scenes-hd-v2/market/tile-1.webp": {
+      "bytes": 331660,
+      "hash": "2fd49f734cddc80a1853a3564381e7bcbdf06b6498652498fbdc97a59abd8df9"
+    },
+    "assets/exploration/free-scenes-hd-v2/market/tile-2.webp": {
+      "bytes": 309970,
+      "hash": "c77c8ab62a7ef3889a7613175c199a744d29ba4f13dc72523970339a11a4c437"
+    },
+    "assets/exploration/free-scenes-hd-v2/market/tile-3.webp": {
+      "bytes": 314302,
+      "hash": "bc7d95904fa3c84cf4b8965ec2c8b4a1dff8fc8a17419a9a18d1f18537a1893e"
+    },
+    "assets/exploration/free-scenes-hd-v2/outskirts/connected.webp": {
+      "bytes": 1044864,
+      "hash": "b672511fed71ab46abf471c56bebce62468838d4e28be07b47bb4b95dc4c2671"
+    },
+    "assets/exploration/free-scenes-hd-v2/outskirts/reference-0.webp": {
+      "bytes": 220862,
+      "hash": "ea0d979912aaf7b95a0a59cf053c8a31a954924597cd233691e92bec3d4b98d8"
+    },
+    "assets/exploration/free-scenes-hd-v2/outskirts/reference-1.webp": {
+      "bytes": 203752,
+      "hash": "a352ffe1d605f32ddf12099a1cdbaab39059d1b8d0d292a2ab4cfb1498f15b9b"
+    },
+    "assets/exploration/free-scenes-hd-v2/outskirts/reference-2.webp": {
+      "bytes": 193726,
+      "hash": "74ed8a911f61c80729faf3d058960bdd622807d44be0554c24b1b629bad02fd9"
+    },
+    "assets/exploration/free-scenes-hd-v2/outskirts/reference-3.webp": {
+      "bytes": 225566,
+      "hash": "173eb9f65cb861cba3958aedc576e86d23a8ad8e1ea2a6b047aab38d861d078e"
+    },
+    "assets/exploration/free-scenes-hd-v2/outskirts/tile-0.webp": {
+      "bytes": 353816,
+      "hash": "de1e33518c2fb42ddf0dc5ab1d55185ffd121b9bdad03ed9de5c3ce375c2499c"
+    },
+    "assets/exploration/free-scenes-hd-v2/outskirts/tile-1.webp": {
+      "bytes": 308436,
+      "hash": "345c95d6bf44011fa5994182f939fde44c2b09b1d35f4f57db26a261223a85c4"
+    },
+    "assets/exploration/free-scenes-hd-v2/outskirts/tile-2.webp": {
+      "bytes": 317440,
+      "hash": "336b571f85944e8a2d8ea88d4da6f871a666138cffbf52072dd0382a0a8000e5"
+    },
+    "assets/exploration/free-scenes-hd-v2/outskirts/tile-3.webp": {
+      "bytes": 402982,
+      "hash": "92e8102b502d1bc6443d68c3e2083630863b8431e4c09cee0c1a3c2a0908d3d8"
+    },
+    "assets/exploration/free-scenes-hd-v2/rampart/connected.webp": {
+      "bytes": 868528,
+      "hash": "3b8ef155103941e58dea38aad1f9c051408098f5cc36f7bbb7ec5cd5a8b65419"
+    },
+    "assets/exploration/free-scenes-hd-v2/rampart/reference-0.webp": {
+      "bytes": 228010,
+      "hash": "e104ede4da37843b69c9c1299cdd16c4c14019b3361a0638037e151b68c6278b"
+    },
+    "assets/exploration/free-scenes-hd-v2/rampart/reference-1.webp": {
+      "bytes": 220296,
+      "hash": "f8ecd7ccdfba6395c369c573844d4e8f3ca9c8b13b9dc16756837199d577c269"
+    },
+    "assets/exploration/free-scenes-hd-v2/rampart/reference-2.webp": {
+      "bytes": 214632,
+      "hash": "99afb40ce85dde0c8827c3242a7f0530eb0ee1649087c4c3278e85738ce0ed89"
+    },
+    "assets/exploration/free-scenes-hd-v2/rampart/reference-3.webp": {
+      "bytes": 213576,
+      "hash": "0be5a6d576beef6e281557685c0ac660d5eb55b7ab9d0d284b9fa164325f95c2"
+    },
+    "assets/exploration/free-scenes-hd-v2/rampart/tile-0.webp": {
+      "bytes": 300740,
+      "hash": "7145ecafc7b8de54062ccd6fbddc686619654de2f24b27eb79f902a45805d637"
+    },
+    "assets/exploration/free-scenes-hd-v2/rampart/tile-1.webp": {
+      "bytes": 288414,
+      "hash": "f5002af9750074e7f9bbbfdaba90bfc42553468254625e10fc2e5339f16ca0f6"
+    },
+    "assets/exploration/free-scenes-hd-v2/rampart/tile-2.webp": {
+      "bytes": 283360,
+      "hash": "9ea8536cbaa255a145c43b80656271aaf8d18372591d6d24a6ae9be9149fee51"
+    },
+    "assets/exploration/free-scenes-hd-v2/rampart/tile-3.webp": {
+      "bytes": 285180,
+      "hash": "5520e05d0fd55c43ec7468f5cad11aa6c06b5fc78de0474de137e84b8d58829d"
+    },
+    "assets/exploration/free-scenes-v1/city-center.webp": {
+      "bytes": 542036,
+      "hash": "0abf855b6910b78cf52669f0ce4dc8e02cd6eff4fd2c09dfd5fe6cb0fae3af48"
+    },
+    "assets/exploration/free-scenes-v1/market.webp": {
+      "bytes": 695598,
+      "hash": "79e3b800c9d7c991effb4a7b9134ce767b0daab5280c1ee26847d0a66442cda4"
+    },
+    "assets/exploration/free-scenes-v1/outskirts.webp": {
+      "bytes": 644958,
+      "hash": "385cc13965adceed4b63c7fceaf9cebeed47614b0adbab1f5aad0bea6789cee5"
+    },
+    "assets/exploration/free-scenes-v1/rampart.webp": {
+      "bytes": 658432,
+      "hash": "eaf4bdc2db44ce2183fdd71bec9b2a51d5e05a2b6ef529797de8b72fd63f29e8"
+    },
+    "assets/exploration/ground-cobble-v1.webp": {
+      "bytes": 412368,
+      "hash": "5b5d305cc177bcccfd42e835e5ca28eed2d679367cf3c59243abbf4576923289"
+    },
+    "assets/exploration/ground-earth-v1.webp": {
+      "bytes": 465756,
+      "hash": "e21612e8c1371991e8bbbd102985211c7538e9eae6e91fedc10902adbbb747a6"
+    },
+    "assets/exploration/market-back-v2.webp": {
+      "bytes": 470472,
+      "hash": "a988d038322560ebeb7c0ede7d7100015e150d217c68a4ed03d71c73f5aca366"
+    },
+    "assets/exploration/market-band-v1.webp": {
+      "bytes": 591112,
+      "hash": "576b81e92f68da8067e92a5c3628685c68ee14868964f65929537500e208b072"
+    },
+    "assets/exploration/market-front-v2.webp": {
+      "bytes": 448824,
+      "hash": "f08967fa3f3cb118cfb6777c1b3acc12f4f9cdaa89bd7001ff600a8c2a433d3e"
+    },
+    "assets/exploration/market-left-v2.webp": {
+      "bytes": 477450,
+      "hash": "6b1650b2526bcbd35e6162b2ee253ba5f466e0ff8b398dd9d606393ff585b79d"
+    },
+    "assets/exploration/market-panorama-v2.webp": {
+      "bytes": 540986,
+      "hash": "f84479474ed0f5e2c29c9140e623d6cbbbdddef3fc94af3d99fdb02c2b3a5ee8"
+    },
+    "assets/exploration/market-right-v2.webp": {
+      "bytes": 489230,
+      "hash": "6c1c042f605f758172f8a186a8feb0a34da15b2d8279c8692ca8065ff9781ecf"
+    },
+    "assets/exploration/outskirts-back-v2.webp": {
+      "bytes": 484498,
+      "hash": "28bdcc049935fbe0c0451a02cbe9adae88c17386a315679567f8be2396435da4"
+    },
+    "assets/exploration/outskirts-band-v1.webp": {
+      "bytes": 610758,
+      "hash": "ce6d0776b43679ac50b63e7914dbd7eb4a0f8a7cc26cd622784867833e3ced4d"
+    },
+    "assets/exploration/outskirts-band-v2.webp": {
+      "bytes": 564908,
+      "hash": "34ed75d95b08163236ba00a21920617e9751b2be13109a62d7c938bf1ff24950"
+    },
+    "assets/exploration/outskirts-front-v2.webp": {
+      "bytes": 440014,
+      "hash": "54101c757c8cc55ac498d9f72832a82df7d1b74ae389c6854a12d041aae2eada"
+    },
+    "assets/exploration/outskirts-left-v2.webp": {
+      "bytes": 453902,
+      "hash": "59eab23b1ae6aa88ef93f2134434c66499ca102bc2bab6e849b9d0c1a89dd95f"
+    },
+    "assets/exploration/outskirts-panorama-v2.webp": {
+      "bytes": 510838,
+      "hash": "f48db11cacae5e17b94865b926a921447d871d1f60fc5309a092e934bc4cb2f0"
+    },
+    "assets/exploration/outskirts-right-v2.webp": {
+      "bytes": 473628,
+      "hash": "b177d2b7e7865561da2133ae41d48a400fd7a86acab9ee68093b3c2886d0c5d0"
+    },
+    "assets/exploration/overland-road/road-aqueduct-wide.webp": {
+      "bytes": 490806,
+      "hash": "38ae2a02dd676029bfd125792586373d857e4651c2365708e851d15ca18d3ee1"
+    },
+    "assets/exploration/overland-road/road-aqueduct.webp": {
+      "bytes": 552440,
+      "hash": "d441b143e62359d86f88191426c06a1fd2b82d29d88d1ae9bc0afea21bcab2ef"
+    },
+    "assets/exploration/overland-road/road-bridge-two-way.webp": {
+      "bytes": 550808,
+      "hash": "1745d95dc9766421a7c95913f89e3bf7d03a92ed5ab56ed8e6a3b25513d65a75"
+    },
+    "assets/exploration/overland-road/road-bridge-wide-night.webp": {
+      "bytes": 339326,
+      "hash": "4a10f7a77d1edb3964ebeb4b7c367bcd57313efdc428a8cac7dc60f51e322ae3"
+    },
+    "assets/exploration/overland-road/road-bridge-wide.webp": {
+      "bytes": 414112,
+      "hash": "4f5f4bc215b751f4053e7d116fe46714f6696e784c338285f1bf5647699a5ce4"
+    },
+    "assets/exploration/overland-road/road-bridge.webp": {
+      "bytes": 509370,
+      "hash": "fef3370102958204351914a3a282f186474e8167c9eb808abf516aef3bce7aa9"
+    },
+    "assets/exploration/overland-road/road-capital-wide.webp": {
+      "bytes": 522656,
+      "hash": "a375264373f1335986c3238def13d8a3bca3065651ab06b50062526de193fdfc"
+    },
+    "assets/exploration/overland-road/road-capital.webp": {
+      "bytes": 507274,
+      "hash": "144e8494ffa865b623fa12387f93c00f4dc684145bdf3702b6ed5734ce52da53"
+    },
+    "assets/exploration/overland-road/road-causeway-wide.webp": {
+      "bytes": 522102,
+      "hash": "1d64eed37e67ebd2abe2a1feadad26eb023ca898609af70da8969c4ca9dc4001"
+    },
+    "assets/exploration/overland-road/road-causeway.webp": {
+      "bytes": 425626,
+      "hash": "2222ff0819afb4ef31ddf6561fc3ba0cee5221077bc7f7c72421e838cab90c72"
+    },
+    "assets/exploration/overland-road/road-downs-wide.webp": {
+      "bytes": 498188,
+      "hash": "f894401d6e962609bb3f2069614701faa4f291b6b663c6a13021df01e14f8e1b"
+    },
+    "assets/exploration/overland-road/road-downs.webp": {
+      "bytes": 530732,
+      "hash": "6990ced8f1f05e5a69a488e0b1b3c2c02139d4c7a6bb069cf43698d67bb827e0"
+    },
+    "assets/exploration/overland-road/road-meadow-wide.webp": {
+      "bytes": 539656,
+      "hash": "60abc142d1510b7fe20a4cfcaad29ddf2e774e3885319655b783b1ff03058187"
+    },
+    "assets/exploration/overland-road/road-meadow.webp": {
+      "bytes": 516520,
+      "hash": "8386f345eea7f2b293835ce0051adcfd0f359b99c130e385bae14dcf40668ed1"
+    },
+    "assets/exploration/overland-road/road-orchard-two-way.webp": {
+      "bytes": 575338,
+      "hash": "23f7ce2417e2beb91cd4b36e1117444179a8a3c6699857e893f6ea75ea57653b"
+    },
+    "assets/exploration/overland-road/road-orchard-wide.webp": {
+      "bytes": 463874,
+      "hash": "3043ac5a5716a97771a63efb6d05b93fbe1a26e81bb5463348381d17f2d06660"
+    },
+    "assets/exploration/overland-road/road-orchard.webp": {
+      "bytes": 598406,
+      "hash": "3054f82cb8026632672034503de846d68a1ad3c500c458b657f2aea6e911b4cc"
+    },
+    "assets/exploration/overland-road/road-pines-wide.webp": {
+      "bytes": 606798,
+      "hash": "b1772d91f3f00734595555489425d43dd95ddd601028b4c97f73281bac185925"
+    },
+    "assets/exploration/overland-road/road-pines.webp": {
+      "bytes": 631718,
+      "hash": "7b6c7f2de280e039a35482f72d3ff9363f2f873a711ec9de8159a6b55b089aaf"
+    },
+    "assets/exploration/overland-road/road-reeds-two-way.webp": {
+      "bytes": 545456,
+      "hash": "3728f12b219307ec78ab6c7ff11ff231de70ea080d3b8e9bd34cae5cf3e1a6ca"
+    },
+    "assets/exploration/overland-road/road-reeds-wide-night.webp": {
+      "bytes": 367246,
+      "hash": "c72c15b3761b00603f80006d6d85bfdfbe325cefa813ba3d9ddcbd486cce6055"
+    },
+    "assets/exploration/overland-road/road-reeds-wide.webp": {
+      "bytes": 426146,
+      "hash": "0dbeec51f269bf40efeb41ede17dfac4fef65f7027d3b04884d584f4bf6da1ae"
+    },
+    "assets/exploration/overland-road/road-reeds.webp": {
+      "bytes": 534360,
+      "hash": "bc8b79ae8cd18de6c9a253d78dda55a0954c2ad268eafbeb16027caa79fe5fcb"
+    },
+    "assets/exploration/overland-road/road-ridge-wide.webp": {
+      "bytes": 541780,
+      "hash": "921e95a8a811289dd4b7c1819bb57077eee785c4530026f6ccf3f0182ca7bda6"
+    },
+    "assets/exploration/overland-road/road-ridge.webp": {
+      "bytes": 544868,
+      "hash": "25e73d2871e75feff8a8e755a07cb9c74061220e491a50a9a58ca851969c967e"
+    },
+    "assets/exploration/rampart-back-v2.webp": {
+      "bytes": 506188,
+      "hash": "3afe1ba3d1c173cca09e6dd476331a45b2f836b0817c439d58200299a7f89648"
+    },
+    "assets/exploration/rampart-band-v1.webp": {
+      "bytes": 556406,
+      "hash": "95ddb9e6ef416d23c21bcbdcb1953ad332545bd44716bc5435d8c4f7176b4bff"
+    },
+    "assets/exploration/rampart-front-v2.webp": {
+      "bytes": 476486,
+      "hash": "64e9da53dd4581494bd35125040e0dcf56d463e0580e01f7ab4c88eb2db11697"
+    },
+    "assets/exploration/rampart-left-v2.webp": {
+      "bytes": 478406,
+      "hash": "4d8a2a11eb173c33f2c7d5ae6733c8f4f5f925ac2bd91e8c135eb0faa2c1cd52"
+    },
+    "assets/exploration/rampart-panorama-v2.webp": {
+      "bytes": 498904,
+      "hash": "ebfcd706c66afd20ff8bb49f95a1364d271f32ab8e9377aabb8ebcfb097b9f1e"
+    },
+    "assets/exploration/rampart-right-v2.webp": {
+      "bytes": 479442,
+      "hash": "46d4ccd8e76d576bf7748d0bd9ca9b88f7fa895d81826b3650ae6717aa48624c"
+    },
+    "assets/exploration/silver-crown/crown-arcade-night.webp": {
+      "bytes": 541650,
+      "hash": "4e48649ad4db72f3194f2e7af0deb762e5bb387cdc8959d26a0c65d88b2b0694"
+    },
+    "assets/exploration/silver-crown/crown-arcade.webp": {
+      "bytes": 648548,
+      "hash": "16055a2857464aeb6e9de71c42a5ab2b47ff9b859c92ff9c076e5eb12b3d4e96"
+    },
+    "assets/exploration/silver-crown/crown-belvedere-night.webp": {
+      "bytes": 484086,
+      "hash": "618551ad8fc026920bca10ac60a3ae902b36ee0eab54908be78550df42fb3f47"
+    },
+    "assets/exploration/silver-crown/crown-belvedere.webp": {
+      "bytes": 562518,
+      "hash": "4e042ed64156d4e37ec5aad7fbdd4fb083e671dd12bd0dd0a91ceeb3cc77b3ab"
+    },
+    "assets/exploration/silver-crown/crown-canal-night.webp": {
+      "bytes": 500436,
+      "hash": "3504fa6f3ce398e746f19e778e273ffbb7f51f725ae36098c685c1696b23a79d"
+    },
+    "assets/exploration/silver-crown/crown-canal.webp": {
+      "bytes": 594662,
+      "hash": "3c602039dc5a2823913e73c8912c9387ca5348d18f6b6df3632dfa2758661d99"
+    },
+    "assets/exploration/silver-crown/crown-floodgate-night.webp": {
+      "bytes": 448166,
+      "hash": "c9fc595e9bf6ca8ef12caf54439060c3442e03fa8f9f46babaab2c273311fecf"
+    },
+    "assets/exploration/silver-crown/crown-floodgate.webp": {
+      "bytes": 542088,
+      "hash": "3f177833933198c25c26550282eb1f0c3146d746901598463a1ba0a8ab5d3e9c"
+    },
+    "assets/exploration/silver-crown/crown-gateward-night.webp": {
+      "bytes": 470510,
+      "hash": "d7afc3238286e2b46a70f2ca1c0a4d988b9aa47d6eee291a9e4dfb0d0305d352"
+    },
+    "assets/exploration/silver-crown/crown-gateward.webp": {
+      "bytes": 611822,
+      "hash": "1ef8c6814937613fda1e3b925d5cb239aa44a00e9ded288c41117aa5163350aa"
+    },
+    "assets/exploration/silver-crown/crown-ledger.webp": {
+      "bytes": 462668,
+      "hash": "88f19307701bcce8bef48c1d012671d4e5bfaadf66c4c02f2b1fadc557cef553"
+    },
+    "assets/exploration/silver-crown/crown-map-room.webp": {
+      "bytes": 493026,
+      "hash": "c3a8db1284ce53447c519c81ded70263248170c2de8521bf427d602045cdafb0"
+    },
+    "assets/exploration/silver-crown/crown-mint.webp": {
+      "bytes": 482274,
+      "hash": "370bf4f4dc9a491024c8611aeb766bb02526d61628fe08cefbca746f71aa0811"
+    },
+    "assets/exploration/silver-crown/crown-promenade-night.webp": {
+      "bytes": 466534,
+      "hash": "c8e93ba8b78b8f4d73c8252e1c4113ae32ea30b3ab0be7cea1e1ce276049e806"
+    },
+    "assets/exploration/silver-crown/crown-promenade.webp": {
+      "bytes": 548496,
+      "hash": "9e22e698fcd777dd95064ed95dc2eab38c21ce64f9d6ddaff40c2d2bf2cdd605"
+    },
+    "assets/exploration/silver-crown/crown-tavern-door-night.webp": {
+      "bytes": 468098,
+      "hash": "6d9d1b8673d5fbe9f716b8174a989ebfd04487cd03266a19265a499a1422777c"
+    },
+    "assets/exploration/silver-crown/crown-tavern-door.webp": {
+      "bytes": 572102,
+      "hash": "75fcb968075b582d1337de20022a1ee52d90ad730b0161d4e6d666ba00376f29"
+    },
+    "assets/exploration/silver-crown/crown-terrace-night.webp": {
+      "bytes": 405824,
+      "hash": "248bdd40474244651d44ade55467243ffca84973f0639e2e73d4a356601c034b"
+    },
+    "assets/exploration/silver-crown/crown-terrace.webp": {
+      "bytes": 570512,
+      "hash": "a7da88cf41ef11de5f5151e55893e4d135f1062ba0e3a93e9ee3023783500a06"
+    },
+    "assets/exploration/starlamp-band-v1.webp": {
+      "bytes": 564294,
+      "hash": "a7c655df3eca33e981b8fd2195e8918888e17b837aef89777aa90b15b48bb70e"
+    },
+    "assets/exploration/starlamp-corner-back-v3.webp": {
+      "bytes": 320550,
+      "hash": "2a422e5dff2b565080e9d27b2cacced41b67e722533d2eb7fda8f8695d3c933b"
+    },
+    "assets/exploration/starlamp-corner-front-v3.webp": {
+      "bytes": 538120,
+      "hash": "8e67bac508fa797b8ab27c16c3e30dac4f47e0c728d37a77623b793715991b85"
+    },
+    "assets/exploration/starlamp-corner-front-v4.webp": {
+      "bytes": 525246,
+      "hash": "ef13b957df1e0f7ac07c83134c511bf6a4bb899a2b2c00897b6f7b5a3a38f567"
+    },
+    "assets/exploration/starlamp-corner-front-v5.webp": {
+      "bytes": 487766,
+      "hash": "18da6aa2395fef67390c55fe4eb4a3181a90ac0793960711889614d8a3604260"
+    },
+    "assets/exploration/starlamp-corner-left-v3.webp": {
+      "bytes": 554924,
+      "hash": "95f802157cc02b4b8650e00c8c06102b6b705bbf08d29f6ae8dc1dd2200b7d7e"
+    },
+    "assets/exploration/starlamp-corner-left-v4.webp": {
+      "bytes": 499342,
+      "hash": "9f303c9da0dbc258452af565dc30c89eafadc284ecc4b84d3217d8b201b39c3a"
+    },
+    "assets/exploration/starlamp-corner-panorama-v2.webp": {
+      "bytes": 445616,
+      "hash": "7639afa86dbe61b766cf2075f774a4263afaeadc543bc7cabff7a8ab3605d5c5"
+    },
+    "assets/exploration/starlamp-corner-panorama-v3.webp": {
+      "bytes": 381092,
+      "hash": "c28bc6a151efcc6176573593ead17e0ac03a9124274915626eac9939d1659b05"
+    },
+    "assets/exploration/starlamp-corner-right-v3.webp": {
+      "bytes": 521514,
+      "hash": "a28588a50ff3150687061c2197ba4678bd80a7d2179f843f0fc7d0d40f8c7bd4"
+    },
+    "assets/exploration/starlamp-facades-v1.webp": {
+      "bytes": 557246,
+      "hash": "230153c0ff0d7ae1f7d4dca2c3c3b12b8da1ee81ccb9406d191866a69d43d10c"
+    },
+    "assets/exploration/starlamp-notice-v2.webp": {
+      "bytes": 309884,
+      "hash": "03467572f554c443a8e4140b87af38ee9ecaf528ebcc5809a3dfac0cb7d135d8"
+    },
+    "assets/exploration/street-hd-v4/connected.webp": {
+      "bytes": 921960,
+      "hash": "5e78a06c6b2c43ef4ebf483d1b05c96342e8965672e068ff955c59a667def038"
+    },
+    "assets/exploration/street-hd-v4/tile-0.webp": {
+      "bytes": 310486,
+      "hash": "009faa61441afe55194d4a29e7c7c1afaed2d9db0cc2c4b0f4bcff79868b8edf"
+    },
+    "assets/exploration/street-hd-v4/tile-1.webp": {
+      "bytes": 322080,
+      "hash": "de0e548e571fc9e23f99fb8c39e6d56ea9d207db79b6fd315f18d79cae512458"
+    },
+    "assets/exploration/street-hd-v4/tile-2.webp": {
+      "bytes": 289850,
+      "hash": "7736b32bdd0f55b1903df14f81d4da67846599be44a3259a9f458810f187d66f"
+    },
+    "assets/exploration/street-hd-v4/tile-3.webp": {
+      "bytes": 303312,
+      "hash": "0dc9ba26e7bea5536d33e64417f6664cbc98cee421ad1bfa9df20baa784673d4"
+    },
+    "assets/exploration/street-illustrated/connected-v1.webp": {
+      "bytes": 678940,
+      "hash": "c2b05e094b9cdd621b2b9e4197934f6c3d56e7739610f0fff1b487ecc1b9d335"
+    },
+    "assets/exploration/street-illustrated/courtyard.webp": {
+      "bytes": 594590,
+      "hash": "f80f27a4fdea104c97ffd62d1d5a4ef24d6ae95708cfae4428287fc9f715aa4e"
+    },
+    "assets/exploration/street-illustrated/entrance.webp": {
+      "bytes": 557144,
+      "hash": "45b1b89e607aa0ccd3093b014c339ec9a2e46a6032c3e3ca17d7e7a32387368e"
+    },
+    "assets/exploration/street-illustrated/street.webp": {
+      "bytes": 557418,
+      "hash": "303e9e0bcece196ece64879c7393d8961ed60372bda374f9b9d6e2e086e30acc"
+    },
+    "assets/exploration/street-spatial/arch.webp": {
+      "bytes": 602798,
+      "hash": "f6027be9a409b711722b0a4e9d41a7d89c9d04c7fd631901abc337066be1782c"
+    },
+    "assets/exploration/street-spatial/courtyard-fountain.webp": {
+      "bytes": 470204,
+      "hash": "c6af08a4850b0da82847cae1fdbd9a057622df2d375df09fb419bb1a9c79ff34"
+    },
+    "assets/exploration/street-spatial/distance.webp": {
+      "bytes": 460502,
+      "hash": "114f30a74ae6efb36e27f8f922ec214c337ceaf48c2839fa71dc366c39391c3c"
+    },
+    "assets/exploration/street-spatial/far-street.webp": {
+      "bytes": 533572,
+      "hash": "74173f3075d8f01881d792bbb45530562373e01935f645222c79acb3a6ca6455"
+    },
+    "assets/exploration/street-spatial/floor.webp": {
+      "bytes": 385414,
+      "hash": "efb9b7d8f3ccef13657b96fd98b88635c7da8baffcb91e175fa00b9c04b653a5"
+    },
+    "assets/exploration/street-spatial/houses.webp": {
+      "bytes": 701346,
+      "hash": "6e524454c8178bc6b874dc1487c8a5bc0ee446aed1c7e4c6719384708faf9573"
+    },
+    "assets/exploration/street-spatial/pharmacy.webp": {
+      "bytes": 607278,
+      "hash": "61ab35c54a17739944df531880f1f2a2793eba51611ddaa04ef0c52543415ced"
+    },
+    "assets/exploration/street-spatial/tavern.webp": {
+      "bytes": 633820,
+      "hash": "3060d5dbaf2ea6728d21812357195e6ebc732e3b8febc716d0ec4d523f26761e"
+    },
+    "assets/exploration/town-night/city-center.webp": {
+      "bytes": 392500,
+      "hash": "3be53cdfc298dab2cb75481aa510cca9a006497368755a8cd7b34321265378d7"
+    },
+    "assets/exploration/town-night/market.webp": {
+      "bytes": 451100,
+      "hash": "f63c32b6d04cd14378fd358f7602b70b6b7e8fab86e5bb706016b66ff99c4c1d"
+    },
+    "assets/exploration/town-night/outskirts.webp": {
+      "bytes": 408248,
+      "hash": "d0ac496731d253a848977e73399933c4be3a678bd0877d0ed69aea5590cb55f0"
+    },
+    "assets/exploration/town-night/rampart.webp": {
+      "bytes": 346594,
+      "hash": "2088c2ffe0742eefcf908274776da0e11aacb7455b7761202375f61f35160807"
+    },
+    "assets/exploration/town-night/street.webp": {
+      "bytes": 398066,
+      "hash": "aa9b6e510a4ce644e814bbcd5ebbf9caefd6d4d7bce8b9391d88071776f3dc77"
+    },
+    "assets/exploration/town-side-places/clock-archive.webp": {
+      "bytes": 345580,
+      "hash": "91bd566d547f067ae896871bd87a49fed2e5530450ce494bbd69395e98bf718b"
+    },
+    "assets/exploration/town-side-places/clock-roof-night.webp": {
+      "bytes": 440758,
+      "hash": "620afca90eaff7cbb88a29d167c322427c79321960b80bdf41231814a7d7719c"
+    },
+    "assets/exploration/town-side-places/clock-roof.webp": {
+      "bytes": 491846,
+      "hash": "53afd71259e21e14e676d01f80e7e4fc17542685d6d169bfa6f7155c2ed113b2"
+    },
+    "assets/exploration/town-side-places/guard-room.webp": {
+      "bytes": 283462,
+      "hash": "834655d74374015758a8c217160c556c466b1528e24aecb4f092c920785b657c"
+    },
+    "assets/exploration/town-side-places/lantern-workshop.webp": {
+      "bytes": 309278,
+      "hash": "91f5a8f8861e2c7f6d7b675ebc67d9ea9c3c7d71a6ced4c92a4873ee7ff905ff"
+    },
+    "assets/exploration/town-side-places/market-alley-night.webp": {
+      "bytes": 400078,
+      "hash": "6d7d6a58fbf83cb3f79c8283223fd564c556445d5ae1b773640c7979f610db66"
+    },
+    "assets/exploration/town-side-places/market-alley.webp": {
+      "bytes": 423278,
+      "hash": "df08fb18a7efac1302cb9f80fcc84b5e6af48fa28f36aeff6fff8b02d2be7b5a"
+    },
+    "assets/exploration/town-side-places/riverbank-night.webp": {
+      "bytes": 514894,
+      "hash": "10c68ac48e67307730dd2f354dba3a801df4ad6739d21180490ee47b6f60e0dd"
+    },
+    "assets/exploration/town-side-places/riverbank.webp": {
+      "bytes": 527420,
+      "hash": "31720f4ca33769bc8aa3dd4808eb9d98a367fba59ecdc2e7d4b529c2c678a597"
     },
     "assets/exploration-parchment.png": {
       "bytes": 2753924,
@@ -1345,6 +1369,10 @@
       "bytes": 1037153,
       "hash": "3e84a48f18c5b76e036f73d34cd1ff55dda990dea5159231364c0e26efa829b8"
     },
+    "assets/gal-npc-cast/rodris-king.png": {
+      "bytes": 1649587,
+      "hash": "2355b35d042be3b2ce9696bd744d1dc0c33739a8f86bac2046f29bc1fded1fd9"
+    },
     "assets/gal-npc-cast/scholar-woman.png": {
       "bytes": 1102747,
       "hash": "7f2e0c05d59642c020bdab5bc924c6d6129fb9d711583daaa2e46f81b24024c1"
@@ -1433,6 +1461,10 @@
       "bytes": 1318332,
       "hash": "89fefa30d6d6265ad6017316bacebb13783f83059ac8d466596e423e98c93853"
     },
+    "assets/hexer.glb": {
+      "bytes": 38192,
+      "hash": "7418a6affafaa53aa94e605988f0c0ac0754793d1b39ce1e88c47cc2658958eb"
+    },
     "assets/hive-guard.glb": {
       "bytes": 45560,
       "hash": "b6c7fcef60e17a0a775b5489623bc402414168f13985bb3ce525554024e99ad3"
@@ -1444,6 +1476,10 @@
     "assets/honey-larva.glb": {
       "bytes": 41468,
       "hash": "acf18471b1c16f8aef2cfef456502a62b250087eb5b02071e4bb877f2a395115"
+    },
+    "assets/hound.glb": {
+      "bytes": 49060,
+      "hash": "234aaa119683e443ea078d3f7832c97bb7565ae7682a3ec7992c33536c327ffc"
     },
     "assets/icons/balance.svg": {
       "bytes": 372,
@@ -1685,6 +1721,10 @@
       "bytes": 61876,
       "hash": "76a23766573fd8354727570182d30bca825e0f415f2b8d59f342128c9aceddbd"
     },
+    "assets/moss-slime.glb": {
+      "bytes": 24456,
+      "hash": "000af4840257a61131cd60185af1260c0edd5e08de6a38c0935c84f8f266ade5"
+    },
     "assets/nexus.glb": {
       "bytes": 4850212,
       "hash": "c3d5eb05cca4bfd07209f6d52919d07f0635ca1cdfedf8125772009d0c65e831"
@@ -1712,6 +1752,10 @@
     "assets/parts-carrier.glb": {
       "bytes": 35628,
       "hash": "0d809f285c5b6f124b00118982e98e3ce89789ce91badb0d8ea44a6969f516f1"
+    },
+    "assets/pebble.glb": {
+      "bytes": 19232,
+      "hash": "06884b438456df39eb3bf04b5b8da77f9d5730c369a714f60daa4bf61c03f3c4"
     },
     "assets/portraits/abyss-devourer-python.svg": {
       "bytes": 49863,
@@ -1926,12 +1970,12 @@
       "hash": "de935c08456276b8d0af7203cf12b646adfb2c63f6ee75d5f22ba86d36dade08"
     },
     "assets/portraits/boss-bloom.svg": {
-      "bytes": 1074,
-      "hash": "08c00a6c0a03463197ea51b5e489f6ecf66afea9dfaed7b1d36e125a0c123003"
+      "bytes": 6974,
+      "hash": "4ea7203d736758064ff34d4456f331e52cd997491f9ca0c7f306a89e7e8a2a9f"
     },
     "assets/portraits/boss-gate.svg": {
-      "bytes": 955,
-      "hash": "56458cb24adf7c183f1c886d15e6c85860c1783ba16ddcdb2fab045550148dd1"
+      "bytes": 11946,
+      "hash": "b3359398cc8f356851d27a170db239d310091f99775a35f32aaf7bf8cb786cca"
     },
     "assets/portraits/boss-tide.svg": {
       "bytes": 6461,
@@ -2002,8 +2046,8 @@
       "hash": "ef48cf7797fa170f24ceac9929e8fa431ebaf77a27fd8c745d0787724576555f"
     },
     "assets/portraits/cultist.svg": {
-      "bytes": 1040,
-      "hash": "6d58b792eb0ebbb70e64083de1373bcf4f1eb18964795e2f3e1632ff2416315a"
+      "bytes": 5748,
+      "hash": "e6716e9b2a4d326dc86620e17275726a298303716bf2dad88bacfd0e9a8b6e34"
     },
     "assets/portraits/darkscale-warlord.svg": {
       "bytes": 736454,
@@ -2150,8 +2194,8 @@
       "hash": "14f68260dafca000dbec26ac830c7eb080db5aa82ac2463ce2793e86d75f7591"
     },
     "assets/portraits/golem.svg": {
-      "bytes": 1128,
-      "hash": "ac15b6bcf22f05782319868b688e0c13312b269b9ea012510f699abbea9fa5f5"
+      "bytes": 6751,
+      "hash": "3612162a6a0ab469ba48901275ad7974eecbbcdfc49bf4a1e47d54c5da508f02"
     },
     "assets/portraits/grey-prowler.svg": {
       "bytes": 10671,
@@ -2182,8 +2226,8 @@
       "hash": "114d4f2570c7b5ebae993bef0e1d269c9341a2190c9da8c1c77acf6b3beed486"
     },
     "assets/portraits/hound.svg": {
-      "bytes": 1088,
-      "hash": "0a8f308d197bf3d13f2c70fa41205f18d7e2efbd88995bb9782ea36c32de531e"
+      "bytes": 8721,
+      "hash": "d3d0749f111aac0e69103960053d65d35b31e5fc45743ee8a25e0d70034ed427"
     },
     "assets/portraits/insane-worker.svg": {
       "bytes": 6727,
@@ -2326,8 +2370,8 @@
       "hash": "3fce125e6fdb2f5f73e0ac31fce883d19f1513cae8546308d0089e4716013b00"
     },
     "assets/portraits/moss-slime.svg": {
-      "bytes": 1128,
-      "hash": "2cbb37aa2a586654614e408ba718cb52bc11292229475e4dcd98749f19252875"
+      "bytes": 4510,
+      "hash": "cb51af6d023092cd1fd08e18a7e3238f876ef664d1fb9c239b0e16a020851a96"
     },
     "assets/portraits/oathless-duelist.svg": {
       "bytes": 15967,
@@ -2358,8 +2402,8 @@
       "hash": "eb61605dd28f862f5c0bb02f8ffe4007684e9502736cb2f42a145436c4e1c3f3"
     },
     "assets/portraits/pebble.svg": {
-      "bytes": 1203,
-      "hash": "a3b7feb20685d731152eb74ccd89a423ee18d3047cb4ad22bd81aad1676c55a5"
+      "bytes": 4009,
+      "hash": "20543dc25d9181dbcdfd2fe2b4638ed8b48b58fb3998ceb68a122f558c5516b9"
     },
     "assets/portraits/pure-creation-elemental.svg": {
       "bytes": 12727,
@@ -2400,6 +2444,10 @@
     "assets/portraits/rift-mote.svg": {
       "bytes": 10170,
       "hash": "2064d9a1a7dd946a60dca0c4a513f2fb1ceaaa823fec455f10d9dbf9f9fbec6c"
+    },
+    "assets/portraits/rodris-de-vivar-v3.png": {
+      "bytes": 2587375,
+      "hash": "688898d963dc0c1ada71cd15d7ac5383f7f901054f8be3953b055dc8dcacf226"
     },
     "assets/portraits/rogue-arm.svg": {
       "bytes": 7482,
@@ -2482,8 +2530,8 @@
       "hash": "050e0383d8487b9231ba29f1e714788d4ab929e28ee45de4425ed27ffa40119f"
     },
     "assets/portraits/sprout.svg": {
-      "bytes": 1147,
-      "hash": "fe25b4caad156083cf0a1d9dba2c48d38fb503b586810afb437d01cb1a063704"
+      "bytes": 4501,
+      "hash": "8772a4ece1f14c10d91addd2ac410a32a4c73ba7d3f93b5772c68cc463a46c08"
     },
     "assets/portraits/stone-ballista.svg": {
       "bytes": 2273,
@@ -2607,7 +2655,7 @@
     },
     "assets/preview-black-market.glb": {
       "bytes": 1410600,
-      "hash": "b00fd6fc7ec9070f20ae7d72b0f90f0cd86e6ed8de8af1f37658502f1815187a"
+      "hash": "d038073c1e1ba5df3a9dcc23709b6dde54584b2090919afc208b015874aca789"
     },
     "assets/preview-castle.glb": {
       "bytes": 2715272,
@@ -2773,6 +2821,10 @@
       "bytes": 1682340,
       "hash": "a9851788f49cb9a4f313009b094a871976630b3b4b7e0f8375ca0f449f6ffcc3"
     },
+    "assets/sprout.glb": {
+      "bytes": 27612,
+      "hash": "5e6f3439760996997b23b6932bc59f273f25a7a3bac86fa2b6dc18b7725b0c9e"
+    },
     "assets/syndicate-blood-croupier.glb": {
       "bytes": 199456,
       "hash": "a91a80b488c47240aa161b95a55aa7d2bebed1cc761aaa5a1865ab1dfc403ccc"
@@ -2798,8 +2850,8 @@
       "hash": "705c0fad50b57dde137b504b1e5c63dbea7bf2e87348ac32bb5116046af9b43c"
     },
     "assets/tavern-machines.glb": {
-      "bytes": 271488,
-      "hash": "37edac5792619ba4be77d1788cb63081958d3b527ed2c6c4b5c443ef649174ec"
+      "bytes": 438336,
+      "hash": "61f6537a3780cf742726e210b0dcabc305495ea5684bbc09d07350242a529673"
     },
     "assets/tavern-visitors/edith-full-v1.png": {
       "bytes": 2008524,
@@ -2865,6 +2917,10 @@
       "bytes": 121756,
       "hash": "2d73130d33ba1f01dcddf218843c0249998a50ba94e4a5e05b888a1c5d0faece"
     },
+    "assets/warden.glb": {
+      "bytes": 44424,
+      "hash": "50b7b9d1d666f0fb5e81dbc4fa2d1b9fa4d2f58c0b6bd3d88bb18bbd5156f7ee"
+    },
     "assets/wasteland.glb": {
       "bytes": 4648264,
       "hash": "208a427133f24238d00b22b1e33f5273bec532b8f77094e7add49c2f57b649f0"
@@ -2896,6 +2952,8 @@
     "./assets/tavern-visitors/silica-laps-full-v2.png",
     "./assets/portraits/edith.png",
     "./assets/portraits/pandora.png",
+    "./assets/portraits/rodris-de-vivar-v3.png",
+    "./assets/gal-npc-cast/rodris-king.png",
     "./assets/portraits/template-bow-female.webp",
     "./assets/portraits/template-bow-male.webp",
     "./assets/portraits/template-staff-female.webp",

@@ -608,3 +608,33 @@
     padding: 18px 20px;
   }
 }
+
+/* Hide parent HUD & floating action buttons only while an active loading overlay is actually visible. */
+body.inn-scene-loading:not(.in-battle):not(.in-adventure):not(
+    :has(#start-screen:not([hidden]), #creation-dialog[open])
+  )
+  :is(
+    .app-header,
+    .ledger-corner,
+    .ledger-edge-handle,
+    .ledger-drawer-host,
+    #inn-resources,
+    #daily-hud,
+    .daily-invitation-record,
+    #audio-panel
+  ),
+body.is-loading-overlay
+  :is(
+    .app-header,
+    .ledger-corner,
+    .ledger-edge-handle,
+    .ledger-drawer-host,
+    #inn-resources,
+    #daily-hud,
+    .daily-invitation-record,
+    #audio-panel,
+    #battle > :is(.turn-column, .right-rail, #ap-orb, #story-toggle, #round-label)
+  ) {
+  visibility: hidden !important;
+  pointer-events: none !important;
+}

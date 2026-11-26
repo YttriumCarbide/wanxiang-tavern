@@ -458,7 +458,7 @@ def ether_condenser():
             box(0.84 + side * 0.59, 0.68 + row * 0.14, -4.16, 0.03, 0.025, 0.14, "brassDark")
 
 
-def detailed_machine_meshes(include_vending=False):
+def detailed_machine_meshes(include_vending=True):
     global VOL, S, ORIGIN, SHAPE
     original = (VOL, S, ORIGIN, SHAPE)
     try:
@@ -691,7 +691,7 @@ def write_glb(path, faces, title="万象酒馆 · 二层走廊", voxel_edge=S):
     return triangles, len(output)
 
 
-def write_machine_glb(path, title, include_vending=False):
+def write_machine_glb(path, title, include_vending=True):
     details = detailed_machine_meshes(include_vending)
     for data in details.values():
         data["p"] = [(x, y, z + 4.4) for x, y, z in data["p"]]
@@ -699,7 +699,11 @@ def write_machine_glb(path, title, include_vending=False):
 
 
 def build_tavern_condenser():
-    write_machine_glb(ASSETS / "tavern-machines.glb", "万象酒馆 · 以太凝聚器")
+    write_machine_glb(
+        ASSETS / "tavern-machines.glb",
+        "万象酒馆 · 以太凝聚器",
+        include_vending=False,
+    )
 
 
 def build():
@@ -743,12 +747,13 @@ def build():
         json.dumps(spec, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n"
     )
     # Preserve the original five-millimetre machine geometry as a reusable source asset.
+    machines = TAVERN_OUT / "万象酒馆-补给装置.glb"
     write_machine_glb(
-        TAVERN_OUT / "万象酒馆-补给装置.glb",
+        machines,
         "万象酒馆 · 补给与以太构筑",
         include_vending=True,
     )
-    build_tavern_condenser()
+    (ASSETS / "tavern-machines.glb").write_bytes(machines.read_bytes())
     print(json.dumps(spec, ensure_ascii=False))
 
 

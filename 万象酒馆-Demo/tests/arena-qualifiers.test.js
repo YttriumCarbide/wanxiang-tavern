@@ -198,7 +198,7 @@ test('arena qualifier identities stay in their archive with 10/10/6/1 categories
     assert.deepEqual(buckets[tier].map((entry) => entry.id).sort(), ids);
   }
   for (const entry of roster) {
-    assert(!Object.hasOwn(DEFINITIONS, entry.id), `${entry.id} must not enter combat definitions`);
+    assert(Object.hasOwn(DEFINITIONS, entry.id), `${entry.id} must be registered in DEFINITIONS`);
     assert(
       !Object.hasOwn(ARENA_ARCHIVE_DEFINITIONS, entry.id),
       `${entry.id} must not replace the main arena cast`,

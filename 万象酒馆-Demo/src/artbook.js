@@ -53,6 +53,9 @@ const DESCRIPTIONS = {
   'city-market': '石板商道两侧错落排开红瓦商铺、布篷货摊与锻铁星灯，北端钟亭拱门映着傍晚人声。',
   'black-market':
     '暗渠石拱下挂满绿焰炼金灯与暗红帷幔，赃物铁笼、走私货栈与地下拍卖台藏于潮湿影中。',
+  'duel-arena': '沙色铺石与八角地纹铺开决斗赛场，阶梯石看台高悬红旗，火盆与青铜铁闸环伺四方。',
+  'silver-shield-exhibition':
+    '象牙白石地与青色地毯铺展雅致展厅，彩窗微光洒向铜框展柜、秘藏展台与地下暗库。',
 };
 
 async function creatureView(stage, id, isCurrent) {

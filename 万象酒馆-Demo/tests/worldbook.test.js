@@ -392,7 +392,6 @@ test('character worldbook entries conform to specification and are triggered dur
     party: library.characters.map((item) => ({
       id: item.id,
       name: item.setting.name,
-      title: item.setting.title,
       worldbook: item.setting.worldbook,
     })),
     history: [],

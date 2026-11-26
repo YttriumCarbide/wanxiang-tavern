@@ -77,6 +77,9 @@ export async function dcMotionChecks({ browser, baseURL, output }) {
     }, freeOptions);
     await page.locator('#dc-stage[data-phase="inscribe"] .fr-circle').waitFor();
     await page.locator('.fr-glyph').last().waitFor();
+    assert.equal(await gal.getAttribute('data-dc-inscribing'), 'true');
+    assert.equal(await gal.locator('.gal-text .gal-fly-char.is-flying-out').count(), 5);
+    assert.equal(await dice.locator('.fr-glyph').count(), 5);
     assert(await gal.locator('.gal-reading').isVisible());
     assert(await dice.locator('.fr-dice').isHidden());
     assert.equal(await dice.locator('[data-dc-continue]').count(), 0);
@@ -84,6 +87,7 @@ export async function dcMotionChecks({ browser, baseURL, output }) {
     await page.waitForFunction(() =>
       window.dcFixture.phases.some(({ phase }) => phase === 'judge'),
     );
+    assert.equal(await gal.getAttribute('data-dc-inscribing'), null);
     const phases = await page.evaluate(() => window.dcFixture.phases.slice(0, 3));
     assert.deepEqual(phases, [
       { phase: 'inscribe', dialogueVisible: true },

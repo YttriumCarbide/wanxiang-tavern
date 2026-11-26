@@ -26,6 +26,8 @@ import {
   overlordPhaseProfile,
   pickBombTarget,
   pickCorruptedTimelineSlot,
+  refreshIronCoachFrontWeakness,
+  syncCollectorArchive,
 } from './overlord-mechanics.js';
 import { BREAKER_EMBLEM_ID, canCombine, EMBLEMS, OVERLOAD_EMBLEM_ID } from './emblems.js';
 import { restoreBag } from './content/items.js';
@@ -111,7 +113,7 @@ export function newBattle(
             maxHp: hp,
             mp,
             maxMp: mp,
-            block: 0,
+            block: d.speed ? 0 : Math.max(0, d.startingShield || 0),
             buffs: Object.fromEntries(
               Object.entries(d.buffs || {}).map(([key, value]) => [key, statusStacks(key, value)]),
             ),
@@ -151,6 +153,7 @@ function simulate(s, plan, slots) {
     deaths = [],
     slows = {},
     pendingPhases = new Map(),
+    pendingOverlordCounters = [],
     usedSlots = new Map();
   for (const u of Object.values(work.units)) {
     const nextStage = nextBossStage(work, u.id, definitions[u.id]);
@@ -478,6 +481,16 @@ function simulate(s, plan, slots) {
       : 0;
     const delta = baseDelta + (breakerActive ? 1 : 0);
     if (delta <= 0) return;
+    if (targetUnit.breakWindow.mode === 'collector' && baseDelta > 0 && isDamageType(damageType)) {
+      targetUnit.breakWindow.usedTypes ||= [];
+      if (!targetUnit.breakWindow.usedTypes.includes(damageType)) {
+        targetUnit.breakWindow.usedTypes.push(damageType);
+      }
+      targetUnit.collectorBreakUsedTypes ||= [];
+      if (!targetUnit.collectorBreakUsedTypes.includes(damageType)) {
+        targetUnit.collectorBreakUsedTypes.push(damageType);
+      }
+    }
     if (baseDelta > 0 && isDamageType(damageType)) {
       const spKey = targetUnit.speciesKey || speciesKeyOf(definitions[targetId] || targetId);
       if (spKey) {
@@ -576,6 +589,12 @@ function simulate(s, plan, slots) {
           if (work.units[actor]?.side === 'enemy')
             n = Math.max(1, Math.round(n * (work.enemyDamageScale || 1)));
           if (!eff.flat) n = overlords.damageBonus(actor, n);
+          if (!eff.flat && n > 0) {
+            n = overlords.incomingDamageModifier(id, damageType, n, {
+              generated,
+              flat: Boolean(eff.flat),
+            });
+          }
           if (!eff.flat && actor) n = applyWeakReduction(n, effectiveBuff(work, actor, 'weak'));
           if (!eff.flat && actor && n > 0 && effectiveBuff(work, actor, 'balance'))
             n = Math.max(1, Math.floor((n * 85) / 100));
@@ -607,11 +626,22 @@ function simulate(s, plan, slots) {
           }
           const lost = lose(u, damage, '攻击', true);
           if (!missedByBlind && n > 0) overlords.onAttackHit(actor, id, Boolean(redirected));
+          if (!generated && !missedByBlind && n > 0) {
+            overlords.recordIncomingDamage(id, damageType, n);
+          }
           if (breakerActive && hadShield && u.block === 0) {
             grantFrontBreakerShield(actor, '击破护盾');
           }
           if (!generated && !missedByBlind && (damageType || breakerActive)) {
             applyBreakImpact(id, damageType, actor);
+          }
+          if (!generated && !missedByBlind && isDamageType(damageType)) {
+            queueOverlordCounter(
+              overlords.checkCounterOnHit(actor, id, damageType, {
+                generated,
+                missed: missedByBlind,
+              }),
+            );
           }
           if (lost && u.side === 'enemy' && !generated) attackInjuries?.add(id);
           if (!generated) recordCooperationHit(work, actor, id, damage);
@@ -751,6 +781,7 @@ function simulate(s, plan, slots) {
         ...attackStatus,
       },
     );
+    flushOverlordCounters();
   }
   function counterAttack(actor, target) {
     const unit = work.units[actor];
@@ -794,8 +825,47 @@ function simulate(s, plan, slots) {
         damageType: basicDamageType,
         ...attackStatus,
       });
+      flushOverlordCounters();
     }
     return damage;
+  }
+  function queueOverlordCounter(entry) {
+    if (!entry) return;
+    const exists = pendingOverlordCounters.some(
+      (item) =>
+        item.actor === entry.actor && item.target === entry.target && item.reason === entry.reason,
+    );
+    if (!exists) pendingOverlordCounters.push(entry);
+  }
+  function flushOverlordCounters() {
+    if (!pendingOverlordCounters.length) return;
+    const list = pendingOverlordCounters.splice(0, pendingOverlordCounters.length);
+    for (const counter of list) {
+      const actorUnit = work.units[counter.actor];
+      const targetUnit = work.units[counter.target];
+      if (!actorUnit || actorUnit.hp <= 0 || actorUnit.broken || actorUnit.buffs?.bind) continue;
+      if (!targetUnit || targetUnit.hp <= 0) continue;
+      currentLogs.push(
+        `${definitions[counter.actor]?.name || counter.actor}触发【${counter.name}】反击${definitions[counter.target]?.name || counter.target}`,
+      );
+      effects(
+        counter.actor,
+        [counter.target],
+        [{ type: 'damage', value: counter.damage }],
+        true,
+        false,
+        false,
+        0,
+        actorUnit.mark || 0,
+        counter.damageType,
+      );
+      record('counter', counter.actor, counter.name, [counter.target], null, null, {
+        isOverlordCounter: true,
+        overlordCounterReason: counter.reason,
+        clip: counter.clip,
+        damageType: counter.damageType,
+      });
+    }
   }
   function record(type, actor, label, targetIds = [], actionId = null, skill = null, detail = {}) {
     const statusApplications = currentStatusApplications.map((application) => ({
@@ -970,6 +1040,8 @@ function simulate(s, plan, slots) {
     clearRearPlagueSeals,
     triggerEntrySkill,
     rear,
+    onFormationChanged: () =>
+      refreshIronCoachFrontWeakness(work, definitions, (entry) => currentLogs.push(entry)),
   });
   const enemyActionIndex = {};
   for (at = 0; at < slots.length; at++) {
@@ -1476,6 +1548,7 @@ function simulate(s, plan, slots) {
           ...(heroDamageType ? { damageType: heroDamageType } : {}),
           ...attackStatus,
         });
+        flushOverlordCounters();
         if (
           cast === repeats - 1 &&
           skill.retreatSwap &&
@@ -1490,6 +1563,7 @@ function simulate(s, plan, slots) {
           if (frontSlot >= 0 && frontSlot < 3 && backSlot >= 3 && rearIncoming) {
             [work.formation[frontSlot], work.formation[backSlot]] = [rearIncoming, a.actor];
             clearRearPlagueSeals();
+            refreshIronCoachFrontWeakness(work, definitions, (entry) => currentLogs.push(entry));
             movedToFront.add(rearIncoming);
             trigger('enterFront', rearIncoming, { targets: [rearIncoming] });
             trigger('enterRear', a.actor, { targets: [a.actor] });
@@ -1570,10 +1644,19 @@ export function syncEnemyBreakWindows(s) {
     if (!u || !d || u.hp <= 0) return;
     if (shouldOpenBreakWindow(s, id, d, enemyIndex)) {
       const stage = u.bossStage || (u.enraged ? 2 : 1);
-      const win = createBreakWindow(d, u, stage, Boolean(d.fixedFirstSlot));
+      const win = createBreakWindow(d, u, stage, Boolean(d.fixedFirstSlot), s, defs);
       u.breakWindow = win;
       u.toughness = win ? win.current : 0;
       u.maxToughness = win ? win.max : 0;
+      if (d.ironCoachMechanic && win?.majorWeakness) {
+        u.coachUsedMajorWeaknesses ||= [];
+        if (!u.coachUsedMajorWeaknesses.includes(win.majorWeakness)) {
+          u.coachUsedMajorWeaknesses.push(win.majorWeakness);
+        }
+      }
+      if (d.collectorMechanic && win?.mode === 'collector') {
+        u.block = Math.max(u.block || 0, stage >= 2 ? 22 : 16);
+      }
     } else {
       u.breakWindow = null;
       u.toughness = 0;
@@ -1589,7 +1672,13 @@ export function openBreakWindow(s, id, options = {}) {
   const d = definition(s, id);
   if (!u || !d || u.hp <= 0) return null;
   const stage = u.bossStage || (u.enraged ? 2 : 1);
-  let win = createBreakWindow(d, u, stage, Boolean(d.fixedFirstSlot));
+  let win = createBreakWindow(d, u, stage, Boolean(d.fixedFirstSlot), s, definitionsFor(s));
+  if (d.ironCoachMechanic && win?.majorWeakness) {
+    u.coachUsedMajorWeaknesses ||= [];
+    if (!u.coachUsedMajorWeaknesses.includes(win.majorWeakness)) {
+      u.coachUsedMajorWeaknesses.push(win.majorWeakness);
+    }
+  }
   if (!win && options.force) {
     win = {
       active: true,
@@ -1616,6 +1705,12 @@ export function advance(result) {
     delete s.activeAlchemicalBomb;
     delete s.overlordUiLocked;
     delete s.activeHiddenWeapons;
+    delete s.activeCollectorArchive;
+    delete s.collectorDamageByType;
+    for (const u of Object.values(s.units || {})) {
+      delete u.collectorArchivedTypes;
+      delete u.coachUsedMajorWeaknesses;
+    }
     s.phase = result.outcome;
     return s;
   }
@@ -1636,6 +1731,7 @@ export function advance(result) {
       u.breakWindow = null;
       u.toughness = 0;
       u.maxToughness = 0;
+      delete u.collectorBreakUsedTypes;
     }
   }
   if (s.pendingAlchemicalBomb) {
@@ -1651,6 +1747,7 @@ export function advance(result) {
     delete s.dragonVein;
     delete s.dragonVeinMeta;
   }
+  syncCollectorArchive(s, definitionsFor(s));
   syncEnemyBreakWindows(s);
   lockHiddenWeapons(s, definitionsFor(s));
   lockEnemyDecisions(s, definitionsFor(s));
@@ -1694,7 +1791,7 @@ export function newEncounter(spec, prior = null, index = 0, heroDefinitions = {}
       ? {
           ...clone(prior.units[h.id]),
           buffs: clone(s.units[h.id].buffs),
-          block: 0,
+          block: Math.max(0, h.startingShield || 0),
           used: 0,
           combined: 0,
           combineSkillUsed: false,
@@ -1732,7 +1829,13 @@ export function newEncounter(spec, prior = null, index = 0, heroDefinitions = {}
       maxMp: 0,
       block: 0,
       buffs: Object.fromEntries(
-        Object.entries(d.buffs || {}).map(([key, value]) => [key, statusStacks(key, value)]),
+        Object.entries(d.buffs || {}).map(([key, value]) => {
+          const scaled =
+            ['poison', 'bleed'].includes(key) && growth.damageScale > 1 && value > 0
+              ? Math.max(1, Math.round(value * growth.damageScale))
+              : value;
+          return [key, statusStacks(key, scaled)];
+        }),
       ),
       used: 0,
       speciesKey: enemyBreak.speciesKey,

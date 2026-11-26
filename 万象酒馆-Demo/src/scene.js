@@ -833,7 +833,9 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
   function playEvent(e, before) {
     if (disposed) return 0;
     const actorDef = e.actor ? definitions[e.actor] : null;
-    const isOverlordEnemy = e.type === 'enemy' && Boolean(actorDef?.overlord);
+    const isOverlordCounter = e.type === 'counter' && Boolean(e.isOverlordCounter);
+    const isOverlordEnemy =
+      (e.type === 'enemy' || isOverlordCounter) && Boolean(actorDef?.overlord);
     const lambAttack = apepAttack(e);
     const lambPhase = e.actor === APEP_ID && e.type === 'bossPhase';
     const clipSpec = {
@@ -866,7 +868,7 @@ export async function createBattleView(stage, onUnitClick, options = {}) {
     if (lambAttack?.type === 'plague' || (e.actor === APEP_ID && e.type === 'sinkingPlague')) {
       plagueFloor?.play(e, lambAttack ? duration * APEP_RELEASE : 0, animationSpeed);
     }
-    if ((e.type === 'enemy' || e.type === 'bossPhase') && e.actor) {
+    if ((e.type === 'enemy' || e.type === 'bossPhase' || isOverlordCounter) && e.actor) {
       let lunge = null;
       let casterMotion = null;
       const bossRec = enemyRecords.find((r) => r.id === e.actor);

@@ -627,7 +627,9 @@ export function explorationSpec(entry, index = 0) {
       chosenBoss === 'radiantWyvern' ||
       chosenBoss === 'alchemicalPuppet' ||
       chosenBoss === 'darkscaleWarlord' ||
-      chosenBoss === 'banditSyndicateKing'
+      chosenBoss === 'banditSyndicateKing' ||
+      chosenBoss === 'arenaQualifierIronCoach' ||
+      chosenBoss === 'silverCrownSyndicateArchon'
     )
       return [chosenBoss];
     const aides = shuffle(fallbackPool).filter((id) => id !== chosenBoss);

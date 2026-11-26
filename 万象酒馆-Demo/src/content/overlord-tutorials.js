@@ -479,6 +479,148 @@ export const OVERLORD_TUTORIALS = Object.freeze({
       },
     ],
   }),
+  arenaQualifierIronCoach: Object.freeze({
+    id: 'arenaQualifierIronCoach',
+    bossName: '海选擂主·铁臂教头',
+    rankLabel: '大骑士竞技场 · 海选擂主',
+    accent: '#d98b4e',
+    portrait: './assets/portraits/arena-q-iron-coach.svg',
+    headline: '速度 1 回合末蓄力重棍、动态大弱点与非弱点截击',
+    intro:
+      '海选擂主每回合固定在先手正常攻防后，把致命【蓄力重棍】压在速度 1 的回合最末位；从二阶段起大弱点会随你当前站位实时切换，用非弱点瞎打则会吃他一记截击！',
+    keyTakeaway:
+      '二阶段只从你当前【前场 3 人】能打出的属性中抽取大弱点（换人会即时刷新）；三阶段扩大到全队 6 人并升至 3 动 3 盾；尽量用弱点抢在速度 1 前破防打断重击！',
+    diagramSvg: html`<svg viewBox="0 0 360 156" class="overlord-tut-svg" aria-hidden="true">
+      <rect
+        x="8"
+        y="8"
+        width="344"
+        height="140"
+        rx="10"
+        fill="#1e150e"
+        stroke="#d98b4e"
+        stroke-width="1.5"
+      />
+      <rect x="22" y="24" width="150" height="58" rx="6" fill="#2e1e12" stroke="#f0a868" />
+      <text x="97" y="44" text-anchor="middle" fill="#ffe6cb" font-size="11" font-weight="700">
+        2→2→3 动固定蓄力轴
+      </text>
+      <text x="97" y="60" text-anchor="middle" fill="#f3c08f" font-size="9">
+        前段随机攻击/守备意图
+      </text>
+      <text x="97" y="74" text-anchor="middle" fill="#f3c08f" font-size="9">
+        末动永远固定速度 1 重棍轰台
+      </text>
+      <rect x="188" y="24" width="150" height="58" rx="6" fill="#281a14" stroke="#f5c249" />
+      <text x="263" y="44" text-anchor="middle" fill="#fff2cf" font-size="11" font-weight="700">
+        三阶段动态弱点 &amp; 反击
+      </text>
+      <text x="263" y="60" text-anchor="middle" fill="#ffd98a" font-size="9">
+        1阶自由破2 / 2阶前场池破2
+      </text>
+      <text x="263" y="74" text-anchor="middle" fill="#ffd98a" font-size="9">
+        3阶6人池破3 · 非弱点必反击
+      </text>
+      <rect x="22" y="96" width="316" height="36" rx="6" fill="#2c2012" stroke="#e8b85b" />
+      <text x="180" y="118" text-anchor="middle" fill="#fff0be" font-size="10" font-weight="700">
+        破局关键：用金色大弱点 -2 格或小弱点凑满破防，打断每回合末速度 1 重棍，避开非弱点截击！
+      </text>
+    </svg>`,
+    mechanics: [
+      {
+        tag: '尾速蓄力',
+        title: '每回合两动（三阶段三动）+ 速度 1 蓄力压轴',
+        summary: '教头前半段以标准速度在攻防意图间切换，回合最末一动固定锁在【速度 1】蓄力砸击。',
+        counter: '趁他速度 1 重棍尚未落下前打空破绽条，即可直接取消他最疼的蓄力一击！',
+      },
+      {
+        tag: '动态弱点',
+        title: '二阶段跟随前场、三阶段扩大到全队 6 人',
+        summary:
+          '一阶段为 2 格普通破绽；二阶段 2 格特殊破绽只从存活前场 3 人招式里挑大弱点，换人立即刷新；三阶段 3 格扩至 6 人全池。',
+        counter: '二阶段不用担心被卡死属性，注意看顶栏与破绽条实时刷新的金色大弱点图标即可。',
+      },
+      {
+        tag: '非弱截击',
+        title: '二、三阶段非弱点直伤必遭反击',
+        summary:
+          '进入二、三阶段后，只要用不在当前弱点列内的属性直接打他，教头会当场赏一记【教头截击】。',
+        counter: '尽量让不带弱点属性的角色施放增益/防御/换位，由捏着大弱点的角色负责主破与输出。',
+      },
+    ],
+  }),
+  silverCrownSyndicateArchon: Object.freeze({
+    id: 'silverCrownSyndicateArchon',
+    bossName: '秘藏馆主·白鸦',
+    rankLabel: '银冠城奇珍展览馆 · 秘藏馆主',
+    accent: '#eab308',
+    portrait: './assets/portraits/silver-crown-syndicate-archon.svg',
+    headline: '孤品名录拒收、蓄力双倍新属性削韧与高速弹幕',
+    intro:
+      '馆主白鸦兼备极高出手速度与大范围 AOE 压制，每回合末还会将上一回合承受的【最高伤害属性】收录进【馆藏名录】（二、三阶段再各加 1 项随机收录），彻底拒收重复套路！',
+    keyTakeaway:
+      '避开卡片下方高亮的【拒收】属性（伤害-40%、0削韧还挨以太铳反击）；等他起手蓄力露出高韧性展柜破绽时，轮流用不同的【未收录新属性】打出 +35% 增伤与双倍 -2 削韧！',
+    diagramSvg: html`<svg viewBox="0 0 360 156" class="overlord-tut-svg" aria-hidden="true">
+      <rect
+        x="8"
+        y="8"
+        width="344"
+        height="140"
+        rx="10"
+        fill="#1a150b"
+        stroke="#eab308"
+        stroke-width="1.5"
+      />
+      <rect x="22" y="24" width="150" height="58" rx="6" fill="#2a210f" stroke="#f5c953" />
+      <text x="97" y="44" text-anchor="middle" fill="#fff2c9" font-size="11" font-weight="700">
+        馆藏拒收名录
+      </text>
+      <text x="97" y="60" text-anchor="middle" fill="#edd087" font-size="9">
+        每轮收录上回合最高伤害 1 项
+      </text>
+      <text x="97" y="74" text-anchor="middle" fill="#edd087" font-size="9">
+        二/三阶再各随机 +1（-40%并反击）
+      </text>
+      <rect x="188" y="24" width="150" height="58" rx="6" fill="#231828" stroke="#c985f7" />
+      <text x="263" y="44" text-anchor="middle" fill="#f7e4ff" font-size="11" font-weight="700">
+        蓄力期孤品破防
+      </text>
+      <text x="263" y="60" text-anchor="middle" fill="#dcaaf7" font-size="9">
+        4 → 6 层厚盾仅在蓄力轮开启
+      </text>
+      <text x="263" y="74" text-anchor="middle" fill="#dcaaf7" font-size="9">
+        新属性+35%伤&amp;-2格 / 同属性限1次
+      </text>
+      <rect x="22" y="96" width="316" height="36" rx="6" fill="#2c2210" stroke="#f0c368" />
+      <text x="180" y="118" text-anchor="middle" fill="#fff0be" font-size="10" font-weight="700">
+        破局关键：前后排换人轮换多属性！蓄力轮靠 2~3 种不同新属性一举轰碎【永久封柜】！
+      </text>
+    </svg>`,
+    mechanics: [
+      {
+        tag: '拒收赝品',
+        title: '最高承伤 Top-1 + 二/三阶段随机加收',
+        summary:
+          '回合结束时白鸦将上一轮对其造成最高伤害的 1 种属性列入拒收名录；二、三阶段再分别额外随机收录 1 种队伍可用属性。',
+        counter: '命中名录内属性伤害骤降 40%、不削韧且当场吃一记以太点射反击——切记看牌换手！',
+      },
+      {
+        tag: '孤品破绽',
+        title: '仅蓄力轮开启 4/6 层高盾 · 新属性双倍击破',
+        summary:
+          '平局不露破绽；唯有他蓄力【永久封柜】时亮起馆藏破绽，所有未收录新属性均享 +35% 增伤与双倍（-2 格）削韧。',
+        counter:
+          '同一个未收录属性在同一回合只能触发 1 次破防削韧，务必用 2~3 位不同属性角色接力打破！',
+      },
+      {
+        tag: '高速齐射',
+        title: '高敏捷多动 + 大范围前排压制',
+        summary:
+          '白鸦具备高速度与 2→3→4 动频率，三管以太铳与展雾连携频繁覆盖全前排，蓄力终结技留在末速释放。',
+        counter: '先利用蓄力轮前段窗口打穿破绽中止封柜，再用治疗与换位消化此前吃到的易伤/流血。',
+      },
+    ],
+  }),
 });
 
 export function normalizeTutorialBossId(id) {

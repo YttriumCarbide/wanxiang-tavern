@@ -314,16 +314,39 @@ export async function overlandChecks({ browser, baseURL, output }) {
     await page.locator('[data-daily="travel:fight"]').click();
     await page.waitForFunction(() => demo.getStatus().mode === 'battle');
     assert.deepEqual(await page.evaluate(() => demo.getState().enemyIds), ['patrolHound']);
-    await page.waitForFunction(() => !demo.getStatus().animating);
-    await page.locator('[data-start="0"]').click();
-    await page.locator('[data-unit="aegis"]').click();
-    // The route fixture tests the victory transition, not whether a basic attack one-shots a level 3 enemy.
-    await page.locator('[data-skill="generated-2"]').click();
-    if (await page.evaluate(() => demo.getStatus().interactionStep === 'target'))
-      await page.locator('[data-unit="patrolHound"]').click();
-    assert.equal(await page.evaluate(() => demo.getForecast().outcome), 'victory');
-    await page.locator('#commit').click();
-    await page.getByRole('button', { name: '继续行程', exact: true }).click();
+    for (let round = 0; round < 4; round++) {
+      await page.waitForFunction(() => !demo.getStatus().animating);
+      const continueBtn = page.getByRole('button', { name: '继续行程', exact: true });
+      if (await continueBtn.isVisible()) break;
+      const heroes = await page.evaluate(() =>
+        demo
+          .getState()
+          .formation.slice(0, 3)
+          .filter((id) => id && (demo.getState().units[id]?.hp ?? 0) > 0),
+      );
+      for (const actor of heroes) {
+        if ((await page.evaluate(() => demo.getForecast()?.outcome)) === 'victory') break;
+        const startSlot = page.locator('[data-start]:enabled').first();
+        if (!(await startSlot.count())) break;
+        await startSlot.click();
+        await page.locator(`[data-unit="${actor}"]`).click();
+        const skill =
+          actor === 'aegis' && round === 0
+            ? page.locator('[data-skill="generated-2"]:enabled')
+            : page.locator('[data-skill="attack"]:enabled');
+        const chosen = (await skill.count())
+          ? skill.first()
+          : page.locator('[data-skill]:enabled').first();
+        if (!(await chosen.count())) break;
+        await chosen.click();
+        if (await page.evaluate(() => demo.getStatus().interactionStep === 'target'))
+          await page.locator('[data-unit="patrolHound"]').click();
+      }
+      await page.locator('#commit:enabled').click();
+    }
+    const continueBtn = page.getByRole('button', { name: '继续行程', exact: true });
+    await continueBtn.waitFor({ state: 'visible' });
+    await continueBtn.click();
     await readUntil('#overland-rp [data-overland-continue]:enabled');
     assert.equal(await page.evaluate(() => demo.getLibrary().daily.active.turns), 10);
     assert.equal(await page.evaluate(() => demo.getLibrary().daily.active.scene), 'road-capital');
@@ -502,9 +525,14 @@ export async function overlandChecks({ browser, baseURL, output }) {
       ['普通地点', '功能地点', '副本'],
     );
     assert.equal(
-      await eternalDirectory.locator('[data-city-dungeon="starbell-undercroft"]').count(),
+      await eternalDirectory.locator('[data-city-dungeon="black-market"]').count(),
       0,
       'the capital directory does not list Starbell dungeons',
+    );
+    assert.equal(
+      await eternalDirectory.locator('[data-city-dungeon="duel-arena"]').count(),
+      1,
+      'the capital directory exposes the Eternal City arena qualifier dungeon',
     );
     await page.screenshot({ path: path.join(output, 'eternal-city-blueprint.png') });
     await frame.locator('#street-city-submap [data-city-facility="guild"]').click();

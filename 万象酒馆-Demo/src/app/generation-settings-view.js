@@ -19,6 +19,7 @@ export function createGenerationSettingsView({ context, library, storage, getPen
     context.generationAccess?.refresh();
     context.records?.refreshArchive?.();
     context.destinations?.refreshQuickTest?.();
+    context.daily?.render?.();
     context.developer?.sync();
     context.gameModifier?.sync();
   }

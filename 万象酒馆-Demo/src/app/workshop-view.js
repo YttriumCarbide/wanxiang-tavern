@@ -5,6 +5,7 @@ import {
   workshopRate,
   workshopBuildCost,
   workshopParallel,
+  workshopItemConsumers,
 } from '../workshop/engine.js';
 import { workshopBoardNodes, workshopLayout, WORKSHOP_TILE } from '../workshop/layout.js';
 import { workshopEntryIcon } from '../workshop/icons.js';
@@ -188,6 +189,20 @@ export function workshopInspector(state, catalog, kind, selected, wallet = {}) {
   const producers = catalog.stations.filter(
     (station) => station.outputs[item.id] && workshopVisible(state, catalog, 'station', station),
   );
+  const consumers = workshopItemConsumers(state, catalog, item.id);
+  const consumersHtml = consumers.length
+    ? `<div class="ws-consumers">${consumers
+        .map((entry) => {
+          const targets = entry.outputs
+            .map(
+              (out) =>
+                `<button type="button" class="ws-consumer-target" data-ws-select="${e(out.id)}" data-kind="item">${itemIcon(catalog, out.id)}<span>${e(out.name)}</span></button>`,
+            )
+            .join('<span class="ws-consumer-sep">/</span>');
+          return `<article class="ws-consumer-row"><div class="ws-consumer-main">${targets}</div><p class="ws-consumer-meta">${e(entry.stationName)}（${entry.active}/${entry.count} 运转）· 每 ${entry.seconds.toFixed(1)} 秒消耗 ${workshopNumber(entry.perCycle)} 份（约 ${workshopNumber(entry.perMinute)}/分）</p></article>`;
+        })
+        .join('')}</div>`
+    : '<p class="ws-consumer-empty">当前没有正在运转的自动产线消耗此材料。</p>';
   return html` <h2>${workshopEntryIcon('items', item, 'ws-title-icon')}${e(item.name)}</h2>
     <div class="ws-stock">
       <b data-ws-stock>${workshopNumber(state.items[item.id])}</b><span>库存</span>
@@ -207,20 +222,6 @@ export function workshopInspector(state, catalog, kind, selected, wallet = {}) {
     >
       ${job?.active ? '正在制作…' : '手作一份'}
     </button>
-    <div class="ws-delivery">
-      <h4>交付给酒馆 <span>${workshopNumber(item.value)} 金币 / 份</span></h4>
-      <div>
-        <input
-          aria-label="交付数量"
-          data-ws-sell-count
-          type="number"
-          min="1"
-          max="1000000000000"
-          value="1"
-        /><button data-ws-action="sell" data-id="${e(item.id)}">交付</button
-        ><button data-ws-action="sell-all" data-id="${e(item.id)}">全部</button>
-      </div>
-    </div>
     <h4>自动生产</h4>
     ${
       producers.length
@@ -228,12 +229,14 @@ export function workshopInspector(state, catalog, kind, selected, wallet = {}) {
             .map((station) => facilityControls(state, catalog, station, [item], wallet))
             .join('')
         : '<p>对应生产设施尚未解锁，先通过手作推进工艺。</p>'
-    }`;
+    }
+    <h4>自动生产消耗</h4>
+    ${consumersHtml}`;
 }
 
 export function workshopInventory(state, catalog) {
   const entries = catalog.items.filter(
     (item) => state.known.includes(item.id) || (state.items[item.id] || 0) > 0,
   );
-  return `<div class="ws-inventory">${entries.map((item) => `<button data-ws-select="${e(item.id)}" data-kind="item" class="ws-inventory-row">${workshopEntryIcon('items', item)}<strong>${e(item.name)}</strong><b data-ws-inventory-quantity="${e(item.id)}">${workshopNumber(state.items[item.id])}</b><span>${workshopNumber(item.value)} 金币 / 份</span></button>`).join('') || '<p>收集到的物资会记在这里。</p>'}</div>`;
+  return `<div class="ws-inventory">${entries.map((item) => `<button data-ws-select="${e(item.id)}" data-kind="item" class="ws-inventory-row">${workshopEntryIcon('items', item)}<strong>${e(item.name)}</strong><b data-ws-inventory-quantity="${e(item.id)}">${workshopNumber(state.items[item.id])}</b></button>`).join('') || '<p>收集到的物资会记在这里。</p>'}</div>`;
 }

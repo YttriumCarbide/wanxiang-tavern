@@ -6,9 +6,9 @@ import { OUTING_SCENES } from '../daily.js';
 import { explorationScene } from '../exploration/scenes.js';
 import { cityForScene } from '../city-directory.js';
 
-const STARBELL_IMAGE = './assets/exploration/city-backgrounds/starbell.png';
-const SILVER_CROWN_IMAGE = './assets/exploration/city-backgrounds/silver-crown.png';
-const ETERNAL_CITY_IMAGE = './assets/exploration/city-backgrounds/eternal-city.png';
+const STARBELL_IMAGE = './assets/exploration/city-backgrounds/starbell.webp';
+const SILVER_CROWN_IMAGE = './assets/exploration/city-backgrounds/silver-crown.webp';
+const ETERNAL_CITY_IMAGE = './assets/exploration/city-backgrounds/eternal-city.webp';
 const TAVERN_IMAGE = './assets/title-tavern.png';
 
 const TAVERN_INDOOR_PLACES = new Set(['corridor', 'bar', 'bar2', 'table', 'table2']);

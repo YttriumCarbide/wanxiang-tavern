@@ -1,4 +1,9 @@
-import { DAMAGE_TYPE_IDS, isDamageType, resolveBasicAttackType } from './damage-types.js';
+import {
+  DAMAGE_TYPE_IDS,
+  inferDamageType,
+  isDamageType,
+  resolveBasicAttackType,
+} from './damage-types.js';
 
 const PLAIN_ORDINARY_LAYERS = Object.freeze({
   hound: 2,
@@ -28,6 +33,20 @@ const PLAIN_ORDINARY_LAYERS = Object.freeze({
   banditCutthroat: 2,
   goblinShaman: 1,
   erosionCrawler: 2,
+  arenaQualifierStick: 1,
+  arenaQualifierWoodShield: 1,
+  arenaQualifierSlinger: 1,
+  arenaQualifierStaff: 1,
+  arenaQualifierKnives: 1,
+  arenaQualifierPitchfork: 1,
+  arenaQualifierNet: 1,
+  arenaQualifierSmith: 1,
+  arenaQualifierHound: 1,
+  arenaQualifierRam: 1,
+  syndicateVelvetBlade: 2,
+  syndicateRepeatingArbalest: 2,
+  syndicateMintChemist: 1,
+  syndicateVaultEnforcer: 2,
 });
 
 const NO_BREAK_ELITES = new Set([
@@ -68,6 +87,18 @@ const SPECIAL_BREAK_PRESETS = Object.freeze({
   erosionJuggernaut: { layers: 3, weaknesses: ['light', 'brawl', 'fire'] },
   aresCannonLeft: { layers: 2, weaknesses: ['lightning', 'axe', 'brawl'] },
   aresCannonRight: { layers: 2, weaknesses: ['lightning', 'ice', 'special-magic'] },
+  arenaQualifierSpear: { layers: 2, weaknesses: ['sword', 'fire', 'wind'] },
+  arenaQualifierAxes: { layers: 2, weaknesses: ['spear', 'ice', 'wind'] },
+  arenaQualifierIronShield: { layers: 2, weaknesses: ['axe', 'fire', 'lightning'] },
+  arenaQualifierCrossbow: { layers: 2, weaknesses: ['sword', 'ice', 'wind'] },
+  arenaQualifierBoxer: { layers: 2, weaknesses: ['spear', 'fire', 'ice'] },
+  arenaQualifierPoleMaster: { layers: 2, weaknesses: ['axe', 'fire', 'lightning'] },
+  arenaQualifierFlail: { layers: 2, weaknesses: ['sword', 'ice', 'wind'] },
+  arenaQualifierTrapper: { layers: 2, weaknesses: ['axe', 'fire', 'lightning'] },
+  arenaQualifierBoar: { layers: 2, weaknesses: ['spear', 'fire', 'ice'] },
+  arenaQualifierSwordsman: { layers: 2, weaknesses: ['axe', 'ice', 'wind'] },
+  syndicateBloodCroupier: { layers: 3, weaknesses: ['light', 'spear', 'fire', 'wind'] },
+  syndicateGildedAutomaton: { layers: 3, weaknesses: ['lightning', 'axe', 'brawl', 'fire'] },
 
   // Bosses (100%)
   millVoleAlpha: { layers: 2, weaknesses: ['special-magic', 'wind', 'sword', 'fire'] },
@@ -103,6 +134,12 @@ const SPECIAL_BREAK_PRESETS = Object.freeze({
   banditSyndicateKing: { layers: 3, weaknesses: ['sword', 'fire', 'lightning', 'brawl'] },
   goblinKingGorg: { layers: 3, weaknesses: ['fire', 'spear', 'light', 'axe'] },
   erosionRiftTyrant: { layers: 3, weaknesses: ['light', 'special-magic', 'brawl', 'fire'] },
+  arenaQualifierTowerCaptain: { layers: 3, weaknesses: ['axe', 'fire', 'lightning'] },
+  arenaQualifierPikeCaptain: { layers: 3, weaknesses: ['sword', 'fire', 'wind'] },
+  arenaQualifierMaul: { layers: 3, weaknesses: ['spear', 'ice', 'wind'] },
+  arenaQualifierBladeCaptain: { layers: 3, weaknesses: ['spear', 'ice', 'wind'] },
+  arenaQualifierHoundCaptain: { layers: 3, weaknesses: ['spear', 'fire', 'ice'] },
+  arenaQualifierVeteran: { layers: 3, weaknesses: ['axe', 'fire', 'lightning'] },
 
   // Overlords (100%)
   alchemicalPuppet: { layers: 2, weaknesses: ['fire', 'brawl', 'axe', 'lightning'] },
@@ -113,6 +150,8 @@ const SPECIAL_BREAK_PRESETS = Object.freeze({
   apepLamb: { layers: 3, weaknesses: ['light', 'fire', 'spear', 'special-magic'] },
   radiantWyvern: { layers: 3, weaknesses: ['ice', 'spear', 'dark', 'lightning'] },
   darkscaleWarlord: { layers: 3, weaknesses: ['light', 'fire', 'spear', 'axe'] },
+  arenaQualifierIronCoach: { layers: 2, weaknesses: ['spear', 'fire', 'lightning', 'light'] },
+  silverCrownSyndicateArchon: { layers: 4, weaknesses: ['light', 'brawl', 'lightning', 'fire'] },
 });
 
 function buildOfficialTable() {
@@ -252,6 +291,48 @@ export function resolveEnemyBreakProfile(defOrId, stage = 1) {
     };
   }
 
+  if (speciesKey === 'arenaQualifierIronCoach' || def.ironCoachMechanic) {
+    const layers = def.breakLayersByPhase?.[s - 1] ?? (s >= 3 ? 3 : 2);
+    if (s === 1) {
+      return {
+        speciesKey,
+        hasBreak: true,
+        mode: 'plain',
+        maxToughness: layers,
+        majorWeakness: null,
+        minorWeaknesses: [],
+        weaknesses: [],
+        alwaysBreakWindow: true,
+      };
+    }
+    const base =
+      Array.isArray(def.weaknesses) && def.weaknesses.length >= 2
+        ? def.weaknesses
+        : ['spear', 'fire', 'lightning', 'light'];
+    return {
+      speciesKey,
+      hasBreak: true,
+      mode: 'special',
+      maxToughness: layers,
+      ...splitWeaknesses(base.slice(0, 3), base[0]),
+      alwaysBreakWindow: true,
+    };
+  }
+
+  if (speciesKey === 'silverCrownSyndicateArchon' || def.collectorMechanic) {
+    const layers = def.breakLayersByPhase?.[s - 1] ?? (s >= 2 ? 6 : 4);
+    return {
+      speciesKey,
+      hasBreak: true,
+      mode: 'collector',
+      maxToughness: layers,
+      majorWeakness: null,
+      minorWeaknesses: [],
+      weaknesses: [],
+      alwaysBreakWindow: false,
+    };
+  }
+
   // Custom / synthetic test definitions with explicit maxToughness (and no official table override).
   if (!official && Number.isFinite(def.maxToughness)) {
     const layers = Math.max(0, Math.round(def.maxToughness));
@@ -373,6 +454,78 @@ export function resolveEnemyBreakProfile(defOrId, stage = 1) {
   };
 }
 
+/** Collect available direct-damage attributes across living party members. */
+export function partyAvailableDamageTypes(state, definitions, { frontOnly = false } = {}) {
+  const units = state?.units || {};
+  const formation = Array.isArray(state?.formation) ? state.formation : [];
+  const rawIds = frontOnly ? formation.slice(0, 3) : formation;
+  let heroIds = rawIds.filter((id) => id && units[id]?.hp > 0);
+  if (!heroIds.length) {
+    heroIds = Object.values(units)
+      .filter((u) => u && u.side === 'hero' && u.hp > 0)
+      .map((u) => u.id);
+  }
+  const found = [];
+  const pushType = (type) => {
+    if (isDamageType(type) && !found.includes(type)) found.push(type);
+  };
+  for (const hid of heroIds) {
+    const hDef = definitions?.[hid];
+    if (!hDef) continue;
+    pushType(resolveBasicAttackType(hDef));
+    for (const skill of hDef.skills || []) {
+      if (!skill || skill.passive) continue;
+      pushType(inferDamageType(skill, hDef));
+    }
+    if (!frontOnly) {
+      const entry = hDef.entrySkill || hDef.combat?.entrySkill;
+      if (entry) pushType(inferDamageType(entry, hDef));
+    }
+  }
+  return found.length ? found : ['sword', 'fire', 'lightning'];
+}
+
+/** Deterministically pick Iron Coach major & minor weaknesses without repeating recent major weaknesses. */
+export function pickIronCoachWeaknesses(
+  state,
+  definitions,
+  def,
+  stage = 2,
+  seedSuffix = '',
+  usedHistory = [],
+) {
+  const s = Math.max(1, Math.min(3, Number(stage) || 1));
+  if (s <= 1) {
+    return { majorWeakness: null, minorWeaknesses: [], weaknesses: [] };
+  }
+  const pool = partyAvailableDamageTypes(state, definitions, { frontOnly: s === 2 });
+  const used = Array.isArray(usedHistory) ? usedHistory : [];
+  const fresh = pool.filter((t) => !used.includes(t));
+  const last = used.at(-1);
+  const candidates = fresh.length
+    ? fresh
+    : pool.filter((t) => t !== last).length
+      ? pool.filter((t) => t !== last)
+      : pool;
+  const key = `${state?.seed ?? 37}:${state?.round ?? 1}:coach:${s}:${used.length}${seedSuffix}`;
+  const major = candidates[hashString(key) % candidates.length];
+  const fallbackOrder = [
+    ...pool.filter((t) => t !== major),
+    ...(def?.weaknesses || []).filter((t) => isDamageType(t) && t !== major),
+    ...DAMAGE_TYPE_IDS.filter((t) => t !== major),
+  ];
+  const minor = [];
+  for (const cand of fallbackOrder) {
+    if (!minor.includes(cand) && cand !== major) minor.push(cand);
+    if (minor.length >= 2) break;
+  }
+  return {
+    majorWeakness: major,
+    minorWeaknesses: minor,
+    weaknesses: [major, ...minor],
+  };
+}
+
 /** Decide whether an enemy opens its single-round Break Window at the start of a planning round. */
 export function shouldOpenBreakWindow(state, id, def, enemyIndex = 0) {
   if (!state || state.phase === 'opening' || !def) return false;
@@ -391,17 +544,63 @@ export function shouldOpenBreakWindow(state, id, def, enemyIndex = 0) {
 }
 
 /** Build a fresh single-round Break Window object for state.units[id].breakWindow. */
-export function createBreakWindow(def, unit, stage = 1, hasFixedFirst = false) {
+export function createBreakWindow(
+  def,
+  unit,
+  stage = 1,
+  hasFixedFirst = false,
+  state = null,
+  definitions = null,
+) {
   const profile = resolveEnemyBreakProfile(def, stage);
   if (!profile.hasBreak || profile.maxToughness <= 0) return null;
+  let majorWeakness = profile.majorWeakness;
+  let minorWeaknesses = [...profile.minorWeaknesses];
+  if (def?.ironCoachMechanic && stage >= 2 && state && definitions) {
+    const picked = pickIronCoachWeaknesses(
+      state,
+      definitions,
+      def,
+      stage,
+      '',
+      unit?.coachUsedMajorWeaknesses || [],
+    );
+    majorWeakness = picked.majorWeakness;
+    minorWeaknesses = picked.minorWeaknesses;
+  }
+  const triggerActionIndex =
+    def?.ironCoachMechanic || def?.collectorMechanic
+      ? Math.max(
+          0,
+          (stage >= 3 ? def.finalPhaseActions : stage === 2 ? def.enragedActions : def.actions) - 1,
+        )
+      : hasFixedFirst
+        ? 1
+        : 0;
+  if (profile.mode === 'collector') {
+    const collected = state?.activeCollectorArchive?.[def?.id]?.collected || [];
+    const used = unit?.collectorBreakUsedTypes || [];
+    return {
+      active: true,
+      mode: 'collector',
+      current: profile.maxToughness,
+      max: profile.maxToughness,
+      majorWeakness: null,
+      minorWeaknesses: [],
+      collectedTypes: [...collected],
+      usedTypes: [...used],
+      triggerActionIndex,
+      source: unit?.chargingMove ? 'charge' : 'window',
+    };
+  }
   return {
     active: true,
     mode: profile.mode,
     current: profile.maxToughness,
     max: profile.maxToughness,
-    majorWeakness: profile.majorWeakness,
-    minorWeaknesses: [...profile.minorWeaknesses],
-    triggerActionIndex: hasFixedFirst ? 1 : 0,
+    majorWeakness,
+    minorWeaknesses,
+    triggerActionIndex,
     source: unit?.chargingMove ? 'charge' : 'window',
   };
 }
@@ -410,6 +609,12 @@ export function createBreakWindow(def, unit, stage = 1, hasFixedFirst = false) {
 export function breakImpactDelta(breakWindow, damageType) {
   if (!breakWindow?.active || !(breakWindow.current > 0) || !isDamageType(damageType)) return 0;
   if (breakWindow.mode === 'plain') return 1;
+  if (breakWindow.mode === 'collector') {
+    const collected = Array.isArray(breakWindow.collectedTypes) ? breakWindow.collectedTypes : [];
+    const used = Array.isArray(breakWindow.usedTypes) ? breakWindow.usedTypes : [];
+    if (collected.includes(damageType) || used.includes(damageType)) return 0;
+    return 2;
+  }
   if (breakWindow.majorWeakness && breakWindow.majorWeakness === damageType) return 2;
   if (
     Array.isArray(breakWindow.minorWeaknesses) &&

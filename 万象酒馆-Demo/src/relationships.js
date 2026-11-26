@@ -2,14 +2,27 @@ export function relationship(library, id) {
   return library.relationships?.[id] || { affection: 0, gains: 0, agreed: false };
 }
 
+export function affectionThreshold(level = 0) {
+  return Math.min(100, 20 + Math.max(0, Math.floor(Number(level) || 0)) * 10);
+}
+
 export function affectionRank(points = 0) {
-  const total = Math.max(0, Number.isSafeInteger(points) ? points : 0);
-  return { level: Math.floor(total / 100), progress: total % 100 };
+  let remaining = Math.max(0, Number.isSafeInteger(points) ? points : 0);
+  for (let level = 0; level < 8; level += 1) {
+    const required = affectionThreshold(level);
+    if (remaining < required) return { level, progress: remaining, required };
+    remaining -= required;
+  }
+  return {
+    level: 8 + Math.floor(remaining / 100),
+    progress: remaining % 100,
+    required: 100,
+  };
 }
 
 export function affectionLabel(points) {
-  const { level, progress } = affectionRank(points);
-  return `好感 Lv.${level} · ${progress}/100`;
+  const { level, progress, required } = affectionRank(points);
+  return `好感 Lv.${level} · ${progress}/${required}`;
 }
 
 export function resetRelationshipGains(library) {

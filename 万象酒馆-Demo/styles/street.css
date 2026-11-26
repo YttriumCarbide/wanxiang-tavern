@@ -223,21 +223,27 @@ html[data-embedded] .street-actions {
   transform: translateX(-50%);
   gap: 2px;
   padding: 5px;
-  border: 1px solid rgba(216, 178, 110, 0.34);
-  border-radius: 999px;
+  border: 1px solid rgba(226, 192, 120, 0.44);
+  border-radius: 4px;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.045), transparent 46%),
-    linear-gradient(180deg, rgba(22, 19, 17, 0.94), rgba(10, 9, 8, 0.97));
+    linear-gradient(180deg, rgba(255, 241, 196, 0.06), transparent 46%),
+    linear-gradient(180deg, rgba(28, 36, 82, 0.94), rgba(10, 13, 32, 0.97));
   box-shadow:
-    0 14px 36px rgba(0, 0, 0, 0.56),
-    0 0 0 4px rgba(10, 8, 7, 0.28),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    0 14px 40px rgba(0, 0, 0, 0.64),
+    0 0 0 3px rgba(8, 10, 28, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(15px);
   -webkit-backdrop-filter: blur(15px);
 }
+html[data-embedded] :is(#scene-talk, #street-map-open, #street-submap-open, #street-return)[hidden],
 #scene-talk[hidden],
 body:has(dialog[open]) #scene-talk,
 body:is(.gal-covered, .leaving) #scene-talk {
+  display: none !important;
+}
+html[data-embedded] body:has(dialog[open]) .street-actions,
+html[data-embedded] body:is(.gal-covered, .leaving) .street-actions,
+html[data-embedded] .street-actions:not(:has(button:not([hidden]))) {
   display: none !important;
 }
 html[data-embedded] #scene-talk,
@@ -254,9 +260,9 @@ html[data-embedded] #street-return {
   min-height: 38px;
   padding: 7px 14px;
   border: 1px solid transparent;
-  border-radius: 999px;
+  border-radius: 3px;
   background: transparent;
-  color: #b5a690;
+  color: #cabfa4;
   font:
     600 13px/1.2 'Microsoft YaHei',
     system-ui,
@@ -276,10 +282,10 @@ html[data-embedded] #street-submap-open:hover,
 html[data-embedded] #street-submap-open:focus-visible,
 html[data-embedded] #street-return:hover,
 html[data-embedded] #street-return:focus-visible {
-  border-color: rgba(216, 178, 110, 0.26);
-  color: #f6e0ae;
-  background: rgba(216, 178, 110, 0.1);
-  box-shadow: none;
+  border-color: rgba(226, 192, 120, 0.36);
+  color: #fff1c4;
+  background: linear-gradient(180deg, rgba(52, 66, 136, 0.55), rgba(24, 30, 72, 0.72));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
   transform: none;
 }
 html[data-embedded] #street-inspector {

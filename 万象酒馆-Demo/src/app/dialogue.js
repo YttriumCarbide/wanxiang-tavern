@@ -1,4 +1,5 @@
 import { authoredGalContent } from '../gal.js';
+import { renderLevelUpPanel } from './level-up-view.js';
 
 /** One owned typewriter, shared by the opening prose and Edith's action-gated lessons. */
 export function createDialogue(events, id = 'guide-dialogue', gal = null) {
@@ -29,21 +30,9 @@ export function createDialogue(events, id = 'guide-dialogue', gal = null) {
     count = 0;
     const line = lines[index];
     const bonuses = panel.querySelector('.dialogue-bonuses');
-    bonuses.replaceChildren(
-      ...(line.bonuses || []).map((bonus, index) => {
-        const badge = document.createElement('span');
-        badge.textContent = bonus;
-        badge.animate(
-          [
-            { opacity: 0, translate: '0 15px' },
-            { opacity: 1, translate: '0 0' },
-          ],
-          { duration: 380, delay: index * 100, fill: 'backwards' },
-        );
-        return badge;
-      }),
-    );
-    bonuses.hidden = !line.bonuses?.length;
+    renderLevelUpPanel(bonuses, line.levelUp, line.bonuses);
+    bonuses.hidden = !line.levelUp && !line.bonuses?.length;
+    panel.classList.toggle('fe-level-dialogue', Boolean(line.levelUp));
     const opening = panel.classList.contains('opening-prose');
     panel.dataset.speaker = line.speaker;
     part('dialogue-speaker').textContent = opening ? line.speaker || '白光之后' : line.speaker;

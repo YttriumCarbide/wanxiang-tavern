@@ -227,7 +227,7 @@ export function restoreDaily(raw) {
   }
   if (raw?.active?.direct && Object.hasOwn(DAILY_ACTIONS, raw.active.kind)) {
     const entry = structuredClone(raw.active);
-    if (entry.preview) return state;
+    if (entry.preview || ['ready', 'setup'].includes(entry.stage)) return state;
     if (entry.kind === 'outing') {
       if (entry.scene === 'street' || entry.scene === 'starlamp-street')
         entry.scene = 'city-center';
