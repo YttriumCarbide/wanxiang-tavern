@@ -54,11 +54,7 @@ export function createDeparture(context) {
     context.shell.renderParty();
     ensureLeftExpandControl();
     resetLeftExpand(panel);
-    title.textContent = selection
-      ? '选择本场同行者'
-      : pending
-        ? '正在生成剧本 · 可调整装备'
-        : '剧本已就绪 · 调整装备';
+    title.textContent = defaultTitle;
     done.textContent = selection ? '确认编队 · 开始生成' : '整备完成 · 出发';
     done.disabled = pending;
     cancel.hidden = !pending;
@@ -131,7 +127,7 @@ export function createDeparture(context) {
       ready() {
         const wasPending = pending;
         pending = false;
-        title.textContent = '剧本已就绪 · 调整装备';
+        title.textContent = defaultTitle;
         done.disabled = false;
         cancel.hidden = true;
         if (pendingRow) pendingRow.hidden = true;
@@ -160,7 +156,7 @@ export function createDeparture(context) {
       context.shell.renderParty();
       ensureLeftExpandControl();
       resetLeftExpand(panelEl);
-      title.textContent = '外出整备';
+      title.textContent = defaultTitle;
       done.textContent = '确认同行';
       done.disabled = false;
       cancel.hidden = true;

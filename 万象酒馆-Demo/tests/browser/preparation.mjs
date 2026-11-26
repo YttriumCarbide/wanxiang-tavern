@@ -128,9 +128,15 @@ export async function preparationChecks({ browser, baseURL, output }) {
     await ledger.waitFor({ state: 'hidden' });
     assert(await panel.evaluate((dialog) => dialog.open), 'Returning closes only the ledger');
     await handle.click();
-    await ledger.locator('.ledger-backdrop').click({
-      position: { x: bounds.x + 24, y: bounds.y + bounds.height / 2 },
-    });
+    const outsidePreparationHitsLedgerBackdrop = await page.evaluate(() =>
+      Boolean(document.elementFromPoint(1, 1)?.closest('.ledger-backdrop')),
+    );
+    assert.equal(
+      outsidePreparationHitsLedgerBackdrop,
+      true,
+      'The ledger backdrop covers blank space outside preparation',
+    );
+    await page.mouse.click(1, 1);
     await ledger.waitFor({ state: 'hidden' });
     assert(await panel.evaluate((dialog) => dialog.open), 'The backdrop closes only the ledger');
     assert.equal(await handle.getAttribute('aria-expanded'), 'false');
@@ -302,6 +308,7 @@ export async function preparationChecks({ browser, baseURL, output }) {
     await page.locator('[data-map-node*="mill-4-attic"]').click();
     await page.locator('#destination-start').click();
     await page.getByRole('button', { name: '确认编队 · 开始生成', exact: true }).waitFor();
+    assert.equal(await panel.locator('#prepare-title').textContent(), '整备');
     const warningMessages = [];
     page.on('dialog', async (dialog) => {
       warningMessages.push(dialog.message());
