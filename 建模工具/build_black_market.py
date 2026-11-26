@@ -24,17 +24,18 @@ PALETTE = {
 }
 
 
-def build_wharf_deck(model, start_z, end_z, colors, group, rivet):
-    model.box(-6.44, -0.25, start_z, 12.88, 0.25, end_z - start_z, "33251b", group)
+def build_wharf_deck(model, start_z, end_z, colors, group, rivet, x_start=-6.44, x_end=6.44):
+    width = x_end - x_start
+    model.box(x_start, -0.25, start_z, width, 0.25, end_z - start_z, "142226", group)
     for edge_z in (start_z, end_z - 0.085):
-        model.box(-6.44, -0.19, edge_z, 12.88, 0.278, 0.085, "7a573b", group)
+        model.box(x_start, -0.19, edge_z, width, 0.278, 0.085, "a86e49", group)
     for row, z in enumerate(np.arange(start_z + 0.097, end_z - 0.21, 0.39)):
-        x = -6.44
+        x = x_start
         column = 0
         length = 1.28 - (row % 3) * 0.38
         depth = min(0.353, end_z - 0.096 - z)
-        while x < 6.38:
-            width = min(length - 0.034, 6.44 - x)
+        while x < x_end - 0.06:
+            width = min(length - 0.034, x_end - x)
             color = colors[(row * 3 + column) % len(colors)]
             model.box(x, 0.0, z, width, 0.088, depth, color, group)
             if width > 0.22 and column % 3 == row % 3:
@@ -48,24 +49,58 @@ def build_central_board(model):
     # The basin extends under the land and piers, not as a dry slab over the inlet.
     model.box(-25.0, -0.56, -19.0, 50.0, 0.22, 38.0, "101a1d", "00_Harbor_Basin_Bedrock")
     model.box(-25.0, -0.34, -19.0, 50.0, 0.26, 38.0, "183f46", "01_Harbor_Basin_Water")
-    build_wharf_deck(
-        model,
-        0.68,
-        5.48,
-        ("594230", "715235", "543d2b", "635440"),
-        "02_Central_Wharf_Deck",
-        "a68150",
+    core_left, core_right = -5.0, 5.0
+    wharves = (
+        {
+            "start": 0.68,
+            "end": 5.48,
+            "colors": ("245b59", "33786f", "1e454e", "3b6b63"),
+            "rivet": "e0ae68",
+            "group": "02_Central_Wharf_Deck",
+            "west": (0.68, 2.62),
+            "east": (3.46, 5.48),
+        },
+        {
+            "start": -5.48,
+            "end": -0.68,
+            "colors": ("39252f", "702c3b", "4e3038", "633b45"),
+            "rivet": "d58b5f",
+            "group": "03_Enemy_Cargo_Wharf",
+            "west": (-5.48, -3.36),
+            "east": (-2.63, -0.68),
+        },
     )
-    build_wharf_deck(
-        model,
-        -5.48,
-        -0.68,
-        ("473426", "594230", "493b32", "63503d"),
-        "03_Enemy_Cargo_Wharf",
-        "785a44",
-    )
+    for wharf in wharves:
+        build_wharf_deck(
+            model,
+            wharf["start"],
+            wharf["end"],
+            wharf["colors"],
+            wharf["group"],
+            wharf["rivet"],
+            core_left,
+            core_right,
+        )
+        build_wharf_deck(
+            model,
+            *wharf["west"],
+            wharf["colors"],
+            wharf["group"],
+            wharf["rivet"],
+            -6.44,
+            core_left,
+        )
+        build_wharf_deck(
+            model,
+            *wharf["east"],
+            wharf["colors"],
+            wharf["group"],
+            wharf["rivet"],
+            core_right,
+            6.44,
+        )
 
-    # Two timber crossings leave a wide, recessed tidal slip visible between the card rows.
+    # Twin gangways cross the tidal slip; the cut-back side piers give the shoreline a stepped outline.
     channel = "04_Tidal_Slip_Water"
     model.box(-6.44, TIDE_Y, -0.68, 12.88, 0.008, 1.36, "30636a", channel)
     for i, x in enumerate(np.arange(-6.25, 6.16, 0.56)):
@@ -79,7 +114,7 @@ def build_central_board(model):
             ("4c8886", "255258", "5d9e91")[i % 3],
             channel,
         )
-    for x in (-5.76, 4.73):
+    for x in (-4.82, 3.78):
         group = "05_Wharf_Crossings"
         model.box(x, -0.20, -0.79, 1.02, 0.21, 1.58, "473426", group)
         for i in range(6):
@@ -98,15 +133,23 @@ def build_central_board(model):
     for z in (-2.345, 2.345):
         for x in (-3.014, 0.0, 3.014):
             enemy_side = z < 0
-            base_col = "343946" if enemy_side else "3d373a"
-            top_col = "473426" if enemy_side else "594230"
+            base_col = "202e34" if enemy_side else "173d3d"
+            top_col = "522c38" if enemy_side else "28645b"
             model.box(
                 x - 1.12, 0.0, z - 1.54, 2.24, 0.10, 3.08, base_col, "Six_Grounded_Foundations"
             )
             model.box(
                 x - 1.05, 0.10, z - 1.47, 2.10, 0.06, 2.94, top_col, "Six_Grounded_Foundations"
             )
-            model.ring(x, 0.16, z, 0.52, "5e5252", 0.035, "Revealed_Dais_Engraving")
+            model.ring(
+                x,
+                0.16,
+                z,
+                0.52,
+                "8c7f68" if enemy_side else "6b9a89",
+                0.035,
+                "Revealed_Dais_Engraving",
+            )
             for sx in (-1, 1):
                 for sz in (-1, 1):
                     model.box(
@@ -121,12 +164,25 @@ def build_central_board(model):
                         glow=enemy_side,
                     )
 
-    for side in (-1, 1):
-        for start in (-5.48, 0.68):
-            x = side * 6.47 - 0.08
-            model.box(x, -0.22, start, 0.16, 0.35, 4.8, "473426", "Edge_Curb")
-            for z in np.arange(start + 0.15, start + 4.8 - 0.16, 0.75):
-                model.box(x - 0.035, 0.13, float(z), 0.23, 0.030, 0.16, "92724f", "Edge_Curb")
+    outer_piers = {
+        -1: ((0.68, 2.62), (-5.48, -3.36)),
+        1: ((3.46, 5.48), (-2.63, -0.68)),
+    }
+    for side, sections in outer_piers.items():
+        x = side * 6.47 - 0.08
+        for start, end in sections:
+            model.box(x, -0.22, start, 0.16, 0.35, end - start, "7d5b45", "Edge_Curb")
+            for z in np.arange(start + 0.15, end - 0.12, 0.75):
+                model.box(
+                    x - 0.035,
+                    0.13,
+                    float(z),
+                    0.23,
+                    0.030,
+                    0.16,
+                    "54a79a" if side < 0 else "bd7956",
+                    "Edge_Curb",
+                )
 
 
 def safe_prop_box(model, x, y, z, w, h, d, color, group, glow=False, pivot=None):
@@ -735,7 +791,7 @@ def build_black_market_preview(rng):
                     0.299,
                     0.039,
                     0.299,
-                    rng.choice(("285558", "306365", "397876")),
+                    rng.choice(("1d555b", "267a76", "3ca397")),
                     "Preview_Harbor_Water",
                 )
                 if (ix * 3 + iz) % 7 == 0:
@@ -746,23 +802,46 @@ def build_black_market_preview(rng):
                         0.20,
                         0.014,
                         0.035,
-                        "76ae98",
+                        "8de4c1",
                         "Preview_Harbor_Reflections",
                     )
             else:
-                preview.box(x, 0.0, z, 0.29, 0.14, 0.29, rng.choice(PALETTE["brick"]), "Terrain")
+                preview.box(
+                    x,
+                    0.0,
+                    z,
+                    0.29,
+                    0.14,
+                    0.29,
+                    rng.choice(("34272e", "51343a", "65453f")),
+                    "Terrain",
+                )
 
     # Open L-shaped timber landing: the surrounding water is not covered by a land mesh.
     pier = "Preview_Harbor_Pier"
-    preview.box(-0.82, 0.043, 0.89, 4.66, 0.22, 1.0, "473426", pier)
-    preview.box(-0.82, 0.043, 1.89, 0.72, 0.22, 1.07, "473426", pier)
+    preview.box(-0.82, 0.043, 0.89, 4.66, 0.22, 1.0, "142226", pier)
+    preview.box(-0.82, 0.043, 1.89, 0.72, 0.22, 1.07, "142226", pier)
     for column, x in enumerate(np.arange(-0.80, 3.8, 0.25)):
         preview.box(
-            float(x), 0.263, 0.91, 0.225, 0.047, 0.96, "7a573b" if column % 2 else "996541", pier
+            float(x),
+            0.263,
+            0.91,
+            0.225,
+            0.047,
+            0.96,
+            ("245b59", "33786f", "702c3b")[column % 3],
+            pier,
         )
     for row, z in enumerate(np.arange(1.92, 2.94, 0.21)):
         preview.box(
-            -0.80, 0.263, float(z), 0.68, 0.047, 0.184, "7a573b" if row % 2 else "996541", pier
+            -0.80,
+            0.263,
+            float(z),
+            0.68,
+            0.047,
+            0.184,
+            ("33786f", "702c3b")[row % 2],
+            pier,
         )
     for x, z in ((-0.67, 2.78), (-0.25, 2.78), (0.37, 1.71), (1.5, 1.71), (3.61, 1.71)):
         preview.box(x, -0.10, z, 0.12, 0.61, 0.12, "624531", "Preview_Harbor_Piles")
