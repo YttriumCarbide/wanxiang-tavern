@@ -137,8 +137,8 @@ test('script and chat worldbooks describe conditional reactions in the existing 
   ]) {
     const entry = book.entries[String(uid)];
     assert.ok(entry.extensions.wanxiang.apiTargets.includes(target));
-    assert(entry.content.includes('`【对白:角色ID】`'));
-    assert(entry.content.includes('`【对白:npc:姓名|立绘编号】`'));
+    assert.match(entry.content, /`【对白:角色ID】[^`\n]*`/u);
+    assert.match(entry.content, /`【对白:npc:姓名\|立绘编号】[^`\n]*`/u);
     const rule = entry.content.split('\n').find((line) => line.startsWith('- 可选立绘反应后缀'));
     assert.ok(rule, `worldbook entry ${uid} defines its optional reaction suffix`);
     assert(rule.includes('按情绪条件使用，不强制每句触发'));
@@ -337,17 +337,18 @@ test('stage retains actors during narration, handles explicit exit and has safe 
 
 function assertGalReactionInstruction(request, kind) {
   const finalText = request.messages.map((message) => message.content).join('\n');
-  const sections = finalText.match(/【Gal对白反应】[^\n]*/gu) || [];
+  const sections =
+    finalText.match(/(?:【Gal对白反应】|可选立绘反应后缀按情绪条件使用)[^\n]*/gu) || [];
   assert.equal(sections.length, 1, `the actual ${kind} request has one Gal reaction section`);
-  const whitelist = sections[0].match(/白名单：(.+?)。/u)?.[1];
+  const whitelist = sections[0].match(/白名单：([^。；\n]+)/u)?.[1];
   assert.ok(whitelist, `the actual ${kind} request spells out its reaction whitelist`);
   assert.deepEqual(
-    whitelist.split('、').map((entry) => entry.split('（', 1)[0]),
+    whitelist.split('、').map((entry) => entry.split('（', 1)[0].replaceAll('`', '')),
     GAL_REACTION_TAGS,
     `the actual ${kind} request has exactly the supported reaction tags`,
   );
   assert(sections[0].includes('按情绪条件使用，不强制每句触发'));
-  assert(sections[0].includes('普通交谈和连续接话沿用无后缀写法'));
+  assert.match(sections[0], /普通交谈和连续接话(?:沿用无后缀写法|不加后缀)/u);
   assert(sections[0].includes('【对白:角色ID|hop】'));
   assert(sections[0].includes('【对白:npc:姓名|立绘编号|hop】'));
 }
@@ -391,13 +392,15 @@ test('actual shared pipeline opts script and chat into Gal without changing the 
       const finalText = request.messages.map((message) => message.content).join('\n');
       assert(finalText.includes('【对白:npc:姓名|立绘编号】'));
       assert(finalText.includes('女守卫·玛莎'));
-      assert.equal(finalText.split('【Gal对白反应】').length - 1, 1);
       assert.equal(finalText.split('【多人队伍聚焦与反端水】').length - 1, 1);
-      assert.match(finalText, /单幕也只选最契合局势的 2～3 名/);
-      assert.match(finalText, /非焦点队友不参与本幕对白，也不要在开场新登场/);
+      assert.match(finalText, /满编也只让最契合局势的 2～3 名/u);
+      assert.match(finalText, /非焦点不开口、不新登场/);
       assert.match(finalText, /一件事深谈 3～5 个来回/);
       assertGalReactionInstruction(request, kind);
-      assert(finalText.includes('【对白:npc:姓名|立绘编号|hop】'));
+      assert.match(finalText, /同屏最多 2～3 人/u);
+      assert.match(finalText, /跨幕轮换焦点/u);
+      assert.match(finalText, /突发状况不写三人以上逐一惊叹/u);
+      assert.match(finalText, /同一角色连写 2～3 条/u);
       assert(!finalText.includes('【对白:npc:城门女卫兵|guardWoman】'));
       assert(finalText.includes('老年男性学者'));
       assert(finalText.includes('不在剧本或聊天正文写戒指的具体游戏效果'));

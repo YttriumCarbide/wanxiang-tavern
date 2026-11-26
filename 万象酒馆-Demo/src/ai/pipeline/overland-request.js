@@ -6,7 +6,7 @@ import {
   normalizeOverlandTheater,
   overlandPlan,
 } from '../../overland-travel.js';
-import { galInstruction } from '../gal-prompt.js';
+import { galInstruction, hasGalReactionGuidance } from '../gal-prompt.js';
 import { extractGenerationEnvelope } from './output-envelope.js';
 import { finalizeRequest } from './prompt-processing.js';
 import { scanScenarioWorldbooks } from '../journey-memory-worldbook.js';
@@ -72,6 +72,12 @@ export async function buildOverlandRequest(input, preset, profile, countTokens, 
 
 export function overlandRequest(input, profile, countTokens, worldInfo) {
   const { party, stages, lootStages } = overlandStages(input);
+  const worldbookMessages = scanScenarioWorldbooks(
+    { ...input, brief: stages.map((stage) => stage.to.name).join('、'), lootStages },
+    countTokens,
+    worldInfo,
+  );
+  const galOptions = { reactionInWorldbook: hasGalReactionGuidance(worldbookMessages) };
   return finalizeRequest(
     {
       messages: [
@@ -89,18 +95,10 @@ export function overlandRequest(input, profile, countTokens, worldInfo) {
 - epilogueGal（顶层，200～350 字带标准 Gal 标记正文）：描写办完事后归途中的歇脚、分食或打趣互动。
 - epilogueProse（顶层，80～120 字纯散文，**不含任何 Gal 标记**）：描写夕阳或晚风中返回酒馆的余韵。
 - 战利品：若输入含 lootStages，为这些战斗幕设计可装备战利品并放入 items（每项含 stageId、name、description、value，以及平衡分布的可选 category:"weapon"|"armor"|"pendant"，绝不生成 gem；普通战斗可直接掉落实用制式武器/护甲/挂坠而不必硬写进台词，关键敌首可掉落对应信物/部位装备）。
-${galInstruction(input, 'script')}
+${galInstruction(input, 'script', galOptions)}
 只输出一组<wanxiang_output>标签，JSON结构为：{"prologue":"出发纯散文","acts":[{"id":"原幕ID","title":"标题","story":"正文"}],"epilogueGal":"归途Gal正文","epilogueProse":"返馆纯散文"}（battle 幕可附加 battleLines，event 幕附加 "choices":["建议一","建议二"]；若有战利品附加 items）。`,
         },
-        ...scanScenarioWorldbooks(
-          {
-            ...input,
-            brief: stages.map((stage) => stage.to.name).join('、'),
-            lootStages,
-          },
-          countTokens,
-          worldInfo,
-        ),
+        ...worldbookMessages,
         {
           role: 'user',
           content: JSON.stringify({

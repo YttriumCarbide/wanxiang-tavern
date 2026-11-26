@@ -15,26 +15,39 @@ function galReactionInstruction() {
 function galEnsembleInstruction(kind) {
   const unit =
     kind === 'script'
-      ? '按场景划分幕次；有 story 数组时每个 story[i] 是一幕'
-      : '以本轮所在的场景为一幕';
+      ? '按场景分幕，每个 story[i] 是一幕'
+      : '本轮场景为一幕';
   return [
-    `【多人队伍聚焦与反端水】${unit}。人数、文风和对白节奏是写作指引，不是代码硬校验。`,
-    '即使队伍满编，单幕也只选最契合局势的 2～3 名同伴或现场 NPC 开口，同屏最多 2～3 人；不为凑人数加人。',
-    '非焦点队友不参与本幕对白，也不要在开场新登场；只用一句【旁白】交代外围分工，不加【登场:角色ID】；若已在场，交代后用【退场:角色ID】切出。跨幕轮换焦点，让不同队友各有独立高光。',
-    '突发状况不写三人以上逐一惊叹、附和或表态；众人同时警戒、拔剑等动作合成一条旁白。',
-    '两名角色在交涉、争论或试探时围绕一件事深谈 3～5 个来回，不让无关第三者插话；短轮聊天沿后续轮次自然推进，不替玩家补话。',
-    '单人发言含明显转折或多层意思时，同一角色连写 2～3 条【对白:同一ID】，不让全员轮流点名。',
+    `【多人队伍聚焦与反端水】${unit}。仅写作指导，不作硬校验。`,
+    '满编也只让最契合局势的 2～3 名同伴或现场 NPC 开口，同屏最多 2～3 人；不为凑数加人。',
+    '非焦点不开口、不新登场：一句【旁白】交代分工，已在场则用【退场:角色ID】切出。跨幕轮换焦点，各有高光。',
+    '突发状况不写三人以上逐一惊叹、附和或表态；集体动作合成一条【旁白】。',
+    '两人交涉、争论或试探时，围绕一件事深谈 3～5 个来回，无关者不插话。短聊分轮推进，不替玩家发言。',
+    '发言有转折或多层意思时，同一角色连写 2～3 条【对白:同一ID】，不让全员轮流点名。',
   ].join('\n');
 }
 
-export function galSceneCastInstruction(input, kind) {
-  return [galActorListText(input), galReactionInstruction(), galEnsembleInstruction(kind)].join(
-    '\n',
-  );
+/** Do not repeat the built-in guide if the request actually contains it. */
+export function hasGalReactionGuidance(messages) {
+  return messages.some(({ role, content }) => {
+    if (role !== 'system' || typeof content !== 'string') return false;
+    return (
+      content.includes('可选立绘反应后缀按情绪条件使用') &&
+      content.includes('【对白:角色ID|hop】') &&
+      content.includes('【对白:npc:姓名|立绘编号|hop】')
+    );
+  });
+}
+
+export function galSceneCastInstruction(input, kind, { reactionInWorldbook = false } = {}) {
+  const rules = [galActorListText(input)];
+  if (!reactionInWorldbook) rules.push(galReactionInstruction());
+  rules.push(galEnsembleInstruction(kind));
+  return rules.join('\n');
 }
 
 /** All narrative APIs use the Gal stage; metadata, mechanics and prose lengths stay unchanged. */
-export function galInstruction(input, kind = 'script') {
+export function galInstruction(input, kind = 'script', options) {
   if (!['script', 'chat', 'quick-chat'].includes(kind)) return '';
   const dialogueTarget = kind === 'script' ? '65%～80%' : kind === 'chat' ? '80%～90%' : '85%左右';
   const style = {
@@ -63,7 +76,7 @@ export function galInstruction(input, kind = 'script') {
 - 正文不能自行授予实际物品。纹章戒指仅可在本次请求明确提供 storyRingReward 时于指定节点描写外观与人物反应；storyRingReward 为 null 时不创作戒指赠送。不在剧本或聊天正文写戒指的具体游戏效果、数值、技能、充能格数或操作教学，也不将纹章戒指列入 data.items。
 4. 【短页阅读节奏】
 - 同一角色可连续使用多个【对白:同一角色ID】，按语气停顿拆成每块 1～2 句（约 20～50 字）；旁白也按动作或观察拆成每块 1～2 句（约 25～60 字）。标记后直接写正文，不留首尾空行，不在词句中间生硬断开。
-${galSceneCastInstruction(input, kind)}
+${galSceneCastInstruction(input, kind, options)}
 【Gal共同写作要求】
 正文使用自然流畅的中文，人物先行动、感受、回应，确有必要时再解释。选用能传递信息的具体细节，避免“复杂神色”“莫名情绪”“意味深长”“故事才刚刚开始”等套话，不靠省略号和感叹号堆情绪。每句对白都要有当下的交流目的，旁白与对白互相补充，不输出创作说明或分镜编号。
 ${style || ''}`;

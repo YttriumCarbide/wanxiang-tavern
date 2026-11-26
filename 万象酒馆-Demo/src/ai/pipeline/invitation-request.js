@@ -1,5 +1,5 @@
 import { journeyContinuityMessage } from '../../memory.js';
-import { galInstruction } from '../gal-prompt.js';
+import { galInstruction, hasGalReactionGuidance } from '../gal-prompt.js';
 import { TOWN_SIDE_PLACES } from '../../content/town-side-places.js';
 import { CITIES } from '../../city-directory.js';
 import { presetSampling } from '../presets.js';
@@ -138,6 +138,12 @@ export function invitationRequest(input, preset, profile, countTokens, worldInfo
 - choices：提供两个各约 20 字的玩家回应，给出两种不同且实际可行的说法或行动（也可写成 {"label":"约20字回应","attr":"cha|wis|int|dex|str|con","dc":9} 以标注判定属性与难度）。最后一条玩家消息若有补充意图，将它融入可尝试的方向。
 6. 收尾幕（finale）：包含标题、地点与约 850～1200 字的完整正文，让人物用对话和动作回扣开头，展示事情落定后的实际变化，能承接不同互动结果，不设置新任务。
 7. 输出 JSON 字段（stages 示意一幕，实际写 3～5 幕）：{"title":"支援断章｜事件标题","prologue":"80～120字纯散文开场白","premise":"来意","stages":[{"title":"幕名","scene":"合法地点ID","description":"眼前情境","hint":"可以留意的方向","intro":"Gal正文","tasks":["玩家可见的任务"],"choices":["回应一","回应二"]}],"finale":{"title":"收尾幕名","scene":"合法地点ID","intro":"收尾Gal正文"}}`;
+  const worldbookMessages = scanScenarioWorldbooks(
+    { ...input, brief: invite.topic },
+    countTokens,
+    worldInfo,
+  );
+  const reactionInWorldbook = hasGalReactionGuidance(worldbookMessages);
   const sampling = presetSampling(preset);
   sampling.maxTokens = Math.max(8000, sampling.maxTokens ?? profile.maxTokens ?? 0);
   return finalizeRequest(
@@ -146,9 +152,9 @@ export function invitationRequest(input, preset, profile, countTokens, worldInfo
         ...journeyContinuityMessage(input),
         {
           role: 'system',
-          content: `你负责酒馆约见剧情。${placeRule}露天描写遵循timeOfDay指定的白天或夜晚；无窗室内用室内灯光。人物的invitationMemory是此人与玩家亲历的过去约见。protagonistId是玩家操控的人，不能把他写成第三个在场人物，也不能替他说话或行动。不写副本、不战斗，不凭空改变好感度。\n${galInstruction(input, 'script')}\n${instructions}\n只输出一组<wanxiang_output>与</wanxiang_output>标签，JSON置于标签内。`,
+          content: `你负责酒馆约见剧情。${placeRule}露天描写遵循timeOfDay指定的白天或夜晚；无窗室内用室内灯光。人物的invitationMemory是此人与玩家亲历的过去约见。protagonistId是玩家操控的人，不能把他写成第三个在场人物，也不能替他说话或行动。不写副本、不战斗，不凭空改变好感度。\n${galInstruction(input, 'script', { reactionInWorldbook })}\n${instructions}\n只输出一组<wanxiang_output>与</wanxiang_output>标签，JSON置于标签内。`,
         },
-        ...scanScenarioWorldbooks({ ...input, brief: invite.topic }, countTokens, worldInfo),
+        ...worldbookMessages,
         { role: 'user', content: JSON.stringify({ ...invite, characters: input.party }) },
         ...playerIntentMessages(input.playerIntent),
       ],

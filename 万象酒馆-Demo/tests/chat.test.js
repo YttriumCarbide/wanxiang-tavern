@@ -577,6 +577,9 @@ test('chat API assembles world, green-light mentions, prose-only history and exa
     };
     const shortened = await post('prompts/preview', { kind: 'chat', input: longInput });
     assert(shortened.tokens.totalBudgetEstimate <= 4096);
+    const shortenedPrompt = shortened.messages.map(({ content }) => content).join('\n');
+    assert.equal(shortenedPrompt.split('按情绪条件使用，不强制每句触发').length - 1, 1);
+    assert(shortenedPrompt.includes('【对白:npc:姓名|立绘编号|hop】'));
     assert(shortened.warnings.some((warning) => warning.includes('本地记录保留')));
     assert(!shortened.messages.some((message) => message.content.includes('往事0：')));
     assert.equal(longInput.history.length, 8);
@@ -676,15 +679,15 @@ test('chat API assembles world, green-light mentions, prose-only history and exa
     assert.equal(questPrompt.split('【多人队伍聚焦与反端水】').length - 1, 1);
     const questPartyRoster = questParty.map(({ id, name }) => ({ id, name }));
     assert(questPrompt.includes(`可用人物ID与姓名：${JSON.stringify(questPartyRoster)}。`));
-    assert.match(questPrompt, /人数、文风和对白节奏是写作指引，不是代码硬校验/);
+    assert.match(questPrompt, /仅写作指导，不作硬校验/);
     assert.match(
       questPrompt,
-      /单幕也只选最契合局势的 2～3 名同伴或现场 NPC 开口，同屏最多 2～3 人/,
+      /满编也只让最契合局势的 2～3 名同伴或现场 NPC 开口，同屏最多 2～3 人/,
     );
-    assert.match(questPrompt, /非焦点队友不参与本幕对白，也不要在开场新登场/);
-    assert.match(questPrompt, /只用一句【旁白】交代外围分工，不加【登场:角色ID】/);
-    assert.match(questPrompt, /交代后用【退场:角色ID】切出/);
-    assert.match(questPrompt, /跨幕轮换焦点，让不同队友各有独立高光/);
+    assert.match(questPrompt, /非焦点不开口、不新登场/);
+    assert.match(questPrompt, /一句【旁白】交代分工/);
+    assert.match(questPrompt, /已在场则用【退场:角色ID】切出/);
+    assert.match(questPrompt, /跨幕轮换焦点，各有高光/);
     assert.match(questPrompt, /围绕一件事深谈 3～5 个来回/);
     assert.match(questPrompt, /同一角色连写 2～3 条/);
 

@@ -10,7 +10,7 @@ import { finalizeRequest } from './prompt-processing.js';
 import { presetOutputTransport, presetOutputWarnings } from '../preset-output.js';
 import { QUEST_LEAD_TYPES } from '../output-protocol.js';
 import { adviceTranscript } from '../advice.js';
-import { galInstruction, galSceneCastInstruction } from '../gal-prompt.js';
+import { galInstruction, galSceneCastInstruction, hasGalReactionGuidance } from '../gal-prompt.js';
 import {
   adventureChatRules,
   adventureOutputBoundary,
@@ -335,17 +335,18 @@ export async function chatRequest(
       worldInfo.settings.authorNote,
       { characterText: characters },
     );
+    const galOptions = { reactionInWorldbook: hasGalReactionGuidance(messages) };
     messages.push({
       role: 'system',
       content: hasWorldbookChatTeaching
         ? kind === 'quick-chat' && input.adventure
-          ? `${adventureTurnTask(input.adventure, !!input.dialogueScenes?.length)}\n${galSceneCastInstruction(input, kind)}`
-          : `${leanTaskRule}\n${galSceneCastInstruction(input, kind)}`
+          ? `${adventureTurnTask(input.adventure, !!input.dialogueScenes?.length)}\n${galSceneCastInstruction(input, kind, galOptions)}`
+          : `${leanTaskRule}\n${galSceneCastInstruction(input, kind, galOptions)}`
         : (kind === 'quick-chat' && input.adventure
             ? adventureChatRules(input.adventure, !!input.dialogueScenes?.length)
             : rules) +
           '\n' +
-          galInstruction(input, kind),
+          galInstruction(input, kind, galOptions),
     });
     if (cityPlace) {
       const time = input.timeOfDay === 'day' ? '白天' : input.timeOfDay === 'night' ? '夜晚' : '';
