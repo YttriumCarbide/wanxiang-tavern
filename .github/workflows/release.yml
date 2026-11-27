@@ -123,7 +123,7 @@ jobs:
           name: ${{ github.ref_name }}
           fail_on_unmatched_files: true
           body: |
-            存档导入反馈与兼容性修复，完整离线安装包。
+            万象酒馆 2.4.0 正式发布（含新副本/霸主机制、星隙工坊升级、资产 WebP 压缩优化等），完整离线安装包。
             Android APK 使用调试签名；Windows ZIP 解压后运行 WanxiangTavern.exe。
             两端包含完整运行资源，AI 功能仍需自行配置联网接口。
           files: |

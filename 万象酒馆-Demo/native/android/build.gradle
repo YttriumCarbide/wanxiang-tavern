@@ -13,8 +13,8 @@ android {
         applicationId 'app.wanxiang.tavern'
         minSdk 26
         targetSdk 36
-        versionCode providers.gradleProperty('wanxiangVersionCode').getOrElse('20301').toInteger()
-        versionName providers.gradleProperty('wanxiangVersion').getOrElse('2.3.1')
+        versionCode providers.gradleProperty('wanxiangVersionCode').getOrElse('20400').toInteger()
+        versionName providers.gradleProperty('wanxiangVersion').getOrElse('2.4.0')
     }
 
     compileOptions {
